@@ -33,16 +33,14 @@ Seq(
 
 
 // Exclude backup files by default.  This uses ~=, which accepts a function of
-//  type T => T (here T = FileFilter) that is applied to the existing value.
+// type T => T (here T = FileFilter) that is applied to the existing value.
 // A similar idea is overriding a member and applying a function to the super value:
-//  override lazy val defaultExcludes = f(super.defaultExcludes)
-//
-defaultExcludes ~= (filter => filter || "*~")
-/*  Some equivalent ways of writing this:
-defaultExcludes ~= (_ || "*~")
-defaultExcludes ~= ( (_: FileFilter) || "*~")
-defaultExcludes ~= ( (filter: FileFilter) => filter || "*~")
-*/
+// override lazy val defaultExcludes = f(super.defaultExcludes)
+// defaultExcludes ~= (filter => filter || "*~")
+// Some equivalent ways of writing this:
+// defaultExcludes ~= (_ || "*~")
+// defaultExcludes ~= ( (_: FileFilter) || "*~")
+// defaultExcludes ~= ( (filter: FileFilter) => filter || "*~")
 
 resolvers += ScalaToolsSnapshots
 

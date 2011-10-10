@@ -1,10 +1,10 @@
-// Set the project name to the string 'My Project'
-name := "Lift Web App"
+// Set the project name to the string
+name := "Scalable Minds Brainflight"
 
 // The := method used in Name and Version is one of two fundamental methods.
 // The other method is <<=
 // All other initialization methods are implemented in terms of these.
-version := "1.0"
+version := "0.1"
 
 scalaVersion := "2.9.1"
 

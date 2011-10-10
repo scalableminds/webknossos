@@ -3,3 +3,6 @@ boot/
 *.db
 *.class
 *.keep
+lifttemplate.iml
+lifttemplate.ipr
+lifttemplate.iws

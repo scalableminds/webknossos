@@ -10,6 +10,6 @@ object LiftConsole {
     // Now run the MainGenericRunner to get your repl
     MainGenericRunner.main(args)
     // After the repl exits, then exit the scala script
-    exit(0)
+    sys.exit(0)
   }
 }

@@ -11,7 +11,7 @@ import net.liftweb.common._
 import org.specs.matcher._
 import org.specs.specification._
 import Helpers._
-import lib._
+import brainflight.lib.DependencyFactory
 
 
 class HelloWorldTestSpecsAsTest extends JUnit3(HelloWorldTestSpecs)
@@ -21,15 +21,15 @@ object HelloWorldTestSpecs extends Specification {
   val session = new LiftSession("", randomString(20), Empty)
   val stableTime = now
 
-  override def executeExpectations(ex: Examples, t: =>Any): Any = {
+  /*override def executeExpectations(ex: Examples, t: =>Any): Any = {
     S.initIfUninitted(session) {
       DependencyFactory.time.doWith(stableTime) {
         super.executeExpectations(ex, t)
       }
     }
-  }
+  } */
 
-  "HelloWorld Snippet" should {
+  /*"HelloWorld Snippet" should {
     "Put the time in the node" in {
       val hello = new HelloWorld
       Thread.sleep(1000) // make sure the time changes
@@ -39,7 +39,7 @@ object HelloWorldTestSpecs extends Specification {
       str.indexOf(stableTime.toString) must be >= 0
       str.indexOf("Hello at") must be >= 0
     }
-  }
+  }   */
 }
 
 }

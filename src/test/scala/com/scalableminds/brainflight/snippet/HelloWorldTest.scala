@@ -11,8 +11,8 @@ import net.liftweb.common._
 import org.specs.matcher._
 import org.specs.specification._
 import Helpers._
-import brainflight.lib.DependencyFactory
-
+import brainflight._
+import com.scalableminds.brainflight._
 
 class HelloWorldTestSpecsAsTest extends JUnit3(HelloWorldTestSpecs)
 object HelloWorldTestSpecsRunner extends ConsoleRunner(HelloWorldTestSpecs)
@@ -40,6 +40,11 @@ object HelloWorldTestSpecs extends Specification {
       str.indexOf("Hello at") must be >= 0
     }
   }   */
+  "ModelStore" should {
+    "contain one Element" in {
+      binary.CubeModel.rotateAndMove((25,0,25),(0,0,0))//.map(DataStore.load).toArray
+    }
+  }
 }
 
 }

@@ -2,6 +2,7 @@ package com.scalableminds.brainflight.binary
 
 import scala.math._
 import com.scalableminds.tools.Math._
+import net.liftweb.json._
 
 /**
  * Scalable Minds - Brainflight
@@ -34,8 +35,14 @@ abstract class DataModel {
       val x = moveVector._1+((cosA+square(ortho._1)*(1-cosA))*px - ortho._3*sinA*py+ ortho._1*ortho._3*(1-cosA)*pz)
       val y = moveVector._2+(ortho._3*sinA*px + cosA * py - ortho._1*sinA*pz)
       val z = moveVector._3+(ortho._1*ortho._3*(1-cosA)*px + ortho._1*sinA*py + (cosA+square(ortho._3)*(1-cosA))*pz)
-      (x.round.asInstanceOf[Int],y.round.asInstanceOf[Int],z.round.asInstanceOf[Int])
+      (x.round.toInt,y.round.toInt,z.round.toInt)
     })
+  }
+
+  def modelInformation = {
+    import net.liftweb.json.JsonDSL._
+    ("id" -> id) ~
+    ("containing" -> containingCoordinates.map(point => List(point._1,point._2,point._3)) )
   }
 }
 

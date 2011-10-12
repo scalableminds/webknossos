@@ -32,9 +32,10 @@ object DataStore {
       case Some(x) =>
         x
       case _ =>
-        println((new File(".")).getAbsolutePath)
         val br = new FileInputStream("binarydata/x%04d/y%04d/z%04d/100527_k0563_mag1_x%04d_y%04d_z%04d.raw".format(x,y,z,x,y,z))
+        val start = System.currentTimeMillis()
         val b = inputStreamToByteArray(br)
+        println("%d".format(System.currentTimeMillis()-start))
         fileBuffer += (((x, y, z), b))
         b
     }
@@ -45,6 +46,8 @@ object DataStore {
    *  Read file contents to a byteArray
     */
   def inputStreamToByteArray(is: InputStream) = {
-    Iterator continually is.read takeWhile (-1 !=) map (_.toByte) toArray
+    val b = new Array[Byte](2097152)
+    is.read(b,0,2097152)
+    b
   }
 }

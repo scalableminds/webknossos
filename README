@@ -7,6 +7,7 @@ Project setup:
 	java -XX:MaxPermSize=256m -Xmx2048M -jar `dirname $0`/sbt-launch.jar "$@" 
 
 - make sbt executable
+- go to project and create directory "binarydata" and copy the x0000 stuff there
 - go to project dir and run "sbt"
 
 Useful sbt commands:

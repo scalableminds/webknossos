@@ -1,4 +1,5 @@
 target/
+binarydata/
 boot/
 *.db
 *.class

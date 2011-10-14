@@ -6,18 +6,10 @@ import _root_.net.liftweb.http._
 import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.sitemap.Loc._
-import Helpers._
-import _root_.net.liftweb.mapper.{DB, ConnectionManager, Schemifier, DefaultConnectionIdentifier, StandardDBVendor}
-import _root_.java.sql.{Connection, DriverManager}
+import _root_.net.liftweb.mapper.{DB, Schemifier, DefaultConnectionIdentifier, StandardDBVendor}
 import _root_.com.scalableminds.brainflight.model._
-import net.liftweb.http.rest._
-import java.lang.IllegalAccessError
-import net.liftweb.json.JsonAST
-import net.liftweb.json.JsonDSL._
-import net.liftweb.json.JsonAST.JString
-import net.liftweb.http.js.JsObj
-import net.liftweb.common.Full._
-
+import com.scalableminds.brainflight.handler.RequestHandler
+import com.scalableminds.brainflight.binary.{FrustrumModel, ModelStore, CubeModel}
 
 /**
  * A class that's instantiated early and run.  It allows the application
@@ -36,8 +28,8 @@ class Boot {
 
       DB.defineConnectionManager(DefaultConnectionIdentifier, vendor)
     }
-
-    LiftRules.dispatch.append{SendToComet}
+    // add our custom dispatcher
+    LiftRules.dispatch.append{RequestHandler.serve}
     // where to search snippet
     LiftRules.addToPackages("com.scalableminds.brainflight")
     Schemifier.schemify(true, Schemifier.infoF _, User)
@@ -67,9 +59,12 @@ class Boot {
 
     LiftRules.loggedInTest = Full(() => User.loggedIn_?)
 
-
-
     S.addAround(DB.buildLoanWrapper)
+
+    /*
+     * Register all BinaryDataModels
+     */
+    ModelStore.register(CubeModel,FrustrumModel)
   }
 
   /**
@@ -78,18 +73,4 @@ class Boot {
   private def makeUtf8(req: HTTPRequest) {
     req.setCharacterEncoding("UTF-8")
   }
-}
-
-object SendToComet extends RestHelper {
-  serve {
-    case Req("request" :: Nil, _ , _) => {
-      for { sess <- S.session ?~ "Session not found"
-            cr <- sess.findComet("CometResponder",Full("cr")) ?~ "Comet actor not found"
-      } yield {
-        cr ! "DO IT"
-        <xml><stuff>asdf</stuff></xml>
-      }
-    }
-  }
-
 }

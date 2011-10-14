@@ -51,7 +51,7 @@ object RequestHandler{
     // should look like: http://localhost/requestModel/cube
     case Req("requestModel" :: modelType :: Nil, _ , GetRequest) => () => {
       ModelStore(modelType) match {
-        case Some(m) => Full(InMemoryResponse(CubeModel.modelInformation,
+        case Some(m) => Full(InMemoryResponse(m.modelInformation,
                               List("Content-Type" -> "application/octet-stream"),
                               List(),
                               200

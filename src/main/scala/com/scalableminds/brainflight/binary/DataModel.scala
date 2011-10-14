@@ -18,9 +18,11 @@ abstract class DataModel {
   val containingCoordinates : IndexedSeq[Tuple3[Int, Int, Int]]
   // every model needs a unique id, it is used to request the model via get http request
   val id : String
+  // defines the axis length of the field
+  val yLength : Int
 
   // contains all containing coordinates as a byte array
-  val modelInformation =
+  lazy val modelInformation =
     containingCoordinates.flatMap(point => List(point._1.toByte,point._2.toByte,point._3.toByte)).toArray
 
   def rotateAndMove(moveVector:Tuple3[Int,Int, Int],axis:Tuple3[Int,Int, Int]):IndexedSeq[Tuple3[Int, Int, Int]]={
@@ -53,11 +55,37 @@ abstract class DataModel {
 
 object CubeModel extends DataModel{
   val id = "cube"
+  val yLength = 50
   // calculate all coordinates which are in the Cube boundary
-  lazy val containingCoordinates : IndexedSeq[Tuple3[Int, Int, Int]] =
-  for{x <- -25 to 25
-      y <- 0 to 50
-      z <- -25 to 25 }yield{
+  val containingCoordinates : IndexedSeq[Tuple3[Int, Int, Int]] =
+  for{
+    y <- 0 to yLength
+    x <- -yLength/2 to yLength/2
+    z <- -yLength/2 to yLength/2
+  }yield{
     (x,y,z)
+  }
+}
+
+object FrustrumModel extends DataModel{
+  val id= "frustrum"
+
+  val yLength = 50
+  // linear equation for the generator of the frustrum
+  def generatorEquation(y:Int) = 10+y // -> z = a + b*y
+  // calculate all coordinates which are in the frustrum boundary
+  val containingCoordinates : IndexedSeq[Tuple3[Int, Int, Int]] = {
+    val generatorMax = generatorEquation(yLength)
+    for{
+      y <- 0 to yLength
+      x <- -generatorMax to generatorMax
+      z <- -generatorMax to generatorMax
+
+      rad = generatorEquation(y)
+
+      if sqrt(square(x)+square(z)) <= rad
+    }yield{
+      (x,y,z)
+    }
   }
 }

@@ -19,19 +19,46 @@ object RequestHandler{
     // should look like: http://localhost/requestData/cube?px=25&py=0&pz=25&ax=0&ay=0&az=0
     // parameters starting with p define the request point, the ones starting with a define the request axis
     case Req("requestData" :: modelType :: Nil, _ , GetRequest) => () => {
-      for { px <- S.param("px")  ?~ "You missed to send your request points x."
-            py <- S.param("py")  ?~ "You missed to send your request points y."
-            pz <- S.param("pz")  ?~ "You missed to send your request points z."
+      for {
+        px <- S.param("px")  ?~ "You missed to send your request points x."
+        py <- S.param("py")  ?~ "You missed to send your request points y."
+        pz <- S.param("pz")  ?~ "You missed to send your request points z."
 
-            ax <- S.param("ax")  ?~ "You missed to send your axis x."
-            ay <- S.param("ay")  ?~ "You missed to send your axis y."
-            az <- S.param("az")  ?~ "You missed to send your axis z."
+        ax <- S.param("ax")  ?~ "You missed to send your axis x."
+        ay <- S.param("ay")  ?~ "You missed to send your axis y."
+        az <- S.param("az")  ?~ "You missed to send your axis z."
       } yield {
-          DataRequestHandler(ModelStore(modelType).get,(px.toInt,py.toInt,pz.toInt),(ax.toInt,ay.toInt,az.toInt))
+        try {
+          val axis = (ax.toInt, ay.toInt,az.toInt)
+          (ModelStore(modelType),axis) match {
+            case (_,(0,0,0)) =>
+              net.liftweb.http.NotAcceptableResponse("Axis is not allowed to be (0,0,0).")
+            case (Some(m),_) =>
+              DataRequestHandler(
+                m,
+                (px.toInt,py.toInt,pz.toInt),
+                axis
+              )
+            case _ =>
+              NotFoundResponse("Model not available.")
+          }
+        }catch{
+          case x:NumberFormatException => NotFoundResponse("Params aren't valid integers.")
+        }
       }
     }
+    // got a request for a models data
+    // should look like: http://localhost/requestModel/cube
     case Req("requestModel" :: modelType :: Nil, _ , GetRequest) => () => {
-      Full(JsonResponse(CubeModel.modelInformation))
+      ModelStore(modelType) match {
+        case Some(m) => Full(InMemoryResponse(CubeModel.modelInformation,
+                              List("Content-Type" -> "application/octet-stream"),
+                              List(),
+                              200
+                         ))
+        case _ => Full(NotFoundResponse("Model not available."))
+      }
+
     }
   }
 

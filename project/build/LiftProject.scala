@@ -7,5 +7,7 @@ class LiftProject(info: ProjectInfo) extends DefaultWebProject(info) {
 
   // Add snapshot repo, since Lift SNAPSHOT in use
   val snapshots = ScalaToolsSnapshots
+
+  override def testClasspath  = super.testClasspath +++ ("src" / "main" / "webapp")
   
 }

@@ -14,6 +14,10 @@ import java.io.{InputStream, FileInputStream,File}
  * A store which handles all binary data, the current implementation uses the given file structure on hdd
  */
 object DataStore {
+  // defines the maximum count of cached file handles
+  val fileBufferLimit = 500
+  // defines how many file handles are deleted when the limit is reached
+  val dropCount = 50
   // try to prevent loading a file multiple times into memory
   val fileBuffer = new HashMap[Tuple3[Int,Int,Int],Array[Byte]]
 
@@ -32,14 +36,17 @@ object DataStore {
       case Some(x) =>
         x
       case _ =>
+        // pretends to flood memory with to many files
+        if(fileBuffer.size>fileBufferLimit)
+          fileBuffer.drop(dropCount)
+
         val br = new FileInputStream("binarydata/x%04d/y%04d/z%04d/100527_k0563_mag1_x%04d_y%04d_z%04d.raw".format(x,y,z,x,y,z))
-        val start = System.currentTimeMillis()
+
         val b = inputStreamToByteArray(br)
-        println("%d".format(System.currentTimeMillis()-start))
         fileBuffer += (((x, y, z), b))
         b
     }
-    byteArray(((point._1%128)*128*128)+(point._2%128)* 128 + point._3 % 128)
+    byteArray(((point._1%128)*16384)+(point._2%128)* 128 + point._3 % 128)
   }
 
   /**

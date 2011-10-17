@@ -9,7 +9,7 @@ import _root_.net.liftweb.sitemap.Loc._
 import _root_.net.liftweb.mapper.{DB, Schemifier, DefaultConnectionIdentifier, StandardDBVendor}
 import _root_.com.scalableminds.brainflight.model._
 import com.scalableminds.brainflight.handler.RequestHandler
-import com.scalableminds.brainflight.binary.{ModelStore, CubeModel}
+import com.scalableminds.brainflight.binary.{FrustrumModel, ModelStore, CubeModel}
 
 /**
  * A class that's instantiated early and run.  It allows the application
@@ -64,7 +64,7 @@ class Boot {
     /*
      * Register all BinaryDataModels
      */
-    ModelStore.register(CubeModel)
+    ModelStore.register(CubeModel,FrustrumModel)
   }
 
   /**

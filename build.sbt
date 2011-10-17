@@ -29,7 +29,10 @@ Seq(
     "org.eclipse.jetty" % "jetty-webapp" % "7.5.1.v20110908" % "compile->default;jetty",
     "org.eclipse.jetty" % "jetty-servlets" % "7.5.1.v20110908" % "jetty",
     "ch.qos.logback" % "logback-classic" % "0.9.26",
-    "org.scala-tools.testing" %% "specs" % "1.6.9"
+    "org.scala-tools.testing" %% "specs" % "1.6.9",
+	"com.foursquare" %% "rogue" % "1.0.26" intransitive(),
+	"net.liftweb"    %% "lift-mongodb-record" % liftVersion,
+	"net.liftweb"    %% "lift-mongodb" % liftVersion 
 )}
 
 

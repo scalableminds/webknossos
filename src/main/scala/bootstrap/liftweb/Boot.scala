@@ -1,15 +1,15 @@
 package bootstrap.liftweb
 
-import _root_.net.liftweb.util._
 import _root_.net.liftweb.common._
 import _root_.net.liftweb.http._
 import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.sitemap.Loc._
-import _root_.net.liftweb.mapper.{DB, Schemifier, DefaultConnectionIdentifier, StandardDBVendor}
+import _root_.net.liftweb.mapper.{DB, Schemifier}
 import _root_.com.scalableminds.brainflight.model._
 import com.scalableminds.brainflight.handler.RequestHandler
 import com.scalableminds.brainflight.binary.{FrustrumModel, ModelStore, CubeModel}
+import com.scalableminds.brainflight.model.MongoConfig
 
 /**
  * A class that's instantiated early and run.  It allows the application
@@ -17,17 +17,8 @@ import com.scalableminds.brainflight.binary.{FrustrumModel, ModelStore, CubeMode
  */
 class Boot {
   def boot {
-    if (!DB.jndiJdbcConnAvailable_?) {
-      val vendor = 
-	new StandardDBVendor(Props.get("db.driver") openOr "org.h2.Driver",
-			     Props.get("db.url") openOr 
-			     "jdbc:h2:lift_proto.db;AUTO_SERVER=TRUE",
-			     Props.get("db.user"), Props.get("db.password"))
+    MongoConfig.init
 
-      LiftRules.unloadHooks.append(vendor.closeAllConnections_! _)
-
-      DB.defineConnectionManager(DefaultConnectionIdentifier, vendor)
-    }
     // add our custom dispatcher
     LiftRules.dispatch.append{RequestHandler.serve}
     // where to search snippet

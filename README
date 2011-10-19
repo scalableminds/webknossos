@@ -1,13 +1,12 @@
 Project setup:
-- install java (from oracle! don't use openJDK)
-- make shure "JAVA_HOME" and "JDK_HOME" are set and PATH contains path to jdk
-- load sbt 0.11, rename to sbt-launch.jar and copy it to bin
+- install java 1.6 (from oracle! don't use openJDK)
+- make sure "JAVA_HOME" and "JDK_HOME" are set and PATH contains path to jdk
+- download sbt 0.11, rename to sbt-launch.jar and copy it to /bin
 - create file "sbt" with following content: 
 
 	java -XX:MaxPermSize=256m -Xmx2048M -jar `dirname $0`/sbt-launch.jar "$@" 
 
 - make sbt executable
-- go to project and create directory "binarydata" and copy the x0000 stuff there
 - go to project dir and run "sbt"
 
 Useful sbt commands:

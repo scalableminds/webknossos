@@ -6,7 +6,6 @@ import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.sitemap.Loc._
 import _root_.net.liftweb.mapper.{DB, Schemifier}
-import _root_.com.scalableminds.brainflight.model._
 import com.scalableminds.brainflight.handler.RequestHandler
 import com.scalableminds.brainflight.binary.{FrustrumModel, ModelStore, CubeModel}
 import com.scalableminds.brainflight.model.MongoConfig
@@ -23,16 +22,15 @@ class Boot {
     LiftRules.dispatch.append{RequestHandler.serve}
     // where to search snippet
     LiftRules.addToPackages("com.scalableminds.brainflight")
-    Schemifier.schemify(true, Schemifier.infoF _, User)
 
     // Build SiteMap
     def sitemap() = SiteMap(
-      Menu("Home") / "index" >> User.AddUserMenusAfter, // Simple menu form
+      //Menu("Home") / "index" >> User.AddUserMenusAfter, // Simple menu form
       // Menu with special Link
       Menu(Loc("Static", Link(List("static"), true, "/static/index"), 
 	       "Static Content")))
 
-    LiftRules.setSiteMapFunc(() => User.sitemapMutator(sitemap()))
+    //LiftRules.setSiteMapFunc(() => User.sitemapMutator(sitemap()))
 
     /*
      * Show the spinny image when an Ajax call starts
@@ -48,7 +46,7 @@ class Boot {
 
     LiftRules.early.append(makeUtf8)
 
-    LiftRules.loggedInTest = Full(() => User.loggedIn_?)
+    //LiftRules.loggedInTest = Full(() => User.loggedIn_?)
 
     S.addAround(DB.buildLoanWrapper)
 

@@ -1,7 +1,7 @@
 ps = new PointStream()
 ps.setup document.getElementById('render'),{"antialias":true}
 
-pointcloud = ps.load "/BrainFlight/WebGl/Pointstream/clouds/acorn.asc"
+pointcloud = read_binary_file() #ps.load "/BrainFlight/WebGl/Pointstream/clouds/acorn.asc"
 
 # MAIN RENDER FUNCTION
 render = ->
@@ -12,5 +12,5 @@ render = ->
 	ps.render pointcloud	
 	return
 		
-ps.pointSize 6
+ps.pointSize 10
 ps.onRender = render

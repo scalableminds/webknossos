@@ -49,6 +49,9 @@ var PointStream = (function() {
     // has a point cloud it works with
     var parsers = [];
     var pointClouds = [];
+	
+	this.parsers = parsers;
+	this.pointClouds = pointClouds;
     
     var registeredParsers = {};
     registeredParsers["asc"] = ASCParser;
@@ -866,7 +869,7 @@ var PointStream = (function() {
         }
       }
     }
-        
+    this.parseCallback= parseCallback;
     /**
       @private
       

@@ -2,6 +2,7 @@ package com.scalableminds.brainflight.binary
 
 import scala.math._
 import com.scalableminds.tools.Math._
+import java.lang.OutOfMemoryError
 
 /**
  * Scalable Minds - Brainflight
@@ -22,8 +23,11 @@ abstract class DataModel {
   val yLength : Int
 
   // contains all containing coordinates as a byte array
-  lazy val modelInformation =
-    containingCoordinates.flatMap(point => List(point._1.toByte,point._2.toByte,point._3.toByte)).toArray
+  lazy val modelInformation = {
+      if(!containingCoordinates.find(p =>{ val (x,y,z) = p; x>127 || x< -128 || y>127 || y< -128 || z>127 || z< -128}).isEmpty)
+        throw new NumberFormatException("Can't convert int to byte (out of range).")
+      containingCoordinates.flatMap(point => List(point._1.toByte,point._2.toByte,point._3.toByte)).toArray
+  }
 
   def rotateAndMove(moveVector:Tuple3[Int,Int, Int],axis:Tuple3[Int,Int, Int]):IndexedSeq[Tuple3[Int, Int, Int]]={
     // orthogonal vector to (0,1,0) and rotation vector

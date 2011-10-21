@@ -79,7 +79,7 @@ read_binary_file = ->
 					currentColor++
 					
 					# IMPORTANT STATISTICS (DO NOT DELETE)
-					parser.numParsedPoints = x+y+z
+					parser.numParsedPoints = currentColor
 					
 		# SKIP USING A "TRADITIONAL" POINTSTREAM PARSER AND CALL psapi.js::parseCallback DIRECTLY
 		ps.parseCallback parser, { "ps_Vertex" : vertices, "ps_Color" : RGB_colors }

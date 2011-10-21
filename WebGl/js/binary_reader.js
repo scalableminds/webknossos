@@ -64,7 +64,7 @@ read_binary_file = function() {
           RGB_colors[currentPixel + 2] = grey_scale_colors[currentColor] / 255;
           currentPixel += 3;
           currentColor++;
-          parser.numParsedPoints = x + y + z;
+          parser.numParsedPoints = currentColor;
         }
       }
     }

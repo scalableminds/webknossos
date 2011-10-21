@@ -12,13 +12,11 @@ import com.mongodb.Mongo
  * To change this template use File | Settings | File Templates.
  */
 
-object UserDb extends MongoIdentifier{
-  val jndiName = "user"
-}
-
 object MongoConfig {
   def init: Unit = {
-    val myMongo = new Mongo("127.0.0.1", 27017)
-    MongoDB.defineDb(DefaultMongoIdentifier, myMongo, "mydb")
+    MongoDB.defineDb(
+      DefaultMongoIdentifier,
+      MongoAddress(MongoHost("127.0.0.1"), "mydb")
+    )
   }
 }

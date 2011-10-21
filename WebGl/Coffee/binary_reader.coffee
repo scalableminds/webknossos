@@ -1,7 +1,7 @@
 read_binary_file = ->
 
 	# COPIED FROM PSAPI.JS::THIS.LOAD
-	newPointCloud = 
+	@newPointCloud = 
 		VBOs: []
 		attributes: {}
 		usingColor: false
@@ -31,6 +31,7 @@ read_binary_file = ->
 	# SPECIFICALLY psapi.js::parseCallback and psapi.js::getParserIndex
 	parser = {}
 	parser.progress = 0
+	parser.numParsedPoints = 0
 	ps.parsers.push parser
 
 	ps.pointClouds.push newPointCloud
@@ -39,7 +40,12 @@ read_binary_file = ->
 	xhr = new XMLHttpRequest()
 	xhr.open "GET", "/BrainFlight/WebGl/Image/z0000/100527_k0563_mag1_x0017_y0017_z0000.raw", true
 	xhr.responseType = "arraybuffer"
-
+	
+	# DEBUG
+	xhr.onprogress = -> ps.println "Progress"
+	xhr.onerror = -> ps.println "Error"
+	xhr.onabort = -> ps.println "Abort"
+	
 	xhr.onload = (e) -> 
 		grey_scale_colors = new Uint8Array(this.response)
 		
@@ -53,10 +59,11 @@ read_binary_file = ->
 		vertices = new Float32Array(numVerts * 3)
 		RGB_colors = new Float32Array(numVerts * 3)
 		currentPixel = 0
+		currentColor = 0
 	
-		for x in [0..127.0] by 0.5
-			for y in [0..127.0] by 0.5
-				for z in [0..1.0] by 0.5
+		for x in [0..12.7] by 0.1
+			for y in [0..12.7] by 0.1
+				for z in [0..12.7] by 0.1
 					# ADD COORDINATES
 					vertices[currentPixel] = x
 					vertices[currentPixel + 1] = y
@@ -64,20 +71,24 @@ read_binary_file = ->
 					
 					# GREY SCALE TO RGB COLOR CONVERTION
 					# R = G = B = GREY SCALE INTEGER
-					RGB_colors[currentPixel] = grey_scale_colors[currentPixel] / 255
-					RGB_colors[currentPixel + 1] =  grey_scale_colors[currentPixel] / 255
-					RGB_colors[currentPixel + 2] = grey_scale_colors[currentPixel] / 255
+					RGB_colors[currentPixel] = grey_scale_colors[currentColor] / 255
+					RGB_colors[currentPixel + 1] =  grey_scale_colors[currentColor] / 255
+					RGB_colors[currentPixel + 2] = grey_scale_colors[currentColor] / 255
 					
-					newPointCloud.numParsedPoints = x+y+z
 					currentPixel += 3
-
+					currentColor++
+					
+					# IMPORTANT STATISTICS (DO NOT DELETE)
+					parser.numParsedPoints = x+y+z
+					
 		# SKIP USING A "TRADITIONAL" POINTSTREAM PARSER AND CALL psapi.js::parseCallback DIRECTLY
 		ps.parseCallback parser, { "ps_Vertex" : vertices, "ps_Color" : RGB_colors }
 		
 		# OTHER POINTSTREAM VALUES / CALLBACKS
-		newPointCloud.numTotalPoints = newPointCloud.numParsedPoints
+		newPointCloud.numTotalPoints = parser.numParsedPoints
 		parser.progress = 1
 		#ps.loadedCallback parser
+		return
 		
-	xhr.send()
+	xhr.send(null)
 	return newPointCloud

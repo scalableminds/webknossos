@@ -38,7 +38,7 @@ read_binary_file = ->
 		
 	# DOWNLOAD FILE
 	xhr = new XMLHttpRequest()
-	xhr.open "GET", "/BrainFlight/WebGl/Image/z0000/100527_k0563_mag1_x0017_y0017_z0000.raw", true
+	xhr.open "GET", "Image/z0000/100527_k0563_mag1_x0017_y0017_z0000.raw", true
 	xhr.responseType = "arraybuffer"
 	
 	# DEBUG

@@ -33,7 +33,7 @@ read_binary_file = function() {
   ps.parsers.push(parser);
   ps.pointClouds.push(newPointCloud);
   xhr = new XMLHttpRequest();
-  xhr.open("GET", "/BrainFlight/WebGl/Image/z0000/100527_k0563_mag1_x0017_y0017_z0000.raw", true);
+  xhr.open("GET", "image/z0000/100527_k0563_mag1_x0017_y0017_z0000.raw", true);
   xhr.responseType = "arraybuffer";
   xhr.onprogress = function() {
     return ps.println("Progress");

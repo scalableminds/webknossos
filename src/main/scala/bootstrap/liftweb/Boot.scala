@@ -43,7 +43,6 @@ class Boot {
      */
     LiftRules.ajaxEnd =
       Full(() => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
-
     LiftRules.early.append(makeUtf8)
 
     LiftRules.loggedInTest = Full(() => User.loggedIn_?)
@@ -52,7 +51,10 @@ class Boot {
      * Register all BinaryDataModels
      */
     ModelStore.register(CubeModel,FrustrumModel)
+    LiftRules.htmlProperties.default.set((r: Req) =>new Html5Properties(r.userAgent))
   }
+
+
 
   /**
    * Force the request to be UTF-8

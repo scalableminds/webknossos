@@ -61,7 +61,7 @@ object CubeModel extends DataModel{
   val id = "cube"
   val yLength = 50
   // calculate all coordinates which are in the Cube boundary
-  val containingCoordinates : IndexedSeq[Tuple3[Int, Int, Int]] =
+  val containingCoordinates =
   for{
     y <- 0 to yLength
     x <- -yLength/2 to yLength/2
@@ -78,7 +78,7 @@ object FrustrumModel extends DataModel{
   // linear equation for the generator of the frustrum
   def generatorEquation(y:Int) = 10+y // -> z = a + b*y
   // calculate all coordinates which are in the frustrum boundary
-  val containingCoordinates : IndexedSeq[Tuple3[Int, Int, Int]] = {
+  val containingCoordinates = {
     val generatorMax = generatorEquation(yLength)
     for{
       y <- 0 to yLength

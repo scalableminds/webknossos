@@ -16,6 +16,8 @@ import java.io.{InputStream, FileInputStream,File}
 object DataStore {
   // defines the maximum count of cached file handles
   val fileBufferLimit = 500
+  // binary data ID
+  val binaryDataID = "100527_k0563_mag1"
   // defines how many file handles are deleted when the limit is reached
   val dropCount = 50
   // try to prevent loading a file multiple times into memory
@@ -40,7 +42,7 @@ object DataStore {
         if(fileBuffer.size>fileBufferLimit)
           fileBuffer.drop(dropCount)
 
-        val br = new FileInputStream("binarydata/x%04d/y%04d/z%04d/100527_k0563_mag1_x%04d_y%04d_z%04d.raw".format(x,y,z,x,y,z))
+        val br = new FileInputStream("binarydata/x%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw".format(x,y,z,binaryDataID,x,y,z))
 
         val b = inputStreamToByteArray(br)
         fileBuffer += (((x, y, z), b))

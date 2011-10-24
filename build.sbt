@@ -10,7 +10,11 @@ scalaVersion := "2.9.1"
 
 seq(webSettings :_*)
 
-jettyScanDirs := Nil 
+seq(jrebelSettings: _*)
+
+jrebel.webLinks <++= webappResources in Compile
+
+//scanDirectories in Compile := Nil 
 
 checksums := Nil
 
@@ -22,19 +26,19 @@ libraryDependencies ++= {
 val liftVersion = "2.4-M4" // Put the current/latest lift version here
 val jettyVersion = "8.0.3.v20111011"
 Seq(
-    "net.databinder" %% "dispatch-google" % "0.7.8",
-    "net.databinder" %% "dispatch-meetup" % "0.7.8", 
     "net.liftweb" %% "lift-webkit" % liftVersion % "compile->default" withSources(),
     "net.liftweb" %% "lift-mapper" % liftVersion % "compile->default",
     "net.liftweb" %% "lift-wizard" % liftVersion % "compile->default",
-    "org.eclipse.jetty" % "jetty-webapp" % jettyVersion % "compile->default;jetty",
-    "org.eclipse.jetty" % "jetty-servlets" % jettyVersion % "jetty",
+    "org.eclipse.jetty" % "jetty-webapp" % jettyVersion % "compile->default;container",
+    "org.eclipse.jetty" % "jetty-servlets" % jettyVersion % "container",
     "ch.qos.logback" % "logback-classic" % "0.9.26",
     "org.scala-tools.testing" %% "specs" % "1.6.9",
 	"com.foursquare" %% "rogue" % "1.0.26" intransitive(),
 	"net.liftweb"    %% "lift-mongodb-record" % liftVersion,
 	"net.liftweb"    %% "lift-mongodb" % liftVersion 
 )}
+
+
 
 
 

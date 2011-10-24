@@ -1,5 +1,7 @@
 resolvers += "Web plugin repo" at "http://siasia.github.com/maven2"    
 
-//Following means libraryDependencies += "com.github.siasia" %% "xsbt-web-plugin" % "0.1.1-<sbt version>""
-//libraryDependencies <+= sbtVersion(v => "com.github.siasia" %% "xsbt-web-plugin" % ("0.1.1-"+v))
-addSbtPlugin("com.github.siasia" % "xsbt-web-plugin" % "0.1.2")
+libraryDependencies <+= sbtVersion(v => "com.github.siasia" %% "xsbt-web-plugin" % (v+"-0.2.6"))
+
+resolvers += "Jawsy.fi M2 releases" at "http://oss.jawsy.fi/maven2/releases"
+
+addSbtPlugin("fi.jawsy.sbtplugins" %% "sbt-jrebel-plugin" % "0.9.0")

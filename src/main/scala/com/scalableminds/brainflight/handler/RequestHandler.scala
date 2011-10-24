@@ -3,6 +3,7 @@ package com.scalableminds.brainflight.handler
 import net.liftweb.http._
 import scala.Predef._
 import net.liftweb.common.Full
+import net.liftweb.json._
 import com.scalableminds.brainflight.binary.{CubeModel, ModelStore}
 
 /**
@@ -18,7 +19,7 @@ object RequestHandler{
     // got a request for binary image data
     // should look like: http://localhost/requestData/cube?px=25&py=0&pz=25&ax=0&ay=0&az=0
     // parameters starting with p define the request point, the ones starting with a define the request axis
-    case Req("requestData" :: modelType :: Nil, _ , GetRequest) => () => {
+    case Req("data" :: modelType :: Nil, _ , _) => () => {
       for {
         px <- S.param("px")  ?~ "You missed to send your request points x."
         py <- S.param("py")  ?~ "You missed to send your request points y."
@@ -49,7 +50,7 @@ object RequestHandler{
     }
     // got a request for a models data
     // should look like: http://localhost/requestModel/cube
-    case Req("requestModel" :: modelType :: Nil, _ , GetRequest) => () => {
+    case Req("model" :: modelType :: Nil, _ , GetRequest) => () => {
       ModelStore(modelType) match {
         case Some(m) => Full(InMemoryResponse(m.modelInformation,
                               List("Content-Type" -> "application/octet-stream"),

@@ -1,11 +1,27 @@
 package com.scalableminds.brainflight
 
-import binary.{DataModel, FrustrumModel, CubeModel, ModelStore}
+import binary._
 import org.specs._
 import net.liftweb._
 import net.liftweb.util._
+import java.io.FileNotFoundException
+
 //class DataModelTest extends JUnit3(DataModelTestSpecs)
 //object DataModelTestSpecsRunner extends ConsoleRunner(DataModelTestSpecs)
+
+object DataStoreTest extends Specification{
+  "DataStore" should {
+    "load Data" in {
+      try{
+        // if this failes the data has changed
+        DataStore.load((0,0,0)) must be equalTo(0.toByte)
+      } catch{
+        case e: FileNotFoundException =>
+          fail("Data not found: Put binary data in e.q. binarydata/x0000/y0000/z0000/100527_k0563_mag1_x0000_y0000_z0000.raw")
+      }
+    }
+  }
+}
 
 object DataModelTestSpecs extends Specification {
   object TestModel extends DataModel{

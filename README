@@ -10,7 +10,8 @@ Project setup:
 - go to project dir and run "sbt"
 
 Useful sbt commands:
-- compile, jetty-run, ~prepare-webapp
+- compile, container:start, container:reload, 
+- if "~" prepends a command e.q. "~compile", sbt waits for source changes to execute the command on the fly
 
 
 

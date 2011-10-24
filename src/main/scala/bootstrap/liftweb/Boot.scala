@@ -19,7 +19,7 @@ class Boot {
     MongoConfig.init
 
     // add our custom dispatcher
-    LiftRules.dispatch.append{RequestHandler.serve}
+    LiftRules.dispatch.append{RequestHandler}
     // where to search snippet
     LiftRules.addToPackages("com.scalableminds.brainflight")
 

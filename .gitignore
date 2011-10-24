@@ -7,3 +7,4 @@ boot/
 lifttemplate.iml
 lifttemplate.ipr
 lifttemplate.iws
+src/main/scala/rebel.xml

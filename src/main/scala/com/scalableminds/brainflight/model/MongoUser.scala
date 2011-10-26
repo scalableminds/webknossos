@@ -52,99 +52,36 @@ trait ProtoUser[T <: ProtoUser[T]] extends MongoRecord[T] with UserIdAsString wi
 */
   def userIdAsString: String = _id.is.toString
 
-  /**
-* The first name field for the User. You can override the behavior
-* of this field:
-* <pre name="code" class="scala">
-* override lazy val firstName = new MyFirstName(this, 32) {
-* println("I am doing something different")
-* }
-* </pre>
-*/
-
-  lazy val firstName: StringField[T] = new MyFirstName(this, 32)
-
-  protected class MyFirstName(obj: T, size: Int) extends StringField(obj, size) {
-    override def displayName = owner.firstNameDisplayName
-    override val fieldId = Some(Text("txtFirstName"))
+  object firstName extends StringField(this,32){
+    override def displayName = ??("first.name")
+  }
+  object lastName extends StringField(this,32){
+    override def displayName = ??("last.name")
   }
 
-  /**
-* The string name for the first name field
-*/
-  def firstNameDisplayName = ??("first.name")
-
-  /**
-* The last field for the User. You can override the behavior
-* of this field:
-* <pre name="code" class="scala">
-* override lazy val lastName = new MyLastName(this, 32) {
-* println("I am doing something different")
-* }
-* </pre>
-*/
-  lazy val lastName: StringField[T] = new MyLastName(this, 32)
-
-  protected class MyLastName(obj: T, size: Int) extends StringField(obj, size) {
-    override def displayName = owner.lastNameDisplayName
-    override val fieldId = Some(Text("txtLastName"))
-  }
-
-  /**
-* The last name string
-*/
-  def lastNameDisplayName = ??("last.name")
-
-  /**
-* The email field for the User. You can override the behavior
-* of this field:
-* <pre name="code" class="scala">
-* override lazy val email = new MyEmail(this, 48) {
-* println("I am doing something different")
-* }
-* </pre>
-*/
-  lazy val email: EmailField[T] = new MyEmail(this, 48)
-
-  protected class MyEmail(obj: T, size: Int) extends EmailField(obj, size) {
+  object email extends EmailField(this, 48) {
     private def valUnique(emailValue: ValueType): List[FieldError] =
     toBoxMyType(emailValue) match {
       case Full(email) => {
         owner.meta.findAll("email", email) match {
-case Nil => Nil
-case usr :: Nil if (usr.id == owner.id) => Empty
-case _ => Text(S.??("unique.email.address"))
-}
+          case Nil => Nil
+          case usr :: Nil if (usr.id == owner.id) => Empty
+          case _ => Text(S.??("unique.email.address"))
+        }
       }
       case _ => Text(S.??("unique.email.address"))
     }
 
-    override def displayName = owner.emailDisplayName
+    override def displayName = ??("email.adress")
     override def validations = valUnique _ :: super.validations
-    override val fieldId = Some(Text("txtEmail"))
   }
 
-  /**
-* The email first name
-*/
-  def emailDisplayName = ??("email.address")
 
-  /**
-* The password field for the User. You can override the behavior
-* of this field:
-* <pre name="code" class="scala">
-* override lazy val password = new MyPassword(this) {
-* println("I am doing something different")
-* }
-* </pre>
-*/
-  lazy val password: MongoPasswordField[T] = new MyPassword(this)
-
-  protected class MyPassword(obj: T) extends MongoPasswordField(obj) {
+  object password extends MongoPasswordField(this) {
 
     private var invalidMatch = false
 
-    override def displayName = owner.passwordDisplayName
+    override def displayName = ??("password")
 
     override def validate: List[FieldError] =
       if(invalidMatch) Text(S.??("passwords.do.not.match"))
@@ -174,20 +111,6 @@ case _ => Text(S.??("unique.email.address"))
       }
   }
 
-  /**
-* The display name for the password field
-*/
-  def passwordDisplayName = ??("password")
-
-  /**
-* The superuser field for the User. You can override the behavior
-* of this field:
-* <pre name="code" class="scala">
-* override lazy val superUser = new MySuperUser(this) {
-* println("I am doing something different")
-* }
-* </pre>
-*/
   lazy val superUser: BooleanField[T] = new MySuperUser(this)
 
   protected class MySuperUser(obj: T) extends BooleanField(obj) {
@@ -342,7 +265,7 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends MongoMeta
 
 
   /**
-* Given an username (probably email address), find the user
+* Given an firstName (probably email address), find the user
 */
   protected def findUserByEmail(email: String): Box[TheUserType] = {
     var searchListHeadOption = meta.findAll(("email" -> email)).headOption
@@ -403,14 +326,12 @@ trait MegaProtoUser[T <: MegaProtoUser[T]] extends ProtoUser[T]{
   self: T =>
 
   /**
-* The has the user been validated.
-* You can override the behavior
-* of this field:
-* <pre name="code" class="scala">
-* override lazy val validated = new MyValidated(this, 32) {
-* println("I am doing something different")
-* }
-* </pre>
+* The user has been validated.
+
+  object validated extends BooleanField(this){
+    override def defaultValue = false
+    override def displayName = ??("validated")
+  }
 */
   lazy val validated: BooleanField[T] = new MyValidated(this)
 
@@ -418,49 +339,19 @@ trait MegaProtoUser[T <: MegaProtoUser[T]] extends ProtoUser[T]{
     override def defaultValue = false
     override val fieldId = Some(Text("txtValidated"))
   }
-
   /**
 * The locale field for the User.
-* You can override the behavior
-* of this field:
-* <pre name="code" class="scala">
-* override lazy val locale = new MyLocale(this, 32) {
-* println("I am doing something different")
-* }
-* </pre>
 */
-  lazy val locale = new MyLocale(this)
-
-  protected class MyLocale(obj: T) extends LocaleField(obj) {
-    override def displayName = owner.localeDisplayName
-    override val fieldId = Some(Text("txtLocale"))
+  object locale extends LocaleField(this) {
+    override def displayName = ??("locale")
   }
 
   /**
 * The time zone field for the User.
-* You can override the behavior
-* of this field:
-* <pre name="code" class="scala">
-* override lazy val timezone = new MyTimeZone(this, 32) {
-* println("I am doing something different")
-* }
-* </pre>
 */
-  lazy val timezone = new MyTimeZone(this)
 
-  protected class MyTimeZone(obj: T) extends TimeZoneField(obj) {
-    override def displayName = owner.timezoneDisplayName
-    override val fieldId = Some(Text("txtTimeZone"))
+  object timezone extends TimeZoneField(this) {
+    override def displayName = ??("time.zone")
+    //override val fieldId = Some(Text("txtTimeZone"))
   }
-
-  /**
-* The string for the timezone field
-*/
-  def timezoneDisplayName = ??("time.zone")
-
-  /**
-* The string for the locale field
-*/
-  def localeDisplayName = ??("locale")
-
 }

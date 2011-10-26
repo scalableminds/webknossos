@@ -17,6 +17,9 @@ import com.scalableminds.brainflight.model.{MongoConfig, User}
 class Boot {
   def boot {
     MongoConfig.init
+    if(!MongoConfig.isMongoRunning){
+      println("No Mongo could be found!exiting....")
+    }
 
     // add our custom dispatcher
     LiftRules.dispatch.append{RequestHandler}

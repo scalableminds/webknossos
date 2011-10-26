@@ -1,7 +1,7 @@
 package com.scalableminds.brainflight.model
 
+import net.liftweb.util._
 import net.liftweb.common._
-import _root_.net.liftweb.mapper._
 
 
 /**
@@ -24,7 +24,6 @@ object User extends User with MetaMegaProtoUser[User] {
 * An O-R mapped "User" class that includes first name, last name, password and we add a "Personal Essay" to it
 */
 class User extends MegaProtoUser[User] {
-  def getSingleton = User
   def meta = User // what's the "meta" server
 
   // define an additional field for a personal essay
@@ -33,4 +32,4 @@ class User extends MegaProtoUser[User] {
 // override def textareaCols = 50
 // override def displayName = "Personal Essay"
 // }
-}
+  }

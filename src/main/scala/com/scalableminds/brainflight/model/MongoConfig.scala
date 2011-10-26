@@ -19,4 +19,14 @@ object MongoConfig {
       MongoAddress(MongoHost("127.0.0.1"), "mydb")
     )
   }
+
+  def isMongoRunning: Boolean = {
+    try {
+      MongoDB.use(DefaultMongoIdentifier) ( db => { db.getLastError } )
+      true
+    }
+    catch {
+      case e => false
+    }
+  }
 }

@@ -1,6 +1,6 @@
 package com.scalableminds.brainflight
 
-import model.ProtoUser
+import model._
 import org.specs.Specification
 import bootstrap.liftweb.Boot
 import net.liftweb.mongodb._
@@ -31,9 +31,7 @@ object MongoTest extends Specification{
       coll.save(doc)
       coll.findOne must_== doc
       coll.remove(doc)
-      val rec = ProtoUser.createRecord.userName("tom").email("tom5@bla.de").password("homo").save
-      //val pk = MyPk.createRecord.keyA("a").keyB("b")
-      //val rec = User.createRecord.id(pk).save
+      //val rec = User.createRecord.userName("tom").email("bla@bla.de").password("homo").save
       })
     }
   }

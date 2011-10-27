@@ -55,9 +55,10 @@ trait ProtoUser[T <: ProtoUser[T]] extends MongoRecord[T] with UserIdAsString wi
   object firstName extends StringField(this,32){
     override def displayName = ??("first.name")
   }
+  /*
   object lastName extends StringField(this,32){
     override def displayName = ??("last.name")
-  }
+  }*/
 
   object email extends EmailField(this, 48) {
     private def valUnique(emailValue: ValueType): List[FieldError] =
@@ -110,24 +111,20 @@ trait ProtoUser[T <: ProtoUser[T]] extends MongoRecord[T] with UserIdAsString wi
         case _ => Full(elem)
       }
   }
-
+  /*
   lazy val superUser: BooleanField[T] = new MySuperUser(this)
 
   protected class MySuperUser(obj: T) extends BooleanField(obj) {
     override def defaultValue = false
+  }*/
+
+  def niceName: String = (firstName.is, email.is) match {
+    case (f, e) if f.length > 1 => f + "("+e+")"
+    case (_, e) => e
   }
 
-  def niceName: String = (firstName.is, lastName.is, email.is) match {
-    case (f, l, e) if f.length > 1 && l.length > 1 => f+" "+l+" ("+e+")"
-    case (f, _, e) if f.length > 1 => f+" ("+e+")"
-    case (_, l, e) if l.length > 1 => l+" ("+e+")"
-    case (_, _, e) => e
-  }
-
-  def shortName: String = (firstName.is, lastName.is) match {
-    case (f, l) if f.length > 1 && l.length > 1 => f+" "+l
-    case (f, _) if f.length > 1 => f
-    case (_, l) if l.length > 1 => l
+  def shortName: String = (firstName.is) match {
+    case (f) if f.length > 1 => f
     case _ => email.is
   }
 
@@ -188,7 +185,7 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends MongoMeta
     /**
 * Return the user's last name
 */
-    def getLastName: String = in.lastName.is
+    def getLastName: String = ""
 
     /**
 * Get the user's email
@@ -197,8 +194,8 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends MongoMeta
 
     /**
 * Is the user a superuser
-*/
-    def superUser_? : Boolean = in.superUser.is
+*/  //TODO: Ugly
+    def superUser_? : Boolean = false
 
     /**
 * Has the user been validated?
@@ -302,20 +299,20 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends MongoMeta
 * The list of fields presented to the user at sign-up
 */
   def signupFields: List[FieldPointerType] = List(firstName,
-                                                  lastName,
+                                     //             lastName,
                                                   email,
-                                                  locale,
-                                                  timezone,
+                                     //             locale,
+                                     //             timezone,
                                                   password)
 
   /**
 * The list of fields presented to the user for editing
 */
   def editFields: List[FieldPointerType] = List(firstName,
-                                                lastName,
-                                                email,
-                                                locale,
-                                                timezone)
+                                      //          lastName,
+                                                email)
+                                      //          locale,
+                                      //          timezone)
 
 }
 /**
@@ -342,16 +339,17 @@ trait MegaProtoUser[T <: MegaProtoUser[T]] extends ProtoUser[T]{
   /**
 * The locale field for the User.
 */
-  object locale extends LocaleField(this) {
-    override def displayName = ??("locale")
-  }
+  //object locale extends LocaleField(this) {
+  //  override def displayName = ??("locale")
+  //}
 
   /**
 * The time zone field for the User.
 */
-
+  /*
   object timezone extends TimeZoneField(this) {
     override def displayName = ??("time.zone")
     //override val fieldId = Some(Text("txtTimeZone"))
   }
+  */
 }

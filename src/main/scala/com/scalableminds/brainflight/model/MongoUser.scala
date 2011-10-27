@@ -73,7 +73,7 @@ trait ProtoUser[T <: ProtoUser[T]] extends MongoRecord[T] with UserIdAsString wi
       case _ => Text(S.??("unique.email.address"))
     }
 
-    override def displayName = ??("email.adress")
+    override def displayName = ??("email.address")
     override def validations = valUnique _ :: super.validations
   }
 

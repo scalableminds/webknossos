@@ -1,0 +1,25 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>Demo</title>
+	<script src="js/libs/modernizr-2.0.6.min.js"></script>
+  <script src="js/libs/pointstream/xbps.js"></script>
+	<script src="js/libs/pointstream/libs/c3.js"></script>
+</head>
+<body>
+	<header></header>
+	<div id="main">	
+		<span id="status"></span><br/>
+		<canvas id="render" height ="400" width="400"></canvas>
+	</div>
+
+	<footer></footer>
+	
+	<script>
+    Modernizr.load({
+      load: ['js/binary_reader.js', 'js/demo.js'],
+      complete: function () { start(); }
+    });
+  </script>
+</body>
+</html>

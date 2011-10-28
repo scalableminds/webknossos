@@ -54,7 +54,7 @@ render = ->
 	ps.render pointcloud
 		
 	# OUTPUT FPS
-	status = document.getElementById('Status')
+	status = document.getElementById('status')
 	status.innerHTML = Math.floor(ps.frameRate) + " FPS <br/> " +  pointcloud.numPoints + " Points" 
 	
 	return

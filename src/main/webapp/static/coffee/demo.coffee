@@ -64,7 +64,7 @@ render = ->
 start = ->		
 	cam = new FreeCam()
 	ps = new PointStream()
-	ps.setup document.getElementById('render'),{"antialias":true}
+	ps.setup document.getElementById('render'), {"antialias":true}
 	
 	ps.background [0.9, 0.9 ,0.9 ,1]
 	ps.pointSize 5

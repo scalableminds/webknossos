@@ -1,33 +1,44 @@
-var Model;
-Model = (function() {
-  var coordinatesModel, model, xhr;
-  model = new EventEmitter();
+var Model, binary_xhr;
+binary_xhr = function(url, callback) {
+  var xhr;
   xhr = new XMLHttpRequest();
-  xhr.open('GET', '/model/cube', true);
+  xhr.open('GET', url, true);
   xhr.responseType = 'arraybuffer';
-  coordinatesModel = null;
   xhr.onload = function() {
     if (this.status === 200) {
-      coordinatesModel = new Int8Array(this.response);
-      return model.emit('initialized');
+      return success(null, this.response);
+    } else {
+      return error(this.responseText);
     }
   };
   xhr.onerror = function(e) {
-    return console.error(e);
+    return error(e);
   };
-  xhr.send();
+  return xhr.send();
+};
+Model = (function() {
+  var coordinatesModel, model;
+  model = new EventEmitter();
+  coordinatesModel = null;
+  binary_xhr("/model/cube", function(err, data) {
+    if (err) {
+      return model.emit('error', err);
+    } else {
+      coordinatesModel = new Int8Array(data);
+      return model.emit('initialized');
+    }
+  });
   model.find = function(point, axis, callback) {
     var find;
     find = function(point, axis, callback) {
-      xhr = new XMLHttpRequest();
-      xhr.open('GET', "/data/cube?px=" + point[0] + "&py=" + point[1] + "&pz=" + point[2] + "&ax=" + axis[0] + "&ay=" + axis[1] + "&az=" + axis[2], true);
-      xhr.responseType = 'arraybuffer';
-      xhr.onload = function() {
-        if (this.status === 200) {
-          return callback(new UInt8Array(this.response));
+      return binary_xhr("/data/cube?px=" + point[0] + "&py=" + point[1] + "&pz=" + point[2] + "&ax=" + axis[0] + "&ay=" + axis[1] + "&az=" + axis[2], function(err, data) {
+        if (err) {
+          model.emit('error', err);
+          return callback(err);
+        } else {
+          return callback(null, new UInt8Array(data));
         }
-      };
-      return xhr.send();
+      });
     };
     if (coordinatesModel != null) {
       return find(point, axis, callback);

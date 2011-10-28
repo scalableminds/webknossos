@@ -63,7 +63,7 @@ read_binary_file = ->
 	
 		for x in [0..12.7] by 0.1
 			for y in [0..12.7] by 0.1
-				for z in [0..12.7] by 0.1
+				for z in [0..0.1] by 0.1
 					# ADD COORDINATES
 					vertices[currentPixel] = x
 					vertices[currentPixel + 1] = y

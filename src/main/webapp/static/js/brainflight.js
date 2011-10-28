@@ -8,7 +8,7 @@ $(function() {
     return canvas.height = _canvas.height();
   }).resize();
   return Modernizr.load({
-    load: ['js/binary_reader.js', 'js/demo.js'],
+    load: ['js/binary_reader.js', 'js/demo.js', 'js/model.js'],
     complete: function() {
       return start();
     }

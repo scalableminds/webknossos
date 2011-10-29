@@ -1,6 +1,7 @@
 Controller = (->
   # actions
- 
+  draw = ->
+    
   
   # mouse events
   

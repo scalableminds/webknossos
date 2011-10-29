@@ -1,34 +1,8 @@
-binary_xhr = (url, callback) ->
-
-  xhr = new XMLHttpRequest()
-  xhr.open('GET', url, true)
-  xhr.responseType = 'arraybuffer'
-  
-  xhr.onload = ->
-    if @status == 200
-      callback(null, @response)
-    else
-      callback(@responseText)
-      
-  xhr.onerror = (e) ->
-    callback(e)
-    
-  xhr.send()
-  
-Math.square = (a) -> a*a
-Math.normalizeVector = (vec) ->
-  
-  length = Math.sqrt(vec.reduce((r, a) -> r + Math.square(a)))
-  if length > 0
-    vec.map((a) -> a / length)
-  else
-    vec
-
 Model = (->
   model = new EventEmitter()
   coordinatesModel = null
   
-  binary_xhr("/model/cube", (err, data) ->
+  binary_request("/model/cube", (err, data) ->
     if err
       model.emit('error', err)
     else
@@ -60,6 +34,7 @@ Model = (->
     a21 = ortho[0] * sinA
     a22 = cosA + Math.square(ortho[2]) * (1 - cosA)
     
+    # 
     output = new Int8Array(new ArrayBuffer(coordinatesModel.byteLength))
     for i in [0...coordinatesModel.length] by 3
       px = coordinatesModel[i]
@@ -75,24 +50,17 @@ Model = (->
     
  
   model.find = (point, axis, callback) ->
-    find = (point, axis, callback) ->
-      
-      binary_xhr(
+    model.wait('initialized', ->
+      binary_request(
         "/data/cube?px=#{point[0]}&py=#{point[1]}&pz=#{point[2]}&ax=#{axis[0]}&ay=#{axis[1]}&az=#{axis[2]}", 
         (err, data) ->
           if err
             model.emit('error', err)
             callback(err)
           else
-            callback(null, new UInt8Array(data))
+            callback(null, new Uint8Array(data))
       )
-
-      
-    if coordinatesModel?
-      find(point, axis, callback)
-    else
-      model.on('initialized', ->
-        find(point, axis, callback)
-      )
+    )
+    
   model
 )()

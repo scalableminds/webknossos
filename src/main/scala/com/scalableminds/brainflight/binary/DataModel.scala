@@ -31,7 +31,8 @@ abstract class DataModel {
 
   def rotateAndMove(moveVector:Tuple3[Int,Int, Int],axis:Tuple3[Int,Int, Int]):IndexedSeq[Tuple3[Int, Int, Int]]={
     // orthogonal vector to (0,1,0) and rotation vector
-    val ortho = (axis._3,0,-axis._1)
+    val ortho = normalizeVector((axis._3,0,-axis._1))
+
     // dot product of (0,1,0) and rotation
     val dotProd = axis._2
     // transformation of dot product for cosA

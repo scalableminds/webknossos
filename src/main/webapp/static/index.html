@@ -1,23 +1,74 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!doctype html>
+<!-- Boilerplate from: http://html5boilerplate.com/ -->
+<html class="no-js" lang="de">
 <head>
-	<title>Test</title>
-	<script src="pointstream/xbps.js"></script>
-	<script src="pointstream/libs/c3.js"></script>
-	
+  <meta charset="utf-8">
+
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <title>Brainflight</title>
+  <meta name="description" content="">
+  <meta name="author" content="Scalable Minds">
+
+  <!-- Mobile viewport optimized: j.mp/bplateviewport -->
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!-- Place favicon.ico and apple-touch-icon.png in the root directory: mathiasbynens.be/notes/touch-icons -->
+
+  <!-- CSS: implied media=all -->
+  <!-- CSS concatenated and minified via ant build script-->
+  <link rel="stylesheet" href="css/style.css">
+  <!-- end CSS-->
+
+  <!-- More ideas for your <head> here: h5bp.com/d/head-Tips -->
+
+  <!-- All JavaScript at the bottom, except for Modernizr / Respond.
+       Modernizr enables HTML5 elements & feature detects; Respond is a polyfill for min/max-width CSS3 Media Queries
+       For optimal performance, use a custom Modernizr build: www.modernizr.com/download/ -->
+  <script src="js/libs/modernizr-2.0.6.min.js"></script>
 </head>
-<body onLoad="start();">
-	<header></header>
-	<div id="main">	
-		<span id="Status"></span><br/>
-		<canvas id="render" height ="400" width="400"></canvas>
-	</div>
 
-	<footer></footer>
-	
-	<script src="js/binary_reader.js"></script>
-	<script src="js/main.js"></script>
+<body>
 
-	
+  <div id="container">
+    <header>
+
+    </header>
+    <div id="main" role="main">
+      <canvas id="render" height ="400" width="400"></canvas>
+    </div>
+    <footer>
+      <div id="status"></div>
+    </footer>
+  </div> <!--! end of #container -->
+
+
+  <!-- JavaScript at the bottom for fast page loading -->
+
+  <script>
+    // http://www.modernizr.com/docs/#load
+    // Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if offline
+    Modernizr.load([
+      {
+        load: '//ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.js',
+        complete: function () {
+          if ( !window.jQuery ) {
+                Modernizr.load('js/libs/jquery-1.6.2.js');
+          }
+        }
+      }]);
+    
+    Modernizr.load({
+      test: Modernizr.webgl,
+      yep: ['js/libs/pointstream/xbps.js','js/libs/pointstream/libs/c3.js','js/libs/event_emitter-3.0.0.min.js','js/brainflight.js'],
+      nope: function () { alert("Sorry dude, you need WebGL for this. Get Chrome or Firefox."); }
+    });  
+  </script>
+
+  <!--[if lt IE 10 ]>
+    <script src="//ajax.googleapis.com/ajax/libs/chrome-frame/1.0.3/CFInstall.min.js"></script>
+    <script>window.attachEvent('onload',function(){CFInstall.check({mode:'overlay'})})</script>
+  <![endif]-->
+  
 </body>
 </html>

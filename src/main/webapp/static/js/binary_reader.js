@@ -55,7 +55,7 @@ read_binary_file = function() {
     currentColor = 0;
     for (x = 0; 0 <= 12.7 ? x <= 12.7 : x >= 12.7; x += 0.1) {
       for (y = 0; 0 <= 12.7 ? y <= 12.7 : y >= 12.7; y += 0.1) {
-        for (z = 0; 0 <= 12.7 ? z <= 12.7 : z >= 12.7; z += 0.1) {
+        for (z = 0; 0 <= 0.1 ? z <= 0.1 : z >= 0.1; z += 0.1) {
           vertices[currentPixel] = x;
           vertices[currentPixel + 1] = y;
           vertices[currentPixel + 2] = z;

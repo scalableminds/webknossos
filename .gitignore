@@ -1,6 +1,6 @@
 .history
 target/
-binaryData/
+binarydata/
 boot/
 *.db
 *.class

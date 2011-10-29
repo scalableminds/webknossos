@@ -37,6 +37,15 @@ class Boot {
 
     LiftRules.setSiteMap(SiteMap(entries:_*))
 
+    // exclude lift ajax files for flight simulator
+    LiftRules.autoIncludeAjax = (session =>
+      S.request match {
+        case Full(Req("static" :: "index" :: Nil,_,_)) =>
+          false
+        case _ =>
+          true
+      })
+
     /*
      * Show the spinny image when an Ajax call starts
      */

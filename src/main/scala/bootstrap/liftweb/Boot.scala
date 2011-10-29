@@ -27,14 +27,15 @@ class Boot {
     // where to search snippet
     LiftRules.addToPackages("com.scalableminds.brainflight")
 
-    // Build SiteMap
-    def sitemap() = SiteMap(
-      Menu("Home") / "index" >> User.AddUserMenusAfter, // Simple menu form
-      // Menu with special Link
-      Menu(Loc("Static", Link(List("static"), true, "/static/index"), 
-	       "Static Content")))
+    LiftRules.resourceNames = "stringTranslations" :: Nil
 
-    LiftRules.setSiteMapFunc(() => User.sitemapMutator(sitemap()))
+    // Build SiteMap
+    val entries = Menu(Loc("Home", List("index"), "Home")) ::
+    Menu(Loc("Static", Link(List("static"), true, "/static/index"),
+      "Static Content")) ::
+    User.sitemap
+
+    LiftRules.setSiteMap(SiteMap(entries:_*))
 
     /*
      * Show the spinny image when an Ajax call starts

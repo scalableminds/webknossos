@@ -27,7 +27,7 @@ read_obj_file = ->
 	
 	# DOWNLOAD FILE
 	xhr = new XMLHttpRequest()
-	xhr.open "GET", "pointstream/clouds/albatross.obj"
+	xhr.open "GET", "js/libs/pointstream/clouds/albatross.obj"
 	xhr.responseType = "text"
 	
 	# CONSTANTS FOR cube.obj

@@ -17,7 +17,7 @@ read_obj_file = function() {
   };
   ps.meshes.push(new3DMesh);
   xhr = new XMLHttpRequest();
-  xhr.open("GET", "pointstream/clouds/albatross.obj");
+  xhr.open("GET", "js/libs/pointstream/clouds/albatross.obj");
   xhr.responseType = "text";
   numVerts = 20000;
   numFaces = 15830;

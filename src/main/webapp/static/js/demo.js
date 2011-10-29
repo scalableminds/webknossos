@@ -1,6 +1,7 @@
-var cam, keyDown, mouseDown, mousePressed, mouseReleased, pointcloud, ps, render, start;
+var cam, keyDown, mesh, mouseDown, mousePressed, mouseReleased, pointcloud, ps, render, start;
 ps = void 0;
 pointcloud = void 0;
+mesh = void 0;
 cam = void 0;
 mouseDown = false;
 mousePressed = function() {
@@ -10,7 +11,6 @@ mouseReleased = function() {
   return mouseDown = false;
 };
 keyDown = function() {
-  ps.println(ps.key);
   switch (ps.key) {
     case 119:
       cam.pos = V3.add(cam.pos, V3.scale(cam.dir, 0.2));
@@ -26,7 +26,7 @@ keyDown = function() {
   }
 };
 render = function() {
-  var h, status, y;
+  var h, y;
   if (mouseDown) {
     y = -(ps.mouseX - ps.width / 2) / ps.width / 45;
     cam.yaw(y);
@@ -36,8 +36,7 @@ render = function() {
   ps.loadMatrix(M4x4.makeLookAt(cam.pos, V3.add(cam.dir, cam.pos), cam.up));
   ps.clear();
   ps.render(pointcloud);
-  status = document.getElementById('status');
-  status.innerHTML = Math.floor(ps.frameRate) + " FPS <br/> " + pointcloud.numPoints + " Points";
+  ps.renderMesh(mesh);
 };
 start = function() {
   cam = new FreeCam();
@@ -52,4 +51,5 @@ start = function() {
   ps.onMouseReleased = mouseReleased;
   ps.onKeyDown = keyDown;
   pointcloud = read_binary_file();
+  mesh = read_obj_file();
 };

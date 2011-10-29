@@ -6,15 +6,31 @@ binary_xhr = function(url, callback) {
   xhr.responseType = 'arraybuffer';
   xhr.onload = function() {
     if (this.status === 200) {
-      return success(null, this.response);
+      return callback(null, this.response);
     } else {
-      return error(this.responseText);
+      return callback(this.responseText);
     }
   };
   xhr.onerror = function(e) {
-    return error(e);
+    return callback(e);
   };
   return xhr.send();
+};
+Math.square = function(a) {
+  return a * a;
+};
+Math.normalizeVector = function(vec) {
+  var length;
+  length = Math.sqrt(vec.reduce(function(r, a) {
+    return r + Math.square(a);
+  }));
+  if (length > 0) {
+    return vec.map(function(a) {
+      return a / length;
+    });
+  } else {
+    return vec;
+  }
 };
 Model = (function() {
   var coordinatesModel, model;
@@ -28,6 +44,32 @@ Model = (function() {
       return model.emit('initialized');
     }
   });
+  model.rotateAndMove = function(moveVector, axis, callback) {
+    var a00, a01, a02, a10, a11, a12, a20, a21, a22, cosA, dotProd, i, ortho, output, px, py, pz, sinA, _ref;
+    ortho = Math.normalizeVector([axis[2], 0, -axis[0]]);
+    dotProd = axis[1];
+    cosA = dotProd / Math.sqrt(Math.square(axis[0]) + Math.square(axis[1]) + Math.square(axis[2]));
+    sinA = Math.sqrt(1 - Math.square(cosA));
+    a00 = cosA + Math.square(ortho[0]) * (1 - cosA);
+    a01 = -ortho[2] * sinA;
+    a02 = ortho[0] * ortho[2] * (1 - cosA);
+    a10 = ortho[2] * sinA;
+    a11 = cosA;
+    a12 = -ortho[0] * sinA;
+    a20 = ortho[0] * ortho[2] * (1 - cosA);
+    a21 = ortho[0] * sinA;
+    a22 = cosA + Math.square(ortho[2]) * (1 - cosA);
+    output = new Int8Array(new ArrayBuffer(coordinatesModel.byteLength));
+    for (i = 0, _ref = coordinatesModel.length; i < _ref; i += 3) {
+      px = coordinatesModel[i];
+      py = coordinatesModel[i + 1];
+      pz = coordinatesModel[i + 2];
+      output[i] = Math.round(moveVector[0] + (a00 * px + a01 * py + a02 * pz));
+      output[i + 1] = Math.round(moveVector[1] + (a10 * px + a11 * py + a12 * pz));
+      output[i + 2] = Math.round(moveVector[2] + (a20 * px + a21 * py + a22 * pz));
+    }
+    return callback(output);
+  };
   model.find = function(point, axis, callback) {
     var find;
     find = function(point, axis, callback) {

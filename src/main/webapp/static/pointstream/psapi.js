@@ -49,10 +49,12 @@ var PointStream = (function() {
     // has a point cloud it works with
     var parsers = [];
     var pointClouds = [];
+	var meshes = [];
 	
 	this.parsers = parsers;
 	this.pointClouds = pointClouds;
-    
+    this.meshes = meshes;
+	
     var registeredParsers = {};
     registeredParsers["asc"] = ASCParser;
     registeredParsers["psi"] = PSIParser;
@@ -312,7 +314,19 @@ var PointStream = (function() {
         return obj;
       }
     }
+	this.createBufferObject = createBufferObject;
     
+	function createElementBufferObject(arr){
+      // !! add check for length > 0
+      if(ctx){
+        var VBO = ctx.createBuffer();
+        ctx.bindBuffer(ctx.ELEMENT_ARRAY_BUFFER, VBO);
+        ctx.bufferData(ctx.ELEMENT_ARRAY_BUFFER, arr, ctx.STATIC_DRAW);
+        
+		return VBO;
+		}
+    }
+	this.createElementBufferObject = createElementBufferObject;	
     /**
       @private
       
@@ -1233,7 +1247,59 @@ var PointStream = (function() {
         }
       }
     };
-    
+    /**
+	  Renders a 3D Mesh
+	  @param {} mesh
+	*/
+	this.renderMesh = function(mesh){
+		if(ctx){
+		
+        var topMatrix = this.peekMatrix();
+        normalMatrix = M4x4.inverseOrthonormal(topMatrix);
+ 
+        if(ctx.getUniformLocation(currProgram, "ps_NormalMatrix") !== null){
+          uniformMatrix(currProgram, "ps_NormalMatrix", false, M4x4.transpose(normalMatrix));
+        }
+        uniformMatrix(currProgram, "ps_ModelViewMatrix", false, topMatrix);
+        
+        // Get the list of semantic names.
+        var semantics = Object.keys(mesh.attributes);
+
+        var firstSemantic = semantics[0];
+        
+        // We need at least positional data.
+        if(mesh.attributes[firstSemantic]){
+
+          var arrayOfBufferObjsV = mesh.attributes[firstSemantic];
+
+          // Iterate over all the vertex buffer objects.
+          for(var currVBO = 0; currVBO < arrayOfBufferObjsV.length; currVBO++){
+            // iterate over all the semantic names "ps_Vertex", "ps_Normal", etc.
+            for(name in semantics){
+              if(mesh.attributes[semantics[name]][currVBO]){
+
+                if(ctx.getAttribLocation(currProgram, semantics[name]) !== -1){				
+                  vertexAttribPointer(currProgram, semantics[name], 3, mesh.attributes[semantics[name]][currVBO].VBO);
+                }
+              }
+            }
+			ctx.bindBuffer(ctx.ELEMENT_ARRAY_BUFFER, mesh.facesIndex);
+			
+			ctx.drawElements(ctx.TRIANGLES, mesh.facesIndexCount, ctx.UNSIGNED_SHORT, 0);
+            //ctx.drawArrays(ctx.TRIANGLES, 0, arrayOfBufferObjsV[currVBO].length/3);
+            
+            // If we render a point cloud with vertices and colors, then 
+            // another one with only vertices, this may cause issues if we
+            // don't disabled all the current attributes after each draw.
+            for(var name in semantics){
+              disableVertexAttribPointer(currProgram, semantics[name]);
+            }
+            
+          }
+        }
+      }
+    };
+	
     /**
       Renders a point cloud.
       @param {} pointCloud

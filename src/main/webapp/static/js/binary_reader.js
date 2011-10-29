@@ -35,15 +35,6 @@ read_binary_file = function() {
   xhr = new XMLHttpRequest();
   xhr.open("GET", "image/z0000/100527_k0563_mag1_x0017_y0017_z0000.raw", true);
   xhr.responseType = "arraybuffer";
-  xhr.onprogress = function() {
-    return ps.println("Progress");
-  };
-  xhr.onerror = function() {
-    return ps.println("Error");
-  };
-  xhr.onabort = function() {
-    return ps.println("Abort");
-  };
   xhr.onload = function(e) {
     var RGB_colors, currentColor, currentPixel, dimensions, grey_scale_colors, numVerts, vertices, x, y, z;
     grey_scale_colors = new Uint8Array(this.response);

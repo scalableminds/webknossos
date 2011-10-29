@@ -41,16 +41,11 @@ read_binary_file = ->
 	xhr.open "GET", "image/z0000/100527_k0563_mag1_x0017_y0017_z0000.raw", true
 	xhr.responseType = "arraybuffer"
 	
-	# DEBUG
-	xhr.onprogress = -> ps.println "Progress"
-	xhr.onerror = -> ps.println "Error"
-	xhr.onabort = -> ps.println "Abort"
-	
 	xhr.onload = (e) -> 
 		grey_scale_colors = new Uint8Array(this.response)
 		
 		# HEIGHT, WIDTH, DEPTH of block
-		#dimensions = Math.pow grey_scale_colors.length, 1/3
+		# dimensions = Math.pow grey_scale_colors.length, 1/3
 		dimensions = 128
 		
 		numVerts = grey_scale_colors.length

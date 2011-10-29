@@ -12,7 +12,7 @@
 /*jsl:import psapi.js*/
 
 /*
-*/
+
 var ps_include = function(path){
   var lastScript = document.getElementsByTagName("head")[0].lastChild;
   var fullUrl = lastScript.src.substring(0, lastScript.src.lastIndexOf('/') + 1) + path;
@@ -31,3 +31,14 @@ ps_include('./parsers/pts.js');
 ps_include('./parsers/ply.js');
 ps_include('./parsers/hps0.js');
 ps_include('./parsers/psi2.js');
+*/
+Modernizr.load([
+  'js/libs/pointstream/psapi.js',
+  'js/libs/pointstream/libs/mjs.js',
+  'js/libs/pointstream/parsers/asc.js',
+  'js/libs/pointstream/parsers/psi.js',
+  'js/libs/pointstream/parsers/pts.js',
+  'js/libs/pointstream/parsers/ply.js',
+  'js/libs/pointstream/parsers/hps0.js',
+  'js/libs/pointstream/parsers/psi2.js'
+]);

@@ -36,7 +36,7 @@ render = function() {
   ps.loadMatrix(M4x4.makeLookAt(cam.pos, V3.add(cam.dir, cam.pos), cam.up));
   ps.clear();
   ps.render(pointcloud);
-  status = document.getElementById('Status');
+  status = document.getElementById('status');
   status.innerHTML = Math.floor(ps.frameRate) + " FPS <br/> " + pointcloud.numPoints + " Points";
 };
 start = function() {

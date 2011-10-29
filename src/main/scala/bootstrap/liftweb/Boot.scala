@@ -17,6 +17,10 @@ import com.scalableminds.brainflight.model.{MongoConfig, User}
 class Boot {
   def boot {
     MongoConfig.init
+    if(!MongoConfig.isMongoRunning){
+      println("No Mongo could be found!exiting....")
+      sys.exit()
+    }
 
     // add our custom dispatcher
     LiftRules.dispatch.append{RequestHandler}
@@ -53,7 +57,6 @@ class Boot {
     ModelStore.register(CubeModel,FrustrumModel)
     LiftRules.htmlProperties.default.set((r: Req) =>new Html5Properties(r.userAgent))
   }
-
 
 
   /**

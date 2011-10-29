@@ -1,7 +1,6 @@
 # GLOBAL VARIABLES
 ps = undefined
 pointcloud = undefined
-mesh = undefined
 cam = undefined
 mouseDown = false
 
@@ -13,6 +12,7 @@ mouseReleased = ->
 	mouseDown = false
 
 keyDown = ->
+	ps.println ps.key
 	switch ps.key
 		# W --> MOVE FORWARD
 		when 119 
@@ -51,12 +51,10 @@ render = ->
 	
 	# Render the Pointcloud
 	ps.clear()
-	#ps.render pointcloud
-	
-	ps.renderMesh mesh
+	ps.render pointcloud
 		
 	# OUTPUT FPS
-	status = document.getElementById('Status')
+	status = document.getElementById('status')
 	status.innerHTML = Math.floor(ps.frameRate) + " FPS <br/> " +  pointcloud.numPoints + " Points" 
 	
 	return
@@ -66,7 +64,7 @@ render = ->
 start = ->		
 	cam = new FreeCam()
 	ps = new PointStream()
-	ps.setup document.getElementById('render'),{"antialias":true}
+	ps.setup document.getElementById('render'), {"antialias":true}
 	
 	ps.background [0.9, 0.9 ,0.9 ,1]
 	ps.pointSize 5
@@ -78,7 +76,4 @@ start = ->
 	
 	# axis = ps.load "Pointstream/clouds/axis.asc"
 	pointcloud = read_binary_file()  #ps.load "Pointstream/clouds/lion.psi" 
-	
-	mesh = read_obj_file()
-	
 	return

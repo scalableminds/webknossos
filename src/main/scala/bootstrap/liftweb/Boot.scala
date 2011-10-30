@@ -30,12 +30,14 @@ class Boot {
     LiftRules.resourceNames = "stringTranslations" :: Nil
 
     // Build SiteMap
-    val entries = Menu(Loc("Home", List("index"), "Home")) ::
+    def entries = Menu(Loc("Home", List("index"), "Home")) ::
     Menu(Loc("Static", Link(List("static"), true, "/static/index"),
       "Static Content")) ::
     User.sitemap
 
-    LiftRules.setSiteMap(SiteMap(entries:_*))
+    println(LiftRules.siteMap)
+
+    LiftRules.setSiteMapFunc(()=>SiteMap(entries:_*))
 
     // exclude lift ajax files for flight simulator
     LiftRules.autoIncludeAjax = (session =>

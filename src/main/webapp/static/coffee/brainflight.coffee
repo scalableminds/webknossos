@@ -7,7 +7,6 @@ $ ->
   ).resize()
   
   Modernizr.load 
-    # load: ['js/model.js']
     load: [
       "js/binary_reader.js",
       "js/obj_reader.js",

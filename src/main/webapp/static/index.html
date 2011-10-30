@@ -9,7 +9,7 @@
 
   <title>Brainflight</title>
   <meta name="description" content="">
-  <meta name="author" content="">
+  <meta name="author" content="Scalable Minds">
 
   <!-- Mobile viewport optimized: j.mp/bplateviewport -->
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -48,31 +48,25 @@
 
   <script>
     // http://www.modernizr.com/docs/#load
-    Modernizr.load([
-      {
-        // Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if offline
-        load: "//ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js",
-        complete: function () {
-          if ( !window.jQuery )
-            Modernizr.load('js/libs/jquery-1.6.1.min.js');
-        }
-      },
-      {
-        test: Modernizr.webgl,
-        yep: [
-          "js/libs/pointstream/xbps.js",
-          "js/libs/pointstream/libs/c3.js",
-          "js/brainflight.js"
-        ],
-        nope: function () { alert( "Sorry dude, you need WebGL for this. Get Chrome or Firefox."); }
+    Modernizr.load({
+      // Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if offline
+      load: "//ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js",
+      complete: function () {
+        if ( !window.jQuery )
+          Modernizr.load('js/libs/jquery-1.6.1.min.js');
       }
-    ]);
+    });
+    
+    if (Modernizr.webgl)
+      Modernizr.load([
+        "js/libs/pointstream/xbps.js",
+        "js/libs/pointstream/libs/c3.js",
+        "js/brainflight.js"
+      ]);
+    else
+      alert( "Sorry dude, you need WebGL for this. Get Chrome or Firefox." );
+      
   </script>
-  <!--  -->
-  
-  
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
-  <script></script>
 	
   <!-- Prompt IE 6 users to install Chrome Frame. Remove this if you want to support IE 6.
        chromium.org/developers/how-tos/chrome-frame-getting-started -->

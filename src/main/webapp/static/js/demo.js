@@ -26,7 +26,7 @@ keyDown = function() {
   }
 };
 render = function() {
-  var h, y;
+  var h, status, y;
   if (mouseDown) {
     y = -(ps.mouseX - ps.width / 2) / ps.width / 45;
     cam.yaw(y);
@@ -37,6 +37,8 @@ render = function() {
   ps.clear();
   ps.render(pointcloud);
   ps.renderMesh(mesh);
+  status = document.getElementById('status');
+  status.innerHTML = Math.floor(ps.frameRate) + " FPS <br/> " + pointcloud.numPoints + " Points";
 };
 start = function() {
   cam = new FreeCam();

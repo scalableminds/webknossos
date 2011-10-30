@@ -33,10 +33,12 @@ Seq(
     "org.eclipse.jetty" % "jetty-webapp" % jettyVersion % "compile->default;container",
     "org.eclipse.jetty" % "jetty-servlets" % jettyVersion % "container;test",
     "ch.qos.logback" % "logback-classic" % "0.9.26",
-    "org.scala-tools.testing" %% "specs" % "1.6.9",
-	"com.foursquare" %% "rogue" % "1.0.26" intransitive(),
-	"net.liftweb"    %% "lift-mongodb-record" % liftVersion,
-	"net.liftweb"    %% "lift-mongodb" % liftVersion 
+    //"org.scala-tools.testing" %% "specs" % "1.6.9",
+    "org.specs2" %% "specs2" % "1.6.1",
+    "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test",
+	  "com.foursquare" %% "rogue" % "1.0.26" intransitive(),
+	  "net.liftweb"    %% "lift-mongodb-record" % liftVersion,
+	  "net.liftweb"    %% "lift-mongodb" % liftVersion
 )}
 
 

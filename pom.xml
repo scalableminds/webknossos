@@ -100,12 +100,23 @@
       <version>4.7</version>
       <scope>test</scope>
     </dependency>
-    <dependency>
+    <!--<dependency>
       <groupId>org.scala-tools.testing</groupId>
       <artifactId>specs_2.9.1</artifactId>
       <version>1.6.9</version>
       <scope>test</scope>
-    </dependency>
+    </dependency>-->
+      <dependency>
+   <groupId>org.specs2</groupId>
+   <artifactId>specs2_2.9.1</artifactId>
+   <version>1.6.1</version>
+ </dependency>
+
+ <dependency>
+   <groupId>org.specs2</groupId>
+   <artifactId>specs2-scalaz-core_2.9.1</artifactId>
+   <version>6.0.1</version>
+ </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-webapp</artifactId>

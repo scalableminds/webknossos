@@ -24,13 +24,14 @@ libraryDependencies += "junit" % "junit" % "4.8" % "test"
 // Add multiple dependencies
 libraryDependencies ++= {
 val liftVersion = "2.4-M4" // Put the current/latest lift version here
-val jettyVersion = "8.0.3.v20111011"
+val jettyVersion = "7.5.4.v20111024"//"8.0.3.v20111011"
 Seq(
     "net.liftweb" %% "lift-webkit" % liftVersion % "compile->default" withSources(),
     "net.liftweb" %% "lift-mapper" % liftVersion % "compile->default",
     "net.liftweb" %% "lift-wizard" % liftVersion % "compile->default",
+    "net.liftweb" %% "lift-testkit" % liftVersion % "test",
     "org.eclipse.jetty" % "jetty-webapp" % jettyVersion % "compile->default;container",
-    "org.eclipse.jetty" % "jetty-servlets" % jettyVersion % "container",
+    "org.eclipse.jetty" % "jetty-servlets" % jettyVersion % "container;test",
     "ch.qos.logback" % "logback-classic" % "0.9.26",
     "org.scala-tools.testing" %% "specs" % "1.6.9",
 	"com.foursquare" %% "rogue" % "1.0.26" intransitive(),

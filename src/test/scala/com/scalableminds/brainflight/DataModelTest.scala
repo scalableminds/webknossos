@@ -1,7 +1,7 @@
 package com.scalableminds.brainflight
 
 import binary._
-import org.specs._
+import org.specs2.mutable.Specification
 import net.liftweb._
 import net.liftweb.util._
 import java.io.FileNotFoundException
@@ -9,7 +9,7 @@ import java.io.FileNotFoundException
 //class DataModelTest extends JUnit3(DataModelTestSpecs)
 //object DataModelTestSpecsRunner extends ConsoleRunner(DataModelTestSpecs)
 
-object DataStoreTest extends Specification{
+class DataStoreTest extends Specification{
   "DataStore" should {
     "load Data" in {
       try{
@@ -17,13 +17,13 @@ object DataStoreTest extends Specification{
         DataStore.load((0,0,0)) must be equalTo(0.toByte)
       } catch{
         case e: FileNotFoundException =>
-          fail("Data not found: Put binary data in e.q. binarydata/x0000/y0000/z0000/100527_k0563_mag1_x0000_y0000_z0000.raw")
+          ko("Data not found: Put binary data in e.q. binarydata/x0000/y0000/z0000/100527_k0563_mag1_x0000_y0000_z0000.raw")
       }
     }
   }
 }
 
-object DataModelTestSpecs extends Specification {
+class DataModelTestSpecs extends Specification {
   object TestModel extends DataModel{
     val id = "testModel"
     val yLength = 2
@@ -43,8 +43,10 @@ object DataModelTestSpecs extends Specification {
       ModelStore.models.size must be equalTo 1
     }
     "match Cube id" in {
-      ModelStore(TestModel.id) must be like{
-        case Some(_) => true
+      ModelStore.register(TestModel)
+      ModelStore(TestModel.id) must beLike{
+        case Some(_) => ok
+        case _ => ko
       }
     }
   }

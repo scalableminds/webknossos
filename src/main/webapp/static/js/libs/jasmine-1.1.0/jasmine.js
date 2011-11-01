@@ -1637,6 +1637,9 @@ jasmine.PrettyPrinter.prototype.format = function(value) {
       value.__Jasmine_been_here_before__ = true;
       if (jasmine.isArray_(value)) {
         this.emitArray(value);
+      } else if (/\[object [A-Za-z0-9]+Array\]/.test(Object.prototype.toString.apply(new Int8Array()))) {
+        // TypedArray
+        this.emitArray(value);
       } else {
         this.emitObject(value);
       }

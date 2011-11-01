@@ -35,7 +35,7 @@ Model = (function() {
       output[i + 1] = Math.round(moveVector[1] + (a10 * px + a11 * py + a12 * pz));
       output[i + 2] = Math.round(moveVector[2] + (a20 * px + a21 * py + a22 * pz));
     }
-    return callback(output);
+    return setTimeout(callback(output), 1);
   };
   model.find = function(point, axis, callback) {
     return model.wait('initialized', function() {
@@ -49,5 +49,15 @@ Model = (function() {
       });
     });
   };
+  if (TEST) {
+    model.__test = {
+      setCoordinatesModel: function(a) {
+        return coordinatesModel = a;
+      },
+      getCoordinatesModel: function() {
+        return coordinatesModel;
+      }
+    };
+  }
   return model;
 })();

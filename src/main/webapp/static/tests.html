@@ -1,0 +1,49 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Brainflight Spec Runner</title>
+
+  <link rel="shortcut icon" type="image/png" href="js/libs/jasmine-1.1.0/jasmine_favicon.png" />
+
+  <link rel="stylesheet" type="text/css" href="js/libs/jasmine-1.1.0/jasmine.css" />
+  <script type="text/javascript" src="js/libs/jasmine-1.1.0/jasmine.js"></script>
+  <script type="text/javascript" src="js/libs/jasmine-1.1.0/jasmine-html.js"></script>
+  <script src="js/libs/modernizr-2.0.6.min.js"></script>
+ 
+  
+  <script type="text/javascript">
+    var TEST = true;
+    var seed = function () { return Math.round(Math.random() * 1000000); }
+    
+    Modernizr.load({
+      load: [
+        'js/spec/spec_helper.js',
+        'js/spec/binary_request.js',
+        'js/spec/model.js',
+        'js/core_ext.js',
+        'js/event_emitter.js',
+        'js/binary_request.js',
+        'js/model.js'
+      ],
+      complete: function() {
+        var jasmineEnv = jasmine.getEnv();
+        jasmineEnv.updateInterval = 1000;
+
+        var trivialReporter = new jasmine.TrivialReporter();
+
+        jasmineEnv.addReporter(trivialReporter);
+
+        jasmineEnv.specFilter = function(spec) {
+          return trivialReporter.specFilter(spec);
+        };
+
+        jasmineEnv.execute();
+      }
+    });
+  </script>
+
+</head>
+
+<body>
+</body>
+</html>

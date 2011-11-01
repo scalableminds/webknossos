@@ -35,14 +35,12 @@ class Boot {
       "Static Content")) ::
     User.sitemap
 
-    println(LiftRules.siteMap)
-
     LiftRules.setSiteMapFunc(()=>SiteMap(entries:_*))
 
     // exclude lift ajax files for flight simulator
     LiftRules.autoIncludeAjax = (session =>
       S.request match {
-        case Full(Req("static" :: "index" :: Nil,_,_)) =>
+        case Full(Req("static" :: _,_,_)) =>
           false
         case _ =>
           true

@@ -13,5 +13,11 @@ Useful sbt commands:
 - compile, container:start, container:reload, 
 - if "~" prepends a command e.q. "~compile", sbt waits for source changes to execute the command on the fly
 
-
-
+Mongodb:
+install Mongodb (get the production release from mongodb.org)
+unpack (tar -xvf mongo(...).tgz)
+move (sudo mv mongo(...) /usr/local/mongodb)
+set environment (sudo vim /etc/environment ; append /usr/local/mongodb/bin to path)
+logout and login again to reload environment
+set up database dir (create (your path)/data/db where you want to save your database)
+start mongo: mongod --dbpath (your path)

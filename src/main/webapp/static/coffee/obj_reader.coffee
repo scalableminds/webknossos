@@ -9,7 +9,7 @@ read_obj_file = ->
 	
 	@new3DMesh =
 		VBOs: []
-		usingColor: false
+		usingColor: true
 		addedVertices: [ 0, 0, 0 ]
 		 
 		center: [ 0, 0, 0 ]
@@ -27,20 +27,24 @@ read_obj_file = ->
 	
 	# DOWNLOAD FILE
 	xhr = new XMLHttpRequest()
-	xhr.open "GET", "js/libs/pointstream/clouds/albatross.obj"
+	xhr.open "GET", "js/libs/pointstream/clouds/F16-lowpoly.obj"
 	xhr.responseType = "text"
 	
 	# CONSTANTS FOR cube.obj
 	# NEEDS TO EVALUATED AUTOMATICALLY
 	
-	numVerts = 20000
+	numVerts = 50250
 	numFaces = 15830
-	numNorms = 20000
+	numNorms = 30000
+	
+	SOMECOLORS = [
+		[0.7, 0.7, 0.7],[0.8, 0.3, 0.2],[0.3, 0.6, 0.4],[0.3, 0.3, 0.3],[0.5, 0.5, 0.9],[0.9, 0.9, 0.6],[0.5, 0.5, 0.5],[0.7, 0.9, 0.7],[0.4, 0.9, 0.4],[0.9, 0.5, 0.6],[0.7, 0.2, 0.2],[0.3, 0.4, 0.5]		]
 	
 	xhr.onload = (e) ->	
 	
 		# OBJ MESH VALUES
 		vertices = new Float32Array(numVerts * 3)
+		colors = new Float32Array(numVerts * 3)
 		faces = new Uint16Array(numFaces * 3)
 		normals = new Float32Array(numNorms * 3)
 		normalsPointer = new Float32Array(numFaces * 3)
@@ -51,37 +55,68 @@ read_obj_file = ->
 		currentVert = 0
 		currentNorm = 0
 		currentFace = 0
+		currentColor = -1
 	
 		for line in lines	
+			# HANDLE SUBGROUPS
+			if line.indexOf("g") is 0
+				# TODO
+				# FOR RIGTH NOW LETS HAVE SOME FUN WITH COLORS
+				if currentColor < 11
+					currentColor++
+				else
+					currentColor = 0
+					
 			# HANDLE NORMALS
 			if line.indexOf("vn") is 0
 				norms = line.split RegExp " +"
 				for i in [1...norms.length]
 					normals[currentNorm + i - 1] = parseFloat norms[i]
 				currentNorm += 3
+				
 			# HANDLE TEXTTURES
 			else if line.indexOf("vt") is 0
-				# BLUB
+				# TODO
 				
 			# HANDLE VERTICES	
 			else if line.indexOf("v") is 0
 				verts = line.split RegExp " +"
 				for i in [1...verts.length]
 					vertices[currentVert + i - 1] = parseFloat verts[i]
+					colors[currentVert + i - 1] = SOMECOLORS[currentColor][i]
 				currentVert += 3
 			# ASSOCIATE FACES TO VERTICES AND NORMALS
-			# SUBTRACT 1 BECAUSE BUFFER INDEX START AT 0
+			# SUBTRACT 1 BECAUSE BUFFER INDEX STARTS AT 0
 			else if line.indexOf("f") is 0
 				fac = line.split RegExp " +"
-				for i in [1...fac.length]
-					# VERTEX INDEX
-					faces[currentFace + i - 1] = parseFloat fac[i].split( "/")[0] - 1
-					# NORMAL INDEX
-					normalsPointer[currentFace + i - 1] = parseFloat fac[i].split( "/")[2] - 1
-				currentFace += 3
+				
+				# HANDLE TRIANGLES
+				if fac.length - 1 is 3
+					for i in [1...fac.length]
+						# VERTEX INDEX
+						faces[currentFace + i - 1] = parseFloat fac[i].split( "/")[0] - 1
+						# NORMAL INDEX
+						normalsPointer[currentFace + i - 1] = parseFloat fac[i].split( "/")[2] - 1
+					# LENGTH MUST AT LEAST BE 4 IN ORDER TO DRAW TRIANGLES	
+					currentFace += 3
+					
+				# HANDLE QUADS / POLYGONS
+				# TRIANGULATE	
+				else
+					polygon = []
+					for i in [1...fac.length - 1]
+						# VERTEX INDEX
+						polygon.push parseFloat fac[i].split( "/")[0] 
+					
+					# ADD NEW FACES
+					newFaces = triangulate(polygon)
+					for i in [0...newFaces.length]
+						faces[currentFace] = newFaces[i]
+						currentFace++
+					
 
 		new3DMesh.numTotalPoints = vertices.length / 3
-		attributes = {"ps_Vertex" : vertices} # "ps_Normals" : normals
+		attributes = {"ps_Vertex" : vertices, "ps_Color": colors} # "ps_Normals" : normals
 				
 		# CREATE VERTEX BUFFER OBJECTS TO STORE DATA
 		# ( ARRAY  BUFFERS)
@@ -101,3 +136,11 @@ read_obj_file = ->
 		
 	xhr.send(null)
 	return new3DMesh
+	
+triangulate = (arr) ->
+	triangles = []	
+	for i in [1...arr.length - 1]
+		triangles.push arr[0]
+		triangles.push arr[i]
+		triangles.push arr[i + 1]
+	return triangles

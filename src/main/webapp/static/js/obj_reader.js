@@ -1,9 +1,9 @@
-var read_obj_file;
+var read_obj_file, triangulate;
 read_obj_file = function() {
-  var numFaces, numNorms, numVerts, xhr;
+  var SOMECOLORS, numFaces, numNorms, numVerts, xhr;
   this.new3DMesh = {
     VBOs: [],
-    usingColor: false,
+    usingColor: true,
     addedVertices: [0, 0, 0],
     center: [0, 0, 0],
     getCenter: function() {
@@ -17,14 +17,16 @@ read_obj_file = function() {
   };
   ps.meshes.push(new3DMesh);
   xhr = new XMLHttpRequest();
-  xhr.open("GET", "js/libs/pointstream/clouds/albatross.obj");
+  xhr.open("GET", "js/libs/pointstream/clouds/F16-lowpoly.obj");
   xhr.responseType = "text";
-  numVerts = 20000;
+  numVerts = 50250;
   numFaces = 15830;
-  numNorms = 20000;
+  numNorms = 30000;
+  SOMECOLORS = [[0.7, 0.7, 0.7], [0.8, 0.3, 0.2], [0.3, 0.6, 0.4], [0.3, 0.3, 0.3], [0.5, 0.5, 0.9], [0.9, 0.9, 0.6], [0.5, 0.5, 0.5], [0.7, 0.9, 0.7], [0.4, 0.9, 0.4], [0.9, 0.5, 0.6], [0.7, 0.2, 0.2], [0.3, 0.4, 0.5]];
   xhr.onload = function(e) {
-    var attributes, buffObj, currentFace, currentNorm, currentVert, fac, faces, i, line, lines, normals, normalsPointer, norms, semantic, vertices, verts, _i, _len, _ref, _ref2, _ref3;
+    var attributes, buffObj, colors, currentColor, currentFace, currentNorm, currentVert, fac, faces, i, line, lines, newFaces, normals, normalsPointer, norms, polygon, semantic, vertices, verts, _i, _len, _ref, _ref2, _ref3, _ref4, _ref5;
     vertices = new Float32Array(numVerts * 3);
+    colors = new Float32Array(numVerts * 3);
     faces = new Uint16Array(numFaces * 3);
     normals = new Float32Array(numNorms * 3);
     normalsPointer = new Float32Array(numFaces * 3);
@@ -32,8 +34,16 @@ read_obj_file = function() {
     currentVert = 0;
     currentNorm = 0;
     currentFace = 0;
+    currentColor = -1;
     for (_i = 0, _len = lines.length; _i < _len; _i++) {
       line = lines[_i];
+      if (line.indexOf("g") === 0) {
+        if (currentColor < 11) {
+          currentColor++;
+        } else {
+          currentColor = 0;
+        }
+      }
       if (line.indexOf("vn") === 0) {
         norms = line.split(RegExp(" +"));
         for (i = 1, _ref = norms.length; 1 <= _ref ? i < _ref : i > _ref; 1 <= _ref ? i++ : i--) {
@@ -44,20 +54,34 @@ read_obj_file = function() {
         verts = line.split(RegExp(" +"));
         for (i = 1, _ref2 = verts.length; 1 <= _ref2 ? i < _ref2 : i > _ref2; 1 <= _ref2 ? i++ : i--) {
           vertices[currentVert + i - 1] = parseFloat(verts[i]);
+          colors[currentVert + i - 1] = SOMECOLORS[currentColor][i];
         }
         currentVert += 3;
       } else if (line.indexOf("f") === 0) {
         fac = line.split(RegExp(" +"));
-        for (i = 1, _ref3 = fac.length; 1 <= _ref3 ? i < _ref3 : i > _ref3; 1 <= _ref3 ? i++ : i--) {
-          faces[currentFace + i - 1] = parseFloat(fac[i].split("/")[0] - 1);
-          normalsPointer[currentFace + i - 1] = parseFloat(fac[i].split("/")[2] - 1);
+        if (fac.length - 1 === 3) {
+          for (i = 1, _ref3 = fac.length; 1 <= _ref3 ? i < _ref3 : i > _ref3; 1 <= _ref3 ? i++ : i--) {
+            faces[currentFace + i - 1] = parseFloat(fac[i].split("/")[0] - 1);
+            normalsPointer[currentFace + i - 1] = parseFloat(fac[i].split("/")[2] - 1);
+          }
+          currentFace += 3;
+        } else {
+          polygon = [];
+          for (i = 1, _ref4 = fac.length - 1; 1 <= _ref4 ? i < _ref4 : i > _ref4; 1 <= _ref4 ? i++ : i--) {
+            polygon.push(parseFloat(fac[i].split("/")[0]));
+          }
+          newFaces = triangulate(polygon);
+          for (i = 0, _ref5 = newFaces.length; 0 <= _ref5 ? i < _ref5 : i > _ref5; 0 <= _ref5 ? i++ : i--) {
+            faces[currentFace] = newFaces[i];
+            currentFace++;
+          }
         }
-        currentFace += 3;
       }
     }
     new3DMesh.numTotalPoints = vertices.length / 3;
     attributes = {
-      "ps_Vertex": vertices
+      "ps_Vertex": vertices,
+      "ps_Color": colors
     };
     for (semantic in attributes) {
       new3DMesh.attributes[semantic] = [];
@@ -69,4 +93,14 @@ read_obj_file = function() {
   };
   xhr.send(null);
   return new3DMesh;
+};
+triangulate = function(arr) {
+  var i, triangles, _ref;
+  triangles = [];
+  for (i = 1, _ref = arr.length - 1; 1 <= _ref ? i < _ref : i > _ref; 1 <= _ref ? i++ : i--) {
+    triangles.push(arr[0]);
+    triangles.push(arr[i]);
+    triangles.push(arr[i + 1]);
+  }
+  return triangles;
 };

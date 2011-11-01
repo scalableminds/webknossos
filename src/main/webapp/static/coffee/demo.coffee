@@ -4,6 +4,7 @@ pointcloud = undefined
 mesh = undefined
 cam = undefined
 mouseDown = false
+clipping_distance = 100
 
 # MOUSE/KEYBOARD EVENTS
 mousePressed = ->
@@ -44,20 +45,33 @@ render = ->
 		h = -(ps.mouseY - ps.height / 2) / ps.height / 8
 		cam.pos = V3.add cam.pos, [0, h, 0]
   
+	
 	ps.loadMatrix M4x4.makeLookAt cam.pos, V3.add(cam.dir, cam.pos), cam.up
 	
-	#ps.translate -c[0], -c[1], -c[2]
-	#ps.println c
+	# CLIPPING
+	length_dir = Math.sqrt cam.dir[0]*cam.dir[0] + cam.dir[1]*cam.dir[1] +  cam.dir[2]*cam.dir[2]
+	
+	n0 = [ cam.dir[0] / length_dir, cam.dir[1] / length_dir, cam.dir[2] / length_dir]
+	
+	p = [clipping_distance * n0[0], clipping_distance * n0[1], clipping_distance * n0[1]]
+	d = V3.dot( p, n0)
+
+	ps.uniformf "d",d
+	ps.uniformf "n0",n0
 	
 	# Render the Pointcloud
 	ps.clear()
 	ps.render pointcloud
 	
-	ps.renderMesh mesh
+	# ps.renderMesh mesh
 		
 	# OUTPUT FPS
 	# status = document.getElementById('Status')
 	# status.innerHTML = Math.floor(ps.frameRate) + " FPS <br/> " +  pointcloud.numPoints + " Points" 
+	
+	#OUTPUT CAMERA POSITION
+	cameraPos = document.getElementById('camera')
+	cameraPos.innerHTML = cam.pos
 	
 	return
 
@@ -68,6 +82,12 @@ start = ->
 	ps = new PointStream()
 	ps.setup document.getElementById('render'),{"antialias":true}
 	
+	# LOAD A CUSTOM SHADER
+	vert = ps.getShaderStr("js/libs/pointstream/shaders/clip.vs")
+	frag = ps.getShaderStr("js/libs/pointstream/shaders/clip.fs")
+	progObj = ps.createProgram(vert, frag);
+	ps.useProgram(progObj);
+	
 	ps.background [0.9, 0.9 ,0.9 ,1]
 	ps.pointSize 5
 	
@@ -76,9 +96,18 @@ start = ->
 	ps.onMouseReleased = mouseReleased
 	ps.onKeyDown = keyDown
 	
-	# axis = ps.load "Pointstream/clouds/axis.asc"
 	pointcloud = read_binary_file()  #ps.load "Pointstream/clouds/lion.psi" 
 	
-	mesh = read_obj_file()
+	# mesh = read_obj_file()
 	
 	return
+	
+#  SET CAMERA TO NEW POSITON
+setCamPosition = ->
+	x = parseFloat document.getElementById('camX').value
+	y = parseFloat document.getElementById('camY').value
+	z = parseFloat document.getElementById('camZ').value
+	
+	if !isNaN(x) and !isNaN(y) and !isNaN(z)
+		cam.pos = [x,y,z]
+		return

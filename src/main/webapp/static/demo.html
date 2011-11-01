@@ -5,14 +5,32 @@
 	<script src="js/libs/modernizr-2.0.6.min.js"></script>
   <script src="js/libs/pointstream/xbps.js"></script>
 	<script src="js/libs/pointstream/libs/c3.js"></script>
+	<link rel="stylesheet" type="text/css" href="css/demo.css" />
 </head>
 <body>
 	<header></header>
 	<div id="main">	
-		<span id="status"></span><br/>
+		<p id="status"></p>
 		<canvas id="render" height ="400" width="400"></canvas>
 	</div>
-
+	<div id="options">
+		<div id="cam">
+			<p>Camera</p>
+			<p id="camera"></p>
+			<form>
+				X: <input type="text" id="camX" size="5px" onChange="setCamPosition();"><br>
+				Y: <input type="text" id="camY"  size="5px" onChange="setCamPosition();"><br>
+				Z: <input type="text" id="camZ"  size="5px" onChange="setCamPosition();">
+			</form>
+		</div>
+		<div id="controls">
+			<p> W/S/A/D: Move Camera</p>
+			<p>Left Mouse Button: Look around</p>
+		</div>
+		<div id="clipping">
+		<p>Clipping params</p>
+		</div>
+	</div>
 	<footer></footer>
 	
 	<script>

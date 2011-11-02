@@ -14,7 +14,7 @@ describe('binary_request', function() {
     var done;
     done = false;
     binary_request('/model/cube', function(err, data) {
-      expect(data.constructor).toEqual(ArrayBuffer);
+      expect(data).toBeA(ArrayBuffer);
       return done = true;
     });
     return waitsFor((function() {

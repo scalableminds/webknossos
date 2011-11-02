@@ -49,15 +49,14 @@ Model = (function() {
       });
     });
   };
-  if (TEST) {
-    model.__test = {
-      setCoordinatesModel: function(a) {
-        return coordinatesModel = a;
-      },
-      getCoordinatesModel: function() {
-        return coordinatesModel;
-      }
-    };
-  }
+  model.__test = {};
+  Object.defineProperty(model.__test, "coordinatesModel", {
+    get: function() {
+      return coordinatesModel;
+    },
+    set: function(a) {
+      return coordinatesModel = a;
+    }
+  });
   return model;
 })();

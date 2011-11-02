@@ -12,6 +12,9 @@ jasmine.Matchers.prototype.toBeSameArrayAs = function(expected) {
   }
   return true;
 };
+jasmine.Matchers.prototype.toBeA = function(clazz) {
+  return jasmine.any(clazz).matches(this.actual);
+};
 async = function(timeout, message, handler) {
   var done, _done;
   if (handler == null) {

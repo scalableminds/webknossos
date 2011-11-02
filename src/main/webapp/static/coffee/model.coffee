@@ -63,14 +63,11 @@ Model = (->
       )
     )
   
-  if TEST
-    model.__test =
-    
-      setCoordinatesModel: (a) ->
-        coordinatesModel = a
-        
-      getCoordinatesModel: ->
-        coordinatesModel
+  model.__test = {}
+  Object.defineProperty(model.__test, "coordinatesModel", 
+    get: -> coordinatesModel
+    set: (a) -> coordinatesModel = a
+  )
   
   model
 )()

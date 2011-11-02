@@ -13,7 +13,7 @@ describe('binary_request', ->
     done = false
     
     binary_request('/model/cube', (err, data) ->
-      expect(data.constructor).toEqual(ArrayBuffer)
+      expect(data).toBeA(ArrayBuffer)
       done = true
     )
     

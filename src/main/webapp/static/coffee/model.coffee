@@ -46,7 +46,8 @@ Model = (->
       output[i + 1] = Math.round(moveVector[1] + (a10 * px + a11 * py + a12 * pz))
       output[i + 2] = Math.round(moveVector[2] + (a20 * px + a21 * py + a22 * pz))
     
-    callback(output)
+    # clear stack before returning callback
+    setTimeout(callback(output), 1)
     
  
   model.find = (point, axis, callback) ->
@@ -61,6 +62,15 @@ Model = (->
             callback(null, new Uint8Array(data))
       )
     )
+  
+  if TEST
+    model.__test =
     
+      setCoordinatesModel: (a) ->
+        coordinatesModel = a
+        
+      getCoordinatesModel: ->
+        coordinatesModel
+  
   model
 )()

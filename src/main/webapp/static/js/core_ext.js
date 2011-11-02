@@ -1,3 +1,4 @@
+var defer;
 Math.square = function(a) {
   return a * a;
 };
@@ -13,4 +14,7 @@ Math.normalizeVector = function(vec) {
   } else {
     return vec;
   }
+};
+defer = function(callback) {
+  return setTimeout(callback, 1);
 };

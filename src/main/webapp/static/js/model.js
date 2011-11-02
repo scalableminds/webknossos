@@ -1,16 +1,20 @@
-var Model;
-Model = (function() {
+var Model, _Model;
+_Model = function(skipInitialization) {
   var coordinatesModel, model;
   model = new EventEmitter();
   coordinatesModel = null;
-  binary_request("/model/cube", function(err, data) {
-    if (err) {
-      return model.emit('error', err);
-    } else {
-      coordinatesModel = new Int8Array(data);
-      return model.emit('initialized');
-    }
-  });
+  if (!skipInitialization) {
+    binary_request("/model/cube", function(err, data) {
+      if (err) {
+        return model.emit('error', err);
+      } else {
+        coordinatesModel = new Int8Array(data);
+        return model.emit('initialized');
+      }
+    });
+  } else {
+    model.emit('initialized');
+  }
   model.rotateAndMove = function(moveVector, axis, callback) {
     var a00, a01, a02, a10, a11, a12, a20, a21, a22, cosA, dotProd, i, ortho, output, px, py, pz, sinA, _ref;
     ortho = Math.normalizeVector([axis[2], 0, -axis[0]]);
@@ -35,7 +39,9 @@ Model = (function() {
       output[i + 1] = Math.round(moveVector[1] + (a10 * px + a11 * py + a12 * pz));
       output[i + 2] = Math.round(moveVector[2] + (a20 * px + a21 * py + a22 * pz));
     }
-    return setTimeout(callback(output), 1);
+    return defer(function() {
+      return callback(output);
+    });
   };
   model.find = function(point, axis, callback) {
     return model.wait('initialized', function() {
@@ -59,4 +65,5 @@ Model = (function() {
     }
   });
   return model;
-})();
+};
+Model = new _Model();

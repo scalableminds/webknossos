@@ -20,7 +20,7 @@ async = (timeout, message, handler) ->
   _done = false
   done = -> _done = true
   
-  setTimeout((-> handler(done)), 1)
+  defer -> handler(done)
   
   waitsFor((-> _done), message, timeout)
   

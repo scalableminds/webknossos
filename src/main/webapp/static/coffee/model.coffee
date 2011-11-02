@@ -1,14 +1,18 @@
-Model = (->
+_Model = (skipInitialization) ->
+
   model = new EventEmitter()
   coordinatesModel = null
   
-  binary_request("/model/cube", (err, data) ->
-    if err
-      model.emit('error', err)
-    else
-      coordinatesModel = new Int8Array(data)
-      model.emit('initialized')
-  )
+  unless skipInitialization
+    binary_request("/model/cube", (err, data) ->
+      if err
+        model.emit('error', err)
+      else
+        coordinatesModel = new Int8Array(data)
+        model.emit('initialized')
+    )
+  else
+    model.emit('initialized')
  
   model.rotateAndMove = (moveVector, axis, callback) ->
     
@@ -47,7 +51,7 @@ Model = (->
       output[i + 2] = Math.round(moveVector[2] + (a20 * px + a21 * py + a22 * pz))
     
     # clear stack before returning callback
-    setTimeout(callback(output), 1)
+    defer -> callback(output)
     
  
   model.find = (point, axis, callback) ->
@@ -64,10 +68,11 @@ Model = (->
     )
   
   model.__test = {}
-  Object.defineProperty(model.__test, "coordinatesModel", 
+  Object.defineProperty(model.__test, "coordinatesModel" 
     get: -> coordinatesModel
     set: (a) -> coordinatesModel = a
   )
   
   model
-)()
+
+Model = new _Model()

@@ -27,7 +27,7 @@ keyDown = function() {
   }
 };
 render = function() {
-  var cameraPos, d, h, length_dir, n0, p, status, versch, y;
+  var d, h, length_dir, n0, p, status, versch, y;
   if (mouseDown) {
     y = -(ps.mouseX - ps.width / 2) / ps.width / 45;
     cam.yaw(y);
@@ -47,9 +47,7 @@ render = function() {
   ps.translate(p[0], p[1], p[2]);
   ps.renderMesh(mesh);
   status = document.getElementById('status');
-  status.innerHTML = Math.floor(ps.frameRate) + " FPS <br/> " + pointcloud.numPoints + " Points";
-  cameraPos = document.getElementById('camera');
-  cameraPos.innerHTML = cam.pos;
+  status.innerHTML = "" + (Math.floor(ps.frameRate)) + " FPS <br/> " + pointcloud.numPoints + " Points <br />" + cam.pos;
 };
 start = function() {
   var frag, progObj, vert;

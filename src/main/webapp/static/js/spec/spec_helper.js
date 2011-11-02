@@ -30,9 +30,9 @@ async = function(timeout, message, handler) {
   done = function() {
     return _done = true;
   };
-  setTimeout((function() {
+  defer(function() {
     return handler(done);
-  }), 1);
+  });
   return waitsFor((function() {
     return _done;
   }), message, timeout);

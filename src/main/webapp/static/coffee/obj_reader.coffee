@@ -27,7 +27,7 @@ read_obj_file = ->
 	
 	# DOWNLOAD FILE
 	xhr = new XMLHttpRequest()
-	xhr.open "GET", "js/libs/pointstream/clouds/F16-lowpoly.obj"
+	xhr.open "GET", "js/libs/pointstream/clouds/sphere.obj"
 	xhr.responseType = "text"
 	
 	# CONSTANTS FOR cube.obj
@@ -55,7 +55,7 @@ read_obj_file = ->
 		currentVert = 0
 		currentNorm = 0
 		currentFace = 0
-		currentColor = -1
+		currentColor = 0
 	
 		for line in lines	
 			# HANDLE SUBGROUPS

@@ -17,7 +17,7 @@ read_obj_file = function() {
   };
   ps.meshes.push(new3DMesh);
   xhr = new XMLHttpRequest();
-  xhr.open("GET", "js/libs/pointstream/clouds/F16-lowpoly.obj");
+  xhr.open("GET", "js/libs/pointstream/clouds/sphere.obj");
   xhr.responseType = "text";
   numVerts = 50250;
   numFaces = 15830;
@@ -34,7 +34,7 @@ read_obj_file = function() {
     currentVert = 0;
     currentNorm = 0;
     currentFace = 0;
-    currentColor = -1;
+    currentColor = 0;
     for (_i = 0, _len = lines.length; _i < _len; _i++) {
       line = lines[_i];
       if (line.indexOf("g") === 0) {

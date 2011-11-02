@@ -1,10 +1,10 @@
-var cam, clipping_distance, keyDown, mesh, mouseDown, mousePressed, mouseReleased, pointcloud, ps, render, setCamPosition, start;
+var cam, changeClippingParams, clipping_distance, keyDown, mesh, mouseDown, mousePressed, mouseReleased, pointcloud, ps, render, setCamPosition, start;
 ps = void 0;
 pointcloud = void 0;
 mesh = void 0;
 cam = void 0;
 mouseDown = false;
-clipping_distance = 100;
+clipping_distance = 15.0;
 mousePressed = function() {
   return mouseDown = true;
 };
@@ -27,7 +27,7 @@ keyDown = function() {
   }
 };
 render = function() {
-  var cameraPos, d, h, length_dir, n0, p, y;
+  var cameraPos, d, h, length_dir, n0, p, versch, y;
   if (mouseDown) {
     y = -(ps.mouseX - ps.width / 2) / ps.width / 45;
     cam.yaw(y);
@@ -37,12 +37,15 @@ render = function() {
   ps.loadMatrix(M4x4.makeLookAt(cam.pos, V3.add(cam.dir, cam.pos), cam.up));
   length_dir = Math.sqrt(cam.dir[0] * cam.dir[0] + cam.dir[1] * cam.dir[1] + cam.dir[2] * cam.dir[2]);
   n0 = [cam.dir[0] / length_dir, cam.dir[1] / length_dir, cam.dir[2] / length_dir];
-  p = [clipping_distance * n0[0], clipping_distance * n0[1], clipping_distance * n0[1]];
+  versch = [clipping_distance * n0[0], clipping_distance * n0[1], clipping_distance * n0[2]];
+  p = V3.add(cam.pos, versch);
   d = V3.dot(p, n0);
   ps.uniformf("d", d);
   ps.uniformf("n0", n0);
   ps.clear();
   ps.render(pointcloud);
+  ps.translate(p[0], p[1], p[2]);
+  ps.renderMesh(mesh);
   cameraPos = document.getElementById('camera');
   cameraPos.innerHTML = cam.pos;
 };
@@ -64,6 +67,7 @@ start = function() {
   ps.onMouseReleased = mouseReleased;
   ps.onKeyDown = keyDown;
   pointcloud = read_binary_file();
+  mesh = read_obj_file();
 };
 setCamPosition = function() {
   var x, y, z;
@@ -72,5 +76,24 @@ setCamPosition = function() {
   z = parseFloat(document.getElementById('camZ').value);
   if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
     cam.pos = [x, y, z];
+  }
+};
+changeClippingParams = function() {
+  var d, distance, n0;
+  distance = parseFloat(document.getElementById('clipDistance').value);
+  if (!isNaN(distance)) {
+    clipping_distance = distance;
+  }
+  n0 = document.getElementById('clipN0').value.split(",");
+  n0[0] = parseFloat(n0[0]);
+  n0[1] = parseFloat(n0[1]);
+  n0[2] = parseFloat(n0[2]);
+  if (!isNaN(n0[0]) && !isNaN(n0[1]) && !isNaN(n0[2])) {
+    ps.uniformf("n0", n0);
+  }
+  return;
+  d = parseFloat(document.getElementById('clipD').value);
+  if (!isNaN(d)) {
+    ps.uniformf("d", d);
   }
 };

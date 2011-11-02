@@ -4,7 +4,7 @@ pointcloud = undefined
 mesh = undefined
 cam = undefined
 mouseDown = false
-clipping_distance = 100
+clipping_distance = 15.0
 
 # MOUSE/KEYBOARD EVENTS
 mousePressed = ->
@@ -53,9 +53,11 @@ render = ->
 	
 	n0 = [ cam.dir[0] / length_dir, cam.dir[1] / length_dir, cam.dir[2] / length_dir]
 	
-	p = [clipping_distance * n0[0], clipping_distance * n0[1], clipping_distance * n0[1]]
+	versch = [clipping_distance * n0[0], clipping_distance * n0[1], clipping_distance * n0[2]]
+	p = V3.add(cam.pos, versch)
 	d = V3.dot( p, n0)
 
+	
 	ps.uniformf "d",d
 	ps.uniformf "n0",n0
 	
@@ -63,7 +65,8 @@ render = ->
 	ps.clear()
 	ps.render pointcloud
 	
-	# ps.renderMesh mesh
+	ps.translate p[0], p[1], p[2]
+	ps.renderMesh mesh
 		
 	# OUTPUT FPS
 	# status = document.getElementById('Status')
@@ -98,7 +101,7 @@ start = ->
 	
 	pointcloud = read_binary_file()  #ps.load "Pointstream/clouds/lion.psi" 
 	
-	# mesh = read_obj_file()
+	mesh = read_obj_file()
 	
 	return
 	
@@ -111,3 +114,19 @@ setCamPosition = ->
 	if !isNaN(x) and !isNaN(y) and !isNaN(z)
 		cam.pos = [x,y,z]
 		return
+
+changeClippingParams = ->
+	distance = parseFloat document.getElementById('clipDistance').value
+	clipping_distance = distance if !isNaN(distance)
+	
+	n0 = document.getElementById('clipN0').value.split ","
+	n0[0] = parseFloat n0[0]
+	n0[1] = parseFloat n0[1]
+	n0[2] = parseFloat n0[2]
+	
+	ps.uniformf "n0",n0 if !isNaN(n0[0]) and !isNaN(n0[1]) and !isNaN(n0[2])
+	return
+	
+	d = parseFloat document.getElementById('clipD').value
+	ps.uniformf "d",d if !isNaN(d) 
+	return

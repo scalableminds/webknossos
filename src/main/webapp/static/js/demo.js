@@ -1,4 +1,4 @@
-var cam, changeClippingParams, clipping_distance, keyDown, mesh, mouseDown, mousePressed, mouseReleased, pointcloud, ps, render, setCamPosition, start;
+var cam, clipping_distance, keyDown, mesh, mouseDown, mousePressed, mouseReleased, pointcloud, ps, render, setCamPosition, start;
 ps = void 0;
 pointcloud = void 0;
 mesh = void 0;
@@ -27,7 +27,7 @@ keyDown = function() {
   }
 };
 render = function() {
-  var cameraPos, d, h, length_dir, n0, p, versch, y;
+  var cameraPos, d, h, length_dir, n0, p, status, versch, y;
   if (mouseDown) {
     y = -(ps.mouseX - ps.width / 2) / ps.width / 45;
     cam.yaw(y);
@@ -46,12 +46,15 @@ render = function() {
   ps.render(pointcloud);
   ps.translate(p[0], p[1], p[2]);
   ps.renderMesh(mesh);
+  status = document.getElementById('status');
+  status.innerHTML = Math.floor(ps.frameRate) + " FPS <br/> " + pointcloud.numPoints + " Points";
   cameraPos = document.getElementById('camera');
   cameraPos.innerHTML = cam.pos;
 };
 start = function() {
   var frag, progObj, vert;
   cam = new FreeCam();
+  cam.pos = [6, 5, -15];
   ps = new PointStream();
   ps.setup(document.getElementById('render'), {
     "antialias": true
@@ -76,24 +79,5 @@ setCamPosition = function() {
   z = parseFloat(document.getElementById('camZ').value);
   if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
     cam.pos = [x, y, z];
-  }
-};
-changeClippingParams = function() {
-  var d, distance, n0;
-  distance = parseFloat(document.getElementById('clipDistance').value);
-  if (!isNaN(distance)) {
-    clipping_distance = distance;
-  }
-  n0 = document.getElementById('clipN0').value.split(",");
-  n0[0] = parseFloat(n0[0]);
-  n0[1] = parseFloat(n0[1]);
-  n0[2] = parseFloat(n0[2]);
-  if (!isNaN(n0[0]) && !isNaN(n0[1]) && !isNaN(n0[2])) {
-    ps.uniformf("n0", n0);
-  }
-  return;
-  d = parseFloat(document.getElementById('clipD').value);
-  if (!isNaN(d)) {
-    ps.uniformf("d", d);
   }
 };

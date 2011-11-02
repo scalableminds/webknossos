@@ -82,6 +82,8 @@ render = ->
 # START SCRIPT		
 start = ->		
 	cam = new FreeCam()
+	cam.pos = [6,5,-15]
+	
 	ps = new PointStream()
 	ps.setup document.getElementById('render'),{"antialias":true}
 	
@@ -114,19 +116,3 @@ setCamPosition = ->
 	if !isNaN(x) and !isNaN(y) and !isNaN(z)
 		cam.pos = [x,y,z]
 		return
-
-changeClippingParams = ->
-	distance = parseFloat document.getElementById('clipDistance').value
-	clipping_distance = distance if !isNaN(distance)
-	
-	n0 = document.getElementById('clipN0').value.split ","
-	n0[0] = parseFloat n0[0]
-	n0[1] = parseFloat n0[1]
-	n0[2] = parseFloat n0[2]
-	
-	ps.uniformf "n0",n0 if !isNaN(n0[0]) and !isNaN(n0[1]) and !isNaN(n0[2])
-	return
-	
-	d = parseFloat document.getElementById('clipD').value
-	ps.uniformf "d",d if !isNaN(d) 
-	return

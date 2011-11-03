@@ -70,11 +70,11 @@ render = ->
 		
 	# OUTPUT FPS
 	status = document.getElementById('status')
-	status.innerHTML = Math.floor(ps.frameRate) + " FPS <br/> " +  pointcloud.numPoints + " Points" 
+	status.innerHTML = "#{Math.floor(ps.frameRate)} FPS <br/> #{pointcloud.numPoints} Points <br />#{cam.pos}" 
 	
-	#OUTPUT CAMERA POSITION
-	cameraPos = document.getElementById('camera')
-	cameraPos.innerHTML = cam.pos
+	# OUTPUT CAMERA POSITION
+	# cameraPos = document.getElementById('camera')
+	# cameraPos.innerHTML = cam.pos
 	
 	return
 

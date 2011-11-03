@@ -3,6 +3,9 @@ jasmine.Matchers.prototype.toBeSameArrayAs = (expected) ->
   for el, i in expected
     return false if el != @actual[i]
   true
+  
+jasmine.Matchers.prototype.toBeA = (clazz) ->
+  jasmine.any(clazz).matches @actual
 
 async = (timeout, message, handler) ->
   
@@ -17,7 +20,7 @@ async = (timeout, message, handler) ->
   _done = false
   done = -> _done = true
   
-  setTimeout((-> handler(done)), 1)
+  defer -> handler(done)
   
   waitsFor((-> _done), message, timeout)
   

@@ -12,6 +12,9 @@ jasmine.Matchers.prototype.toBeSameArrayAs = function(expected) {
   }
   return true;
 };
+jasmine.Matchers.prototype.toBeA = function(clazz) {
+  return jasmine.any(clazz).matches(this.actual);
+};
 async = function(timeout, message, handler) {
   var done, _done;
   if (handler == null) {
@@ -27,9 +30,9 @@ async = function(timeout, message, handler) {
   done = function() {
     return _done = true;
   };
-  setTimeout((function() {
+  defer(function() {
     return handler(done);
-  }), 1);
+  });
   return waitsFor((function() {
     return _done;
   }), message, timeout);

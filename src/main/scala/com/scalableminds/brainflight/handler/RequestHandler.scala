@@ -5,6 +5,12 @@ import net.liftweb.common.Full
 import com.scalableminds.brainflight.binary.ModelStore
 import net.liftweb.http._
 import rest.RestHelper
+import org.bson.types.ObjectId
+import com.foursquare.rogue.Rogue._
+import com.scalableminds.brainflight.model.{FlightRoute, RoutePoint, User}
+import net.liftweb.util.ControlHelpers._
+import net.liftweb.json._
+import net.liftweb.util.Props
 
 /**
  * Scalable Minds - Brainflight
@@ -15,6 +21,9 @@ import rest.RestHelper
 
 
 object RequestHandler extends RestHelper{
+  /**
+   * Handles all incoming REST style requests, verifies the passed data and activates the requested Handler
+   */
   serve{
     // got a request for binary image data
     // should look like: http://localhost/requestData/cube?px=25&py=0&pz=25&ax=0&ay=0&az=0
@@ -58,6 +67,29 @@ object RequestHandler extends RestHelper{
                               200
                          ))
         case _ => Full(NotFoundResponse("Model not available."))
+      }
+    }
+    // got a request to log a users flight data
+    // the user must be logged in to send this request
+    case Post("logroute" :: Nil , _) => {
+      // in development mode the first user gets logged in when there is no one logged in
+      if(Props.mode  == Props.RunModes.Development && !User.loggedIn_?)
+        User.logUserIn(User.findAll.head)
+      User.loggedIn_? match {
+        case true =>
+          // post request must contain a param called payload which contains json e.q.:
+          // payload = "{
+          //              "start" : true, //optional
+          //              "positions" : [[0,0,0],[2,3,4]]
+          //            }"
+          for {
+            payload <- S.param("payload") ?~ "No payload attached." ~> 400
+            parsed <- tryo(parse(payload)) ?~ "Passed json isn't valid." ~> 400
+          } yield {
+            RouteLogger(parsed)
+          }
+        case false =>
+          net.liftweb.http.ForbiddenResponse("Not logged in.")
       }
     }
   }

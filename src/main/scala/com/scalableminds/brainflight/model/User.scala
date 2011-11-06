@@ -10,13 +10,18 @@ import net.liftweb.http.S._
 import net.liftweb.record.{Record, TypedField}
 import net.liftweb.mongodb.record.BsonRecord
 import net.liftweb.record.field.{StringField, PasswordField}
-import net.liftweb.mongodb.record.field.{Password, MongoPasswordField}
+import net.liftweb.mongodb.record.field.{BsonRecordListField, ObjectIdRefField, Password, MongoPasswordField}
+import org.bson.types.ObjectId
 
 /**
 * The singleton that has methods for accessing the database
 */
 object User extends User with MetaMegaProtoUser[User] {
   override def collectionName = "users" // define the MongoDB collection name
+
+  // when the user is going to get logged out, the current route needs to get saved
+  onLogOut ::= SessionRoute.saveRoute _
+
   override def screenWrap = Full(<lift:surround with="default" at="content">
             <lift:bind /></lift:surround>)
   override def skipEmailValidation = true // uncomment this line to skip email validations
@@ -39,6 +44,7 @@ object User extends User with MetaMegaProtoUser[User] {
     else
       formXhtml
   }
+
 }
 
 /**
@@ -46,4 +52,7 @@ object User extends User with MetaMegaProtoUser[User] {
 */
 class User extends MegaProtoUser[User] {
   def meta = User // what's the "meta" server
+
+  // all routes the user creates are connected to his user profile
+  object flightRoutes extends BsonRecordListField(this, FlightRoute)
 }

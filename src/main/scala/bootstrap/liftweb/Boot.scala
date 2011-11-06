@@ -7,7 +7,8 @@ import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.sitemap.Loc._
 import com.scalableminds.brainflight.handler.RequestHandler
 import com.scalableminds.brainflight.binary.{FrustrumModel, ModelStore, CubeModel}
-import com.scalableminds.brainflight.model.{MongoConfig, User}
+import org.bson.types.ObjectId
+import com.scalableminds.brainflight.model.{SessionRoute, FlightRoute, MongoConfig, User}
 
 
 /**
@@ -36,6 +37,11 @@ class Boot {
     User.sitemap
 
     LiftRules.setSiteMapFunc(()=>SiteMap(entries:_*))
+
+    // when the session is about to get closed, the route needs to be saved or it will get lost
+    LiftSession.onAboutToShutdownSession ::= (_ => {
+      SessionRoute.saveRoute(User.currentUser)
+      })
 
     // exclude lift ajax files for flight simulator
     LiftRules.autoIncludeAjax = (session =>

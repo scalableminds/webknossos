@@ -10,7 +10,7 @@ import net.liftweb.http.S._
 import net.liftweb.record.{Record, TypedField}
 import net.liftweb.mongodb.record.BsonRecord
 import net.liftweb.record.field.{StringField, PasswordField}
-import net.liftweb.mongodb.record.field.{BsonRecordListField, ObjectIdRefField, Password, MongoPasswordField}
+import net.liftweb.mongodb.record.field.{BsonRecordListField, ObjectIdRefListField, Password, MongoPasswordField}
 import org.bson.types.ObjectId
 
 /**
@@ -54,5 +54,5 @@ class User extends MegaProtoUser[User] {
   def meta = User // what's the "meta" server
 
   // all routes the user creates are connected to his user profile
-  object flightRoutes extends BsonRecordListField(this, FlightRoute)
+  object flightRoutes extends ObjectIdRefListField(this, FlightRoute)
 }

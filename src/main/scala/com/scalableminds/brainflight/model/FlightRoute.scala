@@ -28,7 +28,8 @@ object SessionRoute extends SessionVar[FlightRoute](FlightRoute.createRecord){
      box match {
       case Full(user) if SessionRoute.is.points.is.size>1 =>
         val l = user.flightRoutes.is
-        user.flightRoutes(SessionRoute.is :: l).save
+        user.flightRoutes(SessionRoute.id.is :: l).save
+        SessionRoute.userID(user.id.is).save
       case _ =>
     }
   }
@@ -45,10 +46,10 @@ object RoutePoint extends JsonObjectMeta[RoutePoint]
 /**
  * Complete flight route
  */
-class FlightRoute private() extends BsonRecord[FlightRoute] {
+class FlightRoute private() extends MongoRecord[FlightRoute] with ObjectIdPk[FlightRoute] {
   def meta = FlightRoute
 
-  object points extends MongoJsonObjectListField(this, RoutePoint)
+    object points extends MongoJsonObjectListField(this, RoutePoint)
+  object userID extends ObjectIdRefField(this, User)
 }
-
-object FlightRoute extends FlightRoute with BsonMetaRecord[FlightRoute]
+object FlightRoute extends FlightRoute with MongoMetaRecord[FlightRoute]

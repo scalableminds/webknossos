@@ -24,6 +24,7 @@ libraryDependencies += "junit" % "junit" % "4.8" % "test"
 // Add multiple dependencies
 libraryDependencies ++= {
 val liftVersion = "2.4-M4" // Put the current/latest lift version here
+val liftMongoVersion = "2.4-SNAPSHOT"
 val jettyVersion = "7.5.4.v20111024"//"8.0.3.v20111011"
 Seq(
     "net.liftweb" %% "lift-webkit" % liftVersion % "compile->default" withSources(),
@@ -37,9 +38,14 @@ Seq(
     "org.specs2" %% "specs2" % "1.6.1",
     "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test",
 	  "com.foursquare" %% "rogue" % "1.0.26" intransitive(),
+<<<<<<< HEAD
 	  "net.liftweb"    %% "lift-mongodb-record" % liftVersion,
 	  "net.liftweb"    %% "lift-mongodb" % liftVersion,
 	  "org.mindrot" % "jbcrypt" % "0.3m"
+=======
+	  "net.liftweb"    %% "lift-mongodb-record" % liftMongoVersion,
+	  "net.liftweb"    %% "lift-mongodb" % liftMongoVersion
+>>>>>>> 6114638f49d8c4f46c1e85de0b72cd7d06324703
 )}
 
 

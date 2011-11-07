@@ -38,7 +38,8 @@ Seq(
     "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test",
 	  "com.foursquare" %% "rogue" % "1.0.26" intransitive(),
 	  "net.liftweb"    %% "lift-mongodb-record" % liftVersion,
-	  "net.liftweb"    %% "lift-mongodb" % liftVersion
+	  "net.liftweb"    %% "lift-mongodb" % liftVersion,
+	  "org.mindrot" % "jbcrypt" % "0.3m"
 )}
 
 

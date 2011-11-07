@@ -19,6 +19,7 @@ def locate(pattern, root=os.curdir):
 def parseCommandLine():
     parser = OptionParser()
     parser.add_option("-p", "--path", dest="path", help="path to obj files",  default=".")
+    parser.add_option("-c", "--color", dest="color", help="enable colors for vertices", default=0)
 
     (options, args) = parser.parse_args()
     return options

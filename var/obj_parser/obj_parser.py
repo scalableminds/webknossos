@@ -3,7 +3,7 @@
 from utility import *
 
 
-def parseObjFile(objFile):
+def parseObjFile(objFile, enableColor):
     print "parsing %s" % objFile
     myfile = open(objFile, "r")
 
@@ -83,14 +83,17 @@ def parseObjFile(objFile):
         else:
             pass
 
-    output = open(objFile+'.js','w')
-    output.write("vertices={" + str(vertices).strip('[]') + "};\n")
-    output.write("textures={" + str(textures).strip('[]') + "};\n")
-    output.write("colors={" + str(colors).strip('[]') + "};\n")
-    output.write("faces={" + str(faces).strip('[]') + "};\n")
-    output.write("normals={" + str(normals).strip('[]') + "};\n")
-    output.write("texturesPointer={" + str(texturesPointer).strip('[]') + "};\n")
-    output.write("normalsPointer={" + str(normalsPointer).strip('[]') + "};\n")
+    output = open(objFile[:-4]+'.js','w')
+    output.write("vertices=" + str(vertices) + ";\n")
+    output.write("faces=" + str(faces) + ";\n")
+    output.write("normals=" + str(normals) + ";\n")
+    output.write("normalsPointer=" + str(normalsPointer) + ";\n")
+    if enableColor:
+        output.write("colors=" + str(colors)+ ";\n")
+    else:
+        output.write("textures=" + str(textures) + ";\n")
+        output.write("texturesPointer=" + str(texturesPointer) + ";\n")
+
         
 
 def triangulate(l):
@@ -104,7 +107,8 @@ def triangulate(l):
 def main():
     options = parseCommandLine()
     for objFile in locate("*.obj",options.path):
-        parseObjFile(objFile)
+        print options.color
+        parseObjFile(objFile, options.color)
 
 if __name__ == '__main__':
     main()

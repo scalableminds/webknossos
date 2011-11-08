@@ -23,5 +23,8 @@ async = (timeout, message, handler) ->
   defer -> handler(done)
   
   waitsFor((-> _done), message, timeout)
-  
-  
+
+Array::all = (predicate) ->
+  for el in @
+    return false unless predicate(el)
+  return true

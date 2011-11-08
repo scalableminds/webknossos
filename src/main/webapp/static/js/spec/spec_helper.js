@@ -37,3 +37,13 @@ async = function(timeout, message, handler) {
     return _done;
   }), message, timeout);
 };
+Array.prototype.all = function(predicate) {
+  var el, _i, _len;
+  for (_i = 0, _len = this.length; _i < _len; _i++) {
+    el = this[_i];
+    if (!predicate(el)) {
+      return false;
+    }
+  }
+  return true;
+};

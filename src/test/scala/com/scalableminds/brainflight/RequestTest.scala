@@ -1,7 +1,7 @@
 package com.scalableminds.brainflight
 
-import lib.JettyTestServer
 
+import lib.JettyTestServer
 import net.liftweb._
 import common.{Box, Full}
 import util._
@@ -27,7 +27,7 @@ import org.specs2.matcher.MatchFailure
 object RequestTest extends Specification with TestKit{
   // stop jetty flooding the console window
   sequential
-  org.eclipse.jetty.util.log.Log.setLog(new SilentLogger)
+  org.eclipse.jetty.util.log.Log.setLog(new JavaSilentLogger)
 
   private val host_ = reachableLocalAddress
   private val port_ = 8181

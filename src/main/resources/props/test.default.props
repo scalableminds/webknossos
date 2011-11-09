@@ -1,0 +1,4 @@
+# Properties in this file will be read when running in test mode
+mongo.autostart=true
+mongo.host=127.0.0.1
+mongo.dbname=testdb

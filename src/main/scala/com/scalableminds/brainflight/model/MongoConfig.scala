@@ -1,8 +1,14 @@
 package com.scalableminds.brainflight.model
 
 import net.liftweb._
+import common.Full
 import mongodb._
-import com.mongodb.Mongo
+import com.mongodb.{MongoException, Mongo}
+import util.Props
+import java.util.Properties
+import java.io.{PipedInputStream, PipedOutputStream, IOException}
+import java.util.logging.LogManager
+import net.liftweb.util.Helpers._
 
 /**
  * Created by IntelliJ IDEA.
@@ -16,17 +22,30 @@ object MongoConfig {
   def init: Unit = {
     MongoDB.defineDb(
       DefaultMongoIdentifier,
-      MongoAddress(MongoHost("127.0.0.1"), "mydb")
+      MongoAddress(MongoHost(Props.get("mongo.host").getOrElse("127.0.0.1")), Props.get("mongo.dbname").getOrElse("mydb"))
     )
   }
 
-  def isMongoRunning: Boolean = {
-    try {
-      MongoDB.use(DefaultMongoIdentifier) ( db => { db.getLastError } )
-      true
+  def setLogLevel(level: String) {
+    val loggingProperties = new Properties()
+    loggingProperties.put(".level", level)
+    val pos = new PipedOutputStream()
+    val pis = new PipedInputStream(pos)
+
+    loggingProperties.store(pos, "")
+    pos.close()
+    LogManager.getLogManager().readConfiguration(pis)
+    pis.close()
+  }
+
+  def running_? : Boolean = {
+    def testDB = tryo(MongoDB.use(DefaultMongoIdentifier)(_.getLastError)) match {
+      case Full(_) => true
+      case _ => false
     }
-    catch {
-      case e => false
-    }
+    setLogLevel("OFF")
+    val ret = testDB
+    setLogLevel("ALL")
+    ret
   }
 }

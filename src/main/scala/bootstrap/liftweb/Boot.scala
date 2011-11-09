@@ -9,6 +9,11 @@ import com.scalableminds.brainflight.handler.RequestHandler
 import com.scalableminds.brainflight.binary.{FrustrumModel, ModelStore, CubeModel}
 import org.bson.types.ObjectId
 import com.scalableminds.brainflight.model.{SessionRoute, FlightRoute, MongoConfig, User}
+import net.liftweb.util.Props
+import com.scalableminds.brainflight.lib.ScalaSilentLogger
+import java.util.Properties
+import java.util.logging.LogManager
+import java.io.{PipedInputStream, PipedOutputStream}
 
 
 /**
@@ -16,15 +21,36 @@ import com.scalableminds.brainflight.model.{SessionRoute, FlightRoute, MongoConf
  * to modify lift's environment
  */
 class Boot {
+  /**
+   * Changes Javas interal logging level, prevents an exception to be printed
+   * when the availigility check of the mongodb fails
+   */
   def boot {
+
     MongoConfig.init
-    if(!MongoConfig.isMongoRunning){
-      println("No Mongo could be found!exiting....")
-      sys.exit()
+    if (!MongoConfig.running_?) {
+      Props.get("mongo.autostart", "false") match {
+        case "false" =>
+          println("No Mongo could be found!exiting....")
+          sys.exit()
+        case "true" =>
+          import scala.sys.process._
+          println("[STARTING MONGO]")
+          val mongoParams = Props.get("mongo.autostart.params") match {
+            case Full(p) => " " + p
+            case _ => ""
+          }
+          ("mongod" + mongoParams).run(new ScalaSilentLogger)
+          Thread.sleep(500) // give mongod some time to start up
+          println("[MONGO SHOULD BE RUNNING]")
+          MongoConfig.init
+      }
     }
 
     // add our custom dispatcher
-    LiftRules.dispatch.append{RequestHandler}
+    LiftRules.dispatch.append {
+      RequestHandler
+    }
     // where to search snippet
     LiftRules.addToPackages("com.scalableminds.brainflight")
 
@@ -32,21 +58,21 @@ class Boot {
 
     // Build SiteMap
     def entries = Menu(Loc("Home", List("index"), "Home")) ::
-    Menu(Loc("Static", Link(List("static"), true, "/static/index"),
-      "Static Content")) ::
-    User.sitemap
+      Menu(Loc("Static", Link(List("static"), true, "/static/index"),
+        "Static Content")) ::
+      User.sitemap
 
-    LiftRules.setSiteMapFunc(()=>SiteMap(entries:_*))
+    LiftRules.setSiteMapFunc(() => SiteMap(entries: _*))
 
     // when the session is about to get closed, the route needs to be saved or it will get lost
     LiftSession.onAboutToShutdownSession ::= (_ => {
       SessionRoute.saveRoute(User.currentUser)
-      })
+    })
 
     // exclude lift ajax files for flight simulator
     LiftRules.autoIncludeAjax = (session =>
       S.request match {
-        case Full(Req("static" :: _,_,_)) =>
+        case Full(Req("static" :: _, _, _)) =>
           false
         case _ =>
           true
@@ -70,8 +96,8 @@ class Boot {
     /*
      * Register all BinaryDataModels
      */
-    ModelStore.register(CubeModel,FrustrumModel)
-    LiftRules.htmlProperties.default.set((r: Req) =>new Html5Properties(r.userAgent))
+    ModelStore.register(CubeModel, FrustrumModel)
+    LiftRules.htmlProperties.default.set((r: Req) => new Html5Properties(r.userAgent))
   }
 
 

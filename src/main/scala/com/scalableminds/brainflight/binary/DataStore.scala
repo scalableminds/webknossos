@@ -46,8 +46,6 @@ object DataStore {
           fileBuffer.drop(dropCount)
 
         val br = new FileInputStream("%sx%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw".format(dataPath,x,y,z,binaryDataID,x,y,z))
-        println("FILEINPUTSTREEAM::::::")
-        println(br)
         val b = inputStreamToByteArray(br)
         fileBuffer += (((x, y, z), b))
         b

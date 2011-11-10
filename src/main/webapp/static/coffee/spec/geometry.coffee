@@ -52,3 +52,10 @@ describe 'geometry', ->
           polygons_touched += 1
     
     expect(polygons_touched).toEqual(12)
+  
+  it 'should return an intersection line segment', ->
+    expect(g.find_intersections(g.polyhedral[0].faces[10], g.polyhedral[1].faces[1]))
+      .toBeDefined()
+    expect(g.find_intersections(g.polyhedral[0].faces[6], g.polyhedral[1].faces[5]))
+      .toBeDefined()
+    

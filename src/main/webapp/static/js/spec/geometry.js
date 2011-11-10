@@ -22,7 +22,7 @@ describe('geometry', function() {
     }
     return _results;
   });
-  return it('polygon normals should point outwards', function() {
+  it('polygon normals should point outwards', function() {
     var coord, coord1, polygon, polygons_touched, pos, ref, _i, _j, _len, _len2, _ref, _ref2, _ref3;
     polygons_touched = 0;
     _ref = g.polyhedral[0].faces;
@@ -61,5 +61,9 @@ describe('geometry', function() {
       }
     }
     return expect(polygons_touched).toEqual(12);
+  });
+  return it('should return an intersection line segment', function() {
+    expect(g.find_intersections(g.polyhedral[0].faces[10], g.polyhedral[1].faces[1])).toBeDefined();
+    return expect(g.find_intersections(g.polyhedral[0].faces[6], g.polyhedral[1].faces[5])).toBeDefined();
   });
 });

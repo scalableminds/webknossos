@@ -73,11 +73,7 @@ Geometry = (function() {
   };
 
   overlaps = function(ex1, ex2) {
-    point_in_cube(p, cube)(function() {
-      var _ref, _ref2, _ref3;
-      return (cube.min[0] < (_ref = p[0]) && _ref < cube.max[0]) && (cube.min[1] < (_ref2 = p[1]) && _ref2 < cube.max[1]) && (cube.min[2] < (_ref3 = p[2]) && _ref3 < cube.max[2]);
-    });
-    return point_in_cube(ex1.min, ex2) || point_in_cube(ex1.max, ex2) || point_in_cube(ex2.min, ex1) || point_in_cube(ex2.max, ex1);
+    return ex1.min[0] < ex2.max[0] && ex1.max[0] > ex2.min[0] && ex1.min[1] < ex2.max[1] && ex1.max[1] > ex2.min[1] && ex1.min[2] < ex2.max[2] && ex1.max[2] > ex2.min[2];
   };
 
   calc_extent = function(vertex, max, min) {
@@ -91,29 +87,32 @@ Geometry = (function() {
   Polyhedron = (function() {
 
     function Polyhedron(faces, edges, vertices) {
-      var edge, max, min, vertex, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4;
+      var edge, face, max, min, vertex, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4;
       this.faces = faces;
       this.edges = edges;
       this.vertices = vertices;
-      _ref = this.vertices;
+      _ref = this.faces;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        vertex = _ref[_i];
-        _ref2 = calc_extent(vertex, max, min), max = _ref2[0], min = _ref2[1];
+        face = _ref[_i];
+        face.polyhedron = this;
+      }
+      _ref2 = this.edges;
+      for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+        edge = _ref2[_j];
+        edge.calc_interior();
+        edge.polyhedron = this;
+      }
+      _ref3 = this.vertices;
+      for (_k = 0, _len3 = _ref3.length; _k < _len3; _k++) {
+        vertex = _ref3[_k];
+        _ref4 = calc_extent(vertex, max, min), max = _ref4[0], min = _ref4[1];
+        vertex.calc_interior();
+        vertex.polyhedron = this;
       }
       this.extent = {
         max: max,
         min: min
       };
-      _ref3 = this.edges;
-      for (_j = 0, _len2 = _ref3.length; _j < _len2; _j++) {
-        edge = _ref3[_j];
-        edge.calc_interior();
-      }
-      _ref4 = this.vertices;
-      for (_k = 0, _len3 = _ref4.length; _k < _len3; _k++) {
-        vertex = _ref4[_k];
-        vertex.calc_interior();
-      }
       this.links = [];
     }
 
@@ -233,13 +232,13 @@ Geometry = (function() {
             for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
               face2 = _ref2[_j];
               if (overlaps(face1.extent, face2.extent)) {
-                _results2.push(find_intersections(face1, face2));
+                _results2.push(this.find_intersections(face1, face2));
               } else {
                 _results2.push(void 0);
               }
             }
             return _results2;
-          })());
+          }).call(this));
         } else {
           _results.push(void 0);
         }
@@ -251,25 +250,28 @@ Geometry = (function() {
   Geometry.prototype.find_intersections = function(face1, face2) {
     var distance_vertex_to_plane, distance_vertices_to_plane, line_segment, line_segment_intersection, max, min, _ref, _ref2;
     distance_vertex_to_plane = function(vertex, plane) {
-      return (vertex.x * plane[0] + vertex.y * plane[1] + vertex.z * plane[2]) - plane[3];
+      if (plane[3] < 0) {
+        return (vertex.x * (-plane[0]) + vertex.y * (-plane[1]) + vertex.z * (-plane[2])) + plane[3];
+      } else {
+        return (vertex.x * plane[0] + vertex.y * plane[1] + vertex.z * plane[2]) - plane[3];
+      }
     };
     distance_vertices_to_plane = function(vertices, plane) {
-      var max, min, s, vertex, _i, _len, _results;
-      _results = [];
+      var max, min, s, vertex, _i, _len;
       for (_i = 0, _len = vertices.length; _i < _len; _i++) {
         vertex = vertices[_i];
         s = distance_vertex_to_plane(vertex, plane);
         if ((typeof max !== "undefined" && max !== null) && (typeof min !== "undefined" && min !== null)) {
           max = Math.max(max, s);
-          _results.push(min = Math.min(min, s));
+          min = Math.min(min, s);
         } else {
-          _results.push(max = min = s);
+          max = min = s;
         }
       }
-      return _results;
+      return [max, min];
     };
     line_segment = function(_face1, _face2) {
-      var d1, d2, e, points, quotient, v, v1, v2, vec, _i, _j, _len, _len2, _ref, _ref2;
+      var d1, d2, e, points, quotient, v, v1, v2, vec, vertex, _i, _j, _len, _len2, _ref, _ref2;
       points = [];
       _ref = _face1.vertices;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -288,8 +290,12 @@ Geometry = (function() {
           d1 = Math.abs(d1);
           d2 = Math.abs(d2);
           vec = v2.sub(v1);
-          quotient = (d1 / (d1 + d2)) * Math.vecLength(vec);
-          points.push(new Vertex([v1.x + quotient * vec[0], v1.y + quotient * vec[1], v1.z + quotient * vec[2]]));
+          quotient = d1 / (d1 + d2);
+          vertex = new Vertex([v1.x + quotient * vec[0], v1.y + quotient * vec[1], v1.z + quotient * vec[2]]);
+          vertex.polyhedron = _face1.polyhedron;
+          if (!e.interior) vertex.interior = false;
+          vertex.linked_edge = e;
+          points.push(vertex);
         }
       }
       return points;
@@ -307,11 +313,11 @@ Geometry = (function() {
       if (d2 === d3) return [seg1[1]];
       return [d3 <= d1 ? seg1[0] : seg2[0], d4 <= d2 ? seg2[1] : seg1[1]];
     };
-    _ref = distance_vertices_to_plane(this.vertices, polygonB.plane), max = _ref[0], min = _ref[1];
+    _ref = distance_vertices_to_plane(face1.vertices, face2.plane), max = _ref[0], min = _ref[1];
     if ((max >= 0 && min >= 0) || (max <= 0 && min <= 0)) {
       return false;
     } else {
-      _ref2 = distance_vertices_to_plane(polygonB.vertices, this.plane), max = _ref2[0], min = _ref2[1];
+      _ref2 = distance_vertices_to_plane(face2.vertices, face1.plane), max = _ref2[0], min = _ref2[1];
       if ((max >= 0 && min >= 0) || (max <= 0 && min <= 0)) {
         return false;
       } else {

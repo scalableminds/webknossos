@@ -50,15 +50,12 @@ class Geometry
   
   overlaps = (ex1, ex2) ->
     
-    point_in_cube(p, cube) ->
-      cube.min[0] < p[0] < cube.max[0] and 
-      cube.min[1] < p[1] < cube.max[1] and 
-      cube.min[2] < p[2] < cube.max[2]
-    
-    point_in_cube(ex1.min, ex2) or 
-    point_in_cube(ex1.max, ex2) or 
-    point_in_cube(ex2.min, ex1) or 
-    point_in_cube(ex2.max, ex1)
+    ex1.min[0] < ex2.max[0] and
+    ex1.max[0] > ex2.min[0] and
+    ex1.min[1] < ex2.max[1] and
+    ex1.max[1] > ex2.min[1] and
+    ex1.min[2] < ex2.max[2] and
+    ex1.max[2] > ex2.min[2]
   
   calc_extent = (vertex, max, min) ->
     
@@ -75,16 +72,21 @@ class Geometry
   class Polyhedron
     constructor: (@faces, @edges, @vertices) ->
     
+      face.polyhedron = @ for face in @faces
+      
+      for edge in @edges
+        edge.calc_interior()
+        edge.polyhedron = @
+    
       # calc extent
       for vertex in @vertices
         [max, min] = calc_extent(vertex, max, min)
-      
+        vertex.calc_interior()
+        vertex.polyhedron = @
+        
       @extent =
         max: max
         min: min
-      
-      edge.calc_interior() for edge in @edges
-      vertex.calc_interior() for vertex in @vertices
       
       @links = []
       
@@ -175,12 +177,15 @@ class Geometry
         if overlaps(face1.extent, p2.extent)
           for face2 in p2.faces
             if overlaps(face1.extent, face2.extent)
-              find_intersections(face1, face2)
+              @find_intersections(face1, face2)
   
   find_intersections: (face1, face2) ->
       
     distance_vertex_to_plane = (vertex, plane) ->
-      (vertex.x * plane[0] + vertex.y * plane[1] + vertex.z * plane[2]) - plane[3]
+      if plane[3] < 0
+        (vertex.x * (-plane[0]) + vertex.y * (-plane[1]) + vertex.z * (-plane[2])) + plane[3]
+      else
+        (vertex.x * plane[0] + vertex.y * plane[1] + vertex.z * plane[2]) - plane[3]
       
     distance_vertices_to_plane = (vertices, plane) ->
       for vertex in vertices
@@ -190,6 +195,7 @@ class Geometry
           min = Math.min(min, s)
         else
           max = min = s
+      [max, min]
     
     line_segment = (_face1, _face2) ->
       points = []
@@ -209,12 +215,17 @@ class Geometry
           d1 = Math.abs(d1)
           d2 = Math.abs(d2)
           vec = v2.sub(v1)
-          quotient = (d1 / (d1 + d2)) * Math.vecLength(vec)
-          points.push new Vertex [
+          quotient = (d1 / (d1 + d2))
+          
+          vertex = new Vertex [
             v1.x + quotient * vec[0]
             v1.y + quotient * vec[1]
             v1.z + quotient * vec[2]
           ]
+          vertex.polyhedron = _face1.polyhedron
+          vertex.interior = false unless e.interior
+          vertex.linked_edge = e
+          points.push vertex
       
       return points
       
@@ -251,12 +262,12 @@ class Geometry
       
       
     
-    [max, min] = distance_vertices_to_plane(@vertices, polygonB.plane)
+    [max, min] = distance_vertices_to_plane(face1.vertices, face2.plane)
     
     if (max >= 0 and min >= 0) or (max <= 0 and min <= 0)
       return false # coplanar or no intersection at all
     else
-      [max, min] = distance_vertices_to_plane(polygonB.vertices, @plane)
+      [max, min] = distance_vertices_to_plane(face2.vertices, face1.plane)
       
       if (max >= 0 and min >= 0) or (max <= 0 and min <= 0)
         return false # still no intersection

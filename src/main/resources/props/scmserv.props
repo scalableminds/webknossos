@@ -2,8 +2,8 @@
 # ----------- mongo-settings ------------
 mongo.autostart=false
 mongo.host=127.0.0.1
-mongo.dbname=mydb
+mongo.dbname=brainflight
 
 # ----------- binary data settings ------
-binarydata.path=/home/deployboy/binarydata/
+binarydata.path=/home/deployboy/binary_data/
 binarydata.id=100527_k0563_mag1

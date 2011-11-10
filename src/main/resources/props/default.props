@@ -1,4 +1,5 @@
 # Properties in this file will be read when running in dev mode
+# ----------- mongo-settings ------------
 mongo.autostart=true
 mongo.host=127.0.0.1
 mongo.dbname=mydb

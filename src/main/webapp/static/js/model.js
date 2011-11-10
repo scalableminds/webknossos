@@ -1,4 +1,5 @@
 var Model, _Model;
+
 _Model = function(skipInitialization) {
   var coordinatesModel, model;
   model = new EventEmitter();
@@ -66,4 +67,5 @@ _Model = function(skipInitialization) {
   });
   return model;
 };
+
 Model = new _Model();

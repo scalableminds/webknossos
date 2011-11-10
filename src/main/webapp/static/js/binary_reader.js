@@ -1,4 +1,5 @@
 var read_binary_file;
+
 read_binary_file = function() {
   var parser, xhr;
   this.newPointCloud = {

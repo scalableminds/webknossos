@@ -15,7 +15,7 @@ async = (timeout, message, handler) ->
     else
       handler = message
       message = timeout
-    timeout = 5000
+    timeout = 60000 # 1 min
       
   _done = false
   done = -> _done = true

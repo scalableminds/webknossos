@@ -1,4 +1,5 @@
 var binary_request;
+
 binary_request = function(url, callback) {
   var xhr;
   xhr = new XMLHttpRequest();

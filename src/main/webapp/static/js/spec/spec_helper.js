@@ -1,20 +1,19 @@
 var async;
+
 jasmine.Matchers.prototype.toBeSameArrayAs = function(expected) {
   var el, i, _len;
-  if (expected.length !== this.actual.length) {
-    return false;
-  }
+  if (expected.length !== this.actual.length) return false;
   for (i = 0, _len = expected.length; i < _len; i++) {
     el = expected[i];
-    if (el !== this.actual[i]) {
-      return false;
-    }
+    if (el !== this.actual[i]) return false;
   }
   return true;
 };
+
 jasmine.Matchers.prototype.toBeA = function(clazz) {
   return jasmine.any(clazz).matches(this.actual);
 };
+
 async = function(timeout, message, handler) {
   var done, _done;
   if (handler == null) {
@@ -24,7 +23,7 @@ async = function(timeout, message, handler) {
       handler = message;
       message = timeout;
     }
-    timeout = 5000;
+    timeout = 60000;
   }
   _done = false;
   done = function() {
@@ -37,13 +36,12 @@ async = function(timeout, message, handler) {
     return _done;
   }), message, timeout);
 };
+
 Array.prototype.all = function(predicate) {
   var el, _i, _len;
   for (_i = 0, _len = this.length; _i < _len; _i++) {
     el = this[_i];
-    if (!predicate(el)) {
-      return false;
-    }
+    if (!predicate(el)) return false;
   }
   return true;
 };

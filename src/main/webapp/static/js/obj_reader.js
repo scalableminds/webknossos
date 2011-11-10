@@ -1,4 +1,5 @@
 var read_obj_file, triangulate;
+
 read_obj_file = function() {
   var SOMECOLORS, numFaces, numNorms, numVerts, xhr;
   this.new3DMesh = {
@@ -94,6 +95,7 @@ read_obj_file = function() {
   xhr.send(null);
   return new3DMesh;
 };
+
 triangulate = function(arr) {
   var i, triangles, _ref;
   triangles = [];

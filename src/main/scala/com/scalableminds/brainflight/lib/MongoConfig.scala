@@ -1,4 +1,4 @@
-package com.scalableminds.brainflight.model
+package com.scalableminds.brainflight.lib
 
 import net.liftweb._
 import common.Full

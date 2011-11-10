@@ -8,9 +8,9 @@ import _root_.net.liftweb.sitemap.Loc._
 import com.scalableminds.brainflight.handler.RequestHandler
 import com.scalableminds.brainflight.binary.{FrustrumModel, ModelStore, CubeModel}
 import org.bson.types.ObjectId
-import com.scalableminds.brainflight.model.{SessionRoute, FlightRoute, MongoConfig, User}
+import com.scalableminds.brainflight.lib.{MongoConfig, ScalaSilentLogger}
+import com.scalableminds.brainflight.model.{SessionRoute, FlightRoute, User}
 import net.liftweb.util.Props
-import com.scalableminds.brainflight.lib.ScalaSilentLogger
 import java.util.Properties
 import java.util.logging.LogManager
 import java.io.{PipedInputStream, PipedOutputStream}
@@ -57,12 +57,12 @@ class Boot {
     LiftRules.resourceNames = "stringTranslations" :: Nil
 
     // Build SiteMap
-    def entries = Menu(Loc("Home", List("index"), "Home")) ::
+    def menueEntries = Menu(Loc("Home", List("index"), "Home")) ::
       Menu(Loc("Static", Link(List("static"), true, "/static/index"),
         "Static Content")) ::
       User.sitemap
 
-    LiftRules.setSiteMapFunc(() => SiteMap(entries: _*))
+    LiftRules.setSiteMapFunc(() => SiteMap(menueEntries: _*))
 
     // when the session is about to get closed, the route needs to be saved or it will get lost
     LiftSession.onAboutToShutdownSession ::= (_ => {

@@ -12,7 +12,7 @@ import org.eclipse.jetty.util.log.Logger;
 /**
  *  Grabs Jetty's log messages and doesn't care about them
  */
-public class SilentLogger implements Logger {
+public class JavaSilentLogger implements Logger{
 
     public void debug(Throwable arg0) {
     }
@@ -28,7 +28,7 @@ public class SilentLogger implements Logger {
     }
 
     public String getName() {
-        return "SilentLogger";
+        return "JavaSilentLogger";
     }
 
     public void ignore(Throwable arg0) {

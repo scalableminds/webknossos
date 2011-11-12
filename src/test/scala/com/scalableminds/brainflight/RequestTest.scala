@@ -1,7 +1,7 @@
 package com.scalableminds.brainflight
 
-import lib.JettyTestServer
 
+import lib.JettyTestServer
 import net.liftweb._
 import common.{Box, Full}
 import util._
@@ -18,16 +18,17 @@ import org.specs2.matcher.MatchFailure
 
 /**
  * Scalable Minds - Brainflight
- * User: tom
+ * User: tmbo
  * Date: 10/14/11
  * Time: 5:56 AM
  */
 
 
 object RequestTest extends Specification with TestKit{
-  // stop jetty flooding the console window
+  // don't run those tests parallel
   sequential
-  org.eclipse.jetty.util.log.Log.setLog(new SilentLogger)
+  // stop jetty flooding the console window
+  org.eclipse.jetty.util.log.Log.setLog(new JavaSilentLogger)
 
   private val host_ = reachableLocalAddress
   private val port_ = 8181
@@ -43,9 +44,6 @@ object RequestTest extends Specification with TestKit{
   }
 
   "JettyServer" should {
-    // don't run those tests parallel
-    //setSequential()
-
     "always return 200" in {
         val sites = List("/static/index",
                          "/",

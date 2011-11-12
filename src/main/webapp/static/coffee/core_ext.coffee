@@ -27,22 +27,23 @@ Math.vecAngleIsReflex = (v1, v2) ->
 Math.vecLength = (vec) ->
   Math.sqrt(vec.reduce(((r, a) -> r + Math.square(a)), 0))
 
-Array::equals = (other) ->
-  return false if @length != other.length
-  for i in [0...@length]
-    return false if @[i] != other[i]
-  true
+Utils = 
+  arrayEquals: (a1, a2) ->
+    return false if a1.length != a1.length
+    for i in [0...a1.length]
+      return false if a1[i] != a2[i]
+    true
 
-Array::cmp = (other) ->
-  if @length != other.length
-    if @length < other.length then -1 else 1
-  else
-    for i in [0...@length]
-      if @[i] < other[i]
-        return -1
-      if @[i] > other[i]
-        return 1
-    0
-    
-defer = (callback) ->
-  setTimeout(callback, 1)
+  arrayCompare: (a1, a2) ->
+    if @length != other.length
+      if @length < other.length then -1 else 1
+    else
+      for i in [0...@length]
+        if @[i] < other[i]
+          return -1
+        if @[i] > other[i]
+          return 1
+      0
+
+  defer: (callback) ->
+    setTimeout(callback, 1)

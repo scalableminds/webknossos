@@ -1,4 +1,4 @@
-var defer;
+var Utils;
 
 Math.square = function(a) {
   return a * a;
@@ -41,32 +41,32 @@ Math.vecLength = function(vec) {
   }), 0));
 };
 
-Array.prototype.equals = function(other) {
-  var i, _ref;
-  if (this.length !== other.length) return false;
-  for (i = 0, _ref = this.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-    if (this[i] !== other[i]) return false;
-  }
-  return true;
-};
-
-Array.prototype.cmp = function(other) {
-  var i, _ref;
-  if (this.length !== other.length) {
-    if (this.length < other.length) {
-      return -1;
+Utils = {
+  arrayEquals: function(a1, a2) {
+    var i, _ref;
+    if (a1.length !== a1.length) return false;
+    for (i = 0, _ref = a1.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      if (a1[i] !== a2[i]) return false;
+    }
+    return true;
+  },
+  arrayCompare: function(a1, a2) {
+    var i, _ref;
+    if (this.length !== other.length) {
+      if (this.length < other.length) {
+        return -1;
+      } else {
+        return 1;
+      }
     } else {
-      return 1;
+      for (i = 0, _ref = this.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+        if (this[i] < other[i]) return -1;
+        if (this[i] > other[i]) return 1;
+      }
+      return 0;
     }
-  } else {
-    for (i = 0, _ref = this.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-      if (this[i] < other[i]) return -1;
-      if (this[i] > other[i]) return 1;
-    }
-    return 0;
+  },
+  defer: function(callback) {
+    return setTimeout(callback, 1);
   }
-};
-
-defer = function(callback) {
-  return setTimeout(callback, 1);
 };

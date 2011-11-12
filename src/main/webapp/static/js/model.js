@@ -40,7 +40,7 @@ _Model = function(skipInitialization) {
       output[i + 1] = Math.round(moveVector[1] + (a10 * px + a11 * py + a12 * pz));
       output[i + 2] = Math.round(moveVector[2] + (a20 * px + a21 * py + a22 * pz));
     }
-    return defer(function() {
+    return Utils.defer(function() {
       return callback(output);
     });
   };

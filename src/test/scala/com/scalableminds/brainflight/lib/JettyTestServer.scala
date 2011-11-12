@@ -12,7 +12,6 @@ package com.scalableminds.brainflight.lib
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 
-import junit.framework.AssertionFailedError
 import net.liftweb.common.Box
 import java.net.URL
 import org.eclipse.jetty.servlet.FilterHolder
@@ -29,6 +28,14 @@ final class JettyTestServer(baseUrlBox: Box[URL]) {
     val dir = System.getProperty("net.liftweb.webapptest.src.test.webapp", "src/main/webapp")
     context.setWar(dir)
     context.addFilter(new FilterHolder(new org.eclipse.jetty.servlets.GzipFilter()),"/",1)
+    /*Jetty 8:
+    val all = EnumSet.of(DispatcherType.ASYNC, DispatcherType.ERROR, DispatcherType.FORWARD,
+            DispatcherType.INCLUDE, DispatcherType.REQUEST);
+    val gzipFilter = new FilterHolder(new GzipFilter());
+    gzipFilter.setInitParameter("mimeTypes", "text/javascript");
+    gzipFilter.setInitParameter("minGzipSize", "0");
+    context.addFilter(gzipFilter, "/", all);       <-- make a star after /
+    */
     server.setHandler(context)
     server.setGracefulShutdown(100)
     server.setStopAtShutdown(true)

@@ -9,7 +9,7 @@ class Geometry
     faces = []
     
     get_edge = (vertex1, vertex2) ->
-      if vertex1.toArray().cmp(vertex2.toArray()) == 1
+      if Utils.arrayCompare(vertex1.toArray(), vertex2.toArray()) == 1
         [vertex1, vertex2] = [vertex2, vertex1]
       
       hit_edges = edges["#{vertex1}x#{vertex2}"] ?= []
@@ -75,7 +75,7 @@ class Geometry
           
           while stack.length > 1 and Math.vecAngleIsReflex(u.sub(last), prelast.sub(last)) > 0
             output.push [u, prelast, 2]
-            stack.pop
+            stack.pop()
             [prelast, last] = stack[-2..-1]
             
           stack.push u
@@ -165,7 +165,7 @@ class Geometry
       @links = []
     
     calc_interior: ->
-      @interior = @adjoining_faces[0].plane.equals @adjoining_faces[1].plane
+      @interior = Utils.arrayEquals(@adjoining_faces[0].plane, @adjoining_faces[1].plane)
       
   
   class Vertex

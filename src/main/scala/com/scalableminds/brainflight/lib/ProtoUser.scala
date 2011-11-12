@@ -13,11 +13,10 @@ import net.liftweb.record.field._
 import net.liftweb.mongodb.record._
 
 /**
- * Created by IntelliJ IDEA.
- * User: tombocklisch
+ * scalableminds - brainflight
+ * User: tmbo
  * Date: 29.10.11
  * Time: 21:21
- * To change this template use File | Settings | File Templates.
  */
 
 trait ProtoUser[T <: ProtoUser[T]] extends MongoRecord[T] with ObjectIdPk[T] {

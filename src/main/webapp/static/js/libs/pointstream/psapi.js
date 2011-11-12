@@ -24,7 +24,7 @@ var PointStream = (function() {
     if(!Float32Array.prototype.subarray){
       /**
         @private
-      */
+      */F
       Float32Array.prototype.subarray = function(s,e){
         return !e ? this.slice(0) : this.slice(s,e);
       };
@@ -1342,7 +1342,7 @@ var PointStream = (function() {
           // Iterate over all the vertex buffer objects.
           for(var currVBO = 0; currVBO < arrayOfBufferObjsV.length; currVBO++){
             // iterate over all the semantic names "ps_Vertex", "ps_Normal", etc.
-            for(name in semantics){
+            for(name in Object.keys(semantics)){
               /*
                 There is a chance we don't have the correspoding semantic data
                 for this vertex. In that case, we skip it.

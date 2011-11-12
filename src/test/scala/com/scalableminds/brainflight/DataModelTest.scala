@@ -10,6 +10,7 @@ import java.io.FileNotFoundException
 //object DataModelTestSpecsRunner extends ConsoleRunner(DataModelTestSpecs)
 
 class DataStoreTest extends Specification{
+  sequential
   "DataStore" should {
     "load Data" in {
       try{

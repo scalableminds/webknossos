@@ -14,7 +14,7 @@ Geometry = (function() {
     faces = [];
     get_edge = function(vertex1, vertex2) {
       var edge, hit_edges, tmp, _i, _len, _name, _ref, _ref2;
-      if (vertex1.toArray().cmp(vertex2.toArray()) === 1) {
+      if (Utils.arrayCompare(vertex1.toArray(), vertex2.toArray()) === 1) {
         _ref = [vertex2, vertex1], vertex1 = _ref[0], vertex2 = _ref[1];
       }
       hit_edges = (_ref2 = edges[_name = "" + vertex1 + "x" + vertex2]) != null ? _ref2 : edges[_name] = [];
@@ -63,7 +63,25 @@ Geometry = (function() {
   };
 
   Geometry.prototype.triangulate = function(polygon) {
-    var first, has_first, has_last, i, last, monotones, output, p, prelast, stack, u, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
+    var calc_reflex, first, has_first, has_last, i, last, monotones, output, p, prelast, ref_normal, remove_links, stack, u, v, v0, v0_reflex, v1, v1_reflex, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4, _ref5;
+    calc_reflex = function(vertex, ref) {
+      return vertex.reflex = !Math.vecAngleIsntReflex(vertex.adjacent0.sub(vertex), vertex.adjacent1.sub(vertex), ref);
+    };
+    remove_links = function(v_old) {
+      var v0, v1;
+      v0 = v_old.adjacent0;
+      v1 = v_old.adjacent1;
+      if (v0.adjacent0 === v_old) {
+        v0.adjacent0 = v1;
+      } else {
+        v0.adjacent1 = v1;
+      }
+      if (v1.adjacent0 === v_old) {
+        return v1.adjacent0 = v0;
+      } else {
+        return v1.adjacent1 = v0;
+      }
+    };
     output = [];
     polygon.sort(function(a, b) {
       return b.y - a.y;
@@ -71,30 +89,52 @@ Geometry = (function() {
     monotones = [polygon];
     for (_i = 0, _len = monotones.length; _i < _len; _i++) {
       p = monotones[_i];
-      stack = p.slice(0, 2);
-      _ref = p.slice(2);
+      ref_normal = Math.normalizeVector(Math.crossProduct(p[1].sub(p[0]), p[2].sub(p[0])));
+      stack = [];
+      _ref = p.slice(1, -1);
       for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
-        u = _ref[_j];
+        v = _ref[_j];
+        if (!calc_reflex(v, ref_normal)) stack.push(v);
+      }
+      while (stack.length > 0) {
+        v = stack.shift();
+        v0 = v.adjacent0;
+        v1 = v.adjacent1;
+        output.push([v0, v, v1]);
+        remove_links(v);
+        v0_reflex = v0.reflex;
+        v1_reflex = v1.reflex;
+        if (!calc_reflex(v0, ref_normal) && v0_reflex) stack.push(v0);
+        if (!calc_reflex(v1, ref_normal) && v1_reflex) stack.push(v1);
+      }
+      return output;
+      stack = p.slice(0, 2);
+      _ref2 = p.slice(2);
+      for (_k = 0, _len3 = _ref2.length; _k < _len3; _k++) {
+        u = _ref2[_k];
         first = stack[0];
         last = stack[stack.length - 1];
-        has_first = u.adjacent1 === first || u.adjacent2 === first;
-        has_last = u.adjacent1 === last || u.adjacent2 === last;
+        has_first = u.adjacents.indexOf(first) !== -1;
+        has_last = u.adjacents.indexOf(last) !== -1;
         if (has_first && has_last) {
-          for (i = 1, _ref2 = stack.length - 1; 1 <= _ref2 ? i < _ref2 : i > _ref2; 1 <= _ref2 ? i++ : i--) {
+          for (i = 1, _ref3 = stack.length - 1; 1 <= _ref3 ? i < _ref3 : i > _ref3; 1 <= _ref3 ? i++ : i--) {
             output.push([u, stack[i], 0]);
+            set_adjacents(u, stack[i]);
           }
           return output;
         } else if (has_first) {
-          for (i = 1, _ref3 = stack.length; 1 <= _ref3 ? i < _ref3 : i > _ref3; 1 <= _ref3 ? i++ : i--) {
+          for (i = 1, _ref4 = stack.length; 1 <= _ref4 ? i < _ref4 : i > _ref4; 1 <= _ref4 ? i++ : i--) {
             output.push([u, stack[i], 1]);
+            set_adjacents(u, stack[i]);
           }
           stack = [last, u];
         } else if (has_last) {
           prelast = stack[stack.length - 2];
-          while (stack.length > 1 && Math.vecAngleIsReflex(u.sub(last), prelast.sub(last)) > 0) {
+          while (stack.length > 1 && Math.vecAngleIsntReflex(u.sub(last), prelast.sub(last), ref_normal)) {
             output.push([u, prelast, 2]);
-            stack.pop;
-            _ref4 = stack.slice(-2), prelast = _ref4[0], last = _ref4[1];
+            set_adjacents(u, prelast);
+            stack.pop();
+            _ref5 = stack.slice(-2), prelast = _ref5[0], last = _ref5[1];
           }
           stack.push(u);
         }
@@ -199,7 +239,7 @@ Geometry = (function() {
     }
 
     Edge.prototype.calc_interior = function() {
-      return this.interior = this.adjoining_faces[0].plane.equals(this.adjoining_faces[1].plane);
+      return this.interior = Utils.arrayEquals(this.adjoining_faces[0].plane, this.adjoining_faces[1].plane);
     };
 
     return Edge;

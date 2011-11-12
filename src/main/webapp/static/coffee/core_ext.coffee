@@ -21,8 +21,8 @@ Math.crossProduct = (v1, v2) ->
 Math.vecAngle = (v1, v2) ->
   Math.dotProduct(v1, v2) / (Math.vecLength(v1) * Math.vecLength(v2))
 
-Math.vecAngleIsReflex = (v1, v2) ->
-  Math.dotProduct(v2, Math.crossProduct(v1, Math.crossProduct(v1, v2)))
+Math.vecAngleIsntReflex = (v1, v2, ref) ->
+  Utils.arrayEquals(Math.normalizeVector(Math.crossProduct(v1, v2)), ref)
 
 Math.vecLength = (vec) ->
   Math.sqrt(vec.reduce(((r, a) -> r + Math.square(a)), 0))
@@ -35,13 +35,13 @@ Utils =
     true
 
   arrayCompare: (a1, a2) ->
-    if @length != other.length
-      if @length < other.length then -1 else 1
+    if a1.length != a2.length
+      if a1.length < a2.length then -1 else 1
     else
-      for i in [0...@length]
-        if @[i] < other[i]
+      for i in [0...a1.length]
+        if a1[i] < a2[i]
           return -1
-        if @[i] > other[i]
+        if a1[i] > a2[i]
           return 1
       0
 

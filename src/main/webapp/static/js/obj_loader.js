@@ -1,4 +1,5 @@
 var load_obj_file;
+
 load_obj_file = function() {
   this.new3DMesh = {
     VBOs: [],

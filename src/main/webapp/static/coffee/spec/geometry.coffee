@@ -65,7 +65,7 @@ describe 'geometry', ->
   it 'should triangulate a monotone polygon', ->
     class V
       constructor: (@x, @y, @z) ->
-      
+        
       sub: (v2) ->
         [@x - v2.x, @y - v2.y, @z - v2.z]
       toString: ->
@@ -81,11 +81,11 @@ describe 'geometry', ->
       new V 7,0,0
     ]
     for i in [0...polygon.length]
-      polygon[i].adjacent1 = polygon[if i > 0 then i - 1 else polygon.length - 1]
-      polygon[i].adjacent2 = polygon[(i + 1) % polygon.length]
+      polygon[i].adjacent0 = polygon[if i > 0 then i - 1 else polygon.length - 1]
+      polygon[i].adjacent1 = polygon[(i + 1) % polygon.length]
     
     polygon = g.triangulate(polygon)
-    console.log v[0].toString(), v[1].toString(), v[2] for v in polygon
+    console.log v[0].toString(), v[1].toString(), v[2].toString() for v in polygon
     
     expect(polygon.length).toEqual(4)
     

@@ -105,13 +105,13 @@ describe('geometry', function() {
     })();
     polygon = [new V(0, 0, 0), new V(0, 7, 0), new V(3, 8, 0), new V(6, 3, 0), new V(7, 6, 0), new V(9, 3, 0), new V(7, 0, 0)];
     for (i = 0, _ref = polygon.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-      polygon[i].adjacent1 = polygon[i > 0 ? i - 1 : polygon.length - 1];
-      polygon[i].adjacent2 = polygon[(i + 1) % polygon.length];
+      polygon[i].adjacent0 = polygon[i > 0 ? i - 1 : polygon.length - 1];
+      polygon[i].adjacent1 = polygon[(i + 1) % polygon.length];
     }
     polygon = g.triangulate(polygon);
     for (_i = 0, _len = polygon.length; _i < _len; _i++) {
       v = polygon[_i];
-      console.log(v[0].toString(), v[1].toString(), v[2]);
+      console.log(v[0].toString(), v[1].toString(), v[2].toString());
     }
     return expect(polygon.length).toEqual(4);
   });

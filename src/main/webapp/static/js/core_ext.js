@@ -31,8 +31,8 @@ Math.vecAngle = function(v1, v2) {
   return Math.dotProduct(v1, v2) / (Math.vecLength(v1) * Math.vecLength(v2));
 };
 
-Math.vecAngleIsReflex = function(v1, v2) {
-  return Math.dotProduct(v2, Math.crossProduct(v1, Math.crossProduct(v1, v2)));
+Math.vecAngleIsntReflex = function(v1, v2, ref) {
+  return Utils.arrayEquals(Math.normalizeVector(Math.crossProduct(v1, v2)), ref);
 };
 
 Math.vecLength = function(vec) {
@@ -52,16 +52,16 @@ Utils = {
   },
   arrayCompare: function(a1, a2) {
     var i, _ref;
-    if (this.length !== other.length) {
-      if (this.length < other.length) {
+    if (a1.length !== a2.length) {
+      if (a1.length < a2.length) {
         return -1;
       } else {
         return 1;
       }
     } else {
-      for (i = 0, _ref = this.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-        if (this[i] < other[i]) return -1;
-        if (this[i] > other[i]) return 1;
+      for (i = 0, _ref = a1.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+        if (a1[i] < a2[i]) return -1;
+        if (a1[i] > a2[i]) return 1;
       }
       return 0;
     }

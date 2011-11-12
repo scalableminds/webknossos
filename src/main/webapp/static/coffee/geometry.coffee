@@ -44,6 +44,28 @@ class Geometry
   
   triangulate: (polygon) ->
     
+    calc_reflex = (vertex, ref) ->
+      vertex.reflex = not Math.vecAngleIsntReflex(
+        vertex.adjacent0.sub(vertex),
+        vertex.adjacent1.sub(vertex),
+        ref
+      )
+    remove_links = (v_old) ->
+      v0 = v_old.adjacent0
+      v1 = v_old.adjacent1
+      
+      if v0.adjacent0 == v_old
+        v0.adjacent0 = v1
+      else
+        v0.adjacent1 = v1
+        
+      if v1.adjacent0 == v_old
+        v1.adjacent0 = v0
+      else
+        v1.adjacent1 = v0
+      
+    
+    
     output = []
       
     # monotonize
@@ -53,28 +75,62 @@ class Geometry
     # triangulate each monotone polygon
     for p in monotones
       
+      # plane normal of the polygon
+      # requires angle (p[1],p[0],p[2]) < 180°
+      # which should always be the case because of the desc-y-ordering
+      ref_normal = Math.normalizeVector(Math.crossProduct(p[1].sub(p[0]), p[2].sub(p[0])))
+      
+      stack = []
+      
+      for v in p[1..-2]
+        unless calc_reflex(v, ref_normal)
+          stack.push v
+          
+      while stack.length > 0
+        v = stack.shift()
+        
+        v0 = v.adjacent0
+        v1 = v.adjacent1
+        output.push [v0, v, v1]
+        
+        remove_links v
+        
+        v0_reflex = v0.reflex
+        v1_reflex = v1.reflex
+        
+        stack.push v0 if not calc_reflex(v0, ref_normal) and v0_reflex
+        stack.push v1 if not calc_reflex(v1, ref_normal) and v1_reflex
+        
+      return output
+      
+      
       stack = p[0..1]
       for u in p[2..-1]
         first = stack[0]
         last = stack[stack.length - 1]
-        has_first = u.adjacent1 == first or u.adjacent2 == first
-        has_last = u.adjacent1 == last or u.adjacent2 == last
+        has_first = u.adjacents.indexOf(first) != -1
+        has_last = u.adjacents.indexOf(last) != -1
         
         if has_first and has_last
           for i in [1...(stack.length - 1)]
             output.push [u, stack[i], 0]
+            set_adjacents u, stack[i]
+            
           return output
           
         else if has_first
           for i in [1...stack.length]
             output.push [u, stack[i], 1]
+            set_adjacents u, stack[i]
+            
           stack = [last, u]
           
         else if has_last
           prelast = stack[stack.length - 2]
           
-          while stack.length > 1 and Math.vecAngleIsReflex(u.sub(last), prelast.sub(last)) > 0
+          while stack.length > 1 and Math.vecAngleIsntReflex(u.sub(last), prelast.sub(last), ref_normal)
             output.push [u, prelast, 2]
+            set_adjacents u, prelast
             stack.pop()
             [prelast, last] = stack[-2..-1]
             

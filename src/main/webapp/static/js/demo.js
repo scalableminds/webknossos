@@ -1,4 +1,4 @@
-var cam, clipping_distance, keyDown, mesh, mouseDown, mousePressed, mouseReleased, pointcloud, ps, render, setCamPosition, start;
+var cam, changePerspectiveParams, clipping_distance, keyDown, mesh, mouseDown, mousePressed, mouseReleased, pointcloud, ps, render, setCamPosition, start;
 ps = void 0;
 pointcloud = void 0;
 mesh = void 0;
@@ -50,17 +50,19 @@ render = function() {
   status.innerHTML = "" + (Math.floor(ps.frameRate)) + " FPS <br/> " + pointcloud.numPoints + " Points <br />" + cam.pos;
 };
 start = function() {
-  var frag, progObj, vert;
   cam = new FreeCam();
   cam.pos = [6, 5, -15];
   ps = new PointStream();
   ps.setup(document.getElementById('render'), {
     "antialias": true
   });
-  vert = ps.getShaderStr("js/libs/pointstream/shaders/clip.vs");
-  frag = ps.getShaderStr("js/libs/pointstream/shaders/clip.fs");
-  progObj = ps.createProgram(vert, frag);
-  ps.useProgram(progObj);
+  /*
+  	vert = ps.getShaderStr("js/libs/pointstream/shaders/clip.vs")
+  	frag = ps.getShaderStr("js/libs/pointstream/shaders/clip.fs")
+  	progObj = ps.createProgram(vert, frag);
+  	ps.useProgram(progObj);
+  	*/
+  ps.perspective(60, ps.width / ps.height, 15, 20);
   ps.background([0.9, 0.9, 0.9, 1]);
   ps.pointSize(5);
   ps.onRender = render;
@@ -68,7 +70,7 @@ start = function() {
   ps.onMouseReleased = mouseReleased;
   ps.onKeyDown = keyDown;
   pointcloud = read_binary_file();
-  mesh = read_obj_file();
+  mesh = load_obj_file();
 };
 setCamPosition = function() {
   var x, y, z;
@@ -77,5 +79,14 @@ setCamPosition = function() {
   z = parseFloat(document.getElementById('camZ').value);
   if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
     cam.pos = [x, y, z];
+  }
+};
+changePerspectiveParams = function() {
+  var far, fovy, near;
+  near = parseFloat(document.getElementById('near').value);
+  far = parseFloat(document.getElementById('far').value);
+  fovy = parseFloat(document.getElementById('fovy').value);
+  if (!isNaN(near) && !isNaN(far) && !isNaN(fovy)) {
+    ps.perspective(fovy, ps.width / ps.height, near, far);
   }
 };

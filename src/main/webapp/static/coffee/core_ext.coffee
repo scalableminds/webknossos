@@ -7,12 +7,22 @@ Math.normalizeVector = (vec) ->
   else
     vec
 
+Math.dotProduct = (v1, v2) ->
+  return null if v1.length != v2.length
+  v1.reduce(((r, a, i) -> r + a * v2[i]), 0)
+
 Math.crossProduct = (v1, v2) ->
   [
     v1[1] * v2[2] - v1[2] * v2[1]
     v1[2] * v2[0] - v1[0] * v2[2]
     v1[0] * v2[1] - v1[1] * v2[0]
   ]
+
+Math.vecAngle = (v1, v2) ->
+  Math.dotProduct(v1, v2) / (Math.vecLength(v1) * Math.vecLength(v2))
+
+Math.vecAngleIsReflex = (v1, v2) ->
+  Math.dotProduct(v2, Math.crossProduct(v1, Math.crossProduct(v1, v2)))
 
 Math.vecLength = (vec) ->
   Math.sqrt(vec.reduce(((r, a) -> r + Math.square(a)), 0))

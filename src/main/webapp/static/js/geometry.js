@@ -1,7 +1,7 @@
 var Geometry;
 
 Geometry = (function() {
-  var Edge, Face, Polyhedron, Vertex, calc_extent, overlaps, triangulate;
+  var Edge, Face, Polyhedron, Vertex, calc_extent, overlaps;
 
   function Geometry() {
     this.polyhedral = [];
@@ -27,7 +27,7 @@ Geometry = (function() {
     };
     for (_i = 0, _len = data.length; _i < _len; _i++) {
       polygon = data[_i];
-      _ref = triangulate(polygon);
+      _ref = this.triangulate(polygon);
       for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
         face = _ref[_j];
         face_vertices = (function() {
@@ -62,14 +62,45 @@ Geometry = (function() {
     })));
   };
 
-  triangulate = function(polygon) {
-    var first, i, _ref, _results;
-    first = polygon[0];
-    _results = [];
-    for (i = 1, _ref = polygon.length - 2; 1 <= _ref ? i <= _ref : i >= _ref; 1 <= _ref ? i++ : i--) {
-      _results.push([first, polygon[i], polygon[i + 1]]);
+  Geometry.prototype.triangulate = function(polygon) {
+    var first, has_first, has_last, i, last, monotones, output, p, prelast, stack, u, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
+    output = [];
+    polygon.sort(function(a, b) {
+      return b.y - a.y;
+    });
+    monotones = [polygon];
+    for (_i = 0, _len = monotones.length; _i < _len; _i++) {
+      p = monotones[_i];
+      stack = p.slice(0, 2);
+      _ref = p.slice(2);
+      for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
+        u = _ref[_j];
+        first = stack[0];
+        last = stack[stack.length - 1];
+        has_first = u.adjacent1 === first || u.adjacent2 === first;
+        has_last = u.adjacent1 === last || u.adjacent2 === last;
+        if (has_first && has_last) {
+          for (i = 1, _ref2 = stack.length - 1; 1 <= _ref2 ? i < _ref2 : i > _ref2; 1 <= _ref2 ? i++ : i--) {
+            output.push([u, stack[i], 0]);
+          }
+          return output;
+        } else if (has_first) {
+          for (i = 1, _ref3 = stack.length; 1 <= _ref3 ? i < _ref3 : i > _ref3; 1 <= _ref3 ? i++ : i--) {
+            output.push([u, stack[i], 1]);
+          }
+          stack = [last, u];
+        } else if (has_last) {
+          prelast = stack[stack.length - 2];
+          while (stack.length > 1 && Math.vecAngleIsReflex(u.sub(last), prelast.sub(last)) > 0) {
+            output.push([u, prelast, 2]);
+            stack.pop;
+            _ref4 = stack.slice(-2), prelast = _ref4[0], last = _ref4[1];
+          }
+          stack.push(u);
+        }
+      }
     }
-    return _results;
+    return output;
   };
 
   overlaps = function(ex1, ex2) {

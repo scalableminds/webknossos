@@ -21,7 +21,7 @@ class Geometry
       tmp
     
     for polygon in data
-      for face in triangulate(polygon)
+      for face in @triangulate(polygon)
         
         face_vertices = for _vertex in face
           vertices[_vertex.toString()] ?= new Vertex(_vertex)
@@ -42,11 +42,45 @@ class Geometry
       Object.keys(vertices).map((a) -> vertices[a])
     )
   
-  triangulate = (polygon) ->
-    # fanning
-    first = polygon[0]
-    for i in [1..(polygon.length - 2)]
-      [first, polygon[i], polygon[i + 1]]
+  triangulate: (polygon) ->
+    
+    output = []
+      
+    # monotonize
+    polygon.sort((a, b) -> b.y - a.y)
+    monotones = [polygon]
+    
+    # triangulate each monotone polygon
+    for p in monotones
+      
+      stack = p[0..1]
+      for u in p[2..-1]
+        first = stack[0]
+        last = stack[stack.length - 1]
+        has_first = u.adjacent1 == first or u.adjacent2 == first
+        has_last = u.adjacent1 == last or u.adjacent2 == last
+        
+        if has_first and has_last
+          for i in [1...(stack.length - 1)]
+            output.push [u, stack[i], 0]
+          return output
+          
+        else if has_first
+          for i in [1...stack.length]
+            output.push [u, stack[i], 1]
+          stack = [last, u]
+          
+        else if has_last
+          prelast = stack[stack.length - 2]
+          
+          while stack.length > 1 and Math.vecAngleIsReflex(u.sub(last), prelast.sub(last)) > 0
+            output.push [u, prelast, 2]
+            stack.pop
+            [prelast, last] = stack[-2..-1]
+            
+          stack.push u
+    
+    output
   
   overlaps = (ex1, ex2) ->
     

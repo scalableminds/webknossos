@@ -3,9 +3,25 @@ describe('geometry', function() {
   var g;
   g = null;
   beforeEach(function() {
-    g = new Geometry();
-    g.load([[[2, 0, 0], [2, 2, 0], [0, 2, 0], [0, 0, 0]], [[0, 0, 0], [0, 0, 2], [2, 0, 2], [2, 0, 0]], [[0, 2, 0], [0, 2, 2], [0, 0, 2], [0, 0, 0]], [[0, 0, 2], [0, 2, 2], [2, 2, 2], [2, 0, 2]], [[2, 2, 0], [2, 2, 2], [0, 2, 2], [0, 2, 0]], [[2, 0, 0], [2, 0, 2], [2, 2, 2], [2, 2, 0]]]);
-    return g.load([[[3, 1, 1], [3, 3, 1], [1, 3, 1], [1, 1, 1]], [[1, 1, 1], [1, 1, 3], [3, 1, 3], [3, 1, 1]], [[1, 3, 1], [1, 3, 3], [1, 1, 3], [1, 1, 1]], [[1, 1, 3], [1, 3, 3], [3, 3, 3], [3, 1, 3]], [[3, 3, 1], [3, 3, 3], [1, 3, 3], [1, 3, 1]], [[3, 1, 1], [3, 1, 3], [3, 3, 3], [3, 3, 1]]]);
+    return g = new Geometry();
+    /*
+        g.load([
+          [[2,0,0],[2,2,0],[0,2,0],[0,0,0]],
+          [[0,0,0],[0,0,2],[2,0,2],[2,0,0]],
+          [[0,2,0],[0,2,2],[0,0,2],[0,0,0]],
+          [[0,0,2],[0,2,2],[2,2,2],[2,0,2]],
+          [[2,2,0],[2,2,2],[0,2,2],[0,2,0]],
+          [[2,0,0],[2,0,2],[2,2,2],[2,2,0]]
+        ])
+        g.load([
+          [[3,1,1],[3,3,1],[1,3,1],[1,1,1]],
+          [[1,1,1],[1,1,3],[3,1,3],[3,1,1]],
+          [[1,3,1],[1,3,3],[1,1,3],[1,1,1]],
+          [[1,1,3],[1,3,3],[3,3,3],[3,1,3]],
+          [[3,3,1],[3,3,3],[1,3,3],[1,3,1]],
+          [[3,1,1],[3,1,3],[3,3,3],[3,3,1]]
+        ])
+    */
   });
   it('should load a polyhedron and triangulate', function() {
     var i, p, _len, _ref, _results;
@@ -62,8 +78,41 @@ describe('geometry', function() {
     }
     return expect(polygons_touched).toEqual(12);
   });
-  return it('should return an intersection line segment', function() {
+  it('should return an intersection line segment', function() {
     expect(g.find_intersections(g.polyhedral[0].faces[10], g.polyhedral[1].faces[1])).toBeDefined();
     return expect(g.find_intersections(g.polyhedral[0].faces[6], g.polyhedral[1].faces[5])).toBeDefined();
+  });
+  return it('should triangulate a monotone polygon', function() {
+    var V, i, polygon, v, _i, _len, _ref;
+    V = (function() {
+
+      function V(x, y, z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+      }
+
+      V.prototype.sub = function(v2) {
+        return [this.x - v2.x, this.y - v2.y, this.z - v2.z];
+      };
+
+      V.prototype.toString = function() {
+        return [this.x, this.y, this.z].toString();
+      };
+
+      return V;
+
+    })();
+    polygon = [new V(0, 0, 0), new V(0, 7, 0), new V(3, 8, 0), new V(6, 3, 0), new V(7, 6, 0), new V(9, 3, 0), new V(7, 0, 0)];
+    for (i = 0, _ref = polygon.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      polygon[i].adjacent1 = polygon[i > 0 ? i - 1 : polygon.length - 1];
+      polygon[i].adjacent2 = polygon[(i + 1) % polygon.length];
+    }
+    polygon = g.triangulate(polygon);
+    for (_i = 0, _len = polygon.length; _i < _len; _i++) {
+      v = polygon[_i];
+      console.log(v[0].toString(), v[1].toString(), v[2]);
+    }
+    return expect(polygon.length).toEqual(4);
   });
 });

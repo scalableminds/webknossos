@@ -2,6 +2,7 @@ describe 'geometry', ->
   g = null
   beforeEach ->
     g = new Geometry()
+    ###
     g.load([
       [[2,0,0],[2,2,0],[0,2,0],[0,0,0]],
       [[0,0,0],[0,0,2],[2,0,2],[2,0,0]],
@@ -18,6 +19,7 @@ describe 'geometry', ->
       [[3,3,1],[3,3,3],[1,3,3],[1,3,1]],
       [[3,1,1],[3,1,3],[3,3,3],[3,3,1]]
     ])
+    ###
     
    
   it 'should load a polyhedron and triangulate', ->
@@ -58,4 +60,34 @@ describe 'geometry', ->
       .toBeDefined()
     expect(g.find_intersections(g.polyhedral[0].faces[6], g.polyhedral[1].faces[5]))
       .toBeDefined()
+  
+  
+  it 'should triangulate a monotone polygon', ->
+    class V
+      constructor: (@x, @y, @z) ->
+      
+      sub: (v2) ->
+        [@x - v2.x, @y - v2.y, @z - v2.z]
+      toString: ->
+        [@x, @y, @z].toString()
+    
+    polygon = [
+      new V 0,0,0
+      new V 0,7,0
+      new V 3,8,0
+      new V 6,3,0
+      new V 7,6,0
+      new V 9,3,0
+      new V 7,0,0
+    ]
+    for i in [0...polygon.length]
+      polygon[i].adjacent1 = polygon[if i > 0 then i - 1 else polygon.length - 1]
+      polygon[i].adjacent2 = polygon[(i + 1) % polygon.length]
+    
+    polygon = g.triangulate(polygon)
+    console.log v[0].toString(), v[1].toString(), v[2] for v in polygon
+    
+    expect(polygon.length).toEqual(4)
+    
+    
     

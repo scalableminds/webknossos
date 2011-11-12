@@ -16,8 +16,23 @@ Math.normalizeVector = function(vec) {
   }
 };
 
+Math.dotProduct = function(v1, v2) {
+  if (v1.length !== v2.length) return null;
+  return v1.reduce((function(r, a, i) {
+    return r + a * v2[i];
+  }), 0);
+};
+
 Math.crossProduct = function(v1, v2) {
   return [v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]];
+};
+
+Math.vecAngle = function(v1, v2) {
+  return Math.dotProduct(v1, v2) / (Math.vecLength(v1) * Math.vecLength(v2));
+};
+
+Math.vecAngleIsReflex = function(v1, v2) {
+  return Math.dotProduct(v2, Math.crossProduct(v1, Math.crossProduct(v1, v2)));
 };
 
 Math.vecLength = function(vec) {

@@ -29,7 +29,7 @@ async = function(timeout, message, handler) {
   done = function() {
     return _done = true;
   };
-  defer(function() {
+  Utils.defer(function() {
     return handler(done);
   });
   return waitsFor((function() {
@@ -37,11 +37,18 @@ async = function(timeout, message, handler) {
   }), message, timeout);
 };
 
-Array.prototype.all = function(predicate) {
+Utils.arrayAll = function(arr, predicate) {
   var el, _i, _len;
-  for (_i = 0, _len = this.length; _i < _len; _i++) {
-    el = this[_i];
+  for (_i = 0, _len = arr.length; _i < _len; _i++) {
+    el = arr[_i];
     if (!predicate(el)) return false;
   }
   return true;
+};
+
+Utils.arrayRemove = function(arr, obj) {
+  var i, rv;
+  i = arr.indexOf(obj);
+  if (rv = i >= 0) arr.splice(i, 1);
+  return rv;
 };

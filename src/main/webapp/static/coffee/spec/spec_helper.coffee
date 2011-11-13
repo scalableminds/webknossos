@@ -20,11 +20,17 @@ async = (timeout, message, handler) ->
   _done = false
   done = -> _done = true
   
-  defer -> handler(done)
+  Utils.defer -> handler(done)
   
   waitsFor((-> _done), message, timeout)
 
-Array::all = (predicate) ->
-  for el in @
+Utils.arrayAll = (arr, predicate) ->
+  for el in arr
     return false unless predicate(el)
   return true
+  
+Utils.arrayRemove = (arr, obj) ->
+  i = arr.indexOf obj
+  if rv = i >= 0
+    arr.splice(i, 1)
+  rv

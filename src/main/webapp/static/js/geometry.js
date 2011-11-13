@@ -62,8 +62,51 @@ Geometry = (function() {
     })));
   };
 
+  Geometry.prototype.monotonize = function(polygon) {
+    var cur, max_adj_y, min_adj_y, min_max, monotone, output, v, _i, _len, _ref, _ref2;
+    min_max = function(array) {
+      var a, max, min, _i, _len;
+      for (_i = 0, _len = array.length; _i < _len; _i++) {
+        a = array[_i];
+        if (!((typeof max !== "undefined" && max !== null) || (typeof min !== "undefined" && min !== null))) {
+          max = min = a;
+        } else {
+          min = Math.min(a, min);
+          max = Math.max(a, max);
+        }
+      }
+      return [min, max];
+    };
+    output = [];
+    polygon.sort(function(a, b) {
+      return b.y - a.y;
+    });
+    _ref = polygon.slice(1, -1);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      v = _ref[_i];
+      _ref2 = min_max([v.adjacent0.y, v.adjacent1.y]), min_adj_y = _ref2[0], max_adj_y = _ref2[1];
+      if (min_adj_y >= v.y && max_adj_y >= v.y) {
+        monotone = [cur = v];
+        while (true) {
+          cur = cur.adjacent0;
+          monotone.push(cur);
+          break;
+        }
+        output.push(monotone);
+      }
+    }
+    monotone = [cur = v];
+    while (true) {
+      cur = cur.adjacent0;
+      monotone.push(cur);
+      break;
+    }
+    output.push(monotone);
+    return output;
+  };
+
   Geometry.prototype.triangulate = function(polygon) {
-    var calc_reflex, first, has_first, has_last, i, last, monotones, output, p, prelast, ref_normal, remove_links, stack, u, v, v0, v0_reflex, v1, v1_reflex, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4, _ref5;
+    var calc_reflex, monotones, output, p, ref_normal, remove_links, stack, v, v0, v0_reflex, v1, v1_reflex, _i, _j, _len, _len2, _ref;
     calc_reflex = function(vertex, ref) {
       return vertex.reflex = !Math.vecAngleIsntReflex(vertex.adjacent0.sub(vertex), vertex.adjacent1.sub(vertex), ref);
     };
@@ -83,15 +126,12 @@ Geometry = (function() {
       }
     };
     output = [];
-    polygon.sort(function(a, b) {
-      return b.y - a.y;
-    });
-    monotones = [polygon];
+    monotones = this.monotonize(polgyon);
     for (_i = 0, _len = monotones.length; _i < _len; _i++) {
       p = monotones[_i];
       ref_normal = Math.normalizeVector(Math.crossProduct(p[1].sub(p[0]), p[2].sub(p[0])));
       stack = [];
-      _ref = p.slice(1, -1);
+      _ref = p.slice(2);
       for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
         v = _ref[_j];
         if (!calc_reflex(v, ref_normal)) stack.push(v);
@@ -106,38 +146,6 @@ Geometry = (function() {
         v1_reflex = v1.reflex;
         if (!calc_reflex(v0, ref_normal) && v0_reflex) stack.push(v0);
         if (!calc_reflex(v1, ref_normal) && v1_reflex) stack.push(v1);
-      }
-      return output;
-      stack = p.slice(0, 2);
-      _ref2 = p.slice(2);
-      for (_k = 0, _len3 = _ref2.length; _k < _len3; _k++) {
-        u = _ref2[_k];
-        first = stack[0];
-        last = stack[stack.length - 1];
-        has_first = u.adjacents.indexOf(first) !== -1;
-        has_last = u.adjacents.indexOf(last) !== -1;
-        if (has_first && has_last) {
-          for (i = 1, _ref3 = stack.length - 1; 1 <= _ref3 ? i < _ref3 : i > _ref3; 1 <= _ref3 ? i++ : i--) {
-            output.push([u, stack[i], 0]);
-            set_adjacents(u, stack[i]);
-          }
-          return output;
-        } else if (has_first) {
-          for (i = 1, _ref4 = stack.length; 1 <= _ref4 ? i < _ref4 : i > _ref4; 1 <= _ref4 ? i++ : i--) {
-            output.push([u, stack[i], 1]);
-            set_adjacents(u, stack[i]);
-          }
-          stack = [last, u];
-        } else if (has_last) {
-          prelast = stack[stack.length - 2];
-          while (stack.length > 1 && Math.vecAngleIsntReflex(u.sub(last), prelast.sub(last), ref_normal)) {
-            output.push([u, prelast, 2]);
-            set_adjacents(u, prelast);
-            stack.pop();
-            _ref5 = stack.slice(-2), prelast = _ref5[0], last = _ref5[1];
-          }
-          stack.push(u);
-        }
       }
     }
     return output;

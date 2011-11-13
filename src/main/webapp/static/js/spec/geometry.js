@@ -1,6 +1,6 @@
 
 describe('geometry', function() {
-  var g;
+  var g, polygonize;
   g = null;
   beforeEach(function() {
     return g = new Geometry();
@@ -47,7 +47,7 @@ describe('geometry', function() {
       _ref2 = [['x', 0], ['x', 2], ['y', 0], ['y', 2], ['z', 0], ['z', 2]];
       for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
         _ref3 = _ref2[_j], coord = _ref3[0], pos = _ref3[1];
-        if (polygon.vertices.all(function(a) {
+        if (Utils.arrayAll(polygon.vertices.all, function(a) {
           return a[coord] === pos;
         })) {
           ref = (function() {
@@ -82,8 +82,8 @@ describe('geometry', function() {
     expect(g.find_intersections(g.polyhedral[0].faces[10], g.polyhedral[1].faces[1])).toBeDefined();
     return expect(g.find_intersections(g.polyhedral[0].faces[6], g.polyhedral[1].faces[5])).toBeDefined();
   });
-  return it('should triangulate a monotone polygon', function() {
-    var V, i, polygon, v, _i, _len, _ref;
+  polygonize = function(vertices) {
+    var V, i, polygon, _ref;
     V = (function() {
 
       function V(x, y, z) {
@@ -100,18 +100,45 @@ describe('geometry', function() {
         return [this.x, this.y, this.z].toString();
       };
 
+      V.prototype.clone = function() {
+        return new V(this.x, this.y, this.z);
+      };
+
       return V;
 
     })();
-    polygon = [new V(0, 0, 0), new V(0, 7, 0), new V(3, 8, 0), new V(6, 3, 0), new V(7, 6, 0), new V(9, 3, 0), new V(7, 0, 0)];
+    polygon = vertices.map(function(a) {
+      return (function(func, args, ctor) {
+        ctor.prototype = func.prototype;
+        var child = new ctor, result = func.apply(child, args);
+        return typeof result === "object" ? result : child;
+      })(V, a, function() {});
+    });
     for (i = 0, _ref = polygon.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
       polygon[i].adjacent0 = polygon[i > 0 ? i - 1 : polygon.length - 1];
       polygon[i].adjacent1 = polygon[(i + 1) % polygon.length];
     }
+    return polygon;
+  };
+  it('should triangulate a monotone polygon', function() {
+    var polygon, v, _i, _len;
+    polygon = polygonize([[0, 0, 0], [0, 7, 0], [3, 8, 0], [6, 3, 0], [7, 6, 0], [9, 3, 0], [7, 0, 0]]);
     polygon = g.triangulate(polygon);
     for (_i = 0, _len = polygon.length; _i < _len; _i++) {
       v = polygon[_i];
       console.log(v[0].toString(), v[1].toString(), v[2].toString());
+    }
+    return expect(polygon.length).toEqual(5);
+  });
+  return it('should split a polygon in monotones', function() {
+    var polygon, v, _i, _len;
+    polygon = polygonize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
+    polygon = g.monotonize(polygon);
+    for (_i = 0, _len = polygon.length; _i < _len; _i++) {
+      v = polygon[_i];
+      console.log.apply(console, v.map(function(a) {
+        return a.toString;
+      }));
     }
     return expect(polygon.length).toEqual(4);
   });

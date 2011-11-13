@@ -42,6 +42,48 @@ class Geometry
       Object.keys(vertices).map((a) -> vertices[a])
     )
   
+  monotonize: (polygon) ->
+    min_max = (array) ->
+      
+      for a in array
+        unless max? or min?
+          max = min = a
+        else
+          min = Math.min(a, min)
+          max = Math.max(a, max)
+
+      [min, max]
+    
+    output = []
+    
+    polygon.sort((a, b) -> b.y - a.y)
+    
+    for v in polygon[1..-2]
+      [min_adj_y, max_adj_y] = min_max([v.adjacent0.y, v.adjacent1.y])
+      
+      if min_adj_y >= v.y and max_adj_y >= v.y
+        monotone = [cur = v]
+        loop
+          cur = cur.adjacent0
+          monotone.push cur
+          break # unless cur.y >= v.y
+        
+        output.push monotone
+        
+        # join v and cur
+        # clone v and cur to _v and _cur
+        # join _v and _cur
+    
+    monotone = [cur = v]
+    loop
+      cur = cur.adjacent0
+      monotone.push cur
+      break # unless cur != v
+    
+    output.push monotone
+    
+    output
+  
   triangulate: (polygon) ->
     
     calc_reflex = (vertex, ref) ->
@@ -69,8 +111,7 @@ class Geometry
     output = []
       
     # monotonize
-    polygon.sort((a, b) -> b.y - a.y)
-    monotones = [polygon]
+    monotones = @monotonize(polgyon)
     
     # triangulate each monotone polygon
     for p in monotones
@@ -82,7 +123,8 @@ class Geometry
       
       stack = []
       
-      for v in p[1..-2]
+      # assumes ccw ordering of vertices
+      for v in p[2..-1]
         unless calc_reflex(v, ref_normal)
           stack.push v
           
@@ -101,42 +143,8 @@ class Geometry
         stack.push v0 if not calc_reflex(v0, ref_normal) and v0_reflex
         stack.push v1 if not calc_reflex(v1, ref_normal) and v1_reflex
         
-      return output
-      
-      
-      stack = p[0..1]
-      for u in p[2..-1]
-        first = stack[0]
-        last = stack[stack.length - 1]
-        has_first = u.adjacents.indexOf(first) != -1
-        has_last = u.adjacents.indexOf(last) != -1
-        
-        if has_first and has_last
-          for i in [1...(stack.length - 1)]
-            output.push [u, stack[i], 0]
-            set_adjacents u, stack[i]
-            
-          return output
-          
-        else if has_first
-          for i in [1...stack.length]
-            output.push [u, stack[i], 1]
-            set_adjacents u, stack[i]
-            
-          stack = [last, u]
-          
-        else if has_last
-          prelast = stack[stack.length - 2]
-          
-          while stack.length > 1 and Math.vecAngleIsntReflex(u.sub(last), prelast.sub(last), ref_normal)
-            output.push [u, prelast, 2]
-            set_adjacents u, prelast
-            stack.pop()
-            [prelast, last] = stack[-2..-1]
-            
-          stack.push u
-    
     output
+
   
   overlaps = (ex1, ex2) ->
     

@@ -38,7 +38,7 @@ describe 'geometry', ->
     polygons_touched = 0
     for polygon in g.polyhedral[0].faces
       for [coord, pos] in [['x', 0], ['x', 2], ['y', 0], ['y', 2], ['z', 0], ['z', 2]]
-        if polygon.vertices.all((a) -> a[coord] == pos)
+        if Utils.arrayAll(polygon.vertices.all, (a) -> a[coord] == pos)
           
           ref = for coord1 in ['x','y','z']
             if coord1 == coord
@@ -62,7 +62,7 @@ describe 'geometry', ->
       .toBeDefined()
   
   
-  it 'should triangulate a monotone polygon', ->
+  polygonize = (vertices) ->
     class V
       constructor: (@x, @y, @z) ->
         
@@ -70,24 +70,58 @@ describe 'geometry', ->
         [@x - v2.x, @y - v2.y, @z - v2.z]
       toString: ->
         [@x, @y, @z].toString()
+      clone: ->
+        new V @x, @y, @z
     
-    polygon = [
-      new V 0,0,0
-      new V 0,7,0
-      new V 3,8,0
-      new V 6,3,0
-      new V 7,6,0
-      new V 9,3,0
-      new V 7,0,0
-    ]
+    polygon = vertices.map (a) -> new V(a...)
+    
     for i in [0...polygon.length]
       polygon[i].adjacent0 = polygon[if i > 0 then i - 1 else polygon.length - 1]
       polygon[i].adjacent1 = polygon[(i + 1) % polygon.length]
     
+    polygon
+  
+  it 'should triangulate a monotone polygon', ->
+
+    polygon = polygonize [
+      [0,0,0]
+      [0,7,0]
+      [3,8,0]
+      [6,3,0]
+      [7,6,0]
+      [9,3,0]
+      [7,0,0]
+    ]
+    
     polygon = g.triangulate(polygon)
     console.log v[0].toString(), v[1].toString(), v[2].toString() for v in polygon
     
+    expect(polygon.length).toEqual(5)
+    
+    # TODO: test for intersections
+    
+  
+  it 'should split a polygon in monotones', ->
+    
+    polygon = polygonize [
+      [0,0,0],
+      [0,10,0],
+      [4,10,0],
+      [2,9,0],
+      [2,7,0],
+      [7,8,0],
+      [4,6,0],
+      [5,3,0],
+      [3,4,0],
+      [1,1,0],
+      [4,1,0],
+      [6,2,0],
+      [5,0,0]
+    ]
+    polygon = g.monotonize(polygon)
+    console.log v.map((a) -> a.toString)... for v in polygon
+    
     expect(polygon.length).toEqual(4)
     
-    
+    # TODO: test for monotonicity
     

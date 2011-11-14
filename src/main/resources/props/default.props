@@ -3,3 +3,10 @@
 mongo.autostart=true
 mongo.host=127.0.0.1
 mongo.dbname=mydb
+
+
+mail.smtp.host=smtprelaypool.ispgateway.de
+mail.smtp.port=465
+mail.smtp.auth=true
+mail.smtp.user=mailout@scalableminds.com
+mail.smtp.pass=NoTNXbe

@@ -73,10 +73,10 @@ object RequestHandler extends RestHelper{
     // the user must be logged in to send this request
     case Post("logroute" :: Nil , req) => {
       // in development mode the first user gets logged in when there is no one logged in
-      if(Props.mode  == Props.RunModes.Development && !User.loggedIn_?)
+      if(Props.mode  == Props.RunModes.Development && !User.isLoggedIn)
         User.logUserIn(User.findAll.head)
       //req.body.get.toString
-      User.loggedIn_? match {
+      User.isLoggedIn match {
         case true =>
           // post request must contain a param called payload which contains json e.q.:
           // payload = "{

@@ -8,11 +8,11 @@ version := "0.1"
 
 scalaVersion := "2.9.1"
 
-seq(webSettings :_*)
-
 seq(jrebelSettings: _*)
 
 jrebel.webLinks <++= webappResources in Compile
+
+seq(webSettings :_*)
 
 //scanDirectories in Compile := Nil 
 
@@ -42,10 +42,6 @@ Seq(
     "net.liftweb"    %% "lift-mongodb" % liftMongoVersion, 
     "org.mindrot" % "jbcrypt" % "0.3m"
 )}
-
-
-
-
 
 // Exclude backup files by default.  This uses ~=, which accepts a function of
 // type T => T (here T = FileFilter) that is applied to the existing value.

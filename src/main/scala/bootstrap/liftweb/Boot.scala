@@ -14,6 +14,9 @@ import net.liftweb.util.Props
 import java.util.Properties
 import java.util.logging.LogManager
 import java.io.{PipedInputStream, PipedOutputStream}
+import net.liftmodules.mongoauth.{Locs, MongoAuth}
+import com.scalableminds.brainflight.config.Sitemap
+import com.scalableminds.config.SmtpMailer
 
 
 /**
@@ -26,6 +29,9 @@ class Boot {
    * when the availigility check of the mongodb fails
    */
   def boot {
+
+    // config an email sender
+    SmtpMailer.init
 
     MongoConfig.init
     if (!MongoConfig.running_?) {
@@ -46,6 +52,8 @@ class Boot {
           MongoConfig.init
       }
     }
+    // init mongoauth
+    MongoAuth.authUserMeta.default.set(User)
 
     // add our custom dispatcher
     LiftRules.dispatch.append {
@@ -56,13 +64,8 @@ class Boot {
 
     LiftRules.resourceNames = "stringTranslations" :: Nil
 
-    // Build SiteMap
-    def menueEntries = Menu(Loc("Home", List("index"), "Home")) ::
-      Menu(Loc("Static", Link(List("static"), true, "/static/index"),
-        "Static Content")) ::
-      User.sitemap
-
-    LiftRules.setSiteMapFunc(() => SiteMap(menueEntries: _*))
+    //LiftRules.setSiteMapFunc(() => SiteMap(menueEntries: _*))
+    LiftRules.setSiteMapFunc(() => Sitemap.siteMap)
 
     // when the session is about to get closed, the route needs to be saved or it will get lost
     LiftSession.onAboutToShutdownSession ::= (_ => {
@@ -77,7 +80,6 @@ class Boot {
         case _ =>
           true
       })
-
     /*
      * Show the spinny image when an Ajax call starts
      */
@@ -91,7 +93,9 @@ class Boot {
       Full(() => LiftRules.jsArtifacts.hide("ajax-loader").cmd)
     LiftRules.early.append(makeUtf8)
 
-    LiftRules.loggedInTest = Full(() => User.loggedIn_?)
+    LiftRules.loggedInTest = Full(() => User.isLoggedIn)
+    // checks for ExtSession cookie
+    LiftRules.earlyInStateful.append(User.testForExtSession)
 
     /*
      * Register all BinaryDataModels

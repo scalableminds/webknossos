@@ -44,6 +44,33 @@ Utils =
         if a1[i] > a2[i]
           return 1
       0
-
+  arrayMin: (arr, comparer) ->
+    arr.reduce((r, a) -> 
+      if comparer
+        if comparer(r, a) < 0 then r else a
+      else
+        Math.min(r, a)
+    , 0)
+  
+  arrayMax: (arr, comparer) ->
+    arr.reduce((r, a) -> 
+      if comparer
+        if comparer(r, a) < 0 then r else a
+      else
+        Math.min(r, a)
+    , 0)
+  
+  arrayMinMax: (arr, comparer) ->
+    min = max = arr[0]
+    for i in [0...arr.length]
+      if comparer
+        min = if comparer(min, a) < 0 then min else a
+        max = if comparer(max, a) > 0 then max else a
+      else
+        min = Math.min(min, a)
+        max = Math.max(max, a)
+    [min, max]
+        
+  
   defer: (callback) ->
     setTimeout(callback, 1)

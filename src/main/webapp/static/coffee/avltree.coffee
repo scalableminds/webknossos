@@ -149,6 +149,7 @@ class AvlTree
     
     @inOrderTraverse (value) ->
       ret.push value
+      return
       
     ret
   

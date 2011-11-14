@@ -14,6 +14,16 @@ jasmine.Matchers.prototype.toBeA = function(clazz) {
   return jasmine.any(clazz).matches(this.actual);
 };
 
+jasmine.Matchers.prototype.toBeBetween = function(a, b) {
+  var _ref;
+  return (Math.min(a, b) <= (_ref = this.actual) && _ref <= Math.max(a, b));
+};
+
+jasmine.Matchers.prototype.toBeStrictlyBetween = function(a, b) {
+  var _ref;
+  return (Math.min(a, b) < (_ref = this.actual) && _ref < Math.max(a, b));
+};
+
 async = function(timeout, message, handler) {
   var done, _done;
   if (handler == null) {

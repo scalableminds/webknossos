@@ -154,7 +154,7 @@ AvlTree = (function() {
     var ret;
     ret = [];
     this.inOrderTraverse(function(value) {
-      return ret.push(value);
+      ret.push(value);
     });
     return ret;
   };

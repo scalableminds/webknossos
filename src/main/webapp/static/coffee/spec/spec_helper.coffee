@@ -1,11 +1,17 @@
-jasmine.Matchers.prototype.toBeSameArrayAs = (expected) ->
+jasmine.Matchers::toBeSameArrayAs = (expected) ->
   return false if expected.length != @actual.length
   for el, i in expected
     return false if el != @actual[i]
   true
   
-jasmine.Matchers.prototype.toBeA = (clazz) ->
+jasmine.Matchers::toBeA = (clazz) ->
   jasmine.any(clazz).matches @actual
+  
+jasmine.Matchers::toBeBetween = (a,b) ->
+  Math.min(a, b) <= @actual <= Math.max(a, b)
+
+jasmine.Matchers::toBeStrictlyBetween = (a,b) ->
+  Math.min(a, b) < @actual < Math.max(a, b)
 
 async = (timeout, message, handler) ->
   

@@ -43,44 +43,61 @@ class Geometry
     )
   
   monotonize: (polygon) ->
-    min_max = (array) ->
-      
-      for a in array
-        unless max? or min?
-          max = min = a
-        else
-          min = Math.min(a, min)
-          max = Math.max(a, max)
-
-      [min, max]
     
     output = []
     
-    polygon.sort((a, b) -> b.y - a.y)
+    polygon = @translateToXY(polygon) unless polygon[0].dx?
+    polygon.sort((a, b) -> a.dy - b.dy || b.dx - a.dx)
     
-    for v in polygon[1..-2]
-      [min_adj_y, max_adj_y] = min_max([v.adjacent0.y, v.adjacent1.y])
+    sweep_status = new AvlTree (a, b) -> 
+      (a[1].dy - b[1].dy || b[1].dx - a[1].dx) || (a[0].dy - b[0].dy || b[0].dx - a[0].dx)
       
-      if min_adj_y >= v.y and max_adj_y >= v.y
-        monotone = [cur = v]
-        loop
-          cur = cur.adjacent0
-          monotone.push cur
-          break # unless cur.y >= v.y
-        
-        output.push monotone
-        
-        # join v and cur
-        # clone v and cur to _v and _cur
-        # join _v and _cur
+    nonregulars = []
+    for v in polygon[1..-1]
+      v0 = v.adjacent0
+      v1 = v.adjacent1
+      if (v0.dy < v.dy or (v0.dy == v.dy and v0.dx > v.dx)) and (v1.dy > v.dy or (v1.dy == v.dy and v1.dx < v.dx))
+        nonregulars.push v
     
-    monotone = [cur = v]
-    loop
-      cur = cur.adjacent0
-      monotone.push cur
-      break # unless cur != v
-    
-    output.push monotone
+    cur_y = null
+    events = []
+    # do the sweep
+    for v, i in polygon
+      
+      if cur_y != v.dy
+        if cur_y?
+          for ev in events
+            console.log ev, sweep_status.getValues().slice()
+          events = []
+        cur_y = v.dy
+        
+      
+      incoming = outgoing = 0
+      
+      # sweep stuff
+      v0 = v.adjacent0
+      if v0.dy < v.dy
+        sweep_status.add [v, v0]
+        outgoing += 1
+      else if v0.dy > v.dy
+        sweep_status.remove [v0, v]
+        incoming += 1
+      else # v0.dy == v.dy
+        v0.skip = true
+      
+      v1 = v.adjacent1
+      if v1.dy < v.dy
+        sweep_status.add [v, v1]
+        outgoing += 1
+      else if v1.dy > v.dy
+        sweep_status.remove [v1, v]
+        incoming += 1
+      else # v1.dy == v.dy
+        v1.skip = true
+        
+      if outgoing == 0 and not v.skip
+        events.push v
+      
     
     output
   
@@ -105,17 +122,18 @@ class Geometry
         v1.adjacent0 = v0
       else
         v1.adjacent1 = v0
-      
-    
     
     output = []
       
     # monotonize
-    monotones = @monotonize(polgyon)
+    # monotones = @monotonize(polygon)
+    monotones = [polygon]
     
     # triangulate each monotone polygon
     for p in monotones
-      
+    
+      p = @translateToXY(p) unless p[0].dx?
+      p.sort (a, b) -> b.y - a.y
       # plane normal of the polygon
       # requires angle (p[1],p[0],p[2]) < 180°
       # which should always be the case because of the desc-y-ordering
@@ -146,7 +164,7 @@ class Geometry
     output
 
   
-  overlaps = (ex1, ex2) ->
+  overlaps: (ex1, ex2) ->
     
     ex1.min[0] < ex2.max[0] and
     ex1.max[0] > ex2.min[0] and
@@ -155,15 +173,21 @@ class Geometry
     ex1.min[2] < ex2.max[2] and
     ex1.max[2] > ex2.min[2]
   
-  calc_extent = (vertex, max, min) ->
+  overlaps2d: (ex1, ex2) ->
+    ex1.min[0] < ex2.max[0] and
+    ex1.max[0] > ex2.min[0] and
+    ex1.min[1] < ex2.max[1] and
+    ex1.max[1] > ex2.min[1]
+  
+  calc_extent: (vertices) ->
+    max = min = vertices[0].toArray()
+    for i in [1...vertices.length]
+      v = vertices[i]
+      max = [Math.max(v.x, max[0]), Math.max(v.y, max[1]), Math.max(v.z, max[2])]
+      min = [Math.min(v.x, min[0]), Math.min(v.y, min[1]), Math.min(v.z, min[2])]
     
-    unless max? or min?
-      [vertex.toArray(), vertex.toArray()]
-    else
-      [
-        [Math.max(vertex.x, max[0]), Math.max(vertex.y, max[1]), Math.max(vertex.z, max[2])]
-        [Math.min(vertex.x, min[0]), Math.min(vertex.y, min[1]), Math.min(vertex.z, min[2])]
-      ]
+    min: min
+    max: max
   
   
   
@@ -177,14 +201,14 @@ class Geometry
         edge.polyhedron = @
     
       # calc extent
+      @extent = @calc_extent(@vertices)
+      
+      
       for vertex in @vertices
-        [max, min] = calc_extent(vertex, max, min)
         vertex.calc_interior()
         vertex.polyhedron = @
         
-      @extent =
-        max: max
-        min: min
+      
       
       @links = []
       
@@ -192,12 +216,7 @@ class Geometry
   class Face
     constructor: (@vertices, @edges, @plane) ->
       
-      for vertex in @vertices
-        [max, min] = calc_extent(vertex, max, min)
-        
-      @extent =
-        max: max
-        min: min
+      @extent = @calc_extent(@vertices)
         
       # calc plane equation
       unless @plane?
@@ -263,18 +282,15 @@ class Geometry
     
     equals: (a) ->
       @x == a.x and @y == a.y and @z == a.z
-  
-  
-  
-  
-  
+
+      
   
   split: (p1, p2) ->
-    if overlaps(p1.extent, p2.extent)
+    if @overlaps(p1.extent, p2.extent)
       for face1 in p1.faces
-        if overlaps(face1.extent, p2.extent)
+        if @overlaps(face1.extent, p2.extent)
           for face2 in p2.faces
-            if overlaps(face1.extent, face2.extent)
+            if @overlaps(face1.extent, face2.extent)
               @find_intersections(face1, face2)
   
   find_intersections: (face1, face2) ->
@@ -375,4 +391,30 @@ class Geometry
           line_segment(face1, face2),
           line_segment(face2, face1)
         )
-        
+  
+  translateToXY: (vertices, normal) ->
+    
+    unless normal?
+      normal = Math.crossProduct(vertices[1].sub(vertices[0]), vertices[2].sub(vertices[0])).map Math.abs 
+    
+    
+    drop_index = if normal[2] >= normal[0] and normal[2] >= normal[1]
+        2
+      else if normal[1] >= normal[0] and normal[1] >= normal[2]
+        1
+      else
+        0
+    
+    for v in vertices
+      switch drop_index
+        when 0
+          v.dx = v.y
+          v.dy = v.z
+        when 1
+          v.dx = v.x
+          v.dy = v.z
+        else
+          v.dx = v.x
+          v.dy = v.y
+
+    vertices

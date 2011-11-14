@@ -66,6 +66,46 @@ Utils = {
       return 0;
     }
   },
+  arrayMin: function(arr, comparer) {
+    return arr.reduce(function(r, a) {
+      if (comparer) {
+        if (comparer(r, a) < 0) {
+          return r;
+        } else {
+          return a;
+        }
+      } else {
+        return Math.min(r, a);
+      }
+    }, 0);
+  },
+  arrayMax: function(arr, comparer) {
+    return arr.reduce(function(r, a) {
+      if (comparer) {
+        if (comparer(r, a) < 0) {
+          return r;
+        } else {
+          return a;
+        }
+      } else {
+        return Math.min(r, a);
+      }
+    }, 0);
+  },
+  arrayMinMax: function(arr, comparer) {
+    var i, max, min, _ref;
+    min = max = arr[0];
+    for (i = 0, _ref = arr.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      if (comparer) {
+        min = comparer(min, a) < 0 ? min : a;
+        max = comparer(max, a) > 0 ? max : a;
+      } else {
+        min = Math.min(min, a);
+        max = Math.max(max, a);
+      }
+    }
+    return [min, max];
+  },
   defer: function(callback) {
     return setTimeout(callback, 1);
   }

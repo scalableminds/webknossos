@@ -1,7 +1,7 @@
 var Geometry;
 
 Geometry = (function() {
-  var Edge, Face, Polyhedron, Vertex, calc_extent, overlaps;
+  var Edge, Face, Polyhedron, Vertex;
 
   function Geometry() {
     this.polyhedral = [];
@@ -63,45 +63,62 @@ Geometry = (function() {
   };
 
   Geometry.prototype.monotonize = function(polygon) {
-    var cur, max_adj_y, min_adj_y, min_max, monotone, output, v, _i, _len, _ref, _ref2;
-    min_max = function(array) {
-      var a, max, min, _i, _len;
-      for (_i = 0, _len = array.length; _i < _len; _i++) {
-        a = array[_i];
-        if (!((typeof max !== "undefined" && max !== null) || (typeof min !== "undefined" && min !== null))) {
-          max = min = a;
-        } else {
-          min = Math.min(a, min);
-          max = Math.max(a, max);
-        }
-      }
-      return [min, max];
-    };
+    var cur_y, ev, events, i, incoming, nonregulars, outgoing, output, sweep_status, v, v0, v1, _i, _j, _len, _len2, _len3, _ref;
     output = [];
+    if (polygon[0].dx == null) polygon = this.translateToXY(polygon);
     polygon.sort(function(a, b) {
-      return b.y - a.y;
+      return a.dy - b.dy || b.dx - a.dx;
     });
-    _ref = polygon.slice(1, -1);
+    sweep_status = new AvlTree(function(a, b) {
+      return (a[1].dy - b[1].dy || b[1].dx - a[1].dx) || (a[0].dy - b[0].dy || b[0].dx - a[0].dx);
+    });
+    nonregulars = [];
+    _ref = polygon.slice(1);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       v = _ref[_i];
-      _ref2 = min_max([v.adjacent0.y, v.adjacent1.y]), min_adj_y = _ref2[0], max_adj_y = _ref2[1];
-      if (min_adj_y >= v.y && max_adj_y >= v.y) {
-        monotone = [cur = v];
-        while (true) {
-          cur = cur.adjacent0;
-          monotone.push(cur);
-          break;
-        }
-        output.push(monotone);
+      v0 = v.adjacent0;
+      v1 = v.adjacent1;
+      if ((v0.dy < v.dy || (v0.dy === v.dy && v0.dx > v.dx)) && (v1.dy > v.dy || (v1.dy === v.dy && v1.dx < v.dx))) {
+        nonregulars.push(v);
       }
     }
-    monotone = [cur = v];
-    while (true) {
-      cur = cur.adjacent0;
-      monotone.push(cur);
-      break;
+    cur_y = null;
+    events = [];
+    for (i = 0, _len2 = polygon.length; i < _len2; i++) {
+      v = polygon[i];
+      if (cur_y !== v.dy) {
+        if (cur_y != null) {
+          for (_j = 0, _len3 = events.length; _j < _len3; _j++) {
+            ev = events[_j];
+            console.log(ev, sweep_status.getValues().slice());
+          }
+          events = [];
+        }
+        cur_y = v.dy;
+      }
+      incoming = outgoing = 0;
+      v0 = v.adjacent0;
+      if (v0.dy < v.dy) {
+        sweep_status.add([v, v0]);
+        outgoing += 1;
+      } else if (v0.dy > v.dy) {
+        sweep_status.remove([v0, v]);
+        incoming += 1;
+      } else {
+        v0.skip = true;
+      }
+      v1 = v.adjacent1;
+      if (v1.dy < v.dy) {
+        sweep_status.add([v, v1]);
+        outgoing += 1;
+      } else if (v1.dy > v.dy) {
+        sweep_status.remove([v1, v]);
+        incoming += 1;
+      } else {
+        v1.skip = true;
+      }
+      if (outgoing === 0 && !v.skip) events.push(v);
     }
-    output.push(monotone);
     return output;
   };
 
@@ -126,9 +143,13 @@ Geometry = (function() {
       }
     };
     output = [];
-    monotones = this.monotonize(polgyon);
+    monotones = [polygon];
     for (_i = 0, _len = monotones.length; _i < _len; _i++) {
       p = monotones[_i];
+      if (p[0].dx == null) p = this.translateToXY(p);
+      p.sort(function(a, b) {
+        return b.y - a.y;
+      });
       ref_normal = Math.normalizeVector(Math.crossProduct(p[1].sub(p[0]), p[2].sub(p[0])));
       stack = [];
       _ref = p.slice(2);
@@ -151,22 +172,32 @@ Geometry = (function() {
     return output;
   };
 
-  overlaps = function(ex1, ex2) {
+  Geometry.prototype.overlaps = function(ex1, ex2) {
     return ex1.min[0] < ex2.max[0] && ex1.max[0] > ex2.min[0] && ex1.min[1] < ex2.max[1] && ex1.max[1] > ex2.min[1] && ex1.min[2] < ex2.max[2] && ex1.max[2] > ex2.min[2];
   };
 
-  calc_extent = function(vertex, max, min) {
-    if (!((max != null) || (min != null))) {
-      return [vertex.toArray(), vertex.toArray()];
-    } else {
-      return [[Math.max(vertex.x, max[0]), Math.max(vertex.y, max[1]), Math.max(vertex.z, max[2])], [Math.min(vertex.x, min[0]), Math.min(vertex.y, min[1]), Math.min(vertex.z, min[2])]];
+  Geometry.prototype.overlaps2d = function(ex1, ex2) {
+    return ex1.min[0] < ex2.max[0] && ex1.max[0] > ex2.min[0] && ex1.min[1] < ex2.max[1] && ex1.max[1] > ex2.min[1];
+  };
+
+  Geometry.prototype.calc_extent = function(vertices) {
+    var i, max, min, v, _ref;
+    max = min = vertices[0].toArray();
+    for (i = 1, _ref = vertices.length; 1 <= _ref ? i < _ref : i > _ref; 1 <= _ref ? i++ : i--) {
+      v = vertices[i];
+      max = [Math.max(v.x, max[0]), Math.max(v.y, max[1]), Math.max(v.z, max[2])];
+      min = [Math.min(v.x, min[0]), Math.min(v.y, min[1]), Math.min(v.z, min[2])];
     }
+    return {
+      min: min,
+      max: max
+    };
   };
 
   Polyhedron = (function() {
 
     function Polyhedron(faces, edges, vertices) {
-      var edge, face, max, min, vertex, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3, _ref4;
+      var edge, face, vertex, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3;
       this.faces = faces;
       this.edges = edges;
       this.vertices = vertices;
@@ -181,17 +212,13 @@ Geometry = (function() {
         edge.calc_interior();
         edge.polyhedron = this;
       }
+      this.extent = this.calc_extent(this.vertices);
       _ref3 = this.vertices;
       for (_k = 0, _len3 = _ref3.length; _k < _len3; _k++) {
         vertex = _ref3[_k];
-        _ref4 = calc_extent(vertex, max, min), max = _ref4[0], min = _ref4[1];
         vertex.calc_interior();
         vertex.polyhedron = this;
       }
-      this.extent = {
-        max: max,
-        min: min
-      };
       this.links = [];
     }
 
@@ -202,30 +229,22 @@ Geometry = (function() {
   Face = (function() {
 
     function Face(vertices, edges, plane) {
-      var edge, max, min, v1, v2, v3, vec1, vec2, vertex, _i, _j, _len, _len2, _ref, _ref2, _ref3, _ref4;
+      var edge, v1, v2, v3, vec1, vec2, _i, _len, _ref, _ref2;
       this.vertices = vertices;
       this.edges = edges;
       this.plane = plane;
-      _ref = this.vertices;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        vertex = _ref[_i];
-        _ref2 = calc_extent(vertex, max, min), max = _ref2[0], min = _ref2[1];
-      }
-      this.extent = {
-        max: max,
-        min: min
-      };
+      this.extent = this.calc_extent(this.vertices);
       if (this.plane == null) {
-        _ref3 = this.vertices, v1 = _ref3[0], v2 = _ref3[1], v3 = _ref3[2];
+        _ref = this.vertices, v1 = _ref[0], v2 = _ref[1], v3 = _ref[2];
         vec1 = v2.sub(v1);
         vec2 = v2.sub(v3);
         plane = Math.normalizeVector(Math.crossProduct(vec1, vec2));
         plane.push(plane[0] * v1.x + plane[1] * v1.y + plane[2] * v1.z);
         this.plane = plane;
       }
-      _ref4 = this.edges;
-      for (_j = 0, _len2 = _ref4.length; _j < _len2; _j++) {
-        edge = _ref4[_j];
+      _ref2 = this.edges;
+      for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+        edge = _ref2[_i];
         edge.adjoining_faces.push(this);
       }
     }
@@ -298,19 +317,19 @@ Geometry = (function() {
 
   Geometry.prototype.split = function(p1, p2) {
     var face1, face2, _i, _len, _ref, _results;
-    if (overlaps(p1.extent, p2.extent)) {
+    if (this.overlaps(p1.extent, p2.extent)) {
       _ref = p1.faces;
       _results = [];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         face1 = _ref[_i];
-        if (overlaps(face1.extent, p2.extent)) {
+        if (this.overlaps(face1.extent, p2.extent)) {
           _results.push((function() {
             var _j, _len2, _ref2, _results2;
             _ref2 = p2.faces;
             _results2 = [];
             for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
               face2 = _ref2[_j];
-              if (overlaps(face1.extent, face2.extent)) {
+              if (this.overlaps(face1.extent, face2.extent)) {
                 _results2.push(this.find_intersections(face1, face2));
               } else {
                 _results2.push(void 0);
@@ -403,6 +422,31 @@ Geometry = (function() {
         return line_segment_intersection(line_segment(face1, face2), line_segment(face2, face1));
       }
     }
+  };
+
+  Geometry.prototype.translateToXY = function(vertices, normal) {
+    var drop_index, v, _i, _len;
+    if (normal == null) {
+      normal = Math.crossProduct(vertices[1].sub(vertices[0]), vertices[2].sub(vertices[0])).map(Math.abs);
+    }
+    drop_index = normal[2] >= normal[0] && normal[2] >= normal[1] ? 2 : normal[1] >= normal[0] && normal[1] >= normal[2] ? 1 : 0;
+    for (_i = 0, _len = vertices.length; _i < _len; _i++) {
+      v = vertices[_i];
+      switch (drop_index) {
+        case 0:
+          v.dx = v.y;
+          v.dy = v.z;
+          break;
+        case 1:
+          v.dx = v.x;
+          v.dy = v.z;
+          break;
+        default:
+          v.dx = v.x;
+          v.dy = v.y;
+      }
+    }
+    return vertices;
   };
 
   return Geometry;

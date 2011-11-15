@@ -12,7 +12,7 @@ import util.Helpers._
  * Base all LiftScreens off this. Currently configured to use bootstrap.
  */
 trait BaseScreen extends LiftScreen {
-  override def allTemplatePath = "templates-hidden" :: "bootstrap-screen" :: Nil
+  override def allTemplatePath = "templates-hidden" :: "baseform-screen" :: Nil
   override val cancelButton = super.cancelButton % ("class" -> "btn")
   override val finishButton = super.finishButton % ("class" -> "btn primary")
 

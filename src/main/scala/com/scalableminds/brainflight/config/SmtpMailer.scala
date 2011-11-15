@@ -1,4 +1,4 @@
-package com.scalableminds
+package com.scalableminds.brainflight
 package config
 
 import javax.mail.{Authenticator, PasswordAuthentication}

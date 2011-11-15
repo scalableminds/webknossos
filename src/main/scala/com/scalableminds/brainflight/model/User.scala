@@ -60,9 +60,6 @@ object User extends User with ProtoAuthUserMeta[User] with Loggable {
    * MongoAuth vars
    */
   // site settings
-  val siteName = "brainflight"
-  val systemEmail = "hello@scalableminds.com"
-  val systemUsername = "scm Staff"
   private lazy val sysUsername = MongoAuth.systemUsername.vend
   private lazy val indexUrl = MongoAuth.indexUrl.vend
   private lazy val loginTokenAfterUrl = MongoAuth.loginTokenAfterUrl.vend
@@ -120,11 +117,11 @@ object User extends User with ProtoAuthUserMeta[User] with Loggable {
         |
         |Thanks,
         |%s
-      """.format(siteName, token.url, sysUsername).stripMargin
+      """.format(MongoAuth.siteName.vend, token.url, sysUsername).stripMargin
 
     sendMail(
       From(MongoAuth.systemFancyEmail),
-      Subject("%s Password Help".format(siteName)),
+      Subject("%s Password Help".format(MongoAuth.siteName.vend)),
       To(user.fancyEmail),
       PlainMailBodyType(msgTxt)
     )
@@ -152,7 +149,7 @@ object User extends User with ProtoAuthUserMeta[User] with Loggable {
 
     sendMail(
       From(MongoAuth.systemFancyEmail),
-      Subject("%s Account activation".format(siteName)),
+      Subject("%s Account activation".format(MongoAuth.siteName.vend)),
       To(user.fancyEmail),
       PlainMailBodyType(msgTxt)
     )

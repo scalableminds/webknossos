@@ -14,9 +14,9 @@ import net.liftweb.util.Props
 import java.util.Properties
 import java.util.logging.LogManager
 import java.io.{PipedInputStream, PipedOutputStream}
-import net.liftmodules.mongoauth.{Locs, MongoAuth}
 import com.scalableminds.brainflight.config.Sitemap
-import com.scalableminds.config.SmtpMailer
+import com.scalableminds.brainflight.config.{ErrorHandler, SmtpMailer}
+import net.liftmodules.mongoauth.{MongoAuth, Locs}
 
 
 /**
@@ -32,6 +32,8 @@ class Boot {
 
     // config an email sender
     SmtpMailer.init
+    // config error handler
+    ErrorHandler.init
 
     MongoConfig.init
     if (!MongoConfig.running_?) {
@@ -54,6 +56,9 @@ class Boot {
     }
     // init mongoauth
     MongoAuth.authUserMeta.default.set(User)
+    MongoAuth.siteName.default.set("brainflight")
+    MongoAuth.systemEmail.default.set("hello@scalableminds.com")
+    MongoAuth.systemUsername.default.set("Brainflight staff")
 
     // add our custom dispatcher
     LiftRules.dispatch.append {

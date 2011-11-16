@@ -3,7 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-  
+
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.scalableminds</groupId>
   <artifactId>lifttemplate</artifactId>
@@ -24,6 +24,12 @@
   </properties>
 
   <repositories>
+      <repository>
+          <id>Liftmodulesrepo</id>
+          <name>Liftmodules repo</name>
+          <url>https://repository-liftmodules.forge.cloudbees.com/release/</url>
+          <layout>default</layout>
+      </repository>
     <repository>
       <id>scala-tools.releases</id>
       <name>Scala-Tools Dependencies Repository for Releases</name>
@@ -82,6 +88,12 @@
       <artifactId>logback-classic</artifactId>
       <version>0.9.26</version>
     </dependency>
+      <dependency>
+           <groupId>net.liftmodules</groupId>
+           <artifactId>mongoauth_2.9.1</artifactId>
+           <version>2.4-M5-0.2</version>
+           <scope>compile</scope>
+       </dependency>
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>

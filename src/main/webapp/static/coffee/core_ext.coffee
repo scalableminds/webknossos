@@ -26,6 +26,12 @@ Math.vecAngleIsntReflex = (v1, v2, ref) ->
 
 Math.vecLength = (vec) ->
   Math.sqrt(vec.reduce(((r, a) -> r + Math.square(a)), 0))
+  
+Math.absMin = (a, b) ->
+  if Math.abs(a) < Math.abs(b)
+    a
+  else
+    b
 
 Utils = 
   arrayEquals: (a1, a2) ->
@@ -70,6 +76,12 @@ Utils =
         min = Math.min(min, a)
         max = Math.max(max, a)
     [min, max]
+  
+  arrayUnique: (arr) ->
+    output = []
+    for el, i in arr
+      output.push el if arr.indexOf(el) == i
+    output
         
   
   defer: (callback) ->

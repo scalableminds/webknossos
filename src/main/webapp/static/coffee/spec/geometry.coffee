@@ -63,7 +63,7 @@ describe 'geometry', ->
   
   class V
     constructor: (@x, @y, @z) ->
-      
+    adjacents: []
     sub: (v2) ->
       [@x - v2.x, @y - v2.y, @z - v2.z]
     toString: ->
@@ -71,7 +71,13 @@ describe 'geometry', ->
     toArray: ->
       [@x, @y, @z]
     clone: ->
-      new V @x, @y, @z
+      v = new V @x, @y, @z
+      v.adjacent0 = @adjacent0
+      v.adjacent1 = @adjacent1
+      v.adjacents = @adjacents?.slice 0
+      v.dx = @dx
+      v.dy = @dy
+      v
     eq: (other) ->
       @x == other.x and @y == other.y and @z == other.z
   
@@ -82,7 +88,7 @@ describe 'geometry', ->
     for i in [0...polygon.length]
       polygon[i].adjacent0 = polygon[if i > 0 then i - 1 else polygon.length - 1]
       polygon[i].adjacent1 = polygon[(i + 1) % polygon.length]
-    
+      polygon[i].adjacents = [polygon[i].adjacent0, polygon[i].adjacent1]
     polygon
   
   it 'should triangulate a monotone polygon', ->
@@ -99,7 +105,7 @@ describe 'geometry', ->
     ]
     
     # do the work
-    polygon = g.triangulate(polygon)
+    polygon = g.triangulateMonotone(polygon)
     
     # simple test to start
     expect(polygon.length).toEqual(5)
@@ -107,6 +113,7 @@ describe 'geometry', ->
     # find all edges
     edges = []
     for tri in polygon
+      g.translateToXY(tri)
       edges.push [tri[0],tri[1]], [tri[1],tri[2]], [tri[2],tri[0]]
     
     # check whether any edge intersect another
@@ -185,41 +192,35 @@ describe 'geometry', ->
     # do the work
     monotones = g.monotonize(polygon)
     
-    console.log 'it should split a polygon in monotones'
-    
-    
     expect(monotones.length).toEqual(4)
     
-    # TODO: test for monotonicity
-    monotones = [_polygon]
     
     for polygon in monotones
       polygon = g.translateToXY(polygon)
-      sweep_status = []
-      
       polygon.sort((a, b) -> a.dy - b.dy || b.dx - a.dx)
-      edges = {}
+      
+      first = polygon[0]
+      last = polygon[polygon.length - 1]
       
       comp = (a, b) -> a.dy - b.dy || b.dx - a.dx
-      for v in polygon
-        if comp(v, v.adjacent0) < 0
-          edges["#{v.dy}x#{v.dx}-#{v.adjacent0.dy}x#{v.adjacent0.dx}"] ?= [v, v.adjacent0]
-        else
-          edges["#{v.adjacent0.dy}x#{v.adjacent0.dx}-#{v.dy}x#{v.dx}"] ?= [v.adjacent0, v]
       
-        if comp(v, v.adjacent1) < 0
-          edges["#{v.dy}x#{v.dx}-#{v.adjacent1.dy}x#{v.adjacent1.dx}"] ?= [v, v.adjacent1]
-        else
-          edges["#{v.adjacent1.dy}x#{v.adjacent1.dx}-#{v.dy}x#{v.dx}"] ?= [v.adjacent1, v]
-      
-      for v in polygon
-        edges_in_y = []
-        for key, e of edges
-          if Math.min(e[0].dy, e[1].dy) <= v.y <= Math.max(e[0].dy, e[1].dy) and e[0].dy != e[1].dy and v != e[0] and v != e[1]
-            edges_in_y.push e
+      unless polygon.length == 3
+        i = 0
+        v = first.adjacent0
+        while v.adjacent0 != last
+          expect(comp(v, v.adjacent0)).toBeLessThan 0
+          v = v.adjacent0
+          if i++ == 10000
+            expect(i).toBeLessThan 10000
+            break
         
-        console.log edges_in_y, v
-        expect(edges_in_y.length).toBeLessThan(2)
+        v = first.adjacent1
+        while v.adjacent1 != last
+          expect(comp(v, v.adjacent1)).toBeGreaterThan 0
+          v = v.adjacent1
+          if i++ == 20000
+            expect(i).toBeLessThan 20000
+            break
 
   
   it 'should project any plane into xy-plane', ->

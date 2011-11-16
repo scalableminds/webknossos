@@ -1,7 +1,7 @@
 var Geometry;
 
 Geometry = (function() {
-  var Edge, Face, Polyhedron, Vertex;
+  var Edge, Face, Polyhedron, Vertex, ccw;
 
   function Geometry() {
     this.polyhedral = [];
@@ -62,68 +62,187 @@ Geometry = (function() {
     })));
   };
 
-  Geometry.prototype.monotonize = function(polygon) {
-    var cur_y, ev, events, i, incoming, nonregulars, outgoing, output, sweep_status, v, v0, v1, _i, _j, _len, _len2, _len3, _ref;
-    output = [];
-    if (polygon[0].dx == null) polygon = this.translateToXY(polygon);
-    polygon.sort(function(a, b) {
+  ccw = function(p1, p2, p3) {
+    return (p2.dx - p1.dx) * (p3.dy - p1.dy) - (p2.dy - p1.dy) * (p3.dx - p1.dx);
+  };
+
+  Geometry.prototype.triangulate2 = function(polygon) {
+    var adj0, adj1, edge_compare, edge_function, v, vertex_compare, _i, _len, _results;
+    vertex_compare = function(a, b) {
       return a.dy - b.dy || b.dx - a.dx;
-    });
-    sweep_status = new AvlTree(function(a, b) {
-      return (a[1].dy - b[1].dy || b[1].dx - a[1].dx) || (a[0].dy - b[0].dy || b[0].dx - a[0].dx);
-    });
-    nonregulars = [];
-    _ref = polygon.slice(1);
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      v = _ref[_i];
-      v0 = v.adjacent0;
-      v1 = v.adjacent1;
-      if ((v0.dy < v.dy || (v0.dy === v.dy && v0.dx > v.dx)) && (v1.dy > v.dy || (v1.dy === v.dy && v1.dx < v.dx))) {
-        nonregulars.push(v);
-      }
+    };
+    edge_function = function(e, y) {
+      return -(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy);
+    };
+    edge_compare = function(a, b) {
+      return vertex_compare(a[0], b[0]) || vertex_compare(a[1], b[1]);
+    };
+    if (polygon[0].dx == null) polygon = this.translateToXY(polygon);
+    polygon.sort(vertex_compare);
+    _results = [];
+    for (_i = 0, _len = polygon.length; _i < _len; _i++) {
+      v = polygon[_i];
+      adj0 = v.adjacents[0];
+      _results.push(adj1 = v.adjacents[1]);
     }
-    cur_y = null;
-    events = [];
-    for (i = 0, _len2 = polygon.length; i < _len2; i++) {
-      v = polygon[i];
-      if (cur_y !== v.dy) {
-        if (cur_y != null) {
-          for (_j = 0, _len3 = events.length; _j < _len3; _j++) {
-            ev = events[_j];
-            console.log(ev, sweep_status.getValues().slice());
-          }
-          events = [];
+    return _results;
+  };
+
+  Geometry.prototype.monotonize = function(polygon) {
+    var add_edge, adj, current_y, e, edge, edge_compare, edge_function, edge_x, edges_to_remove, first_i_y, i, incoming, left_edge, left_x, outgoing, output, right_edge, right_x, starting_points, sweep_status, v, vertex_compare, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _len6, _m, _n, _ref, _ref2, _ref3, _v;
+    if (polygon.length <= 4) return [polygon];
+    vertex_compare = function(a, b) {
+      return a.dy - b.dy || b.dx - a.dx;
+    };
+    edge_function = function(e, y) {
+      return -(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy);
+    };
+    edge_compare = function(a, b) {
+      return vertex_compare(a[0], b[0]) || vertex_compare(a[1], b[1]);
+    };
+    if (polygon[0].dx == null) polygon = this.translateToXY(polygon);
+    polygon.sort(vertex_compare);
+    sweep_status = {
+      container: [],
+      add: function(e) {
+        return this.container["" + e[0].dx + "x" + e[0].dy + "|" + e[1].dx + "x" + e[1].dy] = e;
+      },
+      remove: function(e) {
+        return delete this.container["" + e[0].dx + "x" + e[0].dy + "|" + e[1].dx + "x" + e[1].dy];
+      },
+      all: function() {
+        var key, _i, _len, _ref, _results;
+        _ref = Object.keys(this.container);
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          key = _ref[_i];
+          _results.push(this.container[key]);
         }
-        cur_y = v.dy;
+        return _results;
       }
-      incoming = outgoing = 0;
-      v0 = v.adjacent0;
-      if (v0.dy < v.dy) {
-        sweep_status.add([v, v0]);
-        outgoing += 1;
-      } else if (v0.dy > v.dy) {
-        sweep_status.remove([v0, v]);
-        incoming += 1;
+    };
+    starting_points = [];
+    add_edge = function(a, b) {
+      var sub0, sub1, v, _a, _b;
+      sweep_status.add([a, b]);
+      if (b.dy === current_y) edges_to_remove.push([a, b]);
+      a.adjacents.push(b);
+      b.adjacents.push(a);
+      sub0 = [a, b];
+      v = b.adjacent0;
+      while (v !== a) {
+        v.polygon = sub0;
+        sub0.push(v);
+        v = v.adjacent0;
+      }
+      a.polygon = b.polygon = sub0;
+      _a = a.clone();
+      _b = b.clone();
+      sub1 = [_a, _b];
+      v = b.adjacent1;
+      while (v !== a) {
+        v.polygon = sub1;
+        sub1.push(v);
+        v = v.adjacent1;
+      }
+      _a.polygon = _b.polygon = sub1;
+      if (a.adjacent0 === sub0[sub0.length - 1]) {
+        a.adjacent1 = b;
+        b.adjacent0 = a;
+        _a.adjacent0 = _b;
+        _b.adjacent1 = _a;
       } else {
-        v0.skip = true;
+        a.adjacent0 = b;
+        b.adjacent1 = a;
+        _a.adjacent1 = _b;
+        _b.adjacent0 = _a;
       }
-      v1 = v.adjacent1;
-      if (v1.dy < v.dy) {
-        sweep_status.add([v, v1]);
-        outgoing += 1;
-      } else if (v1.dy > v.dy) {
-        sweep_status.remove([v1, v]);
-        incoming += 1;
-      } else {
-        v1.skip = true;
+      console.log(sub0, sub1);
+      return starting_points.push(a);
+    };
+    current_y = polygon[0].dy;
+    first_i_y = 0;
+    for (_i = 0, _len = polygon.length; _i < _len; _i++) {
+      _v = polygon[_i];
+      if (_v.dy === current_y) continue;
+      edges_to_remove = [];
+      for (i = first_i_y; first_i_y <= _i ? i < _i : i > _i; first_i_y <= _i ? i++ : i--) {
+        v = polygon[i];
+        _ref = v.adjacents;
+        for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
+          adj = _ref[_j];
+          if (vertex_compare(adj, v) > 0) {
+            sweep_status.add([v, adj]);
+          } else {
+            edges_to_remove.push([adj, v]);
+          }
+        }
       }
-      if (outgoing === 0 && !v.skip) events.push(v);
+      for (i = first_i_y; first_i_y <= _i ? i < _i : i > _i; first_i_y <= _i ? i++ : i--) {
+        v = polygon[i];
+        incoming = outgoing = 0;
+        _ref2 = v.adjacents;
+        for (_k = 0, _len3 = _ref2.length; _k < _len3; _k++) {
+          adj = _ref2[_k];
+          if (vertex_compare(adj, v) > 0) {
+            outgoing += 1;
+          } else {
+            incoming += 1;
+          }
+        }
+        if (!((outgoing >= 1 || i === polygon.length - 1) && (incoming >= 1 || i === 0))) {
+          left_edge = right_edge = null;
+          left_x = right_x = null;
+          _ref3 = sweep_status.all();
+          for (_l = 0, _len4 = _ref3.length; _l < _len4; _l++) {
+            edge = _ref3[_l];
+            if (edge[0] !== v && edge[1] !== v) {
+              edge_x = edge_function(edge, v.dy);
+              if (edge_x < v.dx && (!(typeof left !== "undefined" && left !== null) || edge_x > left[1])) {
+                left_edge = edge;
+                left_x = edge_x;
+              } else if (!(typeof right !== "undefined" && right !== null) || edge_x < right[1]) {
+                right_edge = edge;
+                right_x = edge_x;
+              }
+            }
+          }
+          if ((left_edge != null) && (right_edge != null)) {
+            if (outgoing < 1) {
+              if (left_edge[1].dy < right_edge[1].dy) {
+                add_edge(v, left_edge[1]);
+              } else {
+                add_edge(v, right_edge[1]);
+              }
+            }
+            if (incoming < 1) {
+              if (left_edge[0].dx > right_edge[0].dx) {
+                add_edge(left_edge[0], v);
+              } else {
+                add_edge(right_edge[0], v);
+              }
+            }
+          }
+        }
+      }
+      for (_m = 0, _len5 = edges_to_remove.length; _m < _len5; _m++) {
+        e = edges_to_remove[_m];
+        sweep_status.remove(e);
+      }
+      first_i_y = _i;
+      current_y = _v.dy;
+    }
+    output = [];
+    for (_n = 0, _len6 = polygon.length; _n < _len6; _n++) {
+      v = polygon[_n];
+      if (output.indexOf(v.polygon) === -1) output.push(v.polygon);
     }
     return output;
   };
 
-  Geometry.prototype.triangulate = function(polygon) {
-    var calc_reflex, monotones, output, p, ref_normal, remove_links, stack, v, v0, v0_reflex, v1, v1_reflex, _i, _j, _len, _len2, _ref;
+  Geometry.prototype.triangulateMonotone = function(polygon) {
+    var calc_reflex, output, ref_normal, remove_links, stack, v, v0, v0_reflex, v1, v1_reflex, _i, _len, _ref;
+    if (polygon.length === 3) return [polygon];
     calc_reflex = function(vertex, ref) {
       return vertex.reflex = !Math.vecAngleIsntReflex(vertex.adjacent0.sub(vertex), vertex.adjacent1.sub(vertex), ref);
     };
@@ -143,37 +262,33 @@ Geometry = (function() {
       }
     };
     output = [];
-    monotones = [polygon];
-    for (_i = 0, _len = monotones.length; _i < _len; _i++) {
-      p = monotones[_i];
-      if (p[0].dx == null) p = this.translateToXY(p);
-      p.sort(function(a, b) {
-        return b.y - a.y;
-      });
-      ref_normal = Math.normalizeVector(Math.crossProduct(p[1].sub(p[0]), p[2].sub(p[0])));
-      stack = [];
-      _ref = p.slice(2);
-      for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
-        v = _ref[_j];
-        if (!calc_reflex(v, ref_normal)) stack.push(v);
-      }
-      while (stack.length > 0) {
-        v = stack.shift();
-        v0 = v.adjacent0;
-        v1 = v.adjacent1;
-        output.push([v0, v, v1]);
-        remove_links(v);
-        v0_reflex = v0.reflex;
-        v1_reflex = v1.reflex;
-        if (!calc_reflex(v0, ref_normal) && v0_reflex) stack.push(v0);
-        if (!calc_reflex(v1, ref_normal) && v1_reflex) stack.push(v1);
-      }
+    if (polygon[0].dx == null) polygon = this.translateToXY(polygon);
+    polygon.sort(function(a, b) {
+      return b.dy - a.dy || a.dx - b.dx;
+    });
+    ref_normal = Math.normalizeVector(Math.crossProduct(polygon[1].sub(polygon[0]), polygon[2].sub(polygon[0])));
+    stack = [];
+    _ref = polygon.slice(2);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      v = _ref[_i];
+      if (!calc_reflex(v, ref_normal)) stack.push(v);
+    }
+    while (stack.length > 0) {
+      v = stack.shift();
+      v0 = v.adjacent0;
+      v1 = v.adjacent1;
+      output.push([v0, v, v1]);
+      remove_links(v);
+      v0_reflex = v0.reflex;
+      v1_reflex = v1.reflex;
+      if (!calc_reflex(v0, ref_normal) && v0_reflex) stack.push(v0);
+      if (!calc_reflex(v1, ref_normal) && v1_reflex) stack.push(v1);
     }
     return output;
   };
 
   Geometry.prototype.overlaps = function(ex1, ex2) {
-    return ex1.min[0] < ex2.max[0] && ex1.max[0] > ex2.min[0] && ex1.min[1] < ex2.max[1] && ex1.max[1] > ex2.min[1] && ex1.min[2] < ex2.max[2] && ex1.max[2] > ex2.min[2];
+    return overlaps2d(ex1, ex2) && ex1.min[2] < ex2.max[2] && ex1.max[2] > ex2.min[2];
   };
 
   Geometry.prototype.overlaps2d = function(ex1, ex2) {

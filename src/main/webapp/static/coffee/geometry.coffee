@@ -42,66 +42,177 @@ class Geometry
       Object.keys(vertices).map((a) -> vertices[a])
     )
   
-  monotonize: (polygon) ->
+  ccw = (p1, p2, p3) ->
+    (p2.dx - p1.dx) * (p3.dy - p1.dy) - (p2.dy - p1.dy) * (p3.dx - p1.dx)
+  triangulate2: (polygon) ->
+    vertex_compare = (a, b) -> a.dy - b.dy or b.dx - a.dx
     
-    output = []
+    edge_function = (e, y) ->
+      (-(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy))
+    
+    edge_compare = (a, b) -> vertex_compare(a[0], b[0]) or vertex_compare(a[1], b[1])
     
     polygon = @translateToXY(polygon) unless polygon[0].dx?
-    polygon.sort((a, b) -> a.dy - b.dy || b.dx - a.dx)
+    polygon.sort vertex_compare
     
-    sweep_status = new AvlTree (a, b) -> 
-      (a[1].dy - b[1].dy || b[1].dx - a[1].dx) || (a[0].dy - b[0].dy || b[0].dx - a[0].dx)
+    for v in polygon
+      adj0 = v.adjacents[0]
+      adj1 = v.adjacents[1]
       
-    nonregulars = []
-    for v in polygon[1..-1]
-      v0 = v.adjacent0
-      v1 = v.adjacent1
-      if (v0.dy < v.dy or (v0.dy == v.dy and v0.dx > v.dx)) and (v1.dy > v.dy or (v1.dy == v.dy and v1.dx < v.dx))
-        nonregulars.push v
     
-    cur_y = null
-    events = []
+  
+  monotonize: (polygon) ->
+    
+    return [polygon] if polygon.length <= 4
+    
+    vertex_compare = (a, b) -> a.dy - b.dy or b.dx - a.dx
+    
+    edge_function = (e, y) ->
+      (-(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy))
+    
+    edge_compare = (a, b) -> vertex_compare(a[0], b[0]) or vertex_compare(a[1], b[1])
+     
+    polygon = @translateToXY(polygon) unless polygon[0].dx?
+    polygon.sort vertex_compare
+
+    sweep_status = 
+      container: []
+      add: (e) ->
+        @container["#{e[0].dx}x#{e[0].dy}|#{e[1].dx}x#{e[1].dy}"] = e
+      remove: (e) ->
+        delete @container["#{e[0].dx}x#{e[0].dy}|#{e[1].dx}x#{e[1].dy}"]
+      all: ->
+        for key in Object.keys @container
+          @container[key]
+    
+    starting_points = []
+    add_edge = (a, b) ->
+      sweep_status.add [a, b]
+      edges_to_remove.push [a, b] if b.dy == current_y
+
+      a.adjacents.push b
+      b.adjacents.push a
+      
+      sub0 = [a, b]
+      v = b.adjacent0
+      while v != a
+        v.polygon = sub0
+        sub0.push v
+        v = v.adjacent0
+      
+      a.polygon = b.polygon = sub0
+      
+      _a = a.clone()
+      _b = b.clone()
+      
+      sub1 = [_a, _b]
+      v = b.adjacent1
+      while v != a
+        v.polygon = sub1
+        sub1.push v
+        v = v.adjacent1
+      
+      _a.polygon = _b.polygon = sub1
+      
+      
+      if a.adjacent0 == sub0[sub0.length - 1]
+        a.adjacent1 = b
+        b.adjacent0 = a
+        _a.adjacent0 = _b
+        _b.adjacent1 = _a
+      else
+        a.adjacent0 = b
+        b.adjacent1 = a
+        _a.adjacent1 = _b
+        _b.adjacent0 = _a
+      
+      console.log(sub0, sub1)  
+      
+
+      
+      starting_points.push a
+
+    
+    current_y = polygon[0].dy
+    first_i_y = 0
+    
     # do the sweep
-    for v, i in polygon
+    for _v, _i in polygon
+      continue if _v.dy == current_y
       
-      if cur_y != v.dy
-        if cur_y?
-          for ev in events
-            console.log ev, sweep_status.getValues().slice()
-          events = []
-        cur_y = v.dy
+      # first pass
+      # add edges to sweep_status
+      edges_to_remove = []
+      for i in [first_i_y..._i]
         
-      
-      incoming = outgoing = 0
-      
-      # sweep stuff
-      v0 = v.adjacent0
-      if v0.dy < v.dy
-        sweep_status.add [v, v0]
-        outgoing += 1
-      else if v0.dy > v.dy
-        sweep_status.remove [v0, v]
-        incoming += 1
-      else # v0.dy == v.dy
-        v0.skip = true
-      
-      v1 = v.adjacent1
-      if v1.dy < v.dy
-        sweep_status.add [v, v1]
-        outgoing += 1
-      else if v1.dy > v.dy
-        sweep_status.remove [v1, v]
-        incoming += 1
-      else # v1.dy == v.dy
-        v1.skip = true
+        v = polygon[i]
         
-      if outgoing == 0 and not v.skip
-        events.push v
+        for adj in v.adjacents
+          if vertex_compare(adj, v) > 0
+            sweep_status.add [v, adj]
+          else
+            edges_to_remove.push [adj, v]
       
+      # second pass
+      # if the vertex has an edge left and right to it
+      # we need to regularize it
+      for i in [first_i_y..._i]
+        v = polygon[i]
+        
+        incoming = outgoing = 0
+        
+        for adj in v.adjacents
+          if vertex_compare(adj, v) > 0
+            outgoing += 1
+          else
+            incoming += 1
+        
+        unless (outgoing >= 1 or i == polygon.length - 1) and (incoming >= 1 or i == 0)
+          left_edge = right_edge = null
+          left_x = right_x = null
+        
+          for edge in sweep_status.all()
+            if edge[0] != v and edge[1] != v 
+              
+              edge_x = edge_function(edge, v.dy)
+              if edge_x < v.dx and (not left? or edge_x > left[1])
+                left_edge = edge
+                left_x = edge_x
+              else if not right? or edge_x < right[1]
+                right_edge = edge
+                right_x = edge_x
+          
+          if left_edge? and right_edge?
+            
+            if outgoing < 1
+              if left_edge[1].dy < right_edge[1].dy
+                add_edge(v, left_edge[1])
+              else
+                add_edge(v, right_edge[1])
+            
+            if incoming < 1
+              if left_edge[0].dx > right_edge[0].dx
+                add_edge(left_edge[0], v)
+              else
+                add_edge(right_edge[0], v)
+      
+      # third pass
+      # remove edges from 
+      sweep_status.remove e for e in edges_to_remove
+
+      first_i_y = _i
+      current_y = _v.dy
+    
+    output = []
+
+    for v in polygon
+      output.push v.polygon if output.indexOf(v.polygon) == -1
     
     output
   
-  triangulate: (polygon) ->
+  triangulateMonotone: (polygon) ->
+    
+    return [polygon] if polygon.length == 3
     
     calc_reflex = (vertex, ref) ->
       vertex.reflex = not Math.vecAngleIsntReflex(
@@ -125,51 +236,41 @@ class Geometry
     
     output = []
       
-    # monotonize
-    # monotones = @monotonize(polygon)
-    monotones = [polygon]
+    polygon = @translateToXY(polygon) unless polygon[0].dx?
+    polygon.sort (a, b) -> b.dy - a.dy || a.dx - b.dx
+    # plane normal of the polygon
+    # requires angle (p[1],p[0],p[2]) < 180°
+    # which should always be the case because of the desc-y-ordering
+    ref_normal = Math.normalizeVector(Math.crossProduct(polygon[1].sub(polygon[0]), polygon[2].sub(polygon[0])))
     
-    # triangulate each monotone polygon
-    for p in monotones
+    stack = []
     
-      p = @translateToXY(p) unless p[0].dx?
-      p.sort (a, b) -> b.y - a.y
-      # plane normal of the polygon
-      # requires angle (p[1],p[0],p[2]) < 180°
-      # which should always be the case because of the desc-y-ordering
-      ref_normal = Math.normalizeVector(Math.crossProduct(p[1].sub(p[0]), p[2].sub(p[0])))
+    # assumes ccw ordering of vertices
+    for v in polygon[2..-1]
+      unless calc_reflex(v, ref_normal)
+        stack.push v
+        
+    while stack.length > 0
+      v = stack.shift()
       
-      stack = []
+      v0 = v.adjacent0
+      v1 = v.adjacent1
+      output.push [v0, v, v1]
       
-      # assumes ccw ordering of vertices
-      for v in p[2..-1]
-        unless calc_reflex(v, ref_normal)
-          stack.push v
-          
-      while stack.length > 0
-        v = stack.shift()
-        
-        v0 = v.adjacent0
-        v1 = v.adjacent1
-        output.push [v0, v, v1]
-        
-        remove_links v
-        
-        v0_reflex = v0.reflex
-        v1_reflex = v1.reflex
-        
-        stack.push v0 if not calc_reflex(v0, ref_normal) and v0_reflex
-        stack.push v1 if not calc_reflex(v1, ref_normal) and v1_reflex
+      remove_links v
+      
+      v0_reflex = v0.reflex
+      v1_reflex = v1.reflex
+      
+      stack.push v0 if not calc_reflex(v0, ref_normal) and v0_reflex
+      stack.push v1 if not calc_reflex(v1, ref_normal) and v1_reflex
         
     output
 
   
   overlaps: (ex1, ex2) ->
     
-    ex1.min[0] < ex2.max[0] and
-    ex1.max[0] > ex2.min[0] and
-    ex1.min[1] < ex2.max[1] and
-    ex1.max[1] > ex2.min[1] and
+    overlaps2d(ex1, ex2) and
     ex1.min[2] < ex2.max[2] and
     ex1.max[2] > ex2.min[2]
   

@@ -41,6 +41,14 @@ Math.vecLength = function(vec) {
   }), 0));
 };
 
+Math.absMin = function(a, b) {
+  if (Math.abs(a) < Math.abs(b)) {
+    return a;
+  } else {
+    return b;
+  }
+};
+
 Utils = {
   arrayEquals: function(a1, a2) {
     var i, _ref;
@@ -105,6 +113,15 @@ Utils = {
       }
     }
     return [min, max];
+  },
+  arrayUnique: function(arr) {
+    var el, i, output, _len;
+    output = [];
+    for (i = 0, _len = arr.length; i < _len; i++) {
+      el = arr[i];
+      if (arr.indexOf(el) === i) output.push(el);
+    }
+    return output;
   },
   defer: function(callback) {
     return setTimeout(callback, 1);

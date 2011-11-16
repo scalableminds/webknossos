@@ -37,7 +37,7 @@ object Sitemap extends Locs {
 
   // locations (menu entries)
   val home = MenuLoc(Menu.i("Home") / "index" >> TopBarGroup)
-  val static = MenuLoc(Menu.i("Static") / "static"/ "index")
+  val static = Menu(Loc("Static", Link(List("static"), true, "/static/index"),"Static Content"))
   val loginToken = MenuLoc(buildLoginTokenMenu)
   val logout = MenuLoc(buildLogoutMenu)
   private val profileParamMenu = Menu.param[User]("User", "Profile",
@@ -54,7 +54,7 @@ object Sitemap extends Locs {
 
   private def menus = List(
     home.menu,
-    static.menu,
+    static,
     Menu.i("Login") / "login" >> RequireNotLoggedIn,
     register.menu,
     loginToken.menu,

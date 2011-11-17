@@ -72,8 +72,8 @@ describe 'geometry', ->
       [@x, @y, @z]
     clone: ->
       v = new V @x, @y, @z
-      v.adjacent0 = @adjacent0
-      v.adjacent1 = @adjacent1
+      v.adj0 = @adj0
+      v.adj1 = @adj1
       v.adjacents = @adjacents?.slice 0
       v.dx = @dx
       v.dy = @dy
@@ -86,9 +86,9 @@ describe 'geometry', ->
     polygon = vertices.map (a) -> new V(a...)
     
     for i in [0...polygon.length]
-      polygon[i].adjacent0 = polygon[if i > 0 then i - 1 else polygon.length - 1]
-      polygon[i].adjacent1 = polygon[(i + 1) % polygon.length]
-      polygon[i].adjacents = [polygon[i].adjacent0, polygon[i].adjacent1]
+      polygon[i].adj0 = polygon[if i > 0 then i - 1 else polygon.length - 1]
+      polygon[i].adj1 = polygon[(i + 1) % polygon.length]
+      polygon[i].adjacents = [polygon[i].adj0, polygon[i].adj1]
     polygon
   
   it 'should triangulate a monotone polygon', ->
@@ -113,7 +113,6 @@ describe 'geometry', ->
     # find all edges
     edges = []
     for tri in polygon
-      g.translateToXY(tri)
       edges.push [tri[0],tri[1]], [tri[1],tri[2]], [tri[2],tri[0]]
     
     # check whether any edge intersect another
@@ -173,7 +172,7 @@ describe 'geometry', ->
   it 'should split a polygon in monotones', ->
     # setup
     # plane: normal = [0, 0, 1], d = 0
-    polygon = _polygon = polygonize [
+    polygon = polygonize [
       [0,0,0],
       [0,10,0],
       [4,10,0],
@@ -192,6 +191,7 @@ describe 'geometry', ->
     # do the work
     monotones = g.monotonize(polygon)
     
+    
     expect(monotones.length).toEqual(4)
     
     
@@ -206,18 +206,18 @@ describe 'geometry', ->
       
       unless polygon.length == 3
         i = 0
-        v = first.adjacent0
-        while v.adjacent0 != last
-          expect(comp(v, v.adjacent0)).toBeLessThan 0
-          v = v.adjacent0
+        v = first.adj0
+        while v.adj0 != last
+          expect(comp(v, v.adj0)).toBeLessThan 0
+          v = v.adj0
           if i++ == 10000
             expect(i).toBeLessThan 10000
             break
         
-        v = first.adjacent1
-        while v.adjacent1 != last
-          expect(comp(v, v.adjacent1)).toBeGreaterThan 0
-          v = v.adjacent1
+        v = first.adj1
+        while v.adj1 != last
+          expect(comp(v, v.adj1)).toBeGreaterThan 0
+          v = v.adj1
           if i++ == 20000
             expect(i).toBeLessThan 20000
             break

@@ -49,8 +49,8 @@ describe('geometry', function() {
     V.prototype.clone = function() {
       var v, _ref;
       v = new V(this.x, this.y, this.z);
-      v.adjacent0 = this.adjacent0;
-      v.adjacent1 = this.adjacent1;
+      v.adj0 = this.adj0;
+      v.adj1 = this.adj1;
       v.adjacents = (_ref = this.adjacents) != null ? _ref.slice(0) : void 0;
       v.dx = this.dx;
       v.dy = this.dy;
@@ -74,9 +74,9 @@ describe('geometry', function() {
       })(V, a, function() {});
     });
     for (i = 0, _ref = polygon.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-      polygon[i].adjacent0 = polygon[i > 0 ? i - 1 : polygon.length - 1];
-      polygon[i].adjacent1 = polygon[(i + 1) % polygon.length];
-      polygon[i].adjacents = [polygon[i].adjacent0, polygon[i].adjacent1];
+      polygon[i].adj0 = polygon[i > 0 ? i - 1 : polygon.length - 1];
+      polygon[i].adj1 = polygon[(i + 1) % polygon.length];
+      polygon[i].adjacents = [polygon[i].adj0, polygon[i].adj1];
     }
     return polygon;
   };
@@ -88,7 +88,6 @@ describe('geometry', function() {
     edges = [];
     for (_i = 0, _len = polygon.length; _i < _len; _i++) {
       tri = polygon[_i];
-      g.translateToXY(tri);
       edges.push([tri[0], tri[1]], [tri[1], tri[2]], [tri[2], tri[0]]);
     }
     for (i1 = 0, _len2 = edges.length; i1 < _len2; i1++) {
@@ -143,8 +142,8 @@ describe('geometry', function() {
     return _results;
   });
   it('should split a polygon in monotones', function() {
-    var comp, first, i, last, monotones, polygon, v, _i, _len, _polygon, _results;
-    polygon = _polygon = polygonize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
+    var comp, first, i, last, monotones, polygon, v, _i, _len, _results;
+    polygon = polygonize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
     monotones = g.monotonize(polygon);
     expect(monotones.length).toEqual(4);
     _results = [];
@@ -161,22 +160,22 @@ describe('geometry', function() {
       };
       if (polygon.length !== 3) {
         i = 0;
-        v = first.adjacent0;
-        while (v.adjacent0 !== last) {
-          expect(comp(v, v.adjacent0)).toBeLessThan(0);
-          v = v.adjacent0;
+        v = first.adj0;
+        while (v.adj0 !== last) {
+          expect(comp(v, v.adj0)).toBeLessThan(0);
+          v = v.adj0;
           if (i++ === 10000) {
             expect(i).toBeLessThan(10000);
             break;
           }
         }
-        v = first.adjacent1;
+        v = first.adj1;
         _results.push((function() {
           var _results2;
           _results2 = [];
-          while (v.adjacent1 !== last) {
-            expect(comp(v, v.adjacent1)).toBeGreaterThan(0);
-            v = v.adjacent1;
+          while (v.adj1 !== last) {
+            expect(comp(v, v.adj1)).toBeGreaterThan(0);
+            v = v.adj1;
             if (i++ === 20000) {
               expect(i).toBeLessThan(20000);
               break;

@@ -58,157 +58,156 @@ class Geometry
     for v in polygon
       adj0 = v.adjacents[0]
       adj1 = v.adjacents[1]
-      
-    
   
-  monotonize: (polygon) ->
+  class EdgeSet
+    container: []
+    add: (e) ->
+      @container["#{e[0].dx}x#{e[0].dy}|#{e[1].dx}x#{e[1].dy}"] = e
+    remove: (e) ->
+      delete @container["#{e[0].dx}x#{e[0].dy}|#{e[1].dx}x#{e[1].dy}"]
+    all: ->
+      for key in Object.keys @container
+        @container[key]
+  
+  class Monotonizer
+    constructor: (@polygon) ->
+      @sweep_status = new EdgeSet
+      @edges_to_remove = []
+      
+      @vertex_compare = (a, b) -> a.dy - b.dy or b.dx - a.dx
     
-    return [polygon] if polygon.length <= 4
+      @edge_function = (e, y) ->
+        (-(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy))
+      
+      @edge_compare = (a, b) => @vertex_compare(a[0], b[0]) or @vertex_compare(a[1], b[1])
     
-    vertex_compare = (a, b) -> a.dy - b.dy or b.dx - a.dx
-    
-    edge_function = (e, y) ->
-      (-(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy))
-    
-    edge_compare = (a, b) -> vertex_compare(a[0], b[0]) or vertex_compare(a[1], b[1])
-     
-    polygon = @translateToXY(polygon) unless polygon[0].dx?
-    polygon.sort vertex_compare
+    run: ->
+      
+      return [@polygon] if @polygon.length <= 4
+      
+      @polygon = Geometry.translateToXY(@polygon) unless @polygon[0].dx?
+      @polygon.sort @vertex_compare
+      
+      @current_y = @polygon[0].dy
+      first_i_y = 0
+      
+      # do the sweep
+      for _v, _i in @polygon
+        continue if _v.dy == @current_y
+        
+        # first pass
+        # add edges to sweep_status
+        @edges_to_remove = []
+        
+        for i in [first_i_y..._i]
+          
+          v = @polygon[i]
+          for adj in v.adjacents
+            if @vertex_compare(adj, v) > 0
+              @sweep_status.add [v, adj]
+            else
+              @edges_to_remove.push [adj, v]
+         
+        
+        # second pass
+        # if the vertex has an edge left and right to it
+        # we need to regularize it
+        for i in [first_i_y..._i]
+          v = @polygon[i]
+          incoming = outgoing = 0
+          
+          for adj in v.adjacents
+            if @vertex_compare(adj, v) > 0
+              outgoing += 1
+            else
+              incoming += 1
+          
+          unless (outgoing >= 1 or i == @polygon.length - 1) and (incoming >= 1 or i == 0)
+            left_edge = right_edge = null
+            left_x = right_x = null
+          
+            for edge in @sweep_status.all()
+              if edge[0] != v and edge[1] != v 
+                
+                edge_x = @edge_function(edge, v.dy)
+                if edge_x < v.dx and (not left? or edge_x > left[1])
+                  left_edge = edge
+                  left_x = edge_x
+                else if not right? or edge_x < right[1]
+                  right_edge = edge
+                  right_x = edge_x
+            
+            if left_edge? and right_edge?
+              
+              if outgoing < 1
+                if left_edge[1].dy < right_edge[1].dy
+                  @addDiagonal_(v, left_edge[1])
+                else
+                  @addDiagonal_(v, right_edge[1])
+              
+              if incoming < 1
+                if left_edge[0].dx > right_edge[0].dx
+                  @addDiagonal_(left_edge[0], v)
+                else
+                  @addDiagonal_(right_edge[0], v)
+                  
+        
+        # third pass
+        # remove edges from 
+        @sweep_status.remove e for e in @edges_to_remove
 
-    sweep_status = 
-      container: []
-      add: (e) ->
-        @container["#{e[0].dx}x#{e[0].dy}|#{e[1].dx}x#{e[1].dy}"] = e
-      remove: (e) ->
-        delete @container["#{e[0].dx}x#{e[0].dy}|#{e[1].dx}x#{e[1].dy}"]
-      all: ->
-        for key in Object.keys @container
-          @container[key]
+        first_i_y = _i
+        @current_y = _v.dy
+      
+      output = []
+
+      for v in @polygon
+        output.push v.polygon if output.indexOf(v.polygon) == -1
+      
+      output
     
-    starting_points = []
-    add_edge = (a, b) ->
-      sweep_status.add [a, b]
-      edges_to_remove.push [a, b] if b.dy == current_y
+    addDiagonal_: (a, b) ->
+    
+      @sweep_status.add [a, b]
+      @edges_to_remove.push [a, b] if b.dy == @current_y
 
       a.adjacents.push b
       b.adjacents.push a
       
-      sub0 = [a, b]
-      v = b.adjacent0
-      while v != a
-        v.polygon = sub0
-        sub0.push v
-        v = v.adjacent0
-      
-      a.polygon = b.polygon = sub0
-      
       _a = a.clone()
       _b = b.clone()
       
+      sub0 = [a, b]
+      v = b.adj0
+      while v != a
+        v.polygon = sub0
+        sub0.push v
+        v = v.adj0
+      
       sub1 = [_a, _b]
-      v = b.adjacent1
+      v = b.adj1
       while v != a
         v.polygon = sub1
         sub1.push v
-        v = v.adjacent1
+        v = v.adj1
       
+      a.polygon = b.polygon = sub0
       _a.polygon = _b.polygon = sub1
       
-      
-      if a.adjacent0 == sub0[sub0.length - 1]
-        a.adjacent1 = b
-        b.adjacent0 = a
-        _a.adjacent0 = _b
-        _b.adjacent1 = _a
+      if a.adj0 == sub0[sub0.length - 1]
+        a.adj1 = b
+        b.adj0 = a
+        _a.adj0 = _b
+        _b.adj1 = _a
       else
-        a.adjacent0 = b
-        b.adjacent1 = a
-        _a.adjacent1 = _b
-        _b.adjacent0 = _a
-      
-      console.log(sub0, sub1)  
-      
-
-      
-      starting_points.push a
-
+        a.adj0 = b
+        b.adj1 = a
+        _a.adj1 = _b
+        _b.adj0 = _a
     
-    current_y = polygon[0].dy
-    first_i_y = 0
-    
-    # do the sweep
-    for _v, _i in polygon
-      continue if _v.dy == current_y
-      
-      # first pass
-      # add edges to sweep_status
-      edges_to_remove = []
-      for i in [first_i_y..._i]
-        
-        v = polygon[i]
-        
-        for adj in v.adjacents
-          if vertex_compare(adj, v) > 0
-            sweep_status.add [v, adj]
-          else
-            edges_to_remove.push [adj, v]
-      
-      # second pass
-      # if the vertex has an edge left and right to it
-      # we need to regularize it
-      for i in [first_i_y..._i]
-        v = polygon[i]
-        
-        incoming = outgoing = 0
-        
-        for adj in v.adjacents
-          if vertex_compare(adj, v) > 0
-            outgoing += 1
-          else
-            incoming += 1
-        
-        unless (outgoing >= 1 or i == polygon.length - 1) and (incoming >= 1 or i == 0)
-          left_edge = right_edge = null
-          left_x = right_x = null
-        
-          for edge in sweep_status.all()
-            if edge[0] != v and edge[1] != v 
-              
-              edge_x = edge_function(edge, v.dy)
-              if edge_x < v.dx and (not left? or edge_x > left[1])
-                left_edge = edge
-                left_x = edge_x
-              else if not right? or edge_x < right[1]
-                right_edge = edge
-                right_x = edge_x
-          
-          if left_edge? and right_edge?
-            
-            if outgoing < 1
-              if left_edge[1].dy < right_edge[1].dy
-                add_edge(v, left_edge[1])
-              else
-                add_edge(v, right_edge[1])
-            
-            if incoming < 1
-              if left_edge[0].dx > right_edge[0].dx
-                add_edge(left_edge[0], v)
-              else
-                add_edge(right_edge[0], v)
-      
-      # third pass
-      # remove edges from 
-      sweep_status.remove e for e in edges_to_remove
+  monotonize: (polygon) ->
+    new Monotonizer(polygon).run()
 
-      first_i_y = _i
-      current_y = _v.dy
-    
-    output = []
-
-    for v in polygon
-      output.push v.polygon if output.indexOf(v.polygon) == -1
-    
-    output
   
   triangulateMonotone: (polygon) ->
     
@@ -216,23 +215,23 @@ class Geometry
     
     calc_reflex = (vertex, ref) ->
       vertex.reflex = not Math.vecAngleIsntReflex(
-        vertex.adjacent0.sub(vertex),
-        vertex.adjacent1.sub(vertex),
+        vertex.adj0.sub(vertex),
+        vertex.adj1.sub(vertex),
         ref
       )
     remove_links = (v_old) ->
-      v0 = v_old.adjacent0
-      v1 = v_old.adjacent1
+      v0 = v_old.adj0
+      v1 = v_old.adj1
       
-      if v0.adjacent0 == v_old
-        v0.adjacent0 = v1
+      if v0.adj0 == v_old
+        v0.adj0 = v1
       else
-        v0.adjacent1 = v1
+        v0.adj1 = v1
         
-      if v1.adjacent0 == v_old
-        v1.adjacent0 = v0
+      if v1.adj0 == v_old
+        v1.adj0 = v0
       else
-        v1.adjacent1 = v0
+        v1.adj1 = v0
     
     output = []
       
@@ -253,8 +252,8 @@ class Geometry
     while stack.length > 0
       v = stack.shift()
       
-      v0 = v.adjacent0
-      v1 = v.adjacent1
+      v0 = v.adj0
+      v1 = v.adj1
       output.push [v0, v, v1]
       
       remove_links v
@@ -492,8 +491,7 @@ class Geometry
           line_segment(face1, face2),
           line_segment(face2, face1)
         )
-  
-  translateToXY: (vertices, normal) ->
+  translateToXY = (vertices, normal) ->
     
     unless normal?
       normal = Math.crossProduct(vertices[1].sub(vertices[0]), vertices[2].sub(vertices[0])).map Math.abs 
@@ -519,3 +517,6 @@ class Geometry
           v.dy = v.y
 
     vertices
+  @translateToXY: translateToXY
+  translateToXY: translateToXY
+  

@@ -24,7 +24,7 @@ libraryDependencies += "junit" % "junit" % "4.8" % "test"
 // Add multiple dependencies
 libraryDependencies ++= {
 val liftVersion = "2.4-M5" // Put the current/latest lift version here
-val liftMongoVersion = "2.4-SNAPSHOT"
+val liftMongoVersion = "2.4-M5"
 val jettyVersion = "7.5.4.v20111024"//"8.0.3.v20111011"
 Seq(
     "net.liftweb" %% "lift-webkit" % liftVersion % "compile->default" withSources(),

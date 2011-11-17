@@ -61,34 +61,14 @@ describe 'geometry', ->
     # expect(g.find_intersections(g.polyhedral[0].faces[6], g.polyhedral[1].faces[5]))
       # .toBeDefined()
   
-  class V
-    constructor: (@x, @y, @z) ->
-    adjacents: []
-    sub: (v2) ->
-      [@x - v2.x, @y - v2.y, @z - v2.z]
-    toString: ->
-      @toArray().toString()
-    toArray: ->
-      [@x, @y, @z]
-    clone: ->
-      v = new V @x, @y, @z
-      v.adj0 = @adj0
-      v.adj1 = @adj1
-      v.adjacents = @adjacents?.slice 0
-      v.dx = @dx
-      v.dy = @dy
-      v
-    eq: (other) ->
-      @x == other.x and @y == other.y and @z == other.z
-  
+ 
   polygonize = (vertices) ->
     
-    polygon = vertices.map (a) -> new V(a...)
+    polygon = vertices.map (a) -> new Vertex3(a...)
     
     for i in [0...polygon.length]
-      polygon[i].adj0 = polygon[if i > 0 then i - 1 else polygon.length - 1]
-      polygon[i].adj1 = polygon[(i + 1) % polygon.length]
-      polygon[i].adjacents = [polygon[i].adj0, polygon[i].adj1]
+      polygon[i].adjacents.add polygon[if i > 0 then i - 1 else polygon.length - 1]
+      polygon[i].adjacents.add polygon[(i + 1) % polygon.length]
     polygon
   
   it 'should triangulate a monotone polygon', ->
@@ -105,7 +85,7 @@ describe 'geometry', ->
     ]
     
     # do the work
-    polygon = g.triangulateMonotone(polygon)
+    polygon = Geometry.triangulateMonotone(Geometry.translateToXY polygon)
     
     # simple test to start
     expect(polygon.length).toEqual(5)
@@ -127,8 +107,8 @@ describe 'geometry', ->
           vec2 = e2[1].sub(p2)
           
           # quick check whether the extents overlap
-          if g.overlaps2d(g.calc_extent(e1), g.calc_extent(e2))
-            if (e1[0].eq(e2[0]) and e1[1].eq(e2[1])) or (e1[0].eq(e2[1]) and e1[1].eq(e2[0]))
+          if Geometry.overlaps2d(Geometry.calcExtent(e1), Geometry.calcExtent(e2))
+            if (e1[0].equals(e2[0]) and e1[1].equals(e2[1])) or (e1[0].equals(e2[1]) and e1[1].equals(e2[0]))
               e1.colinear += 1
             else
               # thanks Gareth Rees
@@ -189,15 +169,14 @@ describe 'geometry', ->
     ]
     
     # do the work
-    monotones = g.monotonize(polygon)
+    monotones = Geometry.monotonize(Geometry.translateToXY polygon)
     
-    
+    # simple test to start
     expect(monotones.length).toEqual(4)
     
-    
+    # make sure the monotone propery is ensured for each polygon
     for polygon in monotones
-      polygon = g.translateToXY(polygon)
-      polygon.sort((a, b) -> a.dy - b.dy || b.dx - a.dx)
+      polygon.sort (a, b) -> a.dy - b.dy or b.dx - a.dx
       
       first = polygon[0]
       last = polygon[polygon.length - 1]
@@ -228,17 +207,17 @@ describe 'geometry', ->
     # setup
     # normal = [-3, 0, 1]
     vertices = [
-      new V 3,4,5
-      new V 4,6,8
-      new V 3,5,5
+      new Vertex3 3,4,5
+      new Vertex3 4,6,8
+      new Vertex3 3,5,5
     ]
     
     # do the work
-    vertices = g.translateToXY(vertices)
+    vertices2 = Geometry.translateToXY(vertices)
     
     # the x-coordinate should be gone
-    for v in vertices
-      expect(v.y).toEqual(v.dx)
-      expect(v.z).toEqual(v.dy)
+    for v, i in vertices2
+      expect(vertices[i].y).toEqual(v.dx)
+      expect(vertices[i].z).toEqual(v.dy)
     
     

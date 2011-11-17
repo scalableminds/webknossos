@@ -8,18 +8,6 @@ class Geometry
     edges = {}
     faces = []
     
-    get_edge = (vertex1, vertex2) ->
-      if Utils.arrayCompare(vertex1.toArray(), vertex2.toArray()) == 1
-        [vertex1, vertex2] = [vertex2, vertex1]
-      
-      hit_edges = edges["#{vertex1}x#{vertex2}"] ?= []
-      
-      for edge in hit_edges
-        return edge if edge.adjoining_faces.length < 2
-      
-      hit_edges.push tmp = new Edge(vertex1, vertex2)
-      tmp
-    
     for polygon in data
       for face in @triangulate(polygon)
         
@@ -44,55 +32,32 @@ class Geometry
   
   ccw = (p1, p2, p3) ->
     (p2.dx - p1.dx) * (p3.dy - p1.dy) - (p2.dy - p1.dy) * (p3.dx - p1.dx)
-  triangulate2: (polygon) ->
-    vertex_compare = (a, b) -> a.dy - b.dy or b.dx - a.dx
-    
-    edge_function = (e, y) ->
-      (-(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy))
-    
-    edge_compare = (a, b) -> vertex_compare(a[0], b[0]) or vertex_compare(a[1], b[1])
-    
-    polygon = @translateToXY(polygon) unless polygon[0].dx?
-    polygon.sort vertex_compare
-    
-    for v in polygon
-      adj0 = v.adjacents[0]
-      adj1 = v.adjacents[1]
-  
-  class EdgeSet
-    container: []
-    add: (e) ->
-      @container["#{e[0].dx}x#{e[0].dy}|#{e[1].dx}x#{e[1].dy}"] = e
-    remove: (e) ->
-      delete @container["#{e[0].dx}x#{e[0].dy}|#{e[1].dx}x#{e[1].dy}"]
-    all: ->
-      for key in Object.keys @container
-        @container[key]
   
   class Monotonizer
     constructor: (@polygon) ->
-      @sweep_status = new EdgeSet
+      @sweep_status = new Edge2Set
       @edges_to_remove = []
       
-      @vertex_compare = (a, b) -> a.dy - b.dy or b.dx - a.dx
-    
       @edge_function = (e, y) ->
         (-(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy))
       
-      @edge_compare = (a, b) => @vertex_compare(a[0], b[0]) or @vertex_compare(a[1], b[1])
+      @edge_compare = (a, b) -> (a[0].compare b[0]) or (a[1].compare b[1])
     
     run: ->
       
       return [@polygon] if @polygon.length <= 4
       
-      @polygon = Geometry.translateToXY(@polygon) unless @polygon[0].dx?
-      @polygon.sort @vertex_compare
+      # @polygon = Geometry.translateToXY(@polygon) unless @polygon[0].dx?
+      @polygon.sort (a,b) -> a.compare b
       
       @current_y = @polygon[0].dy
       first_i_y = 0
       
       # do the sweep
       for _v, _i in @polygon
+        
+        _v._adjacents = [_v.adj0, _v.adj1]
+        
         continue if _v.dy == @current_y
         
         # first pass
@@ -102,8 +67,8 @@ class Geometry
         for i in [first_i_y..._i]
           
           v = @polygon[i]
-          for adj in v.adjacents
-            if @vertex_compare(adj, v) > 0
+          for adj in v._adjacents
+            if (adj.compare v) > 0
               @sweep_status.add [v, adj]
             else
               @edges_to_remove.push [adj, v]
@@ -116,8 +81,8 @@ class Geometry
           v = @polygon[i]
           incoming = outgoing = 0
           
-          for adj in v.adjacents
-            if @vertex_compare(adj, v) > 0
+          for adj in v._adjacents
+            if (adj.compare v) > 0
               outgoing += 1
             else
               incoming += 1
@@ -171,8 +136,8 @@ class Geometry
       @sweep_status.add [a, b]
       @edges_to_remove.push [a, b] if b.dy == @current_y
 
-      a.adjacents.push b
-      b.adjacents.push a
+      a._adjacents.push b
+      b._adjacents.push a
       
       _a = a.clone()
       _b = b.clone()
@@ -205,20 +170,16 @@ class Geometry
         _a.adj1 = _b
         _b.adj0 = _a
     
-  monotonize: (polygon) ->
+  @monotonize: (polygon) ->
     new Monotonizer(polygon).run()
 
-  
-  triangulateMonotone: (polygon) ->
+  @triangulateMonotone: (polygon) ->
     
     return [polygon] if polygon.length == 3
     
-    calc_reflex = (vertex, ref) ->
-      vertex.reflex = not Math.vecAngleIsntReflex(
-        vertex.adj0.sub(vertex),
-        vertex.adj1.sub(vertex),
-        ref
-      )
+    is_reflex = (v) ->
+      v.reflex = ccw(v.adj0, v, v.adj1) >= 0
+      
     remove_links = (v_old) ->
       v0 = v_old.adj0
       v1 = v_old.adj1
@@ -235,18 +196,13 @@ class Geometry
     
     output = []
       
-    polygon = @translateToXY(polygon) unless polygon[0].dx?
-    polygon.sort (a, b) -> b.dy - a.dy || a.dx - b.dx
-    # plane normal of the polygon
-    # requires angle (p[1],p[0],p[2]) < 180°
-    # which should always be the case because of the desc-y-ordering
-    ref_normal = Math.normalizeVector(Math.crossProduct(polygon[1].sub(polygon[0]), polygon[2].sub(polygon[0])))
+    polygon.sort (a, b) -> a.compare b
     
     stack = []
     
     # assumes ccw ordering of vertices
     for v in polygon[2..-1]
-      unless calc_reflex(v, ref_normal)
+      unless is_reflex(v)
         stack.push v
         
     while stack.length > 0
@@ -261,25 +217,31 @@ class Geometry
       v0_reflex = v0.reflex
       v1_reflex = v1.reflex
       
-      stack.push v0 if not calc_reflex(v0, ref_normal) and v0_reflex
-      stack.push v1 if not calc_reflex(v1, ref_normal) and v1_reflex
+      stack.push v0 if not is_reflex(v0) and v0_reflex
+      stack.push v1 if not is_reflex(v1) and v1_reflex
         
     output
-
+    
+  @triangulate: (polygon) ->
+    monotones = Geometry.monotonize @toFace2.vertices
+    triangles = []
+    for monotone in monotones 
+      triangles.push (Geometry.triangulateMonotone monotone)...
+    triangles
   
-  overlaps: (ex1, ex2) ->
+  @overlaps: (ex1, ex2) ->
     
     overlaps2d(ex1, ex2) and
     ex1.min[2] < ex2.max[2] and
     ex1.max[2] > ex2.min[2]
   
-  overlaps2d: (ex1, ex2) ->
+  @overlaps2d: (ex1, ex2) ->
     ex1.min[0] < ex2.max[0] and
     ex1.max[0] > ex2.min[0] and
     ex1.min[1] < ex2.max[1] and
     ex1.max[1] > ex2.min[1]
   
-  calc_extent: (vertices) ->
+  @calcExtent: (vertices) ->
     max = min = vertices[0].toArray()
     for i in [1...vertices.length]
       v = vertices[i]
@@ -288,102 +250,6 @@ class Geometry
     
     min: min
     max: max
-  
-  
-  
-  class Polyhedron
-    constructor: (@faces, @edges, @vertices) ->
-    
-      face.polyhedron = @ for face in @faces
-      
-      for edge in @edges
-        edge.calc_interior()
-        edge.polyhedron = @
-    
-      # calc extent
-      @extent = @calc_extent(@vertices)
-      
-      
-      for vertex in @vertices
-        vertex.calc_interior()
-        vertex.polyhedron = @
-        
-      
-      
-      @links = []
-      
-      
-  class Face
-    constructor: (@vertices, @edges, @plane) ->
-      
-      @extent = @calc_extent(@vertices)
-        
-      # calc plane equation
-      unless @plane?
-        [v1, v2, v3] = @vertices
-        
-        vec1 = v2.sub(v1)
-        vec2 = v2.sub(v3)
-        
-        plane = Math.normalizeVector(Math.crossProduct(vec1, vec2))
-        
-        plane.push(plane[0] * v1.x + plane[1] * v1.y + plane[2] * v1.z)
-        @plane = plane
-      
-      edge.adjoining_faces.push(@) for edge in @edges
-  
-  class Edge
-    constructor: (vertex1, vertex2) ->
-      
-      @vertices = [vertex1, vertex2]
-      @adjoining_faces = []
-      
-      vertex1.edges.push @
-      vertex2.edges.push @
-      
-      vertex1.adjacents.push vertex2
-      
-      @interior = true
-      
-      @links = []
-    
-    calc_interior: ->
-      @interior = Utils.arrayEquals(@adjoining_faces[0].plane, @adjoining_faces[1].plane)
-      
-  
-  class Vertex
-    constructor: (_vertex = [0,0,0]) ->
-      @x = _vertex[0]
-      @y = _vertex[1]
-      @z = _vertex[2]
-      
-      @edges = []
-      
-      # null = unknown, -1 = outside, 0 = boundary, 1 = inside
-      @status = null
-      
-      @adjacents = []
-      
-      @interior = true
-    
-    calc_interior: ->
-      for edge in @edges
-        return edge.interior = false unless edge.interior
-      
-    
-    sub: (v2) ->
-      [@x - v2.x, @y - v2.y, @z - v2.z]
-      
-    toArray: ->
-      [@x, @y, @z]
-    
-    toString: ->
-      @toArray().toString()
-    
-    equals: (a) ->
-      @x == a.x and @y == a.y and @z == a.z
-
-      
   
   split: (p1, p2) ->
     if @overlaps(p1.extent, p2.extent)
@@ -491,32 +357,21 @@ class Geometry
           line_segment(face1, face2),
           line_segment(face2, face1)
         )
-  translateToXY = (vertices, normal) ->
+
+  @translateToXY: (vertices, normal) ->
     
     unless normal?
-      normal = Math.crossProduct(vertices[1].sub(vertices[0]), vertices[2].sub(vertices[0])).map Math.abs 
+      normal = Math.crossProduct(vertices[1].sub(vertices[0]), vertices[2].sub(vertices[0]))
     
-    
-    drop_index = if normal[2] >= normal[0] and normal[2] >= normal[1]
-        2
-      else if normal[1] >= normal[0] and normal[1] >= normal[2]
-        1
-      else
-        0
-    
+    set = new Vertex2Set()
     for v in vertices
-      switch drop_index
-        when 0
-          v.dx = v.y
-          v.dy = v.z
-        when 1
-          v.dx = v.x
-          v.dy = v.z
-        else
-          v.dx = v.x
-          v.dy = v.y
-
-    vertices
-  @translateToXY: translateToXY
-  translateToXY: translateToXY
+      set.add v.toVertex2 normal
+    
+    for v in set.all()
+      i = 0
+      for adj in v.original.adjacents.all()
+        v["adj#{i++}"] = set.get(adj.toVertex2 normal) if Math.dotProduct(adj.sub(v.original), normal) == 0
+    
+    set.all()
+      
   

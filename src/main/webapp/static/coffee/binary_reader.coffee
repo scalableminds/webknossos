@@ -66,10 +66,10 @@ read_binary_file = ->
 					
 					# GREY SCALE TO RGB COLOR CONVERTION
 					# R = G = B = GREY SCALE INTEGER
-					RGB_colors[currentPixel] = grey_scale_colors[currentColor] / 255
-					RGB_colors[currentPixel + 1] =  grey_scale_colors[currentColor] / 255
-					RGB_colors[currentPixel + 2] = grey_scale_colors[currentColor] / 255
-					
+					RGB_colors[currentPixel ] = grey_scale_colors[currentColor] / 255
+					RGB_colors[currentPixel + 1] = 0
+					RGB_colors[currentPixel + 2] =  0
+
 					currentPixel += 3
 					currentColor++
 					

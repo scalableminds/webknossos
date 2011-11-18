@@ -5,6 +5,7 @@ mesh = undefined
 cam = undefined
 mouseDown = false
 clipping_distance = 15.0
+enableClipping = true
 
 # MOUSE/KEYBOARD EVENTS
 mousePressed = ->
@@ -47,34 +48,32 @@ render = ->
   
 	
 	ps.loadMatrix M4x4.makeLookAt cam.pos, V3.add(cam.dir, cam.pos), cam.up
-	
-	# CLIPPING
-	length_dir = Math.sqrt cam.dir[0]*cam.dir[0] + cam.dir[1]*cam.dir[1] +  cam.dir[2]*cam.dir[2]
-	
-	n0 = [ cam.dir[0] / length_dir, cam.dir[1] / length_dir, cam.dir[2] / length_dir]
-	
-	versch = [clipping_distance * n0[0], clipping_distance * n0[1], clipping_distance * n0[2]]
-	p = V3.add(cam.pos, versch)
-	d = V3.dot( p, n0)
 
+	# CLIPPING
+	if enableClipping
+		length_dir = Math.sqrt cam.dir[0]*cam.dir[0] + cam.dir[1]*cam.dir[1] +  cam.dir[2]*cam.dir[2]
+		
+		n0 = [ cam.dir[0] / length_dir, cam.dir[1] / length_dir, cam.dir[2] / length_dir]
+		
+		versch = [clipping_distance * n0[0], clipping_distance * n0[1], clipping_distance * n0[2]]
+		p = V3.add(cam.pos, versch)
+		d = V3.dot( p, n0)
 	
-	ps.uniformf "d",d
-	ps.uniformf "n0",n0
-	
+		ps.uniformf "d",d
+		ps.uniformf "n0",n0
+		ps.uniformi "clipping",1		
+	else
+		ps.uniformi "clipping",0
+
 	# Render the Pointcloud
 	ps.clear()
 	ps.render pointcloud
-	
-	ps.translate p[0], p[1], p[2]
+		
+	#ps.translate p[0], p[1], p[2]	
 	ps.renderMesh mesh
 		
 	# OUTPUT FPS
-	status = document.getElementById('status')
-	status.innerHTML = "#{Math.floor(ps.frameRate)} FPS <br/> #{pointcloud.numPoints} Points <br />#{cam.pos}" 
-	
-	# OUTPUT CAMERA POSITION
-	# cameraPos = document.getElementById('camera')
-	# cameraPos.innerHTML = cam.pos
+	document.all.status.innerHTML = "#{Math.floor(ps.frameRate)} FPS <br/> #{pointcloud.numPoints} Points <br />#{cam.pos}" 
 	
 	return
 
@@ -87,14 +86,20 @@ start = ->
 	ps = new PointStream()
 	ps.setup document.getElementById('render'),{"antialias":true}
 	
-	# LOAD A CUSTOM SHADER
-	###
+	# ENABLE BLENDING
+	ctx = ps.getContext()
+	ctx.blendFunc(ctx.SRC_ALPHA, ctx.ONE_MINUS_SRC_ALPHA)
+	ctx.enable(ctx.BLEND)
+	ctx.disable(ctx.DEPTH_TEST)
+	
+	# LOAD A CUSTOM SHADER	
 	vert = ps.getShaderStr("js/libs/pointstream/shaders/clip.vs")
 	frag = ps.getShaderStr("js/libs/pointstream/shaders/clip.fs")
 	progObj = ps.createProgram(vert, frag);
 	ps.useProgram(progObj);
-	###
-	ps.perspective 60, ps.width / ps.height, 15, 20
+	ps.uniformf "alphaBlending", 0.5
+	
+	ps.perspective 60, ps.width / ps.height, 0.1, 20
 	ps.background [0.9, 0.9 ,0.9 ,1]
 	ps.pointSize 5
 	
@@ -126,3 +131,6 @@ changePerspectiveParams = ->
 	if !isNaN(near) and !isNaN(far) and !isNaN(fovy)
 		ps.perspective fovy, ps.width / ps.height, near, far
 		return	
+
+toggleClipping = ->
+	enableClipping = !enableClipping

@@ -68,7 +68,7 @@ read_obj_file = function() {
         } else {
           polygon = [];
           for (i = 1, _ref4 = fac.length - 1; 1 <= _ref4 ? i < _ref4 : i > _ref4; 1 <= _ref4 ? i++ : i--) {
-            polygon.push(parseFloat(fac[i].split("/")[0]));
+            polygon.push(parseFloat(fac[i].split("/")[0] - 1));
           }
           newFaces = triangulate(polygon);
           for (i = 0, _ref5 = newFaces.length; 0 <= _ref5 ? i < _ref5 : i > _ref5; 0 <= _ref5 ? i++ : i--) {

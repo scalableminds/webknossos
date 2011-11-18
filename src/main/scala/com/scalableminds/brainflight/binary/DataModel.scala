@@ -3,7 +3,7 @@ package com.scalableminds.brainflight.binary
 import scala.math._
 import com.scalableminds.tools.Math._
 import java.lang.OutOfMemoryError
-import com.scalableminds.tools.geometry.{NGonalFrustrum, Polygon}
+import com.scalableminds.tools.geometry.{NGonalFrustum, Polygon}
 
 /**
  * Scalable Minds - Brainflight
@@ -29,7 +29,7 @@ abstract class DataModel {
         throw new NumberFormatException("Can't convert int to byte (out of range).")
       containingCoordinates.flatMap(point => List(point._1.toByte,point._2.toByte,point._3.toByte)).toArray
   }
-
+  // specifies the polygons the model consists of
   val polygons : List[Polygon]
 
   def rotateAndMove(moveVector:Tuple3[Int,Int, Int],axis:Tuple3[Int,Int, Int]):IndexedSeq[Tuple3[Int, Int, Int]]={
@@ -73,16 +73,16 @@ object CubeModel extends DataModel{
   }yield{
     (x,y,z)
   }
-  val polygons = new NGonalFrustrum(4,50,25,25).polygons
+  val polygons = new NGonalFrustum(4,50,25,25).polygons
 }
 
-object FrustrumModel extends DataModel{
-  val id= "frustrum"
+object FrustumModel extends DataModel{
+  val id= "frustum"
 
   val yLength = 50
-  // linear equation for the generator of the frustrum
+  // linear equation for the generator of the frustum
   def generatorEquation(y:Int) = 10+y // -> z = a + b*y
-  // calculate all coordinates which are in the frustrum boundary
+  // calculate all coordinates which are in the frustum boundary
   val containingCoordinates = {
     val generatorMax = generatorEquation(yLength)
     for{
@@ -97,5 +97,6 @@ object FrustrumModel extends DataModel{
       (x,y,z)
     }
   }
+  // TODO: implement polygons for frustrum -> evaluate number of vertices
   val polygons = List()
 }

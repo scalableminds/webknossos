@@ -14,7 +14,7 @@ jrebel.webLinks <++= webappResources in Compile
 
 seq(webSettings :_*)
 
-//scanDirectories in Compile := Nil 
+//scanDirectories in Compile := Nil
 
 checksums := Nil
 

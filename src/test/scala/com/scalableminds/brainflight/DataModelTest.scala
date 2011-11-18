@@ -36,7 +36,7 @@ class DataModelTestSpecs extends Specification {
       }yield{
         (x,y,z)
       }
-
+    val polygons = Nil
   }
   "ModelStore" should {
     "contain one Element" in {

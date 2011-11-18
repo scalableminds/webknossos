@@ -3,30 +3,29 @@ var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, par
 
 Polyhedron = (function() {
 
-  function Polyhedron(faces, edges, vertices) {
+  function Polyhedron(faces, vertices, edges) {
     var edge, face, vertex, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _ref3;
     this.faces = faces;
-    this.edges = edges;
     this.vertices = vertices;
+    this.edges = edges;
     _ref = this.faces;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       face = _ref[_i];
       face.polyhedron = this;
     }
-    _ref2 = this.edges;
+    _ref2 = this.edges.all();
     for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
       edge = _ref2[_j];
       edge.calc_interior();
       edge.polyhedron = this;
     }
-    this.extent = Geometry.calcExtent(this.vertices);
-    _ref3 = this.vertices;
+    this.extent = Geometry.calcExtent(this.vertices.all());
+    _ref3 = this.vertices.all();
     for (_k = 0, _len3 = _ref3.length; _k < _len3; _k++) {
       vertex = _ref3[_k];
       vertex.calc_interior();
       vertex.polyhedron = this;
     }
-    this.links = [];
   }
 
   return Polyhedron;
@@ -48,10 +47,14 @@ Face2 = (function() {
 Face3 = (function() {
 
   function Face3(vertices, edges, plane) {
-    var edge, v1, v2, v3, vec1, vec2, _i, _len, _ref, _ref2;
+    var e, edge, v1, v2, v3, vec1, vec2, _i, _j, _len, _len2, _ref, _ref2;
     this.vertices = vertices;
-    this.edges = edges;
     this.plane = plane;
+    for (_i = 0, _len = edges.length; _i < _len; _i++) {
+      e = edges[_i];
+      e.adjoining_faces.push(this);
+    }
+    this.edges = Edge3Set.fromArray(edges);
     this.extent = Geometry.calcExtent(this.vertices);
     if (this.plane == null) {
       _ref = this.vertices, v1 = _ref[0], v2 = _ref[1], v3 = _ref[2];
@@ -62,8 +65,8 @@ Face3 = (function() {
       this.plane = plane;
     }
     _ref2 = this.edges;
-    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-      edge = _ref2[_i];
+    for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+      edge = _ref2[_j];
       edge.adjoining_faces.push(this);
     }
   }
@@ -115,17 +118,36 @@ Face3 = (function() {
 Edge3 = (function() {
 
   function Edge3(vertex1, vertex2) {
-    this.vertices = [vertex1, vertex2];
+    var _ref;
+    if ((vertex2.compare(vertex1)) < 0) {
+      _ref = [vertex2, vertex1], vertex1 = _ref[0], vertex2 = _ref[1];
+    }
+    this[0] = vertex1;
+    this[1] = vertex2;
     this.adjoining_faces = [];
-    vertex1.edges.push(this);
-    vertex2.edges.push(this);
-    vertex1.adjacents.push(vertex2);
+    vertex1.adjacents.add(vertex2);
+    vertex2.adjacents.add(vertex1);
     this.interior = true;
     this.links = [];
   }
 
+  Edge3.prototype.length = 2;
+
   Edge3.prototype.calc_interior = function() {
     return this.interior = Utils.arrayEquals(this.adjoining_faces[0].plane, this.adjoining_faces[1].plane);
+  };
+
+  Edge3.prototype.other = function(v) {
+    if (v === this[0]) {
+      return this[0];
+    } else {
+      return this[1];
+    }
+  };
+
+  Edge3.prototype.remove = function() {
+    this[0].adjacents.remove(this[1]);
+    return this[1].adjacents.remove(this[0]);
   };
 
   return Edge3;
@@ -186,6 +208,22 @@ Vertex3 = (function() {
     this.interior = true;
   }
 
+  Vertex3.fromArray = function(arr) {
+    return new Vertex3(arr[0], arr[1], arr[2]);
+  };
+
+  Vertex3.prototype.adjacents = function() {
+    var edge, output, _i, _len, _ref, _results;
+    output = [];
+    _ref = this.edges;
+    _results = [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      edge = _ref[_i];
+      _results.push(output.push(edge));
+    }
+    return _results;
+  };
+
   Vertex3.prototype.calc_interior = function() {
     var edge, _i, _len, _ref;
     _ref = this.edges;
@@ -234,6 +272,10 @@ Vertex3 = (function() {
     return this.x === a.x && this.y === a.y && this.z === a.z;
   };
 
+  Vertex3.prototype.compare = function(other) {
+    return this.x - other.x || this.y - other.y || this.z - other.z;
+  };
+
   return Vertex3;
 
 })();
@@ -247,7 +289,8 @@ GeometrySet = (function() {
   GeometrySet.prototype.lookup = function() {};
 
   GeometrySet.prototype.add = function(e) {
-    return this.container[this.lookup(e)] = e;
+    var _base, _name, _ref;
+    return (_ref = (_base = this.container)[_name = this.lookup(e)]) != null ? _ref : _base[_name] = e;
   };
 
   GeometrySet.prototype.remove = function(e) {
@@ -256,6 +299,10 @@ GeometrySet = (function() {
 
   GeometrySet.prototype.get = function(e) {
     return this.container[this.lookup(e)];
+  };
+
+  GeometrySet.prototype.has = function(e) {
+    return this.container[this.lookup(e)] != null;
   };
 
   GeometrySet.prototype.all = function() {

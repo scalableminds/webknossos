@@ -2,39 +2,34 @@ class Geometry
   constructor: ->
     @polyhedral = []
   
-  load: (data) ->
+  load: (_polyhedral) ->
     
-    vertices = {}
-    edges = {}
+    vertices = new Vertex3Set
+    edges = new Edge3Set
     faces = []
     
-    for polygon in data
-      for face in @triangulate(polygon)
+    for _polygon in _polyhedral
+      
+      face_vertices = for el in _polygon
+        vertices.add Vertex3.fromArray el
         
-        face_vertices = for _vertex in face
-          vertices[_vertex.toString()] ?= new Vertex(_vertex)
-        
-        face_edges = for i in [0...face_vertices.length]
-          
-          vertex1 = face_vertices[i]
-          vertex2 = face_vertices[(i + 1) % face_vertices.length]
-          
-          get_edge(vertex1, vertex2)
-        
-        faces.push tmp = new Face(face_vertices, face_edges)
-        tmp
+      face_edges = for i in [0...face_vertices.length]
+        edges.add new Edge3 face_vertices[i], face_vertices[(i + 1) % face_vertices.length]
+      
+      faces.push new Face3(face_vertices, face_edges)
     
-    @polyhedral.push new Polyhedron(
-      faces,
-      Object.keys(edges).map((a) -> edges[a]).reduce((r,a) -> r.concat a),
-      Object.keys(vertices).map((a) -> vertices[a])
-    )
+    @polyhedral.push new Polyhedron faces, vertices, edges
+    
   
   ccw = (p1, p2, p3) ->
     (p2.dx - p1.dx) * (p3.dy - p1.dy) - (p2.dy - p1.dy) * (p3.dx - p1.dx)
   
   class Monotonizer
     constructor: (@polygon) ->
+      @edges = new Edge3Set
+      for i in [0...@polygon.length]
+        @edges.add new Edge3 @polygon[i].original, @polygon[(i + 1) % @polygon.length].original
+      
       @sweep_status = new Edge2Set
       @edges_to_remove = []
       
@@ -132,7 +127,8 @@ class Geometry
       output
     
     addDiagonal_: (a, b) ->
-    
+      @edges.add new Edge3 a.original, b.original
+      
       @sweep_status.add [a, b]
       @edges_to_remove.push [a, b] if b.dy == @current_y
 
@@ -177,6 +173,11 @@ class Geometry
     
     return [polygon] if polygon.length == 3
     
+    edges = new Edge3Set
+    
+    for i in [0...polygon.length]
+      edges.add new Edge3 polygon[i].original, polygon[(i + 1) % polygon.length].original
+    
     is_reflex = (v) ->
       v.reflex = ccw(v.adj0, v, v.adj1) >= 0
       
@@ -211,6 +212,8 @@ class Geometry
       v0 = v.adj0
       v1 = v.adj1
       output.push [v0, v, v1]
+      
+      edges.add new Edge3 v0.original, v1.original
       
       remove_links v
       

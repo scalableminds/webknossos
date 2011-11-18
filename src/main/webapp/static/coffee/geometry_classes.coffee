@@ -1,23 +1,19 @@
 class Polyhedron
-  constructor: (@faces, @edges, @vertices) ->
+  constructor: (@faces, @vertices, @edges) ->
   
     face.polyhedron = @ for face in @faces
     
-    for edge in @edges
+    for edge in @edges.all()
       edge.calc_interior()
       edge.polyhedron = @
   
     # calc extent
-    @extent = Geometry.calcExtent(@vertices)
+    @extent = Geometry.calcExtent(@vertices.all())
     
     
-    for vertex in @vertices
+    for vertex in @vertices.all()
       vertex.calc_interior()
       vertex.polyhedron = @
-      
-    
-    
-    @links = []
 
 class Face2
   constructor: (@vertices) ->
@@ -26,10 +22,14 @@ class Face2
     
 
 class Face3
-  constructor: (@vertices, @edges, @plane) ->
+  constructor: (@vertices, edges, @plane) ->
+    
+    e.adjoining_faces.push @ for e in edges
+
+    @edges = Edge3Set.fromArray edges 
     
     @extent = Geometry.calcExtent(@vertices)
-      
+    
     # calc plane equation
     unless @plane?
       [v1, v2, v3] = @vertices
@@ -43,6 +43,7 @@ class Face3
       @plane = plane
     
     edge.adjoining_faces.push(@) for edge in @edges
+  
   
   toFace2: ->
     vertices = new Vertex2Set()
@@ -68,20 +69,32 @@ class Face3
 class Edge3
   constructor: (vertex1, vertex2) ->
     
-    @vertices = [vertex1, vertex2]
+    if (vertex2.compare vertex1) < 0
+      [vertex1, vertex2] = [vertex2, vertex1]
+    
+    @[0] = vertex1
+    @[1] = vertex2
+    
     @adjoining_faces = []
     
-    vertex1.edges.push @
-    vertex2.edges.push @
-    
-    vertex1.adjacents.push vertex2
+    vertex1.adjacents.add vertex2
+    vertex2.adjacents.add vertex1
     
     @interior = true
     
     @links = []
   
+  length: 2
+  
   calc_interior: ->
     @interior = Utils.arrayEquals(@adjoining_faces[0].plane, @adjoining_faces[1].plane)
+    
+  other: (v) ->
+    if v == @[0] then @[0] else @[1]
+    
+  remove: ->
+    @[0].adjacents.remove @[1]
+    @[1].adjacents.remove @[0]
     
 class Vertex2
   constructor: (@dx, @dy) ->
@@ -122,6 +135,14 @@ class Vertex3
     @adjacents = new Vertex3Set
     
     @interior = true
+  
+  @fromArray: (arr) ->
+    new Vertex3 arr[0], arr[1], arr[2]
+  
+  adjacents: ->
+    output = []
+    for edge in @edges
+      output.push edge
   
   calc_interior: ->
     for edge in @edges
@@ -165,17 +186,22 @@ class Vertex3
   
   equals: (a) ->
     @x == a.x and @y == a.y and @z == a.z
+    
+  compare: (other) ->
+    @x - other.x or @y - other.y or @z - other.z
 
 class GeometrySet
   constructor: ->
     @container = {}
   lookup: ->
   add: (e) ->
-    @container[@lookup(e)] = e
+    @container[@lookup(e)] ?= e
   remove: (e) ->
     delete @container[@lookup(e)]
   get: (e) ->
     @container[@lookup(e)]
+  has: (e) ->
+    @container[@lookup(e)]?
   all: ->
     for key in Object.keys @container
       @container[key]

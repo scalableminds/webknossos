@@ -3,6 +3,7 @@ package com.scalableminds.brainflight.binary
 import scala.math._
 import com.scalableminds.tools.Math._
 import java.lang.OutOfMemoryError
+import com.scalableminds.tools.geometry.{NGonalFrustrum, Polygon}
 
 /**
  * Scalable Minds - Brainflight
@@ -28,6 +29,8 @@ abstract class DataModel {
         throw new NumberFormatException("Can't convert int to byte (out of range).")
       containingCoordinates.flatMap(point => List(point._1.toByte,point._2.toByte,point._3.toByte)).toArray
   }
+
+  val polygons : List[Polygon]
 
   def rotateAndMove(moveVector:Tuple3[Int,Int, Int],axis:Tuple3[Int,Int, Int]):IndexedSeq[Tuple3[Int, Int, Int]]={
     // orthogonal vector to (0,1,0) and rotation vector
@@ -70,6 +73,7 @@ object CubeModel extends DataModel{
   }yield{
     (x,y,z)
   }
+  val polygons = new NGonalFrustrum(4,50,25,25).polygons
 }
 
 object FrustrumModel extends DataModel{
@@ -93,4 +97,5 @@ object FrustrumModel extends DataModel{
       (x,y,z)
     }
   }
+  val polygons = List()
 }

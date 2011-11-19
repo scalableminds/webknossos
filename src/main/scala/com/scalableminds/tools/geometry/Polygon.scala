@@ -47,6 +47,10 @@ class RegularPolygon(n: Int, a: Int) {
 /**
  * Simple polygon implementation
  */
-class Polygon(vertices: List[Vector3D]){
+class Polygon(val vertices: List[Vector3D]){
   override def toString = vertices.mkString("[",",","]")
+  def normalVector = {
+    if(vertices.size<2) throw new IllegalStateException("Not a valid Polygon: "+vertices)
+    vertices(0) x vertices(1)
+  }
 }

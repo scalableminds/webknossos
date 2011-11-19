@@ -1,6 +1,7 @@
 package com.scalableminds.tools.geometry
 
 import scala.math._
+import com.scalableminds.tools.Math._
 
 /**
  * scalableminds - brainflight
@@ -39,4 +40,26 @@ class Vector2D(val x:Double, val y:Double){
  */
 class Vector3D(val x:Double, val y:Double,val z:Double){
   override def toString = "[%d,%d,%d]".format(x.round,y.round,z.round)
+
+  def normalize = {
+    val sq = sqrt(square(x)+square(y)+square(z))
+    new Vector3D(x/sq, y/sq, z/sq)
+  }
+  
+  def x(o: Vector3D):Vector3D = {
+    new Vector3D(
+      y * o.z - z * o.y,
+      z * o.x - x * o.z,
+      x * o.y - y * o.x
+    )
+  }
+  def °(o:Vector3D) = x * o.x + y * o.y + z * o.z
+
+  def toTuple = (x,y,z)
+}
+
+object Vector3D {
+  implicit def Vector3DToTuple(v:Vector3D) = (v.x,v.y,v.z)
+  implicit def Vector3DToIntTuple(v:Vector3D) = (v.x.toInt,v.y.toInt,v.z.toInt)
+  implicit def TupletoVector3D(v:Tuple3[Double, Double, Double]) = new Vector3D(v._1,v._2,v._3)
 }

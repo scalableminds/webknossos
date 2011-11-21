@@ -32,6 +32,11 @@ class Vector2D(val x:Double, val y:Double){
     case 2 => new Vector3D(x, y, value)
   }
 
+  override def equals(v: Any):Boolean = v match {
+    case v:Vector2D => x == x && v.y == y
+    case _ => false
+  }
+
   override def toString = "[%d,%d]".format(x.round,y.round)
 }
 

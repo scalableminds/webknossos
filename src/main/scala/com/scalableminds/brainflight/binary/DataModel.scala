@@ -64,7 +64,7 @@ abstract class DataModel {
       for(n <- normals)
         if((n ° p) > 0) false
       true
-    }).map( Vector3DToIntTuple _)
+    }).map( Vector3DToIntTuple _).distinct
   }
 
   private def surroundingCube : Seq[Vector3D] = {

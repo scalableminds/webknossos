@@ -1,5 +1,5 @@
-class 3d_engine
-
+class GL_engine
+############################################################################
 	#private Properties
 	empty_func = -> 
 	gl = null
@@ -12,14 +12,14 @@ class 3d_engine
 	frameCount = 0
 	lastTime
 
-
+############################################################################
 	#public Properties
 	VERSION = 0.1
 	usersRender = empty_func
 	geometry = []
 	shaderProgram = null
 
-
+############################################################################
 	#public methods 
 
 	###
@@ -27,8 +27,8 @@ class 3d_engine
 	@param {String} varName
 	@param {Number} varValue
 	###
-	uniformi = (varName, varValue) ->
-		var Location = gl.getUniformLocation(shaderProgram, varName)
+	uniformi : (varName, varValue) ->
+		varLocation = gl.getUniformLocation(shaderProgram, varName)
 		if varLocation isnt null
 			if varValue.length is 4
 				gl.uniform4iv varLocation, varValue
@@ -46,8 +46,8 @@ class 3d_engine
 	@param {String} varName
 	@param {Number} varValue
 	###
-	uniformf = (varName, varValue) ->
-		var Location = gl.getUniformLocation(shaderProgram, varName)
+	uniformf : (varName, varValue) ->
+		varLocation = gl.getUniformLocation(shaderProgram, varName)
 		if varLocation isnt null
 			if varValue.length is 4
 				gl.uniform4fv varLocation, varValue
@@ -66,8 +66,8 @@ class 3d_engine
 	@param {Boolean} transpose must be false
 	@param {Array} matrix
 	###
-	uniformMatrix = (varName, transpose, matrix) ->
-		varLocation = ctx.getUniformLocation(shaderProgram, varName)
+	uniformMatrix : (varName, transpose, matrix) ->
+		varLocation = gl.getUniformLocation(shaderProgram, varName)
 		if varLocation isnt null
 			if matrix.length is 16
 				gl.uniformMatrix4fv varLocation, transpose, matrix
@@ -78,23 +78,6 @@ class 3d_engine
 		else
 		console.log "Uniform matrix '" + varName + "' was not found."
 
-
-
-	#private methods
-
-	###
-	@param {String} varName
-	@param {Number} size
-	@param {} VBO
-	###
-	vertexAttribPointer = (varName, size, VBO) ->
-		varLocation = ctx.getAttribLocation(shaderProgram, varName)
-		if varLocation isnt -1
-			gl.bindBuffer gl.ARRAY_BUFFER, VBO
-			gl.vertexAttribPointer varLocation, size, gl.FLOAT, false, 0, 0
-			gl.enableVertexAttribArray varLocation
-		else
-			console.log "Vertex attrib '" + varName + "' was not found."
 
 	###
 	Create a buffer object which will contain
@@ -108,7 +91,7 @@ class 3d_engine
 	@returns {Object}
 	###
 
-	createBufferObject = (data, isElementBuffer = false) ->
+	createBufferObject : (data, isElementBuffer = false) ->
 		if gl
 			VBO = gl.CreateBuffer()
 			if isElemetBuffer
@@ -117,10 +100,58 @@ class 3d_engine
 			else
 				gl.bindBuffer(gl.ARRAY_BUFFER, VBO)
 				gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW)	
-			return VBO			
+			return VBO
 
-				 
-# weiter mit 330
+############################################################################
+	#private methods
+
+	###
+	@param {String} varName
+	@param {Number} size
+	@param {} VBO
+	###
+	vertexAttribPointer = (varName, size, VBO) ->
+		varLocation = gl.getAttribLocation(shaderProgram, varName)
+		if varLocation isnt -1
+			gl.bindBuffer gl.ARRAY_BUFFER, VBO
+			gl.vertexAttribPointer varLocation, size, gl.FLOAT, false, 0, 0
+			gl.enableVertexAttribArray varLocation
+		else
+	
+	###
+	@param {WebGLProgram} programObj
+	@param {String} varName
+	###
+	disableVertexAttribPointer = (programObj, varName) ->
+		varLocation = gl.getAttribLocation(programObj, varName)
+		gl.disableVertexAttribArray varLocation  if varLocation isnt -1	
+
+			
+	###
+	@param {String} vetexShaderSource
+	@param {String} fragmentShaderSource
+	###		 
+	createProgramObject = (vetexShaderSource, fragmentShaderSource) ->
+		vertexShaderObject = gl.createShader(gl.VERTEX_SHADER)
+		gl.shaderSource vertexShaderObject, vetexShaderSource
+		gl.compileShader vertexShaderObject
+		throw gl.getShaderInfoLog(vertexShaderObject)  unless gl.getShaderParameter(vertexShaderObject, gl.COMPILE_STATUS)
+
+		fragmentShaderObject = gl.createShader(gl.FRAGMENT_SHADER)
+		gl.shaderSource fragmentShaderObject, fragmentShaderSource
+		gl.compileShader fragmentShaderObject
+		throw gl.getShaderInfoLog(fragmentShaderObject)  unless gl.getShaderParameter(fragmentShaderObject, gl.COMPILE_STATUS)
+
+		programObject = gl.createProgram()
+		gl.attachShader programObject, vertexShaderObject
+		gl.attachShader programObject, fragmentShaderObject
+		gl.linkProgram programObject
+		throw "Error linking shaders."  unless gl.getProgramParameter(programObject, gl.LINK_STATUS)
+		
+		return programObject
+
+
+# weiter mit 909
 
 
 

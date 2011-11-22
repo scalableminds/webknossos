@@ -15,6 +15,7 @@ Mesh = (function() {
       EBO: null,
       length: null
     };
+    this.type = "Mesh";
   }
   Mesh.prototype.setVertexIndex = function(data) {
     this.vertexIndex.EBO = data;

@@ -1,6 +1,6 @@
 var GL_engine;
 GL_engine = (function() {
-  var VERSION, canvas, createProgramObject, disableVertexAttribPointer, empty_func, frameCount, frameRate, frames, geometry, gl, shaderProgram, usersRender, vertexAttribPointer;
+  var VERSION, canvas, createProgramObject, disableVertexAttribPointer, empty_func, frameCount, frameRate, frames, geometry, gl, matrixStack, renderLoop, setDefaultUniforms, shaderProgram, usersRender, vertexAttribPointer;
   function GL_engine() {}
   empty_func = function() {};
   gl = null;
@@ -9,6 +9,7 @@ GL_engine = (function() {
   frameRate = 0;
   frameCount = 0;
   lastTime;
+  matrixStack = null;
   VERSION = 0.1;
   usersRender = empty_func;
   geometry = [];
@@ -88,26 +89,90 @@ GL_engine = (function() {
   	A 3D context must exist before calling this function
   
   	@param {Array} data
-  	@param {Boolean} isElementBuffer
   
   	@returns {Object}
   	*/
-  GL_engine.prototype.createBufferObject = function(data, isElementBuffer) {
+  GL_engine.prototype.createArrayBufferObject = function(data) {
     var VBO;
-    if (isElementBuffer == null) {
-      isElementBuffer = false;
-    }
     if (gl) {
       VBO = gl.CreateBuffer();
-      if (isElemetBuffer) {
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, VBO);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, gl.STATIC_DRAW);
-      } else {
-        gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
-        gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-      }
+      gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
+      gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
       return VBO;
     }
+  };
+  /*
+  	Create an ElementArrayBuffer object which will contain
+  	the Vertex buffer object for the shader
+  
+  	A 3D context must exist before calling this function
+  
+  	@param {Array} data
+  
+  	@returns {Object}
+  	*/
+  GL_engine.prototype.createElementArrayBufferObject = function(data) {
+    var VBO;
+    if (gl) {
+      VBO = gl.CreateBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, VBO);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      return VBO;
+    }
+  };
+  /*
+  	deletes VBO/EBOs of Geometry Object 
+  	@param {Geometry}
+  	*/
+  GL_engine.prototype.deleteBuffer = function(geometry) {
+    gl.deleteBuffer(geometry.vertices.VBO);
+    if (geometry.colors.hasColors) {
+      gl.deleteBuffer(geometry.colors.VBO);
+    }
+    if (geometry.normals.hasNormals) {
+      gl.deleteBuffer(geometry.normals.VBO);
+    }
+    if (geometry.getClassType === "Mesh") {
+      return gl.deleteBuffer(geometry.vertexIndex.EBO);
+    }
+  };
+  render;
+  /*
+  	Get the height of the canvas.
+  	@name GL_engine#height
+  	@returns {Number}
+  	*/
+  GL_engine.__defineGetter__("height", function() {
+    return canvas.height;
+  });
+  /*
+  	Get the width of the canvas.
+  	@name GL_engine#height
+  	@returns {Number}
+  	*/
+  GL_engine.__defineGetter__("width", function() {
+    return canvas.width;
+  });
+  /*
+  	Get the framerate of GL_engine.
+  	@name GL_engine#framerate
+  	@returns {Number}
+  	*/
+  GL_engine.__defineGetter__("frameRate", function() {
+    return frameRate;
+  });
+  /*
+  	Sets the background color.
+  	@param {Array} color Array of 4 values ranging from 0 to 1.
+  	*/
+  GL_engine.background = function(color) {
+    return gl.clearColor(color[0], color[1], color[2], color[3]);
+  };
+  /*
+  	Clears the color and depth buffers.
+  	*/
+  GL_engine.clear = function() {
+    return gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   };
   /*
   	@param {String} varName
@@ -162,6 +227,29 @@ GL_engine = (function() {
       throw "Error linking shaders.";
     }
     return programObject;
+  };
+  /*
+  	main renderLoop
+  	calls usersRender() 
+  	*/
+  renderLoop = function() {
+    var lastTime, now;
+    frames++;
+    frameCount++;
+    now = new Date();
+    matrixStack.push(M4x4.I);
+    usersRender();
+    matrixStack.pop();
+    if (now - lastTime > 1000) {
+      frameRate = frames / (now - lastTime) * 1000;
+      frames = 0;
+      return lastTime = now;
+    }
+  };
+  setDefaultUniforms = function() {
+    uniformf(currProgram, "pointSize", 1);
+    uniformf(currProgram, "attenuation", [attn[0], attn[1], attn[2]]);
+    return uniformMatrix(currProgram, "projectionMatrix", false, projectionMatrix);
   };
   return GL_engine;
 })();

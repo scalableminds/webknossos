@@ -1,26 +1,25 @@
 class Geometry
         constructor : ->
 
-		@verticies = {
+		@vertices = 
 			VBO : null
 			length : null
-			}
-	
-		@colors = {
+				
+		@colors = 
 			VBO : null
 			length : null
-			hasColors : null	
-			}
+			hasColors : null				
 
-		@normals = {
+		@normals = 
 			VBO : null
 			length : null	
-			hasNormals : null	
-			}
+			hasNormals : null
+
+		@type = "Geometry"				
 
 	setVerticies : (data) -> 
-		@verticies.VBO = data
-		@verticies.length = data.length
+		@vertices.VBO = data
+		@vertices.length = data.length
 
 	setColors : (data) -> 
 		@colors.VBO = data
@@ -32,4 +31,7 @@ class Geometry
 		@normals.length = data.length	
 		@hasNormals = true
 
+	#returns the ClassName of an object
+	getClassType : ->
+		@type
 	

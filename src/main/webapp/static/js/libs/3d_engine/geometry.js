@@ -3,7 +3,7 @@ Geometry = (function() {
   function Geometry() {}
   return Geometry;
 })();
-this.verticies = {
+this.vertices = {
   VBO: null,
   length: null
 };
@@ -17,10 +17,11 @@ this.normals = {
   length: null,
   hasNormals: null
 };
+this.type = "Geometry";
 ({
   setVerticies: function(data) {
-    this.verticies.VBO = data;
-    return this.verticies.length = data.length;
+    this.vertices.VBO = data;
+    return this.vertices.length = data.length;
   },
   setColors: function(data) {
     this.colors.VBO = data;
@@ -31,5 +32,8 @@ this.normals = {
     this.normals.VBO = data;
     this.normals.length = data.length;
     return this.hasNormals = true;
+  },
+  getClassType: function() {
+    return this.type;
   }
 });

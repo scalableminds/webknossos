@@ -1,10 +1,11 @@
 class Mesh extends Geometry
 	constructor: ->
 		super()
-		@vertexIndex = {
+		@vertexIndex = 
 			EBO : null
 			length : null	
-		}
+		
+		@type = "Mesh"
 
 	setVertexIndex : (data) -> 
 		@vertexIndex.EBO = data

@@ -136,7 +136,52 @@ GL_engine = (function() {
       return gl.deleteBuffer(geometry.vertexIndex.EBO);
     }
   };
-  render;
+  /*
+  	renders a geometry object
+  	@param {Geometry}
+  	*/
+  GL_engine.prototype.render = function(geometry) {
+    var normalMatrix, topMatrix;
+    if (gl) {
+      topMatrix = peekMatrix();
+      uniformMatrix(shaderProgram, "modelViewMatrix", false, topMatrix);
+      if (geometry.normals.hasNormals) {
+        normalMatrix = M4x4.inverseOrthonormal(topMatrix);
+        uniformMatrix(shaderProgram, "normalMatrix", false, M4x4.transpose(normalMatrix));
+      }
+      if (geometry.colors.hasColors) {
+        if (gl.getAttribLocation(shaderProgram, "aColor")(isNot(-1))) {
+          vertexAttribPointer(shaderProgram, "aColor", 3, geometry.colors.VBO);
+        }
+      }
+      if (gl.getAttribLocation(shaderProgram, "aVertex")(isNot(-1))) {
+        vertexAttribPointer(shaderProgram, "aVertex", 3, geometry.vertices.VBO);
+      }
+      if (geometry.getClass() === "Mesh") {
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO);
+        gl.drawElemets(gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0);
+      } else {
+        gl.drawArrays(gl.POINTS, 0, geometry.vertices.length / 3);
+      }
+      disableVertexAttribPointer(shaderProgram, "aVertex");
+      if (geometry.colors.hasColor) {
+        return disableVertexAttribPointer(shaderProgram, "aColor");
+      }
+    }
+  };
+  /*
+  	Sets the background color.
+  	@param {Array} color Array of 4 values ranging from 0 to 1.
+  	*/
+  GL_engine.prototype.background = function(color) {
+    return gl.clearColor(color[0], color[1], color[2], color[3]);
+  };
+  /*
+  	Clears the color and depth buffers.
+  	*/
+  GL_engine.prototype.clear = function() {
+    return gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  };
   /*
   	Get the height of the canvas.
   	@name GL_engine#height
@@ -162,17 +207,35 @@ GL_engine = (function() {
     return frameRate;
   });
   /*
-  	Sets the background color.
-  	@param {Array} color Array of 4 values ranging from 0 to 1.
+  	Pushes on a copy of the matrix at the top of the matrix stack.
+  	@param {Float32Array} mat
   	*/
-  GL_engine.background = function(color) {
-    return gl.clearColor(color[0], color[1], color[2], color[3]);
+  GL_engine.prototype.pushMatrix = function() {
+    return matrixStack.push(peekMatrix());
   };
   /*
-  	Clears the color and depth buffers.
+  	Pops off the matrix on top of the matrix stack.
+  	@param {Float32Array} mat
   	*/
-  GL_engine.clear = function() {
-    return gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  GL_engine.prototype.popMatrix = function() {
+    return matrixStack.pop();
+  };
+  /*
+  	Get a copy of the matrix at the top of the matrix stack.
+  	@param {Float32Array} mat
+  	*/
+  GL_engine.prototype.peekMatrix = function() {
+    return M4x4.clone(matrixStack[matrixStack.length - 1]);
+  };
+  /*
+  	Set the matrix at the top of the matrix stack.
+  	@param {Float32Array} mat
+  	*/
+  GL_engine.prototype.loadMatrix = function(mat) {
+    return matrixStack[matrixStack.length - 1] = mat;
+  };
+  GL_engine.prototype.multMatrix = function(mat) {
+    return loadMatrix(M4x4.mul(peekMatrix(), mat));
   };
   /*
   	@param {String} varName

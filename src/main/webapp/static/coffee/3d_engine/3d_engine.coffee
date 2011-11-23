@@ -129,7 +129,55 @@ class GL_engine
 
 		gl.deleteBuffer geometry.vertexIndex.EBO if geometry.getClassType is "Mesh"
 
-	render
+	###
+	renders a geometry object
+	@param {Geometry}
+	###
+	render : (geometry) ->
+		if gl
+			topMatrix = peekMatrix()
+			uniformMatrix shaderProgram, "modelViewMatrix", false, topMatrix
+
+			if geometry.normals.hasNormals
+				normalMatrix = M4x4.inverseOrthonormal(topMatrix);	
+				uniformMatrix shaderProgram, "normalMatrix", false, M4x4.transpose normalMatrix
+			# enable Attribute pointers/ bind buffers
+			if geometry.colors.hasColors
+				if gl.getAttribLocation(shaderProgram, "aColor") isNot -1
+					vertexAttribPointer shaderProgram, "aColor", 3, geometry.colors.VBO
+
+
+			if gl.getAttribLocation(shaderProgram, "aVertex") isNot -1
+				vertexAttribPointer shaderProgram, "aVertex", 3, geometry.vertices.VBO
+
+			# render everything to screen
+			if geometry.getClass() is "Mesh"
+				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
+				gl.drawElemets gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0
+			else
+				gl.drawArrays gl.POINTS, 0, geometry.vertices.length / 3
+
+			disableVertexAttribPointer shaderProgram, "aVertex"
+			disableVertexAttribPointer shaderProgram, "aColor" if geometry.colors.hasColor
+
+
+
+	###
+	Sets the background color.
+	@param {Array} color Array of 4 values ranging from 0 to 1.
+	###
+	background : (color) ->
+		gl.clearColor color[0], color[1], color[2], color[3]
+	
+	###
+	Clears the color and depth buffers.
+	###
+	clear : ->
+		gl.clear gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT
+
+
+
+
 
 
 	###
@@ -156,21 +204,41 @@ class GL_engine
 	@__defineGetter__ "frameRate", ->
 		frameRate
 
-	###
-	Sets the background color.
-	@param {Array} color Array of 4 values ranging from 0 to 1.
-	###
-	@background = (color) ->
-		gl.clearColor color[0], color[1], color[2], color[3]
-	
-	###
-	Clears the color and depth buffers.
-	###
-	@clear = ->
-		gl.clear gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT
 
-		 
+	################################
+	#Public MATRIX STACK OPERATIONS
+	################################
 
+	###
+	Pushes on a copy of the matrix at the top of the matrix stack.
+	@param {Float32Array} mat
+	###		 
+	pushMatrix : ->
+		matrixStack.push peekMatrix()
+
+	###
+	Pops off the matrix on top of the matrix stack.
+	@param {Float32Array} mat
+	###
+	popMatrix : ->
+		matrixStack.pop()
+
+	###
+	Get a copy of the matrix at the top of the matrix stack.
+	@param {Float32Array} mat
+	###
+	peekMatrix : ->
+		M4x4.clone matrixStack[matrixStack.length - 1]
+
+	###
+	Set the matrix at the top of the matrix stack.
+	@param {Float32Array} mat
+	###
+	loadMatrix : (mat) ->
+		matrixStack[matrixStack.length - 1] = mat
+
+	multMatrix : (mat) ->
+		loadMatrix M4x4.mul peekMatrix(), mat
 
 ############################################################################
 	#private methods
@@ -253,7 +321,7 @@ class GL_engine
 	
 
 
-# weiter mit 909
+# weiter mit 1400
 
 
 

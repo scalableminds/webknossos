@@ -54,9 +54,6 @@ Geometry = (function() {
       this.edge_function = function(e, y) {
         return -(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy);
       };
-      this.edge_compare = function(a, b) {
-        return (a[0].compare(b[0])) || (a[1].compare(b[1]));
-      };
     }
 
     Monotonizer.prototype.run = function() {
@@ -195,18 +192,24 @@ Geometry = (function() {
     return new Monotonizer(polygon).run();
   };
 
-  Geometry.triangulateMonotone = function(polygon) {
-    var edges, i, is_reflex, output, remove_links, stack, v, v0, v0_reflex, v1, v1_reflex, _i, _len, _ref, _ref2;
+  Geometry.triangulateMonotone = function(polygon, edges) {
+    var e, e1, e2, e3, i, i1, i2, i3, is_reflex, output, remove_links, stack, v, v0, v0_reflex, v1, v1_reflex, v2, v2e3, v3, _edges, _i, _len, _ref, _ref2, _ref3, _results;
     if (polygon.length === 3) return [polygon];
-    edges = new Edge3Set;
-    for (i = 0, _ref = polygon.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-      edges.add(new Edge3(polygon[i].original, polygon[(i + 1) % polygon.length].original));
+    v2e3 = new Vertex2Edge3Dictionary;
+    if (!edges) {
+      edges = new Edge3Set;
+      for (i = 0, _ref = polygon.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+        v0 = polygon[i];
+        v1 = polygon[(i + 1) % polygon.length];
+        e = edges.add(new Edge3(v0.original, v1.original));
+        v2e3.add(v0, e);
+        v2e3.add(v1, e);
+      }
     }
     is_reflex = function(v) {
       return v.reflex = ccw(v.adj0, v, v.adj1) >= 0;
     };
     remove_links = function(v_old) {
-      var v0, v1;
       v0 = v_old.adj0;
       v1 = v_old.adj1;
       if (v0.adj0 === v_old) {
@@ -235,7 +238,9 @@ Geometry = (function() {
       v0 = v.adj0;
       v1 = v.adj1;
       output.push([v0, v, v1]);
-      edges.add(new Edge3(v0.original, v1.original));
+      e = edges.add(new Edge3(v0.original, v1.original));
+      v2e3.add(v0, e);
+      v2e3.add(v1, e);
       remove_links(v);
       v0_reflex = v0.reflex;
       v1_reflex = v1.reflex;
@@ -243,6 +248,122 @@ Geometry = (function() {
       if (!is_reflex(v1) && v1_reflex) stack.push(v1);
     }
     return output;
+    output = [];
+    _edges = edges.all();
+    _results = [];
+    for (i1 = 0, _ref3 = _edges.length; 0 <= _ref3 ? i1 < _ref3 : i1 > _ref3; 0 <= _ref3 ? i1++ : i1--) {
+      e1 = _edges[i1];
+      _results.push((function() {
+        var _ref4, _ref5, _results2;
+        _results2 = [];
+        for (i2 = _ref4 = i1 + 1, _ref5 = _edges.length; _ref4 <= _ref5 ? i2 < _ref5 : i2 > _ref5; _ref4 <= _ref5 ? i2++ : i2--) {
+          e2 = _edges[i2];
+          _results2.push((function() {
+            var _ref6, _ref7, _results3;
+            _results3 = [];
+            for (i3 = _ref6 = i2 + 1, _ref7 = _edges.length; _ref6 <= _ref7 ? i3 < _ref7 : i3 > _ref7; _ref6 <= _ref7 ? i3++ : i3--) {
+              e3 = _edges[i3];
+              v1 = e1[0] === e2[0] || e1[0] === e2[1] ? e1[0] : e1[1] === e2[0] || e1[1] === e2[1] ? e1[1] : null;
+              v2 = e1[0] === e3[0] || e1[0] === e3[1] ? e1[0] : e1[1] === e3[0] || e1[1] === e3[1] ? e1[1] : null;
+              v3 = e2[0] === e3[0] || e2[0] === e3[1] ? e2[0] : e2[1] === e3[0] || e2[1] === e3[1] ? e2[1] : null;
+              if ((v1 != null) && (v2 != null) && (v3 != null) && v1 !== v2 && v2 !== v3 && v1 !== v3) {
+                _results3.push(output.push([v1, v2, v3]));
+              } else {
+                _results3.push(void 0);
+              }
+            }
+            return _results3;
+          })());
+        }
+        return _results2;
+      })());
+    }
+    return _results;
+  };
+
+  Geometry.triangulateMonotone2 = function(vertices, edges) {
+    var adj0, adj1, e, e1, e2, e3, i, i1, i2, i3, is_reflex, output, remove_links, stack, v, v0, v0_reflex, v1, v1_reflex, v2, v2e3, v3, ve, _edges, _i, _len, _ref, _ref2, _ref3, _results;
+    if (vertices.length === 3) return [vertices];
+    v2e3 = new Vertex2Edge3Dictionary;
+    is_reflex = function(v) {
+      return v.reflex = ccw(v.adj0, v, v.adj1) >= 0;
+    };
+    remove_links = function(v_old) {
+      var v0, v1;
+      v0 = v_old.adj0;
+      v1 = v_old.adj1;
+      if (v0.adj0 === v_old) {
+        v0.adj0 = v1;
+      } else {
+        v0.adj1 = v1;
+      }
+      if (v1.adj0 === v_old) {
+        return v1.adj0 = v0;
+      } else {
+        return v1.adj1 = v0;
+      }
+    };
+    output = [];
+    polygon.sort(function(a, b) {
+      return a.compare(b);
+    });
+    stack = [];
+    _ref = polygon.slice(2);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      v = _ref[_i];
+      if (!is_reflex(v)) stack.push(v);
+    }
+    while (stack.length > 0) {
+      v = stack.shift();
+      ve = v.edges.all();
+      ve.sort(function(a, b) {
+        return a.compare(b);
+      });
+      for (i = 0, _ref2 = ve.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
+        adj0 = ve[i];
+        adj1 = ve[(i + 1) % ve.length];
+        v0 = adj0.other(v);
+        v1 = adj1.other(v);
+        e = edges.add(new Edge3(v0, v1));
+        v2e3.add(v0, e);
+        v2e3.add(v1, e);
+        v0_reflex = v0.reflex;
+        v1_reflex = v1.reflex;
+        if (!is_reflex(v0) && v0_reflex) stack.push(v0);
+        if (!is_reflex(v1) && v1_reflex) stack.push(v1);
+      }
+    }
+    output = [];
+    _edges = edges.all();
+    _results = [];
+    for (i1 = 0, _ref3 = _edges.length; 0 <= _ref3 ? i1 < _ref3 : i1 > _ref3; 0 <= _ref3 ? i1++ : i1--) {
+      e1 = _edges[i1];
+      _results.push((function() {
+        var _ref4, _ref5, _results2;
+        _results2 = [];
+        for (i2 = _ref4 = i1 + 1, _ref5 = _edges.length; _ref4 <= _ref5 ? i2 < _ref5 : i2 > _ref5; _ref4 <= _ref5 ? i2++ : i2--) {
+          e2 = _edges[i2];
+          _results2.push((function() {
+            var _ref6, _ref7, _results3;
+            _results3 = [];
+            for (i3 = _ref6 = i2 + 1, _ref7 = _edges.length; _ref6 <= _ref7 ? i3 < _ref7 : i3 > _ref7; _ref6 <= _ref7 ? i3++ : i3--) {
+              e3 = _edges[i3];
+              v1 = e1[0] === e2[0] || e1[0] === e2[1] ? e1[0] : e1[1] === e2[0] || e1[1] === e2[1] ? e1[1] : null;
+              v2 = e1[0] === e3[0] || e1[0] === e3[1] ? e1[0] : e1[1] === e3[0] || e1[1] === e3[1] ? e1[1] : null;
+              v3 = e2[0] === e3[0] || e2[0] === e3[1] ? e2[0] : e2[1] === e3[0] || e2[1] === e3[1] ? e2[1] : null;
+              if ((v1 != null) && (v2 != null) && (v3 != null) && v1 !== v2 && v2 !== v3 && v1 !== v3) {
+                _results3.push(output.push([v1, v2, v3]));
+              } else {
+                _results3.push(void 0);
+              }
+            }
+            return _results3;
+          })());
+        }
+        return _results2;
+      })());
+    }
+    return _results;
   };
 
   Geometry.triangulate = function(polygon) {
@@ -278,7 +399,7 @@ Geometry = (function() {
     };
   };
 
-  Geometry.prototype.split = function(p1, p2) {
+  Geometry.prototype.splitPolyhedral = function(p1, p2) {
     var face1, face2, _i, _len, _ref, _results;
     if (this.overlaps(p1.extent, p2.extent)) {
       _ref = p1.faces;
@@ -308,7 +429,7 @@ Geometry = (function() {
     }
   };
 
-  Geometry.prototype.find_intersections = function(face1, face2) {
+  Geometry.prototype.findFaceIntersections = function(face1, face2) {
     var distance_vertex_to_plane, distance_vertices_to_plane, line_segment, line_segment_intersection, max, min, _ref, _ref2;
     distance_vertex_to_plane = function(vertex, plane) {
       if (plane[3] < 0) {
@@ -340,11 +461,11 @@ Geometry = (function() {
         if (distance_vertex_to_plane(v, _face2.plane) === 0) points.push(v);
       }
       if (points.length === 2) return points;
-      _ref2 = _face1.edges;
+      _ref2 = _face1.edges.all();
       for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
         e = _ref2[_j];
-        v1 = e.vertices[0];
-        v2 = e.vertices[1];
+        v1 = e[0];
+        v2 = e[1];
         d1 = distance_vertex_to_plane(v1, _face2.plane);
         d2 = distance_vertex_to_plane(v2, _face2.plane);
         if (((d1 < 0 && 0 < d2)) || ((d1 > 0 && 0 > d2))) {
@@ -352,7 +473,7 @@ Geometry = (function() {
           d2 = Math.abs(d2);
           vec = v2.sub(v1);
           quotient = d1 / (d1 + d2);
-          vertex = new Vertex([v1.x + quotient * vec[0], v1.y + quotient * vec[1], v1.z + quotient * vec[2]]);
+          vertex = new Vertex3([v1.x + quotient * vec[0], v1.y + quotient * vec[1], v1.z + quotient * vec[2]]);
           vertex.polyhedron = _face1.polyhedron;
           if (!e.interior) vertex.interior = false;
           vertex.linked_edge = e;

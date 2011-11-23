@@ -35,8 +35,7 @@ class Geometry
       
       @edge_function = (e, y) ->
         (-(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy))
-      
-      @edge_compare = (a, b) -> (a[0].compare b[0]) or (a[1].compare b[1])
+
     
     run: ->
       
@@ -169,14 +168,21 @@ class Geometry
   @monotonize: (polygon) ->
     new Monotonizer(polygon).run()
 
-  @triangulateMonotone: (polygon) ->
+  @triangulateMonotone: (polygon, edges) ->
     
     return [polygon] if polygon.length == 3
     
-    edges = new Edge3Set
+    v2e3 = new Vertex2Edge3Dictionary
     
-    for i in [0...polygon.length]
-      edges.add new Edge3 polygon[i].original, polygon[(i + 1) % polygon.length].original
+    unless edges
+      edges = new Edge3Set
+      
+      for i in [0...polygon.length]
+        v0 = polygon[i]
+        v1 = polygon[(i + 1) % polygon.length]
+        e = edges.add new Edge3 v0.original, v1.original
+        v2e3.add v0, e
+        v2e3.add v1, e
     
     is_reflex = (v) ->
       v.reflex = ccw(v.adj0, v, v.adj1) >= 0
@@ -213,7 +219,9 @@ class Geometry
       v1 = v.adj1
       output.push [v0, v, v1]
       
-      edges.add new Edge3 v0.original, v1.original
+      e = edges.add new Edge3 v0.original, v1.original
+      v2e3.add v0, e
+      v2e3.add v1, e
       
       remove_links v
       
@@ -223,7 +231,122 @@ class Geometry
       stack.push v0 if not is_reflex(v0) and v0_reflex
       stack.push v1 if not is_reflex(v1) and v1_reflex
         
-    output
+    return output
+    
+    output = []
+    
+    # super naive: O(n³)
+    _edges = edges.all()
+    for i1 in [0..._edges.length]
+      e1 = _edges[i1]
+      for i2 in [(i1 + 1)..._edges.length]
+        e2 = _edges[i2]
+        for i3 in [(i2 + 1)..._edges.length]
+          e3 = _edges[i3]
+          v1 = if e1[0] == e2[0] or e1[0] == e2[1] 
+              e1[0]
+            else if e1[1] == e2[0] or e1[1] == e2[1]
+              e1[1]
+            else null
+          v2 = if e1[0] == e3[0] or e1[0] == e3[1] 
+              e1[0]
+            else if e1[1] == e3[0] or e1[1] == e3[1]
+              e1[1]
+            else null
+          v3 = if e2[0] == e3[0] or e2[0] == e3[1] 
+              e2[0]
+            else if e2[1] == e3[0] or e2[1] == e3[1]
+              e2[1]
+            else null
+          output.push [v1, v2, v3] if v1? and v2? and v3? and v1 != v2 and v2 != v3 and v1 != v3
+          
+  @triangulateMonotone2: (vertices, edges) ->
+    
+    return [vertices] if vertices.length == 3
+    
+    v2e3 = new Vertex2Edge3Dictionary
+    
+    is_reflex = (v) ->
+      v.reflex = ccw(v.adj0, v, v.adj1) >= 0
+      
+    remove_links = (v_old) ->
+      v0 = v_old.adj0
+      v1 = v_old.adj1
+      
+      if v0.adj0 == v_old
+        v0.adj0 = v1
+      else
+        v0.adj1 = v1
+        
+      if v1.adj0 == v_old
+        v1.adj0 = v0
+      else
+        v1.adj1 = v0
+    
+    output = []
+      
+    polygon.sort (a, b) -> a.compare b
+    
+    stack = []
+    
+    # assumes ccw ordering of vertices
+    for v in polygon[2..-1]
+      unless is_reflex(v)
+        stack.push v
+        
+    while stack.length > 0
+      v = stack.shift()
+      
+      ve = v.edges.all()
+      ve.sort (a, b) -> a.compare b
+      
+      for i in [0...ve.length]
+        
+        adj0 = ve[i]
+        adj1 = ve[(i + 1) % ve.length]
+        
+        v0 = adj0.other(v)
+        v1 = adj1.other(v)
+        
+        e = edges.add new Edge3 v0, v1
+        v2e3.add v0, e
+        v2e3.add v1, e
+        
+        # remove_links v
+        
+        v0_reflex = v0.reflex
+        v1_reflex = v1.reflex
+        
+        stack.push v0 if not is_reflex(v0) and v0_reflex
+        stack.push v1 if not is_reflex(v1) and v1_reflex
+    
+    output = []
+    
+    # super naive: O(n³)
+    _edges = edges.all()
+    for i1 in [0..._edges.length]
+      e1 = _edges[i1]
+      for i2 in [(i1 + 1)..._edges.length]
+        e2 = _edges[i2]
+        for i3 in [(i2 + 1)..._edges.length]
+          e3 = _edges[i3]
+          v1 = if e1[0] == e2[0] or e1[0] == e2[1] 
+              e1[0]
+            else if e1[1] == e2[0] or e1[1] == e2[1]
+              e1[1]
+            else null
+          v2 = if e1[0] == e3[0] or e1[0] == e3[1] 
+              e1[0]
+            else if e1[1] == e3[0] or e1[1] == e3[1]
+              e1[1]
+            else null
+          v3 = if e2[0] == e3[0] or e2[0] == e3[1] 
+              e2[0]
+            else if e2[1] == e3[0] or e2[1] == e3[1]
+              e2[1]
+            else null
+          output.push [v1, v2, v3] if v1? and v2? and v3? and v1 != v2 and v2 != v3 and v1 != v3
+          
     
   @triangulate: (polygon) ->
     monotones = Geometry.monotonize @toFace2.vertices
@@ -254,7 +377,7 @@ class Geometry
     min: min
     max: max
   
-  split: (p1, p2) ->
+  splitPolyhedral: (p1, p2) ->
     if @overlaps(p1.extent, p2.extent)
       for face1 in p1.faces
         if @overlaps(face1.extent, p2.extent)
@@ -262,7 +385,7 @@ class Geometry
             if @overlaps(face1.extent, face2.extent)
               @find_intersections(face1, face2)
   
-  find_intersections: (face1, face2) ->
+  findFaceIntersections: (face1, face2) ->
       
     distance_vertex_to_plane = (vertex, plane) ->
       if plane[3] < 0
@@ -288,9 +411,9 @@ class Geometry
       
       return points if points.length == 2
       
-      for e in _face1.edges
-        v1 = e.vertices[0]
-        v2 = e.vertices[1]
+      for e in _face1.edges.all()
+        v1 = e[0]
+        v2 = e[1]
         d1 = distance_vertex_to_plane(v1, _face2.plane)
         d2 = distance_vertex_to_plane(v2, _face2.plane)
         
@@ -300,7 +423,7 @@ class Geometry
           vec = v2.sub(v1)
           quotient = (d1 / (d1 + d2))
           
-          vertex = new Vertex [
+          vertex = new Vertex3 [
             v1.x + quotient * vec[0]
             v1.y + quotient * vec[1]
             v1.z + quotient * vec[2]
@@ -308,6 +431,7 @@ class Geometry
           vertex.polyhedron = _face1.polyhedron
           vertex.interior = false unless e.interior
           vertex.linked_edge = e
+          
           points.push vertex
       
       return points
@@ -365,6 +489,8 @@ class Geometry
     
     unless normal?
       normal = Math.crossProduct(vertices[1].sub(vertices[0]), vertices[2].sub(vertices[0]))
+    
+    # v.to2d(normal) for v in vertices
     
     set = new Vertex2Set()
     for v in vertices

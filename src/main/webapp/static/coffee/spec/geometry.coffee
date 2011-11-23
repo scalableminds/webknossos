@@ -54,12 +54,12 @@ describe 'geometry', ->
     expect(polygons_touched).toEqual(6)
   
   it 'should return an intersection line segment', ->
-    expect(g.find_intersections(g.polyhedral[0].faces[10], g.polyhedral[1].faces[1]))
+    expect(g.findFaceIntersections(g.polyhedral[0].faces[4], g.polyhedral[1].faces[0]))
       .toBeDefined()
-    expect(g.find_intersections(g.polyhedral[0].faces[6], g.polyhedral[1].faces[5]))
+    expect(g.findFaceIntersections(g.polyhedral[0].faces[4], g.polyhedral[1].faces[4]))
       .toBeDefined()
   
- 
+  
   polygonize = (vertices) ->
     
     polygon = vertices.map (a) -> new Vertex3(a...)
@@ -84,6 +84,9 @@ describe 'geometry', ->
     
     # do the work
     polygon = Geometry.triangulateMonotone(Geometry.translateToXY polygon)
+    
+    for tri in polygon
+      console.log tri[0].toString(), tri[1].toString(), tri[2].toString()
     
     # simple test to start
     expect(polygon.length).toEqual(5)

@@ -32,6 +32,8 @@ Math.absMin = (a, b) ->
     a
   else
     b
+Math.normalize = (a) ->
+  if a > 0 then 1 else if a < 0 then -1 else 0
 
 Utils = 
   arrayEquals: (a1, a2) ->

@@ -63,8 +63,8 @@ describe('geometry', function() {
     return expect(polygons_touched).toEqual(6);
   });
   it('should return an intersection line segment', function() {
-    expect(g.find_intersections(g.polyhedral[0].faces[10], g.polyhedral[1].faces[1])).toBeDefined();
-    return expect(g.find_intersections(g.polyhedral[0].faces[6], g.polyhedral[1].faces[5])).toBeDefined();
+    expect(g.findFaceIntersections(g.polyhedral[0].faces[4], g.polyhedral[1].faces[0])).toBeDefined();
+    return expect(g.findFaceIntersections(g.polyhedral[0].faces[4], g.polyhedral[1].faces[4])).toBeDefined();
   });
   polygonize = function(vertices) {
     var i, polygon, _ref;
@@ -82,20 +82,24 @@ describe('geometry', function() {
     return polygon;
   };
   it('should triangulate a monotone polygon', function() {
-    var e, e1, e2, edges, i1, i2, p1, p11, p12, p2, p21, p22, polygon, qp, qp1, qp2, rs, t1, t2, tri, vec1, vec2, _i, _j, _len, _len2, _len3, _len4, _results;
+    var e, e1, e2, edges, i1, i2, p1, p11, p12, p2, p21, p22, polygon, qp, qp1, qp2, rs, t1, t2, tri, vec1, vec2, _i, _j, _k, _len, _len2, _len3, _len4, _len5, _results;
     polygon = polygonize([[0, 0, 0], [0, 7, 0], [3, 8, 0], [6, 3, 0], [7, 6, 0], [9, 3, 0], [7, 0, 0]]);
     polygon = Geometry.triangulateMonotone(Geometry.translateToXY(polygon));
-    expect(polygon.length).toEqual(5);
-    edges = [];
     for (_i = 0, _len = polygon.length; _i < _len; _i++) {
       tri = polygon[_i];
+      console.log(tri[0].toString(), tri[1].toString(), tri[2].toString());
+    }
+    expect(polygon.length).toEqual(5);
+    edges = [];
+    for (_j = 0, _len2 = polygon.length; _j < _len2; _j++) {
+      tri = polygon[_j];
       edges.push([tri[0], tri[1]], [tri[1], tri[2]], [tri[2], tri[0]]);
     }
-    for (i1 = 0, _len2 = edges.length; i1 < _len2; i1++) {
+    for (i1 = 0, _len3 = edges.length; i1 < _len3; i1++) {
       e1 = edges[i1];
       p1 = e1[0];
       vec1 = e1[1].sub(p1);
-      for (i2 = 0, _len3 = edges.length; i2 < _len3; i2++) {
+      for (i2 = 0, _len4 = edges.length; i2 < _len4; i2++) {
         e2 = edges[i2];
         if (i1 !== i2) {
           p2 = e2[0];
@@ -132,8 +136,8 @@ describe('geometry', function() {
       }
     }
     _results = [];
-    for (_j = 0, _len4 = edges.length; _j < _len4; _j++) {
-      e = edges[_j];
+    for (_k = 0, _len5 = edges.length; _k < _len5; _k++) {
+      e = edges[_k];
       if (e.colinear) {
         _results.push(expect(e.colinear).toBeLessThan(2));
       } else {

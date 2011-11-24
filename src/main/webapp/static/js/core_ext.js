@@ -1,4 +1,5 @@
 var Utils;
+var __slice = Array.prototype.slice;
 
 Math.square = function(a) {
   return a * a;
@@ -132,6 +133,17 @@ Utils = {
       if (arr.indexOf(el) === i) output.push(el);
     }
     return output;
+  },
+  factory: function() {
+    var args, callback, klass, obj, _i;
+    klass = arguments[0], args = 3 <= arguments.length ? __slice.call(arguments, 1, _i = arguments.length - 1) : (_i = 1, []), callback = arguments[_i++];
+    obj = (function(func, args, ctor) {
+      ctor.prototype = func.prototype;
+      var child = new ctor, result = func.apply(child, args);
+      return typeof result === "object" ? result : child;
+    })(klass, args, function() {});
+    callback(obj);
+    return obj;
   },
   defer: function(callback) {
     return setTimeout(callback, 1);

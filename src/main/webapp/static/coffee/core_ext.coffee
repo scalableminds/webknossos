@@ -84,7 +84,12 @@ Utils =
     for el, i in arr
       output.push el if arr.indexOf(el) == i
     output
-        
+  
+  factory: (klass, args..., callback) ->
+    obj = new klass(args...)
+    callback(obj)
+    obj
+    
   
   defer: (callback) ->
     setTimeout(callback, 1)

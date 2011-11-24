@@ -25,32 +25,28 @@ class Geometry
     (p2.dx - p1.dx) * (p3.dy - p1.dy) - (p2.dy - p1.dy) * (p3.dx - p1.dx)
   
   class Monotonizer
-    constructor: (@polygon) ->
-      @edges = new Edge3Set
-      for i in [0...@polygon.length]
-        @edges.add new Edge3 @polygon[i].original, @polygon[(i + 1) % @polygon.length].original
+    constructor: (@face) ->
       
       @sweep_status = new Edge2Set
       @edges_to_remove = []
       
       @edge_function = (e, y) ->
         (-(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy))
-
-    
+      
+      @output = [@face]
+      
     run: ->
       
-      return [@polygon] if @polygon.length <= 4
+      vertices = @face.vertices
+      return [@face] if vertices.length <= 4
       
-      # @polygon = Geometry.translateToXY(@polygon) unless @polygon[0].dx?
-      @polygon.sort (a,b) -> a.compare b
+      vertices.sort (a,b) -> a.compare b
       
-      @current_y = @polygon[0].dy
+      @current_y = vertices[0].dy
       first_i_y = 0
       
       # do the sweep
-      for _v, _i in @polygon
-        
-        _v._adjacents = [_v.adj0, _v.adj1]
+      for _v, _i in vertices
         
         continue if _v.dy == @current_y
         
@@ -60,8 +56,8 @@ class Geometry
         
         for i in [first_i_y..._i]
           
-          v = @polygon[i]
-          for adj in v._adjacents
+          v = vertices[i]
+          for adj in v.adj
             if (adj.compare v) > 0
               @sweep_status.add [v, adj]
             else
@@ -72,16 +68,16 @@ class Geometry
         # if the vertex has an edge left and right to it
         # we need to regularize it
         for i in [first_i_y..._i]
-          v = @polygon[i]
+          v = vertices[i]
           incoming = outgoing = 0
           
-          for adj in v._adjacents
+          for adj in v.adj
             if (adj.compare v) > 0
               outgoing += 1
             else
               incoming += 1
           
-          unless (outgoing >= 1 or i == @polygon.length - 1) and (incoming >= 1 or i == 0)
+          unless (outgoing >= 1 or i == vertices.length - 1) and (incoming >= 1 or i == 0)
             left_edge = right_edge = null
             left_x = right_x = null
           
@@ -100,15 +96,15 @@ class Geometry
               
               if outgoing < 1
                 if left_edge[1].dy < right_edge[1].dy
-                  @addDiagonal_(v, left_edge[1])
+                  @addDiagonal(v, left_edge[1])
                 else
-                  @addDiagonal_(v, right_edge[1])
+                  @addDiagonal(v, right_edge[1])
               
               if incoming < 1
                 if left_edge[0].dx > right_edge[0].dx
-                  @addDiagonal_(left_edge[0], v)
+                  @addDiagonal(left_edge[0], v)
                 else
-                  @addDiagonal_(right_edge[0], v)
+                  @addDiagonal(right_edge[0], v)
                   
         
         # third pass
@@ -118,243 +114,76 @@ class Geometry
         first_i_y = _i
         @current_y = _v.dy
       
-      output = []
-
-      for v in @polygon
-        output.push v.polygon if output.indexOf(v.polygon) == -1
-      
-      output
+      @output
     
-    addDiagonal_: (a, b) ->
-      @edges.add new Edge3 a.original, b.original
+    addDiagonal: (a, b) ->
       
       @sweep_status.add [a, b]
       @edges_to_remove.push [a, b] if b.dy == @current_y
 
-      a._adjacents.push b
-      b._adjacents.push a
-      
-      _a = a.clone()
-      _b = b.clone()
-      
-      sub0 = [a, b]
-      v = b.adj0
-      while v != a
-        v.polygon = sub0
-        sub0.push v
-        v = v.adj0
-      
-      sub1 = [_a, _b]
-      v = b.adj1
-      while v != a
-        v.polygon = sub1
-        sub1.push v
-        v = v.adj1
-      
-      a.polygon = b.polygon = sub0
-      _a.polygon = _b.polygon = sub1
-      
-      if a.adj0 == sub0[sub0.length - 1]
-        a.adj1 = b
-        b.adj0 = a
-        _a.adj0 = _b
-        _b.adj1 = _a
-      else
-        a.adj0 = b
-        b.adj1 = a
-        _a.adj1 = _b
-        _b.adj0 = _a
+      i = @output.indexOf a.face
+      @output.splice i, 1, (a.face.splitAtEdge a, b)...
     
-  @monotonize: (polygon) ->
-    new Monotonizer(polygon).run()
-
-  @triangulateMonotone: (polygon, edges) ->
+  @monotonize: (face) ->
+    new Monotonizer(face).run()
+  
+  @triangulateMonotone: (face) ->
     
-    return [polygon] if polygon.length == 3
-    
-    v2e3 = new Vertex2Edge3Dictionary
-    
-    unless edges
-      edges = new Edge3Set
-      
-      for i in [0...polygon.length]
-        v0 = polygon[i]
-        v1 = polygon[(i + 1) % polygon.length]
-        e = edges.add new Edge3 v0.original, v1.original
-        v2e3.add v0, e
-        v2e3.add v1, e
+    vertices = face.vertices
+    return [vertices] if vertices.length == 3
     
     is_reflex = (v) ->
-      v.reflex = ccw(v.adj0, v, v.adj1) >= 0
-      
-    remove_links = (v_old) ->
-      v0 = v_old.adj0
-      v1 = v_old.adj1
-      
-      if v0.adj0 == v_old
-        v0.adj0 = v1
-      else
-        v0.adj1 = v1
-        
-      if v1.adj0 == v_old
-        v1.adj0 = v0
-      else
-        v1.adj1 = v0
+      v.reflex = ccw(v.adj[0], v, v.adj[1]) >= 0
     
     output = []
       
-    polygon.sort (a, b) -> a.compare b
+    vertices.sort (a, b) -> a.compare b
     
     stack = []
     
     # assumes ccw ordering of vertices
-    for v in polygon[2..-1]
+    for v in vertices[2..-1]
       unless is_reflex(v)
         stack.push v
         
     while stack.length > 0
       v = stack.shift()
       
-      v0 = v.adj0
-      v1 = v.adj1
-      output.push [v0, v, v1]
+      v0 = v.adj[0]
+      v1 = v.adj[1]
       
-      e = edges.add new Edge3 v0.original, v1.original
-      v2e3.add v0, e
-      v2e3.add v1, e
+      _v0 = v0.clone()
+      _v1 = v1.clone()
       
-      remove_links v
+      if v0.adj[0] == v
+        v0.adj[0] = v1
+        _v0.adj[1] = _v1
+      else
+        v0.adj[1] = v1
+        _v0.adj[0] = _v1
+      
+      if v1.adj[0] == v
+        v1.adj[0] = v0
+        _v1.adj[1] = _v0
+      else
+        v1.adj[1] = v0
+        _v1.adj[0] = _v0
+      
+      v.adj[0] = _v0
+      v.adj[1] = _v1
+      
+      output.push new Face2([v, _v0, _v1], [new Edge2(v, _v0), new Edge2(v, _v1), new Edge2(_v0, _v1)])
       
       v0_reflex = v0.reflex
       v1_reflex = v1.reflex
       
       stack.push v0 if not is_reflex(v0) and v0_reflex
       stack.push v1 if not is_reflex(v1) and v1_reflex
-        
-    return output
     
-    output = []
-    
-    # super naive: O(n³)
-    _edges = edges.all()
-    for i1 in [0..._edges.length]
-      e1 = _edges[i1]
-      for i2 in [(i1 + 1)..._edges.length]
-        e2 = _edges[i2]
-        for i3 in [(i2 + 1)..._edges.length]
-          e3 = _edges[i3]
-          v1 = if e1[0] == e2[0] or e1[0] == e2[1] 
-              e1[0]
-            else if e1[1] == e2[0] or e1[1] == e2[1]
-              e1[1]
-            else null
-          v2 = if e1[0] == e3[0] or e1[0] == e3[1] 
-              e1[0]
-            else if e1[1] == e3[0] or e1[1] == e3[1]
-              e1[1]
-            else null
-          v3 = if e2[0] == e3[0] or e2[0] == e3[1] 
-              e2[0]
-            else if e2[1] == e3[0] or e2[1] == e3[1]
-              e2[1]
-            else null
-          output.push [v1, v2, v3] if v1? and v2? and v3? and v1 != v2 and v2 != v3 and v1 != v3
-          
-  @triangulateMonotone2: (vertices, edges) ->
-    
-    return [vertices] if vertices.length == 3
-    
-    v2e3 = new Vertex2Edge3Dictionary
-    
-    is_reflex = (v) ->
-      v.reflex = ccw(v.adj0, v, v.adj1) >= 0
-      
-    remove_links = (v_old) ->
-      v0 = v_old.adj0
-      v1 = v_old.adj1
-      
-      if v0.adj0 == v_old
-        v0.adj0 = v1
-      else
-        v0.adj1 = v1
-        
-      if v1.adj0 == v_old
-        v1.adj0 = v0
-      else
-        v1.adj1 = v0
-    
-    output = []
-      
-    polygon.sort (a, b) -> a.compare b
-    
-    stack = []
-    
-    # assumes ccw ordering of vertices
-    for v in polygon[2..-1]
-      unless is_reflex(v)
-        stack.push v
-        
-    while stack.length > 0
-      v = stack.shift()
-      
-      ve = v.edges.all()
-      ve.sort (a, b) -> a.compare b
-      
-      for i in [0...ve.length]
-        
-        adj0 = ve[i]
-        adj1 = ve[(i + 1) % ve.length]
-        
-        v0 = adj0.other(v)
-        v1 = adj1.other(v)
-        
-        e = edges.add new Edge3 v0, v1
-        v2e3.add v0, e
-        v2e3.add v1, e
-        
-        # remove_links v
-        
-        v0_reflex = v0.reflex
-        v1_reflex = v1.reflex
-        
-        stack.push v0 if not is_reflex(v0) and v0_reflex
-        stack.push v1 if not is_reflex(v1) and v1_reflex
-    
-    output = []
-    
-    # super naive: O(n³)
-    _edges = edges.all()
-    for i1 in [0..._edges.length]
-      e1 = _edges[i1]
-      for i2 in [(i1 + 1)..._edges.length]
-        e2 = _edges[i2]
-        for i3 in [(i2 + 1)..._edges.length]
-          e3 = _edges[i3]
-          v1 = if e1[0] == e2[0] or e1[0] == e2[1] 
-              e1[0]
-            else if e1[1] == e2[0] or e1[1] == e2[1]
-              e1[1]
-            else null
-          v2 = if e1[0] == e3[0] or e1[0] == e3[1] 
-              e1[0]
-            else if e1[1] == e3[0] or e1[1] == e3[1]
-              e1[1]
-            else null
-          v3 = if e2[0] == e3[0] or e2[0] == e3[1] 
-              e2[0]
-            else if e2[1] == e3[0] or e2[1] == e3[1]
-              e2[1]
-            else null
-          output.push [v1, v2, v3] if v1? and v2? and v3? and v1 != v2 and v2 != v3 and v1 != v3
-          
-    
-  @triangulate: (polygon) ->
-    monotones = Geometry.monotonize @toFace2.vertices
-    triangles = []
-    for monotone in monotones 
-      triangles.push (Geometry.triangulateMonotone monotone)...
-    triangles
-  
+    output
+ 
+
+            
   @overlaps: (ex1, ex2) ->
     
     overlaps2d(ex1, ex2) and
@@ -484,23 +313,5 @@ class Geometry
           line_segment(face1, face2),
           line_segment(face2, face1)
         )
-
-  @translateToXY: (vertices, normal) ->
-    
-    unless normal?
-      normal = Math.crossProduct(vertices[1].sub(vertices[0]), vertices[2].sub(vertices[0]))
-    
-    # v.to2d(normal) for v in vertices
-    
-    set = new Vertex2Set()
-    for v in vertices
-      set.add v.toVertex2 normal
-    
-    for v in set.all()
-      i = 0
-      for adj in v.original.adjacents.all()
-        v["adj#{i++}"] = set.get(adj.toVertex2 normal) if Math.dotProduct(adj.sub(v.original), normal) == 0
-    
-    set.all()
       
   

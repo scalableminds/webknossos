@@ -1,4 +1,4 @@
-var Edge2, Edge2Set, Edge3, Edge3Set, Face3, GeometrySet, Polyhedron, Vertex2, Vertex2Edge3Dictionary, Vertex2Set, Vertex3, Vertex3Set;
+var Edge2, Edge2Set, Edge3, Edge3Set, Face2, Face3, GeometrySet, Polyhedron, Vertex2, Vertex2Edge3Dictionary, Vertex2Set, Vertex3, Vertex3Set, Vertex3Vertex2Dictionary;
 var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
 Polyhedron = (function() {
@@ -81,23 +81,121 @@ Face3 = (function() {
     }
   }
 
-  Face3.prototype.triangulate = function() {
-    var edges, faces, v, vertices, _i, _j, _len, _len2, _ref, _ref2;
+  Face3.prototype.toFace2 = function() {
+    var e, edge2, edges2, face, v, v0, v1, vertices2, _i, _len, _ref;
+    vertices2 = new Vertex3Vertex2Dictionary;
     _ref = this.vertices;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       v = _ref[_i];
-      v.to2d(this.plane);
+      vertices2.add(v, v.toVertex2(this.plane));
     }
-    _ref2 = Geometry.monotonize(this.vertices, this.edges), vertices = _ref2[0], edges = _ref2[1];
-    faces = Geometry.triangulateMonotonize(vertices, edges);
-    for (_j = 0, _len2 = vertices.length; _j < _len2; _j++) {
-      v = vertices[_j];
-      v.clean2d();
+    edges2 = (function() {
+      var _j, _len2, _ref2, _results;
+      _ref2 = this.edges.all();
+      _results = [];
+      for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+        e = _ref2[_j];
+        v0 = vertices2.get(e[0]);
+        v1 = vertices2.get(e[1]);
+        edge2 = new Edge2(v0, v1);
+        edge2.original = e;
+        v0.addEdge(edge2);
+        v1.addEdge(edge2);
+        _results.push(edge2);
+      }
+      return _results;
+    }).call(this);
+    face = new Face2(vertices2.all(), edges2);
+    face.original = this;
+    return face;
+  };
+
+  Face3.prototype.triangulate = function() {
+    var face1, face2, faces, _i, _j, _len, _len2, _ref, _ref2;
+    face2 = this.toFace2();
+    faces = [];
+    _ref = Geometry.monotonize(face2);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      face1 = _ref[_i];
+      _ref2 = Geometry.triangulateMonotone(face1);
+      for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+        face2 = _ref2[_j];
+        faces.push(face2.toFace3());
+      }
     }
     return faces;
   };
 
   return Face3;
+
+})();
+
+Face2 = (function() {
+
+  function Face2(vertices, edges) {
+    var e, v, _i, _j, _len, _len2, _ref, _ref2;
+    this.vertices = vertices;
+    this.edges = edges;
+    _ref = this.edges;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      e = _ref[_i];
+      e.face = this;
+    }
+    _ref2 = this.vertices;
+    for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+      v = _ref2[_j];
+      v.face = this;
+    }
+  }
+
+  Face2.prototype.splitAtEdge = function(a, b) {
+    var edges0, edges1, i, last, v, v0, v1, vertices0, vertices1, _a, _b, _last, _ref, _ref2;
+    _a = a.clone();
+    _b = b.clone();
+    a.adj[0] = b;
+    b.adj[1] = a;
+    vertices0 = [a, b];
+    last = b;
+    v = b.adj[0];
+    while (v !== a) {
+      vertices0.push(v);
+      _last = v;
+      v = last === v.adj[0] ? v.adj[1] : v.adj[0];
+      last = _last;
+    }
+    edges0 = [];
+    for (i = 1, _ref = vertices0.length; 1 <= _ref ? i < _ref : i > _ref; 1 <= _ref ? i++ : i--) {
+      v0 = vertices0[i];
+      v1 = vertices0[(i + 1) % vertices0.length];
+      edges0.push(new Edge2(v0, v1));
+      v0.adj[0] = v1;
+      v1.adj[1] = v0;
+    }
+    _a.adj[1] = _b;
+    _b.adj[0] = _a;
+    _a.adj[0].adj[1] = _a;
+    _b.adj[1].adj[0] = _b;
+    vertices1 = [_b, _a];
+    last = _a;
+    v = _a.adj[0];
+    while (v !== _b) {
+      vertices1.push(v);
+      _last = v;
+      v = last === v.adj[0] ? v.adj[1] : v.adj[0];
+      last = _last;
+    }
+    edges1 = [];
+    for (i = 0, _ref2 = vertices1.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
+      v0 = vertices1[i];
+      v1 = vertices1[(i + 1) % vertices1.length];
+      edges1.push(new Edge2(v0, v1));
+      v0.adj[0] = v1;
+      v1.adj[1] = v0;
+    }
+    return [new Face2(vertices0, edges0), new Face2(vertices1, edges1)];
+  };
+
+  return Face2;
 
 })();
 
@@ -110,13 +208,22 @@ Edge2 = (function() {
     }
     this[0] = vertex1;
     this[1] = vertex2;
+    this.vector = vertex2.sub(vertex1);
+    this.sin = Math.normalize(this.vector[1]);
+    this.cos = this.vector[0] / Math.vecLength(this.vector);
   }
+
+  Edge2.prototype.length = 2;
+
+  Edge2.prototype.compare = function(other) {
+    return this.sin - other.sin || this.sin * (this.cos - other.cos);
+  };
 
   Edge2.prototype.other = function(v) {
     if (v === this[0]) {
-      return this[0];
-    } else {
       return this[1];
+    } else {
+      return this[0];
     }
   };
 
@@ -162,7 +269,7 @@ Edge3 = (function() {
     var sin, vec0, vec1;
     vec0 = this.vector();
     vec1 = other.vector();
-    return (sin = Math.normalize(vec0[1])) - Math.normalize(vec1[1]) || (sin > 0 ? vec0[0] - vec1[0] : vec1[0] - vec0[0]);
+    return (sin = Math.normalize(vec0[1])) - Math.normalize(vec1[1]) || sin * (Math.normalizeVector(vec0)[0] - Math.normalizeVector(vec1)[0]);
   };
 
   Edge3.prototype.remove = function() {
@@ -192,6 +299,7 @@ Vertex2 = (function() {
   function Vertex2(dx, dy) {
     this.dx = dx;
     this.dy = dy;
+    this.adj = [];
   }
 
   Vertex2.prototype.toVertex3 = function() {
@@ -201,15 +309,21 @@ Vertex2 = (function() {
     return v.adjacents.add(v.adj1.original);
   };
 
+  Vertex2.prototype.addEdge = function(e) {
+    if (!this.adj[0]) {
+      return this.adj[0] = e.other(this);
+    } else if (!this.adj[1]) {
+      return this.adj[1] = e.other(this);
+    }
+  };
+
   Vertex2.prototype.clone = function() {
     var v;
     v = new Vertex2(this.dx, this.dy);
-    v.adj0 = this.adj0;
-    v.adj1 = this.adj1;
+    v.adj = this.adj.slice(0);
     v.original = this.original;
     v.normal = this.normal;
-    if (this._adjacents) v._adjacents = this._adjacents;
-    if (this.polygon) v.polygon = this.polygon;
+    if (this.face) v.face = this.face;
     return v;
   };
 
@@ -477,6 +591,33 @@ Vertex3Set = (function() {
   };
 
   return Vertex3Set;
+
+})();
+
+Vertex3Vertex2Dictionary = (function() {
+
+  __extends(Vertex3Vertex2Dictionary, GeometrySet);
+
+  function Vertex3Vertex2Dictionary() {
+    Vertex3Vertex2Dictionary.__super__.constructor.apply(this, arguments);
+  }
+
+  Vertex3Vertex2Dictionary.prototype.lookup = function(v) {
+    return "" + v.x + "x" + v.y + "x" + v.z;
+  };
+
+  Vertex3Vertex2Dictionary.prototype.add = function(v3, v2) {
+    var l, tmp;
+    if ((tmp = this.container[l = this.lookup(v3)]) != null) {
+      return tmp;
+    } else {
+      this.container[l] = v2;
+      this.length += 1;
+      return v2;
+    }
+  };
+
+  return Vertex3Vertex2Dictionary;
 
 })();
 

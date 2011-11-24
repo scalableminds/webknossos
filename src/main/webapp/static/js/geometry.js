@@ -1,4 +1,5 @@
 var Geometry;
+var __slice = Array.prototype.slice;
 
 Geometry = (function() {
   var Monotonizer, ccw;
@@ -42,39 +43,34 @@ Geometry = (function() {
 
   Monotonizer = (function() {
 
-    function Monotonizer(polygon) {
-      var i, _ref;
-      this.polygon = polygon;
-      this.edges = new Edge3Set;
-      for (i = 0, _ref = this.polygon.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-        this.edges.add(new Edge3(this.polygon[i].original, this.polygon[(i + 1) % this.polygon.length].original));
-      }
+    function Monotonizer(face) {
+      this.face = face;
       this.sweep_status = new Edge2Set;
       this.edges_to_remove = [];
       this.edge_function = function(e, y) {
         return -(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy);
       };
+      this.output = [this.face];
     }
 
     Monotonizer.prototype.run = function() {
-      var adj, e, edge, edge_x, first_i_y, i, incoming, left_edge, left_x, outgoing, output, right_edge, right_x, v, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _len6, _m, _n, _ref, _ref2, _ref3, _ref4, _ref5, _ref6, _v;
-      if (this.polygon.length <= 4) return [this.polygon];
-      this.polygon.sort(function(a, b) {
+      var adj, e, edge, edge_x, first_i_y, i, incoming, left_edge, left_x, outgoing, right_edge, right_x, v, vertices, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _m, _ref, _ref2, _ref3, _ref4, _v;
+      vertices = this.face.vertices;
+      if (vertices.length <= 4) return [this.face];
+      vertices.sort(function(a, b) {
         return a.compare(b);
       });
-      this.current_y = this.polygon[0].dy;
+      this.current_y = vertices[0].dy;
       first_i_y = 0;
-      _ref = this.polygon;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        _v = _ref[_i];
-        _v._adjacents = [_v.adj0, _v.adj1];
+      for (_i = 0, _len = vertices.length; _i < _len; _i++) {
+        _v = vertices[_i];
         if (_v.dy === this.current_y) continue;
         this.edges_to_remove = [];
         for (i = first_i_y; first_i_y <= _i ? i < _i : i > _i; first_i_y <= _i ? i++ : i--) {
-          v = this.polygon[i];
-          _ref2 = v._adjacents;
-          for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
-            adj = _ref2[_j];
+          v = vertices[i];
+          _ref = v.adj;
+          for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
+            adj = _ref[_j];
             if ((adj.compare(v)) > 0) {
               this.sweep_status.add([v, adj]);
             } else {
@@ -83,23 +79,23 @@ Geometry = (function() {
           }
         }
         for (i = first_i_y; first_i_y <= _i ? i < _i : i > _i; first_i_y <= _i ? i++ : i--) {
-          v = this.polygon[i];
+          v = vertices[i];
           incoming = outgoing = 0;
-          _ref3 = v._adjacents;
-          for (_k = 0, _len3 = _ref3.length; _k < _len3; _k++) {
-            adj = _ref3[_k];
+          _ref2 = v.adj;
+          for (_k = 0, _len3 = _ref2.length; _k < _len3; _k++) {
+            adj = _ref2[_k];
             if ((adj.compare(v)) > 0) {
               outgoing += 1;
             } else {
               incoming += 1;
             }
           }
-          if (!((outgoing >= 1 || i === this.polygon.length - 1) && (incoming >= 1 || i === 0))) {
+          if (!((outgoing >= 1 || i === vertices.length - 1) && (incoming >= 1 || i === 0))) {
             left_edge = right_edge = null;
             left_x = right_x = null;
-            _ref4 = this.sweep_status.all();
-            for (_l = 0, _len4 = _ref4.length; _l < _len4; _l++) {
-              edge = _ref4[_l];
+            _ref3 = this.sweep_status.all();
+            for (_l = 0, _len4 = _ref3.length; _l < _len4; _l++) {
+              edge = _ref3[_l];
               if (edge[0] !== v && edge[1] !== v) {
                 edge_x = this.edge_function(edge, v.dy);
                 if (edge_x < v.dx && (!(typeof left !== "undefined" && left !== null) || edge_x > left[1])) {
@@ -114,267 +110,94 @@ Geometry = (function() {
             if ((left_edge != null) && (right_edge != null)) {
               if (outgoing < 1) {
                 if (left_edge[1].dy < right_edge[1].dy) {
-                  this.addDiagonal_(v, left_edge[1]);
+                  this.addDiagonal(v, left_edge[1]);
                 } else {
-                  this.addDiagonal_(v, right_edge[1]);
+                  this.addDiagonal(v, right_edge[1]);
                 }
               }
               if (incoming < 1) {
                 if (left_edge[0].dx > right_edge[0].dx) {
-                  this.addDiagonal_(left_edge[0], v);
+                  this.addDiagonal(left_edge[0], v);
                 } else {
-                  this.addDiagonal_(right_edge[0], v);
+                  this.addDiagonal(right_edge[0], v);
                 }
               }
             }
           }
         }
-        _ref5 = this.edges_to_remove;
-        for (_m = 0, _len5 = _ref5.length; _m < _len5; _m++) {
-          e = _ref5[_m];
+        _ref4 = this.edges_to_remove;
+        for (_m = 0, _len5 = _ref4.length; _m < _len5; _m++) {
+          e = _ref4[_m];
           this.sweep_status.remove(e);
         }
         first_i_y = _i;
         this.current_y = _v.dy;
       }
-      output = [];
-      _ref6 = this.polygon;
-      for (_n = 0, _len6 = _ref6.length; _n < _len6; _n++) {
-        v = _ref6[_n];
-        if (output.indexOf(v.polygon) === -1) output.push(v.polygon);
-      }
-      return output;
+      return this.output;
     };
 
-    Monotonizer.prototype.addDiagonal_ = function(a, b) {
-      var sub0, sub1, v, _a, _b;
-      this.edges.add(new Edge3(a.original, b.original));
+    Monotonizer.prototype.addDiagonal = function(a, b) {
+      var i, _ref;
       this.sweep_status.add([a, b]);
       if (b.dy === this.current_y) this.edges_to_remove.push([a, b]);
-      a._adjacents.push(b);
-      b._adjacents.push(a);
-      _a = a.clone();
-      _b = b.clone();
-      sub0 = [a, b];
-      v = b.adj0;
-      while (v !== a) {
-        v.polygon = sub0;
-        sub0.push(v);
-        v = v.adj0;
-      }
-      sub1 = [_a, _b];
-      v = b.adj1;
-      while (v !== a) {
-        v.polygon = sub1;
-        sub1.push(v);
-        v = v.adj1;
-      }
-      a.polygon = b.polygon = sub0;
-      _a.polygon = _b.polygon = sub1;
-      if (a.adj0 === sub0[sub0.length - 1]) {
-        a.adj1 = b;
-        b.adj0 = a;
-        _a.adj0 = _b;
-        return _b.adj1 = _a;
-      } else {
-        a.adj0 = b;
-        b.adj1 = a;
-        _a.adj1 = _b;
-        return _b.adj0 = _a;
-      }
+      i = this.output.indexOf(a.face);
+      return (_ref = this.output).splice.apply(_ref, [i, 1].concat(__slice.call(a.face.splitAtEdge(a, b))));
     };
 
     return Monotonizer;
 
   })();
 
-  Geometry.monotonize = function(polygon) {
-    return new Monotonizer(polygon).run();
+  Geometry.monotonize = function(face) {
+    return new Monotonizer(face).run();
   };
 
-  Geometry.triangulateMonotone = function(polygon, edges) {
-    var e, e1, e2, e3, i, i1, i2, i3, is_reflex, output, remove_links, stack, v, v0, v0_reflex, v1, v1_reflex, v2, v2e3, v3, _edges, _i, _len, _ref, _ref2, _ref3, _results;
-    if (polygon.length === 3) return [polygon];
-    v2e3 = new Vertex2Edge3Dictionary;
-    if (!edges) {
-      edges = new Edge3Set;
-      for (i = 0, _ref = polygon.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-        v0 = polygon[i];
-        v1 = polygon[(i + 1) % polygon.length];
-        e = edges.add(new Edge3(v0.original, v1.original));
-        v2e3.add(v0, e);
-        v2e3.add(v1, e);
-      }
-    }
-    is_reflex = function(v) {
-      return v.reflex = ccw(v.adj0, v, v.adj1) >= 0;
-    };
-    remove_links = function(v_old) {
-      v0 = v_old.adj0;
-      v1 = v_old.adj1;
-      if (v0.adj0 === v_old) {
-        v0.adj0 = v1;
-      } else {
-        v0.adj1 = v1;
-      }
-      if (v1.adj0 === v_old) {
-        return v1.adj0 = v0;
-      } else {
-        return v1.adj1 = v0;
-      }
-    };
-    output = [];
-    polygon.sort(function(a, b) {
-      return a.compare(b);
-    });
-    stack = [];
-    _ref2 = polygon.slice(2);
-    for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-      v = _ref2[_i];
-      if (!is_reflex(v)) stack.push(v);
-    }
-    while (stack.length > 0) {
-      v = stack.shift();
-      v0 = v.adj0;
-      v1 = v.adj1;
-      output.push([v0, v, v1]);
-      e = edges.add(new Edge3(v0.original, v1.original));
-      v2e3.add(v0, e);
-      v2e3.add(v1, e);
-      remove_links(v);
-      v0_reflex = v0.reflex;
-      v1_reflex = v1.reflex;
-      if (!is_reflex(v0) && v0_reflex) stack.push(v0);
-      if (!is_reflex(v1) && v1_reflex) stack.push(v1);
-    }
-    return output;
-    output = [];
-    _edges = edges.all();
-    _results = [];
-    for (i1 = 0, _ref3 = _edges.length; 0 <= _ref3 ? i1 < _ref3 : i1 > _ref3; 0 <= _ref3 ? i1++ : i1--) {
-      e1 = _edges[i1];
-      _results.push((function() {
-        var _ref4, _ref5, _results2;
-        _results2 = [];
-        for (i2 = _ref4 = i1 + 1, _ref5 = _edges.length; _ref4 <= _ref5 ? i2 < _ref5 : i2 > _ref5; _ref4 <= _ref5 ? i2++ : i2--) {
-          e2 = _edges[i2];
-          _results2.push((function() {
-            var _ref6, _ref7, _results3;
-            _results3 = [];
-            for (i3 = _ref6 = i2 + 1, _ref7 = _edges.length; _ref6 <= _ref7 ? i3 < _ref7 : i3 > _ref7; _ref6 <= _ref7 ? i3++ : i3--) {
-              e3 = _edges[i3];
-              v1 = e1[0] === e2[0] || e1[0] === e2[1] ? e1[0] : e1[1] === e2[0] || e1[1] === e2[1] ? e1[1] : null;
-              v2 = e1[0] === e3[0] || e1[0] === e3[1] ? e1[0] : e1[1] === e3[0] || e1[1] === e3[1] ? e1[1] : null;
-              v3 = e2[0] === e3[0] || e2[0] === e3[1] ? e2[0] : e2[1] === e3[0] || e2[1] === e3[1] ? e2[1] : null;
-              if ((v1 != null) && (v2 != null) && (v3 != null) && v1 !== v2 && v2 !== v3 && v1 !== v3) {
-                _results3.push(output.push([v1, v2, v3]));
-              } else {
-                _results3.push(void 0);
-              }
-            }
-            return _results3;
-          })());
-        }
-        return _results2;
-      })());
-    }
-    return _results;
-  };
-
-  Geometry.triangulateMonotone2 = function(vertices, edges) {
-    var adj0, adj1, e, e1, e2, e3, i, i1, i2, i3, is_reflex, output, remove_links, stack, v, v0, v0_reflex, v1, v1_reflex, v2, v2e3, v3, ve, _edges, _i, _len, _ref, _ref2, _ref3, _results;
+  Geometry.triangulateMonotone = function(face) {
+    var is_reflex, output, stack, v, v0, v0_reflex, v1, v1_reflex, vertices, _i, _len, _ref, _v0, _v1;
+    vertices = face.vertices;
     if (vertices.length === 3) return [vertices];
-    v2e3 = new Vertex2Edge3Dictionary;
     is_reflex = function(v) {
-      return v.reflex = ccw(v.adj0, v, v.adj1) >= 0;
-    };
-    remove_links = function(v_old) {
-      var v0, v1;
-      v0 = v_old.adj0;
-      v1 = v_old.adj1;
-      if (v0.adj0 === v_old) {
-        v0.adj0 = v1;
-      } else {
-        v0.adj1 = v1;
-      }
-      if (v1.adj0 === v_old) {
-        return v1.adj0 = v0;
-      } else {
-        return v1.adj1 = v0;
-      }
+      return v.reflex = ccw(v.adj[0], v, v.adj[1]) >= 0;
     };
     output = [];
-    polygon.sort(function(a, b) {
+    vertices.sort(function(a, b) {
       return a.compare(b);
     });
     stack = [];
-    _ref = polygon.slice(2);
+    _ref = vertices.slice(2);
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       v = _ref[_i];
       if (!is_reflex(v)) stack.push(v);
     }
     while (stack.length > 0) {
       v = stack.shift();
-      ve = v.edges.all();
-      ve.sort(function(a, b) {
-        return a.compare(b);
-      });
-      for (i = 0, _ref2 = ve.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
-        adj0 = ve[i];
-        adj1 = ve[(i + 1) % ve.length];
-        v0 = adj0.other(v);
-        v1 = adj1.other(v);
-        e = edges.add(new Edge3(v0, v1));
-        v2e3.add(v0, e);
-        v2e3.add(v1, e);
-        v0_reflex = v0.reflex;
-        v1_reflex = v1.reflex;
-        if (!is_reflex(v0) && v0_reflex) stack.push(v0);
-        if (!is_reflex(v1) && v1_reflex) stack.push(v1);
+      v0 = v.adj[0];
+      v1 = v.adj[1];
+      _v0 = v0.clone();
+      _v1 = v1.clone();
+      if (v0.adj[0] === v) {
+        v0.adj[0] = v1;
+        _v0.adj[1] = _v1;
+      } else {
+        v0.adj[1] = v1;
+        _v0.adj[0] = _v1;
       }
+      if (v1.adj[0] === v) {
+        v1.adj[0] = v0;
+        _v1.adj[1] = _v0;
+      } else {
+        v1.adj[1] = v0;
+        _v1.adj[0] = _v0;
+      }
+      v.adj[0] = _v0;
+      v.adj[1] = _v1;
+      output.push(new Face2([v, _v0, _v1], [new Edge2(v, _v0), new Edge2(v, _v1), new Edge2(_v0, _v1)]));
+      v0_reflex = v0.reflex;
+      v1_reflex = v1.reflex;
+      if (!is_reflex(v0) && v0_reflex) stack.push(v0);
+      if (!is_reflex(v1) && v1_reflex) stack.push(v1);
     }
-    output = [];
-    _edges = edges.all();
-    _results = [];
-    for (i1 = 0, _ref3 = _edges.length; 0 <= _ref3 ? i1 < _ref3 : i1 > _ref3; 0 <= _ref3 ? i1++ : i1--) {
-      e1 = _edges[i1];
-      _results.push((function() {
-        var _ref4, _ref5, _results2;
-        _results2 = [];
-        for (i2 = _ref4 = i1 + 1, _ref5 = _edges.length; _ref4 <= _ref5 ? i2 < _ref5 : i2 > _ref5; _ref4 <= _ref5 ? i2++ : i2--) {
-          e2 = _edges[i2];
-          _results2.push((function() {
-            var _ref6, _ref7, _results3;
-            _results3 = [];
-            for (i3 = _ref6 = i2 + 1, _ref7 = _edges.length; _ref6 <= _ref7 ? i3 < _ref7 : i3 > _ref7; _ref6 <= _ref7 ? i3++ : i3--) {
-              e3 = _edges[i3];
-              v1 = e1[0] === e2[0] || e1[0] === e2[1] ? e1[0] : e1[1] === e2[0] || e1[1] === e2[1] ? e1[1] : null;
-              v2 = e1[0] === e3[0] || e1[0] === e3[1] ? e1[0] : e1[1] === e3[0] || e1[1] === e3[1] ? e1[1] : null;
-              v3 = e2[0] === e3[0] || e2[0] === e3[1] ? e2[0] : e2[1] === e3[0] || e2[1] === e3[1] ? e2[1] : null;
-              if ((v1 != null) && (v2 != null) && (v3 != null) && v1 !== v2 && v2 !== v3 && v1 !== v3) {
-                _results3.push(output.push([v1, v2, v3]));
-              } else {
-                _results3.push(void 0);
-              }
-            }
-            return _results3;
-          })());
-        }
-        return _results2;
-      })());
-    }
-    return _results;
-  };
-
-  Geometry.triangulate = function(polygon) {
-    var monotone, monotones, triangles, _i, _len;
-    monotones = Geometry.monotonize(this.toFace2.vertices);
-    triangles = [];
-    for (_i = 0, _len = monotones.length; _i < _len; _i++) {
-      monotone = monotones[_i];
-      triangles.push.apply(triangles, Geometry.triangulateMonotone(monotone));
-    }
-    return triangles;
+    return output;
   };
 
   Geometry.overlaps = function(ex1, ex2) {
@@ -506,31 +329,6 @@ Geometry = (function() {
         return line_segment_intersection(line_segment(face1, face2), line_segment(face2, face1));
       }
     }
-  };
-
-  Geometry.translateToXY = function(vertices, normal) {
-    var adj, i, set, v, _i, _j, _k, _len, _len2, _len3, _ref, _ref2;
-    if (normal == null) {
-      normal = Math.crossProduct(vertices[1].sub(vertices[0]), vertices[2].sub(vertices[0]));
-    }
-    set = new Vertex2Set();
-    for (_i = 0, _len = vertices.length; _i < _len; _i++) {
-      v = vertices[_i];
-      set.add(v.toVertex2(normal));
-    }
-    _ref = set.all();
-    for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
-      v = _ref[_j];
-      i = 0;
-      _ref2 = v.original.adjacents.all();
-      for (_k = 0, _len3 = _ref2.length; _k < _len3; _k++) {
-        adj = _ref2[_k];
-        if (Math.dotProduct(adj.sub(v.original), normal) === 0) {
-          v["adj" + (i++)] = set.get(adj.toVertex2(normal));
-        }
-      }
-    }
-    return set.all();
   };
 
   return Geometry;

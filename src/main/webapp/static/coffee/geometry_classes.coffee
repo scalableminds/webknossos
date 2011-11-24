@@ -51,17 +51,91 @@ class Face3
     
     edge.adjoining_faces.push(@) for edge in edges
   
+  toFace2: ->
+    vertices2 = new Vertex3Vertex2Dictionary
+    for v in @vertices
+      vertices2.add v, v.toVertex2(@plane)
+    
+    edges2 = for e in @edges.all()
+      v0 = vertices2.get(e[0])
+      v1 = vertices2.get(e[1])
+      edge2 = new Edge2 v0, v1
+      edge2.original = e
+      v0.addEdge edge2
+      v1.addEdge edge2
+      edge2
+      
+    face = new Face2 vertices2.all(), edges2
+    face.original = @
+    face
+  
   triangulate: ->
     
-    v.to2d(@plane) for v in @vertices
+    face2 = @toFace2()
     
-    [vertices, edges] = Geometry.monotonize @vertices, @edges
-    
-    faces = Geometry.triangulateMonotonize vertices, edges
-    
-    v.clean2d() for v in vertices
+    faces = []
+    for face1 in Geometry.monotonize face2
+      for face2 in Geometry.triangulateMonotone face1
+        faces.push face2.toFace3()
     
     faces
+
+class Face2
+  constructor: (@vertices, @edges) ->
+    e.face = @ for e in @edges
+    v.face = @ for v in @vertices
+    
+  
+  splitAtEdge: (a, b) ->
+    
+    _a = a.clone()
+    _b = b.clone()
+    
+    a.adj[0] = b
+    b.adj[1] = a
+    
+    vertices0 = [a, b]
+    last = b
+    v = b.adj[0]
+    while v != a
+      vertices0.push v
+      _last = v
+      v = if last == v.adj[0] then v.adj[1] else v.adj[0]
+      last = _last
+    
+    edges0 = []
+    for i in [1...vertices0.length]
+      v0 = vertices0[i]
+      v1 = vertices0[(i+1) % vertices0.length]
+      edges0.push new Edge2(v0, v1)
+      v0.adj[0] = v1
+      v1.adj[1] = v0    
+    
+    _a.adj[1] = _b
+    _b.adj[0] = _a
+    
+    _a.adj[0].adj[1] = _a
+    _b.adj[1].adj[0] = _b
+    
+    vertices1 = [_b, _a]
+    last = _a
+    v = _a.adj[0]
+    while v != _b
+      vertices1.push v
+      _last = v
+      v = if last == v.adj[0] then v.adj[1] else v.adj[0]
+      last = _last
+    
+    edges1 = []
+    for i in [0...vertices1.length]
+      v0 = vertices1[i]
+      v1 = vertices1[(i+1) % vertices1.length]
+      edges1.push new Edge2(v0, v1)
+      v0.adj[0] = v1
+      v1.adj[1] = v0
+      
+    return [new Face2(vertices0, edges0), new Face2(vertices1, edges1)]
+    
     
 class Edge2
   constructor: (vertex1, vertex2) ->
@@ -72,8 +146,17 @@ class Edge2
     @[0] = vertex1
     @[1] = vertex2
     
+    @vector = vertex2.sub vertex1
+    @sin = Math.normalize(@vector[1])
+    @cos = @vector[0] / Math.vecLength(@vector)
+  
+  length: 2
+  
+  compare: (other) ->
+    @sin - other.sin || @sin * (@cos - other.cos)
+  
   other: (v) ->
-    if v == @[0] then @[0] else @[1]
+    if v == @[0] then @[1] else @[0]
     
 class Edge3
   constructor: (vertex1, vertex2) ->
@@ -108,7 +191,7 @@ class Edge3
     vec0 = @vector()
     vec1 = other.vector()
     
-    (sin = Math.normalize(vec0[1])) - Math.normalize(vec1[1]) || (if sin > 0 then vec0[0] - vec1[0] else vec1[0] - vec0[0])
+    (sin = Math.normalize(vec0[1])) - Math.normalize(vec1[1]) || sin * (Math.normalizeVector(vec0)[0] - Math.normalizeVector(vec1)[0])
     
   remove: ->
     @[0].adjacents.remove @[1]
@@ -128,20 +211,25 @@ class Edge3
     
 class Vertex2
   constructor: (@dx, @dy) ->
+    @adj = []
     
   toVertex3: ->
     v = @original
     v.adjacents.add v.adj0.original
     v.adjacents.add v.adj1.original
   
+  addEdge: (e) ->
+    unless @adj[0]
+      @adj[0] = e.other @
+    else unless @adj[1]
+      @adj[1] = e.other @
+  
   clone: ->
     v = new Vertex2 @dx, @dy
-    v.adj0 = @adj0
-    v.adj1 = @adj1
+    v.adj = @adj.slice 0
     v.original = @original
     v.normal = @normal
-    v._adjacents = @_adjacents if @_adjacents
-    v.polygon = @polygon if @polygon
+    v.face = @face if @face
     v
   
   compare: (other) ->
@@ -300,6 +388,17 @@ class Vertex2Set extends GeometrySet
 
 class Vertex3Set extends GeometrySet
   lookup: (v) -> "#{v.x}x#{v.y}x#{v.z}" 
+
+class Vertex3Vertex2Dictionary extends GeometrySet
+  lookup: (v) -> "#{v.x}x#{v.y}x#{v.z}"
+  
+  add: (v3, v2) ->
+    if (tmp = @container[l = @lookup(v3)])?
+      tmp
+    else
+      @container[l] = v2
+      @length += 1
+      v2
   
 class Vertex2Edge3Dictionary extends GeometrySet
   lookup: (v) -> "#{v.dx}x#{v.dy}"

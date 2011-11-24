@@ -76,7 +76,7 @@ class Face3
     faces = []
     for face1 in Geometry.monotonize face2
       for face2 in Geometry.triangulateMonotone face1
-        faces.push face2.toFace3()
+        faces.push face2
     
     faces
 

@@ -1,6 +1,6 @@
 
 describe('geometry', function() {
-  var face2ize, polygonize;
+  var face2ize, face3ize;
   describe('with pre-loading', function() {
     var g;
     g = null;
@@ -69,7 +69,7 @@ describe('geometry', function() {
       return expect(g.findFaceIntersections(g.polyhedral[0].faces[4], g.polyhedral[1].faces[4])).toBeDefined();
     });
   });
-  face2ize = function(vertices) {
+  face3ize = function(vertices) {
     var a, edges, i;
     vertices = (function() {
       var _i, _len, _results;
@@ -88,22 +88,10 @@ describe('geometry', function() {
       }
       return _results;
     })();
-    return new Face3(vertices, edges).toFace2();
+    return new Face3(vertices, edges);
   };
-  polygonize = function(vertices) {
-    var i, polygon, _ref;
-    polygon = vertices.map(function(a) {
-      return (function(func, args, ctor) {
-        ctor.prototype = func.prototype;
-        var child = new ctor, result = func.apply(child, args);
-        return typeof result === "object" ? result : child;
-      })(Vertex3, a, function() {});
-    });
-    for (i = 0, _ref = polygon.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-      polygon[i].adjacents.add(polygon[i > 0 ? i - 1 : polygon.length - 1]);
-      polygon[i].adjacents.add(polygon[(i + 1) % polygon.length]);
-    }
-    return polygon;
+  face2ize = function(vertices) {
+    return face3ize(vertices).toFace2();
   };
   it('should split a polygon by adding a diagonal', function() {
     var face, faces, faces1, faces2, i, test_round, _ref, _results;
@@ -201,12 +189,12 @@ describe('geometry', function() {
     return _results;
   });
   it('should split a polygon in monotones', function() {
-    var face, first, i, last, monotones, polygon, v, _i, _len;
-    polygon = face2ize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
-    monotones = Geometry.monotonize(polygon);
-    expect(monotones.length).toEqual(4);
-    for (_i = 0, _len = monotones.length; _i < _len; _i++) {
-      face = monotones[_i];
+    var face, faces, first, i, last, v, _i, _len;
+    face = face2ize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
+    faces = Geometry.monotonize(face);
+    expect(faces.length).toEqual(4);
+    for (_i = 0, _len = faces.length; _i < _len; _i++) {
+      face = faces[_i];
       expect(face).toBeA(Face2);
       face.vertices.sort(function(a, b) {
         return a.compare(b);
@@ -237,7 +225,7 @@ describe('geometry', function() {
       }
     }
   });
-  return it('should translate any face3 to face2', function() {
+  it('should translate any face3 to face2', function() {
     var e, edges, face, face2, i, v, vertices, _i, _len, _len2, _ref, _ref2, _results;
     vertices = [new Vertex3(3, 4, 5), new Vertex3(4, 6, 8), new Vertex3(3, 5, 5)];
     edges = [new Edge3(vertices[0], vertices[1]), new Edge3(vertices[1], vertices[2]), new Edge3(vertices[2], vertices[0])];
@@ -259,5 +247,11 @@ describe('geometry', function() {
       _results.push(expect(edges.indexOf(e.original)).not.toEqual(-1));
     }
     return _results;
+  });
+  return it('should triangulate a face', function() {
+    var face, triangles;
+    face = face3ize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
+    triangles = face.triangulate();
+    return expect(triangles.length).toEqual(face.vertices.length - 2);
   });
 });

@@ -61,7 +61,7 @@ describe 'geometry', ->
         .toBeDefined()
   
   
-  face2ize = (vertices) ->
+  face3ize = (vertices) ->
     
     vertices = for a in vertices
       new Vertex3(a[0], a[1], a[2])
@@ -69,17 +69,11 @@ describe 'geometry', ->
     edges = for i in [0...vertices.length]
       new Edge3 vertices[i], vertices[(i + 1) % vertices.length]
     
-    new Face3(vertices, edges).toFace2()
+    new Face3(vertices, edges)
   
-  
-  polygonize = (vertices) ->
-    
-    polygon = vertices.map (a) -> new Vertex3(a...)
-    
-    for i in [0...polygon.length]
-      polygon[i].adjacents.add polygon[if i > 0 then i - 1 else polygon.length - 1]
-      polygon[i].adjacents.add polygon[(i + 1) % polygon.length]
-    polygon
+  face2ize = (vertices) ->
+    face3ize(vertices).toFace2()
+
   
   it 'should split a polygon by adding a diagonal', ->
     
@@ -133,7 +127,7 @@ describe 'geometry', ->
       expect(test_round(faces[i].vertices, 1)).toBeTruthy()
   
   it 'should triangulate a monotone polygon', ->
-    
+
     # setup
     face = face2ize [
       [0,0,0]
@@ -218,7 +212,7 @@ describe 'geometry', ->
   it 'should split a polygon in monotones', ->
     # setup
     # plane: normal = [0, 0, 1], d = 0
-    polygon = face2ize [
+    face = face2ize [
       [0,0,0],
       [0,10,0],
       [4,10,0],
@@ -235,13 +229,13 @@ describe 'geometry', ->
     ]
     
     # do the work
-    monotones = Geometry.monotonize(polygon)
+    faces = Geometry.monotonize(face)
     
     # simple test to start
-    expect(monotones.length).toEqual(4)
+    expect(faces.length).toEqual(4)
     
     # make sure the monotone propery is ensured for each polygon
-    for face in monotones
+    for face in faces
       expect(face).toBeA Face2
       face.vertices.sort (a, b) -> a.compare b
       
@@ -299,4 +293,27 @@ describe 'geometry', ->
       expect(e).toBeA Edge2
       expect(edges.indexOf(e.original)).not.toEqual -1 
       
+  
+  it 'should triangulate a face', ->
+    
+    # setup
+    face = face3ize [
+      [0,0,0],
+      [0,10,0],
+      [4,10,0],
+      [2,9,0],
+      [2,7,0],
+      [7,8,0],
+      [4,6,0],
+      [5,3,0],
+      [3,4,0],
+      [1,1,0],
+      [4,1,0],
+      [6,2,0],
+      [5,0,0]
+    ]
+    
+    triangles = face.triangulate()
+    
+    expect(triangles.length).toEqual(face.vertices.length - 2)
     

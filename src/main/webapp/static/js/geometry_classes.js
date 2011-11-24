@@ -120,7 +120,7 @@ Face3 = (function() {
       _ref2 = Geometry.triangulateMonotone(face1);
       for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
         face2 = _ref2[_j];
-        faces.push(face2.toFace3());
+        faces.push(face2);
       }
     }
     return faces;

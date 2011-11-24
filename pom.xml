@@ -13,7 +13,7 @@
   <inceptionYear>2010</inceptionYear>
   <properties>
     <scala.version>2.9.1</scala.version>
-    <jettyVersion>7.2.0.v20101020</jettyVersion>
+    <jettyVersion>8.0.4.v20111024</jettyVersion>
     <!-- Common plugin settings -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>${project.build.sourceEncoding}</project.reporting.outputEncoding>

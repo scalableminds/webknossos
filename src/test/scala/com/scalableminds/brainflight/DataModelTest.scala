@@ -5,6 +5,7 @@ import org.specs2.mutable.Specification
 import net.liftweb._
 import net.liftweb.util._
 import java.io.FileNotFoundException
+import com.scalableminds.tools.geometry.NGonalFrustum
 
 //class DataModelTest extends JUnit3(DataModelTestSpecs)
 //object DataModelTestSpecsRunner extends ConsoleRunner(DataModelTestSpecs)
@@ -28,15 +29,7 @@ class DataModelTestSpecs extends Specification {
   object TestModel extends DataModel{
     val id = "testModel"
     val yLength = 2
-    val containingCoordinates =
-      for{
-        y <- 0 to yLength
-        x <- -yLength/2 to yLength/2
-        z <- -yLength/2 to yLength/2
-      }yield{
-        (x,y,z)
-      }
-
+    val polygons = new NGonalFrustum(4,yLength,yLength/2,yLength/2).polygons
   }
   "ModelStore" should {
     "contain one Element" in {

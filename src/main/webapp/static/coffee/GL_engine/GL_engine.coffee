@@ -4,6 +4,7 @@ class GL_engine
 	empty_func = -> 
 	gl = null
 	canvas = null
+	requestAnimationFrame = empty_func
 
 
 	# for calculating fps
@@ -11,9 +12,14 @@ class GL_engine
 	frameCount = 0
 	lastTime = null
 	
-	matrixStack = null
+	matrixStack = []
 
 	programCaches = []
+	geometry = []
+
+	attn = [0.01, 0.0, 0.003]
+
+	projectionMatrix = null
 
 ############################################################################
 	#public Properties
@@ -21,7 +27,6 @@ class GL_engine
 	frameRate = 0
 	# Contains reference to user's RenderingScript
 	usersRender = empty_func
-	geometry = []
 	shaderProgram = null
 
 ############################################################################
@@ -31,6 +36,7 @@ class GL_engine
 	constructor: (cvs, glAttribs) ->
 		lastTime = new Date()
 		frames = 0
+		canvas = cvs
 		contextNames = [ "webgl", "experimental-webgl", "moz-webgl", "webkit-3d" ]
 		i = 0
 
@@ -42,12 +48,22 @@ class GL_engine
 
 		alert "Your browser does not support WebGL."  unless gl
 		gl.viewport 0, 0, parseInt(cvs.width, 10), parseInt(cvs.height, 10)
-		perspective()
+		@perspective()
 		normalMatrix = M4x4.I
 
 		gl.enable(gl.DEPTH_TEST)
-		background [1, 1, 1, 1]
+		@background [1, 1, 1, 1]
 	
+		requestAnimationFrame = (->
+			window.requestAnimationFrame or 
+			window.webkitRequestAnimationFrame or 
+			window.mozRequestAnimationFrame or 
+			window.oRequestAnimationFrame or 
+			window.msRequestAnimationFrame or 
+			(callback, cvs) ->
+    	window.setTimeout callback, 1000.0 / 60.0
+			)()
+
 		animationLoop()
 
 
@@ -69,7 +85,7 @@ class GL_engine
 			else
 				gl.uniform1i varLocation, varValue
 		else
-		console.log "uniform var '" + varName + "' was not found."
+			console.log "uniform var '" + varName + "' was not found."
 
 	###
 	Set a uniform float
@@ -88,7 +104,7 @@ class GL_engine
 			else
 				gl.uniform1f varLocation, varValue
 		else
-		console.log "uniform var '" + varName + "' was not found."
+			console.log "uniform var '" + varName + "' was not found."
 
 	###
 	Sets a uniform matrix.
@@ -106,7 +122,7 @@ class GL_engine
 			else
 				gl.uniformMatrix2fv varLocation, transpose, matrix
 		else
-		console.log "Uniform matrix '" + varName + "' was not found."
+			console.log "Uniform matrix '" + varName + "' was not found."
 
 	###
 	Create a buffer object which will contain
@@ -121,7 +137,7 @@ class GL_engine
 
 	createArrayBufferObject : (data) ->
 		if gl
-			VBO = gl.CreateBuffer()
+			VBO = gl.createBuffer()
 			gl.bindBuffer gl.ARRAY_BUFFER, VBO
 			gl.bufferData gl.ARRAY_BUFFER, data, gl.STATIC_DRAW
 			return VBO
@@ -140,7 +156,7 @@ class GL_engine
 
 	createElementArrayBufferObject : (data) ->
 		if gl
-			VBO = gl.CreateBuffer()
+			VBO = gl.createBuffer()
 			gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, VBO
 			gl.bufferData gl.ELEMENT_ARRAY_BUFFER, data, gl.STATIC_DRAW
 			return VBO
@@ -151,8 +167,8 @@ class GL_engine
 	###
 	deleteBuffer : (geometry) ->
 		gl.deleteBuffer geometry.vertices.VBO
-		gl.deleteBuffer geometry.colors.VBO if geometry.colors.hasColors
-		gl.deleteBuffer geometry.normals.VBO if geometry.normals.hasNormals
+		gl.deleteBuffer geometry.colors.VBO if geometry.hasColors
+		gl.deleteBuffer geometry.normals.VBO if geometry.hasNormals
 
 		gl.deleteBuffer geometry.vertexIndex.EBO if geometry.getClassType is "Mesh"
 
@@ -162,23 +178,23 @@ class GL_engine
 	###
 	render : (geometry) ->
 		if gl
-			topMatrix = peekMatrix()
-			uniformMatrix shaderProgram, "modelViewMatrix", false, topMatrix
+			topMatrix = @peekMatrix()
+			@uniformMatrix "modelViewMatrix", false, topMatrix
 
-			if geometry.normals.hasNormals
+			if geometry.hasNormals
 				normalMatrix = M4x4.inverseOrthonormal(topMatrix);	
-				uniformMatrix shaderProgram, "normalMatrix", false, M4x4.transpose normalMatrix
+				@uniformMatrix "normalMatrix", false, M4x4.transpose normalMatrix
 			# enable Attribute pointers/ bind buffers
-			if geometry.colors.hasColors
-				if gl.getAttribLocation(shaderProgram, "aColor") isNot -1
+			if geometry.hasColors
+				if gl.getAttribLocation(shaderProgram, "aColor") isnt -1
 					vertexAttribPointer shaderProgram, "aColor", 3, geometry.colors.VBO
 
 
-			if gl.getAttribLocation(shaderProgram, "aVertex") isNot -1
+			if gl.getAttribLocation(shaderProgram, "aVertex") isnt -1
 				vertexAttribPointer shaderProgram, "aVertex", 3, geometry.vertices.VBO
 
 			# render everything to screen
-			if geometry.getClass() is "Mesh"
+			if geometry.getClassType() is "Mesh"
 				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
 				gl.drawElemets gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0
 			else
@@ -207,7 +223,7 @@ class GL_engine
 	@param {Number} size - in pixels	
 	###
 	pointSize : (size) ->
-		uniformf shaderProgram, "pointSize", size
+		@uniformf "pointSize", size
 
 
 	###
@@ -217,13 +233,13 @@ class GL_engine
 	@param {Number} quadratic	
 	###
 	attenuation : (constant, linear, quadratic) ->
-		uniformf shaderProgram, "attenuation", [constant, linear, quadratic]
+		@uniformf "attenuation", [constant, linear, quadratic]
 
-	perspective = (fovy, aspect, near, far) ->
+	perspective : (fovy, aspect, near, far) ->
 
 		if arguments.length is 0
 			fovy = 60
-			aspect = width / height
+			aspect = @width / @height
 			near = 0.1
 			far = 1000
 
@@ -238,47 +254,31 @@ class GL_engine
 		C = -(far + near) / (far - near)
 		D = -2 * far * near / (far - near)
 		projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 0, 0, D, 0)
-		uniformMatrix shaderProgram, "projectionMatrix", false, projectionMatrix  if shaderProgram
+		@uniformMatrix "projectionMatrix", false, projectionMatrix  if shaderProgram
 
-	###
-	Get the height of the canvas.
-	@name GL_engine#height
-	@returns {Number}
-	###	
+	onRender : (func) ->
+		usersRender = func
+
+
+
 	@__defineGetter__ "height", ->
 		canvas.height
 
-	###
-	Get the width of the canvas.
-	@name GL_engine#height
-	@returns {Number}
-	###	
 	@__defineGetter__ "width", ->
 		canvas.width
-
-	###
-	Get the framerate of GL_engine.
-	@name GL_engine#framerate
-	@returns {Number}
-	###	
+	
 	@__defineGetter__ "frameRate", ->
 		frameRate
-
-	###
-	Get the VERSION of GL_engine.
-	@name GL_engine#VERSION
-	@returns {Number}
-	###	
+	
 	@__defineGetter__ "VERSION", ->
 		VERSION
 
-	###
-	Set the external user's render function
-	@name GL_engine#framerate
-	@returns {Number}
-	###	
-	@__defineSetter__ "usersRender", (val) ->
-		usersRender = val
+
+
+
+
+
+
 
 
 
@@ -291,7 +291,7 @@ class GL_engine
 	@param {Float32Array} mat
 	###		 
 	pushMatrix : ->
-		matrixStack.push peekMatrix()
+		matrixStack.push @peekMatrix()
 
 	###
 	Pops off the matrix on top of the matrix stack.
@@ -315,7 +315,7 @@ class GL_engine
 		matrixStack[matrixStack.length - 1] = mat
 
 	multMatrix : (mat) ->
-		loadMatrix M4x4.mul peekMatrix(), mat
+		@loadMatrix M4x4.mul @peekMatrix(), mat
 
 	##################################################
 	# Public Modelview matrix math operations
@@ -330,7 +330,7 @@ class GL_engine
 	###
 	scale : (sx, sy, sz) ->
 		smat = (if (not sy and not sz) then M4x4.scale1(sx, M4x4.I) else M4x4.scale3(sx, sy, sz, M4x4.I))
-		loadMatrix M4x4.mul(peekMatrix(), smat)
+		@loadMatrix M4x4.mul(@peekMatrix(), smat)
 	
 
 	###
@@ -342,7 +342,7 @@ class GL_engine
 	###
 	translate : (tx, ty, tz) ->
 		trans = M4x4.translate3(tx, ty, tz, M4x4.I)
-		loadMatrix M4x4.mul(peekMatrix(), trans)
+		@loadMatrix M4x4.mul(@peekMatrix(), trans)
 	
 
 	###
@@ -353,7 +353,7 @@ class GL_engine
 	###
 	rotateX : (radians) ->
 		rotMat = M4x4.rotate(radians, V3.$(1,0,0), M4x4.I)
-		loadMatrix M4x4.mul(peekMatrix(), rotMat)
+		@loadMatrix M4x4.mul(@peekMatrix(), rotMat)
 	
 	###
 	Multiply the matrix at the top of the model view matrix
@@ -363,7 +363,7 @@ class GL_engine
 	###
 	rotateY : (radians) ->
 		rotMat = M4x4.rotate(radians, V3.$(0,1,0), M4x4.I)
-		loadMatrix M4x4.mul(peekMatrix(), rotMat)
+		loadMatrix M4x4.mul(@peekMatrix(), rotMat)
 
 	###
 	Multiply the matrix at the top of the model view matrix
@@ -373,11 +373,11 @@ class GL_engine
 	###
 	rotateZ : (radians) ->
 		rotMat = M4x4.rotate(radians, V3.$(0,0,1), M4x4.I)
-		loadMatrix M4x4.mul(peekMatrix(), rotMat)
+		@loadMatrix M4x4.mul(@peekMatrix(), rotMat)
 
 	rotate : (radians, a) ->
 		rotMat = M4x4.rotate(radians, a, M4x4.I)
-		loadMatrix M4x4.mul(peekMatrix(), rotMat)
+		@loadMatrix M4x4.mul(@peekMatrix(), rotMat)
     
 
 ############################################################################
@@ -406,12 +406,12 @@ class GL_engine
 
 			
 	###
-	@param {String} vetexShaderSource
+	@param {String} vertexShaderSource
 	@param {String} fragmentShaderSource
 	###		 
-	createShaderProgram = (vetexShaderSource, fragmentShaderSource) ->
+	createShaderProgram : (vertexShaderSource, fragmentShaderSource) ->
 		vertexShaderObject = gl.createShader(gl.VERTEX_SHADER)
-		gl.shaderSource vertexShaderObject, vetexShaderSource
+		gl.shaderSource vertexShaderObject, vertexShaderSource
 		gl.compileShader vertexShaderObject
 		throw gl.getShaderInfoLog(vertexShaderObject)  unless gl.getShaderParameter(vertexShaderObject, gl.COMPILE_STATUS)
 
@@ -429,28 +429,29 @@ class GL_engine
 		shaderProgram = programObject
 		
 		#Tell WebGL to use shader
-		gl.useProgram shaderProgram
-
-		#set the static uniforms 
-		setDefaultUniforms()
-
+		@useProgram shaderProgram
 
 		return programObject
 
 
+	useProgram : (program) ->
+		shaderProgram = program
+		gl.useProgram shaderProgram
+		alreadySet = false
+		i = 0
 
-	requestAnimationFrame = ->
-		window.requestAnimationFrame or 
-		window.webkitRequestAnimationFrame or 
-		window.mozRequestAnimationFrame or 
-		window.oRequestAnimationFrame or 
-		window.msRequestAnimationFrame or 
-		(callback) ->
-			window.setTimeout callback, 1000.0 / 60.0
+		while i < programCaches.length
+			alreadySet = true  if shaderProgram and programCaches[i] is shaderProgram
+			i++
+
+		if alreadySet is false
+			@setDefaultUniforms()
+			programCaches.push shaderProgram
+
 
 	animationLoop = ->
 		renderLoop()
-		PSrequestAnimationFrame animationLoop
+		requestAnimationFrame animationLoop, canvas
 
 
 	###
@@ -476,25 +477,12 @@ class GL_engine
 
 
 
-	setDefaultUniforms = ->
-		uniformf shaderProgram, "pointSize", 1
-		uniformf shaderProgram, "attenuation", [ attn[0], attn[1], attn[2] ]
-		uniformMatrix shaderProgram, "projectionMatrix", false, projectionMatrix
+	setDefaultUniforms : ->
+		@uniformf "pointSize", 1
+		@uniformf "attenuation", [ attn[0], attn[1], attn[2] ]
+		@uniformMatrix "projectionMatrix", false, projectionMatrix
 
 
-	useProgram = (program) ->
-		shaderProgram = program
-		gl.useProgram shaderProgram
-		alreadySet = false
-		i = 0
-
-		while i < programCaches.length
-			alreadySet = true  if shaderProgram and programCaches[i] is shaderProgram
-			i++
-
-		if alreadySet is false
-			setDefaultUniforms()
-			programCaches.push shaderProgram
 
 
 # weiter mit 1400

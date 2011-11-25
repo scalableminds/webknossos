@@ -15,6 +15,11 @@ $ ->
       "js/event_emitter.js",
       "js/controller.js",
       "js/model.js",
-      "js/demo.js"
+      "js/demo.js",
+      "js/libs/GL_engine/geometry.js",
+      "js/libs/GL_engine/geometry_pointcloud.js",
+      "js/libs/GL_engine/geometry_mesh.js",
+      "js/libs/GL_engine/libs/c3.js",
+      "js/libs/GL_engine/libs/mjs.js"
     ]
     complete: () -> start()

@@ -1,23 +1,27 @@
 var GL_engine;
 GL_engine = (function() {
-  var VERSION, animationLoop, canvas, createShaderProgram, disableVertexAttribPointer, empty_func, frameCount, frameRate, frames, geometry, gl, lastTime, matrixStack, perspective, programCaches, renderLoop, requestAnimationFrame, setDefaultUniforms, shaderProgram, useProgram, usersRender, vertexAttribPointer;
+  var VERSION, animationLoop, attn, canvas, disableVertexAttribPointer, empty_func, frameCount, frameRate, frames, geometry, gl, lastTime, matrixStack, programCaches, projectionMatrix, renderLoop, requestAnimationFrame, shaderProgram, usersRender, vertexAttribPointer;
   empty_func = function() {};
   gl = null;
   canvas = null;
+  requestAnimationFrame = empty_func;
   frames = 0;
   frameCount = 0;
   lastTime = null;
-  matrixStack = null;
+  matrixStack = [];
   programCaches = [];
+  geometry = [];
+  attn = [0.01, 0.0, 0.003];
+  projectionMatrix = null;
   VERSION = 0.1;
   frameRate = 0;
   usersRender = empty_func;
-  geometry = [];
   shaderProgram = null;
   function GL_engine(cvs, glAttribs) {
     var contextNames, i, normalMatrix;
     lastTime = new Date();
     frames = 0;
+    canvas = cvs;
     contextNames = ["webgl", "experimental-webgl", "moz-webgl", "webkit-3d"];
     i = 0;
     while (i < contextNames.length) {
@@ -33,10 +37,15 @@ GL_engine = (function() {
       alert("Your browser does not support WebGL.");
     }
     gl.viewport(0, 0, parseInt(cvs.width, 10), parseInt(cvs.height, 10));
-    perspective();
+    this.perspective();
     normalMatrix = M4x4.I;
     gl.enable(gl.DEPTH_TEST);
-    background([1, 1, 1, 1]);
+    this.background([1, 1, 1, 1]);
+    requestAnimationFrame = (function() {
+      return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function(callback, cvs) {
+        return window.setTimeout(callback, 1000.0 / 60.0);
+      };
+    })();
     animationLoop();
   }
   /*
@@ -49,18 +58,17 @@ GL_engine = (function() {
     varLocation = gl.getUniformLocation(shaderProgram, varName);
     if (varLocation !== null) {
       if (varValue.length === 4) {
-        gl.uniform4iv(varLocation, varValue);
+        return gl.uniform4iv(varLocation, varValue);
       } else if (varValue.length === 3) {
-        gl.uniform3iv(varLocation, varValue);
+        return gl.uniform3iv(varLocation, varValue);
       } else if (varValue.length === 2) {
-        gl.uniform2iv(varLocation, varValue);
+        return gl.uniform2iv(varLocation, varValue);
       } else {
-        gl.uniform1i(varLocation, varValue);
+        return gl.uniform1i(varLocation, varValue);
       }
     } else {
-
+      return console.log("uniform var '" + varName + "' was not found.");
     }
-    return console.log("uniform var '" + varName + "' was not found.");
   };
   /*
   	Set a uniform float
@@ -72,18 +80,17 @@ GL_engine = (function() {
     varLocation = gl.getUniformLocation(shaderProgram, varName);
     if (varLocation !== null) {
       if (varValue.length === 4) {
-        gl.uniform4fv(varLocation, varValue);
+        return gl.uniform4fv(varLocation, varValue);
       } else if (varValue.length === 3) {
-        gl.uniform3fv(varLocation, varValue);
+        return gl.uniform3fv(varLocation, varValue);
       } else if (varValue.length === 2) {
-        gl.uniform2fv(varLocation, varValue);
+        return gl.uniform2fv(varLocation, varValue);
       } else {
-        gl.uniform1f(varLocation, varValue);
+        return gl.uniform1f(varLocation, varValue);
       }
     } else {
-
+      return console.log("uniform var '" + varName + "' was not found.");
     }
-    return console.log("uniform var '" + varName + "' was not found.");
   };
   /*
   	Sets a uniform matrix.
@@ -96,16 +103,15 @@ GL_engine = (function() {
     varLocation = gl.getUniformLocation(shaderProgram, varName);
     if (varLocation !== null) {
       if (matrix.length === 16) {
-        gl.uniformMatrix4fv(varLocation, transpose, matrix);
+        return gl.uniformMatrix4fv(varLocation, transpose, matrix);
       } else if (matrix.length === 9) {
-        gl.uniformMatrix3fv(varLocation, transpose, matrix);
+        return gl.uniformMatrix3fv(varLocation, transpose, matrix);
       } else {
-        gl.uniformMatrix2fv(varLocation, transpose, matrix);
+        return gl.uniformMatrix2fv(varLocation, transpose, matrix);
       }
     } else {
-
+      return console.log("Uniform matrix '" + varName + "' was not found.");
     }
-    return console.log("Uniform matrix '" + varName + "' was not found.");
   };
   /*
   	Create a buffer object which will contain
@@ -120,7 +126,7 @@ GL_engine = (function() {
   GL_engine.prototype.createArrayBufferObject = function(data) {
     var VBO;
     if (gl) {
-      VBO = gl.CreateBuffer();
+      VBO = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, VBO);
       gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
       return VBO;
@@ -139,7 +145,7 @@ GL_engine = (function() {
   GL_engine.prototype.createElementArrayBufferObject = function(data) {
     var VBO;
     if (gl) {
-      VBO = gl.CreateBuffer();
+      VBO = gl.createBuffer();
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, VBO);
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, gl.STATIC_DRAW);
       return VBO;
@@ -151,10 +157,10 @@ GL_engine = (function() {
   	*/
   GL_engine.prototype.deleteBuffer = function(geometry) {
     gl.deleteBuffer(geometry.vertices.VBO);
-    if (geometry.colors.hasColors) {
+    if (geometry.hasColors) {
       gl.deleteBuffer(geometry.colors.VBO);
     }
-    if (geometry.normals.hasNormals) {
+    if (geometry.hasNormals) {
       gl.deleteBuffer(geometry.normals.VBO);
     }
     if (geometry.getClassType === "Mesh") {
@@ -168,21 +174,21 @@ GL_engine = (function() {
   GL_engine.prototype.render = function(geometry) {
     var normalMatrix, topMatrix;
     if (gl) {
-      topMatrix = peekMatrix();
-      uniformMatrix(shaderProgram, "modelViewMatrix", false, topMatrix);
-      if (geometry.normals.hasNormals) {
+      topMatrix = this.peekMatrix();
+      this.uniformMatrix("modelViewMatrix", false, topMatrix);
+      if (geometry.hasNormals) {
         normalMatrix = M4x4.inverseOrthonormal(topMatrix);
-        uniformMatrix(shaderProgram, "normalMatrix", false, M4x4.transpose(normalMatrix));
+        this.uniformMatrix("normalMatrix", false, M4x4.transpose(normalMatrix));
       }
-      if (geometry.colors.hasColors) {
-        if (gl.getAttribLocation(shaderProgram, "aColor")(isNot(-1))) {
+      if (geometry.hasColors) {
+        if (gl.getAttribLocation(shaderProgram, "aColor") !== -1) {
           vertexAttribPointer(shaderProgram, "aColor", 3, geometry.colors.VBO);
         }
       }
-      if (gl.getAttribLocation(shaderProgram, "aVertex")(isNot(-1))) {
+      if (gl.getAttribLocation(shaderProgram, "aVertex") !== -1) {
         vertexAttribPointer(shaderProgram, "aVertex", 3, geometry.vertices.VBO);
       }
-      if (geometry.getClass() === "Mesh") {
+      if (geometry.getClassType() === "Mesh") {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO);
         gl.drawElemets(gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0);
       } else {
@@ -211,7 +217,7 @@ GL_engine = (function() {
   	@param {Number} size - in pixels	
   	*/
   GL_engine.prototype.pointSize = function(size) {
-    return uniformf(shaderProgram, "pointSize", size);
+    return this.uniformf("pointSize", size);
   };
   /*
   	Set the point attenuation factors.	
@@ -220,13 +226,13 @@ GL_engine = (function() {
   	@param {Number} quadratic	
   	*/
   GL_engine.prototype.attenuation = function(constant, linear, quadratic) {
-    return uniformf(shaderProgram, "attenuation", [constant, linear, quadratic]);
+    return this.uniformf("attenuation", [constant, linear, quadratic]);
   };
-  perspective = function(fovy, aspect, near, far) {
-    var A, B, C, D, X, Y, projectionMatrix, xmax, xmin, ymax, ymin;
+  GL_engine.prototype.perspective = function(fovy, aspect, near, far) {
+    var A, B, C, D, X, Y, xmax, xmin, ymax, ymin;
     if (arguments.length === 0) {
       fovy = 60;
-      aspect = width / height;
+      aspect = this.width / this.height;
       near = 0.1;
       far = 1000;
     }
@@ -242,55 +248,30 @@ GL_engine = (function() {
     D = -2 * far * near / (far - near);
     projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 0, 0, D, 0);
     if (shaderProgram) {
-      return uniformMatrix(shaderProgram, "projectionMatrix", false, projectionMatrix);
+      return this.uniformMatrix("projectionMatrix", false, projectionMatrix);
     }
   };
-  /*
-  	Get the height of the canvas.
-  	@name GL_engine#height
-  	@returns {Number}
-  	*/
+  GL_engine.prototype.onRender = function(func) {
+    return usersRender = func;
+  };
   GL_engine.__defineGetter__("height", function() {
     return canvas.height;
   });
-  /*
-  	Get the width of the canvas.
-  	@name GL_engine#height
-  	@returns {Number}
-  	*/
   GL_engine.__defineGetter__("width", function() {
     return canvas.width;
   });
-  /*
-  	Get the framerate of GL_engine.
-  	@name GL_engine#framerate
-  	@returns {Number}
-  	*/
   GL_engine.__defineGetter__("frameRate", function() {
     return frameRate;
   });
-  /*
-  	Get the VERSION of GL_engine.
-  	@name GL_engine#VERSION
-  	@returns {Number}
-  	*/
   GL_engine.__defineGetter__("VERSION", function() {
     return VERSION;
-  });
-  /*
-  	Set the external user's render function
-  	@name GL_engine#framerate
-  	@returns {Number}
-  	*/
-  GL_engine.__defineSetter__("usersRender", function(val) {
-    return usersRender = val;
   });
   /*
   	Pushes on a copy of the matrix at the top of the matrix stack.
   	@param {Float32Array} mat
   	*/
   GL_engine.prototype.pushMatrix = function() {
-    return matrixStack.push(peekMatrix());
+    return matrixStack.push(this.peekMatrix());
   };
   /*
   	Pops off the matrix on top of the matrix stack.
@@ -314,7 +295,7 @@ GL_engine = (function() {
     return matrixStack[matrixStack.length - 1] = mat;
   };
   GL_engine.prototype.multMatrix = function(mat) {
-    return loadMatrix(M4x4.mul(peekMatrix(), mat));
+    return this.loadMatrix(M4x4.mul(this.peekMatrix(), mat));
   };
   /*
   	@name PointStream#scale
@@ -327,7 +308,7 @@ GL_engine = (function() {
   GL_engine.prototype.scale = function(sx, sy, sz) {
     var smat;
     smat = (!sy && !sz ? M4x4.scale1(sx, M4x4.I) : M4x4.scale3(sx, sy, sz, M4x4.I));
-    return loadMatrix(M4x4.mul(peekMatrix(), smat));
+    return this.loadMatrix(M4x4.mul(this.peekMatrix(), smat));
   };
   /*
   	Multiplies the top of the matrix stack with a translation matrix.
@@ -339,7 +320,7 @@ GL_engine = (function() {
   GL_engine.prototype.translate = function(tx, ty, tz) {
     var trans;
     trans = M4x4.translate3(tx, ty, tz, M4x4.I);
-    return loadMatrix(M4x4.mul(peekMatrix(), trans));
+    return this.loadMatrix(M4x4.mul(this.peekMatrix(), trans));
   };
   /*
   	Multiply the matrix at the top of the model view matrix
@@ -350,7 +331,7 @@ GL_engine = (function() {
   GL_engine.prototype.rotateX = function(radians) {
     var rotMat;
     rotMat = M4x4.rotate(radians, V3.$(1, 0, 0), M4x4.I);
-    return loadMatrix(M4x4.mul(peekMatrix(), rotMat));
+    return this.loadMatrix(M4x4.mul(this.peekMatrix(), rotMat));
   };
   /*
   	Multiply the matrix at the top of the model view matrix
@@ -361,7 +342,7 @@ GL_engine = (function() {
   GL_engine.prototype.rotateY = function(radians) {
     var rotMat;
     rotMat = M4x4.rotate(radians, V3.$(0, 1, 0), M4x4.I);
-    return loadMatrix(M4x4.mul(peekMatrix(), rotMat));
+    return loadMatrix(M4x4.mul(this.peekMatrix(), rotMat));
   };
   /*
   	Multiply the matrix at the top of the model view matrix
@@ -372,12 +353,12 @@ GL_engine = (function() {
   GL_engine.prototype.rotateZ = function(radians) {
     var rotMat;
     rotMat = M4x4.rotate(radians, V3.$(0, 0, 1), M4x4.I);
-    return loadMatrix(M4x4.mul(peekMatrix(), rotMat));
+    return this.loadMatrix(M4x4.mul(this.peekMatrix(), rotMat));
   };
   GL_engine.prototype.rotate = function(radians, a) {
     var rotMat;
     rotMat = M4x4.rotate(radians, a, M4x4.I);
-    return loadMatrix(M4x4.mul(peekMatrix(), rotMat));
+    return this.loadMatrix(M4x4.mul(this.peekMatrix(), rotMat));
   };
   /*
   	@param {String} varName
@@ -407,13 +388,13 @@ GL_engine = (function() {
     }
   };
   /*
-  	@param {String} vetexShaderSource
+  	@param {String} vertexShaderSource
   	@param {String} fragmentShaderSource
   	*/
-  createShaderProgram = function(vetexShaderSource, fragmentShaderSource) {
+  GL_engine.prototype.createShaderProgram = function(vertexShaderSource, fragmentShaderSource) {
     var fragmentShaderObject, programObject, vertexShaderObject;
     vertexShaderObject = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertexShaderObject, vetexShaderSource);
+    gl.shaderSource(vertexShaderObject, vertexShaderSource);
     gl.compileShader(vertexShaderObject);
     if (!gl.getShaderParameter(vertexShaderObject, gl.COMPILE_STATUS)) {
       throw gl.getShaderInfoLog(vertexShaderObject);
@@ -432,18 +413,29 @@ GL_engine = (function() {
       throw "Error linking shaders.";
     }
     shaderProgram = programObject;
-    gl.useProgram(shaderProgram);
-    setDefaultUniforms();
+    this.useProgram(shaderProgram);
     return programObject;
   };
-  requestAnimationFrame = function() {
-    return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function(callback) {
-      return window.setTimeout(callback, 1000.0 / 60.0);
-    };
+  GL_engine.prototype.useProgram = function(program) {
+    var alreadySet, i;
+    shaderProgram = program;
+    gl.useProgram(shaderProgram);
+    alreadySet = false;
+    i = 0;
+    while (i < programCaches.length) {
+      if (shaderProgram && programCaches[i] === shaderProgram) {
+        alreadySet = true;
+      }
+      i++;
+    }
+    if (alreadySet === false) {
+      this.setDefaultUniforms();
+      return programCaches.push(shaderProgram);
+    }
   };
   animationLoop = function() {
     renderLoop();
-    return PSrequestAnimationFrame(animationLoop);
+    return requestAnimationFrame(animationLoop, canvas);
   };
   /*
   	main renderLoop
@@ -463,27 +455,10 @@ GL_engine = (function() {
       return lastTime = now;
     }
   };
-  setDefaultUniforms = function() {
-    uniformf(shaderProgram, "pointSize", 1);
-    uniformf(shaderProgram, "attenuation", [attn[0], attn[1], attn[2]]);
-    return uniformMatrix(shaderProgram, "projectionMatrix", false, projectionMatrix);
-  };
-  useProgram = function(program) {
-    var alreadySet, i;
-    shaderProgram = program;
-    gl.useProgram(shaderProgram);
-    alreadySet = false;
-    i = 0;
-    while (i < programCaches.length) {
-      if (shaderProgram && programCaches[i] === shaderProgram) {
-        alreadySet = true;
-      }
-      i++;
-    }
-    if (alreadySet === false) {
-      setDefaultUniforms();
-      return programCaches.push(shaderProgram);
-    }
+  GL_engine.prototype.setDefaultUniforms = function() {
+    this.uniformf("pointSize", 1);
+    this.uniformf("attenuation", [attn[0], attn[1], attn[2]]);
+    return this.uniformMatrix("projectionMatrix", false, projectionMatrix);
   };
   return GL_engine;
 })();

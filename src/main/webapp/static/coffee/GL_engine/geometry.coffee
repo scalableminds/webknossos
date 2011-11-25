@@ -1,6 +1,5 @@
 class Geometry
-        constructor : ->
-
+	constructor : ->
 		@vertices = 
 			VBO : null
 			length : null
@@ -8,16 +7,19 @@ class Geometry
 		@colors = 
 			VBO : null
 			length : null
-			hasColors : null				
-
+				
 		@normals = 
 			VBO : null
-			length : null	
-			hasNormals : null
+			length : null
+	
+		@hasNormals = false
+		@hasColors = false
+		@fragmentShader = null
+		@vertexShader = null
 
 		@type = "Geometry"				
 
-	setVerticies : (data) -> 
+	setVertices : (data) -> 
 		@vertices.VBO = data
 		@vertices.length = data.length
 

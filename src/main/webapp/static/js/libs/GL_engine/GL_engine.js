@@ -36,7 +36,7 @@ GL_engine = (function() {
     if (!gl) {
       alert("Your browser does not support WebGL.");
     }
-    gl.viewport(0, 0, parseInt(cvs.width, 10), parseInt(cvs.height, 10));
+    gl.viewport(0, 0, parseInt(canvas.width, 10), parseInt(canvas.height, 10));
     this.perspective();
     normalMatrix = M4x4.I;
     gl.enable(gl.DEPTH_TEST);
@@ -232,7 +232,7 @@ GL_engine = (function() {
     var A, B, C, D, X, Y, xmax, xmin, ymax, ymin;
     if (arguments.length === 0) {
       fovy = 60;
-      aspect = this.width / this.height;
+      aspect = canvas.width / canvas.height;
       near = 0.1;
       far = 1000;
     }
@@ -253,6 +253,15 @@ GL_engine = (function() {
   };
   GL_engine.prototype.onRender = function(func) {
     return usersRender = func;
+  };
+  GL_engine.prototype.getHeight = function() {
+    return canvas.height;
+  };
+  GL_engine.prototype.getWidth = function() {
+    return canvas.width;
+  };
+  GL_engine.prototype.getFramerate = function() {
+    return frameRate;
   };
   GL_engine.__defineGetter__("height", function() {
     return canvas.height;

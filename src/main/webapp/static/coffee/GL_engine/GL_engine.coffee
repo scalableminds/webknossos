@@ -47,7 +47,7 @@ class GL_engine
 			i++
 
 		alert "Your browser does not support WebGL."  unless gl
-		gl.viewport 0, 0, parseInt(cvs.width, 10), parseInt(cvs.height, 10)
+		gl.viewport 0, 0, parseInt(canvas.width, 10), parseInt(canvas.height, 10)
 		@perspective()
 		normalMatrix = M4x4.I
 
@@ -239,7 +239,7 @@ class GL_engine
 
 		if arguments.length is 0
 			fovy = 60
-			aspect = @width / @height
+			aspect = canvas.width / canvas.height
 			near = 0.1
 			far = 1000
 
@@ -259,7 +259,15 @@ class GL_engine
 	onRender : (func) ->
 		usersRender = func
 
+	getHeight : ->
+		return canvas.height
 
+	getWidth : ->
+		return canvas.width
+
+
+	getFramerate: ->
+		return frameRate
 
 	@__defineGetter__ "height", ->
 		canvas.height

@@ -19,13 +19,13 @@ class Geometry
 
 		@type = "Geometry"				
 
-	setVertices : (data) -> 
+	setVertices : (data, len) -> 
 		@vertices.VBO = data
-		@vertices.length = data.length
+		@vertices.length = len
 
-	setColors : (data) -> 
+	setColors : (data, len) -> 
 		@colors.VBO = data
-		@colors.length = data.length	
+		@colors.length = len
 		@hasColors = true
 
 	setNormals : (data) -> 

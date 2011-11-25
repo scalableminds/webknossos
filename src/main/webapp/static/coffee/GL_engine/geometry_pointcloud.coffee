@@ -3,10 +3,10 @@ class Pointcloud extends Geometry
 		super()
 		@type = "Pointcloud"
 
-	setVertices : (data) -> 
-		super data
+	setVertices : (data, len) -> 
+		super data, len
 
-	setColors : (data) ->
-		super data
+	setColors : (data, len) ->
+		super data, len
 
 

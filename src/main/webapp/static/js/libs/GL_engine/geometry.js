@@ -19,13 +19,13 @@ Geometry = (function() {
     this.vertexShader = null;
     this.type = "Geometry";
   }
-  Geometry.prototype.setVertices = function(data) {
+  Geometry.prototype.setVertices = function(data, len) {
     this.vertices.VBO = data;
-    return this.vertices.length = data.length;
+    return this.vertices.length = len;
   };
-  Geometry.prototype.setColors = function(data) {
+  Geometry.prototype.setColors = function(data, len) {
     this.colors.VBO = data;
-    this.colors.length = data.length;
+    this.colors.length = len;
     return this.hasColors = true;
   };
   Geometry.prototype.setNormals = function(data) {

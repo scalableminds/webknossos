@@ -10,9 +10,9 @@ vertexShader = "varying vec4 frontColor;attribute vec3 aVertex;attribute vec4 aC
 render = function() {
   var d, h, length_dir, n0, p, status, versch, y;
   if (mouseDown) {
-    y = -(eng.mouseX - eng.width / 2) / eng.width / 45;
+    y = -(eng.mouseX - eng.getWidth / 2) / eng.getWidth / 45;
     cam.yaw(y);
-    h = -(eng.mouseY - eng.height / 2) / eng.height / 8;
+    h = -(eng.mouseY - eng.getHeight / 2) / eng.getHeight / 8;
     cam.pos = V3.add(cam.pos, [0, h, 0]);
   }
   eng.loadMatrix(M4x4.makeLookAt(cam.pos, V3.add(cam.dir, cam.pos), cam.up));
@@ -27,7 +27,7 @@ render = function() {
   eng.render(pointcloud);
   eng.translate(p[0], p[1], p[2]);
   status = document.getElementById('status');
-  status.innerHTML = "" + (Math.floor(eng.frameRate)) + " Feng <br/> " + pointcloud.vertices.length + " Points <br />" + cam.pos;
+  status.innerHTML = "" + (Math.floor(eng.getFramerate())) + " Feng <br/> " + pointcloud.vertices.length + " Points <br />" + cam.pos;
 };
 start = function() {
   var progObj;
@@ -39,7 +39,7 @@ start = function() {
   progObj = eng.createShaderProgram(vertexShader, fragmentShader);
   eng.useProgram(progObj);
   eng.onRender(render);
-  eng.perspective(60, eng.width / eng.height, 15, 20);
+  eng.perspective(60, eng.getWidth / eng.getHeight, 15, 20);
   eng.background([0.9, 0.9, 0.9, 1]);
   eng.pointSize(5);
   return pointcloud = loadPointcloud();
@@ -73,8 +73,8 @@ loadPointcloud = function() {
         }
       }
     }
-    pointCloud.setVertices(eng.createArrayBufferObject(vertices));
-    pointCloud.setColors(eng.createArrayBufferObject(RGB_colors));
+    pointCloud.setVertices(eng.createArrayBufferObject(vertices), vertices.length);
+    pointCloud.setColors(eng.createArrayBufferObject(RGB_colors), RGB_colors.length);
     pointCloud.fragmentShader = fragmentShader;
     return pointCloud.vertexShader = vertexShader;
   };
@@ -96,6 +96,6 @@ changePerspectiveParams = function() {
   far = parseFloat(document.getElementById('far').value);
   fovy = parseFloat(document.getElementById('fovy').value);
   if (!isNaN(near) && !isNaN(far) && !isNaN(fovy)) {
-    eng.perspective(fovy, eng.width / eng.height, near, far);
+    eng.perspective(fovy, eng.getWidth / eng.getHeight, near, far);
   }
 };

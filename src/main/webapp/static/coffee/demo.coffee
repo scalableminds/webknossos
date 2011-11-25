@@ -61,10 +61,10 @@ render = ->
 
 	# MOUSE/CAMERA MOVEMENT
 	if mouseDown 
-		y = -(eng.mouseX - eng.width / 2) / eng.width / 45
+		y = -(eng.mouseX - eng.getWidth / 2) / eng.getWidth / 45
 		cam.yaw y
 	
-		h = -(eng.mouseY - eng.height / 2) / eng.height / 8
+		h = -(eng.mouseY - eng.getHeight / 2) / eng.getHeight / 8
 		cam.pos = V3.add cam.pos, [0, h, 0]
   
 	
@@ -92,7 +92,7 @@ render = ->
 		
 	# OUTPUT Feng
 	status = document.getElementById('status')
-	status.innerHTML = "#{Math.floor(eng.frameRate)} Feng <br/> #{pointcloud.vertices.length} Points <br />#{cam.pos}" 
+	status.innerHTML = "#{Math.floor(eng.getFramerate())} Feng <br/> #{pointcloud.vertices.length} Points <br />#{cam.pos}" 
 	
 	# OUTPUT CAMERA POSITION
 	# cameraPos = document.getElementById('camera')
@@ -117,7 +117,7 @@ start = ->
 	eng.useProgram progObj
 
 	eng.onRender render
-	eng.perspective 60, eng.width / eng.height, 15, 20
+	eng.perspective 60, eng.getWidth / eng.getHeight, 15, 20
 	eng.background [0.9, 0.9 ,0.9 ,1]
 	eng.pointSize 5
 	
@@ -175,8 +175,8 @@ loadPointcloud = ->
 		# OTHER POINTSTREAM VALUES / CALLBACKS
 
 
-		pointCloud.setVertices eng.createArrayBufferObject vertices
-		pointCloud.setColors eng.createArrayBufferObject RGB_colors
+		pointCloud.setVertices (eng.createArrayBufferObject vertices), vertices.length
+		pointCloud.setColors (eng.createArrayBufferObject RGB_colors), RGB_colors.length
 		pointCloud.fragmentShader = fragmentShader
 		pointCloud.vertexShader = vertexShader
 
@@ -202,5 +202,5 @@ changePerspectiveParams = ->
 	fovy = parseFloat document.getElementById('fovy').value
 	
 	if !isNaN(near) and !isNaN(far) and !isNaN(fovy)
-		eng.perspective fovy, eng.width / eng.height, near, far
+		eng.perspective fovy, eng.getWidth / eng.getHeight, near, far
 		return	

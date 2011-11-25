@@ -13,11 +13,11 @@ Pointcloud = (function() {
     Pointcloud.__super__.constructor.call(this);
     this.type = "Pointcloud";
   }
-  Pointcloud.prototype.setVertices = function(data) {
-    return Pointcloud.__super__.setVertices.call(this, data);
+  Pointcloud.prototype.setVertices = function(data, len) {
+    return Pointcloud.__super__.setVertices.call(this, data, len);
   };
-  Pointcloud.prototype.setColors = function(data) {
-    return Pointcloud.__super__.setColors.call(this, data);
+  Pointcloud.prototype.setColors = function(data, len) {
+    return Pointcloud.__super__.setColors.call(this, data, len);
   };
   return Pointcloud;
 })();

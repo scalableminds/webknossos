@@ -1302,7 +1302,7 @@ var PointStream = (function() {
 	
     /**
       Renders a point cloud.
-      @param {} pointCloud
+      @param {} pointCloud(
     */
     this.render = function(pointCloud){
     

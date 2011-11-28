@@ -141,7 +141,7 @@ Geometry = (function() {
       this.sweep_status.add([a, b]);
       if (b.dy === this.current_y) this.edges_to_remove.push([a, b]);
       i = this.output.indexOf(a.face);
-      return (_ref = this.output).splice.apply(_ref, [i, 1].concat(__slice.call(a.face.splitAtEdge(a, b))));
+      return (_ref = this.output).splice.apply(_ref, [i, 1].concat(__slice.call(a.face.splitAtEdges(new Edge2(a, b)))));
     };
 
     return Monotonizer;

@@ -3,6 +3,7 @@ describe 'geometry', ->
     g = null
     beforeEach ->
       g = new Geometry()
+      # cube from (0,0,0) to (2,2,2)
       g.load([
         [[2,0,0],[2,2,0],[0,2,0],[0,0,0]],
         [[0,0,0],[0,0,2],[2,0,2],[2,0,0]],
@@ -11,6 +12,7 @@ describe 'geometry', ->
         [[2,2,0],[2,2,2],[0,2,2],[0,2,0]],
         [[2,0,0],[2,0,2],[2,2,2],[2,2,0]]
       ])
+      # cube from (1,1,1) to (3,3,3)
       g.load([
         [[3,1,1],[3,3,1],[1,3,1],[1,1,1]],
         [[1,1,1],[1,1,3],[3,1,3],[3,1,1]],
@@ -96,13 +98,13 @@ describe 'geometry', ->
     
     # do the work
     # split at (2,7),(1,1)
-    faces = face.splitAtEdge(face.vertices[4], face.vertices[9])
+    faces = face.splitAtEdges(new Edge2(face.vertices[4], face.vertices[9]))
     
     # split at (3,4),(4,6)
-    faces1 = faces[0].splitAtEdge(face.vertices[8], face.vertices[6])
+    faces1 = faces[0].splitAtEdges(new Edge2(face.vertices[8], face.vertices[6]))
     
     # split at (0,0),(2,9)
-    faces2 = faces[1].splitAtEdge(face.vertices[0], face.vertices[3])
+    faces2 = faces[1].splitAtEdges(new Edge2(face.vertices[0], face.vertices[3]))
     
     faces = faces1.concat faces2
     
@@ -111,6 +113,55 @@ describe 'geometry', ->
     expect(faces[1].vertices.length).toEqual(3)
     expect(faces[2].vertices.length).toEqual(4)
     expect(faces[3].vertices.length).toEqual(7)
+    
+    # test if adjacent links work
+    test_round = (vertices, direction) ->
+      i = 0
+      v = vertices[0].adj[direction]
+      while v != vertices[0]
+        return false if vertices.indexOf(v) == -1
+        v = v.adj[direction]
+        return false if i++ == vertices.length - 1
+      true
+          
+    for i in [0...faces.length]
+      expect(test_round(faces[i].vertices, 0)).toBeTruthy()
+      expect(test_round(faces[i].vertices, 1)).toBeTruthy()
+  
+  it 'should split a polygon by adding a segmented line', ->
+    
+    # setup
+    face = face2ize [
+      [0,0,0],
+      [0,10,0],
+      [4,10,0],
+      [2,9,0],
+      [2,7,0],
+      [7,8,0],
+      [4,6,0],
+      [5,3,0],
+      [3,4,0],
+      [1,1,0],
+      [4,1,0],
+      [6,2,0],
+      [5,0,0]
+    ]
+    
+    # do the work
+    # split at (2,7),(1,1)
+    v0 = face.vertices[4] # (2,7)
+    v1 = new Vertex2(2, 4)
+    v2 = new Vertex2(1, 4)
+    v3 = face.vertices[9] # (1,1)
+    faces = face.splitAtEdges(
+      new Edge2(v0, v1), 
+      new Edge2(v1, v2), 
+      new Edge2(v2, v3)
+    )
+    
+    # simple counting tests
+    expect(faces[0].vertices.length).toEqual(8)
+    expect(faces[1].vertices.length).toEqual(11)
     
     # test if adjacent links work
     test_round = (vertices, direction) ->

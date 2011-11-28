@@ -1,5 +1,5 @@
 var Edge2, Edge2Set, Edge3, Edge3Set, Face2, Face3, GeometrySet, Polyhedron, Vertex2, Vertex2Edge3Dictionary, Vertex2Set, Vertex3, Vertex3Set, Vertex3Vertex2Dictionary;
-var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
+var __slice = Array.prototype.slice, __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor; child.__super__ = parent.prototype; return child; };
 
 Polyhedron = (function() {
 
@@ -148,51 +148,68 @@ Face2 = (function() {
     }
   }
 
-  Face2.prototype.splitAtEdge = function(a, b) {
-    var edges0, edges1, i, last, v, v0, v1, vertices0, vertices1, _a, _b, _last, _ref, _ref2;
-    _a = a.clone();
-    _b = b.clone();
-    a.adj[0] = b;
-    b.adj[1] = a;
-    vertices0 = [a, b];
-    last = b;
-    v = b.adj[0];
-    while (v !== a) {
-      vertices0.push(v);
-      _last = v;
-      v = last === v.adj[0] ? v.adj[1] : v.adj[0];
-      last = _last;
+  Face2.prototype.splitAtEdges = function() {
+    var buildFace, edge0, edge1, edges, i, v, vertices, _first, _last, _ref, _ref2, _ref3, _vertices;
+    edges = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+    if (edges.length < 1) return false;
+    buildFace = function(vertices0) {
+      var edges0, first, i, last, v, v0, v1, _last, _ref;
+      first = vertices0[0];
+      last = vertices0[vertices0.length - 1];
+      v = last.adj[0];
+      while (v !== first) {
+        vertices0.push(v);
+        _last = v;
+        v = last === v.adj[0] ? v.adj[1] : v.adj[0];
+        last = _last;
+      }
+      edges0 = [];
+      for (i = 1, _ref = vertices0.length; 1 <= _ref ? i < _ref : i > _ref; 1 <= _ref ? i++ : i--) {
+        v0 = vertices0[i];
+        v1 = vertices0[(i + 1) % vertices0.length];
+        edges0.push(new Edge2(v0, v1));
+        v0.adj[0] = v1;
+        v1.adj[1] = v0;
+      }
+      return new Face2(vertices0, edges0);
+    };
+    edge0 = edges[0];
+    if (edges.length > 1) {
+      vertices = [];
+      edge1 = edges[1];
+      if (edge1[0] === edge0[0] || edge1[1] === edge0[0]) {
+        vertices.push(edge0[1], edge0[0]);
+      } else {
+        vertices.push(edge0[0], edge0[1]);
+      }
+      for (i = 1, _ref = edges.length; 1 <= _ref ? i < _ref : i > _ref; 1 <= _ref ? i++ : i--) {
+        vertices.push(edges[i].other(vertices[i]));
+      }
+    } else {
+      vertices = [edge0[0], edge0[1]];
     }
-    edges0 = [];
-    for (i = 1, _ref = vertices0.length; 1 <= _ref ? i < _ref : i > _ref; 1 <= _ref ? i++ : i--) {
-      v0 = vertices0[i];
-      v1 = vertices0[(i + 1) % vertices0.length];
-      edges0.push(new Edge2(v0, v1));
-      v0.adj[0] = v1;
-      v1.adj[1] = v0;
+    _vertices = (function() {
+      var _i, _len, _results;
+      _results = [];
+      for (_i = 0, _len = vertices.length; _i < _len; _i++) {
+        v = vertices[_i];
+        _results.push(v.clone());
+      }
+      return _results;
+    })();
+    for (i = 0, _ref2 = vertices.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
+      if (i !== vertices.length - 1) vertices[i].adj[0] = vertices[i + 1];
+      if (i !== 0) vertices[i].adj[1] = vertices[i - 1];
     }
-    _a.adj[1] = _b;
-    _b.adj[0] = _a;
-    _a.adj[0].adj[1] = _a;
-    _b.adj[1].adj[0] = _b;
-    vertices1 = [_b, _a];
-    last = _a;
-    v = _a.adj[0];
-    while (v !== _b) {
-      vertices1.push(v);
-      _last = v;
-      v = last === v.adj[0] ? v.adj[1] : v.adj[0];
-      last = _last;
+    for (i = 0, _ref3 = _vertices.length; 0 <= _ref3 ? i < _ref3 : i > _ref3; 0 <= _ref3 ? i++ : i--) {
+      if (i !== _vertices.length - 1) _vertices[i].adj[1] = _vertices[i + 1];
+      if (i !== 0) _vertices[i].adj[0] = _vertices[i - 1];
     }
-    edges1 = [];
-    for (i = 0, _ref2 = vertices1.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
-      v0 = vertices1[i];
-      v1 = vertices1[(i + 1) % vertices1.length];
-      edges1.push(new Edge2(v0, v1));
-      v0.adj[0] = v1;
-      v1.adj[1] = v0;
-    }
-    return [new Face2(vertices0, edges0), new Face2(vertices1, edges1)];
+    _first = _vertices[0];
+    _last = _vertices[_vertices.length - 1];
+    _first.adj[0].adj[1] = _first;
+    _last.adj[1].adj[0] = _last;
+    return [buildFace(vertices), buildFace(_vertices.reverse())];
   };
 
   return Face2;

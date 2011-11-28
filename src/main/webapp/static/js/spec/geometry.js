@@ -96,14 +96,42 @@ describe('geometry', function() {
   it('should split a polygon by adding a diagonal', function() {
     var face, faces, faces1, faces2, i, test_round, _ref, _results;
     face = face2ize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
-    faces = face.splitAtEdge(face.vertices[4], face.vertices[9]);
-    faces1 = faces[0].splitAtEdge(face.vertices[8], face.vertices[6]);
-    faces2 = faces[1].splitAtEdge(face.vertices[0], face.vertices[3]);
+    faces = face.splitAtEdges(new Edge2(face.vertices[4], face.vertices[9]));
+    faces1 = faces[0].splitAtEdges(new Edge2(face.vertices[8], face.vertices[6]));
+    faces2 = faces[1].splitAtEdges(new Edge2(face.vertices[0], face.vertices[3]));
     faces = faces1.concat(faces2);
     expect(faces[0].vertices.length).toEqual(5);
     expect(faces[1].vertices.length).toEqual(3);
     expect(faces[2].vertices.length).toEqual(4);
     expect(faces[3].vertices.length).toEqual(7);
+    test_round = function(vertices, direction) {
+      var i, v;
+      i = 0;
+      v = vertices[0].adj[direction];
+      while (v !== vertices[0]) {
+        if (vertices.indexOf(v) === -1) return false;
+        v = v.adj[direction];
+        if (i++ === vertices.length - 1) return false;
+      }
+      return true;
+    };
+    _results = [];
+    for (i = 0, _ref = faces.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      expect(test_round(faces[i].vertices, 0)).toBeTruthy();
+      _results.push(expect(test_round(faces[i].vertices, 1)).toBeTruthy());
+    }
+    return _results;
+  });
+  it('should split a polygon by adding a segmented line', function() {
+    var face, faces, i, test_round, v0, v1, v2, v3, _ref, _results;
+    face = face2ize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
+    v0 = face.vertices[4];
+    v1 = new Vertex2(2, 4);
+    v2 = new Vertex2(1, 4);
+    v3 = face.vertices[9];
+    faces = face.splitAtEdges(new Edge2(v0, v1), new Edge2(v1, v2), new Edge2(v2, v3));
+    expect(faces[0].vertices.length).toEqual(8);
+    expect(faces[1].vertices.length).toEqual(11);
     test_round = function(vertices, direction) {
       var i, v;
       i = 0;

@@ -86,55 +86,70 @@ class Face2
     v.face = @ for v in @vertices
     
   
-  splitAtEdge: (a, b) ->
+  splitAtEdges: (edges...) ->
     
-    _a = a.clone()
-    _b = b.clone()
+    return false if edges.length < 1
     
-    a.adj[0] = b
-    b.adj[1] = a
-    
-    vertices0 = [a, b]
-    last = b
-    v = b.adj[0]
-    while v != a
-      vertices0.push v
-      _last = v
-      v = if last == v.adj[0] then v.adj[1] else v.adj[0]
-      last = _last
-    
-    edges0 = []
-    for i in [1...vertices0.length]
-      v0 = vertices0[i]
-      v1 = vertices0[(i+1) % vertices0.length]
-      edges0.push new Edge2(v0, v1)
-      v0.adj[0] = v1
-      v1.adj[1] = v0    
-    
-    _a.adj[1] = _b
-    _b.adj[0] = _a
-    
-    _a.adj[0].adj[1] = _a
-    _b.adj[1].adj[0] = _b
-    
-    vertices1 = [_b, _a]
-    last = _a
-    v = _a.adj[0]
-    while v != _b
-      vertices1.push v
-      _last = v
-      v = if last == v.adj[0] then v.adj[1] else v.adj[0]
-      last = _last
-    
-    edges1 = []
-    for i in [0...vertices1.length]
-      v0 = vertices1[i]
-      v1 = vertices1[(i+1) % vertices1.length]
-      edges1.push new Edge2(v0, v1)
-      v0.adj[0] = v1
-      v1.adj[1] = v0
+    buildFace = (vertices0) ->
       
-    return [new Face2(vertices0, edges0), new Face2(vertices1, edges1)]
+      first = vertices0[0]
+      last  = vertices0[vertices0.length - 1]
+      v = last.adj[0]
+      while v != first
+        vertices0.push v
+        _last = v
+        v = if last == v.adj[0] then v.adj[1] else v.adj[0]
+        last = _last
+      
+      edges0 = []
+      for i in [1...vertices0.length]
+        v0 = vertices0[i]
+        v1 = vertices0[(i+1) % vertices0.length]
+        edges0.push new Edge2(v0, v1)
+        v0.adj[0] = v1
+        v1.adj[1] = v0
+        
+      new Face2(vertices0, edges0)
+    
+    # collect vertices
+    # edges needs to be ordered
+    # inner vertices (0 < i < -1) don't need to be connected via adj-pointers
+    edge0 = edges[0]
+    if edges.length > 1
+      
+      vertices = []
+      edge1 = edges[1]
+      if edge1[0] == edge0[0] or edge1[1] == edge0[0]
+        vertices.push edge0[1], edge0[0]
+      else
+        vertices.push edge0[0], edge0[1]
+      
+      for i in [1...edges.length]
+        vertices.push(edges[i].other(vertices[i]))
+    else
+      vertices = [edge0[0], edge0[1]]      
+    
+    # clone all the vertices which get split
+    _vertices = (v.clone() for v in vertices)
+    
+    # set adj-pointers for face 0
+    for i in [0...vertices.length]
+      vertices[i].adj[0] = vertices[i + 1] unless i == vertices.length - 1
+      vertices[i].adj[1] = vertices[i - 1] unless i == 0
+    
+    
+    # set adj-pointers for face 1
+    for i in [0..._vertices.length]
+      _vertices[i].adj[1] = _vertices[i + 1] unless i == _vertices.length - 1
+      _vertices[i].adj[0] = _vertices[i - 1] unless i == 0
+    
+    _first = _vertices[0]
+    _last  = _vertices[_vertices.length - 1]
+    
+    _first.adj[0].adj[1] = _first
+    _last.adj[1].adj[0] = _last
+    
+    [buildFace(vertices), buildFace(_vertices.reverse())]
     
     
 class Edge2

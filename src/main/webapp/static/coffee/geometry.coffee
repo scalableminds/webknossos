@@ -122,7 +122,7 @@ class Geometry
       @edges_to_remove.push [a, b] if b.dy == @current_y
 
       i = @output.indexOf a.face
-      @output.splice i, 1, (a.face.splitAtEdge a, b)...
+      @output.splice(i, 1, (a.face.splitAtEdges(new Edge2(a, b)))...)
     
   @monotonize: (face) ->
     new Monotonizer(face).run()

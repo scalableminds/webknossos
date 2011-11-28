@@ -117,6 +117,7 @@ describe('geometry', function() {
     };
     _results = [];
     for (i = 0, _ref = faces.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      expect(faces[i].edges.length).toEqual(faces[i].vertices.length);
       expect(test_round(faces[i].vertices, 0)).toBeTruthy();
       _results.push(expect(test_round(faces[i].vertices, 1)).toBeTruthy());
     }
@@ -145,6 +146,7 @@ describe('geometry', function() {
     };
     _results = [];
     for (i = 0, _ref = faces.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
+      expect(faces[i].edges.length).toEqual(faces[i].vertices.length);
       expect(test_round(faces[i].vertices, 0)).toBeTruthy();
       _results.push(expect(test_round(faces[i].vertices, 1)).toBeTruthy());
     }
@@ -224,6 +226,7 @@ describe('geometry', function() {
     for (_i = 0, _len = faces.length; _i < _len; _i++) {
       face = faces[_i];
       expect(face).toBeA(Face2);
+      expect(face.edges.length).toEqual(face.vertices.length);
       face.vertices.sort(function(a, b) {
         return a.compare(b);
       });
@@ -253,12 +256,13 @@ describe('geometry', function() {
       }
     }
   });
-  it('should translate any face3 to face2', function() {
-    var e, edges, face, face2, i, v, vertices, _i, _len, _len2, _ref, _ref2, _results;
+  it('should translate any face3 to face2 and back', function() {
+    var e, edges, face, face2, face3, i, v, vertices, _i, _j, _len, _len2, _len3, _len4, _ref, _ref2, _ref3, _ref4, _results;
     vertices = [new Vertex3(3, 4, 5), new Vertex3(4, 6, 8), new Vertex3(3, 5, 5)];
     edges = [new Edge3(vertices[0], vertices[1]), new Edge3(vertices[1], vertices[2]), new Edge3(vertices[2], vertices[0])];
     face = new Face3(vertices, edges);
     face2 = face.toFace2();
+    face3 = face.fromFace2s([face2])[0];
     _ref = face2.vertices;
     for (i = 0, _len = _ref.length; i < _len; i++) {
       v = _ref[i];
@@ -268,18 +272,45 @@ describe('geometry', function() {
       expect(vertices[i].z).toEqual(v.dy);
     }
     _ref2 = face2.edges;
-    _results = [];
     for (_i = 0, _len2 = _ref2.length; _i < _len2; _i++) {
       e = _ref2[_i];
       expect(e).toBeA(Edge2);
-      _results.push(expect(edges.indexOf(e.original)).not.toEqual(-1));
+      expect(edges.indexOf(e.original)).not.toEqual(-1);
+    }
+    _ref3 = face3.vertices;
+    for (i = 0, _len3 = _ref3.length; i < _len3; i++) {
+      v = _ref3[i];
+      expect(v).toBe(face.vertices[i]);
+    }
+    _ref4 = face3.edges.all();
+    _results = [];
+    for (_j = 0, _len4 = _ref4.length; _j < _len4; _j++) {
+      e = _ref4[_j];
+      _results.push(expect(face.edges.has(e)).toBeTruthy());
     }
     return _results;
   });
   return it('should triangulate a face', function() {
-    var face, triangles;
+    var face, triangle, triangles, v, _i, _len, _results;
     face = face3ize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
     triangles = face.triangulate();
-    return expect(triangles.length).toEqual(face.vertices.length - 2);
+    expect(triangles.length).toEqual(face.vertices.length - 2);
+    _results = [];
+    for (_i = 0, _len = triangles.length; _i < _len; _i++) {
+      triangle = triangles[_i];
+      expect(triangle.vertices.length).toEqual(3);
+      expect(triangle.edges.length).toEqual(3);
+      _results.push((function() {
+        var _j, _len2, _ref, _results2;
+        _ref = triangle.vertices;
+        _results2 = [];
+        for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
+          v = _ref[_j];
+          _results2.push(expect(face.vertices.indexOf(v)).not.toEqual(-1));
+        }
+        return _results2;
+      })());
+    }
+    return _results;
   });
 });

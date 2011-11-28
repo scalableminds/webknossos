@@ -125,6 +125,7 @@ describe 'geometry', ->
       true
           
     for i in [0...faces.length]
+      expect(faces[i].edges.length).toEqual(faces[i].vertices.length)
       expect(test_round(faces[i].vertices, 0)).toBeTruthy()
       expect(test_round(faces[i].vertices, 1)).toBeTruthy()
   
@@ -174,6 +175,7 @@ describe 'geometry', ->
       true
           
     for i in [0...faces.length]
+      expect(faces[i].edges.length).toEqual(faces[i].vertices.length)
       expect(test_round(faces[i].vertices, 0)).toBeTruthy()
       expect(test_round(faces[i].vertices, 1)).toBeTruthy()
   
@@ -288,6 +290,7 @@ describe 'geometry', ->
     # make sure the monotone propery is ensured for each polygon
     for face in faces
       expect(face).toBeA Face2
+      expect(face.edges.length).toEqual(face.vertices.length)
       face.vertices.sort (a, b) -> a.compare b
       
       first = face.vertices[0]
@@ -313,7 +316,7 @@ describe 'geometry', ->
             break
     return
 
-  it 'should translate any face3 to face2', ->
+  it 'should translate any face3 to face2 and back', ->
     
     # setup
     # normal = [-3, 0, 1]
@@ -332,6 +335,7 @@ describe 'geometry', ->
     
     # do the work
     face2 = face.toFace2()
+    face3 = face.fromFace2s([face2])[0]
     
     # the x-coordinate should be gone
     for v, i in face2.vertices
@@ -343,6 +347,12 @@ describe 'geometry', ->
     for e in face2.edges
       expect(e).toBeA Edge2
       expect(edges.indexOf(e.original)).not.toEqual -1 
+    
+    for v, i in face3.vertices
+      expect(v).toBe(face.vertices[i])
+    
+    for e in face3.edges.all()
+      expect(face.edges.has(e)).toBeTruthy()
       
   
   it 'should triangulate a face', ->
@@ -367,4 +377,11 @@ describe 'geometry', ->
     triangles = face.triangulate()
     
     expect(triangles.length).toEqual(face.vertices.length - 2)
+    
+    for triangle in triangles
+      expect(triangle.vertices.length).toEqual(3)
+      expect(triangle.edges.length).toEqual(3)
+      
+      for v in triangle.vertices
+        expect(face.vertices.indexOf(v)).not.toEqual(-1)
     

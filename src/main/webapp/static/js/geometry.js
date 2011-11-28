@@ -155,7 +155,7 @@ Geometry = (function() {
   Geometry.triangulateMonotone = function(face) {
     var is_reflex, output, stack, v, v0, v0_reflex, v1, v1_reflex, vertices, _i, _len, _ref, _v0, _v1;
     vertices = face.vertices;
-    if (vertices.length === 3) return [vertices];
+    if (vertices.length === 3) return [face];
     is_reflex = function(v) {
       return v.reflex = ccw(v.adj[0], v, v.adj[1]) >= 0;
     };
@@ -296,10 +296,10 @@ Geometry = (function() {
           d2 = Math.abs(d2);
           vec = v2.sub(v1);
           quotient = d1 / (d1 + d2);
-          vertex = new Vertex3([v1.x + quotient * vec[0], v1.y + quotient * vec[1], v1.z + quotient * vec[2]]);
+          vertex = new Vertex3(v1.x + quotient * vec[0], v1.y + quotient * vec[1], v1.z + quotient * vec[2]);
           vertex.polyhedron = _face1.polyhedron;
           if (!e.interior) vertex.interior = false;
-          vertex.linked_edge = e;
+          e.splitByVertex(vertex);
           points.push(vertex);
         }
       }

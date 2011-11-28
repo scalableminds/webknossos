@@ -60,6 +60,16 @@ Math.normalize = function(a) {
   }
 };
 
+Math.between = function(x, a, b) {
+  return ((a < b ? a : b) <= x && x <= (a > b ? a : b));
+};
+
+Math.equalsNearly = function(a, b) {
+  var e;
+  e = 1e-15;
+  return (a - e < b && b < a + e);
+};
+
 Utils = {
   arrayEquals: function(a1, a2) {
     var i, _ref;

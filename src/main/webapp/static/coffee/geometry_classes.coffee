@@ -56,14 +56,15 @@ class Face3
     for v in @vertices
       vertices2.add v, v.toVertex2(@plane)
     
-    edges2 = for e in @edges.all()
+    edges2 = []
+    for e in @edges.all()
       v0 = vertices2.get(e[0])
       v1 = vertices2.get(e[1])
       edge2 = new Edge2 v0, v1
       edge2.original = e
       v0.addEdge edge2
       v1.addEdge edge2
-      edge2
+      edges2.push edge2
       
     face = new Face2 vertices2.all(), edges2
     face.original = @
@@ -73,12 +74,43 @@ class Face3
     
     face2 = @toFace2()
     
-    faces = []
-    for face1 in Geometry.monotonize face2
-      for face2 in Geometry.triangulateMonotone face1
-        faces.push face2
+    face2s = []
+    for monotone in Geometry.monotonize face2
+      for triangle in Geometry.triangulateMonotone monotone
+        face2s.push triangle
     
-    faces
+    @fromFace2s(face2s)
+  
+  remove: ->
+    for e in @edges.all()
+      (adj = e.adjoining_faces).splice(adj.indexOf(@), 1)
+    
+    (faces = @polyhedron.faces).splice(faces.indexOf(@), 1) if @polyhedron?
+  
+  fromFace2s: (face2s) ->
+    @remove()
+    
+    for face2 in face2s
+      
+      vertices = []
+      for vertex2 in face2.vertices
+        vertices.push vertex2.original
+      
+      edges = []
+      for edge2 in face2.edges
+        edge3 = new Edge3(edge2[0].original, edge2[1].original)
+        if @polyhedron?
+          edge3.polyhedron = @polyhedron
+          edge3 = @polyhedron.edges.add edge3
+        edges.push edge3
+        
+      face3 = new Face3(vertices, edges)
+      if @polyhedron?
+        face3.polyhedron = @polyhedron
+        @polyhedron.faces.push face3
+      
+      face3
+    
 
 class Face2
   constructor: (@vertices, @edges) ->
@@ -102,7 +134,7 @@ class Face2
         last = _last
       
       edges0 = []
-      for i in [1...vertices0.length]
+      for i in [0...vertices0.length]
         v0 = vertices0[i]
         v1 = vertices0[(i+1) % vertices0.length]
         edges0.push new Edge2(v0, v1)
@@ -172,6 +204,28 @@ class Edge2
   
   other: (v) ->
     if v == @[0] then @[1] else @[0]
+  
+  linear: (y) ->
+    if Math.between(y, @[0].dy, @[1].dy)
+      (-(@[0].dx * (@[1].dy - y) - @[1].dx * (@[0].dy - y)) / (@[0].dy - @[1].dy))
+    else
+      false
+  
+  splitByVertex: (v) ->
+    if Math.nearlyEquals(@linear(v.dy), v.dx)
+      if @[0].adj[0] == @[1]
+        @[0].adj[0] = v
+        v.adj[0] = @[1]
+        v.adj[1] = @[0]
+        @[1].adj[1] = v
+      else
+        @[0].adj[1] = v
+        v.adj[1] = @[1]
+        v.adj[0] = @[0]
+        @[1].adj[0] = v
+      [new Edge2(@[0], v), new Edge2(@[1], v)]
+    else
+      [@]
     
 class Edge3
   constructor: (vertex1, vertex2) ->
@@ -188,8 +242,6 @@ class Edge3
     vertex2.adjacents.add vertex1
     
     @interior = true
-    
-    @links = []
   
   length: 2
   
@@ -201,12 +253,6 @@ class Edge3
   
   vector: ->
     @[1].sub(@[0])
-    
-  compare: (other) ->
-    vec0 = @vector()
-    vec1 = other.vector()
-    
-    (sin = Math.normalize(vec0[1])) - Math.normalize(vec1[1]) || sin * (Math.normalizeVector(vec0)[0] - Math.normalizeVector(vec1)[0])
     
   remove: ->
     @[0].adjacents.remove @[1]
@@ -223,6 +269,16 @@ class Edge3
     face0.vertices = face0.vertices.concat(face1.vertices)
     face0.edges.bulkAdd(face1.edges.all())
     face0
+  
+  splitByVertex: (v) ->
+    @remove()
+    edges = [new Edge3(@[0], v), new Edge3(@[1], v)]
+    for e in edges
+      e.adjoining_faces = @adjoining_faces.slice(0)
+      e.interior = @interior
+      face.edges.add e for face in @adjoining_faces
+      @polyhedron?.edges.add e
+    edges
     
 class Vertex2
   constructor: (@dx, @dy) ->
@@ -275,34 +331,6 @@ class Vertex3
   calc_interior: ->
     for edge in @edges
       return edge.interior = false unless edge.interior
-  
-  to2d: (normal) ->
-    _normal = normal.map Math.abs 
-      
-    drop_index = if _normal[2] >= _normal[0] and _normal[2] >= _normal[1]
-        2
-      else if _normal[1] >= _normal[0] and _normal[1] >= _normal[2]
-        1
-      else
-        0
-    
-    switch drop_index
-      when 0
-        @dx = @y
-        @dy = @z
-      when 1
-        @dx = @x
-        @dy = @z
-      else
-        @dx = @x
-        @dy = @y
- 
-    @dnormal = normal
-  
-  clean2d: ->
-    delete @dx
-    delete @dy
-    delete @dnormal
   
   toVertex2: (normal) ->
     _normal = normal.map Math.abs 
@@ -377,6 +405,10 @@ class GeometrySet
       true
     else
       false
+      
+  replace: (e, a...) ->
+    if @remove e
+      @add _a for _a in a
   get: (e) ->
     @container[@lookup(e)]
   has: (e) ->

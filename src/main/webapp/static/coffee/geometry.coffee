@@ -130,7 +130,7 @@ class Geometry
   @triangulateMonotone: (face) ->
     
     vertices = face.vertices
-    return [vertices] if vertices.length == 3
+    return [face] if vertices.length == 3
     
     is_reflex = (v) ->
       v.reflex = ccw(v.adj[0], v, v.adj[1]) >= 0
@@ -252,14 +252,15 @@ class Geometry
           vec = v2.sub(v1)
           quotient = (d1 / (d1 + d2))
           
-          vertex = new Vertex3 [
-            v1.x + quotient * vec[0]
-            v1.y + quotient * vec[1]
+          vertex = new Vertex3(
+            v1.x + quotient * vec[0],
+            v1.y + quotient * vec[1],
             v1.z + quotient * vec[2]
-          ]
+          )
           vertex.polyhedron = _face1.polyhedron
           vertex.interior = false unless e.interior
-          vertex.linked_edge = e
+          
+          e.splitByVertex(vertex)
           
           points.push vertex
       

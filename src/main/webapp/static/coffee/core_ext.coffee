@@ -35,6 +35,13 @@ Math.absMin = (a, b) ->
 Math.normalize = (a) ->
   if a > 0 then 1 else if a < 0 then -1 else 0
 
+Math.between = (x, a, b) ->
+  (if a < b then a else b) <= x <= (if a > b then a else b)
+
+Math.equalsNearly = (a, b) ->
+  e = 1e-15
+  a - e < b < a + e
+
 Utils = 
   arrayEquals: (a1, a2) ->
     return false if a1.length != a1.length

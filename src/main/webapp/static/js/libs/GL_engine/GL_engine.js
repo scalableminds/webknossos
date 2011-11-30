@@ -182,17 +182,17 @@ GL_engine = (function() {
       }
       if (geometry.hasColors) {
         if (gl.getAttribLocation(shaderProgram, "aColor") !== -1) {
-          vertexAttribPointer(shaderProgram, "aColor", 3, geometry.colors.VBO);
+          vertexAttribPointer("aColor", 3, geometry.colors.VBO);
         }
       }
       if (gl.getAttribLocation(shaderProgram, "aVertex") !== -1) {
-        vertexAttribPointer(shaderProgram, "aVertex", 3, geometry.vertices.VBO);
+        vertexAttribPointer("aVertex", 3, geometry.vertices.VBO);
       }
       if (geometry.getClassType() === "Mesh") {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO);
         gl.drawElemets(gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0);
       } else {
-        gl.drawArrays(gl.POINTS, 0, geometry.vertices.length / 3);
+        gl.drawArrays(gl.POINTS, 0, 100);
       }
       disableVertexAttribPointer(shaderProgram, "aVertex");
       if (geometry.colors.hasColor) {

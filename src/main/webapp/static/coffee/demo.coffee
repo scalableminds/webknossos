@@ -117,7 +117,7 @@ start = ->
 	eng.useProgram progObj
 
 	eng.onRender render
-	eng.perspective 60, eng.getWidth / eng.getHeight, 15, 20
+	eng.perspective 60, eng.getWidth() / eng.getHeight(), 15, 20
 	eng.background [0.9, 0.9 ,0.9 ,1]
 	eng.pointSize 5
 	

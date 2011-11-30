@@ -192,11 +192,11 @@ GL_engine = (function() {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO);
         gl.drawElemets(gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0);
       } else {
-        gl.drawArrays(gl.POINTS, 0, 100);
+        gl.drawArrays(gl.POINTS, 0, geometry.vertices.length / 3);
       }
-      disableVertexAttribPointer(shaderProgram, "aVertex");
+      disableVertexAttribPointer("aVertex");
       if (geometry.colors.hasColor) {
-        return disableVertexAttribPointer(shaderProgram, "aColor");
+        return disableVertexAttribPointer("aColor");
       }
     }
   };
@@ -389,9 +389,9 @@ GL_engine = (function() {
   	@param {WebGLProgram} programObj
   	@param {String} varName
   	*/
-  disableVertexAttribPointer = function(programObj, varName) {
+  disableVertexAttribPointer = function(varName) {
     var varLocation;
-    varLocation = gl.getAttribLocation(programObj, varName);
+    varLocation = gl.getAttribLocation(shaderProgram, varName);
     if (varLocation !== -1) {
       return gl.disableVertexAttribArray(varLocation);
     }

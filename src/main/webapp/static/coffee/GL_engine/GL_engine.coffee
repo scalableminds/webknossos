@@ -198,10 +198,10 @@ class GL_engine
 				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
 				gl.drawElemets gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0
 			else
-				gl.drawArrays gl.POINTS, 0, 100
+				gl.drawArrays gl.POINTS, 0, geometry.vertices.length / 3
 
-			disableVertexAttribPointer shaderProgram, "aVertex"
-			disableVertexAttribPointer shaderProgram, "aColor" if geometry.colors.hasColor
+			disableVertexAttribPointer "aVertex"
+			disableVertexAttribPointer "aColor" if geometry.colors.hasColor
 
 
 
@@ -408,8 +408,8 @@ class GL_engine
 	@param {WebGLProgram} programObj
 	@param {String} varName
 	###
-	disableVertexAttribPointer = (programObj, varName) ->
-		varLocation = gl.getAttribLocation(programObj, varName)
+	disableVertexAttribPointer = (varName) ->
+		varLocation = gl.getAttribLocation(shaderProgram, varName)
 		gl.disableVertexAttribArray varLocation  if varLocation isnt -1	
 
 			

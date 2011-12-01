@@ -1,0 +1,23 @@
+<div lift="surround?with=default;at=content">
+  <span lift="CurrentUser.title"></span>
+  <div class="container">
+    <div class="content">
+      <div class="page-header">
+        <span lift="CurrentUser.header"></span>
+      </div>
+      <div class="row">
+        <div class="span16">
+          <div id="bootstrap-alerts" lift="BootstrapAlerts"></div>
+          <ul class="tabs">
+            <span lift="GroupMenu?group=settings;current_class=active"></span>
+          </ul>
+        </div>
+        <div class="span12">
+          <lift:bind name="content" />
+        </div>
+        <div class="span4">
+        </div>
+      </div>
+    </div>
+  </div> <!-- /container -->
+</div>

@@ -8,11 +8,11 @@ version := "0.1"
 
 scalaVersion := "2.9.1"
 
-seq(webSettings :_*)
-
 seq(jrebelSettings: _*)
 
 jrebel.webLinks <++= webappResources in Compile
+
+seq(webSettings :_*)
 
 //scanDirectories in Compile := Nil 
 
@@ -23,8 +23,8 @@ libraryDependencies += "junit" % "junit" % "4.8" % "test"
 
 // Add multiple dependencies
 libraryDependencies ++= {
-val liftVersion = "2.4-M4" // Put the current/latest lift version here
-val liftMongoVersion = "2.4-SNAPSHOT"
+val liftVersion = "2.4-M5" // Put the current/latest lift version here
+val liftMongoVersion = "2.4-M5"
 val jettyVersion = "7.5.4.v20111024"//"8.0.3.v20111011"
 Seq(
     "net.liftweb" %% "lift-webkit" % liftVersion % "compile->default" withSources(),
@@ -39,13 +39,10 @@ Seq(
     "org.specs2" %% "specs2-scalaz-core" % "6.0.1" % "test",
     "com.foursquare" %% "rogue" % "1.0.26" intransitive(),
     "net.liftweb"    %% "lift-mongodb-record" % liftMongoVersion,
-    "net.liftweb"    %% "lift-mongodb" % liftMongoVersion, 
+    "net.liftweb"    %% "lift-mongodb" % liftMongoVersion,
+    "net.liftmodules" %% "mongoauth" % (liftVersion+"-0.1"), 
     "org.mindrot" % "jbcrypt" % "0.3m"
 )}
-
-
-
-
 
 // Exclude backup files by default.  This uses ~=, which accepts a function of
 // type T => T (here T = FileFilter) that is applied to the existing value.
@@ -60,3 +57,5 @@ Seq(
 resolvers += ScalaToolsSnapshots
 
 resolvers += ScalaToolsReleases
+
+resolvers += "Liftmodules repo" at "https://repository-liftmodules.forge.cloudbees.com/release"

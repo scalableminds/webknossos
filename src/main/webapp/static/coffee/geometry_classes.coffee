@@ -15,9 +15,16 @@ class Polyhedron
       vertex.calc_interior()
       vertex.polyhedron = @
   
-  mergeFaces: ->
+  _mergeFaces: ->
     for e in @edges.all()
       e.merge() if Utils.arrayEquals(e.adjoining_faces[0].plane, e.adjoining_faces[1].plane)
+  
+  triangulate: ->
+    for face in @faces.slice(0)
+      face.triangulate()
+    for edge in @edges.all()
+      edge.calc_interior()
+    
   
   
   union: (other) ->
@@ -52,22 +59,43 @@ class Face3
     edge.adjoining_faces.push(@) for edge in edges
   
   toFace2: ->
-    vertices2 = new Vertex3Vertex2Dictionary
+    _normal = @plane.map Math.abs 
+      
+    drop_index = if _normal[2] >= _normal[0] and _normal[2] >= _normal[1]
+        2
+      else if _normal[1] >= _normal[0] and _normal[1] >= _normal[2]
+        1
+      else
+        0
+    
+    vertices2 = []
     for v in @vertices
-      vertices2.add v, v.toVertex2(@plane)
+      vertices2.push v.toVertex2(drop_index)
+      
+    lowerRightIndex = null
+    for i in [0...vertices2.length]
+      if lowerRightIndex == null or vertices2[i].compare(vertices2[lowerRightIndex]) < 0
+        lowerRightIndex = i
+    
+    reversed = Geometry::ccw(
+      vertices2[if lowerRightIndex - 1 < 0 then vertices2.length - 1 else lowerRightIndex - 1], 
+      vertices2[lowerRightIndex], 
+      vertices2[(lowerRightIndex + 1) % vertices2.length]
+    ) < 0
+    vertices2.reverse() if reversed
     
     edges2 = []
-    for e in @edges.all()
-      v0 = vertices2.get(e[0])
-      v1 = vertices2.get(e[1])
-      edge2 = new Edge2 v0, v1
-      edge2.original = e
-      v0.addEdge edge2
-      v1.addEdge edge2
-      edges2.push edge2
-      
-    face = new Face2 vertices2.all(), edges2
+    for i in [0...vertices2.length]
+      v0 = vertices2[i]
+      v1 = vertices2[(i + 1) % vertices2.length]
+      throw "Vertex lining isn't correct" unless (v0.original.adjacents.has(v1.original) and v1.original.adjacents.has(v0.original))
+      edges2.push new Edge2(v0, v1)
+      v0.adj[1] = v1
+      v1.adj[0] = v0
+    
+    face = new Face2 vertices2, edges2
     face.original = @
+    face.reversed = reversed
     face
   
   triangulate: ->
@@ -95,16 +123,20 @@ class Face3
       vertices = []
       for vertex2 in face2.vertices
         vertices.push vertex2.original
+      vertices.reverse() if face2.reversed
       
       edges = []
       for edge2 in face2.edges
         edge3 = new Edge3(edge2[0].original, edge2[1].original)
+        edge3 = @edges.get(edge3) || edge3
         if @polyhedron?
           edge3.polyhedron = @polyhedron
           edge3 = @polyhedron.edges.add edge3
         edges.push edge3
         
-      face3 = new Face3(vertices, edges)
+      plane = if face2.original? then face2.original.plane else null 
+      
+      face3 = new Face3(vertices, edges, plane)
       if @polyhedron?
         face3.polyhedron = @polyhedron
         @polyhedron.faces.push face3
@@ -117,72 +149,84 @@ class Face2
     e.face = @ for e in @edges
     v.face = @ for v in @vertices
     
-  
-  splitAtEdges: (edges...) ->
+  splitAtVertices: (splitting_vertices...) ->  
     
-    return false if edges.length < 1
+    return false if splitting_vertices.length < 2
     
-    buildFace = (vertices0) ->
-      
-      first = vertices0[0]
-      last  = vertices0[vertices0.length - 1]
-      v = last.adj[0]
-      while v != first
-        vertices0.push v
-        _last = v
-        v = if last == v.adj[0] then v.adj[1] else v.adj[0]
-        last = _last
-      
-      edges0 = []
-      for i in [0...vertices0.length]
-        v0 = vertices0[i]
-        v1 = vertices0[(i+1) % vertices0.length]
-        edges0.push new Edge2(v0, v1)
-        v0.adj[0] = v1
-        v1.adj[1] = v0
-        
-      new Face2(vertices0, edges0)
+    first = splitting_vertices[0]
+    last = splitting_vertices[splitting_vertices.length - 1]
     
-    # collect vertices
-    # edges needs to be ordered
-    # inner vertices (0 < i < -1) don't need to be connected via adj-pointers
-    edge0 = edges[0]
-    if edges.length > 1
-      
-      vertices = []
-      edge1 = edges[1]
-      if edge1[0] == edge0[0] or edge1[1] == edge0[0]
-        vertices.push edge0[1], edge0[0]
-      else
-        vertices.push edge0[0], edge0[1]
-      
-      for i in [1...edges.length]
-        vertices.push(edges[i].other(vertices[i]))
+    vertices = @vertices.map((a) -> a.clone())
+    
+    # find split indexes
+    for v, i in @vertices
+      first_index = i if v.compare(first) == 0
+      last_index = i if v.compare(last) == 0
+      break if first_index? and last_index?
+    
+    # split vertices-buffers
+    if first_index < last_index
+      vertices0 = vertices.slice(first_index, last_index + 1)
+      vertices1 = vertices.slice(last_index).concat vertices.slice(0, first_index + 1)
     else
-      vertices = [edge0[0], edge0[1]]      
+      vertices0 = vertices.slice(first_index).concat vertices.slice(0, last_index + 1)
+      vertices1 = vertices.slice(last_index, first_index + 1)
+      
+    # face0
+    vertices0 = splitting_vertices.slice(1, -1).reverse().map((a) -> a.clone()).concat(vertices0)
+    edges0 = []
+    for v, i in vertices0
+      v0 = vertices0[i]
+      v1 = vertices0[(i+1) % vertices0.length]
+      
+      v0.adj[1] = v1
+      v1.adj[0] = v0
+      edges0.push new Edge2(vertices0[i], vertices0[(i + 1) % vertices0.length])
     
-    # clone all the vertices which get split
-    _vertices = (v.clone() for v in vertices)
+    face0 = new Face2(vertices0, edges0)
+    face0.original = @original
+
     
-    # set adj-pointers for face 0
-    for i in [0...vertices.length]
-      vertices[i].adj[0] = vertices[i + 1] unless i == vertices.length - 1
-      vertices[i].adj[1] = vertices[i - 1] unless i == 0
+    # face1
+    vertices1[0] = vertices1[0].clone()
+    vertices1[vertices1.length - 1] = vertices1[vertices1.length - 1].clone()
     
+    vertices1 = splitting_vertices.slice(1, -1).map((a) -> a.clone()).concat(vertices1)
+    edges1 = []
+    for v, i in vertices1
+      v0 = vertices1[i]
+      v1 = vertices1[(i+1) % vertices1.length]
+      
+      v0.adj[1] = v1
+      v1.adj[0] = v0
+      edges1.push new Edge2(vertices1[i], vertices1[(i + 1) % vertices1.length])
+      
+    for i in [0...vertices1.length]
+      v0 = vertices1[i]
+      v1 = vertices1[(i+1) % vertices1.length]
+      
+    face1 = new Face2(vertices1, edges1)
+    face1.original = @original
     
-    # set adj-pointers for face 1
-    for i in [0..._vertices.length]
-      _vertices[i].adj[1] = _vertices[i + 1] unless i == _vertices.length - 1
-      _vertices[i].adj[0] = _vertices[i - 1] unless i == 0
+    [face0, face1]
+  
+  splitByMultipleVertices: (vertices_sets) ->
     
-    _first = _vertices[0]
-    _last  = _vertices[_vertices.length - 1]
+    return false if vertices_sets.length < 1
     
-    _first.adj[0].adj[1] = _first
-    _last.adj[1].adj[0] = _last
+    make_container = (face) ->
+      {face: face, verticeSet: Vertex2Set.fromArray(face.vertices)}
     
-    [buildFace(vertices), buildFace(_vertices.reverse())]
-    
+    faces = [make_container(@)]
+    for vertices_set in vertices_sets
+      for faceContainer, i in faces
+        if faceContainer.verticeSet.has(vertices_set[0]) and 
+        faceContainer.verticeSet.has(vertices_set[vertices_set.length - 1])
+          newFaces = faceContainer.face.splitAtVertices(vertices_set...)
+          faces.splice(i, 1, make_container(newFaces[0]), make_container(newFaces[1]))
+          break
+     
+    face.face for face in faces
     
 class Edge2
   constructor: (vertex1, vertex2) ->
@@ -299,7 +343,6 @@ class Vertex2
     v = new Vertex2 @dx, @dy
     v.adj = @adj.slice 0
     v.original = @original
-    v.normal = @normal
     v.face = @face if @face
     v
   
@@ -332,15 +375,7 @@ class Vertex3
     for edge in @edges
       return edge.interior = false unless edge.interior
   
-  toVertex2: (normal) ->
-    _normal = normal.map Math.abs 
-      
-    drop_index = if _normal[2] >= _normal[0] and _normal[2] >= _normal[1]
-        2
-      else if _normal[1] >= _normal[0] and _normal[1] >= _normal[2]
-        1
-      else
-        0
+  toVertex2: (drop_index) ->
     
     switch drop_index
       when 0
@@ -355,7 +390,6 @@ class Vertex3
     
     v = new Vertex2 dx, dy
     v.original = @
-    v.normal = normal
     
     @vertex2 = v
     

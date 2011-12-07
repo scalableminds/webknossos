@@ -16,9 +16,9 @@ describe('geometry', function() {
       _results = [];
       for (i = 0, _len = _ref.length; i < _len; i++) {
         p = _ref[i];
-        expect(p.vertices.all().length).toEqual(8);
-        expect(p.faces.length).toEqual(6);
-        expect(p.edges.all().length).toEqual(12);
+        expect(p.faces.length).toEqual(6 * 2);
+        expect(p.vertices.length).toEqual(6 * 4 / 3);
+        expect(p.edges.length).toEqual(6 * 2 * 3 / 2);
         expect(p.extent.min).toBeSameArrayAs([0 + i, 0 + i, 0 + i]);
         _results.push(expect(p.extent.max).toBeSameArrayAs([2 + i, 2 + i, 2 + i]));
       }
@@ -62,7 +62,14 @@ describe('geometry', function() {
           }
         }
       }
-      return expect(polygons_touched).toEqual(6);
+      return expect(polygons_touched).toEqual(12);
+    });
+    it('there should be some interior edges', function() {
+      var interior_edges;
+      interior_edges = g.polyhedral[0].edges.all().filter(function(a) {
+        return a.interior;
+      });
+      return expect(interior_edges.length).toEqual(6);
     });
     return it('should return an intersection line segment', function() {
       expect(g.findFaceIntersections(g.polyhedral[0].faces[4], g.polyhedral[1].faces[0])).toBeDefined();
@@ -93,46 +100,16 @@ describe('geometry', function() {
   face2ize = function(vertices) {
     return face3ize(vertices).toFace2();
   };
-  it('should split a polygon by adding a diagonal', function() {
-    var face, faces, faces1, faces2, i, test_round, _ref, _results;
-    face = face2ize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
-    faces = face.splitAtEdges(new Edge2(face.vertices[4], face.vertices[9]));
-    faces1 = faces[0].splitAtEdges(new Edge2(face.vertices[8], face.vertices[6]));
-    faces2 = faces[1].splitAtEdges(new Edge2(face.vertices[0], face.vertices[3]));
-    faces = faces1.concat(faces2);
-    expect(faces[0].vertices.length).toEqual(5);
-    expect(faces[1].vertices.length).toEqual(3);
-    expect(faces[2].vertices.length).toEqual(4);
-    expect(faces[3].vertices.length).toEqual(7);
-    test_round = function(vertices, direction) {
-      var i, v;
-      i = 0;
-      v = vertices[0].adj[direction];
-      while (v !== vertices[0]) {
-        if (vertices.indexOf(v) === -1) return false;
-        v = v.adj[direction];
-        if (i++ === vertices.length - 1) return false;
-      }
-      return true;
-    };
-    _results = [];
-    for (i = 0, _ref = faces.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-      expect(faces[i].edges.length).toEqual(faces[i].vertices.length);
-      expect(test_round(faces[i].vertices, 0)).toBeTruthy();
-      _results.push(expect(test_round(faces[i].vertices, 1)).toBeTruthy());
-    }
-    return _results;
-  });
-  it('should split a polygon by adding a segmented line', function() {
-    var face, faces, i, test_round, v0, v1, v2, v3, _ref, _results;
-    face = face2ize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
-    v0 = face.vertices[4];
+  it('should split a polygon by adding a segmented line through vertices', function() {
+    var face, faces, i, test_round, v, v0, v1, v2, v3, _ref, _results;
+    face = face2ize([[5, 0, 0], [6, 2, 0], [4, 1, 0], [1, 1, 0], [3, 4, 0], [5, 3, 0], [4, 6, 0], [7, 8, 0], [2, 7, 0], [2, 9, 0], [4, 10, 0], [0, 10, 0], [0, 0, 0]]);
+    v0 = face.vertices[8];
     v1 = new Vertex2(2, 4);
     v2 = new Vertex2(1, 4);
-    v3 = face.vertices[9];
-    faces = face.splitAtEdges(new Edge2(v0, v1), new Edge2(v1, v2), new Edge2(v2, v3));
-    expect(faces[0].vertices.length).toEqual(8);
-    expect(faces[1].vertices.length).toEqual(11);
+    v3 = face.vertices[3];
+    faces = face.splitAtVertices(v0, v1, v2, v3);
+    expect(faces[0].vertices.length).toEqual(11);
+    expect(faces[1].vertices.length).toEqual(8);
     test_round = function(vertices, direction) {
       var i, v;
       i = 0;
@@ -148,12 +125,22 @@ describe('geometry', function() {
     for (i = 0, _ref = faces.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
       expect(faces[i].edges.length).toEqual(faces[i].vertices.length);
       expect(test_round(faces[i].vertices, 0)).toBeTruthy();
-      _results.push(expect(test_round(faces[i].vertices, 1)).toBeTruthy());
+      expect(test_round(faces[i].vertices, 1)).toBeTruthy();
+      _results.push((function() {
+        var _i, _len, _ref2, _results2;
+        _ref2 = faces[i].vertices;
+        _results2 = [];
+        for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+          v = _ref2[_i];
+          _results2.push(expect(face.vertices.indexOf(v)).toEqual(-1));
+        }
+        return _results2;
+      })());
     }
     return _results;
   });
   it('should triangulate a monotone polygon', function() {
-    var e, e1, e2, edges, face, faces, i1, i2, p1, p11, p12, p2, p21, p22, qp, qp1, qp2, rs, t1, t2, tri, vec1, vec2, _i, _j, _k, _len, _len2, _len3, _len4, _len5, _results;
+    var e, e1, e2, edges, face, faces, i, i1, i2, p1, p11, p12, p2, p21, p22, qp, qp1, qp2, rs, t1, t2, tri, v, vec1, vec2, _i, _j, _k, _l, _len, _len2, _len3, _len4, _len5, _len6, _ref, _results;
     face = face2ize([[0, 0, 0], [0, 7, 0], [3, 8, 0], [6, 3, 0], [7, 6, 0], [9, 3, 0], [7, 0, 0]]);
     faces = Geometry.triangulateMonotone(face);
     expect(faces.length).toEqual(5);
@@ -161,17 +148,26 @@ describe('geometry', function() {
       tri = faces[_i];
       expect(tri.vertices.length).toEqual(3);
       expect(tri.edges.length).toEqual(3);
+      _ref = face.vertices;
+      for (_j = 0, _len2 = _ref.length; _j < _len2; _j++) {
+        v = _ref[_j];
+        Geometry.prototype.ccw(v.adj[0], v, v.adj[1]);
+      }
+      for (i = 0; i < 3; i++) {
+        face.vertices[i].adj[0] = face.vertices[i === 0 ? 2 : i - 1];
+        face.vertices[i].adj[1] = face.vertices[(i + 1) % 3];
+      }
     }
     edges = [];
-    for (_j = 0, _len2 = faces.length; _j < _len2; _j++) {
-      tri = faces[_j];
+    for (_k = 0, _len3 = faces.length; _k < _len3; _k++) {
+      tri = faces[_k];
       edges = edges.concat(tri.edges);
     }
-    for (i1 = 0, _len3 = edges.length; i1 < _len3; i1++) {
+    for (i1 = 0, _len4 = edges.length; i1 < _len4; i1++) {
       e1 = edges[i1];
       p1 = e1[0];
       vec1 = e1[1].sub(p1);
-      for (i2 = 0, _len4 = edges.length; i2 < _len4; i2++) {
+      for (i2 = 0, _len5 = edges.length; i2 < _len5; i2++) {
         e2 = edges[i2];
         if (i1 !== i2) {
           p2 = e2[0];
@@ -208,8 +204,8 @@ describe('geometry', function() {
       }
     }
     _results = [];
-    for (_k = 0, _len5 = edges.length; _k < _len5; _k++) {
-      e = edges[_k];
+    for (_l = 0, _len6 = edges.length; _l < _len6; _l++) {
+      e = edges[_l];
       if (e.colinear) {
         _results.push(expect(e.colinear).toBeLessThan(2));
       } else {
@@ -220,23 +216,24 @@ describe('geometry', function() {
   });
   it('should split a polygon in monotones', function() {
     var face, faces, first, i, last, v, _i, _len;
-    face = face2ize([[0, 0, 0], [0, 10, 0], [4, 10, 0], [2, 9, 0], [2, 7, 0], [7, 8, 0], [4, 6, 0], [5, 3, 0], [3, 4, 0], [1, 1, 0], [4, 1, 0], [6, 2, 0], [5, 0, 0]]);
+    face = face2ize([[5, 0, 0], [6, 2, 0], [4, 1, 0], [1, 1, 0], [3, 4, 0], [5, 3, 0], [4, 6, 0], [7, 8, 0], [2, 7, 0], [2, 9, 0], [4, 10, 0], [0, 10, 0], [0, 0, 0]]);
     faces = Geometry.monotonize(face);
     expect(faces.length).toEqual(4);
     for (_i = 0, _len = faces.length; _i < _len; _i++) {
       face = faces[_i];
       expect(face).toBeA(Face2);
       expect(face.edges.length).toEqual(face.vertices.length);
-      face.vertices.sort(function(a, b) {
-        return a.compare(b);
-      });
-      first = face.vertices[0];
-      last = face.vertices[face.vertices.length - 1];
       if (face.vertices.length !== 3) {
+        face.vertices.sort(function(a, b) {
+          return a.compare(b);
+        });
+        first = face.vertices[0];
+        last = face.vertices[face.vertices.length - 1];
         i = 0;
         v = first.adj[0];
         while (v.adj[0] !== last) {
           expect(v.compare(v.adj[0])).toBeLessThan(0);
+          expect(v.compare(v.adj[1])).toBeGreaterThan(0);
           v = v.adj[0];
           if (i++ === 1000) {
             expect(i).toBeLessThan(1000);
@@ -246,7 +243,8 @@ describe('geometry', function() {
         i = 0;
         v = first.adj[1];
         while (v.adj[1] !== last) {
-          expect(v.compare(v.adj[1])).toBeGreaterThan(0);
+          expect(v.compare(v.adj[1])).toBeLessThan(0);
+          expect(v.compare(v.adj[0])).toBeGreaterThan(0);
           v = v.adj[1];
           if (i++ === 1000) {
             expect(i).toBeLessThan(1000);
@@ -258,7 +256,7 @@ describe('geometry', function() {
   });
   it('should translate any face3 to face2 and back', function() {
     var e, edges, face, face2, face3, i, v, vertices, _i, _j, _len, _len2, _len3, _len4, _ref, _ref2, _ref3, _ref4, _results;
-    vertices = [new Vertex3(3, 4, 5), new Vertex3(4, 6, 8), new Vertex3(3, 5, 5)];
+    vertices = [new Vertex3(4, 6, 8), new Vertex3(3, 4, 5), new Vertex3(3, 5, 5)];
     edges = [new Edge3(vertices[0], vertices[1]), new Edge3(vertices[1], vertices[2]), new Edge3(vertices[2], vertices[0])];
     face = new Face3(vertices, edges);
     face2 = face.toFace2();
@@ -275,7 +273,7 @@ describe('geometry', function() {
     for (_i = 0, _len2 = _ref2.length; _i < _len2; _i++) {
       e = _ref2[_i];
       expect(e).toBeA(Edge2);
-      expect(edges.indexOf(e.original)).not.toEqual(-1);
+      expect(face.edges.has([e[0].original, e[1].original])).not.toEqual(-1);
     }
     _ref3 = face3.vertices;
     for (i = 0, _len3 = _ref3.length; i < _len3; i++) {
@@ -286,7 +284,7 @@ describe('geometry', function() {
     _results = [];
     for (_j = 0, _len4 = _ref4.length; _j < _len4; _j++) {
       e = _ref4[_j];
-      _results.push(expect(face.edges.has(e)).toBeTruthy());
+      _results.push(expect(face.edges.get(e)).toBe(e));
     }
     return _results;
   });

@@ -27,9 +27,13 @@ describe 'geometry', ->
       expect(g.polyhedral.length).toEqual(2)
       
       for p, i in g.polyhedral
-        expect(p.vertices.all().length).toEqual(8)
-        expect(p.faces.length).toEqual(6)
-        expect(p.edges.all().length).toEqual(12)
+        # each cube has 6 squares
+        # each square, thus split to 2 triangles
+        expect(p.faces.length).toEqual(6 * 2)
+        # each square has 4 vertices, but each vertex is shared by 3 squares
+        expect(p.vertices.length).toEqual(6 * 4 / 3)
+        # each triangle has 3 edges, but each edge is shared by 2 triangles
+        expect(p.edges.length).toEqual(6 * 2 * 3 / 2)
         
         expect(p.extent.min).toBeSameArrayAs [0 + i, 0 + i, 0 + i]
         expect(p.extent.max).toBeSameArrayAs [2 + i, 2 + i, 2 + i]
@@ -54,7 +58,13 @@ describe 'geometry', ->
             polygon.touched = true
             polygons_touched += 1
       
-      expect(polygons_touched).toEqual(6)
+      expect(polygons_touched).toEqual(12)
+      
+    it 'there should be some interior edges', ->
+      interior_edges = g.polyhedral[0].edges.all().filter (a) -> a.interior
+      
+      expect(interior_edges.length).toEqual(6)
+      
     
     it 'should return an intersection line segment', ->
       expect(g.findFaceIntersections(g.polyhedral[0].faces[4], g.polyhedral[1].faces[0]))
@@ -76,93 +86,38 @@ describe 'geometry', ->
   face2ize = (vertices) ->
     face3ize(vertices).toFace2()
 
-  
-  it 'should split a polygon by adding a diagonal', ->
+  it 'should split a polygon by adding a segmented line through vertices', ->
     
     # setup
     face = face2ize [
-      [0,0,0],
-      [0,10,0],
-      [4,10,0],
-      [2,9,0],
-      [2,7,0],
-      [7,8,0],
-      [4,6,0],
-      [5,3,0],
-      [3,4,0],
-      [1,1,0],
-      [4,1,0],
+      [5,0,0],
       [6,2,0],
-      [5,0,0]
+      [4,1,0],
+      [1,1,0],
+      [3,4,0],
+      [5,3,0],
+      [4,6,0],
+      [7,8,0],
+      [2,7,0],
+      [2,9,0],
+      [4,10,0],
+      [0,10,0],
+      [0,0,0],
     ]
     
     # do the work
     # split at (2,7),(1,1)
-    faces = face.splitAtEdges(new Edge2(face.vertices[4], face.vertices[9]))
-    
-    # split at (3,4),(4,6)
-    faces1 = faces[0].splitAtEdges(new Edge2(face.vertices[8], face.vertices[6]))
-    
-    # split at (0,0),(2,9)
-    faces2 = faces[1].splitAtEdges(new Edge2(face.vertices[0], face.vertices[3]))
-    
-    faces = faces1.concat faces2
-    
-    # simple counting tests
-    expect(faces[0].vertices.length).toEqual(5)
-    expect(faces[1].vertices.length).toEqual(3)
-    expect(faces[2].vertices.length).toEqual(4)
-    expect(faces[3].vertices.length).toEqual(7)
-    
-    # test if adjacent links work
-    test_round = (vertices, direction) ->
-      i = 0
-      v = vertices[0].adj[direction]
-      while v != vertices[0]
-        return false if vertices.indexOf(v) == -1
-        v = v.adj[direction]
-        return false if i++ == vertices.length - 1
-      true
-          
-    for i in [0...faces.length]
-      expect(faces[i].edges.length).toEqual(faces[i].vertices.length)
-      expect(test_round(faces[i].vertices, 0)).toBeTruthy()
-      expect(test_round(faces[i].vertices, 1)).toBeTruthy()
-  
-  it 'should split a polygon by adding a segmented line', ->
-    
-    # setup
-    face = face2ize [
-      [0,0,0],
-      [0,10,0],
-      [4,10,0],
-      [2,9,0],
-      [2,7,0],
-      [7,8,0],
-      [4,6,0],
-      [5,3,0],
-      [3,4,0],
-      [1,1,0],
-      [4,1,0],
-      [6,2,0],
-      [5,0,0]
-    ]
-    
-    # do the work
-    # split at (2,7),(1,1)
-    v0 = face.vertices[4] # (2,7)
+    v0 = face.vertices[8] # (2,7)
     v1 = new Vertex2(2, 4)
     v2 = new Vertex2(1, 4)
-    v3 = face.vertices[9] # (1,1)
-    faces = face.splitAtEdges(
-      new Edge2(v0, v1), 
-      new Edge2(v1, v2), 
-      new Edge2(v2, v3)
+    v3 = face.vertices[3] # (1,1)
+    faces = face.splitAtVertices(
+      v0, v1, v2, v3
     )
     
     # simple counting tests
-    expect(faces[0].vertices.length).toEqual(8)
-    expect(faces[1].vertices.length).toEqual(11)
+    expect(faces[0].vertices.length).toEqual(11)
+    expect(faces[1].vertices.length).toEqual(8)
     
     # test if adjacent links work
     test_round = (vertices, direction) ->
@@ -178,6 +133,10 @@ describe 'geometry', ->
       expect(faces[i].edges.length).toEqual(faces[i].vertices.length)
       expect(test_round(faces[i].vertices, 0)).toBeTruthy()
       expect(test_round(faces[i].vertices, 1)).toBeTruthy()
+      
+      for v in faces[i].vertices
+        # all vertices should be cloned
+        expect(face.vertices.indexOf(v)).toEqual(-1)
   
   it 'should triangulate a monotone polygon', ->
 
@@ -201,6 +160,14 @@ describe 'geometry', ->
     for tri in faces
       expect(tri.vertices.length).toEqual(3)
       expect(tri.edges.length).toEqual(3)
+      
+      for v in face.vertices
+        Geometry::ccw(v.adj[0], v, v.adj[1])
+      for i in [0...3]
+        face.vertices[i].adj[0] = face.vertices[if i == 0 then 2 else i - 1]
+        face.vertices[i].adj[1] = face.vertices[(i + 1) % 3]
+        
+        
     
     
     # find all edges
@@ -264,21 +231,21 @@ describe 'geometry', ->
   
   it 'should split a polygon in monotones', ->
     # setup
-    # plane: normal = [0, 0, 1], d = 0
+    # plane: normal = [0, 0, -1], d = 0
     face = face2ize [
-      [0,0,0],
-      [0,10,0],
-      [4,10,0],
-      [2,9,0],
-      [2,7,0],
-      [7,8,0],
-      [4,6,0],
-      [5,3,0],
-      [3,4,0],
-      [1,1,0],
-      [4,1,0],
+      [5,0,0],
       [6,2,0],
-      [5,0,0]
+      [4,1,0],
+      [1,1,0],
+      [3,4,0],
+      [5,3,0],
+      [4,6,0],
+      [7,8,0],
+      [2,7,0],
+      [2,9,0],
+      [4,10,0],
+      [0,10,0],
+      [0,0,0],
     ]
     
     # do the work
@@ -291,16 +258,18 @@ describe 'geometry', ->
     for face in faces
       expect(face).toBeA Face2
       expect(face.edges.length).toEqual(face.vertices.length)
-      face.vertices.sort (a, b) -> a.compare b
-      
-      first = face.vertices[0]
-      last = face.vertices[face.vertices.length - 1]
       
       unless face.vertices.length == 3
+        face.vertices.sort (a, b) -> a.compare b
+        
+        first = face.vertices[0]
+        last = face.vertices[face.vertices.length - 1]
+        
         i = 0
         v = first.adj[0]
         while v.adj[0] != last
           expect(v.compare v.adj[0]).toBeLessThan 0
+          expect(v.compare v.adj[1]).toBeGreaterThan 0
           v = v.adj[0]
           if i++ == 1000
             expect(i).toBeLessThan 1000
@@ -309,7 +278,8 @@ describe 'geometry', ->
         i = 0
         v = first.adj[1]
         while v.adj[1] != last
-          expect(v.compare v.adj[1]).toBeGreaterThan 0
+          expect(v.compare v.adj[1]).toBeLessThan 0
+          expect(v.compare v.adj[0]).toBeGreaterThan 0
           v = v.adj[1]
           if i++ == 1000
             expect(i).toBeLessThan 1000
@@ -321,8 +291,8 @@ describe 'geometry', ->
     # setup
     # normal = [-3, 0, 1]
     vertices = [
-      new Vertex3 3,4,5
       new Vertex3 4,6,8
+      new Vertex3 3,4,5
       new Vertex3 3,5,5
     ]
     edges = [
@@ -346,13 +316,13 @@ describe 'geometry', ->
       
     for e in face2.edges
       expect(e).toBeA Edge2
-      expect(edges.indexOf(e.original)).not.toEqual -1 
+      expect(face.edges.has [e[0].original, e[1].original]).not.toEqual -1 
     
     for v, i in face3.vertices
       expect(v).toBe(face.vertices[i])
     
     for e in face3.edges.all()
-      expect(face.edges.has(e)).toBeTruthy()
+      expect(face.edges.get(e)).toBe(e)
       
   
   it 'should triangulate a face', ->

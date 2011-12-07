@@ -10,19 +10,25 @@ class Geometry
     
     for _polygon in _polyhedral
       
-      face_vertices = for el in _polygon
-        vertices.add Vertex3.fromArray el
+      face_vertices = []
+      for el in _polygon
+        face_vertices.push(vertices.add(Vertex3.fromArray(el)))
         
-      face_edges = for i in [0...face_vertices.length]
-        edges.add new Edge3 face_vertices[i], face_vertices[(i + 1) % face_vertices.length]
+      face_edges = []
+      for i in [0...face_vertices.length]
+        face_edges.push(edges.add(new Edge3(face_vertices[i], face_vertices[(i + 1) % face_vertices.length])))
       
       faces.push new Face3(face_vertices, face_edges)
     
-    @polyhedral.push new Polyhedron faces, vertices, edges
+    polyhedron = new Polyhedron faces, vertices, edges
+    polyhedron.triangulate()
+    @polyhedral.push polyhedron
     
   
   ccw = (p1, p2, p3) ->
     (p2.dx - p1.dx) * (p3.dy - p1.dy) - (p2.dy - p1.dy) * (p3.dx - p1.dx)
+  
+  ccw: ccw
   
   class Monotonizer
     constructor: (@face) ->
@@ -33,13 +39,13 @@ class Geometry
       @edge_function = (e, y) ->
         (-(e[0].dx * (e[1].dy - y) - e[1].dx * (e[0].dy - y)) / (e[0].dy - e[1].dy))
       
-      @output = [@face]
+      @added_diagonals = []
       
     run: ->
       
-      vertices = @face.vertices
-      return [@face] if vertices.length <= 4
+      return [@face] if @face.vertices.length <= 4
       
+      vertices = @face.vertices.slice(0)
       vertices.sort (a,b) -> a.compare b
       
       @current_y = vertices[0].dy
@@ -50,33 +56,26 @@ class Geometry
         
         continue if _v.dy == @current_y
         
-        # first pass
+        # main pass
         # add edges to sweep_status
         @edges_to_remove = []
         
-        for i in [first_i_y..._i]
-          
-          v = vertices[i]
-          for adj in v.adj
-            if (adj.compare v) > 0
-              @sweep_status.add [v, adj]
-            else
-              @edges_to_remove.push [adj, v]
-         
-        
-        # second pass
-        # if the vertex has an edge left and right to it
-        # we need to regularize it
         for i in [first_i_y..._i]
           v = vertices[i]
           incoming = outgoing = 0
           
           for adj in v.adj
             if (adj.compare v) > 0
+              @sweep_status.add [v, adj]
               outgoing += 1
             else
+              @edges_to_remove.push [adj, v]
               incoming += 1
-          
+         
+        
+          # if the vertex has an edge left and right to it
+          # we need to regularize it
+            
           unless (outgoing >= 1 or i == vertices.length - 1) and (incoming >= 1 or i == 0)
             left_edge = right_edge = null
             left_x = right_x = null
@@ -107,22 +106,23 @@ class Geometry
                   @addDiagonal(right_edge[0], v)
                   
         
-        # third pass
+        # cleanup pass
         # remove edges from 
         @sweep_status.remove e for e in @edges_to_remove
 
         first_i_y = _i
         @current_y = _v.dy
       
-      @output
+      
+      @face.splitByMultipleVertices @added_diagonals
+      
     
     addDiagonal: (a, b) ->
       
       @sweep_status.add [a, b]
       @edges_to_remove.push [a, b] if b.dy == @current_y
 
-      i = @output.indexOf a.face
-      @output.splice(i, 1, (a.face.splitAtEdges(new Edge2(a, b)))...)
+      @added_diagonals.push [a, b]
     
   @monotonize: (face) ->
     new Monotonizer(face).run()
@@ -133,10 +133,11 @@ class Geometry
     return [face] if vertices.length == 3
     
     is_reflex = (v) ->
-      v.reflex = ccw(v.adj[0], v, v.adj[1]) >= 0
+      v.reflex = ccw(v.adj[0], v, v.adj[1]) < 0
     
     output = []
       
+    vertices.slice 0
     vertices.sort (a, b) -> a.compare b
     
     stack = []
@@ -172,7 +173,12 @@ class Geometry
       v.adj[0] = _v0
       v.adj[1] = _v1
       
-      output.push new Face2([v, _v0, _v1], [new Edge2(v, _v0), new Edge2(v, _v1), new Edge2(_v0, _v1)])
+      face_vertices = [_v1, _v0, v]
+      face_edges = [new Edge2(v, _v0), new Edge2(v, _v1), new Edge2(_v0, _v1)]
+      face2 = new Face2(face_vertices, face_edges)
+      face2.original = face.original
+      
+      output.push face2
       
       v0_reflex = v0.reflex
       v1_reflex = v1.reflex

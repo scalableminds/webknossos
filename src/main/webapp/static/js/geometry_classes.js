@@ -28,7 +28,7 @@ Polyhedron = (function() {
     }
   }
 
-  Polyhedron.prototype.mergeFaces = function() {
+  Polyhedron.prototype._mergeFaces = function() {
     var e, _i, _len, _ref, _results;
     _ref = this.edges.all();
     _results = [];
@@ -39,6 +39,22 @@ Polyhedron = (function() {
       } else {
         _results.push(void 0);
       }
+    }
+    return _results;
+  };
+
+  Polyhedron.prototype.triangulate = function() {
+    var edge, face, _i, _j, _len, _len2, _ref, _ref2, _results;
+    _ref = this.faces.slice(0);
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      face = _ref[_i];
+      face.triangulate();
+    }
+    _ref2 = this.edges.all();
+    _results = [];
+    for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
+      edge = _ref2[_j];
+      _results.push(edge.calc_interior());
     }
     return _results;
   };
@@ -82,27 +98,37 @@ Face3 = (function() {
   }
 
   Face3.prototype.toFace2 = function() {
-    var e, edge2, edges2, face, v, v0, v1, vertices2, _i, _j, _len, _len2, _ref, _ref2;
-    vertices2 = new Vertex3Vertex2Dictionary;
+    var drop_index, edges2, face, i, lowerRightIndex, reversed, v, v0, v1, vertices2, _i, _len, _normal, _ref, _ref2, _ref3;
+    _normal = this.plane.map(Math.abs);
+    drop_index = _normal[2] >= _normal[0] && _normal[2] >= _normal[1] ? 2 : _normal[1] >= _normal[0] && _normal[1] >= _normal[2] ? 1 : 0;
+    vertices2 = [];
     _ref = this.vertices;
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       v = _ref[_i];
-      vertices2.add(v, v.toVertex2(this.plane));
+      vertices2.push(v.toVertex2(drop_index));
     }
+    lowerRightIndex = null;
+    for (i = 0, _ref2 = vertices2.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
+      if (lowerRightIndex === null || vertices2[i].compare(vertices2[lowerRightIndex]) < 0) {
+        lowerRightIndex = i;
+      }
+    }
+    reversed = Geometry.prototype.ccw(vertices2[lowerRightIndex - 1 < 0 ? vertices2.length - 1 : lowerRightIndex - 1], vertices2[lowerRightIndex], vertices2[(lowerRightIndex + 1) % vertices2.length]) < 0;
+    if (reversed) vertices2.reverse();
     edges2 = [];
-    _ref2 = this.edges.all();
-    for (_j = 0, _len2 = _ref2.length; _j < _len2; _j++) {
-      e = _ref2[_j];
-      v0 = vertices2.get(e[0]);
-      v1 = vertices2.get(e[1]);
-      edge2 = new Edge2(v0, v1);
-      edge2.original = e;
-      v0.addEdge(edge2);
-      v1.addEdge(edge2);
-      edges2.push(edge2);
+    for (i = 0, _ref3 = vertices2.length; 0 <= _ref3 ? i < _ref3 : i > _ref3; 0 <= _ref3 ? i++ : i--) {
+      v0 = vertices2[i];
+      v1 = vertices2[(i + 1) % vertices2.length];
+      if (!(v0.original.adjacents.has(v1.original) && v1.original.adjacents.has(v0.original))) {
+        throw "Vertex lining isn't correct";
+      }
+      edges2.push(new Edge2(v0, v1));
+      v0.adj[1] = v1;
+      v1.adj[0] = v0;
     }
-    face = new Face2(vertices2.all(), edges2);
+    face = new Face2(vertices2, edges2);
     face.original = this;
+    face.reversed = reversed;
     return face;
   };
 
@@ -135,7 +161,7 @@ Face3 = (function() {
   };
 
   Face3.prototype.fromFace2s = function(face2s) {
-    var edge2, edge3, edges, face2, face3, vertex2, vertices, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _results;
+    var edge2, edge3, edges, face2, face3, plane, vertex2, vertices, _i, _j, _k, _len, _len2, _len3, _ref, _ref2, _results;
     this.remove();
     _results = [];
     for (_i = 0, _len = face2s.length; _i < _len; _i++) {
@@ -146,18 +172,21 @@ Face3 = (function() {
         vertex2 = _ref[_j];
         vertices.push(vertex2.original);
       }
+      if (face2.reversed) vertices.reverse();
       edges = [];
       _ref2 = face2.edges;
       for (_k = 0, _len3 = _ref2.length; _k < _len3; _k++) {
         edge2 = _ref2[_k];
         edge3 = new Edge3(edge2[0].original, edge2[1].original);
+        edge3 = this.edges.get(edge3) || edge3;
         if (this.polyhedron != null) {
           edge3.polyhedron = this.polyhedron;
           edge3 = this.polyhedron.edges.add(edge3);
         }
         edges.push(edge3);
       }
-      face3 = new Face3(vertices, edges);
+      plane = face2.original != null ? face2.original.plane : null;
+      face3 = new Face3(vertices, edges, plane);
       if (this.polyhedron != null) {
         face3.polyhedron = this.polyhedron;
         this.polyhedron.faces.push(face3);
@@ -189,68 +218,93 @@ Face2 = (function() {
     }
   }
 
-  Face2.prototype.splitAtEdges = function() {
-    var buildFace, edge0, edge1, edges, i, v, vertices, _first, _last, _ref, _ref2, _ref3, _vertices;
-    edges = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-    if (edges.length < 1) return false;
-    buildFace = function(vertices0) {
-      var edges0, first, i, last, v, v0, v1, _last, _ref;
-      first = vertices0[0];
-      last = vertices0[vertices0.length - 1];
-      v = last.adj[0];
-      while (v !== first) {
-        vertices0.push(v);
-        _last = v;
-        v = last === v.adj[0] ? v.adj[1] : v.adj[0];
-        last = _last;
-      }
-      edges0 = [];
-      for (i = 0, _ref = vertices0.length; 0 <= _ref ? i < _ref : i > _ref; 0 <= _ref ? i++ : i--) {
-        v0 = vertices0[i];
-        v1 = vertices0[(i + 1) % vertices0.length];
-        edges0.push(new Edge2(v0, v1));
-        v0.adj[0] = v1;
-        v1.adj[1] = v0;
-      }
-      return new Face2(vertices0, edges0);
-    };
-    edge0 = edges[0];
-    if (edges.length > 1) {
-      vertices = [];
-      edge1 = edges[1];
-      if (edge1[0] === edge0[0] || edge1[1] === edge0[0]) {
-        vertices.push(edge0[1], edge0[0]);
-      } else {
-        vertices.push(edge0[0], edge0[1]);
-      }
-      for (i = 1, _ref = edges.length; 1 <= _ref ? i < _ref : i > _ref; 1 <= _ref ? i++ : i--) {
-        vertices.push(edges[i].other(vertices[i]));
-      }
+  Face2.prototype.splitAtVertices = function() {
+    var edges0, edges1, face0, face1, first, first_index, i, last, last_index, splitting_vertices, v, v0, v1, vertices, vertices0, vertices1, _len, _len2, _len3, _ref, _ref2;
+    splitting_vertices = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+    if (splitting_vertices.length < 2) return false;
+    first = splitting_vertices[0];
+    last = splitting_vertices[splitting_vertices.length - 1];
+    vertices = this.vertices.map(function(a) {
+      return a.clone();
+    });
+    _ref = this.vertices;
+    for (i = 0, _len = _ref.length; i < _len; i++) {
+      v = _ref[i];
+      if (v.compare(first) === 0) first_index = i;
+      if (v.compare(last) === 0) last_index = i;
+      if ((first_index != null) && (last_index != null)) break;
+    }
+    if (first_index < last_index) {
+      vertices0 = vertices.slice(first_index, last_index + 1);
+      vertices1 = vertices.slice(last_index).concat(vertices.slice(0, first_index + 1));
     } else {
-      vertices = [edge0[0], edge0[1]];
+      vertices0 = vertices.slice(first_index).concat(vertices.slice(0, last_index + 1));
+      vertices1 = vertices.slice(last_index, first_index + 1);
     }
-    _vertices = (function() {
-      var _i, _len, _results;
-      _results = [];
-      for (_i = 0, _len = vertices.length; _i < _len; _i++) {
-        v = vertices[_i];
-        _results.push(v.clone());
+    vertices0 = splitting_vertices.slice(1, -1).reverse().map(function(a) {
+      return a.clone();
+    }).concat(vertices0);
+    edges0 = [];
+    for (i = 0, _len2 = vertices0.length; i < _len2; i++) {
+      v = vertices0[i];
+      v0 = vertices0[i];
+      v1 = vertices0[(i + 1) % vertices0.length];
+      v0.adj[1] = v1;
+      v1.adj[0] = v0;
+      edges0.push(new Edge2(vertices0[i], vertices0[(i + 1) % vertices0.length]));
+    }
+    face0 = new Face2(vertices0, edges0);
+    face0.original = this.original;
+    vertices1[0] = vertices1[0].clone();
+    vertices1[vertices1.length - 1] = vertices1[vertices1.length - 1].clone();
+    vertices1 = splitting_vertices.slice(1, -1).map(function(a) {
+      return a.clone();
+    }).concat(vertices1);
+    edges1 = [];
+    for (i = 0, _len3 = vertices1.length; i < _len3; i++) {
+      v = vertices1[i];
+      v0 = vertices1[i];
+      v1 = vertices1[(i + 1) % vertices1.length];
+      v0.adj[1] = v1;
+      v1.adj[0] = v0;
+      edges1.push(new Edge2(vertices1[i], vertices1[(i + 1) % vertices1.length]));
+    }
+    for (i = 0, _ref2 = vertices1.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
+      v0 = vertices1[i];
+      v1 = vertices1[(i + 1) % vertices1.length];
+    }
+    face1 = new Face2(vertices1, edges1);
+    face1.original = this.original;
+    return [face0, face1];
+  };
+
+  Face2.prototype.splitByMultipleVertices = function(vertices_sets) {
+    var face, faceContainer, faces, i, make_container, newFaces, vertices_set, _i, _j, _len, _len2, _len3, _ref, _results;
+    if (vertices_sets.length < 1) return false;
+    make_container = function(face) {
+      return {
+        face: face,
+        verticeSet: Vertex2Set.fromArray(face.vertices)
+      };
+    };
+    faces = [make_container(this)];
+    for (_i = 0, _len = vertices_sets.length; _i < _len; _i++) {
+      vertices_set = vertices_sets[_i];
+      for (i = 0, _len2 = faces.length; i < _len2; i++) {
+        faceContainer = faces[i];
+        if (faceContainer.verticeSet.has(vertices_set[0]) && faceContainer.verticeSet.has(vertices_set[vertices_set.length - 1])) {
+          newFaces = (_ref = faceContainer.face).splitAtVertices.apply(_ref, vertices_set);
+          faces.splice(i, 1, make_container(newFaces[0]), make_container(newFaces[1]));
+          break;
+        }
       }
-      return _results;
-    })();
-    for (i = 0, _ref2 = vertices.length; 0 <= _ref2 ? i < _ref2 : i > _ref2; 0 <= _ref2 ? i++ : i--) {
-      if (i !== vertices.length - 1) vertices[i].adj[0] = vertices[i + 1];
-      if (i !== 0) vertices[i].adj[1] = vertices[i - 1];
     }
-    for (i = 0, _ref3 = _vertices.length; 0 <= _ref3 ? i < _ref3 : i > _ref3; 0 <= _ref3 ? i++ : i--) {
-      if (i !== _vertices.length - 1) _vertices[i].adj[1] = _vertices[i + 1];
-      if (i !== 0) _vertices[i].adj[0] = _vertices[i - 1];
+    _results = [];
+    for (_j = 0, _len3 = faces.length; _j < _len3; _j++) {
+      face = faces[_j];
+      _results.push(face.face);
     }
-    _first = _vertices[0];
-    _last = _vertices[_vertices.length - 1];
-    _first.adj[0].adj[1] = _first;
-    _last.adj[1].adj[0] = _last;
-    return [buildFace(vertices), buildFace(_vertices.reverse())];
+    return _results;
   };
 
   return Face2;
@@ -417,7 +471,6 @@ Vertex2 = (function() {
     v = new Vertex2(this.dx, this.dy);
     v.adj = this.adj.slice(0);
     v.original = this.original;
-    v.normal = this.normal;
     if (this.face) v.face = this.face;
     return v;
   };
@@ -463,10 +516,8 @@ Vertex3 = (function() {
     }
   };
 
-  Vertex3.prototype.toVertex2 = function(normal) {
-    var drop_index, dx, dy, v, _normal;
-    _normal = normal.map(Math.abs);
-    drop_index = _normal[2] >= _normal[0] && _normal[2] >= _normal[1] ? 2 : _normal[1] >= _normal[0] && _normal[1] >= _normal[2] ? 1 : 0;
+  Vertex3.prototype.toVertex2 = function(drop_index) {
+    var dx, dy, v;
     switch (drop_index) {
       case 0:
         dx = this.y;
@@ -482,7 +533,6 @@ Vertex3 = (function() {
     }
     v = new Vertex2(dx, dy);
     v.original = this;
-    v.normal = normal;
     this.vertex2 = v;
     return v;
   };

@@ -13,6 +13,7 @@ import org.bson.types._
 import net.liftweb.mongodb.{JsonObject, JsonObjectMeta}
 import net.liftweb.http.SessionVar
 import net.liftweb.common.{Full, Box}
+import java.util.Date
 
 /**
  * User: tmbo
@@ -23,12 +24,13 @@ import net.liftweb.common.{Full, Box}
 /**
  * Flight route which is currently active and not yet saved to DB
  */
-object SessionRoute extends SessionVar[FlightRoute](FlightRoute.createRecord){
-  def saveRoute(box:Box[User]){
-     box match {
-      case Full(user) if SessionRoute.is.points.is.size>1 =>
+object SessionRoute extends SessionVar[FlightRoute](FlightRoute.createRecord) {
+  def saveRoute(box: Box[User]) {
+    box match {
+      case Full(user) if SessionRoute.is.points.is.size > 1 =>
         val l = user.flightRoutes.is
         user.flightRoutes(SessionRoute.id.is :: l).save
+        SessionRoute.timestamp(new Date())
         SessionRoute.userID(user.id.is).save
       case _ =>
     }
@@ -38,9 +40,10 @@ object SessionRoute extends SessionVar[FlightRoute](FlightRoute.createRecord){
 /**
  * One point on a flight route
  */
-case class RoutePoint(x: Int , y: Int , z:Int) extends JsonObject[RoutePoint] {
+case class RoutePoint(x: Int, y: Int, z: Int) extends JsonObject[RoutePoint] {
   def meta = RoutePoint
 }
+
 object RoutePoint extends JsonObjectMeta[RoutePoint]
 
 /**
@@ -49,7 +52,10 @@ object RoutePoint extends JsonObjectMeta[RoutePoint]
 class FlightRoute private() extends MongoRecord[FlightRoute] with ObjectIdPk[FlightRoute] {
   def meta = FlightRoute
 
-    object points extends MongoJsonObjectListField(this, RoutePoint)
+  object points extends MongoJsonObjectListField(this, RoutePoint)
+
   object userID extends ObjectIdRefField(this, User)
+  object timestamp extends DateTimeField(this)
 }
+
 object FlightRoute extends FlightRoute with MongoMetaRecord[FlightRoute]

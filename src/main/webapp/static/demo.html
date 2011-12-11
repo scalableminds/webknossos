@@ -33,11 +33,17 @@
 			<p> W/S/A/D: Move Camera</p>
 			<p>Left Mouse Button: Look around</p>
 		</div>
-		<div id="clipping">
-		<p>Clipping params</p>
+		<div id="perspective">
+		<p>Perspective params</p>
 		<form>
 		<p>
-			Distance: <input type="text" id="clipDistance" size="5" onChange="changeClippingParams();"/>
+			Near: <input type="text" id="near" size="5" value="15"  onChange="changePerspectiveParams();"/>
+		</p>
+		<p>
+			Far: <input type="text" id="far" size="5" value="20"  onChange="changePerspectiveParams();"/>
+		</p>
+		<p>
+			FovY: <input type="text" id="fovy" size="5" value="60"  onChange="changePerspectiveParams();"/>
 		</p>
 		</form>
 		</div>
@@ -46,7 +52,7 @@
 	
 	<script type="text/javascript">
     Modernizr.load({
-      load: ['js/binary_reader.js', 'js/demo.js', 'js/obj_reader.js'],
+      load: ['js/binary_reader.js', 'js/obj_loader.js','js/demo.js'],
       complete: function () { start(); }
     });
   </script>

@@ -3,6 +3,8 @@ package com.scalableminds.brainflight.binary
 import scala.math._
 import com.scalableminds.tools.Math._
 import java.lang.OutOfMemoryError
+import com.scalableminds.tools.geometry.Vector3D._
+import com.scalableminds.tools.geometry.{Vector3D, NGonalFrustum, Polygon}
 
 /**
  * Scalable Minds - Brainflight
@@ -16,7 +18,6 @@ import java.lang.OutOfMemoryError
  * A binary data model defines which binary data is responded given a viewpoint and an axis
  */
 abstract class DataModel {
-  val containingCoordinates : IndexedSeq[Tuple3[Int, Int, Int]]
   // every model needs a unique id, it is used to request the model via get http request
   val id : String
   // defines the axis length of the field
@@ -28,8 +29,10 @@ abstract class DataModel {
         throw new NumberFormatException("Can't convert int to byte (out of range).")
       containingCoordinates.flatMap(point => List(point._1.toByte,point._2.toByte,point._3.toByte)).toArray
   }
+  // specifies the polygons the model consists of
+  val polygons : List[Polygon]
 
-  def rotateAndMove(moveVector:Tuple3[Int,Int, Int],axis:Tuple3[Int,Int, Int]):IndexedSeq[Tuple3[Int, Int, Int]]={
+  def rotateAndMove(moveVector:Tuple3[Int,Int, Int],axis:Tuple3[Int,Int, Int]):Seq[Tuple3[Int, Int, Int]]={
     // orthogonal vector to (0,1,0) and rotation vector
     val ortho = normalizeVector((axis._3,0,-axis._1))
 
@@ -54,43 +57,41 @@ abstract class DataModel {
       (x.round.toInt,y.round.toInt,z.round.toInt)
     })
   }
+  // calculate all coordinates which are in the model boundary
+  lazy val containingCoordinates:Seq[Tuple3[Int, Int, Int]] = {
+    val normals = polygons.map(_.normalVector)
+    surroundingCube.filter(p => {
+      for(n <- normals)
+        if((n ° p) > 0) false
+      true
+    }).map( Vector3DToIntTuple _).distinct
+  }
 
+  private def surroundingCube : Seq[Vector3D] = {
+    val vertices = polygons.flatMap(_.vertices)
 
+    val t = vertices.foldLeft(vertices(0))((b,e) => (math.max(b.x,e.x),math.max(b.y,e.y),math.max(b.z,e.z)))
+    val b = vertices.foldLeft(vertices(0))((b,e) => (math.min(b.x,e.x),math.min(b.y,e.y),math.min(b.z,e.z)))
+
+    for{
+      y <- b.y.round to t.y.round
+      x <- b.x.round to t.x.round
+      z <- b.z.round to t.z.round
+    } yield new Vector3D(x,y,z)
+  }
 }
 
 object CubeModel extends DataModel{
   val id = "cube"
   val yLength = 50
-  // calculate all coordinates which are in the Cube boundary
-  val containingCoordinates =
-  for{
-    y <- 0 to yLength
-    x <- -yLength/2 to yLength/2
-    z <- -yLength/2 to yLength/2
-  }yield{
-    (x,y,z)
-  }
+
+  val polygons = new NGonalFrustum(4,yLength,25,25).polygons
 }
 
-object FrustrumModel extends DataModel{
-  val id= "frustrum"
+object FrustumModel extends DataModel{
+  val id= "frustum"
 
   val yLength = 50
-  // linear equation for the generator of the frustrum
-  def generatorEquation(y:Int) = 10+y // -> z = a + b*y
-  // calculate all coordinates which are in the frustrum boundary
-  val containingCoordinates = {
-    val generatorMax = generatorEquation(yLength)
-    for{
-      y <- 0 to yLength
-      x <- -generatorMax to generatorMax
-      z <- -generatorMax to generatorMax
-
-      rad = generatorEquation(y)
-
-      if sqrt(square(x)+square(z)) <= rad
-    }yield{
-      (x,y,z)
-    }
-  }
+  // TODO: implement polygons for frustrum -> evaluate number of vertices
+  val polygons = new NGonalFrustum(8,yLength,10,60).polygons
 }

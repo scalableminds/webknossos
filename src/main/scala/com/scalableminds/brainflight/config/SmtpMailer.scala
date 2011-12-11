@@ -18,8 +18,8 @@ object SmtpMailer extends Loggable {
     var isAuth = Props.get("mail.smtp.auth", "false").toBoolean
 
     Mailer.customProperties = Props.get("mail.smtp.host", "localhost") match {
-      case h => Map(
-        "mail.smtp.host" -> h,
+      case host => Map(
+        "mail.smtp.host" -> host,
         "mail.smtp.port" -> Props.get("mail.smtp.port", "25"),
         "mail.smtp.auth" -> isAuth.toString,
         "mail.smtp.socketFactory.port"-> "465",

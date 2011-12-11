@@ -6,7 +6,7 @@ import _root_.net.liftweb.http.provider._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.sitemap.Loc._
 import com.scalableminds.brainflight.handler.RequestHandler
-import com.scalableminds.brainflight.binary.{FrustrumModel, ModelStore, CubeModel}
+import com.scalableminds.brainflight.binary.{FrustumModel, ModelStore, CubeModel}
 import org.bson.types.ObjectId
 import com.scalableminds.brainflight.lib.{MongoConfig, ScalaSilentLogger}
 import com.scalableminds.brainflight.model.{SessionRoute, FlightRoute, User}
@@ -105,7 +105,7 @@ class Boot {
     /*
      * Register all BinaryDataModels
      */
-    ModelStore.register(CubeModel, FrustrumModel)
+    ModelStore.register(CubeModel, FrustumModel)
     LiftRules.htmlProperties.default.set((r: Req) => new Html5Properties(r.userAgent))
   }
 

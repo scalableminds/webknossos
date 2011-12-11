@@ -9,7 +9,7 @@ $ ->
   Modernizr.load 
     load: [
       "js/binary_reader.js",
-      "js/obj_reader.js",
+      "js/obj_loader.js",
       "js/binary_request.js",
       "js/core_ext.js",
       "js/event_emitter.js",

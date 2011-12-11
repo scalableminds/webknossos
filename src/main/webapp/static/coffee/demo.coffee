@@ -88,11 +88,13 @@ start = ->
 	ps.setup document.getElementById('render'),{"antialias":true}
 	
 	# LOAD A CUSTOM SHADER
+	###
 	vert = ps.getShaderStr("js/libs/pointstream/shaders/clip.vs")
 	frag = ps.getShaderStr("js/libs/pointstream/shaders/clip.fs")
 	progObj = ps.createProgram(vert, frag);
 	ps.useProgram(progObj);
-	
+	###
+	ps.perspective 60, ps.width / ps.height, 15, 20
 	ps.background [0.9, 0.9 ,0.9 ,1]
 	ps.pointSize 5
 	
@@ -101,9 +103,8 @@ start = ->
 	ps.onMouseReleased = mouseReleased
 	ps.onKeyDown = keyDown
 	
-	pointcloud = read_binary_file()  #ps.load "Pointstream/clouds/lion.psi" 
-	
-	mesh = read_obj_file()
+	pointcloud = read_binary_file()  	
+	mesh = load_obj_file()
 	
 	return
 	
@@ -116,3 +117,12 @@ setCamPosition = ->
 	if !isNaN(x) and !isNaN(y) and !isNaN(z)
 		cam.pos = [x,y,z]
 		return
+		
+changePerspectiveParams = ->
+	near = parseFloat document.getElementById('near').value
+	far = parseFloat document.getElementById('far').value
+	fovy = parseFloat document.getElementById('fovy').value
+	
+	if !isNaN(near) and !isNaN(far) and !isNaN(fovy)
+		ps.perspective fovy, ps.width / ps.height, near, far
+		return	

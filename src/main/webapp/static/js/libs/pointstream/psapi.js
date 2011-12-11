@@ -24,7 +24,7 @@ var PointStream = (function() {
     if(!Float32Array.prototype.subarray){
       /**
         @private
-      */
+      */F
       Float32Array.prototype.subarray = function(s,e){
         return !e ? this.slice(0) : this.slice(s,e);
       };

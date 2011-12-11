@@ -51,7 +51,7 @@ _Model = (skipInitialization) ->
       output[i + 2] = Math.round(moveVector[2] + (a20 * px + a21 * py + a22 * pz))
     
     # clear stack before returning callback
-    defer -> callback(output)
+    Utils.defer -> callback(output)
     
  
   model.find = (point, axis, callback) ->

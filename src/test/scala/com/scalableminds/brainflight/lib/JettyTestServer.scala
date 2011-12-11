@@ -9,25 +9,29 @@ package com.scalableminds.brainflight.lib
  */
 
 
-import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 
 import net.liftweb.common.Box
 import java.net.URL
 import org.eclipse.jetty.servlet.FilterHolder
+import org.eclipse.jetty.server.Server
+import javax.servlet.DispatcherType
+import java.util.EnumSet
 
 final class JettyTestServer(baseUrlBox: Box[URL]) {
 
   def baseUrl = baseUrlBox getOrElse new URL("http://127.0.0.1:8080")
 
   private val (server_, context_) = {
+    val all = EnumSet.of(DispatcherType.ASYNC, DispatcherType.ERROR, DispatcherType.FORWARD,
+                DispatcherType.INCLUDE, DispatcherType.REQUEST);
     val server = new Server(baseUrl.getPort)
     val context = new WebAppContext()
     context.setServer(server)
     context.setContextPath("/")
     val dir = System.getProperty("net.liftweb.webapptest.src.test.webapp", "src/main/webapp")
     context.setWar(dir)
-    context.addFilter(new FilterHolder(new org.eclipse.jetty.servlets.GzipFilter()),"/",1)
+    context.addFilter("org.eclipse.jetty.servlets.GzipFilter","/",all)
     /*Jetty 8:
     val all = EnumSet.of(DispatcherType.ASYNC, DispatcherType.ERROR, DispatcherType.FORWARD,
             DispatcherType.INCLUDE, DispatcherType.REQUEST);

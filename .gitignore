@@ -10,3 +10,7 @@ lifttemplate.iml
 lifttemplate.ipr
 lifttemplate.iws
 src/main/scala/rebel.xml
+*.obj
+*.zip
+src/main/webapp/static/image
+src/main/webapp/static/js/libs/pointstream/clouds

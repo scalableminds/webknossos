@@ -1,5 +1,6 @@
 var EventEmitter;
 var __slice = Array.prototype.slice;
+
 EventEmitter = (function() {
   var callbacks, emitted;
   callbacks = {};
@@ -22,9 +23,7 @@ EventEmitter = (function() {
     },
     on: function(evnt, callback) {
       var _ref;
-      if ((_ref = callbacks[evnt]) == null) {
-        callbacks[evnt] = [];
-      }
+      if ((_ref = callbacks[evnt]) == null) callbacks[evnt] = [];
       callbacks[evnt].push({
         callback: callback
       });
@@ -32,9 +31,7 @@ EventEmitter = (function() {
     },
     once: function(evnt, callback) {
       var _ref;
-      if ((_ref = callbacks[evnt]) == null) {
-        callbacks[evnt] = [];
-      }
+      if ((_ref = callbacks[evnt]) == null) callbacks[evnt] = [];
       callbacks[evnt].push({
         callback: callback,
         once: true

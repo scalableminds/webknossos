@@ -1,3 +1,4 @@
+
 describe('model', function() {
   it('should exist', function() {
     return expect(Model).toBeDefined();

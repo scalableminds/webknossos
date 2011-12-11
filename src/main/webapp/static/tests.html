@@ -14,13 +14,18 @@
   <script type="text/javascript">
     Modernizr.load({
       load: [
+        'js/core_ext.js',
         'js/spec/spec_helper.js',
         'js/spec/binary_request.js',
         'js/spec/model.js',
-        'js/core_ext.js',
+        'js/spec/geometry.js',
+        //'js/spec/avltree.js',
         'js/event_emitter.js',
         'js/binary_request.js',
-        'js/model.js'
+        'js/model.js',
+        'js/geometry.js',
+        'js/geometry_classes.js',
+        //'js/avltree.js'
       ],
       complete: function() {
         var jasmineEnv = jasmine.getEnv();

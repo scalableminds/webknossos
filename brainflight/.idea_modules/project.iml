@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="false">
+    <output url="file://$MODULE_DIR$/../project/target/scala_2.9.1" />
+    <output-test url="file://$MODULE_DIR$/../project/target/scala_2.9.1" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../project">
+      <sourceFolder url="file://$MODULE_DIR$/../project" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../project/plugins" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/../project/boot" />
+      <excludeFolder url="file://$MODULE_DIR$/../project/plugins/project/target" />
+      <excludeFolder url="file://$MODULE_DIR$/../project/plugins/target" />
+      <excludeFolder url="file://$MODULE_DIR$/../project/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library">
+      <library name="sbt-and-plugins">
+        <CLASSES>
+          <root url="file://$MODULE_DIR$/../project/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0" />
+          <root url="jar://$MODULE_DIR$/../project/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/xsbti/interface-0.11.0.jar!/" />
+          <root url="file://$MODULE_DIR$/../project/target/scala-2.9.1/sbt-0.11.0/classes" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/com.github.scala-incubator.io/scala-io-core_2.9.1/jars/scala-io-core_2.9.1-0.2.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/control_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/incremental-compiler_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/commons-io/commons-io/jars/commons-io-2.0.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.reflections/reflections/jars/reflections-0.9.5.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.springframework/spring-context/jars/spring-context-3.0.6.RELEASE.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/classfile_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/ivy_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/javassist/javassist/jars/javassist-3.12.1.GA.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/commons-httpclient-3.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.scala-tools/scala-stm_2.9.1/jars/scala-stm_2.9.1-0.4.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.codehaus.jackson/jackson-core-asl/jars/jackson-core-asl-1.9.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/com.google.guava/guava/jars/guava-r08.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/run_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/commons-codec/commons-codec/jars/commons-codec-1.3.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/testing_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/tracking_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/javax.persistence/persistence-api/jars/persistence-api-1.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/discovery_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/oauth.signpost/signpost-core/jars/signpost-core-1.2.1.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/ch.qos.logback/logback-core/jars/logback-core-0.9.30.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/local/play/anorm_2.9.1/2.0-RC1-SNAPSHOT/jars/anorm_2.9.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/jline-0.9.94.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.scala-lang/scalap/jars/scalap-2.9.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/com.h2database/h2/jars/h2-1.3.158.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.codehaus.jackson/jackson-mapper-asl/jars/jackson-mapper-asl-1.9.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/commons-logging-1.0.4.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/com.github.jsuereth.scala-arm/scala-arm_2.9.1/jars/scala-arm_2.9.1-0.3.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/xsbti/interface-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/commons-codec-1.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.yaml/snakeyaml/bundles/snakeyaml-1.9.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/api_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/ch.qos.logback/logback-classic/jars/logback-classic-0.9.30.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.hibernate/hibernate-validator/jars/hibernate-validator-4.2.0.Final.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/commons-lang/commons-lang/jars/commons-lang-2.6.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.slf4j/slf4j-api/jars/slf4j-api-1.6.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/joda-time/joda-time/jars/joda-time-2.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/local/play/play_2.9.1/2.0-RC1-SNAPSHOT/jars/play_2.9.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/actions_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/rhino/js/jars/js-1.7R2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/lib/jansi.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/classpath_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/com.jolbox/bonecp/bundles/bonecp-0.7.1.RELEASE.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/lib/scala-compiler.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/javax.validation/validation-api/jars/validation-api-1.0.0.GA.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.slf4j/jcl-over-slf4j/jars/jcl-over-slf4j-1.6.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/jsch-0.1.31.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/main_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.avaje/ebean/jars/ebean-2.7.3.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/launcher-interface_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/persist_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/javax.servlet/javax.servlet-api/jars/javax.servlet-api-3.0.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/completion_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/io_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/scala_2.9.1/sbt_0.11.0/com.github.mpeltonen/sbt-idea/jars/sbt-idea-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/dom4j/dom4j/jars/dom4j-1.6.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/sbt_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/collections_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.jboss.netty/netty/bundles/netty-3.2.6.Final.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/test-interface-0.5.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/lib/scala-library.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.springframework/spring-beans/jars/spring-beans-3.0.6.RELEASE.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/ivy-2.2.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/com.typesafe.config/config_2.9.1/jars/config_2.9.1-0.1.6.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.springframework/spring-core/jars/spring-core-3.0.6.RELEASE.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/local/play/templates_2.9.1/2.0-RC1-SNAPSHOT/jars/templates_2.9.1.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/com.github.scala-incubator.io/scala-io-file_2.9.1/jars/scala-io-file_2.9.1-0.2.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/se.scalablesolutions.akka/akka-actor/jars/akka-actor-1.3-RC2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/xml-apis/xml-apis/jars/xml-apis-1.0.b2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/compile_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/task-system_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/org.slf4j/jul-to-slf4j/jars/jul-to-slf4j-1.6.2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/com.google.javascript/closure-compiler/jars/closure-compiler-r1459.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/com.codahale/jerkson_2.9.1/jars/jerkson_2.9.1-0.5.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/lib/jline.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/mysql/mysql-connector-java/jars/mysql-connector-java-5.1.17.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/com.ning/async-http-client/jars/async-http-client-1.6.5.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/process_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/sbinary_2.9.0-0.4.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/tasks_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/repository/cache/se.scalablesolutions.akka/akka-slf4j/jars/akka-slf4j-1.3-RC2.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/cache_2.9.1-0.11.0.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/sbt/boot/scala-2.9.1/org.scala-tools.sbt/sbt/0.11.0/logging_2.9.1-0.11.0.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/sbt_2.9.1/srcs/sbt_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/main_2.9.1/srcs/main_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/actions_2.9.1/srcs/actions_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/classfile_2.9.1/srcs/classfile_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/io_2.9.1/srcs/io_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/control_2.9.1/srcs/control_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-lang/scala-library/srcs/scala-library-2.9.1-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/logging_2.9.1/srcs/logging_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/process_2.9.1/srcs/process_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/classpath_2.9.1/srcs/classpath_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/launcher-interface_2.9.1/srcs/launcher-interface_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-lang/scala-compiler/srcs/scala-compiler-2.9.1-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/incremental-compiler_2.9.1/srcs/incremental-compiler_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/collections_2.9.1/srcs/collections_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/api_2.9.1/srcs/api_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/persist_2.9.1/srcs/persist_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbinary/sbinary_2.9.0/srcs/sbinary_2.9.0-0.4.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/compile_2.9.1/srcs/compile_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/ivy_2.9.1/srcs/ivy_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.apache.ivy/ivy/srcs/ivy-2.2.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/com.jcraft/jsch/srcs/jsch-0.1.31-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/commons-httpclient/commons-httpclient/srcs/commons-httpclient-3.1-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/commons-logging/commons-logging/srcs/commons-logging-1.0.4-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/completion_2.9.1/srcs/completion_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/jline/jline/srcs/jline-0.9.94-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/discovery_2.9.1/srcs/discovery_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/run_2.9.1/srcs/run_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/task-system_2.9.1/srcs/task-system_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/tasks_2.9.1/srcs/tasks_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/tracking_2.9.1/srcs/tracking_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/cache_2.9.1/srcs/cache_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/testing_2.9.1/srcs/testing_2.9.1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/precompiled-2_8_1/srcs/precompiled-2_8_1-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/precompiled-2_8_0/srcs/precompiled-2_8_0-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/precompiled-2_9_0/srcs/precompiled-2_9_0-0.11.0-sources.jar!/" />
+          <root url="jar://$MODULE_DIR$/../../playframework/framework/../repository/cache/org.scala-tools.sbt/interface/srcs/interface-0.11.0-sources.jar!/" />
+        </SOURCES>
+      </library>
+    </orderEntry>
+    <orderEntry type="library" name="scala-2.9.1" level="project" />
+  </component>
+</module>
+

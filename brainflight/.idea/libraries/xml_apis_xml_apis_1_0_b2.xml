@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="xml-apis_xml-apis_1.0.b2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/xml-apis/xml-apis/jars/xml-apis-1.0.b2.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/xml-apis/xml-apis/srcs/xml-apis-1.0.b2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="play_anorm_2.9.1_2.0-RC1-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/local/play/anorm_2.9.1/2.0-RC1-SNAPSHOT/jars/anorm_2.9.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

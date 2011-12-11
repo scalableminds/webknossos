@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="se.scalablesolutions.akka_akka-slf4j_1.3-RC2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/se.scalablesolutions.akka/akka-slf4j/jars/akka-slf4j-1.3-RC2.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/se.scalablesolutions.akka/akka-slf4j/srcs/akka-slf4j-1.3-RC2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

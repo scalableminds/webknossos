@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="joda-time_joda-time_2.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/joda-time/joda-time/jars/joda-time-2.0.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/joda-time/joda-time/docs/joda-time-2.0-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/joda-time/joda-time/srcs/joda-time-2.0-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

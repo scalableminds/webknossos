@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="com.mongodb.casbah_casbah-commons_2.9.1_2.1.5-1">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/com.mongodb.casbah/casbah-commons_2.9.1/jars/casbah-commons_2.9.1-2.1.5-1.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/com.mongodb.casbah/casbah-commons_2.9.1/docs/casbah-commons_2.9.1-2.1.5-1-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/com.mongodb.casbah/casbah-commons_2.9.1/srcs/casbah-commons_2.9.1-2.1.5-1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

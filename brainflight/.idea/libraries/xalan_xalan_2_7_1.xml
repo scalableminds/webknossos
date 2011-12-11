@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="xalan_xalan_2.7.1">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/xalan/xalan/jars/xalan-2.7.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/xalan/xalan/srcs/xalan-2.7.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

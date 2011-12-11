@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="org.springframework_spring-core_3.0.6.RELEASE">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/org.springframework/spring-core/jars/spring-core-3.0.6.RELEASE.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/org.springframework/spring-core/srcs/spring-core-3.0.6.RELEASE-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

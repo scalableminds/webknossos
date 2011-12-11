@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="org.slf4j_jcl-over-slf4j_1.6.2">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/org.slf4j/jcl-over-slf4j/jars/jcl-over-slf4j-1.6.2.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/org.slf4j/jcl-over-slf4j/docs/jcl-over-slf4j-1.6.2-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/org.slf4j/jcl-over-slf4j/srcs/jcl-over-slf4j-1.6.2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

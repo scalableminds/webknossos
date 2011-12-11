@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="play_templates_2.9.1_2.0-RC1-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../playframework/repository/local/play/templates_2.9.1/2.0-RC1-SNAPSHOT/jars/templates_2.9.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

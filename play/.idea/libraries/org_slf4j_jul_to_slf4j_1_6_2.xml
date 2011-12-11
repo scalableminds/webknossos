@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="org.slf4j_jul-to-slf4j_1.6.2">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/bin/play/repository/cache/org.slf4j/jul-to-slf4j/jars/jul-to-slf4j-1.6.2.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/bin/play/repository/cache/org.slf4j/jul-to-slf4j/docs/jul-to-slf4j-1.6.2-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/bin/play/repository/cache/org.slf4j/jul-to-slf4j/srcs/jul-to-slf4j-1.6.2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

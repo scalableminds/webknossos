@@ -1,0 +1,9 @@
+# Properties in this file will be read when running in test mode on scmserv
+# ----------- mongo-settings ------------
+mongo.autostart=false
+mongo.host=127.0.0.1
+mongo.dbname=brainflight
+
+# ----------- binary data settings ------
+binarydata.path=/home/deployboy/binary_data/
+binarydata.id=100527_k0563_mag1

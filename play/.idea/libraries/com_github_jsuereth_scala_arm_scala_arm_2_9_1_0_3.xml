@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="com.github.jsuereth.scala-arm_scala-arm_2.9.1_0.3">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/bin/play/repository/cache/com.github.jsuereth.scala-arm/scala-arm_2.9.1/jars/scala-arm_2.9.1-0.3.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/bin/play/repository/cache/com.github.jsuereth.scala-arm/scala-arm_2.9.1/docs/scala-arm_2.9.1-0.3-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/bin/play/repository/cache/com.github.jsuereth.scala-arm/scala-arm_2.9.1/srcs/scala-arm_2.9.1-0.3-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

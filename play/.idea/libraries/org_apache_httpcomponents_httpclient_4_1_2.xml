@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="org.apache.httpcomponents_httpclient_4.1.2">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/bin/play/repository/cache/org.apache.httpcomponents/httpclient/jars/httpclient-4.1.2.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/bin/play/repository/cache/org.apache.httpcomponents/httpclient/srcs/httpclient-4.1.2-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

@@ -1,0 +1,28 @@
+<div class="row">
+  <div class="span16">
+    <wizard:screen_info><div>Page <wizard:screen_number/> of <wizard:total_screens/></div></wizard:screen_info>
+    <wizard:wizard_top> <div> <wizard:bind/> </div> </wizard:wizard_top>
+    <wizard:screen_top> <div> <wizard:bind/> </div> </wizard:screen_top>
+    <!--<wizard:errors> <div> <ul> <wizard:item> <li> <wizard:bind/> </li> </wizard:item> </ul> </div> </wizard:errors>-->
+    <fieldset>
+      <wizard:fields>
+        <wizard:line>
+          <div class="clearfix">
+            <wizard:label><label wizard:for=""><wizard:bind></wizard:bind></label></wizard:label>
+            <div class="input">
+              <wizard:form></wizard:form>
+              <wizard:help><span class="help-inline"><wizard:bind></wizard:bind></span></wizard:help>
+              <wizard:field_errors><ul><wizard:error><li><wizard:bind></wizard:bind></li></wizard:error></ul></wizard:field_errors>
+            </div>
+          </div>
+        </wizard:line>
+      </wizard:fields>
+    </fieldset>
+    <div class="actions">
+      <wizard:next/>
+      <wizard:cancel/>
+    </div>
+    <wizard:screen_bottom><div><wizard:bind></wizard:bind></div></wizard:screen_bottom>
+    <wizard:wizard_bottom><div><wizard:bind></wizard:bind></div></wizard:wizard_bottom>
+  </div>
+</div>

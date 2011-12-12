@@ -2,6 +2,8 @@
 target/
 binarydata/
 boot/
+.idea/*
+play/.idea/*
 *.db
 *.class
 *.keep

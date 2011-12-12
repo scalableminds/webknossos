@@ -1,0 +1,22 @@
+div#main{
+	height: 450px;
+	width: 450px;
+	padding: 10px;
+	position: absolute;
+	left: 10 px; 
+	top: 0px;
+	margin-right: 30px;
+}
+
+div#options{
+	height: 450px;
+	width: 450px;
+	padding: 10px;
+	position: absolute;	
+	margin-left: 30px;
+	left: 500px;
+	top:0px;
+}
+
+
+	

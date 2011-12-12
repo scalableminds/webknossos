@@ -1,0 +1,51 @@
+@(user: User)
+
+@main(user){
+<header>
+  <hgroup>
+      <h1>Static</h1>
+      <h2>Index</h2>
+  </hgroup>
+</header>
+<script src="@routes.Assets.at("javascripts/libs/modernizr-2.0.6.min.js")"></script>
+  <div id="container">
+    <div id="main" role="main">
+      <canvas id="render"></canvas>
+    </div>
+    <footer>
+      <span id="status"></span>
+    </footer>
+  </div> <!--! end of #container -->
+
+
+  <!-- JavaScript at the bottom for fast page loading -->
+
+  <script>
+    // http://www.modernizr.com/docs/#load
+    Modernizr.load({
+      // Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if offline
+      load: "//ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js",
+      complete: function () {
+        if ( !window.jQuery )
+          Modernizr.load('@routes.Assets.at("javascripts/libs/jquery-1.6.1.min.js")');
+      }
+    });
+    
+    if (Modernizr.webgl)
+      Modernizr.load([
+        "@routes.Assets.at("javascripts/libs/pointstream/xbps.js")",
+        "@routes.Assets.at("javascripts/libs/pointstream/libs/c3.js")",
+        "@routes.Assets.at("javascripts/brainflight.js")"
+      ]);
+    else
+      alert( "Sorry dude, you need WebGL for this. Get Chrome or Firefox." );
+      
+  </script>
+	
+  <!-- Prompt IE 6 users to install Chrome Frame. Remove this if you want to support IE 6.
+       chromium.org/developers/how-tos/chrome-frame-getting-started -->
+  <!--[if lt IE 9 ]>
+    <script src="//ajax.googleapis.com/ajax/libs/chrome-frame/1.0.3/CFInstall.min.js"></script>
+    <script>window.attachEvent('onload',function(){CFInstall.check({mode:'overlay'})})</script>
+  <![endif]-->
+}

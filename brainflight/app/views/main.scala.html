@@ -1,4 +1,4 @@
-@(projects: Seq[Project], user: User)(body: Html)
+@(user: User)(body: Html)
 
 <html>
     <head>
@@ -25,13 +25,23 @@
         <nav>
             <h4 class="dashboard"><a href="#/">Dashboard</a></h4>
             <ul id="projects">
-                @projects.groupBy(_.folder).map {
-                    case (group, projects) => {
-                        @views.html.projects.group(group, projects)
-                    }
-                }
+                <li>
+                    <span class="toggle"></span>
+                    <h4 class="groupName">Static / Test</h4>
+                    <span class="loader">Loading</span>
+                    <ul>
+                        <li>
+                            <a class="name" href="@routes.Test.index">Index</a>
+                        </li>
+                        <li>
+                            <a class="name" href="@routes.Test.demo">Demo</a>
+                        </li>
+                        <li>
+                            <a class="name" href="@routes.Test.tests">Tests</a>
+                        </li>
+                    </ul>
+                </li>
             </ul>
-            <button id="newGroup">New group</button>
         </nav>
         <section id="main">
             @body

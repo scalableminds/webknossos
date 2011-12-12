@@ -1252,3 +1252,504 @@ Caused by: java.io.FileNotFoundException: binaryData/x0000/y0000/z0000/100527_k0
 	at play.core.Invoker$$anonfun$receive$1.apply(Invoker.scala:50) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
 	... 13 common frames omitted
 
+2011-12-12 00:13:35,661 - [INFO] - from play in pool-16-thread-219 
+Application started
+
+2011-12-12 00:14:56,351 - [INFO] - from play in pool-16-thread-230 
+Application started
+
+2011-12-12 00:16:48,127 - [ERROR] - from application in pool-16-thread-246 
+
+
+! @68kkm93d4 - Internal server error, for request [GET /] ->
+
+play.api.UnexpectedException: Unexpected exception [Parse: /Users/tombocklisch/Documents/ScalableMinds/brainflight/brainflight/conf/application.conf: 40: Reserved character '@' is not allowed outside quotes (if you intended '@' to be part of a key or string value, try enclosing the key or value in double quotes)]
+	at play.core.ReloadableApplication$$anonfun$get$1$$anonfun$1.apply(ApplicationProvider.scala:87) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.ReloadableApplication$$anonfun$get$1$$anonfun$1.apply(ApplicationProvider.scala:65) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at play.core.ReloadableApplication$$anonfun$get$1.apply(ApplicationProvider.scala:65) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.ReloadableApplication$$anonfun$get$1.apply(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Either$RightProjection.flatMap(Either.scala:277) ~[scala-library.jar:na]
+	at play.core.ReloadableApplication.get(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$class.sendHandler$1(Server.scala:38) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.apply(Exception.scala:88) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.either(Exception.scala:110) ~[scala-library.jar:na]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:46) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:48) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.toLeft(Option.scala:252) [scala-library.jar:na]
+	at play.core.server.Server$class.getHandlerFor(Server.scala:44) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer.getHandlerFor(NettyServer.scala:32) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer$PlayDefaultUpstreamHandler.messageReceived(NettyServer.scala:320) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.stream.ChunkedWriteHandler.handleUpstream(ChunkedWriteHandler.java:149) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.Channels.fireMessageReceived(Channels.java:302) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.unfoldAndFireMessageReceived(ReplayingDecoder.java:522) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.callDecode(ReplayingDecoder.java:506) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.messageReceived(ReplayingDecoder.java:443) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.ChannelEventRunnable.run(ChannelEventRunnable.java:69) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor$ChildExecutor.run(OrderedMemoryAwareThreadPoolExecutor.java:316) [netty-3.2.6.Final.jar:na]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886) [na:1.6.0_29]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908) [na:1.6.0_29]
+	at java.lang.Thread.run(Thread.java:680) [na:1.6.0_29]
+Caused by: com.typesafe.config.ConfigException$Parse: /Users/tombocklisch/Documents/ScalableMinds/brainflight/brainflight/conf/application.conf: 40: Reserved character '@' is not allowed outside quotes (if you intended '@' to be part of a key or string value, try enclosing the key or value in double quotes)
+	at com.typesafe.config.impl.Parser$ParseContext.nextToken(Parser.java:81) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser$ParseContext.checkElementSeparator(Parser.java:143) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser$ParseContext.parseObject(Parser.java:546) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser$ParseContext.parse(Parser.java:671) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser.parse(Parser.java:32) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.rawParseValue(Parseable.java:162) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.rawParseValue(Parseable.java:150) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.parseValue(Parseable.java:134) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.parseValue(Parseable.java:128) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.parse(Parseable.java:112) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.ConfigImpl.fromBasename(ConfigImpl.java:44) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.ConfigImpl.parseFileAnySyntax(ConfigImpl.java:111) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.ConfigFactory.parseFileAnySyntax(ConfigFactory.java:383) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.ConfigFactory.parseFileAnySyntax(ConfigFactory.java:387) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at play.api.Configuration$.fromFile(Configuration.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.api.Application$$anonfun$2$$anonfun$apply$1.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.api.Application$$anonfun$2$$anonfun$apply$1.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at play.api.Application$$anonfun$2.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.api.Application$$anonfun$2.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.getOrElse(Option.scala:108) [scala-library.jar:na]
+	at play.api.Application.<init>(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.ReloadableApplication$$anonfun$get$1$$anonfun$1.apply(ApplicationProvider.scala:74) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	... 37 common frames omitted
+
+2011-12-12 00:17:02,001 - [ERROR] - from application in pool-16-thread-244 
+
+
+! @68kkm93d5 - Internal server error, for request [GET /] ->
+
+play.api.UnexpectedException: Unexpected exception [Parse: /Users/tombocklisch/Documents/ScalableMinds/brainflight/brainflight/conf/application.conf: 40: '$' not followed by {, 'p' not allowed after '$' (if you intended 'p' to be part of a key or string value, try enclosing the key or value in double quotes)]
+	at play.core.ReloadableApplication$$anonfun$get$1$$anonfun$1.apply(ApplicationProvider.scala:87) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.ReloadableApplication$$anonfun$get$1$$anonfun$1.apply(ApplicationProvider.scala:65) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at play.core.ReloadableApplication$$anonfun$get$1.apply(ApplicationProvider.scala:65) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.ReloadableApplication$$anonfun$get$1.apply(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Either$RightProjection.flatMap(Either.scala:277) ~[scala-library.jar:na]
+	at play.core.ReloadableApplication.get(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$class.sendHandler$1(Server.scala:38) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.apply(Exception.scala:88) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.either(Exception.scala:110) ~[scala-library.jar:na]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:46) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:48) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.toLeft(Option.scala:252) [scala-library.jar:na]
+	at play.core.server.Server$class.getHandlerFor(Server.scala:44) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer.getHandlerFor(NettyServer.scala:32) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer$PlayDefaultUpstreamHandler.messageReceived(NettyServer.scala:320) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.stream.ChunkedWriteHandler.handleUpstream(ChunkedWriteHandler.java:149) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.Channels.fireMessageReceived(Channels.java:302) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.unfoldAndFireMessageReceived(ReplayingDecoder.java:522) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.callDecode(ReplayingDecoder.java:506) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.messageReceived(ReplayingDecoder.java:443) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.ChannelEventRunnable.run(ChannelEventRunnable.java:69) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor$ChildExecutor.run(OrderedMemoryAwareThreadPoolExecutor.java:316) [netty-3.2.6.Final.jar:na]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886) [na:1.6.0_29]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908) [na:1.6.0_29]
+	at java.lang.Thread.run(Thread.java:680) [na:1.6.0_29]
+Caused by: com.typesafe.config.ConfigException$Parse: /Users/tombocklisch/Documents/ScalableMinds/brainflight/brainflight/conf/application.conf: 40: '$' not followed by {, 'p' not allowed after '$' (if you intended 'p' to be part of a key or string value, try enclosing the key or value in double quotes)
+	at com.typesafe.config.impl.Parser$ParseContext.nextToken(Parser.java:81) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser$ParseContext.checkElementSeparator(Parser.java:143) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser$ParseContext.parseObject(Parser.java:546) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser$ParseContext.parse(Parser.java:671) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser.parse(Parser.java:32) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.rawParseValue(Parseable.java:162) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.rawParseValue(Parseable.java:150) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.parseValue(Parseable.java:134) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.parseValue(Parseable.java:128) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.parse(Parseable.java:112) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.ConfigImpl.fromBasename(ConfigImpl.java:44) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.ConfigImpl.parseFileAnySyntax(ConfigImpl.java:111) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.ConfigFactory.parseFileAnySyntax(ConfigFactory.java:383) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.ConfigFactory.parseFileAnySyntax(ConfigFactory.java:387) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at play.api.Configuration$.fromFile(Configuration.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.api.Application$$anonfun$2$$anonfun$apply$1.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.api.Application$$anonfun$2$$anonfun$apply$1.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at play.api.Application$$anonfun$2.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.api.Application$$anonfun$2.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.getOrElse(Option.scala:108) [scala-library.jar:na]
+	at play.api.Application.<init>(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.ReloadableApplication$$anonfun$get$1$$anonfun$1.apply(ApplicationProvider.scala:74) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	... 37 common frames omitted
+
+2011-12-12 00:17:11,850 - [ERROR] - from application in pool-16-thread-248 
+
+
+! @68kkm93d6 - Internal server error, for request [GET /] ->
+
+play.api.UnexpectedException: Unexpected exception [Parse: /Users/tombocklisch/Documents/ScalableMinds/brainflight/brainflight/conf/application.conf: 40: Reserved character '&' is not allowed outside quotes (if you intended '&' to be part of a key or string value, try enclosing the key or value in double quotes)]
+	at play.core.ReloadableApplication$$anonfun$get$1$$anonfun$1.apply(ApplicationProvider.scala:87) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.ReloadableApplication$$anonfun$get$1$$anonfun$1.apply(ApplicationProvider.scala:65) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at play.core.ReloadableApplication$$anonfun$get$1.apply(ApplicationProvider.scala:65) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.ReloadableApplication$$anonfun$get$1.apply(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Either$RightProjection.flatMap(Either.scala:277) ~[scala-library.jar:na]
+	at play.core.ReloadableApplication.get(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$class.sendHandler$1(Server.scala:38) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.apply(Exception.scala:88) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.either(Exception.scala:110) ~[scala-library.jar:na]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:46) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:48) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.toLeft(Option.scala:252) [scala-library.jar:na]
+	at play.core.server.Server$class.getHandlerFor(Server.scala:44) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer.getHandlerFor(NettyServer.scala:32) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer$PlayDefaultUpstreamHandler.messageReceived(NettyServer.scala:320) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.stream.ChunkedWriteHandler.handleUpstream(ChunkedWriteHandler.java:149) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.Channels.fireMessageReceived(Channels.java:302) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.unfoldAndFireMessageReceived(ReplayingDecoder.java:522) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.callDecode(ReplayingDecoder.java:506) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.messageReceived(ReplayingDecoder.java:443) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.ChannelEventRunnable.run(ChannelEventRunnable.java:69) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor$ChildExecutor.run(OrderedMemoryAwareThreadPoolExecutor.java:316) [netty-3.2.6.Final.jar:na]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886) [na:1.6.0_29]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908) [na:1.6.0_29]
+	at java.lang.Thread.run(Thread.java:680) [na:1.6.0_29]
+Caused by: com.typesafe.config.ConfigException$Parse: /Users/tombocklisch/Documents/ScalableMinds/brainflight/brainflight/conf/application.conf: 40: Reserved character '&' is not allowed outside quotes (if you intended '&' to be part of a key or string value, try enclosing the key or value in double quotes)
+	at com.typesafe.config.impl.Parser$ParseContext.nextToken(Parser.java:81) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser$ParseContext.checkElementSeparator(Parser.java:143) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser$ParseContext.parseObject(Parser.java:546) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser$ParseContext.parse(Parser.java:671) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parser.parse(Parser.java:32) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.rawParseValue(Parseable.java:162) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.rawParseValue(Parseable.java:150) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.parseValue(Parseable.java:134) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.parseValue(Parseable.java:128) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.Parseable.parse(Parseable.java:112) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.ConfigImpl.fromBasename(ConfigImpl.java:44) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.impl.ConfigImpl.parseFileAnySyntax(ConfigImpl.java:111) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.ConfigFactory.parseFileAnySyntax(ConfigFactory.java:383) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at com.typesafe.config.ConfigFactory.parseFileAnySyntax(ConfigFactory.java:387) ~[config_2.9.1-0.1.6.jar:0.1.6]
+	at play.api.Configuration$.fromFile(Configuration.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.api.Application$$anonfun$2$$anonfun$apply$1.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.api.Application$$anonfun$2$$anonfun$apply$1.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at play.api.Application$$anonfun$2.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.api.Application$$anonfun$2.apply(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.getOrElse(Option.scala:108) [scala-library.jar:na]
+	at play.api.Application.<init>(Application.scala:34) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.ReloadableApplication$$anonfun$get$1$$anonfun$1.apply(ApplicationProvider.scala:74) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	... 37 common frames omitted
+
+2011-12-12 00:22:35,475 - [INFO] - from play in pool-16-thread-263 
+Application started
+
+2011-12-12 00:31:50,127 - [ERROR] - from application in pool-16-thread-278 
+
+
+! @68kkm93d7 - Internal server error, for request [GET /] ->
+
+sbt.PlayProject$CompilationException: Compilation error [object index is not a member of package views.html]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39$$anonfun$apply$40.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39$$anonfun$apply$40.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39.apply(SbtPlugin.scala:526) ~[play_2.9.1.jar:na]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1.apply(SbtPlugin.scala:526) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1.apply(SbtPlugin.scala:525) ~[play_2.9.1.jar:na]
+	at scala.Either$LeftProjection.map(Either.scala:183) ~[scala-library.jar:na]
+	at sbt.PlayProject$$anon$1.reload(SbtPlugin.scala:525) ~[play_2.9.1.jar:na]
+	at play.core.ReloadableApplication.get(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$class.sendHandler$1(Server.scala:38) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.apply(Exception.scala:88) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.either(Exception.scala:110) ~[scala-library.jar:na]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:46) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:48) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.toLeft(Option.scala:252) [scala-library.jar:na]
+	at play.core.server.Server$class.getHandlerFor(Server.scala:44) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer.getHandlerFor(NettyServer.scala:32) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer$PlayDefaultUpstreamHandler.messageReceived(NettyServer.scala:320) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.stream.ChunkedWriteHandler.handleUpstream(ChunkedWriteHandler.java:149) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.Channels.fireMessageReceived(Channels.java:302) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.unfoldAndFireMessageReceived(ReplayingDecoder.java:522) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.callDecode(ReplayingDecoder.java:506) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.messageReceived(ReplayingDecoder.java:443) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.ChannelEventRunnable.run(ChannelEventRunnable.java:69) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor$ChildExecutor.run(OrderedMemoryAwareThreadPoolExecutor.java:316) [netty-3.2.6.Final.jar:na]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886) [na:1.6.0_29]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908) [na:1.6.0_29]
+	at java.lang.Thread.run(Thread.java:680) [na:1.6.0_29]
+
+2011-12-12 00:32:33,659 - [INFO] - from play in pool-16-thread-291 
+Application started
+
+2011-12-12 00:34:49,641 - [ERROR] - from application in pool-16-thread-305 
+
+
+! @68kkm93d8 - Internal server error, for request [GET /] ->
+
+sbt.PlayProject$CompilationException: Compilation error [object Test is not a member of package controllers
+Note: class Test exists, but it has no companion object.]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39$$anonfun$apply$40.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39$$anonfun$apply$40.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39.apply(SbtPlugin.scala:526) ~[play_2.9.1.jar:na]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1.apply(SbtPlugin.scala:526) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1.apply(SbtPlugin.scala:525) ~[play_2.9.1.jar:na]
+	at scala.Either$LeftProjection.map(Either.scala:183) ~[scala-library.jar:na]
+	at sbt.PlayProject$$anon$1.reload(SbtPlugin.scala:525) ~[play_2.9.1.jar:na]
+	at play.core.ReloadableApplication.get(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$class.sendHandler$1(Server.scala:38) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.apply(Exception.scala:88) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.either(Exception.scala:110) ~[scala-library.jar:na]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:46) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:48) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.toLeft(Option.scala:252) [scala-library.jar:na]
+	at play.core.server.Server$class.getHandlerFor(Server.scala:44) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer.getHandlerFor(NettyServer.scala:32) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer$PlayDefaultUpstreamHandler.messageReceived(NettyServer.scala:320) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.stream.ChunkedWriteHandler.handleUpstream(ChunkedWriteHandler.java:149) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.Channels.fireMessageReceived(Channels.java:302) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.unfoldAndFireMessageReceived(ReplayingDecoder.java:522) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.callDecode(ReplayingDecoder.java:506) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.messageReceived(ReplayingDecoder.java:443) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.ChannelEventRunnable.run(ChannelEventRunnable.java:69) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor$ChildExecutor.run(OrderedMemoryAwareThreadPoolExecutor.java:316) [netty-3.2.6.Final.jar:na]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886) [na:1.6.0_29]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908) [na:1.6.0_29]
+	at java.lang.Thread.run(Thread.java:680) [na:1.6.0_29]
+
+2011-12-12 00:35:11,707 - [INFO] - from play in pool-16-thread-303 
+Application started
+
+2011-12-12 00:38:18,246 - [INFO] - from play in pool-16-thread-321 
+Application started
+
+2011-12-12 00:38:31,024 - [INFO] - from play in pool-16-thread-321 
+Application started
+
+2011-12-12 00:38:56,447 - [INFO] - from play in pool-16-thread-322 
+Application started
+
+2011-12-12 00:47:29,594 - [INFO] - from play in pool-16-thread-406 
+Application started
+
+2011-12-12 00:55:13,666 - [ERROR] - from application in pool-16-thread-463 
+
+
+! @68kkm93d9 - Internal server error, for request [GET /test/demo] ->
+
+sbt.PlayProject$CompilationException: Compilation error [not enough arguments for method apply: (user: models.User)play.api.templates.Html in object index.
+Unspecified value parameter user.]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39$$anonfun$apply$40.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39$$anonfun$apply$40.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39.apply(SbtPlugin.scala:526) ~[play_2.9.1.jar:na]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1.apply(SbtPlugin.scala:526) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1.apply(SbtPlugin.scala:525) ~[play_2.9.1.jar:na]
+	at scala.Either$LeftProjection.map(Either.scala:183) ~[scala-library.jar:na]
+	at sbt.PlayProject$$anon$1.reload(SbtPlugin.scala:525) ~[play_2.9.1.jar:na]
+	at play.core.ReloadableApplication.get(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$class.sendHandler$1(Server.scala:38) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.apply(Exception.scala:88) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.either(Exception.scala:110) ~[scala-library.jar:na]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:46) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:48) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.toLeft(Option.scala:252) [scala-library.jar:na]
+	at play.core.server.Server$class.getHandlerFor(Server.scala:44) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer.getHandlerFor(NettyServer.scala:32) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer$PlayDefaultUpstreamHandler.messageReceived(NettyServer.scala:320) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.stream.ChunkedWriteHandler.handleUpstream(ChunkedWriteHandler.java:149) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.Channels.fireMessageReceived(Channels.java:302) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.unfoldAndFireMessageReceived(ReplayingDecoder.java:522) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.callDecode(ReplayingDecoder.java:506) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.messageReceived(ReplayingDecoder.java:443) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.ChannelEventRunnable.run(ChannelEventRunnable.java:69) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor$ChildExecutor.run(OrderedMemoryAwareThreadPoolExecutor.java:316) [netty-3.2.6.Final.jar:na]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886) [na:1.6.0_29]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908) [na:1.6.0_29]
+	at java.lang.Thread.run(Thread.java:680) [na:1.6.0_29]
+
+2011-12-12 00:56:24,781 - [ERROR] - from application in pool-16-thread-479 
+
+
+! @68kkm93da - Internal server error, for request [GET /test/demo] ->
+
+sbt.PlayProject$CompilationException: Compilation error [type mismatch;
+ found   : Option[models.User]
+ required: models.User]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39$$anonfun$apply$40.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39$$anonfun$apply$40.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39.apply(SbtPlugin.scala:526) ~[play_2.9.1.jar:na]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1.apply(SbtPlugin.scala:526) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1.apply(SbtPlugin.scala:525) ~[play_2.9.1.jar:na]
+	at scala.Either$LeftProjection.map(Either.scala:183) ~[scala-library.jar:na]
+	at sbt.PlayProject$$anon$1.reload(SbtPlugin.scala:525) ~[play_2.9.1.jar:na]
+	at play.core.ReloadableApplication.get(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$class.sendHandler$1(Server.scala:38) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.apply(Exception.scala:88) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.either(Exception.scala:110) ~[scala-library.jar:na]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:46) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:48) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.toLeft(Option.scala:252) [scala-library.jar:na]
+	at play.core.server.Server$class.getHandlerFor(Server.scala:44) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer.getHandlerFor(NettyServer.scala:32) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer$PlayDefaultUpstreamHandler.messageReceived(NettyServer.scala:320) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.stream.ChunkedWriteHandler.handleUpstream(ChunkedWriteHandler.java:149) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.Channels.fireMessageReceived(Channels.java:302) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.unfoldAndFireMessageReceived(ReplayingDecoder.java:522) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.callDecode(ReplayingDecoder.java:506) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.messageReceived(ReplayingDecoder.java:443) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.ChannelEventRunnable.run(ChannelEventRunnable.java:69) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor$ChildExecutor.run(OrderedMemoryAwareThreadPoolExecutor.java:316) [netty-3.2.6.Final.jar:na]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886) [na:1.6.0_29]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908) [na:1.6.0_29]
+	at java.lang.Thread.run(Thread.java:680) [na:1.6.0_29]
+
+2011-12-12 00:56:34,721 - [ERROR] - from application in pool-16-thread-468 
+
+
+! @68kkm93db - Internal server error, for request [GET /test/demo] ->
+
+sbt.PlayProject$CompilationException: Compilation error [too many arguments for method apply: (user: models.User)(body: play.api.templates.Html)play.api.templates.Html in object main]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39$$anonfun$apply$40.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39$$anonfun$apply$40.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39.apply(SbtPlugin.scala:529) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1$$anonfun$apply$39.apply(SbtPlugin.scala:526) ~[play_2.9.1.jar:na]
+	at scala.Option.map(Option.scala:133) [scala-library.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1.apply(SbtPlugin.scala:526) ~[play_2.9.1.jar:na]
+	at sbt.PlayProject$$anon$1$$anonfun$reload$1.apply(SbtPlugin.scala:525) ~[play_2.9.1.jar:na]
+	at scala.Either$LeftProjection.map(Either.scala:183) ~[scala-library.jar:na]
+	at sbt.PlayProject$$anon$1.reload(SbtPlugin.scala:525) ~[play_2.9.1.jar:na]
+	at play.core.ReloadableApplication.get(ApplicationProvider.scala:63) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$class.sendHandler$1(Server.scala:38) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1$$anonfun$apply$4.apply(Server.scala:46) ~[play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch$$anonfun$either$1.apply(Exception.scala:110) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.apply(Exception.scala:88) ~[scala-library.jar:na]
+	at scala.util.control.Exception$Catch.either(Exception.scala:110) ~[scala-library.jar:na]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:46) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.Server$$anonfun$getHandlerFor$1.apply(Server.scala:48) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at scala.Option.toLeft(Option.scala:252) [scala-library.jar:na]
+	at play.core.server.Server$class.getHandlerFor(Server.scala:44) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer.getHandlerFor(NettyServer.scala:32) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at play.core.server.NettyServer$PlayDefaultUpstreamHandler.messageReceived(NettyServer.scala:320) [play_2.9.1.jar:2.0-RC1-SNAPSHOT]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.stream.ChunkedWriteHandler.handleUpstream(ChunkedWriteHandler.java:149) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.Channels.fireMessageReceived(Channels.java:302) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.unfoldAndFireMessageReceived(ReplayingDecoder.java:522) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.callDecode(ReplayingDecoder.java:506) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.codec.replay.ReplayingDecoder.messageReceived(ReplayingDecoder.java:443) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.SimpleChannelUpstreamHandler.handleUpstream(SimpleChannelUpstreamHandler.java:80) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline.sendUpstream(DefaultChannelPipeline.java:564) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.channel.DefaultChannelPipeline$DefaultChannelHandlerContext.sendUpstream(DefaultChannelPipeline.java:783) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.ChannelEventRunnable.run(ChannelEventRunnable.java:69) [netty-3.2.6.Final.jar:na]
+	at org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor$ChildExecutor.run(OrderedMemoryAwareThreadPoolExecutor.java:316) [netty-3.2.6.Final.jar:na]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.runTask(ThreadPoolExecutor.java:886) [na:1.6.0_29]
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:908) [na:1.6.0_29]
+	at java.lang.Thread.run(Thread.java:680) [na:1.6.0_29]
+
+2011-12-12 00:57:02,016 - [INFO] - from play in pool-16-thread-468 
+Application started
+
+2011-12-12 00:58:05,834 - [INFO] - from play in pool-16-thread-501 
+Application started
+
+2011-12-12 00:58:21,564 - [INFO] - from play in pool-16-thread-499 
+Application started
+
+2011-12-12 00:59:31,662 - [INFO] - from play in pool-16-thread-517 
+Application started
+
+2011-12-12 01:05:39,614 - [INFO] - from play in pool-16-thread-541 
+Application started
+

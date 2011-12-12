@@ -11,13 +11,14 @@ cd playframework/framework
 ```
 a sbt console is going to open type 
 ```bash
-build-repository
+> build-repository
 ```
 -> done!
 
 To run play type 
 ```bash
 play framework/play
+> run
 ```
 project root directory.
 

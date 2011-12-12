@@ -1,6 +1,6 @@
 class Pointcloud extends Geometry
-	constructor: ->
-		super()
+	constructor: (fragmentShader, vertexShader) ->
+		super(fragmentShader, vertexShader)
 		@type = "Pointcloud"
 
 	setVertices : (data, len) -> 
@@ -9,4 +9,8 @@ class Pointcloud extends Geometry
 	setColors : (data, len) ->
 		super data, len
 
+	setNormals : (data, len) ->
+		super data, len
 
+	getClassType : ->
+		super

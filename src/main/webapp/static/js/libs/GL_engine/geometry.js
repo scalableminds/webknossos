@@ -1,6 +1,6 @@
 var Geometry;
 Geometry = (function() {
-  function Geometry() {
+  function Geometry(fragmentShader, vertexShader) {
     this.vertices = {
       VBO: null,
       length: null
@@ -15,8 +15,8 @@ Geometry = (function() {
     };
     this.hasNormals = false;
     this.hasColors = false;
-    this.fragmentShader = null;
-    this.vertexShader = null;
+    this.fragmentShader = fragmentShader;
+    this.vertexShader = vertexShader;
     this.type = "Geometry";
   }
   Geometry.prototype.setVertices = function(data, len) {
@@ -28,9 +28,9 @@ Geometry = (function() {
     this.colors.length = len;
     return this.hasColors = true;
   };
-  Geometry.prototype.setNormals = function(data) {
+  Geometry.prototype.setNormals = function(data, len) {
     this.normals.VBO = data;
-    this.normals.length = data.length;
+    this.normals.length = len;
     return this.hasNormals = true;
   };
   Geometry.prototype.getClassType = function() {

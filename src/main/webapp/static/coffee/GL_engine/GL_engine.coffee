@@ -15,7 +15,7 @@ class GL_engine
 	matrixStack = []
 
 	programCaches = []
-	geometry = []
+
 
 	attn = [0.01, 0.0, 0.003]
 
@@ -371,7 +371,7 @@ class GL_engine
 	###
 	rotateY : (radians) ->
 		rotMat = M4x4.rotate(radians, V3.$(0,1,0), M4x4.I)
-		loadMatrix M4x4.mul(@peekMatrix(), rotMat)
+		@loadMatrix M4x4.mul(@peekMatrix(), rotMat)
 
 	###
 	Multiply the matrix at the top of the model view matrix
@@ -434,6 +434,7 @@ class GL_engine
 		gl.linkProgram programObject
 		throw "Error linking shaders."  unless gl.getProgramParameter(programObject, gl.LINK_STATUS)
 		
+		#Sets shader Program 
 		shaderProgram = programObject
 		
 		#Tell WebGL to use shader
@@ -486,7 +487,7 @@ class GL_engine
 
 
 	setDefaultUniforms : ->
-		@uniformf "pointSize", 1
+		@uniformf "pointSize", 5
 		@uniformf "attenuation", [ attn[0], attn[1], attn[2] ]
 		@uniformMatrix "projectionMatrix", false, projectionMatrix
 

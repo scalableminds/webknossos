@@ -9,8 +9,8 @@ var __hasProp = Object.prototype.hasOwnProperty, __extends = function(child, par
 };
 Pointcloud = (function() {
   __extends(Pointcloud, Geometry);
-  function Pointcloud() {
-    Pointcloud.__super__.constructor.call(this);
+  function Pointcloud(fragmentShader, vertexShader) {
+    Pointcloud.__super__.constructor.call(this, fragmentShader, vertexShader);
     this.type = "Pointcloud";
   }
   Pointcloud.prototype.setVertices = function(data, len) {
@@ -18,6 +18,12 @@ Pointcloud = (function() {
   };
   Pointcloud.prototype.setColors = function(data, len) {
     return Pointcloud.__super__.setColors.call(this, data, len);
+  };
+  Pointcloud.prototype.setNormals = function(data, len) {
+    return Pointcloud.__super__.setNormals.call(this, data, len);
+  };
+  Pointcloud.prototype.getClassType = function() {
+    return Pointcloud.__super__.getClassType.apply(this, arguments);
   };
   return Pointcloud;
 })();

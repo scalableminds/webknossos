@@ -1,6 +1,6 @@
 var GL_engine;
 GL_engine = (function() {
-  var VERSION, animationLoop, attn, canvas, disableVertexAttribPointer, empty_func, frameCount, frameRate, frames, geometry, gl, lastTime, matrixStack, programCaches, projectionMatrix, renderLoop, requestAnimationFrame, shaderProgram, usersRender, vertexAttribPointer;
+  var VERSION, animationLoop, attn, canvas, disableVertexAttribPointer, empty_func, frameCount, frameRate, frames, gl, lastTime, matrixStack, programCaches, projectionMatrix, renderLoop, requestAnimationFrame, shaderProgram, usersRender, vertexAttribPointer;
   empty_func = function() {};
   gl = null;
   canvas = null;
@@ -10,7 +10,6 @@ GL_engine = (function() {
   lastTime = null;
   matrixStack = [];
   programCaches = [];
-  geometry = [];
   attn = [0.01, 0.0, 0.003];
   projectionMatrix = null;
   VERSION = 0.1;
@@ -351,7 +350,7 @@ GL_engine = (function() {
   GL_engine.prototype.rotateY = function(radians) {
     var rotMat;
     rotMat = M4x4.rotate(radians, V3.$(0, 1, 0), M4x4.I);
-    return loadMatrix(M4x4.mul(this.peekMatrix(), rotMat));
+    return this.loadMatrix(M4x4.mul(this.peekMatrix(), rotMat));
   };
   /*
   	Multiply the matrix at the top of the model view matrix
@@ -465,7 +464,7 @@ GL_engine = (function() {
     }
   };
   GL_engine.prototype.setDefaultUniforms = function() {
-    this.uniformf("pointSize", 1);
+    this.uniformf("pointSize", 5);
     this.uniformf("attenuation", [attn[0], attn[1], attn[2]]);
     return this.uniformMatrix("projectionMatrix", false, projectionMatrix);
   };

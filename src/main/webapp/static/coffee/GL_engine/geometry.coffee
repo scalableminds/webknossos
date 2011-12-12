@@ -1,5 +1,5 @@
 class Geometry
-	constructor : ->
+	constructor : (fragmentShader, vertexShader) ->
 		@vertices = 
 			VBO : null
 			length : null
@@ -14,8 +14,8 @@ class Geometry
 	
 		@hasNormals = false
 		@hasColors = false
-		@fragmentShader = null
-		@vertexShader = null
+		@fragmentShader = fragmentShader
+		@vertexShader = vertexShader
 
 		@type = "Geometry"				
 
@@ -28,9 +28,9 @@ class Geometry
 		@colors.length = len
 		@hasColors = true
 
-	setNormals : (data) -> 
+	setNormals : (data, len) -> 
 		@normals.VBO = data
-		@normals.length = data.length	
+		@normals.length = len	
 		@hasNormals = true
 
 	#returns the ClassName of an object

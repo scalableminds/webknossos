@@ -59,6 +59,7 @@ void main(void){
 # #####################
 render = ->
 
+	eng.perspective 60, eng.getWidth() / eng.getHeight(), 15, 20
 	# MOUSE/CAMERA MOVEMENT
 	if mouseDown 
 		y = -(eng.mouseX - eng.getWidth / 2) / eng.getWidth / 45
@@ -117,7 +118,7 @@ start = ->
 	eng.useProgram progObj
 
 	eng.onRender render
-	eng.perspective 60, eng.getWidth() / eng.getHeight(), 15, 20
+
 	eng.background [0.9, 0.9 ,0.9 ,1]
 	eng.pointSize 5
 	

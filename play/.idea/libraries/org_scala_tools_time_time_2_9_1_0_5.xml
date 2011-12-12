@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="org.scala-tools.time_time_2.9.1_0.5">
-    <CLASSES>
-      <root url="jar://$USER_HOME$/bin/play/repository/cache/org.scala-tools.time/time_2.9.1/jars/time_2.9.1-0.5.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="com.codahale_jerkson_2.9.1_0.5.0">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/com.codahale/jerkson_2.9.1/jars/jerkson_2.9.1-0.5.0.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

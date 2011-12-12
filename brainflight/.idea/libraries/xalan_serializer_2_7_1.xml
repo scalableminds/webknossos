@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="xalan_serializer_2.7.1">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../playframework/repository/cache/xalan/serializer/jars/serializer-2.7.1.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

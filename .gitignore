@@ -1,9 +1,9 @@
+logs/
 .history
 target/
 binarydata/
 boot/
-.idea/*
-play/.idea/*
+.idea/
 *.db
 *.class
 *.keep
@@ -14,5 +14,3 @@ lifttemplate.iws
 src/main/scala/rebel.xml
 *.obj
 *.zip
-src/main/webapp/static/image
-src/main/webapp/static/js/libs/pointstream/clouds

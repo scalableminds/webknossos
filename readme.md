@@ -21,7 +21,7 @@ a sbt console is going to open type
 To run play type 
 
 ```bash
-play framework/play
+playframework/play
 > run
 ```
 

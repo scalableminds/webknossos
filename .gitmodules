@@ -1,3 +1,0 @@
-[submodule "playframework"]
-	path = playframework
-	url = git://github.com/playframework/Play20.git

@@ -1302,7 +1302,7 @@ var PointStream = (function() {
 	
     /**
       Renders a point cloud.
-      @param {} pointCloud
+      @param {} pointCloud(
     */
     this.render = function(pointCloud){
     
@@ -1361,7 +1361,7 @@ var PointStream = (function() {
                 }
               }
             }
-            ctx.drawArrays(ctx.POINTS, 0, arrayOfBufferObjsV[currVBO].length/3);
+            ctx.drawArrays(ctx.POINTS, 0, pointcloud.numTotalPoints);
             
             // If we render a point cloud with vertices and colors, then 
             // another one with only vertices, this may cause issues if we

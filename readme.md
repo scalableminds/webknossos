@@ -4,6 +4,8 @@
 
 #Play setup:
 ```bash
+git fetch origin Play:Play
+git checkout Play
 git submodule init
 git submodule update
 cd playframework/framework
@@ -21,8 +23,7 @@ a sbt console is going to open type
 To run play type 
 
 ```bash
-playframework/play
-> run
+playframework/play run
 ```
 
 project root directory.

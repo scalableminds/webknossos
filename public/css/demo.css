@@ -18,5 +18,8 @@ div#options{
 	top:0px;
 }
 
-
-	
+div#clipping,#controls,#cam,#perspective{
+	border: 2px solid black;
+	margin: 10px;
+	padding-left: 30px;
+}	

@@ -16,7 +16,6 @@
 	<div id="options">
 		<div id="cam">
 			<p>Camera</p>
-			<p id="camera"></p>
 			<form>
 				<p>
 					X: <input type="text" id="camX" size="5" onChange="setCamPosition();"/>
@@ -33,11 +32,16 @@
 			<p> W/S/A/D: Move Camera</p>
 			<p>Left Mouse Button: Look around</p>
 		</div>
+		<div id="clipping">
+			<p>
+			Enable Clipping	<input type="checkbox" id="clipping" checked="true" onChange="toggleClipping();">
+			</p>
+		</div>
 		<div id="perspective">
 		<p>Perspective params</p>
 		<form>
 		<p>
-			Near: <input type="text" id="near" size="5" value="15"  onChange="changePerspectiveParams();"/>
+			Near: <input type="text" id="near" size="5" value="0.1"  onChange="changePerspectiveParams();" disabled="true"/>
 		</p>
 		<p>
 			Far: <input type="text" id="far" size="5" value="20"  onChange="changePerspectiveParams();"/>

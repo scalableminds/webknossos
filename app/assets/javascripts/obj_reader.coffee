@@ -106,7 +106,7 @@ read_obj_file = ->
 					polygon = []
 					for i in [1...fac.length - 1]
 						# VERTEX INDEX
-						polygon.push parseFloat fac[i].split( "/")[0] 
+						polygon.push parseFloat fac[i].split( "/")[0] - 1
 					
 					# ADD NEW FACES
 					newFaces = triangulate(polygon)

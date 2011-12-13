@@ -1,0 +1,3 @@
+[submodule "playframework"]
+	path = playframework
+	url = git@github.com:tmbo/Play20.git

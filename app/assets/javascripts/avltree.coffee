@@ -4,7 +4,7 @@ Derived from http:#closure-library.googlecode.com/svn/docs/closure_goog_structs_
 ---------------------------------------------------------------
 Copyright 2007 The Closure Library Authors. All Rights Reserved.
 
-Licensed under the Apache License, Version 2.0 (the "License");
+Licensed under the Apache Licen se, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
@@ -22,7 +22,7 @@ class AvlTree
   
   constructor: (@comparator_) ->
     # default
-    @comparator_ ?= (a, b) -> 
+    @comparator_ ?= (a, b) ->
       if String(a) < String(b)
         -1
       else if String(a) > String(b)

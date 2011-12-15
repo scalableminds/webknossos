@@ -51,7 +51,7 @@ class _Controller
 	loadPointcloud = ->
 		# DOWNLOAD FILE
 		xhr = new XMLHttpRequest()
-		xhr.open "GET", "image/z0000/100527_k0563_mag1_x0017_y0017_z0000.raw", true
+		xhr.open "GET", "/assets/test_cube.raw", true
 		xhr.responseType = "arraybuffer"
 	
 		xhr.onload = (e) -> 

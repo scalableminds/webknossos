@@ -1,5 +1,7 @@
 class _Controller
+	
 
+	#Shaders temp in Controller
 	fragmentShader = "#ifdef GL_ES\n
 		precision highp float;\n
 	#endif\n
@@ -20,32 +22,16 @@ class _Controller
 	uniform mat4 modelViewMatrix;
 	uniform mat4 projectionMatrix;
 	uniform mat4 normalMatrix;
+	void main(void){ 
+		frontColor = aColor; 
+		vec4 ecPos4 = modelViewMatrix * vec4(aVertex, 1.0); 
+		float dist = length( ecPos4 ); 
+		float attn = attenuation[0] +   
+			  (attenuation[1] * dist)  +  
+			  (attenuation[2] * dist * dist); 
 
-	uniform float d;
-	uniform vec3 n0;
-
-	void main(void){
-		frontColor =  aColor;
-
-		vec4 ecPos4 = modelViewMatrix * vec4(aVertex, 1.0);
-
-		float dist = length( ecPos4 );
-		float attn = attenuation[0] + 
-		            (attenuation[1] * dist) +
-		            (attenuation[2] * dist * dist);
-
-		gl_PointSize = pointSize * sqrt(1.0/attn);
-		
-		float s = dot(ecPos4, vec4(n0, 1.0));
-		s = s - d; 
-		
-		if( s < 0.0){
-		  gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
-		  frontColor = vec4(0.0, 0.0, 0.0, 1.0);
-		  gl_PointSize = 0.0;
-		}else{
-		gl_Position = projectionMatrix * ecPos4;
-		}
+		gl_PointSize = (attn > 0.0) ? pointSize * sqrt(1.0/attn) : 1.0; 
+		gl_Position = projectionMatrix * ecPos4; 
 	}";
 
 	loadPointcloud = ->
@@ -99,6 +85,7 @@ class _Controller
 		pointCloud.setVertices (View.createArrayBufferObject vertices), vertices.length
 		pointCloud.setColors (View.createArrayBufferObject RGB_colors), RGB_colors.length
 		View.addGeometry pointCloud
+		View.draw()
 
 
 	demo: ->

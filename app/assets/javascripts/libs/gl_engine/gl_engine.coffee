@@ -61,7 +61,7 @@ class GL_engine
 			window.oRequestAnimationFrame or 
 			window.msRequestAnimationFrame or 
 			(callback, cvs) ->
-    	window.setTimeout callback, 1000.0 / 60.0
+    				window.setTimeout callback, 1000.0 / 60.0
 			)()
 
 		animationLoop()
@@ -185,10 +185,11 @@ class GL_engine
 				normalMatrix = M4x4.inverseOrthonormal(topMatrix);	
 				@uniformMatrix "normalMatrix", false, M4x4.transpose normalMatrix
 			# enable Attribute pointers/ bind buffers
+			
 			if geometry.hasColors
 				if gl.getAttribLocation(shaderProgram, "aColor") isnt -1
 					vertexAttribPointer "aColor", 3, geometry.colors.VBO
-
+			
 
 			if gl.getAttribLocation(shaderProgram, "aVertex") isnt -1
 				vertexAttribPointer "aVertex", 3, geometry.vertices.VBO
@@ -236,12 +237,13 @@ class GL_engine
 		@uniformf "attenuation", [constant, linear, quadratic]
 
 	perspective : (fovy, aspect, near, far) ->
-
+		
 		if arguments.length is 0
-			fovy = 60
+			fovy = 30
 			aspect = canvas.width / canvas.height
-			near = 0.1
+			near = 0.01
 			far = 1000
+
 
 		ymax = near * Math.tan(fovy * Math.PI / 360)
 		ymin = -ymax
@@ -255,6 +257,7 @@ class GL_engine
 		D = -2 * far * near / (far - near)
 		projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 0, 0, D, 0)
 		@uniformMatrix "projectionMatrix", false, projectionMatrix  if shaderProgram
+		
 
 	onRender : (func) ->
 		usersRender = func
@@ -280,14 +283,6 @@ class GL_engine
 	
 	@__defineGetter__ "VERSION", ->
 		VERSION
-
-
-
-
-
-
-
-
 
 
 	################################
@@ -483,18 +478,18 @@ class GL_engine
 			frames = 0
 			lastTime = now
 
-
+	#apply a single draw
+	draw : ->
+		matrixStack.push M4x4.I
+		usersRender()
+		matrixStack.pop()		
 
 
 	setDefaultUniforms : ->
-		@uniformf "pointSize", 5
+		@uniformf "pointSize", 10
 		@uniformf "attenuation", [ attn[0], attn[1], attn[2] ]
 		@uniformMatrix "projectionMatrix", false, projectionMatrix
 
-
-
-
-# weiter mit 1400
 
 
 

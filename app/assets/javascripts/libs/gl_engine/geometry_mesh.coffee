@@ -1,7 +1,15 @@
-class Pointcloud extends Geometry
+class Mesh extends Geometry
 	constructor: (fragmentShader, vertexShader) ->
 		super(fragmentShader, vertexShader)
-		@type = "Pointcloud"
+		@vertexIndex = 
+			EBO : null
+			length : null	
+		
+		@type = "Mesh"
+
+	setVertexIndex : (data) -> 
+		@vertexIndex.EBO = data
+		@vertexIndex.length = data.length
 
 	setVertices : (data, len) -> 
 		super data, len

@@ -4,7 +4,7 @@ _Model = (skipInitialization) ->
   coordinatesModel = null
   
   unless skipInitialization
-    binary_request("/model/cube", (err, data) ->
+    binary_request("/binary/model/cube", (err, data) ->
       if err
         model.emit('error', err)
       else
@@ -57,7 +57,7 @@ _Model = (skipInitialization) ->
   model.find = (point, axis, callback) ->
     model.wait('initialized', ->
       binary_request(
-        "/data/cube?px=#{point[0]}&py=#{point[1]}&pz=#{point[2]}&ax=#{axis[0]}&ay=#{axis[1]}&az=#{axis[2]}", 
+        "/binary/data/cube?px=#{point[0]}&py=#{point[1]}&pz=#{point[2]}&ax=#{axis[0]}&ay=#{axis[1]}&az=#{axis[2]}", 
         (err, data) ->
           if err
             model.emit('error', err)

@@ -18,7 +18,6 @@ $ ->
       "/assets/javascripts/libs/gl_engine/flycam.js",
       "/assets/javascripts/libs/gl_engine/gl_engine.js",
       "/assets/javascripts/libs/csg.js",
-      "/assets/javascripts/libs/c3.js",
       "/assets/javascripts/libs/mjs.js"
       "/assets/javascripts/controller.js",
       "/assets/javascripts/keyboard.js",

@@ -1,20 +1,24 @@
-_Model = (skipInitialization) ->
+class _Model extends EventEmitter
 
-  model = new EventEmitter()
-  coordinatesModel = null
-  
-  unless skipInitialization
-    binary_request("/binary/model/cube", (err, data) ->
-      if err
-        model.emit('error', err)
-      else
-        coordinatesModel = new Int8Array(data)
-        model.emit('initialized')
-    )
-  else
-    model.emit('initialized')
+  constructor : (skipInitialization) ->
+    super
+    @masterPolygon = new CSG()
+    @polygonBuckets = []
+    @pointBuckets = []
+    @coordsCache = []
+
+    unless skipInitialization
+      binary_request("/binary/model/cube", (err, data) =>
+        if err
+          @emit('error', err)
+        else
+          @coordinatesModel = new Int8Array(data)
+          @emit('initialized')
+      )
+    else
+      @emit('initialized')
  
-  model.rotateAndMove = (moveVector, axis, callback) ->
+  rotateAndMove : (moveVector, axis, callback) ->
     
     # orthogonal vector to (0,1,0) and rotation vector
     ortho = Math.normalizeVector([axis[2], 0, -axis[0]])
@@ -39,11 +43,11 @@ _Model = (skipInitialization) ->
     a22 = cosA + Math.square(ortho[2]) * (1 - cosA)
     
     # 
-    output = new Int8Array(new ArrayBuffer(coordinatesModel.byteLength))
-    for i in [0...coordinatesModel.length] by 3
-      px = coordinatesModel[i]
-      py = coordinatesModel[i + 1]
-      pz = coordinatesModel[i + 2]
+    output = new Int8Array(new ArrayBuffer(@coordinatesModel.byteLength))
+    for i in [0...@coordinatesModel.length] by 3
+      px = @coordinatesModel[i]
+      py = @coordinatesModel[i + 1]
+      pz = @coordinatesModel[i + 2]
       
       # see rotation matrix and helmert-transformation for more details
       output[i]     = Math.round(moveVector[0] + (a00 * px + a01 * py + a02 * pz))
@@ -51,28 +55,30 @@ _Model = (skipInitialization) ->
       output[i + 2] = Math.round(moveVector[2] + (a20 * px + a21 * py + a22 * pz))
     
     # clear stack before returning callback
-    Utils.defer -> callback(output)
-    
- 
-  model.find = (point, axis, callback) ->
-    model.wait('initialized', ->
-      binary_request(
-        "/binary/data/cube?px=#{point[0]}&py=#{point[1]}&pz=#{point[2]}&ax=#{axis[0]}&ay=#{axis[1]}&az=#{axis[2]}", 
-        (err, data) ->
+    Utils.defer -> callback(null, output)
+  
+  get : (position, direction, callback) ->
+    @load(position, direction, (err, colors) =>
+      if err
+        callback(err)
+      else
+        @rotateAndMove(position, direction, (err, coords) ->
           if err
-            model.emit('error', err)
             callback(err)
           else
-            callback(null, new Uint8Array(data))
-      )
+            callback(null, coords, colors)
+        )
+    )
+
+  load : (point, direction, callback) ->
+    binary_request(
+      "/binary/data/cube?px=#{point[0]}&py=#{point[1]}&pz=#{point[2]}&ax=#{direction[0]}&ay=#{direction[1]}&az=#{direction[2]}", 
+      (err, data) ->
+        if err
+          callback(err)
+        else
+          callback(null, new Uint8Array(data))
     )
   
-  model.__test = {}
-  Object.defineProperty(model.__test, "coordinatesModel" 
-    get: -> coordinatesModel
-    set: (a) -> coordinatesModel = a
-  )
-  
-  model
 
 Model = new _Model()

@@ -3,6 +3,7 @@ package controllers
 import play.api._
 import play.api.mvc._
 import play.api.data._
+import play.api.Play.current
 
 import models._
 import views._
@@ -98,7 +99,12 @@ trait Secured {
   /**
    * Retrieve the connected user email.
    */
-  private def username(request: RequestHeader) = request.session.get("email")
+  private def username(request: RequestHeader) = {
+    if(Play.configuration.getBoolean("application.enableAutoLogin").get)
+      Some("scmboy@scalableminds.com")
+    else
+      request.session.get("email")
+  }
 
   /**
    * Redirect to login if the user in not authorized.

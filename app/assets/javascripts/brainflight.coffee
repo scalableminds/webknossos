@@ -13,6 +13,7 @@ $ ->
       "/assets/javascripts/binary_request.js",
       "/assets/javascripts/core_ext.js",
       "/assets/javascripts/event_emitter.js",
+      "/assets/javascripts/libs/GL_engine/GL_engine.js",
       "/assets/javascripts/libs/GL_engine/geometry.js",
       "/assets/javascripts/libs/GL_engine/geometry_pointcloud.js",
       "/assets/javascripts/libs/GL_engine/geometry_mesh.js",

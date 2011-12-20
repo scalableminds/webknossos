@@ -1,4 +1,4 @@
-describe 'model', ->
+describe 'Model.Binary', ->
 
   it 'should exist', ->
     expect(Model.Binary).toBeDefined()
@@ -64,3 +64,25 @@ describe 'model', ->
           Model.Binary.rotateAndMove testModel, [0,0,0], [2,4,6], (err, data1) ->
             expect(data1).toBeSameArrayAs data
             done()
+
+describe 'Model.Mesh', ->
+
+  it 'should load a cube', ->
+    async 'get never completed', (done) ->
+
+      Model.Mesh.get 'cube', (err, coords, colors, indexes) ->
+
+        expect(err).toBeNull()
+        expect(coords.length).toEqual 8 * 3
+        expect(colors.length).toEqual 8 * 3
+        expect(indexes.length).toEqual 6 * 2 * 3
+
+        expect(coords).toBeSameArrayAs [0,0,0,0,0,1,0,1,0,0,1,1,1,0,0,1,0,1,1,1,0,1,1,1]
+
+        for i in [0...colors.length] by 3
+          expect(colors[i    ]).toEqual 1
+          expect(colors[i + 1]).toEqual 0
+          expect(colors[i + 2]).toEqual 0
+        
+        expect(indexes).toBeSameArrayAs [0, 6, 4, 0, 2, 6, 0, 3, 2, 0, 1, 3, 2, 7, 6, 2, 3, 7, 4, 6, 7, 4, 7, 5, 0, 4, 5, 0, 5, 1, 1, 5, 7, 1, 7, 3]
+        done()

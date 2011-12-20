@@ -7,9 +7,9 @@ class Mesh extends Geometry
 		
 		@type = "Mesh"
 
-	setVertexIndex : (data) -> 
+	setVertexIndex : (data, len) -> 
 		@vertexIndex.EBO = data
-		@vertexIndex.length = data.length
+		@vertexIndex.length = len
 
 	setVertices : (data, len) -> 
 		super data, len

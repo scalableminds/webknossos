@@ -87,6 +87,13 @@ class _Controller
 		View.addGeometry pointCloud
 		View.draw()
 
+	createMesh: (vertices, RGB_colors, indices) ->
+		mesh = new Mesh fragmentShader, vertexShader
+		mesh.setVertices (View.createArrayBufferObject vertices), vertices.length
+		mesh.setColors (View.createArrayBufferObject RGB_colors), RGB_colors.length
+		mesh.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
+		View.addGeometry mesh
+		View.draw()
 
 	demo: ->
 		loadPointcloud()		

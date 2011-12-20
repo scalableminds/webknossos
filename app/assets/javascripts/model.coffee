@@ -2,32 +2,21 @@ Model ?= {}
 Model.Binary =
 
 	coordinatesModel : null
-	lazyInitialize : (callback) ->
-		unless @coordinatesModel
+	
+	initialize : (callback) ->
+		
+		@startInitializing callback
 
-			if @initializing
-				@initializing.push callback
+		binary_request("/binary/model/cube", (err, data) =>
 			
-			else
-				@initializing = [callback]
-
-				binary_request("/binary/model/cube", (err, data) =>
-					
-					callbacks = @initializing
-					delete @initializing
-					
-					if err
-						cb(err) for cb in callbacks
-					
-					else
-						@coordinatesModel = new Int8Array(data)
-						cb(null) for cb in callbacks
-					
-					return
-				)
-
-		else
-			callback(null)
+			callback = @endInitializing err
+			
+			unless err
+				@coordinatesModel = new Int8Array(data)
+				callback null
+			
+			return
+		)
 
 	rotateAndMove : (data, moveVector, axis, callback) ->
 		
@@ -93,12 +82,104 @@ Model.Binary =
 				"/binary/data/cube?px=#{point[0]}&py=#{point[1]}&pz=#{point[2]}&ax=#{direction[0]}&ay=#{direction[1]}&az=#{direction[2]}", 
 				(err, data) ->
 					if err
-						callback(err)
+						callback err
 					else
-						callback(null, new Uint8Array(data))
+						callback null, new Uint8Array(data) 
 			)
 
 Model.Mesh =
 	
 	get : (name, callback) ->
-		callback('Not implemented')
+
+		binary_request("/assets/mesh/#{name}", (err, data) ->
+
+			if err
+				callback err 
+
+			else
+				try
+					header  = new Uint32Array(data, 0, 3)
+					coords  = new Float32Array(data, 12, header[0])
+					colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
+					indexes = new Uint32Array(data, 12 + 4 * (header[0] + header[1]), header[2])
+
+					callback(null, coords, colors, indexes)
+				catch ex
+					callback(ex)
+		)
+
+		
+Model.Shader =
+	
+	get : (name, callback) ->
+		callback('Not implemented', data)
+
+Model.Route =
+	
+	dirtyBuffer : null
+	route : null
+	startDirection : null
+
+	initialize : (callback) ->
+
+		@startInitializing()
+
+		request("/route/initialize", (err, data) =>
+			
+			callback = @endInitializing err
+			
+			unless err
+				try
+					data = JSON.parse data
+
+					@route = [ data.position ]
+					@startDirection = data.direction
+					
+					callback null, data.position, data.direction
+				catch ex
+					callback ex
+		)
+	
+
+	put : (position, callback) ->
+		
+		@lazyInitialize (err) =>
+			return callback(err) if err
+
+			@route.push position
+			@dirtyBuffer = [] unless @dirtyBuffer
+			@dirtyBuffer.push position
+
+
+Model.LazyInitializable =
+	
+	initialized : false
+
+	lazyInitialize : (callback) ->
+		unless @initialized
+			if @waitingForInitializing
+				@waitingForInitializing.push callback
+			else
+				@initialize callback
+		else
+			callback null
+	
+	startInitializing : (callback) ->
+		@waitingForInitializing = [ callback ]
+	
+	endInitializing : (err) ->
+		callbacks = @waitingForInitializing
+		delete @waitingForInitializing
+		
+		callback = (args...)->
+			cb(args...) for cb in callbacks
+			return
+
+		if err
+			callback err
+			return
+		else
+			return callback
+
+_.extend Model.Route, Model.LazyInitializable
+_.extend Model.Binary, Model.LazyInitializable

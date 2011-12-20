@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from utility import *
+import struct
 
 
 def parseObjFile(objFile, enableColor):
@@ -83,6 +84,24 @@ def parseObjFile(objFile, enableColor):
         else:
             pass
 
+    output = open(objFile[:-4], 'wb')
+    
+    if enableColor:
+        output.write(struct.pack('III', len(vertices) , len(colors), len(faces)))
+    else:
+        output.write(struct.pack('III', len(vertices) , len(vertices), len(faces)))
+    
+    output.write(struct.pack('f' * len(vertices), *vertices))
+    
+    if enableColor:
+        output.write(struct.pack('f' * len(colors), *colors))
+    else:
+        output.write(struct.pack('f' * len(vertices), *([1,0,0] * (len(vertices) / 3))))
+    
+    output.write(struct.pack('I' * len(faces), *faces))
+    
+    output.close()
+
     output = open(objFile[:-4]+'.js','w')
     output.write("vertices=" + str(vertices) + ";\n")
     output.write("faces=" + str(faces) + ";\n")
@@ -93,6 +112,7 @@ def parseObjFile(objFile, enableColor):
     else:
         output.write("textures=" + str(textures) + ";\n")
         output.write("texturesPointer=" + str(texturesPointer) + ";\n")
+    output.close()
 
         
 
@@ -106,7 +126,7 @@ def triangulate(l):
 
 def main():
     options = parseCommandLine()
-    for objFile in locate("*.obj",options.path):
+    for objFile in locate("*.obj", options.path):
         print options.color
         parseObjFile(objFile, options.color)
 

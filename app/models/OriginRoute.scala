@@ -5,7 +5,7 @@ import com.novus.salat.global._
 import com.novus.salat.dao.SalatDAO
 import play.api.Play
 import play.api.Play.current
-import brainflight.tools.geometry.Vector3D
+import brainflight.tools.geometry.Point3D
 
 /**
  * scalableminds - brainflight
@@ -13,11 +13,11 @@ import brainflight.tools.geometry.Vector3D
  * Date: 11.12.11
  * Time: 22:07
  */
-case class LocDir(location: Vector3D, direction: Vector3D)
+case class PosDir(position: Point3D, direction: Point3D)
 
-case class OriginLocDir(lorection: LocDir, usedCount: Int, _id: ObjectId = new ObjectId)
+case class OriginPosDir(porection: PosDir, usedCount: Int, _id: ObjectId = new ObjectId)
 
-object OriginLocDir extends BasicDAO[OriginLocDir]("origins") {
+object OriginPosDir extends BasicDAO[OriginPosDir]("origins") {
   def leastUsed = {
     val origin = find(MongoDBObject()).sort(orderBy = MongoDBObject("usedCount" -> 1)).limit(1).toList
     if (origin.size > 0)

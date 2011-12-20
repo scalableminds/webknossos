@@ -1,5 +1,6 @@
 import brainflight.binary.{FrustumModel, CubeModel, ModelStore}
 import brainflight.tools.geometry._
+import models.PosDir._
 import play.api._
 
 import models._
@@ -22,9 +23,7 @@ object InitialData {
   def date(str: String) = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(str)
 
   def insert() = {
-    val v = Vector3D(1.0,1.0,1.0)
-    val l = LocDir(v, v)
-    OriginLocDir.insert(OriginLocDir(l,0))
+    OriginPosDir.insert(OriginPosDir(PosDir(Point3D(1,1,1), Point3D(1,1,1)), 0))
 
     if (User.findAll.isEmpty) {
 

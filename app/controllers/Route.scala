@@ -1,11 +1,11 @@
 package controllers
 
 import play.api.json._
-import models.{FlightRoute, OriginLocDir}
+import models.{FlightRoute, OriginPosDir}
 import play.api.mvc._
 import org.bson.types.ObjectId
-import brainflight.tools.geometry.Vector3D._
-import brainflight.tools.geometry.Vector3D
+import brainflight.tools.geometry.Point3D
+import brainflight.tools.geometry.Point3D._
 
 /**
  * scalableminds - brainflight
@@ -17,16 +17,16 @@ object Route extends Controller with Secured {
 
   def initialize = Action {
     implicit request =>
-    val start = OriginLocDir.leastUsed match {
+    val start = OriginPosDir.leastUsed match {
       case null => throw new NoSuchElementException("no OriginLocations saved.")
       case route => route
     }
-    val initdata = FlightRoute.createForUser(userId, start.lorection.location :: Nil)
+    val initdata = FlightRoute.createForUser(userId, start.porection.position :: Nil)
 
     val data = collection.Map(
-      "id" -> initdata._id.toString,
-      "location" -> start.lorection.location.toString,
-      "direction" -> start.lorection.direction.toString
+      "id" -> toJson(initdata._id.toString),
+      "position" -> toJson(start.porection.position),
+      "direction" -> toJson(start.porection.direction)
     )
     Ok(toJson(data)).as("application/json")
   }
@@ -44,7 +44,7 @@ object Route extends Controller with Secured {
         case _ => return BadRequest
       }
 
-      return (parsedJson \ "positions").asOpt[List[Vector3D]] match {
+      return (parsedJson \ "positions").asOpt[List[Point3D]] match {
         case Some(list) =>
           FlightRoute.save(fr.copy(points = fr.points ::: list ))
           Ok

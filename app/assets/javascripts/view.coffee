@@ -92,7 +92,10 @@ class _View
 	#redirects the call from Geometry-Factory directly to engine
 	createArrayBufferObject : (data) ->
 		engine.createArrayBufferObject data
-
+		
+	#redirects the call from Geometry-Factory directly to engine
+	createElementArrayBufferObject : (data) ->
+		engine.createElementArrayBufferObject data
 
 	#Apply a single draw (not used right now)
 	draw : ->

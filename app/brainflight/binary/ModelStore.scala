@@ -4,7 +4,7 @@ import collection.mutable.HashMap
 
 /**
  * Scalable Minds - Brainflight
- * User: tom
+ * User: tmbo
  * Date: 10/11/11
  * Time: 7:59 AM
  */

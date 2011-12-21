@@ -17,6 +17,7 @@ import java.io.{FileNotFoundException, InputStream, FileInputStream, File}
  * A store which handles all binary data, the current implementation uses the given file structure on hdd
  */
 object DataStore{
+  lazy val nullBlock = (for(x<-0 to 128*128*128) yield 0.toByte).toArray
   // defines the maximum count of cached file handles
   val fileBufferLimit = 500
   // binary data ID
@@ -46,10 +47,17 @@ object DataStore{
         // pretends to flood memory with to many files
         if(fileBuffer.size>fileBufferLimit)
           fileBuffer.drop(dropCount)
-        val br = new FileInputStream("%sx%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw".format(dataPath,x,y,z,binaryDataID,x,y,z))
-        val b = inputStreamToByteArray(br)
-        fileBuffer += (((x, y, z), b))
-        b
+        try{
+        	val br = new FileInputStream("%sx%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw".format(dataPath,x,y,z,binaryDataID,x,y,z))
+        	val b = inputStreamToByteArray(br)
+        	fileBuffer += (((x, y, z), b))
+        	b
+        } catch {
+          case e: FileNotFoundException => 
+          	sys.error("Block %sx%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw not found!".format(dataPath,x,y,z,binaryDataID,x,y,z))
+        	fileBuffer += (((x, y, z), nullBlock))
+        	nullBlock
+        }
     }
     byteArray(((point._1%128)*16384)+(point._2%128)* 128 + point._3 % 128)
   }

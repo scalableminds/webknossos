@@ -1,6 +1,6 @@
 import brainflight.binary.{FrustumModel, CubeModel, ModelStore}
 import brainflight.tools.geometry._
-import models.PosDir._
+import models.PosDir
 import play.api._
 
 import models._

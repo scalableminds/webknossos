@@ -18,8 +18,12 @@ object ApplicationSpec extends Specification {
   "pass functional test" in {
    withNettyServer{
     val driver = new HtmlUnitDriver()
-      driver.get("http://localhost:9000")
-      driver.getPageSource must contain ("Brainflight")
+      /*driver.get("http://localhost:9000/route/initialize")
+      driver.getPageSource must contain ("id")
+      driver.get("http://localhost:9000/")
+      driver.getPageSource must contain ("id")
+      driver.get("http://localhost:9000/ro")
+      driver.getPageSource must contain ("id")     */
    }
   }
  }

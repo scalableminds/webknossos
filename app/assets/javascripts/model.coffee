@@ -99,7 +99,7 @@ Model.Mesh =
 						header  = new Uint32Array(data, 0, 3)
 						coords  = new Float32Array(data, 12, header[0])
 						colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
-						indexes = new Uint32Array(data, 12 + 4 * (header[0] + header[1]), header[2])
+						indexes = new Uint16Array(data, 12 + 4 * (header[0] + header[1]), header[2])
 
 						callback(null, coords, colors, indexes)
 					catch ex
@@ -108,10 +108,18 @@ Model.Mesh =
 Model.Shader =
 	
 	get : (name, callback) ->
-		request
-			url : "/assets/shader/#{name}"
-			,
-			callback
+		request { url : "/assets/shader/#{name}.vs" }, (err, vertexShader) ->
+			if err
+				callback err
+			
+			else
+				request { url : "/assets/shader/#{name}.fs" }, (err, fragmentShader) ->
+					if err
+						callback err
+					else
+						callback null, vertexShader, fragmentShader
+
+
 	
 Model.Route =
 	
@@ -148,6 +156,8 @@ Model.Route =
 		@push()
 
 	_push : ->
+		unless @pushing
+			@pushing = true
 
 			transportBuffer = @dirtyBuffer
 			@dirtyBuffer = []
@@ -158,6 +168,7 @@ Model.Route =
 				data : @dirtyBuffer
 				,
 				(err) =>
+					@pushing = false
 					if err
 						@dirtyBuffer = transportBuffer.concat @dirtyBuffer
 						@push()

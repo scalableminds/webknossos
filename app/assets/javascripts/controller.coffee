@@ -56,9 +56,9 @@ class _Controller
 			currentPixel = 0
 			currentColor = 0
 	
-			for y in [0..12.7] by 0.1
-				for x in [0..12.7] by 0.1
-					for z in [0..12.7] by 0.1
+			for y in [0..127] by 1
+				for x in [0..127] by 1
+					for z in [0..127] by 1
 						# ADD COORDINATES
 						vertices[currentPixel] = x
 						vertices[currentPixel + 1] = y

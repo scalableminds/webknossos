@@ -43,7 +43,7 @@ describe 'geometry', ->
       polygons_touched = 0
       for polygon in g.polyhedral[0].faces
         for [coord, pos] in [['x', 0], ['x', 2], ['y', 0], ['y', 2], ['z', 0], ['z', 2]]
-          if Utils.arrayAll(polygon.vertices, (a) -> a[coord] == pos)
+          if _.all(polygon.vertices, (a) -> a[coord] == pos)
             
             ref = for coord1 in ['x','y','z']
               if coord1 == coord

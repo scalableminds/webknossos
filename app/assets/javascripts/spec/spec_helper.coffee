@@ -1,11 +1,8 @@
 jasmine.Matchers::toBeSameArrayAs = (expected) ->
-  return false if expected.length != @actual.length
-  for el, i in expected
-    return false if el != @actual[i]
-  true
+  _.all(@actual, (el, i) -> el == expected[i])
   
 jasmine.Matchers::toBeA = (clazz) ->
-  jasmine.any(clazz).matches @actual
+  @actual.constructor = clazz
   
 jasmine.Matchers::toBeBetween = (a,b) ->
   Math.min(a, b) <= @actual <= Math.max(a, b)
@@ -26,17 +23,6 @@ async = (timeout, message, handler) ->
   _done = false
   done = -> _done = true
   
-  Utils.defer -> handler(done)
+  _.defer -> handler(done)
   
   waitsFor((-> _done), message, timeout)
-
-Utils.arrayAll = (arr, predicate) ->
-  for el in arr
-    return false unless predicate(el)
-  return true
-  
-Utils.arrayRemove = (arr, obj) ->
-  i = arr.indexOf obj
-  if rv = i >= 0
-    arr.splice(i, 1)
-  rv

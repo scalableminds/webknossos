@@ -18,15 +18,16 @@ describe 'Model.Binary', ->
     it 'should load some points', ->
       async 'never completed loading', (done) ->
         
-        Model.Binary.load [0,0,0], [0,1,0], (err, data) ->
+        Model.Binary.get [0,0,0], [0,1,0], (err, coords, colors) ->
           expect(err).toBeNull()
-          expect(data).toBeDefined()
-          expect(data).toBeA(Uint8Array)
-          expect(data.length).toBeGreaterThan(0)
+          expect(coords).toBeA(Float32Array)
+          expect(colors).toBeA(Float32Array)
+          expect(coords.length).toBeGreaterThan(0)
+          expect(colors.length).toBeGreaterThan(0)
           done()
 
   
-  describe 'rotateAndMove', ->
+  describe 'rotateAndTranslate', ->
     
     testModel = new Int8Array(new ArrayBuffer(81))
     i = 0
@@ -39,8 +40,8 @@ describe 'Model.Binary', ->
           i += 3
     
     it 'should be able to move model', ->
-      async 'rotateAndMove never completed', (done) ->
-        Model.Binary.rotateAndMove testModel, [1,2,3], [0,1,0], (err, data) ->
+      async 'rotateAndTranslate never completed', (done) ->
+        Model.Binary.rotateAndTranslate testModel, [1,2,3], [0,1,0], (err, data) ->
           
           correct = [0,2,2,0,2,3,0,2,4,1,2,2,1,2,3,1,2,4,2,2,2,2,2,3,2,2,4,0,3,2,0,3,3,0,3,4,1,3,2,1,3,3,1,3,4,2,3,2,2,3,3,2,3,4,0,4,2,0,4,3,0,4,4,1,4,2,1,4,3,1,4,4,2,4,2,2,4,3,2,4,4]
           
@@ -48,20 +49,20 @@ describe 'Model.Binary', ->
           done()
 
     it 'should be able to rotate model', ->
-      async "rotateAndMove never completed", (done) ->
+      async "rotateAndTranslate never completed", (done) ->
         
-        Model.Binary.rotateAndMove testModel, [0,0,0], [1,2,3], (err, data) ->
+        Model.Binary.rotateAndTranslate testModel, [0,0,0], [1,2,3], (err, data) ->
           
           correct = [-1,1,0,-1,0,0,-1,-1,1,0,1,-1,0,0,0,0,-1,1,1,1 ,-1,1,0,0,1,-1,0,-1,2,0,-1,1,1,-1,0,2,0,1,0,0,1,1,0,0,1,1,1,0,1,0,1,1,-1,1,0,2,1,0,1,2,-1,1,2,1,2,1,1,1,2,0,0,2,2,2,1,1,1,1,1,0,2]
           
-          expect(data).toBeSameArrayAs correct
+          expect(_.all(@actual, (el, i) -> Math.round(el) == expected[i])).toBe true
           done()
 
     it 'should rotate independent of the rotating vectors size', ->
-      async 'rotateAndMove never completed', (done) ->
+      async 'rotateAndTranslate never completed', (done) ->
       
-        Model.Binary.rotateAndMove testModel, [0,0,0], [1,2,3], (err, data) ->
-          Model.Binary.rotateAndMove testModel, [0,0,0], [2,4,6], (err, data1) ->
+        Model.Binary.rotateAndTranslate testModel, [0,0,0], [1,2,3], (err, data) ->
+          Model.Binary.rotateAndTranslate testModel, [0,0,0], [2,4,6], (err, data1) ->
             expect(data1).toBeSameArrayAs data
             done()
 

@@ -6,10 +6,10 @@ $ ->
     canvas.height = _canvas.height()
   ).resize()
   
+  required_scripts = []
   require = (src) ->
-    
+    required_scripts.push "/assets/javascript/#{src}"
 
-  require("/assets/javascript/binary_reader.js")
   Modernizr.load 
     load: [
       "/assets/javascripts/binary_request.js",

@@ -23,7 +23,7 @@ object Route extends Controller with Secured {
     }
     val initdata = FlightRoute.createForUser(userId, start.porection.position :: Nil)
 
-    val data = collection.Map(
+    val data = Map(
       "id" -> toJson(initdata._id.toString),
       "position" -> toJson(start.porection.position),
       "direction" -> toJson(start.porection.direction)

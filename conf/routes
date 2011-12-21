@@ -43,6 +43,7 @@ GET     /binary/polygons/:model             controllers.BinaryData.polygons(mode
 # Route Stuff
 GET     /route/initialize                   controllers.Route.initialize
 POST    /route/:id                          controllers.Route.blackBox(id: String)
+GET		/route/:id							controllers.Route.getRoute(id: String)
 
 # Test pages
 GET     /test/                              controllers.Test.index

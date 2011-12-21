@@ -115,14 +115,14 @@ Model.Shader =
 	
 Model.Route =
 	
-	dirtyBuffer : null
+	dirtyBuffer : []
 	route : null
 	startDirection : null
 	id : null
 
 	initialize : (callback) ->
 
-		@startInitializing()
+		@startInitializing callback
 
 		request
 			url : '/route/initialize'
@@ -143,15 +143,24 @@ Model.Route =
 					catch ex
 						callback ex
 	
-	push : () ->
-		
-		request
-			url : "/route/#{@id}"
-			contentType : 'application/json'
-			data : @dirtyBuffer
-			,
-			(err) ->
-				# blablabla
+	push : ->
+		@push = _.throttle @_push, 30000
+		@push()
+
+	_push : ->
+
+			transportBuffer = @dirtyBuffer
+			@dirtyBuffer = []
+			request
+				url : "/route/#{@id}"
+				contentType : 'application/json'
+				method : 'POST'
+				data : @dirtyBuffer
+				,
+				(err) =>
+					if err
+						@dirtyBuffer = transportBuffer.concat @dirtyBuffer
+						@push()
 	
 	put : (position, callback) ->
 		
@@ -159,9 +168,8 @@ Model.Route =
 			return callback(err) if err
 
 			@route.push position
-			@dirtyBuffer = [] unless @dirtyBuffer
 			@dirtyBuffer.push position
-
+			@push()
 
 Model.LazyInitializable =
 	
@@ -183,7 +191,7 @@ Model.LazyInitializable =
 		callbacks = @waitingForInitializing
 		delete @waitingForInitializing
 		
-		callback = (args...)->
+		callback = (args...) ->
 			cb(args...) for cb in callbacks
 			return
 

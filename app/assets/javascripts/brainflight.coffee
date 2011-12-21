@@ -12,6 +12,7 @@ $ ->
 
   Modernizr.load 
     load: [
+      "/assets/javascripts/libs/mjs.js"
       "/assets/javascripts/binary_request.js",
       "/assets/javascripts/core_ext.js",
       "/assets/javascripts/event_emitter.js",
@@ -20,7 +21,6 @@ $ ->
       "/assets/javascripts/libs/gl_engine/flycam.js",
       "/assets/javascripts/libs/gl_engine/gl_engine.js",
       "/assets/javascripts/libs/csg.js",
-      "/assets/javascripts/libs/mjs.js"
       "/assets/javascripts/controller.js",
       "/assets/javascripts/keyboard.js",
       "/assets/javascripts/view.js",

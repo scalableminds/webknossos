@@ -199,7 +199,7 @@ class GL_engine
 				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
 				gl.drawElements gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0
 			else
-				gl.drawArrays gl.POINTS, 0, 20000#geometry.vertices.length / 3
+				gl.drawArrays gl.POINTS, 0, geometry.vertices.length / 3
 
 			disableVertexAttribPointer "aVertex"
 			disableVertexAttribPointer "aColor" if geometry.colors.hasColor

@@ -25,5 +25,6 @@ $ ->
       "/assets/javascripts/keyboard.js",
       "/assets/javascripts/view.js",
       "/assets/javascripts/model.js"
+      "/assets/javascripts/geometry_factory.js"
     ]
     complete: () -> start()

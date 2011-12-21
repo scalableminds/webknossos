@@ -21,7 +21,7 @@ class _View
 	curCoords = [0, 0]
 
 	#constants
-	clippingDistance = 1000
+	clippingDistance = 280
 	camPos = [63.5,63.5,-clippingDistance+63.5]
 
 	moveValueStrafe = 0.1
@@ -38,7 +38,7 @@ class _View
 
 		engine.background [0.9, 0.9 ,0.9 ,1]
 		engine.pointSize 100
-		engine.perspective 30, cvs.width / cvs.height, clippingDistance, clippingDistance + 1 
+		engine.perspective 30, cvs.width / cvs.height, 1, clippingDistance + 1 
 
 		engine.onRender renderFunction
 

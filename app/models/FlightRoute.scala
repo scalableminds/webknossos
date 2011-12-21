@@ -16,7 +16,7 @@ import java.util.Date
  */
 case class FlightRoute(user_id: ObjectId, points: List[Point3D] = Nil, closed: Boolean = false, timestamp: Date = new Date, _id: ObjectId = new ObjectId)
 
-object FlightRoute extends BasicDAO[FlightRoute]("flightroutes") {
+object FlightRoute extends BasicDAO[FlightRoute]("routes") {
   def createForUser(user_id: ObjectId, points: List[Point3D] = Nil) = {
     closeOpenRoutes(user_id)
     val fr = FlightRoute(user_id, points)

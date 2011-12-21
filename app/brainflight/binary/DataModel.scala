@@ -8,7 +8,7 @@ import brainflight.tools.geometry.{Vector3D, NGonalFrustum, Polygon}
 
 /**
  * Scalable Minds - Brainflight
- * User: tom
+ * User: tmbo
  * Date: 10/10/11
  * Time: 10:47 AM
  */
@@ -44,8 +44,8 @@ abstract class DataModel {
 
     //calculate rotation matrix
     val a11 = cosA+square(ortho._1)*(1-cosA);  val a12 = -ortho._3*sinA;   val a13 = ortho._1*ortho._3*(1-cosA)
-    val a21 = ortho._3*sinA;                  val a22 = cosA;             val a23 = -ortho._1*sinA;
-    val a31 = ortho._1*ortho._3*(1-cosA);     val a32 = ortho._1*sinA;    val a33 = cosA+square(ortho._3)*(1-cosA);
+    val a21 = ortho._3*sinA;                   val a22 = cosA;             val a23 = -ortho._1*sinA;
+    val a31 = ortho._1*ortho._3*(1-cosA);      val a32 = ortho._1*sinA;    val a33 = cosA+square(ortho._3)*(1-cosA);
 
 
     containingCoordinates.map(point=>{

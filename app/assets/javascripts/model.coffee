@@ -7,16 +7,19 @@ Model.Binary =
 		
 		@startInitializing callback
 
-		binary_request("/binary/model/cube", (err, data) =>
-			
-			callback = @endInitializing err
-			
-			unless err
-				@coordinatesModel = new Int8Array(data)
-				callback null
-			
-			return
-		)
+		request
+			url : '/binary/model/cube'
+			responseType : 'arraybuffer'
+			,
+			(err, data) =>
+				
+				callback = @endInitializing err
+				
+				unless err
+					@coordinatesModel = new Int8Array(data)
+					callback null
+				
+				return
 
 	rotateAndMove : (data, moveVector, axis, callback) ->
 		
@@ -47,7 +50,7 @@ Model.Binary =
 			a22 = cosA + Math.square(ortho[2]) * (1 - cosA)
 			
 			# 
-			output = new Int8Array(new ArrayBuffer(data.byteLength))
+			output = new Float32Array(new ArrayBuffer(data.byteLength * 4))
 			for i in [0...data.length] by 3
 				px = data[i]
 				py = data[i + 1]
@@ -78,69 +81,89 @@ Model.Binary =
 		@lazyInitialize (err) ->
 			return callback(err) if err
 
-			binary_request(
-				"/binary/data/cube?px=#{point[0]}&py=#{point[1]}&pz=#{point[2]}&ax=#{direction[0]}&ay=#{direction[1]}&az=#{direction[2]}", 
+			request
+				url : "/binary/data/cube?px=#{point[0]}&py=#{point[1]}&pz=#{point[2]}&ax=#{direction[0]}&ay=#{direction[1]}&az=#{direction[2]}"
+				responseType : 'arraybuffer'
+				,
 				(err, data) ->
 					if err
 						callback err
 					else
 						callback null, new Uint8Array(data) 
-			)
 
 Model.Mesh =
 	
 	get : (name, callback) ->
 
-		binary_request("/assets/mesh/#{name}", (err, data) ->
+		request 
+			url : "/assets/mesh/#{name}"
+			responseType : 'arraybuffer'
+			, 
+			(err, data) ->
 
-			if err
-				callback err 
+				if err
+					callback err 
 
-			else
-				try
-					header  = new Uint32Array(data, 0, 3)
-					coords  = new Float32Array(data, 12, header[0])
-					colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
-					indexes = new Uint32Array(data, 12 + 4 * (header[0] + header[1]), header[2])
+				else
+					try
+						header  = new Uint32Array(data, 0, 3)
+						coords  = new Float32Array(data, 12, header[0])
+						colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
+						indexes = new Uint32Array(data, 12 + 4 * (header[0] + header[1]), header[2])
 
-					callback(null, coords, colors, indexes)
-				catch ex
-					callback(ex)
-		)
+						callback(null, coords, colors, indexes)
+					catch ex
+						callback(ex)
 
 		
 Model.Shader =
 	
 	get : (name, callback) ->
-		callback('Not implemented', data)
-
+		request
+			url : "/assets/shader/#{name}"
+			,
+			callback
+	
 Model.Route =
 	
 	dirtyBuffer : null
 	route : null
 	startDirection : null
+	id : null
 
 	initialize : (callback) ->
 
 		@startInitializing()
 
-		request("/route/initialize", (err, data) =>
-			
-			callback = @endInitializing err
-			
-			unless err
-				try
-					data = JSON.parse data
+		request
+			url : '/route/initialize'
+			,
+			(err, data) =>
+				
+				callback = @endInitializing err
+				
+				unless err
+					try
+						data = JSON.parse data
 
-					@route = [ data.position ]
-					@startDirection = data.direction
-					
-					callback null, data.position, data.direction
-				catch ex
-					callback ex
-		)
+						@route = [ data.position ]
+						@id = data.id
+						@startDirection = data.direction
+						
+						callback null, data.position, data.direction
+					catch ex
+						callback ex
 	
-
+	push : () ->
+		
+		request
+			url : "/route/#{@id}"
+			contentType : 'application/json'
+			data : @dirtyBuffer
+			,
+			(err) ->
+				# blablabla
+	
 	put : (position, callback) ->
 		
 		@lazyInitialize (err) =>

@@ -1,3 +1,8 @@
+.cache
+.classpath
+.project
+.settings/
+.target/
 logs/
 .history
 target/

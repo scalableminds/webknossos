@@ -28,6 +28,7 @@ object Route extends Controller with Secured {
       "position" -> toJson(start.porection.position),
       "direction" -> toJson(start.porection.direction)
     )
+    OriginPosDir.incUsed(start)
     Ok(toJson(data)).as("application/json")
   }
 
@@ -35,16 +36,16 @@ object Route extends Controller with Secured {
     implicit request =>
     def f(implicit request: Request[AnyContent]): Result = {
       val parsedJson = request.body.asJson.get
-      val fr = FlightRoute.findOneByID(id) match {
+      val fr = FlightRoute.findOpenByID(id) match {
         case Some(fr) if fr.user_id ==userId => fr
-        case _ => return BadRequest
+        case _ => return BadRequest("No open route found.")
       }
 
       return parsedJson.asOpt[List[Point3D]] match {
         case Some(list) =>
           FlightRoute.save(fr.copy(points = fr.points ::: list ))
           Ok
-        case None => BadRequest
+        case None => BadRequest("Json invalid.")
       }
     }
     f(request)

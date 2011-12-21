@@ -6,6 +6,7 @@ import com.novus.salat.dao.SalatDAO
 import play.api.Play
 import play.api.Play.current
 import brainflight.tools.geometry.Point3D
+import java.util.Date
 
 /**
  * scalableminds - brainflight
@@ -13,14 +14,23 @@ import brainflight.tools.geometry.Point3D
  * Date: 11.12.11
  * Time: 22:07
  */
-case class FlightRoute(user_id: ObjectId, points: List[Point3D] = Nil, _id: ObjectId = new ObjectId)
+case class FlightRoute(user_id: ObjectId, points: List[Point3D] = Nil, closed: Boolean = false, timestamp: Date = new Date, _id: ObjectId = new ObjectId)
 
 object FlightRoute extends BasicDAO[FlightRoute]("flightroutes") {
   def createForUser(user_id: ObjectId, points: List[Point3D] = Nil) = {
+    closeOpenRoutes(user_id)
     val fr = FlightRoute(user_id, points)
     insert(fr)
     fr
   }
-
-  def findOneByID(id: String): Option[FlightRoute] = findOneByID(new ObjectId(id))
+  def closeOpenRoutes(user_id: ObjectId){
+    update(MongoDBObject("user_id" -> user_id, "closed" -> false), $set ("closed" -> true), false, true)
+  }
+  
+  def findOpenByID(id: String): Option[FlightRoute] = {
+    findOneByID(new ObjectId(id)) match {
+      case Some(r) if !r.closed => Some(r)
+      case _ => None
+    }
+  }
 }

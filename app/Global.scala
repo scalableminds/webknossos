@@ -23,8 +23,9 @@ object InitialData {
   def date(str: String) = new java.text.SimpleDateFormat("yyyy-MM-dd").parse(str)
 
   def insert() = {
-    OriginPosDir.insert(OriginPosDir(PosDir(Point3D(1,1,1), Point3D(1,1,1)), 0))
-
+    if (OriginPosDir.findAll.isEmpty)
+      OriginPosDir.insert(OriginPosDir(PosDir(Point3D(1,1,1), Point3D(1,1,1)), 0))
+    
     if (User.findAll.isEmpty) {
 
       val u = User("scmboy@scalableminds.com", "SCM Boy", "secret", true)

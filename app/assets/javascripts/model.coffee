@@ -180,7 +180,7 @@ Model.LazyInitializable =
 
 	lazyInitialize : (callback) ->
 		unless @initialized
-			if @waitingForInitializing
+			if @waitingForInitializing?
 				@waitingForInitializing.push callback
 			else
 				@initialize callback
@@ -202,6 +202,7 @@ Model.LazyInitializable =
 			callback err
 			return
 		else
+			@initialized = true
 			return callback
 
 _.extend Model.Route, Model.LazyInitializable

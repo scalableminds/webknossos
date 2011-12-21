@@ -69,11 +69,14 @@ Model.Binary =
 			if err
 				callback(err)
 			else
+				colorsFloat = new Float32Array(colors.length)
+				colorsFloat[i] = colors[i] for i in [0...colors.length]
+
 				@rotateAndMove(@coordinatesModel, position, direction, (err, coords) ->
 					if err
 						callback(err)
 					else
-						callback(null, coords, colors)
+						callback(null, coords, colorsFloat)
 				)
 		)
 

@@ -188,7 +188,7 @@ class GL_engine
 			
 			if geometry.hasColors
 				if gl.getAttribLocation(shaderProgram, "aColor") isnt -1
-					vertexAttribPointer "aColor", 3, geometry.colors.VBO
+					vertexAttribPointer "aColor", 1, geometry.colors.VBO
 			
 
 			if gl.getAttribLocation(shaderProgram, "aVertex") isnt -1
@@ -197,13 +197,15 @@ class GL_engine
 			# render everything to screen
 			if geometry.getClassType() is "Mesh"
 				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
-				gl.drawElemets gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0
+				gl.drawElements gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0
 			else
-				gl.drawArrays gl.POINTS, 0, geometry.vertices.length / 3
+				gl.drawArrays gl.POINTS, 0, 20000#geometry.vertices.length / 3
 
 			disableVertexAttribPointer "aVertex"
 			disableVertexAttribPointer "aColor" if geometry.colors.hasColor
-
+#1591812
+#397953
+#132651
 
 
 	###

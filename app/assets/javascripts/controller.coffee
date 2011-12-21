@@ -14,7 +14,7 @@ class _Controller
 	vertexShader = "varying vec4 frontColor;
 
 	attribute vec3 aVertex;
-	attribute vec4 aColor;
+	attribute float aColor;
 
 	uniform float pointSize;
 	uniform vec3 attenuation;
@@ -23,7 +23,7 @@ class _Controller
 	uniform mat4 projectionMatrix;
 	uniform mat4 normalMatrix;
 	void main(void){ 
-		frontColor = aColor; 
+		frontColor = vec4(aColor,aColor,aColor,1.0); 
 		vec4 ecPos4 = modelViewMatrix * vec4(aVertex, 1.0); 
 		float dist = length( ecPos4 ); 
 		float attn = attenuation[0] +   
@@ -34,69 +34,26 @@ class _Controller
 		gl_Position = projectionMatrix * ecPos4; 
 	}";
 
-	loadPointcloud = ->
-		# DOWNLOAD FILE
-		xhr = new XMLHttpRequest()
-		xhr.open "GET", "/assets/test_cube.raw", true
-		xhr.responseType = "arraybuffer"
-	
-		xhr.onload = (e) -> 
+	loadPointcloud : ->
+		Model.Binary.get([0,0,0],[0,1,0],(err,vertices, colors) =>
+			@createPointcloud(vertices, colors) unless err
+		)
 
-			grey_scale_colors = new Uint8Array(this.response)
-		
-			# HEIGHT, WIDTH, DEPTH of block
-			# dimensions = Math.pow grey_scale_colors.length, 1/3
-			dimensions = 128
-		
-			numVerts = grey_scale_colors.length
-		
-			# RAW PARSING
-			vertices = new Float32Array(numVerts * 3)
-			RGB_colors = new Float32Array(numVerts * 3)
-			currentPixel = 0
-			currentColor = 0
-	
-			for y in [0..12.7] by 0.1
-				for x in [0..12.7] by 0.1
-					for z in [0..12.7] by 0.1
-						# ADD COORDINATES
-						vertices[currentPixel] = x
-						vertices[currentPixel + 1] = y
-						vertices[currentPixel + 2] = z
-					
-						# GREY SCALE TO RGB COLOR CONVERTION
-						# R = G = B = GREY SCALE INTEGER
-						RGB_colors[currentPixel] = grey_scale_colors[currentColor] / 255
-						RGB_colors[currentPixel + 1] =  grey_scale_colors[currentColor] / 255
-						RGB_colors[currentPixel + 2] = grey_scale_colors[currentColor] / 255
-					
-						currentPixel += 3
-						currentColor++
-			
-			Controller.createPointcloud vertices, RGB_colors
-			# OTHER POINTSTREAM VALUES / CALLBACKS
-
-		xhr.send(null)	
-
-		#mesh = load_obj_file()
-
-	createPointcloud: (vertices, RGB_colors) ->
+	createPointcloud : (vertices, colors) ->
 		pointCloud = new Pointcloud fragmentShader, vertexShader
 		pointCloud.setVertices (View.createArrayBufferObject vertices), vertices.length
-		pointCloud.setColors (View.createArrayBufferObject RGB_colors), RGB_colors.length
+		pointCloud.setColors (View.createArrayBufferObject colors), colors.length
 		View.addGeometry pointCloud
-		View.draw()
 
-	createMesh: (vertices, RGB_colors, indices) ->
+	createMesh : (vertices, RGB_colors, indices) ->
 		mesh = new Mesh fragmentShader, vertexShader
 		mesh.setVertices (View.createArrayBufferObject vertices), vertices.length
 		mesh.setColors (View.createArrayBufferObject RGB_colors), RGB_colors.length
 		mesh.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
 		View.addGeometry mesh
-		View.draw()
 
-	demo: ->
-		loadPointcloud()		
+	demo : ->
+		@loadPointcloud()		
 
   # mouse events
   

@@ -21,7 +21,7 @@ class _View
 	curCoords = [0, 0]
 
 	#constants
-	clippingDistance = 28
+	clippingDistance = 1000
 	camPos = [6.35,6.35,-clippingDistance+6.35]
 	moveValueStrafe = 0.1
 	moveValueRotate = 0.02

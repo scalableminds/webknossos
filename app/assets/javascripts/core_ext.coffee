@@ -1,3 +1,21 @@
+M4x4.transformPointsAffine = (m, points, r) ->
+  # MathUtils_assert(m.length === 16, "m.length === 16");
+  # MathUtils_assert(v.length === 3, "v.length === 3");
+  # MathUtils_assert(r === undefined || r.length === 3, "r === undefined || r.length === 3");
+  
+  r = new MJS_FLOAT_ARRAY_TYPE(points.length) unless r?
+
+  for i in [0...points.length] by 3
+    v0 = points[i]
+    v1 = points[i + 1]
+    v2 = points[i + 2]
+    
+    r[i]     = m[0] * v0 + m[4] * v1 + m[8] * v2 + m[12]
+    r[i + 1] = m[1] * v0 + m[5] * v1 + m[9] * v2 + m[13]
+    r[i + 2] = m[2] * v0 + m[6] * v1 + m[10] * v2 + m[14]
+
+  r
+
 Math.square = (a) -> a * a
 
 Math.normalizeVector = (vec) ->

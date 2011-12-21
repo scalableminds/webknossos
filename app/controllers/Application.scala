@@ -4,9 +4,9 @@ import play.api._
 import play.api.mvc._
 import play.api.data._
 import play.api.Play.current
-
 import models._
 import views._
+import play.mvc.Results.Redirect
 
 object Application extends Controller {
 
@@ -101,7 +101,7 @@ object Application extends Controller {
  */
 trait Secured {
   def user(implicit request: RequestHeader) = {
-    request.session.get("email") match {
+    username(request) match {
       case Some(mail) => User.findByEmail(mail)
       case _ => None
     }
@@ -118,9 +118,9 @@ trait Secured {
    * Retrieve the connected user email.
    */
   private def username(request: RequestHeader) = {
-    if (Play.configuration.getBoolean("application.enableAutoLogin").get)
+    if (Play.configuration.getBoolean("application.enableAutoLogin").get){
       Some("scmboy@scalableminds.com")
-    else
+    }else
       request.session.get("email")
   }
 

@@ -25,4 +25,10 @@ object OriginPosDir extends BasicDAO[OriginPosDir]("origins") {
     else
       null
   }
+
+  def incUsed(obj: OriginPosDir) {
+    update(MongoDBObject("_id" -> obj._id), $inc("usedCount" -> 1))
+  }
+
+  def findAll = find(MongoDBObject.empty).toList
 }

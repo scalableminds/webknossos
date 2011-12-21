@@ -99,7 +99,7 @@ Model.Mesh =
 						header  = new Uint32Array(data, 0, 3)
 						coords  = new Float32Array(data, 12, header[0])
 						colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
-						indexes = new Uint32Array(data, 12 + 4 * (header[0] + header[1]), header[2])
+						indexes = new Uint16Array(data, 12 + 4 * (header[0] + header[1]), header[2])
 
 						callback(null, coords, colors, indexes)
 					catch ex
@@ -108,21 +108,29 @@ Model.Mesh =
 Model.Shader =
 	
 	get : (name, callback) ->
-		request
-			url : "/assets/shader/#{name}"
-			,
-			callback
+		request { url : "/assets/shader/#{name}.vs" }, (err, vertexShader) ->
+			if err
+				callback err
+			
+			else
+				request { url : "/assets/shader/#{name}.fs" }, (err, fragmentShader) ->
+					if err
+						callback err
+					else
+						callback null, vertexShader, fragmentShader
+
+
 	
 Model.Route =
 	
-	dirtyBuffer : null
+	dirtyBuffer : []
 	route : null
 	startDirection : null
 	id : null
 
 	initialize : (callback) ->
 
-		@startInitializing()
+		@startInitializing callback
 
 		request
 			url : '/route/initialize'
@@ -143,15 +151,27 @@ Model.Route =
 					catch ex
 						callback ex
 	
-	push : () ->
-		
-		request
-			url : "/route/#{@id}"
-			contentType : 'application/json'
-			data : @dirtyBuffer
-			,
-			(err) ->
-				# blablabla
+	push : ->
+		@push = _.throttle @_push, 30000
+		@push()
+
+	_push : ->
+		unless @pushing
+			@pushing = true
+
+			transportBuffer = @dirtyBuffer
+			@dirtyBuffer = []
+			request
+				url : "/route/#{@id}"
+				contentType : 'application/json'
+				method : 'POST'
+				data : @dirtyBuffer
+				,
+				(err) =>
+					@pushing = false
+					if err
+						@dirtyBuffer = transportBuffer.concat @dirtyBuffer
+						@push()
 	
 	put : (position, callback) ->
 		
@@ -159,9 +179,8 @@ Model.Route =
 			return callback(err) if err
 
 			@route.push position
-			@dirtyBuffer = [] unless @dirtyBuffer
 			@dirtyBuffer.push position
-
+			@push()
 
 Model.LazyInitializable =
 	
@@ -183,7 +202,7 @@ Model.LazyInitializable =
 		callbacks = @waitingForInitializing
 		delete @waitingForInitializing
 		
-		callback = (args...)->
+		callback = (args...) ->
 			cb(args...) for cb in callbacks
 			return
 

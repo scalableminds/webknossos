@@ -50,6 +50,9 @@ GET     /test/                              controllers.Test.index
 GET     /test/demo                          controllers.Test.demo
 GET     /test/tests                         controllers.Test.tests
 
+#Admin pages 
+GET     /admin/loadData                     controllers.Admin.loadData(x: Int, y: Int, z: Int)
+
 # Javascript routing
 GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes
 

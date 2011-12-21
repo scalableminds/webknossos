@@ -3,13 +3,21 @@ describe 'binary_request', ->
   it 'should load anything', ->
     async "loading never completed", (done) ->
     
-      binary_request '/binary/model/cube', (err, data) ->
-        expect(err).toBeNull()
-        done()
+      request 
+        url : '/binary/model/cube'
+        responseType : 'arraybuffer'
+        ,
+        (err, data) ->
+          expect(err).toBeNull()
+          done()
 
   it 'should load an arraybuffer', ->
     async "loading never completed", (done) ->
     
-      binary_request '/binary/model/cube', (err, data) ->
-        expect(data).toBeA(ArrayBuffer)
-        done()
+      request 
+        url : '/binary/model/cube'
+        responseType : 'arraybuffer'
+        ,
+        (err, data) ->
+          expect(data).toBeA(ArrayBuffer)
+          done()

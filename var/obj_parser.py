@@ -5,7 +5,7 @@ import struct
 
 
 def parseObjFile(objFile, enableColor):
-    print "parsing %s" % objFile
+    print "converting %s" % objFile
     myfile = open(objFile, "r")
 
     vertices = []
@@ -87,9 +87,9 @@ def parseObjFile(objFile, enableColor):
     output = open(objFile[:-4], 'wb')
     
     if enableColor:
-        output.write(struct.pack('III', len(vertices) , len(colors), len(faces)))
+        output.write(struct.pack('III', len(vertices), len(colors), len(faces)))
     else:
-        output.write(struct.pack('III', len(vertices) , len(vertices), len(faces)))
+        output.write(struct.pack('III', len(vertices), len(vertices), len(faces)))
     
     output.write(struct.pack('f' * len(vertices), *vertices))
     
@@ -98,10 +98,13 @@ def parseObjFile(objFile, enableColor):
     else:
         output.write(struct.pack('f' * len(vertices), *([1,0,0] * (len(vertices) / 3))))
     
-    output.write(struct.pack('I' * len(faces), *faces))
+    output.write(struct.pack('H' * len(faces), *faces))
     
     output.close()
 
+    print "%s written" % objFile[:-4]
+
+    
     output = open(objFile[:-4]+'.js','w')
     output.write("vertices=" + str(vertices) + ";\n")
     output.write("faces=" + str(faces) + ";\n")
@@ -113,6 +116,8 @@ def parseObjFile(objFile, enableColor):
         output.write("textures=" + str(textures) + ";\n")
         output.write("texturesPointer=" + str(texturesPointer) + ";\n")
     output.close()
+
+    print "%s.js written" % objFile[:-4]
 
         
 
@@ -127,7 +132,6 @@ def triangulate(l):
 def main():
     options = parseCommandLine()
     for objFile in locate("*.obj", options.path):
-        print options.color
         parseObjFile(objFile, options.color)
 
 if __name__ == '__main__':

@@ -488,7 +488,7 @@ class GL_engine
 
 
 	setDefaultUniforms : ->
-		@uniformf "pointSize", 100
+		@uniformf "pointSize", 50
 		@uniformf "attenuation", [ attn[0], attn[1], attn[2] ]
 		@uniformMatrix "projectionMatrix", false, projectionMatrix
 

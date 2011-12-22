@@ -8,6 +8,7 @@ logs/
 target/
 binarydata/
 binaryData/
+binaryData
 boot/
 .idea/
 .idea_modules/

@@ -1,7 +1,8 @@
 class _Controller
 	
 	loadPointcloud : ->
-		GeometryFactory.requestPointcloud([0,0,0], [0,1,0])
+		View.setCamera([800,200,200])
+		GeometryFactory.loadPointcloud([800,200,200], [0,1,0],"default")
 
 	demo : ->
 		@loadPointcloud()		

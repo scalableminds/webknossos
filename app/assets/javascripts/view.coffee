@@ -21,8 +21,8 @@ class _View
 	curCoords = [0, 0]
 
 	#constants
-	clippingDistance = 280
-	camPos = [63.5,63.5,-clippingDistance+63.5]
+	clippingDistance = 170
+	camPos = [0,20,-clippingDistance+0]
 
 	moveValueStrafe = 0.1
 	moveValueRotate = 0.02
@@ -37,8 +37,8 @@ class _View
 		#cam.move [+6.3,0,0]
 
 		engine.background [0.9, 0.9 ,0.9 ,1]
-		engine.pointSize 100
-		engine.perspective 30, cvs.width / cvs.height, 1, clippingDistance + 1 
+		engine.pointSize 50
+		engine.perspective 30, cvs.width / cvs.height, clippingDistance, clippingDistance + 10 
 
 		engine.onRender renderFunction
 
@@ -77,7 +77,7 @@ class _View
 			
 		# OUTPUT Framerate
 		status = document.getElementById('status')
-		status.innerHTML = "#{Math.floor(engine.getFramerate())} FPS <br/> #{totalNumberOfVertices} Total Points <br />" 
+		status.innerHTML = "#{Math.floor(engine.getFramerate())} FPS <br/> #{totalNumberOfVertices} Total Points <br />"
 
 
 	#adds all kind of geometry to geometry-array
@@ -101,6 +101,10 @@ class _View
 	#Apply a single draw (not used right now)
 	draw : ->
 		engine.draw()
+
+	setCamera : (position) ->
+		camPos = position
+		cam.move camPos
 
 # #####################
 # MOUSE (not used)

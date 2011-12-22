@@ -4,8 +4,8 @@ import play.api.json._
 import models.{ FlightRoute, OriginPosDir }
 import play.api.mvc._
 import org.bson.types.ObjectId
-import brainflight.tools.geometry.Point3D
-import brainflight.tools.geometry.Point3D._
+import brainflight.tools.geometry.Vector3D
+import brainflight.tools.geometry.Vector3D._
 
 /**
  * scalableminds - brainflight
@@ -40,7 +40,7 @@ object Route extends Controller with Secured {
           case _                                  => return BadRequest( "No open route found." )
         }
 
-        return parsedJson.asOpt[List[Point3D]] match {
+        return parsedJson.asOpt[List[Vector3D]] match {
           case Some( list ) =>
             FlightRoute.save( fr.copy( points = fr.points ::: list ) )
             Ok

@@ -33,7 +33,10 @@ Model.Binary =
 			mat = M4x4.makeRotate V3.angle([0,1,0], axis), [axis[2], 0, -axis[0]]
 			mat = M4x4.translateSelf moveVector, mat
 		
-			_.defer -> callback null, M4x4.transformPointsAffine(mat, data, output)
+			_.defer -> 
+				console.time "test"
+				callback null, M4x4.transformPointsAffine(mat, data, output)
+				console.timeEnd "test"
 		
 		else
 

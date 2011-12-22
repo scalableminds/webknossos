@@ -53,7 +53,7 @@ describe 'Model.Binary', ->
         
         Model.Binary.rotateAndTranslate testModel, [0,0,0], [1,2,3], (err, data) ->
           
-          correct = [-1,1,0,-1,0,0,-1,-1,1,0,1,-1,0,0,0,0,-1,1,1,1 ,-1,1,0,0,1,-1,0,-1,2,0,-1,1,1,-1,0,2,0,1,0,0,1,1,0,0,1,1,1,0,1,0,1,1,-1,1,0,2,1,0,1,2,-1,1,2,1,2,1,1,1,2,0,0,2,2,2,1,1,1,1,1,0,2]
+          correct = [-1,1,0,-1,0,0,-1,-1,1,0,1,-1,0,0,0,0,-1,1,1,1,-1,1,0,0,1,-1,0,-1,2,0,-1,1,1,-1,0,2,0,1,0,0,1,1,0,0,1,1,1,0,1,0,1,1,-1,1,0,2,1,0,1,2,-1,1,2,1,2,1,1,1,2,0,0,2,2,2,1,1,1,1,1,0,2]
           
           expect(_.all(@actual, (el, i) -> Math.round(el) == expected[i])).toBe true
           done()
@@ -91,9 +91,11 @@ describe 'Model.Mesh', ->
 describe 'Model.Shader', ->
   it 'should load some shaders', ->
     async (done) ->
-      Model.Shader.get 'default', (err, vertexShader, fragmentShader) ->
+      Model.Shader.get 'mesh', (err, vertexShader, fragmentShader) ->
 
         expect(err).toBeNull()
         expect(vertexShader).toBeA(String)
         expect(fragmentShader).toBeA(String)
+        expect(Model.Shader.cache.mesh[0]).toEqual vertexShader
+        expect(Model.Shader.cache.mesh[1]).toEqual fragmentShader
         done()

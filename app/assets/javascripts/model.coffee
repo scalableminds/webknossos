@@ -88,12 +88,9 @@ Model.Mesh =
 	
 	get : (name, callback) ->
 
-		request 
-			url : "/assets/mesh/#{name}"
-			responseType : 'arraybuffer'
-			, 
-			(err, data) ->
+		unless @tryCache name, callback
 
+			request url : "/assets/mesh/#{name}", responseType : 'arraybuffer', (err, data) =>
 				if err
 					callback err 
 
@@ -104,7 +101,8 @@ Model.Mesh =
 						colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
 						indexes = new Uint16Array(data, 12 + 4 * (header[0] + header[1]), header[2])
 
-						callback(null, coords, colors, indexes)
+						@cachingCallback(name, callback)(null, coords, colors, indexes)
+
 					catch ex
 						callback(ex)
 
@@ -155,7 +153,6 @@ Model.Route =
 		request	url : "/route/#{@id}", (err, data) =>
 			unless err
 				@route = JSON.parse data
-
 
 
 	push : ->
@@ -227,7 +224,8 @@ Model.Synchronizable =
 
 	synchronizingCallback : (loadedData, callback) ->
 		loadedData.push null
-		i = loadedData.counter = loadedData.length
+		loadedData.counter = loadedData.length
+		i = loadedData.length - 1
 
 		(err, data) ->
 			if err
@@ -259,8 +257,9 @@ Model.Cacheable =
 
 
 
+_.extend Model.Binary, Model.Synchronizable
+_.extend Model.Binary, Model.LazyInitializable
+_.extend Model.Mesh, Model.Cacheable
 _.extend Model.Shader, Model.Synchronizable
 _.extend Model.Shader, Model.Cacheable
 _.extend Model.Route, Model.LazyInitializable
-_.extend Model.Binary, Model.Synchronizable
-_.extend Model.Binary, Model.LazyInitializable

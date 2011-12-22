@@ -5,7 +5,7 @@ import com.novus.salat.global._
 import com.novus.salat.dao.SalatDAO
 import play.api.Play
 import play.api.Play.current
-import brainflight.tools.geometry.Point3D
+import brainflight.tools.geometry.Vector3D
 
 /**
  * scalableminds - brainflight
@@ -13,7 +13,7 @@ import brainflight.tools.geometry.Point3D
  * Date: 11.12.11
  * Time: 22:07
  */
-case class PosDir(position: Point3D, direction: Point3D)
+case class PosDir(position: Vector3D, direction: Vector3D)
 
 case class OriginPosDir(porection: PosDir, usedCount: Int, _id: ObjectId = new ObjectId)
 

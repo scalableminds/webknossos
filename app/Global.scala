@@ -24,7 +24,7 @@ object InitialData {
 
   def insert() = {
     if (OriginPosDir.findAll.isEmpty)
-      OriginPosDir.insert(OriginPosDir(PosDir(Point3D(1,1,1), Point3D(1,1,1)), 0))
+      OriginPosDir.insert(OriginPosDir(PosDir(Vector3D(1.0,1.0,1.0), Vector3D(1.0,1.0,1.0)), 0))
     
     if (User.findAll.isEmpty) {
 

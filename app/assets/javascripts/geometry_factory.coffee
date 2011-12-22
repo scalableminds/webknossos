@@ -25,6 +25,8 @@ class _GeometryFactory
 				if fragmentShaderSource? and vertexShaderSource?
 					@createPointcloud(tmpVertices, tmpColors, 
 					fragmentShaderSource, vertexShaderSource)
+			else
+				console.log err
 		)
 
 	# create a new Pointcloud object and send it to the View

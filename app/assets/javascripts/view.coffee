@@ -37,7 +37,7 @@ class _View
 		#cam.move [+6.3,0,0]
 
 		engine.background [0.9, 0.9 ,0.9 ,1]
-		engine.pointSize 50
+		engine.pointSize 20
 		engine.perspective 30, cvs.width / cvs.height, clippingDistance, clippingDistance + 10 
 
 		engine.onRender renderFunction

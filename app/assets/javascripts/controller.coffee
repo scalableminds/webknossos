@@ -1,11 +1,28 @@
 class _Controller
 	
-	loadPointcloud : ->
-		View.setCamera([800,200,200])
-		GeometryFactory.loadPointcloud([800,200,200], [0,1,0],"default")
+	#global variables for camera/plane 
+	position = null
+	direction = null
 
-	demo : ->
-		@loadPointcloud()		
+	initialize : () ->
+		Model.Route.initialize((err, pos, dir) =>
+			unless err
+				position = pos
+				direction = dir
+				@loadPointcloud()
+		)
+
+	loadPointcloud : () ->
+		View.setCamera(position)
+		GeometryFactory.loadPointcloud position, direction,"pointcloud"
+
+	updatePosition : (pos) ->
+		position = pos
+		Model.Route.put(position, (err) =>
+			console.log err
+		)
+		# bei jeder Änderung versuchen Pointcloud nachzuladen?
+		#@loadPointcloud()
 
   # mouse events
   
@@ -14,5 +31,5 @@ class _Controller
 Controller = new _Controller
 
 start = ->
-	Controller.demo()
+	Controller.initialize()
 

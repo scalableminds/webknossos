@@ -7,9 +7,9 @@ describe 'Model.Binary', ->
     async 'never initialized', (done) ->
       
       Model.Binary.lazyInitialize (err) ->
-        coordinatesModel = Model.Binary.coordinatesModel
-        expect(coordinatesModel).toBeDefined()
-        expect(coordinatesModel.length % 3).toEqual(0)
+        vertexTemplate = Model.Binary.vertexTemplate
+        expect(vertexTemplate).toBeDefined()
+        expect(vertexTemplate.length % 3).toEqual(0)
         done()
 
   

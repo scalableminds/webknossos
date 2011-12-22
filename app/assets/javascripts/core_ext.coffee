@@ -16,6 +16,24 @@ M4x4.transformPointsAffine = (m, points, r) ->
 
   r
 
+_.throttle2 = (func, wait) ->
+  timeout = more = false
+
+  ->
+    context = @
+    args = arguments
+    if timeout == false
+      _.defer -> func.apply(context, arguments)
+      timeout = setTimeout (
+        -> 
+          timeout = false
+          func.apply(context, arguments) if more
+          more = false
+        ), wait
+    else
+      more = true
+
+
 Math.square = (a) -> a * a
 
 Math.normalizeVector = (vec) ->

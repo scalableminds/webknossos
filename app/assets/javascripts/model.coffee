@@ -24,48 +24,47 @@ Model.Binary =
 
 	rotateAndTranslate : (data, moveVector, axis, callback) ->
 		
-		@lazyInitialize (err) ->
-
-			return callback(err) if err
-
-			output = new Float32Array(data.length)
-			axis = V3.normalize axis
+		output = new Float32Array(data.length)
+		axis = V3.normalize axis
 
 
-			unless axis[0] == 0 and axis[1] == 1 and axis[2] == 0
-				
-				mat = M4x4.makeRotate V3.angle([0,1,0], axis), [axis[2], 0, -axis[0]]
-				mat = M4x4.translateSelf moveVector, mat
+		unless axis[0] == 0 and axis[1] == 1 and axis[2] == 0
 			
-				_.defer -> callback null, M4x4.transformPointsAffine(mat, data, output)
+			mat = M4x4.makeRotate V3.angle([0,1,0], axis), [axis[2], 0, -axis[0]]
+			mat = M4x4.translateSelf moveVector, mat
+		
+			_.defer -> callback null, M4x4.transformPointsAffine(mat, data, output)
+		
+		else
+
+			[px, py, pz] = moveVector
 			
-			else
+			for i in [0...data.length] by 3
+				output[i]     = px + data[i]
+				output[i + 1] = py + data[i + 1]
+				output[i + 2] = pz + data[i + 2]
 
-				[px, py, pz] = moveVector
-				
-				for i in [0...data.length] by 3
-					output[i]     = px + data[i]
-					output[i + 1] = py + data[i + 1]
-					output[i + 2] = pz + data[i + 2]
-
-				_.defer -> callback null, output
+			_.defer -> callback null, output
 	
 	get : (position, direction, callback) ->
 		
-		loadedData = []
-		
-		finalCallback = (err, vertices, colors) ->
-			if err
-				callback err
-			else
-				colorsFloat = new Float32Array(colors.length)
-				colorsFloat[i] = colors[i] / 255 for i in [0...colors.length]
-				callback null, vertices, colorsFloat
+		@lazyInitialize (err) =>
+			return callback err if err
+
+			loadedData = []
+			
+			finalCallback = (err, vertices, colors) ->
+				if err
+					callback err
+				else
+					colorsFloat = new Float32Array(colors.length)
+					colorsFloat[i] = colors[i] / 255 for i in [0...colors.length]
+					callback null, vertices, colorsFloat
 
 
-		@rotateAndTranslate @vertexTemplate, position, direction, @synchronizingCallback(loadedData, finalCallback)
+			@rotateAndTranslate @vertexTemplate, position, direction, @synchronizingCallback(loadedData, finalCallback)
 
-		@load position, direction, @synchronizingCallback(loadedData, finalCallback)
+			@load position, direction, @synchronizingCallback(loadedData, finalCallback)
 
 				
 

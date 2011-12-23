@@ -34,9 +34,8 @@ Model.Binary =
 			mat = M4x4.translateSelf moveVector, mat
 		
 			_.defer -> 
-				console.time "test"
 				callback null, M4x4.transformPointsAffine(mat, data, output)
-				console.timeEnd "test"
+
 		
 		else
 

@@ -5,6 +5,7 @@ import brainflight.tools.Math._
 import java.lang.OutOfMemoryError
 import brainflight.tools.geometry.Vector3D._
 import brainflight.tools.geometry.{Vector3D, NGonalFrustum, Polygon}
+import scala.collection.parallel.ParSeq
 
 /**
  * Scalable Minds - Brainflight
@@ -32,7 +33,7 @@ abstract class DataModel {
   // specifies the polygons the model consists of
   val polygons : List[Polygon]
 
-  def rotateAndMove(moveVector:Tuple3[Int,Int, Int],axis:Tuple3[Int,Int, Int]):Seq[Tuple3[Int, Int, Int]]={
+  def rotateAndMove(moveVector:Tuple3[Int,Int, Int],axis:Tuple3[Int,Int, Int]):ParSeq[Tuple3[Int, Int, Int]]={
     // orthogonal vector to (0,1,0) and rotation vector
     val ortho = normalizeVector((axis._3,0,-axis._1))
 
@@ -48,7 +49,7 @@ abstract class DataModel {
     val a31 = ortho._1*ortho._3*(1-cosA);      val a32 = ortho._1*sinA;    val a33 = cosA+square(ortho._3)*(1-cosA);
 
 
-    containingCoordinates.map(point=>{
+    containingCoordinates.par.map(point=>{
       val (px,py,pz) = point
       // see rotation matrix and helmert-transformation for more details
       val x = moveVector._1+(a11*px + a12*py + a13*pz)
@@ -83,7 +84,7 @@ abstract class DataModel {
 
 object CubeModel extends DataModel{
   val id = "cube"
-  val yLength = 50
+  val yLength = 120
 
   val polygons = new NGonalFrustum(4,yLength,25,25).polygons
 }

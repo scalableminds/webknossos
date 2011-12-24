@@ -1,9 +1,10 @@
 package brainflight.tools.geometry
 
 import scala.math._
-import play.api.json.JsString._
-import play.api.json.JsArray._
-import play.api.json._
+import play.api.libs.json.JsString._
+import play.api.libs.json.JsArray._
+import play.api.libs.json.Writes._
+import play.api.libs.json._
 
 /**
  * scalableminds - brainflight

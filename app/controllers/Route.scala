@@ -1,6 +1,6 @@
 package controllers
 
-import play.api.json._
+import play.api.libs.json._
 import models.{ FlightRoute, OriginPosDir }
 import play.api.mvc._
 import org.bson.types.ObjectId

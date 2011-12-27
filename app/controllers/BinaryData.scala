@@ -22,23 +22,6 @@ import Input.EOF
 import play.api.libs.concurrent._
 
 object BinaryData extends Controller with Secured {
-
-  def echo(name: String) = WebSocket[String] { request => (in, out) =>
-
-    Logger.info(name + " is connected!")
-
-    out <<: in.map {
-      case EOF => {
-        Logger.info(name + " is disconnected. Cleaning resources")
-        EOF
-      }
-      case el => {
-        Logger.info("Got message: " + el)
-        el.map("[" + name + "] " + _.reverse)
-      }
-    }
-
-  }
   
   def data(modelType: String, px: Int, py: Int, pz: Int, ax: Int, ay: Int, az: Int) = Action {
     val axis = (ax, ay, az)

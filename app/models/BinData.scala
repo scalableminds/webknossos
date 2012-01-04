@@ -28,7 +28,7 @@ object BinData extends BasicDAO[BinData]("bindata"){
   // binary data id
   val binaryDataID = Play.configuration.getString("binarydata.id") getOrElse("100527_k0563_mag1")
   // binary data Path
-  val dataPath = Play.configuration.getString("binarydata.path") getOrElse("/home/lesnail/workspace/bindata")
+  val dataPath = Play.configuration.getString("binarydata.path") getOrElse("binaryData")
   
   def createOrGet(x: Int, y: Int, z: Int):Array[Byte] = {
     findByCoordinates(x,y,z) match {

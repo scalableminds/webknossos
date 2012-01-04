@@ -19,6 +19,11 @@ object Admin extends Controller{
     Ok("saved x:%d y:%d z:%d".format(x,y,z))
   }
   
+  def fullTest() = Action{
+    Ok("BinData: %s\n GridFS: %s\n DataStore: %s\n".format(timeBinDoc(),
+        timeGridFS(),timeDataStore()))
+  }
+  
   def createTestBinData()= Action{
     val x = 5
     BinData.collection.dropCollection()
@@ -39,7 +44,7 @@ object Admin extends Controller{
     Ok("Gridfs Database created")
   }
   
-  def testBinDoc() = Action {
+  def timeBinDoc() = {
     val x = 5
     var time = -System.currentTimeMillis()
     val fileBuffer = new HashMap[Tuple3[Int, Int, Int], Array[Byte]]
@@ -55,11 +60,15 @@ object Admin extends Controller{
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
     fileBuffer.clear()
-    Ok(sdf.format(time))  
+    sdf.format(time)
   }
   
-  def testGridFS() = Action {
-	val x = 5
+  def testBinDoc() = Action {
+	Ok(timeBinDoc())
+  }
+  
+  def timeGridFS()={
+    val x = 5
     var fileBuffer = new HashMap[Tuple3[Int, Int, Int], Array[Byte]]
 	
     var time = -System.currentTimeMillis()
@@ -74,15 +83,20 @@ object Admin extends Controller{
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
     fileBuffer.clear()
-    Ok(sdf.format(time)) 
+    sdf.format(time)
+  }
+  
+  def testGridFS() = Action {
+    Ok(timeGridFS()) 
   }
   
   def cleanup() = Action {
-    DataStore.cleanup()
+    System.runFinalization()
+    System.gc()
     Ok("cleaned up!")
   }
   
-  def testDataStore() = Action {
+  def timeDataStore() = {
     val x = 5
     var time = -System.currentTimeMillis()
     for{y <- 0 until 25
@@ -92,7 +106,12 @@ object Admin extends Controller{
     time += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
-    Ok(sdf.format(time))
+    DataStore.cleanUp()
+    sdf.format(time)
+  }
+  
+  def testDataStore() = Action {
+	Ok(timeDataStore())
   }
 }
 

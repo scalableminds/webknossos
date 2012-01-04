@@ -58,6 +58,7 @@ GET     /admin/createtestbindata            controllers.Admin.createTestBinData
 GET     /admin/creategridfsdata             controllers.Admin.createGridFsData
 GET     /admin/testdatastore                controllers.Admin.testDataStore
 GET     /admin/cleanup                      controllers.Admin.cleanup
+GET     /admin/fulltest                     controllers.Admin.fullTest
 
 # Javascript routing
 GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes

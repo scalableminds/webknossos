@@ -76,4 +76,9 @@ object DataStore {
     is.read(b, 0, 2097152)
     b
   }
+  
+  def cleanUp(){
+    fileBuffer.clear()
+  }
+  
 }

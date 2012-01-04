@@ -4,20 +4,11 @@
 
 #Play setup:
 ```bash
-git fetch origin Play:Play
-git checkout Play
 git submodule init
 git submodule update
 cd playframework/framework
-./build
+./build build-repository
 ```
-
-a sbt console is going to open type 
-
-```bash
-> build-repository
-```
-
 -> done!
 
 To run play type 
@@ -26,7 +17,7 @@ To run play type
 playframework/play run
 ```
 
-project root directory.
+in the project root directory.
 
 #Mongodb
 - install Mongodb (get the production release from mongodb.org). Unpack:

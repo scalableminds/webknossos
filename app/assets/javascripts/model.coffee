@@ -2,7 +2,7 @@ Model ?= {}
 
 Model.Binary =
 
-	coordinatesModel : null
+	vertexTemplate : null
 	
 	initialize : (callback) ->
 		
@@ -11,60 +11,64 @@ Model.Binary =
 		request
 			url : '/binary/model/cube'
 			responseType : 'arraybuffer'
-			,
+			,	
 			(err, data) =>
 				
 				callback = @endInitializing err
 				
 				unless err
-					@coordinatesModel = new Int8Array(data)
+					@vertexTemplate = new Int8Array(data)
 					callback null
 				
 				return
 
 	rotateAndTranslate : (data, moveVector, axis, callback) ->
 		
-		@lazyInitialize (err) ->
-
-			return callback(err) if err
-
-			output = new Float32Array(data.length)
-			axis = V3.normalize axis
+		output = new Float32Array(data.length)
+		axis = V3.normalize axis
 
 
-			unless axis[0] == 0 and axis[1] == 1 and axis[2] == 0
-				
-				mat = M4x4.makeRotate V3.angle([0,1,0], axis), [axis[2], 0, -axis[0]]
-				mat = M4x4.translateSelf moveVector, mat
+		unless axis[0] == 0 and axis[1] == 1 and axis[2] == 0
 			
-				_.defer -> callback null, M4x4.transformPointsAffine(mat, data, output)
+			mat = M4x4.makeRotate V3.angle([0,1,0], axis), [axis[2], 0, -axis[0]]
+			mat = M4x4.translateSelf moveVector, mat
+		
+			_.defer -> 
+				callback null, M4x4.transformPointsAffine(mat, data, output)
+
+		
+		else
+
+			[px, py, pz] = moveVector
 			
-			else
+			for i in [0...data.length] by 3
+				output[i]     = px + data[i]
+				output[i + 1] = py + data[i + 1]
+				output[i + 2] = pz + data[i + 2]
 
-				[px, py, pz] = moveVector
-				
-				for i in [0...data.length] by 3
-					output[i]     = px + data[i]
-					output[i + 1] = py + data[i + 1]
-					output[i + 2] = pz + data[i + 2]
-
-				_.defer -> callback null, output
+			_.defer -> callback null, output
 	
 	get : (position, direction, callback) ->
-		@load position, direction, (err, colors) =>
-			
-			if err
-				callback(err)
-			
-			else
-				colorsFloat = new Float32Array(colors.length)
-				colorsFloat[i] = colors[i] / 255 for i in [0...colors.length]
+		
+		@lazyInitialize (err) =>
+			return callback err if err
 
-				@rotateAndTranslate @coordinatesModel, position, direction, (err, coords) ->
-					if err
-						callback(err)
-					else
-						callback(null, coords, colorsFloat)
+			loadedData = []
+			
+			finalCallback = (err, vertices, colors) ->
+				if err
+					callback err
+				else
+					colorsFloat = new Float32Array(colors.length)
+					colorsFloat[i] = colors[i] / 255 for i in [0...colors.length]
+					callback null, vertices, colorsFloat
+
+
+			@rotateAndTranslate @vertexTemplate, position, direction, @synchronizingCallback(loadedData, finalCallback)
+
+			@load position, direction, @synchronizingCallback(loadedData, finalCallback)
+
+				
 
 	load : (point, direction, callback) ->
 		@lazyInitialize (err) ->
@@ -85,12 +89,9 @@ Model.Mesh =
 	
 	get : (name, callback) ->
 
-		request 
-			url : "/assets/mesh/#{name}"
-			responseType : 'arraybuffer'
-			, 
-			(err, data) ->
+		unless @tryCache name, callback
 
+			request url : "/assets/mesh/#{name}", responseType : 'arraybuffer', (err, data) =>
 				if err
 					callback err 
 
@@ -101,24 +102,20 @@ Model.Mesh =
 						colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
 						indexes = new Uint16Array(data, 12 + 4 * (header[0] + header[1]), header[2])
 
-						callback(null, coords, colors, indexes)
+						@cachingCallback(name, callback)(null, coords, colors, indexes)
+
 					catch ex
 						callback(ex)
 
 Model.Shader =
-	
-	get : (name, callback) ->
-		request { url : "/assets/shader/#{name}.vs" }, (err, vertexShader) ->
-			if err
-				callback err
-			
-			else
-				request { url : "/assets/shader/#{name}.fs" }, (err, fragmentShader) ->
-					if err
-						callback err
-					else
-						callback null, vertexShader, fragmentShader
 
+	get : (name, callback) ->
+		
+		unless @tryCache name, callback
+		
+			loadedData = []
+			request url : "/assets/shader/#{name}.vs", (@synchronizingCallback loadedData, (@cachingCallback name, callback))
+			request url : "/assets/shader/#{name}.fs", (@synchronizingCallback loadedData, (@cachingCallback name, callback))
 
 	
 Model.Route =
@@ -126,6 +123,7 @@ Model.Route =
 	dirtyBuffer : []
 	route : null
 	startDirection : null
+	startPosition : null
 	id : null
 
 	initialize : (callback) ->
@@ -146,32 +144,42 @@ Model.Route =
 						@route = [ data.position ]
 						@id = data.id
 						@startDirection = data.direction
+						@startPosition = data.position
 						
 						callback null, data.position, data.direction
 					catch ex
 						callback ex
 	
+	pull : ->
+		request	url : "/route/#{@id}", (err, data) =>
+			unless err
+				@route = JSON.parse data
+
+
 	push : ->
-		@push = _.throttle @_push, 30000
+		@push = _.throttle2 @_push, 30000
 		@push()
 
 	_push : ->
 		unless @pushing
 			@pushing = true
 
-			transportBuffer = @dirtyBuffer
-			@dirtyBuffer = []
-			request
-				url : "/route/#{@id}"
-				contentType : 'application/json'
-				method : 'POST'
-				data : @dirtyBuffer
-				,
-				(err) =>
-					@pushing = false
-					if err
-						@dirtyBuffer = transportBuffer.concat @dirtyBuffer
-						@push()
+			@lazyInitialize (err) =>
+				return if err
+
+				transportBuffer = @dirtyBuffer
+				@dirtyBuffer = []
+				request
+					url : "/route/#{@id}"
+					contentType : 'application/json'
+					method : 'POST'
+					data : transportBuffer
+					,
+					(err) =>
+						@pushing = false
+						if err
+							@dirtyBuffer = transportBuffer.concat @dirtyBuffer
+							@push()
 	
 	put : (position, callback) ->
 		
@@ -213,5 +221,46 @@ Model.LazyInitializable =
 			@initialized = true
 			return callback
 
-_.extend Model.Route, Model.LazyInitializable
+Model.Synchronizable = 	
+
+	synchronizingCallback : (loadedData, callback) ->
+		loadedData.push null
+		loadedData.counter = loadedData.length
+		i = loadedData.length - 1
+
+		(err, data) ->
+			if err
+				callback err unless loadedData.errorState
+				loadedData._errorState = true
+			else
+				loadedData[i] = data
+				unless --loadedData.counter
+					callback null, loadedData...
+
+Model.Cacheable =
+	
+	cache : {}
+
+	cachingCallback : (cache_tag, callback) ->
+		(err, args...) =>
+			if err
+				callback err
+			else
+				@cache[cache_tag] = args
+				callback null, args...
+	
+	tryCache : (cache_tag, callback) ->
+		if (cached = @cache[cache_tag])?
+			_.defer -> callback null, cached...
+			return true
+		else
+			return false
+
+
+
+_.extend Model.Binary, Model.Synchronizable
 _.extend Model.Binary, Model.LazyInitializable
+_.extend Model.Mesh, Model.Cacheable
+_.extend Model.Shader, Model.Synchronizable
+_.extend Model.Shader, Model.Cacheable
+_.extend Model.Route, Model.LazyInitializable

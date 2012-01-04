@@ -2,7 +2,7 @@ jasmine.Matchers::toBeSameArrayAs = (expected) ->
   _.all(@actual, (el, i) -> el == expected[i])
   
 jasmine.Matchers::toBeA = (clazz) ->
-  @actual.constructor = clazz
+  @actual.constructor == clazz
   
 jasmine.Matchers::toBeBetween = (a,b) ->
   Math.min(a, b) <= @actual <= Math.max(a, b)
@@ -10,14 +10,10 @@ jasmine.Matchers::toBeBetween = (a,b) ->
 jasmine.Matchers::toBeStrictlyBetween = (a,b) ->
   Math.min(a, b) < @actual < Math.max(a, b)
 
-async = (timeout, message, handler) ->
+async = (timeout, handler) ->
   
   unless handler?
-    unless message?
-      handler = timeout
-    else
-      handler = message
-      message = timeout
+    handler = timeout
     timeout = 60000 # 1 min
       
   _done = false
@@ -25,4 +21,4 @@ async = (timeout, message, handler) ->
   
   _.defer -> handler(done)
   
-  waitsFor((-> _done), message, timeout)
+  waitsFor((-> _done), 'async operation timed out', timeout)

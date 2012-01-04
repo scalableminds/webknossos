@@ -5,7 +5,7 @@ import com.novus.salat.global._
 import com.novus.salat.dao.SalatDAO
 import play.api.Play
 import play.api.Play.current
-import brainflight.tools.geometry.Point3D
+import brainflight.tools.geometry.Vector3D
 import java.util.Date
 
 /**
@@ -14,10 +14,10 @@ import java.util.Date
  * Date: 11.12.11
  * Time: 22:07
  */
-case class FlightRoute(user_id: ObjectId, points: List[Point3D] = Nil, closed: Boolean = false, timestamp: Date = new Date, _id: ObjectId = new ObjectId)
+case class FlightRoute(user_id: ObjectId, points: List[Vector3D] = Nil, closed: Boolean = false, timestamp: Date = new Date, _id: ObjectId = new ObjectId)
 
 object FlightRoute extends BasicDAO[FlightRoute]("routes") {
-  def createForUser(user_id: ObjectId, points: List[Point3D] = Nil) = {
+  def createForUser(user_id: ObjectId, points: List[Vector3D] = Nil) = {
     closeOpenRoutes(user_id)
     val fr = FlightRoute(user_id, points)
     insert(fr)

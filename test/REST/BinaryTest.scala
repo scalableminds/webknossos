@@ -54,7 +54,7 @@ object BinaryTest extends Specification {
       val Some( result ) = routeAndCall( FakeRequest( GET, "/binary/polygons/cube" ) )
       status( result ) must be equalTo ( 200 )
       contentType( result ) must equalTo( Some( "application/json" ) )
-      //contentAsString(result) must be equalTo Json.stringify(toJson( CubeModel.polygons ))
+      contentAsString(result) must be equalTo Json.stringify(toJson( CubeModel.polygons ))
     }
     "return data" in {
       running( FakeApplication() ) {

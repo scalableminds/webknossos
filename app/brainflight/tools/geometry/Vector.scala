@@ -2,8 +2,8 @@ package brainflight.tools.geometry
 
 import scala.math._
 import brainflight.tools.Math._
-import play.api.json.JsArray._
-import play.api.json._
+import play.api.libs.json.JsArray._
+import play.api.libs.json._
 import play.Logger
 
 /**

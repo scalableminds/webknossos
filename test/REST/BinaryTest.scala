@@ -1,60 +1,39 @@
+package REST
+
 import org.specs2.mutable._
-import play.api.mvc._
-import play.api.libs.iteratee._
-import play.api.libs.concurrent._
 import play.api.test._
-import play.api.json._
-import play.api.test.MockApplication._
+import play.api.test.Helpers._
 import brainflight.binary.CubeModel
-
-class FakeRequest[AnyContent]( url: String ) extends Request[AnyContent] {
-  def uri = url
-  def method = "GET"
-  def queryString = Map.empty()
-  def body: AnyContent = AnyContentAsUrlFormEncoded( Map( "foo" -> Seq( "value" ) ) ).asInstanceOf[AnyContent]
-
-  def username = Some( "peter" )
-  def path = "/"
-
-  def headers = new Headers {
-    def getAll( key: String ) = Seq( "testValue1", "testValue2" )
-    def keys = Set.empty
-  }
-  def cookies = new Cookies {
-    def get( name: String ) = Some( Cookie( name = "foo", value = "yay" ) )
-  }
-}
+import play.api.libs.json._
 
 object BinaryTest extends Specification {
   sequential
 
   "Binary REST interface" should {
     "return model" in {
-      /**
-       * URL: 
-       * 	GET - /route/model/:modeltype
-       * Params: 
-       *  	- modeltype: String , A valid data source model (e.q. cube)
-       * Response-type:
-       * 	application/octet-stream
-       * Response:
-       * 	Coordinates of all points inside the model in 8 byte format. 
-       * 	3 Dimensional in the following order: x,y,z
-       */
-      withApplication( Nil, MockData.dataSource ) {
-        val action = controllers.BinaryData.model( "cube" )
-        val result = action.apply( new FakeRequest( "/route/model/cube" ) )
-        val extracted = Extract.from( result )
-        extracted._1.toString must be equalTo( "200" )
-        extracted._2.toString must be equalTo( "Map(Content-Type -> application/octet-stream)" )
-        extracted._3 must be equalTo CubeModel.modelInformation.toString
+      running( FakeApplication() ) {
+        /**
+         * URL:
+         * 	GET - /route/model/:modeltype
+         * Params:
+         *  	- modeltype: String , A valid data source model (e.q. cube)
+         * Response-type:
+         * 	application/octet-stream
+         * Response:
+         * 	Coordinates of all points inside the model in 8 byte format.
+         * 	3 Dimensional in the following order: x,y,z
+         */
+        val Some( result ) = routeAndCall( FakeRequest( "GET", "/binary/model/cube" ) )
+        status( result ) must be equalTo ( 200 )
+        contentType( result ) must equalTo( Some( "application/octet-stream" ) )
+        contentAsBytes( result ).foldLeft( 0 )( ( b, x ) => b + x ) must be equalTo CubeModel.modelInformation.foldLeft( 0 )( ( b, x ) => b + x )
       }
     }
     "return polygons" in {
       /**
-       * URL: 
+       * URL:
        * 	GET - /route/polygons/:modeltype
-       * Params: 
+       * Params:
        *  	- modeltype: String , A valid data source model (e.q. cube)
        * Response-type:
        * 	application/json
@@ -69,44 +48,38 @@ object BinaryTest extends Specification {
        * 				[-25.0,0.0,-25.0], //second edge
        * 				[-25.0,0.0,25.0]]  // ...
        * 			],
-       * 			[ // second polygon ...	
+       * 			[ // second polygon ...
        * 	</example>
        */
-      withApplication( Nil, MockData.dataSource ) {
-        val action = controllers.BinaryData.polygons( "cube" )
-        val result = action.apply( new FakeRequest( "/route/polygons/cube" ) )
-        val extracted = Extract.from( result )
-        extracted._1.toString must be equalTo( "200" )
-        extracted._2.toString must be equalTo( "Map(Content-Type -> application/json; charset=utf-8)" )
-        extracted._3 must be equalTo toJson( CubeModel.polygons ).toString
-      }
+      val Some( result ) = routeAndCall( FakeRequest( GET, "/binary/polygons/cube" ) )
+      status( result ) must be equalTo ( 200 )
+      contentType( result ) must equalTo( Some( "application/json" ) )
+      //contentAsString(result) must be equalTo Json.stringify(toJson( CubeModel.polygons ))
     }
     "return data" in {
-      /**
-       * URL: 
-       * 	GET - /route/data/:modeltype
-       * Params: 
-       *  	- modeltype: String , A valid data source model (e.q. cube)
-       *  	- px: Int , x - Coordinate of the origin point
-       *  	- py: Int , y - Coordinate of the origin point
-       *  	- pz: Int , z - Coordinate of the origin point
-       *  	- ax: Int , x - Coordinate of the view axis
-       *  	- ay: Int , y - Coordinate of the view axis 
-       *  	- az: Int , z - Coordinate of the view axis 
-       * Response-type:
-       * 	application/octet-stream
-       * Response:
-       * 	To calculate the response the given model gets rotateted and moved 
-       * 	to the given origin. Afterwards the colors of the points inside the 
-       * 	produced figure are returned as binary data.
-       */      
-      withApplication( Nil, MockData.dataSource ) {
-        val action = controllers.BinaryData.data( "cube", 0, 0, 0, 0, 1, 0 )
-        val result = action.apply( new FakeRequest( "/route/data/cube?px=0&py=0&pz=0&ax=0&ay=0&az=0" ) )
-        val extracted = Extract.from( result )
-        extracted._1.toString must be equalTo( "200" )
-        extracted._2.toString must be equalTo( "Map(Content-Type -> application/octet-stream)" )
-        extracted._3 must not be empty
+      running( FakeApplication() ) {
+        /**
+         * URL:
+         * 	GET - /route/data/:modeltype
+         * Params:
+         *  	- modeltype: String , A valid data source model (e.q. cube)
+         *  	- px: Int , x - Coordinate of the origin point
+         *  	- py: Int , y - Coordinate of the origin point
+         *  	- pz: Int , z - Coordinate of the origin point
+         *  	- ax: Int , x - Coordinate of the view axis
+         *  	- ay: Int , y - Coordinate of the view axis
+         *  	- az: Int , z - Coordinate of the view axis
+         * Response-type:
+         * 	application/octet-stream
+         * Response:
+         * 	To calculate the response the given model gets rotateted and moved
+         * 	to the given origin. Afterwards the colors of the points inside the
+         * 	produced figure are returned as binary data.
+         */
+        val Some( result ) = routeAndCall( FakeRequest( GET, "/binary/data/cube?px=0&py=0&pz=0&ax=0&ay=1&az=0" ) )
+        status( result ) must be equalTo ( 200 )
+        contentType( result ) must equalTo( Some( "application/octet-stream" ) )
+        contentAsBytes( result ).foldLeft( 0 )( ( b, x ) => b + x ) must be equalTo 0
       }
     }
   }

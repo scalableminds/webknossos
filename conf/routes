@@ -51,6 +51,12 @@ GET     /test/tests                         controllers.Test.tests
 
 #Admin pages 
 GET     /admin/loadData                     controllers.Admin.loadData(x: Int, y: Int, z: Int)
+GET     /admin/testbindoc                   controllers.Admin.testBinDoc
+GET     /admin/testgridfs                   controllers.Admin.testGridFS
+GET     /admin/createtestbindata            controllers.Admin.createTestBinData
+GET     /admin/creategridfsdata             controllers.Admin.createGridFsData
+GET     /admin/testdatastore                controllers.Admin.testDataStore
+GET     /admin/cleanup                      controllers.Admin.cleanup
 
 # Javascript routing
 GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes

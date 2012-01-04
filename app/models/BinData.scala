@@ -12,12 +12,14 @@ import com.mongodb.casbah.Imports._
 import scala.collection.JavaConverters._
 import com.novus.salat.global._
 import com.novus.salat.dao.SalatDAO
+import com.novus.salat.annotations._
 import com.mongodb.casbah.gridfs.Imports._
 
 
 import brainflight.binary.DataStore
 
-case class BinData(x: Int, y: Int, z: Int, var buffer: Array[Byte], _id : ObjectId = new ObjectId()){
+case class BinData(x: Int, y: Int, z: Int, _id : ObjectId = new ObjectId()){
+  @Persist var buffer = new Array[Byte](2097152)
   var is = new FileInputStream(BinData.createFilename(x,y,z))
   buffer = DataStore.inputStreamToByteArray(is)
 }
@@ -26,18 +28,18 @@ object BinData extends BasicDAO[BinData]("bindata"){
   // binary data id
   val binaryDataID = Play.configuration.getString("binarydata.id") getOrElse("100527_k0563_mag1")
   // binary data Path
-  val dataPath = Play.configuration.getString("binarydata.path") getOrElse("/media/Data/binary_data")
+  val dataPath = Play.configuration.getString("binarydata.path") getOrElse("/home/lesnail/workspace/bindata")
   
-  def createOrGet(x: Int, y: Int, z: Int) = {
+  def createOrGet(x: Int, y: Int, z: Int):Array[Byte] = {
     findByCoordinates(x,y,z) match {
-      case None => create(new BinData(x,y,z,new Array[Byte](2097152)))
-      case Some(data) => data.asInstanceOf[BinData]
+      case None => create(new BinData(x,y,z))
+      case Some(data) => data.asInstanceOf[BinData].buffer
     }
   }
   
-  private def create(data: BinData) = {
+  private def create(data: BinData):Array[Byte] = {
     insert(data)
-    data
+    data.buffer
   }
   
   def findByCoordinates(x: Int, y: Int, z: Int) = {
@@ -67,13 +69,22 @@ object BinDataGridFs{
   //GridFs handle
   val myfs = GridFS(MongoConnection()(Play.configuration.getString("mongo.dbname").getOrElse("salat-dao")))
   
-  def findByCoordinates(x: Int, y: Int, z: Int) =myfs.findOne(BinData.createFilename(x,y,z))
+  def findByCoordinates(x: Int, y: Int, z: Int) = myfs.findOne(BinData.convertCoordinatesToString(x,y,z))
 
-  def create(x: Int, y:Int, z: Int)={   
-    val IS = new FileInputStream(BinData.convertCoordinatesToString(x,y,z))
-    myfs(IS) { fh=>
-    fh.filename = BinData.convertCoordinatesToString(x,y,z)
-    fh.contentType = "application"
+  def createOrGet(x: Int, y:Int, z: Int):Array[Byte]={
+    myfs.findOne(BinData.convertCoordinatesToString(x,y,z)) match {
+      case None => create(x,y,z)
+      case Some(data) => DataStore.inputStreamToByteArray(data.inputStream)
     }
   }
+  
+  private def create(x: Int, y: Int, z: Int):Array[Byte] ={
+    val IS = new FileInputStream(BinData.createFilename(x,y,z))
+    myfs(IS) { fh=>
+      fh.filename = BinData.convertCoordinatesToString(x,y,z)
+      fh.contentType = "application"
+    }
+    DataStore.inputStreamToByteArray(IS)
+  }
 }
+  

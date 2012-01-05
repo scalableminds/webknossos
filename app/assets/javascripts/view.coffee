@@ -40,8 +40,6 @@ class _View
 		engine.pointSize 30
 		engine.perspective 30, cvs.width / cvs.height, clippingDistance, clippingDistance + 10 
 
-		engine.onRender renderFunction
-
 		keyboard = new Keyboard
 
 		#Mouse
@@ -77,7 +75,7 @@ class _View
 			
 		# OUTPUT Framerate
 		status = document.getElementById('status')
-		status.innerHTML = "#{Math.floor(engine.getFramerate())} FPS <br/> #{totalNumberOfVertices} Total Points <br />"
+		status.innerHTML = "#{Math.floor(engine.getFramerate())} FPS <br/> #{totalNumberOfVertices} Total Points <br /> #{cam.getPos()}"
 
 
 	#adds all kind of geometry to geometry-array
@@ -102,9 +100,21 @@ class _View
 	draw : ->
 		engine.draw()
 
+	startRendering : () ->
+		engine.onRender renderFunction
+
+	#setCamera Positon
 	setCamera : (position) ->
 		camPos = position
-		cam.move camPos
+		cam.setPos camPos
+	
+	# rotate Camera by angle
+	rotateCamera : (angle) ->
+		#TODO
+
+	#notify Controller of postion changes
+	notifyController : () ->
+		Controller.update cam.getPos(), cam.getDir() 
 
 # #####################
 # MOUSE (not used)
@@ -176,6 +186,7 @@ class _View
 		if keyboard.isKeyDown(KEY_C)
 			cam.roll moveValueRotate
 
+		View.notifyController()
 
 	keyDown = (evt) ->
 		keyboard.setKeyDown evt.keyCode

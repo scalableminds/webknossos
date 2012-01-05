@@ -23,9 +23,9 @@ import play.api.libs.concurrent._
 
 object BinaryData extends Controller with Secured {
   
-  def data(modelType: String, px: Int, py: Int, pz: Int, ax: Int, ay: Int, az: Int) = Action {
-    val axis = (ax, ay, az)
-    val point = (px,py,pz)
+  def data(modelType: String, px: String, py: String, pz: String, ax: String, ay: String, az: String) = Action {
+    val axis = (ax.toDouble, ay.toDouble, az.toDouble)
+    val point = (px.toDouble,py.toDouble,pz.toDouble)
     (ModelStore(modelType), axis) match {
       case (_, (0, 0, 0)) =>
         BadRequest("Axis is not allowed to be (0,0,0).")

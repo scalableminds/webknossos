@@ -48,6 +48,81 @@ Model.Binary =
 
 			_.defer -> callback null, output
 	
+	get2 : (coordinates, callback) ->
+
+		output = new Float32Array(~~(coordinates.length / 3))
+
+		linear = (p0, p1, d) ->
+			p0 * (1 - d) + p1 * d
+		
+		bilinear = (p0, p1, p2, p3, d0, d1) ->
+			p0 * (1 - d0) * (1 - d1) + 
+			p1 * d0 * (1 - d1) + 
+			p2 * (1 - d0) * d1 + 
+			p3 * d0 * d1
+		
+		trilinear = (p0, p1, p2, p3, p4, p5, p6, p7, d0, d1, d2) ->
+			p0 * (1 - d0) * (1 - d1) * (1 - d2) +
+			p1 * d0 * (1 - d1) * (1 - d2) + 
+			p2 * (1 - d0) * d1 * (1 - d2) + 
+			p3 * (1 - d0) * (1 - d1) * d2 +
+			p4 * d0 * (1 - d1) * d2 + 
+			p5 * (1 - d0) * d1 * d2 + 
+			p6 * d0 * d1 * (1 - d2) + 
+			p7 * d0 * d1 * d2
+
+		for i in [0...coordinates.length] by 3
+
+			x = coordinates[i]
+			y = coordinates[i + 1]
+			z = coordinates[i + 2]
+
+			x0 = x >> 0; x1 = x0 + 1; xd = x - x0			
+			y0 = y >> 0; y1 = y0 + 1;	yd = y - y0
+			z0 = z >> 0; z1 = z0 + 1; zd = z - z0
+
+			output[i / 3] = if x0 == x
+				if y0 == y
+					if z0 == z
+						value(x, y, z)
+					else
+						#linear z
+						linear(value(x, y, z0), value(x, y, z1), zd)
+				else
+					if z0 == z
+						#linear y
+						linear(value(x, y0, z), value(x, y1, z), yd)
+					else
+						#bilinear y,z
+						bilinear(value(x, y0, z0), value(x, y1, z0), value(x, y0, z1), value(x, y1, z1), yd, zd)
+			else
+				if y0 == y
+					if z0 == z
+						#linear x
+						linear(value(x0, y, z), value(x1, y, z), xd)
+					else
+						#bilinear x,z
+						bilinear(value(x0, y, z0), value(x1, y, z0), value(x0, y, z1), value(x1, y, z1), xd, zd)
+				else
+					if z0 == z
+						#bilinear x,y
+						bilinear(value(x0, y0, z), value(x1, y0, z), value(x0, y1, z), value(x1, y1, z), xd, yd)
+					else
+						#trilinear x,y,z
+						trilinear(
+							value(x0, y0, z0),
+							value(x1, y0, z0),
+							value(x0, y1, z0),
+							value(x1, y1, z0),
+							value(x0, y0, z1),
+							value(x1, y0, z1),
+							value(x0, y1, z1),
+							value(x1, y1, z1),
+							xd, yd, zd
+						)
+		
+		callback(null, output)
+
 	get : (position, direction, callback) ->
 		
 		@lazyInitialize (err) =>

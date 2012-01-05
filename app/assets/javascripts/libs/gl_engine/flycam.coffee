@@ -1,5 +1,6 @@
 class Flycam
 
+	halfBlockWidth=128/2
 	distance = 0
 	trans = [ 1, 0, 0, 0,  # left
 		0, 1, 0, 0,  # up
@@ -13,6 +14,12 @@ class Flycam
 	getMatrix : ->
 		M4x4.clone trans
 
+	getMatrixWithoutDistance : ->
+		@move [ 0, 0, distance ]
+		returnMat = M4x4.clone trans
+		@move [ 0, 0, -distance ]
+		return returnMat
+
 	reset : ->
 		trans = [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]
 
@@ -21,20 +28,23 @@ class Flycam
 		trans = M4x4.mul(trans, tranMat)
 
 	yaw : (angle) ->
-		@move [ 0, 0, distance ]
+		@move [ halfBlockWidth, halfBlockWidth, distance ]
 		rotMat = M4x4.makeRotate(angle, [ 0, 1, 0 ])
 		trans = M4x4.mul(trans, rotMat)
-		@move [ 0, 0, -distance ]
+		@move [ -halfBlockWidth, -halfBlockWidth, -distance ]
 
 	roll : (angle) ->
+		@move [ halfBlockWidth, halfBlockWidth, distance ]
 		rotMat = M4x4.makeRotate(angle, [ 0, 0, 1 ])
 		trans = M4x4.mul(trans, rotMat)
+		@move [ -halfBlockWidth, -halfBlockWidth, -distance ]
+
 
 	pitch : (angle) ->
-		@move [ 0, 0, distance ]
+		@move [ halfBlockWidth, halfBlockWidth, distance ]
 		rotMat = M4x4.makeRotate(angle, [ 1, 0, 0 ])
 		trans = M4x4.mul(trans, rotMat)
-		@move [ 0, 0, -distance ]
+		@move [ -halfBlockWidth, -halfBlockWidth, -distance ]
 
 	rotateOnAxis : (angle, axis) ->
 		rotMat = M4x4.makeRotate(angle, axis)

@@ -107,6 +107,45 @@ Model.Mesh =
 					catch ex
 						callback(ex)
 
+Model.Pointcloudmesh =
+	
+	get : (width, callback) ->
+
+		try
+			# *3 coords per point
+			verticesArraySize = (width)*(width)*3
+
+			vertices = new Uint16Array(verticesArraySize)
+
+			# *2 because two triangles per point and 3 points per triangle
+			triangles = new Uint16Array(verticesArraySize*2)
+			currentPoint = 0
+			currentIndex = 0
+
+			#iterate through all points
+			for y in [0..width - 1]
+				for x in [0..width - 1]
+					# < width -1: because you don't draw a triangle with
+					# the last points on each axis.
+					if y < (width - 1) and x < (width - 1)
+						triangles[currentIndex*2 + 0] = currentPoint
+						triangles[currentIndex*2 + 1] = currentPoint + 1 
+						triangles[currentIndex*2 + 2] = currentPoint + width
+						triangles[currentIndex*2 + 3] = currentPoint + width
+						triangles[currentIndex*2 + 4] = currentPoint + width + 1
+						triangles[currentIndex*2 + 5] = currentPoint + 1
+					
+						vertices[currentIndex + 0] = x
+						vertices[currentIndex + 1] = y
+						vertices[currentIndex + 2] = 0
+
+					currentPoint++
+					currentIndex += 6
+
+			callback(null, vertices, triangles)
+		catch ex
+			callback(ex)
+
 Model.Shader =
 
 	get : (name, callback) ->

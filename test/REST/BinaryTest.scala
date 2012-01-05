@@ -82,5 +82,13 @@ object BinaryTest extends Specification {
         contentAsBytes( result ).foldLeft( 0 )( ( b, x ) => b + x ) must be equalTo 0
       }
     }
+    "return null block for negative parameters" in {
+      running( FakeApplication() ) {
+        val Some( result ) = routeAndCall( FakeRequest( GET, "/binary/data/cube?px=173&py=-26&pz=198&ax=-0.9&ay=0.2&az=-0.3" ) )
+        status( result ) must be equalTo ( 200 )
+        contentType( result ) must equalTo( Some( "application/octet-stream" ) )
+        contentAsBytes( result ).foldLeft( 0 )( ( b, x ) => b + x ) must be equalTo 0
+      }
+    }
   }
 }

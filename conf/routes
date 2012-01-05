@@ -36,7 +36,7 @@ DELETE  /projects/:project/tasks/folder     controllers.Tasks.deleteFolder(proje
 PUT     /project/:project/tasks/folder      controllers.Tasks.renameFolder(project: String, folder: String)
 
 # Binary Data
-GET     /binary/data/:model                 controllers.BinaryData.data(model: String, px: Int, py: Int, pz: Int, ax: Int, ay: Int, az: Int)
+GET     /binary/data/:model                 controllers.BinaryData.data(model: String, px: String, py: String, pz: String, ax: String, ay: String, az: String)
 GET     /binary/model/:model                controllers.BinaryData.model(model:String)
 GET     /binary/polygons/:model             controllers.BinaryData.polygons(model:String)
 

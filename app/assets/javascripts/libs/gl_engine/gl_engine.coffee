@@ -206,7 +206,7 @@ class GL_engine
 				vertexAttribPointer "aVertex", 3, geometry.vertices.VBO
 
 			# render everything to screen
-			if geometry.getClassType() is "Mesh"
+			if geometry.getClassType() is "Mesh" or "Trianglesplane"
 				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
 				gl.drawElements gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0
 			else

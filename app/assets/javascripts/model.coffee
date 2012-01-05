@@ -107,7 +107,7 @@ Model.Mesh =
 					catch ex
 						callback(ex)
 
-Model.Pointcloudmesh =
+Model.Trianglesplane =
 	
 	get : (width, callback) ->
 

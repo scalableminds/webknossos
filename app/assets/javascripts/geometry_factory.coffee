@@ -30,10 +30,10 @@ class _GeometryFactory
 				console.log err
 		)
 
-		Model.Pointcloudmesh.get(128,(err, vertices, indices) =>
+		Model.Trianglesplane.get(128,(err, vertices, indices) =>
 			unless err
 				if fragmentShaderSource? and vertexShaderSource?
-					@createPointcloudmesh(vertices, indices, 
+					@createTrianglesplane(vertices, indices, 
 					fragmentShaderSource, vertexShaderSource)
 			else
 				console.log err
@@ -54,11 +54,11 @@ class _GeometryFactory
 			mesh.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
 			View.addGeometry mesh
 
-	createPointcloudmesh : (vertices, indices, fragmentShader, vertexShader) ->
-			pointcloudmesh = new Mesh fragmentShader, vertexShader
-			pointcloudmesh.normalVertices = vertices
-			pointcloudmesh.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
-			View.addGeometry pointcloudmesh
+	createTrianglesplane : (vertices, indices, fragmentShader, vertexShader) ->
+			trianglesplane = new Mesh fragmentShader, vertexShader
+			trianglesplane.normalVertices = vertices
+			trianglesplane.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
+			View.addGeometry trianglesplane
 
 
 

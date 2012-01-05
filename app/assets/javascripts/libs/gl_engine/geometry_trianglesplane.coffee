@@ -1,11 +1,11 @@
-class Pointcloudmesh extends Geometry
+class Trianglesplane extends Geometry
 	constructor: (fragmentShader, vertexShader) ->
 		super(fragmentShader, vertexShader)
 		@vertexIndex = 
 			EBO : null
 			length : null	
 		
-		@type = "Pointcloudmesh"
+		@type = "Trianglesplane"
 
 	setVertexIndex : (data, len) -> 
 		@vertexIndex.EBO = data

@@ -23,32 +23,6 @@ class _Controller
 		# bei jeder Änderung versuchen Pointcloud nachzuladen?
 		#@loadPointcloud()
 
-	#move to factory
-	createTriangles = (width) ->
-
-		# *6 because two triangles per point and 3 vertices per triangle
-		trianglesArraySize = (width)*(width)*6
-
-		triangles = new Uint16Array(trianglesArraySize)
-		currentPoint = 0
-		currentIndex = 0
-
-		#iterate through all points
-		for y in [0..width - 1]
-			for x in [0..width - 1]
-				# < width -1: because you don't draw a triangle with
-				# the last points on each axis.
-				if y < (width - 1) and x < (width - 1)
-					triangles[currentIndex + 0] = currentPoint
-					triangles[currentIndex + 1] = currentPoint + 1 
-					triangles[currentIndex + 2] = currentPoint + width
-					triangles[currentIndex + 3] = currentPoint + width
-					triangles[currentIndex + 4] = currentPoint + width + 1
-					triangles[currentIndex + 5] = currentPoint + 1
-				currentPoint++
-				currentIndex += 6
-
-		return triangles
   # mouse events
   
   # keyboard events

@@ -29,11 +29,12 @@ class _GeometryFactory
 			else
 				console.log err
 		)
-
-		Model.Trianglesplane.get(128,(err, vertices, indices) =>
+		
+		verticesWidth=128
+		Model.Trianglesplane.get(verticesWidth,(err, vertices, indices) =>
 			unless err
 				if fragmentShaderSource? and vertexShaderSource?
-					@createTrianglesplane(vertices, indices, 
+					@createTrianglesplane(vertices, verticesWidth, indices, 
 					fragmentShaderSource, vertexShaderSource)
 			else
 				console.log err
@@ -54,9 +55,9 @@ class _GeometryFactory
 			mesh.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
 			View.addGeometry mesh
 
-	createTrianglesplane : (vertices, indices, fragmentShader, vertexShader) ->
+	createTrianglesplane : (vertices, verticesWidth, indices, fragmentShader, vertexShader) ->
 			trianglesplane = new Mesh fragmentShader, vertexShader
-			trianglesplane.normalVertices = vertices
+			trianglesplane.setNormalVertices vertices, verticesWidth
 			trianglesplane.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
 			View.addGeometry trianglesplane
 

@@ -31,10 +31,10 @@ object Route extends Controller with Secured {
       Ok( toJson( data ) ).as( "application/json" )
   }
 
-  def blackBox( id: String ) = Action {
+  def blackBox( id: String ) = Action(parse.json(maxLength = 1024)) {
     implicit request =>
-      def f( implicit request: Request[AnyContent] ): Result = {
-        val parsedJson = request.body.asJson.get
+      def f( implicit request: Request[JsValue] ): Result = {
+        val parsedJson = request.body
         val fr = FlightRoute.findOpenByID( id ) match {
           case Some( fr ) if fr.user_id == userId => fr
           case _                                  => return BadRequest( "No open route found." )

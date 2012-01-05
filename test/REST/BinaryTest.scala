@@ -5,6 +5,8 @@ import play.api.test._
 import play.api.test.Helpers._
 import brainflight.binary.CubeModel
 import play.api.libs.json._
+import scala.util.Random
+import play.api.mvc._
 
 object BinaryTest extends Specification {
   sequential

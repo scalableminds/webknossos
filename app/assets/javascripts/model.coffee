@@ -18,6 +18,17 @@ Model.BinaryStore =
 		(y % @BUCKET_WIDTH >> 0) * @BUCKET_WIDTH +
 		(z % @BUCKET_WIDTH >> 0) * @BUCKET_WIDTH * @BUCKET_WIDTH
 
+	extendPoints : (x0, y0, z0, x1, y1, z1) ->
+
+		@extendCube(
+			x0 / @BUCKET_WIDTH >> 0,
+			y0 / @BUCKET_WIDTH >> 0,
+			x0 / @BUCKET_WIDTH >> 0,
+			x1 / @BUCKET_WIDTH >> 0,
+			y1 / @BUCKET_WIDTH >> 0,
+			z1 / @BUCKET_WIDTH >> 0
+		)
+
 	extendCube : (x0, y0, z0, x1, y1, z1) ->
 		
 		cubeOffset = [
@@ -26,9 +37,9 @@ Model.BinaryStore =
 			Math.min(z0, z1, @offset[2])
 		]
 		cubeSize = [
-			Math.max(x0, x1, @offset[0] + @size[0]) - cubeOffset[0]
-			Math.max(y0, y1, @offset[1] + @size[1]) - cubeOffset[1]
-			Math.max(z0, z1, @offset[2] + @size[2]) - cubeOffset[2]
+			Math.max(x0, x1, @offset[0] + @size[0]) - cubeOffset[0] + 1
+			Math.max(y0, y1, @offset[1] + @size[1]) - cubeOffset[1] + 1
+			Math.max(z0, z1, @offset[2] + @size[2]) - cubeOffset[2] + 1
 		]
 
 		cube = []
@@ -40,7 +51,7 @@ Model.BinaryStore =
 						(y - @offset[1]) * @size[0] +
 						(z - @offset[2]) * @size[0] * @size[1] 
 					
-					cube.push @dataCube[index]
+					cube.push @data[index]
 						
 					
 		@data = cube
@@ -61,6 +72,7 @@ Model.BinaryStore =
 			if 0 <= bucketIndex < @data.length
 				unless bucket?
 					bucket = @data[bucketIndex] = new Float32Array(@BUCKET_WIDTH * @BUCKET_WIDTH * @BUCKET_WIDTH)
+					bucket[i] = -1 for i in [0...bucket.length]
 				bucket[@pointIndex(x, y, z)] = newValue
 			else
 				throw "cube fault"
@@ -193,13 +205,33 @@ Model.Binary =
 
 			loadedData = []
 			
-			finalCallback = (err, vertices, colors) ->
+			finalCallback = (err, vertices, colors) =>
 				if err
 					callback err
 				else
-					colorsFloat = new Float32Array(colors.length)
-					colorsFloat[i] = colors[i] / 255 for i in [0...colors.length]
-					callback null, vertices, colorsFloat
+					console.time("e")
+					max_x = min_x = vertices[0]
+					max_y = min_y = vertices[1]
+					max_z = min_z = vertices[2]
+					for i in [3...vertices.length] by 3
+						x = vertices[i]
+						y = vertices[i + 1]
+						z = vertices[i + 2]
+						max_x = if x > max_x then x else max_x
+						max_y = if y > max_y then y else max_y
+						max_z = if z > max_z then z else max_z
+						min_x = if x < min_x then x else min_x
+						min_y = if y < min_y then y else min_y
+						min_z = if z < min_z then z else min_z
+					
+
+					@extendPoints(min_x, min_y, min_z, max_x, max_y, max_z)
+					
+					for i in [0...colors.length]
+						@value(vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2], colors[i] / 256)
+
+					console.timeEnd "e"
+					callback null if callback
 
 
 			@rotateAndTranslate @vertexTemplate, position, direction, @synchronizingCallback(loadedData, finalCallback)
@@ -265,13 +297,13 @@ Model.Trianglesplane =
 					indexes[currentIndex * 2 + 3] = currentPoint + width
 					indexes[currentIndex * 2 + 4] = currentPoint + width + 1
 					indexes[currentIndex * 2 + 5] = currentPoint + 1
-				
+					
 					vertices[currentIndex + 0] = x
 					vertices[currentIndex + 1] = y
 					vertices[currentIndex + 2] = 0
 
 				currentPoint++
-				currentIndex += 6
+				currentIndex += 3
 
 		callback(null, vertices, indexes)
 

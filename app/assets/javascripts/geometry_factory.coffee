@@ -7,7 +7,7 @@ class _GeometryFactory
 					unless err
 						mesh.setVertices (View.createArrayBufferObject vertices), vertices.length
 						mesh.setColors (View.createArrayBufferObject colors), colors.length
-						mesh.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
+						mesh.setVertexIndex (View.createElementArrayBufferObject indices), indices.length
 
 						View.addGeometry mesh
 					else
@@ -22,9 +22,9 @@ class _GeometryFactory
 			unless err
 				Model.Trianglesplane.get(width,(err, vertices, indices) ->
 					unless err
-						trianglesplane = new Trianlgesplane fragmentShader, vertexShader
-						trianglesplane.setNormalVertices vertices, verticesWidth
-						trianglesplane.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
+						trianglesplane = new Trianglesplane fragmentShader, vertexShader
+						trianglesplane.setNormalVertices vertices, width
+						trianglesplane.setVertexIndex (View.createElementArrayBufferObject indices), indices.length
 
 						View.addGeometry trianglesplane
 					else

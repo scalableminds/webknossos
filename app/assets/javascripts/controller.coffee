@@ -9,7 +9,9 @@ class _Controller
 			unless err
 				position = pos
 				direction = dir
-				@loadPointcloud()
+				GeometryFactory.createTrianglesplane(128, "pointcloud")
+			else
+				throw err
 		)
 
 	loadPointcloud : () ->

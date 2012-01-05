@@ -33,7 +33,7 @@ abstract class DataModel {
   // specifies the polygons the model consists of
   val polygons : List[Polygon]
 
-  def rotateAndMove(moveVector:Tuple3[Int,Int, Int],axis:Tuple3[Int,Int, Int]):ParSeq[Tuple3[Int, Int, Int]]={
+  def rotateAndMove(moveVector:Tuple3[Double,Double, Double],axis:Tuple3[Double,Double,Double]):ParSeq[Tuple3[Int, Int, Int]]={
     // orthogonal vector to (0,1,0) and rotation vector
     val ortho = normalizeVector((axis._3,0,-axis._1))
 

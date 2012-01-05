@@ -81,7 +81,7 @@ class _View
 		totalNumberOfVertices = 0
 		for i in [0...geometries.length] by 1
 			g = geometries[i]
-			if g.getClassType() is "Pointcloudmesh"
+			if g.getClassType() is "Trianglesplane"
 				transMatrix = cam.getMatrixWithoutDistance()
 
 				newVertices = M4x4.transformPointsAffine transMatrix, g.normalVertices
@@ -143,7 +143,7 @@ class _View
 	#and adds the shader if is not already set for this geometry-type
 	addGeometry: (geometry) ->
 		geometries.push geometry
-		if geometry.getClassType() is "Pointcloudmesh"
+		if geometry.getClassType() is "Trianglesplane"
 				meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 		if geometry.getClassType() is "Pointcloud"
 				pointcloudProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader

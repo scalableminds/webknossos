@@ -51,8 +51,10 @@ class GL_engine
 		@perspective()
 		normalMatrix = M4x4.I
 
-		gl.enable(gl.DEPTH_TEST)
+		gl.disable(gl.DEPTH_TEST)
+		#gl.depthFunc(gl.GL_ALWAYS)
 		@background [1, 1, 1, 1]
+
 	
 		requestAnimationFrame = (->
 			window.requestAnimationFrame or 
@@ -160,6 +162,15 @@ class GL_engine
 			gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, VBO
 			gl.bufferData gl.ELEMENT_ARRAY_BUFFER, data, gl.STATIC_DRAW
 			return VBO
+	###
+	deletes EBO of Geometry Object 
+	@param {Geometry}
+	###
+	deleteEBOBuffer : (geometry) ->
+		gl.deleteBuffer geometry.vertexIndex.EBO if geometry.getClassType is "Mesh"
+
+	deleteSingleBuffer : (buffer) ->
+		gl.deleteBuffer buffer
 
 	###
 	deletes VBO/EBOs of Geometry Object 
@@ -241,7 +252,7 @@ class GL_engine
 	perspective : (fovy, aspect, near, far) ->
 		
 		if arguments.length is 0
-			fovy = 30
+			fovy = 60
 			aspect = canvas.width / canvas.height
 			near = 0.01
 			far = 1000
@@ -257,7 +268,8 @@ class GL_engine
 		B = (ymax + ymin) / (ymax - ymin)
 		C = -(far + near) / (far - near)
 		D = -2 * far * near / (far - near)
-		projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 0, 0, D, 0)
+		projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 63.5, -100, D, 0)
+		M4x4.translate
 		@uniformMatrix "projectionMatrix", false, projectionMatrix  if shaderProgram
 		
 

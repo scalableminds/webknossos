@@ -6,6 +6,12 @@ class _View
 	geometries = []
 	keyboard = null
 
+	#Buffer with all ColorData
+	colorclouds = []
+	setColorclouds = null
+	colorcloudsWidth = 10
+	colorcloudWidth = 128
+
 	#ProgramObjects
 	#One Shader for each Geometry-Type
 	meshProgramObject = null
@@ -21,14 +27,15 @@ class _View
 	curCoords = [0, 0]
 
 	#constants
-	clippingDistance = 170
-	camPos = [0,20,-clippingDistance+0]
-
+	clippingDistance = 140
+	#camPos = [63.5,63.5,-clippingDistance+63.5]
+	camPos = [0,0,-clippingDistance+63.5]
 	moveValueStrafe = 0.1
 	moveValueRotate = 0.02
 
 
 	constructor: () -> 
+		setColorclouds = new Uint8Array(1000)
 		cvs = document.getElementById('render')
 		engine = new GL_engine cvs, {"antialias":true}
 
@@ -37,8 +44,10 @@ class _View
 		#cam.move [+6.3,0,0]
 
 		engine.background [0.9, 0.9 ,0.9 ,1]
-		engine.pointSize 30
-		engine.perspective 30, cvs.width / cvs.height, clippingDistance, clippingDistance + 10 
+		#engine.background [0, 0 ,0 ,1]
+		engine.pointSize 100
+		#engine.perspective 30, cvs.width / cvs.height, clippingDistance, clippingDistance + 1
+		engine.perspective 60, cvs.width / cvs.height, 0.0001, 100000
 
 		engine.onRender renderFunction
 
@@ -66,10 +75,60 @@ class _View
 		engine.loadMatrix (M4x4.makeLookAt cam.getPos(), V3.add(cam.getDir(), cam.getPos()) , cam.getUp())
 		engine.clear()
 
+
+
 		#renders all geometries in geometry-array
 		totalNumberOfVertices = 0
 		for i in [0...geometries.length] by 1
-			engine.useProgram = meshProgramObject if geometries[i].getClassType() is "Mesh"
+			g = geometries[i]
+			if g.getClassType() is "Pointcloudmesh"
+				transMatrix = cam.getMatrixWithoutDistance()
+
+				newVertices = M4x4.transformPointsAffine transMatrix, g.normalVertices
+
+				engine.deleteSingleBuffer g.vertices.VBO
+				g.setVertices (View.createArrayBufferObject newVertices), newVertices.length
+
+				newColors = new Float32Array(128*128*3)
+				for j in [0...newVertices.length] by 3
+					x = Math.round newVertices[j]
+					y = Math.round newVertices[j + 1]
+					z = newVertices[j + 2]
+					z1 = Math.floor newVertices[j + 2]
+					z2 = Math.ceil newVertices[j + 2]
+
+					xb = Math.floor x/colorcloudWidth
+					yb = Math.floor y/colorcloudWidth
+					z1b = Math.floor z1/colorcloudWidth
+					z2b = Math.floor z2/colorcloudWidth
+					b1 = xb + yb * colorcloudsWidth + z1b * colorcloudsWidth * colorcloudsWidth
+					b2 = xb + yb * colorcloudsWidth + z2b * colorcloudsWidth * colorcloudsWidth
+
+					#p = x + y*colorcloudWidth*colorcloudsWidth + z*colorcloudWidth*colorcloudWidth*colorcloudsWidth*colorcloudsWidth
+					#b = Math.floor(p / (colorcloudWidth*colorcloudWidth*colorcloudWidth))
+					ind1 = (x % colorcloudWidth) + (y % colorcloudWidth) * colorcloudWidth + (z1 % colorcloudWidth) * colorcloudWidth * colorcloudWidth
+					ind2 = (x % colorcloudWidth) + (y % colorcloudWidth) * colorcloudWidth + (z2 % colorcloudWidth) * colorcloudWidth * colorcloudWidth
+					if setColorclouds[b1] isnt 0 and setColorclouds[b2] isnt 0 and x>=0 and y>=0 and z>=0
+						c = colorclouds[b1][ind1] * (1-(z-z1)) + colorclouds[b2][ind2] * (1-(z2-z))
+					
+						newColors[j] = c
+						newColors[j+1] = c
+						newColors[j+2] = c
+
+					#if j is 0
+					#console.log "b: " + b + "ind: " + ind + "p: " + p + " z: " + z 
+
+
+				engine.deleteSingleBuffer g.colors.VBO
+				g.setColors (View.createArrayBufferObject newColors), newColors.length
+
+
+				#engine.deleteEBOBuffer geometries[i]
+				#geometries[i].setVertexIndex (View.createElementArrayBufferObject geometries[i].ind), geometries[i].vertexIndex.length
+				engine.useProgram = meshProgramObject 
+
+
+
 			engine.useProgram = pointcloudProgramObject if geometries[i].getClassType() is "Pointcloud"
 			#counts vertices of all geometries
 			totalNumberOfVertices += geometries[i].vertices.length
@@ -77,18 +136,22 @@ class _View
 			
 		# OUTPUT Framerate
 		status = document.getElementById('status')
-		status.innerHTML = "#{Math.floor(engine.getFramerate())} FPS <br/> #{totalNumberOfVertices} Total Points <br />"
+		status.innerHTML = "#{Math.floor(engine.getFramerate())} FPS <br/> #{totalNumberOfVertices} Total Points <br />" 
 
 
 	#adds all kind of geometry to geometry-array
 	#and adds the shader if is not already set for this geometry-type
 	addGeometry: (geometry) ->
 		geometries.push geometry
-		if geometry.getClassType() is "Mesh"
+		if geometry.getClassType() is "Pointcloudmesh"
 				meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 		if geometry.getClassType() is "Pointcloud"
 				pointcloudProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 
+	addColors: (newColors, x, y, z) ->
+		#arrayPosition = x + y*colorWidth + z*colorWidth*colorWidth #wrong
+		setColorclouds[0] = 1
+		colorclouds[0] = newColors
 
 	#redirects the call from Geometry-Factory directly to engine
 	createArrayBufferObject : (data) ->
@@ -101,10 +164,6 @@ class _View
 	#Apply a single draw (not used right now)
 	draw : ->
 		engine.draw()
-
-	setCamera : (position) ->
-		camPos = position
-		cam.move camPos
 
 # #####################
 # MOUSE (not used)

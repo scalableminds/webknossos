@@ -18,6 +18,8 @@ $ ->
       "/assets/javascripts/event_emitter.js",
       "/assets/javascripts/libs/gl_engine/geometry.js",
       "/assets/javascripts/libs/gl_engine/geometry_pointcloud.js",
+      "/assets/javascripts/libs/gl_engine/geometry_pointcloudmesh.js",
+      "/assets/javascripts/libs/gl_engine/geometry_mesh.js",
       "/assets/javascripts/libs/gl_engine/flycam.js",
       "/assets/javascripts/libs/gl_engine/gl_engine.js",
       "/assets/javascripts/libs/csg.js",

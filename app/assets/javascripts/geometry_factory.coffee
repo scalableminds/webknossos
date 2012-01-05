@@ -23,7 +23,17 @@ class _GeometryFactory
 				tmpColors = colors
 
 				if fragmentShaderSource? and vertexShaderSource?
-					@createPointcloud(tmpVertices, tmpColors, 
+					View.addColors tmpColors, 0, 0
+					#@createPointcloud(tmpVertices, tmpColors, 
+					#fragmentShaderSource, vertexShaderSource)
+			else
+				console.log err
+		)
+
+		Model.Pointcloudmesh.get(128,(err, vertices, indices) =>
+			unless err
+				if fragmentShaderSource? and vertexShaderSource?
+					@createPointcloudmesh(vertices, indices, 
 					fragmentShaderSource, vertexShaderSource)
 			else
 				console.log err
@@ -43,5 +53,14 @@ class _GeometryFactory
 			mesh.setColors (View.createArrayBufferObject RGB_colors), RGB_colors.length
 			mesh.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
 			View.addGeometry mesh
+
+	createPointcloudmesh : (vertices, indices, fragmentShader, vertexShader) ->
+			pointcloudmesh = new Mesh fragmentShader, vertexShader
+			pointcloudmesh.normalVertices = vertices
+			pointcloudmesh.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
+			View.addGeometry pointcloudmesh
+
+
+
 
 GeometryFactory = new _GeometryFactory

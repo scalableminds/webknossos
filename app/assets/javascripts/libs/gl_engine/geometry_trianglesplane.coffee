@@ -11,6 +11,10 @@ class Trianglesplane extends Geometry
 		@vertexIndex.EBO = data
 		@vertexIndex.length = len
 
+	setNormalVertices : (data, width) -> 
+		@normalVertices = data
+		@normalVerticesWidth = width
+
 	setVertices : (data, len) -> 
 		super data, len
 

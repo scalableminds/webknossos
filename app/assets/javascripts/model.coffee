@@ -135,12 +135,12 @@ Model.Trianglesplane =
 						triangles[currentIndex*2 + 4] = currentPoint + width + 1
 						triangles[currentIndex*2 + 5] = currentPoint + 1
 					
-						vertices[currentIndex + 0] = x
-						vertices[currentIndex + 1] = y
-						vertices[currentIndex + 2] = 0
+					vertices[currentIndex + 0] = x
+					vertices[currentIndex + 1] = y
+					vertices[currentIndex + 2] = 0
 
 					currentPoint++
-					currentIndex += 6
+					currentIndex += 3
 
 			callback(null, vertices, triangles)
 		catch ex

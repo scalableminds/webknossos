@@ -89,7 +89,11 @@ class _View
 				engine.deleteSingleBuffer g.vertices.VBO
 				g.setVertices (View.createArrayBufferObject newVertices), newVertices.length
 
-				newColors = new Float32Array(128*128*3)
+				newColors = new Float32Array(128*128)
+
+				for j in [0..128*128-1]
+					newColors[j]=0.5
+				###
 				for j in [0...newVertices.length] by 3
 					x = Math.round newVertices[j]
 					y = Math.round newVertices[j + 1]
@@ -117,7 +121,7 @@ class _View
 
 					#if j is 0
 					#console.log "b: " + b + "ind: " + ind + "p: " + p + " z: " + z 
-
+				###
 
 				engine.deleteSingleBuffer g.colors.VBO
 				g.setColors (View.createArrayBufferObject newColors), newColors.length
@@ -129,10 +133,10 @@ class _View
 
 
 
-			engine.useProgram = pointcloudProgramObject if geometries[i].getClassType() is "Pointcloud"
+			engine.useProgram = pointcloudProgramObject if g.getClassType() is "Pointcloud"
 			#counts vertices of all geometries
-			totalNumberOfVertices += geometries[i].vertices.length
-			engine.render geometries[i]
+			totalNumberOfVertices += g.vertices.length
+			engine.render g
 			
 		# OUTPUT Framerate
 		status = document.getElementById('status')

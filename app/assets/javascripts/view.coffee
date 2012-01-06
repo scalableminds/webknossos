@@ -50,6 +50,7 @@ class _View
 		engine.onRender renderFunction
 
 		keyboard = new Keyboard
+		keyboard.onChange = keyboardAfterChanged
 
 		#Mouse
 		attach cvs, "mousemove", mouseMoved
@@ -102,9 +103,14 @@ class _View
 			engine.render g
 			
 		# OUTPUT Framerate
-		status = document.getElementById('status')
-		status.innerHTML = "#{Math.floor(engine.getFramerate())} FPS <br/> #{totalNumberOfVertices} Total Points <br />" 
+		writeFramerate Math.floor(engine.getFramerate()), totalNumberOfVertices
 
+	writeFramerate = (framerate, totalNumberOfVertices) ->
+		framerate = 0 unless framerate? 
+		totalNumberOfVertices = 0 unless totalNumberOfVertices? 
+		
+		status = document.getElementById('status')
+		status.innerHTML = "#{framerate} FPS <br/> #{totalNumberOfVertices} Total Points <br />" 
 
 	#adds all kind of geometry to geometry-array
 	#and adds the shader if is not already set for this geometry-type
@@ -112,6 +118,8 @@ class _View
 		geometries.push geometry
 		if geometry.getClassType() is "Trianglesplane"
 				trianglesplaneProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+			#a single draw to see when the triangleplane is ready
+			@draw()
 		if geometry.getClassType() is "Pointcloud"
 				pointcloudProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 
@@ -210,6 +218,13 @@ class _View
 
 	keyUp = (evt) ->
 		keyboard.setKeyUp evt.keyCode
+
+	keyboardAfterChanged = (countKeysDown) ->
+		if countKeysDown > 0
+			engine.startAnimationLoop()
+		else
+			engine.stopAnimationLoop()
+			window.setTimeout writeFramerate, 500
 
 # #####################
 # HELPER

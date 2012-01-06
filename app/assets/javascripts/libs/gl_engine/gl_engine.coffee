@@ -15,6 +15,9 @@ class GL_engine
 	# for throttling renderLoop
 	lastLoopTime = null
 	maximumFramerate = 25
+
+	#to stop the animationLoop
+	stopAnimation = 1
 	
 	matrixStack = []
 
@@ -71,7 +74,7 @@ class GL_engine
     				window.setTimeout callback, 1000.0 / 60.0
 			)()
 
-		animationLoop()
+		
 
 
 
@@ -474,7 +477,7 @@ class GL_engine
 
 	animationLoop = ->
 		renderLoop()
-		requestAnimationFrame animationLoop, canvas
+		requestAnimationFrame animationLoop, canvas if stopAnimation isnt 1
 
 
 	###
@@ -518,8 +521,12 @@ class GL_engine
 		@uniformMatrix "projectionMatrix", false, projectionMatrix
 
 
+	stopAnimationLoop : ->
+		stopAnimation = 1 if stopAnimation is 0
 
-
+	startAnimationLoop : ->
+		stopAnimation = 0 if stopAnimation is 1
+		animationLoop()
 
 
 

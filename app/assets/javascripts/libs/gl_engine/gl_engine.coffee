@@ -10,7 +10,11 @@ class GL_engine
 	# for calculating fps
 	frames = 0
 	frameCount = 0
-	lastTime = null
+	lastFramerateTime = null
+
+	# for throttling renderLoop
+	lastLoopTime = null
+	maximumFramerate = 25
 	
 	matrixStack = []
 
@@ -34,7 +38,8 @@ class GL_engine
 
 
 	constructor: (cvs, glAttribs) ->
-		lastTime = new Date()
+		lastFramerateTime = new Date()
+		lastLoopTime = new Date()
 		frames = 0
 		canvas = cvs
 		contextNames = [ "webgl", "experimental-webgl", "moz-webgl", "webkit-3d" ]
@@ -476,10 +481,11 @@ class GL_engine
 	main renderLoop
 	calls usersRender() 
 	###
-	renderLoop = ->
+	_renderLoop = ->
 		frames++
 		frameCount++
 		now = new Date()
+		lastLoopTime = now
 
 		matrixStack.push M4x4.I
 
@@ -487,11 +493,18 @@ class GL_engine
 
 		matrixStack.pop()
 
-		if now - lastTime > 1000
-			frameRate = frames / (now - lastTime) * 1000
+		if now - lastFramerateTime > 1000
+			frameRate = frames / (now - lastFramerateTime) * 1000
 			frames = 0
-			lastTime = now
+			lastFramerateTime = now
 
+	#throttling renderLoop
+	renderLoop = ->
+		now = new Date()
+		if now - lastLoopTime > 1000/maximumFramerate
+			_renderLoop()
+
+		
 	#apply a single draw
 	draw : ->
 		matrixStack.push M4x4.I

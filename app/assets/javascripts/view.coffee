@@ -14,7 +14,7 @@ class _View
 
 	#ProgramObjects
 	#One Shader for each Geometry-Type
-	meshProgramObject = null
+	trianglesplaneProgramObject = null
 	pointcloudProgramObject = null
 
 	#mouse (not used)
@@ -44,9 +44,7 @@ class _View
 		#cam.move [+6.3,0,0]
 
 		engine.background [0.9, 0.9 ,0.9 ,1]
-		#engine.background [0, 0 ,0 ,1]
 		engine.pointSize 100
-		#engine.perspective 30, cvs.width / cvs.height, clippingDistance, clippingDistance + 1
 		engine.perspective 60, cvs.width / cvs.height, 0.0001, 100000
 
 		engine.onRender renderFunction
@@ -89,49 +87,14 @@ class _View
 				engine.deleteSingleBuffer g.vertices.VBO
 				g.setVertices (View.createArrayBufferObject newVertices), newVertices.length
 
-				newColors = new Float32Array(128*128)
+				#get colors for new coords from Model
+				Model.Binary.get(newVertices, (err, colors) ->
+					throw err if err
+					engine.deleteSingleBuffer g.colors.VBO
+					g.setColors (View.createArrayBufferObject colors), colors.length
+				)
 
-				for j in [0..128*128-1]
-					newColors[j]=0.5
-				###
-				for j in [0...newVertices.length] by 3
-					x = Math.round newVertices[j]
-					y = Math.round newVertices[j + 1]
-					z = newVertices[j + 2]
-					z1 = Math.floor newVertices[j + 2]
-					z2 = Math.ceil newVertices[j + 2]
-
-					xb = Math.floor x/colorcloudWidth
-					yb = Math.floor y/colorcloudWidth
-					z1b = Math.floor z1/colorcloudWidth
-					z2b = Math.floor z2/colorcloudWidth
-					b1 = xb + yb * colorcloudsWidth + z1b * colorcloudsWidth * colorcloudsWidth
-					b2 = xb + yb * colorcloudsWidth + z2b * colorcloudsWidth * colorcloudsWidth
-
-					#p = x + y*colorcloudWidth*colorcloudsWidth + z*colorcloudWidth*colorcloudWidth*colorcloudsWidth*colorcloudsWidth
-					#b = Math.floor(p / (colorcloudWidth*colorcloudWidth*colorcloudWidth))
-					ind1 = (x % colorcloudWidth) + (y % colorcloudWidth) * colorcloudWidth + (z1 % colorcloudWidth) * colorcloudWidth * colorcloudWidth
-					ind2 = (x % colorcloudWidth) + (y % colorcloudWidth) * colorcloudWidth + (z2 % colorcloudWidth) * colorcloudWidth * colorcloudWidth
-					if setColorclouds[b1] isnt 0 and setColorclouds[b2] isnt 0 and x>=0 and y>=0 and z>=0
-						c = colorclouds[b1][ind1] * (1-(z-z1)) + colorclouds[b2][ind2] * (1-(z2-z))
-					
-						newColors[j] = c
-						newColors[j+1] = c
-						newColors[j+2] = c
-
-					#if j is 0
-					#console.log "b: " + b + "ind: " + ind + "p: " + p + " z: " + z 
-				###
-
-				engine.deleteSingleBuffer g.colors.VBO
-				g.setColors (View.createArrayBufferObject newColors), newColors.length
-
-
-				#engine.deleteEBOBuffer geometries[i]
-				#geometries[i].setVertexIndex (View.createElementArrayBufferObject geometries[i].ind), geometries[i].vertexIndex.length
-				engine.useProgram = meshProgramObject 
-
-
+				engine.useProgram = trianglesplaneProgramObject 
 
 			engine.useProgram = pointcloudProgramObject if g.getClassType() is "Pointcloud"
 			#counts vertices of all geometries
@@ -148,7 +111,7 @@ class _View
 	addGeometry: (geometry) ->
 		geometries.push geometry
 		if geometry.getClassType() is "Trianglesplane"
-				meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+				trianglesplaneProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 		if geometry.getClassType() is "Pointcloud"
 				pointcloudProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 

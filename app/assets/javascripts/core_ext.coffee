@@ -33,6 +33,39 @@ _.throttle2 = (func, wait) ->
     else
       more = true
 
+_.once2 = (func) ->
+  initialized = false
+  watingCallbacks = null
+
+  done = (err) ->
+    callbacks = watingCallbacks
+    watingCallbacks = null
+
+    callback = (args...) ->
+      cb(args...) for cb in callbacks
+      return
+
+    if err
+      callback err
+      return
+    else
+      initialized = true
+      return callback
+  
+  (callback) ->
+    context = @
+
+    unless initialized
+      if watingCallbacks?
+        watingCallbacks.push callback
+      else
+        watingCallbacks = [callback]
+        func.apply(context, [done])
+    else
+      callback null
+
+
+
 Interpolation =
   linear : (p0, p1, d) ->
     if p0 == -1 or p1 == -1
@@ -61,3 +94,59 @@ Interpolation =
       p101 * (1 - d0) * d1 * d2 + 
       p110 * d0 * d1 * (1 - d2) + 
       p111 * d0 * d1 * d2
+
+interpolate = (x, x0, x1, xd, y, y0, y1, yd, z, z0, z1, zd, get)->
+  if xd == 0
+    if yd == 0
+      if zd == 0
+        get(x, y, z)
+      else
+        #linear z
+        Interpolation.linear(get(x, y, z0), get(x, y, z1), zd)
+    else
+      if zd == 0
+        #linear y
+        Interpolation.linear(get(x, y0, z), get(x, y1, z), yd)
+      else
+        #bilinear y,z
+        Interpolation.bilinear(
+          get(x, y0, z0), 
+          get(x, y1, z0), 
+          get(x, y0, z1), 
+          get(x, y1, z1), 
+          yd, zd)
+  else
+    if yd == 0
+      if zd == 0
+        #linear x
+        Interpolation.linear(get(x0, y, z), get(x1, y, z), xd)
+      else
+        #bilinear x,z
+        Interpolation.bilinear(
+          get(x0, y, z0), 
+          get(x1, y, z0), 
+          get(x0, y, z1), 
+          get(x1, y, z1), 
+          xd, zd)
+    else
+      if zd == 0
+        #bilinear x,y
+        Interpolation.bilinear(
+          get(x0, y0, z), 
+          get(x1, y0, z), 
+          get(x0, y1, z), 
+          get(x1, y1, z), 
+          xd, yd)
+      else
+        #trilinear x,y,z
+        Interpolation.trilinear(
+          get(x0, y0, z0),
+          get(x1, y0, z0),
+          get(x0, y1, z0),
+          get(x1, y1, z0),
+          get(x0, y0, z1),
+          get(x1, y0, z1),
+          get(x0, y1, z1),
+          get(x1, y1, z1),
+          xd, yd, zd
+        )

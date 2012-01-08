@@ -68,7 +68,7 @@ describe 'Model.Trianglesplane', ->
   it 'should generate a plane', ->
     async (done) ->
 
-      Model.Trianglesplane.get 3, (err, vertices, indices) ->
+      Model.Trianglesplane.get 3, 0, (err, vertices, indices) ->
 
         expect(err).toBeNull()
         expect(vertices).toBeA Uint16Array

@@ -1,7 +1,5 @@
+# Applies a transformation matrix on an array of points.
 M4x4.transformPointsAffine = (m, points, r) ->
-  # MathUtils_assert(m.length === 16, "m.length === 16");
-  # MathUtils_assert(v.length === 3, "v.length === 3");
-  # MathUtils_assert(r === undefined || r.length === 3, "r === undefined || r.length === 3");
   
   r = new MJS_FLOAT_ARRAY_TYPE(points.length) unless r?
 
@@ -16,6 +14,10 @@ M4x4.transformPointsAffine = (m, points, r) ->
 
   r
 
+# `_.throttle2` makes a function only be executed once in a given
+# time span -- no matter how often you it. The function cannot have 
+# any input parameters. In contrast to `_.throttle`, the function
+# at the beginning of the time span.
 _.throttle2 = (func, wait) ->
   timeout = more = false
 
@@ -33,6 +35,10 @@ _.throttle2 = (func, wait) ->
     else
       more = true
 
+# `_.once2` makes sure a function is executed only once. It works only
+# with asynchronous functions. The function cannot have any input 
+# parameters. If one pass of the function failes, it can be executed 
+# again.
 _.once2 = (func) ->
   initialized = false
   watingCallbacks = null
@@ -65,7 +71,8 @@ _.once2 = (func) ->
       callback null
 
 
-
+# This provides interpolation mechanics. It's a lot of code. But it
+# should run fast.
 Interpolation =
   linear : (p0, p1, d) ->
     if p0 == -1 or p1 == -1
@@ -95,7 +102,18 @@ Interpolation =
       p110 * d0 * d1 * (1 - d2) + 
       p111 * d0 * d1 * d2
 
-interpolate = (x, x0, x1, xd, y, y0, y1, yd, z, z0, z1, zd, get)->
+# Use this function to have your point interpolated. We'll figure
+# out whether linear, bilinear or trilinear interpolation is best.
+# But, you need to give us the `get` callback so we can find points
+# in your data structure. Keep in mind that the `get` function
+# probably loses its scope (hint: use `_.bind`)
+interpolate = (x, y, z, get)->
+  
+  # Bitwise operations are faster than javascript's native rounding functions.
+  x0 = x >> 0; x1 = x0 + 1; xd = x - x0     
+  y0 = y >> 0; y1 = y0 + 1; yd = y - y0
+  z0 = z >> 0; z1 = z0 + 1; zd = z - z0
+
   if xd == 0
     if yd == 0
       if zd == 0

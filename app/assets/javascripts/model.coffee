@@ -261,7 +261,7 @@ Model.Binary =
 				callback null if callback
 
 		# We use synchronized callbacks to make sure both callbacks have returned.
-		@vertices position, direction, @synchronizingCallback(loadedData, finalCallback)
+		@pullVertices position, direction, @synchronizingCallback(loadedData, finalCallback)
 
 		@pull position, direction, @synchronizingCallback(loadedData, finalCallback)
 
@@ -526,7 +526,7 @@ Model.Route =
 		unless @pushing
 			@pushing = true
 
-			@lazyInitialize (err) =>
+			@initialize (err) =>
 				return if err
 
 				transportBuffer = @dirtyBuffer
@@ -546,7 +546,7 @@ Model.Route =
 	# Add a point to the buffer. Just keep adding them.
 	put : (position, callback) ->
 		
-		@lazyInitialize (err) =>
+		@initialize (err) =>
 			return callback(err) if err
 
 			@route.push [Math.round(position[0]), Math.round(position[1]), Math.round(position[2])]

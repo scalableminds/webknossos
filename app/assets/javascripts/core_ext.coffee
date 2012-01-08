@@ -40,7 +40,7 @@ M4x4.moveVertices = (vertices, translationVector, directionVector) ->
     mat = M4x4.makeRotate V3.angle([0,1,0], directionVector), [directionVector[2], 0, -directionVector[0]]
     mat = M4x4.translateSelf translationVector, mat
   
-    M4x4.transformPointsAffine(mat, template, output)
+    M4x4.transformPointsAffine(mat, vertices, output)
 
 # `_.throttle2` makes a function only be executed once in a given
 # time span -- no matter how often you it. The function cannot have 

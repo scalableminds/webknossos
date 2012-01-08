@@ -143,11 +143,12 @@ Model.Binary =
 		
 		# Some lazy initialization magic.
 		@initializeVerticesTemplate (err) =>
-			return callback err if err
-
+			
+			return callback(err) if err
+			
 			# Defer computation so the current stack isn't blocked
-    	_.defer =>
-    		callback null, M4x4.moveVertices(@verticesTemplate, position, direction)
+			_.defer =>
+				callback null, M4x4.moveVertices(@verticesTemplate, position, direction)
 
 
 	# This method allows you to query the data structure. Give us an array of
@@ -197,33 +198,30 @@ Model.Binary =
 	#
 	# No Callback Paramters
 	ping : (position, direction, callback) ->
-		@ping = _.defer(_.bind(@_ping, @))
-		@ping(position, direction, callback)
 
-	_ping : (position, direction, callback) ->
-
-		_preloadVertices = @preloadVertices
-	
-		# Looks like `preload_vertices` hasn't been populated yet.
-		# This is what ppl call lazy initialization.
-		if _preloadVertices.length == 0
-			for x in [-20..20] by 5
-				for y in [0..10] by 5
-					for z in [-20..20] by 5
-						_preloadVertices.push x, y, z
-
-		preloadCheckHits     = 0
-		preloadCheckVertices = M4x4.moveVertices _preloadVertices, position, direction
-		for i in [0...preloadCheckVertices.length] by 3
-			x = preloadCheckVertices[i]
-			y = preloadCheckVertices[i + 1]
-			z = preloadCheckVertices[i + 2]
-
-			if x >= 0 and y >= 0 and z >= 0 and @value(x, y, z) > 0
-				preloadCheckHits++
+		_.defer =>
+			_preloadVertices = @preloadVertices
 		
-		if preloadCheckHits / (preloadCheckVertices.length / 3) < @PRELOAD_TOLERANCE
-			@pull(position, direction, callback)
+			# Looks like `preload_vertices` hasn't been populated yet.
+			# This is what ppl call lazy initialization.
+			if _preloadVertices.length == 0
+				for x in [-20..20] by 5
+					for y in [0..10] by 5
+						for z in [-20..20] by 5
+							_preloadVertices.push x, y, z
+
+			preloadCheckHits     = 0
+			preloadCheckVertices = M4x4.moveVertices _preloadVertices, position, direction
+			for i in [0...preloadCheckVertices.length] by 3
+				x = preloadCheckVertices[i]
+				y = preloadCheckVertices[i + 1]
+				z = preloadCheckVertices[i + 2]
+
+				if x >= 0 and y >= 0 and z >= 0 and @value(x, y, z) > 0
+					preloadCheckHits++
+			
+			if preloadCheckHits / (preloadCheckVertices.length / 3) < @PRELOAD_TOLERANCE
+				@pull(position, direction, callback)
 
 	pull : (position, direction, callback) ->
 

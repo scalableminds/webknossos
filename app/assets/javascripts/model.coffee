@@ -139,15 +139,15 @@ Model.Binary =
 	#
 	# Example: `Model.Binary.vertices([23, 42, 12], [1,2,3], (err, vertices) -> ...)`
 	#
-	vertices : (position, direction, callback) ->
+	pullVertices : (position, direction, callback) ->
 		
 		# Some lazy initialization magic.
 		@initializeVerticesTemplate (err) =>
 			return callback err if err
 
-			data   = @verticesTemplate
-			output = new Float32Array(data.length)
-			axis   = V3.normalize direction
+			template  = @verticesTemplate
+			output    = new Float32Array(template.length)
+			direction = V3.normalize direction
 
 			# `[0,1,0]` is the axis of the template, so there is no need for rotating
 			# We can do translation on our own, because it's not too complex..and 
@@ -158,19 +158,19 @@ Model.Binary =
 				
 				# Defer the computation the current stack isn't blocked
 				_.defer -> 
-					for i in [0...data.length] by 3
-						output[i]     = px + data[i]
-						output[i + 1] = py + data[i + 1]
-						output[i + 2] = pz + data[i + 2]
+					for i in [0...template.length] by 3
+						output[i]     = px + template[i]
+						output[i + 1] = py + template[i + 1]
+						output[i + 2] = pz + template[i + 2]
 					callback(null, output) if callback
 				
 			else
-	
+				
 				mat = M4x4.makeRotate V3.angle([0,1,0], direction), [direction[2], 0, -direction[0]]
 				mat = M4x4.translateSelf position, mat
 			
 				_.defer -> 
-					callback null, M4x4.transformPointsAffine(mat, data, output)
+					callback null, M4x4.transformPointsAffine(mat, template, output)
 
 
 	# This method allows you to query the data structure. Give us an array of
@@ -277,11 +277,12 @@ Model.Binary =
 					callback(null, new Uint8Array(data)) if callback
 	
 	# Now comes the implementation of our internal data structure.
-	# `data` is the main array. It represents the cuboid containing all the 
-	# buckets. `size` and `offset` describe its dimension.
-	data : []
-	size : [0,0,0]
-	offset : [0,0,0]
+	# `cube` is the main array. It actually represents a cuboid 
+	# containing all the buckets. `cubeSize` and `cubeOffset` 
+	# describe its dimension.
+	cube : null
+	cubeSize : null
+	cubeOffset : null
 
 	# Each bucket is 64x64x64 large.
 	BUCKET_WIDTH : 64
@@ -291,8 +292,8 @@ Model.Binary =
 	bucketIndex : (x, y, z) ->
 		
 		_bucket_width = @BUCKET_WIDTH
-		_offset = @offset
-		_size = @size
+		_offset       = @cubeOffset
+		_size         = @cubeSize
 
 		(x / _bucket_width - _offset[0] >> 0) + 
 		(y / _bucket_width - _offset[1] >> 0) * _size[0] + 
@@ -325,46 +326,64 @@ Model.Binary =
 	# And this one is for passing bucket coordinates.
 	extendCube : (x0, y0, z0, x1, y1, z1) ->
 		
-		_offset = @offset
-		_size = @size
-		_data = @data
+		_cube   = @cube
+		_offset = @cubeOffset
+		_size   = @cubeSize
 
 		# First, we calculate the new dimension of the cuboid.
-		cubeOffset = [
-			Math.min(x0, x1, _offset[0])
-			Math.min(y0, y1, _offset[1])
-			Math.min(z0, z1, _offset[2])
-		]
-		cubeSize = [
-			Math.max(x0, x1, _offset[0] + _size[0]) - cubeOffset[0] + 1
-			Math.max(y0, y1, _offset[1] + _size[1]) - cubeOffset[1] + 1
-			Math.max(z0, z1, _offset[2] + _size[2]) - cubeOffset[2] + 1
-		]
+		if _cube?
+			cubeOffset = [
+				Math.min(x0, x1, _offset[0])
+				Math.min(y0, y1, _offset[1])
+				Math.min(z0, z1, _offset[2])
+			]
+			cubeSize = [
+				Math.max(x0, x1, _offset[0] + _size[0]) - cubeOffset[0] + 1
+				Math.max(y0, y1, _offset[1] + _size[1]) - cubeOffset[1] + 1
+				Math.max(z0, z1, _offset[2] + _size[2]) - cubeOffset[2] + 1
+			]
+		else
+			cubeOffset = [
+				Math.min(x0, x1)
+				Math.min(y0, y1)
+				Math.min(z0, z1)
+			]
+			cubeSize = [
+				Math.max(x0, x1) - cubeOffset[0] + 1
+				Math.max(y0, y1) - cubeOffset[1] + 1
+				Math.max(z0, z1) - cubeOffset[2] + 1
+			]
 
 		# Then we reorganize the existing buckets.
 		cube = []
 		for z in [0...cubeSize[2]]
 			for y in [0...cubeSize[1]]
 				for x in [0...cubeSize[0]]
-					index =
-						(x - _offset[0]) +
-						(y - _offset[1]) * _size[0] +
-						(z - _offset[2]) * _size[0] * _size[1] 
+					cube.push if _cube?
+						index =
+							(x - _offset[0]) +
+							(y - _offset[1]) * _size[0] +
+							(z - _offset[2]) * _size[0] * _size[1] 
+					else
+						null
 					
-					cube.push _data[index]
-						
-					
-		@data = cube
-		@offset = cubeOffset
-		@size = cubeSize
+		@cube       = cube
+		@cubeOffset = cubeOffset
+		@cubeSize   = cubeSize
 
 	# Get or set a color value of a point.
 	# Keep in mind that 0 represents a undefined value.
 	# Real color values range from 1 to 2 -- with black being 0 and white 1.
 	value : (x, y, z, newValue) ->
 
+		_cube = @cube
+
+		unless _cube?
+			throw "cube fault" if newValue?
+			return 0
+
 		bucketIndex = @bucketIndex(x, y, z)
-		bucket = @data[bucketIndex]
+		bucket      = _cube[bucketIndex]
 
 		unless newValue?
 			if bucket?
@@ -372,10 +391,10 @@ Model.Binary =
 			else
 				0
 		else
-			if 0 <= bucketIndex < @data.length
+			if 0 <= bucketIndex < @cube.length
 				unless bucket?
 					_bucket_width = @BUCKET_WIDTH
-					bucket = @data[bucketIndex] = new Float32Array(_bucket_width * _bucket_width * _bucket_width)
+					bucket = _cube[bucketIndex] = new Float32Array(_bucket_width * _bucket_width * _bucket_width)
 				bucket[@pointIndex(x, y, z)] = newValue
 			else
 				# Please handle cuboid expansion explicitly.

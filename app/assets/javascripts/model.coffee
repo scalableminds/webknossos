@@ -145,32 +145,9 @@ Model.Binary =
 		@initializeVerticesTemplate (err) =>
 			return callback err if err
 
-			template  = @verticesTemplate
-			output    = new Float32Array(template.length)
-			direction = V3.normalize direction
-
-			# `[0,1,0]` is the axis of the template, so there is no need for rotating
-			# We can do translation on our own, because it's not too complex..and 
-			# probably faster.
-			if direction[0] == 0 and direction[1] == 1 and direction[2] == 0
-
-				[px, py, pz] = position
-				
-				# Defer the computation the current stack isn't blocked
-				_.defer -> 
-					for i in [0...template.length] by 3
-						output[i]     = px + template[i]
-						output[i + 1] = py + template[i + 1]
-						output[i + 2] = pz + template[i + 2]
-					callback(null, output) if callback
-				
-			else
-				
-				mat = M4x4.makeRotate V3.angle([0,1,0], direction), [direction[2], 0, -direction[0]]
-				mat = M4x4.translateSelf position, mat
-			
-				_.defer -> 
-					callback null, M4x4.transformPointsAffine(mat, template, output)
+			# Defer computation so the current stack isn't blocked
+    	_.defer =>
+    		callback null, M4x4.moveVertices(@verticesTemplate, position, direction)
 
 
 	# This method allows you to query the data structure. Give us an array of
@@ -205,6 +182,10 @@ Model.Binary =
 		callback(null, colors) if callback
 
 	
+
+	PRELOAD_TOLERANCE : 0.95
+	preloadVertices : []
+
 	# Use this method to let us know when you've changed your spot. Then we'll try to 
 	# preload some data. 
 	#
@@ -215,9 +196,39 @@ Model.Binary =
 	# you look at
 	#
 	# No Callback Paramters
-
 	ping : (position, direction, callback) ->
+		@ping = _.defer(_.bind(@_ping, @))
+		@ping(position, direction, callback)
+
+	_ping : (position, direction, callback) ->
+
+		_preloadVertices = @preloadVertices
+	
+		# Looks like `preload_vertices` hasn't been populated yet.
+		# This is what ppl call lazy initialization.
+		if _preloadVertices.length == 0
+			for x in [-20..20] by 5
+				for y in [0..10] by 5
+					for z in [-20..20] by 5
+						_preloadVertices.push x, y, z
+
+		preloadCheckHits     = 0
+		preloadCheckVertices = M4x4.moveVertices _preloadVertices, position, direction
+		for i in [0...preloadCheckVertices.length] by 3
+			x = preloadCheckVertices[i]
+			y = preloadCheckVertices[i + 1]
+			z = preloadCheckVertices[i + 2]
+
+			if x >= 0 and y >= 0 and z >= 0 and @value(x, y, z) > 0
+				preloadCheckHits++
 		
+		if preloadCheckHits / (preloadCheckVertices.length / 3) < @PRELOAD_TOLERANCE
+			@pull(position, direction, callback)
+
+	pull : (position, direction, callback) ->
+
+		# Can I haz mutex please.
+
 		loadedData = []
 		
 		finalCallback = (err, vertices, colors) =>
@@ -239,12 +250,12 @@ Model.Binary =
 					min_y = if y < min_y then y else min_y
 					min_z = if z < min_z then z else min_z
 				
-				min_x = if x < 0 then 0 else x
-				min_y = if y < 0 then 0 else y
-				min_z = if z < 0 then 0 else z
-				max_x = if x < 0 then 0 else x
-				max_y = if y < 0 then 0 else y
-				max_z = if z < 0 then 0 else z
+				min_x = if min_x < 0 then 0 else min_x
+				min_y = if min_y < 0 then 0 else min_y
+				min_z = if min_z < 0 then 0 else min_z
+				max_x = if max_x < 0 then 0 else max_x
+				max_y = if max_y < 0 then 0 else max_y
+				max_z = if max_z < 0 then 0 else max_z
 
 
 				# Maybe we need to expand our data structure.
@@ -261,11 +272,11 @@ Model.Binary =
 				callback null if callback
 
 		# We use synchronized callbacks to make sure both callbacks have returned.
-		@vertices position, direction, @synchronizingCallback(loadedData, finalCallback)
+		@pullVertices position, direction, @synchronizingCallback(loadedData, finalCallback)
 
 		@pull position, direction, @synchronizingCallback(loadedData, finalCallback)
 
-	pull : (position, direction, callback) ->
+	load : (position, direction, callback) ->
 		request
 			url : "/binary/data/cube?px=#{position[0]}&py=#{position[1]}&pz=#{position[2]}&ax=#{direction[0]}&ay=#{direction[1]}&az=#{direction[2]}"
 			responseType : 'arraybuffer'
@@ -526,7 +537,7 @@ Model.Route =
 		unless @pushing
 			@pushing = true
 
-			@lazyInitialize (err) =>
+			@initialize (err) =>
 				return if err
 
 				transportBuffer = @dirtyBuffer
@@ -546,7 +557,7 @@ Model.Route =
 	# Add a point to the buffer. Just keep adding them.
 	put : (position, callback) ->
 		
-		@lazyInitialize (err) =>
+		@initialize (err) =>
 			return callback(err) if err
 
 			@route.push [Math.round(position[0]), Math.round(position[1]), Math.round(position[2])]

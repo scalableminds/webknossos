@@ -14,6 +14,40 @@ M4x4.transformPointsAffine = (m, points, r) ->
 
   r
 
+M4x4.makeRotate2 = (axis, r) ->
+
+  r = new MJS_FLOAT_ARRAY_TYPE(16) unless r?
+
+  # orthogonal vector to (0,1,0) and rotation vector
+  ortho = V3.normalize([axis[2], 0, -axis[0]])
+
+  # dot product of (0,1,0) and rotation
+  dotProd = axis[1]
+  
+  # transformation of dot product for cosA
+  cosA = dotProd / V3.length(axis)
+  sinA = Math.sqrt(1 - cosA * cosA)
+  
+  # calculate rotation matrix
+  r[0] = cosA + ortho[0] * ortho[0] * (1 - cosA)
+  r[1] = -ortho[2] * sinA
+  r[2] = ortho[0] * ortho[2] * (1 - cosA)
+  r[3] = 0
+  r[4] = ortho[2] * sinA
+  r[5] = cosA
+  r[6] = -ortho[0] * sinA
+  r[7] = 0
+  r[8] = ortho[0] * ortho[2] * (1 - cosA)
+  r[9] = ortho[0] * sinA
+  r[10] = cosA + ortho[2] * ortho[2] * (1 - cosA)
+  r[11] = 0
+  r[12] = 0
+  r[13] = 0
+  r[14] = 0
+  r[15] = 0
+  
+  r
+
 # Moves an array of vertices. It also supports rotation, just provide
 # a vector representing the direction you're looking. The vertices
 # are considered to be at position `[0,0,0]` with the direction `[0,1,0]`.
@@ -29,15 +63,15 @@ M4x4.moveVertices = (vertices, translationVector, directionVector) ->
 
     [px, py, pz] = translationVector
     
-    for i in [0...template.length] by 3
-      output[i]     = px + template[i]
-      output[i + 1] = py + template[i + 1]
-      output[i + 2] = pz + template[i + 2]
+    for i in [0...vertices.length] by 3
+      output[i]     = px + vertices[i]
+      output[i + 1] = py + vertices[i + 1]
+      output[i + 2] = pz + vertices[i + 2]
     output
   
   else
     
-    mat = M4x4.makeRotate V3.angle([0,1,0], directionVector), [directionVector[2], 0, -directionVector[0]]
+    mat = M4x4.makeRotate2 directionVector
     mat = M4x4.translateSelf translationVector, mat
   
     M4x4.transformPointsAffine(mat, vertices, output)

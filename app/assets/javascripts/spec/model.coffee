@@ -155,3 +155,38 @@ describe 'Interpolation', ->
     # 0.3 * (0.4 * (0.7 * 1 + 0.3 * 1.2) + 0.6 * (0.7 * 1.3 + 0.3 * 1.6)) +
     # 0.7 * (0.4 * (0.7 * 1.7 + 0.3 * 1.8) + 0.6 * (0.7 * 2 + 0.3 * 1.1))
     expect(interpolate(0.3, 0.6, 0.7, getter)).toBeNearly 1.5884
+
+
+describe 'M4x4.moveVertices', ->
+  testModel = new Int8Array(new ArrayBuffer(81))
+  i = 0
+  for y in [0..2]  
+    for x in [-1..1]
+      for z in [-1..1]
+        testModel[i]   = x
+        testModel[i+1] = y
+        testModel[i+2] = z
+        i += 3
+  
+  it 'should be able to move model', ->
+    data = M4x4.moveVertices testModel, [1,2,3], [0,1,0]
+      
+    correct = [0,2,2,0,2,3,0,2,4,1,2,2,1,2,3,1,2,4,2,2,2,2,2,3,2,2,4,0,3,2,0,3,3,0,3,4,1,3,2,1,3,3,1,3,4,2,3,2,2,3,3,2,3,4,0,4,2,0,4,3,0,4,4,1,4,2,1,4,3,1,4,4,2,4,2,2,4,3,2,4,4]
+    
+    expect(data).toBeSameArrayAs correct
+
+  it 'should be able to rotate model', ->
+    data = M4x4.moveVertices testModel, [0,0,0], [1,2,3]
+        
+    correct = [-1,1,0,-1,0,0,-1,-1,1,0,1,-1,0,0,0,0,-1,1,1,1,-1,1,0,0,1,-1,0,-1,2,0,-1,1,1,-1,0,2,0,1,0,0,1,1,0,0,1,1,1,0,1,0,1,1,-1,1,0,2,1,0,1,2,-1,1,2,1,2,1,1,1,2,0,0,2,2,2,1,1,1,1,1,0,2]
+    
+    invalidCount = 0
+    for i in [0...data.length]
+      invalidCount++ if Math.round(data[i]) != correct[i]
+    expect(invalidCount).toBe 0
+
+  it 'should rotate independent of the rotating vectors size', ->
+    data = M4x4.moveVertices testModel, [0,0,0], [1,2,3]
+    data1 = M4x4.moveVertices testModel, [0,0,0], [2,4,6]
+    
+    expect(data1).toBeSameArrayAs data

@@ -58,6 +58,12 @@ class Flycam
 	getPos : ->
 		[ trans[12], trans[13], trans[14] ]
 
+	getMatrixCentre : ->
+		@move [ 0, 0, distance ]
+		returnMat = M4x4.clone trans
+		@move [ 0, 0, -distance ]
+		[ returnMat[12], returnMat[13], returnMat[14] ]
+
 	setPos : (p) ->
 		trans[12] = p[0]
 		trans[13] = p[1]

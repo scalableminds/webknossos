@@ -51,7 +51,7 @@ Model ?= {}
 # The server provides the coordinates (vertices) and color values of
 # the data separately. Therefore we can (lazily) load a template of 
 # vertices which represent a generic chunk of data.
-# Once we really get a request, we then just need to load the color 
+# Once we really get a request, we then just need to load the color
 # data and transform the vertices template to match the position of 
 # the data block (see `Model.Binary._ping`). This is pretty efficient 
 # as we do not need another roundtrip to the server.
@@ -191,6 +191,7 @@ Model.Binary =
 	#
 	get : (vertices, callback) ->
 
+		_value = _.bind(@value, @)
 		colors = new Float32Array(vertices.length / 3 >> 0)
 
 		for i in [0...vertices.length] by 3
@@ -199,21 +200,22 @@ Model.Binary =
 			y = vertices[i + 1]
 			z = vertices[i + 2]
 
-			# Bitwise operations are faster than javascript's native rounding functions.
-			x0 = x >> 0; x1 = x0 + 1; xd = x - x0			
-			y0 = y >> 0; y1 = y0 + 1;	yd = y - y0
-			z0 = z >> 0; z1 = z0 + 1; zd = z - z0
-
-			colors[i / 3] = interpolate(
-				x, x0, x1, xd,
-				y, y0, y1, yd,
-				z, z0, z1, zd,
-				_.bind(@value, @)
-			)
+			colors[i / 3] = interpolate(x, y, z, _value)
 		
 		callback(null, colors) if callback
 
 	
+	# Use this method to let us know when you've changed your spot. Then we'll try to 
+	# preload some data. 
+	#
+	# Parameters:
+	#
+	# *   `position` is a 3-element array representing the point you're currently at
+	# *   `direction` is a 3-element array representing the vector of the direction 
+	# you look at
+	#
+	# No Callback Paramters
+
 	ping : (position, direction, callback) ->
 		
 		loadedData = []
@@ -222,6 +224,7 @@ Model.Binary =
 			if err
 				callback err
 			else
+				# First let's find out what extent the points have we just loaded.
 				max_x = min_x = vertices[0]
 				max_y = min_y = vertices[1]
 				max_z = min_z = vertices[2]
@@ -244,8 +247,10 @@ Model.Binary =
 				max_z = if z < 0 then 0 else z
 
 
+				# Maybe we need to expand our data structure.
 				@extendPoints(min_x, min_y, min_z, max_x, max_y, max_z)
 				
+				# Then we'll just put the point in to our data structure.
 				for i in [0...colors.length]
 					x = vertices[i * 3]
 					y = vertices[i * 3 + 1]
@@ -255,7 +260,7 @@ Model.Binary =
 
 				callback null if callback
 
-
+		# We use synchronized callbacks to make sure both callbacks have returned.
 		@vertices position, direction, @synchronizingCallback(loadedData, finalCallback)
 
 		@pull position, direction, @synchronizingCallback(loadedData, finalCallback)
@@ -271,12 +276,18 @@ Model.Binary =
 				else
 					callback(null, new Uint8Array(data)) if callback
 	
+	# Now comes the implementation of our internal data structure.
+	# `data` is the main array. It represents the cuboid containing all the 
+	# buckets. `size` and `offset` describe its dimension.
 	data : []
 	size : [0,0,0]
 	offset : [0,0,0]
 
+	# Each bucket is 64x64x64 large.
 	BUCKET_WIDTH : 64
 
+	# Retuns the index of the bucket (in the cuboid) which holds the
+	# point you're looking for.
 	bucketIndex : (x, y, z) ->
 		
 		_bucket_width = @BUCKET_WIDTH
@@ -287,6 +298,7 @@ Model.Binary =
 		(y / _bucket_width - _offset[1] >> 0) * _size[0] + 
 		(z / _bucket_width - _offset[2] >> 0) * _size[0] * _size[1]
 	
+	# Returns the index of the point (in the bucket) you're looking for.
 	pointIndex : (x, y, z) ->
 		
 		_bucket_width = @BUCKET_WIDTH
@@ -295,25 +307,29 @@ Model.Binary =
 		(y % _bucket_width >> 0) * _bucket_width +
 		(z % _bucket_width >> 0) * _bucket_width * _bucket_width
 
-	extendPoints : (x0, y0, z0, x1, y1, z1) ->
+	# Want to add data? Make sure the cuboid is big enough.
+	# This one is for passing real point coordinates.
+	extendPoints : (x_min, y_min, z_min, x_max, y_max, z_max) ->
 		
 		_bucket_width = @BUCKET_WIDTH
 
 		@extendCube(
-			x0 / _bucket_width >> 0,
-			y0 / _bucket_width >> 0,
-			x0 / _bucket_width >> 0,
-			x1 / _bucket_width >> 0,
-			y1 / _bucket_width >> 0,
-			z1 / _bucket_width >> 0
+			x_min / _bucket_width >> 0,
+			y_min / _bucket_width >> 0,
+			x_min / _bucket_width >> 0,
+			x_max / _bucket_width >> 0,
+			y_max / _bucket_width >> 0,
+			z_max / _bucket_width >> 0
 		)
-
+	
+	# And this one is for passing bucket coordinates.
 	extendCube : (x0, y0, z0, x1, y1, z1) ->
 		
 		_offset = @offset
 		_size = @size
 		_data = @data
 
+		# First, we calculate the new dimension of the cuboid.
 		cubeOffset = [
 			Math.min(x0, x1, _offset[0])
 			Math.min(y0, y1, _offset[1])
@@ -325,6 +341,7 @@ Model.Binary =
 			Math.max(z0, z1, _offset[2] + _size[2]) - cubeOffset[2] + 1
 		]
 
+		# Then we reorganize the existing buckets.
 		cube = []
 		for z in [0...cubeSize[2]]
 			for y in [0...cubeSize[1]]
@@ -341,6 +358,9 @@ Model.Binary =
 		@offset = cubeOffset
 		@size = cubeSize
 
+	# Get or set a color value of a point.
+	# Keep in mind that 0 represents a undefined value.
+	# Real color values range from 1 to 2 -- with black being 0 and white 1.
 	value : (x, y, z, newValue) ->
 
 		bucketIndex = @bucketIndex(x, y, z)
@@ -358,6 +378,7 @@ Model.Binary =
 					bucket = @data[bucketIndex] = new Float32Array(_bucket_width * _bucket_width * _bucket_width)
 				bucket[@pointIndex(x, y, z)] = newValue
 			else
+				# Please handle cuboid expansion explicitly.
 				throw "cube fault"
 
 # This loads and caches meshes.
@@ -383,32 +404,32 @@ Model.Mesh =
 					# `Model.Cacheable.cachingCallback`
 					@cachingCallback(name, callback)(null, coords, colors, indexes)
 
+# This creates a Triangleplane
+# It is essentially a square with a grid of vertices. Those vertices are
+# connected through triangles. Cuz that's how u do it in WebGL.
 Model.Trianglesplane =
 	
 	get : (width, callback) ->
 
-		# *3 coords per point
-		verticesArraySize = width * width * 3
+		# Each three elements represent one vertex.
+		vertices = new Uint16Array(width * width * 3)
 
-		vertices = new Uint16Array(verticesArraySize)
-
-		# *2 because two triangles per point and 3 points per triangle
-		indexes = new Uint16Array(verticesArraySize * 2)
+		# Each three elements represent one triangle.
+		# And each vertex is connected through two triangles.
+		indices = new Uint16Array(width * width * 6)
 		currentPoint = 0
 		currentIndex = 0
 
-		#iterate through all points
-		for y in [0..width - 1]
-			for x in [0..width - 1]
-				# < width -1: because you don't draw a triangle with
-				# the last points on each axis.
+		for y in [0...width]
+			for x in [0...width]
+				# We don't draw triangles with the last point of an axis.
 				if y < (width - 1) and x < (width - 1)
-					indexes[currentIndex * 2 + 0] = currentPoint
-					indexes[currentIndex * 2 + 1] = currentPoint + 1 
-					indexes[currentIndex * 2 + 2] = currentPoint + width
-					indexes[currentIndex * 2 + 3] = currentPoint + width
-					indexes[currentIndex * 2 + 4] = currentPoint + width + 1
-					indexes[currentIndex * 2 + 5] = currentPoint + 1
+					indices[currentIndex * 2 + 0] = currentPoint
+					indices[currentIndex * 2 + 1] = currentPoint + 1 
+					indices[currentIndex * 2 + 2] = currentPoint + width
+					indices[currentIndex * 2 + 3] = currentPoint + width
+					indices[currentIndex * 2 + 4] = currentPoint + width + 1
+					indices[currentIndex * 2 + 5] = currentPoint + 1
 					
 					vertices[currentIndex + 0] = x
 					vertices[currentIndex + 1] = y
@@ -417,7 +438,7 @@ Model.Trianglesplane =
 				currentPoint++
 				currentIndex += 3
 
-		callback(null, vertices, indexes)
+		callback(null, vertices, indices)
 
 # This loads and caches a pair (vertex and fragment) shaders
 #
@@ -514,11 +535,8 @@ Model.Route =
 			@push()
 
 
-
-#################################################
-# Mixins
-#################################################
-
+# Helps to make sure that a bunch of callbacks have returned before 
+# your code continues.
 Model.Synchronizable = 	
 
 	synchronizingCallback : (loadedData, callback) ->
@@ -535,6 +553,9 @@ Model.Synchronizable =
 				unless --loadedData.counter
 					callback null, loadedData...
 
+# Hook up your callbacks with a caching mechansim. So: First check the
+# cache with `tryCache`, then do your stuff and hook up the 
+# `cachingCallback` to your callbacks.
 Model.Cacheable =
 	
 	cache : {}
@@ -554,11 +575,7 @@ Model.Cacheable =
 		else
 			return false
 
-
-#################################################
-# Mixin hook up
-#################################################
-
+# Mixin hook ups
 _.extend Model.Binary, Model.Synchronizable
 _.extend Model.Mesh, Model.Cacheable
 _.extend Model.Shader, Model.Synchronizable

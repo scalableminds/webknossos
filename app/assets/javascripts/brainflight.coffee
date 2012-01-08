@@ -15,6 +15,7 @@ $ ->
       "/assets/javascripts/libs/mjs.js"
       "/assets/javascripts/binary_request.js",
       "/assets/javascripts/core_ext.js",
+      "/assets/javascripts/interpolation.js",
       "/assets/javascripts/event_emitter.js",
       "/assets/javascripts/libs/gl_engine/geometry.js",
       "/assets/javascripts/libs/gl_engine/geometry_pointcloud.js",

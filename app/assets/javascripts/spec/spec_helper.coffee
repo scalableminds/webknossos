@@ -10,6 +10,10 @@ jasmine.Matchers::toBeBetween = (a,b) ->
 jasmine.Matchers::toBeStrictlyBetween = (a,b) ->
   Math.min(a, b) < @actual < Math.max(a, b)
 
+jasmine.Matchers::toBeNearly = (a) ->
+  EPSILON = 1e-10
+  a - EPSILON < @actual < a + EPSILON
+
 async = (timeout, handler) ->
   
   unless handler?

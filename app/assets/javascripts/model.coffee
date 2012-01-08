@@ -199,6 +199,11 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (position, direction, callback) ->
 
+		@ping = _.mutex(_.bind(@_ping, @))
+		@ping(position, direction, callback)
+
+	_ping : (position, direction, callback, done) ->
+
 		_.defer =>
 			_preloadVertices = @preloadVertices
 		
@@ -221,17 +226,19 @@ Model.Binary =
 					preloadCheckHits++
 			
 			if preloadCheckHits / (preloadCheckVertices.length / 3) < @PRELOAD_TOLERANCE
-				@pull(position, direction, callback)
+				@pull(position, direction, ->
+					done()
+					callback.apply(this, arguments) if callback
+				)
 
 	pull : (position, direction, callback) ->
-
-		# Can I haz mutex please.
 
 		loadedData = []
 		
 		finalCallback = (err, vertices, colors) =>
 			if err
 				callback err
+
 			else
 				# First let's find out what extent the points have we just loaded.
 				max_x = min_x = vertices[0]
@@ -272,11 +279,12 @@ Model.Binary =
 		# We use synchronized callbacks to make sure both callbacks have returned.
 		@pullVertices position, direction, @synchronizingCallback(loadedData, finalCallback)
 
-		@pull position, direction, @synchronizingCallback(loadedData, finalCallback)
+		@load position, direction, @synchronizingCallback(loadedData, finalCallback)
 
 	load : (position, direction, callback) ->
+		
 		request
-			url : "/binary/data/cube?px=#{position[0]}&py=#{position[1]}&pz=#{position[2]}&ax=#{direction[0]}&ay=#{direction[1]}&az=#{direction[2]}"
+			url : "/binary/data/cube?px=#{Math.round(position[0])}&py=#{Math.round(position[1])}&pz=#{Math.round(position[2])}&ax=#{direction[0]}&ay=#{direction[1]}&az=#{direction[2]}"
 			responseType : 'arraybuffer'
 			,
 			(err, data) ->
@@ -558,9 +566,12 @@ Model.Route =
 		@initialize (err) =>
 			return callback(err) if err
 
-			@route.push [Math.round(position[0]), Math.round(position[1]), Math.round(position[2])]
-			@dirtyBuffer.push position
-			@push()
+			position = [Math.round(position[0]), Math.round(position[1]), Math.round(position[2])]
+			_lastPosition = _.last(@route)
+			unless _lastPosition[0] == position[0] and _lastPosition[1] == position[1] and _lastPosition[2] == position[2]
+				@route.push position
+				@dirtyBuffer.push position
+				@push()
 
 
 # Helps to make sure that a bunch of callbacks have returned before 

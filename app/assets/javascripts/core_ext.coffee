@@ -43,7 +43,7 @@ M4x4.moveVertices = (vertices, translationVector, directionVector) ->
     M4x4.transformPointsAffine(mat, vertices, output)
 
 # `_.throttle2` makes a function only be executed once in a given
-# time span -- no matter how often you it. The function cannot have 
+# time span -- no matter how often you it. We don't recomment to use 
 # any input parameters. In contrast to `_.throttle`, the function
 # at the beginning of the time span.
 _.throttle2 = (func, wait) ->
@@ -53,11 +53,11 @@ _.throttle2 = (func, wait) ->
     context = @
     args = arguments
     if timeout == false
-      _.defer -> func.apply(context, arguments)
+      _.defer -> func.apply(context, args)
       timeout = setTimeout (
         -> 
           timeout = false
-          func.apply(context, arguments) if more
+          func.apply(context, args) if more
           more = false
         ), wait
     else
@@ -97,4 +97,21 @@ _.once2 = (func) ->
         func.apply(context, [done])
     else
       callback null
+
+
+_.mutex = (func, timeout = 60000) ->
+
+  busy = false
+
+  done = ->
+    busy = false
+
+  (args...) ->
+    unless busy
+      
+      busy = true
+      
+      func.apply(this, args.concat(done))
+
+      setTimeout(done, timeout)
 

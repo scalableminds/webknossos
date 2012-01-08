@@ -439,7 +439,7 @@ Model.Mesh =
 # connected through triangles. Cuz that's how u do it in WebGL.
 Model.Trianglesplane =
 	
-	get : (width, callback) ->
+	get : (width, zOffset, callback) ->
 
 		# Each three elements represent one vertex.
 		vertices = new Uint16Array(width * width * 3)
@@ -463,7 +463,7 @@ Model.Trianglesplane =
 					
 					vertices[currentIndex + 0] = x
 					vertices[currentIndex + 1] = y
-					vertices[currentIndex + 2] = 0
+					vertices[currentIndex + 2] = zOffset
 
 				currentPoint++
 				currentIndex += 3

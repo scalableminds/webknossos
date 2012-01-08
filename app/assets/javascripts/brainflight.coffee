@@ -23,7 +23,6 @@ $ ->
       "/assets/javascripts/libs/gl_engine/geometry_mesh.js",
       "/assets/javascripts/libs/gl_engine/flycam.js",
       "/assets/javascripts/libs/gl_engine/gl_engine.js",
-      "/assets/javascripts/libs/csg.js",
       "/assets/javascripts/controller.js",
       "/assets/javascripts/keyboard.js",
       "/assets/javascripts/view.js",

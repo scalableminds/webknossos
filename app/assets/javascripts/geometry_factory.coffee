@@ -17,10 +17,10 @@ class _GeometryFactory
 				throw err
 		)
 
-	createTrianglesplane : (width, shaderName) ->
+	createTrianglesplane : (width, zOffset, shaderName) ->
 		getShader(shaderName, (err, fragmentShader, vertexShader) ->
 			unless err
-				Model.Trianglesplane.get(width,(err, vertices, indices) ->
+				Model.Trianglesplane.get(width, zOffset,(err, vertices, indices) ->
 					unless err
 						trianglesplane = new Trianglesplane fragmentShader, vertexShader
 						trianglesplane.setNormalVertices vertices, width

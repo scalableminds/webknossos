@@ -272,7 +272,7 @@ Model.Binary =
 		# We use synchronized callbacks to make sure both callbacks have returned.
 		@pullVertices position, direction, @synchronizingCallback(loadedData, finalCallback)
 
-		@pull position, direction, @synchronizingCallback(loadedData, finalCallback)
+		@load position, direction, @synchronizingCallback(loadedData, finalCallback)
 
 	load : (position, direction, callback) ->
 		request

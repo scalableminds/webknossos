@@ -14,6 +14,34 @@ M4x4.transformPointsAffine = (m, points, r) ->
 
   r
 
+# Moves an array of vertices. It also supports rotation, just provide
+# a vector representing the direction you're looking. The vertices
+# are considered to be at position `[0,0,0]` with the direction `[0,1,0]`.
+M4x4.moveVertices = (vertices, translationVector, directionVector) ->
+
+  output = new Float32Array(vertices.length)
+  directionVector = V3.normalize(directionVector)
+
+  # `[0,1,0]` is the axis of the template, so there is no need for rotating
+  # We can do translation on our own, because it's not too complex..and 
+  # probably faster.
+  if directionVector[0] == 0 and directionVector[1] == 1 and directionVector[2] == 0
+
+    [px, py, pz] = translationVector
+    
+    for i in [0...template.length] by 3
+      output[i]     = px + template[i]
+      output[i + 1] = py + template[i + 1]
+      output[i + 2] = pz + template[i + 2]
+    output
+  
+  else
+    
+    mat = M4x4.makeRotate V3.angle([0,1,0], directionVector), [directionVector[2], 0, -directionVector[0]]
+    mat = M4x4.translateSelf translationVector, mat
+  
+    M4x4.transformPointsAffine(mat, template, output)
+
 # `_.throttle2` makes a function only be executed once in a given
 # time span -- no matter how often you it. The function cannot have 
 # any input parameters. In contrast to `_.throttle`, the function

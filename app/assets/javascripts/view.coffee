@@ -89,10 +89,10 @@ class _View
 				g.setVertices (View.createArrayBufferObject newVertices), newVertices.length
 
 				#sends current position to Model for preloading data
-				Model.Binary.ping cam.getPos(), cam.getDir(), null
+				Model.Binary.ping cam.getMatrixCentre(), cam.getDir(), null
 
 				#sends current position to Model for caching route
-				Model.Route.put cam.getPos(), null
+				Model.Route.put cam.getMatrixCentre(), null
 
 				#get colors for new coords from Model
 				Model.Binary.get(newVertices, (err, colors) ->

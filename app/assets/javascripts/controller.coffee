@@ -9,7 +9,7 @@ class _Controller
 			unless err
 				position = pos
 				direction = dir
-				GeometryFactory.createTrianglesplane(128, "pointcloud")
+				GeometryFactory.createTrianglesplane(128, 0, "pointcloud")
 			else
 				throw err
 		)

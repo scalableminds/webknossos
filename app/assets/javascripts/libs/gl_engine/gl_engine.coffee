@@ -504,7 +504,7 @@ class GL_engine
 	#throttling renderLoop
 	renderLoop = ->
 		now = new Date()
-		if now - lastLoopTime > 1000/maximumFramerate
+		if now - lastLoopTime >= 1000/maximumFramerate
 			_renderLoop()
 
 		

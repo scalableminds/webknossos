@@ -169,10 +169,10 @@ Model.Binary =
 	#
 	get : (vertices, callback) ->
 
-		# console.profile("Model.Binary.get")
+		console.time("get")
 		_this  = @
 		_value = (x0, y0, z0) ->
-			_this.value(x0, y0, z0)
+			_this.getColor(x0, y0, z0)
 
 		colors = new Float32Array(vertices.length / 3 >> 0)
 
@@ -184,7 +184,7 @@ Model.Binary =
 
 			colors[i / 3] = interpolate(x, y, z, _value)
 		
-		# console.profileEnd("Model.Binary.get")
+		console.timeEnd("get")
 		callback(null, colors) if callback
 
 	
@@ -331,9 +331,9 @@ Model.Binary =
 		
 		_bucket_width = @BUCKET_WIDTH
 
-		(x % _bucket_width >> 0) +
-		(y % _bucket_width >> 0) * _bucket_width +
-		(z % _bucket_width >> 0) * _bucket_width * _bucket_width
+		(x % _bucket_width) +
+		(y % _bucket_width) * _bucket_width +
+		(z % _bucket_width) * _bucket_width * _bucket_width
 
 	# Want to add data? Make sure the cuboid is big enough.
 	# This one is for passing real point coordinates.
@@ -398,6 +398,29 @@ Model.Binary =
 		@cube       = cube
 		@cubeOffset = cubeOffset
 		@cubeSize   = cubeSize
+
+	getColor : (x, y, z) ->
+		
+		unless (_cube = @cube)
+			return 0
+
+		_bucket_width = @BUCKET_WIDTH
+		_offset       = @cubeOffset
+		_size         = @cubeSize
+
+		_bucketIndex = 
+			(x / _bucket_width - _offset[0]) + 
+			(y / _bucket_width - _offset[1]) * _size[0] + 
+			(z / _bucket_width - _offset[2]) * _size[0] * _size[1] >> 0
+		_pointIndex = 
+			(x % _bucket_width) +
+			(y % _bucket_width) * _bucket_width +
+			(z % _bucket_width) * _bucket_width * _bucket_width
+		
+		if (_bucket = _cube[_bucketIndex])
+			_bucket[_pointIndex]
+		else
+			0
 
 	# Get or set a color value of a point.
 	# Keep in mind that 0 represents a undefined value.

@@ -98,6 +98,8 @@ class _View
 				#get colors for new coords from Model
 				Model.Binary.get(newVertices, (err, colors) ->
 					throw err if err
+					console.log "normal: " + colors[0] + " " + colors[1] + " " + colors[2] + 
+														colors[128*128-3] + " " + colors[128*128-2] + " " + colors[128*128-1]
 					engine.deleteSingleBuffer g.colors.VBO
 					g.setColors (View.createArrayBufferObject colors), colors.length
 				)

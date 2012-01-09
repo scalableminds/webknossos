@@ -454,7 +454,7 @@ Model.Trianglesplane =
 	get : (width, zOffset, callback) ->
 
 		# Each three elements represent one vertex.
-		vertices = new Uint16Array(width * width * 3)
+		vertices = new Float32Array(width * width * 3)
 
 		# Each three elements represent one triangle.
 		# And each vertex is connected through two triangles.
@@ -472,10 +472,17 @@ Model.Trianglesplane =
 					indices[currentIndex * 2 + 3] = currentPoint + width
 					indices[currentIndex * 2 + 4] = currentPoint + width + 1
 					indices[currentIndex * 2 + 5] = currentPoint + 1
-					
-					vertices[currentIndex + 0] = x
-					vertices[currentIndex + 1] = y
-					vertices[currentIndex + 2] = zOffset
+				else
+					indices[currentIndex * 2 + 0] = 0
+					indices[currentIndex * 2 + 1] = 0
+					indices[currentIndex * 2 + 2] = 0
+					indices[currentIndex * 2 + 3] = 0
+					indices[currentIndex * 2 + 4] = 0
+					indices[currentIndex * 2 + 5] = 0
+
+				vertices[currentIndex + 0] = x
+				vertices[currentIndex + 1] = y
+				vertices[currentIndex + 2] = zOffset
 
 				currentPoint++
 				currentIndex += 3

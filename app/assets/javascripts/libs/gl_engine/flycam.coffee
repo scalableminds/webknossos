@@ -1,24 +1,16 @@
 class Flycam
 
-	halfBlockWidth=128/2
-	distance = 0
 	trans = [ 1, 0, 0, 0,  # left
 		0, 1, 0, 0,  # up
 		0, 0, 1, 0,  # direction
 		0, 0, 0, 1] # position
 	rotMat = undefined
 
-	constructor : (distanceInPoints) ->
-		distance = distanceInPoints
+	constructor : () ->
+
 
 	getMatrix : ->
 		M4x4.clone trans
-
-	getMatrixWithoutDistance : ->
-		@move [ 0, 0, distance ]
-		returnMat = M4x4.clone trans
-		@move [ 0, 0, -distance ]
-		return returnMat
 
 	reset : ->
 		trans = [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]
@@ -27,24 +19,23 @@ class Flycam
 		tranMat = M4x4.makeTranslate([ p[0], p[1], p[2] ])
 		trans = M4x4.mul(trans, tranMat)
 
+	getMovedNonPersistent : (p) ->
+		@move [ p[0], p[1], p[2] ]
+		returnMat = M4x4.clone trans
+		@move [ p[0], p[1], -p[2] ]
+		return returnMat
+
 	yaw : (angle) ->
-		@move [ halfBlockWidth, halfBlockWidth, distance ]
 		rotMat = M4x4.makeRotate(angle, [ 0, 1, 0 ])
 		trans = M4x4.mul(trans, rotMat)
-		@move [ -halfBlockWidth, -halfBlockWidth, -distance ]
 
 	roll : (angle) ->
-		@move [ halfBlockWidth, halfBlockWidth, distance ]
 		rotMat = M4x4.makeRotate(angle, [ 0, 0, 1 ])
 		trans = M4x4.mul(trans, rotMat)
-		@move [ -halfBlockWidth, -halfBlockWidth, -distance ]
-
 
 	pitch : (angle) ->
-		@move [ halfBlockWidth, halfBlockWidth, distance ]
 		rotMat = M4x4.makeRotate(angle, [ 1, 0, 0 ])
 		trans = M4x4.mul(trans, rotMat)
-		@move [ -halfBlockWidth, -halfBlockWidth, -distance ]
 
 	rotateOnAxis : (angle, axis) ->
 		rotMat = M4x4.makeRotate(angle, axis)
@@ -58,12 +49,6 @@ class Flycam
 	getPos : ->
 		[ trans[12], trans[13], trans[14] ]
 
-	getMatrixCentre : ->
-		@move [ 0, 0, distance ]
-		returnMat = M4x4.clone trans
-		@move [ 0, 0, -distance ]
-		[ returnMat[12], returnMat[13], returnMat[14] ]
-
 	setPos : (p) ->
 		trans[12] = p[0]
 		trans[13] = p[1]
@@ -71,6 +56,11 @@ class Flycam
 
 	getDir : ->
 		[ trans[8], trans[9], trans[10] ]
+
+	setDir : (p) ->
+		trans[8] = p[0]
+		trans[9] = p[1]
+		trans[10] = p[2]
 
 	getUp : ->
 		[ trans[4], trans[5], trans[6] ]

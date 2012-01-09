@@ -1,7 +1,5 @@
 # Applies a transformation matrix on an array of points.
-M4x4.transformPointsAffine = (m, points, r) ->
-  
-  r = new MJS_FLOAT_ARRAY_TYPE(points.length) unless r?
+M4x4.transformPointsAffine = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
 
   for i in [0...points.length] by 3
     v0 = points[i]
@@ -14,32 +12,48 @@ M4x4.transformPointsAffine = (m, points, r) ->
 
   r
 
-M4x4.makeRotate2 = (axis, r) ->
+# Applies a transformation matrix on an array of points.
+M4x4.transformPointsAffineWithTranslation = (m, translationVector, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
 
-  r = new MJS_FLOAT_ARRAY_TYPE(16) unless r?
+  [tx, ty, tz] = translationVector
+
+  for i in [0...points.length] by 3
+    v0 = points[i]
+    v1 = points[i + 1]
+    v2 = points[i + 2]
+    
+    r[i]     = m[0] * v0 + m[4] * v1 + m[8] * v2 + m[12] + tx
+    r[i + 1] = m[1] * v0 + m[5] * v1 + m[9] * v2 + m[13] + ty
+    r[i + 2] = m[2] * v0 + m[6] * v1 + m[10] * v2 + m[14] + tz
+
+  r
+
+M4x4.makeRotate2 = (direction, r = new MJS_FLOAT_ARRAY_TYPE(16)) ->
 
   # orthogonal vector to (0,1,0) and rotation vector
-  ortho = V3.normalize([axis[2], 0, -axis[0]])
+  axis = V3.normalize([direction[2], 0, -direction[0]])
 
   # dot product of (0,1,0) and rotation
-  dotProd = axis[1]
+  dotProd = direction[1]
   
   # transformation of dot product for cosA
-  cosA = dotProd / V3.length(axis)
+  cosA = dotProd / V3.length(direction)
   sinA = Math.sqrt(1 - cosA * cosA)
+
+  [axis_x, axix_y, axis_z] = axis
   
   # calculate rotation matrix
-  r[0] = cosA + ortho[0] * ortho[0] * (1 - cosA)
-  r[1] = -ortho[2] * sinA
-  r[2] = ortho[0] * ortho[2] * (1 - cosA)
-  r[3] = 0
-  r[4] = ortho[2] * sinA
-  r[5] = cosA
-  r[6] = -ortho[0] * sinA
-  r[7] = 0
-  r[8] = ortho[0] * ortho[2] * (1 - cosA)
-  r[9] = ortho[0] * sinA
-  r[10] = cosA + ortho[2] * ortho[2] * (1 - cosA)
+  r[0]  = axis_x * axis_x * (1 - cosA) + cosA 
+  r[1]  = axis_z * sinA
+  r[2]  = axis_x * axis_z * (1 - cosA)
+  r[3]  = 0
+  r[4]  = -axis_z * sinA
+  r[5]  = cosA
+  r[6]  = axis_x * sinA
+  r[7]  = 0
+  r[8]  = axis_x * axis_z * (1 - cosA)
+  r[9]  = -axis_x * sinA
+  r[10] = axis_z * axis_z * (1 - cosA) + cosA
   r[11] = 0
   r[12] = 0
   r[13] = 0
@@ -72,9 +86,8 @@ M4x4.moveVertices = (vertices, translationVector, directionVector) ->
   else
     
     mat = M4x4.makeRotate2 directionVector
-    mat = M4x4.translateSelf translationVector, mat
-  
-    M4x4.transformPointsAffine(mat, vertices, output)
+    
+    M4x4.transformPointsAffineWithTranslation(mat, translationVector, vertices, output)
 
 # `_.throttle2` makes a function only be executed once in a given
 # time span -- no matter how often you it. We don't recomment to use 

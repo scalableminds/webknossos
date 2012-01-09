@@ -109,7 +109,7 @@ Model.Binary =
 				
 				unless err
 					@verticesTemplate = new Int8Array(data)
-					callback(null)
+					callback() if callback
 				
 				return
 
@@ -144,11 +144,11 @@ Model.Binary =
 		# Some lazy initialization magic.
 		@initializeVerticesTemplate (err) =>
 			
-			return callback(err) if err
+			return callback(err) if err and callback
 			
 			# Defer computation so the current stack isn't blocked
 			_.defer =>
-				callback null, M4x4.moveVertices(@verticesTemplate, position, direction)
+				callback(null, M4x4.moveVertices(@verticesTemplate, position, direction)) if callback
 
 
 	# This method allows you to query the data structure. Give us an array of
@@ -169,7 +169,11 @@ Model.Binary =
 	#
 	get : (vertices, callback) ->
 
-		_value = _.bind(@value, @)
+		console.time("get")
+		_this  = @
+		_value = (x0, y0, z0) ->
+			_this.getColor(x0, y0, z0)
+
 		colors = new Float32Array(vertices.length / 3 >> 0)
 
 		for i in [0...vertices.length] by 3
@@ -180,6 +184,7 @@ Model.Binary =
 
 			colors[i / 3] = interpolate(x, y, z, _value)
 		
+		console.timeEnd("get")
 		callback(null, colors) if callback
 
 	
@@ -199,16 +204,15 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (position, direction, callback) ->
 
-		@ping = _.throttle2(_.mutex(_.bind(@_ping, @)), 500)
+		@ping = _.throttle2(_.mutex(_.bind(@_ping, @)), 500, false)
 		@ping(position, direction, callback)
 
 	_ping : (position, direction, callback, done) ->
 
-		finalCallback = ->
-			done()
-			callback() if callback
+		callback() if callback
 
 		_.defer =>
+			
 			_preloadVertices = @preloadVertices
 		
 			# Looks like `preload_vertices` hasn't been populated yet.
@@ -232,9 +236,10 @@ Model.Binary =
 					preloadCheckHits++ if @value(x, y, z) > 0
 			
 			if preloadCheckHits / preloadCheckCount < @PRELOAD_TOLERANCE
-				@pull(position, direction, finalCallback)
+				@pull(position, direction, done)
 			else
-				finalCallback()
+				done()
+			
 
 	pull : (position, direction, callback) ->
 
@@ -242,7 +247,7 @@ Model.Binary =
 		
 		finalCallback = (err, vertices, colors) =>
 			if err
-				callback err
+				callback err if callback
 
 			else
 				# First let's find out what extent the points have we just loaded.
@@ -326,9 +331,9 @@ Model.Binary =
 		
 		_bucket_width = @BUCKET_WIDTH
 
-		(x % _bucket_width >> 0) +
-		(y % _bucket_width >> 0) * _bucket_width +
-		(z % _bucket_width >> 0) * _bucket_width * _bucket_width
+		(x % _bucket_width) +
+		(y % _bucket_width) * _bucket_width +
+		(z % _bucket_width) * _bucket_width * _bucket_width
 
 	# Want to add data? Make sure the cuboid is big enough.
 	# This one is for passing real point coordinates.
@@ -394,6 +399,29 @@ Model.Binary =
 		@cubeOffset = cubeOffset
 		@cubeSize   = cubeSize
 
+	getColor : (x, y, z) ->
+		
+		unless (_cube = @cube)
+			return 0
+
+		_bucket_width = @BUCKET_WIDTH
+		_offset       = @cubeOffset
+		_size         = @cubeSize
+
+		_bucketIndex = 
+			(x / _bucket_width - _offset[0]) + 
+			(y / _bucket_width - _offset[1]) * _size[0] + 
+			(z / _bucket_width - _offset[2]) * _size[0] * _size[1] >> 0
+		_pointIndex = 
+			(x % _bucket_width) +
+			(y % _bucket_width) * _bucket_width +
+			(z % _bucket_width) * _bucket_width * _bucket_width
+		
+		if (_bucket = _cube[_bucketIndex])
+			_bucket[_pointIndex]
+		else
+			0
+
 	# Get or set a color value of a point.
 	# Keep in mind that 0 represents a undefined value.
 	# Real color values range from 1 to 2 -- with black being 0 and white 1.
@@ -434,7 +462,7 @@ Model.Mesh =
 
 			request url : "/assets/mesh/#{name}", responseType : 'arraybuffer', (err, data) =>
 				if err
-					callback err 
+					callback err if callback
 
 				else
 				  # To save bandwidth meshes are transferred in a binary format.
@@ -487,7 +515,7 @@ Model.Trianglesplane =
 				currentPoint++
 				currentIndex += 3
 
-		callback(null, vertices, indices)
+		callback(null, vertices, indices) if callback
 
 # This loads and caches a pair (vertex and fragment) shaders
 #
@@ -577,7 +605,7 @@ Model.Route =
 	put : (position, callback) ->
 		
 		@initialize (err) =>
-			return callback(err) if err
+			return callback(err) if err and callback
 
 			position = [Math.round(position[0]), Math.round(position[1]), Math.round(position[2])]
 			_lastPosition = _.last(@route)
@@ -603,7 +631,7 @@ Model.Synchronizable =
 			else
 				loadedData[i] = data
 				unless --loadedData.counter
-					callback null, loadedData...
+					callback(null, loadedData...) if callback
 
 # Hook up your callbacks with a caching mechansim. So: First check the
 # cache with `tryCache`, then do your stuff and hook up the 
@@ -618,11 +646,12 @@ Model.Cacheable =
 				callback err
 			else
 				@cache[cache_tag] = args
-				callback null, args...
+				callback(null, args...) if callback
 	
 	tryCache : (cache_tag, callback) ->
 		if (cached = @cache[cache_tag])?
-			_.defer -> callback null, cached...
+			if callback
+				_.defer -> callback(null, cached...)
 			return true
 		else
 			return false

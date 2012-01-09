@@ -199,10 +199,14 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (position, direction, callback) ->
 
-		@ping = _.mutex(_.bind(@_ping, @))
+		@ping = _.throttle2(_.mutex(_.bind(@_ping, @)), 500)
 		@ping(position, direction, callback)
 
 	_ping : (position, direction, callback, done) ->
+
+		finalCallback = ->
+			done()
+			callback() if callback
 
 		_.defer =>
 			_preloadVertices = @preloadVertices
@@ -216,20 +220,21 @@ Model.Binary =
 							_preloadVertices.push x, y, z
 
 			preloadCheckHits     = 0
+			preloadCheckCount    = 0
 			preloadCheckVertices = M4x4.moveVertices _preloadVertices, position, direction
 			for i in [0...preloadCheckVertices.length] by 3
 				x = preloadCheckVertices[i]
 				y = preloadCheckVertices[i + 1]
 				z = preloadCheckVertices[i + 2]
 
-				if x >= 0 and y >= 0 and z >= 0 and @value(x, y, z) > 0
-					preloadCheckHits++
+				if x >= 0 and y >= 0 and z >= 0 
+					preloadCheckCount++
+					preloadCheckHits++ if @value(x, y, z) > 0
 			
-			if preloadCheckHits / (preloadCheckVertices.length / 3) < @PRELOAD_TOLERANCE
-				@pull(position, direction, ->
-					done()
-					callback.apply(this, arguments) if callback
-				)
+			if preloadCheckHits / preloadCheckCount < @PRELOAD_TOLERANCE
+				@pull(position, direction, finalCallback)
+			else
+				finalCallback()
 
 	pull : (position, direction, callback) ->
 

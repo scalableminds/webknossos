@@ -1,0 +1,7 @@
+#! /usr/bin/env sh
+
+echo "[info] Cleaning target directories..."
+rm -rf target
+rm -rf project/target
+rm -rf project/project/target
+echo "[info] Done."

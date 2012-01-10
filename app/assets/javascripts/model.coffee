@@ -312,42 +312,40 @@ Model.Binary =
 	cubeOffset : null
 
 	# Each bucket is 64x64x64 large.
-	BUCKET_WIDTH : 64
+	# Implementation note: This isn't really a variable and hard-coded
+	# all over the place for performance concerns.
+	BUCKET_WIDTH : 1 << 6
 
 	# Retuns the index of the bucket (in the cuboid) which holds the
 	# point you're looking for.
 	bucketIndex : (x, y, z) ->
 		
-		_bucket_width = @BUCKET_WIDTH
-		_offset       = @cubeOffset
-		_size         = @cubeSize
+		_offset = @cubeOffset
+		_size   = @cubeSize
 
-		(x / _bucket_width - _offset[0] >> 0) + 
-		(y / _bucket_width - _offset[1] >> 0) * _size[0] + 
-		(z / _bucket_width - _offset[2] >> 0) * _size[0] * _size[1]
+		((x >> 6) - _offset[0]) + 
+		((y >> 6) - _offset[1]) * _size[0] + 
+		((z >> 6) - _offset[2]) * _size[0] * _size[1]
 	
 	# Returns the index of the point (in the bucket) you're looking for.
 	pointIndex : (x, y, z) ->
 		
-		_bucket_width = @BUCKET_WIDTH
-
-		(x % _bucket_width) +
-		(y % _bucket_width) * _bucket_width +
-		(z % _bucket_width) * _bucket_width * _bucket_width
+		# x % 64 + y % 64 * 64 + z % 64 * 64^2
+		(x & -64) +
+		((y & -64) << 6) +
+		((z & -64) << 12)
 
 	# Want to add data? Make sure the cuboid is big enough.
 	# This one is for passing real point coordinates.
 	extendPoints : (x_min, y_min, z_min, x_max, y_max, z_max) ->
 		
-		_bucket_width = @BUCKET_WIDTH
-
 		@extendCube(
-			x_min / _bucket_width >> 0,
-			y_min / _bucket_width >> 0,
-			x_min / _bucket_width >> 0,
-			x_max / _bucket_width >> 0,
-			y_max / _bucket_width >> 0,
-			z_max / _bucket_width >> 0
+			x_min >> 6, # x_min / 64
+			y_min >> 6,
+			x_min >> 6,
+			x_max >> 6,
+			y_max >> 6,
+			z_max >> 6
 		)
 	
 	# And this one is for passing bucket coordinates.
@@ -399,23 +397,51 @@ Model.Binary =
 		@cubeOffset = cubeOffset
 		@cubeSize   = cubeSize
 
+	# Work in progress
+	getColor2 : (x, y, z, c) ->
+
+		unless (_cube = @cube)
+			return 0
+
+		_offset = @cubeOffset
+		_size   = @cubeSize
+
+		[_offset0, _offset1, _offset2] = _offset
+		[_size0, _size1, _size2] = _size
+
+		_size01 = _size0 * _size1
+
+		_bucketIndex000 = 
+			((x >> 6) - _offset0) + 
+			((y >> 6) - _offset1) * _size0 + 
+			((z >> 6) - _offset2) * _size01
+		_pointIndex000 = 
+			((x & -64)) +
+			((y & -64) << 6) +
+			((z & -64) << 12)
+		
+			
+
+
+	# A faster implementation of `Model.Binary.value`, but only for
+	# getting color values.
 	getColor : (x, y, z) ->
 		
 		unless (_cube = @cube)
 			return 0
 
-		_bucket_width = @BUCKET_WIDTH
-		_offset       = @cubeOffset
-		_size         = @cubeSize
+		_offset = @cubeOffset
+		_size   = @cubeSize
 
 		_bucketIndex = 
-			(x / _bucket_width - _offset[0]) + 
-			(y / _bucket_width - _offset[1]) * _size[0] + 
-			(z / _bucket_width - _offset[2]) * _size[0] * _size[1] >> 0
+			((x >> 6) - _offset[0]) + 
+			((y >> 6) - _offset[1]) * _size[0] + 
+			((z >> 6) - _offset[2]) * _size[0] * _size[1]
+		
 		_pointIndex = 
-			(x % _bucket_width) +
-			(y % _bucket_width) * _bucket_width +
-			(z % _bucket_width) * _bucket_width * _bucket_width
+			((x & -64)) +
+			((y & -64) << 6) +
+			((z & -64) << 12)
 		
 		if (_bucket = _cube[_bucketIndex])
 			_bucket[_pointIndex]
@@ -444,8 +470,7 @@ Model.Binary =
 		else
 			if 0 <= bucketIndex < @cube.length
 				unless bucket?
-					_bucket_width = @BUCKET_WIDTH
-					bucket = _cube[bucketIndex] = new Float32Array(_bucket_width * _bucket_width * _bucket_width)
+					bucket = _cube[bucketIndex] = new Float32Array(1 << 18)
 				bucket[@pointIndex(x, y, z)] = newValue
 			else
 				# Please handle cuboid expansion explicitly.

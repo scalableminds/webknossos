@@ -85,15 +85,16 @@ M4x4.moveVertices = (vertices, translationVector, directionVector) ->
   
   else
     
-    mat = M4x4.makeRotate2 directionVector
+    mat = M4x4.makeRotate2(directionVector)
     
     M4x4.transformPointsAffineWithTranslation(mat, translationVector, vertices, output)
 
 # `_.throttle2` makes a function only be executed once in a given
 # time span -- no matter how often you it. We don't recomment to use 
-# any input parameters. In contrast to `_.throttle`, the function
+# any input parameters, because you cannot know which are used and 
+# which are dropped. In contrast to `_.throttle`, the function
 # at the beginning of the time span.
-_.throttle2 = (func, wait) ->
+_.throttle2 = (func, wait, resume = true) ->
   timeout = more = false
 
   ->
@@ -108,7 +109,7 @@ _.throttle2 = (func, wait) ->
           more = false
         ), wait
     else
-      more = true
+      more = resume and true
 
 # `_.once2` makes sure a function is executed only once. It works only
 # with asynchronous functions. The function cannot have any input 
@@ -146,19 +147,21 @@ _.once2 = (func) ->
       callback null
 
 
-_.mutex = (func, timeout = 60000) ->
+_.mutex = (func, timeout = 20000) ->
 
   busy = false
-
-  done = ->
-    busy = false
+  i = 0
 
   (args...) ->
     unless busy
       
+      i++
+      current = i
       busy = true
+
+      done = ->
+        busy = false if i == current
       
       func.apply(this, args.concat(done))
 
       setTimeout(done, timeout)
-

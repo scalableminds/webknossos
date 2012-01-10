@@ -1,15 +1,16 @@
 # This provides interpolation mechanics. It's a lot of code. But it
 # should run fast.
 Interpolation =
+  BLACK : 1
   linear : (p0, p1, d) ->
     if p0 == 0 or p1 == 0
-      0
+      @BLACK
     else
       p0 * (1 - d) + p1 * d
   
   bilinear : (p00, p10, p01, p11, d0, d1) ->
     if p00 == 0 or p10 == 0 or p01 == 0 or p11 == 0
-      0
+      @BLACK
     else
       p00 * (1 - d0) * (1 - d1) + 
       p10 * d0 * (1 - d1) + 
@@ -18,7 +19,7 @@ Interpolation =
     
   trilinear : (p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2) ->
     if p000 == 0 or p100 == 0 or p010 == 0 or p110 == 0 or p001 == 0 or p101 == 0 or p011 == 0 or p111 == 0
-      0
+      @BLACK
     else
       p000 * (1 - d0) * (1 - d1) * (1 - d2) +
       p100 * d0 * (1 - d1) * (1 - d2) + 
@@ -40,6 +41,8 @@ interpolate = (x, y, z, get)->
   x0 = x >> 0; x1 = x0 + 1; xd = x - x0     
   y0 = y >> 0; y1 = y0 + 1; yd = y - y0
   z0 = z >> 0; z1 = z0 + 1; zd = z - z0
+
+  # return get(x0, y0, z0)
 
   if xd == 0
     if yd == 0

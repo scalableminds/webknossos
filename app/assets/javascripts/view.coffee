@@ -6,12 +6,6 @@ class _View
 	geometries = []
 	keyboard = null
 
-	#Buffer with all ColorData
-	colorclouds = []
-	setColorclouds = null
-	colorcloudsWidth = 10
-	colorcloudWidth = 128
-
 	#ProgramObjects
 	#One Shader for each Geometry-Type
 	trianglesplaneProgramObject = null
@@ -29,19 +23,19 @@ class _View
 	#constants
 	clippingDistance = 140
 	#camPos = [63.5,63.5,-clippingDistance+63.5]
-	camPos = [0,0,-clippingDistance+63.5]
+	camPos = [0,0,-clippingDistance]
 	moveValueStrafe = 0.1
 	moveValueRotate = 0.02
 
+	perspectiveMatrix = null
+
 
 	constructor: () -> 
-		setColorclouds = new Uint8Array(1000)
 		cvs = document.getElementById('render')
 		engine = new GL_engine cvs, {"antialias":true}
 
-		cam = new Flycam(clippingDistance)
-		cam.move camPos
-		#cam.move [+6.3,0,0]
+		cam = new Flycam()
+		perspectiveMatrix = cam.getMovedNonPersistent camPos
 
 		engine.background [0.9, 0.9 ,0.9 ,1]
 		engine.pointSize 100
@@ -71,32 +65,41 @@ class _View
 	renderFunction = ->
 		makeMovement()
 		#sets view to camera position and direction
-		engine.loadMatrix (M4x4.makeLookAt cam.getPos(), V3.add(cam.getDir(), cam.getPos()) , cam.getUp())
+		engine.loadMatrix (M4x4.makeLookAt [ perspectiveMatrix[12], perspectiveMatrix[13], perspectiveMatrix[14] ],
+			V3.add([ perspectiveMatrix[8], perspectiveMatrix[9], perspectiveMatrix[10] ], 
+				[ perspectiveMatrix[12], perspectiveMatrix[13], perspectiveMatrix[14] ]),
+			[ perspectiveMatrix[4], perspectiveMatrix[5], perspectiveMatrix[6] ])
 		engine.clear()
-
-
 
 		#renders all geometries in geometry-array
 		totalNumberOfVertices = 0
 		for i in [0...geometries.length] by 1
 			g = geometries[i]
 			if g.getClassType() is "Trianglesplane"
-				transMatrix = cam.getMatrixWithoutDistance()
+				console.log "cam: " + cam.toString()
 
+				transMatrix = cam.getMatrix()
+				#console.log "normal: " + g.normalVertices[0] + " " + g.normalVertices[1] + " " + g.normalVertices[2] + 
+				#												g.normalVertices[128*128*3-3] + " " + g.normalVertices[128*128*3-2] + " " + g.normalVertices[128*128*3-1]
 				newVertices = M4x4.transformPointsAffine transMatrix, g.normalVertices
+				#console.log "new: " + newVertices[0] + " " + newVertices[1] + " " + newVertices[2] + 
+				#												newVertices[128*128*3-3] + " " + newVertices[128*128*3-2] + " " + newVertices[128*128*3-1]
 
+				#hsa to be removed later
 				engine.deleteSingleBuffer g.vertices.VBO
-				g.setVertices (View.createArrayBufferObject newVertices), newVertices.length
+				g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
 
 				#sends current position to Model for preloading data
-				Model.Binary.ping cam.getMatrixCentre(), cam.getDir(), null
+				Model.Binary.ping cam.getPos(), cam.getDir(), null
 
 				#sends current position to Model for caching route
-				Model.Route.put cam.getMatrixCentre(), null
+				Model.Route.put cam.getPos(), null
 
 				#get colors for new coords from Model
 				Model.Binary.get(newVertices, (err, colors) ->
 					throw err if err
+					console.log "normal: " + colors[0] + " " + colors[1] + " " + colors[2] + 
+														colors[128*128-3] + " " + colors[128*128-2] + " " + colors[128*128-1]
 					engine.deleteSingleBuffer g.colors.VBO
 					g.setColors (View.createArrayBufferObject colors), colors.length
 				)
@@ -145,6 +148,10 @@ class _View
 	#Apply a single draw (not used right now)
 	draw : ->
 		engine.draw()
+
+	setCam : (position, direction) ->
+		cam.move [position[0], position[1], position[2]]
+		
 
 # #####################
 # MOUSE (not used)

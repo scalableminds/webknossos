@@ -1,4 +1,4 @@
-package REST
+package integration
 
 import org.specs2.mutable._
 import play.api.test._
@@ -26,7 +26,7 @@ object BinaryTest extends Specification {
          * 	3 Dimensional in the following order: x,y,z
          */
         val Some( result ) = routeAndCall( FakeRequest( "GET", "/binary/model/cube" ) )
-        status( result ) must be equalTo ( 200 )
+        status( result ) must be equalTo ( OK )
         contentType( result ) must equalTo( Some( "application/octet-stream" ) )
         contentAsBytes( result ).foldLeft( 0 )( ( b, x ) => b + x ) must be equalTo CubeModel.modelInformation.foldLeft( 0 )( ( b, x ) => b + x )
       }
@@ -54,9 +54,9 @@ object BinaryTest extends Specification {
        * 	</example>
        */
       val Some( result ) = routeAndCall( FakeRequest( GET, "/binary/polygons/cube" ) )
-      status( result ) must be equalTo ( 200 )
+      status( result ) must be equalTo ( OK )
       contentType( result ) must equalTo( Some( "application/json" ) )
-      //contentAsString(result) must be equalTo Json.stringify(toJson( CubeModel.polygons ))
+      contentAsString(result) must be equalTo Json.stringify(toJson( CubeModel.polygons ))
     }
     "return data" in {
       running( FakeApplication() ) {
@@ -79,7 +79,7 @@ object BinaryTest extends Specification {
          * 	produced figure are returned as binary data.
          */
         val Some( result ) = routeAndCall( FakeRequest( GET, "/binary/data/cube?px=0&py=0&pz=0&ax=0&ay=1&az=0" ) )
-        status( result ) must be equalTo ( 200 )
+        status( result ) must be equalTo ( OK )
         contentType( result ) must equalTo( Some( "application/octet-stream" ) )
         contentAsBytes( result ).foldLeft( 0 )( ( b, x ) => b + x ) must be equalTo 0
       }
@@ -87,7 +87,7 @@ object BinaryTest extends Specification {
     "return null block for negative parameters" in {
       running( FakeApplication() ) {
         val Some( result ) = routeAndCall( FakeRequest( GET, "/binary/data/cube?px=173&py=-26&pz=198&ax=-0.9&ay=0.2&az=-0.3" ) )
-        status( result ) must be equalTo ( 200 )
+        status( result ) must be equalTo ( OK )
         contentType( result ) must equalTo( Some( "application/octet-stream" ) )
         contentAsBytes( result ).foldLeft( 0 )( ( b, x ) => b + x ) must be equalTo 0
       }

@@ -28,7 +28,7 @@ object Route extends Controller with Secured {
         "position" -> toJson( start.porection.position ),
         "direction" -> toJson( start.porection.direction ) )
       OriginPosDir.incUsed( start )
-      Ok( toJson( data ) ).as( "application/json" )
+      Ok( toJson( data ) )
   }
 
   def blackBox( id: String ) = Action(parse.json(maxLength = 1024)) {

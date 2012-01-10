@@ -9,8 +9,9 @@ class _Controller
 			unless err
 				position = pos
 				direction = dir
+				View.setCam pos, dir
 				GeometryFactory.createTrianglesplane(128, 0, "trianglesplane")
-				GeometryFactory.createTrianglesplane(128, 1, "trianglesplane")
+				#GeometryFactory.createTrianglesplane(128, 1, "trianglesplane")
 			else
 				throw err
 		)

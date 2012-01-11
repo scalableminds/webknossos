@@ -28,6 +28,9 @@ class GL_engine
 
 	projectionMatrix = null
 
+	#constans
+	SUBARRAY_LENGTH = 11
+
 ############################################################################
 	#public Properties
 	VERSION = 0.1
@@ -207,7 +210,7 @@ class GL_engine
 			
 			if geometry.hasColors
 				if gl.getAttribLocation(shaderProgram, "aColor") isnt -1
-					vertexAttribPointer "aColor", 1, geometry.colors.VBO
+					vertexAttribPointer "aColor", SUBARRAY_LENGTH, geometry.colors.VBO
 			
 
 			if gl.getAttribLocation(shaderProgram, "aVertex") isnt -1

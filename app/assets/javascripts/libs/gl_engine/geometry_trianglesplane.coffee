@@ -4,12 +4,36 @@ class Trianglesplane extends Geometry
 		@vertexIndex = 
 			EBO : null
 			length : null	
+
+		@interpolationFront = 
+			VBO : null
+			length : null	
+
+		@interpolationBack = 
+			VBO : null
+			length : null	
+
+		@interpolationOffset = 
+			VBO : null
+			length : null							
 		
 		@type = "Trianglesplane"
 
 	setVertexIndex : (data, len) -> 
 		@vertexIndex.EBO = data
 		@vertexIndex.length = len
+
+	setInterpolationFront : (data, len) -> 
+		@interpolationBack.VBO = data
+		@interpolationBack.length = len
+		
+	setInterpolationBack : (data, len) -> 
+		@interpolationBack.VBO = data
+		@interpolationBack.length = len
+		
+	setInterpolationOffset : (data, len) -> 
+		@interpolationOffset.VBO = data
+		@interpolationOffset.length = len						
 
 	setNormalVertices : (data, width) -> 
 		@normalVertices = data

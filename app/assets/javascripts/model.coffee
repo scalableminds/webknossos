@@ -152,8 +152,24 @@ Model.Binary =
 
 
 	# This method allows you to query the data structure. Give us an array of
-	# vertices and we'll give you the corresponding color values. We'll even
-	# do some interpolation so the result is smoother.
+	# vertices and we'll give you the stuff you need to interpolate data.
+	#
+	# We'll figure out how many color values you need to do interpolation.
+	# That'll be 1, 2, 4 or 8 values. They represent greyscale colors ranging from
+	# 1 to 2. Additionally, you need three delta values xd, yd and zd which are in
+	# the range from 0 to 1. Then you should be able to perform a trilinear 
+	# interpolation. To sum up, you get 11 floating point values for each point.
+	# We spilt those in three array buffers to have them used in WebGL shaders as 
+	# vec4 and vec3 attributes.
+	# 
+	# While processing the data several errors can occur. Please note that 
+	# processing of a point halts if any of the required color values is wrong.
+	# You can determine any errors by examining the first value of each point.
+	# Feel free to color code those errors as you wish.
+	#
+	# *   `-2`: negative coordinates given
+	# *   `-1`: block fault
+	# *   `0`: point fault
 	# 
 	# Parameters:
 	# 
@@ -164,18 +180,20 @@ Model.Binary =
 	#
 	# Callback Parameters:
 	# 
-	# *   `colors` is a `Float32Array` containing the color values of the requested
-	# points.
+	# *   `interpolationFront` is a `Float32Array` with the first 4 color values of
+	# each points. The first value would contain any error codes.
+	# *   `interpolationBack` is a `Float32Array` with the second 4 color values of
+	# each points.
+	# *   `interpolationDelta` is a `Float32Array` with the delta values.
 	#
 	get : (vertices, callback) ->
 
-		console.time("get")
-		
 		interpolationFront = new Float32Array(vertices.length / 3 << 2)
-		interpolationBack = new Float32Array(vertices.length / 3 << 2)
-		interpolationOffset = new Float32Array(vertices.length)
+		interpolationBack  = new Float32Array(vertices.length / 3 << 2)
+		interpolationDelta = new Float32Array(vertices.length)
 		
 		if (_cube = @cube)
+			
 			[_offset0, _offset1, _offset2] = @cubeOffset
 			_size0 = @cubeSize[0]
 			_size01 = _size0 * @cubeSize[1]
@@ -188,13 +206,18 @@ Model.Binary =
 				y = vertices[i + 1]
 				z = vertices[i + 2]
 
-				find2(x, y, z, interpolationFront, interpolationBack, interpolationOffset, j4, j3, _cube, _offset0, _offset1, _offset2, _size0, _size01)
+				find2(
+					x, y, z, 
+					interpolationFront, interpolationBack, interpolationDelta, 
+					j4, j3, 
+					_cube, 
+					_offset0, _offset1, _offset2, 
+					_size0, _size01)
 
 				j3 += 3
 				j4 += 4
 		
-		console.timeEnd("get")
-		callback(null, interpolationFront, interpolationBack, interpolationOffset) if callback
+		callback(null, interpolationFront, interpolationBack, interpolationDelta) if callback
 
 	
 
@@ -235,6 +258,7 @@ Model.Binary =
 			preloadCheckHits     = 0
 			preloadCheckCount    = 0
 			preloadCheckVertices = M4x4.moveVertices _preloadVertices, position, direction
+
 			for i in [0...preloadCheckVertices.length] by 3
 				x = preloadCheckVertices[i]
 				y = preloadCheckVertices[i + 1]
@@ -242,7 +266,7 @@ Model.Binary =
 
 				if x >= 0 and y >= 0 and z >= 0 
 					preloadCheckCount++
-					preloadCheckHits++ if @value(x, y, z) > 0
+					preloadCheckHits++ if @getColor(x, y, z) > 0
 			
 			if preloadCheckHits / preloadCheckCount < @PRELOAD_TOLERANCE
 				@pull(position, direction, done)
@@ -291,7 +315,7 @@ Model.Binary =
 					y = vertices[i * 3 + 1]
 					z = vertices[i * 3 + 2]
 					if x >= 0 and y >= 0 and z >= 0
-						@value(x, y, z, colors[i] / 256 + 1)
+						@setColor(x, y, z, colors[i] / 256 + 1)
 
 				callback null if callback
 
@@ -316,14 +340,12 @@ Model.Binary =
 	# `cube` is the main array. It actually represents a cuboid 
 	# containing all the buckets. `cubeSize` and `cubeOffset` 
 	# describe its dimension.
+	# Each bucket is 64x64x64 large. This isnt really variable
+	# because the bitwise operations require the width to be a
+	# a power of 2.
 	cube : null
 	cubeSize : null
 	cubeOffset : null
-
-	# Each bucket is 64x64x64 large.
-	# Implementation note: This isn't really a variable and hard-coded
-	# all over the place for performance concerns.
-	BUCKET_WIDTH : 1 << 6
 
 	# Retuns the index of the bucket (in the cuboid) which holds the
 	# point you're looking for.
@@ -332,6 +354,9 @@ Model.Binary =
 		_offset = @cubeOffset
 		_size   = @cubeSize
 
+		# (x / 64) - offset.x + 
+		# ((y / 64) - offset.y) * size.x + 
+		# ((z / 64) - offset.z) * size.x * size.y
 		((x >> 6) - _offset[0]) + 
 		((y >> 6) - _offset[1]) * _size[0] + 
 		((z >> 6) - _offset[2]) * _size[0] * _size[1]
@@ -339,10 +364,10 @@ Model.Binary =
 	# Returns the index of the point (in the bucket) you're looking for.
 	pointIndex : (x, y, z) ->
 		
-		# x % 64 + y % 64 * 64 + z % 64 * 64^2
-		(x & -64) +
-		((y & -64) << 6) +
-		((z & -64) << 12)
+		# x % 64 + (y % 64) * 64 + (z % 64) * 64^2
+		(x & 63) +
+		((y & 63) << 6) +
+		((z & 63) << 12)
 
 	# Want to add data? Make sure the cuboid is big enough.
 	# This one is for passing real point coordinates.
@@ -406,84 +431,39 @@ Model.Binary =
 		@cubeOffset = cubeOffset
 		@cubeSize   = cubeSize
 
-	# Work in progress
-	getColor2 : (x, y, z, xd, yd, zd) ->
-
-		unless (_cube = @cube)
-			return 0
-
-		_offset = @cubeOffset
-		_size   = @cubeSize
-
-		[_offset0, _offset1, _offset2] = _offset
-		[_size0, _size1, _size2] = _size
-
-		_size01 = _size0 * _size1
-
-		_bucketIndex000 = 
-			((x >> 6) - _offset0) + 
-			((y >> 6) - _offset1) * _size0 + 
-			((z >> 6) - _offset2) * _size01
-		_pointIndex000 = 
-			((x & -64)) +
-			((y & -64) << 6) +
-			((z & -64) << 12)
-		
-			
-
-
-	# A faster implementation of `Model.Binary.value`, but only for
-	# getting color values.
+	# Getting a color value from the data structure.s
+	# Color values range from 1 to 2 -- with black being 0 and white 1.
 	getColor : (x, y, z) ->
 		
 		unless (_cube = @cube)
 			return 0
-
-		_offset = @cubeOffset
-		_size   = @cubeSize
-
-		_bucketIndex = 
-			((x >> 6) - _offset[0]) + 
-			((y >> 6) - _offset[1]) * _size[0] + 
-			((z >> 6) - _offset[2]) * _size[0] * _size[1]
 		
-		_pointIndex = 
-			((x & -64)) +
-			((y & -64) << 6) +
-			((z & -64) << 12)
-		
-		if (_bucket = _cube[_bucketIndex])
-			_bucket[_pointIndex]
+		if (_bucket = _cube[@bucketIndex(x, y, z)])
+			_bucket[@pointIndex(x, y, z)]
 		else
 			0
 
-	# Get or set a color value of a point.
-	# Keep in mind that 0 represents a undefined value.
-	# Real color values range from 1 to 2 -- with black being 0 and white 1.
-	value : (x, y, z, newValue) ->
+	# Set a color value of a point.
+	# Color values range from 1 to 2 -- with black being 0 and white 1.
+	setColor : (x, y, z, value) ->
 
 		_cube = @cube
 
-		unless _cube?
-			throw "cube fault" if newValue?
-			return 0
+		throw "cube fault" unless _cube?
 
 		bucketIndex = @bucketIndex(x, y, z)
 		bucket      = _cube[bucketIndex]
 
-		unless newValue?
-			if bucket?
-				bucket[@pointIndex(x, y, z)]
-			else
-				0
+		if 0 <= bucketIndex < @cube.length
+			unless bucket?
+				bucket = _cube[bucketIndex] = new Float32Array(1 << 18)
+			bucket[@pointIndex(x, y, z)] = value
 		else
-			if 0 <= bucketIndex < @cube.length
-				unless bucket?
-					bucket = _cube[bucketIndex] = new Float32Array(1 << 18)
-				bucket[@pointIndex(x, y, z)] = newValue
-			else
-				# Please handle cuboid expansion explicitly.
-				throw "cube fault"
+			# Please handle cuboid expansion explicitly.
+			throw "cube fault"
+
+
+		
 
 # This loads and caches meshes.
 #

@@ -136,9 +136,9 @@ nextPoint = (x0, y0, z0, xd, yd, zd, _cube, bucketIndex000, pointIndex000, _size
 # -2 : negative coordinates
 # -1 : bucket fault
 # 0  : point fault
-find2 = (x, y, z, output, i, _cube, _offset0, _offset1, _offset2, _size0, _size01) ->
+find2 = (x, y, z, interpolationFront, interpolationBack, interpolationOffset, j4, j3, _cube, _offset0, _offset1, _offset2, _size0, _size01) ->
 
-  return output[i] = -2 if x < 0 or y < 0 or z < 0
+  return interpolationFront[j4] = -2 if x < 0 or y < 0 or z < 0
 
   # Bitwise operations are faster than javascript's native rounding functions.
   x0 = x >> 0; xd = x - x0     
@@ -156,89 +156,87 @@ find2 = (x, y, z, output, i, _cube, _offset0, _offset1, _offset2, _size0, _size0
     ((z0 & 63) << 12)
   
   output0 = nextPoint(x0, y0, z0, false, false, false, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-  return output[i] = output0 if output0 <= 0
+  return interpolationFront[j4] = output0 if output0 <= 0
 
   if xd == 0
     if yd == 0
       unless zd == 0
         #linear z
         output1 = nextPoint(x0, y0, z0, false, false, true, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output1 if output1 <= 0
+        return interpolationFront[j4] = output1 if output1 <= 0
     else
       if zd == 0
         #linear y
         output1 = nextPoint(x0, y0, z0, false, true, false, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output1 if output1 <= 0
+        return interpolationFront[j4] = output1 if output1 <= 0
       else
         #bilinear y,z
         output1 = nextPoint(x0, y0, z0, false, true, false, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output1 if output1 <= 0
+        return interpolationFront[j4] = output1 if output1 <= 0
 
         output2 = nextPoint(x0, y0, z0, false, false, true, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output2 if output2 <= 0
+        return interpolationFront[j4] = output2 if output2 <= 0
 
         output3 = nextPoint(x0, y0, z0, false, true, true,  _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output3 if output3 <= 0
+        return interpolationFront[j4] = output3 if output3 <= 0
   else
     if yd == 0
       if zd == 0
         #linear x
         output1 = nextPoint(x0, y0, z0, true, false, false, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output1 if output1 <= 0
+        return interpolationFront[j4] = output1 if output1 <= 0
       else
         #bilinear x,z
         output1 = nextPoint(x0, y0, z0, true, false, false, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output1 if output1 <= 0
+        return interpolationFront[j4] = output1 if output1 <= 0
 
         output2 = nextPoint(x0, y0, z0, false, false, true, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output2 if output2 <= 0
+        return interpolationFront[j4] = output2 if output2 <= 0
 
         output3 = nextPoint(x0, y0, z0, true, false, true,  _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output3 if output3 <= 0
+        return interpolationFront[j4] = output3 if output3 <= 0
     else
       if zd == 0
         #bilinear x,y
         output1 = nextPoint(x0, y0, z0, true, false, false, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output1 if output1 <= 0
+        return interpolationFront[j4] = output1 if output1 <= 0
 
         output2 = nextPoint(x0, y0, z0, false, true, false, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output2 if output2 <= 0
+        return interpolationFront[j4] = output2 if output2 <= 0
 
         output3 = nextPoint(x0, y0, z0, true, true, false,  _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output3 if output3 <= 0
+        return interpolationFront[j4] = output3 if output3 <= 0
       else
         #trilinear x,y,z
         output1 = nextPoint(x0, y0, z0, true, false, false, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output1 if output1 <= 0
+        return interpolationFront[j4] = output1 if output1 <= 0
 
         output2 = nextPoint(x0, y0, z0, false, true, false, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output2 if output2 <= 0
+        return interpolationFront[j4] = output2 if output2 <= 0
 
         output3 = nextPoint(x0, y0, z0, true, true, false,  _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output3 if output3 <= 0
+        return interpolationFront[j4] = output3 if output3 <= 0
 
         output4 = nextPoint(x0, y0, z0, false, false, true, _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output4 if output4 <= 0
+        return interpolationFront[j4] = output4 if output4 <= 0
 
         output5 = nextPoint(x0, y0, z0, true, false, true,  _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output5 if output5 <= 0
+        return interpolationFront[j4] = output5 if output5 <= 0
 
         output6 = nextPoint(x0, y0, z0, false, true, true,  _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output6 if output6 <= 0
+        return interpolationFront[j4] = output6 if output6 <= 0
 
         output7 = nextPoint(x0, y0, z0, true, true, true,   _cube, bucketIndex000, pointIndex000, _size0, _size01)
-        return output[i] = output7 if output7 <= 0
+        return interpolationFront[j4] = output7 if output7 <= 0
 
-  output[i]      = output0
-  output[i + 1]  = output1
-  output[i + 2]  = output2
-  output[i + 3]  = output3
-  output[i + 4]  = output4
-  output[i + 5]  = output5
-  output[i + 6]  = output6
-  output[i + 7]  = output7
-  output[i + 8]  = xd
-  output[i + 9]  = yd
-  output[i + 10] = zd
-
-  output
+  interpolationFront[j4]      = output0
+  interpolationFront[j4 + 1]  = output1
+  interpolationFront[j4 + 2]  = output2
+  interpolationFront[j4 + 3]  = output3
+  interpolationBack[j4]       = output4
+  interpolationBack[j4 + 1]   = output5
+  interpolationBack[j4 + 2]   = output6
+  interpolationBack[j4 + 3]   = output7
+  interpolationOffset[j3 + 0] = xd
+  interpolationOffset[j3 + 1] = yd
+  interpolationOffset[j3 + 2] = zd

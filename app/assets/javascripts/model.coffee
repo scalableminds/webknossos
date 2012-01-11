@@ -171,13 +171,16 @@ Model.Binary =
 
 		console.time("get")
 		
-		colors = new Float32Array(vertices.length / 3 * 11 >> 0)
+		interpolationFront = new Float32Array(vertices.length / 3 << 2)
+		interpolationBack = new Float32Array(vertices.length / 3 << 2)
+		interpolationOffset = new Float32Array(vertices.length)
 		
 		if (_cube = @cube)
 			[_offset0, _offset1, _offset2] = @cubeOffset
 			_size0 = @cubeSize[0]
 			_size01 = _size0 * @cubeSize[1]
-			j = 0
+			j3 = 0
+			j4 = 0
 
 			for i in [0...vertices.length] by 3
 
@@ -185,12 +188,13 @@ Model.Binary =
 				y = vertices[i + 1]
 				z = vertices[i + 2]
 
-				find2(x, y, z, colors, j, _cube, _offset0, _offset1, _offset2, _size0, _size01)
+				find2(x, y, z, interpolationFront, interpolationBack, interpolationOffset, j4, j3, _cube, _offset0, _offset1, _offset2, _size0, _size01)
 
-				j += 11
+				j3 += 3
+				j4 += 4
 		
 		console.timeEnd("get")
-		callback(null, colors) if callback
+		callback(null, interpolationFront, interpolationBack, interpolationOffset) if callback
 
 	
 

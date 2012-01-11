@@ -170,19 +170,24 @@ Model.Binary =
 	get : (vertices, callback) ->
 
 		console.time("get")
-		_this  = @
-		_value = (x0, y0, z0) ->
-			_this.getColor(x0, y0, z0)
+		
+		colors = new Float32Array(vertices.length / 3 * 11 >> 0)
+		
+		if (_cube = @cube)
+			[_offset0, _offset1, _offset2] = @cubeOffset
+			_size0 = @cubeSize[0]
+			_size01 = _size0 * @cubeSize[1]
+			j = 0
 
-		colors = new Float32Array(vertices.length / 3 >> 0)
+			for i in [0...vertices.length] by 3
 
-		for i in [0...vertices.length] by 3
+				x = vertices[i]
+				y = vertices[i + 1]
+				z = vertices[i + 2]
 
-			x = vertices[i]
-			y = vertices[i + 1]
-			z = vertices[i + 2]
+				find2(x, y, z, colors, j, _cube, _offset0, _offset1, _offset2, _size0, _size01)
 
-			colors[i / 3] = interpolate(x, y, z, _value)
+				j += 11
 		
 		console.timeEnd("get")
 		callback(null, colors) if callback
@@ -398,7 +403,7 @@ Model.Binary =
 		@cubeSize   = cubeSize
 
 	# Work in progress
-	getColor2 : (x, y, z, c) ->
+	getColor2 : (x, y, z, xd, yd, zd) ->
 
 		unless (_cube = @cube)
 			return 0
@@ -517,21 +522,16 @@ Model.Trianglesplane =
 
 		for y in [0...width]
 			for x in [0...width]
+				currentIndex2 = currentIndex << 1
+
 				# We don't draw triangles with the last point of an axis.
 				if y < (width - 1) and x < (width - 1)
-					indices[currentIndex * 2 + 0] = currentPoint
-					indices[currentIndex * 2 + 1] = currentPoint + 1 
-					indices[currentIndex * 2 + 2] = currentPoint + width
-					indices[currentIndex * 2 + 3] = currentPoint + width
-					indices[currentIndex * 2 + 4] = currentPoint + width + 1
-					indices[currentIndex * 2 + 5] = currentPoint + 1
-				else
-					indices[currentIndex * 2 + 0] = 0
-					indices[currentIndex * 2 + 1] = 0
-					indices[currentIndex * 2 + 2] = 0
-					indices[currentIndex * 2 + 3] = 0
-					indices[currentIndex * 2 + 4] = 0
-					indices[currentIndex * 2 + 5] = 0
+					indices[currentIndex2 + 0] = currentPoint
+					indices[currentIndex2 + 1] = currentPoint + 1 
+					indices[currentIndex2 + 2] = currentPoint + width
+					indices[currentIndex2 + 3] = currentPoint + width
+					indices[currentIndex2 + 4] = currentPoint + width + 1
+					indices[currentIndex2 + 5] = currentPoint + 1
 
 				vertices[currentIndex + 0] = x
 				vertices[currentIndex + 1] = y

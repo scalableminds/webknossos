@@ -24,8 +24,8 @@ class Trianglesplane extends Geometry
 		@vertexIndex.length = len
 
 	setInterpolationFront : (data, len) -> 
-		@interpolationBack.VBO = data
-		@interpolationBack.length = len
+		@interpolationFront.VBO = data
+		@interpolationFront.length = len
 		
 	setInterpolationBack : (data, len) -> 
 		@interpolationBack.VBO = data

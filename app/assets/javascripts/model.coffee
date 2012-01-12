@@ -152,8 +152,24 @@ Model.Binary =
 
 
 	# This method allows you to query the data structure. Give us an array of
-	# vertices and we'll give you the corresponding color values. We'll even
-	# do some interpolation so the result is smoother.
+	# vertices and we'll give you the stuff you need to interpolate data.
+	#
+	# We'll figure out how many color values you need to do interpolation.
+	# That'll be 1, 2, 4 or 8 values. They represent greyscale colors ranging from
+	# 1 to 2. Additionally, you need three delta values xd, yd and zd which are in
+	# the range from 0 to 1. Then you should be able to perform a trilinear 
+	# interpolation. To sum up, you get 11 floating point values for each point.
+	# We spilt those in three array buffers to have them used in WebGL shaders as 
+	# vec4 and vec3 attributes.
+	# 
+	# While processing the data several errors can occur. Please note that 
+	# processing of a point halts if any of the required color values is wrong.
+	# You can determine any errors by examining the first value of each point.
+	# Feel free to color code those errors as you wish.
+	#
+	# *   `-2`: negative coordinates given
+	# *   `-1`: block fault
+	# *   `0`: point fault
 	# 
 	# Parameters:
 	# 
@@ -164,28 +180,44 @@ Model.Binary =
 	#
 	# Callback Parameters:
 	# 
-	# *   `colors` is a `Float32Array` containing the color values of the requested
-	# points.
+	# *   `interpolationFront` is a `Float32Array` with the first 4 color values of
+	# each points. The first value would contain any error codes.
+	# *   `interpolationBack` is a `Float32Array` with the second 4 color values of
+	# each points.
+	# *   `interpolationDelta` is a `Float32Array` with the delta values.
 	#
 	get : (vertices, callback) ->
 
-		console.time("get")
-		_this  = @
-		_value = (x0, y0, z0) ->
-			_this.getColor(x0, y0, z0)
-
-		colors = new Float32Array(vertices.length / 3 >> 0)
-
-		for i in [0...vertices.length] by 3
-
-			x = vertices[i]
-			y = vertices[i + 1]
-			z = vertices[i + 2]
-
-			colors[i / 3] = interpolate(x, y, z, _value)
+		interpolationFront = new Float32Array(vertices.length / 3 << 2)
+		interpolationBack  = new Float32Array(vertices.length / 3 << 2)
+		interpolationDelta = new Float32Array(vertices.length)
 		
-		console.timeEnd("get")
-		callback(null, colors) if callback
+		if (_cube = @cube)
+			
+			[_offset0, _offset1, _offset2] = @cubeOffset
+			_size0 = @cubeSize[0]
+			_size01 = _size0 * @cubeSize[1]
+			j3 = 0
+			j4 = 0
+
+			for i in [0...vertices.length] by 3
+
+				x = vertices[i]
+				y = vertices[i + 1]
+				z = vertices[i + 2]
+
+				find2(
+					x, y, z, 
+					interpolationFront, interpolationBack, interpolationDelta, 
+					j4, j3, 
+					_cube, 
+					_offset0, _offset1, _offset2, 
+					_size0, _size01)
+
+				j3 += 3
+				j4 += 4
+		
+		callback(null, interpolationFront, interpolationBack, interpolationDelta) if callback
 
 	
 
@@ -226,6 +258,7 @@ Model.Binary =
 			preloadCheckHits     = 0
 			preloadCheckCount    = 0
 			preloadCheckVertices = M4x4.moveVertices _preloadVertices, position, direction
+
 			for i in [0...preloadCheckVertices.length] by 3
 				x = preloadCheckVertices[i]
 				y = preloadCheckVertices[i + 1]
@@ -233,7 +266,7 @@ Model.Binary =
 
 				if x >= 0 and y >= 0 and z >= 0 
 					preloadCheckCount++
-					preloadCheckHits++ if @value(x, y, z) > 0
+					preloadCheckHits++ if @getColor(x, y, z) > 0
 			
 			if preloadCheckHits / preloadCheckCount < @PRELOAD_TOLERANCE
 				@pull(position, direction, done)
@@ -282,7 +315,7 @@ Model.Binary =
 					y = vertices[i * 3 + 1]
 					z = vertices[i * 3 + 2]
 					if x >= 0 and y >= 0 and z >= 0
-						@value(x, y, z, colors[i] / 256 + 1)
+						@setColor(x, y, z, colors[i] / 256 + 1)
 
 				callback null if callback
 
@@ -307,47 +340,46 @@ Model.Binary =
 	# `cube` is the main array. It actually represents a cuboid 
 	# containing all the buckets. `cubeSize` and `cubeOffset` 
 	# describe its dimension.
+	# Each bucket is 64x64x64 large. This isnt really variable
+	# because the bitwise operations require the width to be a
+	# a power of 2.
 	cube : null
 	cubeSize : null
 	cubeOffset : null
-
-	# Each bucket is 64x64x64 large.
-	BUCKET_WIDTH : 64
 
 	# Retuns the index of the bucket (in the cuboid) which holds the
 	# point you're looking for.
 	bucketIndex : (x, y, z) ->
 		
-		_bucket_width = @BUCKET_WIDTH
-		_offset       = @cubeOffset
-		_size         = @cubeSize
+		_offset = @cubeOffset
+		_size   = @cubeSize
 
-		(x / _bucket_width - _offset[0] >> 0) + 
-		(y / _bucket_width - _offset[1] >> 0) * _size[0] + 
-		(z / _bucket_width - _offset[2] >> 0) * _size[0] * _size[1]
+		# (x / 64) - offset.x + 
+		# ((y / 64) - offset.y) * size.x + 
+		# ((z / 64) - offset.z) * size.x * size.y
+		((x >> 6) - _offset[0]) + 
+		((y >> 6) - _offset[1]) * _size[0] + 
+		((z >> 6) - _offset[2]) * _size[0] * _size[1]
 	
 	# Returns the index of the point (in the bucket) you're looking for.
 	pointIndex : (x, y, z) ->
 		
-		_bucket_width = @BUCKET_WIDTH
-
-		(x % _bucket_width) +
-		(y % _bucket_width) * _bucket_width +
-		(z % _bucket_width) * _bucket_width * _bucket_width
+		# x % 64 + (y % 64) * 64 + (z % 64) * 64^2
+		(x & 63) +
+		((y & 63) << 6) +
+		((z & 63) << 12)
 
 	# Want to add data? Make sure the cuboid is big enough.
 	# This one is for passing real point coordinates.
 	extendPoints : (x_min, y_min, z_min, x_max, y_max, z_max) ->
 		
-		_bucket_width = @BUCKET_WIDTH
-
 		@extendCube(
-			x_min / _bucket_width >> 0,
-			y_min / _bucket_width >> 0,
-			x_min / _bucket_width >> 0,
-			x_max / _bucket_width >> 0,
-			y_max / _bucket_width >> 0,
-			z_max / _bucket_width >> 0
+			x_min >> 6, # x_min / 64
+			y_min >> 6,
+			x_min >> 6,
+			x_max >> 6,
+			y_max >> 6,
+			z_max >> 6
 		)
 	
 	# And this one is for passing bucket coordinates.
@@ -399,57 +431,39 @@ Model.Binary =
 		@cubeOffset = cubeOffset
 		@cubeSize   = cubeSize
 
+	# Getting a color value from the data structure.s
+	# Color values range from 1 to 2 -- with black being 0 and white 1.
 	getColor : (x, y, z) ->
 		
 		unless (_cube = @cube)
 			return 0
-
-		_bucket_width = @BUCKET_WIDTH
-		_offset       = @cubeOffset
-		_size         = @cubeSize
-
-		_bucketIndex = 
-			(x / _bucket_width - _offset[0]) + 
-			(y / _bucket_width - _offset[1]) * _size[0] + 
-			(z / _bucket_width - _offset[2]) * _size[0] * _size[1] >> 0
-		_pointIndex = 
-			(x % _bucket_width) +
-			(y % _bucket_width) * _bucket_width +
-			(z % _bucket_width) * _bucket_width * _bucket_width
 		
-		if (_bucket = _cube[_bucketIndex])
-			_bucket[_pointIndex]
+		if (_bucket = _cube[@bucketIndex(x, y, z)])
+			_bucket[@pointIndex(x, y, z)]
 		else
 			0
 
-	# Get or set a color value of a point.
-	# Keep in mind that 0 represents a undefined value.
-	# Real color values range from 1 to 2 -- with black being 0 and white 1.
-	value : (x, y, z, newValue) ->
+	# Set a color value of a point.
+	# Color values range from 1 to 2 -- with black being 0 and white 1.
+	setColor : (x, y, z, value) ->
 
 		_cube = @cube
 
-		unless _cube?
-			throw "cube fault" if newValue?
-			return 0
+		throw "cube fault" unless _cube?
 
 		bucketIndex = @bucketIndex(x, y, z)
 		bucket      = _cube[bucketIndex]
 
-		unless newValue?
-			if bucket?
-				bucket[@pointIndex(x, y, z)]
-			else
-				0
+		if 0 <= bucketIndex < @cube.length
+			unless bucket?
+				bucket = _cube[bucketIndex] = new Float32Array(1 << 18)
+			bucket[@pointIndex(x, y, z)] = value
 		else
-			if 0 <= bucketIndex < @cube.length
-				unless bucket?
-					_bucket_width = @BUCKET_WIDTH
-					bucket = _cube[bucketIndex] = new Float32Array(_bucket_width * _bucket_width * _bucket_width)
-				bucket[@pointIndex(x, y, z)] = newValue
-			else
-				# Please handle cuboid expansion explicitly.
-				throw "cube fault"
+			# Please handle cuboid expansion explicitly.
+			throw "cube fault"
+
+
+		
 
 # This loads and caches meshes.
 #
@@ -492,21 +506,16 @@ Model.Trianglesplane =
 
 		for y in [0...width]
 			for x in [0...width]
+				currentIndex2 = currentIndex << 1
+
 				# We don't draw triangles with the last point of an axis.
 				if y < (width - 1) and x < (width - 1)
-					indices[currentIndex * 2 + 0] = currentPoint
-					indices[currentIndex * 2 + 1] = currentPoint + 1 
-					indices[currentIndex * 2 + 2] = currentPoint + width
-					indices[currentIndex * 2 + 3] = currentPoint + width
-					indices[currentIndex * 2 + 4] = currentPoint + width + 1
-					indices[currentIndex * 2 + 5] = currentPoint + 1
-				else
-					indices[currentIndex * 2 + 0] = 0
-					indices[currentIndex * 2 + 1] = 0
-					indices[currentIndex * 2 + 2] = 0
-					indices[currentIndex * 2 + 3] = 0
-					indices[currentIndex * 2 + 4] = 0
-					indices[currentIndex * 2 + 5] = 0
+					indices[currentIndex2 + 0] = currentPoint
+					indices[currentIndex2 + 1] = currentPoint + 1 
+					indices[currentIndex2 + 2] = currentPoint + width
+					indices[currentIndex2 + 3] = currentPoint + width
+					indices[currentIndex2 + 4] = currentPoint + width + 1
+					indices[currentIndex2 + 5] = currentPoint + 1
 
 				vertices[currentIndex + 0] = x
 				vertices[currentIndex + 1] = y

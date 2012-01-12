@@ -28,6 +28,7 @@ class GL_engine
 
 	projectionMatrix = null
 
+
 ############################################################################
 	#public Properties
 	VERSION = 0.1
@@ -207,16 +208,26 @@ class GL_engine
 			
 			if geometry.hasColors
 				if gl.getAttribLocation(shaderProgram, "aColor") isnt -1
-					vertexAttribPointer "aColor", 1, geometry.colors.VBO
+					vertexAttribPointer "aColor", 3, geometry.colors.VBO
 			
 
 			if gl.getAttribLocation(shaderProgram, "aVertex") isnt -1
 				vertexAttribPointer "aVertex", 3, geometry.vertices.VBO
 
 			# render everything to screen
-			if geometry.getClassType() is "Mesh" or "Trianglesplane"
+			if geometry.getClassType() is "Trianglesplane"
+				if gl.getAttribLocation(shaderProgram, "interpolationFront") isnt -1
+					vertexAttribPointer "interpolationFront", 4, geometry.interpolationFront.VBO
+				if gl.getAttribLocation(shaderProgram, "interpolationBack") isnt -1
+					vertexAttribPointer "interpolationBack", 4, geometry.interpolationBack.VBO
+				if gl.getAttribLocation(shaderProgram, "interpolationOffset") isnt -1
+					vertexAttribPointer "interpolationOffset", 3, geometry.interpolationOffset.VBO
 				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
 				gl.drawElements gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0
+				
+				disableVertexAttribPointer "interpolationFront"	
+				disableVertexAttribPointer "interpolationBack"
+				disableVertexAttribPointer "interpolationOffset"
 			else
 				gl.drawArrays gl.POINTS, 0, geometry.vertices.length / 3
 

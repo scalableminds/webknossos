@@ -19,7 +19,9 @@ def locate(pattern, root=os.curdir):
 def parseCommandLine():
     parser = OptionParser()
     parser.add_option("-p", "--path", dest="path", help="path to obj files",  default=".")
-    parser.add_option("-c", "--color", dest="color", help="enable colors for vertices", default=0)
+    parser.add_option("-c", "--colorsEnabled", dest="colorsEnabled", help="enable colors for vertices", default=1)
+    parser.add_option("-s", "--colorSize", dest="colorSize", help="define number color values per vertex (1=float, 3=vec3)", default=1)
+
 
     (options, args) = parser.parse_args()
     return options

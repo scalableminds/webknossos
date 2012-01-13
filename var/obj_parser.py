@@ -4,7 +4,7 @@ from utility import *
 import struct
 
 
-def parseObjFile(objFile, enableColor):
+def parseObjFile(objFile, options):
     print "converting %s" % objFile
     myfile = open(objFile, "r")
 
@@ -43,7 +43,7 @@ def parseObjFile(objFile, enableColor):
         # HANDLE VERTICES    
         elif line[0] == "v":
             vertices += map(float,spacereg.split(line)[1:])
-            colors += COLORS[currentColor]*3
+            colors += COLORS[currentColor]*options.colorSize;
 
         # ASSOCIATE FACES TO VERTICES AND NORMALS
         # SUBTRACT 1 BECAUSE BUFFER INDEX STARTS AT 0
@@ -86,14 +86,14 @@ def parseObjFile(objFile, enableColor):
 
     output = open(objFile[:-4], 'wb')
     
-    if enableColor:
+    if options.colorsEnabled:
         output.write(struct.pack('III', len(vertices), len(colors), len(faces)))
     else:
         output.write(struct.pack('III', len(vertices), len(vertices), len(faces)))
     
     output.write(struct.pack('f' * len(vertices), *vertices))
     
-    if enableColor:
+    if options.colorsEnabled:
         output.write(struct.pack('f' * len(colors), *colors))
     else:
         output.write(struct.pack('f' * len(vertices), *([1,0,0] * (len(vertices) / 3))))
@@ -110,7 +110,7 @@ def parseObjFile(objFile, enableColor):
     output.write("faces=" + str(faces) + ";\n")
     output.write("normals=" + str(normals) + ";\n")
     output.write("normalsPointer=" + str(normalsPointer) + ";\n")
-    if enableColor:
+    if options.colorsEnabled:
         output.write("colors=" + str(colors)+ ";\n")
     else:
         output.write("textures=" + str(textures) + ";\n")
@@ -132,7 +132,7 @@ def triangulate(l):
 def main():
     options = parseCommandLine()
     for objFile in locate("*.obj", options.path):
-        parseObjFile(objFile, options.color)
+        parseObjFile(objFile, options)
 
 if __name__ == '__main__':
     main()

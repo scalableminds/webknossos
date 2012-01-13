@@ -17,7 +17,6 @@ $ ->
       "/assets/javascripts/core_ext.js",
       "/assets/javascripts/interpolation.js",
       "/assets/javascripts/libs/gl_engine/geometry.js",
-      "/assets/javascripts/libs/gl_engine/geometry_pointcloud.js",
       "/assets/javascripts/libs/gl_engine/geometry_trianglesplane.js",
       "/assets/javascripts/libs/gl_engine/geometry_mesh.js",
       "/assets/javascripts/libs/gl_engine/flycam.js",

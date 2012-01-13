@@ -24,7 +24,7 @@ class _View
 	clippingDistance = 140
 	#camPos = [63.5,63.5,-clippingDistance+63.5]
 	camPos = [0,0,-clippingDistance]
-	moveValueStrafe = 0.1
+	moveValueStrafe = 0.5
 	moveValueRotate = 0.02
 
 	perspectiveMatrix = null

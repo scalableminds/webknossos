@@ -31,7 +31,7 @@ object Route extends Controller with Secured {
       Ok( toJson( data ) )
   }
 
-  def blackBox( id: String ) = Action(parse.json(maxLength = 1024)) {
+  def blackBox( id: String ) = Action(parse.json(maxLength = 1024 * 1024)) {
     implicit request =>
       def f( implicit request: Request[JsValue] ): Result = {
         val parsedJson = request.body

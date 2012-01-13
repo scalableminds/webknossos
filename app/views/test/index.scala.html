@@ -17,14 +17,14 @@
 
   <script>
     // http://www.modernizr.com/docs/#load
-    Modernizr.load({
-      // Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if offline
-      load: "//ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js",
-      complete: function () {
-        if ( !window.jQuery )
-          Modernizr.load('@routes.Assets.at("javascripts/libs/jquery-1.6.1.min.js")');
-      }
-    });
+    // Modernizr.load({
+    //   // Grab Google CDN's jQuery, with a protocol relative URL; fall back to local if offline
+    //   load: "//ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js",
+    //   complete: function () {
+    //     if ( !window.jQuery )
+    //       Modernizr.load('@routes.Assets.at("javascripts/libs/jquery-1.6.1.min.js")');
+    //   }
+    // });
     
     if (Modernizr.webgl)
       Modernizr.load([

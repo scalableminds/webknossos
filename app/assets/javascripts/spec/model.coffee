@@ -50,7 +50,7 @@ describe 'Model.Binary', ->
     Model.Binary.cube = null
     Model.Binary.extendPoints 80,80,80, 250,250,250
     
-    expect(Model.Binary.pointIndex(80, 80, 80)).toBe 16 * (Model.Binary.BUCKET_WIDTH * (Model.Binary.BUCKET_WIDTH + 1) + 1)
+    expect(Model.Binary.pointIndex(80, 80, 80)).toBe 16 * (64 * (64 + 1) + 1)
     expect(Model.Binary.bucketIndex(80, 80, 80)).toBe 0
   
   it 'should get and set color values', ->
@@ -58,9 +58,9 @@ describe 'Model.Binary', ->
     Model.Binary.cube = null
     Model.Binary.extendPoints 80,80,80, 250,250,250
 
-    expect(Model.Binary.value(83, 83, 83, 1.5)).toBe 1.5
+    expect(Model.Binary.setColor(83, 83, 83, 1.5)).toBe 1.5
     expect(Model.Binary.cube[Model.Binary.bucketIndex(83, 83, 83)][Model.Binary.pointIndex(83, 83, 83)]).toBe 1.5
-    expect(Model.Binary.value(83, 83, 83)).toBe 1.5
+    expect(Model.Binary.getColor(83, 83, 83)).toBe 1.5
 
 
 describe 'Model.Trianglesplane', ->
@@ -71,7 +71,7 @@ describe 'Model.Trianglesplane', ->
       Model.Trianglesplane.get 3, 0, (err, vertices, indices) ->
 
         expect(err).toBeNull()
-        expect(vertices).toBeA Uint16Array
+        expect(vertices).toBeA Float32Array
         expect(indices).toBeA Uint16Array
 
         done()

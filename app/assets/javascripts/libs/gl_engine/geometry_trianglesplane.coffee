@@ -1,6 +1,6 @@
 class Trianglesplane extends Geometry
-	constructor: (fragmentShader, vertexShader) ->
-		super(fragmentShader, vertexShader)
+	constructor: (vertexShader, fragmentShader) ->
+		super(vertexShader, fragmentShader)
 		@vertexIndex = 
 			EBO : null
 			length : null	

@@ -5,8 +5,8 @@ import com.novus.salat.global._
 import com.novus.salat.dao.SalatDAO
 import play.api.Play
 import play.api.Play.current
-import play.api.json.JsArray._
-import play.api.json._
+import play.api.libs.json.JsArray._
+import play.api.libs.json._
 
 /**
  * scalableminds - brainflight

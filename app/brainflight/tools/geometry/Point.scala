@@ -1,7 +1,7 @@
 package brainflight.tools.geometry
 
-import play.api.json._
-import play.api.json.Writes._
+import play.api.libs.json._
+import play.api.libs.json.Writes._
 
 /**
  * scalableminds - brainflight

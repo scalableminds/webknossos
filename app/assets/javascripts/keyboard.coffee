@@ -15,24 +15,35 @@ KEY_C = 67
 #Manages if Keys are presed or toggled
 class Keyboard
 
-	keysDown = []
-	keysToggled = []
+  keysDown = []
+  keysToggled = []
 
-	constructor : ->
-		for i in [0..127]
-			keysDown.push false
-			keysToggled.push false
+  constructor : ->
+    @onChange = null
+    for i in [0..127]
+      keysDown.push false
+      keysToggled.push false
 
-	setKeyDown : (key) ->
+  setKeyDown : (key) ->
     keysDown[key] = true
+    @changed()
   
   setKeyUp : (key) ->
     keysToggled[key] = !keysToggled[key]
     keysDown[key] = false
+    @changed()
 
   isKeyToggled : (key) ->
     return keysToggled[key]
   
   isKeyDown : (key) ->
     return keysDown[key]
+
+  changed : () ->
+    if @onChange isnt null
+      countKeysDown = 0
+      for i in [0..127]
+        countKeysDown++ if keysDown[i] is true
+
+      @onChange countKeysDown
 

@@ -10,7 +10,14 @@ class GL_engine
 	# for calculating fps
 	frames = 0
 	frameCount = 0
-	lastTime = null
+	lastFramerateTime = null
+
+	# for throttling renderLoop
+	lastLoopTime = null
+	maximumFramerate = 10
+
+	#to stop the animationLoop
+	stopAnimation = 1
 	
 	matrixStack = []
 
@@ -20,6 +27,7 @@ class GL_engine
 	attn = [0.01, 0.0, 0.003]
 
 	projectionMatrix = null
+
 
 ############################################################################
 	#public Properties
@@ -34,7 +42,8 @@ class GL_engine
 
 
 	constructor: (cvs, glAttribs) ->
-		lastTime = new Date()
+		lastFramerateTime = new Date()
+		lastLoopTime = new Date()
 		frames = 0
 		canvas = cvs
 		contextNames = [ "webgl", "experimental-webgl", "moz-webgl", "webkit-3d" ]
@@ -51,8 +60,10 @@ class GL_engine
 		@perspective()
 		normalMatrix = M4x4.I
 
-		gl.enable(gl.DEPTH_TEST)
+		gl.disable(gl.DEPTH_TEST)
+		#gl.depthFunc(gl.GL_ALWAYS)
 		@background [1, 1, 1, 1]
+
 	
 		requestAnimationFrame = (->
 			window.requestAnimationFrame or 
@@ -64,7 +75,7 @@ class GL_engine
     				window.setTimeout callback, 1000.0 / 60.0
 			)()
 
-		animationLoop()
+		
 
 
 
@@ -160,6 +171,15 @@ class GL_engine
 			gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, VBO
 			gl.bufferData gl.ELEMENT_ARRAY_BUFFER, data, gl.STATIC_DRAW
 			return VBO
+	###
+	deletes EBO of Geometry Object 
+	@param {Geometry}
+	###
+	deleteEBOBuffer : (geometry) ->
+		gl.deleteBuffer geometry.vertexIndex.EBO if geometry.getClassType is "Mesh"
+
+	deleteSingleBuffer : (buffer) ->
+		gl.deleteBuffer buffer
 
 	###
 	deletes VBO/EBOs of Geometry Object 
@@ -188,16 +208,26 @@ class GL_engine
 			
 			if geometry.hasColors
 				if gl.getAttribLocation(shaderProgram, "aColor") isnt -1
-					vertexAttribPointer "aColor", 1, geometry.colors.VBO
+					vertexAttribPointer "aColor", 3, geometry.colors.VBO
 			
 
 			if gl.getAttribLocation(shaderProgram, "aVertex") isnt -1
 				vertexAttribPointer "aVertex", 3, geometry.vertices.VBO
 
 			# render everything to screen
-			if geometry.getClassType() is "Mesh"
+			if geometry.getClassType() is "Trianglesplane"
+				if gl.getAttribLocation(shaderProgram, "interpolationFront") isnt -1
+					vertexAttribPointer "interpolationFront", 4, geometry.interpolationFront.VBO
+				if gl.getAttribLocation(shaderProgram, "interpolationBack") isnt -1
+					vertexAttribPointer "interpolationBack", 4, geometry.interpolationBack.VBO
+				if gl.getAttribLocation(shaderProgram, "interpolationOffset") isnt -1
+					vertexAttribPointer "interpolationOffset", 3, geometry.interpolationOffset.VBO
 				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
 				gl.drawElements gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0
+				
+				disableVertexAttribPointer "interpolationFront"	
+				disableVertexAttribPointer "interpolationBack"
+				disableVertexAttribPointer "interpolationOffset"
 			else
 				gl.drawArrays gl.POINTS, 0, geometry.vertices.length / 3
 
@@ -241,7 +271,7 @@ class GL_engine
 	perspective : (fovy, aspect, near, far) ->
 		
 		if arguments.length is 0
-			fovy = 30
+			fovy = 60
 			aspect = canvas.width / canvas.height
 			near = 0.01
 			far = 1000
@@ -257,7 +287,8 @@ class GL_engine
 		B = (ymax + ymin) / (ymax - ymin)
 		C = -(far + near) / (far - near)
 		D = -2 * far * near / (far - near)
-		projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 0, 0, D, 0)
+		projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 63.5, -100, D, 0)
+		M4x4.translate
 		@uniformMatrix "projectionMatrix", false, projectionMatrix  if shaderProgram
 		
 
@@ -457,17 +488,18 @@ class GL_engine
 
 	animationLoop = ->
 		renderLoop()
-		requestAnimationFrame animationLoop, canvas
+		requestAnimationFrame animationLoop, canvas if stopAnimation isnt 1
 
 
 	###
 	main renderLoop
 	calls usersRender() 
 	###
-	renderLoop = ->
+	_renderLoop = ->
 		frames++
 		frameCount++
 		now = new Date()
+		lastLoopTime = now
 
 		matrixStack.push M4x4.I
 
@@ -475,11 +507,18 @@ class GL_engine
 
 		matrixStack.pop()
 
-		if now - lastTime > 1000
-			frameRate = frames / (now - lastTime) * 1000
+		if now - lastFramerateTime > 1000
+			frameRate = frames / (now - lastFramerateTime) * 1000
 			frames = 0
-			lastTime = now
+			lastFramerateTime = now
 
+	#throttling renderLoop
+	renderLoop = ->
+		now = new Date()
+		if now - lastLoopTime >= 1000/maximumFramerate
+			_renderLoop()
+
+		
 	#apply a single draw
 	draw : ->
 		matrixStack.push M4x4.I
@@ -493,8 +532,12 @@ class GL_engine
 		@uniformMatrix "projectionMatrix", false, projectionMatrix
 
 
+	stopAnimationLoop : ->
+		stopAnimation = 1 if stopAnimation is 0
 
-
+	startAnimationLoop : ->
+		stopAnimation = 0 if stopAnimation is 1
+		animationLoop()
 
 
 

@@ -1,47 +1,46 @@
 class _GeometryFactory 
 
-	#load the binary pointcloud data & a shader from the Model
-	loadPointcloud : (postion, direction, shaderName) ->
-		fragmentShaderSource = null
-		vertexShaderSource = null
-		tmpVertices = null
-		tmpColors = null
-
-		Model.Shader.get(shaderName, (err, vertexShader, fragmentShader) =>
+	createMesh : (name, shaderName) ->
+		getShader(shaderName, (err, fragmentShader, vertexShader) ->
 			unless err
-				fragmentShaderSource = fragmentShader
-				vertexShaderSource = vertexShader
+				Model.Mesh.get(name,(err, vertices, colors, indices) ->
+					unless err
+						mesh.setVertices (View.createArrayBufferObject vertices), vertices.length
+						mesh.setColors (View.createArrayBufferObject colors), colors.length
+						mesh.setVertexIndex (View.createElementArrayBufferObject indices), indices.length
 
-				if tmpVertices? and tmpColors? 
-					@createPointcloud(tmpVertices, tmpColors,
-					fragmentShaderSource, vertexShaderSource)
-		)
-
-		Model.Binary.get(postion,direction,(err,vertices, colors) =>
-			unless err
-				tmpVertices = vertices
-				tmpColors = colors
-
-				if fragmentShaderSource? and vertexShaderSource?
-					@createPointcloud(tmpVertices, tmpColors, 
-					fragmentShaderSource, vertexShaderSource)
+						View.addGeometry mesh
+					else
+						throw err
+				)
 			else
-				console.log err
+				throw err
 		)
 
-	# create a new Pointcloud object and send it to the View
-	createPointcloud : (vertices, colors, fragmentShader, vertexShader) ->
-		
-			pointCloud = new Pointcloud fragmentShader, vertexShader
-			pointCloud.setVertices (View.createArrayBufferObject vertices), vertices.length
-			pointCloud.setColors (View.createArrayBufferObject colors), colors.length
-			View.addGeometry pointCloud
+	createTrianglesplane : (width, zOffset, shaderName) ->
+		getShader(shaderName, (err, fragmentShader, vertexShader) ->
+			unless err
+				Model.Trianglesplane.get(width, zOffset,(err, vertices, indices) ->
+					unless err
+						trianglesplane = new Trianglesplane fragmentShader, vertexShader
+						trianglesplane.setNormalVertices vertices, width
+						trianglesplane.setVertexIndex (View.createElementArrayBufferObject indices), indices.length
 
-	createMesh : (vertices, RGB_colors, indices) ->
-			mesh = new Mesh FragmentShaderSource, VertexShaderSource
-			mesh.setVertices (View.createArrayBufferObject vertices), vertices.length
-			mesh.setColors (View.createArrayBufferObject RGB_colors), RGB_colors.length
-			mesh.setVertexIndex (View.createIndexArrayBufferObject indices), indices.length
-			View.addGeometry mesh
+						View.addGeometry trianglesplane
+					else
+						throw err
+				)
+			else
+				throw err
+		)
+
+
+	getShader = (shaderName, callback) ->
+		Model.Shader.get(shaderName, (err, vertexShader, fragmentShader) ->
+			unless err
+				callback null, fragmentShader, vertexShader
+			else
+				callback err
+		)
 
 GeometryFactory = new _GeometryFactory

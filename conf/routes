@@ -36,7 +36,7 @@ DELETE  /projects/:project/tasks/folder     controllers.Tasks.deleteFolder(proje
 PUT     /project/:project/tasks/folder      controllers.Tasks.renameFolder(project: String, folder: String)
 
 # Binary Data
-GET     /binary/data/:model                 controllers.BinaryData.data(model: String, px: Int, py: Int, pz: Int, ax: Int, ay: Int, az: Int)
+GET     /binary/data/:model                 controllers.BinaryData.data(model: String, px: String, py: String, pz: String, ax: String, ay: String, az: String)
 GET     /binary/model/:model                controllers.BinaryData.model(model:String)
 GET     /binary/polygons/:model             controllers.BinaryData.polygons(model:String)
 
@@ -52,6 +52,13 @@ GET     /test/tests                         controllers.Test.tests
 
 #Admin pages 
 GET     /admin/loadData                     controllers.Admin.loadData(x: Int, y: Int, z: Int)
+GET     /admin/testbindoc                   controllers.Admin.testBinDoc
+GET     /admin/testgridfs                   controllers.Admin.testGridFS
+GET     /admin/createtestbindata            controllers.Admin.createTestBinData
+GET     /admin/creategridfsdata             controllers.Admin.createGridFsData
+GET     /admin/testdatastore                controllers.Admin.testDataStore
+GET     /admin/cleanup                      controllers.Admin.cleanup
+GET     /admin/fulltest                     controllers.Admin.fullTest
 
 # Javascript routing
 GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes

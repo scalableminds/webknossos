@@ -1,9 +1,5 @@
-M4x4.transformPointsAffine = (m, points, r) ->
-  # MathUtils_assert(m.length === 16, "m.length === 16");
-  # MathUtils_assert(v.length === 3, "v.length === 3");
-  # MathUtils_assert(r === undefined || r.length === 3, "r === undefined || r.length === 3");
-  
-  r = new MJS_FLOAT_ARRAY_TYPE(points.length) unless r?
+# Applies a transformation matrix on an array of points.
+M4x4.transformPointsAffine = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
 
   for i in [0...points.length] by 3
     v0 = points[i]
@@ -16,123 +12,156 @@ M4x4.transformPointsAffine = (m, points, r) ->
 
   r
 
-_.throttle2 = (func, wait) ->
+# Applies a transformation matrix on an array of points.
+M4x4.transformPointsAffineWithTranslation = (m, translationVector, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
+
+  [tx, ty, tz] = translationVector
+
+  for i in [0...points.length] by 3
+    v0 = points[i]
+    v1 = points[i + 1]
+    v2 = points[i + 2]
+    
+    r[i]     = m[0] * v0 + m[4] * v1 + m[8] * v2 + m[12] + tx
+    r[i + 1] = m[1] * v0 + m[5] * v1 + m[9] * v2 + m[13] + ty
+    r[i + 2] = m[2] * v0 + m[6] * v1 + m[10] * v2 + m[14] + tz
+
+  r
+
+M4x4.makeRotate2 = (direction, r = new MJS_FLOAT_ARRAY_TYPE(16)) ->
+
+  # orthogonal vector to (0,1,0) and rotation vector
+  axis = V3.normalize([direction[2], 0, -direction[0]])
+
+  # dot product of (0,1,0) and rotation
+  dotProd = direction[1]
+  
+  # transformation of dot product for cosA
+  cosA = dotProd / V3.length(direction)
+  sinA = Math.sqrt(1 - cosA * cosA)
+
+  [axis_x, axix_y, axis_z] = axis
+  
+  # calculate rotation matrix
+  r[0]  = axis_x * axis_x * (1 - cosA) + cosA 
+  r[1]  = axis_z * sinA
+  r[2]  = axis_x * axis_z * (1 - cosA)
+  r[3]  = 0
+  r[4]  = -axis_z * sinA
+  r[5]  = cosA
+  r[6]  = axis_x * sinA
+  r[7]  = 0
+  r[8]  = axis_x * axis_z * (1 - cosA)
+  r[9]  = -axis_x * sinA
+  r[10] = axis_z * axis_z * (1 - cosA) + cosA
+  r[11] = 0
+  r[12] = 0
+  r[13] = 0
+  r[14] = 0
+  r[15] = 0
+  
+  r
+
+# Moves an array of vertices. It also supports rotation, just provide
+# a vector representing the direction you're looking. The vertices
+# are considered to be at position `[0,0,0]` with the direction `[0,1,0]`.
+M4x4.moveVertices = (vertices, translationVector, directionVector) ->
+
+  output = new Float32Array(vertices.length)
+  directionVector = V3.normalize(directionVector)
+
+  # `[0,1,0]` is the axis of the template, so there is no need for rotating
+  # We can do translation on our own, because it's not too complex..and 
+  # probably faster.
+  if directionVector[0] == 0 and directionVector[1] == 1 and directionVector[2] == 0
+
+    [px, py, pz] = translationVector
+    
+    for i in [0...vertices.length] by 3
+      output[i]     = px + vertices[i]
+      output[i + 1] = py + vertices[i + 1]
+      output[i + 2] = pz + vertices[i + 2]
+    output
+  
+  else
+    
+    mat = M4x4.makeRotate2(directionVector)
+    
+    M4x4.transformPointsAffineWithTranslation(mat, translationVector, vertices, output)
+
+# `_.throttle2` makes a function only be executed once in a given
+# time span -- no matter how often you it. We don't recomment to use 
+# any input parameters, because you cannot know which are used and 
+# which are dropped. In contrast to `_.throttle`, the function
+# at the beginning of the time span.
+_.throttle2 = (func, wait, resume = true) ->
   timeout = more = false
 
   ->
     context = @
     args = arguments
     if timeout == false
-      _.defer -> func.apply(context, arguments)
+      _.defer -> func.apply(context, args)
       timeout = setTimeout (
         -> 
           timeout = false
-          func.apply(context, arguments) if more
+          func.apply(context, args) if more
           more = false
         ), wait
     else
-      more = true
+      more = resume and true
 
+# `_.once2` makes sure a function is executed only once. It works only
+# with asynchronous functions. The function cannot have any input 
+# parameters. If one pass of the function failes, it can be executed 
+# again.
+_.once2 = (func) ->
+  initialized = false
+  watingCallbacks = null
 
-Math.square = (a) -> a * a
+  done = (err) ->
+    callbacks = watingCallbacks
+    watingCallbacks = null
 
-Math.normalizeVector = (vec) ->
-  length = Math.vecLength(vec)
-  if length > 0
-    vec.map((a) -> a / length)
-  else
-    vec
+    callback = (args...) ->
+      cb(args...) for cb in callbacks
+      return
 
-Math.dotProduct = (v1, v2) ->
-  return null if v1.length != v2.length
-  v1.reduce(((r, a, i) -> r + a * v2[i]), 0)
-
-Math.crossProduct = (v1, v2) ->
-  [
-    v1[1] * v2[2] - v1[2] * v2[1]
-    v1[2] * v2[0] - v1[0] * v2[2]
-    v1[0] * v2[1] - v1[1] * v2[0]
-  ]
-
-Math.vecAngle = (v1, v2) ->
-  Math.dotProduct(v1, v2) / (Math.vecLength(v1) * Math.vecLength(v2))
-
-Math.vecAngleIsntReflex = (v1, v2, ref) ->
-  Utils.arrayEquals(Math.normalizeVector(Math.crossProduct(v1, v2)), ref)
-
-Math.vecLength = (vec) ->
-  Math.sqrt(vec.reduce(((r, a) -> r + Math.square(a)), 0))
-  
-Math.absMin = (a, b) ->
-  if Math.abs(a) < Math.abs(b)
-    a
-  else
-    b
-Math.normalize = (a) ->
-  if a > 0 then 1 else if a < 0 then -1 else 0
-
-Math.between = (x, a, b) ->
-  (if a < b then a else b) <= x <= (if a > b then a else b)
-
-Math.equalsNearly = (a, b) ->
-  e = 1e-15
-  a - e < b < a + e
-
-Utils = 
-  arrayEquals: (a1, a2) ->
-    return false if a1.length != a1.length
-    for i in [0...a1.length]
-      return false if a1[i] != a2[i]
-    true
-
-  arrayCompare: (a1, a2) ->
-    if a1.length != a2.length
-      if a1.length < a2.length then -1 else 1
+    if err
+      callback err
+      return
     else
-      for i in [0...a1.length]
-        if a1[i] < a2[i]
-          return -1
-        if a1[i] > a2[i]
-          return 1
-      0
-  arrayMin: (arr, comparer) ->
-    arr.reduce((r, a) -> 
-      if comparer
-        if comparer(r, a) < 0 then r else a
+      initialized = true
+      return callback
+  
+  (callback) ->
+    context = @
+
+    unless initialized
+      if watingCallbacks?
+        watingCallbacks.push callback
       else
-        Math.min(r, a)
-    , 0)
-  
-  arrayMax: (arr, comparer) ->
-    arr.reduce((r, a) -> 
-      if comparer
-        if comparer(r, a) < 0 then r else a
-      else
-        Math.min(r, a)
-    , 0)
-  
-  arrayMinMax: (arr, comparer) ->
-    min = max = arr[0]
-    for i in [0...arr.length]
-      if comparer
-        min = if comparer(min, a) < 0 then min else a
-        max = if comparer(max, a) > 0 then max else a
-      else
-        min = Math.min(min, a)
-        max = Math.max(max, a)
-    [min, max]
-  
-  arrayUnique: (arr) ->
-    output = []
-    for el, i in arr
-      output.push el if arr.indexOf(el) == i
-    output
-  
-  factory: (klass, args..., callback) ->
-    obj = new klass(args...)
-    callback(obj)
-    obj
-    
-  
-  defer: (callback) ->
-    setTimeout(callback, 1)
+        watingCallbacks = [callback]
+        func.apply(context, [done])
+    else
+      callback null
+
+
+_.mutex = (func, timeout = 20000) ->
+
+  busy = false
+  i = 0
+
+  (args...) ->
+    unless busy
+      
+      i++
+      current = i
+      busy = true
+
+      done = ->
+        busy = false if i == current
+      
+      func.apply(this, args.concat(done))
+
+      setTimeout(done, timeout)

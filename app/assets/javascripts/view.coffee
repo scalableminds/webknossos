@@ -43,7 +43,10 @@ class _View
 
 		engine.background [0.9, 0.9 ,0.9 ,1]
 		engine.pointSize 100
-		engine.perspective 60, cvs.width / cvs.height, 0.0001, 100000
+		####
+		### ACHTUNG VON 60 AUF 90 GEÄNDERT! ###
+		#####
+		engine.perspective 90, cvs.width / cvs.height, 0.0001, 100000
 
 		engine.onRender renderFunction
 
@@ -82,12 +85,16 @@ class _View
 		# first Mesh is always the coordinate axis mini-map
 		if meshes[0]
 			engine.pushMatrix()
-			engine.translate 300,50,0
+			engine.translate 250,100,0
+			console.log V3.angle [0,0,1], cam.getDir()
+
+			engine.rotateX V3.angle [1,0,0], cam.getDir()
+			engine.rotateY V3.angle [0,1,0], cam.getDir()
+			engine.rotateZ V3.angle [0,0,1], cam.getDir()
+
 			engine.useProgram meshProgramObject
 			engine.render meshes[0]
 			engine.popMatrix()
-
-			console.log cvs.width - 20
 
 			totalNumberOfVertices += meshes[0].vertices.length
 
@@ -155,14 +162,15 @@ class _View
 	addGeometry : (geometry) ->
 
 		if geometry.getClassType() is "Trianglesplane"
-				trianglesplaneProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
-				triangleplane = geometry
+			trianglesplaneProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+			triangleplane = geometry
 			#a single draw to see when the triangleplane is ready
 			@draw()
 
 		if geometry.getClassType() is "Mesh"
-				meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
-				meshes.push geometry
+			meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+			meshes.push geometry
+			@draw()
 
 	addColors : (newColors, x, y, z) ->
 		#arrayPosition = x + y*colorWidth + z*colorWidth*colorWidth #wrong

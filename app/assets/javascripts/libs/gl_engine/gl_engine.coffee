@@ -214,7 +214,7 @@ class GL_engine
 			if gl.getAttribLocation(shaderProgram, "aVertex") isnt -1
 				vertexAttribPointer "aVertex", 3, geometry.vertices.VBO
 
-			# render everything to screen
+			# render trianglesplanes
 			if geometry.getClassType() is "Trianglesplane"
 				if gl.getAttribLocation(shaderProgram, "interpolationFront") isnt -1
 					vertexAttribPointer "interpolationFront", 4, geometry.interpolationFront.VBO
@@ -228,8 +228,11 @@ class GL_engine
 				disableVertexAttribPointer "interpolationFront"	
 				disableVertexAttribPointer "interpolationBack"
 				disableVertexAttribPointer "interpolationOffset"
-			else
-				gl.drawArrays gl.POINTS, 0, geometry.vertices.length / 3
+
+			# render Meshes	
+			else if geometry.getClassType() is "Mesh"
+				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
+				gl.drawElements gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0			
 
 			disableVertexAttribPointer "aVertex"
 			disableVertexAttribPointer "aColor" if geometry.colors.hasColor

@@ -124,7 +124,7 @@ nextPoint = (xd, yd, zd, _cube, bucketIndex0, pointIndex0, _size0, _size01) ->
   # `4032   = 000000 111111 000000`
   if yd
     if (pointIndex & 4032) == 4032
-      # The point is to be at the bottom border.
+      # The point is to at the bottom border.
       bucketIndex += _size0
       pointIndex &= -4033
     else

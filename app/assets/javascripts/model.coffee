@@ -250,9 +250,9 @@ Model.Binary =
 			# Looks like `preload_vertices` hasn't been populated yet.
 			# This is what ppl call lazy initialization.
 			if _preloadVertices.length == 0
-				for x in [-20..20] by 5
+				for x in [-50..50] by 5
 					for y in [0..10] by 5
-						for z in [-20..20] by 5
+						for z in [-50..50] by 5
 							_preloadVertices.push x, y, z
 
 			preloadCheckHits     = 0
@@ -376,7 +376,7 @@ Model.Binary =
 		@extendCube(
 			x_min >> 6, # x_min / 64
 			y_min >> 6,
-			x_min >> 6,
+			z_min >> 6,
 			x_max >> 6,
 			y_max >> 6,
 			z_max >> 6
@@ -397,9 +397,9 @@ Model.Binary =
 				Math.min(z0, z1, _offset[2])
 			]
 			cubeSize = [
-				Math.max(x1 - x0 + 1, _size[0])
-				Math.max(y1 - y0 + 1, _size[1])
-				Math.max(z1 - z0 + 1, _size[2])
+				Math.max(x0, x1, _offset[0] + _size[0]) - cubeOffset[0] + 1
+				Math.max(y0, y1, _offset[1] + _size[1]) - cubeOffset[1] + 1
+				Math.max(z0, z1, _offset[2] + _size[2]) - cubeOffset[2] + 1
 			]
 		else
 			cubeOffset = [

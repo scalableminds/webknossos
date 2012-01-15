@@ -31,6 +31,8 @@ void main(void){
   	aColor = vec4(0.0, 0.0, 1.0, 1.0);
   } else if (interpolationFront[0] == -1.0) {
   	aColor = vec4(1.0, 0.0, 0.0, 1.0);
+  } else if (interpolationFront[1] == 0.0) {
+  	aColor = vec4(0.0, 1.0, 0.0, 1.0);
   } else {
   	aColor = vec4(0.0, 0.0, 0.0, 1.0);
   }

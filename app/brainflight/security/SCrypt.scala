@@ -50,6 +50,7 @@ object SCrypt {
   /**
    * Sort of self-explanatory :)
    */
-  def verifyPassword(plainTextPassword: PlainPassword, hashedPassword: PasswordHash): Boolean =
+  def verifyPassword(plainTextPassword: PlainPassword, hashedPassword: PasswordHash): Boolean = {
     hashedPassword.compareTo(BCrypt.hashpw(plainTextPassword, hashedPassword)) == 0
+  }
 }

@@ -35,8 +35,7 @@ object Application extends Controller {
       registerForm.bindFromRequest.fold(
         formWithErrors => BadRequest(html.register(formWithErrors)),
         user => {
-          println(user)
-          User.create(User(user._1, user._2, user._2, false))
+          User.create _ tupled(user)
           Redirect(routes.Test.index).withSession("email" -> user._1)
         }
       )
@@ -47,7 +46,8 @@ object Application extends Controller {
       "email" -> text,
       "password" -> text
     ) verifying("Invalid email or password", result => result match {
-      case (email, password) => User.authenticate(email, password).isDefined
+      case (email, password) => 
+        User.authenticate(email, password).isDefined
     })
   )
 

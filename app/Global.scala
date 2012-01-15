@@ -26,10 +26,10 @@ object InitialData {
     
     if (User.findAll.isEmpty) {
 
-      val u = User("scmboy@scalableminds.com", "SCM Boy", "secret", true)
+      val u = ("scmboy@scalableminds.com", "SCM Boy", "secret")
       Seq(
         u
-      ).foreach(User.create)
+      ).foreach(User.create _ tupled)
     }
 
   }

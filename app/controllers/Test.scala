@@ -11,9 +11,9 @@ import models.User
  * Date: 12.12.11
  * Time: 00:23
  */
-object Test  extends Controller {
+object Test  extends Controller with Secured{
   def index = Action { implicit request =>
-    Ok(html.test.index(User.findByEmail("scmboy@scalableminds.com").get))
+    Ok(html.test.index(user.getOrElse(User.findByEmail("scmboy@scalableminds.com").get)))
   }
 
   def demo = Action { implicit request =>

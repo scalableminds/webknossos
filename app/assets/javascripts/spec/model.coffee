@@ -6,7 +6,7 @@ describe 'Model.Binary', ->
   it 'should pull vertices', ->
     async (done) ->
       
-      Model.Binary.pullVertices [1,2,3], [1,2,3], (err, vertices) ->
+      Model.Binary.pullVertices [1,2,3], [1,2,3], (err, { vertices, minmax }) ->
         expect(vertices).toBeA(Float32Array)
         expect(vertices.length % 3).toEqual(0)
         anyNaN = false
@@ -155,6 +155,20 @@ describe 'Interpolation', ->
     # 0.3 * (0.4 * (0.7 * 1 + 0.3 * 1.2) + 0.6 * (0.7 * 1.3 + 0.3 * 1.6)) +
     # 0.7 * (0.4 * (0.7 * 1.7 + 0.3 * 1.8) + 0.6 * (0.7 * 2 + 0.3 * 1.1))
     expect(interpolate(0.3, 0.6, 0.7, getter)).toBeNearly 1.5884
+  
+  it 'should find the next index', ->
+
+    Model.Binary.cube = null
+    Model.Binary.extendCube(0,0,0,3,3,3)
+
+    Model.Binary.setColor(64, 64, 64, 33)
+
+    expect(nextPoint(true, true, true, Model.Binary.cube, 0, (63 << 12) + (63 << 6) + 63, 4, 16)).toBe(33)
+
+    Model.Binary.setColor(56, 1, 1, 34)
+    expect(nextPoint(true, true, true, Model.Binary.cube, 0, 55, 4, 16)).toBe(34)
+
+
 
 
 describe 'M4x4.moveVertices', ->

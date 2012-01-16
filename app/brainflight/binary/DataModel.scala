@@ -86,7 +86,7 @@ object CubeModel extends DataModel{
   val id = "cube"
   val yLength = 50
 
-  val polygons = new NGonalFrustum(4,yLength,25,25).polygons
+  val polygons = new NGonalFrustum(4,yLength,64,64).polygons
 }
 
 object FrustumModel extends DataModel{

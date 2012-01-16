@@ -1,7 +1,7 @@
 #Project setup:
 - install java 1.6 (from oracle! don't use openJDK)
 - make sure "JAVA_HOME" and "JDK_HOME" are set and PATH contains path to jdk
-- Install nodejs + coffee + less and make shure PATH is set to find them 
+- install nodejs + coffee + less and make sure PATH is set to find them 
 
 #Play setup:
 ```bash

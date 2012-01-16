@@ -35,9 +35,8 @@ object Application extends Controller {
       registerForm.bindFromRequest.fold(
         formWithErrors => BadRequest(html.register(formWithErrors)),
         user => {
-          println(user)
-          User.create(User(user._1, user._2, user._2, false))
-          Redirect(routes.Projects.index).withSession("email" -> user._1)
+          User.create _ tupled(user)
+          Redirect(routes.Test.index).withSession("email" -> user._1)
         }
       )
   }
@@ -47,7 +46,8 @@ object Application extends Controller {
       "email" -> text,
       "password" -> text
     ) verifying("Invalid email or password", result => result match {
-      case (email, password) => User.authenticate(email, password).isDefined
+      case (email, password) => 
+        User.authenticate(email, password).isDefined
     })
   )
 
@@ -66,7 +66,7 @@ object Application extends Controller {
     implicit request =>
       loginForm.bindFromRequest.fold(
         formWithErrors => BadRequest(html.login(formWithErrors)),
-        user => Redirect(routes.Projects.index).withSession("email" -> user._1)
+        user => Redirect(routes.Test.index).withSession("email" -> user._1)
       )
   }
 
@@ -85,11 +85,7 @@ object Application extends Controller {
     import routes.javascript._
     Ok(
       Routes.javascriptRouter("jsRoutes")(
-        Projects.add, Projects.delete, Projects.rename,
-        Projects.addGroup, Projects.deleteGroup, Projects.renameGroup,
-        Projects.addUser, Projects.removeUser, Tasks.addFolder,
-        Tasks.renameFolder, Tasks.deleteFolder, Tasks.index,
-        Tasks.add, Tasks.update, Tasks.delete
+          //fill in stuff which should be able to be called from js
       )
     ).as("text/javascript")
   }
@@ -137,30 +133,6 @@ trait Secured {
   def IsAuthenticated(f: => String => Request[AnyContent] => Result) = Security.Authenticated(username, onUnauthorized) {
     user =>
       Action(request => f(user)(request))
-  }
-
-  /**
-   * Check if the connected user is a member of this project.
-   */
-  def IsMemberOf(project: String)(f: => String => Request[AnyContent] => Result) = IsAuthenticated {
-    user => request =>
-      if (Project.isMember(project, user)) {
-        f(user)(request)
-      } else {
-        Results.Forbidden
-      }
-  }
-
-  /**
-   * Check if the connected user is a owner of this task.
-   */
-  def IsOwnerOf(task: String)(f: => String => Request[AnyContent] => Result) = IsAuthenticated {
-    user => request =>
-      if (Task.isOwner(task, user)) {
-        f(user)(request)
-      } else {
-        Results.Forbidden
-      }
   }
 
 }

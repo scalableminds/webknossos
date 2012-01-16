@@ -146,9 +146,16 @@ Model.Binary =
 			
 			return callback(err) if err and callback
 			
-			# Defer computation so the current stack isn't blocked
-			_.defer =>
-				callback(null, M4x4.moveVertices(@verticesTemplate, position, direction)) if callback
+			worker = new Worker("/assets/javascripts/pullVerticesWorker.js")
+
+			worker.onmessage = (event) ->
+				callback(null, event.data) if callback
+			
+			worker.postMessage(
+				verticesTemplate : @verticesTemplate
+				position : position
+				direction : direction
+			)
 
 
 	# This method allows you to query the data structure. Give us an array of
@@ -278,36 +285,13 @@ Model.Binary =
 
 		loadedData = []
 		
-		finalCallback = (err, vertices, colors) =>
+		finalCallback = (err, { vertices, minmax}, colors) =>
 			if err
 				callback err if callback
 
 			else
-				# First let's find out what extent the points have we just loaded.
-				max_x = min_x = vertices[0]
-				max_y = min_y = vertices[1]
-				max_z = min_z = vertices[2]
-				for i in [3...vertices.length] by 3
-					x = vertices[i]
-					y = vertices[i + 1]
-					z = vertices[i + 2]
-					max_x = if x > max_x then x else max_x
-					max_y = if y > max_y then y else max_y
-					max_z = if z > max_z then z else max_z
-					min_x = if x < min_x then x else min_x
-					min_y = if y < min_y then y else min_y
-					min_z = if z < min_z then z else min_z
-				
-				min_x = if min_x < 0 then 0 else min_x
-				min_y = if min_y < 0 then 0 else min_y
-				min_z = if min_z < 0 then 0 else min_z
-				max_x = if max_x < 0 then 0 else max_x
-				max_y = if max_y < 0 then 0 else max_y
-				max_z = if max_z < 0 then 0 else max_z
-
-
 				# Maybe we need to expand our data structure.
-				@extendPoints(min_x, min_y, min_z, max_x, max_y, max_z)
+				@extendPoints(minmax...)
 				
 				# Then we'll just put the point in to our data structure.
 				for i in [0...colors.length]

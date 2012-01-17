@@ -409,9 +409,9 @@ Model.Binary =
 				for x in [0...cubeSize[0]]
 					cube.push if _cube?
 						index = 
-							(x - _offset[0]) +
-							(y - _offset[1]) * _size[0] +
-							(z - _offset[2]) * _size[0] * _size[1]
+							(x + cubeOffset[0] - _offset[0]) +
+							(y + cubeOffset[1] - _offset[1]) * _size[0] +
+							(z + cubeOffset[2] - _offset[2]) * _size[0] * _size[1]
 						_cube[index]
 					else
 						null

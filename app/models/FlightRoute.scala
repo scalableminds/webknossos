@@ -4,6 +4,8 @@ import com.mongodb.casbah.Imports._
 import com.novus.salat.global._
 import com.novus.salat.dao.SalatDAO
 import play.api.Play
+import play.api.Mode
+import play.api.Configuration
 import play.api.Play.current
 import brainflight.tools.geometry.Vector3D
 import java.util.Date
@@ -24,7 +26,9 @@ object FlightRoute extends BasicDAO[FlightRoute]("routes") {
     fr
   }
   def closeOpenRoutes(user_id: ObjectId){
-    update(MongoDBObject("user_id" -> user_id, "closed" -> false), $set ("closed" -> true), false, true)
+    // TODO: REMOVE THIS later (after ext session is implemented)
+    if(Play.maybeApplication.map(_.mode).getOrElse(Mode.Dev) == Mode.Prod)
+    	update(MongoDBObject("user_id" -> user_id, "closed" -> false), $set ("closed" -> true), false, true)
   }
   
   def findOpenByID(id: String): Option[FlightRoute] = {

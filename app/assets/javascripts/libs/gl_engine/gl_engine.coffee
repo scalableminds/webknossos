@@ -274,7 +274,7 @@ class GL_engine
 	perspective : (fovy, aspect, near, far) ->
 		
 		if arguments.length is 0
-			fovy = 60
+			fovy = 90
 			aspect = canvas.width / canvas.height
 			near = 0.01
 			far = 1000
@@ -290,7 +290,8 @@ class GL_engine
 		B = (ymax + ymin) / (ymax - ymin)
 		C = -(far + near) / (far - near)
 		D = -2 * far * near / (far - near)
-		projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 63.5, -100, D, 0)
+		#projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 63.5, -100, D, 0)
+		projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 0, 0, D, 0)
 		M4x4.translate
 		@uniformMatrix "projectionMatrix", false, projectionMatrix  if shaderProgram
 		

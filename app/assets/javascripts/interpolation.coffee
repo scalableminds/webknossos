@@ -181,12 +181,14 @@ find2 = (x, y, z, interpolationFront, interpolationBack, interpolationDelta, j4,
         # linear z
         output1 = nextPoint(false, false, true, _cube, bucketIndex0, pointIndex0, _size0, _size01)
         return interpolationFront[j4] = output1 if output1 <= 0
+        interpolationDelta[j3] = zd
 
     else
       if zd == 0
         # linear y
         output1 = nextPoint(false, true, false, _cube, bucketIndex0, pointIndex0, _size0, _size01)
         return interpolationFront[j4] = output1 if output1 <= 0
+        interpolationDelta[j3] = yd
 
       else
         # bilinear y,z
@@ -199,12 +201,16 @@ find2 = (x, y, z, interpolationFront, interpolationBack, interpolationDelta, j4,
         output3 = nextPoint(false, true, true,  _cube, bucketIndex0, pointIndex0, _size0, _size01)
         return interpolationFront[j4] = output3 if output3 <= 0
 
+        interpolationDelta[j3]     = yd
+        interpolationDelta[j3 + 1] = zd
+
   else
     if yd == 0
       if zd == 0
         # linear x
         output1 = nextPoint(true, false, false, _cube, bucketIndex0, pointIndex0, _size0, _size01)
         return interpolationFront[j4] = output1 if output1 <= 0
+        interpolationDelta[j3] = xd
 
       else
         #bilinear x,z
@@ -215,7 +221,10 @@ find2 = (x, y, z, interpolationFront, interpolationBack, interpolationDelta, j4,
         return interpolationFront[j4] = output2 if output2 <= 0
 
         output3 = nextPoint(true, false, true,  _cube, bucketIndex0, pointIndex0, _size0, _size01)
-        return interpolationFront[j4] = output3 if output3 <= 0
+        return interpolationFront[j4] = output3 if output3 <= 
+
+        interpolationDelta[j3]     = xd
+        interpolationDelta[j3 + 1] = zd
 
     else
       if zd == 0
@@ -228,6 +237,9 @@ find2 = (x, y, z, interpolationFront, interpolationBack, interpolationDelta, j4,
 
         output3 = nextPoint(true, true, false,  _cube, bucketIndex0, pointIndex0, _size0, _size01)
         return interpolationFront[j4] = output3 if output3 <= 0
+
+        interpolationDelta[j3]     = xd
+        interpolationDelta[j3 + 1] = yd
 
       else
         # trilinear x,y,z
@@ -252,6 +264,10 @@ find2 = (x, y, z, interpolationFront, interpolationBack, interpolationDelta, j4,
         output7 = nextPoint(true, true, true,   _cube, bucketIndex0, pointIndex0, _size0, _size01)
         return interpolationFront[j4] = output7 if output7 <= 0
 
+        interpolationDelta[j3]     = xd
+        interpolationDelta[j3 + 1] = yd
+        interpolationDelta[j3 + 2] = zd
+
   interpolationFront[j4]     = output0
   interpolationFront[j4 + 1] = output1 || 0
   interpolationFront[j4 + 2] = output2 || 0
@@ -260,7 +276,4 @@ find2 = (x, y, z, interpolationFront, interpolationBack, interpolationDelta, j4,
   interpolationBack[j4 + 1]  = output5 || 0
   interpolationBack[j4 + 2]  = output6 || 0
   interpolationBack[j4 + 3]  = output7 || 0
-  interpolationDelta[j3 + 0] = xd
-  interpolationDelta[j3 + 1] = yd
-  interpolationDelta[j3 + 2] = zd
 

@@ -146,15 +146,20 @@ Model.Binary =
 			
 			return callback(err) if err and callback
 			
-			worker = new Worker("/assets/javascripts/pullVerticesWorker.js")
+			worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker.js")
+			workerHandle = Math.random()
+			workerCallback = (event) ->
+				if event.data.workerHandle == workerHandle 
+					callback(null, event.data) if callback
+					worker.removeEventListener("message", workerCallback, false)
 
-			worker.onmessage = (event) ->
-				callback(null, event.data) if callback
+			worker.addEventListener("message", workerCallback, false)
 			
 			worker.postMessage(
 				verticesTemplate : @verticesTemplate
 				position : position
 				direction : direction
+				workerHandle : workerHandle
 			)
 
 
@@ -381,9 +386,9 @@ Model.Binary =
 				Math.min(z0, z1, _offset[2])
 			]
 			cubeSize = [
-				Math.max(x0, x1, _offset[0] + _size[0]) - cubeOffset[0] + 1
-				Math.max(y0, y1, _offset[1] + _size[1]) - cubeOffset[1] + 1
-				Math.max(z0, z1, _offset[2] + _size[2]) - cubeOffset[2] + 1
+				Math.max(x0, x1, _offset[0] + _size[0] - 1) - cubeOffset[0] + 1
+				Math.max(y0, y1, _offset[1] + _size[1] - 1) - cubeOffset[1] + 1
+				Math.max(z0, z1, _offset[2] + _size[2] - 1) - cubeOffset[2] + 1
 			]
 		else
 			cubeOffset = [
@@ -404,9 +409,9 @@ Model.Binary =
 				for x in [0...cubeSize[0]]
 					cube.push if _cube?
 						index = 
-							(x - _offset[0]) +
-							(y - _offset[1]) * _size[0] +
-							(z - _offset[2]) * _size[0] * _size[1]
+							(x + cubeOffset[0] - _offset[0]) +
+							(y + cubeOffset[1] - _offset[1]) * _size[0] +
+							(z + cubeOffset[2] - _offset[2]) * _size[0] * _size[1]
 						_cube[index]
 					else
 						null

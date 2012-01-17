@@ -483,7 +483,11 @@ Model.Mesh =
 Model.Trianglesplane =
 	
 	get : (width, zOffset, callback) ->
-
+		
+		# so we have Point 0 0 0 centered
+		startIndex = - Math.floor width/2
+		endIndex = startIndex + width
+		
 		# Each three elements represent one vertex.
 		vertices = new Float32Array(width * width * 3)
 
@@ -493,12 +497,12 @@ Model.Trianglesplane =
 		currentPoint = 0
 		currentIndex = 0
 
-		for y in [0...width]
-			for x in [0...width]
+		for y in [startIndex...endIndex]
+			for x in [startIndex...endIndex]
 				currentIndex2 = currentIndex << 1
 
 				# We don't draw triangles with the last point of an axis.
-				if y < (width - 1) and x < (width - 1)
+				if y < (endIndex - 1) and x < (endIndex - 1)
 					indices[currentIndex2 + 0] = currentPoint
 					indices[currentIndex2 + 1] = currentPoint + 1 
 					indices[currentIndex2 + 2] = currentPoint + width

@@ -146,15 +146,20 @@ Model.Binary =
 			
 			return callback(err) if err and callback
 			
-			worker = new Worker("/assets/javascripts/pullVerticesWorker.js")
+			worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker.js")
+			workerHandle = Math.random()
+			workerCallback = (event) ->
+				if event.data.workerHandle == workerHandle 
+					callback(null, event.data) if callback
+					worker.removeEventListener("message", workerCallback, false)
 
-			worker.onmessage = (event) ->
-				callback(null, event.data) if callback
+			worker.addEventListener("message", workerCallback, false)
 			
 			worker.postMessage(
 				verticesTemplate : @verticesTemplate
 				position : position
 				direction : direction
+				workerHandle : workerHandle
 			)
 
 

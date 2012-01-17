@@ -2,6 +2,7 @@ importScripts("underscore-min.js", "libs/mjs.js", "core_ext.js")
 
 onmessage = (event) ->
 	
+	workerHandle = event.data.workerHandle
 	vertices = M4x4.moveVertices(event.data.verticesTemplate, event.data.position, event.data.direction)
 	
 	max_x = min_x = vertices[0]
@@ -27,4 +28,4 @@ onmessage = (event) ->
 		if max_z < 0 then 0 else max_z
 	]
 	
-	postMessage({ vertices, minmax })
+	postMessage({ vertices, minmax, workerHandle })

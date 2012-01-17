@@ -1,3 +1,5 @@
+controllKeys = [37, 38, 39, 40, 65, 68, 83, 87, 89, 81, 70, 67]
+
 KEY_LEFT = 37
 KEY_UP = 38
 KEY_RIGHT = 39
@@ -43,7 +45,8 @@ class Keyboard
     if @onChange isnt null
       countKeysDown = 0
       for i in [0..127]
-        countKeysDown++ if keysDown[i] is true
+        if keysDown[i] is true 
+          countKeysDown++  if _.indexOf(controllKeys, i) isnt -1
 
       @onChange countKeysDown
 

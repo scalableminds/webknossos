@@ -243,7 +243,8 @@ Model.Binary =
 
 	
 
-	PRELOAD_TOLERANCE : 0.95
+	PRELOAD_TOLERANCE : 0.7
+	PRELOAD_RADIUS : 20
 	preloadVertices : []
 
 	# Use this method to let us know when you've changed your spot. Then we'll try to 
@@ -266,13 +267,13 @@ Model.Binary =
 		_.defer =>
 			
 			_preloadVertices = @preloadVertices
-		
+			_preloadRadius   = @PRELOAD_RADIUS
 			# Looks like `preload_vertices` hasn't been populated yet.
 			# This is what ppl call lazy initialization.
 			if _preloadVertices.length == 0
-				for x in [-20..20] by 5
+				for x in [-_preloadRadius.._preloadRadius] by 5
 					for y in [0..10] by 5
-						for z in [-20..20] by 5
+						for z in [-_preloadRadius.._preloadRadius] by 5
 							_preloadVertices.push x, y, z
 
 			preloadCheckHits     = 0
@@ -301,11 +302,12 @@ Model.Binary =
 
 		loadedData = []
 		
-		finalCallback = (err, { vertices, minmax }, colors) =>
+		finalCallback = (err, arg1, colors) =>
 			if err
 				callback err if callback
 
 			else
+				{ vertices, minmax } = arg1
 				# Maybe we need to expand our data structure.
 				@extendPoints(minmax...)
 				

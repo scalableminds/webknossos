@@ -209,6 +209,14 @@ Model.Binary =
 			[_offset0, _offset1, _offset2] = @cubeOffset
 			_size0 = @cubeSize[0]
 			_size01 = _size0 * @cubeSize[1]
+			
+			_lowerBound0 = _offset0 << 6
+			_lowerBound1 = _offset1 << 6
+			_lowerBound2 = _offset2 << 6
+			_upperBound0 = (_offset0 + @cubeSize[0]) << 6
+			_upperBound1 = (_offset1 + @cubeSize[1]) << 6
+			_upperBound2 = (_offset2 + @cubeSize[2]) << 6
+
 			j3 = 0
 			j4 = 0
 
@@ -223,7 +231,9 @@ Model.Binary =
 					interpolationFront, interpolationBack, interpolationDelta, 
 					j4, j3, 
 					_cube, 
-					_offset0, _offset1, _offset2, 
+					_offset0, _offset1, _offset2,
+					_lowerBound0, _lowerBound1, _lowerBound2,
+					_upperBound0, _upperBound1, _upperBound2,
 					_size0, _size01)
 
 				j3 += 3
@@ -253,8 +263,6 @@ Model.Binary =
 
 	_ping : (position, direction, callback, done) ->
 
-		callback() if callback
-
 		_.defer =>
 			
 			_preloadVertices = @preloadVertices
@@ -262,9 +270,9 @@ Model.Binary =
 			# Looks like `preload_vertices` hasn't been populated yet.
 			# This is what ppl call lazy initialization.
 			if _preloadVertices.length == 0
-				for x in [-50..50] by 5
+				for x in [-20..20] by 5
 					for y in [0..10] by 5
-						for z in [-50..50] by 5
+						for z in [-20..20] by 5
 							_preloadVertices.push x, y, z
 
 			preloadCheckHits     = 0
@@ -281,7 +289,10 @@ Model.Binary =
 					preloadCheckHits++ if @getColor(x, y, z) > 0
 			
 			if preloadCheckHits / preloadCheckCount < @PRELOAD_TOLERANCE
-				@pull(position, direction, done)
+				@pull(position, direction, (err) ->
+					done()
+					callback() if !err and callback
+				)
 			else
 				done()
 			
@@ -290,7 +301,7 @@ Model.Binary =
 
 		loadedData = []
 		
-		finalCallback = (err, { vertices, minmax}, colors) =>
+		finalCallback = (err, { vertices, minmax }, colors) =>
 			if err
 				callback err if callback
 
@@ -376,21 +387,70 @@ Model.Binary =
 		
 		_cube   = @cube
 		_offset = @cubeOffset
-		_size   = @cubeSize
+		_size   = @cubeSize		
 
 		# First, we calculate the new dimension of the cuboid.
 		if _cube?
+			_upperBound = [
+				_offset[0] + _size[0]
+				_offset[1] + _size[1]
+				_offset[2] + _size[2]
+			]
+
 			cubeOffset = [
 				Math.min(x0, x1, _offset[0])
 				Math.min(y0, y1, _offset[1])
 				Math.min(z0, z1, _offset[2])
 			]
 			cubeSize = [
-				Math.max(x0, x1, _offset[0] + _size[0] - 1) - cubeOffset[0] + 1
-				Math.max(y0, y1, _offset[1] + _size[1] - 1) - cubeOffset[1] + 1
-				Math.max(z0, z1, _offset[2] + _size[2] - 1) - cubeOffset[2] + 1
+				Math.max(x0, x1, _upperBound[0] - 1) - cubeOffset[0] + 1
+				Math.max(y0, y1, _upperBound[1] - 1) - cubeOffset[1] + 1
+				Math.max(z0, z1, _upperBound[2] - 1) - cubeOffset[2] + 1
 			]
+
+			# Just reorganize the existing buckets when the cube dimensions 
+			# have changed.
+			if cubeOffset[0] != _offset[0] or 
+			cubeOffset[1] != _offset[1] or 
+			cubeOffset[2] != _offset[2] or 
+			cubeSize[0] != _size[0] or 
+			cubeSize[1] != _size[1] or 
+			cubeSize[2] != _size[2]
+				
+				cube = []
+
+				for z in [0...cubeSize[2]]
+					
+					# Bound checking is necessary.
+					if _offset[2] <= z + cubeOffset[2] < _upperBound[2]
+						
+						for y in [0...cubeSize[1]]
+						
+							if _offset[1] <= y + cubeOffset[1] < _upperBound[1]
+						
+								for x in [0...cubeSize[0]]
+						
+									cube.push if _cube? and _offset[0] <= x + cubeOffset[0] < _upperBound[0]
+										index = 
+											(x + cubeOffset[0] - _offset[0]) +
+											(y + cubeOffset[1] - _offset[1]) * _size[0] +
+											(z + cubeOffset[2] - _offset[2]) * _size[0] * _size[1]
+										_cube[index]
+									else
+										null
+							else
+								cube.push(null) for x in [0...cubeSize[0]]
+									
+					else
+						cube.push(null) for xy in [0...(cubeSize[0] * cubeSize[1])]
+					
+				@cube       = cube
+				@cubeOffset = cubeOffset
+				@cubeSize   = cubeSize
+						
+		
 		else
+			# Before, there wasn't any cube.
 			cubeOffset = [
 				Math.min(x0, x1)
 				Math.min(y0, y1)
@@ -401,24 +461,15 @@ Model.Binary =
 				Math.max(y0, y1) - cubeOffset[1] + 1
 				Math.max(z0, z1) - cubeOffset[2] + 1
 			]
-
-		# Then we reorganize the existing buckets.
-		cube = []
-		for z in [0...cubeSize[2]]
-			for y in [0...cubeSize[1]]
-				for x in [0...cubeSize[0]]
-					cube.push if _cube?
-						index = 
-							(x + cubeOffset[0] - _offset[0]) +
-							(y + cubeOffset[1] - _offset[1]) * _size[0] +
-							(z + cubeOffset[2] - _offset[2]) * _size[0] * _size[1]
-						_cube[index]
-					else
-						null
+			cube = []
+			cube.push(null) for xyz in [0...(cubeSize[0] * cubeSize[1] * cubeSize[2])]
+			
+			@cube       = cube
+			@cubeOffset = cubeOffset
+			@cubeSize   = cubeSize
+			
 					
-		@cube       = cube
-		@cubeOffset = cubeOffset
-		@cubeSize   = cubeSize
+
 
 	# Getting a color value from the data structure.s
 	# Color values range from 1 to 2 -- with black being 0 and white 1.

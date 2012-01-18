@@ -243,7 +243,7 @@ Model.Binary =
 
 	
 
-	PRELOAD_TOLERANCE : 0.7
+	PRELOAD_TOLERANCE : 0.9
 	PRELOAD_RADIUS : 20
 	preloadVertices : []
 

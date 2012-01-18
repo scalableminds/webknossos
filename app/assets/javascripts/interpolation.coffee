@@ -118,6 +118,8 @@ nextPoint = (xd, yd, zd, _cube, bucketIndex0, pointIndex0, _size0, _size01) ->
       # The point seems to be at the right border.
       bucketIndex++
       pointIndex &= -64
+      # Bound checking.
+      return -1 if bucketIndex % _size0 == 0
     else
       pointIndex++
   
@@ -127,6 +129,8 @@ nextPoint = (xd, yd, zd, _cube, bucketIndex0, pointIndex0, _size0, _size01) ->
       # The point is to at the bottom border.
       bucketIndex += _size0
       pointIndex &= -4033
+      # Bound checking.
+      return -1 if bucketIndex % _size01 == 0
     else
       pointIndex += 64
   
@@ -153,9 +157,12 @@ nextPoint = (xd, yd, zd, _cube, bucketIndex0, pointIndex0, _size0, _size01) ->
 # -2 : negative coordinates
 # -1 : bucket fault
 # 0  : point fault
-find2 = (x, y, z, interpolationFront, interpolationBack, interpolationDelta, j4, j3, _cube, _offset0, _offset1, _offset2, _size0, _size01) ->
+find2 = (x, y, z, interpolationFront, interpolationBack, interpolationDelta, j4, j3, _cube, _offset0, _offset1, _offset2, _lowerBound0, _lowerBound1, _lowerBound2, _upperBound0, _upperBound1, _upperBound2, _size0, _size01) ->
 
   return interpolationFront[j4] = -2 if x < 0 or y < 0 or z < 0
+  
+  # Bound checking is necessary.
+  return interpolationFront[j4] = -1 if x < _lowerBound0 or y < _lowerBound1 or z < _lowerBound2 or x > _upperBound0 or y > _upperBound1 or z > _upperBound2
 
   # Bitwise operations are faster than javascript's native rounding functions.
   x0 = x >> 0; xd = x - x0     

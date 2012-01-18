@@ -15,7 +15,7 @@ uniform mat4 normalMatrix;
 
 void main(void){ 
 
-	if (interpolationFront[0] > 0.0) {
+	if (interpolationFront[0] >= 1.0) {
 	 	float colorScalar =
 	 		interpolationFront[0] * (1.0 - interpolationOffset[0]) * (1.0 - interpolationOffset[1]) * (1.0 - interpolationOffset[2]) +
 	 		interpolationFront[1] * interpolationOffset[0]         * (1.0 - interpolationOffset[1]) * (1.0 - interpolationOffset[2]) + 
@@ -31,8 +31,8 @@ void main(void){
   	aColor = vec4(0.0, 0.0, 1.0, 1.0);
   } else if (interpolationFront[0] == -1.0) {
   	aColor = vec4(1.0, 0.0, 0.0, 1.0);
-  } else if (interpolationFront[1] == 0.0) {
-  	aColor = vec4(0.0, 1.0, 0.0, 1.0);
+  } else if (interpolationFront[0] >= 0.0 && interpolationFront[0] < 1.0) {
+  	aColor = vec4(0.0, 1.0 - interpolationFront[0], 0.0, 1.0);
   } else {
   	aColor = vec4(0.0, 0.0, 0.0, 1.0);
   }

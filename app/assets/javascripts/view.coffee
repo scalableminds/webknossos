@@ -121,7 +121,7 @@ class _View
 			g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
 
 			#sends current position to Model for preloading data
-			Model.Binary.ping cam.getPos(), cam.getDir(), null
+			Model.Binary.ping cam.getPos(), cam.getDir(), renderFunction
 
 			#sends current position to Model for caching route
 			Model.Route.put cam.getPos(), null

@@ -28,7 +28,7 @@ class _View
 	clippingDistance = 140
 	#camPos = [63.5,63.5,-clippingDistance+63.5]
 	camPos = [0,0,-clippingDistance]
-	moveValueStrafe = 0.5
+	moveValueStrafe = 1
 	moveValueRotate = 0.02
 
 	perspectiveMatrix = null
@@ -36,7 +36,7 @@ class _View
 
 	constructor: () -> 
 		cvs = document.getElementById('render')
-		engine = new GL_engine cvs, {"antialias":true}
+		engine = new GL_engine cvs, antialias : true
 
 		cam = new Flycam()
 		perspectiveMatrix = cam.getMovedNonPersistent camPos
@@ -101,7 +101,7 @@ class _View
 
 
 		# OUTPUT Framerate
-		writeFramerate Math.floor(engine.getFramerate()), totalNumberOfVertices
+		writeFramerate Math.floor(engine.getFramerate()), cam.getPos()
 
 	drawTriangleplane = ->
 		
@@ -150,12 +150,10 @@ class _View
 			
 				
 
-	writeFramerate = (framerate, totalNumberOfVertices) ->
-		framerate = 0 unless framerate? 
-		totalNumberOfVertices = 0 unless totalNumberOfVertices? 
+	writeFramerate = (framerate = 0, position = 0) ->
 		
-		status = document.getElementById('status')
-		status.innerHTML = "#{framerate} FPS <br/> #{totalNumberOfVertices} Total Points <br />" 
+		document.getElementById('status')
+			.innerHTML = "#{framerate} FPS <br/> #{position}<br />" 
 
 	#adds all kind of geometry to geometry-array
 	#and adds the shader if is not already set for this geometry-type

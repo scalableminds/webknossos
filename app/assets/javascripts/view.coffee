@@ -80,12 +80,12 @@ class _View
 
 		#renders all geometries in geometry-array
 		totalNumberOfVertices = 0
-		totalNumberOfVertices += drawTriangleplane()
+		#totalNumberOfVertices += drawTriangleplane()
 
 		# first Mesh is always the coordinate axis mini-map
 		if meshes[0]
 			engine.pushMatrix()
-			engine.translate 250,100,0
+			engine.translate 200,100,0
 			console.log V3.angle [0,0,1], cam.getDir()
 
 			engine.rotateX V3.angle [1,0,0], cam.getDir()

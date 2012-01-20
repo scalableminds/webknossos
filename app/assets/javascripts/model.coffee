@@ -217,8 +217,7 @@ Model.Binary =
 
 	PRELOAD_TOLERANCE : 0.9
 	PRELOAD_RADIUS : 20
-	preloadVertices : []
-
+	
 	# Use this method to let us know when you've changed your spot. Then we'll try to 
 	# preload some data. 
 	#
@@ -238,36 +237,38 @@ Model.Binary =
 
 		_.defer =>
 			
-			_preloadVertices = @preloadVertices
-			_preloadRadius   = @PRELOAD_RADIUS
-			# Looks like `preload_vertices` hasn't been populated yet.
-			# This is what ppl call lazy initialization.
-			if _preloadVertices.length == 0
-				for z in [-1..10] by 3
-					for x in [-_preloadRadius.._preloadRadius] by 5
-						for y in [-_preloadRadius.._preloadRadius] by 5
-							_preloadVertices.push x, y, z
-
-			preloadCheckHits     = 0
-			preloadCheckCount    = 0
-			preloadCheckVertices = M4x4.transformPointsAffine matrix, _preloadVertices
-
-			for i in [0...preloadCheckVertices.length] by 3
-				x = preloadCheckVertices[i]
-				y = preloadCheckVertices[i + 1]
-				z = preloadCheckVertices[i + 2]
-
-				if x >= 0 and y >= 0 and z >= 0 
-					preloadCheckCount++
-					preloadCheckHits++ if @getColor(x, y, z) > 0
+			_preloadRadius = @PRELOAD_RADIUS
 			
-			if preloadCheckHits / preloadCheckCount < @PRELOAD_TOLERANCE
+			if @preloadTest(matrix, -_preloadRadius, -_preloadRadius, 2 * _preloadRadius) < @PRELOAD_TOLERANCE
 				@pull(matrix, (err) ->
 					done()
 					callback() if !err and callback
 				)
 			else
 				done()
+	
+	preloadTest : (matrix, x0, y0, z, width, sparse = 5) ->
+
+		vertices = []
+		for x in [x0...(x0 + width)] by sparse
+			for y in [y0...(y0 + width)] by sparse
+				vertices.push x, y, z
+
+		vertices = M4x4.transformPointsAffine matrix, vertices
+
+		count = hits = 0
+		for i in [0...vertices.length] by 3
+			x = vertices[i]
+			y = vertices[i + 1]
+			z = vertices[i + 2]
+
+			if x >= 0 and y >= 0 and z >= 0 
+				count++
+				hits++ if @getColor(x, y, z) > 0
+		
+		hits / count
+
+
 			
 
 	pull : (matrix, callback) ->
@@ -304,7 +305,7 @@ Model.Binary =
 		_WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
 
 		unless @loadSocket
-			socket = @loadSocket = new _WebSocket("ws://#{document.location.host}/binary/socket")
+			socket = @loadSocket = new _WebSocket("ws://#{document.location.host}/binary/ws")
 			socket.binaryType = 'arraybuffer'
 			socket.onclose = (code, reason) ->
 				alert("#{code}: #{reason}")
@@ -332,7 +333,7 @@ Model.Binary =
 		transmitPackage = new Float32Array(17)
 		transmitPackage[0] = socketHandle
 		transmitPackage.set(matrix, 1)
-		
+
 		if socket.readyState == _WebSocket.OPEN
 			socket.send(transmitPackage)
 		else
@@ -340,7 +341,7 @@ Model.Binary =
 				socket.send(transmitPackage)
 				socket.removeEventListener("open", socketOpenCallback, false)
 			socket.addEventListener("open", socketOpenCallback, false)
-
+		
 	
 	# Now comes the implementation of our internal data structure.
 	# `cube` is the main array. It actually represents a cuboid 

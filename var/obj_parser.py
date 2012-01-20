@@ -20,7 +20,8 @@ def parseObjFile(objFile, options):
     lines = myfile.read().split('\n')
     lines = filter(lambda x: len(x) > 0,[x.strip() for x in lines])
 
-    currentColor = 0
+    # SHOULD BE RESET AT THE FIRST OCCURANCE OF A "g" TAG
+    currentColor = 12
 
     for line in lines:    
         # HANDLE SUBGROUPS
@@ -29,6 +30,7 @@ def parseObjFile(objFile, options):
             # FOR RIGTH NOW LETS HAVE SOME FUN WITH COLORS
             if currentColor < 11:
                 currentColor+=1
+                print COLORS[currentColor]
             else:
                 currentColor = 0
                 
@@ -43,7 +45,7 @@ def parseObjFile(objFile, options):
         # HANDLE VERTICES    
         elif line[0] == "v":
             vertices += map(float,spacereg.split(line)[1:])
-            colors += COLORS[currentColor]*options.colorSize;
+            colors += COLORS[currentColor];
 
         # ASSOCIATE FACES TO VERTICES AND NORMALS
         # SUBTRACT 1 BECAUSE BUFFER INDEX STARTS AT 0

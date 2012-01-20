@@ -239,7 +239,7 @@ Model.Binary =
 			
 			_preloadRadius = @PRELOAD_RADIUS
 			
-			if @preloadTest(matrix, -_preloadRadius, -_preloadRadius, 2 * _preloadRadius) < @PRELOAD_TOLERANCE
+			if @preloadTest(matrix, -_preloadRadius, -_preloadRadius, 0, 2 * _preloadRadius) < @PRELOAD_TOLERANCE
 				@pull(matrix, (err) ->
 					done()
 					callback() if !err and callback
@@ -319,10 +319,11 @@ Model.Binary =
 			socket.removeEventListener("message", socketCallback, false)
 			socket.removeEventListener("error", socketErrorCallback, false)
 		
-		socketCallback = (buffer) ->
+		socketCallback = (event) ->
+			buffer = event.data
 			handle = new Float32Array(buffer, 0, 1)[0]
-			if handle == workerHandle
-				callback(null, new Uint8Array(data, 4)) if callback
+			if handle == socketHandle
+				callback(null, new Uint8Array(buffer, 4)) if callback
 				socket.removeEventListener("message", socketCallback, false)
 				socket.removeEventListener("error", socketErrorCallback, false)
 
@@ -333,12 +334,13 @@ Model.Binary =
 		transmitPackage = new Float32Array(17)
 		transmitPackage[0] = socketHandle
 		transmitPackage.set(matrix, 1)
+		socketHandle = transmitPackage[0]
 
 		if socket.readyState == _WebSocket.OPEN
-			socket.send(transmitPackage)
+			socket.send(transmitPackage.buffer)
 		else
 			socketOpenCallback = ->
-				socket.send(transmitPackage)
+				socket.send(transmitPackage.buffer)
 				socket.removeEventListener("open", socketOpenCallback, false)
 			socket.addEventListener("open", socketOpenCallback, false)
 		

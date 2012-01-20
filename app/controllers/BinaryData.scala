@@ -49,8 +49,8 @@ object BinaryData extends Controller with Secured {
         case el => {
           Logger.info( "Got message: " + el.toString )
           el.map( bytes => {
-            if ( bytes.length >= 8 ) {
-              Logger.info( "Value: '%f' Num bytes: %d".format( toDouble( bytes ), bytes.length ) )
+            if ( bytes.length >= 4 ) {
+              Logger.info( "Value: '%f' Num bytes: %d".format( toFloat( bytes ), bytes.length ) )
             } else {
               Logger.info( "Send me more!" )
             }
@@ -61,7 +61,7 @@ object BinaryData extends Controller with Secured {
       } |>> out
 
   }
-  def toDouble( bytes: Array[Byte] ) = ByteBuffer.wrap( bytes ).getDouble
+  def toFloat( bytes: Array[Byte] ) = ByteBuffer.wrap( bytes ).getFloat
 
   def model( modelType: String ) = Action {
     ModelStore( modelType ) match {

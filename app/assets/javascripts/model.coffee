@@ -216,7 +216,7 @@ Model.Binary =
 	
 
 	PRELOAD_TOLERANCE : 0.9
-	PRELOAD_RADIUS : 20
+	PRELOAD_RADIUS : 37
 	
 	# Use this method to let us know when you've changed your spot. Then we'll try to 
 	# preload some data. 
@@ -230,23 +230,42 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (matrix, callback) ->
 
-		@ping = _.throttle2(_.mutex(_.bind(@_ping, @)), 500, false)
+		@ping = _.throttle2(_.mutex(_.bind(@_ping, @), 3000), 500, false)
 		@ping(matrix, callback)
 
 	_ping : (matrix, callback, done) ->
 
 		_.defer =>
 			
-			_preloadRadius = @PRELOAD_RADIUS
+			loadedData = []
+			finalCallback = (err) ->
+				done()
+				callback() if !err and callback
+					
+			_preloadRadius    = @PRELOAD_RADIUS
+			_preloadTolerance = @PRELOAD_TOLERANCE
 			
-			if @preloadTest(matrix, -_preloadRadius, -_preloadRadius, 0, 2 * _preloadRadius) < @PRELOAD_TOLERANCE
-				@pull(matrix, (err) ->
-					done()
-					callback() if !err and callback
-				)
-			else
+			for x0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
+				for y0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
+					unless @preload(matrix, x0, y0, 0, _preloadRadius * 2, @synchronizingCallback(loadedData, finalCallback))
+						for z in [-1...15] by 3
+							break if @preload(matrix, x0, y0, z, _preloadRadius * 2, @synchronizingCallback(loadedData, finalCallback))
+								
+					
+			if loadedData.length == 0
 				done()
 	
+	preload : (matrix, x0, y0, z, width, sparse = 5, callback) ->
+
+		if @preloadTest(matrix, x0, y0, z, width, sparse) < @PRELOAD_TOLERANCE
+			@pull(
+				M4x4.translate(matrix, M4x4.transformPointAffine(matrix, [x0 - matrix[12], y0 - matrix[13], z - matrix[14]])),
+				callback
+			)
+			true
+		else
+			false
+
 	preloadTest : (matrix, x0, y0, z, width, sparse = 5) ->
 
 		vertices = []

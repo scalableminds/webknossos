@@ -11,6 +11,27 @@ M4x4.transformPointsAffine = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.len
     r[i + 2] = m[2] * v0 + m[6] * v1 + m[10] * v2 + m[14]
 
   r
+# Applies a transformation matrix on an array of points.
+M4x4.transformPoints = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
+
+  for i in [0...points.length] by 3
+    v0 = points[i]
+    v1 = points[i + 1]
+    v2 = points[i + 2]
+    
+    r[i]     = m[0] * v0 + m[4] * v1 + m[8] * v2 + m[12]
+    r[i + 1] = m[1] * v0 + m[5] * v1 + m[9] * v2 + m[13]
+    r[i + 2] = m[2] * v0 + m[6] * v1 + m[10] * v2 + m[14]
+    w        = m[3] * v0 + m[7] * v1 + m[11] * v2 + m[15]
+
+    if w != 1.0
+      r[0] /= w
+      r[1] /= w
+      r[2] /= w
+
+  r
+
+
 
 # Applies a transformation matrix on an array of points.
 M4x4.transformPointsAffineWithTranslation = (m, translationVector, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->

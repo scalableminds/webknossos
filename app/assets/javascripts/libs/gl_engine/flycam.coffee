@@ -17,8 +17,10 @@ class Flycam
 
 	move : (p) ->
 		tranMat = M4x4.makeTranslate([ p[0], p[1], p[2] ])
+		console.log "translate", Array.prototype.join(",", M4x4.translate(trans, p))
 		trans = M4x4.mul(trans, tranMat)
-
+		console.log "mul", Array.prototype.join(",", trans)
+	
 	getMovedNonPersistent : (p) ->
 		@move [ p[0], p[1], p[2] ]
 		returnMat = M4x4.clone trans

@@ -14,14 +14,14 @@ POST    /register                           controllers.Application.registrate
 
 # Binary Data
 GET     /binary/data/:model                 controllers.BinaryData.data(model: String, px: String, py: String, pz: String, ax: String, ay: String, az: String)
-GET     /binary/model/:model                controllers.BinaryData.model(model:String)
-GET     /binary/polygons/:model             controllers.BinaryData.polygons(model:String)
-GET		/binary/ws							controllers.BinaryData.dataWebsocket()
+GET     /binary/model/:model                controllers.BinaryData.model(model: String)
+GET     /binary/polygons/:model             controllers.BinaryData.polygons(model: String)
+GET			/binary/ws/:model										controllers.BinaryData.dataWebsocket(model: String)
 
 # Route Stuff
 GET     /route/initialize                   controllers.Route.initialize
 POST    /route/:id                          controllers.Route.blackBox(id: String)
-GET		/route/:id							controllers.Route.getRoute(id: String)
+GET			/route/:id													controllers.Route.getRoute(id: String)
 
 # Test pages
 GET     /test/                              controllers.Test.index

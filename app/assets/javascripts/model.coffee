@@ -115,7 +115,28 @@ Model.Binary =
 	#
 	# Example: `Model.Binary.vertices([23, 42, 12], [1,2,3], (err, vertices) -> ...)`
 	#
-	pullVertices : (matrix, callback) ->
+	pullVertices : (position, direction, callback) ->
+		
+		worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker.js")
+		workerHandle = Math.random()
+		workerCallback = (event) ->
+			
+			if (args = event.data).workerHandle == workerHandle
+				if err = args.err
+					callback(err)
+				else 
+					callback(null, args) if callback
+				worker.removeEventListener("message", workerCallback, false)
+
+		worker.addEventListener("message", workerCallback, false)
+
+		worker.onerror = (err) ->
+			console.log(err)
+		
+		worker.postMessage { @verticesTemplate, position, direction, workerHandle }
+		return
+	
+	pullVertices2 : (matrix, callback) ->
 		
 		worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker.js")
 		
@@ -229,12 +250,93 @@ Model.Binary =
 	# you look at
 	#
 	# No Callback Paramters
-	ping : (matrix, callback) ->
+	ping : (position, direction, callback) ->
 
 		@ping = _.throttle2(_.mutex(_.bind(@_ping, @)), 500, false)
-		@ping(matrix, callback)
+		@ping(position, direction, callback)
 
-	_ping : (matrix, callback, done) ->
+	_ping : (position, direction, callback, done) ->
+
+		_.defer =>
+			
+			_preloadVertices = @preloadVertices
+			_preloadRadius   = @PRELOAD_RADIUS
+			# Looks like `preload_vertices` hasn't been populated yet.
+			# This is what ppl call lazy initialization.
+			if _preloadVertices.length == 0
+				for y in [-1..10] by 3
+					for x in [-_preloadRadius.._preloadRadius] by 5
+						for z in [-_preloadRadius.._preloadRadius] by 5
+							_preloadVertices.push x, y, z
+
+			preloadCheckHits     = 0
+			preloadCheckCount    = 0
+			preloadCheckVertices = M4x4.moveVertices _preloadVertices, position, direction
+
+			for i in [0...preloadCheckVertices.length] by 3
+				x = preloadCheckVertices[i]
+				y = preloadCheckVertices[i + 1]
+				z = preloadCheckVertices[i + 2]
+
+				if x >= 0 and y >= 0 and z >= 0 
+					preloadCheckCount++
+					preloadCheckHits++ if @getColor(x, y, z) > 0
+			
+			if preloadCheckHits / preloadCheckCount < @PRELOAD_TOLERANCE
+				@pull(position, direction, (err) ->
+					done()
+					callback() if !err and callback
+				)
+			else
+				done()
+			
+
+	pull : (position, direction, callback) ->
+
+		loadedData = []
+		
+		finalCallback = (err, arg1, colors) =>
+			if err
+				callback err if callback
+
+			else
+				{ vertices, minmax } = arg1
+				# Maybe we need to expand our data structure.
+				@extendPoints(minmax...)
+				
+				# Then we'll just put the point in to our data structure.
+				for i in [0...colors.length]
+					x = vertices[i * 3]
+					y = vertices[i * 3 + 1]
+					z = vertices[i * 3 + 2]
+					if x >= 0 and y >= 0 and z >= 0
+						@setColor(x, y, z, colors[i] / 256 + 1)
+
+				callback null if callback
+
+		# We use synchronized callbacks to make sure both callbacks have returned.
+		@pullVertices position, direction, @synchronizingCallback(loadedData, finalCallback)
+
+		@load position, direction, @synchronizingCallback(loadedData, finalCallback)
+
+	load : (position, direction, callback) ->
+		
+		request
+			url : "/binary/data/cube?px=#{Math.round(position[0])}&py=#{Math.round(position[1])}&pz=#{Math.round(position[2])}&ax=#{direction[0]}&ay=#{direction[1]}&az=#{direction[2]}"
+			responseType : 'arraybuffer'
+			,
+			(err, data) ->
+				if err
+					callback(err) if callback
+				else
+					callback(null, new Uint8Array(data)) if callback
+	
+	ping2 : (matrix, callback) ->
+
+		@ping2 = _.throttle2(_.mutex(_.bind(@_ping2, @)), 500, false)
+		@ping2(matrix, callback)
+
+	_ping2 : (matrix, callback, done) ->
 
 		_.defer =>
 			
@@ -262,7 +364,7 @@ Model.Binary =
 					preloadCheckHits++ if @getColor(x, y, z) > 0
 			
 			if preloadCheckHits / preloadCheckCount < @PRELOAD_TOLERANCE
-				@pull(matrix, (err) ->
+				@pull(position, direction, (err) ->
 					done()
 					callback() if !err and callback
 				)
@@ -270,7 +372,7 @@ Model.Binary =
 				done()
 			
 
-	pull : (matrix, callback) ->
+	pull2 : (matrix, callback) ->
 
 		loadedData = []
 		
@@ -294,17 +396,15 @@ Model.Binary =
 				callback null if callback
 
 		# We use synchronized callbacks to make sure both callbacks have returned.
-		@pullVertices matrix, @synchronizingCallback(loadedData, finalCallback)
+		@pullVertices2 matrix, @synchronizingCallback(loadedData, finalCallback)
 
-		@load matrix, @synchronizingCallback(loadedData, finalCallback)
+		@load2 matrix, @synchronizingCallback(loadedData, finalCallback)
 	
 
-	load : (matrix, callback) ->
+	load2 : (matrix, callback) ->
 		
-		_WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
-
 		unless @loadSocket
-			socket = @loadSocket = new _WebSocket("ws://#{document.location.host}/binary/socket")
+			socket = @loadSocket = new (if window['MozWebSocket'] then MozWebSocket else WebSocket)("/binary/socket")
 			socket.binaryType = 'arraybuffer'
 			socket.onclose = (code, reason) ->
 				alert("#{code}: #{reason}")
@@ -328,18 +428,10 @@ Model.Binary =
 		socket.addEventListener("message", socketCallback, false)
 		socket.addEventListener("error", socketErrorCallback, false)
 
-		
 		transmitPackage = new Float32Array(17)
 		transmitPackage[0] = socketHandle
 		transmitPackage.set(matrix, 1)
-		
-		if socket.readyState == _WebSocket.OPEN
-			socket.send(transmitPackage)
-		else
-			socketOpenCallback = ->
-				socket.send(transmitPackage)
-				socket.removeEventListener("open", socketOpenCallback, false)
-			socket.addEventListener("open", socketOpenCallback, false)
+		socket.send(transmitPackage)
 
 	
 	# Now comes the implementation of our internal data structure.

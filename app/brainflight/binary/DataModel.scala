@@ -33,6 +33,18 @@ abstract class DataModel {
   // specifies the polygons the model consists of
   val polygons : List[Polygon]
 
+  def rotateAndMove(matrix: List[Float]): ParSeq[Tuple3[Int, Int, Int]]={
+    containingCoordinates.par.map(point=>{
+      val (px,py,pz) = point
+      // see rotation matrix and helmert-transformation for more details
+      val x = matrix(0)*px+matrix(4)*py + matrix(8)*pz + matrix(12)
+      val y = matrix(1)*px+matrix(5)*py + matrix(8)*pz + matrix(13)
+      val z = matrix(2)*px+matrix(6)*py + matrix(8)*pz + matrix(14)
+      (x.round.toInt,y.round.toInt,z.round.toInt)
+    })
+  }
+
+  
   def rotateAndMove(moveVector:Tuple3[Double,Double, Double],axis:Tuple3[Double,Double,Double]):ParSeq[Tuple3[Int, Int, Int]]={
     // orthogonal vector to (0,1,0) and rotation vector
     val ortho = normalizeVector((axis._3,0,-axis._1))

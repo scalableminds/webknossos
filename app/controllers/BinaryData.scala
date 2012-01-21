@@ -10,6 +10,16 @@ import views._
 
 import brainflight.binary._
 import java.nio.ByteBuffer
+import akka.actor._
+import akka.util.duration._
+
+import play.api.libs.akka._
+
+import play.api.Play.current
+
+import play.api.libs.iteratee._
+import Input.EOF
+import play.api.libs.concurrent._
 
 /**
  * scalableminds - brainflight
@@ -17,10 +27,6 @@ import java.nio.ByteBuffer
  * Date: 11.12.11
  * Time: 13:21
  */
-
-import play.api.libs.iteratee._
-import Input.EOF
-import play.api.libs.concurrent._
 
 object BinaryData extends Controller with Secured {
 
@@ -37,31 +43,52 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def dataWebsocket() = WebSocket[Array[Byte]] { request =>
-    ( in, out ) =>
-      Logger.info( "Someone connected!" )
+  def dataWebsocket( modelType: String ) = WebSocket.using[Array[Byte]] { request =>
+    val output = new PushEnumerator[Array[Byte]]
+    val input = Iteratee.foreach[Array[Byte]]( in => {
+      println( "Message arrived! Bytes: %d".format( in.length ) )
+      val ( binHandle, binMatrix ) = in.splitAt( 4 )
+      if ( binMatrix.length % 4 == 0 ) {
+        val matrix = subDivide( binMatrix, 4 ) map toFloat
 
-      in.mapInput {
-        case Input.EOF => {
-          Logger.info( "Someone disconnected. Cleaning resources" )
-          EOF
+        ModelStore( modelType ) match {
+          case Some( m ) =>
+            val result: Array[Byte] =
+              m.rotateAndMove( matrix ).map( DataStore.load ).toArray
+            output.push( binHandle ++ result )
+          case _ =>
+            output.push( binHandle )
         }
-        case el => {
-          Logger.info( "Got message: " + el.toString )
-          el.map( bytes => {
-            if ( bytes.length >= 4 ) {
-              Logger.info( "Value: '%f' Num bytes: %d".format( toFloat( bytes ), bytes.length ) )
-            } else {
-              Logger.info( "Send me more!" )
-            }
-            0
-          } )
-          el
-        }
-      } |>> out
+
+      } else {
+        output.push( binHandle )
+      }
+    } )
+
+    ( input, output )
+  }
+  def subDivide[T]( list: Array[T], subCollectionSize: Int ): List[Array[T]] = {
+    val numFloatBytes = 4
+    if ( list.length <= subCollectionSize ) {
+      list :: Nil
+    } else {
+      var result = List[Array[T]]()
+      for ( i <- 0 until list.length by numFloatBytes ) {
+        result ::= list.slice( i, i + numFloatBytes )
+      }
+      result
+    }
+  }
+
+  def toFloat( bytes: Array[Byte] ) = {
+    ByteBuffer.wrap( bytes ).getFloat
 
   }
-  def toFloat( bytes: Array[Byte] ) = ByteBuffer.wrap( bytes ).getFloat
+  def toBinary( float: Float ) = {
+    val result = new Array[Byte]( 4 )
+    ByteBuffer.wrap( result ).putFloat( float )
+    result
+  }
 
   def model( modelType: String ) = Action {
     ModelStore( modelType ) match {

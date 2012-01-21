@@ -80,7 +80,7 @@ class _View
 
 		#renders all geometries in geometry-array
 		totalNumberOfVertices = 0
-		#totalNumberOfVertices += drawTriangleplane()
+		totalNumberOfVertices += drawTriangleplane()
 
 		# first Mesh is always the coordinate axis mini-map
 		if meshes[0]

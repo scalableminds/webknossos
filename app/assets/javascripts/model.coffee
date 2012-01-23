@@ -250,10 +250,9 @@ Model.Binary =
 							promises.push(promise)
 							break
 
-		$.when(promises)
-			.done(-> callback() if callback)
-			.fail((err) -> callback(err) if callback)
-			.always(-> done())
+		$.when(promises...)
+			.always(-> callback())
+			.always(done)
 
 	
 	preload : (matrix, x0, y0, z, width, sparse = 5) ->
@@ -300,9 +299,8 @@ Model.Binary =
 					z = vertices[i * 3 + 2]
 					if x >= 0 and y >= 0 and z >= 0
 						@setColor(x, y, z, colors[i] / 256 + 1)
-				return
 
-			.promise()
+				return arguments
 
 	
 

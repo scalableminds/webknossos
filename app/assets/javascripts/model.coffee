@@ -247,9 +247,9 @@ Model.Binary =
 			
 			for x0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
 				for y0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
-					unless @preload(matrix, x0, y0, 0, _preloadRadius * 2, @synchronizingCallback(loadedData, finalCallback))
+					unless @preload(matrix, x0, y0, 0, _preloadRadius * 2, null, @synchronizingCallback(loadedData, finalCallback))
 						for z in [-1...15] by 3
-							break if @preload(matrix, x0, y0, z, _preloadRadius * 2, @synchronizingCallback(loadedData, finalCallback))
+							break if @preload(matrix, x0, y0, z, _preloadRadius * 2, null, @synchronizingCallback(loadedData, finalCallback))
 								
 					
 			if loadedData.length == 0
@@ -259,7 +259,7 @@ Model.Binary =
 
 		if @preloadTest(matrix, x0, y0, z, width, sparse) < @PRELOAD_TOLERANCE
 			@pull(
-				M4x4.translate(matrix, M4x4.transformPointAffine(matrix, [x0 - matrix[12], y0 - matrix[13], z - matrix[14]])),
+				M4x4.translate([x0, y0, z], matrix),
 				callback
 			)
 			true
@@ -324,7 +324,7 @@ Model.Binary =
 		_WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
 
 		unless @loadSocket
-			socket = @loadSocket = new _WebSocket("ws://#{document.location.host}/binary/ws")
+			socket = @loadSocket = new _WebSocket("ws://#{document.location.host}/binary/ws/cube")
 			socket.binaryType = 'arraybuffer'
 			socket.onclose = (code, reason) ->
 				alert("#{code}: #{reason}")
@@ -354,6 +354,7 @@ Model.Binary =
 		transmitPackage[0] = socketHandle
 		transmitPackage.set(matrix, 1)
 		socketHandle = transmitPackage[0]
+		console.log("request", transmitPackage)
 
 		if socket.readyState == _WebSocket.OPEN
 			socket.send(transmitPackage.buffer)

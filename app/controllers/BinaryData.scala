@@ -81,7 +81,7 @@ object BinaryData extends Controller with Secured {
   }
 
   def toFloat( bytes: Array[Byte] ) = {
-    ByteBuffer.wrap( bytes ).getFloat
+    ByteBuffer.wrap( bytes.reverse ).getFloat
 
   }
   def toBinary( float: Float ) = {

@@ -11,8 +11,6 @@ Model ?= {}
 # #Model.Binary#
 # Binary is the real deal.
 # It loads and stores the primary graphical data.
-#
-# **Mixins**: Model.Synchronizable
 # 
 # ##Data structure##
 #
@@ -115,24 +113,27 @@ Model.Binary =
 	#
 	# Example: `Model.Binary.vertices([23, 42, 12], [1,2,3], (err, vertices) -> ...)`
 	#
-	pullVertices : (matrix, callback) ->
+	calcVertices : (matrix) ->
 		
+		returnDeferred = $.Deferred()
+
 		worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker.js")
 		
 		workerHandle = Math.random()
 		workerCallback = (event) ->
 			
 			if (args = event.data).workerHandle == workerHandle
-				if err = args.err
-					callback(err)
-				else 
-					callback(null, args) if callback
 				worker.removeEventListener("message", workerCallback, false)
+				if err = args.err
+					returnDeferred.reject(err)
+				else 
+					returnDeferred.resolve(args)
 
 		worker.addEventListener("message", workerCallback, false)
 		
 		worker.postMessage { matrix, workerHandle }
-		return
+		
+		returnDeferred.promise()
 
 
 	# This method allows you to query the data structure. Give us an array of
@@ -230,43 +231,38 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (matrix, callback) ->
 
-		@ping = _.throttle2(_.mutex(_.bind(@_ping, @), 3000), 500, false)
+		@ping = _.throttle2(_.mutex(_.bind(@_ping, @), 5000), 500, false)
 		@ping(matrix, callback)
 
 	_ping : (matrix, callback, done) ->
 
-		_.defer =>
-			
-			loadedData = []
-			finalCallback = (err) ->
-				done()
-				callback() if !err and callback
-					
-			_preloadRadius    = @PRELOAD_RADIUS
-			_preloadTolerance = @PRELOAD_TOLERANCE
-			
-			for x0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
-				for y0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
-					unless @preload(matrix, x0, y0, 0, _preloadRadius * 2, null, @synchronizingCallback(loadedData, finalCallback))
-						for z in [-1...15] by 3
-							break if @preload(matrix, x0, y0, z, _preloadRadius * 2, null, @synchronizingCallback(loadedData, finalCallback))
-								
-					
-			if loadedData.length == 0
-				done()
+		promises = []
+		_preloadRadius    = @PRELOAD_RADIUS
+		_preloadTolerance = @PRELOAD_TOLERANCE
+		
+		for x0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
+			for y0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
+				if promise = @preload(matrix, x0, y0, 0, _preloadRadius * 2)
+					promises.push(promise)
+				else
+					for z in [-1...15] by 3
+						if promise = @preload(matrix, x0, y0, z, _preloadRadius * 2)
+							promises.push(promise)
+							break
+
+		$.when(promises...)
+			.always(-> callback())
+			.always(done)
+
 	
-	preload : (matrix, x0, y0, z, width, sparse = 5, callback) ->
+	preload : (matrix, x0, y0, z, width, sparse = 5) ->
 
 		if @preloadTest(matrix, x0, y0, z, width, sparse) < @PRELOAD_TOLERANCE
-			@pull(
-				M4x4.translate([x0, y0, z], matrix),
-				callback
-			)
-			true
+			@pull(M4x4.translate([x0, y0, z], matrix))
 		else
 			false
 
-	preloadTest : (matrix, x0, y0, z, width, sparse = 5) ->
+	preloadTest : (matrix, x0, y0, z, width, sparse) ->
 
 		vertices = []
 		for x in [x0...(x0 + width)] by sparse
@@ -288,18 +284,11 @@ Model.Binary =
 		hits / count
 
 
-			
+	pull : (matrix) ->
 
-	pull : (matrix, callback) ->
+		$.when(@loadColors(matrix), @calcVertices(matrix))
 
-		loadedData = []
-		
-		finalCallback = (err, arg1, colors) =>
-			if err
-				callback err if callback
-
-			else
-				{ vertices, minmax } = arg1
+			.pipe (colors, { vertices, minmax }) =>
 				# Maybe we need to expand our data structure.
 				@extendPoints(minmax...)
 				
@@ -311,40 +300,43 @@ Model.Binary =
 					if x >= 0 and y >= 0 and z >= 0
 						@setColor(x, y, z, colors[i] / 256 + 1)
 
-				callback null if callback
+				return arguments
 
-		# We use synchronized callbacks to make sure both callbacks have returned.
-		@pullVertices matrix, @synchronizingCallback(loadedData, finalCallback)
-
-		@load matrix, @synchronizingCallback(loadedData, finalCallback)
 	
 
-	load : (matrix, callback) ->
+	loadColors : (matrix) ->
 		
+		returnDeferred = $.Deferred()
+
 		_WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
 
 		unless @loadSocket
 			socket = @loadSocket = new _WebSocket("ws://#{document.location.host}/binary/ws/cube")
+			openDeferred = @loadSocketOpenDeferred = $.Deferred()
+
 			socket.binaryType = 'arraybuffer'
-			socket.onclose = (code, reason) ->
-				alert("#{code}: #{reason}")
+			socket.onclose = (code, reason) -> alert("#{code}: #{reason}")
+			socket.onopen = -> openDeferred.resolve()
+			setTimeout((-> openDeferred.reject("timeout")), 20000)
+
 		else
 			socket = @loadSocket
+			openDeferred = @loadSocketOpenDeferred
 		
 		socketHandle = Math.random()
 
 		socketErrorCallback = (err) ->
-			callback(err)
 			socket.removeEventListener("message", socketCallback, false)
 			socket.removeEventListener("error", socketErrorCallback, false)
+			returnDeferred.reject(err)
 		
 		socketCallback = (event) ->
 			buffer = event.data
 			handle = new Float32Array(buffer, 0, 1)[0]
 			if handle == socketHandle
-				callback(null, new Uint8Array(buffer, 4)) if callback
 				socket.removeEventListener("message", socketCallback, false)
 				socket.removeEventListener("error", socketErrorCallback, false)
+				returnDeferred.resolve(new Uint8Array(buffer, 4))
 
 		socket.addEventListener("message", socketCallback, false)
 		socket.addEventListener("error", socketErrorCallback, false)
@@ -356,13 +348,8 @@ Model.Binary =
 		socketHandle = transmitPackage[0]
 		console.log("request", transmitPackage)
 
-		if socket.readyState == _WebSocket.OPEN
-			socket.send(transmitPackage.buffer)
-		else
-			socketOpenCallback = ->
-				socket.send(transmitPackage.buffer)
-				socket.removeEventListener("open", socketOpenCallback, false)
-			socket.addEventListener("open", socketOpenCallback, false)
+		openDeferred.done(-> socket.send(transmitPackage.buffer))
+		returnDeferred.promise()
 		
 	
 	# Now comes the implementation of our internal data structure.
@@ -496,11 +483,9 @@ Model.Binary =
 			@cube       = cube
 			@cubeOffset = cubeOffset
 			@cubeSize   = cubeSize
-			
-					
 
 
-	# Getting a color value from the data structure.s
+	# Getting a color value from the data structure.
 	# Color values range from 1 to 2 -- with black being 0 and white 1.
 	getColor : (x, y, z) ->
 		
@@ -602,10 +587,11 @@ Model.Trianglesplane =
 # This loads and caches a pair (vertex and fragment) shaders
 #
 # **Mixins**: Model.Cacheable
+# **Mixins**: Model.Synchronizable
 Model.Shader =
 
 	get : (name, callback) ->
-		
+
 		unless @tryCache name, callback
 		
 			loadedData = []
@@ -739,7 +725,6 @@ Model.Cacheable =
 			return false
 
 # Mixin hook ups
-_.extend Model.Binary, Model.Synchronizable
 _.extend Model.Mesh, Model.Cacheable
 _.extend Model.Shader, Model.Synchronizable
 _.extend Model.Shader, Model.Cacheable

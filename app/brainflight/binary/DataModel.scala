@@ -38,8 +38,8 @@ abstract class DataModel {
       val (px,py,pz) = point
       // see rotation matrix and helmert-transformation for more details
       val x = matrix(0)*px+matrix(4)*py + matrix(8)*pz + matrix(12)
-      val y = matrix(1)*px+matrix(5)*py + matrix(8)*pz + matrix(13)
-      val z = matrix(2)*px+matrix(6)*py + matrix(8)*pz + matrix(14)
+      val y = matrix(1)*px+matrix(5)*py + matrix(9)*pz + matrix(13)
+      val z = matrix(2)*px+matrix(6)*py + matrix(10)*pz + matrix(14)
       (x.round.toInt,y.round.toInt,z.round.toInt)
     })
   }

@@ -55,7 +55,6 @@ object BinaryData extends Controller with Secured {
           case Some( m ) =>
             val result: Array[Byte] =
               m.rotateAndMove( matrix ).map( DataStore.load ).toArray
-            println("Result: %s".format(result.mkString(":")))
             output.push( binHandle ++ result )
           case _ =>
             output.push( binHandle )

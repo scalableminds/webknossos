@@ -89,30 +89,6 @@ Model ?= {}
 #
 Model.Binary =
 	
-	verticesTemplate : null
-	
-	# We use lazy initialization load the vertex template.
-	# This method can only be called once if initialization succeeds.
-	initializeVerticesTemplate : (callback) ->
-		@initializeVerticesTemplate = _.once2(@_initializeVerticesTemplate)
-		@initializeVerticesTemplate(callback)
-
-	_initializeVerticesTemplate : (doneCallback) ->
-		
-		request
-			url : '/binary/model/cube'
-			responseType : 'arraybuffer'
-			,	
-			(err, data) =>
-				
-				callback = doneCallback(err)
-				
-				unless err
-					@verticesTemplate = new Int8Array(data)
-					callback() if callback
-				
-				return
-
 	# This method gives you the vertices for a chunk of data (mostly a cube). 
 	# You need to provide the position and direction of the cube you're looking 
 	# for.
@@ -141,26 +117,43 @@ Model.Binary =
 	#
 	pullVertices : (position, direction, callback) ->
 		
-		# Some lazy initialization magic.
-		@initializeVerticesTemplate (err) =>
+		worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker.js")
+		workerHandle = Math.random()
+		workerCallback = (event) ->
 			
-			return callback(err) if err and callback
-			
-			worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker.js")
-			workerHandle = Math.random()
-			workerCallback = (event) ->
-				if event.data.workerHandle == workerHandle 
-					callback(null, event.data) if callback
-					worker.removeEventListener("message", workerCallback, false)
+			if (args = event.data).workerHandle == workerHandle
+				if err = args.err
+					callback(err)
+				else 
+					callback(null, args) if callback
+				worker.removeEventListener("message", workerCallback, false)
 
-			worker.addEventListener("message", workerCallback, false)
+		worker.addEventListener("message", workerCallback, false)
+
+		worker.onerror = (err) ->
+			console.log(err)
+		
+		worker.postMessage { @verticesTemplate, position, direction, workerHandle }
+		return
+	
+	pullVertices2 : (matrix, callback) ->
+		
+		worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker.js")
+		
+		workerHandle = Math.random()
+		workerCallback = (event) ->
 			
-			worker.postMessage(
-				verticesTemplate : @verticesTemplate
-				position : position
-				direction : direction
-				workerHandle : workerHandle
-			)
+			if (args = event.data).workerHandle == workerHandle
+				if err = args.err
+					callback(err)
+				else 
+					callback(null, args) if callback
+				worker.removeEventListener("message", workerCallback, false)
+
+		worker.addEventListener("message", workerCallback, false)
+		
+		worker.postMessage { matrix, workerHandle }
+		return
 
 
 	# This method allows you to query the data structure. Give us an array of
@@ -192,30 +185,30 @@ Model.Binary =
 	#
 	# Callback Parameters:
 	# 
-	# *   `interpolationFront` is a `Float32Array` with the first 4 color values of
+	# *   `bufferFront` is a `Float32Array` with the first 4 color values of
 	# each points. The first value would contain any error codes.
-	# *   `interpolationBack` is a `Float32Array` with the second 4 color values of
+	# *   `bufferBack` is a `Float32Array` with the second 4 color values of
 	# each points.
-	# *   `interpolationDelta` is a `Float32Array` with the delta values.
+	# *   `bufferDelta` is a `Float32Array` with the delta values.
 	#
 	get : (vertices, callback) ->
 
-		interpolationFront = new Float32Array(vertices.length / 3 << 2)
-		interpolationBack  = new Float32Array(vertices.length / 3 << 2)
-		interpolationDelta = new Float32Array(vertices.length)
+		console.time("get")
+		bufferFront = new Float32Array(vertices.length / 3 << 2)
+		bufferBack  = new Float32Array(vertices.length / 3 << 2)
+		bufferDelta = new Float32Array(vertices.length)
 		
 		if (_cube = @cube)
 			
-			[_offset0, _offset1, _offset2] = @cubeOffset
-			_size0 = @cubeSize[0]
-			_size01 = _size0 * @cubeSize[1]
+			size0  = @cubeSize[0]
+			size01 = @cubeSize[0] * @cubeSize[1]
 			
-			_lowerBound0 = _offset0 << 6
-			_lowerBound1 = _offset1 << 6
-			_lowerBound2 = _offset2 << 6
-			_upperBound0 = (_offset0 + @cubeSize[0]) << 6
-			_upperBound1 = (_offset1 + @cubeSize[1]) << 6
-			_upperBound2 = (_offset2 + @cubeSize[2]) << 6
+			lowerBound0 = @cubeOffset[0] << 6
+			lowerBound1 = @cubeOffset[1] << 6
+			lowerBound2 = @cubeOffset[2] << 6
+			upperBound0 = (@cubeOffset[0] + @cubeSize[0]) << 6
+			upperBound1 = (@cubeOffset[1] + @cubeSize[1]) << 6
+			upperBound2 = (@cubeOffset[2] + @cubeSize[2]) << 6
 
 			j3 = 0
 			j4 = 0
@@ -226,20 +219,20 @@ Model.Binary =
 				y = vertices[i + 1]
 				z = vertices[i + 2]
 
-				find2(
+				InterpolationCollector.collect(
 					x, y, z, 
-					interpolationFront, interpolationBack, interpolationDelta, 
+					bufferFront, bufferBack, bufferDelta, 
 					j4, j3, 
 					_cube, 
-					_offset0, _offset1, _offset2,
-					_lowerBound0, _lowerBound1, _lowerBound2,
-					_upperBound0, _upperBound1, _upperBound2,
-					_size0, _size01)
+					lowerBound0, lowerBound1, lowerBound2,
+					upperBound0, upperBound1, upperBound2,
+					size0, size01)
 
 				j3 += 3
 				j4 += 4
-		
-		callback(null, interpolationFront, interpolationBack, interpolationDelta) if callback
+			
+		console.timeEnd("get")
+		callback(null, bufferFront, bufferBack, bufferDelta) if callback
 
 	
 
@@ -271,8 +264,8 @@ Model.Binary =
 			# Looks like `preload_vertices` hasn't been populated yet.
 			# This is what ppl call lazy initialization.
 			if _preloadVertices.length == 0
-				for x in [-_preloadRadius.._preloadRadius] by 5
-					for y in [0..10] by 5
+				for y in [-1..10] by 3
+					for x in [-_preloadRadius.._preloadRadius] by 5
 						for z in [-_preloadRadius.._preloadRadius] by 5
 							_preloadVertices.push x, y, z
 
@@ -337,6 +330,109 @@ Model.Binary =
 					callback(err) if callback
 				else
 					callback(null, new Uint8Array(data)) if callback
+	
+	ping2 : (matrix, callback) ->
+
+		@ping2 = _.throttle2(_.mutex(_.bind(@_ping2, @)), 500, false)
+		@ping2(matrix, callback)
+
+	_ping2 : (matrix, callback, done) ->
+
+		_.defer =>
+			
+			_preloadVertices = @preloadVertices
+			_preloadRadius   = @PRELOAD_RADIUS
+			# Looks like `preload_vertices` hasn't been populated yet.
+			# This is what ppl call lazy initialization.
+			if _preloadVertices.length == 0
+				for z in [-1..10] by 3
+					for x in [-_preloadRadius.._preloadRadius] by 5
+						for y in [-_preloadRadius.._preloadRadius] by 5
+							_preloadVertices.push x, y, z
+
+			preloadCheckHits     = 0
+			preloadCheckCount    = 0
+			preloadCheckVertices = M4x4.transformPointsAffine matrix, _preloadVertices
+
+			for i in [0...preloadCheckVertices.length] by 3
+				x = preloadCheckVertices[i]
+				y = preloadCheckVertices[i + 1]
+				z = preloadCheckVertices[i + 2]
+
+				if x >= 0 and y >= 0 and z >= 0 
+					preloadCheckCount++
+					preloadCheckHits++ if @getColor(x, y, z) > 0
+			
+			if preloadCheckHits / preloadCheckCount < @PRELOAD_TOLERANCE
+				@pull(position, direction, (err) ->
+					done()
+					callback() if !err and callback
+				)
+			else
+				done()
+			
+
+	pull2 : (matrix, callback) ->
+
+		loadedData = []
+		
+		finalCallback = (err, arg1, colors) =>
+			if err
+				callback err if callback
+
+			else
+				{ vertices, minmax } = arg1
+				# Maybe we need to expand our data structure.
+				@extendPoints(minmax...)
+				
+				# Then we'll just put the point in to our data structure.
+				for i in [0...colors.length]
+					x = vertices[i * 3]
+					y = vertices[i * 3 + 1]
+					z = vertices[i * 3 + 2]
+					if x >= 0 and y >= 0 and z >= 0
+						@setColor(x, y, z, colors[i] / 256 + 1)
+
+				callback null if callback
+
+		# We use synchronized callbacks to make sure both callbacks have returned.
+		@pullVertices2 matrix, @synchronizingCallback(loadedData, finalCallback)
+
+		@load2 matrix, @synchronizingCallback(loadedData, finalCallback)
+	
+
+	load2 : (matrix, callback) ->
+		
+		unless @loadSocket
+			socket = @loadSocket = new (if window['MozWebSocket'] then MozWebSocket else WebSocket)("/binary/socket")
+			socket.binaryType = 'arraybuffer'
+			socket.onclose = (code, reason) ->
+				alert("#{code}: #{reason}")
+		else
+			socket = @loadSocket
+		
+		socketHandle = Math.random()
+
+		socketErrorCallback = (err) ->
+			callback(err)
+			socket.removeEventListener("message", socketCallback, false)
+			socket.removeEventListener("error", socketErrorCallback, false)
+		
+		socketCallback = (buffer) ->
+			handle = new Float32Array(buffer, 0, 1)[0]
+			if handle == workerHandle
+				callback(null, new Uint8Array(data, 4)) if callback
+				socket.removeEventListener("message", socketCallback, false)
+				socket.removeEventListener("error", socketErrorCallback, false)
+
+		socket.addEventListener("message", socketCallback, false)
+		socket.addEventListener("error", socketErrorCallback, false)
+
+		transmitPackage = new Float32Array(17)
+		transmitPackage[0] = socketHandle
+		transmitPackage.set(matrix, 1)
+		socket.send(transmitPackage)
+
 	
 	# Now comes the implementation of our internal data structure.
 	# `cube` is the main array. It actually represents a cuboid 

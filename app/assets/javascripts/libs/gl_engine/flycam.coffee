@@ -16,8 +16,8 @@ class Flycam
 		trans = [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]
 
 	move : (p) ->
-		tranMat = M4x4.makeTranslate([ p[0], p[1], p[2] ])
-		trans = M4x4.mul(trans, tranMat)
+		trans = M4x4.translate([ p[0], p[1], p[2] ], trans)
+		#trans = M4x4.mul(trans, tranMat)
 
 	getMovedNonPersistent : (p) ->
 		@move [ p[0], p[1], p[2] ]

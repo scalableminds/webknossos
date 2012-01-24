@@ -315,7 +315,7 @@ Model.Binary =
 			openDeferred = @loadSocketOpenDeferred = $.Deferred()
 
 			socket.binaryType = 'arraybuffer'
-			socket.onclose = (code, reason) -> alert("#{code}: #{reason}")
+			socket.onclose = (code, reason) -> console.error("socket closed", "#{code}: #{reason}")
 			socket.onopen = -> openDeferred.resolve()
 			setTimeout((-> openDeferred.reject("timeout")), 20000)
 
@@ -341,7 +341,6 @@ Model.Binary =
 		socket.addEventListener("message", socketCallback, false)
 		socket.addEventListener("error", socketErrorCallback, false)
 
-		
 		transmitPackage = new Float32Array(17)
 		transmitPackage[0] = socketHandle
 		transmitPackage.set(matrix, 1)

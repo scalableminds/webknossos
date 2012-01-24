@@ -49,7 +49,7 @@ object BinaryData extends Controller with Secured {
       println( "Message arrived! Bytes: %d".format( in.length ) )
       val ( binHandle, binMatrix ) = in.splitAt( 4 )
       if ( binMatrix.length % 4 == 0 ) {
-        val matrix = subDivide( binMatrix, 4 ) map toFloat
+        val matrix = subDivide( binMatrix.reverse, 4 ) map toFloat
 
         ModelStore( modelType ) match {
           case Some( m ) =>
@@ -81,7 +81,7 @@ object BinaryData extends Controller with Secured {
   }
 
   def toFloat( bytes: Array[Byte] ) = {
-    ByteBuffer.wrap( bytes.reverse ).getFloat
+    ByteBuffer.wrap( bytes ).getFloat
 
   }
   def toBinary( float: Float ) = {

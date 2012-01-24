@@ -48,7 +48,7 @@ class _View
 		#####
 		engine.perspective 90, cvs.width / cvs.height, 0.0001, 100000
 
-		engine.onRender renderFunction
+		engine.onRender = renderFunction
 
 		keyboard = new Keyboard
 		keyboard.onChange = keyboardAfterChanged
@@ -80,17 +80,19 @@ class _View
 
 		#renders all geometries in geometry-array
 		totalNumberOfVertices = 0
-		#totalNumberOfVertices += drawTriangleplane()
+		totalNumberOfVertices += drawTriangleplane()
 
 		# first Mesh is always the coordinate axis mini-map
 		if meshes[0]
 			engine.pushMatrix()
-			engine.translate 200,100,0
-			console.log V3.angle [0,0,1], cam.getDir()
 
-			engine.rotateX V3.angle [1,0,0], cam.getDir()
-			engine.rotateY V3.angle [0,1,0], cam.getDir()
-			engine.rotateZ V3.angle [0,0,1], cam.getDir()
+			# rotate the axis mini-map according to the cube's rotation and translate it
+			rotMatrix = cam.getMatrix()
+			rotMatrix[12] = 200
+			rotMatrix[13] = 0
+			rotMatrix[14] = -75
+
+			engine.loadMatrix rotMatrix
 
 			engine.useProgram meshProgramObject
 			engine.render meshes[0]
@@ -98,10 +100,8 @@ class _View
 
 			totalNumberOfVertices += meshes[0].vertices.length
 
-
-
 		# OUTPUT Framerate
-		writeFramerate Math.floor(engine.getFramerate()), totalNumberOfVertices
+		writeFramerate Math.floor(engine.framerate), totalNumberOfVertices
 
 	drawTriangleplane = ->
 		

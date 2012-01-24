@@ -10,11 +10,11 @@ class GL_engine
 	# for calculating fps
 	frames = 0
 	frameCount = 0
-	lastFramerateTime = null
+	lastframerateTime = null
 
 	# for throttling renderLoop
 	lastLoopTime = null
-	maximumFramerate = 50
+	maximumframerate = 50
 
 	#to stop the animationLoop
 	stopAnimation = 1
@@ -31,8 +31,7 @@ class GL_engine
 
 ############################################################################
 	#public Properties
-	VERSION = 0.1
-	frameRate = 0
+	framerate = 0
 	# Contains reference to user's RenderingScript
 	usersRender = empty_func
 	shaderProgram = null
@@ -42,7 +41,7 @@ class GL_engine
 
 
 	constructor: (cvs, glAttribs) ->
-		lastFramerateTime = new Date()
+		lastframerateTime = new Date()
 		lastLoopTime = new Date()
 		frames = 0
 		canvas = cvs
@@ -295,31 +294,33 @@ class GL_engine
 		M4x4.translate
 		@uniformMatrix "projectionMatrix", false, projectionMatrix  if shaderProgram
 		
+	Object.defineProperty(
+		@prototype,
+		"onRender",
+		set: (func) ->
+			usersRender = func
+		)
 
-	onRender : (func) ->
-		usersRender = func
-
-	getHeight : ->
-		return canvas.height
-
-	getWidth : ->
-		return canvas.width
-
-
-	getFramerate: ->
-		return frameRate
-
-	@__defineGetter__ "height", ->
-		canvas.height
-
-	@__defineGetter__ "width", ->
-		canvas.width
+	Object.defineProperty(
+		@prototype,
+		"width",
+		get: ->
+			canvas.width
+		)
 	
-	@__defineGetter__ "frameRate", ->
-		frameRate
-	
-	@__defineGetter__ "VERSION", ->
-		VERSION
+	Object.defineProperty(
+		@prototype,
+		"height",
+		get: ->
+			canvas.height
+		)
+
+	Object.defineProperty(
+		@prototype,
+		"framerate",
+		get: ->
+			framerate
+		)
 
 
 	################################
@@ -511,15 +512,15 @@ class GL_engine
 
 		matrixStack.pop()
 
-		if now - lastFramerateTime > 1000
-			frameRate = frames / (now - lastFramerateTime) * 1000
+		if now - lastframerateTime > 1000
+			framerate = frames / (now - lastframerateTime) * 1000
 			frames = 0
-			lastFramerateTime = now
+			lastframerateTime = now
 
 	#throttling renderLoop
 	renderLoop = ->
 		now = new Date()
-		if now - lastLoopTime >= 1000/maximumFramerate
+		if now - lastLoopTime >= 1000/maximumframerate
 			_renderLoop()
 
 		

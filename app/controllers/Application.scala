@@ -7,19 +7,29 @@ import play.api.Play.current
 import models._
 import views._
 import play.mvc.Results.Redirect
+import play.api.data.Forms._
+import models._
 
 object Application extends Controller {
 
   // -- Authentication
 
-  val registerForm = Form(
-    of(
+  val registerForm: Form[(String, String, String)] = Form(
+    mapping(
       "email" -> email,
-      "password" -> text,
-      "repassword" -> text
-    ) verifying("Passwords do not match", result => result match {
-      case (_, password, repassword) => password == repassword
-    })
+      "name" -> text,
+      "password" -> tuple(
+        "main" -> text(minLength = 6),
+        "confirm" -> text
+      ).verifying(
+        // Add an additional constraint: both passwords must match
+        "Passwords don't match", passwords => passwords._1 == passwords._2
+      )
+    )( (user, name, password) => (user, name, password._1) ) (  user => Some((user._1, user._2, ("",""))) ).verifying(
+      // Add an additional constraint: The username must not be taken (you could do an SQL request here)
+      "This username is already in use.",
+      user => User.findByEmail(user._1).isEmpty
+    )
   )
 
   def register = Action {
@@ -35,14 +45,14 @@ object Application extends Controller {
       registerForm.bindFromRequest.fold(
         formWithErrors => BadRequest(html.register(formWithErrors)),
         user => {
-          User.create _ tupled(user)
+          User.create _ tupled(user)	
           Redirect(routes.Test.index).withSession("email" -> user._1)
         }
       )
   }
 
   val loginForm = Form(
-    of(
+    tuple(
       "email" -> text,
       "password" -> text
     ) verifying("Invalid email or password", result => result match {

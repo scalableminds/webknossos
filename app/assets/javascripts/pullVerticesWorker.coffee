@@ -27,6 +27,7 @@ self.onmessage = (event) ->
 		
 		return postMessage({ err, workerHandle }) if err
 
+		# vertices = M4x4.moveVertices verticesTemplate, args.position, args.direction
 		vertices = M4x4.transformPointsAffine args.matrix, verticesTemplate
 		
 		max_x = min_x = vertices[0]

@@ -27,12 +27,12 @@ object DataStore {
   // defines how many file handles are deleted when the limit is reached
   val dropCount = 50
   // try to prevent loading a file multiple times into memory
-  val fileBuffer = new HashMap[Tuple3[Long, Long, Long], Array[Byte]]
+  val fileBuffer = new HashMap[Tuple3[Int, Int, Int], Array[Byte]]
 
   /**
    * Load the binary data of the given coordinate from file
    */
-  def load(point: Tuple3[Long, Long, Long]): Byte = {
+  def load(point: Tuple3[Int, Int, Int]): Byte = {
     // TODO: Insert upper bound
     if (point._1 < 0 || point._2 < 0 || point._3 < 0) return 0
 
@@ -65,7 +65,7 @@ object DataStore {
             nullBlock
         }
     }
-    byteArray((((point._1 % 128) * 16384) + (point._2 % 128) * 128 + point._3 % 128).toInt)
+    byteArray((((point._1 % 128) * 16384) + (point._2 % 128) * 128 + point._3 % 128))
   }
 
   /**

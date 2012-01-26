@@ -52,6 +52,9 @@ case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
     new Vector3D( x / sq, y / sq, z / sq )
   }
 
+  def -( o: Vector3D ): Vector3D = {
+    new Vector3D( x - o.x, y - o.y, z - o.z )
+  }
   def x( o: Vector3D ): Vector3D = {
     new Vector3D(
       y * o.z - z * o.y,
@@ -66,6 +69,14 @@ case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
     val nz = matrix( 2 ) * x + matrix( 6 ) * y + matrix( 10 ) * z + matrix( 14 )
     new Vector3D( nx, ny, nz )
   }
+  
+  def rotate( matrix: List[Float] ): Vector3D = {
+    // see rotation matrix and helmert-transformation for more details
+    val nx = matrix( 0 ) * x + matrix( 4 ) * y + matrix( 8 ) * z
+    val ny = matrix( 1 ) * x + matrix( 5 ) * y + matrix( 9 ) * z
+    val nz = matrix( 2 ) * x + matrix( 6 ) * y + matrix( 10 ) * z
+    new Vector3D( nx, ny, nz )
+  }
 
   def °( o: Vector3D ) = x * o.x + y * o.y + z * o.z
 
@@ -77,7 +88,7 @@ object Vector3D {
 
   implicit def Vector3DToIntTuple( v: Vector3D ) = ( v.x.toInt, v.y.toInt, v.z.toInt )
 
-  implicit def TupletoVector3D[T<%Double]( v: Tuple3[T, T, T] ) = new Vector3D( v._1, v._2, v._3 )
+  implicit def TupletoVector3D[T <% Double]( v: Tuple3[T, T, T] ) = new Vector3D( v._1, v._2, v._3 )
 
   // json converter
   implicit object Vector3DWrites extends Writes[Vector3D] {

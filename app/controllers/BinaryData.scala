@@ -18,6 +18,7 @@ import play.api.libs.concurrent._
 import brainflight.tools.ExtendedDataTypes._
 import brainflight.tools.Math._
 import brainflight.tools.geometry.Vector3D._
+import brainflight.tools.geometry.Figure
 
 /**
  * scalableminds - brainflight
@@ -65,15 +66,8 @@ object BinaryData extends Controller with Secured {
         val matrix = binMatrix.reverse.subDivide( 4 ).map( _.toFloat )
         ModelStore( modelType ) match {
           case Some( model ) =>
-            val normals = model.normals.map( _.rotate( matrix ) )
-            val vertices = model.vertices.map( _.rotateAndMove( matrix ) )
-            val cube = surroundingCube( vertices )
-            val coordinates =
-              cube.filter( p => {
-                for ( n <- normals )
-                  if ( ( n ° p ) > 0 ) false
-                true
-              } )
+            val figure = Figure(model.polygons.map(_.rotateAndMove( matrix )))
+            val coordinates = pointsInFigure( figure )
             // rotate the model and generate the requested data
             val result: Array[Byte] =
               coordinates.map( DataStore.load ).toArray

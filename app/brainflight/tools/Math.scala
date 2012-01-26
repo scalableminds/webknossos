@@ -3,6 +3,8 @@ package brainflight.tools
 import scala.math._
 import util.DynamicVariable
 import brainflight.tools.geometry.Vector3D
+import brainflight.tools.geometry.Polygon
+import brainflight.tools.geometry.Figure
 
 /**
  * Scalable Minds - Brainflight
@@ -19,17 +21,37 @@ object Math {
     if ( l > 0 ) ( v._1 / l, v._2 / l, v._3 / l ) else v
   }
 
-  def surroundingCube( vertices: Seq[Vector3D] ): Seq[Tuple3[Int, Int, Int]] = {
+  def pointsInFigure( figure: Figure ): Seq[Tuple3[Int, Int, Int]] = {
+    val vertices = figure.polygons.flatMap(_.vertices)
     val top = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
       math.max( b.x, e.x ), math.max( b.y, e.y ), math.max( b.z, e.z ) ) )
     val bottom = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
       math.min( b.x, e.x ), math.min( b.y, e.y ), math.min( b.z, e.z ) ) )
+      
+    val coordinates = scala.collection.mutable.ListBuffer[Tuple3[Int, Int, Int]]()
 
+    val v001 = new Vector3D(0, 0, 1)  
     for {
       x <- bottom.x.toInt to top.x.toInt
       y <- bottom.y.toInt to top.y.toInt
-      z <- bottom.z.toInt to top.z.toInt
-      if x >= 0 && y >= 0 && z >= 0
-    } yield ( x, y, z )
+      if x >= 0 && y >= 0
+    } {
+      val list = scala.collection.mutable.ListBuffer[Int]()
+      for( polygon <- figure.polygons){
+        val v = new Vector3D(x,y,0)
+    	val interSection = ((polygon.d - (v ° polygon.normalVector)) / (v001 ° polygon.normalVector)).toInt
+    	
+    	if(interSection >= bottom.z && interSection <= top.z)
+    	  if(figure.isInside(new Vector3D(x,y,interSection)))
+    		  list.append(interSection)
+      }
+      if(!list.isEmpty){
+        assert(list.distinct.size<=2, "BÄHBÄHM")
+        for(z <- list.min to list.max){
+        	coordinates.append((x, y, z))
+        }
+      }
+    }
+    coordinates
   }
 }

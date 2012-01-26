@@ -53,10 +53,16 @@ class RegularPolygon( n: Int, a: Int ) {
  * Simple polygon implementation
  */
 class Polygon( val vertices: List[Vector3D] ) {
-  def normalVector = {
+  lazy val normalVector = {
     if ( vertices.size < 3 ) throw new IllegalStateException( "Not a valid Polygon: " + vertices )
-    (vertices( 0 ) - vertices(1)) x (vertices( 2 ) - vertices(1))
+    (vertices( 0 ) - vertices( 1 )) x (vertices( 2 ) - vertices( 1 ))
   }
+  
+  def rotateAndMove( matrix: List[Float] ): Polygon = {
+    new Polygon(vertices.map(_.rotateAndMove(matrix)))
+  }
+  
+  lazy val d = normalVector ° vertices(0)
 }
 object Polygon {
   import Vector3D._

@@ -65,7 +65,7 @@ object BinaryData extends Controller with Secured {
         val matrix = binMatrix.reverse.subDivide( 4 ).map( _.toFloat )
         ModelStore( modelType ) match {
           case Some( model ) =>
-            val normals = model.normals.map( _.rotateAndMove( matrix ) )
+            val normals = model.normals.map( _.rotate( matrix ) )
             val vertices = model.vertices.map( _.rotateAndMove( matrix ) )
             val cube = surroundingCube( vertices )
             val coordinates =

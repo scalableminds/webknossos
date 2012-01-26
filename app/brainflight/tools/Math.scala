@@ -29,6 +29,7 @@ object Math {
       x <- bottom.x.round to top.x.round
       y <- bottom.y.round to top.y.round
       z <- bottom.z.round to top.z.round
+      if x >= 0 && y >= 0 && z >= 0
     } yield ( x, y, z )
   }
 }

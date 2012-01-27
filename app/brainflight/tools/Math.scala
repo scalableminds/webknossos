@@ -15,6 +15,7 @@ import brainflight.tools.geometry.Vector3D._
  */
 
 object Math {
+  val EPSILON = 1e-10
   def square( x: Int ) = x * x
   def square( x: Double ) = x * x
   def normalizeVector( v: Tuple3[Double, Double, Double] ): Tuple3[Double, Double, Double] = {
@@ -41,7 +42,7 @@ object Math {
       for( polygon <- figure.polygons){
         val v = new Vector3D(x,y,0)
         val divisor = v001 ° polygon.normalVector
-        if(divisor != 0){
+        if(divisor > EPSILON || divisor < -EPSILON){
 	    	val z = ((polygon.d - (v ° polygon.normalVector)) / divisor).toInt
 	    	
 	    	if(z >= 0 && z >= min_z && z <= max_z && figure.isInside(new Vector3D(x,y,z), polygon))

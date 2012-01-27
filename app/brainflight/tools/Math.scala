@@ -49,7 +49,7 @@ object Math {
         }
       }
       if(!list.isEmpty){
-        assert(list.distinct.size<=2, "BÄHBÄHM")
+        assert(list.distinct.size<=2, "BÄHBÄHM "+ list)
         for(z <- list.min to list.max){
         	coordinates.append((x, y, z))
         }

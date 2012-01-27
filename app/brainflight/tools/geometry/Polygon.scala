@@ -55,7 +55,7 @@ class RegularPolygon( n: Int, a: Int ) {
 class Polygon( val vertices: List[Vector3D] ) {
   lazy val normalVector = {
     if ( vertices.size < 3 ) throw new IllegalStateException( "Not a valid Polygon: " + vertices )
-    (vertices( 0 ) - vertices( 1 )) x (vertices( 2 ) - vertices( 1 ))
+    ((vertices( 0 ) - vertices( 1 )) x (vertices( 2 ) - vertices( 1 ))).normalize
   }
   
   def rotateAndMove( matrix: List[Float] ): Polygon = {

@@ -59,7 +59,7 @@ object BinaryData extends Controller with Secured {
     val input = Iteratee.foreach[Array[Byte]]( in => {
       println( "Message arrived! Bytes: %d".format( in.length ) )
       // first 4 bytes are always used as a client handle
-      if ( in.length >= 68 ) {
+      if ( in.length >= 68 && in.length%4 == 0) {
         val ( binHandle, inRest ) = in.splitAt( 4 )
         
         

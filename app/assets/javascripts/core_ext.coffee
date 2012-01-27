@@ -186,3 +186,22 @@ _.mutex = (func, timeout = 20000) ->
       func.apply(this, args.concat(done))
 
       setTimeout(done, timeout)
+
+_.mutexDeferred = (func, timeout = 20000) ->
+
+  deferred = null
+
+  (args...) ->
+
+    unless deferred
+      
+      deferred = func.apply(this, args)
+      setTimeout((-> deferred = null), timeout)
+      deferred.always -> deferred = null
+      deferred
+
+    else
+      def = $.Deferred()
+      def.reject("mutex")
+      def
+

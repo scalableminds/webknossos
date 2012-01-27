@@ -229,12 +229,12 @@ Model.Binary =
 	# you look at
 	#
 	# No Callback Paramters
-	ping : (matrix, callback) ->
+	ping : (matrix) ->
 
-		@ping = _.throttle2(_.mutex(_.bind(@_ping, @), 5000), 500, false)
-		@ping(matrix, callback)
+		@ping = _.mutexDeferred(_.bind(@_ping, @), 5000)
+		@ping(matrix)
 
-	_ping : (matrix, callback, done) ->
+	_ping : (matrix) ->
 
 		promises = []
 		_preloadRadius    = @PRELOAD_RADIUS
@@ -244,21 +244,19 @@ Model.Binary =
 			for y0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
 				if promise = @preload(matrix, x0, y0, 0, _preloadRadius * 2)
 					promises.push(promise)
-				else
-					for z in [-1...15] by 3
-						if promise = @preload(matrix, x0, y0, z, _preloadRadius * 2)
-							promises.push(promise)
-							break
+				# else
+				# 	for z in [-1...15] by 3
+				# 		if promise = @preload(matrix, x0, y0, z, _preloadRadius * 2)
+				# 			promises.push(promise)
+				# 			break
 
 		$.when(promises...)
-			.always(-> callback())
-			.always(done)
 
 	
 	preload : (matrix, x0, y0, z, width, sparse = 5) ->
 
 		if @preloadTest(matrix, x0, y0, z, width, sparse) < @PRELOAD_TOLERANCE
-			@pull(M4x4.translate([x0, y0, z - 1], matrix))
+			@pull(M4x4.translate([x0, y0, z - 2], matrix))
 		else
 			false
 
@@ -343,15 +341,21 @@ Model.Binary =
 		socket.addEventListener("message", socketCallback, false)
 		socket.addEventListener("error", socketErrorCallback, false)
 
-		transmitPackage = new Float32Array(17)
-		transmitPackage[0] = socketHandle
-		transmitPackage.set(matrix, 1)
-		socketHandle = transmitPackage[0]
-		console.log("request", transmitPackage)
+		@calcVertices(matrix).done ({ vertices }) ->
 
-		openDeferred.done(-> socket.send(transmitPackage.buffer))
+			transmitPackage = new Float32Array(17 + vertices.length)
+			transmitPackage[0] = socketHandle
+			transmitPackage.set(matrix, 1)
+
+			transmitPackage.set(vertices, 17)
+
+			socketHandle = transmitPackage[0]
+			console.log("request", transmitPackage)
+
+			openDeferred.done(-> socket.send(transmitPackage.buffer))
+
 		returnDeferred.promise()
-		
+			
 	
 	# Now comes the implementation of our internal data structure.
 	# `cube` is the main array. It actually represents a cuboid 
@@ -371,9 +375,9 @@ Model.Binary =
 		_offset = @cubeOffset
 		_size   = @cubeSize
 
-		# (x / 64) - offset.x + 
+		# `(x / 64) - offset.x + 
 		# ((y / 64) - offset.y) * size.x + 
-		# ((z / 64) - offset.z) * size.x * size.y
+		# ((z / 64) - offset.z) * size.x * size.y`
 		((x >> 6) - _offset[0]) + 
 		((y >> 6) - _offset[1]) * _size[0] + 
 		((z >> 6) - _offset[2]) * _size[0] * _size[1]
@@ -381,7 +385,7 @@ Model.Binary =
 	# Returns the index of the point (in the bucket) you're looking for.
 	pointIndex : (x, y, z) ->
 		
-		# x % 64 + (y % 64) * 64 + (z % 64) * 64^2
+		# `x % 64 + (y % 64) * 64 + (z % 64) * 64^2
 		(x & 63) +
 		((y & 63) << 6) +
 		((z & 63) << 12)

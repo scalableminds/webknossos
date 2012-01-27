@@ -4,7 +4,7 @@ class Flycam
 		0, 1, 0, 0,  # up
 		0, 0, 1, 0,  # direction
 		0, 0, 0, 1] # position
-	rotMat = undefined
+	# rotMat = undefined
 
 	constructor : () ->
 
@@ -26,20 +26,20 @@ class Flycam
 		return returnMat
 
 	yaw : (angle) ->
-		rotMat = M4x4.makeRotate(angle, [ 0, 1, 0 ])
-		trans = M4x4.mul(trans, rotMat)
+		trans = M4x4.rotate(angle, [ 0, 1, 0 ], trans)
+		# trans = M4x4.mul(trans, rotMat)
 
 	roll : (angle) ->
-		rotMat = M4x4.makeRotate(angle, [ 0, 0, 1 ])
-		trans = M4x4.mul(trans, rotMat)
+		trans = M4x4.rotate(angle, [ 0, 0, 1 ], trans)
+		# trans = M4x4.mul(trans, rotMat)
 
 	pitch : (angle) ->
-		rotMat = M4x4.makeRotate(angle, [ 1, 0, 0 ])
-		trans = M4x4.mul(trans, rotMat)
+		trans = M4x4.rotate(angle, [ 1, 0, 0 ], trans)
+		# trans = M4x4.mul(trans, rotMat)
 
 	rotateOnAxis : (angle, axis) ->
-		rotMat = M4x4.makeRotate(angle, axis)
-		trans = M4x4.mul(trans, rotMat)
+		trans = M4x4.rotate(angle, axis, trans)
+		# trans = M4x4.mul(trans, rotMat)
 
 	toString : ->
 		return "[" + trans[ 0] + ", " + trans[ 1] + ", " + trans[ 2] + ", " + trans[ 3] + ", " +

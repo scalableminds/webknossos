@@ -60,6 +60,7 @@ object Math {
           }
         }
       }
+      
       if ( !list.isEmpty ) {
         var start = list.min
         var end = list.max
@@ -67,14 +68,14 @@ object Math {
         if ( end >= 0 ) {
           start = max( start, 0 )
           for ( z <- start to end ) {
-            val clientX = client( coordinates.size * 3 )
+            /*val clientX = client( coordinates.size * 3 )
             val clientY = client( coordinates.size * 3 + 1 )
             val clientZ = client( coordinates.size * 3 + 2 )
             if ( client.size > coordinates.size * 3 + 2 && (
               clientX != x ||
               clientY != y ||
               clientZ != z ) )
-              println( "NOOOOOOOOO" )
+              println( "NOOOOOOOOO" )*/
             coordinates.append( ( x, y, z ) )
           }
         }

@@ -55,7 +55,7 @@ class RegularPolygon( n: Int, a: Int ) {
 class Polygon( val vertices: List[Vector3D] ) {
   lazy val normalVector = {
     if ( vertices.size < 3 ) throw new IllegalStateException( "Not a valid Polygon: " + vertices )
-    ((vertices( 0 ) - vertices( 1 )) x (vertices( 2 ) - vertices( 1 ))).normalize
+    (vertices( 0 ) - vertices( 1 )) x (vertices( 2 ) - vertices( 1 ))
   }
   
   def rotateAndMove( matrix: List[Float] ): Polygon = {
@@ -63,6 +63,10 @@ class Polygon( val vertices: List[Vector3D] ) {
   }
   
   lazy val d = normalVector ° vertices(0)
+  
+  override def toString = {
+    vertices.toString
+  }
 }
 object Polygon {
   import Vector3D._

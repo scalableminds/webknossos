@@ -28,7 +28,7 @@ object Math {
       math.max( b.x, e.x ), math.max( b.y, e.y ), math.max( b.z, e.z ) ) ))
     val (min_x,min_y,min_z) = Vector3DToIntTuple(vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
       math.min( b.x, e.x ), math.min( b.y, e.y ), math.min( b.z, e.z ) ) ))
-      
+        
     val coordinates = scala.collection.mutable.ListBuffer[Tuple3[Int, Int, Int]]()
 
     val v001 = new Vector3D(0, 0, 1)  
@@ -44,7 +44,7 @@ object Math {
         if(divisor != 0){
 	    	val z = ((polygon.d - (v ° polygon.normalVector)) / divisor).toInt
 	    	
-	    	if(z >= min_z && z <= max_z && figure.isInside(new Vector3D(x,y,z)))
+	    	if(z >= 0 && z >= min_z && z <= max_z && figure.isInside(new Vector3D(x,y,z), polygon))
 	    		  list.append(z)
         }
       }

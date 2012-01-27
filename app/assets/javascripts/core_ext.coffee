@@ -205,3 +205,78 @@ _.mutexDeferred = (func, timeout = 20000) ->
       def.reject("mutex")
       def
 
+class WorkerPool
+
+  constructor : (@url, @workerLimit = 3) ->
+    @queue = []
+    @workers = []
+
+  send : (args) ->
+
+    deferred = $.Deferred()
+
+    for _worker in @workers when not _worker.busy
+      worker = _worker
+      break
+    
+    if not worker and @workers.length < @workerLimit
+      worker = @spawnWorker()
+    
+    if worker
+      @startWorker(worker, args, deferred)
+    else
+      @queuePush(args, deferred)
+    
+    deferred.promise()
+      
+
+  spawnWorker : ->
+
+    worker = new Worker(@url)
+    workerDesc =
+      worker : worker
+      busy : false
+    
+    workerReset = =>
+      workerDesc.busy = false
+      @queueShift(workerDesc)
+
+    worker.onerror = (err) -> 
+      console.error(err)
+      workerReset()
+
+    worker.addEventListener("message", workerReset, false)
+
+    @workers.push workerDesc
+
+    workerDesc
+  
+  startWorker : (workerDesc, args, deferred) ->
+    
+    workerHandle = args.workerHandle = Math.random()
+    workerCallback = (event) ->
+      
+      if (data = event.data).workerHandle == workerHandle
+        worker.removeEventListener("message", workerCallback, false)
+        if err = data.err
+          deferred.reject(err)
+        else 
+          deferred.resolve(data)
+    
+    worker = workerDesc.worker
+    worker.addEventListener("message", workerCallback, false)
+
+    workerDesc.busy = true
+    worker.postMessage args
+  
+  queueShift : (workerDesc) ->
+
+    if @queue.length > 0 and not workerDesc.busy
+      { args, deferred } = @queue.shift()
+      @startWorker(workerDesc, args, deferred)
+    
+  queuePush : (args, deferred) ->
+
+    @queue.push { args, deferred }
+
+

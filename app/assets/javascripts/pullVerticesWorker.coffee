@@ -75,6 +75,10 @@ self.onmessage = (event) ->
 		max_x = if max_x < 0 then 0 else max_x
 		max_y = if max_y < 0 then 0 else max_y
 		max_z = if max_z < 0 then 0 else max_z
+		minmax = [
+			min_x, min_y, min_z
+			max_x, max_y, max_z
+		]
 
 		vertices = []
 		v001 = [0, 0, 1]
@@ -88,24 +92,21 @@ self.onmessage = (event) ->
 					unless -EPSILON <= divisor <= EPSILON
 						z = ((polygon.d - V3.dot(vxy0, normal)) / divisor) | 0
 
-						if (min_z <= z <= max_z) && polygon.isInside([x,y,z], polygons)
+						if polygon.isInside([x,y,z], polygons)
 							z_range.push(z) 
 				
-				z_range = _.uniq(z_range)
-				throw "nonono" unless 0 <= z_range.length <= 2
-				if z_range.length == 2
-					z_range.sort()
-					for z in [z_range[0]..z_range[1]] 
-						vertices.push x,y,z
-				else if z_range.length == 1
-					vertices.push x,y,z_range[0]
+				if z_range.length > 0
+					start_z = _.min(z_range)
+					end_z   = _.max(z_range)
+					
+					if end_z >= 0
+						start_z = 0 if start_z < 0
 
+						for z in [start_z..end_z]
+							vertices.push x,y,z
 		
 		vertices = new Float32Array(vertices)
 
-		minmax = [
-			min_x, min_y, min_z
-			max_x, max_y, max_z
-		]
+
 							
 		postMessage({ vertices, minmax, workerHandle })

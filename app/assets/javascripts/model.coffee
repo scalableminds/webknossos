@@ -134,6 +134,13 @@ Model.Binary =
 		worker.postMessage { matrix, workerHandle }
 		
 		returnDeferred.promise()
+	
+	calcVertices2 : (matrix) ->
+
+		workerPool = 
+			@calcVerticesWorkerPool ||= new WorkerPool("/assets/javascripts/pullVerticesWorker.js", 1)
+
+		workerPool.send { matrix }
 
 
 	# This method allows you to query the data structure. Give us an array of
@@ -173,7 +180,6 @@ Model.Binary =
 	#
 	get : (vertices, callback) ->
 
-		console.time("get")
 		bufferFront = new Float32Array(vertices.length / 3 << 2)
 		bufferBack  = new Float32Array(vertices.length / 3 << 2)
 		bufferDelta = new Float32Array(vertices.length)
@@ -211,7 +217,6 @@ Model.Binary =
 				j3 += 3
 				j4 += 4
 			
-		console.timeEnd("get")
 		callback(null, bufferFront, bufferBack, bufferDelta) if callback
 
 	

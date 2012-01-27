@@ -258,7 +258,7 @@ Model.Binary =
 	preload : (matrix, x0, y0, z, width, sparse = 5) ->
 
 		if @preloadTest(matrix, x0, y0, z, width, sparse) < @PRELOAD_TOLERANCE
-			@pull(M4x4.translate([x0, y0, z], matrix))
+			@pull(M4x4.translate([x0, y0, z - 1], matrix))
 		else
 			false
 

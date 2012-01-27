@@ -42,11 +42,10 @@ object Math {
         val v = new Vector3D(x,y,0)
         val divisor = v001 ° polygon.normalVector
         if(divisor != 0){
-	    	val interSection = ((polygon.d - (v ° polygon.normalVector)) / (v001 ° polygon.normalVector)).toInt
+	    	val z = ((polygon.d - (v ° polygon.normalVector)) / divisor).toInt
 	    	
-	    	if(interSection >= min_z && interSection <= max_z)
-	    	  if(figure.isInside(new Vector3D(x,y,interSection)))
-	    		  list.append(interSection)
+	    	if(z >= min_z && z <= max_z && figure.isInside(new Vector3D(x,y,z)))
+	    		  list.append(z)
         }
       }
       if(!list.isEmpty){

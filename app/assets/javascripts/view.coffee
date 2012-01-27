@@ -188,7 +188,9 @@ class _View
 		engine.draw()
 
 	setCam : (position, direction) ->
-		cam.setPos [position[0], position[1], position[2]]
+		cam.setPos position
+		cam.setDir direction
+
 		
 
 # #####################

@@ -17,7 +17,9 @@ object ExtendedDataTypes {
 	class ExtendedArray[T]( a: Array[T]){
 	  def subDivide( subCollectionSize: Int ): List[Array[T]] = {
 	    val numFloatBytes = 4
-	    if ( a.length <= subCollectionSize ) {
+	    if(a.length == 0){
+	      Nil
+	    } else if ( a.length <= subCollectionSize ) {
 	      a :: Nil
 	    } else {
 	      var result = List[Array[T]]()

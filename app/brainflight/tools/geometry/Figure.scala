@@ -7,8 +7,9 @@ case class Figure( polygons: Seq[Polygon]){
     for{ polygon <- polygons
     	if polygon != p
     }{
-      if( point ° polygon.normalVector - polygon.d > EPSILON){ 
-        val dot = point ° polygon.normalVector
+      if( point ° polygon.normalVector - polygon.d > EPSILON){
+        val dist = point ° polygon.normalVector - polygon.d
+        println("(%f, %f, %f) failed: distance '%f'".format(point.x,point.y,point.z,dist))
         return false
       }
     } 

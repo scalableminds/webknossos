@@ -59,15 +59,19 @@ object BinaryData extends Controller with Secured {
     val input = Iteratee.foreach[Array[Byte]]( in => {
       println( "Message arrived! Bytes: %d".format( in.length ) )
       // first 4 bytes are always used as a client handle
-      if ( in.length == 68 ) {
-        val ( binHandle, binMatrix ) = in.splitAt( 4 )
+      if ( in.length >= 68 ) {
+        val ( binHandle, inRest ) = in.splitAt( 4 )
+        
+        
+        val ( binMatrix, binClientCoord ) = inRest.splitAt( 64 )
 
         // convert the matrix from byte to float representation
         val matrix = binMatrix.reverse.subDivide( 4 ).map( _.toFloat )
+        val clientCoord = binClientCoord.reverse.subDivide( 4 ).map( _.toFloat ).map( _.toInt)
         ModelStore( modelType ) match {
           case Some( model ) =>
             val figure = Figure(model.polygons.map(_.rotateAndMove( matrix )))
-            val coordinates = pointsInFigure( figure )
+            val coordinates = pointsInFigure( figure, clientCoord )
             // rotate the model and generate the requested data
             val result: Array[Byte] =
               coordinates.map( DataStore.load ).toArray

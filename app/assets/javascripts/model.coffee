@@ -236,7 +236,7 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (matrix) ->
 
-		@ping = _.mutexDeferred(_.bind(@_ping, @), 5000)
+		@ping = _.mutexDeferred(_.bind(@_ping, @), 10000)
 		@ping(matrix)
 
 	_ping : (matrix) ->
@@ -295,7 +295,7 @@ Model.Binary =
 				# Maybe we need to expand our data structure.
 				@extendPoints(minmax...)
 				
-				console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.") if vertices.length != colors.length * 3
+				console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) if vertices.length != colors.length * 3
 
 				# Then we'll just put the point in to our data structure.
 				for i in [0...colors.length]
@@ -341,23 +341,24 @@ Model.Binary =
 			if handle == socketHandle
 				socket.removeEventListener("message", socketCallback, false)
 				socket.removeEventListener("error", socketErrorCallback, false)
-				returnDeferred.resolve(new Uint8Array(buffer, 4))
+				returnDeferred.resolve(array = new Uint8Array(buffer, 4))
+				console.log("incoming", array, matrix)
 
 		socket.addEventListener("message", socketCallback, false)
 		socket.addEventListener("error", socketErrorCallback, false)
 
-		@calcVertices(matrix).done ({ vertices }) ->
+		# @calcVertices(matrix).done ({ vertices }) ->
 
-			transmitPackage = new Float32Array(17 + vertices.length)
-			transmitPackage[0] = socketHandle
-			transmitPackage.set(matrix, 1)
+		transmitPackage = new Float32Array(17)
+		transmitPackage[0] = socketHandle
+		transmitPackage.set(matrix, 1)
 
-			transmitPackage.set(vertices, 17)
+		# transmitPackage.set(vertices, 17)
 
-			socketHandle = transmitPackage[0]
-			console.log("request", transmitPackage)
+		socketHandle = transmitPackage[0]
+		console.log("request", transmitPackage)
 
-			openDeferred.done(-> socket.send(transmitPackage.buffer))
+		openDeferred.done(-> socket.send(transmitPackage.buffer))
 
 		returnDeferred.promise()
 			

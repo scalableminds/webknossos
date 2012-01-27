@@ -49,9 +49,6 @@ object Math {
 	    		  list.append(interSection)
         }
       }
-      if(list.isEmpty){
-        println("NEEEEIN")
-      }
       if(!list.isEmpty){
         assert(list.distinct.size<=2, "BÄHBÄHM")
         for(z <- list.min to list.max){

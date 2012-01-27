@@ -292,6 +292,8 @@ Model.Binary =
 				# Maybe we need to expand our data structure.
 				@extendPoints(minmax...)
 				
+				console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.") if vertices.length != colors.length * 3
+
 				# Then we'll just put the point in to our data structure.
 				for i in [0...colors.length]
 					x = vertices[i * 3]

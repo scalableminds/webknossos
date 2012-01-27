@@ -68,14 +68,14 @@ object Math {
           start = max( start, 0 )
           end = max( end, 0 )
           for ( z <- list.min to list.max ) {
-            val clientX = client( coordinates.size * 3 )
+            /*val clientX = client( coordinates.size * 3 )
             val clientY = client( coordinates.size * 3 + 1 )
             val clientZ = client( coordinates.size * 3 + 2 )
             if ( client.size > coordinates.size * 3 + 2 && (
               clientX != x ||
               clientY != y ||
               clientZ != z ) )
-              println( "NOOOOOOOOO" )
+              println( "NOOOOOOOOO" )*/
             coordinates.append( ( x, y, z ) )
           }
         }

@@ -5,6 +5,7 @@ import util.DynamicVariable
 import brainflight.tools.geometry.Vector3D
 import brainflight.tools.geometry.Polygon
 import brainflight.tools.geometry.Figure
+import brainflight.tools.geometry.Vector3D._
 
 /**
  * Scalable Minds - Brainflight
@@ -23,27 +24,33 @@ object Math {
 
   def pointsInFigure( figure: Figure ): Seq[Tuple3[Int, Int, Int]] = {
     val vertices = figure.polygons.flatMap(_.vertices)
-    val top = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
-      math.max( b.x, e.x ), math.max( b.y, e.y ), math.max( b.z, e.z ) ) )
-    val bottom = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
-      math.min( b.x, e.x ), math.min( b.y, e.y ), math.min( b.z, e.z ) ) )
+    val (max_x,max_y,max_z) = Vector3DToIntTuple(vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
+      math.max( b.x, e.x ), math.max( b.y, e.y ), math.max( b.z, e.z ) ) ))
+    val (min_x,min_y,min_z) = Vector3DToIntTuple(vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
+      math.min( b.x, e.x ), math.min( b.y, e.y ), math.min( b.z, e.z ) ) ))
       
     val coordinates = scala.collection.mutable.ListBuffer[Tuple3[Int, Int, Int]]()
 
     val v001 = new Vector3D(0, 0, 1)  
     for {
-      x <- bottom.x.toInt to top.x.toInt
-      y <- bottom.y.toInt to top.y.toInt
+      x <- min_x to max_x
+      y <- min_y to max_y
       if x >= 0 && y >= 0
     } {
       val list = scala.collection.mutable.ListBuffer[Int]()
       for( polygon <- figure.polygons){
         val v = new Vector3D(x,y,0)
-    	val interSection = ((polygon.d - (v ° polygon.normalVector)) / (v001 ° polygon.normalVector)).toInt
-    	
-    	if(interSection >= bottom.z && interSection <= top.z)
-    	  if(figure.isInside(new Vector3D(x,y,interSection)))
-    		  list.append(interSection)
+        val divisor = v001 ° polygon.normalVector
+        if(divisor != 0){
+	    	val interSection = ((polygon.d - (v ° polygon.normalVector)) / (v001 ° polygon.normalVector)).toInt
+	    	
+	    	if(interSection >= min_z && interSection <= max_z)
+	    	  if(figure.isInside(new Vector3D(x,y,interSection)))
+	    		  list.append(interSection)
+        }
+      }
+      if(list.isEmpty){
+        println("NEEEEIN")
       }
       if(!list.isEmpty){
         assert(list.distinct.size<=2, "BÄHBÄHM")

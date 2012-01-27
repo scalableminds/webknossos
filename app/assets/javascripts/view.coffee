@@ -86,7 +86,7 @@ class _View
 		if meshes[0]
 			engine.pushMatrix()
 			engine.translate 200,100,0
-			console.log V3.angle [0,0,1], cam.getDir()
+			# console.log V3.angle [0,0,1], cam.getDir()
 
 			engine.rotateX V3.angle [1,0,0], cam.getDir()
 			engine.rotateY V3.angle [0,1,0], cam.getDir()

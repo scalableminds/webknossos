@@ -65,7 +65,7 @@ object DataStore {
             nullBlock
         }
     }
-    byteArray((((point._1 % 128) * 16384) + (point._2 % 128) * 128 + point._3 % 128))
+    byteArray((((point._3 % 128) * 16384) + (point._2 % 128) * 128 + point._1 % 128))
   }
 
   /**

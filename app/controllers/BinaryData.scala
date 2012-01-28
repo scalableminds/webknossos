@@ -75,7 +75,7 @@ object BinaryData extends Controller with Secured {
             // rotate the model and generate the requested data
             val result: Array[Byte] =
               coordinates.map( DataStore.load ).toArray
-            println("Calculated %d points.".format(coordinates.size))
+            println("Calculated %d points. Hash %f".format(coordinates.size, hash))
             output.push( binHandle ++ hash.toBinary ++ result )
           case _ =>
             output.push( binHandle )

@@ -59,9 +59,12 @@ self.onmessage = (event) ->
 		max_z = min_z = cubeVertices[0][2] | 0
 		for i in [1...cubeVertices.length]
 			vertex = cubeVertices[i]
-			x = vertex[0] | 0
-			y = vertex[1] | 0
-			z = vertex[2] | 0
+			x = vertex[0]
+			y = vertex[1]
+			z = vertex[2]
+			x = (x + if x >= 0 then EPSILON else -EPSILON) | 0
+			y = (y + if y >= 0 then EPSILON else -EPSILON) | 0
+			z = (z + if z >= 0 then EPSILON else -EPSILON) | 0
 			max_x = if x > max_x then x else max_x
 			max_y = if y > max_y then y else max_y
 			max_z = if z > max_z then z else max_z

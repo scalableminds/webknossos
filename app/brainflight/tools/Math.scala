@@ -71,10 +71,10 @@ object Math {
         if ( end >= 0 ) {
           start = max( start, 0 )
           
-          
+          hash = (hash % (1e8).toInt) + 1  
           hash *= start + 1
           hash *= end + 1
-          hash = (hash % (1e8).toInt) + 1
+         
           for ( z <- start to end ) {
             
             coordinates.append( ( x, y, z ) )

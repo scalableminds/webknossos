@@ -76,7 +76,7 @@ object BinaryData extends Controller with Secured {
             val result: Array[Byte] =
               coordinates.map( DataStore.load ).toArray
             println("Calculated %d points. Hash %f".format(coordinates.size, hash))
-            output.push( binHandle ++ hash.toBinary ++ result )
+            output.push( binHandle ++ binHandle ++ hash.toBinary ++ result )
           case _ =>
             output.push( binHandle )
         }

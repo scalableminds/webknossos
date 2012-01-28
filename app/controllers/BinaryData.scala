@@ -71,12 +71,12 @@ object BinaryData extends Controller with Secured {
         ModelStore( modelType ) match {
           case Some( model ) =>
             val figure = Figure(model.polygons.map(_.rotateAndMove( matrix )))
-            val coordinates = pointsInFigure( figure, clientCoord )
+            val (coordinates, hash) = pointsInFigure( figure, clientCoord )
             // rotate the model and generate the requested data
             val result: Array[Byte] =
               coordinates.map( DataStore.load ).toArray
             println("Calculated %d points.".format(coordinates.size))
-            output.push( binHandle ++ result )
+            output.push( binHandle ++ hash.toBinary ++ result )
           case _ =>
             output.push( binHandle )
         }

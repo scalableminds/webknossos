@@ -32,6 +32,16 @@ object ExtendedDataTypes {
 	    }
 	  }
 	}
+	implicit def Int2ExtendedInt( i: Int) =
+	  new ExtendedInt( i )
+	
+	class ExtendedInt( i: Int) {
+	  def toBinary = {
+	    val result = new Array[Byte]( 4 )
+	    ByteBuffer.wrap( result ).putInt( i )
+	    result
+	  }
+	}
 	
 	implicit def Float2ExtendedFloat( f: Float) =
 	  new ExtendedFloat( f )

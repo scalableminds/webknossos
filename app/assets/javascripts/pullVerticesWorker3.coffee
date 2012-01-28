@@ -8,11 +8,11 @@ class Polygon
 
 	constructor : (vertices) ->
 		@vertices = vertices
-		@normal = V3.cross(V3.sub(vertices[0], vertices[1], []), V3.sub(vertices[2], vertices[1], []), [])
+		@normal = V3.cross(V3.sub(vertices[0], vertices[1]), V3.sub(vertices[2], vertices[1]))
 		@d = V3.dot(vertices[0], @normal)
 
 	transform : (matrix) ->
-		new Polygon(@vertices.map (a) -> M4x4.transformPointAffine(matrix, a, []))
+		new Polygon(@vertices.map (a) -> M4x4.transformPointAffine(matrix, a))
 
 	isInside : (point, polygons) ->
 		for polygon in polygons when polygon != @
@@ -51,8 +51,10 @@ self.onmessage = (event) ->
 		
 		return postMessage({ err, workerHandle }) if err
 
-		cubeVertices = cubeVerticesTemplate.map (a) -> M4x4.transformPointAffine(args.matrix, a, [])
-		polygons     = polygonsTemplate.map (a) -> a.transform(args.matrix)
+		{ matrix, zRanges } = args
+		cubeVertices = cubeVerticesTemplate.map (a) -> M4x4.transformPointAffine(matrix, a)
+		polygons     = polygonsTemplate.map (a) -> a.transform(matrix)
+
 		
 		max_x = min_x = cubeVertices[0][0] | 0
 		max_y = min_y = cubeVertices[0][1] | 0
@@ -81,6 +83,18 @@ self.onmessage = (event) ->
 		]
 
 		vertices = []
+		i = 0
+		for x in [min_x..max_x]  
+			for y in [min_y..max_y]  
+				z0 = zRange[i++]
+				
+
+		i = 0
+		while i < zRange.length
+			z0 = zRange[0]
+			if i + 1 < zRange.length
+				z1 = zRange[1]
+
 		v001 = [0, 0, 1]
 		for x in [min_x..max_x]  
 			for y in [min_y..max_y]  

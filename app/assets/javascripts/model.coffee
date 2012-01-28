@@ -135,6 +135,28 @@ Model.Binary =
 		
 		returnDeferred.promise()
 	
+	calcVertices3 : (matrix, zRanges) ->
+		
+		returnDeferred = $.Deferred()
+
+		worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker3.js")
+		
+		workerHandle = Math.random()
+		workerCallback = (event) ->
+			
+			if (args = event.data).workerHandle == workerHandle
+				worker.removeEventListener("message", workerCallback, false)
+				if err = args.err
+					returnDeferred.reject(err)
+				else 
+					returnDeferred.resolve(args)
+
+		worker.addEventListener("message", workerCallback, false)
+		
+		worker.postMessage { matrix, zRanges, workerHandle }
+		
+		returnDeferred.promise()
+	
 	calcVertices2 : (matrix) ->
 
 		workerPool = 
@@ -236,18 +258,18 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (matrix) ->
 
-		@ping = _.mutexDeferred(_.bind(@_ping, @), 10000)
+		@ping = _.mutexDeferred(_.bind(@_ping, @), 50000)
 		@ping(matrix)
 
 	_ping : (matrix) ->
 
 		promises = []
-		_preloadRadius    = @PRELOAD_RADIUS
-		_preloadTolerance = @PRELOAD_TOLERANCE
+		preloadRadius    = @PRELOAD_RADIUS
+		preloadTolerance = @PRELOAD_TOLERANCE
 		
-		for x0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
-			for y0 in [-_preloadRadius.._preloadRadius] by _preloadRadius * 2
-				if promise = @preload(matrix, x0, y0, 0, _preloadRadius * 2)
+		for x0 in [-preloadRadius..preloadRadius] by preloadRadius << 1
+			for y0 in [-preloadRadius..preloadRadius] by preloadRadius << 1
+				if promise = @preload(matrix, x0, y0, 0, preloadRadius << 1)
 					promises.push(promise)
 				# else
 				# 	for z in [-1...15] by 3
@@ -268,8 +290,9 @@ Model.Binary =
 	preloadTest : (matrix, x0, y0, z, width, sparse) ->
 
 		vertices = []
-		for x in [x0...(x0 + width)] by sparse
-			for y in [y0...(y0 + width)] by sparse
+		halfWidth = width >> 1
+		for x in [(x0 - halfWidth)..(x0 + halfWidth)] by sparse
+			for y in [(y0 - halfWidth)..(y0 + halfWidth)] by sparse
 				vertices.push x, y, z
 
 		vertices = M4x4.transformPointsAffine matrix, vertices

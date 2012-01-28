@@ -201,9 +201,7 @@ _.mutexDeferred = (func, timeout = 20000) ->
       deferred
 
     else
-      def = $.Deferred()
-      def.reject("mutex")
-      def
+      $.Deferred().reject("mutex").promise()
 
 class WorkerPool
 

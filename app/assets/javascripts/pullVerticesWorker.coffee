@@ -91,7 +91,7 @@ self.onmessage = (event) ->
 					divisor = V3.dot(v001, normal)
 					unless -EPSILON <= divisor <= EPSILON
 						z = ((polygon.d - V3.dot(vxy0, normal)) / divisor)
-						z = (z + if z > 0 then EPSILON else -EPSILON) | 0
+						z = (z + if z >= 0 then EPSILON else -EPSILON) | 0
 
 						if polygon.isInside([x,y,z], polygons)
 							z_range.push(z) 

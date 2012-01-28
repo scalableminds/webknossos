@@ -24,7 +24,7 @@ object Math {
     if ( l > 0 ) ( v._1 / l, v._2 / l, v._3 / l ) else v
   }
 
-  def pointsInFigure( figure: Figure, client: Array[Int] ): Seq[Tuple3[Int, Int, Int]] = {
+  def pointsInFigure( figure: Figure, client: Array[Int] ): Tuple2[Seq[Tuple3[Int, Int, Int]], Double] = {
     val vertices = figure.polygons.flatMap( _.vertices )
     val maxVector = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
       math.max( b.x, e.x ), math.max( b.y, e.y ), math.max( b.z, e.z ) ) ) 
@@ -40,6 +40,8 @@ object Math {
     val max_y = maxVector.y.patchAbsoluteValue.toInt 
     val max_z = maxVector.z.patchAbsoluteValue.toInt 
     
+    var hash = 2
+    
     val min_x = max( minVector.x.patchAbsoluteValue.toInt, 0 )
     val min_y = max( minVector.y.patchAbsoluteValue.toInt, 0 )
     val min_z = max( minVector.z.patchAbsoluteValue.toInt, 0 )
@@ -54,8 +56,8 @@ object Math {
         val v = new Vector3D( x, y, 0 )
         val divisor = v001 ° polygon.normalVector
         if ( ! divisor.nearZero ) {
-          val zDEBUG = ( ( polygon.d - ( v ° polygon.normalVector ) ) / divisor ).patchAbsoluteValue
-          val z = zDEBUG.toInt
+          val z = ( ( polygon.d - ( v ° polygon.normalVector ) ) / divisor ).patchAbsoluteValue.toInt
+          
           if ( figure.isInside( new Vector3D( x, y, z ), polygon ) ) {
             list.append( z )
           }
@@ -65,23 +67,19 @@ object Math {
       if ( !list.isEmpty ) {
         var start = list.min
         var end = list.max
-        //assert(list.distinct-.size<=2, " BÄHBÄHM "+ list)
+        
         if ( end >= 0 ) {
           start = max( start, 0 )
+          
+          hash *= start + 1
+          hash *= end + 1
           for ( z <- start to end ) {
-            /*val clientX = client( coordinates.size * 3 )
-            val clientY = client( coordinates.size * 3 + 1 )
-            val clientZ = client( coordinates.size * 3 + 2 )
-            if ( client.size > coordinates.size * 3 + 2 && (
-              clientX != x ||
-              clientY != y ||
-              clientZ != z ) )
-              println( "NOOOOOOOOO" )*/
+            
             coordinates.append( ( x, y, z ) )
           }
         }
       }
     }
-    coordinates
+    (coordinates, hash)
   }
 }

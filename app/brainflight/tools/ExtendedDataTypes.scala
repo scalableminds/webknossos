@@ -48,12 +48,20 @@ object ExtendedDataTypes {
 	  new ExtendedDouble( d )
 	
 	class ExtendedDouble( d: Double) {
+	  
 	  def patchAbsoluteValue = 
 	    if( d >= 0 )
 	      d + EPSILON
 	    else
 	      d - EPSILON
+	  
 	  def nearZero = 
 	    d <= EPSILON && d >= -EPSILON
+	  
+	  def toBinary = {
+	    val result = new Array[Byte]( 8 )
+	    ByteBuffer.wrap( result ).putDouble( d )
+	    result
+	  }
 	}
 }

@@ -1,5 +1,7 @@
 package brainflight.tools
+
 import java.nio.ByteBuffer
+import brainflight.tools.Math._
 
 object ExtendedDataTypes {
 	implicit def ByteArray2ExtendedByteArray( b: Array[Byte]) = 
@@ -40,5 +42,18 @@ object ExtendedDataTypes {
 	    ByteBuffer.wrap( result ).putFloat( f )
 	    result
 	  }
+	}
+	
+	implicit def Dobule2ExtendedDouble( d: Double) =
+	  new ExtendedDouble( d )
+	
+	class ExtendedDouble( d: Double) {
+	  def patchAbsoluteValue = 
+	    if( d >= 0 )
+	      d + EPSILON
+	    else
+	      d - EPSILON
+	  def nearZero = 
+	    d <= EPSILON && d >= -EPSILON
 	}
 }

@@ -67,7 +67,7 @@ object BinaryData extends Controller with Secured {
 
         // convert the matrix from byte to float representation
         val matrix = binMatrix.reverse.subDivide( 4 ).map( _.toFloat )
-        val clientCoord = binClientCoord.reverse.subDivide( 4 ).map( _.toFloat ).map( _.toInt)
+        val clientCoord = binClientCoord.reverse.subDivide( 4 ).map( _.toFloat ).map( _.toInt).toArray
         ModelStore( modelType ) match {
           case Some( model ) =>
             val figure = Figure(model.polygons.map(_.rotateAndMove( matrix )))

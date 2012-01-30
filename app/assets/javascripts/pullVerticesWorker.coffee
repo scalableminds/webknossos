@@ -105,7 +105,7 @@ self.onmessage = (event) ->
 					
 					if end_z >= 0
 						start_z = 0 if start_z < 0
-
+						
 						for z in [start_z..end_z]
 							vertices.push x,y,z
 		

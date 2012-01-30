@@ -315,11 +315,13 @@ Model.Binary =
 		$.when(@loadColors(matrix), @calcVertices(matrix))
 
 			.pipe (colors, { vertices, minmax }) =>
+
 				# Maybe we need to expand our data structure.
 				@extendPoints(minmax...)
 				
 				console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) if vertices.length != colors.length * 3
 
+				console.error("Hashes don't match.", hash, hash2) if hash != hash2
 				# Then we'll just put the point in to our data structure.
 				for i in [0...colors.length]
 					x = vertices[i * 3]
@@ -361,27 +363,28 @@ Model.Binary =
 		socketCallback = (event) ->
 			buffer = event.data
 			handle = new Float32Array(buffer, 0, 1)[0]
+			hash = new Int32Array(buffer, 4, 1)[0]
 			if handle == socketHandle
 				socket.removeEventListener("message", socketCallback, false)
 				socket.removeEventListener("error", socketErrorCallback, false)
-				returnDeferred.resolve(array = new Uint8Array(buffer, 4))
-				console.log("incoming", array, matrix)
+				returnDeferred.resolve(new Uint8Array(buffer, 8))
+				console.log("incoming", matrix)
 
 		socket.addEventListener("message", socketCallback, false)
 		socket.addEventListener("error", socketErrorCallback, false)
 
-		# @calcVertices(matrix).done ({ vertices }) ->
+		@calcVertices(matrix).done ({ vertices }) ->
 
-		transmitPackage = new Float32Array(17)
-		transmitPackage[0] = socketHandle
-		transmitPackage.set(matrix, 1)
+			transmitPackage = new Float32Array(17 * vertices.length)
+			transmitPackage[0] = socketHandle
+			transmitPackage.set(matrix, 1)
 
-		# transmitPackage.set(vertices, 17)
+			transmitPackage.set(vertices, 17)
 
-		socketHandle = transmitPackage[0]
-		console.log("request", transmitPackage)
+			socketHandle = transmitPackage[0]
+			console.log("request", transmitPackage)
 
-		openDeferred.done(-> socket.send(transmitPackage.buffer))
+			openDeferred.done(-> socket.send(transmitPackage.buffer))
 
 		returnDeferred.promise()
 			

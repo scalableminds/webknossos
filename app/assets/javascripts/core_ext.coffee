@@ -203,6 +203,43 @@ _.mutexDeferred = (func, timeout = 20000) ->
     else
       $.Deferred().reject("mutex").promise()
 
+_.whenWithProgress = (args...) ->
+    length = args.length
+    pValues = new Array( length )
+    firstParam = args[0]
+    count = length
+    pCount = length
+    deferred = if length <= 1 && firstParam && jQuery.isFunction( firstParam.promise ) 
+        firstParam
+      else 
+        jQuery.Deferred()
+    promise = deferred.promise()
+    
+    resolveFunc = ( i ) ->
+      ( value ) ->
+        args[ i ] = if arguments.length > 1 then sliceDeferred.call( arguments, 0 ) else value
+        if !( --count ) 
+          deferred.resolveWith( deferred, args )
+        else
+          deferred.notifyWith( deferred, args )
+
+    progressFunc = ( i ) ->
+      ( value ) ->
+        pValues[ i ] = if arguments.length > 1 then sliceDeferred.call( arguments, 0 ) else value
+        deferred.notifyWith( promise, pValues )
+
+    if length > 1
+      for i in [0...length] 
+        if args[ i ] && args[ i ].promise && jQuery.isFunction( args[ i ].promise )
+          args[ i ].promise().then( resolveFunc(i), deferred.reject, progressFunc(i) )
+        else
+          --count
+      unless count 
+        deferred.resolveWith( deferred, args )
+    else if deferred != firstParam
+      deferred.resolveWith( deferred, if length then [ firstParam ] else [] )
+    promise
+
 class WorkerPool
 
   constructor : (@url, @workerLimit = 3) ->

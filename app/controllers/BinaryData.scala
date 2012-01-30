@@ -65,7 +65,7 @@ object BinaryData extends Controller with Secured {
 
         // convert the matrix from byte to float representation
         val matrix = binMatrix.reverse.subDivide( 4 ).map( _.toFloat )
-        val clientCoord = binClientCoord.reverse.subDivide( 4 ).map( _.toFloat ).map( _.toInt )
+        val clientCoord = binClientCoord.reverse.subDivide( 4 ).map( _.toFloat ).map(_.toInt)
         ModelStore( modelType ) match {
           case Some( model ) =>
             val figure = Figure( model.polygons.map( _.rotateAndMove( matrix ) ) )
@@ -74,11 +74,11 @@ object BinaryData extends Controller with Secured {
             
             val promiseOfResult = Akka.future {
               def f( x: List[Int], y: Seq[Tuple3[Int, Int, Int]] ) {
-                if ( x.length != y.length * 3 ) System.err.println( "Size doesn't match!" )
+                if ( x.length / 3 != y.length ) System.err.println( "Size doesn't match! %d (S) != %d (C)".format(x.length/3,y.length) )
                 else
                   y.zipWithIndex.foreach {
                     case ( e, i ) => {
-                      val client = ( x( i ), x( i + 1 ), x( i + 2 ) )
+                      val client = ( x( i*3 ), x( i*3 + 1 ), x( i*3 + 2 ) )
                       if ( e != client )
                         System.err.println( "ELEMTNS don't match: %s (S) <-> %s (C)".format( e, client ) )
                     }

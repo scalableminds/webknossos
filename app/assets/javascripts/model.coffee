@@ -277,7 +277,7 @@ Model.Binary =
 				# 			promises.push(promise)
 				# 			break
 
-		$.when(promises...)
+		_.whenWithProgress(promises...)
 
 	
 	preload : (matrix, x0, y0, z, width, sparse = 5) ->
@@ -337,9 +337,9 @@ Model.Binary =
 		
 		returnDeferred = $.Deferred()
 
-		_WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
-
+		
 		unless @loadSocket
+			_WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
 			socket = @loadSocket = new _WebSocket("ws://#{document.location.host}/binary/ws/cube")
 			openDeferred = @loadSocketOpenDeferred = $.Deferred()
 
@@ -362,11 +362,10 @@ Model.Binary =
 		socketCallback = (event) ->
 			buffer = event.data
 			handle = new Float32Array(buffer, 0, 1)[0]
-			hash = new Int32Array(buffer, 4, 1)[0]
 			if handle == socketHandle
 				socket.removeEventListener("message", socketCallback, false)
 				socket.removeEventListener("error", socketErrorCallback, false)
-				returnDeferred.resolve(new Uint8Array(buffer, 8))
+				returnDeferred.resolve(new Uint8Array(buffer, 4))
 				console.log("incoming", matrix)
 
 		socket.addEventListener("message", socketCallback, false)

@@ -321,7 +321,6 @@ Model.Binary =
 				
 				console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) if vertices.length != colors.length * 3
 
-				console.error("Hashes don't match.", hash, hash2) if hash != hash2
 				# Then we'll just put the point in to our data structure.
 				for i in [0...colors.length]
 					x = vertices[i * 3]

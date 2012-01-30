@@ -375,7 +375,7 @@ Model.Binary =
 
 		@calcVertices(matrix).done ({ vertices }) ->
 
-			transmitPackage = new Float32Array(17 * vertices.length)
+			transmitPackage = new Float32Array(17 + vertices.length)
 			transmitPackage[0] = socketHandle
 			transmitPackage.set(matrix, 1)
 

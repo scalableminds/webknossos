@@ -48,7 +48,7 @@ class _View
 		#####
 		engine.perspective 90, cvs.width / cvs.height, 0.0001, 100000
 
-		engine.onRender renderFunction
+		engine.onRender = renderFunction
 
 		keyboard = new Keyboard
 		keyboard.onChange = keyboardAfterChanged
@@ -88,9 +88,13 @@ class _View
 			engine.translate 200,100,0
 			# console.log V3.angle [0,0,1], cam.getDir()
 
-			engine.rotateX V3.angle [1,0,0], cam.getDir()
-			engine.rotateY V3.angle [0,1,0], cam.getDir()
-			engine.rotateZ V3.angle [0,0,1], cam.getDir()
+			# rotate the axis mini-map according to the cube's rotation and translate it
+			rotMatrix = cam.getMatrix()
+			rotMatrix[12] = -200
+			rotMatrix[13] = 0
+			rotMatrix[14] = -75
+
+			engine.loadMatrix rotMatrix
 
 			engine.useProgram meshProgramObject
 			engine.render meshes[0]
@@ -98,16 +102,15 @@ class _View
 
 			totalNumberOfVertices += meshes[0].vertices.length
 
-
-
 		# OUTPUT Framerate
-		writeFramerate Math.floor(engine.getFramerate()), cam.getPos()
+		writeFramerate Math.floor(engine.framerate), cam.getPos()
+
 
 	drawTriangleplane = ->
 		
 		g = triangleplane
 		if g.getClassType() is "Trianglesplane"
-			# console.log "cam: " + cam.toString()
+			console.log "cam: " + cam.toString()
 
 			transMatrix = cam.getMatrix()
 			#console.log "normal: " + g.normalVertices[0] + " " + g.normalVertices[1] + " " + g.normalVertices[2] + 
@@ -123,15 +126,16 @@ class _View
 			#sends current position to Model for preloading data
 			Model.Binary.ping(transMatrix)?.done -> renderFunction()
 
+
 			#sends current position to Model for caching route
 			Model.Route.put cam.getPos(), null
 
 			#get colors for new coords from Model
 			Model.Binary.get(newVertices, (err, interpolationFront, interpolationBack, interpolationOffset) ->
 				throw err if err
-				# console.log "interpolationFront: " + interpolationFront[0] + " " + interpolationFront[1] + " " + interpolationFront[2] + " " + interpolationFront[128*128-3] + " " + interpolationFront[128*128-2] + " " + interpolationFront[128*128-1]
-				# console.log "interpolationBack: " + interpolationBack[0] + " " + interpolationBack[1] + " " + interpolationBack[2] + " " + interpolationBack[128*128-3] + " " + interpolationBack[128*128-2] + " " + interpolationBack[128*128-1]
-				# console.log "interpolationOffset: " + interpolationOffset[0] + " " + interpolationOffset[1] + " " + interpolationOffset[2] + " " + interpolationOffset[128*128-3] + " " + interpolationOffset[128*128-2] + " " + interpolationOffset[128*128-1]
+				console.log "interpolationFront: " + interpolationFront[0] + " " + interpolationFront[1] + " " + interpolationFront[2] + " " + interpolationFront[128*128-3] + " " + interpolationFront[128*128-2] + " " + interpolationFront[128*128-1]
+				console.log "interpolationBack: " + interpolationBack[0] + " " + interpolationBack[1] + " " + interpolationBack[2] + " " + interpolationBack[128*128-3] + " " + interpolationBack[128*128-2] + " " + interpolationBack[128*128-1]
+				console.log "interpolationOffset: " + interpolationOffset[0] + " " + interpolationOffset[1] + " " + interpolationOffset[2] + " " + interpolationOffset[128*128-3] + " " + interpolationOffset[128*128-2] + " " + interpolationOffset[128*128-1]
 
 				engine.deleteSingleBuffer g.interpolationFront.VBO
 				engine.deleteSingleBuffer g.interpolationBack.VBO
@@ -150,8 +154,7 @@ class _View
 			
 				
 
-	writeFramerate = (framerate = 0, position = 0) ->
-		
+	writeFramerate = (framerate = 0, position = 0) ->	
 		document.getElementById('status')
 			.innerHTML = "#{framerate} FPS <br/> #{position}<br />" 
 

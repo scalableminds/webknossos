@@ -25,8 +25,7 @@ class _Controller
 		Model.Route.put(position, (err) =>
 			console.log err
 		)
-		# bei jeder Änderung versuchen Pointcloud nachzuladen?
-		#@loadPointcloud()
+
 
   # mouse events
   

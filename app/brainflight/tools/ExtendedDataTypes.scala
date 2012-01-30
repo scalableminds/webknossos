@@ -2,6 +2,7 @@ package brainflight.tools
 
 import java.nio.ByteBuffer
 import brainflight.tools.Math._
+import scala.collection.mutable.ListBuffer
 
 object ExtendedDataTypes {
 	implicit def ByteArray2ExtendedByteArray( b: Array[Byte]) = 
@@ -11,22 +12,16 @@ object ExtendedDataTypes {
 		def toFloat = {
 		    ByteBuffer.wrap( b ).getFloat
 		}
-	}
-	
-	implicit def Array2ExtendedArray[T]( a: Array[T]) = 
-	  new ExtendedArray( a )
-	
-	class ExtendedArray[T]( a: Array[T]){
-	  def subDivide( subCollectionSize: Int ): List[Array[T]] = {
-	    val numFloatBytes = 4
-	    if(a.length == 0){
-	      Nil
-	    } else if ( a.length <= subCollectionSize ) {
-	      a :: Nil
+		
+	  def subDivide( subCollectionSize: Int ): Array[Array[Byte]] = {
+	    if(b.size == 0){
+	      new Array(0)
+	    } else if ( b.length <= subCollectionSize ) {
+	      Array(b)
 	    } else {
-	      var result = List[Array[T]]()
-	      for ( i <- 0 until a.length by numFloatBytes ) {
-	        result ::= a.slice( i, i + numFloatBytes )
+	      var result = new Array[Array[Byte]]( (b.size / subCollectionSize).ceil.toInt)
+	      for ( i <- 0 until b.size by subCollectionSize ) {
+	        result.update(i/subCollectionSize, b.slice( i, i + subCollectionSize ))
 	      }
 	      result
 	    }

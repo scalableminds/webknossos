@@ -59,7 +59,7 @@ class Polygon( val vertices: List[Vector3D] ) {
     (vertices( 0 ) - vertices( 1 )) x (vertices( 2 ) - vertices( 1 ))
   }
   
-  def rotateAndMove( matrix: List[Float] ): Polygon = {
+  def rotateAndMove( matrix: Array[Float] ): Polygon = {
     new Polygon(vertices.map(_.rotateAndMove(matrix)))
   }
   

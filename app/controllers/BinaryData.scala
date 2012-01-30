@@ -57,24 +57,26 @@ object BinaryData extends Controller with Secured {
     val output = new PushEnumerator[Array[Byte]]
     val input = Iteratee.foreach[Array[Byte]]( in => {
       println( "Message arrived! Bytes: %d".format( in.length ) )
+      val start = System.currentTimeMillis()
       // first 4 bytes are always used as a client handle
       if ( in.length >= 68 && in.length % 4 == 0 ) {
         val ( binHandle, inRest ) = in.splitAt( 4 )
-
         val ( binMatrix, binClientCoord ) = inRest.splitAt( 64 )
 
         // convert the matrix from byte to float representation
-        val matrix = binMatrix.reverse.subDivide( 4 ).map( _.toFloat )
-        val clientCoord = binClientCoord.reverse.subDivide( 4 ).map( _.toFloat ).map(_.toInt)
+        val matrix = binMatrix.subDivide( 4 ).map( _.reverse.toFloat )
+        val pauseStart = System.currentTimeMillis()
+        val clientCoord = binClientCoord.subDivide( 4 ).map( _.reverse.toFloat ).map( _.toInt )
+        val pauseEnd = System.currentTimeMillis()
+
         ModelStore( modelType ) match {
           case Some( model ) =>
             val figure = Figure( model.polygons.map( _.rotateAndMove( matrix ) ) )
             val coordinates = pointsInFigure( figure )
-            // rotate the model and generate the requested data
-            
-            val promiseOfResult = Akka.future {
-              def f( x: List[Int], y: Seq[Tuple3[Int, Int, Int]] ) {
-                if ( x.length / 3 != y.length ) System.err.println( "Size doesn't match! %d (S) != %d (C)".format(x.length/3,y.length) )
+            // rotate the model and generate the requested dat	a
+            Akka.future {
+              def f( x: Array[Int], y: Seq[Tuple3[Int, Int, Int]] ) {
+                if ( x.length / 3 != y.length ) System.err.println( "Size doesn't match! %d (S) != %d (C)".format( y.length, x.length / 3 ) )
                 else {
                   val it = x.iterator
                   y.zipWithIndex.foreach {
@@ -85,19 +87,18 @@ object BinaryData extends Controller with Secured {
                     }
                   }
                 }
-                println("Compare completed! Handle: "+binHandle.toFloat)
+                println( "Compare completed! Handle: " + binHandle.toFloat )
               }
               f( clientCoord, coordinates )
             }
-
             val result: Array[Byte] =
               coordinates.map( DataStore.load ).toArray
-            println( "Calculated %d points. Handle: %s".format( coordinates.size, binHandle.toFloat ) )
+            val end = System.currentTimeMillis()
+            println( "Calculated %d points in %d ms. Handle: %s".format( coordinates.size, end + pauseEnd - pauseStart - start, binHandle.toFloat ) )
             output.push( binHandle ++ result )
           case _ =>
             output.push( binHandle )
         }
-
       }
     } )
 

@@ -24,7 +24,7 @@ object Math {
     if ( l > 0 ) ( v._1 / l, v._2 / l, v._3 / l ) else v
   }
 
-  def pointsInFigure( figure: Figure, client: Array[Int] ): Tuple2[Seq[Tuple3[Int, Int, Int]], Int] = {
+  def pointsInFigure( figure: Figure ): Seq[Tuple3[Int, Int, Int]] = {
     val vertices = figure.polygons.flatMap( _.vertices )
     val maxVector = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
       math.max( b.x, e.x ), math.max( b.y, e.y ), math.max( b.z, e.z ) ) ) 
@@ -39,8 +39,6 @@ object Math {
     val max_x = maxVector.x.patchAbsoluteValue.toInt 
     val max_y = maxVector.y.patchAbsoluteValue.toInt 
     val max_z = maxVector.z.patchAbsoluteValue.toInt 
-    
-    var hash = 2
     
     val min_x = max( minVector.x.patchAbsoluteValue.toInt, 0 )
     val min_y = max( minVector.y.patchAbsoluteValue.toInt, 0 )
@@ -70,18 +68,13 @@ object Math {
         
         if ( end >= 0 ) {
           start = max( start, 0 )
-          
-          hash = (hash % (1e8).toInt) + 1  
-          hash *= start + 1
-          hash *= end + 1
          
-          for ( z <- start to end ) {
-            
+          for ( z <- start to end ) {           
             coordinates.append( ( x, y, z ) )
           }
         }
       }
     }
-    (coordinates, hash)
+    coordinates
   }
 }

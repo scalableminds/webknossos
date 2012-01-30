@@ -31,9 +31,9 @@ object Math {
     var minVector = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
       math.min( b.x, e.x ), math.min( b.y, e.y ), math.min( b.z, e.z ) ) ) 
 
-    val coordinates = scala.collection.mutable.ListBuffer[Tuple3[Int, Int, Int]]()
-    var list = scala.collection.mutable.ListBuffer[Int]()
-    var zDEBUG = 0.0
+    val coordinates = scala.collection.mutable.ArrayBuilder.make[Tuple3[Int, Int, Int]]()
+    var list = scala.collection.mutable.ArrayBuffer[Int]()
+    
     val v001 = new Vector3D( 0, 0, 1 )
    
     val max_x = maxVector.x.patchAbsoluteValue.toInt 
@@ -48,15 +48,14 @@ object Math {
       x <- min_x to max_x
       y <- min_y to max_y
     } {
-      list = scala.collection.mutable.ListBuffer[Int]()
-
+      list = scala.collection.mutable.ArrayBuffer[Int]()
+      
       for ( polygon <- figure.polygons ) {
         val v = new Vector3D( x, y, 0 )
         val divisor = v001 ° polygon.normalVector
         if ( ! divisor.nearZero ) {
           val z = ( ( polygon.d - ( v ° polygon.normalVector ) ) / divisor ).patchAbsoluteValue.toInt
-          
-          if ( figure.isInside( new Vector3D( x, y, z ), polygon ) ) {
+          if ( figure.isInside( ( x, y, z ), polygon ) ) {
             list.append( z )
           }
         }
@@ -70,11 +69,12 @@ object Math {
           start = max( start, 0 )
          
           for ( z <- start to end ) {           
-            coordinates.append( ( x, y, z ) )
+            coordinates += ( ( x, y, z ) )
           }
         }
       }
+      
     }
-    coordinates
+    coordinates.result
   }
 }

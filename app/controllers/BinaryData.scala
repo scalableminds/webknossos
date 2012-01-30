@@ -75,21 +75,24 @@ object BinaryData extends Controller with Secured {
             val promiseOfResult = Akka.future {
               def f( x: List[Int], y: Seq[Tuple3[Int, Int, Int]] ) {
                 if ( x.length / 3 != y.length ) System.err.println( "Size doesn't match! %d (S) != %d (C)".format(x.length/3,y.length) )
-                else
+                else {
+                  val it = x.iterator
                   y.zipWithIndex.foreach {
                     case ( e, i ) => {
-                      val client = ( x( i*3 ), x( i*3 + 1 ), x( i*3 + 2 ) )
+                      val client = ( it.next, it.next, it.next )
                       if ( e != client )
                         System.err.println( "ELEMTNS don't match: %s (S) <-> %s (C)".format( e, client ) )
                     }
                   }
+                }
+                println("Compare completed! Handle: "+binHandle.toFloat)
               }
               f( clientCoord, coordinates )
             }
 
             val result: Array[Byte] =
               coordinates.map( DataStore.load ).toArray
-            println( "Calculated %d points.".format( coordinates.size ) )
+            println( "Calculated %d points. Handle: %s".format( coordinates.size, binHandle.toFloat ) )
             output.push( binHandle ++ result )
           case _ =>
             output.push( binHandle )

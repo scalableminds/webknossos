@@ -54,9 +54,9 @@ object Math {
         val v = new Vector3D( x, y, 0 )
         val divisor = v001 ° polygon.normalVector
         if ( ! divisor.nearZero ) {
-          val z = ( ( polygon.d - ( v ° polygon.normalVector ) ) / divisor ).patchAbsoluteValue.toInt
-          if ( figure.isInside( ( x, y, z ), polygon ) ) {
-            list.append( z )
+          val z = ( ( polygon.d - ( v ° polygon.normalVector ) ) / divisor )
+          if ( figure.isInside( ( x.toDouble, y.toDouble, z ), polygon ) ) {
+            list.append( z.patchAbsoluteValue.toInt )
           }
         }
       }

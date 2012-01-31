@@ -59,17 +59,20 @@ object BinaryData extends Controller with Secured {
           case Some( model ) =>
             val figure = Figure( model.polygons.map( _.rotateAndMove( matrix ) ) )
             val coordinates = pointsInFigure( figure )
-            
+
             Akka.future {
               def f( x: Array[Int], y: Seq[Tuple3[Int, Int, Int]] ) {
                 if ( x.length / 3 != y.length ) System.err.println( "Size doesn't match! %d (S) != %d (C)".format( y.length, x.length / 3 ) )
-                else {
-                  val it = x.iterator
-                  y.zipWithIndex.foreach {
-                    case ( e, i ) => {
+                val it = x.iterator
+                var failed = 0
+                y.zipWithIndex.foreach {
+                  case ( e, i ) => {
+                    if ( it.hasNext ) {
                       val client = ( it.next, it.next, it.next )
-                      if ( e != client )
+                      if ( e != client && failed < 20 ) {
+                        failed += 1
                         System.err.println( "ELEMTNS don't match: %s (S) <-> %s (C)".format( e, client ) )
+                      }
                     }
                   }
                 }

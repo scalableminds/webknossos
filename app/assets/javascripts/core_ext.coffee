@@ -240,15 +240,13 @@ _.whenWithProgress = (args...) ->
       deferred.resolveWith( deferred, if length then [ firstParam ] else [] )
     promise
 
-class WorkerPool
+class SimpleWorkerPool
 
   constructor : (@url, @workerLimit = 3) ->
     @queue = []
     @workers = []
 
-  send : (args) ->
-
-    deferred = $.Deferred()
+  send : (data) ->
 
     for _worker in @workers when not _worker.busy
       worker = _worker
@@ -258,60 +256,134 @@ class WorkerPool
       worker = @spawnWorker()
     
     if worker
-      @startWorker(worker, args, deferred)
+      worker.send(data)
     else
-      @queuePush(args, deferred)
-    
-    deferred.promise()
+      @queuePush(data)
       
 
   spawnWorker : ->
 
-    worker = new Worker(@url)
-    workerDesc =
-      worker : worker
-      busy : false
+    worker = new SimpleWorker(@url)
+    worker.busy = false
     
     workerReset = =>
-      workerDesc.busy = false
-      @queueShift(workerDesc)
+      worker.busy = false
+      @queueShift(worker)
 
-    worker.onerror = (err) -> 
+    worker.worker.onerror = (err) -> 
       console.error(err)
       workerReset()
 
-    worker.addEventListener("message", workerReset, false)
+    worker.worker.addEventListener("message", workerReset, false)
 
-    @workers.push workerDesc
+    @workers.push(worker)
 
-    workerDesc
+    worker
   
-  startWorker : (workerDesc, args, deferred) ->
+  queueShift : (worker) ->
+
+    if @queue.length > 0 and not worker.busy
+      { data, deferred } = @queue.shift()
+      worker.send(data)
+        .done (data) -> deferred.resolve(data)
+        .fail (err) -> deferred.reject(err)
     
-    workerHandle = args.workerHandle = Math.random()
-    workerCallback = (event) ->
+  queuePush : (data) ->
+
+    deferred = $.Deferred()
+    @queue.push { data, deferred }
+
+class SimpleWorker
+
+  constructor : (url) ->
+    @worker = new Worker(url)
+
+    @worker.onerror = (err) -> 
+      console.error(err)
+  
+  send : (data) ->  
+    
+    deferred = $.Deferred()
+
+    workerHandle = data.workerHandle = Math.random()
+
+    workerMessageCallback = (event) =>
       
-      if (data = event.data).workerHandle == workerHandle
-        worker.removeEventListener("message", workerCallback, false)
-        if err = data.err
+      if (result = event.data).workerHandle == workerHandle
+        @worker.removeEventListener("message", workerMessageCallback, false)
+        if err = result.err
           deferred.reject(err)
         else 
-          deferred.resolve(data)
-    
-    worker = workerDesc.worker
-    worker.addEventListener("message", workerCallback, false)
+          deferred.resolve(result)
 
-    workerDesc.busy = true
-    worker.postMessage args
+    @worker.addEventListener("message", workerMessageCallback, false)
+    @worker.postMessage(data)
+
+    deferred.promise()
+
+class SimpleArrayBufferSocket
   
-  queueShift : (workerDesc) ->
+  OPEN_TIMEOUT : 20000
+  MESSAGE_TIMEOUT : 120000
+   
+  constructor : (@url, @requestBufferType, @responseBufferType) ->
+    @WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
+    @initializeWebSocket()
+  
+  initializeWebSocket : ->
+    unless @socket
+      socket = @socket = new @WebSocket(@url)
+      openDeferred = @openDeferred = $.Deferred()
 
-    if @queue.length > 0 and not workerDesc.busy
-      { args, deferred } = @queue.shift()
-      @startWorker(workerDesc, args, deferred)
+      socket.binaryType = 'arraybuffer'
+      
+      socket.onopen = -> openDeferred.resolve()
+      
+      socket.onerror = (err) ->
+        console.error("socket error", err)
+     
+      socket.onclose = (code, reason) => 
+        openDeferred.reject("closed")
+        console.error("socket closed", "#{code}: #{reason}")
+        @socket = null
+      
+      setTimeout(=> 
+        openDeferred.reject("timeout")
+        @socket = null unless @socket.readyState == @WebSocket.OPEN
+      , @OPEN_TIMEOUT)
     
-  queuePush : (args, deferred) ->
+    @openDeferred.promise()
+  
+  send : (data) ->
 
-    @queue.push { args, deferred }
+    deferred = $.Deferred()
+    
+    @initializeWebSocket().done =>
 
+      padding = Math.max(@requestBufferType.BYTES_PER_ELEMENT, Float32Array.BYTES_PER_ELEMENT)
+      
+      transmitBuffer  = new ArrayBuffer(padding + data.byteLength)
+      handleArray     = new Float32Array(transmitBuffer, 0, 1)
+      handleArray[0]  = Math.random()
+      socketHandle    = handleArray[0]
+
+      dataArray = new @requestBufferType(transmitBuffer, padding)
+      dataArray.set(data)
+
+      socketCallback = (event) =>
+        buffer = event.data
+        handle = new Float32Array(buffer, 0, 1)[0]
+        if handle == socketHandle
+          @socket.removeEventListener("message", socketCallback, false)
+          deferred.resolve(new @responseBufferType(buffer, 4))
+      
+      @socket.addEventListener("message", socketCallback, false)
+      @socket.send(transmitBuffer)
+    
+    setTimeout((=> deferred.reject("timeout")), @MESSAGE_TIMEOUT)
+
+    deferred.promise()
+
+
+  
 

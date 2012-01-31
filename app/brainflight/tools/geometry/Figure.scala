@@ -5,7 +5,8 @@ import brainflight.tools.Math._
 case class Figure( polygons: Seq[Polygon] ) {
   def isInside( point: Vector3D, p: Polygon ): Boolean = {
     for ( polygon <- polygons ) {
-      if ( polygon.equals( p ) && point ° polygon.normalVector - polygon.d > EPSILON ) {
+      val dist =  point ° polygon.normalVector - polygon.d
+      if ( polygon != p && dist > EPSILON ) {
         return false
       }
     }

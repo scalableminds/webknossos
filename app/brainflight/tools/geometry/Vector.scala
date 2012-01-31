@@ -68,7 +68,7 @@ case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
     val nx = matrix( 0 ) * x + matrix( 4 ) * y + matrix( 8 ) * z + matrix( 12 )
     val ny = matrix( 1 ) * x + matrix( 5 ) * y + matrix( 9 ) * z + matrix( 13 )
     val nz = matrix( 2 ) * x + matrix( 6 ) * y + matrix( 10 ) * z + matrix( 14 )
-    new Vector3D( nx, ny, nz )
+    Vector3D( nx, ny, nz )
   }
   
   def rotate( matrix: List[Float] ): Vector3D = {
@@ -76,7 +76,7 @@ case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
     val nx = matrix( 0 ) * x + matrix( 4 ) * y + matrix( 8 ) * z
     val ny = matrix( 1 ) * x + matrix( 5 ) * y + matrix( 9 ) * z
     val nz = matrix( 2 ) * x + matrix( 6 ) * y + matrix( 10 ) * z
-    new Vector3D( nx, ny, nz )
+    Vector3D( nx, ny, nz )
   }
 
   def °( o: Vector3D ) = x * o.x + y * o.y + z * o.z

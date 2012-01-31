@@ -287,15 +287,22 @@ Model.Binary =
 		else
 			false
 
-	preloadTest : (matrix, x0, y0, z, width, sparse) ->
+	preloadTestVertices : (x0, y0, z, width, sparse) ->
+		@preloadTestVertices = _.memoize(@_preloadTestVertices, (args...) -> args.toString())
+		@preloadTestVertices(x0, y0, z, width, sparse)
 
+	_preloadTestVertices : (x0, y0, z, width, sparse) ->
 		vertices = []
 		halfWidth = width >> 1
 		for x in [(x0 - halfWidth)..(x0 + halfWidth)] by sparse
 			for y in [(y0 - halfWidth)..(y0 + halfWidth)] by sparse
 				vertices.push x, y, z
+		vertices
 
-		vertices = M4x4.transformPointsAffine matrix, vertices
+	preloadTest : (matrix, x0, y0, z, width, sparse) ->
+
+		vertices = @preloadTestVertices(x0, y0, z, width, sparse)
+		vertices = M4x4.transformPointsAffine(matrix, vertices)
 
 		count = hits = 0
 		for i in [0...vertices.length] by 3
@@ -337,14 +344,15 @@ Model.Binary =
 		
 		returnDeferred = $.Deferred()
 
-		
 		unless @loadSocket
 			_WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
 			socket = @loadSocket = new _WebSocket("ws://#{document.location.host}/binary/ws/cube")
 			openDeferred = @loadSocketOpenDeferred = $.Deferred()
 
 			socket.binaryType = 'arraybuffer'
-			socket.onclose = (code, reason) -> console.error("socket closed", "#{code}: #{reason}")
+			socket.onclose = (code, reason) => 
+				console.error("socket closed", "#{code}: #{reason}")
+				@loadSocket = null
 			socket.onopen = -> openDeferred.resolve()
 			setTimeout((-> openDeferred.reject("timeout")), 20000)
 

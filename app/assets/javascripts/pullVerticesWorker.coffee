@@ -4,6 +4,11 @@ polygonsTemplate  = null
 cubeVerticesTemplate = null
 EPSILON = 1e-10
 
+_log = []
+console =
+	log : (args...) ->
+		_log.push args
+
 class Polygon
 
 	constructor : (vertices) ->
@@ -78,39 +83,50 @@ self.onmessage = (event) ->
 		max_x = if max_x < 0 then 0 else max_x
 		max_y = if max_y < 0 then 0 else max_y
 		max_z = if max_z < 0 then 0 else max_z
-		minmax = [
-			min_x, min_y, min_z
-			max_x, max_y, max_z
-		]
+
 
 		vertices = []
+		# verticesBuffers = new Array((max_x + 1 - min_x) * (max_y + 1 - min_y))
 		v001 = [0, 0, 1]
-		for x in [min_x..max_x]  
+		for x in [min_x..max_x]
+			  
 			for y in [min_y..max_y]  
 				vxy0 = [x,y,0]
-				z_range = []
+				start_z = end_z = null
 				for polygon in polygons
 					normal = polygon.normal
 					divisor = V3.dot(v001, normal)
 					unless -EPSILON <= divisor <= EPSILON
 						z = ((polygon.d - V3.dot(vxy0, normal)) / divisor)
-						z = (z + if z >= 0 then EPSILON else -EPSILON) | 0
-
+						
 						if polygon.isInside([x,y,z], polygons)
-							z_range.push(z) 
+							z = (z + if z >= 0 then EPSILON else -EPSILON) | 0
+
+							unless start_z?
+								start_z = end_z = z
+							else
+								throw "nooo" if start_z != end_z and start_z - EPSILON <= z <= start_z + EPSILON and end_z - EPSILON <= z <= end_z + EPSILON
+								start_z = z if z < start_z
+								end_z   = z if z > end_z 
 				
-				if z_range.length > 0
-					start_z = _.min(z_range)
-					end_z   = _.max(z_range)
-					
+				if start_z?
 					if end_z >= 0
 						start_z = 0 if start_z < 0
 						
 						for z in [start_z..end_z]
 							vertices.push x,y,z
+						
+						min_z = z if z < min_z
+						max_z = z if z > max_z
+						throw "huch min" if z < min_z
+						throw "huch max" if z > max_z
 		
 		vertices = new Float32Array(vertices)
-
+		
+		minmax = [
+			min_x, min_y, min_z
+			max_x, max_y, max_z
+		]
 
 							
 		postMessage({ vertices, minmax, workerHandle })

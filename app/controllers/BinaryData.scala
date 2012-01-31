@@ -28,20 +28,6 @@ import play.api.libs.concurrent._
  */
 
 object BinaryData extends Controller with Secured {
-  /*def data( modelType: String, px: String, py: String, pz: String, 
-      ax: String, ay: String, az: String ) = Action {
-    
-    val axis = ( ax.toDouble, ay.toDouble, az.toDouble )
-    val point = ( px.toDouble, py.toDouble, pz.toDouble )
-    ( ModelStore( modelType ), axis ) match {
-      case ( _, ( 0, 0, 0 ) ) =>
-        BadRequest( "Axis is not allowed to be (0,0,0)." )
-      case ( Some( m ), _ ) =>
-        Ok( ( m.rotateAndMove( point, axis ).map( DataStore.load ).toArray ) )
-      case _ =>
-        NotFound( "Model not available." )
-    }
-  }*/
 
   /**
    * Websocket implementation. Client needs to send a 4 byte handle and a 64
@@ -73,7 +59,7 @@ object BinaryData extends Controller with Secured {
           case Some( model ) =>
             val figure = Figure( model.polygons.map( _.rotateAndMove( matrix ) ) )
             val coordinates = pointsInFigure( figure )
-            // rotate the model and generate the requested dat	a
+            
             Akka.future {
               def f( x: Array[Int], y: Seq[Tuple3[Int, Int, Int]] ) {
                 if ( x.length / 3 != y.length ) System.err.println( "Size doesn't match! %d (S) != %d (C)".format( y.length, x.length / 3 ) )
@@ -91,6 +77,7 @@ object BinaryData extends Controller with Secured {
               }
               f( clientCoord, coordinates )
             }
+            // rotate the model and generate the requested data
             val result: Array[Byte] =
               coordinates.map( DataStore.load ).toArray
             val end = System.currentTimeMillis()

@@ -113,56 +113,11 @@ Model.Binary =
 	#
 	# Example: `Model.Binary.vertices([23, 42, 12], [1,2,3], (err, vertices) -> ...)`
 	#
+	calcVerticesWorker : new SimpleWorker("/assets/javascripts/pullVerticesWorker.js")
+
 	calcVertices : (matrix) ->
-		
-		returnDeferred = $.Deferred()
 
-		worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker.js")
-		
-		workerHandle = Math.random()
-		workerCallback = (event) ->
-			
-			if (args = event.data).workerHandle == workerHandle
-				worker.removeEventListener("message", workerCallback, false)
-				if err = args.err
-					returnDeferred.reject(err)
-				else 
-					returnDeferred.resolve(args)
-
-		worker.addEventListener("message", workerCallback, false)
-		
-		worker.postMessage { matrix, workerHandle }
-		
-		returnDeferred.promise()
-	
-	calcVertices3 : (matrix, zRanges) ->
-		
-		returnDeferred = $.Deferred()
-
-		worker = @pullVerticesWorker ||= new Worker("/assets/javascripts/pullVerticesWorker3.js")
-		
-		workerHandle = Math.random()
-		workerCallback = (event) ->
-			
-			if (args = event.data).workerHandle == workerHandle
-				worker.removeEventListener("message", workerCallback, false)
-				if err = args.err
-					returnDeferred.reject(err)
-				else 
-					returnDeferred.resolve(args)
-
-		worker.addEventListener("message", workerCallback, false)
-		
-		worker.postMessage { matrix, zRanges, workerHandle }
-		
-		returnDeferred.promise()
-	
-	calcVertices2 : (matrix) ->
-
-		workerPool = 
-			@calcVerticesWorkerPool ||= new WorkerPool("/assets/javascripts/pullVerticesWorker.js", 1)
-
-		workerPool.send { matrix }
+		@calcVerticesWorker.send { matrix }
 
 
 	# This method allows you to query the data structure. Give us an array of
@@ -241,7 +196,6 @@ Model.Binary =
 			
 		callback(null, bufferFront, bufferBack, bufferDelta) if callback
 
-	
 
 	PRELOAD_TOLERANCE : 0.9
 	PRELOAD_RADIUS : 37
@@ -339,60 +293,11 @@ Model.Binary =
 				return arguments
 
 	
-
+	loadColorsSocket : new SimpleArrayBufferSocket("ws://#{document.location.host}/binary/ws/cube", Float32Array, Uint8Array)
+	
 	loadColors : (matrix) ->
 		
-		returnDeferred = $.Deferred()
-
-		unless @loadSocket
-			_WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
-			socket = @loadSocket = new _WebSocket("ws://#{document.location.host}/binary/ws/cube")
-			openDeferred = @loadSocketOpenDeferred = $.Deferred()
-
-			socket.binaryType = 'arraybuffer'
-			socket.onclose = (code, reason) => 
-				console.error("socket closed", "#{code}: #{reason}")
-				@loadSocket = null
-			socket.onopen = -> openDeferred.resolve()
-			setTimeout((-> openDeferred.reject("timeout")), 20000)
-
-		else
-			socket = @loadSocket
-			openDeferred = @loadSocketOpenDeferred
-		
-		socketHandle = Math.random()
-
-		socketErrorCallback = (err) ->
-			socket.removeEventListener("message", socketCallback, false)
-			socket.removeEventListener("error", socketErrorCallback, false)
-			returnDeferred.reject(err)
-		
-		socketCallback = (event) ->
-			buffer = event.data
-			handle = new Float32Array(buffer, 0, 1)[0]
-			if handle == socketHandle
-				socket.removeEventListener("message", socketCallback, false)
-				socket.removeEventListener("error", socketErrorCallback, false)
-				returnDeferred.resolve(new Uint8Array(buffer, 4))
-				console.log("incoming", matrix)
-
-		socket.addEventListener("message", socketCallback, false)
-		socket.addEventListener("error", socketErrorCallback, false)
-
-		@calcVertices(matrix).done ({ vertices }) ->
-
-			transmitPackage = new Float32Array(17 + vertices.length)
-			transmitPackage[0] = socketHandle
-			transmitPackage.set(matrix, 1)
-
-			transmitPackage.set(vertices, 17)
-
-			socketHandle = transmitPackage[0]
-			console.log("request", transmitPackage)
-
-			openDeferred.done(-> socket.send(transmitPackage.buffer))
-
-		returnDeferred.promise()
+		@loadColorsSocket.send(matrix)
 			
 	
 	# Now comes the implementation of our internal data structure.

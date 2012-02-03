@@ -4,11 +4,6 @@ polygonsTemplate  = null
 cubeVerticesTemplate = null
 EPSILON = 1e-10
 
-_log = []
-console =
-	log : (args...) ->
-		_log.push args
-
 class Polygon
 
 	constructor : (vertices) ->
@@ -86,7 +81,6 @@ self.onmessage = (event) ->
 
 
 		vertices = []
-		# verticesBuffers = new Array((max_x + 1 - min_x) * (max_y + 1 - min_y))
 		v001 = [0, 0, 1]
 		for x in [min_x..max_x]
 			  
@@ -116,11 +110,6 @@ self.onmessage = (event) ->
 						for z in [start_z..end_z]
 							vertices.push x,y,z
 						
-						min_z = z if z < min_z
-						max_z = z if z > max_z
-						throw "huch min" if z < min_z
-						throw "huch max" if z > max_z
-		
 		vertices = new Float32Array(vertices)
 		
 		minmax = [
@@ -128,5 +117,5 @@ self.onmessage = (event) ->
 			max_x, max_y, max_z
 		]
 
-							
+						
 		postMessage({ vertices, minmax, workerHandle })

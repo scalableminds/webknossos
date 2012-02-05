@@ -323,11 +323,13 @@ class SimpleWorker
 
 class SimpleArrayBufferSocket
   
-  OPEN_TIMEOUT : 20000
+  OPEN_TIMEOUT : 5000
   MESSAGE_TIMEOUT : 120000
+
    
-  constructor : (@url, @requestBufferType, @responseBufferType) ->
+  constructor : (@url, @fallbackUrl, @requestBufferType, @responseBufferType) ->
     @WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
+    @fallbackMode = false
     @initializeWebSocket()
   
   initializeWebSocket : ->
@@ -349,7 +351,10 @@ class SimpleArrayBufferSocket
       
       setTimeout(=> 
         openDeferred.reject("timeout")
-        @socket = null unless @socket.readyState == @WebSocket.OPEN
+        unless @socket.readyState == @WebSocket.OPEN
+          @socket = null 
+          @fallbackMode = true
+          alert("Switching to ajax fallback mode.")
       , @OPEN_TIMEOUT)
     
     @openDeferred.promise()
@@ -358,31 +363,55 @@ class SimpleArrayBufferSocket
 
     deferred = $.Deferred()
     
-    @initializeWebSocket().done =>
+    unless @fallbackMode
 
-      padding = Math.max(@requestBufferType.BYTES_PER_ELEMENT, Float32Array.BYTES_PER_ELEMENT)
+      @initializeWebSocket().done( =>
+
+        padding = Math.max(@requestBufferType.BYTES_PER_ELEMENT, Float32Array.BYTES_PER_ELEMENT)
+        
+        transmitBuffer  = new ArrayBuffer(padding + data.byteLength)
+        handleArray     = new Float32Array(transmitBuffer, 0, 1)
+        handleArray[0]  = Math.random()
+        socketHandle    = handleArray[0]
+
+        dataArray = new @requestBufferType(transmitBuffer, padding)
+        dataArray.set(data)
+
+        socketCallback = (event) =>
+          buffer = event.data
+          handle = new Float32Array(buffer, 0, 1)[0]
+          if handle == socketHandle
+            @socket.removeEventListener("message", socketCallback, false)
+            deferred.resolve(new @responseBufferType(buffer, 4))
+        
+        @socket.addEventListener("message", socketCallback, false)
+        @socket.send(transmitBuffer)
+        console.log("socket-request", transmitBuffer)
       
-      transmitBuffer  = new ArrayBuffer(padding + data.byteLength)
-      handleArray     = new Float32Array(transmitBuffer, 0, 1)
-      handleArray[0]  = Math.random()
-      socketHandle    = handleArray[0]
-
-      dataArray = new @requestBufferType(transmitBuffer, padding)
-      dataArray.set(data)
-
-      socketCallback = (event) =>
-        buffer = event.data
-        handle = new Float32Array(buffer, 0, 1)[0]
-        if handle == socketHandle
-          @socket.removeEventListener("message", socketCallback, false)
-          deferred.resolve(new @responseBufferType(buffer, 4))
-      
-      @socket.addEventListener("message", socketCallback, false)
-      @socket.send(transmitBuffer)
+        setTimeout((=> deferred.reject("timeout")), @MESSAGE_TIMEOUT)
+      ).fail => @sendUsingFallback(data, deferred)
     
-    setTimeout((=> deferred.reject("timeout")), @MESSAGE_TIMEOUT)
+    else
+      @sendUsingFallback(data, deferred)
 
     deferred.promise()
+  
+  sendUsingFallback : (data, deferred = $.Deferred()) ->
+    
+    request(
+      data : data.buffer
+      url : @fallbackUrl
+      responseType : 'arraybuffer'
+      (err, buffer) =>
+        if err
+          deferred.reject(err)
+        else
+          deferred.resolve(new @responseBufferType(buffer))
+    )
+    deferred.promise()
+
+
+
 
 
   

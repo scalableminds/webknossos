@@ -293,7 +293,10 @@ Model.Binary =
 				return arguments
 
 	
-	loadColorsSocket : new SimpleArrayBufferSocket("ws://#{document.location.host}/binary/ws/cube", Float32Array, Uint8Array)
+	loadColorsSocket : new SimpleArrayBufferSocket(
+		"ws://#{document.location.host}/binary/ws/cube", 
+		"/binary/data/cube", 
+		Float32Array, Uint8Array)
 	
 	loadColors : (matrix) ->
 		

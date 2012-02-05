@@ -32,7 +32,7 @@ object ExtendedDataTypes {
         val result = new Array[Array[Byte]]( arraySize )
 
         for ( i <- 0 until b.size by subCollectionSize ) {
-          val subCollection = b.slice( i, max( i + subCollectionSize, b.size - 1 ) )
+          val subCollection = b.slice( i, min( i + subCollectionSize, b.size ) )
           result.update( i / subCollectionSize, subCollection )
         }
         result

@@ -85,7 +85,7 @@ object BinaryData extends Controller with Secured {
    */
   def requestViaWebsocket( modelType: String ) =
     WebSocket.using[Array[Byte]] { request =>
-      val output = new PushEnumerator[Array[Byte]]
+      val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
         //println( "Message arrived! Bytes: %d".format( in.length ) )
         //val start = System.currentTimeMillis()

@@ -29,14 +29,17 @@ import play.api.libs.json.JsValue
  */
 
 object BinaryData extends Controller with Secured {
+  val WebSocketHandleLength = 4
+  val WebSocketMatrixLength = RotationMatrixSize3D * 4
+  val MinWebSocketRequestSize = WebSocketHandleLength + WebSocketMatrixLength
 
-  def calculateBinaryData( model: DataModel, matrix: Array[Float], clientCoord: Array[Int] = Array() ) = {
-    if ( matrix.length != 16 ) {
-      println("Size: "+matrix.length)
+  def calculateBinaryData( model: DataModel, matrix: Array[Float], clientCoordinates: Array[Int] = Array() ) = {
+    if ( matrix.length != RotationMatrixSize3D ) {
+      println( "Size: " + matrix.length )
       Array[Byte]()
     } else {
       val figure = Figure( model.polygons.map( _.rotateAndMove( matrix ) ) )
-      val coordinates = pointsInFigure( figure )
+      val coordinates = figure.calculateInnerPoints()
 
       Akka.future {
         def f( x: Array[Int], y: Seq[Tuple3[Int, Int, Int]] ) {
@@ -56,7 +59,7 @@ object BinaryData extends Controller with Secured {
             }
           }
         }
-        f( clientCoord, coordinates )
+        f( clientCoordinates, coordinates )
       }
       // rotate the model and generate the requested data
       coordinates.map( DataStore.load ).toArray
@@ -66,7 +69,8 @@ object BinaryData extends Controller with Secured {
   def requestViaAjax( modelType: String ) = Action { implicit request =>
     ( request.body.asRaw, ModelStore( modelType ) ) match {
       case ( Some( binRequest ), Some( model ) ) =>
-        val matrix = binRequest.asBytes().getOrElse( Array[Byte]() ).subDivide( 4 ).map( _.reverse.toFloat )
+        val binMatrix = binRequest.asBytes().getOrElse( Array[Byte]() )
+        val matrix = binMatrix.subDivide( 4 ).map( _.reverse.toFloat )
         val result = calculateBinaryData( model, matrix )
         Ok( result )
       case _ =>
@@ -85,26 +89,22 @@ object BinaryData extends Controller with Secured {
    */
   def requestViaWebsocket( modelType: String ) =
     WebSocket.using[Array[Byte]] { request =>
-      val output = new PushEnumerator[Array[Byte]]
+      val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
         //println( "Message arrived! Bytes: %d".format( in.length ) )
-        //val start = System.currentTimeMillis()
         // first 4 bytes are always used as a client handle
-        if ( in.length >= 68 && in.length % 4 == 0 ) {
-          val ( binHandle, inRest ) = in.splitAt( 4 )
-          val ( binMatrix, binClientCoord ) = inRest.splitAt( 64 )
+        if ( in.length >= MinWebSocketRequestSize && in.length % 4 == 0 ) {
+          val ( binHandle, inRest ) = in.splitAt( WebSocketHandleLength )
+          val ( binMatrix, binClientCoord ) = inRest.splitAt( WebSocketMatrixLength )
 
           // convert the matrix from byte to float representation
           val matrix = binMatrix.subDivide( 4 ).map( _.reverse.toFloat )
-          //val pauseStart = System.currentTimeMillis()
-          val clientCoord = binClientCoord.subDivide( 4 ).map( _.reverse.toFloat ).map( _.toInt )
-          //val pauseEnd = System.currentTimeMillis()
+          val clientCoordinates =
+            binClientCoord.subDivide( 4 ).map( _.reverse.toFloat ).map( _.toInt )
 
           ModelStore( modelType ) match {
             case Some( model ) =>
-              val result = calculateBinaryData( model, matrix, clientCoord )
-              val end = System.currentTimeMillis()
-              //println( "Calculated %d points in %d ms. Handle: %s".format( coordinates.size, end + pauseEnd - pauseStart - start, binHandle.toFloat ) )
+              val result = calculateBinaryData( model, matrix, clientCoordinates )
               output.push( binHandle ++ result )
             case _ =>
               output.push( binHandle )
@@ -117,16 +117,16 @@ object BinaryData extends Controller with Secured {
 
   def model( modelType: String ) = Action {
     ModelStore( modelType ) match {
-      case Some( m ) =>
-        Ok( toJson( m.vertices ) )
+      case Some( model ) =>
+        Ok( toJson( model.vertices ) )
       case _ =>
         NotFound( "Model not available." )
     }
   }
   def polygons( modelType: String ) = Action {
     ModelStore( modelType ) match {
-      case Some( m ) =>
-        Ok( toJson( m.polygons ) )
+      case Some( model ) =>
+        Ok( toJson( model.polygons ) )
       case _ =>
         NotFound( "Model not available." )
     }

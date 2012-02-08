@@ -16,6 +16,7 @@ import brainflight.tools.ExtendedDataTypes._
  */
 
 object Math {
+  val RotationMatrixSize3D = 16
   
   val EPSILON = 1e-10
   

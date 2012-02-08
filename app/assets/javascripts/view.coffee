@@ -124,7 +124,8 @@ class _View
 			g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
 
 			#sends current position to Model for preloading data
-			Model.Binary.ping(transMatrix)?.done(-> renderFunction()).progress(-> renderFunction())
+			deferredUpdate = -> _.defer(-> renderFunction())
+			Model.Binary.ping(transMatrix)?.done(deferredUpdate).progress(deferredUpdate)
 
 
 			#sends current position to Model for caching route

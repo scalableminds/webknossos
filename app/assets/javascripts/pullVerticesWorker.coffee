@@ -80,28 +80,32 @@ self.onmessage = (event) ->
 		max_z = if max_z < 0 then 0 else max_z
 
 
-		vertices = []
 		v001 = [0, 0, 1]
+		polygons1 = []
+		for polygon in polygons
+			divisor = V3.dot(v001, polygon.normal)
+			unless -EPSILON <= divisor <= EPSILON
+				polygon.divisor = divisor
+				polygons1.push(polygon)
+
+		vertices = []
 		for x in [min_x..max_x]
 			  
 			for y in [min_y..max_y]  
 				vxy0 = [x,y,0]
 				start_z = end_z = null
-				for polygon in polygons
-					normal = polygon.normal
-					divisor = V3.dot(v001, normal)
-					unless -EPSILON <= divisor <= EPSILON
-						z = ((polygon.d - V3.dot(vxy0, normal)) / divisor)
-						
-						if polygon.isInside([x,y,z], polygons)
-							z = (z + if z >= 0 then EPSILON else -EPSILON) | 0
+				for polygon in polygons1
+					z = ((polygon.d - V3.dot(vxy0, polygon.normal)) / polygon.divisor)
+					
+					if polygon.isInside([x,y,z], polygons)
+						z = (z + if z >= 0 then EPSILON else -EPSILON) | 0
 
-							unless start_z?
-								start_z = end_z = z
-							else
-								throw "nooo" if start_z != end_z and start_z - EPSILON <= z <= start_z + EPSILON and end_z - EPSILON <= z <= end_z + EPSILON
-								start_z = z if z < start_z
-								end_z   = z if z > end_z 
+						unless start_z?
+							start_z = end_z = z
+						else
+							throw "nooo" if start_z != end_z and start_z - EPSILON <= z <= start_z + EPSILON and end_z - EPSILON <= z <= end_z + EPSILON
+							start_z = z if z < start_z
+							end_z   = z if z > end_z 
 				
 				if start_z?
 					if end_z >= 0

@@ -337,6 +337,12 @@ class SimpleArrayBufferSocket
       socket = @socket = new @WebSocket(@url)
       openDeferred = @openDeferred = $.Deferred()
 
+      switchToFallback = =>
+        unless @fallbackMode
+          @socket = null 
+          @fallbackMode = true
+          alert("Switching to ajax fallback mode.")
+
       socket.binaryType = 'arraybuffer'
       
       socket.onopen = -> openDeferred.resolve()
@@ -347,14 +353,12 @@ class SimpleArrayBufferSocket
       socket.onclose = (code, reason) => 
         openDeferred.reject("closed")
         console.error("socket closed", "#{code}: #{reason}")
-        @socket = null
+        switchToFallback()
       
       setTimeout(=> 
         openDeferred.reject("timeout")
-        unless @socket.readyState == @WebSocket.OPEN
-          @socket = null 
-          @fallbackMode = true
-          alert("Switching to ajax fallback mode.")
+        if not @socket or @socket.readyState != @WebSocket.OPEN
+          switchToFallback()
       , @OPEN_TIMEOUT)
     
     @openDeferred.promise()
@@ -409,9 +413,6 @@ class SimpleArrayBufferSocket
           deferred.resolve(new @responseBufferType(buffer))
     )
     deferred.promise()
-
-
-
 
 
   

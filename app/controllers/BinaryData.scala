@@ -36,7 +36,7 @@ object BinaryData extends Controller with Secured {
       Array[Byte]()
     } else {
       val figure = Figure( model.polygons.map( _.rotateAndMove( matrix ) ) )
-      val coordinates = pointsInFigure( figure )
+      val coordinates = figure.calculateInnerPoints()
 
       Akka.future {
         def f( x: Array[Int], y: Seq[Tuple3[Int, Int, Int]] ) {

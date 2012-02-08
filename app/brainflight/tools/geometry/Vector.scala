@@ -49,8 +49,8 @@ class Vector2D( val x: Double, val y: Double ) {
  */
 case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
   def normalize = {
-    val sq = sqrt( square( x ) + square( y ) + square( z ) )
-    new Vector3D( x / sq, y / sq, z / sq )
+    val length = sqrt( square( x ) + square( y ) + square( z ) )
+    new Vector3D( x / length, y / length, z / length )
   }
 
   def -( o: Vector3D ): Vector3D = {

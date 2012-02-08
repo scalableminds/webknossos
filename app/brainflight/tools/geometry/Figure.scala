@@ -25,8 +25,12 @@ case class Figure( polygons: Seq[Polygon] ) {
     var zRangeBoundaries = ArrayBuffer[Int]()
 
     val directionalVector = new Vector3D( 0, 0, 1 )
-    val polygonsAndDivisors = this.polygons.map( polygon => 
-      (polygon,directionalVector ° polygon.normalVector))
+    val polygonsAndDivisors =
+      for {
+        polygon <- this.polygons
+        divisor = directionalVector ° polygon.normalVector
+        if !divisor.nearZero
+      } yield ( polygon, divisor )
 
     val max_x = maxVector.x.patchAbsoluteValue.toInt
     val max_y = maxVector.y.patchAbsoluteValue.toInt
@@ -42,14 +46,12 @@ case class Figure( polygons: Seq[Polygon] ) {
     } {
       zRangeBoundaries = ArrayBuffer[Int]()
 
-      for ( (polygon ,divisor) <- polygonsAndDivisors ) {
+      for ( ( polygon, divisor ) <- polygonsAndDivisors ) {
         val rayPositionVector = new Vector3D( x, y, 0 )
-        if ( !divisor.nearZero ) {
-          val zBoundary =  
-            ( polygon.d - ( rayPositionVector ° polygon.normalVector ) ) / divisor 
-          if ( this.isInside( ( x.toDouble, y.toDouble, zBoundary ), polygon ) ) {
-            zRangeBoundaries.append( zBoundary.patchAbsoluteValue.toInt )
-          }
+        val zBoundary =
+          ( polygon.d - ( rayPositionVector ° polygon.normalVector ) ) / divisor
+        if ( this.isInside( ( x.toDouble, y.toDouble, zBoundary ), polygon ) ) {
+          zRangeBoundaries.append( zBoundary.patchAbsoluteValue.toInt )
         }
       }
 
@@ -60,8 +62,8 @@ case class Figure( polygons: Seq[Polygon] ) {
         if ( upperBoundary >= 0 ) {
           lowerBoundary = max( lowerBoundary, 0 )
 
-          innerPoints ++= 
-            (for ( z <- lowerBoundary to upperBoundary ) yield ( ( x, y, z ) ) )
+          innerPoints ++=
+            ( for ( z <- lowerBoundary to upperBoundary ) yield ( ( x, y, z ) ) )
         }
       }
 

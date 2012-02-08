@@ -62,8 +62,8 @@ class Polygon( val vertices: List[Vector3D] ) {
       ( vertices( 0 ) - vertices( 1 ) ) x ( vertices( 2 ) - vertices( 1 ) )
   }
 
-  def rotateAndMove( matrix: Array[Float] ): Polygon = {
-    new Polygon( vertices.map( _.rotateAndMove( matrix ) ) )
+  def transformAffine( matrix: Array[Float] ): Polygon = {
+    new Polygon( vertices.map( _.transformAffine( matrix ) ) )
   }
 
   lazy val d = normalVector ° vertices( 0 )

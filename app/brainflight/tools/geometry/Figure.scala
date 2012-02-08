@@ -8,10 +8,10 @@ import scala.collection.mutable.ArrayBuffer
 
 case class Figure( polygons: Seq[Polygon] ) {
 
-  def isInside( point: Vector3D, polygonOfPoint: Polygon = null ) = {
+  def isInside( point: Tuple3[Double,Double,Double], polygonOfPoint: Polygon = null ) = {
     !polygons.exists( polygon =>
       polygon != polygonOfPoint &&
-        point ° polygon.normalVector - polygon.d > EPSILON )
+        polygon.normalVector ° point - polygon.d > EPSILON )
   }
 
   def calculateInnerPoints(): Seq[Tuple3[Int, Int, Int]] = {

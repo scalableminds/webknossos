@@ -28,10 +28,12 @@ request = (options, callback) ->
       deferred.reject(@statusText)
   
   xhr.onerror = (err) ->
-    deferred.reject(errr)
+    deferred.reject(err)
 
   xhr.send(options.data)
 
-  deferred.done (data) -> callback(null, data)
-  deferred.fail (err) -> callback(err)
+  if callback
+    deferred.done (data) -> callback(null, data)
+    deferred.fail (err) -> callback(err)
+  
   deferred.promise()

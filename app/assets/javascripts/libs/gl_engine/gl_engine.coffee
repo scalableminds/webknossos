@@ -419,7 +419,39 @@ class GL_engine
 	rotate : (radians, a) ->
 		rotMat = M4x4.rotate(radians, a, M4x4.I)
 		@loadMatrix M4x4.mul(@peekMatrix(), rotMat)
-    
+
+	###
+	Calculate the 2d canvas position based on a 3D vector
+
+	@param {Array} 3d vector
+	###
+	get2dPoint : (vector) ->
+		# transform world to clipping coordinates
+		modelViewProjectionMatrix = M4x4.mul projectionMatrix, @peekMatrix()
+	
+		V3.mul4x4 modelViewProjectionMatrix,vector,vector
+
+		canvasX = Math.round ( ((1 -vector[0]) / 2) * canvas.width)
+		canvasY = Math.round ( ((1 - vector[1]) / 2) * canvas.height)
+
+		return [canvasX, canvasY]
+
+	###
+	Calculate the 3d postion based on a 2d canvas position
+
+	@param {Array} 2d vector
+	###
+	get3dPoint : (vector, matrix) ->
+		x = 2 * vector[0] / canvas.width - 1
+		y = -2 * vector[1] / canvas.height + 1
+				        
+		modelViewProjectionMatrix = M4x4.mul projectionMatrix, matrix
+		inverseMatrix = M4x4.inverse modelViewProjectionMatrix
+		vector = []
+		V3.mul4x4 inverseMatrix, [x,y,0], vector
+
+		return vector
+
 
 ############################################################################
 	#private methods

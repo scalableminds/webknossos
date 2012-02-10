@@ -155,23 +155,29 @@ Model.Binary =
 	# each points.
 	# *   `bufferDelta` is a `Float32Array` with the delta values.
 	#
-	get : (vertices, callback) ->
+	get : (vertices) ->
+
+		$.Deferred().resolve(@getSync(vertices))
+
+
+	getSync : (vertices) ->
 
 		bufferFront = new Float32Array(vertices.length / 3 << 2)
 		bufferBack  = new Float32Array(vertices.length / 3 << 2)
 		bufferDelta = new Float32Array(vertices.length)
 		
-		if (_cube = @cube)
+		if (cube = @cube)
 			
-			size0  = @cubeSize[0]
-			size01 = @cubeSize[0] * @cubeSize[1]
+			{ cubeSize, cubeOffset } = @
+			size0  = cubeSize[0]
+			size01 = cubeSize[0] * cubeSize[1]
 			
-			lowerBound0 = @cubeOffset[0] << 6
-			lowerBound1 = @cubeOffset[1] << 6
-			lowerBound2 = @cubeOffset[2] << 6
-			upperBound0 = (@cubeOffset[0] + @cubeSize[0]) << 6
-			upperBound1 = (@cubeOffset[1] + @cubeSize[1]) << 6
-			upperBound2 = (@cubeOffset[2] + @cubeSize[2]) << 6
+			lowerBound0 = cubeOffset[0] << 6
+			lowerBound1 = cubeOffset[1] << 6
+			lowerBound2 = cubeOffset[2] << 6
+			upperBound0 = (cubeOffset[0] + cubeSize[0]) << 6
+			upperBound1 = (cubeOffset[1] + cubeSize[1]) << 6
+			upperBound2 = (cubeOffset[2] + cubeSize[2]) << 6
 
 			j3 = 0
 			j4 = 0
@@ -186,7 +192,7 @@ Model.Binary =
 					x, y, z, 
 					bufferFront, bufferBack, bufferDelta, 
 					j4, j3, 
-					_cube, 
+					cube, 
 					lowerBound0, lowerBound1, lowerBound2,
 					upperBound0, upperBound1, upperBound2,
 					size0, size01)
@@ -194,7 +200,7 @@ Model.Binary =
 				j3 += 3
 				j4 += 4
 			
-		callback(null, bufferFront, bufferBack, bufferDelta) if callback
+		 { bufferFront, bufferBack, bufferDelta }
 
 
 	PRELOAD_TOLERANCE : 0.9
@@ -348,15 +354,14 @@ Model.Binary =
 	# point you're looking for.
 	bucketIndex : (x, y, z) ->
 		
-		_offset = @cubeOffset
-		_size   = @cubeSize
+		{ cubeOffset, cubeSize } = @
 
 		# `(x / 64) - offset.x + 
 		# ((y / 64) - offset.y) * size.x + 
 		# ((z / 64) - offset.z) * size.x * size.y`
-		((x >> 6) - _offset[0]) + 
-		((y >> 6) - _offset[1]) * _size[0] + 
-		((z >> 6) - _offset[2]) * _size[0] * _size[1]
+		((x >> 6) - cubeOffset[0]) + 
+		((y >> 6) - cubeOffset[1]) * cubeSize[0] + 
+		((z >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
 	
 	# Returns the index of the point (in the bucket) you're looking for.
 	pointIndex : (x, y, z) ->
@@ -382,68 +387,67 @@ Model.Binary =
 	# And this one is for passing bucket coordinates.
 	extendCube : (x0, y0, z0, x1, y1, z1) ->
 		
-		_cube   = @cube
-		_offset = @cubeOffset
-		_size   = @cubeSize		
+		{ cube, cubeOffset, cubeSize } = @
 
 		# First, we calculate the new dimension of the cuboid.
-		if _cube?
-			_upperBound = [
-				_offset[0] + _size[0]
-				_offset[1] + _size[1]
-				_offset[2] + _size[2]
+		if cube?
+			upperBound = [
+				cubeOffset[0] + cubeSize[0]
+				cubeOffset[1] + cubeSize[1]
+				cubeOffset[2] + cubeSize[2]
 			]
 
-			cubeOffset = [
-				Math.min(x0, x1, _offset[0])
-				Math.min(y0, y1, _offset[1])
-				Math.min(z0, z1, _offset[2])
+			newCubeOffset = [
+				Math.min(x0, x1, cubeOffset[0])
+				Math.min(y0, y1, cubeOffset[1])
+				Math.min(z0, z1, cubeOffset[2])
 			]
-			cubeSize = [
-				Math.max(x0, x1, _upperBound[0] - 1) - cubeOffset[0] + 1
-				Math.max(y0, y1, _upperBound[1] - 1) - cubeOffset[1] + 1
-				Math.max(z0, z1, _upperBound[2] - 1) - cubeOffset[2] + 1
+			newCubeSize = [
+				Math.max(x0, x1, upperBound[0] - 1) - cubeOffset[0] + 1
+				Math.max(y0, y1, upperBound[1] - 1) - cubeOffset[1] + 1
+				Math.max(z0, z1, upperBound[2] - 1) - cubeOffset[2] + 1
 			]
 
 			# Just reorganize the existing buckets when the cube dimensions 
 			# have changed.
-			if cubeOffset[0] != _offset[0] or 
-			cubeOffset[1] != _offset[1] or 
-			cubeOffset[2] != _offset[2] or 
-			cubeSize[0] != _size[0] or 
-			cubeSize[1] != _size[1] or 
-			cubeSize[2] != _size[2]
+			if cubeOffset[0] != newCubeOffset[0] or 
+			cubeOffset[1] != newCubeOffset[1] or 
+			cubeOffset[2] != newCubeOffset[2] or 
+			cubeSize[0] != newCubeSize[0] or 
+			cubeSize[1] != newCubeSize[1] or 
+			cubeSize[2] != newCubeSize[2]
 				
-				cube = []
+				newCube = []
 
 				for z in [0...cubeSize[2]]
 					
 					# Bound checking is necessary.
-					if _offset[2] <= z + cubeOffset[2] < _upperBound[2]
+					if cubeOffset[2] <= z + newCubeOffset[2] < upperBound[2]
 						
-						for y in [0...cubeSize[1]]
+						for y in [0...newCubeSize[1]]
 						
-							if _offset[1] <= y + cubeOffset[1] < _upperBound[1]
+							if cubeOffset[1] <= y + newCubeOffset[1] < upperBound[1]
 						
-								for x in [0...cubeSize[0]]
+								for x in [0...newCubeSize[0]]
 						
-									cube.push if _cube? and _offset[0] <= x + cubeOffset[0] < _upperBound[0]
+									newCube.push(if cubeOffset[0] <= x + newCubeOffset[0] < upperBound[0]
 										index = 
-											(x + cubeOffset[0] - _offset[0]) +
-											(y + cubeOffset[1] - _offset[1]) * _size[0] +
-											(z + cubeOffset[2] - _offset[2]) * _size[0] * _size[1]
-										_cube[index]
+											(x + newCubeOffset[0] - cubeOffset[0]) +
+											(y + newCubeOffset[1] - cubeOffset[1]) * cubeSize[0] +
+											(z + newCubeOffset[2] - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+										cube[index]
 									else
 										null
+									)
 							else
-								cube.push(null) for x in [0...cubeSize[0]]
+								newCube.push(null) for x in [0...newCubeSize[0]]
 									
 					else
-						cube.push(null) for xy in [0...(cubeSize[0] * cubeSize[1])]
+						newCube.push(null) for xy in [0...(newCubeSize[0] * newCubeSize[1])]
 					
-				@cube       = cube
-				@cubeOffset = cubeOffset
-				@cubeSize   = cubeSize
+				@cube       = newCube
+				@cubeOffset = newCubeOffset
+				@cubeSize   = newCubeSize
 						
 		
 		else
@@ -461,9 +465,7 @@ Model.Binary =
 			cube = []
 			cube.push(null) for xyz in [0...(cubeSize[0] * cubeSize[1] * cubeSize[2])]
 			
-			@cube       = cube
-			@cubeOffset = cubeOffset
-			@cubeSize   = cubeSize
+			_.extend(@, { cube, cubeOffset, cubeSize})
 
 
 	# Getting a color value from the data structure.
@@ -498,87 +500,85 @@ Model.Binary =
 			throw "cube fault"
 
 
-		
-
 # This loads and caches meshes.
-#
-# **Mixins**: Model.Cacheable
 Model.Mesh =
 	
-	get : (name, callback) ->
+	get : (name) ->
 
-		unless @tryCache name, callback
+		request(
+			url : "/assets/mesh/#{name}"
+			responseType : 'arraybuffer'
+		).pipe (data) ->
+			
+				# To save bandwidth meshes are transferred in a binary format.
+				header  = new Uint32Array(data, 0, 3)
+				coords  = new Float32Array(data, 12, header[0])
+				colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
+				indexes = new Uint16Array(data, 12 + 4 * (header[0] + header[1]), header[2])
 
-			request url : "/assets/mesh/#{name}", responseType : 'arraybuffer', (err, data) =>
-				if err
-					callback err if callback
+				{ coords, colors, indexes }
 
-				else
-				  # To save bandwidth meshes are transferred in a binary format.
-					header  = new Uint32Array(data, 0, 3)
-					coords  = new Float32Array(data, 12, header[0])
-					colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
-					indexes = new Uint16Array(data, 12 + 4 * (header[0] + header[1]), header[2])
-
-					# `Model.Cacheable.cachingCallback`
-					@cachingCallback(name, callback)(null, coords, colors, indexes)
+Model.Mesh.get = _.memoize(Model.Mesh.get)
 
 # This creates a Triangleplane
 # It is essentially a square with a grid of vertices. Those vertices are
 # connected through triangles. Cuz that's how u do it in WebGL.
 Model.Trianglesplane =
 	
-	get : (width, zOffset, callback) ->
+	get : (width, zOffset) ->
 		
-		# so we have Point 0 0 0 centered
-		startIndex = - Math.floor width/2
-		endIndex = startIndex + width
+		deferred = $.Deferred()
+
+		_.defer ->
+			
+			# so we have Point 0 0 0 centered
+			startIndex = - Math.floor width/2
+			endIndex = startIndex + width
+			
+			# Each three elements represent one vertex.
+			vertices = new Float32Array(width * width * 3)
+
+			# Each three elements represent one triangle.
+			# And each vertex is connected through two triangles.
+			indices = new Uint16Array(width * width * 6)
+			currentPoint = 0
+			currentIndex = 0
+
+			for y in [startIndex...endIndex]
+				for x in [startIndex...endIndex]
+					currentIndex2 = currentIndex << 1
+
+					# We don't draw triangles with the last point of an axis.
+					if y < (endIndex - 1) and x < (endIndex - 1)
+						indices[currentIndex2 + 0] = currentPoint
+						indices[currentIndex2 + 1] = currentPoint + 1 
+						indices[currentIndex2 + 2] = currentPoint + width
+						indices[currentIndex2 + 3] = currentPoint + width
+						indices[currentIndex2 + 4] = currentPoint + width + 1
+						indices[currentIndex2 + 5] = currentPoint + 1
+
+					vertices[currentIndex + 0] = x
+					vertices[currentIndex + 1] = y
+					vertices[currentIndex + 2] = zOffset
+
+					currentPoint++
+					currentIndex += 3
+			
+			deferred.resolve { vertices, indices }
 		
-		# Each three elements represent one vertex.
-		vertices = new Float32Array(width * width * 3)
-
-		# Each three elements represent one triangle.
-		# And each vertex is connected through two triangles.
-		indices = new Uint16Array(width * width * 6)
-		currentPoint = 0
-		currentIndex = 0
-
-		for y in [startIndex...endIndex]
-			for x in [startIndex...endIndex]
-				currentIndex2 = currentIndex << 1
-
-				# We don't draw triangles with the last point of an axis.
-				if y < (endIndex - 1) and x < (endIndex - 1)
-					indices[currentIndex2 + 0] = currentPoint
-					indices[currentIndex2 + 1] = currentPoint + 1 
-					indices[currentIndex2 + 2] = currentPoint + width
-					indices[currentIndex2 + 3] = currentPoint + width
-					indices[currentIndex2 + 4] = currentPoint + width + 1
-					indices[currentIndex2 + 5] = currentPoint + 1
-
-				vertices[currentIndex + 0] = x
-				vertices[currentIndex + 1] = y
-				vertices[currentIndex + 2] = zOffset
-
-				currentPoint++
-				currentIndex += 3
-
-		callback(null, vertices, indices) if callback
+		deferred.promise()
 
 # This loads and caches a pair (vertex and fragment) shaders
-#
-# **Mixins**: Model.Cacheable
-# **Mixins**: Model.Synchronizable
 Model.Shader =
 
 	get : (name, callback) ->
 
-		unless @tryCache name, callback
-		
-			loadedData = []
-			request url : "/assets/shader/#{name}.vs", (@synchronizingCallback loadedData, (@cachingCallback name, callback))
-			request url : "/assets/shader/#{name}.fs", (@synchronizingCallback loadedData, (@cachingCallback name, callback))
+		$.when(
+			request(url : "/assets/shader/#{name}.vs"), 
+			request(url : "/assets/shader/#{name}.fs")
+		)
 
+Model.Shader.get = _.memoize(Model.Shader.get)
 
 # This takes care of the route. 
 Model.Route =
@@ -588,22 +588,17 @@ Model.Route =
 	startDirection : null
 	startPosition : null
 	id : null
+	initializeDeferred : null
 
 	# Returns a `position` and `direction` to start your work.
-	initialize : (callback) ->
-		@initialize = _.once2(@_initialize)
-		@initialize(callback)
+	initialize : ->
 
-	_initialize : (doneCallback) ->
+		unless @initializeDeferred
+			
+			@initializeDeferred = $.Deferred()
 
-		request
-			url : '/route/initialize'
-			,
-			(err, data) =>
-				
-				callback = doneCallback(err)
-				
-				unless err
+			request(url : '/route/initialize').done( 
+				(data) =>
 					try
 						data = JSON.parse data
 
@@ -612,9 +607,12 @@ Model.Route =
 						@startDirection = data.direction
 						@startPosition  = data.position
 						
-						callback(null, data.position, data.direction)
+						@initializeDeferred.resolve()
 					catch ex
-						callback ex
+						@initializeDeferred.reject(ex)
+			)
+		
+		@initializeDeferred.promise()
 	
 	# Pulls a route from the server.
 	pull : ->
@@ -626,37 +624,36 @@ Model.Route =
 	# Pushes th buffered route to the server. Pushing happens at most 
 	# every 30 seconds.
 	push : ->
-		@push = _.throttle2 @_push, 30000
+		@push = _.mutexDeferred(_.throttle2(@_push, 30000), -1)
 		@push()
 
 	_push : ->
-		unless @pushing
-			@pushing = true
 
-			@initialize (err) =>
-				return if err
+		deferred = $.Deferred()
+		
+		@initializeDeferred.done =>
+			
+			transportBuffer = @dirtyBuffer
+			@dirtyBuffer = []
 
-				transportBuffer = @dirtyBuffer
-				@dirtyBuffer = []
-				request
-					url : "/route/#{@id}"
-					contentType : 'application/json'
-					method : 'POST'
-					data : transportBuffer
-					,
-					(err) =>
-						@pushing = false
-						if err
-							@dirtyBuffer = transportBuffer.concat @dirtyBuffer
-							@push()
+			request(
+				url : "/route/#{@id}"
+				contentType : 'application/json'
+				method : 'POST'
+				data : transportBuffer
+			).fail( =>
+				@dirtyBuffer = transportBuffer.concat(@dirtyBuffer)
+				@push()
+			).always(-> deferred.resolve())
+		
+		deferred.promise()
 
 	
 	# Add a point to the buffer. Just keep adding them.
 	put : (position, callback) ->
 		
-		@initialize (err) =>
-			return callback(err) if err and callback
-
+		@initializeDeferred.done =>
+			
 			position = [Math.round(position[0]), Math.round(position[1]), Math.round(position[2])]
 			_lastPosition = _.last(@route)
 			unless _lastPosition[0] == position[0] and _lastPosition[1] == position[1] and _lastPosition[2] == position[2]
@@ -682,31 +679,3 @@ Model.Synchronizable =
 				loadedData[i] = data
 				unless --loadedData.counter
 					callback(null, loadedData...) if callback
-
-# Hook up your callbacks with a caching mechansim. So: First check the
-# cache with `tryCache`, then do your stuff and hook up the 
-# `cachingCallback` to your callbacks.
-Model.Cacheable =
-	
-	cache : {}
-
-	cachingCallback : (cache_tag, callback) ->
-		(err, args...) =>
-			if err
-				callback err
-			else
-				@cache[cache_tag] = args
-				callback(null, args...) if callback
-	
-	tryCache : (cache_tag, callback) ->
-		if (cached = @cache[cache_tag])?
-			if callback
-				_.defer -> callback(null, cached...)
-			return true
-		else
-			return false
-
-# Mixin hook ups
-_.extend Model.Mesh, Model.Cacheable
-_.extend Model.Shader, Model.Synchronizable
-_.extend Model.Shader, Model.Cacheable

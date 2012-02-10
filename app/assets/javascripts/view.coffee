@@ -34,7 +34,7 @@ class _View
 	perspectiveMatrix = null
 
 
-	constructor: () -> 
+	constructor : -> 
 		cvs = document.getElementById('render')
 		engine = new GL_engine cvs, antialias : true
 
@@ -132,20 +132,15 @@ class _View
 			Model.Route.put cam.getPos(), null
 
 			#get colors for new coords from Model
-			Model.Binary.get(newVertices, (err, interpolationFront, interpolationBack, interpolationOffset) ->
-				throw err if err
-				# console.log "interpolationFront: " + interpolationFront[0] + " " + interpolationFront[1] + " " + interpolationFront[2] + " " + interpolationFront[128*128-3] + " " + interpolationFront[128*128-2] + " " + interpolationFront[128*128-1]
-				# console.log "interpolationBack: " + interpolationBack[0] + " " + interpolationBack[1] + " " + interpolationBack[2] + " " + interpolationBack[128*128-3] + " " + interpolationBack[128*128-2] + " " + interpolationBack[128*128-1]
-				# console.log "interpolationOffset: " + interpolationOffset[0] + " " + interpolationOffset[1] + " " + interpolationOffset[2] + " " + interpolationOffset[128*128-3] + " " + interpolationOffset[128*128-2] + " " + interpolationOffset[128*128-1]
-
+			Model.Binary.get(newVertices).done ({bufferFront, bufferBack, bufferOffset}) ->
+				
 				engine.deleteSingleBuffer g.interpolationFront.VBO
 				engine.deleteSingleBuffer g.interpolationBack.VBO
 				engine.deleteSingleBuffer g.interpolationOffset.VBO
 				
-				g.setInterpolationFront (View.createArrayBufferObject interpolationFront), interpolationFront.length
-				g.setInterpolationBack (View.createArrayBufferObject interpolationBack), interpolationBack.length
-				g.setInterpolationOffset (View.createArrayBufferObject interpolationOffset), interpolationOffset.length										
-			)
+				g.setInterpolationFront  (View.createArrayBufferObject bufferFront),  bufferFront.length
+				g.setInterpolationBack   (View.createArrayBufferObject bufferBack),   bufferBack.length
+				g.setInterpolationOffset (View.createArrayBufferObject bufferOffset), bufferOffset.length
 
 			engine.useProgram trianglesplaneProgramObject 
 			engine.render g

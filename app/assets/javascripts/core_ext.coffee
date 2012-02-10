@@ -196,7 +196,7 @@ _.mutexDeferred = (func, timeout = 20000) ->
     unless deferred
       
       deferred = func.apply(this, args)
-      setTimeout((-> deferred = null), timeout)
+      setTimeout((-> deferred = null), timeout) unless timeout < 0
       deferred.always -> deferred = null
       deferred
 
@@ -419,7 +419,4 @@ class SimpleArrayBufferSocket
           deferred.resolve(new @responseBufferType(buffer))
     )
     deferred.promise()
-
-
-  
 

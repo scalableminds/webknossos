@@ -10,22 +10,17 @@ class _Controller
 				position = pos
 				direction = dir
 				View.setCam pos, dir
-				GeometryFactory.createMesh("coords","mesh")
-				GeometryFactory.createTrianglesplane(128, 0, "trianglesplane")
-				#GeometryFactory.createTrianglesplane(128, 1, "trianglesplane")
+				GeometryFactory.createMesh("coordinateAxes", "mesh").then (mesh) ->
+					View.addGeometry mesh
+					
+				GeometryFactory.createMesh("crosshair", "mesh").then (mesh) -> 
+					View.addGeometry mesh
+
+				GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").then (trianglesplane) ->
+					View.addGeometry trianglesplane		
 			else
 				throw err
 		)
-
-	loadPointcloud : () ->
-		GeometryFactory.loadPointcloud position, direction,"pointcloud"
-
-	updatePosition : (pos) ->
-		position = pos
-		Model.Route.put(position, (err) =>
-			console.log err
-		)
-
 
   # mouse events
   

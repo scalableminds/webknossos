@@ -12,6 +12,10 @@ GET     /logout                             controllers.Application.logout
 GET     /register                           controllers.Application.register
 POST    /register                           controllers.Application.registrate
 
+# Facebook
+GET     /login/fb                           controllers.login.FacebookLogin.login
+GET     /login/fb/code                      controllers.login.FacebookLogin.loginCode(code: String)
+
 # Binary Data
 GET     /binary/model/:model                controllers.BinaryData.model(model: String)
 GET     /binary/polygons/:model             controllers.BinaryData.polygons(model: String)

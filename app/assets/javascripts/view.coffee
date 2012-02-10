@@ -8,7 +8,7 @@ class _View
 
 	# geometry objects
 	triangleplane = null
-	meshes = []
+	meshes = {}
 
 	#ProgramObjects
 	#One Shader for each Geometry-Type
@@ -47,7 +47,6 @@ class _View
 		### ACHTUNG VON 60 AUF 90 GEÄNDERT! ###
 		#####
 		engine.perspective 90, cvs.width / cvs.height, 0.0001, 100000
-
 		engine.onRender = renderFunction
 
 		keyboard = new Keyboard
@@ -78,29 +77,35 @@ class _View
 			[ perspectiveMatrix[4], perspectiveMatrix[5], perspectiveMatrix[6] ])
 		engine.clear()
 
-		#renders all geometries in geometry-array
-		totalNumberOfVertices = 0
-		totalNumberOfVertices += drawTriangleplane()
+		# renders all geometry objects
+		# render the Triangleplane first
+		drawTriangleplane() if triangleplane
 
-		# first Mesh is always the coordinate axis mini-map
-		if meshes[0]
+		# render Meshes
+		engine.useProgram meshProgramObject
+
+		# coordinate axis mini-map
+		if meshes["coordinateAxes"]
 			engine.pushMatrix()
 			engine.translate 200,100,0
 			# console.log V3.angle [0,0,1], cam.getDir()
 
+			#axisMinimap ||= engine.get3dPoint [50,50]
+
 			# rotate the axis mini-map according to the cube's rotation and translate it
 			rotMatrix = cam.getMatrix()
-			rotMatrix[12] = -200
-			rotMatrix[13] = 0
-			rotMatrix[14] = -75
+			rotMatrix[12] = -150 #axisMinimap[0]
+			rotMatrix[13] = 0 #axisMinimap[1]
+			rotMatrix[14] = -100
 
+			#console.log engine.get3dPoint [50,50], cam.getMovedNonPersistent [0,0,0]
 			engine.loadMatrix rotMatrix
-
-			engine.useProgram meshProgramObject
-			engine.render meshes[0]
+			engine.render meshes["coordinateAxes"]
 			engine.popMatrix()
 
-			totalNumberOfVertices += meshes[0].vertices.length
+		if meshes["crosshair"]
+			engine.translate 50, 50, 0
+			engine.render meshes["crosshair"]
 
 		# OUTPUT Framerate
 		writeFramerate Math.floor(engine.framerate), cam.getPos()
@@ -109,44 +114,41 @@ class _View
 	drawTriangleplane = ->
 		
 		g = triangleplane
-		if g.getClassType() is "Trianglesplane"
-			# console.log "cam: " + cam.toString()
+		#console.log "cam: " + cam.toString()
 
-			transMatrix = cam.getMatrix()
-			#console.log "normal: " + g.normalVertices[0] + " " + g.normalVertices[1] + " " + g.normalVertices[2] + 
-			#												g.normalVertices[128*128*3-3] + " " + g.normalVertices[128*128*3-2] + " " + g.normalVertices[128*128*3-1]
-			newVertices = M4x4.transformPointsAffine transMatrix, g.normalVertices
-			#console.log "new: " + newVertices[0] + " " + newVertices[1] + " " + newVertices[2] + 
-			#												newVertices[128*128*3-3] + " " + newVertices[128*128*3-2] + " " + newVertices[128*128*3-1]
+		transMatrix = cam.getMatrix()
+		#console.log "normal: " + g.normalVertices[0] + " " + g.normalVertices[1] + " " + g.normalVertices[2] + 
+		#												g.normalVertices[128*128*3-3] + " " + g.normalVertices[128*128*3-2] + " " + g.normalVertices[128*128*3-1]
+		newVertices = M4x4.transformPointsAffine transMatrix, g.normalVertices
+		#console.log "new: " + newVertices[0] + " " + newVertices[1] + " " + newVertices[2] + 
+		#												newVertices[128*128*3-3] + " " + newVertices[128*128*3-2] + " " + newVertices[128*128*3-1]
 
-			#hsa to be removed later
-			engine.deleteSingleBuffer g.vertices.VBO
-			g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
+		#hsa to be removed later
+		engine.deleteSingleBuffer g.vertices.VBO
+		g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
 
-			#sends current position to Model for preloading data
-			deferredUpdate = -> renderFunction()
-			Model.Binary.ping(transMatrix)?.done(deferredUpdate).progress(deferredUpdate)
+		#sends current position to Model for preloading data
+		Model.Binary.ping(transMatrix).done(renderFunction)
 
+		#sends current position to Model for caching route
+		Model.Route.put cam.getPos(), null
 
-			#sends current position to Model for caching route
-			Model.Route.put cam.getPos(), null
+		#get colors for new coords from Model
+		Model.Binary.get(newVertices).done ({ bufferFront, bufferBack, bufferDelta }) ->
+			
+			engine.deleteSingleBuffer g.interpolationFront.VBO
+			engine.deleteSingleBuffer g.interpolationBack.VBO
+			engine.deleteSingleBuffer g.interpolationOffset.VBO
+			
+			g.setInterpolationFront  (View.createArrayBufferObject bufferFront), bufferFront.length
+			g.setInterpolationBack   (View.createArrayBufferObject bufferBack),  bufferBack.length
+			g.setInterpolationOffset (View.createArrayBufferObject bufferDelta), bufferDelta.length
 
-			#get colors for new coords from Model
-			Model.Binary.get(newVertices).done ({bufferFront, bufferBack, bufferOffset}) ->
-				
-				engine.deleteSingleBuffer g.interpolationFront.VBO
-				engine.deleteSingleBuffer g.interpolationBack.VBO
-				engine.deleteSingleBuffer g.interpolationOffset.VBO
-				
-				g.setInterpolationFront  (View.createArrayBufferObject bufferFront),  bufferFront.length
-				g.setInterpolationBack   (View.createArrayBufferObject bufferBack),   bufferBack.length
-				g.setInterpolationOffset (View.createArrayBufferObject bufferOffset), bufferOffset.length
+		engine.useProgram trianglesplaneProgramObject 
+		engine.render g
 
-			engine.useProgram trianglesplaneProgramObject 
-			engine.render g
-
-			#used for total Vertex counting
-			return g.vertices.length
+		#used for total Vertex counting
+		return g.vertices.length
 			
 				
 
@@ -166,7 +168,7 @@ class _View
 
 		if geometry.getClassType() is "Mesh"
 			meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
-			meshes.push geometry
+			meshes[geometry.name] = geometry
 			@draw()
 
 	addColors : (newColors, x, y, z) ->

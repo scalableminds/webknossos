@@ -19,20 +19,19 @@ import play.api.libs.json.Json._
  * n - is the number of vertices and a is the apothem
  * http://en.wikipedia.org/wiki/Regular_polygon
  */
-class RegularPolygon( n: Int, a: Int ) {
+class RegularPolygon( numberOfVertices: Int, apothem: Int ) {
   val vertices = {
-    var vertices = List[Vector2D]();
     // angle between two diagonals
-    val alpha = 2 * Pi / n
+    val alpha = 2 * Pi / numberOfVertices
     // vector to the first vertex
-    var pointVector = new Vector2D( -tan( alpha / 2 ) * a, a )
-    vertices ::= pointVector
+    var pointVector = new Vector2D( -tan( alpha / 2 ) * apothem, apothem )
+    var vertices = pointVector :: Nil
     // length of the polygons sides
-    val s = 2 * tan( alpha / 2 ) * a
+    val s = 2 * tan( alpha / 2 ) * apothem
     // vector which is used to generate the following vertices
     // through iteration, rotating and vector addition
     var v = new Vector2D( -s, 0 )
-    for ( i <- 1 until n ) {
+    for ( i <- 1 until numberOfVertices ) {
       v = v.rotate( alpha )
       pointVector = pointVector + v
       vertices = vertices ::: pointVector :: Nil
@@ -40,14 +39,16 @@ class RegularPolygon( n: Int, a: Int ) {
     vertices
   }
   /**
-   * Returns the vertex at the given index. Negative indices are used to navigate clockwise
+   * Returns the vertex at the given index. Negative indices are used
+   * to navigate clockwise
    */
   def vertex( index: Int ) = {
     val i = ( index % vertices.size )
     if ( i < 0 ) vertices( vertices.size + i ) else vertices( i )
   }
   // convert polygon to a valid json representation
-  def to3D( value: Int, position: Int ) = vertices.map( v => v.to3D( value, position ) )
+  def to3D( value: Int, position: Int ) =
+    vertices.map( v => v.to3D( value, position ) )
 }
 
 /**
@@ -55,16 +56,18 @@ class RegularPolygon( n: Int, a: Int ) {
  */
 class Polygon( val vertices: List[Vector3D] ) {
   lazy val normalVector = {
-    if ( vertices.size < 3 ) throw new IllegalStateException( "Not a valid Polygon: " + vertices )
-    (vertices( 0 ) - vertices( 1 )) x (vertices( 2 ) - vertices( 1 ))
+    if ( vertices.size < 3 )
+      throw new IllegalStateException( "Not a valid Polygon: " + vertices )
+    else
+      ( vertices( 0 ) - vertices( 1 ) ) x ( vertices( 2 ) - vertices( 1 ) )
   }
-  
-  def rotateAndMove( matrix: Array[Float] ): Polygon = {
-    new Polygon(vertices.map(_.rotateAndMove(matrix)))
+
+  def transformAffine( matrix: Array[Float] ): Polygon = {
+    new Polygon( vertices.map( _.transformAffine( matrix ) ) )
   }
-  
-  lazy val d = normalVector ° vertices(0)
-  
+
+  lazy val d = normalVector ° vertices( 0 )
+
   override def toString = {
     vertices.toString
   }

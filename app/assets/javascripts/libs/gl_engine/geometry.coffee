@@ -17,7 +17,8 @@ class Geometry
 		@vertexShader = vertexShader
 		@fragmentShader = fragmentShader
 
-		@type = "Geometry"				
+		@type = "Geometry"
+		@name = ""				
 
 	setVertices : (data, len) -> 
 		@vertices.VBO = data
@@ -33,6 +34,9 @@ class Geometry
 		@normals.length = len	
 		@hasNormals = true
 
+	setName : (name) ->
+		@name = name
+ 
 	#returns the ClassName of an object
 	getClassType : ->
 		@type

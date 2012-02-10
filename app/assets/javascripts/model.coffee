@@ -199,6 +199,9 @@ Model.Binary =
 
 	PRELOAD_TOLERANCE : 0.9
 	PRELOAD_RADIUS : 37
+
+	loadingMatrices : []
+	lastPingedMatrix : null
 	
 	# Use this method to let us know when you've changed your spot. Then we'll try to 
 	# preload some data. 
@@ -212,10 +215,9 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (matrix) ->
 
-		@ping = _.mutexDeferred(_.bind(@_ping, @), 50000)
-		@ping(matrix)
+		return if (lastPingedMatrix = @lastPingedMatrix) and @compareMatrix(lastPingedMatrix, matrix)
 
-	_ping : (matrix) ->
+		@lastPingedMatrix = matrix
 
 		promises = []
 		preloadRadius    = @PRELOAD_RADIUS
@@ -225,37 +227,57 @@ Model.Binary =
 			for y0 in [-preloadRadius..preloadRadius] by preloadRadius << 1
 				if promise = @preload(matrix, x0, y0, 0, preloadRadius << 1)
 					promises.push(promise)
-				# else
-				# 	for z in [-1...15] by 3
-				# 		if promise = @preload(matrix, x0, y0, z, _preloadRadius * 2)
-				# 			promises.push(promise)
-				# 			break
+				else
+					for z in [-1...15] by 3
+						if promise = @preload(matrix, x0, y0, z, preloadRadius << 1)
+							promises.push(promise)
+							break
 
-		_.whenWithProgress(promises...)
+		$.whenWithProgress(promises...)
 
+	compareMatrix : (matrix1, matrix2) ->
+
+		TOLERANCE_ANGLE_COSINE = .95
+		TOLERANCE_TRANSLATION  = 10
+		
+		for i in [0..2]
+			cardinalVector = [0, 0, 0]
+			cardinalVector[i] = 1
+
+			transformedCardinalVector1 = M4x4.transformPointAffine(matrix1, cardinalVector, [])
+			transformedCardinalVector2 = M4x4.transformPointAffine(matrix2, cardinalVector, [])
+
+			return false if V3.dot(transformedCardinalVector1, transformedCardinalVector2) < TOLERANCE_ANGLE_COSINE
+		
+		position1 = [matrix1[12], matrix1[13], matrix1[14]]
+		position2 = [matrix2[12], matrix2[13], matrix2[14]]
+
+		return V3.length(V3.sub(position1, position2, [])) < TOLERANCE_TRANSLATION
 	
 	preload : (matrix, x0, y0, z, width, sparse = 5) ->
-
-		if @preloadTest(matrix, x0, y0, z, width, sparse) < @PRELOAD_TOLERANCE
-			@pull(M4x4.translate([x0, y0, z - 2], matrix))
+		matrix = M4x4.translate([x0, y0, z - 2], matrix)
+		if @preloadTest(matrix, width, sparse) < @PRELOAD_TOLERANCE
+			@pull(matrix)
 		else
 			false
 
-	preloadTestVertices : (x0, y0, z, width, sparse) ->
+	preloadTestVertices : (width, sparse) ->
 		@preloadTestVertices = _.memoize(@_preloadTestVertices, (args...) -> args.toString())
-		@preloadTestVertices(x0, y0, z, width, sparse)
+		@preloadTestVertices(width, sparse)
 
-	_preloadTestVertices : (x0, y0, z, width, sparse) ->
+	_preloadTestVertices : (width, sparse) ->
 		vertices = []
 		halfWidth = width >> 1
-		for x in [(x0 - halfWidth)..(x0 + halfWidth)] by sparse
-			for y in [(y0 - halfWidth)..(y0 + halfWidth)] by sparse
-				vertices.push x, y, z
+		for x in [-halfWidth..halfWidth] by sparse
+			for y in [-halfWidth..halfWidth] by sparse
+				vertices.push x, y, 0
 		vertices
 
-	preloadTest : (matrix, x0, y0, z, width, sparse) ->
+	preloadTest : (matrix, width, sparse) ->
 
-		vertices = @preloadTestVertices(x0, y0, z, width, sparse)
+		return 1 if _.any(@loadingMatrices, (a) => @compareMatrix(matrix, a))
+
+		vertices = @preloadTestVertices(width, sparse)
 		vertices = M4x4.transformPointsAffine(matrix, vertices)
 
 		count = hits = 0
@@ -273,6 +295,9 @@ Model.Binary =
 
 	pull : (matrix) ->
 
+		console.log(_.any(@loadingMatrices, (a) => @compareMatrix(matrix, a)))
+		@loadingMatrices.push(matrix)
+
 		$.when(@loadColors(matrix), @calcVertices(matrix))
 
 			.pipe (colors, { vertices, minmax }) =>
@@ -283,20 +308,25 @@ Model.Binary =
 				console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) if vertices.length != colors.length * 3
 
 				# Then we'll just put the point in to our data structure.
-				for i in [0...colors.length]
-					x = vertices[i * 3]
-					y = vertices[i * 3 + 1]
-					z = vertices[i * 3 + 2]
+				j = 0
+				for i of colors
+					x = vertices[j]
+					y = vertices[j + 1]
+					z = vertices[j + 2]
 					if x >= 0 and y >= 0 and z >= 0
 						@setColor(x, y, z, colors[i] / 256 + 1)
-
+					j += 3
+				
+				_.removeElement(@loadingMatrices, matrix)
 				return arguments
 
 	
 	loadColorsSocket : new SimpleArrayBufferSocket(
-		"ws://#{document.location.host}/binary/ws/cube", 
-		"/binary/data/cube", 
-		Float32Array, Uint8Array)
+		url : "ws://#{document.location.host}/binary/ws/cube"
+		fallbackUrl : "/binary/data/cube"
+		requestBufferType : Float32Array
+		responseBufferType : Uint8Array
+	)
 	
 	loadColors : (matrix) ->
 		
@@ -619,6 +649,7 @@ Model.Route =
 						if err
 							@dirtyBuffer = transportBuffer.concat @dirtyBuffer
 							@push()
+
 	
 	# Add a point to the buffer. Just keep adding them.
 	put : (position, callback) ->

@@ -124,7 +124,7 @@ class _View
 			g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
 
 			#sends current position to Model for preloading data
-			deferredUpdate = -> _.defer(-> renderFunction())
+			deferredUpdate = -> renderFunction()
 			Model.Binary.ping(transMatrix)?.done(deferredUpdate).progress(deferredUpdate)
 
 

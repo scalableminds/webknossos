@@ -38,7 +38,7 @@ object BinaryData extends Controller with Secured {
       println( "Size: " + matrix.length )
       Array[Byte]()
     } else {
-      val figure = Figure( model.polygons.map( _.rotateAndMove( matrix ) ) )
+      val figure = Figure( model.polygons.map( _.transformAffine( matrix ) ) )
       val coordinates = figure.calculateInnerPoints()
 
       Akka.future {

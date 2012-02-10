@@ -63,7 +63,7 @@ case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
       x * o.y - y * o.x )
   }
 
-  def rotateAndMove( matrix: Array[Float] ): Vector3D = {
+  def transformAffine( matrix: Array[Float] ): Vector3D = {
     // see rotation matrix and helmert-transformation for more details
     val nx = matrix( 0 ) * x + matrix( 4 ) * y + matrix( 8 ) * z + matrix( 12 )
     val ny = matrix( 1 ) * x + matrix( 5 ) * y + matrix( 9 ) * z + matrix( 13 )
@@ -80,7 +80,9 @@ case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
   }
 
   def °( o: Vector3D ) = x * o.x + y * o.y + z * o.z
-
+  
+  def °( o: Tuple3[Double,Double,Double] ) = x * o._1 + y * o._2 + z * o._3
+  
   def toTuple = ( x, y, z )
   
   override def toString = "(%f, %f, %f)".format(x,y,z)

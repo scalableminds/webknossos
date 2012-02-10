@@ -157,7 +157,9 @@ Model.Binary =
 	#
 	get : (vertices) ->
 
-		$.Deferred().resolve(@getSync(vertices))
+		$.Deferred()
+			.resolve(@getSync(vertices))
+			.promise()
 
 
 	getSync : (vertices) ->
@@ -200,7 +202,7 @@ Model.Binary =
 				j3 += 3
 				j4 += 4
 			
-		 { bufferFront, bufferBack, bufferDelta }
+		{ bufferFront, bufferBack, bufferDelta }
 
 
 	PRELOAD_TOLERANCE : 0.9
@@ -221,7 +223,7 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (matrix) ->
 
-		return if (lastPingedMatrix = @lastPingedMatrix) and @compareMatrix(lastPingedMatrix, matrix)
+		return $.Deferred().reject().promise() if (lastPingedMatrix = @lastPingedMatrix) and @compareMatrix(lastPingedMatrix, matrix)
 
 		@lastPingedMatrix = matrix
 
@@ -315,7 +317,7 @@ Model.Binary =
 
 				# Then we'll just put the point in to our data structure.
 				j = 0
-				for i of colors
+				for i in [0...colors.length]
 					x = vertices[j]
 					y = vertices[j + 1]
 					z = vertices[j + 2]
@@ -419,7 +421,7 @@ Model.Binary =
 				
 				newCube = []
 
-				for z in [0...cubeSize[2]]
+				for z in [0...newCubeSize[2]]
 					
 					# Bound checking is necessary.
 					if cubeOffset[2] <= z + newCubeOffset[2] < upperBound[2]
@@ -512,11 +514,11 @@ Model.Mesh =
 			
 				# To save bandwidth meshes are transferred in a binary format.
 				header  = new Uint32Array(data, 0, 3)
-				coords  = new Float32Array(data, 12, header[0])
-				colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
-				indexes = new Uint16Array(data, 12 + 4 * (header[0] + header[1]), header[2])
+				vertices = new Float32Array(data, 12, header[0])
+				colors   = new Float32Array(data, 12 + header[0] * 4, header[1])
+				indices  = new Uint16Array(data, 12 + 4 * (header[0] + header[1]), header[2])
 
-				{ coords, colors, indexes }
+				{ vertices, colors, indices }
 
 Model.Mesh.get = _.memoize(Model.Mesh.get)
 
@@ -571,12 +573,12 @@ Model.Trianglesplane =
 # This loads and caches a pair (vertex and fragment) shaders
 Model.Shader =
 
-	get : (name, callback) ->
+	get : (name) ->
 
 		$.when(
 			request(url : "/assets/shader/#{name}.vs"), 
 			request(url : "/assets/shader/#{name}.fs")
-		)
+		).pipe (vertexShader, fragmentShader) -> { vertexShader, fragmentShader }
 
 Model.Shader.get = _.memoize(Model.Shader.get)
 
@@ -597,6 +599,9 @@ Model.Route =
 			
 			@initializeDeferred = $.Deferred()
 
+			@initializeDeferred.fail =>
+				@initializeDeferred = null
+
 			request(url : '/route/initialize').done( 
 				(data) =>
 					try
@@ -607,7 +612,7 @@ Model.Route =
 						@startDirection = data.direction
 						@startPosition  = data.position
 						
-						@initializeDeferred.resolve()
+						@initializeDeferred.resolve(data)
 					catch ex
 						@initializeDeferred.reject(ex)
 			)
@@ -624,7 +629,7 @@ Model.Route =
 	# Pushes th buffered route to the server. Pushing happens at most 
 	# every 30 seconds.
 	push : ->
-		@push = _.mutexDeferred(_.throttle2(@_push, 30000), -1)
+		@push = _.throttle2(_.mutexDeferred(@_push, -1), 30000)
 		@push()
 
 	_push : ->
@@ -660,22 +665,3 @@ Model.Route =
 				@route.push position
 				@dirtyBuffer.push position
 				@push()
-
-
-# Helps to make sure that a bunch of callbacks have returned before 
-# your code continues.
-Model.Synchronizable = 	
-
-	synchronizingCallback : (loadedData, callback) ->
-		loadedData.push null
-		loadedData.counter = loadedData.length
-		i = loadedData.length - 1
-
-		(err, data) ->
-			if err
-				callback err unless loadedData.errorState
-				loadedData._errorState = true
-			else
-				loadedData[i] = data
-				unless --loadedData.counter
-					callback(null, loadedData...) if callback

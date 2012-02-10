@@ -1,7 +1,9 @@
 importScripts("underscore-min.js", "libs/deferreds.js", "libs/mjs.js", "core_ext.js", "binary_request.js")
 
-polygonsTemplate  = null
-cubeVerticesTemplate = null
+
+polygonsPrototype     = null
+cubeVerticesPrototype = null
+initializeDeferred    = null
 EPSILON = 1e-10
 
 class Polygon
@@ -21,39 +23,41 @@ class Polygon
 		true
 
 
-initializePolygonsTemplate = _.once2 (doneCallback) ->
+initialize = ->
+	
+	unless initializeDeferred
+		initializeDeferred = $.Deferred()
 		
-	request
-		url : '/binary/polygons/cube'
-		(err, data) ->
-			
-			callback = doneCallback(err)
-			
-			unless err
+		initializeDeferred.fail ->
+			initializeDeferred = null
+
+		request(url : '/binary/polygons/cube')
+			.done((data) ->
+				
 				data = JSON.parse(data)
-				polygonsTemplate = data.map (face) -> new Polygon(face)
-				cubeVerticesTemplate = []
+				polygonsPrototype = data.map (face) -> new Polygon(face)
+				cubeVerticesPrototype = []
 				for face in data
 					for vertex in face
-						cubeVerticesTemplate.push vertex
-				cubeVerticesTemplate = _.uniq(cubeVerticesTemplate, null, (a) -> a.toString())
-				callback() if callback
-			
-			return
+						cubeVerticesPrototype.push vertex
+				cubeVerticesPrototype = _.uniq(cubeVerticesPrototype, null, (a) -> a.toString())
+				
+				initializeDeferred.resolve()
+
+			).fail((err) -> initializeDeferred.reject(err))
+
+	initializeDeferred.promise()
 
 
 self.onmessage = (event) ->
 	
-	# timeStart = new Date()
-	initializePolygonsTemplate (err) ->
+	initialize().done ->
 
 		args = event.data
 		workerHandle = args.workerHandle
 		
-		return postMessage({ err, workerHandle }) if err
-
-		cubeVertices = cubeVerticesTemplate.map (a) -> M4x4.transformPointAffine(args.matrix, a, [])
-		polygons     = polygonsTemplate.map (a) -> a.transform(args.matrix)
+		cubeVertices = cubeVerticesPrototype.map (a) -> M4x4.transformPointAffine(args.matrix, a, [])
+		polygons     = polygonsPrototype.map (a) -> a.transform(args.matrix)
 		
 		max_x = min_x = cubeVertices[0][0] | 0
 		max_y = min_y = cubeVertices[0][1] | 0
@@ -120,7 +124,5 @@ self.onmessage = (event) ->
 			min_x, min_y, min_z
 			max_x, max_y, max_z
 		]
-
-		# time = new Date() - timeStart
 						
 		postMessage({ vertices, minmax, workerHandle })

@@ -1,37 +1,30 @@
-class _Controller
+Controller =
 	
-	#global variables for camera/plane 
-	position = null
-	direction = null
+	position : null
+	direction : null
 
-	initialize : () ->
-		Model.Route.initialize((err, pos, dir) =>
-			unless err
-				position = pos
-				direction = dir
-				View.setCam pos, dir
-				GeometryFactory.createMesh("coords","mesh")
-				GeometryFactory.createTrianglesplane(128, 0, "trianglesplane")
-				#GeometryFactory.createTrianglesplane(128, 1, "trianglesplane")
-			else
-				throw err
-		)
+	initialize : ->
+		
+		Model.Route.initialize().done ({ position, direction }) =>
+			
+			@position  = position
+			@direction = direction
+			
+			View.setCam(position, direction)
 
-	loadPointcloud : () ->
-		GeometryFactory.loadPointcloud position, direction,"pointcloud"
+			GeometryFactory.createMesh("coordinateAxes", "mesh").done (mesh) ->
+				View.addGeometry mesh
+				
+			GeometryFactory.createMesh("crosshair", "mesh").done (mesh) -> 
+				View.addGeometry mesh
 
-	updatePosition : (pos) ->
-		position = pos
-		Model.Route.put(position, (err) =>
-			console.log err
-		)
-
+			GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
+				View.addGeometry trianglesplane		
 
   # mouse events
   
   # keyboard events
 
-Controller = new _Controller
 
 start = ->
 	Controller.initialize()

@@ -1,6 +1,6 @@
 request = (options, callback) ->
 
-  # deferred = $.Deferred()
+  deferred = $.Deferred()
 
   _.defaults(options,
     method: 'GET',
@@ -9,7 +9,7 @@ request = (options, callback) ->
     contentType: null
   )
 
-  # return deferred.reject('No url defined').promise() unless options.url
+  return deferred.reject('No url defined').promise() unless options.url
 
   if options.data
     options.data = JSON.stringify(options.data) if options.contentType == 'application/json'
@@ -23,17 +23,15 @@ request = (options, callback) ->
 
   xhr.onload = ->
     if @status == 200
-      callback(null, @response) if callback
-      # deferred.resolve(@response)
+      deferred.resolve(@response)
     else
-      callback(@statusText) if callback
-      # deferred.reject(@statusText)
+      deferred.reject(@statusText)
   
   xhr.onerror = (err) ->
-    callback(err) if callback
-    # deferred.reject(@statusText)
-  
+    deferred.reject(errr)
 
   xhr.send(options.data)
 
-  # deferred.promise()
+  deferred.done (data) -> callback(null, data)
+  deferred.fail (err) -> callback(err)
+  deferred.promise()

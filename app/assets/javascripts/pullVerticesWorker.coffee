@@ -1,4 +1,4 @@
-importScripts("underscore-min.js", "libs/mjs.js", "core_ext.js", "binary_request.js")
+importScripts("underscore-min.js", "libs/deferreds.js", "libs/mjs.js", "core_ext.js", "binary_request.js")
 
 polygonsTemplate  = null
 cubeVerticesTemplate = null
@@ -44,6 +44,7 @@ initializePolygonsTemplate = _.once2 (doneCallback) ->
 
 self.onmessage = (event) ->
 	
+	# timeStart = new Date()
 	initializePolygonsTemplate (err) ->
 
 		args = event.data
@@ -90,9 +91,8 @@ self.onmessage = (event) ->
 
 		vertices = []
 		for x in [min_x..max_x]
-			  
 			for y in [min_y..max_y]  
-				vxy0 = [x,y,0]
+				vxy0 = [x, y, 0]
 				start_z = end_z = null
 				for polygon in polygons1
 					z = ((polygon.d - V3.dot(vxy0, polygon.normal)) / polygon.divisor)
@@ -121,5 +121,6 @@ self.onmessage = (event) ->
 			max_x, max_y, max_z
 		]
 
+		# time = new Date() - timeStart
 						
 		postMessage({ vertices, minmax, workerHandle })

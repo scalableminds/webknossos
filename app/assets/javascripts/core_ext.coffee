@@ -203,7 +203,12 @@ _.mutexDeferred = (func, timeout = 20000) ->
     else
       $.Deferred().reject("mutex").promise()
 
-_.whenWithProgress = (args...) ->
+_.removeElement = (array, element) ->
+  if (index = array.indexOf(element)) != -1
+    array.splice(index, 1)
+
+
+$.whenWithProgress = (args...) ->
     length = args.length
     pValues = new Array( length )
     firstParam = args[0]
@@ -271,7 +276,7 @@ class SimpleWorkerPool
       @queueShift(worker)
 
     worker.worker.onerror = (err) -> 
-      console.error(err)
+      console?.error(err)
       workerReset()
 
     worker.worker.addEventListener("message", workerReset, false)
@@ -299,7 +304,7 @@ class SimpleWorker
     @worker = new Worker(url)
 
     @worker.onerror = (err) -> 
-      console.error(err)
+      console?.error(err)
   
   send : (data) ->  
     
@@ -326,10 +331,11 @@ class SimpleArrayBufferSocket
   OPEN_TIMEOUT : 5000
   MESSAGE_TIMEOUT : 120000
 
+  WebSocket : if (window ? self)['MozWebSocket'] then MozWebSocket else WebSocket
+  FallbackMode : false
    
-  constructor : (@url, @fallbackUrl, @requestBufferType, @responseBufferType) ->
-    @WebSocket = if window['MozWebSocket'] then MozWebSocket else WebSocket
-    @fallbackMode = false
+  constructor : (options) ->
+    _.extend(@, options)
     @initializeWebSocket()
   
   initializeWebSocket : ->
@@ -352,7 +358,7 @@ class SimpleArrayBufferSocket
      
       socket.onclose = (code, reason) => 
         openDeferred.reject("closed")
-        console.error("socket closed", "#{code}: #{reason}")
+        console?.error("socket closed", "#{code}: #{reason}")
         switchToFallback()
       
       setTimeout(=> 
@@ -390,7 +396,7 @@ class SimpleArrayBufferSocket
         
         @socket.addEventListener("message", socketCallback, false)
         @socket.send(transmitBuffer)
-        console.log("socket-request", transmitBuffer)
+        console?.log("socket-request", transmitBuffer)
       
         setTimeout((=> deferred.reject("timeout")), @MESSAGE_TIMEOUT)
       ).fail => @sendUsingFallback(data, deferred)

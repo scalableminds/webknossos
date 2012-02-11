@@ -1,4 +1,4 @@
-package controllers.login
+package controllers
 import play.api.mvc._
 import views._
 import java.net.URLEncoder

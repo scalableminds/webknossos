@@ -13,6 +13,10 @@ import models._
 object Application extends Controller {
 
   // -- Authentication
+  
+  def index = Action{
+    Ok(html.index())
+  }
 
   val registerForm: Form[(String, String, String)] = Form(
     mapping(
@@ -124,7 +128,6 @@ trait Secured {
    * Retrieve the connected user email.
    */
   private def username(request: RequestHeader) = {
-    println("LOGIN: "+Play.configuration.getBoolean("application.enableAutoLogin"))
     if (Play.configuration.getBoolean("application.enableAutoLogin").get){
       Some("scmboy@scalableminds.com")
     }else

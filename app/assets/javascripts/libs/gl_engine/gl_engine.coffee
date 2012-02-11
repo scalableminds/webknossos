@@ -3,48 +3,43 @@ class GL_engine
 	#private Properties
 	empty_func = -> 
 	gl = null
-	canvas = null
-	requestAnimationFrame = empty_func
-
+	canvas : null
+	requestAnimationFrame : empty_func
 
 	# for calculating fps
-	frames = 0
-	frameCount = 0
-	lastframerateTime = null
+	frames : 0
+	frameCount : 0
+	lastframerateTime : null
 
 	# for throttling renderLoop
-	lastLoopTime = null
-	maximumframerate = 50
+	lastLoopTime : null
+	maximumframerate : 50
 
 	#to stop the animationLoop
-	stopAnimation = 1
-	
+	stopAnimation : false
+
 	matrixStack = []
+	projectionMatrix = null
 
-	programCaches = []
-
+	shaderProgram : null
 
 	attn = [0.01, 0.0, 0.003]
 
-	projectionMatrix = null
-
-
 ############################################################################
 	#public Properties
-	framerate = 0
+	framerate : 0
 	# Contains reference to user's RenderingScript
 	usersRender = empty_func
-	shaderProgram = null
 
 ############################################################################
 	#public methods 
 
 
 	constructor: (cvs, glAttribs) ->
-		lastframerateTime = new Date()
-		lastLoopTime = new Date()
-		frames = 0
-		canvas = cvs
+		@lastframerateTime = new Date()
+		@lastLoopTime = new Date()
+		@frames = 0
+		@canvas = cvs
 		contextNames = [ "webgl", "experimental-webgl", "moz-webgl", "webkit-3d" ]
 		i = 0
 
@@ -55,7 +50,7 @@ class GL_engine
 			i++
 
 		alert "Your browser does not support WebGL."  unless gl
-		gl.viewport 0, 0, parseInt(canvas.width, 10), parseInt(canvas.height, 10)
+		gl.viewport 0, 0, parseInt(@canvas.width, 10), parseInt(@canvas.height, 10)
 		@perspective()
 		normalMatrix = M4x4.I
 
@@ -74,8 +69,6 @@ class GL_engine
     				window.setTimeout callback, 1000.0 / 60.0
 			)()
 
-		
-
 
 
 	###
@@ -84,7 +77,7 @@ class GL_engine
 	@param {Number} varValue
 	###
 	uniformi : (varName, varValue) ->
-		varLocation = gl.getUniformLocation(shaderProgram, varName)
+		varLocation = gl.getUniformLocation(@shaderProgram, varName)
 		if varLocation isnt null
 			if varValue.length is 4
 				gl.uniform4iv varLocation, varValue
@@ -103,7 +96,7 @@ class GL_engine
 	@param {Number} varValue
 	###
 	uniformf : (varName, varValue) ->
-		varLocation = gl.getUniformLocation(shaderProgram, varName)
+		varLocation = gl.getUniformLocation(@shaderProgram, varName)
 		if varLocation isnt null
 			if varValue.length is 4
 				gl.uniform4fv varLocation, varValue
@@ -123,7 +116,7 @@ class GL_engine
 	@param {Array} matrix
 	###
 	uniformMatrix : (varName, transpose, matrix) ->
-		varLocation = gl.getUniformLocation(shaderProgram, varName)
+		varLocation = gl.getUniformLocation(@shaderProgram, varName)
 		if varLocation isnt null
 			if matrix.length is 16
 				gl.uniformMatrix4fv varLocation, transpose, matrix
@@ -206,39 +199,35 @@ class GL_engine
 			# enable Attribute pointers/ bind buffers
 			
 			if geometry.hasColors
-				if gl.getAttribLocation(shaderProgram, "aColor") isnt -1
-					vertexAttribPointer "aColor", 3, geometry.colors.VBO
+				if gl.getAttribLocation(@shaderProgram, "aColor") isnt -1
+					@vertexAttribPointer "aColor", 3, geometry.colors.VBO
 			
 
-			if gl.getAttribLocation(shaderProgram, "aVertex") isnt -1
-				vertexAttribPointer "aVertex", 3, geometry.vertices.VBO
+			if gl.getAttribLocation(@shaderProgram, "aVertex") isnt -1
+				@vertexAttribPointer "aVertex", 3, geometry.vertices.VBO
 
 			# render trianglesplanes
 			if geometry.getClassType() is "Trianglesplane"
-				if gl.getAttribLocation(shaderProgram, "interpolationFront") isnt -1
-					vertexAttribPointer "interpolationFront", 4, geometry.interpolationFront.VBO
-				if gl.getAttribLocation(shaderProgram, "interpolationBack") isnt -1
-					vertexAttribPointer "interpolationBack", 4, geometry.interpolationBack.VBO
-				if gl.getAttribLocation(shaderProgram, "interpolationOffset") isnt -1
-					vertexAttribPointer "interpolationOffset", 3, geometry.interpolationOffset.VBO
+				if gl.getAttribLocation(@shaderProgram, "interpolationFront") isnt -1
+					@vertexAttribPointer "interpolationFront", 4, geometry.interpolationFront.VBO
+				if gl.getAttribLocation(@shaderProgram, "interpolationBack") isnt -1
+					@vertexAttribPointer "interpolationBack", 4, geometry.interpolationBack.VBO
+				if gl.getAttribLocation(@shaderProgram, "interpolationOffset") isnt -1
+					@vertexAttribPointer "interpolationOffset", 3, geometry.interpolationOffset.VBO
 				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
 				gl.drawElements gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0
 				
-				disableVertexAttribPointer "interpolationFront"	
-				disableVertexAttribPointer "interpolationBack"
-				disableVertexAttribPointer "interpolationOffset"
+				@disableVertexAttribPointer "interpolationFront"	
+				@disableVertexAttribPointer "interpolationBack"
+				@disableVertexAttribPointer "interpolationOffset"
 
 			# render Meshes	
 			else if geometry.getClassType() is "Mesh"
 				gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
 				gl.drawElements gl.TRIANGLES, geometry.vertexIndex.length, gl.UNSIGNED_SHORT, 0			
 
-			disableVertexAttribPointer "aVertex"
-			disableVertexAttribPointer "aColor" if geometry.colors.hasColor
-#1591812
-#397953
-#132651
-
+			@disableVertexAttribPointer "aVertex"
+			@disableVertexAttribPointer "aColor" if geometry.colors.hasColor
 
 	###
 	Sets the background color.
@@ -274,7 +263,7 @@ class GL_engine
 		
 		if arguments.length is 0
 			fovy = 90
-			aspect = canvas.width / canvas.height
+			aspect = @canvas.width / @canvas.height
 			near = 0.01
 			far = 1000
 
@@ -292,7 +281,7 @@ class GL_engine
 		#projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 63.5, -100, D, 0)
 		projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 0, 0, D, 0)
 		M4x4.translate
-		@uniformMatrix "projectionMatrix", false, projectionMatrix  if shaderProgram
+		@uniformMatrix "projectionMatrix", false, projectionMatrix  if @shaderProgram
 		
 	Object.defineProperty(
 		@prototype,
@@ -305,23 +294,15 @@ class GL_engine
 		@prototype,
 		"width",
 		get: ->
-			canvas.width
+			@canvas.width
 		)
 	
 	Object.defineProperty(
 		@prototype,
 		"height",
 		get: ->
-			canvas.height
+			@canvas.height
 		)
-
-	Object.defineProperty(
-		@prototype,
-		"framerate",
-		get: ->
-			framerate
-		)
-
 
 	################################
 	#Public MATRIX STACK OPERATIONS
@@ -431,8 +412,8 @@ class GL_engine
 	
 		V3.mul4x4 modelViewProjectionMatrix,vector,vector
 
-		canvasX = Math.round ( ((1 -vector[0]) / 2) * canvas.width)
-		canvasY = Math.round ( ((1 - vector[1]) / 2) * canvas.height)
+		canvasX = Math.round ( ((1 -vector[0]) / 2) * @canvas.width)
+		canvasY = Math.round ( ((1 - vector[1]) / 2) * @canvas.height)
 
 		return [canvasX, canvasY]
 
@@ -442,8 +423,8 @@ class GL_engine
 	@param {Array} 2d vector
 	###
 	get3dPoint : (vector, matrix) ->
-		x = 2 * vector[0] / canvas.width - 1
-		y = -2 * vector[1] / canvas.height + 1
+		x = 2 * vector[0] / @canvas.width - 1
+		y = -2 * vector[1] / @canvas.height + 1
 				        
 		modelViewProjectionMatrix = M4x4.mul projectionMatrix, matrix
 		inverseMatrix = M4x4.inverse modelViewProjectionMatrix
@@ -461,8 +442,8 @@ class GL_engine
 	@param {Number} size
 	@param {} VBO
 	###
-	vertexAttribPointer = (varName, size, VBO) ->
-		varLocation = gl.getAttribLocation(shaderProgram, varName)
+	vertexAttribPointer : (varName, size, VBO) ->
+		varLocation = gl.getAttribLocation(@shaderProgram, varName)
 		if varLocation isnt -1
 			gl.bindBuffer gl.ARRAY_BUFFER, VBO
 			gl.vertexAttribPointer varLocation, size, gl.FLOAT, false, 0, 0
@@ -473,8 +454,8 @@ class GL_engine
 	@param {WebGLProgram} programObj
 	@param {String} varName
 	###
-	disableVertexAttribPointer = (varName) ->
-		varLocation = gl.getAttribLocation(shaderProgram, varName)
+	disableVertexAttribPointer : (varName) ->
+		varLocation = gl.getAttribLocation(@shaderProgram, varName)
 		gl.disableVertexAttribArray varLocation  if varLocation isnt -1	
 
 			
@@ -500,43 +481,37 @@ class GL_engine
 		throw "Error linking shaders."  unless gl.getProgramParameter(programObject, gl.LINK_STATUS)
 		
 		#Sets shader Program 
-		shaderProgram = programObject
+		@shaderProgram = programObject
 		
 		#Tell WebGL to use shader
-		@useProgram shaderProgram
+		@useProgram @shaderProgram
 
 		return programObject
 
 
 	useProgram : (program) ->
-		shaderProgram = program
-		gl.useProgram shaderProgram
-		alreadySet = false
-		i = 0
+		@shaderProgram = program
+		gl.useProgram @shaderProgram
 
-		while i < programCaches.length
-			alreadySet = true  if shaderProgram and programCaches[i] is shaderProgram
-			i++
-
-		if alreadySet is false
+		unless @shaderProgram.UniformIsSet
 			@setDefaultUniforms()
-			programCaches.push shaderProgram
+			@shaderProgram.UniformIsSet = true
 
 
-	animationLoop = ->
-		renderLoop()
-		requestAnimationFrame animationLoop, canvas if stopAnimation isnt 1
+	animationLoop : ->
+		@renderLoop()
+		@requestAnimationFrame @animationLoop, @canvas unless @stopAnimation
 
 
 	###
 	main renderLoop
 	calls usersRender() 
 	###
-	_renderLoop = ->
-		frames++
-		frameCount++
+	_renderLoop : ->
+		@frames++
+		@frameCount++
 		now = new Date()
-		lastLoopTime = now
+		@lastLoopTime = now
 
 		matrixStack.push M4x4.I
 
@@ -544,16 +519,16 @@ class GL_engine
 
 		matrixStack.pop()
 
-		if now - lastframerateTime > 1000
-			framerate = frames / (now - lastframerateTime) * 1000
-			frames = 0
-			lastframerateTime = now
+		if now - @lastframerateTime > 1000
+			@framerate = @frames / (now - @lastframerateTime) * 1000
+			@frames = 0
+			@lastframerateTime = now
 
 	#throttling renderLoop
-	renderLoop = ->
+	renderLoop : ->
 		now = new Date()
-		if now - lastLoopTime >= 1000/maximumframerate
-			_renderLoop()
+		if now - @lastLoopTime >= 1000 / @maximumframerate
+			@_renderLoop()
 
 		
 	#apply a single draw
@@ -570,11 +545,11 @@ class GL_engine
 
 
 	stopAnimationLoop : ->
-		stopAnimation = 1 if stopAnimation is 0
+		@stopAnimation = not @stopAnimation
 
 	startAnimationLoop : ->
-		stopAnimation = 0 if stopAnimation is 1
-		animationLoop()
+		@stopAnimation = not @stopAnimation
+		@animationLoop()
 
 
 

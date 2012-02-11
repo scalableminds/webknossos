@@ -79,13 +79,13 @@ class _View
 
 		# renders all geometry objects
 		# render the Triangleplane first
-		drawTriangleplane() if triangleplane
+		if triangleplane
+			drawTriangleplane() 
 
 		# render Meshes
-		engine.useProgram meshProgramObject
-
 		# coordinate axis mini-map
 		if meshes["coordinateAxes"]
+			engine.useProgram meshProgramObject
 			engine.pushMatrix()
 			engine.translate 200,100,0
 			# console.log V3.angle [0,0,1], cam.getDir()
@@ -104,7 +104,7 @@ class _View
 			engine.popMatrix()
 
 		if meshes["crosshair"]
-			engine.translate 50, 50, 0
+			engine.useProgram meshProgramObject
 			engine.render meshes["crosshair"]
 
 		# OUTPUT Framerate

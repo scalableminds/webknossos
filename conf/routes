@@ -4,6 +4,7 @@
 
 # The home page
 GET     /                                   controllers.Test.index
+GET     /index                              controllers.Application.index
 
 # Authentication
 GET     /login                              controllers.Application.login
@@ -13,8 +14,8 @@ GET     /register                           controllers.Application.register
 POST    /register                           controllers.Application.registrate
 
 # Facebook
-GET     /login/fb                           controllers.login.FacebookLogin.login
-GET     /login/fb/code                      controllers.login.FacebookLogin.loginCode(code: String)
+GET     /login/fb                           controllers.FacebookLogin.login
+GET     /login/fb/code                      controllers.FacebookLogin.loginCode(code: String)
 
 # Binary Data
 GET     /binary/model/:model                controllers.BinaryData.model(model: String)

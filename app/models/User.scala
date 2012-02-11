@@ -9,21 +9,18 @@ import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import brainflight.security.SCrypt._
 
-@Salat
-abstract class LoginType(@Persist val identifier: String)
-
-case class LocalLogin() extends LoginType("local")
-
-case class User( 
-    email: String, 
-    name: String, 
-    verified: Boolean = false, 
-    pwdHash: String = "", 
-    loginType: LoginType = LocalLogin(), 
-    _id: ObjectId = new ObjectId )
+case class User(
+  email: String,
+  name: String,
+  verified: Boolean = false,
+  pwdHash: String = "",
+  loginType: String = "local",
+  _id: ObjectId = new ObjectId )
 
 object User extends BasicDAO[User]( "users" ) {
 
+  val LocalLoginType = "local"
+  
   def findByEmail( email: String ) = findOne( MongoDBObject(
     "email" -> email ) )
 
@@ -31,7 +28,7 @@ object User extends BasicDAO[User]( "users" ) {
 
   def authenticate( email: String, password: String ) =
     for {
-      user <- findOne( MongoDBObject( "email" -> email , "loginType" -> LocalLogin) )
+      user <- findOne( MongoDBObject( "email" -> email, "loginType" -> LocalLoginType ) )
       if verifyPassword( password, user.pwdHash )
     } yield user
 
@@ -41,7 +38,7 @@ object User extends BasicDAO[User]( "users" ) {
     user
   }
 
-  def createRemote( email: String, name: String, loginType: LoginType ) = {
+  def createRemote( email: String, name: String, loginType: String ) = {
     val user = User( email, name, true, "", loginType )
     insert( user )
     user

@@ -13,7 +13,12 @@ import models.User
  */
 object Test  extends Controller with Secured{
   def index = Action { implicit request =>
-    Ok(html.test.index(user.getOrElse(User.findByEmail("scmboy@scalableminds.com").get)))
+    user match{
+      case Some( u ) => 
+        Ok(html.test.index(u))
+      case _ =>
+        Redirect(routes.Application.login)
+    }
   }
 
   def demo = Action { implicit request =>

@@ -124,6 +124,7 @@ trait Secured {
    * Retrieve the connected user email.
    */
   private def username(request: RequestHeader) = {
+    println("LOGIN: "+Play.configuration.getBoolean("application.enableAutoLogin"))
     if (Play.configuration.getBoolean("application.enableAutoLogin").get){
       Some("scmboy@scalableminds.com")
     }else

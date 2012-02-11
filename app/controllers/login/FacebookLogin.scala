@@ -7,9 +7,6 @@ import com.restfb.BaseFacebookClient
 import com.restfb.DefaultFacebookClient
 import play.api.Play.current
 import play.api.Play
-import models.LoginType
-
-case class FacebookLoginType() extends LoginType("facebook")
 
 object FacebookLogin extends Controller {
   
@@ -61,7 +58,7 @@ object FacebookLogin extends Controller {
           models.User.createRemote(
             meObject.getEmail,
             meObject.getFirstName + " " + meObject.getLastName,
-            FacebookLoginType() )
+            "facebook" )
       }
       Ok( html.test.index( user ) ).withSession( "email" -> user.email )
     } catch {

@@ -67,8 +67,7 @@ object FileDataStore extends DataStore{
             nullBlock
         }
     }
-    val zA = (point._3 % 256) / 2
-    byteArray(((zA * 8192) + (point._2 % 128) * 128 + point._1 % 128))
+    byteArray(((point._1 % 128) * 128 * 128 + (point._2 % 128) * 128 + (point._3 % 256) / 2))
   }
 
   /**

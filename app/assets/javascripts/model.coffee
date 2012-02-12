@@ -223,21 +223,27 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (matrix) ->
 
-		return $.Deferred().reject().promise() if (lastPingedMatrix = @lastPingedMatrix) and @compareMatrix(lastPingedMatrix, matrix)
+		if (lastPingedMatrix = @lastPingedMatrix) and @compareMatrix(lastPingedMatrix, matrix)
+			null
+		else
+			@lastPingedMatrix = matrix
+			deferred = @pingImpl(matrix)
+			deferred.fail => @lastPingedMatrix = null
+			deferred
 
-		@lastPingedMatrix = matrix
+	pingImpl : (matrix) ->
 
-		promises = []
-		preloadRadius    = @PRELOAD_RADIUS
-		preloadTolerance = @PRELOAD_TOLERANCE
+		promises        = []
+		preloadRadius   = @PRELOAD_RADIUS
+		preloadDiameter = @PRELOAD_RADIUS << 1
 		
-		for x0 in [-preloadRadius..preloadRadius] by preloadRadius << 1
-			for y0 in [-preloadRadius..preloadRadius] by preloadRadius << 1
-				if promise = @preload(matrix, x0, y0, 0, preloadRadius << 1)
+		for x0 in [-preloadRadius..preloadRadius] by preloadDiameter
+			for y0 in [-preloadRadius..preloadRadius] by preloadDiameter
+				if promise = @preload(matrix, x0, y0, 0, preloadDiameter)
 					promises.push(promise)
 				else
 					for z in [-1...15] by 3
-						if promise = @preload(matrix, x0, y0, z, preloadRadius << 1)
+						if promise = @preload(matrix, x0, y0, z, preloadDiameter)
 							promises.push(promise)
 							break
 
@@ -245,15 +251,15 @@ Model.Binary =
 
 	compareMatrix : (matrix1, matrix2) ->
 
-		TOLERANCE_ANGLE_COSINE = .95
-		TOLERANCE_TRANSLATION  = 10
+		TOLERANCE_ANGLE_COSINE = .99
+		TOLERANCE_TRANSLATION  = 30
 		
 		for i in [0..2]
 			cardinalVector = [0, 0, 0]
 			cardinalVector[i] = 1
 
-			transformedCardinalVector1 = M4x4.transformPointAffine(matrix1, cardinalVector, [])
-			transformedCardinalVector2 = M4x4.transformPointAffine(matrix2, cardinalVector, [])
+			transformedCardinalVector1 = V3.normalize(M4x4.transformLineAffine(matrix1, cardinalVector, []), [])
+			transformedCardinalVector2 = V3.normalize(M4x4.transformLineAffine(matrix2, cardinalVector, []), [])
 
 			return false if V3.dot(transformedCardinalVector1, transformedCardinalVector2) < TOLERANCE_ANGLE_COSINE
 		
@@ -263,17 +269,18 @@ Model.Binary =
 		return V3.length(V3.sub(position1, position2, [])) < TOLERANCE_TRANSLATION
 	
 	preload : (matrix, x0, y0, z, width, sparse = 5) ->
-		matrix = M4x4.translate([x0, y0, z - 2], matrix)
+		
+		matrix = M4x4.translate([x0, y0, z - 5], matrix)
 		if @preloadTest(matrix, width, sparse) < @PRELOAD_TOLERANCE
 			@pull(matrix)
 		else
 			false
 
 	preloadTestVertices : (width, sparse) ->
-		@preloadTestVertices = _.memoize(@_preloadTestVertices, (args...) -> args.toString())
+		@preloadTestVertices = _.memoize(@preloadTestVerticesImpl, (args...) -> args.toString())
 		@preloadTestVertices(width, sparse)
 
-	_preloadTestVertices : (width, sparse) ->
+	preloadTestVerticesImpl : (width, sparse) ->
 		vertices = []
 		halfWidth = width >> 1
 		for x in [-halfWidth..halfWidth] by sparse
@@ -285,8 +292,7 @@ Model.Binary =
 
 		return 1 if _.any(@loadingMatrices, (a) => @compareMatrix(matrix, a))
 
-		vertices = @preloadTestVertices(width, sparse)
-		vertices = M4x4.transformPointsAffine(matrix, vertices)
+		vertices = M4x4.transformPointsAffine(matrix, @preloadTestVertices(width, sparse))
 
 		count = hits = 0
 		for i in [0...vertices.length] by 3
@@ -303,9 +309,10 @@ Model.Binary =
 
 	pull : (matrix) ->
 
-		console.log(_.any(@loadingMatrices, (a) => @compareMatrix(matrix, a)))
-		@loadingMatrices.push(matrix)
+		CHUNK_SIZE = 1e5
 
+		@loadingMatrices.push(matrix)
+		
 		$.when(@loadColors(matrix), @calcVertices(matrix))
 
 			.pipe (colors, { vertices, minmax }) =>
@@ -315,18 +322,25 @@ Model.Binary =
 				
 				console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) if vertices.length != colors.length * 3
 
+				deferred = $.Deferred()
+
 				# Then we'll just put the point in to our data structure.
-				j = 0
-				for i in [0...colors.length]
-					x = vertices[j]
-					y = vertices[j + 1]
-					z = vertices[j + 2]
-					if x >= 0 and y >= 0 and z >= 0
-						@setColor(x, y, z, colors[i] / 256 + 1)
-					j += 3
-				
-				_.removeElement(@loadingMatrices, matrix)
-				return arguments
+				i = 0
+
+				calcChunk = => 
+					_.defer( =>
+						i = @bulkSetColor(vertices, colors, i, CHUNK_SIZE)	
+								
+						if i == colors.length
+							_.removeElement(@loadingMatrices, matrix)
+							deferred.resolve()
+						else
+							calcChunk()
+					)
+					
+				calcChunk()
+			
+				deferred.promise()
 
 	
 	loadColorsSocket : new SimpleArrayBufferSocket(
@@ -484,7 +498,7 @@ Model.Binary =
 
 	# Set a color value of a point.
 	# Color values range from 1 to 2 -- with black being 0 and white 1.
-	setColor : (x, y, z, value) ->
+	setColor : (x, y, z, color) ->
 
 		_cube = @cube
 
@@ -496,10 +510,69 @@ Model.Binary =
 		if 0 <= bucketIndex < @cube.length
 			unless bucket?
 				bucket = _cube[bucketIndex] = new Float32Array(1 << 18)
-			bucket[@pointIndex(x, y, z)] = value
+			bucket[@pointIndex(x, y, z)] = color
 		else
 			# Please handle cuboid expansion explicitly.
 			throw "cube fault"
+	
+	bulkSetColor : (vertices, colors, offset = 0, length) ->
+		
+		cube = @cube
+		size01 = @cubeSize[0] * @cubeSize[1]
+
+		end = if length? and offset + length < colors.length
+			offset + length
+		else
+			colors.length
+		
+		x0 = vertices[offset]
+		y0 = vertices[offset + 1]
+		z0 = vertices[offset + 2]
+		
+		bucketIndex = @bucketIndex(x0, y0, z0)
+		pointIndex  = @pointIndex(x0, y0, z0)
+		bucket      = cube[bucketIndex]
+
+		i = offset
+		j = offset * 3
+
+		while i < end
+
+			x = vertices[j]
+			y = vertices[j + 1]
+			z = vertices[j + 2]
+
+			if z == z0 + 1 && y == y0 && x == x0
+				if (pointIndex & 258048) == 258048
+					# The point seems to be at the back border.
+					bucketIndex += size01
+					pointIndex  &= -258049
+					bucket      = cube[bucketIndex]
+				else
+					pointIndex += 4096
+			else 
+				bucketIndex = @bucketIndex(x, y, z)
+				pointIndex  = @pointIndex(x, y, z)
+				bucket      = cube[bucketIndex]
+			
+			if 0 <= bucketIndex < cube.length
+				unless bucket?
+					bucket = cube[bucketIndex] = new Float32Array(1 << 18)
+				bucket[pointIndex] = colors[i] / 256 + 1
+			else
+				throw "cube fault"
+			
+
+			x0 = x
+			y0 = y
+			z0 = z
+
+			i += 1
+			j += 3
+
+
+		i
+
 
 
 # This loads and caches meshes.

@@ -40,7 +40,7 @@ object FileDataStore extends DataStore{
 
     val x = point._1 / 128
     val y = point._2 / 128
-    val z = point._3 / 128
+    val z = point._3 / 256
 
     val byteArray: Array[Byte] = fileCache.get((x, y, z)) match {
       case Some(x) =>
@@ -67,7 +67,8 @@ object FileDataStore extends DataStore{
             nullBlock
         }
     }
-    byteArray((((point._3 % 128) * 16384) + (point._2 % 128) * 128 + point._1 % 128))
+    val zA = (point._3 % 256) / 2
+    byteArray(((zA * 8192) + (point._2 % 128) * 128 + point._1 % 128))
   }
 
   /**

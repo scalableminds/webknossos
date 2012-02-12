@@ -16,7 +16,7 @@ object RouteTest extends Specification {
     
     var routeID: String = "2ef481781364831b59747dbb"
     
-    "grab a new route ID" in {
+    "grab a new route" in {
       running( FakeApplication() ) {
         val Some( result ) = routeAndCall( FakeRequest(
           GET,
@@ -39,8 +39,7 @@ object RouteTest extends Specification {
           case None =>
             ko
         }
-        (json \ "position").asOpt[List[Int]] must beSome
-        (json \ "direction").asOpt[List[Int]] must beSome 
+        (json \ "matrix").asOpt[List[Float]] must beSome
       }
     }
     

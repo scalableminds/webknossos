@@ -76,7 +76,7 @@ object FileDataStore extends DataStore{
   def inputStreamToByteArray(is: InputStream) = {
     val byteArray = new Array[Byte](2097152)
     is.read(byteArray, 0, 2097152)
-    assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
+    //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
     byteArray
   }
   

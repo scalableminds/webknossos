@@ -370,11 +370,6 @@ class SimpleArrayBufferSocket
       data : data.buffer
       url : @fallbackUrl
       responseType : 'arraybuffer'
-      (err, buffer) =>
-        if err
-          deferred.reject(err)
-        else
-          deferred.resolve(new @responseBufferType(buffer))
     ).pipe (buffer) => new @responseBufferType(buffer)
 
 _window = window ? self

@@ -72,7 +72,7 @@ object ExtendedDataTypes {
       else
         d - EPSILON
 
-    def nearZero =
+    def isNearZero =
       d <= EPSILON && d >= -EPSILON
 
     def toBinary = {

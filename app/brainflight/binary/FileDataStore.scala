@@ -40,7 +40,7 @@ object FileDataStore extends DataStore{
 
     val x = point._1 / 128
     val y = point._2 / 128
-    val z = point._3 / 128
+    val z = point._3 / 256
 
     val byteArray: Array[Byte] = fileCache.get((x, y, z)) match {
       case Some(x) =>
@@ -67,7 +67,8 @@ object FileDataStore extends DataStore{
             nullBlock
         }
     }
-    byteArray((((point._3 % 128) * 16384) + (point._2 % 128) * 128 + point._1 % 128))
+    val zB = (point._3 % 256) / 2
+    byteArray((zB * 128 * 128 + (point._2 % 128) * 128 + point._1 % 128))
   }
 
   /**
@@ -76,7 +77,7 @@ object FileDataStore extends DataStore{
   def inputStreamToByteArray(is: InputStream) = {
     val byteArray = new Array[Byte](2097152)
     is.read(byteArray, 0, 2097152)
-    assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
+    //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
     byteArray
   }
   

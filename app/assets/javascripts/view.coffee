@@ -104,7 +104,6 @@ class _View
 			engine.popMatrix()
 
 		if meshes["crosshair"]
-			engine.translate 50, 50, 0
 			engine.render meshes["crosshair"]
 
 		# OUTPUT Framerate
@@ -128,7 +127,7 @@ class _View
 		g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
 
 		#sends current position to Model for preloading data
-		Model.Binary.ping(transMatrix).done(renderFunction)
+		Model.Binary.ping(transMatrix)?.done(renderFunction)
 
 		#sends current position to Model for caching route
 		Model.Route.put cam.getPos(), null

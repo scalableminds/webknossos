@@ -29,7 +29,7 @@ case class Figure( polygons: Seq[Polygon] ) {
       for {
         polygon <- this.polygons
         divisor = directionalVector ° polygon.normalVector
-        if !divisor.nearZero
+        if !divisor.isNearZero
       } yield ( polygon, divisor )
 
     val max_x = maxVector.x.patchAbsoluteValue.toInt

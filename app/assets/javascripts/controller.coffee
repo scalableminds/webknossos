@@ -1,16 +1,10 @@
 Controller =
-	
-	position : null
-	direction : null
 
 	initialize : ->
 		
-		Model.Route.initialize().done ({ position, direction }) =>
-			
-			@position  = position
-			@direction = direction
-			
-			View.setCam(position, direction)
+		Model.Route.initialize().done (matrix) =>
+				
+			View.setCam(matrix)
 
 			GeometryFactory.createMesh("coordinateAxes", "mesh").done (mesh) ->
 				View.addGeometry mesh

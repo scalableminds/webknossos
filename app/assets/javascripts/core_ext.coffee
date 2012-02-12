@@ -87,6 +87,9 @@ M4x4.inverse = (mat) ->
 
   return dest
 
+M4x4.extractTranslation = (m) ->
+  [m[12], m[13], m[14]]
+
 # `_.throttle2` makes a function only be executed once in a given
 # time span -- no matter how often you it. We don't recomment to use 
 # any input parameters, because you cannot know which are used and 
@@ -307,6 +310,7 @@ class SimpleArrayBufferSocket
     unless SimpleArrayBufferSocket.FallbackMode
       @socket = null 
       SimpleArrayBufferSocket.FallbackMode = true
+      console?.log("switching to xhr")
 
   send : (data) ->
 

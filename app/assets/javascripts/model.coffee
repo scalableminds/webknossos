@@ -660,8 +660,6 @@ Model.Route =
 	
 	dirtyBuffer : []
 	route : null
-	startDirection : null
-	startPosition : null
 	id : null
 	initializeDeferred : null
 
@@ -680,12 +678,10 @@ Model.Route =
 					try
 						data = JSON.parse data
 
-						@route          = [ data.position ]
+						@route          = [ M4x4.extractTranslation(data.matrix) ]
 						@id             = data.id
-						@startDirection = data.direction
-						@startPosition  = data.position
 						
-						@initializeDeferred.resolve(data)
+						@initializeDeferred.resolve(data.matrix)
 					catch ex
 						@initializeDeferred.reject(ex)
 			)

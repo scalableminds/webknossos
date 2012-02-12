@@ -8,7 +8,8 @@ object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     ModelStore.register(CubeModel, FrustumModel)
-    InitialData.insert()
+    if(Play.current.mode == Mode.Dev)
+    	InitialData.insert()
   }
 
 }

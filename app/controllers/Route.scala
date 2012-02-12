@@ -2,12 +2,12 @@ package controllers
 
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import models.{ FlightRoute, OriginPosDir }
+import models.{ FlightRoute, RouteOrigin }
 import play.api.mvc._
 import org.bson.types.ObjectId
 import brainflight.tools.geometry.Vector3D
 import brainflight.tools.geometry.Vector3D._
-
+import brainflight.tools.Math._
 /**
  * scalableminds - brainflight
  * User: tmbo
@@ -18,17 +18,18 @@ object Route extends Controller with Secured {
 
   def initialize = Action {
     implicit request =>
-      val start = OriginPosDir.leastUsed match {
+      val start = RouteOrigin.leastUsed match {
         case null  => throw new NoSuchElementException( "no OriginLocations saved." )
         case route => route
       }
-      val initdata = FlightRoute.createForUser( userId, start.porection.position :: Nil )
+      val initdata = FlightRoute.createForUser( 
+          userId, 
+          extractTranslationFromMatrix(start.matrix).get :: Nil )
 
       val data = Map(
         "id" -> toJson( initdata._id.toString ),
-        "position" -> toJson( start.porection.position ),
-        "direction" -> toJson( start.porection.direction ) )
-      OriginPosDir.incUsed( start )
+        "matrix" -> toJson( start.matrix ) )
+      RouteOrigin.incUsed( start )
       Ok( toJson( data ) )
   }
 

@@ -187,9 +187,8 @@ class _View
 	draw : ->
 		engine.draw()
 
-	setCam : (position, direction) ->
-		cam.setPos position
-		cam.setDir direction
+	setCam : (matrix) ->
+		cam.setMatrix(matrix)
 
 		
 

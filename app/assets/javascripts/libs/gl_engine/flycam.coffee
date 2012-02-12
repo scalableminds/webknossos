@@ -11,6 +11,9 @@ class Flycam
 
 	getMatrix : ->
 		M4x4.clone trans
+	
+	setMatrix : (matrix) ->
+		trans = matrix
 
 	reset : ->
 		trans = [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]

@@ -13,6 +13,10 @@ import models._
 object Application extends Controller {
 
   // -- Authentication
+  
+  def index = Action{
+    Ok(html.index())
+  }
 
   val registerForm: Form[(String, String, String)] = Form(
     mapping(

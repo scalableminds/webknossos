@@ -45,9 +45,9 @@ case class Figure( polygons: Seq[Polygon] ) {
       y <- min_y to max_y
     } {
       zRangeBoundaries = ArrayBuffer[Int]()
-
-      for ( ( polygon, divisor ) <- polygonsAndDivisors ) {
-        val rayPositionVector = new Vector3D( x, y, 0 )
+      val rayPositionVector = new Vector3D( x, y, 0 )
+      
+      for ( ( polygon, divisor ) <- polygonsAndDivisors ) {  
         val zBoundary =
           ( polygon.d - ( rayPositionVector ° polygon.normalVector ) ) / divisor
         if ( this.isInside( ( x.toDouble, y.toDouble, zBoundary ), polygon ) ) {

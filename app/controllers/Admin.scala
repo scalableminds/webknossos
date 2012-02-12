@@ -8,11 +8,14 @@ import models._
 import views._
 import play.mvc.Results.Redirect
 import java.text.SimpleDateFormat
-import java.util.TimeZone;
+import java.util.TimeZone
 import scala.collection.mutable.HashMap
 import brainflight.binary.DataStore
+import brainflight.binary.FileDataStore
 
 object Admin extends Controller{
+  val fileDataStore = FileDataStore
+  
   
   def loadData(x: Int, y: Int, z: Int) = Action { implicit request => 
     BinData.createOrGet(x,y,z)
@@ -75,7 +78,7 @@ object Admin extends Controller{
     for{y <- 0 until 25
     	z <- 0 until 20}{
     	  BinDataGridFs.findByCoordinates(x,y,z) match {
-    	    case Some(data) => fileBuffer += (((x,y,z),DataStore.inputStreamToByteArray(data.inputStream)))
+    	    case Some(data) => fileBuffer += (((x,y,z),fileDataStore.inputStreamToByteArray(data.inputStream)))
             case None => println("this will not happen")
     	  }
     	}
@@ -101,12 +104,12 @@ object Admin extends Controller{
     var time = -System.currentTimeMillis()
     for{y <- 0 until 25
     	z <- 0 until 20}{
-    	  DataStore.load(Tuple3(x*128,y*128,z*128))
+    	  fileDataStore.load(Tuple3(x*128,y*128,z*128))
     	}
     time += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
-    DataStore.cleanUp()
+    fileDataStore.cleanUp()
     sdf.format(time)
   }
   

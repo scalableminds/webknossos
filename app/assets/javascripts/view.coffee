@@ -42,7 +42,6 @@ class _View
 		perspectiveMatrix = cam.getMovedNonPersistent camPos
 
 		engine.background [0.9, 0.9 ,0.9 ,1]
-		engine.pointSize 100
 		####
 		### ACHTUNG VON 60 AUF 90 GEÄNDERT! ###
 		#####
@@ -151,12 +150,7 @@ class _View
 
 		engine.useProgram trianglesplaneProgramObject 
 		engine.render g
-
-		#used for total Vertex counting
-		return g.vertices.length
 			
-				
-
 	writeFramerate = (framerate = 0, position = 0) ->	
 		document.getElementById('status')
 			.innerHTML = "#{framerate} FPS <br/> #{position}<br />" 

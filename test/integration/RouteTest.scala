@@ -5,6 +5,7 @@ import play.api.test._
 import play.api.test.Helpers._
 import brainflight.binary.CubeModel
 import play.api.libs.json._
+import play.api.libs.json.Json._
 import scala.util.Random
 import play.api.mvc._
 
@@ -52,7 +53,7 @@ object RouteTest extends Specification {
           } ).toList
         // test with random not necessary usefull routeid
         val Some( result ) = routeAndCall( FakeRequest(
-          "POST",
+          POST,
           "/route/"+routeID,
           FakeHeaders(),
           toJson( s ) ) )

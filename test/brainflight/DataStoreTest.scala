@@ -6,7 +6,7 @@ import play.api.test.Helpers._
 import brainflight.binary.DataStore
 import java.io.FileNotFoundException
 
-class DataStoreTesst extends Specification {
+class DataStoreTest extends Specification {
   sequential
   "DataStore" should {
     "load Data" in {
@@ -18,6 +18,17 @@ class DataStoreTesst extends Specification {
           case e: FileNotFoundException =>
             ko("Data not found: Put binary data in e.q. binarydata/x0000/y0000/z0000/100527_k0563_mag1_x0000_y0000_z0000.raw")
         }
+      }
+    }
+    "not return random data" in {
+      running(FakeApplication()) {
+        DataStore.load((15, 53, 25)) must be equalTo DataStore.load((15, 53, 24)) 
+      }
+    }
+    "return black for not existing Data" in {
+      running(FakeApplication()) {
+        DataStore.load((-34, 53, 25)) must be equalTo (0.toByte)
+        DataStore.load((22222222, 33333333, 4444444)) must be equalTo (0.toByte)
       }
     }
   }

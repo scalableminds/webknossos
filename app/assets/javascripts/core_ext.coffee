@@ -1,14 +1,27 @@
 # Applies a transformation matrix on an array of points.
 M4x4.transformPointsAffine = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
 
+  m00 = m[0]
+  m01 = m[1]
+  m02 = m[2]
+  m10 = m[4]
+  m11 = m[5]
+  m12 = m[6]
+  m20 = m[8]
+  m21 = m[9]
+  m22 = m[10]
+  m30 = m[12]
+  m31 = m[13]
+  m32 = m[14]
+
   for i in [0...points.length] by 3
     v0 = points[i]
     v1 = points[i + 1]
     v2 = points[i + 2]
     
-    r[i]     = m[0] * v0 + m[4] * v1 + m[8] * v2 + m[12]
-    r[i + 1] = m[1] * v0 + m[5] * v1 + m[9] * v2 + m[13]
-    r[i + 2] = m[2] * v0 + m[6] * v1 + m[10] * v2 + m[14]
+    r[i]     = m00 * v0 + m10 * v1 + m20 * v2 + m30
+    r[i + 1] = m01 * v0 + m11 * v1 + m21 * v2 + m31
+    r[i + 2] = m02 * v0 + m12 * v1 + m22 * v2 + m32
 
   r
 

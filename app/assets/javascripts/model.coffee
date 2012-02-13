@@ -706,6 +706,28 @@ Model.Trianglesplane =
 					currentPoint++
 					currentIndex += 3
 			
+			radius = 100
+			middle = [0, 0, zOffset - radius]
+
+			i = 0
+			vec  = new Float32Array(3)
+			vec2 = new Float32Array(3)
+			for i in [0...vertices.length] by 3
+				vec[0] = vertices[i]
+				vec[1] = vertices[i + 1]
+				vec[2] = vertices[i + 2]
+
+				vec2 = V3.sub(vec, middle, vec2)
+				length = V3.length(vec2)
+				vec2 = V3.scale(vec2, radius / length, vec2)
+				V3.add(middle, vec2, vec)
+
+				vertices[i]     = vec[0]
+				vertices[i + 1] = vec[1]
+				vertices[i + 2] = vec[2]
+
+
+
 			deferred.resolve { vertices, indices }
 		
 		deferred.promise()

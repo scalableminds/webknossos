@@ -1,9 +1,10 @@
-controllKeys = [37, 38, 39, 40, 65, 68, 83, 87, 89, 81, 70, 67]
+controllKeys = [37, 38, 39, 40, 65, 68, 83, 87, 89, 81, 70, 67, 32]
 
 KEY_LEFT = 37
 KEY_UP = 38
 KEY_RIGHT = 39
 KEY_DOWN = 40
+KEY_SPACE = 32
 
 KEY_A = 65
 KEY_D = 68

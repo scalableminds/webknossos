@@ -1,16 +1,30 @@
 # Applies a transformation matrix on an array of points.
 M4x4.transformPointsAffine = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
 
+  m00 = m[0]
+  m01 = m[1]
+  m02 = m[2]
+  m10 = m[4]
+  m11 = m[5]
+  m12 = m[6]
+  m20 = m[8]
+  m21 = m[9]
+  m22 = m[10]
+  m30 = m[12]
+  m31 = m[13]
+  m32 = m[14]
+
   for i in [0...points.length] by 3
     v0 = points[i]
     v1 = points[i + 1]
     v2 = points[i + 2]
     
-    r[i]     = m[0] * v0 + m[4] * v1 + m[8] * v2 + m[12]
-    r[i + 1] = m[1] * v0 + m[5] * v1 + m[9] * v2 + m[13]
-    r[i + 2] = m[2] * v0 + m[6] * v1 + m[10] * v2 + m[14]
+    r[i]     = m00 * v0 + m10 * v1 + m20 * v2 + m30
+    r[i + 1] = m01 * v0 + m11 * v1 + m21 * v2 + m31
+    r[i + 2] = m02 * v0 + m12 * v1 + m22 * v2 + m32
 
   r
+
 # Applies a transformation matrix on an array of points.
 M4x4.transformPoints = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
 
@@ -31,84 +45,6 @@ M4x4.transformPoints = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) 
 
   r
 
-
-
-# Applies a transformation matrix on an array of points.
-M4x4.transformPointsAffineWithTranslation = (m, translationVector, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
-
-  [tx, ty, tz] = translationVector
-
-  for i in [0...points.length] by 3
-    v0 = points[i]
-    v1 = points[i + 1]
-    v2 = points[i + 2]
-    
-    r[i]     = m[0] * v0 + m[4] * v1 + m[8] * v2 + m[12] + tx
-    r[i + 1] = m[1] * v0 + m[5] * v1 + m[9] * v2 + m[13] + ty
-    r[i + 2] = m[2] * v0 + m[6] * v1 + m[10] * v2 + m[14] + tz
-
-  r
-
-M4x4.makeRotate2 = (direction, r = new MJS_FLOAT_ARRAY_TYPE(16)) ->
-
-  # orthogonal vector to (0,1,0) and rotation vector
-  axis = V3.normalize([direction[2], 0, -direction[0]])
-
-  # dot product of (0,1,0) and rotation
-  dotProd = direction[1]
-  
-  # transformation of dot product for cosA
-  cosA = dotProd / V3.length(direction)
-  sinA = Math.sqrt(1 - cosA * cosA)
-
-  [axis_x, axix_y, axis_z] = axis
-  
-  # calculate rotation matrix
-  r[0]  = axis_x * axis_x * (1 - cosA) + cosA 
-  r[1]  = axis_z * sinA
-  r[2]  = axis_x * axis_z * (1 - cosA)
-  r[3]  = 0
-  r[4]  = -axis_z * sinA
-  r[5]  = cosA
-  r[6]  = axis_x * sinA
-  r[7]  = 0
-  r[8]  = axis_x * axis_z * (1 - cosA)
-  r[9]  = -axis_x * sinA
-  r[10] = axis_z * axis_z * (1 - cosA) + cosA
-  r[11] = 0
-  r[12] = 0
-  r[13] = 0
-  r[14] = 0
-  r[15] = 0
-  
-  r
-
-# Moves an array of vertices. It also supports rotation, just provide
-# a vector representing the direction you're looking. The vertices
-# are considered to be at position `[0,0,0]` with the direction `[0,1,0]`.
-M4x4.moveVertices = (vertices, translationVector, directionVector) ->
-
-  output = new Float32Array(vertices.length)
-  directionVector = V3.normalize(directionVector)
-
-  # `[0,1,0]` is the axis of the template, so there is no need for rotating
-  # We can do translation on our own, because it's not too complex..and 
-  # probably faster.
-  if directionVector[0] == 0 and directionVector[1] == 1 and directionVector[2] == 0
-
-    [px, py, pz] = translationVector
-    
-    for i in [0...vertices.length] by 3
-      output[i]     = px + vertices[i]
-      output[i + 1] = py + vertices[i + 1]
-      output[i + 2] = pz + vertices[i + 2]
-    output
-  
-  else
-    
-    mat = M4x4.makeRotate2(directionVector)
-    
-    M4x4.transformPointsAffineWithTranslation(mat, translationVector, vertices, output)
 
 M4x4.inverse = (mat) ->
   # cache matrix values
@@ -164,6 +100,9 @@ M4x4.inverse = (mat) ->
 
   return dest
 
+M4x4.extractTranslation = (m) ->
+  [m[12], m[13], m[14]]
+
 # `_.throttle2` makes a function only be executed once in a given
 # time span -- no matter how often you it. We don't recomment to use 
 # any input parameters, because you cannot know which are used and 
@@ -185,42 +124,6 @@ _.throttle2 = (func, wait, resume = true) ->
         ), wait
     else
       more = resume and true
-
-# `_.once2` makes sure a function is executed only once. It works only
-# with asynchronous functions. The function cannot have any input 
-# parameters. If one pass of the function failes, it can be executed 
-# again.
-_.once2 = (func) ->
-  initialized = false
-  watingCallbacks = null
-
-  done = (err) ->
-    callbacks = watingCallbacks
-    watingCallbacks = null
-
-    callback = (args...) ->
-      cb(args...) for cb in callbacks
-      return
-
-    if err
-      callback err
-      return
-    else
-      initialized = true
-      return callback
-  
-  (callback) ->
-    context = @
-
-    unless initialized
-      if watingCallbacks?
-        watingCallbacks.push callback
-      else
-        watingCallbacks = [callback]
-        func.apply(context, [done])
-    else
-      callback null
-
 
 _.mutex = (func, timeout = 20000) ->
 
@@ -250,7 +153,7 @@ _.mutexDeferred = (func, timeout = 20000) ->
     unless deferred
       
       deferred = func.apply(this, args)
-      setTimeout((-> deferred = null), timeout)
+      setTimeout((-> deferred = null), timeout) unless timeout < 0
       deferred.always -> deferred = null
       deferred
 
@@ -263,41 +166,41 @@ _.removeElement = (array, element) ->
 
 
 $.whenWithProgress = (args...) ->
-    length = args.length
-    pValues = new Array( length )
-    firstParam = args[0]
-    count = length
-    pCount = length
-    deferred = if length <= 1 && firstParam && jQuery.isFunction( firstParam.promise ) 
-        firstParam
-      else 
-        jQuery.Deferred()
-    promise = deferred.promise()
-    
-    resolveFunc = ( i ) ->
-      ( value ) ->
-        args[ i ] = if arguments.length > 1 then sliceDeferred.call( arguments, 0 ) else value
-        if !( --count ) 
-          deferred.resolveWith( deferred, args )
-        else
-          deferred.notifyWith( deferred, args )
-
-    progressFunc = ( i ) ->
-      ( value ) ->
-        pValues[ i ] = if arguments.length > 1 then sliceDeferred.call( arguments, 0 ) else value
-        deferred.notifyWith( promise, pValues )
-
-    if length > 1
-      for i in [0...length] 
-        if args[ i ] && args[ i ].promise && jQuery.isFunction( args[ i ].promise )
-          args[ i ].promise().then( resolveFunc(i), deferred.reject, progressFunc(i) )
-        else
-          --count
-      unless count 
+  length = args.length
+  pValues = new Array( length )
+  firstParam = args[0]
+  count = length
+  pCount = length
+  deferred = if length <= 1 && firstParam && jQuery.isFunction( firstParam.promise ) 
+      firstParam
+    else 
+      jQuery.Deferred()
+  promise = deferred.promise()
+  
+  resolveFunc = ( i ) ->
+    ( value ) ->
+      args[ i ] = if arguments.length > 1 then sliceDeferred.call( arguments, 0 ) else value
+      if !( --count ) 
         deferred.resolveWith( deferred, args )
-    else if deferred != firstParam
-      deferred.resolveWith( deferred, if length then [ firstParam ] else [] )
-    promise
+      else
+        deferred.notifyWith( deferred, args )
+
+  progressFunc = ( i ) ->
+    ( value ) ->
+      pValues[ i ] = if arguments.length > 1 then sliceDeferred.call( arguments, 0 ) else value
+      deferred.notifyWith( promise, pValues )
+
+  if length > 1
+    for i in [0...length] 
+      if args[ i ] && args[ i ].promise && jQuery.isFunction( args[ i ].promise )
+        args[ i ].promise().then( resolveFunc(i), deferred.reject, progressFunc(i) )
+      else
+        --count
+    unless count 
+      deferred.resolveWith( deferred, args )
+  else if deferred != firstParam
+    deferred.resolveWith( deferred, if length then [ firstParam ] else [] )
+  promise
 
 class SimpleWorkerPool
 
@@ -383,9 +286,8 @@ class SimpleWorker
 class SimpleArrayBufferSocket
   
   OPEN_TIMEOUT : 5000
-  MESSAGE_TIMEOUT : 120000
+  MESSAGE_TIMEOUT : 60000
 
-  WebSocket : if (window ? self)['MozWebSocket'] then MozWebSocket else WebSocket
   FallbackMode : false
    
   constructor : (options) ->
@@ -394,14 +296,8 @@ class SimpleArrayBufferSocket
   
   initializeWebSocket : ->
     unless @socket
-      socket = @socket = new @WebSocket(@url)
+      socket = @socket = new SimpleArrayBufferSocket.WebSocket(@url)
       openDeferred = @openDeferred = $.Deferred()
-
-      switchToFallback = =>
-        unless @fallbackMode
-          @socket = null 
-          @fallbackMode = true
-          alert("Switching to ajax fallback mode.")
 
       socket.binaryType = 'arraybuffer'
       
@@ -413,67 +309,82 @@ class SimpleArrayBufferSocket
       socket.onclose = (code, reason) => 
         openDeferred.reject("closed")
         console?.error("socket closed", "#{code}: #{reason}")
-        switchToFallback()
+        @switchToXHR()
       
       setTimeout(=> 
         openDeferred.reject("timeout")
-        if not @socket or @socket.readyState != @WebSocket.OPEN
-          switchToFallback()
+        if not @socket or @socket.readyState != SimpleArrayBufferSocket.WebSocket.OPEN
+          @switchToXHR()
       , @OPEN_TIMEOUT)
     
     @openDeferred.promise()
   
+  switchToXHR : ->
+    unless SimpleArrayBufferSocket.FallbackMode
+      @socket = null 
+      SimpleArrayBufferSocket.FallbackMode = true
+      console?.log("switching to xhr")
+
   send : (data) ->
 
     deferred = $.Deferred()
-    
-    unless @fallbackMode
 
-      @initializeWebSocket().done( =>
+    resolver = (result) ->
+      deferred.resolve(result)
 
-        padding = Math.max(@requestBufferType.BYTES_PER_ELEMENT, Float32Array.BYTES_PER_ELEMENT)
-        
-        transmitBuffer  = new ArrayBuffer(padding + data.byteLength)
-        handleArray     = new Float32Array(transmitBuffer, 0, 1)
-        handleArray[0]  = Math.random()
-        socketHandle    = handleArray[0]
-
-        dataArray = new @requestBufferType(transmitBuffer, padding)
-        dataArray.set(data)
-
-        socketCallback = (event) =>
-          buffer = event.data
-          handle = new Float32Array(buffer, 0, 1)[0]
-          if handle == socketHandle
-            @socket.removeEventListener("message", socketCallback, false)
-            deferred.resolve(new @responseBufferType(buffer, 4))
-        
-        @socket.addEventListener("message", socketCallback, false)
-        @socket.send(transmitBuffer)
-        console?.log("socket-request", transmitBuffer)
-      
-        setTimeout((=> deferred.reject("timeout")), @MESSAGE_TIMEOUT)
-      ).fail => @sendUsingFallback(data, deferred)
-    
+    unless SimpleArrayBufferSocket.FallbackMode
+      @sendWithWebSocket(data)
+        .done(resolver)
+        .fail(=>
+          @switchToXHR()
+          @sendWithXHR(data).done(resolver)
+        )
     else
-      @sendUsingFallback(data, deferred)
+      @sendWithXHR(data).done(resolver)
 
     deferred.promise()
+
+  sendWithWebSocket : (data) ->
+    
+    @initializeWebSocket().pipe =>
+      
+      deferred = $.Deferred()
+
+      padding = Math.max(@requestBufferType.BYTES_PER_ELEMENT, Float32Array.BYTES_PER_ELEMENT)
+      
+      transmitBuffer  = new ArrayBuffer(padding + data.byteLength)
+      handleArray     = new Float32Array(transmitBuffer, 0, 1)
+      handleArray[0]  = Math.random()
+      socketHandle    = handleArray[0]
+
+      dataArray = new @requestBufferType(transmitBuffer, padding)
+      dataArray.set(data)
+
+      socketCallback = (event) =>
+        buffer = event.data
+        handle = new Float32Array(buffer, 0, 1)[0]
+        if handle == socketHandle
+          @socket.removeEventListener("message", socketCallback, false)
+          deferred.resolve(new @responseBufferType(buffer, 4))
+      
+      @socket.addEventListener("message", socketCallback, false)
+      @socket.send(transmitBuffer)
+      console?.log("socket-request", transmitBuffer)
+    
+      setTimeout(( => 
+        deferred.reject("timeout")
+      ), @MESSAGE_TIMEOUT)
+
+      deferred.promise()
   
-  sendUsingFallback : (data, deferred = $.Deferred()) ->
+  sendWithXHR : (data) ->
     
     request(
       data : data.buffer
       url : @fallbackUrl
       responseType : 'arraybuffer'
-      (err, buffer) =>
-        if err
-          deferred.reject(err)
-        else
-          deferred.resolve(new @responseBufferType(buffer))
-    )
-    deferred.promise()
+    ).pipe (buffer) => new @responseBufferType(buffer)
 
-
+_window = window ? self
+SimpleArrayBufferSocket.WebSocket = if _window.MozWebSocket then _window.MozWebSocket else _window.WebSocket
   
-

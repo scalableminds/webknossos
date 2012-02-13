@@ -155,23 +155,31 @@ Model.Binary =
 	# each points.
 	# *   `bufferDelta` is a `Float32Array` with the delta values.
 	#
-	get : (vertices, callback) ->
+	get : (vertices) ->
+
+		$.Deferred()
+			.resolve(@getSync(vertices))
+			.promise()
+
+
+	getSync : (vertices) ->
 
 		bufferFront = new Float32Array(vertices.length / 3 << 2)
 		bufferBack  = new Float32Array(vertices.length / 3 << 2)
 		bufferDelta = new Float32Array(vertices.length)
 		
-		if (_cube = @cube)
+		if (cube = @cube)
 			
-			size0  = @cubeSize[0]
-			size01 = @cubeSize[0] * @cubeSize[1]
+			{ cubeSize, cubeOffset } = @
+			size0  = cubeSize[0]
+			size01 = cubeSize[0] * cubeSize[1]
 			
-			lowerBound0 = @cubeOffset[0] << 6
-			lowerBound1 = @cubeOffset[1] << 6
-			lowerBound2 = @cubeOffset[2] << 6
-			upperBound0 = (@cubeOffset[0] + @cubeSize[0]) << 6
-			upperBound1 = (@cubeOffset[1] + @cubeSize[1]) << 6
-			upperBound2 = (@cubeOffset[2] + @cubeSize[2]) << 6
+			lowerBound0 = cubeOffset[0] << 6
+			lowerBound1 = cubeOffset[1] << 6
+			lowerBound2 = cubeOffset[2] << 6
+			upperBound0 = (cubeOffset[0] + cubeSize[0]) << 6
+			upperBound1 = (cubeOffset[1] + cubeSize[1]) << 6
+			upperBound2 = (cubeOffset[2] + cubeSize[2]) << 6
 
 			j3 = 0
 			j4 = 0
@@ -186,7 +194,7 @@ Model.Binary =
 					x, y, z, 
 					bufferFront, bufferBack, bufferDelta, 
 					j4, j3, 
-					_cube, 
+					cube, 
 					lowerBound0, lowerBound1, lowerBound2,
 					upperBound0, upperBound1, upperBound2,
 					size0, size01)
@@ -194,14 +202,17 @@ Model.Binary =
 				j3 += 3
 				j4 += 4
 			
-		callback(null, bufferFront, bufferBack, bufferDelta) if callback
+		{ bufferFront, bufferBack, bufferDelta }
 
 
-	PRELOAD_TOLERANCE : 0.9
-	PRELOAD_RADIUS : 37
+	PRELOAD_TEST_TOLERANCE : 0.9
+	PRELOAD_TEST_RADIUS : 37
+	PING_THROTTLE_TIME : 3000
+	COMPARE_TOLERANCE_ANGLE_COSINE : .99
+	COMPARE_TOLERANCE_TRANSLATION : 30
 
 	loadingMatrices : []
-	lastPingedMatrix : null
+	lastPing : null
 	
 	# Use this method to let us know when you've changed your spot. Then we'll try to 
 	# preload some data. 
@@ -215,21 +226,28 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (matrix) ->
 
-		return if (lastPingedMatrix = @lastPingedMatrix) and @compareMatrix(lastPingedMatrix, matrix)
+		if (lastPing = @lastPing) and (new Date() - lastPing.time) < @PING_THROTTLE_TIME and @compareMatrix(lastPing.matrix, matrix)
+			null
+		else
+			time = new Date()
+			@lastPing = { matrix, time }
+			deferred = @pingImpl(matrix)
+			deferred.fail => @lastPingedMatrix = null
+			deferred
 
-		@lastPingedMatrix = matrix
+	pingImpl : (matrix) ->
 
-		promises = []
-		preloadRadius    = @PRELOAD_RADIUS
-		preloadTolerance = @PRELOAD_TOLERANCE
+		promises        = []
+		preloadRadius   = @PRELOAD_TEST_RADIUS
+		preloadDiameter = @PRELOAD_TEST_RADIUS << 1
 		
-		for x0 in [-preloadRadius..preloadRadius] by preloadRadius << 1
-			for y0 in [-preloadRadius..preloadRadius] by preloadRadius << 1
-				if promise = @preload(matrix, x0, y0, 0, preloadRadius << 1)
+		for x0 in [-preloadRadius..preloadRadius] by preloadDiameter
+			for y0 in [-preloadRadius..preloadRadius] by preloadDiameter
+				if promise = @preload(matrix, x0, y0, 0, preloadDiameter)
 					promises.push(promise)
 				else
 					for z in [-1...15] by 3
-						if promise = @preload(matrix, x0, y0, z, preloadRadius << 1)
+						if promise = @preload(matrix, x0, y0, z, preloadDiameter)
 							promises.push(promise)
 							break
 
@@ -237,35 +255,36 @@ Model.Binary =
 
 	compareMatrix : (matrix1, matrix2) ->
 
-		TOLERANCE_ANGLE_COSINE = .95
-		TOLERANCE_TRANSLATION  = 10
+		vec1 = new Float64Array(3)
+		vec2 = new Float64Array(3)
 		
 		for i in [0..2]
 			cardinalVector = [0, 0, 0]
 			cardinalVector[i] = 1
 
-			transformedCardinalVector1 = M4x4.transformPointAffine(matrix1, cardinalVector, [])
-			transformedCardinalVector2 = M4x4.transformPointAffine(matrix2, cardinalVector, [])
+			transformedCardinalVector1 = V3.normalize(M4x4.transformLineAffine(matrix1, cardinalVector, vec1), vec1)
+			transformedCardinalVector2 = V3.normalize(M4x4.transformLineAffine(matrix2, cardinalVector, vec2), vec2)
 
-			return false if V3.dot(transformedCardinalVector1, transformedCardinalVector2) < TOLERANCE_ANGLE_COSINE
+			return false if V3.dot(transformedCardinalVector1, transformedCardinalVector2) < @COMPARE_TOLERANCE_ANGLE_COSINE
 		
 		position1 = [matrix1[12], matrix1[13], matrix1[14]]
 		position2 = [matrix2[12], matrix2[13], matrix2[14]]
 
-		return V3.length(V3.sub(position1, position2, [])) < TOLERANCE_TRANSLATION
+		return V3.length(V3.sub(position1, position2, vec1)) < @COMPARE_TOLERANCE_TRANSLATION
 	
 	preload : (matrix, x0, y0, z, width, sparse = 5) ->
-		matrix = M4x4.translate([x0, y0, z - 2], matrix)
-		if @preloadTest(matrix, width, sparse) < @PRELOAD_TOLERANCE
+		
+		matrix = M4x4.translate([x0, y0, z - 5], matrix)
+		if @preloadTest(matrix, width, sparse) < @PRELOAD_TEST_TOLERANCE
 			@pull(matrix)
 		else
 			false
 
 	preloadTestVertices : (width, sparse) ->
-		@preloadTestVertices = _.memoize(@_preloadTestVertices, (args...) -> args.toString())
+		@preloadTestVertices = _.memoize(@preloadTestVerticesImpl, (args...) -> args.toString())
 		@preloadTestVertices(width, sparse)
 
-	_preloadTestVertices : (width, sparse) ->
+	preloadTestVerticesImpl : (width, sparse) ->
 		vertices = []
 		halfWidth = width >> 1
 		for x in [-halfWidth..halfWidth] by sparse
@@ -277,27 +296,37 @@ Model.Binary =
 
 		return 1 if _.any(@loadingMatrices, (a) => @compareMatrix(matrix, a))
 
-		vertices = @preloadTestVertices(width, sparse)
-		vertices = M4x4.transformPointsAffine(matrix, vertices)
+		vertices = M4x4.transformPointsAffine(matrix, @preloadTestVertices(width, sparse))
 
-		count = hits = 0
-		for i in [0...vertices.length] by 3
-			x = vertices[i]
-			y = vertices[i + 1]
-			z = vertices[i + 2]
+		i = j = 0
+		while j < vertices.length
+			x = vertices[j++]
+			y = vertices[j++]
+			z = vertices[j++]
+			
+			if x >= 0 and y >= 0 and z >= 0
+				if i != j
+					vertices[i++] = x
+					vertices[i++] = y
+					vertices[i++] = z
 
-			if x >= 0 and y >= 0 and z >= 0 
-				count++
-				hits++ if @getColor(x, y, z) > 0
+		count = i / 3
+		colors = @bulkGetColorUnordered(vertices.subarray(0, i))
+		
+		hits = 0
+
+		for color in colors
+			hits++  if color > 0
 		
 		hits / count
 
 
 	pull : (matrix) ->
 
-		console.log(_.any(@loadingMatrices, (a) => @compareMatrix(matrix, a)))
-		@loadingMatrices.push(matrix)
+		CHUNK_SIZE = 1e5
 
+		@loadingMatrices.push(matrix)
+		
 		$.when(@loadColors(matrix), @calcVertices(matrix))
 
 			.pipe (colors, { vertices, minmax }) =>
@@ -307,18 +336,29 @@ Model.Binary =
 				
 				console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) if vertices.length != colors.length * 3
 
+				deferred = $.Deferred()
+
 				# Then we'll just put the point in to our data structure.
-				j = 0
-				for i of colors
-					x = vertices[j]
-					y = vertices[j + 1]
-					z = vertices[j + 2]
-					if x >= 0 and y >= 0 and z >= 0
-						@setColor(x, y, z, colors[i] / 256 + 1)
-					j += 3
-				
-				_.removeElement(@loadingMatrices, matrix)
-				return arguments
+				i = 0
+
+				calcChunk = => 
+					_.defer( =>
+						try
+							i = @bulkSetColor(vertices, colors, i, CHUNK_SIZE)
+						catch err
+							console.error minmax
+							throw err
+								
+						if i == colors.length
+							_.removeElement(@loadingMatrices, matrix)
+							deferred.resolve()
+						else
+							calcChunk()
+					)
+					
+				calcChunk()
+			
+				deferred.promise()
 
 	
 	loadColorsSocket : new SimpleArrayBufferSocket(
@@ -348,15 +388,14 @@ Model.Binary =
 	# point you're looking for.
 	bucketIndex : (x, y, z) ->
 		
-		_offset = @cubeOffset
-		_size   = @cubeSize
+		{ cubeOffset, cubeSize } = @
 
 		# `(x / 64) - offset.x + 
 		# ((y / 64) - offset.y) * size.x + 
 		# ((z / 64) - offset.z) * size.x * size.y`
-		((x >> 6) - _offset[0]) + 
-		((y >> 6) - _offset[1]) * _size[0] + 
-		((z >> 6) - _offset[2]) * _size[0] * _size[1]
+		((x >> 6) - cubeOffset[0]) + 
+		((y >> 6) - cubeOffset[1]) * cubeSize[0] + 
+		((z >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
 	
 	# Returns the index of the point (in the bucket) you're looking for.
 	pointIndex : (x, y, z) ->
@@ -378,243 +417,343 @@ Model.Binary =
 			y_max >> 6,
 			z_max >> 6
 		)
+		throw "noooo" if @bucketIndex(x_max, y_max, z_max) > @cube.length
 	
 	# And this one is for passing bucket coordinates.
 	extendCube : (x0, y0, z0, x1, y1, z1) ->
-		
-		_cube   = @cube
-		_offset = @cubeOffset
-		_size   = @cubeSize		
+
+		oldCube       = @cube
+		oldCubeOffset = @cubeOffset
+		oldCubeSize   = @cubeSize		
 
 		# First, we calculate the new dimension of the cuboid.
-		if _cube?
-			_upperBound = [
-				_offset[0] + _size[0]
-				_offset[1] + _size[1]
-				_offset[2] + _size[2]
-			]
+		if oldCube?
+			upperBound = new Uint32Array(3)
+			upperBound[0] = oldCubeOffset[0] + oldCubeSize[0]
+			upperBound[1] = oldCubeOffset[1] + oldCubeSize[1]
+			upperBound[2] = oldCubeOffset[2] + oldCubeSize[2]
+			
 
-			cubeOffset = [
-				Math.min(x0, x1, _offset[0])
-				Math.min(y0, y1, _offset[1])
-				Math.min(z0, z1, _offset[2])
-			]
-			cubeSize = [
-				Math.max(x0, x1, _upperBound[0] - 1) - cubeOffset[0] + 1
-				Math.max(y0, y1, _upperBound[1] - 1) - cubeOffset[1] + 1
-				Math.max(z0, z1, _upperBound[2] - 1) - cubeOffset[2] + 1
-			]
+			newCubeOffset = new Uint32Array(3)
+			newCubeOffset[0] = Math.min(x0, x1, oldCubeOffset[0])
+			newCubeOffset[1] = Math.min(y0, y1, oldCubeOffset[1])
+			newCubeOffset[2] = Math.min(z0, z1, oldCubeOffset[2])
+			
+			newCubeSize = new Uint32Array(3)
+			newCubeSize[0] = Math.max(x0, x1, upperBound[0] - 1) - newCubeOffset[0] + 1
+			newCubeSize[1] = Math.max(y0, y1, upperBound[1] - 1) - newCubeOffset[1] + 1
+			newCubeSize[2] = Math.max(z0, z1, upperBound[2] - 1) - newCubeOffset[2] + 1
+			
 
 			# Just reorganize the existing buckets when the cube dimensions 
 			# have changed.
-			if cubeOffset[0] != _offset[0] or 
-			cubeOffset[1] != _offset[1] or 
-			cubeOffset[2] != _offset[2] or 
-			cubeSize[0] != _size[0] or 
-			cubeSize[1] != _size[1] or 
-			cubeSize[2] != _size[2]
-				
-				cube = []
+			if newCubeOffset[0] != oldCubeOffset[0] or 
+			newCubeOffset[1] != oldCubeOffset[1] or 
+			newCubeOffset[2] != oldCubeOffset[2] or 
+			newCubeSize[0] != oldCubeSize[0] or 
+			newCubeSize[1] != oldCubeSize[1] or 
+			newCubeSize[2] != oldCubeSize[2]
 
-				for z in [0...cubeSize[2]]
-					
+				newCube = []
+
+				for z in [0...newCubeSize[2]]
+
 					# Bound checking is necessary.
-					if _offset[2] <= z + cubeOffset[2] < _upperBound[2]
-						
-						for y in [0...cubeSize[1]]
-						
-							if _offset[1] <= y + cubeOffset[1] < _upperBound[1]
-						
-								for x in [0...cubeSize[0]]
-						
-									cube.push if _cube? and _offset[0] <= x + cubeOffset[0] < _upperBound[0]
+					if oldCubeOffset[2] <= z + newCubeOffset[2] < upperBound[2]
+
+						for y in [0...newCubeSize[1]]
+
+							if oldCubeOffset[1] <= y + newCubeOffset[1] < upperBound[1]
+
+								for x in [0...newCubeSize[0]]
+
+									newCube.push if oldCube? and oldCubeOffset[0] <= x + newCubeOffset[0] < upperBound[0]
 										index = 
-											(x + cubeOffset[0] - _offset[0]) +
-											(y + cubeOffset[1] - _offset[1]) * _size[0] +
-											(z + cubeOffset[2] - _offset[2]) * _size[0] * _size[1]
-										_cube[index]
+											(x + newCubeOffset[0] - oldCubeOffset[0]) +
+											(y + newCubeOffset[1] - oldCubeOffset[1]) * oldCubeSize[0] +
+											(z + newCubeOffset[2] - oldCubeOffset[2]) * oldCubeSize[0] * oldCubeSize[1]
+										oldCube[index]
 									else
 										null
 							else
-								cube.push(null) for x in [0...cubeSize[0]]
-									
+								newCube.push(null) for x in [0...newCubeSize[0]]
+
 					else
-						cube.push(null) for xy in [0...(cubeSize[0] * cubeSize[1])]
-					
-				@cube       = cube
-				@cubeOffset = cubeOffset
-				@cubeSize   = cubeSize
-						
-		
+						newCube.push(null) for xy in [0...(newCubeSize[0] * newCubeSize[1])]
+
+				@cube       = newCube
+				@cubeOffset = newCubeOffset
+				@cubeSize   = newCubeSize
+
+
 		else
 			# Before, there wasn't any cube.
-			cubeOffset = [
-				Math.min(x0, x1)
-				Math.min(y0, y1)
-				Math.min(z0, z1)
-			]
-			cubeSize = [
-				Math.max(x0, x1) - cubeOffset[0] + 1
-				Math.max(y0, y1) - cubeOffset[1] + 1
-				Math.max(z0, z1) - cubeOffset[2] + 1
-			]
-			cube = []
-			cube.push(null) for xyz in [0...(cubeSize[0] * cubeSize[1] * cubeSize[2])]
+			newCubeOffset = new Uint16Array(3)
+			newCubeOffset[0] = Math.min(x0, x1)
+			newCubeOffset[1] = Math.min(y0, y1)
+			newCubeOffset[2] = Math.min(z0, z1)
 			
-			@cube       = cube
-			@cubeOffset = cubeOffset
-			@cubeSize   = cubeSize
+			newCubeSize = new Uint16Array(3)
+			newCubeSize[0] = Math.max(x0, x1) - newCubeOffset[0] + 1
+			newCubeSize[1] = Math.max(y0, y1) - newCubeOffset[1] + 1
+			newCubeSize[2] = Math.max(z0, z1) - newCubeOffset[2] + 1
+			
+			newCube = []
+			newCube.push(null) for xyz in [0...(newCubeSize[0] * newCubeSize[1] * newCubeSize[2])]
+
+			@cube       = newCube
+			@cubeOffset = newCubeOffset
+			@cubeSize   = newCubeSize
 
 
 	# Getting a color value from the data structure.
 	# Color values range from 1 to 2 -- with black being 0 and white 1.
 	getColor : (x, y, z) ->
 		
-		unless (_cube = @cube)
+		unless (cube = @cube)
 			return 0
 		
-		if (_bucket = _cube[@bucketIndex(x, y, z)])
-			_bucket[@pointIndex(x, y, z)]
+		if (bucket = cube[@bucketIndex(x, y, z)])
+			bucket[@pointIndex(x, y, z)]
 		else
 			0
+	
+	bulkGetColorUnordered : (vertices) ->
+
+		if cube = @cube
+			{ cubeOffset, cubeSize } = @
+			cubeOffset0 = cubeOffset[0]
+			cubeOffset1 = cubeOffset[1]
+			cubeOffset2 = cubeOffset[2]
+			cubeSize0   = cubeSize[0]
+			cubeSize01  = cubeSize[0] * cubeSize[1]
+
+			colors = new Float32Array(vertices.length / 3)
+			i = j = 0
+			while j < vertices.length
+				x = vertices[j++]
+				y = vertices[j++]
+				z = vertices[j++]
+				
+				bucketIndex = 
+					((x >> 6) - cubeOffset0) + 
+					((y >> 6) - cubeOffset1) * cubeSize0 + 
+					((z >> 6) - cubeOffset2) * cubeSize01
+				
+				colors[i++] =
+					if bucket = cube[bucketIndex]
+						bucket[@pointIndex(x, y, z)]
+					else 
+						0
+
+			colors.subarray(0, i)
+
+		else
+			[]
+
 
 	# Set a color value of a point.
 	# Color values range from 1 to 2 -- with black being 0 and white 1.
-	setColor : (x, y, z, value) ->
+	setColor : (x, y, z, color) ->
 
-		_cube = @cube
+		cube = @cube
 
-		throw "cube fault" unless _cube?
+		throw "cube fault" unless cube?
 
 		bucketIndex = @bucketIndex(x, y, z)
-		bucket      = _cube[bucketIndex]
+		bucket      = _ube[bucketIndex]
 
-		if 0 <= bucketIndex < @cube.length
+		if 0 <= bucketIndex < cube.length
 			unless bucket?
-				bucket = _cube[bucketIndex] = new Float32Array(1 << 18)
-			bucket[@pointIndex(x, y, z)] = value
+				bucket = cube[bucketIndex] = new Float32Array(1 << 18)
+			bucket[@pointIndex(x, y, z)] = color
 		else
 			# Please handle cuboid expansion explicitly.
 			throw "cube fault"
-
-
+	
+	bulkSetColor : (vertices, colors, offset = 0, length) ->
 		
+		{ cube, cubeOffset, cubeSize } = @
+		cubeOffset0 = cubeOffset[0]
+		cubeOffset1 = cubeOffset[1]
+		cubeOffset2 = cubeOffset[2]
+		cubeSize0   = cubeSize[0]
+		cubeSize01  = cubeSize[0] * cubeSize[1]
+
+
+		end = if length? and offset + length < colors.length
+			offset + length
+		else
+			colors.length
+		
+		x0 = vertices[offset]
+		y0 = vertices[offset + 1]
+		z0 = vertices[offset + 2]
+		
+		bucketIndex = @bucketIndex(x0, y0, z0)
+		pointIndex  = @pointIndex(x0, y0, z0)
+		bucket      = cube[bucketIndex]
+
+		i = offset
+		j = offset * 3
+
+		while i < end
+
+			x = vertices[j]
+			y = vertices[j + 1]
+			z = vertices[j + 2]
+
+			if z == z0 + 1 && y == y0 && x == x0
+				if (pointIndex & 258048) == 258048
+					# The point seems to be at the back border.
+					bucketIndex += cubeSize01
+					pointIndex  &= -258049
+					bucket      = cube[bucketIndex]
+				else
+					pointIndex += 4096
+			else 
+				# Fastcall
+				bucketIndex = 
+					((x >> 6) - cubeOffset0) + 
+					((y >> 6) - cubeOffset1) * cubeSize0 + 
+					((z >> 6) - cubeOffset2) * cubeSize01
+				
+				pointIndex  = @pointIndex(x, y, z)
+				bucket      = cube[bucketIndex]
+			
+			if 0 <= bucketIndex < cube.length
+				unless bucket?
+					bucket = cube[bucketIndex] = new Float32Array(1 << 18)
+				bucket[pointIndex] = colors[i] / 256 + 1
+			else
+				console.error(x, y, z, bucketIndex, pointIndex)
+				throw "cube fault"
+			
+
+			x0 = x
+			y0 = y
+			z0 = z
+
+			i += 1
+			j += 3
+
+
+		i
+
+
 
 # This loads and caches meshes.
-#
-# **Mixins**: Model.Cacheable
 Model.Mesh =
 	
-	get : (name, callback) ->
+	get : (name) ->
 
-		unless @tryCache name, callback
+		request(
+			url : "/assets/mesh/#{name}"
+			responseType : 'arraybuffer'
+		).pipe (data) ->
+			
+				# To save bandwidth meshes are transferred in a binary format.
+				header  = new Uint32Array(data, 0, 3)
+				vertices = new Float32Array(data, 12, header[0])
+				colors   = new Float32Array(data, 12 + header[0] * 4, header[1])
+				indices  = new Uint16Array(data, 12 + 4 * (header[0] + header[1]), header[2])
 
-			request url : "/assets/mesh/#{name}", responseType : 'arraybuffer', (err, data) =>
-				if err
-					callback err if callback
+				{ vertices, colors, indices }
 
-				else
-				  # To save bandwidth meshes are transferred in a binary format.
-					header  = new Uint32Array(data, 0, 3)
-					coords  = new Float32Array(data, 12, header[0])
-					colors  = new Float32Array(data, 12 + header[0] * 4, header[1])
-					indexes = new Uint16Array(data, 12 + 4 * (header[0] + header[1]), header[2])
-
-					# `Model.Cacheable.cachingCallback`
-					@cachingCallback(name, callback)(null, coords, colors, indexes)
+Model.Mesh.get = _.memoize(Model.Mesh.get)
 
 # This creates a Triangleplane
 # It is essentially a square with a grid of vertices. Those vertices are
 # connected through triangles. Cuz that's how u do it in WebGL.
 Model.Trianglesplane =
 	
-	get : (width, zOffset, callback) ->
+	get : (width, zOffset) ->
 		
-		# so we have Point 0 0 0 centered
-		startIndex = - Math.floor width/2
-		endIndex = startIndex + width
+		deferred = $.Deferred()
+
+		_.defer ->
+			
+			# so we have Point 0 0 0 centered
+			startIndex = - Math.floor width/2
+			endIndex = startIndex + width
+			
+			# Each three elements represent one vertex.
+			vertices = new Float32Array(width * width * 3)
+
+			# Each three elements represent one triangle.
+			# And each vertex is connected through two triangles.
+			indices = new Uint16Array(width * width * 6)
+			currentPoint = 0
+			currentIndex = 0
+
+			for y in [startIndex...endIndex]
+				for x in [startIndex...endIndex]
+					currentIndex2 = currentIndex << 1
+
+					# We don't draw triangles with the last point of an axis.
+					if y < (endIndex - 1) and x < (endIndex - 1)
+						indices[currentIndex2 + 0] = currentPoint
+						indices[currentIndex2 + 1] = currentPoint + 1 
+						indices[currentIndex2 + 2] = currentPoint + width
+						indices[currentIndex2 + 3] = currentPoint + width
+						indices[currentIndex2 + 4] = currentPoint + width + 1
+						indices[currentIndex2 + 5] = currentPoint + 1
+
+					vertices[currentIndex + 0] = x
+					vertices[currentIndex + 1] = y
+					vertices[currentIndex + 2] = zOffset
+
+					currentPoint++
+					currentIndex += 3
+			
+			deferred.resolve { vertices, indices }
 		
-		# Each three elements represent one vertex.
-		vertices = new Float32Array(width * width * 3)
-
-		# Each three elements represent one triangle.
-		# And each vertex is connected through two triangles.
-		indices = new Uint16Array(width * width * 6)
-		currentPoint = 0
-		currentIndex = 0
-
-		for y in [startIndex...endIndex]
-			for x in [startIndex...endIndex]
-				currentIndex2 = currentIndex << 1
-
-				# We don't draw triangles with the last point of an axis.
-				if y < (endIndex - 1) and x < (endIndex - 1)
-					indices[currentIndex2 + 0] = currentPoint
-					indices[currentIndex2 + 1] = currentPoint + 1 
-					indices[currentIndex2 + 2] = currentPoint + width
-					indices[currentIndex2 + 3] = currentPoint + width
-					indices[currentIndex2 + 4] = currentPoint + width + 1
-					indices[currentIndex2 + 5] = currentPoint + 1
-
-				vertices[currentIndex + 0] = x
-				vertices[currentIndex + 1] = y
-				vertices[currentIndex + 2] = zOffset
-
-				currentPoint++
-				currentIndex += 3
-
-		callback(null, vertices, indices) if callback
+		deferred.promise()
 
 # This loads and caches a pair (vertex and fragment) shaders
-#
-# **Mixins**: Model.Cacheable
-# **Mixins**: Model.Synchronizable
 Model.Shader =
 
-	get : (name, callback) ->
+	get : (name) ->
 
-		unless @tryCache name, callback
-		
-			loadedData = []
-			request url : "/assets/shader/#{name}.vs", (@synchronizingCallback loadedData, (@cachingCallback name, callback))
-			request url : "/assets/shader/#{name}.fs", (@synchronizingCallback loadedData, (@cachingCallback name, callback))
+		$.when(
+			request(url : "/assets/shader/#{name}.vs"), 
+			request(url : "/assets/shader/#{name}.fs")
+		).pipe (vertexShader, fragmentShader) -> { vertexShader, fragmentShader }
 
+Model.Shader.get = _.memoize(Model.Shader.get)
 
 # This takes care of the route. 
 Model.Route =
 	
 	dirtyBuffer : []
 	route : null
-	startDirection : null
-	startPosition : null
 	id : null
+	initializeDeferred : null
 
 	# Returns a `position` and `direction` to start your work.
-	initialize : (callback) ->
-		@initialize = _.once2(@_initialize)
-		@initialize(callback)
+	initialize : ->
 
-	_initialize : (doneCallback) ->
+		unless @initializeDeferred
+			
+			@initializeDeferred = $.Deferred()
 
-		request
-			url : '/route/initialize'
-			,
-			(err, data) =>
-				
-				callback = doneCallback(err)
-				
-				unless err
+			@initializeDeferred.fail =>
+				@initializeDeferred = null
+
+			request(url : '/route/initialize').done( 
+				(data) =>
 					try
 						data = JSON.parse data
 
-						@route          = [ data.position ]
+						@route          = [ M4x4.extractTranslation(data.matrix) ]
 						@id             = data.id
-						@startDirection = data.direction
-						@startPosition  = data.position
 						
-						callback(null, data.position, data.direction)
+						@initializeDeferred.resolve(data.matrix)
 					catch ex
-						callback ex
+						@initializeDeferred.reject(ex)
+			)
+		
+		@initializeDeferred.promise()
 	
 	# Pulls a route from the server.
 	pull : ->
@@ -626,87 +765,39 @@ Model.Route =
 	# Pushes th buffered route to the server. Pushing happens at most 
 	# every 30 seconds.
 	push : ->
-		@push = _.throttle2 @_push, 30000
+		@push = _.throttle2(_.mutexDeferred(@_push, -1), 30000)
 		@push()
 
 	_push : ->
-		unless @pushing
-			@pushing = true
 
-			@initialize (err) =>
-				return if err
+		deferred = $.Deferred()
+		
+		@initializeDeferred.done =>
+			
+			transportBuffer = @dirtyBuffer
+			@dirtyBuffer = []
 
-				transportBuffer = @dirtyBuffer
-				@dirtyBuffer = []
-				request
-					url : "/route/#{@id}"
-					contentType : 'application/json'
-					method : 'POST'
-					data : transportBuffer
-					,
-					(err) =>
-						@pushing = false
-						if err
-							@dirtyBuffer = transportBuffer.concat @dirtyBuffer
-							@push()
+			request(
+				url : "/route/#{@id}"
+				contentType : 'application/json'
+				method : 'POST'
+				data : transportBuffer
+			).fail( =>
+				@dirtyBuffer = transportBuffer.concat(@dirtyBuffer)
+				@push()
+			).always(-> deferred.resolve())
+		
+		deferred.promise()
 
 	
 	# Add a point to the buffer. Just keep adding them.
 	put : (position, callback) ->
 		
-		@initialize (err) =>
-			return callback(err) if err and callback
-
+		@initializeDeferred.done =>
+			
 			position = [Math.round(position[0]), Math.round(position[1]), Math.round(position[2])]
 			_lastPosition = _.last(@route)
 			unless _lastPosition[0] == position[0] and _lastPosition[1] == position[1] and _lastPosition[2] == position[2]
 				@route.push position
 				@dirtyBuffer.push position
 				@push()
-
-
-# Helps to make sure that a bunch of callbacks have returned before 
-# your code continues.
-Model.Synchronizable = 	
-
-	synchronizingCallback : (loadedData, callback) ->
-		loadedData.push null
-		loadedData.counter = loadedData.length
-		i = loadedData.length - 1
-
-		(err, data) ->
-			if err
-				callback err unless loadedData.errorState
-				loadedData._errorState = true
-			else
-				loadedData[i] = data
-				unless --loadedData.counter
-					callback(null, loadedData...) if callback
-
-# Hook up your callbacks with a caching mechansim. So: First check the
-# cache with `tryCache`, then do your stuff and hook up the 
-# `cachingCallback` to your callbacks.
-Model.Cacheable =
-	
-	cache : {}
-
-	cachingCallback : (cache_tag, callback) ->
-		(err, args...) =>
-			if err
-				callback err
-			else
-				@cache[cache_tag] = args
-				callback(null, args...) if callback
-	
-	tryCache : (cache_tag, callback) ->
-		if (cached = @cache[cache_tag])?
-			if callback
-				_.defer -> callback(null, cached...)
-			return true
-		else
-			return false
-
-# Mixin hook ups
-_.extend Model.Mesh, Model.Cacheable
-_.extend Model.Shader, Model.Synchronizable
-_.extend Model.Shader, Model.Cacheable

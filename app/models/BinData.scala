@@ -16,12 +16,12 @@ import com.novus.salat.annotations._
 import com.mongodb.casbah.gridfs.Imports._
 
 
-import brainflight.binary.DataStore
+import brainflight.binary.FileDataStore
 
 case class BinData(x: Int, y: Int, z: Int, _id : ObjectId = new ObjectId()){
   @Persist var buffer = new Array[Byte](2097152)
   var is = new FileInputStream(BinData.createFilename(x,y,z))
-  buffer = DataStore.inputStreamToByteArray(is)
+  buffer = FileDataStore.inputStreamToByteArray(is)
 }
 
 object BinData extends BasicDAO[BinData]("bindata"){
@@ -74,7 +74,7 @@ object BinDataGridFs{
   def createOrGet(x: Int, y:Int, z: Int):Array[Byte]={
     myfs.findOne(BinData.convertCoordinatesToString(x,y,z)) match {
       case None => create(x,y,z)
-      case Some(data) => DataStore.inputStreamToByteArray(data.inputStream)
+      case Some(data) => FileDataStore.inputStreamToByteArray(data.inputStream)
     }
   }
   
@@ -84,7 +84,7 @@ object BinDataGridFs{
       fh.filename = BinData.convertCoordinatesToString(x,y,z)
       fh.contentType = "application"
     }
-    DataStore.inputStreamToByteArray(IS)
+    FileDataStore.inputStreamToByteArray(IS)
   }
 }
   

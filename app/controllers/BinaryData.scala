@@ -29,6 +29,9 @@ import play.api.libs.json.JsValue
  */
 
 object BinaryData extends Controller with Secured {
+  
+  val dataStore: DataStore = FileDataStore
+  
   val WebSocketHandleLength = 4
   val WebSocketMatrixLength = RotationMatrixSize3D * 4
   val MinWebSocketRequestSize = WebSocketHandleLength + WebSocketMatrixLength
@@ -62,7 +65,7 @@ object BinaryData extends Controller with Secured {
         f( clientCoordinates, coordinates )
       }
       // rotate the model and generate the requested data
-      coordinates.map( DataStore.load ).toArray
+      coordinates.map( dataStore.load ).toArray
     }
   }
 

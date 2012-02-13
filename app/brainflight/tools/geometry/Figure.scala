@@ -29,7 +29,7 @@ case class Figure( polygons: Seq[Polygon] ) {
       for {
         polygon <- this.polygons
         divisor = directionalVector ° polygon.normalVector
-        if !divisor.nearZero
+        if !divisor.isNearZero
       } yield ( polygon, divisor )
 
     val max_x = maxVector.x.patchAbsoluteValue.toInt
@@ -45,9 +45,9 @@ case class Figure( polygons: Seq[Polygon] ) {
       y <- min_y to max_y
     } {
       zRangeBoundaries = ArrayBuffer[Int]()
-
-      for ( ( polygon, divisor ) <- polygonsAndDivisors ) {
-        val rayPositionVector = new Vector3D( x, y, 0 )
+      val rayPositionVector = new Vector3D( x, y, 0 )
+      
+      for ( ( polygon, divisor ) <- polygonsAndDivisors ) {  
         val zBoundary =
           ( polygon.d - ( rayPositionVector ° polygon.normalVector ) ) / divisor
         if ( this.isInside( ( x.toDouble, y.toDouble, zBoundary ), polygon ) ) {

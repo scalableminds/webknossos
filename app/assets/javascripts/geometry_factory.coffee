@@ -3,8 +3,8 @@ class _GeometryFactory
 
 	createMesh : (modelName, shaderName) ->
 		$.when(
-			getShader(shaderName),
-			getMesh(modelName)
+			Model.Shader.get(shaderName),
+			Model.Mesh.get(modelName)
 		).pipe (shader, geometry) ->
 			mesh = new Mesh shader.vertexShader, shader.fragmentShader
 			mesh.setName modelName
@@ -15,8 +15,8 @@ class _GeometryFactory
 
 	createTrianglesplane : (width, zOffset, shaderName) ->
 		$.when(
-			getShader(shaderName),
-			getTrianglesPlane(width, zOffset)	
+			Model.Shader.get(shaderName),
+			Model.Trianglesplane.get(width, zOffset)	
 		).pipe (shader, geometry) ->
 			trianglesplane = new Trianglesplane shader.vertexShader, shader.fragmentShader
 			trianglesplane.setNormalVertices geometry.vertices, geometry.width

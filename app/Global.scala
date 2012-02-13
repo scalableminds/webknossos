@@ -1,6 +1,5 @@
 import brainflight.binary.{FrustumModel, CubeModel, ModelStore}
 import brainflight.tools.geometry._
-import models.PosDir
 import play.api._
 
 import models._
@@ -9,7 +8,8 @@ object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     ModelStore.register(CubeModel, FrustumModel)
-    InitialData.insert()
+    if(Play.current.mode == Mode.Dev)
+    	InitialData.insert()
   }
 
 }
@@ -21,8 +21,10 @@ object Global extends GlobalSettings {
 object InitialData {
 
   def insert() = {
-    if (OriginPosDir.findAll.isEmpty)
-      OriginPosDir.insert(OriginPosDir(PosDir(Vector3D(1.0,1.0,1.0), Vector3D(1.0,1.0,1.0)), 0))
+    if (RouteOrigin.findAll.isEmpty){
+      val matrix = List[Float]( 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 685, 611, 648, 1 )
+      RouteOrigin.insert(RouteOrigin(matrix, 0))
+    }
     
     if (User.findAll.isEmpty) {
 

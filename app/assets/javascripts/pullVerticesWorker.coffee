@@ -8,13 +8,55 @@ EPSILON = 1e-10
 
 class Polygon
 
-	constructor : (vertices) ->
-		@vertices = vertices
-		@normal = V3.cross(V3.sub(vertices[0], vertices[1], []), V3.sub(vertices[2], vertices[1], []), [])
-		@d = V3.dot(vertices[0], @normal)
+	constructor : (vertices, isFlatArray) ->
+		unless isFlatArray
+			@vertices = _vertices = new Float64Array(vertices.length * 3)
+			i = j = 0
+			while i < vertices.length
+				vertex = vertices[i++]
+				_vertices[j++] = vertex[0]
+				_vertices[j++] = vertex[1]
+				_vertices[j++] = vertex[2]
+		
+			@normal = V3.cross(
+				V3.sub(vertices[0], vertices[1], new Float64Array(3)), 
+				V3.sub(vertices[2], vertices[1], new Float64Array(3)), 
+				new Float64Array(3)
+			)
+			
+			@d = V3.dot(vertices[0], @normal)
+		
+		else
+			@vertices = vertices
+
+			vec1 = new Float64Array(3)
+			vec1[0] = vertices[0]
+			vec1[1] = vertices[1]
+			vec1[2] = vertices[2]
+
+			vec2 = new Float64Array(3)
+			vec2[0] = vertices[3]
+			vec2[1] = vertices[4]
+			vec2[2] = vertices[5]
+
+			vec3 = new Float64Array(3)
+			vec3[0] = vertices[6]
+			vec3[1] = vertices[7]
+			vec3[2] = vertices[8]
+
+			@normal = V3.cross(
+				V3.sub(vec1, vec2, new Float64Array(3)), 
+				V3.sub(vec3, vec2, new Float64Array(3)), 
+				new Float64Array(3)
+			)
+
+			@d = V3.dot(vec3, @normal)
 
 	transform : (matrix) ->
-		new Polygon(@vertices.map (a) -> M4x4.transformPointAffine(matrix, a, []))
+		new Polygon(
+			M4x4.transformPointsAffine(matrix, @vertices, new Float64Array(@vertices.length)),
+			true
+		)
 
 	isInside : (point, polygons) ->
 		for polygon in polygons when polygon != @
@@ -35,13 +77,23 @@ initialize = ->
 			.done((data) ->
 				
 				data = JSON.parse(data)
-				polygonsPrototype = data.map (face) -> new Polygon(face)
+				
+				polygonsPrototype = []
+				for face in data
+					polygonsPrototype.push(new Polygon(face))
+
 				cubeVerticesPrototype = []
 				for face in data
 					for vertex in face
-						cubeVerticesPrototype.push vertex
-				cubeVerticesPrototype = _.uniq(cubeVerticesPrototype, null, (a) -> a.toString())
-				
+						alreadyListed = false
+						for i in [0...cubeVerticesPrototype.length] by 3
+							if cubeVerticesPrototype[i] == vertex[0] and cubeVerticesPrototype[i + 1] == vertex[1] and cubeVerticesPrototype[i + 2] == vertex[2]
+								alreadyListed = true
+								break
+						cubeVerticesPrototype.push(vertex[0], vertex[1], vertex[2]) unless alreadyListed
+
+				cubeVerticesPrototype = new Float64Array(cubeVerticesPrototype)
+								
 				initializeDeferred.resolve()
 
 			).fail((err) -> initializeDeferred.reject(err))
@@ -56,17 +108,23 @@ self.onmessage = (event) ->
 		args = event.data
 		workerHandle = args.workerHandle
 		
-		cubeVertices = cubeVerticesPrototype.map (a) -> M4x4.transformPointAffine(args.matrix, a, [])
-		polygons     = polygonsPrototype.map (a) -> a.transform(args.matrix)
+		cubeVertices = M4x4.transformPointsAffine(
+			args.matrix, 
+			cubeVerticesPrototype, 
+			new Float64Array(cubeVerticesPrototype.length)
+		)
 		
-		max_x = min_x = cubeVertices[0][0] | 0
-		max_y = min_y = cubeVertices[0][1] | 0
-		max_z = min_z = cubeVertices[0][2] | 0
-		for i in [1...cubeVertices.length]
-			vertex = cubeVertices[i]
-			x = vertex[0]
-			y = vertex[1]
-			z = vertex[2]
+		polygons = []
+		for polygon in polygonsPrototype
+			polygons.push(polygon.transform(args.matrix))
+		
+		max_x = min_x = cubeVertices[0] | 0
+		max_y = min_y = cubeVertices[1] | 0
+		max_z = min_z = cubeVertices[2] | 0
+		for i in [3...cubeVertices.length] by 3
+			x = cubeVertices[i]
+			y = cubeVertices[i + 1]
+			z = cubeVertices[i + 2]
 			x = (x + if x >= 0 then EPSILON else -EPSILON) | 0
 			y = (y + if y >= 0 then EPSILON else -EPSILON) | 0
 			z = (z + if z >= 0 then EPSILON else -EPSILON) | 0
@@ -85,7 +143,9 @@ self.onmessage = (event) ->
 		max_z = if max_z < 0 then 0 else max_z
 
 
-		v001 = [0, 0, 1]
+		v001 = new Float64Array(3)
+		v001[2] = 1
+
 		polygons1 = []
 		for polygon in polygons
 			divisor = V3.dot(v001, polygon.normal)
@@ -93,15 +153,23 @@ self.onmessage = (event) ->
 				polygon.divisor = divisor
 				polygons1.push(polygon)
 
+		vxy0 = new Float64Array(3)
+		vxyz = new Float64Array(3)
 		vertices = []
 		for x in [min_x..max_x]
+			vxy0[0] = x
+			vxyz[0] = x
+
 			for y in [min_y..max_y]  
-				vxy0 = [x, y, 0]
+				vxy0[1] = y
+				vxyz[1] = y
+
 				start_z = end_z = null
 				for polygon in polygons1
 					z = ((polygon.d - V3.dot(vxy0, polygon.normal)) / polygon.divisor)
+					vxyz[2] = z
 					
-					if polygon.isInside([x,y,z], polygons)
+					if polygon.isInside(vxyz, polygons)
 						z = (z + if z >= 0 then EPSILON else -EPSILON) | 0
 
 						unless start_z?
@@ -116,7 +184,7 @@ self.onmessage = (event) ->
 						start_z = 0 if start_z < 0
 						
 						for z in [start_z..end_z]
-							vertices.push x,y,z
+							vertices.push x, y, z
 						
 		vertices = new Float32Array(vertices)
 		

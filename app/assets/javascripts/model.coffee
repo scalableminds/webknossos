@@ -205,11 +205,14 @@ Model.Binary =
 		{ bufferFront, bufferBack, bufferDelta }
 
 
-	PRELOAD_TOLERANCE : 0.9
-	PRELOAD_RADIUS : 37
+	PRELOAD_TEST_TOLERANCE : 0.9
+	PRELOAD_TEST_RADIUS : 37
+	PING_THROTTLE_TIME : 3000
+	COMPARE_TOLERANCE_ANGLE_COSINE : .99
+	COMPARE_TOLERANCE_TRANSLATION : 30
 
 	loadingMatrices : []
-	lastPingedMatrix : null
+	lastPing : null
 	
 	# Use this method to let us know when you've changed your spot. Then we'll try to 
 	# preload some data. 
@@ -223,10 +226,11 @@ Model.Binary =
 	# No Callback Paramters
 	ping : (matrix) ->
 
-		if (lastPingedMatrix = @lastPingedMatrix) and @compareMatrix(lastPingedMatrix, matrix)
+		if (lastPing = @lastPing) and (new Date() - lastPing.time) < @PING_THROTTLE_TIME and @compareMatrix(lastPing.matrix, matrix)
 			null
 		else
-			@lastPingedMatrix = matrix
+			time = new Date()
+			@lastPing = { matrix, time }
 			deferred = @pingImpl(matrix)
 			deferred.fail => @lastPingedMatrix = null
 			deferred
@@ -234,8 +238,8 @@ Model.Binary =
 	pingImpl : (matrix) ->
 
 		promises        = []
-		preloadRadius   = @PRELOAD_RADIUS
-		preloadDiameter = @PRELOAD_RADIUS << 1
+		preloadRadius   = @PRELOAD_TEST_RADIUS
+		preloadDiameter = @PRELOAD_TEST_RADIUS << 1
 		
 		for x0 in [-preloadRadius..preloadRadius] by preloadDiameter
 			for y0 in [-preloadRadius..preloadRadius] by preloadDiameter
@@ -251,27 +255,27 @@ Model.Binary =
 
 	compareMatrix : (matrix1, matrix2) ->
 
-		TOLERANCE_ANGLE_COSINE = .99
-		TOLERANCE_TRANSLATION  = 30
+		vec1 = new Float64Array(3)
+		vec2 = new Float64Array(3)
 		
 		for i in [0..2]
 			cardinalVector = [0, 0, 0]
 			cardinalVector[i] = 1
 
-			transformedCardinalVector1 = V3.normalize(M4x4.transformLineAffine(matrix1, cardinalVector, []), [])
-			transformedCardinalVector2 = V3.normalize(M4x4.transformLineAffine(matrix2, cardinalVector, []), [])
+			transformedCardinalVector1 = V3.normalize(M4x4.transformLineAffine(matrix1, cardinalVector, vec1), vec1)
+			transformedCardinalVector2 = V3.normalize(M4x4.transformLineAffine(matrix2, cardinalVector, vec2), vec2)
 
-			return false if V3.dot(transformedCardinalVector1, transformedCardinalVector2) < TOLERANCE_ANGLE_COSINE
+			return false if V3.dot(transformedCardinalVector1, transformedCardinalVector2) < @COMPARE_TOLERANCE_ANGLE_COSINE
 		
 		position1 = [matrix1[12], matrix1[13], matrix1[14]]
 		position2 = [matrix2[12], matrix2[13], matrix2[14]]
 
-		return V3.length(V3.sub(position1, position2, [])) < TOLERANCE_TRANSLATION
+		return V3.length(V3.sub(position1, position2, vec1)) < @COMPARE_TOLERANCE_TRANSLATION
 	
 	preload : (matrix, x0, y0, z, width, sparse = 5) ->
 		
 		matrix = M4x4.translate([x0, y0, z - 5], matrix)
-		if @preloadTest(matrix, width, sparse) < @PRELOAD_TOLERANCE
+		if @preloadTest(matrix, width, sparse) < @PRELOAD_TEST_TOLERANCE
 			@pull(matrix)
 		else
 			false
@@ -294,15 +298,25 @@ Model.Binary =
 
 		vertices = M4x4.transformPointsAffine(matrix, @preloadTestVertices(width, sparse))
 
-		count = hits = 0
-		for i in [0...vertices.length] by 3
-			x = vertices[i]
-			y = vertices[i + 1]
-			z = vertices[i + 2]
+		i = j = 0
+		while j < vertices.length
+			x = vertices[j++]
+			y = vertices[j++]
+			z = vertices[j++]
+			
+			if x >= 0 and y >= 0 and z >= 0
+				if i != j
+					vertices[i++] = x
+					vertices[i++] = y
+					vertices[i++] = z
 
-			if x >= 0 and y >= 0 and z >= 0 
-				count++
-				hits++ if @getColor(x, y, z) > 0
+		count = i / 3
+		colors = @bulkGetColorUnordered(vertices.subarray(0, i))
+		
+		hits = 0
+
+		for color in colors
+			hits++  if color > 0
 		
 		hits / count
 
@@ -329,7 +343,11 @@ Model.Binary =
 
 				calcChunk = => 
 					_.defer( =>
-						i = @bulkSetColor(vertices, colors, i, CHUNK_SIZE)	
+						try
+							i = @bulkSetColor(vertices, colors, i, CHUNK_SIZE)
+						catch err
+							console.error minmax
+							throw err
 								
 						if i == colors.length
 							_.removeElement(@loadingMatrices, matrix)
@@ -399,117 +417,155 @@ Model.Binary =
 			y_max >> 6,
 			z_max >> 6
 		)
+		throw "noooo" if @bucketIndex(x_max, y_max, z_max) > @cube.length
 	
 	# And this one is for passing bucket coordinates.
 	extendCube : (x0, y0, z0, x1, y1, z1) ->
-		
-		{ cube, cubeOffset, cubeSize } = @
+
+		oldCube       = @cube
+		oldCubeOffset = @cubeOffset
+		oldCubeSize   = @cubeSize		
 
 		# First, we calculate the new dimension of the cuboid.
-		if cube?
-			upperBound = [
-				cubeOffset[0] + cubeSize[0]
-				cubeOffset[1] + cubeSize[1]
-				cubeOffset[2] + cubeSize[2]
-			]
+		if oldCube?
+			upperBound = new Uint32Array(3)
+			upperBound[0] = oldCubeOffset[0] + oldCubeSize[0]
+			upperBound[1] = oldCubeOffset[1] + oldCubeSize[1]
+			upperBound[2] = oldCubeOffset[2] + oldCubeSize[2]
+			
 
-			newCubeOffset = [
-				Math.min(x0, x1, cubeOffset[0])
-				Math.min(y0, y1, cubeOffset[1])
-				Math.min(z0, z1, cubeOffset[2])
-			]
-			newCubeSize = [
-				Math.max(x0, x1, upperBound[0] - 1) - cubeOffset[0] + 1
-				Math.max(y0, y1, upperBound[1] - 1) - cubeOffset[1] + 1
-				Math.max(z0, z1, upperBound[2] - 1) - cubeOffset[2] + 1
-			]
+			newCubeOffset = new Uint32Array(3)
+			newCubeOffset[0] = Math.min(x0, x1, oldCubeOffset[0])
+			newCubeOffset[1] = Math.min(y0, y1, oldCubeOffset[1])
+			newCubeOffset[2] = Math.min(z0, z1, oldCubeOffset[2])
+			
+			newCubeSize = new Uint32Array(3)
+			newCubeSize[0] = Math.max(x0, x1, upperBound[0] - 1) - newCubeOffset[0] + 1
+			newCubeSize[1] = Math.max(y0, y1, upperBound[1] - 1) - newCubeOffset[1] + 1
+			newCubeSize[2] = Math.max(z0, z1, upperBound[2] - 1) - newCubeOffset[2] + 1
+			
 
 			# Just reorganize the existing buckets when the cube dimensions 
 			# have changed.
-			if cubeOffset[0] != newCubeOffset[0] or 
-			cubeOffset[1] != newCubeOffset[1] or 
-			cubeOffset[2] != newCubeOffset[2] or 
-			cubeSize[0] != newCubeSize[0] or 
-			cubeSize[1] != newCubeSize[1] or 
-			cubeSize[2] != newCubeSize[2]
-				
+			if newCubeOffset[0] != oldCubeOffset[0] or 
+			newCubeOffset[1] != oldCubeOffset[1] or 
+			newCubeOffset[2] != oldCubeOffset[2] or 
+			newCubeSize[0] != oldCubeSize[0] or 
+			newCubeSize[1] != oldCubeSize[1] or 
+			newCubeSize[2] != oldCubeSize[2]
+
 				newCube = []
 
 				for z in [0...newCubeSize[2]]
-					
+
 					# Bound checking is necessary.
-					if cubeOffset[2] <= z + newCubeOffset[2] < upperBound[2]
-						
+					if oldCubeOffset[2] <= z + newCubeOffset[2] < upperBound[2]
+
 						for y in [0...newCubeSize[1]]
-						
-							if cubeOffset[1] <= y + newCubeOffset[1] < upperBound[1]
-						
+
+							if oldCubeOffset[1] <= y + newCubeOffset[1] < upperBound[1]
+
 								for x in [0...newCubeSize[0]]
-						
-									newCube.push(if cubeOffset[0] <= x + newCubeOffset[0] < upperBound[0]
+
+									newCube.push if oldCube? and oldCubeOffset[0] <= x + newCubeOffset[0] < upperBound[0]
 										index = 
-											(x + newCubeOffset[0] - cubeOffset[0]) +
-											(y + newCubeOffset[1] - cubeOffset[1]) * cubeSize[0] +
-											(z + newCubeOffset[2] - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
-										cube[index]
+											(x + newCubeOffset[0] - oldCubeOffset[0]) +
+											(y + newCubeOffset[1] - oldCubeOffset[1]) * oldCubeSize[0] +
+											(z + newCubeOffset[2] - oldCubeOffset[2]) * oldCubeSize[0] * oldCubeSize[1]
+										oldCube[index]
 									else
 										null
-									)
 							else
 								newCube.push(null) for x in [0...newCubeSize[0]]
-									
+
 					else
 						newCube.push(null) for xy in [0...(newCubeSize[0] * newCubeSize[1])]
-					
+
 				@cube       = newCube
 				@cubeOffset = newCubeOffset
 				@cubeSize   = newCubeSize
-						
-		
+
+
 		else
 			# Before, there wasn't any cube.
-			cubeOffset = [
-				Math.min(x0, x1)
-				Math.min(y0, y1)
-				Math.min(z0, z1)
-			]
-			cubeSize = [
-				Math.max(x0, x1) - cubeOffset[0] + 1
-				Math.max(y0, y1) - cubeOffset[1] + 1
-				Math.max(z0, z1) - cubeOffset[2] + 1
-			]
-			cube = []
-			cube.push(null) for xyz in [0...(cubeSize[0] * cubeSize[1] * cubeSize[2])]
+			newCubeOffset = new Uint16Array(3)
+			newCubeOffset[0] = Math.min(x0, x1)
+			newCubeOffset[1] = Math.min(y0, y1)
+			newCubeOffset[2] = Math.min(z0, z1)
 			
-			_.extend(@, { cube, cubeOffset, cubeSize})
+			newCubeSize = new Uint16Array(3)
+			newCubeSize[0] = Math.max(x0, x1) - newCubeOffset[0] + 1
+			newCubeSize[1] = Math.max(y0, y1) - newCubeOffset[1] + 1
+			newCubeSize[2] = Math.max(z0, z1) - newCubeOffset[2] + 1
+			
+			newCube = []
+			newCube.push(null) for xyz in [0...(newCubeSize[0] * newCubeSize[1] * newCubeSize[2])]
+
+			@cube       = newCube
+			@cubeOffset = newCubeOffset
+			@cubeSize   = newCubeSize
 
 
 	# Getting a color value from the data structure.
 	# Color values range from 1 to 2 -- with black being 0 and white 1.
 	getColor : (x, y, z) ->
 		
-		unless (_cube = @cube)
+		unless (cube = @cube)
 			return 0
 		
-		if (_bucket = _cube[@bucketIndex(x, y, z)])
-			_bucket[@pointIndex(x, y, z)]
+		if (bucket = cube[@bucketIndex(x, y, z)])
+			bucket[@pointIndex(x, y, z)]
 		else
 			0
+	
+	bulkGetColorUnordered : (vertices) ->
+
+		if cube = @cube
+			{ cubeOffset, cubeSize } = @
+			cubeOffset0 = cubeOffset[0]
+			cubeOffset1 = cubeOffset[1]
+			cubeOffset2 = cubeOffset[2]
+			cubeSize0   = cubeSize[0]
+			cubeSize01  = cubeSize[0] * cubeSize[1]
+
+			colors = new Float32Array(vertices.length / 3)
+			i = j = 0
+			while j < vertices.length
+				x = vertices[j++]
+				y = vertices[j++]
+				z = vertices[j++]
+				
+				bucketIndex = 
+					((x >> 6) - cubeOffset0) + 
+					((y >> 6) - cubeOffset1) * cubeSize0 + 
+					((z >> 6) - cubeOffset2) * cubeSize01
+				
+				colors[i++] =
+					if bucket = cube[bucketIndex]
+						bucket[@pointIndex(x, y, z)]
+					else 
+						0
+
+			colors.subarray(0, i)
+
+		else
+			[]
+
 
 	# Set a color value of a point.
 	# Color values range from 1 to 2 -- with black being 0 and white 1.
 	setColor : (x, y, z, color) ->
 
-		_cube = @cube
+		cube = @cube
 
-		throw "cube fault" unless _cube?
+		throw "cube fault" unless cube?
 
 		bucketIndex = @bucketIndex(x, y, z)
-		bucket      = _cube[bucketIndex]
+		bucket      = _ube[bucketIndex]
 
-		if 0 <= bucketIndex < @cube.length
+		if 0 <= bucketIndex < cube.length
 			unless bucket?
-				bucket = _cube[bucketIndex] = new Float32Array(1 << 18)
+				bucket = cube[bucketIndex] = new Float32Array(1 << 18)
 			bucket[@pointIndex(x, y, z)] = color
 		else
 			# Please handle cuboid expansion explicitly.
@@ -517,8 +573,13 @@ Model.Binary =
 	
 	bulkSetColor : (vertices, colors, offset = 0, length) ->
 		
-		cube = @cube
-		size01 = @cubeSize[0] * @cubeSize[1]
+		{ cube, cubeOffset, cubeSize } = @
+		cubeOffset0 = cubeOffset[0]
+		cubeOffset1 = cubeOffset[1]
+		cubeOffset2 = cubeOffset[2]
+		cubeSize0   = cubeSize[0]
+		cubeSize01  = cubeSize[0] * cubeSize[1]
+
 
 		end = if length? and offset + length < colors.length
 			offset + length
@@ -545,13 +606,18 @@ Model.Binary =
 			if z == z0 + 1 && y == y0 && x == x0
 				if (pointIndex & 258048) == 258048
 					# The point seems to be at the back border.
-					bucketIndex += size01
+					bucketIndex += cubeSize01
 					pointIndex  &= -258049
 					bucket      = cube[bucketIndex]
 				else
 					pointIndex += 4096
 			else 
-				bucketIndex = @bucketIndex(x, y, z)
+				# Fastcall
+				bucketIndex = 
+					((x >> 6) - cubeOffset0) + 
+					((y >> 6) - cubeOffset1) * cubeSize0 + 
+					((z >> 6) - cubeOffset2) * cubeSize01
+				
 				pointIndex  = @pointIndex(x, y, z)
 				bucket      = cube[bucketIndex]
 			
@@ -560,6 +626,7 @@ Model.Binary =
 					bucket = cube[bucketIndex] = new Float32Array(1 << 18)
 				bucket[pointIndex] = colors[i] / 256 + 1
 			else
+				console.error(x, y, z, bucketIndex, pointIndex)
 				throw "cube fault"
 			
 

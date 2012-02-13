@@ -239,11 +239,11 @@ class _View
 			cam.move [0,0,-moveValueStrafe]
 
 		#Rotate up
-		if keyboard.isKeyDown(KEY_UP)
+		if keyboard.isKeyDown(KEY_DOWN)
 			cam.pitch moveValueRotate
 
 		#Rotate down
-		if keyboard.isKeyDown(KEY_DOWN)
+		if keyboard.isKeyDown(KEY_UP)
 			cam.pitch -moveValueRotate
 
 		#Rotate right

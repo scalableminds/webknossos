@@ -231,7 +231,7 @@ class _View
 			cam.move [moveValueStrafe,0,0]
 
 		#Forward
-		if keyboard.isKeyDown(KEY_Q)
+		if keyboard.isKeyDown(KEY_SPACE)
 			cam.move [0,0,moveValueStrafe]
 
 		#Backward

@@ -1,3 +1,7 @@
+steps     = 140
+stepBack  = [0, 0, -steps]
+stepFront = [0, 0, steps]
+
 class Flycam
 
 	trans = [ 1, 0, 0, 0,  # left
@@ -29,19 +33,27 @@ class Flycam
 		return returnMat
 
 	yaw : (angle) ->
+		@move(stepBack)
 		trans = M4x4.rotate(angle, [ 0, 1, 0 ], trans)
+		@move(stepFront)
 		# trans = M4x4.mul(trans, rotMat)
 
 	roll : (angle) ->
+		@move(stepBack)
 		trans = M4x4.rotate(angle, [ 0, 0, 1 ], trans)
+		@move(stepFront)
 		# trans = M4x4.mul(trans, rotMat)
 
 	pitch : (angle) ->
+		@move(stepBack)
 		trans = M4x4.rotate(angle, [ 1, 0, 0 ], trans)
+		@move(stepFront)
 		# trans = M4x4.mul(trans, rotMat)
 
 	rotateOnAxis : (angle, axis) ->
+		@move(stepBack)
 		trans = M4x4.rotate(angle, axis, trans)
+		@move(stepFront)
 		# trans = M4x4.mul(trans, rotMat)
 
 	toString : ->

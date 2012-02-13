@@ -243,7 +243,7 @@ class _View
 
 		#Rotate up
 		if buttonDown
-			cam.pitch -(curCoords[1]-mouseY)/500
+			cam.pitch -(curCoords[1]-mouseY)/250
 			curCoords[1] = mouseY
 					
 		if keyboard.isKeyDown(KEY_UP)
@@ -251,7 +251,7 @@ class _View
 
 		#Rotate down
 		if buttonDown
-			cam.pitch (curCoords[1]-mouseY)/500
+			cam.pitch (curCoords[1]-mouseY)/250
 			curCoords[1] = mouseY
 					
 		if keyboard.isKeyDown(KEY_DOWN)
@@ -259,7 +259,7 @@ class _View
 
 		#Rotate right
 		if buttonDown
-			cam.yaw -(curCoords[0]-mouseX)/500
+			cam.yaw -(curCoords[0]-mouseX)/250
 			curCoords[0] = mouseX
 
 		if keyboard.isKeyDown(KEY_RIGHT)
@@ -267,7 +267,7 @@ class _View
 
 		#Rotate left
 		if buttonDown
-			cam.yaw (curCoords[0]-mouseX)/500
+			cam.yaw (curCoords[0]-mouseX)/250
 			curCoords[0] = mouseX
 
 		if keyboard.isKeyDown(KEY_LEFT)

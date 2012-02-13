@@ -94,7 +94,7 @@ class _View
 
 			# rotate the axis mini-map according to the cube's rotation and translate it
 			rotMatrix = cam.getMatrix()
-			rotMatrix[12] = -150 #axisMinimap[0]
+			rotMatrix[12] = -100 #axisMinimap[0]
 			rotMatrix[13] = 0 #axisMinimap[1]
 			rotMatrix[14] = -100
 

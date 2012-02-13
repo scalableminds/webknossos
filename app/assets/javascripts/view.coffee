@@ -204,9 +204,12 @@ class _View
 		curCoords[0] = mouseX
 		curCoords[1] = mouseY
 		buttonDown = true
+		engine.startAnimationLoop()
 
 	mouseReleased = ->
 		buttonDown = false 
+		engine.stopAnimationLoop()
+		window.setTimeout writeFramerate, 500
 
 # #####################
 # KEYBOARD
@@ -239,18 +242,34 @@ class _View
 			cam.move [0,0,-moveValueStrafe]
 
 		#Rotate up
+		if buttonDown
+			cam.pitch -(curCoords[1]-mouseY)/500
+			curCoords[1] = mouseY
+					
 		if keyboard.isKeyDown(KEY_UP)
 			cam.pitch moveValueRotate
 
 		#Rotate down
+		if buttonDown
+			cam.pitch (curCoords[1]-mouseY)/500
+			curCoords[1] = mouseY
+					
 		if keyboard.isKeyDown(KEY_DOWN)
 			cam.pitch -moveValueRotate
 
 		#Rotate right
+		if buttonDown
+			cam.yaw -(curCoords[0]-mouseX)/500
+			curCoords[0] = mouseX
+
 		if keyboard.isKeyDown(KEY_RIGHT)
 			cam.yaw -moveValueRotate
 
 		#Rotate left
+		if buttonDown
+			cam.yaw (curCoords[0]-mouseX)/500
+			curCoords[0] = mouseX
+
 		if keyboard.isKeyDown(KEY_LEFT)
 			cam.yaw moveValueRotate
 

@@ -14,7 +14,7 @@ class GL_engine
 
 	# for throttling renderLoop
 	lastLoopTime = null
-	maximumframerate = 30
+	maximumframerate = 20
 
 	#to stop the animationLoop
 	stopAnimation = 1

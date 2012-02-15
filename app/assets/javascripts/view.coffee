@@ -30,6 +30,7 @@ class _View
 	camPos = [0,0,-clippingDistance]
 	moveValueStrafe = 1
 	moveValueRotate = 0.02
+	mouseRotateDivision = 250
 
 	perspectiveMatrix = null
 
@@ -204,9 +205,12 @@ class _View
 		curCoords[0] = mouseX
 		curCoords[1] = mouseY
 		buttonDown = true
+		engine.startAnimationLoop()
 
 	mouseReleased = ->
 		buttonDown = false 
+		engine.stopAnimationLoop()
+		window.setTimeout writeFramerate, 500
 
 # #####################
 # KEYBOARD
@@ -235,24 +239,40 @@ class _View
 			cam.move [0,0,moveValueStrafe]
 
 		#Backward
-		if keyboard.isKeyDown(KEY_Y)
+		if keyboard.isKeyDown(KEY_X)
 			cam.move [0,0,-moveValueStrafe]
 
 		#Rotate up
-		if keyboard.isKeyDown(KEY_DOWN)
+		if buttonDown
+			cam.pitchDistance (curCoords[1]-mouseY)/mouseRotateDivision
+			curCoords[1] = mouseY
+
+		if keyboard.isKeyDown(KEY_UP)
 			cam.pitch moveValueRotate
 
 		#Rotate down
-		if keyboard.isKeyDown(KEY_UP)
+		if buttonDown
+			cam.pitchDistance -(curCoords[1]-mouseY)/mouseRotateDivision
+			curCoords[1] = mouseY
+
+		if keyboard.isKeyDown(KEY_DOWN)
 			cam.pitch -moveValueRotate
 
 		#Rotate right
+		if buttonDown
+			cam.yawDistance (curCoords[0]-mouseX)/mouseRotateDivision
+			curCoords[0] = mouseX
+
 		if keyboard.isKeyDown(KEY_RIGHT)
 			cam.yaw -moveValueRotate
 
 		#Rotate left
+			cam.yawDistance -(curCoords[0]-mouseX)/mouseRotateDivision
+			curCoords[0] = mouseX
+
 		if keyboard.isKeyDown(KEY_LEFT)
 			cam.yaw moveValueRotate
+
 
 		#Rotate right
 		if keyboard.isKeyDown(KEY_E)

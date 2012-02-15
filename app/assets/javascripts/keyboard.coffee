@@ -1,4 +1,4 @@
-controllKeys = [37, 38, 39, 40, 65, 68, 83, 87, 89, 81, 70, 67, 32]
+controllKeys = [37, 38, 39, 40, 65, 68, 83, 87, 89, 81, 70, 67, 32, 88]
 
 KEY_LEFT = 37
 KEY_UP = 38
@@ -14,6 +14,7 @@ KEY_Y = 89
 KEY_Q = 81
 KEY_E = 70
 KEY_C = 67
+KEY_X = 88
 
 #Manages if Keys are presed or toggled
 class Keyboard

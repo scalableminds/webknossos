@@ -20,6 +20,7 @@ import brainflight.tools.geometry.Vector3D._
 import brainflight.tools.geometry.Figure
 import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
+import brainflight.security.Secured
 
 /**
  * scalableminds - brainflight
@@ -28,8 +29,7 @@ import play.api.libs.json.JsValue
  * Time: 13:21
  */
 
-object BinaryData extends Controller with Secured {
-  
+object BinaryData extends Controller with Secured {  
   val dataStore: DataStore = FileDataStore
   
   val WebSocketHandleLength = 4

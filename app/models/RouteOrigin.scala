@@ -6,6 +6,7 @@ import com.novus.salat.dao.SalatDAO
 import play.api.Play
 import play.api.Play.current
 import brainflight.tools.geometry.Vector3D
+import brainflight.tools.geometry.TransformationMatrix
 
 /**
  * scalableminds - brainflight
@@ -14,7 +15,7 @@ import brainflight.tools.geometry.Vector3D
  * Time: 22:07
  */
 
-case class RouteOrigin(matrix: List[Float], usedCount: Int, _id: ObjectId = new ObjectId)
+case class RouteOrigin(matrix: TransformationMatrix, usedCount: Int, _id: ObjectId = new ObjectId)
 
 object RouteOrigin extends BasicDAO[RouteOrigin]("routeOrigins") {
   def leastUsed = {

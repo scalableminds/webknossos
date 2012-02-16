@@ -8,6 +8,8 @@ import org.bson.types.ObjectId
 import brainflight.tools.geometry.Vector3D
 import brainflight.tools.geometry.Vector3D._
 import brainflight.tools.Math._
+import brainflight.security.Secured
+
 /**
  * scalableminds - brainflight
  * User: tmbo
@@ -24,11 +26,11 @@ object Route extends Controller with Secured {
       }
       val initdata = FlightRoute.createForUser( 
           userId, 
-          extractTranslationFromMatrix(start.matrix).get :: Nil )
+          (start.matrix.extractTranslation).get :: Nil )
 
       val data = Map(
         "id" -> toJson( initdata._id.toString ),
-        "matrix" -> toJson( start.matrix ) )
+        "matrix" -> toJson( start.matrix.value ) )
       RouteOrigin.incUsed( start )
       Ok( toJson( data ) )
   }

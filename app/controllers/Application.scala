@@ -9,6 +9,8 @@ import views._
 import play.mvc.Results.Redirect
 import play.api.data.Forms._
 import models._
+import play.api.libs.iteratee.Done
+import play.api.libs.iteratee.Input
 
 object Application extends Controller {
 
@@ -102,51 +104,6 @@ object Application extends Controller {
           //fill in stuff which should be able to be called from js
       )
     ).as("text/javascript")
-  }
-
-}
-
-/**
- * Provide security features
- */
-trait Secured {
-  def user(implicit request: RequestHeader) = {
-    username(request) match {
-      case Some(mail) => User.findByEmail(mail)
-      case _ => None
-    }
-  }
-
-  def userId(implicit request: RequestHeader) = {
-    user match {
-      case Some(u) => u._id
-      case _ => throw new Exception("not logged in")
-    }
-  }
-
-  /**
-   * Retrieve the connected user email.
-   */
-  private def username(request: RequestHeader) = {
-    if (Play.configuration.getBoolean("application.enableAutoLogin").get){
-      Some("scmboy@scalableminds.com")
-    }else
-      request.session.get("email")
-  }
-
-  /**
-   * Redirect to login if the user in not authorized.
-   */
-  private def onUnauthorized(request: RequestHeader) = Results.Redirect(routes.Application.login)
-
-  // --
-
-  /**
-   * Action for authenticated users.
-   */
-  def IsAuthenticated(f: => String => Request[AnyContent] => Result) = Security.Authenticated(username, onUnauthorized) {
-    user =>
-      Action(request => f(user)(request))
   }
 
 }

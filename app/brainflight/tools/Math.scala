@@ -23,12 +23,5 @@ object Math {
   def square( x: Int ) = x * x
 
   def square( d: Double ) = d * d
-
-  def extractTranslationFromMatrix( matrix: List[Float] ) =
-    matrix match {
-      case matrix if matrix.size >= 16 =>
-        Some( Vector3D( matrix( 12 ), matrix( 13 ), matrix( 14 ) ) )
-      case _ =>
-        None
-    }
+  
 }

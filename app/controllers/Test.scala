@@ -4,6 +4,7 @@ import play.api.mvc.Action._
 import views.html
 import play.api.mvc.{Action, Controller}
 import models.User
+import brainflight.security.Secured
 
 /**
  * scalableminds - brainflight

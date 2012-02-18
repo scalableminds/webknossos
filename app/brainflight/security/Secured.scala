@@ -20,20 +20,13 @@ trait Secured {
   val DefaultAccessRole: Option[Role] = None
   val DefaultAccessPermission: Option[Permission] = None
 
-  def user( implicit request: RequestHeader ): Option[models.User] = {
+  def maybeUser( implicit request: RequestHeader ): Option[models.User] = {
     for {
       email <- username( request )
       user <- User.findByEmail( email )
     } yield user
   }
-
-  def userId( implicit request: RequestHeader ) = {
-    user match {
-      case Some( u ) => u._id
-      case _         => throw new Exception( "not logged in" )
-    }
-  }
-
+  
   /**
    * Retrieve the connected user email.
    */
@@ -58,7 +51,7 @@ trait Secured {
     onUnauthorized: RequestHeader => Result )( action: User => Action[A] ): Action[( Action[A], A )] = {
 
     val authenticatedBodyParser = BodyParser { request =>
-      user( request ).map { user =>
+      maybeUser( request ).map { user =>
         if ( ( role.isEmpty || user.hasRole( role.get ) ) &&
           ( permission.isEmpty || user.hasPermission( permission.get ) ) ) {
 

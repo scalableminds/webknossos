@@ -18,41 +18,41 @@ import scala.math._
  * Date: 11.12.11
  * Time: 22:07
  */
-case class FlightRoute(
-    user_id: ObjectId,
-    pointTree: Array[Byte] = Array(),
+case class TrackedRoute(
+    userId: ObjectId,
+    binaryPointTree: Array[Byte] = Array(),
     first: List[Int],
     last: List[Int],
     closed: Boolean = false,
     timestamp: Date = new Date,
     _id: ObjectId = new ObjectId ) {
 
-  def route = Array[Vector3I]( first ) ++ FlightRoute.byteCodesToRoute( first, pointTree )
+  def points = Array[Vector3I]( first ) ++ TrackedRoute.byteCodesToRoute( first, binaryPointTree )
 
-  def addPoints( newPoints: List[Vector3I] ) = {
+  def add( newPoints: List[Vector3I] ) = {
     val modifiedRoute = this.copy(
-      pointTree = pointTree ++ FlightRoute.routeToByteCodes( last, newPoints ),
+      binaryPointTree = binaryPointTree ++ TrackedRoute.routeToByteCodes( last, newPoints ),
       last = newPoints.last )
-    FlightRoute.save( modifiedRoute )
+    TrackedRoute.save( modifiedRoute )
     modifiedRoute
   }
 
-  def addBranchPoint() = {
-    val modifiedRoute = this.copy( pointTree = pointTree :+ FlightRoute.BranchByteCode )
-    FlightRoute.save( modifiedRoute )
+  def addBranch() = {
+    val modifiedRoute = this.copy( binaryPointTree = binaryPointTree :+ TrackedRoute.BranchByteCode )
+    TrackedRoute.save( modifiedRoute )
     modifiedRoute
   }
 
-  def closeBranch( nextBranch: Vector3I) = {
-    val modifiedRoute = this.copy( 
-        pointTree = pointTree :+ FlightRoute.EndByteCode, 
-        last = nextBranch )
-    FlightRoute.save( modifiedRoute )
+  def closeBranch( nextBranch: Vector3I ) = {
+    val modifiedRoute = this.copy(
+      binaryPointTree = binaryPointTree :+ TrackedRoute.EndByteCode,
+      last = nextBranch )
+    TrackedRoute.save( modifiedRoute )
     modifiedRoute
   }
 }
 
-object FlightRoute extends BasicDAO[FlightRoute]( "routes" ) {
+object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
 
   val ValueByteCode = 0x00.toByte
   val BranchByteCode = 0x80.toByte
@@ -80,9 +80,9 @@ object FlightRoute extends BasicDAO[FlightRoute]( "routes" ) {
     var dz = s.z - e.z
 
     val maxSize = max( dx.abs, max( dy.abs, dz.abs ) )
-    
-    if( maxSize > 5)
-      log.warn("Huge gap! Size: %d".format(maxSize))
+
+    if ( maxSize > 5 )
+      log.warn( "Huge gap! Size: %d".format( maxSize ) )
 
     val xList = List.fill( dx.abs )( dx.signum ) ::: List.fill( maxSize - dx.abs )( 0 )
     val yList = List.fill( dy.abs )( dy.signum ) ::: List.fill( maxSize - dy.abs )( 0 )
@@ -115,34 +115,32 @@ object FlightRoute extends BasicDAO[FlightRoute]( "routes" ) {
     }
   }
 
-  def createForUser( user_id: ObjectId, points: List[Vector3I] = Nil ) = {
-    closeOpenRoutes( user_id )
+  def createForUser( user: User, points: List[Vector3I] = Nil ) = {
+    closeOpenRoutesBy( user )
     val b: Array[Byte] = Array()
-    val fr = FlightRoute(
-      user_id,
+    val route = TrackedRoute(
+      user._id,
       routeToByteCodes( points.head, points.slice( 1, points.size ) ),
       points.head,
       points.last )
-    insert( fr )
-    fr
-  }
-  def closeOpenRoutes( user_id: ObjectId ) {
-    // TODO: REMOVE THIS later (after ext session is implemented)
-    if ( Play.maybeApplication.map( _.mode ).getOrElse( Mode.Dev ) == Mode.Prod )
-      update( MongoDBObject( "user_id" -> user_id, "closed" -> false ), $set( "closed" -> true ), false, true )
+    insert( route )
+    route
   }
 
-  def findOpenByID( id: String ): Option[FlightRoute] = {
-    find( MongoDBObject( "_id" -> new ObjectId( id ), "closed" -> false ) ).toList match {
-      case r :: _ => Some( r )
-      case _      => None
-    }
+  def closeOpenRoutesBy( user: User ) {
+    if ( Play.maybeApplication.map( _.mode ).getOrElse( Mode.Dev ) == Mode.Prod )
+      update(
+        MongoDBObject( "userId" -> user._id, "closed" -> false ),
+        $set( "closed" -> true ), false, true )
   }
-  
-  def findOpenByUser( user: User ): Option[FlightRoute] = {
-    find( MongoDBObject( "user_id" -> user._id, "closed" -> false ) ).toList match {
-      case r :: _ => Some( r )
-      case _      => None
-    }
+
+  def findOpenBy( id: String ): Option[TrackedRoute] = {
+    find(
+      MongoDBObject( "_id" -> new ObjectId( id ), "closed" -> false ) ).toList.headOption
+  }
+
+  def findOpenBy( user: User ): Option[TrackedRoute] = {
+    find(
+      MongoDBObject( "userId" -> user._id, "closed" -> false ) ).toList.headOption
   }
 }

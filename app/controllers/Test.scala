@@ -14,7 +14,7 @@ import brainflight.security.Secured
  */
 object Test  extends Controller with Secured{
   def index = Action { implicit request =>
-    user match{
+    maybeUser match{
       case Some( u ) => 
         Ok(html.test.index(u))
       case _ =>

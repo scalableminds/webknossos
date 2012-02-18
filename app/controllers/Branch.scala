@@ -11,7 +11,7 @@ import play.api.mvc.Action
 import play.api.mvc.Request
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import models.FlightRoute
+import models.TrackedRoute
 
 object Branch extends Controller with Secured {
   override val DefaultAccessRole = Role( "user" )
@@ -23,10 +23,9 @@ object Branch extends Controller with Secured {
           val binMatrix = binRequest.asBytes().getOrElse( Array[Byte]() )
           val branchMatrix = binMatrix.subDivide( 4 ).map( _.reverse.toFloat )
           User.save( user.copy( branchPoints = TransformationMatrix(branchMatrix.toList) :: user.branchPoints ) )
-          FlightRoute.findOpenByUser( user ) foreach { flightRoute =>
-            flightRoute.addBranchPoint()
+          TrackedRoute.findOpenBy( user ) foreach { flightRoute =>
+            flightRoute.addBranch()
           }
-          
           Ok
         case _ =>
           BadRequest( "Request needs to be binary" )
@@ -38,7 +37,7 @@ object Branch extends Controller with Secured {
       if ( !user.branchPoints.isEmpty ){
         val branchPoint = user.branchPoints.head
         User.save( user.copy( branchPoints = user.branchPoints.tail ) )
-        FlightRoute.findOpenByUser( user ) foreach { flightRoute =>
+        TrackedRoute.findOpenBy( user ) foreach { flightRoute =>
             flightRoute.closeBranch( branchPoint.extractTranslation.get.toVector3I )
         }
       }

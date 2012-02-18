@@ -3,7 +3,7 @@ package controllers
 import brainflight.security.Secured
 import play.api.mvc.Controller
 import models.User
-import brainflight.tools.geometry.TransformationMatrix
+import models.TransformationMatrix
 import models.Role
 import models.Permission
 import brainflight.tools.ExtendedDataTypes._
@@ -11,6 +11,7 @@ import play.api.mvc.Action
 import play.api.mvc.Request
 import play.api.libs.json.Json._
 import play.api.libs.json._
+import models.FlightRoute
 
 object Branch extends Controller with Secured {
   override val DefaultAccessRole = Role( "user" )
@@ -22,6 +23,10 @@ object Branch extends Controller with Secured {
           val binMatrix = binRequest.asBytes().getOrElse( Array[Byte]() )
           val branchMatrix = binMatrix.subDivide( 4 ).map( _.reverse.toFloat )
           User.save( user.copy( branchPoints = TransformationMatrix(branchMatrix.toList) :: user.branchPoints ) )
+          FlightRoute.findOpenByUser( user ) foreach { flightRoute =>
+            flightRoute.addBranchPoint()
+          }
+          
           Ok
         case _ =>
           BadRequest( "Request needs to be binary" )
@@ -31,7 +36,11 @@ object Branch extends Controller with Secured {
   def pop = Authenticated() { user =>
     implicit request =>
       if ( !user.branchPoints.isEmpty ){
+        val branchPoint = user.branchPoints.head
         User.save( user.copy( branchPoints = user.branchPoints.tail ) )
+        FlightRoute.findOpenByUser( user ) foreach { flightRoute =>
+            flightRoute.closeBranch( branchPoint.extractTranslation.get.toVector3I )
+        }
       }
       Ok
   }

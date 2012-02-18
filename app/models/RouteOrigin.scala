@@ -6,7 +6,6 @@ import com.novus.salat.dao.SalatDAO
 import play.api.Play
 import play.api.Play.current
 import brainflight.tools.geometry.Vector3D
-import brainflight.tools.geometry.TransformationMatrix
 
 /**
  * scalableminds - brainflight

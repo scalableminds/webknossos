@@ -5,10 +5,10 @@ import play.api.libs.json._
 import models.{ FlightRoute, RouteOrigin }
 import play.api.mvc._
 import org.bson.types.ObjectId
-import brainflight.tools.geometry.Vector3D
-import brainflight.tools.geometry.Vector3D._
 import brainflight.tools.Math._
 import brainflight.security.Secured
+import brainflight.tools.geometry.Vector3I
+import brainflight.tools.geometry.Vector3I._
 
 /**
  * scalableminds - brainflight
@@ -25,8 +25,8 @@ object Route extends Controller with Secured {
         case route => route
       }
       val initdata = FlightRoute.createForUser( 
-          userId, 
-          (start.matrix.extractTranslation).get :: Nil )
+          userId,  
+          (start.matrix.extractTranslation).get.toVector3I :: Nil )
 
       val data = Map(
         "id" -> toJson( initdata._id.toString ),
@@ -39,14 +39,14 @@ object Route extends Controller with Secured {
     implicit request =>
       def f( implicit request: Request[JsValue] ): Result = {
         val parsedJson = request.body
-        val fr = FlightRoute.findOpenByID( id ) match {
+        val flightRoute = FlightRoute.findOpenByID( id ) match {
           case Some( fr ) if fr.user_id == userId => fr
           case _                                  => return BadRequest( "No open route found." )
         }
 
-        return parsedJson.asOpt[List[Vector3D]] match {
-          case Some( list ) =>
-            FlightRoute.save( fr.copy( points = fr.points ::: list ) )
+        return parsedJson.asOpt[List[Vector3I]] match {
+          case Some( points ) =>
+            flightRoute.addPoints( points )
             Ok
           case None => BadRequest( "Json invalid." )
         }
@@ -57,7 +57,7 @@ object Route extends Controller with Secured {
     implicit request =>
       FlightRoute.findOneByID( new ObjectId( id ) ) match {
         case Some( fr ) if fr.user_id == userId =>
-          Ok(toJson(fr.points))
+          Ok(toJson(fr.route))
         case _ =>
           BadRequest( "Buuuuuuuh." )
       }

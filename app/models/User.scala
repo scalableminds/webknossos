@@ -9,7 +9,6 @@ import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import brainflight.security.SCrypt._
 import scala.collection.mutable.Stack
-import brainflight.tools.geometry.TransformationMatrix
 
 case class User(
     email: String,

@@ -76,6 +76,6 @@ object Polygon {
   import Vector3D._
   // json converter
   implicit object PolygonWrites extends Writes[Polygon] {
-    def writes( p: Polygon ) = JsArray( p.vertices.map( v => toJson( v ) ) )
+    def writes( p: Polygon ) = JsArray( p.vertices.map( v => toJson( v.toVector3I ) ) )
   }
 }

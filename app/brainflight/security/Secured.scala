@@ -22,24 +22,26 @@ trait Secured {
 
   def maybeUser( implicit request: RequestHeader ): Option[models.User] = {
     for {
-      email <- username( request )
-      user <- User.findByEmail( email )
+      userId <- userId( request )
+      user <- User.findOneById( userId )
     } yield user
   }
   
   /**
    * Retrieve the connected user email.
    */
-  private def username( request: RequestHeader ) = {
-    if ( Play.configuration.getBoolean( "application.enableAutoLogin" ).get ) {
-      Some( "scmboy@scalableminds.com" )
-    } else
-      request.session.get( "email" )
+  private def userId( request: RequestHeader ) = {
+    request.session.get( "userId" ) match {
+      case Some(id) => Some(id)
+      case _ if Play.configuration.getBoolean( "application.enableAutoLogin" ).get =>
+          Some( User.findLocalByEmail("scmboy@scalableminds.com").get.id )
+      case _ => None
+    }
   }
 
   def Authenticated(
     role: Option[Role] = DefaultAccessRole,
-    permission: Option[Permission] = DefaultAccessPermission )( f: => User => Request[AnyContent] => Result ): Action[( Action[AnyContent], AnyContent )] = Authenticated( username, role, permission, onUnauthorized ) {
+    permission: Option[Permission] = DefaultAccessPermission )( f: => User => Request[AnyContent] => Result ): Action[( Action[AnyContent], AnyContent )] = Authenticated( userId, role, permission, onUnauthorized ) {
     user =>
       Action( request => f( user )( request ) )
   }
@@ -84,7 +86,7 @@ trait Secured {
   /**
    * Action for authenticated users.
    */
-  def IsAuthenticated( f: => String => Request[AnyContent] => Result ) = Security.Authenticated( username, onUnauthorized ) {
+  def IsAuthenticated( f: => String => Request[AnyContent] => Result ) = Security.Authenticated( userId, onUnauthorized ) {
     user =>
       Action( request => f( user )( request ) )
   }

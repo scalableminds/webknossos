@@ -34,7 +34,7 @@ object Application extends Controller {
     )( (user, name, password) => (user, name, password._1) ) (  user => Some((user._1, user._2, ("",""))) ).verifying(
       // Add an additional constraint: The username must not be taken (you could do an SQL request here)
       "This username is already in use.",
-      user => User.findByEmail(user._1).isEmpty
+      user => User.findLocalByEmail(user._1).isEmpty
     )
   )
 
@@ -50,9 +50,9 @@ object Application extends Controller {
     implicit request =>
       registerForm.bindFromRequest.fold(
         formWithErrors => BadRequest(html.register(formWithErrors)),
-        user => {
-          User.create _ tupled(user)	
-          Redirect(routes.Test.index).withSession("email" -> user._1)
+        userForm => {
+          val user = User.create _ tupled(userForm)	
+          Redirect(routes.Test.index).withSession("userId" -> user.id)
         }
       )
   }
@@ -63,7 +63,7 @@ object Application extends Controller {
       "password" -> text
     ) verifying("Invalid email or password", result => result match {
       case (email, password) => 
-        User.authenticate(email, password).isDefined
+        User.auth(email, password).isDefined
     })
   )
 
@@ -82,7 +82,10 @@ object Application extends Controller {
     implicit request =>
       loginForm.bindFromRequest.fold(
         formWithErrors => BadRequest(html.login(formWithErrors)),
-        user => Redirect(routes.Test.index).withSession("email" -> user._1)
+        userForm => {
+          val user = User.findLocalByEmail( userForm._1 ).get
+          Redirect(routes.Test.index).withSession("userId" -> user.id)
+        }
       )
   }
 

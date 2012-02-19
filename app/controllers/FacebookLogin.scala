@@ -51,7 +51,7 @@ object FacebookLogin extends Controller {
       val meObject =
         facebookClient.fetchObject( "me", classOf[com.restfb.types.User] );
 
-      val user = models.User.findByEmail( meObject.getEmail ) match {
+      val user = models.User.authRemote( meObject.getEmail, "facebook" ) match {
         case Some( user ) =>
           user
         case None =>

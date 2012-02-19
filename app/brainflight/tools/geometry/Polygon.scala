@@ -55,7 +55,7 @@ class RegularPolygon( numberOfVertices: Int, apothem: Int ) {
  * Simple polygon implementation
  */
 class Polygon( val vertices: List[Vector3D] ) {
-  lazy val normalVector = {
+  val normalVector = {
     if ( vertices.size < 3 )
       throw new IllegalStateException( "Not a valid Polygon: " + vertices )
     else
@@ -66,7 +66,7 @@ class Polygon( val vertices: List[Vector3D] ) {
     new Polygon( vertices.map( _.transformAffine( matrix ) ) )
   }
 
-  lazy val d = normalVector ° vertices( 0 )
+  val d = normalVector ° vertices( 0 )
 
   override def toString = {
     vertices.toString

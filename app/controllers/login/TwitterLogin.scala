@@ -1,4 +1,4 @@
-package controllers
+package controllers.login
 
 import views._
 
@@ -13,9 +13,11 @@ import play.api.libs._
 import play.api.libs.concurrent._
 import play.api.libs.iteratee._
 import com.ning.http.client.Realm.AuthScheme
+import brainflight.security.Secured
 
 object TwitterLogin extends Controller {
 
+  val UserInformationURL = "https://api.twitter.com/1/account/verify_credentials.json?skip_status=true"
   // OAuth
 
   val KEY = ConsumerKey( "xo4kwjFHv4BcnVOs2zK4A",
@@ -46,23 +48,19 @@ object TwitterLogin extends Controller {
         case Left( e ) => throw e
       } )
   }
+
   def authUser( tokens: RequestToken ) = Async {
 
-    WS.url( "https://api.twitter.com/1/account/verify_credentials.json?skip_status=true" )
+    WS.url( UserInformationURL )
       .sign( OAuthCalculator( KEY, tokens ) )
       .get().map( response => {
-        val name = (response.json \ "name").as[String]
-        val screen_name = (response.json \ "screen_name").as[String]
-        val user = models.User.authRemote( screen_name+"@TWITTER.COM" , "twitter" ) match {
-          case Some( user ) =>
-            user
-          case None =>
-            models.User.createRemote(
-              screen_name+"@TWITTER.COM",
-              name,
-              "twitter" )
-        }
-        Redirect( routes.Test.index() ).withSession( "userId" -> user.id )
+        val name = ( response.json \ "name" ).as[String]
+        val email = ( response.json \ "screen_name" ).as[String] + "@TWITTER"
+        
+        val user = models.User.authRemote( email, "twitter" ) getOrElse (
+          models.User.createRemote( email, name, "twitter" ) )
+          
+        Redirect( controllers.routes.Test.index() ).withSession( Secured.createSession(user) )
       } )
   }
 

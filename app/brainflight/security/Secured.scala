@@ -11,10 +11,14 @@ import controllers.routes
 import play.api.libs.iteratee.Done
 import models.{ Role, Permission }
 
+object Secured {
+  val SessionInformationKey = "userId"
+  
+  def createSession( user: User ):Tuple2[String,String] = ( "userId" -> user.id)
+}
 /**
  * Provide security features
  */
-
 trait Secured {
 
   val DefaultAccessRole: Option[Role] = None
@@ -26,16 +30,18 @@ trait Secured {
       user <- User.findOneById( userId )
     } yield user
   }
-  
+
   /**
    * Retrieve the connected user email.
    */
   private def userId( request: RequestHeader ) = {
-    request.session.get( "userId" ) match {
-      case Some(id) => Some(id)
+    request.session.get( Secured.SessionInformationKey ) match {
+      case Some( id ) =>
+        Some( id )
       case _ if Play.configuration.getBoolean( "application.enableAutoLogin" ).get =>
-          Some( User.findLocalByEmail("scmboy@scalableminds.com").get.id )
-      case _ => None
+        Some( User.findLocalByEmail( "scmboy@scalableminds.com" ).get.id )
+      case _ => 
+        None
     }
   }
 

@@ -11,6 +11,7 @@ import play.api.data.Forms._
 import models._
 import play.api.libs.iteratee.Done
 import play.api.libs.iteratee.Input
+import brainflight.security.Secured
 
 object Application extends Controller {
 
@@ -52,7 +53,7 @@ object Application extends Controller {
         formWithErrors => BadRequest(html.register(formWithErrors)),
         userForm => {
           val user = User.create _ tupled(userForm)	
-          Redirect(routes.Test.index).withSession("userId" -> user.id)
+          Redirect(routes.Test.index).withSession( Secured.createSession(user))
         }
       )
   }
@@ -84,7 +85,7 @@ object Application extends Controller {
         formWithErrors => BadRequest(html.login(formWithErrors)),
         userForm => {
           val user = User.findLocalByEmail( userForm._1 ).get
-          Redirect(routes.Test.index).withSession("userId" -> user.id)
+          Redirect(routes.Test.index).withSession(Secured.createSession(user))
         }
       )
   }

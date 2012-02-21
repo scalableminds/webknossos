@@ -16,10 +16,11 @@ import Input.EOF
 import play.api.libs.concurrent._
 import brainflight.tools.ExtendedDataTypes._
 import brainflight.tools.Math._
-import brainflight.tools.geometry.Vector3D._
+import brainflight.tools.geometry.Vector3I._
 import brainflight.tools.geometry.Figure
 import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
+import brainflight.security.Secured
 
 /**
  * scalableminds - brainflight
@@ -29,9 +30,8 @@ import play.api.libs.json.JsValue
  */
 
 object BinaryData extends Controller with Secured {
-  
   val dataStore: DataStore = FileDataStore
-  
+
   val WebSocketHandleLength = 4
   val WebSocketMatrixLength = RotationMatrixSize3D * 4
   val MinWebSocketRequestSize = WebSocketHandleLength + WebSocketMatrixLength
@@ -121,7 +121,7 @@ object BinaryData extends Controller with Secured {
   def model( modelType: String ) = Action {
     ModelStore( modelType ) match {
       case Some( model ) =>
-        Ok( toJson( model.vertices ) )
+        Ok( toJson( model.vertices.map( _.toVector3I ) ) )
       case _ =>
         NotFound( "Model not available." )
     }

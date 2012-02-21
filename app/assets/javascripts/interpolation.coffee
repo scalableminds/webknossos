@@ -1,103 +1,5 @@
 # This provides interpolation mechanics. It's a lot of code. But it
 # should run fast.
-Interpolation =
-  BLACK : 1
-  linear : (p0, p1, d) ->
-    if p0 == 0 or p1 == 0
-      @BLACK
-    else
-      p0 * (1 - d) + p1 * d
-  
-  bilinear : (p00, p10, p01, p11, d0, d1) ->
-    if p00 == 0 or p10 == 0 or p01 == 0 or p11 == 0
-      @BLACK
-    else
-      p00 * (1 - d0) * (1 - d1) + 
-      p10 * d0 * (1 - d1) + 
-      p01 * (1 - d0) * d1 + 
-      p11 * d0 * d1
-    
-  trilinear : (p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2) ->
-    if p000 == 0 or p100 == 0 or p010 == 0 or p110 == 0 or p001 == 0 or p101 == 0 or p011 == 0 or p111 == 0
-      @BLACK
-    else
-      p000 * (1 - d0) * (1 - d1) * (1 - d2) +
-      p100 * d0 * (1 - d1) * (1 - d2) + 
-      p010 * (1 - d0) * d1 * (1 - d2) + 
-      p110 * d0 * d1 * (1 - d2) +
-      p001 * (1 - d0) * (1 - d1) * d2 + 
-      p101 * d0 * (1 - d1) * d2 + 
-      p011 * (1 - d0) * d1 * d2 + 
-      p111 * d0 * d1 * d2
-
-  # Use this function to have your point interpolated. We'll figure
-  # out whether linear, bilinear or trilinear interpolation is best.
-  # But, you need to give us the `get` callback so we can find points
-  # in your data structure. Keep in mind that the `get` function
-  # probably loses its scope (hint: use `_.bind`)
-  interpolate : (x, y, z, get)->
-    
-    # Bitwise operations are faster than javascript's native rounding functions.
-    x0 = x >> 0; x1 = x0 + 1; xd = x - x0     
-    y0 = y >> 0; y1 = y0 + 1; yd = y - y0
-    z0 = z >> 0; z1 = z0 + 1; zd = z - z0
-
-    # return get(x0, y0, z0)
-
-    if xd == 0
-      if yd == 0
-        if zd == 0
-          get(x, y, z)
-        else
-          #linear z
-          Interpolation.linear(get(x, y, z0), get(x, y, z1), zd)
-      else
-        if zd == 0
-          #linear y
-          Interpolation.linear(get(x, y0, z), get(x, y1, z), yd)
-        else
-          #bilinear y,z
-          Interpolation.bilinear(
-            get(x, y0, z0), 
-            get(x, y1, z0), 
-            get(x, y0, z1), 
-            get(x, y1, z1), 
-            yd, zd)
-    else
-      if yd == 0
-        if zd == 0
-          #linear x
-          Interpolation.linear(get(x0, y, z), get(x1, y, z), xd)
-        else
-          #bilinear x,z
-          Interpolation.bilinear(
-            get(x0, y, z0), 
-            get(x1, y, z0), 
-            get(x0, y, z1), 
-            get(x1, y, z1), 
-            xd, zd)
-      else
-        if zd == 0
-          #bilinear x,y
-          Interpolation.bilinear(
-            get(x0, y0, z), 
-            get(x1, y0, z), 
-            get(x0, y1, z), 
-            get(x1, y1, z), 
-            xd, yd)
-        else
-          #trilinear x,y,z
-          Interpolation.trilinear(
-            get(x0, y0, z0),
-            get(x1, y0, z0),
-            get(x0, y1, z0),
-            get(x1, y1, z0),
-            get(x0, y0, z1),
-            get(x1, y0, z1),
-            get(x0, y1, z1),
-            get(x1, y1, z1),
-            xd, yd, zd
-          )
 
 InterpolationCollector =
   # Finding points adjacent to the already found one.
@@ -284,3 +186,181 @@ InterpolationCollector =
     buffer1[j4 + 1]  = output5 || 0
     buffer1[j4 + 2]  = output6 || 0
     buffer1[j4 + 3]  = output7 || 0
+
+  bulkCollect : (vertices, bufferFront, bufferBack, bufferDelta, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
+
+    i = j3 = j4 = 0
+    length = vertices.length
+
+    while i < length
+
+      x = vertices[i++]
+      y = vertices[i++]
+      z = vertices[i++]
+
+      @collect(
+        x, y, z, 
+        bufferFront, bufferBack, bufferDelta, 
+        j4, j3, 
+        cube, 
+        ll0, ll1, ll2,
+        ur0, ur1, ur2,
+        size0, size01)
+
+      j3 += 3
+      j4 += 4
+      
+    return
+    
+
+  nextPointMacro : (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, size01) ->
+
+    bucketIndexOwn = bucketIndex0
+    pointIndexOwn  = pointIndex0
+    
+    # We use bitmasks to handle x, y and z coordinates.
+    # `63     = 000000 000000 111111`
+    if xd
+      if (pointIndexOwn & 63) == 63
+        # The point seems to be at the right border.
+        bucketIndexOwn++
+        pointIndexOwn &= -64
+        # Bound checking.
+        output = -1 if bucketIndexOwn % size0 == 0
+      else
+        pointIndex2++
+    
+    if output != -1
+      # `4032   = 000000 111111 000000`
+      if yd
+        if (pointIndexOwn & 4032) == 4032
+          # The point is to at the bottom border.
+          bucketIndexOwn += size0
+          pointIndexOwn &= -4033
+          # Bound checking.
+          output = -1 if bucketIndexOwn % size01 == 0
+        else
+          pointIndexOwn += 64
+      
+      if output != -1
+        # `258048 = 111111 000000 000000`
+        if zd
+          if (pointIndexOwn & 258048) == 258048
+            # The point seems to be at the back border.
+            bucketIndexOwn += size01
+            pointIndexOwn &= -258049
+          else
+            pointIndexOwn += 4096
+      
+        output = if (bucket = cube[bucketIndexOwn])?
+          bucket[pointIndexOwn]
+        else
+          -1
+
+  pointMacro : (output, xD, yD, zD) ->
+    nextPointMacro(output, xD, yD, zD, cube, bucketIndex0, pointIndex0, size0, size01)
+    return buffer0[j4] = output if output <= 0
+  
+  collectMacro : (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
+
+    if x < 0 or y < 0 or z < 0
+      buffer0[j4] = -2
+      return
+    
+    # Bound checking is necessary.
+    if x < ll0 or y < ll1 or z < ll2 or x > ur0 or y > ur1 or z > ur2
+      buffer0[j4] = -1 
+      return
+
+    # Bitwise operations are faster than javascript's native rounding functions.
+    x0 = x >> 0; xd = x - x0     
+    y0 = y >> 0; yd = y - y0
+    z0 = z >> 0; zd = z - z0
+
+    bucketIndex0 = 
+      ((x0 - ll0) >> 6) + 
+      ((y0 - ll1) >> 6) * size0 + 
+      ((z0 - ll2) >> 6) * size01
+    
+    pointIndex0 = 
+      ((x0 & 63)) +
+      ((y0 & 63) << 6) +
+      ((z0 & 63) << 12)
+    
+    pointMacro(output0, false, false, false)
+
+    if xd == 0
+      if yd == 0
+        unless zd == 0
+          # linear z
+          pointMacro(output1, false, false, true)
+
+          bufferDelta[j3] = zd
+
+      else
+        if zd == 0
+          # linear y
+          pointMacro(output1, false, true, false)
+
+          bufferDelta[j3] = yd
+
+        else
+          # bilinear y,z
+          pointMacro(output1, false, true, false)
+          pointMacro(output2, false, false, true)
+          pointMacro(output3, false, true, true)
+
+          bufferDelta[j3]     = yd
+          bufferDelta[j3 + 1] = zd
+
+    else
+      if yd == 0
+        if zd == 0
+          # linear x
+          pointMacro(output1, true, false, false)
+
+          bufferDelta[j3] = xd
+
+        else
+          #bilinear x,z
+          pointMacro(output1, true, false, false)
+          pointMacro(output2, false, false, true)
+          pointMacro(output3, true, false, true)
+
+          bufferDelta[j3]     = xd
+          bufferDelta[j3 + 1] = zd
+
+      else
+        if zd == 0
+          # bilinear x,y
+          pointMacro(output1, true, false, false)
+          pointMacro(output2, false, true, false)
+          pointMacro(output3, true, true, false)
+
+          bufferDelta[j3]     = xd
+          bufferDelta[j3 + 1] = yd
+
+        else
+          # trilinear x,y,z
+          pointMacro(output1, true, false, false)
+          pointMacro(output2, false, true, false)
+          pointMacro(output3, true, true, false)
+          pointMacro(output4, false, false, true)
+          pointMacro(output5, true, false, true)
+          pointMacro(output6, false, true, true)
+          pointMacro(output7, true, true, true)
+
+
+          bufferDelta[j3]     = xd
+          bufferDelta[j3 + 1] = yd
+          bufferDelta[j3 + 2] = zd
+
+    buffer0[j4]     = output0
+    buffer0[j4 + 1] = output1 || 0
+    buffer0[j4 + 2] = output2 || 0
+    buffer0[j4 + 3] = output3 || 0
+    buffer1[j4]      = output4 || 0
+    buffer1[j4 + 1]  = output5 || 0
+    buffer1[j4 + 2]  = output6 || 0
+    buffer1[j4 + 3]  = output7 || 0
+    return 

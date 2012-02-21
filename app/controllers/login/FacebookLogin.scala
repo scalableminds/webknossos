@@ -1,4 +1,4 @@
-package controllers
+package controllers.login
 import play.api.mvc._
 import views._
 import java.net.URLEncoder
@@ -7,6 +7,7 @@ import com.restfb.BaseFacebookClient
 import com.restfb.DefaultFacebookClient
 import play.api.Play.current
 import play.api.Play
+import brainflight.security.Secured
 
 object FacebookLogin extends Controller {
   
@@ -51,16 +52,13 @@ object FacebookLogin extends Controller {
       val meObject =
         facebookClient.fetchObject( "me", classOf[com.restfb.types.User] );
 
-      val user = models.User.findByEmail( meObject.getEmail ) match {
-        case Some( user ) =>
-          user
-        case None =>
+      val user = models.User.authRemote( meObject.getEmail, "facebook" ) getOrElse (
           models.User.createRemote(
             meObject.getEmail,
             meObject.getFirstName + " " + meObject.getLastName,
-            "facebook" )
-      }
-      Ok( html.test.index( user ) ).withSession( "email" -> user.email )
+            "facebook" ) )
+            
+      Ok( html.test.index( user ) ).withSession( Secured.createSession(user) )
     } catch {
       case ( e ) => BadRequest( "Failed to login." )
     }

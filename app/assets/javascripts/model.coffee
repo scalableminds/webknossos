@@ -181,26 +181,14 @@ Model.Binary =
 			upperBound1 = (cubeOffset[1] + cubeSize[1]) << 6
 			upperBound2 = (cubeOffset[2] + cubeSize[2]) << 6
 
-			j3 = 0
-			j4 = 0
-
-			for i in [0...vertices.length] by 3
-
-				x = vertices[i]
-				y = vertices[i + 1]
-				z = vertices[i + 2]
-
-				InterpolationCollector.collect(
-					x, y, z, 
-					bufferFront, bufferBack, bufferDelta, 
-					j4, j3, 
-					cube, 
-					lowerBound0, lowerBound1, lowerBound2,
-					upperBound0, upperBound1, upperBound2,
-					size0, size01)
-
-				j3 += 3
-				j4 += 4
+			InterpolationCollector.bulkCollect(
+				vertices,
+				bufferFront, bufferBack, bufferDelta, 
+				cube, 
+				lowerBound0, lowerBound1, lowerBound2,
+				upperBound0, upperBound1, upperBound2,
+				size0, size01
+			)
 			
 		{ bufferFront, bufferBack, bufferDelta }
 
@@ -341,22 +329,26 @@ Model.Binary =
 				# Then we'll just put the point in to our data structure.
 				i = 0
 
-				calcChunk = => 
-					_.defer( =>
-						try
-							i = @bulkSetColor(vertices, colors, i, CHUNK_SIZE)
-						catch err
-							console.error minmax
-							throw err
+				# calcChunk = => 
+				# 	_.defer( =>
+				# 		try
+				# 			i = @bulkSetColor(vertices, colors, i, CHUNK_SIZE)
+				# 		catch err
+				# 			console.error minmax
+				# 			throw err
 								
-						if i == colors.length
-							_.removeElement(@loadingMatrices, matrix)
-							deferred.resolve()
-						else
-							calcChunk()
-					)
+				# 		if i == colors.length
+				# 			_.removeElement(@loadingMatrices, matrix)
+				# 			deferred.resolve()
+				# 		else
+				# 			calcChunk()
+				# 	)
 					
-				calcChunk()
+				# calcChunk()
+
+				@bulkSetColor(vertices, colors)
+				_.removeElement(@loadingMatrices, matrix)
+				deferred.resolve()
 			
 				deferred.promise()
 
@@ -640,8 +632,6 @@ Model.Binary =
 
 		i
 
-
-
 # This loads and caches meshes.
 Model.Mesh =
 	
@@ -706,6 +696,28 @@ Model.Trianglesplane =
 					currentPoint++
 					currentIndex += 3
 			
+			radius = 100
+			middle = [0, 0, zOffset - radius]
+
+			i = 0
+			vec  = new Float32Array(3)
+			vec2 = new Float32Array(3)
+			for i in [0...vertices.length] by 3
+				vec[0] = vertices[i]
+				vec[1] = vertices[i + 1]
+				vec[2] = vertices[i + 2]
+
+				vec2 = V3.sub(vec, middle, vec2)
+				length = V3.length(vec2)
+				vec2 = V3.scale(vec2, radius / length, vec2)
+				V3.add(middle, vec2, vec)
+
+				vertices[i]     = vec[0]
+				vertices[i + 1] = vec[1]
+				vertices[i + 2] = vec[2]
+
+
+
 			deferred.resolve { vertices, indices }
 		
 		deferred.promise()

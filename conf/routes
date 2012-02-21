@@ -14,8 +14,11 @@ GET     /register                           controllers.Application.register
 POST    /register                           controllers.Application.registrate
 
 # Facebook
-GET     /login/fb                           controllers.FacebookLogin.login
-GET     /login/fb/code                      controllers.FacebookLogin.loginCode(code: String)
+GET     /login/fb                           controllers.login.FacebookLogin.login
+GET     /login/fb/code                      controllers.login.FacebookLogin.loginCode(code: String)
+
+# Twitter
+GET     /login/tw                           controllers.login.TwitterLogin.login
 
 # Binary Data
 GET     /binary/model/:model                controllers.BinaryData.model(model: String)
@@ -27,6 +30,12 @@ POST    /binary/data/:model                 controllers.BinaryData.requestViaAja
 GET     /route/initialize                   controllers.Route.initialize
 POST    /route/:id                          controllers.Route.blackBox(id: String)
 GET			/route/:id													controllers.Route.getRoute(id: String)
+
+# Branching
+POST		/branch/push												controllers.Branch.push
+GET			/branch/pop													controllers.Branch.pop
+GET			/branch/list												controllers.Branch.list
+GET			/branch/clear												controllers.Branch.clear
 
 # Test pages
 GET     /test/                              controllers.Test.index

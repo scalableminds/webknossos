@@ -11,42 +11,43 @@ import controllers.routes
 import play.api.libs.iteratee.Done
 import models.{ Role, Permission }
 
+object Secured {
+  val SessionInformationKey = "userId"
+  
+  def createSession( user: User ):Tuple2[String,String] = ( "userId" -> user.id)
+}
 /**
  * Provide security features
  */
-
 trait Secured {
 
   val DefaultAccessRole: Option[Role] = None
   val DefaultAccessPermission: Option[Permission] = None
 
-  def user( implicit request: RequestHeader ): Option[models.User] = {
+  def maybeUser( implicit request: RequestHeader ): Option[models.User] = {
     for {
-      email <- username( request )
-      user <- User.findByEmail( email )
+      userId <- userId( request )
+      user <- User.findOneById( userId )
     } yield user
-  }
-
-  def userId( implicit request: RequestHeader ) = {
-    user match {
-      case Some( u ) => u._id
-      case _         => throw new Exception( "not logged in" )
-    }
   }
 
   /**
    * Retrieve the connected user email.
    */
-  private def username( request: RequestHeader ) = {
-    if ( Play.configuration.getBoolean( "application.enableAutoLogin" ).get ) {
-      Some( "scmboy@scalableminds.com" )
-    } else
-      request.session.get( "email" )
+  private def userId( request: RequestHeader ) = {
+    request.session.get( Secured.SessionInformationKey ) match {
+      case Some( id ) =>
+        Some( id )
+      case _ if Play.configuration.getBoolean( "application.enableAutoLogin" ).get =>
+        Some( User.findLocalByEmail( "scmboy@scalableminds.com" ).get.id )
+      case _ => 
+        None
+    }
   }
 
   def Authenticated(
     role: Option[Role] = DefaultAccessRole,
-    permission: Option[Permission] = DefaultAccessPermission )( f: => User => Request[AnyContent] => Result ): Action[( Action[AnyContent], AnyContent )] = Authenticated( username, role, permission, onUnauthorized ) {
+    permission: Option[Permission] = DefaultAccessPermission )( f: => User => Request[AnyContent] => Result ): Action[( Action[AnyContent], AnyContent )] = Authenticated( userId, role, permission, onUnauthorized ) {
     user =>
       Action( request => f( user )( request ) )
   }
@@ -58,7 +59,7 @@ trait Secured {
     onUnauthorized: RequestHeader => Result )( action: User => Action[A] ): Action[( Action[A], A )] = {
 
     val authenticatedBodyParser = BodyParser { request =>
-      user( request ).map { user =>
+      maybeUser( request ).map { user =>
         if ( ( role.isEmpty || user.hasRole( role.get ) ) &&
           ( permission.isEmpty || user.hasPermission( permission.get ) ) ) {
 
@@ -91,7 +92,7 @@ trait Secured {
   /**
    * Action for authenticated users.
    */
-  def IsAuthenticated( f: => String => Request[AnyContent] => Result ) = Security.Authenticated( username, onUnauthorized ) {
+  def IsAuthenticated( f: => String => Request[AnyContent] => Result ) = Security.Authenticated( userId, onUnauthorized ) {
     user =>
       Action( request => f( user )( request ) )
   }

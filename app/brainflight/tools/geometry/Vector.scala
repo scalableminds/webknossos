@@ -44,6 +44,9 @@ class Vector2D( val x: Double, val y: Double ) {
   override def toString = "[%d,%d]".format( x.round, y.round )
 }
 
+case class Vector3I( val x: Int, val y: Int, val z: Int){
+  def -( o: Vector3I) = Vector3I( x - o.x, y - o.y, z - o.z )
+}
 /**
  * Vector in 3D space
  */
@@ -78,6 +81,8 @@ case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
     val nz = matrix( 2 ) * x + matrix( 6 ) * y + matrix( 10 ) * z
     Vector3D( nx, ny, nz )
   }
+  
+  def toVector3I = Vector3I( x.round.toInt, y.round.toInt, z.round.toInt )
 
   def °( o: Vector3D ) = x * o.x + y * o.y + z * o.z
   
@@ -89,24 +94,31 @@ case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
 }
 
 object Vector3D {
+  
   implicit def Vector3DToTuple( v: Vector3D ) = ( v.x, v.y, v.z )
-
-  implicit def Vector3DToIntTuple( v: Vector3D ) = ( v.x.toInt, v.y.toInt, v.z.toInt )
 
   implicit def TupletoVector3D[T <% Double]( v: Tuple3[T, T, T] ) = new Vector3D( v._1, v._2, v._3 )
 
+}
+object Vector3I{
+
+  implicit def Vector3IToIntTuple( v: Vector3I ) = ( v.x, v.y, v.z )
+  implicit def Vector3IToIntList( v: Vector3I ) = List( v.x, v.y, v.z )
+  implicit def Vector3IToIntArray( v: Vector3I ) = Array( v.x, v.y, v.z )
+  implicit def IntListToVector3I( l: List[Int] ) = Vector3I( l(0), l(1), l(2) )
+
   // json converter
-  implicit object Vector3DWrites extends Writes[Vector3D] {
-    def writes( v: Vector3D ) = {
-      val l = List( v.x.round, v.y.round, v.z.round )
+  implicit object Vector3IWrites extends Writes[Vector3I] {
+    def writes( v: Vector3I ) = {
+      val l = List( v.x, v.y, v.z )
       JsArray( l.map( toJson( _ ) ) )
     }
   }
-  implicit object Vector3DReads extends Reads[Vector3D] {
+  implicit object Vector3IReads extends Reads[Vector3I] {
     def reads( json: JsValue ) = json match {
       case JsArray( ts ) if ts.size == 3 =>
         val c = ts.map( fromJson[Int]( _ ) )
-        Vector3D( c( 0 ), c( 1 ), c( 2 ) )
+        Vector3I( c( 0 ), c( 1 ), c( 2 ) )
       case _ => throw new RuntimeException( "List expected" )
     }
   }

@@ -1,3 +1,7 @@
+steps     = 140
+stepBack  = [0, 0, -steps]
+stepFront = [0, 0, steps]
+
 class Flycam
 
 	trans = [ 1, 0, 0, 0,  # left
@@ -20,7 +24,7 @@ class Flycam
 
 	move : (p) ->
 		trans = M4x4.translate([ p[0], p[1], p[2] ], trans)
-		# trans = M4x4.mul(trans, tranMat)
+		
 
 	getMovedNonPersistent : (p) ->
 		@move [ p[0], p[1], p[2] ]
@@ -30,19 +34,36 @@ class Flycam
 
 	yaw : (angle) ->
 		trans = M4x4.rotate(angle, [ 0, 1, 0 ], trans)
-		# trans = M4x4.mul(trans, rotMat)
+
+	yawDistance : (angle) ->
+		@move(stepBack)
+		trans = M4x4.rotate(angle, [ 0, 1, 0 ], trans)
+		@move(stepFront)		
 
 	roll : (angle) ->
+		trans = M4x4.rotate(angle, [ 0, 0, 1 ], trans)		
+
+	rollDistance : (angle) ->
+		@move(stepBack)
 		trans = M4x4.rotate(angle, [ 0, 0, 1 ], trans)
-		# trans = M4x4.mul(trans, rotMat)
+		@move(stepFront)
 
 	pitch : (angle) ->
 		trans = M4x4.rotate(angle, [ 1, 0, 0 ], trans)
-		# trans = M4x4.mul(trans, rotMat)
+
+	pitchDistance : (angle) ->
+		@move(stepBack)
+		trans = M4x4.rotate(angle, [ 1, 0, 0 ], trans)
+		@move(stepFront)
 
 	rotateOnAxis : (angle, axis) ->
+		trans = M4x4.rotate(angle, axis, trans)	
+
+	rotateOnAxisDistance : (angle, axis) ->
+		@move(stepBack)
 		trans = M4x4.rotate(angle, axis, trans)
-		# trans = M4x4.mul(trans, rotMat)
+		@move(stepFront)
+		
 
 	toString : ->
 		return "[" + trans[ 0] + ", " + trans[ 1] + ", " + trans[ 2] + ", " + trans[ 3] + ", " +

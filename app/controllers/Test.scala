@@ -4,6 +4,7 @@ import play.api.mvc.Action._
 import views.html
 import play.api.mvc.{Action, Controller}
 import models.User
+import brainflight.security.Secured
 
 /**
  * scalableminds - brainflight
@@ -13,7 +14,7 @@ import models.User
  */
 object Test  extends Controller with Secured{
   def index = Action { implicit request =>
-    user match{
+    maybeUser match{
       case Some( u ) => 
         Ok(html.test.index(u))
       case _ =>

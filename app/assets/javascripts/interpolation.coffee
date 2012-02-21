@@ -215,45 +215,45 @@ InterpolationCollector =
 
   nextPointMacro : (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, size01) ->
 
-    bucketIndexOwn = bucketIndex0
-    pointIndexOwn  = pointIndex0
+    bucketIndex = bucketIndex0
+    pointIndex  = pointIndex0
     
     # We use bitmasks to handle x, y and z coordinates.
     # `63     = 000000 000000 111111`
     if xd
-      if (pointIndexOwn & 63) == 63
+      if (pointIndex & 63) == 63
         # The point seems to be at the right border.
-        bucketIndexOwn++
-        pointIndexOwn &= -64
+        bucketIndex++
+        pointIndex &= -64
         # Bound checking.
-        output = -1 if bucketIndexOwn % size0 == 0
+        output = -1 if bucketIndex % size0 == 0
       else
-        pointIndex2++
+        pointIndex++
     
     if output != -1
       # `4032   = 000000 111111 000000`
       if yd
-        if (pointIndexOwn & 4032) == 4032
+        if (pointIndex & 4032) == 4032
           # The point is to at the bottom border.
-          bucketIndexOwn += size0
-          pointIndexOwn &= -4033
+          bucketIndex += size0
+          pointIndex &= -4033
           # Bound checking.
-          output = -1 if bucketIndexOwn % size01 == 0
+          output = -1 if bucketIndex % size01 == 0
         else
-          pointIndexOwn += 64
+          pointIndex += 64
       
       if output != -1
         # `258048 = 111111 000000 000000`
         if zd
-          if (pointIndexOwn & 258048) == 258048
+          if (pointIndex & 258048) == 258048
             # The point seems to be at the back border.
-            bucketIndexOwn += size01
-            pointIndexOwn &= -258049
+            bucketIndex += size01
+            pointIndex &= -258049
           else
-            pointIndexOwn += 4096
+            pointIndex += 4096
       
-        output = if (bucket = cube[bucketIndexOwn])?
-          bucket[pointIndexOwn]
+        output = if (bucket = cube[bucketIndex])?
+          bucket[pointIndex]
         else
           -1
 

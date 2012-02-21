@@ -1,15 +1,42 @@
-importScripts("underscore-min.js", "libs/deferreds.js", "libs/mjs.js", "core_ext.js", "binary_request.js")
+# This is a worker for `Model.Binary`.
+# It can do the calculation of vertices accompaning color data
+# responded from the server on a `pull` request.
+# First the worker loads a model of the response data represented
+# as a convex polyhedron. Then for each invocation that model is
+# transformed by a transformation matrix and rasterized, resulting
+# the requested vertices.
 
+# Loading script dependencies
+importScripts(
+	"underscore-min.js", 
+	"libs/deferreds.js", 
+	"libs/mjs.js", 
+	"core_ext.js", 
+	"binary_request.js"
+)
 
+# Constants
+EPSILON = 1e-10
+
+# Variables (global)
 polygonsPrototype     = null
 cubeVerticesPrototype = null
 initializeDeferred    = null
-EPSILON = 1e-10
 
+
+# Represents a polygon.
 class Polygon
 
+	# Pass an array consisting of three-value arrays, each representing a
+	# vertex, or just a flat array where each three values represent a vertex.
+	# If you choose the second option you should set `isFlatArray` to `true`. 
+	# Make sure the vertices are correctly ordered in counter-clockwise manner.
+	# Otherwise the polygon's normal cannot be calculated correctly.
+	#
+	# The constructor turns the vertices list into a typed array and precomputes
+	# the Hesse normal form.
 	constructor : (vertices, isFlatArray) ->
-		unless isFlatArray
+		unless isFlatArray or not _.isArray(vertices[0])
 			@vertices = _vertices = new Float64Array(vertices.length * 3)
 			i = j = 0
 			while i < vertices.length
@@ -52,12 +79,15 @@ class Polygon
 
 			@d = V3.dot(vec3, @normal)
 
+	# Transform the polygon using a transformation matrix.
 	transform : (matrix) ->
 		new Polygon(
 			M4x4.transformPointsAffine(matrix, @vertices, new Float64Array(@vertices.length)),
 			true
 		)
 
+	# Tests whether a point lies inside of the associated
+	# polyhedron.
 	isInside : (point, polygons) ->
 		for polygon in polygons when polygon != @
 			if V3.dot(polygon.normal, point) - polygon.d > EPSILON
@@ -193,4 +223,4 @@ self.onmessage = (event) ->
 			max_x, max_y, max_z
 		]
 						
-		postMessage({ vertices, minmax, workerHandle })
+		postMessage { vertices, minmax, workerHandle }

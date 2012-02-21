@@ -1,4 +1,5 @@
-package brainflight.tools.geometry
+package models
+import brainflight.tools.geometry.Vector3D
 
 case class TransformationMatrix( value: List[Float] ) {
   def extractTranslation =

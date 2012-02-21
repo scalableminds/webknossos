@@ -9,7 +9,6 @@ import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import brainflight.security.SCrypt._
 import scala.collection.mutable.Stack
-import brainflight.tools.geometry.TransformationMatrix
 
 case class User(
     email: String,
@@ -36,18 +35,25 @@ case class User(
 
   def hasPermission( permission: Permission ) =
     ruleSet.find( _.implies( permission ) ).isDefined
+    
+  def id = _id.toString
 }
 
 object User extends BasicDAO[User]( "users" ) {
 
   val LocalLoginType = "local"
 
-  def findByEmail( email: String ) = findOne( MongoDBObject(
-    "email" -> email ) )
+  def findLocalByEmail( email: String ) = findOne( MongoDBObject(
+    "email" -> email, "loginType" -> LocalLoginType ) )
 
   def findAll = find( MongoDBObject.empty ).toList
+  
+  def findOneById( id: String): Option[User] = findOneByID( new ObjectId(id) )
+  
+  def authRemote( email: String, loginType: String) = 
+    findOne( MongoDBObject( "email" -> email, "loginType" -> loginType ) )
 
-  def authenticate( email: String, password: String ) =
+  def auth( email: String, password: String ) =
     for {
       user <- findOne( MongoDBObject( "email" -> email, "loginType" -> LocalLoginType ) )
       if verifyPassword( password, user.pwdHash )

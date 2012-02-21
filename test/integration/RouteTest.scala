@@ -46,10 +46,10 @@ object RouteTest extends Specification {
     "handle long POST requests" in {
       running( FakeApplication() ) {
         val r = new Random
-        var s =
-          ( ( 1 to 100000 ) map { i =>
-            List( r.nextDouble * 100, r.nextDouble * 100, r.nextDouble * 100 )
-          } ).toList
+        var s = List.fill(100000)(List(123,456,789))
+          //( ( 1 to 100000 ) map { i =>
+          //  List( r.nextDouble * 100, r.nextDouble * 100, r.nextDouble * 100 )
+          //} ).toList
         // test with random not necessary usefull routeid
         val Some( result ) = routeAndCall( FakeRequest(
           POST,

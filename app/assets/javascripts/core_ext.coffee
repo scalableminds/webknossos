@@ -125,25 +125,10 @@ _.throttle2 = (func, wait, resume = true) ->
     else
       more = resume and true
 
-_.mutex = (func, timeout = 20000) ->
-
-  busy = false
-  i = 0
-
-  (args...) ->
-    unless busy
-      
-      i++
-      current = i
-      busy = true
-
-      done = ->
-        busy = false if i == current
-      
-      func.apply(this, args.concat(done))
-
-      setTimeout(done, timeout)
-
+# Returns a wrapper function that rejects all invocations while an 
+# instance of the function is still running. The mutex can be 
+# cleared with a predefined timeout. The wrapped function is
+# required to return a `$.Deferred` at all times.
 _.mutexDeferred = (func, timeout = 20000) ->
 
   deferred = null
@@ -152,20 +137,26 @@ _.mutexDeferred = (func, timeout = 20000) ->
 
     unless deferred
       
-      deferred = func.apply(this, args)
-      setTimeout((-> deferred = null), timeout) unless timeout < 0
+      deferred = _deferred = func.apply(this, args)
+      unless timeout < 0
+        setTimeout((-> 
+          deferred = null if deferred == _deferred
+        ), timeout) 
       deferred.always -> deferred = null
       deferred
 
     else
       $.Deferred().reject("mutex").promise()
 
+# Removes the first occurrence of given element from an array.
 _.removeElement = (array, element) ->
   if (index = array.indexOf(element)) != -1
     array.splice(index, 1)
 
-
+# Works like `$.when`. However, there is a notification when one
+# of the deferreds completes.
 $.whenWithProgress = (args...) ->
+  sliceDeferred = [].slice
   length = args.length
   pValues = new Array( length )
   firstParam = args[0]
@@ -182,6 +173,7 @@ $.whenWithProgress = (args...) ->
       args[ i ] = if arguments.length > 1 then sliceDeferred.call( arguments, 0 ) else value
       if !( --count ) 
         deferred.resolveWith( deferred, args )
+      # This is new
       else
         deferred.notifyWith( deferred, args )
 
@@ -255,6 +247,10 @@ class SimpleWorkerPool
     deferred = $.Deferred()
     @queue.push { data, deferred }
 
+# `SimpleWorker` is a wrapper around the WebWorker API. First you
+# initialize it providing url of the javascript worker code. Afterwards
+# you can request work using `send` and wait for the result using the
+# returned deferred.
 class SimpleWorker
 
   constructor : (url) ->
@@ -263,6 +259,7 @@ class SimpleWorker
     @worker.onerror = (err) -> 
       console?.error(err)
   
+  # Returns a `$.Deferred` object representing the completion state.
   send : (data) ->  
     
     deferred = $.Deferred()
@@ -282,6 +279,8 @@ class SimpleWorker
     @worker.postMessage(data)
 
     deferred.promise()
+
+
 
 class SimpleArrayBufferSocket
   
@@ -390,7 +389,15 @@ SimpleArrayBufferSocket.WebSocket = if _window.MozWebSocket then _window.MozWebS
 
 
 
+
+# Just a proof of concept. Don't use this.
+# It inlines one function within another for performance reasons.
+# Because it works at runtime method decompilation is required. Keep
+# in mind that this isn't standardized, thus, generally a bad idea
+# to use. It also uses eval. So its really bad. 
 fastCall = (replacements, target, loopMode) ->
+
+  console.warn "Using fastCall can result in undefined behavior."
 
   targetBody = target.toString()
   targetBody = targetBody.substring(targetBody.indexOf("{") + 1, targetBody.lastIndexOf("}"))

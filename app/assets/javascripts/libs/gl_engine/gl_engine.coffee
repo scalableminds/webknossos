@@ -24,8 +24,6 @@ class GL_engine
 
 	shaderProgram : null
 
-	attn = [0.01, 0.0, 0.003]
-
 ############################################################################
 	#public Properties
 	framerate : 0

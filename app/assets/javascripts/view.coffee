@@ -43,7 +43,6 @@ class _View
 		perspectiveMatrix = cam.getMovedNonPersistent camPos
 
 		engine.background [0.9, 0.9 ,0.9 ,1]
-		engine.pointSize 100
 		####
 		### ACHTUNG VON 60 AUF 90 GEÄNDERT! ###
 		#####
@@ -80,13 +79,13 @@ class _View
 
 		# renders all geometry objects
 		# render the Triangleplane first
-		drawTriangleplane() if triangleplane
+		if triangleplane
+			drawTriangleplane() 
 
 		# render Meshes
-		engine.useProgram meshProgramObject
-
 		# coordinate axis mini-map
 		if meshes["coordinateAxes"]
+			engine.useProgram meshProgramObject
 			engine.pushMatrix()
 			engine.translate 200,100,0
 			# console.log V3.angle [0,0,1], cam.getDir()
@@ -105,6 +104,7 @@ class _View
 			engine.popMatrix()
 
 		if meshes["crosshair"]
+			engine.useProgram meshProgramObject
 			engine.render meshes["crosshair"]
 
 		# OUTPUT Framerate
@@ -146,12 +146,7 @@ class _View
 
 		engine.useProgram trianglesplaneProgramObject 
 		engine.render g
-
-		#used for total Vertex counting
-		return g.vertices.length
 			
-				
-
 	writeFramerate = (framerate = 0, position = 0) ->	
 		document.getElementById('status')
 			.innerHTML = "#{framerate} FPS <br/> #{position}<br />" 

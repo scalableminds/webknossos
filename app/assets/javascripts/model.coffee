@@ -181,6 +181,7 @@ Model.Binary =
 			upperBound1 = (cubeOffset[1] + cubeSize[1]) << 6
 			upperBound2 = (cubeOffset[2] + cubeSize[2]) << 6
 
+			console.time("bulkCollect")
 			InterpolationCollector.bulkCollect(
 				vertices,
 				bufferFront, bufferBack, bufferDelta, 
@@ -189,6 +190,7 @@ Model.Binary =
 				upperBound0, upperBound1, upperBound2,
 				size0, size01
 			)
+			console.timeEnd("bulkCollect")
 			
 		{ bufferFront, bufferBack, bufferDelta }
 

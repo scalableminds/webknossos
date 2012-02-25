@@ -1,4 +1,4 @@
-request = (options, callback) ->
+request = (options) ->
 
   deferred = $.Deferred()
 
@@ -32,8 +32,4 @@ request = (options, callback) ->
 
   xhr.send(options.data)
 
-  if callback
-    deferred.done (data) -> callback(null, data)
-    deferred.fail (err) -> callback(err)
-  
   deferred.promise()

@@ -47,18 +47,22 @@ nextPointMacro = (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, si
 
 pointMacro = (output, xD, yD, zD) ->
   nextPointMacro(output, xD, yD, zD, cube, bucketIndex0, pointIndex0, size0, size01)
-  return buffer0[j4] = output if output <= 0
+  if output <= 0
+    buffer0[j4] = output
+    continue
 
-collectMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
+collectLoopMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
+
+  output1 = output2 = output3 = output4 = output5 = output6 = output7 = 0
 
   if x < 0 or y < 0 or z < 0
     buffer0[j4] = -2
-    return
+    continue
   
   # Bound checking is necessary.
   if x < ll0 or y < ll1 or z < ll2 or x > ur0 or y > ur1 or z > ur2
     buffer0[j4] = -1 
-    return
+    continue
 
   # Bitwise operations are faster than javascript's native rounding functions.
   x0 = x >> 0; xd = x - x0     
@@ -138,7 +142,6 @@ collectMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, ll1, 
         pointMacro(output6, false, true, true)
         pointMacro(output7, true, true, true)
 
-
         bufferDelta[j3]     = xd
         bufferDelta[j3 + 1] = yd
         bufferDelta[j3 + 2] = zd
@@ -147,11 +150,11 @@ collectMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, ll1, 
   buffer0[j4 + 1] = output1 || 0
   buffer0[j4 + 2] = output2 || 0
   buffer0[j4 + 3] = output3 || 0
-  buffer1[j4]      = output4 || 0
-  buffer1[j4 + 1]  = output5 || 0
-  buffer1[j4 + 2]  = output6 || 0
-  buffer1[j4 + 3]  = output7 || 0
-  return 
+  buffer1[j4]     = output4 || 0
+  buffer1[j4 + 1] = output5 || 0
+  buffer1[j4 + 2] = output6 || 0
+  buffer1[j4 + 3] = output7 || 0
+
 
 InterpolationCollector =
   # Finding points adjacent to the already found one.
@@ -334,33 +337,34 @@ InterpolationCollector =
     buffer0[j4 + 1] = output1 || 0
     buffer0[j4 + 2] = output2 || 0
     buffer0[j4 + 3] = output3 || 0
-    buffer1[j4]      = output4 || 0
-    buffer1[j4 + 1]  = output5 || 0
-    buffer1[j4 + 2]  = output6 || 0
-    buffer1[j4 + 3]  = output7 || 0
+    buffer1[j4]     = output4 || 0
+    buffer1[j4 + 1] = output5 || 0
+    buffer1[j4 + 2] = output6 || 0
+    buffer1[j4 + 3] = output7 || 0
 
-  bulkCollect : (vertices, bufferFront, bufferBack, bufferDelta, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
+  bulkCollect : (vertices, buffer0, buffer1, bufferDelta, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
 
-    i = j3 = j4 = 0
+    i = 0
+    j4 = -4
+    j3 = -3
     length = vertices.length
 
     while i < length
 
-      x = vertices[i++]
-      y = vertices[i++]
-      z = vertices[i++]
+      x   = vertices[i++]
+      y   = vertices[i++]
+      z   = vertices[i++]
+      j3 += 3
+      j4 += 4
 
-      collectMacro(
+      collectLoopMacro(
         x, y, z, 
-        bufferFront, bufferBack, bufferDelta, 
+        buffer0, buffer1, bufferDelta, 
         j4, j3, 
         cube, 
         ll0, ll1, ll2,
         ur0, ur1, ur2,
         size0, size01)
-
-      j3 += 3
-      j4 += 4
       
     return
 

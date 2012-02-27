@@ -81,4 +81,17 @@ object ExtendedDataTypes {
       result
     }
   }
+  
+  implicit def Array2ExtendedArray[A]( a: Array[A] ) =
+    new ExtendedArray( a )
+  
+  class ExtendedArray[A]( l: Array[A]) {
+    def dynamicSliding( size: Int)( f: List[A] => Int) {
+     val iterator = l.sliding(size, 1)
+     while( iterator.hasNext ){
+       val step = f(iterator.next().toList)
+       iterator.drop(step)
+     }
+    }
+  }
 }

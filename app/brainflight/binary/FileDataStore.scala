@@ -58,7 +58,7 @@ object FileDataStore extends DataStore{
           binData
         } catch {
           case e: FileNotFoundException =>
-            System.err.println(
+            Logger.warn(
               "Block %sx%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw not found!".
                 format(dataPath, x, y, z, binaryDataID, x, y, z))
             // if the file block isn't found, a nullBlock is associated with 

@@ -38,7 +38,7 @@ object BinaryData extends Controller with Secured {
 
   def calculateBinaryData( model: DataModel, matrix: Array[Float], clientCoordinates: Array[Int] = Array() ) = {
     if ( matrix.length != RotationMatrixSize3D ) {
-      println( "Size: " + matrix.length )
+      Logger.debug( "Size: " + matrix.length )
       Array[Byte]()
     } else {
       val figure = Figure( model.polygons.map( _.transformAffine( matrix ) ) )
@@ -47,7 +47,7 @@ object BinaryData extends Controller with Secured {
       Akka.future {
         def f( x: Array[Int], y: Seq[Tuple3[Int, Int, Int]] ) {
           if ( x.length / 3 != y.length )
-            System.err.println( "Size doesn't match! %d (S) != %d (C)".format( y.length, x.length / 3 ) )
+            Logger.warn( "Size doesn't match! %d (S) != %d (C)".format( y.length, x.length / 3 ) )
           val it = x.iterator
           var failed = 0
           y.zipWithIndex.foreach {
@@ -56,7 +56,7 @@ object BinaryData extends Controller with Secured {
                 val client = ( it.next, it.next, it.next )
                 if ( e != client && failed < 20 ) {
                   failed += 1
-                  System.err.println( "ELEMTNS don't match: %s (S) <-> %s (C)".format( e, client ) )
+                  Logger.warn( "ELEMTNS don't match: %s (S) <-> %s (C)".format( e, client ) )
                 }
               }
             }

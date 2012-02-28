@@ -30,11 +30,13 @@ case class TrackedRoute(
   def points = Array[Vector3I]( first ) ++ TrackedRoute.byteCodesToRoute( first, binaryPointTree )
 
   def add( newPoints: List[Vector3I] ) = {
-    val modifiedRoute = this.copy(
-      binaryPointTree = binaryPointTree ++ TrackedRoute.routeToByteCodes( last, newPoints ),
-      last = newPoints.last )
-    TrackedRoute.save( modifiedRoute )
-    modifiedRoute
+    if ( newPoints.size > 0 ) {
+      val modifiedRoute = this.copy(
+        binaryPointTree = binaryPointTree ++ TrackedRoute.routeToByteCodes( last, newPoints ),
+        last = newPoints.last )
+      TrackedRoute.save( modifiedRoute )
+      modifiedRoute
+    }
   }
 
   def addBranch() = {

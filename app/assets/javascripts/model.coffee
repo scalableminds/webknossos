@@ -784,7 +784,7 @@ Model.Route =
 		
 		@initialize().done =>
 			
-			transportBuffer = @buffer
+			transportBuffer = new Float32Array(@buffer.subarray(0, @index))
 			@createBuffer()
 
 			request(

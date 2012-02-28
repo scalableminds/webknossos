@@ -13,7 +13,7 @@ importScripts(
 	"libs/mjs.js", 
 	"libs/polyhedron.js", 
 	"core_ext.js", 
-	"binary_request.js"
+	"libs/request.js"
 )
 
 # Variables (global)

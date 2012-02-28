@@ -13,8 +13,10 @@ $ ->
   Modernizr.load 
     load: [
       "/assets/javascripts/libs/mjs.js"
-      "/assets/javascripts/binary_request.js",
+      "/assets/javascripts/libs/request.js",
       "/assets/javascripts/core_ext.js",
+      "/assets/javascripts/libs/simple_worker.js",
+      "/assets/javascripts/libs/simple_array_buffer_socket.js",
       "/assets/javascripts/interpolation.js",
       "/assets/javascripts/libs/gl_engine/geometry.js",
       "/assets/javascripts/libs/gl_engine/geometry_trianglesplane.js",

@@ -117,12 +117,8 @@ class _View
 		#console.log "cam: " + cam.toString()
 
 		transMatrix = cam.getMatrix()
-		#console.log "normal: " + g.normalVertices[0] + " " + g.normalVertices[1] + " " + g.normalVertices[2] + 
-		#												g.normalVertices[128*128*3-3] + " " + g.normalVertices[128*128*3-2] + " " + g.normalVertices[128*128*3-1]
 		newVertices = M4x4.transformPointsAffine transMatrix, g.normalVertices
-		#console.log "new: " + newVertices[0] + " " + newVertices[1] + " " + newVertices[2] + 
-		#												newVertices[128*128*3-3] + " " + newVertices[128*128*3-2] + " " + newVertices[128*128*3-1]
-
+		
 		#hsa to be removed later
 		engine.deleteSingleBuffer g.vertices.VBO
 		g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
@@ -134,14 +130,14 @@ class _View
 		Model.Route.put cam.getPos(), null
 
 		#get colors for new coords from Model
-		Model.Binary.get(newVertices).done ({ bufferFront, bufferBack, bufferDelta }) ->
+		Model.Binary.get(newVertices).done ({ buffer0, buffer1, bufferDelta }) ->
 			
 			engine.deleteSingleBuffer g.interpolationFront.VBO
 			engine.deleteSingleBuffer g.interpolationBack.VBO
 			engine.deleteSingleBuffer g.interpolationOffset.VBO
 			
-			g.setInterpolationFront  (View.createArrayBufferObject bufferFront), bufferFront.length
-			g.setInterpolationBack   (View.createArrayBufferObject bufferBack),  bufferBack.length
+			g.setInterpolationFront  (View.createArrayBufferObject buffer0), buffer0.length
+			g.setInterpolationBack   (View.createArrayBufferObject buffer1), buffer1.length
 			g.setInterpolationOffset (View.createArrayBufferObject bufferDelta), bufferDelta.length
 
 		engine.useProgram trianglesplaneProgramObject 

@@ -1,10 +1,31 @@
 # This is the model. It takes care of the data including the 
 # communication with the server.
 #
-# All public operations are **asynchronous**. Give us a **callback**
-# and we'll (ahem) call you back. The first parameter of the callback 
+# All public operations are **asynchronous**. We provide a promise
+# on which you can react 
 # is always reserved for any occured error. So make sure to check
 # whether every thing went right.
+ 
+
+# Macros
+bucketIndexMacro = (x, y, z) ->
+
+	((x >> 6) - cubeOffset[0]) + 
+	((y >> 6) - cubeOffset[1]) * cubeSize[0] + 
+	((z >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+
+bucketIndex2Macro = (x, y, z) ->
+
+	((x >> 6) - cubeOffset0) + 
+	((y >> 6) - cubeOffset1) * cubeSize0 + 
+	((z >> 6) - cubeOffset2) * cubeSize01
+
+pointIndexMacro = (x, y, z) ->
+	
+	(x & 63) +
+	((y & 63) << 6) +
+	((z & 63) << 12)
+
 
 Model ?= {}
 
@@ -87,37 +108,28 @@ Model ?= {}
 #
 Model.Binary =
 	
-	# This method gives you the vertices for a chunk of data (mostly a cube). 
-	# You need to provide the position and direction of the cube you're looking 
-	# for.
+	# This method gives you the vertices for a chunk of data (i.e. a cube). 
+	# You need to provide the position and rotation of the cube you're looking 
+	# for in form of a 4x4 transformation matrix.
 	#
 	# Imagine you want to load a cube which sits arbitrarily in 3d space i.e. 
-	# it has an arbitrary position and arbitrary orientation (direction). 
-	# Because we have a template cube full of vertices at a standard position 
-	# `[0,0,0]` with a standard orientation `[0,1,0]` it is just a matter of
-	# applying a transformation matrix. Specifically, we rotate and translate
-	# the template. Big ups to [Vladimir Vukićević](http://vlad1.com/) for
-	# writing the mjs-js (matrix javascripat) library.
+	# it has an arbitrary position and arbitrary rotation. Because we have a 
+	# template polyhedron it is just a matter of applying the transformation 
+	# matrix and rasterizing the polyhedron. Big ups to 
+	# [Vladimir Vukićević](http://vlad1.com/) for writing the mjs-js (matrix 
+	# javascripat) library.
 	#
 	# Parameters:
 	#
-	# *   `position` is a 3-element array representing the center point of the 
-	# front of the cube. 
-	# *   `direction` is also 3-element array representing the vector of the axis
-	# spiking through the center of front and back
+	# *   `matrix` is a 16-element array representing the 4x4 transformation matrix
 	# 
-	# Callback Parameters:
+	#
+	# Promise Parameters:
 	#
 	# *   `vertices` is a `Float32Array` with the transformed values. Every three
 	# elements represent the coordinates of a vertex.
 	#
-	# Example: `Model.Binary.vertices([23, 42, 12], [1,2,3], (err, vertices) -> ...)`
 	#
-	calcVerticesWorker : new SimpleWorker("/assets/javascripts/pullVerticesWorker.js")
-
-	calcVertices : (matrix) ->
-
-		@calcVerticesWorker.send { matrix }
 
 
 	# This method allows you to query the data structure. Give us an array of
@@ -147,11 +159,11 @@ Model.Binary =
 	# neighbor-interpolation, which isn't pretty and kind of wavey. Every three
 	# elements (x,y,z) represent one vertex.
 	#
-	# Callback Parameters:
+	# Promise Parameters:
 	# 
-	# *   `bufferFront` is a `Float32Array` with the first 4 color values of
+	# *   `buffer0` is a `Float32Array` with the first 4 color values of
 	# each points. The first value would contain any error codes.
-	# *   `bufferBack` is a `Float32Array` with the second 4 color values of
+	# *   `buffer1` is a `Float32Array` with the second 4 color values of
 	# each points.
 	# *   `bufferDelta` is a `Float32Array` with the delta values.
 	#
@@ -161,44 +173,30 @@ Model.Binary =
 			.resolve(@getSync(vertices))
 			.promise()
 
-
+	# A synchronized implementation of `get`.
 	getSync : (vertices) ->
 
-		bufferFront = new Float32Array(vertices.length / 3 << 2)
-		bufferBack  = new Float32Array(vertices.length / 3 << 2)
+		buffer0     = new Float32Array(vertices.length / 3 << 2)
+		buffer1     = new Float32Array(vertices.length / 3 << 2)
 		bufferDelta = new Float32Array(vertices.length)
 		
 		if (cube = @cube)
 			
 			{ cubeSize, cubeOffset } = @
-			size0  = cubeSize[0]
-			size01 = cubeSize[0] * cubeSize[1]
-			
-			lowerBound0 = cubeOffset[0] << 6
-			lowerBound1 = cubeOffset[1] << 6
-			lowerBound2 = cubeOffset[2] << 6
-			upperBound0 = (cubeOffset[0] + cubeSize[0]) << 6
-			upperBound1 = (cubeOffset[1] + cubeSize[1]) << 6
-			upperBound2 = (cubeOffset[2] + cubeSize[2]) << 6
 
-			console.time("bulkCollect")
 			InterpolationCollector.bulkCollect(
 				vertices,
-				bufferFront, bufferBack, bufferDelta, 
-				cube, 
-				lowerBound0, lowerBound1, lowerBound2,
-				upperBound0, upperBound1, upperBound2,
-				size0, size01
+				buffer0, buffer1, bufferDelta, 
+				cube, cubeSize, cubeOffset
 			)
-			console.timeEnd("bulkCollect")
 			
-		{ bufferFront, bufferBack, bufferDelta }
+		{ buffer0, buffer1, bufferDelta }
 
 
 	PRELOAD_TEST_TOLERANCE : 0.9
 	PRELOAD_TEST_RADIUS : 37
 	PING_THROTTLE_TIME : 3000
-	COMPARE_TOLERANCE_ANGLE_COSINE : .99
+	COMPARE_TOLERANCE_ANGLE_COSINE : .995
 	COMPARE_TOLERANCE_TRANSLATION : 30
 
 	loadingMatrices : []
@@ -284,7 +282,9 @@ Model.Binary =
 
 	preloadTest : (matrix, width, sparse) ->
 
-		return 1 if _.any(@loadingMatrices, (a) => @compareMatrix(matrix, a))
+		for loadingMatrix in @loadingMatrices
+			return 1 if @compareMatrix(matrix, loadingMatrix)
+		
 
 		vertices = M4x4.transformPointsAffine(matrix, @preloadTestVertices(width, sparse))
 
@@ -324,7 +324,8 @@ Model.Binary =
 				# Maybe we need to expand our data structure.
 				@extendPoints(minmax...)
 				
-				console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) if vertices.length != colors.length * 3
+				if vertices.length != colors.length * 3
+					console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) 
 
 				deferred = $.Deferred()
 
@@ -356,8 +357,8 @@ Model.Binary =
 
 	
 	loadColorsSocket : new SimpleArrayBufferSocket(
-		url : "ws://#{document.location.host}/binary/ws/cube"
-		fallbackUrl : "/binary/data/cube"
+		defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws/cube")
+		fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/data/cube")
 		requestBufferType : Float32Array
 		responseBufferType : Uint8Array
 	)
@@ -365,6 +366,12 @@ Model.Binary =
 	loadColors : (matrix) ->
 		
 		@loadColorsSocket.send(matrix)
+
+	calcVerticesWorker : new SimpleWorker("/assets/javascripts/pullVerticesWorker.js")
+
+	calcVertices : (matrix) ->
+
+		@calcVerticesWorker.send { matrix }
 			
 	
 	# Now comes the implementation of our internal data structure.
@@ -378,41 +385,34 @@ Model.Binary =
 	cubeSize : null
 	cubeOffset : null
 
+	BUCKET_WIDTH : 1 << 6
+
 	# Retuns the index of the bucket (in the cuboid) which holds the
 	# point you're looking for.
 	bucketIndex : (x, y, z) ->
 		
 		{ cubeOffset, cubeSize } = @
 
-		# `(x / 64) - offset.x + 
-		# ((y / 64) - offset.y) * size.x + 
-		# ((z / 64) - offset.z) * size.x * size.y`
-		((x >> 6) - cubeOffset[0]) + 
-		((y >> 6) - cubeOffset[1]) * cubeSize[0] + 
-		((z >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+		bucketIndexMacro(x, y, z)
 	
 	# Returns the index of the point (in the bucket) you're looking for.
 	pointIndex : (x, y, z) ->
 		
-		# `x % 64 + (y % 64) * 64 + (z % 64) * 64^2
-		(x & 63) +
-		((y & 63) << 6) +
-		((z & 63) << 12)
+		pointIndexMacro(x, y, z)
 
 	# Want to add data? Make sure the cuboid is big enough.
 	# This one is for passing real point coordinates.
 	extendPoints : (x_min, y_min, z_min, x_max, y_max, z_max) ->
 		
 		@extendCube(
-			x_min >> 6, # x_min / 64
+			x_min >> 6,
 			y_min >> 6,
 			z_min >> 6,
 			x_max >> 6,
 			y_max >> 6,
 			z_max >> 6
 		)
-		throw "noooo" if @bucketIndex(x_max, y_max, z_max) > @cube.length
-	
+		
 	# And this one is for passing bucket coordinates.
 	extendCube : (x0, y0, z0, x1, y1, z1) ->
 
@@ -427,7 +427,6 @@ Model.Binary =
 			upperBound[1] = oldCubeOffset[1] + oldCubeSize[1]
 			upperBound[2] = oldCubeOffset[2] + oldCubeSize[2]
 			
-
 			newCubeOffset = new Uint32Array(3)
 			newCubeOffset[0] = Math.min(x0, x1, oldCubeOffset[0])
 			newCubeOffset[1] = Math.min(y0, y1, oldCubeOffset[1])
@@ -482,12 +481,12 @@ Model.Binary =
 
 		else
 			# Before, there wasn't any cube.
-			newCubeOffset = new Uint16Array(3)
+			newCubeOffset = new Uint32Array(3)
 			newCubeOffset[0] = Math.min(x0, x1)
 			newCubeOffset[1] = Math.min(y0, y1)
 			newCubeOffset[2] = Math.min(z0, z1)
 			
-			newCubeSize = new Uint16Array(3)
+			newCubeSize = new Uint32Array(3)
 			newCubeSize[0] = Math.max(x0, x1) - newCubeOffset[0] + 1
 			newCubeSize[1] = Math.max(y0, y1) - newCubeOffset[1] + 1
 			newCubeSize[2] = Math.max(z0, z1) - newCubeOffset[2] + 1
@@ -506,9 +505,13 @@ Model.Binary =
 		
 		unless (cube = @cube)
 			return 0
+
+		{ cubeOffset, cubeSize } = @
+
+		bucket = cube[bucketIndexMacro(x, y, z)]
 		
-		if (bucket = cube[@bucketIndex(x, y, z)])
-			bucket[@pointIndex(x, y, z)]
+		if bucket
+			bucket[pointIndexMacro(x, y, z)]
 		else
 			0
 	
@@ -529,14 +532,11 @@ Model.Binary =
 				y = vertices[j++]
 				z = vertices[j++]
 				
-				bucketIndex = 
-					((x >> 6) - cubeOffset0) + 
-					((y >> 6) - cubeOffset1) * cubeSize0 + 
-					((z >> 6) - cubeOffset2) * cubeSize01
+				bucketIndex = bucketIndex2Macro(x, y, z)
 				
 				colors[i++] =
 					if bucket = cube[bucketIndex]
-						bucket[@pointIndex(x, y, z)]
+						bucket[pointIndexMacro(x, y, z)]
 					else 
 						0
 
@@ -554,13 +554,15 @@ Model.Binary =
 
 		throw "cube fault" unless cube?
 
-		bucketIndex = @bucketIndex(x, y, z)
-		bucket      = _ube[bucketIndex]
+		{ cubeOffset, cubeSize } = @
+
+		bucketIndex = bucketIndexMacro(x, y, z)
+		bucket      = cube[bucketIndex]
 
 		if 0 <= bucketIndex < cube.length
 			unless bucket?
 				bucket = cube[bucketIndex] = new Float32Array(1 << 18)
-			bucket[@pointIndex(x, y, z)] = color
+			bucket[pointIndexMacro(x, y, z)] = color
 		else
 			# Please handle cuboid expansion explicitly.
 			throw "cube fault"
@@ -575,7 +577,7 @@ Model.Binary =
 		cubeSize01  = cubeSize[0] * cubeSize[1]
 
 
-		end = if length? and offset + length < colors.length
+		endIndex = if length? and offset + length < colors.length
 			offset + length
 		else
 			colors.length
@@ -584,14 +586,14 @@ Model.Binary =
 		y0 = vertices[offset + 1]
 		z0 = vertices[offset + 2]
 		
-		bucketIndex = @bucketIndex(x0, y0, z0)
-		pointIndex  = @pointIndex(x0, y0, z0)
+		bucketIndex = bucketIndex2Macro(x0, y0, z0)
+		pointIndex  = pointIndexMacro(x0, y0, z0)
 		bucket      = cube[bucketIndex]
 
 		i = offset
 		j = offset * 3
 
-		while i < end
+		while i < endIndex
 
 			x = vertices[j]
 			y = vertices[j + 1]
@@ -606,13 +608,8 @@ Model.Binary =
 				else
 					pointIndex += 4096
 			else 
-				# Fastcall
-				bucketIndex = 
-					((x >> 6) - cubeOffset0) + 
-					((y >> 6) - cubeOffset1) * cubeSize0 + 
-					((z >> 6) - cubeOffset2) * cubeSize01
-				
-				pointIndex  = @pointIndex(x, y, z)
+				bucketIndex = bucketIndex2Macro(x, y, z)
+				pointIndex  = pointIndexMacro(x, y, z)
 				bucket      = cube[bucketIndex]
 			
 			if 0 <= bucketIndex < cube.length
@@ -736,15 +733,17 @@ Model.Shader =
 
 Model.Shader.get = _.memoize(Model.Shader.get)
 
+
 # This takes care of the route. 
 Model.Route =
 	
-	dirtyBuffer : []
-	route : null
-	id : null
-	initializeDeferred : null
+	# Constants
+	BUFFER_SIZE : 262144 # 1024 * 1204 / 4
+	
+	# Variables
+	branchStack : []
 
-	# Returns a `position` and `direction` to start your work.
+	# Initializes this module and returns a matrix to start your work.
 	initialize : ->
 
 		unless @initializeDeferred
@@ -754,64 +753,103 @@ Model.Route =
 			@initializeDeferred.fail =>
 				@initializeDeferred = null
 
-			request(url : '/route/initialize').done( 
+			request(url : '/route/initialize').then( 
+				
 				(data) =>
 					try
 						data = JSON.parse data
-
-						@route          = [ M4x4.extractTranslation(data.matrix) ]
-						@id             = data.id
+						@id  = data.id
+						@createBuffer()
 						
 						@initializeDeferred.resolve(data.matrix)
 					catch ex
 						@initializeDeferred.reject(ex)
+
+				(err) =>
+					@initializeDeferred.reject(err)
+
 			)
 		
 		@initializeDeferred.promise()
-	
-	# Pulls a route from the server.
-	pull : ->
-		request	url : "/route/#{@id}", (err, data) =>
-			unless err
-				@route = JSON.parse data
 
-	
-	# Pushes th buffered route to the server. Pushing happens at most 
+	# Pushes the buffered route to the server. Pushing happens at most 
 	# every 30 seconds.
 	push : ->
-		@push = _.throttle2(_.mutexDeferred(@_push, -1), 30000)
+		@push = _.throttle2(_.mutexDeferred(@pushImpl, -1), 30000)
 		@push()
 
-	_push : ->
+	pushImpl : ->
 
 		deferred = $.Deferred()
 		
-		@initializeDeferred.done =>
+		@initialize().done =>
 			
-			transportBuffer = @dirtyBuffer
-			@dirtyBuffer = []
+			transportBuffer = @buffer
+			@createBuffer()
 
 			request(
-				url : "/route/#{@id}"
-				contentType : 'application/json'
+				url    : "/route/#{@id}"
 				method : 'POST'
-				data : transportBuffer
+				data   : transportBuffer
 			).fail( =>
-				@dirtyBuffer = transportBuffer.concat(@dirtyBuffer)
+				
+				oldBuffer = @buffer
+				oldIndex  = @index
+				@createBuffer()
+				@buffer.set(oldBuffer.subarray(0, oldIndex))
+				@buffer.set(transportBuffer, oldIndex)
+				@index = oldIndex + transportBuffer.length
+
 				@push()
+
 			).always(-> deferred.resolve())
 		
 		deferred.promise()
 
-	
-	# Add a point to the buffer. Just keep adding them.
-	put : (position, callback) ->
+	createBuffer : ->
+		@index = 0
+		@buffer = new Float32Array(@BUFFER_SIZE)
+
+	addToBuffer : (typeNumber, value) ->
+
+		@buffer[@index++] = typeNumber
 		
-		@initializeDeferred.done =>
+		if value
+			switch typeNumber
+				when 0
+					@buffer.set(value.subarray(0, 3), @index)
+					@index += 3
+				when 1
+					@buffer.set(value.subarray(0, 16), @index)
+					@index += 16
+
+		@push()
+
+	putBranch : (matrix) ->
+
+		@initialize().done =>
 			
-			position = [Math.round(position[0]), Math.round(position[1]), Math.round(position[2])]
-			_lastPosition = _.last(@route)
-			unless _lastPosition[0] == position[0] and _lastPosition[1] == position[1] and _lastPosition[2] == position[2]
-				@route.push position
-				@dirtyBuffer.push position
-				@push()
+			@addToBuffer(1, matrix)
+			@branchStack.push(matrix)
+
+	popBranch : ->
+
+		@initialize().done =>
+
+			@addToBuffer(2)
+			@branchStack.pop()
+
+	# Add a point to the buffer. Just keep adding them.
+	put : (position) ->
+		
+		@initialize().done =>
+			
+			position = V3.round(position)
+			lastPosition = @lastPosition
+
+			if not lastPosition or 
+			lastPosition[0] != position[0] or 
+			lastPosition[1] != position[1] or 
+			lastPosition[2] != position[2]
+				@lastPosition = position
+				@addToBuffer(0, position)

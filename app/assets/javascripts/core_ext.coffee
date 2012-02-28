@@ -1,4 +1,4 @@
-# Applies a transformation matrix on an array of points.
+# Applies an affine transformation matrix on an array of points.
 M4x4.transformPointsAffine = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
 
   m00 = m[0]
@@ -46,7 +46,7 @@ M4x4.transformPoints = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) 
   r
 
 
-M4x4.inverse = (mat) ->
+M4x4.inverse = (mat, dest = new MJS_FLOAT_ARRAY_TYPE(16)) ->
   # cache matrix values
   a00 = mat[0]
   a01 = mat[1]
@@ -100,8 +100,17 @@ M4x4.inverse = (mat) ->
 
   return dest
 
-M4x4.extractTranslation = (m) ->
-  [m[12], m[13], m[14]]
+M4x4.extractTranslation = (m, r = new MJS_FLOAT_ARRAY_TYPE(3)) ->
+  r[0] = m[12]
+  r[1] = m[13]
+  r[2] = m[14]
+  r
+
+V3.round = (v, r = new MJS_FLOAT_ARRAY_TYPE(3)) ->
+  r[0] = Math.round(v[0])
+  r[1] = Math.round(v[1])
+  r[2] = Math.round(v[2])
+  r
 
 # `_.throttle2` makes a function only be executed once in a given
 # time span -- no matter how often you it. We don't recomment to use 
@@ -194,6 +203,39 @@ $.whenWithProgress = (args...) ->
     deferred.resolveWith( deferred, if length then [ firstParam ] else [] )
   promise
 
+# `SimpleWorker` is a wrapper around the WebWorker API. First you
+# initialize it providing url of the javascript worker code. Afterwards
+# you can request work using `send` and wait for the result using the
+# returned deferred.
+class SimpleWorker
+
+  constructor : (url) ->
+    @worker = new Worker(url)
+
+    @worker.onerror = (err) -> 
+      console?.error(err)
+  
+  # Returns a `$.Deferred` object representing the completion state.
+  send : (data) ->  
+    
+    deferred = $.Deferred()
+
+    workerHandle = data.workerHandle = Math.random()
+
+    workerMessageCallback = (event) =>
+      
+      if (result = event.data).workerHandle == workerHandle
+        @worker.removeEventListener("message", workerMessageCallback, false)
+        if err = result.err
+          deferred.reject(err)
+        else 
+          deferred.resolve(result)
+
+    @worker.addEventListener("message", workerMessageCallback, false)
+    @worker.postMessage(data)
+
+    deferred.promise()
+
 class SimpleWorkerPool
 
   constructor : (@url, @workerLimit = 3) ->
@@ -247,55 +289,61 @@ class SimpleWorkerPool
     deferred = $.Deferred()
     @queue.push { data, deferred }
 
-# `SimpleWorker` is a wrapper around the WebWorker API. First you
-# initialize it providing url of the javascript worker code. Afterwards
-# you can request work using `send` and wait for the result using the
-# returned deferred.
-class SimpleWorker
 
-  constructor : (url) ->
-    @worker = new Worker(url)
-
-    @worker.onerror = (err) -> 
-      console?.error(err)
+class SimpleArrayBufferSocket
   
-  # Returns a `$.Deferred` object representing the completion state.
-  send : (data) ->  
-    
+  fallbackMode : false
+  
+  constructor : (options) ->
+    _.extend(@, options)
+    @sender = @defaultSender
+    @sender.open(@)
+  
+  switchToFallback : ->
+    unless @fallbackMode
+      @sender.close()
+      @fallbackMode = true
+      @sender = @fallbackSender
+      @sender.initialize(@)
+
+  send : (data) ->
+
     deferred = $.Deferred()
 
-    workerHandle = data.workerHandle = Math.random()
+    resolver = (result) ->
+      deferred.resolve(result)
 
-    workerMessageCallback = (event) =>
-      
-      if (result = event.data).workerHandle == workerHandle
-        @worker.removeEventListener("message", workerMessageCallback, false)
-        if err = result.err
-          deferred.reject(err)
-        else 
-          deferred.resolve(result)
-
-    @worker.addEventListener("message", workerMessageCallback, false)
-    @worker.postMessage(data)
+    @sender.send(data)
+      .done(resolver)
+      .fail( =>
+        unless @fallbackMode
+          @switchToFallback()
+          @send(data).done(resolver)
+        else
+          deferred.reject()
+      )
 
     deferred.promise()
 
 
+class SimpleArrayBufferSocket.WebSocket
 
-class SimpleArrayBufferSocket
-  
   OPEN_TIMEOUT : 5000
   MESSAGE_TIMEOUT : 60000
 
-  FallbackMode : false
-   
-  constructor : (options) ->
-    _.extend(@, options)
-    @initializeWebSocket()
-  
-  initializeWebSocket : ->
-    unless @socket
-      socket = @socket = new SimpleArrayBufferSocket.WebSocket(@url)
+  constructor : (@url) ->
+    _window = window ? self
+    @WebSocketImpl = if _window.MozWebSocket then _window.MozWebSocket else _window.WebSocket
+
+
+  open : ({ @responseBufferType, @requestBufferType }) ->
+    @initialize()
+
+  initialize : ->
+
+    unless @socket and @openDeferred
+
+      socket = @socket = new @WebSocketImpl(@url)
       openDeferred = @openDeferred = $.Deferred()
 
       socket.binaryType = 'arraybuffer'
@@ -308,56 +356,26 @@ class SimpleArrayBufferSocket
       socket.onclose = (code, reason) => 
         openDeferred.reject("closed")
         console?.error("socket closed", "#{code}: #{reason}")
-        @switchToXHR()
       
       setTimeout(=> 
-        openDeferred.reject("timeout")
-        if not @socket or @socket.readyState != SimpleArrayBufferSocket.WebSocket.OPEN
-          @switchToXHR()
+        if not @socket or @socket.readyState != @WebSocketImpl.OPEN
+          openDeferred.reject("timeout")
       , @OPEN_TIMEOUT)
     
     @openDeferred.promise()
-  
-  switchToXHR : ->
-    unless SimpleArrayBufferSocket.FallbackMode
-      @socket = null 
-      SimpleArrayBufferSocket.FallbackMode = true
-      console?.log("switching to xhr")
+
+  close : ->
+    if @socket
+      @socket.close()
+      @socket = null
+      @openDeferred = null
 
   send : (data) ->
 
-    deferred = $.Deferred()
-
-    resolver = (result) ->
-      deferred.resolve(result)
-
-    unless SimpleArrayBufferSocket.FallbackMode
-      @sendWithWebSocket(data)
-        .done(resolver)
-        .fail(=>
-          @switchToXHR()
-          @sendWithXHR(data).done(resolver)
-        )
-    else
-      @sendWithXHR(data).done(resolver)
-
-    deferred.promise()
-
-  sendWithWebSocket : (data) ->
+    @initialize().pipe =>
     
-    @initializeWebSocket().pipe =>
-      
       deferred = $.Deferred()
-
-      padding = Math.max(@requestBufferType.BYTES_PER_ELEMENT, Float32Array.BYTES_PER_ELEMENT)
-      
-      transmitBuffer  = new ArrayBuffer(padding + data.byteLength)
-      handleArray     = new Float32Array(transmitBuffer, 0, 1)
-      handleArray[0]  = Math.random()
-      socketHandle    = handleArray[0]
-
-      dataArray = new @requestBufferType(transmitBuffer, padding)
-      dataArray.set(data)
+      { transmitBuffer, socketHandle } = @createPackage(data)
 
       socketCallback = (event) =>
         buffer = event.data
@@ -368,29 +386,65 @@ class SimpleArrayBufferSocket
       
       @socket.addEventListener("message", socketCallback, false)
       @socket.send(transmitBuffer)
-      console?.log("socket-request", transmitBuffer)
     
       setTimeout(( => 
         deferred.reject("timeout")
       ), @MESSAGE_TIMEOUT)
 
       deferred.promise()
-  
-  sendWithXHR : (data) ->
+
+  createPackage : (data) ->
+
+    padding = Math.max(@requestBufferType.BYTES_PER_ELEMENT, Float32Array.BYTES_PER_ELEMENT)
     
+    transmitBuffer  = new ArrayBuffer(padding + data.byteLength)
+    handleArray     = new Float32Array(transmitBuffer, 0, 1)
+    handleArray[0]  = Math.random()
+    socketHandle    = handleArray[0]
+
+    dataArray = new @requestBufferType(transmitBuffer, padding)
+    dataArray.set(data)
+
+    { transmitBuffer, socketHandle }
+
+
+class SimpleArrayBufferSocket.XmlHttpRequest
+
+  constructor : (@url) ->
+
+  open : ({ @responseBufferType, @requestBufferType }) ->
+
+  send : (data) ->
     request(
       data : data.buffer
-      url : @fallbackUrl
+      url : @url
       responseType : 'arraybuffer'
     ).pipe (buffer) => new @responseBufferType(buffer)
 
-_window = window ? self
-SimpleArrayBufferSocket.WebSocket = if _window.MozWebSocket then _window.MozWebSocket else _window.WebSocket
+  close : ->
+
+class Float32ArrayBuilder
+
+  constructor : (initialSize = 1048576) ->
+
+    @buffer = new Float32Array(initialSize)
+    @index = 0 
+
+  push : (value) ->
+    #TODO overflow check
+    @buffer.set(value, @index)
+    @index += value.length
+
+  finish : ->
+
+    result = new Float32Array(@buffer.subarray(0, @index))
 
 
 
 
-# Just a proof of concept. Don't use this.
+
+
+# Just a proof of concept. Don't ever use this.
 # It inlines one function within another for performance reasons.
 # Because it works at runtime method decompilation is required. Keep
 # in mind that this isn't standardized, thus, generally a bad idea

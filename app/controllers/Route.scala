@@ -96,6 +96,7 @@ object Route extends Controller with Secured {
             println("BULLSHIT")     
             0
         }
+        route.add( points.toList )
         Ok
       } ) getOrElse BadRequest( "No open route found or byte array invalid." )
 

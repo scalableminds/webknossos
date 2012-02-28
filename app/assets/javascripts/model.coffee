@@ -790,7 +790,7 @@ Model.Route =
 			request(
 				url    : "/route/#{@id}"
 				method : 'POST'
-				data   : transportBuffer
+				data   : transportBuffer.buffer
 			).fail( =>
 				
 				oldBuffer = @buffer

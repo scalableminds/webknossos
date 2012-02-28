@@ -329,7 +329,7 @@ Model.Binary =
 
 				@bulkSetColor(vertices, colors)
 				_.removeElement(@loadingMatrices, matrix)
-				
+
 				null
 	
 	loadColorsSocket : new SimpleArrayBufferSocket(
@@ -343,7 +343,7 @@ Model.Binary =
 		
 		@loadColorsSocket.send(matrix)
 
-	calcVerticesWorker : new SimpleWorker("/assets/javascripts/pullVerticesWorker.js")
+	calcVerticesWorker : new SimpleWorker("/assets/javascripts/calc_vertices_worker.js")
 
 	calcVertices : (matrix) ->
 

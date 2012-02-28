@@ -319,42 +319,18 @@ Model.Binary =
 		
 		$.when(@loadColors(matrix), @calcVertices(matrix))
 
-			.pipe (colors, { vertices, minmax }) =>
+			.pipe (colors, { vertices, extent }) =>
 
 				# Maybe we need to expand our data structure.
-				@extendPoints(minmax...)
+				@extendPoints(extent)
 				
 				if vertices.length != colors.length * 3
 					console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) 
 
-				deferred = $.Deferred()
-
-				# Then we'll just put the point in to our data structure.
-				i = 0
-
-				# calcChunk = => 
-				# 	_.defer( =>
-				# 		try
-				# 			i = @bulkSetColor(vertices, colors, i, CHUNK_SIZE)
-				# 		catch err
-				# 			console.error minmax
-				# 			throw err
-								
-				# 		if i == colors.length
-				# 			_.removeElement(@loadingMatrices, matrix)
-				# 			deferred.resolve()
-				# 		else
-				# 			calcChunk()
-				# 	)
-					
-				# calcChunk()
-
 				@bulkSetColor(vertices, colors)
 				_.removeElement(@loadingMatrices, matrix)
-				deferred.resolve()
-			
-				deferred.promise()
-
+				
+				null
 	
 	loadColorsSocket : new SimpleArrayBufferSocket(
 		defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws/cube")
@@ -402,15 +378,15 @@ Model.Binary =
 
 	# Want to add data? Make sure the cuboid is big enough.
 	# This one is for passing real point coordinates.
-	extendPoints : (x_min, y_min, z_min, x_max, y_max, z_max) ->
+	extendPoints : ({ min_x, min_y, min_z, max_x, max_y, max_z }) ->
 		
 		@extendCube(
-			x_min >> 6,
-			y_min >> 6,
-			z_min >> 6,
-			x_max >> 6,
-			y_max >> 6,
-			z_max >> 6
+			min_x >> 6,
+			min_y >> 6,
+			min_z >> 6,
+			max_x >> 6,
+			max_y >> 6,
+			max_z >> 6
 		)
 		
 	# And this one is for passing bucket coordinates.

@@ -38,13 +38,13 @@ object BinaryData extends Controller with Secured {
 
   def calculateBinaryData( model: DataModel, matrix: Array[Float], clientCoordinates: Array[Int] = Array() ) = {
     if ( matrix.length != RotationMatrixSize3D ) {
-      Logger.debug( "Size: " + matrix.length )
+      Logger.debug( "Wrong matrix Size: " + matrix.length )
       Array[Byte]()
     } else {
       val figure = Figure( model.polygons.map( _.transformAffine( matrix ) ) )
       val coordinates = figure.calculateInnerPoints()
 
-      Akka.future {
+      /*Akka.future {
         def f( x: Array[Int], y: Seq[Tuple3[Int, Int, Int]] ) {
           if ( x.length / 3 != y.length )
             Logger.warn( "Size doesn't match! %d (S) != %d (C)".format( y.length, x.length / 3 ) )
@@ -63,7 +63,7 @@ object BinaryData extends Controller with Secured {
           }
         }
         f( clientCoordinates, coordinates )
-      }
+      }*/
       // rotate the model and generate the requested data
       coordinates.map( dataStore.load ).toArray
     }

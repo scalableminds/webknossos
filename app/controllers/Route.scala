@@ -62,8 +62,11 @@ object Route extends Controller with Secured {
         if ( route.userId == user._id )
       } yield {
         var points = Vector.empty[Vector3I]
-        println("Route:")
-        buffer.subDivide( 4 ).map( _.reverse.toFloat ).dynamicSliding( 17 ) {
+        
+        
+        val floatBuffer = buffer.subDivide( 4 ).map( _.reverse.toFloat )
+        println("Route: ")
+        floatBuffer.dynamicSliding( windowSize = 17 ) {
           case PointValue :: x :: y :: z :: _ =>
             val v = Vector3I( x.toInt, y.toInt, z.toInt )
             points = points :+ v
@@ -89,8 +92,7 @@ object Route extends Controller with Secured {
             
             0
           case _ =>
-            println("BULLSHIT")
-            
+            println("BULLSHIT")     
             0
         }
         Ok

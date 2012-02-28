@@ -6,60 +6,67 @@ import brainflight.tools.Math._
 import scala.collection.mutable.ListBuffer
 
 object ExtendedDataTypes {
+
   implicit def ByteArray2ExtendedByteArray( b: Array[Byte] ) =
     new ExtendedByteArray( b )
 
   class ExtendedByteArray( b: Array[Byte] ) {
     def toFloat = {
-      if(b != null && b.size == 4)
-    	  ByteBuffer.wrap( b ).getFloat
+      if ( b != null && b.size == 4 )
+        ByteBuffer.wrap( b ).getFloat
       else
-    	  Float.NaN
+        Float.NaN
     }
 
-    def subDivide( subCollectionSize: Int ): Array[Array[Byte]] = {
-      if ( b.size == 0 ) {
+    def subDivide( subCollectionSize: Int ): Array[Array[Byte]] = b.size match {
+      case 0 =>
         new Array( 0 )
-      } else if ( b.length <= subCollectionSize ) {
+      case s if s <= subCollectionSize =>
         Array( b )
-      } else {
+      case _ =>
         val arraySize =
           if ( b.size % subCollectionSize == 0 )
             b.size / subCollectionSize
           else
             b.size / subCollectionSize + 1
 
-        val result = new Array[Array[Byte]]( arraySize )
+        val fragments = new Array[Array[Byte]]( arraySize )
 
         for ( i <- 0 until b.size by subCollectionSize ) {
           val subCollection = b.slice( i, min( i + subCollectionSize, b.size ) )
-          result.update( i / subCollectionSize, subCollection )
+          fragments.update( i / subCollectionSize, subCollection )
         }
-        result
-      }
+        fragments
     }
   }
+
+  // --------------------------------------------------------------------------
+
   implicit def Int2ExtendedInt( i: Int ) =
     new ExtendedInt( i )
 
   class ExtendedInt( i: Int ) {
     def toBinary = {
-      val result = new Array[Byte]( 4 )
-      ByteBuffer.wrap( result ).putInt( i )
-      result
+      val binary = new Array[Byte]( 4 )
+      ByteBuffer.wrap( binary ).putInt( i )
+      binary
     }
   }
+
+  // --------------------------------------------------------------------------
 
   implicit def Float2ExtendedFloat( f: Float ) =
     new ExtendedFloat( f )
 
   class ExtendedFloat( f: Float ) {
     def toBinary = {
-      val result = new Array[Byte]( 4 )
-      ByteBuffer.wrap( result ).putFloat( f )
-      result
+      val binary = new Array[Byte]( 4 )
+      ByteBuffer.wrap( binary ).putFloat( f )
+      binary
     }
   }
+
+  // --------------------------------------------------------------------------
 
   implicit def Dobule2ExtendedDouble( d: Double ) =
     new ExtendedDouble( d )
@@ -76,22 +83,25 @@ object ExtendedDataTypes {
       d <= EPSILON && d >= -EPSILON
 
     def toBinary = {
-      val result = new Array[Byte]( 8 )
-      ByteBuffer.wrap( result ).putDouble( d )
-      result
+      val binary = new Array[Byte]( 8 )
+      ByteBuffer.wrap( binary ).putDouble( d )
+      binary
     }
   }
-  
+
+  // --------------------------------------------------------------------------
+
   implicit def Array2ExtendedArray[A]( a: Array[A] ) =
     new ExtendedArray( a )
-  
-  class ExtendedArray[A]( l: Array[A]) {
-    def dynamicSliding( size: Int)( f: List[A] => Int) {
-     val iterator = l.sliding(size, 1)
-     while( iterator.hasNext ){
-       val step = f(iterator.next().toList)
-       iterator.drop(step)
-     }
+
+  class ExtendedArray[A]( array: Array[A] ) {
+
+    def dynamicSliding( windowSize: Int )( f: List[A] => Int ) {
+      val iterator = array.sliding( windowSize, 1 )
+      while ( iterator.hasNext ) {
+        val steps = f( iterator.next().toList )
+        iterator.drop( steps )
+      }
     }
   }
 }

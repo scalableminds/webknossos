@@ -1,31 +1,24 @@
+# define 
+#   [
+# 		"model/binary"
+# 		"model/shader"
+# 		"model/route"
+# 		"model/mesh"
+# 		"model/trianglesplane"
+# 	]
+# 	({ binary, shader, route, mesh, trianglesplane }) ->
+#   	Model = 
+# 			Binary        : binary
+# 			Shader        : shader
+# 			Mesh          : mesh
+# 			Route         : route
+# 			Triangleplane : trianglesplane
+
 # This is the model. It takes care of the data including the 
 # communication with the server.
 #
-# All public operations are **asynchronous**. We provide a promise
-# on which you can react 
-# is always reserved for any occured error. So make sure to check
-# whether every thing went right.
- 
-
-# Macros
-bucketIndexMacro = (x, y, z) ->
-
-	((x >> 6) - cubeOffset[0]) + 
-	((y >> 6) - cubeOffset[1]) * cubeSize[0] + 
-	((z >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
-
-bucketIndex2Macro = (x, y, z) ->
-
-	((x >> 6) - cubeOffset0) + 
-	((y >> 6) - cubeOffset1) * cubeSize0 + 
-	((z >> 6) - cubeOffset2) * cubeSize01
-
-pointIndexMacro = (x, y, z) ->
-	
-	(x & 63) +
-	((y & 63) << 6) +
-	((z & 63) << 12)
-
+# All public operations are **asynchronous**. We return a promise
+# which you can react on.
 
 Model ?= {}
 
@@ -103,9 +96,38 @@ Model ?= {}
 #     |  |  |  |  |  |  |  |/
 #     +--+--+--+--+--+--+--+
 #
-#
+# define 
+#   [
+#     "interpolation_collector"
+#     "preloader"
+#     "data_store"
+#   ]
+#   ({ interpolation_collector, preloader, data_store }) ->
+#     Binary = { ... }
+#     _.extend(Binary, preloader)
+#     _.extend(Binary, data_store)
+#     Binary
 
-#
+
+# Macros
+bucketIndexMacro = (x, y, z) ->
+
+	((x >> 6) - cubeOffset[0]) + 
+	((y >> 6) - cubeOffset[1]) * cubeSize[0] + 
+	((z >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+
+bucketIndex2Macro = (x, y, z) ->
+
+	((x >> 6) - cubeOffset0) + 
+	((y >> 6) - cubeOffset1) * cubeSize0 + 
+	((z >> 6) - cubeOffset2) * cubeSize01
+
+pointIndexMacro = (x, y, z) ->
+	
+	(x & 63) +
+	((y & 63) << 6) +
+	((z & 63) << 12)
+
 Model.Binary =
 	
 	# This method gives you the vertices for a chunk of data (i.e. a cube). 
@@ -260,9 +282,11 @@ Model.Binary =
 
 		return V3.length(V3.sub(position1, position2, vec1)) < @COMPARE_TOLERANCE_TRANSLATION
 	
+	PRELOAD_STEPBACK : 15
+
 	preload : (matrix, x0, y0, z, width, sparse = 5) ->
 		
-		matrix = M4x4.translate([x0, y0, z - 5], matrix)
+		matrix = M4x4.translate([x0, y0, z - @PRELOAD_STEPBACK - 5], matrix)
 		if @preloadTest(matrix, width, sparse) < @PRELOAD_TEST_TOLERANCE
 			@pull(matrix)
 		else
@@ -277,7 +301,7 @@ Model.Binary =
 		halfWidth = width >> 1
 		for x in [-halfWidth..halfWidth] by sparse
 			for y in [-halfWidth..halfWidth] by sparse
-				vertices.push x, y, 0
+				vertices.push x, y, -@PRELOAD_STEPBACK
 		vertices
 
 	preloadTest : (matrix, width, sparse) ->
@@ -313,8 +337,6 @@ Model.Binary =
 
 	pull : (matrix) ->
 
-		CHUNK_SIZE = 1e5
-
 		@loadingMatrices.push(matrix)
 		
 		$.when(@loadColors(matrix), @calcVertices(matrix))
@@ -322,7 +344,7 @@ Model.Binary =
 			.pipe (colors, { vertices, extent }) =>
 
 				# Maybe we need to expand our data structure.
-				@extendPoints(extent)
+				@extendByExtent(extent)
 				
 				if vertices.length != colors.length * 3
 					console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) 
@@ -378,9 +400,9 @@ Model.Binary =
 
 	# Want to add data? Make sure the cuboid is big enough.
 	# This one is for passing real point coordinates.
-	extendPoints : ({ min_x, min_y, min_z, max_x, max_y, max_z }) ->
+	extendByExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }) ->
 		
-		@extendCube(
+		@extendByBucketExtent(
 			min_x >> 6,
 			min_y >> 6,
 			min_z >> 6,
@@ -390,7 +412,7 @@ Model.Binary =
 		)
 		
 	# And this one is for passing bucket coordinates.
-	extendCube : (x0, y0, z0, x1, y1, z1) ->
+	extendByBucketExtent : (x0, y0, z0, x1, y1, z1) ->
 
 		oldCube       = @cube
 		oldCubeOffset = @cubeOffset
@@ -475,7 +497,7 @@ Model.Binary =
 			@cubeSize   = newCubeSize
 
 
-	# Getting a color value from the data structure.
+	# Returns a color value from the data structure.
 	# Color values range from 1 to 2 -- with black being 0 and white 1.
 	getColor : (x, y, z) ->
 		
@@ -491,6 +513,10 @@ Model.Binary =
 		else
 			0
 	
+	# Returns a set of color values from the data structure specified
+	# by the passed `vertices`.
+	# Unset values (0) are omitted so the indices of the color values
+	# may not match the indices of the the vertices.
 	bulkGetColorUnordered : (vertices) ->
 
 		if cube = @cube
@@ -543,6 +569,14 @@ Model.Binary =
 			# Please handle cuboid expansion explicitly.
 			throw "cube fault"
 	
+	# Stores a set of color values in the data structure.
+	# You need to pass both the `vertices` and `colors`.
+	# Before invoking this method you have to make sure the
+	# data structure is large enough to handle your input
+	# data. Use `extendByExtent`.
+	# Also, you can choose to just have a chunk of the data
+	# stored. Then you'll also need to specify `offset` and
+	# `length`.
 	bulkSetColor : (vertices, colors, offset = 0, length) ->
 		
 		{ cube, cubeOffset, cubeSize } = @
@@ -606,6 +640,8 @@ Model.Binary =
 
 
 		i
+
+# define ["../libs/request"], ({ request }) ->
 
 # This loads and caches meshes.
 Model.Mesh =
@@ -671,8 +707,11 @@ Model.Trianglesplane =
 					currentPoint++
 					currentIndex += 3
 			
-			radius = 100
-			middle = [0, 0, zOffset - radius]
+
+			# Transforming those vertices to become a spherical cap.
+			# http://en.wikipedia.org/wiki/Spherical_cap
+			radius = 140
+			centerVertex = [0, 0, zOffset - radius]
 
 			i = 0
 			vec  = new Float32Array(3)
@@ -682,10 +721,10 @@ Model.Trianglesplane =
 				vec[1] = vertices[i + 1]
 				vec[2] = vertices[i + 2]
 
-				vec2 = V3.sub(vec, middle, vec2)
+				vec2 = V3.sub(vec, centerVertex, vec2)
 				length = V3.length(vec2)
 				vec2 = V3.scale(vec2, radius / length, vec2)
-				V3.add(middle, vec2, vec)
+				V3.add(centerVertex, vec2, vec)
 
 				vertices[i]     = vec[0]
 				vertices[i + 1] = vec[1]

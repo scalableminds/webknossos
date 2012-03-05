@@ -33,3 +33,5 @@ request = (options) ->
   xhr.send(options.data)
 
   deferred.promise()
+
+# define request

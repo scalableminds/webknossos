@@ -4,90 +4,98 @@ stepFront = [0, 0, steps]
 
 class Flycam
 
-	trans = [ 1, 0, 0, 0,  # left
-		0, 1, 0, 0,  # up
-		0, 0, 1, 0,  # direction
-		0, 0, 0, 1] # position
-	# rotMat = undefined
+	matrix : null
 
 	constructor : () ->
-
+		@reset()
 
 	getMatrix : ->
-		M4x4.clone trans
+		M4x4.clone @matrix
 	
 	setMatrix : (matrix) ->
-		trans = matrix
+		@matrix = matrix
 
 	reset : ->
-		trans = [ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]
+		@matrix = M4x4.clone [ 
+			1, 0, 0, 0, 
+			0, 1, 0, 0, 
+			0, 0, 1, 0, 
+			0, 0, 0, 1 
+		]
 
 	move : (p) ->
-		trans = M4x4.translate([ p[0], p[1], p[2] ], trans)
+		@matrix = M4x4.translate([ p[0], p[1], p[2] ], @matrix)
 		
 
 	getMovedNonPersistent : (p) ->
 		@move [ p[0], p[1], p[2] ]
-		returnMat = M4x4.clone trans
+		output = M4x4.clone @matrix
 		@move [ p[0], p[1], -p[2] ]
-		return returnMat
+		output
 
 	yaw : (angle) ->
-		trans = M4x4.rotate(angle, [ 0, 1, 0 ], trans)
+		@matrix = M4x4.rotate(angle, [ 0, 1, 0 ], @matrix)
 
 	yawDistance : (angle) ->
 		@move(stepBack)
-		trans = M4x4.rotate(angle, [ 0, 1, 0 ], trans)
+		@matrix = M4x4.rotate(angle, [ 0, 1, 0 ], @matrix)
 		@move(stepFront)		
 
 	roll : (angle) ->
-		trans = M4x4.rotate(angle, [ 0, 0, 1 ], trans)		
+		@matrix = M4x4.rotate(angle, [ 0, 0, 1 ], @matrix)		
 
 	rollDistance : (angle) ->
 		@move(stepBack)
-		trans = M4x4.rotate(angle, [ 0, 0, 1 ], trans)
+		@matrix = M4x4.rotate(angle, [ 0, 0, 1 ], @matrix)
 		@move(stepFront)
 
 	pitch : (angle) ->
-		trans = M4x4.rotate(angle, [ 1, 0, 0 ], trans)
+		@matrix = M4x4.rotate(angle, [ 1, 0, 0 ], @matrix)
 
 	pitchDistance : (angle) ->
 		@move(stepBack)
-		trans = M4x4.rotate(angle, [ 1, 0, 0 ], trans)
+		@matrix = M4x4.rotate(angle, [ 1, 0, 0 ], @matrix)
 		@move(stepFront)
 
 	rotateOnAxis : (angle, axis) ->
-		trans = M4x4.rotate(angle, axis, trans)	
+		@matrix = M4x4.rotate(angle, axis, @matrix)	
 
 	rotateOnAxisDistance : (angle, axis) ->
 		@move(stepBack)
-		trans = M4x4.rotate(angle, axis, trans)
+		@matrix = M4x4.rotate(angle, axis, @matrix)
 		@move(stepFront)
-		
 
 	toString : ->
-		return "[" + trans[ 0] + ", " + trans[ 1] + ", " + trans[ 2] + ", " + trans[ 3] + ", " +
-							trans[ 4] + ", " + trans[ 5] + ", " + trans[ 6] + ", " + trans[ 7] + ", " +
-							trans[ 8] + ", " + trans[ 9] + ", " + trans[10] + ", " + trans[11] + ", " +
-							trans[12] + ", " + trans[13] + ", " + trans[14] + ", " + trans[15] + "]"
+		matrix = @matrix
+		"[" + matrix[ 0] + ", " + matrix[ 1] + ", " + matrix[ 2] + ", " + matrix[ 3] + ", " +
+		matrix[ 4] + ", " + matrix[ 5] + ", " + matrix[ 6] + ", " + matrix[ 7] + ", " +
+		matrix[ 8] + ", " + matrix[ 9] + ", " + matrix[10] + ", " + matrix[11] + ", " +
+		matrix[12] + ", " + matrix[13] + ", " + matrix[14] + ", " + matrix[15] + "]"
+	
 	getPos : ->
-		[ trans[12], trans[13], trans[14] ]
+		matrix = @matrix
+		[ matrix[12], matrix[13], matrix[14] ]
 
 	setPos : (p) ->
-		trans[12] = p[0]
-		trans[13] = p[1]
-		trans[14] = p[2]
+		matrix = @matrix
+		matrix[12] = p[0]
+		matrix[13] = p[1]
+		matrix[14] = p[2]
 
 	getDir : ->
-		[ trans[8], trans[9], trans[10] ]
+		matrix = @matrix
+		[ matrix[8], matrix[9], matrix[10] ]
 
 	setDir : (p) ->
-		trans[8] = p[0]
-		trans[9] = p[1]
-		trans[10] = p[2]
+		matrix = @matrix
+		matrix[8]  = p[0]
+		matrix[9]  = p[1]
+		matrix[10] = p[2]
 
 	getUp : ->
-		[ trans[4], trans[5], trans[6] ]
+		matrix = @matrix
+		[ matrix[4], matrix[5], matrix[6] ]
 
 	getLeft : ->
-		[ trans[0], trans[1], trans[2] ]
+		matrix = @matrix
+		[ matrix[0], matrix[1], matrix[2] ]

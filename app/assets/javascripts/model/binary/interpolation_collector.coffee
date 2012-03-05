@@ -1,3 +1,5 @@
+# define ->
+
 # This provides interpolation mechanics. It's a lot of code. But it
 # should run fast.
 
@@ -211,3 +213,4 @@ InterpolationCollector =
       
     return
 
+# define InterpolationCollector

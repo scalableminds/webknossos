@@ -1887,3 +1887,6 @@ M4x4.transformLineAffine = function M4x4_transformLineAffine(m, v, r) {
 
     return r;
 };
+
+
+// define({ MJS_FLOAT_ARRAY_TYPE: MJS_FLOAT_ARRAY_TYPE, M4x4: M4x4, V3: V3});

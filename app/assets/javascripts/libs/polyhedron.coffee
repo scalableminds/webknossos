@@ -230,3 +230,5 @@ class Polygon
 			M4x4.transformPointsAffine(matrix, @vertices, new Float64Array(@vertices.length)),
 			true
 		)
+
+# define Polyhedron

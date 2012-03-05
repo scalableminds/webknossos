@@ -1,3 +1,20 @@
+# define
+  # [
+  #   "libs/jquery"
+  #   "libs/underscore"
+  #   "libs/mjs"
+  #   "libs/core_ext"
+  # ]
+  # ($, _) ->
+  #   require "controller", (controller) ->
+  #     $ ->
+          # canvas = document.getElementById("render")
+          # $(canvas).resize( ->
+          #   _canvas = $ canvas
+          #   canvas.width = _canvas.width()
+          #   canvas.height = _canvas.height()
+          # ).resize()
+          # controller.start() 
 $ ->
   canvas = document.getElementById("render")
   $(canvas).resize(->
@@ -5,10 +22,6 @@ $ ->
     canvas.width = _canvas.width()
     canvas.height = _canvas.height()
   ).resize()
-  
-  required_scripts = []
-  require = (src) ->
-    required_scripts.push "/assets/javascript/#{src}"
 
   Modernizr.load 
     load: [
@@ -17,7 +30,7 @@ $ ->
       "/assets/javascripts/core_ext.js",
       "/assets/javascripts/libs/simple_worker.js",
       "/assets/javascripts/libs/simple_array_buffer_socket.js",
-      "/assets/javascripts/interpolation.js",
+      "/assets/javascripts/model/binary/interpolation_collector.js",
       "/assets/javascripts/libs/gl_engine/geometry.js",
       "/assets/javascripts/libs/gl_engine/geometry_trianglesplane.js",
       "/assets/javascripts/libs/gl_engine/geometry_mesh.js",

@@ -31,7 +31,7 @@ class SimpleWorker
 
     deferred.promise()
 
-class SimpleWorkerPool
+class SimpleWorker.Pool
 
   constructor : (@url, @workerLimit = 3) ->
     @queue = []
@@ -83,3 +83,5 @@ class SimpleWorkerPool
 
     deferred = $.Deferred()
     @queue.push { data, deferred }
+
+# define SimpleWorker

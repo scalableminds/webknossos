@@ -130,3 +130,5 @@ class SimpleArrayBufferSocket.XmlHttpRequest
     ).pipe (buffer) => new @responseBufferType(buffer)
 
   close : ->
+
+# define SimpleArrayBufferSocket

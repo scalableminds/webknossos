@@ -22,8 +22,8 @@ object InitialData {
 
   def insert() = {
     if ( RouteOrigin.findAll.isEmpty ) {
-      val matrix = List[Float]( 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 685, 611, 648, 1 )
-      RouteOrigin.insert( RouteOrigin( TransformationMatrix(matrix), 0 ) )
+      val matrix = List[Float]( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2000, 1000, 1000, 1 )
+      RouteOrigin.insert( RouteOrigin( TransformationMatrix( matrix ), 0 ) )
     }
 
     if ( User.findAll.isEmpty ) {

@@ -28,11 +28,12 @@ def parseObjFile(objFile, options):
         if line[0] == 'g':
             # TODO
             # FOR RIGTH NOW LETS HAVE SOME FUN WITH COLORS
-            if currentColor < 11:
-                currentColor+=1
-                print COLORS[currentColor]
-            else:
-                currentColor = 0
+            # either use a user provided color or choose from a number predefined ones
+            if len(options.color) == 0:
+                if currentColor < 11:
+                    currentColor+=1
+                else:
+                    currentColor = 0
                 
         # HANDLE NORMALS
         if line[0:2] == "vn":
@@ -45,7 +46,10 @@ def parseObjFile(objFile, options):
         # HANDLE VERTICES    
         elif line[0] == "v":
             vertices += map(float,spacereg.split(line)[1:])
-            colors += COLORS[currentColor];
+            if len(options.color) > 0:
+                colors += options.color;
+            else:
+                colors += COLORS[currentColor];
 
         # ASSOCIATE FACES TO VERTICES AND NORMALS
         # SUBTRACT 1 BECAUSE BUFFER INDEX STARTS AT 0
@@ -86,40 +90,27 @@ def parseObjFile(objFile, options):
         else:
             pass
 
+    # Binary Output
     output = open(objFile[:-4], 'wb')
-    
-    if options.colorsEnabled:
-        output.write(struct.pack('III', len(vertices), len(colors), len(faces)))
-    else:
-        output.write(struct.pack('III', len(vertices), len(vertices), len(faces)))
-    
+    output.write(struct.pack('III', len(vertices), len(colors), len(faces)))    
     output.write(struct.pack('f' * len(vertices), *vertices))
-    
-    if options.colorsEnabled:
-        output.write(struct.pack('f' * len(colors), *colors))
-    else:
-        output.write(struct.pack('f' * len(vertices), *([1,0,0] * (len(vertices) / 3))))
-    
+    output.write(struct.pack('f' * len(colors), *colors))
     output.write(struct.pack('H' * len(faces), *faces))
-    
     output.close()
 
     print "%s written" % objFile[:-4]
 
-    
-    output = open(objFile[:-4]+'.js','w')
-    output.write("vertices=" + str(vertices) + ";\n")
-    output.write("faces=" + str(faces) + ";\n")
-    output.write("normals=" + str(normals) + ";\n")
-    output.write("normalsPointer=" + str(normalsPointer) + ";\n")
-    if options.colorsEnabled:
+    # JS Output
+    if options.JsOutput == 1:
+        output = open(objFile[:-4]+'.js','w')
+        output.write("vertices=" + str(vertices) + ";\n")
+        output.write("faces=" + str(faces) + ";\n")
+        output.write("normals=" + str(normals) + ";\n")
+        output.write("normalsPointer=" + str(normalsPointer) + ";\n")
         output.write("colors=" + str(colors)+ ";\n")
-    else:
-        output.write("textures=" + str(textures) + ";\n")
-        output.write("texturesPointer=" + str(texturesPointer) + ";\n")
-    output.close()
+        output.close()
 
-    print "%s.js written" % objFile[:-4]
+        print "%s.js written" % objFile[:-4]
 
         
 
@@ -133,8 +124,12 @@ def triangulate(l):
 
 def main():
     options = parseCommandLine()
-    for objFile in locate("*.obj", options.path):
-        parseObjFile(objFile, options)
+    # either load specified file or scan a directory for obj files
+    if options.path[-3:] == "obj":
+         parseObjFile(options.path, options)
+    else:
+        for objFile in locate("*.obj", options.path):
+            parseObjFile(objFile, options)
 
 if __name__ == '__main__':
     main()

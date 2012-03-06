@@ -1,3 +1,11 @@
+# define 
+# 	[
+# 		"model",
+# 		"view",
+# 		"geometry_factory"
+# 	],
+# 	(Model, View, GeometryFactory) ->
+
 Controller =
 
 	initialize : ->

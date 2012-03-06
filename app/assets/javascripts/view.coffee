@@ -37,7 +37,7 @@ class _View
 
 	constructor : -> 
 		cvs = document.getElementById('render')
-		engine = new GL_engine cvs, antialias : true
+		engine = new GlEngine cvs, antialias : true
 
 		cam = new Flycam()
 		perspectiveMatrix = cam.getMovedNonPersistent camPos

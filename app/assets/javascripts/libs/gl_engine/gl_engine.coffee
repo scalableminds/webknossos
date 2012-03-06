@@ -1,10 +1,9 @@
-class GL_engine
+class GlEngine
 ############################################################################
 	#private Properties
-	empty_func = -> 
 	gl : null
 	canvas : null
-	requestAnimationFrame = empty_func
+	requestAnimationFrame = $.noop()
 
 	# for calculating fps
 	frames : 0
@@ -13,8 +12,6 @@ class GL_engine
 
 	# for throttling renderLoop
 	lastLoopTime : null
-	maximumframerate : 20
-
 
 	#to stop the animationLoop
 	stopAnimation : false
@@ -28,7 +25,7 @@ class GL_engine
 	#public Properties
 	framerate : 0
 	# Contains reference to user's RenderingScript
-	usersRender : empty_func
+	usersRender : $.noop()
 
 ############################################################################
 	#public methods 

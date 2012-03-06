@@ -1,3 +1,12 @@
+# define
+# 	[
+# 		"libs/gl_engine/gl_engine",
+# 		"libs/gl_engine/flycam",
+# 		"keyboard",
+# 		"model"
+# 	],
+# 	(GlEngine, Flycam, Keyboard, Model) ->
+	
 class _View
 
 	# global scene objects

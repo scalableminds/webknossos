@@ -34,8 +34,8 @@ define ->
 			if buttonDown
 				distX = evt.pageX - lastPosition.x
 				distY = evt.pageY - lastPosition.y
-				changedCallback.x distX/ROTATE_DIVISION if distX isnt 0
-				changedCallback.Y distY/ROTATE_DIVISION if distY isnt 0
+				changedCallback.x distX/ROTATE_SLOWDOWN if distX isnt 0
+				changedCallback.Y distY/ROTATE_SLOWDOWN if distY isnt 0
 
 			lastPosition.x = evt.pageX
 			lastPosition.y = evt.pageY		

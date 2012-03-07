@@ -1,4 +1,5 @@
 define ["libs/request"], (request) ->
+  
   class SimpleArrayBufferSocket
     
     fallbackMode : false

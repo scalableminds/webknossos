@@ -1,25 +1,26 @@
-Controller =
+define(
+	[
+		"model"
+	]
+	(Model) ->
+		Controller =
 
-	initialize : ->
-		
-		Model.Route.initialize().done (matrix) =>
+			initialize : ->
 				
-			View.setCam(matrix)
+				Model.Route.initialize().done (matrix) =>
+						
+					View.setCam(matrix)
 
-			GeometryFactory.createMesh("coordinateAxes", "mesh").done (mesh) ->
-				View.addGeometry mesh
-				
-			GeometryFactory.createMesh("crosshair", "mesh").done (mesh) -> 
-				View.addGeometry mesh
+					GeometryFactory.createMesh("coordinateAxes", "mesh").done (mesh) ->
+						View.addGeometry mesh
+						
+					GeometryFactory.createMesh("crosshair", "mesh").done (mesh) -> 
+						View.addGeometry mesh
 
-			GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
-				View.addGeometry trianglesplane		
+					GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
+						View.addGeometry trianglesplane		
 
-  # mouse events
-  
-  # keyboard events
-
-
-start = ->
-	Controller.initialize()
-
+		  # mouse events
+		  
+		  # keyboard events
+)

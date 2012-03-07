@@ -1,8 +1,11 @@
 define(
 	[
-		"model"
+		"model",
+		"view",
+		"geometry_factory"
 	]
-	(Model) ->
+	(Model, View, GeometryFactory) ->
+
 		Controller =
 
 			initialize : ->

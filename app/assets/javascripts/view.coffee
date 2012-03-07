@@ -23,21 +23,13 @@ define [
 			meshProgramObject = null
 
 			#mouse (not used)
-			buttonDown = false
-			lastx = 0
-			lasty = 0
-			mouseX = 0
-			mouseY = 0
-			rot = [0, 0]
-			curCoords = [0, 0]
+
 
 			#constants
 			clippingDistance = 140
 			#camPos = [63.5,63.5,-clippingDistance+63.5]
 			camPos = [0,0,-clippingDistance]
-			moveValueStrafe = 1
-			moveValueRotate = 0.02
-			mouseRotateDivision = 250
+
 
 			perspectiveMatrix = null
 
@@ -59,10 +51,7 @@ define [
 				keyboard = new Keyboard
 				keyboard.onChange = keyboardAfterChanged
 
-				#Mouse
-				attach cvs, "mousemove", mouseMoved
-				attach cvs, "mouseup", mouseReleased
-				attach cvs, "mousedown", mousePressed
+
 
 				#Keyboard
 				attach document, "keydown", keyDown
@@ -195,20 +184,7 @@ define [
 		# MOUSE (not used)
 		# #####################
 
-			mouseMoved = (evt) ->
-				mouseX = evt.pageX
-				mouseY = evt.pageY
 
-			mousePressed = ->
-				curCoords[0] = mouseX
-				curCoords[1] = mouseY
-				buttonDown = true
-				engine.startAnimationLoop()
-
-			mouseReleased = ->
-				buttonDown = false 
-				engine.stopAnimationLoop()
-				window.setTimeout writeFramerate, 500
 
 		# #####################
 		# KEYBOARD
@@ -216,7 +192,7 @@ define [
 
 			makeMovement = () ->
 
-				#Up
+				#UpmouseX
 				if keyboard.isKeyDown(KEY_W)
 					cam.move [0,moveValueStrafe,0]
 
@@ -300,10 +276,6 @@ define [
 		# HELPER
 		# #####################
 
-			attach = (element, type, func) ->
-				if element.addEventListener
-					element.addEventListener type, func, false
-				else
-					element.attachEvent "on" + type, fn
+
 
 		View = new _View

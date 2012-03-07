@@ -1,3 +1,12 @@
+# define
+# 	[
+# 		"libs/gl_engine/gl_engine",
+# 		"libs/gl_engine/flycam",
+# 		"keyboard",
+# 		"model"
+# 	],
+# 	(GlEngine, Flycam, Keyboard, Model) ->
+	
 class _View
 
 	# global scene objects
@@ -37,7 +46,7 @@ class _View
 
 	constructor : -> 
 		cvs = document.getElementById('render')
-		engine = new GL_engine cvs, antialias : true
+		engine = new GlEngine cvs, antialias : true
 
 		cam = new Flycam()
 		perspectiveMatrix = cam.getMovedNonPersistent camPos

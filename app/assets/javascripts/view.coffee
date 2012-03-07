@@ -46,7 +46,7 @@ define [
 				cvs = document.getElementById('render')
 				engine = new GlEngine cvs, antialias : true
 
-				cam = new Flycam()
+				cam = new Flycam(clippingDistance)
 				perspectiveMatrix = cam.getMovedNonPersistent camPos
 
 				engine.background [0.9, 0.9 ,0.9 ,1]

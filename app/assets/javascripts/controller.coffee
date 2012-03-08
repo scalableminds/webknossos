@@ -2,9 +2,10 @@ define(
 	[
 		"model",
 		"view",
-		"geometry_factory"
+		"geometry_factory",
+		"input"
 	]
-	(Model, View, GeometryFactory) ->
+	(Model, View, GeometryFactory, Input) ->
 
 		Controller =
 
@@ -23,7 +24,8 @@ define(
 					GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
 						View.addGeometry trianglesplane		
 
-		  # mouse events
-		  
-		  # keyboard events
-)
+				# mouse events
+				  
+				# keyboard events
+				Input.Keyboard.attach "t", -> console.log "t"
+)		

@@ -27,39 +27,34 @@ define [
 
 
 			#constants
-			clippingDistance = 140
-			#camPos = [63.5,63.5,-clippingDistance+63.5]
-			camPos = [0,0,-clippingDistance]
+			CLIPPING_DISTANCE = 140
+			BACKGROUND_COLOR = [0.9, 0.9 ,0.9 ,1]
+			PROJECTION_NEAR = 0.0001
+			PROJECTION_FAR = 100000
+			PROJECTION_ANGLE = 90
 
-
-			perspectiveMatrix = null
+			PERSPECTIVE_MATRIX = M4x4.clone [ 
+				1, 0, 0, 0, 
+				0, 1, 0, 0, 
+				0, 0, 1, 0, 
+				0, 0, -CLIPPING_DISTANCE, 1 
+			]
 
 
 			constructor : -> 
 				cvs = document.getElementById('render')
-				engine = new GlEngine cvs, antialias : true
 
-				cam = new Flycam(clippingDistance)
+				engine = new GlEngine cvs, antialias : true
+				engine.background BACKGROUND_COLOR
+				engine.setProjectionMatrix PROJECTION_ANGLE, cvs.width / cvs.height, PROJECTION_NEAR, PROJECTION_FAR
+				engine.onRender = renderFunction
+
+				cam = new Flycam CLIPPING_DISTANCE
 				perspectiveMatrix = cam.getMovedNonPersistent camPos
 
 				controller = new Controller cvs
-				
-				engine.background [0.9, 0.9 ,0.9 ,1]
-				####
-				### ACHTUNG VON 60 AUF 90 GEÄNDERT! ###
-				#####
-				engine.perspective 90, cvs.width / cvs.height, 0.0001, 100000
-				engine.onRender = renderFunction
-
-				keyboard = new Keyboard
-				keyboard.onChange = keyboardAfterChanged
 
 
-
-				#Keyboard
-				attach document, "keydown", keyDown
-				#attach document, "keypress", keyPressed
-				attach document, "keyup", keyUp
 
 
 		# #####################
@@ -180,13 +175,6 @@ define [
 
 			setCam : (matrix) ->
 				cam.setMatrix(matrix)
-
-				
-
-		# #####################
-		# MOUSE (not used)
-		# #####################
-
 
 
 		# #####################

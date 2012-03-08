@@ -7,7 +7,10 @@ define(
 	]
 	(Model, View, GeometryFactory, Mouse) ->
 
-		Controller =
+		class Controller
+			
+			MOVE_VALUE_STRAFE = 1
+
 			mouse = null
 			cvs = null
 
@@ -36,7 +39,7 @@ define(
 
 
 			initKeyboard : ->
-			
+
 		  
 		  # keyboard events
 )

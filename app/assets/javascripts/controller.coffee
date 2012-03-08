@@ -24,9 +24,8 @@ define(
 		
 		Controller = 
 
-			initialize : ->
-				cvs = document.getElementById "render"
-
+			initialize : (canvas) ->
+				cvs = canvas
 				initMouse()
 				initKeyboard()
 				

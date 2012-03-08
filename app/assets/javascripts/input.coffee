@@ -8,7 +8,7 @@ define( [
 
 		Input.Keyboard =
 
-			delay : 1000
+			delay : 1000/30
 			keyCallbackMap : {}
 			keyPressedCount : 0
 
@@ -17,7 +17,6 @@ define( [
 				KeyboardJS.bind.key(
 					key
 					=>
-						console.log "down"
 						unless @keyCallbackMap[key]?
 							@keyPressedCount++ 
 							@keyCallbackMap[key] = callback
@@ -25,7 +24,6 @@ define( [
 
 						return
 					=>
-						console.log "up"
 						@keyPressedCount--
 						delete @keyCallbackMap[key]
 						return

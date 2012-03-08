@@ -8,18 +8,27 @@ define(
 	],
 	(Model, View, GeometryFactory, Input, Mouse) ->
 
-		class _Controller
-			
-			MOVE_VALUE_STRAFE = 1
+		Controller ?= {}
 
-			mouse = null
-			cvs = null
+		MOVE_VALUE_STRAFE = 1
+		mouse = null
+		cvs = null
 
-			initialize : () ->
+		initMouse = ->
+			Input.Mouse.init cvs
+			Input.Mouse.attach "x", View.yawDistance
+			Input.Mouse.attach "y", View.pitchDistance
+
+		initKeyboard = ->
+			Input.Keyboard.attach "t", -> console.log "t"
+		
+		Controller = 
+
+			initialize : ->
 				cvs = document.getElementById "render"
 
-				@initMouse()
-				@initKeyboard()
+				initMouse()
+				initKeyboard()
 				
 				Model.Route.initialize().done (matrix) =>
 						
@@ -34,15 +43,5 @@ define(
 					GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
 						View.addGeometry trianglesplane		
 
-			initMouse : ->
-				Input.Mouse.init cvs
-				Input.Mouse.attach "x", View.yawDistance
-				Input.Mouse.attach "y", View.pitchDistance
-
-			initKeyboard : ->
-
-				Input.Keyboard.attach "t", -> console.log "t"
-
-		Controller = new _Controller 
 )		
 

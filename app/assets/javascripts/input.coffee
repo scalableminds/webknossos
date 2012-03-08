@@ -1,7 +1,8 @@
 define( [
-		"libs/keyboard.0.2.2.min"
+		"libs/keyboard.0.2.2.min",
+		"mouse"
 	]
-	(KeyboardJS) ->
+	(KeyboardJS, Mouse) ->
 
 		Input ?= {}
 
@@ -38,8 +39,18 @@ define( [
 					setTimeout( (=> @buttonLoop()), @delay ) 
 
 		Input.Mouse = 
+			mouse : null
+
+			init : (objectToTrack) ->
+				@mouse = new Mouse objectToTrack
 
 			attach : (axis, callback) ->
+				if @mouse?
+					@mouse.bindX callback if axis is "x"
+					@mouse.bindY callback if axis is "y"
+				else
+					console.log "no mouse is set"
+
 
 		Input.Gamepad = $.noop()	
 

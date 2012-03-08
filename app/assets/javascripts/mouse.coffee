@@ -30,26 +30,26 @@ define ->
 
 		###
 		#Binds a function as callback when X-Position was changed
-		#@param {Function} f :
+		#@param {Function} callback :
 		#	gets a modified distance as parameter
 		###
-		bindX : (f) ->
-			changedCallback.x = f
+		bindX : (callback) ->
+			changedCallback.x = callback
 
 		###
 		#Binds a function as callback when Y-Position was changed
-		#@param {Function} f :
+		#@param {Function} callback :
 		#	gets a modified distance as parameter
 		###
-		bindY : (f) ->
-			changedCallback.y = f
+		bindY : (callback) ->
+			changedCallback.y = callback
 
 		mouseMoved = (evt) ->
 			if buttonDown
 				distX = evt.pageX - lastPosition.x
 				distY = evt.pageY - lastPosition.y
 				changedCallback.x distX/SLOWDOWN_FACTOR if distX isnt 0
-				changedCallback.Y distY/SLOWDOWN_FACTOR if distY isnt 0
+				changedCallback.y distY/SLOWDOWN_FACTOR if distY isnt 0
 
 			lastPosition.x = evt.pageX
 			lastPosition.y = evt.pageY		

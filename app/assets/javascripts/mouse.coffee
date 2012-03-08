@@ -1,7 +1,7 @@
 define ->
 	class Mouse
 
-		ROTATE_SLOWDOWN = 250		
+		SLOWDOWN_FACTOR = 250		
 
 		buttonDown = null
 
@@ -13,10 +13,14 @@ define ->
 		target = null
 
 		changedCallback = { 
-			x : null,
-			y : null 
+			x : $.noop(),
+			y : $.noop() 
 		}
 
+		###
+		#@param {Object} objectToTrack :
+		#	HTML object where the mouse has to attach the events
+		###
 		constructor : (objectToTrack) ->
 			target = objectToTrack
 			attach objectToTrack, "mousemove", mouseMoved
@@ -24,9 +28,19 @@ define ->
 			attach objectToTrack, "mousedown", mousePressed
 			buttonDown = false
 
+		###
+		#Binds a function as callback when X-Position was changed
+		#@param {Function} f :
+		#	gets a modified distance as parameter
+		###
 		bindX : (f) ->
 			changedCallback.x = f
 
+		###
+		#Binds a function as callback when Y-Position was changed
+		#@param {Function} f :
+		#	gets a modified distance as parameter
+		###
 		bindY : (f) ->
 			changedCallback.y = f
 
@@ -34,8 +48,8 @@ define ->
 			if buttonDown
 				distX = evt.pageX - lastPosition.x
 				distY = evt.pageY - lastPosition.y
-				changedCallback.x distX/ROTATE_SLOWDOWN if distX isnt 0
-				changedCallback.Y distY/ROTATE_SLOWDOWN if distY isnt 0
+				changedCallback.x distX/SLOWDOWN_FACTOR if distX isnt 0
+				changedCallback.Y distY/SLOWDOWN_FACTOR if distY isnt 0
 
 			lastPosition.x = evt.pageX
 			lastPosition.y = evt.pageY		

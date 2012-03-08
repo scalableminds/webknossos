@@ -3,9 +3,10 @@ define(
 		"model",
 		"view",
 		"geometry_factory",
+		"input",
 		"mouse"
 	]
-	(Model, View, GeometryFactory, Mouse) ->
+	(Model, View, GeometryFactory, Input, Mouse) ->
 
 		class Controller
 			
@@ -30,7 +31,6 @@ define(
 					GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
 						View.addGeometry trianglesplane		
 
-
 			initMouse : ->
 				mouse = new Mouse cvs
 
@@ -40,6 +40,6 @@ define(
 
 			initKeyboard : ->
 
-		  
-		  # keyboard events
-)
+				Input.Keyboard.attach "t", -> console.log "t"
+)		
+

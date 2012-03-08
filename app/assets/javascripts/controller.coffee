@@ -2,13 +2,17 @@ define(
 	[
 		"model",
 		"view",
-		"geometry_factory"
+		"geometry_factory",
+		"mouse"
 	]
-	(Model, View, GeometryFactory) ->
+	(Model, View, GeometryFactory, Mouse) ->
 
 		Controller =
+			mouse = null
+			cvs = null
 
-			initialize : ->
+			initialize : (cannvas) ->
+				cvs = cannvas
 				
 				Model.Route.initialize().done (matrix) =>
 						
@@ -23,7 +27,16 @@ define(
 					GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
 						View.addGeometry trianglesplane		
 
-		  # mouse events
+
+			initMouse : ->
+				mouse = new Mouse cvs
+
+				mouse.bindX View.yawDistance()
+				mouse.bindY View.pitchDistance()
+
+
+			initKeyboard : ->
+			
 		  
 		  # keyboard events
 )

@@ -8,9 +8,10 @@ define [
 		class _View
 
 			# global scene objects
-			engine = undefined
-			cam = undefined
-			cvs = undefined
+			engine = null
+			cam = null
+			cvs = null
+			controller = null
 			keyboard = null
 
 			# geometry objects
@@ -41,6 +42,8 @@ define [
 				cam = new Flycam(clippingDistance)
 				perspectiveMatrix = cam.getMovedNonPersistent camPos
 
+				controller = new Controller cvs
+				
 				engine.background [0.9, 0.9 ,0.9 ,1]
 				####
 				### ACHTUNG VON 60 AUF 90 GEÄNDERT! ###
@@ -277,5 +280,27 @@ define [
 		# #####################
 
 
+		############################################################################
+		#Interface for Controller
+			yaw : (angle) ->
+				cam.yaw angle
+
+			yawDistance : (angle) ->
+				cam.yawDistance	angle
+
+			roll : (angle) ->
+				cam.roll angle
+
+			rollDistance : (angle) ->
+				cam.rollDistance angle
+
+			pitch : (angle) ->
+				cam.pitch angle
+
+			pitchDistance : (angle) ->
+				cam.pitchDistance angle
+
+			move : (p) ->
+				cam.move p
 
 		View = new _View

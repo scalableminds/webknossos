@@ -548,3 +548,6 @@ define ->
 		startAnimationLoop : ->
 			@stopAnimation = false
 			@animationLoop()
+
+
+

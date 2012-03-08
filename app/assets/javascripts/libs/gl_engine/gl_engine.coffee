@@ -49,7 +49,7 @@ define ->
 
 			# initialize viewport and rendering matricies
 			@gl.viewport 0, 0, parseInt(@canvas.width, 10), parseInt(@canvas.height, 10)
-			@perspective()
+			@setProjectionMatrix()
 			normalMatrix = M4x4.I
 
 			@gl.disable(@gl.DEPTH_TEST)
@@ -249,7 +249,7 @@ define ->
 		attenuation : (constant, linear, quadratic) ->
 			@uniformf "attenuation", [constant, linear, quadratic]
 
-		perspective : (fovy, aspect, near, far) ->
+		setProjectionMatrix : (fovy, aspect, near, far) ->
 			
 			if arguments.length is 0
 				fovy = 90

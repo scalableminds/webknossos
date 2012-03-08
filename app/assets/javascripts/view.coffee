@@ -1,9 +1,8 @@
 define [
 		"libs/gl_engine/gl_engine",
 		"libs/gl_engine/flycam",
-		"keyboard",
 		"model"
-	], (GlEngine, Flycam, Keyboard2, Model) ->
+	], (GlEngine, Flycam, Model) ->
 	
 		class _View
 
@@ -11,8 +10,9 @@ define [
 			engine = null
 			cam = null
 			cvs = null
-			controller = null
-			keyboard = null
+			#controller = null
+
+			standardModelViewMatrix = null 			
 
 			# geometry objects
 			triangleplane = null
@@ -23,26 +23,33 @@ define [
 			trianglesplaneProgramObject = null
 			meshProgramObject = null
 
-			#mouse (not used)
-
-
 			#constants
 			CLIPPING_DISTANCE = 140
 			BACKGROUND_COLOR = [0.9, 0.9 ,0.9 ,1]
 			PROJECTION_NEAR = 0.0001
 			PROJECTION_FAR = 100000
 			PROJECTION_ANGLE = 90
+			CANVAS_NAME = "render"
 
-			PERSPECTIVE_MATRIX = M4x4.clone [ 
-				1, 0, 0, 0, 
-				0, 1, 0, 0, 
-				0, 0, 1, 0, 
-				0, 0, -CLIPPING_DISTANCE, 1 
-			]
+
 
 
 			constructor : -> 
 				cvs = document.getElementById('render')
+
+				helperMatrix = [ 
+					1, 0, 0, 0, 
+					0, 1, 0, 0, 
+					0, 0, 1, 0, 
+					0, 0, -CLIPPING_DISTANCE, 1 
+				]
+
+				standardModelViewMatrix = M4x4.makeLookAt [ 
+					helperMatrix[12], helperMatrix[13], helperMatrix[14]],
+					V3.add([ 
+						helperMatrix[8], helperMatrix[9], helperMatrix[10] ], 
+						[helperMatrix[12], helperMatrix[13], helperMatrix[14]]),
+					[helperMatrix[4], helperMatrix[5], helperMatrix[6]]
 
 				engine = new GlEngine cvs, antialias : true
 				engine.background BACKGROUND_COLOR
@@ -50,9 +57,8 @@ define [
 				engine.onRender = renderFunction
 
 				cam = new Flycam CLIPPING_DISTANCE
-				perspectiveMatrix = cam.getMovedNonPersistent camPos
 
-				controller = new Controller cvs
+				#controller = new Controller cvs
 
 
 
@@ -63,12 +69,8 @@ define [
 
 			#main render function
 			renderFunction = ->
-				makeMovement()
 				#sets view to camera position and direction
-				engine.loadMatrix (M4x4.makeLookAt [ perspectiveMatrix[12], perspectiveMatrix[13], perspectiveMatrix[14] ],
-					V3.add([ perspectiveMatrix[8], perspectiveMatrix[9], perspectiveMatrix[10] ], 
-						[ perspectiveMatrix[12], perspectiveMatrix[13], perspectiveMatrix[14] ]),
-					[ perspectiveMatrix[4], perspectiveMatrix[5], perspectiveMatrix[6] ])
+				engine.loadMatrix standardModelViewMatrix
 				engine.clear()
 
 				# renders all geometry objects
@@ -179,7 +181,7 @@ define [
 
 		# #####################
 		# KEYBOARD
-		# #####################
+
 
 			makeMovement = () ->
 
@@ -262,7 +264,7 @@ define [
 				else
 					engine.stopAnimationLoop()
 					window.setTimeout writeFramerate, 500
-
+		# #####################
 		# #####################
 		# HELPER
 		# #####################

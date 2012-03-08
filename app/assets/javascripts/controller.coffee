@@ -10,7 +10,9 @@ define(
 
 		Controller ?= {}
 
-		MOVE_VALUE_STRAFE = 1
+		MOVE_VALUE = 1
+		ROTATE_VALUE = 0.02
+
 		mouse = null
 		cvs = null
 
@@ -20,10 +22,28 @@ define(
 			Input.Mouse.attach "y", View.pitchDistance
 
 		initKeyboard = ->
-			Input.Keyboard.attach "t", -> console.log "t"
+			#Move
+			Input.Keyboard.attach "w", -> View.move [0, MOVE_VALUE, 0]
+			Input.Keyboard.attach "s", -> View.move [0, -MOVE_VALUE, 0]
+			Input.Keyboard.attach "a", -> View.move [MOVE_VALUE, 0, 0]
+			Input.Keyboard.attach "d", -> View.move [-MOVE_VALUE, 0, 0]
+			Input.Keyboard.attach "space", -> View.move [0, 0, MOVE_VALUE]
+			Input.Keyboard.attach "shift + space", -> View.move [0, 0, -MOVE_VALUE]
+
+			#Rotate in distance
+			Input.Keyboard.attach "left", -> View.yawDistance ROTATE_VALUE
+			Input.Keyboard.attach "right", -> View.yawDistance -ROTATE_VALUE
+			Input.Keyboard.attach "up", -> View.pitchDistance ROTATE_VALUE
+			Input.Keyboard.attach "down", -> View.pitchDistance -ROTATE_VALUE
+
+			#Rotate at centre
+			Input.Keyboard.attach "shift + left", -> View.yaw ROTATE_VALUE
+			Input.Keyboard.attach "shift + right", -> View.yaw -ROTATE_VALUE
+			Input.Keyboard.attach "shift + up", -> View.pitch ROTATE_VALUE
+			Input.Keyboard.attach "shift + down", -> View.pitch -ROTATE_VALUE
+
 		
 		Controller = 
-
 			initialize : (canvas) ->
 				cvs = canvas
 				initMouse()

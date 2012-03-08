@@ -3,11 +3,12 @@ require.config
   locale  : "de-de"
 
 require [ "core_ext" ], ->
-  require ["controller"], (Controller) ->
+  require ["controller", "view"], (Controller, View) ->
     $ ->
       $("#render").resize( ->
         _canvas = $(this)
         this.width = _canvas.width()
         this.height = _canvas.height()
       ).resize()
-      Controller.initialize() 
+      Controller.initialize($("#render")[0]) 
+      View.initialize($("#render")[0])

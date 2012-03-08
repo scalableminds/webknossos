@@ -4,13 +4,9 @@ define [
 		"model"
 	], (GlEngine, Flycam, Model) ->
 	
-		class _View
-
-			# global scene objects
 			engine = null
 			cam = null
 			cvs = null
-			#controller = null
 
 			standardModelViewMatrix = null 			
 
@@ -29,43 +25,6 @@ define [
 			PROJECTION_NEAR = 0.0001
 			PROJECTION_FAR = 100000
 			PROJECTION_ANGLE = 90
-			CANVAS_NAME = "render"
-
-
-
-
-			constructor : -> 
-				cvs = document.getElementById('render')
-
-				helperMatrix = [ 
-					1, 0, 0, 0, 
-					0, 1, 0, 0, 
-					0, 0, 1, 0, 
-					0, 0, -CLIPPING_DISTANCE, 1 
-				]
-
-				standardModelViewMatrix = M4x4.makeLookAt [ 
-					helperMatrix[12], helperMatrix[13], helperMatrix[14]],
-					V3.add([ 
-						helperMatrix[8], helperMatrix[9], helperMatrix[10] ], 
-						[helperMatrix[12], helperMatrix[13], helperMatrix[14]]),
-					[helperMatrix[4], helperMatrix[5], helperMatrix[6]]
-
-				engine = new GlEngine cvs, antialias : true
-				engine.background BACKGROUND_COLOR
-				engine.setProjectionMatrix PROJECTION_ANGLE, cvs.width / cvs.height, PROJECTION_NEAR, PROJECTION_FAR
-				engine.onRender = renderFunction
-
-				cam = new Flycam CLIPPING_DISTANCE
-
-				#controller = new Controller cvs
-
-
-
-
-		# #####################
-		# MAIN FUNCTIONS
-		# #####################
 
 			#main render function
 			renderFunction = ->
@@ -143,154 +102,90 @@ define [
 				document.getElementById('status')
 					.innerHTML = "#{framerate} FPS <br/> #{position}<br />" 
 
-			#adds all kind of geometry to geometry-array
-			#and adds the shader if is not already set for this geometry-type
-			addGeometry : (geometry) ->
-
-				if geometry.getClassType() is "Trianglesplane"
-					trianglesplaneProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
-					triangleplane = geometry
-					#a single draw to see when the triangleplane is ready
-					@draw()
-
-				if geometry.getClassType() is "Mesh"
-					meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
-					meshes[geometry.name] = geometry
-					@draw()
-
-			addColors : (newColors, x, y, z) ->
-				#arrayPosition = x + y*colorWidth + z*colorWidth*colorWidth #wrong
-				setColorclouds[0] = 1
-				colorclouds[0] = newColors
-
-			#redirects the call from Geometry-Factory directly to engine
-			createArrayBufferObject : (data) ->
-				engine.createArrayBufferObject data
-				
-			#redirects the call from Geometry-Factory directly to engine
-			createElementArrayBufferObject : (data) ->
-				engine.createElementArrayBufferObject data
-
-			#Apply a single draw (not used right now)
-			draw : ->
-				engine.draw()
-
-			setCam : (matrix) ->
-				cam.setMatrix(matrix)
 
 
-		# #####################
-		# KEYBOARD
+			View =
+				initialize : (canvas) ->
+					cvs = canvas
+
+					helperMatrix = [ 
+						1, 0, 0, 0, 
+						0, 1, 0, 0, 
+						0, 0, 1, 0, 
+						0, 0, -CLIPPING_DISTANCE, 1 
+					]
+
+					standardModelViewMatrix = M4x4.makeLookAt [ 
+						helperMatrix[12], helperMatrix[13], helperMatrix[14]],
+						V3.add([ 
+							helperMatrix[8], helperMatrix[9], helperMatrix[10] ], 
+							[helperMatrix[12], helperMatrix[13], helperMatrix[14]]),
+						[helperMatrix[4], helperMatrix[5], helperMatrix[6]]
+
+					engine = new GlEngine cvs, antialias : true
+					engine.background BACKGROUND_COLOR
+					engine.setProjectionMatrix PROJECTION_ANGLE, cvs.width / cvs.height, PROJECTION_NEAR, PROJECTION_FAR
+					engine.onRender = renderFunction
+
+					cam = new Flycam CLIPPING_DISTANCE
 
 
-			makeMovement = () ->
+				#adds all kind of geometry to geometry-array
+				#and adds the shader if is not already set for this geometry-type
+				addGeometry : (geometry) ->
 
-				#UpmouseX
-				if keyboard.isKeyDown(KEY_W)
-					cam.move [0,moveValueStrafe,0]
+					if geometry.getClassType() is "Trianglesplane"
+						trianglesplaneProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+						triangleplane = geometry
+						#a single draw to see when the triangleplane is ready
+						@draw()
 
-				#Down
-				if keyboard.isKeyDown(KEY_S)
-					cam.move [0,-moveValueStrafe,0]
-			
-				#Right
-				if keyboard.isKeyDown(KEY_D)
-					cam.move [-moveValueStrafe,0,0]
+					if geometry.getClassType() is "Mesh"
+						meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+						meshes[geometry.name] = geometry
+						@draw()
 
-				#Left
-				if keyboard.isKeyDown(KEY_A)
-					cam.move [moveValueStrafe,0,0]
+				addColors : (newColors, x, y, z) ->
+					#arrayPosition = x + y*colorWidth + z*colorWidth*colorWidth #wrong
+					setColorclouds[0] = 1
+					colorclouds[0] = newColors
 
-				#Forward
-				if keyboard.isKeyDown(KEY_SPACE)
-					cam.move [0,0,moveValueStrafe]
+				#redirects the call from Geometry-Factory directly to engine
+				createArrayBufferObject : (data) ->
+					engine.createArrayBufferObject data
+					
+				#redirects the call from Geometry-Factory directly to engine
+				createElementArrayBufferObject : (data) ->
+					engine.createElementArrayBufferObject data
 
-				#Backward
-				if keyboard.isKeyDown(KEY_X)
-					cam.move [0,0,-moveValueStrafe]
+				#Apply a single draw (not used right now)
+				draw : ->
+					engine.draw()
 
-				#Rotate up
-				if buttonDown
-					cam.pitchDistance -(curCoords[1]-mouseY)/mouseRotateDivision
-					curCoords[1] = mouseY
+				setCam : (matrix) ->
+					cam.setMatrix(matrix)
 
-				if keyboard.isKeyDown(KEY_UP)
-					cam.pitch moveValueRotate
+			############################################################################
+			#Interface for Controller
+				yaw : (angle) ->
+					cam.yaw angle
 
-				#Rotate down
-				if buttonDown
-					cam.pitchDistance (curCoords[1]-mouseY)/mouseRotateDivision
-					curCoords[1] = mouseY
+				yawDistance : (angle) ->
+					cam.yawDistance	angle
 
-				if keyboard.isKeyDown(KEY_DOWN)
-					cam.pitch -moveValueRotate
+				roll : (angle) ->
+					cam.roll angle
 
-				#Rotate right
-				if buttonDown
-					cam.yawDistance (curCoords[0]-mouseX)/mouseRotateDivision
-					curCoords[0] = mouseX
+				rollDistance : (angle) ->
+					cam.rollDistance angle
 
-				if keyboard.isKeyDown(KEY_RIGHT)
-					cam.yaw -moveValueRotate
+				pitch : (angle) ->
+					cam.pitch angle
 
-				#Rotate left
-					cam.yawDistance -(curCoords[0]-mouseX)/mouseRotateDivision
-					curCoords[0] = mouseX
+				pitchDistance : (angle) ->
+					cam.pitchDistance angle
 
-				if keyboard.isKeyDown(KEY_LEFT)
-					cam.yaw moveValueRotate
+				move : (p) ->
+					cam.move p
 
-
-				#Rotate right
-				if keyboard.isKeyDown(KEY_E)
-					cam.roll -moveValueRotate
-
-				#Rotate left
-				if keyboard.isKeyDown(KEY_C)
-					cam.roll moveValueRotate
-
-
-			keyDown = (evt) ->
-				keyboard.setKeyDown evt.keyCode
-
-			keyPressed = (evt) ->
-
-			keyUp = (evt) ->
-				keyboard.setKeyUp evt.keyCode
-
-			keyboardAfterChanged = (countKeysDown) ->
-				if countKeysDown > 0
-					engine.startAnimationLoop()
-				else
-					engine.stopAnimationLoop()
-					window.setTimeout writeFramerate, 500
-		# #####################
-		# #####################
-		# HELPER
-		# #####################
-
-
-		############################################################################
-		#Interface for Controller
-			yaw : (angle) ->
-				cam.yaw angle
-
-			yawDistance : (angle) ->
-				cam.yawDistance	angle
-
-			roll : (angle) ->
-				cam.roll angle
-
-			rollDistance : (angle) ->
-				cam.rollDistance angle
-
-			pitch : (angle) ->
-				cam.pitch angle
-
-			pitchDistance : (angle) ->
-				cam.pitchDistance angle
-
-			move : (p) ->
-				cam.move p
-
-		View = new _View
+	

@@ -46,7 +46,7 @@ define ->
 
 		mouseMoved = (evt) ->
 			if buttonDown
-				distX = evt.pageX - lastPosition.x
+				distX = -(evt.pageX - lastPosition.x)
 				distY = evt.pageY - lastPosition.y
 				changedCallback.x distX/SLOWDOWN_FACTOR if distX isnt 0
 				changedCallback.y distY/SLOWDOWN_FACTOR if distY isnt 0

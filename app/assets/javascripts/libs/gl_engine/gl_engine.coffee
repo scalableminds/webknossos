@@ -510,7 +510,7 @@ define ->
 
 			@matrixStack.push M4x4.I
 
-			@usersRender()
+			@usersRender(false)
 
 			@matrixStack.pop()
 
@@ -531,7 +531,7 @@ define ->
 		#apply a single draw
 		draw : ->
 			@matrixStack.push M4x4.I
-			@usersRender()
+			@usersRender(true)
 			@matrixStack.pop()		
 
 		###

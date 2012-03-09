@@ -8,6 +8,8 @@ define [
 			cam = null
 			cvs = null
 
+			lastMatrix = null
+
 			standardModelViewMatrix = null 			
 
 			# geometry objects
@@ -27,7 +29,16 @@ define [
 			PROJECTION_ANGLE = 90
 
 			#main render function
-			renderFunction = ->
+			renderFunction = (forced) ->
+				currentMatrix = cam.getMatrix()
+				changed = false
+				if lastMatrix isnt null and forced is false
+					for i in [0..15]
+						changed = true if lastMatrix[i] isnt currentMatrix[i]
+					return if changed is false
+				lastMatrix = currentMatrix
+
+
 				#sets view to camera position and direction
 				engine.loadMatrix standardModelViewMatrix
 				engine.clear()

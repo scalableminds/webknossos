@@ -63,7 +63,7 @@ define [
 					engine.render meshes["crosshair"]
 
 				# OUTPUT Framerate
-				writeFramerate Math.floor(engine.framerate), cam.getPos()
+				writeFramerate engine.framerate, cam.getPos()
 
 
 			drawTriangleplane = ->
@@ -98,9 +98,11 @@ define [
 				engine.useProgram trianglesplaneProgramObject 
 				engine.render g
 					
-			writeFramerate = (framerate = 0, position = 0) ->	
+			writeFramerate = (framerate = 0, position = [0, 0, 0]) ->	
+				f = Math.floor(framerate)
+				p = [Math.floor(position[0]), Math.floor(position[1]), Math.floor(position[2])]
 				document.getElementById('status')
-					.innerHTML = "#{framerate} FPS <br/> #{position}<br />" 
+					.innerHTML = "#{f} FPS <br/> #{p}<br />" 
 
 
 
@@ -128,6 +130,8 @@ define [
 					engine.onRender = renderFunction
 
 					cam = new Flycam CLIPPING_DISTANCE
+
+					engine.startAnimationLoop() 
 
 
 				#adds all kind of geometry to geometry-array

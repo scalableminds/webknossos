@@ -30,14 +30,14 @@ define [
 
 			#main render function
 			renderFunction = (forced) ->
+				#skipping rendering if nothing has changed
 				currentMatrix = cam.getMatrix()
-				changed = false
-				if lastMatrix isnt null and forced is false
-					for i in [0..15]
-						changed = true if lastMatrix[i] isnt currentMatrix[i]
-					return if changed is false
-				lastMatrix = currentMatrix
+				if forced is false
+						if camHasChanged() is false
+							writeFramerate engine.framerate, cam.getPos()
+							return
 
+				lastMatrix = currentMatrix
 
 				#sets view to camera position and direction
 				engine.loadMatrix standardModelViewMatrix
@@ -115,6 +115,13 @@ define [
 				document.getElementById('status')
 					.innerHTML = "#{f} FPS <br/> #{p}<br />" 
 
+			camHasChanged = ->
+				return true if lastMatrix is null			
+				currentMatrix = cam.getMatrix()
+				for i in [0..15]
+					return true if lastMatrix[i] isnt currentMatrix[i]
+				return false
+				
 
 
 			View =

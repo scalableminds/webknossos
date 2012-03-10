@@ -10,7 +10,7 @@ define [
 
 			lastMatrix = null
 
-			standardModelViewMatrix = null 			
+			standardModelViewMatrix = null 		
 
 			# geometry objects
 			triangleplane = null
@@ -61,7 +61,7 @@ define [
 					rotMatrix[14] = -CLIPPING_DISTANCE + g.relativePosition.z 
 
 					engine.loadMatrix rotMatrix
-					engine.scale g.scaleFactor					
+					engine.scale g.scaleFactor.x					
 					engine.render g
 					engine.popMatrix()
 
@@ -70,9 +70,21 @@ define [
 					engine.useProgram meshProgramObject
 					engine.pushMatrix()
 					engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
-					engine.scale g.scaleFactor					
+					engine.scale g.scaleFactor.x					
 					engine.render g
-					engine.popMatrix()					
+					engine.popMatrix()	
+
+				if meshes["quarter"]
+					g = meshes["quarter"]
+					engine.useProgram meshProgramObject
+					engine.pushMatrix()
+					engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
+					if g.scaleFactor.x > 62
+						g.scaleFactor.x = 1
+					g.scaleFactor.x++
+					engine.scale g.scaleFactor.x , g.scaleFactor.y, g.scaleFactor.z
+					engine.render g
+					engine.popMatrix()	
 
 				# OUTPUT Framerate
 				writeFramerate engine.framerate, cam.getPos()
@@ -111,7 +123,7 @@ define [
 
 				engine.pushMatrix()
 				engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
-				engine.scale g.scaleFactor
+				engine.scale g.scaleFactor.x
 				engine.render g
 				engine.popMatrix()	
 
@@ -218,7 +230,7 @@ define [
 
 				scaleTrianglesPlane : (increment) ->
 					if triangleplane
-						triangleplane.scaleFactor += increment
+						triangleplane.scaleFactor.x += increment
 						@draw()
 
 

@@ -27,7 +27,11 @@ define ->
 				z : 0 
 			}		
 
-			@scaleFactor = 1
+			@scaleFactor = {
+				x : 1,
+				y : 1,
+				z : 1 
+			}		
 
 		setVertices : (data, len) -> 
 			@vertices.VBO = data

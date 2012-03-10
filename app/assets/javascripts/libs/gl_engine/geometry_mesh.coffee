@@ -24,3 +24,4 @@ define ["libs/gl_engine/geometry"], (Geometry) ->
 
 		getClassType : ->
 			super
+

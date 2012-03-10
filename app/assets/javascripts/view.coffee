@@ -51,27 +51,28 @@ define [
 				# render Meshes
 				# coordinate axis mini-map
 				if meshes["coordinateAxes"]
+					g = meshes["coordinateAxes"]
 					engine.useProgram meshProgramObject
 					engine.pushMatrix()
-					engine.translate 200,100,0
-					# console.log V3.angle [0,0,1], cam.getDir()
-
-					#axisMinimap ||= engine.get3dPoint [50,50]
-
-					# rotate the axis mini-map according to the cube's rotation and translate it
+					
 					rotMatrix = cam.getMatrix()
-					rotMatrix[12] = -100 #axisMinimap[0]
-					rotMatrix[13] = 0 #axisMinimap[1]
-					rotMatrix[14] = -100
+					rotMatrix[12] = -g.relativePosition.x
+					rotMatrix[13] = -g.relativePosition.y
+					rotMatrix[14] = -CLIPPING_DISTANCE + g.relativePosition.z 
 
-					#console.log engine.get3dPoint [50,50], cam.getMovedNonPersistent [0,0,0]
 					engine.loadMatrix rotMatrix
-					engine.render meshes["coordinateAxes"]
+					engine.scale g.scaleFactor					
+					engine.render g
 					engine.popMatrix()
 
 				if meshes["crosshair"]
+					g = meshes["crosshair"]
 					engine.useProgram meshProgramObject
-					engine.render meshes["crosshair"]
+					engine.pushMatrix()
+					engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
+					engine.scale g.scaleFactor					
+					engine.render g
+					engine.popMatrix()					
 
 				# OUTPUT Framerate
 				writeFramerate engine.framerate, cam.getPos()
@@ -107,8 +108,13 @@ define [
 					g.setInterpolationOffset (View.createArrayBufferObject bufferDelta), bufferDelta.length
 
 				engine.useProgram trianglesplaneProgramObject 
+
+				engine.pushMatrix()
+				engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
+				engine.scale g.scaleFactor
 				engine.render g
-					
+				engine.popMatrix()	
+
 			writeFramerate = (framerate = 0, position = [0, 0, 0]) ->	
 				f = Math.floor(framerate)
 				p = [Math.floor(position[0]), Math.floor(position[1]), Math.floor(position[2])]
@@ -132,7 +138,7 @@ define [
 						1, 0, 0, 0, 
 						0, 1, 0, 0, 
 						0, 0, 1, 0, 
-						0, 0, -CLIPPING_DISTANCE, 1 
+						0, 0, 0, 1 
 					]
 
 					standardModelViewMatrix = M4x4.makeLookAt [ 
@@ -209,5 +215,11 @@ define [
 
 				move : (p) ->
 					cam.move p
+
+				scaleTrianglesPlane : (increment) ->
+					if triangleplane
+						triangleplane.scaleFactor += increment
+						@draw()
+
 
 	

@@ -12,6 +12,7 @@ define(
 
 		MOVE_VALUE = 1
 		ROTATE_VALUE = 0.02
+		SCALE_FACTOR = 0.05
 
 		mouse = null
 		cvs = null
@@ -22,6 +23,10 @@ define(
 			Input.Mouse.attach "y", View.pitchDistance
 
 		initKeyboard = ->
+			#ScaleTrianglesPlane
+			Input.Keyboard.attach "l", -> View.scaleTrianglesPlane(-SCALE_FACTOR)	
+			Input.Keyboard.attach "k", -> View.scaleTrianglesPlane(SCALE_FACTOR)	
+
 			#Move
 			Input.Keyboard.attach "w", -> View.move [0, MOVE_VALUE, 0]
 			Input.Keyboard.attach "s", -> View.move [0, -MOVE_VALUE, 0]
@@ -54,9 +59,10 @@ define(
 					View.setCam(matrix)
 
 					GeometryFactory.createMesh("coordinateAxes", "mesh").done (mesh) ->
+						mesh.relativePosition.x = 100
 						View.addGeometry mesh
 						
-					GeometryFactory.createMesh("crosshair", "mesh").done (mesh) -> 
+					GeometryFactory.createMesh("crosshair", "mesh").done (mesh) -> 	
 						View.addGeometry mesh
 
 					GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->

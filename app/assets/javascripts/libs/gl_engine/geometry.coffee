@@ -19,7 +19,15 @@ define ->
 			@fragmentShader = fragmentShader
 
 			@type = "Geometry"
-			@name = ""				
+			@name = ""		
+
+			@relativePosition = {
+				x : 0,
+				y : 0,
+				z : 0 
+			}		
+
+			@scaleFactor = 1
 
 		setVertices : (data, len) -> 
 			@vertices.VBO = data

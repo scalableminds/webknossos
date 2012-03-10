@@ -21,7 +21,7 @@ def parseObjFile(objFile, options):
     lines = filter(lambda x: len(x) > 0,[x.strip() for x in lines])
 
     # SHOULD BE RESET AT THE FIRST OCCURANCE OF A "g" TAG
-    currentColor = 12
+    currentColor = 3
 
     for line in lines:    
         # HANDLE SUBGROUPS

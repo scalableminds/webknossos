@@ -3,7 +3,6 @@ define ->
   # This provides interpolation mechanics. It's a lot of code. But it
   # should run fast.
 
-
   # Finding points adjacent to the already found one.
   # We make use of the bucket structure and index arithmetik to optimize
   # lookup time.

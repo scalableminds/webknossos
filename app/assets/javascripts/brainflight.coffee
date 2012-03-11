@@ -1,9 +1,13 @@
+MVC = null
+
 require.config 
   baseUrl : "/assets/javascripts"
   locale  : "de-de"
 
 require [ "core_ext" ], ->
-  require ["controller", "view"], (Controller, View) ->
+  require ["controller", "view", "model"], (Controller, View, Model) ->
+    
+    MVC = { Controller, View, Model }
     $ ->
       $("#render").resize( ->
         _canvas = $(this)

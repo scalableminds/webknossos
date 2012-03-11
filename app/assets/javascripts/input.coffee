@@ -1,16 +1,20 @@
 define( [
 		"libs/keyboard.0.2.2.min",
-		"mouse"
+		"libs/mouse"
 	]
-	(KeyboardJS, Mouse) ->
+	(KeyboardJS, MouseLib) ->
 
 		Input ?= {}
 
-		Input.Keyboard =
+		class Input.Keyboard
 
 			delay : 1000/30
 			keyCallbackMap : {}
 			keyPressedCount : 0
+
+			constructor : (bindings) ->
+				for own key, callback of bindings
+					@attach(key, callback)
 
 			attach : (key, callback) ->
 
@@ -36,11 +40,15 @@ define( [
 
 					setTimeout( (=> @buttonLoop()), @delay ) 
 
-		Input.Mouse = 
+		class Input.Mouse
+			
 			mouse : null
 
-			init : (objectToTrack) ->
-				@mouse = new Mouse objectToTrack
+			constructor : (objectToTrack, bindings) ->
+				@mouse = new MouseLib objectToTrack
+
+				for own axis, callback of bindings
+					@attach(axis, callback)
 
 			attach : (axis, callback) ->
 				if @mouse?
@@ -50,11 +58,11 @@ define( [
 					console.log "no mouse is set"
 
 
-		Input.Gamepad = $.noop()	
+		class Input.Gamepad
 
 			# http://robhawkes.github.com/gamepad-demo/
 			# https://github.com/jbuck/input.js/
 			# http://www.gamepadjs.com/
 
-		return Input
+		Input
 )

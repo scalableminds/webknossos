@@ -1,4 +1,4 @@
-MVC = null
+_MVC = null
 
 require.config 
   baseUrl : "/assets/javascripts"
@@ -7,12 +7,16 @@ require.config
 require [ "core_ext" ], ->
   require ["controller", "view", "model"], (Controller, View, Model) ->
     
-    MVC = { Controller, View, Model }
+    _MVC = { Controller, View, Model }
     $ ->
-      $("#render").resize( ->
-        _canvas = $(this)
+      
+      _canvas = $("#render")
+      canvas  = _canvas[0]
+
+      _canvas.resize( ->
         this.width = _canvas.width()
         this.height = _canvas.height()
       ).resize()
-      Controller.initialize($("#render")[0]) 
-      View.initialize($("#render")[0])
+
+      Controller.initialize(canvas) 
+      View.initialize(canvas)

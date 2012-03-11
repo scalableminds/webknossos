@@ -141,7 +141,6 @@ define [
 				return false
 				
 
-
 			View =
 				initialize : (canvas) ->
 					cvs = canvas

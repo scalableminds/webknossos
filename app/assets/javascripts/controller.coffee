@@ -19,6 +19,7 @@ define(
 				
 				@initMouse()
 				@initKeyboard()
+				@initGamepad()
 				
 				Model.Route.initialize().done (matrix) =>
 						
@@ -75,9 +76,25 @@ define(
 					"shift + down"  : -> View.pitch ROTATE_VALUE
 				)
 
+			initGamepad : ->
+				@input.gamepad = new Input.Gamepad(
+						"ButtonA" : -> console.log "A"
+						"ButtonB" : -> console.log "B"
+						"ButtonX" : -> console.log "X"
+						"ButtonY" : -> console.log "Y"
+						"ButtonStart"  : -> console.log "Start"
+						"ButtonSelect" : -> console.log "Select"
+
+						# "LeftStickX" : -> console.log "LeftStick X"
+						# "LeftStickY" : -> console.log "LeftStick Y"
+						# "RightStickX": -> console.log "RightStick X"
+						# "RightStickX": -> console.log "RightStick Y"
+				)
+
 			input :
 				mouse : null
 				keyboard : null
+				gamepad : null
 
 )		
 

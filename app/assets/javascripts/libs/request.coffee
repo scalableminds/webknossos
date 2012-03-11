@@ -1,4 +1,5 @@
 define ->
+
   request = (options) ->
 
     deferred = $.Deferred()
@@ -34,5 +35,3 @@ define ->
     xhr.send(options.data)
 
     deferred.promise()
-
-  request

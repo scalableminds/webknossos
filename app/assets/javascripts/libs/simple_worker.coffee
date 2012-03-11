@@ -1,4 +1,5 @@
 define ->
+
   # `SimpleWorker` is a wrapper around the WebWorker API. First you
   # initialize it providing url of the javascript worker code. Afterwards
   # you can request work using `send` and wait for the result using the

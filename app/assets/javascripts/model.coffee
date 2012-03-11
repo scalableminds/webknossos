@@ -10,5 +10,6 @@ define [
 		"model/mesh"
 		"model/trianglesplane"
 	], (Binary, Shader, Route, Mesh, Trianglesplane) ->
+
   	Model = { Binary, Shader, Route, Mesh, Trianglesplane }
 

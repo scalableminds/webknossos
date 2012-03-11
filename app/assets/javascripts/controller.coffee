@@ -3,10 +3,9 @@ define(
 		"model",
 		"view",
 		"geometry_factory",
-		"input",
-		"mouse"
+		"input"
 	],
-	(Model, View, GeometryFactory, Input, Mouse) ->
+	(Model, View, GeometryFactory, Input) ->
 
 		Controller ?= {}
 
@@ -14,45 +13,12 @@ define(
 		ROTATE_VALUE = 0.02
 		SCALE_FACTOR = 0.05
 
-		mouse = null
-		cvs = null
-
-		initMouse = ->
-			Input.Mouse.init cvs
-			Input.Mouse.attach "x", View.yawDistance
-			Input.Mouse.attach "y", View.pitchDistance
-
-		initKeyboard = ->
-			#ScaleTrianglesPlane
-			Input.Keyboard.attach "l", -> View.scaleTrianglesPlane(-SCALE_FACTOR)	
-			Input.Keyboard.attach "k", -> View.scaleTrianglesPlane(SCALE_FACTOR)	
-
-			#Move
-			Input.Keyboard.attach "w", -> View.move [0, MOVE_VALUE, 0]
-			Input.Keyboard.attach "s", -> View.move [0, -MOVE_VALUE, 0]
-			Input.Keyboard.attach "a", -> View.move [MOVE_VALUE, 0, 0]
-			Input.Keyboard.attach "d", -> View.move [-MOVE_VALUE, 0, 0]
-			Input.Keyboard.attach "space", -> View.move [0, 0, MOVE_VALUE]
-			Input.Keyboard.attach "shift + space", -> View.move [0, 0, -MOVE_VALUE]
-
-			#Rotate in distance
-			Input.Keyboard.attach "left", -> View.yawDistance ROTATE_VALUE
-			Input.Keyboard.attach "right", -> View.yawDistance -ROTATE_VALUE
-			Input.Keyboard.attach "up", -> View.pitchDistance -ROTATE_VALUE
-			Input.Keyboard.attach "down", -> View.pitchDistance ROTATE_VALUE
-
-			#Rotate at centre
-			Input.Keyboard.attach "shift + left", -> View.yaw ROTATE_VALUE
-			Input.Keyboard.attach "shift + right", -> View.yaw -ROTATE_VALUE
-			Input.Keyboard.attach "shift + up", -> View.pitch -ROTATE_VALUE
-			Input.Keyboard.attach "shift + down", -> View.pitch ROTATE_VALUE
-
-		
 		Controller = 
-			initialize : (canvas) ->
-				cvs = canvas
-				initMouse()
-				initKeyboard()
+
+			initialize : (@canvas) ->
+				
+				@initMouse()
+				@initKeyboard()
 				
 				Model.Route.initialize().done (matrix) =>
 						
@@ -71,7 +37,47 @@ define(
 						View.addGeometry mesh
 
 					GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
-						View.addGeometry trianglesplane		
+						View.addGeometry trianglesplane
+
+			initMouse : ->
+				@input.mouse = new Input.Mouse(
+					@canvas
+					"x" : View.yawDistance
+					"y" : View.pitchDistance
+				)
+
+			initKeyboard : ->
+				
+				@input.keyboard = new Input.Keyboard(
+				
+					#ScaleTrianglesPlane
+					"l" : -> View.scaleTrianglesPlane(-SCALE_FACTOR)	
+					"k" : -> View.scaleTrianglesPlane(SCALE_FACTOR)	
+
+					#Move
+					"w" : -> View.move [0, MOVE_VALUE, 0]
+					"s" : -> View.move [0, -MOVE_VALUE, 0]
+					"a" : -> View.move [MOVE_VALUE, 0, 0]
+					"d" : -> View.move [-MOVE_VALUE, 0, 0]
+					"space" : -> View.move [0, 0, MOVE_VALUE]
+					"shift + space" : -> View.move [0, 0, -MOVE_VALUE]
+
+					#Rotate in distance
+					"left"  : -> View.yawDistance ROTATE_VALUE
+					"right" : -> View.yawDistance -ROTATE_VALUE
+					"up"    : -> View.pitchDistance -ROTATE_VALUE
+					"down"  : -> View.pitchDistance ROTATE_VALUE
+
+					#Rotate at centre
+					"shift + left"  : -> View.yaw ROTATE_VALUE
+					"shift + right" : -> View.yaw -ROTATE_VALUE
+					"shift + up"    : -> View.pitch -ROTATE_VALUE
+					"shift + down"  : -> View.pitch ROTATE_VALUE
+				)
+
+			input :
+				mouse : null
+				keyboard : null
 
 )		
 

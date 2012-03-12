@@ -112,6 +112,36 @@ V3.round = (v, r = new MJS_FLOAT_ARRAY_TYPE(3)) ->
   r[2] = Math.round(v[2])
   r
 
+$.bindDeferred = (target, source) ->
+  source
+    .done(-> target.resolve.apply(target, arguments))
+    .fail(-> target.reject.apply(target, arguments))
+    .progress(-> target.notify.apply(target, arguments))
+
+_.debounceDeferred = (func, wait) ->
+  timeout = null
+  deferred = null
+  ->
+    context = this
+    args = arguments
+
+    deferred.reject() if deferred
+    deferred = $.Deferred()
+    
+    later = ->
+      timeout = null
+      result = func.apply(context, args)
+      if result
+        $.bindDeferred(deferred, result)
+      else
+        deferred.reject()
+
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+
+    deferred.promise()
+
+
 # `_.throttle2` makes a function only be executed once in a given
 # time span -- no matter how often you it. We don't recomment to use 
 # any input parameters, because you cannot know which are used and 

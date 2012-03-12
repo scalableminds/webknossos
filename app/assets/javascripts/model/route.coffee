@@ -98,10 +98,22 @@ define ["libs/request"], (request) ->
 
 		popBranch : ->
 
-			@initialize().done =>
+			deferred = $.Deferred()
+			@initialize()
+				.done =>
 
-				@addToBuffer(2)
-				@branchStack.pop()
+					branchStack = @branchStack
+					
+					if branchStack.length > 0
+						@addToBuffer(2)
+						deferred.resolve(branchStack.pop())
+					else
+						deferred.reject()
+
+				.fail ->
+					deferred.reject()
+
+			deferred.promise()
 
 		# Add a point to the buffer. Just keep adding them.
 		put : (position) ->

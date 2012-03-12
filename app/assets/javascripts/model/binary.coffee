@@ -2,7 +2,8 @@ define [
 		"model/binary/interpolation_collector"
 		"libs/simple_array_buffer_socket"
 		"libs/simple_worker"
-	], (InterpolationCollector, SimpleArrayBufferSocket, SimpleWorker) ->
+		"model/binary/block_preloader"
+	], (InterpolationCollector, SimpleArrayBufferSocket, SimpleWorker, BlockPreloader) ->
 
 		# This is the model. It takes care of the data including the 
 		# communication with the server.
@@ -166,9 +167,7 @@ define [
 			#
 			get : (vertices) ->
 
-				$.Deferred()
-					.resolve(@getSync(vertices))
-					.promise()
+				$.when(@getSync(vertices))
 
 			# A synchronized implementation of `get`.
 			getSync : (vertices) ->
@@ -192,9 +191,8 @@ define [
 
 			PRELOAD_TEST_TOLERANCE : 0.9
 			PRELOAD_TEST_RADIUS : 37
-			PING_THROTTLE_TIME : 3000
-			COMPARE_TOLERANCE_ANGLE_COSINE : .995
-			COMPARE_TOLERANCE_TRANSLATION : 30
+			PING_DEBOUNCE_TIME : 200
+			PRELOAD_STEPBACK : 17
 
 			loadingMatrices : []
 			lastPing : null
@@ -209,18 +207,13 @@ define [
 			# you look at
 			#
 			# No Callback Paramters
-			ping : (matrix) ->
+			ping : (matrix, callback) ->
 
-				if (lastPing = @lastPing) and (new Date() - lastPing.time) < @PING_THROTTLE_TIME and @compareMatrix(lastPing.matrix, matrix)
-					null
-				else
-					time = new Date()
-					@lastPing = { matrix, time }
-					deferred = @pingImpl(matrix)
-					deferred.fail => @lastPingedMatrix = null
-					deferred
+				@ping = _.debounceDeferred(@pingImpl, @PING_DEBOUNCE_TIME)
+				@ping(matrix, callback)
 
-			pingImpl : (matrix) ->
+
+			pingImpl : (matrix, callback) ->
 
 				promises        = []
 				preloadRadius   = @PRELOAD_TEST_RADIUS
@@ -231,34 +224,17 @@ define [
 						if promise = @preload(matrix, x0, y0, 0, preloadDiameter)
 							promises.push(promise)
 						else
-							for z in [-1...15] by 3
+							for z in [-1...50] by 10
 								if promise = @preload(matrix, x0, y0, z, preloadDiameter)
 									promises.push(promise)
 									break
 
-				$.whenWithProgress(promises...)
+				$.whenWithProgress(promises...) if promises.length
 
 			compareMatrix : (matrix1, matrix2) ->
 
-				vec1 = new Float64Array(3)
-				vec2 = new Float64Array(3)
-				
-				for i in [0..2]
-					cardinalVector = [0, 0, 0]
-					cardinalVector[i] = 1
-
-					transformedCardinalVector1 = V3.normalize(M4x4.transformLineAffine(matrix1, cardinalVector, vec1), vec1)
-					transformedCardinalVector2 = V3.normalize(M4x4.transformLineAffine(matrix2, cardinalVector, vec2), vec2)
-
-					return false if V3.dot(transformedCardinalVector1, transformedCardinalVector2) < @COMPARE_TOLERANCE_ANGLE_COSINE
-				
-				position1 = [matrix1[12], matrix1[13], matrix1[14]]
-				position2 = [matrix2[12], matrix2[13], matrix2[14]]
-
-				return V3.length(V3.sub(position1, position2, vec1)) < @COMPARE_TOLERANCE_TRANSLATION
+				throw "Deprecated"
 			
-			PRELOAD_STEPBACK : 15
-
 			preload : (matrix, x0, y0, z, width, sparse = 5) ->
 				
 				matrix = M4x4.translate([x0, y0, z - @PRELOAD_STEPBACK - 5], matrix)
@@ -273,16 +249,12 @@ define [
 					halfWidth = width >> 1
 					for x in [-halfWidth..halfWidth] by sparse
 						for y in [-halfWidth..halfWidth] by sparse
-							vertices.push x, y, -@PRELOAD_STEPBACK
+							vertices.push x, y, 2
 					vertices
 				(args...) -> args.toString()
 			)
 
-			preloadTest : (matrix, width, sparse) ->
-
-				for loadingMatrix in @loadingMatrices
-					return 1 if @compareMatrix(matrix, loadingMatrix)
-				
+			preloadTest : (matrix, width, sparse) ->				
 
 				vertices = M4x4.transformPointsAffine(matrix, @preloadTestVertices(width, sparse))
 
@@ -311,6 +283,8 @@ define [
 
 			pull : (matrix) ->
 
+				console.log "pull", matrix
+				
 				@loadingMatrices.push(matrix)
 				
 				$.when(@loadColors(matrix), @calcVertices(matrix))
@@ -614,3 +588,4 @@ define [
 
 
 				i
+		#_.extend(Binary, BlockPreloader)

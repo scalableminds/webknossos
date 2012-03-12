@@ -65,7 +65,8 @@ object GridFileDataStore extends DataStore{
    */
   def inputStreamToByteArray(is: InputStream) = {
     val byteArray = new Array[Byte](2097152)
-    is.read(byteArray, 0, 2097152)
+    val bytesRead = is.read(byteArray, 0, 2097152)
+    Logger.info("%d bytes read".format(bytesRead))
     //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
     byteArray
   }

@@ -4,6 +4,7 @@ define ["libs/request"], (request) ->
 	Route = 
 		# Constants
 		BUFFER_SIZE : 262144 # 1024 * 1204 / 4
+		PUSH_THROTTLE_TIME : 30000 # 30s
 		
 		# Variables
 		branchStack : []
@@ -39,7 +40,7 @@ define ["libs/request"], (request) ->
 		# Pushes the buffered route to the server. Pushing happens at most 
 		# every 30 seconds.
 		push : ->
-			@push = _.throttle2(_.mutexDeferred(@pushImpl, -1), 30000)
+			@push = _.throttle(_.mutexDeferred(@pushImpl, -1), @PUSH_THROTTLE_TIME)
 			@push()
 
 		pushImpl : ->
@@ -103,7 +104,7 @@ define ["libs/request"], (request) ->
 				.done =>
 
 					branchStack = @branchStack
-					
+
 					if branchStack.length > 0
 						@addToBuffer(2)
 						deferred.resolve(branchStack.pop())

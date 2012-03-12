@@ -118,6 +118,44 @@ $.bindDeferred = (target, source) ->
     .fail(-> target.reject.apply(target, arguments))
     .progress(-> target.notify.apply(target, arguments))
 
+
+_.debounceOrThrottleDeferred = (func, waitDebounce, waitThrottle) ->
+
+  timeoutDebounce = null
+  deferred = null
+  throttled = false
+  
+  ->
+    context = this
+    args = arguments
+
+    deferred.reject() if deferred
+    deferred = $.Deferred()
+    
+    caller = ->
+      result = func.apply(context, args)
+      setTimeout(unthrottler, waitThrottle)
+      throttled = true
+      if result
+        $.bindDeferred(deferred, result)
+      else
+        deferred.reject()
+
+    unthrottler = ->
+      throttled = false
+
+    debouncer = ->
+      timeoutDebounce = null
+      caller()
+
+    clearTimeout(timeoutDebounce)
+    if throttled
+      timeoutDebounce = setTimeout(debouncer, waitDebounce)
+    else
+      caller()
+
+    deferred.promise()
+
 _.debounceDeferred = (func, wait) ->
   timeout = null
   deferred = null

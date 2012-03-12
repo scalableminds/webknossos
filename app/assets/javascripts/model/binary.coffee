@@ -209,7 +209,10 @@ define [
 			# No Callback Paramters
 			ping : (matrix, callback) ->
 
-				@ping = _.debounceDeferred(@pingImpl, @PING_DEBOUNCE_TIME)
+				# fire if
+				# *   wasn't called for 200ms or
+				# *   2.5s after last call are over
+				@ping = _.debounceOrThrottleDeferred(@pingImpl, @PING_DEBOUNCE_TIME, 2500)
 				@ping(matrix, callback)
 
 
@@ -230,13 +233,9 @@ define [
 									break
 
 				$.whenWithProgress(promises...) if promises.length
-
-			compareMatrix : (matrix1, matrix2) ->
-
-				throw "Deprecated"
 			
 			preload : (matrix, x0, y0, z, width, sparse = 5) ->
-				
+				# magic number 5
 				matrix = M4x4.translate([x0, y0, z - @PRELOAD_STEPBACK - 5], matrix)
 				if @preloadTest(matrix, width, sparse) < @PRELOAD_TEST_TOLERANCE
 					@pull(matrix)
@@ -249,7 +248,7 @@ define [
 					halfWidth = width >> 1
 					for x in [-halfWidth..halfWidth] by sparse
 						for y in [-halfWidth..halfWidth] by sparse
-							vertices.push x, y, 2
+							vertices.push x, y, 2 # magic number 2
 					vertices
 				(args...) -> args.toString()
 			)

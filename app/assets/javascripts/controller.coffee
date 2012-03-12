@@ -22,7 +22,7 @@ define(
 				
 				Model.Route.initialize().done (matrix) =>
 						
-					View.setCam(matrix)
+					View.setMatrix(matrix)
 
 					GeometryFactory.createMesh("coordinateAxes", "mesh").done (mesh) ->
 						mesh.relativePosition.x = 100
@@ -67,6 +67,10 @@ define(
 					"right" : -> View.yawDistance -ROTATE_VALUE
 					"up"    : -> View.pitchDistance -ROTATE_VALUE
 					"down"  : -> View.pitchDistance ROTATE_VALUE
+
+					#Branches
+					"b" : -> Model.Route.putBranch(View.getMatrix())
+					"h" : -> Model.Route.popBranch().done((matrix) -> View.setMatrix(matrix))
 
 					#Rotate at centre
 					"shift + left"  : -> View.yaw ROTATE_VALUE

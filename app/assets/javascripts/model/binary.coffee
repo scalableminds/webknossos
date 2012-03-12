@@ -192,6 +192,7 @@ define [
 			PRELOAD_TEST_TOLERANCE : 0.9
 			PRELOAD_TEST_RADIUS : 37
 			PING_DEBOUNCE_TIME : 200
+			PING_THROTTLE_TIME : 2500
 			PRELOAD_STEPBACK : 17
 
 			loadingMatrices : []
@@ -212,7 +213,7 @@ define [
 				# fire if
 				# *   wasn't called for 200ms or
 				# *   2.5s after last call are over
-				@ping = _.debounceOrThrottleDeferred(@pingImpl, @PING_DEBOUNCE_TIME, 2500)
+				@ping = _.debounceOrThrottleDeferred(@pingImpl, @PING_DEBOUNCE_TIME, @PING_THROTTLE_TIME)
 				@ping(matrix, callback)
 
 

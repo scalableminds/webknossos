@@ -59,11 +59,7 @@ define ->
 			vertex  = new Float32Array(3)
 			vec2 = new Float32Array(3)
 
-<<<<<<< HEAD
-			for i in [0...normalVertices.length] by 3
-=======
 			while i < bufferLength
->>>>>>> c96cf06422b14c91645b8a7ecf97d70b1b09f722
 				vertex[0] = normalVertices[i]
 				vertex[1] = normalVertices[i + 1]
 				vertex[2] = normalVertices[i + 2]

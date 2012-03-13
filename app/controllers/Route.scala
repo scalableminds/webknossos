@@ -70,8 +70,8 @@ object Route extends Controller with Secured {
         floatBuffer.dynamicSliding( windowSize = 17 ) {
           case PointValue :: x :: y :: z :: _ =>
             val v = Vector3I( x.toInt, y.toInt, z.toInt )
-            points = points :+ v	
-            println(v)
+            points = points :+ v
+            
             PointSize
           case BranchPushVallue :: tail =>
             val matrix = tail.take(16)

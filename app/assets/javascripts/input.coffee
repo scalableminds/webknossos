@@ -57,7 +57,7 @@ define( [
 		class Input.Deviceorientation
 
 			THRESHOLD = 10
-			SLOWDOWN_FACTOR = 250
+			SLOWDOWN_FACTOR = 500
 			
 			keyPressedCallbacks : {}
 			keyBindings : {}
@@ -76,12 +76,12 @@ define( [
 						
 						{ gamma, beta } = event
 						if gamma < -THRESHOLD or gamma > THRESHOLD
-							@fire("x", gamma)
+							@fire("x", -gamma)
 						else
 							@unfire("x")
 
 						if beta < -THRESHOLD or beta > THRESHOLD
-							@fire("y", beta)
+							@fire("y", -beta)
 						else
 							@unfire("y")
 				)

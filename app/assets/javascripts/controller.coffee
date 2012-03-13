@@ -10,7 +10,7 @@ define(
 		Controller ?= {}
 
 		MOVE_VALUE = 1
-		ROTATE_VALUE = 0.02
+		ROTATE_VALUE = 0.01
 		SCALE_FACTOR = 0.05
 
 		Controller = 

@@ -106,7 +106,7 @@ define [
 				Model.Binary.ping(transMatrix).done(View.draw).progress(View.draw)
 
 				#sends current position to Model for caching route
-				Model.Route.put cam.getPos(), null
+				Model.Route.put transMatrix
 
 				#get colors for new coords from Model
 				Model.Binary.get(newVertices).done ({ buffer0, buffer1, bufferDelta }) ->

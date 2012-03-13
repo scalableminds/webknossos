@@ -195,10 +195,7 @@ define [
 			PRELOAD_TEST_RADIUS : 37
 			PING_DEBOUNCE_TIME : 500
 			PING_THROTTLE_TIME : 2500
-			PRELOAD_STEPBACK : 17
-
-			loadingMatrices : []
-			lastPing : null
+			PRELOAD_STEPBACK : 18
 			
 			# Use this method to let us know when you've changed your spot. Then we'll try to 
 			# preload some data. 
@@ -213,8 +210,8 @@ define [
 			ping : (matrix, callback) ->
 
 				# fire if
-				# *   wasn't called for 300ms or
-				# *   2.5s after last call are over
+				# *   wasn't called for PING_DEBOUNCE_TIME or
+				# *   PING_THROTTLE_TIME after last call are over
 				@ping = _.debounceOrThrottleDeferred(@pingImpl, @PING_DEBOUNCE_TIME, @PING_THROTTLE_TIME)
 				@ping(matrix, callback)
 
@@ -286,9 +283,6 @@ define [
 			pull : (matrix) ->
 
 				console.log "pull", pullCounter++
-
-				
-				@loadingMatrices.push(matrix)
 				
 				$.when(@loadColors(matrix), @calcVertices(matrix))
 
@@ -301,7 +295,6 @@ define [
 							console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) 
 
 						@bulkSetColor(vertices, colors)
-						_.removeElement(@loadingMatrices, matrix)
 
 						null
 			

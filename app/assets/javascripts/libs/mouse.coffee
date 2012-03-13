@@ -65,22 +65,22 @@ define ->
 					y : evt.pageY
 			else
 				if @buttonDown	
-					distX = evt.webkitMovementX
+					distX = -evt.webkitMovementX
 					distY = evt.webkitMovementY
 					changedCallback.x distX/SLOWDOWN_FACTOR if distX isnt 0
 					changedCallback.y distY/SLOWDOWN_FACTOR if distY isnt 0
 
 		mouseDown : =>
-			$(@target).css("cursor", "none")
+			#$(@target).css("cursor", "none")
 			@buttonDown = true
 
 		mouseUp : =>
 			@buttonDown = false 
-			$(@target).css("cursor", "auto")
+			#$(@target).css("cursor", "auto")
 
 		lockMouse : =>
 			@locked = true
-			navigator.webkitpointer.lock @target, -> console.log "Success Mosue Lock", -> console.log "Error: Mouse Lock"
+			navigator.webkitPointer.lock @target, -> console.log "Success Mosue Lock", -> console.log "Error: Mouse Lock"
 
 		unlockMouse : =>
 			@locked = false

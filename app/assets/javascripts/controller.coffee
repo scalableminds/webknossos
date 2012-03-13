@@ -37,11 +37,6 @@ define(
 					GeometryFactory.createMesh("crosshair", "mesh").done (mesh) -> 	
 						View.addGeometry mesh
 
-					GeometryFactory.createMesh("quarter", "mesh").done (mesh) -> 	
-						mesh.relativePosition.y = 70
-						mesh.scaleFactor.y = 5
-						View.addGeometry mesh
-
 					GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
 						View.addGeometry trianglesplane
 

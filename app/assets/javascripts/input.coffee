@@ -8,7 +8,7 @@ define( [
 
 		class Input.Keyboard
 
-			delay : 1000/30
+			delay : 1000 / 30
 			keyCallbackMap : {}
 			keyPressedCount : 0
 
@@ -63,7 +63,7 @@ define( [
 			keyBindings : {}
 			keyPressedCount : 0
 
-			delay : 300
+			delay : 1000 / 30
 
 			constructor : (bindings) ->
 

@@ -25,6 +25,7 @@ define [
 					Model.Trianglesplane.get(width, zOffset)	
 				).pipe (shader, geometry) ->
 					trianglesplane = new Trianglesplane shader.vertexShader, shader.fragmentShader
-					trianglesplane.setNormalVertices geometry.vertices, geometry.width
+					trianglesplane.setNormalVertices geometry.normalVertices
+					trianglesplane.setQueryVertices geometry.queryVertices
 					trianglesplane.setVertexIndex (View.createElementArrayBufferObject geometry.indices), geometry.indices.length
 					return trianglesplane

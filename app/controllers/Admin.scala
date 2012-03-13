@@ -16,23 +16,30 @@ import com.mongodb.casbah.gridfs.Imports._
 object Admin extends Controller{
   
   def testGridFS = Action{
-
-    //Iterate over Block 5/10/10
     
-    var differences = 0
-    var bytesRead = 0
-    
+    var fileDataStoreTime = -System.currentTimeMillis()
     for{x <- 5*128 until 6*128
     	y <- 10*128 until 11*128
-    	z <- 15*256 until 16*256 by 2}{
-    	  val FileStoreByte = FileDataStore.load((x,y,z))
-    	  val GridFileStoreByte = GridFileDataStore.load((x,y,z))
-    	  bytesRead += 1
-    	  if(FileStoreByte != GridFileStoreByte){
-    	    differences += 1
-    	  }  
+    	z <- 15*256 until 16*256 by 2}
+    {
+      FileDataStore.load(Tuple3(x*128,y*128,z*128))
     }
-    Ok("done with %d differences, %d bytes read".format(differences, bytesRead))
+    fileDataStoreTime += System.currentTimeMillis()
+    TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
+    val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
+    Logger.info("FileDatastore needed: %s".format(sdf.format(fileDataStoreTime)))
+    
+    var gridFileDataStoreTime = -System.currentTimeMillis()
+    for{x <- 5*128 until 6*128
+    	y <- 10*128 until 11*128
+    	z <- 15*256 until 16*256 by 2}
+    {
+      GridFileDataStore.load(Tuple3(x*128,y*128,z*128))
+    }
+    gridFileDataStoreTime += System.currentTimeMillis()
+    Logger.info("FileDatastore needed: %s".format(sdf.format(gridFileDataStoreTime)))
+    Ok("done")
   }
 }
+
 

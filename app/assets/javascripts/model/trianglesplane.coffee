@@ -16,7 +16,7 @@ define ->
 			# so we have Point [0 0 0] centered
 			startIndex = - Math.floor width/2
 			endIndex   = startIndex + width
-			endIndex1  = endIndex1 - 1
+			endIndex1  = endIndex - 1
 			
 			# Each three elements represent one vertex.
 			normalVertices = new Float32Array(bufferLength)
@@ -36,7 +36,7 @@ define ->
 
 					# We don't draw triangles with the last point of an axis.
 					if y < endIndex1 and x < endIndex1
-						indices[currentIndex2    ] = currentPoint
+						indices[currentIndex2]     = currentPoint
 						indices[currentIndex2 + 1] = indices[currentIndex2 + 5] = currentPoint + 1 
 						indices[currentIndex2 + 2] = indices[currentIndex2 + 3] = currentPoint + width
 						indices[currentIndex2 + 4] = currentPoint + width + 1

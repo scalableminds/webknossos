@@ -1,14 +1,15 @@
 define( [
 		"libs/keyboard.0.2.2.min",
-		"libs/mouse"
+		"libs/mouse",
+		"libs/gamepad"
 	]
-	(KeyboardJS, MouseLib) ->
+	(KeyboardJS, MouseLib, GamepadJS) ->
 
 		Input ?= {}
 
 		class Input.Keyboard
 
-			delay : 1000/30
+			delay : 1000 / 30
 			keyCallbackMap : {}
 			keyPressedCount : 0
 
@@ -63,7 +64,7 @@ define( [
 			keyBindings : {}
 			keyPressedCount : 0
 
-			delay : 300
+			delay : 1000 / 30
 
 			constructor : (bindings) ->
 
@@ -120,6 +121,59 @@ define( [
 			# http://robhawkes.github.com/gamepad-demo/
 			# https://github.com/jbuck/input.js/
 			# http://www.gamepadjs.com/
+
+			gamepad : null
+			delay :  200
+			buttonCallbackMap : {}
+			buttonNameMap :
+				"ButtonA" : "faceButton0"
+				"ButtonB" : "faceButton1"
+				"ButtonX" : "faceButton2"
+				"ButtonY" : "faceButton3"
+				"ButtonStart"  : "start"
+				"ButtonSelect" : "select"
+
+				"ButtonLeftTrigger"  : " leftShoulder0"
+				"ButtonRightTrigger" : "rightShoulder0"
+				"ButtonLeftShoulder" : "leftShoulder1"
+				"ButtonRightShoulder": "rightShoulder1"
+
+				"ButtonUp"    : "dpadUp"
+				"ButtonDown"  : "dpadDown"
+				"ButtonLeft"  : "dpadLeft"
+				"ButtonRight" : "dpadRight"
+
+				"ButtonLeftStick"  : "leftStickButton"
+				"ButtonRightStick" : "rightStickButton"
+				"LeftStickX" : "leftStickX"
+				"LeftStickY" : "leftStickY"
+				"RightStickX": "rightStickX"
+				"RightStickX": "rightStickY"
+
+
+			constructor : (bindings) ->
+				if GamepadJS.supported
+
+					for own key, callback of bindings
+						@attach( @buttonNameMap[key] , callback )
+
+				else
+				 console.log "Your browser does not support gamepads!"
+
+			attach : (button, callback)  ->
+				@buttonCallbackMap[button] = callback
+				@gamepadLoop()
+
+			gamepadLoop : ->
+				_pad = GamepadJS.getStates()
+				@gamepad = _pad[0]
+
+				if @gamepad?
+					for button, callback of @buttonCallbackMap
+						unless @gamepad[button] == 0
+							callback()
+
+				setTimeout( (=> @gamepadLoop()), @delay)
 
 		Input
 )

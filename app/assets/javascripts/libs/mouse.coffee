@@ -71,12 +71,12 @@ define ->
 					changedCallback.y distY/SLOWDOWN_FACTOR if distY isnt 0
 
 		mouseDown : =>
-			#$(@target).css("cursor", "none")
+			$(@target).css("cursor", "none")
 			@buttonDown = true
 
 		mouseUp : =>
 			@buttonDown = false 
-			#$(@target).css("cursor", "auto")
+			$(@target).css("cursor", "auto")
 
 		lockMouse : =>
 			@locked = true

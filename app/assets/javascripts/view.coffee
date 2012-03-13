@@ -96,7 +96,7 @@ define [
 				#console.log "cam: " + cam.toString()
 
 				transMatrix = cam.getMatrix()
-				newVertices = M4x4.transformPointsAffine transMatrix, g.normalVertices
+				newVertices = M4x4.transformPointsAffine transMatrix, g.queryVertices
 				
 				#sets the original vertices to triangleplane
 				unless g.vertices.VBO?

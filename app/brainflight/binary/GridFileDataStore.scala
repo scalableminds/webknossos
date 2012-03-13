@@ -5,18 +5,15 @@ import play.api.Play.current
 import play.api.Play
 import play.Logger
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
+import com.mongodb.casbah.Imports._
+import scala.collection.JavaConverters._
+import com.mongodb.casbah.gridfs.Imports._
+import brainflight.tools.ExtendedDataTypes._
 
-/**
- * Scalable Minds - Brainflight
- * User: tom
- * Date: 10/11/11
- * Time: 12:20 PM
- */
-
-/**
- * A store which handles all binary data, the current implementation uses the given file structure on hdd
- */
-object FileDataStore extends DataStore{
+object GridFileDataStore extends DataStore{
+	  //GridFs handle
+  val gridfs = GridFS(MongoConnection()(Play.configuration.getString("mongo.dbname").getOrElse("salat-dao")))
+  
   lazy val nullBlock = (for (x <- 0 to 128 * 128 * 128) yield 0.toByte).toArray
   // defines the maximum count of cached file handles
   val maxCacheSize = 500
@@ -32,7 +29,7 @@ object FileDataStore extends DataStore{
   var fileCache = new HashMap[Tuple3[Int, Int, Int], Array[Byte]]
 
   /**
-   * Load the binary data of the given coordinate from file
+   * Load the binary data of the given coordinate from DB
    */
   def load(point: Tuple3[Int, Int, Int]): Byte = {
     // TODO: Insert upper bound
@@ -49,21 +46,15 @@ object FileDataStore extends DataStore{
         // pretends to flood memory with to many files
         if (fileCache.size > maxCacheSize)
           fileCache = fileCache.drop(dropCount)
-        try {
-          val binaryStream = new FileInputStream(
-            "%sx%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw".
-              format(dataPath, x, y, z, binaryDataID, x, y, z))
-          val binData = inputStreamToByteArray(binaryStream)
-          fileCache += (((x, y, z), binData))
-          binData
-        } catch {
-          case e: FileNotFoundException =>
-            Logger.warn(
-              "Block %sx%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw not found!".
-                format(dataPath, x, y, z, binaryDataID, x, y, z))
-            // if the file block isn't found, a nullBlock is associated with 
-            // the coordinates
-            fileCache += (((x, y, z), nullBlock))
+          
+        gridfs.findOne(convertCoordinatesToString(x,y,z)) match {
+          case Some(file) =>     
+            val binData = file.sourceWithCodec(scala.io.Codec.ISO8859).map(_.toByte).toArray
+            fileCache += (((x,y,z), binData))
+            binData
+          case None => 
+            Logger.info("Did not find file %s".format(createFilename(x,y,z)))
+            fileCache += (((x,y,z),nullBlock))
             nullBlock
         }
     }
@@ -76,7 +67,8 @@ object FileDataStore extends DataStore{
    */
   def inputStreamToByteArray(is: InputStream) = {
     val byteArray = new Array[Byte](2097152)
-    is.read(byteArray, 0, 2097152)
+    val bytesRead = is.read(byteArray, 0, 2097152)
+    Logger.info("%d bytes read".format(bytesRead))
     //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
     byteArray
   }
@@ -85,4 +77,27 @@ object FileDataStore extends DataStore{
     fileCache.clear()
   }
   
+  def createFilename(x: Int, y: Int, z: Int): String = {
+	"%s/x%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw".format(dataPath,x,y,z,binaryDataID,x,y,z) 
+  }
+  
+  def convertCoordinatesToString(x: Int, y: Int, z: Int):String = {
+    "%04d%04d%04d".format(x,y,z)
+  }
+  
+  private def create(x: Int, y: Int, z: Int):Array[Byte] ={
+    try{
+      val IS = new FileInputStream(createFilename(x,y,z))
+      gridfs(IS) { fh=>
+      fh.filename = convertCoordinatesToString(x,y,z)
+      fh.contentType = "application"
+      }
+      FileDataStore.inputStreamToByteArray(IS)
+    }
+    catch {
+      case e: FileNotFoundException =>
+        Logger.warn("%s not found!".format(createFilename(x,y,z)));
+        nullBlock
+    }
+  }
 }

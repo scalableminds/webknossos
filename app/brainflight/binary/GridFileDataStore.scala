@@ -26,7 +26,7 @@ object GridFileDataStore extends DataStore{
   // defines how many file handles are deleted when the limit is reached
   val dropCount = 50
   // try to prevent loading a file multiple times into memory
-  val fileCache = new HashMap[Tuple3[Int, Int, Int], Array[Byte]]
+  var fileCache = new HashMap[Tuple3[Int, Int, Int], Array[Byte]]
 
   /**
    * Load the binary data of the given coordinate from DB
@@ -45,7 +45,7 @@ object GridFileDataStore extends DataStore{
       case _ =>
         // pretends to flood memory with to many files
         if (fileCache.size > maxCacheSize)
-          fileCache.drop(dropCount)
+          fileCache = fileCache.drop(dropCount)
           
         gridfs.findOne(convertCoordinatesToString(x,y,z)) match {
           case Some(file) =>     

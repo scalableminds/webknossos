@@ -29,7 +29,7 @@ object FileDataStore extends DataStore{
   // defines how many file handles are deleted when the limit is reached
   val dropCount = 50
   // try to prevent loading a file multiple times into memory
-  val fileCache = new HashMap[Tuple3[Int, Int, Int], Array[Byte]]
+  var fileCache = new HashMap[Tuple3[Int, Int, Int], Array[Byte]]
 
   /**
    * Load the binary data of the given coordinate from file
@@ -48,7 +48,7 @@ object FileDataStore extends DataStore{
       case _ =>
         // pretends to flood memory with to many files
         if (fileCache.size > maxCacheSize)
-          fileCache.drop(dropCount)
+          fileCache = fileCache.drop(dropCount)
         try {
           val binaryStream = new FileInputStream(
             "%sx%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw".

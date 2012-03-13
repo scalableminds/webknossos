@@ -17,6 +17,35 @@ object Admin extends Controller{
   
   def testGridFS = Action{
     
+    val x = 5
+    var fileDataStoreTime = -System.currentTimeMillis()
+    for{
+    	y <- 0 until 25
+    	z <- 0 until 20}
+    {
+      FileDataStore.load(Tuple3(x*128,y*128,z*256))
+    }
+    fileDataStoreTime += System.currentTimeMillis()
+    TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
+    val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
+    Logger.info("FileDatastore needed: %s".format(sdf.format(fileDataStoreTime)))
+    FileDataStore.cleanUp()
+    
+    var gridFileDataStoreTime = -System.currentTimeMillis()
+    for{
+    	y <- 0 until 25
+    	z <- 0 until 20}
+    {
+      GridFileDataStore.load(Tuple3(x*128,y*128,z*256))
+    }
+    gridFileDataStoreTime += System.currentTimeMillis()
+    Logger.info("GridFileDatastore needed: %s".format(sdf.format(gridFileDataStoreTime)))
+    GridFileDataStore.cleanUp()
+    Ok("done")
+  }
+  /*
+  def testGridFS = Action{
+    
     var fileDataStoreTime = -System.currentTimeMillis()
     for{x <- 5*128 until 6*128
     	y <- 10*128 until 11*128
@@ -37,9 +66,9 @@ object Admin extends Controller{
       GridFileDataStore.load(Tuple3(x,y,z))
     }
     gridFileDataStoreTime += System.currentTimeMillis()
-    Logger.info("FileDatastore needed: %s".format(sdf.format(gridFileDataStoreTime)))
+    Logger.info("GridFileDatastore needed: %s".format(sdf.format(gridFileDataStoreTime)))
     Ok("done")
-  }
+  }*/
 }
 
 

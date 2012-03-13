@@ -193,7 +193,7 @@ define [
 
 			PRELOAD_TEST_TOLERANCE : 0.9
 			PRELOAD_TEST_RADIUS : 37
-			PING_DEBOUNCE_TIME : 300
+			PING_DEBOUNCE_TIME : 500
 			PING_THROTTLE_TIME : 2500
 			PRELOAD_STEPBACK : 17
 
@@ -230,7 +230,7 @@ define [
 						if promise = @preload(matrix, x0, y0, 0, preloadDiameter)
 							promises.push(promise)
 						else
-							for z in [-1...50] by 10
+							for z in [-1...70] by 10
 								if promise = @preload(matrix, x0, y0, z, preloadDiameter)
 									promises.push(promise)
 									break
@@ -251,7 +251,7 @@ define [
 					halfWidth = width >> 1
 					for x in [-halfWidth..halfWidth] by sparse
 						for y in [-halfWidth..halfWidth] by sparse
-							vertices.push x, y, 2 # magic number 2
+							vertices.push x, y, 5 # magic number 5
 					vertices
 				(args...) -> args.toString()
 			)
@@ -286,7 +286,7 @@ define [
 			pull : (matrix) ->
 
 				console.log "pull", pullCounter++
-				
+
 				
 				@loadingMatrices.push(matrix)
 				

@@ -206,18 +206,18 @@ define ->
 
 				# render trianglesplanes
 				if geometry.getClassType() is "Trianglesplane"
-					if @gl.getAttribLocation(@shaderProgram, "interpolationFront") > -1
-						@vertexAttribPointer "interpolationFront", 4, geometry.interpolationFront.VBO
-					if @gl.getAttribLocation(@shaderProgram, "interpolationBack") > -1
-						@vertexAttribPointer "interpolationBack", 4, geometry.interpolationBack.VBO
-					if @gl.getAttribLocation(@shaderProgram, "interpolationOffset") > -1
-						@vertexAttribPointer "interpolationOffset", 3, geometry.interpolationOffset.VBO
+					if @gl.getAttribLocation(@shaderProgram, "interpolationBuffer0") > -1
+						@vertexAttribPointer "interpolationBuffer0", 4, geometry.interpolationBuffer0.VBO
+					if @gl.getAttribLocation(@shaderProgram, "interpolationBuffer1") > -1
+						@vertexAttribPointer "interpolationBuffer1", 4, geometry.interpolationBuffer1.VBO
+					if @gl.getAttribLocation(@shaderProgram, "interpolationBufferDelta") > -1
+						@vertexAttribPointer "interpolationBufferDelta", 3, geometry.interpolationBufferDelta.VBO
 					@gl.bindBuffer @gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
 					@gl.drawElements @gl.TRIANGLES, geometry.vertexIndex.length, @gl.UNSIGNED_SHORT, 0
 					
-					@disableVertexAttribPointer "interpolationFront"	
-					@disableVertexAttribPointer "interpolationBack"
-					@disableVertexAttribPointer "interpolationOffset"
+					@disableVertexAttribPointer "interpolationBuffer0"	
+					@disableVertexAttribPointer "interpolationBuffer1"
+					@disableVertexAttribPointer "interpolationBufferDelta"
 
 				# render Meshes	
 				else if geometry.getClassType() is "Mesh"

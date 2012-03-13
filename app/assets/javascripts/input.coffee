@@ -57,6 +57,7 @@ define( [
 		class Input.Deviceorientation
 
 			THRESHOLD = 10
+			SLOWDOWN_FACTOR = 250
 			
 			keyPressedCallbacks : {}
 			keyBindings : {}
@@ -72,36 +73,30 @@ define( [
 				$(window).on(
 					"deviceorientation", 
 					({originalEvent : event}) => 
-						if event.gamma < -THRESHOLD
-							@fire("left")
-							@unfire("right")
-						else if event.gamma > THRESHOLD
-							@fire("right")
-							@unfire("left")
+						
+						{ gamma, beta } = event
+						if gamma < -THRESHOLD or gamma > THRESHOLD
+							@fire("x", gamma)
 						else
-							@unfire("right")
-							@unfire("left")
+							@unfire("x")
 
-						if event.beta < -THRESHOLD
-							@fire("up")
-							@unfire("down")
-						else if event.beta > THRESHOLD
-							@fire("down")
-							@unfire("up")
+						if beta < -THRESHOLD or beta > THRESHOLD
+							@fire("y", beta)
 						else
-							@unfire("up")
-							@unfire("down")
+							@unfire("y")
 				)
 
 			attach : (key, callback) ->
 
 				@keyBindings[key] = callback
 
-			fire : (key) ->
+			fire : (key, dist) ->
 
 				unless @keyPressedCallbacks[key]?
 					@keyPressedCount++ 
-					@keyPressedCallbacks[key] = @keyBindings[key]
+					@keyPressedCallbacks[key] = 
+						callback : @keyBindings[key]
+						distance : dist / SLOWDOWN_FACTOR
 					@buttonLoop() if @keyPressedCount == 1
 
 
@@ -114,8 +109,8 @@ define( [
 
 			buttonLoop : ->
 				if @keyPressedCount > 0
-					for own key, callback of @keyPressedCallbacks
-						callback?()
+					for own key, { callback, distance } of @keyPressedCallbacks
+						callback?(distance)
 
 					setTimeout( (=> @buttonLoop()), @delay ) 
 

@@ -25,6 +25,21 @@ define ->
 
 			new Polyhedron(polygons, vertices)
 
+		scale : (factor) ->
+			
+			{ vertices : oldVertices, polygons : oldPolygons } = @
+
+			vertices = new Float64Array(oldVertices.length)
+			i = vertices.length
+			while i > 0
+				vertices[--i] = oldVertices[i] * factor
+			
+			polygons = []
+			for polygon in oldPolygons
+				polygons.push(polygon.scale(factor))
+
+			new Polyhedron(polygons, vertices)
+
 		# Tests whether `point` is inside (including on the border)
 		# of the polyhedron or not. `omittedPolygon` can be passed
 		# to speed thungs up if you know that `point` is one that
@@ -152,7 +167,7 @@ define ->
 			
 			polygons = []
 			for face in polygonVertices
-				polygons.push(new Polygon(face))
+				polygons.push(new Polyhedron.Polygon(face))
 
 			vertices = []
 			for face in polygonVertices
@@ -168,11 +183,31 @@ define ->
 
 			new Polyhedron(polygons, new Float64Array(vertices))
 
+		@buildCuboid : (center, radius) ->
+
+			[c0, c1, c2] = center
+			[r0, r1, r2] = radius
+
+			@load [
+		    [ 2, 6, 4, 0 ]
+		    [ 5, 7, 3, 1 ]
+		    [ 4, 5, 1, 0 ]
+		    [ 3, 7, 6, 2 ]
+		    [ 1, 3, 2, 0 ]
+		    [ 6, 7, 5, 4 ]
+		  ].map (info) ->
+		    info.map (i) ->
+		     	[
+		        c0 + r0 * (2 * !!(i & 1) - 1)
+		        c1 + r1 * (2 * !!(i & 2) - 1)
+		        c2 + r2 * (2 * !!(i & 4) - 1)
+		      ]
+
 
 
 
 	# Represents a polygon.
-	class Polygon
+	class Polyhedron.Polygon
 
 		# Pass an array consisting of three-value arrays, each representing a
 		# vertex, or just a flat array where each three values represent a vertex.
@@ -232,5 +267,17 @@ define ->
 				M4x4.transformPointsAffine(matrix, @vertices, new Float64Array(@vertices.length)),
 				true
 			)
+
+		scale : (factor) ->
+
+			oldVertices = @vertices
+
+			vertices = new Float64Array(oldVertices.length)
+			i = vertices.length
+			while i > 0
+				vertices[--i] = oldVertices[i] * factor
+
+			new Polygon(vertices, true)
+
 
 	Polyhedron

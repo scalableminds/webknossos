@@ -1,5 +1,6 @@
 package controllers
 
+import play.api.Logger
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import models.{ TrackedRoute, RouteOrigin }
@@ -65,7 +66,7 @@ object Route extends Controller with Secured {
         
         
         val floatBuffer = buffer.subDivide( 4 ).map( _.reverse.toFloat )
-        println("Route: ")
+        Logger.debug("Route received")
         floatBuffer.dynamicSliding( windowSize = 17 ) {
           case PointValue :: x :: y :: z :: _ =>
             val v = Vector3I( x.toInt, y.toInt, z.toInt )
@@ -74,7 +75,7 @@ object Route extends Controller with Secured {
             PointSize
           case BranchPushVallue :: tail =>
             val matrix = tail.take(16)
-            println("PUSH: "+matrix)
+            Logger.debug("PUSH branchpoint: "+matrix)
             route.add( points.toList )
             points = Vector.empty
             User.save( user.copy( branchPoints = TransformationMatrix( matrix ) :: user.branchPoints ) )
@@ -82,7 +83,7 @@ object Route extends Controller with Secured {
             
             BranchMatrixSize
           case BranchPopValue :: _ =>
-            println("POP")
+            Logger.debug("POP branchpoint")
             route.add( points.toList )
             points = Vector.empty
             if ( !user.branchPoints.isEmpty ) {
@@ -93,7 +94,7 @@ object Route extends Controller with Secured {
             
             0
           case _ =>
-            println("BULLSHIT")     
+            Logger.error("BULLSHIT")     
             0
         }
         route.add( points.toList )

@@ -57,10 +57,12 @@ define ->
 				y : evt.pageY		
 
 		mouseDown : =>
+			$(@target).css("cursor", "none")
 			@buttonDown = true
 
 		mouseUp : =>
 			@buttonDown = false 
+			$(@target).css("cursor", "auto")
 
 		attachEventHandler : (type, func) ->
 			if @target.addEventListener

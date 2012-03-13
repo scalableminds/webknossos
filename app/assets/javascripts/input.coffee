@@ -25,7 +25,7 @@ define( [
 						unless @keyCallbackMap[key]?
 							@keyPressedCount++ 
 							@keyCallbackMap[key] = callback
-							@buttonLoop()
+							@buttonLoop() if @keyPressedCount == 1
 
 						return
 					=>
@@ -36,7 +36,7 @@ define( [
 
 			buttonLoop : ->
 				if @keyPressedCount > 0
-					for key, callback of @keyCallbackMap
+					for own key, callback of @keyCallbackMap
 						callback()
 
 					setTimeout( (=> @buttonLoop()), @delay ) 
@@ -52,11 +52,73 @@ define( [
 					@attach(axis, callback)
 
 			attach : (axis, callback) ->
-				if @mouse?
-					@mouse.bindX callback if axis is "x"
-					@mouse.bindY callback if axis is "y"
-				else
-					console.log "no mouse is set"
+				@mouse.bindX callback if axis is "x"
+				@mouse.bindY callback if axis is "y"
+				
+		class Input.Deviceorientation
+
+			THRESHOLD = 10
+			
+			keyPressedCallbacks : {}
+			keyBindings : {}
+			keyPressedCount : 0
+
+			delay : 300
+
+			constructor : (bindings) ->
+
+				for own key, callback of bindings
+					@attach(key, callback)
+
+				$(window).on(
+					"deviceorientation", 
+					({originalEvent : event}) => 
+						if event.gamma < -THRESHOLD
+							@fire("left")
+							@unfire("right")
+						else if event.gamma > THRESHOLD
+							@fire("right")
+							@unfire("left")
+						else
+							@unfire("right")
+							@unfire("left")
+
+						if event.beta < -THRESHOLD
+							@fire("up")
+							@unfire("down")
+						else if event.beta > THRESHOLD
+							@fire("down")
+							@unfire("up")
+						else
+							@unfire("up")
+							@unfire("down")
+				)
+
+			attach : (key, callback) ->
+
+				@keyBindings[key] = callback
+
+			fire : (key) ->
+
+				unless @keyPressedCallbacks[key]?
+					@keyPressedCount++ 
+					@keyPressedCallbacks[key] = @keyBindings[key]
+					@buttonLoop() if @keyPressedCount == 1
+
+
+			unfire : (key) ->
+
+				if @keyPressedCallbacks[key]
+					@keyPressedCount--
+					delete @keyPressedCallbacks[key]
+				return
+
+			buttonLoop : ->
+				if @keyPressedCount > 0
+					for own key, callback of @keyPressedCallbacks
+						callback?()
+
+					setTimeout( (=> @buttonLoop()), @delay ) 
 
 
 		class Input.Gamepad

@@ -39,7 +39,7 @@ define ["libs/request"], (request) ->
   class SimpleArrayBufferSocket.WebSocket
 
     OPEN_TIMEOUT : 5000
-    MESSAGE_TIMEOUT : 60000
+    MESSAGE_TIMEOUT : 20000
 
     constructor : (@url) ->
       _window = window ? self
@@ -63,14 +63,20 @@ define ["libs/request"], (request) ->
         socket.onerror = (err) ->
           console.error("socket error", err)
        
-        socket.onclose = (code, reason) => 
-          openDeferred.reject("closed")
-          console?.error("socket closed", "#{code}: #{reason}")
+        socket.addEventListener(
+          "close" 
+          (code, reason) => 
+            @socket = null
+            console?.error("socket closed", "#{code}: #{reason}")
+          false
+        )
         
-        setTimeout(=> 
-          if not @socket or @socket.readyState != @WebSocketImpl.OPEN
-            openDeferred.reject("timeout")
-        , @OPEN_TIMEOUT)
+        setTimeout(
+          => 
+            if not @socket or @socket.readyState != @WebSocketImpl.OPEN
+              openDeferred.reject("timeout")
+          @OPEN_TIMEOUT
+        )
       
       @openDeferred.promise()
 
@@ -86,20 +92,33 @@ define ["libs/request"], (request) ->
       
         deferred = $.Deferred()
         { transmitBuffer, socketHandle } = @createPackage(data)
+        socket = @socket
 
-        socketCallback = (event) =>
+        detachHandlers = ->
+          socket.removeEventListener("message", socketMessageCallback, false)
+          socket.removeEventListener("close", socketCloseCallback, false)
+            
+        socketMessageCallback = (event) =>
           buffer = event.data
           handle = new Float32Array(buffer, 0, 1)[0]
           if handle == socketHandle
-            @socket.removeEventListener("message", socketCallback, false)
+            detachHandlers()
             deferred.resolve(new @responseBufferType(buffer, 4))
+
+        socketCloseCallback = (event) ->
+          detachHandlers()
+          deferred.reject("socket closed")
         
-        @socket.addEventListener("message", socketCallback, false)
-        @socket.send(transmitBuffer)
+        socket.addEventListener("message", socketMessageCallback, false)
+        socket.addEventListener("close", socketCloseCallback, false)
+        socket.send(transmitBuffer)
       
-        setTimeout(( => 
-          deferred.reject("timeout")
-        ), @MESSAGE_TIMEOUT)
+        setTimeout(
+          -> 
+            detachHandlers()
+            deferred.reject("timeout")
+          @MESSAGE_TIMEOUT
+        )
 
         deferred.promise()
 

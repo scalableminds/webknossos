@@ -31,6 +31,7 @@ define ->
 
 			# fullscreen pointer lock 
 			@attachEventHandler "webkitfullscreenchange", @lockMouse
+			@attachEventHandler "webkitPointerlocklost", @unlockMouse
 			@attachEventHandler "mozfullscreenchange", @lockMouse
 		
 		###
@@ -79,10 +80,12 @@ define ->
 			$(@target).css("cursor", "auto")
 
 		lockMouse : =>
-			@locked = true
-			navigator.webkitPointer.lock @target, -> console.log "Success Mosue Lock", -> console.log "Error: Mouse Lock"
+			PointerLock = navigator.webkitPointer or navigator.Pointer
+			if (PointerLock)
+				PointerLock.lock @target
+				@locked = true
 
-		unlockMouse : =>
+		unlockMouse : ->
 			@locked = false
 
 		attachEventHandler : (type, func) ->

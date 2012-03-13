@@ -54,10 +54,10 @@ define(
 					#Fullscreen Mode
 					"f" : => 
 						canvas = @canvas
-						if ( canvas.webkitRequestFullScreen )
-							canvas.webkitRequestFullScreen canvas.ALLOW_KEYBOARD_INPUT
-						else if ( canvas.mozRequestFullScreen )
-							canvas.RequestFullScreen()
+						requestFullscreen = canvas.webkitRequestFullScreen or canvas.mozRequestFullScreen or canvas.RequestFullScreen
+						if requestFullscreen
+							requestFullscreen.call(canvas, canvas.ALLOW_KEYBOARD_INPUT)
+
 				
 					#ScaleTrianglesPlane
 					"l" : -> View.scaleTrianglesPlane(-SCALE_FACTOR)	

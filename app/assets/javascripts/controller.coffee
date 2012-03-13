@@ -22,10 +22,8 @@ define(
 				@initGamepad()
 
 				@input.deviceorientation = new Input.Deviceorientation(
-					"left"  : -> View.yawDistance ROTATE_VALUE
-					"right" : -> View.yawDistance -ROTATE_VALUE
-					"up"    : -> View.pitchDistance -ROTATE_VALUE
-					"down"  : -> View.pitchDistance ROTATE_VALUE
+					"x"  : View.yawDistance
+					"y" : View.pitchDistance
 				)
 				
 				Model.Route.initialize().done (matrix) =>

@@ -53,7 +53,7 @@ object GridFileDataStore extends DataStore{
             fileCache += (((x,y,z), binData))
             binData
           case None => 
-            Logger.info("Did not find file")
+            Logger.info("Did not find file %s".format(createFilename(x,y,z)))
             fileCache += (((x,y,z),nullBlock))
             nullBlock
         }

@@ -290,18 +290,18 @@ define (function() {
     // todo; possible we need to add different deadzones based on controller
     //       manufacturer, but perhaps they're fairly close anyway.
     if (isChrome && isWindows) {
-        active.push([ 'XInput ', 'GAMEPAD', ChromeWindowsXinputGamepad, "Xbox 360", Gamepad_ImageDataUrls_Xbox360 ]);
+        active.push([ 'XInput ', 'GAMEPAD', ChromeWindowsXinputGamepad, "Xbox 360"]); //, Gamepad_ImageDataUrls_Xbox360 ]);
     } else if (isChrome && isMac) {
         active.push([ 'Vendor: 045e', 'Product: 028e', ChromeMacXbox360Controller, "Xbox 360" ]); //, Gamepad_ImageDataUrls_Xbox360 ]);
         active.push([ 'Vendor: 045e', 'Product: 02a1', ChromeMacXbox360Controller, "Xbox 360" ]); //, Gamepad_ImageDataUrls_Xbox360 ]);
         active.push([ 'Vendor: 054c', 'Product: 0268', ChromeMacPS3Controller, "Playstation 3"]); //, Gamepad_ImageDataUrls_PS3 ]);
     } else if (isFirefox && isWindows) {
-        active.push([ '45e-', '28e-', FirefoxWindowsXbox360Controller, "Xbox 360", Gamepad_ImageDataUrls_Xbox360 ]);
-        active.push([ '45e-', '2a1-', FirefoxWindowsXbox360Controller, "Xbox 360", Gamepad_ImageDataUrls_Xbox360 ]);
-        active.push([ '46d-', 'c21d-', FirefoxWindowsXbox360Controller, "Logitech F310", Gamepad_ImageDataUrls_Xbox360 ]);
-        active.push([ '46d-', 'c21e-', FirefoxWindowsXbox360Controller, "Logitech F510", Gamepad_ImageDataUrls_Xbox360 ]);
+        active.push([ '45e-', '28e-', FirefoxWindowsXbox360Controller, "Xbox 360"]); //, Gamepad_ImageDataUrls_Xbox360 ]);
+        active.push([ '45e-', '2a1-', FirefoxWindowsXbox360Controller, "Xbox 360"]); //, Gamepad_ImageDataUrls_Xbox360 ]);
+        active.push([ '46d-', 'c21d-', FirefoxWindowsXbox360Controller, "Logitech F310"]); //, Gamepad_ImageDataUrls_Xbox360 ]);
+        active.push([ '46d-', 'c21e-', FirefoxWindowsXbox360Controller, "Logitech F510"]); //, Gamepad_ImageDataUrls_Xbox360 ]);
     } else if (isFirefox && isMac) {
-        active.push([ '45e-', '28e-', FirefoxMacXbox360Controller, "Xbox 360", Gamepad_ImageDataUrls_Xbox360 ]);
-        active.push([ '54c-', '268-', FirefoxMacPS3Controller, "Playstation 3", Gamepad_ImageDataUrls_PS3 ]);
+        active.push([ '45e-', '28e-', FirefoxMacXbox360Controller, "Xbox 360"]); //, Gamepad_ImageDataUrls_Xbox360 ]);
+        active.push([ '54c-', '268-', FirefoxMacPS3Controller, "Playstation 3"]); //, Gamepad_ImageDataUrls_PS3 ]);
     }
 return Gamepad });

@@ -20,17 +20,17 @@ case class RouteOrigin(
     _id: ObjectId = new ObjectId)
 
 object RouteOrigin extends BasicDAO[RouteOrigin]("routeOrigins") {
-  def leastUsed = {
+  def useLeastUsed = {
+
     val origin = find(MongoDBObject())
       .sort(orderBy = MongoDBObject("usedCount" -> 1))
       .limit(1)
       .toList
       
-    origin.headOption
-  }
-
-  def increaseUsedCount(obj: RouteOrigin) {
-    update(MongoDBObject("_id" -> obj._id), $inc("usedCount" -> 1))
+    origin.headOption.map{ origin =>
+      update(MongoDBObject("_id" -> origin._id), $inc("usedCount" -> 1))
+      origin.matrix 
+    }
   }
 
   def findAll = find(MongoDBObject.empty).toList

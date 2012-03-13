@@ -17,24 +17,26 @@ define(
 
 			initialize : (@canvas) ->
 				
-				@initMouse()
+				@initMouse() 
 				@initKeyboard()
 				@initGamepad()
+
+				@input.deviceorientation = new Input.Deviceorientation(
+					"left"  : -> View.yawDistance ROTATE_VALUE
+					"right" : -> View.yawDistance -ROTATE_VALUE
+					"up"    : -> View.pitchDistance -ROTATE_VALUE
+					"down"  : -> View.pitchDistance ROTATE_VALUE
+				)
 				
 				Model.Route.initialize().done (matrix) =>
 						
-					View.setCam(matrix)
+					View.setMatrix(matrix)
 
 					GeometryFactory.createMesh("coordinateAxes", "mesh").done (mesh) ->
 						mesh.relativePosition.x = 100
 						View.addGeometry mesh
 						
 					GeometryFactory.createMesh("crosshair", "mesh").done (mesh) -> 	
-						View.addGeometry mesh
-
-					GeometryFactory.createMesh("quarter", "mesh").done (mesh) -> 	
-						mesh.relativePosition.y = 70
-						mesh.scaleFactor.y = 5
 						View.addGeometry mesh
 
 					GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
@@ -50,6 +52,14 @@ define(
 			initKeyboard : ->
 				
 				@input.keyboard = new Input.Keyboard(
+
+					#Fullscreen Mode
+					"f" : -> 
+						canvas = @canvas
+						if ( canvas.webkitRequestFullScreen )
+							canvas.webkitRequestFullScreen canvas.ALLOW_KEYBOARD_INPUT
+						else if ( canvas.mozRequestFullScreen )
+							canvas.RequestFullScreen()
 				
 					#ScaleTrianglesPlane
 					"l" : -> View.scaleTrianglesPlane(-SCALE_FACTOR)	
@@ -68,6 +78,10 @@ define(
 					"right" : -> View.yawDistance -ROTATE_VALUE
 					"up"    : -> View.pitchDistance -ROTATE_VALUE
 					"down"  : -> View.pitchDistance ROTATE_VALUE
+
+					#Branches
+					"b" : -> Model.Route.putBranch(View.getMatrix())
+					"h" : -> Model.Route.popBranch().done((matrix) -> View.setMatrix(matrix))
 
 					#Rotate at centre
 					"shift + left"  : -> View.yaw ROTATE_VALUE
@@ -95,6 +109,8 @@ define(
 				mouse : null
 				keyboard : null
 				gamepad : null
+				deviceorientation : null
+
 
 )		
 

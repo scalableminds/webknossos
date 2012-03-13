@@ -112,6 +112,74 @@ V3.round = (v, r = new MJS_FLOAT_ARRAY_TYPE(3)) ->
   r[2] = Math.round(v[2])
   r
 
+$.bindDeferred = (target, source) ->
+  source
+    .done(-> target.resolve.apply(target, arguments))
+    .fail(-> target.reject.apply(target, arguments))
+    .progress(-> target.notify.apply(target, arguments))
+
+
+_.debounceOrThrottleDeferred = (func, waitDebounce, waitThrottle) ->
+
+  timeoutDebounce = null
+  deferred = null
+  throttled = false
+  
+  ->
+    context = this
+    args = arguments
+
+    deferred.reject() if deferred
+    deferred = $.Deferred()
+    
+    caller = ->
+      result = func.apply(context, args)
+      setTimeout(unthrottler, waitThrottle)
+      throttled = true
+      if result
+        $.bindDeferred(deferred, result)
+      else
+        deferred.reject()
+
+    unthrottler = ->
+      throttled = false
+
+    debouncer = ->
+      timeoutDebounce = null
+      caller()
+
+    clearTimeout(timeoutDebounce)
+    if throttled
+      timeoutDebounce = setTimeout(debouncer, waitDebounce)
+    else
+      caller()
+
+    deferred.promise()
+
+_.debounceDeferred = (func, wait) ->
+  timeout = null
+  deferred = null
+  ->
+    context = this
+    args = arguments
+
+    deferred.reject() if deferred
+    deferred = $.Deferred()
+    
+    later = ->
+      timeout = null
+      result = func.apply(context, args)
+      if result
+        $.bindDeferred(deferred, result)
+      else
+        deferred.reject()
+
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+
+    deferred.promise()
+
+
 # `_.throttle2` makes a function only be executed once in a given
 # time span -- no matter how often you it. We don't recomment to use 
 # any input parameters, because you cannot know which are used and 
@@ -164,6 +232,7 @@ _.removeElement = (array, element) ->
 
 # Works like `$.when`. However, there is a notification when one
 # of the deferreds completes.
+# http://api.jquery.com/jQuery.when/
 $.whenWithProgress = (args...) ->
   sliceDeferred = [].slice
   length = args.length
@@ -202,48 +271,4 @@ $.whenWithProgress = (args...) ->
   else if deferred != firstParam
     deferred.resolveWith( deferred, if length then [ firstParam ] else [] )
   promise
-
-
-
-
-# Just a proof of concept. Don't ever use this.
-# It inlines one function within another for performance reasons.
-# Because it works at runtime method decompilation is required. Keep
-# in mind that this isn't standardized, thus, generally a bad idea
-# to use. It also uses eval. So its really bad. 
-fastCall = (replacements, target, loopMode) ->
-
-  console.warn "Using fastCall can result in undefined behavior."
-
-  targetBody = target.toString()
-  targetBody = targetBody.substring(targetBody.indexOf("{") + 1, targetBody.lastIndexOf("}"))
-
-  for own key, source of replacements
-    sourceBody = source.toString()
-    sourceBody = sourceBody.substring(sourceBody.indexOf("{") + 1, sourceBody.lastIndexOf("}"))
-
-    sourceArguments = source.toString().match(/function \(([^\)]*)\)/)[1].split(",").map($.trim)
-
-    findKeyRegex = new RegExp("#{key}[^\\\(]*\\\([^\\\)]*\\\)[^;]*;","g")
-    for match in targetBody.match(findKeyRegex)
-
-      sourceBody2 = sourceBody
-
-      matchArguments = match.match(/\(([^\)]*)\)/)[1].split(",").map($.trim)
-      if matchArguments.length == sourceArguments.length
-        for i in [0...matchArguments.length]
-          findVarRegex = new RegExp("((?:[^a-zA-z_$0-9]|\\\[|\\\]))(#{sourceArguments[i]})((?:[^a-zA-z_$0-9]|\\\[|\\\]))","g")
-          sourceBody2 = sourceBody2.replace(findVarRegex, "$1#{matchArguments[i]}$3")
-      else
-        throw "cannot use this source"
-
-      sourceBody2 = sourceBody2.replace(/return([^;]*;)/g, "continue;") if loopMode
-      targetBody  = targetBody.replace(match, "// FASTCALL: #{key}(#{matchArguments})\n" + sourceBody2)
-
-
-  targetArguments = target.toString().match(/function \(([^\)]*)\)/)[1]
-
-  result = null
-  eval("result = function (#{targetArguments}) {#{targetBody}};")
-  result
 

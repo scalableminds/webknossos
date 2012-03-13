@@ -1,4 +1,4 @@
-_MVC = null
+MVC = null
 
 require.config 
   baseUrl : "/assets/javascripts"
@@ -7,7 +7,7 @@ require.config
 require [ "core_ext" ], ->
   require ["controller", "view", "model"], (Controller, View, Model) ->
     
-    _MVC = { Controller, View, Model }
+    MVC = { Controller, View, Model }
     $ ->
       
       _canvas = $("#render")

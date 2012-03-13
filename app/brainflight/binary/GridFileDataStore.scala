@@ -47,11 +47,12 @@ object GridFileDataStore extends DataStore{
           fileCache.drop(dropCount)
           
         BinDatabase.findOne(convertCoordinatesToString(x,y,z)) match {
-          case Some(data) => 
-            val binData = inputStreamToByteArray(data.inputStream)
+          case Some(file) => 
+            val binData = file.source.map(_.toByte).toArray
             fileCache += (((x,y,z), binData))
             binData
           case None => 
+            Logger.info("Did not find file")
             fileCache += (((x,y,z),nullBlock))
             nullBlock
         }

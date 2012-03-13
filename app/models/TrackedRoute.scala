@@ -1,5 +1,6 @@
 package models
 
+import scala.collection.mutable.{ Stack, Queue }
 import com.mongodb.casbah.Imports._
 import com.novus.salat.global._
 import com.novus.salat.dao.SalatDAO
@@ -27,13 +28,14 @@ case class TrackedRoute(
     timestamp: Date = new Date,
     _id: ObjectId = new ObjectId ) {
 
-  def points = Array[Vector3I]( first ) ++ TrackedRoute.byteCodesToRoute( first, binaryPointTree )
+  def points = Array[Vector3I]( first ) ++ TrackedRoute.routeFromBinary( start = first, bytes = binaryPointTree )
 
   def add( newPoints: List[Vector3I] ) = {
     if ( newPoints.size > 0 ) {
       val modifiedRoute = this.copy(
-        binaryPointTree = binaryPointTree ++ TrackedRoute.routeToByteCodes( last, newPoints ),
+        binaryPointTree = binaryPointTree ++ TrackedRoute.binaryFromRoute( start = last, points = newPoints ),
         last = newPoints.last )
+        
       TrackedRoute.save( modifiedRoute )
       modifiedRoute
     }
@@ -63,7 +65,9 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
   def byteCodeToInt( b: Int ): Int = b - 1
 
   def isValueByte( b: Byte ): Boolean = ( b & 0xC0 ) == ValueByteCode.toInt
-
+  def isBranchByte( b: Byte ): Boolean = ( b & 0xC0 )  == BranchByteCode.toInt
+  def isEndByte( b: Byte ): Boolean = ( b & 0xC0 ) == EndByteCode.toInt
+  
   def intToByteCode( i: Int ): Byte = {
     assert( i > -2 && i < 2, "Assertion failed with: " + i )
     ( i + 1 ).toByte
@@ -76,45 +80,37 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
     List( byteCodeToInt( byte & xMask ), byteCodeToInt( byte & yMask ), byteCodeToInt( byte & zMask ) )
   }
 
-  def fillGaps( s: Vector3I, e: Vector3I ): List[Vector3I] = {
-    var dx = s.x - e.x
-    var dy = s.y - e.y
-    var dz = s.z - e.z
-
-    val maxSize = max( dx.abs, max( dy.abs, dz.abs ) )
-
-    if ( maxSize > 5 )
-      log.warn( "Huge gap! Size: %d".format( maxSize ) )
-
-    val xList = List.fill( dx.abs )( dx.signum ) ::: List.fill( maxSize - dx.abs )( 0 )
-    val yList = List.fill( dy.abs )( dy.signum ) ::: List.fill( maxSize - dy.abs )( 0 )
-    val zList = List.fill( dz.abs )( dz.signum ) ::: List.fill( maxSize - dz.abs )( 0 )
-
-    List( xList, yList, zList ).transpose.map( IntListToVector3I )
-  }
-
   def pointToByteCode( point: Vector3I ): Byte =
     ( ValueByteCode |
       ( intToByteCode( point.x ) << 4 |
         intToByteCode( point.y ) << 2 |
         intToByteCode( point.z ) ) ).toByte
 
-  def routeToByteCodes( start: Vector3I, points: List[Vector3I] ): Array[Byte] = {
+  def binaryFromRoute( start: Vector3I, points: List[Vector3I] ): Array[Byte] = {
     points.zip( start :: points ).flatMap {
-      case ( p, s ) =>
-        fillGaps( s, p ).map( pointToByteCode )
+      case ( current, previous ) =>
+        current.fillGapTill(previous).map( pointToByteCode )
     }.toArray
   }
 
-  def byteCodesToRoute( start: Vector3I, bytes: Array[Byte] ): Array[Vector3I] = {
+  def routeFromBinary( start: Vector3I, bytes: Array[Byte] ): Array[Vector3I] = {
     var previous = start
-    for {
-      b <- bytes
-      if isValueByte( b )
-    } yield {
-      previous = previous - byteCodeToPoint( b )
-      previous
+    var branchPointStack = Stack[Vector3I]()
+    var route = Queue[Vector3I]()
+    for( b <- bytes ){
+      b match {
+        case b if isValueByte( b ) =>
+          previous = previous - byteCodeToPoint( b )
+    	  route.enqueue(previous)
+        case b if isBranchByte( b ) =>
+          branchPointStack.push( previous)
+          previous
+        case b if isEndByte( b ) =>
+          previous = branchPointStack.pop()
+          previous
+      }
     }
+    route.toArray
   }
 
   def createForUser( user: User, points: List[Vector3I] = Nil ) = {
@@ -122,7 +118,7 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
     val b: Array[Byte] = Array()
     val route = TrackedRoute(
       user._id,
-      routeToByteCodes( points.head, points.slice( 1, points.size ) ),
+      binaryFromRoute( points.head, points.slice( 1, points.size ) ),
       points.head,
       points.last )
     insert( route )

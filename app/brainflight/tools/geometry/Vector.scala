@@ -46,6 +46,23 @@ class Vector2D( val x: Double, val y: Double ) {
 
 case class Vector3I( val x: Int, val y: Int, val z: Int){
   def -( o: Vector3I) = Vector3I( x - o.x, y - o.y, z - o.z )
+  
+  def fillGapTill( dest: Vector3I ): List[Vector3I] = {
+    var dx = x - dest.x
+    var dy = y - dest.y
+    var dz = z - dest.z
+
+    val maxSize = max( dx.abs, max( dy.abs, dz.abs ) )
+
+    if ( maxSize > 5 )
+      System.err.println( "Huge gap! Size: %d".format( maxSize ) )
+
+    val xList = List.fill( dx.abs )( dx.signum ) ::: List.fill( maxSize - dx.abs )( 0 )
+    val yList = List.fill( dy.abs )( dy.signum ) ::: List.fill( maxSize - dy.abs )( 0 )
+    val zList = List.fill( dz.abs )( dz.signum ) ::: List.fill( maxSize - dz.abs )( 0 )
+
+    List( xList, yList, zList ).transpose.map( Vector3I.IntListToVector3I )
+  }
 }
 /**
  * Vector in 3D space

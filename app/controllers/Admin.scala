@@ -22,7 +22,7 @@ object Admin extends Controller{
     	y <- 10*128 until 11*128
     	z <- 15*256 until 16*256 by 2}
     {
-      FileDataStore.load(Tuple3(x*128,y*128,z*128))
+      FileDataStore.load(Tuple3(x,y,z))
     }
     fileDataStoreTime += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
@@ -34,7 +34,7 @@ object Admin extends Controller{
     	y <- 10*128 until 11*128
     	z <- 15*256 until 16*256 by 2}
     {
-      GridFileDataStore.load(Tuple3(x*128,y*128,z*128))
+      GridFileDataStore.load(Tuple3(x,y,z))
     }
     gridFileDataStoreTime += System.currentTimeMillis()
     Logger.info("FileDatastore needed: %s".format(sdf.format(gridFileDataStoreTime)))

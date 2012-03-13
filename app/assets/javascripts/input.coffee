@@ -7,6 +7,16 @@ define( [
 
 		Input ?= {}
 
+		class Input.KeyboardNoLoop
+
+			constructor : (bindings) ->
+				for own key, callback of bindings
+					@attach(key, callback)
+
+			attach : (key, callback) ->
+
+				KeyboardJS.bind.key(key, callback)
+
 		class Input.Keyboard
 
 			delay : 1000 / 30

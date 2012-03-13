@@ -4,6 +4,9 @@ define ->
 		SLOWDOWN_FACTOR = 250		
 
 		buttonDown : false
+		
+		# used for mopuse locking in fullscreen mode
+		locked : false
 
 		lastPosition : 
 			x : null
@@ -25,6 +28,7 @@ define ->
 			@attachEventHandler "mousemove", @mouseMoved
 			@attachEventHandler "mouseup", @mouseUp
 			@attachEventHandler "mousedown", @mouseDown
+			@attachEventHandler "webkitfullscreenchange", @lockMouse
 		
 		###
 		#Binds a function as callback when X-Position was changed
@@ -46,15 +50,22 @@ define ->
 			
 			{ lastPosition, changedCallback } = @
 
-			if @buttonDown
-				distX = -(evt.pageX - lastPosition.x)
-				distY =   evt.pageY - lastPosition.y
-				changedCallback.x distX/SLOWDOWN_FACTOR if distX isnt 0
-				changedCallback.y distY/SLOWDOWN_FACTOR if distY isnt 0
+			unless @locked 
+				if @buttonDown
+					distX = -(evt.pageX - lastPosition.x)
+					distY =   evt.pageY - lastPosition.y
+					changedCallback.x distX/SLOWDOWN_FACTOR if distX isnt 0
+					changedCallback.y distY/SLOWDOWN_FACTOR if distY isnt 0
 
-			@lastPosition =
-				x : evt.pageX
-				y : evt.pageY		
+				@lastPosition =
+					x : evt.pageX
+					y : evt.pageY
+			else
+				if @buttonDown	
+					distX = evt.movementX
+					distY = evt.movementY
+					changedCallback.x distX/SLOWDOWN_FACTOR if distX isnt 0
+					changedCallback.y distY/SLOWDOWN_FACTOR if distY isnt 0
 
 		mouseDown : =>
 			$(@target).css("cursor", "none")
@@ -63,6 +74,12 @@ define ->
 		mouseUp : =>
 			@buttonDown = false 
 			$(@target).css("cursor", "auto")
+
+		lockMouse : =>
+			@lock = true
+
+		unlockMouse : =>
+			@lock = false
 
 		attachEventHandler : (type, func) ->
 			if @target.addEventListener

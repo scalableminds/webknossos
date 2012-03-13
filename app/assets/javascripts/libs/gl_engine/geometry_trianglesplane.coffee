@@ -16,7 +16,13 @@ define ["libs/gl_engine/geometry"], (Geometry) ->
 
 			@interpolationOffset = 
 				VBO : null
-				length : null							
+				length : null				
+
+			#plain plane
+			@normalVertices = null
+
+			#curved plane
+			@queryVertices = null
 			
 			@type = "Trianglesplane"
 
@@ -36,9 +42,11 @@ define ["libs/gl_engine/geometry"], (Geometry) ->
 			@interpolationOffset.VBO = data
 			@interpolationOffset.length = len						
 
-		setNormalVertices : (data, width) -> 
+		setNormalVertices : (data) -> 
 			@normalVertices = data
-			@normalVerticesWidth = width
+
+		setQueryVertices : (data) -> 
+			@queryVertices = data	
 
 		setVertices : (data, len) -> 
 			super data, len

@@ -98,9 +98,9 @@ define [
 				transMatrix = cam.getMatrix()
 				newVertices = M4x4.transformPointsAffine transMatrix, g.normalVertices
 				
-				#hsa to be removed later
-				engine.deleteSingleBuffer g.vertices.VBO
-				g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
+				#sets the original vertices to triangleplane
+				unless g.vertices.VBO?
+					g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
 
 				#sends current position to Model for preloading data
 				Model.Binary.ping(transMatrix).done(View.draw)

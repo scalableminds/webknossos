@@ -59,7 +59,7 @@ define ->
 			vertex  = new Float32Array(3)
 			vec2 = new Float32Array(3)
 
-			for i in [0...vertices.length] by 3
+			for i in [0...normalVertices.length] by 3
 				vertex[0] = normalVertices[i]
 				vertex[1] = normalVertices[i + 1]
 				vertex[2] = normalVertices[i + 2]

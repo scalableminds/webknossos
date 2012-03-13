@@ -36,6 +36,17 @@ case class User(
   def hasPermission( permission: Permission ) =
     ruleSet.find( _.implies( permission ) ).isDefined
     
+  def useBranchPointAsOrigin = {
+    branchPoints match {
+      case head :: tail => 
+        User.save( this.copy( branchPoints = tail ) )
+        Some( head )
+      case _ =>
+        None
+    }
+  }  
+  
+    
   def id = _id.toString
 }
 

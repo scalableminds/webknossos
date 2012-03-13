@@ -66,7 +66,7 @@ define( [
 			# http://www.gamepadjs.com/
 
 			gamepad : null
-			delay : 1000 / 30
+			delay :  200
 			buttonCallbackMap : {}
 			buttonNameMap :
 				"ButtonA" : "faceButton0"
@@ -76,6 +76,18 @@ define( [
 				"ButtonStart"  : "start"
 				"ButtonSelect" : "select"
 
+				"ButtonLeftTrigger"  : " leftShoulder0"
+				"ButtonRightTrigger" : "rightShoulder0"
+				"ButtonLeftShoulder" : "leftShoulder1"
+				"ButtonRightShoulder": "rightShoulder1"
+
+				"ButtonUp"    : "dpadUp"
+				"ButtonDown"  : "dpadDown"
+				"ButtonLeft"  : "dpadLeft"
+				"ButtonRight" : "dpadRight"
+
+				"ButtonLeftStick"  : "leftStickButton"
+				"ButtonRightStick" : "rightStickButton"
 				"LeftStickX" : "leftStickX"
 				"LeftStickY" : "leftStickY"
 				"RightStickX": "rightStickX"

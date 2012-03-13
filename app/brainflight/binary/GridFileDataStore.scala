@@ -8,10 +8,11 @@ import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import com.mongodb.casbah.Imports._
 import scala.collection.JavaConverters._
 import com.mongodb.casbah.gridfs.Imports._
+import brainflight.tools.ExtendedDataTypes._
 
 object GridFileDataStore extends DataStore{
 	  //GridFs handle
-  val BinDatabase = GridFS(MongoConnection()(Play.configuration.getString("mongo.dbname").getOrElse("salat-dao")))
+  val gridfs = GridFS(MongoConnection()(Play.configuration.getString("mongo.dbname").getOrElse("salat-dao")))
   
   lazy val nullBlock = (for (x <- 0 to 128 * 128 * 128) yield 0.toByte).toArray
   // defines the maximum count of cached file handles
@@ -46,9 +47,9 @@ object GridFileDataStore extends DataStore{
         if (fileCache.size > maxCacheSize)
           fileCache.drop(dropCount)
           
-        BinDatabase.findOne(convertCoordinatesToString(x,y,z)) match {
-          case Some(file) => 
-            val binData = file.source.map(_.toByte).toArray
+        gridfs.findOne(convertCoordinatesToString(x,y,z)) match {
+          case Some(file) =>     
+            val binData = file.sourceWithCodec(scala.io.Codec.ISO8859).map(_.toByte).toArray
             fileCache += (((x,y,z), binData))
             binData
           case None => 
@@ -87,7 +88,7 @@ object GridFileDataStore extends DataStore{
   private def create(x: Int, y: Int, z: Int):Array[Byte] ={
     try{
       val IS = new FileInputStream(createFilename(x,y,z))
-      BinDatabase(IS) { fh=>
+      gridfs(IS) { fh=>
       fh.filename = convertCoordinatesToString(x,y,z)
       fh.contentType = "application"
       }

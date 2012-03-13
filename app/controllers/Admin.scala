@@ -16,19 +16,23 @@ import com.mongodb.casbah.gridfs.Imports._
 object Admin extends Controller{
   
   def testGridFS = Action{
+
     //Iterate over Block 5/10/10
+    
     var differences = 0
+    var bytesRead = 0
+    
     for{x <- 5*128 until 6*128
-    	y <- 10*128 until 10*128
+    	y <- 10*128 until 11*128
     	z <- 15*256 until 16*256 by 2}{
     	  val FileStoreByte = FileDataStore.load((x,y,z))
     	  val GridFileStoreByte = GridFileDataStore.load((x,y,z))
-    	  
+    	  bytesRead += 1
     	  if(FileStoreByte != GridFileStoreByte){
     	    differences += 1
     	  }  
     }
-    Ok("done with %d differences".format(differences))
+    Ok("done with %d differences, %d bytes read".format(differences, bytesRead))
   }
 }
 

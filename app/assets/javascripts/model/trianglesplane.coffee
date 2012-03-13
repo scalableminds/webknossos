@@ -59,7 +59,7 @@ define ->
 			vertex  = new Float32Array(3)
 			vec2 = new Float32Array(3)
 
-			for i in [0...vertices.length] by 3
+			while i < bufferLength
 				vertex[0] = normalVertices[i]
 				vertex[1] = normalVertices[i + 1]
 				vertex[2] = normalVertices[i + 2]
@@ -69,10 +69,9 @@ define ->
 				vec2   = V3.scale(vec2, SPHERICAL_CAP_RADIUS / length, vec2)
 				V3.add(centerVertex, vec2, vertex)
 
-				queryVertices[i]     = vertex[0]
-				queryVertices[i + 1] = vertex[1]
-				queryVertices[i + 2] = vertex[2]
-
+				queryVertices[i++] = vertex[0]
+				queryVertices[i++] = vertex[1]
+				queryVertices[i++] = vertex[2]
 
 
 			deferred.resolve { normalVertices, queryVertices, indices }

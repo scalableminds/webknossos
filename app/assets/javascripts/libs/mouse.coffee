@@ -28,7 +28,10 @@ define ->
 			@attachEventHandler "mousemove", @mouseMoved
 			@attachEventHandler "mouseup", @mouseUp
 			@attachEventHandler "mousedown", @mouseDown
+
+			# fullscreen pointer lock 
 			@attachEventHandler "webkitfullscreenchange", @lockMouse
+			@attachEventHandler "mozfullscreenchange", @lockMouse
 		
 		###
 		#Binds a function as callback when X-Position was changed
@@ -62,8 +65,8 @@ define ->
 					y : evt.pageY
 			else
 				if @buttonDown	
-					distX = evt.movementX
-					distY = evt.movementY
+					distX = evt.webkitMovementX
+					distY = evt.webkitMovementY
 					changedCallback.x distX/SLOWDOWN_FACTOR if distX isnt 0
 					changedCallback.y distY/SLOWDOWN_FACTOR if distY isnt 0
 
@@ -76,10 +79,11 @@ define ->
 			$(@target).css("cursor", "auto")
 
 		lockMouse : =>
-			@lock = true
+			@locked = true
+			navigator.webkitpointer.lock @target, -> console.log "Success Mosue Lock", -> console.log "Error: Mouse Lock"
 
 		unlockMouse : =>
-			@lock = false
+			@locked = false
 
 		attachEventHandler : (type, func) ->
 			if @target.addEventListener

@@ -52,7 +52,7 @@ define(
 				@input.keyboard = new Input.Keyboard(
 
 					#Fullscreen Mode
-					"f" : -> 
+					"f" : => 
 						canvas = @canvas
 						if ( canvas.webkitRequestFullScreen )
 							canvas.webkitRequestFullScreen canvas.ALLOW_KEYBOARD_INPUT

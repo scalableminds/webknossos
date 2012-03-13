@@ -15,11 +15,27 @@ import com.mongodb.casbah.gridfs.Imports._
 
 object Admin extends Controller{
   
-  def testGridFS = Action{
+  def timeGridFS = Action{
     
-    val x = 5
+    var gridFileDataStoreTime = -System.currentTimeMillis()
+    for{
+        x <- 0 until 30
+    	y <- 0 until 30
+    	z <- 0 until 30}
+    {
+      GridFileDataStore.load(Tuple3(x*128,y*128,z*256))
+    }
+    gridFileDataStoreTime += System.currentTimeMillis()
+    TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
+    val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
+    GridFileDataStore.cleanUp()
+    Ok("GridFS needed %s".format(sdf.format(gridFileDataStoreTime)))
+  }
+  
+  def timeFileDataStore = Action{
     var fileDataStoreTime = -System.currentTimeMillis()
     for{
+        x <- 0 until 30
     	y <- 0 until 30
     	z <- 0 until 30}
     {
@@ -29,20 +45,9 @@ object Admin extends Controller{
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
     FileDataStore.cleanUp()
-    
-    var gridFileDataStoreTime = -System.currentTimeMillis()
-    for{
-    	y <- 0 until 30
-    	z <- 0 until 30}
-    {
-      GridFileDataStore.load(Tuple3(x*128,y*128,z*256))
-    }
-    gridFileDataStoreTime += System.currentTimeMillis()
-    Logger.info("GridFileDatastore needed: %s".format(sdf.format(gridFileDataStoreTime)))
-    GridFileDataStore.cleanUp()
-    Ok("FileDataStore needed %s \n GridFS needed %s".format(sdf.format(fileDataStoreTime),
-        sdf.format(gridFileDataStoreTime)))
+    Ok("FileDataStore needed %s".format(sdf.format(fileDataStoreTime)))
   }
+    
   /*
   def testGridFS = Action{
     

@@ -14,8 +14,15 @@ import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.gridfs.Imports._
 
 object Admin extends Controller {
+  
+  val xBot = 5
+  val xTop = 5
+  val yBot = 0
+  val yTop = 20
+  val zBot = 0
+  val zTop = 20
 
-  def timeGridFS(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int) = Action {
+  def timeGridFS() = Action {
 
     var gridFileDataStoreTime = -System.currentTimeMillis()
     Logger.info("outside loop")
@@ -34,13 +41,13 @@ object Admin extends Controller {
     Ok("GridFS needed %s\n %d %d %d %d %d %d".format(sdf.format(gridFileDataStoreTime), xBot, xTop, yBot, yTop, zBot, zTop))
   }
 
-  def timeFileDataStore(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int) = Action {
+  def timeFileDataStore() = Action {
     var fileDataStoreTime = -System.currentTimeMillis()
     Logger.info("outside loop")
     for {
       x <- xBot to xTop
       y <- yBot to yTop
-      z <- zTop to zTop
+      z <- zBot to zTop
     } {
       Logger.info("inside loop")
       FileDataStore.load(Tuple3(x * 128, y * 128, z * 256))
@@ -49,7 +56,7 @@ object Admin extends Controller {
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
     FileDataStore.cleanUp()
-    Ok("FileDataStore needed %s\n %d %d %d %d %d %d".format(sdf.format(fileDataStoreTime), xBot, xTop, yBot, yTop, zBot, zTop))
+    Ok("FileDataStore needed %s".format(sdf.format(fileDataStoreTime)))
   }
 
   /*

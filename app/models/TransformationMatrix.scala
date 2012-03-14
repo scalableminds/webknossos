@@ -10,3 +10,7 @@ case class TransformationMatrix( value: List[Float] ) {
         None
     }
 }
+
+object TransformationMatrix{
+  val defaultSize = 16
+}

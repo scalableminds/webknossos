@@ -11,9 +11,9 @@ abstract class Figure
 case class Cube( topLeft: Vector3I, edgeLength: Int) extends Figure{
   def calculateInnerPoints(): Seq[Tuple3[Int, Int, Int]] = {
     for{
-      x <- topLeft.x to topLeft.x + edgeLength
-      y <- topLeft.y to topLeft.y + edgeLength
-      z <- topLeft.z to topLeft.z + edgeLength
+      x <- topLeft.x until topLeft.x + edgeLength
+      y <- topLeft.y until topLeft.y + edgeLength
+      z <- topLeft.z until topLeft.z + edgeLength
     } yield {
       (x,y,z)
     }

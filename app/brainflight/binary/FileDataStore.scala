@@ -14,7 +14,7 @@ import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
  */
 
 /**
- * A store which handles all binary data, the current implementation uses the given file structure on hdd
+ * A data store implementation which uses the hdd as data storage
  */
 object FileDataStore extends DataStore{
   lazy val nullBlock = (for (x <- 0 to 128 * 128 * 128) yield 0.toByte).toArray

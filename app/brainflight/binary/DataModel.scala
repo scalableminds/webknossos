@@ -15,8 +15,10 @@ import scala.collection.parallel.ParSeq
  */
 
 /**
- * All possible data models the client should be able to request need to be defined here and registered in Boot.scala
- * A binary data model defines which binary data is responded given a viewpoint and an axis
+ * All possible data models the client should be able to request need to be 
+ * defined here and registered in Global.scala. A binary data model defines 
+ * which binary data is responded given a client request containing the 
+ * rotation matrix
  */
 abstract class DataModel {
   // every model needs a unique id, it is used to request the model via get http request
@@ -32,6 +34,9 @@ abstract class DataModel {
   lazy val normals = polygons.map(_.normalVector)
 }
 
+/**
+ * Simple cube model
+ */
 object CubeModel extends DataModel{
   val id = "cube"
   val yLength = 50
@@ -39,6 +44,9 @@ object CubeModel extends DataModel{
   val polygons = new NGonalFrustum(4,yLength,38,38).polygons
 }
 
+/**
+ * n-gonal Frustrum model with 
+ */
 object FrustumModel extends DataModel{
   val id= "frustum"
   val yLength = 50

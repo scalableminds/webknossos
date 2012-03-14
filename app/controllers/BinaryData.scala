@@ -37,12 +37,13 @@ object BinaryData extends Controller with Secured {
   val WebSocketCoordinatesLength = Vector3I.defaultSize * 4
   val MinWebSocketRequestSize = WebSocketHandleLength + WebSocketCoordinatesLength
 
-  def calculateBinaryData( cubeSize: Int, position: Array[Int], clientCoordinates: Array[Int] = Array() ) = {
-    if ( position.length != 3 ) {
-      Logger.debug( "Wrong position Size: " + position.length )
+  def calculateBinaryData( cubeSize: Int, cubeCorner: Array[Int], clientCoordinates: Array[Int] = Array() ) = {
+    if ( cubeCorner.length != 3 ) {
+      Logger.debug( "Wrong position Size: " + cubeCorner.length )
       Array[Byte]()
     } else {
-      val figure = Cube( position, cubeSize )
+      Logger.debug( "Corner: "+cubeCorner )
+      val figure = Cube( cubeCorner, cubeSize )
       val coordinates = figure.calculateInnerPoints()
 
       /*Akka.future {
@@ -74,7 +75,8 @@ object BinaryData extends Controller with Secured {
     ( request.body ) match {
       case body if body.size > WebSocketCoordinatesLength =>
         val binPosition = body.asBytes().getOrElse( Array[Byte]() )
-        val position = binPosition.subDivide( 4 ).map( _.reverse.toFloat.toInt / cubeSize)
+        val position = binPosition.subDivide( 4 ).map( _.reverse.toIntFromFloat)
+        val cubeCorner = position.map( x => x - x % cubeSize)
         val result = calculateBinaryData( cubeSize, position )
         Ok( result )
       case body =>
@@ -101,11 +103,12 @@ object BinaryData extends Controller with Secured {
           val ( binPosition, binClientCoord ) = inRest.splitAt( WebSocketCoordinatesLength )
 
           // convert the matrix from byte to float representation
-          val position = binPosition.subDivide( 4 ).map( _.reverse.toFloat.toInt / cubeSize)
+          val position = binPosition.subDivide( 4 ).map( _.reverse.toIntFromFloat)
+          val cubeCorner = position.map( x => x - x % cubeSize)
           val clientCoordinates =
             binClientCoord.subDivide( 4 ).map( _.reverse.toFloat ).map( _.toInt )
 
-            val result = calculateBinaryData( cubeSize, position, clientCoordinates )
+            val result = calculateBinaryData( cubeSize, cubeCorner, clientCoordinates )
             output.push( binHandle ++ result )
         }
       } )

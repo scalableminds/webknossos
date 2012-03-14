@@ -65,6 +65,15 @@ define ->
 		bindY : (callback) ->
 			@changedCallback.y = callback
 
+		unbind : ->
+			$(@target).off 
+				"mousemove" : @mouseMoved
+				"mouseup" : @mouseUp
+				"mousedown" : @mouseDown
+				"webkitfullscreenchange" : @toogleMouseLock
+				"webkitpointerlocklost" : @unlockMouse
+				"webkitpointerlockchange" : @unlockMouse		
+
 		mouseMoved : (evt) =>
 			
 			{ lastPosition, changedCallback } = @

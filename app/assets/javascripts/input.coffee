@@ -51,6 +51,10 @@ define( [
 
 					setTimeout( (=> @buttonLoop()), @delay ) 
 
+			unbind : ->
+				KeyboardJS.unbind.key "all"
+
+
 		class Input.Mouse
 			
 			mouse : null
@@ -73,6 +77,9 @@ define( [
 
 			setRotateValue : (value) ->
 				@mouse.setRotateValue value if @mouse?
+
+			unbind : ->
+				@mouse.unbind()
 
 				
 		class Input.Deviceorientation
@@ -110,6 +117,23 @@ define( [
 			attach : (key, callback) ->
 
 				@keyBindings[key] = callback
+
+			unbind : ->
+				$(window).off(
+					"deviceorientation", 
+					({originalEvent : event}) => 
+						
+						{ gamma, beta } = event
+						if gamma < -THRESHOLD or gamma > THRESHOLD
+							@fire("x", -gamma)
+						else
+							@unfire("x")
+
+						if beta < -THRESHOLD or beta > THRESHOLD
+							@fire("y", -beta)
+						else
+							@unfire("y")
+				)			
 
 			fire : (key, dist) ->
 
@@ -184,14 +208,23 @@ define( [
 				@buttonCallbackMap[button] = callback
 				@gamepadLoop()
 
+			unbind : ->
+				@buttonCallbackMap = null
+				#for own key, callback of @buttonCallbackMap
+				#		@attach( @buttonNameMap[key] , null )			
+
+
 			gamepadLoop : ->
+				#stops the loop caused by unbind
+				return unless @buttonCallbackMap
+
 				_pad = GamepadJS.getStates()
 				@gamepad = _pad[0]
 
 				if @gamepad?
 					for button, callback of @buttonCallbackMap
 						unless @gamepad[button] == 0
-							callback()
+							callback() 
 
 				setTimeout( (=> @gamepadLoop()), @delay)
 

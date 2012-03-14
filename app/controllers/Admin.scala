@@ -18,11 +18,13 @@ object Admin extends Controller {
   def timeGridFS(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int) = Action {
 
     var gridFileDataStoreTime = -System.currentTimeMillis()
+    Logger.info("outside loop")
     for {
-      x <- xBot until xTop
-      y <- yBot until yTop
-      z <- zBot until zTop
+      x <- xBot to xTop
+      y <- yBot to yTop
+      z <- zBot to zTop
     } {
+      Logger.info("inside loop")
       GridFileDataStore.load(Tuple3(x * 128, y * 128, z * 256))
     }
     gridFileDataStoreTime += System.currentTimeMillis()
@@ -34,11 +36,13 @@ object Admin extends Controller {
 
   def timeFileDataStore(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int) = Action {
     var fileDataStoreTime = -System.currentTimeMillis()
+    Logger.info("outside loop")
     for {
-      x <- xBot until xTop
-      y <- yBot until yTop
-      z <- zTop until zTop
+      x <- xBot to xTop
+      y <- yBot to yTop
+      z <- zTop to zTop
     } {
+      Logger.info("inside loop")
       FileDataStore.load(Tuple3(x * 128, y * 128, z * 256))
     }
     fileDataStoreTime += System.currentTimeMillis()

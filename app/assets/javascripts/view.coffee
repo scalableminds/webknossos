@@ -251,9 +251,9 @@ define [
 
 				scaleTrianglesPlane : (delta) ->
 					if triangleplane 
-						x = triangleplane.scaleFactor.x
-						if x + delta > 0 and x + delta < 2
-							triangleplane.scaleFactor.x += delta
+						x = Number(triangleplane.scaleFactor.x) + Number(delta)
+						if x > 0 and x < 2
+							triangleplane.scaleFactor.x = x
 							@draw()
 
 

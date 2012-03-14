@@ -53,7 +53,10 @@ define ->
             pointIndex += 4096
       
         output = if (bucket = cube[bucketIndex])?
-          bucket[pointIndex]
+          if bucket == true
+            -2
+          else
+            bucket[pointIndex]
         else
           -1
 

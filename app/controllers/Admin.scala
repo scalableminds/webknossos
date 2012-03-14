@@ -29,7 +29,7 @@ object Admin extends Controller{
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
     GridFileDataStore.cleanUp()
-    Ok("GridFS needed %s".format(sdf.format(gridFileDataStoreTime)))
+    Ok("GridFS needed %s\n %d %d".format(sdf.format(gridFileDataStoreTime),xBot,xTop))
   }
   
   def timeFileDataStore(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int) = Action{
@@ -45,7 +45,7 @@ object Admin extends Controller{
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
     FileDataStore.cleanUp()
-    Ok("FileDataStore needed %s".format(sdf.format(fileDataStoreTime)))
+    Ok("FileDataStore needed %s\n %d %d".format(sdf.format(fileDataStoreTime),xBot, xTop))
   }
     
   /*

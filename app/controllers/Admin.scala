@@ -15,12 +15,12 @@ import com.mongodb.casbah.gridfs.Imports._
 
 object Admin extends Controller {
   
-  val xBot = 5
-  val xTop = 5
-  val yBot = 0
-  val yTop = 20
-  val zBot = 0
-  val zTop = 20
+  val xBot = 10
+  val xTop = 20
+  val yBot = 20
+  val yTop = 30
+  val zBot = 20
+  val zTop = 30
 
   def timeGridFS() = Action {
 

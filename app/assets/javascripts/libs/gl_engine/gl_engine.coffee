@@ -6,6 +6,10 @@ define ->
 		canvas : null
 		requestAnimationFrame = $.noop()
 
+		PROJECTION_NEAR = 0.0001
+		PROJECTION_FAR = 100000
+		PROJECTION_ANGLE = 90
+
 		# for calculating fps
 		frames : 0
 		frameCount : 0
@@ -48,8 +52,8 @@ define ->
 			alert "Your browser does not support WebGL."  unless @gl
 
 			# initialize viewport and rendering matricies
-			@gl.viewport 0, 0, parseInt(@canvas.width, 10), parseInt(@canvas.height, 10)
-			@setProjectionMatrix()
+			@setViewport()
+			@createProjectionMatrix()
 			normalMatrix = M4x4.I
 
 			@gl.disable(@gl.DEPTH_TEST)
@@ -68,6 +72,9 @@ define ->
 				(callback, cvs) ->
 	    				window.setTimeout callback, 1000.0 / 60.0
 				)()
+
+		setViewport : ->
+			@gl.viewport 0, 0, parseInt(@canvas.width, 10), parseInt(@canvas.height, 10)
 
 		###
 		Set a uniform integer
@@ -249,14 +256,11 @@ define ->
 		attenuation : (constant, linear, quadratic) ->
 			@uniformf "attenuation", [constant, linear, quadratic]
 
-		setProjectionMatrix : (fovy, aspect, near, far) ->
-			
-			if arguments.length is 0
-				fovy = 90
-				aspect = @canvas.width / @canvas.height
-				near = 0.01
-				far = 1000
-
+		createProjectionMatrix : ->
+			fovy = PROJECTION_ANGLE
+			aspect = @canvas.width / @canvas.height
+			near = PROJECTION_NEAR
+			far = PROJECTION_FAR
 
 			ymax = near * Math.tan(fovy * Math.PI / 360)
 			ymin = -ymax
@@ -268,10 +272,7 @@ define ->
 			B = (ymax + ymin) / (ymax - ymin)
 			C = -(far + near) / (far - near)
 			D = -2 * far * near / (far - near)
-			#@projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 63.5, -100, D, 0)
 			@projectionMatrix = M4x4.$(X, 0, 0, 0, 0, Y, 0, 0, A, B, C, -1, 0, 0, D, 0)
-			M4x4.translate
-			@uniformMatrix "projectionMatrix", false, @projectionMatrix  if @shaderProgram
 
 		###
 		@param {String} vertexShaderSource
@@ -299,7 +300,6 @@ define ->
 			
 			#Tell WebGL to use shader
 			@useProgram @shaderProgram
-			@setDefaultUniforms()
 
 			return programObject
 
@@ -312,6 +312,7 @@ define ->
 		useProgram : (program) ->
 			@shaderProgram = program
 			@gl.useProgram @shaderProgram
+			@setProjectionMatrix()
 
 		#################################
 		# public properties
@@ -537,8 +538,9 @@ define ->
 		###
 		Set all uniform variables for the shader
 		^^ used to be more than just one. Sry
+		But still then...
 		###
-		setDefaultUniforms : ->
+		setProjectionMatrix : ->
 			@uniformMatrix "projectionMatrix", false, @projectionMatrix
 
 

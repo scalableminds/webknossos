@@ -38,7 +38,7 @@ define(
 						GeometryFactory.createMesh("crosshair", "mesh").done (mesh) -> 	
 							View.addGeometry mesh
 
-						GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
+						GeometryFactory.createTrianglesplane(256, 0, "trianglesplane").done (trianglesplane) ->
 							View.addGeometry trianglesplane
 					
 					->

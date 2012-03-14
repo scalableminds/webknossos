@@ -69,7 +69,7 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def requestViaAjax( cubeSize: SInt ) = Action { implicit request =>
+  def requestViaAjax( cubeSize: Int ) = Action { implicit request =>
     ( request.body.asRaw, ModelStore( modelType ) ) match {
       case ( Some( binRequest ), Some( model ) ) =>
         val binMatrix = binRequest.asBytes().getOrElse( Array[Byte]() )
@@ -94,7 +94,6 @@ object BinaryData extends Controller with Secured {
     WebSocket.using[Array[Byte]] { request =>
       val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
-        //println( "Message arrived! Bytes: %d".format( in.length ) )
         // first 4 bytes are always used as a client handle
         if ( in.length >= MinWebSocketRequestSize && in.length % 4 == 0 ) {
           val ( binHandle, inRest ) = in.splitAt( WebSocketHandleLength )

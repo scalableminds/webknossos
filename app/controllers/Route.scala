@@ -23,6 +23,10 @@ import models.Role
 object Route extends Controller with Secured {
   override val DefaultAccessRole = Role( "user" )
 
+  val PointValue = 0f
+  val BranchPushVallue = 1f
+  val BranchPopValue = 2f
+  
   def initialize = Authenticated() { user =>
     implicit request =>
       val originOption = (user.useBranchPointAsOrigin) orElse (RouteOrigin.useLeastUsed)
@@ -49,15 +53,6 @@ object Route extends Controller with Secured {
   def blackBox( id: String ) = Action[RawBuffer]( parse.raw( 1024 * 1024 ) ) {
     implicit request =>
 
-      val PointValue = 0f
-      val BranchPushVallue = 1f
-      val BranchPopValue = 2f
-      
-      val PointSize = 3
-      val BranchMatrixSize = 16
-
-      val parsedJson = request.body
-
       ( for {
         user <- maybeUser
         route <- TrackedRoute.findOpenBy( id )
@@ -66,7 +61,6 @@ object Route extends Controller with Secured {
       } yield {
         var points = Vector.empty[Vector3I]
         
-        
         val floatBuffer = buffer.subDivide( 4 ).map( _.reverse.toFloat )
         Logger.debug("Route received")
         floatBuffer.dynamicSliding( windowSize = 17 ) {
@@ -74,7 +68,7 @@ object Route extends Controller with Secured {
             val v = Vector3I( x.toInt, y.toInt, z.toInt )
             points = points :+ v
             
-            PointSize
+            Vector3I.defaultSize
           case BranchPushVallue :: tail =>
             val matrix = tail.take(16)
             Logger.debug("PUSH branchpoint: "+matrix)
@@ -83,7 +77,7 @@ object Route extends Controller with Secured {
             User.save( user.copy( branchPoints = TransformationMatrix( matrix ) :: user.branchPoints ) )
             route.addBranch()
             
-            BranchMatrixSize
+            TransformationMatrix.defaultSize
           case BranchPopValue :: _ =>
             Logger.debug("POP branchpoint")
             route.add( points.toList )
@@ -96,8 +90,8 @@ object Route extends Controller with Secured {
             
             0
           case _ =>
-            Logger.error("BULLSHIT")     
-            0
+            Logger.error("Recieved control code is invalid.")     
+            floatBuffer.size // jump right to the end to stop processing
         }
         route.add( points.toList )
         Ok

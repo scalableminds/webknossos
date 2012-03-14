@@ -41,8 +41,7 @@ object CubeModel extends DataModel{
 
 object FrustumModel extends DataModel{
   val id= "frustum"
-
   val yLength = 50
-  // TODO: implement polygons for frustrum -> evaluate number of vertices
+  
   val polygons = new NGonalFrustum(8,yLength,10,60).polygons
 }

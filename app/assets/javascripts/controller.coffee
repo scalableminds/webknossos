@@ -20,12 +20,9 @@ define(
 				@initMouse() 
 				@initKeyboard()
 				@initGamepad()
+				@initDeviceOrientation()
 
-				@input.deviceorientation = new Input.Deviceorientation(
-					"x"  : View.yawDistance
-					"y" : View.pitchDistance
-				)
-				
+			
 				Model.Route.initialize().then(
 					(matrix) =>
 							
@@ -110,6 +107,12 @@ define(
 						# "RightStickX": -> console.log "RightStick Y"
 				)
 
+			initDeviceOrientation : ->
+				@input.deviceorientation = new Input.Deviceorientation(
+					"x"  : View.yawDistance
+					"y" : View.pitchDistance
+				)
+
 			input :
 				mouse : null
 				keyboard : null
@@ -127,13 +130,42 @@ define(
 				scaleValue = value				
 
 			setMouseRotateValue : (value) ->
-				@input.mouse.setRotateValue value
+				@input.mouse.setRotateValue value if @input.mouse?
 
 			setMouseInversionX : (value) ->
 				@input.mouse.setInversionX value if @input.mouse?
 
 			setMouseInversionY : (value) ->
 				@input.mouse.setInversionY value if @input.mouse?
+
+
+			setMouseActivity : (value) ->
+				if value is false
+					@input.mouse.unbind()
+					@input.mouse = null
+				else
+					@initMouse()
+
+			setKeyboardActivity : (value) ->
+				if value is false
+					@input.keyboard.unbind()
+					@input.keyboard = null
+				else
+					@initKeyboard()
+
+			setGamepadActivity : (value) ->
+				if value is false
+					@input.gamepad.unbind()
+					@input.gamepad = null
+				else
+					@initGamepad()		
+
+			setDeviceOrientationActivity : (value) ->
+				if value is false
+					@input.deviceorientation.unbind()
+					@input.deviceorientation = null
+				else
+					@initDeviceOrientation()					
 
 
 )

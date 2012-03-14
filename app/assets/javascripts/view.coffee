@@ -255,6 +255,3 @@ define [
 						if x > 0 and x < 2
 							triangleplane.scaleFactor.x = x
 							@draw()
-
-
-	

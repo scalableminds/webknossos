@@ -193,12 +193,9 @@ define [
 
 			PRELOAD_TEST_TOLERANCE : 0.9
 			PRELOAD_TEST_RADIUS : 37
-			PING_DEBOUNCE_TIME : 300
+			PING_DEBOUNCE_TIME : 500
 			PING_THROTTLE_TIME : 2500
-			PRELOAD_STEPBACK : 17
-
-			loadingMatrices : []
-			lastPing : null
+			PRELOAD_STEPBACK : 18
 			
 			# Use this method to let us know when you've changed your spot. Then we'll try to 
 			# preload some data. 
@@ -213,8 +210,8 @@ define [
 			ping : (matrix, callback) ->
 
 				# fire if
-				# *   wasn't called for 300ms or
-				# *   2.5s after last call are over
+				# *   wasn't called for PING_DEBOUNCE_TIME or
+				# *   PING_THROTTLE_TIME after last call are over
 				@ping = _.debounceOrThrottleDeferred(@pingImpl, @PING_DEBOUNCE_TIME, @PING_THROTTLE_TIME)
 				@ping(matrix, callback)
 
@@ -230,7 +227,7 @@ define [
 						if promise = @preload(matrix, x0, y0, 0, preloadDiameter)
 							promises.push(promise)
 						else
-							for z in [-1...50] by 10
+							for z in [-1...70] by 10
 								if promise = @preload(matrix, x0, y0, z, preloadDiameter)
 									promises.push(promise)
 									break
@@ -251,7 +248,7 @@ define [
 					halfWidth = width >> 1
 					for x in [-halfWidth..halfWidth] by sparse
 						for y in [-halfWidth..halfWidth] by sparse
-							vertices.push x, y, 2 # magic number 2
+							vertices.push x, y, 5 # magic number 5
 					vertices
 				(args...) -> args.toString()
 			)
@@ -287,9 +284,6 @@ define [
 
 				console.log "pull", pullCounter++
 				
-				
-				@loadingMatrices.push(matrix)
-				
 				$.when(@loadColors(matrix), @calcVertices(matrix))
 
 					.pipe (colors, { vertices, extent }) =>
@@ -301,7 +295,6 @@ define [
 							console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) 
 
 						@bulkSetColor(vertices, colors)
-						_.removeElement(@loadingMatrices, matrix)
 
 						null
 			

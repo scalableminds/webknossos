@@ -18,7 +18,7 @@ case class User(
     loginType: String = "local",
     roles: List[String] = "user" :: Nil,
     permissions: List[Permission] = Nil,
-    branchPoints: List[TransformationMatrix] = Nil,
+    var branchPoints: List[TransformationMatrix] = Nil,
     _id: ObjectId = new ObjectId ) {
 
   val _roles = for{
@@ -35,6 +35,19 @@ case class User(
 
   def hasPermission( permission: Permission ) =
     ruleSet.find( _.implies( permission ) ).isDefined
+    
+  def useBranchPointAsOrigin = {
+    branchPoints match {
+      case head :: tail => 
+        User.save( this.copy( branchPoints = tail ) )
+        branchPoints = tail
+        Some( head )
+      case _ =>
+        None
+    }
+    
+  }  
+  
     
   def id = _id.toString
 }

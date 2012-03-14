@@ -8,6 +8,7 @@ define ["libs/request"], (request) ->
 		
 		# Variables
 		branchStack : []
+		lastMatrix : null
 
 		# Initializes this module and returns a matrix to start your work.
 		initialize : ->
@@ -23,12 +24,21 @@ define ["libs/request"], (request) ->
 					
 					(data) =>
 						try
-							data = JSON.parse data
-							@id  = data.id
+							data         = JSON.parse data
+							@id          = data.id
+							@branchStack = data.branches
 							@createBuffer()
 						catch ex
 							@initializeDeferred.reject(ex)
+						
 						@initializeDeferred.resolve(data.matrix)
+						
+						$(window).on(
+							"unload"
+							=> 
+								@putBranch(@lastMatrix)
+								@pushImpl()
+						)
 
 					(err) =>
 						@initializeDeferred.reject(err)
@@ -97,6 +107,8 @@ define ["libs/request"], (request) ->
 				@addToBuffer(1, matrix)
 				@branchStack.push(matrix)
 
+			return
+
 		popBranch : ->
 
 			deferred = $.Deferred()
@@ -117,11 +129,18 @@ define ["libs/request"], (request) ->
 			deferred.promise()
 
 		# Add a point to the buffer. Just keep adding them.
-		put : (position) ->
+		put : (matrix) ->
 			
+			@lastMatrix = matrix
+
 			@initialize().done =>
 				
-				position = V3.round(position)
+				position = new Float32Array(3)
+				position[0] = matrix[12]
+				position[1] = matrix[13]
+				position[2] = matrix[14]
+
+				position = V3.round(position, position)
 				lastPosition = @lastPosition
 
 				if not lastPosition or 
@@ -130,3 +149,5 @@ define ["libs/request"], (request) ->
 				lastPosition[2] != position[2]
 					@lastPosition = position
 					@addToBuffer(0, position)
+
+			return

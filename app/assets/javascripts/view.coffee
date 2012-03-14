@@ -250,9 +250,11 @@ define [
 					cam.move p
 
 				scaleTrianglesPlane : (delta) ->
-					if triangleplane and triangleplane.scaleFactor.x + delta > 0
-						triangleplane.scaleFactor.x += delta
-						@draw()
+					if triangleplane 
+						x = triangleplane.scaleFactor.x
+						if x + delta > 0 and x + delta < 2
+							triangleplane.scaleFactor.x += delta
+							@draw()
 
 
 	

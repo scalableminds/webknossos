@@ -9,6 +9,9 @@ import collection.mutable.HashMap
  * Time: 7:59 AM
  */
 
+/**
+ * Store of all usable binary data models
+ */
 object ModelStore {
   val models = new HashMap[String,DataModel]
 

@@ -19,6 +19,32 @@ import scala.math._
  * Date: 11.12.11
  * Time: 22:07
  */
+
+
+case class TreeByte( b: Byte) {
+  def isValue = ( b & 0xC0 ) == TreeByte.ValueByte.toInt
+  def isBranch = ( b & 0xC0 )  == TreeByte.BranchByte.toInt
+  def isEnd = ( b & 0xC0 ) == TreeByte.EndByte.toInt
+  
+  def x = TreeByte.byteCodeToInt(b & TreeByte.xMask)
+  def y = TreeByte.byteCodeToInt(b & TreeByte.yMask)
+  def z = TreeByte.byteCodeToInt(b & TreeByte.zMask)
+}
+
+object TreeByte {
+  implicit def ByteToTreeByte( b: Byte) = TreeByte( b )
+  
+  val xMask = 0x30.toByte
+  val yMask = 0x0C.toByte
+  val zMask = 0x03.toByte
+  
+  val ValueByte = 0x00.toByte
+  val BranchByte = 0x80.toByte
+  val EndByte = 0xC0.toByte
+  
+  def byteCodeToInt( b: Int ): Int = b - 1
+}
+
 case class TrackedRoute(
     userId: ObjectId,
     binaryPointTree: Array[Byte] = Array(),
@@ -42,14 +68,14 @@ case class TrackedRoute(
   }
 
   def addBranch() = {
-    val modifiedRoute = this.copy( binaryPointTree = binaryPointTree :+ TrackedRoute.BranchByteCode )
+    val modifiedRoute = this.copy( binaryPointTree = binaryPointTree :+ TreeByte.BranchByte )
     TrackedRoute.save( modifiedRoute )
     modifiedRoute
   }
 
   def closeBranch( nextBranch: Vector3I ) = {
     val modifiedRoute = this.copy(
-      binaryPointTree = binaryPointTree :+ TrackedRoute.EndByteCode,
+      binaryPointTree = binaryPointTree :+ TreeByte.EndByte,
       last = nextBranch )
     TrackedRoute.save( modifiedRoute )
     modifiedRoute
@@ -57,31 +83,18 @@ case class TrackedRoute(
 }
 
 object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
+  import TreeByte._
 
-  val ValueByteCode = 0x00.toByte
-  val BranchByteCode = 0x80.toByte
-  val EndByteCode = 0xC0.toByte
-
-  def byteCodeToInt( b: Int ): Int = b - 1
-
-  def isValueByte( b: Byte ): Boolean = ( b & 0xC0 ) == ValueByteCode.toInt
-  def isBranchByte( b: Byte ): Boolean = ( b & 0xC0 )  == BranchByteCode.toInt
-  def isEndByte( b: Byte ): Boolean = ( b & 0xC0 ) == EndByteCode.toInt
   
   def intToByteCode( i: Int ): Byte = {
     assert( i > -2 && i < 2, "Assertion failed with: " + i )
     ( i + 1 ).toByte
   }
 
-  def byteCodeToPoint( byte: Int ): List[Int] = {
-    val xMask = 0x30.toByte
-    val yMask = 0x0C.toByte
-    val zMask = 0x03.toByte
-    List( byteCodeToInt( byte & xMask ), byteCodeToInt( byte & yMask ), byteCodeToInt( byte & zMask ) )
-  }
+  def byteCodeToPoint( byte: TreeByte ) = List( byte.x, byte.y, byte.z )
 
   def pointToByteCode( point: Vector3I ): Byte =
-    ( ValueByteCode |
+    ( ValueByte |
       ( intToByteCode( point.x ) << 4 |
         intToByteCode( point.y ) << 2 |
         intToByteCode( point.z ) ) ).toByte
@@ -99,13 +112,13 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
     var route = Queue[Vector3I]()
     for( b <- bytes ){
       b match {
-        case b if isValueByte( b ) =>
+        case b if b.isValue =>
           previous = previous - byteCodeToPoint( b )
     	  route.enqueue(previous)
-        case b if isBranchByte( b ) =>
+        case b if b.isBranch =>
           branchPointStack.push( previous)
           previous
-        case b if isEndByte( b ) =>
+        case b if b.isEnd =>
           previous = branchPointStack.pop()
           previous
       }

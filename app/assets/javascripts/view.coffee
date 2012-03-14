@@ -15,6 +15,7 @@ define [
 			# geometry objects
 			triangleplane = null
 			meshes = {}
+			meshCount = 0
 
 			#ProgramObjects
 			#One Shader for each Geometry-Type
@@ -74,6 +75,19 @@ define [
 
 				if meshes["quarter"]
 					g = meshes["quarter"]
+					engine.useProgram meshProgramObject
+					engine.pushMatrix()
+					engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
+					if g.scaleFactor.x > 62
+						g.scaleFactor.x = 1
+					g.scaleFactor.x++
+					engine.scale g.scaleFactor.x , g.scaleFactor.y, g.scaleFactor.z
+					engine.render g
+					engine.popMatrix()	
+
+				# Normans Cube Preview
+				for i in 2...meshCount
+					g = meshes["cube" + 1]
 					engine.useProgram meshProgramObject
 					engine.pushMatrix()
 					engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
@@ -195,6 +209,7 @@ define [
 					if geometry.getClassType() is "Mesh"
 						meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 						meshes[geometry.name] = geometry
+						meshCount ++
 						@draw()
 
 				addColors : (newColors, x, y, z) ->

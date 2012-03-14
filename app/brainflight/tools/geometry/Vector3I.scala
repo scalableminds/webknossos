@@ -37,7 +37,8 @@ object Vector3I{
   implicit def Vector3IToIntList( v: Vector3I ) = List( v.x, v.y, v.z )
   implicit def Vector3IToIntArray( v: Vector3I ) = Array( v.x, v.y, v.z )
   implicit def IntListToVector3I( l: List[Int] ) = Vector3I( l(0), l(1), l(2) )
-
+  implicit def IntListToVector3I( l: Array[Int] ) = Vector3I( l(0), l(1), l(2) )
+  
   // json converter
   implicit object Vector3IWrites extends Writes[Vector3I] {
     def writes( v: Vector3I ) = {

@@ -17,7 +17,8 @@ import play.api.libs.concurrent._
 import brainflight.tools.ExtendedTypes._
 import brainflight.tools.Math._
 import brainflight.tools.geometry.Vector3I._
-import brainflight.tools.geometry.{ Figure, Cube }
+
+import brainflight.tools.geometry.{ Figure, Cube, Vector3I }
 import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
 import brainflight.security.Secured
@@ -33,7 +34,7 @@ object BinaryData extends Controller with Secured {
   val dataStore: DataStore = FileDataStore
 
   val WebSocketHandleLength = 4
-  val WebSocketCoordinatesLength = 3 * 4
+  val WebSocketCoordinatesLength = Vector3I.defaultSize * 4
   val MinWebSocketRequestSize = WebSocketHandleLength + WebSocketCoordinatesLength
 
   def calculateBinaryData( cubeSize: Int, position: Array[Int], clientCoordinates: Array[Int] = Array() ) = {
@@ -69,15 +70,15 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def requestViaAjax( cubeSize: Int ) = Action { implicit request =>
-    ( request.body.asRaw, ModelStore( modelType ) ) match {
-      case ( Some( binRequest ), Some( model ) ) =>
-        val binMatrix = binRequest.asBytes().getOrElse( Array[Byte]() )
-        val matrix = binMatrix.subDivide( 4 ).map( _.reverse.toFloat )
-        val result = calculateBinaryData( model, matrix )
+  def requestViaAjax( cubeSize: Int ) = Action(parse.raw) { implicit request =>
+    ( request.body ) match {
+      case body if body.size > WebSocketCoordinatesLength =>
+        val binPosition = body.asBytes().getOrElse( Array[Byte]() )
+        val position = binPosition.subDivide( 4 ).map( _.reverse.toFloat.toInt / cubeSize)
+        val result = calculateBinaryData( cubeSize, position )
         Ok( result )
-      case _ =>
-        BadRequest( "Request needs to be binary" )
+      case body =>
+        BadRequest( "Request body is to short: %d bytes".format(body.size) )
     }
   }
   /**
@@ -106,7 +107,6 @@ object BinaryData extends Controller with Secured {
 
             val result = calculateBinaryData( cubeSize, position, clientCoordinates )
             output.push( binHandle ++ result )
-          }
         }
       } )
 

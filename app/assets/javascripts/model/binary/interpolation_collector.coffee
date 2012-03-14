@@ -23,7 +23,9 @@ define ->
         bucketIndex++
         pointIndex &= -64
         # Bound checking.
-        output = -1 if bucketIndex % size0 == 0
+        if bucketIndex % size0 == 0
+          output = -1
+          return console.log("cube fault: x")
       else
         pointIndex++
     
@@ -35,7 +37,9 @@ define ->
           bucketIndex += size0
           pointIndex &= -4033
           # Bound checking.
-          output = -1 if bucketIndex % size01 == 0
+          if bucketIndex % size01 == 0
+            output = -1
+            return console.log("cube fault: y")
         else
           pointIndex += 64
       
@@ -46,6 +50,9 @@ define ->
             # The point seems to be at the back border.
             bucketIndex += size01
             pointIndex &= -258049
+
+            if bucketIndex >= cube.length
+              return console.log("cube fault: z")
           else
             pointIndex += 4096
       

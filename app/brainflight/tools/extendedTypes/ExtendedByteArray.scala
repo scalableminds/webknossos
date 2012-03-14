@@ -11,6 +11,8 @@ class ExtendedByteArray( b: Array[Byte] ) {
     else
       Float.NaN
   }
+  
+  def toIntFromFloat = toFloat.toInt
 
   def subDivide( subCollectionSize: Int ): Array[Array[Byte]] = b.size match {
     case 0 =>

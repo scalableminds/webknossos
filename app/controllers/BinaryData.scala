@@ -17,7 +17,8 @@ import play.api.libs.concurrent._
 import brainflight.tools.ExtendedTypes._
 import brainflight.tools.Math._
 import brainflight.tools.geometry.Vector3I._
-import brainflight.tools.geometry.Figure
+
+import brainflight.tools.geometry.{ Figure, Cube, Vector3I }
 import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
 import brainflight.security.Secured
@@ -33,15 +34,16 @@ object BinaryData extends Controller with Secured {
   val dataStore: DataStore = FileDataStore
 
   val WebSocketHandleLength = 4
-  val WebSocketMatrixLength = RotationMatrixSize3D * 4
-  val MinWebSocketRequestSize = WebSocketHandleLength + WebSocketMatrixLength
+  val WebSocketCoordinatesLength = Vector3I.defaultSize * 4
+  val MinWebSocketRequestSize = WebSocketHandleLength + WebSocketCoordinatesLength
 
-  def calculateBinaryData( model: DataModel, matrix: Array[Float], clientCoordinates: Array[Int] = Array() ) = {
-    if ( matrix.length != RotationMatrixSize3D ) {
-      Logger.debug( "Wrong matrix Size: " + matrix.length )
+  def calculateBinaryData( cubeSize: Int, cubeCorner: Array[Int], clientCoordinates: Array[Int] = Array() ) = {
+    if ( cubeCorner.length != 3 ) {
+      Logger.debug( "Wrong position Size: " + cubeCorner.length )
       Array[Byte]()
     } else {
-      val figure = Figure( model.polygons.map( _.transformAffine( matrix ) ) )
+      Logger.debug( "Corner: "+cubeCorner.mkString(", ") )
+      val figure = Cube( cubeCorner, cubeSize )
       val coordinates = figure.calculateInnerPoints()
 
       /*Akka.future {
@@ -69,15 +71,16 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def requestViaAjax( modelType: String ) = Action { implicit request =>
-    ( request.body.asRaw, ModelStore( modelType ) ) match {
-      case ( Some( binRequest ), Some( model ) ) =>
-        val binMatrix = binRequest.asBytes().getOrElse( Array[Byte]() )
-        val matrix = binMatrix.subDivide( 4 ).map( _.reverse.toFloat )
-        val result = calculateBinaryData( model, matrix )
+  def requestViaAjax( cubeSize: Int ) = Action(parse.raw) { implicit request =>
+    ( request.body ) match {
+      case body if body.size > WebSocketCoordinatesLength =>
+        val binPosition = body.asBytes().getOrElse( Array[Byte]() )
+        val position = binPosition.subDivide( 4 ).map( _.reverse.toIntFromFloat)
+        val cubeCorner = position.map( x => x - x % cubeSize)
+        val result = calculateBinaryData( cubeSize, position )
         Ok( result )
-      case _ =>
-        BadRequest( "Request needs to be binary" )
+      case body =>
+        BadRequest( "Request body is to short: %d bytes".format(body.size) )
     }
   }
   /**
@@ -90,28 +93,23 @@ object BinaryData extends Controller with Secured {
    * @param
    * 	modelType:	id of the model to use
    */
-  def requestViaWebsocket( modelType: String ) =
+  def requestViaWebsocket( cubeSize: Int ) =
     WebSocket.using[Array[Byte]] { request =>
       val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
-        //println( "Message arrived! Bytes: %d".format( in.length ) )
         // first 4 bytes are always used as a client handle
         if ( in.length >= MinWebSocketRequestSize && in.length % 4 == 0 ) {
           val ( binHandle, inRest ) = in.splitAt( WebSocketHandleLength )
-          val ( binMatrix, binClientCoord ) = inRest.splitAt( WebSocketMatrixLength )
+          val ( binPosition, binClientCoord ) = inRest.splitAt( WebSocketCoordinatesLength )
 
           // convert the matrix from byte to float representation
-          val matrix = binMatrix.subDivide( 4 ).map( _.reverse.toFloat )
+          val position = binPosition.subDivide( 4 ).map( _.reverse.toIntFromFloat)
+          val cubeCorner = position.map( x => x - x % cubeSize)
           val clientCoordinates =
             binClientCoord.subDivide( 4 ).map( _.reverse.toFloat ).map( _.toInt )
 
-          ModelStore( modelType ) match {
-            case Some( model ) =>
-              val result = calculateBinaryData( model, matrix, clientCoordinates )
-              output.push( binHandle ++ result )
-            case _ =>
-              output.push( binHandle )
-          }
+            val result = calculateBinaryData( cubeSize, cubeCorner, clientCoordinates )
+            output.push( binHandle ++ result )
         }
       } )
 

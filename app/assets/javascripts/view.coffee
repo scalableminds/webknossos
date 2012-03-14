@@ -24,7 +24,7 @@ define [
 
 			#constants
 			CLIPPING_DISTANCE = 140
-			CAM_DISTANCE = 200
+			CAM_DISTANCE = 140
 			BACKGROUND_COLOR = [0.9, 0.9 ,0.9 ,1]
 
 			#main render function

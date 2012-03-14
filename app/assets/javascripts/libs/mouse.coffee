@@ -4,6 +4,7 @@ define ->
 		SLOWDOWN_FACTOR = 250		
 
 		buttonDown : false
+		doubleClicked : false
 		
 		# used for mouse locking in fullscreen mode
 		locked : false
@@ -25,9 +26,8 @@ define ->
 			navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
 			$(target).on 
-				"mousemove" : @mouseMoved
 				"mouseup" : @mouseUp
-				"mousedown" : @mouseDown
+				"dblclick" : @mouseDoubleClick
 
 				# fullscreen pointer lock
 				# Firefox does not yet support Pointer Lock
@@ -58,7 +58,7 @@ define ->
 
 			# regular mouse management
 			unless @locked 
-				if @buttonDown
+				if @doubleClicked
 					distX = -(evt.pageX - lastPosition.x)
 					distY =   evt.pageY - lastPosition.y
 					changedCallback.x distX / SLOWDOWN_FACTOR if distX isnt 0
@@ -77,6 +77,10 @@ define ->
 				changedCallback.x distX / SLOWDOWN_FACTOR if distX isnt 0
 				changedCallback.y distY / SLOWDOWN_FACTOR if distY isnt 0
 
+		mouseDoubleClick : =>
+			@doubleClicked = !@doubleClicked
+
+		# depricated
 		mouseDown : =>
 			$(@target).css("cursor", "none")
 			@buttonDown = true

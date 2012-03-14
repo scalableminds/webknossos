@@ -26,7 +26,7 @@ define ->
 			navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
 			$(target).on 
-				"mouseup" : @mouseUp
+				"mousemove" : @mouseMoved
 				"dblclick" : @mouseDoubleClick
 
 				# fullscreen pointer lock

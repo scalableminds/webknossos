@@ -131,6 +131,9 @@ define( [
 			# http://robhawkes.github.com/gamepad-demo/
 			# https://github.com/jbuck/input.js/
 			# http://www.gamepadjs.com/
+			
+			THRESHOLD = 0.008
+			SLOWDOWN_FACTOR = 500
 
 			gamepad : null
 			delay :  250
@@ -172,11 +175,6 @@ define( [
 				 console.log "Your browser does not support gamepads!"
 
 			attach : (button, callback)  ->
-				#throttle axes callbacks
-				if button in ["leftStickX", "rightStickX", "leftStickY", "rightStickY"]
-					throttledCallback = _.throttle callback, 250
-					@buttonCallbackMap[button] = throttledCallback
-				else 
 					@buttonCallbackMap[button] = callback
 
 			gamepadLoop : ->
@@ -186,19 +184,21 @@ define( [
 				if @gamepad?
 					for button, callback of @buttonCallbackMap
 						unless @gamepad[button] == 0
-							#axes
+							# axes
 							if button in ["leftStickX", "rightStickX", "leftStickY", "rightStickY"]
 								value = @gamepad[button]
-								buttonB = @gamepad["faceButton1"]
-								if value? and buttonB == 1
-									callback(value) if value?
+								callback filterDeadzone(value)
 
 							#buttons
 							else
 								callback()
 
-
 				setTimeout( (=> @gamepadLoop()), @delay)
+
+			filterDeadzone : (value) ->
+    			Math.abs(value) > 0.35 ? value : 0
+
+
 
 		Input
 )

@@ -91,10 +91,10 @@ object BinaryData extends Controller with Secured {
    * 	modelType:	id of the model to use
    */
   def requestViaWebsocket( modelType: String ) =
+    // TODO: secure with authentication
     WebSocket.using[Array[Byte]] { request =>
       val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
-        //println( "Message arrived! Bytes: %d".format( in.length ) )
         // first 4 bytes are always used as a client handle
         if ( in.length >= MinWebSocketRequestSize && in.length % 4 == 0 ) {
           val ( binHandle, inRest ) = in.splitAt( WebSocketHandleLength )

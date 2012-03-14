@@ -25,9 +25,10 @@ object Route extends Controller with Secured {
 
   def initialize = Authenticated() { user =>
     implicit request =>
+      val originOption = (user.useBranchPointAsOrigin) orElse (RouteOrigin.useLeastUsed)
       ( for {
-        origin <- RouteOrigin.leastUsed
-        startPoint <- origin.matrix.extractTranslation
+        origin <- originOption
+        startPoint <- origin.extractTranslation
       } yield {
         val route = TrackedRoute.createForUser(
           user,
@@ -35,9 +36,10 @@ object Route extends Controller with Secured {
 
         val data = Map(
           "id" -> toJson( route._id.toString ),
-          "matrix" -> toJson( origin.matrix.value ) )
-
-        RouteOrigin.increaseUsedCount( origin )
+          "matrix" -> toJson( origin.value ), 
+          "branches" -> toJson ( user.branchPoints.map( _.value).reverse )
+        )
+        
         Ok( toJson( data ) )
       } ) getOrElse NotFound( "Couldn't open new route." )
   }
@@ -70,8 +72,8 @@ object Route extends Controller with Secured {
         floatBuffer.dynamicSliding( windowSize = 17 ) {
           case PointValue :: x :: y :: z :: _ =>
             val v = Vector3I( x.toInt, y.toInt, z.toInt )
-            points = points :+ v	
-            println(v)
+            points = points :+ v
+            
             PointSize
           case BranchPushVallue :: tail =>
             val matrix = tail.take(16)

@@ -4,8 +4,19 @@ import java.nio.ByteBuffer
 import scala.math._
 import brainflight.tools.Math._
 import scala.collection.mutable.ListBuffer
+import com.mongodb.casbah.gridfs.Imports._
 
 object ExtendedDataTypes {
+  
+  implicit def GridFSDBFile2ExtendedGridFSDBFile(f: GridFSDBFile) ={
+    new ExtendedGridFSDBFile(f)
+  }
+  
+  class ExtendedGridFSDBFile(f: GridFSDBFile){
+    def sourceWithCodec(codec: scala.io.Codec) = {
+      scala.io.Source.fromInputStream(f.inputStream)(scala.io.Codec.ISO8859)
+    }
+  }
 
   implicit def ByteArray2ExtendedByteArray( b: Array[Byte] ) =
     new ExtendedByteArray( b )

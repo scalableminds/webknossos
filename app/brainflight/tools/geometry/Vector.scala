@@ -114,7 +114,7 @@ object Vector3D {
   
   implicit def Vector3DToTuple( v: Vector3D ) = ( v.x, v.y, v.z )
 
-  implicit def TupletoVector3D[T <% Double]( v: Tuple3[T, T, T] ) = new Vector3D( v._1, v._2, v._3 )
+  implicit def TupletoVector3D[T <% Double]( v: Tuple3[T, T, T] ) = Vector3D( v._1, v._2, v._3 )
 
 }
 object Vector3I{

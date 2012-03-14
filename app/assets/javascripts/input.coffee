@@ -1,10 +1,21 @@
 define( [
 		"libs/keyboard.0.2.2.min",
-		"libs/mouse"
+		"libs/mouse",
+		"libs/gamepad"
 	]
-	(KeyboardJS, MouseLib) ->
+	(KeyboardJS, MouseLib, GamepadJS) ->
 
 		Input ?= {}
+
+		class Input.KeyboardNoLoop
+
+			constructor : (bindings) ->
+				for own key, callback of bindings
+					@attach(key, callback)
+
+			attach : (key, callback) ->
+
+				KeyboardJS.bind.key(key, callback)
 
 		class Input.Keyboard
 
@@ -57,7 +68,7 @@ define( [
 		class Input.Deviceorientation
 
 			THRESHOLD = 10
-			SLOWDOWN_FACTOR = 250
+			SLOWDOWN_FACTOR = 500
 			
 			keyPressedCallbacks : {}
 			keyBindings : {}
@@ -76,12 +87,12 @@ define( [
 						
 						{ gamma, beta } = event
 						if gamma < -THRESHOLD or gamma > THRESHOLD
-							@fire("x", gamma)
+							@fire("x", -gamma)
 						else
 							@unfire("x")
 
 						if beta < -THRESHOLD or beta > THRESHOLD
-							@fire("y", beta)
+							@fire("y", -beta)
 						else
 							@unfire("y")
 				)
@@ -120,6 +131,59 @@ define( [
 			# http://robhawkes.github.com/gamepad-demo/
 			# https://github.com/jbuck/input.js/
 			# http://www.gamepadjs.com/
+
+			gamepad : null
+			delay :  200
+			buttonCallbackMap : {}
+			buttonNameMap :
+				"ButtonA" : "faceButton0"
+				"ButtonB" : "faceButton1"
+				"ButtonX" : "faceButton2"
+				"ButtonY" : "faceButton3"
+				"ButtonStart"  : "start"
+				"ButtonSelect" : "select"
+
+				"ButtonLeftTrigger"  : " leftShoulder0"
+				"ButtonRightTrigger" : "rightShoulder0"
+				"ButtonLeftShoulder" : "leftShoulder1"
+				"ButtonRightShoulder": "rightShoulder1"
+
+				"ButtonUp"    : "dpadUp"
+				"ButtonDown"  : "dpadDown"
+				"ButtonLeft"  : "dpadLeft"
+				"ButtonRight" : "dpadRight"
+
+				"ButtonLeftStick"  : "leftStickButton"
+				"ButtonRightStick" : "rightStickButton"
+				"LeftStickX" : "leftStickX"
+				"LeftStickY" : "leftStickY"
+				"RightStickX": "rightStickX"
+				"RightStickX": "rightStickY"
+
+
+			constructor : (bindings) ->
+				if GamepadJS.supported
+
+					for own key, callback of bindings
+						@attach( @buttonNameMap[key] , callback )
+
+				else
+				 console.log "Your browser does not support gamepads!"
+
+			attach : (button, callback)  ->
+				@buttonCallbackMap[button] = callback
+				@gamepadLoop()
+
+			gamepadLoop : ->
+				_pad = GamepadJS.getStates()
+				@gamepad = _pad[0]
+
+				if @gamepad?
+					for button, callback of @buttonCallbackMap
+						unless @gamepad[button] == 0
+							callback()
+
+				setTimeout( (=> @gamepadLoop()), @delay)
 
 		Input
 )

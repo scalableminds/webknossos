@@ -6,15 +6,15 @@ define ["libs/gl_engine/geometry"], (Geometry) ->
 				EBO : null
 				length : null	
 
-			@interpolationFront = 
+			@interpolationBuffer0 = 
 				VBO : null
 				length : null	
 
-			@interpolationBack = 
+			@interpolationBuffer1 = 
 				VBO : null
 				length : null	
 
-			@interpolationOffset = 
+			@interpolationBufferDelta = 
 				VBO : null
 				length : null				
 
@@ -30,17 +30,17 @@ define ["libs/gl_engine/geometry"], (Geometry) ->
 			@vertexIndex.EBO = data
 			@vertexIndex.length = len
 
-		setInterpolationFront : (data, len) -> 
-			@interpolationFront.VBO = data
-			@interpolationFront.length = len
+		setInterpolationBuffer0 : (data, len) -> 
+			@interpolationBuffer0.VBO = data
+			@interpolationBuffer0length = len
 			
-		setInterpolationBack : (data, len) -> 
-			@interpolationBack.VBO = data
-			@interpolationBack.length = len
+		setInterpolationBuffer1 : (data, len) -> 
+			@interpolationBuffer1.VBO = data
+			@interpolationBuffer1.length = len
 			
-		setInterpolationOffset : (data, len) -> 
-			@interpolationOffset.VBO = data
-			@interpolationOffset.length = len						
+		setInterpolationBufferDelta : (data, len) -> 
+			@interpolationBufferDelta.VBO = data
+			@interpolationBufferDelta.length = len						
 
 		setNormalVertices : (data) -> 
 			@normalVertices = data

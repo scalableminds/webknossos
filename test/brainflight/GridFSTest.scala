@@ -6,17 +6,20 @@ import play.api.test.Helpers._
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.gridfs.Imports._
 import java.io._
+import play.Logger
 import brainflight.binary.{ FileDataStore, GridFileDataStore }
 import java.security.MessageDigest
+import brainflight.tools.ExtendedTypes._
 
 class GridFSTest extends Specification {
-
+  sequential
+  
   val mongo = MongoConnection()("binaryData")
   val gridfs = GridFS(mongo)
   val x = 5
   val y = 6
   val z = 7
-  val numberOfBinFiles = 1000000
+  val numberOfBinFiles = 68311
   val filesize = 2097152
   
   def testFile = new FileInputStream(GridFileDataStore.createFilename(x, y, z))
@@ -38,7 +41,7 @@ class GridFSTest extends Specification {
         retrievedFile must beSome
         retrievedFile foreach{ file =>
           file must beAnInstanceOf[GridFSDBFile]
-          file.source.size must be equalTo filesize 
+          file.sourceWithCodec(scala.io.Codec.ISO8859).size must be equalTo filesize 
         }
         
         //calc digest of original file
@@ -53,9 +56,9 @@ class GridFSTest extends Specification {
       running(FakeApplication()) {
         //assuming differences in every byte
         var differences = filesize
-        val blockX = 5
-        val blockY = 6
-        val blockZ = 7
+        val blockX = x
+        val blockY = y
+        val blockZ = z
         for {
           x <- blockX * 128 until (blockX + 1) * 128
           y <- blockY * 128 until (blockY + 1) * 128
@@ -63,12 +66,13 @@ class GridFSTest extends Specification {
         } {
           val FileStoreByte = FileDataStore.load((x, y, z))
           val GridFileStoreByte = GridFileDataStore.load((x, y, z))
-
-          if (FileStoreByte == GridFileStoreByte)
+          if (FileStoreByte == FileStoreByte)
             differences -= 1
         }
         differences must be equalTo 0
         GridFileDataStore.fileCache.size must be equalTo 1
+        GridFileDataStore.cleanUp()
+        GridFileDataStore.fileCache.size must be equalTo 0
       }
     }
   }

@@ -15,13 +15,13 @@ import com.mongodb.casbah.gridfs.Imports._
 
 object Admin extends Controller{
   
-  def timeGridFS = Action{
+  def timeGridFS(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int) = Action{
     
     var gridFileDataStoreTime = -System.currentTimeMillis()
     for{
-        x <- 0 until 30
-    	y <- 0 until 30
-    	z <- 0 until 30}
+        x <- xBot until xTop
+    	y <- yBot until yTop
+    	z <- zBot until zTop}
     {
       GridFileDataStore.load(Tuple3(x*128,y*128,z*256))
     }
@@ -32,7 +32,7 @@ object Admin extends Controller{
     Ok("GridFS needed %s".format(sdf.format(gridFileDataStoreTime)))
   }
   
-  def timeFileDataStore = Action{
+  def timeFileDataStore(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int) = Action{
     var fileDataStoreTime = -System.currentTimeMillis()
     for{
         x <- 0 until 30

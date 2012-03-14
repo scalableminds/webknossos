@@ -12,13 +12,14 @@ import java.security.MessageDigest
 class GridFSTest extends Specification {
   sequential
 
-  val mongo = MongoConnection()("gridfs-test")
-  mongo.dropDatabase()
+  val mongo = MongoConnection()("binaryData")
   val gridfs = GridFS(mongo)
   val x = 5
   val y = 6
   val z = 7
-
+  val numberOfBinFiles = 1000000
+  val filesize = 2097152
+  
   def testFile = new FileInputStream(GridFileDataStore.createFilename(x, y, z))
 
   def testFileBytes = {
@@ -29,25 +30,22 @@ class GridFSTest extends Specification {
 
   "GridFS" should {
     "insert file and contain just 1 file" in {
-      running(FakeApplication()) {
-        gridfs(testFile) { file =>
-          file.filename = GridFileDataStore.convertCoordinatesToString(x, y, z)
-          file.contentType = "application"
-        }
-      }
-      gridfs.size must be equalTo 1
+      gridfs.size must be equalTo numberOfBinFiles
     }
 
-    "find the inserted file" in {
+    "find the testfile" in {
       running(FakeApplication()){
         val retrievedFile = gridfs.findOne(GridFileDataStore.convertCoordinatesToString(x, y, z))
+        retrievedFile must beSome
+        retrievedFile foreach{ file =>
+          file must beAnInstanceOf[GridFSDBFile]
+          file.source.size must be equalTo filesize 
+        }
+        
         //calc digest of original file
         val digest = MessageDigest.getInstance("MD5")
         digest.update(testFileBytes)
         val testFile_md5 = digest.digest().map("%02X".format(_)).mkString.toLowerCase()
-        
-        retrievedFile must beSome
-        retrievedFile.get must beAnInstanceOf[GridFSDBFile]
         retrievedFile.get.md5 must be equalTo testFile_md5
       }
     }
@@ -55,7 +53,7 @@ class GridFSTest extends Specification {
     "load the same bytes as the FileStore" in {
       running(FakeApplication()) {
         //assuming differences in every byte
-        var differences = 2097152
+        var differences = filesize
         val blockX = 5
         val blockY = 6
         val blockZ = 7

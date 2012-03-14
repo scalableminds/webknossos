@@ -5,35 +5,37 @@ define ->
 
 		buttonDown : false
 		
-		# used for mopuse locking in fullscreen mode
+		# used for mouse locking in fullscreen mode
 		locked : false
 
 		lastPosition : 
 			x : null
 			y : null
 
-		target : null
-
 		changedCallback :  
 			x : $.noop()
 			y : $.noop() 
 
 		###
-		#@param {Object} objectToTrack :
-		#	HTML object where the mouse has to attach the events
+		#@param {Object} target : DOM Element
+		#	HTML object where the mouse attaches the events
 		###
-		constructor : (objectToTrack) ->
+		constructor : (@target) ->
 		
-			@target = objectToTrack
-			@attachEventHandler "mousemove", @mouseMoved
-			@attachEventHandler "mouseup", @mouseUp
-			@attachEventHandler "mousedown", @mouseDown
+			navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
-			# fullscreen pointer lock 
-			@attachEventHandler "webkitfullscreenchange", @lockMouse
-			@attachEventHandler "webkitPointerlocklost", @unlockMouse
-			@attachEventHandler "mozfullscreenchange", @lockMouse
-		
+			$(target).on 
+				"mousemove" : @mouseMoved
+				"mouseup" : @mouseUp
+				"mousedown" : @mouseDown
+
+				# fullscreen pointer lock
+				# Firefox does not yet support Pointer Lock
+				"webkitfullscreenchange" : @toogleMouseLock
+				# TODO these two need to be revised, once the API spec is finalized
+				"webkitpointerlocklost" : @unlockMouse #???
+				"webkitpointerlockchange" : @unlockMouse
+
 		###
 		#Binds a function as callback when X-Position was changed
 		#@param {Function} callback :
@@ -54,22 +56,26 @@ define ->
 			
 			{ lastPosition, changedCallback } = @
 
+			# regular mouse management
 			unless @locked 
 				if @buttonDown
 					distX = -(evt.pageX - lastPosition.x)
 					distY =   evt.pageY - lastPosition.y
-					changedCallback.x distX/SLOWDOWN_FACTOR if distX isnt 0
-					changedCallback.y distY/SLOWDOWN_FACTOR if distY isnt 0
+					changedCallback.x distX / SLOWDOWN_FACTOR if distX isnt 0
+					changedCallback.y distY / SLOWDOWN_FACTOR if distY isnt 0
 
 				@lastPosition =
 					x : evt.pageX
 					y : evt.pageY
+
+			# fullscreen API 
+			# Mouse lock returns MovementX/Y in addition to the regular properties
+			# (these become static)		
 			else
-				if @buttonDown	
-					distX = -evt.webkitMovementX
-					distY = evt.webkitMovementY
-					changedCallback.x distX/SLOWDOWN_FACTOR if distX isnt 0
-					changedCallback.y distY/SLOWDOWN_FACTOR if distY isnt 0
+				distX = -evt.originalEvent.webkitMovementX
+				distY = evt.originalEvent.webkitMovementY
+				changedCallback.x distX / SLOWDOWN_FACTOR if distX isnt 0
+				changedCallback.y distY / SLOWDOWN_FACTOR if distY isnt 0
 
 		mouseDown : =>
 			$(@target).css("cursor", "none")
@@ -79,17 +85,11 @@ define ->
 			@buttonDown = false 
 			$(@target).css("cursor", "auto")
 
-		lockMouse : =>
-			PointerLock = navigator.webkitPointer or navigator.Pointer
-			if (PointerLock)
-				PointerLock.lock @target
-				@locked = true
-
-		unlockMouse : ->
-			@locked = false
-
-		attachEventHandler : (type, func) ->
-			if @target.addEventListener
-				@target.addEventListener type, func, false
+		toogleMouseLock : =>
+			unless @locked
+				if (navigator.pointer)
+					navigator.pointer.lock @target, ( -> console.log "Mouse Lock successful" ), ( -> console.log "Error: Mouse Lock" )
+					@locked = true
 			else
-				@target.attachEvent "on" + type, fn
+				@locked = false
+				navigator.pointer.unlock()

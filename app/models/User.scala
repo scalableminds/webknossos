@@ -18,7 +18,7 @@ case class User(
     loginType: String = "local",
     roles: List[String] = "user" :: Nil,
     permissions: List[Permission] = Nil,
-    branchPoints: List[TransformationMatrix] = Nil,
+    var branchPoints: List[TransformationMatrix] = Nil,
     _id: ObjectId = new ObjectId ) {
 
   val _roles = for{
@@ -40,10 +40,12 @@ case class User(
     branchPoints match {
       case head :: tail => 
         User.save( this.copy( branchPoints = tail ) )
+        branchPoints = tail
         Some( head )
       case _ =>
         None
     }
+    
   }  
   
     

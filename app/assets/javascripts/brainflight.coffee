@@ -9,14 +9,8 @@ require [ "core_ext" ], ->
     
     MVC = { Controller, View, Model }
     $ ->
-      
       _canvas = $("#render")
       canvas  = _canvas[0]
-
-      _canvas.resize( ->
-        this.width = _canvas.width()
-        this.height = _canvas.height()
-      ).resize()
 
       Controller.initialize(canvas) 
       View.initialize(canvas)

@@ -23,10 +23,8 @@ define [
 
 			#constants
 			CLIPPING_DISTANCE = 140
+			CAM_DISTANCE = 200
 			BACKGROUND_COLOR = [0.9, 0.9 ,0.9 ,1]
-			PROJECTION_NEAR = 0.0001
-			PROJECTION_FAR = 100000
-			PROJECTION_ANGLE = 90
 
 			#main render function
 			renderFunction = (forced) ->
@@ -91,9 +89,7 @@ define [
 
 
 			drawTriangleplane = ->
-				
 				g = triangleplane
-				#console.log "cam: " + cam.toString()
 
 				transMatrix = cam.getMatrix()
 				newVertices = M4x4.transformPointsAffine transMatrix, g.queryVertices
@@ -161,12 +157,29 @@ define [
 
 					engine = new GlEngine cvs, antialias : true
 					engine.background BACKGROUND_COLOR
-					engine.setProjectionMatrix PROJECTION_ANGLE, cvs.width / cvs.height, PROJECTION_NEAR, PROJECTION_FAR
+					engine.createProjectionMatrix()
 					engine.onRender = renderFunction
 
-					cam = new Flycam CLIPPING_DISTANCE
+					cam = new Flycam CAM_DISTANCE
 
 					engine.startAnimationLoop() 
+
+					#resizes canvas correctly
+					_canvas = $("#render")
+
+					cvs.resize = =>
+						cvs.height = _canvas.height()
+						cvs.width = _canvas.width()
+						View.resize()
+						View.draw()
+						return
+
+					$(window).resize( =>
+						cvs.resize()
+						return
+					)
+
+					$(window).resize()
 
 
 				#adds all kind of geometry to geometry-array
@@ -206,6 +219,12 @@ define [
 
 				getMatrix : ->
 					cam.getMatrix()
+
+				#Call this after the canvas was resized to fix the viewport
+				resize : ->
+					engine.setViewport()					
+					engine.createProjectionMatrix()
+
 
 			############################################################################
 			#Interface for Controller

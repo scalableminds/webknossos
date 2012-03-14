@@ -202,14 +202,16 @@ define ->
         j4 += 4
 
         collectLoopMacro(
-          x, y, z, 
+          x, y, z,
           buffer0, buffer1, bufferDelta, 
           j4, j3, 
           cube, 
           lowerBound0, lowerBound1, lowerBound2,
           upperBound0, upperBound1, upperBound2,
           size0, size01)
-        
+      
+      console.log(arguments) if vertices[0] == -1 and vertices[400] == -1
+
       return
 
   InterpolationCollector

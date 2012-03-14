@@ -41,7 +41,8 @@ GET     /test/demo                          controllers.Test.demo
 GET     /test/tests                         controllers.Test.tests
 
 #Admin pages 
-GET     /admin/testgridfs                   controllers.Admin.testGridFS
+GET     /admin/timegridfs                   controllers.Admin.timeGridFS
+GET     /admin/timefiledatastore            controllers.Admin.timeFileDataStore
 
 
 # Javascript routing

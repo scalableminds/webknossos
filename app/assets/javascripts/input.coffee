@@ -7,6 +7,16 @@ define( [
 
 		Input ?= {}
 
+		class Input.KeyboardNoLoop
+
+			constructor : (bindings) ->
+				for own key, callback of bindings
+					@attach(key, callback)
+
+			attach : (key, callback) ->
+
+				KeyboardJS.bind.key(key, callback)
+
 		class Input.Keyboard
 
 			delay : 1000 / 30
@@ -58,7 +68,7 @@ define( [
 		class Input.Deviceorientation
 
 			THRESHOLD = 10
-			SLOWDOWN_FACTOR = 250
+			SLOWDOWN_FACTOR = 500
 			
 			keyPressedCallbacks : {}
 			keyBindings : {}
@@ -77,12 +87,12 @@ define( [
 						
 						{ gamma, beta } = event
 						if gamma < -THRESHOLD or gamma > THRESHOLD
-							@fire("x", gamma)
+							@fire("x", -gamma)
 						else
 							@unfire("x")
 
 						if beta < -THRESHOLD or beta > THRESHOLD
-							@fire("y", beta)
+							@fire("y", -beta)
 						else
 							@unfire("y")
 				)

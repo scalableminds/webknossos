@@ -20,11 +20,7 @@ define(
 				@initMouse() 
 				@initKeyboard()
 				@initGamepad()
-
-				@input.deviceorientation = new Input.Deviceorientation(
-					"x"  : View.yawDistance
-					"y" : View.pitchDistance
-				)
+				@initDeviceOrientation()
 				
 				Model.Route.initialize().then(
 					(matrix) =>
@@ -97,17 +93,23 @@ define(
 
 			initGamepad : ->
 				@input.gamepad = new Input.Gamepad(
-						"ButtonA" : -> console.log "A"
-						"ButtonB" : -> console.log "B"
-						"ButtonX" : -> console.log "X"
-						"ButtonY" : -> console.log "Y"
-						"ButtonStart"  : -> console.log "Start"
-						"ButtonSelect" : -> console.log "Select"
+						"ButtonA" : -> View.pitchDistance 0.01
+						# "ButtonB" : -> console.log "B"
+						# "ButtonX" : -> console.log "X"
+						# "ButtonY" : -> console.log "Y"
+						# "ButtonStart"  : -> console.log "Start"
+						# "ButtonSelect" : -> console.log "Select"
 
-						# "LeftStickX" : -> console.log "LeftStick X"
-						# "LeftStickY" : -> console.log "LeftStick Y"
-						# "RightStickX": -> console.log "RightStick X"
-						# "RightStickX": -> console.log "RightStick Y"
+						"LeftStickX" : View.yawDistance
+						"LeftStickY" : View.pitchDistance
+
+
+				)
+
+			initDeviceOrientation : ->
+				@input.deviceorientation = new Input.Deviceorientation(
+					"x"  : View.yawDistance
+					"y" : View.pitchDistance
 				)
 
 			input :

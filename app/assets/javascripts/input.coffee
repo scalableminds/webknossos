@@ -133,7 +133,7 @@ define( [
 			# http://www.gamepadjs.com/
 
 			gamepad : null
-			delay :  200
+			delay :  250
 			buttonCallbackMap : {}
 			buttonNameMap :
 				"ButtonA" : "faceButton0"
@@ -158,7 +158,7 @@ define( [
 				"LeftStickX" : "leftStickX"
 				"LeftStickY" : "leftStickY"
 				"RightStickX": "rightStickX"
-				"RightStickX": "rightStickY"
+				"RightStickY": "rightStickY"
 
 
 			constructor : (bindings) ->
@@ -166,13 +166,18 @@ define( [
 
 					for own key, callback of bindings
 						@attach( @buttonNameMap[key] , callback )
+					_.defer => @gamepadLoop()
 
 				else
 				 console.log "Your browser does not support gamepads!"
 
 			attach : (button, callback)  ->
-				@buttonCallbackMap[button] = callback
-				@gamepadLoop()
+				#throttle axes callbacks
+				if button in ["leftStickX", "rightStickX", "leftStickY", "rightStickY"]
+					throttledCallback = _.throttle callback, 250
+					@buttonCallbackMap[button] = throttledCallback
+				else 
+					@buttonCallbackMap[button] = callback
 
 			gamepadLoop : ->
 				_pad = GamepadJS.getStates()
@@ -181,7 +186,17 @@ define( [
 				if @gamepad?
 					for button, callback of @buttonCallbackMap
 						unless @gamepad[button] == 0
-							callback()
+							#axes
+							if button in ["leftStickX", "rightStickX", "leftStickY", "rightStickY"]
+								value = @gamepad[button]
+								buttonB = @gamepad["faceButton1"]
+								if value? and buttonB == 1
+									callback(value) if value?
+
+							#buttons
+							else
+								callback()
+
 
 				setTimeout( (=> @gamepadLoop()), @delay)
 

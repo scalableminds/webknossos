@@ -41,8 +41,8 @@ GET     /test/demo                          controllers.Test.demo
 GET     /test/tests                         controllers.Test.tests
 
 #Admin pages 
-GET     /admin/timegridfs/:xBot/:xTop/:yBot/:yTop/:zBot/zTop                   controllers.Admin.timeGridFS(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int)
-GET     /admin/timefiledatastore/:xBot/:xTop/:yBot/:yTop/:zBot/zTop             controllers.Admin.timeFileDataStore(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int)
+GET     /admin/timegridfs/:xBot/:xTop/:yBot/:yTop/:zBot/:zTop                   controllers.Admin.timeGridFS(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int)
+GET     /admin/timefiledatastore/:xBot/:xTop/:yBot/:yTop/:zBot/:zTop             controllers.Admin.timeFileDataStore(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int)
 
 
 # Javascript routing

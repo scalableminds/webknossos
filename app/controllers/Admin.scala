@@ -25,31 +25,27 @@ object Admin extends Controller {
   def timeGridFS() = Action {
 
     var gridFileDataStoreTime = -System.currentTimeMillis()
-    Logger.info("outside loop")
     for {
       x <- xBot to xTop
       y <- yBot to yTop
       z <- zBot to zTop
     } {
-      Logger.info("inside loop")
       GridFileDataStore.load(Tuple3(x * 128, y * 128, z * 256))
     }
     gridFileDataStoreTime += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
     GridFileDataStore.cleanUp()
-    Ok("GridFS needed %s\n %d %d %d %d %d %d".format(sdf.format(gridFileDataStoreTime), xBot, xTop, yBot, yTop, zBot, zTop))
+    Ok("GridFS needed %s".format(sdf.format(gridFileDataStoreTime)))
   }
 
   def timeFileDataStore() = Action {
     var fileDataStoreTime = -System.currentTimeMillis()
-    Logger.info("outside loop")
     for {
       x <- xBot to xTop
       y <- yBot to yTop
       z <- zBot to zTop
     } {
-      Logger.info("inside loop")
       FileDataStore.load(Tuple3(x * 128, y * 128, z * 256))
     }
     fileDataStoreTime += System.currentTimeMillis()

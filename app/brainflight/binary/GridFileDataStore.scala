@@ -8,7 +8,7 @@ import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import com.mongodb.casbah.Imports._
 import scala.collection.JavaConverters._
 import com.mongodb.casbah.gridfs.Imports._
-import brainflight.tools.ExtendedDataTypes._
+import brainflight.tools.ExtendedTypes._
 
 object GridFileDataStore extends DataStore{
 	  //GridFs handle

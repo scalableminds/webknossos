@@ -14,7 +14,7 @@ import play.api.Play.current
 import play.api.libs.iteratee._
 import Input.EOF
 import play.api.libs.concurrent._
-import brainflight.tools.ExtendedDataTypes._
+import brainflight.tools.ExtendedTypes._
 import brainflight.tools.Math._
 import brainflight.tools.geometry.Vector3I._
 import brainflight.tools.geometry.Figure

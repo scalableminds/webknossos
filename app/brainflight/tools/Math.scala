@@ -6,7 +6,6 @@ import brainflight.tools.geometry.Vector3D
 import brainflight.tools.geometry.Polygon
 import brainflight.tools.geometry.Figure
 import brainflight.tools.geometry.Vector3D._
-import brainflight.tools.ExtendedDataTypes._
 
 /**
  * Scalable Minds - Brainflight

@@ -65,8 +65,8 @@ define(
 
 				
 					#ScaleTrianglesPlane
-					"l" : -> View.scaleTrianglesPlane(-scaleValue)	
-					"k" : -> View.scaleTrianglesPlane(scaleValue)	
+					"l" : -> View.scaleTrianglesPlane -scaleValue
+					"k" : -> View.scaleTrianglesPlane scaleValue
 
 					#Move
 					"w" : -> View.move [0, moveValue, 0]

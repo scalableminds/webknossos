@@ -17,16 +17,16 @@
       </div>
       <div id="optionswindow">
         Move:</br>
-        <input type="range" min="0" max="4" value="1" step="0.25" onchange="MVC.Controller.setMoveValue(this.value)" />
+        <input type="range" min="0.25" max="4" value="1" step="0.25" onchange="MVC.Controller.setMoveValue(this.value)" />
         </br></br>
         Rotate:</br>
-        <input type="range" min="0" max="0.05" value="0.01" step="0.005" onchange="MVC.Controller.setRotateValue(this.value)" />
+        <input type="range" min="0.005" max="0.05" value="0.01" step="0.005" onchange="MVC.Controller.setRotateValue(this.value)" />
         </br></br>
         Scale:</br>
-        <input type="range" min="0" max="0.25" value="0.05" step="0.01" onchange="MVC.Controller.setScaleValue(this.value)" />
+        <input type="range" min="0.01" max="0.25" value="0.05" step="0.01" onchange="MVC.Controller.setScaleValue(this.value)" />
         </br></br>
         MouseRotate:</br>
-        <input type="range" min="0" max="0.01" value="0.004" step="0.0005" onchange="MVC.Controller.setMouseRotateValue(this.value)" />
+        <input type="range" min="0.0005" max="0.01" value="0.004" step="0.0005" onchange="MVC.Controller.setMouseRotateValue(this.value)" />
         </br></br>      
         <input type="checkbox" onchange="MVC.Controller.setMouseInversionX(this.checked)"/> Inverse X-Axis of Mouse<br />
         <input type="checkbox" onchange="MVC.Controller.setMouseInversionY(this.checked)"/> Inverse Y-Axis of Mouse<br />

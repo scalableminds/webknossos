@@ -101,7 +101,7 @@ define(
 						# "ButtonSelect" : -> console.log "Select"
 
 						"LeftStickX" : View.yawDistance
-						"LeftStickY" : View.pitchDistance
+						# "LeftStickY" : View.pitchDistance
 
 
 				)

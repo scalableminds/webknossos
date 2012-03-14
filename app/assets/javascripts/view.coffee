@@ -103,21 +103,21 @@ define [
 					g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
 
 				#sends current position to Model for preloading data
-				Model.Binary.ping(transMatrix).done(View.draw)
+				Model.Binary.ping(transMatrix).done(View.draw).progress(View.draw)
 
 				#sends current position to Model for caching route
-				Model.Route.put cam.getPos(), null
+				Model.Route.put transMatrix
 
 				#get colors for new coords from Model
 				Model.Binary.get(newVertices).done ({ buffer0, buffer1, bufferDelta }) ->
 					
-					engine.deleteSingleBuffer g.interpolationFront.VBO
-					engine.deleteSingleBuffer g.interpolationBack.VBO
-					engine.deleteSingleBuffer g.interpolationOffset.VBO
+					engine.deleteSingleBuffer g.interpolationBuffer0.VBO
+					engine.deleteSingleBuffer g.interpolationBuffer1.VBO
+					engine.deleteSingleBuffer g.interpolationBufferDelta.VBO
 					
-					g.setInterpolationFront  (View.createArrayBufferObject buffer0), buffer0.length
-					g.setInterpolationBack   (View.createArrayBufferObject buffer1), buffer1.length
-					g.setInterpolationOffset (View.createArrayBufferObject bufferDelta), bufferDelta.length
+					g.setInterpolationBuffer0 (View.createArrayBufferObject buffer0), buffer0.length
+					g.setInterpolationBuffer1 (View.createArrayBufferObject buffer1), buffer1.length
+					g.setInterpolationBufferDelta (View.createArrayBufferObject bufferDelta), bufferDelta.length
 
 				engine.useProgram trianglesplaneProgramObject 
 
@@ -230,9 +230,9 @@ define [
 				move : (p) ->
 					cam.move p
 
-				scaleTrianglesPlane : (increment) ->
-					if triangleplane
-						triangleplane.scaleFactor.x += increment
+				scaleTrianglesPlane : (delta) ->
+					if triangleplane and triangleplane.scaleFactor.x + delta > 0
+						triangleplane.scaleFactor.x += delta
 						@draw()
 
 

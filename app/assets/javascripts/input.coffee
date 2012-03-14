@@ -64,6 +64,16 @@ define( [
 			attach : (axis, callback) ->
 				@mouse.bindX callback if axis is "x"
 				@mouse.bindY callback if axis is "y"
+
+			setInversionX : (value) ->
+				@mouse.setInversionX value if @mouse?
+
+			setInversionY : (value) ->
+				@mouse.setInversionY value if @mouse?
+
+			setRotateValue : (value) ->
+				@mouse.setRotateValue value if @mouse?
+
 				
 		class Input.Deviceorientation
 

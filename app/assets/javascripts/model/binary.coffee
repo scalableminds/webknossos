@@ -207,16 +207,33 @@ define [
 			# you look at
 			#
 			# No Callback Paramters
-			ping : (matrix, callback) ->
+			ping : (matrix) ->
 
 				# fire if
 				# *   wasn't called for PING_DEBOUNCE_TIME or
 				# *   PING_THROTTLE_TIME after last call are over
-				@ping = _.debounceOrThrottleDeferred(@pingImpl, @PING_DEBOUNCE_TIME, @PING_THROTTLE_TIME)
-				@ping(matrix, callback)
+				@ping = _.debounceOrThrottleDeferred(@pingImpl2, @PING_DEBOUNCE_TIME, @PING_THROTTLE_TIME)
+				@ping(matrix)
 
 
-			pingImpl : (matrix, callback) ->
+			pingImpl2 : (matrix) ->
+
+				promises        = []
+				preloadRadius   = @PRELOAD_TEST_RADIUS
+				preloadDiameter = @PRELOAD_TEST_RADIUS << 1
+				
+				if promise = @preload(matrix, 0, 0, 0, preloadDiameter)
+					promises.push(promise)
+				else
+					for z in [-1...50] by 10
+						if promise = @preload(matrix, 0, 0, z, preloadDiameter)
+							promises.push(promise)
+							break
+
+				$.whenWithProgress(promises...) if promises.length
+			
+
+			pingImpl : (matrix) ->
 
 				promises        = []
 				preloadRadius   = @PRELOAD_TEST_RADIUS
@@ -227,7 +244,7 @@ define [
 						if promise = @preload(matrix, x0, y0, 0, preloadDiameter)
 							promises.push(promise)
 						else
-							for z in [-1...70] by 10
+							for z in [-1...50] by 10
 								if promise = @preload(matrix, x0, y0, z, preloadDiameter)
 									promises.push(promise)
 									break

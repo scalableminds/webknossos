@@ -2,10 +2,12 @@ define [
 		"model/binary/interpolation_collector"
 		"libs/simple_array_buffer_socket"
 		"libs/simple_worker"
-		"model/binary/block_preloader"
-	], (InterpolationCollector, SimpleArrayBufferSocket, SimpleWorker, BlockPreloader) ->
+	], (InterpolationCollector, SimpleArrayBufferSocket, SimpleWorker) ->
 
-		pullCounter = 0
+		EPSILON = 1e-10
+
+
+		loadingState = {}
 
 		# This is the model. It takes care of the data including the 
 		# communication with the server.
@@ -93,6 +95,13 @@ define [
 			((x >> 6) - cubeOffset[0]) + 
 			((y >> 6) - cubeOffset[1]) * cubeSize[0] + 
 			((z >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+
+		bucketIndexVertexMacro = (vertex) ->
+
+			((vertex[0] >> 6) - cubeOffset[0]) + 
+			((vertex[1] >> 6) - cubeOffset[1]) * cubeSize[0] + 
+			((vertex[2] >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+
 
 		bucketIndex2Macro = (x, y, z) ->
 
@@ -212,125 +221,111 @@ define [
 				# fire if
 				# *   wasn't called for PING_DEBOUNCE_TIME or
 				# *   PING_THROTTLE_TIME after last call are over
-				@ping = _.debounceOrThrottleDeferred(@pingImpl2, @PING_DEBOUNCE_TIME, @PING_THROTTLE_TIME)
-				@ping(matrix)
+				#@ping = _.debounceOrThrottleDeferred(@pingImpl, @PING_DEBOUNCE_TIME, @PING_THROTTLE_TIME)
+				@pingImpl(matrix)
 
-
-			pingImpl2 : (matrix) ->
-
-				promises        = []
-				preloadRadius   = @PRELOAD_TEST_RADIUS
-				preloadDiameter = @PRELOAD_TEST_RADIUS << 1
-				
-				if promise = @preload(matrix, 0, 0, 0, preloadDiameter)
-					promises.push(promise)
-				else
-					for z in [-1...50] by 10
-						if promise = @preload(matrix, 0, 0, z, preloadDiameter)
-							promises.push(promise)
-							break
-
-				$.whenWithProgress(promises...) if promises.length
-			
 
 			pingImpl : (matrix) ->
 
-				promises        = []
-				preloadRadius   = @PRELOAD_TEST_RADIUS
-				preloadDiameter = @PRELOAD_TEST_RADIUS << 1
-				
-				for x0 in [-preloadRadius..preloadRadius] by preloadDiameter
-					for y0 in [-preloadRadius..preloadRadius] by preloadDiameter
-						if promise = @preload(matrix, x0, y0, 0, preloadDiameter)
-							promises.push(promise)
-						else
-							for z in [-1...50] by 10
-								if promise = @preload(matrix, x0, y0, z, preloadDiameter)
-									promises.push(promise)
-									break
+				x = (matrix[12] & -64) + 32
+				y = (matrix[13] & -64) + 32
+				z = (matrix[14] & -64) + 32
 
-				$.whenWithProgress(promises...) if promises.length
-			
-			preload : (matrix, x0, y0, z, width, sparse = 5) ->
-				# magic number 5
-				matrix = M4x4.translate([x0, y0, z - @PRELOAD_STEPBACK - 5], matrix)
-				if @preloadTest(matrix, width, sparse) < @PRELOAD_TEST_TOLERANCE
-					@pull(matrix)
+				centerVertex = new Float32Array(3)
+				centerVertex[0] = x
+				centerVertex[1] = y
+				centerVertex[2] = z
+				
+				planeNormal = new Float32Array(3) # [0,0,1]
+				planeNormal[2] = 1
+				M4x4.transformLineAffine(matrix, planeNormal, planeNormal)
+
+				planeDistance = V3.dot(centerVertex, planeNormal)
+
+				@extendByPoint(centerVertex)
+				
+				{ cube, cubeSize, cubeOffset } = @
+				bucketIndex = bucketIndexMacro(x, y, z)
+
+				if not @cube or not cube[bucketIndex]
+					@pullBucket(centerVertex)
+
 				else
-					false
 
-			preloadTestVertices : _.memoize(
-				(width, sparse) ->
-					vertices = []
-					halfWidth = width >> 1
-					for x in [-halfWidth..halfWidth] by sparse
-						for y in [-halfWidth..halfWidth] by sparse
-							vertices.push x, y, 5 # magic number 5
-					vertices
-				(args...) -> args.toString()
-			)
+					workingQueue = []
 
-			preloadTest : (matrix, width, sparse) ->				
+					middleBucketX = x >> 5
+					middleBucketY = y >> 5
+					middleBucketZ = z >> 5
 
-				vertices = M4x4.transformPointsAffine(matrix, @preloadTestVertices(width, sparse))
+					bucketCorner = new Float32Array(3)
 
-				i = j = 0
-				while j < vertices.length
-					x = vertices[j++]
-					y = vertices[j++]
-					z = vertices[j++]
-					
-					if x >= 0 and y >= 0 and z >= 0
-						if i != j
-							vertices[i++] = x
-							vertices[i++] = y
-							vertices[i++] = z
+					# fetching those neighbour buckets
+					for bucketX in [-64..64] by 64
+						for bucketY in [-64..64] by 64
+							for bucketZ in [-64..64] by 64
 
-				count = i / 3
-				colors = @bulkGetColorUnordered(vertices.subarray(0, i))
-				
-				hits = 0
+								frontCorners = 0
+								backCorners = 0
 
-				for color in colors
-					hits++  if color > 0
-				
-				hits / count
+								for cornerX in [0..1]
+									for cornerY in [0..1]
+										for cornerZ in [0..1]
+
+											bucketCorner[0] = ((bucketX + middleBucketX) << 5) | 63 if cornerX
+											bucketCorner[1] = ((bucketY + middleBucketY) << 5) | 63 if cornerY
+											bucketCorner[2] = ((bucketZ + middleBucketZ) << 5) | 63 if cornerZ
+											
+											bucketCorner[0] = bucketCorner[0] | 63 if cornerX
+											bucketCorner[1] = bucketCorner[1] | 63 if cornerY
+											bucketCorner[2] = bucketCorner[2] | 63 if cornerZ
+
+											cornerSide = V3.dot(planeNormal, bucketCorner) - planeDistance
+
+											frontCorners++ if cornerSide < -EPSILON
+											backCorners++  if cornerSide >  EPSILON
+
+								if frontCorners and backCorners
+									bucketIndex = bucketIndexMacro(x, y, z)
+									unless cube[bucketIndex]
+										@extendByPoint(bucketCorner)
+										@pullBucket(bucketCorner) 
+									workingQueue.push bucketCorner
+
+								else if frontCorners
+									workingQueue.push bucketCorner
+									@pullingQueue.push bucketCorner
+
+				return
 
 
-			pull : (matrix) ->
 
-				console.log "pull", pullCounter++
-				
-				$.when(@loadColors(matrix), @calcVertices(matrix))
 
-					.pipe (colors, { vertices, extent }) =>
+			pullingQueue : []
+			
+			pullBucket : (vertex) ->
 
-						# Maybe we need to expand our data structure.
-						@extendByExtent(extent)
-						
-						if vertices.length != colors.length * 3
-							console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) 
+				{ cube, cubeSize, cubeOffset } = @
+				bucketIndex = bucketIndexVertexMacro(vertex)
 
-						@bulkSetColor(vertices, colors)
-
-						null
+				cube[bucketIndex] = loadingState
+				@loadColors(vertex).then(
+					(colors) ->
+						cube[bucketIndex] = colors
+					->
+						cube[bucketIndex] = null
+				)
 			
 			loadColorsSocket : new SimpleArrayBufferSocket(
-				defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws/cube")
-				fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/data/cube")
+				defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?cubeSize=64")
+				fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?cubeSize=64")
 				requestBufferType : Float32Array
 				responseBufferType : Uint8Array
 			)
 			
-			loadColors : (matrix) ->
+			loadColors : (vertex) ->
 				
-				@loadColorsSocket.send(matrix)
-
-			calcVerticesWorker : new SimpleWorker("/assets/javascripts/calc_vertices_worker.js")
-
-			calcVertices : (matrix) ->
-
-				@calcVerticesWorker.send { matrix }
+				@loadColorsSocket.send(vertex)
 					
 			
 			# Now comes the implementation of our internal data structure.
@@ -371,6 +366,17 @@ define [
 					max_y >> 6,
 					max_z >> 6
 				)
+
+			extendByPoint : ([ x, y, z ]) ->
+				@extendByBucketExtent(
+					x >> 6,
+					y >> 6,
+					z >> 6,
+					x >> 6,
+					y >> 6,
+					z >> 6
+				)
+
 				
 			# And this one is for passing bucket coordinates.
 			extendByBucketExtent : (x0, y0, z0, x1, y1, z1) ->

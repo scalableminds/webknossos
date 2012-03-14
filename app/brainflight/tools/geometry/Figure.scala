@@ -6,7 +6,21 @@ import scala.math._
 import scala.collection.mutable.ArrayBuilder
 import scala.collection.mutable.ArrayBuffer
 
-case class Figure( polygons: Seq[Polygon] ) {
+abstract class Figure
+
+case class Cube( topLeft: Vector3I, edgeLength: Int) extends Figure{
+  def calculateInnerPoints(): Seq[Tuple3[Int, Int, Int]] = {
+    for{
+      x <- topLeft.x to topLeft.x + edgeLength
+      y <- topLeft.y to topLeft.y + edgeLength
+      z <- topLeft.z to topLeft.z + edgeLength
+    } yield {
+      (x,y,z)
+    }
+  }
+}
+
+case class ConvexFigure( polygons: Seq[Polygon] ) extends Figure{
 
   def isInside( point: Tuple3[Double,Double,Double], polygonOfPoint: Polygon = null ) = {
     !polygons.exists( polygon =>

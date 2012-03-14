@@ -1,9 +1,9 @@
 package brainflight.tools
 
-import brainflight.tools.ExtendedDataTypes._
+import brainflight.tools.ExtendedTypes._
 import org.specs2.mutable.Specification
 
-class ExtendedDataTypesTest extends Specification{
+class ExtendedTypesTest extends Specification{
 	"Extended byte array" should {
 	  "be able to convert to float" in {
 	    val b = Array[Byte](1,2,3,4)

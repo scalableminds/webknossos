@@ -1,7 +1,7 @@
 package brainflight.tools.geometry
 
 import brainflight.tools.Math._
-import brainflight.tools.ExtendedDataTypes._
+import brainflight.tools.ExtendedTypes._
 import scala.math._
 import scala.collection.mutable.ArrayBuilder
 import scala.collection.mutable.ArrayBuffer

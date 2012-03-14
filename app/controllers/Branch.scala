@@ -6,7 +6,7 @@ import models.User
 import models.TransformationMatrix
 import models.Role
 import models.Permission
-import brainflight.tools.ExtendedDataTypes._
+import brainflight.tools.ExtendedTypes._
 import play.api.mvc.Action
 import play.api.mvc.Request
 import play.api.libs.json.Json._

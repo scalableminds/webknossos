@@ -10,7 +10,7 @@ import brainflight.tools.Math._
 import brainflight.security.Secured
 import brainflight.tools.geometry.Vector3I
 import brainflight.tools.geometry.Vector3I._
-import brainflight.tools.ExtendedDataTypes._
+import brainflight.tools.ExtendedTypes._
 import models.{ User, TransformationMatrix }
 import models.Role
 

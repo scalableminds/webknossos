@@ -10,7 +10,6 @@ import brainflight.binary.{ FileDataStore, GridFileDataStore }
 import java.security.MessageDigest
 
 class GridFSTest extends Specification {
-  sequential
 
   val mongo = MongoConnection()("binaryData")
   val gridfs = GridFS(mongo)

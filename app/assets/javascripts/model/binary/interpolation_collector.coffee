@@ -6,10 +6,10 @@ define ->
   # Finding points adjacent to the already found one.
   # We make use of the bucket structure and index arithmetik to optimize
   # lookup time.
-  # Either returns a color value between 1 and 2 or an error code:
+  # Either returns a color value between 0 and 1 or an error code:
   #
-  # *    `-1`: block fault
-  # *    `0`: point fault (provided by the data structure)
+  # *    `-2`: bucket fault (but loading)
+  # *    `-1`: bucket fault
   nextPointMacro = (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, size01) ->
 
     bucketIndex = bucketIndex0
@@ -23,7 +23,8 @@ define ->
         bucketIndex++
         pointIndex &= -64
         # Bound checking.
-        output = -1 if bucketIndex % size0 == 0
+        if bucketIndex % size0 == 0
+          output = -1
       else
         pointIndex++
     
@@ -35,7 +36,8 @@ define ->
           bucketIndex += size0
           pointIndex &= -4033
           # Bound checking.
-          output = -1 if bucketIndex % size01 == 0
+          if bucketIndex % size01 == 0
+            output = -1
         else
           pointIndex += 64
       
@@ -46,11 +48,15 @@ define ->
             # The point seems to be at the back border.
             bucketIndex += size01
             pointIndex &= -258049
+
           else
             pointIndex += 4096
       
         output = if (bucket = cube[bucketIndex])?
-          bucket[pointIndex]
+          if bucket == true
+            -2
+          else
+            bucket[pointIndex]
         else
           -1
 
@@ -66,18 +72,17 @@ define ->
   # pointIndex = 111111 111111 111111
   #                 z      y      x
   # return codes:
-  # -2 : negative coordinates
+  # -2 : negative coordinates or bucket in loading state
   # -1 : bucket fault
-  # 0  : point fault
   collectLoopMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
 
-    output1 = output2 = output3 = output4 = output5 = output6 = output7 = 0
+    output0 = output1 = output2 = output3 = output4 = output5 = output6 = output7 = 0
 
     if x < 0 or y < 0 or z < 0
       buffer0[j4] = -2
       continue
     
-    # Bound checking is necessary.
+    # Cube bound checking is necessary.
     if x < ll0 or y < ll1 or z < ll2 or x > ur0 or y > ur1 or z > ur2
       buffer0[j4] = -1 
       continue
@@ -91,7 +96,7 @@ define ->
       ((x0 - ll0) >> 6) + 
       ((y0 - ll1) >> 6) * size0 + 
       ((z0 - ll2) >> 6) * size01
-    
+
     pointIndex0 = 
       ((x0 & 63)) +
       ((y0 & 63) << 6) +
@@ -210,8 +215,6 @@ define ->
           upperBound0, upperBound1, upperBound2,
           size0, size01)
       
-      console.log(arguments) if vertices[0] == -1 and vertices[400] == -1
-
       return
 
   InterpolationCollector

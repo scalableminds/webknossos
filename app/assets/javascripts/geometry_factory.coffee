@@ -7,13 +7,13 @@ define [
 
 		GeometryFactory =
 
-			createMesh : (modelName, shaderName) ->
+			createMesh : (fileName, shaderName, modelName) ->
 				$.when(
 					Model.Shader.get(shaderName),
-					Model.Mesh.get(modelName)
+					Model.Mesh.get(fileName)
 				).pipe (shader, geometry) ->
 					mesh = new Mesh shader.vertexShader, shader.fragmentShader
-					mesh.setName modelName
+					if modelName? then mesh.setName modelName else mesh.setName fileName
 					mesh.setVertices (View.createArrayBufferObject geometry.vertices), geometry.vertices.length
 					mesh.setColors (View.createArrayBufferObject geometry.colors), geometry.colors.length
 					mesh.setVertexIndex (View.createElementArrayBufferObject geometry.indices), geometry.indices.length

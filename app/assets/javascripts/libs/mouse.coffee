@@ -36,7 +36,9 @@ define ->
 
 			$(target).on 
 				"mousemove" : @mouseMoved
-				"dblclick" : @mouseDoubleClick
+				"mousedown" : @mouseDown
+				"mouseup"   : @mouseUp
+				"dblclick"  : @mouseDoubleClick
 
 				# fullscreen pointer lock
 				# Firefox does not yet support Pointer Lock
@@ -78,7 +80,7 @@ define ->
 
 			# regular mouse management
 			unless @locked 
-				if @doubleClicked
+				if @doubleClicked or @buttonDown
 					distX = -(evt.pageX - lastPosition.x) * inversion.x
 					distY =  (evt.pageY - lastPosition.y) * inversion.y
 					changedCallback.x distX * rotateValue if distX isnt 0

@@ -24,3 +24,4 @@ lifttemplate.iws
 src/main/scala/rebel.xml
 *.obj
 *.zip
+*.skp

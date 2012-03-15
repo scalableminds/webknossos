@@ -92,7 +92,7 @@ define( [
 							@unfire("x")
 
 						if beta < -THRESHOLD or beta > THRESHOLD
-							@fire("y", -beta)
+							@fire("y", beta)
 						else
 							@unfire("y")
 				)

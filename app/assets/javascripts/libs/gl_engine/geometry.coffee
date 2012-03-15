@@ -4,6 +4,7 @@ define ->
 			@vertices = 
 				VBO : null
 				length : null
+
 					
 			@colors = 
 				VBO : null
@@ -53,4 +54,3 @@ define ->
 		#returns the ClassName of an object
 		getClassType : ->
 			@type
-		

@@ -90,15 +90,19 @@ define [
 					engine.useProgram meshProgramObject
 					engine.pushMatrix()
 
-					engine.translate -250, -150, 100
-					engine.scale 1, 1, 1
-					engine.loadMatrix cam.getMatrix()
+					engine.translate -600, -300, CLIPPING_DISTANCE
+					engine.scale 0.5, 0.5, 0.5
+					#engine.loadMatrix cam.getMatrix()
 					
 
 					for cube in meshes["cubes"]
+						engine.pushMatrix()	
 						engine.translate cube.relativePosition.x, cube.relativePosition.y, CLIPPING_DISTANCE + cube.relativePosition.z 			
 						engine.render cube
-					engine.popMatrix()	
+						engine.renderWireframe cube
+						engine.popMatrix()
+
+					engine.popMatrix()
 
 
 				# OUTPUT Framerate
@@ -298,4 +302,6 @@ define [
 						@draw()
 
 
-	
+			# DIRTY ... PLEASE REVISIT ME LATER
+				setCubeRotation : (matrix) ->
+					

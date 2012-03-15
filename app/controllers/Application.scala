@@ -25,14 +25,13 @@ object Application extends Controller {
     mapping(
       "email" -> email,
       "name" -> text,
-      "password" -> tuple(
-        "main" -> text(minLength = 6),
-        "confirm" -> text
-      ).verifying(
+      "password" -> text(minLength = 6),
+      "repassword" -> text
+      /*.verifying(
         // Add an additional constraint: both passwords must match
-        "Passwords don't match", passwords => passwords._1 == passwords._2
-      )
-    )( (user, name, password) => (user, name, password._1) ) (  user => Some((user._1, user._2, ("",""))) ).verifying(
+        "Passwords don't match", form => form._3 == form._4
+      )*/
+    )( (user, name, password, repassword) => (user, name, password) ) (  user => Some((user._1, user._2, "","")) ).verifying(
       // Add an additional constraint: The username must not be taken (you could do an SQL request here)
       "This username is already in use.",
       user => User.findLocalByEmail(user._1).isEmpty
@@ -49,6 +48,7 @@ object Application extends Controller {
    */
   def registrate = Action {
     implicit request =>
+      Logger.info("registrate")
       registerForm.bindFromRequest.fold(
         formWithErrors => BadRequest(html.register(formWithErrors)),
         userForm => {

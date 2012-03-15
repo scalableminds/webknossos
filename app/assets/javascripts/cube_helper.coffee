@@ -1,25 +1,29 @@
-define
-[
-	"geometry_factory",
-	"view"
-],
-(GeometryFactory, View) ->
+define(
+	[
+		"geometry_factory",
+		"view"
+	]
+	(GeometryFactory, View) ->
 
-	Cuber =
+		CubeHelper =
 
-		cubeCount : 0
+			cubeCount : 0
+			cubes : []
 
-		addCube : (position) ->
-			GeometryFactory.createMesh("cube", "cube" + cubeCount).done (mesh) ->
-							mesh.relativePosition.x = 200 + position[x]
-							mesh.relativePosition.y = 200 + position[y]
-							mesh.relativePosition.z = position[z]
+			initialize : ->
+				#$(window).on "bucketloaded",arguments ,  @addCube arguments
 
-							mesh.scaleFactor = {0.64, 0.64, 0.64}
-							View.addGeometry mesh
-			cubeCount++
+			addCube : (position) ->
 
-		rotateCubes : ->
-			#TODO
+				GeometryFactory.createMesh("cube", "mesh", "cubes").done (mesh) =>
+					for cube in @cubes
+						View.removeMeshByName "cubes"
 
-		Cuber
+					mesh.relativePosition.x = position[0]
+					mesh.relativePosition.y = position[1]
+					mesh.relativePosition.z = position[2]
+					@cubes.push mesh
+					View.addGeometry @cubes
+					@cubeCount++
+
+)

@@ -86,16 +86,16 @@ define [
 					engine.popMatrix()	
 
 				# Normans Cube Preview
-				for i in 2...meshCount
-					g = meshes["cube" + 1]
+				if meshes["cubes"]
 					engine.useProgram meshProgramObject
 					engine.pushMatrix()
-					engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
-					if g.scaleFactor.x > 62
-						g.scaleFactor.x = 1
-					g.scaleFactor.x++
-					engine.scale g.scaleFactor.x , g.scaleFactor.y, g.scaleFactor.z
-					engine.render g
+					engine.scale [1,1,1]
+					engine.translate -200, -100, 0
+
+					for cube in cubes
+						engine.translate cube.relativePosition.x, cube.relativePosition.y, CLIPPING_DISTANCE + cube.relativePosition.z 			
+						engine.render cube
+
 					engine.popMatrix()	
 
 				# OUTPUT Framerate
@@ -113,7 +113,7 @@ define [
 					g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
 
 				#sends current position to Model for preloading data
-				Model.Binary.ping(transMatrix).done(View.draw).progress(View.draw)
+				Model.Binary.ping(transMatrix)#.done(View.draw).progress(View.draw)
 
 				#sends current position to Model for caching route
 				Model.Route.put transMatrix
@@ -195,33 +195,56 @@ define [
 
 					$(window).resize()
 
+					$(window).on("bucketloaded", View.draw) 
 
-				#adds all kind of geometry to geometry-array
-				#and adds the shader if is not already set for this geometry-type
+
+				# adds all kind of geometry to geometry-array
+				# Mesh arrays can be added to support grouping
+				# and adds the shader if is not already set for this geometry-type
 				addGeometry : (geometry) ->
 
-					if geometry.getClassType() is "Trianglesplane"
+					# add mesh group 
+					if _.isArray geometry
+						for mesh in geometry
+							if mesh.getClassType() is "Mesh"
+								meshProgramObject ?= engine.createShaderProgram mesh.vertexShader, mesh.fragmentShader
+						meshes[geometry.name] = geometry
+						meshCount++
+					#single mesh
+					else if geometry.getClassType() is "Mesh"
+							meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+							meshes[geometry.name] = geometry
+							meshCount++
+
+					# trianglesplane stuff
+					else if geometry.getClassType() is "Trianglesplane"
 						trianglesplaneProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 						triangleplane = geometry
 						#a single draw to see when the triangleplane is ready
-						@draw()
+						
+					@draw()
 
-					if geometry.getClassType() is "Mesh"
-						meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
-						meshes[geometry.name] = geometry
-						meshCount ++
-						@draw()
+				removeMeshByName : (name) ->
+					if meshes[name]
+						# group deletion
+						if _.isArray meshes[name]
+							for mesh in meshes[name]
+								engine.deleteBuffer mesh
+
+						#single mesh
+						engine.deleteBuffer meshes[name]
+						delete meshes[name]
 
 				addColors : (newColors, x, y, z) ->
 					#arrayPosition = x + y*colorWidth + z*colorWidth*colorWidth #wrong
 					setColorclouds[0] = 1
 					colorclouds[0] = newColors
 
-				#redirects the call from Geometry-Factory directly to engine
+				#redirects the call from GeometryFactory directly to engine
 				createArrayBufferObject : (data) ->
 					engine.createArrayBufferObject data
 					
-				#redirects the call from Geometry-Factory directly to engine
+				#redirects the call from GeometryFactory directly to engine
 				createElementArrayBufferObject : (data) ->
 					engine.createElementArrayBufferObject data
 
@@ -265,9 +288,8 @@ define [
 					cam.move p
 
 				scaleTrianglesPlane : (delta) ->
-					if triangleplane and triangleplane.scaleFactor.x + delta > 0
-						triangleplane.scaleFactor.x += delta
-						@draw()
-
-
-	
+					if triangleplane 
+						x = Number(triangleplane.scaleFactor.x) + Number(delta)
+						if x > 0 and x < 2
+							triangleplane.scaleFactor.x = x
+							@draw()

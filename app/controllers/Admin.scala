@@ -8,22 +8,29 @@ import play.mvc.Results.Redirect
 import play.Logger
 import java.text.SimpleDateFormat
 import java.util.TimeZone
-import brainflight.binary.{FileDataStore,GridFileDataStore}
+import brainflight.binary.{ FileDataStore, GridFileDataStore }
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.gridfs.Imports._
 
-object Admin extends Controller{
+object Admin extends Controller {
   
-  def timeGridFS(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int) = Action{
-    
+  val xBot = 10
+  val xTop = 20
+  val yBot = 20
+  val yTop = 30
+  val zBot = 20
+  val zTop = 30
+
+  def timeGridFS() = Action {
+
     var gridFileDataStoreTime = -System.currentTimeMillis()
-    for{
-        x <- xBot until xTop
-    	y <- yBot until yTop
-    	z <- zBot until zTop}
-    {
-      GridFileDataStore.load(Tuple3(x*128,y*128,z*256))
+    for {
+      x <- xBot to xTop
+      y <- yBot to yTop
+      z <- zBot to zTop
+    } {
+      GridFileDataStore.load(Tuple3(x * 128, y * 128, z * 256))
     }
     gridFileDataStoreTime += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
@@ -31,15 +38,15 @@ object Admin extends Controller{
     GridFileDataStore.cleanUp()
     Ok("GridFS needed %s".format(sdf.format(gridFileDataStoreTime)))
   }
-  
-  def timeFileDataStore(xBot: Int, xTop: Int, yBot: Int, yTop: Int, zBot: Int, zTop: Int) = Action{
+
+  def timeFileDataStore() = Action {
     var fileDataStoreTime = -System.currentTimeMillis()
-    for{
-        x <- xBot until xTop
-    	y <- yBot until yTop
-    	z <- zTop until zTop}
-    {
-      FileDataStore.load(Tuple3(x*128,y*128,z*256))
+    for {
+      x <- xBot to xTop
+      y <- yBot to yTop
+      z <- zBot to zTop
+    } {
+      FileDataStore.load(Tuple3(x * 128, y * 128, z * 256))
     }
     fileDataStoreTime += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
@@ -47,7 +54,7 @@ object Admin extends Controller{
     FileDataStore.cleanUp()
     Ok("FileDataStore needed %s".format(sdf.format(fileDataStoreTime)))
   }
-    
+
   /*
   def testGridFS = Action{
     

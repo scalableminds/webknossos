@@ -73,7 +73,7 @@ object BinaryData extends Controller with Secured {
 
   def requestViaAjax( cubeSize: Int ) = Action(parse.raw) { implicit request =>
     ( request.body ) match {
-      case body if body.size > WebSocketCoordinatesLength =>
+      case body if body.size >= 12 =>
         val binPosition = body.asBytes().getOrElse( Array[Byte]() )
         val position = binPosition.subDivide( 4 ).map( _.reverse.toIntFromFloat)
         val cubeCorner = position.map( x => x - x % cubeSize)

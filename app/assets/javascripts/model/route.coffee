@@ -26,7 +26,7 @@ define ["libs/request"], (request) ->
 						try
 							data         = JSON.parse data
 							@id          = data.id
-							@branchStack = data.branches
+							@branchStack = data.branches.map (a) -> new Float32Array(a)
 							@createBuffer()
 						catch ex
 							@initializeDeferred.reject(ex)
@@ -36,7 +36,7 @@ define ["libs/request"], (request) ->
 						$(window).on(
 							"unload"
 							=> 
-								@putBranch(@lastMatrix)
+								@putBranch(@lastMatrix) if @lastMatrix
 								@pushImpl()
 						)
 
@@ -59,7 +59,7 @@ define ["libs/request"], (request) ->
 			
 			@initialize().done =>
 				
-				transportBuffer = new Float32Array(@buffer.subarray(0, @index))
+				transportBuffer = new Float32Array(@buffer.subarray(0, @bufferIndex))
 				@createBuffer()
 
 				request(
@@ -69,11 +69,11 @@ define ["libs/request"], (request) ->
 				).fail( =>
 					
 					oldBuffer = @buffer
-					oldIndex  = @index
+					oldIndex  = @bufferIndex
 					@createBuffer()
 					@buffer.set(oldBuffer.subarray(0, oldIndex))
 					@buffer.set(transportBuffer, oldIndex)
-					@index = oldIndex + transportBuffer.length
+					@bufferIndex = oldIndex + transportBuffer.length
 
 					@push()
 
@@ -82,21 +82,21 @@ define ["libs/request"], (request) ->
 			deferred.promise()
 
 		createBuffer : ->
-			@index = 0
+			@bufferIndex = 0
 			@buffer = new Float32Array(@BUFFER_SIZE)
 
 		addToBuffer : (typeNumber, value) ->
 
-			@buffer[@index++] = typeNumber
+			@buffer[@bufferIndex++] = typeNumber
 			
 			if value
 				switch typeNumber
 					when 0
-						@buffer.set(value.subarray(0, 3), @index)
-						@index += 3
+						@buffer.set(value.subarray(0, 3), @bufferIndex)
+						@bufferIndex += 3
 					when 1
-						@buffer.set(value.subarray(0, 16), @index)
-						@index += 16
+						@buffer.set(value.subarray(0, 16), @bufferIndex)
+						@bufferIndex  += 16
 
 			@push()
 

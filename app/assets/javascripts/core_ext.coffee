@@ -112,6 +112,9 @@ V3.round = (v, r = new MJS_FLOAT_ARRAY_TYPE(3)) ->
   r[2] = Math.round(v[2])
   r
 
+V3.toString = (v) ->
+  "#{v[0]},#{v[1]},#{v[2]}"
+
 $.bindDeferred = (target, source) ->
   source
     .done(-> target.resolve.apply(target, arguments))

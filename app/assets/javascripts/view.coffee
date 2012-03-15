@@ -15,6 +15,7 @@ define [
 			# geometry objects
 			triangleplane = null
 			meshes = {}
+			meshCount = 0
 
 			#ProgramObjects
 			#One Shader for each Geometry-Type
@@ -83,6 +84,20 @@ define [
 					engine.scale g.scaleFactor.x , g.scaleFactor.y, g.scaleFactor.z
 					engine.render g
 					engine.popMatrix()	
+
+				# Normans Cube Preview
+				if meshes["cubes"]
+					engine.useProgram meshProgramObject
+					engine.pushMatrix()
+					engine.scale [1,1,1]
+					engine.translate -200, -100, 0
+
+					for cube in cubes
+						engine.translate cube.relativePosition.x, cube.relativePosition.y, CLIPPING_DISTANCE + cube.relativePosition.z 			
+						engine.render cube
+
+					engine.popMatrix()	
+
 
 				# OUTPUT Framerate
 				writeFramerate engine.framerate, cam.getPos()
@@ -182,31 +197,53 @@ define [
 					$(window).resize()
 
 
-				#adds all kind of geometry to geometry-array
-				#and adds the shader if is not already set for this geometry-type
+				# adds all kind of geometry to geometry-array
+				# Mesh arrays can be added to support grouping
+				# and adds the shader if is not already set for this geometry-type
 				addGeometry : (geometry) ->
 
-					if geometry.getClassType() is "Trianglesplane"
+					# add mesh group 
+					if _.isArray geometry
+						for mesh in geometry
+							if mesh.getClassType() is "Mesh"
+								meshProgramObject ?= engine.createShaderProgram mesh.vertexShader, mesh.fragmentShader
+						meshes[geometry.name] = geometry
+						meshCount++
+					#single mesh
+					else if geometry.getClassType() is "Mesh"
+							meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+							meshes[geometry.name] = geometry
+							meshCount++
+
+					# trianglesplane stuff
+					else if geometry.getClassType() is "Trianglesplane"
 						trianglesplaneProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 						triangleplane = geometry
 						#a single draw to see when the triangleplane is ready
-						@draw()
+						
+					@draw()
 
-					if geometry.getClassType() is "Mesh"
-						meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
-						meshes[geometry.name] = geometry
-						@draw()
+				removeMeshByName : (name) ->
+					if meshes[name]
+						# group deletion
+						if _.isArray meshes[name]
+							for mesh in meshes[name]
+								engine.deleteBuffer mesh
+
+						#single mesh
+						engine.deleteBuffer meshes[name]
+						delete meshes[name]
 
 				addColors : (newColors, x, y, z) ->
 					#arrayPosition = x + y*colorWidth + z*colorWidth*colorWidth #wrong
 					setColorclouds[0] = 1
 					colorclouds[0] = newColors
 
-				#redirects the call from Geometry-Factory directly to engine
+				#redirects the call from GeometryFactory directly to engine
 				createArrayBufferObject : (data) ->
 					engine.createArrayBufferObject data
 					
-				#redirects the call from Geometry-Factory directly to engine
+				#redirects the call from GeometryFactory directly to engine
 				createElementArrayBufferObject : (data) ->
 					engine.createElementArrayBufferObject data
 

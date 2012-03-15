@@ -3,9 +3,10 @@ define(
 		"model",
 		"view",
 		"geometry_factory",
-		"input"
+		"input",
+		"cube_helper"
 	],
-	(Model, View, GeometryFactory, Input) ->
+	(Model, View, GeometryFactory, Input, CubeHelper) ->
 
 		Controller ?= {}
 
@@ -41,6 +42,13 @@ define(
 						GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
 							View.addGeometry trianglesplane
 					
+						CubeHelper.initialize()
+						CubeHelper.addCube [100, 40, 0]
+						CubeHelper.addCube [300, 60, -20]
+						CubeHelper.addCube [200, 70, 0]
+						CubeHelper.addCube [170, 30, 10]
+
+
 					->
 						alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
 				)

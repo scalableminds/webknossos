@@ -207,9 +207,6 @@ define [
 					
 				{ buffer0, buffer1, bufferDelta }
 
-
-			PRELOAD_TEST_TOLERANCE : 0.9
-			PRELOAD_TEST_RADIUS : 37
 			PING_DEBOUNCE_TIME : 500
 			PING_THROTTLE_TIME : 2500
 			PRELOAD_STEPBACK : 10
@@ -231,9 +228,9 @@ define [
 				matrix = M4x4.translate([0, 0, -@PRELOAD_STEPBACK], matrix)
 
 				positionVertex = new Float32Array(3)
-				positionVertex[0] = x = matrix[12]
-				positionVertex[1] = y = matrix[13]
-				positionVertex[2] = z = matrix[14]
+				positionVertex[0] = matrix[12]
+				positionVertex[1] = matrix[13]
+				positionVertex[2] = matrix[14]
 				
 				planeNormal = new Float32Array(3)
 				planeNormal[2] = 1
@@ -242,45 +239,47 @@ define [
 				planeDistance = V3.dot(positionVertex, planeNormal)
 				
 				bucketCornerVertex = new Float32Array(3)
-				currentBucket      = new Float32Array(3)
-				testingBucket      = new Float32Array(3)
+				currentAddress     = new Float32Array(3)
+				neighborAddress    = new Float32Array(3)
 
-				currentBucket[0]   = positionVertex[0] >> 6
-				currentBucket[1]   = positionVertex[1] >> 6
-				currentBucket[2]   = positionVertex[2] >> 6
+				currentAddress[0]  = positionVertex[0] >> 6
+				currentAddress[1]  = positionVertex[1] >> 6
+				currentAddress[2]  = positionVertex[2] >> 6
 				
-				workingQueue = [ currentBucket ]
+				workingQueue = [ currentAddress ]
 				visitedList  = []
 
-				if not @cube or not @cube[@bucketIndex(x, y, z)]
-					@extendByPoint(positionVertex)
+				if not @cube or not @cube[@bucketIndexByAddress(currentAddress)]
+					@extendByBucketAddress(currentAddress)
 
 				while workingQueue.length and counter++ < 10
-				
-					currentBucket = workingQueue.shift()
 
-					unless @cube[@bucketIndexByAddress(currentBucket)]
-						@extendByBucketAddress(currentBucket)
-						@pullBucket(currentBucket) 
+					currentAddress = workingQueue.shift()
+
+					unless @cube[@bucketIndexByAddress(currentAddress)]
+						@extendByBucketAddress(currentAddress)
+						@pullBucket(currentAddress) 
 
 					# fetching those neighbor buckets
 
-					testingBucket[0] = currentBucket[0] - 2
-					testingBucket[1] = currentBucket[1] - 2
-					testingBucket[2] = currentBucket[2] - 2
+					tempWorkingQueue = []
 
-					while testingBucket[0] <= currentBucket[0]
-						testingBucket[0]++
-						while testingBucket[1] <= currentBucket[1]
-							testingBucket[1]++
-							while testingBucket[2] <= currentBucket[2]
-								testingBucket[2]++
+					neighborAddress[0] = currentAddress[0] - 2
+					neighborAddress[1] = currentAddress[1] - 2
+					neighborAddress[2] = currentAddress[2] - 2
+
+					while neighborAddress[0] <= currentAddress[0]
+						neighborAddress[0]++
+						while neighborAddress[1] <= currentAddress[1]
+							neighborAddress[1]++
+							while neighborAddress[2] <= currentAddress[2]
+								neighborAddress[2]++
 
 								# go skip yourself
-								continue if testingBucket[0] == currentBucket[0] and testingBucket[1] == currentBucket[1] and testingBucket[2] == currentBucket[2]
+								continue if neighborAddress[0] == currentAddress[0] and neighborAddress[1] == currentAddress[1] and neighborAddress[2] == currentAddress[2]
 
 								# we we're here already
-								continue if visitedList.indexOf(V3.toString(currentBucket)) >= 0
+								continue if visitedList.indexOf(V3.toString(currentAddress)) >= 0
 
 								frontCorners = 0
 								backCorners = 0
@@ -289,9 +288,10 @@ define [
 									for cornerY in [0..1]
 										for cornerZ in [0..1]
 
-											bucketCornerVertex[0] = testingBucket[0] << 6
-											bucketCornerVertex[1] = testingBucket[1] << 6
-											bucketCornerVertex[2] = testingBucket[2] << 6
+											bucketCornerVertex[0] = neighborAddress[0] << 6
+											bucketCornerVertex[1] = neighborAddress[1] << 6
+											bucketCornerVertex[2] = neighborAddress[2] << 6
+
 											bucketCornerVertex[0] = bucketCornerVertex[0] | 63 if cornerX
 											bucketCornerVertex[1] = bucketCornerVertex[1] | 63 if cornerY
 											bucketCornerVertex[2] = bucketCornerVertex[2] | 63 if cornerZ
@@ -303,10 +303,14 @@ define [
 											else if cornerSide > EPSILON
 												backCorners++
 
-								workingQueue.push(V3.clone(testingBucket)) if frontCorners
-						
+								if frontCorners
+									if backCorners	
+										tempWorkingQueue.unshift(V3.clone(neighborAddress)) 
+									else
+										tempWorkingQueue.push(V3.clone(neighborAddress)) 
 
-					visitedList.push(V3.toString(currentBucket))
+					workingQueue = workingQueue.concat(tempWorkingQueue)			
+					visitedList.push(V3.toString(currentAddress))
 							
 
 				console.timeEnd("ping")

@@ -181,6 +181,8 @@ define [
 
 					$(window).resize()
 
+					$(window).on("bucketloaded", View.draw) 
+
 
 				#adds all kind of geometry to geometry-array
 				#and adds the shader if is not already set for this geometry-type

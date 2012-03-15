@@ -8,9 +8,8 @@ define ->
 		}
 
 		buttonDown : false
-
-		#1 => normal; -1 => inverted
-
+		doubleClicked : false
+		
 		# used for mouse locking in fullscreen mode
 		locked : false
 
@@ -37,8 +36,9 @@ define ->
 
 			$(target).on 
 				"mousemove" : @mouseMoved
-				"mouseup" : @mouseUp
 				"mousedown" : @mouseDown
+				"mouseup"   : @mouseUp
+				"dblclick"  : @mouseDoubleClick
 
 				# fullscreen pointer lock
 				# Firefox does not yet support Pointer Lock
@@ -80,7 +80,7 @@ define ->
 
 			# regular mouse management
 			unless @locked 
-				if @buttonDown
+				if @doubleClicked or @buttonDown
 					distX = -(evt.pageX - lastPosition.x) * inversion.x
 					distY =  (evt.pageY - lastPosition.y) * inversion.y
 					changedCallback.x distX * rotateValue if distX isnt 0
@@ -99,6 +99,10 @@ define ->
 				changedCallback.x distX * rotateValue if distX isnt 0
 				changedCallback.y distY * rotateValue if distY isnt 0
 
+		mouseDoubleClick : =>
+			@doubleClicked = !@doubleClicked
+
+		# depricated
 		mouseDown : =>
 			$(@target).css("cursor", "none")
 			@buttonDown = true

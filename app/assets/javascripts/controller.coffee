@@ -43,10 +43,6 @@ define(
 							View.addGeometry trianglesplane
 					
 						CubeHelper.initialize()
-						CubeHelper.addCube [100, 40, 0]
-						CubeHelper.addCube [300, 60, -20]
-						CubeHelper.addCube [200, 70, 0]
-						CubeHelper.addCube [170, 30, 10]
 
 
 					->

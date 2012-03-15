@@ -1,10 +1,16 @@
 define ->
 	class Mouse
 
-		SLOWDOWN_FACTOR = 250		
+		rotateValue = 0.004		
+		inversion = {
+			x : 1
+			y : 1
+		}
 
 		buttonDown : false
-		
+
+		#1 => normal; -1 => inverted
+
 		# used for mouse locking in fullscreen mode
 		locked : false
 
@@ -15,6 +21,11 @@ define ->
 		changedCallback :  
 			x : $.noop()
 			y : $.noop() 
+
+		inversion : 
+			x : 1
+			y : 1
+
 
 		###
 		#@param {Object} target : DOM Element
@@ -36,6 +47,8 @@ define ->
 				"webkitpointerlocklost" : @unlockMouse #???
 				"webkitpointerlockchange" : @unlockMouse
 
+
+
 		###
 		#Binds a function as callback when X-Position was changed
 		#@param {Function} callback :
@@ -52,6 +65,15 @@ define ->
 		bindY : (callback) ->
 			@changedCallback.y = callback
 
+		unbind : ->
+			$(@target).off 
+				"mousemove" : @mouseMoved
+				"mouseup" : @mouseUp
+				"mousedown" : @mouseDown
+				"webkitfullscreenchange" : @toogleMouseLock
+				"webkitpointerlocklost" : @unlockMouse
+				"webkitpointerlockchange" : @unlockMouse		
+
 		mouseMoved : (evt) =>
 			
 			{ lastPosition, changedCallback } = @
@@ -59,10 +81,10 @@ define ->
 			# regular mouse management
 			unless @locked 
 				if @buttonDown
-					distX = -(evt.pageX - lastPosition.x)
-					distY =   evt.pageY - lastPosition.y
-					changedCallback.x distX / SLOWDOWN_FACTOR if distX isnt 0
-					changedCallback.y distY / SLOWDOWN_FACTOR if distY isnt 0
+					distX = -(evt.pageX - lastPosition.x) * inversion.x
+					distY =  (evt.pageY - lastPosition.y) * inversion.y
+					changedCallback.x distX * rotateValue if distX isnt 0
+					changedCallback.y distY * rotateValue if distY isnt 0
 
 				@lastPosition =
 					x : evt.pageX
@@ -72,10 +94,10 @@ define ->
 			# Mouse lock returns MovementX/Y in addition to the regular properties
 			# (these become static)		
 			else
-				distX = -evt.originalEvent.webkitMovementX
-				distY = evt.originalEvent.webkitMovementY
-				changedCallback.x distX / SLOWDOWN_FACTOR if distX isnt 0
-				changedCallback.y distY / SLOWDOWN_FACTOR if distY isnt 0
+				distX = -evt.originalEvent.webkitMovementX * inversion.x
+				distY = evt.originalEvent.webkitMovementY * inversion.y
+				changedCallback.x distX * rotateValue if distX isnt 0
+				changedCallback.y distY * rotateValue if distY isnt 0
 
 		mouseDown : =>
 			$(@target).css("cursor", "none")
@@ -93,3 +115,18 @@ define ->
 			else
 				@locked = false
 				navigator.pointer.unlock()
+
+		setRotateValue : (value) ->
+			rotateValue = value
+
+		setInversionX : (value) ->
+				if value is true
+					inversion.x = -1
+				else
+					inversion.x = 1		
+
+		setInversionY : (value) ->
+				if value is true
+					inversion.y = -1
+				else
+					inversion.y = 1

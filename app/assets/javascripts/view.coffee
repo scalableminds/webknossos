@@ -297,11 +297,13 @@ define [
 					cam.move p
 
 				scaleTrianglesPlane : (delta) ->
-					if triangleplane and triangleplane.scaleFactor.x + delta > 0
-						triangleplane.scaleFactor.x += delta
-						@draw()
+					if triangleplane 
+						x = Number(triangleplane.scaleFactor.x) + Number(delta)
+						if x > 0 and x < 2
+							triangleplane.scaleFactor.x = x
+							@draw()
 
 
 			# DIRTY ... PLEASE REVISIT ME LATER
 				setCubeRotation : (matrix) ->
-					
+

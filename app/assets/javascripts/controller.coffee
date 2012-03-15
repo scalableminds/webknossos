@@ -3,15 +3,16 @@ define(
 		"model",
 		"view",
 		"geometry_factory",
-		"input"
+		"input",
+		"cube_helper"
 	],
-	(Model, View, GeometryFactory, Input) ->
+	(Model, View, GeometryFactory, Input, CubeHelper) ->
 
 		Controller ?= {}
 
-		MOVE_VALUE = 1
-		ROTATE_VALUE = 0.01
-		SCALE_FACTOR = 0.05
+		moveValue = 1
+		rotateValue = 0.01
+		scaleValue = 0.05
 
 		Controller = 
 
@@ -21,7 +22,7 @@ define(
 				@initKeyboard()
 				@initGamepad()
 				@initDeviceOrientation()
-				
+
 				Model.Route.initialize().then(
 					(matrix) =>
 							
@@ -37,6 +38,13 @@ define(
 						GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
 							View.addGeometry trianglesplane
 					
+						CubeHelper.initialize()
+						CubeHelper.addCube [100, 40, 0]
+						CubeHelper.addCube [300, 60, -20]
+						CubeHelper.addCube [200, 70, 0]
+						CubeHelper.addCube [170, 30, 10]
+
+
 					->
 						alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
 				)
@@ -61,28 +69,28 @@ define(
 
 				
 					#ScaleTrianglesPlane
-					"l" : -> View.scaleTrianglesPlane(-SCALE_FACTOR)	
-					"k" : -> View.scaleTrianglesPlane(SCALE_FACTOR)	
+					"l" : -> View.scaleTrianglesPlane -scaleValue
+					"k" : -> View.scaleTrianglesPlane scaleValue
 
 					#Move
-					"w" : -> View.move [0, MOVE_VALUE, 0]
-					"s" : -> View.move [0, -MOVE_VALUE, 0]
-					"a" : -> View.move [MOVE_VALUE, 0, 0]
-					"d" : -> View.move [-MOVE_VALUE, 0, 0]
-					"space" : -> View.move [0, 0, MOVE_VALUE]
-					"shift + space" : -> View.move [0, 0, -MOVE_VALUE]
+					"w" : -> View.move [0, moveValue, 0]
+					"s" : -> View.move [0, -moveValue, 0]
+					"a" : -> View.move [moveValue, 0, 0]
+					"d" : -> View.move [-moveValue, 0, 0]
+					"space" : -> View.move [0, 0, moveValue]
+					"shift + space" : -> View.move [0, 0, -moveValue]
 
 					#Rotate in distance
-					"left"  : -> View.yawDistance ROTATE_VALUE
-					"right" : -> View.yawDistance -ROTATE_VALUE
-					"up"    : -> View.pitchDistance -ROTATE_VALUE
-					"down"  : -> View.pitchDistance ROTATE_VALUE
+					"left"  : -> View.yawDistance rotateValue
+					"right" : -> View.yawDistance -rotateValue
+					"up"    : -> View.pitchDistance -rotateValue
+					"down"  : -> View.pitchDistance rotateValue
 					
 					#Rotate at centre
-					"shift + left"  : -> View.yaw ROTATE_VALUE
-					"shift + right" : -> View.yaw -ROTATE_VALUE
-					"shift + up"    : -> View.pitch -ROTATE_VALUE
-					"shift + down"  : -> View.pitch ROTATE_VALUE
+					"shift + left"  : -> View.yaw rotateValue
+					"shift + right" : -> View.yaw -rotateValue
+					"shift + up"    : -> View.pitch -rotateValue
+					"shift + down"  : -> View.pitch rotateValue
 				)
 				
 				new Input.KeyboardNoLoop(
@@ -112,12 +120,65 @@ define(
 					"y" : View.pitchDistance
 				)
 
+			initDeviceOrientation : ->
+				@input.deviceorientation = new Input.Deviceorientation(
+					"x"  : View.yawDistance
+					"y" : View.pitchDistance
+				)
+
 			input :
 				mouse : null
 				keyboard : null
 				gamepad : null
 				deviceorientation : null
 
+			#Customize Options
+			setMoveValue : (value) ->
+				moveValue = value
 
-)		
+			setRotateValue : (value) ->
+				rotateValue = value				
 
+			setScaleValue : (value) ->
+				scaleValue = value				
+
+			setMouseRotateValue : (value) ->
+				@input.mouse.setRotateValue value if @input.mouse?
+
+			setMouseInversionX : (value) ->
+				@input.mouse.setInversionX value if @input.mouse?
+
+			setMouseInversionY : (value) ->
+				@input.mouse.setInversionY value if @input.mouse?
+
+
+			setMouseActivity : (value) ->
+				if value is false
+					@input.mouse.unbind()
+					@input.mouse = null
+				else
+					@initMouse()
+
+			setKeyboardActivity : (value) ->
+				if value is false
+					@input.keyboard.unbind()
+					@input.keyboard = null
+				else
+					@initKeyboard()
+
+			setGamepadActivity : (value) ->
+				if value is false
+					@input.gamepad.unbind()
+					@input.gamepad = null
+				else
+					@initGamepad()		
+
+			setDeviceOrientationActivity : (value) ->
+				if value is false
+					@input.deviceorientation.unbind()
+					@input.deviceorientation = null
+				else
+					@initDeviceOrientation()					
+
+
+)

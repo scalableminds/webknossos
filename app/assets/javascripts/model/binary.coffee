@@ -2,10 +2,12 @@ define [
 		"model/binary/interpolation_collector"
 		"libs/simple_array_buffer_socket"
 		"libs/simple_worker"
-		"model/binary/block_preloader"
-	], (InterpolationCollector, SimpleArrayBufferSocket, SimpleWorker, BlockPreloader) ->
+	], (InterpolationCollector, SimpleArrayBufferSocket, SimpleWorker) ->
 
-		pullCounter = 0
+		EPSILON = 1e-10
+
+
+		loadingState = true
 
 		# This is the model. It takes care of the data including the 
 		# communication with the server.
@@ -94,6 +96,20 @@ define [
 			((y >> 6) - cubeOffset[1]) * cubeSize[0] + 
 			((z >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
 
+		bucketIndexByVertexMacro = (vertex) ->
+
+			((vertex[0] >> 6) - cubeOffset[0]) + 
+			((vertex[1] >> 6) - cubeOffset[1]) * cubeSize[0] + 
+			((vertex[2] >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+
+
+		bucketIndexByAddressMacro = (vertex) ->
+
+			(vertex[0] - cubeOffset[0]) + 
+			(vertex[1] - cubeOffset[1]) * cubeSize[0] + 
+			(vertex[2] - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+
+
 		bucketIndex2Macro = (x, y, z) ->
 
 			((x >> 6) - cubeOffset0) + 
@@ -137,7 +153,7 @@ define [
 			#
 			# We'll figure out how many color values you need to do interpolation.
 			# That'll be 1, 2, 4 or 8 values. They represent greyscale colors ranging from
-			# 1 to 2. Additionally, you need three delta values xd, yd and zd which are in
+			# 0 to 1. Additionally, you need three delta values xd, yd and zd which are in
 			# the range from 0 to 1. Then you should be able to perform a trilinear 
 			# interpolation. To sum up, you get 11 floating point values for each point.
 			# We spilt those in three array buffers to have them used in WebGL shaders as 
@@ -150,7 +166,8 @@ define [
 			#
 			# *   `-2`: negative coordinates given
 			# *   `-1`: block fault
-			# *   `0`: point fault
+			# *   `0`: black
+			# *   `1`: white
 			# 
 			# Parameters:
 			# 
@@ -190,12 +207,9 @@ define [
 					
 				{ buffer0, buffer1, bufferDelta }
 
-
-			PRELOAD_TEST_TOLERANCE : 0.9
-			PRELOAD_TEST_RADIUS : 37
 			PING_DEBOUNCE_TIME : 500
 			PING_THROTTLE_TIME : 2500
-			PRELOAD_STEPBACK : 18
+			PRELOAD_STEPBACK : 10
 			
 			# Use this method to let us know when you've changed your spot. Then we'll try to 
 			# preload some data. 
@@ -209,128 +223,144 @@ define [
 			# No Callback Paramters
 			ping : (matrix) ->
 
-				# fire if
-				# *   wasn't called for PING_DEBOUNCE_TIME or
-				# *   PING_THROTTLE_TIME after last call are over
-				@ping = _.debounceOrThrottleDeferred(@pingImpl2, @PING_DEBOUNCE_TIME, @PING_THROTTLE_TIME)
-				@ping(matrix)
-
-
-			pingImpl2 : (matrix) ->
-
-				promises        = []
-				preloadRadius   = @PRELOAD_TEST_RADIUS
-				preloadDiameter = @PRELOAD_TEST_RADIUS << 1
+				counter = 0
 				
-				if promise = @preload(matrix, 0, 0, 0, preloadDiameter)
-					promises.push(promise)
-				else
-					for z in [-1...50] by 10
-						if promise = @preload(matrix, 0, 0, z, preloadDiameter)
-							promises.push(promise)
-							break
+				matrix = M4x4.translate([0, 0, -@PRELOAD_STEPBACK], matrix)
 
-				$.whenWithProgress(promises...) if promises.length
+				positionVertex = new Float32Array(3)
+				positionVertex[0] = matrix[12]
+				positionVertex[1] = matrix[13]
+				positionVertex[2] = matrix[14]
+				
+				planeNormal = new Float32Array(3)
+				planeNormal[2] = 1
+				M4x4.transformLineAffine(matrix, planeNormal, planeNormal)
+
+				planeDistance = V3.dot(positionVertex, planeNormal)
+				
+				bucketCornerVertex = new Float32Array(3)
+				currentAddress     = new Float32Array(3)
+				neighborAddress    = new Float32Array(3)
+
+				currentAddress[0]  = positionVertex[0] >> 6
+				currentAddress[1]  = positionVertex[1] >> 6
+				currentAddress[2]  = positionVertex[2] >> 6
+				
+				workingQueue = [ currentAddress ]
+				visitedList  = []
+
+				if not @cube or not @cube[@bucketIndexByAddress(currentAddress)]
+					@extendByBucketAddress(currentAddress)
+
+				while workingQueue.length and counter++ < 30
+
+					currentAddress = workingQueue.shift()
+
+					continue if visitedList.indexOf(V3.toString(currentAddress)) >= 0
+
+					unless @cube[@bucketIndexByAddress(currentAddress)]
+						@extendByBucketAddress(currentAddress)
+						@pullBucket(currentAddress) 
+
+					# fetching those neighbor buckets
+
+					tempWorkingQueue = []
+
+					neighborAddress[0] = currentAddress[0] - 2
+					while neighborAddress[0] <= currentAddress[0]
+						neighborAddress[0]++
+
+						neighborAddress[1] = currentAddress[1] - 2
+						while neighborAddress[1] <= currentAddress[1]
+							neighborAddress[1]++
+
+							neighborAddress[2] = currentAddress[2] - 2
+							while neighborAddress[2] <= currentAddress[2]
+								neighborAddress[2]++
+
+								# go skip yourself
+								continue if neighborAddress[0] == currentAddress[0] and neighborAddress[1] == currentAddress[1] and neighborAddress[2] == currentAddress[2]
+
+								# we we're here already
+								continue if visitedList.indexOf(V3.toString(neighborAddress)) >= 0
+
+								frontCorners = 0
+								backCorners  = 0
+
+								for cornerX in [0..1]
+									for cornerY in [0..1]
+										for cornerZ in [0..1]
+
+											bucketCornerVertex[0] = neighborAddress[0] << 6
+											bucketCornerVertex[1] = neighborAddress[1] << 6
+											bucketCornerVertex[2] = neighborAddress[2] << 6
+
+											bucketCornerVertex[0] = bucketCornerVertex[0] | 63 if cornerX
+											bucketCornerVertex[1] = bucketCornerVertex[1] | 63 if cornerY
+											bucketCornerVertex[2] = bucketCornerVertex[2] | 63 if cornerZ
+
+											cornerSide = planeDistance - V3.dot(planeNormal, bucketCornerVertex)
+
+											if cornerSide < -EPSILON
+												backCorners++ 
+											else if cornerSide > EPSILON
+												frontCorners++
+
+								if frontCorners
+									if backCorners	
+										tempWorkingQueue.unshift(V3.clone(neighborAddress)) 
+									else
+										tempWorkingQueue.push(V3.clone(neighborAddress)) 
+
+					workingQueue = workingQueue.concat(tempWorkingQueue)			
+					visitedList.push(V3.toString(currentAddress))
+							
+
+				console.timeEnd("ping")
+				return
 			
-
-			pingImpl : (matrix) ->
-
-				promises        = []
-				preloadRadius   = @PRELOAD_TEST_RADIUS
-				preloadDiameter = @PRELOAD_TEST_RADIUS << 1
-				
-				for x0 in [-preloadRadius..preloadRadius] by preloadDiameter
-					for y0 in [-preloadRadius..preloadRadius] by preloadDiameter
-						if promise = @preload(matrix, x0, y0, 0, preloadDiameter)
-							promises.push(promise)
-						else
-							for z in [-1...50] by 10
-								if promise = @preload(matrix, x0, y0, z, preloadDiameter)
-									promises.push(promise)
-									break
-
-				$.whenWithProgress(promises...) if promises.length
+			pullingQueue : []
 			
-			preload : (matrix, x0, y0, z, width, sparse = 5) ->
-				# magic number 5
-				matrix = M4x4.translate([x0, y0, z - @PRELOAD_STEPBACK - 5], matrix)
-				if @preloadTest(matrix, width, sparse) < @PRELOAD_TEST_TOLERANCE
-					@pull(matrix)
-				else
-					false
+			pullBucket : (address) ->
 
-			preloadTestVertices : _.memoize(
-				(width, sparse) ->
-					vertices = []
-					halfWidth = width >> 1
-					for x in [-halfWidth..halfWidth] by sparse
-						for y in [-halfWidth..halfWidth] by sparse
-							vertices.push x, y, 5 # magic number 5
-					vertices
-				(args...) -> args.toString()
-			)
+				console.log "pull", V3.toString(address)
 
-			preloadTest : (matrix, width, sparse) ->				
+				@cube[@bucketIndexByAddress(address)] = loadingState
 
-				vertices = M4x4.transformPointsAffine(matrix, @preloadTestVertices(width, sparse))
+				vertex = V3.clone(address)
+				vertex[0] = vertex[0] << 6
+				vertex[1] = vertex[1] << 6
+				vertex[2] = vertex[2] << 6
 
-				i = j = 0
-				while j < vertices.length
-					x = vertices[j++]
-					y = vertices[j++]
-					z = vertices[j++]
-					
-					if x >= 0 and y >= 0 and z >= 0
-						if i != j
-							vertices[i++] = x
-							vertices[i++] = y
-							vertices[i++] = z
-
-				count = i / 3
-				colors = @bulkGetColorUnordered(vertices.subarray(0, i))
-				
-				hits = 0
-
-				for color in colors
-					hits++  if color > 0
-				
-				hits / count
-
-
-			pull : (matrix) ->
-
-				console.log "pull", pullCounter++
-				
-				$.when(@loadColors(matrix), @calcVertices(matrix))
-
-					.pipe (colors, { vertices, extent }) =>
-
-						# Maybe we need to expand our data structure.
-						@extendByExtent(extent)
+				@loadColors(vertex).then(
+					(colors) =>
 						
-						if vertices.length != colors.length * 3
-							console.error("Color (#{colors.length}) and vertices (#{vertices.length / 3}) count doesn't match.", matrix) 
+						bucket = @cube[@bucketIndexByVertex(vertex)] = new Float32Array(colors.length)
+						i = 0
 
-						@bulkSetColor(vertices, colors)
+						for x in [0...64]
+							for y in [0...64]
+								for z in [0...64]
+									bucket[pointIndexMacro(x, y, z)] = colors[i++] / 256
 
-						null
+						console.error "wrong colors length", colors.length if colors.length != 1 << (6 * 3)
+
+						$(window).trigger("bucketloaded", [vertex])
+
+					=>
+						@cube[@bucketIndexByVertex(vertex)] = null
+				)
 			
 			loadColorsSocket : new SimpleArrayBufferSocket(
-				defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws/cube")
-				fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/data/cube")
+				defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?cubeSize=64")
+				fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?cubeSize=64")
 				requestBufferType : Float32Array
 				responseBufferType : Uint8Array
 			)
 			
-			loadColors : (matrix) ->
+			loadColors : (vertex) ->
 				
-				@loadColorsSocket.send(matrix)
-
-			calcVerticesWorker : new SimpleWorker("/assets/javascripts/calc_vertices_worker.js")
-
-			calcVertices : (matrix) ->
-
-				@calcVerticesWorker.send { matrix }
+				@loadColorsSocket.send(vertex)
 					
 			
 			# Now comes the implementation of our internal data structure.
@@ -353,6 +383,19 @@ define [
 				{ cubeOffset, cubeSize } = @
 
 				bucketIndexMacro(x, y, z)
+
+			bucketIndexByVertex : (vertex) ->
+
+				{ cubeOffset, cubeSize } = @
+
+				bucketIndexByVertexMacro(vertex)
+
+			bucketIndexByAddress : (address) ->
+
+				{ cubeOffset, cubeSize } = @
+
+				bucketIndexByAddressMacro(address)
+
 			
 			# Returns the index of the point (in the bucket) you're looking for.
 			pointIndex : (x, y, z) ->
@@ -371,7 +414,21 @@ define [
 					max_y >> 6,
 					max_z >> 6
 				)
-				
+
+			extendByPoint : ([ x, y, z ]) ->
+				@extendByBucketExtent(
+					x >> 6,
+					y >> 6,
+					z >> 6,
+					x >> 6,
+					y >> 6,
+					z >> 6
+				)
+
+			extendByBucketAddress : ([ x, y, z ]) ->
+				@extendByBucketExtent(x, y, z, x, y, z)
+					
+ 				
 			# And this one is for passing bucket coordinates.
 			extendByBucketExtent : (x0, y0, z0, x1, y1, z1) ->
 

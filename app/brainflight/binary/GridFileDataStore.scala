@@ -12,7 +12,7 @@ import brainflight.tools.ExtendedTypes._
 
 object GridFileDataStore extends DataStore{
 	  //GridFs handle
-  val gridfs = GridFS(MongoConnection()(Play.configuration.getString("mongo.dbname").getOrElse("salat-dao")))
+  val gridfs = GridFS(MongoConnection()("binaryData"))
   
   lazy val nullBlock = (for (x <- 0 to 128 * 128 * 128) yield 0.toByte).toArray
   // defines the maximum count of cached file handles

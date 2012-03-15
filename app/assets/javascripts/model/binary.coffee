@@ -6,7 +6,6 @@ define [
 
 		EPSILON = 1e-10
 
-
 		loadingState = true
 
 		# This is the model. It takes care of the data including the 
@@ -208,7 +207,7 @@ define [
 				{ buffer0, buffer1, bufferDelta }
 
 			PING_DEBOUNCE_TIME : 500
-			PING_THROTTLE_TIME : 2500
+			PING_THROTTLE_TIME : 300
 			PRELOAD_STEPBACK : 10
 			
 			# Use this method to let us know when you've changed your spot. Then we'll try to 
@@ -223,28 +222,39 @@ define [
 			# No Callback Paramters
 			ping : (matrix) ->
 
-				counter = 0
-				
-				matrix = M4x4.translate([0, 0, -@PRELOAD_STEPBACK], matrix)
+				@ping = _.throttle2(@pingImpl, @PING_THROTTLE_TIME)
+				@ping(matrix)
 
-				positionVertex = new Float32Array(3)
-				positionVertex[0] = matrix[12]
-				positionVertex[1] = matrix[13]
-				positionVertex[2] = matrix[14]
+			pingImpl : (matrix) ->
+
+				console.log "ping"
+				console.time "ping"
+
+				SPHERE_RADIUS = 140
+				PLANE_STEPBACK = 10
+				LOOP_LIMIT = 30
+				loopCounter = 0
 				
+				sphereCenterVertex  = M4x4.transformPointAffine(matrix, [0, 0, -SPHERE_RADIUS])
+				sphereRadiusSquared = SPHERE_RADIUS * SPHERE_RADIUS
+
 				planeNormal = new Float32Array(3)
 				planeNormal[2] = 1
 				M4x4.transformLineAffine(matrix, planeNormal, planeNormal)
 
-				planeDistance = V3.dot(positionVertex, planeNormal)
-				
+				planeDistance = V3.dot(
+					M4x4.transformPointAffine(matrix, [0, 0, -PLANE_STEPBACK]), 
+					planeNormal
+				)
+
 				bucketCornerVertex = new Float32Array(3)
 				currentAddress     = new Float32Array(3)
 				neighborAddress    = new Float32Array(3)
+				vectorBuffer       = new Float32Array(3)
 
-				currentAddress[0]  = positionVertex[0] >> 6
-				currentAddress[1]  = positionVertex[1] >> 6
-				currentAddress[2]  = positionVertex[2] >> 6
+				currentAddress[0]  = matrix[12] >> 6
+				currentAddress[1]  = matrix[13] >> 6
+				currentAddress[2]  = matrix[14] >> 6
 				
 				workingQueue = [ currentAddress ]
 				visitedList  = []
@@ -252,7 +262,7 @@ define [
 				if not @cube or not @cube[@bucketIndexByAddress(currentAddress)]
 					@extendByBucketAddress(currentAddress)
 
-				while workingQueue.length and counter++ < 30
+				while workingQueue.length and loopCounter++ < LOOP_LIMIT
 
 					currentAddress = workingQueue.shift()
 
@@ -287,24 +297,34 @@ define [
 								frontCorners = 0
 								backCorners  = 0
 
-								for cornerX in [0..1]
-									for cornerY in [0..1]
-										for cornerZ in [0..1]
+								for bucketCornerX in [0..1]
+									for bucketCornerY in [0..1]
+										for bucketCornerZ in [0..1]
 
 											bucketCornerVertex[0] = neighborAddress[0] << 6
 											bucketCornerVertex[1] = neighborAddress[1] << 6
 											bucketCornerVertex[2] = neighborAddress[2] << 6
 
-											bucketCornerVertex[0] = bucketCornerVertex[0] | 63 if cornerX
-											bucketCornerVertex[1] = bucketCornerVertex[1] | 63 if cornerY
-											bucketCornerVertex[2] = bucketCornerVertex[2] | 63 if cornerZ
+											bucketCornerVertex[0] = bucketCornerVertex[0] | 63 if bucketCornerX
+											bucketCornerVertex[1] = bucketCornerVertex[1] | 63 if bucketCornerY
+											bucketCornerVertex[2] = bucketCornerVertex[2] | 63 if bucketCornerZ
 
-											cornerSide = planeDistance - V3.dot(planeNormal, bucketCornerVertex)
+											cornerPlaneDistance = planeDistance - V3.dot(planeNormal, bucketCornerVertex)
 
-											if cornerSide < -EPSILON
+											if cornerPlaneDistance < -EPSILON
 												backCorners++ 
-											else if cornerSide > EPSILON
-												frontCorners++
+											else if cornerPlaneDistance > EPSILON
+												# frontCorners++
+												subX = bucketCornerVertex[0] - sphereCenterVertex[0]
+												subY = bucketCornerVertex[1] - sphereCenterVertex[1]
+												subZ = bucketCornerVertex[2] - sphereCenterVertex[2]
+
+												cornerSphereDistance = sphereRadiusSquared - (subX * subX + subY * subY + subZ * subZ)
+
+												if cornerSphereDistance < -EPSILON
+													backCorners++
+												else if cornerSphereDistance > EPSILON
+													frontCorners++
 
 								if frontCorners
 									if backCorners	

@@ -89,13 +89,15 @@ define [
 				if meshes["cubes"]
 					engine.useProgram meshProgramObject
 					engine.pushMatrix()
-					engine.scale [1,1,1]
-					engine.translate -200, -100, 0
 
-					for cube in cubes
+					engine.translate -250, -150, 100
+					engine.scale 1, 1, 1
+					engine.loadMatrix cam.getMatrix()
+					
+
+					for cube in meshes["cubes"]
 						engine.translate cube.relativePosition.x, cube.relativePosition.y, CLIPPING_DISTANCE + cube.relativePosition.z 			
 						engine.render cube
-
 					engine.popMatrix()	
 
 
@@ -209,7 +211,7 @@ define [
 						for mesh in geometry
 							if mesh.getClassType() is "Mesh"
 								meshProgramObject ?= engine.createShaderProgram mesh.vertexShader, mesh.fragmentShader
-						meshes[geometry.name] = geometry
+						meshes[geometry[0].name] = geometry
 						meshCount++
 					#single mesh
 					else if geometry.getClassType() is "Mesh"
@@ -233,7 +235,9 @@ define [
 								engine.deleteBuffer mesh
 
 						#single mesh
-						engine.deleteBuffer meshes[name]
+						else
+							engine.deleteBuffer meshes[name]
+
 						delete meshes[name]
 
 				addColors : (newColors, x, y, z) ->

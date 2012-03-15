@@ -252,9 +252,11 @@ define [
 				if not @cube or not @cube[@bucketIndexByAddress(currentAddress)]
 					@extendByBucketAddress(currentAddress)
 
-				while workingQueue.length and counter++ < 10
+				while workingQueue.length and counter++ < 30
 
 					currentAddress = workingQueue.shift()
+
+					continue if visitedList.indexOf(V3.toString(currentAddress)) >= 0
 
 					unless @cube[@bucketIndexByAddress(currentAddress)]
 						@extendByBucketAddress(currentAddress)
@@ -265,13 +267,14 @@ define [
 					tempWorkingQueue = []
 
 					neighborAddress[0] = currentAddress[0] - 2
-					neighborAddress[1] = currentAddress[1] - 2
-					neighborAddress[2] = currentAddress[2] - 2
-
 					while neighborAddress[0] <= currentAddress[0]
 						neighborAddress[0]++
+
+						neighborAddress[1] = currentAddress[1] - 2
 						while neighborAddress[1] <= currentAddress[1]
 							neighborAddress[1]++
+
+							neighborAddress[2] = currentAddress[2] - 2
 							while neighborAddress[2] <= currentAddress[2]
 								neighborAddress[2]++
 
@@ -279,10 +282,10 @@ define [
 								continue if neighborAddress[0] == currentAddress[0] and neighborAddress[1] == currentAddress[1] and neighborAddress[2] == currentAddress[2]
 
 								# we we're here already
-								continue if visitedList.indexOf(V3.toString(currentAddress)) >= 0
+								continue if visitedList.indexOf(V3.toString(neighborAddress)) >= 0
 
 								frontCorners = 0
-								backCorners = 0
+								backCorners  = 0
 
 								for cornerX in [0..1]
 									for cornerY in [0..1]
@@ -296,12 +299,12 @@ define [
 											bucketCornerVertex[1] = bucketCornerVertex[1] | 63 if cornerY
 											bucketCornerVertex[2] = bucketCornerVertex[2] | 63 if cornerZ
 
-											cornerSide = V3.dot(planeNormal, bucketCornerVertex) - planeDistance
+											cornerSide = planeDistance - V3.dot(planeNormal, bucketCornerVertex)
 
 											if cornerSide < -EPSILON
-												frontCorners++ 
+												backCorners++ 
 											else if cornerSide > EPSILON
-												backCorners++
+												frontCorners++
 
 								if frontCorners
 									if backCorners	
@@ -318,13 +321,13 @@ define [
 			
 			pullingQueue : []
 			
-			pullBucket : (vertex) ->
+			pullBucket : (address) ->
 
-				vertex = V3.clone(vertex)
-				console.log "pull" , vertex
+				console.log "pull", V3.toString(address)
 
-				@cube[@bucketIndexByAddress(vertex)] = loadingState
+				@cube[@bucketIndexByAddress(address)] = loadingState
 
+				vertex = V3.clone(address)
 				vertex[0] = vertex[0] << 6
 				vertex[1] = vertex[1] << 6
 				vertex[2] = vertex[2] << 6

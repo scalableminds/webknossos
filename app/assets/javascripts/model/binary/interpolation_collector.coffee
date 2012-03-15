@@ -25,7 +25,6 @@ define ->
         # Bound checking.
         if bucketIndex % size0 == 0
           output = -1
-          return console.log("cube fault: x")
       else
         pointIndex++
     
@@ -39,7 +38,6 @@ define ->
           # Bound checking.
           if bucketIndex % size01 == 0
             output = -1
-            return console.log("cube fault: y")
         else
           pointIndex += 64
       
@@ -51,13 +49,14 @@ define ->
             bucketIndex += size01
             pointIndex &= -258049
 
-            if bucketIndex >= cube.length
-              return console.log("cube fault: z")
           else
             pointIndex += 4096
       
         output = if (bucket = cube[bucketIndex])?
-          bucket[pointIndex]
+          if bucket == true
+            -2
+          else
+            bucket[pointIndex]
         else
           -1
 

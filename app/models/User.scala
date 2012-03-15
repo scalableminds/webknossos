@@ -2,13 +2,15 @@ package models
 
 import play.api.db._
 import play.api.Play.current
-
 import com.mongodb.casbah.Imports._
 import com.novus.salat.global._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import brainflight.security.SCrypt._
 import scala.collection.mutable.Stack
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json._
+import scala.collection.immutable.HashMap
 
 case class User(
     email: String,
@@ -16,6 +18,7 @@ case class User(
     verified: Boolean = false,
     pwdHash: String = "",
     loginType: String = "local",
+    configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: List[String] = "user" :: Nil,
     permissions: List[Permission] = Nil,
     var branchPoints: List[TransformationMatrix] = Nil,
@@ -46,9 +49,8 @@ case class User(
         None
     }
     
-  }  
+  } 
   
-    
   def id = _id.toString
 }
 

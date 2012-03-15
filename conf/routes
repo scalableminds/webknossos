@@ -13,6 +13,10 @@ GET     /logout                             controllers.Application.logout
 GET     /register                           controllers.Application.register
 POST    /register                           controllers.Application.registrate
 
+# User settings
+POST    /user/configuration                 controllers.UserController.saveSettings
+GET     /user/configuration                 controllers.UserController.showSettings
+
 # Facebook
 GET     /login/fb                           controllers.login.FacebookLogin.login
 GET     /login/fb/code                      controllers.login.FacebookLogin.loginCode(code: String)

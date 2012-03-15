@@ -98,7 +98,6 @@ define [
 
 					engine.popMatrix()	
 
-
 				# OUTPUT Framerate
 				writeFramerate engine.framerate, cam.getPos()
 

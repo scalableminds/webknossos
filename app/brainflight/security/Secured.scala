@@ -2,6 +2,7 @@ package brainflight.security
 
 import models.User
 import play.api.mvc._
+import play.api.mvc.BodyParsers
 import play.api.mvc.Results._
 import play.api.mvc.Request
 import play.api.Play
@@ -45,11 +46,12 @@ trait Secured {
     }
   }
 
-  def Authenticated(
+  def Authenticated[A](
+    parser: BodyParser[A] = BodyParsers.parse.anyContent,
     role: Option[Role] = DefaultAccessRole,
-    permission: Option[Permission] = DefaultAccessPermission )( f: => User => Request[AnyContent] => Result ): Action[( Action[AnyContent], AnyContent )] = Authenticated( userId, role, permission, onUnauthorized ) {
+    permission: Option[Permission] = DefaultAccessPermission )( f: => User => Request[A] => Result ): Action[( Action[A], A )] = Authenticated( userId, role, permission, onUnauthorized ) {
     user =>
-      Action( request => f( user )( request ) )
+      Action(parser)( request => f( user )( request ) )
   }
 
   def Authenticated[A](

@@ -100,7 +100,7 @@ define( [
 
 				$(window).on(
 					"deviceorientation", 
-					({originalEvent : event}) => 
+					@eventHandler = ({originalEvent : event}) => 
 						
 						{ gamma, beta } = event
 						if gamma < -THRESHOLD or gamma > THRESHOLD
@@ -121,18 +121,7 @@ define( [
 			unbind : ->
 				$(window).off(
 					"deviceorientation", 
-					({originalEvent : event}) => 
-						
-						{ gamma, beta } = event
-						if gamma < -THRESHOLD or gamma > THRESHOLD
-							@fire("x", -gamma)
-						else
-							@unfire("x")
-
-						if beta < -THRESHOLD or beta > THRESHOLD
-							@fire("y", -beta)
-						else
-							@unfire("y")
+					@eventHandler
 				)			
 
 			fire : (key, dist) ->

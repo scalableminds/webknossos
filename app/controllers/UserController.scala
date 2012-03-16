@@ -13,7 +13,6 @@ import models.UserConfiguration
 object UserController extends Controller with Secured{
   override val DefaultAccessRole = Role( "user" )
 
-  // TODO: secure
   def saveSettings = Authenticated(parser = parse.json){ user =>
     implicit request =>
       ( for( settings <- request.body.asOpt[Map[String,String]] ) yield {

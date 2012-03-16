@@ -10,6 +10,7 @@ import play.Logger
 case class Vector3I( val x: Int, val y: Int, val z: Int){
 
   def -( o: Vector3I) = Vector3I( x - o.x, y - o.y, z - o.z )
+  def +( o: Vector3I) = Vector3I( x + o.x, y + o.y, z + o.z )
   
   def fillGapTill( dest: Vector3I ): List[Vector3I] = {
     var dx = x - dest.x

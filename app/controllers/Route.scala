@@ -98,6 +98,12 @@ object Route extends Controller with Secured {
       } ) getOrElse BadRequest( "No open route found or byte array invalid." )
 
   }
+  def list = Authenticated() { user =>
+    implicit request =>
+      val routes = TrackedRoute.findByUser( user )
+      Ok( toJson( routes.map( _.points ) ))
+  }
+  
   def getRoute( id: String ) = Authenticated() { user =>
     implicit request =>
       TrackedRoute.findOneByID( new ObjectId( id ) ).map( route =>

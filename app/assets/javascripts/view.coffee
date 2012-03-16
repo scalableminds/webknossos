@@ -90,7 +90,15 @@ define [
 					engine.useProgram meshProgramObject
 					engine.pushMatrix()
 
-					engine.translate -600, -300, CLIPPING_DISTANCE
+					#engine.translate -700, -300, CLIPPING_DISTANCE
+					matrix = cam.getMatrix()
+					matrix[12] = -700
+					matrix[13] = -300
+					matrix[14] = CLIPPING_DISTANCE
+					#result = M4x4.translate [-matrix[12], -matrix[13], -matrix[14]], matrix, result
+
+					engine.loadMatrix result
+
 					engine.scale 0.5, 0.5, 0.5
 					#engine.loadMatrix cam.getMatrix()
 					

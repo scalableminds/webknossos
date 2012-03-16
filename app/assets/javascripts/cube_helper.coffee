@@ -17,7 +17,6 @@ define(
 
 				GeometryFactory.createMesh("cube", "mesh", "cubes").done (mesh) =>
 				
-					console.log position
 					mesh.relativePosition.x = position[0]
 					mesh.relativePosition.y = position[1]
 					mesh.relativePosition.z = position[2]

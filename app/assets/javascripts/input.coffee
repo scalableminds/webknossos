@@ -155,11 +155,11 @@ define( [
 			# https://github.com/jbuck/input.js/
 			# http://www.gamepadjs.com/
 			
-			THRESHOLD = 0.008
-			SLOWDOWN_FACTOR = 500
+			DEADZONE : 0.35
+			SLOWDOWN_FACTOR : 20
 
 			gamepad : null
-			delay :  250
+			delay :  1000 / 30
 			buttonCallbackMap : {}
 			buttonNameMap :
 				"ButtonA" : "faceButton0"
@@ -217,10 +217,13 @@ define( [
 					for button, callback of @buttonCallbackMap
 						unless @gamepad[button] == 0
 							# axes
-							if button in ["leftStickX", "rightStickX", "leftStickY", "rightStickY"]
+							if button in ["leftStickX", "rightStickX"]
 								value = @gamepad[button]
-								callback filterDeadzone(value)
+								callback -@filterDeadzone(value)
 
+							else if button in ["leftStickY", "rightStickY"]	
+								value = @gamepad[button]
+								callback @filterDeadzone(value)
 							#buttons
 							else
 								callback()
@@ -229,9 +232,7 @@ define( [
 				setTimeout( (=> @gamepadLoop()), @delay)
 
 			filterDeadzone : (value) ->
-    			Math.abs(value) > 0.35 ? value : 0
-
-
+    			if Math.abs(value) > @DEADZONE then value / @SLOWDOWN_FACTOR else 0
 
 		Input
 )

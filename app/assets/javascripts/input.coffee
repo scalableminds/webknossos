@@ -122,6 +122,8 @@ define( [
 				$(window).off(
 					"deviceorientation", 
 					@eventHandler
+					@unfire("x")
+					@unfire("y")
 				)			
 
 			fire : (key, dist) ->
@@ -130,7 +132,7 @@ define( [
 					@keyPressedCount++ 
 					@keyPressedCallbacks[key] = 
 						callback : @keyBindings[key]
-						distance : dist / SLOWDOWN_FACTOR
+						distance : (dist - THRESHOLD) / SLOWDOWN_FACTOR
 					@buttonLoop() if @keyPressedCount == 1
 
 

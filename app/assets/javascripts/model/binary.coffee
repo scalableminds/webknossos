@@ -91,35 +91,35 @@ define [
 		# Macros
 		bucketIndexMacro = (x, y, z) ->
 
-			((x >> 6) - cubeOffset[0]) + 
-			((y >> 6) - cubeOffset[1]) * cubeSize[0] + 
-			((z >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+			((x >> 6) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+			((y >> 6) - cubeOffset[1]) * cubeSize[2] + 
+			((z >> 6) - cubeOffset[2])
 
 		bucketIndexByVertexMacro = (vertex) ->
 
-			((vertex[0] >> 6) - cubeOffset[0]) + 
-			((vertex[1] >> 6) - cubeOffset[1]) * cubeSize[0] + 
-			((vertex[2] >> 6) - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+			((vertex[0] >> 6) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+			((vertex[1] >> 6) - cubeOffset[1]) * cubeSize[2] + 
+			((vertex[2] >> 6) - cubeOffset[2])
 
 
 		bucketIndexByAddressMacro = (vertex) ->
 
-			(vertex[0] - cubeOffset[0]) + 
-			(vertex[1] - cubeOffset[1]) * cubeSize[0] + 
-			(vertex[2] - cubeOffset[2]) * cubeSize[0] * cubeSize[1]
+			(vertex[0] - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+			(vertex[1] - cubeOffset[1]) * cubeSize[2] + 
+			(vertex[2] - cubeOffset[2])
 
 
 		bucketIndex2Macro = (x, y, z) ->
 
-			((x >> 6) - cubeOffset0) + 
-			((y >> 6) - cubeOffset1) * cubeSize0 + 
-			((z >> 6) - cubeOffset2) * cubeSize01
+			((x >> 6) - cubeOffset0) * cubeSize21 +
+			((y >> 6) - cubeOffset1) * cubeSize2 + 
+			((z >> 6) - cubeOffset2)
 
 		pointIndexMacro = (x, y, z) ->
 			
-			(x & 63) +
+			((x & 63) << 12) +
 			((y & 63) << 6) +
-			((z & 63) << 12)
+			((z & 63))
 
 		Binary =
 			
@@ -355,13 +355,7 @@ define [
 				@loadColors(vertex).then(
 					(colors) =>
 						
-						bucket = @cube[@bucketIndexByVertex(vertex)] = new Float32Array(colors.length)
-						i = 0
-
-						for x in [0...64]
-							for y in [0...64]
-								for z in [0...64]
-									bucket[pointIndexMacro(x, y, z)] = colors[i++] / 256
+						@cube[@bucketIndexByVertex(vertex)] = colors
 
 						console.error "wrong colors length", colors.length if colors.length != 1 << (6 * 3)
 
@@ -485,35 +479,34 @@ define [
 
 						newCube = []
 
-						for z in [0...newCubeSize[2]]
+						for x in [0...newCubeSize[0]]
 
 							# Bound checking is necessary.
-							if oldCubeOffset[2] <= z + newCubeOffset[2] < upperBound[2]
+							if oldCubeOffset[0] <= x + newCubeOffset[0] < upperBound[0]
 
 								for y in [0...newCubeSize[1]]
 
 									if oldCubeOffset[1] <= y + newCubeOffset[1] < upperBound[1]
 
-										for x in [0...newCubeSize[0]]
+										for z in [0...newCubeSize[2]]
 
-											newCube.push if oldCube? and oldCubeOffset[0] <= x + newCubeOffset[0] < upperBound[0]
+											newCube.push if oldCubeOffset[2] <= z + newCubeOffset[2] < upperBound[2]
 												index = 
-													(x + newCubeOffset[0] - oldCubeOffset[0]) +
-													(y + newCubeOffset[1] - oldCubeOffset[1]) * oldCubeSize[0] +
-													(z + newCubeOffset[2] - oldCubeOffset[2]) * oldCubeSize[0] * oldCubeSize[1]
+													(x + newCubeOffset[0] - oldCubeOffset[0]) * oldCubeSize[2] * oldCubeSize[1] +
+													(y + newCubeOffset[1] - oldCubeOffset[1]) * oldCubeSize[2] +
+													(z + newCubeOffset[2] - oldCubeOffset[2])
 												oldCube[index]
 											else
 												null
 									else
-										newCube.push(null) for x in [0...newCubeSize[0]]
+										newCube.push(null) for z in [0...newCubeSize[2]]
 
 							else
-								newCube.push(null) for xy in [0...(newCubeSize[0] * newCubeSize[1])]
+								newCube.push(null) for zy in [0...(newCubeSize[2] * newCubeSize[1])]
 
 						@cube       = newCube
 						@cubeOffset = newCubeOffset
 						@cubeSize   = newCubeSize
-
 
 				else
 					# Before, there wasn't any cube.
@@ -562,8 +555,8 @@ define [
 					cubeOffset0 = cubeOffset[0]
 					cubeOffset1 = cubeOffset[1]
 					cubeOffset2 = cubeOffset[2]
-					cubeSize0   = cubeSize[0]
-					cubeSize01  = cubeSize[0] * cubeSize[1]
+					cubeSize2   = cubeSize[2]
+					cubeSize21  = cubeSize[2] * cubeSize[1]
 
 					colors = new Float32Array(vertices.length / 3)
 					i = j = 0
@@ -621,8 +614,8 @@ define [
 				cubeOffset0 = cubeOffset[0]
 				cubeOffset1 = cubeOffset[1]
 				cubeOffset2 = cubeOffset[2]
-				cubeSize0   = cubeSize[0]
-				cubeSize01  = cubeSize[0] * cubeSize[1]
+				cubeSize2   = cubeSize[2]
+				cubeSize21  = cubeSize[2] * cubeSize[1]
 
 
 				endIndex = if length? and offset + length < colors.length
@@ -663,7 +656,7 @@ define [
 					if 0 <= bucketIndex < cube.length
 						unless bucket?
 							bucket = cube[bucketIndex] = new Float32Array(1 << 18)
-						bucket[pointIndex] = colors[i] / 256 + 1
+						bucket[pointIndex] = colors[i] / 256
 					else
 						console.error(x, y, z, bucketIndex, pointIndex)
 						throw "cube fault"

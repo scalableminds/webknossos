@@ -91,15 +91,15 @@ define [
 		# Macros
 		bucketIndexMacro = (x, y, z) ->
 
-			((x >> 6) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
-			((y >> 6) - cubeOffset[1]) * cubeSize[2] + 
-			((z >> 6) - cubeOffset[2])
+			((x >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+			((y >> 5) - cubeOffset[1]) * cubeSize[2] + 
+			((z >> 5) - cubeOffset[2])
 
 		bucketIndexByVertexMacro = (vertex) ->
 
-			((vertex[0] >> 6) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
-			((vertex[1] >> 6) - cubeOffset[1]) * cubeSize[2] + 
-			((vertex[2] >> 6) - cubeOffset[2])
+			((vertex[0] >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+			((vertex[1] >> 5) - cubeOffset[1]) * cubeSize[2] + 
+			((vertex[2] >> 5) - cubeOffset[2])
 
 
 		bucketIndexByAddressMacro = (vertex) ->
@@ -111,15 +111,15 @@ define [
 
 		bucketIndex2Macro = (x, y, z) ->
 
-			((x >> 6) - cubeOffset0) * cubeSize21 +
-			((y >> 6) - cubeOffset1) * cubeSize2 + 
-			((z >> 6) - cubeOffset2)
+			((x >> 5) - cubeOffset0) * cubeSize21 +
+			((y >> 5) - cubeOffset1) * cubeSize2 + 
+			((z >> 5) - cubeOffset2)
 
 		pointIndexMacro = (x, y, z) ->
 			
-			((x & 63) << 12) +
-			((y & 63) << 6) +
-			((z & 63))
+			((x & 31) << 10) +
+			((y & 31) << 5) +
+			((z & 31))
 
 		Binary =
 			
@@ -231,8 +231,8 @@ define [
 				console.time "ping"
 
 				SPHERE_RADIUS = 140
-				PLANE_STEPBACK = 10
-				LOOP_LIMIT = 30
+				PLANE_STEPBACK = 25
+				LOOP_LIMIT = 500
 				loopCounter = 0
 				
 				sphereCenterVertex  = M4x4.transformPointAffine(matrix, [0, 0, -SPHERE_RADIUS])
@@ -252,9 +252,9 @@ define [
 				neighborAddress    = new Float32Array(3)
 				vectorBuffer       = new Float32Array(3)
 
-				currentAddress[0]  = matrix[12] >> 6
-				currentAddress[1]  = matrix[13] >> 6
-				currentAddress[2]  = matrix[14] >> 6
+				currentAddress[0]  = matrix[12] >> 5
+				currentAddress[1]  = matrix[13] >> 5
+				currentAddress[2]  = matrix[14] >> 5
 				
 				workingQueue = [ currentAddress ]
 				visitedList  = []
@@ -274,7 +274,8 @@ define [
 
 					# fetching those neighbor buckets
 
-					tempWorkingQueue = []
+					tempWorkingQueue0 = []
+					tempWorkingQueue1 = []
 
 					neighborAddress[0] = currentAddress[0] - 2
 					while neighborAddress[0] <= currentAddress[0]
@@ -294,50 +295,63 @@ define [
 								# we we're here already
 								continue if visitedList.indexOf(V3.toString(neighborAddress)) >= 0
 
-								frontCorners = 0
-								backCorners  = 0
-
-								for bucketCornerX in [0..1]
-									for bucketCornerY in [0..1]
-										for bucketCornerZ in [0..1]
-
-											bucketCornerVertex[0] = neighborAddress[0] << 6
-											bucketCornerVertex[1] = neighborAddress[1] << 6
-											bucketCornerVertex[2] = neighborAddress[2] << 6
-
-											bucketCornerVertex[0] = bucketCornerVertex[0] | 63 if bucketCornerX
-											bucketCornerVertex[1] = bucketCornerVertex[1] | 63 if bucketCornerY
-											bucketCornerVertex[2] = bucketCornerVertex[2] | 63 if bucketCornerZ
-
-											cornerPlaneDistance = planeDistance - V3.dot(planeNormal, bucketCornerVertex)
-
-											if cornerPlaneDistance < -EPSILON
-												backCorners++ 
-											else if cornerPlaneDistance > EPSILON
-												# frontCorners++
-												subX = bucketCornerVertex[0] - sphereCenterVertex[0]
-												subY = bucketCornerVertex[1] - sphereCenterVertex[1]
-												subZ = bucketCornerVertex[2] - sphereCenterVertex[2]
-
-												cornerSphereDistance = sphereRadiusSquared - (subX * subX + subY * subY + subZ * subZ)
-
-												if cornerSphereDistance < -EPSILON
-													backCorners++
-												else if cornerSphereDistance > EPSILON
-													frontCorners++
+								{ frontCorners, backCorners } = @corners(planeNormal, planeDistance, sphereRadiusSquared, sphereCenterVertex, neighborAddress)
 
 								if frontCorners
 									if backCorners	
-										tempWorkingQueue.unshift(V3.clone(neighborAddress)) 
+										tempWorkingQueue0.push(V3.clone(neighborAddress)) 
 									else
-										tempWorkingQueue.push(V3.clone(neighborAddress)) 
+										tempWorkingQueue1.push(V3.clone(neighborAddress)) 
 
-					workingQueue = workingQueue.concat(tempWorkingQueue)			
+					workingQueue = workingQueue.concat(tempWorkingQueue0).concat(tempWorkingQueue1)			
 					visitedList.push(V3.toString(currentAddress))
 							
 
 				console.timeEnd("ping")
 				return
+
+
+			corners : (planeNormal, planeDistance, sphereRadiusSquared, sphereCenterVertex, neighborAddress) ->
+				bucketCornerVertex = new Float32Array(3)
+				
+				frontCorners = 0
+				backCorners  = 0
+
+				for bucketCornerX in [0..1]
+					for bucketCornerY in [0..1]
+						for bucketCornerZ in [0..1]
+
+							bucketCornerVertex[0] = neighborAddress[0] << 5
+							bucketCornerVertex[1] = neighborAddress[1] << 5
+							bucketCornerVertex[2] = neighborAddress[2] << 5
+
+							bucketCornerVertex[0] = bucketCornerVertex[0] | 31 if bucketCornerX
+							bucketCornerVertex[1] = bucketCornerVertex[1] | 31 if bucketCornerY
+							bucketCornerVertex[2] = bucketCornerVertex[2] | 31 if bucketCornerZ
+
+							if @sideOfPlane(planeNormal, planeDistance, bucketCornerVertex) < -EPSILON
+								if @sideOfSphere(sphereRadiusSquared, sphereCenterVertex, bucketCornerVertex) < -EPSILON
+									frontCorners++
+								else
+									backCorners++
+							else
+								backCorners++
+
+
+				{ frontCorners, backCorners }
+
+
+			sideOfPlane : (planeNormal, planeDistance, bucketCornerVertex) ->
+
+				planeDistance - V3.dot(planeNormal, bucketCornerVertex)
+
+			sideOfSphere : (sphereRadiusSquared, sphereCenterVertex, bucketCornerVertex) ->
+				subX = bucketCornerVertex[0] - sphereCenterVertex[0]
+				subY = bucketCornerVertex[1] - sphereCenterVertex[1]
+				subZ = bucketCornerVertex[2] - sphereCenterVertex[2]
+
+				sphereRadiusSquared - (subX * subX + subY * subY + subZ * subZ)
+
 			
 			pullingQueue : []
 			
@@ -348,16 +362,16 @@ define [
 				@cube[@bucketIndexByAddress(address)] = loadingState
 
 				vertex = V3.clone(address)
-				vertex[0] = vertex[0] << 6
-				vertex[1] = vertex[1] << 6
-				vertex[2] = vertex[2] << 6
+				vertex[0] = vertex[0] << 5
+				vertex[1] = vertex[1] << 5
+				vertex[2] = vertex[2] << 5
 
 				@loadColors(vertex).then(
 					(colors) =>
 						
 						@cube[@bucketIndexByVertex(vertex)] = colors
 
-						console.error "wrong colors length", colors.length if colors.length != 1 << (6 * 3)
+						console.error "wrong colors length", colors.length if colors.length != 1 << (5 * 3)
 
 						$(window).trigger("bucketloaded", [vertex])
 
@@ -366,8 +380,8 @@ define [
 				)
 			
 			loadColorsSocket : new SimpleArrayBufferSocket(
-				defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?cubeSize=64")
-				fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?cubeSize=64")
+				defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?cubeSize=32")
+				fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?cubeSize=32")
 				requestBufferType : Float32Array
 				responseBufferType : Uint8Array
 			)
@@ -388,7 +402,7 @@ define [
 			cubeSize : null
 			cubeOffset : null
 
-			BUCKET_WIDTH : 1 << 6
+			BUCKET_WIDTH : 1 << 5
 
 			# Retuns the index of the bucket (in the cuboid) which holds the
 			# point you're looking for.
@@ -421,22 +435,22 @@ define [
 			extendByExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }) ->
 				
 				@extendByBucketExtent(
-					min_x >> 6,
-					min_y >> 6,
-					min_z >> 6,
-					max_x >> 6,
-					max_y >> 6,
-					max_z >> 6
+					min_x >> 5,
+					min_y >> 5,
+					min_z >> 5,
+					max_x >> 5,
+					max_y >> 5,
+					max_z >> 5
 				)
 
 			extendByPoint : ([ x, y, z ]) ->
 				@extendByBucketExtent(
-					x >> 6,
-					y >> 6,
-					z >> 6,
-					x >> 6,
-					y >> 6,
-					z >> 6
+					x >> 5,
+					y >> 5,
+					z >> 5,
+					x >> 5,
+					y >> 5,
+					z >> 5
 				)
 
 			extendByBucketAddress : ([ x, y, z ]) ->
@@ -594,7 +608,7 @@ define [
 
 				if 0 <= bucketIndex < cube.length
 					unless bucket?
-						bucket = cube[bucketIndex] = new Float32Array(1 << 18)
+						bucket = cube[bucketIndex] = new Float32Array(1 << 15)
 					bucket[pointIndexMacro(x, y, z)] = color
 				else
 					# Please handle cuboid expansion explicitly.
@@ -641,13 +655,13 @@ define [
 					z = vertices[j + 2]
 
 					if z == z0 + 1 && y == y0 && x == x0
-						if (pointIndex & 258048) == 258048
+						if (pointIndex & 31) == 31
 							# The point seems to be at the back border.
-							bucketIndex += cubeSize01
-							pointIndex  &= -258049
+							bucketIndex++
+							pointIndex  &= -32
 							bucket      = cube[bucketIndex]
 						else
-							pointIndex += 4096
+							pointIndex++
 					else 
 						bucketIndex = bucketIndex2Macro(x, y, z)
 						pointIndex  = pointIndexMacro(x, y, z)
@@ -655,7 +669,7 @@ define [
 					
 					if 0 <= bucketIndex < cube.length
 						unless bucket?
-							bucket = cube[bucketIndex] = new Float32Array(1 << 18)
+							bucket = cube[bucketIndex] = new Float32Array(1 << 15)
 						bucket[pointIndex] = colors[i] / 256
 					else
 						console.error(x, y, z, bucketIndex, pointIndex)

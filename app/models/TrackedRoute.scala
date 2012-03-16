@@ -25,6 +25,7 @@ case class TreeByte( b: Byte) {
   def isValue = ( b & 0xC0 ) == TreeByte.ValueByte.toInt
   def isBranch = ( b & 0xC0 )  == TreeByte.BranchByte.toInt
   def isEnd = ( b & 0xC0 ) == TreeByte.EndByte.toInt
+  def isInterpolated = ( b & 0xC0 ) == TreeByte.InterpolatedByte.toInt
   
   def x = TreeByte.byteCodeToInt(b & TreeByte.xMask >> 4)
   def y = TreeByte.byteCodeToInt(b & TreeByte.yMask >> 2)
@@ -39,6 +40,7 @@ object TreeByte {
   val zMask = 0x03.toByte
   
   val ValueByte = 0x00.toByte
+  val InterpolatedByte = 0x40.toByte
   val BranchByte = 0x80.toByte
   val EndByte = 0xC0.toByte
   
@@ -93,16 +95,20 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
 
   def byteCodeToPoint( byte: TreeByte ) = List( byte.x, byte.y, byte.z )
 
-  def pointToByteCode( point: Vector3I ): Byte =
-    ( ValueByte |
+  def pointToByteCode( point: Vector3I, isInterpolated: Boolean ): Byte = {
+    val controlByte = if(isInterpolated) InterpolatedByte else ValueByte
+    ( controlByte |
       ( intToByteCode( point.x ) << 4 |
         intToByteCode( point.y ) << 2 |
         intToByteCode( point.z ) ) ).toByte
+  }
 
   def binaryFromRoute( start: Vector3I, points: List[Vector3I] ): Array[Byte] = {
     points.zip( start :: points ).flatMap {
       case ( current, previous ) =>
-        current.fillGapTill(previous).map( pointToByteCode )
+        val filled = current.fillGapTill(previous)
+        filled.zipWithIndex.map( tuple =>
+          pointToByteCode( tuple._1, tuple._2 != filled.size-1 ) )
     }.toArray
   }
 
@@ -113,8 +119,10 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
     for( b <- bytes ){
       b match {
         case b if b.isValue =>
-          previous = previous - byteCodeToPoint( b )
+          previous = previous + byteCodeToPoint( b )
           route.enqueue(previous)
+        case b if b.isInterpolated =>
+          previous = previous + byteCodeToPoint( b )
         case b if b.isBranch =>
           branchPointStack.push( previous)
           previous
@@ -148,6 +156,10 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
   def findOpenBy( id: String ): Option[TrackedRoute] = {
     find(
       MongoDBObject( "_id" -> new ObjectId( id ), "closed" -> false ) ).toList.headOption
+  }
+  
+  def findByUser( user: User)= {
+    find( MongoDBObject( "userId" -> user._id ) ).toList
   }
 
   def findOpenBy( user: User ): Option[TrackedRoute] = {

@@ -32,6 +32,7 @@ POST    /binary/ajax				                controllers.BinaryData.requestViaAjax(cu
 
 # Route Stuff
 GET     /route/initialize                   controllers.Route.initialize
+GET     /route/list                         controllers.Route.list
 POST    /route/:id                          controllers.Route.blackBox(id: String)
 GET			/route/:id													controllers.Route.getRoute(id: String)
 

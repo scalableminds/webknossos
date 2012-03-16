@@ -17,7 +17,7 @@ define ->
     
     # We use bitmasks to handle x, y and z coordinates.
     # `63     = 000000 000000 111111`
-    if xd
+    if zd
       if (pointIndex & 63) == 63
         # The point seems to be at the right border.
         bucketIndex++
@@ -43,7 +43,7 @@ define ->
       
       if output != -1
         # `258048 = 111111 000000 000000`
-        if zd
+        if xd
           if (pointIndex & 258048) == 258048
             # The point seems to be at the back border.
             bucketIndex += size01
@@ -56,7 +56,7 @@ define ->
           if bucket == true
             -2
           else
-            bucket[pointIndex]
+            bucket[pointIndex] / 256
         else
           -1
 
@@ -70,7 +70,7 @@ define ->
   # for later interpolation. It aims to be fast, therefore the code is ugly.
 
   # pointIndex = 111111 111111 111111
-  #                 z      y      x
+  #                 x      y      z
   # return codes:
   # -2 : negative coordinates or bucket in loading state
   # -1 : bucket fault
@@ -93,14 +93,15 @@ define ->
     z0 = z >> 0; zd = z - z0
 
     bucketIndex0 = 
-      ((x0 - ll0) >> 6) + 
-      ((y0 - ll1) >> 6) * size0 + 
-      ((z0 - ll2) >> 6) * size01
+      ((x0 - ll0) >> 6) * size21 + 
+      ((y0 - ll1) >> 6) * size2 + 
+      ((z0 - ll2) >> 6)
 
     pointIndex0 = 
-      ((x0 & 63)) +
+      ((x0 & 63) << 12) + 
       ((y0 & 63) << 6) +
-      ((z0 & 63) << 12)
+      ((z0 & 63))      
+      
     
     pointMacro(output0, false, false, false)
 
@@ -183,8 +184,8 @@ define ->
 
     bulkCollect : (vertices, buffer0, buffer1, bufferDelta, cube, cubeSize, cubeOffset) ->
 
-      size0  = cubeSize[0]
-      size01 = cubeSize[0] * cubeSize[1]
+      size2  = cubeSize[2]
+      size21 = cubeSize[2] * cubeSize[1]
       
       lowerBound0 = cubeOffset[0] << 6
       lowerBound1 = cubeOffset[1] << 6
@@ -213,7 +214,7 @@ define ->
           cube, 
           lowerBound0, lowerBound1, lowerBound2,
           upperBound0, upperBound1, upperBound2,
-          size0, size01)
+          size2, size21)
       
       return
 

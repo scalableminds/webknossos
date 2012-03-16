@@ -42,7 +42,6 @@ object BinaryData extends Controller with Secured {
       Logger.debug( "Wrong position Size: " + cubeCorner.length )
       Array[Byte]()
     } else {
-      Logger.debug( "Corner: "+cubeCorner.mkString(", ") )
       val figure = Cube( cubeCorner, cubeSize )
       val coordinates = figure.calculateInnerPoints()
 

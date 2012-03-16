@@ -26,8 +26,8 @@ case class TreeByte( b: Byte) {
   def isBranch = ( b & 0xC0 )  == TreeByte.BranchByte.toInt
   def isEnd = ( b & 0xC0 ) == TreeByte.EndByte.toInt
   
-  def x = TreeByte.byteCodeToInt(b & TreeByte.xMask)
-  def y = TreeByte.byteCodeToInt(b & TreeByte.yMask)
+  def x = TreeByte.byteCodeToInt(b & TreeByte.xMask >> 4)
+  def y = TreeByte.byteCodeToInt(b & TreeByte.yMask >> 2)
   def z = TreeByte.byteCodeToInt(b & TreeByte.zMask)
 }
 
@@ -114,7 +114,7 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
       b match {
         case b if b.isValue =>
           previous = previous - byteCodeToPoint( b )
-    	  route.enqueue(previous)
+          route.enqueue(previous)
         case b if b.isBranch =>
           branchPointStack.push( previous)
           previous

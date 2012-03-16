@@ -40,7 +40,7 @@ object TwitterLogin extends Controller {
         case Left( e ) => throw e
       }
     }.getOrElse(
-      TWITTER.retrieveRequestToken( "http://localhost:9000/login/tw" ) match {
+      TWITTER.retrieveRequestToken( "http://brainflight.net/login/tw" ) match {
         case Right( t ) => {
           // We received the unauthorized tokens in the OAuth object - store it before we proceed
           Redirect( TWITTER.redirectUrl( t.token ) ).withSession( "token" -> t.token, "secret" -> t.secret )

@@ -1,4 +1,4 @@
-@(form: Form[(String, String, String)])(implicit flash: Flash)
+@(form: Form[(String, String, String, String)])(implicit flash: Flash)
 
 <html>
     <head>
@@ -31,6 +31,9 @@
             
             <p>
                 <input type="email" name="email" placeholder="Email" value="@form("email").value">
+            </p>
+            <p>
+                <input type="text" name="name" placeholder="Name" value="@form("name").value">
             </p>
             <p>
                 <input type="password" name="password" placeholder="Password">

@@ -70,7 +70,8 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def requestViaAjax( cubeSize: Int ) = Action(parse.raw) { implicit request =>
+  def requestViaAjax( cubeSize: Int ) = Authenticated(parser = parse.raw) { user =>
+    implicit request =>
     ( request.body ) match {
       case body if body.size >= 12 =>
         val binPosition = body.asBytes().getOrElse( Array[Byte]() )
@@ -94,6 +95,7 @@ object BinaryData extends Controller with Secured {
    */
   def requestViaWebsocket( cubeSize: Int ) =
     WebSocket.using[Array[Byte]] { request =>
+      // TODO: secure
       val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
         // first 4 bytes are always used as a client handle

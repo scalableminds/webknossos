@@ -21,22 +21,18 @@ object Application extends Controller {
     Ok(html.index())
   }
 
-  val registerForm: Form[(String, String, String)] = Form(
+  val registerForm: Form[(String, String, String, String)] = Form(
     mapping(
       "email" -> email,
       "name" -> text,
-      "password" -> tuple(
-        "main" -> text(minLength = 6),
-        "confirm" -> text
-      ).verifying(
-        // Add an additional constraint: both passwords must match
-        "Passwords don't match", passwords => passwords._1 == passwords._2
+      "password" -> text(minLength = 6),
+      "repassword" -> text
       )
-    )( (user, name, password) => (user, name, password._1) ) (  user => Some((user._1, user._2, ("",""))) ).verifying(
-      // Add an additional constraint: The username must not be taken (you could do an SQL request here)
-      "This username is already in use.",
-      user => User.findLocalByEmail(user._1).isEmpty
-    )
+      ( 
+          (user, name, password, repassword) => (user, name, password, repassword))
+          ((user) => Some((user._1, user._2, "", ""))
+       ).verifying("Passwords don't match", form => form._3 == form._4 
+       ).verifying("This username is already in use.", user => User.findLocalByEmail(user._1).isEmpty)
   )
 
   def register = Action {
@@ -49,10 +45,11 @@ object Application extends Controller {
    */
   def registrate = Action {
     implicit request =>
+      Logger.info("registrate")
       registerForm.bindFromRequest.fold(
         formWithErrors => BadRequest(html.register(formWithErrors)),
         userForm => {
-          val user = User.create _ tupled(userForm)	
+          val user = User.create(userForm._1, userForm._2, userForm._3)	
           Redirect(routes.Test.index).withSession( Secured.createSession(user))
         }
       )

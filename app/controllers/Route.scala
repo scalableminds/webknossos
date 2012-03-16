@@ -50,11 +50,10 @@ object Route extends Controller with Secured {
   /**
    *
    */
-  def blackBox( id: String ) = Action[RawBuffer]( parse.raw( 1024 * 1024 ) ) {
+  def blackBox( id: String ) = Authenticated( parser = parse.raw( 1024 * 1024 ) ) { user =>
     implicit request =>
 
       ( for {
-        user <- maybeUser
         route <- TrackedRoute.findOpenBy( id )
         buffer <- request.body.asBytes( 1024 * 1024 )
         if ( route.userId == user._id )
@@ -98,6 +97,12 @@ object Route extends Controller with Secured {
       } ) getOrElse BadRequest( "No open route found or byte array invalid." )
 
   }
+  def list = Authenticated() { user =>
+    implicit request =>
+      val routes = TrackedRoute.findByUser( user )
+      Ok( toJson( routes.map( _.points ) ))
+  }
+  
   def getRoute( id: String ) = Authenticated() { user =>
     implicit request =>
       TrackedRoute.findOneByID( new ObjectId( id ) ).map( route =>

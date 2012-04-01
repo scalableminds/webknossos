@@ -1,6 +1,6 @@
 #!/bin/sh
 
 test "" != "$(grep '^[A-Z][A-Z]*-[0-9][0-9]*' "$1")" || {
-	echo "[POLICY] Add a issue id to the start of the message (e.g. 'BF-14')."
+	echo "[POLICY] Add an issue id to the start of the message (e.g. 'BF-14')."
 	exit 1
 }

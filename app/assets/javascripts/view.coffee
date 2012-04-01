@@ -90,24 +90,21 @@ define [
 					engine.useProgram meshProgramObject
 					engine.pushMatrix()
 
-					#engine.translate -700, -300, CLIPPING_DISTANCE
-					matrix = cam.getMatrix()
-					matrix[12] = -700
-					matrix[13] = -300
-					matrix[14] = CLIPPING_DISTANCE
-					#result = M4x4.translate [-matrix[12], -matrix[13], -matrix[14]], matrix, result
+					engine.translate 0, 0, CLIPPING_DISTANCE
 
-					engine.loadMatrix result
+					cube = meshes["cubes"]
+					engine.pushMatrix()	
+					engine.translate cube.relativePosition.x, cube.relativePosition.y, CLIPPING_DISTANCE + cube.relativePosition.z 			
+					engine.render cube
+					engine.renderWireframe cube
+					engine.popMatrix()
 
-					engine.scale 0.5, 0.5, 0.5
-					#engine.loadMatrix cam.getMatrix()
-					
+					for childCube in meshes["cubes"].children
 
-					for cube in meshes["cubes"]
 						engine.pushMatrix()	
-						engine.translate cube.relativePosition.x, cube.relativePosition.y, CLIPPING_DISTANCE + cube.relativePosition.z 			
-						engine.render cube
-						engine.renderWireframe cube
+						engine.translate childCube.relativePosition.x, childCube.relativePosition.y, CLIPPING_DISTANCE + childCube.relativePosition.z 			
+						engine.render childCube
+						engine.renderWireframe childCube
 						engine.popMatrix()
 
 					engine.popMatrix()
@@ -214,22 +211,15 @@ define [
 
 
 				# adds all kind of geometry to geometry-array
-				# Mesh arrays can be added to support grouping
-				# and adds the shader if is not already set for this geometry-type
+				# Mesh can have children to support grouping
+				# adds the shader if is not already set for this geometry-type
 				addGeometry : (geometry) ->
 
-					# add mesh group 
-					if _.isArray geometry
-						for mesh in geometry
-							if mesh.getClassType() is "Mesh"
-								meshProgramObject ?= engine.createShaderProgram mesh.vertexShader, mesh.fragmentShader
-						meshes[geometry[0].name] = geometry
+					# single mesh or mesh group 
+					if geometry.getClassType() is "Mesh"
+						meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+						meshes[geometry.name] = geometry
 						meshCount++
-					#single mesh
-					else if geometry.getClassType() is "Mesh"
-							meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
-							meshes[geometry.name] = geometry
-							meshCount++
 
 					# trianglesplane stuff
 					else if geometry.getClassType() is "Trianglesplane"
@@ -241,15 +231,7 @@ define [
 
 				removeMeshByName : (name) ->
 					if meshes[name]
-						# group deletion
-						if _.isArray meshes[name]
-							for mesh in meshes[name]
-								engine.deleteBuffer mesh
-
-						#single mesh
-						else
-							engine.deleteBuffer meshes[name]
-
+						engine.deleteBuffer meshes[name]
 						delete meshes[name]
 
 				addColors : (newColors, x, y, z) ->

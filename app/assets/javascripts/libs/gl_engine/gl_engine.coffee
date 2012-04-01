@@ -234,7 +234,7 @@ define ->
 				@disableVertexAttribPointer "aVertex"
 				@disableVertexAttribPointer "aColor" if geometry.colors.hasColor
 
-		renderWireframe : (geometry) ->
+		renderWireframe : (geometry, line_width = 2) ->
 
 			# create a BufferObject filled with "black"
 			unless @wireFrameColorBuffer 
@@ -247,7 +247,7 @@ define ->
 				topMatrix = @peekMatrix()
 				@uniformMatrix "modelViewMatrix", false, topMatrix
 
-				@gl.lineWidth(2)
+				@gl.lineWidth(line_width)
 
 				if @gl.getAttribLocation(@shaderProgram, "aColor") > -1
 					@vertexAttribPointer "aColor", 3, @wireFrameColorBuffer

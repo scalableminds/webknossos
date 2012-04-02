@@ -85,31 +85,6 @@ define [
 					engine.render g
 					engine.popMatrix()	
 
-				# Normans Cube Preview
-				if meshes["cubes"]
-					engine.useProgram meshProgramObject
-					engine.pushMatrix()
-
-					engine.translate 0, 0, CLIPPING_DISTANCE
-
-					cube = meshes["cubes"]
-					engine.pushMatrix()	
-					engine.translate cube.relativePosition.x, cube.relativePosition.y, CLIPPING_DISTANCE + cube.relativePosition.z 			
-					engine.render cube
-					engine.renderWireframe cube
-					engine.popMatrix()
-
-					for childCube in meshes["cubes"].children
-
-						engine.pushMatrix()	
-						engine.translate childCube.relativePosition.x, childCube.relativePosition.y, CLIPPING_DISTANCE + childCube.relativePosition.z 			
-						engine.render childCube
-						engine.renderWireframe childCube
-						engine.popMatrix()
-
-					engine.popMatrix()
-
-
 				# OUTPUT Framerate
 				writeFramerate engine.framerate, cam.getPos()
 

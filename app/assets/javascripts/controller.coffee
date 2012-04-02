@@ -4,9 +4,9 @@ define(
 		"view",
 		"geometry_factory",
 		"input",
-		"cube_helper"
+		"helper"
 	],
-	(Model, View, GeometryFactory, Input, CubeHelper) ->
+	(Model, View, GeometryFactory, Input, Helper) ->
 
 		Controller ?= {}
 
@@ -39,7 +39,7 @@ define(
 						GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
 							View.addGeometry trianglesplane
 					
-						CubeHelper.initialize()
+						Helper.initialize()
 
 
 					->

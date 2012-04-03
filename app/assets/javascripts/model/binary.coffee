@@ -75,7 +75,7 @@ define [
 		# Macros
 
 		# Computes the bucket index of the vertex with the given coordinates.
-		# Requires cubeOffset and cubeSize to be in scope.
+		# Requires `cubeOffset` and `cubeSize` to be in scope.
 		bucketIndexMacro = (x, y, z) ->
 
 			((x >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
@@ -83,7 +83,7 @@ define [
 			((z >> 5) - cubeOffset[2])
 
 		# Computes the bucket index of the given vertex.
-		# Requires cubeOffset and cubeSize to be in scope.
+		# Requires `cubeOffset` and `cubeSize` to be in scope.
 		bucketIndexByVertexMacro = (vertex) ->
 
 			((vertex[0] >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
@@ -92,7 +92,7 @@ define [
 
 
 		# Computes the index of the specified bucket.
-		# Requires cubeOffset and cubeSize to be in scope.
+		# Requires `cubeOffset` and `cubeSize` to be in scope.
 		bucketIndexByAddressMacro = (vertex) ->
 
 			(vertex[0] - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
@@ -100,8 +100,8 @@ define [
 			(vertex[2] - cubeOffset[2])
 
 		# Computes the bucket index of the vertex with the given coordinates.
-		# Requires cubeOffset0, cubeOffset1, cubeOffset2, cubeSize2 and 
-		# cubeSize21 to be precomputed and in scope.
+		# Requires `cubeOffset0`, `cubeOffset1`, `cubeOffset2`, `cubeSize2` and 
+		# `cubeSize21` to be precomputed and in scope.
 		bucketIndex2Macro = (x, y, z) ->
 
 			((x >> 5) - cubeOffset0) * cubeSize21 +
@@ -169,6 +169,7 @@ define [
 				if (cube = @cube)
 					
 					{ cubeSize, cubeOffset } = @
+
 
 					InterpolationCollector.bulkCollect(
 						vertices,
@@ -317,6 +318,7 @@ define [
 				return
 			
 			# Loads and inserts a bucket from the server into the cube.
+			# Requires cube to be large enough to handle the loaded bucket.
 			pullBucket : (address) ->
 
 				console.log "pull", V3.toString(address)
@@ -328,7 +330,7 @@ define [
 				vertex[1] = vertex[1] << 5
 				vertex[2] = vertex[2] << 5
 
-				@loadColors(vertex).then(
+				@loadBucket(vertex).then(
 					(colors) =>
 						
 						@cube[@bucketIndexByVertex(vertex)] = colors
@@ -351,7 +353,7 @@ define [
 			loadBucket : (vertex) ->
 				
 				@loadBucketSocket.send(vertex)
-					
+
 			
 			# Now comes the implementation of our internal data structure.
 			# `cube` is the main array. It actually represents a cuboid 

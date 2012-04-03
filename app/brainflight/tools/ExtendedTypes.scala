@@ -7,6 +7,11 @@ import scala.collection.mutable.ListBuffer
 import com.mongodb.casbah.gridfs.Imports._
 import extendedTypes._
 
+/**
+ * Helper object so simplify the include of the implicits. Every new 
+ * extended Type should declare an implicit here if it should be in scope by
+ * default.
+ */
 object ExtendedTypes {
 
   implicit def GridFSDBFile2ExtendedGridFSDBFile( f: GridFSDBFile ) =

@@ -12,6 +12,7 @@ import collection.mutable.HashMap
 /**
  * Store of all usable binary data models
  */
+@deprecated
 object ModelStore {
   val models = new HashMap[String,DataModel]
 

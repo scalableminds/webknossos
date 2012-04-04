@@ -13,7 +13,7 @@ import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.gridfs.Imports._
 
-object Admin extends Controller {
+object PerformanceTest extends Controller {
   
   val xBot = 10
   val xTop = 20

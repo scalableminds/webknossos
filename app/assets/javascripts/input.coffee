@@ -6,7 +6,23 @@ define( [
 	(KeyboardJS, MouseLib, GamepadJS) ->
 
 		Input ?= {}
+		# This is the main Input implementation.
+		# Although all keys, buttons and sensor are mapped in 
+		# the controller, this is were the magic happens.
+		# So far we provide the following input methods:
+		# * Mouse
+		# * Keyboard
+		# * Gamepad
+		# * MotionSensor / Gyroscope
 
+		# Each input method is contained in its own module. We tried to
+		# provide similar public interfaces for the input methods. 
+		# In most cases the heavy lifting is done by librarys in the background.
+
+
+		# This keyboard hook directly passes a keycombo and callback
+		# to the underlying KeyboadJS library to do its dirty work.
+		# Pressing a button will only fire an event once.
 		class Input.KeyboardNoLoop
 
 			constructor : (bindings) ->
@@ -17,6 +33,10 @@ define( [
 
 				KeyboardJS.bind.key(key, callback)
 
+
+		# This module is "main" keyboard handler. 
+		# It is able to handle key-presses and will continously 
+		# fire the attached callback.
 		class Input.Keyboard
 
 			delay : 1000 / 30
@@ -44,6 +64,8 @@ define( [
 						return
 				)
 
+			# In order to continously fire callbacks we have to loop
+			# through all the buttons that a marked as "pressed".
 			buttonLoop : ->
 				if @keyPressedCount > 0
 					for own key, callback of @keyCallbackMap
@@ -55,6 +77,9 @@ define( [
 				KeyboardJS.unbind.key "all"
 
 
+		# The mouse module.
+		# This one basically just provides the public interface
+		# for mouse handling. Nothing fancy here.
 		class Input.Mouse
 			
 			mouse : null
@@ -82,6 +107,11 @@ define( [
 				@mouse.unbind()
 
 				
+		# This module completly handles the device orientation / 
+		# tilting sensor (gyroscope).
+		# Similarily to the keyboard it relies on looping over
+		# all the "pressed" buttons. i.e. Once a certain threshold
+		# for the sensor is met this axis is marked as "pressed" (fire).
 		class Input.Deviceorientation
 
 			THRESHOLD = 10
@@ -151,6 +181,15 @@ define( [
 					setTimeout( (=> @buttonLoop()), @delay ) 
 
 
+		# Last but not least, the gamepad module.
+		# The current gamepad API for the browser forces us
+		# to constantly poll the Gamepad object to evaluate 
+		# the state of a button. 
+		# In order to abstract the gamepad from different vendors,
+		# operation systems and browsers we rely on the GamepadJS lib.
+		# All "thumb sticks" return values -1...1 whereas all other buttons
+		# return 0 or 1.
+
 		class Input.Gamepad
 
 			# http://robhawkes.github.com/gamepad-demo/
@@ -204,10 +243,9 @@ define( [
 
 			unbind : ->
 				@buttonCallbackMap = null
-				#for own key, callback of @buttonCallbackMap
-				#		@attach( @buttonNameMap[key] , null )			
 
-
+			# actively poll the state of gameoad object as returned
+			# by the GamepadJS library.
 			gamepadLoop : ->
 				#stops the loop caused by unbind
 				return unless @buttonCallbackMap
@@ -233,6 +271,8 @@ define( [
 
 				setTimeout( (=> @gamepadLoop()), @delay)
 
+			# FIXME 
+			# as far as I know the gamepad.js lib already provides values for deadzones
 			filterDeadzone : (value) ->
     			if Math.abs(value) > @DEADZONE then value / @SLOWDOWN_FACTOR else 0
 

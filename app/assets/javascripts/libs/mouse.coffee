@@ -1,6 +1,12 @@
 define ->
 	class Mouse
 
+		# This is our mouse library.
+		# All the mouse handling is passed down to 
+		# this lib. Everything is pretty straight forward.
+		# There is even support for the new pointerlock 
+		# (mouse lock) API for webkit browser. 
+
 		rotateValue = 0.004		
 		inversion = {
 			x : 1
@@ -38,7 +44,6 @@ define ->
 				"mousemove" : @mouseMoved
 				"mousedown" : @mouseDown
 				"mouseup"   : @mouseUp
-				"dblclick"  : @mouseDoubleClick
 
 				# fullscreen pointer lock
 				# Firefox does not yet support Pointer Lock
@@ -80,7 +85,7 @@ define ->
 
 			# regular mouse management
 			unless @locked 
-				if @doubleClicked or @buttonDown
+				if @buttonDown
 					distX = -(evt.pageX - lastPosition.x) * inversion.x
 					distY =  (evt.pageY - lastPosition.y) * inversion.y
 					changedCallback.x distX * rotateValue if distX isnt 0
@@ -99,10 +104,6 @@ define ->
 				changedCallback.x distX * rotateValue if distX isnt 0
 				changedCallback.y distY * rotateValue if distY isnt 0
 
-		mouseDoubleClick : =>
-			@doubleClicked = !@doubleClicked
-
-		# depricated
 		mouseDown : =>
 			$(@target).css("cursor", "none")
 			@buttonDown = true

@@ -94,15 +94,11 @@ define(
 					"h" : -> Model.Route.popBranch().done((matrix) -> View.setMatrix(matrix))
 				)
 
+			# for more buttons look at Input.Gamepad
 			initGamepad : ->
 				@input.gamepad = new Input.Gamepad(
 						"ButtonA" : -> View.move [0, 0, moveValue]
 						"ButtonB" : -> View.move [0, 0, -moveValue]
-						# "ButtonX" : -> console.log "X"
-						# "ButtonY" : -> console.log "Y"
-						# "ButtonStart"  : -> console.log "Start"
-						# "ButtonSelect" : -> console.log "Select"
-
 						"LeftStickX" : View.yawDistance
 						"LeftStickY" : View.pitchDistance
 

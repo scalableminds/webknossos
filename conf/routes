@@ -45,10 +45,12 @@ GET     /test/                              controllers.Test.index
 GET     /test/demo                          controllers.Test.demo
 GET     /test/tests                         controllers.Test.tests
 
-#Admin pages 
-GET     /admin/timegridfs                 controllers.Admin.timeGridFS
-GET     /admin/timefiledatastore            controllers.Admin.timeFileDataStore
+#Performance test pages 
+GET     /performance/timegridfs             controllers.PerformanceTest.timeGridFS
+GET     /performance/timefiledatastore      controllers.PerformanceTest.timeFileDataStore
 
+#Admin pages
+GET     /admin/routevisual                  controllers.admin.RouteVisualisation.index
 
 # Javascript routing
 GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes

@@ -16,12 +16,12 @@ define ->
     pointIndex  = pointIndex0
     
     # We use bitmasks to handle x, y and z coordinates.
-    # `63     = 000000 000000 111111`
-    if xd
-      if (pointIndex & 63) == 63
+    # `31     = 00000 00000 11111`
+    if zd
+      if (pointIndex & 31) == 31
         # The point seems to be at the right border.
         bucketIndex++
-        pointIndex &= -64
+        pointIndex &= -32
         # Bound checking.
         if bucketIndex % size0 == 0
           output = -1
@@ -29,34 +29,34 @@ define ->
         pointIndex++
     
     if output != -1
-      # `4032   = 000000 111111 000000`
+      # `992   = 00000 11111 00000`
       if yd
-        if (pointIndex & 4032) == 4032
+        if (pointIndex & 992) == 992
           # The point is to at the bottom border.
           bucketIndex += size0
-          pointIndex &= -4033
+          pointIndex &= -993
           # Bound checking.
           if bucketIndex % size01 == 0
             output = -1
         else
-          pointIndex += 64
+          pointIndex += 32
       
       if output != -1
-        # `258048 = 111111 000000 000000`
-        if zd
-          if (pointIndex & 258048) == 258048
+        # `31744 = 11111 00000 00000`
+        if xd
+          if (pointIndex & 31744) == 31744
             # The point seems to be at the back border.
             bucketIndex += size01
-            pointIndex &= -258049
+            pointIndex &= -31745
 
           else
-            pointIndex += 4096
+            pointIndex += 1024
       
         output = if (bucket = cube[bucketIndex])?
           if bucket == true
             -2
           else
-            bucket[pointIndex]
+            bucket[pointIndex] / 256
         else
           -1
 
@@ -70,16 +70,17 @@ define ->
   # for later interpolation. It aims to be fast, therefore the code is ugly.
 
   # pointIndex = 111111 111111 111111
-  #                 z      y      x
+  #                 x      y      z
   # return codes:
-  # -2 : negative coordinates or bucket in loading state
+  # -3 : negative coordinates 
+  # -2 : bucket in loading state
   # -1 : bucket fault
   collectLoopMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
 
     output0 = output1 = output2 = output3 = output4 = output5 = output6 = output7 = 0
 
     if x < 0 or y < 0 or z < 0
-      buffer0[j4] = -2
+      buffer0[j4] = -3
       continue
     
     # Cube bound checking is necessary.
@@ -93,14 +94,15 @@ define ->
     z0 = z >> 0; zd = z - z0
 
     bucketIndex0 = 
-      ((x0 - ll0) >> 6) + 
-      ((y0 - ll1) >> 6) * size0 + 
-      ((z0 - ll2) >> 6) * size01
+      ((x0 - ll0) >> 5) * size21 + 
+      ((y0 - ll1) >> 5) * size2 + 
+      ((z0 - ll2) >> 5)
 
     pointIndex0 = 
-      ((x0 & 63)) +
-      ((y0 & 63) << 6) +
-      ((z0 & 63) << 12)
+      ((x0 & 31) << 10) + 
+      ((y0 & 31) << 5) +
+      ((z0 & 31))      
+      
     
     pointMacro(output0, false, false, false)
 
@@ -183,15 +185,15 @@ define ->
 
     bulkCollect : (vertices, buffer0, buffer1, bufferDelta, cube, cubeSize, cubeOffset) ->
 
-      size0  = cubeSize[0]
-      size01 = cubeSize[0] * cubeSize[1]
+      size2  = cubeSize[2]
+      size21 = cubeSize[2] * cubeSize[1]
       
-      lowerBound0 = cubeOffset[0] << 6
-      lowerBound1 = cubeOffset[1] << 6
-      lowerBound2 = cubeOffset[2] << 6
-      upperBound0 = (cubeOffset[0] + cubeSize[0]) << 6
-      upperBound1 = (cubeOffset[1] + cubeSize[1]) << 6
-      upperBound2 = (cubeOffset[2] + cubeSize[2]) << 6
+      lowerBound0 = cubeOffset[0] << 5
+      lowerBound1 = cubeOffset[1] << 5
+      lowerBound2 = cubeOffset[2] << 5
+      upperBound0 = (cubeOffset[0] + cubeSize[0]) << 5
+      upperBound1 = (cubeOffset[1] + cubeSize[1]) << 5
+      upperBound2 = (cubeOffset[2] + cubeSize[2]) << 5
 
       i = 0
       j4 = -4
@@ -213,7 +215,7 @@ define ->
           cube, 
           lowerBound0, lowerBound1, lowerBound2,
           upperBound0, upperBound1, upperBound2,
-          size0, size01)
+          size2, size21)
       
       return
 

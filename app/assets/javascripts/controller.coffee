@@ -39,11 +39,6 @@ define(
 							View.addGeometry trianglesplane
 					
 						CubeHelper.initialize()
-						CubeHelper.addCube [100, 40, 0]
-						CubeHelper.addCube [300, 60, -20]
-						CubeHelper.addCube [200, 70, 0]
-						CubeHelper.addCube [170, 30, 10]
-
 
 					->
 						alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
@@ -99,17 +94,13 @@ define(
 					"h" : -> Model.Route.popBranch().done((matrix) -> View.setMatrix(matrix))
 				)
 
+			# for more buttons look at Input.Gamepad
 			initGamepad : ->
 				@input.gamepad = new Input.Gamepad(
-						"ButtonA" : -> View.pitchDistance 0.01
-						# "ButtonB" : -> console.log "B"
-						# "ButtonX" : -> console.log "X"
-						# "ButtonY" : -> console.log "Y"
-						# "ButtonStart"  : -> console.log "Start"
-						# "ButtonSelect" : -> console.log "Select"
-
+						"ButtonA" : -> View.move [0, 0, moveValue]
+						"ButtonB" : -> View.move [0, 0, -moveValue]
 						"LeftStickX" : View.yawDistance
-						# "LeftStickY" : View.pitchDistance
+						"LeftStickY" : View.pitchDistance
 
 
 				)

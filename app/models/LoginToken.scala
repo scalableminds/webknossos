@@ -6,7 +6,7 @@ import play.mvc._
 import com.mongodb.casbah.Imports._
 import scala.collection.JavaConverters._
 import org.joda.time.DateTime
-import com.novus.salat.global._
+import models.context._
 import com.novus.salat.dao.SalatDAO
 /**
  * scalableminds - brainflight

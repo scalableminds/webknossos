@@ -1,7 +1,7 @@
 package models
 
 import com.mongodb.casbah.Imports._
-import com.novus.salat.global._
+import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 

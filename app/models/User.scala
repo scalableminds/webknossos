@@ -3,7 +3,7 @@ package models
 import play.api.db._
 import play.api.Play.current
 import com.mongodb.casbah.Imports._
-import com.novus.salat.global._
+import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import brainflight.security.SCrypt._

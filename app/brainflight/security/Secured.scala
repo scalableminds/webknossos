@@ -6,11 +6,15 @@ import play.api.mvc.BodyParsers
 import play.api.mvc.Results._
 import play.api.mvc.Request
 import play.api.Play
+import play.api.mvc.WebSocket
+import play.api.mvc.WebSocket._
 import play.api.Play.current
 import play.api.libs.iteratee.Input
 import controllers.routes
 import play.api.libs.iteratee.Done
 import models.{ Role, Permission }
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.Iteratee
 
 object Secured {
   /**
@@ -69,15 +73,15 @@ trait Secured {
 
   /**
    * Awesome construct to create an authenticated action. It uses the helper
-   * function defined below this one to ensure that a user is logged in. If 
+   * function defined below this one to ensure that a user is logged in. If
    * a user fails this check he is redirected to the result of 'onUnauthorized'
-   * 
+   *
    * Example usage:
    *   def initialize = Authenticated( role=Admin ) { user =>
    *     implicit request =>
    *       Ok("User is logged in!")
    *   }
-   * 
+   *
    */
   def Authenticated[A](
     parser: BodyParser[A] = BodyParsers.parse.anyContent,
@@ -116,6 +120,28 @@ trait Secured {
       innerAction( request.map( _ => innerBody ) )
     }
   }
+
+  def AuthenticatedWebSocket[A](
+    role: Option[Role] = DefaultAccessRole,
+    permission: Option[Permission] = DefaultAccessPermission )( f: => User => RequestHeader => ( Iteratee[A, _], Enumerator[A] ) )( implicit formatter: FrameFormatter[A] ) =
+    WebSocket.using[A] { request =>
+      ( for {
+        user <- maybeUser( request )
+        
+        if ( ( role.isEmpty || user.hasRole( role.get ) ) &&
+          ( permission.isEmpty || user.hasPermission( permission.get ) ) )
+      } yield {
+        f( user )( request )
+      } ).getOrElse {
+
+        val iteratee = Done[A, Unit]( (), Input.EOF)
+
+        // Send an error and close the socket
+        val enumerator = Enumerator[A]( ).andThen( Enumerator.enumInput( Input.EOF ) )
+
+        ( iteratee, enumerator )
+      }
+    }
 
   /**
    * Redirect to login if the user in not authorized.

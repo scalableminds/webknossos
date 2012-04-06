@@ -8,6 +8,7 @@ import scala.collection.mutable.ArrayBuffer
 
 abstract class Figure
 
+@deprecated( "unused in current data model", "0.2" ) 
 case class Cube( topLeft: Vector3I, edgeLength: Int) extends Figure{
   def calculateInnerPoints(): Seq[Tuple3[Int, Int, Int]] = {
     for{
@@ -19,7 +20,7 @@ case class Cube( topLeft: Vector3I, edgeLength: Int) extends Figure{
     }
   }
 }
-
+@deprecated( "unused in current data model", "0.2" ) 
 case class ConvexFigure( polygons: Seq[Polygon] ) extends Figure{
 
   def isInside( point: Tuple3[Double,Double,Double], polygonOfPoint: Polygon = null ) = {
@@ -30,9 +31,9 @@ case class ConvexFigure( polygons: Seq[Polygon] ) extends Figure{
 
   def calculateInnerPoints(): Seq[Tuple3[Int, Int, Int]] = {
     val vertices = this.polygons.flatMap( _.vertices )
-    val maxVector = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
+    val maxVector = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => Vector3D(
       math.max( b.x, e.x ), math.max( b.y, e.y ), math.max( b.z, e.z ) ) )
-    var minVector = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => (
+    var minVector = vertices.foldLeft( vertices( 0 ) )( ( b, e ) => Vector3D(
       math.min( b.x, e.x ), math.min( b.y, e.y ), math.min( b.z, e.z ) ) )
 
     val innerPoints = ArrayBuilder.make[Tuple3[Int, Int, Int]]()

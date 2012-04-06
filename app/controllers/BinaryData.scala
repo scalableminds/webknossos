@@ -31,6 +31,7 @@ import brainflight.security.Secured
  */
 
 object BinaryData extends Controller with Secured {
+  override val DefaultAccessRole = Role( "user" )
   val dataStore: DataStore = FileDataStore
 
   val WebSocketHandleLength = 4
@@ -93,9 +94,7 @@ object BinaryData extends Controller with Secured {
    * @param
    * 	modelType:	id of the model to use
    */
-  def requestViaWebsocket( cubeSize: Int ) =
-    WebSocket.using[Array[Byte]] { request =>
-      // TODO: secure
+  def requestViaWebsocket( cubeSize: Int ) = AuthenticatedWebSocket[Array[Byte]]() { user => request =>
       val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
         // first 4 bytes are always used as a client handle

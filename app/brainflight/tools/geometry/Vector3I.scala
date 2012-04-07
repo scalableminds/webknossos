@@ -19,7 +19,7 @@ case class Vector3I( val x: Int, val y: Int, val z: Int){
 
     val maxSize = max( dx.abs, max( dy.abs, dz.abs ) )
 
-    if ( maxSize > 5 )
+    if ( maxSize > 25 )
       Logger.error( "Huge gap! Size: %d".format( maxSize ) )
 
     val xList = List.fill( dx.abs )( dx.signum ) ::: List.fill( maxSize - dx.abs )( 0 )

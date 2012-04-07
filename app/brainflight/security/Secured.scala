@@ -127,22 +127,22 @@ trait Secured {
     WebSocket.using[A] { request =>
       ( for {
         user <- maybeUser( request )
-        
-        if ( ( role.isEmpty || user.hasRole( role.get ) ) &&
-          ( permission.isEmpty || user.hasPermission( permission.get ) ) )
+        if ( hasAccess( user, role, permission ) )
       } yield {
         f( user )( request )
       } ).getOrElse {
 
-        val iteratee = Done[A, Unit]( (), Input.EOF)
-
+        val iteratee = Done[A, Unit]( (), Input.EOF )
         // Send an error and close the socket
-        val enumerator = Enumerator[A]( ).andThen( Enumerator.enumInput( Input.EOF ) )
+        val enumerator = Enumerator[A]().andThen( Enumerator.enumInput( Input.EOF ) )
 
         ( iteratee, enumerator )
       }
     }
 
+  def hasAccess( user: User, role: Option[Role], permission: Option[Permission] ) =
+    ( role.isEmpty || user.hasRole( role.get ) ) &&
+      ( permission.isEmpty || user.hasPermission( permission.get ) )
   /**
    * Redirect to login if the user in not authorized.
    */

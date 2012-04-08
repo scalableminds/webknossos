@@ -79,6 +79,14 @@ object User extends BasicDAO[User]( "users" ) {
     insert( user )
     user
   }
+    
+  def verify( validationKey: String) = {
+    ValidationKey.find( validationKey ).map{ user =>
+      ValidationKey.remove( validationKey )
+      save( user.copy( verified = true ) )
+      true
+    } getOrElse false
+  }
 
   def createRemote( email: String, name: String, loginType: String ) = {
     val user = User( email, name, true, "", loginType )

@@ -13,7 +13,7 @@ package object context {
       import play.api.Play.current
 
       val conn = MongoConnection(
-          Play.configuration.getString("mongo.url").getOrElse("localhost"), 
+          Play.configuration.getString("mongo.url").getOrElse("127.0.0.1"), 
           Play.configuration.getInt("mongo.port").getOrElse(27017))(
               Play.configuration.getString("mongo.dbname").getOrElse("salat-dao"))
       for {

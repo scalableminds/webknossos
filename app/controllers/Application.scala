@@ -30,7 +30,7 @@ object Application extends Controller {
       "password" -> tuple(
         "main" -> text,
         "validation" -> text ).verifying( "Passwords don't match", pw => pw._1 == pw._2 ).verifying( "Password too short", pw => pw._1.length >= 6 ) )(
-        ( user, name, password ) => ( user, name, password._1 ) )( ( user ) => Some( ( user._1, user._2, ( "", "" ) ) ) ).verifying( "This username is already in use", user => User.findLocalByEmail( user._1 ).isEmpty ) )
+        ( user, name, password ) => ( user, name, password._1 ) )( ( user ) => Some( ( user._1, user._2, ( "", "" ) ) ) ).verifying( "This email address is already in use", user => User.findLocalByEmail( user._1 ).isEmpty ) )
 
   def register = Action {
     implicit request =>

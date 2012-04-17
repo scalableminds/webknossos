@@ -18,5 +18,5 @@ import play.api.libs.json._
 /**
  * Basis for all mapper objects
  */
-class BasicDAO[T <: com.novus.salat.CaseClass](collectionName:String)(implicit val m: Manifest[T])
+class BasicDAO[T <: AnyRef](collectionName:String)(implicit val m: Manifest[T])
   extends SalatDAO[T, ObjectId](collection = DB.connection(collectionName))

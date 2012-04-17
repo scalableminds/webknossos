@@ -85,19 +85,6 @@ define [
 					engine.render g
 					engine.popMatrix()	
 
-				# Normans Cube Preview
-				if meshes["cubes"]
-					engine.useProgram meshProgramObject
-					engine.pushMatrix()
-					engine.scale [1,1,1]
-					engine.translate -200, -100, 0
-
-					for cube in cubes
-						engine.translate cube.relativePosition.x, cube.relativePosition.y, CLIPPING_DISTANCE + cube.relativePosition.z 			
-						engine.render cube
-
-					engine.popMatrix()	
-
 				# OUTPUT Framerate
 				writeFramerate engine.framerate, cam.getPos()
 
@@ -199,22 +186,15 @@ define [
 
 
 				# adds all kind of geometry to geometry-array
-				# Mesh arrays can be added to support grouping
-				# and adds the shader if is not already set for this geometry-type
+				# Mesh can have children to support grouping
+				# adds the shader if is not already set for this geometry-type
 				addGeometry : (geometry) ->
 
-					# add mesh group 
-					if _.isArray geometry
-						for mesh in geometry
-							if mesh.getClassType() is "Mesh"
-								meshProgramObject ?= engine.createShaderProgram mesh.vertexShader, mesh.fragmentShader
+					# single mesh or mesh group 
+					if geometry.getClassType() is "Mesh"
+						meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 						meshes[geometry.name] = geometry
 						meshCount++
-					#single mesh
-					else if geometry.getClassType() is "Mesh"
-							meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
-							meshes[geometry.name] = geometry
-							meshCount++
 
 					# trianglesplane stuff
 					else if geometry.getClassType() is "Trianglesplane"
@@ -226,12 +206,6 @@ define [
 
 				removeMeshByName : (name) ->
 					if meshes[name]
-						# group deletion
-						if _.isArray meshes[name]
-							for mesh in meshes[name]
-								engine.deleteBuffer mesh
-
-						#single mesh
 						engine.deleteBuffer meshes[name]
 						delete meshes[name]
 
@@ -293,3 +267,4 @@ define [
 						if x > 0 and x < 2
 							triangleplane.scaleFactor.x = x
 							@draw()
+

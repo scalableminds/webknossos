@@ -11,11 +11,17 @@ define [
 				$.when(
 					Model.Shader.get(shaderName),
 					Model.Mesh.get(fileName)
-				).pipe (shader, geometry) ->
+				).pipe (shader, geometry) =>
 					mesh = new Mesh shader.vertexShader, shader.fragmentShader
 					if modelName? then mesh.setName modelName else mesh.setName fileName
-					mesh.setVertices (View.createArrayBufferObject geometry.vertices), geometry.vertices.length
-					mesh.setColors (View.createArrayBufferObject geometry.colors), geometry.colors.length
+					mesh.setVertices(
+						View.createArrayBufferObject( geometry.vertices ),
+						geometry.vertices.length
+					)
+					mesh.setColors(
+						View.createArrayBufferObject( geometry.colors ),
+						geometry.colors.length
+					)
 					mesh.setVertexIndex (View.createElementArrayBufferObject geometry.indices), geometry.indices.length
 					return mesh
 

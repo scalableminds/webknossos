@@ -229,10 +229,34 @@ define ->
 				# render Meshes	
 				else if geometry.getClassType() is "Mesh"
 					@gl.bindBuffer @gl.ELEMENT_ARRAY_BUFFER, geometry.vertexIndex.EBO
-					@gl.drawElements @gl.TRIANGLES, geometry.vertexIndex.length, @gl.UNSIGNED_SHORT, 0			
+					@gl.drawElements @gl.TRIANGLES, geometry.vertexIndex.length, @gl.UNSIGNED_SHORT, 0		
 
 				@disableVertexAttribPointer "aVertex"
 				@disableVertexAttribPointer "aColor" if geometry.colors.hasColor
+
+		renderWireframe : (geometry, line_width = 2) ->
+
+			# create a BufferObject filled with "black"
+			unless @wireFrameColorBuffer 
+				buffer = []
+				for i in [0..1000]
+					buffer.push(0,0,0)
+				@wireFrameColorBuffer = @createArrayBufferObject(new Float32Array(buffer))
+
+			if @gl
+				topMatrix = @peekMatrix()
+				@uniformMatrix "modelViewMatrix", false, topMatrix
+
+				@gl.lineWidth(line_width)
+
+				if @gl.getAttribLocation(@shaderProgram, "aColor") > -1
+					@vertexAttribPointer "aColor", 3, @wireFrameColorBuffer
+				
+				if @gl.getAttribLocation(@shaderProgram, "aVertex") > -1
+					@vertexAttribPointer "aVertex", 3, geometry.vertices.VBO
+
+				@gl.drawElements @gl.LINES, geometry.vertexIndex.length, @gl.UNSIGNED_SHORT, 0		
+
 
 		###
 		Sets the background color.

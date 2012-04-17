@@ -21,6 +21,14 @@ object UserController extends Controller with Secured{
       }) getOrElse ( BadRequest )
   }
   
+  def verify( validationKey: String ) = Action {
+    implicit request =>
+      if( User.verify( validationKey ) ) 
+        Ok("Thanks for your registration.") 
+      else 
+        BadRequest( "Unknown validation key." )
+  }
+  
   def showSettings = Authenticated(){ user =>
     implicit request =>
       Ok( toJson( user.configuration.settings ) )

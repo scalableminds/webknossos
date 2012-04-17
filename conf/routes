@@ -12,6 +12,7 @@ POST    /login                              controllers.Application.authenticate
 GET     /logout                             controllers.Application.logout
 GET     /register                           controllers.Application.register
 POST    /register                           controllers.Application.registrate
+GET     /verify/:key                        controllers.UserController.verify( key: String )
 
 # User settings
 POST    /user/configuration                 controllers.UserController.saveSettings

@@ -13,12 +13,12 @@ package object context {
       import play.api.Play.current
 
       val conn = MongoConnection(
-          Play.configuration.getString("mongodb.url").getOrElse("localhost"), 
-          Play.configuration.getInt("mongodb.port").getOrElse(27017))(
-              Play.configuration.getString("mongodb.dbname").getOrElse("salat-dao"))
+          Play.configuration.getString("mongo.url").getOrElse("127.0.0.1"), 
+          Play.configuration.getInt("mongo.port").getOrElse(27017))(
+              Play.configuration.getString("mongo.dbname").getOrElse("salat-dao"))
       for {
-          dbuser <- Play.configuration.getString("mongodb.user")
-          dbpasswd <- Play.configuration.getString("mongodb.password")
+          dbuser <- Play.configuration.getString("mongo.user")
+          dbpasswd <- Play.configuration.getString("mongo.password")
         } conn.authenticate(dbuser, dbpasswd)
       conn
     }

@@ -8,6 +8,13 @@ define ["libs/gl_engine/geometry"], (Geometry) ->
 				length : null	
 			
 			@type = "Mesh"
+			@children = []
+
+		addChild : (mesh) ->
+			@children.push mesh
+
+		removeChild : (mesh) ->
+			@children = _.without @children, mesh
 
 		setVertexIndex : (data, len) -> 
 			@vertexIndex.EBO = data

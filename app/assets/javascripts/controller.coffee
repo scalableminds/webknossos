@@ -4,9 +4,9 @@ define(
 		"view",
 		"geometry_factory",
 		"input",
-		"cube_helper"
+		"helper"
 	],
-	(Model, View, GeometryFactory, Input, CubeHelper) ->
+	(Model, View, GeometryFactory, Input, Helper) ->
 
 		Controller ?= {}
 
@@ -38,8 +38,6 @@ define(
 						GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
 							View.addGeometry trianglesplane
 					
-						CubeHelper.initialize()
-
 					->
 						alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
 				)
@@ -86,6 +84,9 @@ define(
 					"shift + right" : -> View.yaw -rotateValue
 					"shift + up"    : -> View.pitch -rotateValue
 					"shift + down"  : -> View.pitch rotateValue
+
+					#misc keys
+					"n" : -> Helper.toggle()
 				)
 				
 				new Input.KeyboardNoLoop(

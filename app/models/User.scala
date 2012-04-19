@@ -21,7 +21,7 @@ case class User(
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: List[String] = "user" :: Nil,
     permissions: List[Permission] = Nil,
-    var branchPoints: List[TransformationMatrix] = Nil,
+    var branchPoints: List[BranchPoint] = Nil,
     _id: ObjectId = new ObjectId ) {
 
   val _roles = for{
@@ -60,8 +60,6 @@ object User extends BasicDAO[User]( "users" ) {
 
   def findLocalByEmail( email: String ) = findOne( MongoDBObject(
     "email" -> email, "loginType" -> LocalLoginType ) )
-
-  def findAll = find( MongoDBObject.empty ).toList
   
   def findOneById( id: String): Option[User] = findOneByID( new ObjectId(id) )
   

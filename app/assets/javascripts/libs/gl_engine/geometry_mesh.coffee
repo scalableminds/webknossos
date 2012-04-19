@@ -1,27 +1,35 @@
-define ["libs/gl_engine/geometry"], (Geometry) ->
+### define 
+"libs/gl_engine/geometry" : Geometry
+###
 
-	class Mesh extends Geometry
-		constructor: (vertexShader, fragmentShader) ->
-			super(vertexShader, fragmentShader)
-			@vertexIndex = 
-				EBO : null
-				length : null	
-			
-			@type = "Mesh"
+class Mesh extends Geometry
+	constructor: (vertexShader, fragmentShader) ->
+		super(vertexShader, fragmentShader)
+		@vertexIndex = 
+			EBO : null
+			length : null	
+		
+		@type = "Mesh"
+		@children = []
 
-		setVertexIndex : (data, len) -> 
-			@vertexIndex.EBO = data
-			@vertexIndex.length = len
+	addChild : (mesh) ->
+		@children.push mesh
 
-		setVertices : (data, len) -> 
-			super data, len
+	removeChild : (mesh) ->
+		@children = _.without @children, mesh
 
-		setColors : (data, len) ->
-			super data, len
+	setVertexIndex : (data, len) -> 
+		@vertexIndex.EBO = data
+		@vertexIndex.length = len
 
-		setNormals : (data, len) ->
-			super data, len
+	setVertices : (data, len) -> 
+		super data, len
 
-		getClassType : ->
-			super
+	setColors : (data, len) ->
+		super data, len
 
+	setNormals : (data, len) ->
+		super data, len
+
+	getClassType : ->
+		super

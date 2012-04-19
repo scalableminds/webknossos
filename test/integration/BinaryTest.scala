@@ -11,6 +11,7 @@ import play.api.mvc._
 import play.api.mvc.AnyContent
 import brainflight.tools.ExtendedTypes._
 import controllers.BinaryData
+import models.DataSet
 
 object BinaryTest extends Specification {
   sequential
@@ -82,10 +83,11 @@ object BinaryTest extends Specification {
          * 	to the given origin. Afterwards the colors of the points inside the
          * 	produced figure are returned as binary data.
          */
+        val dataId = DataSet.default.id
         val matrix = Array[Float]( 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 685, 611, 648, 1 )
         val Some( result ) = routeAndCall( FakeRequest(
           POST,
-          "/binary/data/cube",
+          "/binary/ajax?&dataSetId="+dataId+"&cubeSize=64",
           FakeHeaders( Map( "Content" -> List( "application/octet-stream" ) ) ),
           AnyContentAsRaw( raw = RawBuffer( memoryThreshold = 1024, matrix.flatMap( _.toBinary.reverse ) ) ) ) )
 

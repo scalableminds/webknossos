@@ -5,6 +5,8 @@ import play.api.Play.current
 import play.api.Play
 import play.Logger
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
+import brainflight.tools.geometry.Point3D
+import models.DataSet
 
 /**
  * Scalable Minds - Brainflight
@@ -17,41 +19,41 @@ import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
  * A data store implementation which uses the hdd as data storage
  */
 object FileDataStore extends DataStore {
+  case class DataBlockInformation(
+    dataSetId: String,
+    point: Point3D,
+    resolution: Int )
 
-  // Data block containing only zero-byte values
   lazy val nullBlock = ( for ( x <- 0 to 128 * 128 * 128 ) yield 0.toByte ).toArray
+
   // defines the maximum count of cached file handles
   val maxCacheSize = 500
-  // binary data ID
-  val binaryDataID =
-    Play.configuration.getString( "binarydata.id" ) getOrElse ( "100527_k0563_mag1" )
-  // binary data Path
-  val dataPath =
-    Play.configuration.getString( "binarydata.path" ) getOrElse ( "binaryData/" )
+
   // defines how many file handles are deleted when the limit is reached
   val dropCount = 50
+
   // try to prevent loading a file multiple times into memory
-  var fileCache = new HashMap[Tuple3[Int, Int, Int], Array[Byte]]
+  var fileCache = new HashMap[DataBlockInformation, Array[Byte]]
 
   /**
    * Uses the coordinates of a point to calculate the data block the point
    * lays in.
    */
-  def extractBlockCoordinates( point: Tuple3[Int, Int, Int] ) =
-    ( point._1 / 128, point._2 / 128, point._3 / 256 )
+  def extractBlockCoordinates( point: Point3D ) =
+    Point3D( point.x / 128, point.y / 128, point.z / 256 )
 
   /**
    * Load the binary data of the given coordinate from file
    */
-  def load( point: Tuple3[Int, Int, Int] ): Byte = {
-    if ( isInsideBinaryDataSet( point ) ) {
-      val ( x, y, z ) = extractBlockCoordinates( point )
+  override def load( dataSet: DataSet, resolution: Int )( globalPoint: Point3D ): Byte = {
+    if ( dataSet doesContain globalPoint ) {
+      val point = extractBlockCoordinates( globalPoint )
 
       val byteArray: Array[Byte] =
-        fileCache.get( ( x, y, z ) ) getOrElse ( loadBlock( x, y, z ) )
+        fileCache.get( DataBlockInformation( dataSet.id, point, resolution ) ) getOrElse ( loadBlock( dataSet, point, resolution ) )
 
-      val zB = ( point._3 % 256 ) / 2
-      byteArray( ( zB * 128 * 128 + ( point._2 % 128 ) * 128 + point._1 % 128 ) )
+      val zB = ( globalPoint.z % 256 ) / 2
+      byteArray( ( zB * 128 * 128 + ( globalPoint.y % 128 ) * 128 + globalPoint.x % 128 ) )
     } else {
       return 0
     }
@@ -61,24 +63,21 @@ object FileDataStore extends DataStore {
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
    */
-  def loadBlock( x: Int, y: Int, z: Int ): Array[Byte] = {
+  def loadBlock( dataSet: DataSet, point: Point3D, resolution: Int ): Array[Byte] = {
     ensureCacheMaxSize
     val dataBlock =
       try {
-        val binaryStream = new FileInputStream(
-          "%sx%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw".
-            format( dataPath, x, y, z, binaryDataID, x, y, z ) )
+        val binaryStream =
+          new FileInputStream( createFilename( dataSet, resolution, point ) )
         inputStreamToByteArray( binaryStream )
       } catch {
         case e: FileNotFoundException =>
-          Logger.warn(
-            "Block %sx%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw not found!".
-              format( dataPath, x, y, z, binaryDataID, x, y, z ) )
+          Logger.warn( "Block %s not found!".format( createFilename( dataSet, resolution, point ) ) )
           // if the file block isn't found, a nullBlock is associated with 
           // the coordinates
           nullBlock
       }
-    fileCache += ( ( ( x, y, z ), dataBlock ) )
+    fileCache += ( ( DataBlockInformation( dataSet.id, point, resolution ), dataBlock ) )
     dataBlock
   }
 
@@ -91,13 +90,6 @@ object FileDataStore extends DataStore {
     if ( fileCache.size > maxCacheSize )
       fileCache = fileCache.drop( dropCount )
   }
-
-  /**
-   * Checks if a point is inside the whole data set boundary.
-   */
-  def isInsideBinaryDataSet( point: Tuple3[Int, Int, Int] ) =
-    // TODO: insert upper bound
-    point._1 >= 0 && point._2 >= 0 && point._3 >= 0
 
   /**
    *  Read file contents to a byteArray

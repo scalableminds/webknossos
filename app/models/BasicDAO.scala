@@ -19,4 +19,6 @@ import play.api.libs.json._
  * Basis for all mapper objects
  */
 class BasicDAO[T <: AnyRef](collectionName:String)(implicit val m: Manifest[T])
-  extends SalatDAO[T, ObjectId](collection = DB.connection(collectionName))
+  extends SalatDAO[T, ObjectId](collection = DB.connection(collectionName)){
+  def findAll = find( MongoDBObject.empty ).toList  
+}

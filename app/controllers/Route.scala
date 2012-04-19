@@ -3,7 +3,7 @@ package controllers
 import play.api.Logger
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import models.{ TrackedRoute, RouteOrigin }
+import models.{ TrackedRoute, RouteOrigin, BranchPoint }
 import play.api.mvc._
 import org.bson.types.ObjectId
 import brainflight.tools.Math._
@@ -13,6 +13,7 @@ import brainflight.tools.geometry.Vector3I._
 import brainflight.tools.ExtendedTypes._
 import models.{ User, TransformationMatrix }
 import models.Role
+import models.Origin
 
 /**
  * scalableminds - brainflight
@@ -27,24 +28,26 @@ object Route extends Controller with Secured {
   val BranchPushVallue = 1f
   val BranchPopValue = 2f
   
-  def initialize = Authenticated() { user =>
+  def initialize( dataSetId: String ) = Authenticated() { user =>
     implicit request =>
-      val originOption = (user.useBranchPointAsOrigin) orElse (RouteOrigin.useLeastUsed)
+      val originOption:Option[Origin] = 
+        (user.useBranchPointAsOrigin) orElse (RouteOrigin.useLeastUsed( dataSetId ))
       ( for {
         origin <- originOption
-        startPoint <- origin.extractTranslation
+        startPoint <- origin.matrix.extractTranslation
       } yield {
         val route = TrackedRoute.createForUser(
           user,
+          dataSetId,
           startPoint.toVector3I :: Nil )
 
-        val data = Map(
-          "id" -> toJson( route._id.toString ),
-          "matrix" -> toJson( origin.value ), 
-          "branches" -> toJson ( user.branchPoints.map( _.value).reverse )
+        val data = Json.obj(
+          "id" -> route.id,
+          "matrix" -> origin.matrix.value, 
+          "branches" -> user.branchPoints.map( _.matrix.value).reverse 
         )
         
-        Ok( toJson( data ) )
+        Ok( data )
       } ) getOrElse NotFound( "Couldn't open new route." )
   }
   /**
@@ -73,7 +76,7 @@ object Route extends Controller with Secured {
             Logger.debug("PUSH branchpoint: "+matrix)
             route.add( points.toList )
             points = Vector.empty
-            User.save( user.copy( branchPoints = TransformationMatrix( matrix ) :: user.branchPoints ) )
+            User.save( user.copy( branchPoints = BranchPoint( matrix ) :: user.branchPoints ) )
             route.addBranch()
             
             TransformationMatrix.defaultSize
@@ -84,7 +87,7 @@ object Route extends Controller with Secured {
             if ( !user.branchPoints.isEmpty ) {
               val branchPoint = user.branchPoints.head
               User.save( user.copy( branchPoints = user.branchPoints.tail ) )
-              route.closeBranch( branchPoint.extractTranslation.get.toVector3I )
+              route.closeBranch( branchPoint.matrix.extractTranslation.get.toVector3I )
             }
             
             0

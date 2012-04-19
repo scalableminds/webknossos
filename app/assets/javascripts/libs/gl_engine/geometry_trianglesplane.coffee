@@ -1,61 +1,64 @@
-define ["libs/gl_engine/geometry"], (Geometry) ->
-	class Trianglesplane extends Geometry
-		constructor: (vertexShader, fragmentShader) ->
-			super(vertexShader, fragmentShader)
-			@vertexIndex = 
-				EBO : null
-				length : null	
+### define
+"libs/gl_engine/geometry" : Geometry
+###
 
-			@interpolationBuffer0 = 
-				VBO : null
-				length : null	
+class Trianglesplane extends Geometry
+	constructor: (vertexShader, fragmentShader) ->
+		super(vertexShader, fragmentShader)
+		@vertexIndex = 
+			EBO : null
+			length : null	
 
-			@interpolationBuffer1 = 
-				VBO : null
-				length : null	
+		@interpolationBuffer0 = 
+			VBO : null
+			length : null	
 
-			@interpolationBufferDelta = 
-				VBO : null
-				length : null				
+		@interpolationBuffer1 = 
+			VBO : null
+			length : null	
 
-			#plain plane
-			@normalVertices = null
+		@interpolationBufferDelta = 
+			VBO : null
+			length : null				
 
-			#curved plane
-			@queryVertices = null
-			
-			@type = "Trianglesplane"
+		#plain plane
+		@normalVertices = null
 
-		setVertexIndex : (data, len) -> 
-			@vertexIndex.EBO = data
-			@vertexIndex.length = len
+		#curved plane
+		@queryVertices = null
+		
+		@type = "Trianglesplane"
 
-		setInterpolationBuffer0 : (data, len) -> 
-			@interpolationBuffer0.VBO = data
-			@interpolationBuffer0length = len
-			
-		setInterpolationBuffer1 : (data, len) -> 
-			@interpolationBuffer1.VBO = data
-			@interpolationBuffer1.length = len
-			
-		setInterpolationBufferDelta : (data, len) -> 
-			@interpolationBufferDelta.VBO = data
-			@interpolationBufferDelta.length = len						
+	setVertexIndex : (data, len) -> 
+		@vertexIndex.EBO = data
+		@vertexIndex.length = len
 
-		setNormalVertices : (data) -> 
-			@normalVertices = data
+	setInterpolationBuffer0 : (data, len) -> 
+		@interpolationBuffer0.VBO = data
+		@interpolationBuffer0length = len
+		
+	setInterpolationBuffer1 : (data, len) -> 
+		@interpolationBuffer1.VBO = data
+		@interpolationBuffer1.length = len
+		
+	setInterpolationBufferDelta : (data, len) -> 
+		@interpolationBufferDelta.VBO = data
+		@interpolationBufferDelta.length = len						
 
-		setQueryVertices : (data) -> 
-			@queryVertices = data	
+	setNormalVertices : (data) -> 
+		@normalVertices = data
 
-		setVertices : (data, len) -> 
-			super data, len
+	setQueryVertices : (data) -> 
+		@queryVertices = data	
 
-		setColors : (data, len) ->
-			super data, len
+	setVertices : (data, len) -> 
+		super data, len
 
-		setNormals : (data, len) ->
-			super data, len
+	setColors : (data, len) ->
+		super data, len
 
-		getClassType : ->
-			super
+	setNormals : (data, len) ->
+		super data, len
+
+	getClassType : ->
+		super

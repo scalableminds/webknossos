@@ -8,19 +8,18 @@ import scala.collection.mutable.ArrayBuffer
 
 abstract class Figure
 
-@deprecated( "unused in current data model", "0.2" ) 
-case class Cube( topLeft: Vector3I, edgeLength: Int) extends Figure{
-  def calculateInnerPoints(): Seq[Tuple3[Int, Int, Int]] = {
+case class Cube( topLeft: Point3D, edgeLength: Int) extends Figure{
+  def calculateInnerPoints(): Seq[Point3D] = {
     for{
       x <- topLeft.x until topLeft.x + edgeLength
       y <- topLeft.y until topLeft.y + edgeLength
       z <- topLeft.z until topLeft.z + edgeLength
     } yield {
-      (x,y,z)
+      Point3D(x,y,z)
     }
   }
 }
-@deprecated( "unused in current data model", "0.2" ) 
+
 case class ConvexFigure( polygons: Seq[Polygon] ) extends Figure{
 
   def isInside( point: Tuple3[Double,Double,Double], polygonOfPoint: Polygon = null ) = {

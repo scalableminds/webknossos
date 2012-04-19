@@ -16,8 +16,10 @@ define ->
 		
 			@hasNormals = false
 			@hasColors = false
+
 			@vertexShader = vertexShader
 			@fragmentShader = fragmentShader
+			@shaderProgram = null
 
 			@type = "Geometry"
 			@name = ""		

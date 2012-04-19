@@ -17,11 +17,6 @@ define [
 			meshes = {}
 			meshCount = 0
 
-			#ProgramObjects
-			#One Shader for each Geometry-Type
-			trianglesplaneProgramObject = null
-			meshProgramObject = null
-
 			#constants
 			CLIPPING_DISTANCE = 140
 			CAM_DISTANCE = 140
@@ -51,7 +46,7 @@ define [
 				# coordinate axis mini-map
 				if meshes["coordinateAxes"]
 					g = meshes["coordinateAxes"]
-					engine.useProgram meshProgramObject
+					engine.useProgram g.shaderProgram
 					engine.pushMatrix()
 					
 					rotMatrix = cam.getMatrix()
@@ -66,7 +61,7 @@ define [
 
 				if meshes["crosshair"]
 					g = meshes["crosshair"]
-					engine.useProgram meshProgramObject
+					engine.useProgram g.shaderProgram
 					engine.pushMatrix()
 					engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
 					engine.scale g.scaleFactor.x					
@@ -75,7 +70,7 @@ define [
 
 				if meshes["quarter"]
 					g = meshes["quarter"]
-					engine.useProgram meshProgramObject
+					engine.useProgram g.shaderProgram
 					engine.pushMatrix()
 					engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
 					if g.scaleFactor.x > 62
@@ -116,7 +111,7 @@ define [
 					g.setInterpolationBuffer1 (View.createArrayBufferObject buffer1), buffer1.length
 					g.setInterpolationBufferDelta (View.createArrayBufferObject bufferDelta), bufferDelta.length
 
-				engine.useProgram trianglesplaneProgramObject 
+				engine.useProgram g.shaderProgram 
 
 				engine.pushMatrix()
 				engine.translate g.relativePosition.x, g.relativePosition.y, CLIPPING_DISTANCE + g.relativePosition.z 
@@ -192,13 +187,13 @@ define [
 
 					# single mesh or mesh group 
 					if geometry.getClassType() is "Mesh"
-						meshProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+						geometry.shaderProgram ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 						meshes[geometry.name] = geometry
 						meshCount++
 
 					# trianglesplane stuff
 					else if geometry.getClassType() is "Trianglesplane"
-						trianglesplaneProgramObject ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
+						geometry.shaderProgram ?= engine.createShaderProgram geometry.vertexShader, geometry.fragmentShader
 						triangleplane = geometry
 						#a single draw to see when the triangleplane is ready
 						

@@ -23,6 +23,8 @@ define [
 						geometry.colors.length
 					)
 					mesh.setVertexIndex (View.createElementArrayBufferObject geometry.indices), geometry.indices.length
+					mesh.setNormals (View.createArrayBufferObject geometry.normals), geometry.normals.length
+
 					return mesh
 
 			createTrianglesplane : (width, zOffset, shaderName) ->

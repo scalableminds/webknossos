@@ -1,10 +1,13 @@
-# This creates a Triangleplane
+### define ###
+
+# This creates a Trianglesplane
 # It is essentially a square with a grid of vertices. Those vertices are
 # connected through triangles. Cuz that's how u do it in WebGL.
-define ->
 
-	SPHERICAL_CAP_RADIUS = 140
-		
+SPHERICAL_CAP_RADIUS = 140
+
+Trianglesplane = 
+
 	get : (width, zOffset) ->
 		
 		deferred = $.Deferred()

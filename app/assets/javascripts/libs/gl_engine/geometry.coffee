@@ -1,58 +1,59 @@
-define ->
-	class Geometry
-		constructor : (vertexShader, fragmentShader) ->
-			@vertices = 
-				VBO : null
-				length : null
+### define ###
 
-					
-			@colors = 
-				VBO : null
-				length : null
-					
-			@normals = 
-				VBO : null
-				length : null
-		
-			@hasNormals = false
-			@hasColors = false
+class Geometry
+	constructor : (vertexShader, fragmentShader) ->
+		@vertices = 
+			VBO : null
+			length : null
 
-			@vertexShader = vertexShader
-			@fragmentShader = fragmentShader
-			@shaderProgram = null
+				
+		@colors = 
+			VBO : null
+			length : null
+				
+		@normals = 
+			VBO : null
+			length : null
+	
+		@hasNormals = false
+		@hasColors = false
 
-			@type = "Geometry"
-			@name = ""		
+		@vertexShader = vertexShader
+		@fragmentShader = fragmentShader
+		@shaderProgram = null
 
-			@relativePosition = {
-				x : 0,
-				y : 0,
-				z : 0 
-			}		
+		@type = "Geometry"
+		@name = ""		
 
-			@scaleFactor = {
-				x : 1,
-				y : 1,
-				z : 1 
-			}		
+		@relativePosition = {
+			x : 0,
+			y : 0,
+			z : 0 
+		}		
 
-		setVertices : (data, len) -> 
-			@vertices.VBO = data
-			@vertices.length = len
+		@scaleFactor = {
+			x : 1,
+			y : 1,
+			z : 1 
+		}		
 
-		setColors : (data, len) -> 
-			@colors.VBO = data
-			@colors.length = len
-			@hasColors = true
+	setVertices : (data, len) -> 
+		@vertices.VBO = data
+		@vertices.length = len
 
-		setNormals : (data, len) -> 
-			@normals.VBO = data
-			@normals.length = len	
-			@hasNormals = true
+	setColors : (data, len) -> 
+		@colors.VBO = data
+		@colors.length = len
+		@hasColors = true
 
-		setName : (name) ->
-			@name = name
-	 
-		#returns the ClassName of an object
-		getClassType : ->
-			@type
+	setNormals : (data, len) -> 
+		@normals.VBO = data
+		@normals.length = len	
+		@hasNormals = true
+
+	setName : (name) ->
+		@name = name
+ 
+	#returns the ClassName of an object
+	getClassType : ->
+		@type

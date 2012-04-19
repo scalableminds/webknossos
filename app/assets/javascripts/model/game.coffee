@@ -2,7 +2,12 @@
 "libs/request" : request
 ###
 
-Game = 	
+# This holds game specific data.
+
+Game = 
+	
+	dataSet : null
+
 	initialize : -> 
 		
 		request(

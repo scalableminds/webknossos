@@ -1,6 +1,11 @@
-define ["libs/request"], (request) ->
+### define 
+"libs/request" : request
+###
 
-	# This loads and caches meshes.
+# This loads and caches meshes.
+
+Mesh = 
+
 	get : _.memoize (name) ->
 
 		request(

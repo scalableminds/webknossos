@@ -1,27 +1,28 @@
 package controllers
 
+import java.nio.ByteBuffer
+import akka.actor._
+import akka.dispatch._
+import akka.util.duration._
+import akka.pattern.{ ask, pipe }
+import akka.util.Timeout
 import play.api._
 import play.api.mvc._
 import play.api.data._
 import play.api.libs.json.Json._
-import models._
-import views._
-import brainflight.binary._
-import java.nio.ByteBuffer
-import akka.actor._
-import akka.util.duration._
 import play.api.Play.current
 import play.api.libs.iteratee._
 import Input.EOF
 import play.api.libs.concurrent._
-import brainflight.tools.ExtendedTypes._
-import brainflight.tools.Math._
-import brainflight.tools.geometry.Vector3I._
-
-import brainflight.tools.geometry.{ Figure, Cube, Vector3I }
 import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
+import play.libs.Akka._
+import models.Actors._
+import models.Role
+import brainflight.binary._
 import brainflight.security.Secured
+import brainflight.tools.geometry.{ Point3D, Cube }
+import models.DataSet
 
 /**
  * scalableminds - brainflight
@@ -32,89 +33,69 @@ import brainflight.security.Secured
 
 object BinaryData extends Controller with Secured {
   override val DefaultAccessRole = Role( "user" )
-  val dataStore: DataStore = FileDataStore
 
-  val WebSocketHandleLength = 4
-  val WebSocketCoordinatesLength = Vector3I.defaultSize * 4
-  val MinWebSocketRequestSize = WebSocketHandleLength + WebSocketCoordinatesLength
+  def calculateBinaryData( dataSet: DataSet, cubeSize: Int, cubeCorner: Point3D, resolutionExponent: Int ): Future[Array[Byte]] = {
+    implicit val timeout = Timeout( 5 seconds ) // needed for `?` below
+    val figure = Cube( cubeCorner, cubeSize )
+    val coordinates = figure.calculateInnerPoints()
+    val resolution = math.pow( 2, resolutionExponent ).toInt
 
-  def calculateBinaryData( cubeSize: Int, cubeCorner: Array[Int], clientCoordinates: Array[Int] = Array() ) = {
-    if ( cubeCorner.length != 3 ) {
-      Logger.debug( "Wrong position Size: " + cubeCorner.length )
-      Array[Byte]()
-    } else {
-      val figure = Cube( cubeCorner, cubeSize )
-      val coordinates = figure.calculateInnerPoints()
-
-      /*Akka.future {
-        def f( x: Array[Int], y: Seq[Tuple3[Int, Int, Int]] ) {
-          if ( x.length / 3 != y.length )
-            Logger.warn( "Size doesn't match! %d (S) != %d (C)".format( y.length, x.length / 3 ) )
-          val it = x.iterator
-          var failed = 0
-          y.zipWithIndex.foreach {
-            case ( e, i ) => {
-              if ( it.hasNext ) {
-                val client = ( it.next, it.next, it.next )
-                if ( e != client && failed < 20 ) {
-                  failed += 1
-                  Logger.warn( "ELEMTNS don't match: %s (S) <-> %s (C)".format( e, client ) )
-                }
-              }
-            }
-          }
-        }
-        f( clientCoordinates, coordinates )
-      }*/
-      // rotate the model and generate the requested data
-      coordinates.map( dataStore.load ).toArray
-    }
+    // rotate the model and generate the requested data
+    val future = DataSetActor ? BlockRequest( dataSet, resolution, coordinates )
+    future.mapTo[Array[Byte]]
   }
 
-  def requestViaAjax( cubeSize: Int ) = Authenticated(parser = parse.raw) { user =>
+  /**
+   * Handles a request for binary data via a HTTP POST. The content of the
+   * POST body is specified in the BinaryProtokoll.parseAjax functions.
+   */
+  def requestViaAjax( dataSetId: String, cubeSize: Int ) = Authenticated( parser = parse.raw ) { user =>
     implicit request =>
-    ( request.body ) match {
-      case body if body.size >= 12 =>
-        val binPosition = body.asBytes().getOrElse( Array[Byte]() )
-        val position = binPosition.subDivide( 4 ).map( _.reverse.toIntFromFloat)
-        val cubeCorner = position.map( x => x - x % cubeSize)
-        val result = calculateBinaryData( cubeSize, position )
-        Ok( result )
-      case body =>
-        BadRequest( "Request body is to short: %d bytes".format(body.size) )
-    }
+      Async {
+        ( for {
+          payload <- request.body.asBytes()
+          message <- BinaryProtocoll.parseAjax( payload )
+          dataSet <- DataSet.findOneById( dataSetId )
+        } yield {
+          message match {
+            case RequestData( resolutionExponent, position ) =>
+              val cubeCorner = position.scale( x => x - x % cubeSize )
+              calculateBinaryData( dataSet, cubeSize, cubeCorner, resolutionExponent ).asPromise.map(
+                result => Ok( result ) )
+            case _ =>
+              Akka.future {
+                BadRequest( "Unknown message." )
+              }
+          }
+        } ) getOrElse ( Akka.future { BadRequest( "Request body is to short: %d bytes".format( request.body.size ) ) } )
+      }
   }
   /**
-   * Websocket implementation. Client needs to send a 4 byte handle and a 64
-   * byte matrix. This matrix is used to apply a helmert transformation on the
-   * model. After that the requested data is resolved and pushed back to the
-   * output channel. The answer on the socket consists of the 4 byte handle and
-   * the result data
+   * Handles a request for binary data via websockets. The content of a websocket
+   * message is defined in the BinaryProtokoll.parseWebsocket function.
+   * If the message is valid the result is posted onto the websocket.
    *
    * @param
    * 	modelType:	id of the model to use
    */
-  def requestViaWebsocket( cubeSize: Int ) = AuthenticatedWebSocket[Array[Byte]]() { user => request =>
+  def requestViaWebsocket( dataSetId: String, cubeSize: Int ) = AuthenticatedWebSocket[Array[Byte]]() { user =>
+    request =>
       val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
         // first 4 bytes are always used as a client handle
-        if ( in.length >= MinWebSocketRequestSize && in.length % 4 == 0 ) {
-          val ( binHandle, inRest ) = in.splitAt( WebSocketHandleLength )
-          val ( binPosition, binClientCoord ) = inRest.splitAt( WebSocketCoordinatesLength )
-
-          // convert the matrix from byte to float representation
-          val position = binPosition.subDivide( 4 ).map( _.reverse.toIntFromFloat)
-          val cubeCorner = position.map( x => x - x % cubeSize)
-          val clientCoordinates =
-            binClientCoord.subDivide( 4 ).map( _.reverse.toFloat ).map( _.toInt )
-
-            val result = calculateBinaryData( cubeSize, cubeCorner, clientCoordinates )
-            output.push( binHandle ++ result )
+        BinaryProtocoll.parseWebsocket( in ).map {
+          case message @ RequestData( resolutionExponent, position ) =>
+            val cubeCorner = position.scale( x => x - x % cubeSize )
+            for {
+              dataSet <- DataSet.findOneById( dataSetId )
+              result <- calculateBinaryData( dataSet, cubeSize, cubeCorner, resolutionExponent )
+            } {
+              output.push( message.handle ++ result )
+            }
         }
       } )
-
       ( input, output )
-    }
+  }
 
   def model( modelType: String ) = Action {
     ModelStore( modelType ) match {

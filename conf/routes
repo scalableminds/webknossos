@@ -26,13 +26,16 @@ GET     /login/fb/code                      controllers.login.FacebookLogin.logi
 GET     /login/tw                           controllers.login.TwitterLogin.login
 
 # Binary Data
-GET     /binary/model/:model                controllers.BinaryData.model(model: String)
-GET     /binary/polygons/:model             controllers.BinaryData.polygons(model: String)
-GET			/binary/ws													controllers.BinaryData.requestViaWebsocket(cubeSize: Int)
-POST    /binary/ajax				                controllers.BinaryData.requestViaAjax(cubeSize: Int)
+GET     /binary/model/:model                controllers.BinaryData.model( model: String )
+GET     /binary/polygons/:model             controllers.BinaryData.polygons( model: String )
+GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int )
+POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int )
+
+# Game Stuff
+GET     /game/initialize                    controllers.Game.initialize
 
 # Route Stuff
-GET     /route/initialize                   controllers.Route.initialize
+GET     /route/initialize                   controllers.Route.initialize( dataSetId: String )
 GET     /route/list                         controllers.Route.list
 POST    /route/:id                          controllers.Route.blackBox(id: String)
 GET			/route/:id													controllers.Route.getRoute(id: String)

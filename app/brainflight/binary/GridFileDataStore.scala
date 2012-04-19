@@ -9,6 +9,8 @@ import com.mongodb.casbah.Imports._
 import scala.collection.JavaConverters._
 import com.mongodb.casbah.gridfs.Imports._
 import brainflight.tools.ExtendedTypes._
+import brainflight.tools.geometry.Point3D
+import models.DataSet
 
 object GridFileDataStore extends DataStore{
 	  //GridFs handle
@@ -17,12 +19,6 @@ object GridFileDataStore extends DataStore{
   lazy val nullBlock = (for (x <- 0 to 128 * 128 * 128) yield 0.toByte).toArray
   // defines the maximum count of cached file handles
   val maxCacheSize = 500
-  // binary data ID
-  val binaryDataID = 
-    Play.configuration.getString("binarydata.id") getOrElse("100527_k0563_mag1")
-  // binary data Path
-  val dataPath = 
-    Play.configuration.getString("binarydata.path") getOrElse ("binaryData/")
   // defines how many file handles are deleted when the limit is reached
   val dropCount = 50
   // try to prevent loading a file multiple times into memory
@@ -31,13 +27,14 @@ object GridFileDataStore extends DataStore{
   /**
    * Load the binary data of the given coordinate from DB
    */
-  def load(point: Tuple3[Int, Int, Int]): Byte = {
+  override def load(dataSet: DataSet, resolution: Int)(globalPoint: Point3D): Byte = {
     // TODO: Insert upper bound
-    if (point._1 < 0 || point._2 < 0 || point._3 < 0) return 0
+    if (globalPoint.x < 0 || globalPoint.y < 0 || globalPoint.z < 0) return 0
 
-    val x = point._1 / 128
-    val y = point._2 / 128
-    val z = point._3 / 256
+    val x = globalPoint.x / 128
+    val y = globalPoint.y / 128
+    val z = globalPoint.z / 256
+    val point = Point3D(x, y, z) 
 
     val byteArray: Array[Byte] = fileCache.get((x, y, z)) match {
       case Some(x) =>
@@ -47,19 +44,19 @@ object GridFileDataStore extends DataStore{
         if (fileCache.size > maxCacheSize)
           fileCache = fileCache.drop(dropCount)
           
-        gridfs.findOne(convertCoordinatesToString(x,y,z)) match {
+        gridfs.findOne(convertCoordinatesToString(point)) match {
           case Some(file) =>     
             val binData = file.sourceWithCodec(scala.io.Codec.ISO8859).map(_.toByte).toArray
             fileCache += (((x,y,z), binData))
             binData
           case None => 
-            Logger.info("Did not find file %s".format(createFilename(x,y,z)))
+            Logger.info("Did not find file %s".format(createFilename(dataSet, resolution, point)))
             fileCache += (((x,y,z),nullBlock))
             nullBlock
         }
     }
-    val zB = (point._3 % 256) / 2
-    byteArray((zB * 128 * 128 + (point._2 % 128) * 128 + point._1 % 128))
+    val zB = (globalPoint.z % 256) / 2
+    byteArray((zB * 128 * 128 + (globalPoint.y % 128) * 128 + globalPoint.x % 128))
   }
 
   /**
@@ -77,26 +74,22 @@ object GridFileDataStore extends DataStore{
     fileCache.clear()
   }
   
-  def createFilename(x: Int, y: Int, z: Int): String = {
-	"%s/x%04d/y%04d/z%04d/%s_x%04d_y%04d_z%04d.raw".format(dataPath,x,y,z,binaryDataID,x,y,z) 
+  def convertCoordinatesToString(point: Point3D):String = {
+    "%04d%04d%04d".format(point.x,point.y,point.z)
   }
   
-  def convertCoordinatesToString(x: Int, y: Int, z: Int):String = {
-    "%04d%04d%04d".format(x,y,z)
-  }
-  
-  private def create(x: Int, y: Int, z: Int):Array[Byte] ={
+  private def create(dataSet: DataSet, resolution: Int, point: Point3D):Array[Byte] ={
     try{
-      val IS = new FileInputStream(createFilename(x,y,z))
+      val IS = new FileInputStream(createFilename(dataSet, resolution, point))
       gridfs(IS) { fh=>
-      fh.filename = convertCoordinatesToString(x,y,z)
+      fh.filename = convertCoordinatesToString(point)
       fh.contentType = "application"
       }
       FileDataStore.inputStreamToByteArray(IS)
     }
     catch {
       case e: FileNotFoundException =>
-        Logger.warn("%s not found!".format(createFilename(x,y,z)));
+        Logger.warn("%s not found!".format(createFilename(dataSet, resolution, point)));
         nullBlock
     }
   }

@@ -12,6 +12,8 @@ import brainflight.binary.{ FileDataStore, GridFileDataStore }
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.gridfs.Imports._
+import brainflight.tools.geometry.Point3D
+import models.DataSet
 
 object PerformanceTest extends Controller {
   
@@ -30,7 +32,7 @@ object PerformanceTest extends Controller {
       y <- yBot to yTop
       z <- zBot to zTop
     } {
-      GridFileDataStore.load(Tuple3(x * 128, y * 128, z * 256))
+      GridFileDataStore.load(DataSet.default, 1)(Point3D(x * 128, y * 128, z * 256))
     }
     gridFileDataStoreTime += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
@@ -46,7 +48,7 @@ object PerformanceTest extends Controller {
       y <- yBot to yTop
       z <- zBot to zTop
     } {
-      FileDataStore.load(Tuple3(x * 128, y * 128, z * 256))
+      FileDataStore.load( DataSet.default, resolution = 1 )(Point3D(x * 128, y * 128, z * 256))
     }
     fileDataStoreTime += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))

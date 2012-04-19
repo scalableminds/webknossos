@@ -13,25 +13,27 @@ import brainflight.tools.geometry.Vector3D
  * Date: 11.12.11
  * Time: 22:07
  */
+abstract class Origin {
+  def matrix: TransformationMatrix
+}
 
 case class RouteOrigin(
-    matrix: TransformationMatrix, 
-    usedCount: Int, 
-    _id: ObjectId = new ObjectId)
+  matrix: TransformationMatrix,
+  usedCount: Int,
+  dataSetId: ObjectId,
+  _id: ObjectId = new ObjectId ) extends Origin
 
-object RouteOrigin extends BasicDAO[RouteOrigin]("routeOrigins") {
-  def useLeastUsed = {
-
-    val origin = find(MongoDBObject())
-      .sort(orderBy = MongoDBObject("usedCount" -> 1))
-      .limit(1)
+object RouteOrigin extends BasicDAO[RouteOrigin]( "routeOrigins" ) {
+  
+  def useLeastUsed( dataSetId: String ) = {
+    val origin = find( MongoDBObject( "dataSetId" -> new ObjectId(dataSetId) ) )
+      .sort( orderBy = MongoDBObject( "usedCount" -> 1 ) )
+      .limit( 1 )
       .toList
-      
-    origin.headOption.map{ origin =>
-      update(MongoDBObject("_id" -> origin._id), $inc("usedCount" -> 1))
-      origin.matrix 
+
+    origin.headOption.map { origin =>
+      update( MongoDBObject( "_id" -> origin._id ), $inc( "usedCount" -> 1 ) )
+      origin
     }
   }
-
-  def findAll = find(MongoDBObject.empty).toList
 }

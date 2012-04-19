@@ -26,8 +26,6 @@ object Role extends BasicDAO[Role]( "roles" ) {
     }
   }
 
-  def findAll = find( MongoDBObject.empty ).toList
-
   def findOneByName( roleName: String ): Option[Role] =
     findOne( MongoDBObject( "name" -> roleName ) )
 }

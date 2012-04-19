@@ -8,6 +8,7 @@ import play.api.libs.json._
 import play.api.libs.json.Json._
 import scala.util.Random
 import play.api.mvc._
+import models.DataSet
 
 object RouteTest extends Specification {
   sequential
@@ -18,9 +19,10 @@ object RouteTest extends Specification {
     
     "grab a new route" in {
       running( FakeApplication() ) {
+        val dataId = DataSet.default.id
         val Some( result ) = routeAndCall( FakeRequest(
           GET,
-          "/route/initialize") )
+          "/route/initialize?dataSetId="+dataId) )
         status( result ) must be equalTo( OK )
         contentType( result ) must equalTo( Some( "application/json" ) )
         /* json should look like 

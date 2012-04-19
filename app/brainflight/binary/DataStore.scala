@@ -1,4 +1,8 @@
 package brainflight.binary
+import play.api.Play.current
+import play.api.Play
+import brainflight.tools.geometry.Point3D
+import models.DataSet
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
@@ -8,10 +12,32 @@ abstract class DataStore {
   /**
    * Loads the data of a given point from the data source
    */
-  def load( point: Tuple3[Int, Int, Int] ): Byte
+  def load( dataSet: DataSet, resolution: Int )( point: Point3D ): Byte
 
   /**
-   * Gives the data store the possibility to clean up its mess on shutdown/clean 
+   * Gives the data store the possibility to clean up its mess on shutdown/clean
    */
   def cleanUp()
+  
+  /**
+   * Creates the file-name of the cube based on the data set id, resolution
+   * and coordinates.
+   * 
+   * Example:
+   *  "binaryData/100527_k0563/1/x0001/y0002/z0004/100527_k0563_mag1_x0001_y0002_z0004.raw"
+   *  
+   * The path structure is:
+   *  "DATAPATH/DATASETID/RESOLUTION/.../DATASETID_magRESOLUTION_xX_yY_zZ.raw"
+   *  
+   *  where DATAPATH, DATASETID, RESOLUTION, X, Y and Z are parameters.
+   */
+  def createFilename( dataSet: DataSet, resolution: Int, point: Point3D ): String = {
+    "%s/%d/x%04d/y%04d/z%04d/%s_mag%d_x%04d_y%04d_z%04d.raw".format( 
+        dataSet.baseDir,
+        resolution, 
+        point.x, point.y, point.z, 
+        dataSet.name, 
+        resolution, 
+        point.x, point.y, point.z )
+  }
 }

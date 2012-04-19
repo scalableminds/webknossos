@@ -32,7 +32,7 @@ define(
 							mesh.relativePosition.x = 100
 							View.addGeometry mesh
 							
-						GeometryFactory.createMesh("crosshair", "mesh").done (mesh) -> 	
+						GeometryFactory.createMesh("crosshair", "mesh_noLight").done (mesh) -> 	
 							View.addGeometry mesh
 
 						GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->

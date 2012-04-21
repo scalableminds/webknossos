@@ -1,9 +1,9 @@
 ### define
-"model" : Model
-"view" : View
-"geometry_factory" : GeometryFactory
-"input" : Input
-"helper" : Helper
+model : Model
+view : View
+geometry_factory : GeometryFactory
+input : Input
+helper : Helper
 ###
 
 moveValue = 1

@@ -1,8 +1,8 @@
 ### define
-"model" : Model
-"libs/gl_engine/geometry_mesh" : Mesh
-"libs/gl_engine/geometry_trianglesplane" : Trianglesplane
-"view" : View
+model : Model
+libs/gl_engine/geometry_mesh : Mesh
+libs/gl_engine/geometry_trianglesplane : Trianglesplane
+view : View
 ###
 
 GeometryFactory =

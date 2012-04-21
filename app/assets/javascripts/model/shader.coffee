@@ -1,5 +1,5 @@
 ### define
-"libs/request" : request
+libs/request : request
 ###
 
 # This loads and caches a pair (vertex and fragment) shaders

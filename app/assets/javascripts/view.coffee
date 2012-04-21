@@ -1,7 +1,7 @@
 ### define
-"libs/gl_engine/gl_engine" : GlEngine
-"libs/gl_engine/flycam" : Flycam
-"model" : Model
+libs/gl_engine/gl_engine : GlEngine
+libs/gl_engine/flycam : Flycam
+model : Model
 ###
 	
 engine = null

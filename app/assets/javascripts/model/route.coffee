@@ -1,6 +1,6 @@
 ### define
-"libs/request" : request
-"model/game" : Game
+libs/request : request
+model/game : Game
 ###
 
 # This takes care of the route. 

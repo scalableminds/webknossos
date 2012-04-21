@@ -1,8 +1,8 @@
 ### define
-"model/binary/interpolation_collector" : InterpolationCollector
-"model/game" : Game
-"libs/simple_array_buffer_socket" : SimpleArrayBufferSocket
-"libs/simple_worker" : SimpleWorker
+model/binary/interpolation_collector : InterpolationCollector
+model/game : Game
+libs/simple_array_buffer_socket : SimpleArrayBufferSocket
+libs/simple_worker : SimpleWorker
 ###
 
 EPSILON = 1e-10

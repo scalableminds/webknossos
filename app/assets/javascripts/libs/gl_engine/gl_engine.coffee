@@ -1,5 +1,5 @@
 ### define
-"libs/gl_engine/lights" : Lights
+libs/gl_engine/lights : Lights
 ###
 
 class GlEngine

@@ -18,7 +18,7 @@ object Branch extends Controller with Secured {
 
   def list = Authenticated() { user =>
     implicit request =>
-      val points: List[List[Float]] = user.branchPoints.map(_.matrix.value)
+      val points = user.branchPoints.map(_.matrix.value)
       Ok( toJson( points ) )
   }
 

@@ -12,14 +12,6 @@ import models.UserConfiguration
 
 object UserController extends Controller with Secured{
   override val DefaultAccessRole = Role( "user" )
-
-  def saveSettings = Authenticated(parser = parse.json){ user =>
-    implicit request =>
-      ( for( settings <- request.body.asOpt[Map[String,String]] ) yield {
-        User.save( user.copy( configuration = UserConfiguration(settings) ) )
-        Ok
-      }) getOrElse ( BadRequest )
-  }
   
   def verify( validationKey: String ) = Action {
     implicit request =>
@@ -27,6 +19,14 @@ object UserController extends Controller with Secured{
         Ok("Thanks for your registration.") 
       else 
         BadRequest( "Unknown validation key." )
+  }
+  
+  def saveSettings = Authenticated(parser = parse.json){ user =>
+    implicit request =>
+      request.body.asOpt[Map[String,String]] map { settings =>
+        User.save( user.copy( configuration = UserConfiguration(settings) ) )
+        Ok
+      } getOrElse ( BadRequest )
   }
   
   def showSettings = Authenticated(){ user =>

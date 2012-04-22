@@ -8,8 +8,6 @@ import brainflight.mail.DefaultMails
 object Global extends GlobalSettings {
 
   override def onStart( app: Application ) {
-    DefaultMails.uri = Play.configuration.getString( "http.uri" ).get
-
     ModelStore.register( CubeModel, FrustumModel )
     if ( Play.current.mode == Mode.Dev )
       InitialData.insert()

@@ -1,4 +1,4 @@
-@(user: User)(body: Html)
+@(userOpt: Option[User])(body: Html)
 
 <html>
     <head>
@@ -15,22 +15,22 @@
         <header>
             <a href="@routes.Test.index" id="logo">Brain<span>flight</span></a>
             <dl id="user">
-                @if( user != null ) {
-					<dt>@user.name <span>(@user.email)</span></dt>
-	                <dd>
-                    <a href="@routes.Application.logout()">Logout</a>
-                	</dd>
-				} else {
-					<dd>
-                    <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
-                	</dd>
-				  	<dd>
-                    <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
-                	</dd>
-	                <dd>
-                    <a href="@routes.Application.login()">Login</a>
-                	</dd>
-				}
+            @userOpt.map{ user =>
+    					<dt>@user.name <span>(@user.email)</span></dt>
+	            <dd>
+                <a href="@routes.Application.logout()">Logout</a>
+              </dd>
+    				}.getOrElse{
+    					<dd>
+                <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
+              </dd>
+    				  <dd>
+                <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
+              </dd>
+    	        <dd>
+                <a href="@routes.Application.login()">Login</a>
+              </dd>
+    				}
             </dl>
         </header>
         <nav>

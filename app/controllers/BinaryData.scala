@@ -34,15 +34,19 @@ import models.DataSet
 object BinaryData extends Controller with Secured {
   override val DefaultAccessRole = Role( "user" )
 
-  def calculateBinaryData( dataSet: DataSet, cubeSize: Int, cubeCorner: Point3D, resolutionExponent: Int ): Future[Array[Byte]] = {
+  def calculateBinaryData( dataSet: DataSet, cube: Cube, resolutionExponent: Int ): Future[Array[Byte]] = {
     implicit val timeout = Timeout( 5 seconds ) // needed for `?` below
-    val figure = Cube( cubeCorner, cubeSize )
-    val coordinates = figure.calculateInnerPoints()
+    val coordinates = cube.calculateInnerPoints()
     val resolution = math.pow( 2, resolutionExponent ).toInt
 
     // rotate the model and generate the requested data
     val future = DataSetActor ? BlockRequest( dataSet, resolution, coordinates )
     future.mapTo[Array[Byte]]
+  }
+  
+  def calculateCube( position: Point3D, cubeSize: Int) = {
+    val cubeCorner = position.scale( x => x - x % cubeSize )
+    Cube( cubeCorner, cubeSize )
   }
 
   /**
@@ -59,8 +63,8 @@ object BinaryData extends Controller with Secured {
         } yield {
           message match {
             case RequestData( resolutionExponent, position ) =>
-              val cubeCorner = position.scale( x => x - x % cubeSize )
-              calculateBinaryData( dataSet, cubeSize, cubeCorner, resolutionExponent ).asPromise.map(
+              val cube = calculateCube( position, cubeSize )
+              calculateBinaryData( dataSet, cube, resolutionExponent ).asPromise.map(
                 result => Ok( result ) )
             case _ =>
               Akka.future {
@@ -69,7 +73,7 @@ object BinaryData extends Controller with Secured {
           }
         } ) getOrElse ( Akka.future { BadRequest( "Request body is to short: %d bytes".format( request.body.size ) ) } )
       }
-  }
+  }  
   /**
    * Handles a request for binary data via websockets. The content of a websocket
    * message is defined in the BinaryProtokoll.parseWebsocket function.
@@ -80,15 +84,16 @@ object BinaryData extends Controller with Secured {
    */
   def requestViaWebsocket( dataSetId: String, cubeSize: Int ) = AuthenticatedWebSocket[Array[Byte]]() { user =>
     request =>
+      val dataSetOpt = DataSet.findOneById( dataSetId )
       val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
         // first 4 bytes are always used as a client handle
         BinaryProtocoll.parseWebsocket( in ).map {
           case message @ RequestData( resolutionExponent, position ) =>
-            val cubeCorner = position.scale( x => x - x % cubeSize )
+            val cube = calculateCube( position, cubeSize )
             for {
-              dataSet <- DataSet.findOneById( dataSetId )
-              result <- calculateBinaryData( dataSet, cubeSize, cubeCorner, resolutionExponent )
+              dataSet <- dataSetOpt
+              result <- calculateBinaryData( dataSet, cube, resolutionExponent )
             } {
               output.push( message.handle ++ result )
             }

@@ -21,7 +21,7 @@ object Secured {
    * Key used to store authentication information in the client cookie
    */
   val SessionInformationKey = "userId"
-
+    
   /**
    * Creates a map which can be added to a cookie to set a session
    */
@@ -37,14 +37,14 @@ trait Secured {
    * Defines the access role which is used if no role is passed to an
    * authenticated action
    */
-  val DefaultAccessRole: Option[Role] = None
+  def DefaultAccessRole: Option[Role] = None
 
   /**
    * Defines the default permission used for authenticated actions if not
    * specified otherwise
    */
-  val DefaultAccessPermission: Option[Permission] = None
-
+  def DefaultAccessPermission: Option[Permission] = None
+    
   /**
    * Tries to extract the user from a request
    */

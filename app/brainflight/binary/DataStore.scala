@@ -1,6 +1,4 @@
 package brainflight.binary
-import play.api.Play.current
-import play.api.Play
 import brainflight.tools.geometry.Point3D
 import models.DataSet
 
@@ -31,7 +29,7 @@ abstract class DataStore {
    *  
    *  where DATAPATH, DATASETID, RESOLUTION, X, Y and Z are parameters.
    */
-  def createFilename( dataSet: DataSet, resolution: Int, point: Point3D ): String = {
+  def createFilename( dataSet: DataSet, resolution: Int, point: Point3D ) =
     "%s/%d/x%04d/y%04d/z%04d/%s_mag%d_x%04d_y%04d_z%04d.raw".format( 
         dataSet.baseDir,
         resolution, 
@@ -39,5 +37,4 @@ abstract class DataStore {
         dataSet.name, 
         resolution, 
         point.x, point.y, point.z )
-  }
 }

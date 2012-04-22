@@ -15,7 +15,7 @@ object Game extends Controller with Secured{
     val dataSet = DataSet.default
     val result = Json.obj(
         "dataSet" -> Json.obj(
-          "id" -> dataSet._id.toString,
+          "id" -> dataSet.id,
           "resolutions" -> dataSet.supportedResolutions
         )
     )

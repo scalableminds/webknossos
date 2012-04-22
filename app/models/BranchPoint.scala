@@ -1,7 +1,6 @@
 package models
 
-case class BranchPoint(
-  matrix: TransformationMatrix ) extends Origin
+case class BranchPoint( matrix: TransformationMatrix ) extends Origin
 
 object BranchPoint {
 

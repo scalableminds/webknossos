@@ -6,6 +6,7 @@ import models.User
 import play.api.mvc.Action
 import play.api.mvc.Request
 import play.api.libs.json.Json._
+import play.api.libs.json.JsValue
 import play.api.libs.json._
 import models.Role
 import models.UserConfiguration
@@ -20,11 +21,13 @@ object UserController extends Controller with Secured{
       else 
         BadRequest( "Unknown validation key." )
   }
+ 
   
   def saveSettings = Authenticated(parser = parse.json){
     implicit request =>
-      request.body.asOpt[Map[String,String]] map { settings =>
-        User.save( request.user.copy( configuration = UserConfiguration(settings) ) )
+      request.body.asOpt[JsObject] map { settings =>
+        val fields = settings.fields filter UserConfiguration.isValidSetting
+        User.save( request.user.copy( configuration = UserConfiguration( fields.toMap ) ) )
         Ok
       } getOrElse ( BadRequest )
   }

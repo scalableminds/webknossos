@@ -22,14 +22,15 @@ import models.Origin
  * Time: 11:27
  */
 object Route extends Controller with Secured {
-  override val DefaultAccessRole = Role( "user" )
+  override val DefaultAccessRole = Role.User
 
   val PointValue = 0f
   val BranchPushVallue = 1f
   val BranchPopValue = 2f
   
-  def initialize( dataSetId: String ) = Authenticated() { user =>
+  def initialize( dataSetId: String ) = Authenticated{
     implicit request =>
+      val user = request.user
       val originOption:Option[Origin] = 
         (user.useBranchPointAsOrigin) orElse (RouteOrigin.useLeastUsed( dataSetId ))
       ( for {
@@ -48,18 +49,18 @@ object Route extends Controller with Secured {
         )
         
         Ok( data )
-      } ) getOrElse NotFound( "Couldn't open new route." )
+      } ) getOrElse BadRequest( "Couldn't open new route." )
   }
   /**
    *
    */
-  def blackBox( id: String ) = Authenticated( parser = parse.raw( 1024 * 1024 ) ) { user =>
+  def blackBox( id: String ) = Authenticated( parser = parse.raw( 1024 * 1024 ) ) {
     implicit request =>
-
+      val user = request.user
       ( for {
         route <- TrackedRoute.findOpenBy( id )
         buffer <- request.body.asBytes( 1024 * 1024 )
-        if ( route.userId == user._id )
+        if ( route.userId == request.user._id )
       } yield {
         var points = Vector.empty[Vector3I]
         
@@ -100,13 +101,13 @@ object Route extends Controller with Secured {
       } ) getOrElse BadRequest( "No open route found or byte array invalid." )
 
   }
-  def list = Authenticated() { user =>
+  def list = Authenticated{
     implicit request =>
-      val routes = TrackedRoute.findByUser( user )
+      val routes = TrackedRoute.findByUser( request.user )
       Ok( toJson( routes.map( _.points ) ))
   }
   
-  def getRoute( id: String ) = Authenticated() { user =>
+  def getRoute( id: String ) = Authenticated{
     implicit request =>
       TrackedRoute.findOneByID( new ObjectId( id ) ).map( route =>
         Ok( toJson( route.points ) )

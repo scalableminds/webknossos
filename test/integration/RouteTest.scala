@@ -9,6 +9,8 @@ import play.api.libs.json.Json._
 import scala.util.Random
 import play.api.mvc._
 import models.DataSet
+import brainflight.security.Secured
+import util.ExtendedFakeRequest._
 
 object RouteTest extends Specification {
   sequential
@@ -22,7 +24,7 @@ object RouteTest extends Specification {
         val dataId = DataSet.default.id
         val Some( result ) = routeAndCall( FakeRequest(
           GET,
-          "/route/initialize?dataSetId="+dataId) )
+          "/route/initialize?dataSetId="+dataId).authenticated() )
         status( result ) must be equalTo( OK )
         contentType( result ) must equalTo( Some( "application/json" ) )
         /* json should look like 
@@ -48,7 +50,7 @@ object RouteTest extends Specification {
     "handle long POST requests" in {
       running( FakeApplication() ) {
         val r = new Random
-        var s = List.fill(100000)(List(123,456,789))
+        var s = List.fill(100000)(0)
           //( ( 1 to 100000 ) map { i =>
           //  List( r.nextDouble * 100, r.nextDouble * 100, r.nextDouble * 100 )
           //} ).toList
@@ -57,7 +59,7 @@ object RouteTest extends Specification {
           POST,
           "/route/"+routeID,
           FakeHeaders(),
-          toJson( s ) ) )
+          RawBuffer( memoryThreshold = 1024, s.map( _.toByte ).toArray ) ).authenticated() )
         status( result ) must not be equalTo( REQUEST_ENTITY_TOO_LARGE )
         status( result ) must be equalTo( OK )
       }
@@ -67,7 +69,7 @@ object RouteTest extends Specification {
       running( FakeApplication() ) {
         val Some( result ) = routeAndCall( FakeRequest(
           GET,
-          "/route/"+routeID) )
+          "/route/"+routeID).authenticated() )
         status( result ) must be equalTo( OK )
         contentType( result ) must equalTo( Some( "application/json" ) )
       }

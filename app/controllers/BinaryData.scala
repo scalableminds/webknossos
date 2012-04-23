@@ -8,12 +8,12 @@ import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import play.api._
 import play.api.mvc._
+import play.api.mvc.AsyncResult
 import play.api.data._
 import play.api.libs.json.Json._
 import play.api.Play.current
 import play.api.libs.iteratee._
 import Input.EOF
-import play.api.libs.concurrent._
 import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
 import play.libs.Akka._
@@ -32,7 +32,7 @@ import models.DataSet
  */
 
 object BinaryData extends Controller with Secured {
-  override val DefaultAccessRole = Role( "user" )
+  override val DefaultAccessRole = Role.User
 
   def calculateBinaryData( dataSet: DataSet, cube: Cube, resolutionExponent: Int ): Future[Array[Byte]] = {
     implicit val timeout = Timeout( 5 seconds ) // needed for `?` below
@@ -53,8 +53,7 @@ object BinaryData extends Controller with Secured {
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
-  def requestViaAjax( dataSetId: String, cubeSize: Int ) = Authenticated( parser = parse.raw ) { user =>
-    implicit request =>
+  def requestViaAjax( dataSetId: String, cubeSize: Int ) = Authenticated( parser = parse.raw ) { implicit request =>
       Async {
         ( for {
           payload <- request.body.asBytes()

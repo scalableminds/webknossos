@@ -16,6 +16,10 @@ import models.{ Role, Permission }
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
 
+case class AuthenticatedRequest[A](
+  val user: User, request: Request[A]
+) extends WrappedRequest(request)
+
 object Secured {
   /**
    * Key used to store authentication information in the client cookie
@@ -83,42 +87,23 @@ trait Secured {
    *   }
    *
    */
+
   def Authenticated[A](
-    parser: BodyParser[A] = BodyParsers.parse.anyContent,
+    parser: BodyParser[A],
     role: Option[Role] = DefaultAccessRole,
-    permission: Option[Permission] = DefaultAccessPermission )( f: => User => Request[A] => Result ): Action[( Action[A], A )] = Authenticated( userId, role, permission, onUnauthorized ) {
-    user =>
-      Action( parser )( request => f( user )( request ) )
+    permission: Option[Permission] = DefaultAccessPermission )(f: AuthenticatedRequest[A] => Result) = {
+      Action(parser) { request =>
+        maybeUser(request).map { user =>
+           if ( hasAccess( user, role, permission ) ) 
+             f(AuthenticatedRequest(user, request))
+           else
+             Forbidden
+        }.getOrElse( onUnauthorized(request) )      
+    }
   }
 
-  def Authenticated[A](
-    username: RequestHeader => Option[String],
-    role: Option[Role],
-    permission: Option[Permission],
-    onUnauthorized: RequestHeader => Result )( action: User => Action[A] ): Action[( Action[A], A )] = {
-
-    val authenticatedBodyParser = BodyParser { request =>
-      maybeUser( request ).map { user =>
-        if ( ( role.isEmpty || user.hasRole( role.get ) ) &&
-          ( permission.isEmpty || user.hasPermission( permission.get ) ) ) {
-
-          val innerAction = action( user )
-          innerAction.parser( request ).mapDone { body =>
-            body.right.map( innerBody => ( innerAction, innerBody ) )
-          }
-        } else {
-          val input: Input[Array[Byte]] = Input.Empty
-          Done( Left( Forbidden ), input )
-        }
-      }.getOrElse {
-        Done( Left( onUnauthorized( request ) ), Input.Empty )
-      }
-    }
-
-    Action( authenticatedBodyParser ) { request =>
-      val ( innerAction, innerBody ) = request.body
-      innerAction( request.map( _ => innerBody ) )
-    }
+  def Authenticated(f: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent]  = {
+    Authenticated(BodyParsers.parse.anyContent)(f)
   }
 
   def AuthenticatedWebSocket[A](

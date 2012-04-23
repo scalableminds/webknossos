@@ -19,6 +19,13 @@ Controller =
 		@initGamepad()
 		@initDeviceOrientation()
 
+
+		Model.User.initialize().then(
+			(data) =>
+				alert(JSON.stringify data)
+		)
+
+
 		Model.Route.initialize().then(
 			(matrix) =>
 					
@@ -127,6 +134,7 @@ Controller =
 	#Customize Options
 	setMoveValue : (value) ->
 		moveValue = value
+		User.Configuration.push()		
 
 	setRotateValue : (value) ->
 		rotateValue = value				

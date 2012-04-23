@@ -16,6 +16,8 @@ case class UserConfiguration(
 )
 
 object UserConfiguration {
+  val MaxSettings = 50
+  
   val defaultConfiguration = UserConfiguration( 
     Map("mouseActive" -> JsBoolean(true))  
   )

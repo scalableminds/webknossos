@@ -82,3 +82,5 @@ User.Configuration =
 		).always(-> deferred.resolve())
 		
 		deferred.promise()		
+		
+User

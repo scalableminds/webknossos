@@ -11,7 +11,7 @@ Controller =
 
 	initialize : (@canvas) ->
 	
-		Model.User.initialize().then(
+		Model.User.Configuration.initialize().then(
 			(data) =>
 				@initMouse() if data.mouseActive is true
 				@initKeyboard() if data.keyboardActive is true
@@ -151,15 +151,21 @@ Controller =
 		User.Configuration.push()					
 
 	setMouseRotateValue : (value) ->
-		User.Configuration.rotateValue = (Number) value
+		User.Configuration.mouseRotateValue = (Number) value
 		User.Configuration.push()					
 
 	setMouseInversionX : (value) ->
-		User.Configuration.mouseInversionX = (Number) value
+		if value is true
+			User.Configuration.mouseInversionX = 1
+		else
+			User.Configuration.mouseInversionX = -1
 		User.Configuration.push()					
 
 	setMouseInversionY : (value) ->
-		User.Configuration.mouseInversionY = (Number) value
+		if value is true
+			User.Configuration.mouseInversionY = 1
+		else
+			User.Configuration.mouseInversionY = -1
 		User.Configuration.push()					
 
 
@@ -191,7 +197,7 @@ Controller =
 			@initGamepad()		
 
 	setMotionSensorActivity : (value) ->
-		User.Configuration.motionsensorActive = value	
+		User.Configuration.motionsensorActive = value
 		User.Configuration.push()		
 		if value is false
 			@input.deviceorientation.unbind()

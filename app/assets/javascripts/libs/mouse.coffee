@@ -10,12 +10,6 @@ class Mouse
 	# There is even support for the new pointerlock 
 	# (mouse lock) API for webkit browser. 
 
-	# rotateValue = 0.004		
-	# inversion = {
-	# 	x : 1
-	# 	y : 1
-	# }
-
 	buttonDown : false
 	doubleClicked : false
 	
@@ -30,16 +24,13 @@ class Mouse
 		x : $.noop()
 		y : $.noop() 
 
-	# inversion : 
-	# 	x : 1
-	# 	y : 1
-
 
 	###
 	#@param {Object} target : DOM Element
 	#	HTML object where the mouse attaches the events
 	###
 	constructor : (@target) ->
+		# @User = User
 	
 		navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
@@ -123,18 +114,3 @@ class Mouse
 		else
 			@locked = false
 			navigator.pointer.unlock()
-
-	# setRotateValue : (value) ->
-	# 	rotateValue = value
-	# 
-	# setInversionX : (value) ->
-	# 		if value is true
-	# 			inversion.x = -1
-	# 		else
-	# 			inversion.x = 1		
-	# 
-	# setInversionY : (value) ->
-	# 		if value is true
-	# 			inversion.y = -1
-	# 		else
-	# 			inversion.y = 1

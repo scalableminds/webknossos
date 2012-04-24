@@ -23,6 +23,7 @@ Controller =
 				$("#mouseRotateValue")[0].value = data.mouseRotateValue
 				$("#moveValue")[0].value = data.moveValue
 
+				$("#mouseInversionX")[0].checked = data.mouseInversionX
 				$("#mouseInversionY")[0].checked = data.mouseInversionY
 				$("#keyboardActive")[0].checked = data.keyboardActive
 				$("#mouseActive")[0].checked = data.mouseActive
@@ -138,27 +139,27 @@ Controller =
 
 	#Customize Options
 	setMoveValue : (value) ->
-		User.Configuration.moveValue = value
+		User.Configuration.moveValue = (Number) value
 		User.Configuration.push()		
 
 	setRotateValue : (value) ->
-		User.Configuration.rotateValue = value	
+		User.Configuration.rotateValue = (Number) value	
 		User.Configuration.push()		
 
 	setScaleValue : (value) ->
-		User.Configuration.scaleValue = value	
+		User.Configuration.scaleValue = (Number) value	
 		User.Configuration.push()					
 
 	setMouseRotateValue : (value) ->
-		User.Configuration.setRotateValue value
+		User.Configuration.rotateValue = (Number) value
 		User.Configuration.push()					
 
 	setMouseInversionX : (value) ->
-		User.Configuration.setInversionX value
+		User.Configuration.mouseInversionX = (Number) value
 		User.Configuration.push()					
 
 	setMouseInversionY : (value) ->
-		User.Configuration.setInversionY value
+		User.Configuration.mouseInversionY = (Number) value
 		User.Configuration.push()					
 
 

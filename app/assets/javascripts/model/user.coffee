@@ -5,11 +5,13 @@ libs/request : request
 # This takes care of the userdate. 
 User ?= {}
 
+# Debounce for POST User.Configuration
+DEBOUNCE_TIME = 3000
 
 User.Configuration = 
 
 	# userdata
-	# default values are defined by server
+	# default values are defined in server
 	moveValue : null
 	rotateValue : null
 	scaleValue : null
@@ -24,7 +26,7 @@ User.Configuration =
 
 	initialize : ->
 		unless @configDeferred
-			
+			@push =	_.debounce @pushImpl, DEBOUNCE_TIME			
 			@configDeferred = $.Deferred()
 
 			@configDeferred.fail =>
@@ -57,7 +59,9 @@ User.Configuration =
 		
 			@configDeferred.promise()
 
-	push : ->
+	push : null
+
+	pushImpl : ->
 		deferred = $.Deferred()
 			
 		request(
@@ -82,5 +86,5 @@ User.Configuration =
 		).always(-> deferred.resolve())
 		
 		deferred.promise()		
-		
+
 User

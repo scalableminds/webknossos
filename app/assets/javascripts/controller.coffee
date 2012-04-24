@@ -23,8 +23,10 @@ Controller =
 				$("#mouseRotateValue")[0].value = data.mouseRotateValue
 				$("#moveValue")[0].value = data.moveValue
 
-				$("#mouseInversionX")[0].checked = data.mouseInversionX
-				$("#mouseInversionY")[0].checked = data.mouseInversionY
+				$("#mouseInversionX")[0].checked = true if data.mouseInversionX is 1
+				$("#mouseInversionY")[0].checked = true if data.mouseInversionY is 1
+				$("#mouseInversionX")[0].checked = false if data.mouseInversionX is -1
+				$("#mouseInversionY")[0].checked = false if data.mouseInversionY is -1				
 				$("#keyboardActive")[0].checked = data.keyboardActive
 				$("#mouseActive")[0].checked = data.mouseActive
 				$("#gamepadActive")[0].checked = data.gamepadActive

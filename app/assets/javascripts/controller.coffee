@@ -6,23 +6,28 @@ input : Input
 helper : Helper
 ###
 
-rotateValue = 0.01
-scaleValue = 0.05
 
 Controller = 
 
 	initialize : (@canvas) ->
-		
-		@initMouse() 
-		@initKeyboard()
-		@initGamepad()
-		@initDeviceOrientation()
-
-
+	
 		Model.User.initialize().then(
 			(data) =>
+				@initMouse() if data.mouseActive is true
+				@initKeyboard() if data.keyboardActive is true
+				@initGamepad() if data.gamepadActive is true
+				@initMotionsensor() if data.motionsensorActive is true
+					
 				$("#moveValue")[0].value = data.moveValue
+				$("#rotateValue")[0].value = data.rotateValue
+				$("#mouseRotateValue")[0].value = data.mouseRotateValue
+				$("#moveValue")[0].value = data.moveValue
+
+				$("#mouseInversionY")[0].checked = data.mouseInversionY
 				$("#keyboardActive")[0].checked = data.keyboardActive
+				$("#mouseActive")[0].checked = data.mouseActive
+				$("#gamepadActive")[0].checked = data.gamepadActive
+				$("#motionsensorActive")[0].checked = data.motionsensorActive
 		)
 
 
@@ -77,16 +82,16 @@ Controller =
 			"shift + space" : -> View.move [0, 0, -User.Configuration.moveValue]
 
 			#Rotate in distance
-			"left"  : -> View.yawDistance rotateValue
-			"right" : -> View.yawDistance -rotateValue
-			"up"    : -> View.pitchDistance -rotateValue
-			"down"  : -> View.pitchDistance rotateValue
+			"left"  : -> View.yawDistance User.Configuration.rotateValue
+			"right" : -> View.yawDistance -User.Configuration.rotateValue
+			"up"    : -> View.pitchDistance -User.Configuration.rotateValue
+			"down"  : -> View.pitchDistance User.Configuration.rotateValue
 			
 			#Rotate at centre
-			"shift + left"  : -> View.yaw rotateValue
-			"shift + right" : -> View.yaw -rotateValue
-			"shift + up"    : -> View.pitch -rotateValue
-			"shift + down"  : -> View.pitch rotateValue
+			"shift + left"  : -> View.yaw User.Configuration.rotateValue
+			"shift + right" : -> View.yaw -User.Configuration.rotateValue
+			"shift + up"    : -> View.pitch -User.Configuration.rotateValue
+			"shift + down"  : -> View.pitch User.Configuration.rotateValue
 
 			#misc keys
 			"n" : -> Helper.toggle()
@@ -113,7 +118,7 @@ Controller =
 
 		)
 
-	initDeviceOrientation : ->
+	initMotionsensor : ->
 		@input.deviceorientation = new Input.Deviceorientation(
 			"x"  : View.yawDistance
 			"y" : View.pitchDistance
@@ -137,23 +142,29 @@ Controller =
 		User.Configuration.push()		
 
 	setRotateValue : (value) ->
-		rotateValue = value				
+		User.Configuration.rotateValue = value	
+		User.Configuration.push()		
 
 	setScaleValue : (value) ->
-		scaleValue = value				
+		User.Configuration.scaleValue = value	
+		User.Configuration.push()					
 
 	setMouseRotateValue : (value) ->
-		@input.mouse.setRotateValue value if @input.mouse?
+		User.Configuration.setRotateValue value
+		User.Configuration.push()					
 
 	setMouseInversionX : (value) ->
-		@input.mouse.setInversionX value if @input.mouse?
+		User.Configuration.setInversionX value
+		User.Configuration.push()					
 
 	setMouseInversionY : (value) ->
-		@input.mouse.setInversionY value if @input.mouse?
+		User.Configuration.setInversionY value
+		User.Configuration.push()					
 
 
 	setMouseActivity : (value) ->
 		User.Configuration.mouseActive = value
+		User.Configuration.push()				
 		if value is false
 			@input.mouse.unbind()
 			@input.mouse = null
@@ -162,6 +173,7 @@ Controller =
 
 	setKeyboardActivity : (value) ->
 		User.Configuration.keyboardActive = value	
+		User.Configuration.push()		
 		if value is false
 			@input.keyboard.unbind()
 			@input.keyboard = null
@@ -169,6 +181,8 @@ Controller =
 			@initKeyboard()
 
 	setGamepadActivity : (value) ->
+		User.Configuration.gamepadActive = value	
+		User.Configuration.push()		
 		if value is false
 			@input.gamepad.unbind()
 			@input.gamepad = null
@@ -176,9 +190,11 @@ Controller =
 			@initGamepad()		
 
 	setMotionSensorActivity : (value) ->
+		User.Configuration.motionsensorActive = value	
+		User.Configuration.push()		
 		if value is false
 			@input.deviceorientation.unbind()
 			@input.deviceorientation = null
 		else
-			@initDeviceOrientation()					
+			@initMotionsensor()					
 

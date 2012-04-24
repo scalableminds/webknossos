@@ -54,7 +54,7 @@ User.Configuration =
 			url    : "/user/configuration"
 			method : 'POST'
 			contentType : "application/json"
-			data   : { mouseActive : "false", moveValue : "2" }
+			data   : { mouseActive : false, moveValue : 2 }
 		).fail( =>
 			
 			console.log "could'nt save userdata"

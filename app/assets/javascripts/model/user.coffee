@@ -8,17 +8,18 @@ User ?= {}
 
 User.Configuration = 
 
-	#default userdata
-	moveValue : 1
-	rotateValue : 0.01
-	scaleValue : 0.05
-	mouseRotateValue : 0.004
-	mouseInversionX : 1
-	mouseInversionY : 1
-	mouseActive : true
-	keyboardActive : true
-	gamepadActive : false
-	motionsensorActive : false
+	# userdata
+	# default values are defined by server
+	moveValue : null
+	rotateValue : null
+	scaleValue : null
+	mouseRotateValue : null
+	mouseInversionX : null
+	mouseInversionY : null
+	mouseActive : null
+	keyboardActive : null
+	gamepadActive : null
+	motionsensorActive : null
 
 
 	initialize : ->
@@ -34,7 +35,16 @@ User.Configuration =
 				(data) =>
 					try
 						data = JSON.parse data
-
+						{ @moveValue, 
+							@rotateValue, 
+							@scaleValue, 
+							@mouseRotateValue, 
+							@mouseInversionX,
+							@mouseInversionY,
+							@mouseActive, 
+							@keyboardActive,
+							@gamepadActive,
+							@motionsensorActive } = data
 
 					catch ex
 						@configDeferred.reject(ex)
@@ -54,7 +64,17 @@ User.Configuration =
 			url    : "/user/configuration"
 			method : 'POST'
 			contentType : "application/json"
-			data   : { mouseActive : false, moveValue : 2 }
+			data   : { 
+				moveValue : @moveValue,
+				rotateValue : @rotateValue,
+				scaleValue : @scaleValue,
+				mouseRotateValue : @mouseRotateValue,
+				mouseInversionX : @mouseInversionX,
+				mouseInversionY : @mouseInversionY,
+				mouseActive : @mouseActive,
+				keyboardActive : @keyboardActive,
+				gamepadActive : @gamepadActive,
+				motionsensorActive : @motionsensorActive }
 		).fail( =>
 			
 			console.log "could'nt save userdata"

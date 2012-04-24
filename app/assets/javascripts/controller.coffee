@@ -6,7 +6,6 @@ input : Input
 helper : Helper
 ###
 
-moveValue = 1
 rotateValue = 0.01
 scaleValue = 0.05
 
@@ -22,7 +21,8 @@ Controller =
 
 		Model.User.initialize().then(
 			(data) =>
-				alert(JSON.stringify data)
+				$("#moveValue")[0].value = data.moveValue
+				$("#keyboardActive")[0].checked = data.keyboardActive
 		)
 
 
@@ -69,12 +69,12 @@ Controller =
 			"k" : -> View.scaleTrianglesPlane scaleValue
 
 			#Move
-			"w" : -> View.move [0, moveValue, 0]
-			"s" : -> View.move [0, -moveValue, 0]
-			"a" : -> View.move [moveValue, 0, 0]
-			"d" : -> View.move [-moveValue, 0, 0]
-			"space" : -> View.move [0, 0, moveValue]
-			"shift + space" : -> View.move [0, 0, -moveValue]
+			"w" : -> View.move [0, User.Configuration.moveValue, 0]
+			"s" : -> View.move [0, -User.Configuration.moveValue, 0]
+			"a" : -> View.move [User.Configuration.moveValue, 0, 0]
+			"d" : -> View.move [-User.Configuration.moveValue, 0, 0]
+			"space" : -> View.move [0, 0, User.Configuration.moveValue]
+			"shift + space" : -> View.move [0, 0, -User.Configuration.moveValue]
 
 			#Rotate in distance
 			"left"  : -> View.yawDistance rotateValue
@@ -105,8 +105,8 @@ Controller =
 	# for more buttons look at Input.Gamepad
 	initGamepad : ->
 		@input.gamepad = new Input.Gamepad(
-				"ButtonA" : -> View.move [0, 0, moveValue]
-				"ButtonB" : -> View.move [0, 0, -moveValue]
+				"ButtonA" : -> View.move [0, 0, User.Configuration.moveValue]
+				"ButtonB" : -> View.move [0, 0, -User.Configuration.moveValue]
 				"LeftStickX" : View.yawDistance
 				"LeftStickY" : View.pitchDistance
 
@@ -133,7 +133,7 @@ Controller =
 
 	#Customize Options
 	setMoveValue : (value) ->
-		moveValue = value
+		User.Configuration.moveValue = value
 		User.Configuration.push()		
 
 	setRotateValue : (value) ->
@@ -153,6 +153,7 @@ Controller =
 
 
 	setMouseActivity : (value) ->
+		User.Configuration.mouseActive = value
 		if value is false
 			@input.mouse.unbind()
 			@input.mouse = null
@@ -160,6 +161,7 @@ Controller =
 			@initMouse()
 
 	setKeyboardActivity : (value) ->
+		User.Configuration.keyboardActive = value	
 		if value is false
 			@input.keyboard.unbind()
 			@input.keyboard = null
@@ -173,7 +175,7 @@ Controller =
 		else
 			@initGamepad()		
 
-	setDeviceOrientationActivity : (value) ->
+	setMotionSensorActivity : (value) ->
 		if value is false
 			@input.deviceorientation.unbind()
 			@input.deviceorientation = null

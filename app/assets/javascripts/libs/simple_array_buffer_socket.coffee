@@ -1,5 +1,5 @@
 ### define
-"libs/request" : request
+libs/request : request
 ###
 
 class SimpleArrayBufferSocket

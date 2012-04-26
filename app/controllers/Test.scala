@@ -15,11 +15,11 @@ import models.Role
  */
 object Test extends Controller with Secured {
   
-  override val DefaultAccessRole = Role( "user" )
+  override val DefaultAccessRole = Role.User
   
-  def index = Authenticated() { user =>
+  def index = Authenticated{
     implicit request =>
-      Ok( html.test.index( user ) )
+      Ok( html.test.index( request.user ) )
   }
 
   def demo = Action { implicit request =>

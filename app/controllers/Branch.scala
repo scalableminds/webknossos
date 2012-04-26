@@ -14,17 +14,15 @@ import play.api.libs.json._
 import models.TrackedRoute
 
 object Branch extends Controller with Secured {
-  override val DefaultAccessRole = Role( "user" )
+  override val DefaultAccessRole = Role.User
 
-  def list = Authenticated() { user =>
-    implicit request =>
-      val points: List[List[Float]] = user.branchPoints.map(_.matrix.value)
+  def list = Authenticated{ implicit request =>
+      val points = request.user.branchPoints.map(_.matrix.value)
       Ok( toJson( points ) )
   }
 
-  def clear = Authenticated() { user =>
-    implicit request =>
-      User.save( user.copy( branchPoints = Nil ) )
+  def clear = Authenticated{ implicit request =>
+      User.save( request.user.copy( branchPoints = Nil ) )
       Ok
   }
 }

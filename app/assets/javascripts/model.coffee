@@ -1,10 +1,11 @@
 ### define 
-"model/game" : Game
-"model/binary" : Binary
-"model/shader" : Shader
-"model/route" : Route
-"model/mesh" : Mesh
-"model/trianglesplane" : Trianglesplane
+model/game : Game
+model/binary : Binary
+model/shader : Shader
+model/route : Route
+model/mesh : Mesh
+model/trianglesplane : Trianglesplane
+model/user : User
 ###
 
 # This is the model. It takes care of the data including the 
@@ -13,4 +14,4 @@
 # All public operations are **asynchronous**. We return a promise
 # which you can react on.
 
-Model = { Game, Binary, Shader, Route, Mesh, Trianglesplane }
+Model = { Game, Binary, Shader, Route, Mesh, Trianglesplane, User }

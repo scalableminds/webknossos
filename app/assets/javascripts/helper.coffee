@@ -1,5 +1,5 @@
 ### define
-"view" : View
+view : View
 ###
 
 Helper =

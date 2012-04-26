@@ -3,6 +3,7 @@ package models
 import com.mongodb.casbah.commons.Imports._
 import com.novus.salat._
 import com.mongodb.casbah.MongoConnection
+import play.Configuration
 
 package object context {
   object DB {
@@ -12,15 +13,19 @@ package object context {
       import play.api.Play
       import play.api.Play.current
 
-      val conn = MongoConnection(
-          Play.configuration.getString("mongo.url").getOrElse("127.0.0.1"), 
-          Play.configuration.getInt("mongo.port").getOrElse(27017))(
-              Play.configuration.getString("mongo.dbname").getOrElse("salat-dao"))
+      val conf = Play.configuration
+      
+      val url = conf.getString("mongo.url").getOrElse("127.0.0.1")
+      val port = conf.getInt("mongo.port").getOrElse(27017)
+      val dbName = conf.getString("mongo.dbname").getOrElse("salat-dao")
+     
+      val connection = MongoConnection( url, port )( dbName)
+      
       for {
-          dbuser <- Play.configuration.getString("mongo.user")
-          dbpasswd <- Play.configuration.getString("mongo.password")
-        } conn.authenticate(dbuser, dbpasswd)
-      conn
+          dbuser <- conf.getString("mongo.user")
+          dbpasswd <- conf.getString("mongo.password")
+        } connection.authenticate(dbuser, dbpasswd)
+      connection
     }
   }
 

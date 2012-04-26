@@ -1,7 +1,7 @@
 ### define
-"libs/keyboard.0.2.2.min" : KeyboardJS
-"libs/mouse" : MouseLib
-"libs/gamepad" : GamepadJS
+libs/keyboard.0.2.2.min : KeyboardJS
+libs/mouse : MouseLib
+libs/gamepad : GamepadJS
 ###
 
 Input = {}

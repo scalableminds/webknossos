@@ -23,14 +23,24 @@ object Application extends Controller {
     Ok( html.index() )
   }
 
-  val registerForm: Form[( String, String, String )] = Form(
-    mapping(
-      "email" -> email,
-      "name" -> text,
-      "password" -> tuple(
-        "main" -> text,
-        "validation" -> text ).verifying( "Passwords don't match", pw => pw._1 == pw._2 ).verifying( "Password too short", pw => pw._1.length >= 6 ) )(
-        ( user, name, password ) => ( user, name, password._1 ) )( ( user ) => Some( ( user._1, user._2, ( "", "" ) ) ) ).verifying( "This email address is already in use", user => User.findLocalByEmail( user._1 ).isEmpty ) )
+  val registerForm: Form[( String, String, String )] = {
+    def registerFormApply( user: String, name: String, password: Tuple2[String, String] ) =
+      ( user, name, password._1 )
+    def registerFormUnapply( user: Tuple3[String, String, String] ) =
+      Some( ( user._1, user._2, ( "", "" ) ) )
+
+    val passwordField = tuple( "main" -> text, "validation" -> text )
+      .verifying( "Passwords don't match", pw => pw._1 == pw._2 )
+      .verifying( "Password too short", pw => pw._1.length >= 6 )
+
+    Form(
+      mapping(
+        "email" -> email,
+        "name" -> text,
+        "password" -> passwordField )( registerFormApply )( registerFormUnapply )
+        .verifying( "This email address is already in use",
+          user => User.findLocalByEmail( user._1 ).isEmpty ) )
+  }
 
   def register = Action {
     implicit request =>
@@ -49,8 +59,9 @@ object Application extends Controller {
             val user = User.create( email, name, password )
             val key = ValidationKey.createFor( user )
             Mailer ! Send( DefaultMails.registerMail( name, email, key ) )
-
-            Redirect( routes.Test.index ).withSession( Secured.createSession( user ) )
+            Redirect( routes.Test.index )
+              .flashing( "success" -> "Thanks for your registration!" )
+              .withSession( Secured.createSession( user ) )
           }
         } )
   }
@@ -77,10 +88,12 @@ object Application extends Controller {
   def authenticate = Action {
     implicit request =>
       loginForm.bindFromRequest.fold(
-        formWithErrors => BadRequest( html.login( formWithErrors ) ),
+        formWithErrors =>
+          BadRequest( html.login( formWithErrors ) ),
         userForm => {
           val user = User.findLocalByEmail( userForm._1 ).get
-          Redirect( routes.Test.index ).withSession( Secured.createSession( user ) )
+          Redirect( routes.Test.index )
+            .withSession( Secured.createSession( user ) )
         } )
   }
 
@@ -88,8 +101,9 @@ object Application extends Controller {
    * Logout and clean the session.
    */
   def logout = Action {
-    Redirect( routes.Application.login ).withNewSession.flashing(
-      "success" -> "You've been logged out" )
+    Redirect( routes.Application.login )
+      .withNewSession
+      .flashing("success" -> "You've been logged out" )
   }
 
   // -- Javascript routing

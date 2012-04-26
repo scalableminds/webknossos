@@ -5,24 +5,24 @@ import java.net.URLEncoder
 import play.api.libs.ws.WS
 import com.restfb.BaseFacebookClient
 import com.restfb.DefaultFacebookClient
-import play.api.Play.current
 import play.api.Play
 import brainflight.security.Secured
 
 object FacebookLogin extends Controller {
+  val conf = Play.current.configuration
   
   val REDIRECT_URL = 
-    Play.configuration.getString("facebook.redirectHost").getOrElse("http://localhost") + "/login/fb/code"
+    conf.getString("facebook.redirectHost").getOrElse("http://localhost") + "/login/fb/code"
     
   val FACEBOOK = "https://www.facebook.com"
 
   val PERMISSIONS = "email"
 
   val FBAppId =
-    Play.configuration.getString( "facebook.appId" ) get
+    conf.getString( "facebook.appId" ) get
 
   val FBAppSecret =
-    Play.configuration.getString( "facebook.appSecret" ) get
+    conf.getString( "facebook.appSecret" ) get
 
   val accesTokenRegex = "(?<=access_token=)([^&]*)"r
 

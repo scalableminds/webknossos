@@ -1,5 +1,5 @@
 ### define
-"libs/gl_engine/geometry" : Geometry
+libs/gl_engine/geometry : Geometry
 ###
 
 class Trianglesplane extends Geometry

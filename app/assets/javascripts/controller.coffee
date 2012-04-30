@@ -24,15 +24,10 @@ Controller =
 					
 				View.setMatrix(matrix)
 
-				GeometryFactory.createMesh("coordinateAxes", "mesh").done (mesh) ->
-					mesh.relativePosition.x = 100
-					View.addGeometry mesh
-					
-				GeometryFactory.createMesh("crosshair", "mesh_noLight").done (mesh) -> 	
-					View.addGeometry mesh
+				GeometryFactory.createMesh("coordinateAxes.js", -100, 0, 0)
+				GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
+				GeometryFactory.createTrianglesplane(128, 0)
 
-				GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
-					View.addGeometry trianglesplane
 			
 			->
 				alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")

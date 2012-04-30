@@ -1,14 +1,9 @@
 varying vec4 aColor;
 
-attribute vec3 aVertex;
-
 attribute vec4 interpolationBuffer0;
 attribute vec4 interpolationBuffer1;
 attribute vec3 interpolationBufferDelta;
 
-uniform mat4 modelViewMatrix;
-uniform mat4 projectionMatrix;
-uniform mat4 normalMatrix;
 
 void main(void) { 
 
@@ -33,6 +28,5 @@ void main(void) {
   	aColor = vec4(0.0, 0.0, 0.0, 1.0);
   }
 
-	vec4 ecPos4 = modelViewMatrix * vec4(aVertex, 1.0); 
-	gl_Position = projectionMatrix * ecPos4; 
+	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); ; 
 }

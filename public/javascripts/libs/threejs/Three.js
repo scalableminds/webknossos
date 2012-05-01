@@ -14050,7 +14050,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 		if ( ! geometryGroup.__inittedArrays ) {
 
-			console.log( object );
+			// console.log( object );
 			return;
 
 		}

@@ -105,9 +105,10 @@ View =
 
 		@updateTrianglesplane()
 
-		c = currentMatrix
-		@scene.matrix.set(c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7], c[8], c[9], c[10], c[11], c[12], c[13], c[14], c[15])
-		@scene.updateMatrix()
+		# MAth.floor WAT?
+		position = cam.getGlobalPos()
+		p = [Math.floor(position[0]), Math.floor(position[1]), Math.floor(position[2])]
+		$("#status").html "#{p}<br />ZoomStep #{cam.getZoomStep()}<br />" 
 
 		lastMatrix = currentMatrix
 		@renderer.render @scene, @camera

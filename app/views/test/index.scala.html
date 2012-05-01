@@ -58,9 +58,9 @@
 
     if (Modernizr.webgl)
       Modernizr.load([
-        "@routes.Assets.at("javascripts/brainflight.js")",
         "@routes.Assets.at("javascripts/libs/threejs/Three.js")",
-        "@routes.Assets.at("javascripts/libs/threejs/stats.js")"
+        "@routes.Assets.at("javascripts/libs/threejs/stats.js")",
+        "@routes.Assets.at("javascripts/brainflight.js")"
       ]);
     else
       alert( "Sorry dude, you need WebGL for this. Get Chrome or Firefox." );

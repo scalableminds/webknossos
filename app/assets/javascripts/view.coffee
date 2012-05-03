@@ -106,6 +106,8 @@ View =
 		@updateTrianglesplane()
 
 		# MAth.floor WAT?
+		# DOM element selection WAT?
+		#performance WAT?
 		position = cam.getGlobalPos()
 		p = [Math.floor(position[0]), Math.floor(position[1]), Math.floor(position[2])]
 		$("#status").html "#{p}<br />ZoomStep #{cam.getZoomStep()}<br />" 
@@ -135,9 +137,20 @@ View =
 		#get colors for new coords from Model
 		Model.Binary.get(newVertices, cam.getZoomStep()).done ({ buffer0, buffer1, bufferDelta }) ->
 			
-			g.interpolationBuffer0.value = buffer0
-			g.interpolationBuffer1.value = buffer1
-			g.interpolationBufferDelta.value = bufferDelta
+			vec4Buffer0 = []
+			vec4Buffer1 = []
+			vec3BufferDelta = []
+
+			for i in [0..buffer0.length - 1] by 4
+				vec4Buffer0.push new THREE.Vector4( buffer0[i], buffer0[i+1], buffer0[i+2], buffer0[i+3] )
+				vec4Buffer1.push new THREE.Vector4( buffer1[i], buffer1[i+1], buffer1[i+2], buffer1[i+3] )
+
+			for i in [0..bufferDelta.length - 1] by 3
+				vec3BufferDelta.push new THREE.Vector3( bufferDelta[i], bufferDelta[i+1], bufferDelta[i+2] )
+
+			g.interpolationBuffer0.value = vec4Buffer0
+			g.interpolationBuffer1.value = vec4Buffer1
+			g.interpolationBufferDelta.value = vec3BufferDelta
 
 			g.interpolationBuffer0.needsUpdate = true
 			g.interpolationBuffer1.needsUpdate = true

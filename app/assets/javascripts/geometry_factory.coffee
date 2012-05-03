@@ -46,8 +46,9 @@ GeometryFactory =
 					temp.faces.push new THREE.Face3(z, y, x)
 
 			
-			temp.computeFaceNormals()
-			temp.computeCentroids()
+			#temp.computeFaceNormals()
+			#temp.computeCentroids()
+			temp.dynamic = true #FUCKING IMPORTANT
 
 			attributes =
 				interpolationBuffer0 :
@@ -71,4 +72,4 @@ GeometryFactory =
 			trianglesplane.queryVertices = geometry.queryVertices	
 			trianglesplane.attributes = attributes
 			View.trianglesplane = trianglesplane		
-			View.addGeometry trianglesplane
+			View.addGeometry View.trianglesplane

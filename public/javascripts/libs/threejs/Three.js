@@ -15319,6 +15319,13 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 							face = obj_faces[ chunk_faces3[ f ]	];
 
+							//support for Float32Array HACK
+							if ( customAttribute.value instanceof Float32Array ) {
+
+								customAttribute.array = customAttribute.value
+
+							} else {
+
 							v1 = customAttribute.value[ face.a ];
 							v2 = customAttribute.value[ face.b ];
 							v3 = customAttribute.value[ face.c ];
@@ -15339,6 +15346,8 @@ THREE.WebGLRenderer = function ( parameters ) {
 							customAttribute.array[ offset_custom + 11 ] = v3.w;
 
 							offset_custom += 12;
+								
+							}
 
 						}
 

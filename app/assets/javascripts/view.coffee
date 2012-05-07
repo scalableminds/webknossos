@@ -107,7 +107,7 @@ View =
                 if camHasChanged() is false
                     return
 
-        @updateTrianglesplane()
+        #@updateTrianglesplane()
 
         # MAth.floor WAT?
         # DOM element selection WAT?
@@ -153,10 +153,10 @@ View =
 
                 i += 4
                 j +=3
-                
-            # g.interpolationBuffer0.value = vec4Buffer0
-            # g.interpolationBuffer1.value = vec4Buffer1
-            # g.interpolationBufferDelta.value = vec3BufferDelta
+
+            # g.interpolationBuffer0.value = buffer0
+            # g.interpolationBuffer1.value = buffer1
+            # g.interpolationBufferDelta.value = bufferDelta
 
             g.interpolationBuffer0.needsUpdate = true
             g.interpolationBuffer1.needsUpdate = true

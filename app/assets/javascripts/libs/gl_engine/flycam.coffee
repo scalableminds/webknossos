@@ -74,7 +74,7 @@ class Flycam
     @move(@stepFront)
 
   pitch : (angle) ->
-    currentMatrix = M4x4.rotate(angle, [ 1, 0, 0 ], @currentMatrix)
+    @currentMatrix = M4x4.rotate(angle, [ 1, 0, 0 ], @currentMatrix)
 
   pitchDistance : (angle) ->
     @move(@stepBack)

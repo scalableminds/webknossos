@@ -10,13 +10,26 @@ abstract class Figure
 
 case class Cube( topLeft: Point3D, edgeLength: Int) extends Figure{
   def calculateInnerPoints(): Seq[Point3D] = {
-    for{
-      x <- topLeft.x until topLeft.x + edgeLength
-      y <- topLeft.y until topLeft.y + edgeLength
-      z <- topLeft.z until topLeft.z + edgeLength
-    } yield {
-      Point3D(x,y,z)
+    var x = topLeft.x + edgeLength - 1
+    val minX = topLeft.x
+    var y = 0
+    val minY = topLeft.y
+    var z = 0
+    val minZ = topLeft.z
+    var result: List[Point3D] = Nil 
+    while( x >= minX ){
+      y = topLeft.y + edgeLength - 1
+      while( y >= minY ) { 
+        z = topLeft.z + edgeLength - 1
+        while( z >= minZ ){
+          result ::= Point3D(x, y, z)
+          z -= 1
+        }
+        y -= 1
+      }
+      x -= 1
     }
+    result
   }
 }
 

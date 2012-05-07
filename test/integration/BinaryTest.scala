@@ -110,12 +110,20 @@ object BinaryTest extends Specification {
 
     "return null block for negative parameters" in {
       running( FakeApplication() ) {
-        ko
-        //        val Some( result ) = routeAndCall( FakeRequest( GET, "/binary/data/cube?px=173&py=-26&pz=198&ax=-0.9&ay=0.2&az=-0.3" ) )
-        //        status( result ) must be equalTo ( OK )
-        //        contentType( result ) must equalTo( Some( "application/octet-stream" ) )
-        //        contentAsBytes( result ).foldLeft( 0 )( ( b, x ) => b + x ) must be equalTo 0
+        val dataId = DataSet.default.id
+        val matrix = Array[Float]( 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, -1, -1, -1, 1 )
+        val Some( resultAsyc ) = routeAndCall( FakeRequest(
+          POST,
+          "/binary/ajax?&dataSetId=" + dataId + "&cubeSize=64",
+          FakeHeaders( Map( "Content" -> List( "application/octet-stream" ) ) ),
+          RawBuffer( memoryThreshold = 1024, matrix.flatMap( _.toBinary.reverse ) ) ).authenticated() )
+
+        ( resultAsyc.asInstanceOf[AsyncResult] ).result.map( result => {
+          status( result ) must be equalTo ( OK )
+          contentType( result ) must equalTo( Some( "application/octet-stream" ) )
+          //((_:Byte) must be equalTo 0).forall(contentAsBytes( result ).toTraversable)
+        } ).value.get
       }
-    }.pendingUntilFixed
+    }
   }
 }

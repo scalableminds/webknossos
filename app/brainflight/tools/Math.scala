@@ -1,7 +1,6 @@
 package brainflight.tools
 
 import scala.math._
-import util.DynamicVariable
 import brainflight.tools.geometry.Vector3D
 import brainflight.tools.geometry.Polygon
 import brainflight.tools.geometry.Figure

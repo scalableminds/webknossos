@@ -41,10 +41,11 @@ class Flycam
     m = M4x4.clone @currentMatrix
     m[12] = m[12] << @zoomStep
     m[13] = m[13] << @zoomStep
-    m[14] = m[14] << @zoomStep
+    m[14] = m[14] << @zoomStep + 1 # delete later
     m
   
   setMatrix : (matrix) ->
+    matrix[14] = matrix[14] >> 1 # delete later
     @currentMatrix = matrix
 
   move : (p) ->
@@ -101,7 +102,9 @@ class Flycam
 
   getGlobalPos : ->
     matrix = @currentMatrix
-    [ matrix[12] << @zoomStep, matrix[13] << @zoomStep, matrix[14] << @zoomStep ]
+    [ matrix[12] << @zoomStep, 
+    matrix[13] << @zoomStep, 
+    matrix[14] << @zoomStep + 1 ] # delete later
 
   setPos : (p) ->
     matrix = @currentMatrix

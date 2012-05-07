@@ -115,7 +115,7 @@ class GlEngine
       else
         @gl.uniform1i varLocation, varValue
     else
-      console.log "uniform var '" + varName + "' was not found."
+      # console.log "uniform var '" + varName + "' was not found."
 
   ###
   Set a uniform float
@@ -134,7 +134,7 @@ class GlEngine
       else
         @gl.uniform1f varLocation, varValue
     else
-      console.log "uniform var '" + varName + "' was not found."
+      # console.log "uniform var '" + varName + "' was not found."
 
   ###
   Sets a uniform matrix.
@@ -152,7 +152,7 @@ class GlEngine
       else
         @gl.uniformMatrix2fv varLocation, transpose, matrix
     else
-      console.log "Uniform matrix '" + varName + "' was not found."
+      # console.log "Uniform matrix '" + varName + "' was not found."
 
   ###
   Create a buffer object which will contain

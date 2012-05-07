@@ -228,6 +228,9 @@ View =
   getMatrix : ->
     cam.getMatrix()
 
+  getGlobalMatrix : ->
+    cam.getGlobalMatrix()
+
   #Call this after the canvas was resized to fix the viewport
   resize : ->
     engine.setViewport()          

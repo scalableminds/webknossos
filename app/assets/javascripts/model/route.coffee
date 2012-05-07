@@ -98,7 +98,7 @@ Route =
 
     @initialize().pipe =>
       
-      deferred = new $.Defered()
+      deferred = new $.Deferred()
       
       { branchStack } = @
 

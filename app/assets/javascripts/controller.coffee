@@ -101,7 +101,7 @@ Controller =
     
     new Input.KeyboardNoLoop(
       #Branches
-      "b" : -> Model.Route.putBranch(View.getMatrix())
+      "b" : -> Model.Route.putBranch(View.getGlobalMatrix())
       "h" : -> Model.Route.popBranch().done((matrix) -> View.setMatrix(matrix))
 
       #Zoom in/out

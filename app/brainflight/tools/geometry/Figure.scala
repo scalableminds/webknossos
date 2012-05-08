@@ -9,21 +9,24 @@ import scala.collection.mutable.ArrayBuffer
 abstract class Figure
 
 case class Cube( topLeft: Point3D, edgeLength: Int) extends Figure{
-  def calculateInnerPoints(): Seq[Point3D] = {
+  def calculateInnerPoints(): Array[Point3D] = {
     var x = topLeft.x + edgeLength - 1
     val minX = topLeft.x
     var y = 0
     val minY = topLeft.y
     var z = 0
     val minZ = topLeft.z
-    var result: List[Point3D] = Nil 
+    var result = new Array[Point3D](edgeLength*edgeLength*edgeLength)
+    var idx = 0
+    
     while( x >= minX ){
       y = topLeft.y + edgeLength - 1
       while( y >= minY ) { 
         z = topLeft.z + edgeLength - 1
         while( z >= minZ ){
-          result ::= Point3D(x, y, z)
+          result.update(idx, Point3D(x, y, z))
           z -= 1
+          idx+=1
         }
         y -= 1
       }

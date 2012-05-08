@@ -8,7 +8,7 @@ case class SingleRequest( dataSet: DataSet, resolution: Int, point: Point3D )
 case class BlockRequest( dataSet: DataSet, resolution: Int, points: Array[Point3D])
 
 class DataSetActor extends Actor {
-  val dataStore: DataStore = FileDataStore
+  val dataStore: DataStore = new FileDataStore
   def receive = {
     case SingleRequest( dataSet, resolution, point ) =>
       sender ! dataStore.load( dataSet, resolution )( point )

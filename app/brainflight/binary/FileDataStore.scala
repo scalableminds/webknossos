@@ -19,10 +19,6 @@ import models.DataSet
  * A data store implementation which uses the hdd as data storage
  */
 object FileDataStore extends DataStore {
-  case class DataBlockInformation(
-    dataSetId: String,
-    point: Point3D,
-    resolution: Int )
 
   lazy val nullBlock = ( for ( x <- 0 to 128 * 128 * 128 ) yield 0.toByte ).toArray
 
@@ -33,7 +29,7 @@ object FileDataStore extends DataStore {
   val dropCount = 50
 
   // try to prevent loading a file multiple times into memory
-  var fileCache = new HashMap[DataBlockInformation, Array[Byte]]
+  var fileCache = new HashMap[Tuple3[String, Point3D, Int], Array[Byte]]
 
   /**
    * Uses the coordinates of a point to calculate the data block the point
@@ -50,7 +46,7 @@ object FileDataStore extends DataStore {
       val point = extractBlockCoordinates( globalPoint )
 
       val byteArray: Array[Byte] =
-        fileCache.get( DataBlockInformation( dataSet.id, point, resolution ) ) getOrElse ( loadBlock( dataSet, point, resolution ) )
+        fileCache.get( ( dataSet.id, point, resolution ) ) getOrElse ( loadBlock( dataSet, point, resolution ) )
 
       val zB = ( globalPoint.z % 256 ) / 2
       byteArray( ( zB * 128 * 128 + ( globalPoint.y % 128 ) * 128 + globalPoint.x % 128 ) )
@@ -77,7 +73,8 @@ object FileDataStore extends DataStore {
           // the coordinates
           nullBlock
       }
-    fileCache += ( ( DataBlockInformation( dataSet.id, point, resolution ), dataBlock ) )
+    fileCache += ( ( dataSet.id, point, resolution ) -> dataBlock ) 
+    println(fileCache.size)
     dataBlock
   }
 

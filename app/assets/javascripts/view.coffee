@@ -53,7 +53,7 @@ View =
 
         @camera.position.z = CAM_DISTANCE
         @camera.lookAt(new THREE.Vector3( 0, 0, 0 ))
-        @cameraControll = new THREE.TrackballControls(@camera)
+        @cameraControll = new THREE.TrackballControls(@camera) #TODO delete me later!?
 
         @renderer.setSize(WIDTH, HEIGHT)
         container.append(@renderer.domElement)
@@ -127,6 +127,7 @@ View =
         transMatrix = cam.getMatrix()
         newVertices = M4x4.transformPointsAffine transMatrix, @trianglesplane.queryVertices
         
+        #DO WE STILL NEED THIS?
         #sets the original vertices to trianglesplane
         # unless g.vertices.VBO?
         #   g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
@@ -138,6 +139,7 @@ View =
         #sends current position to Model for caching route
         Model.Route.put globalMatrix
 
+        # trilinear interpolation
         Model.Binary.get(newVertices, cam.getZoomStep()).done ({ buffer0, buffer1, bufferDelta }) ->
             # ATTENTION 
             # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)

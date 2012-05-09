@@ -29,7 +29,8 @@ GeometryFactory =
 
       plane = new THREE.PlaneGeometry(128, 128, 1, 1)
 
-      texture = new THREE.ImageUtils.generateDataTexture(128, 128, new THREE.Color(0xff00ff))
+      # data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
+      texture = new THREE.DataTexture(new Uint8Array(128*128), 128, 128, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearFilter, THREE.LinearFilter )
       texture.needsUpdate = true
 
       textureMaterial = new THREE.MeshBasicMaterial({wireframe : false, map: plane.texture})

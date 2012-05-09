@@ -167,9 +167,9 @@ Binary =
 	# A synchronized implementation of `get`.
 	getSync : (vertices, zoomStep) ->
 
-		buffer0     = new Float32Array(vertices.length / 3 << 2)
-		buffer1     = new Float32Array(vertices.length / 3 << 2)
-		bufferDelta = new Float32Array(vertices.length)
+		buffer0     = new Uint8Array(vertices.length / 3 << 2)
+		buffer1     = new Uint8Array(vertices.length / 3 << 2)
+		bufferDelta = new Uint8Array(vertices.length)
 		
 		if (cube = @cubes[zoomStep])
 

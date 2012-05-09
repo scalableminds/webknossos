@@ -107,7 +107,7 @@ View =
                 if camHasChanged() is false
                     return
 
-        #@updateTrianglesplane()
+        @updateTrianglesplane()
 
         # MAth.floor WAT?
         # DOM element selection WAT?
@@ -122,7 +122,7 @@ View =
 
     updateTrianglesplane : ->
         return unless @trianglesplane
-        g = @trianglesplane.attributes
+        g = @trianglesplane
 
         transMatrix = cam.getMatrix()
         newVertices = M4x4.transformPointsAffine transMatrix, @trianglesplane.queryVertices
@@ -138,29 +138,60 @@ View =
         #sends current position to Model for caching route
         Model.Route.put globalMatrix
 
-        #get colors for new coords from Model
         Model.Binary.get(newVertices, cam.getZoomStep()).done ({ buffer0, buffer1, bufferDelta }) ->
+            # ATTENTION 
+            # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
+            # the data attribute is only available for DataTexture (in other cases it is only texture.image)
+            textureData = g.texture.image.data
+            for i in [0..128*128*3]
+                #textureData[i] = Math.random() * 255
+                index0 = i
+                index1 = i + 1
+                index2 = i + 2
+                index3 = i + 3
+
+                bufferDelta0 = bufferDelta[i]
+                bufferDelta1 = bufferDelta[i]
+                bufferDelta2 = bufferDelta[i]
+
+                colorScalar =      
+                buffer0[index0] * (1.0 - bufferDelta0) * (1.0 - bufferDelta1) * (1.0 - bufferDelta2) +
+                buffer0[index1] * bufferDelta0         * (1.0 - bufferDelta1) * (1.0 - bufferDelta2) + 
+                buffer0[index2] * (1.0 - bufferDelta0) * bufferDelta1         * (1.0 - bufferDelta2) + 
+                buffer0[index3] * bufferDelta0         * bufferDelta1         * (1.0 - bufferDelta2) +
+                buffer1[index0] * (1.0 - bufferDelta0) * (1.0 - bufferDelta1) * bufferDelta2 + 
+                buffer1[index1] * bufferDelta0         * (1.0 - bufferDelta1) * bufferDelta2 + 
+                buffer1[index2] * (1.0 - bufferDelta0) * bufferDelta1         * bufferDelta2 + 
+                buffer1[index3] * bufferDelta0         * bufferDelta1         * bufferDelta2
+
+                textureData[i] = colorScalar * 255
+
+            g.texture.needsUpdate = true
+            g.material.map = g.texture
+
+        #get colors for new coords from Model
+        # Model.Binary.get(newVertices, cam.getZoomStep()).done ({ buffer0, buffer1, bufferDelta }) ->
             
-            (vec4Buffer0 = g.interpolationBuffer0.value).length = 0
-            (vec4Buffer1 = g.interpolationBuffer1.value).length = 0
-            (vec3BufferDelta = g.interpolationBufferDelta.value).length = 0
+        #     (vec4Buffer0 = g.interpolationBuffer0.value).length = 0
+        #     (vec4Buffer1 = g.interpolationBuffer1.value).length = 0
+        #     (vec3BufferDelta = g.interpolationBufferDelta.value).length = 0
 
-            i = j = 0
-            while i < buffer0.length
-                vec4Buffer0.push new THREE.Vector4( buffer0[i], buffer0[i+1], buffer0[i+2], buffer0[i+3] )
-                vec4Buffer1.push new THREE.Vector4( buffer1[i], buffer1[i+1], buffer1[i+2], buffer1[i+3] )
-                vec3BufferDelta.push new THREE.Vector3( bufferDelta[j], bufferDelta[j+1], bufferDelta[j+2] )
+        #     i = j = 0
+        #     while i < buffer0.length
+        #         vec4Buffer0.push new THREE.Vector4( buffer0[i], buffer0[i+1], buffer0[i+2], buffer0[i+3] )
+        #         vec4Buffer1.push new THREE.Vector4( buffer1[i], buffer1[i+1], buffer1[i+2], buffer1[i+3] )
+        #         vec3BufferDelta.push new THREE.Vector3( bufferDelta[j], bufferDelta[j+1], bufferDelta[j+2] )
 
-                i += 4
-                j +=3
+        #         i += 4
+        #         j +=3
 
-            # g.interpolationBuffer0.value = buffer0
-            # g.interpolationBuffer1.value = buffer1
-            # g.interpolationBufferDelta.value = bufferDelta
+        #     # g.interpolationBuffer0.value = buffer0
+        #     # g.interpolationBuffer1.value = buffer1
+        #     # g.interpolationBufferDelta.value = bufferDelta
 
-            g.interpolationBuffer0.needsUpdate = true
-            g.interpolationBuffer1.needsUpdate = true
-            g.interpolationBufferDelta.needsUpdate = true
+        #     g.interpolationBuffer0.needsUpdate = true
+        #     g.interpolationBuffer1.needsUpdate = true
+        #     g.interpolationBufferDelta.needsUpdate = true
 
 
     addGeometry : (geometry) ->

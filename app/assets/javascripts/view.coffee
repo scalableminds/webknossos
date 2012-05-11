@@ -5,13 +5,9 @@ model : Model
     
 # global View variables
 cam = null
-lastMatrix = null
-    
 
 #constants
-CLIPPING_DISTANCE = 140
 CAM_DISTANCE = 140
-BACKGROUND_COLOR = [0.9, 0.9 ,0.9 ,1]
 
 View =
   initialize : (canvas) ->
@@ -54,28 +50,31 @@ View =
     @stats = stats
     @positionStats = $("#status")
 
-
+    # start the rendering loop
     @animate()
 
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
 
-    # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    # DO WE STILL NEED THIS???
-    # $(window).on("bucketloaded", View.draw) 
+    # refresh the scene once a bucket is loaded
+    # FIXME: probably not the most elgant thing to do
+    $(window).on("bucketloaded", => cam.hasChanged = true) 
 
   animate : ->
     @renderFunction()
 
     window.requestAnimationFrame => @animate()
 
-  renderFunction : (forced) ->
+  # This is the main render function.
+  # All 3D meshes and the trianglesplane are rendered here.
+  renderFunction : ->
 
-    #skip rendering if nothing has changed
-    currentMatrix = cam.getMatrix()
-    if forced is false
-            if @camHasChanged() is false
-                return
+    # skip rendering if nothing has changed
+    # This prevents you the GPU/CPU from constantly
+    # working and keeps your lap cool
+    # ATTENTION: this seems to be a major performance killer (55FPS -> 29FPS)
+    if cam.hasChanged is false
+      return
 
     @updateTrianglesplane()
 
@@ -84,11 +83,11 @@ View =
     @positionStats.html "#{position}<br />ZoomStep #{cam.getZoomStep()}<br />" 
     @stats.update()
 
-
-    lastMatrix = currentMatrix
+    cam.hasChanged = false
     @renderer.render @scene, @camera
 
-
+  # Let's apply new pixels to the trianglesplane.
+  # We do so by apply a new texture to it.
   updateTrianglesplane : ->
       return unless @trianglesplane
       g = @trianglesplane
@@ -160,10 +159,11 @@ View =
   addGeometry : (geometry) ->
     @scene.add geometry
 
-  
   #Apply a single draw (not used right now)
   draw : ->
-    @renderer.render @scene, @camera
+    #FIXME: this is dirty
+    cam.hasChanged = true
+    @renderFunction()
 
   setMatrix : (matrix) ->
     cam.setMatrix(matrix)
@@ -177,15 +177,6 @@ View =
     @renderer.setSize( window.innerWidth, window.innerHeight )
     @camera.aspect  = window.innerWidth / window.innerHeight
     @camera.updateProjectionMatrix()
-
-  # In order not to stress the GPU to much, we 
-  # try to limit our draw calls.
-  camHasChanged : ->
-    return true if lastMatrix is null           
-    currentMatrix = cam.getMatrix()
-    for i in [0..15]
-        return true if lastMatrix[i] isnt currentMatrix[i]
-    return false
 
 ############################################################################
 #Interface for Controller
@@ -213,11 +204,11 @@ View =
   scaleTrianglesPlane : (delta) ->
     g = @trianglesplane
     if g 
-        x = Number(g.scale.x) + Number(delta)
-        if x > 0 and x < 2
-          # why z? keep in mind the plane is rotated 90°
-          g.scale.x = g.scale.z = x 
-          @draw()
+      x = Number(g.scale.x) + Number(delta)
+      if x > 0 and x < 2
+        # why z? keep in mind the plane is rotated 90°
+        g.scale.x = g.scale.z = x 
+        cam.hasChanged = true
 
   zoomIn : ->
     if cam.getZoomStep() > 0

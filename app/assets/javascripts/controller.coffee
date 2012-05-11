@@ -26,8 +26,8 @@ Controller =
 
         GeometryFactory.createMesh("coordinateAxes.js", -100, 0, 0)
         GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
-        GeometryFactory.createTrianglesplane(128, 0)
-
+        GeometryFactory.createTrianglesplane(128, 0).done ->
+          View.draw()
       
       ->
         alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")

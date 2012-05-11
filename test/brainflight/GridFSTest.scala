@@ -21,8 +21,9 @@ class GridFSTest extends Specification {
   val point = Point3D( 5, 6, 7 )
   val numberOfBinFiles = 68311
   val filesize = 2097152
+  val gfds = new GridFileDataStore
 
-  def testFile = new FileInputStream( GridFileDataStore.createFilename( DataSet.default, 1, point ) )
+  def testFile = new FileInputStream( gfds.createFilename( DataSet.default, 1, point ) )
 
   def testFileBytes = {
     val bytes = new Array[Byte]( testFile.available )
@@ -37,7 +38,7 @@ class GridFSTest extends Specification {
 
     "find the testfile" in {
       running( FakeApplication() ) {
-        val retrievedFile = gridfs.findOne( GridFileDataStore.convertCoordinatesToString( point ) )
+        val retrievedFile = gridfs.findOne( gfds.convertCoordinatesToString( point ) )
         retrievedFile must beSome
         retrievedFile foreach { file =>
           file must beAnInstanceOf[GridFSDBFile]
@@ -70,9 +71,11 @@ class GridFSTest extends Specification {
             differences -= 1
         }*/
         differences must be equalTo 0
-        GridFileDataStore.fileCache.size must be equalTo 1
-        GridFileDataStore.cleanUp()
-        GridFileDataStore.fileCache.size must be equalTo 0
+        gfds.fileCache.size must be equalTo 1
+        gfds.cleanUp()
+        gfds.fileCache.size must be equalTo 0
+        
+        ko
       }
     }.pendingUntilFixed
   }

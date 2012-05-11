@@ -57,7 +57,10 @@ case class User(
 object User extends BasicDAO[User]( "users" ) {
 
   val LocalLoginType = "local"
-
+  
+  def findOneByEmail( email: String ) = findOne( MongoDBObject(
+    "email" -> email ) )
+  
   def findLocalByEmail( email: String ) = findOne( MongoDBObject(
     "email" -> email, "loginType" -> LocalLoginType ) )
   

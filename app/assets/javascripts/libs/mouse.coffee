@@ -1,4 +1,6 @@
-### define ###
+### define 
+model/user : User
+###
 
 class Mouse
 
@@ -7,12 +9,6 @@ class Mouse
   # this lib. Everything is pretty straight forward.
   # There is even support for the new pointerlock 
   # (mouse lock) API for webkit browser. 
-
-  rotateValue = 0.004   
-  inversion = {
-    x : 1
-    y : 1
-  }
 
   buttonDown : false
   doubleClicked : false
@@ -28,16 +24,13 @@ class Mouse
     x : $.noop()
     y : $.noop() 
 
-  inversion : 
-    x : 1
-    y : 1
-
 
   ###
   #@param {Object} target : DOM Element
   # HTML object where the mouse attaches the events
   ###
   constructor : (@target) ->
+    # @User = User
   
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
@@ -87,10 +80,10 @@ class Mouse
     # regular mouse management
     unless @locked 
       if @buttonDown
-        distX = -(evt.pageX - lastPosition.x) * inversion.x
-        distY =  (evt.pageY - lastPosition.y) * inversion.y
-        changedCallback.x distX * rotateValue if distX isnt 0
-        changedCallback.y distY * rotateValue if distY isnt 0
+        distX = -(evt.pageX - lastPosition.x) * User.Configuration.mouseInversionX
+        distY =  (evt.pageY - lastPosition.y) * User.Configuration.mouseInversionY
+        changedCallback.x distX * User.Configuration.mouseRotateValue if distX isnt 0
+        changedCallback.y distY * User.Configuration.mouseRotateValue if distY isnt 0
 
       @lastPosition =
         x : evt.pageX
@@ -100,10 +93,10 @@ class Mouse
     # Mouse lock returns MovementX/Y in addition to the regular properties
     # (these become static)   
     else
-      distX = -evt.originalEvent.webkitMovementX * inversion.x
-      distY = evt.originalEvent.webkitMovementY * inversion.y
-      changedCallback.x distX * rotateValue if distX isnt 0
-      changedCallback.y distY * rotateValue if distY isnt 0
+      distX = -evt.originalEvent.webkitMovementX * User.Configuration.mouseInversionX
+      distY = evt.originalEvent.webkitMovementY * User.Configuration.mouseInversionY
+      changedCallback.x distX * User.Configuration.mouseRotateValue if distX isnt 0
+      changedCallback.y distY * User.Configuration.mouseRotateValue if distY isnt 0
 
   mouseDown : =>
     $(@target).css("cursor", "none")
@@ -122,17 +115,3 @@ class Mouse
       @locked = false
       navigator.pointer.unlock()
 
-  setRotateValue : (value) ->
-    rotateValue = value
-
-  setInversionX : (value) ->
-      if value is true
-        inversion.x = -1
-      else
-        inversion.x = 1   
-
-  setInversionY : (value) ->
-      if value is true
-        inversion.y = -1
-      else
-        inversion.y = 1

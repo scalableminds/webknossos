@@ -83,225 +83,225 @@ ZOOM_STEP_COUNT = 4
 # Requires `cubeOffset` and `cubeSize` to be in scope.
 bucketIndexMacro = (x, y, z) ->
 
-	((x >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
-	((y >> 5) - cubeOffset[1]) * cubeSize[2] + 
-	((z >> 5) - cubeOffset[2])
+  ((x >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+  ((y >> 5) - cubeOffset[1]) * cubeSize[2] + 
+  ((z >> 5) - cubeOffset[2])
 
 # Computes the bucket index of the given vertex.
 # Requires `cubeOffset` and `cubeSize` to be in scope.
 bucketIndexByVertexMacro = (vertex) ->
 
-	((vertex[0] >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
-	((vertex[1] >> 5) - cubeOffset[1]) * cubeSize[2] + 
-	((vertex[2] >> 5) - cubeOffset[2])
+  ((vertex[0] >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+  ((vertex[1] >> 5) - cubeOffset[1]) * cubeSize[2] + 
+  ((vertex[2] >> 5) - cubeOffset[2])
 
 
 # Computes the index of the specified bucket.
 # Requires `cubeOffset` and `cubeSize` to be in scope.
 bucketIndexByAddressMacro = (vertex) ->
 
-	(vertex[0] - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
-	(vertex[1] - cubeOffset[1]) * cubeSize[2] + 
-	(vertex[2] - cubeOffset[2])
+  (vertex[0] - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+  (vertex[1] - cubeOffset[1]) * cubeSize[2] + 
+  (vertex[2] - cubeOffset[2])
 
 # Computes the bucket index of the vertex with the given coordinates.
 # Requires `cubeOffset0`, `cubeOffset1`, `cubeOffset2`, `cubeSize2` and 
 # `cubeSize21` to be precomputed and in scope.
 bucketIndex2Macro = (x, y, z) ->
 
-	((x >> 5) - cubeOffset0) * cubeSize21 +
-	((y >> 5) - cubeOffset1) * cubeSize2 + 
-	((z >> 5) - cubeOffset2)
+  ((x >> 5) - cubeOffset0) * cubeSize21 +
+  ((y >> 5) - cubeOffset1) * cubeSize2 + 
+  ((z >> 5) - cubeOffset2)
 
 # Computes the index of the vertex with the given coordinates in
 # its bucket.
 pointIndexMacro = (x, y, z) ->
-	
-	((x & 31) << 10) +
-	((y & 31) << 5) +
-	((z & 31))
+  
+  ((x & 31) << 10) +
+  ((y & 31) << 5) +
+  ((z & 31))
 
 Binary =
   Rasterizer : Rasterizer
 
-	# This method allows you to query the data structure. Give us an array of
-	# vertices and we'll give you the stuff you need to interpolate data.
-	#
-	# We'll figure out how many color values you need to do interpolation.
-	# That'll be 1, 2, 4 or 8 values. They represent greyscale colors ranging from
-	# 0 to 1. Additionally, you need three delta values xd, yd and zd which are in
-	# the range from 0 to 1. Then you should be able to perform a trilinear 
-	# interpolation. To sum up, you get 11 floating point values for each point.
-	# We spilt those in three array buffers to have them used in WebGL shaders as 
-	# vec4 and vec3 attributes.
-	# 
-	# While processing the data several errors can occur. Please note that 
-	# processing of a point halts if any of the required color values is wrong.
-	# You can determine any errors by examining the first value of each point.
-	# Feel free to color code those errors as you wish.
-	#
-	# *   `-3`: negative coordinates given
-	# *   `-2`: block currently loading
-	# *   `-1`: block fault
-	# *   `0`: black
-	# *   `1`: white
-	# 
-	# Parameters:
-	# 
-	# *   `vertices` is a `Float32Array with the vertices you'd like to query. There
-	# is no need for you to round the coordinates. Otherwise you'd have a nearest-
-	# neighbor-interpolation, which isn't pretty and kind of wavey. Every three
-	# elements (x,y,z) represent one vertex.
-	#
-	# Promise Parameters:
-	# 
-	# *   `buffer0` is a `Float32Array` with the first 4 color values of
-	# each points. The first value would contain any error codes.
-	# *   `buffer1` is a `Float32Array` with the second 4 color values of
-	# each points.
-	# *   `bufferDelta` is a `Float32Array` with the delta values.
-	#
+  # This method allows you to query the data structure. Give us an array of
+  # vertices and we'll give you the stuff you need to interpolate data.
+  #
+  # We'll figure out how many color values you need to do interpolation.
+  # That'll be 1, 2, 4 or 8 values. They represent greyscale colors ranging from
+  # 0 to 1. Additionally, you need three delta values xd, yd and zd which are in
+  # the range from 0 to 1. Then you should be able to perform a trilinear 
+  # interpolation. To sum up, you get 11 floating point values for each point.
+  # We spilt those in three array buffers to have them used in WebGL shaders as 
+  # vec4 and vec3 attributes.
+  # 
+  # While processing the data several errors can occur. Please note that 
+  # processing of a point halts if any of the required color values is wrong.
+  # You can determine any errors by examining the first value of each point.
+  # Feel free to color code those errors as you wish.
+  #
+  # *   `-3`: negative coordinates given
+  # *   `-2`: block currently loading
+  # *   `-1`: block fault
+  # *   `0`: black
+  # *   `1`: white
+  # 
+  # Parameters:
+  # 
+  # *   `vertices` is a `Float32Array with the vertices you'd like to query. There
+  # is no need for you to round the coordinates. Otherwise you'd have a nearest-
+  # neighbor-interpolation, which isn't pretty and kind of wavey. Every three
+  # elements (x,y,z) represent one vertex.
+  #
+  # Promise Parameters:
+  # 
+  # *   `buffer0` is a `Float32Array` with the first 4 color values of
+  # each points. The first value would contain any error codes.
+  # *   `buffer1` is a `Float32Array` with the second 4 color values of
+  # each points.
+  # *   `bufferDelta` is a `Float32Array` with the delta values.
+  #
 
-	get : (vertices, zoomStep) ->
+  get : (vertices, zoomStep) ->
 
-		$.when(@getSync(vertices, zoomStep))
+    $.when(@getSync(vertices, zoomStep))
 
-	# A synchronized implementation of `get`.
-	getSync : (vertices, zoomStep) ->
+  # A synchronized implementation of `get`.
+  getSync : (vertices, zoomStep) ->
 
-		buffer0     = new Float32Array(vertices.length / 3 << 2)
-		buffer1     = new Float32Array(vertices.length / 3 << 2)
-		bufferDelta = new Float32Array(vertices.length)
-		
-		if (cube = @cubes[zoomStep])
+    buffer0     = new Float32Array(vertices.length / 3 << 2)
+    buffer1     = new Float32Array(vertices.length / 3 << 2)
+    bufferDelta = new Float32Array(vertices.length)
+    
+    if (cube = @cubes[zoomStep])
 
-			cubeSize = @cubeSizes[zoomStep]
-			cubeOffset = @cubeOffsets[zoomStep]
-			#{ cubeSize, cubeOffset } = @
+      cubeSize = @cubeSizes[zoomStep]
+      cubeOffset = @cubeOffsets[zoomStep]
+      #{ cubeSize, cubeOffset } = @
 
 
-			InterpolationCollector.bulkCollect(
-				vertices,
-				buffer0, buffer1, bufferDelta, 
-				cube, cubeSize, cubeOffset
-			)
-			
-		{ buffer0, buffer1, bufferDelta }
+      InterpolationCollector.bulkCollect(
+        vertices,
+        buffer0, buffer1, bufferDelta, 
+        cube, cubeSize, cubeOffset
+      )
+      
+    { buffer0, buffer1, bufferDelta }
 
-	PING_DEBOUNCE_TIME : 500
-	PING_THROTTLE_TIME : 500
-	PRELOAD_STEPBACK : 10
-	
-	# Use this method to let us know when you've changed your spot. Then we'll try to 
-	# preload some data. 
-	#
-	# Parameters:
-	#
-	# *   `matrix` is a 3-element array representing the point you're currently at
-	# *   `direction` is a 3-element array representing the vector of the direction 
-	# you look at
-	#
-	# No Callback Paramters
-	ping : (matrix, zoomStep) ->
+  PING_DEBOUNCE_TIME : 500
+  PING_THROTTLE_TIME : 500
+  PRELOAD_STEPBACK : 10
+  
+  # Use this method to let us know when you've changed your spot. Then we'll try to 
+  # preload some data. 
+  #
+  # Parameters:
+  #
+  # *   `matrix` is a 3-element array representing the point you're currently at
+  # *   `direction` is a 3-element array representing the vector of the direction 
+  # you look at
+  #
+  # No Callback Paramters
+  ping : (matrix, zoomStep) ->
 
-		@ping = _.throttle2(@pingImpl, @PING_THROTTLE_TIME)
-		@ping(matrix, zoomStep)
+    @ping = _.throttle2(@pingImpl, @PING_THROTTLE_TIME)
+    @ping(matrix, zoomStep)
 
-	pingImpl : (matrix, zoomStep) ->
+  pingImpl : (matrix, zoomStep) ->
 
-		console.log "ping"
-		console.time "ping"
+    console.log "ping"
+    console.time "ping"
 
-		SPHERE_RADIUS = 140
-		PLANE_STEPBACK = 25
-		LOOP_LIMIT = 60
-		loopCounter = 0
-		
-		sphereCenterVertex  = M4x4.transformPointAffine(matrix, [0, 0, -SPHERE_RADIUS])
-		sphereRadiusSquared = SPHERE_RADIUS * SPHERE_RADIUS
+    SPHERE_RADIUS = 140
+    PLANE_STEPBACK = 25
+    LOOP_LIMIT = 60
+    loopCounter = 0
+    
+    sphereCenterVertex  = M4x4.transformPointAffine(matrix, [0, 0, -SPHERE_RADIUS])
+    sphereRadiusSquared = SPHERE_RADIUS * SPHERE_RADIUS
 
-		planeNormal = new Float32Array(3)
-		planeNormal[2] = 1
-		M4x4.transformLineAffine(matrix, planeNormal, planeNormal)
+    planeNormal = new Float32Array(3)
+    planeNormal[2] = 1
+    M4x4.transformLineAffine(matrix, planeNormal, planeNormal)
 
-		planeDistance = V3.dot(
-			M4x4.transformPointAffine(matrix, [0, 0, -PLANE_STEPBACK]), 
-			planeNormal
-		)
+    planeDistance = V3.dot(
+      M4x4.transformPointAffine(matrix, [0, 0, -PLANE_STEPBACK]), 
+      planeNormal
+    )
 
-		bucketCornerVertex = new Float32Array(3)
-		currentAddress     = new Float32Array(3)
-		neighborAddress    = new Float32Array(3)
-		vectorBuffer       = new Float32Array(3)
+    bucketCornerVertex = new Float32Array(3)
+    currentAddress     = new Float32Array(3)
+    neighborAddress    = new Float32Array(3)
+    vectorBuffer       = new Float32Array(3)
 
-		currentAddress[0]  = matrix[12] >> 5
-		currentAddress[1]  = matrix[13] >> 5
-		currentAddress[2]  = matrix[14] >> 5
-		
-		workingQueue = [ currentAddress ]
-		visitedList  = {}
+    currentAddress[0]  = matrix[12] >> 5
+    currentAddress[1]  = matrix[13] >> 5
+    currentAddress[2]  = matrix[14] >> 5
+    
+    workingQueue = [ currentAddress ]
+    visitedList  = {}
 
-		if not @cubes[zoomStep] or not @cubes[zoomStep][@bucketIndexByAddress(currentAddress, zoomStep)]
-			@extendByBucketAddress(currentAddress, zoomStep)
+    if not @cubes[zoomStep] or not @cubes[zoomStep][@bucketIndexByAddress(currentAddress, zoomStep)]
+      @extendByBucketAddress(currentAddress, zoomStep)
 
-		while workingQueue.length and loopCounter < LOOP_LIMIT
+    while workingQueue.length and loopCounter < LOOP_LIMIT
 
-			currentAddress = workingQueue.shift()
-			currentAddressString = V3.toString(currentAddress)
+      currentAddress = workingQueue.shift()
+      currentAddressString = V3.toString(currentAddress)
 
-			continue if visitedList[currentAddressString]
+      continue if visitedList[currentAddressString]
 
-			loopCounter++
+      loopCounter++
 
-			unless @cubes[zoomStep][@bucketIndexByAddress(currentAddress, zoomStep)]
-				@extendByBucketAddress(currentAddress, zoomStep)
-				@pullBucket(currentAddress, zoomStep) 
+      unless @cubes[zoomStep][@bucketIndexByAddress(currentAddress, zoomStep)]
+        @extendByBucketAddress(currentAddress, zoomStep)
+        @pullBucket(currentAddress, zoomStep) 
 
-			# fetching those neighbor buckets
+      # fetching those neighbor buckets
 
-			tempWorkingQueue0 = []
-			tempWorkingQueue1 = []
+      tempWorkingQueue0 = []
+      tempWorkingQueue1 = []
 
-			neighborAddress[2] = currentAddress[2] - 2
-			while neighborAddress[2] <= currentAddress[2]
-				neighborAddress[2]++
+      neighborAddress[2] = currentAddress[2] - 2
+      while neighborAddress[2] <= currentAddress[2]
+        neighborAddress[2]++
 
-				neighborAddress[1] = currentAddress[1] - 2
-				while neighborAddress[1] <= currentAddress[1]
-					neighborAddress[1]++
+        neighborAddress[1] = currentAddress[1] - 2
+        while neighborAddress[1] <= currentAddress[1]
+          neighborAddress[1]++
 
-					neighborAddress[0] = currentAddress[0] - 2
-					while neighborAddress[0] <= currentAddress[0]
-						neighborAddress[0]++
+          neighborAddress[0] = currentAddress[0] - 2
+          while neighborAddress[0] <= currentAddress[0]
+            neighborAddress[0]++
 
-						# go skip yourself
-						continue if neighborAddress[0] == currentAddress[0] and neighborAddress[1] == currentAddress[1] and neighborAddress[2] == currentAddress[2]
+            # go skip yourself
+            continue if neighborAddress[0] == currentAddress[0] and neighborAddress[1] == currentAddress[1] and neighborAddress[2] == currentAddress[2]
 
-						# we we're here already
-						continue if visitedList[V3.toString(neighborAddress)]
+            # we we're here already
+            continue if visitedList[V3.toString(neighborAddress)]
 
-						frontCorners = 0
-						backCorners  = 0
+            frontCorners = 0
+            backCorners  = 0
 
-						for bucketCornerX in [0..1]
-							for bucketCornerY in [0..1]
-								for bucketCornerZ in [0..1]
+            for bucketCornerX in [0..1]
+              for bucketCornerY in [0..1]
+                for bucketCornerZ in [0..1]
 
-									bucketCornerVertex[0] = neighborAddress[0] << 5
-									bucketCornerVertex[1] = neighborAddress[1] << 5
-									bucketCornerVertex[2] = neighborAddress[2] << 5
+                  bucketCornerVertex[0] = neighborAddress[0] << 5
+                  bucketCornerVertex[1] = neighborAddress[1] << 5
+                  bucketCornerVertex[2] = neighborAddress[2] << 5
 
-									bucketCornerVertex[0] = bucketCornerVertex[0] | 31 if bucketCornerX
-									bucketCornerVertex[1] = bucketCornerVertex[1] | 31 if bucketCornerY
-									bucketCornerVertex[2] = bucketCornerVertex[2] | 31 if bucketCornerZ
+                  bucketCornerVertex[0] = bucketCornerVertex[0] | 31 if bucketCornerX
+                  bucketCornerVertex[1] = bucketCornerVertex[1] | 31 if bucketCornerY
+                  bucketCornerVertex[2] = bucketCornerVertex[2] | 31 if bucketCornerZ
 
-									cornerPlaneDistance = planeDistance - V3.dot(planeNormal, bucketCornerVertex)
+                  cornerPlaneDistance = planeDistance - V3.dot(planeNormal, bucketCornerVertex)
 
-									if cornerPlaneDistance < -EPSILON
+                  if cornerPlaneDistance < -EPSILON
 
-										subX = bucketCornerVertex[0] - sphereCenterVertex[0]
-										subY = bucketCornerVertex[1] - sphereCenterVertex[1]
-										subZ = bucketCornerVertex[2] - sphereCenterVertex[2]
+                    subX = bucketCornerVertex[0] - sphereCenterVertex[0]
+                    subY = bucketCornerVertex[1] - sphereCenterVertex[1]
+                    subZ = bucketCornerVertex[2] - sphereCenterVertex[2]
 
                     cornerSphereDistance = sphereRadiusSquared - (subX * subX + subY * subY + subZ * subZ)
 
@@ -325,7 +325,7 @@ Binary =
 
     console.timeEnd("ping")
     return
-           
+
 
   # Loads and inserts a bucket from the server into the cube.
   # Requires cube to be large enough to handle the loaded bucket.

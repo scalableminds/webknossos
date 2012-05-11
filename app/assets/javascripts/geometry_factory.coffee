@@ -41,6 +41,7 @@ GeometryFactory =
   # be displayed by requesting them as though they were
   # attached to bend surface.
   # The result is then projected on a flat surface.
+  # For me detail look in Model.
   #
   # queryVertices: holds the position/matrices 
   # needed to for the bend surface.
@@ -65,7 +66,7 @@ GeometryFactory =
 
       trianglesplane.queryVertices = geometry.queryVertices
       trianglesplane.texture = texture
-      
+
       View.trianglesplane = trianglesplane    
       View.addGeometry View.trianglesplane
 

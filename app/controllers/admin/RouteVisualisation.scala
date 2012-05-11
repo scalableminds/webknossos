@@ -11,7 +11,7 @@ object RouteVisualisation extends Controller with Secured{
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )
   
-  def index = Authenticated(){ user => implicit request =>
-    Ok( html.admin.index( user, User.findAll ) )
+  def index = Authenticated{ implicit request =>
+    Ok( html.admin.index( request.user, User.findAll ) )
   }
 }

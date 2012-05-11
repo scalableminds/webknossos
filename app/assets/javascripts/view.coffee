@@ -1,5 +1,5 @@
 ### define
-libs/gl_engine/flycam : Flycam
+libs/flycam : Flycam
 model : Model
 ###
     

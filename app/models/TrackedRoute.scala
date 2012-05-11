@@ -59,7 +59,7 @@ case class TrackedRoute(
 
   val id = _id.toString
   
-  def points = Array[Vector3I]( first ) ++ TrackedRoute.routeFromBinary( start = first, bytes = binaryPointTree )
+  def points: List[List[Vector3I]] = TrackedRoute.routeFromBinary( start = first, bytes = binaryPointTree )
 
   def add( newPoints: List[Vector3I] ) = {
     if ( newPoints.size > 0 ) {
@@ -115,10 +115,11 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
     }.toArray
   }
 
-  def routeFromBinary( start: Vector3I, bytes: Array[Byte] ): Array[Vector3I] = {
+  def routeFromBinary( start: Vector3I, bytes: Array[Byte] ): List[List[Vector3I]] = {
     var previous = start
     val branchPointStack = Stack[Vector3I]()
-    val route = Queue[Vector3I]()
+    var tree: List[List[Vector3I]] = Nil
+    var route = Queue[Vector3I]( start )
     for( b <- bytes ){
       b match {
         case b if b.isValue =>
@@ -128,13 +129,17 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
           previous = previous + byteCodeToPoint( b )
         case b if b.isBranch =>
           branchPointStack.push( previous)
+          tree ::= route.toList
+          route = Queue[Vector3I]( previous )
           previous
         case b if b.isEnd =>
           previous = branchPointStack.pop()
+          tree ::= route.toList
+          route = Queue[Vector3I]( previous )
           previous
       }
     }
-    route.toArray
+    tree
   }
 
   def createForUser( user: User, dataSetId: String, points: List[Vector3I] = Nil ) = {

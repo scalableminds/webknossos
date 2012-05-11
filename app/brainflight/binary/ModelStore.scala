@@ -14,15 +14,15 @@ import collection.mutable.HashMap
  */
 
 object ModelStore {
-  val models = new HashMap[String,DataModel]
+  val models = new HashMap[String, DataModel]
 
-  def apply(id:String):Option[DataModel] = {
-    models.get(id)
+  def apply( id: String ): Option[DataModel] = {
+    models.get( id )
   }
-  def register(models: DataModel*){
-    models foreach(x => register(x.id,x))
+  def register( models: DataModel* ) {
+    models foreach ( x => register( x.id, x ) )
   }
-  def register(id:String, model: DataModel){
-    models += ((id,model))
+  def register( id: String, model: DataModel ) {
+    models += ( ( id, model ) )
   }
 }

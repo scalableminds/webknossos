@@ -72,7 +72,7 @@ View =
     # skip rendering if nothing has changed
     # This prevents you the GPU/CPU from constantly
     # working and keeps your lap cool
-    # ATTENTION: this seems to be a major performance killer (55FPS -> 29FPS)
+    # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
     if cam.hasChanged is false
       return
 
@@ -94,11 +94,6 @@ View =
 
       transMatrix = cam.getMatrix()
       newVertices = M4x4.transformPointsAffine transMatrix, @trianglesplane.queryVertices
-      
-      #DO WE STILL NEED THIS?
-      #sets the original vertices to trianglesplane
-      # unless g.vertices.VBO?
-      #   g.setVertices (View.createArrayBufferObject g.normalVertices), g.normalVertices.length
 
       globalMatrix = cam.getGlobalMatrix()
       #sends current position to Model for preloading data
@@ -163,7 +158,6 @@ View =
   draw : ->
     #FIXME: this is dirty
     cam.hasChanged = true
-    @renderFunction()
 
   setMatrix : (matrix) ->
     cam.setMatrix(matrix)
@@ -174,9 +168,14 @@ View =
   #Call this after the canvas was resized to fix the viewport
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
-    @renderer.setSize( window.innerWidth, window.innerHeight )
-    @camera.aspect  = window.innerWidth / window.innerHeight
+    container = $("#render")
+    WIDTH = container.width()
+    HEIGHT = container.height()
+
+    @renderer.setSize( WIDTH, HEIGHT )
+    @camera.aspect  = WIDTH / HEIGHT
     @camera.updateProjectionMatrix()
+    @draw()
 
 ############################################################################
 #Interface for Controller

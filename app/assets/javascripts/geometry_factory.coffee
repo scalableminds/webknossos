@@ -35,7 +35,7 @@ GeometryFactory =
   # Don't let the name fool you, this is just an 
   # ordinary plane with a texture applied to it.
   # 
-  # User tests showed that looking a bend surface (a circle)
+  # User tests showed that looking a bend surface (a half sphere)
   # feels more natural when moving around in 3D space.
   # To acknowledge this fact we determine the pixels that will
   # be displayed by requesting them as though they were

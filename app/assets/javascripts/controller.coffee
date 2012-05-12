@@ -66,8 +66,8 @@ Controller =
 
     
       #ScaleTrianglesPlane
-      "l" : -> View.scaleTrianglesPlane -scaleValue
-      "k" : -> View.scaleTrianglesPlane scaleValue
+      "l" : -> View.scaleTrianglesPlane -User.Configuration.scaleValue
+      "k" : -> View.scaleTrianglesPlane User.Configuration.scaleValue
 
       #Move
       "w" : -> View.move [0, User.Configuration.moveValue, 0]

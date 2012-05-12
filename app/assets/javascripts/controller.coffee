@@ -38,7 +38,6 @@ Controller =
           
         View.setMatrix(matrix)
 
-        GeometryFactory.createMesh("coordinateAxes.js", -100, 0, 0)
         GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
         GeometryFactory.createTrianglesplane(128, 0).done ->
           View.draw()

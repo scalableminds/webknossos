@@ -207,7 +207,66 @@ Binary =
     @ping = _.throttle2(@pingImpl, @PING_THROTTLE_TIME)
     @ping(matrix, zoomStep)
 
+  pingPolyhedron : new Rasterizer([
+      -3,-3,-1 #0
+      -3,-3, 3 #3
+      -3, 3,-1 #6
+      -3, 3, 3 #9
+       3,-3,-1 #12 
+       3,-3, 3 #15
+       3, 3,-1 #18
+       3, 3, 3 #21
+    ],[
+      0,3
+      0,6
+      0,12
+      3,9
+      3,15
+      6,9
+      6,18
+      9,21
+      12,15
+      12,18
+      15,21
+      18,21
+    ])
+
   pingImpl : (matrix, zoomStep) ->
+
+    console.time "ping"
+    matrix = M4x4.clone(matrix)
+    matrix[12] /= 32
+    matrix[13] /= 32
+    matrix[14] /= 32
+
+    polyhedron = @pingPolyhedron.transform(matrix)
+
+    @extendByBucketExtent(
+      polyhedron.min_x
+      polyhedron.min_y
+      polyhedron.min_z
+      polyhedron.max_x
+      polyhedron.max_y
+      polyhedron.max_z
+      zoomStep)
+
+    cube = @cubes[zoomStep]
+
+    test = polyhedron.voxelize()
+    address = new Uint32Array(3)
+    i = 0
+    while i < test.length
+      address[0] = test[i++]
+      address[1] = test[i++]
+      address[2] = test[i++]
+
+      unless cube[@bucketIndexByAddress(address, zoomStep)]
+        @pullBucket(address, zoomStep)
+
+    console.timeEnd "ping"
+
+
+  pingOld : (matrix, zoomStep) ->
 
     console.log "ping"
     console.time "ping"
@@ -331,7 +390,7 @@ Binary =
   # Requires cube to be large enough to handle the loaded bucket.
   pullBucket : (address, zoomStep) ->
 
-    console.log "pull", V3.toString(address)
+    # console.log "pull", V3.toString(address)
 
     @cubes[zoomStep][@bucketIndexByAddress(address, zoomStep)] = loadingState
 

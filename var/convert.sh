@@ -1,5 +1,5 @@
-python var/convert_obj_three.py -i public/mesh/crosshair.obj -o public/mesh/crosshair.js -t ascii -s smooth -a bottom
-python var/convert_obj_three.py -i public/mesh/coordinateAxes.obj -o public/mesh/coordinateAxes.js -t ascii -s smooth -a bottom
+python var/convert_obj_three.py -i public/mesh/crosshair.obj -o public/mesh/crosshair.js -t ascii -s smooth -a bottom -b
+python var/convert_obj_three.py -i public/mesh/coordinateAxes.obj -o public/mesh/coordinateAxes.js -t ascii -s smooth -a bottom -b
 
 
 :<<COMMENT

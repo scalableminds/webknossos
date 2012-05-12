@@ -22,7 +22,7 @@ GeometryFactory =
     @binLoader ?= new THREE.JSONLoader()
     @binLoader.load "assets/mesh/" + fileName, (geometry) ->
 
-      mesh = new THREE.Mesh( geometry, new THREE.MeshFaceMaterial() )
+      mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: 0xffffff, shading: THREE.NoShading, vertexColors: THREE.VertexColors } ))
       mesh.position.x = x
       mesh.position.y = y
       mesh.position.z = z

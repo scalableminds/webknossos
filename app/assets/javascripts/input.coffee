@@ -153,7 +153,7 @@ class Input.Deviceorientation
       @eventHandler
       @unfire("x")
       @unfire("y")
-    )      
+    )
 
   fire : (key, dist) ->
 
@@ -260,7 +260,7 @@ class Input.Gamepad
             value = @gamepad[button]
             callback -@filterDeadzone(value)
 
-          else if button in ["leftStickY", "rightStickY"]  
+          else if button in ["leftStickY", "rightStickY"] 
             value = @gamepad[button]
             callback @filterDeadzone(value)
           #buttons

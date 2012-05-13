@@ -4,10 +4,11 @@ class Flycam
 
   constructor : (distance) ->
     @defaultDistance = distance
-    @zoomStep = 0    
+    @zoomStep = 0   
     @reset()
     @stepBack = [0, 0, -distance]
     @stepFront = [0, 0, distance]
+    @hasChanged = true
 
   reset : ->
     @currentMatrix = M4x4.clone [ 
@@ -24,6 +25,8 @@ class Flycam
     m[13] = m[13] << 1
     m[14] = m[14] << 1
 
+    @hasChanged = true
+
   zoomOut : ->
     @zoomStep++
     m = @currentMatrix
@@ -31,8 +34,10 @@ class Flycam
     m[13] = m[13] >> 1
     m[14] = m[14] >> 1
 
+    @hasChanged = true
+
   getZoomStep : ->
-    @zoomStep    
+    @zoomStep   
 
   getMatrix : ->
     M4x4.clone @currentMatrix
@@ -41,15 +46,16 @@ class Flycam
     m = M4x4.clone @currentMatrix
     m[12] = m[12] << @zoomStep
     m[13] = m[13] << @zoomStep
-    m[14] = m[14] << @zoomStep + 1 # delete later
+    m[14] = m[14] << @zoomStep
     m
   
   setMatrix : (matrix) ->
-    matrix[14] = matrix[14] >> 1 # delete later
     @currentMatrix = matrix
+    @hasChanged = true
 
   move : (p) ->
     @currentMatrix = M4x4.translate([ p[0], p[1], p[2] ], @currentMatrix)
+    @hasChanged = true
     
   getMovedNonPersistent : (p) ->
     @move [ p[0], p[1], p[2] ]
@@ -59,14 +65,16 @@ class Flycam
 
   yaw : (angle) ->
     @currentMatrix = M4x4.rotate(angle, [ 0, 1, 0 ], @currentMatrix)
+    @hasChanged = true
 
   yawDistance : (angle) ->
     @move(@stepBack)
     @currentMatrix = M4x4.rotate(angle, [ 0, 1, 0 ], @currentMatrix)
-    @move(@stepFront)    
+    @move(@stepFront)   
 
   roll : (angle) ->
     @currentMatrix = M4x4.rotate(angle, [ 0, 0, 1 ], @currentMatrix)    
+    @hasChanged = true
 
   rollDistance : (angle) ->
     @move(@stepBack)
@@ -74,7 +82,8 @@ class Flycam
     @move(@stepFront)
 
   pitch : (angle) ->
-    @currentMatrix = M4x4.rotate(angle, [ 1, 0, 0 ], @currentMatrix)
+    currentMatrix = M4x4.rotate(angle, [ 1, 0, 0 ], @currentMatrix)
+    @hasChanged = true
 
   pitchDistance : (angle) ->
     @move(@stepBack)
@@ -82,7 +91,8 @@ class Flycam
     @move(@stepFront)
 
   rotateOnAxis : (angle, axis) ->
-    @currentMatrix = M4x4.rotate(angle, axis, @currentMatrix)  
+    @currentMatrix = M4x4.rotate(angle, axis, @currentMatrix)
+    @hasChanged = true 
 
   rotateOnAxisDistance : (angle, axis) ->
     @move(@stepBack)
@@ -102,9 +112,7 @@ class Flycam
 
   getGlobalPos : ->
     matrix = @currentMatrix
-    [ matrix[12] << @zoomStep, 
-    matrix[13] << @zoomStep, 
-    matrix[14] << @zoomStep + 1 ] # delete later
+    [ matrix[12] << @zoomStep, matrix[13] << @zoomStep, matrix[14] << @zoomStep ]
 
   setPos : (p) ->
     matrix = @currentMatrix
@@ -121,6 +129,8 @@ class Flycam
     matrix[8]  = p[0]
     matrix[9]  = p[1]
     matrix[10] = p[2]
+    
+    @hasChanged = true
 
   getUp : ->
     matrix = @currentMatrix

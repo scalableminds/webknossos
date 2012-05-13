@@ -6,7 +6,7 @@
 <script src="@routes.Assets.at("javascripts/libs/mjs.js")"></script>
   <div id="container">
     <div id="main" role="main">
-      <canvas id="render"></canvas>
+      <div id="render"></div>
         <div id="keyinfos">
           Look around: Arrow-Keys or Mouse</br>
           Rotation: Shift + Arrow-Keys </br>
@@ -58,6 +58,8 @@
 
     if (Modernizr.webgl)
       Modernizr.load([
+        "@routes.Assets.at("javascripts/libs/threejs/Three.js")",
+        "@routes.Assets.at("javascripts/libs/threejs/stats.js")",
         "@routes.Assets.at("javascripts/brainflight.js")"
       ]);
     else

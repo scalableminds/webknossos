@@ -37,7 +37,7 @@ class DataSetActorTest extends AkkaSpecification {
     "responde to a block data request" in new setup {
       running( FakeApplication() ) {
         val dataSetActor = system.actorOf( Props[DataSetActor] )
-        val result = dataSetActor ? BlockRequest( DataSet.default, 1, List(Point3D( 0, 0, 0 ) ) )
+        val result = dataSetActor ? BlockRequest( DataSet.default, 1, Array(Point3D( 0, 0, 0 ) ) )
    
         await(result.asPromise) must be equalTo Array(0)
       }

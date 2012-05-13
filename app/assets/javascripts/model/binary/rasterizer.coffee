@@ -20,7 +20,7 @@ cross = (o, a, b) ->
 crossMacro = (o0, o1, a0, a1, b0, b1) ->
   (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
 
-Uint32_MAX = 2147483648
+Uint32_MAX = 1073741824
 
 class Polyhedron
   constructor : (@vertices, @indices) ->
@@ -29,7 +29,7 @@ class Polyhedron
 
   transform : (matrix) ->
     new Polyhedron(
-      M4x4.transformPointsAffine(matrix, @vertices, new Uint32Array(@vertices.length)), 
+      M4x4.transformPointsAffine(matrix, @vertices, new Int32Array(@vertices.length)), 
       @indices
     )
 
@@ -94,7 +94,7 @@ class Polyhedron
         z = line[j++] - min_z
 
         unless zBuffer = buffer[z]
-          zBuffer = buffer[z] = new Uint32Array(delta_y << 1)
+          zBuffer = buffer[z] = new Int32Array(delta_y << 1)
           for k in [0...zBuffer.length] by 2
             zBuffer[k] = Uint32_MAX
 
@@ -102,9 +102,9 @@ class Polyhedron
         zBuffer[y + 1] = x if x > zBuffer[y + 1]
 
     # build and rasterize convex hull of all z-planes
-    points = new Uint32Array(delta_y << 2)
-    lower  = new Uint32Array(delta_y << 2)
-    upper  = new Uint32Array(delta_y << 2)
+    points = new Int32Array(delta_y << 2)
+    lower  = new Int32Array(delta_y << 2)
+    upper  = new Int32Array(delta_y << 2)
     
     for zBuffer, z in buffer
       # convex hull building base on:

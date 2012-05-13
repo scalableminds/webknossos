@@ -34,10 +34,14 @@ class Mouse
   
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
+    @boundMouseMoved = (event) => @mouseMoved(event)
+    @boundMouseDown  = => @mouseDown()
+    @boundMouseUp    = => @mouseUp()
+
     $(target).on 
-      "mousemove" : @mouseMoved
-      "mousedown" : @mouseDown
-      "mouseup"   : @mouseUp
+      "mousemove" : @boundMouseMoved
+      "mousedown" : @boundMouseDown
+      "mouseup"   : @boundMouseUp
 
       # fullscreen pointer lock
       # Firefox does not yet support Pointer Lock
@@ -66,14 +70,14 @@ class Mouse
 
   unbind : ->
     $(@target).off 
-      "mousemove" : @mouseMoved
-      "mouseup" : @mouseUp
-      "mousedown" : @mouseDown
+      "mousemove" : @boundMouseMoved
+      "mouseup" : @boundMouseUp
+      "mousedown" : @boundMouseDown
       "webkitfullscreenchange" : @toogleMouseLock
       "webkitpointerlocklost" : @unlockMouse
       "webkitpointerlockchange" : @unlockMouse    
 
-  mouseMoved : (evt) =>
+  mouseMoved : (evt) ->
     
     { lastPosition, changedCallback } = @
 
@@ -98,11 +102,11 @@ class Mouse
       changedCallback.x distX * User.Configuration.mouseRotateValue if distX isnt 0
       changedCallback.y distY * User.Configuration.mouseRotateValue if distY isnt 0
 
-  mouseDown : =>
+  mouseDown : ->
     $(@target).css("cursor", "none")
     @buttonDown = true
 
-  mouseUp : =>
+  mouseUp : ->
     @buttonDown = false 
     $(@target).css("cursor", "auto")
 

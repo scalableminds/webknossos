@@ -68,7 +68,7 @@ class GlEngine
     @background [1, 1, 1, 1]
 
     #throttle renderLoop to run every 25ms -> max. 40 FPS (but rather 20FPS)
-    @throttledRenderLoop = _.throttle( @renderLoop, 25)
+    @throttledRenderLoop = _.throttle( @renderLoop, 50)
 
     requestAnimationFrame = (->
       window.requestAnimationFrame or 

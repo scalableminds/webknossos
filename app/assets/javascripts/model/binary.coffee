@@ -209,13 +209,13 @@ Binary =
 
   pingPolyhedron : new Rasterizer([
       -3,-3,-1 #0
-      -3,-3, 3 #3
+      -3,-3, 1 #3
       -3, 3,-1 #6
-      -3, 3, 3 #9
+      -3, 3, 1 #9
        3,-3,-1 #12 
-       3,-3, 3 #15
+       3,-3, 1 #15
        3, 3,-1 #18
-       3, 3, 3 #21
+       3, 3, 1 #21
     ],[
       0,3
       0,6
@@ -235,9 +235,9 @@ Binary =
 
     console.time "ping"
     matrix = M4x4.clone(matrix)
-    matrix[12] /= 32
-    matrix[13] /= 32
-    matrix[14] /= 32
+    matrix[12] = matrix[12] >> 5
+    matrix[13] = matrix[13] >> 5
+    matrix[14] = matrix[14] >> 5
 
     polyhedron = @pingPolyhedron.transform(matrix)
 
@@ -255,6 +255,7 @@ Binary =
     test = polyhedron.voxelize()
     address = new Uint32Array(3)
     i = 0
+    pullCount = 0
     while i < test.length
       address[0] = test[i++]
       address[1] = test[i++]
@@ -262,7 +263,9 @@ Binary =
 
       unless cube[@bucketIndexByAddress(address, zoomStep)]
         @pullBucket(address, zoomStep)
+        pullCount++
 
+    console.log "pullCount", pullCount
     console.timeEnd "ping"
 
 

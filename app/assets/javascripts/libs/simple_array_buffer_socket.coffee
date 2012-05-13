@@ -105,7 +105,7 @@ class SimpleArrayBufferSocket.WebSocket
         handle = new Float32Array(buffer, 0, 1)[0]
         if handle == socketHandle
           detachHandlers()
-          deferred.resolve(new @responseBufferType(buffer, 4))
+          _.defer => deferred.resolve(new @responseBufferType(buffer, 4))
 
       socketCloseCallback = (event) ->
         detachHandlers()

@@ -5,7 +5,6 @@ import _root_.scala.xml.XML
 import scalax.file.Path
 import org.specs2.mutable.Specification
 import play.templates.ScalaTemplateCompiler
-import util.parsing.input.CharSequenceReader
 import play.templates._
 
 /**

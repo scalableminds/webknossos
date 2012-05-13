@@ -253,7 +253,7 @@ Binary =
     cube = @cubes[zoomStep]
 
     test = polyhedron.voxelize()
-    address = new Uint32Array(3)
+    address = new Int32Array(3)
     i = 0
     pullCount = 0
     while i < test.length

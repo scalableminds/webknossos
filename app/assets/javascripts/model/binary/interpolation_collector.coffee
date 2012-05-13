@@ -56,7 +56,7 @@ nextPointMacro = (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, si
         if bucket == true
           -2
         else
-          bucket[pointIndex] / 256
+          bucket[pointIndex]
       else
         -1
 

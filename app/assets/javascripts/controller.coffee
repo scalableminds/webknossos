@@ -38,15 +38,9 @@ Controller =
           
         View.setMatrix(matrix)
 
-        GeometryFactory.createMesh("coordinateAxes", "mesh").done (mesh) ->
-          mesh.relativePosition.x = 100
-          View.addGeometry mesh
-          
-        GeometryFactory.createMesh("crosshair", "mesh_noLight").done (mesh) ->   
-          View.addGeometry mesh
-
-        GeometryFactory.createTrianglesplane(128, 0, "trianglesplane").done (trianglesplane) ->
-          View.addGeometry trianglesplane
+        GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
+        GeometryFactory.createTrianglesplane(128, 0).done ->
+          View.draw()
       
       ->
         alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
@@ -101,7 +95,7 @@ Controller =
     
     new Input.KeyboardNoLoop(
       #Branches
-      "b" : -> Model.Route.putBranch(View.getGlobalMatrix())
+      "b" : -> Model.Route.putBranch(View.getMatrix())
       "h" : -> Model.Route.popBranch().done((matrix) -> View.setMatrix(matrix))
 
       #Zoom in/out
@@ -141,38 +135,38 @@ Controller =
   #Customize Options
   setMoveValue : (value) ->
     User.Configuration.moveValue = (Number) value
-    User.Configuration.push()    
+
+    User.Configuration.push()   
 
   setRotateValue : (value) ->
-    User.Configuration.rotateValue = (Number) value  
-    User.Configuration.push()    
+    User.Configuration.rotateValue = (Number) value 
+    User.Configuration.push()   
 
   setScaleValue : (value) ->
     User.Configuration.scaleValue = (Number) value  
-    User.Configuration.push()          
+    User.Configuration.push()         
 
   setMouseRotateValue : (value) ->
     User.Configuration.mouseRotateValue = (Number) value
-    User.Configuration.push()          
+    User.Configuration.push()         
 
   setMouseInversionX : (value) ->
     if value is true
       User.Configuration.mouseInversionX = 1
     else
       User.Configuration.mouseInversionX = -1
-    User.Configuration.push()          
+    User.Configuration.push()         
 
   setMouseInversionY : (value) ->
     if value is true
       User.Configuration.mouseInversionY = 1
     else
       User.Configuration.mouseInversionY = -1
-    User.Configuration.push()          
-
+    User.Configuration.push()         
 
   setMouseActivity : (value) ->
     User.Configuration.mouseActive = value
-    User.Configuration.push()        
+    User.Configuration.push()       
     if value is false
       @input.mouse.unbind()
       @input.mouse = null
@@ -180,8 +174,8 @@ Controller =
       @initMouse()
 
   setKeyboardActivity : (value) ->
-    User.Configuration.keyboardActive = value  
-    User.Configuration.push()    
+    User.Configuration.keyboardActive = value 
+    User.Configuration.push()   
     if value is false
       @input.keyboard.unbind()
       @input.keyboard = null
@@ -190,7 +184,7 @@ Controller =
 
   setGamepadActivity : (value) ->
     User.Configuration.gamepadActive = value  
-    User.Configuration.push()    
+    User.Configuration.push()   
     if value is false
       @input.gamepad.unbind()
       @input.gamepad = null
@@ -199,10 +193,9 @@ Controller =
 
   setMotionSensorActivity : (value) ->
     User.Configuration.motionsensorActive = value
-    User.Configuration.push()    
+    User.Configuration.push()   
     if value is false
       @input.deviceorientation.unbind()
       @input.deviceorientation = null
     else
-      @initMotionsensor()          
-
+      @initMotionsensor()

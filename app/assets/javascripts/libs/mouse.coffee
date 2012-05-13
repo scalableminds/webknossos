@@ -27,21 +27,17 @@ class Mouse
 
   ###
   #@param {Object} target : DOM Element
-  #  HTML object where the mouse attaches the events
+  # HTML object where the mouse attaches the events
   ###
   constructor : (@target) ->
     # @User = User
   
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
-    @boundMouseMoved = (event) => @mouseMoved(event)
-    @boundMouseDown  = => @mouseDown()
-    @boundMouseUp    = => @mouseUp()
-
     $(target).on 
-      "mousemove" : @boundMouseMoved
-      "mousedown" : @boundMouseDown
-      "mouseup"   : @boundMouseUp
+      "mousemove" : @mouseMoved
+      "mousedown" : @mouseDown
+      "mouseup"   : @mouseUp
 
       # fullscreen pointer lock
       # Firefox does not yet support Pointer Lock
@@ -55,7 +51,7 @@ class Mouse
   ###
   #Binds a function as callback when X-Position was changed
   #@param {Function} callback :
-  #  gets a modified distance as parameter
+  # gets a modified distance as parameter
   ###
   bindX : (callback) ->
     @changedCallback.x = callback
@@ -63,21 +59,21 @@ class Mouse
   ###
   #Binds a function as callback when Y-Position was changed
   #@param {Function} callback :
-  #  gets a modified distance as parameter
+  # gets a modified distance as parameter
   ###
   bindY : (callback) ->
     @changedCallback.y = callback
 
   unbind : ->
     $(@target).off 
-      "mousemove" : @boundMouseMoved
-      "mouseup" : @boundMouseUp
-      "mousedown" : @boundMouseDown
+      "mousemove" : @mouseMoved
+      "mouseup" : @mouseUp
+      "mousedown" : @mouseDown
       "webkitfullscreenchange" : @toogleMouseLock
       "webkitpointerlocklost" : @unlockMouse
       "webkitpointerlockchange" : @unlockMouse    
 
-  mouseMoved : (evt) ->
+  mouseMoved : (evt) =>
     
     { lastPosition, changedCallback } = @
 
@@ -95,18 +91,18 @@ class Mouse
 
     # fullscreen API 
     # Mouse lock returns MovementX/Y in addition to the regular properties
-    # (these become static)    
+    # (these become static)   
     else
       distX = -evt.originalEvent.webkitMovementX * User.Configuration.mouseInversionX
       distY = evt.originalEvent.webkitMovementY * User.Configuration.mouseInversionY
       changedCallback.x distX * User.Configuration.mouseRotateValue if distX isnt 0
       changedCallback.y distY * User.Configuration.mouseRotateValue if distY isnt 0
 
-  mouseDown : ->
+  mouseDown : =>
     $(@target).css("cursor", "none")
     @buttonDown = true
 
-  mouseUp : ->
+  mouseUp : =>
     @buttonDown = false 
     $(@target).css("cursor", "auto")
 

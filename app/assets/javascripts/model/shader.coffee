@@ -6,9 +6,9 @@ libs/request : request
 
 Shader =
 
-	get : _.memoize (name) ->
+  get : _.memoize (name) ->
 
-		$.when(
-			request(url : "/assets/shader/#{name}.vs"), 
-			request(url : "/assets/shader/#{name}.fs")
-		).pipe (vertexShader, fragmentShader) -> { vertexShader, fragmentShader }
+    $.when(
+      request(url : "/assets/shader/#{name}.vs"), 
+      request(url : "/assets/shader/#{name}.fs")
+    ).pipe (vertexShader, fragmentShader) -> { vertexShader, fragmentShader }

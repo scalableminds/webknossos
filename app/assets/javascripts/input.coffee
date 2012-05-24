@@ -153,7 +153,7 @@ class Input.Deviceorientation
       @eventHandler
       @unfire("x")
       @unfire("y")
-    )     
+    )      
 
   fire : (key, dist) ->
 

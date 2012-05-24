@@ -6,6 +6,7 @@ model : Model
 # global View variables
 cam = null
 
+
 #constants
 CAM_DISTANCE = 140
 
@@ -217,4 +218,3 @@ View =
     if cam.getZoomStep() < 3
         #todo: validation in Model
       cam.zoomOut()
-

@@ -69,6 +69,3 @@ GeometryFactory =
 
       View.trianglesplane = trianglesplane    
       View.addGeometry View.trianglesplane
-
-
-      

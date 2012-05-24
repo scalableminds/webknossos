@@ -12,7 +12,7 @@ import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
 import models.DataSet
 
-object GridFileDataStore extends DataStore{
+class GridFileDataStore extends DataStore{
 	  //GridFs handle
   val gridfs = GridFS(MongoConnection()("binaryData"))
   
@@ -59,13 +59,9 @@ object GridFileDataStore extends DataStore{
     byteArray((zB * 128 * 128 + (globalPoint.y % 128) * 128 + globalPoint.x % 128))
   }
 
-  /**
-   *  Read file contents to a byteArray
-   */
-  def inputStreamToByteArray(is: InputStream) = {
-    val byteArray = new Array[Byte](2097152)
-    val bytesRead = is.read(byteArray, 0, 2097152)
-    Logger.info("%d bytes read".format(bytesRead))
+  def inputStreamToByteArray( is: InputStream ) = {
+    val byteArray = new Array[Byte]( 2097152 )
+    is.read( byteArray, 0, 2097152 )
     //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
     byteArray
   }
@@ -85,7 +81,7 @@ object GridFileDataStore extends DataStore{
       fh.filename = convertCoordinatesToString(point)
       fh.contentType = "application"
       }
-      FileDataStore.inputStreamToByteArray(IS)
+      inputStreamToByteArray(IS)
     }
     catch {
       case e: FileNotFoundException =>
@@ -93,4 +89,6 @@ object GridFileDataStore extends DataStore{
         nullBlock
     }
   }
+  
+
 }

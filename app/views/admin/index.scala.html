@@ -1,0 +1,31 @@
+@(user:User, users: List[User])
+
+@main(Some(user)){
+    <header>
+        <hgroup>
+            <h1>Administrator Section</h1>
+            <h2>Visualisation of racked routes</h2>
+        </hgroup>
+    </header>
+    
+    <article  class="tasks">
+          @users.map{ user =>
+                <div class="folder">
+                    <header>
+                        <h3>@user.name</h3>
+                        <span class="loader">Loading</span>
+                    </header>
+                    <ul class="list">
+                        @TrackedRoute.findByUser( user ).map{ route =>
+                          <li>
+                            <input class="done" type="checkbox" />
+                            <h4>@route._id</h4>
+                            <time datetime="@route.timestamp">@route.timestamp.format("hh:mm dd MMM yyyy")</time>
+                          </li>
+                        }
+                    </ul>
+                </div>
+        }
+        <button>Visualize</button> 
+    </article>
+}

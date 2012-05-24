@@ -114,4 +114,3 @@ class Mouse
     else
       @locked = false
       navigator.pointer.unlock()
-

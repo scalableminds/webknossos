@@ -1,6 +1,7 @@
 package models
 
-import scala.collection.mutable.{ Stack, Queue }
+import scala.collection.mutable.Stack
+import scala.collection.immutable.Vector
 import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.dao.SalatDAO
@@ -11,6 +12,7 @@ import play.api.Play.current
 import brainflight.tools.geometry.Vector3I
 import brainflight.tools.geometry.Vector3I._
 import java.util.Date
+import brainflight.tools.ExtendedTypes._
 import scala.math._
 
 /**
@@ -22,27 +24,33 @@ import scala.math._
 
 
 case class TreeByte( b: Byte) {
-  def isValue = ( b & 0xC0 ) == TreeByte.ValueByte.toInt
-  def isBranch = ( b & 0xC0 )  == TreeByte.BranchByte.toInt
-  def isEnd = ( b & 0xC0 ) == TreeByte.EndByte.toInt
-  def isInterpolated = ( b & 0xC0 ) == TreeByte.InterpolatedByte.toInt
+  def isValue = ( b & 0xC0 ) == TreeByte.ValueByte
+  def isBranch = ( b & 0xC0 ).toByte == TreeByte.BranchByte
+  def isEnd = ( b & 0xC0 ).toByte == TreeByte.EndByte
+  def isInterpolated = ( b & 0xC0 ).toByte == TreeByte.InterpolatedByte
   
-  def x = TreeByte.byteCodeToInt(b & TreeByte.xMask >> 4)
-  def y = TreeByte.byteCodeToInt(b & TreeByte.yMask >> 2)
-  def z = TreeByte.byteCodeToInt(b & TreeByte.zMask)
+  def x = TreeByte.byteCodeToInt( (b & TreeByte.xMask) >> 4 )
+  def y = TreeByte.byteCodeToInt( (b & TreeByte.yMask) >> 2 )
+  def z = TreeByte.byteCodeToInt( b & TreeByte.zMask )
 }
 
 object TreeByte {
   implicit def ByteToTreeByte( b: Byte) = TreeByte( b )
   
-  val xMask = 0x30.toByte
-  val yMask = 0x0C.toByte
-  val zMask = 0x03.toByte
+  val xMask = 0x30
+  val yMask = 0x0C
+  val zMask = 0x03
   
   val ValueByte = 0x00.toByte
+  val PointValue = 0f
+
   val InterpolatedByte = 0x40.toByte
+  
   val BranchByte = 0x80.toByte
+  val BranchPushVallue = 1f
+  
   val EndByte = 0xC0.toByte
+  val BranchPopValue = 2f
   
   def byteCodeToInt( b: Int ): Int = b - 1
 }
@@ -59,40 +67,32 @@ case class TrackedRoute(
 
   val id = _id.toString
   
-  def points = Array[Vector3I]( first ) ++ TrackedRoute.routeFromBinary( start = first, bytes = binaryPointTree )
+  def points: List[List[Vector3I]] = TrackedRoute.routeFromBinary( start = first, bytes = binaryPointTree )
 
   def add( newPoints: List[Vector3I] ) = {
     if ( newPoints.size > 0 ) {
-      val modifiedRoute = this.copy(
+      this.copy(
         binaryPointTree = binaryPointTree ++ TrackedRoute.binaryFromRoute( start = last, points = newPoints ),
         last = newPoints.last )
-        
-      TrackedRoute.save( modifiedRoute )
-      modifiedRoute
-    }
+    } else
+      this
   }
 
-  def addBranch() = {
-    val modifiedRoute = this.copy( binaryPointTree = binaryPointTree :+ TreeByte.BranchByte )
-    TrackedRoute.save( modifiedRoute )
-    modifiedRoute
-  }
+  def addBranch = 
+    this.copy( binaryPointTree = binaryPointTree :+ TreeByte.BranchByte.toByte )
 
   def closeBranch( nextBranch: Vector3I ) = {
-    val modifiedRoute = this.copy(
-      binaryPointTree = binaryPointTree :+ TreeByte.EndByte,
+    this.copy(
+      binaryPointTree = binaryPointTree :+ TreeByte.EndByte.toByte,
       last = nextBranch )
-    TrackedRoute.save( modifiedRoute )
-    modifiedRoute
   }
 }
 
-object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
+object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ){
   import TreeByte._
-
   
   def intToByteCode( i: Int ): Byte = {
-    assert( i > -2 && i < 2, "Assertion failed with: " + i )
+    assert( i >= -1 && i <= 1, "Assertion failed with: " + i )
     ( i + 1 ).toByte
   }
 
@@ -110,20 +110,23 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
     points.zip( start :: points ).flatMap {
       case ( current, previous ) =>
         val filled = current.fillGapTill(previous)
-        filled.zipWithIndex.map( tuple =>
-          pointToByteCode( tuple._1, tuple._2 != filled.size-1 ) )
+        filled.zipWithIndex.map{ 
+          case (point, idx) =>
+            pointToByteCode( point, idx != filled.size-1 ) 
+        }       
     }.toArray
   }
 
-  def routeFromBinary( start: Vector3I, bytes: Array[Byte] ): Array[Vector3I] = {
+  def routeFromBinary( start: Vector3I, bytes: Array[Byte] ): List[List[Vector3I]] = {
     var previous = start
     val branchPointStack = Stack[Vector3I]()
-    val route = Queue[Vector3I]()
+    var tree: List[List[Vector3I]] = Nil
+    var route = Vector[Vector3I]( start )
     for( b <- bytes ){
       b match {
         case b if b.isValue =>
           previous = previous + byteCodeToPoint( b )
-          route.enqueue(previous)
+          route = route :+ previous
         case b if b.isInterpolated =>
           previous = previous + byteCodeToPoint( b )
         case b if b.isBranch =>
@@ -131,10 +134,14 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
           previous
         case b if b.isEnd =>
           previous = branchPointStack.pop()
+          tree ::= route.toList
+          route = Vector[Vector3I]( previous )
           previous
       }
     }
-    route.toArray
+    if( ! route.isEmpty )
+      tree ::= route.toList
+    tree
   }
 
   def createForUser( user: User, dataSetId: String, points: List[Vector3I] = Nil ) = {
@@ -169,5 +176,44 @@ object TrackedRoute extends BasicDAO[TrackedRoute]( "routes" ) {
   def findOpenBy( user: User ): Option[TrackedRoute] = {
     find(
       MongoDBObject( "userId" -> user._id, "closed" -> false ) ).toList.headOption
+  }
+  
+  def extendRoute( route1: TrackedRoute, user: User, buffer: Array[Byte]) = {
+    var points = Vector.empty[Vector3I]
+    var routeBuffer = route1    
+    var userBuffer = user
+    val floatBuffer = buffer.subDivide( 4 ).map( _.reverse.toFloat )
+    
+    floatBuffer.dynamicSliding( windowSize = 17 ) {
+      case PointValue :: x :: y :: z :: _ =>
+        val v = Vector3I( x.toInt, y.toInt, z.toInt )
+        points = points :+ v
+        
+        Vector3I.defaultSize
+      case BranchPushVallue :: tail =>
+        val matrix = tail.take(16)
+        
+        userBuffer = userBuffer.copy( branchPoints = BranchPoint( matrix ) :: userBuffer.branchPoints )
+        routeBuffer = routeBuffer.add( points.toList ).addBranch
+        points = Vector.empty
+        
+        TransformationMatrix.defaultSize
+      case BranchPopValue :: _ =>
+        routeBuffer = routeBuffer.add( points.toList )
+        points = Vector.empty
+        if ( !userBuffer.branchPoints.isEmpty ) {
+          val branchPoint = userBuffer.branchPoints.head
+          userBuffer = userBuffer.copy( branchPoints = userBuffer.branchPoints.tail ) 
+          routeBuffer = routeBuffer.closeBranch( branchPoint.matrix.extractTranslation.get.toVector3I )
+        }
+        
+        0
+      case _ =>
+        println("Recieved control code is invalid.")     
+        floatBuffer.size // jump right to the end to stop processing
+    }
+    routeBuffer = routeBuffer.add( points.toList )
+    save( routeBuffer )
+    User.save( userBuffer )
   }
 }

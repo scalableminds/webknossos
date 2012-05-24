@@ -15,7 +15,7 @@ import com.mongodb.casbah.gridfs.Imports._
 import brainflight.tools.geometry.Point3D
 import models.DataSet
 
-object Admin extends Controller {
+object PerformanceTest extends Controller {
   
   val xBot = 10
   val xTop = 20
@@ -27,33 +27,35 @@ object Admin extends Controller {
   def timeGridFS() = Action {
 
     var gridFileDataStoreTime = -System.currentTimeMillis()
+    var dataStore = new GridFileDataStore
     for {
       x <- xBot to xTop
       y <- yBot to yTop
       z <- zBot to zTop
     } {
-      GridFileDataStore.load(DataSet.default, 1)(Point3D(x * 128, y * 128, z * 256))
+      dataStore.load(DataSet.default, 1)(Point3D(x * 128, y * 128, z * 256))
     }
     gridFileDataStoreTime += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
-    GridFileDataStore.cleanUp()
+    dataStore.cleanUp()
     Ok("GridFS needed %s".format(sdf.format(gridFileDataStoreTime)))
   }
 
   def timeFileDataStore() = Action {
     var fileDataStoreTime = -System.currentTimeMillis()
+    var dataStore = new FileDataStore
     for {
       x <- xBot to xTop
       y <- yBot to yTop
       z <- zBot to zTop
     } {
-      FileDataStore.load( DataSet.default, resolution = 1 )(Point3D(x * 128, y * 128, z * 256))
+      dataStore.load( DataSet.default, resolution = 1 )(Point3D(x * 128, y * 128, z * 256))
     }
     fileDataStoreTime += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
     val sdf = new SimpleDateFormat("HH:mm:ss:SSS")
-    FileDataStore.cleanUp()
+    dataStore.cleanUp()
     Ok("FileDataStore needed %s".format(sdf.format(fileDataStoreTime)))
   }
 

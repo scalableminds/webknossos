@@ -18,7 +18,7 @@ import models.DataSet
 /**
  * A data store implementation which uses the hdd as data storage
  */
-object FileDataStore extends DataStore {
+class FileDataStore extends DataStore {
   case class DataBlockInformation(
     dataSetId: String,
     point: Point3D,
@@ -34,6 +34,7 @@ object FileDataStore extends DataStore {
 
   // try to prevent loading a file multiple times into memory
   var fileCache = new HashMap[DataBlockInformation, Array[Byte]]
+  var lastUsed: Option[Tuple2[DataBlockInformation, Array[Byte]]] = None
 
   /**
    * Uses the coordinates of a point to calculate the data block the point
@@ -42,16 +43,29 @@ object FileDataStore extends DataStore {
   def extractBlockCoordinates( point: Point3D ) =
     Point3D( point.x / 128, point.y / 128, point.z / 256 )
 
+  def useLastUsed( blockInfo: DataBlockInformation ) = {
+    lastUsed.flatMap{
+      case (info, data ) if info == blockInfo => 
+        Some(data)
+      case _ => 
+        None
+    }
+  }  
+    
   /**
    * Load the binary data of the given coordinate from file
    */
   override def load( dataSet: DataSet, resolution: Int )( globalPoint: Point3D ): Byte = {
     if ( dataSet doesContain globalPoint ) {
-      val point = extractBlockCoordinates( globalPoint )
-
+      val point = extractBlockCoordinates( globalPoint )     
+      val blockInfo = DataBlockInformation( dataSet.id, point, resolution )
+      
       val byteArray: Array[Byte] =
-        fileCache.get( DataBlockInformation( dataSet.id, point, resolution ) ) getOrElse ( loadBlock( dataSet, point, resolution ) )
-
+        (useLastUsed( blockInfo ) orElse fileCache.get( blockInfo )) getOrElse ( 
+              loadBlock( dataSet, point, resolution ) )
+      
+      lastUsed = Some(blockInfo -> byteArray)
+       
       val zB = ( globalPoint.z % 256 ) / 2
       byteArray( ( zB * 128 * 128 + ( globalPoint.y % 128 ) * 128 + globalPoint.x % 128 ) )
     } else {

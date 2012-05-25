@@ -35,7 +35,7 @@ object BinaryData extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
   def calculateBinaryData( dataSet: DataSet, cube: Cube, resolutionExponent: Int ): Future[Array[Byte]] = {
-    implicit val timeout = Timeout( 5 seconds ) // needed for `?` below
+    implicit val timeout = Timeout( 25 seconds ) // needed for `?` below
     val coordinates = cube.calculateInnerPoints()
     val resolution = math.pow( 2, resolutionExponent ).toInt
 

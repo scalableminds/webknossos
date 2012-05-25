@@ -169,26 +169,24 @@ Binary =
 
   # A synchronized implementation of `get`.
   getSync : (vertices, zoomStep) ->
-
-    buffer0     = new Float32Array(vertices.length / 3 << 2)
-    buffer1     = new Float32Array(vertices.length / 3 << 2)
-    bufferDelta = new Float32Array(vertices.length)
     
+    buffer = new Float32Array(vertices.length / 3)
+
     if (cube = @cubes[zoomStep])
 
       cubeSize = @cubeSizes[zoomStep]
       cubeOffset = @cubeOffsets[zoomStep]
 
       InterpolationCollector.bulkCollect(
-        vertices,
-        buffer0, buffer1, bufferDelta, 
+        vertices, buffer
         cube, cubeSize, cubeOffset
       )
-      
-    { buffer0, buffer1, bufferDelta }
+
+    buffer
 
 
   PULL_LIMIT : 20
+  PING_THROTTLE_TIME : 200
   
   # Use this method to let us know when you've changed your spot. Then we'll try to 
   # preload some data. 
@@ -208,13 +206,13 @@ Binary =
 
   pingPolyhedron : new PolyhedronRasterizer([
       -3,-3,-1 #0
-      -3,-3, 1 #3
+      -2,-2, 2 #3
       -3, 3,-1 #6
-      -3, 3, 1 #9
+      -2, 2, 2 #9
        3,-3,-1 #12 
-       3,-3, 1 #15
+       2,-2, 2 #15
        3, 3,-1 #18
-       3, 3, 1 #21
+       2, 2, 2 #21
     ],[
       0,3
       0,6
@@ -274,7 +272,7 @@ Binary =
   # Requires cube to be large enough to handle the loaded bucket.
   pullBucket : (address, zoomStep) ->
 
-    # console.log "pull", V3.toString(address)
+    console.log "pull", V3.toString(address)
 
     @cubes[zoomStep][@bucketIndexByAddress(address, zoomStep)] = loadingState
 
@@ -319,7 +317,7 @@ Binary =
   cubes : []
   cubeSizes : []
   cubeOffsets : []
-  
+
 
   # Retuns the index of the bucket (in the cuboid) which holds the
   # point you're looking for.

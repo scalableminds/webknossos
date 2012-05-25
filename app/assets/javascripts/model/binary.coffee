@@ -252,11 +252,13 @@ Binary =
 
     cube = @cubes[zoomStep]
 
-    test = polyhedron.voxelize()
+    polyhedron.prepare()
+    # test = polyhedron.collectPoints()
+    test = polyhedron.collectPointsOnion(matrix[12], matrix[13], matrix[14])
     address = new Int32Array(3)
     i = 0
     pullCount = 0
-    while i < test.length
+    while i < test.length and pullCount < 20
       address[0] = test[i++]
       address[1] = test[i++]
       address[2] = test[i++]
@@ -267,126 +269,6 @@ Binary =
 
     console.log "pullCount", pullCount
     console.timeEnd "ping"
-
-
-  pingOld : (matrix, zoomStep) ->
-
-    console.log "ping"
-    console.time "ping"
-
-    SPHERE_RADIUS = 140
-    PLANE_STEPBACK = 25
-    LOOP_LIMIT = 60
-    loopCounter = 0
-    
-    sphereCenterVertex  = M4x4.transformPointAffine(matrix, [0, 0, -SPHERE_RADIUS])
-    sphereRadiusSquared = SPHERE_RADIUS * SPHERE_RADIUS
-
-    planeNormal = new Float32Array(3)
-    planeNormal[2] = 1
-    M4x4.transformLineAffine(matrix, planeNormal, planeNormal)
-
-    planeDistance = V3.dot(
-      M4x4.transformPointAffine(matrix, [0, 0, -PLANE_STEPBACK]), 
-      planeNormal
-    )
-
-    bucketCornerVertex = new Float32Array(3)
-    currentAddress     = new Float32Array(3)
-    neighborAddress    = new Float32Array(3)
-    vectorBuffer       = new Float32Array(3)
-
-    currentAddress[0]  = matrix[12] >> 5
-    currentAddress[1]  = matrix[13] >> 5
-    currentAddress[2]  = matrix[14] >> 5
-    
-    workingQueue = [ currentAddress ]
-    visitedList  = {}
-
-    if not @cubes[zoomStep] or not @cubes[zoomStep][@bucketIndexByAddress(currentAddress, zoomStep)]
-      @extendByBucketAddress(currentAddress, zoomStep)
-
-    while workingQueue.length and loopCounter < LOOP_LIMIT
-
-      currentAddress = workingQueue.shift()
-      currentAddressString = V3.toString(currentAddress)
-
-      continue if visitedList[currentAddressString]
-
-      loopCounter++
-
-      unless @cubes[zoomStep][@bucketIndexByAddress(currentAddress, zoomStep)]
-        @extendByBucketAddress(currentAddress, zoomStep)
-        @pullBucket(currentAddress, zoomStep) 
-
-      # fetching those neighbor buckets
-
-      tempWorkingQueue0 = []
-      tempWorkingQueue1 = []
-
-      neighborAddress[2] = currentAddress[2] - 2
-      while neighborAddress[2] <= currentAddress[2]
-        neighborAddress[2]++
-
-        neighborAddress[1] = currentAddress[1] - 2
-        while neighborAddress[1] <= currentAddress[1]
-          neighborAddress[1]++
-
-          neighborAddress[0] = currentAddress[0] - 2
-          while neighborAddress[0] <= currentAddress[0]
-            neighborAddress[0]++
-
-            # go skip yourself
-            continue if neighborAddress[0] == currentAddress[0] and neighborAddress[1] == currentAddress[1] and neighborAddress[2] == currentAddress[2]
-
-            # we we're here already
-            continue if visitedList[V3.toString(neighborAddress)]
-
-            frontCorners = 0
-            backCorners  = 0
-
-            for bucketCornerX in [0..1]
-              for bucketCornerY in [0..1]
-                for bucketCornerZ in [0..1]
-
-                  bucketCornerVertex[0] = neighborAddress[0] << 5
-                  bucketCornerVertex[1] = neighborAddress[1] << 5
-                  bucketCornerVertex[2] = neighborAddress[2] << 5
-
-                  bucketCornerVertex[0] = bucketCornerVertex[0] | 31 if bucketCornerX
-                  bucketCornerVertex[1] = bucketCornerVertex[1] | 31 if bucketCornerY
-                  bucketCornerVertex[2] = bucketCornerVertex[2] | 31 if bucketCornerZ
-
-                  cornerPlaneDistance = planeDistance - V3.dot(planeNormal, bucketCornerVertex)
-
-                  if cornerPlaneDistance < -EPSILON
-
-                    subX = bucketCornerVertex[0] - sphereCenterVertex[0]
-                    subY = bucketCornerVertex[1] - sphereCenterVertex[1]
-                    subZ = bucketCornerVertex[2] - sphereCenterVertex[2]
-
-                    cornerSphereDistance = sphereRadiusSquared - (subX * subX + subY * subY + subZ * subZ)
-
-                    if cornerSphereDistance < -EPSILON
-                      frontCorners++
-                    else
-                      backCorners++
-                  else
-                    backCorners++
-
-            
-            if frontCorners
-              if backCorners  
-                tempWorkingQueue0.push(V3.clone(neighborAddress)) 
-              else
-                tempWorkingQueue1.push(V3.clone(neighborAddress)) 
-
-      workingQueue = workingQueue.concat(tempWorkingQueue0).concat(tempWorkingQueue1)      
-      visitedList[currentAddressString] = true
-          
-
-    console.timeEnd("ping")
-    return
 
 
   # Loads and inserts a bucket from the server into the cube.

@@ -1,38 +1,56 @@
 ### define ###
 
+HEAP = new ArrayBuffer(1 << 26)
+Int32_MIN = -2147483648
+Int32_MAX = 2147483647
+
 swapMacro = (a, b) ->
   tmp = a
   a = b
   b = tmp
 
-nextPow2Macro = (x) ->
-  --x
-  x |= x >> 1
-  x |= x >> 2
-  x |= x >> 4
-  x |= x >> 8
-  x |= x >> 16
-  x + 1
-
-cross = (o, a, b) ->
-  (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+nextFreeBit = (x) ->
+  n = 1
+  if (x >> 16) == 0
+    n = n + 16
+    x <<= 16
+  if (x >> 24) == 0
+    n = n + 8
+    x <<= 8
+  if (x >> 28) == 0
+    n = n + 4
+    x <<= 4
+  if (x >> 30) == 0
+    n = n + 2
+    x <<= 2
+  32 - n - (x >> 31)
 
 crossMacro = (o0, o1, a0, a1, b0, b1) ->
   (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
 
-Int32_MIN = -2147483648
-Int32_MAX = 2147483647
-
-class Polyhedron
+class PolyhedronRasterizer
+  
   constructor : (@vertices, @indices) ->
-
+    
     @calcExtent()
+    { min_x, min_y, min_z, delta_z, delta_y, shift_z } = @
 
-  transform : (matrix) ->
-    new Polyhedron(
-      M4x4.transformPointsAffine(matrix, @vertices, new Int32Array(@vertices.length)), 
-      @indices
-    )
+    buffer = @buffer = new Int32Array(HEAP, 0, delta_z << shift_z)
+
+    # initialize buffer values
+    for z in [0...delta_z] by 1
+      index = z << shift_z
+      for index_y in [0...delta_y] by 1
+        buffer[index++] = Int32_MAX
+        buffer[index++] = Int32_MIN
+
+    # translate to 0 based coordinate system
+    i = vertices.length
+    while i
+      vertices[--i] -= min_z
+      vertices[--i] -= min_y
+      vertices[--i] -= min_x
+
 
   calcExtent : ->
     
@@ -63,23 +81,59 @@ class Polyhedron
     @delta_x = max_x - min_x + 1
     @delta_y = max_y - min_y + 1
     @delta_z = max_z - min_z + 1
+    @shift_z = nextFreeBit(@delta_y << 1)
+
+    return
 
 
-  voxelize : ->
+  transform : (matrix) ->
+    
+    { min_x, min_y, min_z } = @
+    matrix[12] += min_x
+    matrix[13] += min_y
+    matrix[14] += min_z
 
-    { min_x, min_y, min_z, max_x, max_y, max_z, delta_x, delta_y, delta_z, indices, vertices } = @
+    new_polyhedron = new PolyhedronRasterizer(
+      M4x4.transformPointsAffine(matrix, @vertices, new Int32Array(@vertices.length)), 
+      @indices
+    )
 
-    buffer = new Array(delta_z)
-    output = []
+    matrix[12] -= min_x
+    matrix[13] -= min_y
+    matrix[14] -= min_z
+
+    new_polyhedron
+
+
+  draw : (x, y, z) ->
+    
+    { buffer, shift_z } = @
+    index_y = (z << shift_z) + (y << 1)
+
+    buffer[index_y]     = x if x < buffer[index_y]
+    buffer[index_y + 1] = x if x > buffer[index_y + 1]
+
+    return
+
+
+  prepare : ->
+
+    @drawEdges()
+    @drawPolygons()
+
+
+  drawEdges : ->
+
+    { indices, vertices } = @
 
     # rasterize edges with 3d bresenham
-    i = 0
-    while i < indices.length
+    i = indices.length
+    while i
       
-      i0 = indices[i++]
-      i1 = indices[i++]
+      i0 = indices[--i]
+      i1 = indices[--i]
 
-      line = @bresenham3d(
+      @drawLine3d(
         vertices[i0++], 
         vertices[i0++], 
         vertices[i0],
@@ -88,178 +142,17 @@ class Polyhedron
         vertices[i1]
       )
 
-      j = 0
-      while j < line.length
-        x = line[j++]
-        y = (line[j++] - min_y) << 1 
-        z = line[j++] - min_z
+    return
 
-        unless zBuffer = buffer[z]
-          zBuffer = buffer[z] = new Int32Array(delta_y << 1)
-          k = zBuffer.length
-          while k
-            zBuffer[--k] = Int32_MIN
-            zBuffer[--k] = Int32_MAX
 
-        zBuffer[y]     = x if x < zBuffer[y]
-        zBuffer[y + 1] = x if x > zBuffer[y + 1]
-
-    # build and rasterize convex hull of all z-planes
-    pointsBuffer = new Int32Array(delta_y << 2)
-    lowerBuffer  = new Int32Array(delta_y << 2)
-    upperBuffer  = new Int32Array(delta_y << 2)
+  drawLine3d : (x, y, z, x1, y1, z1) ->
     
-    for zBuffer, z in buffer
-      # convex hull building based on:
-      # http://en.wikibooks.org/wiki/Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain
-
-      # put found end points into an ordered collection
-      # ordered by (y,x)
-      pointsPointer = 0
-      for y in [min_y..max_y]
-        if (x0 = zBuffer[(y - min_y) << 1]) != Int32_MAX
-          pointsBuffer[pointsPointer++] = y
-          pointsBuffer[pointsPointer++] = x0
-          if (x1 = zBuffer[((y - min_y) << 1) + 1]) != x0
-            pointsBuffer[pointsPointer++] = y
-            pointsBuffer[pointsPointer++] = x1
-
-      lowerPointer = 0
-      i = 0
-      while i < pointsPointer
-        points_y = pointsBuffer[i++]
-        points_x = pointsBuffer[i++]
-        lower_4 = lowerBuffer[lowerPointer - 4]
-        lower_3 = lowerBuffer[lowerPointer - 3]
-        lower_2 = lowerBuffer[lowerPointer - 2]
-        lower_1 = lowerBuffer[lowerPointer - 1]
-
-        while lowerPointer >= 4 and 
-        (crossMacro(lower_4, lower_3, lower_2, lower_1, points_y, points_x)) <= 0
-          # lower.pop()
-          lowerPointer -= 2
-          lower_4 = lowerBuffer[lowerPointer - 2]
-          lower_3 = lowerBuffer[lowerPointer - 1]
-          lower_2 = lower_4
-          lower_1 = lower_3
-
-        # lower.push(p)
-        lowerBuffer[lowerPointer++] = points_y
-        lowerBuffer[lowerPointer++] = points_x
-
-      # # assertion
-      # lower1 = []
-      # i = 0
-      # while i < pointsPointer
-      #   p = [pointsBuffer[i++], pointsBuffer[i++]]
-      #   while lower1.length >= 2 and cross(lower1[lower1.length - 2], lower1[lower1.length - 1], p) <= 0
-      #     lower1.pop()
-      #   lower1.push(p)
-      # throw "bla" unless lower1.length == lowerPointer / 2
-
-      upperPointer = 0
-      i = pointsPointer
-      while i 
-        points_x = pointsBuffer[--i]
-        points_y = pointsBuffer[--i]
-        upper_4 = upperBuffer[upperPointer - 4]
-        upper_3 = upperBuffer[upperPointer - 3]
-        upper_2 = upperBuffer[upperPointer - 2]
-        upper_1 = upperBuffer[upperPointer - 1]
-
-        while upperPointer >= 4 and 
-        (crossMacro(upper_4, upper_3, upper_2, upper_1, points_y, points_x)) <= 0
-          upperPointer -= 2
-          upper_4 = upperBuffer[upperPointer - 2]
-          upper_3 = upperBuffer[upperPointer - 1]
-          upper_2 = upper_4
-          upper_1 = upper_3
-
-        upperBuffer[upperPointer++] = points_y
-        upperBuffer[upperPointer++] = points_x
-
-      # # assertion
-      # upper1 = []
-      # i = pointsPointer
-      # while i
-      #   p = [pointsBuffer[--i], pointsBuffer[--i]].reverse()
-      #   while upper1.length >= 2 and cross(upper1[upper1.length - 2], upper1[upper1.length - 1], p) <= 0
-      #     upper1.pop()
-      #   upper1.push(p)
-      # throw "bla" unless upper1.length == upperPointer / 2
-
-      lowerPointer -= 2
-      upperPointer -= 2
-
-      hull = new Int32Array(lowerPointer + upperPointer)
-
-      for i in [0...lowerPointer]
-        hull[i] = lowerBuffer[i]
-      for i in [0...upperPointer]
-        hull[i + lowerPointer] = upperBuffer[i]
-
-
-
-      output.push @rasterizePolygon(hull, zBuffer, z + min_z)...
-
-        
-    output
-
-
-  rasterizePolygon : (hull, buffer, z) ->
-
-    { min_y } = @
-
-    output = []
-
-    # Step 3: go through all the lines in this polygon and build min/max x array.
-    i = j = 0
-    hullLength = hull.length
-    while i < hullLength
-
-      y = hull[i++]
-      x = hull[i++]
-      
-      j = i % hullLength # last line will link last vertex with the first (index num-1 to 0)
-      
-      dy = hull[j++] - y
-      
-      continue if -1 <= dy <= 1 # no need for interpolating any free lines
-
-      dx = hull[j] - x
-      
-      # initializing current line data (see tutorial on line rasterization for details)
-
-      line = @bresenham2d(x, y, x + dx, y + dy)
-
-      for k in [2...(line.length - 2)] by 2
-        x = line[k]
-        index_y = (line[k + 1] - min_y) << 1
-
-        buffer[index_y]     = x if x < buffer[index_y] # initial contains INT_MAX so any value is less
-        buffer[index_y + 1] = x if x > buffer[index_y + 1] # initial contains INT_MIN so any value is greater
-    
-    # Step 4: drawing horizontal line for each y from small_x to large_x including.
-    for offset_y in [0...@delta_y] 
-      min_x = buffer[offset_y << 1]
-      if min_x != Int32_MAX
-        max_x = buffer[(offset_y << 1) + 1]
-        for x in [min_x..max_x]
-          output.push x, offset_y + min_y, z
-
-    output
-
-
-  bresenham3d : (x, y, z, x1, y1, z1) ->
-    
-    output = []
-
-    output.push x, y, z
-
     x_inc = if (dx = x1 - x) < 0 then -1 else 1
     y_inc = if (dy = y1 - y) < 0 then -1 else 1
     z_inc = if (dz = z1 - z) < 0 then -1 else 1
-     
+    
+    @draw(x, y, z)
+    
     dx = if dx < 0 then -dx else dx
     dy = if dy < 0 then -dy else dy
     dz = if dz < 0 then -dz else dz
@@ -292,7 +185,7 @@ class Polyhedron
     err_1 = dy2 - d
     err_2 = dz2 - d
       
-    for i in [0...d]
+    for i in [0...d] by 1
 
       if err_1 > 0
         y += y_inc
@@ -306,18 +199,18 @@ class Polyhedron
       x     += x_inc
       
       switch mode
-        when 0 then output.push x, y, z
-        when 1 then output.push y, x, z
-        else        output.push z, y, x
+        when 0 
+          @draw(x, y, z)
+        when 1 
+          @draw(y, x, z)
+        else
+          @draw(z, y, x)
 
-    output
+    return
 
-  bresenham2d : (x, y, x1, y1) ->
+
+  drawLine2d : (x, y, x1, y1, z) ->
     
-    output = []
-
-    output.push x, y
-
     x_inc = if (dx = x1 - x) < 0 then -1 else 1
     y_inc = if (dy = y1 - y) < 0 then -1 else 1
      
@@ -343,7 +236,7 @@ class Polyhedron
 
     err = dy2 - d
       
-    for i in [0...d]
+    for i in [0...d] by 1
 
       if err > 0
         y += y_inc
@@ -353,21 +246,191 @@ class Polyhedron
       x   += x_inc
       
       if mode
-        output.push y, x
+        @draw(y, x, z)
       else
-        output.push x, y
+        @draw(x, y, z)
+
+    return
+
+
+  drawPolygons : ->
+
+    { delta_x, delta_y, delta_z, shift_z, buffer } = @
+
+    # build and rasterize convex hull of all z-planes
+    pointsBuffer = new Int32Array(delta_y << 2)
+    lowerBuffer  = new Int32Array(delta_y << 2)
+    upperBuffer  = new Int32Array(delta_y << 2)
+    
+    for z in [0...delta_z] by 1
+      # convex hull building based on:
+      # http://en.wikibooks.org/wiki/Algorithm_Implementation/Geometry/Convex_hull/Monotone_chain
+
+      # put found end points into an ordered collection
+      # ordered by (y,x)
+      pointsPointer = 0
+      index_y = z << shift_z
+      for y in [0...delta_y] by 1
+        
+        if (x0 = buffer[index_y++]) != Int32_MAX
+          pointsBuffer[pointsPointer++] = y
+          pointsBuffer[pointsPointer++] = x0
+          if (x1 = buffer[index_y++]) != x0
+            pointsBuffer[pointsPointer++] = y
+            pointsBuffer[pointsPointer++] = x1
+        else
+          index_y++
+
+      lowerPointer = 0
+      i = 0
+      while i < pointsPointer
+        points_y = pointsBuffer[i++]
+        points_x = pointsBuffer[i++]
+        lower_4 = lowerBuffer[lowerPointer - 4]
+        lower_3 = lowerBuffer[lowerPointer - 3]
+        lower_2 = lowerBuffer[lowerPointer - 2]
+        lower_1 = lowerBuffer[lowerPointer - 1]
+
+        while lowerPointer >= 4 and 
+        (crossMacro(lower_4, lower_3, lower_2, lower_1, points_y, points_x)) <= 0
+          # lower.pop()
+          lowerPointer -= 2
+          lower_4 = lowerBuffer[lowerPointer - 2]
+          lower_3 = lowerBuffer[lowerPointer - 1]
+          lower_2 = lower_4
+          lower_1 = lower_3
+
+        # lower.push(p)
+        lowerBuffer[lowerPointer++] = points_y
+        lowerBuffer[lowerPointer++] = points_x
+
+      # # assertion
+      # lower1 = []
+      # i = 0
+      # while i < pointsPointer
+      #   p = [pointsBuffer[i++], pointsBuffer[i++]]
+      #   while lower1.length >= 2 and cross(lower1[lower1.length - 2], lower1[lower1.length - 1], p) <= 0
+      #     lower1.pop()
+      #   lower1.push(p)
+
+      upperPointer = 0
+      i = pointsPointer
+      while i 
+        points_x = pointsBuffer[--i]
+        points_y = pointsBuffer[--i]
+        upper_4 = upperBuffer[upperPointer - 4]
+        upper_3 = upperBuffer[upperPointer - 3]
+        upper_2 = upperBuffer[upperPointer - 2]
+        upper_1 = upperBuffer[upperPointer - 1]
+
+        while upperPointer >= 4 and 
+        (crossMacro(upper_4, upper_3, upper_2, upper_1, points_y, points_x)) <= 0
+          upperPointer -= 2
+          upper_4 = upperBuffer[upperPointer - 2]
+          upper_3 = upperBuffer[upperPointer - 1]
+          upper_2 = upper_4
+          upper_1 = upper_3
+
+        upperBuffer[upperPointer++] = points_y
+        upperBuffer[upperPointer++] = points_x
+
+      # # assertion
+      # upper1 = []
+      # i = pointsPointer
+      # while i
+      #   p = [pointsBuffer[--i], pointsBuffer[--i]].reverse()
+      #   while upper1.length >= 2 and cross(upper1[upper1.length - 2], upper1[upper1.length - 1], p) <= 0
+      #     upper1.pop()
+      #   upper1.push(p)
+
+      lowerPointer -= 2
+      upperPointer -= 2
+
+      hull = new Int32Array(lowerPointer + upperPointer)
+
+      for i in [0...lowerPointer] by 1
+        hull[i] = lowerBuffer[i]
+      for i in [0...upperPointer] by 1
+        hull[i + lowerPointer] = upperBuffer[i]
+      
+      # Step 3: go through all the lines in this polygon and build min/max x array.
+      i = j = 0
+      hullLength = lowerPointer + upperPointer
+      while i < hullLength
+
+        y = hull[i++]
+        x = hull[i++]
+        
+        j = i % hullLength # last line will link last vertex with the first (index num-1 to 0)
+        
+        dy = hull[j++] - y
+        
+        continue if -1 <= dy <= 1 # no need for interpolating any free lines
+
+        dx = hull[j] - x
+        
+        # initializing current line data (see tutorial on line rasterization for details)
+
+        @drawLine2d(x, y, x + dx, y + dy, z)
+
+    return
+      
+
+  collectPoints : ->
+    { buffer, min_x, min_y, min_z, shift_z, delta_y, delta_z } = @
+
+    output = []
+
+    for z in [0...delta_z] by 1
+      index = z << shift_z
+      for y in [0...delta_y] by 1
+        x0 = buffer[index++]
+        x1 = buffer[index++]
+        if x0 != Int32_MAX
+          output.push x + min_x, y + min_y, z + min_z for x in [x0..x1]
 
     output
 
-  @circle : (maxSize) ->
-    q = 0
-    console.time "circle"
+  collectPointsOnion : (xs, ys, zs) ->
+
+    { buffer, min_x, max_x, min_y, max_y, min_z, max_z, delta_x, delta_y, delta_z, shift_z } = @
+
+    maxRadius = Math.max(
+      Math.abs(xs - min_x)
+      Math.abs(xs - max_x)
+      Math.abs(ys - min_y)
+      Math.abs(ys - max_y)
+      Math.abs(zs - min_z)
+      Math.abs(zs - max_z)
+    )
+    output = []
+    for radius in [0..maxRadius] by 1
+      for z in [Math.max(zs - radius, min_z)..Math.min(zs + radius, max_z)] by 1
+        for y in [Math.max(ys - radius, min_y)..Math.min(ys + radius, max_y)] by 1
+          index = ((z - min_z) << shift_z) + ((y - min_z) << 1)
+          x0 = buffer[index++]
+          x1 = buffer[index++]
+          if x0 != Int32_MAX
+            x0 += min_x
+            x1 += min_x
+            for x in [Math.max(xs - radius, x0)..Math.min(xs + radius, x1)]
+              if x == xs - radius or x == xs + radius or
+              y == ys - radius or y == ys + radius or
+              z == zs - radius or z == zs + radius
+                output.push x, y, z
+    output
+
+
+  collectPointsCiruclar : (startPoint) ->
     # output = [[0, 0, 0, 0, 0]]
     q++
 
-    for size in [1..maxSize]
+    for size in [1..maxSize] by 1
 
-      for z in [-size..size]
+      z_dir = -1
+      z = 0
+
+      while z <= size
 
         z_abs = if z < 0 then -z else z
         _size = size - z_abs
@@ -379,7 +442,7 @@ class Polyhedron
           x_dir = 1
           y_dir = -1
 
-          for i in [0...(_size << 2)]
+          for i in [0...(_size << 2)] by 1
 
             # output.push [x, y, z, size, _size]
             q++
@@ -395,10 +458,12 @@ class Polyhedron
           # output.push [0, 0, z, size, _size]
           q++
 
+        z += z_dir
+        z_dir = ~(--z_dir)
+
     # output
     console.timeEnd "circle"
     q
-
 
   @test : ->
   
@@ -433,16 +498,14 @@ class Polyhedron
       18,21
     ]
 
-    p = new Polyhedron(vertices, indices).transform [
+    p = new PolyhedronRasterizer(vertices, indices).transform [
       1,0,0,0
       0,1,0,0
       0,0,1,0
       10,10,10,0
     ]
     console.time "voxelize"
-    o = p.voxelize()
+    p.prepare()
+    o = p.collectPointsOnion(10, 10, 8)
     console.timeEnd "voxelize"
-
-    console.log Polyhedron.circle()
-    
     o

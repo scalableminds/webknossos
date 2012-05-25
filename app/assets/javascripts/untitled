@@ -1,7 +1,0 @@
-
-import math
-
-entropie = 0
-anz = [54, 43, 34, 34, 26, 18, 7,7,6,6,6,6,5,5,4,4,4,4,2,1]
-for a in anz:
-	entropie += (-a / 276 * log2(a/276))

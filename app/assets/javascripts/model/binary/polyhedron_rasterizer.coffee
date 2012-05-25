@@ -7,9 +7,10 @@ Int32_MAX = 2147483647
 HEAP = new ArrayBuffer(1 << 26)
 
 swapMacro = (a, b) ->
-  tmp = a
+  __tmp = a
   a = b
-  b = tmp
+  b = __tmp
+
 
 nextFreeBit = (x) ->
   n = 1
@@ -27,8 +28,18 @@ nextFreeBit = (x) ->
     x <<= 2
   32 - n - (x >> 31)
 
+
 crossMacro = (o0, o1, a0, a1, b0, b1) ->
   (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
+
+
+drawMacro = (x, y, z) ->
+
+  __index_y = (z << shift_z) + (y << 1)
+
+  buffer[__index_y]     = x if x < buffer[__index_y]
+  buffer[__index_y + 1] = x if x > buffer[__index_y + 1]
+
 
 class PolyhedronRasterizer
   
@@ -154,11 +165,13 @@ class PolyhedronRasterizer
 
   drawLine3d : (x, y, z, x1, y1, z1) ->
     
+    { shift_z, buffer } = @
+    
     x_inc = if (dx = x1 - x) < 0 then -1 else 1
     y_inc = if (dy = y1 - y) < 0 then -1 else 1
     z_inc = if (dz = z1 - z) < 0 then -1 else 1
     
-    @draw(x, y, z)
+    drawMacro(x, y, z)
     
     dx = if dx < 0 then -dx else dx
     dy = if dy < 0 then -dy else dy
@@ -207,16 +220,18 @@ class PolyhedronRasterizer
       
       switch mode
         when 0 
-          @draw(x, y, z)
+          drawMacro(x, y, z)
         when 1 
-          @draw(y, x, z)
+          drawMacro(y, x, z)
         else
-          @draw(z, y, x)
+          drawMacro(z, y, x)
 
     return
 
 
   drawLine2d : (x, y, x1, y1, z) ->
+
+    { shift_z, buffer } = @
     
     x_inc = if (dx = x1 - x) < 0 then -1 else 1
     y_inc = if (dy = y1 - y) < 0 then -1 else 1
@@ -226,7 +241,8 @@ class PolyhedronRasterizer
      
     dx2 = dx << 1
     dy2 = dy << 1
-    
+
+    drawMacro(x, y, z)    
 
     if dx >= dy
 
@@ -253,9 +269,9 @@ class PolyhedronRasterizer
       x   += x_inc
       
       if mode
-        @draw(y, x, z)
+        drawMacro(y, x, z)
       else
-        @draw(x, y, z)
+        drawMacro(x, y, z)
 
     return
 
@@ -394,6 +410,7 @@ class PolyhedronRasterizer
           output.push x + min_x, y + min_y, z + min_z for x in [x0..x1]
 
     output
+  
 
   collectPointsOnion : (xs, ys, zs) ->
 
@@ -407,6 +424,7 @@ class PolyhedronRasterizer
       Math.abs(zs - min_z)
       Math.abs(zs - max_z)
     )
+
     output = []
     for radius in [0..maxRadius] by 1
       for z in [Math.max(zs - radius, min_z)..Math.min(zs + radius, max_z)] by 1

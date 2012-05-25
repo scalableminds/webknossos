@@ -166,6 +166,7 @@ Binary =
 
     $.when(@getSync(vertices, zoomStep))
 
+
   # A synchronized implementation of `get`.
   getSync : (vertices, zoomStep) ->
 
@@ -177,8 +178,6 @@ Binary =
 
       cubeSize = @cubeSizes[zoomStep]
       cubeOffset = @cubeOffsets[zoomStep]
-      #{ cubeSize, cubeOffset } = @
-
 
       InterpolationCollector.bulkCollect(
         vertices,
@@ -188,9 +187,8 @@ Binary =
       
     { buffer0, buffer1, bufferDelta }
 
-  PING_DEBOUNCE_TIME : 500
-  PING_THROTTLE_TIME : 500
-  PRELOAD_STEPBACK : 10
+
+  PULL_LIMIT : 20
   
   # Use this method to let us know when you've changed your spot. Then we'll try to 
   # preload some data. 
@@ -206,6 +204,7 @@ Binary =
 
     @ping = _.throttle2(@pingImpl, @PING_THROTTLE_TIME)
     @ping(matrix, zoomStep)
+
 
   pingPolyhedron : new PolyhedronRasterizer([
       -3,-3,-1 #0
@@ -231,6 +230,7 @@ Binary =
       18,21
     ])
 
+
   pingImpl : (matrix, zoomStep) ->
 
     console.time "ping"
@@ -241,7 +241,7 @@ Binary =
 
     polyhedron = @pingPolyhedron.transform(matrix)
 
-    @extendByBucketExtent(
+    @extendByBucketAddressExtent(
       polyhedron.min_x
       polyhedron.min_y
       polyhedron.min_z
@@ -253,15 +253,14 @@ Binary =
     cube = @cubes[zoomStep]
 
     polyhedron.prepare()
-    # test = polyhedron.collectPoints()
-    test = polyhedron.collectPointsOnion(matrix[12], matrix[13], matrix[14])
+    testAddresses = polyhedron.collectPointsOnion(matrix[12], matrix[13], matrix[14])
+    
     address = new Int32Array(3)
-    i = 0
-    pullCount = 0
-    while i < test.length and pullCount < 20
-      address[0] = test[i++]
-      address[1] = test[i++]
-      address[2] = test[i++]
+    i = pullCount = 0
+    while i < testAddresses.length and pullCount < @PULL_LIMIT
+      address[0] = testAddresses[i++]
+      address[1] = testAddresses[i++]
+      address[2] = testAddresses[i++]
 
       unless cube[@bucketIndexByAddress(address, zoomStep)]
         @pullBucket(address, zoomStep)
@@ -291,6 +290,7 @@ Binary =
       =>
         @cubes[zoomStep][@bucketIndexByAddress(address, zoomStep)] = null
     )
+
   
   loadBucketSocket : _.once ->
     
@@ -302,12 +302,14 @@ Binary =
         requestBufferType : Float32Array
         responseBufferType : Uint8Array
       )
+
   
   loadBucket : (address, zoomStep) ->
     arr = new Float32Array(4)
     arr[0] = zoomStep
     arr.set([ address[0] << 5, address[1] << 5, address[2] << 5 ], 1)
     @loadBucketSocket().pipe (socket) -> socket.send(arr)
+
 
   
   # Now comes the implementation of our internal data structure.
@@ -317,6 +319,7 @@ Binary =
   cubes : []
   cubeSizes : []
   cubeOffsets : []
+  
 
   # Retuns the index of the bucket (in the cuboid) which holds the
   # point you're looking for.
@@ -327,12 +330,14 @@ Binary =
 
     bucketIndexMacro(x, y, z)
 
+
   bucketIndexByVertex : (vertex, zoomStep) ->
 
     cubeOffset = @cubeOffsets[zoomStep]
     cubeSize = @cubeSizes[zoomStep]
 
     bucketIndexByVertexMacro(vertex)
+
 
   bucketIndexByAddress : (address, zoomStep) ->
 
@@ -347,11 +352,12 @@ Binary =
     
     pointIndexMacro(x, y, z)
 
+
   # Want to add data? Make sure the cuboid is big enough.
   # This one is for passing real point coordinates.
-  extendByExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }, zoomStep) ->
+  extendByVertexExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }, zoomStep) ->
     
-    @extendByBucketExtent(
+    @extendByBucketAddressExtent(
       min_x >> 5,
       min_y >> 5,
       min_z >> 5,
@@ -361,8 +367,10 @@ Binary =
       zoomStep
     )
 
-  extendByPoint : ([ x, y, z ], zoomStep) ->
-    @extendByBucketExtent(
+
+  extendByVertex : ([ x, y, z ], zoomStep) ->
+
+    @extendByBucketAddressExtent(
       x >> 5,
       y >> 5,
       z >> 5,
@@ -372,12 +380,13 @@ Binary =
       zoomStep
     )
 
+
   extendByBucketAddress : ([ x, y, z ], zoomStep) ->
-    @extendByBucketExtent(x, y, z, x, y, z, zoomStep)
+    @extendByBucketAddressExtent(x, y, z, x, y, z, zoomStep)
       
       
   # And this one is for passing bucket coordinates.
-  extendByBucketExtent : (x0, y0, z0, x1, y1, z1, zoomStep) ->
+  extendByBucketAddressExtent : (x0, y0, z0, x1, y1, z1, zoomStep) ->
 
     oldCube       = @cubes[zoomStep]
     oldCubeOffset = @cubeOffsets[zoomStep]

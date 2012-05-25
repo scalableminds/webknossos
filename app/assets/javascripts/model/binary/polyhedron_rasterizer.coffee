@@ -1,8 +1,10 @@
 ### define ###
 
-HEAP = new ArrayBuffer(1 << 26)
+HEAP_SIZE = 1 << 26
 Int32_MIN = -2147483648
 Int32_MAX = 2147483647
+
+HEAP = new ArrayBuffer(1 << 26)
 
 swapMacro = (a, b) ->
   tmp = a
@@ -50,6 +52,11 @@ class PolyhedronRasterizer
       vertices[--i] -= min_z
       vertices[--i] -= min_y
       vertices[--i] -= min_x
+
+    # create convex hull buffers
+    @pointsBuffer = new Int32Array(delta_y << 2)
+    @lowerBuffer  = new Int32Array(delta_y << 2)
+    @upperBuffer  = new Int32Array(delta_y << 2)
 
 
   calcExtent : ->
@@ -255,12 +262,9 @@ class PolyhedronRasterizer
 
   drawPolygons : ->
 
-    { delta_x, delta_y, delta_z, shift_z, buffer } = @
+    { delta_x, delta_y, delta_z, shift_z, buffer, pointsBuffer, lowerBuffer, upperBuffer } = @
 
     # build and rasterize convex hull of all z-planes
-    pointsBuffer = new Int32Array(delta_y << 2)
-    lowerBuffer  = new Int32Array(delta_y << 2)
-    upperBuffer  = new Int32Array(delta_y << 2)
     
     for z in [0...delta_z] by 1
       # convex hull building based on:
@@ -407,7 +411,7 @@ class PolyhedronRasterizer
     for radius in [0..maxRadius] by 1
       for z in [Math.max(zs - radius, min_z)..Math.min(zs + radius, max_z)] by 1
         for y in [Math.max(ys - radius, min_y)..Math.min(ys + radius, max_y)] by 1
-          index = ((z - min_z) << shift_z) + ((y - min_z) << 1)
+          index = ((z - min_z) << shift_z) + ((y - min_y) << 1)
           x0 = buffer[index++]
           x1 = buffer[index++]
           if x0 != Int32_MAX
@@ -421,7 +425,7 @@ class PolyhedronRasterizer
     output
 
 
-  collectPointsCiruclar : (startPoint) ->
+  collectPointsCircular : (startPoint) ->
     # output = [[0, 0, 0, 0, 0]]
     q++
 

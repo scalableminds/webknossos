@@ -1,6 +1,6 @@
 ### define
 model/binary/interpolation_collector : InterpolationCollector
-model/binary/rasterizer : Rasterizer
+model/binary/polyhedron_rasterizer : PolyhedronRasterizer
 model/game : Game
 libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 libs/simple_worker : SimpleWorker
@@ -98,11 +98,11 @@ bucketIndexByVertexMacro = (vertex) ->
 
 # Computes the index of the specified bucket.
 # Requires `cubeOffset` and `cubeSize` to be in scope.
-bucketIndexByAddressMacro = (vertex) ->
+bucketIndexByAddressMacro = (address) ->
 
-  (vertex[0] - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
-  (vertex[1] - cubeOffset[1]) * cubeSize[2] + 
-  (vertex[2] - cubeOffset[2])
+  (address[0] - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+  (address[1] - cubeOffset[1]) * cubeSize[2] + 
+  (address[2] - cubeOffset[2])
 
 # Computes the bucket index of the vertex with the given coordinates.
 # Requires `cubeOffset0`, `cubeOffset1`, `cubeOffset2`, `cubeSize2` and 
@@ -122,7 +122,7 @@ pointIndexMacro = (x, y, z) ->
   ((z & 31))
 
 Binary =
-  Rasterizer : Rasterizer
+  Rasterizer : PolyhedronRasterizer
 
   # This method allows you to query the data structure. Give us an array of
   # vertices and we'll give you the stuff you need to interpolate data.
@@ -207,7 +207,7 @@ Binary =
     @ping = _.throttle2(@pingImpl, @PING_THROTTLE_TIME)
     @ping(matrix, zoomStep)
 
-  pingPolyhedron : new Rasterizer([
+  pingPolyhedron : new PolyhedronRasterizer([
       -3,-3,-1 #0
       -3,-3, 1 #3
       -3, 3,-1 #6
@@ -279,22 +279,17 @@ Binary =
 
     @cubes[zoomStep][@bucketIndexByAddress(address, zoomStep)] = loadingState
 
-    vertex = V3.clone(address)
-    vertex[0] = vertex[0] << 5
-    vertex[1] = vertex[1] << 5
-    vertex[2] = vertex[2] << 5
+    address = V3.clone(address)
 
-    @loadBucket(vertex, zoomStep).then(
+    @loadBucket(address, zoomStep).then(
       (colors) =>
         
-        @cubes[zoomStep][@bucketIndexByVertex(vertex, zoomStep)] = colors
+        @cubes[zoomStep][@bucketIndexByAddress(address, zoomStep)] = colors
 
-        console.error "wrong colors length", colors.length if colors.length != 1 << (5 * 3)
-
-        $(window).trigger("bucketloaded", [vertex])
+        $(window).trigger("bucketloaded", [address])
 
       =>
-        @cubes[zoomStep][@bucketIndexByVertex(vertex, zoomStep)] = null
+        @cubes[zoomStep][@bucketIndexByAddress(address, zoomStep)] = null
     )
   
   loadBucketSocket : _.once ->
@@ -308,10 +303,10 @@ Binary =
         responseBufferType : Uint8Array
       )
   
-  loadBucket : (vertex, zoomStep) ->
-    arr = new Float32Array(vertex.length + 1)
+  loadBucket : (address, zoomStep) ->
+    arr = new Float32Array(4)
     arr[0] = zoomStep
-    arr.set(vertex, 1)
+    arr.set([ address[0] << 5, address[1] << 5, address[2] << 5 ], 1)
     @loadBucketSocket().pipe (socket) -> socket.send(arr)
 
   

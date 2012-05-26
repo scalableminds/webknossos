@@ -106,21 +106,19 @@ class PolyhedronRasterizer
 
   transform : (matrix) ->
     
-    { min_x, min_y, min_z } = @
-    matrix[12] += min_x
-    matrix[13] += min_y
-    matrix[14] += min_z
+    { min_x, min_y, min_z, vertices } = @
 
-    new_polyhedron = new PolyhedronRasterizer(
-      M4x4.transformPointsAffine(matrix, @vertices, new Int32Array(@vertices.length)), 
+    vertices1 = new Int32Array(vertices.length)
+    i = vertices.length
+    while i
+      vertices1[--i] = vertices[i] + min_z
+      vertices1[--i] = vertices[i] + min_y
+      vertices1[--i] = vertices[i] + min_x
+
+    new PolyhedronRasterizer(
+      M4x4.transformPointsAffine(matrix, vertices1, vertices1), 
       @indices
     )
-
-    matrix[12] -= min_x
-    matrix[13] -= min_y
-    matrix[14] -= min_z
-
-    new_polyhedron
 
 
   draw : (x, y, z) ->
@@ -426,9 +424,14 @@ class PolyhedronRasterizer
     )
 
     output = []
+
     for radius in [0..maxRadius] by 1
-      for z in [Math.max(zs - radius, min_z)..Math.min(zs + radius, max_z)] by 1
-        for y in [Math.max(ys - radius, min_y)..Math.min(ys + radius, max_y)] by 1
+      radius_min_z = Math.max(zs - radius, min_z)
+      radius_max_z = Math.min(zs + radius, max_z)
+      radius_min_y = Math.max(ys - radius, min_y)
+      radius_max_y = Math.min(ys + radius, max_y)
+      for z in [radius_min_z..radius_max_z] by 1
+        for y in [radius_min_y..radius_max_y] by 1
           index = ((z - min_z) << shift_z) + ((y - min_y) << 1)
           x0 = buffer[index++]
           x1 = buffer[index++]

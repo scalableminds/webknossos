@@ -7,6 +7,7 @@ import play.Logger
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import brainflight.tools.geometry.Point3D
 import models.DataSet
+import brainflight.tools.geometry.Cube
 
 /**
  * Scalable Minds - Brainflight
@@ -40,7 +41,7 @@ class FileDataStore extends DataStore {
    * Uses the coordinates of a point to calculate the data block the point
    * lays in.
    */
-  def extractBlockCoordinates( point: Point3D ) =
+  def PointToBlock( point: Point3D ) =
     Point3D( point.x / 128, point.y / 128, point.z / 256 )
 
   def useLastUsed( blockInfo: DataBlockInformation ) = {
@@ -55,14 +56,14 @@ class FileDataStore extends DataStore {
   /**
    * Load the binary data of the given coordinate from file
    */
-  override def load( dataSet: DataSet, resolution: Int )( globalPoint: Point3D ): Byte = {
+  override def load( dataSet: DataSet, resolution: Int, globalPoint: Point3D ): Byte = {
     if ( dataSet doesContain globalPoint ) {
-      val point = extractBlockCoordinates( globalPoint )     
-      val blockInfo = DataBlockInformation( dataSet.id, point, resolution )
+      val block = PointToBlock( globalPoint )     
+      val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
       
       val byteArray: Array[Byte] =
         (useLastUsed( blockInfo ) orElse fileCache.get( blockInfo )) getOrElse ( 
-              loadBlock( dataSet, point, resolution ) )
+              loadBlock( dataSet, block, resolution ) )
       
       lastUsed = Some(blockInfo -> byteArray)
        
@@ -72,7 +73,41 @@ class FileDataStore extends DataStore {
       return 0
     }
   }
-
+  
+  /*
+   * Load the binary data of the given coordinate from file
+   */
+  override def load( dataSet: DataSet, resolution: Int, cube: Cube ): Array[Byte] = { 
+    if ( dataSet doesContain cube.topLeft ) { 
+      val block = PointToBlock( cube.topLeft )     
+      val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
+      
+      val byteArray: Array[Byte] =
+        (useLastUsed( blockInfo ) orElse fileCache.get( blockInfo )) getOrElse ( 
+              loadBlock( dataSet, block, resolution ) )
+      
+      lastUsed = Some(blockInfo -> byteArray)
+       
+      
+      val startX = cube.topLeft.x % 128 
+      val startY = cube.topLeft.y % 128 
+      val startZ = cube.topLeft.z % 256 
+      
+      val result = new Array[Byte]( cube.edgeLength*cube.edgeLength*cube.edgeLength )
+      var idx = 0
+      for{
+        x <- startX until (startX + cube.edgeLength)
+        y <- startY until (startY + cube.edgeLength)
+        z <- startZ until (startZ + cube.edgeLength)
+      } {
+        result.update( idx, byteArray( ( z/2 * 128 * 128 + y * 128 + x ) ))
+        idx += 1
+      }
+      result
+    } else {
+      new Array[Byte]( cube.edgeLength*cube.edgeLength*cube.edgeLength )
+    }
+  }
   /**
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.

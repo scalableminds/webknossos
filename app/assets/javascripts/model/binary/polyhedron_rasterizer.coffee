@@ -99,7 +99,7 @@ class PolyhedronRasterizer
     @delta_x = max_x - min_x + 1
     @delta_y = max_y - min_y + 1
     @delta_z = max_z - min_z + 1
-    @shift_z = nextFreeBit(@delta_y << 1)
+    @shift_z = nextFreeBit((@delta_y << 1) - 1)
 
     return
 
@@ -410,7 +410,7 @@ class PolyhedronRasterizer
           output.push x + min_x, y + min_y, z + min_z for x in [x0..x1]
 
     output
-  
+
 
   collectPointsOnion : (xs, ys, zs) ->
 
@@ -520,13 +520,13 @@ class PolyhedronRasterizer
       18,21
     ]
 
+    console.time "voxelize"
     p = new PolyhedronRasterizer(vertices, indices).transform [
       1,0,0,0
       0,1,0,0
       0,0,1,0
       10,10,10,0
     ]
-    console.time "voxelize"
     p.prepare()
     o = p.collectPointsOnion(10, 10, 8)
     console.timeEnd "voxelize"

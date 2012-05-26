@@ -32,8 +32,10 @@ import models.DataSet
  */
 
 object BinaryData extends Controller with Secured {
+  
   override val DefaultAccessRole = Role.User
-    implicit val timeout = Timeout( 5 seconds ) // needed for `?` below
+  
+  implicit val timeout = Timeout( 5 seconds ) // needed for `?` below
     
   def calculateBinaryData( dataSet: DataSet, cube: Cube, resolutionExponent: Int ): Future[Array[Byte]] = {
     val resolution = math.pow( 2, resolutionExponent ).toInt

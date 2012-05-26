@@ -60,10 +60,38 @@ nextPointMacro = (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, si
       else
         -1
 
+linearMacro = (p0, p1, d) ->
+  buffer[j] = if p0 == 0 or p1 == 0
+    0
+  else
+    p0 * (1 - d) + p1 * d
+  
+bilinearMacro = (p00, p10, p01, p11, d0, d1) ->
+  buffer[j] = if p00 == 0 or p10 == 0 or p01 == 0 or p11 == 0
+    0
+  else
+    p00 * (1 - d0) * (1 - d1) + 
+    p10 * d0 * (1 - d1) + 
+    p01 * (1 - d0) * d1 + 
+    p11 * d0 * d1
+  
+trilinearMacro = (p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2) ->
+  buffer[j] = if p000 == 0 or p100 == 0 or p010 == 0 or p110 == 0 or p001 == 0 or p101 == 0 or p011 == 0 or p111 == 0
+    0
+  else
+    p000 * (1 - d0) * (1 - d1) * (1 - d2) +
+    p100 * d0 * (1 - d1) * (1 - d2) + 
+    p010 * (1 - d0) * d1 * (1 - d2) + 
+    p110 * d0 * d1 * (1 - d2) +
+    p001 * (1 - d0) * (1 - d1) * d2 + 
+    p101 * d0 * (1 - d1) * d2 + 
+    p011 * (1 - d0) * d1 * d2 + 
+    p111 * d0 * d1 * d2
+
 pointMacro = (output, xD, yD, zD) ->
   nextPointMacro(output, xD, yD, zD, cube, bucketIndex0, pointIndex0, size0, size01)
   if output <= 0
-    buffer0[j4] = output
+    buffer[j] = output
     continue
 
 # This macro is used for collecting the necessary data of one point
@@ -75,17 +103,17 @@ pointMacro = (output, xD, yD, zD) ->
 # -3 : negative coordinates 
 # -2 : bucket in loading state
 # -1 : bucket fault
-collectLoopMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
+collectLoopMacro = (x, y, z, buffer, j, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
 
   output0 = output1 = output2 = output3 = output4 = output5 = output6 = output7 = 0
 
   if x < 0 or y < 0 or z < 0
-    buffer0[j4] = -3
+    buffer[j] = -3
     continue
   
   # Cube bound checking is necessary.
   if x < ll0 or y < ll1 or z < ll2 or x > ur0 or y > ur1 or z > ur2
-    buffer0[j4] = -1 
+    buffer[j] = -1 
     continue
 
   # Bitwise operations are faster than javascript's native rounding functions.
@@ -112,14 +140,14 @@ collectLoopMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, l
         # linear z
         pointMacro(output1, false, false, true)
 
-        bufferDelta[j3] = zd
+        linearMacro(output0, output1, zd)
 
     else
       if zd == 0
         # linear y
         pointMacro(output1, false, true, false)
 
-        bufferDelta[j3] = yd
+        linearMacro(output0, output1, yd)
 
       else
         # bilinear y,z
@@ -127,8 +155,7 @@ collectLoopMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, l
         pointMacro(output2, false, false, true)
         pointMacro(output3, false, true, true)
 
-        bufferDelta[j3]     = yd
-        bufferDelta[j3 + 1] = zd
+        bilinearMacro(output0, output1, output2, output3, yd, zd)
 
   else
     if yd == 0
@@ -136,7 +163,7 @@ collectLoopMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, l
         # linear x
         pointMacro(output1, true, false, false)
 
-        bufferDelta[j3] = xd
+        linearMacro(output0, output1, xd)
 
       else
         #bilinear x,z
@@ -144,8 +171,7 @@ collectLoopMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, l
         pointMacro(output2, false, false, true)
         pointMacro(output3, true, false, true)
 
-        bufferDelta[j3]     = xd
-        bufferDelta[j3 + 1] = zd
+        bilinearMacro(output0, output1, output2, output3, xd, yd)
 
     else
       if zd == 0
@@ -154,8 +180,7 @@ collectLoopMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, l
         pointMacro(output2, false, true, false)
         pointMacro(output3, true, true, false)
 
-        bufferDelta[j3]     = xd
-        bufferDelta[j3 + 1] = yd
+        bilinearMacro(output0, output1, output2, output3, xd, yd)
 
       else
         # trilinear x,y,z
@@ -167,23 +192,12 @@ collectLoopMacro = (x, y, z, buffer0, buffer1, bufferDelta, j4, j3, cube, ll0, l
         pointMacro(output6, false, true, true)
         pointMacro(output7, true, true, true)
 
-        bufferDelta[j3]     = xd
-        bufferDelta[j3 + 1] = yd
-        bufferDelta[j3 + 2] = zd
-
-  buffer0[j4]     = output0
-  buffer0[j4 + 1] = output1 || 0
-  buffer0[j4 + 2] = output2 || 0
-  buffer0[j4 + 3] = output3 || 0
-  buffer1[j4]     = output4 || 0
-  buffer1[j4 + 1] = output5 || 0
-  buffer1[j4 + 2] = output6 || 0
-  buffer1[j4 + 3] = output7 || 0
+        trilinearMacro(output0, output1, output2, output3, output4, output5, output6, output7, xd, yd, zd)
 
 
 InterpolationCollector =
 
-  bulkCollect : (vertices, buffer0, buffer1, bufferDelta, cube, cubeSize, cubeOffset) ->
+  bulkCollect : (vertices, buffer, cube, cubeSize, cubeOffset) ->
 
     size2  = cubeSize[2]
     size21 = cubeSize[2] * cubeSize[1]
@@ -195,23 +209,20 @@ InterpolationCollector =
     upperBound1 = (cubeOffset[1] + cubeSize[1]) << 5
     upperBound2 = (cubeOffset[2] + cubeSize[2]) << 5
 
-    i = 0
-    j4 = -4
-    j3 = -3
-    length = vertices.length
+    i = vertices.length
+    j = -1
 
-    while i < length
+    while i
 
-      x   = vertices[i++]
-      y   = vertices[i++]
-      z   = vertices[i++]
-      j3 += 3
-      j4 += 4
+      z  = vertices[--i]
+      y  = vertices[--i]
+      x  = vertices[--i]
+      j++
 
       collectLoopMacro(
         x, y, z,
-        buffer0, buffer1, bufferDelta, 
-        j4, j3, 
+        buffer, 
+        j, 
         cube, 
         lowerBound0, lowerBound1, lowerBound2,
         upperBound0, upperBound1, upperBound2,

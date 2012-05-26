@@ -11,6 +11,7 @@ import com.mongodb.casbah.gridfs.Imports._
 import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
 import models.DataSet
+import brainflight.tools.geometry.Cube
 
 class GridFileDataStore extends DataStore{
 	  //GridFs handle
@@ -27,7 +28,11 @@ class GridFileDataStore extends DataStore{
   /**
    * Load the binary data of the given coordinate from DB
    */
-  override def load(dataSet: DataSet, resolution: Int)(globalPoint: Point3D): Byte = {
+  override def load(dataSet: DataSet, resolution: Int, cube: Cube): Array[Byte] = {
+    //TODO: IMPLEMENT
+    new Array[Byte](0)
+  }
+  override def load(dataSet: DataSet, resolution: Int, globalPoint: Point3D): Byte = {
     // TODO: Insert upper bound
     if (globalPoint.x < 0 || globalPoint.y < 0 || globalPoint.z < 0) return 0
 

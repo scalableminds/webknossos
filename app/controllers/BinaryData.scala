@@ -33,14 +33,13 @@ import models.DataSet
 
 object BinaryData extends Controller with Secured {
   override val DefaultAccessRole = Role.User
-
-  def calculateBinaryData( dataSet: DataSet, cube: Cube, resolutionExponent: Int ): Future[Array[Byte]] = {
     implicit val timeout = Timeout( 5 seconds ) // needed for `?` below
-    val coordinates = cube.calculateInnerPoints()
+    
+  def calculateBinaryData( dataSet: DataSet, cube: Cube, resolutionExponent: Int ): Future[Array[Byte]] = {
     val resolution = math.pow( 2, resolutionExponent ).toInt
 
     // rotate the model and generate the requested data
-    val future = DataSetActor ? BlockRequest( dataSet, resolution, coordinates )
+    val future = DataSetActor ? CubeRequest( dataSet, resolution, cube )
     future.mapTo[Array[Byte]]
   }
   

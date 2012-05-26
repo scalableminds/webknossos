@@ -23,6 +23,7 @@ import brainflight.binary._
 import brainflight.security.Secured
 import brainflight.tools.geometry.{ Point3D, Cube }
 import models.DataSet
+import akka.pattern.AskTimeoutException
 
 /**
  * scalableminds - brainflight
@@ -35,13 +36,18 @@ object BinaryData extends Controller with Secured {
   
   override val DefaultAccessRole = Role.User
   
-  implicit val timeout = Timeout( 5 seconds ) // needed for `?` below
+  val conf = Play.configuration
+
+  implicit val timeout = Timeout( (conf.getInt("actor.defaultTimeout") getOrElse 5 ) seconds ) // needed for `?` below
     
   def calculateBinaryData( dataSet: DataSet, cube: Cube, resolutionExponent: Int ): Future[Array[Byte]] = {
     val resolution = math.pow( 2, resolutionExponent ).toInt
 
     // rotate the model and generate the requested data
-    val future = DataSetActor ? CubeRequest( dataSet, resolution, cube )
+    val future = (DataSetActor ? CubeRequest( dataSet, resolution, cube )) recover { 
+      case e: AskTimeoutException => 
+        new Array[Byte](0) }
+    
     future.mapTo[Array[Byte]]
   }
   

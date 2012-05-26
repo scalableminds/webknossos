@@ -94,15 +94,26 @@ class FileDataStore extends DataStore {
       val startZ = cube.topLeft.z % 256 
       
       val result = new Array[Byte]( cube.edgeLength*cube.edgeLength*cube.edgeLength )
+      
       var idx = 0
-      for{
-        x <- startX until (startX + cube.edgeLength)
-        y <- startY until (startY + cube.edgeLength)
-        z <- startZ until (startZ + cube.edgeLength)
-      } {
-        result.update( idx, byteArray( ( z/2 * 128 * 128 + y * 128 + x ) ))
-        idx += 1
+      var y = 0
+      var z = 0
+      var x = startX
+      
+      while( x < startX + cube.edgeLength){
+        y = startY
+        while( y < startY + cube.edgeLength){
+          z = startZ
+          while( z < startZ + cube.edgeLength){
+            result.update( idx, byteArray( ( z/2 * 128 * 128 + y * 128 + x ) ))
+            idx += 1
+            z+=1
+          } 
+          y+=1
+        }
+        x+=1
       }
+
       result
     } else {
       new Array[Byte]( cube.edgeLength*cube.edgeLength*cube.edgeLength )

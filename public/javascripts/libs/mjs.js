@@ -1091,7 +1091,7 @@ M4x4.mulAffine = function M4x4_mulAffine(a, b, r) {
  *
  *   r
  */
-M4x4.mulAffine = function M4x4_mulAffine(a, b, r, o) {
+M4x4.mulAffineOffset = function M4x4_mulAffine(a, b, r, o) {
   //MathUtils_assert(a.length === 16, "a.length === 16");
   //MathUtils_assert(b.length === 16, "b.length === 16");
 

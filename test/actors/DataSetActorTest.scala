@@ -11,12 +11,13 @@ import akka.actor.Props
 import brainflight.binary.DataSetActor
 import play.api.test._
 import play.api.test.Helpers._
-import brainflight.binary.{ SingleRequest, BlockRequest }
+import brainflight.binary.{ SingleRequest, CubeRequest }
 import brainflight.tools.geometry.Point3D
 import akka.util.Timeout
 import models.DataSet
 import play.libs.Akka._
 import play.api.libs.concurrent._
+import brainflight.tools.geometry.Cube
 
 class DataSetActorTest extends AkkaSpecification {
 
@@ -37,7 +38,7 @@ class DataSetActorTest extends AkkaSpecification {
     "responde to a block data request" in new setup {
       running( FakeApplication() ) {
         val dataSetActor = system.actorOf( Props[DataSetActor] )
-        val result = dataSetActor ? BlockRequest( DataSet.default, 1, Array(Point3D( 0, 0, 0 ) ) )
+        val result = dataSetActor ? CubeRequest( DataSet.default, 1, Cube(Point3D( 0, 0, 0 ), 1 ) )
    
         await(result.asPromise) must be equalTo Array(0)
       }

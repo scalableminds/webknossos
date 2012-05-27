@@ -3,7 +3,6 @@ package integration
 import org.specs2.mutable._
 import play.api.test._
 import play.api.test.Helpers._
-import brainflight.binary.CubeModel
 import play.api.libs.json._
 import play.api.libs.json.Json._
 import scala.util.Random
@@ -18,54 +17,6 @@ object BinaryTest extends Specification {
   sequential
 
   "Binary REST interface" should {
-    "return a models vertices" in {
-      running( FakeApplication() ) {
-        /**
-         * URL:
-         * 	GET - /route/model/:modeltype
-         * Params:
-         *  	- modeltype: String , A valid data source model (e.q. cube)
-         * Response-type:
-         * 	application/json
-         * Response:
-         * 	Coordinates of all vertices of the model
-         */
-        val Some( result ) = routeAndCall( FakeRequest( GET, "/binary/model/cube" ).authenticated() )
-        status( result ) must be equalTo ( OK )
-        contentType( result ) must equalTo( Some( "application/json" ) )
-        contentAsString( result ) must be equalTo Json.stringify( toJson( CubeModel.vertices.map( _.toVector3I ) ) )
-      }
-    }
-    "return a models polygons" in {
-      running( FakeApplication() ) {
-        /**
-         * URL:
-         * 	GET - /route/polygons/:modeltype
-         * Params:
-         *  	- modeltype: String , A valid data source model (e.q. cube)
-         * Response-type:
-         * 	application/json
-         * Response:
-         * 	Polygons which build the hull of the passed model. The resulting
-         * 	json is an array of polygons. Each polygon consists of a list of
-         * 	edges each consisting of an array for the 3 dimensions(e.q. [1,2,3]).
-         * 	<example>
-         * 		[
-         * 			[ // first polygon
-         * 				[-25.0,0.0,25.0], //first edge
-         * 				[-25.0,0.0,-25.0], //second edge
-         * 				[-25.0,0.0,25.0]]  // ...
-         * 			],
-         * 			[ // second polygon ...
-         * 	</example>
-         */
-        val Some( result ) = routeAndCall( FakeRequest( GET, "/binary/polygons/cube" ).authenticated() )
-        status( result ) must be equalTo ( OK )
-        contentType( result ) must equalTo( Some( "application/json" ) )
-        contentAsString( result ) must be equalTo Json.stringify( toJson( CubeModel.polygons ) )
-      }
-    }
-
     "return data through GET" in {
       running( FakeApplication() ) {
         /**

@@ -4,11 +4,18 @@ import collection.mutable.HashMap
 import play.api.Play.current
 import play.api.Play
 import play.Logger
+import models.Actors._
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import brainflight.tools.geometry.Point3D
 import models.DataSet
 import brainflight.tools.geometry.Cube
+import akka.routing.Broadcast
 
+case class DataBlockInformation(
+    dataSetId: String,
+    point: Point3D,
+    resolution: Int)
+    
 /**
  * Scalable Minds - Brainflight
  * User: tom
@@ -20,10 +27,6 @@ import brainflight.tools.geometry.Cube
  * A data store implementation which uses the hdd as data storage
  */
 class FileDataStore extends DataStore {
-  case class DataBlockInformation(
-    dataSetId: String,
-    point: Point3D,
-    resolution: Int )
 
   lazy val nullBlock = ( for ( x <- 0 to 128 * 128 * 128 ) yield 0.toByte ).toArray
 
@@ -37,6 +40,7 @@ class FileDataStore extends DataStore {
   var fileCache = new HashMap[DataBlockInformation, Array[Byte]]
   var lastUsed: Option[Tuple2[DataBlockInformation, Array[Byte]]] = None
 
+  val cacheId = this.hashCode
   /**
    * Uses the coordinates of a point to calculate the data block the point
    * lays in.
@@ -137,10 +141,27 @@ class FileDataStore extends DataStore {
           // the coordinates
           nullBlock
       }
-    fileCache += ( ( DataBlockInformation( dataSet.id, point, resolution ), dataBlock ) )
+    val blockInfo = DataBlockInformation( dataSet.id, point, resolution )
+    fileCache += ( ( blockInfo, dataBlock ) )
+    DataSetActor ! Broadcast( CachedFile( cacheId, blockInfo, dataBlock))
     dataBlock
   }
 
+  def addToCache( remoteCacheId: Int, block: DataBlockInformation, data: Array[Byte]){
+    if( remoteCacheId != cacheId ){
+      fileCache.find{
+          case (b, _) if b == block => true
+          case _ => false
+      } match {
+        case Some( (b, d) ) if d.hashCode > data.hashCode => 
+          fileCache.update(block, data)
+        case None => 
+          fileCache += ( (block, data ))
+        case Some( (b, d) ) =>
+      }
+    }
+  }
+  
   /**
    * Function to restrict the cache to a maximum size. Should be
    * called before or after an item got inserted into the cache

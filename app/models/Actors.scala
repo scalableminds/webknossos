@@ -11,6 +11,6 @@ object Actors {
   val NumOfCPUCores = 8
 
   val Mailer = Akka.system.actorOf( Props[Mailer] )
-  val DataSetActor = Akka.system.actorOf( Props[DataSetActor].withRouter(
+  val DataSetActor = Akka.system.actorOf( Props[DataSetActor].withDispatcher("dataset-prio-dispatcher").withRouter(
     RoundRobinRouter( nrOfInstances = NumOfCPUCores ) ) )
 }

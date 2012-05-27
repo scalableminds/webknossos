@@ -7,6 +7,7 @@ import brainflight.tools.geometry.Cube
 
 case class SingleRequest( dataSet: DataSet, resolution: Int, point: Point3D )
 case class CubeRequest( dataSet: DataSet, resolution: Int, points: Cube)
+case class CachedFile( cacheId: Int, block: DataBlockInformation, data: Array[Byte])
 
 class DataSetActor extends Actor {
   val dataStore: DataStore = new FileDataStore
@@ -15,5 +16,7 @@ class DataSetActor extends Actor {
       sender ! dataStore.load( dataSet, resolution, point )
     case CubeRequest( dataSet, resolution, cube ) =>
       sender ! dataStore.load( dataSet, resolution, cube )
+    case CachedFile( cacheId, block, data) =>
+        dataStore.addToCache(cacheId, block, data)
   }
 }

@@ -107,21 +107,4 @@ object BinaryData extends Controller with Secured {
       } )
       ( input, output )
   }
-
-  def model( modelType: String ) = Action {
-    ModelStore( modelType ) match {
-      case Some( model ) =>
-        Ok( toJson( model.vertices.map( _.toVector3I ) ) )
-      case _ =>
-        NotFound( "Model not available." )
-    }
-  }
-  def polygons( modelType: String ) = Action {
-    ModelStore( modelType ) match {
-      case Some( model ) =>
-        Ok( toJson( model.polygons ) )
-      case _ =>
-        NotFound( "Model not available." )
-    }
-  }
 }

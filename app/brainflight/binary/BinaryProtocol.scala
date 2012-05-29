@@ -16,7 +16,7 @@ abstract class BinaryMessage extends Handle
 
 case class RequestData( resolutionExponent: Int, position: Point3D ) extends BinaryMessage
 
-object BinaryProtocoll {
+object BinaryProtocol {
   /**
    * Length of the different transfert parts of a message
    */

@@ -64,7 +64,7 @@ object BinaryData extends Controller with Secured {
       Async {
         ( for {
           payload <- request.body.asBytes()
-          message <- BinaryProtocoll.parseAjax( payload )
+          message <- BinaryProtocol.parseAjax( payload )
           dataSet <- DataSet.findOneById( dataSetId )
         } yield {
           message match {
@@ -94,7 +94,7 @@ object BinaryData extends Controller with Secured {
       val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
         // first 4 bytes are always used as a client handle
-        BinaryProtocoll.parseWebsocket( in ).map {
+        BinaryProtocol.parseWebsocket( in ).map {
           case message @ RequestData( resolutionExponent, position ) =>
             val cube = calculateCube( position, cubeSize )
             for {
@@ -103,6 +103,8 @@ object BinaryData extends Controller with Secured {
             } {
               output.push( message.handle ++ result )
             }
+          case _ =>
+            Logger.error("Received unhandled message!")
         }
       } )
       ( input, output )

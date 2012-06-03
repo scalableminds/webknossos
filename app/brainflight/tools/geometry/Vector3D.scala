@@ -32,7 +32,10 @@ case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
       z * o.x - x * o.z,
       x * o.y - y * o.x )
   }
-
+  
+  /**
+   * Transforms this vector using a transformation matrix
+   */
   def transformAffine( matrix: Array[Float] ): Vector3D = {
     // see rotation matrix and helmert-transformation for more details
     val nx = matrix( 0 ) * x + matrix( 4 ) * y + matrix( 8 ) * z + matrix( 12 )
@@ -58,14 +61,4 @@ case class Vector3D( val x: Double = 0, val y: Double = 0, val z: Double = 0 ) {
   def toTuple = ( x, y, z )
   
   override def toString = "(%f, %f, %f)".format(x,y,z)
-}
-
-object Vector3D {
-  
-  implicit def Vector3DToTuple( v: Vector3D ) = 
-    ( v.x, v.y, v.z )
-
-  implicit def TupletoVector3D[T <% Double]( v: Tuple3[T, T, T] ) = 
-    Vector3D( v._1, v._2, v._3 )
-
 }

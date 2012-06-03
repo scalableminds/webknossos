@@ -1,0 +1,4 @@
+mongod > /dev/null &
+PID="$!"
+playframework/play run
+kill -9 $PID

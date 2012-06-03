@@ -2,10 +2,13 @@ package models
 import brainflight.tools.geometry.Vector3D
 
 case class TransformationMatrix( value: List[Float] ) {
-  def extractTranslation =
+  /** 
+   * Extract the translation from the transformation matrix
+   */
+  def extractTranslation : Option[Vector3D] =
     value match {
       case matrix if matrix.size >= 16 =>
-        Some( Vector3D( matrix( 12 ), matrix( 13 ), matrix( 14 ) ) )
+        Some( new Vector3D( matrix( 12 ), matrix( 13 ), matrix( 14 ) ) )
       case _ =>
         None
     }

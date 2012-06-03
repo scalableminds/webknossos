@@ -15,6 +15,7 @@ import play.api.libs.iteratee.Done
 import models.{ Role, Permission }
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
+import play.api.libs.iteratee.Concurrent
 
 case class AuthenticatedRequest[A](
   val user: User, request: Request[A]
@@ -116,10 +117,10 @@ trait Secured {
       } yield {
         f( user )( request )
       } ).getOrElse {
-
         val iteratee = Done[A, Unit]( (), Input.EOF )
         // Send an error and close the socket
-        val enumerator = Enumerator[A]().andThen( Enumerator.enumInput( Input.EOF ) )
+        val (enumerator, channel) = Concurrent.broadcast[A]
+        channel.eofAndEnd
 
         ( iteratee, enumerator )
       }

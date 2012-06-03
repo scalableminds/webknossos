@@ -15,7 +15,7 @@ import com.mongodb.casbah.gridfs.Imports._
 import brainflight.tools.geometry.Point3D
 import models.DataSet
 
-object Admin extends Controller {
+object PerformanceTest extends Controller {
   
   val xBot = 10
   val xTop = 20

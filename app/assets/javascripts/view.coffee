@@ -16,13 +16,28 @@ View =
     # The "render" div serves as a container for the canvas, that is 
     # attached to it once a renderer has been initalized.
     container = $("#render")
-    WIDTH = container.width()
-    HEIGHT = container.height()
+    WIDTH = container.width()/2
+    HEIGHT = container.height()/2
 
     # Initialize main THREE.js components
     @renderer = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
     @camera = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
     @scene = new THREE.Scene()
+
+    @rendereryz = new THREE.WebGLRenderer({ clearColor: 0xff0000, antialias: true })
+    @camerayz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
+    @sceneyz = new THREE.Scene()
+
+    @rendererxz = new THREE.WebGLRenderer({ clearColor: 0xff0000, antialias: true })
+    @cameraxz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
+    @scenexz = new THREE.Scene()
+
+    #experimental sphere
+    sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xccff00 })
+    sphereyz = new THREE.Mesh(new THREE.SphereGeometry(50, 16, 16), sphereMaterial)
+
+    sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xcc0000 })
+    spherexz = new THREE.Mesh(new THREE.SphereGeometry(50, 16, 16), sphereMaterial)
 
     # Let's set up a camera
     # The camera is never "moved". It only looks at the scene
@@ -31,10 +46,24 @@ View =
     @camera.position.z = CAM_DISTANCE
     @camera.lookAt(new THREE.Vector3( 0, 0, 0 ))
 
+    @sceneyz.add(@camerayz)
+    @sceneyz.add(sphereyz)
+    @camerayz.position.z = CAM_DISTANCE
+    @camerayz.lookAt(new THREE.Vector3( 0, 0, 0 ))
+
+    @scenexz.add(@cameraxz)
+    @scenexz.add(spherexz)
+    @cameraxz.position.z = CAM_DISTANCE
+    @cameraxz.lookAt(new THREE.Vector3( 0, 0, 0 ))
+
     # Attach the canvas to the container
     # DEBATE: a canvas can be passed the the renderer as an argument...!?
     @renderer.setSize(WIDTH, HEIGHT)
+    @rendereryz.setSize(WIDTH, HEIGHT)
+    @rendererxz.setSize(WIDTH, HEIGHT)
     container.append(@renderer.domElement)
+    container.append(@rendereryz.domElement)
+    container.append(@rendererxz.domElement)
 
     # This "camera" is not a camera in the traditional sense.
     # It rather hosts a number of matrix operations that 
@@ -86,6 +115,8 @@ View =
 
     cam.hasChanged = false
     @renderer.render @scene, @camera
+    @rendereryz.render @sceneyz, @camerayz
+    @rendererxz.render @scenexz, @cameraxz
 
   # Let's apply new pixels to the trianglesplane.
   # We do so by apply a new texture to it.

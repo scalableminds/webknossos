@@ -4,7 +4,7 @@ HEAP_SIZE = 1 << 26
 Int32_MIN = -2147483648
 Int32_MAX = 2147483647
 
-HEAP = new ArrayBuffer(1 << 26)
+HEAP = new ArrayBuffer(HEAP_SIZE)
 
 swapMacro = (a, b) ->
   __tmp = a
@@ -42,13 +42,28 @@ drawMacro = (x, y, z) ->
 
 
 class PolyhedronRasterizer
+
+  class @Master
+
+    constructor : (@vertices, @indices) ->
+
+    transformAffine : (matrix) ->
+
+      { vertices, indices } = @
+
+      new PolyhedronRasterizer(
+        M4x4.transformPointsAffine(matrix, vertices, new Int32Array(vertices.length)), 
+        indices
+      )
+
   
   constructor : (@vertices, @indices) ->
     
     @calcExtent()
     { min_x, min_y, min_z, delta_z, delta_y, shift_z } = @
 
-    buffer = @buffer = new Int32Array(HEAP, 0, delta_z << shift_z)
+    @bufferLength = bufferLength = delta_z << shift_z
+    @buffer = buffer = new Int32Array(HEAP, 0, bufferLength)
 
     # initialize buffer values
     for z in [0...delta_z] by 1
@@ -104,7 +119,7 @@ class PolyhedronRasterizer
     return
 
 
-  transform : (matrix) ->
+  transformAffine : (matrix) ->
     
     { min_x, min_y, min_z, vertices } = @
 
@@ -395,6 +410,7 @@ class PolyhedronRasterizer
       
 
   collectPoints : ->
+    
     { buffer, min_x, min_y, min_z, shift_z, delta_y, delta_z } = @
 
     output = []
@@ -423,7 +439,8 @@ class PolyhedronRasterizer
       Math.abs(zs - max_z)
     )
 
-    output = []
+    outputBuffer = new Int32Array(HEAP, @bufferLength * Int32Array.BYTES_PER_ELEMENT, delta_x * delta_y * delta_z * 3)
+    outputLength = 0
 
     for radius in [0..maxRadius] by 1
       radius_min_z = Math.max(zs - radius, min_z)
@@ -442,8 +459,11 @@ class PolyhedronRasterizer
               if x == xs - radius or x == xs + radius or
               y == ys - radius or y == ys + radius or
               z == zs - radius or z == zs + radius
-                output.push x, y, z
-    output
+                outputBuffer[outputLength++] = x
+                outputBuffer[outputLength++] = y
+                outputBuffer[outputLength++] = z
+
+    outputBuffer.subarray(0, outputLength)
 
 
   collectPointsCircular : (startPoint) ->

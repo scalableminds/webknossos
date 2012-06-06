@@ -10,6 +10,10 @@ class V3RingBuffer
     throw "Parameter `capacity` must be a multiple of 3" unless @capacity % 3 == 0
     @buffer = new @bufferType(@capacity)
 
+  clear : ->
+    @end = @start
+    @length = 0
+
   unshift3 : (x, y, z) ->
     throw "V3RingBuffer is full" unless @length < @capacity
 

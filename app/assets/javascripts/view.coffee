@@ -24,20 +24,30 @@ View =
     @camera = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
     @scene = new THREE.Scene()
 
-    @rendereryz = new THREE.WebGLRenderer({ clearColor: 0xff0000, antialias: true })
+    @rendereryz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, antialias: true })
     @camerayz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
     @sceneyz = new THREE.Scene()
 
-    @rendererxz = new THREE.WebGLRenderer({ clearColor: 0xff0000, antialias: true })
-    @cameraxz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
+    @rendererxz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, antialias: true })
+    @cameraxz = new THREE.OrthographicCamera(WIDTH / -2, WIDTH / 2, HEIGHT / -2, HEIGHT / 2, 0.1, 10000)
     @scenexz = new THREE.Scene()
 
     #experimental sphere
     sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xccff00 })
     sphereyz = new THREE.Mesh(new THREE.SphereGeometry(50, 16, 16), sphereMaterial)
+    sphereyz.position.x = 100
 
-    sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xcc0000 })
+    sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xccff00 })
+    sphereyz2 = new THREE.Mesh(new THREE.SphereGeometry(50, 16, 16), sphereMaterial)
+    sphereyz2.position.x = -100
+
+    sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xccff00 })
     spherexz = new THREE.Mesh(new THREE.SphereGeometry(50, 16, 16), sphereMaterial)
+    spherexz.position.x = 100
+
+    sphereMaterial = new THREE.MeshLambertMaterial({ color: 0xccff00 })
+    spherexz2 = new THREE.Mesh(new THREE.SphereGeometry(50, 16, 16), sphereMaterial)
+    spherexz2.position.x =- 100
 
     # Let's set up a camera
     # The camera is never "moved". It only looks at the scene
@@ -48,11 +58,13 @@ View =
 
     @sceneyz.add(@camerayz)
     @sceneyz.add(sphereyz)
+    @sceneyz.add(sphereyz2)
     @camerayz.position.z = CAM_DISTANCE
     @camerayz.lookAt(new THREE.Vector3( 0, 0, 0 ))
 
     @scenexz.add(@cameraxz)
     @scenexz.add(spherexz)
+    @scenexz.add(spherexz2)
     @cameraxz.position.z = CAM_DISTANCE
     @cameraxz.lookAt(new THREE.Vector3( 0, 0, 0 ))
 
@@ -201,12 +213,18 @@ View =
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
     container = $("#render")
-    WIDTH = container.width()
-    HEIGHT = container.height()
+    WIDTH = container.width()/2
+    HEIGHT = container.height()/2
 
     @renderer.setSize( WIDTH, HEIGHT )
+    @rendereryz.setSize(WIDTH, HEIGHT)
+    @rendererxz.setSize(WIDTH, HEIGHT)
     @camera.aspect  = WIDTH / HEIGHT
     @camera.updateProjectionMatrix()
+    @camerayz.aspect  = WIDTH / HEIGHT
+    @camerayz.updateProjectionMatrix()
+    @cameraxz.aspect  = WIDTH / HEIGHT
+    @cameraxz.updateProjectionMatrix()
     @draw()
 
 ############################################################################

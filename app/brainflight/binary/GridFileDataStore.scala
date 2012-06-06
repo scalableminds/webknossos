@@ -71,6 +71,10 @@ class GridFileDataStore extends DataStore{
     byteArray
   }
   
+  def addToCache( remoteCacheId: Int, block: DataBlockInformation, data: Array[Byte]) {
+    // TODO: implement
+  }
+  
   def cleanUp(){
     fileCache.clear()
   }

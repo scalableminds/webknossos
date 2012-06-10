@@ -1,5 +1,6 @@
 ### define
 model/binary/interpolation_collector : InterpolationCollector
+model/binary/polyhedron_rasterizer : PolyhedronRasterizer
 model/game : Game
 libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 libs/simple_worker : SimpleWorker
@@ -8,7 +9,7 @@ libs/simple_worker : SimpleWorker
 EPSILON = 1e-10
 BUCKET_WIDTH = 1 << 5
 
-loadingState = true
+LOADING_STATE = {}
 
 ZOOM_STEP_COUNT = 4
 
@@ -80,28 +81,23 @@ ZOOM_STEP_COUNT = 4
 
 # Computes the bucket index of the vertex with the given coordinates.
 # Requires `cubeOffset` and `cubeSize` to be in scope.
-bucketIndexMacro = (x, y, z) ->
+
+# Computes the bucket index of the given vertex.
+# Requires `cubeOffset` and `cubeSize` to be in scope.
+bucketIndexByVertex3Macro = (x, y, z) ->
 
   ((x >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
   ((y >> 5) - cubeOffset[1]) * cubeSize[2] + 
   ((z >> 5) - cubeOffset[2])
 
-# Computes the bucket index of the given vertex.
-# Requires `cubeOffset` and `cubeSize` to be in scope.
-bucketIndexByVertexMacro = (vertex) ->
-
-  ((vertex[0] >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
-  ((vertex[1] >> 5) - cubeOffset[1]) * cubeSize[2] + 
-  ((vertex[2] >> 5) - cubeOffset[2])
-
 
 # Computes the index of the specified bucket.
 # Requires `cubeOffset` and `cubeSize` to be in scope.
-bucketIndexByAddressMacro = (vertex) ->
+bucketIndexByAddress3Macro = (bucket_x, bucket_y, bucket_z) ->
 
-  (vertex[0] - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
-  (vertex[1] - cubeOffset[1]) * cubeSize[2] + 
-  (vertex[2] - cubeOffset[2])
+  (bucket_x - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+  (bucket_y - cubeOffset[1]) * cubeSize[2] + 
+  (bucket_z - cubeOffset[2])
 
 # Computes the bucket index of the vertex with the given coordinates.
 # Requires `cubeOffset0`, `cubeOffset1`, `cubeOffset2`, `cubeSize2` and 
@@ -121,6 +117,7 @@ pointIndexMacro = (x, y, z) ->
   ((z & 31))
 
 Binary =
+  Rasterizer : PolyhedronRasterizer
 
   # This method allows you to query the data structure. Give us an array of
   # vertices and we'll give you the stuff you need to interpolate data.
@@ -164,31 +161,30 @@ Binary =
 
     $.when(@getSync(vertices, zoomStep))
 
+
   # A synchronized implementation of `get`.
   getSync : (vertices, zoomStep) ->
-
     buffer0     = new Uint8Array(vertices.length / 3 << 2)
     buffer1     = new Uint8Array(vertices.length / 3 << 2)
     bufferDelta = new Uint8Array(vertices.length)
     
+    buffer = new Float32Array(vertices.length / 3)
+
     if (cube = @cubes[zoomStep])
 
       cubeSize = @cubeSizes[zoomStep]
       cubeOffset = @cubeOffsets[zoomStep]
-      #{ cubeSize, cubeOffset } = @
-
 
       InterpolationCollector.bulkCollect(
-        vertices,
-        buffer0, buffer1, bufferDelta, 
+        vertices, buffer
         cube, cubeSize, cubeOffset
       )
-      
-    { buffer0, buffer1, bufferDelta }
 
-  PING_DEBOUNCE_TIME : 500
-  PING_THROTTLE_TIME : 500
-  PRELOAD_STEPBACK : 10
+    buffer
+
+
+  PULL_LIMIT : 5
+  PING_THROTTLE_TIME : 200
   
   # Use this method to let us know when you've changed your spot. Then we'll try to 
   # preload some data. 
@@ -202,35 +198,43 @@ Binary =
   # No Callback Paramters
   ping : (matrix, zoomStep) ->
 
-    @ping = _.throttle2(@pingImpl, @PING_THROTTLE_TIME)
+    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
     @ping(matrix, zoomStep)
+
+
+  pingPolyhedron : new PolyhedronRasterizer.Master([
+      -3,-3,-1 #0
+      -1,-1, 2 #3
+      -3, 3,-1 #6
+      -1, 1, 2 #9
+       3,-3,-1 #12 
+       1,-1, 2 #15
+       3, 3,-1 #18
+       1, 1, 2 #21
+    ],[
+      0,3
+      0,6
+      0,12
+      3,9
+      3,15
+      6,9
+      6,18
+      9,21
+      12,15
+      12,18
+      15,21
+      18,21
+    ])
+
+
+  pingLastMatrix : null
+
 
   pingImpl : (matrix, zoomStep) ->
 
-    console.log "ping"
-    console.time "ping"
+    unless _.isEqual(matrix, @pingLastMatrix)
 
-    SPHERE_RADIUS = 140
-    PLANE_STEPBACK = 25
-    LOOP_LIMIT = 60
-    loopCounter = 0
-    
-    sphereCenterVertex  = M4x4.transformPointAffine(matrix, [0, 0, -SPHERE_RADIUS])
-    sphereRadiusSquared = SPHERE_RADIUS * SPHERE_RADIUS
-
-    planeNormal = new Float32Array(3)
-    planeNormal[2] = 1
-    M4x4.transformLineAffine(matrix, planeNormal, planeNormal)
-
-    planeDistance = V3.dot(
-      M4x4.transformPointAffine(matrix, [0, 0, -PLANE_STEPBACK]), 
-      planeNormal
-    )
-
-    bucketCornerVertex = new Float32Array(3)
-    currentAddress     = new Float32Array(3)
-    neighborAddress    = new Float32Array(3)
-    vectorBuffer       = new Float32Array(3)
+      @pingLastMatrix = matrix
 
     currentAddress[0]  = matrix[12] >> 5
     currentAddress[1]  = matrix[13] >> 5
@@ -301,54 +305,71 @@ Binary =
                     subY = bucketCornerVertex[1] - sphereCenterVertex[1]
                     subZ = bucketCornerVertex[2] - sphereCenterVertex[2]
 
-                    cornerSphereDistance = sphereRadiusSquared - (subX * subX + subY * subY + subZ * subZ)
+      console.time "ping"
+      matrix = M4x4.clone(matrix)
+      matrix[12] = matrix[12] >> 5
+      matrix[13] = matrix[13] >> 5
+      matrix[14] = matrix[14] >> 5
 
-                    if cornerSphereDistance < -EPSILON
-                      frontCorners++
-                    else
-                      backCorners++
-                  else
-                    backCorners++
+      polyhedron = @pingPolyhedron.transformAffine(matrix)
 
-            
-            if frontCorners
-              if backCorners  
-                tempWorkingQueue0.push(V3.clone(neighborAddress)) 
-              else
-                tempWorkingQueue1.push(V3.clone(neighborAddress)) 
+      @extendByBucketAddressExtent(polyhedron, zoomStep)
 
-      workingQueue = workingQueue.concat(tempWorkingQueue0).concat(tempWorkingQueue1)      
-      visitedList[currentAddressString] = true
-          
+      cube = @cubes[zoomStep]
 
-    console.timeEnd("ping")
-    return
-  
+      polyhedron.prepare()
+      testAddresses = polyhedron.collectPointsOnion(matrix[12], matrix[13], matrix[14])
+      
+      pullQueue = @pullQueue
+      pullQueue.length = 0
+
+      i = 0
+      while i < testAddresses.length
+        x = testAddresses[i++]
+        y = testAddresses[i++]
+        z = testAddresses[i++]
+
+        address = [x, y, z]
+        unless cube[@bucketIndexByAddress(address, zoomStep)]
+          pullQueue.push x, y, z, zoomStep
+          # @pullBucket(address, zoomStep)
+
+      @pull()
+      console.timeEnd "ping"
+
+  pullQueue : []
+  pullLoadingCount : 0
+
+  pull : ->
+    { pullQueue } = @
+    while @pullLoadingCount < @PULL_LIMIT and pullQueue.length
+      [x, y, z, zoomStep] = pullQueue.splice(0, 4)
+      @pullBucket(x, y, z, zoomStep)
+
+
+
   # Loads and inserts a bucket from the server into the cube.
   # Requires cube to be large enough to handle the loaded bucket.
-  pullBucket : (address, zoomStep) ->
+  pullBucket : (bucket_x, bucket_y, bucket_z, zoomStep) ->
 
-    console.log "pull", V3.toString(address)
+    console.log "pull", bucket_x, bucket_y, bucket_z
 
-    @cubes[zoomStep][@bucketIndexByAddress(address, zoomStep)] = loadingState
+    @cubes[zoomStep][@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, zoomStep)] = LOADING_STATE
+    @pullLoadingCount++
 
-    vertex = V3.clone(address)
-    vertex[0] = vertex[0] << 5
-    vertex[1] = vertex[1] << 5
-    vertex[2] = vertex[2] << 5
-
-    @loadBucket(vertex, zoomStep).then(
+    @loadBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep).then(
       (colors) =>
         
-        @cubes[zoomStep][@bucketIndexByVertex(vertex, zoomStep)] = colors
+        @cubes[zoomStep][@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, zoomStep)] = colors
 
-        console.error "wrong colors length", colors.length if colors.length != 1 << (5 * 3)
-
-        $(window).trigger("bucketloaded", [vertex])
+        $(window).trigger("bucketloaded", [[bucket_x, bucket_y, bucket_z]])
 
       =>
-        @cubes[zoomStep][@bucketIndexByVertex(vertex, zoomStep)] = null
-    )
+        @cubes[zoomStep][@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, zoomStep)] = null
+    ).always =>
+      @pullLoadingCount--
+      @pull()
+
   
   loadBucketSocket : _.once ->
     
@@ -360,12 +381,15 @@ Binary =
         requestBufferType : Float32Array
         responseBufferType : Uint8Array
       )
+
   
-  loadBucket : (vertex, zoomStep) ->
-    arr = new Float32Array(vertex.length + 1)
-    arr[0] = zoomStep
-    arr.set(vertex, 1)
+  loadBucketByAddress : ([ bucket_x, bucket_y, bucket_z ], zoomStep) ->
+    @loadBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep)
+
+  loadBucketByAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
+    arr = [ zoomStep, bucket_x << 5, bucket_y << 5, bucket_z << 5 ]
     @loadBucketSocket().pipe (socket) -> socket.send(arr)
+
 
   
   # Now comes the implementation of our internal data structure.
@@ -376,40 +400,49 @@ Binary =
   cubeSizes : []
   cubeOffsets : []
 
+
   # Retuns the index of the bucket (in the cuboid) which holds the
   # point you're looking for.
-  bucketIndex : (x, y, z, zoomStep) ->
-    
-    cubeOffset = @cubeOffsets[zoomStep]
-    cubeSize = @cubeSizes[zoomStep]
-
-    bucketIndexMacro(x, y, z)
-
   bucketIndexByVertex : (vertex, zoomStep) ->
 
+    @bucketIndexByVertex3Macro(vertex[0], vertex[1], vertex[2], zoomStep)
+
+
+  bucketIndexByVertex3 : (x, y, z, zoomStep) ->
+
     cubeOffset = @cubeOffsets[zoomStep]
     cubeSize = @cubeSizes[zoomStep]
 
-    bucketIndexByVertexMacro(vertex)
+    @bucketIndexByVertex3Macro(x, y, z, zoomStep)
+
 
   bucketIndexByAddress : (address, zoomStep) ->
 
+    @bucketIndexByAddress3(address[0], address[1], address[2], zoomStep)
+
+  bucketIndexByAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
+
     cubeOffset = @cubeOffsets[zoomStep]
     cubeSize = @cubeSizes[zoomStep]
 
-    bucketIndexByAddressMacro(address)
+    bucketIndexByAddress3Macro(bucket_x, bucket_y, bucket_z)
 
   
   # Returns the index of the point (in the bucket) you're looking for.
-  pointIndex : (x, y, z) ->
+  pointIndexByVertex : (vertex) ->
+    
+    pointIndexMacro(vertex[0], vertex[1], vertex[2])
+
+  pointIndexByVertex3 : (x, y, z) ->
     
     pointIndexMacro(x, y, z)
 
+
   # Want to add data? Make sure the cuboid is big enough.
   # This one is for passing real point coordinates.
-  extendByExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }, zoomStep) ->
+  extendByVertexExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }, zoomStep) ->
     
-    @extendByBucketExtent(
+    @extendByBucketAddressExtent(
       min_x >> 5,
       min_y >> 5,
       min_z >> 5,
@@ -419,23 +452,37 @@ Binary =
       zoomStep
     )
 
-  extendByPoint : ([ x, y, z ], zoomStep) ->
-    @extendByBucketExtent(
-      x >> 5,
-      y >> 5,
-      z >> 5,
-      x >> 5,
-      y >> 5,
-      z >> 5,
+
+  extendByVertex : ([ x, y, z ], zoomStep) ->
+
+    @extendByVertex3(x, y, z, zoomStep)
+
+  extendByVertex3 : (x, y, z, zoomStep) ->
+    
+    bucket_x = x >> 5
+    bucket_y = y >> 5
+    bucket_z = z >> 5
+
+    @extendByBucketAddressExtent(
+      bucket_x,
+      bucket_y,
+      bucket_z,
+      bucket_x,
+      bucket_y,
+      bucket_z,
       zoomStep
     )
 
   extendByBucketAddress : ([ x, y, z ], zoomStep) ->
-    @extendByBucketExtent(x, y, z, x, y, z, zoomStep)
+
+    @extendByBucketAddressExtent(x, y, z, x, y, z, zoomStep)
       
-      
+  extendByBucketAddressExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }, zoomStep) ->  
+
+    @extendByBucketAddressExtent6(min_x, min_y, min_z, max_x, max_y, max_z, zoomStep)  
+  
   # And this one is for passing bucket coordinates.
-  extendByBucketExtent : (x0, y0, z0, x1, y1, z1, zoomStep) ->
+  extendByBucketAddressExtent6 : (min_x, min_y, min_z, max_x, max_y, max_z, zoomStep) ->
 
     oldCube       = @cubes[zoomStep]
     oldCubeOffset = @cubeOffsets[zoomStep]
@@ -449,14 +496,14 @@ Binary =
       oldUpperBound[2] = oldCubeOffset[2] + oldCubeSize[2]
       
       newCubeOffset = new Uint32Array(3)
-      newCubeOffset[0] = Math.min(x0, x1, oldCubeOffset[0])
-      newCubeOffset[1] = Math.min(y0, y1, oldCubeOffset[1])
-      newCubeOffset[2] = Math.min(z0, z1, oldCubeOffset[2])
+      newCubeOffset[0] = Math.min(min_x, max_x, oldCubeOffset[0])
+      newCubeOffset[1] = Math.min(min_y, max_y, oldCubeOffset[1])
+      newCubeOffset[2] = Math.min(min_z, max_z, oldCubeOffset[2])
       
       newCubeSize = new Uint32Array(3)
-      newCubeSize[0] = Math.max(x0, x1, oldUpperBound[0] - 1) - newCubeOffset[0] + 1
-      newCubeSize[1] = Math.max(y0, y1, oldUpperBound[1] - 1) - newCubeOffset[1] + 1
-      newCubeSize[2] = Math.max(z0, z1, oldUpperBound[2] - 1) - newCubeOffset[2] + 1
+      newCubeSize[0] = Math.max(min_x, max_x, oldUpperBound[0] - 1) - newCubeOffset[0] + 1
+      newCubeSize[1] = Math.max(min_y, max_y, oldUpperBound[1] - 1) - newCubeOffset[1] + 1
+      newCubeSize[2] = Math.max(min_z, max_z, oldUpperBound[2] - 1) - newCubeOffset[2] + 1
       
 
       # Just reorganize the existing buckets when the cube dimensions 
@@ -526,14 +573,14 @@ Binary =
     else
       # Before, there wasn't any cube.
       newCubeOffset = new Uint32Array(3)
-      newCubeOffset[0] = Math.min(x0, x1)
-      newCubeOffset[1] = Math.min(y0, y1)
-      newCubeOffset[2] = Math.min(z0, z1)
+      newCubeOffset[0] = Math.min(min_x, max_x)
+      newCubeOffset[1] = Math.min(min_y, max_y)
+      newCubeOffset[2] = Math.min(min_z, max_z)
       
       newCubeSize = new Uint32Array(3)
-      newCubeSize[0] = Math.max(x0, x1) - newCubeOffset[0] + 1
-      newCubeSize[1] = Math.max(y0, y1) - newCubeOffset[1] + 1
-      newCubeSize[2] = Math.max(z0, z1) - newCubeOffset[2] + 1
+      newCubeSize[0] = Math.max(min_x, max_x) - newCubeOffset[0] + 1
+      newCubeSize[1] = Math.max(min_y, max_y) - newCubeOffset[1] + 1
+      newCubeSize[2] = Math.max(min_z, max_z) - newCubeOffset[2] + 1
       
       newCube = new Array(newCubeSize[0] * newCubeSize[1] * newCubeSize[2])
 

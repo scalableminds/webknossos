@@ -23,6 +23,7 @@ import brainflight.binary._
 import brainflight.security.Secured
 import brainflight.tools.geometry.{ Point3D, Cube }
 import models.DataSet
+import akka.pattern.AskTimeoutException
 
 /**
  * scalableminds - brainflight
@@ -32,15 +33,21 @@ import models.DataSet
  */
 
 object BinaryData extends Controller with Secured {
+  
   override val DefaultAccessRole = Role.User
+  
+  val conf = Play.configuration
 
+  implicit val timeout = Timeout( (conf.getInt("actor.defaultTimeout") getOrElse 5 ) seconds ) // needed for `?` below
+    
   def calculateBinaryData( dataSet: DataSet, cube: Cube, resolutionExponent: Int ): Future[Array[Byte]] = {
-    implicit val timeout = Timeout( 5 seconds ) // needed for `?` below
-    val coordinates = cube.calculateInnerPoints()
     val resolution = math.pow( 2, resolutionExponent ).toInt
 
     // rotate the model and generate the requested data
-    val future = DataSetActor ? BlockRequest( dataSet, resolution, coordinates )
+    val future = (DataSetActor ? CubeRequest( dataSet, resolution, cube )) recover { 
+      case e: AskTimeoutException => 
+        new Array[Byte](0) }
+    
     future.mapTo[Array[Byte]]
   }
   
@@ -57,7 +64,7 @@ object BinaryData extends Controller with Secured {
       Async {
         ( for {
           payload <- request.body.asBytes()
-          message <- BinaryProtocoll.parseAjax( payload )
+          message <- BinaryProtocol.parseAjax( payload )
           dataSet <- DataSet.findOneById( dataSetId )
         } yield {
           message match {
@@ -87,7 +94,7 @@ object BinaryData extends Controller with Secured {
       val output = Enumerator.imperative[Array[Byte]]()
       val input = Iteratee.foreach[Array[Byte]]( in => {
         // first 4 bytes are always used as a client handle
-        BinaryProtocoll.parseWebsocket( in ).map {
+        BinaryProtocol.parseWebsocket( in ).map {
           case message @ RequestData( resolutionExponent, position ) =>
             val cube = calculateCube( position, cubeSize )
             for {
@@ -96,25 +103,10 @@ object BinaryData extends Controller with Secured {
             } {
               output.push( message.handle ++ result )
             }
+          case _ =>
+            Logger.error("Received unhandled message!")
         }
       } )
       ( input, output )
-  }
-
-  def model( modelType: String ) = Action {
-    ModelStore( modelType ) match {
-      case Some( model ) =>
-        Ok( toJson( model.vertices.map( _.toVector3I ) ) )
-      case _ =>
-        NotFound( "Model not available." )
-    }
-  }
-  def polygons( modelType: String ) = Action {
-    ModelStore( modelType ) match {
-      case Some( model ) =>
-        Ok( toJson( model.polygons ) )
-      case _ =>
-        NotFound( "Model not available." )
-    }
   }
 }

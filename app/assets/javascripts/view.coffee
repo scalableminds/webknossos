@@ -6,7 +6,6 @@ model : Model
 # global View variables
 cam = null
 
-
 #constants
 CAM_DISTANCE = 140
 
@@ -152,41 +151,12 @@ View =
       # trianglesplane
       # This is likely to change in the future, if we manage to do the selection,
       # of the corresponding vertices on the GPU
-      Model.Binary.get(newVertices, cam.getZoomStep()).done ({ buffer0, buffer1, bufferDelta }) ->
+      Model.Binary.get(newVertices, cam.getZoomStep()).done (buffer) ->
           
         # ATTENTION 
         # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
         # the data attribute is only available for DataTexture (in other cases it is only texture.image)
-        textureData = g.texture.image.data
-
-        i = j = 0
-        k = 1 << 14 # 128 * 128
-        while --k
-
-          index0 = j++
-          index1 = j++
-          index2 = j++
-          index3 = j++
-
-          bufferDelta0 = bufferDelta[i++]
-          bufferDelta1 = bufferDelta[i++]
-          bufferDelta2 = bufferDelta[i++]
-
-          diff0 = 1.0 - bufferDelta0
-          diff1 = 1.0 - bufferDelta1
-          diff2 = 1.0 - bufferDelta2
-
-          colorScalar =      
-              buffer0[index0] * diff0         * diff1         * diff2 +
-              buffer0[index1] * bufferDelta0  * diff1         * diff2 + 
-              buffer0[index2] * diff0         * bufferDelta1  * diff2 + 
-              buffer0[index3] * bufferDelta0  * bufferDelta1  * diff2 +
-              buffer1[index0] * diff0         * diff1         * bufferDelta2 + 
-              buffer1[index1] * bufferDelta0  * diff1         * bufferDelta2 + 
-              buffer1[index2] * diff0         * bufferDelta1  * bufferDelta2 + 
-              buffer1[index3] * bufferDelta0  * bufferDelta1  * bufferDelta2
-
-          textureData[k] = colorScalar
+        g.texture.image.data.set(buffer)
 
         # Update the texture data and make sure the new texture
         # is used by the Mesh's material.

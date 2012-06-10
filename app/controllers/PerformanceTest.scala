@@ -33,7 +33,7 @@ object PerformanceTest extends Controller {
       y <- yBot to yTop
       z <- zBot to zTop
     } {
-      dataStore.load(DataSet.default, 1)(Point3D(x * 128, y * 128, z * 256))
+      dataStore.load(DataSet.default, 1, Point3D(x * 128, y * 128, z * 256))
     }
     gridFileDataStoreTime += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))
@@ -50,7 +50,7 @@ object PerformanceTest extends Controller {
       y <- yBot to yTop
       z <- zBot to zTop
     } {
-      dataStore.load( DataSet.default, resolution = 1 )(Point3D(x * 128, y * 128, z * 256))
+      dataStore.load( DataSet.default, 1, Point3D(x * 128, y * 128, z * 256))
     }
     fileDataStoreTime += System.currentTimeMillis()
     TimeZone.setDefault(TimeZone.getTimeZone("GMT"))

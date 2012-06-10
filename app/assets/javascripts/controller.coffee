@@ -149,13 +149,11 @@ Controller =
     User.Configuration.mouseRotateValue = (Number) value
     User.Configuration.push()         
 
-
   setMouseInversionX : (value) ->
     if value is true
       User.Configuration.mouseInversionX = 1
     else
       User.Configuration.mouseInversionX = -1
-
     User.Configuration.push()         
 
   setMouseInversionY : (value) ->
@@ -163,13 +161,11 @@ Controller =
       User.Configuration.mouseInversionY = 1
     else
       User.Configuration.mouseInversionY = -1
-
     User.Configuration.push()         
 
   setMouseActivity : (value) ->
     User.Configuration.mouseActive = value
     User.Configuration.push()       
-
     if value is false
       @input.mouse.unbind()
       @input.mouse = null
@@ -201,4 +197,4 @@ Controller =
       @input.deviceorientation.unbind()
       @input.deviceorientation = null
     else
-      @initMotionsensor()         
+      @initMotionsensor()

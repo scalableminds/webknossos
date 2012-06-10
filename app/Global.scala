@@ -1,4 +1,3 @@
-import brainflight.binary.{ FrustumModel, CubeModel, ModelStore }
 import brainflight.tools.geometry._
 import play.api._
 import play.api.Play.current
@@ -8,7 +7,6 @@ import brainflight.mail.DefaultMails
 object Global extends GlobalSettings {
 
   override def onStart( app: Application ) {
-    ModelStore.register( CubeModel, FrustumModel )
     if ( Play.current.mode == Mode.Dev )
       InitialData.insert()
   }

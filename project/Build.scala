@@ -16,8 +16,8 @@ object ApplicationBuild extends Build {
   )
   val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
     resolvers += "repo.novus rels" at "http://repo.novus.com/releases/",
-    resolvers += "repo.novus snaps" at "http://repo.novus.com/snapshots/",
-    incrementalAssetsCompilation:=true
+    resolvers += "repo.novus snaps" at "http://repo.novus.com/snapshots/"//,
+    //incrementalAssetsCompilation:=true
   )
 
 }

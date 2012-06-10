@@ -4,13 +4,18 @@
 # should run fast.
 
 # Finding points adjacent to the already found one.
-# We make use of the bucket structure and index arithmetik to optimize
+# We make use of the bucket structure and index arithmetic to optimize
 # lookup time.
-# Either returns a color value between 0 and 1 or an error code:
+# Either returns a color value between 0 and 255.
 #
+# pointIndex = 111111 111111 111111
+#                 x      y      z
+#
+# The magic numbers here relate to a special error case.
+# However, they ignored when inserting them into the array buffer.
 # *    `-2`: bucket fault (but loading)
 # *    `-1`: bucket fault
-nextPointMacro = (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, size01) ->
+nextPointMacro = (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, sizeZ, sizeZY) ->
 
   bucketIndex = bucketIndex0
   pointIndex  = pointIndex0
@@ -23,7 +28,7 @@ nextPointMacro = (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, si
       bucketIndex++
       pointIndex &= -32
       # Bound checking.
-      if bucketIndex % size0 == 0
+      if bucketIndex % sizeZ == 0
         output = -1
     else
       pointIndex++
@@ -33,10 +38,10 @@ nextPointMacro = (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, si
     if yd
       if (pointIndex & 992) == 992
         # The point is to at the bottom border.
-        bucketIndex += size0
+        bucketIndex += sizeZ
         pointIndex &= -993
         # Bound checking.
-        if bucketIndex % size01 == 0
+        if bucketIndex % sizeZY == 0
           output = -1
       else
         pointIndex += 32
@@ -46,7 +51,7 @@ nextPointMacro = (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, si
       if xd
         if (pointIndex & 31744) == 31744
           # The point seems to be at the back border.
-          bucketIndex += size01
+          bucketIndex += sizeZY
           pointIndex &= -31745
 
         else
@@ -60,12 +65,14 @@ nextPointMacro = (output, xd, yd, zd, cube, bucketIndex0, pointIndex0, size0, si
       else
         -1
 
+# Linear interpolation (Point is on a line)
 linearMacro = (p0, p1, d) ->
   buffer[j] = if p0 == 0 or p1 == 0
     0
   else
     p0 * (1 - d) + p1 * d
-  
+
+# Bilinear interpolation (Point is on a square)
 bilinearMacro = (p00, p10, p01, p11, d0, d1) ->
   buffer[j] = if p00 == 0 or p10 == 0 or p01 == 0 or p11 == 0
     0
@@ -74,7 +81,8 @@ bilinearMacro = (p00, p10, p01, p11, d0, d1) ->
     p10 * d0 * (1 - d1) + 
     p01 * (1 - d0) * d1 + 
     p11 * d0 * d1
-  
+
+# Trilinear interpolation (Point is in a cube)
 trilinearMacro = (p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2) ->
   buffer[j] = if p000 == 0 or p100 == 0 or p010 == 0 or p110 == 0 or p001 == 0 or p101 == 0 or p011 == 0 or p111 == 0
     0
@@ -89,21 +97,14 @@ trilinearMacro = (p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2) ->
     p111 * d0 * d1 * d2
 
 pointMacro = (output, xD, yD, zD) ->
-  nextPointMacro(output, xD, yD, zD, cube, bucketIndex0, pointIndex0, size0, size01)
+  nextPointMacro(output, xD, yD, zD, cube, bucketIndex0, pointIndex0, sizeZ, sizeZY)
   if output <= 0
     buffer[j] = output
     continue
 
-# This macro is used for collecting the necessary data of one point
-# for later interpolation. It aims to be fast, therefore the code is ugly.
-
-# pointIndex = 111111 111111 111111
-#                 x      y      z
-# return codes:
-# -3 : negative coordinates 
-# -2 : bucket in loading state
-# -1 : bucket fault
-collectLoopMacro = (x, y, z, buffer, j, cube, ll0, ll1, ll2, ur0, ur1, ur2, size0, size01) ->
+# This macro is used for collecting and interpolating the data.
+# It aims to be fast, therefore the code is ugly.
+collectLoopMacro = (x, y, z, buffer, j, cube, min_x, min_y, min_z, max_x, max_y, max_z, sizeZ, sizeZY) ->
 
   output0 = output1 = output2 = output3 = output4 = output5 = output6 = output7 = 0
 
@@ -112,7 +113,7 @@ collectLoopMacro = (x, y, z, buffer, j, cube, ll0, ll1, ll2, ur0, ur1, ur2, size
     continue
   
   # Cube bound checking is necessary.
-  if x < ll0 or y < ll1 or z < ll2 or x > ur0 or y > ur1 or z > ur2
+  if x < min_x or y < min_y or z < min_z or x > max_x or y > max_y or z > max_z
     buffer[j] = -1 
     continue
 
@@ -122,9 +123,9 @@ collectLoopMacro = (x, y, z, buffer, j, cube, ll0, ll1, ll2, ur0, ur1, ur2, size
   z0 = z >> 0; zd = z - z0
 
   bucketIndex0 = 
-    ((x0 - ll0) >> 5) * size21 + 
-    ((y0 - ll1) >> 5) * size2 + 
-    ((z0 - ll2) >> 5)
+    ((x0 - min_x) >> 5) * sizeZY + 
+    ((y0 - min_y) >> 5) * sizeZ + 
+    ((z0 - min_z) >> 5)
 
   pointIndex0 = 
     ((x0 & 31) << 10) + 
@@ -199,24 +200,24 @@ InterpolationCollector =
 
   bulkCollect : (vertices, buffer, cube, cubeSize, cubeOffset) ->
 
-    size2  = cubeSize[2]
-    size21 = cubeSize[2] * cubeSize[1]
+    sizeZ  = cubeSize[2]
+    sizeZY = cubeSize[2] * cubeSize[1]
     
-    lowerBound0 = cubeOffset[0] << 5
-    lowerBound1 = cubeOffset[1] << 5
-    lowerBound2 = cubeOffset[2] << 5
-    upperBound0 = (cubeOffset[0] + cubeSize[0]) << 5
-    upperBound1 = (cubeOffset[1] + cubeSize[1]) << 5
-    upperBound2 = (cubeOffset[2] + cubeSize[2]) << 5
+    min_x = cubeOffset[0] << 5
+    min_y = cubeOffset[1] << 5
+    min_z = cubeOffset[2] << 5
+    max_x = (cubeOffset[0] + cubeSize[0]) << 5
+    max_y = (cubeOffset[1] + cubeSize[1]) << 5
+    max_z = (cubeOffset[2] + cubeSize[2]) << 5
 
     i = vertices.length
     j = -1
 
     while i
 
-      z  = vertices[--i]
-      y  = vertices[--i]
-      x  = vertices[--i]
+      z = vertices[--i]
+      y = vertices[--i]
+      x = vertices[--i]
       j++
 
       collectLoopMacro(
@@ -224,8 +225,8 @@ InterpolationCollector =
         buffer, 
         j, 
         cube, 
-        lowerBound0, lowerBound1, lowerBound2,
-        upperBound0, upperBound1, upperBound2,
-        size2, size21)
+        min_x, min_y, min_z,
+        max_x, max_y, max_z,
+        sizeZ, sizeZY)
     
     return

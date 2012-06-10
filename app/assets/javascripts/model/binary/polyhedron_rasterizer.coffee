@@ -1,17 +1,32 @@
 ### define ###
 
-HEAP_SIZE = 1 << 26
+# Constants
+HEAP_SIZE = 1 << 25
+HEAP = new ArrayBuffer(HEAP_SIZE)
 Int32_MIN = -2147483648
 Int32_MAX = 2147483647
 
-HEAP = new ArrayBuffer(HEAP_SIZE)
-
+# Macros
 swapMacro = (a, b) ->
   __tmp = a
   a = b
   b = __tmp
 
 
+crossMacro = (o0, o1, a0, a1, b0, b1) ->
+  (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
+
+
+drawMacro = (x, y, z) ->
+
+  __index_y = (z << shift_z) + (y << 1)
+
+  buffer[__index_y]     = x if x < buffer[__index_y]
+  buffer[__index_y + 1] = x if x > buffer[__index_y + 1]
+
+
+# Returns the index of the next free bit.
+# Example: 5 = 0000 0101 => 3
 nextFreeBit = (x) ->
   n = 1
   if (x >> 16) == 0
@@ -29,22 +44,38 @@ nextFreeBit = (x) ->
   32 - n - (x >> 31)
 
 
-crossMacro = (o0, o1, a0, a1, b0, b1) ->
-  (a0 - o0) * (b1 - o1) - (a1 - o1) * (b0 - o0)
-
-
-drawMacro = (x, y, z) ->
-
-  __index_y = (z << shift_z) + (y << 1)
-
-  buffer[__index_y]     = x if x < buffer[__index_y]
-  buffer[__index_y + 1] = x if x > buffer[__index_y + 1]
-
-
+# Represents a convex polyhedron, which can be voxelized.
+# Use it like this:
+#     masterPolyhredon = new PolyhedronRasterizer.Master([...], [...])
+#     polyhedron = masterPolyhedron.transformAffine(matrix)
+#     output = polyhedron.collectPointsOnion(0, 0, 0)
+#
+# ##A word of caution:##
+# The code is a bit verbose to keep it speedy. Also notice
+# that using this class is nowhere near thread-safe. Each instance
+# will use the same `HEAP`. Therefore two existing instances will
+# definitely collide.
+#
+# ##How the algorithm works:##
+# First, we use a buffer which holds all line segments orthogonal
+# to the yz-plane belonging to the polyhedron, i.e. the smallest 
+# and highest x-coordinate for all y- and z-coordinates currently 
+# known.
+# We start by drawing the edges of the polyhedron into the buffer.
+# This results in having at least one point in each orthogonal plane.
+# Knowing this, we slice polyhedron at each xy-plane (i.e. same 
+# z-coordinate). We collect all points in this plane and run a convex
+# hull algorithm over them, resulting in a convex polygon. We then draw
+# edges of that polygon into our buffer. 
+# Finally, we know all relevant line segments and can collect the points
+# There are some algorithms available to determine the order of the 
+# collected points.
+#  
 class PolyhedronRasterizer
 
   class @Master
 
+    # Works just like a regular mesh in WebGL.
     constructor : (@vertices, @indices) ->
 
     transformAffine : (matrix) ->
@@ -83,6 +114,11 @@ class PolyhedronRasterizer
     @pointsBuffer = new Int32Array(delta_y << 2)
     @lowerBuffer  = new Int32Array(delta_y << 2)
     @upperBuffer  = new Int32Array(delta_y << 2)
+
+    # draw edges of the polyhedron into the buffer
+    @drawEdges()
+    # fill each xy-plane with points
+    @drawPolygons()
 
 
   calcExtent : ->
@@ -139,20 +175,11 @@ class PolyhedronRasterizer
   draw : (x, y, z) ->
     
     { buffer, shift_z } = @
-    index_y = (z << shift_z) + (y << 1)
-
-    buffer[index_y]     = x if x < buffer[index_y]
-    buffer[index_y + 1] = x if x > buffer[index_y + 1]
+    drawMacro(x, y, z)
 
     return
 
-
-  prepare : ->
-
-    @drawEdges()
-    @drawPolygons()
-
-
+  # Draws the edges into the buffer.
   drawEdges : ->
 
     { indices, vertices } = @
@@ -176,6 +203,7 @@ class PolyhedronRasterizer
     return
 
 
+  # Source: https://sites.google.com/site/proyectosroboticos/bresenham-3d
   drawLine3d : (x, y, z, x1, y1, z1) ->
     
     { shift_z, buffer } = @
@@ -241,7 +269,7 @@ class PolyhedronRasterizer
 
     return
 
-
+  # Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
   drawLine2d : (x, y, x1, y1, z) ->
 
     { shift_z, buffer } = @
@@ -288,12 +316,16 @@ class PolyhedronRasterizer
 
     return
 
-
+  # Iterates over all relevant xy-planes. The points in
+  # each plane are used to build a convex polygon. The
+  # edges of that polygon is then drawn into the buffer.
+  # After that, we know all line segments that belong to
+  # the polyhedron.
   drawPolygons : ->
 
     { delta_x, delta_y, delta_z, shift_z, buffer, pointsBuffer, lowerBuffer, upperBuffer } = @
 
-    # build and rasterize convex hull of all z-planes
+    # build and rasterize convex hull of all xy-planes
     
     for z in [0...delta_z] by 1
       # convex hull building based on:
@@ -443,10 +475,12 @@ class PolyhedronRasterizer
     outputLength = 0
 
     for radius in [0..maxRadius] by 1
+
       radius_min_z = Math.max(zs - radius, min_z)
       radius_max_z = Math.min(zs + radius, max_z)
       radius_min_y = Math.max(ys - radius, min_y)
       radius_max_y = Math.min(ys + radius, max_y)
+
       for z in [radius_min_z..radius_max_z] by 1
         for y in [radius_min_y..radius_max_y] by 1
           index = ((z - min_z) << shift_z) + ((y - min_y) << 1)
@@ -466,9 +500,9 @@ class PolyhedronRasterizer
     outputBuffer.subarray(0, outputLength)
 
 
-  collectPointsCircular : (startPoint) ->
-    # output = [[0, 0, 0, 0, 0]]
-    q++
+  enumeratePointsCircular : (startPoint) ->
+    
+    output = [0, 0, 0]
 
     for size in [1..maxSize] by 1
 
@@ -489,8 +523,7 @@ class PolyhedronRasterizer
 
           for i in [0...(_size << 2)] by 1
 
-            # output.push [x, y, z, size, _size]
-            q++
+            output.push x, y, z
 
             x += x_dir
             y += y_dir
@@ -500,15 +533,12 @@ class PolyhedronRasterizer
             if (y == _size or y == -_size) 
               y_dir = ~(--y_dir)
         else
-          # output.push [0, 0, z, size, _size]
-          q++
+          output.push 0, 0, z
 
         z += z_dir
         z_dir = ~(--z_dir)
 
-    # output
-    console.timeEnd "circle"
-    q
+    output
 
   @test : ->
   

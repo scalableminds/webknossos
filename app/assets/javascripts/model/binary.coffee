@@ -6,14 +6,6 @@ libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 libs/simple_worker : SimpleWorker
 ###
 
-EPSILON = 1e-10
-BUCKET_WIDTH = 1 << 5
-
-LOADING_STATE = {}
-
-ZOOM_STEP_COUNT = 4
-
-
 # #Model.Binary#
 # Binary is the real deal.
 # It loads and stores the primary graphical data.
@@ -28,11 +20,11 @@ ZOOM_STEP_COUNT = 4
 # 
 # ###Implementation###
 # Each point value (greyscale color) is represented by a number 
-# between 0 and 1, where 0 is black and 1 white. 
+# between 0 and 255, where 0 is black and 255 white. 
 # 
 # The buckets are implemented as `Uint8Array`s with a length of
 # `BUCKET_WIDTH ^ 3`. Each point can be easiliy found through simple 
-# arithmetik (see `Model.Binary.pointIndex`). Each bucket has an 
+# arithmetic (see `Model.Binary.pointIndexByVertex`). Each bucket has an 
 # address which is its coordinate representation and can be computed 
 # by (integer-)dividing each coordinate with `BUCKET_WIDTH`.
 #
@@ -46,41 +38,37 @@ ZOOM_STEP_COUNT = 4
 # actually just a standard javascript array with each item being 
 # either `null`, `loadingState` or a bucket. The length of the
 # array is `a * b * c`. Also finding the containing bucket of a point 
-# can be done with pretty simple math (see `Model.Binary.bucketIndex`).
+# can be done with pretty simple math (see 
+# `Model.Binary.bucketIndexByVertex`).
+#
+# Currently, we store separate sets of data for each zoom level.
 #
 # ###Inserting###
 # When inserting new data into the data structure we first need
 # to make sure the cube is big enough to cover all buckets. Otherwise
-# we'll have to expand the cube (see `Model.Binary.extendByBucketExtent`). 
+# we'll have to expand the cube (see `Model.Binary.extendByAddressExtent`). 
 # Then we just set the buckets.  
 #
 # ##Loading##
 # We do attempt to preload buckets intelligently (see 
-# `Model.Binary.ping`). We use a breadth-first search starting at
-# the bucket to cursor is currently on. Then we look at its neigbors.
-# For each neighbor we decide based on intersection with an spherical
-# cap (implented by both a plane and a sphere), which resembles the
-# canvas where the data is painted on later (see `Model.Trianglesplane`).
-# 
-# This helps us to load data in the direction of your current view. Also, 
-# the preload algorithm creates an imaginary half-sphere which expands
-# over time. So we should minimize the times user experience unloaded
-# buckets.
+# `Model.Binary.ping`). Using the camera matrix we use a transformed 
+# preview volume (currently a cuboid) to determine which buckets are
+# relevant to load right now. Those buckets are then enumerated starting
+# with the current center of projection. They are used to populate a
+# download queue, so 5 buckets can be loaded at a time.
+# Once a new `Model.Binary.ping` is executed, the queue will be cleared
+# again. This algorithm ensures the center bucket to be loaded first always.
 #
 # ##Querying##
 # `Model.Binary.get` provides an interface to query the stored data.
 # Give us an array of coordinates (vertices) and we'll give you the 
-# corresponding color values. Actually, we provide you with the required
-# data to perform your own interpolation (i.e. on the GPU). We apply 
-# either a linear, bilinear or trilinear interpolation so the result 
-# should be quite smooth. However, if one of the required 2, 4 or 8 points 
-# is missing we'll decide that your requested point is missing aswell.
+# corresponding color values. We apply either a linear, bilinear or 
+# trilinear interpolation so the result should be quite smooth. However, 
+# if one of the required 2, 4 or 8 points is missing we'll decide that 
+# your requested point can't be valid aswell.
 # 
 
 # Macros
-
-# Computes the bucket index of the vertex with the given coordinates.
-# Requires `cubeOffset` and `cubeSize` to be in scope.
 
 # Computes the bucket index of the given vertex.
 # Requires `cubeOffset` and `cubeSize` to be in scope.
@@ -99,15 +87,6 @@ bucketIndexByAddress3Macro = (bucket_x, bucket_y, bucket_z) ->
   (bucket_y - cubeOffset[1]) * cubeSize[2] + 
   (bucket_z - cubeOffset[2])
 
-# Computes the bucket index of the vertex with the given coordinates.
-# Requires `cubeOffset0`, `cubeOffset1`, `cubeOffset2`, `cubeSize2` and 
-# `cubeSize21` to be precomputed and in scope.
-bucketIndex2Macro = (x, y, z) ->
-
-  ((x >> 5) - cubeOffset0) * cubeSize21 +
-  ((y >> 5) - cubeOffset1) * cubeSize2 + 
-  ((z >> 5) - cubeOffset2)
-
 # Computes the index of the vertex with the given coordinates in
 # its bucket.
 pointIndexMacro = (x, y, z) ->
@@ -117,52 +96,24 @@ pointIndexMacro = (x, y, z) ->
   ((z & 31))
 
 Binary =
-  Rasterizer : PolyhedronRasterizer
+
+  # Constants
+  PULL_DOWNLOAD_LIMIT : 5
+  PING_THROTTLE_TIME : 200
+  
+  LOADING_PLACEHOLDER_OBJECT : {}
+  ZOOM_STEP_COUNT : 4
 
   # This method allows you to query the data structure. Give us an array of
-  # vertices and we'll give you the stuff you need to interpolate data.
-  #
-  # We'll figure out how many color values you need to do interpolation.
-  # That'll be 1, 2, 4 or 8 values. They represent greyscale colors ranging from
-  # 0 to 1. Additionally, you need three delta values xd, yd and zd which are in
-  # the range from 0 to 1. Then you should be able to perform a trilinear 
-  # interpolation. To sum up, you get 11 floating point values for each point.
-  # We spilt those in three array buffers to have them used in WebGL shaders as 
-  # vec4 and vec3 attributes.
+  # vertices and we'll the interpolated data.
   # 
-  # While processing the data several errors can occur. Please note that 
-  # processing of a point halts if any of the required color values is wrong.
-  # You can determine any errors by examining the first value of each point.
-  # Feel free to color code those errors as you wish.
-  #
-  # *   `-3`: negative coordinates given
-  # *   `-2`: block currently loading
-  # *   `-1`: block fault
-  # *   `0`: black
-  # *   `1`: white
-  # 
-  # Parameters:
-  # 
-  # *   `vertices` is a `Float32Array with the vertices you'd like to query. There
-  # is no need for you to round the coordinates. Otherwise you'd have a nearest-
-  # neighbor-interpolation, which isn't pretty and kind of wavey. Every three
-  # elements (x,y,z) represent one vertex.
-  #
-  # Promise Parameters:
-  # 
-  # *   `buffer0` is a `Float32Array` with the first 4 color values of
-  # each points. The first value would contain any error codes.
-  # *   `buffer1` is a `Float32Array` with the second 4 color values of
-  # each points.
-  # *   `bufferDelta` is a `Float32Array` with the delta values.
-  #
-
+  # Invalid points will have the value 0.
   get : (vertices, zoomStep) ->
 
     $.when(@getSync(vertices, zoomStep))
 
 
-  # A synchronized implementation of `get`.
+  # A synchronized implementation of `get`. Cuz its faster.
   getSync : (vertices, zoomStep) ->
     
     buffer = new Float32Array(vertices.length / 3)
@@ -180,25 +131,7 @@ Binary =
     buffer
 
 
-  PULL_LIMIT : 5
-  PING_THROTTLE_TIME : 200
-  
-  # Use this method to let us know when you've changed your spot. Then we'll try to 
-  # preload some data. 
-  #
-  # Parameters:
-  #
-  # *   `matrix` is a 3-element array representing the point you're currently at
-  # *   `direction` is a 3-element array representing the vector of the direction 
-  # you look at
-  #
-  # No Callback Paramters
-  ping : (matrix, zoomStep) ->
-
-    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @ping(matrix, zoomStep)
-
-
+  # This is the preview volume for preloading data.
   pingPolyhedron : new PolyhedronRasterizer.Master([
       -3,-3,-1 #0
       -1,-1, 2 #3
@@ -226,6 +159,13 @@ Binary =
 
   pingLastMatrix : null
 
+  # Use this method to let us know when you've changed your spot. Then we'll try to 
+  # preload some data. 
+  ping : (matrix, zoomStep) ->
+
+    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
+    @ping(matrix, zoomStep)
+  
 
   pingImpl : (matrix, zoomStep) ->
 
@@ -233,8 +173,9 @@ Binary =
 
       @pingLastMatrix = matrix
 
-
       console.time "ping"
+
+      # Transform vertex coordinates into bucket addresses.
       matrix = M4x4.clone(matrix)
       matrix[12] = matrix[12] >> 5
       matrix[13] = matrix[13] >> 5
@@ -246,7 +187,6 @@ Binary =
 
       cube = @cubes[zoomStep]
 
-      polyhedron.prepare()
       testAddresses = polyhedron.collectPointsOnion(matrix[12], matrix[13], matrix[14])
       
       pullQueue = @pullQueue
@@ -254,26 +194,32 @@ Binary =
 
       i = 0
       while i < testAddresses.length
-        x = testAddresses[i++]
-        y = testAddresses[i++]
-        z = testAddresses[i++]
+        bucket_x = testAddresses[i++]
+        bucket_y = testAddresses[i++]
+        bucket_z = testAddresses[i++]
 
-        address = [x, y, z]
-        unless cube[@bucketIndexByAddress(address, zoomStep)]
-          pullQueue.push x, y, z, zoomStep
-          # @pullBucket(address, zoomStep)
+        # Just adding bucket addresses we don't have.
+        unless cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, zoomStep)]
+          pullQueue.push bucket_x, bucket_y, bucket_z, zoomStep
 
       @pull()
       console.timeEnd "ping"
 
+  
   pullQueue : []
   pullLoadingCount : 0
 
+  # Eating up the pull queue and triggers downloading buckets.
   pull : ->
-    { pullQueue } = @
-    while @pullLoadingCount < @PULL_LIMIT and pullQueue.length
+    
+    { pullQueue, PULL_DOWNLOAD_LIMIT } = @
+
+    while @pullLoadingCount < PULL_DOWNLOAD_LIMIT and pullQueue.length
+
       [x, y, z, zoomStep] = pullQueue.splice(0, 4)
       @pullBucket(x, y, z, zoomStep)
+
+    return
 
 
 
@@ -283,7 +229,7 @@ Binary =
 
     console.log "pull", bucket_x, bucket_y, bucket_z
 
-    @cubes[zoomStep][@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, zoomStep)] = LOADING_STATE
+    @cubes[zoomStep][@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, zoomStep)] = @LOADING_PLACEHOLDER_OBJECT
     @pullLoadingCount++
 
     @loadBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep).then(
@@ -300,6 +246,7 @@ Binary =
       @pull()
 
   
+  # This is an abstraction of the transport medium.
   loadBucketSocket : _.once ->
     
     Game.initialize().pipe ->
@@ -349,6 +296,7 @@ Binary =
 
     @bucketIndexByAddress3(address[0], address[1], address[2], zoomStep)
 
+
   bucketIndexByAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
 
     cubeOffset = @cubeOffsets[zoomStep]
@@ -361,6 +309,7 @@ Binary =
   pointIndexByVertex : (vertex) ->
     
     pointIndexMacro(vertex[0], vertex[1], vertex[2])
+
 
   pointIndexByVertex3 : (x, y, z) ->
     
@@ -386,6 +335,7 @@ Binary =
 
     @extendByVertex3(x, y, z, zoomStep)
 
+
   extendByVertex3 : (x, y, z, zoomStep) ->
     
     bucket_x = x >> 5
@@ -402,15 +352,17 @@ Binary =
       zoomStep
     )
 
+
   extendByBucketAddress : ([ x, y, z ], zoomStep) ->
 
     @extendByBucketAddressExtent(x, y, z, x, y, z, zoomStep)
+
       
   extendByBucketAddressExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }, zoomStep) ->  
 
     @extendByBucketAddressExtent6(min_x, min_y, min_z, max_x, max_y, max_z, zoomStep)  
-  
-  # And this one is for passing bucket coordinates.
+
+
   extendByBucketAddressExtent6 : (min_x, min_y, min_z, max_x, max_y, max_z, zoomStep) ->
 
     oldCube       = @cubes[zoomStep]

@@ -66,28 +66,28 @@ Controller =
 
     
       #ScaleTrianglesPlane
-      "l" : -> View.scaleTrianglesPlane -User.Configuration.scaleValue
-      "k" : -> View.scaleTrianglesPlane User.Configuration.scaleValue
+      "l" : -> View.scaleTrianglesPlane -Model.User.Configuration.scaleValue
+      "k" : -> View.scaleTrianglesPlane Model.User.Configuration.scaleValue
 
       #Move
-      "w" : -> View.move [0, User.Configuration.moveValue, 0]
-      "s" : -> View.move [0, -User.Configuration.moveValue, 0]
-      "a" : -> View.move [User.Configuration.moveValue, 0, 0]
-      "d" : -> View.move [-User.Configuration.moveValue, 0, 0]
-      "space" : -> View.move [0, 0, User.Configuration.moveValue]
-      "shift + space" : -> View.move [0, 0, -User.Configuration.moveValue]
+      "w" : -> View.move [0, Model.User.Configuration.moveValue, 0]
+      "s" : -> View.move [0, -Model.User.Configuration.moveValue, 0]
+      "a" : -> View.move [Model.User.Configuration.moveValue, 0, 0]
+      "d" : -> View.move [-Model.User.Configuration.moveValue, 0, 0]
+      "space" : -> View.move [0, 0, Model.User.Configuration.moveValue]
+      "shift + space" : -> View.move [0, 0, -Model.User.Configuration.moveValue]
 
       #Rotate in distance
-      "left"  : -> View.yawDistance User.Configuration.rotateValue
-      "right" : -> View.yawDistance -User.Configuration.rotateValue
-      "up"    : -> View.pitchDistance -User.Configuration.rotateValue
-      "down"  : -> View.pitchDistance User.Configuration.rotateValue
+      "left"  : -> View.yawDistance Model.User.Configuration.rotateValue
+      "right" : -> View.yawDistance -Model.User.Configuration.rotateValue
+      "up"    : -> View.pitchDistance -Model.User.Configuration.rotateValue
+      "down"  : -> View.pitchDistance Model.User.Configuration.rotateValue
       
       #Rotate at centre
-      "shift + left"  : -> View.yaw User.Configuration.rotateValue
-      "shift + right" : -> View.yaw -User.Configuration.rotateValue
-      "shift + up"    : -> View.pitch -User.Configuration.rotateValue
-      "shift + down"  : -> View.pitch User.Configuration.rotateValue
+      "shift + left"  : -> View.yaw Model.User.Configuration.rotateValue
+      "shift + right" : -> View.yaw -Model.User.Configuration.rotateValue
+      "shift + up"    : -> View.pitch -Model.User.Configuration.rotateValue
+      "shift + down"  : -> View.pitch Model.User.Configuration.rotateValue
 
       #misc keys
       "n" : -> Helper.toggle()
@@ -106,8 +106,8 @@ Controller =
   # for more buttons look at Input.Gamepad
   initGamepad : ->
     @input.gamepad = new Input.Gamepad(
-        "ButtonA" : -> View.move [0, 0, User.Configuration.moveValue]
-        "ButtonB" : -> View.move [0, 0, -User.Configuration.moveValue]
+        "ButtonA" : -> View.move [0, 0, Model.User.Configuration.moveValue]
+        "ButtonB" : -> View.move [0, 0, -Model.User.Configuration.moveValue]
         "LeftStickX" : View.yawDistance
         "LeftStickY" : View.pitchDistance
 
@@ -134,38 +134,39 @@ Controller =
 
   #Customize Options
   setMoveValue : (value) ->
-    User.Configuration.moveValue = (Number) value
-    User.Configuration.push()   
+    Model.User.Configuration.moveValue = (Number) value
+
+    Model.User.Configuration.push()
 
   setRotateValue : (value) ->
-    User.Configuration.rotateValue = (Number) value 
-    User.Configuration.push()   
+    Model.User.Configuration.rotateValue = (Number) value 
+    Model.User.Configuration.push()   
 
   setScaleValue : (value) ->
-    User.Configuration.scaleValue = (Number) value  
-    User.Configuration.push()         
+    Model.User.Configuration.scaleValue = (Number) value  
+    Model.User.Configuration.push()         
 
   setMouseRotateValue : (value) ->
-    User.Configuration.mouseRotateValue = (Number) value
-    User.Configuration.push()         
+    Model.User.Configuration.mouseRotateValue = (Number) value
+    Model.User.Configuration.push()         
 
   setMouseInversionX : (value) ->
     if value is true
-      User.Configuration.mouseInversionX = 1
+      Model.User.Configuration.mouseInversionX = 1
     else
-      User.Configuration.mouseInversionX = -1
-    User.Configuration.push()         
+      Model.User.Configuration.mouseInversionX = -1
+    Model.User.Configuration.push()         
 
   setMouseInversionY : (value) ->
     if value is true
-      User.Configuration.mouseInversionY = 1
+      Model.User.Configuration.mouseInversionY = 1
     else
-      User.Configuration.mouseInversionY = -1
-    User.Configuration.push()         
+      Model.User.Configuration.mouseInversionY = -1
+    Model.User.Configuration.push()         
 
   setMouseActivity : (value) ->
-    User.Configuration.mouseActive = value
-    User.Configuration.push()       
+    Model.User.Configuration.mouseActive = value
+    Model.User.Configuration.push()
     if value is false
       @input.mouse.unbind()
       @input.mouse = null
@@ -173,8 +174,8 @@ Controller =
       @initMouse()
 
   setKeyboardActivity : (value) ->
-    User.Configuration.keyboardActive = value 
-    User.Configuration.push()   
+    Model.User.Configuration.keyboardActive = value 
+    Model.User.Configuration.push()
     if value is false
       @input.keyboard.unbind()
       @input.keyboard = null
@@ -182,8 +183,8 @@ Controller =
       @initKeyboard()
 
   setGamepadActivity : (value) ->
-    User.Configuration.gamepadActive = value  
-    User.Configuration.push()   
+    Model.User.Configuration.gamepadActive = value  
+    Model.User.Configuration.push()   
     if value is false
       @input.gamepad.unbind()
       @input.gamepad = null
@@ -191,8 +192,8 @@ Controller =
       @initGamepad()    
 
   setMotionSensorActivity : (value) ->
-    User.Configuration.motionsensorActive = value
-    User.Configuration.push()   
+    Model.User.Configuration.motionsensorActive = value
+    Model.User.Configuration.push()   
     if value is false
       @input.deviceorientation.unbind()
       @input.deviceorientation = null

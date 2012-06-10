@@ -136,8 +136,8 @@ Binary =
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
     @ping(matrix, zoomStep)
-  
 
+  pingImpl : (matrix, zoomStep) ->
 
     unless _.isEqual(matrix, @pingLastMatrix)
 

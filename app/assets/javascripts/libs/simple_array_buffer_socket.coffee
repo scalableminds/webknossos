@@ -105,7 +105,11 @@ class SimpleArrayBufferSocket.WebSocket
         handle = new Float32Array(buffer, 0, 1)[0]
         if handle == socketHandle
           detachHandlers()
-          deferred.resolve(new @responseBufferType(buffer, 4))
+          _.defer => 
+            if buffer.byteLength > 4
+              deferred.resolve(new @responseBufferType(buffer, 4))
+            else
+              deferred.reject()
 
       socketCloseCallback = (event) ->
         detachHandlers()
@@ -113,7 +117,7 @@ class SimpleArrayBufferSocket.WebSocket
       
       socket.addEventListener("message", socketMessageCallback, false)
       socket.addEventListener("close", socketCloseCallback, false)
-      socket.send(transmitBuffer)
+      socket.send(transmitBuffer.buffer)
     
       setTimeout(
         -> 
@@ -126,15 +130,10 @@ class SimpleArrayBufferSocket.WebSocket
 
   createPackage : (data) ->
 
-    padding = Math.max(@requestBufferType.BYTES_PER_ELEMENT, Float32Array.BYTES_PER_ELEMENT)
-    
-    transmitBuffer  = new ArrayBuffer(padding + data.byteLength)
-    handleArray     = new Float32Array(transmitBuffer, 0, 1)
-    handleArray[0]  = Math.random()
-    socketHandle    = handleArray[0]
-
-    dataArray = new @requestBufferType(transmitBuffer, padding)
-    dataArray.set(data)
+    transmitBuffer    = new Float32Array(1 + data.length)
+    transmitBuffer[0] = Math.random()
+    transmitBuffer.set(data, 1)
+    socketHandle      = transmitBuffer[0]
 
     { transmitBuffer, socketHandle }
 
@@ -146,6 +145,7 @@ class SimpleArrayBufferSocket.XmlHttpRequest
   open : ({ @responseBufferType, @requestBufferType }) ->
 
   send : (data) ->
+    data = new @requestBufferType(data) if _.isArray(data)
     request(
       data : data.buffer
       url : @url

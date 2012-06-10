@@ -1,6 +1,6 @@
 #! /usr/bin/env sh
 
-cd playframework/framework
+cd ../playframework/framework
 ./cleanEverything
 ./build build-repository
 

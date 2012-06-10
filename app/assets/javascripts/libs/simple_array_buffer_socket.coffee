@@ -105,11 +105,11 @@ class SimpleArrayBufferSocket.WebSocket
         handle = new Float32Array(buffer, 0, 1)[0]
         if handle == socketHandle
           detachHandlers()
-          _.defer => 
-            if buffer.byteLength > 4
-              deferred.resolve(new @responseBufferType(buffer, 4))
-            else
-              deferred.reject()
+          
+          if buffer.byteLength > 4
+            deferred.resolve(new @responseBufferType(buffer, 4))
+          else
+            deferred.reject()
 
       socketCloseCallback = (event) ->
         detachHandlers()
@@ -130,7 +130,7 @@ class SimpleArrayBufferSocket.WebSocket
 
   createPackage : (data) ->
 
-    transmitBuffer    = new Float32Array(1 + data.length)
+    transmitBuffer    = new @requestBufferType(1 + data.length)
     transmitBuffer[0] = Math.random()
     transmitBuffer.set(data, 1)
     socketHandle      = transmitBuffer[0]

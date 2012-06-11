@@ -72,7 +72,7 @@ object BinaryTest extends Specification {
         ( resultAsyc.asInstanceOf[AsyncResult] ).result.map( result => {
           status( result ) must be equalTo ( OK )
           contentType( result ) must equalTo( Some( "application/octet-stream" ) )
-          //((_:Byte) must be equalTo 0).forall(contentAsBytes( result ).toTraversable)
+          ((_:Byte) must be equalTo 0).forall(contentAsBytes( result ).toTraversable)
         } ).value.get
       }
     }

@@ -7,16 +7,20 @@ class SimpleArrayBufferSocket
   fallbackMode : false
   
   constructor : (options) ->
+
     _.extend(@, options)
     @sender = @defaultSender
     @sender.open(@)
   
+
   switchToFallback : ->
+
     unless @fallbackMode
       @sender.close()
       @fallbackMode = true
       @sender = @fallbackSender
       @sender.open(@)
+
 
   send : (data) ->
 
@@ -43,13 +47,17 @@ class SimpleArrayBufferSocket.WebSocket
   OPEN_TIMEOUT : 5000
   MESSAGE_TIMEOUT : 20000
 
+  pendingRequests : []
+
   constructor : (@url) ->
     _window = window ? self
     @WebSocketImpl = if _window.MozWebSocket then _window.MozWebSocket else _window.WebSocket
 
 
   open : ({ @responseBufferType, @requestBufferType }) ->
+    
     @initialize()
+
 
   initialize : ->
 
@@ -68,8 +76,34 @@ class SimpleArrayBufferSocket.WebSocket
       socket.addEventListener(
         "close" 
         (code, reason) => 
+
           @socket = null
+          
+          request.reject("socket closed") for request in @pendingRequests
+          @pendingRequests.length = 0
+          
           console?.error("socket closed", "#{code}: #{reason}")
+
+        false
+      )
+
+      socket.addEventListener(
+        "message"
+        (event) =>
+          
+          buffer = event.data
+          handle = new Float32Array(buffer, 0, 1)[0]
+          
+          for request in @pendingRequests when request.handle == handle
+            
+            _.removeElement(@pendingRequests, request)
+
+            if buffer.byteLength > 4
+              request.resolve(new @responseBufferType(buffer, 4))
+            else
+              request.reject()
+            
+            break
         false
       )
       
@@ -82,55 +116,39 @@ class SimpleArrayBufferSocket.WebSocket
     
     @openDeferred.promise()
 
+
   close : ->
     if @socket
       @socket.close()
       @socket = null
       @openDeferred = null
 
+
   send : (data) ->
 
     @initialize().pipe =>
     
-      deferred = $.Deferred()
       { transmitBuffer, socketHandle } = @createPackage(data)
-      socket = @socket
 
-      detachHandlers = ->
-        socket.removeEventListener("message", socketMessageCallback, false)
-        socket.removeEventListener("close", socketCloseCallback, false)
-          
-      socketMessageCallback = (event) =>
-        buffer = event.data
-        handle = new Float32Array(buffer, 0, 1)[0]
-        if handle == socketHandle
-          detachHandlers()
-          _.defer => 
-            if buffer.byteLength > 4
-              deferred.resolve(new @responseBufferType(buffer, 4))
-            else
-              deferred.reject()
-
-      socketCloseCallback = (event) ->
-        detachHandlers()
-        deferred.reject("socket closed")
+      deferred = $.Deferred()
+      deferred.handle = socketHandle
       
-      socket.addEventListener("message", socketMessageCallback, false)
-      socket.addEventListener("close", socketCloseCallback, false)
-      socket.send(transmitBuffer.buffer)
+      @pendingRequests.push(deferred)
+      @socket.send(transmitBuffer.buffer)
     
       setTimeout(
-        -> 
-          detachHandlers()
+        => 
+          _.removeElement(@pendingRequests, deferred)
           deferred.reject("timeout")
         @MESSAGE_TIMEOUT
       )
 
       deferred.promise()
 
+
   createPackage : (data) ->
 
-    transmitBuffer    = new Float32Array(1 + data.length)
+    transmitBuffer    = new @requestBufferType(1 + data.length)
     transmitBuffer[0] = Math.random()
     transmitBuffer.set(data, 1)
     socketHandle      = transmitBuffer[0]

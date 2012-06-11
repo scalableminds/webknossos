@@ -1,10 +1,7 @@
 ### define
 model/binary/interpolation_collector : InterpolationCollector
 model/binary/polyhedron_rasterizer : PolyhedronRasterizer
-<<<<<<< HEAD
-=======
 model/binary/cube : Cube
->>>>>>> df86ce244a657a21f6714847aaaf399e3a57b311
 model/game : Game
 libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 libs/simple_worker : SimpleWorker

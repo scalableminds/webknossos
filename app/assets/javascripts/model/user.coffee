@@ -3,7 +3,7 @@ libs/request : request
 ###
 
 # This takes care of the userdate. 
-User ?= {}
+User = {}
 
 # Debounce for POST User.Configuration
 DEBOUNCE_TIME = 3000

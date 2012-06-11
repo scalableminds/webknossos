@@ -105,13 +105,13 @@ Binary =
   # This is the preview volume for preloading data.
   pingPolyhedron : new PolyhedronRasterizer.Master([
       -3,-3,-1 #0
-      -1,-1, 2 #3
+      -1,-1, 4 #3
       -3, 3,-1 #6
-      -1, 1, 2 #9
+      -1, 1, 4 #9
        3,-3,-1 #12 
-       1,-1, 2 #15
+       1,-1, 4 #15
        3, 3,-1 #18
-       1, 1, 2 #21
+       1, 1, 4 #21
     ],[
       0,3
       0,6

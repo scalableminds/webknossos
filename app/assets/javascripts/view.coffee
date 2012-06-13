@@ -1,10 +1,12 @@
 ### define
 libs/flycam : Flycam
+libs/flycam2 : Flycam2d
 model : Model
 ###
     
 # global View variables
 cam = null
+cam2d = null
 
 #constants
 CAM_DISTANCE = 140
@@ -25,7 +27,8 @@ View =
     @scenexy = new THREE.Scene()
 
     @rendereryz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, antialias: true })
-    @camerayz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
+    #@camerayz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
+    @camerayz = new THREE.OrthographicCamera( WIDTH / - 2, WIDTH / 2, HEIGHT / 2, HEIGHT / - 2, 1, 1000 );
     @sceneyz = new THREE.Scene()
 
     @rendererxz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, antialias: true })
@@ -61,6 +64,7 @@ View =
     # calculate which pixel are visible on the trianglesplane
     # after moving around.
     cam = new Flycam CAM_DISTANCE
+    cam2d = new Flycam2d CAM_DISTANCE
 
     # FPS stats
     stats = new Stats()
@@ -79,7 +83,7 @@ View =
 
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
-    $(window).on("bucketloaded", => cam.hasChanged = true) 
+    $(window).on("bucketloaded", => cam.hasChanged = true; cam2d.hasChanged = true) 
 
   animate : ->
     @renderFunction()
@@ -96,15 +100,19 @@ View =
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
     if cam.hasChanged is false
       return
+    if cam2d.hasChanged is false
+      return
 
     @updateTrianglesplane()
 
     # update postion and FPS displays
     position = cam.getGlobalPos()
-    @positionStats.html "#{position}<br />ZoomStep #{cam.getZoomStep()}<br />" 
+    position2d = [1,2,3]# cam2d.getGlobalPos()
+    @positionStats.html "#{position}<br />#{position2d}<br />ZoomStep #{cam.getZoomStep()}<br />" 
     @stats.update()
 
     cam.hasChanged = false
+    cam2d.hasChanged = false
     @rendererxy.render @scenexy, @cameraxy
     @rendereryz.render @sceneyz, @camerayz
     @rendererxz.render @scenexz, @cameraxz
@@ -166,6 +174,7 @@ View =
   draw : ->
     #FIXME: this is dirty
     cam.hasChanged = true
+    cam2d.hasChanged = true
 
   setMatrix : (matrix) ->
     cam.setMatrix(matrix)
@@ -213,6 +222,7 @@ View =
 
   move : (p) ->
     cam.move p
+    #cam2d.move p
 
   scaleTrianglesPlane : (delta) ->
     g = @trianglesplane
@@ -222,6 +232,7 @@ View =
         # why z? keep in mind the plane is rotated 90°
         g.scale.x = g.scale.z = x 
         cam.hasChanged = true
+        cam2d.hasChanged = true
 
   zoomIn : ->
     if cam.getZoomStep() > 0

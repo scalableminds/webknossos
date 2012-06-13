@@ -6,7 +6,7 @@ model : Model
     
 # global View variables
 cam = null
-cam2d = null
+#cam2d = null
 
 #constants
 CAM_DISTANCE = 140
@@ -64,7 +64,7 @@ View =
     # calculate which pixel are visible on the trianglesplane
     # after moving around.
     cam = new Flycam CAM_DISTANCE
-    cam2d = new Flycam2d CAM_DISTANCE
+    #cam2d = new Flycam2d CAM_DISTANCE
 
     # FPS stats
     stats = new Stats()
@@ -83,7 +83,7 @@ View =
 
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
-    $(window).on("bucketloaded", => cam.hasChanged = true; cam2d.hasChanged = true) 
+    $(window).on("bucketloaded", => cam.hasChanged = true) 
 
   animate : ->
     @renderFunction()
@@ -100,8 +100,8 @@ View =
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
     if cam.hasChanged is false
       return
-    if cam2d.hasChanged is false
-      return
+    #if cam2d.hasChanged is false
+    #  return
 
     @updateTrianglesplane()
 
@@ -112,7 +112,7 @@ View =
     @stats.update()
 
     cam.hasChanged = false
-    cam2d.hasChanged = false
+    #cam2d.hasChanged = false
     @rendererxy.render @scenexy, @cameraxy
     @rendereryz.render @sceneyz, @camerayz
     @rendererxz.render @scenexz, @cameraxz
@@ -174,7 +174,7 @@ View =
   draw : ->
     #FIXME: this is dirty
     cam.hasChanged = true
-    cam2d.hasChanged = true
+    #cam2d.hasChanged = true
 
   setMatrix : (matrix) ->
     cam.setMatrix(matrix)
@@ -232,7 +232,7 @@ View =
         # why z? keep in mind the plane is rotated 90°
         g.scale.x = g.scale.z = x 
         cam.hasChanged = true
-        cam2d.hasChanged = true
+        #cam2d.hasChanged = true
 
   zoomIn : ->
     if cam.getZoomStep() > 0

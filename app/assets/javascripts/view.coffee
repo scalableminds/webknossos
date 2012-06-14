@@ -6,7 +6,7 @@ model : Model
     
 # global View variables
 cam = null
-#cam2d = null
+cam2d = null
 
 #constants
 CAM_DISTANCE = 140
@@ -18,8 +18,8 @@ View =
     # attached to it once a renderer has been initalized.
     container = $("#render")
     # Create a 4x4 grid
-    WIDTH = container.width()/2
-    HEIGHT = container.height()/2
+    WIDTH =container.width()/2
+    HEIGHT =container.height()/2
 
     # Initialize main THREE.js components
     @rendererxy = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
@@ -27,8 +27,7 @@ View =
     @scenexy = new THREE.Scene()
 
     @rendereryz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, antialias: true })
-    #@camerayz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
-    @camerayz = new THREE.OrthographicCamera( WIDTH / - 2, WIDTH / 2, HEIGHT / 2, HEIGHT / - 2, 1, 1000 );
+    @camerayz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
     @sceneyz = new THREE.Scene()
 
     @rendererxz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, antialias: true })
@@ -64,7 +63,7 @@ View =
     # calculate which pixel are visible on the trianglesplane
     # after moving around.
     cam = new Flycam CAM_DISTANCE
-    #cam2d = new Flycam2d CAM_DISTANCE
+    cam2d = new Flycam2d CAM_DISTANCE
 
     # FPS stats
     stats = new Stats()
@@ -101,18 +100,18 @@ View =
     if cam.hasChanged is false
       return
     #if cam2d.hasChanged is false
-    #  return
+      #return
 
     @updateTrianglesplane()
 
     # update postion and FPS displays
     position = cam.getGlobalPos()
-    position2d = [1,2,3]# cam2d.getGlobalPos()
-    @positionStats.html "#{position}<br />#{position2d}<br />ZoomStep #{cam.getZoomStep()}<br />" 
+    position2d = cam2d.getGlobalPos()
+    @positionStats.html "Flycam: #{position}<br />Flycam2d: #{position2d}<br />ZoomStep #{cam.getZoomStep()}<br />" 
     @stats.update()
 
     cam.hasChanged = false
-    #cam2d.hasChanged = false
+    cam2d.hasChanged = false
     @rendererxy.render @scenexy, @cameraxy
     @rendereryz.render @sceneyz, @camerayz
     @rendererxz.render @scenexz, @cameraxz
@@ -174,10 +173,15 @@ View =
   draw : ->
     #FIXME: this is dirty
     cam.hasChanged = true
-    #cam2d.hasChanged = true
+    cam2d.hasChanged = true
 
   setMatrix : (matrix) ->
     cam.setMatrix(matrix)
+    cam2d.setGlobalPos([matrix[12], matrix[13], matrix[14]])
+
+  setGlobalPos : (pos) ->
+    cam.setGlobalPos(pos)
+    cam2d.setGlobalPos(pos)
 
   getMatrix : ->
     cam.getMatrix()
@@ -202,6 +206,7 @@ View =
 
 ############################################################################
 #Interface for Controller
+  # TODO: Some of those are probably obsolete
   yaw : (angle) ->
     cam.yaw angle
 
@@ -222,7 +227,19 @@ View =
 
   move : (p) ->
     cam.move p
-    #cam2d.move p
+    cam2d.move p
+
+  moveX : (x) ->                   #FIXME: why can't I call move() from within this function?
+    cam.move [100*x, 0, 0]         #FIXME: why do values have to be multiplied?
+    cam2d.move [100*x, 0, 0]
+
+  moveY : (y) ->
+    cam.move [0, 100*y, 0]
+    cam2d.move [0, 100*y, 0]
+  
+  moveZ : (z) ->
+    cam.move [0, 0, 100*z]
+    cam2d.move [0, 0, 100*z]
 
   scaleTrianglesPlane : (delta) ->
     g = @trianglesplane
@@ -232,10 +249,10 @@ View =
         # why z? keep in mind the plane is rotated 90°
         g.scale.x = g.scale.z = x 
         cam.hasChanged = true
-        #cam2d.hasChanged = true
+        cam2d.hasChanged = true
 
-  zoomIn : ->
-    if cam.getZoomStep() > 0
+  zoomIn : ->                       # FIXME: Three zoom functions are needed in order to work
+    if cam.getZoomStep() > 0        #        work with Flycam2d
       cam.zoomIn()
 
   zoomOut : ->

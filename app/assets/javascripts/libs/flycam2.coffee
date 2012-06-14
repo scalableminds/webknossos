@@ -6,6 +6,7 @@ class Flycam2d
     @defaultDistance = distance      #TODO: What is this for?
     @zoomSteps = [0, 0, 0]
     @reset()
+    @globalPosition = [0, 0, 0]
     @stepBack = [0, 0, -distance]    #TODO: What is this for?
     @stepFront = [0, 0, distance]    #TODO: What is this for?
     @hasChanged = true
@@ -18,7 +19,7 @@ class Flycam2d
     @hasChanged = true
 
   zoomOut : ->
-    zoomSteps[index]--
+    zoomSteps[index]++
     @hasChanged = true
 
   getZoomStep : (index) ->
@@ -31,7 +32,7 @@ class Flycam2d
     M4x4.clone @currentMatrix
 
   move : (p) -> #move by whatever is stored in this vector
-    globalPosition = [globalPosition[0]+p[0], globalPosition[1]+p[1], globalPosition[2]+p[2]]
+    @globalPosition = [@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]]
     @hasChanged = true
 
   toString : ->

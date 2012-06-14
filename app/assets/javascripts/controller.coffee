@@ -37,6 +37,8 @@ Controller =
       (matrix) =>
           
         View.setMatrix(matrix)
+        #View.setGlobalPos(2046, 1036, 471)       #So Georg will see data...
+        View.move([46, 36, -530])
 
         GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
         GeometryFactory.createTrianglesplane(128, 0).done ->
@@ -47,10 +49,15 @@ Controller =
     )
 
   initMouse : ->
-    @input.mouse = new Input.Mouse(
-      @canvas
-      "x" : View.yawDistance
-      "y" : View.pitchDistance
+    # initializes an Input.Mouse object with the three canvas
+    # elements and one pair of callbacks per canvas
+    @input.mouses = new Input.Mouse(
+      View.rendererxy.domElement
+      View.rendereryz.domElement
+      View.rendererxz.domElement
+      {"x" : View.moveX, "y" : View.moveY}
+      {"x" : View.moveZ, "y" : View.moveY}
+      {"x" : View.moveX, "y" : View.moveZ}
     )
 
   initKeyboard : ->
@@ -127,7 +134,10 @@ Controller =
     )
 
   input :
-    mouse : null
+    mouses : null
+    mouseXY : null
+    mouseXZ : null
+    mouseYZ : null
     keyboard : null
     gamepad : null
     deviceorientation : null

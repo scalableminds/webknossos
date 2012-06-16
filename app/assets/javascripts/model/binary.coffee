@@ -72,7 +72,7 @@ Binary =
   # Constants
   PULL_DOWNLOAD_LIMIT : 5
   PING_THROTTLE_TIME : 200
-  TEXTURE_SIZE : 128
+  TEXTURE_SIZE : 512
 
   # This method allows you to query the data structure. Give us an array of
   # vertices and we'll the interpolated data.

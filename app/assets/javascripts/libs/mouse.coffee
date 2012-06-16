@@ -20,9 +20,9 @@ class Mouse
     x : null
     y : null
 
-  changedCallback :  
-    x : $.noop()
-    y : $.noop() 
+  # stores the callbacks for mouse movement in each dimension
+  changedCallbackX : $.noop()
+  changedCallbackY : $.noop()
 
 
   ###
@@ -54,7 +54,7 @@ class Mouse
   # gets a modified distance as parameter
   ###
   bindX : (callback) ->
-    @changedCallback.x = callback
+    @changedCallbackX = callback
 
   ###
   #Binds a function as callback when Y-Position was changed
@@ -62,7 +62,7 @@ class Mouse
   # gets a modified distance as parameter
   ###
   bindY : (callback) ->
-    @changedCallback.y = callback
+    @changedCallbackY = callback
 
   unbind : ->
     $(@target).off 
@@ -82,8 +82,8 @@ class Mouse
       if @buttonDown
         distX = -(evt.pageX - lastPosition.x) * User.Configuration.mouseInversionX
         distY =  (evt.pageY - lastPosition.y) * User.Configuration.mouseInversionY
-        changedCallback.x distX * User.Configuration.mouseRotateValue if distX isnt 0
-        changedCallback.y distY * User.Configuration.mouseRotateValue if distY isnt 0
+        @changedCallbackX distX * User.Configuration.mouseRotateValue if distX isnt 0
+        @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
 
       @lastPosition =
         x : evt.pageX
@@ -95,8 +95,8 @@ class Mouse
     else
       distX = -evt.originalEvent.webkitMovementX * User.Configuration.mouseInversionX
       distY = evt.originalEvent.webkitMovementY * User.Configuration.mouseInversionY
-      changedCallback.x distX * User.Configuration.mouseRotateValue if distX isnt 0
-      changedCallback.y distY * User.Configuration.mouseRotateValue if distY isnt 0
+      @changedCallbackX distX * User.Configuration.mouseRotateValue if distX isnt 0
+      @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
 
   mouseDown : =>
     $(@target).css("cursor", "none")

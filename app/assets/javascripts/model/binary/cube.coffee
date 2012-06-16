@@ -14,7 +14,6 @@ bucketIndexByVertex3Macro = (x, y, z) ->
 # Computes the index of the specified bucket.
 # Requires `cubeOffset` and `cubeSize` to be in scope.
 bucketIndexByAddress3Macro = (bucket_x, bucket_y, bucket_z) ->
-
   (bucket_x - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
   (bucket_y - cubeOffset[1]) * cubeSize[2] + 
   (bucket_z - cubeOffset[2])
@@ -156,7 +155,7 @@ Cube =
     oldCube       = @cubes[zoomStep]
     oldCubeOffset = @cubeOffsets[zoomStep]
     oldCubeSize   = @cubeSizes[zoomStep]
-
+    
     # First, we calculate the new dimension of the cuboid.
     if oldCube?
       oldUpperBound = new Uint32Array(3)
@@ -173,7 +172,6 @@ Cube =
       newCubeSize[0] = Math.max(min_x, max_x, oldUpperBound[0] - 1) - newCubeOffset[0] + 1
       newCubeSize[1] = Math.max(min_y, max_y, oldUpperBound[1] - 1) - newCubeOffset[1] + 1
       newCubeSize[2] = Math.max(min_z, max_z, oldUpperBound[2] - 1) - newCubeOffset[2] + 1
-      
 
       # Just reorganize the existing buckets when the cube dimensions 
       # have changed. Transferring all old buckets to their new location.
@@ -256,3 +254,7 @@ Cube =
       @cubes[zoomStep]       = newCube
       @cubeOffsets[zoomStep] = newCubeOffset
       @cubeSizes[zoomStep]   = newCubeSize
+
+    # Also extend greater zoomSteps to make room for interpolated textures
+    if zoomStep < @ZOOM_STEP_COUNT - 1
+      @extendByBucketAddressExtent6(min_x >> 1, min_y >> 1, min_z >> 1, max_x >> 1, max_y >> 1, max_z >> 1, zoomStep + 1)

@@ -1,6 +1,4 @@
 ### define
-model/binary/interpolation_collector : InterpolationCollector
-model/binary/polyhedron_rasterizer : PolyhedronRasterizer
 model/binary/cube : Cube
 model/game : Game
 libs/simple_array_buffer_socket : SimpleArrayBufferSocket
@@ -74,106 +72,129 @@ Binary =
   # Constants
   PULL_DOWNLOAD_LIMIT : 5
   PING_THROTTLE_TIME : 200
-
+  TEXTURE_SIZE : 128
 
   # This method allows you to query the data structure. Give us an array of
   # vertices and we'll the interpolated data.
   # 
   # Invalid points will have the value 0.
-  get : (vertices, zoomStep) ->
 
-    $.when(@getSync(vertices, zoomStep))
+  getXY : (position, zoomStep) ->
 
+    $.when(@getXYSync(position, zoomStep))
 
   # A synchronized implementation of `get`. Cuz its faster.
-  getSync : (vertices, zoomStep) ->
-    
-    buffer = new Float32Array(vertices.length / 3)
+  getXYSync : (position, zoomStep) ->
+
+    buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
+
+    unless _.isEqual({position, zoomStep}, {@position, @zoomStep})
+
+      @lastPosition = position
+      @lastZoomStep = zoomStep
+
+      @positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
+      @bucketsXY = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0)
+      #@bucketsXZ = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6)
+      #@bucketsYZ = @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6)
 
     if cubeData = Cube.getSubCubeByZoomStep(zoomStep)
 
       { cube, cubeSize, cubeOffset } = cubeData
 
-      InterpolationCollector.bulkCollect(
-        vertices, buffer
-        cube, cubeSize, cubeOffset
-      )
+      offset_x = position[0] & 31
+      offset_y = position[1] & 31
+      offset_z = position[2] & 31
+
+      texture_x = -offset_x
+      texture_y = -offset_y
+      for y in [0..(@TEXTURE_SIZE >> 5)]
+        texture_y = (y << 5) - offset_y
+        height = 32
+        off_y = 0
+        if y == 0
+          texture_y = 0
+          height = 32 - offset_y
+          off_y = offset_y
+        if y == (@TEXTURE_SIZE >> 5)
+          height = offset_y
+
+        for x in [0..(@TEXTURE_SIZE >> 5)]
+          texture_x = (x << 5) - offset_x
+          width = 32
+          off_x = 0
+          if x == 0
+            texture_x = 0
+            width = 32 - offset_x
+            off_x = offset_x
+          if x == (@TEXTURE_SIZE >> 5)
+            width = offset_x
+
+          if @bucketsXY[y*((@TEXTURE_SIZE >> 5) + 1) + x] and colors = cube[Cube.bucketIndexByAddress(@bucketsXY[y*((@TEXTURE_SIZE >> 5) + 1) + x], zoomStep)]
+            @renderBucketToBuffer(colors, 1024, 32-1024*width, texture_y*@TEXTURE_SIZE + texture_x, 1024*off_x + 32*off_y + offset_z, @TEXTURE_SIZE - width, buffer, width, height)
 
     buffer
 
-
-  # This is the preview volume for preloading data.
-  pingPolyhedron : new PolyhedronRasterizer.Master([
-      -3,-3,-1 #0
-      -1,-1, 4 #3
-      -3, 3,-1 #6
-      -1, 1, 4 #9
-       3,-3,-1 #12 
-       1,-1, 4 #15
-       3, 3,-1 #18
-       1, 1, 4 #21
-    ],[
-      0,3
-      0,6
-      0,12
-      3,9
-      3,15
-      6,9
-      6,18
-      9,21
-      12,15
-      12,18
-      15,21
-      18,21
-    ])
-
-
-  pingLastMatrix : null
+  renderBucketToBuffer : (colors, pixelDelta, rowDelta, offset, bucketOffset, bufferDelta, buffer, w, h) ->
+    bufferIndex = offset
+    bucketIndex = bucketOffset
+    i = w * h
+    while i--
+      buffer[bufferIndex++] = colors[bucketIndex]
+      bucketIndex += pixelDelta
+      unless i % w
+        bucketIndex += rowDelta
+        bufferIndex += bufferDelta
 
   # Use this method to let us know when you've changed your spot. Then we'll try to 
   # preload some data. 
-  ping : (matrix, zoomStep) ->
+  ping : (position, zoomStep) ->
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @ping(matrix, zoomStep)
+    @ping(position, zoomStep)
 
-  pingImpl : (matrix, zoomStep) ->
+  pingImpl : (position, zoomStep) ->
 
-    unless _.isEqual(matrix, @pingLastMatrix)
+    unless _.isEqual({position, zoomStep}, {@lastPosition, @lastZoomStep})
 
-      @pingLastMatrix = matrix
+      @lastPosition = position
+      @lastZoomStep = zoomStep
 
       console.time "ping"
 
-      # Transform vertex coordinates into bucket addresses.
-      matrix = M4x4.clone(matrix)
-      matrix[12] = matrix[12] >> 5
-      matrix[13] = matrix[13] >> 5
-      matrix[14] = matrix[14] >> 5
+      @positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
+      @bucketsXY = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0)
+      #@bucketsXZ = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6)
+      #@bucketsYZ = @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6)
 
-      polyhedron = @pingPolyhedron.transformAffine(matrix)
+      Cube.extendByBucketAddressExtent6(
+        @positionBucket[0] - (@TEXTURE_SIZE >> 6), @positionBucket[1] - (@TEXTURE_SIZE >> 6), @positionBucket[2] - (@TEXTURE_SIZE >> 6),
+        @positionBucket[0] + (@TEXTURE_SIZE >> 6), @positionBucket[1] + (@TEXTURE_SIZE >> 6), @positionBucket[2] + (@TEXTURE_SIZE >> 6),
+        zoomStep)
 
-      Cube.extendByBucketAddressExtent(polyhedron, zoomStep)
-
-      testAddresses = polyhedron.collectPointsOnion(matrix[12], matrix[13], matrix[14])
-      
       pullQueue = @pullQueue
       pullQueue.length = 0
 
-      i = 0
-      while i < testAddresses.length
-        bucket_x = testAddresses[i++]
-        bucket_y = testAddresses[i++]
-        bucket_z = testAddresses[i++]
-
-        # Just adding bucket addresses we don't have.
-        unless Cube.isBucketSetByAddress3(bucket_x, bucket_y, bucket_z, zoomStep)
-          pullQueue.push bucket_x, bucket_y, bucket_z, zoomStep
+      i = @bucketsXY.length
+      while i--
+        if @bucketsXY[i]
+          pullQueue.push @bucketsXY[i][0], @bucketsXY[i][1], @bucketsXY[i][2], zoomStep
 
       @pull()
       console.timeEnd "ping"
 
-  
+  getBucketArray : (center, range_x, range_y, range_z) ->
+
+    buckets = []
+
+    for z in [-range_z..range_z]
+      for y in [-range_y..range_y]
+        for x in [-range_x..range_x]
+          bucket = [center[0] + x, center[1] + y, center[2] + z]
+          buckets.push if _.min(bucket) >= 0 then bucket else null
+
+    buckets
+
   pullQueue : []
   pullLoadingCount : 0
 
@@ -185,7 +206,10 @@ Binary =
     while @pullLoadingCount < PULL_DOWNLOAD_LIMIT and pullQueue.length
 
       [x, y, z, zoomStep] = pullQueue.splice(0, 4)
-      @pullBucket(x, y, z, zoomStep)
+
+      # Only loading new buckets
+      unless Cube.isBucketSetByAddress3(x, y, z, zoomStep)
+        @pullBucket(x, y, z, zoomStep)
 
     return
 
@@ -201,14 +225,12 @@ Binary =
     @loadBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep).then(
 
       (colors) =>
-        
         Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, colors)
 
         $(window).trigger("bucketloaded", [[bucket_x, bucket_y, bucket_z]])
 
       =>
         Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, null)
-
     ).always =>
 
       @pullLoadingCount--

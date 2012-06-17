@@ -132,7 +132,7 @@ View =
 
       globalMatrix = cam.getGlobalMatrix()
       # sends current position to Model for preloading data
-      Model.Binary.ping transMatrix, cam.getZoomStep() #.done(View.draw).progress(View.draw)
+      Model.Binary.ping cam.getGlobalPos(), cam.getZoomStep() #.done(View.draw).progress(View.draw)
 
       # sends current position to Model for caching route
       Model.Route.put globalMatrix

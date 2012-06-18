@@ -8,22 +8,23 @@ model : Model
 cam = null
 cam2d = null
 
-#constants
-CAM_DISTANCE = 140
+# constants
+# display 256px out of 512px total width and height
+CAM_DISTANCE = 64
 
 View =
-  initialize : (canvas) ->
+  initialize : ->
 
     # The "render" div serves as a container for the canvas, that is 
     # attached to it once a renderer has been initalized.
     container = $("#render")
     # Create a 4x4 grid
-    WIDTH =container.width()/2
-    HEIGHT =container.height()/2
+    WIDTH = container.width()/2
+    HEIGHT = container.height()/2
 
     # Initialize main THREE.js components
     @rendererxy = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
-    @cameraxy = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
+    @cameraxy = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 1, 1000)
     @scenexy = new THREE.Scene()
 
     @rendereryz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, antialias: true })
@@ -34,9 +35,9 @@ View =
     @cameraxz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
     @scenexz = new THREE.Scene()
 
-    # Let's set up a camera
-    # The camera is never "moved". It only looks at the scene
-    # (the trianglesplane in particular)
+    # Let's set up cameras
+    # The cameras are never "moved". They only look at the scenes
+    # (the trianglesplanes in particular)
     @scenexy.add(@cameraxy)
     @cameraxy.position.z = CAM_DISTANCE
     @cameraxy.lookAt(new THREE.Vector3( 0, 0, 0 ))
@@ -119,13 +120,17 @@ View =
   # Let's apply new pixels to the trianglesplane.
   # We do so by apply a new texture to it.
   updateTrianglesplane : ->
-      # use old trianglesplane for xy
+      # new trianglesplane for xy
       return unless @trianglesplanexy
       gxy = @trianglesplanexy
 
       # new trianglesplane for yz
       return unless @trianglesplaneyz
       gyz = @trianglesplaneyz
+
+      # new trianglesplane for xz
+      return unless @trianglesplanexz
+      gxz = @trianglesplanexz
 
       transMatrix = cam.getMatrix()
       #OLD newVertices = M4x4.transformPointsAffine transMatrix, @trianglesplane.queryVertices
@@ -162,13 +167,21 @@ View =
         gyz.texture.needsUpdate = true
         gyz.material.map = gyz.texture
 
+        #Model.Binary.getyz(cam.getGlobalPos(), cam.getZoomStepyz()).done (bufferyz) ->
+        gxz.texture.image.data.set(buffer)
+        gxz.texture.needsUpdate = true
+        gxz.material.map = gxz.texture
+
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
-  addGeometryxy : (geometry) ->
+  addGeometryXY : (geometry) ->
     @scenexy.add geometry
 
-  addGeometryyz : (geometry) ->
+  addGeometryYZ : (geometry) ->
     @sceneyz.add geometry
+
+  addGeometryXZ : (geometry) ->
+    @scenexz.add geometry
 
   #Apply a single draw (not used right now)
   draw : ->
@@ -243,7 +256,7 @@ View =
     cam2d.move [0, 0, 100*z]
 
   scaleTrianglesPlane : (delta) ->
-    g = @trianglesplane
+    g = @trianglesplanexy
     if g 
       x = Number(g.scale.x) + Number(delta)
       if x > 0 and x < 2

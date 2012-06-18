@@ -120,15 +120,15 @@ View =
   # We do so by apply a new texture to it.
   updateTrianglesplane : ->
       # use old trianglesplane for xy
-      return unless @trianglesplane
-      g = @trianglesplane
+      return unless @trianglesplanexy
+      gxy = @trianglesplanexy
 
       # new trianglesplane for yz
       return unless @trianglesplaneyz
       gyz = @trianglesplaneyz
 
       transMatrix = cam.getMatrix()
-      newVertices = M4x4.transformPointsAffine transMatrix, @trianglesplane.queryVertices
+      #OLD newVertices = M4x4.transformPointsAffine transMatrix, @trianglesplane.queryVertices
 
       globalMatrix = cam.getGlobalMatrix()
       # sends current position to Model for preloading data
@@ -143,20 +143,21 @@ View =
       # trianglesplane
       # This is likely to change in the future, if we manage to do the selection,
       # of the corresponding vertices on the GPU
-      Model.Binary.get(newVertices, cam.getZoomStep()).done (buffer) ->
+      #Model.Binary.get(newVertices, cam.getZoomStep()).done (buffer) ->
+      Model.Binary.getXY(cam.getGlobalPos(), cam.getZoomStep()).done (buffer) ->
           
         # ATTENTION 
         # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
         # the data attribute is only available for DataTexture (in other cases it is only texture.image)
-        g.texture.image.data.set(buffer)
+        gxy.texture.image.data.set(buffer)
 
         # Update the texture data and make sure the new texture
         # is used by the Mesh's material.
-        g.texture.needsUpdate = true
-        g.material.map = g.texture
+        gxy.texture.needsUpdate = true
+        gxy.material.map = gxy.texture
 
       # TODO implement interface to get new textures, for now just use the old buffer
-      #Model.Binary.getxy(cam.getGlobalPos(), cam.getZoomStepxy()).done (bufferxy) ->
+      #Model.Binary.getyz(cam.getGlobalPos(), cam.getZoomStepyz()).done (bufferyz) ->
         gyz.texture.image.data.set(buffer)
         gyz.texture.needsUpdate = true
         gyz.material.map = gyz.texture

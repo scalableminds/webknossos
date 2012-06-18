@@ -53,33 +53,33 @@ GeometryFactory =
       Model.Trianglesplane.get(width, zOffset)  
     ).pipe (shader, geometry) ->
 
-      plane = new THREE.PlaneGeometry(128, 128, 1, 1)
-      planeyz = new THREE.PlaneGeometry(256, 256, 1, 1)
+      planexy = new THREE.PlaneGeometry(512, 512, 1, 1)
+      planeyz = new THREE.PlaneGeometry(512, 512, 1, 1)
 
       # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
-      texture = new THREE.DataTexture(new Uint8Array(128*128), 128, 128, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texture.needsUpdate = true
+      texturexy = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+      texturexy.needsUpdate = true
 
-      textureyz = new THREE.DataTexture(new Uint8Array(128*128), 128, 128, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+      textureyz = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
       textureyz.needsUpdate = true
 
-      textureMaterial = new THREE.MeshBasicMaterial({wireframe : false, map: plane.texture})
+      textureMaterialxy = new THREE.MeshBasicMaterial({wireframe : false, map: planexy.texture})
       textureMaterialyz = new THREE.MeshBasicMaterial({wireframe : false, map: planeyz.texture})
 
-      trianglesplane = new THREE.Mesh( plane, textureMaterial )
-      trianglesplane.rotation.x = 90 /180*Math.PI
+      trianglesplanexy = new THREE.Mesh( planexy, textureMaterialxy )
+      trianglesplanexy.rotation.x = 90 /180*Math.PI
 
       trianglesplaneyz = new THREE.Mesh( planeyz, textureMaterialyz )
       #rotate 45 to distinguish from first trianglesplane
       trianglesplaneyz.rotation.x = 90 /180*Math.PI
 
-      trianglesplane.queryVertices = geometry.queryVertices
-      trianglesplane.texture = texture
+      #trianglesplane.queryVertices = geometry.queryVertices
+      trianglesplanexy.texture = texturexy
 
       trianglesplaneyz.texture = textureyz
 
-      View.trianglesplane = trianglesplane    
-      View.addGeometryxy View.trianglesplane
+      View.trianglesplanexy = trianglesplanexy
+      View.addGeometryxy View.trianglesplanexy
 
       View.trianglesplaneyz = trianglesplaneyz
       View.addGeometryyz View.trianglesplaneyz

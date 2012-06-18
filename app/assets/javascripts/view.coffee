@@ -248,8 +248,8 @@ View =
     cam2d.move [100*x, 0, 0]
 
   moveY : (y) ->
-    cam.move [0, 100*y, 0]
-    cam2d.move [0, 100*y, 0]
+    cam.move [0, -100*y, 0]
+    cam2d.move [0, -100*y, 0]
   
   moveZ : (z) ->
     cam.move [0, 0, 100*z]

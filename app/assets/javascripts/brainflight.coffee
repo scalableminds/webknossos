@@ -9,8 +9,8 @@ require [ "core_ext" ], ->
     
     MVC = { Controller, View, Model }
     $ ->
-      _canvas = $("#render")
-      canvas  = _canvas[0]
+      _canvases = $("#render")
+      canvases  = _canvases[0]
 
-      Controller.initialize(canvas) 
-      View.initialize(canvas)
+      Controller.initialize(canvases) 
+      View.initialize()

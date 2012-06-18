@@ -9,7 +9,7 @@ helper : Helper
 
 Controller = 
 
-  initialize : (@canvas) ->
+  initialize : (@canvases) ->
   
     Model.User.Configuration.initialize().then(
       (data) =>
@@ -66,10 +66,10 @@ Controller =
 
       #Fullscreen Mode
       "f" : => 
-        canvas = @canvas
-        requestFullscreen = canvas.webkitRequestFullScreen or canvas.mozRequestFullScreen or canvas.RequestFullScreen
+        canvases = @canvases
+        requestFullscreen = canvases.webkitRequestFullScreen or canvases.mozRequestFullScreen or canvases.RequestFullScreen
         if requestFullscreen
-          requestFullscreen.call(canvas, canvas.ALLOW_KEYBOARD_INPUT)
+          requestFullscreen.call(canvases, canvases.ALLOW_KEYBOARD_INPUT)
 
     
       #ScaleTrianglesPlane

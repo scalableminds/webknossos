@@ -9,8 +9,8 @@ cam = null
 cam2d = null
 
 # constants
-# display 256px out of 512px total width and height
-CAM_DISTANCE = 64
+# display 384px out of 512px total width and height
+CAM_DISTANCE = 96
 
 View =
   initialize : ->
@@ -19,8 +19,8 @@ View =
     # attached to it once a renderer has been initalized.
     container = $("#render")
     # Create a 4x4 grid
-    WIDTH = container.width()/2
-    HEIGHT = container.height()/2
+    WIDTH = (container.width()-40)/2
+    HEIGHT = (container.height()-40)/2
 
     # Initialize main THREE.js components
     @rendererxy = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
@@ -84,6 +84,7 @@ View =
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     $(window).on("bucketloaded", => cam.hasChanged = true) 
+    $(window).on("bucketloaded", => cam2d.hasChanged = true) 
 
   animate : ->
     @renderFunction()
@@ -100,8 +101,8 @@ View =
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
     if cam.hasChanged is false
       return
-    #if cam2d.hasChanged is false
-      #return
+    if cam2d.hasChanged is false
+      return
 
     @updateTrianglesplane()
 
@@ -137,7 +138,9 @@ View =
 
       globalMatrix = cam.getGlobalMatrix()
       # sends current position to Model for preloading data
-      Model.Binary.ping cam.getGlobalPos(), cam.getZoomStep() #.done(View.draw).progress(View.draw)
+      # NEW with direction vector
+      # Model.Binary.ping cam2d.getGlobalPos(), cam2d.getDirection(), cam2d.getZoomStep()
+      Model.Binary.ping cam2d.getGlobalPos(), cam2d.getZoomStep(0) #.done(View.draw).progress(View.draw)
 
       # sends current position to Model for caching route
       Model.Route.put globalMatrix
@@ -148,8 +151,7 @@ View =
       # trianglesplane
       # This is likely to change in the future, if we manage to do the selection,
       # of the corresponding vertices on the GPU
-      #Model.Binary.get(newVertices, cam.getZoomStep()).done (buffer) ->
-      Model.Binary.getXY(cam.getGlobalPos(), cam.getZoomStep()).done (buffer) ->
+      Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(0)).done (buffer) ->
           
         # ATTENTION 
         # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
@@ -167,7 +169,7 @@ View =
         gyz.texture.needsUpdate = true
         gyz.material.map = gyz.texture
 
-        #Model.Binary.getyz(cam.getGlobalPos(), cam.getZoomStepyz()).done (bufferyz) ->
+      #Model.Binary.getyz(cam.getGlobalPos(), cam.getZoomStepyz()).done (bufferyz) ->
         gxz.texture.image.data.set(buffer)
         gxz.texture.needsUpdate = true
         gxz.material.map = gxz.texture
@@ -204,8 +206,8 @@ View =
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
     container = $("#render")
-    WIDTH = container.width()/2
-    HEIGHT = container.height()/2
+    WIDTH = (container.width()-40)/2
+    HEIGHT = (container.height()-40)/2
 
     @rendererxy.setSize( WIDTH, HEIGHT )
     @rendereryz.setSize( WIDTH, HEIGHT )
@@ -238,6 +240,9 @@ View =
 
   pitchDistance : (angle) ->
     cam.pitchDistance angle
+
+  setDirection : (direction) ->
+    cam2d.setDirection direction
 
   move : (p) ->
     cam.move p

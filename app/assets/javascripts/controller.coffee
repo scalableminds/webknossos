@@ -39,6 +39,8 @@ Controller =
         View.setMatrix(matrix)
         #View.setGlobalPos(2046, 1036, 471)       #So Georg will see data...
         View.move([46, 36, -530])
+        # set initial direction
+        View.setDirection([0, 0, 1])
 
         GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
         GeometryFactory.createTrianglesplane(128, 0).done ->

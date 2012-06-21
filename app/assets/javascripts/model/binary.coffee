@@ -72,7 +72,7 @@ Binary =
 
   # Constants
   PING_THROTTLE_TIME : 200
-  TEXTURE_SIZE : 256
+  TEXTURE_SIZE : 512
 
   # This method allows you to query the data structure. Give us an array of
   # vertices and we'll the interpolated data.
@@ -132,8 +132,6 @@ Binary =
 
           if @bucketsXY[y*((@TEXTURE_SIZE >> 5) + 1) + x] and colors = cube[Cube.bucketIndexByAddress(@bucketsXY[y*((@TEXTURE_SIZE >> 5) + 1) + x], zoomStep)]
             @renderBucketToBuffer(colors, 1024, 32-1024*width, texture_y*@TEXTURE_SIZE + texture_x, 1024*off_x + 32*off_y + offset_z, @TEXTURE_SIZE - width, buffer, width, height)
-          else
-            console.log "bucker missing:", @bucketsXY[y*((@TEXTURE_SIZE >> 5) + 1) + x]
     buffer
 
   renderBucketToBuffer : (colors, pixelDelta, rowDelta, offset, bucketOffset, bufferDelta, buffer, w, h) ->

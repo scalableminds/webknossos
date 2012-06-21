@@ -7,7 +7,7 @@ libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 PullQueue = 
 
   # Constants
-  PULL_DOWNLOAD_LIMIT : 10
+  PULL_DOWNLOAD_LIMIT : 1
 
   queue : []
   pullLoadingCount : 0
@@ -73,6 +73,7 @@ PullQueue =
 
     pullLoadingCount = @pullLoadingCount
 
+    Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, Cube.LOADING_PLACEHOLDER_OBJECT)
     pullLoadingCount++
 
     @loadBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep).then(

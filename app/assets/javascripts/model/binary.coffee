@@ -178,7 +178,7 @@ Binary =
       console.log i
       while i--
         if @bucketsXY[i]
-          PullQueue.insert [@bucketsXY[i][0], @bucketsXY[i][1], @bucketsXY[i][2], zoomStep], i
+          PullQueue.insert [@bucketsXY[i][0], @bucketsXY[i][1], @bucketsXY[i][2], zoomStep], PullQueue.priorities[i]
 
       console.timeEnd "queue"
       PullQueue.pull()

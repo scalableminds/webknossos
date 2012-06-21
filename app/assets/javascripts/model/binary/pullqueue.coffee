@@ -7,7 +7,7 @@ libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 PullQueue = 
 
   # Constants
-  PULL_DOWNLOAD_LIMIT : 1
+  PULL_DOWNLOAD_LIMIT : 10
 
   queue : []
   pullLoadingCount : 0

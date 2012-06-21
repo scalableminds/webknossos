@@ -8,22 +8,23 @@ model : Model
 cam = null
 cam2d = null
 
-#constants
-CAM_DISTANCE = 140
+# constants
+# display 384px out of 512px total width and height
+CAM_DISTANCE = 96
 
 View =
-  initialize : (canvas) ->
+  initialize : ->
 
     # The "render" div serves as a container for the canvas, that is 
     # attached to it once a renderer has been initalized.
     container = $("#render")
     # Create a 4x4 grid
-    WIDTH =container.width()/2
-    HEIGHT =container.height()/2
+    WIDTH = (container.width()-40)/2
+    HEIGHT = (container.height()-40)/2
 
     # Initialize main THREE.js components
     @rendererxy = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
-    @cameraxy = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
+    @cameraxy = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 1, 1000)
     @scenexy = new THREE.Scene()
 
     @rendereryz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, antialias: true })
@@ -34,9 +35,9 @@ View =
     @cameraxz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
     @scenexz = new THREE.Scene()
 
-    # Let's set up a camera
-    # The camera is never "moved". It only looks at the scene
-    # (the trianglesplane in particular)
+    # Let's set up cameras
+    # The cameras are never "moved". They only look at the scenes
+    # (the trianglesplanes in particular)
     @scenexy.add(@cameraxy)
     @cameraxy.position.z = CAM_DISTANCE
     @cameraxy.lookAt(new THREE.Vector3( 0, 0, 0 ))
@@ -83,6 +84,7 @@ View =
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     $(window).on("bucketloaded", => cam.hasChanged = true) 
+    $(window).on("bucketloaded", => cam2d.hasChanged = true) 
 
   animate : ->
     @renderFunction()
@@ -99,8 +101,8 @@ View =
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
     if cam.hasChanged is false
       return
-    #if cam2d.hasChanged is false
-      #return
+    if cam2d.hasChanged is false
+      return
 
     @updateTrianglesplane()
 
@@ -119,7 +121,7 @@ View =
   # Let's apply new pixels to the trianglesplane.
   # We do so by apply a new texture to it.
   updateTrianglesplane : ->
-      # use old trianglesplane for xy
+      # new trianglesplane for xy
       return unless @trianglesplanexy
       gxy = @trianglesplanexy
 
@@ -127,12 +129,18 @@ View =
       return unless @trianglesplaneyz
       gyz = @trianglesplaneyz
 
+      # new trianglesplane for xz
+      return unless @trianglesplanexz
+      gxz = @trianglesplanexz
+
       transMatrix = cam.getMatrix()
       #OLD newVertices = M4x4.transformPointsAffine transMatrix, @trianglesplane.queryVertices
 
       globalMatrix = cam.getGlobalMatrix()
       # sends current position to Model for preloading data
-      Model.Binary.ping cam.getGlobalPos(), cam.getZoomStep() #.done(View.draw).progress(View.draw)
+      # NEW with direction vector
+      # Model.Binary.ping cam2d.getGlobalPos(), cam2d.getDirection(), cam2d.getZoomStep()
+      Model.Binary.ping cam2d.getGlobalPos(), cam2d.getZoomStep(0) #.done(View.draw).progress(View.draw)
 
       # sends current position to Model for caching route
       Model.Route.put globalMatrix
@@ -143,8 +151,7 @@ View =
       # trianglesplane
       # This is likely to change in the future, if we manage to do the selection,
       # of the corresponding vertices on the GPU
-      #Model.Binary.get(newVertices, cam.getZoomStep()).done (buffer) ->
-      Model.Binary.getXY(cam.getGlobalPos(), cam.getZoomStep()).done (buffer) ->
+      Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(0)).done (buffer) ->
           
         # ATTENTION 
         # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
@@ -162,13 +169,21 @@ View =
         gyz.texture.needsUpdate = true
         gyz.material.map = gyz.texture
 
+      #Model.Binary.getyz(cam.getGlobalPos(), cam.getZoomStepyz()).done (bufferyz) ->
+        gxz.texture.image.data.set(buffer)
+        gxz.texture.needsUpdate = true
+        gxz.material.map = gxz.texture
+
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
-  addGeometryxy : (geometry) ->
+  addGeometryXY : (geometry) ->
     @scenexy.add geometry
 
-  addGeometryyz : (geometry) ->
+  addGeometryYZ : (geometry) ->
     @sceneyz.add geometry
+
+  addGeometryXZ : (geometry) ->
+    @scenexz.add geometry
 
   #Apply a single draw (not used right now)
   draw : ->
@@ -191,8 +206,8 @@ View =
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
     container = $("#render")
-    WIDTH = container.width()/2
-    HEIGHT = container.height()/2
+    WIDTH = (container.width()-40)/2
+    HEIGHT = (container.height()-40)/2
 
     @rendererxy.setSize( WIDTH, HEIGHT )
     @rendereryz.setSize( WIDTH, HEIGHT )
@@ -226,6 +241,9 @@ View =
   pitchDistance : (angle) ->
     cam.pitchDistance angle
 
+  setDirection : (direction) ->
+    cam2d.setDirection direction
+
   move : (p) ->
     cam.move p
     cam2d.move p
@@ -243,7 +261,7 @@ View =
     cam2d.move [0, 0, 100*z]
 
   scaleTrianglesPlane : (delta) ->
-    g = @trianglesplane
+    g = @trianglesplanexy
     if g 
       x = Number(g.scale.x) + Number(delta)
       if x > 0 and x < 2

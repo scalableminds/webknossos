@@ -79,10 +79,9 @@ PullQueue =
     queue.length = 0
 
   pull : ->
-    { queue, pullLoadingCount, PULL_DOWNLOAD_LIMIT } = @
+    { queue, PULL_DOWNLOAD_LIMIT } = @
 
-    while pullLoadingCount < PULL_DOWNLOAD_LIMIT and queue.length
-
+    while @pullLoadingCount < PULL_DOWNLOAD_LIMIT and queue.length
       [x, y, z, zoomStep] = @removeFirst()
 
       unless Cube.isBucketSetByAddress3(x, y, z, zoomStep)
@@ -90,11 +89,9 @@ PullQueue =
 
   pullBucket : (bucket_x, bucket_y, bucket_z, zoomStep) ->
 
-    pullLoadingCount = @pullLoadingCount
-
+    @pullLoadingCount++
     console.log "requesting: ", [bucket_x, bucket_y, bucket_z]
     Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, Cube.LOADING_PLACEHOLDER_OBJECT)
-    pullLoadingCount++
 
     @loadBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep).then(
 
@@ -108,7 +105,7 @@ PullQueue =
         Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, null)
 
     ).always =>
-      pullLoadingCount--
+      @pullLoadingCount--
       @pull()
 
   loadBucketSocket : _.once ->

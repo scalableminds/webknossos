@@ -73,6 +73,7 @@ PullQueue =
 
     pullLoadingCount = @pullLoadingCount
 
+    console.log "requesting: ", [bucket_x, bucket_y, bucket_z]
     Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, Cube.LOADING_PLACEHOLDER_OBJECT)
     pullLoadingCount++
 

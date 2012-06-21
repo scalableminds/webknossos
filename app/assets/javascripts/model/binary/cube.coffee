@@ -155,7 +155,7 @@ Cube =
     oldCube       = @cubes[zoomStep]
     oldCubeOffset = @cubeOffsets[zoomStep]
     oldCubeSize   = @cubeSizes[zoomStep]
-    
+  
     # First, we calculate the new dimension of the cuboid.
     if oldCube?
       oldUpperBound = new Uint32Array(3)

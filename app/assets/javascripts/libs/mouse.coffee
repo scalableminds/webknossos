@@ -80,7 +80,7 @@ class Mouse
     # regular mouse management
     unless @locked 
       if @buttonDown
-        distX = -(evt.pageX - lastPosition.x) * User.Configuration.mouseInversionX
+        distX =  (evt.pageX - lastPosition.x) * User.Configuration.mouseInversionX
         distY =  (evt.pageY - lastPosition.y) * User.Configuration.mouseInversionY
         @changedCallbackX distX * User.Configuration.mouseRotateValue if distX isnt 0
         @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
@@ -93,7 +93,7 @@ class Mouse
     # Mouse lock returns MovementX/Y in addition to the regular properties
     # (these become static)   
     else
-      distX = -evt.originalEvent.webkitMovementX * User.Configuration.mouseInversionX
+      distX = evt.originalEvent.webkitMovementX * User.Configuration.mouseInversionX
       distY = evt.originalEvent.webkitMovementY * User.Configuration.mouseInversionY
       @changedCallbackX distX * User.Configuration.mouseRotateValue if distX isnt 0
       @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0

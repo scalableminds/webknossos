@@ -99,10 +99,12 @@ PullQueue =
     @loadBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep).then(
 
       (colors) =>
+        console.log "success: ", [bucket_x, bucket_y, bucket_z]
         Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, colors)
         $(window).trigger("bucketloaded", [[bucket_x, bucket_y, bucket_z]])
 
       =>
+        console.log "fail: ", [bucket_x, bucket_y, bucket_z]
         Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, null)
 
     ).always =>

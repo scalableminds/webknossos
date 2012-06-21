@@ -1,5 +1,6 @@
 ### define
 model/binary/cube : Cube
+model/binary/pullqueue : PullQueue
 model/game : Game
 libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 libs/simple_worker : SimpleWorker
@@ -70,9 +71,8 @@ libs/simple_worker : SimpleWorker
 Binary =
 
   # Constants
-  PULL_DOWNLOAD_LIMIT : 5
   PING_THROTTLE_TIME : 200
-  TEXTURE_SIZE : 512
+  TEXTURE_SIZE : 256
 
   # This method allows you to query the data structure. Give us an array of
   # vertices and we'll the interpolated data.
@@ -132,7 +132,8 @@ Binary =
 
           if @bucketsXY[y*((@TEXTURE_SIZE >> 5) + 1) + x] and colors = cube[Cube.bucketIndexByAddress(@bucketsXY[y*((@TEXTURE_SIZE >> 5) + 1) + x], zoomStep)]
             @renderBucketToBuffer(colors, 1024, 32-1024*width, texture_y*@TEXTURE_SIZE + texture_x, 1024*off_x + 32*off_y + offset_z, @TEXTURE_SIZE - width, buffer, width, height)
-
+          else
+            console.log "bucker missing:", @bucketsXY[y*((@TEXTURE_SIZE >> 5) + 1) + x]
     buffer
 
   renderBucketToBuffer : (colors, pixelDelta, rowDelta, offset, bucketOffset, bufferDelta, buffer, w, h) ->
@@ -155,7 +156,7 @@ Binary =
 
   pingImpl : (position, zoomStep) ->
 
-    unless _.isEqual({position, zoomStep}, {@lastPosition, @lastZoomStep})
+    unless _.isEqual({ position, zoomStep }, { @lastPosition, @lastZoomStep })
 
       @lastPosition = position
       @lastZoomStep = zoomStep
@@ -172,15 +173,17 @@ Binary =
         @positionBucket[0] + (@TEXTURE_SIZE >> 6), @positionBucket[1] + (@TEXTURE_SIZE >> 6), @positionBucket[2] + (@TEXTURE_SIZE >> 6),
         zoomStep)
 
-      pullQueue = @pullQueue
-      pullQueue.length = 0
+      console.time "queue"
+      PullQueue.clear()
 
       i = @bucketsXY.length
+      console.log i
       while i--
         if @bucketsXY[i]
-          pullQueue.push @bucketsXY[i][0], @bucketsXY[i][1], @bucketsXY[i][2], zoomStep
+          PullQueue.insert [@bucketsXY[i][0], @bucketsXY[i][1], @bucketsXY[i][2], zoomStep], i
 
-      @pull()
+      console.timeEnd "queue"
+      PullQueue.pull()
       console.timeEnd "ping"
 
   getBucketArray : (center, range_x, range_y, range_z) ->
@@ -194,68 +197,3 @@ Binary =
           buckets.push if _.min(bucket) >= 0 then bucket else null
 
     buckets
-
-  pullQueue : []
-  pullLoadingCount : 0
-
-  # Eating up the pull queue and triggers downloading buckets.
-  pull : ->
-    
-    { pullQueue, PULL_DOWNLOAD_LIMIT } = @
-
-    while @pullLoadingCount < PULL_DOWNLOAD_LIMIT and pullQueue.length
-
-      [x, y, z, zoomStep] = pullQueue.splice(0, 4)
-
-      # Only loading new buckets
-      unless Cube.isBucketSetByAddress3(x, y, z, zoomStep)
-        @pullBucket(x, y, z, zoomStep)
-
-    return
-
-
-
-  # Loads and inserts a bucket from the server into the cube.
-  # Requires cube to be large enough to handle the loaded bucket.
-  pullBucket : (bucket_x, bucket_y, bucket_z, zoomStep) ->
-
-    Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, Cube.LOADING_PLACEHOLDER_OBJECT)
-    @pullLoadingCount++
-
-    @loadBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep).then(
-
-      (colors) =>
-        Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, colors)
-
-        $(window).trigger("bucketloaded", [[bucket_x, bucket_y, bucket_z]])
-
-      =>
-        Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, null)
-    ).always =>
-
-      @pullLoadingCount--
-      @pull()
-
-  
-  # This is an abstraction of the transport medium.
-  loadBucketSocket : _.once ->
-    
-    Game.initialize().pipe ->
-      dataSetId = Game.dataSet.id
-      new SimpleArrayBufferSocket(
-        defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{dataSetId}&cubeSize=32")
-        fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{dataSetId}&cubeSize=32")
-        requestBufferType : Float32Array
-        responseBufferType : Uint8Array
-      )
-
-  
-  loadBucketByAddress : ([ bucket_x, bucket_y, bucket_z ], zoomStep) ->
-
-    @loadBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep)
-
-  loadBucketByAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
-
-    transmitBuffer = [ zoomStep, bucket_x << 5, bucket_y << 5, bucket_z << 5 ]
-    @loadBucketSocket().pipe (socket) -> socket.send(transmitBuffer)
-

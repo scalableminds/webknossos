@@ -37,7 +37,6 @@ Controller =
       (matrix) =>
           
         View.setMatrix(matrix)
-        #View.setGlobalPos(2046, 1036, 471)       #So Georg will see data...
         View.move([46, 36, -530])
         # set initial direction
         View.setDirection([0, 0, 1])
@@ -54,9 +53,8 @@ Controller =
     # initializes an Input.Mouse object with the three canvas
     # elements and one pair of callbacks per canvas
     @input.mouses = new Input.Mouse(
-      View.rendererxy.domElement
-      View.rendereryz.domElement
-      View.rendererxz.domElement
+      [View.rendererxy.domElement, View.rendereryz.domElement, View.rendererxz.domElement]
+      [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
       {"x" : View.moveX, "y" : View.moveY}
       {"x" : View.moveZ, "y" : View.moveY}
       {"x" : View.moveX, "y" : View.moveZ}
@@ -79,18 +77,18 @@ Controller =
       "k" : -> View.scaleTrianglesPlane Model.User.Configuration.scaleValue
 
       #Move
-      "w" : -> View.move [0, Model.User.Configuration.moveValue, 0]
-      "s" : -> View.move [0, -Model.User.Configuration.moveValue, 0]
-      "a" : -> View.move [Model.User.Configuration.moveValue, 0, 0]
-      "d" : -> View.move [-Model.User.Configuration.moveValue, 0, 0]
-      "space" : -> View.move [0, 0, Model.User.Configuration.moveValue]
-      "shift + space" : -> View.move [0, 0, -Model.User.Configuration.moveValue]
+      "w" : -> View.moveActivePlane [0, -Model.User.Configuration.moveValue, 0]
+      "s" : -> View.moveActivePlane [0, Model.User.Configuration.moveValue, 0]
+      "a" : -> View.moveActivePlane [-Model.User.Configuration.moveValue, 0, 0]
+      "d" : -> View.moveActivePlane [Model.User.Configuration.moveValue, 0, 0]
+      "space" : -> View.moveActivePlane [0, 0, Model.User.Configuration.moveValue]
+      "shift + space" : -> View.moveActivePlane [0, 0, -Model.User.Configuration.moveValue]
 
       #Rotate in distance
-      "left"  : -> View.yawDistance Model.User.Configuration.rotateValue
-      "right" : -> View.yawDistance -Model.User.Configuration.rotateValue
-      "up"    : -> View.pitchDistance -Model.User.Configuration.rotateValue
-      "down"  : -> View.pitchDistance Model.User.Configuration.rotateValue
+      "left"  : -> View.moveActivePlane [-Model.User.Configuration.moveValue, 0, 0]
+      "right" : -> View.moveActivePlane [Model.User.Configuration.moveValue, 0, 0]
+      "up"    : -> View.moveActivePlane [0, -Model.User.Configuration.moveValue, 0]
+      "down"  : -> View.moveActivePlane [0, Model.User.Configuration.moveValue, 0]
       
       #Rotate at centre
       "shift + left"  : -> View.yaw Model.User.Configuration.rotateValue

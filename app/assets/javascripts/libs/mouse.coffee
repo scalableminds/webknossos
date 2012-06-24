@@ -23,21 +23,24 @@ class Mouse
   # stores the callbacks for mouse movement in each dimension
   changedCallbackX : $.noop()
   changedCallbackY : $.noop()
+  activeCallback : $.noop()
 
 
   ###
   #@param {Object} target : DOM Element
   # HTML object where the mouse attaches the events
   ###
-  constructor : (@target) ->
+  constructor : (@target, activeCallback) ->
     # @User = User
   
+    @activeCallback = activeCallback
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
     $(target).on 
       "mousemove" : @mouseMoved
       "mousedown" : @mouseDown
       "mouseup"   : @mouseUp
+      "mouseenter" : @mouseEnter
 
       # fullscreen pointer lock
       # Firefox does not yet support Pointer Lock
@@ -69,6 +72,7 @@ class Mouse
       "mousemove" : @mouseMoved
       "mouseup" : @mouseUp
       "mousedown" : @mouseDown
+      "mouseenter" : @mouseEnter
       "webkitfullscreenchange" : @toogleMouseLock
       "webkitpointerlocklost" : @unlockMouse
       "webkitpointerlockchange" : @unlockMouse    
@@ -98,6 +102,9 @@ class Mouse
       @changedCallbackX distX * User.Configuration.mouseRotateValue if distX isnt 0
       @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
 
+  mouseEnter : =>
+    @activeCallback()
+    
   mouseDown : =>
     $(@target).css("cursor", "none")
     @buttonDown = true

@@ -80,64 +80,25 @@ class Input.Keyboard
 # This one basically just provides the public interface
 # for mouse handling. Nothing fancy here.
 #class Input.Mouse
-#  
-#  mouse : null
-#  mouseXY : null
-#  mouseXZ : null
-#  mouseZY : null
-#
-#
-#  constructor : (objectToTrack, bindings) ->
-#    @mouse = new MouseLib objectToTrack
-#
-#    for own axis, callback of bindings
-#      @attach(axis, callback)
-#
-#  attach : (axis, callback) ->
-#    @mouse.bindX callback if axis is "x"
-#    @mouse.bindY callback if axis is "y"
-#
-#  setInversionX : (value) ->
-#    @mouse.setInversionX value if @mouse?
-#
-#  setInversionY : (value) ->
-#    @mouse.setInversionY value if @mouse?
-#
-#  setRotateValue : (value) ->
-#    @mouse.setRotateValue value if @mouse?
-#
-#  unbind : ->
-#    @mouse.unbind()
-
-# New Try to design the Mouse: It needs three mouses
+# It needs three mouses
 # because at every canvas(=objectToTrack) there needs
 # to be a different callback.
 class Input.Mouse
   
-  constructor : (objectToTrackXY, objectToTrackYZ, objectToTrackXZ, bindingsXY, bindingsYZ, bindingsXZ) ->
+  constructor : (objectsToTrack, activeCallbacks, bindingsXY, bindingsYZ, bindingsXZ) ->
     # create three mouses for each plane
-    @mouseXY = new MouseLib objectToTrackXY
-    @mouseYZ = new MouseLib objectToTrackYZ
-    @mouseXZ = new MouseLib objectToTrackXZ
+    @mouseXY = new MouseLib(objectsToTrack[0], activeCallbacks[0])
+    @mouseYZ = new MouseLib(objectsToTrack[1], activeCallbacks[1])
+    @mouseXZ = new MouseLib(objectsToTrack[2], activeCallbacks[2])
 
     for own axis, callback of bindingsXY
       @attach(@mouseXY, axis, callback)
-      #@mouseXY.bindX callback if axis is "x"
-      #@mouseXY.bindY callback if axis is "y"
-      #@mouseXY.changedCallbackX = callback if axis is "x"
-      #@mouseXY.changedCallbackY = callback if axis is "y"
+
     for own axis, callback of bindingsYZ
       @attach(@mouseYZ, axis, callback)
-      #@mouseYZ.bindX callback if axis is "x"
-      #@mouseYZ.bindY callback if axis is "y"
-      #@mouseYZ.changedCallbackX = callback if axis is "x"
-      #@mouseYZ.changedCallbackY = callback if axis is "y"
+    
     for own axis, callback of bindingsXZ
       @attach(@mouseXZ, axis, callback)
-      #@mouseXZ.bindX callback if axis is "x"
-      #@mouseXZ.bindY callback if axis is "y"
-      #@mouseXZ.changedCallbackX = callback if axis is "x"
-      #@mouseXZ.changedCallbackY = callback if axis is "y"
 
   attach : (m, axis, callback) ->
     m.bindX callback if axis is "x"

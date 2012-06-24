@@ -11,6 +11,9 @@ cam2d = null
 # constants
 # display 384px out of 512px total width and height
 CAM_DISTANCE = 96
+PLANE_XY = 1
+PLANE_YZ = 2
+PLANE_XZ = 3
 
 View =
   initialize : ->
@@ -99,8 +102,9 @@ View =
     # This prevents you the GPU/CPU from constantly
     # working and keeps your lap cool
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
-    if cam.hasChanged is false
-      return
+    
+    #if cam.hasChanged is false
+      #return
     if cam2d.hasChanged is false
       return
 
@@ -109,7 +113,7 @@ View =
     # update postion and FPS displays
     position = cam.getGlobalPos()
     position2d = cam2d.getGlobalPos()
-    @positionStats.html "Flycam: #{position}<br />Flycam2d: #{position2d}<br />ZoomStep #{cam.getZoomStep()}<br />" 
+    @positionStats.html "Flycam: #{position}<br />Flycam2d: #{position2d}<br />ZoomStep #{cam.getZoomStep()}<br />activePlane: #{cam2d.activePlane}" 
     @stats.update()
 
     cam.hasChanged = false
@@ -248,6 +252,15 @@ View =
     cam.move p
     cam2d.move p
 
+  moveActivePlane : (p) ->
+    switch (cam2d.activePlane)
+      when PLANE_XY
+        cam2d.move p
+      when PLANE_YZ
+        cam2d.move [p[2], p[1], p[0]]
+      when PLANE_XZ
+        cam2d.move [p[0], p[2], p[1]]
+
   moveX : (x) ->                   #FIXME: why can't I call move() from within this function?
     cam.move [100*x, 0, 0]         #FIXME: why do values have to be multiplied?
     cam2d.move [100*x, 0, 0]
@@ -278,3 +291,19 @@ View =
     if cam.getZoomStep() < 3
         #todo: validation in Model
       cam.zoomOut()
+
+  setActivePlane : (activePlane) ->
+    cam2d.setActivePlane activePlane
+    cam2d.hasChanged = true
+
+  setActivePlaneXY : ->
+    cam2d.setActivePlane PLANE_XY
+    cam2d.hasChanged = true
+
+  setActivePlaneYZ : ->
+    cam2d.setActivePlane PLANE_YZ
+    cam2d.hasChanged = true
+
+  setActivePlaneXZ : ->
+    cam2d.setActivePlane PLANE_XZ
+    cam2d.hasChanged = true

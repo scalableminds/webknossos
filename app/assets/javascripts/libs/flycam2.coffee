@@ -1,4 +1,9 @@
 ### define ###
+
+# constants (for active_plane)
+PLANE_XY = 1
+PLANE_YZ = 2
+PLANE_XZ = 3
   
 class Flycam2d
 
@@ -11,6 +16,7 @@ class Flycam2d
     @stepBack = [0, 0, -distance]    #TODO: What is this for?
     @stepFront = [0, 0, distance]    #TODO: What is this for?
     @hasChanged = true
+    @activePlane = PLANE_XY
 
   #reset : ->
   #  @zoomSteps=[1,1,1]
@@ -55,3 +61,6 @@ class Flycam2d
   setGlobalPos : (position) ->
     @globalPosition = position
     @hasChanged = true
+
+  setActivePlane : (activePlane) ->
+    @activePlane = activePlane

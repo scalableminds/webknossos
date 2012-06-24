@@ -16,11 +16,11 @@ class Flycam2d
   #  @zoomSteps=[1,1,1]
 
   zoomIn : (index) ->
-    zoomSteps[index]--
+    @zoomSteps[index]--
     @hasChanged = true
 
-  zoomOut : ->
-    zoomSteps[index]++
+  zoomOut : (index) ->
+    @zoomSteps[index]++
     @hasChanged = true
 
   getZoomStep : (index) ->

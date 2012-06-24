@@ -99,8 +99,6 @@ View =
     # This prevents you the GPU/CPU from constantly
     # working and keeps your lap cool
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
-    if cam.hasChanged is false
-      return
     if cam2d.hasChanged is false
       return
 
@@ -109,10 +107,9 @@ View =
     # update postion and FPS displays
     position = cam.getGlobalPos()
     position2d = cam2d.getGlobalPos()
-    @positionStats.html "Flycam: #{position}<br />Flycam2d: #{position2d}<br />ZoomStep #{cam.getZoomStep()}<br />" 
+    @positionStats.html "Flycam: #{position}<br />Flycam2d: #{position2d}<br />ZoomStep #{cam2d.getZoomStep()}<br />" 
     @stats.update()
 
-    cam.hasChanged = false
     cam2d.hasChanged = false
     @rendererxy.render @scenexy, @cameraxy
     @rendereryz.render @sceneyz, @camerayz
@@ -271,10 +268,10 @@ View =
         cam2d.hasChanged = true
 
   zoomIn : ->                       # FIXME: Three zoom functions are needed in order to work
-    if cam.getZoomStep() > 0        #        work with Flycam2d
-      cam.zoomIn()
+    if cam2d.getZoomStep(0) > 0     #        work with Flycam2d
+      cam2d.zoomIn(0)
 
   zoomOut : ->
-    if cam.getZoomStep() < 3
+    if cam2d.getZoomStep(0) < 3
         #todo: validation in Model
-      cam.zoomOut()
+      cam2d.zoomOut(0)

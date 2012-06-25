@@ -5,15 +5,14 @@ model : Model
 ###
     
 # global View variables
-cam = null
 cam2d = null
 
 # constants
 # display 384px out of 512px total width and height
 CAM_DISTANCE = 96
-PLANE_XY = 1
-PLANE_YZ = 2
-PLANE_XZ = 3
+PLANE_XY = 0
+PLANE_YZ = 1
+PLANE_XZ = 2
 
 View =
   initialize : ->
@@ -66,7 +65,6 @@ View =
     # It rather hosts a number of matrix operations that 
     # calculate which pixel are visible on the trianglesplane
     # after moving around.
-    cam = new Flycam CAM_DISTANCE
     cam2d = new Flycam2d CAM_DISTANCE
 
     # FPS stats
@@ -86,7 +84,6 @@ View =
 
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
-    $(window).on("bucketloaded", => cam.hasChanged = true) 
     $(window).on("bucketloaded", => cam2d.hasChanged = true) 
 
   animate : ->
@@ -108,9 +105,8 @@ View =
     @updateTrianglesplane()
 
     # update postion and FPS displays
-    position = cam.getGlobalPos()
     position2d = cam2d.getGlobalPos()
-    @positionStats.html "Flycam: #{position}<br />Flycam2d: #{position2d}<br />ZoomStep #{cam2d.getZoomStep(0)}<br />activePlane: #{cam2d.activePlane}" 
+    @positionStats.html "Flycam2d: #{position2d}<br />ZoomStep #{cam2d.getZoomStep(0)}<br />activePlane: #{cam2d.getActivePlane()}" 
     @stats.update()
 
     cam2d.hasChanged = false
@@ -133,17 +129,13 @@ View =
       return unless @trianglesplanexz
       gxz = @trianglesplanexz
 
-      transMatrix = cam.getMatrix()
-      #OLD newVertices = M4x4.transformPointsAffine transMatrix, @trianglesplane.queryVertices
-
-      globalMatrix = cam.getGlobalMatrix()
       # sends current position to Model for preloading data
       # NEW with direction vector
-      # Model.Binary.ping cam2d.getGlobalPos(), cam2d.getDirection(), cam2d.getZoomStep()
-      Model.Binary.ping cam2d.getGlobalPos(), cam2d.getZoomStep(0) #.done(View.draw).progress(View.draw)
+      # Model.Binary.ping cam2d.getGlobalPos(), cam2d.getDirection(), cam2d.getZoomStep(PLANE_XY)
+      Model.Binary.ping cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)
 
       # sends current position to Model for caching route
-      Model.Route.put globalMatrix
+      # TODO implement Routing Model.Route.put globalMatrix
 
       # trilinear interpolation
       # we used to do this on the shader (trianglesplane.vs)
@@ -151,26 +143,26 @@ View =
       # trianglesplane
       # This is likely to change in the future, if we manage to do the selection,
       # of the corresponding vertices on the GPU
-      Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(0)).done (buffer) ->
+      Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (bufferxy) ->
           
         # ATTENTION 
         # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
         # the data attribute is only available for DataTexture (in other cases it is only texture.image)
-        gxy.texture.image.data.set(buffer)
+        gxy.texture.image.data.set(bufferxy)
 
         # Update the texture data and make sure the new texture
         # is used by the Mesh's material.
         gxy.texture.needsUpdate = true
         gxy.material.map = gxy.texture
 
-      # TODO implement interface to get new textures, for now just use the old buffer
-      #Model.Binary.getyz(cam.getGlobalPos(), cam.getZoomStepyz()).done (bufferyz) ->
-        gyz.texture.image.data.set(buffer)
+      # TODO implement other two interfaces to get new textures, for now just use the old buffer
+      #Model.Binary.getyz(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_YZ)).done (bufferyz) ->
+        gyz.texture.image.data.set(bufferxy)
         gyz.texture.needsUpdate = true
         gyz.material.map = gyz.texture
 
-      #Model.Binary.getyz(cam.getGlobalPos(), cam.getZoomStepyz()).done (bufferyz) ->
-        gxz.texture.image.data.set(buffer)
+      #Model.Binary.getyz(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XZ)).done (bufferxz) ->
+        gxz.texture.image.data.set(bufferxy)
         gxz.texture.needsUpdate = true
         gxz.material.map = gxz.texture
 
@@ -188,19 +180,17 @@ View =
   #Apply a single draw (not used right now)
   draw : ->
     #FIXME: this is dirty
-    cam.hasChanged = true
     cam2d.hasChanged = true
 
   setMatrix : (matrix) ->
-    cam.setMatrix(matrix)
     cam2d.setGlobalPos([matrix[12], matrix[13], matrix[14]])
 
   setGlobalPos : (pos) ->
-    cam.setGlobalPos(pos)
     cam2d.setGlobalPos(pos)
 
+  # probably obsolete
   getMatrix : ->
-    cam.getMatrix()
+    cam2d.getGlobalPos()
 
   #Call this after the canvas was resized to fix the viewport
   resize : ->
@@ -223,33 +213,15 @@ View =
 ############################################################################
 #Interface for Controller
   # TODO: Some of those are probably obsolete
-  yaw : (angle) ->
-    cam.yaw angle
-
-  yawDistance : (angle) ->
-    cam.yawDistance angle
-
-  roll : (angle) ->
-    cam.roll angle
-
-  rollDistance : (angle) ->
-    cam.rollDistance angle
-
-  pitch : (angle) ->
-    cam.pitch angle
-
-  pitchDistance : (angle) ->
-    cam.pitchDistance angle
 
   setDirection : (direction) ->
     cam2d.setDirection direction
 
   move : (p) ->
-    cam.move p
     cam2d.move p
 
   moveActivePlane : (p) ->
-    switch (cam2d.activePlane)
+    switch (cam2d.getActivePlane())
       when PLANE_XY
         cam2d.move p
       when PLANE_YZ
@@ -257,16 +229,15 @@ View =
       when PLANE_XZ
         cam2d.move [p[0], p[2], p[1]]
 
-  moveX : (x) ->                   #FIXME: why can't I call move() from within this function?
-    cam.move [100*x, 0, 0]         #FIXME: why do values have to be multiplied?
+  #FIXME: why do values have to be multiplied?
+  #FIXME: why can't I call move() from within this function?
+  moveX : (x) -> 
     cam2d.move [100*x, 0, 0]
 
   moveY : (y) ->
-    cam.move [0, 100*y, 0]
     cam2d.move [0, 100*y, 0]
   
   moveZ : (z) ->
-    cam.move [0, 0, 100*z]
     cam2d.move [0, 0, 100*z]
 
   scaleTrianglesPlane : (delta) ->
@@ -276,17 +247,16 @@ View =
       if x > 0 and x < 2
         # why z? keep in mind the plane is rotated 90°
         g.scale.x = g.scale.z = x 
-        cam.hasChanged = true
         cam2d.hasChanged = true
 
-  zoomIn : ->                       # FIXME: Three zoom functions are needed in order to work
-    if cam2d.getZoomStep(0) > 0     #        work with Flycam2d
-      cam2d.zoomIn(0)
+  zoomIn : ->
+    if cam2d.getZoomStep(cam2d.getActivePlane()) > 0
+      cam2d.zoomIn(cam2d.getActivePlane())
 
+  #todo: validation in Model
   zoomOut : ->
-    if cam2d.getZoomStep(0) < 3
-        #todo: validation in Model
-      cam2d.zoomOut(0)
+    if cam2d.getZoomStep(cam2d.getActivePlane()) < 3
+      cam2d.zoomOut(cam2d.getActivePlane())
 
   setActivePlane : (activePlane) ->
     cam2d.setActivePlane activePlane

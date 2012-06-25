@@ -42,7 +42,7 @@ Controller =
         View.setDirection([0, 0, 1])
 
         GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
-        GeometryFactory.createTrianglesplane(128, 0).done ->
+        GeometryFactory.createTrianglesplane(512, 0).done ->
           View.draw()
       
       ->
@@ -89,12 +89,6 @@ Controller =
       "right" : -> View.moveActivePlane [Model.User.Configuration.moveValue, 0, 0]
       "up"    : -> View.moveActivePlane [0, -Model.User.Configuration.moveValue, 0]
       "down"  : -> View.moveActivePlane [0, Model.User.Configuration.moveValue, 0]
-      
-      #Rotate at centre
-      "shift + left"  : -> View.yaw Model.User.Configuration.rotateValue
-      "shift + right" : -> View.yaw -Model.User.Configuration.rotateValue
-      "shift + up"    : -> View.pitch -Model.User.Configuration.rotateValue
-      "shift + down"  : -> View.pitch Model.User.Configuration.rotateValue
 
       #misc keys
       "n" : -> Helper.toggle()
@@ -115,22 +109,20 @@ Controller =
     @input.gamepad = new Input.Gamepad(
         "ButtonA" : -> View.move [0, 0, Model.User.Configuration.moveValue]
         "ButtonB" : -> View.move [0, 0, -Model.User.Configuration.moveValue]
-        "LeftStickX" : View.yawDistance
-        "LeftStickY" : View.pitchDistance
-
-
     )
 
   initMotionsensor : ->
     @input.deviceorientation = new Input.Deviceorientation(
-      "x"  : View.yawDistance
-      "y" : View.pitchDistance
+    # TODO implement functionality
+    #  "x"  : View.yawDistance
+    #  "y" : View.pitchDistance
     )
 
   initDeviceOrientation : ->
     @input.deviceorientation = new Input.Deviceorientation(
-      "x"  : View.yawDistance
-      "y" : View.pitchDistance
+    # TODO implement functionality
+    #  "x"  : View.yawDistance
+    #  "y" : View.pitchDistance
     )
 
   input :

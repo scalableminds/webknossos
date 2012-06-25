@@ -106,6 +106,8 @@ View =
 
     # update postion and FPS displays
     position2d = cam2d.getGlobalPos()
+    # without rounding the position becomes really long and blocks the canvas mouse input
+    position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
     @positionStats.html "Flycam2d: #{position2d}<br />ZoomStep #{cam2d.getZoomStep(0)}<br />activePlane: #{cam2d.getActivePlane()}" 
     @stats.update()
 
@@ -196,8 +198,8 @@ View =
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
     container = $("#render")
-    WIDTH = (container.width()-40)/2
-    HEIGHT = (container.height()-40)/2
+    WIDTH = (container.width()-41)/2
+    HEIGHT = (container.height()-41)/2
 
     @rendererxy.setSize( WIDTH, HEIGHT )
     @rendereryz.setSize( WIDTH, HEIGHT )
@@ -241,13 +243,14 @@ View =
     cam2d.move [0, 0, 100*z]
 
   scaleTrianglesPlane : (delta) ->
-    g = @trianglesplanexy
-    if g 
-      x = Number(g.scale.x) + Number(delta)
-      if x > 0 and x < 2
-        # why z? keep in mind the plane is rotated 90°
-        g.scale.x = g.scale.z = x 
-        cam2d.hasChanged = true
+    @x = 1 unless @x
+    if (@x+delta > 0.5) and (@x+delta < 1.5)
+      @x += Number(delta)
+      WIDTH = HEIGHT = @x * 384
+      container = $("#render")
+      container.width(2 * WIDTH + 40)
+      container.height(2 * HEIGHT + 40)
+      @resize()
 
   zoomIn : ->
     if cam2d.getZoomStep(cam2d.getActivePlane()) > 0

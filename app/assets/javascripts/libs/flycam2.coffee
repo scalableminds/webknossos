@@ -7,11 +7,13 @@ PLANE_XZ = 2
   
 class Flycam2d
 
-  constructor : (distance) ->
+  constructor : (distance, buffer) -> # buffer: how many pixels is the texture larger than the canvas on each side?
+    @buffer = buffer
     @defaultDistance = distance
     @zoomSteps = [0, 0, 0]
   #  @reset()
     @globalPosition = [0, 0, 0]
+    @texturePositionXY = [0, 0, 0]
     @direction = [0, 0, 1]
     @stepBack = [0, 0, -distance]    #TODO: What is this for?
     @stepFront = [0, 0, distance]    #TODO: What is this for?
@@ -58,6 +60,9 @@ class Flycam2d
   getGlobalPos : ->
     @globalPosition
 
+  getTexturePositionXY : ->
+    @texturePositionXY
+
   setGlobalPos : (position) ->
     @globalPosition = position
     @hasChanged = true
@@ -67,3 +72,11 @@ class Flycam2d
 
   getActivePlane : ->
     @activePlane
+
+  needsUpdateXY : ->
+    (( Math.abs(@globalPosition[0]-@texturePositionXY[0])>@buffer or
+      Math.abs(@globalPosition[1]-@texturePositionXY[1])>@buffer or
+      @globalPosition[2]!=@texturePositionXY[2] ) and @globalPosition!= [0,0,0])
+
+  notifyNewTextureXY : ->
+    @texturePositionXY = @globalPosition.slice()    #copy that position

@@ -65,7 +65,7 @@ View =
     # It rather hosts a number of matrix operations that 
     # calculate which pixel are visible on the trianglesplane
     # after moving around.
-    cam2d = new Flycam2d CAM_DISTANCE
+    cam2d = new Flycam2d CAM_DISTANCE, (512-384)/2   # TODO: Can this be calculated from CAM_DISTANCE?
 
     # FPS stats
     stats = new Stats()
@@ -106,9 +106,11 @@ View =
 
     # update postion and FPS displays
     position2d = cam2d.getGlobalPos()
+    texturePositionXY = cam2d.texturePositionXY
     # without rounding the position becomes really long and blocks the canvas mouse input
     position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
-    @positionStats.html "Flycam2d: #{position2d}<br />ZoomStep #{cam2d.getZoomStep(0)}<br />activePlane: #{cam2d.getActivePlane()}" 
+    texturePositionXY = [Math.round(texturePositionXY[0]),Math.round(texturePositionXY[1]),Math.round(texturePositionXY[2])]
+    @positionStats.html "Flycam2d: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{cam2d.getZoomStep(0)}<br />activePlane: #{cam2d.getActivePlane()}" 
     @stats.update()
 
     cam2d.hasChanged = false
@@ -145,29 +147,42 @@ View =
       # trianglesplane
       # This is likely to change in the future, if we manage to do the selection,
       # of the corresponding vertices on the GPU
-      Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (bufferxy) ->
+      if cam2d.needsUpdateXY()
+        Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (bufferxy) ->
           
-        # ATTENTION 
-        # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
-        # the data attribute is only available for DataTexture (in other cases it is only texture.image)
-        gxy.texture.image.data.set(bufferxy)
+          # ATTENTION 
+          # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
+          # the data attribute is only available for DataTexture (in other cases it is only texture.image)
+          gxy.texture.image.data.set(bufferxy)
 
-        # Update the texture data and make sure the new texture
-        # is used by the Mesh's material.
-        gxy.texture.needsUpdate = true
-        gxy.material.map = gxy.texture
+          # Update the texture data and make sure the new texture
+          # is used by the Mesh's material.
+          gxy.texture.needsUpdate = true
+          gxy.material.map = gxy.texture
 
-      # TODO implement other two interfaces to get new textures, for now just use the old buffer
-      #Model.Binary.getyz(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_YZ)).done (bufferyz) ->
-        gyz.texture.image.data.set(bufferxy)
-        gyz.texture.needsUpdate = true
-        gyz.material.map = gyz.texture
+          # TODO implement other two interfaces to get new textures, for now just use the old buffer
+          #Model.Binary.getyz(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_YZ)).done (bufferyz) ->
+          gyz.texture.image.data.set(bufferxy)
+          gyz.texture.needsUpdate = true
+          gyz.material.map = gyz.texture
+  
+        #Model.Binary.getyz(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XZ)).done (bufferxz) ->
+          gxz.texture.image.data.set(bufferxy)
+          gxz.texture.needsUpdate = true
+          gxz.material.map = gxz.texture
 
-      #Model.Binary.getyz(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XZ)).done (bufferxz) ->
-        gxz.texture.image.data.set(bufferxy)
-        gxz.texture.needsUpdate = true
-        gxz.material.map = gxz.texture
+          gxy.position = new THREE.Vector3(0, 0, 0)
+          cam2d.notifyNewTextureXY()
+      else
+        gxy.position = new THREE.Vector3(-cam2d.getGlobalPos()[0]+cam2d.getTexturePositionXY()[0],
+                                          cam2d.getGlobalPos()[1]-cam2d.getTexturePositionXY()[1], 0)
+        # The following two lines might actually accomplish that faster, but for some reason this
+        # moves the plan along the z axis...
+        #
+        #gxy.translateX(-(cam2d.getGlobalPos()[0]-cam2d.getTexturePositionXY()[0])-gxy.position.x)
+        #gxy.translateY((cam2d.getGlobalPos()[1]-cam2d.getTexturePositionXY()[1])-gxy.position.y)
 
+  
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
   addGeometryXY : (geometry) ->
@@ -231,16 +246,15 @@ View =
       when PLANE_XZ
         cam2d.move [p[0], p[2], p[1]]
 
-  #FIXME: why do values have to be multiplied?
   #FIXME: why can't I call move() from within this function?
   moveX : (x) -> 
-    cam2d.move [100*x, 0, 0]
+    cam2d.move [x, 0, 0]
 
   moveY : (y) ->
-    cam2d.move [0, 100*y, 0]
+    cam2d.move [0, y, 0]
   
   moveZ : (z) ->
-    cam2d.move [0, 0, 100*z]
+    cam2d.move [0, 0, z]
 
   scaleTrianglesPlane : (delta) ->
     @x = 1 unless @x

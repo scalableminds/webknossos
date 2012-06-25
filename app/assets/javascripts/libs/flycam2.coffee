@@ -1,9 +1,9 @@
 ### define ###
 
 # constants (for active_plane)
-PLANE_XY = 1
-PLANE_YZ = 2
-PLANE_XZ = 3
+PLANE_XY = 0
+PLANE_YZ = 1
+PLANE_XZ = 2
   
 class Flycam2d
 
@@ -64,3 +64,6 @@ class Flycam2d
 
   setActivePlane : (activePlane) ->
     @activePlane = activePlane
+
+  getActivePlane : ->
+    @activePlane

@@ -86,8 +86,8 @@ class Mouse
       if @buttonDown
         distX =  (evt.pageX - lastPosition.x) * User.Configuration.mouseInversionX
         distY =  (evt.pageY - lastPosition.y) * User.Configuration.mouseInversionY
-        @changedCallbackX distX * User.Configuration.mouseRotateValue if distX isnt 0
-        @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
+        @changedCallbackX distX if distX isnt 0
+        @changedCallbackY distY if distY isnt 0
 
       @lastPosition =
         x : evt.pageX

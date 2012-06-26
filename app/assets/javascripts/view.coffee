@@ -62,9 +62,7 @@ View =
     container.append(@rendererxz.domElement)
 
     # This "camera" is not a camera in the traditional sense.
-    # It rather hosts a number of matrix operations that 
-    # calculate which pixel are visible on the trianglesplane
-    # after moving around.
+    # It just takes care of the global position
     cam2d = new Flycam2d CAM_DISTANCE, (512-384)/2   # TODO: Can this be calculated from CAM_DISTANCE?
 
     # FPS stats
@@ -139,7 +137,7 @@ View =
       Model.Binary.ping cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)
 
       # sends current position to Model for caching route
-      # TODO implement Routing Model.Route.put globalMatrix
+      Model.Route.put cam2d.getGlobalPos()
 
       # trilinear interpolation
       # we used to do this on the shader (trianglesplane.vs)
@@ -199,16 +197,6 @@ View =
     #FIXME: this is dirty
     cam2d.hasChanged = true
 
-  setMatrix : (matrix) ->
-    cam2d.setGlobalPos([matrix[12], matrix[13], matrix[14]])
-
-  setGlobalPos : (pos) ->
-    cam2d.setGlobalPos(pos)
-
-  # probably obsolete
-  getMatrix : ->
-    cam2d.getGlobalPos()
-
   #Call this after the canvas was resized to fix the viewport
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
@@ -230,6 +218,12 @@ View =
 ############################################################################
 #Interface for Controller
   # TODO: Some of those are probably obsolete
+
+  setGlobalPos : (pos) ->
+    cam2d.setGlobalPos(pos)
+
+  getGlobalPos : ->
+    cam2d.getGlobalPos()
 
   setDirection : (direction) ->
     cam2d.setDirection direction

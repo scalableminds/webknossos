@@ -13,7 +13,6 @@ Route =
   
   # Variables
   branchStack : []
-  lastMatrix : null
 
   # Initializes this module and returns a matrix to start your work.
   initialize : _.once ->
@@ -32,11 +31,12 @@ Route =
         $(window).on(
           "unload"
           => 
-            @putBranch(@lastMatrix) if @lastMatrix
+            @putBranch(@lastPosition) if @lastPosition
             @pushImpl()
         )
 
-        data.matrix
+        #FIXME we don't need a matrix in the DB, change to just the position
+        data.matrix.slice(12,15)
 
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.
@@ -70,27 +70,21 @@ Route =
     @bufferIndex = 0
     @buffer = new Float32Array(BUFFER_SIZE)
 
-  addToBuffer : (typeNumber, value) ->
+  addToBuffer : (value) ->
 
-    @buffer[@bufferIndex++] = typeNumber
-    
-    if value
-      switch typeNumber
-        when 0
-          @buffer.set(value.subarray(0, 3), @bufferIndex)
-          @bufferIndex += 3
-        when 1
-          @buffer.set(value.subarray(0, 16), @bufferIndex)
-          @bufferIndex  += 16
+    @buffer[@bufferIndex++] = 0
+
+    @buffer.set(value, @bufferIndex)
+    @bufferIndex += 3
 
     @push()
 
-  putBranch : (matrix) ->
+  putBranch : (position) ->
 
     @initialize().done =>
       
-      @addToBuffer(1, matrix)
-      @branchStack.push(matrix)
+      @addToBuffer(position)
+      @branchStack.push(position)
 
     return
 
@@ -103,19 +97,15 @@ Route =
       { branchStack } = @
 
       if branchStack.length > 0
-        @addToBuffer(2)
+        #@addToBuffer(2)
         deferred.resolve(branchStack.pop())
       else
         deferred.reject()
 
   # Add a point to the buffer. Just keep adding them.
-  put : (matrix) ->
-    
-    @lastMatrix = matrix
+  put : (position) ->
 
     @initialize().done =>
-      
-      position = matrix.subarray(12,15)
 
       position = V3.round(position, position)
       lastPosition = @lastPosition
@@ -125,6 +115,6 @@ Route =
       lastPosition[1] != position[1] or 
       lastPosition[2] != position[2]
         @lastPosition = position
-        @addToBuffer(0, position)
+        @addToBuffer(position)
 
     return

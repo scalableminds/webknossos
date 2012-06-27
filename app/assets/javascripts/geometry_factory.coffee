@@ -56,6 +56,9 @@ GeometryFactory =
       planexy = new THREE.PlaneGeometry(512, 512, 1, 1)
       planeyz = new THREE.PlaneGeometry(512, 512, 1, 1)
       planexz = new THREE.PlaneGeometry(512, 512, 1, 1)
+      planePrevXY = new THREE.PlaneGeometry(150, 150, 1, 1)
+      planePrevYZ = new THREE.PlaneGeometry(150, 150, 1, 1)
+      planePrevXZ = new THREE.PlaneGeometry(150, 150, 1, 1)
 
       # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
       texturexy = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
@@ -67,22 +70,44 @@ GeometryFactory =
       texturexz = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
       texturexz.needsUpdate = true
 
+      texturePrevXY = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+      texturePrevXY.needsUpdate = true
+      texturePrevYZ = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+      texturePrevYZ.needsUpdate = true
+      texturePrevXZ = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+      texturePrevXZ.needsUpdate = true
+
       textureMaterialxy = new THREE.MeshBasicMaterial({wireframe : false, map: planexy.texture})
       textureMaterialyz = new THREE.MeshBasicMaterial({wireframe : false, map: planeyz.texture})
       textureMaterialxz = new THREE.MeshBasicMaterial({wireframe : false, map: planexz.texture})
+      textureMaterialPrevXY = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevXY.texture})
+      textureMaterialPrevYZ = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevYZ.texture})
+      textureMaterialPrevXZ = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevXZ.texture})
 
       trianglesplanexy = new THREE.Mesh( planexy, textureMaterialxy )
       trianglesplanexy.rotation.x = 90 /180*Math.PI
-
+      
       trianglesplaneyz = new THREE.Mesh( planeyz, textureMaterialyz )
       trianglesplaneyz.rotation.x = 90 /180*Math.PI
 
       trianglesplanexz = new THREE.Mesh( planexz, textureMaterialxz )
       trianglesplanexz.rotation.x = 90 /180*Math.PI
 
+      trianglesplanePrevXY = new THREE.Mesh( planePrevXY, textureMaterialPrevXY )
+      trianglesplanePrevXY.rotation.x = 90 /180*Math.PI
+      
+      trianglesplanePrevYZ = new THREE.Mesh( planePrevYZ, textureMaterialPrevYZ )
+      trianglesplanePrevYZ.rotation.x = 90 /180*Math.PI
+      trianglesplanePrevYZ.rotation.z = -90 /180*Math.PI
+      
+      trianglesplanePrevXZ = new THREE.Mesh( planePrevXZ, textureMaterialPrevXZ )
+
       trianglesplanexy.texture = texturexy
       trianglesplaneyz.texture = textureyz
       trianglesplanexz.texture = texturexz
+      trianglesplanePrevXY.texture = texturePrevXY
+      trianglesplanePrevYZ.texture = texturePrevYZ
+      trianglesplanePrevXZ.texture = texturePrevXZ
 
       View.trianglesplanexy = trianglesplanexy
       View.addGeometryXY View.trianglesplanexy
@@ -92,4 +117,11 @@ GeometryFactory =
 
       View.trianglesplanexz = trianglesplanexz
       View.addGeometryXZ View.trianglesplanexz
+
+      View.trianglesplanePrevXY = trianglesplanePrevXY
+      View.addGeometryPrev View.trianglesplanePrevXY
+      View.trianglesplanePrevYZ = trianglesplanePrevYZ
+      View.addGeometryPrev View.trianglesplanePrevYZ
+      View.trianglesplanePrevXZ = trianglesplanePrevXZ
+      View.addGeometryPrev View.trianglesplanePrevXZ
     )

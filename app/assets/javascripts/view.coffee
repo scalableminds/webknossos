@@ -21,8 +21,8 @@ View =
     # attached to it once a renderer has been initalized.
     container = $("#render")
     # Create a 4x4 grid
-    WIDTH = (container.width()-40)/2
-    HEIGHT = (container.height()-40)/2
+    WIDTH = (container.width()-48)/2
+    HEIGHT = (container.height()-48)/2
 
     # Initialize main THREE.js components
     @rendererxy = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
@@ -242,8 +242,8 @@ View =
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
     container = $("#render")
-    WIDTH = (container.width()-41)/2
-    HEIGHT = (container.height()-41)/2
+    WIDTH = (container.width()-49)/2
+    HEIGHT = (container.height()-49)/2
 
     @rendererxy.setSize( WIDTH, HEIGHT )
     @rendereryz.setSize( WIDTH, HEIGHT )
@@ -297,8 +297,8 @@ View =
       @x += Number(delta)
       WIDTH = HEIGHT = @x * 384
       container = $("#render")
-      container.width(2 * WIDTH + 40)
-      container.height(2 * HEIGHT + 40)
+      container.width(2 * WIDTH + 48)
+      container.height(2 * HEIGHT + 48)
       @resize()
 
   zoomIn : ->
@@ -316,12 +316,21 @@ View =
 
   setActivePlaneXY : ->
     cam2d.setActivePlane PLANE_XY
+    $("canvas")[0].style.borderColor = "#FFDD00"
+    $("canvas")[1].style.borderColor = "#C7D1D8"
+    $("canvas")[2].style.borderColor = "#C7D1D8"
     cam2d.hasChanged = true
 
   setActivePlaneYZ : ->
     cam2d.setActivePlane PLANE_YZ
+    $("canvas")[0].style.borderColor = "#C7D1D8"
+    $("canvas")[1].style.borderColor = "#FFDD00"
+    $("canvas")[2].style.borderColor = "#C7D1D8"
     cam2d.hasChanged = true
 
   setActivePlaneXZ : ->
     cam2d.setActivePlane PLANE_XZ
+    $("canvas")[0].style.borderColor = "#C7D1D8"
+    $("canvas")[1].style.borderColor = "#C7D1D8"
+    $("canvas")[2].style.borderColor = "#FFDD00"
     cam2d.hasChanged = true

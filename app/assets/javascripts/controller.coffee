@@ -34,9 +34,9 @@ Controller =
     )
 
     Model.Route.initialize().then(
-      (matrix) =>
-          
-        View.setMatrix(matrix)
+      (position) =>
+        
+        View.setGlobalPos(position)  
         View.move([46, 36, -530])
         # set initial direction
         View.setDirection([0, 0, 1])
@@ -96,8 +96,8 @@ Controller =
     
     new Input.KeyboardNoLoop(
       #Branches
-      "b" : -> Model.Route.putBranch(View.getMatrix())
-      "h" : -> Model.Route.popBranch().done((matrix) -> View.setMatrix(matrix))
+      "b" : -> Model.Route.putBranch(View.getGlobalPos())
+      "h" : -> Model.Route.popBranch().done((position) -> View.setGlobalPos(position))
 
       #Zoom in/out
       "o" : -> View.zoomIn()

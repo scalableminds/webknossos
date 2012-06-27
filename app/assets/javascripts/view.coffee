@@ -9,7 +9,7 @@ cam2d = null
 
 # constants
 # display 384px out of 512px total width and height
-CAM_DISTANCE = 96
+CAM_DISTANCE = 384/2  #alt: 96
 PLANE_XY = 0
 PLANE_YZ = 1
 PLANE_XZ = 2
@@ -37,6 +37,10 @@ View =
     @cameraxz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
     @scenexz = new THREE.Scene()
 
+    @rendererPrev = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
+    @cameraPrev = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
+    @scenePrev = new THREE.Scene()
+
     # Let's set up cameras
     # The cameras are never "moved". They only look at the scenes
     # (the trianglesplanes in particular)
@@ -52,20 +56,28 @@ View =
     @cameraxz.position.z = CAM_DISTANCE
     @cameraxz.lookAt(new THREE.Vector3( 0, 0, 0 ))
 
+    @scenePrev.add(@cameraPrev)
+    @cameraPrev.position.x = CAM_DISTANCE/2
+    @cameraPrev.position.y = CAM_DISTANCE/2
+    @cameraPrev.position.z = CAM_DISTANCE
+    @cameraPrev.lookAt(new THREE.Vector3( 0, 0, 0 ))
+
     # Attach the canvas to the container
     # DEBATE: a canvas can be passed the the renderer as an argument...!?
     @rendererxy.setSize(WIDTH, HEIGHT)
     @rendereryz.setSize(WIDTH, HEIGHT)
     @rendererxz.setSize(WIDTH, HEIGHT)
+    @rendererPrev.setSize(WIDTH, HEIGHT)
     container.append(@rendererxy.domElement)
     container.append(@rendereryz.domElement)
     container.append(@rendererxz.domElement)
+    container.append(@rendererPrev.domElement)
 
     # This "camera" is not a camera in the traditional sense.
     # It rather hosts a number of matrix operations that 
     # calculate which pixel are visible on the trianglesplane
     # after moving around.
-    cam2d = new Flycam2d CAM_DISTANCE, (512-384)/2   # TODO: Can this be calculated from CAM_DISTANCE?
+    cam2d = new Flycam2d CAM_DISTANCE
 
     # FPS stats
     stats = new Stats()
@@ -117,6 +129,7 @@ View =
     @rendererxy.render @scenexy, @cameraxy
     @rendereryz.render @sceneyz, @camerayz
     @rendererxz.render @scenexz, @cameraxz
+    @rendererPrev.render @scenePrev, @cameraPrev
 
   # Let's apply new pixels to the trianglesplane.
   # We do so by apply a new texture to it.
@@ -132,6 +145,14 @@ View =
       # new trianglesplane for xz
       return unless @trianglesplanexz
       gxz = @trianglesplanexz
+
+      # new trianglesplanes preview
+      return unless @trianglesplanePrevXY
+      gpxy = @trianglesplanePrevXY
+      return unless @trianglesplanePrevYZ
+      gpyz = @trianglesplanePrevYZ
+      return unless @trianglesplanePrevXZ
+      gpxz = @trianglesplanePrevXZ
 
       # sends current position to Model for preloading data
       # NEW with direction vector
@@ -182,6 +203,23 @@ View =
         #gxy.translateX(-(cam2d.getGlobalPos()[0]-cam2d.getTexturePositionXY()[0])-gxy.position.x)
         #gxy.translateY((cam2d.getGlobalPos()[1]-cam2d.getTexturePositionXY()[1])-gxy.position.y)
 
+      # Cropping and mapping the Textures to preview planes
+      offsets = cam2d.getOffsetsXY()
+      gpxy.texture = gxy.texture.clone()
+      gpxy.texture.needsUpdate = true
+      gpxy.material.map = gpxy.texture
+      gpxy.material.map.repeat.x = CAM_DISTANCE*2 / 512;
+      gpxy.material.map.repeat.y = CAM_DISTANCE*2 / 512;
+      gpxy.material.map.offset.x = offsets[0] / 512;
+      gpxy.material.map.offset.y = offsets[1] / 512;
+      
+      gpyz.texture = gyz.texture.clone()
+      gpyz.texture.needsUpdate = true
+      gpyz.material.map = gpyz.texture
+      
+      gpxz.texture = gxz.texture.clone()
+      gpxz.texture.needsUpdate = true
+      gpxz.material.map = gpxz.texture
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
@@ -193,6 +231,9 @@ View =
 
   addGeometryXZ : (geometry) ->
     @scenexz.add geometry
+
+  addGeometryPrev : (geometry) ->
+    @scenePrev.add geometry
 
   #Apply a single draw (not used right now)
   draw : ->

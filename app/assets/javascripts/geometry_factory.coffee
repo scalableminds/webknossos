@@ -128,13 +128,13 @@ GeometryFactory =
       trianglesplanexz.rotation.x = 90 /180*Math.PI
 
       trianglesplanePrevXY = new THREE.Mesh( planePrevXY, textureMaterialPrevXY )
-      trianglesplanePrevXY.rotation.x = 90 /180*Math.PI
       
       trianglesplanePrevYZ = new THREE.Mesh( planePrevYZ, textureMaterialPrevYZ )
       trianglesplanePrevYZ.rotation.x = 90 /180*Math.PI
       trianglesplanePrevYZ.rotation.z = -90 /180*Math.PI
       
       trianglesplanePrevXZ = new THREE.Mesh( planePrevXZ, textureMaterialPrevXZ )
+      trianglesplanePrevXZ.rotation.x = 90 /180*Math.PI
 
       trianglesplanexy.texture = texturexy
       trianglesplaneyz.texture = textureyz

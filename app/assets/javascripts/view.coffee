@@ -38,7 +38,7 @@ View =
     @scenexz = new THREE.Scene()
 
     @rendererPrev = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
-    @cameraPrev = new THREE.PerspectiveCamera(50, WIDTH / HEIGHT, 0.1, 10000)
+    @cameraPrev = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 10000)
     @scenePrev = new THREE.Scene()
 
     # Let's set up cameras
@@ -60,7 +60,7 @@ View =
     @cameraPrev.position.x = 4000   #so it looks at the 2500x2500 cube
     @cameraPrev.position.y = 4000
     @cameraPrev.position.z = 5000
-    @cameraPrev.lookAt(new THREE.Vector3( 1250, 1250, 1250 ))
+    @cameraPrev.lookAt(new THREE.Vector3( 1250, 800, 1250 ))
 
     # Attach the canvas to the container
     # DEBATE: a canvas can be passed the the renderer as an argument...!?

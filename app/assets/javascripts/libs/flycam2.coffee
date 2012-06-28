@@ -14,6 +14,8 @@ class Flycam2d
   #  @reset()
     @globalPosition = [0, 0, 0]
     @texturePositionXY = [0, 0, 0]
+    @texturePositionYZ = [0, 0, 0]
+    @texturePositionXZ = [0, 0, 0]
     @direction = [0, 0, 1]
     @stepBack = [0, 0, -distance]    #TODO: What is this for?
     @stepFront = [0, 0, distance]    #TODO: What is this for?
@@ -63,6 +65,12 @@ class Flycam2d
   getTexturePositionXY : ->
     @texturePositionXY
 
+  getTexturePositionYZ : ->
+    @texturePositionYZ
+
+  getTexturePositionXZ : ->
+    @texturePositionXZ
+
   setGlobalPos : (position) ->
     @globalPosition = position
     @hasChanged = true
@@ -84,3 +92,27 @@ class Flycam2d
 
   notifyNewTextureXY : ->
     @texturePositionXY = @globalPosition.slice()    #copy that position
+
+  needsUpdateYZ : ->
+    (( Math.abs(@globalPosition[1]-@texturePositionYZ[1])>@buffer or
+      Math.abs(@globalPosition[2]-@texturePositionYZ[2])>@buffer or
+      @globalPosition[0]!=@texturePositionYZ[0] ) and @globalPosition!= [0,0,0])
+
+  getOffsetsYZ : ->
+    [@globalPosition[2]-@texturePositionYZ[2]+@buffer,
+     @globalPosition[1]-@texturePositionYZ[1]+@buffer]
+
+  notifyNewTextureYZ : ->
+    @texturePositionYZ = @globalPosition.slice()    #copy that position
+
+  needsUpdateXZ : ->
+    (( Math.abs(@globalPosition[0]-@texturePositionXZ[0])>@buffer or
+      Math.abs(@globalPosition[2]-@texturePositionXZ[2])>@buffer or
+      @globalPosition[1]!=@texturePositionXZ[1] ) and @globalPosition!= [0,0,0])
+
+  getOffsetsXZ : ->
+    [@globalPosition[0]-@texturePositionXZ[0]+@buffer,
+     @globalPosition[2]-@texturePositionXZ[2]+@buffer]
+
+  notifyNewTextureXZ : ->
+    @texturePositionXZ = @globalPosition.slice()    #copy that position

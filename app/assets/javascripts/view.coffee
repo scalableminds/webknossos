@@ -38,7 +38,7 @@ View =
     @scenexz = new THREE.Scene()
 
     @rendererPrev = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
-    @cameraPrev = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
+    @cameraPrev = new THREE.PerspectiveCamera(50, WIDTH / HEIGHT, 0.1, 10000)
     @scenePrev = new THREE.Scene()
 
     # Let's set up cameras
@@ -57,10 +57,10 @@ View =
     @cameraxz.lookAt(new THREE.Vector3( 0, 0, 0 ))
 
     @scenePrev.add(@cameraPrev)
-    @cameraPrev.position.x = CAM_DISTANCE/2
-    @cameraPrev.position.y = CAM_DISTANCE/2
-    @cameraPrev.position.z = CAM_DISTANCE
-    @cameraPrev.lookAt(new THREE.Vector3( 0, 0, 0 ))
+    @cameraPrev.position.x = 3000
+    @cameraPrev.position.y = 1500
+    @cameraPrev.position.z = 1000
+    @cameraPrev.lookAt(new THREE.Vector3( 2050, 1040, 470 ))
 
     # Attach the canvas to the container
     # DEBATE: a canvas can be passed the the renderer as an argument...!?
@@ -203,6 +203,10 @@ View =
 
       # Cropping and mapping the Textures to preview planes
       offsets = cam2d.getOffsetsXY()
+      globalPos = cam2d.getGlobalPos()
+      globalPosVec = new THREE.Vector3(globalPos[0], globalPos[1], globalPos[2])
+
+      gpxy.position = globalPosVec
       gpxy.texture = gxy.texture.clone()
       gpxy.texture.needsUpdate = true
       gpxy.material.map = gpxy.texture
@@ -211,10 +215,12 @@ View =
       gpxy.material.map.offset.x = offsets[0] / 512;
       gpxy.material.map.offset.y = offsets[1] / 512;
       
+      gpyz.position = globalPosVec
       gpyz.texture = gyz.texture.clone()
       gpyz.texture.needsUpdate = true
       gpyz.material.map = gpyz.texture
       
+      gpxz.position = globalPosVec
       gpxz.texture = gxz.texture.clone()
       gpxz.texture.needsUpdate = true
       gpxz.material.map = gpxz.texture

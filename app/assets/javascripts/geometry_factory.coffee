@@ -56,9 +56,9 @@ GeometryFactory =
       planexy = new THREE.PlaneGeometry(512, 512, 1, 1)
       planeyz = new THREE.PlaneGeometry(512, 512, 1, 1)
       planexz = new THREE.PlaneGeometry(512, 512, 1, 1)
-      planePrevXY = new THREE.PlaneGeometry(150, 150, 1, 1)
-      planePrevYZ = new THREE.PlaneGeometry(150, 150, 1, 1)
-      planePrevXZ = new THREE.PlaneGeometry(150, 150, 1, 1)
+      planePrevXY = new THREE.PlaneGeometry(384, 384, 1, 1)
+      planePrevYZ = new THREE.PlaneGeometry(384, 384, 1, 1)
+      planePrevXZ = new THREE.PlaneGeometry(384, 384, 1, 1)
 
       # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
       texturexy = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )

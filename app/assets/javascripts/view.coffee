@@ -57,10 +57,10 @@ View =
     @cameraxz.lookAt(new THREE.Vector3( 0, 0, 0 ))
 
     @scenePrev.add(@cameraPrev)
-    @cameraPrev.position.x = 3000
-    @cameraPrev.position.y = 1500
-    @cameraPrev.position.z = 1000
-    @cameraPrev.lookAt(new THREE.Vector3( 2050, 1040, 470 ))
+    @cameraPrev.position.x = 4000   #so it looks at the 2500x2500 cube
+    @cameraPrev.position.y = 4000
+    @cameraPrev.position.z = 5000
+    @cameraPrev.lookAt(new THREE.Vector3( 1250, 1250, 1250 ))
 
     # Attach the canvas to the container
     # DEBATE: a canvas can be passed the the renderer as an argument...!?
@@ -201,29 +201,38 @@ View =
         #gxy.translateX(-(cam2d.getGlobalPos()[0]-cam2d.getTexturePositionXY()[0])-gxy.position.x)
         #gxy.translateY((cam2d.getGlobalPos()[1]-cam2d.getTexturePositionXY()[1])-gxy.position.y)
 
-      # Cropping and mapping the Textures to preview planes
-      offsets = cam2d.getOffsetsXY()
       globalPos = cam2d.getGlobalPos()
-      globalPosVec = new THREE.Vector3(globalPos[0], globalPos[1], globalPos[2])
+      # Translating ThreeJS' coordinate system to the preview's one
+      globalPosVec = new THREE.Vector3(globalPos[0], 2500-globalPos[2], globalPos[1])
 
+      # Cropping and mapping the Textures to preview planes
+      offsetsXY = cam2d.getOffsetsXY()
       gpxy.position = globalPosVec
       gpxy.texture = gxy.texture.clone()
       gpxy.texture.needsUpdate = true
       gpxy.material.map = gpxy.texture
       gpxy.material.map.repeat.x = CAM_DISTANCE*2 / 512;
       gpxy.material.map.repeat.y = CAM_DISTANCE*2 / 512;
-      gpxy.material.map.offset.x = offsets[0] / 512;
-      gpxy.material.map.offset.y = offsets[1] / 512;
+      gpxy.material.map.offset.x = offsetsXY[0] / 512;
+      gpxy.material.map.offset.y = offsetsXY[1] / 512;
       
       gpyz.position = globalPosVec
       gpyz.texture = gyz.texture.clone()
       gpyz.texture.needsUpdate = true
       gpyz.material.map = gpyz.texture
+      gpyz.material.map.repeat.x = CAM_DISTANCE*2 / 512;
+      gpyz.material.map.repeat.y = CAM_DISTANCE*2 / 512;
+      gpyz.material.map.offset.x = (512 - CAM_DISTANCE*2) / 2 / 512;
+      gpyz.material.map.offset.y = (512 - CAM_DISTANCE*2) / 2 / 512;
       
       gpxz.position = globalPosVec
       gpxz.texture = gxz.texture.clone()
       gpxz.texture.needsUpdate = true
       gpxz.material.map = gpxz.texture
+      gpxz.material.map.repeat.x = CAM_DISTANCE*2 / 512;
+      gpxz.material.map.repeat.y = CAM_DISTANCE*2 / 512;
+      gpxz.material.map.offset.x = (512 - CAM_DISTANCE*2) / 2 / 512;
+      gpxz.material.map.offset.y = (512 - CAM_DISTANCE*2) / 2 / 512;
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.

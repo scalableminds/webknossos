@@ -10,6 +10,7 @@ class Flycam2d
   constructor : (distance) ->
     @buffer = 256-distance          # buffer: how many pixels is the texture larger than the canvas on each side?
     @defaultDistance = distance
+    @newBuckets = false
     @zoomSteps = [0, 0, 0]
   #  @reset()
     @globalPosition = [0, 0, 0]
@@ -84,7 +85,7 @@ class Flycam2d
   needsUpdateXY : ->
     (( Math.abs(@globalPosition[0]-@texturePositionXY[0])>@buffer or
       Math.abs(@globalPosition[1]-@texturePositionXY[1])>@buffer or
-      @globalPosition[2]!=@texturePositionXY[2] ) and @globalPosition!= [0,0,0])
+      @globalPosition[2]!=@texturePositionXY[2] ) and @globalPosition!= [0,0,0]) or @newBuckets
 
   getOffsetsXY : ->
     [@globalPosition[0]-@texturePositionXY[0]+@buffer,
@@ -92,6 +93,7 @@ class Flycam2d
 
   notifyNewTextureXY : ->
     @texturePositionXY = @globalPosition.slice()    #copy that position
+    @newBuckets = false
 
   needsUpdateYZ : ->
     (( Math.abs(@globalPosition[1]-@texturePositionYZ[1])>@buffer or

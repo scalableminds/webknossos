@@ -94,7 +94,7 @@ View =
 
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
-    $(window).on("bucketloaded", => cam2d.hasChanged = true) 
+    $(window).on("bucketloaded", => cam2d.hasChanged = true; cam2d.newBuckets = true) 
 
   animate : ->
     @renderFunction()

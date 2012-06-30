@@ -38,7 +38,7 @@ View =
     @scenexz = new THREE.Scene()
 
     @rendererPrev = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
-    @cameraPrev = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 10000)
+    @cameraPrev = new THREE.OrthographicCamera(-2100, 2100, 2450, -1750, -100000, 100000)
     @scenePrev = new THREE.Scene()
 
     # Let's set up cameras

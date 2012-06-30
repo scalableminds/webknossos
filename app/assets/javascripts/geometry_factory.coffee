@@ -26,7 +26,6 @@ GeometryFactory =
       mesh.position.x = x
       mesh.position.y = y
       mesh.position.z = z
-      mesh.doubleSided = true
       View.addGeometryXY mesh
 
   # Let's set up our trianglesplane.

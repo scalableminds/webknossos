@@ -13,6 +13,7 @@ CAM_DISTANCE = 384/2  #alt: 96
 PLANE_XY = 0
 PLANE_YZ = 1
 PLANE_XZ = 2
+VIEW_3D  = 3
 
 View =
   initialize : ->
@@ -38,7 +39,7 @@ View =
     @scenexz = new THREE.Scene()
 
     @rendererPrev = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
-    @cameraPrev = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 10000)
+    @cameraPrev = new THREE.OrthographicCamera(-2100, 2100, 2100, -2100, -100000, 100000)
     @scenePrev = new THREE.Scene()
 
     # Let's set up cameras
@@ -57,10 +58,7 @@ View =
     @cameraxz.lookAt(new THREE.Vector3( 0, 0, 0 ))
 
     @scenePrev.add(@cameraPrev)
-    @cameraPrev.position.x = 4000   #so it looks at the 2500x2500 cube
-    @cameraPrev.position.y = 4000
-    @cameraPrev.position.z = 5000
-    @cameraPrev.lookAt(new THREE.Vector3( 1250, 800, 1250 ))
+    @changePrev VIEW_3D
 
     # Attach the canvas to the container
     # DEBATE: a canvas can be passed the the renderer as an argument...!?
@@ -72,6 +70,29 @@ View =
     container.append(@rendereryz.domElement)
     container.append(@rendererxz.domElement)
     container.append(@rendererPrev.domElement)
+
+    @prevControls = $('#prevControls')
+    @button3D = document.createElement("input")
+    @button3D.setAttribute "type", "button"
+    @button3D.setAttribute "value", "3D View"
+    @button3D.addEventListener "click", @changePrev3D, true
+    @prevControls.append @button3D
+    @buttonXY = document.createElement("input")
+    @buttonXY.setAttribute "type", "button"
+    @buttonXY.setAttribute "value", "XY Plane"
+    @buttonXY.addEventListener "click", @changePrevXY, true
+    @prevControls.append @buttonXY
+    @buttonYZ = document.createElement("input")
+    @buttonYZ.setAttribute "type", "button"
+    @buttonYZ.setAttribute "value", "YZ Plane"
+    @buttonYZ.addEventListener "click", @changePrevYZ, true
+    @prevControls.append @buttonYZ
+    @buttonXZ = document.createElement("input")
+    @buttonXZ.setAttribute "type", "button"
+    @buttonXZ.setAttribute "value", "XZ Plane"
+    @buttonXZ.addEventListener "click", @changePrevXZ, true
+    @prevControls.append @buttonXZ
+
 
     # This "camera" is not a camera in the traditional sense.
     # It just takes care of the global position
@@ -247,6 +268,29 @@ View =
 
   addGeometryPrev : (geometry) ->
     @scenePrev.add geometry
+
+  changePrev : (id) ->
+    @cameraPrev.position.x = 1250   #so it looks at the 2500x2500 cube
+    @cameraPrev.position.y = 1250
+    @cameraPrev.position.z = 1250
+    switch id
+      when VIEW_3D
+        @cameraPrev.position.x = 4000   #so it looks at the 2500x2500 cube
+        @cameraPrev.position.y = 4000
+        @cameraPrev.position.z = 5000
+      when PLANE_XY
+        @cameraPrev.position.y = 4000
+      when PLANE_YZ
+        @cameraPrev.position.x = 4000
+      when PLANE_XZ
+        @cameraPrev.position.z = 4000
+    @cameraPrev.lookAt(new THREE.Vector3( 1250, 1250, 1250 ))
+    if cam2d then cam2d.hasChanged = true
+
+  changePrev3D : => View.changePrev(VIEW_3D)
+  changePrevXY : => View.changePrev(PLANE_XY)
+  changePrevYZ : => View.changePrev(PLANE_YZ)
+  changePrevXZ : => View.changePrev(PLANE_XZ)
 
   #Apply a single draw (not used right now)
   draw : ->

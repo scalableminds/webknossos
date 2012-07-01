@@ -263,12 +263,15 @@ View =
     @rendererxy.setSize( WIDTH, HEIGHT )
     @rendereryz.setSize( WIDTH, HEIGHT )
     @rendererxz.setSize( WIDTH, HEIGHT )
+    @rendererPrev.setSize( WIDTH, HEIGHT)
     @cameraxy.aspect  = WIDTH / HEIGHT
     @cameraxy.updateProjectionMatrix()
     @camerayz.aspect  = WIDTH / HEIGHT
     @camerayz.updateProjectionMatrix()
     @cameraxz.aspect  = WIDTH / HEIGHT
     @cameraxz.updateProjectionMatrix()
+    @cameraPrev.aspect = WIDTH / HEIGHT
+    @cameraPrev.updateProjectionMatrix()
     @draw()
 
 ############################################################################

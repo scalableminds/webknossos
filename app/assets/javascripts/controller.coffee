@@ -10,6 +10,11 @@ helper : Helper
 Controller = 
 
   initialize : (@canvases) ->
+
+    # FIXME probably not the best place?!
+    # avoid scrolling while pressing space
+    document.onkeydown = (event) ->
+      if event.keyCode == 32 then return false
   
     Model.User.Configuration.initialize().then(
       (data) =>

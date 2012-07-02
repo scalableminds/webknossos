@@ -355,12 +355,17 @@ View =
 
   scaleTrianglesPlane : (delta) ->
     @x = 1 unless @x
-    if (@x+delta > 0.5) and (@x+delta < 1.5)
+    if (@x+delta > 0.75) and (@x+delta < 1.5)
       @x += Number(delta)
       WIDTH = HEIGHT = @x * 384
       container = $("#render")
       container.width(2 * WIDTH + 48)
       container.height(2 * HEIGHT + 48)
+
+      # scales the 3D-view controls
+      prevControl = $("#prevControls")
+      prevControl.css({top: @x * 440 + "px", left: @x * 420 + "px"})
+
       @resize()
 
   zoomIn : ->

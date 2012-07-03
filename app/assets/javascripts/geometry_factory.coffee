@@ -1,6 +1,7 @@
 ### define
 model : Model
 view : View
+libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
 ###
 
 # This module is responsible for loading Geometry objects like meshes
@@ -79,19 +80,23 @@ GeometryFactory =
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 0))
       previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999}))
       View.addGeometryPrev previewBox
-      # TODO: For some reason, this code das not work:
-      #text1 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 0", {size: 100, height: 100}), new THREE.MeshLamberMaterial({color: 0x999999}))
-      #text1.position = new THREE.Vector3(0, 2500, 0)
-      #View.addGeometryPrev text1
-      #text2 = new THREE.Mesh(new THREE.TextGeometry("2500, 0, 0", {size: 100, height: 100}), new THREE.MeshLamberMaterial({color: 0x999999}))
-      #text2.position = new THREE.Vector3(2500, 2500, 0)
-      #View.addGeometryPrev text2
-      #text3 = new THREE.Mesh(new THREE.TextGeometry("0, 2500, 0", {size: 100, height: 100}), new THREE.MeshLamberMaterial({color: 0x999999}))
-      #text3.position = new THREE.Vector3(0, 2500, 2500)
-      #View.addGeometryPrev text3
-      #text4 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 2500", {size: 100, height: 100}), new THREE.MeshLamberMaterial({color: 0x999999}))
-      #text4.position = new THREE.Vector3(0, 0, 0)
-      #View.addGeometryPrev text4
+      # TODO: find right rotation:
+      text1 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+      text1.position = new THREE.Vector3(0, 2500, 0)
+      text1.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
+      View.addGeometryPrev text1
+      text2 = new THREE.Mesh(new THREE.TextGeometry("2500, 0, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+      text2.position = new THREE.Vector3(2000, 2300, 0)
+      text2.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
+      View.addGeometryPrev text2
+      text3 = new THREE.Mesh(new THREE.TextGeometry("0, 2500, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+      text3.position = new THREE.Vector3(0, 2500, 2500)
+      text3.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
+      View.addGeometryPrev text3
+      text4 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 2500", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+      text4.position = new THREE.Vector3(0, 0, 0)
+      text4.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
+      View.addGeometryPrev text4
 
       # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
       texturexy = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )

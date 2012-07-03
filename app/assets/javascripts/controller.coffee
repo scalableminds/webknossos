@@ -14,7 +14,7 @@ Controller =
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
     document.onkeydown = (event) ->
-      if event.keyCode == 32 then return false
+      if event.keyCode == 32 or 37<=event.keyCode<=40 then return false
   
     Model.User.Configuration.initialize().then(
       (data) =>

@@ -97,7 +97,8 @@ View =
     # This "camera" is not a camera in the traditional sense.
     # It just takes care of the global position
     cam2d = new Flycam2d CAM_DISTANCE
-
+    @setActivePlaneXY()
+    
     # FPS stats
     stats = new Stats()
     stats.getDomElement().style.position = 'absolute'

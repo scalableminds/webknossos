@@ -19,7 +19,7 @@ object ValidationKey extends BasicDAO[ValidationKey]( "validations" ) {
   def find( validationKey: String ) = {
     for {
       el <- findOne( MongoDBObject( "key" -> validationKey ) )
-      user <- User.findOneByID( el.userId )
+      user <- User.findOneById( el.userId )
     } yield user
   }
 

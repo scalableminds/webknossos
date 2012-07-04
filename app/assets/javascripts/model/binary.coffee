@@ -182,7 +182,7 @@ Binary =
       @positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
       @bucketsXY = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0)
 
-    if cubeData = Cube.getSubCubeByZoomStep(zoomStep)
+    if cubeData = Cube.getCube()
 
       { cube, cubeSize, cubeOffset } = cubeData
 

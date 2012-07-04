@@ -71,17 +71,103 @@ libs/simple_worker : SimpleWorker
 Binary =
 
   # Constants
-  PING_THROTTLE_TIME : 200
+  PING_THROTTLE_TIME : 1000
   TEXTURE_SIZE : 512
 
-  # This method allows you to query the data structure. Give us an array of
-  # vertices and we'll the interpolated data.
-  # 
-  # Invalid points will have the value 0.
+  # Priorities
+  PRIORITIES : [
+    240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225, 288,
+    241, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 224, 287,
+    242, 183, 132, 131, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 168, 223, 286,
+    243, 184, 133,  90,  89,  88,  87,  86,  85,  84,  83,  82,  81, 120, 167, 222, 285,
+    244, 185, 134,  91,  56,  55,  54,  53,  52,  51,  50,  49,  80, 119, 166, 221, 284,
+    245, 186, 135,  92,  57,  30,  29,  28,  27,  26,  25,  48,  79, 118, 165, 220, 283,
+    246, 187, 136,  93,  58,  31,  12,  11,  10,   9,  24,  47,  78, 117, 164, 219, 282,
+    247, 188, 137,  94,  59,  32,  13,   2,   1,   8,  23,  46,  77, 116, 163, 218, 281,
+    248, 189, 138,  95,  60,  33,  14,   3,   0,   7,  22,  45,  76, 115, 162, 217, 280,
+    249, 190, 139,  96,  61,  34,  15,   4,   5,   6,  21,  44,  75, 114, 161, 216, 279,
+    250, 191, 140,  97,  62,  35,  16,  17,  18,  19,  20,  43,  74, 113, 160, 215, 278,
+    251, 192, 141,  98,  63,  36,  37,  38,  39,  40,  41,  42,  73, 112, 159, 214, 277,
+    252, 193, 142,  99,  64,  65,  66,  67,  68,  69,  70,  71,  72, 111, 158, 213, 276,
+    253, 194, 143, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 157, 212, 275,
+    254, 195, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 211, 274,
+    255, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 273,
+    256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272]
+
+  PRELOADING : [0,10,20]
+
+  # Use this method to let us know when you've changed your spot. Then we'll try to 
+  # preload some data. 
+  ping : (position, zoomStep, direction) ->
+
+    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
+    @ping(position, zoomStep, direction)
+
+  pingImpl : (position, zoomStep, direction) ->
+
+    unless _.isEqual({ position, zoomStep, direction }, { @lastPosition, @lastZoomStep, @lastDirection })
+
+      @lastPosition = position
+      @lastZoomStep = zoomStep
+      @lastDirection = direction
+
+      console.time "ping"
+
+      positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
+      buckets = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
+                @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6),
+                @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6))
+
+      Cube.extendByBucketAddressExtent6(
+        @positionBucket[0] - (@TEXTURE_SIZE >> 6), @positionBucket[1] - (@TEXTURE_SIZE >> 6), @positionBucket[2] - (@TEXTURE_SIZE >> 6),
+        @positionBucket[0] + (@TEXTURE_SIZE >> 6), @positionBucket[1] + (@TEXTURE_SIZE >> 6), @positionBucket[2] + (@TEXTURE_SIZE >> 6),
+        zoomStep)
+
+      console.time "queue"
+      PullQueue.clear()
+
+      direction = [0,0,1]
+
+      delta_x = delta_y = delta_z = 0
+      direction_x = direction_y = direction_z = 0
+      index = buckets.length
+      level = 0
+
+      i = buckets.length * @PRELOADING.length
+      while i--
+        index--
+        if buckets[index]
+          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z, zoomStep], @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]
+
+        unless i % buckets.length
+          index = buckets.length
+          level++
+
+          delta_x += direction[0]
+          delta_y += direction[1]
+          delta_z += direction[2]
+          direction_x = Math.round(delta_x)
+          direction_y = Math.round(delta_y)
+          direction_z = Math.round(delta_z)
+
+      console.timeEnd "queue"
+      
+      PullQueue.pull()
+      
+      console.timeEnd "ping"
+
 
   getXY : (position, zoomStep) ->
 
     $.when(@getXYSync(position, zoomStep))
+
+  getXZ : (position, zoomStep) ->
+
+    $.when(@getXZSync(position, zoomStep))
+
+  getYZ : (position, zoomStep) ->
+
+    $.when(@getYZSync(position, zoomStep))
 
   # A synchronized implementation of `get`. Cuz its faster.
   getXYSync : (position, zoomStep) ->
@@ -95,8 +181,6 @@ Binary =
 
       @positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
       @bucketsXY = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0)
-      #@bucketsXZ = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6)
-      #@bucketsYZ = @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6)
 
     if cubeData = Cube.getSubCubeByZoomStep(zoomStep)
 
@@ -144,45 +228,6 @@ Binary =
       unless i % w
         bucketIndex += rowDelta
         bufferIndex += bufferDelta
-
-  # Use this method to let us know when you've changed your spot. Then we'll try to 
-  # preload some data. 
-  ping : (position, zoomStep) ->
-
-    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @ping(position, zoomStep)
-
-  pingImpl : (position, zoomStep) ->
-
-    unless _.isEqual({ position, zoomStep }, { @lastPosition, @lastZoomStep })
-
-      @lastPosition = position
-      @lastZoomStep = zoomStep
-
-      console.time "ping"
-
-      @positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
-      @bucketsXY = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0)
-      #@bucketsXZ = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6)
-      #@bucketsYZ = @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6)
-
-      Cube.extendByBucketAddressExtent6(
-        @positionBucket[0] - (@TEXTURE_SIZE >> 6), @positionBucket[1] - (@TEXTURE_SIZE >> 6), @positionBucket[2] - (@TEXTURE_SIZE >> 6),
-        @positionBucket[0] + (@TEXTURE_SIZE >> 6), @positionBucket[1] + (@TEXTURE_SIZE >> 6), @positionBucket[2] + (@TEXTURE_SIZE >> 6),
-        zoomStep)
-
-      console.time "queue"
-      PullQueue.clear()
-
-      i = @bucketsXY.length
-      console.log i
-      while i--
-        if @bucketsXY[i]
-          PullQueue.insert [@bucketsXY[i][0], @bucketsXY[i][1], @bucketsXY[i][2], zoomStep], PullQueue.priorities[i]
-
-      console.timeEnd "queue"
-      PullQueue.pull()
-      console.timeEnd "ping"
 
   getBucketArray : (center, range_x, range_y, range_z) ->
 

@@ -5,8 +5,8 @@ import PlayProject._
 
 object ApplicationBuild extends Build {
 
-  val appName = "brainflight"
-  val appVersion = "0.2"
+  val appName = "oxalis"
+  val appVersion = "0.1"
   val appDependencies = Seq(
     "com.mongodb.casbah" % "casbah_2.9.1" % "2.1.5-1",
     "com.novus" %% "salat-core" % "0.0.8-SNAPSHOT",

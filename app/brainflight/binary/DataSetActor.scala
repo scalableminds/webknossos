@@ -3,10 +3,10 @@ package brainflight.binary
 import akka.actor.Actor
 import brainflight.tools.geometry.Point3D
 import models.DataSet
-import brainflight.tools.geometry.Cube
+import brainflight.tools.geometry.Cuboid
 
 case class SingleRequest( dataSet: DataSet, resolution: Int, point: Point3D )
-case class CubeRequest( dataSet: DataSet, resolution: Int, points: Cube)
+case class CubeRequest( dataSet: DataSet, resolution: Int, points: Cuboid)
 case class CachedFile( cacheId: Int, block: DataBlockInformation, data: Array[Byte])
 
 class DataSetActor extends Actor {

@@ -2,6 +2,7 @@
 libs/flycam : Flycam
 libs/flycam2 : Flycam2d
 model : Model
+libs/Tween : TWEEN_LIB
 ###
     
 # global View variables
@@ -58,8 +59,7 @@ View =
     @cameraxz.lookAt(new THREE.Vector3( 0, 0, 0 ))
 
     @scenePrev.add(@cameraPrev)
-    @changePrev VIEW_3D
-
+    
     # Attach the canvas to the container
     # DEBATE: a canvas can be passed the the renderer as an argument...!?
     @rendererxy.setSize(WIDTH, HEIGHT)
@@ -108,6 +108,7 @@ View =
     @stats = stats
     @positionStats = $("#status")
 
+    @changePrev VIEW_3D
     # start the rendering loop
     @animate()
 
@@ -127,6 +128,8 @@ View =
   # All 3D meshes and the trianglesplane are rendered here.
   renderFunction : ->
 
+    TWEEN.update()
+
     # skip rendering if nothing has changed
     # This prevents you the GPU/CPU from constantly
     # working and keeps your lap cool
@@ -135,7 +138,7 @@ View =
       return
 
     @updateTrianglesplane()
-
+    
     # update postion and FPS displays
     position2d = cam2d.getGlobalPos()
     texturePositionXY = cam2d.texturePositionXY
@@ -279,22 +282,40 @@ View =
     @scenePrev.add geometry
 
   changePrev : (id) ->
-    @cameraPrev.position.x = 1250   #so it looks at the 2500x2500 cube
-    @cameraPrev.position.y = 1250
-    @cameraPrev.position.z = 1250
+    # In order for the rotation to be correct, it is not sufficient
+    # to just use THREEJS' lookAt() function, because it may still
+    # look at the plane in a wrong angle. Therefore, the rotation
+    # has to be hard coded.
+    @tween = new TWEEN.Tween({ cameraPrev: @cameraPrev, x: @cameraPrev.position.x, y: @cameraPrev.position.y, z: @cameraPrev.position.z, xRot: @cameraPrev.rotation.x, yRot: @cameraPrev.rotation.y, zRot: @cameraPrev.rotation.z})
     switch id
       when VIEW_3D
-        @cameraPrev.position.x = 4000   #so it looks at the 2500x2500 cube
-        @cameraPrev.position.y = 4000
-        @cameraPrev.position.z = 5000
+        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47)}, 2000)
+        .onUpdate(@updateCameraPrev)
+        .start()
+        #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)
       when PLANE_XY
-        @cameraPrev.position.y = 4000
+        @tween.to({  x: 1250, y: 4000, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(0), zRot: @degToRad(0)}, 2000)
+        .onUpdate(@updateCameraPrev)
+        .start()
+        #rotation: (-90, 0, 90) -> (-90, 0, 0)
       when PLANE_YZ
-        @cameraPrev.position.x = 4000
+        @tween.to({  x: 4000, y: 1250, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(90), zRot: @degToRad(0)}, 2000)
+        .onUpdate(@updateCameraPrev)
+        .start()
+        #rotation: (0, 90, 0) -> (-90, 90, 0)
       when PLANE_XZ
-        @cameraPrev.position.z = 4000
-    @cameraPrev.lookAt(new THREE.Vector3( 1250, 1250, 1250 ))
-    if cam2d then cam2d.hasChanged = true
+        @tween.to({  x: 1250, y: 1250, z: 4000, xRot: @degToRad(0), yRot: @degToRad(0), zRot: @degToRad(0)}, 2000)
+        .onUpdate(@updateCameraPrev)
+        .start()
+        #rotation: (0, 0, 0) -> (0, 0, 0)
+    cam2d.hasChanged = true
+
+  degToRad : (deg) -> deg/180*Math.PI
+
+  updateCameraPrev : ->
+    @cameraPrev.position = new THREE.Vector3(@x, @y, @z)
+    @cameraPrev.rotation = new THREE.Vector3(@xRot, @yRot, @zRot)
+    cam2d.hasChanged = true
 
   changePrev3D : => View.changePrev(VIEW_3D)
   changePrevXY : => View.changePrev(PLANE_XY)

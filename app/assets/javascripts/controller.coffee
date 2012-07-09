@@ -13,8 +13,8 @@ Controller =
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
-    document.onkeydown = (event) ->
-      if event.keyCode == 32 or 37<=event.keyCode<=40 then return false
+    $(document).keydown (event) ->
+      if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault(); return
   
     Model.User.Configuration.initialize().then(
       (data) =>

@@ -98,6 +98,15 @@ GeometryFactory =
       text4.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
       View.addGeometryPrev text4
 
+      # create route to show in previewBox
+      routeGeometry = new THREE.Geometry()
+      routeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
+      routeGeometry.vertices.push(new THREE.Vector3(2046, 1036, 470))
+      routeGeometry.dynamic = true
+      route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000}))
+      View.route = route
+      View.addGeometryPrev route
+
       # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
       texturexy = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
       texturexy.needsUpdate = true

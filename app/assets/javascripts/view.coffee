@@ -174,10 +174,18 @@ View =
       return unless @trianglesplanePrevXZ
       gpxz = @trianglesplanePrevXZ
 
+      return unless @route
+      route = @route
+
       # sends current position to Model for preloading data
       # NEW with direction vector
       # Model.Binary.ping cam2d.getGlobalPos(), cam2d.getDirection(), cam2d.getZoomStep(PLANE_XY)
       Model.Binary.ping cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)
+
+      # draw route in 3D-view
+      position2d = cam2d.getGlobalPos()
+      route.geometry.vertices[1] = new THREE.Vector3(position2d[0], position2d[1], position2d[2])
+      route.geometry.verticesNeedUpdate = true
 
       # sends current position to Model for caching route
       Model.Route.put cam2d.getGlobalPos()

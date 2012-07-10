@@ -103,6 +103,7 @@ class Input.Mouse
   attach : (m, axis, callback) ->
     m.bindX callback if axis is "x"
     m.bindY callback if axis is "y"
+    m.bindR callback if axis is "r"
 
   setInversionX : (m, value) ->
     m.setInversionX value if m?

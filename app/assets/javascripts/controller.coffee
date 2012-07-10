@@ -15,6 +15,10 @@ Controller =
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
       if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault(); return
+
+    # hide contextmenu, while rightclicking a canvas
+    $("#render").bind "contextmenu", (event) ->
+      event.preventDefault(); return
   
     Model.User.Configuration.initialize().then(
       (data) =>
@@ -60,9 +64,9 @@ Controller =
     @input.mouses = new Input.Mouse(
       [View.rendererxy.domElement, View.rendereryz.domElement, View.rendererxz.domElement]
       [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
-      {"x" : View.moveX, "y" : View.moveY}
-      {"x" : View.moveZ, "y" : View.moveY}
-      {"x" : View.moveX, "y" : View.moveZ}
+      {"x" : View.moveX, "y" : View.moveY, "r" : View.setWaypointXY}
+      {"x" : View.moveZ, "y" : View.moveY, "r" : View.setWaypointYZ}
+      {"x" : View.moveX, "y" : View.moveZ, "r" : View.setWaypointXZ}
     )
 
   initKeyboard : ->

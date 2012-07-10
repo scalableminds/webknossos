@@ -79,31 +79,43 @@ class Input.Keyboard
 # The mouse module.
 # This one basically just provides the public interface
 # for mouse handling. Nothing fancy here.
+#class Input.Mouse
+# It needs three mouses
+# because at every canvas(=objectToTrack) there needs
+# to be a different callback.
 class Input.Mouse
   
-  mouse : null
+  constructor : (objectsToTrack, activeCallbacks, bindingsXY, bindingsYZ, bindingsXZ) ->
+    # create three mouses for each plane
+    @mouseXY = new MouseLib(objectsToTrack[0], activeCallbacks[0])
+    @mouseYZ = new MouseLib(objectsToTrack[1], activeCallbacks[1])
+    @mouseXZ = new MouseLib(objectsToTrack[2], activeCallbacks[2])
 
-  constructor : (objectToTrack, bindings) ->
-    @mouse = new MouseLib objectToTrack
+    for own axis, callback of bindingsXY
+      @attach(@mouseXY, axis, callback)
 
-    for own axis, callback of bindings
-      @attach(axis, callback)
+    for own axis, callback of bindingsYZ
+      @attach(@mouseYZ, axis, callback)
+    
+    for own axis, callback of bindingsXZ
+      @attach(@mouseXZ, axis, callback)
 
-  attach : (axis, callback) ->
-    @mouse.bindX callback if axis is "x"
-    @mouse.bindY callback if axis is "y"
+  attach : (m, axis, callback) ->
+    m.bindX callback if axis is "x"
+    m.bindY callback if axis is "y"
+    m.bindR callback if axis is "r"
 
-  setInversionX : (value) ->
-    @mouse.setInversionX value if @mouse?
+  setInversionX : (m, value) ->
+    m.setInversionX value if m?
 
-  setInversionY : (value) ->
-    @mouse.setInversionY value if @mouse?
+  setInversionY : (m, value) ->
+    m.setInversionY value if m?
 
-  setRotateValue : (value) ->
-    @mouse.setRotateValue value if @mouse?
+  setRotateValue : (m, value) ->
+    m.setRotateValue value if m?
 
-  unbind : ->
-    @mouse.unbind()
+  unbind : (m) ->
+    m.unbind()
 
     
 # This module completly handles the device orientation / 

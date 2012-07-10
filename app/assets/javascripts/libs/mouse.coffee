@@ -20,24 +20,29 @@ class Mouse
     x : null
     y : null
 
-  changedCallback :  
-    x : $.noop()
-    y : $.noop() 
+  # stores the callbacks for mouse movement in each dimension
+  changedCallbackX : $.noop()
+  changedCallbackY : $.noop()
+  changedCallbackR : $.noop()
+  activeCallback : $.noop()
 
 
   ###
   #@param {Object} target : DOM Element
   # HTML object where the mouse attaches the events
   ###
-  constructor : (@target) ->
+  constructor : (target, activeCallback) ->
     # @User = User
+    @target = target
   
+    @activeCallback = activeCallback
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
-    $(target).on 
+    $(@target).on 
       "mousemove" : @mouseMoved
       "mousedown" : @mouseDown
       "mouseup"   : @mouseUp
+      "mouseenter" : @mouseEnter
 
       # fullscreen pointer lock
       # Firefox does not yet support Pointer Lock
@@ -54,7 +59,7 @@ class Mouse
   # gets a modified distance as parameter
   ###
   bindX : (callback) ->
-    @changedCallback.x = callback
+    @changedCallbackX = callback
 
   ###
   #Binds a function as callback when Y-Position was changed
@@ -62,13 +67,22 @@ class Mouse
   # gets a modified distance as parameter
   ###
   bindY : (callback) ->
-    @changedCallback.y = callback
+    @changedCallbackY = callback
+
+  ###
+  #Binds a function as callback when canvas was rightclicked
+  #@param {Function} callback :
+  # gets the relative mouse position as parameter
+  ###
+  bindR : (callback) ->
+    @changedCallbackR = callback
 
   unbind : ->
     $(@target).off 
       "mousemove" : @mouseMoved
       "mouseup" : @mouseUp
       "mousedown" : @mouseDown
+      "mouseenter" : @mouseEnter
       "webkitfullscreenchange" : @toogleMouseLock
       "webkitpointerlocklost" : @unlockMouse
       "webkitpointerlockchange" : @unlockMouse    
@@ -80,10 +94,10 @@ class Mouse
     # regular mouse management
     unless @locked 
       if @buttonDown
-        distX = -(evt.pageX - lastPosition.x) * User.Configuration.mouseInversionX
+        distX =  (evt.pageX - lastPosition.x) * User.Configuration.mouseInversionX
         distY =  (evt.pageY - lastPosition.y) * User.Configuration.mouseInversionY
-        changedCallback.x distX * User.Configuration.mouseRotateValue if distX isnt 0
-        changedCallback.y distY * User.Configuration.mouseRotateValue if distY isnt 0
+        @changedCallbackX distX if distX isnt 0
+        @changedCallbackY distY if distY isnt 0
 
       @lastPosition =
         x : evt.pageX
@@ -93,14 +107,22 @@ class Mouse
     # Mouse lock returns MovementX/Y in addition to the regular properties
     # (these become static)   
     else
-      distX = -evt.originalEvent.webkitMovementX * User.Configuration.mouseInversionX
+      distX = evt.originalEvent.webkitMovementX * User.Configuration.mouseInversionX
       distY = evt.originalEvent.webkitMovementY * User.Configuration.mouseInversionY
-      changedCallback.x distX * User.Configuration.mouseRotateValue if distX isnt 0
-      changedCallback.y distY * User.Configuration.mouseRotateValue if distY isnt 0
+      @changedCallbackX distX * User.Configuration.mouseRotateValue if distX isnt 0
+      @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
 
-  mouseDown : =>
-    $(@target).css("cursor", "none")
-    @buttonDown = true
+  mouseEnter : =>
+    @activeCallback()
+    
+  mouseDown : (evt) =>
+    # check whether the mouseDown event is a rightclick
+    if evt.which == 3
+      # on rightclick, return mouse position relative to the canvas
+      @changedCallbackR [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top]
+    else
+      $(@target).css("cursor", "none")
+      @buttonDown = true
 
   mouseUp : =>
     @buttonDown = false 

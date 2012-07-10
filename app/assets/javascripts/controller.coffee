@@ -9,7 +9,16 @@ helper : Helper
 
 Controller = 
 
-  initialize : (@canvas) ->
+  initialize : (@canvases) ->
+
+    # FIXME probably not the best place?!
+    # avoid scrolling while pressing space
+    $(document).keydown (event) ->
+      if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault(); return
+
+    # hide contextmenu, while rightclicking a canvas
+    $("#render").bind "contextmenu", (event) ->
+      event.preventDefault(); return
   
     Model.User.Configuration.initialize().then(
       (data) =>
@@ -34,12 +43,15 @@ Controller =
     )
 
     Model.Route.initialize().then(
-      (matrix) =>
-          
-        View.setMatrix(matrix)
+      (position) =>
+        
+        View.setGlobalPos(position)  
+        View.move([46, 36, -530])
+        # set initial direction
+        View.setDirection([0, 0, 1])
 
         GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
-        GeometryFactory.createTrianglesplane(128, 0).done ->
+        GeometryFactory.createTrianglesplane(512, 0).done ->
           View.draw()
       
       ->
@@ -47,10 +59,14 @@ Controller =
     )
 
   initMouse : ->
-    @input.mouse = new Input.Mouse(
-      @canvas
-      "x" : View.yawDistance
-      "y" : View.pitchDistance
+    # initializes an Input.Mouse object with the three canvas
+    # elements and one pair of callbacks per canvas
+    @input.mouses = new Input.Mouse(
+      [View.rendererxy.domElement, View.rendereryz.domElement, View.rendererxz.domElement]
+      [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
+      {"x" : View.moveX, "y" : View.moveY, "r" : View.setWaypointXY}
+      {"x" : View.moveZ, "y" : View.moveY, "r" : View.setWaypointYZ}
+      {"x" : View.moveX, "y" : View.moveZ, "r" : View.setWaypointXZ}
     )
 
   initKeyboard : ->
@@ -59,35 +75,29 @@ Controller =
 
       #Fullscreen Mode
       "f" : => 
-        canvas = @canvas
-        requestFullscreen = canvas.webkitRequestFullScreen or canvas.mozRequestFullScreen or canvas.RequestFullScreen
+        canvases = @canvases
+        requestFullscreen = canvases.webkitRequestFullScreen or canvases.mozRequestFullScreen or canvases.RequestFullScreen
         if requestFullscreen
-          requestFullscreen.call(canvas, canvas.ALLOW_KEYBOARD_INPUT)
+          requestFullscreen.call(canvases, canvases.ALLOW_KEYBOARD_INPUT)
 
     
       #ScaleTrianglesPlane
-      "l" : -> View.scaleTrianglesPlane -User.Configuration.scaleValue
-      "k" : -> View.scaleTrianglesPlane User.Configuration.scaleValue
+      "l" : -> View.scaleTrianglesPlane -Model.User.Configuration.scaleValue
+      "k" : -> View.scaleTrianglesPlane Model.User.Configuration.scaleValue
 
       #Move
-      "w" : -> View.move [0, User.Configuration.moveValue, 0]
-      "s" : -> View.move [0, -User.Configuration.moveValue, 0]
-      "a" : -> View.move [User.Configuration.moveValue, 0, 0]
-      "d" : -> View.move [-User.Configuration.moveValue, 0, 0]
-      "space" : -> View.move [0, 0, User.Configuration.moveValue]
-      "shift + space" : -> View.move [0, 0, -User.Configuration.moveValue]
+      "w" : -> View.moveActivePlane [0, -Model.User.Configuration.moveValue, 0]
+      "s" : -> View.moveActivePlane [0, Model.User.Configuration.moveValue, 0]
+      "a" : -> View.moveActivePlane [-Model.User.Configuration.moveValue, 0, 0]
+      "d" : -> View.moveActivePlane [Model.User.Configuration.moveValue, 0, 0]
+      "space" : -> View.moveActivePlane [0, 0, Model.User.Configuration.moveValue]
+      "shift + space" : -> View.moveActivePlane [0, 0, -Model.User.Configuration.moveValue]
 
       #Rotate in distance
-      "left"  : -> View.yawDistance User.Configuration.rotateValue
-      "right" : -> View.yawDistance -User.Configuration.rotateValue
-      "up"    : -> View.pitchDistance -User.Configuration.rotateValue
-      "down"  : -> View.pitchDistance User.Configuration.rotateValue
-      
-      #Rotate at centre
-      "shift + left"  : -> View.yaw User.Configuration.rotateValue
-      "shift + right" : -> View.yaw -User.Configuration.rotateValue
-      "shift + up"    : -> View.pitch -User.Configuration.rotateValue
-      "shift + down"  : -> View.pitch User.Configuration.rotateValue
+      "left"  : -> View.moveActivePlane [-Model.User.Configuration.moveValue, 0, 0]
+      "right" : -> View.moveActivePlane [Model.User.Configuration.moveValue, 0, 0]
+      "up"    : -> View.moveActivePlane [0, -Model.User.Configuration.moveValue, 0]
+      "down"  : -> View.moveActivePlane [0, Model.User.Configuration.moveValue, 0]
 
       #misc keys
       "n" : -> Helper.toggle()
@@ -95,8 +105,8 @@ Controller =
     
     new Input.KeyboardNoLoop(
       #Branches
-      "b" : -> Model.Route.putBranch(View.getMatrix())
-      "h" : -> Model.Route.popBranch().done((matrix) -> View.setMatrix(matrix))
+      "b" : -> Model.Route.putBranch(View.getGlobalPos())
+      "h" : -> Model.Route.popBranch().done((position) -> View.setGlobalPos(position))
 
       #Zoom in/out
       "o" : -> View.zoomIn()
@@ -106,67 +116,68 @@ Controller =
   # for more buttons look at Input.Gamepad
   initGamepad : ->
     @input.gamepad = new Input.Gamepad(
-        "ButtonA" : -> View.move [0, 0, User.Configuration.moveValue]
-        "ButtonB" : -> View.move [0, 0, -User.Configuration.moveValue]
-        "LeftStickX" : View.yawDistance
-        "LeftStickY" : View.pitchDistance
-
-
+        "ButtonA" : -> View.move [0, 0, Model.User.Configuration.moveValue]
+        "ButtonB" : -> View.move [0, 0, -Model.User.Configuration.moveValue]
     )
 
   initMotionsensor : ->
     @input.deviceorientation = new Input.Deviceorientation(
-      "x"  : View.yawDistance
-      "y" : View.pitchDistance
+    # TODO implement functionality
+    #  "x"  : View.yawDistance
+    #  "y" : View.pitchDistance
     )
 
   initDeviceOrientation : ->
     @input.deviceorientation = new Input.Deviceorientation(
-      "x"  : View.yawDistance
-      "y" : View.pitchDistance
+    # TODO implement functionality
+    #  "x"  : View.yawDistance
+    #  "y" : View.pitchDistance
     )
 
   input :
-    mouse : null
+    mouses : null
+    mouseXY : null
+    mouseXZ : null
+    mouseYZ : null
     keyboard : null
     gamepad : null
     deviceorientation : null
 
   #Customize Options
   setMoveValue : (value) ->
-    User.Configuration.moveValue = (Number) value
-    User.Configuration.push()   
+    Model.User.Configuration.moveValue = (Number) value
+
+    Model.User.Configuration.push()
 
   setRotateValue : (value) ->
-    User.Configuration.rotateValue = (Number) value 
-    User.Configuration.push()   
+    Model.User.Configuration.rotateValue = (Number) value 
+    Model.User.Configuration.push()   
 
   setScaleValue : (value) ->
-    User.Configuration.scaleValue = (Number) value  
-    User.Configuration.push()         
+    Model.User.Configuration.scaleValue = (Number) value  
+    Model.User.Configuration.push()         
 
   setMouseRotateValue : (value) ->
-    User.Configuration.mouseRotateValue = (Number) value
-    User.Configuration.push()         
+    Model.User.Configuration.mouseRotateValue = (Number) value
+    Model.User.Configuration.push()         
 
   setMouseInversionX : (value) ->
     if value is true
-      User.Configuration.mouseInversionX = 1
+      Model.User.Configuration.mouseInversionX = 1
     else
-      User.Configuration.mouseInversionX = -1
-    User.Configuration.push()         
+      Model.User.Configuration.mouseInversionX = -1
+    Model.User.Configuration.push()         
 
   setMouseInversionY : (value) ->
     if value is true
-      User.Configuration.mouseInversionY = 1
+      Model.User.Configuration.mouseInversionY = 1
     else
-      User.Configuration.mouseInversionY = -1
-    User.Configuration.push()         
+      Model.User.Configuration.mouseInversionY = -1
+    Model.User.Configuration.push()         
 
   setMouseActivity : (value) ->
-    User.Configuration.mouseActive = value
-    User.Configuration.push()
-
+    Model.User.Configuration.mouseActive = value
+    Model.User.Configuration.push()
     if value is false
       @input.mouse.unbind()
       @input.mouse = null
@@ -174,8 +185,8 @@ Controller =
       @initMouse()
 
   setKeyboardActivity : (value) ->
-    User.Configuration.keyboardActive = value 
-    User.Configuration.push()   
+    Model.User.Configuration.keyboardActive = value 
+    Model.User.Configuration.push()
     if value is false
       @input.keyboard.unbind()
       @input.keyboard = null
@@ -183,8 +194,8 @@ Controller =
       @initKeyboard()
 
   setGamepadActivity : (value) ->
-    User.Configuration.gamepadActive = value  
-    User.Configuration.push()   
+    Model.User.Configuration.gamepadActive = value  
+    Model.User.Configuration.push()   
     if value is false
       @input.gamepad.unbind()
       @input.gamepad = null
@@ -192,8 +203,8 @@ Controller =
       @initGamepad()    
 
   setMotionSensorActivity : (value) ->
-    User.Configuration.motionsensorActive = value
-    User.Configuration.push()   
+    Model.User.Configuration.motionsensorActive = value
+    Model.User.Configuration.push()   
     if value is false
       @input.deviceorientation.unbind()
       @input.deviceorientation = null

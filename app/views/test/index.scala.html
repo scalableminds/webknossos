@@ -6,7 +6,11 @@
 <script src="@routes.Assets.at("javascripts/libs/mjs.js")"></script>
   <div id="container">
     <div id="main" role="main">
-      <div id="render"></div>
+      <div id="render">
+        <div id="prevControls"></div>
+      </div>
+      <div id="overlay">
+        <div id="status"></div>
         <div id="keyinfos">
           Look around: Arrow-Keys or Mouse</br>
           Rotation: Shift + Arrow-Keys </br>
@@ -16,30 +20,28 @@
           Scale: K and L</br>
           Zoom: O and P</br>          
           F: Fullscreen</br>
-      </div>
-      <div id="optionswindow">
-        Move:</br>
-        <input id="moveValue" type="range" min="0.25" max="4" value="1" step="0.25" onchange="MVC.Controller.setMoveValue(this.value)" />
-        </br></br>
-        Rotate:</br>
-        <input id="rotateValue" type="range" min="0.005" max="0.05" value="0.01" step="0.005" onchange="MVC.Controller.setRotateValue(this.value)" />
-        </br></br>
-        MouseRotate:</br>
-        <input id="mouseRotateValue" type="range" min="0.0005" max="0.01" value="0.004" step="0.0005" onchange="MVC.Controller.setMouseRotateValue(this.value)" />
-        </br></br>      
-        <input id="mouseInversionX" type="checkbox" onchange="MVC.Controller.setMouseInversionX(this.checked)"/> Inverse X-Axis of Mouse<br />
-        <input id="mouseInversionY" type="checkbox" onchange="MVC.Controller.setMouseInversionY(this.checked)"/> Inverse Y-Axis of Mouse<br />
-        <br />
-        <br />
-        <input id="mouseActive" type="checkbox" onchange="MVC.Controller.setMouseActivity(this.checked)"/> Mouse <br />
-        <input id="keyboardActive" type="checkbox" onchange="MVC.Controller.setKeyboardActivity(this.checked)"/> Keyboard <br />        
-        <input id="gamepadActive" type="checkbox" onchange="MVC.Controller.setGamepadActivity(this.checked)"/> Gamepad <br />       
-        <input id="motionsensorActive" type="checkbox" onchange="MVC.Controller.setMotionSensorActivity(this.checked)"/> Motion Sensor <br />               
-      </div>
-    </div>    
-    <footer>
-      <span id="status"></span>
-    </footer>
+        </div>
+        <div id="optionswindow">
+          Move:</br>
+          <input id="moveValue" type="range" min="0.25" max="4" value="1" step="0.25" onchange="MVC.Controller.setMoveValue(this.value)" />
+          </br></br>
+          Rotate:</br>
+          <input id="rotateValue" type="range" min="0.005" max="0.05" value="0.01" step="0.005" onchange="MVC.Controller.setRotateValue(this.value)" />
+          </br></br>
+          MouseRotate:</br>
+          <input id="mouseRotateValue" type="range" min="0.0005" max="0.01" value="0.004" step="0.0005" onchange="MVC.Controller.setMouseRotateValue(this.value)" />
+          </br></br>      
+          <input id="mouseInversionX" type="checkbox" onchange="MVC.Controller.setMouseInversionX(this.checked)"/> Inverse X-Axis of Mouse<br />
+          <input id="mouseInversionY" type="checkbox" onchange="MVC.Controller.setMouseInversionY(this.checked)"/> Inverse Y-Axis of Mouse<br />
+          <br />
+          <br />
+          <input id="mouseActive" type="checkbox" onchange="MVC.Controller.setMouseActivity(this.checked)"/> Mouse <br />
+          <input id="keyboardActive" type="checkbox" onchange="MVC.Controller.setKeyboardActivity(this.checked)"/> Keyboard <br />        
+          <input id="gamepadActive" type="checkbox" onchange="MVC.Controller.setGamepadActivity(this.checked)"/> Gamepad <br />       
+          <input id="motionsensorActive" type="checkbox" onchange="MVC.Controller.setMotionSensorActivity(this.checked)"/> Motion Sensor <br />               
+        </div>
+      </div>  
+    </div>   
   </div> <!--! end of #container -->
 
 

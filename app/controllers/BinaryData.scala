@@ -91,7 +91,7 @@ object BinaryData extends Controller with Secured {
   def requestViaWebsocket( dataSetId: String, cubeSize: Int ) = AuthenticatedWebSocket[Array[Byte]]() { user =>
     request =>
       val dataSetOpt = DataSet.findOneById( dataSetId )
-      val output = Enumerator.imperative[Array[Byte]]()
+      val (output, channel) = Concurrent.broadcast[Array[Byte]]
       val input = Iteratee.foreach[Array[Byte]]( in => {
         // first 4 bytes are always used as a client handle
         BinaryProtocol.parseWebsocket( in ).map {
@@ -101,7 +101,7 @@ object BinaryData extends Controller with Secured {
               dataSet <- dataSetOpt
               result <- calculateBinaryData( dataSet, cube, resolutionExponent )
             } {
-              output.push( message.handle ++ result )
+              channel.push( message.handle ++ result )
             }
           case _ =>
             Logger.error("Received unhandled message!")

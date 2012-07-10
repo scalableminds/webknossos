@@ -23,6 +23,7 @@ class Mouse
   # stores the callbacks for mouse movement in each dimension
   changedCallbackX : $.noop()
   changedCallbackY : $.noop()
+  changedCallbackR : $.noop()
   activeCallback : $.noop()
 
 
@@ -30,13 +31,14 @@ class Mouse
   #@param {Object} target : DOM Element
   # HTML object where the mouse attaches the events
   ###
-  constructor : (@target, activeCallback) ->
+  constructor : (target, activeCallback) ->
     # @User = User
+    @target = target
   
     @activeCallback = activeCallback
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
-    $(target).on 
+    $(@target).on 
       "mousemove" : @mouseMoved
       "mousedown" : @mouseDown
       "mouseup"   : @mouseUp
@@ -66,6 +68,14 @@ class Mouse
   ###
   bindY : (callback) ->
     @changedCallbackY = callback
+
+  ###
+  #Binds a function as callback when canvas was rightclicked
+  #@param {Function} callback :
+  # gets the relative mouse position as parameter
+  ###
+  bindR : (callback) ->
+    @changedCallbackR = callback
 
   unbind : ->
     $(@target).off 
@@ -105,9 +115,14 @@ class Mouse
   mouseEnter : =>
     @activeCallback()
     
-  mouseDown : =>
-    $(@target).css("cursor", "none")
-    @buttonDown = true
+  mouseDown : (evt) =>
+    # check whether the mouseDown event is a rightclick
+    if evt.which == 3
+      # on rightclick, return mouse position relative to the canvas
+      @changedCallbackR [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top]
+    else
+      $(@target).css("cursor", "none")
+      @buttonDown = true
 
   mouseUp : =>
     @buttonDown = false 

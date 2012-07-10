@@ -98,10 +98,14 @@ GeometryFactory =
       text4.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
       View.addGeometryPrev text4
 
-      # create route to show in previewBox
+      # create route to show in previewBox and pre-allocate buffer
       routeGeometry = new THREE.Geometry()
-      routeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
+      i = 0
       routeGeometry.vertices.push(new THREE.Vector3(2046, 1036, 470))
+      while i < 100
+        # workaround to hide the unused vertices
+        routeGeometry.vertices.push(new THREE.Vector2(0, 0))
+        i += 1
       routeGeometry.dynamic = true
       route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000}))
       View.route = route

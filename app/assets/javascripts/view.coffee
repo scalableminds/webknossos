@@ -177,18 +177,10 @@ View =
       return unless @trianglesplanePrevXZ
       gpxz = @trianglesplanePrevXZ
 
-      return unless @route
-      route = @route
-
       # sends current position to Model for preloading data
       # NEW with direction vector
       # Model.Binary.ping cam2d.getGlobalPos(), cam2d.getDirection(), cam2d.getZoomStep(PLANE_XY)
       Model.Binary.ping cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)
-
-      # draw route in 3D-view
-      position2d = cam2d.getGlobalPos()
-      route.geometry.vertices[1] = new THREE.Vector3(position2d[0], position2d[1], position2d[2])
-      route.geometry.verticesNeedUpdate = true
 
       # sends current position to Model for caching route
       Model.Route.put cam2d.getGlobalPos()
@@ -430,4 +422,30 @@ View =
     $("canvas")[0].style.borderColor = "#C7D1D8"
     $("canvas")[1].style.borderColor = "#C7D1D8"
     $("canvas")[2].style.borderColor = "#FFDD00"
+    cam2d.hasChanged = true
+
+  setWaypointXY : (position) ->
+    curGlobalPos = cam2d.getGlobalPos()
+    curZoomStep = cam2d.getZoomStep(PLANE_XY) + 1
+    # calculate the global position of the rightclick
+    View.setWaypoint [curGlobalPos[0] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[1] - 192/curZoomStep + position[1]/curZoomStep, curGlobalPos[2]]
+
+  setWaypointYZ : (position) ->
+    curGlobalPos = cam2d.getGlobalPos()
+    curZoomStep = cam2d.getZoomStep(PLANE_XZ) + 1
+    # calculate the global position of the rightclick
+    View.setWaypoint [curGlobalPos[0] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[1], curGlobalPos[2] - 192/curZoomStep + position[1]/curZoomStep]
+
+  setWaypointXZ : (position) ->
+    curGlobalPos = cam2d.getGlobalPos()
+    curZoomStep = cam2d.getZoomStep(PLANE_YZ) + 1
+    # calculate the global position of the rightclick
+    View.setWaypoint [curGlobalPos[0], curGlobalPos[1] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[2] - 192/curZoomStep + position[1]/curZoomStep]
+
+  setWaypoint : (position) ->
+    @curIndex = 1 unless @curIndex
+    # draw route in 3D-view
+    @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], position[1], position[2])
+    @route.geometry.verticesNeedUpdate = true
+    @curIndex += 1
     cam2d.hasChanged = true

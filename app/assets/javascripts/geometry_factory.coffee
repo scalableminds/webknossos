@@ -98,18 +98,8 @@ GeometryFactory =
       text4.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
       View.addGeometryPrev text4
 
-      # create route to show in previewBox and pre-allocate buffer
-      routeGeometry = new THREE.Geometry()
-      i = 0
-      routeGeometry.vertices.push(new THREE.Vector3(2046, 1036, 470))
-      while i < 100
-        # workaround to hide the unused vertices
-        routeGeometry.vertices.push(new THREE.Vector2(0, 0))
-        i += 1
-      routeGeometry.dynamic = true
-      route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000}))
-      View.route = route
-      View.addGeometryPrev route
+      # create route
+      View.createRoute 10
 
       # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
       texturexy = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )

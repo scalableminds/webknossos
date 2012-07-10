@@ -443,9 +443,37 @@ View =
     View.setWaypoint [curGlobalPos[0], curGlobalPos[1] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[2] - 192/curZoomStep + position[1]/curZoomStep]
 
   setWaypoint : (position) ->
-    @curIndex = 1 unless @curIndex
-    # draw route in 3D-view
+    unless @curIndex
+      @curIndex = 1 
+      @route.geometry.vertices[0] = new THREE.Vector3(2046, 1036, 470)
+    # resize buffer if route gets too long
+    if @curIndex >= @maxRouteLen
+      @maxRouteLen *= 2
+      @createRoute @maxRouteLen, @route
     @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], position[1], position[2])
     @route.geometry.verticesNeedUpdate = true
     @curIndex += 1
     cam2d.hasChanged = true
+
+  createRoute : (maxRouteLen, lastRoute) ->
+    # create route to show in previewBox and pre-allocate buffer
+    @maxRouteLen = maxRouteLen
+    routeGeometry = new THREE.Geometry()
+    i = 0
+    if lastRoute?
+      for vertex in lastRoute.geometry.vertices
+        routeGeometry.vertices.push(vertex)
+      i = @maxRouteLen / 2
+      while i < maxRouteLen
+        # workaround to hide the unused vertices
+        routeGeometry.vertices.push(new THREE.Vector2(0, 0))
+        i += 1
+    else
+      while i < maxRouteLen
+        # workaround to hide the unused vertices
+        routeGeometry.vertices.push(new THREE.Vector2(0, 0))
+        i += 1
+    routeGeometry.dynamic = true
+    route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000}))
+    @route = route
+    @addGeometryPrev route

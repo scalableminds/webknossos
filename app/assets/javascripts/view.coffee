@@ -378,8 +378,8 @@ View =
   prevViewportSite : =>
     (View.cameraPrev.right - View.cameraPrev.left)         # always quadratic
 
-  zoomPrev : (up) =>
-    factor = if up then 0.9 else 10/9
+  zoomPrev : (value) =>
+    factor = Math.pow(0.9, value)
     middleX = (View.cameraPrev.left + View.cameraPrev.right)/2
     middleY = (View.cameraPrev.bottom + View.cameraPrev.top)/2
     size = View.prevViewportSite()

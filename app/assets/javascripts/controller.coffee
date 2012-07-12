@@ -64,9 +64,9 @@ Controller =
     @input.mouses = new Input.Mouse(
       [View.rendererxy.domElement, View.rendereryz.domElement, View.rendererxz.domElement, View.rendererPrev.domElement]
       [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
-      {"x" : View.moveX, "y" : View.moveY, "r" : View.setWaypointXY}
-      {"x" : View.moveZ, "y" : View.moveY, "r" : View.setWaypointYZ}
-      {"x" : View.moveX, "y" : View.moveZ, "r" : View.setWaypointXZ}
+      {"x" : View.moveX, "y" : View.moveY, "w" : View.moveZ, "r" : View.setWaypointXY}
+      {"x" : View.moveZ, "y" : View.moveY, "w" : View.moveX, "r" : View.setWaypointYZ}
+      {"x" : View.moveX, "y" : View.moveZ, "w" : View.moveY, "r" : View.setWaypointXZ}
       {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev}
     )
 

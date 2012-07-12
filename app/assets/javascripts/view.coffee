@@ -375,6 +375,33 @@ View =
   moveZ : (z) ->
     cam2d.move [0, 0, z]
 
+  prevViewportSite : =>
+    (View.cameraPrev.right - View.cameraPrev.left)         # always quadratic
+
+  zoomPrev : (up) =>
+    factor = if up then 0.9 else 10/9
+    middleX = (View.cameraPrev.left + View.cameraPrev.right)/2
+    middleY = (View.cameraPrev.bottom + View.cameraPrev.top)/2
+    size = View.prevViewportSite()
+    View.cameraPrev.left = middleX - factor*size/2
+    View.cameraPrev.right = middleX + factor*size/2
+    View.cameraPrev.top = middleY + factor*size/2
+    View.cameraPrev.bottom = middleY - factor*size/2
+    View.cameraPrev.updateProjectionMatrix()
+    cam2d.hasChanged = true
+
+  movePrevX : (x) =>
+    View.cameraPrev.left += x*View.prevViewportSite()/384
+    View.cameraPrev.right += x*View.prevViewportSite()/384
+    View.cameraPrev.updateProjectionMatrix()
+    cam2d.hasChanged = true
+
+  movePrevY : (y) =>
+    View.cameraPrev.top -= y*View.prevViewportSite()/384
+    View.cameraPrev.bottom -= y*View.prevViewportSite()/384
+    View.cameraPrev.updateProjectionMatrix()
+    cam2d.hasChanged = true
+  
   scaleTrianglesPlane : (delta) ->
     @x = 1 unless @x
     if (@x+delta > 0.75) and (@x+delta < 1.5)

@@ -62,11 +62,12 @@ Controller =
     # initializes an Input.Mouse object with the three canvas
     # elements and one pair of callbacks per canvas
     @input.mouses = new Input.Mouse(
-      [View.rendererxy.domElement, View.rendereryz.domElement, View.rendererxz.domElement]
+      [View.rendererxy.domElement, View.rendereryz.domElement, View.rendererxz.domElement, View.rendererPrev.domElement]
       [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
       {"x" : View.moveX, "y" : View.moveY, "r" : View.setWaypointXY}
       {"x" : View.moveZ, "y" : View.moveY, "r" : View.setWaypointYZ}
       {"x" : View.moveX, "y" : View.moveZ, "r" : View.setWaypointXZ}
+      {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev}
     )
 
   initKeyboard : ->

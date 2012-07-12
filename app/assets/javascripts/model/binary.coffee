@@ -73,9 +73,10 @@ Binary =
   # Constants
   PING_THROTTLE_TIME : 1000
   TEXTURE_SIZE : 512
-  XY_TEXTURE : 0
-  XZ_TEXTURE : 1
-  YZ_TEXTURE : 2
+
+  VIEW_XY : 0
+  VIEW_XZ : 1
+  VIEW_YZ : 2
 
   # Priorities
   PRIORITIES : [
@@ -98,6 +99,10 @@ Binary =
     256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272]
 
   PRELOADING : [0,10,20]
+
+  viewXY = { topLeftBucket: null, zoomStep : null, view : VIEW_XY }
+  viewXZ = { topLeftBucket: null, zoomStep : null, view : VIEW_XZ }
+  viewYZ = { topLeftBucket: null, zoomStep : null, view : VIEW_YZ }
 
   # Use this method to let us know when you've changed your spot. Then we'll try to 
   # preload some data. 
@@ -162,94 +167,79 @@ Binary =
 
   getXY : (position, zoomStep) ->
 
-    $.when(@getSync(position, zoomStep, ))
+    $.when(@getSync(position, zoomStep, @viewXY))
+
 
   getXZ : (position, zoomStep) ->
 
-    $.when(@getXZSync(position, zoomStep))
+    $.when(@getXZSync(position, zoomStep, @viewXZ))
+
 
   getYZ : (position, zoomStep) ->
 
-    $.when(@getYZSync(position, zoomStep))
+    $.when(@getYZSync(position, zoomStep, @viewYZ))
+
 
   # A synchronized implementation of `get`. Cuz its faster.
   getSync : (position, zoomStep, view) ->
 
-    textureCenter = Cube.vertexToZoomedBucket(position, zoomStep)
-    textureOffset = [textureCenter[0] - (@TEXTURE_SIZE >> 6), textureCenter[1] - (@TEXTURE_SIZE >> 6), textureCenter[2] - (@TEXTURE_SIZE >> 6)]
+    centerBucket = Cube.vertexToZoomedBucket(position, zoomStep)
+    
+    topLeftBucket = [
+      centerBucket[0] - (@TEXTURE_SIZE >> 6)
+      centerBucket[1] - (@TEXTURE_SIZE >> 6)
+      centerBucket[2] - (@TEXTURE_SIZE >> 6)
+    ]
 
-    unless view? and _.isEqual({ view.textureOffset, view.zoomStep }, { textureOffset, zoomStep } )
+    area = [
+      area[0] >> 5
+      area[1] - 1 >> 5
+      area[2] >> 5
+      area[3] - 1 >> 5
+    ]
 
-      view.textureOffset = textureOffset
+    unless _.isEqual({ view.topLeftBucket, view.zoomStep }, { topLeftBucket, zoomStep } )
+
+      view.topleftBucket = topLeftBucket
       view.zoomStep = zoomStep
-      view.bucketArray = initializeBucketArray()
+      view.area = area
+      view.bucketStatusArray = @getBucketStatusArray(topLeftBucket, @TEXTURE_SIZE >> 5, @TEXTURE_SIZE >> 5, view.view)
       view.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
       view.changed = true
 
-    if view.changed
+    if view.changed or _.isEqual(area, view.area)
+
+      for u in [area[0]..area[2]] by 1
+        for v in [area[1]..area[3]] by 1
+          if view.bucketArray[(area[2] - area[0] + 1) * u + v]
+            @renderBucket()
+
+      view.area = area
+      view.changed = false
+
+      view.buffer
+    
+    else
+      null
 
 
+  renderBucketToBuffer : (bufferOffset, view) ->
+    null
 
-      @lastPosition = position
-      @lastZoomStep = zoomStep
 
-      @positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
-      @bucketsXY = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0)
+  renderBucketToBuffer : () ->
+    null
 
-    if cubeData = Cube.getCube()
 
-      { cube, cubeSize, cubeOffset } = cubeData
-
-      offset_x = position[0] & 31
-      offset_y = position[1] & 31
-      offset_z = position[2] & 31
-
-      texture_x = -offset_x
-      texture_y = -offset_y
-      for y in [0..(@TEXTURE_SIZE >> 5)]
-        texture_y = (y << 5) - offset_y
-        height = 32
-        off_y = 0
-        if y == 0
-          texture_y = 0
-          height = 32 - offset_y
-          off_y = offset_y
-        if y == (@TEXTURE_SIZE >> 5)
-          height = offset_y
-
-        for x in [0..(@TEXTURE_SIZE >> 5)]
-          texture_x = (x << 5) - offset_x
-          width = 32
-          off_x = 0
-          if x == 0
-            texture_x = 0
-            width = 32 - offset_x
-            off_x = offset_x
-          if x == (@TEXTURE_SIZE >> 5)
-            width = offset_x
-
-          if @bucketsXY[y*((@TEXTURE_SIZE >> 5) + 1) + x] and colors = cube[Cube.bucketIndexByAddress(@bucketsXY[y*((@TEXTURE_SIZE >> 5) + 1) + x], zoomStep)]
-            @renderBucketToBuffer(colors, 1024, 32-1024*width, texture_y*@TEXTURE_SIZE + texture_x, 1024*off_x + 32*off_y + offset_z, @TEXTURE_SIZE - width, buffer, width, height)
-    buffer
-
-  renderBucketToBuffer : (colors, pixelDelta, rowDelta, offset, bucketOffset, bufferDelta, buffer, w, h) ->
-    bufferIndex = offset
-    bucketIndex = bucketOffset
-    i = w * h
-    while i--
-      buffer[bufferIndex++] = colors[bucketIndex]
-      bucketIndex += pixelDelta
-      unless i % w
-        bucketIndex += rowDelta
-        bufferIndex += bufferDelta
-
-  getBucketStatusArray : (topLeftBucket, range_x, range_y, range_z) ->
+  getBucketStatusArray : (offset, range_u, range_v, view) ->
 
     status = []
 
-    for delta_z in [0..range_z-1]
-      for delta_y in [0..range_y-1]
-        for delta_z in [0..range_x-1]
-          status.push 
+    if view = @VIEW_XZ offset = [offset[0], offset[2], offset[1]]
+    if view = @VIEW_YZ offset = [offset[1], offset[2], offset[0]]
+
+    for delta_u in [0..range_u - 1] by 1
+      for delta_v in [0..range_v - 1] by 1
+        status.push offset[0] + delta_u >= 0 and offset[1] + delta_v >= 0 and offset[2] >= 0
 
     status

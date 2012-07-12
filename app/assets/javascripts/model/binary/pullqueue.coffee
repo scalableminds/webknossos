@@ -16,13 +16,16 @@ PullQueue =
   pullLoadingCount : 0
 
   swap : (a, b) ->
+
     queue = @queue
 
     tmp = queue[a]
     queue[a] = queue[b]
     queue[b] = tmp
 
+
   siftUp :(pos) ->
+
     queue = @queue
 
     while pos and queue[pos].priority < queue[(pos - 1) >> 1].priority
@@ -30,7 +33,9 @@ PullQueue =
       @swap(pos, parent)
       pos = parent
 
+
   siftDown : (pos) ->
+
     queue = @queue
 
     while (pos << 1) + 1 < queue.length
@@ -40,7 +45,9 @@ PullQueue =
       @swap(pos, child)
       pos = child
 
+
   insert : (bucket, zoomStep, priority) ->
+
     queue = @queue
 
     # Buckets with negative priority are not loaded
@@ -52,7 +59,9 @@ PullQueue =
       queue.push(b)
       @siftUp(queue.length - 1)
 
+
   removeFirst : ->
+
     queue = @queue
 
     return null unless queue.length
@@ -61,12 +70,16 @@ PullQueue =
     @siftDown(0)
     { first.bucket, first.zoomStep }
 
+
   clear : ->
+
     queue = @queue
 
     queue.length = 0
 
+
   pull : ->
+
     { queue, PULL_DOWNLOAD_LIMIT } = @
 
     while @pullLoadingCount < PULL_DOWNLOAD_LIMIT and queue.length
@@ -75,7 +88,9 @@ PullQueue =
       if Cube.getWorstRequestedZoomStepOfBucketByZoomedAddress(bucket, zoomStep) > zoomStep
         @pullBucket(bucket, zoomStep)
 
+
   pullBucket : (bucket, zoomStep) ->
+
     @pullLoadingCount++
     Cube.setRequestedZoomStepByZoomedAddress(bucket, zoomStep)
 
@@ -102,6 +117,8 @@ PullQueue =
         responseBufferType : Uint8Array
       )
 
+
   loadBucketByAddress : (bucket, zoomStep) ->
+
     transmitBuffer = [ zoomStep, bucket[0] << 5, bucket[1] << 5, bucket[2] << 5 ]
     @loadBucketSocket().pipe (socket) -> socket.send(transmitBuffer)

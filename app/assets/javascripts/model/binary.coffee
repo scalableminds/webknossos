@@ -73,6 +73,9 @@ Binary =
   # Constants
   PING_THROTTLE_TIME : 1000
   TEXTURE_SIZE : 512
+  XY_TEXTURE : 0
+  XZ_TEXTURE : 1
+  YZ_TEXTURE : 2
 
   # Priorities
   PRIORITIES : [
@@ -159,7 +162,7 @@ Binary =
 
   getXY : (position, zoomStep) ->
 
-    $.when(@getXYSync(position, zoomStep))
+    $.when(@getSync(position, zoomStep, ))
 
   getXZ : (position, zoomStep) ->
 
@@ -170,11 +173,22 @@ Binary =
     $.when(@getYZSync(position, zoomStep))
 
   # A synchronized implementation of `get`. Cuz its faster.
-  getXYSync : (position, zoomStep) ->
+  getSync : (position, zoomStep, view) ->
 
-    buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
+    textureCenter = Cube.vertexToZoomedBucket(position, zoomStep)
+    textureOffset = [textureCenter[0] - (@TEXTURE_SIZE >> 6), textureCenter[1] - (@TEXTURE_SIZE >> 6), textureCenter[2] - (@TEXTURE_SIZE >> 6)]
 
-    unless _.isEqual({position, zoomStep}, {@position, @zoomStep})
+    unless view? and _.isEqual({ view.textureOffset, view.zoomStep }, { textureOffset, zoomStep } )
+
+      view.textureOffset = textureOffset
+      view.zoomStep = zoomStep
+      view.bucketArray = initializeBucketArray()
+      view.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
+      view.changed = true
+
+    if view.changed
+
+
 
       @lastPosition = position
       @lastZoomStep = zoomStep
@@ -229,14 +243,13 @@ Binary =
         bucketIndex += rowDelta
         bufferIndex += bufferDelta
 
-  getBucketArray : (center, range_x, range_y, range_z) ->
+  getBucketStatusArray : (topLeftBucket, range_x, range_y, range_z) ->
 
-    buckets = []
+    status = []
 
-    for z in [-range_z..range_z]
-      for y in [-range_y..range_y]
-        for x in [-range_x..range_x]
-          bucket = [center[0] + x, center[1] + y, center[2] + z]
-          buckets.push if _.min(bucket) >= 0 then bucket else null
+    for delta_z in [0..range_z-1]
+      for delta_y in [0..range_y-1]
+        for delta_z in [0..range_x-1]
+          status.push 
 
-    buckets
+    status

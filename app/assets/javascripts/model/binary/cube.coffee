@@ -2,15 +2,6 @@
 
 # Macros
 
-# Computes the bucket index of the given vertex.
-# Requires `cubeOffset` and `cubeSize` to be in scope.
-bucketIndexByVertex3Macro = (x, y, z) ->
-
-  ((x >> 5) - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
-  ((y >> 5) - cubeOffset[1]) * cubeSize[2] + 
-  ((z >> 5) - cubeOffset[2])
-
-
 # Computes the index of the specified bucket.
 # Requires `cubeOffset` and `cubeSize` to be in scope.
 bucketIndexByAddress3Macro = (bucket_x, bucket_y, bucket_z) ->
@@ -18,26 +9,6 @@ bucketIndexByAddress3Macro = (bucket_x, bucket_y, bucket_z) ->
   (bucket_x - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
   (bucket_y - cubeOffset[1]) * cubeSize[2] + 
   (bucket_z - cubeOffset[2])
-
-# Computes the index of the vertex with the given coordinates in
-# its bucket.
-pointIndexMacro = (x, y, z) ->
-  
-  (
-    ((x & 31) << 10) +
-    ((y & 31) << 5) +
-    ((z & 31))
-  ) >> 1
-
-pointIndexByZoomStepMacro = (x, y, z, zoomStep) ->
-
-  coordMask = 31 << zoomStep
-
-  (
-    ((x & coordMask) << (10 - zoomStep)) +
-    ((y & coordMask) << (5 - zoomStep)) +
-    ((z & coordMask) >> (zoomStep))
-  ) >> 1
 
 
 Cube = 
@@ -52,14 +23,8 @@ Cube =
   cubeSize : null
   cubeOffset : null
 
-  getPlaceholderBucket : _.memoize(
-    (zoomStep) -> { zoomStep, isPlaceholder : true }
-    5
-  )
-
-
   getCube : ->
-
+  
     { cube, cubeSize, cubeOffset } = @
     
     if cube 
@@ -68,54 +33,117 @@ Cube =
       null
 
 
-  getZoomStepOfBucketByAddress3 : (bucket_x, bucket_y, bucket_z) ->
+  getWorstRequestedZoomStepOfBucketByZoomedAddress : (bucket, zoomStep) ->
 
-    if cube = @cube
+    @getWorstRequestedZoomStepOfBucketByZoomedAddress3(
+      bucket[0]
+      bucket[1]
+      bucket[2]
+      zoomStep
+    )
 
-      bucket = cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)]
 
-      if bucket
-        return bucket.zoomStep || 0
-
-    false
-
-  getZoomStepOfBucketByZoomedAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
-
-    @getZoomStepOfBucketByAddress3(bucket_x << zoomStep, bucket_y << zoomStep, bucket_z << zoomStep)
-
-  getWorstZoomStepOfBucketByZoomedAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
+  getWorstRequestedZoomStepOfBucketByZoomedAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
 
     x = bucket_x << zoomStep
     y = bucket_y << zoomStep
     z = bucket_z << zoomStep
 
-    worstZoomStep = 0 
+    worstZoomStep = 0
     tmp = 0
     width = 1 << zoomStep
     for dx in [0...width] by 1
       for dy in [0...width] by 1
         for dz in [0...width] by 1
-          tmp = @getZoomStepOfBucketByAddress3(x + dx, y + dy, z + dz)
-          if tmp is false 
-            return false
-          if tmp is 1 
-            worstZoomStep = 1
+          tmp = @getRequestedZoomStepOfBucketByAddress3(x + dx, y + dy, z + dz)
+          worstZoomStep = tmp if tmp > worstZoomStep
+          return if worstZoomStep = @ZOOM_STEP_COUNT
+
     worstZoomStep
 
 
-  isBucketSetByAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
+  getRequestedZoomStepOfBucketByAddress : (bucket) ->
 
-    @cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, zoomStep)]?
+    @getRequestedZoomStepOfBucketByAddress3(
+      bucket[0]
+      bucket[1]
+      bucket[2]
+    )
 
 
-  setBucketByAddress3 : (bucket_x, bucket_y, bucket_z, bucketData, zoomStep = 0) ->
+  getRequestedZoomStepOfBucketByAddress3 : (bucket_x, bucket_y, bucket_z) ->
 
-    { cube, cubeSize, cubeOffset } = @
+    { cube } = @
+
+    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
+
+    if cube[bucketIndex]
+      cube[bucketIndex].requestedZoomStep
+    else
+      @ZOOM_STEP_COUNT
+
+  setBucketByZoomedAddress : (bucket, zoomStep, bucketData) ->
+
+    @setBucketByZoomedAddress3(
+      bucket[0]
+      bucket[1]
+      bucket[2]
+      bucketData
+      zoomStep
+    )
+
+
+  setBucketByZoomedAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep, bucketData) ->
+
+    { cube } = @
       
     if zoomStep
+      baseBucketMask = ~0 << zoomStep
 
-      bucketData.zoomStep = zoomStep if bucketData
+      baseBucket_x = bucket_x & baseBucketMask
+      baseBucket_y = bucket_y & baseBucketMask
+      baseBucket_z = bucket_z & baseBucketMask
 
+      width = 1 << zoomStep
+      for dx in [0...width] by 1
+        for dy in [0...width] by 1
+          for dz in [0...width] by 1
+
+            bucket = cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)]
+
+            if bucketData
+              if zoomStep < bucket.zoomStep 
+                bucket.data = bucketData
+                bucket.zoomStep = zoomStep
+            else
+              bucket.requestedZoomStep = bucket.zoomStep
+
+    else
+      bucket = cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)]
+
+      if bucketData
+        if zoomStep < bucket.zoomStep 
+          bucket.data = bucketData
+          bucket.zoomStep = 0
+      else
+        bucket.requestedZoomStep = bucket.zoomStep
+
+
+  setRequestedZoomStepByZoomedAddress : (bucket, zoomStep) ->
+
+    setRequestedZoomStepByZoomedAddress3(
+      bucket[0]
+      bucket[1]
+      bucket[2]
+      zoomStep
+    )
+
+
+  setRequestedZoomStepByZoomedAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
+
+    { cube } = @
+
+    if zoomStep
       baseBucketMask = ~0 << zoomStep
 
       baseBucket_x = bucket_x & baseBucketMask
@@ -129,136 +157,59 @@ Cube =
 
             bucketIndex = @bucketIndexByAddress3(baseBucket_x + dx, baseBucket_y + dy, baseBucket_z + dz)
 
-            oldBucket = cube[bucketIndex]
-            if not oldBucket or oldBucket.isPlaceholder or oldBucket.zoomStep > zoomStep
-              cube[bucketIndex] = bucketData
+            if cube[bucketIndex]
+              cube[bucketIndex].requestedZoomStep = Math.min(zoomStep, cube[bucketIndex].requestedZoomStep)
+            else
+              cube[bucketIndex] = { requestedZoomStep : zoomStep, zoomStep : @ZOOM_STEP_COUNT }
+
     else
-      cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)] = bucketData
+      bucketIndex = @bucketIndexByAddress3(baseBucket_x + dx, baseBucket_y + dy, baseBucket_z + dz)
 
-    return
-  
-  setBucketByZoomedAddress3 : (bucket_x, bucket_y, bucket_z, bucketData, zoomStep) ->
+      if cube[bucketIndex]
+        cube[bucketIndex].requestedZoomStep = 0
+      else
+        cube[bucketIndex] = { requestedZoomStep = 0, zoomStep : @ZOOM_STEP_COUNT }
 
-    @setBucketByAddress3(
-      bucket_x << zoomStep
-      bucket_y << zoomStep
-      bucket_z << zoomStep
-      bucketData
-      zoomStep
+
+  bucketIndexByAddress : (bucket) ->
+
+    @bucketIndexByAddress3(
+      bucket[0]
+      bucket[1]
+      bucket[2]
     )
-    return
 
 
-  # Retuns the index of the bucket (in the cuboid) which holds the
-  # point you're looking for.
-  bucketIndexByVertex : (vertex) ->
+  bucketIndexByZoomedAddress : (bucket, zoomStep) ->
 
-    { cubeOffset, cubeSize } = @
-
-    bucketIndexByVertex3Macro(vertex[0], vertex[1], vertex[2])
-
-
-  bucketIndexByVertex3 : (x, y, z) ->
-
-    { cubeOffset, cubeSize } = @
-
-    bucketIndexByVertex3Macro(x, y, z)
-
-
-  bucketIndexByAddress : (address) ->
-
-    { cubeOffset, cubeSize } = @
-
-    @bucketIndexByAddress3(address[0], address[1], address[2])
-
-
-  bucketIndexByZoomedAddress : (address, zoomStep) ->
-
-    { cubeOffset, cubeSize } = @
-
-    @bucketIndexByAddress3(address[0] << zoomStep, address[1] << zoomStep, address[2] << zoomStep)
+    @bucketIndexByAddress3(
+      bucket[0] << zoomStep
+      bucket[1] << zoomStep
+      bucket[2] << zoomStep
+    )
 
 
   bucketIndexByAddress3 : (bucket_x, bucket_y, bucket_z) ->
 
     { cubeOffset, cubeSize } = @
 
-    (bucket_x - @cubeOffset[0]) * @cubeSize[2] * @cubeSize[1] +
-    (bucket_y - @cubeOffset[1]) * @cubeSize[2] + 
-    (bucket_z - @cubeOffset[2])
+    bucketIndexByAddress3Macro(bucket_x, bucket_y, bucket_z)
 
 
-  vertexToAddress : (vertex) ->
+  vertexToZoomedBucketAddress : (vertex, zoomStep) ->
 
-    @vertexToAddress3(vertex[0], vertex[1], vertex[2])
-
-
-  vertexToAddress3 : (x, y, z) ->
-
-    [ x >> 5, y >> 5, z >> 5 ]
-
-
-  addressToVertex : (address) ->
-
-    @addressToVertex(address[0], address[1], address[2])
-
-
-  addressToVertex3 : (bucket_x, bucket_y, bucket_z) ->
-
-    [ bucket_x << 5, bucket_y << 5, bucket_z << 5 ]
-
-
-  # Returns the index of the point (in the bucket) you're looking for.
-  pointIndexByVertex : (vertex, zoomStep) ->
-    
-    pointIndexByZoomStepMacro(vertex[0], vertex[1], vertex[2], zoomStep)
-
-
-  pointIndexByVertex3 : (x, y, z, zoomStep) ->
-    
-    pointIndexByZoomStepMacro(x, y, z, zoomStep)
-
-
-  # Want to add data? Make sure the cuboid is big enough.
-  # This one is for passing real point coordinates.
-  extendByVertexExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }) ->
-    
-    @extendByBucketAddressExtent(
-      min_x >> 5,
-      min_y >> 5,
-      min_z >> 5,
-      max_x >> 5,
-      max_y >> 5,
-      max_z >> 5
+    @vertexToAddress3(
+      vertex[0]
+      vertex[1]
+      vertex[2]
     )
 
 
-  extendByVertex : (vertex) ->
+  vertexToZoomedBucketAddress3 : (x, y, z, zoomStep) ->
 
-    @extendByVertex3(vertex[0], vertex[1], vertex[2])
-
-
-  extendByVertex3 : (x, y, z) ->
-    
-    bucket_x = x >> 5
-    bucket_y = y >> 5
-    bucket_z = z >> 5
-
-    @extendByBucketAddressExtent(
-      bucket_x,
-      bucket_y,
-      bucket_z,
-      bucket_x,
-      bucket_y,
-      bucket_z
-    )
+    [ x >> 5 + zoomStep, y >> 5 + zoomStep, z >> 5 + zoomStep]
 
 
-  extendByBucketAddress : ([ x, y, z ]) ->
-
-    @extendByBucketAddressExtent(x, y, z, x, y, z)
-
-      
   extendByBucketAddressExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }) ->  
 
     @extendByBucketAddressExtent6(min_x, min_y, min_z, max_x, max_y, max_z)  
@@ -269,7 +220,7 @@ Cube =
     { cube : oldCube, cubeOffset : oldCubeOffset, cubeSize : oldCubeSize } = @
 
     # First, we calculate the new dimension of the cuboid.
-    if oldCube?
+    if oldCube
       oldUpperBound = new Uint32Array(3)
       oldUpperBound[0] = oldCubeOffset[0] + oldCubeSize[0]
       oldUpperBound[1] = oldCubeOffset[1] + oldCubeSize[1]

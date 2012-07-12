@@ -124,9 +124,7 @@ class Mouse
 
   mouseWheel : (evt, delta) =>
     if @changedCallbackMW?
-      up = delta > 0
-      for i in [1..Math.abs(delta)]
-        @changedCallbackMW(up)
+      @changedCallbackMW(delta)
       return false      # prevent scrolling the web page
     
   mouseDown : (evt) =>

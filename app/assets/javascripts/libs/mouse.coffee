@@ -1,5 +1,6 @@
 ### define 
 model/user : User
+libs/jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
 ###
 
 class Mouse
@@ -34,7 +35,7 @@ class Mouse
   constructor : (target, activeCallback) ->
     # @User = User
     @target = target
-  
+
     @activeCallback = activeCallback
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
@@ -43,6 +44,7 @@ class Mouse
       "mousedown" : @mouseDown
       "mouseup"   : @mouseUp
       "mouseenter" : @mouseEnter
+      "mousewheel" : @mouseWheel
 
       # fullscreen pointer lock
       # Firefox does not yet support Pointer Lock
@@ -77,6 +79,9 @@ class Mouse
   bindR : (callback) ->
     @changedCallbackR = callback
 
+  bindW : (callback) ->
+    @changedCallbackMW = callback
+
   unbind : ->
     $(@target).off 
       "mousemove" : @mouseMoved
@@ -85,7 +90,8 @@ class Mouse
       "mouseenter" : @mouseEnter
       "webkitfullscreenchange" : @toogleMouseLock
       "webkitpointerlocklost" : @unlockMouse
-      "webkitpointerlockchange" : @unlockMouse    
+      "webkitpointerlockchange" : @unlockMouse  
+      "mousewheel" : @mouseWheel  
 
   mouseMoved : (evt) =>
     
@@ -113,7 +119,15 @@ class Mouse
       @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
 
   mouseEnter : =>
-    @activeCallback()
+    if @activeCallback?
+      @activeCallback()
+
+  mouseWheel : (evt, delta) =>
+    if @changedCallbackMW?
+      up = delta > 0
+      for i in [1..Math.abs(delta)]
+        @changedCallbackMW(up)
+      return false      # prevent scrolling the web page
     
   mouseDown : (evt) =>
     # check whether the mouseDown event is a rightclick

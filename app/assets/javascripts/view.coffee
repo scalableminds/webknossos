@@ -278,25 +278,29 @@ View =
     # to just use THREEJS' lookAt() function, because it may still
     # look at the plane in a wrong angle. Therefore, the rotation
     # has to be hard coded.
-    @tween = new TWEEN.Tween({ cameraPrev: @cameraPrev, x: @cameraPrev.position.x, y: @cameraPrev.position.y, z: @cameraPrev.position.z, xRot: @cameraPrev.rotation.x, yRot: @cameraPrev.rotation.y, zRot: @cameraPrev.rotation.z})
+    @tween = new TWEEN.Tween({ cameraPrev: @cameraPrev, x: @cameraPrev.position.x, y: @cameraPrev.position.y, z: @cameraPrev.position.z, xRot: @cameraPrev.rotation.x, yRot: @cameraPrev.rotation.y, zRot: @cameraPrev.rotation.z, l: @cameraPrev.left, r: @cameraPrev.right, t: @cameraPrev.top, b: @cameraPrev.bottom})
     switch id
       when VIEW_3D
-        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47)}, 2000)
+        scale = 2100
+        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale, r: scale, t: scale, b: -scale}, 2000)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)
       when PLANE_XY
-        @tween.to({  x: 1250, y: 4000, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(0), zRot: @degToRad(0)}, 2000)
+        scale = 1600
+        @tween.to({  x: 1250, y: 4000, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 2000)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-90, 0, 90) -> (-90, 0, 0)
       when PLANE_YZ
-        @tween.to({  x: 4000, y: 1250, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(90), zRot: @degToRad(0)}, 2000)
+        scale = 1600
+        @tween.to({  x: 4000, y: 1250, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(90), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 2000)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 90, 0) -> (-90, 90, 0)
       when PLANE_XZ
-        @tween.to({  x: 1250, y: 1250, z: 4000, xRot: @degToRad(0), yRot: @degToRad(0), zRot: @degToRad(0)}, 2000)
+        scale = 1600
+        @tween.to({  x: 1250, y: 1250, z: 4000, xRot: @degToRad(0), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 2000)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 0, 0) -> (0, 0, 0)
@@ -307,6 +311,11 @@ View =
   updateCameraPrev : ->
     @cameraPrev.position = new THREE.Vector3(@x, @y, @z)
     @cameraPrev.rotation = new THREE.Vector3(@xRot, @yRot, @zRot)
+    @cameraPrev.left = @l
+    @cameraPrev.right = @r
+    @cameraPrev.top = @t
+    @cameraPrev.bottom = @b
+    @cameraPrev.updateProjectionMatrix()
     cam2d.hasChanged = true
 
   changePrev3D : => View.changePrev(VIEW_3D)

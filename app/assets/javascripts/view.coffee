@@ -192,7 +192,7 @@ View =
       # This is likely to change in the future, if we manage to do the selection,
       # of the corresponding vertices on the GPU
       if cam2d.needsUpdateXY()
-        Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (bufferxy) ->
+        Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY), []).done (bufferxy) ->
           
           # ATTENTION 
           # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)

@@ -68,7 +68,7 @@ PullQueue =
     first = queue.splice(0, 1, queue[queue.length - 1])[0]
     queue.pop()
     @siftDown(0)
-    { first.bucket, first.zoomStep }
+    first
 
 
   clear : ->
@@ -93,14 +93,17 @@ PullQueue =
 
     @pullLoadingCount++
     Cube.setRequestedZoomStepByZoomedAddress(bucket, zoomStep)
+    console.log "Requested: ", bucket, zoomStep
 
     @loadBucketByAddress(bucket, zoomStep).then(
 
       (colors) =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, colors)
+        console.log "Success: ", bucket, zoomStep
 
       =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, null)
+        console.log "Failed: ", bucket, zoomStep
 
     ).always =>
       @pullLoadingCount--

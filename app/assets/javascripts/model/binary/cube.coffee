@@ -57,7 +57,7 @@ Cube =
         for dz in [0...width] by 1
           tmp = @getRequestedZoomStepOfBucketByAddress3(x + dx, y + dy, z + dz)
           worstZoomStep = tmp if tmp > worstZoomStep
-          return if worstZoomStep = @ZOOM_STEP_COUNT
+          return worstZoomStep if worstZoomStep == @ZOOM_STEP_COUNT
 
     worstZoomStep
 
@@ -88,8 +88,8 @@ Cube =
       bucket[0]
       bucket[1]
       bucket[2]
-      bucketData
       zoomStep
+      bucketData
     )
 
 
@@ -131,7 +131,7 @@ Cube =
 
   setRequestedZoomStepByZoomedAddress : (bucket, zoomStep) ->
 
-    setRequestedZoomStepByZoomedAddress3(
+    @setRequestedZoomStepByZoomedAddress3(
       bucket[0]
       bucket[1]
       bucket[2]
@@ -168,7 +168,7 @@ Cube =
       if cube[bucketIndex]
         cube[bucketIndex].requestedZoomStep = 0
       else
-        cube[bucketIndex] = { requestedZoomStep = 0, zoomStep : @ZOOM_STEP_COUNT }
+        cube[bucketIndex] = { requestedZoomStep : 0, zoomStep : @ZOOM_STEP_COUNT }
 
 
   bucketIndexByAddress : (bucket) ->
@@ -198,7 +198,7 @@ Cube =
 
   vertexToZoomedBucketAddress : (vertex, zoomStep) ->
 
-    @vertexToAddress3(
+    @vertexToZoomedBucketAddress3(
       vertex[0]
       vertex[1]
       vertex[2]

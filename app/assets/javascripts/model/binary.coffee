@@ -100,9 +100,9 @@ Binary =
 
   PRELOADING : [0,10,20]
 
-  viewXY = { topLeftBucket: null, zoomStep : null, view : VIEW_XY }
-  viewXZ = { topLeftBucket: null, zoomStep : null, view : VIEW_XZ }
-  viewYZ = { topLeftBucket: null, zoomStep : null, view : VIEW_YZ }
+  viewXY : { topLeftBucket: null, zoomStep : null, view : @VIEW_XY }
+  viewXZ : { topLeftBucket: null, zoomStep : null, view : @VIEW_XZ }
+  viewYZ : { topLeftBucket: null, zoomStep : null, view : @VIEW_YZ }
 
   # Use this method to let us know when you've changed your spot. Then we'll try to 
   # preload some data. 
@@ -121,48 +121,60 @@ Binary =
 
       console.time "ping"
 
-      positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
-      buckets = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
-                @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6),
-                @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6))
+      #positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
+      #buckets = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
+      #          @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6),
+      #          @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6))
 
-      Cube.extendByBucketAddressExtent6(
-        @positionBucket[0] - (@TEXTURE_SIZE >> 6), @positionBucket[1] - (@TEXTURE_SIZE >> 6), @positionBucket[2] - (@TEXTURE_SIZE >> 6),
-        @positionBucket[0] + (@TEXTURE_SIZE >> 6), @positionBucket[1] + (@TEXTURE_SIZE >> 6), @positionBucket[2] + (@TEXTURE_SIZE >> 6),
-        zoomStep)
+      #Cube.extendByBucketAddressExtent6(
+      #  @positionBucket[0] - (@TEXTURE_SIZE >> 6), @positionBucket[1] - (@TEXTURE_SIZE >> 6), @positionBucket[2] - (@TEXTURE_SIZE >> 6),
+      #  @positionBucket[0] + (@TEXTURE_SIZE >> 6), @positionBucket[1] + (@TEXTURE_SIZE >> 6), @positionBucket[2] + (@TEXTURE_SIZE >> 6),
+      #  zoomStep)
 
-      console.time "queue"
+      Cube.extendByBucketAddressExtent6(0, 0, 0, 7, 7, 7)
+
+      #console.time "queue"
       PullQueue.clear()
 
-      direction = [0,0,1]
+      #direction = [0,0,1]
 
-      delta_x = delta_y = delta_z = 0
-      direction_x = direction_y = direction_z = 0
-      index = buckets.length
-      level = 0
+      #delta_x = delta_y = delta_z = 0
+      #direction_x = direction_y = direction_z = 0
+      #index = buckets.length
+      #level = 0
 
-      i = buckets.length * @PRELOADING.length
-      while i--
-        index--
-        if buckets[index]
-          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z, zoomStep], @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]
+      #i = buckets.length * @PRELOADING.length
+      #while i--
+      #  index--
+      #  if buckets[index]
+      #    PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomStep, @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]
 
-        unless i % buckets.length
-          index = buckets.length
-          level++
+      #  unless i % buckets.length
+      #    index = buckets.length
+      #    level++
 
-          delta_x += direction[0]
-          delta_y += direction[1]
-          delta_z += direction[2]
-          direction_x = Math.round(delta_x)
-          direction_y = Math.round(delta_y)
-          direction_z = Math.round(delta_z)
+      #    delta_x += direction[0]
+      #    delta_y += direction[1]
+      #    delta_z += direction[2]
+      #    direction_x = Math.round(delta_x)
+      #    direction_y = Math.round(delta_y)
+      #    direction_z = Math.round(delta_z)
+
+      PullQueue.insert [0, 0, 0], 3, 0
+      PullQueue.insert [0, 0, 0], 1, 1
+      PullQueue.insert [1, 1, 0], 1, 2
+      PullQueue.insert [0, 0, 0], 0, 3
+      PullQueue.insert [0, 1, 0], 0, 4
+      PullQueue.insert [0, 2, 0], 0, 5
+      PullQueue.insert [0, 3, 0], 0, 6
 
       console.timeEnd "queue"
       
       PullQueue.pull()
       
       console.timeEnd "ping"
+
+      console.log Cube.getCube()
 
 
   getXY : (position, zoomStep) ->
@@ -183,7 +195,10 @@ Binary =
   # A synchronized implementation of `get`. Cuz its faster.
   getSync : (position, zoomStep, view) ->
 
-    centerBucket = Cube.vertexToZoomedBucket(position, zoomStep)
+    position = [0,0,0]
+    zoomStep = 2
+
+    centerBucket = Cube.vertexToZoomedBucketAddress(position, zoomStep)
     
     topLeftBucket = [
       centerBucket[0] - (@TEXTURE_SIZE >> 6)
@@ -191,28 +206,31 @@ Binary =
       centerBucket[2] - (@TEXTURE_SIZE >> 6)
     ]
 
+    area = [0,0,32,32]
+
     area = [
       area[0] >> 5
-      area[1] - 1 >> 5
-      area[2] >> 5
+      area[1] >> 5
+      area[2] - 1 >> 5
       area[3] - 1 >> 5
     ]
 
-    unless _.isEqual({ view.topLeftBucket, view.zoomStep }, { topLeftBucket, zoomStep } )
+   # unless _.isEqual(view.topLeftBucket, topLeftBucket) and _.isEqual(view.zoomStep, zoomStep)
 
-      view.topleftBucket = topLeftBucket
-      view.zoomStep = zoomStep
-      view.area = area
-      view.bucketStatusArray = @getBucketStatusArray(topLeftBucket, @TEXTURE_SIZE >> 5, @TEXTURE_SIZE >> 5, view.view)
-      view.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
-      view.changed = true
+    view.topLeftBucket = topLeftBucket
+    view.zoomStep = zoomStep
+    view.area = area
+    view.bucketStatusArray = @getBucketStatusArray(topLeftBucket, @TEXTURE_SIZE >> 5, @TEXTURE_SIZE >> 5, view.view)
+    view.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
+    view.changed = true
 
-    if view.changed or _.isEqual(area, view.area)
+    if view.changed or not _.isEqual(view.area, area)
 
       for u in [area[0]..area[2]] by 1
         for v in [area[1]..area[3]] by 1
-          if view.bucketArray[(area[2] - area[0] + 1) * u + v]
-            @renderBucket()
+          if view.bucketStatusArray[(area[2] - area[0] + 1) * u + v]
+            @renderBucketToBuffer(view.buffer, u << 5 + @TEXTURE_SIZE * v << 5, @generateRenderMap())
+            view.bucketArray[(area[2] - area[0] + 1) * u + v] = false
 
       view.area = area
       view.changed = false
@@ -223,11 +241,20 @@ Binary =
       null
 
 
-  renderBucketToBuffer : (bufferOffset, view) ->
-    null
+  generateRenderMap : () ->
+   # if zoomStep:
+    
+    #  width = 1 << zoomStep
+     # for dx in [0...width] by 1
+      #  for dy in [0...width] by 1
+       #   for dz in [0...width] by 1
+        #    if 
+         #     addBucketToRenderMap()
+    #else
+     # {  }
 
 
-  renderBucketToBuffer : () ->
+  renderBucketToBuffer : (buffer, bufferOffset, renderMap) ->
     null
 
 
@@ -235,8 +262,8 @@ Binary =
 
     status = []
 
-    if view = @VIEW_XZ offset = [offset[0], offset[2], offset[1]]
-    if view = @VIEW_YZ offset = [offset[1], offset[2], offset[0]]
+    offset = [offset[0], offset[2], offset[1]] if view == @VIEW_XZ
+    offset = [offset[1], offset[2], offset[0]] if view == @VIEW_YZ
 
     for delta_u in [0..range_u - 1] by 1
       for delta_v in [0..range_v - 1] by 1

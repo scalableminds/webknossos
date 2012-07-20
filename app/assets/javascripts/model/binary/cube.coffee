@@ -98,18 +98,16 @@ Cube =
     { cube } = @
       
     if zoomStep
-      baseBucketMask = ~0 << zoomStep
-
-      baseBucket_x = bucket_x & baseBucketMask
-      baseBucket_y = bucket_y & baseBucketMask
-      baseBucket_z = bucket_z & baseBucketMask
+      x = bucket_x << zoomStep
+      y = bucket_y << zoomStep
+      z = bucket_z << zoomStep
 
       width = 1 << zoomStep
       for dx in [0...width] by 1
         for dy in [0...width] by 1
           for dz in [0...width] by 1
 
-            bucket = cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)]
+            bucket = cube[@bucketIndexByAddress3(x + dx, y + dy, z + dz)]
 
             if bucketData
               if zoomStep < bucket.zoomStep 
@@ -128,6 +126,8 @@ Cube =
       else
         bucket.requestedZoomStep = bucket.zoomStep
 
+    return
+
 
   setRequestedZoomStepByZoomedAddress : (bucket, zoomStep) ->
 
@@ -144,18 +144,17 @@ Cube =
     { cube } = @
 
     if zoomStep
-      baseBucketMask = ~0 << zoomStep
 
-      baseBucket_x = bucket_x & baseBucketMask
-      baseBucket_y = bucket_y & baseBucketMask
-      baseBucket_z = bucket_z & baseBucketMask
+      x = bucket_x << zoomStep
+      y = bucket_y << zoomStep
+      z = bucket_z << zoomStep
 
       width = 1 << zoomStep
       for dx in [0...width] by 1
         for dy in [0...width] by 1
           for dz in [0...width] by 1
 
-            bucketIndex = @bucketIndexByAddress3(baseBucket_x + dx, baseBucket_y + dy, baseBucket_z + dz)
+            bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz)
 
             if cube[bucketIndex]
               cube[bucketIndex].requestedZoomStep = Math.min(zoomStep, cube[bucketIndex].requestedZoomStep)
@@ -163,12 +162,14 @@ Cube =
               cube[bucketIndex] = { requestedZoomStep : zoomStep, zoomStep : @ZOOM_STEP_COUNT }
 
     else
-      bucketIndex = @bucketIndexByAddress3(baseBucket_x + dx, baseBucket_y + dy, baseBucket_z + dz)
+      bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
 
       if cube[bucketIndex]
         cube[bucketIndex].requestedZoomStep = 0
       else
         cube[bucketIndex] = { requestedZoomStep : 0, zoomStep : @ZOOM_STEP_COUNT }
+
+    return
 
 
   bucketIndexByAddress : (bucket) ->

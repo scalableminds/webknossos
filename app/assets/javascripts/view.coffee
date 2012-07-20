@@ -481,12 +481,13 @@ View =
   setWaypoint : (position) ->
     unless @curIndex
       @curIndex = 1 
-      @route.geometry.vertices[0] = new THREE.Vector3(2046, 1036, 470)
+      @route.geometry.vertices[0] = new THREE.Vector3(2046, 2500 - 470, 1036)
     # resize buffer if route gets too long
     if @curIndex >= @maxRouteLen
       @maxRouteLen *= 2
       @createRoute @maxRouteLen, @route
-    @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], position[1], position[2])
+    # Translating ThreeJS' coordinate system to the preview's one
+    @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], 2500 - position[2], position[1])
     @route.geometry.verticesNeedUpdate = true
     @curIndex += 1
     cam2d.hasChanged = true
@@ -500,15 +501,11 @@ View =
       for vertex in lastRoute.geometry.vertices
         routeGeometry.vertices.push(vertex)
       i = @maxRouteLen / 2
-      while i < maxRouteLen
-        # workaround to hide the unused vertices
-        routeGeometry.vertices.push(new THREE.Vector2(0, 0))
-        i += 1
-    else
-      while i < maxRouteLen
-        # workaround to hide the unused vertices
-        routeGeometry.vertices.push(new THREE.Vector2(0, 0))
-        i += 1
+    while i < maxRouteLen
+      # workaround to hide the unused vertices
+      routeGeometry.vertices.push(new THREE.Vector2(0, 0))
+      i += 1
+
     routeGeometry.dynamic = true
     route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000}))
     @route = route

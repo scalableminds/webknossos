@@ -5,7 +5,6 @@ libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 ###
 
 # #Model.PullQueue#
-# TODO
 
 PullQueue = 
 

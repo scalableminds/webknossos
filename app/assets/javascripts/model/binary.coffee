@@ -66,7 +66,8 @@ libs/simple_worker : SimpleWorker
 # trilinear interpolation so the result should be quite smooth. However, 
 # if one of the required 2, 4 or 8 points is missing we'll decide that 
 # your requested point can't be valid aswell.
-# 
+#
+
 
 Binary =
 
@@ -100,9 +101,11 @@ Binary =
 
   PRELOADING : [0,10,20]
 
-  viewXY : { topLeftBucket: null, zoomStep : null, view : @VIEW_XY }
-  viewXZ : { topLeftBucket: null, zoomStep : null, view : @VIEW_XZ }
-  viewYZ : { topLeftBucket: null, zoomStep : null, view : @VIEW_YZ }
+  views : [
+    { topLeftBucket : null, zoomStep : null }
+    { topLeftBucket : null, zoomStep : null }
+    { topLeftBucket : null, zoomStep : null }
+  ]
 
   # Use this method to let us know when you've changed your spot. Then we'll try to 
   # preload some data. 
@@ -177,36 +180,39 @@ Binary =
       console.log Cube.getCube()
 
 
-  getXY : (position, zoomStep) ->
-
-    $.when(@getSync(position, zoomStep, @viewXY))
-
-
-  getXZ : (position, zoomStep) ->
-
-    $.when(@getXZSync(position, zoomStep, @viewXZ))
+  getXY : (position, zoomStep, area) ->
+    $.when(@getSync(position, zoomStep, area, @VIEW_XY))
 
 
-  getYZ : (position, zoomStep) ->
+  getXZ : (position, zoomStep, area) ->
 
-    $.when(@getYZSync(position, zoomStep, @viewYZ))
+    $.when(@getXZSync(position, zoomStep, area, @VIEW_XZ))
+
+
+  getYZ : (position, zoomStep, area) ->
+
+    $.when(@getYZSync(position, zoomStep, area, @VIEW_YZ))
 
 
   # A synchronized implementation of `get`. Cuz its faster.
-  getSync : (position, zoomStep, view) ->
-
-    position = [0,0,0]
+  getSync : (position, zoomStep, area, view) ->
+    position = [0,0,33]
+    area = [0,0,32,32]
     zoomStep = 2
 
-    centerBucket = Cube.vertexToZoomedBucketAddress(position, zoomStep)
-    
-    topLeftBucket = [
-      centerBucket[0] - (@TEXTURE_SIZE >> 6)
-      centerBucket[1] - (@TEXTURE_SIZE >> 6)
-      centerBucket[2] - (@TEXTURE_SIZE >> 6)
-    ]
+    currentView = @views[view]
 
-    area = [0,0,32,32]
+    topLeftBucket = Cube.vertexToZoomedBucketAddress3(
+      position[0] - (@TEXTURE_SIZE >> 1)
+      position[1] - (@TEXTURE_SIZE >> 1)
+      position[2] - (@TEXTURE_SIZE >> 1)
+      zoomStep
+    )
+
+    layerMask = (1 << 5) - 1
+    layer = position[2] & layerMask if view.view == @VIEW_XY
+    layer = position[1] & layerMask if view.view == @VIEW_XZ
+    layer = position[0] & layerMask if view.view == @VIEW_YZ
 
     area = [
       area[0] >> 5
@@ -215,14 +221,14 @@ Binary =
       area[3] - 1 >> 5
     ]
 
-   # unless _.isEqual(view.topLeftBucket, topLeftBucket) and _.isEqual(view.zoomStep, zoomStep)
+    unless _.isEqual(currentView.topLeftBucket, topLeftBucket) and _.isEqual(currentView.zoomStep, zoomStep)
 
-    view.topLeftBucket = topLeftBucket
-    view.zoomStep = zoomStep
-    view.area = area
-    view.bucketStatusArray = @getBucketStatusArray(topLeftBucket, @TEXTURE_SIZE >> 5, @TEXTURE_SIZE >> 5, view.view)
-    view.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
-    view.changed = true
+      view.topLeftBucket = topLeftBucket
+      view.zoomStep = zoomStep
+      view.area = area
+      view.bucketStatusArray = @getBucketStatusArray(topLeftBucket, @TEXTURE_SIZE >> 5, @TEXTURE_SIZE >> 5, view.view)
+      view.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
+      view.changed = true
 
     if view.changed or not _.isEqual(view.area, area)
 

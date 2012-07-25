@@ -7,9 +7,8 @@ PLANE_XZ = 2
   
 class Flycam2d
 
-  constructor : (distance) ->
-    @buffer = 256-distance          # buffer: how many pixels is the texture larger than the canvas on each side?
-    @defaultDistance = distance
+  constructor : (width) ->
+    @buffer = 256-width/2          # buffer: how many pixels is the texture larger than the canvas on each side?
     @newBuckets = false
     @zoomSteps = [0, 0, 0]
   #  @reset()
@@ -18,8 +17,6 @@ class Flycam2d
     @texturePositionYZ = [0, 0, 0]
     @texturePositionXZ = [0, 0, 0]
     @direction = [0, 0, 1]
-    @stepBack = [0, 0, -distance]    #TODO: What is this for?
-    @stepFront = [0, 0, distance]    #TODO: What is this for?
     @hasChanged = true
     @activePlane = PLANE_XY
 
@@ -88,6 +85,7 @@ class Flycam2d
       @globalPosition[2]!=@texturePositionXY[2] ) and @globalPosition!= [0,0,0]) or @newBuckets
 
   getOffsetsXY : ->
+    if @needsUpdateXY() then return [@buffer, @buffer]
     [@globalPosition[0]-@texturePositionXY[0]+@buffer,
      @globalPosition[1]-@texturePositionXY[1]+@buffer]
 
@@ -101,6 +99,7 @@ class Flycam2d
       @globalPosition[0]!=@texturePositionYZ[0] ) and @globalPosition!= [0,0,0])
 
   getOffsetsYZ : ->
+    if @needsUpdateYZ() then return [@buffer, @buffer]
     [@globalPosition[2]-@texturePositionYZ[2]+@buffer,
      @globalPosition[1]-@texturePositionYZ[1]+@buffer]
 
@@ -113,6 +112,7 @@ class Flycam2d
       @globalPosition[1]!=@texturePositionXZ[1] ) and @globalPosition!= [0,0,0])
 
   getOffsetsXZ : ->
+    if @needsUpdateXZ() then return [@buffer, @buffer]
     [@globalPosition[0]-@texturePositionXZ[0]+@buffer,
      @globalPosition[2]-@texturePositionXZ[2]+@buffer]
 

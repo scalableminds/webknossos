@@ -53,9 +53,9 @@ GeometryFactory =
     #  Model.Trianglesplane.get(width, zOffset)  
     #).pipe (shader, geometry) ->
 
-      planexy = new THREE.PlaneGeometry(512, 512, 1, 1)
-      planeyz = new THREE.PlaneGeometry(512, 512, 1, 1)
-      planexz = new THREE.PlaneGeometry(512, 512, 1, 1)
+      planexy = new THREE.PlaneGeometry(380, 380, 1, 1)
+      planeyz = new THREE.PlaneGeometry(380, 380, 1, 1)
+      planexz = new THREE.PlaneGeometry(380, 380, 1, 1)
       planePrevXY = new THREE.PlaneGeometry(384, 384, 1, 1)
       planePrevYZ = new THREE.PlaneGeometry(384, 384, 1, 1)
       planePrevXZ = new THREE.PlaneGeometry(384, 384, 1, 1)

@@ -9,8 +9,9 @@ libs/Tween : TWEEN_LIB
 cam2d = null
 
 # constants
-# display 384px out of 512px total width and height
-CAM_DISTANCE = 384/2  #alt: 96
+# display 512px out of 512px total width and height
+CAM_DISTANCE = 384/2 # alt: 384/2  #alt: 96
+VIEWPORT_WIDTH = 380
 PLANE_XY = 0
 PLANE_YZ = 1
 PLANE_XZ = 2
@@ -27,19 +28,19 @@ View =
     HEIGHT = (container.height()-48)/2
 
     # Initialize main THREE.js components
-    @rendererxy = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
+    @rendererxy = new THREE.WebGLRenderer({ clearColor: 0xff0000, clearAlpha: 1, antialias: true })
     @cameraxy = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 1, 1000)
     @scenexy = new THREE.Scene()
 
-    @rendereryz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, antialias: true })
+    @rendereryz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, clearAlpha: 1, antialias: true })
     @camerayz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
     @sceneyz = new THREE.Scene()
 
-    @rendererxz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, antialias: true })
+    @rendererxz = new THREE.WebGLRenderer({ clearColor: 0x00ff00, clearAlpha: 1, antialias: true })
     @cameraxz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
     @scenexz = new THREE.Scene()
 
-    @rendererPrev = new THREE.WebGLRenderer({ clearColor: 0xffffff, antialias: true })
+    @rendererPrev = new THREE.WebGLRenderer({ clearColor: 0xffffff, clearAlpha: 1, antialias: true })
     @cameraPrev = new THREE.OrthographicCamera(-2100, 2100, 2100, -2100, -100000, 100000)
     @scenePrev = new THREE.Scene()
 
@@ -96,7 +97,7 @@ View =
 
     # This "camera" is not a camera in the traditional sense.
     # It just takes care of the global position
-    cam2d = new Flycam2d CAM_DISTANCE
+    cam2d = new Flycam2d VIEWPORT_WIDTH
     @setActivePlaneXY()
     
     # FPS stats
@@ -157,25 +158,36 @@ View =
   # Let's apply new pixels to the trianglesplane.
   # We do so by apply a new texture to it.
   updateTrianglesplane : ->
+      # properties for each plane, so we can do it in a loop rather than calling each function six times...
+      propsXY = {needsUpdate: cam2d.needsUpdateXY(), getFkt: Model.Binary.getXY, planeID: PLANE_XY, offsets: cam2d.getOffsetsXY()}
+      propsYZ = {needsUpdate: cam2d.needsUpdateXY(), getFkt: Model.Binary.getXY, planeID: PLANE_YZ, offsets: cam2d.getOffsetsXY()}
+      propsXZ = {needsUpdate: cam2d.needsUpdateXY(), getFkt: Model.Binary.getXY, planeID: PLANE_XZ, offsets: cam2d.getOffsetsXY()}
+
       # new trianglesplane for xy
       return unless @trianglesplanexy
       gxy = @trianglesplanexy
+      gxy.props = propsXY
 
       # new trianglesplane for yz
       return unless @trianglesplaneyz
       gyz = @trianglesplaneyz
+      gyz.props = propsYZ
 
       # new trianglesplane for xz
       return unless @trianglesplanexz
       gxz = @trianglesplanexz
+      gxz.props = propsXZ
 
-      # new trianglesplanes preview
+      # new trianglesplanes for preview
       return unless @trianglesplanePrevXY
       gpxy = @trianglesplanePrevXY
+      gpxy.props = propsXY
       return unless @trianglesplanePrevYZ
       gpyz = @trianglesplanePrevYZ
+      gpyz.props = propsYZ
       return unless @trianglesplanePrevXZ
       gpxz = @trianglesplanePrevXZ
+      gpxz.props = propsXZ
 
       # sends current position to Model for preloading data
       # NEW with direction vector
@@ -185,79 +197,47 @@ View =
       # sends current position to Model for caching route
       Model.Route.put cam2d.getGlobalPos()
 
-      # trilinear interpolation
-      # we used to do this on the shader (trianglesplane.vs)
-      # but we switched to this software method in order to use texture on the 
-      # trianglesplane
-      # This is likely to change in the future, if we manage to do the selection,
-      # of the corresponding vertices on the GPU
-      if cam2d.needsUpdateXY()
-        Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (bufferxy) ->
-          
-          # ATTENTION 
-          # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
-          # the data attribute is only available for DataTexture (in other cases it is only texture.image)
-          gxy.texture.image.data.set(bufferxy)
-
-          # Update the texture data and make sure the new texture
-          # is used by the Mesh's material.
-          gxy.texture.needsUpdate = true
-          gxy.material.map = gxy.texture
-
-          # TODO implement other two interfaces to get new textures, for now just use the old buffer
-          #Model.Binary.getyz(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_YZ)).done (bufferyz) ->
-          gyz.texture.image.data.set(bufferxy)
-          gyz.texture.needsUpdate = true
-          gyz.material.map = gyz.texture
-  
-        #Model.Binary.getyz(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XZ)).done (bufferxz) ->
-          gxz.texture.image.data.set(bufferxy)
-          gxz.texture.needsUpdate = true
-          gxz.material.map = gxz.texture
-
-          gxy.position = new THREE.Vector3(0, 0, 0)
-          cam2d.notifyNewTextureXY()
-      else
-        gxy.position = new THREE.Vector3(-cam2d.getGlobalPos()[0]+cam2d.getTexturePositionXY()[0],
-                                          cam2d.getGlobalPos()[1]-cam2d.getTexturePositionXY()[1], 0)
-        # The following two lines might actually accomplish that faster, but for some reason this
-        # moves the plan along the z axis...
-        #
-        #gxy.translateX(-(cam2d.getGlobalPos()[0]-cam2d.getTexturePositionXY()[0])-gxy.position.x)
-        #gxy.translateY((cam2d.getGlobalPos()[1]-cam2d.getTexturePositionXY()[1])-gxy.position.y)
-
       globalPos = cam2d.getGlobalPos()
       # Translating ThreeJS' coordinate system to the preview's one
       globalPosVec = new THREE.Vector3(globalPos[0], 2500-globalPos[2], globalPos[1])
-
-      # Cropping and mapping the Textures to preview planes
-      offsetsXY = cam2d.getOffsetsXY()
-      gpxy.position = globalPosVec
-      gpxy.texture = gxy.texture.clone()
-      gpxy.texture.needsUpdate = true
-      gpxy.material.map = gpxy.texture
-      gpxy.material.map.repeat.x = CAM_DISTANCE*2 / 512;
-      gpxy.material.map.repeat.y = CAM_DISTANCE*2 / 512;
-      gpxy.material.map.offset.x = offsetsXY[0] / 512;
-      gpxy.material.map.offset.y = offsetsXY[1] / 512;
       
-      gpyz.position = globalPosVec
-      gpyz.texture = gyz.texture.clone()
-      gpyz.texture.needsUpdate = true
-      gpyz.material.map = gpyz.texture
-      gpyz.material.map.repeat.x = CAM_DISTANCE*2 / 512;
-      gpyz.material.map.repeat.y = CAM_DISTANCE*2 / 512;
-      gpyz.material.map.offset.x = (512 - CAM_DISTANCE*2) / 2 / 512;
-      gpyz.material.map.offset.y = (512 - CAM_DISTANCE*2) / 2 / 512;
-      
-      gpxz.position = globalPosVec
-      gpxz.texture = gxz.texture.clone()
-      gpxz.texture.needsUpdate = true
-      gpxz.material.map = gpxz.texture
-      gpxz.material.map.repeat.x = CAM_DISTANCE*2 / 512;
-      gpxz.material.map.repeat.y = CAM_DISTANCE*2 / 512;
-      gpxz.material.map.offset.x = (512 - CAM_DISTANCE*2) / 2 / 512;
-      gpxz.material.map.offset.y = (512 - CAM_DISTANCE*2) / 2 / 512;
+      i = 0       # counts which plane is used
+      for plane in [gxy, gyz, gxz, gpxy, gpxz, gpyz]
+        i++
+        if plane.props.needsUpdate and i<=3
+          # TODO: Why don't those lines work? it would get rid of that huge switch statement 
+          #
+          #plane.props.getFkt(cam2d.getGlobalPos(), cam2d.getZoomStep(plane.props.planeID)).done (buffer) ->
+          #  plane.texture.image.data.set(buffer)
+          switch plane.props.planeID
+            when PLANE_XY
+              Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
+                plane.texture.image.data.set(buffer)
+                cam2d.notifyNewTextureXY()
+            when PLANE_YZ
+              Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
+                plane.texture.image.data.set(buffer)
+                cam2d.notifyNewTextureXY()
+            when PLANE_XZ
+              Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
+                plane.texture.image.data.set(buffer)
+                cam2d.notifyNewTextureXY()
+        
+        else if i>=4
+          switch plane.props.planeID
+            when PLANE_XY then plane.texture = gxy.texture.clone()
+            when PLANE_YZ then plane.texture = gyz.texture.clone()
+            when PLANE_XZ then plane.texture = gxz.texture.clone()
+        
+        offsets = plane.props.offsets
+        plane.texture.needsUpdate = true
+        plane.material.map = plane.texture
+        if i>3 then plane.position = globalPosVec
+        else
+          plane.material.map.repeat.x = VIEWPORT_WIDTH / 508;
+          plane.material.map.repeat.y = VIEWPORT_WIDTH / 508;
+          plane.material.map.offset.x = offsets[0] / 508;
+          plane.material.map.offset.y = offsets[1] / 508;
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
@@ -282,25 +262,25 @@ View =
     switch id
       when VIEW_3D
         scale = 2100
-        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale, r: scale, t: scale, b: -scale}, 2000)
+        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale, r: scale, t: scale, b: -scale}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)
       when PLANE_XY
         scale = 1600
-        @tween.to({  x: 1250, y: 4000, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 2000)
+        @tween.to({  x: 1250, y: 4000, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-90, 0, 90) -> (-90, 0, 0)
       when PLANE_YZ
         scale = 1600
-        @tween.to({  x: 4000, y: 1250, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(90), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 2000)
+        @tween.to({  x: 4000, y: 1250, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(90), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 90, 0) -> (-90, 90, 0)
       when PLANE_XZ
         scale = 1600
-        @tween.to({  x: 1250, y: 1250, z: 4000, xRot: @degToRad(0), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 2000)
+        @tween.to({  x: 1250, y: 1250, z: 4000, xRot: @degToRad(0), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 0, 0) -> (0, 0, 0)

@@ -224,18 +224,21 @@ View =
                 cam2d.notifyNewTextureXY()
         
         else if i>=4
+          sFactor = cam2d.getPlaneScalingFactor plane.props.planeID
+          plane.scale.x = plane.scale.y = plane.scale.z = sFactor
           switch plane.props.planeID
             when PLANE_XY then plane.texture = gxy.texture.clone()
             when PLANE_YZ then plane.texture = gyz.texture.clone()
             when PLANE_XZ then plane.texture = gxz.texture.clone()
         
         offsets = plane.props.offsets
+        scalingFactor = cam2d.getTextureScalingFactor plane.props.planeID
         plane.texture.needsUpdate = true
         plane.material.map = plane.texture
         if i>3 then plane.position = globalPosVec
         else
-          plane.material.map.repeat.x = VIEWPORT_WIDTH / 508;
-          plane.material.map.repeat.y = VIEWPORT_WIDTH / 508;
+          plane.material.map.repeat.x = VIEWPORT_WIDTH*scalingFactor / 508;
+          plane.material.map.repeat.y = VIEWPORT_WIDTH*scalingFactor / 508;
           plane.material.map.offset.x = offsets[0] / 508;
           plane.material.map.offset.y = offsets[1] / 508;
   
@@ -407,13 +410,11 @@ View =
       @resize()
 
   zoomIn : ->
-    if cam2d.getZoomStep(cam2d.getActivePlane()) > 0
-      cam2d.zoomIn(cam2d.getActivePlane())
+    cam2d.zoomIn(cam2d.getActivePlane())
 
   #todo: validation in Model
   zoomOut : ->
-    if cam2d.getZoomStep(cam2d.getActivePlane()) < 3
-      cam2d.zoomOut(cam2d.getActivePlane())
+    cam2d.zoomOut(cam2d.getActivePlane())
 
   setActivePlane : (activePlane) ->
     cam2d.setActivePlane activePlane

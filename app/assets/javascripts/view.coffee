@@ -118,7 +118,8 @@ View =
 
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
-    $(window).on("bucketloaded", => cam2d.hasChanged = true; cam2d.newBuckets = true) 
+    # FIXME: notifies all planes when any bucket is loaded
+    $(window).on("bucketloaded", => cam2d.hasChanged = true; cam2d.newBuckets = [true, true, true]) 
 
   animate : ->
     @renderFunction()
@@ -142,7 +143,7 @@ View =
     
     # update postion and FPS displays
     position2d = cam2d.getGlobalPos()
-    texturePositionXY = cam2d.texturePositionXY
+    texturePositionXY = cam2d.texturePosition[0]
     # without rounding the position becomes really long and blocks the canvas mouse input
     position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
     texturePositionXY = [Math.round(texturePositionXY[0]),Math.round(texturePositionXY[1]),Math.round(texturePositionXY[2])]
@@ -159,9 +160,9 @@ View =
   # We do so by apply a new texture to it.
   updateTrianglesplane : ->
       # properties for each plane, so we can do it in a loop rather than calling each function six times...
-      propsXY = {needsUpdate: cam2d.needsUpdateXY(), getFkt: Model.Binary.getXY, planeID: PLANE_XY, offsets: cam2d.getOffsetsXY()}
-      propsYZ = {needsUpdate: cam2d.needsUpdateXY(), getFkt: Model.Binary.getXY, planeID: PLANE_YZ, offsets: cam2d.getOffsetsXY()}
-      propsXZ = {needsUpdate: cam2d.needsUpdateXY(), getFkt: Model.Binary.getXY, planeID: PLANE_XZ, offsets: cam2d.getOffsetsXY()}
+      propsXY = {getFkt: Model.Binary.getXY, planeID: PLANE_XY}
+      propsYZ = {getFkt: Model.Binary.getXY, planeID: PLANE_YZ}
+      propsXZ = {getFkt: Model.Binary.getXY, planeID: PLANE_XZ}
 
       # new trianglesplane for xy
       return unless @trianglesplanexy
@@ -204,7 +205,7 @@ View =
       i = 0       # counts which plane is used
       for plane in [gxy, gyz, gxz, gpxy, gpxz, gpyz]
         i++
-        if plane.props.needsUpdate and i<=3
+        if cam2d.needsUpdate(plane.props.planeID) and i<=3
           # TODO: Why don't those lines work? it would get rid of that huge switch statement 
           #
           #plane.props.getFkt(cam2d.getGlobalPos(), cam2d.getZoomStep(plane.props.planeID)).done (buffer) ->
@@ -213,15 +214,13 @@ View =
             when PLANE_XY
               Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
                 plane.texture.image.data.set(buffer)
-                cam2d.notifyNewTextureXY()
             when PLANE_YZ
               Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
                 plane.texture.image.data.set(buffer)
-                cam2d.notifyNewTextureXY()
             when PLANE_XZ
               Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
                 plane.texture.image.data.set(buffer)
-                cam2d.notifyNewTextureXY()
+          cam2d.notifyNewTexture plane.props.planeID
         
         else if i>=4
           sFactor = cam2d.getPlaneScalingFactor plane.props.planeID
@@ -231,7 +230,7 @@ View =
             when PLANE_YZ then plane.texture = gyz.texture.clone()
             when PLANE_XZ then plane.texture = gxz.texture.clone()
         
-        offsets = plane.props.offsets
+        offsets = cam2d.getOffsets plane.props.planeID
         scalingFactor = cam2d.getTextureScalingFactor plane.props.planeID
         plane.texture.needsUpdate = true
         plane.material.map = plane.texture
@@ -351,7 +350,7 @@ View =
   moveActivePlane : (p) ->
     switch (cam2d.getActivePlane())
       when PLANE_XY
-        cam2d.move p
+        cam2d.moveActivePlane p
       when PLANE_YZ
         cam2d.move [p[2], p[1], p[0]]
       when PLANE_XZ
@@ -359,13 +358,13 @@ View =
 
   #FIXME: why can't I call move() from within this function?
   moveX : (x) -> 
-    cam2d.move [x, 0, 0]
+    cam2d.moveActivePlane [x, 0, 0]
 
   moveY : (y) ->
-    cam2d.move [0, y, 0]
+    cam2d.moveActivePlane [0, y, 0]
   
   moveZ : (z) ->
-    cam2d.move [0, 0, z]
+    cam2d.moveActivePlane [0, 0, z]
 
   prevViewportSite : =>
     (View.cameraPrev.right - View.cameraPrev.left)         # always quadratic

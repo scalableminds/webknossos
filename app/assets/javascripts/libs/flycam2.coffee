@@ -137,8 +137,8 @@ class Flycam2d
     ind = @getIndices planeID
     f   = @getPlaneScalingFactor planeID
     #if @needsUpdate(planeID) then return [buffer[planeID], buffer[planeID]]
-    [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]])/f + @buffer[planeID],
-      (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]])/f + @buffer[planeID]]
+    [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]]) + @buffer[planeID],
+      (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]]) + @buffer[planeID]]
 
   #notifyNewTextureXY : ->
   #  @texturePositionXY = @globalPosition.slice()    #copy that position

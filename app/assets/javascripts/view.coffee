@@ -189,6 +189,12 @@ View =
       return unless @trianglesplanePrevXZ
       gpxz = @trianglesplanePrevXZ
       gpxz.props = propsXZ
+      gbxy = @borderPrevXY
+      gbxy.props = propsXY
+      gbyz = @borderPrevYZ
+      gbyz.props = propsYZ
+      gbxz = @borderPrevXZ
+      gbxz.props = propsXZ
 
       # sends current position to Model for preloading data
       # NEW with direction vector
@@ -203,7 +209,7 @@ View =
       globalPosVec = new THREE.Vector3(globalPos[0], 2500-globalPos[2], globalPos[1])
       
       i = 0       # counts which plane is used
-      for plane in [gxy, gyz, gxz, gpxy, gpxz, gpyz]
+      for plane in [gxy, gyz, gxz, gpxy, gpxz, gpyz, gbxy, gbyz, gbxz]
         i++
         if cam2d.needsUpdate(plane.props.planeID) and i<=3
           # TODO: Why don't those lines work? it would get rid of that huge switch statement 
@@ -218,13 +224,11 @@ View =
               Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
                 plane.texture.image.data.set(buffer)
             when PLANE_XZ
-              Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
-                plane.texture.image.data.set(buffer)
+             Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
+               plane.texture.image.data.set(buffer)
           cam2d.notifyNewTexture plane.props.planeID
         
-        else if i>=4
-          sFactor = cam2d.getPlaneScalingFactor plane.props.planeID
-          plane.scale.x = plane.scale.y = plane.scale.z = sFactor
+        else if i>=4 and i<=6
           switch plane.props.planeID
             when PLANE_XY then plane.texture = gxy.texture.clone()
             when PLANE_YZ then plane.texture = gyz.texture.clone()
@@ -232,9 +236,14 @@ View =
         
         offsets = cam2d.getOffsets plane.props.planeID
         scalingFactor = cam2d.getTextureScalingFactor plane.props.planeID
-        plane.texture.needsUpdate = true
-        plane.material.map = plane.texture
-        if i>3 then plane.position = globalPosVec
+        if i>=4
+          sFactor = cam2d.getPlaneScalingFactor plane.props.planeID
+          plane.scale.x = plane.scale.y = plane.scale.z = sFactor
+        if i<=6
+          plane.texture.needsUpdate = true
+          plane.material.map = plane.texture
+        if i>=4 and i<=6 then plane.position = globalPosVec
+        else if i>=7 then plane.position = new THREE.Vector3(globalPosVec.x-1, globalPosVec.y-1, globalPosVec.z-1)
         else
           plane.material.map.repeat.x = VIEWPORT_WIDTH*scalingFactor / 508;
           plane.material.map.repeat.y = VIEWPORT_WIDTH*scalingFactor / 508;

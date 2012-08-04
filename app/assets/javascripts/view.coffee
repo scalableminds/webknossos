@@ -160,9 +160,9 @@ View =
   # We do so by apply a new texture to it.
   updateTrianglesplane : ->
       # properties for each plane, so we can do it in a loop rather than calling each function six times...
-      propsXY = {getFkt: Model.Binary.getXY, planeID: PLANE_XY}
-      propsYZ = {getFkt: Model.Binary.getXY, planeID: PLANE_YZ}
-      propsXZ = {getFkt: Model.Binary.getXY, planeID: PLANE_XZ}
+      propsXY = {getFkt: Model.Binary.get, planeID: PLANE_XY}
+      propsYZ = {getFkt: Model.Binary.get, planeID: PLANE_YZ}
+      propsXZ = {getFkt: Model.Binary.get, planeID: PLANE_XZ}
 
       # new trianglesplane for xy
       return unless @trianglesplanexy
@@ -218,14 +218,14 @@ View =
           #  plane.texture.image.data.set(buffer)
           switch plane.props.planeID
             when PLANE_XY
-              Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
-                plane.texture.image.data.set(buffer)
-            when PLANE_YZ
-              Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
-                plane.texture.image.data.set(buffer)
-            when PLANE_XZ
-             Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
-               plane.texture.image.data.set(buffer)
+              Model.Binary.get(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY), [0, 0, 100, 100], 0)#.done (buffer) ->
+              #plane.texture.image.data.set(buffer)
+           # when PLANE_YZ
+           #   Model.Binary.get(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY), [0, 0, 100, 100], 0).done (buffer) ->
+           #     plane.texture.image.data.set(buffer)
+           # when PLANE_XZ
+           #  Model.Binary.get(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY), [0, 0, 100, 100], 0).done (buffer) ->
+           #    plane.texture.image.data.set(buffer)
           cam2d.notifyNewTexture plane.props.planeID
         
         else if i>=4 and i<=6

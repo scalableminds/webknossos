@@ -3,6 +3,7 @@ libs/flycam : Flycam
 libs/flycam2 : Flycam2d
 model : Model
 libs/Tween : TWEEN_LIB
+model/game : Game
 ###
     
 # global View variables
@@ -109,13 +110,13 @@ View =
     @stats = stats
     @positionStats = $("#status")
 
-    @changePrev VIEW_3D
+    @first = true
     # start the rendering loop
     @animate()
 
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
-
+    
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
@@ -206,8 +207,13 @@ View =
 
       globalPos = cam2d.getGlobalPos()
       # Translating ThreeJS' coordinate system to the preview's one
-      globalPosVec = new THREE.Vector3(globalPos[0], 2500-globalPos[2], globalPos[1])
+      globalPosVec = new THREE.Vector3(globalPos[0], Game.dataSet.upperBoundary[1]-globalPos[2], globalPos[1])
       
+      if @first==true
+        @changePrev VIEW_3D
+        @first = false
+
+    
       i = 0       # counts which plane is used
       for plane in [gxy, gyz, gxz, gpxy, gpxz, gpyz, gbxy, gbyz, gbxz]
         i++
@@ -269,29 +275,30 @@ View =
     # to just use THREEJS' lookAt() function, because it may still
     # look at the plane in a wrong angle. Therefore, the rotation
     # has to be hard coded.
-    @tween = new TWEEN.Tween({ cameraPrev: @cameraPrev, x: @cameraPrev.position.x, y: @cameraPrev.position.y, z: @cameraPrev.position.z, xRot: @cameraPrev.rotation.x, yRot: @cameraPrev.rotation.y, zRot: @cameraPrev.rotation.z, l: @cameraPrev.left, r: @cameraPrev.right, t: @cameraPrev.top, b: @cameraPrev.bottom})
+    @tween = new TWEEN.Tween({ texts: @texts, cameraPrev: @cameraPrev, x: @cameraPrev.position.x, y: @cameraPrev.position.y, z: @cameraPrev.position.z, xRot: @cameraPrev.rotation.x, yRot: @cameraPrev.rotation.y, zRot: @cameraPrev.rotation.z, l: @cameraPrev.left, r: @cameraPrev.right, t: @cameraPrev.top, b: @cameraPrev.bottom})
+    b = Game.dataSet.upperBoundary
     switch id
       when VIEW_3D
-        scale = 2100
-        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale, r: scale, t: scale, b: -scale}, 800)
+        scale = Math.sqrt(b[0]*b[0]+b[1]*b[1]+b[2]*b[2])/1.9
+        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale, r: scale, t: scale+scale*0.25, b: -scale+scale*0.25}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)
       when PLANE_XY
-        scale = 1600
-        @tween.to({  x: 1250, y: 4000, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 800)
+        scale = (Math.max b[0], b[1])/1.75
+        @tween.to({  x: b[0]/2, y: 4000, z: b[1]/2, xRot: @degToRad(-90), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-90, 0, 90) -> (-90, 0, 0)
       when PLANE_YZ
-        scale = 1600
-        @tween.to({  x: 4000, y: 1250, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(90), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 800)
+        scale = (Math.max b[1], b[2])/1.75
+        @tween.to({  x: 4000, y: b[2]/2, z: b[1]/2, xRot: @degToRad(-90), yRot: @degToRad(90), zRot: @degToRad(0), l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 90, 0) -> (-90, 90, 0)
       when PLANE_XZ
-        scale = 1600
-        @tween.to({  x: 1250, y: 1250, z: 4000, xRot: @degToRad(0), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 800)
+        scale = (Math.max b[0], b[2])/1.75
+        @tween.to({  x: b[0]/2, y: b[2]/2, z: 4000, xRot: @degToRad(0), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 0, 0) -> (0, 0, 0)
@@ -306,6 +313,9 @@ View =
     @cameraPrev.right = @r
     @cameraPrev.top = @t
     @cameraPrev.bottom = @b
+    if @texts
+      for text in @texts
+        text.rotation = new THREE.Vector3(@xRot, @yRot, @zRot)
     @cameraPrev.updateProjectionMatrix()
     cam2d.hasChanged = true
 
@@ -470,13 +480,13 @@ View =
   setWaypoint : (position) ->
     unless @curIndex
       @curIndex = 1 
-      @route.geometry.vertices[0] = new THREE.Vector3(2046, 2500 - 470, 1036)
+      @route.geometry.vertices[0] = new THREE.Vector3(2046, Game.dataSet.upperBoundary[1] - 470, 1036)
     # resize buffer if route gets too long
     if @curIndex >= @maxRouteLen
       @maxRouteLen *= 2
       @createRoute @maxRouteLen, @route
     # Translating ThreeJS' coordinate system to the preview's one
-    @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], 2500 - position[2], position[1])
+    @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
     @route.geometry.verticesNeedUpdate = true
     @curIndex += 1
     cam2d.hasChanged = true

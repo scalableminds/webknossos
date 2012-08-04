@@ -81,7 +81,7 @@ GeometryFactory =
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 2500))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 2500))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 0))
-      previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999}))
+      previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
       View.addGeometryPrev previewBox
       # TODO: find right rotation:
       text1 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))

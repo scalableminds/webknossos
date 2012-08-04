@@ -40,7 +40,7 @@ View =
     @cameraxz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
     @scenexz = new THREE.Scene()
 
-    @rendererPrev = new THREE.WebGLRenderer({ clearColor: 0xffffff, clearAlpha: 1, antialias: true })
+    @rendererPrev = new THREE.WebGLRenderer({ clearColor: 0xffffff, clearAlpha: 1, antialias: false })
     @cameraPrev = new THREE.OrthographicCamera(-2100, 2100, 2100, -2100, -100000, 100000)
     @scenePrev = new THREE.Scene()
 
@@ -430,7 +430,7 @@ View =
 
   setActivePlaneXY : ->
     cam2d.setActivePlane PLANE_XY
-    $("canvas")[0].style.borderColor = "#FFDD00"
+    $("canvas")[0].style.borderColor = "#DD0000 #00DD00"
     $("canvas")[1].style.borderColor = "#C7D1D8"
     $("canvas")[2].style.borderColor = "#C7D1D8"
     cam2d.hasChanged = true
@@ -438,7 +438,7 @@ View =
   setActivePlaneYZ : ->
     cam2d.setActivePlane PLANE_YZ
     $("canvas")[0].style.borderColor = "#C7D1D8"
-    $("canvas")[1].style.borderColor = "#FFDD00"
+    $("canvas")[1].style.borderColor = "#0000DD 00DD00"
     $("canvas")[2].style.borderColor = "#C7D1D8"
     cam2d.hasChanged = true
 
@@ -446,7 +446,7 @@ View =
     cam2d.setActivePlane PLANE_XZ
     $("canvas")[0].style.borderColor = "#C7D1D8"
     $("canvas")[1].style.borderColor = "#C7D1D8"
-    $("canvas")[2].style.borderColor = "#FFDD00"
+    $("canvas")[2].style.borderColor = "#DD0000 0000DD"
     cam2d.hasChanged = true
 
   setWaypointXY : (position) ->
@@ -470,12 +470,13 @@ View =
   setWaypoint : (position) ->
     unless @curIndex
       @curIndex = 1 
-      @route.geometry.vertices[0] = new THREE.Vector3(2046, 1036, 470)
+      @route.geometry.vertices[0] = new THREE.Vector3(2046, 2500 - 470, 1036)
     # resize buffer if route gets too long
     if @curIndex >= @maxRouteLen
       @maxRouteLen *= 2
       @createRoute @maxRouteLen, @route
-    @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], position[1], position[2])
+    # Translating ThreeJS' coordinate system to the preview's one
+    @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], 2500 - position[2], position[1])
     @route.geometry.verticesNeedUpdate = true
     @curIndex += 1
     cam2d.hasChanged = true
@@ -489,16 +490,12 @@ View =
       for vertex in lastRoute.geometry.vertices
         routeGeometry.vertices.push(vertex)
       i = @maxRouteLen / 2
-      while i < maxRouteLen
-        # workaround to hide the unused vertices
-        routeGeometry.vertices.push(new THREE.Vector2(0, 0))
-        i += 1
-    else
-      while i < maxRouteLen
-        # workaround to hide the unused vertices
-        routeGeometry.vertices.push(new THREE.Vector2(0, 0))
-        i += 1
+    while i < maxRouteLen
+      # workaround to hide the unused vertices
+      routeGeometry.vertices.push(new THREE.Vector2(0, 0))
+      i += 1
+
     routeGeometry.dynamic = true
-    route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000}))
+    route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 2}))
     @route = route
     @addGeometryPrev route

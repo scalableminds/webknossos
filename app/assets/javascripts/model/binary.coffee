@@ -68,16 +68,25 @@ libs/simple_worker : SimpleWorker
 # your requested point can't be valid aswell.
 #
 
+# Macros
+
+tileIndexByTileCoordsMacro = (u, v) ->
+
+  u * (@TEXTURE_SIZE >> 5) + v
+
 
 Binary =
 
   # Constants
   PING_THROTTLE_TIME : 1000
   TEXTURE_SIZE : 512
+  MPA_SIZE : 85 # 4⁰ + 4¹ + 4² + 4³
 
-  VIEW_XY : 0
-  VIEW_XZ : 1
-  VIEW_YZ : 2
+  VIEW_XY : { u : 0, v : 1, w : 2 }
+  VIEW_XZ : { u : 0, v : 2, w : 1 }
+  VIEW_YZ : { u : 2, v : 1, w : 0 }
+
+  RECURSION_PLACEHOLDER : {}
 
   # Priorities
   PRIORITIES : [
@@ -102,9 +111,9 @@ Binary =
   PRELOADING : [0,10,20]
 
   views : [
-    { topLeftBucket : null, zoomStep : null }
-    { topLeftBucket : null, zoomStep : null }
-    { topLeftBucket : null, zoomStep : null }
+    { layer : null, zoomStep : null }
+    { layer : null, zoomStep : null }
+    { layer : null, zoomStep : null }
   ]
 
   # Use this method to let us know when you've changed your spot. Then we'll try to 
@@ -177,22 +186,10 @@ Binary =
       
       console.timeEnd "ping"
 
-      console.log Cube.getCube()
 
+  get : (position, zoomStep, area, view) ->
 
-  getXY : (position, zoomStep, area) ->
-    $.when(@getSync(position, zoomStep, area, @VIEW_XY))
-
-
-  getXZ : (position, zoomStep, area) ->
-
-    $.when(@getXZSync(position, zoomStep, area, @VIEW_XZ))
-
-
-  getYZ : (position, zoomStep, area) ->
-
-    $.when(@getYZSync(position, zoomStep, area, @VIEW_YZ))
-
+    $.when(@getSync(position, zoomStep, area, view))
 
   # A synchronized implementation of `get`. Cuz its faster.
   getSync : (position, zoomStep, area, view) ->
@@ -209,10 +206,9 @@ Binary =
       zoomStep
     )
 
-    layerMask = (1 << 5) - 1
-    layer = position[2] & layerMask if view.view == @VIEW_XY
-    layer = position[1] & layerMask if view.view == @VIEW_XZ
-    layer = position[0] & layerMask if view.view == @VIEW_YZ
+    layer = position[2] if view == @VIEW_XY
+    layer = position[1] if view == @VIEW_XZ
+    layer = position[0] if view == @VIEW_YZ
 
     area = [
       area[0] >> 5
@@ -221,58 +217,144 @@ Binary =
       area[3] - 1 >> 5
     ]
 
-    unless _.isEqual(currentView.topLeftBucket, topLeftBucket) and _.isEqual(currentView.zoomStep, zoomStep)
+    unless _.isEqual(currentView.layer, layer) and _.isEqual(currentView.zoomStep, zoomStep)
 
-      view.topLeftBucket = topLeftBucket
-      view.zoomStep = zoomStep
-      view.area = area
-      view.bucketStatusArray = @getBucketStatusArray(topLeftBucket, @TEXTURE_SIZE >> 5, @TEXTURE_SIZE >> 5, view.view)
-      view.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
-      view.changed = true
+      currentView.layer = layer
+      currentView.zoomStep = zoomStep
+      currentView.topLeftBucket = topLeftBucket
+      currentView.area = area
+      currentView.tiles = @getTileArray(topLeftBucket, @TEXTURE_SIZE >> 5, @TEXTURE_SIZE >> 5, view)
+      currentView.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
+      currentView.changed = true
 
-    if view.changed or not _.isEqual(view.area, area)
+    unless _.isEqual(currentView.topLeftBucket, topLeftBucket)
+
+      oldTopLeftBucket = currentView.topLeftBucket
+      oldTiles = currentView.tiles
+      oldBuffer = currentView.buffer
+
+      currentView.topLeftBucket = topLeftBucket
+      currentView.tiles = @getTileArray(topLeftBucket, @TEXTURE_SIZE >> 5, @TEXTURE_SIZE >> 5, view)
+      currentView.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
+      currentView.changed = true
+
+      { u, v } = view
+
+      width = (@TEXTURE_SIZE >> 5) - Math.abs(currentView.topLeftBucket[u], oldTopLeftBucket[u])
+      height = (@TEXTURE_SIZE >> 5) - Math.abs(currentView.topLeftBucket[v], oldTopLeftBucket[v])
+      oldOffset = [
+        Math.max(currentView.topLeftBucket[u] - oldTopLeftBucket[u], 0)
+        Math.max(currentView.topLeftBucket[v] - oldTopLeftBucket[v], 0)
+      ]
+      newOffset = [
+        Math.max(oldTopLeftBucket[u] - currentView.topLeftBucket[u], 0)
+        Math.max(oldTopLeftBucket[v] - currentView.topLeftBucket[v], 0)
+      ]
+
+      for du in [0...width] by 1
+        for dv in [0...height] by 1
+          oldTileIndex = tileIndexByTileCoordsMacro(oldOffset[0] + du, oldOffset[1] + dv)
+          newTileIndex = tileIndexByTileCoordsMacro(newOffset[0] + du, newOffset[1] + dv)
+
+          if currentView.tiles[newTileIndex] and not oldTiles[oldTileIndex]
+            #@copyTile(currentView.buffer, oldBuffer, newTileIndex, oldTileIndex)
+            currentView.tiles[newTextureIndex] = false
+
+    if currentView.changed or not _.isEqual(currentView.area, area)
+
+      currentView.area = area
+      currentView.changed = false
 
       for u in [area[0]..area[2]] by 1
         for v in [area[1]..area[3]] by 1
-          if view.bucketStatusArray[(area[2] - area[0] + 1) * u + v]
-            @renderBucketToBuffer(view.buffer, u << 5 + @TEXTURE_SIZE * v << 5, @generateRenderMap())
-            view.bucketArray[(area[2] - area[0] + 1) * u + v] = false
+          tileIndex = tileIndexByTileCoordsMacro(u, v)
+          if currentView.tiles[tileIndex]
+            #@renderTile()...
+            currentView.tiles[tileIndex] = false
 
-      view.area = area
-      view.changed = false
-
-      view.buffer
+      currentView.buffer
     
+      console.log getRenderMap([0,0,0],2,10, currentView)
+
     else
       null
 
 
-  generateRenderMap : () ->
-   # if zoomStep:
+  getRenderMap : (bucket, zoomStep, layer, view) ->
     
-    #  width = 1 << zoomStep
-     # for dx in [0...width] by 1
-      #  for dy in [0...width] by 1
-       #   for dz in [0...width] by 1
-        #    if 
-         #     addBucketToRenderMap()
+    map = new Array(@MAP_SIZE)
+
+    if zoomStep
+
+      offset_x = bucket[0] << zoomStep
+      offset_y = bucket[1] << zoomStep
+      offset_z = bucket[2] << zoomStep
+
+      width = 1 << zoomStep
+      for dx in [0...width] by 1
+        for dy in [0...width] by 1
+          for dz in [0...width] by 1
+            subBucket = [offset_x + dx, offset_y + dy, offset_z + dz]
+            subBucketZoomStep = Cube.getZoomStepOfBucketByAddress(subBucket)
+            if layer >> (subBucketZoomStep + 5) == subBucket[view.w] >> subBucketZoomStep
+              addBucketToRenderMap(map, 0, subBucket, subBucketZoomStep, [bucket[view.u], bucket[view.v]], zoomStep, view)
     #else
      # {  }
 
 
-  renderBucketToBuffer : (buffer, bufferOffset, renderMap) ->
-    null
+  addBucketToRanderMap : (map, mapIndex, bucket, bucketZoomStep, tile, tileZoomStep, view) ->
+
+    if map[mapIndex] == null or map[mapIndex] == @RECURSION_PLACEHOLDER
+      currentZoomStep = Cube.ZOOM_STEP_COUNT
+    else currentZoomStep =  Cube.getZoomStepOfBucketByAddress(map[mapIndex])
+
+    
+    if currentZoomStep <= tileZoomStep
+      return
+
+    if bucketZoomStep == tileZoomStep
+
+      map[mapIndex] = bucket
+      return
+
+    if map[mapIndex] == @RECURSION_PLACEHOLDER and bucketZoomStep > tileZoomStep
+      
+      for i in range[0..3]
+        newTile = [(tile[0] << 1) + (i % 2), (tile[1] << 1) + (i / 2)]
+        addBucketToRenderMap(map, mapIndex + 1 + i, bucket, bucketZoomStep, newTile, tileZoomStep - 1)
+      return
+
+    if bucketZoomStep < tileZoomStep
+      
+      for i in range[0..3]
+        newTile = [(tile[0] << 1) + (i % 2), (tile[1] << 1) + (i / 2)]
+        zoomDifference = tileZoomStep - bucketZoomStep - 1
+        newBucket = [bucket[0] >> zoomDifference, bucket[1] >> zoomDifference, bucket[2] >> zoomDifference]
+        
+        if newBucket[view.u] == newTile[0] and newBucket[view.v] == newTile[1]
+          addBucketToRenderMap(map, mapIndex + 1 + i, bucket, bucketZoomStep, newTile, tileZoomStep - 1)
+        else
+          addBucketToRenderMap(map, mapIndex + 1 + i, map[mapIndex], Cube.getZoomStepOfBucketByAddress(map[mapIndex]), newTile, tileZoomStep - 1)
+      return
+
+      map[mapIndex] = @RECURSION_PLACEHOLDER
+      return
+
+    map[mapIndex] = bucket
 
 
-  getBucketStatusArray : (offset, range_u, range_v, view) ->
+  #renderBucketToBuffer : (buffer, bufferOffset, renderMap) ->
+  #  null
 
-    status = []
+  getTileArray : (offset, range_u, range_v, view) ->
+
+    tiles = []
 
     offset = [offset[0], offset[2], offset[1]] if view == @VIEW_XZ
     offset = [offset[1], offset[2], offset[0]] if view == @VIEW_YZ
 
-    for delta_u in [0..range_u - 1] by 1
-      for delta_v in [0..range_v - 1] by 1
-        status.push offset[0] + delta_u >= 0 and offset[1] + delta_v >= 0 and offset[2] >= 0
+    for du in [0...range_u] by 1
+      for dv in [0...range_v] by 1
+        tiles.push offset[0] + du >= 0 and offset[1] + dv >= 0 and offset[2] >= 0
 
-    status
+    tiles

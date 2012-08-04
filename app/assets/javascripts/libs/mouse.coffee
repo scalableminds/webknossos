@@ -1,5 +1,6 @@
 ### define 
 model/user : User
+libs/jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
 ###
 
 class Mouse
@@ -23,6 +24,7 @@ class Mouse
   # stores the callbacks for mouse movement in each dimension
   changedCallbackX : $.noop()
   changedCallbackY : $.noop()
+  changedCallbackR : $.noop()
   activeCallback : $.noop()
 
 
@@ -30,17 +32,19 @@ class Mouse
   #@param {Object} target : DOM Element
   # HTML object where the mouse attaches the events
   ###
-  constructor : (@target, activeCallback) ->
+  constructor : (target, activeCallback) ->
     # @User = User
-  
+    @target = target
+
     @activeCallback = activeCallback
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
-    $(target).on 
+    $(@target).on 
       "mousemove" : @mouseMoved
       "mousedown" : @mouseDown
       "mouseup"   : @mouseUp
       "mouseenter" : @mouseEnter
+      "mousewheel" : @mouseWheel
 
       # fullscreen pointer lock
       # Firefox does not yet support Pointer Lock
@@ -67,6 +71,17 @@ class Mouse
   bindY : (callback) ->
     @changedCallbackY = callback
 
+  ###
+  #Binds a function as callback when canvas was rightclicked
+  #@param {Function} callback :
+  # gets the relative mouse position as parameter
+  ###
+  bindR : (callback) ->
+    @changedCallbackR = callback
+
+  bindW : (callback) ->
+    @changedCallbackMW = callback
+
   unbind : ->
     $(@target).off 
       "mousemove" : @mouseMoved
@@ -75,7 +90,8 @@ class Mouse
       "mouseenter" : @mouseEnter
       "webkitfullscreenchange" : @toogleMouseLock
       "webkitpointerlocklost" : @unlockMouse
-      "webkitpointerlockchange" : @unlockMouse    
+      "webkitpointerlockchange" : @unlockMouse  
+      "mousewheel" : @mouseWheel  
 
   mouseMoved : (evt) =>
     
@@ -103,11 +119,22 @@ class Mouse
       @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
 
   mouseEnter : =>
-    @activeCallback()
+    if @activeCallback?
+      @activeCallback()
+
+  mouseWheel : (evt, delta) =>
+    if @changedCallbackMW?
+      @changedCallbackMW(delta)
+      return false      # prevent scrolling the web page
     
-  mouseDown : =>
-    $(@target).css("cursor", "none")
-    @buttonDown = true
+  mouseDown : (evt) =>
+    # check whether the mouseDown event is a rightclick
+    if evt.which == 3
+      # on rightclick, return mouse position relative to the canvas
+      @changedCallbackR [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top]
+    else
+      $(@target).css("cursor", "none")
+      @buttonDown = true
 
   mouseUp : =>
     @buttonDown = false 

@@ -19,9 +19,9 @@ Cube =
   # `cube` is the main array. It actually represents a cuboid 
   # containing all the buckets. `cubeSize` and `cubeOffset` 
   # describe its dimension.
-  cube : null
-  cubeSize : null
-  cubeOffset : null
+  cube : []
+  cubeSize : [0, 0, 0]
+  cubeOffset : [0, 0, 0]
 
   getCube : ->
   
@@ -225,6 +225,7 @@ Cube =
       vertex[0]
       vertex[1]
       vertex[2]
+      zoomStep
     )
 
 

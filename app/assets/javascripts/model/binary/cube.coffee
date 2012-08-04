@@ -82,6 +82,28 @@ Cube =
     else
       @ZOOM_STEP_COUNT
 
+
+  getZoomStepOfBucketByAddress : (bucket) ->
+
+    @getZoomStepOfBucketByAddress3(
+      bucket[0]
+      bucket[1]
+      bucket[2]
+    )
+
+
+  getZoomStepOfBucketByAddress3 : (bucket_x, bucket_y, bucket_z) ->
+
+    { cube } = @
+
+    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
+
+    if cube[bucketIndex]
+      cube[bucketIndex].zoomStep
+    else
+      @ZOOM_STEP_COUNT
+
+
   setBucketByZoomedAddress : (bucket, zoomStep, bucketData) ->
 
     @setBucketByZoomedAddress3(

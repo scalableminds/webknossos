@@ -53,12 +53,15 @@ GeometryFactory =
     #  Model.Trianglesplane.get(width, zOffset)  
     #).pipe (shader, geometry) ->
 
-      planexy = new THREE.PlaneGeometry(512, 512, 1, 1)
-      planeyz = new THREE.PlaneGeometry(512, 512, 1, 1)
-      planexz = new THREE.PlaneGeometry(512, 512, 1, 1)
-      planePrevXY = new THREE.PlaneGeometry(384, 384, 1, 1)
-      planePrevYZ = new THREE.PlaneGeometry(384, 384, 1, 1)
-      planePrevXZ = new THREE.PlaneGeometry(384, 384, 1, 1)
+      planexy = new THREE.PlaneGeometry(380, 380, 1, 1)
+      planeyz = new THREE.PlaneGeometry(380, 380, 1, 1)
+      planexz = new THREE.PlaneGeometry(380, 380, 1, 1)
+      planePrevXY = new THREE.PlaneGeometry(380, 380, 1, 1)
+      planePrevYZ = new THREE.PlaneGeometry(380, 380, 1, 1)
+      planePrevXZ = new THREE.PlaneGeometry(380, 380, 1, 1)
+      planeBorderPrevXY = new THREE.PlaneGeometry(390, 390, 1, 1)
+      planeBorderPrevYZ = new THREE.PlaneGeometry(390, 390, 1, 1)
+      planeBorderPrevXZ = new THREE.PlaneGeometry(390, 390, 1, 1)
       
       #create preview Box (2500x2500)
       previewBoxGeometry = new THREE.Geometry()
@@ -78,7 +81,7 @@ GeometryFactory =
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 2500))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 2500))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 0))
-      previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999}))
+      previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
       View.addGeometryPrev previewBox
       # TODO: find right rotation:
       text1 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
@@ -97,6 +100,9 @@ GeometryFactory =
       text4.position = new THREE.Vector3(0, 0, 0)
       text4.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
       View.addGeometryPrev text4
+
+      # create route
+      View.createRoute 10
 
       # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
       texturexy = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
@@ -121,6 +127,9 @@ GeometryFactory =
       textureMaterialPrevXY = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevXY.texture})
       textureMaterialPrevYZ = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevYZ.texture})
       textureMaterialPrevXZ = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevXZ.texture})
+      textureMaterialBorderPrevXY = new THREE.MeshBasicMaterial({wireframe : false, color: 0xff0000})
+      textureMaterialBorderPrevYZ = new THREE.MeshBasicMaterial({wireframe : false, color: 0x0000ff})
+      textureMaterialBorderPrevXZ = new THREE.MeshBasicMaterial({wireframe : false, color: 0x00ff00})
 
       trianglesplanexy = new THREE.Mesh( planexy, textureMaterialxy )
       trianglesplanexy.rotation.x = 90 /180*Math.PI
@@ -132,13 +141,16 @@ GeometryFactory =
       trianglesplanexz.rotation.x = 90 /180*Math.PI
 
       trianglesplanePrevXY = new THREE.Mesh( planePrevXY, textureMaterialPrevXY )
+      borderPrevXY = new THREE.Mesh( planeBorderPrevXY, textureMaterialBorderPrevXY)
       
       trianglesplanePrevYZ = new THREE.Mesh( planePrevYZ, textureMaterialPrevYZ )
-      trianglesplanePrevYZ.rotation.x = 90 /180*Math.PI
-      trianglesplanePrevYZ.rotation.z = -90 /180*Math.PI
+      borderPrevYZ = new THREE.Mesh( planeBorderPrevYZ, textureMaterialBorderPrevYZ)
+      trianglesplanePrevYZ.rotation.x = borderPrevYZ.rotation.x = 90 /180*Math.PI
+      trianglesplanePrevYZ.rotation.z = borderPrevYZ.rotation.z = -90 /180*Math.PI
       
       trianglesplanePrevXZ = new THREE.Mesh( planePrevXZ, textureMaterialPrevXZ )
-      trianglesplanePrevXZ.rotation.x = 90 /180*Math.PI
+      borderPrevXZ = new THREE.Mesh( planeBorderPrevXZ, textureMaterialBorderPrevXZ)
+      trianglesplanePrevXZ.rotation.x = borderPrevXZ.rotation.x = 90 /180*Math.PI
 
       trianglesplanexy.texture = texturexy
       trianglesplaneyz.texture = textureyz
@@ -162,4 +174,11 @@ GeometryFactory =
       View.addGeometryPrev View.trianglesplanePrevYZ
       View.trianglesplanePrevXZ = trianglesplanePrevXZ
       View.addGeometryPrev View.trianglesplanePrevXZ
+
+      View.borderPrevXY = borderPrevXY
+      View.addGeometryPrev View.borderPrevXY
+      View.borderPrevYZ = borderPrevYZ
+      View.addGeometryPrev View.borderPrevYZ
+      View.borderPrevXZ = borderPrevXZ
+      View.addGeometryPrev View.borderPrevXZ
     )

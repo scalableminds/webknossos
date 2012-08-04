@@ -85,11 +85,12 @@ class Input.Keyboard
 # to be a different callback.
 class Input.Mouse
   
-  constructor : (objectsToTrack, activeCallbacks, bindingsXY, bindingsYZ, bindingsXZ) ->
+  constructor : (objectsToTrack, activeCallbacks, bindingsXY, bindingsYZ, bindingsXZ, bindingsPrev) ->
     # create three mouses for each plane
     @mouseXY = new MouseLib(objectsToTrack[0], activeCallbacks[0])
     @mouseYZ = new MouseLib(objectsToTrack[1], activeCallbacks[1])
     @mouseXZ = new MouseLib(objectsToTrack[2], activeCallbacks[2])
+    @mousePrev = new MouseLib(objectsToTrack[3])
 
     for own axis, callback of bindingsXY
       @attach(@mouseXY, axis, callback)
@@ -99,10 +100,15 @@ class Input.Mouse
     
     for own axis, callback of bindingsXZ
       @attach(@mouseXZ, axis, callback)
+    
+    for own axis, callback of bindingsPrev
+      @attach(@mousePrev, axis, callback)
 
   attach : (m, axis, callback) ->
     m.bindX callback if axis is "x"
     m.bindY callback if axis is "y"
+    m.bindR callback if axis is "r"
+    m.bindW callback if axis is "w"
 
   setInversionX : (m, value) ->
     m.setInversionX value if m?

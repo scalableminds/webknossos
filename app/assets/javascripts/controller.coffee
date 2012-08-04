@@ -13,8 +13,12 @@ Controller =
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
-    document.onkeydown = (event) ->
-      if event.keyCode == 32 or 37<=event.keyCode<=40 then return false
+    $(document).keydown (event) ->
+      if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault(); return
+
+    # hide contextmenu, while rightclicking a canvas
+    $("#render").bind "contextmenu", (event) ->
+      event.preventDefault(); return
   
     Model.User.Configuration.initialize().then(
       (data) =>
@@ -41,8 +45,9 @@ Controller =
     Model.Route.initialize().then(
       (position) =>
         
-        View.setGlobalPos(position)  
-        View.move([46, 36, -530])
+        View.setGlobalPos([400, 340, 500]) #position)  
+        #View.move([46, 36, -530])
+        
         # set initial direction
         View.setDirection([0, 0, 1])
 
@@ -58,11 +63,12 @@ Controller =
     # initializes an Input.Mouse object with the three canvas
     # elements and one pair of callbacks per canvas
     @input.mouses = new Input.Mouse(
-      [View.rendererxy.domElement, View.rendereryz.domElement, View.rendererxz.domElement]
+      [View.rendererxy.domElement, View.rendereryz.domElement, View.rendererxz.domElement, View.rendererPrev.domElement]
       [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
-      {"x" : View.moveX, "y" : View.moveY}
-      {"x" : View.moveZ, "y" : View.moveY}
-      {"x" : View.moveX, "y" : View.moveZ}
+      {"x" : View.moveX, "y" : View.moveY, "w" : View.moveZ, "r" : View.setWaypointXY}
+      {"x" : View.moveZ, "y" : View.moveY, "w" : View.moveX, "r" : View.setWaypointYZ}
+      {"x" : View.moveX, "y" : View.moveZ, "w" : View.moveY, "r" : View.setWaypointXZ}
+      {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev}
     )
 
   initKeyboard : ->

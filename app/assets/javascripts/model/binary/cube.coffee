@@ -221,7 +221,7 @@ Cube =
 
   vertexToZoomedBucketAddress : (vertex, zoomStep) ->
 
-    @vertexToZoomedBucketAddress3(
+    a = @vertexToZoomedBucketAddress3(
       vertex[0]
       vertex[1]
       vertex[2]
@@ -232,7 +232,6 @@ Cube =
   vertexToZoomedBucketAddress3 : (x, y, z, zoomStep) ->
 
     [ x >> 5 + zoomStep, y >> 5 + zoomStep, z >> 5 + zoomStep]
-
 
   extendByBucketAddressExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }) ->  
 

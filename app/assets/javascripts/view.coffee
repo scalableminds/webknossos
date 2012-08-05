@@ -218,8 +218,9 @@ View =
           #  plane.texture.image.data.set(buffer)
           switch plane.props.planeID
             when PLANE_XY
-              Model.Binary.get(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY), [0, 0, 100, 100], 0)#.done (buffer) ->
-              #plane.texture.image.data.set(buffer)
+              Model.Binary.get(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY), [0, 0, 100, 100], 0).done (buffer) ->
+                if buffer
+                  plane.texture.image.data.set(buffer)
            # when PLANE_YZ
            #   Model.Binary.get(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY), [0, 0, 100, 100], 0).done (buffer) ->
            #     plane.texture.image.data.set(buffer)

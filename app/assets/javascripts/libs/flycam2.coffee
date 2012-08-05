@@ -90,21 +90,6 @@ class Flycam2d
   getActivePlane : ->
     @activePlane
 
-  #needsUpdateXY : ->
-  #  (( Math.abs(@globalPosition[0]-@texturePositionXY[0])>@buffer[PLANE_XY] or
-  #    Math.abs(@globalPosition[1]-@texturePositionXY[1])>@buffer[PLANE_XY] or
-  #    @globalPosition[2]!=@texturePositionXY[2] ) and @globalPosition!= [0,0,0]) or @newBuckets
-
-  #needsUpdateYZ : ->
-  #  (( Math.abs(@globalPosition[1]-@texturePositionYZ[1])>@buffer[PLANE_YZ] or
-  #    Math.abs(@globalPosition[2]-@texturePositionYZ[2])>@buffer[PLANE_YZ] or
-  #    @globalPosition[0]!=@texturePositionYZ[0] ) and @globalPosition!= [0,0,0])
-
-  #needsUpdateXZ : ->
-  #  (( Math.abs(@globalPosition[0]-@texturePositionXZ[0])>@buffer[PLANE_XZ] or
-  #    Math.abs(@globalPosition[2]-@texturePositionXZ[2])>@buffer[PLANE_XZ] or
-  #    @globalPosition[1]!=@texturePositionXZ[1] ) and @globalPosition!= [0,0,0])
-
   getIndices : (planeID) ->         # Returns a ordered 3-tuple [x, y, z] which
     switch planeID                  # represents the dimensions from the viewpoint
       when PLANE_XY then [0, 1, 2]  # of each plane. For example, moving along the
@@ -118,35 +103,12 @@ class Flycam2d
       (Math.abs(@globalPosition[ind[1]]-@texturePosition[planeID][ind[1]]))/f>@buffer[planeID] or
       @globalPosition[ind[2]]!=@texturePosition[planeID][ind[2]] ) or @newBuckets[planeID]
 
-  #getOffsetsXY : ->
-  #  if @needsUpdateXY() then return [@buffer[PLANE_XY], @buffer[PLANE_XY]]
-  #  [@globalPosition[0]-@texturePositionXY[0]+@buffer[PLANE_XY],
-  #   @globalPosition[1]-@texturePositionXY[1]+@buffer[PLANE_XY]]
-
-  #getOffsetsYZ : ->
-  #  if @needsUpdateYZ() then return [@buffer[PLANE_YZ], @buffer[PLANE_YZ]]
-  #  [@globalPosition[2]-@texturePositionYZ[2]+@buffer[PLANE_YZ],
-  #   @globalPosition[1]-@texturePositionYZ[1]+@buffer[PLANE_YZ]]
-
-  #getOffsetsXZ : ->
-  #  if @needsUpdateXZ() then return [@buffer[PLANE_XZ], @buffer[PLANE_XZ]]
-  #  [@globalPosition[0]-@texturePositionXZ[0]+@buffer[PLANE_XZ],
-  #   @globalPosition[2]-@texturePositionXZ[2]+@buffer[PLANE_XZ]]
-
   getOffsets : (planeID) ->
     ind = @getIndices planeID
+    if @needsUpdate planeID                       # because currently, getOffsets is called befor notifyNewTexture
+      return [@buffer[planeID], @buffer[planeID]]
     [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @getZoomStep planeID) + @buffer[planeID],
       (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @getZoomStep planeID) + @buffer[planeID]]
-
-  #notifyNewTextureXY : ->
-  #  @texturePositionXY = @globalPosition.slice()    #copy that position
-  #  @newBuckets = false
-
-  #notifyNewTextureYZ : ->
-  #  @texturePositionYZ = @globalPosition.slice()    #copy that position
-
-  #notifyNewTextureXZ : ->
-  #  @texturePositionXZ = @globalPosition.slice()    #copy that position
 
   notifyNewTexture : (planeID) ->
     @texturePosition[planeID] = @globalPosition.slice()    #copy that position

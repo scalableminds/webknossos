@@ -85,20 +85,16 @@ class Input.Keyboard
 # to be a different callback.
 class Input.Mouse
   
-  constructor : (objectsToTrack, activeCallbacks, bindingsXY, bindingsYZ, bindingsXZ, bindingsPrev) ->
+  constructor : (objectsToTrack, activeCallbacks, bindingsPlanes, bindingsPrev) ->
     # create three mouses for each plane
     @mouseXY = new MouseLib(objectsToTrack[0], activeCallbacks[0])
     @mouseYZ = new MouseLib(objectsToTrack[1], activeCallbacks[1])
     @mouseXZ = new MouseLib(objectsToTrack[2], activeCallbacks[2])
     @mousePrev = new MouseLib(objectsToTrack[3])
 
-    for own axis, callback of bindingsXY
+    for own axis, callback of bindingsPlanes
       @attach(@mouseXY, axis, callback)
-
-    for own axis, callback of bindingsYZ
       @attach(@mouseYZ, axis, callback)
-    
-    for own axis, callback of bindingsXZ
       @attach(@mouseXZ, axis, callback)
     
     for own axis, callback of bindingsPrev

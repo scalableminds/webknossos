@@ -124,27 +124,18 @@ View =
   # Let's apply new pixels to the trianglesplane.
   # We do so by apply a new texture to it.
   updateTrianglesplane : ->
-      # FIXME: Is this useful?
-      return unless @trianglesplanexy
-      return unless @trianglesplaneyz
-      return unless @trianglesplanexz
-      return unless @trianglesplanePrevXY
-      return unless @trianglesplanePrevYZ
-      return unless @trianglesplanePrevXZ
-      return unless @borderPrevXY
-      return unless @borderPrevYZ
-      return unless @borderPrevXZ
-      
-      # create variables for each plane
-      gxy = @trianglesplanexy
-      gyz = @trianglesplaneyz
-      gxz = @trianglesplanexz
-      gpxy = @trianglesplanePrevXY
-      gpyz = @trianglesplanePrevYZ
-      gpxz = @trianglesplanePrevXZ
-      gbxy = @borderPrevXY
-      gbyz = @borderPrevYZ
-      gbxz = @borderPrevXZ
+      return unless @meshes
+
+      #FIXME: Using the meshes directly would again simplify the code...
+      gxy = @meshes[0][PLANE_XY]
+      gyz = @meshes[0][PLANE_YZ]
+      gxz = @meshes[0][PLANE_XZ]
+      gpxy = @meshes[1][PLANE_XY]
+      gpyz = @meshes[1][PLANE_YZ]
+      gpxz = @meshes[1][PLANE_XZ]
+      gbxy = @meshes[2][PLANE_XY]
+      gbyz = @meshes[2][PLANE_YZ]
+      gbxz = @meshes[2][PLANE_XZ]
 
       for plane in [gxy, gpxy, gbxy]
         plane.planeID = PLANE_XY
@@ -225,20 +216,8 @@ View =
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
-  addGeometryXY : (geometry) ->
-    @scene[PLANE_XY].add geometry
-
-  removeGeometryXY : (geometry) ->
-    @scene[PLANE_XY].remove geometry
-
-  addGeometryYZ : (geometry) ->
-    @scene[PLANE_YZ].add geometry
-
-  addGeometryXZ : (geometry) ->
-    @scene[PLANE_XZ].add geometry
-
-  addGeometryPrev : (geometry) ->
-    @scene[VIEW_3D].add geometry
+  addGeometry : (planeID, geometry) ->
+    @scene[planeID].add geometry
 
   changePrev : (id) ->
     # In order for the rotation to be correct, it is not sufficient
@@ -325,17 +304,12 @@ View =
   setDirection : (direction) ->
     cam2d.setDirection direction
 
-  move : (p) ->
-    cam2d.move p
+  # Should not be used anymore
+  #move : (p) ->
+  #  cam2d.move p
 
   moveActivePlane : (p) ->
-    switch (cam2d.getActivePlane())
-      when PLANE_XY
-        cam2d.moveActivePlane p
-      when PLANE_YZ
-        cam2d.move [p[2], p[1], p[0]]
-      when PLANE_XZ
-        cam2d.move [p[0], p[2], p[1]]
+    cam2d.moveActivePlane p
     @updateRoutePosition p
 
   #FIXME: why can't I call move() from within this function?
@@ -351,14 +325,14 @@ View =
     cam2d.moveActivePlane [0, 0, z]
     View.updateRoutePosition [0, 0, z]
 
-  prevViewportSite : =>
-    (View.cameraPrev.right - View.cameraPrev.left)         # always quadratic
+  prevViewportSize : =>
+    (View.camera[VIEW_3D].right - View.camera[VIEW_3D].left)         # always quadratic
 
   zoomPrev : (value) =>
     factor = Math.pow(0.9, value)
-    middleX = (View.cameraPrev.left + View.cameraPrev.right)/2
-    middleY = (View.cameraPrev.bottom + View.cameraPrev.top)/2
-    size = View.prevViewportSite()
+    middleX = (View.camera[VIEW_3D].left + View.camera[VIEW_3D].right)/2
+    middleY = (View.camera[VIEW_3D].bottom + View.camera[VIEW_3D].top)/2
+    size = View.prevViewportSize()
     View.camera[VIEW_3D].left = middleX - factor*size/2
     View.camera[VIEW_3D].right = middleX + factor*size/2
     View.camera[VIEW_3D].top = middleY + factor*size/2
@@ -367,14 +341,16 @@ View =
     cam2d.hasChanged = true
 
   movePrevX : (x) =>
-    View.camera[VIEW_3D].left += x*View.prevViewportSite()/384
-    View.camera[VIEW_3D].right += x*View.prevViewportSite()/384
+    size = View.prevViewportSize()
+    View.camera[VIEW_3D].left += x*size/384
+    View.camera[VIEW_3D].right += x*size/384
     View.camera[VIEW_3D].updateProjectionMatrix()
     cam2d.hasChanged = true
 
   movePrevY : (y) =>
-    View.camera[VIEW_3D].top -= y*View.prevViewportSite()/384
-    View.camera[VIEW_3D].bottom -= y*View.prevViewportSite()/384
+    size = View.prevViewportSize()
+    View.camera[VIEW_3D].top -= y*size/384
+    View.camera[VIEW_3D].bottom -= y*size/384
     View.camera[VIEW_3D].updateProjectionMatrix()
     cam2d.hasChanged = true
   
@@ -400,50 +376,26 @@ View =
   zoomOut : ->
     cam2d.zoomOut(cam2d.getActivePlane())
 
-  setActivePlane : (activePlane) ->
-    cam2d.setActivePlane activePlane
-    cam2d.hasChanged = true
-
   setActivePlaneXY : ->
-    cam2d.setActivePlane PLANE_XY
-    $("canvas")[0].style.borderColor = "#DD0000 #00DD00"
-    $("canvas")[1].style.borderColor = "#C7D1D8"
-    $("canvas")[2].style.borderColor = "#C7D1D8"
-    cam2d.hasChanged = true
+    View.setActivePlane PLANE_XY
 
   setActivePlaneYZ : ->
-    cam2d.setActivePlane PLANE_YZ
-    $("canvas")[0].style.borderColor = "#C7D1D8"
-    $("canvas")[1].style.borderColor = "#0000DD 00DD00"
-    $("canvas")[2].style.borderColor = "#C7D1D8"
-    cam2d.hasChanged = true
+    View.setActivePlane PLANE_YZ
 
   setActivePlaneXZ : ->
-    cam2d.setActivePlane PLANE_XZ
-    $("canvas")[0].style.borderColor = "#C7D1D8"
-    $("canvas")[1].style.borderColor = "#C7D1D8"
-    $("canvas")[2].style.borderColor = "#DD0000 0000DD"
+    View.setActivePlane PLANE_XZ
+
+  setActivePlane : (planeID) ->
+    cam2d.setActivePlane planeID
+    for i in [0..2]
+      $("canvas")[i].style.borderColor = if i==planeID then "#888800" else "#C7D1D8"
     cam2d.hasChanged = true
 
-  setWaypointXY : (position) ->
-    curGlobalPos = cam2d.getGlobalPos()
-    curZoomStep = cam2d.getZoomStep(PLANE_XY) + 1
-    # calculate the global position of the rightclick
-    View.setWaypoint [curGlobalPos[0] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[1] - 192/curZoomStep + position[1]/curZoomStep, curGlobalPos[2]]
-
-  setWaypointYZ : (position) ->
-    curGlobalPos = cam2d.getGlobalPos()
-    curZoomStep = cam2d.getZoomStep(PLANE_XZ) + 1
-    # calculate the global position of the rightclick
-    View.setWaypoint [curGlobalPos[0] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[1], curGlobalPos[2] - 192/curZoomStep + position[1]/curZoomStep]
-
-  setWaypointXZ : (position) ->
-    curGlobalPos = cam2d.getGlobalPos()
-    curZoomStep = cam2d.getZoomStep(PLANE_YZ) + 1
-    # calculate the global position of the rightclick
-    View.setWaypoint [curGlobalPos[0], curGlobalPos[1] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[2] - 192/curZoomStep + position[1]/curZoomStep]
-
   setWaypoint : (position) ->
+    curGlobalPos = cam2d.getGlobalPos()
+    curZoomStep = cam2d.getZoomStep(cam2d.getActivePlane()) + 1
+    # calculate the global position of the rightclick
+    position = [curGlobalPos[0] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[1] - 192/curZoomStep + position[1]/curZoomStep, curGlobalPos[2]]
     unless @curIndex
       @curIndex = 1 
       @route.geometry.vertices[0] = new THREE.Vector3(400, Game.dataSet.upperBoundary[1] - 500, 340)
@@ -483,9 +435,9 @@ View =
     @routeView = routeView
     @particleSystem = particleSystem
     @routeView.position = new THREE.Vector3(-400, 340, 501)
-    @addGeometryPrev route
-    @addGeometryPrev particleSystem
-    @addGeometryXY routeView
+    @addGeometry VIEW_3D, route
+    @addGeometry VIEW_3D, particleSystem
+    @addGeometry PLANE_XY, routeView
 
   updateRoutePosition : (p) ->
     @routeView.position = new THREE.Vector3(@routeView.position.x - p[0], @routeView.position.y + p[1], @routeView.position.z + p[2])

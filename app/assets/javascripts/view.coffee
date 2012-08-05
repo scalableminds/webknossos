@@ -89,6 +89,7 @@ View =
     $(window).on("bucketloaded", => cam2d.hasChanged = true; cam2d.newBuckets = [true, true, true]) 
 
   animate : ->
+
     @renderFunction()
 
     window.requestAnimationFrame => @animate()
@@ -179,22 +180,12 @@ View =
 
         # only the main planes
         if i<=3
-          if  cam2d.needsUpdate(plane.planeID)
-            # TODO: Why don't those lines work? it would get rid of that huge switch statement 
-            #
-            #plane.props.getFkt(cam2d.getGlobalPos(), cam2d.getZoomStep(plane.props.planeID)).done (buffer) ->
-            #  plane.texture.image.data.set(buffer)
-            switch plane.planeID
-              when PLANE_XY
-                Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
-                  plane.texture.image.data.set(buffer)
-              when PLANE_YZ
-                Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
-                  plane.texture.image.data.set(buffer)
-              when PLANE_XZ
-                Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
-                  plane.texture.image.data.set(buffer)
+          if cam2d.needsUpdate plane.planeID
             cam2d.notifyNewTexture plane.planeID
+
+          Model.Binary.get(cam2d.getTexturePosition(plane.planeID), cam2d.getZoomStep(plane.planeID), [120, 120, 150, 150], plane.planeID).done (buffer) ->
+            if buffer
+              plane.texture.image.data.set(buffer)
         
         #only for border planes
         else if i>=7 then plane.position = new THREE.Vector3(globalPosVec.x-1, globalPosVec.y-1, globalPosVec.z-1)

@@ -3,6 +3,7 @@ libs/flycam : Flycam
 libs/flycam2 : Flycam2d
 model : Model
 libs/Tween : TWEEN_LIB
+model/game : Game
 ###
     
 # global View variables
@@ -10,7 +11,7 @@ cam2d = null
 
 # constants
 # display 512px out of 512px total width and height
-CAM_DISTANCE = 384/2 # alt: 384/2  #alt: 96
+#CAM_DISTANCE = 384/2 # alt: 384/2  #alt: 96
 VIEWPORT_WIDTH = 380
 PLANE_XY = 0
 PLANE_YZ = 1
@@ -28,72 +29,38 @@ View =
     HEIGHT = (container.height()-48)/2
 
     # Initialize main THREE.js components
-    @rendererxy = new THREE.WebGLRenderer({ clearColor: 0xff0000, clearAlpha: 1, antialias: true })
-    @cameraxy = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 1, 1000)
-    @scenexy = new THREE.Scene()
+    colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
+    @renderer = new Array(4)
+    @camera   = new Array(4)
+    @scene    = new Array(4)
+    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
+      camDistance  = if i==VIEW_3D then 100000 else 40
+      @renderer[i] = new THREE.WebGLRenderer({clearColor: colors[i], clearAlpha: 1, antialias: false})
+      @camera[i]   = new THREE.OrthographicCamera(-192, 192, 192, -192, -camDistance, camDistance)
+      @scene[i]    = new THREE.Scene()
 
-    @rendereryz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, clearAlpha: 1, antialias: true })
-    @camerayz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
-    @sceneyz = new THREE.Scene()
+      # Let's set up cameras
+      # The cameras are never "moved". They only look at the scenes
+      # (the trianglesplanes in particular)
+      @scene[i].add @camera[i]
+      @camera[i].position.z = 1
+      @camera[i].lookAt(new THREE.Vector3( 0, 0, 0))
 
-    @rendererxz = new THREE.WebGLRenderer({ clearColor: 0x00ff00, clearAlpha: 1, antialias: true })
-    @cameraxz = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 10000)
-    @scenexz = new THREE.Scene()
-
-    @rendererPrev = new THREE.WebGLRenderer({ clearColor: 0xffffff, clearAlpha: 1, antialias: false })
-    @cameraPrev = new THREE.OrthographicCamera(-2100, 2100, 2100, -2100, -100000, 100000)
-    @scenePrev = new THREE.Scene()
-
-    # Let's set up cameras
-    # The cameras are never "moved". They only look at the scenes
-    # (the trianglesplanes in particular)
-    @scenexy.add(@cameraxy)
-    @cameraxy.position.z = CAM_DISTANCE
-    @cameraxy.lookAt(new THREE.Vector3( 0, 0, 0 ))
-
-    @sceneyz.add(@camerayz)
-    @camerayz.position.z = CAM_DISTANCE
-    @camerayz.lookAt(new THREE.Vector3( 0, 0, 0 ))
-
-    @scenexz.add(@cameraxz)
-    @cameraxz.position.z = CAM_DISTANCE
-    @cameraxz.lookAt(new THREE.Vector3( 0, 0, 0 ))
-
-    @scenePrev.add(@cameraPrev)
-    
-    # Attach the canvas to the container
-    # DEBATE: a canvas can be passed the the renderer as an argument...!?
-    @rendererxy.setSize(WIDTH, HEIGHT)
-    @rendereryz.setSize(WIDTH, HEIGHT)
-    @rendererxz.setSize(WIDTH, HEIGHT)
-    @rendererPrev.setSize(WIDTH, HEIGHT)
-    container.append(@rendererxy.domElement)
-    container.append(@rendereryz.domElement)
-    container.append(@rendererxz.domElement)
-    container.append(@rendererPrev.domElement)
+      # Attach the canvas to the container
+      # DEBATE: a canvas can be passed the the renderer as an argument...!?
+      @renderer[i].setSize WIDTH, HEIGHT
+      container.append @renderer[i].domElement
 
     @prevControls = $('#prevControls')
-    @button3D = document.createElement("input")
-    @button3D.setAttribute "type", "button"
-    @button3D.setAttribute "value", "3D View"
-    @button3D.addEventListener "click", @changePrev3D, true
-    @prevControls.append @button3D
-    @buttonXY = document.createElement("input")
-    @buttonXY.setAttribute "type", "button"
-    @buttonXY.setAttribute "value", "XY Plane"
-    @buttonXY.addEventListener "click", @changePrevXY, true
-    @prevControls.append @buttonXY
-    @buttonYZ = document.createElement("input")
-    @buttonYZ.setAttribute "type", "button"
-    @buttonYZ.setAttribute "value", "YZ Plane"
-    @buttonYZ.addEventListener "click", @changePrevYZ, true
-    @prevControls.append @buttonYZ
-    @buttonXZ = document.createElement("input")
-    @buttonXZ.setAttribute "type", "button"
-    @buttonXZ.setAttribute "value", "XZ Plane"
-    @buttonXZ.addEventListener "click", @changePrevXZ, true
-    @prevControls.append @buttonXZ
-
+    values        = ["XY Plane", "XY Plane", "XZ Plane", "3D View"]
+    callbacks     = [@changePrevXY, @changePrevYZ, @changePrevXZ, @changePrev3D]
+    buttons       = new Array(4)
+    for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
+      buttons[i] = document.createElement "input"
+      buttons[i].setAttribute "type", "button"
+      buttons[i].setAttribute "value", values[i]
+      buttons[i].addEventListener "click", callbacks[i], true
+      @prevControls.append buttons[i]
 
     # This "camera" is not a camera in the traditional sense.
     # It just takes care of the global position
@@ -109,13 +76,13 @@ View =
     @stats = stats
     @positionStats = $("#status")
 
-    @changePrev VIEW_3D
+    @first = true
     # start the rendering loop
     @animate()
 
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
-
+    
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
@@ -151,50 +118,41 @@ View =
     @stats.update()
 
     cam2d.hasChanged = false
-    @rendererxy.render @scenexy, @cameraxy
-    @rendereryz.render @sceneyz, @camerayz
-    @rendererxz.render @scenexz, @cameraxz
-    @rendererPrev.render @scenePrev, @cameraPrev
+    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
+      @renderer[i].render @scene[i], @camera[i]
 
   # Let's apply new pixels to the trianglesplane.
   # We do so by apply a new texture to it.
   updateTrianglesplane : ->
-      # properties for each plane, so we can do it in a loop rather than calling each function six times...
-      propsXY = {getFkt: Model.Binary.get, planeID: PLANE_XY}
-      propsYZ = {getFkt: Model.Binary.get, planeID: PLANE_YZ}
-      propsXZ = {getFkt: Model.Binary.get, planeID: PLANE_XZ}
 
-      # new trianglesplane for xy
+      # FIXME: Is this useful?
       return unless @trianglesplanexy
-      gxy = @trianglesplanexy
-      gxy.props = propsXY
-
-      # new trianglesplane for yz
       return unless @trianglesplaneyz
-      gyz = @trianglesplaneyz
-      gyz.props = propsYZ
-
-      # new trianglesplane for xz
       return unless @trianglesplanexz
-      gxz = @trianglesplanexz
-      gxz.props = propsXZ
-
-      # new trianglesplanes for preview
       return unless @trianglesplanePrevXY
-      gpxy = @trianglesplanePrevXY
-      gpxy.props = propsXY
       return unless @trianglesplanePrevYZ
-      gpyz = @trianglesplanePrevYZ
-      gpyz.props = propsYZ
       return unless @trianglesplanePrevXZ
+      return unless @borderPrevXY
+      return unless @borderPrevYZ
+      return unless @borderPrevXZ
+      
+      # create variables for each plane
+      gxy = @trianglesplanexy
+      gyz = @trianglesplaneyz
+      gxz = @trianglesplanexz
+      gpxy = @trianglesplanePrevXY
+      gpyz = @trianglesplanePrevYZ
       gpxz = @trianglesplanePrevXZ
-      gpxz.props = propsXZ
       gbxy = @borderPrevXY
-      gbxy.props = propsXY
       gbyz = @borderPrevYZ
-      gbyz.props = propsYZ
       gbxz = @borderPrevXZ
-      gbxz.props = propsXZ
+
+      for plane in [gxy, gpxy, gbxy]
+        plane.planeID = PLANE_XY
+      for plane in [gyz, gpyz, gbyz]
+        plane.planeID = PLANE_YZ
+      for plane in [gxz, gpxz, gbxz]
+        plane.planeID = PLANE_XZ
 
       # sends current position to Model for preloading data
       # NEW with direction vector
@@ -206,46 +164,61 @@ View =
 
       globalPos = cam2d.getGlobalPos()
       # Translating ThreeJS' coordinate system to the preview's one
-      globalPosVec = new THREE.Vector3(globalPos[0], 2500-globalPos[2], globalPos[1])
+      globalPosVec = new THREE.Vector3(globalPos[0], Game.dataSet.upperBoundary[1]-globalPos[2], globalPos[1])
       
+      if @first==true           # initialize Preview
+        @changePrev VIEW_3D
+        @first = false
+
+    
       i = 0       # counts which plane is used
       for plane in [gxy, gyz, gxz, gpxy, gpxz, gpyz, gbxy, gbyz, gbxz]
         i++
-        if cam2d.needsUpdate(plane.props.planeID) and i<=3
-          # TODO: Why don't those lines work? it would get rid of that huge switch statement 
-          #
-          #plane.props.getFkt(cam2d.getGlobalPos(), cam2d.getZoomStep(plane.props.planeID)).done (buffer) ->
-          #  plane.texture.image.data.set(buffer)
-          switch plane.props.planeID
-            when PLANE_XY
-              Model.Binary.get(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY), [0, 0, 100, 100], 0).done (buffer) ->
-                if buffer
+        offsets = cam2d.getOffsets plane.planeID
+        scalingFactor = cam2d.getTextureScalingFactor plane.planeID
+
+        # only the main planes
+        if i<=3
+          if  cam2d.needsUpdate(plane.planeID)
+            # TODO: Why don't those lines work? it would get rid of that huge switch statement 
+            #
+            #plane.props.getFkt(cam2d.getGlobalPos(), cam2d.getZoomStep(plane.props.planeID)).done (buffer) ->
+            #  plane.texture.image.data.set(buffer)
+            switch plane.planeID
+              when PLANE_XY
+                Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
                   plane.texture.image.data.set(buffer)
-           # when PLANE_YZ
-           #   Model.Binary.get(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY), [0, 0, 100, 100], 0).done (buffer) ->
-           #     plane.texture.image.data.set(buffer)
-           # when PLANE_XZ
-           #  Model.Binary.get(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY), [0, 0, 100, 100], 0).done (buffer) ->
-           #    plane.texture.image.data.set(buffer)
-          cam2d.notifyNewTexture plane.props.planeID
+              when PLANE_YZ
+                Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
+                  plane.texture.image.data.set(buffer)
+              when PLANE_XZ
+                Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
+                  plane.texture.image.data.set(buffer)
+            cam2d.notifyNewTexture plane.planeID
         
-        else if i>=4 and i<=6
-          switch plane.props.planeID
+        #only for border planes
+        else if i>=7 then plane.position = new THREE.Vector3(globalPosVec.x-1, globalPosVec.y-1, globalPosVec.z-1)
+        
+        # only preview planes
+        else
+          switch plane.planeID
             when PLANE_XY then plane.texture = gxy.texture.clone()
             when PLANE_YZ then plane.texture = gyz.texture.clone()
             when PLANE_XZ then plane.texture = gxz.texture.clone()
-        
-        offsets = cam2d.getOffsets plane.props.planeID
-        scalingFactor = cam2d.getTextureScalingFactor plane.props.planeID
+          plane.position = globalPosVec
+
+        # only for preview and border planes
         if i>=4
-          sFactor = cam2d.getPlaneScalingFactor plane.props.planeID
+          sFactor = cam2d.getPlaneScalingFactor plane.planeID
           plane.scale.x = plane.scale.y = plane.scale.z = sFactor
+        
+        # only for main and preview planes
         if i<=6
           plane.texture.needsUpdate = true
           plane.material.map = plane.texture
-        if i>=4 and i<=6 then plane.position = globalPosVec
-        else if i>=7 then plane.position = new THREE.Vector3(globalPosVec.x-1, globalPosVec.y-1, globalPosVec.z-1)
-        else
+
+        # only main planes
+        if i<=3
           plane.material.map.repeat.x = VIEWPORT_WIDTH*scalingFactor / 508;
           plane.material.map.repeat.y = VIEWPORT_WIDTH*scalingFactor / 508;
           plane.material.map.offset.x = offsets[0] / 508;
@@ -254,45 +227,49 @@ View =
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
   addGeometryXY : (geometry) ->
-    @scenexy.add geometry
+    @scene[PLANE_XY].add geometry
+
+  removeGeometryXY : (geometry) ->
+    @scene[PLANE_XY].remove geometry
 
   addGeometryYZ : (geometry) ->
-    @sceneyz.add geometry
+    @scene[PLANE_YZ].add geometry
 
   addGeometryXZ : (geometry) ->
-    @scenexz.add geometry
+    @scene[PLANE_XZ].add geometry
 
   addGeometryPrev : (geometry) ->
-    @scenePrev.add geometry
+    @scene[VIEW_3D].add geometry
 
   changePrev : (id) ->
     # In order for the rotation to be correct, it is not sufficient
     # to just use THREEJS' lookAt() function, because it may still
     # look at the plane in a wrong angle. Therefore, the rotation
     # has to be hard coded.
-    @tween = new TWEEN.Tween({ cameraPrev: @cameraPrev, x: @cameraPrev.position.x, y: @cameraPrev.position.y, z: @cameraPrev.position.z, xRot: @cameraPrev.rotation.x, yRot: @cameraPrev.rotation.y, zRot: @cameraPrev.rotation.z, l: @cameraPrev.left, r: @cameraPrev.right, t: @cameraPrev.top, b: @cameraPrev.bottom})
+    @tween = new TWEEN.Tween({ texts: @texts, camera: @camera[VIEW_3D], x: @camera[VIEW_3D].position.x, y: @camera[VIEW_3D].position.y, z: @camera[VIEW_3D].position.z, xRot: @camera[VIEW_3D].rotation.x, yRot: @camera[VIEW_3D].rotation.y, zRot: @camera[VIEW_3D].rotation.z, l: @camera[VIEW_3D].left, r: @camera[VIEW_3D].right, t: @camera[VIEW_3D].top, b: @camera[VIEW_3D].bottom})
+    b = Game.dataSet.upperBoundary
     switch id
       when VIEW_3D
-        scale = 2100
-        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale, r: scale, t: scale, b: -scale}, 800)
+        scale = Math.sqrt(b[0]*b[0]+b[1]*b[1]+b[2]*b[2])/1.9
+        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale, r: scale, t: scale+scale*0.25, b: -scale+scale*0.25}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)
       when PLANE_XY
-        scale = 1600
-        @tween.to({  x: 1250, y: 4000, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 800)
+        scale = (Math.max b[0], b[1])/1.75
+        @tween.to({  x: b[0]/2, y: 4000, z: b[1]/2, xRot: @degToRad(-90), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-90, 0, 90) -> (-90, 0, 0)
       when PLANE_YZ
-        scale = 1600
-        @tween.to({  x: 4000, y: 1250, z: 1250, xRot: @degToRad(-90), yRot: @degToRad(90), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 800)
+        scale = (Math.max b[1], b[2])/1.75
+        @tween.to({  x: 4000, y: b[2]/2, z: b[1]/2, xRot: @degToRad(-90), yRot: @degToRad(90), zRot: @degToRad(0), l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 90, 0) -> (-90, 90, 0)
       when PLANE_XZ
-        scale = 1600
-        @tween.to({  x: 1250, y: 1250, z: 4000, xRot: @degToRad(0), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale, b: -scale}, 800)
+        scale = (Math.max b[0], b[2])/1.75
+        @tween.to({  x: b[0]/2, y: b[2]/2, z: 4000, xRot: @degToRad(0), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 0, 0) -> (0, 0, 0)
@@ -301,13 +278,16 @@ View =
   degToRad : (deg) -> deg/180*Math.PI
 
   updateCameraPrev : ->
-    @cameraPrev.position = new THREE.Vector3(@x, @y, @z)
-    @cameraPrev.rotation = new THREE.Vector3(@xRot, @yRot, @zRot)
-    @cameraPrev.left = @l
-    @cameraPrev.right = @r
-    @cameraPrev.top = @t
-    @cameraPrev.bottom = @b
-    @cameraPrev.updateProjectionMatrix()
+    @camera.position = new THREE.Vector3(@x, @y, @z)
+    @camera.rotation = new THREE.Vector3(@xRot, @yRot, @zRot)
+    @camera.left = @l
+    @camera.right = @r
+    @camera.top = @t
+    @camera.bottom = @b
+    if @texts
+      for text in @texts
+        text.rotation = new THREE.Vector3(@xRot, @yRot, @zRot)
+    @camera.updateProjectionMatrix()
     cam2d.hasChanged = true
 
   changePrev3D : => View.changePrev(VIEW_3D)
@@ -327,18 +307,10 @@ View =
     WIDTH = (container.width()-49)/2
     HEIGHT = (container.height()-49)/2
 
-    @rendererxy.setSize( WIDTH, HEIGHT )
-    @rendereryz.setSize( WIDTH, HEIGHT )
-    @rendererxz.setSize( WIDTH, HEIGHT )
-    @rendererPrev.setSize( WIDTH, HEIGHT)
-    @cameraxy.aspect  = WIDTH / HEIGHT
-    @cameraxy.updateProjectionMatrix()
-    @camerayz.aspect  = WIDTH / HEIGHT
-    @camerayz.updateProjectionMatrix()
-    @cameraxz.aspect  = WIDTH / HEIGHT
-    @cameraxz.updateProjectionMatrix()
-    @cameraPrev.aspect = WIDTH / HEIGHT
-    @cameraPrev.updateProjectionMatrix()
+    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
+      @renderer[i].setSize( WIDTH, HEIGHT)
+      @camera[i].aspect = WIDTH / HEIGHT
+      @camera[i].updateProjectionMatrix()
     @draw()
 
 ############################################################################
@@ -365,16 +337,20 @@ View =
         cam2d.move [p[2], p[1], p[0]]
       when PLANE_XZ
         cam2d.move [p[0], p[2], p[1]]
+    @updateRoutePosition p
 
   #FIXME: why can't I call move() from within this function?
   moveX : (x) -> 
     cam2d.moveActivePlane [x, 0, 0]
+    View.updateRoutePosition [x, 0, 0]
 
   moveY : (y) ->
     cam2d.moveActivePlane [0, y, 0]
+    View.updateRoutePosition [0, y, 0]
   
   moveZ : (z) ->
     cam2d.moveActivePlane [0, 0, z]
+    View.updateRoutePosition [0, 0, z]
 
   prevViewportSite : =>
     (View.cameraPrev.right - View.cameraPrev.left)         # always quadratic
@@ -384,23 +360,23 @@ View =
     middleX = (View.cameraPrev.left + View.cameraPrev.right)/2
     middleY = (View.cameraPrev.bottom + View.cameraPrev.top)/2
     size = View.prevViewportSite()
-    View.cameraPrev.left = middleX - factor*size/2
-    View.cameraPrev.right = middleX + factor*size/2
-    View.cameraPrev.top = middleY + factor*size/2
-    View.cameraPrev.bottom = middleY - factor*size/2
-    View.cameraPrev.updateProjectionMatrix()
+    View.camera[VIEW_3D].left = middleX - factor*size/2
+    View.camera[VIEW_3D].right = middleX + factor*size/2
+    View.camera[VIEW_3D].top = middleY + factor*size/2
+    View.camera[VIEW_3D].bottom = middleY - factor*size/2
+    View.camera[VIEW_3D].updateProjectionMatrix()
     cam2d.hasChanged = true
 
   movePrevX : (x) =>
-    View.cameraPrev.left += x*View.prevViewportSite()/384
-    View.cameraPrev.right += x*View.prevViewportSite()/384
-    View.cameraPrev.updateProjectionMatrix()
+    View.camera[VIEW_3D].left += x*View.prevViewportSite()/384
+    View.camera[VIEW_3D].right += x*View.prevViewportSite()/384
+    View.camera[VIEW_3D].updateProjectionMatrix()
     cam2d.hasChanged = true
 
   movePrevY : (y) =>
-    View.cameraPrev.top -= y*View.prevViewportSite()/384
-    View.cameraPrev.bottom -= y*View.prevViewportSite()/384
-    View.cameraPrev.updateProjectionMatrix()
+    View.camera[VIEW_3D].top -= y*View.prevViewportSite()/384
+    View.camera[VIEW_3D].bottom -= y*View.prevViewportSite()/384
+    View.camera[VIEW_3D].updateProjectionMatrix()
     cam2d.hasChanged = true
   
   scaleTrianglesPlane : (delta) ->
@@ -471,32 +447,47 @@ View =
   setWaypoint : (position) ->
     unless @curIndex
       @curIndex = 1 
-      @route.geometry.vertices[0] = new THREE.Vector3(2046, 2500 - 470, 1036)
-    # resize buffer if route gets too long
-    if @curIndex >= @maxRouteLen
-      @maxRouteLen *= 2
-      @createRoute @maxRouteLen, @route
+      @route.geometry.vertices[0] = new THREE.Vector3(400, Game.dataSet.upperBoundary[1] - 500, 340)
+      @routeView.geometry.vertices[0] = new THREE.Vector3(400, -340, -500)
+      @particleSystem.geometry.vertices[0] = new THREE.Vector3(400, Game.dataSet.upperBoundary[1] - 500, 340)
     # Translating ThreeJS' coordinate system to the preview's one
-    @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], 2500 - position[2], position[1])
-    @route.geometry.verticesNeedUpdate = true
-    @curIndex += 1
-    cam2d.hasChanged = true
+    if @curIndex < @maxRouteLen
+      @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
+      @routeView.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], -position[1], -position[2])
+      @particleSystem.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
+      @route.geometry.verticesNeedUpdate = true
+      @routeView.geometry.verticesNeedUpdate = true
+      @particleSystem.geometry.verticesNeedUpdate = true
+      @curIndex += 1
+      cam2d.hasChanged = true
 
-  createRoute : (maxRouteLen, lastRoute) ->
+  createRoute : (maxRouteLen) ->
     # create route to show in previewBox and pre-allocate buffer
     @maxRouteLen = maxRouteLen
     routeGeometry = new THREE.Geometry()
+    routeGeometryView = new THREE.Geometry()
+    particles = new THREE.Geometry()
     i = 0
-    if lastRoute?
-      for vertex in lastRoute.geometry.vertices
-        routeGeometry.vertices.push(vertex)
-      i = @maxRouteLen / 2
     while i < maxRouteLen
       # workaround to hide the unused vertices
       routeGeometry.vertices.push(new THREE.Vector2(0, 0))
+      routeGeometryView.vertices.push(new THREE.Vector2(0, 0))
+      particles.vertices.push(new THREE.Vector2(0, 0))
       i += 1
 
     routeGeometry.dynamic = true
-    route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 2}))
+    routeGeometryView.dynamic = true
+    route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
+    routeView = new THREE.Line(routeGeometryView, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
+    particleSystem = new THREE.ParticleSystem(particles, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 3, sizeAttenuation: false}))
     @route = route
+    @routeView = routeView
+    @particleSystem = particleSystem
+    @routeView.position = new THREE.Vector3(-400, 340, 501)
     @addGeometryPrev route
+    @addGeometryPrev particleSystem
+    @addGeometryXY routeView
+
+  updateRoutePosition : (p) ->
+    @routeView.position = new THREE.Vector3(@routeView.position.x - p[0], @routeView.position.y + p[1], @routeView.position.z + p[2])
+    @routeView.geometry.verticesNeedUpdate = true

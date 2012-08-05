@@ -2,6 +2,7 @@
 model : Model
 view : View
 libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
+model/game : Game
 ###
 
 # This module is responsible for loading Geometry objects like meshes
@@ -63,46 +64,48 @@ GeometryFactory =
       planeBorderPrevYZ = new THREE.PlaneGeometry(390, 390, 1, 1)
       planeBorderPrevXZ = new THREE.PlaneGeometry(390, 390, 1, 1)
       
-      #create preview Box (2500x2500)
+      #create preview Box depending on Game.dataSet.upperBoundary
+      b = Game.dataSet.upperBoundary
       previewBoxGeometry = new THREE.Geometry()
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 2500, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 0, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 0, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 2500, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 2500))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], b[2], 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], 0, 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], 0, b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], b[2], b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, b[1]))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 0, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 2500, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 2500, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 0, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], 0, 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], b[2], 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], b[2], b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], 0, b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], 0))
       previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
       View.addGeometryPrev previewBox
       # TODO: find right rotation:
-      text1 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text1.position = new THREE.Vector3(0, 2500, 0)
+      text1 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 0", {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+      text1.position = new THREE.Vector3(0, b[2], 0)
       text1.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
       View.addGeometryPrev text1
-      text2 = new THREE.Mesh(new THREE.TextGeometry("2500, 0, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text2.position = new THREE.Vector3(2000, 2300, 0)
+      text2 = new THREE.Mesh(new THREE.TextGeometry(b[0]+", 0, 0", {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+      text2.position = new THREE.Vector3(b[0], b[2], 0)
       text2.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
       View.addGeometryPrev text2
-      text3 = new THREE.Mesh(new THREE.TextGeometry("0, 2500, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text3.position = new THREE.Vector3(0, 2500, 2500)
+      text3 = new THREE.Mesh(new THREE.TextGeometry("0, "+b[2]+", 0", {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+      text3.position = new THREE.Vector3(0, b[2], b[1])
       text3.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
       View.addGeometryPrev text3
-      text4 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 2500", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+      text4 = new THREE.Mesh(new THREE.TextGeometry("0, 0, "+b[2], {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
       text4.position = new THREE.Vector3(0, 0, 0)
       text4.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
       View.addGeometryPrev text4
+      View.texts = [text1, text2, text3, text4]
 
       # create route
-      View.createRoute 10
+      View.createRoute 1000
 
       # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
       texturexy = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )

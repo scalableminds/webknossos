@@ -28,8 +28,9 @@ View =
     HEIGHT = (container.height()-48)/2
 
     # Initialize main THREE.js components
-    @rendererxy = new THREE.WebGLRenderer({ clearColor: 0xff0000, clearAlpha: 1, antialias: true })
-    @cameraxy = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 1, 1000)
+    @rendererxy = new THREE.WebGLRenderer({ clearColor: 0xff0000, clearAlpha: 1, antialias: false })
+    #@cameraxy = new THREE.PerspectiveCamera(90, WIDTH / HEIGHT, 0.1, 1000)
+    @cameraxy = new THREE.OrthographicCamera(-192, 192, 192, -192, 152, 232)
     @scenexy = new THREE.Scene()
 
     @rendereryz = new THREE.WebGLRenderer({ clearColor: 0x0000ff, clearAlpha: 1, antialias: true })
@@ -255,6 +256,9 @@ View =
   addGeometryXY : (geometry) ->
     @scenexy.add geometry
 
+  removeGeometryXY : (geometry) ->
+    @scenexy.remove geometry
+
   addGeometryYZ : (geometry) ->
     @sceneyz.add geometry
 
@@ -364,16 +368,20 @@ View =
         cam2d.move [p[2], p[1], p[0]]
       when PLANE_XZ
         cam2d.move [p[0], p[2], p[1]]
+    @updateRoutePosition p
 
   #FIXME: why can't I call move() from within this function?
   moveX : (x) -> 
     cam2d.moveActivePlane [x, 0, 0]
+    View.updateRoutePosition [x, 0, 0]
 
   moveY : (y) ->
     cam2d.moveActivePlane [0, y, 0]
+    View.updateRoutePosition [0, y, 0]
   
   moveZ : (z) ->
     cam2d.moveActivePlane [0, 0, z]
+    View.updateRoutePosition [0, 0, z]
 
   prevViewportSite : =>
     (View.cameraPrev.right - View.cameraPrev.left)         # always quadratic
@@ -470,32 +478,47 @@ View =
   setWaypoint : (position) ->
     unless @curIndex
       @curIndex = 1 
-      @route.geometry.vertices[0] = new THREE.Vector3(2046, 2500 - 470, 1036)
-    # resize buffer if route gets too long
-    if @curIndex >= @maxRouteLen
-      @maxRouteLen *= 2
-      @createRoute @maxRouteLen, @route
+      @route.geometry.vertices[0] = new THREE.Vector3(400, 2500 - 500, 340)
+      @routeView.geometry.vertices[0] = new THREE.Vector3(400, -340, -500)
+      @particleSystem.geometry.vertices[0] = new THREE.Vector3(400, 2500 - 500, 340)
     # Translating ThreeJS' coordinate system to the preview's one
-    @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], 2500 - position[2], position[1])
-    @route.geometry.verticesNeedUpdate = true
-    @curIndex += 1
-    cam2d.hasChanged = true
+    if @curIndex < @maxRouteLen
+      @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], 2500 - position[2], position[1])
+      @routeView.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], -position[1], -position[2])
+      @particleSystem.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], 2500 - position[2], position[1])
+      @route.geometry.verticesNeedUpdate = true
+      @routeView.geometry.verticesNeedUpdate = true
+      @particleSystem.geometry.verticesNeedUpdate = true
+      @curIndex += 1
+      cam2d.hasChanged = true
 
-  createRoute : (maxRouteLen, lastRoute) ->
+  createRoute : (maxRouteLen) ->
     # create route to show in previewBox and pre-allocate buffer
     @maxRouteLen = maxRouteLen
     routeGeometry = new THREE.Geometry()
+    routeGeometryView = new THREE.Geometry()
+    particles = new THREE.Geometry()
     i = 0
-    if lastRoute?
-      for vertex in lastRoute.geometry.vertices
-        routeGeometry.vertices.push(vertex)
-      i = @maxRouteLen / 2
     while i < maxRouteLen
       # workaround to hide the unused vertices
       routeGeometry.vertices.push(new THREE.Vector2(0, 0))
+      routeGeometryView.vertices.push(new THREE.Vector2(0, 0))
+      particles.vertices.push(new THREE.Vector2(0, 0))
       i += 1
 
     routeGeometry.dynamic = true
-    route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 2}))
+    routeGeometryView.dynamic = true
+    route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
+    routeView = new THREE.Line(routeGeometryView, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
+    particleSystem = new THREE.ParticleSystem(particles, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 3, sizeAttenuation: false}))
     @route = route
+    @routeView = routeView
+    @particleSystem = particleSystem
+    @routeView.position = new THREE.Vector3(-400, 340, 501)
     @addGeometryPrev route
+    @addGeometryPrev particleSystem
+    @addGeometryXY routeView
+
+  updateRoutePosition : (p) ->
+    @routeView.position = new THREE.Vector3(@routeView.position.x - p[0], @routeView.position.y + p[1], @routeView.position.z + p[2])
+    @routeView.geometry.verticesNeedUpdate = true

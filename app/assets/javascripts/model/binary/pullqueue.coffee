@@ -4,8 +4,6 @@ model/game : Game
 libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 ###
 
-# #Model.PullQueue#
-
 PullQueue = 
 
   # Constants

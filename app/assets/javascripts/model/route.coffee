@@ -99,7 +99,7 @@ Route =
 
       if branchStack.length > 0
         #@addToBuffer(2)
-        deferred.resolve(branchStack.pop())
+        deferred.resolve(branchStack.pop().slice(12,15))
       else
         deferred.reject()
 

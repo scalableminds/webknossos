@@ -20,14 +20,16 @@ Renderer =
   # Constants
   TEXTURE_SIZE : 512
   MAP_SIZE : 85 # 4⁰ + 4¹ + 4² + 4³
+  DELTA : [9, 4, 0]
+  REPEAT : [0, 0, 1]
 
   RECURSION_PLACEHOLDER : {}
   
   renderTile : (tile, plane) ->
 
-    bucket = plane.topLeftBucket
-    bucket[plane.view.u] += tile.u
-    bucket[plane.view.v] += tile.v
+    bucket = plane.topLeftBucket.slice(0)
+    bucket[plane.view.u] += tile[0]
+    bucket[plane.view.v] += tile[1]
 
     map = @generateRenderMap(bucket, plane.zoomStep, plane)
     @renderSubTile(map, 0, tile, plane.zoomStep, plane)
@@ -50,9 +52,7 @@ Renderer =
       sourceOffset = 0
       bucketData = Cube.getBucketByAddress(map[mapIndex])
 
-      console.log destOffset, scaleFactor, bucketData
-
-      @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, 5 - scaleFactor, bucketData, sourceOffset, 1, 32, 1, 1)
+      @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, 5 - scaleFactor, bucketData, sourceOffset, 1 << @DELTA[plane.view.u], 1 << @DELTA[plane.view.v], 1, 1)
       #@renderToBuffer(plane.buffer, , @TEXTURE_SIZE, 5 - zoomDifference, [64,128,192,255], 0, 1, 2, 4, 4)
 
 
@@ -95,12 +95,14 @@ Renderer =
             subBucketZoomStep = Cube.getZoomStepOfBucketByAddress(subBucket)
             if plane.layer >> (subBucketZoomStep + 5) == subBucket[plane.view.w] >> subBucketZoomStep
               @addBucketToRenderMap(map, 0, subBucket, subBucketZoomStep, [bucket[plane.view.u], bucket[plane.view.v]], zoomStep, plane)
+
+      map
+
     else
 
-      [ bucket ]
-
-    return map
-
+      if Cube.getZoomStepOfBucketByAddress(bucket) < Cube.ZOOM_STEP_COUNT
+        [ bucket ]
+      else [ undefined ]
 
   addBucketToRenderMap : (map, mapIndex, bucket, bucketZoomStep, tile, tileZoomStep, plane) ->
 

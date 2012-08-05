@@ -23,6 +23,8 @@ Renderer =
   DELTA : [9, 4, 0]
   REPEAT : [0, 0, 1]
 
+  SPECIALbucketData : null
+
   RECURSION_PLACEHOLDER : {}
   
   renderTile : (tile, plane) ->
@@ -47,13 +49,23 @@ Renderer =
 
     else
 
+      unless @SPECIALbucketData
+        @SPECIALbucketData = new Uint8Array(32*32*16)
+        i = 0
+        for x in [0..31] by 1
+          for y in [0..31] by 1
+            for z in [0..15] by 1
+              @SPECIALbucketData[i] = if z == 0 then 255 else 128
+              i++
+        console.log @SPECIALbucketData
+
       scaleFactor = plane.zoomStep - tileZoomStep
       destOffset = bufferOffsetByTileCoordsMacro(tile, scaleFactor)
       sourceOffset = 0
       bucketData = Cube.getBucketByAddress(map[mapIndex])
 
+      #if tile[0] == tile[1]
       @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, 5 - scaleFactor, bucketData, sourceOffset, 1 << @DELTA[plane.view.u], 1 << @DELTA[plane.view.v], 1, 1)
-      #@renderToBuffer(plane.buffer, , @TEXTURE_SIZE, 5 - zoomDifference, [64,128,192,255], 0, 1, 2, 4, 4)
 
 
   renderToBuffer : (destBuffer, destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat) ->

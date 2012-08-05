@@ -67,6 +67,7 @@ GeometryFactory =
 
       borderColors       = [0xff0000, 0x0000ff, 0x00ff00]
 
+      # dimension: [XY, YZ, XZ]; kind: [main, preview, border]
       for dimension in [0..2]
         for kind in [0..2]
           size = if kind==2 then 390 else 380
@@ -120,9 +121,9 @@ GeometryFactory =
       View.createRoute 1000
 
       meshes[1][PLANE_YZ].rotation.x = meshes[2][PLANE_YZ].rotation.x = 90 /180*Math.PI
-      meshes[1][PLANE_YZ].rotation.z = meshes[1][PLANE_YZ].rotation.z = -90 /180*Math.PI
+      meshes[1][PLANE_YZ].rotation.z = meshes[2][PLANE_YZ].rotation.z = -90 /180*Math.PI
       
-      meshes[1][PLANE_XZ].rotation.x = meshes[1][PLANE_XZ].rotation.x = 90 /180*Math.PI
+      meshes[1][PLANE_XZ].rotation.x = meshes[2][PLANE_XZ].rotation.x = 90 /180*Math.PI
 
       View.meshes = meshes
       for kind in [0..2]

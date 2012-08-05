@@ -5,6 +5,12 @@ libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
 model/game : Game
 ###
 
+
+PLANE_XY = 0
+PLANE_YZ = 1
+PLANE_XZ = 2
+VIEW_3D  = 3
+
 # This module is responsible for loading Geometry objects like meshes
 # or creating them programmatically.
 # These objects initalized with default values (postion, materials, etc)
@@ -28,7 +34,7 @@ GeometryFactory =
       mesh.position.x = x
       mesh.position.y = y
       mesh.position.z = z
-      View.addGeometryXY mesh
+      View.addGeometry PLANE_XY, mesh
 
   # Let's set up our trianglesplane.
   # It serves as a "canvas" where the brain images
@@ -54,15 +60,31 @@ GeometryFactory =
     #  Model.Trianglesplane.get(width, zOffset)  
     #).pipe (shader, geometry) ->
 
-      planexy = new THREE.PlaneGeometry(380, 380, 1, 1)
-      planeyz = new THREE.PlaneGeometry(380, 380, 1, 1)
-      planexz = new THREE.PlaneGeometry(380, 380, 1, 1)
-      planePrevXY = new THREE.PlaneGeometry(380, 380, 1, 1)
-      planePrevYZ = new THREE.PlaneGeometry(380, 380, 1, 1)
-      planePrevXZ = new THREE.PlaneGeometry(380, 380, 1, 1)
-      planeBorderPrevXY = new THREE.PlaneGeometry(390, 390, 1, 1)
-      planeBorderPrevYZ = new THREE.PlaneGeometry(390, 390, 1, 1)
-      planeBorderPrevXZ = new THREE.PlaneGeometry(390, 390, 1, 1)
+      planes             = [new Array(3), new Array(3), new Array(3)]
+      textures           = [new Array(3), new Array(3)]
+      textureMaterials   = [new Array(3), new Array(3), new Array(3)]
+      meshes             = [new Array(3), new Array(3), new Array(3)]
+
+      borderColors       = [0xff0000, 0x0000ff, 0x00ff00]
+
+      for dimension in [0..2]
+        for kind in [0..2]
+          size = if kind==2 then 390 else 380
+          planes[kind][dimension] = new THREE.PlaneGeometry(size, size, 1, 1)
+
+          if kind<2
+            textures[kind][dimension] = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+            textures[kind][dimension].needsUpdate = true
+            textureMaterials[kind][dimension] = new THREE.MeshBasicMaterial({wireframe : false, map: planes[kind][dimension].texture})
+          else
+            textureMaterials[kind][dimension] = new THREE.MeshBasicMaterial({wireframe : false, color: borderColors[dimension]})
+
+          meshes[kind][dimension] = new THREE.Mesh( planes[kind][dimension], textureMaterials[kind][dimension] )
+          if kind<1
+            meshes[kind][dimension].rotation.x = 90 /180*Math.PI
+
+          if kind<2
+            meshes[kind][dimension].texture = textures[kind][dimension]
       
       #create preview Box depending on Game.dataSet.upperBoundary
       b = Game.dataSet.upperBoundary
@@ -84,104 +106,27 @@ GeometryFactory =
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], b[1]))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], 0))
       previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
-      View.addGeometryPrev previewBox
-      # TODO: find right rotation:
-      text1 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 0", {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text1.position = new THREE.Vector3(0, b[2], 0)
-      text1.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
-      View.addGeometryPrev text1
-      text2 = new THREE.Mesh(new THREE.TextGeometry(b[0]+", 0, 0", {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text2.position = new THREE.Vector3(b[0], b[2], 0)
-      text2.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
-      View.addGeometryPrev text2
-      text3 = new THREE.Mesh(new THREE.TextGeometry("0, "+b[2]+", 0", {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text3.position = new THREE.Vector3(0, b[2], b[1])
-      text3.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
-      View.addGeometryPrev text3
-      text4 = new THREE.Mesh(new THREE.TextGeometry("0, 0, "+b[2], {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text4.position = new THREE.Vector3(0, 0, 0)
-      text4.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
-      View.addGeometryPrev text4
-      View.texts = [text1, text2, text3, text4]
+      View.addGeometry VIEW_3D, previewBox
+
+      strings   = ["0, 0, 0", b[0]+", 0, 0", "0, "+b[2]+", 0", "0, 0, "+b[2]]
+      positions = [new THREE.Vector3(0, b[2], 0), new THREE.Vector3(b[0], b[2], 0), new THREE.Vector3(0, b[2], b[1]), new THREE.Vector3(0, 0, 0)]
+      texts     = new Array(4)
+      for i in [1..3]
+        texts[i] = new THREE.Mesh(new THREE.TextGeometry(strings[i], {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+        texts[i].position = positions[i]
+        View.addGeometry VIEW_3D, texts[i]
 
       # create route
       View.createRoute 1000
 
-      # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
-      texturexy = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texturexy.needsUpdate = true
-
-      textureyz = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      textureyz.needsUpdate = true
-
-      texturexz = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texturexz.needsUpdate = true
-
-      texturePrevXY = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texturePrevXY.needsUpdate = true
-      texturePrevYZ = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texturePrevYZ.needsUpdate = true
-      texturePrevXZ = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texturePrevXZ.needsUpdate = true
-
-      textureMaterialxy = new THREE.MeshBasicMaterial({wireframe : false, map: planexy.texture})
-      textureMaterialyz = new THREE.MeshBasicMaterial({wireframe : false, map: planeyz.texture})
-      textureMaterialxz = new THREE.MeshBasicMaterial({wireframe : false, map: planexz.texture})
-      textureMaterialPrevXY = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevXY.texture})
-      textureMaterialPrevYZ = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevYZ.texture})
-      textureMaterialPrevXZ = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevXZ.texture})
-      textureMaterialBorderPrevXY = new THREE.MeshBasicMaterial({wireframe : false, color: 0xff0000})
-      textureMaterialBorderPrevYZ = new THREE.MeshBasicMaterial({wireframe : false, color: 0x0000ff})
-      textureMaterialBorderPrevXZ = new THREE.MeshBasicMaterial({wireframe : false, color: 0x00ff00})
-
-      trianglesplanexy = new THREE.Mesh( planexy, textureMaterialxy )
-      trianglesplanexy.rotation.x = 90 /180*Math.PI
+      meshes[1][PLANE_YZ].rotation.x = meshes[2][PLANE_YZ].rotation.x = 90 /180*Math.PI
+      meshes[1][PLANE_YZ].rotation.z = meshes[1][PLANE_YZ].rotation.z = -90 /180*Math.PI
       
-      trianglesplaneyz = new THREE.Mesh( planeyz, textureMaterialyz )
-      trianglesplaneyz.rotation.x = 90 /180*Math.PI
+      meshes[1][PLANE_XZ].rotation.x = meshes[1][PLANE_XZ].rotation.x = 90 /180*Math.PI
 
-      trianglesplanexz = new THREE.Mesh( planexz, textureMaterialxz )
-      trianglesplanexz.rotation.x = 90 /180*Math.PI
-
-      trianglesplanePrevXY = new THREE.Mesh( planePrevXY, textureMaterialPrevXY )
-      borderPrevXY = new THREE.Mesh( planeBorderPrevXY, textureMaterialBorderPrevXY)
-      
-      trianglesplanePrevYZ = new THREE.Mesh( planePrevYZ, textureMaterialPrevYZ )
-      borderPrevYZ = new THREE.Mesh( planeBorderPrevYZ, textureMaterialBorderPrevYZ)
-      trianglesplanePrevYZ.rotation.x = borderPrevYZ.rotation.x = 90 /180*Math.PI
-      trianglesplanePrevYZ.rotation.z = borderPrevYZ.rotation.z = -90 /180*Math.PI
-      
-      trianglesplanePrevXZ = new THREE.Mesh( planePrevXZ, textureMaterialPrevXZ )
-      borderPrevXZ = new THREE.Mesh( planeBorderPrevXZ, textureMaterialBorderPrevXZ)
-      trianglesplanePrevXZ.rotation.x = borderPrevXZ.rotation.x = 90 /180*Math.PI
-
-      trianglesplanexy.texture = texturexy
-      trianglesplaneyz.texture = textureyz
-      trianglesplanexz.texture = texturexz
-      trianglesplanePrevXY.texture = texturePrevXY
-      trianglesplanePrevYZ.texture = texturePrevYZ
-      trianglesplanePrevXZ.texture = texturePrevXZ
-
-      View.trianglesplanexy = trianglesplanexy
-      View.addGeometryXY View.trianglesplanexy
-
-      View.trianglesplaneyz = trianglesplaneyz
-      View.addGeometryYZ View.trianglesplaneyz
-
-      View.trianglesplanexz = trianglesplanexz
-      View.addGeometryXZ View.trianglesplanexz
-
-      View.trianglesplanePrevXY = trianglesplanePrevXY
-      View.addGeometryPrev View.trianglesplanePrevXY
-      View.trianglesplanePrevYZ = trianglesplanePrevYZ
-      View.addGeometryPrev View.trianglesplanePrevYZ
-      View.trianglesplanePrevXZ = trianglesplanePrevXZ
-      View.addGeometryPrev View.trianglesplanePrevXZ
-
-      View.borderPrevXY = borderPrevXY
-      View.addGeometryPrev View.borderPrevXY
-      View.borderPrevYZ = borderPrevYZ
-      View.addGeometryPrev View.borderPrevYZ
-      View.borderPrevXZ = borderPrevXZ
-      View.addGeometryPrev View.borderPrevXZ
+      View.meshes = meshes
+      for kind in [0..2]
+        for dimension in [0..2]
+          scene = if kind==0 then dimension else VIEW_3D
+          View.addGeometry scene, View.meshes[kind][dimension]
     )

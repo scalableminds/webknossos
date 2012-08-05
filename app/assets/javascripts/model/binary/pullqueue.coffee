@@ -90,17 +90,17 @@ PullQueue =
 
     @pullLoadingCount++
     Cube.setRequestedZoomStepByZoomedAddress(bucket, zoomStep)
-    console.log "Requested: ", bucket, zoomStep
+    #console.log "Requested: ", bucket, zoomStep
 
     @loadBucketByAddress(bucket, zoomStep).then(
 
       (colors) =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, colors)
-        console.log "Success: ", bucket, zoomStep
+        #console.log "Success: ", bucket, zoomStep
 
       =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, null)
-        console.log "Failed: ", bucket, zoomStep
+        #rconsole.log "Failed: ", bucket, zoomStep
 
     ).always =>
       @pullLoadingCount--
@@ -120,5 +120,5 @@ PullQueue =
 
   loadBucketByAddress : (bucket, zoomStep) ->
 
-    transmitBuffer = [ zoomStep, bucket[0] << 5, bucket[1] << 5, bucket[2] << 5 ]
+    transmitBuffer = [ zoomStep, bucket[0] << 5, bucket[1] << 5, bucket[2] << 4 ]
     @loadBucketSocket().pipe (socket) -> socket.send(transmitBuffer)

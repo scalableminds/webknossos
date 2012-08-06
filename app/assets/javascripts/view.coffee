@@ -292,20 +292,20 @@ View =
 
   moveActivePlane : (p) ->
     cam2d.moveActivePlane p
-    @updateRoutePosition p
+    @updateRoute()
 
   #FIXME: why can't I call move() from within this function?
   moveX : (x) -> 
     cam2d.moveActivePlane [x, 0, 0]
-    View.updateRoutePosition [x, 0, 0]
+    View.updateRoute()
 
   moveY : (y) ->
     cam2d.moveActivePlane [0, y, 0]
-    View.updateRoutePosition [0, y, 0]
+    View.updateRoute()
   
   moveZ : (z) ->
     cam2d.moveActivePlane [0, 0, z]
-    View.updateRoutePosition [0, 0, z]
+    View.updateRoute()
 
   prevViewportSize : =>
     (View.camera[VIEW_3D].right - View.camera[VIEW_3D].left)         # always quadratic
@@ -353,10 +353,12 @@ View =
 
   zoomIn : ->
     cam2d.zoomIn(cam2d.getActivePlane())
+    View.updateRoute()
 
   #todo: validation in Model
   zoomOut : ->
     cam2d.zoomOut(cam2d.getActivePlane())
+    View.updateRoute()
 
   setActivePlaneXY : ->
     View.setActivePlane PLANE_XY
@@ -379,10 +381,7 @@ View =
     # calculate the global position of the rightclick
     position = [curGlobalPos[0] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[1] - 192/curZoomStep + position[1]/curZoomStep, curGlobalPos[2]]
     unless @curIndex
-      @curIndex = 1 
-      @route.geometry.vertices[0] = new THREE.Vector3(400, Game.dataSet.upperBoundary[1] - 500, 340)
-      @routeView.geometry.vertices[0] = new THREE.Vector3(400, -340, -500)
-      @particleSystem.geometry.vertices[0] = new THREE.Vector3(400, Game.dataSet.upperBoundary[1] - 500, 340)
+      @curIndex = 0
     # Translating ThreeJS' coordinate system to the preview's one
     if @curIndex < @maxRouteLen
       @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
@@ -433,7 +432,10 @@ View =
     @route = route
     @routeView = routeView
     @particleSystem = particleSystem
-    @routeView.position = new THREE.Vector3(-400, 340, 501)
+
+    # Initializing Position
+    gPos = cam2d.getGlobalPos()
+    @routeView.position = new THREE.Vector3(-gPos[0], gPos[1], gPos[2]+1)
 
     particle = new THREE.Mesh(new THREE.CubeGeometry(300, 300, 300, 10, 10, 10), new THREE.MeshBasicMaterial({color: 0xff0000}))
     particle.position.x = 0
@@ -447,6 +449,12 @@ View =
     @addGeometry VIEW_3D, particleSystem
     @addGeometry PLANE_XY, routeView
 
-  updateRoutePosition : (p) ->
-    @routeView.position = new THREE.Vector3(@routeView.position.x - p[0], @routeView.position.y + p[1], cam2d.getGlobalPos()[2]+1)
+  updateRoute : ->
+    gPos                = cam2d.getGlobalPos()
+    scale               = cam2d.getPlaneScalingFactor PLANE_XY
+    console.log "scale (alt): " + @routeView.scale
+    console.log "scale: " + scale
+    @routeView.scale    = new THREE.Vector3(1/scale, 1/scale, 1/scale)
+    @routeView.position = new THREE.Vector3(-gPos[0]/scale, gPos[1]/scale, gPos[2]/scale+1)
+    #@routeView.position = new THREE.Vector3(@routeView.position.x - p[0], @routeView.position.y + p[1], cam2d.getGlobalPos()[2]+1)
     @routeView.geometry.verticesNeedUpdate = true

@@ -352,12 +352,18 @@ View =
       @resize()
 
   zoomIn : ->
-    cam2d.zoomIn(cam2d.getActivePlane())
+    if Model.User.Configuration.lockZoom
+      cam2d.zoomInAll()
+    else 
+      cam2d.zoomIn(cam2d.getActivePlane())
     View.updateRoute()
 
   #todo: validation in Model
   zoomOut : ->
-    cam2d.zoomOut(cam2d.getActivePlane())
+    if Model.User.Configuration.lockZoom
+      cam2d.zoomOutAll()
+    else 
+      cam2d.zoomOut(cam2d.getActivePlane())
     View.updateRoute()
 
   setActivePlaneXY : ->

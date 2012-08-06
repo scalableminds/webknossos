@@ -35,6 +35,7 @@ Controller =
         $("#moveValue")[0].value = data.moveValue
         $("#rotateValue")[0].value = data.rotateValue
         $("#mouseRotateValue")[0].value = data.mouseRotateValue
+        $("#lockZoom")[0].checked = data.lockZoom
         $("#moveValue")[0].value = data.moveValue
 
         $("#mouseInversionX")[0].checked = true if data.mouseInversionX is 1
@@ -164,7 +165,11 @@ Controller =
 
   setMouseRotateValue : (value) ->
     Model.User.Configuration.mouseRotateValue = (Number) value
-    Model.User.Configuration.push()         
+    Model.User.Configuration.push()   
+
+  setLockZoom : (value) ->
+    Model.User.Configuration.lockZoom = value
+    Model.User.Configuration.push()      
 
   setMouseInversionX : (value) ->
     if value is true

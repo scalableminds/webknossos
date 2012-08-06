@@ -35,6 +35,7 @@ Controller =
         $("#moveValue")[0].value = data.moveValue
         $("#rotateValue")[0].value = data.rotateValue
         $("#mouseRotateValue")[0].value = data.mouseRotateValue
+        $("#routeClippingDistance")[0].value = data.routeClippingDistance
         $("#lockZoom")[0].checked = data.lockZoom
         $("#moveValue")[0].value = data.moveValue
 
@@ -46,6 +47,8 @@ Controller =
         $("#mouseActive")[0].checked = data.mouseActive
         $("#gamepadActive")[0].checked = data.gamepadActive
         $("#motionsensorActive")[0].checked = data.motionsensorActive
+
+        View.setRouteClippingDistance data.routeClippingDistance
     )
 
     Model.Route.initialize().then(
@@ -165,6 +168,12 @@ Controller =
 
   setMouseRotateValue : (value) ->
     Model.User.Configuration.mouseRotateValue = (Number) value
+    Model.User.Configuration.push()      
+
+  setRouteClippingDistance : (value) ->
+    console.log "setRouteClippingDistance()"
+    Model.User.Configuration.routeClippingDistance = (Number) value
+    View.setRouteClippingDistance((Number) value)
     Model.User.Configuration.push()   
 
   setLockZoom : (value) ->

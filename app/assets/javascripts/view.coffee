@@ -29,12 +29,14 @@ View =
     HEIGHT = (container.height()-48)/2
 
     # Initialize main THREE.js components
+    # Max. distance the route may have from the main plane in order to be displayed:
+    @camDistance = 40
     colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
     @renderer = new Array(4)
     @camera   = new Array(4)
     @scene    = new Array(4)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
-      camDistance  = if i==VIEW_3D then 100000 else 40
+      camDistance  = if i==VIEW_3D then 100000 else @camDistance
       @renderer[i] = new THREE.WebGLRenderer({clearColor: colors[i], clearAlpha: 1, antialias: false})
       @camera[i]   = new THREE.OrthographicCamera(-192, 192, 192, -192, -camDistance, camDistance)
       @scene[i]    = new THREE.Scene()
@@ -357,6 +359,7 @@ View =
     else 
       cam2d.zoomIn(cam2d.getActivePlane())
     View.updateRoute()
+    View.updateCamDistance()
 
   #todo: validation in Model
   zoomOut : ->
@@ -365,6 +368,17 @@ View =
     else 
       cam2d.zoomOut(cam2d.getActivePlane())
     View.updateRoute()
+    View.updateCamDistance()
+
+  updateCamDistance : ->
+    for i in [0..2]
+      @camera[i].near = - @camDistance/cam2d.getPlaneScalingFactor(i)
+      @camera[i].updateProjectionMatrix()
+    cam2d.hasChanged = true
+
+  setRouteClippingDistance : (value) ->
+    @camDistance = value
+    @updateCamDistance()
 
   setActivePlaneXY : ->
     View.setActivePlane PLANE_XY

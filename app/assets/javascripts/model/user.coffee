@@ -16,6 +16,7 @@ User.Configuration =
   rotateValue : null
   scaleValue : null
   mouseRotateValue : null
+  routeClippingDistance : null
   lockZoom : null
   mouseInversionX : null
   mouseInversionY : null
@@ -42,6 +43,7 @@ User.Configuration =
               @rotateValue, 
               @scaleValue, 
               @mouseRotateValue, 
+              @routeClippingDistance, 
               @lockZoom,
               @mouseInversionX,
               @mouseInversionY,
@@ -75,6 +77,7 @@ User.Configuration =
         rotateValue : @rotateValue,
         scaleValue : @scaleValue,
         mouseRotateValue : @mouseRotateValue,
+        routeClippingDistance : @routeClippingDistance,
         lockZoom : @lockZoom
         mouseInversionX : @mouseInversionX,
         mouseInversionY : @mouseInversionY,

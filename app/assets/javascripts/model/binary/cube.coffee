@@ -118,7 +118,7 @@ Cube =
 
     { cube } = @
 
-    cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)].data
+    cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)]
 
 
   setBucketByZoomedAddress : (bucket, zoomStep, bucketData) ->

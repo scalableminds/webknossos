@@ -12,7 +12,7 @@ subTileMacro = (tile, index) ->
 
 bufferOffsetByTileCoordsMacro = (tile, scaleFactor) ->
 
-  tile[0] * (1 << (5 - scaleFactor)) + tile[1] * (1 << (5 - scaleFactor)) * @TEXTURE_SIZE
+  tile[0] * (1 << tileSize) + tile[1] * (1 << tileSize) * @TEXTURE_SIZE
 
 
 Renderer = 
@@ -48,9 +48,9 @@ Renderer =
         @renderSubTile(map, (mapIndex << 2) + 1 + i, subTile, tileZoomStep - 1, plane)
 
     else
-
       console.log "RENDERING", tile, tileZoomStep, map[mapIndex]
-#      unless @SPECIALbucketData
+
+      #      unless @SPECIALbucketData
  #       @SPECIALbucketData = new Uint8Array(32*32*16)
   #      i = 0
    #     for x in [0..31] by 1
@@ -61,18 +61,24 @@ Renderer =
         #console.log @SPECIALbucketData
 
       tileSize = 5 - (plane.zoomStep - tileZoomStep)
-      #layerMask = (1 << 5) - 1
-      #destOffset = bufferOffsetByTileCoordsMacro(tile, scaleFactor)
+      destOffset = bufferOffsetByTileCoordsMacro(tile, tileSize)
       
-
-      #sourceOffset = ((plane.layer >> plane.zoomStep) & layerMask) * (1 << @DELTA[plane.view.w])
+      layerMask = (1 << 5) - 1
+      sourceOffset = ((plane.layer >> plane.zoomStep) & layerMask) * (1 << @DELTA[plane.view.w])
       
-      #bucketData = Cube.getBucketByAddress(map[mapIndex])
+      bucket = Cube.getBucketByAddress(map[mapIndex])
+      skip = Math.max(plane.zoomStep - bucket.zoomStep, 0)
+      repeat = Math.max(bucket.zoomStep - plane.zoomStep, 0)
 
-      #@renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, 5 - scaleFactor, bucketData, sourceOffset, 1 << @DELTA[plane.view.u], 1 << @DELTA[plane.view.v], @REPEAT[plane.view.u], @REPEAT[plane.view.v], plane.view.w == 2 and tile[0] == 7 and tile[1] == 7)
+      
+      @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, tileSize, bucket.data, 0,
+        1 << (@DELTA[plane.view.u] + skip),
+        1 << (@DELTA[plane.view.v] + skip),
+        @REPEAT[plane.view.u] + repeat,
+        @REPEAT[plane.view.v] + repeat)
 
 
-  renderToBuffer : (destBuffer, destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat, debug) ->
+  renderToBuffer : (destBuffer, destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat) ->
 
     i = 1 << (destSize << 1)
     destRowMask = (1 << destSize) - 1

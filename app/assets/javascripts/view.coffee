@@ -183,7 +183,7 @@ View =
           if cam2d.needsUpdate plane.planeID
             cam2d.notifyNewTexture plane.planeID
 
-          Model.Binary.get(cam2d.getTexturePosition(plane.planeID), cam2d.getZoomStep(plane.planeID), [120, 120, 150, 150], plane.planeID).done (buffer) ->
+          Model.Binary.get(cam2d.getTexturePosition(plane.planeID), cam2d.getZoomStep(plane.planeID), cam2d.getArea(plane.planeID), plane.planeID).done (buffer) ->
             if buffer
               plane.texture.image.data.set(buffer)
         

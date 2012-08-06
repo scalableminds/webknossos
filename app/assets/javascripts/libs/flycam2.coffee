@@ -110,6 +110,11 @@ class Flycam2d
     [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @getZoomStep planeID) + @buffer[planeID],
       (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @getZoomStep planeID) + @buffer[planeID]]
 
+  getArea : (planeID) ->
+    offsets = @getOffsets planeID
+    size    = @getTextureScalingFactor(planeID) * @viewportWidth
+    [offsets[0], offsets[1], offsets[0] + size, offsets[1] + size]
+
   notifyNewTexture : (planeID) ->
     @texturePosition[planeID] = @globalPosition.slice()    #copy that position
     @newBuckets[planeID] = false

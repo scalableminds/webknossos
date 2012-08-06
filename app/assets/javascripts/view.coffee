@@ -416,11 +416,11 @@ View =
     vector = new THREE.Vector3((position[0] / 384 ) * 2 - 1, - (position[1] / 384) * 2 + 1, 0.5)
     projector = new THREE.Projector()
     console.log vector.x, vector.y, vector.z
-    projector.unprojectVector(vector, @cameraPrev)
+    projector.unprojectVector(vector, @camera[VIEW_3D])
 
-    ray = new THREE.Ray(@cameraPrev.position, vector.subSelf(@cameraPrev.position).normalize())
+    ray = new THREE.Ray(@camera[VIEW_3D].position, vector.subSelf(@camera[VIEW_3D].position).normalize())
 
-    console.log @cameraPrev.position
+    console.log @camera[VIEW_3D].position
 
     intersects = ray.intersectObjects(@particles)
     console.log vector, intersects.length
@@ -459,7 +459,7 @@ View =
     particle.position.z = 0
     @particles = []
     @particles.push particle
-    @addGeometryPrev particle
+    @addGeometry VIEW_3D, particle
 
     @addGeometry VIEW_3D, route
     @addGeometry VIEW_3D, particleSystem

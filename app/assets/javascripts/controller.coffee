@@ -35,6 +35,7 @@ Controller =
         $("#moveValue")[0].value = data.moveValue
         $("#rotateValue")[0].value = data.rotateValue
         $("#mouseRotateValue")[0].value = data.mouseRotateValue
+        $("#lockZoom")[0].checked = data.lockZoom
         $("#moveValue")[0].value = data.moveValue
 
         $("#mouseInversionX")[0].checked = true if data.mouseInversionX is 1
@@ -70,10 +71,8 @@ Controller =
     @input.mouses = new Input.Mouse(
       [View.renderer[PLANE_XY].domElement, View.renderer[PLANE_YZ].domElement, View.renderer[PLANE_XZ].domElement, View.renderer[VIEW_3D].domElement]
       [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
-      {"x" : View.moveX, "y" : View.moveY, "w" : View.moveZ, "r" : View.setWaypointXY}
-      {"x" : View.moveZ, "y" : View.moveY, "w" : View.moveX, "r" : View.setWaypointYZ}
-      {"x" : View.moveX, "y" : View.moveZ, "w" : View.moveY, "r" : View.setWaypointXZ}
-      {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev}
+      {"x" : View.moveX, "y" : View.moveY, "w" : View.moveZ, "r" : _.bind(View.setWaypoint, View)}
+      {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev, "r" : _.bind(View.onPreviewClick, View)}
     )
 
   initKeyboard : ->
@@ -166,7 +165,11 @@ Controller =
 
   setMouseRotateValue : (value) ->
     Model.User.Configuration.mouseRotateValue = (Number) value
-    Model.User.Configuration.push()         
+    Model.User.Configuration.push()   
+
+  setLockZoom : (value) ->
+    Model.User.Configuration.lockZoom = value
+    Model.User.Configuration.push()      
 
   setMouseInversionX : (value) ->
     if value is true

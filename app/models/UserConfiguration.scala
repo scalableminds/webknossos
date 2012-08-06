@@ -24,6 +24,7 @@ object UserConfiguration {
       "rotateValue" -> JsNumber( 0.01 ),
       "scaleValue" -> JsNumber( 0.05 ),
       "mouseRotateValue" -> JsNumber( 0.004 ),
+      "lockZoom" -> JsBoolean( true ),
       "mouseInversionX" -> JsNumber( 1 ),
       "mouseInversionY" -> JsNumber( 1 ),
       "mouseActive" -> JsBoolean( true ),

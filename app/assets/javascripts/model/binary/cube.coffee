@@ -1,4 +1,6 @@
-### define ###
+### define
+libs/event_mixin : EventMixin
+###
 
 # Macros
 
@@ -150,6 +152,7 @@ Cube =
             if bucketData
               if zoomStep < bucket.zoomStep 
                 bucket.data = bucketData
+                @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
                 bucket.zoomStep = zoomStep
             else
               bucket.requestedZoomStep = bucket.zoomStep
@@ -160,6 +163,7 @@ Cube =
       if bucketData
         if zoomStep < bucket.zoomStep 
           bucket.data = bucketData
+          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z], 0, bucket.zoomStep)
           bucket.zoomStep = 0
       else
         bucket.requestedZoomStep = bucket.zoomStep
@@ -367,3 +371,7 @@ Cube =
       @cube       = newCube
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
+
+_.extend(Cube, new EventMixin())
+
+Cube

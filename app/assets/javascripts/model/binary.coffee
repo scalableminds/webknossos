@@ -109,6 +109,51 @@ Binary =
     { layer : null, zoomStep : null, view : { u : 0, v : 2, w : 1 } }
   ]
 
+  init : () ->
+
+    Cube.on "bucketLoaded", (bucket, zoomStep, oldZoomStep) =>
+
+      #console.log "NEW BUCKET DATA", bucket, zoomStep
+
+      for i in [0..2] by 1
+        plane = @planes[i]
+
+        continue unless plane.topLeftBucket
+
+        if plane.layer >> 5 == bucket[plane.view.w] and oldZoomStep > plane.zoomStep
+#        if plane.layer >> (zoomStep + 5) == bucket[plane.view.w]
+#          if zoomStep > plane.zoomStep
+
+#            zoomDifference = zoomStep - plane.zoomStep
+#            width = 1 << zoomDifference
+#            offset_u = (bucket[plane.view.u] << zoomDifference) - plane.topLeftBucket[plane.view.u]
+#            offset_v = (bucket[plane.view.v] << zoomDifference) - plane.topLeftBucket[plane.view.v]
+
+ #           for u in [offset_u...offset_u + width] by 1
+ #             for v in [offset_v...offset_v + width] by 1
+
+  #              if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
+   #               plane.tiles[tileIndexByTileCoordsMacro(u, v)] = true
+    #              plane.changed = true
+
+     #     else
+
+           # zoomDifference = plane.zoomStep - zoomStep
+           # u = (bucket[plane.view.u] >> zoomDifference) - plane.topLeftBucket[plane.view.u]
+           # v = (bucket[plane.view.v] >> zoomDifference) - plane.topLeftBucket[plane.view.v]
+
+           # if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
+           #   plane.tiles[tileIndexByTileCoordsMacro(u, v)] = true
+           #   plane.changed = true
+
+          u = (bucket[plane.view.u] >> plane.zoomStep) - plane.topLeftBucket[plane.view.u]
+          v = (bucket[plane.view.v] >> plane.zoomStep) - plane.topLeftBucket[plane.view.v]
+
+          if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
+              plane.tiles[tileIndexByTileCoordsMacro(u, v)] = true
+              plane.changed = true
+
+
   # Use this method to let us know when you've changed your spot. Then we'll try to 
   # preload some data. 
   ping : (position, zoomStep, direction) ->
@@ -194,13 +239,13 @@ Binary =
 #          direction_y = Math.round(delta_y)
 #          direction_z = Math.round(delta_z)
       
-      PullQueue.insert [1, 1, 1], 3, 0
-      PullQueue.insert [8, 7, 7], 1, 1
-      PullQueue.insert [9, 8, 7], 1, 2
-      PullQueue.insert [16, 14, 15], 0, 3
-      PullQueue.insert [16, 15, 15], 0, 4
-      PullQueue.insert [16, 16, 15], 0, 5
-      PullQueue.insert [16, 17, 15], 0, 6
+      PullQueue.insert [10, 10, 21], 3, 0
+      PullQueue.insert [42, 42, 84], 1, 1
+      PullQueue.insert [43, 43, 84], 1, 2
+      PullQueue.insert [84, 84, 168], 0, 3
+      PullQueue.insert [84, 85, 168], 0, 4
+      PullQueue.insert [84, 86, 168], 0, 5
+      PullQueue.insert [84, 87, 168], 0, 6
 
       PullQueue.pull()
 
@@ -212,11 +257,10 @@ Binary =
 
   # A synchronized implementation of `get`. Cuz its faster.
   getSync : (position, zoomStep, area, plane) ->
-    area = [0,0,512,512]
 
     topLeftPosition = position.slice(0)
-    topLeftPosition[plane.view.u] -= @TEXTURE_SIZE >> 1
-    topLeftPosition[plane.view.v] -= @TEXTURE_SIZE >> 1
+    topLeftPosition[plane.view.u] -= (@TEXTURE_SIZE >> 1) << zoomStep
+    topLeftPosition[plane.view.v] -= (@TEXTURE_SIZE >> 1) << zoomStep
 
     topLeftBucket = Cube.vertexToZoomedBucketAddress(topLeftPosition, zoomStep)
 
@@ -231,6 +275,8 @@ Binary =
 
     unless _.isEqual(plane.layer, layer) and _.isEqual(plane.zoomStep, zoomStep)
 
+      console.log "LAYER OR ZOOMSTEP CHANGED"
+
       plane.layer = layer
       plane.zoomStep = zoomStep
       plane.topLeftBucket = topLeftBucket
@@ -241,6 +287,8 @@ Binary =
 
     unless _.isEqual(plane.topLeftBucket, topLeftBucket)
 
+      console.log "TOP_LEFT_BUCKET CHANGED", topLeftBucket
+
       oldTopLeftBucket = plane.topLeftBucket
       oldTiles = plane.tiles
       oldBuffer = plane.buffer
@@ -250,8 +298,8 @@ Binary =
       plane.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
       plane.changed = true
 
-      width = (@TEXTURE_SIZE >> 5) - Math.abs(plane.topLeftBucket[plane.view.u], oldTopLeftBucket[plane.view.u])
-      height = (@TEXTURE_SIZE >> 5) - Math.abs(plane.topLeftBucket[plane.view.v], oldTopLeftBucket[plane.view.v])
+      width = (@TEXTURE_SIZE >> 5) - Math.abs(plane.topLeftBucket[plane.view.u] - oldTopLeftBucket[plane.view.u])
+      height = (@TEXTURE_SIZE >> 5) - Math.abs(plane.topLeftBucket[plane.view.v] - oldTopLeftBucket[plane.view.v])
       oldOffset = [
         Math.max(plane.topLeftBucket[plane.view.u] - oldTopLeftBucket[plane.view.u], 0)
         Math.max(plane.topLeftBucket[plane.view.v] - oldTopLeftBucket[plane.view.v], 0)
@@ -263,6 +311,7 @@ Binary =
 
       for du in [0...width] by 1
         for dv in [0...height] by 1
+          # TODO
           o1 = oldOffset[0] + du
           o2 = oldOffset[1] + dv
           n1 = newOffset[0] + du
@@ -272,11 +321,11 @@ Binary =
           newTileIndex = tileIndexByTileCoordsMacro(n1, n2)
 
           if plane.tiles[newTileIndex] and not oldTiles[oldTileIndex]
+            # TODO
             #@copyTile(currentView.buffer, oldBuffer, newTileIndex, oldTileIndex)
-            #plane.tiles[newTextureIndex] = false
-            null
+            #console.log "COPYING TILE FROM", [o1, o2], "TO", [n1, n2]
+            plane.tiles[newTileIndex] = false
 
-    plane.changed = true
     if plane.changed or not _.isEqual(plane.area, area)
 
       plane.area = area
@@ -288,11 +337,12 @@ Binary =
           if plane.tiles[tileIndex]
 
             Renderer.renderTile([u, v], plane)
-            #plane.tiles[tileIndex] = false
+            plane.tiles[tileIndex] = false
 
       plane.buffer
     
     else
+
       null
 
 
@@ -318,3 +368,7 @@ Binary =
           buckets.push if _.min(bucket) >= 0 then bucket else null
 
     buckets
+
+Binary.init()
+
+Binary

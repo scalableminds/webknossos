@@ -174,6 +174,8 @@ View =
     
       i = 0       # counts which plane is used
       for plane in [gxy, gyz, gxz, gpxy, gpxz, gpyz, gbxy, gbyz, gbxz]
+        if i % 3 != 0
+          continue
         i++
         offsets = cam2d.getOffsets plane.planeID
         scalingFactor = cam2d.getTextureScalingFactor plane.planeID
@@ -183,7 +185,7 @@ View =
           if cam2d.needsUpdate plane.planeID
             cam2d.notifyNewTexture plane.planeID
 
-          Model.Binary.get(cam2d.getTexturePosition(plane.planeID), cam2d.getZoomStep(plane.planeID), cam2d.getArea(plane.planeID), plane.planeID).done (buffer) ->
+          Model.Binary.get(cam2d.getTexturePosition(plane.planeID), 2, cam2d.getArea(plane.planeID), plane.planeID).done (buffer) ->
             if buffer
               plane.texture.image.data.set(buffer)
         

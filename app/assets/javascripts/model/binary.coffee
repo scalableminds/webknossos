@@ -111,7 +111,7 @@ Binary =
       @lastZoomStep = zoomStep
       @lastDirection = direction
 
-      console.time "ping"
+      #console.time "ping"
 
       positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
       buckets = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
@@ -123,7 +123,7 @@ Binary =
         @positionBucket[0] + (@TEXTURE_SIZE >> 6), @positionBucket[1] + (@TEXTURE_SIZE >> 6), @positionBucket[2] + (@TEXTURE_SIZE >> 6),
         zoomStep)
 
-      console.time "queue"
+      #console.time "queue"
       PullQueue.clear()
 
       direction = [0,0,1]
@@ -150,11 +150,11 @@ Binary =
           direction_y = Math.round(delta_y)
           direction_z = Math.round(delta_z)
 
-      console.timeEnd "queue"
+      #console.timeEnd "queue"
       
       PullQueue.pull()
       
-      console.timeEnd "ping"
+      #console.timeEnd "ping"
 
 
   getXY : (position, zoomStep) ->

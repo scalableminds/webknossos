@@ -9,10 +9,10 @@ subTileMacro = (tile, index) ->
 
   [(tile[0] << 1) + (index % 2), (tile[1] << 1) + (index >> 1)]
 
+
 bufferOffsetByTileCoordsMacro = (tile, scaleFactor) ->
 
-  tile[0] * (1 << (5 - scaleFactor)) + 
-  tile[1] * (1 << (5 - scaleFactor)) * @TEXTURE_SIZE
+  tile[0] * (1 << (5 - scaleFactor)) + tile[1] * (1 << (5 - scaleFactor)) * @TEXTURE_SIZE
 
 
 Renderer = 
@@ -22,6 +22,8 @@ Renderer =
   MAP_SIZE : 85 # 4⁰ + 4¹ + 4² + 4³
   DELTA : [9, 4, 0]
   REPEAT : [0, 0, 1]
+
+  SPECIALbucketData : null
 
   RECURSION_PLACEHOLDER : {}
   
@@ -47,16 +49,30 @@ Renderer =
 
     else
 
-      scaleFactor = plane.zoomStep - tileZoomStep
-      destOffset = bufferOffsetByTileCoordsMacro(tile, scaleFactor)
-      sourceOffset = 0
-      bucketData = Cube.getBucketByAddress(map[mapIndex])
+      console.log "RENDERING", tile, tileZoomStep, map[mapIndex]
+#      unless @SPECIALbucketData
+ #       @SPECIALbucketData = new Uint8Array(32*32*16)
+  #      i = 0
+   #     for x in [0..31] by 1
+    #      for y in [0..31] by 1
+     #       for z in [0..15] by 1
+      #        @SPECIALbucketData[i] = if z == 0 then 255 else 128
+       #       i++
+        #console.log @SPECIALbucketData
 
-      @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, 5 - scaleFactor, bucketData, sourceOffset, 1 << @DELTA[plane.view.u], 1 << @DELTA[plane.view.v], 1, 1)
-      #@renderToBuffer(plane.buffer, , @TEXTURE_SIZE, 5 - zoomDifference, [64,128,192,255], 0, 1, 2, 4, 4)
+      tileSize = 5 - (plane.zoomStep - tileZoomStep)
+      #layerMask = (1 << 5) - 1
+      #destOffset = bufferOffsetByTileCoordsMacro(tile, scaleFactor)
+      
+
+      #sourceOffset = ((plane.layer >> plane.zoomStep) & layerMask) * (1 << @DELTA[plane.view.w])
+      
+      #bucketData = Cube.getBucketByAddress(map[mapIndex])
+
+      #@renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, 5 - scaleFactor, bucketData, sourceOffset, 1 << @DELTA[plane.view.u], 1 << @DELTA[plane.view.v], @REPEAT[plane.view.u], @REPEAT[plane.view.v], plane.view.w == 2 and tile[0] == 7 and tile[1] == 7)
 
 
-  renderToBuffer : (destBuffer, destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat) ->
+  renderToBuffer : (destBuffer, destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat, debug) ->
 
     i = 1 << (destSize << 1)
     destRowMask = (1 << destSize) - 1
@@ -93,6 +109,7 @@ Renderer =
           for dz in [0...width] by 1
             subBucket = [offset_x + dx, offset_y + dy, offset_z + dz]
             subBucketZoomStep = Cube.getZoomStepOfBucketByAddress(subBucket)
+
             if plane.layer >> (subBucketZoomStep + 5) == subBucket[plane.view.w] >> subBucketZoomStep
               @addBucketToRenderMap(map, 0, subBucket, subBucketZoomStep, [bucket[plane.view.u], bucket[plane.view.v]], zoomStep, plane)
 
@@ -103,6 +120,7 @@ Renderer =
       if Cube.getZoomStepOfBucketByAddress(bucket) < Cube.ZOOM_STEP_COUNT
         [ bucket ]
       else [ undefined ]
+
 
   addBucketToRenderMap : (map, mapIndex, bucket, bucketZoomStep, tile, tileZoomStep, plane) ->
 

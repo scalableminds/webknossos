@@ -1,4 +1,6 @@
-### define ###
+### define
+libs/event_mixin : EventMixin
+###
 
 # Macros
 
@@ -144,21 +146,24 @@ Cube =
         for dy in [0...width] by 1
           for dz in [0...width] by 1
 
-            bucket = cube[@bucketIndexByAddress3(x + dx, y + dy, z + dz)]
+            bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz)
+            bucket = cube[bucketIndex]
 
             if bucketData
               if zoomStep < bucket.zoomStep 
                 bucket.data = bucketData
+                @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
                 bucket.zoomStep = zoomStep
             else
               bucket.requestedZoomStep = bucket.zoomStep
 
     else
-      bucket = cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)]
-
+      bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
+      bucket = cube[bucketIndex]
       if bucketData
         if zoomStep < bucket.zoomStep 
           bucket.data = bucketData
+          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z], 0, bucket.zoomStep)
           bucket.zoomStep = 0
       else
         bucket.requestedZoomStep = bucket.zoomStep
@@ -199,6 +204,7 @@ Cube =
               cube[bucketIndex] = { requestedZoomStep : zoomStep, zoomStep : @ZOOM_STEP_COUNT }
 
     else
+
       bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
 
       if cube[bucketIndex]
@@ -233,7 +239,7 @@ Cube =
 
     bucketIndexByAddress3Macro(bucket_x, bucket_y, bucket_z)
 
-
+        
   vertexToZoomedBucketAddress : (vertex, zoomStep) ->
 
     a = @vertexToZoomedBucketAddress3(
@@ -248,6 +254,7 @@ Cube =
 
     [ x >> 5 + zoomStep, y >> 5 + zoomStep, z >> 5 + zoomStep]
 
+
   extendByBucketAddressExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }) ->  
 
     @extendByBucketAddressExtent6(min_x, min_y, min_z, max_x, max_y, max_z)  
@@ -256,6 +263,14 @@ Cube =
   extendByBucketAddressExtent6 : (min_x, min_y, min_z, max_x, max_y, max_z) ->
 
     { cube : oldCube, cubeOffset : oldCubeOffset, cubeSize : oldCubeSize } = @
+
+    # TODO: Make cube support negative bucket addresses
+    min_x = Math.max(min_x, 0)
+    min_y = Math.max(min_y, 0)
+    min_z = Math.max(min_z, 0)
+    max_x = Math.max(max_x, 0)
+    max_y = Math.max(max_y, 0)
+    max_z = Math.max(max_z, 0)
 
     # First, we calculate the new dimension of the cuboid.
     if oldCube
@@ -356,3 +371,7 @@ Cube =
       @cube       = newCube
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
+
+_.extend(Cube, new EventMixin())
+
+Cube

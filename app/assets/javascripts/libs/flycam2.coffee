@@ -34,6 +34,14 @@ class Flycam2d
       @hasChanged = true
       @buffer[planeID] = 256-@viewportWidth*@getTextureScalingFactor(planeID)/2
 
+  zoomInAll : ->
+    for i in [0..2]
+      @zoomIn i
+
+  zoomOutAll : ->
+    for i in [0..2]
+      @zoomOut i
+
   getZoomStep : (planeID) ->  # round, because Model expects Integer
     steps = Math.round(@zoomSteps[planeID] + 0.2) # will round up if value is *.3
     if steps < 0
@@ -67,8 +75,9 @@ class Flycam2d
     @direction = [0.8 * @lastDirection[0] + 0.2 * p[0], 0.8 * @lastDirection[1] + 0.2 * p[1], 0.8 * @lastDirection[2] + 0.2 * p[2]]
 
   moveActivePlane : (p) ->
+    ind = @getIndices @activePlane
     f = (@getPlaneScalingFactor @activePlane)
-    @move([p[0]*f, p[1]*f, p[2]*f])
+    @move([p[ind[0]]*f, p[ind[1]]*f, p[ind[2]]*f])
 
   toString : ->
     position = @globalPosition

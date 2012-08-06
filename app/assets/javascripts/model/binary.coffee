@@ -109,6 +109,51 @@ Binary =
     { layer : null, zoomStep : null, view : { u : 0, v : 2, w : 1 } }
   ]
 
+  init : () ->
+
+    Cube.on "bucketLoaded", (bucket, zoomStep, oldZoomStep) =>
+
+      #console.log "NEW BUCKET DATA", bucket, zoomStep
+
+      for i in [0..2] by 1
+        plane = @planes[i]
+
+        continue unless plane.topLeftBucket
+
+        if plane.layer >> 5 == bucket[plane.view.w] and oldZoomStep > plane.zoomStep
+#        if plane.layer >> (zoomStep + 5) == bucket[plane.view.w]
+#          if zoomStep > plane.zoomStep
+
+#            zoomDifference = zoomStep - plane.zoomStep
+#            width = 1 << zoomDifference
+#            offset_u = (bucket[plane.view.u] << zoomDifference) - plane.topLeftBucket[plane.view.u]
+#            offset_v = (bucket[plane.view.v] << zoomDifference) - plane.topLeftBucket[plane.view.v]
+
+ #           for u in [offset_u...offset_u + width] by 1
+ #             for v in [offset_v...offset_v + width] by 1
+
+  #              if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
+   #               plane.tiles[tileIndexByTileCoordsMacro(u, v)] = true
+    #              plane.changed = true
+
+     #     else
+
+           # zoomDifference = plane.zoomStep - zoomStep
+           # u = (bucket[plane.view.u] >> zoomDifference) - plane.topLeftBucket[plane.view.u]
+           # v = (bucket[plane.view.v] >> zoomDifference) - plane.topLeftBucket[plane.view.v]
+
+           # if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
+           #   plane.tiles[tileIndexByTileCoordsMacro(u, v)] = true
+           #   plane.changed = true
+
+          u = (bucket[plane.view.u] >> plane.zoomStep) - plane.topLeftBucket[plane.view.u]
+          v = (bucket[plane.view.v] >> plane.zoomStep) - plane.topLeftBucket[plane.view.v]
+
+          if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
+              plane.tiles[tileIndexByTileCoordsMacro(u, v)] = true
+              plane.changed = true
+
+
   # Use this method to let us know when you've changed your spot. Then we'll try to 
   # preload some data. 
   ping : (position, zoomStep, direction) ->
@@ -126,74 +171,83 @@ Binary =
 
       #console.time "ping"
 
-      @positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
-      buckets   = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
-                  @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6),
-                  @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6))
+#      @positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
+#      buckets   = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
+#                  @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6),
+#                  @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6))
       # Buckets of zoom step 3 so that there won't be any black
-      @positionBucket3 = [position[0] >> (5 + 3), position[1] >> (5 + 3), position[2] >> (5 + 3)]
-      buckets3  = @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0).concat(
-                  @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep)),
-                  @getBucketArray(@positionBucket3, 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep)))
+#      @positionBucket3 = [position[0] >> (5 + 3), position[1] >> (5 + 3), position[2] >> (5 + 3)]
+#      buckets3  = @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0).concat(
+#                  @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep)),
+#                  @getBucketArray(@positionBucket3, 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep)))
       
-      Cube.extendByBucketAddressExtent6(
-        @positionBucket[0] - (@TEXTURE_SIZE >> 6), @positionBucket[1] - (@TEXTURE_SIZE >> 6), @positionBucket[2] - (@TEXTURE_SIZE >> 6),
-        @positionBucket[0] + (@TEXTURE_SIZE >> 6), @positionBucket[1] + (@TEXTURE_SIZE >> 6), @positionBucket[2] + (@TEXTURE_SIZE >> 6),
-        zoomStep)
-      
+      #Cube.extendByBucketAddressExtent6(
+      #  @positionBucket[0] - (@TEXTURE_SIZE >> 6), @positionBucket[1] - (@TEXTURE_SIZE >> 6), @positionBucket[2] - (@TEXTURE_SIZE >> 6),
+      #  @positionBucket[0] + (@TEXTURE_SIZE >> 6), @positionBucket[1] + (@TEXTURE_SIZE >> 6), @positionBucket[2] + (@TEXTURE_SIZE >> 6),
+      #  zoomStep)
+
+      Cube.extendByBucketAddressExtent6(0, 0, 0, 20, 20, 20)
+
+      #console.time "queue"
       PullQueue.clear()
 
-      direction = [0,0,1]
-      directionValue = Math.sqrt(direction[0]*direction[0] + direction[1]*direction[1] + direction[2]*direction[2])
-      directionMax   = Math.max(direction[0], direction[1], direction[2])
-      direction      = [direction[0]/directionMax, direction[1]/directionMax, direction[2]/directionMax]
+#      direction = [0,0,1]
+#      directionValue = Math.sqrt(direction[0]*direction[0] + direction[1]*direction[1] + direction[2]*direction[2])
+#      directionMax   = Math.max(direction[0], direction[1], direction[2])
+#      direction      = [direction[0]/directionMax, direction[1]/directionMax, direction[2]/directionMax]
 
-      directionValue = Math.max(directionValue, 0.01)         # so there is no division by 0
-      preloading = [0, Math.round(10/directionValue),         # TODO: optimze those values
-                    Math.round(100/directionValue),
-                    Math.round(200/directionValue),
-                    Math.round(300/directionValue)]
+#      directionValue = Math.max(directionValue, 0.01)         # so there is no division by 0
+#      preloading = [0, Math.round(10/directionValue),         # TODO: optimze those values
+#                    Math.round(100/directionValue),
+#                    Math.round(200/directionValue),
+#                    Math.round(300/directionValue)]
+#
+  #    delta_x = delta_y = delta_z = 0
+  #    direction_x = direction_y = direction_z = 0
+  #    index = buckets.length
+  #    level = 0
 
-      delta_x = delta_y = delta_z = 0
-      direction_x = direction_y = direction_z = 0
-      index = buckets.length
-      level = 0
-
-      console.time "queue 1"
-      console.log "Buckets 1: " + buckets3.length
-      if zoomStep != 3            # don't do this if you need to load the lowest resolution anyway
-        for coordinate in [0..2]
-          i = [0, 0, 0]
-          for indexValue in [0, 1, -1]
-            i[coordinate] = indexValue
-            for b in buckets3
-              if b
-                priority = Math.max(Math.abs(b[0] - @positionBucket3[0]), Math.abs(b[1] - @positionBucket3[1]), Math.abs(b[2] - @positionBucket3[2]))
-                PullQueue.insert [b[0] + i[0], b[1] + i[1], b[2] + i[2]], 3, priority + Math.abs(indexValue)*buckets3.length
-      console.timeEnd "queue 1"
+ #     console.time "queue 1"
+ #     console.log "Buckets 1: " + buckets3.length
+ #     if zoomStep != 3            # don't do this if you need to load the lowest resolution anyway
+ #       for coordinate in [0..2]
+ #         i = [0, 0, 0]
+ #         for indexValue in [0, 1, -1]
+ #           i[coordinate] = indexValue
+ #           for b in buckets3
+ #             if b
+ #               priority = Math.max(Math.abs(b[0] - @positionBucket3[0]), Math.abs(b[1] - @positionBucket3[1]), Math.abs(b[2] - @positionBucket3[2]))
+ #               PullQueue.insert [b[0] + i[0], b[1] + i[1], b[2] + i[2]], 3, priority + Math.abs(indexValue)*buckets3.length
+ #     console.timeEnd "queue 1"
       
-      i = buckets.length * preloading.length
-      console.log "Buckets 2: " + buckets.length
-      while i--
-        index--
-        if buckets[index]
-          priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
-          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomStep, @PRIORITIES[index % @PRIORITIES.length] + preloading[level] + buckets3.length
+#      i = buckets.length * preloading.length
+#      console.log "Buckets 2: " + buckets.length
+#      while i--
+#        index--
+#        if buckets[index]
+#          priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
+#          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomStep, @PRIORITIES[index % @PRIORITIES.length] + preloading[level] + buckets3.length
 
-        unless i % buckets.length
-          index = buckets.length
-          level++
+#        unless i % buckets.length
+#          index = buckets.length
+#          level++
 
-          delta_x += direction[0]
-          delta_y += direction[1]
-          delta_z += direction[2]
-          direction_x = Math.round(delta_x)
-          direction_y = Math.round(delta_y)
-          direction_z = Math.round(delta_z)
+#          delta_x += direction[0]
+#          delta_y += direction[1]
+#          delta_z += direction[2]
+#          direction_x = Math.round(delta_x)
+#          direction_y = Math.round(delta_y)
+#          direction_z = Math.round(delta_z)
       
+      PullQueue.insert [10, 10, 21], 3, 0
+      PullQueue.insert [42, 42, 84], 1, 1
+      PullQueue.insert [43, 43, 84], 1, 2
+      PullQueue.insert [84, 84, 168], 0, 3
+      PullQueue.insert [84, 85, 168], 0, 4
+      PullQueue.insert [84, 86, 168], 0, 5
+      PullQueue.insert [84, 87, 168], 0, 6
+
       PullQueue.pull()
-      
-      #console.timeEnd "ping"
 
 
   get : (position, zoomStep, area, plane) ->
@@ -203,11 +257,10 @@ Binary =
 
   # A synchronized implementation of `get`. Cuz its faster.
   getSync : (position, zoomStep, area, plane) ->
-    area = [0,0,512,512]
 
     topLeftPosition = position.slice(0)
-    topLeftPosition[plane.view.u] -= @TEXTURE_SIZE >> 1
-    topLeftPosition[plane.view.v] -= @TEXTURE_SIZE >> 1
+    topLeftPosition[plane.view.u] -= (@TEXTURE_SIZE >> 1) << zoomStep
+    topLeftPosition[plane.view.v] -= (@TEXTURE_SIZE >> 1) << zoomStep
 
     topLeftBucket = Cube.vertexToZoomedBucketAddress(topLeftPosition, zoomStep)
 
@@ -222,6 +275,8 @@ Binary =
 
     unless _.isEqual(plane.layer, layer) and _.isEqual(plane.zoomStep, zoomStep)
 
+      console.log "LAYER OR ZOOMSTEP CHANGED"
+
       plane.layer = layer
       plane.zoomStep = zoomStep
       plane.topLeftBucket = topLeftBucket
@@ -232,6 +287,8 @@ Binary =
 
     unless _.isEqual(plane.topLeftBucket, topLeftBucket)
 
+      console.log "TOP_LEFT_BUCKET CHANGED", topLeftBucket
+
       oldTopLeftBucket = plane.topLeftBucket
       oldTiles = plane.tiles
       oldBuffer = plane.buffer
@@ -241,8 +298,8 @@ Binary =
       plane.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
       plane.changed = true
 
-      width = (@TEXTURE_SIZE >> 5) - Math.abs(plane.topLeftBucket[plane.view.u], oldTopLeftBucket[plane.view.u])
-      height = (@TEXTURE_SIZE >> 5) - Math.abs(plane.topLeftBucket[plane.view.v], oldTopLeftBucket[plane.view.v])
+      width = (@TEXTURE_SIZE >> 5) - Math.abs(plane.topLeftBucket[plane.view.u] - oldTopLeftBucket[plane.view.u])
+      height = (@TEXTURE_SIZE >> 5) - Math.abs(plane.topLeftBucket[plane.view.v] - oldTopLeftBucket[plane.view.v])
       oldOffset = [
         Math.max(plane.topLeftBucket[plane.view.u] - oldTopLeftBucket[plane.view.u], 0)
         Math.max(plane.topLeftBucket[plane.view.v] - oldTopLeftBucket[plane.view.v], 0)
@@ -254,6 +311,7 @@ Binary =
 
       for du in [0...width] by 1
         for dv in [0...height] by 1
+          # TODO
           o1 = oldOffset[0] + du
           o2 = oldOffset[1] + dv
           n1 = newOffset[0] + du
@@ -263,11 +321,11 @@ Binary =
           newTileIndex = tileIndexByTileCoordsMacro(n1, n2)
 
           if plane.tiles[newTileIndex] and not oldTiles[oldTileIndex]
+            # TODO
             #@copyTile(currentView.buffer, oldBuffer, newTileIndex, oldTileIndex)
-            #plane.tiles[newTextureIndex] = false
-            null
+            #console.log "COPYING TILE FROM", [o1, o2], "TO", [n1, n2]
+            plane.tiles[newTileIndex] = false
 
-    plane.changed = true
     if plane.changed or not _.isEqual(plane.area, area)
 
       plane.area = area
@@ -279,11 +337,12 @@ Binary =
           if plane.tiles[tileIndex]
 
             Renderer.renderTile([u, v], plane)
-            #plane.tiles[tileIndex] = false
+            plane.tiles[tileIndex] = false
 
       plane.buffer
     
     else
+
       null
 
 
@@ -309,3 +368,7 @@ Binary =
           buckets.push if _.min(bucket) >= 0 then bucket else null
 
     buckets
+
+Binary.init()
+
+Binary

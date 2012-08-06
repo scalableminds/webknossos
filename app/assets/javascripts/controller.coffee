@@ -50,7 +50,7 @@ Controller =
     Model.Route.initialize().then(
       (position) =>
         
-        View.setGlobalPos([400, 340, 500]) #position)  
+        View.setGlobalPos([2800, 2800, 2800]) #position)  
         #View.move([46, 36, -530])
         
         # set initial direction

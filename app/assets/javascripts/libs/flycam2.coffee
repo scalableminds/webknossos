@@ -106,7 +106,7 @@ class Flycam2d
   getOffsets : (planeID) ->
     ind = @getIndices planeID
     if @needsUpdate planeID                       # because currently, getOffsets is called befor notifyNewTexture
-      return [@buffer[planeID], @buffer[planeID]]
+      @notifyNewTexture planeID
     [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @getZoomStep planeID) + @buffer[planeID],
       (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @getZoomStep planeID) + @buffer[planeID]]
 
@@ -117,4 +117,9 @@ class Flycam2d
 
   notifyNewTexture : (planeID) ->
     @texturePosition[planeID] = @globalPosition.slice()    #copy that position
+    # As the Model does not render textures for exact positions, the last 5 bits of
+    # the X and Y coordinates for each texture have to be set to 0
+    for i in [0..2]
+      if i != (planeID+2)%3
+        @texturePosition[planeID][i] &= -1 << 5
     @newBuckets[planeID] = false

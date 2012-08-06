@@ -393,25 +393,35 @@ View =
       for i in [0..2]
         @routeView[i].geometry.vertices[@curIndex] = new THREE.Vector3(pos[i][0], pos[i][1], pos[i][2])
         @routeView[i].geometry.verticesNeedUpdate = true
-      @particleSystem.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
       
       @route.geometry.verticesNeedUpdate = true
-      @particleSystem.geometry.verticesNeedUpdate = true
+
+      particle = new THREE.Mesh(new THREE.CubeGeometry(30, 30, 30, 10, 10, 10), new THREE.MeshBasicMaterial({color: 0xff0000}))
+      particle.position.x = position[0]
+      particle.position.y = Game.dataSet.upperBoundary[1] - position[2]
+      particle.position.z = position[1]
+      @particles.push particle
+      @addGeometry VIEW_3D, particle
+
       @curIndex += 1
       cam2d.hasChanged = true
 
-  onPreviewClick : (position) ->    
+  onPreviewClick : (position) ->
+    # vector with direction from camera position to click position
     vector = new THREE.Vector3((position[0] / 384 ) * 2 - 1, - (position[1] / 384) * 2 + 1, 0.5)
+    
+    # create a ray with the direction of this vector
     projector = new THREE.Projector()
-    projector.unprojectVector(vector, @camera[VIEW_3D])
+    ray = projector.pickingRay(vector, @camera[VIEW_3D])
 
-    ray = new THREE.Ray(@camera[VIEW_3D].position, vector.subSelf(@camera[VIEW_3D].position).normalize())
-
+    # identify clicked object
     intersects = ray.intersectObjects(@particles)
 
     if (intersects.length > 0)
       intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
-      alert 1
+      objPos = intersects[0].object.position
+      # jump to the nodes position
+      cam2d.setGlobalPos [objPos.x, objPos.z, -objPos.y + Game.dataSet.upperBoundary[1]]
 
   createRoute : (maxRouteLen) ->
     # create route to show in previewBox and pre-allocate buffer
@@ -420,14 +430,12 @@ View =
     routeGeometryView = new Array(3)
     for i in [0..2]
        routeGeometryView[i] = new THREE.Geometry()
-    particles = new THREE.Geometry()
     i = 0
     while i < maxRouteLen
       # workaround to hide the unused vertices
       routeGeometry.vertices.push(new THREE.Vector2(0, 0))
       for g in routeGeometryView
         g.vertices.push(new THREE.Vector2(0, 0))
-      particles.vertices.push(new THREE.Vector2(0, 0))
       i += 1
 
     routeGeometry.dynamic = true
@@ -436,10 +444,8 @@ View =
     routeView = new Array(3)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       routeView[i] = new THREE.Line(routeGeometryView[i], new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
-    particleSystem = new THREE.ParticleSystem(particles, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 3, sizeAttenuation: false}))
     @route = route
     @routeView = routeView
-    @particleSystem = particleSystem
 
     # Initializing Position
     gPos = cam2d.getGlobalPos()
@@ -447,16 +453,9 @@ View =
     for i in [0..2]
       @routeView[i].position = new THREE.Vector3(pos[i][0], pos[i][1], pos[i][2]+1)
 
-    particle = new THREE.Mesh(new THREE.CubeGeometry(300, 300, 300, 10, 10, 10), new THREE.MeshBasicMaterial({color: 0xff0000}))
-    particle.position.x = 0
-    particle.position.y = 0
-    particle.position.z = 0
     @particles = []
-    @particles.push particle
-    @addGeometry VIEW_3D, particle
 
     @addGeometry VIEW_3D, route
-    @addGeometry VIEW_3D, particleSystem
     for i in [0..2]
       @addGeometry i, routeView[i]
 

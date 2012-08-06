@@ -68,7 +68,7 @@ Controller =
       {"x" : View.moveX, "y" : View.moveY, "w" : View.moveZ, "r" : View.setWaypointXY}
       {"x" : View.moveZ, "y" : View.moveY, "w" : View.moveX, "r" : View.setWaypointYZ}
       {"x" : View.moveX, "y" : View.moveZ, "w" : View.moveY, "r" : View.setWaypointXZ}
-      {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev}
+      {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev, "r" : _.bind(View.onPreviewClick, View)}
     )
 
   initKeyboard : ->

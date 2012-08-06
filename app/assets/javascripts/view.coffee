@@ -502,6 +502,23 @@ View =
       @curIndex += 1
       cam2d.hasChanged = true
 
+  onPreviewClick : (position) ->    
+    vector = new THREE.Vector3((position[0] / 384 ) * 2 - 1, - (position[1] / 384) * 2 + 1, 0.5)
+    projector = new THREE.Projector()
+    console.log vector.x, vector.y, vector.z
+    projector.unprojectVector(vector, @cameraPrev)
+
+    ray = new THREE.Ray(@cameraPrev.position, vector.subSelf(@cameraPrev.position).normalize())
+
+    console.log @cameraPrev.position
+
+    intersects = ray.intersectObjects(@particles)
+    console.log vector, intersects.length
+
+    if (intersects.length > 0)
+      intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
+      alert 1
+
   createRoute : (maxRouteLen) ->
     # create route to show in previewBox and pre-allocate buffer
     @maxRouteLen = maxRouteLen
@@ -525,10 +542,19 @@ View =
     @routeView = routeView
     @particleSystem = particleSystem
     @routeView.position = new THREE.Vector3(-400, 340, 501)
+
+    particle = new THREE.Mesh(new THREE.CubeGeometry(300, 300, 300, 10, 10, 10), new THREE.MeshBasicMaterial({color: 0xff0000}))
+    particle.position.x = 0
+    particle.position.y = 0
+    particle.position.z = 0
+    @particles = []
+    @particles.push particle
+    @addGeometryPrev particle
+
     @addGeometryPrev route
     @addGeometryPrev particleSystem
     @addGeometryXY routeView
 
   updateRoutePosition : (p) ->
-    @routeView.position = new THREE.Vector3(@routeView.position.x - p[0], @routeView.position.y + p[1], @routeView.position.z + p[2])
+    @routeView.position = new THREE.Vector3(@routeView.position.x - p[0], @routeView.position.y + p[1], cam2d.getGlobalPos()[2]+1)
     @routeView.geometry.verticesNeedUpdate = true

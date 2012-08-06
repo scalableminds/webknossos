@@ -96,7 +96,7 @@ PullQueue =
 
       (colors) =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, colors)
-        console.log "Success: ", bucket, zoomStep, colors
+        console.log "Success: ", bucket, zoomStep, colorsnn
 
       =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, null)

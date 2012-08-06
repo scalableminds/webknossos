@@ -372,23 +372,30 @@ View =
   setActivePlane : (planeID) ->
     cam2d.setActivePlane planeID
     for i in [0..2]
-      $("canvas")[i].style.borderColor = if i==planeID then "#888800" else "#C7D1D8"
+      $("canvas")[i].style.borderColor = if i==planeID then "#f8f800" else "#C7D1D8"
     cam2d.hasChanged = true
 
   setWaypoint : (position) ->
     curGlobalPos = cam2d.getGlobalPos()
-    curZoomStep = cam2d.getZoomStep(cam2d.getActivePlane()) + 1
+    activePlane  = cam2d.getActivePlane()
+    zoomFactor   = cam2d.getPlaneScalingFactor activePlane
     # calculate the global position of the rightclick
-    position = [curGlobalPos[0] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[1] - 192/curZoomStep + position[1]/curZoomStep, curGlobalPos[2]]
+    switch activePlane
+      when PLANE_XY then position = [curGlobalPos[0] - (VIEWPORT_WIDTH/2 - position[0])*zoomFactor, curGlobalPos[1] - (VIEWPORT_WIDTH/2 - position[1])*zoomFactor, curGlobalPos[2]]
+      when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (VIEWPORT_WIDTH/2 - position[1])*zoomFactor, curGlobalPos[2] - (VIEWPORT_WIDTH/2 - position[0])*zoomFactor]
+      when PLANE_XZ then position = [curGlobalPos[0] - (VIEWPORT_WIDTH/2 - position[0])*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (VIEWPORT_WIDTH/2 - position[1])*zoomFactor]
     unless @curIndex
       @curIndex = 0
     # Translating ThreeJS' coordinate system to the preview's one
     if @curIndex < @maxRouteLen
       @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
-      @routeView.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], -position[1], -position[2])
+      pos = [[position[0], -position[1], -position[2]], [position[2], -position[1], position[0]], [position[0], -position[2], position[1]]]
+      for i in [0..2]
+        @routeView[i].geometry.vertices[@curIndex] = new THREE.Vector3(pos[i][0], pos[i][1], pos[i][2])
+        @routeView[i].geometry.verticesNeedUpdate = true
       @particleSystem.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
+      
       @route.geometry.verticesNeedUpdate = true
-      @routeView.geometry.verticesNeedUpdate = true
       @particleSystem.geometry.verticesNeedUpdate = true
       @curIndex += 1
       cam2d.hasChanged = true
@@ -396,15 +403,11 @@ View =
   onPreviewClick : (position) ->    
     vector = new THREE.Vector3((position[0] / 384 ) * 2 - 1, - (position[1] / 384) * 2 + 1, 0.5)
     projector = new THREE.Projector()
-    console.log vector.x, vector.y, vector.z
     projector.unprojectVector(vector, @camera[VIEW_3D])
 
     ray = new THREE.Ray(@camera[VIEW_3D].position, vector.subSelf(@camera[VIEW_3D].position).normalize())
 
-    console.log @camera[VIEW_3D].position
-
     intersects = ray.intersectObjects(@particles)
-    console.log vector, intersects.length
 
     if (intersects.length > 0)
       intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
@@ -414,20 +417,25 @@ View =
     # create route to show in previewBox and pre-allocate buffer
     @maxRouteLen = maxRouteLen
     routeGeometry = new THREE.Geometry()
-    routeGeometryView = new THREE.Geometry()
+    routeGeometryView = new Array(3)
+    for i in [0..2]
+       routeGeometryView[i] = new THREE.Geometry()
     particles = new THREE.Geometry()
     i = 0
     while i < maxRouteLen
       # workaround to hide the unused vertices
       routeGeometry.vertices.push(new THREE.Vector2(0, 0))
-      routeGeometryView.vertices.push(new THREE.Vector2(0, 0))
+      for g in routeGeometryView
+        g.vertices.push(new THREE.Vector2(0, 0))
       particles.vertices.push(new THREE.Vector2(0, 0))
       i += 1
 
     routeGeometry.dynamic = true
     routeGeometryView.dynamic = true
     route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
-    routeView = new THREE.Line(routeGeometryView, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
+    routeView = new Array(3)
+    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      routeView[i] = new THREE.Line(routeGeometryView[i], new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
     particleSystem = new THREE.ParticleSystem(particles, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 3, sizeAttenuation: false}))
     @route = route
     @routeView = routeView
@@ -435,7 +443,9 @@ View =
 
     # Initializing Position
     gPos = cam2d.getGlobalPos()
-    @routeView.position = new THREE.Vector3(-gPos[0], gPos[1], gPos[2]+1)
+    pos = [[-gPos[0], gPos[1], gPos[2]], [-gPos[2], gPos[1], -gPos[0]], [-gPos[0], gPos[2], -gPos[1]]]
+    for i in [0..2]
+      @routeView[i].position = new THREE.Vector3(pos[i][0], pos[i][1], pos[i][2]+1)
 
     particle = new THREE.Mesh(new THREE.CubeGeometry(300, 300, 300, 10, 10, 10), new THREE.MeshBasicMaterial({color: 0xff0000}))
     particle.position.x = 0
@@ -447,14 +457,15 @@ View =
 
     @addGeometry VIEW_3D, route
     @addGeometry VIEW_3D, particleSystem
-    @addGeometry PLANE_XY, routeView
+    for i in [0..2]
+      @addGeometry i, routeView[i]
 
   updateRoute : ->
     gPos                = cam2d.getGlobalPos()
-    scale               = cam2d.getPlaneScalingFactor PLANE_XY
-    console.log "scale (alt): " + @routeView.scale
-    console.log "scale: " + scale
-    @routeView.scale    = new THREE.Vector3(1/scale, 1/scale, 1/scale)
-    @routeView.position = new THREE.Vector3(-gPos[0]/scale, gPos[1]/scale, gPos[2]/scale+1)
-    #@routeView.position = new THREE.Vector3(@routeView.position.x - p[0], @routeView.position.y + p[1], cam2d.getGlobalPos()[2]+1)
-    @routeView.geometry.verticesNeedUpdate = true
+    scale               = [cam2d.getPlaneScalingFactor(PLANE_XY), cam2d.getPlaneScalingFactor(PLANE_YZ), cam2d.getPlaneScalingFactor(PLANE_XZ)]
+    
+    pos = [[-gPos[0], gPos[1], gPos[2]], [-gPos[2], gPos[1], -gPos[0]], [-gPos[0], gPos[2], -gPos[1]]]
+    for i in [0..2]
+      @routeView[i].scale    = new THREE.Vector3(1/scale[i], 1/scale[i], 1/scale[i])
+      @routeView[i].position = new THREE.Vector3(pos[i][0]/scale[i], pos[i][1]/scale[i], pos[i][2]/scale[i]+1)
+      @routeView[i].geometry.verticesNeedUpdate = true

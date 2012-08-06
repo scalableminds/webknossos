@@ -16,6 +16,7 @@ User.Configuration =
   rotateValue : null
   scaleValue : null
   mouseRotateValue : null
+  lockZoom : null
   mouseInversionX : null
   mouseInversionY : null
   mouseActive : null
@@ -41,6 +42,7 @@ User.Configuration =
               @rotateValue, 
               @scaleValue, 
               @mouseRotateValue, 
+              @lockZoom,
               @mouseInversionX,
               @mouseInversionY,
               @mouseActive, 
@@ -73,6 +75,7 @@ User.Configuration =
         rotateValue : @rotateValue,
         scaleValue : @scaleValue,
         mouseRotateValue : @mouseRotateValue,
+        lockZoom : @lockZoom
         mouseInversionX : @mouseInversionX,
         mouseInversionY : @mouseInversionY,
         mouseActive : @mouseActive,

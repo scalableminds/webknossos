@@ -127,14 +127,14 @@ Binary =
       console.time "ping"
 
       @positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
-      buckets   = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> (6 + zoomStep), @TEXTURE_SIZE >> 6, 0).concat(
+      buckets   = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
                   @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6),
                   @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6))
       # Buckets of zoom step 3 so that there won't be any black
       @positionBucket3 = [position[0] >> (5 + 3), position[1] >> (5 + 3), position[2] >> (5 + 3)]
-      buckets3  = @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + zoomStep), @TEXTURE_SIZE >> (6 + zoomStep), 0).concat(
-                  @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + zoomStep), 0, @TEXTURE_SIZE >> (6 + zoomStep)),
-                  @getBucketArray(@positionBucket3, 0, @TEXTURE_SIZE >> (6 + zoomStep), @TEXTURE_SIZE >> (6 + zoomStep)))
+      buckets3  = @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0).concat(
+                  @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep)),
+                  @getBucketArray(@positionBucket3, 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep)))
       
       Cube.extendByBucketAddressExtent6(
         @positionBucket[0] - (@TEXTURE_SIZE >> 6), @positionBucket[1] - (@TEXTURE_SIZE >> 6), @positionBucket[2] - (@TEXTURE_SIZE >> 6),
@@ -162,6 +162,8 @@ Binary =
       index = buckets.length
       level = 0
 
+      console.time "queue 1"
+      console.log "Buckets 1: " + buckets3.length
       if zoomStep != 3            # don't do this if you need to load the lowest resolution anyway
         for coordinate in [0..2]
           i = [0, 0, 0]
@@ -171,8 +173,10 @@ Binary =
               if b
                 priority = Math.max(Math.abs(b[0] - @positionBucket3[0]), Math.abs(b[1] - @positionBucket3[1]), Math.abs(b[2] - @positionBucket3[2]))
                 PullQueue.insert [b[0] + i[0], b[1] + i[1], b[2] + i[2]], 3, priority + Math.abs(indexValue)*buckets3.length
-
+      console.timeEnd "queue 1"
+      
       i = buckets.length * preloading.length
+      console.log "Buckets 2: " + buckets.length
       while i--
         index--
         if buckets[index]

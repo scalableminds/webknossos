@@ -397,72 +397,64 @@ View =
     # calculate the global position of the rightclick
     position = [curGlobalPos[0] - 192/curZoomStep + position[0]/curZoomStep, curGlobalPos[1] - 192/curZoomStep + position[1]/curZoomStep, curGlobalPos[2]]
     unless @curIndex
-      @curIndex = 1 
-      @route.geometry.vertices[0] = new THREE.Vector3(400, Game.dataSet.upperBoundary[1] - 500, 340)
-      @routeView.geometry.vertices[0] = new THREE.Vector3(400, -340, -500)
-      @particleSystem.geometry.vertices[0] = new THREE.Vector3(400, Game.dataSet.upperBoundary[1] - 500, 340)
+      @curIndex = 0
     # Translating ThreeJS' coordinate system to the preview's one
     if @curIndex < @maxRouteLen
       @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
       @routeView.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], -position[1], -position[2])
-      @particleSystem.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
+
+      particle = new THREE.Mesh(new THREE.CubeGeometry(30, 30, 30, 10, 10, 10), new THREE.MeshBasicMaterial({color: 0xff0000}))
+      particle.position.x = position[0]
+      particle.position.y = Game.dataSet.upperBoundary[1] - position[2]
+      particle.position.z = position[1]
+      @particles.push particle
+      @addGeometry VIEW_3D, particle
+
       @route.geometry.verticesNeedUpdate = true
       @routeView.geometry.verticesNeedUpdate = true
-      @particleSystem.geometry.verticesNeedUpdate = true
       @curIndex += 1
       cam2d.hasChanged = true
 
-  onPreviewClick : (position) ->    
+  onPreviewClick : (position) ->
+    # vector with direction from camera position to click position
     vector = new THREE.Vector3((position[0] / 384 ) * 2 - 1, - (position[1] / 384) * 2 + 1, 0.5)
+    
+    # create a ray with the direction of this vector
     projector = new THREE.Projector()
-    console.log vector.x, vector.y, vector.z
-    projector.unprojectVector(vector, @camera[VIEW_3D])
+    ray = projector.pickingRay(vector, @camera[VIEW_3D])
 
-    ray = new THREE.Ray(@camera[VIEW_3D].position, vector.subSelf(@camera[VIEW_3D].position).normalize())
-
-    console.log @camera[VIEW_3D].position
-
+    # identify clicked object
     intersects = ray.intersectObjects(@particles)
-    console.log vector, intersects.length
 
     if (intersects.length > 0)
       intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
-      alert 1
+      objPos = intersects[0].object.position
+      # jump to the nodes position
+      cam2d.setGlobalPos [objPos.x, objPos.z, -objPos.y + Game.dataSet.upperBoundary[1]]
 
   createRoute : (maxRouteLen) ->
     # create route to show in previewBox and pre-allocate buffer
     @maxRouteLen = maxRouteLen
     routeGeometry = new THREE.Geometry()
     routeGeometryView = new THREE.Geometry()
-    particles = new THREE.Geometry()
     i = 0
     while i < maxRouteLen
       # workaround to hide the unused vertices
       routeGeometry.vertices.push(new THREE.Vector2(0, 0))
       routeGeometryView.vertices.push(new THREE.Vector2(0, 0))
-      particles.vertices.push(new THREE.Vector2(0, 0))
       i += 1
 
     routeGeometry.dynamic = true
     routeGeometryView.dynamic = true
     route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
     routeView = new THREE.Line(routeGeometryView, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
-    particleSystem = new THREE.ParticleSystem(particles, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 3, sizeAttenuation: false}))
     @route = route
     @routeView = routeView
-    @particleSystem = particleSystem
-    @routeView.position = new THREE.Vector3(-400, 340, 501)
+    @routeView.position = new THREE.Vector3(-2800, 2800, 5601)
 
-    particle = new THREE.Mesh(new THREE.CubeGeometry(300, 300, 300, 10, 10, 10), new THREE.MeshBasicMaterial({color: 0xff0000}))
-    particle.position.x = 0
-    particle.position.y = 0
-    particle.position.z = 0
     @particles = []
-    @particles.push particle
-    @addGeometry VIEW_3D, particle
 
     @addGeometry VIEW_3D, route
-    @addGeometry VIEW_3D, particleSystem
     @addGeometry PLANE_XY, routeView
 
   updateRoutePosition : (p) ->

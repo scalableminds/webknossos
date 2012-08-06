@@ -71,7 +71,7 @@ Controller =
       [View.renderer[PLANE_XY].domElement, View.renderer[PLANE_YZ].domElement, View.renderer[PLANE_XZ].domElement, View.renderer[VIEW_3D].domElement]
       [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
       {"x" : View.moveX, "y" : View.moveY, "w" : View.moveZ, "r" : _.bind(View.setWaypoint, View)}
-      {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev}
+      {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev, "r" : _.bind(View.onPreviewClick, View)}
     )
 
   initKeyboard : ->

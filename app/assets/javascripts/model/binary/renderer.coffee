@@ -9,6 +9,7 @@ subTileMacro = (tile, index) ->
 
   [(tile[0] << 1) + (index % 2), (tile[1] << 1) + (index >> 1)]
 
+
 bufferOffsetByTileCoordsMacro = (tile, scaleFactor) ->
 
   tile[0] * (1 << (5 - scaleFactor)) + 
@@ -49,26 +50,29 @@ Renderer =
 
     else
 
-      unless @SPECIALbucketData
-        @SPECIALbucketData = new Uint8Array(32*32*16)
-        i = 0
-        for x in [0..31] by 1
-          for y in [0..31] by 1
-            for z in [0..15] by 1
-              @SPECIALbucketData[i] = if z == 0 then 255 else 128
-              i++
-        console.log @SPECIALbucketData
+#      unless @SPECIALbucketData
+ #       @SPECIALbucketData = new Uint8Array(32*32*16)
+  #      i = 0
+   #     for x in [0..31] by 1
+    #      for y in [0..31] by 1
+     #       for z in [0..15] by 1
+      #        @SPECIALbucketData[i] = if z == 0 then 255 else 128
+       #       i++
+        #console.log @SPECIALbucketData
 
       scaleFactor = plane.zoomStep - tileZoomStep
+      layerMask = (1 << 5) - 1
       destOffset = bufferOffsetByTileCoordsMacro(tile, scaleFactor)
-      sourceOffset = 0
+      
+
+      sourceOffset = ((plane.layer >> plane.zoomStep) & layerMask) * (1 << @DELTA[plane.view.w])
+      
       bucketData = Cube.getBucketByAddress(map[mapIndex])
 
-      #if tile[0] == tile[1]
-      @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, 5 - scaleFactor, bucketData, sourceOffset, 1 << @DELTA[plane.view.u], 1 << @DELTA[plane.view.v], 1, 1)
+      @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, 5 - scaleFactor, bucketData, sourceOffset, 1 << @DELTA[plane.view.u], 1 << @DELTA[plane.view.v], @REPEAT[plane.view.u], @REPEAT[plane.view.v], plane.view.w == 2 and tile[0] == 7 and tile[1] == 7)
 
 
-  renderToBuffer : (destBuffer, destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat) ->
+  renderToBuffer : (destBuffer, destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat, debug) ->
 
     i = 1 << (destSize << 1)
     destRowMask = (1 << destSize) - 1

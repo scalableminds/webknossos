@@ -96,11 +96,11 @@ PullQueue =
 
       (colors) =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, colors)
-        #console.log "Success: ", bucket, zoomStep
+        console.log "Success: ", bucket, zoomStep, colors
 
       =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, null)
-        #rconsole.log "Failed: ", bucket, zoomStep
+        #console.log "Failed: ", bucket, zoomStep
 
     ).always =>
       @pullLoadingCount--

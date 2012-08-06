@@ -6,6 +6,11 @@ input : Input
 helper : Helper
 ###
 
+PLANE_XY = 0
+PLANE_YZ = 1
+PLANE_XZ = 2
+VIEW_3D  = 3
+
 
 Controller = 
 
@@ -63,11 +68,9 @@ Controller =
     # initializes an Input.Mouse object with the three canvas
     # elements and one pair of callbacks per canvas
     @input.mouses = new Input.Mouse(
-      [View.rendererxy.domElement, View.rendereryz.domElement, View.rendererxz.domElement, View.rendererPrev.domElement]
+      [View.renderer[PLANE_XY].domElement, View.renderer[PLANE_YZ].domElement, View.renderer[PLANE_XZ].domElement, View.renderer[VIEW_3D].domElement]
       [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
-      {"x" : View.moveX, "y" : View.moveY, "w" : View.moveZ, "r" : View.setWaypointXY}
-      {"x" : View.moveZ, "y" : View.moveY, "w" : View.moveX, "r" : View.setWaypointYZ}
-      {"x" : View.moveX, "y" : View.moveZ, "w" : View.moveY, "r" : View.setWaypointXZ}
+      {"x" : View.moveX, "y" : View.moveY, "w" : View.moveZ, "r" : _.bind(View.setWaypoint, View)}
       {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev, "r" : _.bind(View.onPreviewClick, View)}
     )
 

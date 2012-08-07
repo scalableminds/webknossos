@@ -144,7 +144,7 @@ View =
         @changePrev VIEW_3D
         @first = false
 
-      for dimension in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      for dimension in [PLANE_XY]
         for kind in [0..1]
           #i++
           offsets = cam2d.getOffsets dimension

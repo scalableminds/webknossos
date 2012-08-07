@@ -57,6 +57,9 @@ Renderer =
         @renderSubTile(map, (mapIndex << 2) + 1 + i, subTile, tileZoomStep - 1, plane)
 
     else
+
+      #if tile[0] != 16 or tile[1] != 16
+       # return
  
       tileSize = 5 - (plane.zoomStep - tileZoomStep)
       bucket = Cube.getBucketByAddress(map[mapIndex])
@@ -66,15 +69,15 @@ Renderer =
       destOffset = bufferOffsetByTileMacro(tile, tileSize)
 
       sourceOffsets = [
-        0
-        0
-        plane.layer & (1 << 5) - 1
+        (((plane.topLeftBucket[plane.view.u] << (plane.zoomStep - tileZoomStep)) + tile[0]) & ((1 << (bucket.zoomStep - tileZoomStep)) - 1))   << (5 - (bucket.zoomStep - tileZoomStep))
+        (((plane.topLeftBucket[plane.view.v] << (plane.zoomStep - tileZoomStep)) + tile[1]) & ((1 << (bucket.zoomStep - tileZoomStep)) - 1))   << (5 - (bucket.zoomStep - tileZoomStep))
+        (plane.layer >> bucket.zoomStep) & (1 << 5) - 1
       ]
 
-      #sourceOffsets[plane.view.w] >> 1
+      sourceOffsets[plane.view.w] = sourceOffsets[plane.view.w] >> 1
       sourceOffset = (sourceOffsets[0] << @DELTA[plane.view.u]) + (sourceOffsets[1] << @DELTA[plane.view.v]) + (sourceOffsets[2] << @DELTA[plane.view.w])
 
-      console.log "Rendering", plane.layer, sourceOffsets, sourceOffset
+      console.log "Rendering", plane.layer, sourceOffsets
 
       @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, tileSize, bucket.data, sourceOffset,
         1 << (@DELTA[plane.view.u] + skip),

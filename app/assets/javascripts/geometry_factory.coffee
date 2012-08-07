@@ -97,6 +97,8 @@ GeometryFactory =
           crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3( WIDTH/2*i,  WIDTH/2*(1-i), 1))
           crosshairs[dimension][i] = new THREE.Line(crosshairsGeometry[dimension][i], new THREE.LineBasicMaterial({color: crosshairColors[dimension][i], linewidth: 1}))
           View.addGeometry dimension, crosshairs[dimension][i]
+          if Model.User.Configuration.displayCrosshair?
+            crosshairs[dimension][i].visible = Model.User.Configuration.displayCrosshair
 
       View.crosshairs = crosshairs
 

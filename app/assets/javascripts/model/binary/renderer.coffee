@@ -10,7 +10,7 @@ subTileMacro = (tile, index) ->
   [(tile[0] << 1) + (index % 2), (tile[1] << 1) + (index >> 1)]
 
 
-bufferOffsetByTileCoordsMacro = (tile, scaleFactor) ->
+bufferOffsetByTileMacro = (tile, tileSize) ->
 
   tile[0] * (1 << tileSize) + tile[1] * (1 << tileSize) * @TEXTURE_SIZE
 
@@ -27,6 +27,15 @@ Renderer =
 
   RECURSION_PLACEHOLDER : {}
   
+
+  copyTile : (destBuffer, destTile, sourceBuffer, sourceTile) ->
+
+    destOffset = bufferOffsetByTileMacro(destTile, 5)
+    sourceOffset = bufferOffsetByTileMacro(sourceTile, 5)
+            
+    Renderer.renderToBuffer(destBuffer, destOffset, @TEXTURE_SIZE, 5, sourceBuffer, sourceOffset, 1, @TEXTURE_SIZE, 0, 0)        
+
+
   renderTile : (tile, plane) ->
 
     bucket = plane.topLeftBucket.slice(0)
@@ -48,28 +57,17 @@ Renderer =
         @renderSubTile(map, (mapIndex << 2) + 1 + i, subTile, tileZoomStep - 1, plane)
 
     else
-      console.log "RENDERING", tile, tileZoomStep, map[mapIndex]
-
-      #      unless @SPECIALbucketData
- #       @SPECIALbucketData = new Uint8Array(32*32*16)
-  #      i = 0
-   #     for x in [0..31] by 1
-    #      for y in [0..31] by 1
-     #       for z in [0..15] by 1
-      #        @SPECIALbucketData[i] = if z == 0 then 255 else 128
-       #       i++
-        #console.log @SPECIALbucketData
 
       tileSize = 5 - (plane.zoomStep - tileZoomStep)
-      destOffset = bufferOffsetByTileCoordsMacro(tile, tileSize)
+      destOffset = bufferOffsetByTileMacro(tile, tileSize)
       
-      layerMask = (1 << 5) - 1
-      sourceOffset = ((plane.layer >> plane.zoomStep) & layerMask) * (1 << @DELTA[plane.view.w])
-      
+      #layerMask = (1 << 5) - 1
+      #plane.layer & layerMask
+      #sourceOffset = ((plane.layer >> plane.zoomStep) & layerMask) * (1 << @DELTA[plane.view.w])
+
       bucket = Cube.getBucketByAddress(map[mapIndex])
       skip = Math.max(plane.zoomStep - bucket.zoomStep, 0)
       repeat = Math.max(bucket.zoomStep - plane.zoomStep, 0)
-
       
       @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, tileSize, bucket.data, 0,
         1 << (@DELTA[plane.view.u] + skip),

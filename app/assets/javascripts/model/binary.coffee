@@ -69,9 +69,9 @@ model/game : Game
 
 # Macros
 
-tileIndexByTileCoordsMacro = (u, v) ->
+tileIndexByTileMacro = (tile) ->
 
-  u * (@TEXTURE_SIZE >> 5) + v
+  tile[0] * (@TEXTURE_SIZE >> 5) + tile[1]
 
 
 Binary =
@@ -101,7 +101,7 @@ Binary =
     255, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 273,
     256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272]
 
-  PRELOADING : [0,10,20]
+  PRELOADING : [0,100,200]
 
   planes : [
     { layer : null, zoomStep : null, view : { u : 0, v : 1, w : 2 } }
@@ -113,44 +113,48 @@ Binary =
 
     Cube.on "bucketLoaded", (bucket, zoomStep, oldZoomStep) =>
 
-      #console.log "NEW BUCKET DATA", bucket, zoomStep
-
       for i in [0..2] by 1
         plane = @planes[i]
 
         continue unless plane.topLeftBucket
 
         if plane.layer >> 5 == bucket[plane.view.w] and oldZoomStep > plane.zoomStep
-#        if plane.layer >> (zoomStep + 5) == bucket[plane.view.w]
-#          if zoomStep > plane.zoomStep
-
-#            zoomDifference = zoomStep - plane.zoomStep
-#            width = 1 << zoomDifference
-#            offset_u = (bucket[plane.view.u] << zoomDifference) - plane.topLeftBucket[plane.view.u]
-#            offset_v = (bucket[plane.view.v] << zoomDifference) - plane.topLeftBucket[plane.view.v]
-
- #           for u in [offset_u...offset_u + width] by 1
- #             for v in [offset_v...offset_v + width] by 1
-
-  #              if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
-   #               plane.tiles[tileIndexByTileCoordsMacro(u, v)] = true
-    #              plane.changed = true
-
-     #     else
-
-           # zoomDifference = plane.zoomStep - zoomStep
-           # u = (bucket[plane.view.u] >> zoomDifference) - plane.topLeftBucket[plane.view.u]
-           # v = (bucket[plane.view.v] >> zoomDifference) - plane.topLeftBucket[plane.view.v]
-
-           # if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
-           #   plane.tiles[tileIndexByTileCoordsMacro(u, v)] = true
-           #   plane.changed = true
+          # if plane.layer >> (zoomStep + 5) == bucket[plane.view.w]
+          #   if zoomStep > plane.zoomStep
+          #
+          #     zoomDifference = zoomStep - plane.zoomStep
+          #     width = 1 << zoomDifference
+          #     offset_u = (bucket[plane.view.u] << zoomDifference) - plane.topLeftBucket[plane.view.u]
+          #     offset_v = (bucket[plane.view.v] << zoomDifference) - plane.topLeftBucket[plane.view.v]
+          #
+          #     for u in [offset_u...offset_u + width] by 1
+          #       for v in [offset_v...offset_v + width] by 1
+          #
+          #     if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
+          #       #TODO Macro-Fix
+          #       tile = [u, v] 
+          #       plane.tiles[tileIndexByTileMacro(tile)] = true
+          #       plane.changed = true
+          #
+          #   else
+          #
+          #     zoomDifference = plane.zoomStep - zoomStep
+          #     u = (bucket[plane.view.u] >> zoomDifference) - plane.topLeftBucket[plane.view.u]
+          #     v = (bucket[plane.view.v] >> zoomDifference) - plane.topLeftBucket[plane.view.v]
+          #
+          #     if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
+          #       #TODO Macro-Fix
+          #       tile = [u, v]
+          #       plane.tiles[tileIndexByTileMacro(tile)] = true
+          #       plane.changed = true
 
           u = (bucket[plane.view.u] >> plane.zoomStep) - plane.topLeftBucket[plane.view.u]
           v = (bucket[plane.view.v] >> plane.zoomStep) - plane.topLeftBucket[plane.view.v]
 
           if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
-              plane.tiles[tileIndexByTileCoordsMacro(u, v)] = true
+              #TODO Macro-Fix
+              tile = [u, v]
+              plane.tiles[tileIndexByTileMacro(tile)] = true
               plane.changed = true
 
 
@@ -169,29 +173,30 @@ Binary =
       @lastZoomStep = zoomStep
       @lastDirection = direction
 
-      #console.time "ping"
+      console.time "ping"
 
-#      @positionBucket = [position[0] >> (5 + zoomStep), position[1] >> (5 + zoomStep), position[2] >> (5 + zoomStep)]
-#      buckets   = @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
-#                  @getBucketArray(@positionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6),
-#                  @getBucketArray(@positionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6))
+      positionBucket = [position[0] >> 5, position[1] >> 5, position[2] >> 5]
+      zoomedPositionBucket = [positionBucket[0] >> zoomStep, positionBucket[1] >> zoomStep, positionBucket[2] >> zoomStep]
+
+      buckets   = @getBucketArray(zoomedPositionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
+                  @getBucketArray(zoomedPositionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6),
+                  @getBucketArray(zoomedPositionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6))
+
       # Buckets of zoom step 3 so that there won't be any black
 #      @positionBucket3 = [position[0] >> (5 + 3), position[1] >> (5 + 3), position[2] >> (5 + 3)]
 #      buckets3  = @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0).concat(
 #                  @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep)),
 #                  @getBucketArray(@positionBucket3, 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep)))
       
-      #Cube.extendByBucketAddressExtent6(
-      #  @positionBucket[0] - (@TEXTURE_SIZE >> 6), @positionBucket[1] - (@TEXTURE_SIZE >> 6), @positionBucket[2] - (@TEXTURE_SIZE >> 6),
-      #  @positionBucket[0] + (@TEXTURE_SIZE >> 6), @positionBucket[1] + (@TEXTURE_SIZE >> 6), @positionBucket[2] + (@TEXTURE_SIZE >> 6),
-      #  zoomStep)
+      Cube.extendByBucketAddressExtent6(
+        positionBucket[0] - (@TEXTURE_SIZE >> 6), positionBucket[1] - (@TEXTURE_SIZE >> 6), positionBucket[2] - (@TEXTURE_SIZE >> 6),
+        positionBucket[0] + (@TEXTURE_SIZE >> 6), positionBucket[1] + (@TEXTURE_SIZE >> 6), positionBucket[2] + (@TEXTURE_SIZE >> 6),
+      )
 
-      Cube.extendByBucketAddressExtent6(0, 0, 0, 20, 20, 20)
-
-      #console.time "queue"
+      console.time "queue"
       PullQueue.clear()
 
-#      direction = [0,0,1]
+      direction = [0,0,1]
 #      directionValue = Math.sqrt(direction[0]*direction[0] + direction[1]*direction[1] + direction[2]*direction[2])
 #      directionMax   = Math.max(direction[0], direction[1], direction[2])
 #      direction      = [direction[0]/directionMax, direction[1]/directionMax, direction[2]/directionMax]
@@ -202,15 +207,15 @@ Binary =
 #                    Math.round(200/directionValue),
 #                    Math.round(300/directionValue)]
 #
-  #    delta_x = delta_y = delta_z = 0
-  #    direction_x = direction_y = direction_z = 0
-  #    index = buckets.length
-  #    level = 0
+      delta_x = delta_y = delta_z = 0
+      direction_x = direction_y = direction_z = 0
+      index = buckets.length
+      level = 0
 
  #     console.time "queue 1"
  #     console.log "Buckets 1: " + buckets3.length
  #     if zoomStep != 3            # don't do this if you need to load the lowest resolution anyway
- #       for coordinate in [0..2]
+ #     for coordinate in [0..2]
  #         i = [0, 0, 0]
  #         for indexValue in [0, 1, -1]
  #           i[coordinate] = indexValue
@@ -220,32 +225,32 @@ Binary =
  #               PullQueue.insert [b[0] + i[0], b[1] + i[1], b[2] + i[2]], 3, priority + Math.abs(indexValue)*buckets3.length
  #     console.timeEnd "queue 1"
       
-#      i = buckets.length * preloading.length
+      i = buckets.length * @PRELOADING.length
 #      console.log "Buckets 2: " + buckets.length
-#      while i--
-#        index--
-#        if buckets[index]
+      while i--
+        index--
+        if buckets[index]
 #          priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
-#          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomStep, @PRIORITIES[index % @PRIORITIES.length] + preloading[level] + buckets3.length
+          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomStep, @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]# + buckets3.length
 
-#        unless i % buckets.length
-#          index = buckets.length
-#          level++
+        unless i % buckets.length
+          index = buckets.length
+          level++
 
-#          delta_x += direction[0]
-#          delta_y += direction[1]
-#          delta_z += direction[2]
-#          direction_x = Math.round(delta_x)
-#          direction_y = Math.round(delta_y)
-#          direction_z = Math.round(delta_z)
+          delta_x += direction[0]
+          delta_y += direction[1]
+          delta_z += direction[2]
+          direction_x = Math.round(delta_x)
+          direction_y = Math.round(delta_y)
+          direction_z = Math.round(delta_z)
       
-      PullQueue.insert [10, 10, 21], 3, 0
-      PullQueue.insert [42, 42, 84], 1, 1
-      PullQueue.insert [43, 43, 84], 1, 2
-      PullQueue.insert [84, 84, 168], 0, 3
-      PullQueue.insert [84, 85, 168], 0, 4
-      PullQueue.insert [84, 86, 168], 0, 5
-      PullQueue.insert [84, 87, 168], 0, 6
+#      PullQueue.insert [10, 10, 21], 3, 0
+#      PullQueue.insert [42, 42, 84], 1, 1
+#      PullQueue.insert [43, 43, 84], 1, 2
+#      PullQueue.insert [84, 84, 168], 0, 3
+#      PullQueue.insert [84, 85, 168], 0, 4
+#      PullQueue.insert [84, 86, 168], 0, 5
+#      PullQueue.insert [84, 87, 168], 0, 6
 
       PullQueue.pull()
 
@@ -311,19 +316,16 @@ Binary =
 
       for du in [0...width] by 1
         for dv in [0...height] by 1
-          # TODO
-          o1 = oldOffset[0] + du
-          o2 = oldOffset[1] + dv
-          n1 = newOffset[0] + du
-          n2 = newOffset[1] + dv
 
-          oldTileIndex = tileIndexByTileCoordsMacro(o1, o2)
-          newTileIndex = tileIndexByTileCoordsMacro(n1, n2)
+          oldTile = [oldOffset[0] + du, oldOffset[1] + dv]
+          newTile = [newOffset[0] + du, newOffset[1] + dv]
+
+          oldTileIndex = tileIndexByTileMacro(oldTile)
+          newTileIndex = tileIndexByTileMacro(newTile)
 
           if plane.tiles[newTileIndex] and not oldTiles[oldTileIndex]
-            # TODO
-            #@copyTile(currentView.buffer, oldBuffer, newTileIndex, oldTileIndex)
-            #console.log "COPYING TILE FROM", [o1, o2], "TO", [n1, n2]
+            
+            Renderer.copyTile(plane.buffer, newTile, oldBuffer, oldTile)
             plane.tiles[newTileIndex] = false
 
     if plane.changed or not _.isEqual(plane.area, area)
@@ -333,15 +335,19 @@ Binary =
 
       for u in [area[0]..area[2]] by 1
         for v in [area[1]..area[3]] by 1
-          tileIndex = tileIndexByTileCoordsMacro(u, v)
-          if plane.tiles[tileIndex]
 
-            Renderer.renderTile([u, v], plane)
+          tile = [u, v]
+          tileIndex = tileIndexByTileMacro(tile)
+ 
+          if plane.tiles[tileIndex]
+            Renderer.renderTile(tile, plane)
             plane.tiles[tileIndex] = false
 
       plane.buffer
     
     else
+
+      #console.log "NOTHING TO DO"
 
       null
 

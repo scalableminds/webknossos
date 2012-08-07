@@ -188,9 +188,11 @@ Binary =
 #                  @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep)),
 #                  @getBucketArray(@positionBucket3, 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep)))
 
+      resizeRadius = @TEXTURE_SIZE >> 6 - zoomStep
+
       Cube.extendByBucketAddressExtent6(
-        positionBucket[0] - (@TEXTURE_SIZE >> 6), positionBucket[1] - (@TEXTURE_SIZE >> 6), positionBucket[2] - (@TEXTURE_SIZE >> 6),
-        positionBucket[0] + (@TEXTURE_SIZE >> 6), positionBucket[1] + (@TEXTURE_SIZE >> 6), positionBucket[2] + (@TEXTURE_SIZE >> 6),
+        positionBucket[0] - resizeRadius, positionBucket[1] - resizeRadius, positionBucket[2] - resizeRadius,
+        positionBucket[0] + resizeRadius, positionBucket[1] + resizeRadius, positionBucket[2] + resizeRadius,
       )
 
       console.time "queue"
@@ -224,7 +226,6 @@ Binary =
  #     console.timeEnd "queue 1"
       
       i = buckets.length * @PRELOADING.length
-#      console.log "Buckets 2: " + buckets.length
       while i--
         index--
         if buckets[index]

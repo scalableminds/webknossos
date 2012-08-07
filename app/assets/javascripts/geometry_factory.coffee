@@ -137,7 +137,6 @@ GeometryFactory =
       # create route
       View.createRoute 1000
 
-      meshes[1][PLANE_YZ].rotation.x = meshes[2][PLANE_YZ].rotation.x = 90 /180*Math.PI
       meshes[1][PLANE_YZ].rotation.z = meshes[2][PLANE_YZ].rotation.z = -90 /180*Math.PI
       
       meshes[1][PLANE_XZ].rotation.x = meshes[2][PLANE_XZ].rotation.x = 90 /180*Math.PI

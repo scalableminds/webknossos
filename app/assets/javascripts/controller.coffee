@@ -53,6 +53,9 @@ Controller =
 
         View.setRouteClippingDistance data.routeClippingDistance
         View.setDisplayCrosshair data.displayCrosshair
+        View.setDisplayPreview PLANE_XY, data.displayPreviewXY
+        View.setDisplayPreview PLANE_YZ, data.displayPreviewYZ
+        View.setDisplayPreview PLANE_XZ, data.displayPreviewXZ
     )
 
     Model.Route.initialize().then(
@@ -191,14 +194,17 @@ Controller =
 
   setDisplayPreviewXY : (value) ->
     Model.User.Configuration.displayPreviewXY = value
+    View.setDisplayPreview PLANE_XY, value
     Model.User.Configuration.push()      
 
   setDisplayPreviewYZ : (value) ->
     Model.User.Configuration.displayPreviewYZ = value
+    View.setDisplayPreview PLANE_YZ, value
     Model.User.Configuration.push()      
 
   setDisplayPreviewXZ : (value) ->
     Model.User.Configuration.displayPreviewXZ = value
+    View.setDisplayPreview PLANE_XZ, value
     Model.User.Configuration.push()      
 
   setMouseInversionX : (value) ->

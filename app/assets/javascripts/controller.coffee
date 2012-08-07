@@ -35,9 +35,13 @@ Controller =
         $("#moveValue")[0].value = data.moveValue
         $("#rotateValue")[0].value = data.rotateValue
         $("#mouseRotateValue")[0].value = data.mouseRotateValue
+        $("#routeClippingDistance")[0].value = data.routeClippingDistance
         $("#lockZoom")[0].checked = data.lockZoom
+        $("#displayCrosshair")[0].checked = data.displayCrosshair
+        $("#displayPreviewXY")[0].checked = data.displayPreviewXY
+        $("#displayPreviewYZ")[0].checked = data.displayPreviewYZ
+        $("#displayPreviewXZ")[0].checked = data.displayPreviewXZ
         $("#moveValue")[0].value = data.moveValue
-
         $("#mouseInversionX")[0].checked = true if data.mouseInversionX is 1
         $("#mouseInversionY")[0].checked = true if data.mouseInversionY is 1
         $("#mouseInversionX")[0].checked = false if data.mouseInversionX is -1
@@ -46,6 +50,12 @@ Controller =
         $("#mouseActive")[0].checked = data.mouseActive
         $("#gamepadActive")[0].checked = data.gamepadActive
         $("#motionsensorActive")[0].checked = data.motionsensorActive
+
+        View.setRouteClippingDistance data.routeClippingDistance
+        View.setDisplayCrosshair data.displayCrosshair
+        View.setDisplayPreview PLANE_XY, data.displayPreviewXY
+        View.setDisplayPreview PLANE_YZ, data.displayPreviewYZ
+        View.setDisplayPreview PLANE_XZ, data.displayPreviewXZ
     )
 
     Model.Route.initialize().then(
@@ -165,10 +175,36 @@ Controller =
 
   setMouseRotateValue : (value) ->
     Model.User.Configuration.mouseRotateValue = (Number) value
+    Model.User.Configuration.push()      
+
+  setRouteClippingDistance : (value) ->
+    console.log "setRouteClippingDistance()"
+    Model.User.Configuration.routeClippingDistance = (Number) value
+    View.setRouteClippingDistance((Number) value)
     Model.User.Configuration.push()   
 
   setLockZoom : (value) ->
     Model.User.Configuration.lockZoom = value
+    Model.User.Configuration.push()      
+
+  setDisplayCrosshair : (value) ->
+    Model.User.Configuration.displayCrosshair = value
+    View.setDisplayCrosshair value
+    Model.User.Configuration.push()    
+
+  setDisplayPreviewXY : (value) ->
+    Model.User.Configuration.displayPreviewXY = value
+    View.setDisplayPreview PLANE_XY, value
+    Model.User.Configuration.push()      
+
+  setDisplayPreviewYZ : (value) ->
+    Model.User.Configuration.displayPreviewYZ = value
+    View.setDisplayPreview PLANE_YZ, value
+    Model.User.Configuration.push()      
+
+  setDisplayPreviewXZ : (value) ->
+    Model.User.Configuration.displayPreviewXZ = value
+    View.setDisplayPreview PLANE_XZ, value
     Model.User.Configuration.push()      
 
   setMouseInversionX : (value) ->

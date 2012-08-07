@@ -105,7 +105,7 @@ Binary =
 
   planes : [
     { layer : null, zoomStep : null, view : { u : 0, v : 1, w : 2 } }
-    { layer : null, zoomStep : null, view : { u : 1, v : 2, w : 0 } }
+    { layer : null, zoomStep : null, view : { u : 2, v : 1, w : 0 } }
     { layer : null, zoomStep : null, view : { u : 0, v : 2, w : 1 } }
   ]
 
@@ -262,6 +262,20 @@ Binary =
 
   # A synchronized implementation of `get`. Cuz its faster.
   getSync : (position, zoomStep, area, plane) ->
+
+    #buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)    
+
+#    for i in [0...512] by 1
+ #     for j in [0..512] by 1
+  #      color = 0
+   #     if i >= 255
+    #      color += 128
+     #   if j >= 255
+      #    color += 64
+       # buffer[i*512+j] = color
+
+    #return buffer
+
 
     topLeftPosition = position.slice(0)
     topLeftPosition[plane.view.u] -= (@TEXTURE_SIZE >> 1) << zoomStep

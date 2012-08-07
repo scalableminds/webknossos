@@ -212,8 +212,6 @@ Binary =
       index = buckets.length
       level = 0
 
- #     console.time "queue 1"
- #     console.log "Buckets 1: " + buckets3.length
  #     if zoomStep != 3            # don't do this if you need to load the lowest resolution anyway
  #     for coordinate in [0..2]
  #         i = [0, 0, 0]
@@ -229,9 +227,9 @@ Binary =
 #      console.log "Buckets 2: " + buckets.length
       while i--
         index--
-        if buckets[index]
+#        if buckets[index]
 #          priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
-          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomStep, @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]# + buckets3.length
+#          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomStep, @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]# + buckets3.length
 
         unless i % buckets.length
           index = buckets.length
@@ -244,13 +242,13 @@ Binary =
           direction_y = Math.round(delta_y)
           direction_z = Math.round(delta_z)
       
-#      PullQueue.insert [10, 10, 21], 3, 0
-#      PullQueue.insert [42, 42, 84], 1, 1
-#      PullQueue.insert [43, 43, 84], 1, 2
-#      PullQueue.insert [84, 84, 168], 0, 3
-#      PullQueue.insert [84, 85, 168], 0, 4
-#      PullQueue.insert [84, 86, 168], 0, 5
-#      PullQueue.insert [84, 87, 168], 0, 6
+      PullQueue.insert [10, 10, 21], 3, 0
+      PullQueue.insert [42, 42, 84], 1, 1
+      PullQueue.insert [43, 43, 84], 1, 2
+      PullQueue.insert [84, 84, 168], 0, 3
+      PullQueue.insert [84, 85, 168], 0, 4
+      PullQueue.insert [84, 86, 168], 0, 5
+      PullQueue.insert [84, 87, 168], 0, 6
 
       PullQueue.pull()
 
@@ -263,19 +261,10 @@ Binary =
   # A synchronized implementation of `get`. Cuz its faster.
   getSync : (position, zoomStep, area, plane) ->
 
-    #buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)    
-
-#    for i in [0...512] by 1
- #     for j in [0..512] by 1
-  #      color = 0
-   #     if i >= 255
-    #      color += 128
-     #   if j >= 255
-      #    color += 64
-       # buffer[i*512+j] = color
-
-    #return buffer
-
+    zoomStep = 2
+    position[0] = 2688
+    position[1] = 2688
+    console.log "HERE WE GO"
 
     topLeftPosition = position.slice(0)
     topLeftPosition[plane.view.u] -= (@TEXTURE_SIZE >> 1) << zoomStep
@@ -294,8 +283,6 @@ Binary =
 
     unless _.isEqual(plane.layer, layer) and _.isEqual(plane.zoomStep, zoomStep)
 
-      console.log "LAYER OR ZOOMSTEP CHANGED"
-
       plane.layer = layer
       plane.zoomStep = zoomStep
       plane.topLeftBucket = topLeftBucket
@@ -305,8 +292,6 @@ Binary =
       plane.changed = true
 
     unless _.isEqual(plane.topLeftBucket, topLeftBucket)
-
-      console.log "TOP_LEFT_BUCKET CHANGED", topLeftBucket
 
       oldTopLeftBucket = plane.topLeftBucket
       oldTiles = plane.tiles
@@ -360,8 +345,6 @@ Binary =
       plane.buffer
     
     else
-
-      #console.log "NOTHING TO DO"
 
       null
 

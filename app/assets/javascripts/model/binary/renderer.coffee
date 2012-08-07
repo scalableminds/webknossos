@@ -57,19 +57,26 @@ Renderer =
         @renderSubTile(map, (mapIndex << 2) + 1 + i, subTile, tileZoomStep - 1, plane)
 
     else
-
+ 
       tileSize = 5 - (plane.zoomStep - tileZoomStep)
-      destOffset = bufferOffsetByTileMacro(tile, tileSize)
-      
-      #layerMask = (1 << 5) - 1
-      #plane.layer & layerMask
-      #sourceOffset = ((plane.layer >> plane.zoomStep) & layerMask) * (1 << @DELTA[plane.view.w])
-
       bucket = Cube.getBucketByAddress(map[mapIndex])
       skip = Math.max(plane.zoomStep - bucket.zoomStep, 0)
       repeat = Math.max(bucket.zoomStep - plane.zoomStep, 0)
-      
-      @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, tileSize, bucket.data, 0,
+
+      destOffset = bufferOffsetByTileMacro(tile, tileSize)
+
+      sourceOffsets = [
+        0
+        0
+        plane.layer & (1 << 5) - 1
+      ]
+
+      #sourceOffsets[plane.view.w] >> 1
+      sourceOffset = (sourceOffsets[0] << @DELTA[plane.view.u]) + (sourceOffsets[1] << @DELTA[plane.view.v]) + (sourceOffsets[2] << @DELTA[plane.view.w])
+
+      console.log "Rendering", plane.layer, sourceOffsets, sourceOffset
+
+      @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, tileSize, bucket.data, sourceOffset,
         1 << (@DELTA[plane.view.u] + skip),
         1 << (@DELTA[plane.view.v] + skip),
         @REPEAT[plane.view.u] + repeat,

@@ -29,12 +29,14 @@ View =
     HEIGHT = (container.height()-48)/2
 
     # Initialize main THREE.js components
+    # Max. distance the route may have from the main plane in order to be displayed:
+    @camDistance = 40
     colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
     @renderer = new Array(4)
     @camera   = new Array(4)
     @scene    = new Array(4)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
-      camDistance  = if i==VIEW_3D then 100000 else 40
+      camDistance  = if i==VIEW_3D then 100000 else @camDistance
       @renderer[i] = new THREE.WebGLRenderer({clearColor: colors[i], clearAlpha: 1, antialias: false})
       @camera[i]   = new THREE.OrthographicCamera(-192, 192, 192, -192, -camDistance, camDistance)
       @scene[i]    = new THREE.Scene()
@@ -52,7 +54,7 @@ View =
       container.append @renderer[i].domElement
 
     @prevControls = $('#prevControls')
-    values        = ["XY Plane", "XY Plane", "XZ Plane", "3D View"]
+    values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
     callbacks     = [@changePrevXY, @changePrevYZ, @changePrevXZ, @changePrev3D]
     buttons       = new Array(4)
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
@@ -124,6 +126,7 @@ View =
   # We do so by apply a new texture to it.
   updateTrianglesplane : ->
       return unless @meshes
+      return unless @prevBorders
 
       # sends current position to Model for preloading data
       # NEW with direction vector
@@ -141,8 +144,8 @@ View =
         @changePrev VIEW_3D
         @first = false
 
-      for kind in [0..2]
-        for dimension in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      for dimension in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+        for kind in [0..1]
           #i++
           offsets = cam2d.getOffsets dimension
           scalingFactor = cam2d.getTextureScalingFactor dimension
@@ -172,7 +175,7 @@ View =
             sFactor = cam2d.getPlaneScalingFactor dimension
             scale   = @meshes[kind][dimension].scale
             scale.x = scale.y = scale.z = sFactor
-          
+
           # only for main and preview planes
           if kind <= 1
             @meshes[kind][dimension].texture.needsUpdate = true
@@ -185,6 +188,11 @@ View =
             map.repeat.y = VIEWPORT_WIDTH*scalingFactor / 508;
             map.offset.x = offsets[0] / 508;
             map.offset.y = offsets[1] / 508;
+
+        @prevBorders[dimension].position = globalPosVec
+        sFactor = cam2d.getPlaneScalingFactor dimension
+        @prevBorders[dimension].scale = new THREE.Vector3(sFactor, sFactor, sFactor)
+        
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
@@ -347,6 +355,7 @@ View =
     else 
       cam2d.zoomIn(cam2d.getActivePlane())
     View.updateRoute()
+    View.updateCamDistance()
 
   #todo: validation in Model
   zoomOut : ->
@@ -355,6 +364,28 @@ View =
     else 
       cam2d.zoomOut(cam2d.getActivePlane())
     View.updateRoute()
+    View.updateCamDistance()
+
+  updateCamDistance : ->
+    for i in [0..2]
+      @camera[i].near = - @camDistance/cam2d.getPlaneScalingFactor(i)
+      @camera[i].updateProjectionMatrix()
+    cam2d.hasChanged = true
+
+  setRouteClippingDistance : (value) ->
+    @camDistance = value
+    @updateCamDistance()
+
+  setDisplayCrosshair : (value) ->
+    if View.crosshairs
+      for plane in @crosshairs
+        for line in plane
+          line.visible = value
+
+  setDisplayPreview : (planeID, value) ->
+    if View.meshes
+      View.meshes[1][planeID].visible = value
+      cam2d.hasChanged = true;
 
   setActivePlaneXY : ->
     View.setActivePlane PLANE_XY

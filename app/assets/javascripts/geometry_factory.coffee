@@ -6,10 +6,12 @@ model/game : Game
 ###
 
 
-PLANE_XY = 0
-PLANE_YZ = 1
-PLANE_XZ = 2
-VIEW_3D  = 3
+PLANE_XY       = 0
+PLANE_YZ       = 1
+PLANE_XZ       = 2
+VIEW_3D        = 3
+WIDTH          = 384
+VIEWPORT_WIDTH = 380
 
 # This module is responsible for loading Geometry objects like meshes
 # or creating them programmatically.
@@ -64,15 +66,22 @@ GeometryFactory =
       textures           = [new Array(3), new Array(3)]
       textureMaterials   = [new Array(3), new Array(3), new Array(3)]
       meshes             = [new Array(3), new Array(3), new Array(3)]
+      crosshairs         = [new Array(2), new Array(2), new Array(2)]   # crosshairs for main planes, each consisting of two lines
+      crosshairsGeometry = [new Array(2), new Array(2), new Array(2)]
+      prevBorders        = new Array(3)
+      prevBordersGeo     = new Array(3)
 
       borderColors       = [0xff0000, 0x0000ff, 0x00ff00]
+      crosshairColors    = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
 
       # dimension: [XY, YZ, XZ]; kind: [main, preview, border]
       for dimension in [0..2]
         for kind in [0..2]
-          size = if kind==2 then 390 else 380
+          # create plane
+          size = if kind==2 then 390 else VIEWPORT_WIDTH
           planes[kind][dimension] = new THREE.PlaneGeometry(size, size, 1, 1)
 
+          # create texture
           if kind<2
             textures[kind][dimension] = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
             textures[kind][dimension].needsUpdate = true
@@ -80,12 +89,38 @@ GeometryFactory =
           else
             textureMaterials[kind][dimension] = new THREE.MeshBasicMaterial({wireframe : false, color: borderColors[dimension]})
 
+          # create mesh
           meshes[kind][dimension] = new THREE.Mesh( planes[kind][dimension], textureMaterials[kind][dimension] )
-          if kind<1
+          if kind==0
             meshes[kind][dimension].rotation.x = 90 /180*Math.PI
-
+          config = Model.User.Configuration
+          if config? and kind==1
+            values = [config.displayPreviewXY, config.displayPreviewYZ, config.displayPreviewXZ]
+            meshes[kind][dimension].visible = values[dimension]
           if kind<2
             meshes[kind][dimension].texture = textures[kind][dimension]
+
+        # create crosshairs
+        for i in [0..1]
+          crosshairsGeometry[dimension][i] = new THREE.Geometry()
+          crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3(-WIDTH/2*i, -WIDTH/2*(1-i), 1))
+          crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3( WIDTH/2*i,  WIDTH/2*(1-i), 1))
+          crosshairs[dimension][i] = new THREE.Line(crosshairsGeometry[dimension][i], new THREE.LineBasicMaterial({color: crosshairColors[dimension][i], linewidth: 1}))
+          View.addGeometry dimension, crosshairs[dimension][i]
+          if Model.User.Configuration.displayCrosshair?
+            crosshairs[dimension][i].visible = Model.User.Configuration.displayCrosshair
+
+        # create borders
+        prevBordersGeo[dimension] = new THREE.Geometry()
+        prevBordersGeo[dimension].vertices.push(new THREE.Vector3(-VIEWPORT_WIDTH/2-1, 0, -VIEWPORT_WIDTH/2-1))
+        prevBordersGeo[dimension].vertices.push(new THREE.Vector3(-VIEWPORT_WIDTH/2-1, 0,  VIEWPORT_WIDTH/2+1))
+        prevBordersGeo[dimension].vertices.push(new THREE.Vector3( VIEWPORT_WIDTH/2+1, 0,  VIEWPORT_WIDTH/2+1))
+        prevBordersGeo[dimension].vertices.push(new THREE.Vector3( VIEWPORT_WIDTH/2+1, 0, -VIEWPORT_WIDTH/2-1))
+        prevBordersGeo[dimension].vertices.push(new THREE.Vector3(-VIEWPORT_WIDTH/2-1, 0, -VIEWPORT_WIDTH/2-1))
+        prevBorders[dimension] = new THREE.Line(prevBordersGeo[dimension], new THREE.LineBasicMaterial({color: borderColors[dimension], linewidth: 1}))
+
+      View.crosshairs = crosshairs
+
       
       #create preview Box depending on Game.dataSet.upperBoundary
       b = Game.dataSet.upperBoundary
@@ -121,14 +156,17 @@ GeometryFactory =
       # create route
       View.createRoute 1000
 
-      meshes[1][PLANE_YZ].rotation.x = meshes[2][PLANE_YZ].rotation.x = 90 /180*Math.PI
-      meshes[1][PLANE_YZ].rotation.z = meshes[2][PLANE_YZ].rotation.z = -90 /180*Math.PI
+      meshes[1][PLANE_YZ].rotation.z = meshes[2][PLANE_YZ].rotation.z = prevBorders[PLANE_YZ].rotation.z = -90 /180*Math.PI
       
-      meshes[1][PLANE_XZ].rotation.x = meshes[2][PLANE_XZ].rotation.x = 90 /180*Math.PI
+      meshes[1][PLANE_XZ].rotation.x = meshes[2][PLANE_XZ].rotation.x = prevBorders[PLANE_XZ].rotation.x = 90 /180*Math.PI
 
-      View.meshes = meshes
-      for kind in [0..2]
-        for dimension in [0..2]
+      View.meshes      = meshes
+      View.prevBorders = prevBorders
+      for dimension in [0..2]
+        for kind in [0..2]
+          if kind == 2
+            meshes[kind][dimension].visible = false
           scene = if kind==0 then dimension else VIEW_3D
           View.addGeometry scene, View.meshes[kind][dimension]
+        View.addGeometry VIEW_3D, View.prevBorders[dimension]
     )

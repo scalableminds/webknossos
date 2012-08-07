@@ -37,8 +37,11 @@ Controller =
         $("#mouseRotateValue")[0].value = data.mouseRotateValue
         $("#routeClippingDistance")[0].value = data.routeClippingDistance
         $("#lockZoom")[0].checked = data.lockZoom
+        $("#displayCrosshair")[0].checked = data.displayCrosshair
+        $("#displayPreviewXY")[0].checked = data.displayPreviewXY
+        $("#displayPreviewYZ")[0].checked = data.displayPreviewYZ
+        $("#displayPreviewXZ")[0].checked = data.displayPreviewXZ
         $("#moveValue")[0].value = data.moveValue
-
         $("#mouseInversionX")[0].checked = true if data.mouseInversionX is 1
         $("#mouseInversionY")[0].checked = true if data.mouseInversionY is 1
         $("#mouseInversionX")[0].checked = false if data.mouseInversionX is -1
@@ -49,6 +52,7 @@ Controller =
         $("#motionsensorActive")[0].checked = data.motionsensorActive
 
         View.setRouteClippingDistance data.routeClippingDistance
+        View.setDisplayCrosshair data.displayCrosshair
     )
 
     Model.Route.initialize().then(
@@ -178,6 +182,23 @@ Controller =
 
   setLockZoom : (value) ->
     Model.User.Configuration.lockZoom = value
+    Model.User.Configuration.push()      
+
+  setDisplayCrosshair : (value) ->
+    Model.User.Configuration.displayCrosshair = value
+    View.setDisplayCrosshair value
+    Model.User.Configuration.push()    
+
+  setDisplayPreviewXY : (value) ->
+    Model.User.Configuration.displayPreviewXY = value
+    Model.User.Configuration.push()      
+
+  setDisplayPreviewYZ : (value) ->
+    Model.User.Configuration.displayPreviewYZ = value
+    Model.User.Configuration.push()      
+
+  setDisplayPreviewXZ : (value) ->
+    Model.User.Configuration.displayPreviewXZ = value
     Model.User.Configuration.push()      
 
   setMouseInversionX : (value) ->

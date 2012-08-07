@@ -10,6 +10,7 @@ PLANE_XY = 0
 PLANE_YZ = 1
 PLANE_XZ = 2
 VIEW_3D  = 3
+WIDTH    = 384
 
 # This module is responsible for loading Geometry objects like meshes
 # or creating them programmatically.
@@ -64,8 +65,11 @@ GeometryFactory =
       textures           = [new Array(3), new Array(3)]
       textureMaterials   = [new Array(3), new Array(3), new Array(3)]
       meshes             = [new Array(3), new Array(3), new Array(3)]
+      crosshairs         = [new Array(2), new Array(2), new Array(2)]   # crosshairs for main planes, each consisting of two lines
+      crosshairsGeometry = [new Array(2), new Array(2), new Array(2)]
 
       borderColors       = [0xff0000, 0x0000ff, 0x00ff00]
+      crosshairColors    = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
 
       # dimension: [XY, YZ, XZ]; kind: [main, preview, border]
       for dimension in [0..2]
@@ -81,11 +85,21 @@ GeometryFactory =
             textureMaterials[kind][dimension] = new THREE.MeshBasicMaterial({wireframe : false, color: borderColors[dimension]})
 
           meshes[kind][dimension] = new THREE.Mesh( planes[kind][dimension], textureMaterials[kind][dimension] )
-          if kind<1
+          if kind==0
             meshes[kind][dimension].rotation.x = 90 /180*Math.PI
 
           if kind<2
             meshes[kind][dimension].texture = textures[kind][dimension]
+
+        for i in [0..1]
+          crosshairsGeometry[dimension][i] = new THREE.Geometry()
+          crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3(-WIDTH/2*i, -WIDTH/2*(1-i), 1))
+          crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3( WIDTH/2*i,  WIDTH/2*(1-i), 1))
+          crosshairs[dimension][i] = new THREE.Line(crosshairsGeometry[dimension][i], new THREE.LineBasicMaterial({color: crosshairColors[dimension][i], linewidth: 1}))
+          View.addGeometry dimension, crosshairs[dimension][i]
+
+      View.crosshairs = crosshairs
+
       
       #create preview Box depending on Game.dataSet.upperBoundary
       b = Game.dataSet.upperBoundary

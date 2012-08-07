@@ -104,8 +104,6 @@ View =
     # This prevents you the GPU/CPU from constantly
     # working and keeps your lap cool
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
-    if cam2d.hasChanged is false
-      return
 
     @updateTrianglesplane()
     

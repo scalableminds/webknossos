@@ -18,6 +18,10 @@ User.Configuration =
   mouseRotateValue : null
   routeClippingDistance : null
   lockZoom : null
+  displayCrosshair : null
+  displayPreviewXY : null
+  displayPreviewYZ : null
+  displayPreviewXZ : null
   mouseInversionX : null
   mouseInversionY : null
   mouseActive : null
@@ -45,6 +49,10 @@ User.Configuration =
               @mouseRotateValue, 
               @routeClippingDistance, 
               @lockZoom,
+              @displayCrosshair,
+              @displayPreviewXY,
+              @displayPreviewYZ,
+              @displayPreviewXZ,
               @mouseInversionX,
               @mouseInversionY,
               @mouseActive, 
@@ -79,6 +87,10 @@ User.Configuration =
         mouseRotateValue : @mouseRotateValue,
         routeClippingDistance : @routeClippingDistance,
         lockZoom : @lockZoom
+        displayCrosshair : @displayCrosshair
+        displayPreviewXY : @displayPreviewXY
+        displayPreviewYZ : @displayPreviewYZ
+        displayPreviewXZ : @displayPreviewXZ
         mouseInversionX : @mouseInversionX,
         mouseInversionY : @mouseInversionY,
         mouseActive : @mouseActive,

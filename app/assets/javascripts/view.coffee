@@ -54,7 +54,7 @@ View =
       container.append @renderer[i].domElement
 
     @prevControls = $('#prevControls')
-    values        = ["XY Plane", "XY Plane", "XZ Plane", "3D View"]
+    values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
     callbacks     = [@changePrevXY, @changePrevYZ, @changePrevXZ, @changePrev3D]
     buttons       = new Array(4)
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
@@ -379,6 +379,12 @@ View =
   setRouteClippingDistance : (value) ->
     @camDistance = value
     @updateCamDistance()
+
+  setDisplayCrosshair : (value) ->
+    if View.crosshairs
+      for plane in @crosshairs
+        for line in plane
+          line.visible = value
 
   setActivePlaneXY : ->
     View.setActivePlane PLANE_XY

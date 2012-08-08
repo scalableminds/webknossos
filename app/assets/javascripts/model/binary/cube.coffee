@@ -264,6 +264,8 @@ Cube =
 
     { cube : oldCube, cubeOffset : oldCubeOffset, cubeSize : oldCubeSize } = @
 
+    console.log "Resizing the Cube:", min_x, min_y, min_z, max_x, max_y, max_z
+
     # TODO: Make cube support negative bucket addresses
     min_x = Math.max(min_x, 0)
     min_y = Math.max(min_y, 0)

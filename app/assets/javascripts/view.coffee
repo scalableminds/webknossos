@@ -80,6 +80,7 @@ View =
     @positionStats = $("#status")
 
     @first = true
+    @newTextures = [true, true, true, true]
     # start the rendering loop
     @animate()
 
@@ -119,9 +120,12 @@ View =
     @positionStats.html "Flycam2d: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{cam2d.getIntegerZoomStep(cam2d.getActivePlane())}<br />activePlane: #{cam2d.getActivePlane()}" 
     @stats.update()
 
-    cam2d.hasChanged = false
+    @newTextures[VIEW_3D] = @newTextures[0] or @newTextures[1] or @newTextures[2]
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
-      @renderer[i].render @scene[i], @camera[i]
+      if cam2d.hasChanged or @newTextures[i]
+        @renderer[i].render @scene[i], @camera[i]
+    cam2d.hasChanged = false
+    @newTextures = [false, false, false, false]
 
   # Let's apply new pixels to the trianglesplane.
   # We do so by apply a new texture to it.
@@ -146,50 +150,38 @@ View =
         @first = false
 
       for dimension in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-        for kind in [0..1]
-
-          # only the main planes
-          if kind == 0
+        if cam2d.needsUpdate dimension
+          cam2d.notifyNewTexture dimension
             
-            if cam2d.needsUpdate dimension
-              cam2d.notifyNewTexture dimension
-            
-            plane = @meshes[kind][dimension]
+        plane = @meshes[0][dimension]
 
-            Model.Binary.get(cam2d.getTexturePosition(dimension), cam2d.getIntegerZoomStep(dimension), cam2d.getArea(dimension), dimension).done (buffer) ->
-              if buffer
-                plane.texture.image.data.set(buffer)
+        Model.Binary.get(cam2d.getTexturePosition(dimension), cam2d.getIntegerZoomStep(dimension), cam2d.getArea(dimension), dimension).done (buffer) ->
+          if buffer
+            plane.texture.image.data.set(buffer)
+            View.newTextures[dimension] = true
+
+        @newTextures[dimension] |= cam2d.hasChanged
+        if !@newTextures[dimension]
+          continue
+          
+        @meshes[1][dimension].texture = @meshes[0][dimension].texture.clone()
+        @meshes[1][dimension].position = globalPosVec
+        sFactor = cam2d.getPlaneScalingFactor dimension
+        scale   = @meshes[1][dimension].scale
+        scale.x = scale.y = scale.z = sFactor
+
+        @meshes[0][dimension].texture.needsUpdate = true
+        @meshes[0][dimension].material.map = @meshes[0][dimension].texture
+        @meshes[1][dimension].texture.needsUpdate = true
+        @meshes[1][dimension].material.map = @meshes[1][dimension].texture
         
-          offsets = cam2d.getOffsets dimension
-          scalingFactor = cam2d.getTextureScalingFactor dimension
-          
-          #only for border planes
-          if kind == 2
-            @meshes[kind][dimension].position = new THREE.Vector3(globalPosVec.x-1, globalPosVec.y-1, globalPosVec.z-1)
-          
-          # only preview planes
-          if kind == 1
-            @meshes[kind][dimension].texture = @meshes[0][dimension].texture.clone()
-            @meshes[kind][dimension].position = globalPosVec
-
-          # only for preview and border planes
-          if kind >=1
-            sFactor = cam2d.getPlaneScalingFactor dimension
-            scale   = @meshes[kind][dimension].scale
-            scale.x = scale.y = scale.z = sFactor
-
-          # only for main and preview planes
-          if kind <= 1
-            @meshes[kind][dimension].texture.needsUpdate = true
-            @meshes[kind][dimension].material.map = @meshes[kind][dimension].texture
-
-          # only main planes
-          if kind == 0
-            map = @meshes[kind][dimension].material.map
-            map.repeat.x = VIEWPORT_WIDTH*scalingFactor / 508;
-            map.repeat.y = VIEWPORT_WIDTH*scalingFactor / 508;
-            map.offset.x = offsets[0] / 508;
-            map.offset.y = offsets[1] / 508;
+        offsets = cam2d.getOffsets dimension
+        scalingFactor = cam2d.getTextureScalingFactor dimension
+        map = @meshes[0][dimension].material.map
+        map.repeat.x = VIEWPORT_WIDTH*scalingFactor / 508;
+        map.repeat.y = VIEWPORT_WIDTH*scalingFactor / 508;
+        map.offset.x = offsets[0] / 508;
+        map.offset.y = offsets[1] / 508;
 
         @prevBorders[dimension].position = globalPosVec
         sFactor = cam2d.getPlaneScalingFactor dimension

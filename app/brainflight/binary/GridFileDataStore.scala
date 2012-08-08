@@ -11,7 +11,7 @@ import com.mongodb.casbah.gridfs.Imports._
 import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
 import models.DataSet
-import brainflight.tools.geometry.Cube
+import brainflight.tools.geometry.Cuboid
 
 class GridFileDataStore extends DataStore{
 	  //GridFs handle
@@ -28,7 +28,7 @@ class GridFileDataStore extends DataStore{
   /**
    * Load the binary data of the given coordinate from DB
    */
-  override def load(dataSet: DataSet, resolution: Int, cube: Cube): Array[Byte] = {
+  override def load(dataSet: DataSet, resolution: Int, cube: Cuboid): Array[Byte] = {
     //TODO: IMPLEMENT
     new Array[Byte](0)
   }

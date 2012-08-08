@@ -30,12 +30,14 @@ View =
     @x = 1
 
     # Initialize main THREE.js components
+    # Max. distance the route may have from the main plane in order to be displayed:
+    @camDistance = 40
     colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
     @renderer = new Array(4)
     @camera   = new Array(4)
     @scene    = new Array(4)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
-      camDistance  = if i==VIEW_3D then 100000 else 40
+      camDistance  = if i==VIEW_3D then 100000 else @camDistance
       @renderer[i] = new THREE.WebGLRenderer({clearColor: colors[i], clearAlpha: 1, antialias: false})
       @camera[i]   = new THREE.OrthographicCamera(-192, 192, 192, -192, -camDistance, camDistance)
       @scene[i]    = new THREE.Scene()
@@ -53,7 +55,7 @@ View =
       container.append @renderer[i].domElement
 
     @prevControls = $('#prevControls')
-    values        = ["XY Plane", "XY Plane", "XZ Plane", "3D View"]
+    values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
     callbacks     = [@changePrevXY, @changePrevYZ, @changePrevXZ, @changePrev3D]
     buttons       = new Array(4)
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
@@ -90,6 +92,7 @@ View =
     $(window).on("bucketloaded", => cam2d.hasChanged = true; cam2d.newBuckets = [true, true, true]) 
 
   animate : ->
+
     @renderFunction()
 
     window.requestAnimationFrame => @animate()
@@ -104,8 +107,6 @@ View =
     # This prevents you the GPU/CPU from constantly
     # working and keeps your lap cool
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
-    if cam2d.hasChanged is false
-      return
 
     @updateTrianglesplane()
     
@@ -115,7 +116,7 @@ View =
     # without rounding the position becomes really long and blocks the canvas mouse input
     position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
     texturePositionXY = [Math.round(texturePositionXY[0]),Math.round(texturePositionXY[1]),Math.round(texturePositionXY[2])]
-    @positionStats.html "Flycam2d: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{cam2d.getZoomStep(cam2d.getActivePlane())}<br />activePlane: #{cam2d.getActivePlane()}" 
+    @positionStats.html "Flycam2d: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{cam2d.getIntegerZoomStep(cam2d.getActivePlane())}<br />activePlane: #{cam2d.getActivePlane()}" 
     @stats.update()
 
     cam2d.hasChanged = false
@@ -126,11 +127,12 @@ View =
   # We do so by apply a new texture to it.
   updateTrianglesplane : ->
       return unless @meshes
+      return unless @prevBorders
 
       # sends current position to Model for preloading data
       # NEW with direction vector
       # Model.Binary.ping cam2d.getGlobalPos(), cam2d.getDirection(), cam2d.getZoomStep(PLANE_XY)
-      Model.Binary.ping cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)
+      Model.Binary.ping cam2d.getGlobalPos(), cam2d.getIntegerZoomSteps()
 
       # sends current position to Model for caching route
       Model.Route.put cam2d.getGlobalPos()
@@ -143,31 +145,23 @@ View =
         @changePrev VIEW_3D
         @first = false
 
-      for kind in [0..2]
-        for dimension in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-          #i++
-          offsets = cam2d.getOffsets dimension
-          scalingFactor = cam2d.getTextureScalingFactor dimension
+      for dimension in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+        for kind in [0..1]
 
           # only the main planes
           if kind == 0
-            if  cam2d.needsUpdate(dimension)
-              # TODO: Why don't those lines work? it would get rid of that huge switch statement 
-              #
-              #plane.props.getFkt(cam2d.getGlobalPos(), cam2d.getZoomStep(plane.props.planeID)).done (buffer) ->
-              #  plane.texture.image.data.set(buffer)
-              plane = @meshes[kind][dimension]
-              switch dimension
-                when PLANE_XY
-                  Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
-                    plane.texture.image.data.set(buffer)
-                when PLANE_YZ
-                  Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
-                    plane.texture.image.data.set(buffer)
-                when PLANE_XZ
-                  Model.Binary.getXY(cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)).done (buffer) ->
-                    plane.texture.image.data.set(buffer)
+            
+            if cam2d.needsUpdate dimension
               cam2d.notifyNewTexture dimension
+            
+            plane = @meshes[kind][dimension]
+
+            Model.Binary.get(cam2d.getTexturePosition(dimension), cam2d.getIntegerZoomStep(dimension), cam2d.getArea(dimension), dimension).done (buffer) ->
+              if buffer
+                plane.texture.image.data.set(buffer)
+        
+          offsets = cam2d.getOffsets dimension
+          scalingFactor = cam2d.getTextureScalingFactor dimension
           
           #only for border planes
           if kind == 2
@@ -183,7 +177,7 @@ View =
             sFactor = cam2d.getPlaneScalingFactor dimension
             scale   = @meshes[kind][dimension].scale
             scale.x = scale.y = scale.z = sFactor
-          
+
           # only for main and preview planes
           if kind <= 1
             @meshes[kind][dimension].texture.needsUpdate = true
@@ -196,6 +190,11 @@ View =
             map.repeat.y = VIEWPORT_WIDTH*scalingFactor / 508;
             map.offset.x = offsets[0] / 508;
             map.offset.y = offsets[1] / 508;
+
+        @prevBorders[dimension].position = globalPosVec
+        sFactor = cam2d.getPlaneScalingFactor dimension
+        @prevBorders[dimension].scale = new THREE.Vector3(sFactor, sFactor, sFactor)
+        
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
@@ -358,13 +357,42 @@ View =
       @resize()
 
   zoomIn : ->
-    cam2d.zoomIn(cam2d.getActivePlane())
+    if Model.User.Configuration.lockZoom
+      cam2d.zoomInAll()
+    else 
+      cam2d.zoomIn(cam2d.getActivePlane())
     View.updateRoute()
+    View.updateCamDistance()
 
   #todo: validation in Model
   zoomOut : ->
-    cam2d.zoomOut(cam2d.getActivePlane())
+    if Model.User.Configuration.lockZoom
+      cam2d.zoomOutAll()
+    else 
+      cam2d.zoomOut(cam2d.getActivePlane())
     View.updateRoute()
+    View.updateCamDistance()
+
+  updateCamDistance : ->
+    for i in [0..2]
+      @camera[i].near = - @camDistance/cam2d.getPlaneScalingFactor(i)
+      @camera[i].updateProjectionMatrix()
+    cam2d.hasChanged = true
+
+  setRouteClippingDistance : (value) ->
+    @camDistance = value
+    @updateCamDistance()
+
+  setDisplayCrosshair : (value) ->
+    if View.crosshairs
+      for plane in @crosshairs
+        for line in plane
+          line.visible = value
+
+  setDisplayPreview : (planeID, value) ->
+    if View.meshes
+      View.meshes[1][planeID].visible = value
+      cam2d.hasChanged = true;
 
   setActivePlaneXY : ->
     View.setActivePlane PLANE_XY
@@ -396,9 +424,9 @@ View =
     if @curIndex < @maxRouteLen
       @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
       @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
-      pos = [[position[0], -position[1], -position[2]], [position[2], -position[1], position[0]], [position[0], -position[2], position[1]]]
       for i in [0..2]
-        @routeView[i].geometry.vertices[@curIndex] = new THREE.Vector3(pos[i][0], pos[i][1], pos[i][2])
+        ind = cam2d.getIndices i
+        @routeView[i].geometry.vertices[@curIndex] = new THREE.Vector3(position[ind[0]], -position[ind[1]], -position[ind[2]])
         @routeView[i].geometry.verticesNeedUpdate = true
       @route.geometry.verticesNeedUpdate = true
       @routeNodes.geometry.verticesNeedUpdate = true
@@ -410,6 +438,14 @@ View =
       #particle.position.z = position[1]
       #@addGeometry VIEW_3D, particle
 
+      # Animation to center waypoint position
+      @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], cam2d: cam2d})
+      @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 300)
+      @waypointAnimation.onUpdate ->
+        @cam2d.setGlobalPos [@globalPosX, @globalPosY, @globalPosZ]
+        View.updateRoute()
+      @waypointAnimation.start()
+    
       @curIndex += 1
       cam2d.hasChanged = true
 
@@ -462,9 +498,9 @@ View =
 
     # Initializing Position
     gPos = cam2d.getGlobalPos()
-    pos = [[-gPos[0], gPos[1], gPos[2]], [-gPos[2], gPos[1], -gPos[0]], [-gPos[0], gPos[2], -gPos[1]]]
     for i in [0..2]
-      routeView[i].position = new THREE.Vector3(pos[i][0], pos[i][1], pos[i][2]+1)
+      ind = cam2d.getIndices i
+      routeView[i].position = new THREE.Vector3(-gPos[ind[0]], gPos[ind[1]], gPos[ind[2]])
 
     # set initial ray threshold to define initial click area
     @particles = []
@@ -483,8 +519,8 @@ View =
     gPos                = cam2d.getGlobalPos()
     scale               = [cam2d.getPlaneScalingFactor(PLANE_XY), cam2d.getPlaneScalingFactor(PLANE_YZ), cam2d.getPlaneScalingFactor(PLANE_XZ)]
     
-    pos = [[-gPos[0], gPos[1], gPos[2]], [-gPos[2], gPos[1], -gPos[0]], [-gPos[0], gPos[2], -gPos[1]]]
     for i in [0..2]
+      ind = cam2d.getIndices i
       @routeView[i].scale    = new THREE.Vector3(1/scale[i], 1/scale[i], 1/scale[i])
-      @routeView[i].position = new THREE.Vector3(pos[i][0]/scale[i], pos[i][1]/scale[i], pos[i][2]/scale[i]+1)
+      @routeView[i].position = new THREE.Vector3(-gPos[ind[0]]/scale[i], gPos[ind[1]]/scale[i], gPos[ind[2]]/scale[i]+1)
       @routeView[i].geometry.verticesNeedUpdate = true

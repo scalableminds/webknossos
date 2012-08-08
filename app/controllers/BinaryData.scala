@@ -21,7 +21,7 @@ import models.Actors._
 import models.Role
 import brainflight.binary._
 import brainflight.security.Secured
-import brainflight.tools.geometry.{ Point3D, Cube }
+import brainflight.tools.geometry.{ Point3D, Cuboid }
 import models.DataSet
 import akka.pattern.AskTimeoutException
 
@@ -37,23 +37,28 @@ object BinaryData extends Controller with Secured {
   override val DefaultAccessRole = Role.User
   
   val conf = Play.configuration
+  val scaleFactors = Array(1,1,2)
 
   implicit val timeout = Timeout( (conf.getInt("actor.defaultTimeout") getOrElse 5 ) seconds ) // needed for `?` below
     
-  def calculateBinaryData( dataSet: DataSet, cube: Cube, resolutionExponent: Int ): Future[Array[Byte]] = {
-    val resolution = math.pow( 2, resolutionExponent ).toInt
-
+  def calculateBinaryData( dataSet: DataSet, cuboid: Cuboid, resolution: Int ): Future[Array[Byte]] = {
     // rotate the model and generate the requested data
-    val future = (DataSetActor ? CubeRequest( dataSet, resolution, cube )) recover { 
+    val future = (DataSetActor ? CubeRequest( dataSet, resolution, cuboid )) recover { 
       case e: AskTimeoutException => 
         new Array[Byte](0) }
     
     future.mapTo[Array[Byte]]
   }
   
-  def calculateCube( position: Point3D, cubeSize: Int) = {
-    val cubeCorner = position.scale( x => x - x % cubeSize )
-    Cube( cubeCorner, cubeSize )
+  def resolutionFromExponent( exp: Int ) =
+    math.pow( 2, exp ).toInt
+  
+  def cuboidFromPosition( position: Point3D, cubeSize: Int ) = {  
+    val cubeCorner = position.scale{
+        case (x,i) => 
+          x - x % (cubeSize/scaleFactors(i))
+    }
+    Cuboid( cubeCorner, cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2) )
   }
 
   /**
@@ -68,9 +73,10 @@ object BinaryData extends Controller with Secured {
           dataSet <- DataSet.findOneById( dataSetId )
         } yield {
           message match {
-            case RequestData( resolutionExponent, position ) =>
-              val cube = calculateCube( position, cubeSize )
-              calculateBinaryData( dataSet, cube, resolutionExponent ).asPromise.map(
+            case RequestData( exp, position ) =>
+              val resolution = resolutionFromExponent( exp )
+              val cuboid = cuboidFromPosition( position, cubeSize )
+              calculateBinaryData( dataSet, cuboid, resolution ).asPromise.map(
                 result => Ok( result ) )
             case _ =>
               Akka.future {
@@ -95,11 +101,12 @@ object BinaryData extends Controller with Secured {
       val input = Iteratee.foreach[Array[Byte]]( in => {
         // first 4 bytes are always used as a client handle
         BinaryProtocol.parseWebsocket( in ).map {
-          case message @ RequestData( resolutionExponent, position ) =>
-            val cube = calculateCube( position, cubeSize )
+          case message @ RequestData( exp, position ) =>
+            val resolution = resolutionFromExponent( exp )
+            val cuboid = cuboidFromPosition( position, cubeSize )
             for {
               dataSet <- dataSetOpt
-              result <- calculateBinaryData( dataSet, cube, resolutionExponent )
+              result <- calculateBinaryData( dataSet, cuboid, resolution )
             } {
               channel.push( message.handle ++ result )
             }

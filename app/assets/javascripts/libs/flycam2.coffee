@@ -58,13 +58,6 @@ class Flycam2d
   getPlaneScalingFactor : (planeID) ->
     Math.pow(2, @zoomSteps[planeID])
 
-  # Is this ever needed?
-  #getZoomSteps : ->
-  #  @zoomSteps   
-
-  #getMatrix : ->
-  #  M4x4.clone @currentMatrix
-
   getDirection : ->
     @direction
 
@@ -111,21 +104,13 @@ class Flycam2d
 
   needsUpdate : (planeID) ->
     area = @getArea planeID
-    #(area[0] < 0 or area[2] < 0 or area[1] > TEXTURE_WIDTH or area[3] > TEXTURE_WIDTH or
+    ind  = @getIndices planeID
     (area[0] < 0 or area[1] < 0 or area[2] > TEXTURE_WIDTH or area[3] > TEXTURE_WIDTH or
+      @globalPosition[ind[2]] != @texturePosition[ind[3]] or
       (@integerZoomSteps[planeID] - @zoomSteps[planeID]) > 0.75)
-    #ind = @getIndices planeID
-    #f   = @getPlaneScalingFactor planeID
-    #( (Math.abs(@globalPosition[ind[0]]-@texturePosition[planeID][ind[0]]))/f>@buffer[planeID] or
-    #  (Math.abs(@globalPosition[ind[1]]-@texturePosition[planeID][ind[1]]))/f>@buffer[planeID] or
-    #  @globalPosition[ind[2]]!=@texturePosition[planeID][ind[2]] ) or
-    #  (((@zoomSteps[planeID]*100) % 100 >= 25) and (@integerZoomSteps[planeID] < @zoomSteps[planeID]) ) or
-    #  @newBuckets[planeID]
 
   getOffsets : (planeID) ->
     ind = @getIndices planeID
-    #if @needsUpdate planeID                       # because currently, getOffsets is called befor notifyNewTexture
-    #  @notifyNewTexture planeID
     [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID],
       (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID]]
 

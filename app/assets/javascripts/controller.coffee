@@ -32,24 +32,24 @@ Controller =
         @initGamepad() if data.gamepadActive is true
         @initMotionsensor() if data.motionsensorActive is true
           
-        $("#moveValue")[0].value = data.moveValue
-        $("#rotateValue")[0].value = data.rotateValue
-        $("#mouseRotateValue")[0].value = data.mouseRotateValue
+        #$("#moveValue")[0].value = data.moveValue
+        #$("#rotateValue")[0].value = data.rotateValue
+        #$("#mouseRotateValue")[0].value = data.mouseRotateValue
         $("#routeClippingDistance")[0].value = data.routeClippingDistance
         $("#lockZoom")[0].checked = data.lockZoom
         $("#displayCrosshair")[0].checked = data.displayCrosshair
         $("#displayPreviewXY")[0].checked = data.displayPreviewXY
         $("#displayPreviewYZ")[0].checked = data.displayPreviewYZ
         $("#displayPreviewXZ")[0].checked = data.displayPreviewXZ
-        $("#moveValue")[0].value = data.moveValue
+        #$("#moveValue")[0].value = data.moveValue
         $("#mouseInversionX")[0].checked = true if data.mouseInversionX is 1
         $("#mouseInversionY")[0].checked = true if data.mouseInversionY is 1
         $("#mouseInversionX")[0].checked = false if data.mouseInversionX is -1
         $("#mouseInversionY")[0].checked = false if data.mouseInversionY is -1        
-        $("#keyboardActive")[0].checked = data.keyboardActive
-        $("#mouseActive")[0].checked = data.mouseActive
-        $("#gamepadActive")[0].checked = data.gamepadActive
-        $("#motionsensorActive")[0].checked = data.motionsensorActive
+        #$("#keyboardActive")[0].checked = data.keyboardActive
+        #$("#mouseActive")[0].checked = data.mouseActive
+        #$("#gamepadActive")[0].checked = data.gamepadActive
+        #$("#motionsensorActive")[0].checked = data.motionsensorActive
 
         View.setRouteClippingDistance data.routeClippingDistance
         View.setDisplayCrosshair data.displayCrosshair

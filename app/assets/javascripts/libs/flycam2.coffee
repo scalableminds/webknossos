@@ -1,9 +1,10 @@
 ### define ###
 
 # constants (for active_plane)
-PLANE_XY = 0
-PLANE_YZ = 1
-PLANE_XZ = 2
+PLANE_XY      = 0
+PLANE_YZ      = 1
+PLANE_XZ      = 2
+TEXTURE_WIDTH = 512
   
 class Flycam2d
 
@@ -13,6 +14,7 @@ class Flycam2d
     @viewportWidth = width
     @newBuckets = [false, false, false]
     @zoomSteps = [0.0, 0.0, 0.0]
+    @integerZoomSteps = [0, 0, 0]
   #  @reset()
     @globalPosition = [0, 0, 0]
     @texturePosition = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
@@ -29,7 +31,7 @@ class Flycam2d
     @buffer[planeID] = 256-@viewportWidth*@getTextureScalingFactor(planeID)/2
 
   zoomOut : (planeID) ->
-    if @zoomSteps[planeID] < (3.3-0.05)
+    if @zoomSteps[planeID] < (3.25-0.05)
       @zoomSteps[planeID] += 0.05
       @hasChanged = true
       @buffer[planeID] = 256-@viewportWidth*@getTextureScalingFactor(planeID)/2
@@ -42,14 +44,16 @@ class Flycam2d
     for i in [0..2]
       @zoomOut i
 
-  getZoomStep : (planeID) ->  # round, because Model expects Integer
-    steps = Math.round(@zoomSteps[planeID] + 0.2) # will round up if value is *.3
-    if steps < 0
-      return 0
-    steps
+  calculateIntegerZoomStep : (planeID) ->                                 # round, because Model expects Integer
+    @integerZoomSteps[planeID] = Math.round(@zoomSteps[planeID] + 0.25)   # will round up if value is *.25
+    if @integerZoomSteps[planeID] < 0
+      @integerZoomSteps[planeID] = 0
+
+  getIntegerZoomStep : (planeID) ->
+    @integerZoomSteps[planeID]
 
   getTextureScalingFactor : (planeID) ->
-    Math.pow(2, @zoomSteps[planeID])/Math.pow(2, @getZoomStep(planeID))
+    Math.pow(2, @zoomSteps[planeID])/Math.pow(2, @integerZoomSteps[planeID])
 
   getPlaneScalingFactor : (planeID) ->
     Math.pow(2, @zoomSteps[planeID])
@@ -106,29 +110,39 @@ class Flycam2d
       when PLANE_XZ then [0, 2, 1]  # along the Z axis in the cube -> ind[0]=2
 
   needsUpdate : (planeID) ->
-    ind = @getIndices planeID
-    f   = @getPlaneScalingFactor planeID
-    ( (Math.abs(@globalPosition[ind[0]]-@texturePosition[planeID][ind[0]]))/f>@buffer[planeID] or
-      (Math.abs(@globalPosition[ind[1]]-@texturePosition[planeID][ind[1]]))/f>@buffer[planeID] or
-      @globalPosition[ind[2]]!=@texturePosition[planeID][ind[2]] ) or @newBuckets[planeID]
+    area = @getArea planeID
+    #(area[0] < 0 or area[2] < 0 or area[1] > TEXTURE_WIDTH or area[3] > TEXTURE_WIDTH or
+    (area[0] < 0 or area[1] < 0 or area[2] > TEXTURE_WIDTH or area[3] > TEXTURE_WIDTH or
+      (@integerZoomSteps[planeID] - @zoomSteps[planeID]) > 0.75)
+    #ind = @getIndices planeID
+    #f   = @getPlaneScalingFactor planeID
+    #( (Math.abs(@globalPosition[ind[0]]-@texturePosition[planeID][ind[0]]))/f>@buffer[planeID] or
+    #  (Math.abs(@globalPosition[ind[1]]-@texturePosition[planeID][ind[1]]))/f>@buffer[planeID] or
+    #  @globalPosition[ind[2]]!=@texturePosition[planeID][ind[2]] ) or
+    #  (((@zoomSteps[planeID]*100) % 100 >= 25) and (@integerZoomSteps[planeID] < @zoomSteps[planeID]) ) or
+    #  @newBuckets[planeID]
 
   getOffsets : (planeID) ->
     ind = @getIndices planeID
-    if @needsUpdate planeID                       # because currently, getOffsets is called befor notifyNewTexture
-      @notifyNewTexture planeID
-    [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @getZoomStep planeID) + @buffer[planeID],
-      (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @getZoomStep planeID) + @buffer[planeID]]
+    #if @needsUpdate planeID                       # because currently, getOffsets is called befor notifyNewTexture
+    #  @notifyNewTexture planeID
+    [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID],
+      (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID]]
 
   getArea : (planeID) ->
     offsets = @getOffsets planeID
     size    = @getTextureScalingFactor(planeID) * @viewportWidth
     [offsets[0], offsets[1], offsets[0] + size, offsets[1] + size]
+    #[offsets[0], offsets[0] + size, offsets[1], offsets[1] + size]
 
   notifyNewTexture : (planeID) ->
+    console.log "notifyNewTexture()"
     @texturePosition[planeID] = @globalPosition.slice()    #copy that position
+    @calculateIntegerZoomStep planeID
     # As the Model does not render textures for exact positions, the last 5 bits of
     # the X and Y coordinates for each texture have to be set to 0
     for i in [0..2]
       if i != (planeID+2)%3
-        @texturePosition[planeID][i] &= -1 << 5
+        @texturePosition[planeID][i] &= -1 << (5 + @integerZoomSteps[planeID])
+    @buffer[planeID] = 256-@viewportWidth*@getTextureScalingFactor(planeID)/2
     @newBuckets[planeID] = false

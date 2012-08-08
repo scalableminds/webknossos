@@ -227,9 +227,8 @@ Binary =
 #      console.log "Buckets 2: " + buckets.length
       while i--
         index--
-#        if buckets[index]
-#          priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
-#          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomStep, @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]# + buckets3.length
+        if buckets[index]
+          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomStep, @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]# + buckets3.length
 
         unless i % buckets.length
           index = buckets.length
@@ -241,14 +240,6 @@ Binary =
           direction_x = Math.round(delta_x)
           direction_y = Math.round(delta_y)
           direction_z = Math.round(delta_z)
-      
-      PullQueue.insert [10, 10, 21], 3, 0
-      PullQueue.insert [42, 42, 84], 1, 1
-      PullQueue.insert [43, 43, 84], 1, 2
-      PullQueue.insert [84, 84, 168], 0, 3
-      PullQueue.insert [84, 85, 168], 0, 4
-      PullQueue.insert [84, 86, 168], 0, 5
-      PullQueue.insert [84, 87, 168], 0, 6
 
       PullQueue.pull()
 
@@ -260,11 +251,6 @@ Binary =
 
   # A synchronized implementation of `get`. Cuz its faster.
   getSync : (position, zoomStep, area, plane) ->
-
-    zoomStep = 2
-    position[0] = 2688
-    position[1] = 2688
-    console.log "HERE WE GO"
 
     topLeftPosition = position.slice(0)
     topLeftPosition[plane.view.u] -= (@TEXTURE_SIZE >> 1) << zoomStep

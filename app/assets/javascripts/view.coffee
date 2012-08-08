@@ -115,7 +115,7 @@ View =
     # without rounding the position becomes really long and blocks the canvas mouse input
     position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
     texturePositionXY = [Math.round(texturePositionXY[0]),Math.round(texturePositionXY[1]),Math.round(texturePositionXY[2])]
-    @positionStats.html "Flycam2d: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{cam2d.getZoomStep(cam2d.getActivePlane())}<br />activePlane: #{cam2d.getActivePlane()}" 
+    @positionStats.html "Flycam2d: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{cam2d.getIntegerZoomStep(cam2d.getActivePlane())}<br />activePlane: #{cam2d.getActivePlane()}" 
     @stats.update()
 
     cam2d.hasChanged = false
@@ -131,7 +131,7 @@ View =
       # sends current position to Model for preloading data
       # NEW with direction vector
       # Model.Binary.ping cam2d.getGlobalPos(), cam2d.getDirection(), cam2d.getZoomStep(PLANE_XY)
-      Model.Binary.ping cam2d.getGlobalPos(), cam2d.getZoomStep(PLANE_XY)
+      Model.Binary.ping cam2d.getGlobalPos(), cam2d.getIntegerZoomStep(PLANE_XY)
 
       # sends current position to Model for caching route
       Model.Route.put cam2d.getGlobalPos()
@@ -146,20 +146,21 @@ View =
 
       for dimension in [PLANE_XY, PLANE_YZ, PLANE_XZ]
         for kind in [0..1]
-          #i++
-          offsets = cam2d.getOffsets dimension
-          scalingFactor = cam2d.getTextureScalingFactor dimension
 
           # only the main planes
           if kind == 0
             
             if cam2d.needsUpdate dimension
               cam2d.notifyNewTexture dimension
+            
             plane = @meshes[kind][dimension]
 
-            Model.Binary.get(cam2d.getTexturePosition(dimension), cam2d.getZoomStep(dimension), cam2d.getArea(dimension), dimension).done (buffer) ->
+            Model.Binary.get(cam2d.getTexturePosition(dimension), cam2d.getIntegerZoomStep(dimension), cam2d.getArea(dimension), dimension).done (buffer) ->
               if buffer
                 plane.texture.image.data.set(buffer)
+        
+          offsets = cam2d.getOffsets dimension
+          scalingFactor = cam2d.getTextureScalingFactor dimension
           
           #only for border planes
           if kind == 2

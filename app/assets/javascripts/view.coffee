@@ -399,7 +399,7 @@ View =
     cam2d.setActivePlane planeID
     for i in [0..2]
       $("canvas")[i].style.borderColor = if i==planeID then "#f8f800" else "#C7D1D8"
-    cam2d.hasChanged = true
+    #cam2d.hasChanged = true
 
   setWaypoint : (position) ->
     curGlobalPos = cam2d.getGlobalPos()

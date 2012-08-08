@@ -86,11 +86,11 @@ User.Configuration =
         scaleValue : @scaleValue,
         mouseRotateValue : @mouseRotateValue,
         routeClippingDistance : @routeClippingDistance,
-        lockZoom : @lockZoom
-        displayCrosshair : @displayCrosshair
-        displayPreviewXY : @displayPreviewXY
-        displayPreviewYZ : @displayPreviewYZ
-        displayPreviewXZ : @displayPreviewXZ
+        lockZoom : @lockZoom,
+        displayCrosshair : @displayCrosshair,
+        displayPreviewXY : @displayPreviewXY,
+        displayPreviewYZ : @displayPreviewYZ,
+        displayPreviewXZ : @displayPreviewXZ,
         mouseInversionX : @mouseInversionX,
         mouseInversionY : @mouseInversionY,
         mouseActive : @mouseActive,

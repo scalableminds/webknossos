@@ -268,10 +268,6 @@ Cube =
 
     { cube : oldCube, cubeOffset : oldCubeOffset, cubeSize : oldCubeSize } = @
 
-    console.log @cubeOffset, @cubeSize
-
-    console.time "cube"
-
     # TODO: Make cube support negative bucket addresses
     min_x = Math.max(min_x, 0)
     min_y = Math.max(min_y, 0)
@@ -380,7 +376,6 @@ Cube =
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
 
-    console.timeEnd "cube"
 
 _.extend(Cube, new EventMixin())
 

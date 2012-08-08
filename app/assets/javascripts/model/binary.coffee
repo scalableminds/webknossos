@@ -129,7 +129,8 @@ Binary =
               #TODO Macro-Fix
               tile = [u, v]
               plane.tiles[tileIndexByTileMacro(tile)] = true
-              plane.changed = true
+              if u in [plane.area[0]..plane.area[2]] and v in [plane.area[1]..plane.area[3]]
+                plane.changed = true
 
 
   # Use this method to let us know when you've changed your spot. Then we'll try to 
@@ -261,7 +262,6 @@ Binary =
     ]
 
     unless _.isEqual(plane.layer, layer) and _.isEqual(plane.zoomStep, zoomStep)
-
       plane.layer = layer
       plane.zoomStep = zoomStep
       plane.topLeftBucket = topLeftBucket
@@ -271,7 +271,6 @@ Binary =
       plane.changed = true
 
     unless _.isEqual(plane.topLeftBucket, topLeftBucket)
-
       oldTopLeftBucket = plane.topLeftBucket
       oldTiles = plane.tiles
       oldBuffer = plane.buffer
@@ -307,7 +306,6 @@ Binary =
             plane.tiles[newTileIndex] = false
 
     if plane.changed or not _.isEqual(plane.area, area)
-
       plane.area = area
       plane.changed = false
 
@@ -324,7 +322,6 @@ Binary =
       plane.buffer
     
     else
-
       null
 
 

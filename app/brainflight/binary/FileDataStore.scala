@@ -5,7 +5,6 @@ import models.Actors._
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import brainflight.tools.geometry.Point3D
 import models.DataSet
-import brainflight.tools.geometry.Cube
 import akka.routing.Broadcast
     
 /**

@@ -21,9 +21,9 @@ Cube =
   # `cube` is the main array. It actually represents a cuboid 
   # containing all the buckets. `cubeSize` and `cubeOffset` 
   # describe its dimension.
-  cube : []
-  cubeSize : [0, 0, 0]
-  cubeOffset : [0, 0, 0]
+  cube : null
+  cubeSize : null
+  cubeOffset : null
 
   getCube : ->
   
@@ -268,6 +268,10 @@ Cube =
 
     { cube : oldCube, cubeOffset : oldCubeOffset, cubeSize : oldCubeSize } = @
 
+    console.log @cubeOffset, @cubeSize
+
+    console.time "cube"
+
     # TODO: Make cube support negative bucket addresses
     min_x = Math.max(min_x, 0)
     min_y = Math.max(min_y, 0)
@@ -375,6 +379,8 @@ Cube =
       @cube       = newCube
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
+
+    console.timeEnd "cube"
 
 _.extend(Cube, new EventMixin())
 

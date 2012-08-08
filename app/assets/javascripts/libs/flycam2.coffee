@@ -124,7 +124,6 @@ class Flycam2d
     #[offsets[0], offsets[0] + size, offsets[1], offsets[1] + size]
 
   notifyNewTexture : (planeID) ->
-    console.log "notifyNewTexture()"
     @texturePosition[planeID] = @globalPosition.slice()    #copy that position
     @calculateIntegerZoomStep planeID
     # As the Model does not render textures for exact positions, the last 5 bits of

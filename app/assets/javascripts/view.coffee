@@ -25,8 +25,9 @@ View =
     # attached to it once a renderer has been initalized.
     container = $("#render")
     # Create a 4x4 grid
-    WIDTH = (container.width()-48)/2
+    @curWidth = WIDTH = (container.width()-48)/2
     HEIGHT = (container.height()-48)/2
+    @x = 1
 
     # Initialize main THREE.js components
     colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
@@ -320,6 +321,9 @@ View =
     View.camera[VIEW_3D].top = middleY + factor*size/2
     View.camera[VIEW_3D].bottom = middleY - factor*size/2
     View.camera[VIEW_3D].updateProjectionMatrix()
+
+    View.rayThreshold = (4)*(View.camera[VIEW_3D].right - View.camera[VIEW_3D].left)/384
+
     cam2d.hasChanged = true
 
   movePrevX : (x) =>
@@ -340,10 +344,12 @@ View =
     @x = 1 unless @x
     if (@x+delta > 0.75) and (@x+delta < 1.5)
       @x += Number(delta)
-      WIDTH = HEIGHT = @x * 384
+      View.curWidth = WIDTH = HEIGHT = @x * 384
       container = $("#render")
       container.width(2 * WIDTH + 48)
       container.height(2 * HEIGHT + 48)
+      # set scale factor in view
+      View.x = @x
 
       # scales the 3D-view controls
       prevControl = $("#prevControls")
@@ -381,27 +387,28 @@ View =
     zoomFactor   = cam2d.getPlaneScalingFactor activePlane
     # calculate the global position of the rightclick
     switch activePlane
-      when PLANE_XY then position = [curGlobalPos[0] - (VIEWPORT_WIDTH/2 - position[0])*zoomFactor, curGlobalPos[1] - (VIEWPORT_WIDTH/2 - position[1])*zoomFactor, curGlobalPos[2]]
-      when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (VIEWPORT_WIDTH/2 - position[1])*zoomFactor, curGlobalPos[2] - (VIEWPORT_WIDTH/2 - position[0])*zoomFactor]
-      when PLANE_XZ then position = [curGlobalPos[0] - (VIEWPORT_WIDTH/2 - position[0])*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (VIEWPORT_WIDTH/2 - position[1])*zoomFactor]
+      when PLANE_XY then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2]]
+      when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2] - (@curWidth/2 - position[0])/@x*zoomFactor]
+      when PLANE_XZ then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (@curWidth/2 - position[1])/@x*zoomFactor]
     unless @curIndex
       @curIndex = 0
     # Translating ThreeJS' coordinate system to the preview's one
     if @curIndex < @maxRouteLen
       @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
+      @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
       pos = [[position[0], -position[1], -position[2]], [position[2], -position[1], position[0]], [position[0], -position[2], position[1]]]
       for i in [0..2]
         @routeView[i].geometry.vertices[@curIndex] = new THREE.Vector3(pos[i][0], pos[i][1], pos[i][2])
         @routeView[i].geometry.verticesNeedUpdate = true
-      
       @route.geometry.verticesNeedUpdate = true
-
-      particle = new THREE.Mesh(new THREE.CubeGeometry(30, 30, 30, 10, 10, 10), new THREE.MeshBasicMaterial({color: 0xff0000}))
-      particle.position.x = position[0]
-      particle.position.y = Game.dataSet.upperBoundary[1] - position[2]
-      particle.position.z = position[1]
-      @particles.push particle
-      @addGeometry VIEW_3D, particle
+      @routeNodes.geometry.verticesNeedUpdate = true
+      
+      #TEST CUBES
+      #particle = new THREE.Mesh(new THREE.CubeGeometry(30, 30, 30, 1, 1, 1), new THREE.MeshBasicMaterial({color: 0xff0000}))
+      #particle.position.x = position[0]
+      #particle.position.y = Game.dataSet.upperBoundary[1] - position[2]
+      #particle.position.z = position[1]
+      #@addGeometry VIEW_3D, particle
 
       @curIndex += 1
       cam2d.hasChanged = true
@@ -410,54 +417,67 @@ View =
     # vector with direction from camera position to click position
     vector = new THREE.Vector3((position[0] / 384 ) * 2 - 1, - (position[1] / 384) * 2 + 1, 0.5)
     
-    # create a ray with the direction of this vector
+    # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()
     ray = projector.pickingRay(vector, @camera[VIEW_3D])
+    ray.setThreshold(@rayThreshold)
 
     # identify clicked object
-    intersects = ray.intersectObjects(@particles)
+    intersects = ray.intersectObjects([@routeNodes])
 
-    if (intersects.length > 0)
+    console.log intersects[0].distance
+
+    if (intersects.length > 0 and intersects[0].distance >= 0)
       intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
-      objPos = intersects[0].object.position
+      objPos = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # jump to the nodes position
       cam2d.setGlobalPos [objPos.x, objPos.z, -objPos.y + Game.dataSet.upperBoundary[1]]
 
   createRoute : (maxRouteLen) ->
-    # create route to show in previewBox and pre-allocate buffer
+    # create route to show in previewBox and pre-allocate buffers
     @maxRouteLen = maxRouteLen
     routeGeometry = new THREE.Geometry()
+    routeGeometryNodes = new THREE.Geometry()
+    routeGeometry.dynamic = true
+    routeGeometryNodes.dynamic = true
     routeGeometryView = new Array(3)
     for i in [0..2]
-       routeGeometryView[i] = new THREE.Geometry()
+      routeGeometryView[i] = new THREE.Geometry()
+      routeGeometryView[i].dynamic = true
+
     i = 0
     while i < maxRouteLen
       # workaround to hide the unused vertices
-      routeGeometry.vertices.push(new THREE.Vector2(0, 0))
+      routeGeometry.vertices.push(new THREE.Vector2(0,0))
+      routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
       for g in routeGeometryView
         g.vertices.push(new THREE.Vector2(0, 0))
       i += 1
 
-    routeGeometry.dynamic = true
-    routeGeometryView.dynamic = true
     route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
     routeView = new Array(3)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       routeView[i] = new THREE.Line(routeGeometryView[i], new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
-    @route = route
-    @routeView = routeView
+    routeNodes = new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 5, sizeAttenuation : false}))
 
     # Initializing Position
     gPos = cam2d.getGlobalPos()
     pos = [[-gPos[0], gPos[1], gPos[2]], [-gPos[2], gPos[1], -gPos[0]], [-gPos[0], gPos[2], -gPos[1]]]
     for i in [0..2]
-      @routeView[i].position = new THREE.Vector3(pos[i][0], pos[i][1], pos[i][2]+1)
+      routeView[i].position = new THREE.Vector3(pos[i][0], pos[i][1], pos[i][2]+1)
 
+    # set initial ray threshold to define initial click area
     @particles = []
+    @rayThreshold = 100
 
+    @addGeometry VIEW_3D, routeNodes
     @addGeometry VIEW_3D, route
     for i in [0..2]
       @addGeometry i, routeView[i]
+
+    @route = route
+    @routeView = routeView
+    @routeNodes = routeNodes
 
   updateRoute : ->
     gPos                = cam2d.getGlobalPos()

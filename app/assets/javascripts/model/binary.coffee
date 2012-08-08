@@ -160,23 +160,23 @@ Binary =
 
   # Use this method to let us know when you've changed your spot. Then we'll try to 
   # preload some data. 
-  ping : (position, zoomStep, direction) ->
+  ping : (position, zoomSteps, direction) ->
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @ping(position, zoomStep, direction)
+    @ping(position, zoomSteps, direction)
 
-  pingImpl : (position, zoomStep, direction) ->
+  pingImpl : (position, zoomSteps, direction) ->
 
-    unless _.isEqual({ position, zoomStep, direction }, { @lastPosition, @lastZoomStep, @lastDirection })
+    unless _.isEqual({ position, zoomSteps, direction }, { @lastPosition, @lastZoomSteps, @lastDirection })
 
       @lastPosition = position
-      @lastZoomStep = zoomStep
+      @lastZoomSteps = zoomSteps
       @lastDirection = direction
 
       console.time "ping"
 
       positionBucket = [position[0] >> 5, position[1] >> 5, position[2] >> 5]
-      zoomedPositionBucket = [positionBucket[0] >> zoomStep, positionBucket[1] >> zoomStep, positionBucket[2] >> zoomStep]
+      zoomedPositionBucket = [positionBucket[0] >> zoomSteps[0], positionBucket[1] >> zoomSteps[0], positionBucket[2] >> zoomSteps[0]]
 
       buckets   = @getBucketArray(zoomedPositionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
                   @getBucketArray(zoomedPositionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6),
@@ -188,7 +188,7 @@ Binary =
 #                  @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep)),
 #                  @getBucketArray(@positionBucket3, 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep)))
 
-      resizeRadius = @TEXTURE_SIZE >> 6 - zoomStep
+      resizeRadius = @TEXTURE_SIZE >> 6 - zoomSteps[0]
 
       Cube.extendByBucketAddressExtent6(
         positionBucket[0] - resizeRadius, positionBucket[1] - resizeRadius, positionBucket[2] - resizeRadius,
@@ -230,7 +230,7 @@ Binary =
         index--
         if buckets[index]
          # priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
-          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomStep, @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]# + buckets3.length
+          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]# + buckets3.length
 
         unless i % buckets.length
           index = buckets.length

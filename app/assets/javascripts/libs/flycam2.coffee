@@ -52,6 +52,9 @@ class Flycam2d
   getIntegerZoomStep : (planeID) ->
     @integerZoomSteps[planeID]
 
+  getIntegerZoomSteps : ->
+    @integerZoomSteps
+
   getTextureScalingFactor : (planeID) ->
     Math.pow(2, @zoomSteps[planeID])/Math.pow(2, @integerZoomSteps[planeID])
 

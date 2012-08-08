@@ -109,6 +109,8 @@ Binary =
     { layer : null, zoomStep : null, view : { u : 0, v : 2, w : 1 } }
   ]
 
+  cubeReady : false
+
   init : () ->
 
     Cube.on "bucketLoaded", (bucket, zoomStep, oldZoomStep) =>
@@ -119,34 +121,6 @@ Binary =
         continue unless plane.topLeftBucket
 
         if plane.layer >> 5 == bucket[plane.view.w] and oldZoomStep > plane.zoomStep
-          # if plane.layer >> (zoomStep + 5) == bucket[plane.view.w]
-          #   if zoomStep > plane.zoomStep
-          #
-          #     zoomDifference = zoomStep - plane.zoomStep
-          #     width = 1 << zoomDifference
-          #     offset_u = (bucket[plane.view.u] << zoomDifference) - plane.topLeftBucket[plane.view.u]
-          #     offset_v = (bucket[plane.view.v] << zoomDifference) - plane.topLeftBucket[plane.view.v]
-          #
-          #     for u in [offset_u...offset_u + width] by 1
-          #       for v in [offset_v...offset_v + width] by 1
-          #
-          #     if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
-          #       #TODO Macro-Fix
-          #       tile = [u, v] 
-          #       plane.tiles[tileIndexByTileMacro(tile)] = true
-          #       plane.changed = true
-          #
-          #   else
-          #
-          #     zoomDifference = plane.zoomStep - zoomStep
-          #     u = (bucket[plane.view.u] >> zoomDifference) - plane.topLeftBucket[plane.view.u]
-          #     v = (bucket[plane.view.v] >> zoomDifference) - plane.topLeftBucket[plane.view.v]
-          #
-          #     if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
-          #       #TODO Macro-Fix
-          #       tile = [u, v]
-          #       plane.tiles[tileIndexByTileMacro(tile)] = true
-          #       plane.changed = true
 
           u = (bucket[plane.view.u] >> plane.zoomStep) - plane.topLeftBucket[plane.view.u]
           v = (bucket[plane.view.v] >> plane.zoomStep) - plane.topLeftBucket[plane.view.v]
@@ -253,6 +227,8 @@ Binary =
 
       PullQueue.pull()
 
+    @cubeReady = true
+
 
   get : (position, zoomStep, area, plane) ->
 
@@ -266,6 +242,8 @@ Binary =
     #position[0] = 2688
     #position[1] = 2688
     #console.log "HERE WE GO"
+
+    return unless @cubeReady
 
     topLeftPosition = position.slice(0)
     topLeftPosition[plane.view.u] -= (@TEXTURE_SIZE >> 1) << zoomStep

@@ -108,8 +108,8 @@ class Flycam2d
   needsUpdate : (planeID) ->
     area = @getArea planeID
     ind  = @getIndices planeID
-    (area[0] < 0 or area[1] < 0 or area[2] > TEXTURE_WIDTH or area[3] > TEXTURE_WIDTH or
-      @globalPosition[ind[2]] != @texturePosition[ind[3]] or
+    ((area[0] < 0) or (area[1] < 0) or (area[2] > TEXTURE_WIDTH) or (area[3] > TEXTURE_WIDTH) or
+      (@globalPosition[ind[2]] != @texturePosition[planeID][ind[2]]) or
       (@integerZoomSteps[planeID] - @zoomSteps[planeID]) > 0.75)
 
   getOffsets : (planeID) ->

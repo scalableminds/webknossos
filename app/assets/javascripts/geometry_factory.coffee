@@ -62,9 +62,9 @@ GeometryFactory =
     #  Model.Trianglesplane.get(width, zOffset)  
     #).pipe (shader, geometry) ->
 
-      planes             = [new Array(3), new Array(3), new Array(3)]
+      planes             = [new Array(3), new Array(3)]
       textures           = [new Array(3), new Array(3)]
-      textureMaterials   = [new Array(3), new Array(3), new Array(3)]
+      textureMaterials   = [new Array(3), new Array(3)]
       meshes             = [new Array(3), new Array(3), new Array(3)]
       crosshairs         = [new Array(2), new Array(2), new Array(2)]   # crosshairs for main planes, each consisting of two lines
       crosshairsGeometry = [new Array(2), new Array(2), new Array(2)]
@@ -76,18 +76,14 @@ GeometryFactory =
 
       # dimension: [XY, YZ, XZ]; kind: [main, preview, border]
       for dimension in [0..2]
-        for kind in [0..2]
+        for kind in [0..1]
           # create plane
-          size = if kind==2 then 390 else VIEWPORT_WIDTH
-          planes[kind][dimension] = new THREE.PlaneGeometry(size, size, 1, 1)
+          planes[kind][dimension] = new THREE.PlaneGeometry(VIEWPORT_WIDTH, VIEWPORT_WIDTH, 1, 1)
 
           # create texture
-          if kind<2
-            textures[kind][dimension] = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-            textures[kind][dimension].needsUpdate = true
-            textureMaterials[kind][dimension] = new THREE.MeshBasicMaterial({wireframe : false, map: planes[kind][dimension].texture})
-          else
-            textureMaterials[kind][dimension] = new THREE.MeshBasicMaterial({wireframe : false, color: borderColors[dimension]})
+          textures[kind][dimension] = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+          textures[kind][dimension].needsUpdate = true
+          textureMaterials[kind][dimension] = new THREE.MeshBasicMaterial({wireframe : false, map: planes[kind][dimension].texture})
 
           # create mesh
           meshes[kind][dimension] = new THREE.Mesh( planes[kind][dimension], textureMaterials[kind][dimension] )
@@ -97,8 +93,7 @@ GeometryFactory =
           if config? and kind==1
             values = [config.displayPreviewXY, config.displayPreviewYZ, config.displayPreviewXZ]
             meshes[kind][dimension].visible = values[dimension]
-          if kind<2
-            meshes[kind][dimension].texture = textures[kind][dimension]
+          meshes[kind][dimension].texture = textures[kind][dimension]
 
         # create crosshairs
         for i in [0..1]
@@ -154,18 +149,16 @@ GeometryFactory =
       View.texts = texts
 
       # create route
-      View.createRoute 1000
+      View.createRoute 10000
 
-      meshes[1][PLANE_YZ].rotation.z = meshes[2][PLANE_YZ].rotation.z = prevBorders[PLANE_YZ].rotation.z = -90 /180*Math.PI
+      meshes[1][PLANE_YZ].rotation.z = prevBorders[PLANE_YZ].rotation.z = -90 /180*Math.PI
       
-      meshes[1][PLANE_XZ].rotation.x = meshes[2][PLANE_XZ].rotation.x = prevBorders[PLANE_XZ].rotation.x = 90 /180*Math.PI
+      meshes[1][PLANE_XZ].rotation.x = prevBorders[PLANE_XZ].rotation.x = 90 /180*Math.PI
 
       View.meshes      = meshes
       View.prevBorders = prevBorders
       for dimension in [0..2]
-        for kind in [0..2]
-          if kind == 2
-            meshes[kind][dimension].visible = false
+        for kind in [0..1]
           scene = if kind==0 then dimension else VIEW_3D
           View.addGeometry scene, View.meshes[kind][dimension]
         View.addGeometry VIEW_3D, View.prevBorders[dimension]

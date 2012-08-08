@@ -131,7 +131,7 @@ View =
       # sends current position to Model for preloading data
       # NEW with direction vector
       # Model.Binary.ping cam2d.getGlobalPos(), cam2d.getDirection(), cam2d.getZoomStep(PLANE_XY)
-      Model.Binary.ping cam2d.getGlobalPos(), cam2d.getIntegerZoomStep(PLANE_XY)
+      Model.Binary.ping cam2d.getGlobalPos(), cam2d.getIntegerZoomSteps()
 
       # sends current position to Model for caching route
       Model.Route.put cam2d.getGlobalPos()

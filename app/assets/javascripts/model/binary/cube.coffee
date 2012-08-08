@@ -152,6 +152,8 @@ Cube =
             if bucketData
               if zoomStep < bucket.zoomStep 
                 bucket.data = bucketData
+                if not bucket
+                  console.log "strange thing happening - ", [x + dx, y + dy, z + dz]
                 @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
                 bucket.zoomStep = zoomStep
             else
@@ -163,6 +165,8 @@ Cube =
       if bucketData
         if zoomStep < bucket.zoomStep 
           bucket.data = bucketData
+          if not bucket
+            console.log "another strange thing happening - ", [x + dx, y + dy, z + dz]
           @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z], 0, bucket.zoomStep)
           bucket.zoomStep = 0
       else
@@ -263,8 +267,6 @@ Cube =
   extendByBucketAddressExtent6 : (min_x, min_y, min_z, max_x, max_y, max_z) ->
 
     { cube : oldCube, cubeOffset : oldCubeOffset, cubeSize : oldCubeSize } = @
-
-    console.log "Resizing the Cube:", min_x, min_y, min_z, max_x, max_y, max_z
 
     # TODO: Make cube support negative bucket addresses
     min_x = Math.max(min_x, 0)

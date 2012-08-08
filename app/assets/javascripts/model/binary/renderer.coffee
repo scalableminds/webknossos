@@ -65,16 +65,17 @@ Renderer =
 
       destOffset = bufferOffsetByTileMacro(tile, tileSize)
 
+      offsetMask = (1 << bucket.zoomStep - tileZoomStep) - 1;
+      scaleFactor = 5 - (bucket.zoomStep - tileZoomStep)
+
       sourceOffsets = [
-        0
-        0
-        plane.layer & (1 << 5) - 1
+        (((plane.topLeftBucket[plane.view.u] << plane.zoomStep - tileZoomStep) + tile[0]) & offsetMask) << scaleFactor
+        (((plane.topLeftBucket[plane.view.v] << plane.zoomStep - tileZoomStep) + tile[1]) & offsetMask) << scaleFactor
+        (plane.layer >> bucket.zoomStep) & (1 << 5) - 1
       ]
 
-      #sourceOffsets[plane.view.w] >> 1
+      sourceOffsets[plane.view.w] = sourceOffsets[plane.view.w] >> 1
       sourceOffset = (sourceOffsets[0] << @DELTA[plane.view.u]) + (sourceOffsets[1] << @DELTA[plane.view.v]) + (sourceOffsets[2] << @DELTA[plane.view.w])
-
-      console.log "Rendering", plane.layer, sourceOffsets, sourceOffset
 
       @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, tileSize, bucket.data, sourceOffset,
         1 << (@DELTA[plane.view.u] + skip),

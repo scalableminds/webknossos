@@ -3,6 +3,7 @@ libs/flycam : Flycam
 libs/flycam2 : Flycam2d
 model : Model
 libs/Tween : TWEEN_LIB
+libs/datgui/dat.gui : DatGui
 model/game : Game
 ###
     
@@ -28,6 +29,20 @@ View =
     @curWidth = WIDTH = (container.width()-48)/2
     HEIGHT = (container.height()-48)/2
     @x = 1
+
+    # create GUI
+    text = {message: "Test", speed: 0.5, checkbox: true}
+    gui  = new dat.GUI()
+    gui.add text, "message"
+    gui.add text, "speed", -5, 5
+    $("#optionswindow").append gui.domElement
+    #$(gui.domElement).css
+    #  position : 'absolute'
+    #  left : '220px'
+    #  top : '260px'
+    #  height : '500px'
+    f1 = gui.addFolder("Folder")
+    f1.add text, "checkbox"
 
     # Initialize main THREE.js components
     # Max. distance the route may have from the main plane in order to be displayed:

@@ -2,7 +2,16 @@
 model : Model
 view : View
 libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
+model/game : Game
 ###
+
+
+PLANE_XY       = 0
+PLANE_YZ       = 1
+PLANE_XZ       = 2
+VIEW_3D        = 3
+WIDTH          = 384
+VIEWPORT_WIDTH = 380
 
 # This module is responsible for loading Geometry objects like meshes
 # or creating them programmatically.
@@ -27,7 +36,7 @@ GeometryFactory =
       mesh.position.x = x
       mesh.position.y = y
       mesh.position.z = z
-      View.addGeometryXY mesh
+      View.addGeometry PLANE_XY, mesh
 
   # Let's set up our trianglesplane.
   # It serves as a "canvas" where the brain images
@@ -53,126 +62,104 @@ GeometryFactory =
     #  Model.Trianglesplane.get(width, zOffset)  
     #).pipe (shader, geometry) ->
 
-      planexy = new THREE.PlaneGeometry(512, 512, 1, 1)
-      planeyz = new THREE.PlaneGeometry(512, 512, 1, 1)
-      planexz = new THREE.PlaneGeometry(512, 512, 1, 1)
-      planePrevXY = new THREE.PlaneGeometry(384, 384, 1, 1)
-      planePrevYZ = new THREE.PlaneGeometry(384, 384, 1, 1)
-      planePrevXZ = new THREE.PlaneGeometry(384, 384, 1, 1)
+      planes             = [new Array(3), new Array(3)]
+      textures           = [new Array(3), new Array(3)]
+      textureMaterials   = [new Array(3), new Array(3)]
+      meshes             = [new Array(3), new Array(3), new Array(3)]
+      crosshairs         = [new Array(2), new Array(2), new Array(2)]   # crosshairs for main planes, each consisting of two lines
+      crosshairsGeometry = [new Array(2), new Array(2), new Array(2)]
+      prevBorders        = new Array(3)
+      prevBordersGeo     = new Array(3)
+
+      borderColors       = [0xff0000, 0x0000ff, 0x00ff00]
+      crosshairColors    = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
+
+      # dimension: [XY, YZ, XZ]; kind: [main, preview, border]
+      for dimension in [0..2]
+        for kind in [0..1]
+          # create plane
+          planes[kind][dimension] = new THREE.PlaneGeometry(VIEWPORT_WIDTH, VIEWPORT_WIDTH, 1, 1)
+
+          # create texture
+          textures[kind][dimension] = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+          textures[kind][dimension].needsUpdate = true
+          textureMaterials[kind][dimension] = new THREE.MeshBasicMaterial({wireframe : false, map: planes[kind][dimension].texture})
+
+          # create mesh
+          meshes[kind][dimension] = new THREE.Mesh( planes[kind][dimension], textureMaterials[kind][dimension] )
+          if kind==0
+            meshes[kind][dimension].rotation.x = 90 /180*Math.PI
+          config = Model.User.Configuration
+          if config? and kind==1
+            values = [config.displayPreviewXY, config.displayPreviewYZ, config.displayPreviewXZ]
+            meshes[kind][dimension].visible = values[dimension]
+          meshes[kind][dimension].texture = textures[kind][dimension]
+
+        # create crosshairs
+        for i in [0..1]
+          crosshairsGeometry[dimension][i] = new THREE.Geometry()
+          crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3(-WIDTH/2*i, -WIDTH/2*(1-i), 1))
+          crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3( WIDTH/2*i,  WIDTH/2*(1-i), 1))
+          crosshairs[dimension][i] = new THREE.Line(crosshairsGeometry[dimension][i], new THREE.LineBasicMaterial({color: crosshairColors[dimension][i], linewidth: 1}))
+          View.addGeometry dimension, crosshairs[dimension][i]
+          if Model.User.Configuration.displayCrosshair?
+            crosshairs[dimension][i].visible = Model.User.Configuration.displayCrosshair
+
+        # create borders
+        prevBordersGeo[dimension] = new THREE.Geometry()
+        prevBordersGeo[dimension].vertices.push(new THREE.Vector3(-VIEWPORT_WIDTH/2-1, 0, -VIEWPORT_WIDTH/2-1))
+        prevBordersGeo[dimension].vertices.push(new THREE.Vector3(-VIEWPORT_WIDTH/2-1, 0,  VIEWPORT_WIDTH/2+1))
+        prevBordersGeo[dimension].vertices.push(new THREE.Vector3( VIEWPORT_WIDTH/2+1, 0,  VIEWPORT_WIDTH/2+1))
+        prevBordersGeo[dimension].vertices.push(new THREE.Vector3( VIEWPORT_WIDTH/2+1, 0, -VIEWPORT_WIDTH/2-1))
+        prevBordersGeo[dimension].vertices.push(new THREE.Vector3(-VIEWPORT_WIDTH/2-1, 0, -VIEWPORT_WIDTH/2-1))
+        prevBorders[dimension] = new THREE.Line(prevBordersGeo[dimension], new THREE.LineBasicMaterial({color: borderColors[dimension], linewidth: 1}))
+
+      View.crosshairs = crosshairs
+
       
-      #create preview Box (2500x2500)
+      #create preview Box depending on Game.dataSet.upperBoundary
+      b = Game.dataSet.upperBoundary
       previewBoxGeometry = new THREE.Geometry()
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 2500, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 0, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 0, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 2500, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 2500))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], b[2], 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], 0, 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], 0, b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], b[2], b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, b[1]))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 0, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 2500, 0))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 2500, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(2500, 0, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 2500))
-      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 2500, 0))
-      previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999}))
-      View.addGeometryPrev previewBox
-      # TODO: find right rotation:
-      text1 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text1.position = new THREE.Vector3(0, 2500, 0)
-      text1.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
-      View.addGeometryPrev text1
-      text2 = new THREE.Mesh(new THREE.TextGeometry("2500, 0, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text2.position = new THREE.Vector3(2000, 2300, 0)
-      text2.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
-      View.addGeometryPrev text2
-      text3 = new THREE.Mesh(new THREE.TextGeometry("0, 2500, 0", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text3.position = new THREE.Vector3(0, 2500, 2500)
-      text3.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
-      View.addGeometryPrev text3
-      text4 = new THREE.Mesh(new THREE.TextGeometry("0, 0, 2500", {size : 120, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
-      text4.position = new THREE.Vector3(0, 0, 0)
-      text4.rotation = new THREE.Vector3(0, 35 /180*Math.PI, 0)
-      View.addGeometryPrev text4
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], 0, 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], b[2], 0))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], b[2], b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(b[0], 0, b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], b[1]))
+      previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], 0))
+      previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
+      View.addGeometry VIEW_3D, previewBox
 
-      # create route to show in previewBox and pre-allocate buffer
-      routeGeometry = new THREE.Geometry()
-      i = 0
-      routeGeometry.vertices.push(new THREE.Vector3(2046, 1036, 470))
-      while i < 100
-        # workaround to hide the unused vertices
-        routeGeometry.vertices.push(new THREE.Vector2(0, 0))
-        i += 1
-      routeGeometry.dynamic = true
-      route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000}))
-      View.route = route
-      View.addGeometryPrev route
+      strings   = ["0, 0, 0", b[0]+", 0, 0", "0, "+b[2]+", 0", "0, 0, "+b[2]]
+      positions = [new THREE.Vector3(0, b[2], 0), new THREE.Vector3(b[0], b[2], 0), new THREE.Vector3(0, b[2], b[1]), new THREE.Vector3(0, 0, 0)]
+      texts     = new Array(4)
+      for i in [0..3]
+        texts[i] = new THREE.Mesh(new THREE.TextGeometry(strings[i], {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+        texts[i].position = positions[i]
+        View.addGeometry VIEW_3D, texts[i]
+      View.texts = texts
 
-      # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter 
-      texturexy = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texturexy.needsUpdate = true
+      # create route
+      View.createRoute 10000
 
-      textureyz = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      textureyz.needsUpdate = true
-
-      texturexz = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texturexz.needsUpdate = true
-
-      texturePrevXY = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texturePrevXY.needsUpdate = true
-      texturePrevYZ = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texturePrevYZ.needsUpdate = true
-      texturePrevXZ = new THREE.DataTexture(new Uint8Array(512*512), 512, 512, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-      texturePrevXZ.needsUpdate = true
-
-      textureMaterialxy = new THREE.MeshBasicMaterial({wireframe : false, map: planexy.texture})
-      textureMaterialyz = new THREE.MeshBasicMaterial({wireframe : false, map: planeyz.texture})
-      textureMaterialxz = new THREE.MeshBasicMaterial({wireframe : false, map: planexz.texture})
-      textureMaterialPrevXY = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevXY.texture})
-      textureMaterialPrevYZ = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevYZ.texture})
-      textureMaterialPrevXZ = new THREE.MeshBasicMaterial({wireframe : false, map: planePrevXZ.texture})
-
-      trianglesplanexy = new THREE.Mesh( planexy, textureMaterialxy )
-      trianglesplanexy.rotation.x = 90 /180*Math.PI
+      meshes[1][PLANE_YZ].rotation.z = prevBorders[PLANE_YZ].rotation.z = -90 /180*Math.PI
       
-      trianglesplaneyz = new THREE.Mesh( planeyz, textureMaterialyz )
-      trianglesplaneyz.rotation.x = 90 /180*Math.PI
+      meshes[1][PLANE_XZ].rotation.x = prevBorders[PLANE_XZ].rotation.x = 90 /180*Math.PI
 
-      trianglesplanexz = new THREE.Mesh( planexz, textureMaterialxz )
-      trianglesplanexz.rotation.x = 90 /180*Math.PI
-
-      trianglesplanePrevXY = new THREE.Mesh( planePrevXY, textureMaterialPrevXY )
-      
-      trianglesplanePrevYZ = new THREE.Mesh( planePrevYZ, textureMaterialPrevYZ )
-      trianglesplanePrevYZ.rotation.x = 90 /180*Math.PI
-      trianglesplanePrevYZ.rotation.z = -90 /180*Math.PI
-      
-      trianglesplanePrevXZ = new THREE.Mesh( planePrevXZ, textureMaterialPrevXZ )
-      trianglesplanePrevXZ.rotation.x = 90 /180*Math.PI
-
-      trianglesplanexy.texture = texturexy
-      trianglesplaneyz.texture = textureyz
-      trianglesplanexz.texture = texturexz
-      trianglesplanePrevXY.texture = texturePrevXY
-      trianglesplanePrevYZ.texture = texturePrevYZ
-      trianglesplanePrevXZ.texture = texturePrevXZ
-
-      View.trianglesplanexy = trianglesplanexy
-      View.addGeometryXY View.trianglesplanexy
-
-      View.trianglesplaneyz = trianglesplaneyz
-      View.addGeometryYZ View.trianglesplaneyz
-
-      View.trianglesplanexz = trianglesplanexz
-      View.addGeometryXZ View.trianglesplanexz
-
-      View.trianglesplanePrevXY = trianglesplanePrevXY
-      View.addGeometryPrev View.trianglesplanePrevXY
-      View.trianglesplanePrevYZ = trianglesplanePrevYZ
-      View.addGeometryPrev View.trianglesplanePrevYZ
-      View.trianglesplanePrevXZ = trianglesplanePrevXZ
-      View.addGeometryPrev View.trianglesplanePrevXZ
+      View.meshes      = meshes
+      View.prevBorders = prevBorders
+      for dimension in [0..2]
+        for kind in [0..1]
+          scene = if kind==0 then dimension else VIEW_3D
+          View.addGeometry scene, View.meshes[kind][dimension]
+        View.addGeometry VIEW_3D, View.prevBorders[dimension]
     )

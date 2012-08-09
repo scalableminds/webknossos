@@ -12,8 +12,8 @@ import play.api.libs.json.Writes._
  */
 
 case class Point3D(x: Int, y:Int, z:Int){
-  def scale( f: Int => Int ) = 
-    Point3D( f(x), f(y), f(z) )
+  def scale( f: (Int, Int) => Int ) = 
+    Point3D( f(x, 0), f(y, 1), f(z, 2) )
     
   def hasGreaterCoordinateAs( other: Point3D ) = 
     x > other.x || y > other.y || z > other.z

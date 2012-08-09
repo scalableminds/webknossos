@@ -1,7 +1,7 @@
 package brainflight.binary
 import brainflight.tools.geometry.Point3D
 import models.DataSet
-import brainflight.tools.geometry.Cube
+import brainflight.tools.geometry.Cuboid
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
@@ -13,7 +13,7 @@ abstract class DataStore {
    */
   def load( dataSet: DataSet, resolution: Int, point: Point3D ): Byte
 
-  def load( dataSet: DataSet, resolution: Int, cube: Cube): Array[Byte]
+  def load( dataSet: DataSet, resolution: Int, cube: Cuboid): Array[Byte]
   
   def addToCache( remoteCacheId: Int, block: DataBlockInformation, data: Array[Byte])
   /**

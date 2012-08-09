@@ -47,8 +47,8 @@ PullQueue =
 
     queue = @queue
 
-    if priority > 50 and zoomStep < 3
-      @insert([bucket[0] >> 1, bucket[1] >> 1, bucket[2] >> 1], zoomStep+1, priority-50)
+#    if priority > 50 and zoomStep < 3
+#      @insert([bucket[0] >> 1, bucket[1] >> 1, bucket[2] >> 1], zoomStep+1, priority-50)
 
     # Buckets with negative priority are not loaded
     return unless priority >= 0

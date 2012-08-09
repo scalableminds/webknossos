@@ -384,7 +384,7 @@ View =
   setDisplayPreview : (planeID, value) ->
     if View.meshes
       View.meshes[1][planeID].visible = value
-      cam2d.hasChanged = true;
+      cam2d.hasChanged = true
 
   setActivePlaneXY : ->
     View.setActivePlane PLANE_XY

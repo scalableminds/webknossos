@@ -79,9 +79,6 @@ Cube =
 
     bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "getRequestedZoomStepOfBucketByAddress3")
 
-    if bucketIndex == undefined
-      console.log "ERROR"
-
     if cube[bucketIndex]
       cube[bucketIndex].requestedZoomStep
     else

@@ -77,7 +77,7 @@ tileIndexByTileMacro = (tile) ->
 Binary =
 
   # Constants
-  PING_THROTTLE_TIME : 1000
+  PING_THROTTLE_TIME : 10
   
   TEXTURE_SIZE : 512
 
@@ -141,10 +141,12 @@ Binary =
 
   pingImpl : (position, zoomSteps, direction) ->
 
-    unless _.isEqual({ position, zoomSteps, direction }, { @lastPosition, @lastZoomSteps, @lastDirection })
+    unless position == @lastPosition and direction == @lastDirection and _.isEqual(zoomSteps, @lastZoomSteps)
+
+      console.log "changed"
 
       @lastPosition = position
-      @lastZoomSteps = zoomSteps
+      @lastZoomSteps = zoomSteps.slice(0)
       @lastDirection = direction
 
       console.time "ping"
@@ -162,11 +164,11 @@ Binary =
 #                  @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep)),
 #                  @getBucketArray(@positionBucket3, 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep)))
 
-      resizeRadius = (@TEXTURE_SIZE >> 6 - zoomSteps[0])
+      resizeRadius = (@TEXTURE_SIZE >> 6)
 
       Cube.extendByBucketAddressExtent6(
-        positionBucket[0] - resizeRadius, positionBucket[1] - resizeRadius, positionBucket[2] - resizeRadius,
-        positionBucket[0] + resizeRadius, positionBucket[1] + resizeRadius, positionBucket[2] + resizeRadius,
+        (zoomedPositionBucket[0] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] - resizeRadius) << zoomSteps[0],
+        (zoomedPositionBucket[0] + resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] + resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] + resizeRadius) << zoomSteps[0]
      #   0,0,0,200,200,200
       )
 

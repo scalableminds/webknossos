@@ -31,18 +31,42 @@ View =
     @x = 1
 
     # create GUI
-    text = {message: "Test", speed: 0.5, checkbox: true}
-    gui  = new dat.GUI()
-    gui.add text, "message"
-    gui.add text, "speed", -5, 5
-    $("#optionswindow").append gui.domElement
+    objects = { 
+                lockZoom: true
+                inverseX: false
+                inverseY: false
+                routeClippingDistance: 40
+                displayCrosshairs: true
+                displayPrevXY : true
+                displayPrevYZ : true
+                displayPrevXZ : true
+              }
+    @gui  = new dat.GUI({autoPlace: false})
+    $("#optionswindow").append @gui.domElement
+    
+    #c = gui.add text, "speed", 1, 100
+    #c.onChange (value) -> Controller.setRouteClippingDistance value
+    
     #$(gui.domElement).css
     #  position : 'absolute'
     #  left : '220px'
     #  top : '260px'
     #  height : '500px'
-    f1 = gui.addFolder("Folder")
-    f1.add text, "checkbox"
+    
+    fControls = @gui.addFolder("Controls")
+    fControls.add objects, "lockZoom"
+    fControls.add objects, "inverseX"
+    fControls.add objects, "inverseY"
+
+    fView = @gui.addFolder("View")
+    fView.add objects, "routeClippingDistance", 1, 100
+    fView.add objects, "displayCrosshairs"
+    fView.add objects, "displayPrevXY"
+    fView.add objects, "displayPrevYZ"
+    fView.add objects, "displayPrevXZ"
+
+    fControls.open()
+    fView.open()
 
     # Initialize main THREE.js components
     # Max. distance the route may have from the main plane in order to be displayed:

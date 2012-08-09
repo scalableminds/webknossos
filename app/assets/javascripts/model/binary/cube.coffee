@@ -77,7 +77,10 @@ Cube =
 
     { cube } = @
 
-    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
+    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "getRequestedZoomStepOfBucketByAddress3")
+
+    if bucketIndex == undefined
+      console.log "ERROR"
 
     if cube[bucketIndex]
       cube[bucketIndex].requestedZoomStep
@@ -98,9 +101,9 @@ Cube =
 
     { cube } = @
 
-    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
+    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "getZoomStepOfBucketByAddress3")
 
-    if cube[bucketIndex]
+    if bucketIndex? and cube[bucketIndex]
       cube[bucketIndex].zoomStep
     else
       @ZOOM_STEP_COUNT
@@ -118,8 +121,12 @@ Cube =
 
     { cube } = @
 
-    cube[@bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)]
-
+    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "getBucketByAddress3")
+    
+    if bucketIndex?
+      cube[bucketIndex]
+    else
+      undefined
 
   setBucketByZoomedAddress : (bucket, zoomStep, bucketData) ->
 
@@ -146,27 +153,29 @@ Cube =
         for dy in [0...width] by 1
           for dz in [0...width] by 1
 
-            bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz)
+            bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz, "setBucketByZoomedAddress")
+
+            if bucketIndex == undefined
+              console.log "ERROR"
             bucket = cube[bucketIndex]
 
             if bucketData
               if zoomStep < bucket.zoomStep 
                 bucket.data = bucketData
-                if not bucket
-                  console.log "strange thing happening - ", [x + dx, y + dy, z + dz]
                 @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
                 bucket.zoomStep = zoomStep
             else
               bucket.requestedZoomStep = bucket.zoomStep
 
     else
-      bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
+      bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "setBucketByZoomedAddress")
+      
+      if bucketIndex == undefined
+        console.log "ERROR"
       bucket = cube[bucketIndex]
       if bucketData
         if zoomStep < bucket.zoomStep 
           bucket.data = bucketData
-          if not bucket
-            console.log "another strange thing happening - ", [x + dx, y + dy, z + dz]
           @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z], 0, bucket.zoomStep)
           bucket.zoomStep = 0
       else
@@ -202,6 +211,8 @@ Cube =
 
             bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz)
 
+            if bucketIndex == undefined
+              console.log "ERROR"
             if cube[bucketIndex]
               cube[bucketIndex].requestedZoomStep = Math.min(zoomStep, cube[bucketIndex].requestedZoomStep)
             else
@@ -210,6 +221,9 @@ Cube =
     else
 
       bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
+
+      if bucketIndex == undefined
+        console.log "ERROR"
 
       if cube[bucketIndex]
         cube[bucketIndex].requestedZoomStep = 0
@@ -237,11 +251,19 @@ Cube =
     )
 
 
-  bucketIndexByAddress3 : (bucket_x, bucket_y, bucket_z) ->
+  bucketIndexByAddress3 : (bucket_x, bucket_y, bucket_z, name) ->
 
     { cubeOffset, cubeSize } = @
 
-    bucketIndexByAddress3Macro(bucket_x, bucket_y, bucket_z)
+    if bucket_x >= cubeOffset[0] and bucket_x < cubeOffset[0] + cubeSize[0] and
+    bucket_y >= cubeOffset[1] and bucket_y < cubeOffset[1] + cubeSize[1] and
+    bucket_z >= cubeOffset[2] and bucket_z < cubeOffset[2] + cubeSize[2]
+    
+      bucketIndexByAddress3Macro(bucket_x, bucket_y, bucket_z)
+
+    else
+
+      undefined
 
         
   vertexToZoomedBucketAddress : (vertex, zoomStep) ->
@@ -278,6 +300,7 @@ Cube =
 
     # First, we calculate the new dimension of the cuboid.
     if oldCube
+
       oldUpperBound = new Uint32Array(3)
       oldUpperBound[0] = oldCubeOffset[0] + oldCubeSize[0]
       oldUpperBound[1] = oldCubeOffset[1] + oldCubeSize[1]
@@ -292,7 +315,6 @@ Cube =
       newCubeSize[0] = Math.max(min_x, max_x, oldUpperBound[0] - 1) - newCubeOffset[0] + 1
       newCubeSize[1] = Math.max(min_y, max_y, oldUpperBound[1] - 1) - newCubeOffset[1] + 1
       newCubeSize[2] = Math.max(min_z, max_z, oldUpperBound[2] - 1) - newCubeOffset[2] + 1
-      
 
       # Just reorganize the existing buckets when the cube dimensions 
       # have changed. Transferring all old buckets to their new location.
@@ -375,7 +397,6 @@ Cube =
       @cube       = newCube
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
-
 
 _.extend(Cube, new EventMixin())
 

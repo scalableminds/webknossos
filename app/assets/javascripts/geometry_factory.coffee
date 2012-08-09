@@ -75,6 +75,9 @@ GeometryFactory =
       crosshairColors    = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
 
       # dimension: [XY, YZ, XZ]; kind: [main, preview, border]
+      config = Model.User.Configuration
+      values = [config.displayPreviewXY, config.displayPreviewYZ, config.displayPreviewXZ]
+      
       for dimension in [0..2]
         for kind in [0..1]
           # create plane
@@ -89,9 +92,7 @@ GeometryFactory =
           meshes[kind][dimension] = new THREE.Mesh( planes[kind][dimension], textureMaterials[kind][dimension] )
           if kind==0
             meshes[kind][dimension].rotation.x = 90 /180*Math.PI
-          config = Model.User.Configuration
-          if config? and kind==1
-            values = [config.displayPreviewXY, config.displayPreviewYZ, config.displayPreviewXZ]
+          if kind==1
             meshes[kind][dimension].visible = values[dimension]
           meshes[kind][dimension].texture = textures[kind][dimension]
 

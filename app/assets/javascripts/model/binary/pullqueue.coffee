@@ -7,7 +7,7 @@ libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 PullQueue = 
 
   # Constants
-  PULL_DOWNLOAD_LIMIT : 10
+  PULL_DOWNLOAD_LIMIT : 100
 
   queue : []
   pullLoadingCount : 0
@@ -46,6 +46,9 @@ PullQueue =
   insert : (bucket, zoomStep, priority) ->
 
     queue = @queue
+
+    if priority > 100 and zoomStep < 3
+      @insert([bucket[0] >> 1, bucket[1] >> 1, bucket[2] >> 1], zoomStep+1, priority-100)
 
     # Buckets with negative priority are not loaded
     return unless priority >= 0

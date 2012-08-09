@@ -7,7 +7,7 @@ import play.api.Play.current
 import play.api.Play
 import brainflight.tools.geometry.Point3D
 import models.DataSet
-import brainflight.tools.geometry.Cube
+import brainflight.tools.geometry.Cuboid
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 
 case class DataBlockInformation(
@@ -44,8 +44,8 @@ abstract class CachedDataStore extends DataStore {
    * Uses the coordinates of a point to calculate the data block the point
    * lays in.
    */
-  def PointToBlock( point: Point3D ) =
-    Point3D( point.x / 128, point.y / 128, point.z / 256 )
+  def PointToBlock( point: Point3D, resolution: Int ) =
+    Point3D( point.x / 128 / resolution, point.y / 128 / resolution, point.z / 128 / resolution)
 
   def useLastUsed( blockInfo: DataBlockInformation ) = {
     lastUsed.flatMap{
@@ -61,7 +61,7 @@ abstract class CachedDataStore extends DataStore {
    */
   override def load( dataSet: DataSet, resolution: Int, globalPoint: Point3D ): Byte = {
     if ( dataSet doesContain globalPoint ) {
-      val block = PointToBlock( globalPoint )     
+      val block = PointToBlock( globalPoint, resolution )     
       val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
       
       val byteArray: Array[Byte] =
@@ -70,8 +70,7 @@ abstract class CachedDataStore extends DataStore {
       
       lastUsed = Some(blockInfo -> byteArray)
        
-      val zB = ( globalPoint.z % 256 ) / 2
-      byteArray( ( zB * 128 * 128 + ( globalPoint.y % 128 ) * 128 + globalPoint.x % 128 ) )
+      byteArray( ( ( globalPoint.z % 128 ) * 128 * 128 + ( globalPoint.y % 128 ) * 128 + globalPoint.x % 128 ) )
     } else {
       return 0
     }
@@ -80,9 +79,9 @@ abstract class CachedDataStore extends DataStore {
   /*
    * Load the binary data of the given coordinate from file
    */
-  override def load( dataSet: DataSet, resolution: Int, cube: Cube ): Array[Byte] = { 
+  override def load( dataSet: DataSet, resolution: Int, cube: Cuboid ): Array[Byte] = { 
     if ( dataSet doesContain cube.topLeft ) { 
-      val block = PointToBlock( cube.topLeft )     
+      val block = PointToBlock( cube.topLeft, resolution )     
       val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
       
       val byteArray: Array[Byte] =
@@ -92,23 +91,23 @@ abstract class CachedDataStore extends DataStore {
       lastUsed = Some(blockInfo -> byteArray)
        
       
-      val startX = cube.topLeft.x % 128 
-      val startY = cube.topLeft.y % 128 
-      val startZ = cube.topLeft.z % 256 
+      val startX = (cube.topLeft.x / resolution) % 128 
+      val startY = (cube.topLeft.y / resolution) % 128 
+      val startZ = (cube.topLeft.z / resolution) % 128 
       
-      val result = new Array[Byte]( cube.edgeLength*cube.edgeLength*cube.edgeLength )
+      val result = new Array[Byte]( cube.volume )
       
       var idx = 0
       var y = 0
       var z = 0
       var x = startX
       
-      while( x < startX + cube.edgeLength){
+      while( x < startX + cube.edgeLengthX){
         y = startY
-        while( y < startY + cube.edgeLength){
+        while( y < startY + cube.edgeLengthY){
           z = startZ
-          while( z < startZ + cube.edgeLength){
-            result.update( idx, byteArray( ( z/2 * 128 * 128 + y * 128 + x ) ))
+          while( z < startZ + cube.edgeLengthZ){
+            result.update( idx, byteArray( ( z * 128 * 128 + y * 128 + x ) ))
             idx += 1
             z+=1
           } 
@@ -119,7 +118,7 @@ abstract class CachedDataStore extends DataStore {
 
       result
     } else {
-      new Array[Byte]( cube.edgeLength*cube.edgeLength*cube.edgeLength )
+      new Array[Byte]( cube.volume )
     }
   }
   /**

@@ -6,6 +6,11 @@ input : Input
 helper : Helper
 ###
 
+PLANE_XY = 0
+PLANE_YZ = 1
+PLANE_XZ = 2
+VIEW_3D  = 3
+
 
 Controller = 
 
@@ -30,8 +35,13 @@ Controller =
         $("#moveValue")[0].value = data.moveValue
         $("#rotateValue")[0].value = data.rotateValue
         $("#mouseRotateValue")[0].value = data.mouseRotateValue
+        $("#routeClippingDistance")[0].value = data.routeClippingDistance
+        $("#lockZoom")[0].checked = data.lockZoom
+        $("#displayCrosshair")[0].checked = data.displayCrosshair
+        $("#displayPreviewXY")[0].checked = data.displayPreviewXY
+        $("#displayPreviewYZ")[0].checked = data.displayPreviewYZ
+        $("#displayPreviewXZ")[0].checked = data.displayPreviewXZ
         $("#moveValue")[0].value = data.moveValue
-
         $("#mouseInversionX")[0].checked = true if data.mouseInversionX is 1
         $("#mouseInversionY")[0].checked = true if data.mouseInversionY is 1
         $("#mouseInversionX")[0].checked = false if data.mouseInversionX is -1
@@ -40,13 +50,20 @@ Controller =
         $("#mouseActive")[0].checked = data.mouseActive
         $("#gamepadActive")[0].checked = data.gamepadActive
         $("#motionsensorActive")[0].checked = data.motionsensorActive
+
+        View.setRouteClippingDistance data.routeClippingDistance
+        View.setDisplayCrosshair data.displayCrosshair
+        View.setDisplayPreview PLANE_XY, data.displayPreviewXY
+        View.setDisplayPreview PLANE_YZ, data.displayPreviewYZ
+        View.setDisplayPreview PLANE_XZ, data.displayPreviewXZ
     )
 
     Model.Route.initialize().then(
       (position) =>
         
-        View.setGlobalPos(position)  
-        View.move([46, 36, -530])
+        View.setGlobalPos([2800, 2800, 5376]) #position)  
+        #View.move([46, 36, -530])
+        
         # set initial direction
         View.setDirection([0, 0, 1])
 
@@ -62,11 +79,10 @@ Controller =
     # initializes an Input.Mouse object with the three canvas
     # elements and one pair of callbacks per canvas
     @input.mouses = new Input.Mouse(
-      [View.rendererxy.domElement, View.rendereryz.domElement, View.rendererxz.domElement]
+      [View.renderer[PLANE_XY].domElement, View.renderer[PLANE_YZ].domElement, View.renderer[PLANE_XZ].domElement, View.renderer[VIEW_3D].domElement]
       [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
-      {"x" : View.moveX, "y" : View.moveY, "r" : View.setWaypointXY}
-      {"x" : View.moveZ, "y" : View.moveY, "r" : View.setWaypointYZ}
-      {"x" : View.moveX, "y" : View.moveZ, "r" : View.setWaypointXZ}
+      {"x" : View.moveX, "y" : View.moveY, "w" : View.moveZ, "r" : _.bind(View.setWaypoint, View)}
+      {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev, "r" : _.bind(View.onPreviewClick, View)}
     )
 
   initKeyboard : ->
@@ -159,7 +175,37 @@ Controller =
 
   setMouseRotateValue : (value) ->
     Model.User.Configuration.mouseRotateValue = (Number) value
-    Model.User.Configuration.push()         
+    Model.User.Configuration.push()      
+
+  setRouteClippingDistance : (value) ->
+    console.log "setRouteClippingDistance()"
+    Model.User.Configuration.routeClippingDistance = (Number) value
+    View.setRouteClippingDistance((Number) value)
+    Model.User.Configuration.push()   
+
+  setLockZoom : (value) ->
+    Model.User.Configuration.lockZoom = value
+    Model.User.Configuration.push()      
+
+  setDisplayCrosshair : (value) ->
+    Model.User.Configuration.displayCrosshair = value
+    View.setDisplayCrosshair value
+    Model.User.Configuration.push()    
+
+  setDisplayPreviewXY : (value) ->
+    Model.User.Configuration.displayPreviewXY = value
+    View.setDisplayPreview PLANE_XY, value
+    Model.User.Configuration.push()      
+
+  setDisplayPreviewYZ : (value) ->
+    Model.User.Configuration.displayPreviewYZ = value
+    View.setDisplayPreview PLANE_YZ, value
+    Model.User.Configuration.push()      
+
+  setDisplayPreviewXZ : (value) ->
+    Model.User.Configuration.displayPreviewXZ = value
+    View.setDisplayPreview PLANE_XZ, value
+    Model.User.Configuration.push()      
 
   setMouseInversionX : (value) ->
     if value is true

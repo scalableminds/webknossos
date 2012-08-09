@@ -70,7 +70,7 @@ object Route extends Controller with Secured {
   
   def getRoute( id: String ) = Authenticated{
     implicit request =>
-      TrackedRoute.findOneByID( new ObjectId( id ) ).map( route =>
+      TrackedRoute.findOneById( new ObjectId( id ) ).map( route =>
         Ok( toJson( route.points ) )
       ) getOrElse NotFound( "Couldn't open route." )
   }

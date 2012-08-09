@@ -7,19 +7,22 @@ libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 PullQueue = 
 
   # Constants
-  PULL_DOWNLOAD_LIMIT : 10
+  PULL_DOWNLOAD_LIMIT : 100
 
   queue : []
   pullLoadingCount : 0
 
   swap : (a, b) ->
+
     queue = @queue
 
     tmp = queue[a]
     queue[a] = queue[b]
     queue[b] = tmp
 
+
   siftUp :(pos) ->
+
     queue = @queue
 
     while pos and queue[pos].priority < queue[(pos - 1) >> 1].priority
@@ -27,7 +30,9 @@ PullQueue =
       @swap(pos, parent)
       pos = parent
 
+
   siftDown : (pos) ->
+
     queue = @queue
 
     while (pos << 1) + 1 < queue.length
@@ -37,54 +42,68 @@ PullQueue =
       @swap(pos, child)
       pos = child
 
-  insert : (bucket, priority) ->
+
+  insert : (bucket, zoomStep, priority) ->
+
     queue = @queue
+
+#    if priority > 50 and zoomStep < 3
+#      @insert([bucket[0] >> 1, bucket[1] >> 1, bucket[2] >> 1], zoomStep+1, priority-50)
 
     # Buckets with negative priority are not loaded
     return unless priority >= 0
-    b = { "bucket" : bucket, "priority" : priority }
-    queue.push(b)
-    @siftUp(queue.length - 1)
+    
+    # Checking whether bucket is already loaded
+    if Cube.getWorstRequestedZoomStepOfBucketByZoomedAddress(bucket, zoomStep) > zoomStep
+      b = { "bucket" : bucket, "zoomStep" : zoomStep, "priority" : priority }
+      queue.push(b)
+      @siftUp(queue.length - 1)
+
 
   removeFirst : ->
+
     queue = @queue
 
     return null unless queue.length
     first = queue.splice(0, 1, queue[queue.length - 1])[0]
     queue.pop()
     @siftDown(0)
-    first.bucket
+    first
+
 
   clear : ->
+
     queue = @queue
 
     queue.length = 0
 
+
   pull : ->
+
     { queue, PULL_DOWNLOAD_LIMIT } = @
 
     while @pullLoadingCount < PULL_DOWNLOAD_LIMIT and queue.length
-      [x, y, z, zoomStep] = @removeFirst()
+      { bucket, zoomStep } = @removeFirst()
 
-      unless Cube.isBucketSetByAddress3(x, y, z, zoomStep)
-        @pullBucket(x, y, z, zoomStep)
+      if Cube.getWorstRequestedZoomStepOfBucketByZoomedAddress(bucket, zoomStep) > zoomStep
+        @pullBucket(bucket, zoomStep)
 
-  pullBucket : (bucket_x, bucket_y, bucket_z, zoomStep) ->
+
+  pullBucket : (bucket, zoomStep) ->
 
     @pullLoadingCount++
-    #console.log "requesting: ", [bucket_x, bucket_y, bucket_z]
-    Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, Cube.LOADING_PLACEHOLDER_OBJECT)
+    Cube.setRequestedZoomStepByZoomedAddress(bucket, zoomStep)
+    #console.log "Requested: ", bucket, zoomStep
 
-    @loadBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep).then(
+    @loadBucketByAddress(bucket, zoomStep).then(
 
       (colors) =>
-        #console.log "success: ", [bucket_x, bucket_y, bucket_z]
-        Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, colors)
-        $(window).trigger("bucketloaded", [[bucket_x, bucket_y, bucket_z]])
+        Cube.setBucketByZoomedAddress(bucket, zoomStep, colors)
+        #console.log "Success: ", bucket, zoomStep, colors
 
       =>
-        #console.log "fail: ", [bucket_x, bucket_y, bucket_z]
-        Cube.setBucketByAddress3(bucket_x, bucket_y, bucket_z, zoomStep, null)
+        Cube.setBucketByZoomedAddress(bucket, zoomStep, null)
+        console.log "Failed: ", bucket, zoomStep
 
     ).always =>
       @pullLoadingCount--
@@ -101,7 +120,8 @@ PullQueue =
         responseBufferType : Uint8Array
       )
 
-  loadBucketByAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
 
-    transmitBuffer = [ zoomStep, bucket_x << 5, bucket_y << 5, bucket_z << 5 ]
+  loadBucketByAddress : (bucket, zoomStep) ->
+
+    transmitBuffer = [ zoomStep, bucket[0] << (zoomStep + 5), bucket[1] << (zoomStep + 5), bucket[2] << (zoomStep + 4) ]
     @loadBucketSocket().pipe (socket) -> socket.send(transmitBuffer)

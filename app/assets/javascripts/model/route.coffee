@@ -84,7 +84,8 @@ Route =
     @initialize().done =>
       
       @addToBuffer(position)
-      @branchStack.push(position)
+      # push TransformationMatrix for compatibility reasons
+      @branchStack.push([0,0,0,0,0,0,0,0,0,0,0,0,position[0],position[1],position[2],0])
 
     return
 
@@ -98,7 +99,7 @@ Route =
 
       if branchStack.length > 0
         #@addToBuffer(2)
-        deferred.resolve(branchStack.pop())
+        deferred.resolve(branchStack.pop().slice(12,15))
       else
         deferred.reject()
 

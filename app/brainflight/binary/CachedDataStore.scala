@@ -2,18 +2,22 @@ package brainflight.binary
 
 import models.DataSet
 import brainflight.tools.geometry.Point3D
-import collection.mutable.HashMap
 import play.api.Play.current
 import play.api.Play
 import brainflight.tools.geometry.Point3D
 import models.DataSet
 import brainflight.tools.geometry.Cuboid
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
+import akka.agent.Agent
+
+case class DataBlock( info: DataBlockInformation, data: Data)
 
 case class DataBlockInformation(
     dataSetId: String,
     point: Point3D,
     resolution: Int)
+    
+case class Data( value: Array[Byte])
     
 /**
  * Scalable Minds - Brainflight
@@ -25,19 +29,20 @@ case class DataBlockInformation(
 /**
  * A data store implementation which uses the hdd as data storage
  */
-abstract class CachedDataStore extends DataStore {
+abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]]) extends DataStore {
 
+  val conf = Play.configuration
+  
   lazy val nullBlock = ( for ( x <- 0 to 128 * 128 * 128 ) yield 0.toByte ).toArray
 
   // defines the maximum count of cached file handles
-  val maxCacheSize = 500
+  val maxCacheSize = conf.getInt("bindata.cacheMaxSize") getOrElse 100
 
   // defines how many file handles are deleted when the limit is reached
-  val dropCount = 50
+  val dropCount = conf.getInt("bindata.cacheDropCount") getOrElse 20
 
   // try to prevent loading a file multiple times into memory
-  var fileCache = new HashMap[DataBlockInformation, Array[Byte]]
-  var lastUsed: Option[Tuple2[DataBlockInformation, Array[Byte]]] = None
+  var lastUsed: Option[Tuple2[DataBlockInformation, Data]] = None
 
   val cacheId = this.hashCode
   /**
@@ -65,10 +70,10 @@ abstract class CachedDataStore extends DataStore {
       val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
       
       val byteArray: Array[Byte] =
-        (useLastUsed( blockInfo ) orElse fileCache.get( blockInfo )) getOrElse ( 
-              loadBlock( dataSet, block, resolution ) )
+        ((useLastUsed( blockInfo ) orElse cacheAgent().get( blockInfo )) getOrElse (
+              loadAndCacheData( dataSet, block, resolution ) )).value
       
-      lastUsed = Some(blockInfo -> byteArray)
+      lastUsed = Some(blockInfo -> Data(byteArray))
        
       byteArray( ( ( globalPoint.z % 128 ) * 128 * 128 + ( globalPoint.y % 128 ) * 128 + globalPoint.x % 128 ) )
     } else {
@@ -85,10 +90,10 @@ abstract class CachedDataStore extends DataStore {
       val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
       
       val byteArray: Array[Byte] =
-        (useLastUsed( blockInfo ) orElse fileCache.get( blockInfo )) getOrElse ( 
-              loadBlock( dataSet, block, resolution ) )
+        ((useLastUsed( blockInfo ) orElse cacheAgent().get( blockInfo )) getOrElse {
+              loadAndCacheData( dataSet, block, resolution ) }).value
       
-      lastUsed = Some(blockInfo -> byteArray)
+      lastUsed = Some(blockInfo -> Data(byteArray))
        
       
       val startX = (cube.topLeft.x / resolution) % 128 
@@ -102,11 +107,15 @@ abstract class CachedDataStore extends DataStore {
       var z = 0
       var x = startX
       
-      while( x < startX + cube.edgeLengthX){
+      val edgeX = cube.edgeLengthX
+      val edgeY = cube.edgeLengthY
+      val edgeZ = cube.edgeLengthZ
+      
+      while( x < startX + edgeX){
         y = startY
-        while( y < startY + cube.edgeLengthY){
+        while( y < startY + edgeY){
           z = startZ
-          while( z < startZ + cube.edgeLengthZ){
+          while( z < startZ + edgeZ){
             result.update( idx, byteArray( ( z * 128 * 128 + y * 128 + x ) ))
             idx += 1
             z+=1
@@ -125,21 +134,12 @@ abstract class CachedDataStore extends DataStore {
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
    */
-  def loadBlock( dataSet: DataSet, point: Point3D, resolution: Int ): Array[Byte]
+  def loadBlock( dataSet: DataSet, point: Point3D, resolution: Int ): DataBlock
 
-  def addToCache( remoteCacheId: Int, block: DataBlockInformation, data: Array[Byte]){
-    if( remoteCacheId != cacheId ){
-      fileCache.find{
-          case (b, _) if b == block => true
-          case _ => false
-      } match {
-        case Some( (b, d) ) if d.hashCode > data.hashCode => 
-          fileCache.update(block, data)
-        case None => 
-          fileCache += ( (block, data ))
-        case Some( (b, d) ) =>
-      }
-    }
+  def loadAndCacheData( dataSet: DataSet, point: Point3D, resolution: Int ): Data = {
+    val block = loadBlock( dataSet, point, resolution)
+    cacheAgent send( _ + (block.info -> block.data))
+    block.data
   }
   
   /**
@@ -148,8 +148,8 @@ abstract class CachedDataStore extends DataStore {
    */
   def ensureCacheMaxSize {
     // pretends to flood memory with to many files
-    if ( fileCache.size > maxCacheSize )
-      fileCache = fileCache.drop( dropCount )
+    if ( cacheAgent().size > maxCacheSize )
+      cacheAgent send( _.drop( dropCount )) 
   }
 
   /**
@@ -166,7 +166,7 @@ abstract class CachedDataStore extends DataStore {
    * Called when the store is restarted or going to get shutdown.
    */
   def cleanUp() {
-    fileCache.clear()
+    cacheAgent send( _ => Map.empty )
   }
 
 }

@@ -51,6 +51,8 @@ case class User(
     
   } 
   
+  override def toString = email
+  
   def id = _id.toString
 }
 
@@ -64,7 +66,6 @@ object User extends BasicDAO[User]( "users" ) {
   def findLocalByEmail( email: String ) = findOne( MongoDBObject(
     "email" -> email, "loginType" -> LocalLoginType ) )
   
-  def findOneById( id: String): Option[User] = findOneById( new ObjectId(id) )
   
   def authRemote( email: String, loginType: String) = 
     findOne( MongoDBObject( "email" -> email, "loginType" -> loginType ) )

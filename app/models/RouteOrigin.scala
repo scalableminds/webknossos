@@ -6,6 +6,7 @@ import com.novus.salat.dao.SalatDAO
 import play.api.Play
 import play.api.Play.current
 import brainflight.tools.geometry.Vector3D
+import org.bson.types.ObjectId
 
 /**
  * scalableminds - brainflight
@@ -26,14 +27,18 @@ case class RouteOrigin(
 object RouteOrigin extends BasicDAO[RouteOrigin]( "routeOrigins" ) {
   
   def useLeastUsed( dataSetId: String ) = {
-    val origin = find( MongoDBObject( "dataSetId" -> new ObjectId(dataSetId) ) )
-      .sort( orderBy = MongoDBObject( "usedCount" -> 1 ) )
-      .limit( 1 )
-      .toList
-
-    origin.headOption.map { origin =>
-      update( MongoDBObject( "_id" -> origin._id ), $inc( "usedCount" -> 1 ) )
-      origin
+    if( ObjectId.isValid( dataSetId )){
+      val origin = find( MongoDBObject( "dataSetId" -> new ObjectId(dataSetId) ) )
+        .sort( orderBy = MongoDBObject( "usedCount" -> 1 ) )
+        .limit( 1 )
+        .toList
+  
+      origin.headOption.map { origin =>
+        update( MongoDBObject( "_id" -> origin._id ), $inc( "usedCount" -> 1 ) )
+        origin
+      }
+    } else {
+      None
     }
   }
 }

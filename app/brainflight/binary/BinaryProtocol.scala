@@ -14,7 +14,8 @@ trait Handle {
 
 abstract class BinaryMessage extends Handle
 
-case class RequestData( resolutionExponent: Int, position: Point3D ) extends BinaryMessage
+case class SingleDataRequest( resolutionExponent: Int, position: Point3D )
+case class MultipleDataRequest( requests: Array[SingleDataRequest]) extends BinaryMessage
 
 object BinaryProtocol {
   /**
@@ -23,25 +24,37 @@ object BinaryProtocol {
   val HandleLength = 4
   val ZoomLevelLength = 4
   val CoordinatesLength = 12
+  
+  val RequestSize = ZoomLevelLength + CoordinatesLength
   /**
    * An ajax request must always contain a zoom level and the coordinates
    */
-  val MinAjaxRequestSize = ZoomLevelLength + CoordinatesLength
+  val MinAjaxRequestSize = RequestSize
   /**
    * A websocket request must contain a handle, the zoom level and the coordinates
    */
-  val MinWebSocketRequestSize = HandleLength + ZoomLevelLength + CoordinatesLength
+  val MinWebSocketRequestSize = HandleLength + RequestSize
 
-  def parsePayload( payload: Array[Byte] ) = {
-    val ( binResolution, binPosition ) = payload.splitAt( 4 )
-
+  def parseSingleRequestPayload( singleRequestPayload: Array[Byte] ) = {
+    val ( binResolution, binPosition ) = singleRequestPayload.splitAt( 4 )
+  
     // calculate the upper left corner of the data cube
     val positionArray = binPosition.subDivide( 4 ).map( _.reverse.toIntFromFloat )
 
     Point3D.fromArray( positionArray ).map { position =>
       val resolutionExponent = binResolution.reverse.toIntFromFloat
-      RequestData( resolutionExponent, position )
+      SingleDataRequest( resolutionExponent, position )
     }
+  }
+  
+  def parsePayload( multipleRequestPayload: Array[Byte] ): Option[BinaryMessage] = {
+    val requests = multipleRequestPayload.subDivide( RequestSize ) flatMap { 
+      parseSingleRequestPayload }
+    
+    if( requests.size > 0 )
+      Some(MultipleDataRequest( requests ))
+    else
+      None
   }
 
   /**

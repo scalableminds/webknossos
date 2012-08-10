@@ -7,7 +7,7 @@ libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 PullQueue = 
 
   # Constants
-  PULL_DOWNLOAD_LIMIT : 10
+  PULL_DOWNLOAD_LIMIT : 100
 
   queue : []
   pullLoadingCount : 0
@@ -46,6 +46,9 @@ PullQueue =
   insert : (bucket, zoomStep, priority) ->
 
     queue = @queue
+
+#    if priority > 50 and zoomStep < 3
+#      @insert([bucket[0] >> 1, bucket[1] >> 1, bucket[2] >> 1], zoomStep+1, priority-50)
 
     # Buckets with negative priority are not loaded
     return unless priority >= 0
@@ -90,13 +93,13 @@ PullQueue =
 
     @pullLoadingCount++
     Cube.setRequestedZoomStepByZoomedAddress(bucket, zoomStep)
-    console.log "Requested: ", bucket, zoomStep
+    #console.log "Requested: ", bucket, zoomStep
 
     @loadBucketByAddress(bucket, zoomStep).then(
 
       (colors) =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, colors)
-        console.log "Success: ", bucket, zoomStep
+        #console.log "Success: ", bucket, zoomStep, colors
 
       =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, null)
@@ -120,5 +123,5 @@ PullQueue =
 
   loadBucketByAddress : (bucket, zoomStep) ->
 
-    transmitBuffer = [ zoomStep, bucket[0] << 5, bucket[1] << 5, bucket[2] << 5 ]
+    transmitBuffer = [ zoomStep, bucket[0] << (zoomStep + 5), bucket[1] << (zoomStep + 5), bucket[2] << (zoomStep + 4) ]
     @loadBucketSocket().pipe (socket) -> socket.send(transmitBuffer)

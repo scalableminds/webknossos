@@ -14,8 +14,7 @@ abstract class DataStore {
   def load( dataSet: DataSet, resolution: Int, point: Point3D ): Byte
 
   def load( dataSet: DataSet, resolution: Int, cube: Cuboid): Array[Byte]
-  
-  def addToCache( remoteCacheId: Int, block: DataBlockInformation, data: Array[Byte])
+
   /**
    * Gives the data store the possibility to clean up its mess on shutdown/clean
    */

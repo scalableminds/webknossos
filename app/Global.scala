@@ -16,16 +16,17 @@ object Global extends GlobalSettings {
 /**
  * Initial set of data to be imported
  * in the sample application.
- */
+ */    
 object InitialData {
 
   def insert() = {
     if ( DataSet.findAll.isEmpty ) {
       DataSet.insert( DataSet(
-        "100527_k0563",
-        Play.configuration.getString( "binarydata.path" ) getOrElse ( "binaryData/" )+"100527_k0563",
+        "2012-06-28_Cortex",
+        Play.configuration.getString( "binarydata.path" ) getOrElse ( "binaryData/" )+"2012-06-28_Cortex",
         List( 0, 1, 2, 3 ),
-        Point3D( 32 * 128, 42 * 128, 44 * 128) ) )
+        Point3D( 23 * 128, 15 * 128, 7 * 128) ) )
+
     }
 
     if ( User.findAll.isEmpty ) {
@@ -41,7 +42,7 @@ object InitialData {
 
     if ( RouteOrigin.findAll.isEmpty ) {
       val d = DataSet.default
-      val matrix = List[Float]( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2000, 1000, 1000, 1 )
+      val matrix = List[Float]( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 300, 300, 200, 1 )
       RouteOrigin.insert( RouteOrigin( TransformationMatrix( matrix ), 0, d._id ) )
     }
   }

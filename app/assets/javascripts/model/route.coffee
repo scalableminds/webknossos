@@ -24,7 +24,7 @@ Route =
         responseType : "json"
       ).pipe (data) =>
         
-        @id          = data.id
+        @id          = data.route.id
         @branchStack = data.branches.map (a) -> new Float32Array(a)
         @createBuffer()
         
@@ -36,7 +36,7 @@ Route =
         )
 
         #FIXME we don't need a matrix in the DB, change to just the position
-        data.matrix.slice(12,15)
+        data.route.origin.slice(12,15)
 
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.

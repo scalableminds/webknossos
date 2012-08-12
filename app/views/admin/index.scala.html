@@ -16,13 +16,6 @@
                         <span class="loader">Loading</span>
                     </header>
                     <ul class="list">
-                        @TrackedRoute.findByUser( user ).map{ route =>
-                          <li>
-                            <input class="done" type="checkbox" />
-                            <h4>@route._id</h4>
-                            <time datetime="@route.timestamp">@route.timestamp.format("hh:mm dd MMM yyyy")</time>
-                          </li>
-                        }
                     </ul>
                 </div>
         }

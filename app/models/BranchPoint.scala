@@ -1,9 +1,12 @@
 package models
 
-case class BranchPoint( matrix: TransformationMatrix ) extends Origin
+import play.api.libs.json.Writes
+import play.api.libs.json.Json
+
+case class BranchPoint( id: Int )
 
 object BranchPoint {
-
-  def apply( fl: List[Float] ): BranchPoint =
-    BranchPoint( TransformationMatrix( fl ) )
+  implicit object BranchPointWrites extends Writes[BranchPoint] {
+    def writes(b: BranchPoint) = Json.toJson(b.id)
+  }
 }

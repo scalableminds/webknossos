@@ -3,10 +3,10 @@ package models
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
 
-case class Color( r: Float, g: Float, b: Float)
+case class Color( r: Float, g: Float, b: Float, a: Float)
 
 object Color {
   implicit object ColorWrites extends Writes[Color] {
-    def writes(c: Color) = Json.arr(c.r, c.g, c.b)
+    def writes(c: Color) = Json.arr(c.r, c.g, c.b, c.a)
   }
 }

@@ -55,8 +55,9 @@ class NMLParser(file: File) {
       colorRed <- ((node \ "@color.r").text).toFloatOpt
       colorBlue <- ((node \ "@color.g").text).toFloatOpt
       colorGreen <- ((node \ "@color.b").text).toFloatOpt
+      colorAlpha <- ((node \ "@color.a").text).toFloatOpt
     } yield {
-      Color(colorRed, colorBlue, colorGreen)
+      Color(colorRed, colorBlue, colorGreen, colorAlpha)
     }
   }
 

@@ -356,7 +356,6 @@ View =
     View.updateRoute()
     View.updateCamDistance()
 
-  #todo: validation in Model
   zoomOut : ->
     if Model.User.Configuration.lockZoom
       cam2d.zoomOutAll()

@@ -77,7 +77,7 @@ GeometryFactory =
       # dimension: [XY, YZ, XZ]; kind: [main, preview, border]
       config = Model.User.Configuration
       values = [config.displayPreviewXY, config.displayPreviewYZ, config.displayPreviewXZ]
-      
+
       for dimension in [0..2]
         for kind in [0..1]
           # create plane

@@ -413,7 +413,12 @@ View =
     unless @curIndex
       @curIndex = 0
     # Translating ThreeJS' coordinate system to the preview's one
-    if @curIndex < @maxRouteLen
+    #if @curIndex < @maxRouteLen
+    for k in [0...@maxRouteLen]
+      @curIndex = k
+      position[0] = Math.random() * 5000
+      position[1] = Math.random() * 5000
+      position[2] = Math.random() * 5000
       @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
       @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
       for i in [0..2]
@@ -443,7 +448,7 @@ View =
 
   onPreviewClick : (position) ->
     # vector with direction from camera position to click position
-    vector = new THREE.Vector3((position[0] / 384 ) * 2 - 1, - (position[1] / 384) * 2 + 1, 0.5)
+    vector = new THREE.Vector3((position[0] / (384 * @x) ) * 2 - 1, - (position[1] / (384 * @x)) * 2 + 1, 0.5)
     
     # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()

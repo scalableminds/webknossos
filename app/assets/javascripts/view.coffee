@@ -399,31 +399,43 @@ View =
     cam2d.setActivePlane planeID
     for i in [0..2]
       $("canvas")[i].style.borderColor = if i==planeID then "#f8f800" else "#C7D1D8"
-    #cam2d.hasChanged = true
 
-  setWaypoint : (position) ->
+  setActiveNodePosition : (position) ->
+    @lastNodePosition = position
+    View.updateRoute()
+
+  setWaypoint : (position, typeNumber) ->
     curGlobalPos = cam2d.getGlobalPos()
     activePlane  = cam2d.getActivePlane()
     zoomFactor   = cam2d.getPlaneScalingFactor activePlane
-    # calculate the global position of the rightclick
-    switch activePlane
-      when PLANE_XY then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2]]
-      when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2] - (@curWidth/2 - position[0])/@x*zoomFactor]
-      when PLANE_XZ then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (@curWidth/2 - position[1])/@x*zoomFactor]
+
+    if typeNumber == 0
+      # calculate the global position of the rightclick
+      switch activePlane
+        when PLANE_XY then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2]]
+        when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2] - (@curWidth/2 - position[0])/@x*zoomFactor]
+        when PLANE_XZ then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (@curWidth/2 - position[1])/@x*zoomFactor]
+      
     unless @curIndex
       @curIndex = 0
-    # Translating ThreeJS' coordinate system to the preview's one
-    #if @curIndex < @maxRouteLen
-    for k in [0...@maxRouteLen]
-      @curIndex = k
-      position[0] = Math.random() * 5000
-      position[1] = Math.random() * 5000
-      position[2] = Math.random() * 5000
-      @route.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
+      @lastNodePosition = position
+
+    if @curIndex < @maxRouteLen
+
+    #PERFORMANCE TEST
+    #for k in [0...@maxRouteLen] 
+      #@curIndex = k
+      #position[0] = Math.random() * 5000
+      #position[1] = Math.random() * 5000
+      #position[2] = Math.random() * 5000
+
+      @route.geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[0], Game.dataSet.upperBoundary[1] - @lastNodePosition[2], @lastNodePosition[1])
+      @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
       @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
       for i in [0..2]
         ind = cam2d.getIndices i
-        @routeView[i].geometry.vertices[@curIndex] = new THREE.Vector3(position[ind[0]], -position[ind[1]], -position[ind[2]])
+        @routeView[i].geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[ind[0]], -@lastNodePosition[ind[1]], -@lastNodePosition[ind[2]])
+        @routeView[i].geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[ind[0]], -position[ind[1]], -position[ind[2]])
         @routeView[i].geometry.verticesNeedUpdate = true
       @route.geometry.verticesNeedUpdate = true
       @routeNodes.geometry.verticesNeedUpdate = true
@@ -443,6 +455,7 @@ View =
         View.updateRoute()
       @waypointAnimation.start()
     
+      @lastNodePosition = position
       @curIndex += 1
       cam2d.hasChanged = true
 
@@ -458,13 +471,12 @@ View =
     # identify clicked object
     intersects = ray.intersectObjects([@routeNodes])
 
-    console.log intersects[0].distance
-
     if (intersects.length > 0 and intersects[0].distance >= 0)
       intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
       objPos = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # jump to the nodes position
       cam2d.setGlobalPos [objPos.x, objPos.z, -objPos.y + Game.dataSet.upperBoundary[1]]
+      View.updateRoute()
 
   createRoute : (maxRouteLen) ->
     # create route to show in previewBox and pre-allocate buffers
@@ -482,15 +494,19 @@ View =
     while i < maxRouteLen
       # workaround to hide the unused vertices
       routeGeometry.vertices.push(new THREE.Vector2(0,0))
-      routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
       for g in routeGeometryView
         g.vertices.push(new THREE.Vector2(0, 0))
       i += 1
 
-    route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
+    i = 0
+    while i < 2 * maxRouteLen
+      routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
+      i += 1
+
+    route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces)
     routeView = new Array(3)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      routeView[i] = new THREE.Line(routeGeometryView[i], new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}))
+      routeView[i] = new THREE.Line(routeGeometryView[i], new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces)
     routeNodes = new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 5, sizeAttenuation : false}))
 
     # Initializing Position

@@ -10,11 +10,11 @@ import models.graph.Experiment
 import models.Role
 import nml.NMLParser
 
-object NMLUpload extends Controller with Secured{
+object NMLIO extends Controller with Secured{
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )
   
-  def index = Authenticated{ implicit request =>
+  def uploadForm = Authenticated{ implicit request =>
     Ok(html.admin.nmlupload(request.user))
   }
   
@@ -31,6 +31,20 @@ object NMLUpload extends Controller with Secured{
     }.getOrElse {
       BadRequest("Missing file")
     }
+  }
+  
+  def downloadList = Authenticated{ implicit request =>
+    Ok( html.admin.index( request.user, User.findAll ) )
+  }
+  
+  def download( taskId: String) = Authenticated{ implicit request =>
+    (for {
+      task <- Experiment.findOneById(taskId)
+    } yield {
+      Ok(Experiment.toXML(task)).withHeaders(
+        CONTENT_TYPE -> "application/octet-stream",
+        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(task.dataSetId)))
+    }) getOrElse BadRequest
   }
   
 }

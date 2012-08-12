@@ -48,9 +48,10 @@ GET     /performance/timegridfs             controllers.PerformanceTest.timeGrid
 GET     /performance/timefiledatastore      controllers.PerformanceTest.timeFileDataStore
 
 #Admin pages
-GET     /admin/routevisual                  controllers.admin.RouteVisualisation.index
-GET     /admin/nmlupload                    controllers.admin.NMLUpload.index
-POST    /admin/nmlupload                    controllers.admin.NMLUpload.upload
+GET     /admin/nmldownload                  controllers.admin.NMLIO.downloadList
+GET     /admin/nmlupload                    controllers.admin.NMLIO.uploadForm
+POST    /admin/nmlupload                    controllers.admin.NMLIO.upload
+GET     /admin/nmldownload/:taskId          controllers.admin.NMLIO.download( taskId: String )
 
 # Javascript routing
 GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes

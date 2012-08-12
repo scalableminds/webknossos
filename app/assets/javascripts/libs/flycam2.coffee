@@ -28,13 +28,13 @@ class Flycam2d
   zoomIn : (planeID) ->
     @zoomSteps[planeID] -= 0.05
     @hasChanged = true
-    @buffer[planeID] = 256-@viewportWidth*@getTextureScalingFactor(planeID)/2
+    @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
 
   zoomOut : (planeID) ->
     if @zoomSteps[planeID] < (3.25-0.05)
       @zoomSteps[planeID] += 0.05
       @hasChanged = true
-      @buffer[planeID] = 256-@viewportWidth*@getTextureScalingFactor(planeID)/2
+      @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
 
   zoomInAll : ->
     for i in [0..2]

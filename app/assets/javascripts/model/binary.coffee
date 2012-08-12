@@ -77,7 +77,7 @@ tileIndexByTileMacro = (tile) ->
 Binary =
 
   # Constants
-  PING_THROTTLE_TIME : 1000
+  PING_THROTTLE_TIME : 10
   
   TEXTURE_SIZE : 512
 

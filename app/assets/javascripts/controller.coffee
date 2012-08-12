@@ -61,7 +61,7 @@ Controller =
     Model.Route.initialize().then(
       (position) =>
         
-        View.setGlobalPos([2800, 2800, 5376]) #position)  
+        View.setGlobalPos(position)
         #View.move([46, 36, -530])
         
         # set initial direction

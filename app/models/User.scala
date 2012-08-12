@@ -17,11 +17,11 @@ case class User(
     name: String,
     verified: Boolean = false,
     pwdHash: String = "",
+    tasks: List[ObjectId] = Nil,
     loginType: String = "local",
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: List[String] = "user" :: Nil,
     permissions: List[Permission] = Nil,
-    var branchPoints: List[BranchPoint] = Nil,
     _id: ObjectId = new ObjectId ) {
 
   val _roles = for{
@@ -38,18 +38,6 @@ case class User(
 
   def hasPermission( permission: Permission ) =
     ruleSet.find( _.implies( permission ) ).isDefined
-    
-  def useBranchPointAsOrigin = {
-    branchPoints match {
-      case head :: tail => 
-        User.save( this.copy( branchPoints = tail ) )
-        branchPoints = tail
-        Some( head )
-      case _ =>
-        None
-    }
-    
-  } 
   
   override def toString = email
   
@@ -76,8 +64,8 @@ object User extends BasicDAO[User]( "users" ) {
       if verifyPassword( password, user.pwdHash )
     } yield user
 
-  def create( email: String, name: String, password: String = "" ) = {
-    val user = User( email, name, false, hashPassword( password ) )
+  def create( email: String, name: String, password: String = "", tasks: List[ObjectId] = Nil ) = {
+    val user = User( email, name, false, hashPassword( password ), tasks )
     insert( user )
     user
   }
@@ -91,7 +79,7 @@ object User extends BasicDAO[User]( "users" ) {
   }
 
   def createRemote( email: String, name: String, loginType: String ) = {
-    val user = User( email, name, true, "", loginType )
+    val user = User( email, name, true, "", loginType = loginType )
     insert( user )
     user
   }

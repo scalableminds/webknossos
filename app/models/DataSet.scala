@@ -28,4 +28,7 @@ object DataSet extends BasicDAO[DataSet]( "dataSets" ) {
       throw new Exception( "No default data set found!" )
     }
   }
+  
+  def findOneByName(name: String) = 
+    findOne( MongoDBObject( "name" -> name))
 }

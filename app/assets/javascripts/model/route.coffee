@@ -36,8 +36,8 @@ Route =
       @socket.on "data", (data) =>
         
         Route.data = data
-        console.log data.dataSet.id
-        #@id          = data.route.id
+        console.log data
+        @id        = data.dataSet.id
         #@branchStack = data.branches.map (a) -> new Float32Array(a)
         @createBuffer()
         

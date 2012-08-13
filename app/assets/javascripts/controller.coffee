@@ -4,12 +4,15 @@ view : View
 geometry_factory : GeometryFactory
 input : Input
 helper : Helper
+libs/flycam2 : Flycam
 ###
 
-PLANE_XY = 0
-PLANE_YZ = 1
-PLANE_XZ = 2
-VIEW_3D  = 3
+PLANE_XY         : 0
+PLANE_YZ         : 1
+PLANE_XZ         : 2
+VIEW_3D          : 3
+WIDTH            : 384
+TEXTURE_WIDTH    : 512
 
 
 class Controller
@@ -17,9 +20,23 @@ class Controller
   constructor : ->
 
 
-    #create model and View
+    # create Model, View and Flycam
     @model = new Model()
     @view  = new View(@model)
+    @flycam = new Flycam2D(WIDTH)
+
+    # create Meshes and add to View
+    @mainPlanes = new Array(3)
+    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      @mainPlanes[i] = new Plane(WIDTH, TEXTURE_WIDTH, @flycam, i, @model)
+      @mainPlanes[i].rotation.x = 90 /180*Math.PI
+      @view.addGeometry(i, mainPlanes[i])
+    @skeletonView = new SkeletonView(Game.dataset.upperBoundary, @flycam, @model, @mainPlanes)
+    svMeshes      = @skeletonView.getMeshes()
+    @view.addGeometry(VIEW_3D, svMeshes)
+
+    # initialize Skeleton View Camera Controller
+    @svCameraController = new SvCameraController(@view.getSvCamera, @flycam, Game.dataset.upperBoundary, @skeletonView)
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -75,8 +92,8 @@ class Controller
         @view.setDirection([0, 0, 1])
 
         #GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
-        GeometryFactory.createTrianglesplane(512, 0, @model.User.Configuration, @view).done =>
-          @view.draw()
+        #GeometryFactory.createTrianglesplane(512, 0, @model.User.Configuration, @view).done =>
+        #  @view.draw()
       
       ->
         alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")

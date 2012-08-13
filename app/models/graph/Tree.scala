@@ -4,6 +4,7 @@ import brainflight.tools.geometry.Point3D
 import models.Color
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
+import play.api.libs.json.JsObject
 import xml.XMLWrites
 import xml.Xml
 
@@ -31,22 +32,22 @@ object Tree {
   }
 
   implicit object NodeWrites extends Writes[Node] {
-    def writes(n: Node) = {
+    def writes(n: Node): JsObject = {
       val j = Json.obj(
         "id" -> n.id,
         "radius" -> n.radius,
         "position" -> n.position)
-      n.comment match {
+      Json.obj(n.id.toString -> (n.comment match {
         case Some(c) => j ++ Json.obj("comment" -> c)
         case _       => j
-      }
+      }))
     }
   }
 
   implicit object TreeWrites extends Writes[Tree] {
     def writes(t: Tree) = Json.obj(
       "id" -> t.id,
-      "nodes" -> t.nodes,
+      "nodes" -> t.nodes.foldLeft(Json.obj())((o,e) => o ++ NodeWrites.writes(e)),
       "edges" -> t.edges,
       "color" -> t.color)
   }

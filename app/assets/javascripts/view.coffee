@@ -143,7 +143,7 @@ View =
 
       globalPos = cam2d.getGlobalPos()
       # Translating ThreeJS' coordinate system to the preview's one
-      globalPosVec = new THREE.Vector3(globalPos[0], Game.dataSet.upperBoundary[1]-globalPos[2], globalPos[1])
+      globalPosVec = new THREE.Vector3(globalPos[0], Game.dataSet.upperBoundary[2]-globalPos[2], globalPos[1])
       
       if @first==true and Game.dataSet           # initialize Preview
         @changePrev VIEW_3D
@@ -202,8 +202,8 @@ View =
     b = Game.dataSet.upperBoundary
     switch id
       when VIEW_3D
-        scale = Math.sqrt(b[0]*b[0]+b[1]*b[1]+b[2]*b[2])/1.9
-        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale, r: scale, t: scale+scale*0.25, b: -scale+scale*0.25}, 800)
+        scale = Math.sqrt(b[0]*b[0]+b[1]*b[1])/1.8
+        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale+scale*(b[0]/(b[0]+b[1])-0.5), r: scale+scale*(b[0]/(b[0]+b[1])-0.5), t: scale-scale*0.1, b: -scale-scale*0.1}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)
@@ -428,9 +428,9 @@ View =
       #position[1] = Math.random() * 5000
       #position[2] = Math.random() * 5000
 
-      @route.geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[0], Game.dataSet.upperBoundary[1] - @lastNodePosition[2], @lastNodePosition[1])
-      @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
-      @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[1] - position[2], position[1])
+      @route.geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[0], Game.dataSet.upperBoundary[2] - @lastNodePosition[2], @lastNodePosition[1])
+      @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[2] - position[2], position[1])
+      @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[2] - position[2], position[1])
       for i in [0..2]
         ind = cam2d.getIndices i
         @routeView[i].geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[ind[0]], -@lastNodePosition[ind[1]], -@lastNodePosition[ind[2]])
@@ -442,7 +442,7 @@ View =
       #TEST CUBES
       #particle = new THREE.Mesh(new THREE.CubeGeometry(30, 30, 30, 1, 1, 1), new THREE.MeshBasicMaterial({color: 0xff0000}))
       #particle.position.x = position[0]
-      #particle.position.y = Game.dataSet.upperBoundary[1] - position[2]
+      #particle.position.y = Game.dataSet.upperBoundary[2] - position[2]
       #particle.position.z = position[1]
       #@addGeometry VIEW_3D, particle
 
@@ -514,7 +514,7 @@ View =
       intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
       objPos = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # jump to the nodes position
-      cam2d.setGlobalPos [objPos.x, objPos.z, -objPos.y + Game.dataSet.upperBoundary[1]]
+      cam2d.setGlobalPos [objPos.x, objPos.z, -objPos.y + Game.dataSet.upperBoundary[2]]
       View.updateRoute()
 
   createRoute : (maxRouteLen) ->

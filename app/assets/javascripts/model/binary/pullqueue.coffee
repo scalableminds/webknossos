@@ -98,7 +98,7 @@ PullQueue =
     @loadBucketByAddress(bucket, zoomStep).then(
 
       (colors) =>
-        Cube.setBucketByZoomedAddress(bucket, zoomStep, colors)
+        Cube.setBucketByZoomedAddress(bucket, zoomStep, colors) if colors.length
         #console.log "Success: ", bucket, zoomStep, colors
 
       =>

@@ -33,6 +33,8 @@ class View
     HEIGHT = (container.height()-48)/2
     @x = 1
 
+    @geometries = []
+
     # Initialize main THREE.js components
     # Max. distance the route may have from the main plane in order to be displayed:
     @camDistance = 40
@@ -54,7 +56,6 @@ class View
       @camera[i].lookAt(new THREE.Vector3( 0, 0, 0))
 
       # Attach the canvas to the container
-      # DEBATE: a canvas can be passed the the renderer as an argument...!?
       @renderer[i].setSize WIDTH, HEIGHT
       container.append @renderer[i].domElement
 
@@ -69,9 +70,6 @@ class View
       buttons[i].addEventListener "click", callbacks[i], true
       @prevControls.append buttons[i]
 
-    # This "camera" is not a camera in the traditional sense.
-    # It just takes care of the global position
-    @cam2d = new Flycam2d VIEWPORT_WIDTH
     @setActivePlaneXY()
     
     # FPS stats
@@ -94,7 +92,7 @@ class View
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
-    $(window).on("bucketloaded", => @cam2d.hasChanged = true; @cam2d.newBuckets = [true, true, true]) 
+    # $(window).on("bucketloaded", => @cam2d.hasChanged = true; @cam2d.newBuckets = [true, true, true]) 
 
   animate : ->
 
@@ -112,8 +110,6 @@ class View
     # This prevents you the GPU/CPU from constantly
     # working and keeps your lap cool
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
-
-    @updateTrianglesplane()
     
     # update postion and FPS displays
     position2d = @cam2d.getGlobalPos()
@@ -130,126 +126,11 @@ class View
         @renderer[i].render @scene[i], @camera[i]
     @cam2d.hasChanged = false
     @newTextures = [false, false, false, false]
-
-  # Let's apply new pixels to the trianglesplane.
-  # We do so by apply a new texture to it.
-  updateTrianglesplane : ->
-      return unless @meshes
-      return unless @prevBorders
-
-      # sends current position to Model for preloading data
-      # NEW with direction vector
-      # Model.Binary.ping cam2d.getGlobalPos(), cam2d.getDirection(), cam2d.getZoomStep(PLANE_XY)
-      @model.Binary.ping @cam2d.getGlobalPos(), @cam2d.getIntegerZoomSteps()
-
-      # sends current position to Model for caching route
-      @model.Route.put @cam2d.getGlobalPos()
-
-      globalPos = @cam2d.getGlobalPos()
-      # Translating ThreeJS' coordinate system to the preview's one
-      globalPosVec = new THREE.Vector3(globalPos[0], Game.dataSet.upperBoundary[2]-globalPos[2], globalPos[1])
-      
-      if @first==true and Game.dataSet           # initialize Preview
-        @changePrev VIEW_3D
-        @first = false
-
-      for dimension in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-        if @cam2d.needsUpdate dimension
-          @cam2d.notifyNewTexture dimension
-            
-        plane = @meshes[0][dimension]
-
-        @model.Binary.get(@cam2d.getTexturePosition(dimension), @cam2d.getIntegerZoomStep(dimension), @cam2d.getArea(dimension), dimension).done (buffer) =>
-          if buffer
-            plane.texture.image.data.set(buffer)
-            @newTextures[dimension] = true
-
-        @newTextures[dimension] |= @cam2d.hasChanged
-        if !@newTextures[dimension]
-          continue
-          
-        @meshes[1][dimension].texture = @meshes[0][dimension].texture.clone()
-        @meshes[1][dimension].position = globalPosVec
-        sFactor = @cam2d.getPlaneScalingFactor dimension
-        scale   = @meshes[1][dimension].scale
-        scale.x = scale.y = scale.z = sFactor
-
-        @meshes[0][dimension].texture.needsUpdate = true
-        @meshes[0][dimension].material.map = @meshes[0][dimension].texture
-        @meshes[1][dimension].texture.needsUpdate = true
-        @meshes[1][dimension].material.map = @meshes[1][dimension].texture
-        
-        offsets = @cam2d.getOffsets dimension
-        scalingFactor = @cam2d.getTextureScalingFactor dimension
-        map = @meshes[0][dimension].material.map
-        map.repeat.x = VIEWPORT_WIDTH*scalingFactor / 508;
-        map.repeat.y = VIEWPORT_WIDTH*scalingFactor / 508;
-        map.offset.x = offsets[0] / 508;
-        map.offset.y = offsets[1] / 508;
-
-        @prevBorders[dimension].position = globalPosVec
-        sFactor = @cam2d.getPlaneScalingFactor dimension
-        @prevBorders[dimension].scale = new THREE.Vector3(sFactor, sFactor, sFactor)
-        
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
   addGeometry : (planeID, geometry) ->
     @scene[planeID].add geometry
-
-  changePrev : (id) ->
-    # In order for the rotation to be correct, it is not sufficient
-    # to just use THREEJS' lookAt() function, because it may still
-    # look at the plane in a wrong angle. Therefore, the rotation
-    # has to be hard coded.
-    @tween = new TWEEN.Tween({ camera: @camera, cam2d: @cam2d, texts: @texts, x: @camera[VIEW_3D].position.x, y: @camera[VIEW_3D].position.y, z: @camera[VIEW_3D].position.z, xRot: @camera[VIEW_3D].rotation.x, yRot: @camera[VIEW_3D].rotation.y, zRot: @camera[VIEW_3D].rotation.z, l: @camera[VIEW_3D].left, r: @camera[VIEW_3D].right, t: @camera[VIEW_3D].top, b: @camera[VIEW_3D].bottom})
-    b = Game.dataSet.upperBoundary
-    switch id
-      when VIEW_3D
-        scale = Math.sqrt(b[0]*b[0]+b[1]*b[1])/1.8
-        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale+scale*(b[0]/(b[0]+b[1])-0.5), r: scale+scale*(b[0]/(b[0]+b[1])-0.5), t: scale-scale*0.1, b: -scale-scale*0.1}, 800)
-        .onUpdate(@updateCameraPrev)
-        .start()
-        #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)
-      when PLANE_XY
-        scale = (Math.max b[0], b[1])/1.75
-        @tween.to({  x: b[0]/2, y: 4000, z: b[1]/2, xRot: @degToRad(-90), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, 800)
-        .onUpdate(@updateCameraPrev)
-        .start()
-        #rotation: (-90, 0, 90) -> (-90, 0, 0)
-      when PLANE_YZ
-        scale = (Math.max b[1], b[2])/1.75
-        @tween.to({  x: 4000, y: b[2]/2, z: b[1]/2, xRot: @degToRad(-90), yRot: @degToRad(90), zRot: @degToRad(0), l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, 800)
-        .onUpdate(@updateCameraPrev)
-        .start()
-        #rotation: (0, 90, 0) -> (-90, 90, 0)
-      when PLANE_XZ
-        scale = (Math.max b[0], b[2])/1.75
-        @tween.to({  x: b[0]/2, y: b[2]/2, z: 4000, xRot: @degToRad(0), yRot: @degToRad(0), zRot: @degToRad(0), l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, 800)
-        .onUpdate(@updateCameraPrev)
-        .start()
-        #rotation: (0, 0, 0) -> (0, 0, 0)
-    @cam2d.hasChanged = true
-
-  degToRad : (deg) -> deg/180*Math.PI
-
-  updateCameraPrev : ->
-    @camera[VIEW_3D].position = new THREE.Vector3(@x, @y, @z)
-    @camera[VIEW_3D].rotation = new THREE.Vector3(@xRot, @yRot, @zRot)
-    @camera[VIEW_3D].left = @l
-    @camera[VIEW_3D].right = @r
-    @camera[VIEW_3D].top = @t
-    @camera[VIEW_3D].bottom = @b
-    if @texts
-      for text in @texts
-        text.rotation = new THREE.Vector3(@xRot, @yRot, @zRot)
-    @camera[VIEW_3D].updateProjectionMatrix()
-    @cam2d.hasChanged = true
-
-  changePrev3D : => @changePrev(VIEW_3D)
-  changePrevXY : => @changePrev(PLANE_XY)
-  changePrevYZ : => @changePrev(PLANE_YZ)
-  changePrevXZ : => @changePrev(PLANE_XZ)
 
   #Apply a single draw (not used right now)
   draw : ->
@@ -268,68 +149,6 @@ class View
       @camera[i].aspect = WIDTH / HEIGHT
       @camera[i].updateProjectionMatrix()
     @draw()
-
-############################################################################
-#Interface for Controller
-  # TODO: Some of those are probably obsolete
-
-  setGlobalPos : (pos) ->
-    @cam2d.setGlobalPos(pos)
-
-  getGlobalPos : ->
-    @cam2d.getGlobalPos()
-
-  setDirection : (direction) ->
-    @cam2d.setDirection direction
-
-  # Should not be used anymore
-  #move : (p) ->
-  #  cam2d.move p
-
-  moveActivePlane : (p) ->
-    @cam2d.moveActivePlane p
-    @updateRoute()
-
-  moveX : (x) => 
-    @moveActivePlane [x, 0, 0]
-    
-  moveY : (y) =>
-    @moveActivePlane [0, y, 0]
-    
-  moveZ : (z) =>
-    @moveActivePlane [0, 0, z]
-    
-  prevViewportSize : =>
-    (@camera[VIEW_3D].right - @camera[VIEW_3D].left)         # always quadratic
-
-  zoomPrev : (value) =>
-    factor = Math.pow(0.9, value)
-    middleX = (@camera[VIEW_3D].left + @camera[VIEW_3D].right)/2
-    middleY = (@camera[VIEW_3D].bottom + @camera[VIEW_3D].top)/2
-    size = @prevViewportSize()
-    @camera[VIEW_3D].left = middleX - factor*size/2
-    @camera[VIEW_3D].right = middleX + factor*size/2
-    @camera[VIEW_3D].top = middleY + factor*size/2
-    @camera[VIEW_3D].bottom = middleY - factor*size/2
-    @camera[VIEW_3D].updateProjectionMatrix()
-
-    @rayThreshold = (4)*(@camera[VIEW_3D].right - @camera[VIEW_3D].left)/384
-
-    @cam2d.hasChanged = true
-
-  movePrevX : (x) =>
-    size = @prevViewportSize()
-    @camera[VIEW_3D].left += x*size/384
-    @camera[VIEW_3D].right += x*size/384
-    @camera[VIEW_3D].updateProjectionMatrix()
-    @cam2d.hasChanged = true
-
-  movePrevY : (y) =>
-    size = @prevViewportSize()
-    @camera[VIEW_3D].top -= y*size/384
-    @camera[VIEW_3D].bottom -= y*size/384
-    @camera[VIEW_3D].updateProjectionMatrix()
-    @cam2d.hasChanged = true
   
   scaleTrianglesPlane : (delta) ->
     @x = 1 unless @x
@@ -373,17 +192,6 @@ class View
   setRouteClippingDistance : (value) ->
     @camDistance = value
     @updateCamDistance()
-
-  setDisplayCrosshair : (value) =>
-    if @crosshairs
-      for plane in @crosshairs
-        for line in plane
-          line.visible = value
-
-  setDisplayPreview : (planeID, value) =>
-    if @meshes
-      @meshes[1][planeID].visible = value
-      @cam2d.hasChanged = true
 
   setActivePlaneXY : =>
     @setActivePlane PLANE_XY
@@ -536,3 +344,6 @@ class View
       @routeView[i].scale    = new THREE.Vector3(1/scale[i], 1/scale[i], 1/scale[i])
       @routeView[i].position = new THREE.Vector3(-gPos[ind[0]]/scale[i], gPos[ind[1]]/scale[i], gPos[ind[2]]/scale[i]+1)
       @routeView[i].geometry.verticesNeedUpdate = true
+
+  getSvCamera : =>
+    @camera[VIEW_3D]

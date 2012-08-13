@@ -14,4 +14,15 @@ model/user : User
 # All public operations are **asynchronous**. We return a promise
 # which you can react on.
 
-Model = { Game, Binary, Shader, Route, Mesh, Trianglesplane, User }
+#Model = { Game, Binary, Shader, Route, Mesh, Trianglesplane, User }
+
+class Model
+
+  constructor : ->
+    @Game = Game
+    @Binary = Binary
+    @Shade = Shader
+    @Route = Route
+    @Mesh = Mesh
+    @Trianglesplane = Trianglesplane
+    @User = User

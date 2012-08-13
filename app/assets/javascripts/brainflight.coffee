@@ -12,5 +12,5 @@ require [ "core_ext" ], ->
       _canvases = $("#render")
       canvases  = _canvases[0]
 
-      Controller.initialize(canvases) 
-      View.initialize()
+      controller = new Controller(canvases) 
+      #View.initialize()

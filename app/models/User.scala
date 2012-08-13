@@ -46,7 +46,7 @@ case class User(
 
 object User extends BasicDAO[User]( "users" ) {
   
-  val default = findLocalByEmail( "scmboy@scalableminds.com" ).get
+  def default = findLocalByEmail( "scmboy@scalableminds.com" ).get
 
   val LocalLoginType = "local"
   

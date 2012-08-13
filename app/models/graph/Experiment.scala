@@ -11,6 +11,8 @@ import play.api.libs.json.Json
 
 case class Experiment(dataSetId: ObjectId, trees: List[Tree], branchPoints: List[BranchPoint], time: Long, activeNodeId: Int, editPosition: Point3D, _id: ObjectId = new ObjectId) {
   def id = _id.toString
+  def tree(treeId: Int) = trees.find( _.id == treeId)
+  def updateTree( tree: Tree) = this.copy( trees = tree :: trees.filter( _.id == tree.id))
 }
 
 object Experiment extends BasicDAO[Experiment]("experiments") {

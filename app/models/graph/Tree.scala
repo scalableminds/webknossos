@@ -5,23 +5,10 @@ import models.Color
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
 
-case class Node(id: Int, radius: Float, position: Point3D, viewport: Int, resolution: Int, timestamp: Long, comment: Option[String] = None)
-
-object Node {
-  def toXML(n: Node) = {
-    <node id={ n.id.toString } radius={ n.radius.toString } x={ n.position.x.toString } y={ n.position.y.toString } z={ n.position.z.toString } inVp={ n.viewport.toString } inMag={ n.resolution.toString } time={ n.timestamp.toString }/>
-  }
+case class Tree(id: Int, nodes: List[Node], edges: List[Edge], color: Color){
+  def addNodes(ns: List[Node]) = this.copy( nodes = nodes ::: ns)
+  def addEdges(es: List[Edge]) = this.copy( edges = edges ::: es)
 }
-
-case class Edge(source: Node, target: Node)
-
-object Edge {
-  def toXML(e: Edge) = {
-    <edge source={ e.source.id.toString } target={ e.target.id.toString }/>
-  }
-}
-
-case class Tree(id: Int, nodes: List[Node], edges: List[Edge], color: Color)
 
 object Tree {
   def toXML(t: Tree) = {

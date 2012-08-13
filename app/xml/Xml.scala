@@ -1,5 +1,7 @@
 package xml
 
+import scala.xml.Node
+
 object Xml {
-  //def toXML( t: T)(implicit object Writes[T]) = {}
+  def toXML[T](t: T)(implicit w: XMLWrites[T]): Node = w.writes(t)
 }

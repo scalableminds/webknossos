@@ -26,6 +26,7 @@ import models.DataSet
 import akka.pattern.AskTimeoutException
 import play.api.libs.iteratee.Concurrent.Channel
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * scalableminds - brainflight

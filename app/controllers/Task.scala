@@ -21,6 +21,7 @@ import play.api.libs.iteratee.Input
 import play.api.libs.iteratee.Done
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.Comet
+import models.DataSet
 
 /**
  * scalableminds - brainflight
@@ -42,9 +43,26 @@ class TaskHandler(var task: Experiment) {
     }
   }
 
+  def createDataSetInformation(dataSetId: ObjectId) =
+    DataSet.findOneById(dataSetId) match {
+      case Some(dataSet) =>
+        Json.obj(
+          "dataSet" -> Json.obj(
+            "id" -> dataSet.id,
+            "resolutions" -> dataSet.supportedResolutions,
+            "upperBoundary" -> dataSet.maxCoordinates))
+      case _ =>
+        Json.obj("error" -> "Couldn't find dataset.")
+    }
+
+  def createTaskInformation = {
+    Json.obj(
+      "task" -> task)
+  }
+
   def unicastOnStart(channel: Channel[JsValue]) {
-    channel.push(Json.obj(
-      "task" -> task))
+    channel.push(
+      createTaskInformation ++ createDataSetInformation(task.dataSetId))
   }
 
   def unicastOnComplete() {
@@ -85,31 +103,24 @@ object Task extends Controller with Secured {
     (iteratee, enumerator)
   }
 
-  def createTaskInformation(user: User, task: Experiment) = {
-    Json.obj(
-      "task" -> task)
-  }
-
-  def initialize(dataSetId: String) = Authenticated {
+  /*def initialize(dataSetId: String) = Authenticated {
     implicit request =>
       val user = request.user
       (for {
         taskId <- user.tasks.headOption
         task <- Experiment.findOneById(taskId)
       } yield Ok(createTaskInformation(user, task))) getOrElse BadRequest("Couldn't open new route.")
-  }
+  }*/
 
-  def connect(dataSetId: String) = AuthenticatedWebSocket[JsValue]() { user =>
+  def connect(taskId: String) = AuthenticatedWebSocket[JsValue]() { user =>
     request =>
       (for {
-        taskId <- user.tasks.headOption
         task <- Experiment.findOneById(taskId)
       } yield (new TaskHandler(task)).openWebsocket()) getOrElse createEOFPair(Some("Couldn't find a task."))
   }
 
-  def cometRCV(dataSetId: String, callback: String) = Authenticated { implicit request =>
+  def cometRCV(taskId: String, callback: String) = Authenticated { implicit request =>
     val (_, output) = (for {
-      taskId <- request.user.tasks.headOption
       task <- Experiment.findOneById(taskId)
     } yield (new TaskHandler(task)).openWebsocket()) getOrElse createEOFPair(Some("Couldn't find a task."))
     Ok.stream(output &> Comet(callback = "parent." + callback))

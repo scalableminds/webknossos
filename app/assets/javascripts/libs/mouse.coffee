@@ -131,7 +131,7 @@ class Mouse
     # check whether the mouseDown event is a rightclick
     if evt.which == 3
       # on rightclick, return mouse position relative to the canvas
-      @changedCallbackR [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top]
+      @changedCallbackR [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
     else
       $(@target).css("cursor", "none")
       @buttonDown = true

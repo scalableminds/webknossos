@@ -9,21 +9,17 @@ TEXTURE_WIDTH = 512
 class Flycam2d
 
   constructor : (width) ->
-    initialBuffer = 256-width/2          # buffer: how many pixels is the texture larger than the canvas on each side?
+    initialBuffer = (TEXTURE_WIDTH - width) / 2          # buffer: how many pixels is the texture larger than the canvas on each side?
     @buffer = [initialBuffer, initialBuffer, initialBuffer]
     @viewportWidth = width
     @newBuckets = [false, false, false]
     @zoomSteps = [0.0, 0.0, 0.0]
     @integerZoomSteps = [0, 0, 0]
-  #  @reset()
     @globalPosition = [0, 0, 0]
     @texturePosition = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
     @direction = [0, 0, 1]
     @hasChanged = true
     @activePlane = PLANE_XY
-
-  #reset : ->
-  #  @zoomSteps=[1,1,1]
 
   zoomIn : (planeID) ->
     @zoomSteps[planeID] -= 0.05
@@ -129,7 +125,7 @@ class Flycam2d
     # As the Model does not render textures for exact positions, the last 5 bits of
     # the X and Y coordinates for each texture have to be set to 0
     for i in [0..2]
-      if i != (planeID+2)%3
+      if i != (planeID + 2) % 3
         @texturePosition[planeID][i] &= -1 << (5 + @integerZoomSteps[planeID])
-    @buffer[planeID] = 256-@viewportWidth*@getTextureScalingFactor(planeID)/2
+    @buffer[planeID] = TEXTURE_WIDTH / 2 - @viewportWidth * @getTextureScalingFactor(planeID) / 2
     @newBuckets[planeID] = false

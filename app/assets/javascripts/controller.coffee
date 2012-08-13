@@ -61,6 +61,7 @@ Controller =
     Model.Route.initialize().then(
       (position) =>
         
+        console.log position
         View.setGlobalPos(position)
         #View.move([46, 36, -530])
         

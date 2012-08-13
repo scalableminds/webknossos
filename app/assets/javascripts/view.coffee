@@ -458,6 +458,46 @@ View =
       @curIndex += 1
       cam2d.hasChanged = true
 
+  showNodeID : (position) ->
+    # vector with direction from camera position to click position
+    vector = new THREE.Vector3((position[0] / (384 * @x) ) * 2 - 1, - (position[1] / (384 * @x)) * 2 + 1, 0.5)
+
+    # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
+    projector = new THREE.Projector()
+    ray = projector.pickingRay(vector, @camera[VIEW_3D])
+    ray.setThreshold(@rayThreshold)
+
+    # identify clicked object
+    intersects = ray.intersectObjects([@routeNodes])
+
+    if (intersects.length > 0 and intersects[0].distance >= 0)
+      unless @c
+        @c = document.createElement('canvas')
+        @c.getContext('2d').font = '50px Arial'
+
+        @tex = new THREE.Texture(@c)
+        @tex.needsUpdate = true
+        @tex.dynamic = true
+        
+        mat = new THREE.MeshBasicMaterial({map: @tex})
+        mat.transparent = true
+
+        titleQuad = new THREE.Mesh(
+          new THREE.PlaneGeometry(@c.width, @c.height),
+          mat
+        )
+
+        titleQuad.doubleSided = true
+        titleQuad.position.set(0,1000,0)
+        @addGeometry VIEW_3D, titleQuad
+
+      @c.getContext('2d').clearRect(0, 0, @c.width, @c.height)
+      objPos = intersects[0].object.geometry.vertices[intersects[0].vertex]
+      @c.getContext('2d').fillText(intersects[0].vertex, position[0], position[1])
+      @tex.needsUpdate = true
+      cam2d.hasChanged = true
+
+
   onPreviewClick : (position) ->
     # vector with direction from camera position to click position
     vector = new THREE.Vector3((position[0] / (384 * @x) ) * 2 - 1, - (position[1] / (384 * @x)) * 2 + 1, 0.5)

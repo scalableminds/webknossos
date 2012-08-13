@@ -11,28 +11,31 @@ import models.Role
 import nml.NMLParser
 import xml.Xml
 
-object NMLIO extends Controller with Secured{
+object NMLIO extends Controller with Secured {
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )
-  
-  def uploadForm = Authenticated{ implicit request =>
+
+  def uploadForm = Authenticated { implicit request =>
     Ok(html.admin.nmlupload(request.user))
   }
-  
-  def upload = Action(parse.multipartFormData){ implicit request =>
+
+  def upload = Action(parse.multipartFormData) { implicit request =>
     request.body.file("nmlFile").map { nmlFile =>
-      (new NMLParser(nmlFile.ref.file).parse).foreach( Experiment.save )
+      (new NMLParser(nmlFile.ref.file).parse).foreach { e =>
+        User.save(User.default.copy(tasks = List(e._id)))
+        Experiment.save(e)
+      }
       Ok("File uploaded")
     }.getOrElse {
       BadRequest("Missing file")
     }
   }
-  
-  def downloadList = Authenticated{ implicit request =>
-    Ok( html.admin.index( request.user, User.findAll ) )
+
+  def downloadList = Authenticated { implicit request =>
+    Ok(html.admin.index(request.user, User.findAll))
   }
-  
-  def download( taskId: String) = Authenticated{ implicit request =>
+
+  def download(taskId: String) = Authenticated { implicit request =>
     (for {
       task <- Experiment.findOneById(taskId)
     } yield {
@@ -41,5 +44,5 @@ object NMLIO extends Controller with Secured{
         CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(task.dataSetId)))
     }) getOrElse BadRequest
   }
-  
+
 }

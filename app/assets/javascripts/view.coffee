@@ -202,8 +202,8 @@ View =
     b = Game.dataSet.upperBoundary
     switch id
       when VIEW_3D
-        scale = Math.sqrt(b[0]*b[0]+b[1]*b[1]+b[2]*b[2])/1.9
-        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale, r: scale, t: scale+scale*0.25, b: -scale+scale*0.25}, 800)
+        scale = Math.sqrt(b[0]*b[0]+b[1]*b[1])/1.8
+        @tween.to({  x: 4000, y: 4000, z: 5000, xRot: @degToRad(-36.25), yRot: @degToRad(30.6), zRot: @degToRad(20.47), l: -scale+scale*(b[0]/(b[0]+b[1])-0.5), r: scale+scale*(b[0]/(b[0]+b[1])-0.5), t: scale-scale*0.1, b: -scale-scale*0.1}, 800)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)

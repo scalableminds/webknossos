@@ -4,6 +4,8 @@ import brainflight.tools.geometry.Point3D
 import models.Color
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
+import xml.XMLWrites
+import xml.Xml
 
 case class Tree(id: Int, nodes: List[Node], edges: List[Edge], color: Color){
   def addNodes(ns: List[Node]) = this.copy( nodes = nodes ::: ns)
@@ -11,13 +13,14 @@ case class Tree(id: Int, nodes: List[Node], edges: List[Edge], color: Color){
 }
 
 object Tree {
-  def toXML(t: Tree) = {
+  implicit object TreeXMLWrites extends XMLWrites[Tree]{
+    def writes(t: Tree) = 
     <thing id={ t.id.toString } color.r={ t.color.r.toString } color.g={ t.color.g.toString } color.b={ t.color.b.toString } color.a={ t.color.a.toString }>
       <nodes>
-        { t.nodes.map(Node.toXML) }
+        { t.nodes.map(n => Xml.toXML(n)) }
       </nodes>
       <edges>
-        { t.edges.map(Edge.toXML) }
+        { t.edges.map(e => Xml.toXML(e)) }
       </edges>
     </thing>
   }

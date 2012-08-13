@@ -9,6 +9,7 @@ import nml._
 import models.graph.Experiment
 import models.Role
 import nml.NMLParser
+import xml.Xml
 
 object NMLIO extends Controller with Secured{
   // TODO remove comment in production
@@ -35,7 +36,7 @@ object NMLIO extends Controller with Secured{
     (for {
       task <- Experiment.findOneById(taskId)
     } yield {
-      Ok(Experiment.toXML(task)).withHeaders(
+      Ok(Xml.toXML(task)).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",
         CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(task.dataSetId)))
     }) getOrElse BadRequest

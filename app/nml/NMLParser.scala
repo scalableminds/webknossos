@@ -62,7 +62,7 @@ class NMLParser(file: File) {
   }
 
   def parseTree(tree: Node): Option[Tree] = {
-    for {
+    (for {
       id <- ((tree \ "@id").text).toIntOpt
       color <- parseColor(tree)
     } yield {
@@ -71,8 +71,11 @@ class NMLParser(file: File) {
 
       val edges = (tree \ "edges" \ "edge").flatMap(parseEdge(nodes)).toList
 
-      Tree(id, nodes.values.toList, edges, color)
-    }
+      if(nodes.size > 0 )
+        Some(Tree(id, nodes.values.toList, edges, color))
+      else
+        None
+    }).flatMap( x => x)
   }
 
   def findRootNode(treeNodes: Map[Int, Node], edges: List[Edge]) = {

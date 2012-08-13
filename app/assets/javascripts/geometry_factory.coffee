@@ -2,7 +2,7 @@
 model : Model
 view : View
 libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
-model/game : Game
+model/route : Route
 ###
 
 
@@ -118,8 +118,8 @@ GeometryFactory =
       View.crosshairs = crosshairs
 
       
-      #create preview Box depending on Game.dataSet.upperBoundary
-      b = Game.dataSet.upperBoundary
+      #create preview Box depending on Route.data.dataSet.upperBoundary
+      b = Route.data.dataSet.upperBoundary
       previewBoxGeometry = new THREE.Geometry()
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], 0))

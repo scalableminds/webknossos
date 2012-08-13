@@ -8,8 +8,6 @@ import scala.collection.mutable.ArrayBuffer
 import akka.agent.Agent
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
-import brainflight.binary.DataBlockInformation
-import brainflight.binary.Data
 import akka.actor.ActorRef
 
 case class SingleRequest( dataSet: DataSet, resolution: Int, point: Point3D )

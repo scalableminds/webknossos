@@ -69,7 +69,7 @@ trait Secured {
       case _ if Play.configuration.getBoolean( "application.enableAutoLogin" ).get =>
         // development setting: if the above key is set, one gets logged in 
         // automatically
-        Some( User.findLocalByEmail( "scmboy@scalableminds.com" ).get.id )  
+        Some( User.default.id )  
       case _ =>
         None
     }

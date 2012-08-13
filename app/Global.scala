@@ -28,7 +28,7 @@ object InitialData {
         "2012-06-28_Cortex",
         Play.configuration.getString("binarydata.path") getOrElse ("binaryData/") + "2012-06-28_Cortex",
         List(0, 1, 2, 3),
-        Point3D(23 * 128, 15 * 128, 7 * 128)))
+        Point3D(24 * 128, 16 * 128, 8 * 128)))
 
     }
 

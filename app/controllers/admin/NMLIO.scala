@@ -19,13 +19,7 @@ object NMLIO extends Controller with Secured{
   }
   
   def upload = Action(parse.multipartFormData){ implicit request =>
-    println("mhm")
     request.body.file("nmlFile").map { nmlFile =>
-      import java.io.File
-      println("called")
-      val filename = nmlFile.filename 
-      val contentType = nmlFile.contentType
-      val fileName = "/tmp/nmlFile"+System.currentTimeMillis
       (new NMLParser(nmlFile.ref.file).parse).foreach( Experiment.save )
       Ok("File uploaded")
     }.getOrElse {

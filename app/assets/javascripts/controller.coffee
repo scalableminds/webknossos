@@ -14,7 +14,7 @@ VIEW_3D  = 3
 
 class Controller
 
-  constructor : (@canvases) ->
+  constructor : ->
 
 
     #create model and View
@@ -29,6 +29,8 @@ class Controller
     # hide contextmenu, while rightclicking a canvas
     $("#render").bind "contextmenu", (event) ->
       event.preventDefault(); return
+
+    @canvases = $("#render")[0]
   
     @model.User.Configuration.initialize().then(
       (data) =>
@@ -171,68 +173,68 @@ class Controller
     deviceorientation : null
 
   #Customize Options
-  setMoveValue : (value) ->
+  setMoveValue : (value) =>
     @model.User.Configuration.moveValue = (Number) value
 
     @model.User.Configuration.push()
 
-  setRotateValue : (value) ->
+  setRotateValue : (value) =>
     @model.User.Configuration.rotateValue = (Number) value 
     @model.User.Configuration.push()   
 
-  setScaleValue : (value) ->
+  setScaleValue : (value) =>
     @model.User.Configuration.scaleValue = (Number) value  
     @model.User.Configuration.push()         
 
-  setMouseRotateValue : (value) ->
+  setMouseRotateValue : (value) =>
     @model.User.Configuration.mouseRotateValue = (Number) value
     @model.User.Configuration.push()      
 
-  setRouteClippingDistance : (value) ->
+  setRouteClippingDistance : (value) =>
     console.log "setRouteClippingDistance()"
     @model.User.Configuration.routeClippingDistance = (Number) value
     @view.setRouteClippingDistance((Number) value)
     @model.User.Configuration.push()   
 
-  setLockZoom : (value) ->
+  setLockZoom : (value) =>
     @model.User.Configuration.lockZoom = value
     @model.User.Configuration.push()      
 
-  setDisplayCrosshair : (value) ->
+  setDisplayCrosshair : (value) =>
     @model.User.Configuration.displayCrosshair = value
     @view.setDisplayCrosshair value
     @model.User.Configuration.push()    
 
-  setDisplayPreviewXY : (value) ->
+  setDisplayPreviewXY : (value) =>
     @model.User.Configuration.displayPreviewXY = value
     @view.setDisplayPreview PLANE_XY, value
     @model.User.Configuration.push()      
 
-  setDisplayPreviewYZ : (value) ->
+  setDisplayPreviewYZ : (value) =>
     @model.User.Configuration.displayPreviewYZ = value
     @view.setDisplayPreview PLANE_YZ, value
     @model.User.Configuration.push()      
 
-  setDisplayPreviewXZ : (value) ->
+  setDisplayPreviewXZ : (value) =>
     @model.User.Configuration.displayPreviewXZ = value
     @view.setDisplayPreview PLANE_XZ, value
     @model.User.Configuration.push()      
 
-  setMouseInversionX : (value) ->
+  setMouseInversionX : (value) =>
     if value is true
       @model.User.Configuration.mouseInversionX = 1
     else
       @model.User.Configuration.mouseInversionX = -1
     @model.User.Configuration.push()         
 
-  setMouseInversionY : (value) ->
+  setMouseInversionY : (value) =>
     if value is true
       @model.User.Configuration.mouseInversionY = 1
     else
       @model.User.Configuration.mouseInversionY = -1
     @model.User.Configuration.push()         
 
-  setMouseActivity : (value) ->
+  setMouseActivity : (value) =>
     @model.User.Configuration.mouseActive = value
     @model.User.Configuration.push()
     if value is false
@@ -241,7 +243,7 @@ class Controller
     else
       @initMouse()
 
-  setKeyboardActivity : (value) ->
+  setKeyboardActivity : (value) =>
     @model.User.Configuration.keyboardActive = value 
     @model.User.Configuration.push()
     if value is false
@@ -250,7 +252,7 @@ class Controller
     else
       @initKeyboard()
 
-  setGamepadActivity : (value) ->
+  setGamepadActivity : (value) =>
     @model.User.Configuration.gamepadActive = value  
     @model.User.Configuration.push()   
     if value is false
@@ -259,7 +261,7 @@ class Controller
     else
       @initGamepad()    
 
-  setMotionSensorActivity : (value) ->
+  setMotionSensorActivity : (value) =>
     @model.User.Configuration.motionsensorActive = value
     @model.User.Configuration.push()   
     if value is false

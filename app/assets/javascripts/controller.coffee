@@ -121,8 +121,14 @@ Controller =
     
     new Input.KeyboardNoLoop(
       #Branches
-      "b" : -> Model.Route.putBranch(View.getGlobalPos())
-      "h" : -> Model.Route.popBranch().done((position) -> View.setGlobalPos(position))
+      "b" : -> 
+        Model.Route.putBranch(View.getGlobalPos())
+        View.setWaypoint(View.getGlobalPos(), 1)
+      "h" : -> Model.Route.popBranch().done(
+        (position) -> 
+          View.setGlobalPos(position)
+          View.setActiveNodePosition(position)
+        )
 
       #Zoom in/out
       "o" : -> View.zoomIn()

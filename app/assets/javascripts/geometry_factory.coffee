@@ -140,11 +140,11 @@ GeometryFactory =
       previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
       View.addGeometry VIEW_3D, previewBox
 
-      strings   = ["0, 0, 0", b[0]+", 0, 0", "0, "+b[2]+", 0", "0, 0, "+b[2]]
+      strings   = ["0, 0, 0", b[0]+", 0, 0", "0, "+b[1]+", 0", "0, 0, "+b[2]]
       positions = [new THREE.Vector3(0, b[2], 0), new THREE.Vector3(b[0], b[2], 0), new THREE.Vector3(0, b[2], b[1]), new THREE.Vector3(0, 0, 0)]
       texts     = new Array(4)
       for i in [0..3]
-        texts[i] = new THREE.Mesh(new THREE.TextGeometry(strings[i], {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+        texts[i] = new THREE.Mesh(new THREE.TextGeometry(strings[i], {size : 150, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
         texts[i].position = positions[i]
         View.addGeometry VIEW_3D, texts[i]
       View.texts = texts

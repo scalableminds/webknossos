@@ -3,12 +3,13 @@ libs/flycam : Flycam
 libs/flycam2 : Flycam2d
 libs/Tween : TWEEN_LIB
 model/game : Game
+libs/event_mixin : EventMixin
 ###
 
 #model : Model
     
 # global View variables
-# cam2d = null
+# flycam = null
 
 # constants
 # display 512px out of 512px total width and height
@@ -21,9 +22,12 @@ VIEW_3D  = 3
 
 class View
 
-  constructor : (model) ->
+  constructor : (model, flycam) ->
 
-    @model = model
+    _.extend(this, new EventMixin())
+
+    @model  = model
+    @flycam = flycam
 
     # The "render" div serves as a container for the canvas, that is 
     # attached to it once a renderer has been initalized.
@@ -92,7 +96,7 @@ class View
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
-    # $(window).on("bucketloaded", => @cam2d.hasChanged = true; @cam2d.newBuckets = [true, true, true]) 
+    # $(window).on("bucketloaded", => @flycam.hasChanged = true; @flycam.newBuckets = [true, true, true]) 
 
   animate : ->
 
@@ -104,6 +108,8 @@ class View
   # All 3D meshes and the trianglesplane are rendered here.
   renderFunction : ->
 
+    @trigger "render"
+
     TWEEN.update()
 
     # skip rendering if nothing has changed
@@ -112,19 +118,23 @@ class View
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
     
     # update postion and FPS displays
-    position2d = @cam2d.getGlobalPos()
-    texturePositionXY = @cam2d.texturePosition[0]
+    position2d = @flycam.getGlobalPos()
+    texturePositionXY = @flycam.texturePosition[0]
     # without rounding the position becomes really long and blocks the canvas mouse input
     position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
     texturePositionXY = [Math.round(texturePositionXY[0]),Math.round(texturePositionXY[1]),Math.round(texturePositionXY[2])]
-    @positionStats.html "Flycam2d: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{@cam2d.getIntegerZoomStep(@cam2d.getActivePlane())}<br />activePlane: #{@cam2d.getActivePlane()}" 
+    @positionStats.html "Flyflycam: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{@flycam.getIntegerZoomStep(@flycam.getActivePlane())}<br />activePlane: #{@flycam.getActivePlane()}" 
     @stats.update()
 
     @newTextures[VIEW_3D] = @newTextures[0] or @newTextures[1] or @newTextures[2]
+    #viewport = [[0, 0], [200, 0], [0, 200], [200, 200]]
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
-      if @cam2d.hasChanged or @newTextures[i]
-        @renderer[i].render @scene[i], @camera[i]
-    @cam2d.hasChanged = false
+    #  if @flycam.hasChanged or @newTextures[i]
+      #@renderer[0].setViewport(viewport[i][0], viewport[i][1], 200, 200)
+      #@renderer[0].setScissor(viewport[i][0], viewport[i][1], 200, 200)
+      #@renderer[0].render @scene[0], @camera[i]
+      @renderer[i].render @scene[i], @camera[i]
+    @flycam.hasChanged = false
     @newTextures = [false, false, false, false]
   
   # Adds a new Three.js geometry to the scene.
@@ -135,7 +145,7 @@ class View
   #Apply a single draw (not used right now)
   draw : ->
     #FIXME: this is dirty
-    @cam2d.hasChanged = true
+    @flycam.hasChanged = true
 
   #Call this after the canvas was resized to fix the viewport
   resize : ->
@@ -169,25 +179,25 @@ class View
 
   zoomIn : =>
     if @model.User.Configuration.lockZoom
-      @cam2d.zoomInAll()
+      @flycam.zoomInAll()
     else 
-      @cam2d.zoomIn(cam2d.getActivePlane())
+      @flycam.zoomIn(flycam.getActivePlane())
     @updateRoute()
     @updateCamDistance()
 
   zoomOut : =>
     if @model.User.Configuration.lockZoom
-      @cam2d.zoomOutAll()
+      @flycam.zoomOutAll()
     else 
-      @cam2d.zoomOut(cam2d.getActivePlane())
+      @flycam.zoomOut(flycam.getActivePlane())
     @updateRoute()
     @updateCamDistance()
 
   updateCamDistance : ->
     for i in [0..2]
-      @camera[i].near = - @camDistance/@cam2d.getPlaneScalingFactor(i)
+      @camera[i].near = - @camDistance/@flycam.getPlaneScalingFactor(i)
       @camera[i].updateProjectionMatrix()
-    @cam2d.hasChanged = true
+    @flycam.hasChanged = true
 
   setRouteClippingDistance : (value) ->
     @camDistance = value
@@ -203,7 +213,7 @@ class View
     @setActivePlane PLANE_XZ
 
   setActivePlane : (planeID) =>
-    @cam2d.setActivePlane planeID
+    @flycam.setActivePlane planeID
     for i in [0..2]
       $("canvas")[i].style.borderColor = if i==planeID then "#f8f800" else "#C7D1D8"
 
@@ -212,9 +222,9 @@ class View
     @updateRoute()
 
   setWaypoint : (position, typeNumber) =>
-    curGlobalPos = @cam2d.getGlobalPos()
-    activePlane  = @cam2d.getActivePlane()
-    zoomFactor   = @cam2d.getPlaneScalingFactor activePlane
+    curGlobalPos = @flycam.getGlobalPos()
+    activePlane  = @flycam.getActivePlane()
+    zoomFactor   = @flycam.getPlaneScalingFactor activePlane
 
     if typeNumber == 0
       # calculate the global position of the rightclick
@@ -240,7 +250,7 @@ class View
       @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[2] - position[2], position[1])
       @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], Game.dataSet.upperBoundary[2] - position[2], position[1])
       for i in [0..2]
-        ind = @cam2d.getIndices i
+        ind = @flycam.getIndices i
         @routeView[i].geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[ind[0]], -@lastNodePosition[ind[1]], -@lastNodePosition[ind[2]])
         @routeView[i].geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[ind[0]], -position[ind[1]], -position[ind[2]])
         @routeView[i].geometry.verticesNeedUpdate = true
@@ -255,16 +265,16 @@ class View
       #@addGeometry VIEW_3D, particle
 
       # Animation to center waypoint position
-      @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], cam2d: @cam2d, updateRoute: @updateRoute})
+      @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam, updateRoute: @updateRoute})
       @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 300)
       @waypointAnimation.onUpdate ->
-        @cam2d.setGlobalPos [@globalPosX, @globalPosY, @globalPosZ]
+        @flycam.setGlobalPos [@globalPosX, @globalPosY, @globalPosZ]
         @updateRoute()
       @waypointAnimation.start()
     
       @lastNodePosition = position
       @curIndex += 1
-      @cam2d.hasChanged = true
+      @flycam.hasChanged = true
 
   onPreviewClick : (position) =>
     # vector with direction from camera position to click position
@@ -282,7 +292,7 @@ class View
       intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
       objPos = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # jump to the nodes position
-      @cam2d.setGlobalPos [objPos.x, objPos.z, -objPos.y + Game.dataSet.upperBoundary[2]]
+      @flycam.setGlobalPos [objPos.x, objPos.z, -objPos.y + Game.dataSet.upperBoundary[2]]
       @updateRoute()
 
   createRoute : (maxRouteLen) ->
@@ -317,9 +327,9 @@ class View
     routeNodes = new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 5, sizeAttenuation : false}))
 
     # Initializing Position
-    gPos = @cam2d.getGlobalPos()
+    gPos = @flycam.getGlobalPos()
     for i in [0..2]
-      ind = @cam2d.getIndices i
+      ind = @flycam.getIndices i
       routeView[i].position = new THREE.Vector3(-gPos[ind[0]], gPos[ind[1]], gPos[ind[2]])
 
     # set initial ray threshold to define initial click area
@@ -336,11 +346,11 @@ class View
     @routeNodes = routeNodes
 
   updateRoute : =>
-    gPos                = @cam2d.getGlobalPos()
-    scale               = [@cam2d.getPlaneScalingFactor(PLANE_XY), @cam2d.getPlaneScalingFactor(PLANE_YZ), @cam2d.getPlaneScalingFactor(PLANE_XZ)]
+    gPos                = @flycam.getGlobalPos()
+    scale               = [@flycam.getPlaneScalingFactor(PLANE_XY), @flycam.getPlaneScalingFactor(PLANE_YZ), @flycam.getPlaneScalingFactor(PLANE_XZ)]
     
     for i in [0..2]
-      ind = @cam2d.getIndices i
+      ind = @flycam.getIndices i
       @routeView[i].scale    = new THREE.Vector3(1/scale[i], 1/scale[i], 1/scale[i])
       @routeView[i].position = new THREE.Vector3(-gPos[ind[0]]/scale[i], gPos[ind[1]]/scale[i], gPos[ind[2]]/scale[i]+1)
       @routeView[i].geometry.verticesNeedUpdate = true

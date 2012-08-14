@@ -7,8 +7,8 @@ input : Input
 helper : Helper
 libs/flycam2 : Flycam
 geometries/plane : Plane
-controller/svcameracontroller : SvCameraController
-geometries/skeletonview : SkeletonView
+controller/cameracontroller : CameraController
+controller/scenecontroller : SceneController
 ###
 
 PLANE_XY         = 0
@@ -31,20 +31,13 @@ class Controller
     @view  = new View(@model, @flycam)
     @view.on "render", (event) => @render()
 
-    # create Meshes and add to View
-    @mainPlanes = new Array(3)
-    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @mainPlanes[i] = new Plane(WIDTH, TEXTURE_WIDTH, @flycam, i, @model)
-      @mainPlanes[i].plane.rotation.x = 90 /180*Math.PI
-      for mesh in @mainPlanes[i].getMeshes()
-        @view.addGeometry(i, mesh)
-    @skeletonView = new SkeletonView([2000, 2000, 2000], @flycam, @model, @mainPlanes)
-    svMeshes      = @skeletonView.getMeshes()
-    for mesh in svMeshes
+    @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model, @mainPlanes)
+    meshes      = @sceneController.getMeshes()
+    for mesh in meshes
       @view.addGeometry(VIEW_3D, mesh)
 
     # initialize Skeleton View Camera Controller
-    @svCameraController = new SvCameraController(@view.getSvCamera, @flycam, [2000, 2000, 2000], @skeletonView)
+    @cameraController = new CameraController(@view.getCameras(), @flycam, [2000, 2000, 2000], @sceneController)
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -111,7 +104,7 @@ class Controller
     # initializes an Input.Mouse object with the three canvas
     # elements and one pair of callbacks per canvas
     @input.mouses = new Input.Mouse(
-      [@view.renderer[PLANE_XY].domElement, @view.renderer[PLANE_YZ].domElement, @view.renderer[PLANE_XZ].domElement, @view.renderer[VIEW_3D].domElement]
+      [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
       [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
       {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : _.bind(@view.setWaypoint, @view)}
       {"x" : @view.movePrevX, "y" : @view.movePrevY, "w" : @view.zoomPrev, "r" : _.bind(@view.onPreviewClick, @view)}
@@ -198,10 +191,9 @@ class Controller
     deviceorientation : null
 
   render : ->
-    @model.Binary.ping @flycam.getGlobalPos(), @flycam.getIntegerZoomSteps()
-    @skeletonView.update()
-    for plane in @mainPlanes
-      plane.updateTexture()
+    @model.Binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
+    @cameraController.update()
+    @sceneController.update()
 
   move  : (v) =>                 # v: Vector represented as array of length 3
     @flycam.moveActivePlane(v)

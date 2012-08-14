@@ -75,7 +75,7 @@ class Plane
       if texture?
         @plane.texture = texture.clone()
       else if @model?
-        console.log "Args: " + [@flycam.getTexturePosition(@planeID), @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID]
+        #console.log "Args: " + [@flycam.getTexturePosition(@planeID), @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID]
         @model.Binary.get(@flycam.getTexturePosition(@planeID), @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID).done (buffer) =>
           if buffer
             @plane.texture.image.data.set(buffer)

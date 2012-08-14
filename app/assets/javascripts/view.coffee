@@ -33,8 +33,8 @@ class View
     # attached to it once a renderer has been initalized.
     container = $("#render")
     # Create a 4x4 grid
-    @curWidth = WIDTH = (container.width()-48)/2
-    HEIGHT = (container.height()-48)/2
+    @curWidth = WIDTH = (container.width()-20)/2
+    HEIGHT = (container.height()-20)/2
     @x = 1
 
     @geometries = []
@@ -43,25 +43,29 @@ class View
     # Max. distance the route may have from the main plane in order to be displayed:
     @camDistance = 40
     colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
-    @renderer = new Array(4)
+    @renderer = new THREE.WebGLRenderer({clearColor: colors[i], clearAlpha: 1, antialias: false})
     @camera   = new Array(4)
-    @scene    = new Array(4)
+    @scene    = new THREE.Scene()
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
       camDistance  = if i==VIEW_3D then 100000 else @camDistance
-      @renderer[i] = new THREE.WebGLRenderer({clearColor: colors[i], clearAlpha: 1, antialias: false})
-      @camera[i]   = new THREE.OrthographicCamera(-192, 192, 192, -192, -camDistance, camDistance)
-      @scene[i]    = new THREE.Scene()
+      boundary     = if i==VIEW_3D then 300    else VIEWPORT_WIDTH/2
+      @camera[i]   = new THREE.OrthographicCamera(-boundary, boundary, boundary, -boundary, -camDistance, camDistance)
 
       # Let's set up cameras
-      # The cameras are never "moved". They only look at the scenes
+      # The cameras are never "moved". They only look at the scene
       # (the trianglesplanes in particular)
-      @scene[i].add @camera[i]
-      @camera[i].position.z = 1
-      @camera[i].lookAt(new THREE.Vector3( 0, 0, 0))
+      @scene.add @camera[i]
+    @camera[PLANE_XY].position.z = -1
+    @camera[PLANE_YZ].position.x =  1
+    @camera[PLANE_XZ].position.y =  1
+    @camera[VIEW_3D].position    = new THREE.Vector3(10, 10, -10)
+    @camera[VIEW_3D].up          = new THREE.Vector3(0, 0, -1)
+    for cam in @camera
+      cam.lookAt(new THREE.Vector3( 0, 0, 0))
 
-      # Attach the canvas to the container
-      @renderer[i].setSize WIDTH, HEIGHT
-      container.append @renderer[i].domElement
+    # Attach the canvas to the container
+    @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
+    container.append @renderer.domElement
 
     @prevControls = $('#prevControls')
     values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
@@ -127,20 +131,25 @@ class View
     @stats.update()
 
     @newTextures[VIEW_3D] = @newTextures[0] or @newTextures[1] or @newTextures[2]
-    #viewport = [[0, 0], [200, 0], [0, 200], [200, 200]]
+    viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
+    @renderer.autoClear = true
+    colors   = [ 0xff0000, 0x00ff00, 0x0000ff, 0xffffff]
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
     #  if @flycam.hasChanged or @newTextures[i]
-      #@renderer[0].setViewport(viewport[i][0], viewport[i][1], 200, 200)
-      #@renderer[0].setScissor(viewport[i][0], viewport[i][1], 200, 200)
-      #@renderer[0].render @scene[0], @camera[i]
-      @renderer[i].render @scene[i], @camera[i]
+      if @scene.__objects[0]?
+        @scene.__objects[0].visible = (i!=2)
+      @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
+      @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
+      @renderer.enableScissorTest(true)
+      @renderer.setClearColor(colors[i], 1);
+      @renderer.render @scene, @camera[i]
     @flycam.hasChanged = false
     @newTextures = [false, false, false, false]
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
   addGeometry : (planeID, geometry) ->
-    @scene[planeID].add geometry
+    @scene.add geometry
 
   #Apply a single draw (not used right now)
   draw : ->
@@ -154,8 +163,8 @@ class View
     WIDTH = (container.width()-49)/2
     HEIGHT = (container.height()-49)/2
 
+    @renderer.setSize( 2*WIDTH+20, 4*HEIGHT+20)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
-      @renderer[i].setSize( WIDTH, HEIGHT)
       @camera[i].aspect = WIDTH / HEIGHT
       @camera[i].updateProjectionMatrix()
     @draw()
@@ -215,7 +224,7 @@ class View
   setActivePlane : (planeID) =>
     @flycam.setActivePlane planeID
     for i in [0..2]
-      $("canvas")[i].style.borderColor = if i==planeID then "#f8f800" else "#C7D1D8"
+      $(".inputcatcher")[i].style.borderColor = if i==planeID then "#f8f800" else "#C7D1D8"
 
   setActiveNodePosition : (position) ->
     @lastNodePosition = position
@@ -355,5 +364,5 @@ class View
       @routeView[i].position = new THREE.Vector3(-gPos[ind[0]]/scale[i], gPos[ind[1]]/scale[i], gPos[ind[2]]/scale[i]+1)
       @routeView[i].geometry.verticesNeedUpdate = true
 
-  getSvCamera : =>
-    @camera[VIEW_3D]
+  getCameras : =>
+    @camera

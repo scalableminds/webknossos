@@ -10,6 +10,7 @@ import play.api.libs.json.Writes
 import play.api.libs.json.Json
 import xml.Xml
 import xml.XMLWrites
+import Tree.TreeWrites
 
 case class Experiment(dataSetId: ObjectId, trees: List[Tree], branchPoints: List[BranchPoint], time: Long, activeNodeId: Int, editPosition: Point3D, _id: ObjectId = new ObjectId) {
   def id = _id.toString
@@ -62,7 +63,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
   implicit object ExperimentWrites extends Writes[Experiment] {
     def writes(e: Experiment) = Json.obj(
       "id" -> e.id,
-      "trees" -> e.trees,
+      "trees" -> e.trees.foldLeft(Json.obj())((o,t) => o ++ TreeWrites.writes(t)),
       "activeNode" -> e.activeNodeId,
       "branchPoints" -> e.branchPoints,
       "editPosition" -> e.editPosition)

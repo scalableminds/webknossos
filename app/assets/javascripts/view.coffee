@@ -125,17 +125,17 @@ class View
     @newTextures[VIEW_3D] = @newTextures[0] or @newTextures[1] or @newTextures[2]
     viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
     @renderer.autoClear = true
-    colors   = [ 0xff0000, 0x00ff00, 0x0000ff, 0xffffff]
-    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
-      @trigger "renderCam", i
-    #  if @flycam.hasChanged or @newTextures[i]
-      @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
-      @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
-      @renderer.enableScissorTest(true)
-      @renderer.setClearColorHex(colors[i], 0.5);
-      @renderer.render @scene, @camera[i]
+    colors   = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
+    if @flycam.hasChanged or @flycam.hasNewTextures()
+      for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
+        @trigger "renderCam", i
+        @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
+        @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
+        @renderer.enableScissorTest(true)
+        @renderer.setClearColorHex(colors[i], 1);
+        @renderer.render @scene, @camera[i]
     @flycam.hasChanged = false
-    @newTextures = [false, false, false, false]
+    @flycam.hasNewTexture = [false, false, false]
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.

@@ -17,7 +17,7 @@ class Flycam2d
     @viewportWidth = width
     # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
     @maxZoomStepDiff = Math.min(Math.log(MAX_ZOOM_TRESHOLD) / Math.LN2, Math.log((TEXTURE_WIDTH-MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
-    @newBuckets = [false, false, false]
+    @hasNewTexture = [false, false, false]
     @zoomSteps = [0.0, 0.0, 0.0]
     @integerZoomSteps = [0, 0, 0]
   #  @reset()
@@ -140,4 +140,6 @@ class Flycam2d
       if i != (planeID+2)%3
         @texturePosition[planeID][i] &= -1 << (5 + @integerZoomSteps[planeID])
     @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
-    @newBuckets[planeID] = false
+
+  hasNewTextures : ->
+    (@hasNewTexture[PLANE_XY] or @hasNewTexture[PLANE_YZ] or @hasNewTexture[PLANE_XZ])

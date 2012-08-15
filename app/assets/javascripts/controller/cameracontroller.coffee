@@ -39,32 +39,32 @@ class CameraController
 
     camera = @cameras[VIEW_3D]
     b = @upperBoundary
-    time = 2000
+    time = 800
     console.log "From up: " + [camera.up.x, camera.up.y, camera.up.z]
-    @tween = new TWEEN.Tween({  middle: new THREE.Vector3(b[0]/2, b[1]/2, b[2]/2), upX: camera.up.x, upY: camera.up.y, upZ: camera.up.Z, camera: camera,flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
+    @tween = new TWEEN.Tween({  middle: new THREE.Vector3(b[0]/2, b[1]/2, b[2]/2), upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera,flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
     switch id
       when VIEW_3D
         scale = Math.sqrt(b[0]*b[0]+b[1]*b[1])/1.8
         console.log "To up: " + [0, 0, -1]
-        @tween.to({  x: 100, y: 100, z: -100, upX: 0, upY: 0, upZ: -1, l: -scale+scale*(b[0]/(b[0]+b[1])-0.5), r: scale+scale*(b[0]/(b[0]+b[1])-0.5), t: scale-scale*0.1, b: -scale-scale*0.1}, time)
+        @tween.to({  x: b[0]*0.8, y: b[1], z: b[2] / 5, upX: 0, upY: 0, upZ: -1, l: -scale+scale*(b[0]/ (b[0]+b[1])-0.5), r: scale+scale*(b[0]/(b[0]+b[1])-0.5), t: scale-scale*0.1, b: -scale-scale*0.1}, time)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)
       when PLANE_XY
         scale = (Math.max b[0], b[1])/1.75
-        @tween.to({  x: b[0]/2, y: b[1]/2, z: -1, upX: 0, upY: -1, upZ: 0, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
+        @tween.to({  x: b[0]/2, y: b[1]/2, z: 0, upX: 0, upY: -1, upZ: 0, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-90, 0, 90) -> (-90, 0, 0)
       when PLANE_YZ
         scale = (Math.max b[1], b[2])/1.75
-        @tween.to({  x: 1, y: b[1]/2, z: b[2]/2, upX: 0, upY: -1, upZ: 0, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
+        @tween.to({  x: b[0], y: b[1]/2, z: b[2]/2, upX: 0, upY: -1, upZ: 0, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 90, 0) -> (-90, 90, 0)
       when PLANE_XZ
         scale = (Math.max b[0], b[2])/1.75
-        @tween.to({  x: b[0]/2, y: 1, z: b[2]/2, upX: 0, upY: 0, upZ: -1, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
+        @tween.to({  x: b[0]/2, y: b[1], z: b[2]/2, upX: 0, upY: 0, upZ: -1, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 0, 0) -> (0, 0, 0)
@@ -84,13 +84,11 @@ class CameraController
     @camera.top = @t
     @camera.bottom = @b
     @camera.up = new THREE.Vector3(@upX, @upY, @upZ)
-    console.log [@upX, @upY, @upZ]
     @camera.lookAt(@middle)
 
     @sv.setTextRotation(@xRot, @yRot, @zRot)
     @camera.updateProjectionMatrix()
     @flycam.hasChanged = true
-    console.log "updateCameraPrev()"
     
   prevViewportSize : ->
     (@cameras[VIEW_3D].right - @cameras[VIEW_3D].left)         # always quadratic

@@ -101,6 +101,7 @@ class Controller
       (position) =>
         
         @flycam.setGlobalPos(position)
+        @cameraController.changePrevSV()
         #View.move([46, 36, -530])
         
         # set initial direction

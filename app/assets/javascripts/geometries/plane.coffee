@@ -65,25 +65,21 @@ class Plane
   setDisplayPlane : (value) =>
     @plane.visible = value
 
-  updateTexture : (texture) =>
+  updateTexture : =>
 
       globalPos = @flycam.getGlobalPos()
 
       if @flycam.needsUpdate @planeID
         @flycam.notifyNewTexture @planeID
 
-      if texture?
-        @plane.texture = texture.clone()
-      else if @model?
-        #console.log "Args: " + [@flycam.getTexturePosition(@planeID), @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID]
+      if @model?
         @model.Binary.get(@flycam.getTexturePosition(@planeID), @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID).done (buffer) =>
           if buffer
             @plane.texture.image.data.set(buffer)
-            #@newTextures[dimension] = true
+            @flycam.hasNewTexture[@planeID] = true
 
-      #@newTextures[dimension] |= @cam2d.hasChanged
-      #if !@newTextures[dimension]
-      #  continue
+      if !@flycam.hasNewTexture[@planeID] and !@flycam.hasChanged
+        return
 
       @plane.texture.needsUpdate = true
       @plane.material.map = @plane.texture

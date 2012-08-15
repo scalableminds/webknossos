@@ -113,6 +113,7 @@ PullQueue =
 
     Route.initialize().pipe ->
       dataSetId = Route.data.dataSet.id
+      console.log dataSetId
       new SimpleArrayBufferSocket(
         defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{dataSetId}&cubeSize=32")
         fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{dataSetId}&cubeSize=32")

@@ -1269,7 +1269,7 @@ THREE.Ray.prototype = {
 				object.matrixWorld.multiplyVector3( point.clone() )
 			);
 
-			if ( distance > this.threshold ) {
+			if ( distance > this.threshold || isNaN(distance)) {
 				continue;
 			}
 

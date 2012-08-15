@@ -45,8 +45,8 @@ class Plane
     @crosshair          = new Array(2)
     for i in [0..1]
       crosshairGeometries[i] = new THREE.Geometry()
-      crosshairGeometries[i].vertices.push(new THREE.Vector3(-pWidth/2*i, -pWidth/2*(1-i), 1))
-      crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i,  pWidth/2*(1-i), 1))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3(-pWidth/2*i, 1, -pWidth/2*(1-i)))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i, 1,  pWidth/2*(1-i)))
       @crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({color: CROSSHAIR_COLORS[@planeID][i], linewidth: 1}))
       
     # create borders
@@ -103,8 +103,16 @@ class Plane
     @plane.rotation = @prevBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
 
   setPosition : (posVec) =>
+    #@plane.position = posVec
+    #offset = new THREE.Vector3(0, 0, 0)
+    #if      @planeID==PLANE_XY then  offset.z =-1
+    #else if @planeID==PLANE_YZ then  offset.x = 1
+    #else if @planeID==PLANE_XZ then  offset.y = 1
+    #@prevBorders.position = @crosshair[0].position = @crosshair[1].position = posVec.add(posVec, offset)
     @plane.position = @prevBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
-    @prevBorders.position.z = @crosshair[0].position.z = @crosshair[1].position.z = posVec.z + 1
+
+  setVisible : (visible) =>
+    @plane.visible = @prevBorders.visible = @crosshair[0].visible = @crosshair[1].visible = visible
 
   getMeshes : =>
     [@plane, @prevBorders, @crosshair[0], @crosshair[1]]

@@ -43,7 +43,7 @@ class SceneController
 
     # TODO: Implement text 
 
-    @skeleton = new Skeleton(10000, @view, @flycam)
+    @skeleton = new Skeleton(10000, @flycam)
 
     # create Meshes
     @planes = new Array(3)
@@ -89,6 +89,9 @@ class SceneController
   setWaypoint : (position, typeNumber) =>
     @skeleton.setWaypoint(position, typeNumber)
 
+  onPreviewClick : (position, scaleFactor, camera) =>
+    @skeleton.onPreviewClick(position, scaleFactor, camera)
+
   setActiveNodePosition : (position) =>
     @skeleton.setActiveNodePosition(position)
 
@@ -96,7 +99,7 @@ class SceneController
     result = []
     for plane in @planes
       result = result.concat(plane.getMeshes())
-    result.concat(@skeleton.getMeshes())
+    result = result.concat(@skeleton.getMeshes())
     result.push(@cube)
     console.log "result: " + result
     return result

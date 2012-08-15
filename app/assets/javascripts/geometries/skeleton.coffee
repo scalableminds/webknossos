@@ -1,6 +1,5 @@
 ### define
 model : Model
-view : View
 ###
 
 class Skeleton
@@ -8,9 +7,8 @@ class Skeleton
   # This class is supposed to collect all the Geometries that belong to the skeleton, like
   # nodes, edges and trees
 
-  constructor : (maxRouteLen, view, flycam) ->
+  constructor : (maxRouteLen, flycam) ->
     @maxRouteLen = maxRouteLen
-    @view = view
     @flycam = flycam
 
     @createRoute(maxRouteLen)
@@ -27,12 +25,12 @@ class Skeleton
     i = 0
     while i < maxRouteLen
       # workaround to hide the unused vertices
-      routeGeometry.vertices.push(new THREE.Vector2(0,0))
+      routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
       i += 1
 
     i = 0
     while i < 2 * maxRouteLen
-      routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
+      routeGeometry.vertices.push(new THREE.Vector2(0,0))
       i += 1
 
     route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces)
@@ -40,7 +38,6 @@ class Skeleton
 
     # set initial ray threshold to define initial click area
     @particles = []
-    @rayThreshold = 100
 
     @route = route
     @routeNodes = routeNodes
@@ -48,14 +45,14 @@ class Skeleton
   setActiveNodePosition : (position) =>
     @lastNodePosition = position
 
-  getMeshes : ->
+  getMeshes : =>
     [@route, @routeNodes]
 
   setWaypoint : (position, typeNumber) =>
     curGlobalPos = @flycam.getGlobalPos()
       
     console.log position
-    
+
     unless @curIndex
       @curIndex = 0
       @lastNodePosition = position
@@ -96,14 +93,14 @@ class Skeleton
       @curIndex += 1
       @flycam.hasChanged = true
 
-  onPreviewClick : (position) =>
+  onPreviewClick : (position, scaleFactor, camera) =>
     # vector with direction from camera position to click position
-    vector = new THREE.Vector3((position[0] / (384 * @x) ) * 2 - 1, - (position[1] / (384 * @x)) * 2 + 1, 0.5)
+    vector = new THREE.Vector3((position[0] / (384 * scaleFactor) ) * 2 - 1, - (position[1] / (384 * scaleFactor)) * 2 + 1, 0.5)
     
     # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()
-    ray = projector.pickingRay(vector, @camera[VIEW_3D])
-    ray.setThreshold(@rayThreshold)
+    ray = projector.pickingRay(vector, camera)
+    ray.setThreshold(@flycam.getRayThreshold())
 
     # identify clicked object
     intersects = ray.intersectObjects([@routeNodes])

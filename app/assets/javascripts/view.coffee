@@ -35,7 +35,7 @@ class View
     # Create a 4x4 grid
     @curWidth = WIDTH = (container.width()-20)/2
     HEIGHT = (container.height()-20)/2
-    @x = 1
+    @scaleFactor = 1
 
     @geometries = []
 
@@ -161,17 +161,17 @@ class View
     @draw()
   
   scaleTrianglesPlane : (delta) =>
-    @x = 1 unless @x
-    if (@x+delta > 0.75) and (@x+delta < 1.5)
-      @x += Number(delta)
-      @curWidth = WIDTH = HEIGHT = @x * 384
+    @scaleFactor = 1 unless @scaleFactor
+    if (@scaleFactor+delta > 0.75) and (@scaleFactor+delta < 1.5)
+      @scaleFactor += Number(delta)
+      @curWidth = WIDTH = HEIGHT = @scaleFactor * 384
       container = $("#render")
       container.width(2 * WIDTH + 48)
       container.height(2 * HEIGHT + 48)
 
       # scales the 3D-view controls
       prevControl = $("#prevControls")
-      prevControl.css({top: @x * 440 + "px", left: @x * 420 + "px"})
+      prevControl.css({top: @scaleFactor * 440 + "px", left: @scaleFactor * 420 + "px"})
 
       @resize()
 

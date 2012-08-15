@@ -17,7 +17,7 @@ class CameraController
   # View. It provides methods to set a certain View (animated).
 
   constructor : (cameras, flycam, upperBoundary, skeletonView) ->
-    @cameras        = cameras
+    @cameras       = cameras
     @flycam        = flycam
     @upperBoundary = upperBoundary
     @skeletonView  = skeletonView
@@ -29,7 +29,6 @@ class CameraController
     @cameras[PLANE_XZ].position = new THREE.Vector3(gPos[0]    , gPos[1] + 1, gPos[2])
 
   changePrev : (id) ->
-    console.log "changePrev()"
     # In order for the rotation to be correct, it is not sufficient
     # to just use THREEJS' lookAt() function, because it may still
     # look at the plane in a wrong angle. Therefore, the rotation
@@ -86,6 +85,8 @@ class CameraController
     @camera.up = new THREE.Vector3(@upX, @upY, @upZ)
     @camera.lookAt(@middle)
 
+    @flycam.setRayThreshold(@camera.right, @camera.left)
+
     @sv.setTextRotation(@xRot, @yRot, @zRot)
     @camera.updateProjectionMatrix()
     @flycam.hasChanged = true
@@ -105,8 +106,7 @@ class CameraController
     camera.bottom = middleY - factor*size/2
     camera.updateProjectionMatrix()
 
-    @rayThreshold = (4)*(camera.right - camera.left)/384
-
+    @flycam.setRayThreshold(camera.right, camera.left)
     @flycam.hasChanged = true
 
   movePrevX : (x) =>

@@ -491,9 +491,12 @@ View =
 
     # initialize edges
     i = 0
-    for edge in initData.trees[0].edges
-      nodePos = initData.trees[0].nodes[edge.source].position
-      node2Pos = initData.trees[0].nodes[edge.target].position
+    index = 0
+    for t of initData.trees
+      index = t
+    for edge in initData.trees[index].edges
+      nodePos = initData.trees[index].nodes[edge.source].position
+      node2Pos = initData.trees[index].nodes[edge.target].position
       routeGeometry.vertices.push(new THREE.Vector3(nodePos[0], Route.data.dataSet.upperBoundary[1] - nodePos[2], nodePos[1]))
       routeGeometry.vertices.push(new THREE.Vector3(node2Pos[0], Route.data.dataSet.upperBoundary[1] - node2Pos[2], node2Pos[1]))
       for g in routeGeometryView
@@ -510,14 +513,14 @@ View =
 
     # initialize edit position
     if i != 0
-      nodePos = initData.trees[0].nodes[initData.activeNode].position
+      nodePos = initData.trees[index].nodes[initData.activeNode].position
       @lastNodePosition = nodePos
 
     # initialize nodes
     i = 0
     while i < maxRouteLen
-      if initData.trees[0].nodes[i]
-        nodePos = initData.trees[0].nodes[i].position
+      if initData.trees[index].nodes[i]
+        nodePos = initData.trees[index].nodes[i].position
         routeGeometryNodes.vertices.push(new THREE.Vector3(nodePos[0], Route.data.dataSet.upperBoundary[1] - nodePos[2], nodePos[1]))
         @curIndex = i + 1
       else

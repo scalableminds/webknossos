@@ -2,6 +2,7 @@
 model : Model
 view : View
 geometries/plane : Plane
+geometries/skeleton : Skeleton
 ###
 
 
@@ -41,6 +42,8 @@ class SceneController
     @cube = new THREE.Line(geo, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
 
     # TODO: Implement text 
+
+    @skeleton = new Skeleton(10000, @view, @flycam)
 
     # create Meshes
     @planes = new Array(3)
@@ -83,10 +86,17 @@ class SceneController
   setTextRotation : (rotVec) =>
     # TODO: Implement
 
+  setWaypoint : (position, typeNumber) =>
+    @skeleton.setWaypoint(position, typeNumber)
+
+  setActiveNodePosition : (position) =>
+    @skeleton.setActiveNodePosition(position)
+
   getMeshes : =>
     result = []
     for plane in @planes
       result = result.concat(plane.getMeshes())
+    result.concat(@skeleton.getMeshes())
     result.push(@cube)
     console.log "result: " + result
     return result

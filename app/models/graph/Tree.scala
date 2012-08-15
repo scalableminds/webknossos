@@ -46,9 +46,10 @@ object Tree {
 
   implicit object TreeWrites extends Writes[Tree] {
     def writes(t: Tree) = Json.obj(
+     t.id.toString -> Json.obj(
       "id" -> t.id,
       "nodes" -> t.nodes.foldLeft(Json.obj())((o,e) => o ++ NodeWrites.writes(e)),
       "edges" -> t.edges,
-      "color" -> t.color)
+      "color" -> t.color))
   }
 }

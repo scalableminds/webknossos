@@ -49,7 +49,7 @@ class View
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
       camDistance  = if i==VIEW_3D then 100000 else @camDistance
       boundary     = if i==VIEW_3D then 300    else VIEWPORT_WIDTH/2
-      @camera[i]   = new THREE.OrthographicCamera(-boundary, boundary, boundary, -boundary, -camDistance, camDistance)
+      @camera[i]   = new THREE.OrthographicCamera(-boundary-2, boundary+2, boundary+2, -boundary-2, -camDistance, camDistance)
 
       # Let's set up cameras
       # The cameras are never "moved". They only look at the scene
@@ -59,24 +59,16 @@ class View
     @camera[PLANE_YZ].position.x =  1
     @camera[PLANE_XZ].position.y =  1
     @camera[VIEW_3D].position    = new THREE.Vector3(10, 10, -10)
-    @camera[VIEW_3D].up          = new THREE.Vector3(0, 0, -1)
+    @camera[PLANE_XY].up         = new THREE.Vector3( 0, -1,  0)
+    @camera[PLANE_YZ].up         = new THREE.Vector3( 0, -1,  0)
+    @camera[PLANE_XZ].up         = new THREE.Vector3( 0,  0, -1)
+    @camera[VIEW_3D].up          = new THREE.Vector3( 0,  0, -1)
     for cam in @camera
       cam.lookAt(new THREE.Vector3( 0, 0, 0))
 
     # Attach the canvas to the container
     @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
     container.append @renderer.domElement
-
-    @prevControls = $('#prevControls')
-    values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
-    callbacks     = [@changePrevXY, @changePrevYZ, @changePrevXZ, @changePrev3D]
-    buttons       = new Array(4)
-    for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-      buttons[i] = document.createElement "input"
-      buttons[i].setAttribute "type", "button"
-      buttons[i].setAttribute "value", values[i]
-      buttons[i].addEventListener "click", callbacks[i], true
-      @prevControls.append buttons[i]
 
     @setActivePlaneXY()
     
@@ -135,13 +127,12 @@ class View
     @renderer.autoClear = true
     colors   = [ 0xff0000, 0x00ff00, 0x0000ff, 0xffffff]
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
+      @trigger "renderCam", i
     #  if @flycam.hasChanged or @newTextures[i]
-      if @scene.__objects[0]?
-        @scene.__objects[0].visible = (i!=2)
       @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
       @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
       @renderer.enableScissorTest(true)
-      @renderer.setClearColor(colors[i], 1);
+      @renderer.setClearColorHex(colors[i], 0.5);
       @renderer.render @scene, @camera[i]
     @flycam.hasChanged = false
     @newTextures = [false, false, false, false]
@@ -224,7 +215,9 @@ class View
   setActivePlane : (planeID) =>
     @flycam.setActivePlane planeID
     for i in [0..2]
-      $(".inputcatcher")[i].style.borderColor = if i==planeID then "#f8f800" else "#C7D1D8"
+      catcherStyle = $(".inputcatcher")[i].style
+      #catcherStyle.borderColor  = "#f8f800"   #  else "#C7D1D8"
+      $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
 
   setActiveNodePosition : (position) ->
     @lastNodePosition = position

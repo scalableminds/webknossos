@@ -29,15 +29,17 @@ class Controller
     @model = new Model()
     @flycam = new Flycam(WIDTH)
     @view  = new View(@model, @flycam)
-    @view.on "render", (event) => @render()
 
     @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model, @mainPlanes)
     meshes      = @sceneController.getMeshes()
     for mesh in meshes
       @view.addGeometry(VIEW_3D, mesh)
 
-    # initialize Skeleton View Camera Controller
+    # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @flycam, [2000, 2000, 2000], @sceneController)
+    
+    @view.on "render", (event) => @render()
+    @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -49,6 +51,18 @@ class Controller
       event.preventDefault(); return
 
     @canvases = $("#render")[0]
+
+    @prevControls = $('#prevControls')
+    values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
+    callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
+                      @cameraController.changePrevXZ, @cameraController.changePrevSV]
+    buttons       = new Array(4)
+    for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
+      buttons[i] = document.createElement "input"
+      buttons[i].setAttribute "type", "button"
+      buttons[i].setAttribute "value", values[i]
+      buttons[i].addEventListener "click", callbacks[i], true
+      @prevControls.append buttons[i]
   
     @model.User.Configuration.initialize().then(
       (data) =>

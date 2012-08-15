@@ -122,7 +122,7 @@ class Controller
       [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
       [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
       {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : _.bind(@view.setWaypoint, @view)}
-      {"x" : @view.movePrevX, "y" : @view.movePrevY, "w" : @view.zoomPrev, "r" : _.bind(@view.onPreviewClick, @view)}
+      {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "r" : _.bind(@view.onPreviewClick, @view)}
     )
 
   initKeyboard : ->

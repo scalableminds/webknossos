@@ -107,18 +107,18 @@ class CameraController
 
     @rayThreshold = (4)*(camera.right - camera.left)/384
 
-    @cam2d.hasChanged = true
+    @flycam.hasChanged = true
 
   movePrevX : (x) =>
     size = @prevViewportSize()
     @cameras[VIEW_3D].left += x*size/384
     @cameras[VIEW_3D].right += x*size/384
     @cameras[VIEW_3D].updateProjectionMatrix()
-    @cam2d.hasChanged = true
+    @flycam.hasChanged = true
 
   movePrevY : (y) =>
     size = @prevViewportSize()
     @cameras[VIEW_3D].top -= y*size/384
     @cameras[VIEW_3D].bottom -= y*size/384
     @cameras[VIEW_3D].updateProjectionMatrix()
-    @cam2d.hasChanged = true
+    @flycam.hasChanged = true

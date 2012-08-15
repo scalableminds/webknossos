@@ -38,7 +38,8 @@ Route =
         Route.data = data
         console.log data
         @id        = data.dataSet.id
-        #@branchStack = data.branches.map (a) -> new Float32Array(a)
+        #@branchStack = data.task.branchPoints.map (a) -> new Float32Array(a)
+        @branchStack = (data.task.trees[branchPoint.treeId].nodes[branchPoint].position for branchPoint in data.task.branchPoints)
         @createBuffer()
         
         $(window).on(
@@ -105,7 +106,7 @@ Route =
       
       @addToBuffer(1, position)
       # push TransformationMatrix for compatibility reasons
-      @branchStack.push([0,0,0,0,0,0,0,0,0,0,0,0,position[0],position[1],position[2],0])
+      @branchStack.push(position)
 
     return
 
@@ -119,7 +120,7 @@ Route =
 
       if branchStack.length > 0
         @addToBuffer(2)
-        deferred.resolve(branchStack.pop().slice(12,15))
+        deferred.resolve(branchStack.pop())
       else
         deferred.reject()
 

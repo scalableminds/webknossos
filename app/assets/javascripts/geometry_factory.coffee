@@ -150,7 +150,7 @@ GeometryFactory =
       View.texts = texts
 
       # create route
-      View.createRoute 10000
+      View.createRoute 10000, Route.data.task
 
       meshes[1][PLANE_YZ].rotation.z = prevBorders[PLANE_YZ].rotation.z = -90 /180*Math.PI
       

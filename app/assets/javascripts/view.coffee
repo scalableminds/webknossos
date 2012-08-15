@@ -477,7 +477,7 @@ View =
       cam2d.setGlobalPos [objPos.x, objPos.z, -objPos.y + Route.data.dataSet.upperBoundary[1]]
       View.updateRoute()
 
-  createRoute : (maxRouteLen) ->
+  createRoute : (maxRouteLen, initData) ->
     # create route to show in previewBox and pre-allocate buffers
     @maxRouteLen = maxRouteLen
     routeGeometry = new THREE.Geometry()
@@ -489,17 +489,39 @@ View =
       routeGeometryView[i] = new THREE.Geometry()
       routeGeometryView[i].dynamic = true
 
+    # initialize edges
     i = 0
-    while i < maxRouteLen
+    for edge in initData.trees[0].edges
+      nodePos = initData.trees[0].nodes[edge.source].position
+      node2Pos = initData.trees[0].nodes[edge.target].position
+      routeGeometry.vertices.push(new THREE.Vector3(nodePos[0], Route.data.dataSet.upperBoundary[1] - nodePos[2], nodePos[1]))
+      routeGeometry.vertices.push(new THREE.Vector3(node2Pos[0], Route.data.dataSet.upperBoundary[1] - node2Pos[2], node2Pos[1]))
+      for g in routeGeometryView
+        g.vertices.push(new THREE.Vector3(nodePos[0], Route.data.dataSet.upperBoundary[1] - nodePos[2], nodePos[1]))
+        g.vertices.push(new THREE.Vector3(node2Pos[0], Route.data.dataSet.upperBoundary[1] - node2Pos[2], node2Pos[1]))
+      i += 2
+
+    while i < 2 * maxRouteLen
       # workaround to hide the unused vertices
       routeGeometry.vertices.push(new THREE.Vector2(0,0))
       for g in routeGeometryView
         g.vertices.push(new THREE.Vector2(0, 0))
       i += 1
 
+    # initialize edit position
+    if i != 0
+      nodePos = initData.trees[0].nodes[initData.activeNode].position
+      @lastNodePosition = nodePos
+
+    # initialize nodes
     i = 0
-    while i < 2 * maxRouteLen
-      routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
+    while i < maxRouteLen
+      if initData.trees[0].nodes[i]
+        nodePos = initData.trees[0].nodes[i].position
+        routeGeometryNodes.vertices.push(new THREE.Vector3(nodePos[0], Route.data.dataSet.upperBoundary[1] - nodePos[2], nodePos[1]))
+        @curIndex = i + 1
+      else
+        routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
       i += 1
 
     route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces)

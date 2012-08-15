@@ -122,7 +122,7 @@ class Controller
       [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
       [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
       {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : @setWaypoint}
-      {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "r" : @view.onPreviewClick}
+      {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "r" : @onPreviewClick}
     )
 
   initKeyboard : ->
@@ -221,12 +221,15 @@ class Controller
     curGlobalPos = @flycam.getGlobalPos()
     activePlane  = @flycam.getActivePlane()
     zoomFactor   = @flycam.getPlaneScalingFactor activePlane
-    scaleFactor  = @view.x
+    scaleFactor  = @view.scaleFactor
     switch activePlane
       when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2]]
       when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
       when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
     @sceneController.setWaypoint(position, typeNumber)
+
+  onPreviewClick : (position) =>
+    @sceneController.onPreviewClick(position, @view.scaleFactor, @view.getCameras()[VIEW_3D])
 
   #Customize Options
   setMoveValue : (value) =>

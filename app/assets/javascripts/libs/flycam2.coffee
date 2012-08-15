@@ -26,6 +26,7 @@ class Flycam2d
     @direction = [0, 0, 1]
     @hasChanged = true
     @activePlane = PLANE_XY
+    @rayThreshold = 100
 
   #reset : ->
   #  @zoomSteps=[1,1,1]
@@ -143,3 +144,9 @@ class Flycam2d
 
   hasNewTextures : ->
     (@hasNewTexture[PLANE_XY] or @hasNewTexture[PLANE_YZ] or @hasNewTexture[PLANE_XZ])
+
+  setRayThreshold : (cameraRight, cameraLeft) ->
+    @rayThreshold = 4 * (cameraRight - cameraLeft) / 384
+
+  getRayThreshold : ->
+    @rayThreshold

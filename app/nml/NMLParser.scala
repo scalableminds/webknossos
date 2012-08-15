@@ -26,9 +26,9 @@ class NMLParser(file: File) {
       activeNodeId <- ((parameters \ "activeNode" \ "@id").text).toIntOpt
       dataSet <- DataSet.findOneByName(dataSetId.text)
     } yield {
-      val trees = (data \ "thing").flatMap(parseTree)
-      val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint)
-      Experiment(dataSet._id, trees.toList, branchPoints.toList, time, activeNodeId, editPosition)
+      val trees = (data \ "thing").flatMap(parseTree).toList
+      val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
+      Experiment(dataSet._id, trees, branchPoints.toList, time, activeNodeId, editPosition)
     }
   }
 
@@ -36,9 +36,11 @@ class NMLParser(file: File) {
     node.headOption.flatMap(parsePoint3D)
   }
   
-  def parseBranchPoint(node: Node) = {
-    ((node \ "@id").text).toIntOpt.map( id =>
-    BranchPoint(id)
+  def parseBranchPoint(trees: List[Tree])(node: Node) = {
+    ((node \ "@id").text).toIntOpt.flatMap( id =>
+      trees.find( _.nodes.find(_.id == id).isDefined).map{ tree =>
+        BranchPoint(id, tree.id)
+      }
     )
   }
 

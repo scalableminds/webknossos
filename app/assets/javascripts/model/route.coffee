@@ -39,7 +39,7 @@ Route =
         console.log data
         @id        = data.dataSet.id
         #@branchStack = data.task.branchPoints.map (a) -> new Float32Array(a)
-        @branchStack = (data.task.trees[branchPoint.treeId].nodes[branchPoint].position for branchPoint in data.task.branchPoints)
+        @branchStack = (data.task.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.task.branchPoints) # when data.task.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
         @createBuffer()
         
         $(window).on(

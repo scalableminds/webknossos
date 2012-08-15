@@ -120,8 +120,8 @@ class Controller
     @input.mouses = new Input.Mouse(
       [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
       [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
-      {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : _.bind(@view.setWaypoint, @view)}
-      {"x" : @view.movePrevX, "y" : @view.movePrevY, "w" : @view.zoomPrev, "r" : _.bind(@view.onPreviewClick, @view)}
+      {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : @setWaypoint}
+      {"x" : @view.movePrevX, "y" : @view.movePrevY, "w" : @view.zoomPrev, "r" : @view.onPreviewClick}
     )
 
   initKeyboard : ->
@@ -162,11 +162,11 @@ class Controller
       #Branches
       "b" : => 
         @model.Route.putBranch(@view.getGlobalPos())
-        @view.setWaypoint(@view.getGlobalPos(), 1)
+        @sceneController.setWaypoint(@view.getGlobalPos(), 1)
       "h" : => @model.Route.popBranch().done(
         (position) -> 
           @view.setGlobalPos(position)
-          @view.setActiveNodePosition(position)
+          @sceneController.setActiveNodePosition(position)
         )
 
       #Zoom in/out
@@ -215,6 +215,17 @@ class Controller
   moveX : (x) => @move([x, 0, 0])
   moveY : (y) => @move([0, y, 0])
   moveZ : (z) => @move([0, 0, z])
+
+  setWaypoint : (relativePosition, typeNumber) =>
+    curGlobalPos = @flycam.getGlobalPos()
+    activePlane  = @flycam.getActivePlane()
+    zoomFactor   = @flycam.getPlaneScalingFactor activePlane
+    scaleFactor  = @view.x
+    switch activePlane
+      when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2]]
+      when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
+      when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
+    @sceneController.setWaypoint(position, typeNumber)
 
   #Customize Options
   setMoveValue : (value) =>

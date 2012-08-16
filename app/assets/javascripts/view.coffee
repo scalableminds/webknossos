@@ -49,7 +49,7 @@ class View
       # No need to set any properties, because the camera controller will deal with that
       @camera[i]   = new THREE.OrthographicCamera(0, 0, 0, 0)
       @scene.add @camera[i]
-      
+
     @camera[PLANE_XY].position.z = -1
     @camera[PLANE_YZ].position.x =  1
     @camera[PLANE_XZ].position.y =  1
@@ -99,9 +99,9 @@ class View
   # All 3D meshes and the trianglesplane are rendered here.
   renderFunction : ->
 
-    @trigger "render"
-
     TWEEN.update()
+
+    @trigger "render"
 
     # skip rendering if nothing has changed
     # This prevents you the GPU/CPU from constantly

@@ -36,7 +36,7 @@ class Controller
       @view.addGeometry(VIEW_3D, mesh)
 
     # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @flycam, [2000, 2000, 2000], @sceneController)
+    @cameraController = new CameraController(@view.getCameras(), @flycam, @model, [2000, 2000, 2000], @sceneController)
     
     @view.on "render", (event) => @render()
     @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
@@ -90,7 +90,7 @@ class Controller
         $("#gamepadActive")[0].checked = data.gamepadActive
         $("#motionsensorActive")[0].checked = data.motionsensorActive
 
-        #@view.setRouteClippingDistance data.routeClippingDistance
+        @cameraController.setRouteClippingDistance data.routeClippingDistance
         #@view.setDisplayCrosshair data.displayCrosshair
         #@view.setDisplayPreview PLANE_XY, data.displayPreviewXY
         #@view.setDisplayPreview PLANE_YZ, data.displayPreviewYZ
@@ -162,17 +162,17 @@ class Controller
     new Input.KeyboardNoLoop(
       #Branches
       "b" : => 
-        @model.Route.putBranch(@view.getGlobalPos())
-        @sceneController.setWaypoint(@view.getGlobalPos(), 1)
+        @model.Route.putBranch(@flycam.getGlobalPos())
+        @sceneController.setWaypoint(@flycam.getGlobalPos(), 1)
       "h" : => @model.Route.popBranch().done(
-        (position) -> 
-          @view.setGlobalPos(position)
+        (position) => 
+          @flycam.setGlobalPos(position)
           @sceneController.setActiveNodePosition(position)
         )
 
       #Zoom in/out
-      "o" : => @view.zoomIn()
-      "p" : => @view.zoomOut()
+      "o" : => @cameraController.zoomIn()
+      "p" : => @cameraController.zoomOut()
     )
 
   # for more buttons look at Input.Gamepad
@@ -252,7 +252,7 @@ class Controller
   setRouteClippingDistance : (value) =>
     console.log "setRouteClippingDistance()"
     @model.User.Configuration.routeClippingDistance = (Number) value
-    @view.setRouteClippingDistance((Number) value)
+    @cameraController.setRouteClippingDistance((Number) value)
     @model.User.Configuration.push()   
 
   setLockZoom : (value) =>

@@ -166,38 +166,26 @@ class View
       @scaleFactor += Number(delta)
       @curWidth = WIDTH = HEIGHT = @scaleFactor * 384
       container = $("#render")
-      container.width(2 * WIDTH + 48)
-      container.height(2 * HEIGHT + 48)
+      container.width(2 * WIDTH + 20)
+      container.height(2 * HEIGHT + 20)
+
+      divs = $(".inputcatcher")
+      for div in divs
+        $(div).width(WIDTH)
+        $(div).height(HEIGHT)
+
+      divYZ = $("#planeyz")
+      divYZ.css({left: @scaleFactor * (384 + 20) + "px"})
+      divXZ = $("#planexz")
+      divXZ.css({top: @scaleFactor * (384 + 20) + "px"})
+      divSkeleton = $("#skeletonview")
+      divSkeleton.css({left: @scaleFactor * (384 + 20) + "px", top: @scaleFactor * (384 + 20) + "px"})
 
       # scales the 3D-view controls
       prevControl = $("#prevControls")
       prevControl.css({top: @scaleFactor * 440 + "px", left: @scaleFactor * 420 + "px"})
 
       @resize()
-
-  zoomIn : =>
-    if @model.User.Configuration.lockZoom
-      @flycam.zoomInAll()
-    else 
-      @flycam.zoomIn(flycam.getActivePlane())
-    @updateCamDistance()
-
-  zoomOut : =>
-    if @model.User.Configuration.lockZoom
-      @flycam.zoomOutAll()
-    else 
-      @flycam.zoomOut(flycam.getActivePlane())
-    @updateCamDistance()
-
-  updateCamDistance : ->
-    for i in [0..2]
-      @camera[i].near = - @camDistance/@flycam.getPlaneScalingFactor(i)
-      @camera[i].updateProjectionMatrix()
-    @flycam.hasChanged = true
-
-  setRouteClippingDistance : (value) ->
-    @camDistance = value
-    @updateCamDistance()
 
   setActivePlaneXY : =>
     @setActivePlane PLANE_XY

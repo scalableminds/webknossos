@@ -37,24 +37,19 @@ class View
     HEIGHT = (container.height()-20)/2
     @scaleFactor = 1
 
-    @geometries = []
-
     # Initialize main THREE.js components
-    # Max. distance the route may have from the main plane in order to be displayed:
-    @camDistance = 40
     colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
     @renderer = new THREE.WebGLRenderer({clearColor: colors[i], clearAlpha: 1, antialias: false})
     @camera   = new Array(4)
     @scene    = new THREE.Scene()
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
-      camDistance  = if i==VIEW_3D then 100000 else @camDistance
-      boundary     = if i==VIEW_3D then 300    else VIEWPORT_WIDTH/2
-      @camera[i]   = new THREE.OrthographicCamera(-boundary-2, boundary+2, boundary+2, -boundary-2, -camDistance, camDistance)
-
       # Let's set up cameras
       # The cameras are never "moved". They only look at the scene
       # (the trianglesplanes in particular)
+      # No need to set any properties, because the camera controller will deal with that
+      @camera[i]   = new THREE.OrthographicCamera(0, 0, 0, 0)
       @scene.add @camera[i]
+      
     @camera[PLANE_XY].position.z = -1
     @camera[PLANE_YZ].position.x =  1
     @camera[PLANE_XZ].position.y =  1

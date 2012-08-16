@@ -15,7 +15,8 @@ PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
-WIDTH            = 380
+VIEWPORT_WIDTH   = 380
+WIDTH            = 384
 TEXTURE_WIDTH    = 512
 
 
@@ -27,7 +28,7 @@ class Controller
 
     # create Model, View and Flycam
     @model = new Model()
-    @flycam = new Flycam(WIDTH)
+    @flycam = new Flycam(VIEWPORT_WIDTH)
     @view  = new View(@model, @flycam)
 
     @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model)
@@ -92,13 +93,14 @@ class Controller
 
         @cameraController.setRouteClippingDistance data.routeClippingDistance
         @sceneController.setDisplayCrosshair data.displayCrosshair
-        @sceneController.setDisplayPreview PLANE_XY, data.displayPreviewXY
-        @sceneController.setDisplayPreview PLANE_YZ, data.displayPreviewYZ
-        @sceneController.setDisplayPreview PLANE_XZ, data.displayPreviewXZ
+        @sceneController.setDisplaySV PLANE_XY, data.displayPreviewXY
+        @sceneController.setDisplaySV PLANE_YZ, data.displayPreviewYZ
+        @sceneController.setDisplaySV PLANE_XZ, data.displayPreviewXZ
     )
 
     @model.Route.initialize().then(
       (position) =>
+        # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
         
         @flycam.setGlobalPos(position)
         @cameraController.changePrevSV()
@@ -265,17 +267,17 @@ class Controller
 
   setDisplayPreviewXY : (value) =>
     @model.User.Configuration.displayPreviewXY = value
-    @sceneController.setDisplayPreview PLANE_XY, value
+    @sceneController.setDisplaySV PLANE_XY, value
     @model.User.Configuration.push()      
 
   setDisplayPreviewYZ : (value) =>
     @model.User.Configuration.displayPreviewYZ = value
-    @sceneController.setDisplayPreview PLANE_YZ, value
+    @sceneController.setDisplaySV PLANE_YZ, value
     @model.User.Configuration.push()      
 
   setDisplayPreviewXZ : (value) =>
     @model.User.Configuration.displayPreviewXZ = value
-    @sceneController.setDisplayPreview PLANE_XZ, value
+    @sceneController.setDisplaySV PLANE_XZ, value
     @model.User.Configuration.push()      
 
   setMouseInversionX : (value) =>

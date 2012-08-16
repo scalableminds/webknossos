@@ -19,11 +19,12 @@ class Plane
   # the plane itself, its texture, borders and crosshairs.
 
   constructor : (planeWidth, textureWidth, flycam, planeID, model) ->
-    @flycam       = flycam
-    @planeID      = planeID
-    @model        = model
-    @planeWidth   = planeWidth
-    @textureWidth = textureWidth
+    @flycam          = flycam
+    @planeID         = planeID
+    @model           = model
+    @planeWidth      = planeWidth
+    @textureWidth    = textureWidth
+    @displayCosshair = true
 
     @createMeshes(planeWidth, textureWidth)
 
@@ -59,11 +60,7 @@ class Plane
     @prevBorders = new THREE.Line(prevBordersGeo, new THREE.LineBasicMaterial({color: BORDER_COLORS[@planeID], linewidth: 1}))
 
   setDisplayCrosshair : (value) =>
-    @crosshair[0].visible = value
-    @crosshair[1].visible = value
-
-  setDisplayPreview : (value) =>
-    @plane.visible = value
+    @displayCosshair = value
 
   updateTexture : =>
 
@@ -99,16 +96,11 @@ class Plane
     @plane.rotation = @prevBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
 
   setPosition : (posVec) =>
-    #@plane.position = posVec
-    #offset = new THREE.Vector3(0, 0, 0)
-    #if      @planeID==PLANE_XY then  offset.z =-1
-    #else if @planeID==PLANE_YZ then  offset.x = 1
-    #else if @planeID==PLANE_XZ then  offset.y = 1
-    #@prevBorders.position = @crosshair[0].position = @crosshair[1].position = posVec.add(posVec, offset)
     @plane.position = @prevBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
 
   setVisible : (visible) =>
-    @plane.visible = @prevBorders.visible = @crosshair[0].visible = @crosshair[1].visible = visible
+    @plane.visible = @prevBorders.visible = visible
+    @crosshair[0].visible = @crosshair[1].visible = visible and @displayCosshair
 
   getMeshes : =>
     [@plane, @prevBorders, @crosshair[0], @crosshair[1]]

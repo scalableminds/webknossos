@@ -10,7 +10,8 @@ PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
-WIDTH            = 380
+WIDTH            = 384
+VIEWPORT_WIDTH   = 380
 TEXTURE_WIDTH    = 512
 
 class SceneController
@@ -22,7 +23,8 @@ class SceneController
     @upperBoundary = upperBoundary
     @flycam        = flycam
     @model         = model
-    @current = 0
+    @current       = 0
+    @displayPlane  = [true, true, true]
 
     @createMeshes()
 
@@ -48,7 +50,7 @@ class SceneController
     # create Meshes
     @planes = new Array(3)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @planes[i] = new Plane(WIDTH, TEXTURE_WIDTH, @flycam, i, @model)
+      @planes[i] = new Plane(VIEWPORT_WIDTH, TEXTURE_WIDTH, @flycam, i, @model)
 
     @planes[PLANE_XY].setRotation(new THREE.Vector3(-90 /180*Math.PI, 0, 0))
     @planes[PLANE_YZ].setRotation(new THREE.Vector3(-90 /180*Math.PI, 0, -90 /180*Math.PI))
@@ -67,7 +69,7 @@ class SceneController
       @cube.visible = true
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
         @planes[i].setVisible(true)
-        @planes[i].plane.visible = false
+        @planes[i].plane.visible = @displayPlane[i]
 
   update : =>
     gPos         = @flycam.getGlobalPos()
@@ -98,9 +100,11 @@ class SceneController
   setDisplayCrosshair : (value) =>
     for plane in @planes
       plane.setDisplayCrosshair value
+    @flycam.hasChanged = true
 
-  setDisplayPreview : (plane, value) =>
-    @planes[plane].setDisplayPreview value
+  setDisplaySV : (plane, value) =>
+    @displayPlane[plane] = value
+    @flycam.hasChanged = true
 
   getMeshes : =>
     result = []

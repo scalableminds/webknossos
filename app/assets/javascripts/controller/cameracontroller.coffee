@@ -10,6 +10,8 @@ PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
+VIEWPORT_WIDTH   = 380
+WIDTH            = 384
 
 class CameraController
 
@@ -22,6 +24,10 @@ class CameraController
     @model         = model
     @upperBoundary = upperBoundary
     @skeletonView  = skeletonView
+
+    @updateCamViewport()
+    @cameras[VIEW_3D].near = -100000
+    @cameras[VIEW_3D].far  =  100000
 
   update : =>
     gPos = @flycam.getGlobalPos()
@@ -129,21 +135,24 @@ class CameraController
       @flycam.zoomInAll()
     else 
       @flycam.zoomIn(@flycam.getActivePlane())
-    @updateCamDistance()
+    @updateCamViewport()
 
   zoomOut : =>
     if @model.User.Configuration.lockZoom
       @flycam.zoomOutAll()
     else 
       @flycam.zoomOut(@flycam.getActivePlane())
-    @updateCamDistance()
+    @updateCamViewport()
 
   setRouteClippingDistance : (value) ->
     @camDistance = value
-    @updateCamDistance()
+    @updateCamViewport()
 
-  updateCamDistance : ->
+  updateCamViewport : ->
     for i in [0..2]
       @cameras[i].near = -@camDistance / @flycam.getPlaneScalingFactor(i)
+      boundary     = WIDTH / 2 * @flycam.getPlaneScalingFactor(i)
+      @cameras[i].left  = @cameras[i].bottom = -boundary
+      @cameras[i].right = @cameras[i].top    =  boundary
       @cameras[i].updateProjectionMatrix()
     @flycam.hasChanged = true

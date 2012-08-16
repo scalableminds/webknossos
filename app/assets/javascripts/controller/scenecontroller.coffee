@@ -95,6 +95,13 @@ class SceneController
   setActiveNodePosition : (position) =>
     @skeleton.setActiveNodePosition(position)
 
+  setDisplayCrosshair : (value) =>
+    for plane in @planes
+      plane.setDisplayCrosshair value
+
+  setDisplayPreview : (plane, value) =>
+    @planes[plane].setDisplayPreview value
+
   getMeshes : =>
     result = []
     for plane in @planes

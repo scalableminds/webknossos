@@ -30,7 +30,7 @@ class Controller
     @flycam = new Flycam(WIDTH)
     @view  = new View(@model, @flycam)
 
-    @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model, @mainPlanes)
+    @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model)
     meshes      = @sceneController.getMeshes()
     for mesh in meshes
       @view.addGeometry(VIEW_3D, mesh)
@@ -91,10 +91,10 @@ class Controller
         $("#motionsensorActive")[0].checked = data.motionsensorActive
 
         @cameraController.setRouteClippingDistance data.routeClippingDistance
-        #@view.setDisplayCrosshair data.displayCrosshair
-        #@view.setDisplayPreview PLANE_XY, data.displayPreviewXY
-        #@view.setDisplayPreview PLANE_YZ, data.displayPreviewYZ
-        #@view.setDisplayPreview PLANE_XZ, data.displayPreviewXZ
+        @sceneController.setDisplayCrosshair data.displayCrosshair
+        @sceneController.setDisplayPreview PLANE_XY, data.displayPreviewXY
+        @sceneController.setDisplayPreview PLANE_YZ, data.displayPreviewYZ
+        @sceneController.setDisplayPreview PLANE_XZ, data.displayPreviewXZ
     )
 
     @model.Route.initialize().then(
@@ -250,7 +250,6 @@ class Controller
     @model.User.Configuration.push()      
 
   setRouteClippingDistance : (value) =>
-    console.log "setRouteClippingDistance()"
     @model.User.Configuration.routeClippingDistance = (Number) value
     @cameraController.setRouteClippingDistance((Number) value)
     @model.User.Configuration.push()   
@@ -261,22 +260,22 @@ class Controller
 
   setDisplayCrosshair : (value) =>
     @model.User.Configuration.displayCrosshair = value
-    @view.setDisplayCrosshair value
+    @sceneController.setDisplayCrosshair(value)
     @model.User.Configuration.push()    
 
   setDisplayPreviewXY : (value) =>
     @model.User.Configuration.displayPreviewXY = value
-    @view.setDisplayPreview PLANE_XY, value
+    @sceneController.setDisplayPreview PLANE_XY, value
     @model.User.Configuration.push()      
 
   setDisplayPreviewYZ : (value) =>
     @model.User.Configuration.displayPreviewYZ = value
-    @view.setDisplayPreview PLANE_YZ, value
+    @sceneController.setDisplayPreview PLANE_YZ, value
     @model.User.Configuration.push()      
 
   setDisplayPreviewXZ : (value) =>
     @model.User.Configuration.displayPreviewXZ = value
-    @view.setDisplayPreview PLANE_XZ, value
+    @sceneController.setDisplayPreview PLANE_XZ, value
     @model.User.Configuration.push()      
 
   setMouseInversionX : (value) =>

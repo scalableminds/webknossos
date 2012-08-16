@@ -62,7 +62,7 @@ class Plane
     @crosshair[0].visible = value
     @crosshair[1].visible = value
 
-  setDisplayPlane : (value) =>
+  setDisplayPreview : (value) =>
     @plane.visible = value
 
   updateTexture : =>

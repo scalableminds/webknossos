@@ -16,9 +16,10 @@ class CameraController
   # The Sceleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
   # View. It provides methods to set a certain View (animated).
 
-  constructor : (cameras, flycam, upperBoundary, skeletonView) ->
+  constructor : (cameras, flycam, model, upperBoundary, skeletonView) ->
     @cameras       = cameras
     @flycam        = flycam
+    @model         = model
     @upperBoundary = upperBoundary
     @skeletonView  = skeletonView
 
@@ -121,4 +122,28 @@ class CameraController
     @cameras[VIEW_3D].top -= y*size/384
     @cameras[VIEW_3D].bottom -= y*size/384
     @cameras[VIEW_3D].updateProjectionMatrix()
+    @flycam.hasChanged = true
+
+  zoomIn : =>
+    if @model.User.Configuration.lockZoom
+      @flycam.zoomInAll()
+    else 
+      @flycam.zoomIn(@flycam.getActivePlane())
+    @updateCamDistance()
+
+  zoomOut : =>
+    if @model.User.Configuration.lockZoom
+      @flycam.zoomOutAll()
+    else 
+      @flycam.zoomOut(@flycam.getActivePlane())
+    @updateCamDistance()
+
+  setRouteClippingDistance : (value) ->
+    @camDistance = value
+    @updateCamDistance()
+
+  updateCamDistance : ->
+    for i in [0..2]
+      @cameras[i].near = -@camDistance / @flycam.getPlaneScalingFactor(i)
+      @cameras[i].updateProjectionMatrix()
     @flycam.hasChanged = true

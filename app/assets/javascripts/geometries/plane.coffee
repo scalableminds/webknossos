@@ -46,17 +46,17 @@ class Plane
     @crosshair          = new Array(2)
     for i in [0..1]
       crosshairGeometries[i] = new THREE.Geometry()
-      crosshairGeometries[i].vertices.push(new THREE.Vector3(-pWidth/2*i, 1, -pWidth/2*(1-i)))
-      crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i, 1,  pWidth/2*(1-i)))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3(-pWidth/2*i, 0, -pWidth/2*(1-i)))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i, 0,  pWidth/2*(1-i)))
       @crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({color: CROSSHAIR_COLORS[@planeID][i], linewidth: 1}))
       
     # create borders
     prevBordersGeo = new THREE.Geometry()
-    prevBordersGeo.vertices.push(new THREE.Vector3(-pWidth/2, 1, -pWidth/2))
-    prevBordersGeo.vertices.push(new THREE.Vector3(-pWidth/2, 1,  pWidth/2))
-    prevBordersGeo.vertices.push(new THREE.Vector3( pWidth/2, 1,  pWidth/2))
-    prevBordersGeo.vertices.push(new THREE.Vector3( pWidth/2, 1, -pWidth/2))
-    prevBordersGeo.vertices.push(new THREE.Vector3(-pWidth/2, 1, -pWidth/2))
+    prevBordersGeo.vertices.push(new THREE.Vector3(-pWidth/2, 0, -pWidth/2))
+    prevBordersGeo.vertices.push(new THREE.Vector3(-pWidth/2, 0,  pWidth/2))
+    prevBordersGeo.vertices.push(new THREE.Vector3( pWidth/2, 0,  pWidth/2))
+    prevBordersGeo.vertices.push(new THREE.Vector3( pWidth/2, 0, -pWidth/2))
+    prevBordersGeo.vertices.push(new THREE.Vector3(-pWidth/2, 0, -pWidth/2))
     @prevBorders = new THREE.Line(prevBordersGeo, new THREE.LineBasicMaterial({color: BORDER_COLORS[@planeID], linewidth: 1}))
 
   setDisplayCrosshair : (value) =>
@@ -75,7 +75,7 @@ class Plane
             @plane.texture.image.data.set(buffer)
             @flycam.hasNewTexture[@planeID] = true
 
-      if !@flycam.hasNewTexture[@planeID] and !@flycam.hasChanged
+      if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return
 
       @plane.texture.needsUpdate = true
@@ -96,7 +96,12 @@ class Plane
     @plane.rotation = @prevBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
 
   setPosition : (posVec) =>
-    @plane.position = @prevBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
+    @prevBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
+    offset = new THREE.Vector3(0, 0, 0)
+    if      @planeID == PLANE_XY then offset.z =  1
+    else if @planeID == PLANE_YZ then offset.x = -1
+    else if @planeID == PLANE_XZ then offset.y = -1
+    @plane.position = offset.add(posVec, offset)
 
   setVisible : (visible) =>
     @plane.visible = @prevBorders.visible = visible

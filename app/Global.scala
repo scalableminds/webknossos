@@ -7,7 +7,7 @@ import brainflight.mail.DefaultMails
 object Global extends GlobalSettings {
 
   override def onStart( app: Application ) {
-    if ( Play.current.mode == Mode.Dev )
+//    if ( Play.current.mode == Mode.Dev )
       InitialData.insert()
   }
 

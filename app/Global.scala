@@ -22,10 +22,10 @@ object InitialData {
   def insert() = {
     if ( DataSet.findAll.isEmpty ) {
       DataSet.insert( DataSet(
-        "2012-06-28_Cortex",
-        Play.configuration.getString( "binarydata.path" ) getOrElse ( "binaryData/" )+"2012-06-28_Cortex",
+        "2012-09-26_ex145_07x2",
+        Play.configuration.getString( "binarydata.path" ) getOrElse ( "binaryData/" )+"2012-09-26_ex145_07x2",
         List( 0, 1, 2, 3 ),
-        Point3D( 23 * 128, 15 * 128, 7 * 128) ) )
+        Point3D( 80 * 128, 56 * 128, 19 * 128) ) )
 
     }
 

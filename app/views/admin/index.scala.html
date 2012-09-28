@@ -4,7 +4,7 @@
     <header>
         <hgroup>
             <h1>Administrator Section</h1>
-            <h2>Visualisation of racked routes</h2>
+            <h2>Download of nml-Files</h2>
         </hgroup>
     </header>
     
@@ -16,16 +16,15 @@
                         <span class="loader">Loading</span>
                     </header>
                     <ul class="list">
-                        @TrackedRoute.findByUser( user ).map{ route =>
+                      @user.tasks.flatMap(i => models.graph.Experiment.findOneById(i)).map{ task =>
                           <li>
-                            <input class="done" type="checkbox" />
-                            <h4>@route._id</h4>
-                            <time datetime="@route.timestamp">@route.timestamp.format("hh:mm dd MMM yyyy")</time>
+                            <h4>@models.DataSet.findOneById(task.dataSetId).map(_.name)</h4>
+                            <a href="@controllers.admin.routes.NMLIO.download(task.id)">Export NML</a> 
+                            <time datetime="@task.time">@task.time</time>
                           </li>
                         }
                     </ul>
                 </div>
         }
-        <button>Visualize</button> 
     </article>
 }

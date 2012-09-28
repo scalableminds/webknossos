@@ -28,7 +28,7 @@ a {
     width: 2*@standardViewportWidth+20px;
     height: 2*@standardViewportWidth+20px;
     position: absolute;
-    top: 0;
+    top: 20px;
     left: 300px;
 }
 #render canvas {
@@ -38,8 +38,8 @@ a {
     z-index: 10;
 }
 .inputcatcher {
-    width: @standardViewportWidth;
-    height: @standardViewportWidth;
+    width: @standardViewportWidth - 4px;
+    height: @standardViewportWidth - 4px;
     border-width: 2px;
     border-style:solid;
     border-color: #ffff00;
@@ -61,6 +61,7 @@ a {
 #skeletonview {
     top: (384+20)px;
     left: (384+20)px;
+    border-width: 0px;
 }
 //canvas {
 //    margin-right: 20px;

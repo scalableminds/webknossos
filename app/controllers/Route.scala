@@ -22,29 +22,34 @@ import models.Origin
  */
 object Route extends Controller with Secured {
   override val DefaultAccessRole = Role.User
-  
-  def initialize( dataSetId: String ) = Authenticated{
+
+  def createRouteInformation( user: User, dataSetId: String, origin: Origin ) = {
+    origin.matrix.extractTranslation.map { startPoint =>
+      val route = TrackedRoute.createForUser(
+        user,
+        dataSetId,
+        startPoint.toVector3I :: Nil )
+
+      Json.obj(
+        "route" -> Json.obj(
+          "id" -> route.id ,
+          "origin" -> origin.matrix.value ) )
+    }
+  }
+
+  def createUserBranchInformation( user: User ) = {
+    Json.obj( "branches" -> user.branchPoints.map( _.matrix.value ).reverse )
+  }
+
+  def initialize( dataSetId: String ) = Authenticated {
     implicit request =>
       val user = request.user
-      val originOption:Option[Origin] = 
-        (user.useBranchPointAsOrigin) orElse (RouteOrigin.useLeastUsed( dataSetId ))
       ( for {
-        origin <- originOption
-        startPoint <- origin.matrix.extractTranslation
-      } yield {
-        val route = TrackedRoute.createForUser(
-          user,
-          dataSetId,
-          startPoint.toVector3I :: Nil )
-
-        val data = Json.obj(
-          "id" -> route.id,
-          "matrix" -> origin.matrix.value, 
-          "branches" -> user.branchPoints.map( _.matrix.value).reverse 
-        )
-        
-        Ok( data )
-      } ) getOrElse BadRequest( "Couldn't open new route." )
+        origin <- ( user.useBranchPointAsOrigin orElse ( RouteOrigin.useLeastUsed( dataSetId ) ) )
+        routeData <- createRouteInformation( user, dataSetId, origin )
+      } yield 
+        Ok( routeData ++ createUserBranchInformation( user ) ) 
+      ) getOrElse BadRequest( "Couldn't open new route." )
   }
   /**
    *
@@ -53,25 +58,23 @@ object Route extends Controller with Secured {
     implicit request =>
       val user = request.user
       ( for {
-        route <- TrackedRoute.findOpenBy( id )
+        route <- TrackedRoute.findOpenBy( id, user )
         buffer <- request.body.asBytes( 1024 * 1024 )
-        if ( route.userId == request.user._id )
       } yield {
         TrackedRoute.extendRoute( route, user, buffer )
         Ok
       } ) getOrElse BadRequest( "No open route found or byte array invalid." )
 
   }
-  def list = Authenticated{
+  def list = Authenticated {
     implicit request =>
       val routes = TrackedRoute.findByUser( request.user )
-      Ok( toJson( routes.map( _.points ) ))
+      Ok( toJson( routes.map( _.points ) ) )
   }
-  
-  def getRoute( id: String ) = Authenticated{
+
+  def getRoute( id: String ) = Authenticated {
     implicit request =>
       TrackedRoute.findOneById( new ObjectId( id ) ).map( route =>
-        Ok( toJson( route.points ) )
-      ) getOrElse NotFound( "Couldn't open route." )
+        Ok( toJson( route.points ) ) ) getOrElse NotFound( "Couldn't open route." )
   }
 }

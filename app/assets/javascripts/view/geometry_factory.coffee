@@ -27,16 +27,16 @@ GeometryFactory =
   # Traditionally the data require to create a geometry mesh
   # should be provided by the Model (-> Model.Mesh), but 
   # for right now let's rely on THREE.js model loader.
-  createMesh : (fileName, x = 0, y = 0, z = 0, view) ->
+  #createMesh : (fileName, x = 0, y = 0, z = 0, view) ->
 
-    @binLoader ?= new THREE.JSONLoader()
-    @binLoader.load "assets/mesh/" + fileName, (geometry) ->
+  #  @binLoader ?= new THREE.JSONLoader()
+  #  @binLoader.load "assets/mesh/" + fileName, (geometry) ->
 
-      mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: 0xffffff, shading: THREE.NoShading, vertexColors: THREE.VertexColors } ))
-      mesh.position.x = x
-      mesh.position.y = y
-      mesh.position.z = z
-      view.addGeometry PLANE_XY, mesh
+  #    mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: 0xffffff, shading: THREE.NoShading, vertexColors: THREE.VertexColors } ))
+  #    mesh.position.x = x
+  #    mesh.position.y = y
+  #    mesh.position.z = z
+  #    view.addGeometry PLANE_XY, mesh
 
   # Let's set up our trianglesplane.
   # It serves as a "canvas" where the brain images
@@ -56,8 +56,8 @@ GeometryFactory =
   # needed to for the bend surface.
   # normalVertices: (depricated) holds the vertex postion 
   # for the flat surface
-  createTrianglesplane : (width, zOffset, config, view) ->
-    $.when(
+  createGeometries : (config) ->
+    # $.when(
     #  Model.Shader.get("trianglesplane")
     #  Model.Trianglesplane.get(width, zOffset)  
     #).pipe (shader, geometry) ->
@@ -101,7 +101,7 @@ GeometryFactory =
           crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3(-WIDTH/2*i, -WIDTH/2*(1-i), 1))
           crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3( WIDTH/2*i,  WIDTH/2*(1-i), 1))
           crosshairs[dimension][i] = new THREE.Line(crosshairsGeometry[dimension][i], new THREE.LineBasicMaterial({color: crosshairColors[dimension][i], linewidth: 1}))
-          view.addGeometry dimension, crosshairs[dimension][i]
+          #view.addGeometry dimension, crosshairs[dimension][i]
           if config.displayCrosshair?
             crosshairs[dimension][i].visible = config.displayCrosshair
 
@@ -114,7 +114,7 @@ GeometryFactory =
         prevBordersGeo[dimension].vertices.push(new THREE.Vector3(-VIEWPORT_WIDTH/2-1, 0, -VIEWPORT_WIDTH/2-1))
         prevBorders[dimension] = new THREE.Line(prevBordersGeo[dimension], new THREE.LineBasicMaterial({color: borderColors[dimension], linewidth: 1}))
 
-      view.crosshairs = crosshairs
+      #view.crosshairs = crosshairs
 
       
       #create preview Box depending on Game.dataSet.upperBoundary
@@ -137,7 +137,7 @@ GeometryFactory =
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], b[1]))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], 0))
       previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
-      view.addGeometry VIEW_3D, previewBox
+      #view.addGeometry VIEW_3D, previewBox
 
       strings   = ["0, 0, 0", b[0]+", 0, 0", "0, "+b[1]+", 0", "0, 0, "+b[2]]
       positions = [new THREE.Vector3(0, b[2], 0), new THREE.Vector3(b[0], b[2], 0), new THREE.Vector3(0, b[2], b[1]), new THREE.Vector3(0, 0, 0)]
@@ -145,21 +145,22 @@ GeometryFactory =
       for i in [0..3]
         texts[i] = new THREE.Mesh(new THREE.TextGeometry(strings[i], {size : 150, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
         texts[i].position = positions[i]
-        view.addGeometry VIEW_3D, texts[i]
-      view.texts = texts
+        #view.addGeometry VIEW_3D, texts[i]
+      #view.texts = texts
 
       # create route
-      view.createRoute 10000
+      #view.createRoute 10000
 
       meshes[1][PLANE_YZ].rotation.z = prevBorders[PLANE_YZ].rotation.z = -90 /180*Math.PI
       
       meshes[1][PLANE_XZ].rotation.x = prevBorders[PLANE_XZ].rotation.x = 90 /180*Math.PI
 
-      view.meshes      = meshes
-      view.prevBorders = prevBorders
-      for dimension in [0..2]
-        for kind in [0..1]
-          scene = if kind==0 then dimension else VIEW_3D
-          view.addGeometry scene, view.meshes[kind][dimension]
-        view.addGeometry VIEW_3D, view.prevBorders[dimension]
-    )
+      #view.meshes      = meshes
+      #view.prevBorders = prevBorders
+      #for dimension in [0..2]
+      #  for kind in [0..1]
+      #    scene = if kind==0 then dimension else VIEW_3D
+      #    view.addGeometry scene, view.meshes[kind][dimension]
+      #  view.addGeometry VIEW_3D, view.prevBorders[dimension]
+
+      return { m: meshes, p: prevBorders, c: crosshairs}

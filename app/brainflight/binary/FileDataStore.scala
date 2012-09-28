@@ -6,6 +6,7 @@ import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import brainflight.tools.geometry.Point3D
 import models.DataSet
 import akka.routing.Broadcast
+import akka.agent.Agent
     
 /**
  * Scalable Minds - Brainflight
@@ -17,15 +18,16 @@ import akka.routing.Broadcast
 /**
  * A data store implementation which uses the hdd as data storage
  */
-class FileDataStore extends CachedDataStore {
+class FileDataStore( cacheAgent: Agent[Map[DataBlockInformation, Data]]) 
+  extends CachedDataStore( cacheAgent ){
 
   /**
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
    */
-  def loadBlock( dataSet: DataSet, point: Point3D, resolution: Int ): Array[Byte] = {
+  def loadBlock( dataSet: DataSet, point: Point3D, resolution: Int ): DataBlock = {
     ensureCacheMaxSize
-    val dataBlock =
+    val dataBlock = Data(
       try {
         val binaryStream =
           new FileInputStream( createFilename( dataSet, resolution, point ) )
@@ -36,10 +38,8 @@ class FileDataStore extends CachedDataStore {
           // if the file block isn't found, a nullBlock is associated with 
           // the coordinates
           nullBlock
-      }
+      })
     val blockInfo = DataBlockInformation( dataSet.id, point, resolution )
-    fileCache += ( ( blockInfo, dataBlock ) )
-    DataSetActor ! Broadcast( CachedFile( cacheId, blockInfo, dataBlock))
-    dataBlock
+    DataBlock( blockInfo, dataBlock)
   }
 }

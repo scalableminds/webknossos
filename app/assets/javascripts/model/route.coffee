@@ -24,7 +24,7 @@ Route =
         responseType : "json"
       ).pipe (data) =>
         
-        @id          = data.id
+        @id          = data.route.id
         @branchStack = data.branches.map (a) -> new Float32Array(a)
         @createBuffer()
         
@@ -36,7 +36,7 @@ Route =
         )
 
         #FIXME we don't need a matrix in the DB, change to just the position
-        data.matrix.slice(12,15)
+        data.route.origin.slice(12,15)
 
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.
@@ -70,12 +70,13 @@ Route =
     @bufferIndex = 0
     @buffer = new Float32Array(BUFFER_SIZE)
 
-  addToBuffer : (value) ->
+  addToBuffer : (typeNumber, value) ->
 
-    @buffer[@bufferIndex++] = 0
+    @buffer[@bufferIndex++] = typeNumber
 
-    @buffer.set(value, @bufferIndex)
-    @bufferIndex += 3
+    if value and typeNumber != 2
+      @buffer.set(value, @bufferIndex)
+      @bufferIndex += 3
 
     @push()
 
@@ -83,7 +84,7 @@ Route =
 
     @initialize().done =>
       
-      @addToBuffer(position)
+      @addToBuffer(1, position)
       # push TransformationMatrix for compatibility reasons
       @branchStack.push([0,0,0,0,0,0,0,0,0,0,0,0,position[0],position[1],position[2],0])
 
@@ -98,7 +99,7 @@ Route =
       { branchStack } = @
 
       if branchStack.length > 0
-        #@addToBuffer(2)
+        @addToBuffer(2)
         deferred.resolve(branchStack.pop().slice(12,15))
       else
         deferred.reject()
@@ -116,6 +117,6 @@ Route =
       lastPosition[1] != position[1] or 
       lastPosition[2] != position[2]
         @lastPosition = position
-        @addToBuffer(position)
+        @addToBuffer(0, position)
 
     return

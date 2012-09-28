@@ -25,25 +25,57 @@ a {
     }
 }
 #render {
-    width: 816px;
-    height: 816px;
+    width: 2*@standardViewportWidth+20px;
+    height: 2*@standardViewportWidth+20px;
     position: absolute;
     top: 0;
-    left: 300;
+    left: 300px;
 }
-canvas {
-    margin-right: 20px;
-    margin-bottom: 20px;
-    border-width:2px;
+#render canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 10;
+}
+.inputcatcher {
+    width: @standardViewportWidth;
+    height: @standardViewportWidth;
+    border-width: 2px;
     border-style:solid;
-    border-color: @mainBackground;
+    border-color: #ffff00;
+    position: absolute;
+    z-index: 20;
 }
+#planexy {
+    top: 0px;
+    left: 0px;
+}
+#planeyz {
+    top: 0px;
+    left: (384+20)px;
+}
+#planexz {
+    top: (384+20)px;
+    left: 0px;
+}
+#skeletonview {
+    top: (384+20)px;
+    left: (384+20)px;
+}
+//canvas {
+//    margin-right: 20px;
+//    margin-bottom: 20px;
+//    border-width: 2px;
+//    border-style:solid;
+//    border-color: @mainBackground;
+//}
 #prevControls {
     width: 384px;
     height: 20px;
     position: relative;
     top: 440;
     left: 420;
+    z-index: 30;
 }
 #overlay {
     position: absolute;

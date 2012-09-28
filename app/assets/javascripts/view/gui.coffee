@@ -24,6 +24,8 @@ class Gui
                 inverseY: data.mouseInversionY == 1
                 routeClippingDistance: data.routeClippingDistance
                 displayCrosshairs: data.displayCrosshair
+                #FIXME: Why do I have to do this?
+                interpolation : if typeof data.interpolation isnt "undefined" then data.interpolation else true
                 displayPrevXY : data.displayPreviewXY
                 displayPrevYZ : data.displayPreviewYZ
                 displayPrevXZ : data.displayPreviewXZ
@@ -56,26 +58,32 @@ class Gui
                           .name("Inverse Y")
                           .onChange(@setMouseInversionY)
 
-    fView = @gui.addFolder("View")
+    fView = @gui.addFolder("Planes")
     (fView.add @settings, "routeClippingDistance", 1, 100)
                           .name("Clipping Distance")    
                           .onChange(@setRouteClippingDistance)
     (fView.add @settings, "displayCrosshairs")
                           .name("Show Crosshairs")
                           .onChange(@setDisplayCrosshair)
-    (fView.add @settings, "displayPrevXY")
+    (fView.add @settings, "interpolation")
+                          .name("Interpolation")
+                          .onChange(@setInterpolation)
+
+    fSkeleton = @gui.addFolder("Skeleton View")
+    (fSkeleton.add @settings, "displayPrevXY")
                           .name("Display XY-Plane")
                           .onChange(@setDisplayPreviewXY)
-    (fView.add @settings, "displayPrevYZ")
+    (fSkeleton.add @settings, "displayPrevYZ")
                           .name("Display YZ-Plane")
                           .onChange(@setDisplayPreviewYZ)
-    (fView.add @settings, "displayPrevXZ")
+    (fSkeleton.add @settings, "displayPrevXZ")
                           .name("Display XZ-Plane")
                           .onChange(@setDisplayPreviewXZ)
 
     fPosition.open()
     fControls.open()
     fView.open()
+    fSkeleton.open()
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
@@ -84,7 +92,7 @@ class Gui
 
   updateGlobalPosition : =>
     pos = @flycam.getGlobalPos()
-    @settings.position = pos[0] + ", " + pos[1] + ", " + pos[2]
+    @settings.position = Math.round(pos[0]) + ", " + Math.round(pos[1]) + ", " + Math.round(pos[2])
 
   setRouteClippingDistance : (value) =>
     @model.User.Configuration.routeClippingDistance = (Number) value
@@ -99,6 +107,11 @@ class Gui
     @model.User.Configuration.displayCrosshair = value
     @sceneController.setDisplayCrosshair(value)
     @model.User.Configuration.push()    
+
+  setInterpolation : (value) =>
+    @sceneController.setInterpolation(value)
+    @model.User.Configuration.interpolation = (Boolean) value
+    @model.User.Configuration.push()
 
   setDisplayPreviewXY : (value) =>
     @model.User.Configuration.displayPreviewXY = value

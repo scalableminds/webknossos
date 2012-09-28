@@ -27,6 +27,7 @@ object UserConfiguration {
       "routeClippingDistance" -> JsNumber( 50 ),
       "lockZoom" -> JsBoolean( true ),
       "displayCrosshair" -> JsBoolean( true ),
+      "interpolation" -> JsBoolean( true ),
       "displayPreviewXY" -> JsBoolean( true ),
       "displayPreviewYZ" -> JsBoolean( true ),
       "displayPreviewXZ" -> JsBoolean( true ),

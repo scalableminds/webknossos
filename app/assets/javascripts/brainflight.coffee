@@ -7,10 +7,5 @@ require.config
 require [ "core_ext" ], ->
   require ["controller", "view", "model"], (Controller, View, Model) ->
     
-    MVC = { Controller, View, Model }
-    $ ->
-      _canvases = $("#render")
-      canvases  = _canvases[0]
-
-      Controller.initialize(canvases) 
-      View.initialize()
+    controller = new Controller()
+    MVC = { controller, View, Model }

@@ -8,18 +8,16 @@ import models.Role
 import models.DataSet
 import play.api.Logger
 
-object Game extends Controller with Secured{
+object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User
-  
-  def initialize = Authenticated{ implicit request =>
-    val dataSet = DataSet.default
-    val result = Json.obj(
-        "dataSet" -> Json.obj(
-          "id" -> dataSet.id,
-          "resolutions" -> dataSet.supportedResolutions,
-          "upperBoundary" -> dataSet.maxCoordinates
-        )
-    )
-    Ok( result )
+
+  def createDataSetInformation( dataSet: DataSet ) = Json.obj(
+    "dataSet" -> Json.obj(
+      "id" -> dataSet.id,
+      "resolutions" -> dataSet.supportedResolutions,
+      "upperBoundary" -> dataSet.maxCoordinates ) )
+
+  def initialize = Authenticated { implicit request =>
+    Ok( createDataSetInformation( DataSet.default ) )
   }
 }

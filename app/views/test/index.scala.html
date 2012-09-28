@@ -8,6 +8,10 @@
     <div id="main" role="main">
       <div id="render">
         <div id="prevControls"></div>
+        <div id="planexy" class="inputcatcher"></div>
+        <div id="planeyz" class="inputcatcher"></div>
+        <div id="planexz" class="inputcatcher"></div>
+        <div id="skeletonview" class="inputcatcher"></div>
       </div>
       <div id="overlay">
         <div id="status"></div>
@@ -24,13 +28,13 @@
         <div id="optionswindow">
           <!--
           Move:</br>
-          <input id="moveValue" type="range" min="0.25" max="4" value="1" step="0.25" onchange="MVC.Controller.setMoveValue(this.value)" />
+          <input id="moveValue" type="range" min="0.25" max="4" value="1" step="0.25" onchange="MVC.controller.setMoveValue(this.value)" />
           </br></br>
           Rotate:</br>
-          <input id="rotateValue" type="range" min="0.005" max="0.05" value="0.01" step="0.005" onchange="MVC.Controller.setRotateValue(this.value)" />
+          <input id="rotateValue" type="range" min="0.005" max="0.05" value="0.01" step="0.005" onchange="MVC.controller.setRotateValue(this.value)" />
           </br></br>
           MouseRotate:</br>
-          <input id="mouseRotateValue" type="range" min="0.0005" max="0.01" value="0.004" step="0.0005" onchange="MVC.Controller.setMouseRotateValue(this.value)" />
+          <input id="mouseRotateValue" type="range" min="0.0005" max="0.01" value="0.004" step="0.0005" onchange="MVC.controller.setMouseRotateValue(this.value)" />
           </br></br></br></br>
         -->
 
@@ -58,7 +62,8 @@
           <input id="mouseActive" type="checkbox" onchange="MVC.Controller.setMouseActivity(this.checked)"/> Mouse <br />
           <input id="keyboardActive" type="checkbox" onchange="MVC.Controller.setKeyboardActivity(this.checked)"/> Keyboard <br />        
           <input id="gamepadActive" type="checkbox" onchange="MVC.Controller.setGamepadActivity(this.checked)"/> Gamepad <br />       
-          <input id="motionsensorActive" type="checkbox" onchange="MVC.Controller.setMotionSensorActivity(this.checked)"/> Motion Sensor <br />  -->               
+          <input id="motionsensorActive" type="checkbox" onchange="MVC.Controller.setMotionSensorActivity(this.checked)"/> Motion Sensor <br /> 
+-->
         </div>
       </div>  
     </div>   

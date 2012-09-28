@@ -44,7 +44,7 @@ object PerformanceTest extends Controller {
 
   def timeFileDataStore() = Action {
     var fileDataStoreTime = -System.currentTimeMillis()
-    var dataStore = new FileDataStore
+    var dataStore = new FileDataStore( models.Agents.BinaryCacheAgent )
     for {
       x <- xBot to xTop
       y <- yBot to yTop

@@ -12,8 +12,6 @@ class DataSetPriorityMailbox(settings: ActorSystem.Settings, config: Config) ext
   // Create a new PriorityGenerator, lower prio means more important
   PriorityGenerator {
     // 'highpriority messages should be treated first if possible
-    case _ @ CachedFile(_,_,_) => 
-      1
     // PoisonPill when no other left
     case PoisonPill    => 3
  

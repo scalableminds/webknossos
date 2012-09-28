@@ -2,19 +2,45 @@
 model : Model
 view : View
 geometry_factory : GeometryFactory
+libs/event_mixin : EventMixin
 input : Input
 helper : Helper
+libs/flycam2 : Flycam
+geometries/plane : Plane
+controller/cameracontroller : CameraController
+controller/scenecontroller : SceneController
 ###
 
-PLANE_XY = 0
-PLANE_YZ = 1
-PLANE_XZ = 2
-VIEW_3D  = 3
+PLANE_XY         = 0
+PLANE_YZ         = 1
+PLANE_XZ         = 2
+VIEW_3D          = 3
+VIEWPORT_WIDTH   = 380
+WIDTH            = 384
+TEXTURE_WIDTH    = 512
 
 
-Controller = 
+class Controller
 
-  initialize : (@canvases) ->
+  constructor : ->
+
+    _.extend(this, new EventMixin())
+
+    # create Model, View and Flycam
+    @model = new Model()
+    @flycam = new Flycam(VIEWPORT_WIDTH)
+    @view  = new View(@model, @flycam)
+
+    @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model)
+    meshes      = @sceneController.getMeshes()
+    for mesh in meshes
+      @view.addGeometry(VIEW_3D, mesh)
+
+    # initialize Camera Controller
+    @cameraController = new CameraController(@view.getCameras(), @flycam, @model, [2000, 2000, 2000], @sceneController)
+    
+    @view.on "render", (event) => @render()
+    @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -24,8 +50,22 @@ Controller =
     # hide contextmenu, while rightclicking a canvas
     $("#render").bind "contextmenu", (event) ->
       event.preventDefault(); return
+
+    @canvases = $("#render")[0]
+
+    @prevControls = $('#prevControls')
+    values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
+    callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
+                      @cameraController.changePrevXZ, @cameraController.changePrevSV]
+    buttons       = new Array(4)
+    for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
+      buttons[i] = document.createElement "input"
+      buttons[i].setAttribute "type", "button"
+      buttons[i].setAttribute "value", values[i]
+      buttons[i].addEventListener "click", callbacks[i], true
+      @prevControls.append buttons[i]
   
-    Model.User.Configuration.initialize().then(
+    @model.User.Configuration.initialize().then(
       (data) =>
         @initMouse() if data.mouseActive is true
         @initKeyboard() if data.keyboardActive is true
@@ -51,25 +91,27 @@ Controller =
         #$("#gamepadActive")[0].checked = data.gamepadActive
         #$("#motionsensorActive")[0].checked = data.motionsensorActive
 
-        View.setRouteClippingDistance data.routeClippingDistance
-        View.setDisplayCrosshair data.displayCrosshair
-        View.setDisplayPreview PLANE_XY, data.displayPreviewXY
-        View.setDisplayPreview PLANE_YZ, data.displayPreviewYZ
-        View.setDisplayPreview PLANE_XZ, data.displayPreviewXZ
+        @cameraController.setRouteClippingDistance data.routeClippingDistance
+        @sceneController.setDisplayCrosshair data.displayCrosshair
+        @sceneController.setDisplaySV PLANE_XY, data.displayPreviewXY
+        @sceneController.setDisplaySV PLANE_YZ, data.displayPreviewYZ
+        @sceneController.setDisplaySV PLANE_XZ, data.displayPreviewXZ
     )
 
-    Model.Route.initialize().then(
+    @model.Route.initialize().then(
       (position) =>
+        # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
         
-        View.setGlobalPos([2800, 2800, 5376]) #position)  
+        @flycam.setGlobalPos(position)
+        @cameraController.changePrevSV()
         #View.move([46, 36, -530])
         
         # set initial direction
-        View.setDirection([0, 0, 1])
+        #@view.setDirection([0, 0, 1])
 
-        GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
-        GeometryFactory.createTrianglesplane(512, 0).done ->
-          View.draw()
+        #GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
+        #GeometryFactory.createTrianglesplane(512, 0, @model.User.Configuration, @view).done =>
+        #  @view.draw()
       
       ->
         alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
@@ -79,10 +121,10 @@ Controller =
     # initializes an Input.Mouse object with the three canvas
     # elements and one pair of callbacks per canvas
     @input.mouses = new Input.Mouse(
-      [View.renderer[PLANE_XY].domElement, View.renderer[PLANE_YZ].domElement, View.renderer[PLANE_XZ].domElement, View.renderer[VIEW_3D].domElement]
-      [View.setActivePlaneXY, View.setActivePlaneYZ, View.setActivePlaneXZ]
-      {"x" : View.moveX, "y" : View.moveY, "w" : View.moveZ, "r" : _.bind(View.setWaypoint, View)}
-      {"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev, "r" : _.bind(View.onPreviewClick, View)}
+      [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
+      [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
+      {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : @setWaypoint}
+      {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "r" : @onPreviewClick}
     )
 
   initKeyboard : ->
@@ -98,57 +140,63 @@ Controller =
 
     
       #ScaleTrianglesPlane
-      "l" : -> View.scaleTrianglesPlane -Model.User.Configuration.scaleValue
-      "k" : -> View.scaleTrianglesPlane Model.User.Configuration.scaleValue
+      "l" : => @view.scaleTrianglesPlane -@model.User.Configuration.scaleValue
+      "k" : => @view.scaleTrianglesPlane @model.User.Configuration.scaleValue
 
       #Move
-      "w" : -> View.moveActivePlane [0, -Model.User.Configuration.moveValue, 0]
-      "s" : -> View.moveActivePlane [0, Model.User.Configuration.moveValue, 0]
-      "a" : -> View.moveActivePlane [-Model.User.Configuration.moveValue, 0, 0]
-      "d" : -> View.moveActivePlane [Model.User.Configuration.moveValue, 0, 0]
-      "space" : -> View.moveActivePlane [0, 0, Model.User.Configuration.moveValue]
-      "shift + space" : -> View.moveActivePlane [0, 0, -Model.User.Configuration.moveValue]
+      "w"             : => @moveY(-@model.User.Configuration.moveValue)
+      "s"             : => @moveY( @model.User.Configuration.moveValue)
+      "a"             : => @moveX(-@model.User.Configuration.moveValue)
+      "d"             : => @moveX( @model.User.Configuration.moveValue)
+      "space"         : => @moveZ( @model.User.Configuration.moveValue)
+      "shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
 
       #Rotate in distance
-      "left"  : -> View.moveActivePlane [-Model.User.Configuration.moveValue, 0, 0]
-      "right" : -> View.moveActivePlane [Model.User.Configuration.moveValue, 0, 0]
-      "up"    : -> View.moveActivePlane [0, -Model.User.Configuration.moveValue, 0]
-      "down"  : -> View.moveActivePlane [0, Model.User.Configuration.moveValue, 0]
+      "left"          : => @moveX(-@model.User.Configuration.moveValue)
+      "right"         : => @moveX( @model.User.Configuration.moveValue)
+      "up"            : => @moveY(-@model.User.Configuration.moveValue)
+      "down"          : => @moveY( @model.User.Configuration.moveValue)
 
       #misc keys
-      "n" : -> Helper.toggle()
+      "n" : => Helper.toggle()
     )
     
     new Input.KeyboardNoLoop(
       #Branches
-      "b" : -> Model.Route.putBranch(View.getGlobalPos())
-      "h" : -> Model.Route.popBranch().done((position) -> View.setGlobalPos(position))
+      "b" : => 
+        @model.Route.putBranch(@flycam.getGlobalPos())
+        @sceneController.setWaypoint(@flycam.getGlobalPos(), 1)
+      "h" : => @model.Route.popBranch().done(
+        (position) => 
+          @flycam.setGlobalPos(position)
+          @sceneController.setActiveNodePosition(position)
+        )
 
       #Zoom in/out
-      "o" : -> View.zoomIn()
-      "p" : -> View.zoomOut()
+      "o" : => @cameraController.zoomIn()
+      "p" : => @cameraController.zoomOut()
     )
 
   # for more buttons look at Input.Gamepad
-  initGamepad : ->
-    @input.gamepad = new Input.Gamepad(
-        "ButtonA" : -> View.move [0, 0, Model.User.Configuration.moveValue]
-        "ButtonB" : -> View.move [0, 0, -Model.User.Configuration.moveValue]
-    )
+  #initGamepad : ->
+  #  @input.gamepad = new Input.Gamepad(
+  #      "ButtonA" : -> @view.move [0, 0, @model.User.Configuration.moveValue]
+  #      "ButtonB" : -> @view.move [0, 0, -@model.User.Configuration.moveValue]
+  #  )
 
-  initMotionsensor : ->
-    @input.deviceorientation = new Input.Deviceorientation(
+  #initMotionsensor : ->
+  #  @input.deviceorientation = new Input.Deviceorientation(
     # TODO implement functionality
     #  "x"  : View.yawDistance
     #  "y" : View.pitchDistance
-    )
+   # )
 
-  initDeviceOrientation : ->
-    @input.deviceorientation = new Input.Deviceorientation(
+  #initDeviceOrientation : ->
+  #  @input.deviceorientation = new Input.Deviceorientation(
     # TODO implement functionality
     #  "x"  : View.yawDistance
     #  "y" : View.pitchDistance
-    )
+  #  )
 
   input :
     mouses : null
@@ -159,98 +207,123 @@ Controller =
     gamepad : null
     deviceorientation : null
 
+  render : ->
+    @model.Binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
+    @cameraController.update()
+    @sceneController.update()
+
+  move  : (v) =>                 # v: Vector represented as array of length 3
+    @flycam.moveActivePlane(v)
+
+  moveX : (x) => @move([x, 0, 0])
+  moveY : (y) => @move([0, y, 0])
+  moveZ : (z) => @move([0, 0, z])
+
+  setWaypoint : (relativePosition, typeNumber) =>
+    curGlobalPos = @flycam.getGlobalPos()
+    activePlane  = @flycam.getActivePlane()
+    zoomFactor   = @flycam.getPlaneScalingFactor activePlane
+    scaleFactor  = @view.scaleFactor
+    switch activePlane
+      when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2]]
+      when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
+      when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
+    @sceneController.setWaypoint(position, typeNumber)
+
+  onPreviewClick : (position) =>
+    @sceneController.onPreviewClick(position, @view.scaleFactor, @view.getCameras()[VIEW_3D])
+
   #Customize Options
-  setMoveValue : (value) ->
-    Model.User.Configuration.moveValue = (Number) value
+  setMoveValue : (value) =>
+    @model.User.Configuration.moveValue = (Number) value
 
-    Model.User.Configuration.push()
+    @model.User.Configuration.push()
 
-  setRotateValue : (value) ->
-    Model.User.Configuration.rotateValue = (Number) value 
-    Model.User.Configuration.push()   
+  setRotateValue : (value) =>
+    @model.User.Configuration.rotateValue = (Number) value 
+    @model.User.Configuration.push()   
 
-  setScaleValue : (value) ->
-    Model.User.Configuration.scaleValue = (Number) value  
-    Model.User.Configuration.push()         
+  setScaleValue : (value) =>
+    @model.User.Configuration.scaleValue = (Number) value  
+    @model.User.Configuration.push()         
 
-  setMouseRotateValue : (value) ->
-    Model.User.Configuration.mouseRotateValue = (Number) value
-    Model.User.Configuration.push()      
+  setMouseRotateValue : (value) =>
+    @model.User.Configuration.mouseRotateValue = (Number) value
+    @model.User.Configuration.push()      
 
-  setRouteClippingDistance : (value) ->
-    console.log "setRouteClippingDistance()"
-    Model.User.Configuration.routeClippingDistance = (Number) value
-    View.setRouteClippingDistance((Number) value)
-    Model.User.Configuration.push()   
+  setRouteClippingDistance : (value) =>
+    @model.User.Configuration.routeClippingDistance = (Number) value
+    @cameraController.setRouteClippingDistance((Number) value)
+    @model.User.Configuration.push()   
 
-  setLockZoom : (value) ->
-    Model.User.Configuration.lockZoom = value
-    Model.User.Configuration.push()      
+  setLockZoom : (value) =>
+    @model.User.Configuration.lockZoom = value
+    @model.User.Configuration.push()      
 
-  setDisplayCrosshair : (value) ->
-    Model.User.Configuration.displayCrosshair = value
-    View.setDisplayCrosshair value
-    Model.User.Configuration.push()    
+  setDisplayCrosshair : (value) =>
+    @model.User.Configuration.displayCrosshair = value
+    @sceneController.setDisplayCrosshair(value)
+    @model.User.Configuration.push()    
 
-  setDisplayPreviewXY : (value) ->
-    Model.User.Configuration.displayPreviewXY = value
-    View.setDisplayPreview PLANE_XY, value
-    Model.User.Configuration.push()      
+  setDisplayPreviewXY : (value) =>
+    @model.User.Configuration.displayPreviewXY = value
+    @sceneController.setDisplaySV PLANE_XY, value
+    @model.User.Configuration.push()      
 
-  setDisplayPreviewYZ : (value) ->
-    Model.User.Configuration.displayPreviewYZ = value
-    View.setDisplayPreview PLANE_YZ, value
-    Model.User.Configuration.push()      
+  setDisplayPreviewYZ : (value) =>
+    @model.User.Configuration.displayPreviewYZ = value
+    @sceneController.setDisplaySV PLANE_YZ, value
+    @model.User.Configuration.push()      
 
-  setDisplayPreviewXZ : (value) ->
-    Model.User.Configuration.displayPreviewXZ = value
-    View.setDisplayPreview PLANE_XZ, value
-    Model.User.Configuration.push()      
+  setDisplayPreviewXZ : (value) =>
+    @model.User.Configuration.displayPreviewXZ = value
+    @sceneController.setDisplaySV PLANE_XZ, value
+    @model.User.Configuration.push()      
 
-  setMouseInversionX : (value) ->
+  setMouseInversionX : (value) =>
     if value is true
-      Model.User.Configuration.mouseInversionX = 1
+      @model.User.Configuration.mouseInversionX = 1
     else
-      Model.User.Configuration.mouseInversionX = -1
-    Model.User.Configuration.push()         
+      @model.User.Configuration.mouseInversionX = -1
+    @model.User.Configuration.push()         
 
-  setMouseInversionY : (value) ->
+  setMouseInversionY : (value) =>
     if value is true
-      Model.User.Configuration.mouseInversionY = 1
+      @model.User.Configuration.mouseInversionY = 1
     else
-      Model.User.Configuration.mouseInversionY = -1
-    Model.User.Configuration.push()         
+      @model.User.Configuration.mouseInversionY = -1
+    @model.User.Configuration.push()         
 
-  setMouseActivity : (value) ->
-    Model.User.Configuration.mouseActive = value
-    Model.User.Configuration.push()
+  setMouseActivity : (value) =>
+    @model.User.Configuration.mouseActive = value
+    @model.User.Configuration.push()
     if value is false
       @input.mouse.unbind()
       @input.mouse = null
     else
       @initMouse()
 
-  setKeyboardActivity : (value) ->
-    Model.User.Configuration.keyboardActive = value 
-    Model.User.Configuration.push()
+  setKeyboardActivity : (value) =>
+    @model.User.Configuration.keyboardActive = value 
+    @model.User.Configuration.push()
     if value is false
       @input.keyboard.unbind()
       @input.keyboard = null
     else
       @initKeyboard()
 
-  setGamepadActivity : (value) ->
-    Model.User.Configuration.gamepadActive = value  
-    Model.User.Configuration.push()   
+  setGamepadActivity : (value) =>
+    @model.User.Configuration.gamepadActive = value  
+    @model.User.Configuration.push()   
     if value is false
       @input.gamepad.unbind()
       @input.gamepad = null
     else
       @initGamepad()    
 
-  setMotionSensorActivity : (value) ->
-    Model.User.Configuration.motionsensorActive = value
-    Model.User.Configuration.push()   
+  setMotionSensorActivity : (value) =>
+    @model.User.Configuration.motionsensorActive = value
+    @model.User.Configuration.push()   
     if value is false
       @input.deviceorientation.unbind()
       @input.deviceorientation = null

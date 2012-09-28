@@ -7,6 +7,7 @@ input : Input
 helper : Helper
 libs/flycam2 : Flycam
 geometries/plane : Plane
+view/gui : Gui
 controller/cameracontroller : CameraController
 controller/scenecontroller : SceneController
 ###
@@ -71,6 +72,9 @@ class Controller
         @initKeyboard() if data.keyboardActive is true
         @initGamepad() if data.gamepadActive is true
         @initMotionsensor() if data.motionsensorActive is true
+
+        @gui = new Gui($("#optionswindow"), data, @model,
+                        @sceneController, @cameraController, @flycam)
           
         #$("#moveValue")[0].value = data.moveValue
         #$("#rotateValue")[0].value = data.rotateValue
@@ -209,6 +213,8 @@ class Controller
 
   render : ->
     @model.Binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
+    if (@gui)
+      @gui.updateGlobalPosition()
     @cameraController.update()
     @sceneController.update()
 
@@ -249,50 +255,7 @@ class Controller
 
   setMouseRotateValue : (value) =>
     @model.User.Configuration.mouseRotateValue = (Number) value
-    @model.User.Configuration.push()      
-
-  setRouteClippingDistance : (value) =>
-    @model.User.Configuration.routeClippingDistance = (Number) value
-    @cameraController.setRouteClippingDistance((Number) value)
-    @model.User.Configuration.push()   
-
-  setLockZoom : (value) =>
-    @model.User.Configuration.lockZoom = value
-    @model.User.Configuration.push()      
-
-  setDisplayCrosshair : (value) =>
-    @model.User.Configuration.displayCrosshair = value
-    @sceneController.setDisplayCrosshair(value)
-    @model.User.Configuration.push()    
-
-  setDisplayPreviewXY : (value) =>
-    @model.User.Configuration.displayPreviewXY = value
-    @sceneController.setDisplaySV PLANE_XY, value
-    @model.User.Configuration.push()      
-
-  setDisplayPreviewYZ : (value) =>
-    @model.User.Configuration.displayPreviewYZ = value
-    @sceneController.setDisplaySV PLANE_YZ, value
-    @model.User.Configuration.push()      
-
-  setDisplayPreviewXZ : (value) =>
-    @model.User.Configuration.displayPreviewXZ = value
-    @sceneController.setDisplaySV PLANE_XZ, value
-    @model.User.Configuration.push()      
-
-  setMouseInversionX : (value) =>
-    if value is true
-      @model.User.Configuration.mouseInversionX = 1
-    else
-      @model.User.Configuration.mouseInversionX = -1
-    @model.User.Configuration.push()         
-
-  setMouseInversionY : (value) =>
-    if value is true
-      @model.User.Configuration.mouseInversionY = 1
-    else
-      @model.User.Configuration.mouseInversionY = -1
-    @model.User.Configuration.push()         
+    @model.User.Configuration.push()             
 
   setMouseActivity : (value) =>
     @model.User.Configuration.mouseActive = value

@@ -118,3 +118,6 @@ class Plane
 
   getMeshes : =>
     [@plane, @prevBorders, @crosshair[0], @crosshair[1]]
+
+  setLinearInterpolationEnabled : (value) =>
+    @plane.texture.magFilter = if value==true then THREE.LinearFilter else THREE.NearestFilter

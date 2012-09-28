@@ -19,6 +19,7 @@ User.Configuration =
   routeClippingDistance : null
   lockZoom : null
   displayCrosshair : null
+  interpolation : null
   displayPreviewXY : null
   displayPreviewYZ : null
   displayPreviewXZ : null
@@ -50,6 +51,7 @@ User.Configuration =
               @routeClippingDistance, 
               @lockZoom,
               @displayCrosshair,
+              @interpolation,
               @displayPreviewXY,
               @displayPreviewYZ,
               @displayPreviewXZ,
@@ -88,6 +90,7 @@ User.Configuration =
         routeClippingDistance : @routeClippingDistance,
         lockZoom : @lockZoom,
         displayCrosshair : @displayCrosshair,
+        interpolation : @interpolation,
         displayPreviewXY : @displayPreviewXY,
         displayPreviewYZ : @displayPreviewYZ,
         displayPreviewXZ : @displayPreviewXZ,

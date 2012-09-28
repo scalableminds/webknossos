@@ -106,6 +106,11 @@ class SceneController
       plane.setDisplayCrosshair value
     @flycam.hasChanged = true
 
+  setInterpolation : (value) =>
+    for plane in @planes
+      plane.setLinearInterpolationEnabled(value)
+    @flycam.hasChanged = true
+
   setDisplaySV : (plane, value) =>
     @displayPlane[plane] = value
     @flycam.hasChanged = true

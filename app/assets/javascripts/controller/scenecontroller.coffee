@@ -63,11 +63,15 @@ class SceneController
     if id in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       @cube.visible = false
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-        if i!=id then @planes[i].setVisible(false)
-        else          @planes[i].setVisible(true)
+        if i == id
+          @planes[i].setOriginalCrosshairColor()
+          @planes[i].setVisible(true)
+        else
+          @planes[i].setVisible(false)
     else
       @cube.visible = true
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+        @planes[i].setGrayCrosshairColor()
         @planes[i].setVisible(true)
         @planes[i].plane.visible = @displayPlane[i]
 

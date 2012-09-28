@@ -60,17 +60,26 @@ class SceneController
     new THREE.Vector3(x, y, z)
 
   updateSceneForCam : (id) =>
+    # This method is called for each of the four cams. Even
+    # though they are all looking at the same scene, some
+    # things have to be changed for each cam.
     if id in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       @cube.visible = false
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
         if i == id
           @planes[i].setOriginalCrosshairColor()
           @planes[i].setVisible(true)
+          pos = @flycam.getGlobalPos().slice()
+          # Offset the plane so the user can see the route behind the plane
+          pos[@flycam.getIndices(i)[2]] += if i==PLANE_XY then @planeShift else -@planeShift
+          @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))
         else
           @planes[i].setVisible(false)
     else
       @cube.visible = true
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+        pos = @flycam.getGlobalPos()
+        @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))
         @planes[i].setGrayCrosshairColor()
         @planes[i].setVisible(true)
         @planes[i].plane.visible = @displayPlane[i]
@@ -105,6 +114,9 @@ class SceneController
     for plane in @planes
       plane.setDisplayCrosshair value
     @flycam.hasChanged = true
+
+  setRouteClippingDistance : (value) =>
+    @planeShift = value
 
   setInterpolation : (value) =>
     for plane in @planes

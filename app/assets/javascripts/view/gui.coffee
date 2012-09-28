@@ -97,6 +97,7 @@ class Gui
   setRouteClippingDistance : (value) =>
     @model.User.Configuration.routeClippingDistance = (Number) value
     @cameraController.setRouteClippingDistance((Number) value)
+    @sceneController.setRouteClippingDistance((Number) value)
     @model.User.Configuration.push()   
 
   setLockZoom : (value) =>

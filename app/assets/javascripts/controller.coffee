@@ -96,6 +96,7 @@ class Controller
         #$("#motionsensorActive")[0].checked = data.motionsensorActive
 
         @cameraController.setRouteClippingDistance data.routeClippingDistance
+        @sceneController.setRouteClippingDistance data.routeClippingDistance
         @sceneController.setDisplayCrosshair data.displayCrosshair
         @sceneController.setDisplaySV PLANE_XY, data.displayPreviewXY
         @sceneController.setDisplaySV PLANE_YZ, data.displayPreviewYZ

@@ -2,7 +2,6 @@
 libs/flycam : Flycam
 libs/flycam2 : Flycam2d
 libs/Tween : TWEEN_LIB
-libs/datgui/dat.gui : DatGui
 model/game : Game
 libs/event_mixin : EventMixin
 ###
@@ -37,44 +36,6 @@ class View
     @curWidth = WIDTH = (container.width()-20)/2
     HEIGHT = (container.height()-20)/2
     @scaleFactor = 1
-
-    # create GUI
-    objects = { 
-                lockZoom: true
-                inverseX: false
-                inverseY: false
-                routeClippingDistance: 40
-                displayCrosshairs: true
-                displayPrevXY : true
-                displayPrevYZ : true
-                displayPrevXZ : true
-              }
-    @gui  = new dat.GUI({autoPlace: false})
-    $("#optionswindow").append @gui.domElement
-    
-    #c = gui.add text, "speed", 1, 100
-    #c.onChange (value) -> Controller.setRouteClippingDistance value
-    
-    #$(gui.domElement).css
-    #  position : 'absolute'
-    #  left : '220px'
-    #  top : '260px'
-    #  height : '500px'
-    
-    fControls = @gui.addFolder("Controls")
-    fControls.add objects, "lockZoom"
-    fControls.add objects, "inverseX"
-    fControls.add objects, "inverseY"
-
-    fView = @gui.addFolder("View")
-    fView.add objects, "routeClippingDistance", 1, 100
-    fView.add objects, "displayCrosshairs"
-    fView.add objects, "displayPrevXY"
-    fView.add objects, "displayPrevYZ"
-    fView.add objects, "displayPrevXZ"
-
-    fControls.open()
-    fView.open()
 
     # Initialize main THREE.js components
     colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
@@ -153,7 +114,7 @@ class View
     # without rounding the position becomes really long and blocks the canvas mouse input
     position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
     texturePositionXY = [Math.round(texturePositionXY[0]),Math.round(texturePositionXY[1]),Math.round(texturePositionXY[2])]
-    @positionStats.html "Flyflycam: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{@flycam.getIntegerZoomStep(@flycam.getActivePlane())}<br />activePlane: #{@flycam.getActivePlane()}" 
+    #@positionStats.html "Flyflycam: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{@flycam.getIntegerZoomStep(@flycam.getActivePlane())}<br />activePlane: #{@flycam.getActivePlane()}" 
     @stats.update()
 
     @newTextures[VIEW_3D] = @newTextures[0] or @newTextures[1] or @newTextures[2]

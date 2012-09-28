@@ -3,11 +3,14 @@ import play.api._
 import play.api.Play.current
 import models._
 import brainflight.mail.DefaultMails
+import models.graph.Experiment
+import models.graph.Tree
+import models.graph.Node
 
 object Global extends GlobalSettings {
 
-  override def onStart( app: Application ) {
-    if ( Play.current.mode == Mode.Dev )
+  override def onStart(app: Application) {
+    if (Play.current.mode == Mode.Dev)
       InitialData.insert()
   }
 
@@ -16,7 +19,7 @@ object Global extends GlobalSettings {
 /**
  * Initial set of data to be imported
  * in the sample application.
- */    
+ */
 object InitialData {
 
   def insert() = {
@@ -29,21 +32,24 @@ object InitialData {
 
     }
 
-    if ( User.findAll.isEmpty ) {
-      val u = ( "scmboy@scalableminds.com", "SCM Boy", "secret" )
-      Seq(
-        u ).foreach( User.create _ tupled )
+    if (Role.findAll.isEmpty) {
+      Role.insert(Role("user", Nil))
+      Role.insert(Role("admin", Permission("*", "*" :: Nil) :: Nil))
     }
 
-    if ( Role.findAll.isEmpty ) {
-      Role.insert( Role( "user", Nil ) )
-      Role.insert( Role( "admin", Permission( "*", "*" :: Nil ) :: Nil ) )
-    }
-
-    if ( RouteOrigin.findAll.isEmpty ) {
+    if (Experiment.findAll.isEmpty) {
       val d = DataSet.default
-      val matrix = List[Float]( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 300, 300, 200, 1 )
-      RouteOrigin.insert( RouteOrigin( TransformationMatrix( matrix ), 0, d._id ) )
+      val p = Point3D(300, 300, 200)
+      val nodes = List(Node(1, 1, p, 0, 0, 0))
+      val tree = Tree(1, nodes, Nil, Color(1, 0, 0, 0))
+      val exp = Experiment(d._id, List(tree), Nil, 0, 1, p)
+      Experiment.insert(exp)
+    }
+
+    if (User.findAll.isEmpty) {
+      val u = ("scmboy@scalableminds.com", "SCM Boy", "secret", List(Experiment.default._id))
+      Seq(
+        u).foreach(User.create _ tupled)
     }
   }
 

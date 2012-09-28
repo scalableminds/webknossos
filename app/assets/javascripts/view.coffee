@@ -2,8 +2,12 @@
 libs/flycam : Flycam
 libs/flycam2 : Flycam2d
 libs/Tween : TWEEN_LIB
+<<<<<<< HEAD
 model/game : Game
 libs/event_mixin : EventMixin
+=======
+model/route : Route
+>>>>>>> 133286e50335378a38568075ca6350e5fe5ba3b9
 ###
 
 #model : Model
@@ -197,16 +201,6 @@ class View
       catcherStyle = $(".inputcatcher")[i].style
       #catcherStyle.borderColor  = "#f8f800"   #  else "#C7D1D8"
       $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
-
-  # updateRoute : =>
-  #   gPos                = @flycam.getGlobalPos()
-  #   scale               = [@flycam.getPlaneScalingFactor(PLANE_XY), @flycam.getPlaneScalingFactor(PLANE_YZ), @flycam.getPlaneScalingFactor(PLANE_XZ)]
-    
-  #   for i in [0..2]
-  #     ind = @flycam.getIndices i
-  #     @routeView[i].scale    = new THREE.Vector3(1/scale[i], 1/scale[i], 1/scale[i])
-  #     @routeView[i].position = new THREE.Vector3(-gPos[ind[0]]/scale[i], gPos[ind[1]]/scale[i], gPos[ind[2]]/scale[i]+1)
-  #     @routeView[i].geometry.verticesNeedUpdate = true
 
   getCameras : =>
     @camera

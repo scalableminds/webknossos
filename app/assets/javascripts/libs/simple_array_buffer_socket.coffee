@@ -101,7 +101,7 @@ class SimpleArrayBufferSocket.WebSocket
             if buffer.byteLength > 4
               request.resolve(new @responseBufferType(buffer, 4))
             else
-              request.reject()
+              request.resolve([])
             
             break
         false
@@ -168,7 +168,12 @@ class SimpleArrayBufferSocket.XmlHttpRequest
       data : data.buffer
       url : @url
       responseType : 'arraybuffer'
-    ).pipe (buffer) => new @responseBufferType(buffer)
+    ).pipe (buffer) => 
+    
+      if buffer
+        new @responseBufferType(buffer)
+      else
+        []
 
   close : ->
 

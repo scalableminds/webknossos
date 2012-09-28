@@ -12,6 +12,7 @@ PLANE_XZ         = 2
 VIEW_3D          = 3
 BORDER_COLORS    = [0xff0000, 0x0000ff, 0x00ff00]
 CROSSHAIR_COLORS = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
+GRAY_CH_COLOR    = 0x222222
 
 class Plane
 
@@ -61,6 +62,14 @@ class Plane
 
   setDisplayCrosshair : (value) =>
     @displayCosshair = value
+
+  setOriginalCrosshairColor : =>
+    for i in [0..1]
+      @crosshair[i].material = new THREE.LineBasicMaterial({color: CROSSHAIR_COLORS[@planeID][i], linewidth: 1})
+
+  setGrayCrosshairColor : =>
+    for i in [0..1]
+      @crosshair[i].material = new THREE.LineBasicMaterial({color: GRAY_CH_COLOR, linewidth: 1})
 
   updateTexture : =>
 

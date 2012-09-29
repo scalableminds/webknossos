@@ -1,0 +1,10 @@
+@(user:User)
+
+@main(Some(user)){
+  @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data") {
+      <input type="file" name="nmlFile">
+    <p>
+        <input type="submit">
+    </p>
+  }
+}

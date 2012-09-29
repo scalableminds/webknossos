@@ -26,6 +26,7 @@ import models.DataSet
 import akka.pattern.AskTimeoutException
 import play.api.libs.iteratee.Concurrent.Channel
 import scala.collection.mutable.ArrayBuffer
+//import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * scalableminds - brainflight
@@ -76,7 +77,6 @@ object BinaryData extends Controller with Secured {
    */
   def requestViaAjax( dataSetId: String, cubeSize: Int ) = Authenticated( parser = parse.raw ) { implicit request =>
     Async {
-       val t = System.currentTimeMillis
       ( for {
         payload <- request.body.asBytes()
         message <- BinaryProtocol.parseAjax( payload )

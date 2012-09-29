@@ -26,7 +26,11 @@ object ExtendedTypes {
 
   implicit def Int2ExtendedInt( i: Int ) =
     new ExtendedInt( i )
+  
+  // --------------------------------------------------------------------------
 
+  implicit def String2ExtendedString( s: String ) =
+    new ExtendedString( s )
   // --------------------------------------------------------------------------
 
   implicit def Float2ExtendedFloat( f: Float ) =

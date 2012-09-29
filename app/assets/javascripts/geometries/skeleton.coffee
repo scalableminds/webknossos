@@ -1,5 +1,6 @@
 ### define
 model : Model
+model/route : Route
 ###
 
 class Skeleton
@@ -11,9 +12,12 @@ class Skeleton
     @maxRouteLen = maxRouteLen
     @flycam = flycam
 
-    @createRoute(maxRouteLen)
+    # FIXME: this value should be adjusted according to width!!!
+    @curWidth = 384
 
-  createRoute : (maxRouteLen) ->
+    @createRoute(maxRouteLen, Route.data.task)
+
+  createRoute : (maxRouteLen, initData) ->
     # create route to show in previewBox and pre-allocate buffers
     @maxRouteLen = maxRouteLen
 
@@ -21,43 +25,88 @@ class Skeleton
     routeGeometryNodes = new THREE.Geometry()
     routeGeometry.dynamic = true
     routeGeometryNodes.dynamic = true
+    routeGeometryView = new Array(3)
 
+    for i in [0..2]
+      routeGeometryView[i] = new THREE.Geometry()
+      routeGeometryView[i].dynamic = true
+
+    # initialize edges
     i = 0
-    while i < maxRouteLen
+    index = 0
+    for t of initData.trees
+      index = t
+    for edge in initData.trees[index].edges
+      nodePos = initData.trees[index].nodes[edge.source].position
+      node2Pos = initData.trees[index].nodes[edge.target].position
+      routeGeometry.vertices.push(new THREE.Vector3(nodePos[0], Route.data.dataSet.upperBoundary[1] - nodePos[2], nodePos[1]))
+      routeGeometry.vertices.push(new THREE.Vector3(node2Pos[0], Route.data.dataSet.upperBoundary[1] - node2Pos[2], node2Pos[1]))
+      for g in routeGeometryView
+        g.vertices.push(new THREE.Vector3(nodePos[0], Route.data.dataSet.upperBoundary[1] - nodePos[2], nodePos[1]))
+        g.vertices.push(new THREE.Vector3(node2Pos[0], Route.data.dataSet.upperBoundary[1] - node2Pos[2], node2Pos[1]))
+      i += 2
+
+    while i < 2 * maxRouteLen
       # workaround to hide the unused vertices
-      routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
+      routeGeometry.vertices.push(new THREE.Vector2(0,0))
+      for g in routeGeometryView
+        g.vertices.push(new THREE.Vector2(0, 0))
       i += 1
 
+    # initialize edit position
+    if i != 0
+      nodePos = initData.trees[index].nodes[initData.activeNode].position
+      @lastNodePosition = nodePos
+
+    # initialize nodes
     i = 0
-    while i < 2 * maxRouteLen
-      routeGeometry.vertices.push(new THREE.Vector2(0,0))
+    while i < maxRouteLen
+      if initData.trees[index].nodes[i]
+        nodePos = initData.trees[index].nodes[i].position
+        routeGeometryNodes.vertices.push(new THREE.Vector3(nodePos[0], Route.data.dataSet.upperBoundary[1] - nodePos[2], nodePos[1]))
+        @curIndex = i + 1
+      else
+        routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
       i += 1
 
     route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces)
+    @routeView = new Array(3)
+    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      @routeView[i] = new THREE.Line(routeGeometryView[i], new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces)
     routeNodes = new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 5, sizeAttenuation : false}))
+
+    # Initializing Position
+    gPos = cam2d.getGlobalPos()
+    for i in [0..2]
+      ind = cam2d.getIndices i
+      @routeView[i].position = new THREE.Vector3(-gPos[ind[0]], gPos[ind[1]], gPos[ind[2]])
 
     # set initial ray threshold to define initial click area
     @particles = []
-
-    @route = route
-    @routeNodes = routeNodes
+    @rayThreshold = 100
 
   setActiveNodePosition : (position) =>
     @lastNodePosition = position
+    @updateRoute()
 
   getMeshes : =>
     [@route, @routeNodes]
 
   setWaypoint : (position, typeNumber) =>
     curGlobalPos = @flycam.getGlobalPos()
-      
-    console.log position
+    activePlane  = @flycam.getActivePlane()
+    zoomFactor   = @flycam.getPlaneScalingFactor activePlane
 
+    if typeNumber == 0
+      # calculate the global position of the rightclick
+      switch activePlane
+        when PLANE_XY then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2]]
+        when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2] - (@curWidth/2 - position[0])/@x*zoomFactor]
+        when PLANE_XZ then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (@curWidth/2 - position[1])/@x*zoomFactor]
+      
     unless @curIndex
       @curIndex = 0
       @lastNodePosition = position
-
-    console.log position, @curIndex, @maxRouteLen
 
     if @curIndex < @maxRouteLen
 
@@ -71,6 +120,12 @@ class Skeleton
       @route.geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[0], @lastNodePosition[1], @lastNodePosition[2])
       @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[0], position[1], position[2])
       @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], position[1], position[2])
+
+      for i in [0..2]
+        ind = @flycam.getIndices i
+        @routeView[i].geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[ind[0]], -@lastNodePosition[ind[1]], -@lastNodePosition[ind[2]])
+        @routeView[i].geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[ind[0]], -position[ind[1]], -position[ind[2]])
+        @routeView[i].geometry.verticesNeedUpdate = true
 
       @route.geometry.verticesNeedUpdate = true
       @routeNodes.geometry.verticesNeedUpdate = true
@@ -110,3 +165,34 @@ class Skeleton
       objPos = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # jump to the nodes position
       @flycam.setGlobalPos [objPos.x, objPos.y, objPos.z]
+
+      @updateRoute()
+
+  updateRoute : =>
+    gPos  = @flycam.getGlobalPos()
+    scale = [@flycam.getPlaneScalingFactor(PLANE_XY), @flycam.getPlaneScalingFactor(PLANE_YZ), @flycam.getPlaneScalingFactor(PLANE_XZ)]
+  
+    for i in [0..2]
+      ind = @flycam.getIndices i
+      @routeView[i].scale    = new THREE.Vector3(1/scale[i], 1/scale[i], 1/scale[i])
+      @routeView[i].position = new THREE.Vector3(-gPos[ind[0]]/scale[i], gPos[ind[1]]/scale[i], gPos[ind[2]]/scale[i]+1)
+      @routeView[i].geometry.verticesNeedUpdate = true
+
+  onPreviewClick : (position) ->
+    # vector with direction from camera position to click position
+    vector = new THREE.Vector3((position[0] / (384 * @x) ) * 2 - 1, - (position[1] / (384 * @x)) * 2 + 1, 0.5)
+    
+    # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
+    projector = new THREE.Projector()
+    ray = projector.pickingRay(vector, @camera[VIEW_3D])
+    ray.setThreshold(@rayThreshold)
+
+    # identify clicked object
+    intersects = ray.intersectObjects([@routeNodes])
+
+    if (intersects.length > 0 and intersects[0].distance >= 0)
+      intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
+      objPos = intersects[0].object.geometry.vertices[intersects[0].vertex]
+      # jump to the nodes position
+      cam2d.setGlobalPos [objPos.x, objPos.z, -objPos.y + Route.data.dataSet.upperBoundary[1]]
+      View.updateRoute()

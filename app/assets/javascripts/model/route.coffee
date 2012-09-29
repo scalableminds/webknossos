@@ -1,5 +1,7 @@
 ### define
 libs/request : request
+libs/event_mixin : EventMixin
+libs/json_socket : JsonSocket
 model/game : Game
 ###
 
@@ -8,24 +10,36 @@ model/game : Game
 # Constants
 BUFFER_SIZE = 262144 # 1024 * 1204 / 4
 PUSH_THROTTLE_TIME = 30000 # 30s
+INIT_TIMEOUT = 10000 # 10s
 
 Route = 
   
   # Variables
   branchStack : []
 
-  # Initializes this module and returns a matrix to start your work.
+  # Initializes this module and returns a position to start your work.
   initialize : _.once ->
 
     Game.initialize().pipe =>
 
-      request(
-        url : "/route/initialize?dataSetId=#{Game.dataSet.id}"
-        responseType : "json"
-      ).pipe (data) =>
+      _.extend(this, new EventMixin())
+
+      @socket = new JsonSocket(
+        senders : [
+          new JsonSocket.WebSocket("ws://#{document.location.host}/task/ws/#{Game.task.id}")
+          new JsonSocket.Comet("/task/comet/#{Game.task.id}")
+        ]
+      )
+
+      deferred = new $.Deferred()
+
+      @socket.on "data", (data) =>
         
-        @id          = data.route.id
-        @branchStack = data.branches.map (a) -> new Float32Array(a)
+        Route.data = data
+        console.log data
+        @id        = data.dataSet.id
+        #@branchStack = data.task.branchPoints.map (a) -> new Float32Array(a)
+        @branchStack = (data.task.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.task.branchPoints) # when data.task.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
         @createBuffer()
         
         $(window).on(
@@ -35,16 +49,25 @@ Route =
             @pushImpl()
         )
 
-        #FIXME we don't need a matrix in the DB, change to just the position
-        data.route.origin.slice(12,15)
+        deferred.resolve(data.task.editPosition)
+
+      setTimeout(
+        -> deferred.reject()
+        INIT_TIMEOUT
+      )
+
+      deferred
 
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.
   push : ->
+    console.log "push()"
     @push = _.throttle(_.mutexDeferred(@pushImpl, -1), PUSH_THROTTLE_TIME)
     @push()
 
   pushImpl : ->
+
+    console.log "pushing..."
 
     @initialize().pipe =>
       
@@ -86,7 +109,7 @@ Route =
       
       @addToBuffer(1, position)
       # push TransformationMatrix for compatibility reasons
-      @branchStack.push([0,0,0,0,0,0,0,0,0,0,0,0,position[0],position[1],position[2],0])
+      @branchStack.push(position)
 
     return
 
@@ -100,7 +123,7 @@ Route =
 
       if branchStack.length > 0
         @addToBuffer(2)
-        deferred.resolve(branchStack.pop().slice(12,15))
+        deferred.resolve(branchStack.pop())
       else
         deferred.reject()
 

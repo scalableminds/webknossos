@@ -14,6 +14,12 @@ import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.gridfs.Imports._
 import brainflight.tools.geometry.Point3D
 import models.DataSet
+import akka.agent.Agent
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+import brainflight.binary.DataBlockInformation
+import brainflight.binary.Data
+import akka.actor.ActorRef
 
 object PerformanceTest extends Controller {
   
@@ -44,7 +50,10 @@ object PerformanceTest extends Controller {
 
   def timeFileDataStore() = Action {
     var fileDataStoreTime = -System.currentTimeMillis()
-    var dataStore = new FileDataStore( models.Agents.BinaryCacheAgent )
+    implicit val system = Akka.system
+
+    val BinaryCacheAgent = Agent( Map[DataBlockInformation, Data]().empty )
+    var dataStore = new FileDataStore( BinaryCacheAgent )
     for {
       x <- xBot to xTop
       y <- yBot to yTop

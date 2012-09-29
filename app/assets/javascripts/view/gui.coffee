@@ -53,9 +53,10 @@ class Gui
     #  height : '500px'
     
     fPosition = @gui.addFolder("Position")
-    posController = (fPosition.add @settings, "position").name("Position")
-    posController.listen()
-    posController.onFinishChange(@setPosFromString)
+    (fPosition.add @settings, "position")
+                          .name("Position")
+                          .listen()
+                          .onFinishChange(@setPosFromString)
     fControls = @gui.addFolder("Controls")
     (fControls.add @settings, "lockZoom")
                           .name("Lock Zoom")
@@ -101,11 +102,12 @@ class Gui
                           .name("Delete Active Tree")
 
     fNodes = @gui.addFolder("Nodes")
+    @activeNodeIdController =
     (fNodes.add @settings, "activeNodeID")
                           .min(1)
                           .step(1)
                           .name("Active Node ID")
-                          #.onChange(@setDisplayPreviewXY)
+                          .onFinishChange(@setActiveNode)
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
@@ -173,3 +175,13 @@ class Gui
     else
       @model.User.Configuration.mouseInversionY = -1
     @model.User.Configuration.push()  
+
+  # called when value is changed in input field
+  setActiveNode : (value) =>
+    @flycam.setGlobalPos(@model.Route.setActiveNode(value))
+    @setActiveNodeId(@model.Route.getActiveNodeId())
+
+  # called when value user switch to different active node
+  setActiveNodeId : (value) =>
+    @settings.activeNodeID = value
+    @activeNodeIdController.updateDisplay()

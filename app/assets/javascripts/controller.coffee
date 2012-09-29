@@ -144,10 +144,12 @@ class Controller
       "b" : => 
         @model.Route.putBranch(@flycam.getGlobalPos())
         @sceneController.setWaypoint(@flycam.getGlobalPos(), 1)
+        @gui.setActiveNodeId(@model.Route.getActiveNodeId())
       "h" : => @model.Route.popBranch().done(
         (position) => 
           @flycam.setGlobalPos(position)
           @sceneController.setActiveNodePosition(position)
+          @gui.setActiveNodeId(@model.Route.getActiveNodeId())
         )
 
       #Zoom in/out
@@ -210,6 +212,7 @@ class Controller
       when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
     @sceneController.setWaypoint(position, typeNumber)
     @model.Route.put(position)
+    @gui.setActiveNodeId(@model.Route.getActiveNodeId())
 
   onPreviewClick : (position) =>
     @sceneController.onPreviewClick(position, @view.scaleFactor, @view.getCameras()[VIEW_3D])

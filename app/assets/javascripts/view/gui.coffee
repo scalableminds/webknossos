@@ -22,13 +22,22 @@ class Gui
                 lockZoom: data.lockZoom
                 inverseX: data.mouseInversionX == 1
                 inverseY: data.mouseInversionY == 1
+
                 routeClippingDistance: data.routeClippingDistance
                 displayCrosshairs: data.displayCrosshair
                 #FIXME: Why do I have to do this?
                 interpolation : if typeof data.interpolation isnt "undefined" then data.interpolation else true
+
                 displayPrevXY : data.displayPreviewXY
                 displayPrevYZ : data.displayPreviewYZ
                 displayPrevXZ : data.displayPreviewXZ
+
+                activeTreeID : 1
+                newTree : -> alert "Create New Tree"
+                deleteActiveTree : -> alert "Delete Active Tree"
+
+                activeNodeID : 1
+                deleteActiveNode : -> alert "Delete Active Node"
               }
     @gui  = new dat.GUI({autoPlace: false})
     
@@ -80,10 +89,32 @@ class Gui
                           .name("Display XZ-Plane")
                           .onChange(@setDisplayPreviewXZ)
 
+    fTrees = @gui.addFolder("Trees")
+    (fTrees.add @settings, "activeTreeID")
+                          .min(1)
+                          .step(1)
+                          .name("Active Tree ID")
+                          #.onChange(@setDisplayPreviewXY)
+    (fTrees.add @settings, "newTree")
+                          .name("Create New Tree")
+    (fTrees.add @settings, "deleteActiveTree")
+                          .name("Delete Active Tree")
+
+    fNodes = @gui.addFolder("Nodes")
+    (fNodes.add @settings, "activeNodeID")
+                          .min(1)
+                          .step(1)
+                          .name("Active Node ID")
+                          #.onChange(@setDisplayPreviewXY)
+    (fNodes.add @settings, "deleteActiveNode")
+                          .name("Delete Active Node")
+
     fPosition.open()
     fControls.open()
     fView.open()
     fSkeleton.open()
+    fTrees.open()
+    fNodes.open()
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")

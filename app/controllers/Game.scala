@@ -7,17 +7,19 @@ import brainflight.security.Secured
 import models.Role
 import models.DataSet
 import play.api.Logger
+import models.graph.Experiment
 
 object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
-  def createDataSetInformation( dataSet: DataSet ) = Json.obj(
-    "dataSet" -> Json.obj(
-      "id" -> dataSet.id,
-      "resolutions" -> dataSet.supportedResolutions,
-      "upperBoundary" -> dataSet.maxCoordinates ) )
+  def createTaskInformation(task: Experiment) = Json.obj(
+    "task" -> Json.obj(
+      "id" -> task.id))
 
   def initialize = Authenticated { implicit request =>
-    Ok( createDataSetInformation( DataSet.default ) )
+    (for {
+      taskId <- request.user.tasks.headOption
+      task <- Experiment.findOneById(taskId)
+    } yield Ok(createTaskInformation(task))) getOrElse BadRequest("Couldn't open task.")
   }
 }

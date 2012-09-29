@@ -13,6 +13,6 @@ object Actors {
   val system = Akka.system
 
   val Mailer = system.actorOf( Props[Mailer], name = "mailActor" )
-  val DataSetActor = system.actorOf( Props[DataSetActor].withDispatcher("dataset-prio-dispatcher").withRouter(
+  val DataSetActor = system.actorOf( Props[DataSetActor].withRouter(
     RoundRobinRouter( nrOfInstances = NumOfCPUCores ) ) )
 }

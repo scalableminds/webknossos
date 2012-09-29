@@ -3,6 +3,7 @@ libs/request : request
 libs/event_mixin : EventMixin
 libs/json_socket : JsonSocket
 model/game : Game
+model/tracepoint : TracePointClass
 ###
 
 # This takes care of the route. 
@@ -12,10 +13,15 @@ BUFFER_SIZE = 262144 # 1024 * 1204 / 4
 PUSH_THROTTLE_TIME = 30000 # 30s
 INIT_TIMEOUT = 10000 # 10s
 
+KIND_USUAL  = 0
+KIND_BRANCH = 1
+
 Route = 
   
   # Variables
   branchStack : []
+  tree : null
+  activePoint : null
 
   # Initializes this module and returns a position to start your work.
   initialize : _.once ->
@@ -41,6 +47,10 @@ Route =
         #@branchStack = data.task.branchPoints.map (a) -> new Float32Array(a)
         @branchStack = (data.task.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.task.branchPoints) # when data.task.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
         @createBuffer()
+
+        @idCount = 0;
+        @tree = new TracePoint(null, 0, @idCount++, [200, 200, 200], 1, 1)
+        @activePoint = @tree
         
         $(window).on(
           "unload"
@@ -101,6 +111,8 @@ Route =
       @buffer.set(value, @bufferIndex)
       @bufferIndex += 3
 
+    #console.log @buffer.subarray(0, 50)
+
     @push()
 
   putBranch : (position) ->
@@ -111,19 +123,36 @@ Route =
       # push TransformationMatrix for compatibility reasons
       @branchStack.push(position)
 
+      point = new TracePoint(@activePoint, 1, @idCount++, position, 1, 1)
+      @activePoint.appendNext(point)
+      @activePoint = point
+      console.log @tree.toString()
+
     return
 
   popBranch : ->
 
     @initialize().pipe =>
+
+      savedActivePoint = @activePoint
+      while (true)
+        @activePoint = @activePoint.parent
+        unless @activePoint
+          break
+        if (@activePoint.kind == KIND_BRANCH)
+          break
+      unless @activePoint
+        @activePoint = savedActivePoint
       
       deferred = new $.Deferred()
       
+      # Georg doesn't get the following lines
       { branchStack } = @
 
       if branchStack.length > 0
         @addToBuffer(2)
-        deferred.resolve(branchStack.pop())
+        #deferred.resolve(branchStack.pop())
+        deferred.resolve(@activePoint.pos)
       else
         deferred.reject()
 
@@ -141,5 +170,11 @@ Route =
       lastPosition[2] != position[2]
         @lastPosition = position
         @addToBuffer(0, position)
+
+      point = new TracePoint(@activePoint, 0, @idCount++, position, 1, 1)
+      @activePoint.appendNext(point)
+      @activePoint = point
+      console.log @tree.toString()
+
 
     return

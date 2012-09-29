@@ -2,12 +2,9 @@
 libs/flycam : Flycam
 libs/flycam2 : Flycam2d
 libs/Tween : TWEEN_LIB
-<<<<<<< HEAD
 model/game : Game
 libs/event_mixin : EventMixin
-=======
 model/route : Route
->>>>>>> 133286e50335378a38568075ca6350e5fe5ba3b9
 ###
 
 #model : Model

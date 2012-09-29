@@ -32,16 +32,8 @@ class Controller
     @flycam = new Flycam(VIEWPORT_WIDTH)
     @view  = new View(@model, @flycam)
 
-    @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model)
-    meshes      = @sceneController.getMeshes()
-    for mesh in meshes
-      @view.addGeometry(VIEW_3D, mesh)
-
     # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @flycam, @model, [2000, 2000, 2000], @sceneController)
-    
-    @view.on "render", (event) => @render()
-    @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
+    @cameraController = new CameraController(@view.getCameras(), @flycam, @model, [2000, 2000, 2000])
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -65,58 +57,39 @@ class Controller
       buttons[i].setAttribute "value", values[i]
       buttons[i].addEventListener "click", callbacks[i], true
       @prevControls.append buttons[i]
-  
-    @model.User.Configuration.initialize().then(
-      (data) =>
-        @initMouse() if data.mouseActive is true
-        @initKeyboard() if data.keyboardActive is true
-        @initGamepad() if data.gamepadActive is true
-        @initMotionsensor() if data.motionsensorActive is true
-
-        @gui = new Gui($("#optionswindow"), data, @model,
-                        @sceneController, @cameraController, @flycam)
-          
-        #$("#moveValue")[0].value = data.moveValue
-        #$("#rotateValue")[0].value = data.rotateValue
-        #$("#mouseRotateValue")[0].value = data.mouseRotateValue
-        #$("#routeClippingDistance")[0].value = data.routeClippingDistance
-        #$("#lockZoom")[0].checked = data.lockZoom
-        #$("#displayCrosshair")[0].checked = data.displayCrosshair
-        #$("#displayPreviewXY")[0].checked = data.displayPreviewXY
-        #$("#displayPreviewYZ")[0].checked = data.displayPreviewYZ
-        #$("#displayPreviewXZ")[0].checked = data.displayPreviewXZ
-        #$("#moveValue")[0].value = data.moveValue
-        #$("#mouseInversionX")[0].checked = true if data.mouseInversionX is 1
-        #$("#mouseInversionY")[0].checked = true if data.mouseInversionY is 1
-        #$("#mouseInversionX")[0].checked = false if data.mouseInversionX is -1
-        #$("#mouseInversionY")[0].checked = false if data.mouseInversionY is -1        
-        #$("#keyboardActive")[0].checked = data.keyboardActive
-        #$("#mouseActive")[0].checked = data.mouseActive
-        #$("#gamepadActive")[0].checked = data.gamepadActive
-        #$("#motionsensorActive")[0].checked = data.motionsensorActive
-
-        @cameraController.setRouteClippingDistance data.routeClippingDistance
-        @sceneController.setRouteClippingDistance data.routeClippingDistance
-        @sceneController.setDisplayCrosshair data.displayCrosshair
-        @sceneController.setDisplaySV PLANE_XY, data.displayPreviewXY
-        @sceneController.setDisplaySV PLANE_YZ, data.displayPreviewYZ
-        @sceneController.setDisplaySV PLANE_XZ, data.displayPreviewXZ
-    )
 
     @model.Route.initialize().then(
       (position) =>
         # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
+
+        @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model)
+        meshes      = @sceneController.getMeshes()
+        for mesh in meshes
+          @view.addGeometry(VIEW_3D, mesh)
+    
+        @view.on "render", (event) => @render()
+        @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
         
         @flycam.setGlobalPos(position)
         @cameraController.changePrevSV()
-        #View.move([46, 36, -530])
-        
-        # set initial direction
-        #@view.setDirection([0, 0, 1])
+  
+        @model.User.Configuration.initialize().then(
+          (data) =>
+            @initMouse() if data.mouseActive is true
+            @initKeyboard() if data.keyboardActive is true
+            @initGamepad() if data.gamepadActive is true
+            @initMotionsensor() if data.motionsensorActive is true
 
-        #GeometryFactory.createMesh("crosshair.js", 0, 0, 5)
-        #GeometryFactory.createTrianglesplane(512, 0, @model.User.Configuration, @view).done =>
-        #  @view.draw()
+            @gui = new Gui($("#optionswindow"), data, @model,
+                            @sceneController, @cameraController, @flycam)
+
+            @cameraController.setRouteClippingDistance data.routeClippingDistance
+            @sceneController.setRouteClippingDistance data.routeClippingDistance
+            @sceneController.setDisplayCrosshair data.displayCrosshair
+            @sceneController.setDisplaySV PLANE_XY, data.displayPreviewXY
+            @sceneController.setDisplaySV PLANE_YZ, data.displayPreviewYZ
+            @sceneController.setDisplaySV PLANE_XZ, data.displayPreviewXZ
+        )
       
       ->
         alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")

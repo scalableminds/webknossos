@@ -48,8 +48,8 @@ Route =
         @branchStack = (data.task.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.task.branchPoints) # when data.task.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
         @createBuffer()
 
-        @idCount = 0;
-        @tree = new TracePoint(null, 0, @idCount++, [200, 200, 200], 1, 1)
+        @idCount = 1
+        @tree = null
         @activePoint = @tree
         
         $(window).on(
@@ -123,10 +123,7 @@ Route =
       # push TransformationMatrix for compatibility reasons
       @branchStack.push(position)
 
-      point = new TracePoint(@activePoint, 1, @idCount++, position, 1, 1)
-      @activePoint.appendNext(point)
-      @activePoint = point
-      console.log @tree.toString()
+      @putNewPoint(position, KIND_BRANCH)
 
     return
 
@@ -171,10 +168,27 @@ Route =
         @lastPosition = position
         @addToBuffer(0, position)
 
-      point = new TracePoint(@activePoint, 0, @idCount++, position, 1, 1)
-      @activePoint.appendNext(point)
+      @putNewPoint(position, KIND_USUAL)
+
+    return
+
+  putNewPoint : (position, kind) ->
+      point = new TracePoint(@activePoint, kind, @idCount++, position, 1, 1)
+      if @activePoint
+        @activePoint.appendNext(point)
+      else
+        @tree = point
       @activePoint = point
       console.log @tree.toString()
 
+  getActiveNodeId : ->
+    @activePoint.id
 
-    return
+  getActiveNodePos : ->
+    @activePoint.pos
+
+  setActiveNode : (id) ->
+    findResult = if @tree.id == id then @tree else @tree.findNodeById(id)
+    if (findResult)
+      @activePoint = findResult
+    return @activePoint.pos

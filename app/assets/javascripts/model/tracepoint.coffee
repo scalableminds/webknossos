@@ -19,6 +19,18 @@ class TracePoint
     if (@kind == KIND_BRANCH)
       @children.push(next)
 
+  findNodeById : (id) ->
+    if (@next)
+      if @next.id == id then return @next
+      return @next.findNodeById(id)
+    if (@children.length > 0)
+      for c in @children
+        if c.id == id then return c
+      for c in @children
+        cResult = c.findNodeById(id)
+        if cResult then return cResult
+    return null
+
   toString : ->
     if (@kind == KIND_USUAL)
       if (@next)

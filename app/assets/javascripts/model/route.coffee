@@ -13,8 +13,8 @@ BUFFER_SIZE = 262144 # 1024 * 1204 / 4
 PUSH_THROTTLE_TIME = 30000 # 30s
 INIT_TIMEOUT = 10000 # 10s
 
-KIND_USUAL  = 0
-KIND_BRANCH = 1
+TYPE_USUAL  = 0
+TYPE_BRANCH = 1
 
 Route = 
   
@@ -53,15 +53,15 @@ Route =
         @activeNode = @tree
         
         # Build sample tree
-        @putNewPoint([300, 300, 200], KIND_USUAL)
-        branch = @putNewPoint([300, 320, 200], KIND_BRANCH)
-        @putNewPoint([340, 340, 200], KIND_USUAL)
-        @putNewPoint([360, 380, 200], KIND_USUAL)
+        @putNewPoint([300, 300, 200], TYPE_USUAL)
+        branch = @putNewPoint([300, 320, 200], TYPE_BRANCH)
+        @putNewPoint([340, 340, 200], TYPE_USUAL)
+        @putNewPoint([360, 380, 200], TYPE_USUAL)
         @activeNode = branch
-        branch = @putNewPoint([340, 280, 200], KIND_BRANCH)
-        @putNewPoint([360, 270, 200], KIND_USUAL)
+        branch = @putNewPoint([340, 280, 200], TYPE_BRANCH)
+        @putNewPoint([360, 270, 200], TYPE_USUAL)
         @activeNode = branch
-        @putNewPoint([360, 290, 200], KIND_USUAL)
+        @putNewPoint([360, 290, 200], TYPE_USUAL)
         console.log "--------- TREE ---------"
         console.log @tree.toString()
 
@@ -136,7 +136,7 @@ Route =
       # push TransformationMatrix for compatibility reasons
       @branchStack.push(position)
 
-      @putNewPoint(position, KIND_BRANCH)
+      @putNewPoint(position, TYPE_BRANCH)
 
     return
 
@@ -150,7 +150,7 @@ Route =
           @activeNode = @activeNode.parent
           unless @activeNode
             break
-          if (@activeNode.kind == KIND_BRANCH)
+          if (@activeNode.type == TYPE_BRANCH)
             break
       unless @activeNode
         @activeNode = savedActiveNode
@@ -182,12 +182,12 @@ Route =
         @lastPosition = position
         @addToBuffer(0, position)
 
-      @putNewPoint(position, KIND_USUAL)
+      @putNewPoint(position, TYPE_USUAL)
 
     return
 
-  putNewPoint : (position, kind) ->
-      point = new TracePoint(@activeNode, kind, @idCount++, position, 1, 1)
+  putNewPoint : (position, type) ->
+      point = new TracePoint(@activeNode, type, @idCount++, position, 1, 1)
       if @activeNode
         @activeNode.appendNext(point)
       else
@@ -203,6 +203,9 @@ Route =
 
   getActiveNodePos : ->
     @activeNode.pos
+
+  getActiveNodeType : ->
+    @activeNode.type
 
   setActiveNode : (id) ->
     findResult = if @tree.id == id then @tree else @tree.findNodeById(id)

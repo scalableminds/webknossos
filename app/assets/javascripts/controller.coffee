@@ -85,11 +85,11 @@ class Controller
         #  pos = [Math.random() * 2000, Math.random() * 2000, Math.random() * 2000]
         #  if Math.random() < 0.3
         #    @model.Route.putBranch(pos)
-        #    @sceneController.setWaypoint(pos, 1)
+        #    @sceneController.setWaypoint()
         #    #@gui.setActiveNodeId(@model.Route.getActiveNodeId())
         #  else
         #    @model.Route.putBranch(pos)
-        #    @sceneController.setWaypoint(pos, 0)
+        #    @sceneController.setWaypoint()
         #    #@gui.setActiveNodeId(@model.Route.getActiveNodeId())
 
   
@@ -163,7 +163,7 @@ class Controller
       #Branches
       "b" : => 
         @model.Route.putBranch(@flycam.getGlobalPos())
-        @sceneController.setWaypoint(@flycam.getGlobalPos(), 1)
+        @sceneController.setWaypoint()
         @gui.setActiveNodeId(@model.Route.getActiveNodeId())
       "h" : => @model.Route.popBranch().done(
         (position) => 
@@ -230,12 +230,37 @@ class Controller
       when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2]]
       when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
       when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
-    @sceneController.setWaypoint(position, typeNumber)
     @model.Route.put(position)
+    @sceneController.setWaypoint()
     @gui.setActiveNodeId(@model.Route.getActiveNodeId())
 
+  #onPreviewClick : (position) =>
+  #  @sceneController.skeleton.onPreviewClick(position, @view.scaleFactor, @view.getCameras()[VIEW_3D])
+
   onPreviewClick : (position) =>
-    @sceneController.onPreviewClick(position, @view.scaleFactor, @view.getCameras()[VIEW_3D])
+    scaleFactor = @view.scaleFactor
+    camera      = @view.getCameras()[VIEW_3D]
+    # vector with direction from camera position to click position
+    vector = new THREE.Vector3((position[0] / (384 * scaleFactor) ) * 2 - 1, - (position[1] / (384 * scaleFactor)) * 2 + 1, 0.5)
+    
+    # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
+    projector = new THREE.Projector()
+    ray = projector.pickingRay(vector, camera)
+    ray.setThreshold(@flycam.getRayThreshold())
+ 
+    # identify clicked object
+    intersects = ray.intersectObjects([@sceneController.skeleton.routeNodes])
+
+    if (intersects.length > 0 and intersects[0].distance >= 0)
+      # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
+      vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
+      # set the active Node to the one that has the ID stored in the vertex
+      @gui.setActiveNode(vertex.id)
+      console.log intersects
+      # jump to the nodes position
+      #@flycam.setGlobalPos [vertex.x, vertex.y, vertex.z]
+
+      #@updateRoute()
 
   #Customize Options
   setMoveValue : (value) =>

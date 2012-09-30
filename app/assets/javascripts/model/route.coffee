@@ -53,17 +53,86 @@ Route =
         @activeNode = @tree
         
         # Build sample tree
-        @putNewPoint([300, 300, 200], TYPE_USUAL)
-        branch = @putNewPoint([300, 320, 200], TYPE_BRANCH)
-        @putNewPoint([340, 340, 200], TYPE_USUAL)
-        @putNewPoint([360, 380, 200], TYPE_USUAL)
-        @activeNode = branch
-        branch = @putNewPoint([340, 280, 200], TYPE_BRANCH)
-        @putNewPoint([360, 270, 200], TYPE_USUAL)
-        @activeNode = branch
-        @putNewPoint([360, 290, 200], TYPE_USUAL)
-        console.log "--------- TREE ---------"
-        console.log @tree.toString()
+        #@putNewPoint([300, 300, 200], TYPE_USUAL)
+        #branch = @putNewPoint([300, 320, 200], TYPE_BRANCH)
+        #@putNewPoint([340, 340, 200], TYPE_USUAL)
+        #@putNewPoint([360, 380, 200], TYPE_USUAL)
+        #@activeNode = branch
+        #branch = @putNewPoint([340, 280, 200], TYPE_BRANCH)
+        #@putNewPoint([360, 270, 200], TYPE_USUAL)
+        #@activeNode = branch
+        #@putNewPoint([360, 290, 200], TYPE_USUAL)
+        #console.log "--------- TREE ---------"
+        #console.log @tree.toString()
+
+        # Build sample data.task
+        console.log "---------- Build data.task -----------"
+        console.log data.task
+        data.task = {
+          activeNode : 6
+          branchPoints : [{id : 1}, {id : 2}]
+          editPosition : [400, 350, 200]
+          id : "5029141a44aebdd7a089a062"
+          trees : {
+            1 : {
+              color : [1, 0, 0, 0]
+              edges : [{source : 1, target : 3},
+                       {source : 3, target : 4},
+                       {source : 1, target : 2},
+                       {source : 2, target : 5},
+                       {source : 2, target : 6},
+                       {source : 2, target : 7}]
+              id : 1
+              nodes : {
+                1 : { id : 1, position : [300, 300, 200], radius : 1}
+                2 : { id : 2, position : [350, 350, 200], radius : 1}
+                3 : { id : 3, position : [300, 350, 200], radius : 1}
+                4 : { id : 4, position : [300, 400, 200], radius : 1}
+                5 : { id : 5, position : [400, 300, 200], radius : 1}
+                6 : { id : 6, position : [400, 350, 200], radius : 1}
+                7 : { id : 7, position : [400, 400, 200], radius : 1}
+              }
+            }
+          }
+        }
+        console.log data.task
+
+        #@recursionTest(0)
+
+        ############ Load Tree from data.task ##############
+        # get tree to build
+        index = 0
+        for t of data.task.trees
+          index = t
+        tree = data.task.trees[index]
+        # Initialize nodes
+        nodes = []
+        i = 0
+        for nodeInd of tree.nodes
+          node = tree.nodes[nodeInd]
+          if node
+            nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, 1))
+        # Set branchpoints
+        for branchpoint in data.task.branchPoints
+          node = @findNodeInList(nodes, branchpoint.id)
+          if node
+            node.type = TYPE_BRANCH
+        # Initialize edges
+        for edge in tree.edges
+          sourceNode = @findNodeInList(nodes, tree.nodes[edge.source].id)
+          targetNode  = @findNodeInList(nodes, tree.nodes[edge.target].id)
+          sourceNode.appendNext(targetNode)
+          targetNode.parent = sourceNode
+        # Find root (only node without parent)
+        for node in nodes
+          unless node.parent
+            @tree = node
+            break
+        # Set active Node
+        @activeNode = @findNodeInList(nodes, data.task.activeNode)
+        # Set idCount
+        for node in nodes
+          @idCount = Math.max(node.id + 1, @idCount);
 
         $(window).on(
           "unload"
@@ -152,20 +221,23 @@ Route =
             break
           if (@activeNode.type == TYPE_BRANCH)
             break
+      deferred = new $.Deferred()
       unless @activeNode
         @activeNode = savedActiveNode
+        deferred.reject()
+      else
+        deferred.resolve(@activeNode.pos)
       
-      deferred = new $.Deferred()
       
       # Georg doesn't get the following lines
-      { branchStack } = @
+      #{ branchStack } = @
 
-      if branchStack.length > 0
-        @addToBuffer(2)
+      #if branchStack.length > 0
+      #  @addToBuffer(2)
         #deferred.resolve(branchStack.pop())
-        deferred.resolve(@activeNode.pos)
-      else
-        deferred.reject()
+      #  deferred.resolve(@activeNode.pos)
+      #else
+      #  deferred.reject()
 
   # Add a point to the buffer. Just keep adding them.
   put : (position) ->
@@ -208,10 +280,13 @@ Route =
     @activeNode.type
 
   setActiveNode : (id) ->
-    findResult = if @tree.id == id then @tree else @tree.findNodeById(id)
+    findResult = @findNodeInTree(id)
     if (findResult)
       @activeNode = findResult
     return @activeNode.pos
+
+  findNodeInTree : (id) ->
+    if @tree.id == id then @tree else @tree.findNodeById(id)
 
   deleteActiveNode : ->
     id = @activeNode.id
@@ -230,3 +305,16 @@ Route =
       if c
         result = result.concat(@getNodeList(c))
     return result
+
+  # Helper method used in initialization
+  findNodeInList : (list, id) ->
+    for node in list
+      if node.id == id
+        return node
+    return null
+
+  # Just to check how far we can go. I (Georg) had a call
+  # stack of about 20,000
+  recursionTest : (counter) ->
+    console.log(counter++)
+    return @recursionTest(counter)

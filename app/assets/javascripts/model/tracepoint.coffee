@@ -14,15 +14,9 @@ class TracePoint
     @children = []
 
   appendNext : (next) ->
-    if (@kind == KIND_USUAL)
-      @next = next
-    if (@kind == KIND_BRANCH)
-      @children.push(next)
+    @children.push(next)
 
   findNodeById : (id) ->
-    if (@next)
-      if @next.id == id then return @next
-      return @next.findNodeById(id)
     if (@children.length > 0)
       for c in @children
         if c.id == id then return c
@@ -31,10 +25,20 @@ class TracePoint
         if cResult then return cResult
     return null
 
+  remove : (id) ->
+    for i in [0..@children.length]
+      if @children[i].id == id
+        # Remove child
+        @children.splice(i, i + 1)
+        return
+
+  getChildren : ->
+    return @children
+
   toString : ->
     if (@kind == KIND_USUAL)
-      if (@next)
-        return @id + ", " + @next.toString()
+      if (@children[0])
+        return @id + ", " + @children[0].toString()
       return @id + "."
     if (@kind == KIND_BRANCH)
       result = @id + "( "

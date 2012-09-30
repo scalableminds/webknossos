@@ -72,6 +72,26 @@ class Controller
         
         @flycam.setGlobalPos(position)
         @cameraController.changePrevSV()
+
+        ########## TEST #############
+        #for i in [1..1000]
+        #  if Math.random() < 0.2
+        #    @model.Route.popBranch().done(
+        #      (position) => 
+        #        @flycam.setGlobalPos(position)
+        #        @sceneController.setActiveNodePosition(position)
+        #        #@gui.setActiveNodeId(@model.Route.getActiveNodeId())
+        #      )
+        #  pos = [Math.random() * 2000, Math.random() * 2000, Math.random() * 2000]
+        #  if Math.random() < 0.3
+        #    @model.Route.putBranch(pos)
+        #    @sceneController.setWaypoint(pos, 1)
+        #    #@gui.setActiveNodeId(@model.Route.getActiveNodeId())
+        #  else
+        #    @model.Route.putBranch(pos)
+        #    @sceneController.setWaypoint(pos, 0)
+        #    #@gui.setActiveNodeId(@model.Route.getActiveNodeId())
+
   
         @model.User.Configuration.initialize().then(
           (data) =>

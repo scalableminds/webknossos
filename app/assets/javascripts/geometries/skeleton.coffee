@@ -18,7 +18,7 @@ class Skeleton
     @flycam = flycam
     @model = model
 
-    @createRoute(maxRouteLen, Route.data.task)
+    @createRoute(maxRouteLen, @model.Route.data.task)
 
   createRoute : (maxRouteLen, initData) ->
     # create route to show in previewBox and pre-allocate buffers

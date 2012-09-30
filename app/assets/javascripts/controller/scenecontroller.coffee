@@ -45,7 +45,7 @@ class SceneController
 
     # TODO: Implement text 
 
-    @skeleton = new Skeleton(10000, @flycam)
+    @skeleton = new Skeleton(10000, @flycam, @model)
 
     # create Meshes
     @planes = new Array(3)
@@ -135,3 +135,12 @@ class SceneController
     result.push(@cube)
     console.log "result: " + result
     return result
+
+  # Will completely reload the trees from model.
+  # This needs to be done at initialization or whenever
+  # the skeleton is changes in a way that can't efficiently
+  # applied to the particle system, like deleting nodes.
+  updateRoute : ->
+    @skeleton.clearRoute()
+    @skeleton.loadSkeletonFromModel()
+    @flycam.hasChanged = true

@@ -21,7 +21,7 @@ Route =
   # Variables
   branchStack : []
   tree : null
-  activePoint : null
+  activeNode : null
 
   # Initializes this module and returns a position to start your work.
   initialize : _.once ->
@@ -50,8 +50,21 @@ Route =
 
         @idCount = 1
         @tree = null
-        @activePoint = @tree
+        @activeNode = @tree
         
+        # Build sample tree
+        @putNewPoint([300, 300, 200], KIND_USUAL)
+        branch = @putNewPoint([300, 320, 200], KIND_BRANCH)
+        @putNewPoint([340, 340, 200], KIND_USUAL)
+        @putNewPoint([360, 380, 200], KIND_USUAL)
+        @activeNode = branch
+        branch = @putNewPoint([340, 280, 200], KIND_BRANCH)
+        @putNewPoint([360, 270, 200], KIND_USUAL)
+        @activeNode = branch
+        @putNewPoint([360, 290, 200], KIND_USUAL)
+        console.log "--------- TREE ---------"
+        console.log @tree.toString()
+
         $(window).on(
           "unload"
           => 
@@ -131,15 +144,16 @@ Route =
 
     @initialize().pipe =>
 
-      savedActivePoint = @activePoint
-      while (true)
-        @activePoint = @activePoint.parent
-        unless @activePoint
-          break
-        if (@activePoint.kind == KIND_BRANCH)
-          break
-      unless @activePoint
-        @activePoint = savedActivePoint
+      savedActiveNode = @activeNode
+      if @activeNode
+        while (true)
+          @activeNode = @activeNode.parent
+          unless @activeNode
+            break
+          if (@activeNode.kind == KIND_BRANCH)
+            break
+      unless @activeNode
+        @activeNode = savedActiveNode
       
       deferred = new $.Deferred()
       
@@ -149,7 +163,7 @@ Route =
       if branchStack.length > 0
         @addToBuffer(2)
         #deferred.resolve(branchStack.pop())
-        deferred.resolve(@activePoint.pos)
+        deferred.resolve(@activeNode.pos)
       else
         deferred.reject()
 
@@ -173,22 +187,43 @@ Route =
     return
 
   putNewPoint : (position, kind) ->
-      point = new TracePoint(@activePoint, kind, @idCount++, position, 1, 1)
-      if @activePoint
-        @activePoint.appendNext(point)
+      point = new TracePoint(@activeNode, kind, @idCount++, position, 1, 1)
+      if @activeNode
+        @activeNode.appendNext(point)
       else
         @tree = point
-      @activePoint = point
-      console.log @tree.toString()
+      @activeNode = point
+      #console.log @tree.toString()
+      #console.log @getNodeList()
+      #for item in @getNodeList()
+      #  console.log item.id
 
   getActiveNodeId : ->
-    @activePoint.id
+    @activeNode.id
 
   getActiveNodePos : ->
-    @activePoint.pos
+    @activeNode.pos
 
   setActiveNode : (id) ->
     findResult = if @tree.id == id then @tree else @tree.findNodeById(id)
     if (findResult)
-      @activePoint = findResult
-    return @activePoint.pos
+      @activeNode = findResult
+    return @activeNode.pos
+
+  deleteActiveNode : ->
+    id = @activeNode.id
+    @activeNode = @activeNode.parent
+    @activeNode.remove(id)
+    console.log @tree.toString()
+
+  getTree : ->
+    @tree
+
+  getNodeList : (start) ->
+    unless start
+      start = @tree
+    result = [start]
+    for c in start.getChildren()
+      if c
+        result = result.concat(@getNodeList(c))
+    return result

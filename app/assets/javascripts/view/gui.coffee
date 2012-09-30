@@ -37,7 +37,7 @@ class Gui
                 deleteActiveTree : -> alert "Delete Active Tree"
 
                 activeNodeID : 1
-                deleteActiveNode : -> alert "Delete Active Node"
+                deleteActiveNode : @deleteActiveNode
               }
     @gui  = new dat.GUI({autoPlace: false})
     
@@ -112,9 +112,9 @@ class Gui
                           .name("Delete Active Node")
 
     fPosition.open()
-    fControls.open()
-    fView.open()
-    fSkeleton.open()
+    #fControls.open()
+    #fView.open()
+    #fSkeleton.open()
     fTrees.open()
     fNodes.open()
 
@@ -185,3 +185,8 @@ class Gui
   setActiveNodeId : (value) =>
     @settings.activeNodeID = value
     @activeNodeIdController.updateDisplay()
+
+  deleteActiveNode : =>
+    @model.Route.deleteActiveNode()
+    @setActiveNodeId(@model.Route.getActiveNodeId())
+    @sceneController.updateRoute()

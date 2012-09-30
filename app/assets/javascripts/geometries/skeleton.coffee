@@ -13,9 +13,10 @@ class Skeleton
   # This class is supposed to collect all the Geometries that belong to the skeleton, like
   # nodes, edges and trees
 
-  constructor : (maxRouteLen, flycam) ->
+  constructor : (maxRouteLen, flycam, model) ->
     @maxRouteLen = maxRouteLen
     @flycam = flycam
+    @model = model
 
     @createRoute(maxRouteLen, Route.data.task)
 
@@ -27,65 +28,69 @@ class Skeleton
     routeGeometryNodes = new THREE.Geometry()
     routeGeometry.dynamic = true
     routeGeometryNodes.dynamic = true
-    #routeGeometryView = new Array(3)
 
-    #for i in [0..2]
-    #  routeGeometryView[i] = new THREE.Geometry()
-    #  routeGeometryView[i].dynamic = true
+    #index = 0
+    #for t of initData.trees
+    #  index = t
+    #for edge in initData.trees[index].edges
+    #  nodePos = initData.trees[index].nodes[edge.source].position
+    #  node2Pos = initData.trees[index].nodes[edge.target].position
+    #  routeGeometry.vertices.push(new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2]))
+    #  routeGeometry.vertices.push(new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2]))
+    #  i += 2
 
-    # initialize edges
-    i = 0
-    index = 0
-    for t of initData.trees
-      index = t
-    for edge in initData.trees[index].edges
-      nodePos = initData.trees[index].nodes[edge.source].position
-      node2Pos = initData.trees[index].nodes[edge.target].position
-      routeGeometry.vertices.push(new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2]))
-      routeGeometry.vertices.push(new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2]))
-      #for g in routeGeometryView
-      #  g.vertices.push(new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2]))
-      #  g.vertices.push(new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2]))
-      i += 2
-
-    while i < 2 * maxRouteLen
+    for i in [1..2 * @maxRouteLen]
       # workaround to hide the unused vertices
       routeGeometry.vertices.push(new THREE.Vector2(0,0))
-      #for g in routeGeometryView
-      #  g.vertices.push(new THREE.Vector2(0, 0))
-      i += 1
+      if i <= @maxRouteLen
+        routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
 
     # initialize edit position
-    if i != 0
-      nodePos = initData.trees[index].nodes[initData.activeNode].position
-      @lastNodePosition = nodePos
+    #if i != 0
+    #  nodePos = initData.trees[index].nodes[initData.activeNode].position
+    #  @lastNodePosition = nodePos
 
     # initialize nodes
-    i = 0
-    while i < maxRouteLen
-      if initData.trees[index].nodes[i]
-        nodePos = initData.trees[index].nodes[i].position
-        routeGeometryNodes.vertices.push(new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2]))
-        @curIndex = i + 1
-      else
-        routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
-      i += 1
+    #i = 0
+    #while i < maxRouteLen
+    #  if initData.trees[index].nodes[i]
+    #    nodePos = initData.trees[index].nodes[i].position
+    #    routeGeometryNodes.vertices.push(new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2]))
+    #    @curIndex = i + 1
+    #  else
+    #  i += 1
 
     @route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces)
-    #@routeView = new Array(3)
-    #for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-    #  @routeView[i] = new THREE.Line(routeGeometryView[i], new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces)
     @routeNodes = new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 5, sizeAttenuation : false}))
 
-    # Initializing Position
-    gPos = @flycam.getGlobalPos()
-    #for i in [0..2]
-    #  ind = @flycam.getIndices i
-    #  @routeView[i].position = new THREE.Vector3(-gPos[ind[0]], gPos[ind[1]], gPos[ind[2]])
+    # Initialize the tree
+    @loadSkeletonFromModel()
 
-    # set initial ray threshold to define initial click area
-    @particles = []
-    #@rayThreshold = 100
+  clearRoute : ->
+    for i in [0..2 * @maxRouteLen - 1]
+      # workaround to hide the unused vertices
+      @route.geometry.vertices[i]      = new THREE.Vector2(0,0)
+      if i < @maxRouteLen
+        @routeNodes.geometry.vertices[i] = new THREE.Vector2(0,0)
+      @route.geometry.verticesNeedUpdate = true
+      @routeNodes.geometry.verticesNeedUpdate = true
+    @curIndex = 0
+
+  loadSkeletonFromModel : ->
+    @curIndex = 0
+    console.log @model.Route.getNodeList()
+    for node in @model.Route.getNodeList()
+      if node.parent
+        nodePos = node.pos
+        node2Pos = node.parent.pos
+        @route.geometry.vertices[2 * @curIndex]     = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
+        @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
+        @routeNodes.geometry.vertices[@curIndex]    = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
+        @curIndex += 2
+
+    @lastNodePosition = @model.Route.getActiveNodePos()
+    @route.geometry.verticesNeedUpdate = true
+    @routeNodes.geometry.verticesNeedUpdate = true
 
   setActiveNodePosition : (position) =>
     @lastNodePosition = position
@@ -122,7 +127,7 @@ class Skeleton
       @route.geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[0], @lastNodePosition[1], @lastNodePosition[2])
       @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[0], position[1], position[2])
       @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], position[1], position[2])
-      
+
       #for i in [0..2]
       #  ind = @flycam.getIndices i
       #  @routeView[i].geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[ind[0]], -@lastNodePosition[ind[1]], -@lastNodePosition[ind[2]])

@@ -134,6 +134,8 @@ Route =
         for node in nodes
           @idCount = Math.max(node.id + 1, @idCount);
 
+        console.log @exportTreeToNML()
+
         $(window).on(
           "unload"
           => 
@@ -149,6 +151,40 @@ Route =
       )
 
       deferred
+
+  # Returns an object that is structured the same way as data.task is
+  exportTreeToNML : ->
+    result = {
+      activeNode : @activeNode.id
+      branchPoints : []
+      editPosition : @activeNode.pos
+      trees : {}
+    }
+    nodes = @getNodeList()
+    # Get Branchpoints
+    for node in nodes
+      if node.type == TYPE_BRANCH
+        result.branchPoints.push({id : node.id})
+    result.trees["1"] = {}
+    tree = result.trees["1"]
+    tree.color = [1, 0, 0, 0]
+    tree.edges = []
+    # Get Edges
+    for node in nodes
+      for child in node.getChildren()
+        tree.edges.push({source : node.id, target : child.id})
+    tree.id = 1
+    tree.nodes = {}
+    # Get Nodes
+    for node in nodes
+      tree.nodes[node.id.toString()] = {
+        id : node.id
+        position : node.pos
+        radius : node.size
+      }
+
+    return result
+
 
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.

@@ -180,6 +180,7 @@ class Gui
   # called when value is changed in input field
   setActiveNode : (value) =>
     @flycam.setGlobalPos(@model.Route.setActiveNode(value))
+    @sceneController.setActiveNodePosition(@flycam.getGlobalPos())
     @setActiveNodeId(@model.Route.getActiveNodeId())
 
   # called when value user switch to different active node

@@ -1,12 +1,12 @@
-KIND_USUAL  = 0
-KIND_BRANCH = 1
+TYPE_USUAL  = 0
+TYPE_BRANCH = 1
 
 # This class should represent a Trace Point
 class TracePoint
 
-  constructor : (parent, kind, id, pos, size, color) ->
+  constructor : (parent, type, id, pos, size, color) ->
     @parent   = parent
-    @kind     = kind
+    @type     = type
     @id       = id
     @pos      = pos
     @size     = size
@@ -36,11 +36,11 @@ class TracePoint
     return @children
 
   toString : ->
-    if (@kind == KIND_USUAL)
+    if (@type == TYPE_USUAL)
       if (@children[0])
         return @id + ", " + @children[0].toString()
       return @id + "."
-    if (@kind == KIND_BRANCH)
+    if (@type == TYPE_BRANCH)
       result = @id + "( "
       if (@children.length > 0)
         result += "(" + @children[0].toString() + ")"

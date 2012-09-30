@@ -64,6 +64,7 @@ class Skeleton
     @routeNodes = new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 5, sizeAttenuation : false}))
 
     # Initialize the tree
+    @clearRoute()
     @loadSkeletonFromModel()
 
   clearRoute : ->
@@ -77,16 +78,25 @@ class Skeleton
     @curIndex = 0
 
   loadSkeletonFromModel : ->
-    @curIndex = 0
-    console.log @model.Route.getNodeList()
-    for node in @model.Route.getNodeList()
+    nodeList = @model.Route.getNodeList()
+    console.log nodeList
+    # Draw first Node, because it has no parent and therefore isn't drawn in the loop below
+    if nodeList.length > 0
+      nodePos = nodeList[0].pos
+      @routeNodes.geometry.vertices[@curIndex]    = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
+      @routeNodes.geometry.vertices[@curIndex].id = nodeList[0].id
+    @curIndex++
+    for node in nodeList
       if node.parent
-        nodePos = node.pos
-        node2Pos = node.parent.pos
+        nodePos = node.parent.pos
+        node2Pos = node.pos
         @route.geometry.vertices[2 * @curIndex]     = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
         @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
-        @routeNodes.geometry.vertices[@curIndex]    = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
-        @curIndex += 2
+        @routeNodes.geometry.vertices[@curIndex]    = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
+        # Assign the ID to the vertex, so we can access it later
+        @routeNodes.geometry.vertices[@curIndex].id = node.id
+        @curIndex++
+
 
     @lastNodePosition = @model.Route.getActiveNodePos()
     @route.geometry.verticesNeedUpdate = true
@@ -99,10 +109,15 @@ class Skeleton
   getMeshes : =>
     [@route, @routeNodes]
 
-  setWaypoint : (position, typeNumber) =>
+  # Looks for the Active Point in Model.Route and adds it to
+  # the Skeleton View
+  setWaypoint : =>
     curGlobalPos = @flycam.getGlobalPos()
     activePlane  = @flycam.getActivePlane()
     zoomFactor   = @flycam.getPlaneScalingFactor activePlane
+    position     = @model.Route.getActiveNodePos()
+    typeNumber   = @model.Route.getActiveNodeType()
+    id           = @model.Route.getActiveNodeId()
 
     #if typeNumber == 0
       # calculate the global position of the rightclick
@@ -127,6 +142,8 @@ class Skeleton
       @route.geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[0], @lastNodePosition[1], @lastNodePosition[2])
       @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[0], position[1], position[2])
       @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], position[1], position[2])
+      # Assign the ID to the vertex, so we can access it later
+      @routeNodes.geometry.vertices[@curIndex].id = id
 
       #for i in [0..2]
       #  ind = @flycam.getIndices i
@@ -154,26 +171,6 @@ class Skeleton
       @lastNodePosition = position
       @curIndex += 1
       @flycam.hasChanged = true
-
-  onPreviewClick : (position, scaleFactor, camera) =>
-    # vector with direction from camera position to click position
-    vector = new THREE.Vector3((position[0] / (384 * scaleFactor) ) * 2 - 1, - (position[1] / (384 * scaleFactor)) * 2 + 1, 0.5)
-    
-    # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
-    projector = new THREE.Projector()
-    ray = projector.pickingRay(vector, camera)
-    ray.setThreshold(@flycam.getRayThreshold())
-
-    # identify clicked object
-    intersects = ray.intersectObjects([@routeNodes])
-
-    if (intersects.length > 0 and intersects[0].distance >= 0)
-      intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
-      objPos = intersects[0].object.geometry.vertices[intersects[0].vertex]
-      # jump to the nodes position
-      @flycam.setGlobalPos [objPos.x, objPos.y, objPos.z]
-
-      #@updateRoute()
 
   #updateRoute : =>
   #  gPos  = @flycam.getGlobalPos()

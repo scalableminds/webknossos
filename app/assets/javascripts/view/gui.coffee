@@ -15,10 +15,11 @@ class Gui
     @sceneController = sceneController
     @cameraController = cameraController
     @flycam = flycam
+    initPos = @flycam.getGlobalPos()
 
     # create GUI
     @settings = { 
-                position : "300, 302, 482"
+                position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
                 lockZoom: data.lockZoom
                 inverseX: data.mouseInversionX == 1
                 inverseY: data.mouseInversionY == 1
@@ -36,7 +37,7 @@ class Gui
                 newTree : -> alert "Create New Tree"
                 deleteActiveTree : -> alert "Delete Active Tree"
 
-                activeNodeID : 1
+                activeNodeID : @model.Route.getActiveNodeId()
                 deleteActiveNode : @deleteActiveNode
               }
     @gui  = new dat.GUI({autoPlace: false})

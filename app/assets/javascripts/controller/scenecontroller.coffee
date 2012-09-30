@@ -101,11 +101,8 @@ class SceneController
   setTextRotation : (rotVec) =>
     # TODO: Implement
 
-  setWaypoint : (position, typeNumber) =>
-    @skeleton.setWaypoint(position, typeNumber)
-
-  onPreviewClick : (position, scaleFactor, camera) =>
-    @skeleton.onPreviewClick(position, scaleFactor, camera)
+  setWaypoint : =>
+    @skeleton.setWaypoint()
 
   setActiveNodePosition : (position) =>
     @skeleton.setActiveNodePosition(position)

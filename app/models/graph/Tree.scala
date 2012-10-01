@@ -53,7 +53,11 @@ object Tree {
       val j = Json.obj(
         ID -> n.id,
         RADIUS -> n.radius,
-        POSITION -> n.position)
+        POSITION -> n.position,
+        VIEWPORT -> n.viewport,
+        RESOLUTION -> n.resolution,
+        TIMESTAMP -> n.timestamp
+      )
       n.comment match {
         case Some(c) => j ++ Json.obj("comment" -> c)
         case _       => j
@@ -87,6 +91,5 @@ object Tree {
         (js \ NODES).as[List[Node]],
         (js \ EDGES).as[List[Edge]],
         (js \ COLOR).as[Color])
-
   }
 }

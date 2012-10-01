@@ -42,7 +42,7 @@ object InitialData {
       val p = Point3D(300, 300, 200)
       val nodes = List(Node(1, 1, p, 0, 0, 0))
       val tree = Tree(1, nodes, Nil, Color(1, 0, 0, 0))
-      val exp = Experiment(d._id, List(tree), Nil, 0, 1, p)
+      val exp = Experiment(d._id, List(tree), Nil, 0, 1, Scale(12,12,24), p)
       Experiment.insert(exp)
     }
 

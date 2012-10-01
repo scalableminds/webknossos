@@ -13,6 +13,7 @@ import play.api.Logger
 import models.graph.Tree
 import java.io.File
 import models.BranchPoint
+import brainflight.tools.geometry.Scale
 
 class NMLParser(file: File) {
   def parse = {
@@ -21,26 +22,47 @@ class NMLParser(file: File) {
       parameters <- (data \ "parameters")
       dataSetId <- (parameters \ "experiment" \ "@name")
       editPosition <- parseEditPosition(parameters \ "editPosition")
+      scale <- parseScale(parameters \ "scale")
       time <- ((parameters \ "time" \ "@ms").text).toIntOpt
       activeNodeId <- ((parameters \ "activeNode" \ "@id").text).toIntOpt
       dataSet <- DataSet.findOneByName(dataSetId.text)
     } yield {
-      val trees = (data \ "thing").flatMap(parseTree).toList
+      val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
+
       val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
-      Experiment(dataSet._id, trees, branchPoints.toList, time, activeNodeId, editPosition)
+      Experiment(dataSet._id, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
     }
   }
+
+  def verifyTrees(trees: List[Tree]): List[Tree] = {
+    trees
+    //trees.flatMap(splitIntoComponents)
+  }
+
+  /*def componentsContainNode(components: List[Tree], node: models.graph.Node) = 
+    components.flatMap(_.nodes).find( _.id == node.id).isDefined
+
+  def splitIntoComponents(tree: Tree) = {
+    def split(components: List[Tree], nodes: List[models.graph.Node]) = nodes match {
+      case node :: tail if componentsContainNode(components, node) =>
+        
+        split(components, tail)
+      case _ =>
+        components
+    }
+
+    split(Nil, tree.nodes)
+  }*/
 
   def parseEditPosition(node: NodeSeq) = {
     node.headOption.flatMap(parsePoint3D)
   }
-  
+
   def parseBranchPoint(trees: List[Tree])(node: Node) = {
-    ((node \ "@id").text).toIntOpt.flatMap( id =>
-      trees.find( _.nodes.find(_.id == id).isDefined).map{ tree =>
+    ((node \ "@id").text).toIntOpt.flatMap(id =>
+      trees.find(_.nodes.find(_.id == id).isDefined).map { tree =>
         BranchPoint(id, tree.id)
-      }
-    )
+      })
   }
 
   def parsePoint3D(node: Node) = {
@@ -49,6 +71,15 @@ class NMLParser(file: File) {
       y <- ((node \ "@y").text).toIntOpt
       z <- ((node \ "@z").text).toIntOpt
     } yield Point3D(x, y, z)
+  }
+
+  def parseScale(nodes: NodeSeq) = {
+    nodes.headOption.flatMap(node =>
+      for {
+        x <- ((node \ "@x").text).toFloatOpt
+        y <- ((node \ "@y").text).toFloatOpt
+        z <- ((node \ "@z").text).toFloatOpt
+      } yield Scale(x, y, z))
   }
 
   def parseColor(node: Node) = {
@@ -72,11 +103,11 @@ class NMLParser(file: File) {
 
       val edges = (tree \ "edges" \ "edge").flatMap(parseEdge(nodes)).toList
 
-      if(nodes.size > 0 )
+      if (nodes.size > 0)
         Some(Tree(id, nodes.values.toList, edges, color))
       else
         None
-    }).flatMap( x => x)
+    }).flatMap(x => x)
   }
 
   def findRootNode(treeNodes: Map[Int, Node], edges: List[Edge]) = {

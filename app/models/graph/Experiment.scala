@@ -16,8 +16,9 @@ import Tree.TreeFormat
 import play.api.libs.json.Reads
 import play.api.libs.json.JsValue
 import play.api.libs.json.Format
+import brainflight.tools.geometry.Scale
 
-case class Experiment(dataSetId: ObjectId, trees: List[Tree], branchPoints: List[BranchPoint], time: Long, activeNodeId: Int, editPosition: Point3D, _id: ObjectId = new ObjectId) {
+case class Experiment(dataSetId: ObjectId, trees: List[Tree], branchPoints: List[BranchPoint], time: Long, activeNodeId: Int, scale: Scale, editPosition: Point3D, _id: ObjectId = new ObjectId) {
   def id = _id.toString
   def tree(treeId: Int) = trees.find(_.id == treeId)
   def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
@@ -30,7 +31,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
         <things>
           <parameters>
             <experiment name={ dataSet.name }/>
-            <scale x="12.0" y="12.0" z="24.0"/>
+            <scale x={ e.scale.x.toString } y={ e.scale.y.toString } z={ e.scale.z.toString }/>
             <offset x="0" y="0" z="0"/>
             <time ms={ e.time.toString }/>
             <activeNode id={ e.activeNodeId.toString }/>
@@ -71,12 +72,14 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     val ACTIVE_NODE = "activeNode"
     val BRANCH_POINTS = "branchPoints"
     val EDIT_POSITION = "editPosition"
+    val SCALE = "scale"
 
     def writes(e: Experiment) = Json.obj(
       ID -> e.id,
       TREES -> e.trees.map(TreeFormat.writes),
       ACTIVE_NODE -> e.activeNodeId,
       BRANCH_POINTS -> e.branchPoints,
+      SCALE -> e.scale,
       EDIT_POSITION -> e.editPosition)
 
     def reads(js: JsValue): Experiment = {
@@ -86,7 +89,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       val activeNode = (js \ ACTIVE_NODE).as[Int]
       val branchPoints = (js \ BRANCH_POINTS).as[List[BranchPoint]]
       val editPosition = (js \ EDIT_POSITION).as[Point3D]
-      Experiment.findOneById(id) match{
+      Experiment.findOneById(id) match {
         case Some(exp) =>
           exp.copy(trees = trees, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition)
         case _ =>

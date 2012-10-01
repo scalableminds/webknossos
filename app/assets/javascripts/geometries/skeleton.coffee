@@ -28,21 +28,10 @@ class Skeleton
 
     @activeNode = new THREE.Mesh(
         new THREE.SphereGeometry(1),
-        new THREE.MeshLambertMaterial({
-          color : 0x0000ff
+        new THREE.MeshBasicMaterial({
+          color : 0x000088
           })
       )
-
-    # TODO: Why are the spheres always black? Here's a sample code copied from
-    # http://aerotwist.com/tutorials/getting-started-with-three-js/
-    sphereMaterial = new THREE.MeshLambertMaterial({color: 0xCC0000})
-    radius = 50
-    segments = 16
-    rings = 16
-    @sphere = new THREE.Mesh(
-       new THREE.SphereGeometry(radius, segments, rings),
-       sphereMaterial)
-    @sphere.position = new THREE.Vector3(500,500,500)
 
     for tree in @model.Route.getTrees()
       @createNewTree(tree.treeId)
@@ -110,19 +99,10 @@ class Skeleton
     @setActiveNode()
 
   setActiveNode : () =>
-    @lastNodePosition = @model.Route.getActiveNodePos()
-    @setNodeRadius(@model.Route.getActiveNodeRadius())
-    #@activeNode.boundRadius = 20
-    #@activeNode.geometry.radius = 20
-    #@activeNode.geometry.verticesNeedUpdate = true
     position = @model.Route.getActiveNodePos()
+    @lastNodePosition = position
+    @setNodeRadius(@model.Route.getActiveNodeRadius())
     @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
-    s = @activeNode.scale.x * 2
-    #@activeNode.scale = new THREE.Vector3(s, s, s)
-    #@activeNode.matrixWorldNeedsUpdate = true
-    console.log "Active Node:"
-    console.log @activeNode
-    #@updateRoute()
 
   setNodeRadius : (value) ->
     @activeNode.scale = new THREE.Vector3(value, value, value)

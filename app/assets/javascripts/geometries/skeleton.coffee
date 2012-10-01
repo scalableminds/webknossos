@@ -15,99 +15,92 @@ class Skeleton
 
   constructor : (maxRouteLen, flycam, model) ->
     @maxRouteLen = maxRouteLen
-    @flycam = flycam
-    @model = model
+    @flycam      = flycam
+    @model       = model
+    # Edges
+    @routes      = []
+    # Nodes
+    @nodes       = []
+    # Tree IDs
+    @ids         = []
+    # Current Index
+    @curIndex    = []
 
-    @createRoute(maxRouteLen, @model.Route.data.task)
+    for tree in @model.Route.getTrees()
+      @createNewTree(tree.treeId)
+    @loadSkeletonFromModel()
 
-  createRoute : (maxRouteLen, initData) ->
+  createNewTree : (treeId) ->
     # create route to show in previewBox and pre-allocate buffers
-    @maxRouteLen = maxRouteLen
-
     routeGeometry = new THREE.Geometry()
     routeGeometryNodes = new THREE.Geometry()
     routeGeometry.dynamic = true
     routeGeometryNodes.dynamic = true
 
-    #index = 0
-    #for t of initData.trees
-    #  index = t
-    #for edge in initData.trees[index].edges
-    #  nodePos = initData.trees[index].nodes[edge.source].position
-    #  node2Pos = initData.trees[index].nodes[edge.target].position
-    #  routeGeometry.vertices.push(new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2]))
-    #  routeGeometry.vertices.push(new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2]))
-    #  i += 2
-
-    for i in [1..2 * @maxRouteLen]
+    for i in [1..@maxRouteLen]
       # workaround to hide the unused vertices
-      routeGeometry.vertices.push(new THREE.Vector2(0,0))
-      if i <= @maxRouteLen
-        routeGeometryNodes.vertices.push(new THREE.Vector2(0,0))
+      routeGeometry.vertices.push(new THREE.Vector2(0,0))      # sources
+      routeGeometry.vertices.push(new THREE.Vector2(0,0))      # targets
+      routeGeometryNodes.vertices.push(new THREE.Vector2(0,0)) # nodes
 
-    # initialize edit position
-    #if i != 0
-    #  nodePos = initData.trees[index].nodes[initData.activeNode].position
-    #  @lastNodePosition = nodePos
-
-    # initialize nodes
-    #i = 0
-    #while i < maxRouteLen
-    #  if initData.trees[index].nodes[i]
-    #    nodePos = initData.trees[index].nodes[i].position
-    #    routeGeometryNodes.vertices.push(new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2]))
-    #    @curIndex = i + 1
-    #  else
-    #  i += 1
-
-    @route = new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces)
-    @routeNodes = new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 5, sizeAttenuation : false}))
+    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces))
+    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 5, sizeAttenuation : false})))
+    @ids.push(treeId)
+    @curIndex.push(0)
 
     # Initialize the tree
-    @clearRoute()
-    @loadSkeletonFromModel()
+    @clearRoute(treeId)
 
-  clearRoute : ->
-    for i in [0..2 * @maxRouteLen - 1]
+  clearRoute : (treeId) ->
+    index = @getIndexFromTreeId(treeId)
+    for i in [0..@maxRouteLen - 1]
       # workaround to hide the unused vertices
-      @route.geometry.vertices[i]      = new THREE.Vector2(0,0)
-      if i < @maxRouteLen
-        @routeNodes.geometry.vertices[i] = new THREE.Vector2(0,0)
-      @route.geometry.verticesNeedUpdate = true
-      @routeNodes.geometry.verticesNeedUpdate = true
-    @curIndex = 0
+      @routes[index].geometry.vertices[2 * i]     = new THREE.Vector2(0,0)
+      @routes[index].geometry.vertices[2 * i + 1] = new THREE.Vector2(0,0)
+      @nodes[index].geometry.vertices[i] = new THREE.Vector2(0,0)
+      @routes[index].geometry.verticesNeedUpdate = true
+      @nodes[index].geometry.verticesNeedUpdate = true
+    @curIndex[index] = 0
 
   loadSkeletonFromModel : ->
-    nodeList = @model.Route.getNodeList()
-    console.log nodeList
-    # Draw first Node, because it has no parent and therefore isn't drawn in the loop below
-    if nodeList.length > 0
-      nodePos = nodeList[0].pos
-      @routeNodes.geometry.vertices[@curIndex]    = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
-      @routeNodes.geometry.vertices[@curIndex].id = nodeList[0].id
-    @curIndex++
-    for node in nodeList
-      if node.parent
-        nodePos = node.parent.pos
-        node2Pos = node.pos
-        @route.geometry.vertices[2 * @curIndex]     = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
-        @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
-        @routeNodes.geometry.vertices[@curIndex]    = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
-        # Assign the ID to the vertex, so we can access it later
-        @routeNodes.geometry.vertices[@curIndex].id = node.id
-        @curIndex++
+    for tree in @model.Route.getTrees()
+      nodeList = @model.Route.getNodeList(tree)
+      console.log nodeList
+
+      index = @getIndexFromTreeId(tree.treeId)
+
+      # Draw first Node, because it has no parent and therefore isn't drawn in the loop below
+      if nodeList.length > 0
+        nodePos = nodeList[0].pos
+        @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
+        @nodes[index].geometry.vertices[@curIndex[index]].id = nodeList[0].id
+      @curIndex[index]++
+      for node in nodeList
+        if node.parent
+          nodePos = node.parent.pos
+          node2Pos = node.pos
+          @routes[index].geometry.vertices[2 * @curIndex[index]]     = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
+          @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
+          @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
+          # Assign the ID to the vertex, so we can access it later
+          @nodes[index].geometry.vertices[@curIndex[index]].id = node.id
+          @curIndex[index]++
+      @routes[index].geometry.verticesNeedUpdate = true
+      @nodes[index].geometry.verticesNeedUpdate = true
 
 
     @lastNodePosition = @model.Route.getActiveNodePos()
-    @route.geometry.verticesNeedUpdate = true
-    @routeNodes.geometry.verticesNeedUpdate = true
 
   setActiveNodePosition : (position) =>
     @lastNodePosition = position
     #@updateRoute()
 
   getMeshes : =>
-    [@route, @routeNodes]
+    result = []
+    for i in [0..@ids.length]
+      result = result.concat(@routes[i])
+      result = result.concat(@nodes[i])
+    return result
 
   # Looks for the Active Point in Model.Route and adds it to
   # the Skeleton View
@@ -118,6 +111,7 @@ class Skeleton
     position     = @model.Route.getActiveNodePos()
     typeNumber   = @model.Route.getActiveNodeType()
     id           = @model.Route.getActiveNodeId()
+    index        = @getIndexFromTreeId(@model.Route.getTree().treeId)
 
     #if typeNumber == 0
       # calculate the global position of the rightclick
@@ -126,11 +120,11 @@ class Skeleton
     #    when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2] - (@curWidth/2 - position[0])/@x*zoomFactor]
     #    when PLANE_XZ then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (@curWidth/2 - position[1])/@x*zoomFactor]
       
-    unless @curIndex
-      @curIndex = 0
+    unless @curIndex[index]
+      @curIndex[index] = 0
       @lastNodePosition = position
 
-    if @curIndex < @maxRouteLen
+    if @curIndex[index] < @maxRouteLen
 
     #PERFORMANCE TEST
     #for k in [0...@maxRouteLen] 
@@ -139,11 +133,11 @@ class Skeleton
       #position[1] = Math.random() * 5000
       #position[2] = Math.random() * 5000
 
-      @route.geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[0], @lastNodePosition[1], @lastNodePosition[2])
-      @route.geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[0], position[1], position[2])
-      @routeNodes.geometry.vertices[@curIndex] = new THREE.Vector3(position[0], position[1], position[2])
+      @routes[index].geometry.vertices[2 * @curIndex[index]] = new THREE.Vector3(@lastNodePosition[0], @lastNodePosition[1], @lastNodePosition[2])
+      @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(position[0], position[1], position[2])
+      @nodes[index].geometry.vertices[@curIndex[index]] = new THREE.Vector3(position[0], position[1], position[2])
       # Assign the ID to the vertex, so we can access it later
-      @routeNodes.geometry.vertices[@curIndex].id = id
+      @nodes[index].geometry.vertices[@curIndex[index]].id = id
 
       #for i in [0..2]
       #  ind = @flycam.getIndices i
@@ -151,8 +145,8 @@ class Skeleton
       #  @routeView[i].geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[ind[0]], -position[ind[1]], -position[ind[2]])
       #  @routeView[i].geometry.verticesNeedUpdate = true
 
-      @route.geometry.verticesNeedUpdate = true
-      @routeNodes.geometry.verticesNeedUpdate = true
+      @routes[index].geometry.verticesNeedUpdate = true
+      @nodes[index].geometry.verticesNeedUpdate = true
       
       #TEST CUBES
       #particle = new THREE.Mesh(new THREE.CubeGeometry(30, 30, 30, 1, 1, 1), new THREE.MeshBasicMaterial({color: 0xff0000}))
@@ -169,15 +163,13 @@ class Skeleton
       @waypointAnimation.start()
     
       @lastNodePosition = position
-      @curIndex += 1
+      @curIndex[index]++
       @flycam.hasChanged = true
-
-  #updateRoute : =>
-  #  gPos  = @flycam.getGlobalPos()
-  #  scale = [@flycam.getPlaneScalingFactor(PLANE_XY), @flycam.getPlaneScalingFactor(PLANE_YZ), @flycam.getPlaneScalingFactor(PLANE_XZ)]
-  
-    #for i in [0..2]
-    #  ind = @flycam.getIndices i
-    #  @routeView[i].scale    = new THREE.Vector3(1/scale[i], 1/scale[i], 1/scale[i])
-    #  @routeView[i].position = new THREE.Vector3(-gPos[ind[0]]/scale[i], gPos[ind[1]]/scale[i], gPos[ind[2]]/scale[i]+1)
-    #  @routeView[i].geometry.verticesNeedUpdate = true
+      
+  getIndexFromTreeId : (treeId) ->
+    unless treeId
+      treeId = @model.Route.getTree().treeId
+    for i in [0..@ids.length]
+      if @ids[i] == treeId
+        return i
+    return null

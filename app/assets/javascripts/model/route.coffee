@@ -20,8 +20,9 @@ Route =
   
   # Variables
   branchStack : []
-  tree : null
+  trees : []
   activeNode : null
+  activeTree : null
 
   # Initializes this module and returns a position to start your work.
   initialize : _.once ->
@@ -49,8 +50,10 @@ Route =
         @createBuffer()
 
         @idCount = 1
-        @tree = null
-        @activeNode = @tree
+        @treeIdCount = 1
+        @trees = []
+        @activeNode = null
+        @activeTree = null
         
         # Build sample tree
         #@putNewPoint([300, 300, 200], TYPE_USUAL)
@@ -93,6 +96,17 @@ Route =
                 7 : { id : 7, position : [400, 400, 200], radius : 1}
               }
             }
+            5 : {
+              color : [1, 0, 0, 0]
+              edges : [{source : 8, target : 9},
+                       {source : 9, target : 10}]
+              id : 2
+              nodes : {
+                8 : { id : 8, position : [350, 400, 200], radius : 1}
+                9 : { id : 9, position : [400, 450, 200], radius : 1}
+                10 : { id : 10, position : [350, 450, 200], radius : 1}
+              }
+            }
           }
         }
         console.log data.task
@@ -101,40 +115,53 @@ Route =
 
         ############ Load Tree from data.task ##############
         # get tree to build
-        index = 0
         for t of data.task.trees
-          index = t
-        tree = data.task.trees[index]
-        # Initialize nodes
-        nodes = []
-        i = 0
-        for nodeInd of tree.nodes
-          node = tree.nodes[nodeInd]
-          if node
-            nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, 1))
-        # Set branchpoints
-        for branchpoint in data.task.branchPoints
-          node = @findNodeInList(nodes, branchpoint.id)
-          if node
-            node.type = TYPE_BRANCH
-        # Initialize edges
-        for edge in tree.edges
-          sourceNode = @findNodeInList(nodes, tree.nodes[edge.source].id)
-          targetNode  = @findNodeInList(nodes, tree.nodes[edge.target].id)
-          sourceNode.appendNext(targetNode)
-          targetNode.parent = sourceNode
-        # Find root (only node without parent)
-        for node in nodes
-          unless node.parent
-            @tree = node
-            break
-        # Set active Node
-        @activeNode = @findNodeInList(nodes, data.task.activeNode)
-        # Set idCount
-        for node in nodes
-          @idCount = Math.max(node.id + 1, @idCount);
+          tree = data.task.trees[t]
+          # Initialize nodes
+          nodes = []
+          i = 0
+          for nodeInd of tree.nodes
+            node = tree.nodes[nodeInd]
+            if node
+              nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, 1))
+          # Set branchpoints
+          for branchpoint in data.task.branchPoints
+            node = @findNodeInList(nodes, branchpoint.id)
+            if node
+              node.type = TYPE_BRANCH
+          # Initialize edges
+          for edge in tree.edges
+            sourceNode = @findNodeInList(nodes, tree.nodes[edge.source].id)
+            targetNode  = @findNodeInList(nodes, tree.nodes[edge.target].id)
+            sourceNode.appendNext(targetNode)
+            targetNode.parent = sourceNode
+          # Find root (only node without parent)
+          for node in nodes
+            unless node.parent
+              node.treeId = tree.id
+              @trees.push(node)
+              break
+          # Set active Node
+          activeNodeT = @findNodeInList(nodes, data.task.activeNode)
+          if activeNodeT
+            @activeNode = activeNodeT
+            # Active Tree is the one last added
+            @activeTree = @trees[@trees.length - 1]
+          # Set idCount
+          for node in nodes
+            @idCount = Math.max(node.id + 1, @idCount);
+        
+        for tree in @trees
+          @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
+        unless @activeTree
+          @createNewTree
 
-        console.log @exportTreeToNML()
+        for tree in @trees
+          console.log "Tree " + tree.treeId + ":"
+          console.log tree.toString()
+
+        console.log "NML-Object:"
+        console.log @exportToNML()
 
         $(window).on(
           "unload"
@@ -153,35 +180,36 @@ Route =
       deferred
 
   # Returns an object that is structured the same way as data.task is
-  exportTreeToNML : ->
+  exportToNML : ->
     result = {
       activeNode : @activeNode.id
       branchPoints : []
       editPosition : @activeNode.pos
       trees : {}
     }
-    nodes = @getNodeList()
-    # Get Branchpoints
-    for node in nodes
-      if node.type == TYPE_BRANCH
-        result.branchPoints.push({id : node.id})
-    result.trees["1"] = {}
-    tree = result.trees["1"]
-    tree.color = [1, 0, 0, 0]
-    tree.edges = []
-    # Get Edges
-    for node in nodes
-      for child in node.getChildren()
-        tree.edges.push({source : node.id, target : child.id})
-    tree.id = 1
-    tree.nodes = {}
-    # Get Nodes
-    for node in nodes
-      tree.nodes[node.id.toString()] = {
-        id : node.id
-        position : node.pos
-        radius : node.size
-      }
+    for tree in @trees
+      nodes = @getNodeList(tree)
+      # Get Branchpoints
+      for node in nodes
+        if node.type == TYPE_BRANCH
+          result.branchPoints.push({id : node.id})
+      result.trees[tree.treeId.toString()] = {}
+      tree = result.trees[tree.treeId.toString()]
+      tree.color = [1, 0, 0, 0]
+      tree.edges = []
+      # Get Edges
+      for node in nodes
+        for child in node.getChildren()
+          tree.edges.push({source : node.id, target : child.id})
+      tree.id = 1
+      tree.nodes = {}
+      # Get Nodes
+      for node in nodes
+        tree.nodes[node.id.toString()] = {
+          id : node.id
+          position : node.pos
+          radius : node.size
+        }
 
     return result
 
@@ -299,9 +327,12 @@ Route =
       if @activeNode
         @activeNode.appendNext(point)
       else
-        @tree = point
+        # Tree has to be empty, so replace sentinel with point
+        point.treeId = @activeTree.treeId
+        @trees[@activeTree.treeIndex] = point
+        @activeTree = point
       @activeNode = point
-      #console.log @tree.toString()
+      #console.log @activeTree.toString()
       #console.log @getNodeList()
       #for item in @getNodeList()
       #  console.log item.id
@@ -321,23 +352,50 @@ Route =
       @activeNode = findResult
     return @activeNode.pos
 
-  findNodeInTree : (id) ->
-    if @tree.id == id then @tree else @tree.findNodeById(id)
+  setActiveTree : (id) ->
+    for tree in @trees
+      if tree.treeId == id
+        @activeTree = tree
+
+  createNewTree : (id) ->
+    # Because a tree is represented by the root element and we
+    # don't have any root element, we need a sentinel to save the
+    # treeId and it's index within trees.
+    sentinel = new TracePoint(null, null, null, null, null, null)
+    sentinel.treeId = @treeIdCount++
+    # save Index, so we can access it once we have the root element
+    sentinel.treeIndex = @trees.length
+    @trees.push(sentinel)
+    @activeTree = sentinel
+    return sentinel.treeId
+
+  findNodeInActiveTree : (id, tree) ->
+    unless tree
+      tree = @activeTree
+    if @activeTree.id == id then @activeTree else @activeTree.findNodeById(id)
 
   deleteActiveNode : ->
     id = @activeNode.id
     @activeNode = @activeNode.parent
     @activeNode.remove(id)
-    console.log @tree.toString()
+    console.log @activeTree.toString()
 
-  getTree : ->
-    @tree
+  getTree : (id) ->
+    unless id
+      return @activeTree
+    for tree in @trees
+      if tree.treeId == id
+        return tree
+    return null
 
-  getNodeList : (start) ->
-    unless start
-      start = @tree
-    result = [start]
-    for c in start.getChildren()
+  getTrees : ->
+    @trees
+
+  getNodeList : (tree) ->
+    unless tree
+      tree = @activeTree
+    result = [tree]
+    for c in tree.getChildren()
       if c
         result = result.concat(@getNodeList(c))
     return result

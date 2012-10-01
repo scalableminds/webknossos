@@ -54,10 +54,10 @@ object Tree {
         ID -> n.id,
         RADIUS -> n.radius,
         POSITION -> n.position)
-      Json.obj(n.id.toString -> (n.comment match {
+      n.comment match {
         case Some(c) => j ++ Json.obj("comment" -> c)
         case _       => j
-      }))
+      }
     }
 
     def reads(js: JsValue) =
@@ -77,11 +77,10 @@ object Tree {
     val COLOR = "color"
 
     def writes(t: Tree) = Json.obj(
-      t.id.toString -> Json.obj(
         ID -> t.id,
         NODES -> t.nodes.map(NodeFormat.writes),
         EDGES -> t.edges,
-        COLOR -> t.color))
+        COLOR -> t.color)
 
     def reads(js: JsValue) =
       Tree((js \ ID).as[Int],

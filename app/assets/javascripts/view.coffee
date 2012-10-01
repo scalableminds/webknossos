@@ -135,7 +135,7 @@ class View
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
-  addGeometry : (planeID, geometry) ->
+  addGeometry : (geometry) ->
     @scene.add geometry
 
   #Apply a single draw (not used right now)

@@ -65,7 +65,7 @@ class Controller
         @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model)
         meshes      = @sceneController.getMeshes()
         for mesh in meshes
-          @view.addGeometry(VIEW_3D, mesh)
+          @view.addGeometry(mesh)
     
         @view.on "render", (event) => @render()
         @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)

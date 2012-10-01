@@ -34,49 +34,11 @@ import brainflight.tools.geometry.Point3D
  */
 class TaskHandler(var task: Experiment) {
 
-  def parseNode(jso: JsObject) = {
-    for {
-      id <- (jso \ "id").asOpt[Int]
-      radius <- (jso \ "radius").asOpt[Float]
-      positionArray <- (jso \ "position").asOpt[Array[Int]]
-      position <- Point3D.fromArray(positionArray)
-      viewport <- (jso \ "viewport").asOpt[Int]
-      resolution <- (jso \ "resolution").asOpt[Int]
-
-    } yield {
-      val time = System.currentTimeMillis
-      Node(id, radius, position, viewport, resolution, time)
-    }
-  }
-
-  def parseEdges(nodes: List[Node], edgesList: List[List[Int]]) = {
-    edgesList.flatMap {
-      case (s :: t :: _) =>
-        for {
-          source <- nodes.find(_.id == s)
-          target <- nodes.find(_.id == t)
-        } yield {
-          Edge(source, target)
-        }
-      case _ => None
-    }
-  }
-
   def processInput(input: JsValue) {
     (input.asOpt[Map[String, JsValue]]) map { obj =>
       obj.collect {
         case ("log", value) =>
-          for {
-            treeId <- (value \ "treeId").asOpt[Int]
-            nodeObjs <- (value \ "nodes").asOpt[List[JsObject]]
-            edgeList <- (value \ "edges").asOpt[List[List[Int]]]
-            tree <- task.tree(treeId)
-          } {
-            val nodes = nodeObjs.flatMap(parseNode)
-            var updatedTree = tree.addNodes(nodes)
-            val edges = parseEdges( updatedTree.nodes, edgeList)
-            Experiment.save(task.updateTree(updatedTree.addEdges(edges)))
-          }
+          (value).asOpt[Experiment].map(Experiment.save)
         case ("useBranchpoint", value) =>
         // TODO
         case ("addBranchpoint", value) =>

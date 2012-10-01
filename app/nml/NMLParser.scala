@@ -17,7 +17,6 @@ import models.BranchPoint
 class NMLParser(file: File) {
   def parse = {
     val data = XML.loadFile(file)
-
     for {
       parameters <- (data \ "parameters")
       dataSetId <- (parameters \ "experiment" \ "@name")
@@ -92,10 +91,10 @@ class NMLParser(file: File) {
     for {
       source <- ((edge \ "@source").text).toIntOpt
       target <- ((edge \ "@target").text).toIntOpt
-      sourceNode <- treeNodes.get(source)
-      targetNode <- treeNodes.get(target)
+      //sourceNode <- treeNodes.get(source)
+      //targetNode <- treeNodes.get(target)
     } yield {
-      Edge(sourceNode, targetNode)
+      Edge(source, target)
     }
   }
 

@@ -29,7 +29,7 @@ class Skeleton
     @activeNode = new THREE.Mesh(
         new THREE.SphereGeometry(1),
         new THREE.MeshBasicMaterial({
-          color : 0x000088
+          color : 0x005500
           })
       )
 
@@ -72,7 +72,6 @@ class Skeleton
   loadSkeletonFromModel : ->
     for tree in @model.Route.getTrees()
       nodeList = @model.Route.getNodeList(tree)
-      console.log nodeList
 
       index = @getIndexFromTreeId(tree.treeId)
 

@@ -45,12 +45,10 @@ class CameraController
     camera = @cameras[VIEW_3D]
     b = @upperBoundary
     time = 800
-    console.log "From up: " + [camera.up.x, camera.up.y, camera.up.z]
     @tween = new TWEEN.Tween({  middle: new THREE.Vector3(b[0]/2, b[1]/2, b[2]/2), upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera,flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
     switch id
       when VIEW_3D
         scale = Math.sqrt(b[0]*b[0]+b[1]*b[1])/1.8
-        console.log "To up: " + [0, 0, -1]
         @tween.to({  x: b[0]*0.8, y: b[1], z: b[2] / 5, upX: 0, upY: 0, upZ: -1, l: -scale+scale*(b[0]/ (b[0]+b[1])-0.5), r: scale+scale*(b[0]/(b[0]+b[1])-0.5), t: scale-scale*0.1, b: -scale-scale*0.1}, time)
         .onUpdate(@updateCameraPrev)
         .start()

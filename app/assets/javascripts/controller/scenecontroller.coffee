@@ -127,7 +127,6 @@ class SceneController
       result = result.concat(plane.getMeshes())
     result = result.concat(@skeleton.getMeshes())
     result.push(@cube)
-    console.log "result: " + result
     return result
 
   # Will completely reload the trees from model.

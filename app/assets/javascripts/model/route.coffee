@@ -34,6 +34,7 @@ Route =
       $.get("/experiment/#{Game.task.id}",
         (data) =>
           Route.data = data
+          console.log "Route.data:"
           console.log data
           @id        = data.dataSet.id
           #@branchStack = data.experiment.branchPoints.map (a) -> new Float32Array(a)
@@ -110,7 +111,6 @@ Route =
 
           ############ Load Tree from data.experiment ##############
           # get tree to build
-          @branchStack = data.experiment.branchPoints
           for tree in data.experiment.trees
             # Initialize nodes
             nodes = []
@@ -118,11 +118,6 @@ Route =
             for node in tree.nodes
               if node
                 nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, 1))
-            # Set branchpoints
-            #for branchpoint in data.experiment.branchPoints
-            #  node = @findNodeInList(nodes, branchpoint.id)
-            #  if node
-            #    node.type = TYPE_BRANCH
             # Initialize edges
             for edge in tree.edges
               sourceNode = @findNodeInList(nodes, edge.source)
@@ -148,6 +143,13 @@ Route =
             for node in nodes
               @idCount = Math.max(node.id + 1, @idCount);
           
+          # Set branchpoints
+          nodeList = @getNodeListOfAllTrees()
+          for branchpoint in data.experiment.branchPoints
+            node = @findNodeInList(nodeList, branchpoint.id)
+            if node
+              @branchStack.push(node)
+            
           for tree in @trees
             @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
           for tree in lostTrees
@@ -157,13 +159,6 @@ Route =
             @activeTree = tree
           unless @activeTree
             @createNewTree()
-
-          for tree in @trees
-            console.log "Tree " + tree.treeId + ":"
-            console.log tree.toString()
-
-          console.log "NML-Object:"
-          console.log @exportToNML()
 
           $(window).on(
             "unload"
@@ -189,14 +184,13 @@ Route =
     result = Route.data.experiment
     result.activeNode = @activeNode.id
     result.branchPoints = []
+    # Get Branchpoints
+    for branchPoint in @branchStack
+      result.branchPoints.push({id : branchPoint.id})
     result.editPosition = @activeNode.pos
     result.trees = []
     for tree in @trees
       nodes = @getNodeList(tree)
-      # Get Branchpoints
-      for node in nodes
-        if node.type == TYPE_BRANCH
-          result.branchPoints.push({id : node.id})
       tree = {}
       result.trees.push(tree)
       tree.color = [1, 0, 0, 0]
@@ -219,6 +213,8 @@ Route =
           resolution : 0
         })
 
+    console.log "NML-Objekt"
+    console.log result
     return result
 
 
@@ -265,7 +261,7 @@ Route =
     @initialize().done =>
       
       #@addToBuffer(1, position)
-      @branchStack.push(@activeNode.pos)
+      @branchStack.push(@activeNode)
 
       #@putNewPoint(position, TYPE_BRANCH)
 
@@ -275,20 +271,29 @@ Route =
 
     @initialize().pipe =>
 
-      savedActiveNode = @activeNode
-      if @activeNode
-        while (true)
-          @activeNode = @activeNode.parent
-          unless @activeNode
-            break
-          if (@activeNode.type == TYPE_BRANCH)
-            break
+      
+      point = @branchStack.pop()
       deferred = new $.Deferred()
-      unless @activeNode
-        @activeNode = savedActiveNode
-        deferred.reject()
-      else
+      if point
+        @activeNode = point
         deferred.resolve(@activeNode.pos)
+      else
+        deferred.reject()
+
+      #savedActiveNode = @activeNode
+      #if @activeNode
+      #  while (true)
+      #    @activeNode = @activeNode.parent
+      #    unless @activeNode
+      #      break
+      #    if (@activeNode.type == TYPE_BRANCH)
+      #      break
+      #deferred = new $.Deferred()
+      #unless @activeNode
+      #  @activeNode = savedActiveNode
+      #  deferred.reject()
+      #else
+      #  deferred.resolve(@activeNode.pos)
       
       
       # Georg doesn't get the following lines
@@ -384,7 +389,6 @@ Route =
     id = @activeNode.id
     @activeNode = @activeNode.parent
     @activeNode.remove(id)
-    console.log @activeTree.toString()
 
   getTree : (id) ->
     unless id
@@ -404,6 +408,12 @@ Route =
     for c in tree.getChildren()
       if c
         result = result.concat(@getNodeList(c))
+    return result
+
+  getNodeListOfAllTrees : ->
+    result = []
+    for tree in @trees
+      result = result.concat(@getNodeList(tree))
     return result
 
   # Helper method used in initialization

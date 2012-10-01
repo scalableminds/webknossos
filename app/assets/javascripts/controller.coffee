@@ -165,11 +165,12 @@ class Controller
         @model.Route.putBranch(@flycam.getGlobalPos())
         @sceneController.setWaypoint()
         @gui.setActiveNodeId(@model.Route.getActiveNodeId())
+        @gui.updateRadius()
       "h" : => @model.Route.popBranch().done(
         (position) => 
           @flycam.setGlobalPos(position)
-          @sceneController.setActiveNodePosition(position)
           @gui.setActiveNodeId(@model.Route.getActiveNodeId())
+          @sceneController.skeleton.setActiveNode()
         )
 
       #Zoom in/out
@@ -233,6 +234,7 @@ class Controller
     @model.Route.put(position)
     @sceneController.setWaypoint()
     @gui.setActiveNodeId(@model.Route.getActiveNodeId())
+    @gui.updateRadius()
 
   #onPreviewClick : (position) =>
   #  @sceneController.skeleton.onPreviewClick(position, @view.scaleFactor, @view.getCameras()[VIEW_3D])

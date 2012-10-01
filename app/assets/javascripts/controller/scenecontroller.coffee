@@ -104,9 +104,6 @@ class SceneController
   setWaypoint : =>
     @skeleton.setWaypoint()
 
-  setActiveNodePosition : (position) =>
-    @skeleton.setActiveNodePosition(position)
-
   setDisplayCrosshair : (value) =>
     for plane in @planes
       plane.setDisplayCrosshair value

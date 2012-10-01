@@ -162,8 +162,8 @@ class Controller
     new Input.KeyboardNoLoop(
       #Branches
       "b" : => 
-        @model.Route.putBranch(@flycam.getGlobalPos())
-        @sceneController.setWaypoint()
+        @model.Route.putBranch()
+        #@sceneController.setWaypoint()
         @gui.setActiveNodeId(@model.Route.getActiveNodeId())
         @gui.updateRadius()
       "h" : => @model.Route.popBranch().done(

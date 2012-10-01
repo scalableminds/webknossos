@@ -39,6 +39,7 @@ class Gui
 
                 activeNodeID : @model.Route.getActiveNodeId()
                 deleteActiveNode : @deleteActiveNode
+                radius : @model.Route.getActiveNodeRadius()
               }
     @gui  = new dat.GUI({autoPlace: false})
     
@@ -109,6 +110,10 @@ class Gui
                           .step(1)
                           .name("Active Node ID")
                           .onFinishChange(@setActiveNode)
+    (fNodes.add @settings, "radius", 1, 500)
+                          .name("Radius")    
+                          .listen()
+                          .onChange(@setNodeRadius)
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
@@ -180,13 +185,21 @@ class Gui
   # called when value is changed in input field
   setActiveNode : (value) =>
     @flycam.setGlobalPos(@model.Route.setActiveNode(value))
-    @sceneController.setActiveNodePosition(@flycam.getGlobalPos())
+    @sceneController.skeleton.setActiveNode()
     @setActiveNodeId(@model.Route.getActiveNodeId())
 
   # called when value user switch to different active node
   setActiveNodeId : (value) =>
     @settings.activeNodeID = value
     @activeNodeIdController.updateDisplay()
+
+  setNodeRadius : (value) =>
+    @model.Route.setActiveNodeRadius(value)
+    @sceneController.skeleton.setNodeRadius(value)
+    @flycam.hasChanged = true
+
+  updateRadius : ->
+    @settings.radius = @model.Route.getActiveNodeRadius()
 
   deleteActiveNode : =>
     @model.Route.deleteActiveNode()

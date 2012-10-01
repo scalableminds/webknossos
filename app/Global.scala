@@ -6,12 +6,22 @@ import brainflight.mail.DefaultMails
 import models.graph.Experiment
 import models.graph.Tree
 import models.graph.Node
+import play.api.libs.concurrent._
+import play.api.Play.current
+import akka.actor.Props
+import brainflight.mail.Mailer
+import brainflight.io.StartWatching
+import brainflight.io.DataSetChangeHandler
+import brainflight.io.DirectoryWatcherActor
 
 object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     if (Play.current.mode == Mode.Dev)
       InitialData.insert()
+      
+      val dwa = Akka.system.actorOf( Props[DirectoryWatcherActor], name = "directoryWatcher" )
+      dwa ! StartWatching("binaryData", new DataSetChangeHandler)
   }
 
 }
@@ -23,14 +33,14 @@ object Global extends GlobalSettings {
 object InitialData {
 
   def insert() = {
-    if ( DataSet.findAll.isEmpty ) {
+    /*if ( DataSet.findAll.isEmpty ) {
       DataSet.insert( DataSet(
         "2012-09-26_ex145_07x2",
         Play.configuration.getString( "binarydata.path" ) getOrElse ( "binaryData/" )+"2012-09-26_ex145_07x2",
         List( 0, 1, 2, 3 ),
         Point3D( 80 * 128, 56 * 128, 19 * 128) ) )
 
-    }
+    }*/
 
     if (Role.findAll.isEmpty) {
       Role.insert(Role("user", Nil))

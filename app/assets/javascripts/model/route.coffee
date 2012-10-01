@@ -323,7 +323,7 @@ Route =
     return
 
   putNewPoint : (position, type) ->
-      point = new TracePoint(@activeNode, type, @idCount++, position, 1, 1)
+      point = new TracePoint(@activeNode, type, @idCount++, position, 10, 1)
       if @activeNode
         @activeNode.appendNext(point)
       else
@@ -346,10 +346,18 @@ Route =
   getActiveNodeType : ->
     @activeNode.type
 
+  getActiveNodeRadius : ->
+    @activeNode.size
+
+  setActiveNodeRadius : (radius) ->
+    if @activeNode
+      @activeNode.size = radius
+
   setActiveNode : (id) ->
-    findResult = @findNodeInTree(id)
-    if (findResult)
-      @activeNode = findResult
+    for tree in @trees
+      findResult = @findNodeInTree(id)
+      if findResult
+        @activeNode = findResult
     return @activeNode.pos
 
   setActiveTree : (id) ->
@@ -369,7 +377,7 @@ Route =
     @activeTree = sentinel
     return sentinel.treeId
 
-  findNodeInActiveTree : (id, tree) ->
+  findNodeInTree : (id, tree) ->
     unless tree
       tree = @activeTree
     if @activeTree.id == id then @activeTree else @activeTree.findNodeById(id)

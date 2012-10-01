@@ -44,8 +44,8 @@ class NMLParser(file: File) {
 
   def splitIntoComponents(tree: Tree) = {
     def split(components: List[Tree], nodes: List[models.graph.Node]) = nodes match {
-      case node :: tail if componentsContainNode(components, node) =>
-        
+      case node :: tail =>
+        componentsContainNode(components, node)
         split(components, tail)
       case _ =>
         components
@@ -59,10 +59,8 @@ class NMLParser(file: File) {
   }
 
   def parseBranchPoint(trees: List[Tree])(node: Node) = {
-    ((node \ "@id").text).toIntOpt.flatMap(id =>
-      trees.find(_.nodes.find(_.id == id).isDefined).map { tree =>
-        BranchPoint(id, tree.id)
-      })
+    ((node \ "@id").text).toIntOpt.map(id =>
+      BranchPoint(id))
   }
 
   def parsePoint3D(node: Node) = {

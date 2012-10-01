@@ -1,5 +1,7 @@
 package models.graph
 
+import play.api.libs.json.JsValue
+import play.api.libs.json.Reads
 import models.DataSet
 import brainflight.tools.geometry.Point3D
 import models.BasicDAO
@@ -10,7 +12,10 @@ import play.api.libs.json.Writes
 import play.api.libs.json.Json
 import xml.Xml
 import xml.XMLWrites
-import Tree.TreeWrites
+import Tree.TreeFormat
+import play.api.libs.json.Reads
+import play.api.libs.json.JsValue
+import play.api.libs.json.Format
 
 case class Experiment(dataSetId: ObjectId, trees: List[Tree], branchPoints: List[BranchPoint], time: Long, activeNodeId: Int, editPosition: Point3D, _id: ObjectId = new ObjectId) {
   def id = _id.toString
@@ -60,12 +65,33 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     }) getOrElse (throw new Exception("No Experiment found"))
   }
 
-  implicit object ExperimentWrites extends Writes[Experiment] {
+  implicit object ExperimentFormat extends Format[Experiment] {
+    val ID = "id"
+    val TREES = "trees"
+    val ACTIVE_NODE = "activeNode"
+    val BRANCH_POINTS = "branchPoints"
+    val EDIT_POSITION = "editPosition"
+
     def writes(e: Experiment) = Json.obj(
-      "id" -> e.id,
-      "trees" -> e.trees.foldLeft(Json.obj())((o,t) => o ++ TreeWrites.writes(t)),
-      "activeNode" -> e.activeNodeId,
-      "branchPoints" -> e.branchPoints,
-      "editPosition" -> e.editPosition)
+      ID -> e.id,
+      TREES -> e.trees.map(TreeFormat.writes),
+      ACTIVE_NODE -> e.activeNodeId,
+      BRANCH_POINTS -> e.branchPoints,
+      EDIT_POSITION -> e.editPosition)
+
+    def reads(js: JsValue): Experiment = {
+
+      val id = (js \ ID).as[String]
+      val trees = (js \ TREES).as[List[Tree]]
+      val activeNode = (js \ ACTIVE_NODE).as[Int]
+      val branchPoints = (js \ BRANCH_POINTS).as[List[BranchPoint]]
+      val editPosition = (js \ EDIT_POSITION).as[Point3D]
+      Experiment.findOneById(id) match{
+        case Some(exp) =>
+          exp.copy(trees = trees, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition)
+        case _ =>
+          throw new RuntimeException("Valid experiment id expected")
+      }
+    }
   }
 }

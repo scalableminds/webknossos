@@ -45,6 +45,8 @@ Route =
           @treeIdCount = 1
           @trees = []
           @activeNode = null
+          # Used to save in NML file, is always defined
+          @lastActiveNodeId = 1
           @activeTree = null
           
           # Build sample tree
@@ -137,6 +139,7 @@ Route =
             activeNodeT = @findNodeInList(nodes, data.experiment.activeNode)
             if activeNodeT
               @activeNode = activeNodeT
+              @lastActiveNodeId = @activeNode.id
               # Active Tree is the one last added
               @activeTree = @trees[@trees.length - 1]
             # Set idCount
@@ -158,7 +161,11 @@ Route =
             @trees[@activeTree.treeIndex] = tree
             @activeTree = tree
           unless @activeTree
-            @createNewTree()
+            if @trees.length > 0
+              @activeTree = @trees[0]
+            else
+              # TODO: in this case, skeleton will crash, because it wants to draw the sentinel
+              @createNewTree()
 
           $(window).on(
             "unload"
@@ -182,36 +189,43 @@ Route =
   # Returns an object that is structured the same way as data.experiment is
   exportToNML : ->
     result = Route.data.experiment
-    result.activeNode = @activeNode.id
+    # TODO: what if activeNode is null??
+    result.activeNode = @lastActiveNodeId
     result.branchPoints = []
     # Get Branchpoints
     for branchPoint in @branchStack
       result.branchPoints.push({id : branchPoint.id})
-    result.editPosition = @activeNode.pos
+    # TODO: Implement current position
+    if @activeNode
+      result.editPosition = @activeNode.pos
+    else
+      result.editPosition = [300, 300, 200]
     result.trees = []
     for tree in @trees
-      nodes = @getNodeList(tree)
-      tree = {}
-      result.trees.push(tree)
-      tree.color = [1, 0, 0, 0]
-      tree.edges = []
-      # Get Edges
-      for node in nodes
-        for child in node.getChildren()
-          tree.edges.push({source : node.id, target : child.id})
-      tree.id = 1
-      tree.nodes = []
-      # Get Nodes
-      for node in nodes
-        tree.nodes.push({
-          id : node.id
-          position : node.pos
-          radius : node.size
-          # TODO: Those are dummy values
-          viewport : 0
-          timestamp : 0
-          resolution : 0
-        })
+      # Don't save empty trees (id is null)
+      if tree.id
+        nodes = @getNodeList(tree)
+        treeObj = {}
+        result.trees.push(treeObj)
+        treeObj.color = [1, 0, 0, 0]
+        treeObj.edges = []
+        # Get Edges
+        for node in nodes
+          for child in node.getChildren()
+            treeObj.edges.push({source : node.id, target : child.id})
+        treeObj.id = tree.treeId
+        treeObj.nodes = []
+        # Get Nodes
+        for node in nodes
+          treeObj.nodes.push({
+            id : node.id
+            position : node.pos
+            radius : node.size
+            # TODO: Those are dummy values
+            viewport : 0
+            timestamp : 0
+            resolution : 0
+          })
 
     console.log "NML-Objekt"
     console.log result
@@ -261,7 +275,8 @@ Route =
     @initialize().done =>
       
       #@addToBuffer(1, position)
-      @branchStack.push(@activeNode)
+      if @activeNode
+        @branchStack.push(@activeNode)
 
       #@putNewPoint(position, TYPE_BRANCH)
 
@@ -276,9 +291,11 @@ Route =
       deferred = new $.Deferred()
       if point
         @activeNode = point
+        @lastActiveNodeId = @activeNode.id
         deferred.resolve(@activeNode.pos)
       else
         deferred.reject()
+      @push()
 
       #savedActiveNode = @activeNode
       #if @activeNode
@@ -322,6 +339,7 @@ Route =
         @addToBuffer(0, position)
 
       @putNewPoint(position, TYPE_USUAL)
+      @push()
 
     return
 
@@ -335,22 +353,30 @@ Route =
         @trees[@activeTree.treeIndex] = point
         @activeTree = point
       @activeNode = point
+      @lastActiveNodeId = @activeNode.id
       #console.log @activeTree.toString()
       #console.log @getNodeList()
       #for item in @getNodeList()
       #  console.log item.id
 
   getActiveNodeId : ->
-    @activeNode.id
+    @lastActiveNodeId
 
   getActiveNodePos : ->
+    unless @activeNode then return null
     @activeNode.pos
 
   getActiveNodeType : ->
+    unless @activeNode then return null
     @activeNode.type
 
   getActiveNodeRadius : ->
+    unless @activeNode then return null
     @activeNode.size
+
+  getActiveTreeId : ->
+    if @activeTree
+      return @activeTree.treeId
 
   setActiveNodeRadius : (radius) ->
     if @activeNode
@@ -361,14 +387,22 @@ Route =
       findResult = @findNodeInTree(id)
       if findResult
         @activeNode = findResult
+        @lastActiveNodeId = @activeNode.id
+        @activeTree = tree
+        break
+    @push()
     return @activeNode.pos
 
   setActiveTree : (id) ->
     for tree in @trees
       if tree.treeId == id
         @activeTree = tree
+        break
+    @activeNode = @activeTree
+    @lastActiveNodeId = @activeNode.id
+    @push()
 
-  createNewTree : (id) ->
+  createNewTree : ->
     # Because a tree is represented by the root element and we
     # don't have any root element, we need a sentinel to save the
     # treeId and it's index within trees.
@@ -378,6 +412,8 @@ Route =
     sentinel.treeIndex = @trees.length
     @trees.push(sentinel)
     @activeTree = sentinel
+    @activeNode = null
+    @push()
     return sentinel.treeId
 
   findNodeInTree : (id, tree) ->
@@ -386,9 +422,31 @@ Route =
     if @activeTree.id == id then @activeTree else @activeTree.findNodeById(id)
 
   deleteActiveNode : ->
+    unless @activeNode
+      return
     id = @activeNode.id
     @activeNode = @activeNode.parent
-    @activeNode.remove(id)
+    if @activeNode
+      @activeNode.remove(id)
+      @lastActiveNodeId = @activeNode.id
+    @push()
+
+  deleteActiveTree : ->
+    # There should always be an active Tree
+    # Find index of activeTree
+    for i in [0..@trees.length]
+      if @trees[i].treeId == @activeTree.treeId
+        index = i
+        break
+    @trees.splice(index, 1)
+    console.log @trees
+    # Because we always want an active tree, check if we need
+    # to create one.
+    if @trees.length == 0
+      @createNewTree()
+    @activeTree = @trees[0]
+    @activeNode = null
+    @push()
 
   getTree : (id) ->
     unless id

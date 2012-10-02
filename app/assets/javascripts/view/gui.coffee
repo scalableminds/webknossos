@@ -33,9 +33,9 @@ class Gui
                 displayPrevYZ : data.displayPreviewYZ
                 displayPrevXZ : data.displayPreviewXZ
 
-                activeTreeID : 1
-                newTree : -> alert "Create New Tree"
-                deleteActiveTree : -> alert "Delete Active Tree"
+                activeTreeID : @model.Route.getActiveTreeId()
+                newTree : @createNewTree
+                deleteActiveTree : @deleteActiveTree
 
                 activeNodeID : @model.Route.getActiveNodeId()
                 deleteActiveNode : @deleteActiveNode
@@ -93,11 +93,12 @@ class Gui
                           .onChange(@setDisplayPreviewXZ)
 
     fTrees = @gui.addFolder("Trees")
+    @activeTreeIdController =
     (fTrees.add @settings, "activeTreeID")
                           .min(1)
                           .step(1)
                           .name("Active Tree ID")
-                          #.onChange(@setDisplayPreviewXY)
+                          .onFinishChange(@setActiveTree)
     (fTrees.add @settings, "newTree")
                           .name("Create New Tree")
     (fTrees.add @settings, "deleteActiveTree")
@@ -110,10 +111,10 @@ class Gui
                           .step(1)
                           .name("Active Node ID")
                           .onFinishChange(@setActiveNode)
-    (fNodes.add @settings, "radius", 1, 500)
-                          .name("Radius")    
-                          .listen()
-                          .onChange(@setNodeRadius)
+    #(fNodes.add @settings, "radius", 1, 500)
+    #                      .name("Radius")    
+    #                      .listen()
+    #                      .onChange(@setNodeRadius)
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
@@ -183,15 +184,31 @@ class Gui
     @model.User.Configuration.push()  
 
   # called when value is changed in input field
+  setActiveTree : (value) =>
+    @model.Route.setActiveTree(value)
+    @updateNodeAndTreeIds()
+    @sceneController.updateRoute()
+
+  # called when value user switch to different active tree
+  #setActiveTreeId : (value) =>
+  #  @settings.activeTreeID = value
+  #  @activeTreeIdController.updateDisplay()
+
+  createNewTree : =>
+    id = @model.Route.createNewTree()
+    @updateNodeAndTreeIds()
+    @sceneController.skeleton.createNewTree(id)
+
+  deleteActiveTree : =>
+    @model.Route.deleteActiveTree()
+    @updateNodeAndTreeIds()
+    @sceneController.updateRoute()
+    
+  # called when value is changed in input field
   setActiveNode : (value) =>
     @flycam.setGlobalPos(@model.Route.setActiveNode(value))
+    @updateNodeAndTreeIds()
     @sceneController.skeleton.setActiveNode()
-    @setActiveNodeId(@model.Route.getActiveNodeId())
-
-  # called when value user switch to different active node
-  setActiveNodeId : (value) =>
-    @settings.activeNodeID = value
-    @activeNodeIdController.updateDisplay()
 
   setNodeRadius : (value) =>
     @model.Route.setActiveNodeRadius(value)
@@ -203,5 +220,12 @@ class Gui
 
   deleteActiveNode : =>
     @model.Route.deleteActiveNode()
-    @setActiveNodeId(@model.Route.getActiveNodeId())
+    @updateNodeAndTreeIds()
     @sceneController.updateRoute()
+
+  # called when value user switch to different active node
+  updateNodeAndTreeIds : =>
+    @settings.activeNodeID = @model.Route.lastActiveNodeId
+    @settings.activeTreeID = @model.Route.getActiveTreeId()
+    @activeNodeIdController.updateDisplay()
+    @activeTreeIdController.updateDisplay()

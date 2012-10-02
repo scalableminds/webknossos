@@ -69,6 +69,9 @@ class Controller
     
         @view.on "render", (event) => @render()
         @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
+        @sceneController.skeleton.on "newGeometries", (list, event) =>
+          for geometry in list
+            @view.addGeometry(geometry)
         
         @flycam.setGlobalPos(position)
         @cameraController.changePrevSV()
@@ -163,19 +166,16 @@ class Controller
       #Branches
       "b" : => 
         @model.Route.putBranch()
-        #@sceneController.setWaypoint()
-        @gui.setActiveNodeId(@model.Route.getActiveNodeId())
-        @gui.updateRadius()
-      "h" : => @model.Route.popBranch().done(
+      "j" : => @model.Route.popBranch().done(
         (position) => 
           @flycam.setGlobalPos(position)
-          @gui.setActiveNodeId(@model.Route.getActiveNodeId())
+          @gui.updateNodeAndTreeIds()
           @sceneController.skeleton.setActiveNode()
         )
 
       #Zoom in/out
-      "o" : => @cameraController.zoomIn()
-      "p" : => @cameraController.zoomOut()
+      "i" : => @cameraController.zoomIn()
+      "o" : => @cameraController.zoomOut()
     )
 
   # for more buttons look at Input.Gamepad
@@ -232,9 +232,9 @@ class Controller
       when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
       when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
     @model.Route.put(position)
-    @sceneController.setWaypoint()
-    @gui.setActiveNodeId(@model.Route.getActiveNodeId())
+    @gui.updateNodeAndTreeIds()
     @gui.updateRadius()
+    @sceneController.setWaypoint()
 
   #onPreviewClick : (position) =>
   #  @sceneController.skeleton.onPreviewClick(position, @view.scaleFactor, @view.getCameras()[VIEW_3D])
@@ -251,13 +251,18 @@ class Controller
     ray.setThreshold(@flycam.getRayThreshold())
  
     # identify clicked object
-    intersects = ray.intersectObjects([@sceneController.skeleton.routeNodes])
+    intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
 
     if (intersects.length > 0 and intersects[0].distance >= 0)
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
       vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex
-      @gui.setActiveNode(vertex.id)
+      @model.Route.setActiveNode(vertex.id)
+      @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+      @gui.updateNodeAndTreeIds()
+      @sceneController.skeleton.setActiveNode()
+      
+      #@gui.setActiveNode(vertex.id)
       console.log intersects
       # jump to the nodes position
       #@flycam.setGlobalPos [vertex.x, vertex.y, vertex.z]

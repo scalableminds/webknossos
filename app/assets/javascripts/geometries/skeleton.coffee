@@ -1,6 +1,7 @@
 ### define
 model : Model
 model/route : Route
+libs/event_mixin : EventMixin
 ###
 
 PLANE_XY = 0
@@ -14,6 +15,8 @@ class Skeleton
   # nodes, edges and trees
 
   constructor : (maxRouteLen, flycam, model) ->
+    _.extend(this, new EventMixin())
+
     @maxRouteLen = maxRouteLen
     @flycam      = flycam
     @model       = model
@@ -33,9 +36,7 @@ class Skeleton
           })
       )
 
-    for tree in @model.Route.getTrees()
-      @createNewTree(tree.treeId)
-    @loadSkeletonFromModel()
+    @reset()
 
   createNewTree : (treeId) ->
     # create route to show in previewBox and pre-allocate buffers
@@ -58,6 +59,10 @@ class Skeleton
     # Initialize the tree
     @clearRoute(treeId)
 
+    @setActiveNode()
+    
+    @trigger "newGeometries", [@routes[@routes.length - 1], @nodes[@nodes.length - 1]]
+
   clearRoute : (treeId) ->
     index = @getIndexFromTreeId(treeId)
     for i in [0..@maxRouteLen - 1]
@@ -68,6 +73,19 @@ class Skeleton
       @routes[index].geometry.verticesNeedUpdate = true
       @nodes[index].geometry.verticesNeedUpdate = true
     @curIndex[index] = 0
+
+  reset : ->
+    i = 0
+    while i < @ids.length
+      @routes[i].visible = false
+      @nodes[i].visible  = false
+      i++
+    @routes = []
+    @nodes  = []
+    @ids    = []
+    for tree in @model.Route.getTrees()
+      @createNewTree(tree.treeId)
+    @loadSkeletonFromModel()
 
   loadSkeletonFromModel : ->
     for tree in @model.Route.getTrees()
@@ -99,9 +117,15 @@ class Skeleton
 
   setActiveNode : () =>
     position = @model.Route.getActiveNodePos()
+    # May be null
     @lastNodePosition = position
-    @setNodeRadius(@model.Route.getActiveNodeRadius())
-    @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
+    if position
+      @lastNodePosition = position
+      @setNodeRadius(@model.Route.getActiveNodeRadius())
+      @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
+    else
+      @setNodeRadius(0)
+
 
   setNodeRadius : (value) ->
     @activeNode.scale = new THREE.Vector3(value, value, value)
@@ -133,6 +157,8 @@ class Skeleton
       
     unless @curIndex[index]
       @curIndex[index] = 0
+      @lastNodePosition = position
+    unless @lastNodePosition
       @lastNodePosition = position
 
     if @curIndex[index] < @maxRouteLen

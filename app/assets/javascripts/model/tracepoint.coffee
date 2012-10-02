@@ -29,7 +29,7 @@ class TracePoint
     for i in [0..@children.length]
       if @children[i].id == id
         # Remove child
-        @children.splice(i, i + 1)
+        @children.splice(i, 1)
         return
 
   getChildren : ->

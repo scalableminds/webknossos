@@ -134,6 +134,5 @@ class SceneController
   # the skeleton is changes in a way that can't efficiently
   # applied to the particle system, like deleting nodes.
   updateRoute : ->
-    @skeleton.clearRoute()
-    @skeleton.loadSkeletonFromModel()
+    @skeleton.reset()
     @flycam.hasChanged = true

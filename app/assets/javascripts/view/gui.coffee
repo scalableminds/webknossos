@@ -111,10 +111,11 @@ class Gui
                           .step(1)
                           .name("Active Node ID")
                           .onFinishChange(@setActiveNode)
-    #(fNodes.add @settings, "radius", 1, 500)
-    #                      .name("Radius")    
-    #                      .listen()
-    #                      .onChange(@setNodeRadius)
+    scale = @model.Route.scaleX
+    (fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
+                          .name("Radius")    
+                          .listen()
+                          .onChange(@setNodeRadius)
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
@@ -212,7 +213,8 @@ class Gui
 
   setNodeRadius : (value) =>
     @model.Route.setActiveNodeRadius(value)
-    @sceneController.skeleton.setNodeRadius(value)
+    # convert from nm to voxels, divide by resolution
+    @sceneController.skeleton.setNodeRadius(value / @model.Route.scaleX)
     @flycam.hasChanged = true
 
   updateRadius : ->

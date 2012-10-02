@@ -93,24 +93,26 @@ class Skeleton
 
       index = @getIndexFromTreeId(tree.treeId)
 
-      # Draw first Node, because it has no parent and therefore isn't drawn in the loop below
-      if nodeList.length > 0
-        nodePos = nodeList[0].pos
-        @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
-        @nodes[index].geometry.vertices[@curIndex[index]].id = nodeList[0].id
-      @curIndex[index]++
-      for node in nodeList
-        if node.parent
-          nodePos = node.parent.pos
-          node2Pos = node.pos
-          @routes[index].geometry.vertices[2 * @curIndex[index]]     = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
-          @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
-          @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
-          # Assign the ID to the vertex, so we can access it later
-          @nodes[index].geometry.vertices[@curIndex[index]].id = node.id
-          @curIndex[index]++
-      @routes[index].geometry.verticesNeedUpdate = true
-      @nodes[index].geometry.verticesNeedUpdate = true
+      # Check that we are not dealing with a sentinel
+      if nodeList[0].id
+        # Draw first Node, because it has no parent and therefore isn't drawn in the loop below
+        if nodeList.length > 0
+          nodePos = nodeList[0].pos
+          @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
+          @nodes[index].geometry.vertices[@curIndex[index]].id = nodeList[0].id
+        @curIndex[index]++
+        for node in nodeList
+          if node.parent
+            nodePos = node.parent.pos
+            node2Pos = node.pos
+            @routes[index].geometry.vertices[2 * @curIndex[index]]     = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
+            @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
+            @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
+            # Assign the ID to the vertex, so we can access it later
+            @nodes[index].geometry.vertices[@curIndex[index]].id = node.id
+            @curIndex[index]++
+        @routes[index].geometry.verticesNeedUpdate = true
+        @nodes[index].geometry.verticesNeedUpdate = true
 
 
     @setActiveNode()

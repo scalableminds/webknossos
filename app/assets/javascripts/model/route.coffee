@@ -10,7 +10,7 @@ model/tracepoint : TracePointClass
   
 # Constants
 BUFFER_SIZE = 262144 # 1024 * 1204 / 4
-PUSH_THROTTLE_TIME = 5000#30000 # 30s
+PUSH_THROTTLE_TIME = 30000 # 30s
 INIT_TIMEOUT = 10000 # 10s
 
 TYPE_USUAL  = 0
@@ -113,6 +113,7 @@ Route =
 
           ############ Load Tree from data.experiment ##############
           @scaleX = data.experiment.scale[0]
+          @globalPosition = data.experiment.editPosition
           # get tree to build
           for tree in data.experiment.trees
             # Initialize nodes
@@ -136,6 +137,7 @@ Route =
                 else
                   node.treeId = tree.id
                   @trees.push(node)
+                  treeFound = true
             # Set active Node
             activeNodeT = @findNodeInList(nodes, data.experiment.activeNode)
             if activeNodeT
@@ -157,7 +159,10 @@ Route =
           for tree in @trees
             @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
           for tree in lostTrees
+            savedActiveNode = @activeNode
             @createNewTree()
+            # Restore active node
+            @activeNode = savedActiveNode
             tree.treeId = @activeTree.treeId
             @trees[@activeTree.treeIndex] = tree
             @activeTree = tree
@@ -165,7 +170,6 @@ Route =
             if @trees.length > 0
               @activeTree = @trees[0]
             else
-              # TODO: in this case, skeleton will crash, because it wants to draw the sentinel
               @createNewTree()
 
           $(window).on(
@@ -190,17 +194,12 @@ Route =
   # Returns an object that is structured the same way as data.experiment is
   exportToNML : ->
     result = Route.data.experiment
-    # TODO: what if activeNode is null??
     result.activeNode = @lastActiveNodeId
     result.branchPoints = []
     # Get Branchpoints
     for branchPoint in @branchStack
       result.branchPoints.push({id : branchPoint.id})
-    # TODO: Implement current position
-    if @activeNode
-      result.editPosition = @activeNode.pos
-    else
-      result.editPosition = [300, 300, 200]
+    result.editPosition = @globalPosition
     result.trees = []
     for tree in @trees
       # Don't save empty trees (id is null)
@@ -289,6 +288,7 @@ Route =
 
       
       point = @branchStack.pop()
+      @push()
       deferred = new $.Deferred()
       if point
         @activeNode = point
@@ -296,7 +296,6 @@ Route =
         deferred.resolve(@activeNode.pos)
       else
         deferred.reject()
-      @push()
 
       #savedActiveNode = @activeNode
       #if @activeNode
@@ -389,7 +388,7 @@ Route =
 
   setActiveNode : (id) ->
     for tree in @trees
-      findResult = @findNodeInTree(id)
+      findResult = @findNodeInTree(id, tree)
       if findResult
         @activeNode = findResult
         @lastActiveNodeId = @activeNode.id
@@ -424,7 +423,7 @@ Route =
   findNodeInTree : (id, tree) ->
     unless tree
       tree = @activeTree
-    if @activeTree.id == id then @activeTree else @activeTree.findNodeById(id)
+    if tree.id == id then tree else tree.findNodeById(id, tree)
 
   deleteActiveNode : ->
     unless @activeNode

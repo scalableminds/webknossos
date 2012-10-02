@@ -18,7 +18,10 @@ class Gui
     initPos = @flycam.getGlobalPos()
 
     # create GUI
+    modelRadius = @model.Route.getActiveNodeRadius()
     @settings = { 
+                save : => @model.Route.pushImpl()
+
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
                 lockZoom: data.lockZoom
                 inverseX: data.mouseInversionX == 1
@@ -39,7 +42,7 @@ class Gui
 
                 activeNodeID : @model.Route.getActiveNodeId()
                 deleteActiveNode : @deleteActiveNode
-                radius : @model.Route.getActiveNodeRadius()
+                radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
               }
     @gui  = new dat.GUI({autoPlace: false})
     
@@ -53,6 +56,10 @@ class Gui
     #  left : '220px'
     #  top : '260px'
     #  height : '500px'
+
+    fFile = @gui.addFolder("File")
+    (fFile.add @settings, "save")
+                          .name("Save now")
     
     fPosition = @gui.addFolder("Position")
     (fPosition.add @settings, "position")
@@ -119,6 +126,7 @@ class Gui
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
+    fFile.open()
     fPosition.open()
     #fControls.open()
     #fView.open()

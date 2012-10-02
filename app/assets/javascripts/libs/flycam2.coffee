@@ -11,7 +11,8 @@ MAX_ZOOM_TRESHOLD  = 2
   
 class Flycam2d
 
-  constructor : (width) ->
+  constructor : (width, model) ->
+    @model = model
     initialBuffer = TEXTURE_WIDTH/2-width/2          # buffer: how many pixels is the texture larger than the canvas on each side?
     @buffer = [initialBuffer, initialBuffer, initialBuffer]
     @viewportWidth = width
@@ -76,8 +77,7 @@ class Flycam2d
     @direction = direction
 
   move : (p) -> #move by whatever is stored in this vector
-    @globalPosition = [@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]]
-    @hasChanged = true
+    @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
     # update the direction whenever the user moves
     @lastDirection = @direction
     @direction = [0.8 * @lastDirection[0] + 0.2 * p[0], 0.8 * @lastDirection[1] + 0.2 * p[1], 0.8 * @lastDirection[2] + 0.2 * p[2]]
@@ -93,6 +93,7 @@ class Flycam2d
 
   getGlobalPos : ->
     @globalPosition
+    @model.Route.globalPosition = @globalPosition
 
   getTexturePosition : (planeID) ->
     @texturePosition[planeID]

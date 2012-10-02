@@ -29,7 +29,7 @@ class Controller
 
     # create Model, View and Flycam
     @model = new Model()
-    @flycam = new Flycam(VIEWPORT_WIDTH)
+    @flycam = new Flycam(VIEWPORT_WIDTH, @model)
     @view  = new View(@model, @flycam)
 
     # initialize Camera Controller
@@ -160,6 +160,7 @@ class Controller
 
       #misc keys
       "n" : => Helper.toggle()
+      #"ctr + s"       : => @model.Route.pushImpl()
     )
     
     new Input.KeyboardNoLoop(

@@ -112,6 +112,7 @@ Route =
           lostTrees = []
 
           ############ Load Tree from data.experiment ##############
+          @scaleX = data.experiment.scale[0]
           # get tree to build
           for tree in data.experiment.trees
             # Initialize nodes
@@ -344,20 +345,22 @@ Route =
     return
 
   putNewPoint : (position, type) ->
-      point = new TracePoint(@activeNode, type, @idCount++, position, 10, 1)
-      if @activeNode
-        @activeNode.appendNext(point)
-      else
-        # Tree has to be empty, so replace sentinel with point
-        point.treeId = @activeTree.treeId
-        @trees[@activeTree.treeIndex] = point
-        @activeTree = point
-      @activeNode = point
-      @lastActiveNodeId = @activeNode.id
-      #console.log @activeTree.toString()
-      #console.log @getNodeList()
-      #for item in @getNodeList()
-      #  console.log item.id
+    unless @lastRadius
+      @lastRadius = 10 * @scaleX
+    point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, 1)
+    if @activeNode
+      @activeNode.appendNext(point)
+    else
+      # Tree has to be empty, so replace sentinel with point
+      point.treeId = @activeTree.treeId
+      @trees[@activeTree.treeIndex] = point
+      @activeTree = point
+    @activeNode = point
+    @lastActiveNodeId = @activeNode.id
+    #console.log @activeTree.toString()
+    #console.log @getNodeList()
+    #for item in @getNodeList()
+    #  console.log item.id
 
   getActiveNodeId : ->
     @lastActiveNodeId
@@ -381,6 +384,8 @@ Route =
   setActiveNodeRadius : (radius) ->
     if @activeNode
       @activeNode.size = radius
+      @lastRadius = radius
+    @push()
 
   setActiveNode : (id) ->
     for tree in @trees

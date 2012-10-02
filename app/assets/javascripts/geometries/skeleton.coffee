@@ -121,7 +121,7 @@ class Skeleton
     @lastNodePosition = position
     if position
       @lastNodePosition = position
-      @setNodeRadius(@model.Route.getActiveNodeRadius())
+      @setNodeRadius(@model.Route.getActiveNodeRadius() / @model.Route.scaleX)
       @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
     else
       @setNodeRadius(0)

@@ -18,8 +18,9 @@ class CameraController
   # The Sceleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
   # View. It provides methods to set a certain View (animated).
 
-  constructor : (cameras, flycam, model, upperBoundary) ->
+  constructor : (cameras, lights, flycam, model, upperBoundary) ->
     @cameras       = cameras
+    @lights        = lights
     @flycam        = flycam
     @model         = model
     @upperBoundary = upperBoundary
@@ -34,6 +35,11 @@ class CameraController
     @cameras[PLANE_YZ].position = new THREE.Vector3(gPos[0] + 1, gPos[1]    , gPos[2])
     @cameras[PLANE_XZ].position = new THREE.Vector3(gPos[0]    , gPos[1] + 1, gPos[2])
 
+    # offset the lights very far
+    @lights[PLANE_XY].position = new THREE.Vector3(gPos[0]         , gPos[1]         , gPos[2] - 100000)
+    @lights[PLANE_YZ].position = new THREE.Vector3(gPos[0] + 100000, gPos[1]         , gPos[2])
+    @lights[PLANE_XZ].position = new THREE.Vector3(gPos[0]         , gPos[1] + 100000, gPos[2])
+
   changePrev : (id) ->
     # In order for the rotation to be correct, it is not sufficient
     # to just use THREEJS' lookAt() function, because it may still
@@ -45,12 +51,10 @@ class CameraController
     camera = @cameras[VIEW_3D]
     b = @upperBoundary
     time = 800
-    console.log "From up: " + [camera.up.x, camera.up.y, camera.up.z]
-    @tween = new TWEEN.Tween({  middle: new THREE.Vector3(b[0]/2, b[1]/2, b[2]/2), upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera,flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
+    @tween = new TWEEN.Tween({  middle: new THREE.Vector3(b[0]/2, b[1]/2, b[2]/2), upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera, flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
     switch id
       when VIEW_3D
         scale = Math.sqrt(b[0]*b[0]+b[1]*b[1])/1.8
-        console.log "To up: " + [0, 0, -1]
         @tween.to({  x: b[0]*0.8, y: b[1], z: b[2] / 5, upX: 0, upY: 0, upZ: -1, l: -scale+scale*(b[0]/ (b[0]+b[1])-0.5), r: scale+scale*(b[0]/(b[0]+b[1])-0.5), t: scale-scale*0.1, b: -scale-scale*0.1}, time)
         .onUpdate(@updateCameraPrev)
         .start()

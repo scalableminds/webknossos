@@ -42,14 +42,18 @@ class View
     colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
     @renderer = new THREE.WebGLRenderer({clearColor: colors[i], clearAlpha: 1, antialias: false})
     @camera   = new Array(4)
+    @lights   = new Array(3)
     @scene    = new THREE.Scene()
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
       # Let's set up cameras
-      # The cameras are never "moved". They only look at the scene
-      # (the trianglesplanes in particular)
       # No need to set any properties, because the camera controller will deal with that
       @camera[i]   = new THREE.OrthographicCamera(0, 0, 0, 0)
       @scene.add @camera[i]
+
+      # There is one light for each plane
+      if i != VIEW_3D
+        @lights[i]   = new THREE.PointLight( 0xffffff, 0.8 )
+        @scene.add @lights[i]
 
     @camera[PLANE_XY].position.z = -1
     @camera[PLANE_YZ].position.x =  1
@@ -204,3 +208,6 @@ class View
 
   getCameras : =>
     @camera
+
+  getLights  : =>
+    @lights

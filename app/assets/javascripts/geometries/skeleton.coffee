@@ -37,7 +37,7 @@ class Skeleton
     # 1 nm, so that @activeNode.scale is the radius in nm.
     @activeNode = new THREE.Mesh(
         new THREE.SphereGeometry(1 / @model.Route.scaleX),
-        new THREE.MeshBasicMaterial({
+        new THREE.MeshLambertMaterial({
           color : 0xff0000
           })
       )
@@ -216,7 +216,7 @@ class Skeleton
   pushNewNode : (radius, position, id) ->
     newNode = new THREE.Mesh(
       new THREE.SphereGeometry(1 / @model.Route.scaleX),
-      new THREE.MeshBasicMaterial({ color : 0xff0000 })
+      new THREE.MeshLambertMaterial({ color : 0xff0000 })
     )
     newNode.scale = new THREE.Vector3(radius, radius, radius)
     newNode.position = new THREE.Vector3(position[0], position[1], position[2])

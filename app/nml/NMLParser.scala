@@ -28,31 +28,47 @@ class NMLParser(file: File) {
       dataSet <- DataSet.findOneByName(dataSetId.text)
     } yield {
       val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
-
       val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
       Experiment(dataSet._id, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
     }
   }
+  
+  
+  
 
   def verifyTrees(trees: List[Tree]): List[Tree] = {
-    trees
-    //trees.flatMap(splitIntoComponents)
+    trees.flatMap(splitIntoComponents)
+    //trees
   }
-
-  /*def componentsContainNode(components: List[Tree], node: models.graph.Node) = 
-    components.flatMap(_.nodes).find( _.id == node.id).isDefined
-
-  def splitIntoComponents(tree: Tree) = {
-    def split(components: List[Tree], nodes: List[models.graph.Node]) = nodes match {
-      case node :: tail =>
-        componentsContainNode(components, node)
-        split(components, tail)
-      case _ =>
-        components
+  
+  def splitIntoComponents(tree: Tree): List[Tree] = {
+    def buildTreeFromNode(node: models.graph.Node, sourceTree: Tree): Tree = {
+        val connectedEdges = sourceTree.edges.filter( e => e.target == node.id || e.source == node.id)
+        
+        val connectedNodes = connectedEdges.flatMap{
+          case Edge(s,t) if s == node.id => sourceTree.nodes.find( _.id == t)
+          case Edge(s,t) if t == node.id => sourceTree.nodes.find( _.id == s)
+        }
+        
+        val componentPart = Tree(tree.id, node :: connectedNodes, connectedEdges, tree.color)
+        
+        //println("node: \n"+ node + "\ncomponentPart: \n" + componentPart + "\ntree: \n" + sourceTree + "\n")
+        connectedNodes.foldLeft(componentPart)((tree, n) =>
+            tree ++ buildTreeFromNode(n, sourceTree -- componentPart))
     }
-
-    split(Nil, tree.nodes)
-  }*/
+    
+    var treeToProcess = tree
+    
+    var components = List[Tree]()
+    
+    while(!treeToProcess.nodes.isEmpty){
+      val component = buildTreeFromNode(treeToProcess.nodes.head, treeToProcess)
+      treeToProcess = treeToProcess -- component
+      components ::= component
+    }
+    if(components.size > 1 ) Logger.debug("Splitted tree: " + components)
+    components
+  }
 
   def parseEditPosition(node: NodeSeq) = {
     node.headOption.flatMap(parsePoint3D)

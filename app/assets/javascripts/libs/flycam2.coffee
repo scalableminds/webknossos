@@ -11,13 +11,14 @@ MAX_ZOOM_TRESHOLD  = 2
   
 class Flycam2d
 
-  constructor : (width) ->
+  constructor : (width, model) ->
+    @model = model
     initialBuffer = TEXTURE_WIDTH/2-width/2          # buffer: how many pixels is the texture larger than the canvas on each side?
     @buffer = [initialBuffer, initialBuffer, initialBuffer]
     @viewportWidth = width
     # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
     @maxZoomStepDiff = Math.min(Math.log(MAX_ZOOM_TRESHOLD) / Math.LN2, Math.log((TEXTURE_WIDTH-MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
-    @newBuckets = [false, false, false]
+    @hasNewTexture = [false, false, false]
     @zoomSteps = [0.0, 0.0, 0.0]
     @integerZoomSteps = [0, 0, 0]
   #  @reset()
@@ -26,6 +27,7 @@ class Flycam2d
     @direction = [0, 0, 1]
     @hasChanged = true
     @activePlane = PLANE_XY
+    @rayThreshold = 100
 
   #reset : ->
   #  @zoomSteps=[1,1,1]
@@ -75,8 +77,7 @@ class Flycam2d
     @direction = direction
 
   move : (p) -> #move by whatever is stored in this vector
-    @globalPosition = [@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]]
-    @hasChanged = true
+    @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
     # update the direction whenever the user moves
     @lastDirection = @direction
     @direction = [0.8 * @lastDirection[0] + 0.2 * p[0], 0.8 * @lastDirection[1] + 0.2 * p[1], 0.8 * @lastDirection[2] + 0.2 * p[2]]
@@ -92,6 +93,7 @@ class Flycam2d
 
   getGlobalPos : ->
     @globalPosition
+    @model.Route.globalPosition = @globalPosition
 
   getTexturePosition : (planeID) ->
     @texturePosition[planeID]
@@ -140,4 +142,12 @@ class Flycam2d
       if i != (planeID+2)%3
         @texturePosition[planeID][i] &= -1 << (5 + @integerZoomSteps[planeID])
     @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
-    @newBuckets[planeID] = false
+
+  hasNewTextures : ->
+    (@hasNewTexture[PLANE_XY] or @hasNewTexture[PLANE_YZ] or @hasNewTexture[PLANE_XZ])
+
+  setRayThreshold : (cameraRight, cameraLeft) ->
+    @rayThreshold = 4 * (cameraRight - cameraLeft) / 384
+
+  getRayThreshold : ->
+    @rayThreshold

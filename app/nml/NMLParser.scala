@@ -29,9 +29,8 @@ class NMLParser(file: File) {
     println("test")
     for {
       parameters <- (data \ "parameters")
-      dataSetId <- (parameters \ "experiment" \ "@name")
+      dataSetName <- (parameters \ "experiment" \ "@name")
       scale <- parseScale(parameters \ "scale")
-      dataSet <- DataSet.findOneByName(dataSetId.text)
     } yield {
       println("reached")
       val activeNodeId = parseActiveNode(parameters \ "activeNode")
@@ -40,7 +39,7 @@ class NMLParser(file: File) {
       val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
 
       val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
-      Experiment(dataSet._id, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
+      Experiment(dataSetName.text, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
     }
   }
 

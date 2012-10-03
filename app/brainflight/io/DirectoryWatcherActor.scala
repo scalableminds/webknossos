@@ -11,16 +11,21 @@ import play.api.libs.iteratee._
 import play.api.libs.concurrent._
 import akka.util.Timeout
 import akka.pattern.ask
+import akka.dispatch.Terminate
+import play.api.Play
+import play.api.Logger
 
 case class StartWatching(val pathName: String, changeHandler: DirectoryChangeHandler)
 case class StopWatching()
 
 class DirectoryWatcherActor extends Actor {
-
+  Logger.warn("If an UnsatisfiedLinkError occours: Don't mind.")
+  // TODO: fix classloader problems
   val watchService = FileSystems.getDefault().newWatchService()
   val keys = new HashMap[WatchKey, Path]
   var shouldStop = false
   var changeHandler: DirectoryChangeHandler = null
+  var updateTicker: Cancellable = null
 
   def receive = {
     case StopWatching =>
@@ -40,10 +45,8 @@ class DirectoryWatcherActor extends Actor {
     val event_path = event.context().asInstanceOf[Path]
     val path = parent.resolve(event_path)
     if (kind.equals(StandardWatchEventKind.ENTRY_CREATE)) {
-      println("Entry created: " + path)
       changeHandler.onCreate(path)
     } else if (kind.equals(StandardWatchEventKind.ENTRY_DELETE)) {
-      println("Entry deleted: " + path)
       changeHandler.onDelete(path)
     }
   }
@@ -63,9 +66,7 @@ class DirectoryWatcherActor extends Actor {
   def registerAll(start: Path): Unit = {
     val file = start.asInstanceOf[PathImpl].getFile
     if (file.isDirectory()) {
-      println("trying to register: " + start + " file: " + file)
       register(start)
-      println("registered: " + start)
       file.listFiles().map { child =>
         val path = new PathImpl(child)
         //registerAll(path)
@@ -81,45 +82,54 @@ class DirectoryWatcherActor extends Actor {
 
     registerAll(watchedPath)
     changeHandler.onStart(watchedPath)
-    try {
-      while (!shouldStop) {
-        val key = watchService.take()
-        keys.get(key).map { dir =>
-          key.pollEvents().asScala.foreach(event => {
-            val kind = event.kind
+    updateTicker = context.system.scheduler.schedule(10 seconds, 10 seconds)(
+      changeHandler.onTick(watchedPath))
+    Akka.future {
+      try {
+        while (!shouldStop) {
+          val key = watchService.take()
+          keys.get(key).map { dir =>
+            key.pollEvents().asScala.foreach(event => {
+              val kind = event.kind
 
-            if (kind != StandardWatchEventKind.OVERFLOW) {
-              val name = event.context().asInstanceOf[Path]
-              var child = dir.resolve(name)
+              if (kind != StandardWatchEventKind.OVERFLOW) {
+                val name = event.context().asInstanceOf[Path]
+                var child = dir.resolve(name)
 
-              printEvent(event, dir)
+                printEvent(event, dir)
 
-              if (kind == StandardWatchEventKind.ENTRY_CREATE) {
-                try {
-                  val file = child.asInstanceOf[PathImpl].getFile
-                  if (file.isDirectory()) {
-                    registerAll(child);
+                if (kind == StandardWatchEventKind.ENTRY_CREATE) {
+                  try {
+                    val file = child.asInstanceOf[PathImpl].getFile
+                    if (file.isDirectory()) {
+                      registerAll(child);
+                    }
+                  } catch {
+                    case e: Exception =>
+                      println("Exception: " + e)
+                      return
                   }
-                } catch {
-                  case e: Exception =>
-                    println("Exception: " + e)
-                    return
                 }
               }
-            }
-          })
-        }
+            })
+          }
 
-        if (!key.reset()) {
-          keys.remove(key);
-          if (keys.isEmpty) {
-            return
+          if (!key.reset()) {
+            keys.remove(key);
+            if (keys.isEmpty) {
+              return
+            }
           }
         }
+      } catch {
+        case ie: InterruptedException => println("InterruptedException: " + ie)
+        case e: Exception             => println("Exception: " + e)
       }
-    } catch {
-      case ie: InterruptedException => println("InterruptedException: " + ie)
-      case e: Exception             => println("Exception: " + e)
-    }
+    }(Play.current)
+  }
+
+  override def postStop() = {
+    shouldStop = true
+    updateTicker.cancel()
   }
 }

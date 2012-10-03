@@ -7,4 +7,5 @@ trait DirectoryChangeHandler {
   def onCreate(path: Path)
   def onDelete(path: Path)
   def onStart(path: Path)
+  def onTick(path: Path)
 }

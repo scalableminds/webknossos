@@ -15,15 +15,14 @@ import brainflight.io.DataSetChangeHandler
 import brainflight.io.DirectoryWatcherActor
 
 object Global extends GlobalSettings {
-
+  
   override def onStart(app: Application) {
+    val DirectoryWatcher = Akka.system.actorOf( Props[DirectoryWatcherActor], name = "directoryWatcher" )
+    DirectoryWatcher ! StartWatching("binaryData", new DataSetChangeHandler)
+    
     if (Play.current.mode == Mode.Dev)
-      InitialData.insert()
-      
-      val dwa = Akka.system.actorOf( Props[DirectoryWatcherActor], name = "directoryWatcher" )
-      dwa ! StartWatching("binaryData", new DataSetChangeHandler)
+      InitialData.insert() 
   }
-
 }
 
 /**
@@ -52,5 +51,4 @@ object InitialData {
         u).foreach(User.create _ tupled)
     }
   }
-
 }

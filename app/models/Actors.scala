@@ -6,11 +6,13 @@ import play.api.Play.current
 import brainflight.mail.Mailer
 import brainflight.binary.DataSetActor
 import akka.routing.RoundRobinRouter
+import brainflight.binary._
 
 object Actors {
   val NumOfCPUCores = 8
+  val system = Akka.system
 
-  val Mailer = Akka.system.actorOf( Props[Mailer] )
-  val DataSetActor = Akka.system.actorOf( Props[DataSetActor].withDispatcher("dataset-prio-dispatcher").withRouter(
+  val Mailer = system.actorOf( Props[Mailer], name = "mailActor" )
+  val DataSetActor = system.actorOf( Props[DataSetActor].withRouter(
     RoundRobinRouter( nrOfInstances = NumOfCPUCores ) ) )
 }

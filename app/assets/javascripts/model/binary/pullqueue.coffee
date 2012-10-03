@@ -1,6 +1,6 @@
 ### define
 model/binary/cube : Cube
-model/game : Game
+model/route : Route
 libs/simple_array_buffer_socket : SimpleArrayBufferSocket
 ###
 
@@ -98,7 +98,7 @@ PullQueue =
     @loadBucketByAddress(bucket, zoomStep).then(
 
       (colors) =>
-        Cube.setBucketByZoomedAddress(bucket, zoomStep, colors)
+        Cube.setBucketByZoomedAddress(bucket, zoomStep, colors) if colors.length
         #console.log "Success: ", bucket, zoomStep, colors
 
       =>
@@ -111,8 +111,9 @@ PullQueue =
 
   loadBucketSocket : _.once ->
 
-    Game.initialize().pipe ->
-      dataSetId = Game.dataSet.id
+    Route.initialize().pipe ->
+      dataSetId = Route.data.dataSet.id
+      console.log dataSetId
       new SimpleArrayBufferSocket(
         defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{dataSetId}&cubeSize=32")
         fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{dataSetId}&cubeSize=32")

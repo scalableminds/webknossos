@@ -23,13 +23,12 @@ case class DataSet(
 }
 
 object DataSet extends BasicDAO[DataSet]( "dataSets" ) {
-
-  def findOneById( id: String ): Option[DataSet] =
-    DataSet.findOneById( new ObjectId( id ) )
-
   def default = {
     DataSet.findAll.headOption getOrElse {
       throw new Exception( "No default data set found!" )
     }
   }
+  
+  def findOneByName(name: String) = 
+    findOne( MongoDBObject( "name" -> name))
 }

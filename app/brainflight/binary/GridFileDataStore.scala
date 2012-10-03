@@ -71,7 +71,7 @@ class GridFileDataStore extends DataStore{
     byteArray
   }
   
-  def addToCache( remoteCacheId: Int, block: DataBlockInformation, data: Array[Byte]) {
+  def addToCache( remoteCacheId: Int, block: DataBlockInformation, data: Data) {
     // TODO: implement
   }
   

@@ -32,15 +32,13 @@ POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( d
 # Game Stuff
 GET     /game/initialize                    controllers.Game.initialize
 
-# Route Stuff
-GET     /route/initialize                   controllers.Route.initialize( dataSetId: String )
-GET     /route/list                         controllers.Route.list
-POST    /route/:id                          controllers.Route.blackBox(id: String)
-GET			/route/:id													controllers.Route.getRoute(id: String)
+# Task Stuff
+GET       /experiment/:experimentId         controllers.Task.info( experimentId: String )
+PUT       /experiment/:experimentId         controllers.Task.update( experimentId: String )
 
-# Branching
-GET			/branch/list												controllers.Branch.list
-GET			/branch/clear												controllers.Branch.clear
+# GET     /route/list                       controllers.Route.list
+# POST    /route/:id                        controllers.Route.blackBox(id: String)
+# GET			/route/:id												controllers.Route.getRoute(id: String)
 
 # Test pages
 GET     /test/                              controllers.Test.index
@@ -52,7 +50,10 @@ GET     /performance/timegridfs             controllers.PerformanceTest.timeGrid
 GET     /performance/timefiledatastore      controllers.PerformanceTest.timeFileDataStore
 
 #Admin pages
-GET     /admin/routevisual                  controllers.admin.RouteVisualisation.index
+GET     /admin/nmldownload                  controllers.admin.NMLIO.downloadList
+GET     /admin/nmlupload                    controllers.admin.NMLIO.uploadForm
+POST    /admin/nmlupload                    controllers.admin.NMLIO.upload
+GET     /admin/nmldownload/:taskId          controllers.admin.NMLIO.download( taskId: String )
 
 # Javascript routing
 GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes

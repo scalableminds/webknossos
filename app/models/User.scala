@@ -11,17 +11,18 @@ import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json._
 import scala.collection.immutable.HashMap
+import models.graph.Experiment
 
 case class User(
     email: String,
     name: String,
     verified: Boolean = false,
     pwdHash: String = "",
+    tasks: List[ObjectId] = Nil,
     loginType: String = "local",
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: List[String] = "user" :: Nil,
     permissions: List[Permission] = Nil,
-    var branchPoints: List[BranchPoint] = Nil,
     _id: ObjectId = new ObjectId ) {
 
   val _roles = for{
@@ -38,23 +39,15 @@ case class User(
 
   def hasPermission( permission: Permission ) =
     ruleSet.find( _.implies( permission ) ).isDefined
-    
-  def useBranchPointAsOrigin = {
-    branchPoints match {
-      case head :: tail => 
-        User.save( this.copy( branchPoints = tail ) )
-        branchPoints = tail
-        Some( head )
-      case _ =>
-        None
-    }
-    
-  } 
+  
+  override def toString = email
   
   def id = _id.toString
 }
 
 object User extends BasicDAO[User]( "users" ) {
+  
+  def default = findLocalByEmail( "scmboy@scalableminds.com" ).get
 
   val LocalLoginType = "local"
   
@@ -64,7 +57,6 @@ object User extends BasicDAO[User]( "users" ) {
   def findLocalByEmail( email: String ) = findOne( MongoDBObject(
     "email" -> email, "loginType" -> LocalLoginType ) )
   
-  def findOneById( id: String): Option[User] = findOneById( new ObjectId(id) )
   
   def authRemote( email: String, loginType: String) = 
     findOne( MongoDBObject( "email" -> email, "loginType" -> loginType ) )
@@ -75,8 +67,8 @@ object User extends BasicDAO[User]( "users" ) {
       if verifyPassword( password, user.pwdHash )
     } yield user
 
-  def create( email: String, name: String, password: String = "" ) = {
-    val user = User( email, name, false, hashPassword( password ) )
+  def create( email: String, name: String, password: String = "", tasks: List[ObjectId] = List(Experiment.createNew._id) ) = {
+    val user = User( email, name, false, hashPassword( password ), tasks )
     insert( user )
     user
   }
@@ -90,7 +82,7 @@ object User extends BasicDAO[User]( "users" ) {
   }
 
   def createRemote( email: String, name: String, loginType: String ) = {
-    val user = User( email, name, true, "", loginType )
+    val user = User( email, name, true, "", loginType = loginType )
     insert( user )
     user
   }

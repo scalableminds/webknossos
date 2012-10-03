@@ -35,11 +35,10 @@ object InitialData {
   def insert() = {
     /*if ( DataSet.findAll.isEmpty ) {
       DataSet.insert( DataSet(
-        "2012-09-26_ex145_07x2",
-        Play.configuration.getString( "binarydata.path" ) getOrElse ( "binaryData/" )+"2012-09-26_ex145_07x2",
+        "2012-06-28_Cortex",
+        Play.configuration.getString( "binarydata.path" ) getOrElse ( "binaryData/" )+"2012-06-28_Cortex",
         List( 0, 1, 2, 3 ),
-        Point3D( 80 * 128, 56 * 128, 19 * 128) ) )
-
+        Point3D(24 * 128, 16 * 128, 8 * 128) ) )
     }*/
 
     if (Role.findAll.isEmpty) {
@@ -47,17 +46,8 @@ object InitialData {
       Role.insert(Role("admin", Permission("*", "*" :: Nil) :: Nil))
     }
 
-    if (Experiment.findAll.isEmpty) {
-      val d = DataSet.default
-      val p = Point3D(300, 300, 200)
-      val nodes = List(Node(1, 1, p, 0, 0, 0))
-      val tree = Tree(1, nodes, Nil, Color(1, 0, 0, 0))
-      val exp = Experiment(d._id, List(tree), Nil, 0, 1, p)
-      Experiment.insert(exp)
-    }
-
     if (User.findAll.isEmpty) {
-      val u = ("scmboy@scalableminds.com", "SCM Boy", "secret", List(Experiment.default._id))
+      val u = ("scmboy@scalableminds.com", "SCM Boy", "secret", List(Experiment.createNew._id))
       Seq(
         u).foreach(User.create _ tupled)
     }

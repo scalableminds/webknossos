@@ -33,9 +33,8 @@ POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( d
 GET     /game/initialize                    controllers.Game.initialize
 
 # Task Stuff
-GET       /task/ws/:taskId                  controllers.Task.connect( taskId: String )
-GET       /task/comet/:taskId               controllers.Task.cometRCV( taskId: String, callback: String )
-POST      /task/comet/:taskId               controllers.Task.cometSND( taskId: String )
+GET       /experiment/:experimentId         controllers.Task.info( experimentId: String )
+PUT       /experiment/:experimentId         controllers.Task.update( experimentId: String )
 
 # GET     /route/list                       controllers.Route.list
 # POST    /route/:id                        controllers.Route.blackBox(id: String)

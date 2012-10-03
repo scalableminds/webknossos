@@ -23,6 +23,7 @@ User.Configuration =
   displayPreviewXY : null
   displayPreviewYZ : null
   displayPreviewXZ : null
+  nodesAsSpheres : null
   mouseInversionX : null
   mouseInversionY : null
   mouseActive : null
@@ -55,6 +56,7 @@ User.Configuration =
               @displayPreviewXY,
               @displayPreviewYZ,
               @displayPreviewXZ,
+              @nodesAsSpheres,
               @mouseInversionX,
               @mouseInversionY,
               @mouseActive, 
@@ -94,6 +96,7 @@ User.Configuration =
         displayPreviewXY : @displayPreviewXY,
         displayPreviewYZ : @displayPreviewYZ,
         displayPreviewXZ : @displayPreviewXZ,
+        nodesAsSpheres : @nodesAsSpheres,
         mouseInversionX : @mouseInversionX,
         mouseInversionY : @mouseInversionY,
         mouseActive : @mouseActive,

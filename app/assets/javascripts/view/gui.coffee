@@ -18,7 +18,10 @@ class Gui
     initPos = @flycam.getGlobalPos()
 
     # create GUI
+    modelRadius = @model.Route.getActiveNodeRadius()
     @settings = { 
+                save : => @model.Route.pushImpl()
+
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
                 lockZoom: data.lockZoom
                 inverseX: data.mouseInversionX == 1
@@ -32,13 +35,15 @@ class Gui
                 displayPrevXY : data.displayPreviewXY
                 displayPrevYZ : data.displayPreviewYZ
                 displayPrevXZ : data.displayPreviewXZ
+                nodesAsSpheres : data.nodesAsSpheres
 
-                activeTreeID : 1
-                newTree : -> alert "Create New Tree"
-                deleteActiveTree : -> alert "Delete Active Tree"
+                activeTreeID : @model.Route.getActiveTreeId()
+                newTree : @createNewTree
+                deleteActiveTree : @deleteActiveTree
 
                 activeNodeID : @model.Route.getActiveNodeId()
                 deleteActiveNode : @deleteActiveNode
+                radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
               }
     @gui  = new dat.GUI({autoPlace: false})
     
@@ -52,6 +57,10 @@ class Gui
     #  left : '220px'
     #  top : '260px'
     #  height : '500px'
+
+    fFile = @gui.addFolder("File")
+    (fFile.add @settings, "save")
+                          .name("Save now")
     
     fPosition = @gui.addFolder("Position")
     (fPosition.add @settings, "position")
@@ -90,13 +99,17 @@ class Gui
     (fSkeleton.add @settings, "displayPrevXZ")
                           .name("Display XZ-Plane")
                           .onChange(@setDisplayPreviewXZ)
+    (fSkeleton.add @settings, "nodesAsSpheres")
+                          .name("Nodes as Spheres")
+                          .onChange(@setNodeAsSpheres)
 
     fTrees = @gui.addFolder("Trees")
+    @activeTreeIdController =
     (fTrees.add @settings, "activeTreeID")
                           .min(1)
                           .step(1)
                           .name("Active Tree ID")
-                          #.onChange(@setDisplayPreviewXY)
+                          .onFinishChange(@setActiveTree)
     (fTrees.add @settings, "newTree")
                           .name("Create New Tree")
     (fTrees.add @settings, "deleteActiveTree")
@@ -109,9 +122,15 @@ class Gui
                           .step(1)
                           .name("Active Node ID")
                           .onFinishChange(@setActiveNode)
+    scale = @model.Route.scaleX
+    (fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
+                          .name("Radius")    
+                          .listen()
+                          .onChange(@setNodeRadius)
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
+    fFile.open()
     fPosition.open()
     #fControls.open()
     #fView.open()
@@ -163,6 +182,12 @@ class Gui
     @sceneController.setDisplaySV PLANE_XZ, value
     @model.User.Configuration.push()      
 
+  setNodeAsSpheres : (value) =>
+    @model.User.Configuration.nodesAsSpheres = value
+    @sceneController.skeleton.setDisplaySpheres(value)
+    @model.User.Configuration.push()  
+    @flycam.hasChanged = true    
+
   setMouseInversionX : (value) =>
     if value is true
       @model.User.Configuration.mouseInversionX = 1
@@ -178,17 +203,49 @@ class Gui
     @model.User.Configuration.push()  
 
   # called when value is changed in input field
+  setActiveTree : (value) =>
+    @model.Route.setActiveTree(value)
+    @updateNodeAndTreeIds()
+    @sceneController.updateRoute()
+
+  # called when value user switch to different active tree
+  #setActiveTreeId : (value) =>
+  #  @settings.activeTreeID = value
+  #  @activeTreeIdController.updateDisplay()
+
+  createNewTree : =>
+    id = @model.Route.createNewTree()
+    @updateNodeAndTreeIds()
+    @sceneController.skeleton.createNewTree(id)
+
+  deleteActiveTree : =>
+    @model.Route.deleteActiveTree()
+    @updateNodeAndTreeIds()
+    @sceneController.updateRoute()
+    
+  # called when value is changed in input field
   setActiveNode : (value) =>
     @flycam.setGlobalPos(@model.Route.setActiveNode(value))
-    @sceneController.setActiveNodePosition(@flycam.getGlobalPos())
-    @setActiveNodeId(@model.Route.getActiveNodeId())
+    @updateNodeAndTreeIds()
+    @sceneController.skeleton.setActiveNode()
 
-  # called when value user switch to different active node
-  setActiveNodeId : (value) =>
-    @settings.activeNodeID = value
-    @activeNodeIdController.updateDisplay()
+  setNodeRadius : (value) =>
+    @model.Route.setActiveNodeRadius(value)
+    # convert from nm to voxels, divide by resolution
+    @sceneController.skeleton.setNodeRadius(value)
+    @flycam.hasChanged = true
+
+  updateRadius : ->
+    @settings.radius = @model.Route.getActiveNodeRadius()
 
   deleteActiveNode : =>
     @model.Route.deleteActiveNode()
-    @setActiveNodeId(@model.Route.getActiveNodeId())
+    @updateNodeAndTreeIds()
     @sceneController.updateRoute()
+
+  # called when value user switch to different active node
+  updateNodeAndTreeIds : =>
+    @settings.activeNodeID = @model.Route.lastActiveNodeId
+    @settings.activeTreeID = @model.Route.getActiveTreeId()
+    @activeNodeIdController.updateDisplay()
+    @activeTreeIdController.updateDisplay()

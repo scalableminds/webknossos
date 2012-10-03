@@ -104,9 +104,6 @@ class SceneController
   setWaypoint : =>
     @skeleton.setWaypoint()
 
-  setActiveNodePosition : (position) =>
-    @skeleton.setActiveNodePosition(position)
-
   setDisplayCrosshair : (value) =>
     for plane in @planes
       plane.setDisplayCrosshair value
@@ -130,7 +127,6 @@ class SceneController
       result = result.concat(plane.getMeshes())
     result = result.concat(@skeleton.getMeshes())
     result.push(@cube)
-    console.log "result: " + result
     return result
 
   # Will completely reload the trees from model.
@@ -138,6 +134,5 @@ class SceneController
   # the skeleton is changes in a way that can't efficiently
   # applied to the particle system, like deleting nodes.
   updateRoute : ->
-    @skeleton.clearRoute()
-    @skeleton.loadSkeletonFromModel()
+    @skeleton.reset()
     @flycam.hasChanged = true

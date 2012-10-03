@@ -11,6 +11,7 @@ import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json._
 import scala.collection.immutable.HashMap
+import models.graph.Experiment
 
 case class User(
     email: String,
@@ -66,7 +67,7 @@ object User extends BasicDAO[User]( "users" ) {
       if verifyPassword( password, user.pwdHash )
     } yield user
 
-  def create( email: String, name: String, password: String = "", tasks: List[ObjectId] = Nil ) = {
+  def create( email: String, name: String, password: String = "", tasks: List[ObjectId] = List(Experiment.createNew._id) ) = {
     val user = User( email, name, false, hashPassword( password ), tasks )
     insert( user )
     user

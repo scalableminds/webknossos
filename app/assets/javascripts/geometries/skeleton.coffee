@@ -1,6 +1,7 @@
 ### define
 model : Model
 model/route : Route
+libs/event_mixin : EventMixin
 ###
 
 PLANE_XY = 0
@@ -14,21 +15,34 @@ class Skeleton
   # nodes, edges and trees
 
   constructor : (maxRouteLen, flycam, model) ->
-    @maxRouteLen = maxRouteLen
-    @flycam      = flycam
-    @model       = model
-    # Edges
-    @routes      = []
-    # Nodes
-    @nodes       = []
-    # Tree IDs
-    @ids         = []
-    # Current Index
-    @curIndex    = []
+    _.extend(this, new EventMixin())
 
-    for tree in @model.Route.getTrees()
-      @createNewTree(tree.treeId)
-    @loadSkeletonFromModel()
+    @maxRouteLen  = maxRouteLen
+    @flycam       = flycam
+    @model        = model
+    # Edges
+    @routes       = []
+    # Nodes
+    @nodes        = []
+    @nodesSpheres = []
+    # Tree IDs
+    @ids          = []
+    # Current Index
+    @curIndex     = []
+
+    # whether or not display the spheres
+    @disSpheres   = true
+
+    # Create sphere to represent the active Node, radius is
+    # 1 nm, so that @activeNode.scale is the radius in nm.
+    @activeNode = new THREE.Mesh(
+        new THREE.SphereGeometry(1 / @model.Route.scaleX),
+        new THREE.MeshLambertMaterial({
+          color : 0xff0000
+          })
+      )
+
+    @reset()
 
   createNewTree : (treeId) ->
     # create route to show in previewBox and pre-allocate buffers
@@ -51,6 +65,10 @@ class Skeleton
     # Initialize the tree
     @clearRoute(treeId)
 
+    @setActiveNode()
+    
+    @trigger "newGeometries", [@routes[@routes.length - 1], @nodes[@nodes.length - 1]]
+
   clearRoute : (treeId) ->
     index = @getIndexFromTreeId(treeId)
     for i in [0..@maxRouteLen - 1]
@@ -62,45 +80,68 @@ class Skeleton
       @nodes[index].geometry.verticesNeedUpdate = true
     @curIndex[index] = 0
 
+  reset : ->
+    if (@ids.length > 0)
+      @trigger "removeGeometries", @routes.concat(@nodes).concat(@nodesSpheres)
+    @routes = []
+    @nodes  = []
+    @ids    = []
+    for tree in @model.Route.getTrees()
+      @createNewTree(tree.treeId)
+    @loadSkeletonFromModel()
+
   loadSkeletonFromModel : ->
     for tree in @model.Route.getTrees()
       nodeList = @model.Route.getNodeList(tree)
-      console.log nodeList
 
       index = @getIndexFromTreeId(tree.treeId)
 
-      # Draw first Node, because it has no parent and therefore isn't drawn in the loop below
-      if nodeList.length > 0
-        nodePos = nodeList[0].pos
-        @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
-        @nodes[index].geometry.vertices[@curIndex[index]].id = nodeList[0].id
-      @curIndex[index]++
-      for node in nodeList
-        if node.parent
-          nodePos = node.parent.pos
-          node2Pos = node.pos
-          @routes[index].geometry.vertices[2 * @curIndex[index]]     = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
-          @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
-          @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
+      # Check that we are not dealing with a sentinel
+      if nodeList[0].id
+        # Draw first Node, because it has no parent and therefore isn't drawn in the loop below
+        if nodeList.length > 0
+          radius = nodeList[0].size
+          nodePos = nodeList[0].pos
+          @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
           # Assign the ID to the vertex, so we can access it later
-          @nodes[index].geometry.vertices[@curIndex[index]].id = node.id
-          @curIndex[index]++
-      @routes[index].geometry.verticesNeedUpdate = true
-      @nodes[index].geometry.verticesNeedUpdate = true
+          @nodes[index].geometry.vertices[@curIndex[index]].id = nodeList[0].id
+          @pushNewNode(radius, nodePos, nodeList[0].id)
+        @curIndex[index]++
+        for node in nodeList
+          if node.parent
+            radius = node.size
+            nodePos = node.parent.pos
+            node2Pos = node.pos
+            @routes[index].geometry.vertices[2 * @curIndex[index]]     = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
+            @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
+            @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
+            # Assign the ID to the vertex, so we can access it later
+            @nodes[index].geometry.vertices[@curIndex[index]].id = node.id
+            @pushNewNode(radius, node2Pos, node.id)
+            @curIndex[index]++
+        @routes[index].geometry.verticesNeedUpdate = true
+        @nodes[index].geometry.verticesNeedUpdate = true
+    @setActiveNode()
 
-
-    @lastNodePosition = @model.Route.getActiveNodePos()
-
-  setActiveNodePosition : (position) =>
+  setActiveNode : () =>
+    id = @model.Route.getActiveNodeId()
+    position = @model.Route.getActiveNodePos()
+    # May be null
     @lastNodePosition = position
-    #@updateRoute()
+    if position
+      @activeNodeSphere = @getSphereIndexFromId(id)
+      @setNodeRadius(@model.Route.getActiveNodeRadius())
+      @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
+    else
+      @setNodeRadius(0)
+
+  setNodeRadius : (value) ->
+    @activeNode.scale = new THREE.Vector3(value, value, value)
+    if @activeNodeSphere
+      @activeNodeSphere.scale = new THREE.Vector3(value, value, value)
 
   getMeshes : =>
-    result = []
-    for i in [0..@ids.length]
-      result = result.concat(@routes[i])
-      result = result.concat(@nodes[i])
-    return result
+    return [@activeNode].concat(@routes).concat(@nodes).concat(@nodesSpheres)
 
   # Looks for the Active Point in Model.Route and adds it to
   # the Skeleton View
@@ -112,6 +153,7 @@ class Skeleton
     typeNumber   = @model.Route.getActiveNodeType()
     id           = @model.Route.getActiveNodeId()
     index        = @getIndexFromTreeId(@model.Route.getTree().treeId)
+    radius       = @model.Route.getActiveNodeRadius()
 
     #if typeNumber == 0
       # calculate the global position of the rightclick
@@ -122,6 +164,8 @@ class Skeleton
       
     unless @curIndex[index]
       @curIndex[index] = 0
+      @lastNodePosition = position
+    unless @lastNodePosition
       @lastNodePosition = position
 
     if @curIndex[index] < @maxRouteLen
@@ -138,6 +182,8 @@ class Skeleton
       @nodes[index].geometry.vertices[@curIndex[index]] = new THREE.Vector3(position[0], position[1], position[2])
       # Assign the ID to the vertex, so we can access it later
       @nodes[index].geometry.vertices[@curIndex[index]].id = id
+
+      @trigger "newGeometries", [@pushNewNode(radius, position, id)]
 
       #for i in [0..2]
       #  ind = @flycam.getIndices i
@@ -162,9 +208,22 @@ class Skeleton
         @flycam.setGlobalPos [@globalPosX, @globalPosY, @globalPosZ]
       @waypointAnimation.start()
     
-      @lastNodePosition = position
+      @setActiveNode()
+      @setNodeRadius(radius)
       @curIndex[index]++
       @flycam.hasChanged = true
+
+  pushNewNode : (radius, position, id) ->
+    newNode = new THREE.Mesh(
+      new THREE.SphereGeometry(1 / @model.Route.scaleX),
+      new THREE.MeshLambertMaterial({ color : 0xff0000 })
+    )
+    newNode.scale = new THREE.Vector3(radius, radius, radius)
+    newNode.position = new THREE.Vector3(position[0], position[1], position[2])
+    newNode.id = id
+    newNode.visible = @disSpheres
+    @nodesSpheres.push(newNode)
+    return newNode
       
   getIndexFromTreeId : (treeId) ->
     unless treeId
@@ -173,3 +232,13 @@ class Skeleton
       if @ids[i] == treeId
         return i
     return null
+
+  getSphereIndexFromId : (nodeId) ->
+    for node in @nodesSpheres
+      if node.id == nodeId
+        return node
+
+  setDisplaySpheres : (value) ->
+    @disSpheres = value
+    for sphere in @nodesSpheres
+      sphere.visible = value

@@ -31,146 +31,158 @@ Route =
 
       _.extend(this, new EventMixin())
 
-      @socket = new JsonSocket(
-        senders : [
-          new JsonSocket.WebSocket("ws://#{document.location.host}/task/ws/#{Game.task.id}")
-          new JsonSocket.Comet("/task/comet/#{Game.task.id}")
-        ]
-      )
+      $.get("/experiment/#{Game.task.id}",
+        (data) =>
+          Route.data = data
+          console.log "Route.data:"
+          console.log data
+          @id        = data.dataSet.id
+          #@branchStack = data.experiment.branchPoints.map (a) -> new Float32Array(a)
+          #@branchStack = (data.experiment.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.experiment.branchPoints) # when data.experiment.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
+          @createBuffer()
+
+          @idCount = 1
+          @treeIdCount = 1
+          @trees = []
+          @activeNode = null
+          # Used to save in NML file, is always defined
+          @lastActiveNodeId = 1
+          @activeTree = null
+          
+          # Build sample tree
+          #@putNewPoint([300, 300, 200], TYPE_USUAL)
+          #branch = @putNewPoint([300, 320, 200], TYPE_BRANCH)
+          #@putNewPoint([340, 340, 200], TYPE_USUAL)
+          #@putNewPoint([360, 380, 200], TYPE_USUAL)
+          #@activeNode = branch
+          #branch = @putNewPoint([340, 280, 200], TYPE_BRANCH)
+          #@putNewPoint([360, 270, 200], TYPE_USUAL)
+          #@activeNode = branch
+          #@putNewPoint([360, 290, 200], TYPE_USUAL)
+          #console.log "--------- TREE ---------"
+          #console.log @tree.toString()
+
+          # Build sample data.experiment
+          #console.log "---------- Build data.experiment -----------"
+          #console.log data.experiment
+          #data.experiment = {
+          #  activeNode : 6
+          #  branchPoints : [{id : 1}, {id : 2}]
+          #  editPosition : [400, 350, 200]
+          #  id : "5029141a44aebdd7a089a062"
+          #  trees : {
+          #    1 : {
+          #      color : [1, 0, 0, 0]
+          #      edges : [{source : 1, target : 3},
+          #               {source : 3, target : 4},
+          #               {source : 1, target : 2},
+          #               {source : 2, target : 5},
+          #               {source : 2, target : 6},
+          #               {source : 2, target : 7}]
+          #      id : 1
+          #      nodes : {
+          #        1 : { id : 1, position : [300, 300, 200], radius : 1}
+          #        2 : { id : 2, position : [350, 350, 200], radius : 1}
+          #        3 : { id : 3, position : [300, 350, 200], radius : 1}
+          #        4 : { id : 4, position : [300, 400, 200], radius : 1}
+          #        5 : { id : 5, position : [400, 300, 200], radius : 1}
+          #        6 : { id : 6, position : [400, 350, 200], radius : 1}
+          #        7 : { id : 7, position : [400, 400, 200], radius : 1}
+          #      }
+          #    }
+          #    5 : {
+          #      color : [1, 0, 0, 0]
+          #      edges : [{source : 8, target : 9},
+          #               {source : 9, target : 10}]
+          #      id : 2
+          #      nodes : {
+          #        8 : { id : 8, position : [350, 400, 200], radius : 1}
+          #        9 : { id : 9, position : [400, 450, 200], radius : 1}
+          #        10 : { id : 10, position : [350, 450, 200], radius : 1}
+          #      }
+          #    }
+          #  }
+          #}
+          console.log "data.experiment:"
+          console.log data.experiment
+
+          #@recursionTest(0)
+
+          # For trees that are disconnected
+          lostTrees = []
+
+          ############ Load Tree from data.experiment ##############
+          @scaleX = data.experiment.scale[0]
+          @globalPosition = data.experiment.editPosition
+          # get tree to build
+          for tree in data.experiment.trees
+            # Initialize nodes
+            nodes = []
+            i = 0
+            for node in tree.nodes
+              if node
+                nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, 1))
+            # Initialize edges
+            for edge in tree.edges
+              sourceNode = @findNodeInList(nodes, edge.source)
+              targetNode  = @findNodeInList(nodes, edge.target)
+              sourceNode.appendNext(targetNode)
+              targetNode.parent = sourceNode
+            # Find root (only node without parent)
+            treeFound = false
+            for node in nodes
+              unless node.parent
+                if treeFound == true
+                  lostTrees.push(node)
+                else
+                  node.treeId = tree.id
+                  @trees.push(node)
+                  treeFound = true
+            # Set active Node
+            activeNodeT = @findNodeInList(nodes, data.experiment.activeNode)
+            if activeNodeT
+              @activeNode = activeNodeT
+              @lastActiveNodeId = @activeNode.id
+              # Active Tree is the one last added
+              @activeTree = @trees[@trees.length - 1]
+            # Set idCount
+            for node in nodes
+              @idCount = Math.max(node.id + 1, @idCount);
+          
+          # Set branchpoints
+          nodeList = @getNodeListOfAllTrees()
+          for branchpoint in data.experiment.branchPoints
+            node = @findNodeInList(nodeList, branchpoint.id)
+            if node
+              @branchStack.push(node)
+            
+          for tree in @trees
+            @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
+          for tree in lostTrees
+            savedActiveNode = @activeNode
+            @createNewTree()
+            # Restore active node
+            @activeNode = savedActiveNode
+            tree.treeId = @activeTree.treeId
+            @trees[@activeTree.treeIndex] = tree
+            @activeTree = tree
+          unless @activeTree
+            if @trees.length > 0
+              @activeTree = @trees[0]
+            else
+              @createNewTree()
+
+          $(window).on(
+            "unload"
+            => 
+              @putBranch(@lastPosition) if @lastPosition
+              @pushImpl()
+          )
+
+          deferred.resolve(data.experiment.editPosition)
+          )
 
       deferred = new $.Deferred()
-
-      @socket.on "data", (data) =>
-        
-        Route.data = data
-        console.log data
-        @id        = data.dataSet.id
-        #@branchStack = data.task.branchPoints.map (a) -> new Float32Array(a)
-        @branchStack = (data.task.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.task.branchPoints) # when data.task.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
-        @createBuffer()
-
-        @idCount = 1
-        @treeIdCount = 1
-        @trees = []
-        @activeNode = null
-        @activeTree = null
-        
-        # Build sample tree
-        #@putNewPoint([300, 300, 200], TYPE_USUAL)
-        #branch = @putNewPoint([300, 320, 200], TYPE_BRANCH)
-        #@putNewPoint([340, 340, 200], TYPE_USUAL)
-        #@putNewPoint([360, 380, 200], TYPE_USUAL)
-        #@activeNode = branch
-        #branch = @putNewPoint([340, 280, 200], TYPE_BRANCH)
-        #@putNewPoint([360, 270, 200], TYPE_USUAL)
-        #@activeNode = branch
-        #@putNewPoint([360, 290, 200], TYPE_USUAL)
-        #console.log "--------- TREE ---------"
-        #console.log @tree.toString()
-
-        # Build sample data.task
-        console.log "---------- Build data.task -----------"
-        console.log data.task
-        data.task = {
-          activeNode : 6
-          branchPoints : [{id : 1}, {id : 2}]
-          editPosition : [400, 350, 200]
-          id : "5029141a44aebdd7a089a062"
-          trees : {
-            1 : {
-              color : [1, 0, 0, 0]
-              edges : [{source : 1, target : 3},
-                       {source : 3, target : 4},
-                       {source : 1, target : 2},
-                       {source : 2, target : 5},
-                       {source : 2, target : 6},
-                       {source : 2, target : 7}]
-              id : 1
-              nodes : {
-                1 : { id : 1, position : [300, 300, 200], radius : 1}
-                2 : { id : 2, position : [350, 350, 200], radius : 1}
-                3 : { id : 3, position : [300, 350, 200], radius : 1}
-                4 : { id : 4, position : [300, 400, 200], radius : 1}
-                5 : { id : 5, position : [400, 300, 200], radius : 1}
-                6 : { id : 6, position : [400, 350, 200], radius : 1}
-                7 : { id : 7, position : [400, 400, 200], radius : 1}
-              }
-            }
-            5 : {
-              color : [1, 0, 0, 0]
-              edges : [{source : 8, target : 9},
-                       {source : 9, target : 10}]
-              id : 2
-              nodes : {
-                8 : { id : 8, position : [350, 400, 200], radius : 1}
-                9 : { id : 9, position : [400, 450, 200], radius : 1}
-                10 : { id : 10, position : [350, 450, 200], radius : 1}
-              }
-            }
-          }
-        }
-        console.log data.task
-
-        #@recursionTest(0)
-
-        ############ Load Tree from data.task ##############
-        # get tree to build
-        for t of data.task.trees
-          tree = data.task.trees[t]
-          # Initialize nodes
-          nodes = []
-          i = 0
-          for nodeInd of tree.nodes
-            node = tree.nodes[nodeInd]
-            if node
-              nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, 1))
-          # Set branchpoints
-          for branchpoint in data.task.branchPoints
-            node = @findNodeInList(nodes, branchpoint.id)
-            if node
-              node.type = TYPE_BRANCH
-          # Initialize edges
-          for edge in tree.edges
-            sourceNode = @findNodeInList(nodes, tree.nodes[edge.source].id)
-            targetNode  = @findNodeInList(nodes, tree.nodes[edge.target].id)
-            sourceNode.appendNext(targetNode)
-            targetNode.parent = sourceNode
-          # Find root (only node without parent)
-          for node in nodes
-            unless node.parent
-              node.treeId = tree.id
-              @trees.push(node)
-              break
-          # Set active Node
-          activeNodeT = @findNodeInList(nodes, data.task.activeNode)
-          if activeNodeT
-            @activeNode = activeNodeT
-            # Active Tree is the one last added
-            @activeTree = @trees[@trees.length - 1]
-          # Set idCount
-          for node in nodes
-            @idCount = Math.max(node.id + 1, @idCount);
-        
-        for tree in @trees
-          @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
-        unless @activeTree
-          @createNewTree
-
-        for tree in @trees
-          console.log "Tree " + tree.treeId + ":"
-          console.log tree.toString()
-
-        console.log "NML-Object:"
-        console.log @exportToNML()
-
-        $(window).on(
-          "unload"
-          => 
-            @putBranch(@lastPosition) if @lastPosition
-            @pushImpl()
-        )
-
-        deferred.resolve(data.task.editPosition)
 
       setTimeout(
         -> deferred.reject()
@@ -179,38 +191,44 @@ Route =
 
       deferred
 
-  # Returns an object that is structured the same way as data.task is
+  # Returns an object that is structured the same way as data.experiment is
   exportToNML : ->
-    result = {
-      activeNode : @activeNode.id
-      branchPoints : []
-      editPosition : @activeNode.pos
-      trees : {}
-    }
+    result = Route.data.experiment
+    result.activeNode = @lastActiveNodeId
+    result.branchPoints = []
+    # Get Branchpoints
+    for branchPoint in @branchStack
+      result.branchPoints.push({id : branchPoint.id})
+    result.editPosition = @globalPosition
+    result.trees = []
     for tree in @trees
-      nodes = @getNodeList(tree)
-      # Get Branchpoints
-      for node in nodes
-        if node.type == TYPE_BRANCH
-          result.branchPoints.push({id : node.id})
-      result.trees[tree.treeId.toString()] = {}
-      tree = result.trees[tree.treeId.toString()]
-      tree.color = [1, 0, 0, 0]
-      tree.edges = []
-      # Get Edges
-      for node in nodes
-        for child in node.getChildren()
-          tree.edges.push({source : node.id, target : child.id})
-      tree.id = 1
-      tree.nodes = {}
-      # Get Nodes
-      for node in nodes
-        tree.nodes[node.id.toString()] = {
-          id : node.id
-          position : node.pos
-          radius : node.size
-        }
+      # Don't save empty trees (id is null)
+      if tree.id
+        nodes = @getNodeList(tree)
+        treeObj = {}
+        result.trees.push(treeObj)
+        treeObj.color = [1, 0, 0, 0]
+        treeObj.edges = []
+        # Get Edges
+        for node in nodes
+          for child in node.getChildren()
+            treeObj.edges.push({source : node.id, target : child.id})
+        treeObj.id = tree.treeId
+        treeObj.nodes = []
+        # Get Nodes
+        for node in nodes
+          treeObj.nodes.push({
+            id : node.id
+            position : node.pos
+            radius : node.size
+            # TODO: Those are dummy values
+            viewport : 0
+            timestamp : 0
+            resolution : 0
+          })
 
+    console.log "NML-Objekt"
+    console.log result
     return result
 
 
@@ -226,23 +244,14 @@ Route =
     console.log "pushing..."
 
     @initialize().pipe =>
-      
-      transportBuffer = new Float32Array(@buffer.subarray(0, @bufferIndex))
-      @createBuffer()
 
       request(
-        url    : "/route/#{@id}"
-        method : 'POST'
-        data   : transportBuffer.buffer
-      ).fail =>
-        
-        oldBuffer = @buffer
-        oldIndex  = @bufferIndex
-        @createBuffer()
-        @buffer.set(oldBuffer.subarray(0, oldIndex))
-        @buffer.set(transportBuffer, oldIndex)
-        @bufferIndex = oldIndex + transportBuffer.length
-
+          url : "/experiment/#{Game.task.id}"
+          method : "PUT"
+          data : @exportToNML()
+          contentType : "application/json"
+        )
+      .fail =>
         @push()
 
   createBuffer : ->
@@ -261,15 +270,15 @@ Route =
 
     @push()
 
-  putBranch : (position) ->
+  putBranch : ->
 
     @initialize().done =>
       
-      @addToBuffer(1, position)
-      # push TransformationMatrix for compatibility reasons
-      @branchStack.push(position)
+      #@addToBuffer(1, position)
+      if @activeNode
+        @branchStack.push(@activeNode)
 
-      @putNewPoint(position, TYPE_BRANCH)
+      #@putNewPoint(position, TYPE_BRANCH)
 
     return
 
@@ -277,20 +286,31 @@ Route =
 
     @initialize().pipe =>
 
-      savedActiveNode = @activeNode
-      if @activeNode
-        while (true)
-          @activeNode = @activeNode.parent
-          unless @activeNode
-            break
-          if (@activeNode.type == TYPE_BRANCH)
-            break
+      
+      point = @branchStack.pop()
+      @push()
       deferred = new $.Deferred()
-      unless @activeNode
-        @activeNode = savedActiveNode
-        deferred.reject()
-      else
+      if point
+        @activeNode = point
+        @lastActiveNodeId = @activeNode.id
         deferred.resolve(@activeNode.pos)
+      else
+        deferred.reject()
+
+      #savedActiveNode = @activeNode
+      #if @activeNode
+      #  while (true)
+      #    @activeNode = @activeNode.parent
+      #    unless @activeNode
+      #      break
+      #    if (@activeNode.type == TYPE_BRANCH)
+      #      break
+      #deferred = new $.Deferred()
+      #unless @activeNode
+      #  @activeNode = savedActiveNode
+      #  deferred.reject()
+      #else
+      #  deferred.resolve(@activeNode.pos)
       
       
       # Georg doesn't get the following lines
@@ -319,45 +339,74 @@ Route =
         @addToBuffer(0, position)
 
       @putNewPoint(position, TYPE_USUAL)
+      @push()
 
     return
 
   putNewPoint : (position, type) ->
-      point = new TracePoint(@activeNode, type, @idCount++, position, 1, 1)
-      if @activeNode
-        @activeNode.appendNext(point)
-      else
-        # Tree has to be empty, so replace sentinel with point
-        point.treeId = @activeTree.treeId
-        @trees[@activeTree.treeIndex] = point
-        @activeTree = point
-      @activeNode = point
-      #console.log @activeTree.toString()
-      #console.log @getNodeList()
-      #for item in @getNodeList()
-      #  console.log item.id
+    unless @lastRadius
+      @lastRadius = 10 * @scaleX
+    point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, 1)
+    if @activeNode
+      @activeNode.appendNext(point)
+    else
+      # Tree has to be empty, so replace sentinel with point
+      point.treeId = @activeTree.treeId
+      @trees[@activeTree.treeIndex] = point
+      @activeTree = point
+    @activeNode = point
+    @lastActiveNodeId = @activeNode.id
+    #console.log @activeTree.toString()
+    #console.log @getNodeList()
+    #for item in @getNodeList()
+    #  console.log item.id
 
   getActiveNodeId : ->
-    @activeNode.id
+    @lastActiveNodeId
 
   getActiveNodePos : ->
+    unless @activeNode then return null
     @activeNode.pos
 
   getActiveNodeType : ->
+    unless @activeNode then return null
     @activeNode.type
 
+  getActiveNodeRadius : ->
+    unless @activeNode then return null
+    @activeNode.size
+
+  getActiveTreeId : ->
+    if @activeTree
+      return @activeTree.treeId
+
+  setActiveNodeRadius : (radius) ->
+    if @activeNode
+      @activeNode.size = radius
+      @lastRadius = radius
+    @push()
+
   setActiveNode : (id) ->
-    findResult = @findNodeInTree(id)
-    if (findResult)
-      @activeNode = findResult
+    for tree in @trees
+      findResult = @findNodeInTree(id, tree)
+      if findResult
+        @activeNode = findResult
+        @lastActiveNodeId = @activeNode.id
+        @activeTree = tree
+        break
+    @push()
     return @activeNode.pos
 
   setActiveTree : (id) ->
     for tree in @trees
       if tree.treeId == id
         @activeTree = tree
+        break
+    @activeNode = @activeTree
+    @lastActiveNodeId = @activeNode.id
+    @push()
 
-  createNewTree : (id) ->
+  createNewTree : ->
     # Because a tree is represented by the root element and we
     # don't have any root element, we need a sentinel to save the
     # treeId and it's index within trees.
@@ -367,18 +416,41 @@ Route =
     sentinel.treeIndex = @trees.length
     @trees.push(sentinel)
     @activeTree = sentinel
+    @activeNode = null
+    @push()
     return sentinel.treeId
 
-  findNodeInActiveTree : (id, tree) ->
+  findNodeInTree : (id, tree) ->
     unless tree
       tree = @activeTree
-    if @activeTree.id == id then @activeTree else @activeTree.findNodeById(id)
+    if tree.id == id then tree else tree.findNodeById(id, tree)
 
   deleteActiveNode : ->
+    unless @activeNode
+      return
     id = @activeNode.id
     @activeNode = @activeNode.parent
-    @activeNode.remove(id)
-    console.log @activeTree.toString()
+    if @activeNode
+      @activeNode.remove(id)
+      @lastActiveNodeId = @activeNode.id
+    @push()
+
+  deleteActiveTree : ->
+    # There should always be an active Tree
+    # Find index of activeTree
+    for i in [0..@trees.length]
+      if @trees[i].treeId == @activeTree.treeId
+        index = i
+        break
+    @trees.splice(index, 1)
+    console.log @trees
+    # Because we always want an active tree, check if we need
+    # to create one.
+    if @trees.length == 0
+      @createNewTree()
+    @activeTree = @trees[0]
+    @activeNode = null
+    @push()
 
   getTree : (id) ->
     unless id
@@ -398,6 +470,12 @@ Route =
     for c in tree.getChildren()
       if c
         result = result.concat(@getNodeList(c))
+    return result
+
+  getNodeListOfAllTrees : ->
+    result = []
+    for tree in @trees
+      result = result.concat(@getNodeList(tree))
     return result
 
   # Helper method used in initialization

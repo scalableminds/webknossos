@@ -1,6 +1,4 @@
-### define
-libs/event_mixin : EventMixin
-###
+### define ###
 
 # Macros
 
@@ -13,26 +11,30 @@ bucketIndexByAddress3Macro = (bucket_x, bucket_y, bucket_z) ->
   (bucket_z - cubeOffset[2])
 
 
-Cube = 
+class Cube
 
-  ZOOM_STEP_COUNT : 4
-
-  # Now comes the implementation of our internal data structure.
-  # `cube` is the main array. It actually represents a cuboid 
-  # containing all the buckets. `cubeSize` and `cubeOffset` 
-  # describe its dimension.
   cube : null
   cubeSize : null
   cubeOffset : null
 
-  getCube : ->
-  
-    { cube, cubeSize, cubeOffset } = @
+
+  constructor : (dataSetId, bucketSize = 32, zoomStepCount = 4) ->
     
-    if cube 
-      { cube, cubeSize, cubeOffset }
-    else 
-      null
+    @dataSetId = dataSetId
+
+    @BUCKET_SIZE = bucketSize
+    @ZOOM_STEP_COUNT = zoomStepCount
+
+
+# TODO: still needed?
+#  getCube : ->
+#  
+#    { cube, cubeSize, cubeOffset } = @
+#    
+#    if cube
+#      { cube, cubeSize, cubeOffset }
+#    else 
+#      null
 
 
   getWorstRequestedZoomStepOfBucketByZoomedAddress : (bucket, zoomStep) ->
@@ -394,7 +396,3 @@ Cube =
       @cube       = newCube
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
-
-_.extend(Cube, new EventMixin())
-
-Cube

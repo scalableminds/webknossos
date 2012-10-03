@@ -15,6 +15,7 @@ Game =
       responseType : "json"
     ).pipe (task) =>
       _.extend(this, task)
+      console.log this
       return
 
 

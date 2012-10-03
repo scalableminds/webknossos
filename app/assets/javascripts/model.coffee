@@ -20,7 +20,7 @@ class Model
 
   constructor : ->
     @Game = Game
-    @Binary = Binary
+    @Binary = new Binary()
     @Shade = Shader
     @Route = Route
     @Mesh = Mesh

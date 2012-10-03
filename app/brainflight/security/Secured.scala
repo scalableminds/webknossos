@@ -66,10 +66,10 @@ trait Secured {
     request.session.get( Secured.SessionInformationKey ) match {
       case Some( id ) =>
         Some( id )
-      /*case _ if Play.configuration.getBoolean( "application.enableAutoLogin" ).get =>
+      case _ if Play.configuration.getBoolean( "application.enableAutoLogin" ).get =>
         // development setting: if the above key is set, one gets logged in 
         // automatically
-        Some( User.default.id )  */
+        Some( User.default.id )  
       case _ =>
         None
     }

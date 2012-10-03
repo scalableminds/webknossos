@@ -31,6 +31,7 @@ object UserConfiguration {
       "displayPreviewXY" -> JsBoolean( false ),
       "displayPreviewYZ" -> JsBoolean( false ),
       "displayPreviewXZ" -> JsBoolean( false ),
+      "nodesAsSpheres" -> JsBoolean( false ),
       "mouseInversionX" -> JsNumber( -1 ),
       "mouseInversionY" -> JsNumber( -1 ),
       "mouseActive" -> JsBoolean( true ),

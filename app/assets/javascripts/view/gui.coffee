@@ -35,6 +35,7 @@ class Gui
                 displayPrevXY : data.displayPreviewXY
                 displayPrevYZ : data.displayPreviewYZ
                 displayPrevXZ : data.displayPreviewXZ
+                nodesAsSpheres : data.nodesAsSpheres
 
                 activeTreeID : @model.Route.getActiveTreeId()
                 newTree : @createNewTree
@@ -98,6 +99,9 @@ class Gui
     (fSkeleton.add @settings, "displayPrevXZ")
                           .name("Display XZ-Plane")
                           .onChange(@setDisplayPreviewXZ)
+    (fSkeleton.add @settings, "nodesAsSpheres")
+                          .name("Nodes as Spheres")
+                          .onChange(@setNodeAsSpheres)
 
     fTrees = @gui.addFolder("Trees")
     @activeTreeIdController =
@@ -178,6 +182,12 @@ class Gui
     @sceneController.setDisplaySV PLANE_XZ, value
     @model.User.Configuration.push()      
 
+  setNodeAsSpheres : (value) =>
+    @model.User.Configuration.nodesAsSpheres = value
+    @sceneController.skeleton.setDisplaySpheres(value)
+    @model.User.Configuration.push()  
+    @flycam.hasChanged = true    
+
   setMouseInversionX : (value) =>
     if value is true
       @model.User.Configuration.mouseInversionX = 1
@@ -222,7 +232,7 @@ class Gui
   setNodeRadius : (value) =>
     @model.Route.setActiveNodeRadius(value)
     # convert from nm to voxels, divide by resolution
-    @sceneController.skeleton.setNodeRadius(value / @model.Route.scaleX)
+    @sceneController.skeleton.setNodeRadius(value)
     @flycam.hasChanged = true
 
   updateRadius : ->

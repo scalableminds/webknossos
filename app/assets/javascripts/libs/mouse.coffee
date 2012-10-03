@@ -25,6 +25,8 @@ class Mouse
   changedCallbackX : $.noop()
   changedCallbackY : $.noop()
   changedCallbackR : $.noop()
+  changedCallbackMW : $.noop()
+  changedCallbackM : $.noop()
   activeCallback : $.noop()
 
 
@@ -82,6 +84,9 @@ class Mouse
   bindW : (callback) ->
     @changedCallbackMW = callback
 
+  bindM : (callback) ->
+    @changedCallbackM = callback
+
   unbind : ->
     $(@target).off 
       "mousemove" : @mouseMoved
@@ -96,6 +101,10 @@ class Mouse
   mouseMoved : (evt) =>
     
     { lastPosition, changedCallback } = @
+
+    # mouse moved in preview to show tooltip
+    if @changedCallbackM?
+      @changedCallbackM [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top]
 
     # regular mouse management
     unless @locked 
@@ -131,7 +140,7 @@ class Mouse
     # check whether the mouseDown event is a rightclick
     if evt.which == 3
       # on rightclick, return mouse position relative to the canvas
-      @changedCallbackR [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top]
+      @changedCallbackR [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
     else
       $(@target).css("cursor", "none")
       @buttonDown = true

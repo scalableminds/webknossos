@@ -13,8 +13,8 @@ Game =
     request(
       url : "/game/initialize"
       responseType : "json"
-    ).pipe (data) =>
-      _.extend(this, data)
+    ).pipe (task) =>
+      _.extend(this, task)
       return
 
 

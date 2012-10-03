@@ -19,9 +19,11 @@ User.Configuration =
   routeClippingDistance : null
   lockZoom : null
   displayCrosshair : null
+  interpolation : null
   displayPreviewXY : null
   displayPreviewYZ : null
   displayPreviewXZ : null
+  nodesAsSpheres : null
   mouseInversionX : null
   mouseInversionY : null
   mouseActive : null
@@ -50,9 +52,11 @@ User.Configuration =
               @routeClippingDistance, 
               @lockZoom,
               @displayCrosshair,
+              @interpolation,
               @displayPreviewXY,
               @displayPreviewYZ,
               @displayPreviewXZ,
+              @nodesAsSpheres,
               @mouseInversionX,
               @mouseInversionY,
               @mouseActive, 
@@ -88,9 +92,11 @@ User.Configuration =
         routeClippingDistance : @routeClippingDistance,
         lockZoom : @lockZoom,
         displayCrosshair : @displayCrosshair,
+        interpolation : @interpolation,
         displayPreviewXY : @displayPreviewXY,
         displayPreviewYZ : @displayPreviewYZ,
         displayPreviewXZ : @displayPreviewXZ,
+        nodesAsSpheres : @nodesAsSpheres,
         mouseInversionX : @mouseInversionX,
         mouseInversionY : @mouseInversionY,
         mouseActive : @mouseActive,

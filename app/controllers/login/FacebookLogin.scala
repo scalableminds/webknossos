@@ -7,6 +7,7 @@ import com.restfb.BaseFacebookClient
 import com.restfb.DefaultFacebookClient
 import play.api.Play
 import brainflight.security.Secured
+//import scala.concurrent.ExecutionContext.Implicits.global
 
 object FacebookLogin extends Controller {
   val conf = Play.current.configuration
@@ -45,22 +46,25 @@ object FacebookLogin extends Controller {
   }
 
   def loginCode( code: String ) = Action { response =>
-    val ws = WS.url( facebookAcessTokenUrl( code ) ).get().value
-    val accessToken = accesTokenRegex.findFirstIn( ws.get.body ).getOrElse( "" )
-    try {
-      val facebookClient = new DefaultFacebookClient( accessToken );
-      val meObject =
-        facebookClient.fetchObject( "me", classOf[com.restfb.types.User] );
-
-      val user = models.User.authRemote( meObject.getEmail, "facebook" ) getOrElse (
-          models.User.createRemote(
-            meObject.getEmail,
-            meObject.getFirstName + " " + meObject.getLastName,
-            "facebook" ) )
-            
-      Ok( html.test.index( user ) ).withSession( Secured.createSession(user) )
-    } catch {
-      case ( e ) => BadRequest( "Failed to login." )
+    Async{
+      WS.url( facebookAcessTokenUrl( code ) ).get().map{ reponse =>
+        try {
+          val accessToken = accesTokenRegex.findFirstIn( response.body.asText.get ).getOrElse( "" )
+          val facebookClient = new DefaultFacebookClient( accessToken );
+          val meObject =
+            facebookClient.fetchObject( "me", classOf[com.restfb.types.User] );
+    
+          val user = models.User.authRemote( meObject.getEmail, "facebook" ) getOrElse (
+              models.User.createRemote(
+                meObject.getEmail,
+                meObject.getFirstName + " " + meObject.getLastName,
+                "facebook" ) )
+                
+          Ok( html.test.index( user ) ).withSession( Secured.createSession(user) )
+        } catch {
+          case ( e ) => BadRequest( "Failed to login." )
+        }
+      }
     }
   }
 }

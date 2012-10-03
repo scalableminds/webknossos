@@ -2,7 +2,7 @@
 model : Model
 view : View
 libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
-model/game : Game
+model/route : Route
 ###
 
 
@@ -27,7 +27,7 @@ GeometryFactory =
   # Traditionally the data require to create a geometry mesh
   # should be provided by the Model (-> Model.Mesh), but 
   # for right now let's rely on THREE.js model loader.
-  createMesh : (fileName, x = 0, y = 0, z = 0) ->
+  createMesh : (fileName, x = 0, y = 0, z = 0, view) ->
 
     @binLoader ?= new THREE.JSONLoader()
     @binLoader.load "assets/mesh/" + fileName, (geometry) ->
@@ -36,7 +36,7 @@ GeometryFactory =
       mesh.position.x = x
       mesh.position.y = y
       mesh.position.z = z
-      View.addGeometry PLANE_XY, mesh
+      view.addGeometry PLANE_XY, mesh
 
   # Let's set up our trianglesplane.
   # It serves as a "canvas" where the brain images
@@ -56,7 +56,7 @@ GeometryFactory =
   # needed to for the bend surface.
   # normalVertices: (depricated) holds the vertex postion 
   # for the flat surface
-  createTrianglesplane : (width, zOffset) ->
+  createTrianglesplane : (width, zOffset, config, view) ->
     $.when(
     #  Model.Shader.get("trianglesplane")
     #  Model.Trianglesplane.get(width, zOffset)  
@@ -75,6 +75,8 @@ GeometryFactory =
       crosshairColors    = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
 
       # dimension: [XY, YZ, XZ]; kind: [main, preview, border]
+      values = [config.displayPreviewXY, config.displayPreviewYZ, config.displayPreviewXZ]
+
       for dimension in [0..2]
         for kind in [0..1]
           # create plane
@@ -89,9 +91,7 @@ GeometryFactory =
           meshes[kind][dimension] = new THREE.Mesh( planes[kind][dimension], textureMaterials[kind][dimension] )
           if kind==0
             meshes[kind][dimension].rotation.x = 90 /180*Math.PI
-          config = Model.User.Configuration
-          if config? and kind==1
-            values = [config.displayPreviewXY, config.displayPreviewYZ, config.displayPreviewXZ]
+          if kind==1
             meshes[kind][dimension].visible = values[dimension]
           meshes[kind][dimension].texture = textures[kind][dimension]
 
@@ -101,9 +101,9 @@ GeometryFactory =
           crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3(-WIDTH/2*i, -WIDTH/2*(1-i), 1))
           crosshairsGeometry[dimension][i].vertices.push(new THREE.Vector3( WIDTH/2*i,  WIDTH/2*(1-i), 1))
           crosshairs[dimension][i] = new THREE.Line(crosshairsGeometry[dimension][i], new THREE.LineBasicMaterial({color: crosshairColors[dimension][i], linewidth: 1}))
-          View.addGeometry dimension, crosshairs[dimension][i]
-          if Model.User.Configuration.displayCrosshair?
-            crosshairs[dimension][i].visible = Model.User.Configuration.displayCrosshair
+          view.addGeometry dimension, crosshairs[dimension][i]
+          if config.displayCrosshair?
+            crosshairs[dimension][i].visible = config.displayCrosshair
 
         # create borders
         prevBordersGeo[dimension] = new THREE.Geometry()
@@ -114,11 +114,11 @@ GeometryFactory =
         prevBordersGeo[dimension].vertices.push(new THREE.Vector3(-VIEWPORT_WIDTH/2-1, 0, -VIEWPORT_WIDTH/2-1))
         prevBorders[dimension] = new THREE.Line(prevBordersGeo[dimension], new THREE.LineBasicMaterial({color: borderColors[dimension], linewidth: 1}))
 
-      View.crosshairs = crosshairs
+      view.crosshairs = crosshairs
 
       
-      #create preview Box depending on Game.dataSet.upperBoundary
-      b = Game.dataSet.upperBoundary
+      #create preview Box depending on Route.data.dataSet.upperBoundary
+      b = Route.data.dataSet.upperBoundary
       previewBoxGeometry = new THREE.Geometry()
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], 0))
@@ -137,29 +137,28 @@ GeometryFactory =
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], b[1]))
       previewBoxGeometry.vertices.push(new THREE.Vector3(0, b[2], 0))
       previewBox = new THREE.Line(previewBoxGeometry, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
-      View.addGeometry VIEW_3D, previewBox
+      view.addGeometry VIEW_3D, previewBox
 
-      strings   = ["0, 0, 0", b[0]+", 0, 0", "0, "+b[2]+", 0", "0, 0, "+b[2]]
+      strings   = ["0, 0, 0", b[0]+", 0, 0", "0, "+b[1]+", 0", "0, 0, "+b[2]]
       positions = [new THREE.Vector3(0, b[2], 0), new THREE.Vector3(b[0], b[2], 0), new THREE.Vector3(0, b[2], b[1]), new THREE.Vector3(0, 0, 0)]
       texts     = new Array(4)
       for i in [0..3]
-        texts[i] = new THREE.Mesh(new THREE.TextGeometry(strings[i], {size : 200, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
+        texts[i] = new THREE.Mesh(new THREE.TextGeometry(strings[i], {size : 150, height : 20, font : "helvetiker"}), new THREE.MeshBasicMaterial({color: 0x999999}))
         texts[i].position = positions[i]
-        View.addGeometry VIEW_3D, texts[i]
-      View.texts = texts
+        view.addGeometry VIEW_3D, texts[i]
+      view.texts = texts
 
-      # create route
-      View.createRoute 10000
+      View.createRoute 10000, Route.data.task
 
       meshes[1][PLANE_YZ].rotation.z = prevBorders[PLANE_YZ].rotation.z = -90 /180*Math.PI
       
       meshes[1][PLANE_XZ].rotation.x = prevBorders[PLANE_XZ].rotation.x = 90 /180*Math.PI
 
-      View.meshes      = meshes
-      View.prevBorders = prevBorders
+      view.meshes      = meshes
+      view.prevBorders = prevBorders
       for dimension in [0..2]
         for kind in [0..1]
           scene = if kind==0 then dimension else VIEW_3D
-          View.addGeometry scene, View.meshes[kind][dimension]
-        View.addGeometry VIEW_3D, View.prevBorders[dimension]
+          view.addGeometry scene, view.meshes[kind][dimension]
+        view.addGeometry VIEW_3D, view.prevBorders[dimension]
     )

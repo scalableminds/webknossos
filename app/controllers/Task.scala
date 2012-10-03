@@ -58,7 +58,7 @@ object Task extends Controller with Secured {
       Ok(createTaskInformation(exp) ++ createDataSetInformation(exp.dataSetId))).getOrElse(BadRequest("Task not found."))
   }
 
-  def update(expId: String) = Authenticated(parse.json) { implicit request =>
+  def update(expId: String) = Authenticated(parse.json(maxLength=2097152)) { implicit request =>
     (request.body).asOpt[Experiment].map { exp =>
       Experiment.save(exp)
       Ok

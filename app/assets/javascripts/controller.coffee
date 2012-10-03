@@ -33,7 +33,7 @@ class Controller
     @view  = new View(@model, @flycam)
 
     # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @flycam, @model, [2000, 2000, 2000])
+    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model, [2000, 2000, 2000])
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space

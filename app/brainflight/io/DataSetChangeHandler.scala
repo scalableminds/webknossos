@@ -5,6 +5,7 @@ import name.pachler.nio.file.Path
 import name.pachler.nio.file.impl.PathImpl
 import models.DataSet
 import brainflight.tools.geometry.Point3D
+import play.api.Logger
 
 class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {
@@ -17,6 +18,10 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
         }
       }
     }
+  }
+  
+  def onTick(path: Path) {
+    onStart(path)
   }
 
   def onCreate(path: Path) {
@@ -49,8 +54,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
 
   def dataSetFromFile(f: File): Option[DataSet] = {
     if (f.isDirectory()) {
-      println("dataSetFromFile: " + f + " files ")
-      f.listFiles().map(_.getAbsolutePath()).foreach(println)
+      Logger.trace("dataSetFromFile: " + f)
       val resolutions = f.listFiles().filter(f => f.isDirectory() && isNumber(f.getName())).map(_.getName().toInt).toList
 
       (for {
@@ -63,8 +67,6 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
           xs.listFiles().filter(_.getName.startsWith("y")).size,
           ys.listFiles().filter(_.getName.startsWith("z")).size)
       }) map { coords =>
-
-        println("done")
         val maxCoordinates = Point3D(coords._1 * 128, coords._2 * 128, coords._3 * 128)
         DataSet(f.getName(), f.getAbsolutePath(), resolutions, maxCoordinates)
       }

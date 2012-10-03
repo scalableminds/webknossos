@@ -138,6 +138,9 @@ class View
   addGeometry : (geometry) ->
     @scene.add geometry
 
+  removeGeometry : (geometry) ->
+    @scene.remove geometry
+
   #Apply a single draw (not used right now)
   draw : ->
     #FIXME: this is dirty

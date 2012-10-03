@@ -72,6 +72,9 @@ class Controller
         @sceneController.skeleton.on "newGeometries", (list, event) =>
           for geometry in list
             @view.addGeometry(geometry)
+        @sceneController.skeleton.on "removeGeometries", (list, event) =>
+          for geometry in list
+            @view.removeGeometry(geometry)
         
         @flycam.setGlobalPos(position)
         @cameraController.changePrevSV()
@@ -112,6 +115,7 @@ class Controller
             @sceneController.setDisplaySV PLANE_XY, data.displayPreviewXY
             @sceneController.setDisplaySV PLANE_YZ, data.displayPreviewYZ
             @sceneController.setDisplaySV PLANE_XZ, data.displayPreviewXZ
+            @sceneController.skeleton.setDisplaySpheres data.nodesAsSpheres
         )
       
       ->

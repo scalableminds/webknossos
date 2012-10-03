@@ -14,6 +14,7 @@ import play.api.libs.iteratee.Input
 import brainflight.security.Secured
 import models.Actors._
 import brainflight.mail._
+import controllers.admin._
 
 object Application extends Controller {
 
@@ -109,9 +110,10 @@ object Application extends Controller {
   // -- Javascript routing
 
   def javascriptRoutes = Action { implicit request =>
-    import routes.javascript._
     Ok(
       Routes.javascriptRouter( "jsRoutes" )( //fill in stuff which should be able to be called from js
+          controllers.admin.routes.javascript.NMLIO.upload, 
+          controllers.admin.routes.javascript.NMLIO.downloadList
       ) ).as( "text/javascript" )
   }
 

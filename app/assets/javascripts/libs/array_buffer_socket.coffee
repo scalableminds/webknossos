@@ -90,7 +90,7 @@ class ArrayBufferSocket.WebSocket
       socket.addEventListener(
         "message"
         (event) =>
-          
+
           buffer = event.data
           handle = new Float32Array(buffer, 0, 1)[0]
           

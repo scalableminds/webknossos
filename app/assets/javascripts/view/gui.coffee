@@ -1,5 +1,6 @@
 ### define
 libs/datgui/dat.gui : DatGui
+libs/request : request
 ###
 
 PLANE_XY = 0
@@ -21,6 +22,9 @@ class Gui
     modelRadius = @model.Route.getActiveNodeRadius()
     @settings = { 
                 save : => @model.Route.pushImpl()
+                upload : @uploadNML
+                download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
+                                          "_blank", "width=700,height=400,location=no,menubar=no")
 
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
                 lockZoom: data.lockZoom
@@ -52,15 +56,16 @@ class Gui
     #c = gui.add text, "speed", 1, 100
     #c.onChange (value) -> Controller.setRouteClippingDistance value
     
-    #$(gui.domElement).css
-    #  position : 'absolute'
-    #  left : '220px'
-    #  top : '260px'
-    #  height : '500px'
+    $(@gui.domElement).css
+      width : '300px'
 
     fFile = @gui.addFolder("File")
     (fFile.add @settings, "save")
                           .name("Save now")
+    (fFile.add @settings, "upload")
+                          .name("Upload NML")
+    (fFile.add @settings, "download")
+                          .name("Download NML")
     
     fPosition = @gui.addFolder("Position")
     (fPosition.add @settings, "position")
@@ -142,6 +147,23 @@ class Gui
     stringArray = posString.split(",")
     pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
     @flycam.setGlobalPos(pos)
+
+  uploadNML : =>
+    # Create dummy input field
+    input = $("<input>", type : "file")
+    input.trigger("click")
+    input.on("change", (evt) ->
+      file = evt.target.files[0]
+      requestObject = jsRoutes.controllers.admin.NMLIO.upload()
+      xhr = new XMLHttpRequest()
+      # Reload when done
+      xhr.onload = -> window.location.reload()
+      xhr.open(requestObject.method, requestObject.url, true)
+      # send it as form data
+      formData = new FormData()
+      formData.append("nmlFile", file)
+      xhr.send(formData)
+    )
 
   updateGlobalPosition : =>
     pos = @flycam.getGlobalPos()

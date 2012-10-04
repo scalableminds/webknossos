@@ -4,6 +4,7 @@ import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
+import models.basics.BasicDAO
 
 case class Role( name: String, permissions: List[Permission], _id: ObjectId = new ObjectId ) extends Implyable {
   def implies( permission: Permission ) =

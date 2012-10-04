@@ -11,7 +11,7 @@
                         <span class="loader">Loading</span>
                     </header>
                     <ul class="list">
-                      @user.tasks.flatMap(i => models.graph.Experiment.findOneById(i)).sortBy(_.timestamp).map{ exp =>
+                      @user.experiments.flatMap(i => models.graph.Experiment.findOneById(i)).sortBy(_.timestamp).map{ exp =>
                           <li>
                             <h4>@exp.dataSetName</h4>
                             <a href="@controllers.admin.routes.NMLIO.download(exp.id)">Export NML</a> 

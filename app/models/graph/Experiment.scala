@@ -4,7 +4,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Reads
 import models.DataSet
 import brainflight.tools.geometry.Point3D
-import models.BasicDAO
+import models.basics.BasicDAO
 import models.BranchPoint
 import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId

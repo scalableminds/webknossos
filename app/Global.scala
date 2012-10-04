@@ -13,6 +13,7 @@ import brainflight.mail.Mailer
 import brainflight.io.StartWatching
 import brainflight.io.DataSetChangeHandler
 import brainflight.io.DirectoryWatcherActor
+import models.basics.BasicEvolution
 
 object Global extends GlobalSettings {
   
@@ -20,8 +21,10 @@ object Global extends GlobalSettings {
     val DirectoryWatcher = Akka.system.actorOf( Props[DirectoryWatcherActor], name = "directoryWatcher" )
     DirectoryWatcher ! StartWatching("binaryData", new DataSetChangeHandler)
     
-    if (Play.current.mode == Mode.Dev)
+    if (Play.current.mode == Mode.Dev){
+      BasicEvolution.runDBEvolution()
       InitialData.insert() 
+    }
   }
 }
 

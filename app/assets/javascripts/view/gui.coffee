@@ -141,7 +141,9 @@ class Gui
     fNodes.open()
 
   saveNow : =>
-    @model.Route.pushImpl().done( -> alert("Successfully saved!"))
+    @model.Route.pushImpl()
+      .fail( -> alert("Something went wrong with saving, please try again."))
+      .done( -> alert("Successfully saved!"))
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")

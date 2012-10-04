@@ -24,7 +24,7 @@ object NMLIO extends Controller with Secured {
     request.body.file("nmlFile").map { nmlFile =>
       (new NMLParser(nmlFile.ref.file).parse).foreach { e =>
         Logger.debug("Successfully parsed nmlFile")
-        User.save(request.user.copy(experiments = List(e._id)))
+        User.save(request.user.copy(experiments = e._id :: request.user.experiments))
         Experiment.save(e)
       }
       Ok("File uploaded")

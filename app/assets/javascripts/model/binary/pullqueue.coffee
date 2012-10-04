@@ -168,7 +168,7 @@ class PullQueue
     
     new ArrayBufferSocket(
       senders : [
-        new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@cube.dataSetId}&cubeSize={@cube.bucketSize}")
+        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@cube.dataSetId}&cubeSize={@cube.bucketSize}")
         new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@cube.dataSetId}&cubeSize={@cube.bucketSize}")
       ]
       requestBufferType : Uint32Array

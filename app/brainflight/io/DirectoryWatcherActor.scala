@@ -19,9 +19,13 @@ case class StartWatching(val pathName: String, changeHandler: DirectoryChangeHan
 case class StopWatching()
 
 class DirectoryWatcherActor extends Actor {
+  
+  val TICKER_INTERVAL = 10 minutes
+  
   Logger.warn("If an UnsatisfiedLinkError occours: Don't mind.")
   // TODO: fix classloader problems
   val watchService = FileSystems.getDefault().newWatchService()
+  
   val keys = new HashMap[WatchKey, Path]
   var shouldStop = false
   var changeHandler: DirectoryChangeHandler = null
@@ -40,7 +44,7 @@ class DirectoryWatcherActor extends Actor {
   /**
    * Print an event
    */
-  def printEvent(event: WatchEvent[_], parent: Path): Unit = {
+  def handleFileEvent(event: WatchEvent[_], parent: Path): Unit = {
     val kind = event.kind
     val event_path = event.context().asInstanceOf[Path]
     val path = parent.resolve(event_path)
@@ -82,7 +86,7 @@ class DirectoryWatcherActor extends Actor {
 
     registerAll(watchedPath)
     changeHandler.onStart(watchedPath)
-    updateTicker = context.system.scheduler.schedule(10 seconds, 10 seconds)(
+    updateTicker = context.system.scheduler.schedule(TICKER_INTERVAL, TICKER_INTERVAL)(
       changeHandler.onTick(watchedPath))
     Akka.future {
       try {
@@ -96,7 +100,7 @@ class DirectoryWatcherActor extends Actor {
                 val name = event.context().asInstanceOf[Path]
                 var child = dir.resolve(name)
 
-                printEvent(event, dir)
+                handleFileEvent(event, dir)
 
                 if (kind == StandardWatchEventKind.ENTRY_CREATE) {
                   try {

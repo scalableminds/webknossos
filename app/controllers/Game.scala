@@ -8,18 +8,24 @@ import models.Role
 import models.DataSet
 import play.api.Logger
 import models.graph.Experiment
+import models.User
 
 object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
-  def createTaskInformation(task: Experiment) = Json.obj(
+  def createExperimentIDInfo(experimentId: String) = Json.obj(
     "task" -> Json.obj(
-      "id" -> task.id))
+      "id" -> experimentId))
 
   def initialize = Authenticated { implicit request =>
-    (for {
-      taskId <- request.user.tasks.headOption
-      task <- Experiment.findOneById(taskId)
-    } yield Ok(createTaskInformation(task))) getOrElse BadRequest("Couldn't open task.")
+    val experimentId = request.user.experiments match {
+      case experimentId :: _ =>
+        experimentId.toString
+      case _ =>
+        val exp = Experiment.createNew
+        User.save(request.user.copy(experiments = exp._id :: request.user.experiments))
+        exp.id
+    }
+    Ok(createExperimentIDInfo(experimentId)) 
   }
 }

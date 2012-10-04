@@ -23,6 +23,7 @@ User.Configuration =
   displayPreviewXY : null
   displayPreviewYZ : null
   displayPreviewXZ : null
+  newNodeNewTree : null
   nodesAsSpheres : null
   mouseInversionX : null
   mouseInversionY : null
@@ -56,6 +57,7 @@ User.Configuration =
               @displayPreviewXY,
               @displayPreviewYZ,
               @displayPreviewXZ,
+              @newNodeNewTree,
               @nodesAsSpheres,
               @mouseInversionX,
               @mouseInversionY,
@@ -96,6 +98,7 @@ User.Configuration =
         displayPreviewXY : @displayPreviewXY,
         displayPreviewYZ : @displayPreviewYZ,
         displayPreviewXZ : @displayPreviewXZ,
+        newNodeNewTree : @newNodeNewTree,
         nodesAsSpheres : @nodesAsSpheres,
         mouseInversionX : @mouseInversionX,
         mouseInversionY : @mouseInversionY,

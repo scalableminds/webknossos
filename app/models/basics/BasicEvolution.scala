@@ -15,15 +15,10 @@ object BasicEvolution {
       try {
         clazz.findAll
       } catch {
-        case e: java.lang.Exception =>
-          val defaultValues = clazz.defaultValues
-          
-          
-          
-          //e.
-          Logger.error("Got it")
+        case e: java.lang.Exception =>  
+          clazz.collection.drop
+          Logger.warn("Droped '%s' collection because of schema / grater inconsistency".format(clazz))
       }
     }
-
   }
 }

@@ -32,9 +32,9 @@ POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( d
 # Game Stuff
 GET     /game/initialize                    controllers.Game.initialize
 
-# Task Stuff
-GET       /experiment/:experimentId         controllers.Task.info( experimentId: String )
-PUT       /experiment/:experimentId         controllers.Task.update( experimentId: String )
+# Experiment Stuff
+GET       /experiment/:experimentId         controllers.ExperimentController.info( experimentId: String )
+PUT       /experiment/:experimentId         controllers.ExperimentController.update( experimentId: String )
 
 # GET     /route/list                       controllers.Route.list
 # POST    /route/:id                        controllers.Route.blackBox(id: String)

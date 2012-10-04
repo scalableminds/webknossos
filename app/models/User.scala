@@ -19,7 +19,7 @@ case class User(
     name: String,
     verified: Boolean = false,
     pwdHash: String = "",
-    tasks: List[ObjectId] = Nil,
+    experiments: List[ObjectId] = Nil,
     loginType: String = "local",
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: List[String] = "user" :: Nil,
@@ -42,6 +42,9 @@ case class User(
     ruleSet.find( _.implies( permission ) ).isDefined
   
   override def toString = email
+  
+  def headExperimentOrDefault = 
+    experiments.headOption getOrElse Experiment.createNew._id
   
   def id = _id.toString
 }
@@ -68,8 +71,8 @@ object User extends BasicDAO[User]( "users" ) {
       if verifyPassword( password, user.pwdHash )
     } yield user
 
-  def create( email: String, name: String, password: String = "", tasks: List[ObjectId] = List(Experiment.createNew._id) ) = {
-    val user = User( email, name, false, hashPassword( password ), tasks )
+  def create( email: String, name: String, password: String = "", experiments: List[ObjectId] = List()) = {
+    val user = User( email, name, false, hashPassword( password ), experiments )
     insert( user )
     user
   }

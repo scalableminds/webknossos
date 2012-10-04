@@ -28,6 +28,4 @@ class BasicDAO[T <: AnyRef](collectionName:String)(implicit val m: Manifest[T])
     else
       None
   }
-  
-  def defaultValues: Map[String, JsValue]
 }

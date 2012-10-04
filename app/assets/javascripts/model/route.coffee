@@ -438,6 +438,8 @@ Route =
     if @activeNode
       @activeNode.remove(id)
       @lastActiveNodeId = @activeNode.id
+    else
+      @deleteActiveTree()
     @push()
 
   deleteActiveTree : ->

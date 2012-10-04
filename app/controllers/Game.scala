@@ -12,14 +12,14 @@ import models.graph.Experiment
 object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
-  def createTaskInformation(task: Experiment) = Json.obj(
+  def createExperimentIDInfo(experiment: Experiment) = Json.obj(
     "task" -> Json.obj(
-      "id" -> task.id))
+      "id" -> experiment.id))
 
   def initialize = Authenticated { implicit request =>
+    val experimentId = request.user.headExperimentOrDefault
     (for {
-      taskId <- request.user.tasks.headOption
-      task <- Experiment.findOneById(taskId)
-    } yield Ok(createTaskInformation(task))) getOrElse BadRequest("Couldn't open task.")
+      experiment <- Experiment.findOneById(experimentId)
+    } yield Ok(createExperimentIDInfo(experiment))) getOrElse BadRequest("Couldn't open experiment.")
   }
 }

@@ -43,9 +43,6 @@ case class User(
   
   override def toString = email
   
-  def headExperimentOrDefault = 
-    experiments.headOption getOrElse Experiment.createNew._id
-  
   def id = _id.toString
 }
 

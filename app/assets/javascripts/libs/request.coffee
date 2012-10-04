@@ -40,7 +40,6 @@ request = (options) ->
   xhr.onerror = (err) ->
     deferred.reject(err)
 
-  console.log options.data
   xhr.send(options.data)
 
   deferred.promise()

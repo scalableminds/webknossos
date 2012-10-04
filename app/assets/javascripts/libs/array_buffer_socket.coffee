@@ -1,4 +1,6 @@
-### define ###
+### define
+libs/request : Requester
+###
 
 class ArrayBufferSocket
 
@@ -118,6 +120,7 @@ class ArrayBufferSocket.WebSocket
 
 
   close : ->
+
     if @socket
       @socket.close()
       @socket = null
@@ -156,7 +159,6 @@ class ArrayBufferSocket.WebSocket
     { transmitBuffer, socketHandle }
 
 
-
   _window = window ? self
   @prototype.WebSocketImpl = if _window.MozWebSocket then _window.MozWebSocket else _window.WebSocket
 
@@ -170,7 +172,7 @@ class ArrayBufferSocket.XmlHttpRequest
   send : (data) ->
 
     data = new @requestBufferType(data) if _.isArray(data)
-    requester(
+    Requester(
       data : data.buffer
       url : @url
       dataType : 'arraybuffer'

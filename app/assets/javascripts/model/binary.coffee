@@ -55,7 +55,7 @@ class Binary
   constructor : () ->
 
     @cube = new Cube()
-    @queue = new PullQueue("506d73f6e4b0a9f7ee01ad66", @cube) # TODO
+    @queue = new PullQueue("506d700ee4b0e689edd0f238", @cube) # TODO
 
     @cube.on "bucketLoaded", (bucket, newZoomStep, oldZoomStep) =>
 

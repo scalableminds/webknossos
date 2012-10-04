@@ -60,7 +60,7 @@ object Task extends Controller with Secured {
 
   def update(expId: String) = Authenticated(parse.json(maxLength=2097152)) { implicit request =>
     (request.body).asOpt[Experiment].map { exp =>
-      Experiment.save(exp)
+      Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
       Ok
     } getOrElse (BadRequest("Update failed."))
   }

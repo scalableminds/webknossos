@@ -27,13 +27,14 @@ case class DataSet(
 object DataSet extends BasicDAO[DataSet]("dataSets") {
   def default = {
     //find(MongoDBObject())
-    DataSet.findAll.headOption getOrElse {
+    val all = DataSet.findAll
+    if (all.isEmpty)
       throw new Exception("No default data set found!")
-    }
+    all.maxBy(_.priority)
   }
-  
-  def findOneByName(name: String) = 
-    findOne( MongoDBObject( "name" -> name))
+
+  def findOneByName(name: String) =
+    findOne(MongoDBObject("name" -> name))
 
   def updateOrCreate(d: DataSet) {
     findOne(MongoDBObject("name" -> d.name)) match {

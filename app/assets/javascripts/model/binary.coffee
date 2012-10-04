@@ -55,8 +55,6 @@ class Binary
     @cube = new Cube("TEST")
     @queue = new PullQueue(@cube)
 
-    _.extend(@cube, new EventMixin())
-
     @cube.on "bucketLoaded", (bucket, newZoomStep, oldZoomStep) =>
 
       for i in [0..2] by 1
@@ -108,14 +106,14 @@ class Binary
 
       resizeRadius = (@TEXTURE_SIZE >> 6)
 
-      Cube.extendByBucketAddressExtent6(
-        (zoomedPositionBucket[0] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] - resizeRadius) << zoomSteps[0],
-        (zoomedPositionBucket[0] + resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] + resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] + resizeRadius) << zoomSteps[0]
+      @cube.extendByBucketAddressExtent(
+        [(zoomedPositionBucket[0] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] - resizeRadius) << zoomSteps[0]],
+        [(zoomedPositionBucket[0] + resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] + resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] + resizeRadius) << zoomSteps[0]]
      #   0,0,0,200,200,200
       )
 
       console.time "queue"
-      PullQueue.clear()
+      @queue.clear()
 
       direction = [0,0,1]
 #      directionValue = Math.sqrt(direction[0]*direction[0] + direction[1]*direction[1] + direction[2]*direction[2])

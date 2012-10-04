@@ -83,12 +83,15 @@ class Skeleton
   reset : ->
     if (@ids.length > 0)
       @trigger "removeGeometries", @routes.concat(@nodes).concat(@nodesSpheres)
-    @routes = []
-    @nodes  = []
-    @ids    = []
+    @routes       = []
+    @nodes        = []
+    @ids          = []
+    @nodesSpheres = []
     for tree in @model.Route.getTrees()
       @createNewTree(tree.treeId)
     @loadSkeletonFromModel()
+    # Add Spheres to the scene
+    @trigger "newGeometries", @nodesSpheres
 
   loadSkeletonFromModel : ->
     for tree in @model.Route.getTrees()
@@ -104,7 +107,7 @@ class Skeleton
           nodePos = nodeList[0].pos
           @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(nodePos[0], nodePos[1], nodePos[2])
           # Assign the ID to the vertex, so we can access it later
-          @nodes[index].geometry.vertices[@curIndex[index]].id = nodeList[0].id
+          @nodes[index].geometry.vertices[@curIndex[index]].nodeId = nodeList[0].id
           @pushNewNode(radius, nodePos, nodeList[0].id)
         @curIndex[index]++
         for node in nodeList
@@ -116,7 +119,7 @@ class Skeleton
             @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
             @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(node2Pos[0], node2Pos[1], node2Pos[2])
             # Assign the ID to the vertex, so we can access it later
-            @nodes[index].geometry.vertices[@curIndex[index]].id = node.id
+            @nodes[index].geometry.vertices[@curIndex[index]].nodeId = node.id
             @pushNewNode(radius, node2Pos, node.id)
             @curIndex[index]++
         @routes[index].geometry.verticesNeedUpdate = true
@@ -133,6 +136,7 @@ class Skeleton
       @setNodeRadius(@model.Route.getActiveNodeRadius())
       @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
     else
+      @activeNodeSphere = null
       @setNodeRadius(0)
 
   setNodeRadius : (value) ->
@@ -181,7 +185,7 @@ class Skeleton
       @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(position[0], position[1], position[2])
       @nodes[index].geometry.vertices[@curIndex[index]] = new THREE.Vector3(position[0], position[1], position[2])
       # Assign the ID to the vertex, so we can access it later
-      @nodes[index].geometry.vertices[@curIndex[index]].id = id
+      @nodes[index].geometry.vertices[@curIndex[index]].nodeId = id
 
       @trigger "newGeometries", [@pushNewNode(radius, position, id)]
 
@@ -220,7 +224,7 @@ class Skeleton
     )
     newNode.scale = new THREE.Vector3(radius, radius, radius)
     newNode.position = new THREE.Vector3(position[0], position[1], position[2])
-    newNode.id = id
+    newNode.nodeId = id
     newNode.visible = @disSpheres
     @nodesSpheres.push(newNode)
     return newNode
@@ -235,7 +239,7 @@ class Skeleton
 
   getSphereIndexFromId : (nodeId) ->
     for node in @nodesSpheres
-      if node.id == nodeId
+      if node.nodeId == nodeId
         return node
 
   setDisplaySpheres : (value) ->

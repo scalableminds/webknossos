@@ -12,14 +12,17 @@ import models._
 import play.api.libs.iteratee.Done
 import play.api.libs.iteratee.Input
 import brainflight.security.Secured
-import models.Actors._
 import brainflight.mail._
 import controllers.admin._
+import play.api.libs.concurrent.Akka
+import akka.actor.Props
 
 object Application extends Controller {
 
   // -- Authentication
 
+  val Mailer = Akka.system.actorOf( Props[Mailer], name = "mailActor" )
+  
   def index = Action {
     Ok( html.index() )
   }
@@ -59,7 +62,7 @@ object Application extends Controller {
           case ( email, name, password ) => {
             val user = User.create( email, name, password )
             val key = ValidationKey.createFor( user )
-            Mailer ! Send( DefaultMails.registerMail( name, email, key ) )
+           Mailer ! Send( DefaultMails.registerMail( name, email, key ) )
             Redirect( routes.Test.index )
               .flashing( "success" -> "Thanks for your registration!" )
               .withSession( Secured.createSession( user ) )

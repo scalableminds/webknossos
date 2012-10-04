@@ -1,7 +1,4 @@
-### define
-libs/request : requester
-libs/event_mixin : EventMixin
-###
+### define ###
 
 class ArrayBufferSocket
 

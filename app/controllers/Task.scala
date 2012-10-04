@@ -36,8 +36,8 @@ import brainflight.tools.geometry.Point3D
 object Task extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
-  def createDataSetInformation(dataSetId: ObjectId) =
-    DataSet.findOneById(dataSetId) match {
+  def createDataSetInformation(dataSetName: String) =
+    DataSet.findOneByName(dataSetName) match {
       case Some(dataSet) =>
         Json.obj(
           "dataSet" -> Json.obj(
@@ -55,10 +55,10 @@ object Task extends Controller with Secured {
 
   def info(experimentId: String) = Authenticated { implicit request =>
     Experiment.findOneById(experimentId).map(exp =>
-      Ok(createTaskInformation(exp) ++ createDataSetInformation(exp.dataSetId))).getOrElse(BadRequest("Task not found."))
+      Ok(createTaskInformation(exp) ++ createDataSetInformation(exp.dataSetName))).getOrElse(BadRequest("Task not found."))
   }
 
-  def update(expId: String) = Authenticated(parse.json) { implicit request =>
+  def update(expId: String) = Authenticated(parse.json(maxLength=2097152)) { implicit request =>
     (request.body).asOpt[Experiment].map { exp =>
       Experiment.save(exp)
       Ok

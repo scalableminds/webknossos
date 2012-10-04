@@ -21,7 +21,7 @@ class Gui
     # create GUI
     modelRadius = @model.Route.getActiveNodeRadius()
     @settings = { 
-                save : => @model.Route.pushImpl()
+                save : @saveNow
                 upload : @uploadNML
                 download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
                                           "_blank", "width=700,height=400,location=no,menubar=no")
@@ -33,8 +33,7 @@ class Gui
 
                 routeClippingDistance: data.routeClippingDistance
                 displayCrosshairs: data.displayCrosshair
-                #FIXME: Why do I have to do this?
-                interpolation : if typeof data.interpolation isnt "undefined" then data.interpolation else true
+                interpolation : data.interpolation
 
                 displayPrevXY : data.displayPreviewXY
                 displayPrevYZ : data.displayPreviewYZ
@@ -46,18 +45,13 @@ class Gui
                 deleteActiveTree : @deleteActiveTree
 
                 activeNodeID : @model.Route.getActiveNodeId()
+                newNodeNewTree : data.newNodeNewTree
                 deleteActiveNode : @deleteActiveNode
                 radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
               }
-    @gui  = new dat.GUI({autoPlace: false})
+    @gui  = new dat.GUI({autoPlace: false, width : 280, hideable : false})
     
     container.append @gui.domElement
-    
-    #c = gui.add text, "speed", 1, 100
-    #c.onChange (value) -> Controller.setRouteClippingDistance value
-    
-    $(@gui.domElement).css
-      width : '300px'
 
     fFile = @gui.addFolder("File")
     (fFile.add @settings, "save")
@@ -115,6 +109,9 @@ class Gui
                           .step(1)
                           .name("Active Tree ID")
                           .onFinishChange(@setActiveTree)
+    (fTrees.add @settings, "newNodeNewTree")
+                          .name("Soma clicking mode")
+                          .onFinishChange(@setNewNodeNewTree)
     (fTrees.add @settings, "newTree")
                           .name("Create New Tree")
     (fTrees.add @settings, "deleteActiveTree")
@@ -142,6 +139,11 @@ class Gui
     #fSkeleton.open()
     fTrees.open()
     fNodes.open()
+
+  saveNow : =>
+    @model.Route.pushImpl()
+      .fail( -> alert("Something went wrong with saving, please try again."))
+      .done( -> alert("Successfully saved!"))
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
@@ -250,6 +252,10 @@ class Gui
     @flycam.setGlobalPos(@model.Route.setActiveNode(value))
     @updateNodeAndTreeIds()
     @sceneController.skeleton.setActiveNode()
+
+  setNewNodeNewTree : (value) =>
+    @model.User.Configuration.newNodeNewTree = value
+    @model.User.Configuration.push()      
 
   setNodeRadius : (value) =>
     @model.Route.setActiveNodeRadius(value)

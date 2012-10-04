@@ -41,7 +41,6 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   // defines how many file handles are deleted when the limit is reached
   val dropCount = conf.getInt("bindata.cacheDropCount") getOrElse 20
 
-  // try to prevent loading a file multiple times into memory
   var lastUsed: Option[Tuple2[DataBlockInformation, Data]] = None
 
   val cacheId = this.hashCode

@@ -8,6 +8,7 @@ import scala.collection.JavaConverters._
 import org.joda.time.DateTime
 import models.context._
 import com.novus.salat.dao.SalatDAO
+import models.basics.BasicDAO
 /**
  * scalableminds - brainflight
  * User: tmbo

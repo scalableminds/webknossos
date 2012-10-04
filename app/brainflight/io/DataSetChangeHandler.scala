@@ -6,6 +6,7 @@ import name.pachler.nio.file.impl.PathImpl
 import models.DataSet
 import brainflight.tools.geometry.Point3D
 import play.api.Logger
+import brainflight.tools.ExtendedTypes._
 
 class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {
@@ -19,7 +20,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
       }
     }
   }
-  
+
   def onTick(path: Path) {
     onStart(path)
   }
@@ -52,20 +53,40 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     f.listFiles().filter(_.isDirectory())
   }
 
+  def highestResolutionDir(l: Array[File]) = {
+    if (l.isEmpty)
+      None
+    else
+      Some(l.minBy(f => f.getName().toIntOpt.getOrElse(Int.MaxValue)))
+  }
+
+  def maxValueFromFiles(l: Array[File]): Option[Int] = {
+    val numbers = l.flatMap { f =>
+      if (f.getName.size > 1)
+        f.getName.substring(1).toIntOpt
+      else
+        None
+    }
+    if (numbers.isEmpty)
+      None
+    else {
+      Some(numbers.max)
+    }
+  }
+
   def dataSetFromFile(f: File): Option[DataSet] = {
     if (f.isDirectory()) {
       Logger.trace("dataSetFromFile: " + f)
       val resolutions = f.listFiles().filter(f => f.isDirectory() && isNumber(f.getName())).map(_.getName().toInt).toList
-
       (for {
-        res <- listDirectories(f).headOption
+        res <- highestResolutionDir(listDirectories(f))
         xs <- listDirectories(res).headOption
         ys <- listDirectories(xs).headOption
+        maxX <- maxValueFromFiles(res.listFiles())
+        maxY <- maxValueFromFiles(xs.listFiles())
+        maxZ <- maxValueFromFiles(ys.listFiles())
       } yield {
-        // TODO: improve size calculation
-        (res.listFiles().filter(_.getName.startsWith("x")).size,
-          xs.listFiles().filter(_.getName.startsWith("y")).size,
-          ys.listFiles().filter(_.getName.startsWith("z")).size)
+        (maxX, maxY, maxZ)
       }) map { coords =>
         val maxCoordinates = Point3D(coords._1 * 128, coords._2 * 128, coords._3 * 128)
         DataSet(f.getName(), f.getAbsolutePath(), resolutions, maxCoordinates)

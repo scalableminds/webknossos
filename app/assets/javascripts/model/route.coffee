@@ -243,6 +243,8 @@ Route =
 
     console.log "pushing..."
 
+    deferred = new $.Deferred()
+
     @initialize().pipe =>
 
       request(
@@ -253,6 +255,9 @@ Route =
         )
       .fail =>
         @push()
+        deferred.reject()
+      .done =>
+        deferred.resolve()
 
   createBuffer : ->
     @bufferIndex = 0

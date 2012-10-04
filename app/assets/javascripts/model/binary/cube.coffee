@@ -1,15 +1,6 @@
-### define ###
-
-# Macros
-
-# Computes the index of the specified bucket.
-# Requires `cubeOffset` and `cubeSize` to be in scope.
-bucketIndexByAddress3Macro = (bucket_x, bucket_y, bucket_z) ->
-
-  (bucket_x - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
-  (bucket_y - cubeOffset[1]) * cubeSize[2] + 
-  (bucket_z - cubeOffset[2])
-
+### define
+libs/event_mixin : EventMixin
+###
 
 class Cube
 
@@ -17,130 +8,90 @@ class Cube
   cubeSize : null
   cubeOffset : null
 
+  # Constants
+  BUCKET_LENGTH : 32 * 32 * 16 # TODO
+  BUCKET_SIZE_P : 5
+  ZOOM_STEP_COUNT : 4
 
-  constructor : (dataSetId, bucketSize = 32, zoomStepCount = 4) ->
+
+  constructor : () ->
     
-    @dataSetId = dataSetId
-
-    @BUCKET_SIZE = bucketSize
-    @ZOOM_STEP_COUNT = zoomStepCount
+    _.extend(@, new EventMixin())
 
 
-# TODO: still needed?
-#  getCube : ->
-#  
-#    { cube, cubeSize, cubeOffset } = @
-#    
-#    if cube
-#      { cube, cubeSize, cubeOffset }
-#    else 
-#      null
-
-
-  getWorstRequestedZoomStepOfBucketByZoomedAddress : (bucket, zoomStep) ->
-
-    @getWorstRequestedZoomStepOfBucketByZoomedAddress3(
-      bucket[0]
-      bucket[1]
-      bucket[2]
-      zoomStep
-    )
-
-
-  getWorstRequestedZoomStepOfBucketByZoomedAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
-
-    x = bucket_x << zoomStep
-    y = bucket_y << zoomStep
-    z = bucket_z << zoomStep
-
-    worstZoomStep = 0
-    tmp = 0
-    width = 1 << zoomStep
-    for dx in [0...width] by 1
-      for dy in [0...width] by 1
-        for dz in [0...width] by 1
-          tmp = @getRequestedZoomStepOfBucketByAddress3(x + dx, y + dy, z + dz)
-          worstZoomStep = tmp if tmp > worstZoomStep
-          return worstZoomStep if worstZoomStep == @ZOOM_STEP_COUNT
-
-    worstZoomStep
-
-
-  getRequestedZoomStepOfBucketByAddress : (bucket) ->
-
-    @getRequestedZoomStepOfBucketByAddress3(
-      bucket[0]
-      bucket[1]
-      bucket[2]
-    )
-
-
-  getRequestedZoomStepOfBucketByAddress3 : (bucket_x, bucket_y, bucket_z) ->
-
-    { cube } = @
-
-    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "getRequestedZoomStepOfBucketByAddress3")
-
-    if cube[bucketIndex]
-      cube[bucketIndex].requestedZoomStep
-    else
-      @ZOOM_STEP_COUNT
-
-
-  getZoomStepOfBucketByAddress : (bucket) ->
-
-    @getZoomStepOfBucketByAddress3(
-      bucket[0]
-      bucket[1]
-      bucket[2]
-    )
-
-
-  getZoomStepOfBucketByAddress3 : (bucket_x, bucket_y, bucket_z) ->
-
-    { cube } = @
-
-    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "getZoomStepOfBucketByAddress3")
-
-    if bucketIndex? and cube[bucketIndex]
-      cube[bucketIndex].zoomStep
-    else
-      @ZOOM_STEP_COUNT
-
-
+  # TODO: needed?
   getBucketByAddress : (bucket) ->
 
-    @getBucketByAddress3(
-      bucket[0]
-      bucket[1]
-      bucket[2]
-    )
-
-  getBucketByAddress3 : (bucket_x, bucket_y, bucket_z) ->
-
-    { cube } = @
-
-    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "getBucketByAddress3")
+    bucketIndex = @getBucketIndexByAddress(bucket)
     
     if bucketIndex?
-      cube[bucketIndex]
+      @cube[bucketIndex]
     else
       undefined
 
-  setBucketByZoomedAddress : (bucket, zoomStep, bucketData) ->
 
-    @setBucketByZoomedAddress3(
-      bucket[0]
-      bucket[1]
-      bucket[2]
-      zoomStep
-      bucketData
-    )
+  getBucketIndexByAddress : ([bucket_x, bucket_y, bucket_z]) ->
+
+    { cubeOffset, cubeSize } = @
+
+    if bucket_x >= cubeOffset[0] and bucket_x < cubeOffset[0] + cubeSize[0] and
+    bucket_y >= cubeOffset[1] and bucket_y < cubeOffset[1] + cubeSize[1] and
+    bucket_z >= cubeOffset[2] and bucket_z < cubeOffset[2] + cubeSize[2]
+    
+      (bucket_x - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
+      (bucket_y - cubeOffset[1]) * cubeSize[2] + 
+      (bucket_z - cubeOffset[2])
+    
+    else
+      undefined
 
 
-  setBucketByZoomedAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep, bucketData) ->
+  getZoomStepByAddress : (bucket) ->
 
-    { cube } = @
+    bucketIndex = @getBucketIndexByAddress(bucket)
+
+    if bucketIndex? and @cube[bucketIndex]
+      @cube[bucketIndex].zoomStep
+    else
+      @ZOOM_STEP_COUNT
+
+
+  getRequestedZoomStepByAddress : (bucket) ->
+
+    bucketIndex = @getBucketIndexByAddress(bucket)
+
+    if @cube[bucketIndex]
+      @cube[bucketIndex].requestedZoomStep
+    else
+      @ZOOM_STEP_COUNT
+
+
+  getWorstRequestedZoomStepByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+
+    if zoomStep
+
+      x = bucket_x << zoomStep
+      y = bucket_y << zoomStep
+      z = bucket_z << zoomStep
+
+      worstZoomStep = 0
+      tmp = 0
+      width = 1 << zoomStep
+      for dx in [0...width] by 1
+        for dy in [0...width] by 1
+          for dz in [0...width] by 1
+            tmp = @getRequestedZoomStepByAddress([x + dx, y + dy, z + dz])
+            worstZoomStep = tmp if tmp > worstZoomStep
+            return worstZoomStep if worstZoomStep == @ZOOM_STEP_COUNT
+    
+      worstZoomStep
+
+    else
+
+      @getRequestedZoomStepByAddress([bucket_x, bucket_y, bucket_z])
+
+
+  setBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
       
     if zoomStep
       x = bucket_x << zoomStep
@@ -152,11 +103,8 @@ class Cube
         for dy in [0...width] by 1
           for dz in [0...width] by 1
 
-            bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz, "setBucketByZoomedAddress")
-
-            if bucketIndex == undefined
-              console.log "ERROR"
-            bucket = cube[bucketIndex]
+            bucketIndex = @getBucketIndexByAddress([x + dx, y + dy, z + dz])
+            bucket = @cube[bucketIndex]
 
             if bucketData
               if zoomStep < bucket.zoomStep 
@@ -167,15 +115,13 @@ class Cube
               bucket.requestedZoomStep = bucket.zoomStep
 
     else
-      bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "setBucketByZoomedAddress")
-      
-      if bucketIndex == undefined
-        console.log "ERROR"
-      bucket = cube[bucketIndex]
+      bucketIndex = @getBucketIndexByAddress([bucket_x, bucket_y, bucket_z])
+
+      bucket = @cube[bucketIndex]
       if bucketData
         if zoomStep < bucket.zoomStep 
           bucket.data = bucketData
-          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z], 0, bucket.zoomStep)
+          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, 0], bucket.zoomStep)
           bucket.zoomStep = 0
       else
         bucket.requestedZoomStep = bucket.zoomStep
@@ -183,19 +129,7 @@ class Cube
     return
 
 
-  setRequestedZoomStepByZoomedAddress : (bucket, zoomStep) ->
-
-    @setRequestedZoomStepByZoomedAddress3(
-      bucket[0]
-      bucket[1]
-      bucket[2]
-      zoomStep
-    )
-
-
-  setRequestedZoomStepByZoomedAddress3 : (bucket_x, bucket_y, bucket_z, zoomStep) ->
-
-    { cube } = @
+  setRequestedZoomStepByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
     if zoomStep
 
@@ -208,84 +142,35 @@ class Cube
         for dy in [0...width] by 1
           for dz in [0...width] by 1
 
-            bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz)
+            bucketIndex = @getBucketIndexByAddress([x + dx, y + dy, z + dz])
 
-            if bucketIndex == undefined
-              console.log "ERROR"
-            if cube[bucketIndex]
-              cube[bucketIndex].requestedZoomStep = Math.min(zoomStep, cube[bucketIndex].requestedZoomStep)
+            if @cube[bucketIndex]
+              @cube[bucketIndex].requestedZoomStep = Math.min(zoomStep, @cube[bucketIndex].requestedZoomStep)
             else
-              cube[bucketIndex] = { requestedZoomStep : zoomStep, zoomStep : @ZOOM_STEP_COUNT }
+              @cube[bucketIndex] = { requestedZoomStep : zoomStep, zoomStep : @ZOOM_STEP_COUNT }
 
     else
 
-      bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
+      bucketIndex = @getBucketIndexByAddress([bucket_x, bucket_y, bucket_z])
 
-      if bucketIndex == undefined
-        console.log "ERROR"
-
-      if cube[bucketIndex]
-        cube[bucketIndex].requestedZoomStep = 0
+      if @cube[bucketIndex]
+        @cube[bucketIndex].requestedZoomStep = 0
       else
-        cube[bucketIndex] = { requestedZoomStep : 0, zoomStep : @ZOOM_STEP_COUNT }
+        @cube[bucketIndex] = { requestedZoomStep : 0, zoomStep : @ZOOM_STEP_COUNT }
 
     return
 
-
-  bucketIndexByAddress : (bucket) ->
-
-    @bucketIndexByAddress3(
-      bucket[0]
-      bucket[1]
-      bucket[2]
-    )
-
-
-  bucketIndexByZoomedAddress : (bucket, zoomStep) ->
-
-    @bucketIndexByAddress3(
-      bucket[0] << zoomStep
-      bucket[1] << zoomStep
-      bucket[2] << zoomStep
-    )
-
-
-  bucketIndexByAddress3 : (bucket_x, bucket_y, bucket_z, name) ->
-
-    { cubeOffset, cubeSize } = @
-
-    if bucket_x >= cubeOffset[0] and bucket_x < cubeOffset[0] + cubeSize[0] and
-    bucket_y >= cubeOffset[1] and bucket_y < cubeOffset[1] + cubeSize[1] and
-    bucket_z >= cubeOffset[2] and bucket_z < cubeOffset[2] + cubeSize[2]
-    
-      bucketIndexByAddress3Macro(bucket_x, bucket_y, bucket_z)
-
-    else
-
-      undefined
-
         
-  vertexToZoomedBucketAddress : (vertex, zoomStep) ->
+  positionToZoomedAddress : (x, y, z, zoomStep) ->
 
-    a = @vertexToZoomedBucketAddress3(
-      vertex[0]
-      vertex[1]
-      vertex[2]
+    [ x >> @cube.BUCKET_SIZE_P + zoomStep,
+      y >> @cube.BUCKET_SIZE_P + zoomStep,
+      z >> @cube.BUCKET_SIZE_P + zoomStep,
       zoomStep
-    )
+    ]
 
 
-  vertexToZoomedBucketAddress3 : (x, y, z, zoomStep) ->
-
-    [ x >> 5 + zoomStep, y >> 5 + zoomStep, z >> 5 + zoomStep]
-
-
-  extendByBucketAddressExtent : ({ min_x, min_y, min_z, max_x, max_y, max_z }) ->  
-
-    @extendByBucketAddressExtent6(min_x, min_y, min_z, max_x, max_y, max_z)  
-
-
-  extendByBucketAddressExtent6 : (min_x, min_y, min_z, max_x, max_y, max_z) ->
+  extendByBucketAddressExtent : ([min_x, min_y, min_z], [max_x, max_y, max_z]) ->
 
     { cube : oldCube, cubeOffset : oldCubeOffset, cubeSize : oldCubeSize } = @
 
@@ -354,32 +239,8 @@ class Cube
         @cubeOffset = newCubeOffset
         @cubeSize   = newCubeSize
 
-        # verify
-
-        # throw "ouch" unless newIndex == newCube.length
-
-        # for x in [newCubeOffset[0]...(newCubeOffset[0] + newCubeSize[0])]
-        #   for y in [newCubeOffset[1]...(newCubeOffset[1] + newCubeSize[1])]
-        #     for z in [newCubeOffset[2]...(newCubeOffset[2] + newCubeSize[2])]
-              
-        #         oldIndex =
-        #           (x - oldCubeOffset[0]) * oldCubeSize[2] * oldCubeSize[1] +
-        #           (y - oldCubeOffset[1]) * oldCubeSize[2] + 
-        #           (z - oldCubeOffset[2])
-              
-        #         newIndex = 
-        #           (x - newCubeOffset[0]) * newCubeSize[2] * newCubeSize[1] +
-        #           (y - newCubeOffset[1]) * newCubeSize[2] + 
-        #           (z - newCubeOffset[2])
-
-        #       if (oldCubeOffset[0] <= x < oldUpperBound[0]) and
-        #       (oldCubeOffset[1] <= y < oldUpperBound[1]) and
-        #       (oldCubeOffset[2] <= z < oldUpperBound[2])
-        #         throw "ouch" unless oldCube[oldIndex] == newCube[newIndex]
-        #       else
-        #         throw "ouch" unless newCube[newIndex] == undefined
-
     else
+
       # Before, there wasn't any cube.
       newCubeOffset = new Uint32Array(3)
       newCubeOffset[0] = Math.min(min_x, max_x)

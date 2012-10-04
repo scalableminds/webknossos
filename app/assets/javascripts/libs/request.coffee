@@ -2,38 +2,45 @@
 
 request = (options) ->
 
-  if options.dataType == "blob" or options.dataType == "arraybuffer"
-    
-    deferred = $.Deferred()
+  deferred = $.Deferred()
 
-    return deferred.reject('No url defined').promise() unless options.url
+  _.defaults(options,
+    method: 'GET',
+    responseType: null,
+    data: null
+    contentType: null
+  )
 
-    _.defaults(options, type: 'GET', data: null)
+  return deferred.reject('No url defined').promise() unless options.url
 
-    options.type = 'POST' if options.type == 'GET' and options.data
+  if options.data
+    options.data = JSON.stringify(options.data) if options.contentType == 'application/json'
+    options.data = jQuery.param(options.data)   if options.contentType == 'application/x-www-form-urlencoded'
+    options.method = 'POST' if options.method == 'GET'
 
-    xhr = new XMLHttpRequest()
-    xhr.open options.type, options.url, true
-    xhr.responseType = options.dataType 
-    xhr.setRequestHeader('Content-Type', options.contentType) if options.contentType
+  xhr = new XMLHttpRequest()
+  xhr.open options.method, options.url, true
+  if options.responseType && options.responseType != "json"
+    xhr.responseType = options.responseType 
+  xhr.setRequestHeader('Content-Type', options.contentType) if options.contentType
 
-    xhr.onload = ->
-      if @status == 200
-        deferred.resolve(@response)
+  xhr.onload = ->
+    if @status == 200
+      if options.responseType == "json"
+        try
+          data = JSON.parse @response
+        catch error
+          return deferred.reject(error)
+        deferred.resolve(data)
       else
-        deferred.reject(@statusText)
-    
-    xhr.onerror = (err) ->
-      deferred.reject(err)
-
-    xhr.send(options.data)
-
-    deferred.promise()
+        deferred.resolve(@response)
+    else
+      deferred.reject(@statusText)
   
-  else
-    
-    if options.data
-      options.data = JSON.stringify(options.data)
-      options.contentType = "application/json" unless options.contentType
-    
-    $.ajax(options)
+  xhr.onerror = (err) ->
+    deferred.reject(err)
+
+  console.log options.data
+  xhr.send(options.data)
+
+  deferred.promise()

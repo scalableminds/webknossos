@@ -3,7 +3,6 @@ model/binary/cube : Cube
 model/binary/pullqueue : PullQueue
 model/binary/renderer : Renderer
 model/game : Game
-libs/event_mixin : EventMixin
 ###
 
 # Macros
@@ -48,12 +47,15 @@ class Binary
   cube : null
   queue : null
 
-  constructor : (textureSize = 512, bucketSize = 32, zoomStepCount = 4) ->
+  # Constants
+  TEXTURE_SIZE : 512
+  PING_THROTTLE_TIME : 1000
 
-    @TEXTURE_SIZE = textureSize
 
-    @cube = new Cube("TEST")
-    @queue = new PullQueue(@cube)
+  constructor : () ->
+
+    @cube = new Cube()
+    @queue = new PullQueue("506d73f6e4b0a9f7ee01ad66", @cube) # TODO
 
     @cube.on "bucketLoaded", (bucket, newZoomStep, oldZoomStep) =>
 
@@ -147,7 +149,7 @@ class Binary
         index--
         if buckets[index]
          # priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
-          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES[index % @PRIORITIES.length]# + @PRELOADING[level]# + buckets3.length
+          @queue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z, zoomSteps[0]], @PRIORITIES[index % @PRIORITIES.length]# + @PRELOADING[level]# + buckets3.length
 
         unless i % buckets.length
           index = buckets.length
@@ -160,115 +162,17 @@ class Binary
           #direction_y = Math.round(delta_y)
           #direction_z = Math.round(delta_z)
 
-    PullQueue.pull()
-
-    @cubeReady = true
+    @queue.pull()
 
 
-  get : (position, zoomStep, area, plane) ->
+  get : (position, zoomStep, area) ->
 
-    $.when(@getSync(position, zoomStep, area, @planes[plane]))
-
-
-  # A synchronized implementation of `get`. Cuz its faster.
-  getSync : (position, zoomStep, area, plane) ->
-
-    #zoomStep = 2
-    #position[0] = 2688
-    #position[1] = 2688
-    #console.log "HERE WE GO"
-
-    return unless @cubeReady
-
-    topLeftPosition = position.slice(0)
-    topLeftPosition
-    topLeftPosition[plane.view.u] -= (@TEXTURE_SIZE >> 1) << zoomStep
-    topLeftPosition[plane.view.v] -= (@TEXTURE_SIZE >> 1) << zoomStep
-
-    topLeftBucket = Cube.vertexToZoomedBucketAddress(topLeftPosition, zoomStep)
-
-    layer = position[plane.view.w]
-
-    area = [
-      area[0] >> 5
-      area[1] >> 5
-      area[2] - 1 >> 5
-      area[3] - 1 >> 5
-    ]
-
-    unless _.isEqual(plane.layer, layer) and _.isEqual(plane.zoomStep, zoomStep)
-      plane.layer = layer
-      plane.zoomStep = zoomStep
-      plane.topLeftBucket = topLeftBucket
-      plane.area = area
-      plane.tiles = @getTileArray(topLeftBucket, @TEXTURE_SIZE >> 5, @TEXTURE_SIZE >> 5, plane.view)
-      plane.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
-      plane.changed = true
-
-    unless _.isEqual(plane.topLeftBucket, topLeftBucket)
-      oldTopLeftBucket = plane.topLeftBucket
-      oldTiles = plane.tiles
-      oldBuffer = plane.buffer
-
-      plane.topLeftBucket = topLeftBucket
-      plane.tiles = @getTileArray(topLeftBucket, @TEXTURE_SIZE >> 5, @TEXTURE_SIZE >> 5, plane.view)
-      plane.buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
-      plane.changed = true
-
-      width = (@TEXTURE_SIZE >> 5) - Math.abs(plane.topLeftBucket[plane.view.u] - oldTopLeftBucket[plane.view.u])
-      height = (@TEXTURE_SIZE >> 5) - Math.abs(plane.topLeftBucket[plane.view.v] - oldTopLeftBucket[plane.view.v])
-      oldOffset = [
-        Math.max(plane.topLeftBucket[plane.view.u] - oldTopLeftBucket[plane.view.u], 0)
-        Math.max(plane.topLeftBucket[plane.view.v] - oldTopLeftBucket[plane.view.v], 0)
-      ]
-      newOffset = [
-        Math.max(oldTopLeftBucket[plane.view.u] - plane.topLeftBucket[plane.view.u], 0)
-        Math.max(oldTopLeftBucket[plane.view.v] - plane.topLeftBucket[plane.view.v], 0)
-      ]
-
-      for du in [0...width] by 1
-        for dv in [0...height] by 1
-
-          oldTile = [oldOffset[0] + du, oldOffset[1] + dv]
-          newTile = [newOffset[0] + du, newOffset[1] + dv]
-
-          oldTileIndex = tileIndexByTileMacro(oldTile)
-          newTileIndex = tileIndexByTileMacro(newTile)
-
-          if plane.tiles[newTileIndex] and not oldTiles[oldTileIndex]
-            
-            Renderer.copyTile(plane.buffer, newTile, oldBuffer, oldTile)
-            plane.tiles[newTileIndex] = false
-
-    if plane.changed or not _.isEqual(plane.area, area)
-      plane.area = area
-      plane.changed = false
-
-      for u in [area[0]..area[2]] by 1
-        for v in [area[1]..area[3]] by 1
-
-          tile = [u, v]
-          tileIndex = tileIndexByTileMacro(tile)
- 
-          if plane.tiles[tileIndex]
-            Renderer.renderTile(tile, plane)
-            plane.tiles[tileIndex] = false
-
-      plane.buffer
-    
-    else
-      null
+    $.when(@getSync(position, zoomStep, area))
 
 
-  getTileArray : (offset, range_u, range_v, view) ->
+  getSync : (position, zoomStep, area) ->
 
-    tiles = []
-
-    for du in [0...range_u] by 1
-      for dv in [0...range_v] by 1
-        tiles.push offset[view.u] + du >= 0 and offset[view.v] + dv >= 0 and offset[view.w] >= 0
-
-    tiles
+    null
 
 
   getBucketArray : (center, range_x, range_y, range_z) ->

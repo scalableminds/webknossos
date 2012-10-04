@@ -12,6 +12,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Json._
 import scala.collection.immutable.HashMap
 import models.graph.Experiment
+import models.basics.BasicDAO
 
 case class User(
     email: String,

@@ -6,14 +6,23 @@ import brainflight.mail.DefaultMails
 import models.graph.Experiment
 import models.graph.Tree
 import models.graph.Node
+import play.api.libs.concurrent._
+import play.api.Play.current
+import akka.actor.Props
+import brainflight.mail.Mailer
+import brainflight.io.StartWatching
+import brainflight.io.DataSetChangeHandler
+import brainflight.io.DirectoryWatcherActor
 
 object Global extends GlobalSettings {
-
+  
   override def onStart(app: Application) {
+    val DirectoryWatcher = Akka.system.actorOf( Props[DirectoryWatcherActor], name = "directoryWatcher" )
+    DirectoryWatcher ! StartWatching("binaryData", new DataSetChangeHandler)
+    
     if (Play.current.mode == Mode.Dev)
-      InitialData.insert()
+      InitialData.insert() 
   }
-
 }
 
 /**
@@ -23,14 +32,6 @@ object Global extends GlobalSettings {
 object InitialData {
 
   def insert() = {
-    if ( DataSet.findAll.isEmpty ) {
-      DataSet.insert( DataSet(
-        "2012-06-28_Cortex",
-        Play.configuration.getString( "binarydata.path" ) getOrElse ( "binaryData/" )+"2012-06-28_Cortex",
-        List( 0, 1, 2, 3 ),
-        Point3D(24 * 128, 16 * 128, 8 * 128) ) )
-    }
-
     if (Role.findAll.isEmpty) {
       Role.insert(Role("user", Nil))
       Role.insert(Role("admin", Permission("*", "*" :: Nil) :: Nil))
@@ -42,5 +43,4 @@ object InitialData {
         u).foreach(User.create _ tupled)
     }
   }
-
 }

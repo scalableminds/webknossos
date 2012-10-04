@@ -43,7 +43,7 @@ object NMLIO extends Controller with Secured {
     } yield {
       Ok(Xml.toXML(task)).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",
-        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(task.dataSetId)))
+        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(task.dataSetName)))
     }) getOrElse BadRequest
   }
 

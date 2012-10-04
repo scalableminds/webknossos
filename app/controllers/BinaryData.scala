@@ -17,7 +17,6 @@ import Input.EOF
 import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
 import play.libs.Akka._
-import models.Actors._
 import models.Role
 import brainflight.binary._
 import brainflight.security.Secured
@@ -26,6 +25,7 @@ import models.DataSet
 import akka.pattern.AskTimeoutException
 import play.api.libs.iteratee.Concurrent.Channel
 import scala.collection.mutable.ArrayBuffer
+import akka.routing.RoundRobinRouter
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
@@ -37,6 +37,9 @@ import scala.collection.mutable.ArrayBuffer
 
 object BinaryData extends Controller with Secured {
 
+  val dataSetActor = Akka.system.actorOf( Props[DataSetActor].withRouter(
+    RoundRobinRouter( nrOfInstances = 8 ) ) )
+    
   override val DefaultAccessRole = Role.User
 
   implicit val dispatcher = Akka.system.dispatcher
@@ -63,7 +66,7 @@ object BinaryData extends Controller with Secured {
       CubeRequest( dataSet, resolution, cuboid )
     }
     
-    val future = ( DataSetActor ? MultiCubeRequest( cubeRequests ) ) recover {
+    val future = ( dataSetActor ? MultiCubeRequest( cubeRequests ) ) recover {
       case e: AskTimeoutException =>
         new Array[Byte]( 0 )
     }

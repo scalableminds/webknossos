@@ -19,7 +19,7 @@ import play.api.libs.json.Format
 import brainflight.tools.geometry.Scale
 import models.Color
 
-case class Experiment(dataSetId: ObjectId, trees: List[Tree], branchPoints: List[BranchPoint], time: Long, activeNodeId: Int, scale: Scale, editPosition: Point3D, _id: ObjectId = new ObjectId) {
+case class Experiment(dataSetName: String, trees: List[Tree], branchPoints: List[BranchPoint], time: Long, activeNodeId: Int, scale: Scale, editPosition: Point3D, _id: ObjectId = new ObjectId) {
   def id = _id.toString
   def tree(treeId: Int) = trees.find(_.id == treeId)
   def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
@@ -28,7 +28,7 @@ case class Experiment(dataSetId: ObjectId, trees: List[Tree], branchPoints: List
 object Experiment extends BasicDAO[Experiment]("experiments") {
   implicit object ExperimentXMLWrites extends XMLWrites[Experiment] {
     def writes(e: Experiment) = {
-      (DataSet.findOneById(e.dataSetId).map { dataSet =>
+      (DataSet.findOneByName(e.dataSetName).map { dataSet =>
         <things>
           <parameters>
             <experiment name={ dataSet.name }/>
@@ -61,7 +61,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
   def createNew = {
     val d = DataSet.default
     val tree = Tree(1, Nil, Nil, Color(1, 0, 0, 0))
-    val exp = Experiment(d._id, List(tree), Nil, 0, 1, Scale(12, 12, 24), Point3D(0, 0, 0))
+    val exp = Experiment(d.name, List(tree), Nil, 0, 1, Scale(12, 12, 24), Point3D(0, 0, 0))
     Experiment.insert(exp)
     exp
   }

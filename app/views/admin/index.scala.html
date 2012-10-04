@@ -18,7 +18,7 @@
                     <ul class="list">
                       @user.tasks.flatMap(i => models.graph.Experiment.findOneById(i)).map{ task =>
                           <li>
-                            <h4>@models.DataSet.findOneById(task.dataSetId).map(_.name)</h4>
+                            <h4>@models.DataSet.findOneByName(task.dataSetName).map(_.name)</h4>
                             <a href="@controllers.admin.routes.NMLIO.download(task.id)">Export NML</a> 
                             <time datetime="@task.time">@task.time</time>
                           </li>

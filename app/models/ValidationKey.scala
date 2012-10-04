@@ -5,6 +5,7 @@ import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import java.util.UUID
+import models.basics.BasicDAO
 
 case class ValidationKey( key: String, userId: ObjectId, _id: ObjectId = new ObjectId )
 

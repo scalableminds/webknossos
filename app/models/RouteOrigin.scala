@@ -7,6 +7,7 @@ import play.api.Play
 import play.api.Play.current
 import brainflight.tools.geometry.Vector3D
 import org.bson.types.ObjectId
+import models.basics.BasicDAO
 
 /**
  * scalableminds - brainflight

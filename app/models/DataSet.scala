@@ -5,6 +5,7 @@ import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import brainflight.tools.geometry.Point3D
+import models.basics.BasicDAO
 
 case class DataSet(
     name: String,

@@ -1,10 +1,8 @@
-package models
+package models.basics
 
 import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.dao.SalatDAO
-import play.api.Play
-import play.api.Play.current
 import play.api.libs.json.JsArray._
 import play.api.libs.json._
 import org.bson.types.ObjectId
@@ -30,4 +28,6 @@ class BasicDAO[T <: AnyRef](collectionName:String)(implicit val m: Manifest[T])
     else
       None
   }
+  
+  def defaultValues: Map[String, JsValue]
 }

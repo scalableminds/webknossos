@@ -21,7 +21,7 @@ class Gui
     # create GUI
     modelRadius = @model.Route.getActiveNodeRadius()
     @settings = { 
-                save : => @model.Route.pushImpl()
+                save : @saveNow
                 upload : @uploadNML
                 download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
                                           "_blank", "width=700,height=400,location=no,menubar=no")
@@ -139,6 +139,9 @@ class Gui
     #fSkeleton.open()
     fTrees.open()
     fNodes.open()
+
+  saveNow : =>
+    @model.Route.pushImpl().done( -> alert("Successfully saved!"))
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")

@@ -77,7 +77,6 @@ class View
     # Create Abstract Tree Viewer
     @abstractTreeViewer = new AbstractTreeViewer(abstractTreeContainer.width(), abstractTreeContainer.height())
     abstractTreeContainer.append @abstractTreeViewer.canvas
-    @abstractTreeViewer.drawStuff()
 
     # FPS stats
     stats = new Stats()
@@ -218,3 +217,6 @@ class View
 
   getLights  : =>
     @lights
+
+  drawTree : (tree) ->
+    @abstractTreeViewer.drawTree(tree)

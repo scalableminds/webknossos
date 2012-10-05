@@ -256,6 +256,8 @@ class Controller
     @gui.updateRadius()
     @sceneController.setWaypoint()
 
+    @view.drawTree(@model.Route.getTree())
+
   #onPreviewClick : (position) =>
   #  @sceneController.skeleton.onPreviewClick(position, @view.scaleFactor, @view.getCameras()[VIEW_3D])
 

@@ -1,7 +1,7 @@
 ### define ###
 
-NODE_RADIUS = 3
-NODE_DISTANCE = 20
+NODE_RADIUS = 2
+MAX_NODE_DISTANCE = 100
 
 class AbsractTreeViewer
   constructor : (width, height) ->
@@ -23,43 +23,63 @@ class AbsractTreeViewer
     @ctx.fillStyle = "#ffffff"
     @ctx.fillRect(0, 0, @width, @height)
 
+    @nodeDistance = Math.min(@height / (@getMaxTreeDepth(tree) + 1), MAX_NODE_DISTANCE)
+
+    # The algorithm works as follows:
+    # A tree is given a left and right border that it can use. If
+    # there is a branchpoint, both children are rest trees, so the
+    # branch point will choose a left and right border for each of
+    # them and call the method recursively.
+    # For that decision, the branch points needs information about
+    # the rest tree's width. A trees width, however, depends on its
+    # children's width. So, we need to do two iterations: first we
+    # determine the widths of each relevant node, then we use this
+    # information to actually draw the tree. The first task is done
+    # by recordWidths(), the second by drawTreeWithWidths().
+
     @recordWidths(tree)
-    @drawTreeWithWidths(tree, 0, @width, 30)
+    @drawTreeWithWidths(tree, 0, @width, @nodeDistance)
 
-    #@getAbstractNodePositions(tree, 0, @width, 30)
-    #while (true)
-    #  @drawNode(tree.abstractX, tree.abstractY)
-    #  if tree.children[0]
-    #    tree = tree.children[0]
-    #  else
-    #    break
-
-    #@drawNode(@width / 2, 30)
-    #@drawEdge(@width / 2, 30, @width / 2, 50)
-    #@drawNode(@width / 2, 50)
-
-  drawTreeWithWidths : (tree, left, right, top) ->
+  drawTreeWithWidths : (tree, left, right, top) -> 
+    # get the decision point
     decisionPoint = @getNextDecisionPoint(tree)
+    # calculate m (middle that divides the left and right tree, if any)
     if decisionPoint.children.length == 0
-      x = (right - left) / 2 + left
+      m = (left + right) / 2
     else
       c1 = decisionPoint.children[0]
       c2 = decisionPoint.children[1]
-      x = (right - left) * c1.width / (c1.width + c2.width) + left
-    x2 = (right - left) / 2 + left
-    @drawNode(x2, top)
-    top2 = top
-    while tree.children.length == 1
-      tree = tree.children[0]
-      top2 += NODE_DISTANCE
-      @drawNode(x2, top2)
-      @drawEdge(x2, top2 - NODE_DISTANCE, x2, top2)
-    if tree.children.length > 0
-      c1 = @drawTreeWithWidths(tree.children[0], left, x, top2 + NODE_DISTANCE)
-      c2 = @drawTreeWithWidths(tree.children[1], x, right, top2 + NODE_DISTANCE)
-      @drawEdge(x2, top2, c1[0], c1[1])
-      @drawEdge(x2, top2, c2[0], c2[1])
-    return [x2, top]
+      m = (right - left) * c1.width / (c1.width + c2.width) + left
+    
+    # Calculate the length of the 'chain' of nodes with one child,
+    # because they all share the root's x coordinate
+    chainCount = 0
+    subTree = tree
+    while subTree.children.length == 1
+      subTree = subTree.children[0]
+      chainCount++
+
+    # if the decision point has (2) children, draw them and remember their prosition
+    if decisionPoint.children.length > 0
+      c1 = @drawTreeWithWidths(decisionPoint.children[0], left,  m, top + (chainCount + 1) * @nodeDistance)
+      c2 = @drawTreeWithWidths(decisionPoint.children[1], m, right, top + (chainCount + 1) * @nodeDistance)
+      # set the root's x coordinate to be in between the decisionPoint's childs
+      xr = (c1[0] + c2[0]) / 2
+      # draw edges from last node in 'chain' (or root, if chain empty)
+      # and the decisionPoint's children
+      @drawEdge(xr, top + chainCount * @nodeDistance, c1[0], c1[1])
+      @drawEdge(xr, top + chainCount * @nodeDistance, c2[0], c2[1])
+    else
+      # if decisionPoint is leaf, there's not much to do
+      xr = m
+    
+    # Draw the chain and the root, connect them.
+    for i in [0..chainCount]
+      @drawNode(xr, top + i * @nodeDistance)
+      if i != 0
+        @drawEdge(xr, top + (i - 1) * @nodeDistance, xr, top + i * @nodeDistance)
+
+    return [xr, top]
 
   drawNode : (x, y) ->
     @ctx.beginPath()
@@ -74,43 +94,41 @@ class AbsractTreeViewer
     @ctx.lineTo(x2, y2)
     @ctx.stroke()
 
+  # Decision point is any point with point.children.length != 1
   getNextDecisionPoint : (tree) ->
     while tree.children.length == 1
       tree = tree.children[0]
     return tree
 
   recordWidths : (tree) ->
+    # Because any node with children.length == 1 has
+    # the same width as its child, we can skip those.
+
+    # Leafs just have a width of one
     decisionPoint = @getNextDecisionPoint(tree)
     if decisionPoint.children.length == 0
       decisionPoint.width = 1
       return 1
-
+    
+    # Branchpoints are as wide as its children combined.
+    # But actually, we need the width of the children
     result = 0
     for child in decisionPoint.children
       child.width = @recordWidths(child)
       result += child.width
     return result
 
-  getAbstractNodePositions : (tree, left, right, top) ->
-    # root is fix
-    tree.abstractX = (right - left) / 2
-    tree.abstractY = top
+  getMaxTreeDepth : (tree, count) ->
+    unless tree
+      return 0
+    unless count
+      count = 1
 
-    offset = 30
-    offsetCounter = 1
+    while tree.children.length == 1
+      tree = tree.children[0]
+      count++
 
-    while true
-      if tree.children.length == 0
-        return
-      if tree.children.length == 1
-        tree = tree.children[0]
-        tree.abstractX = (right - left) / 2
-        tree.abstractY = top + offsetCounter * offset
-        offsetCounter++
-    
-    # Deal with branchpoints
-    i = 0
-    for child in tree.children
-      @getAbstractNodePositions(child, left + i * (right - left) / tree.children.length,
-                                       left + (i + 1) * (right - left) / tree.children.length,
-                                       top + offsetCounter * offset)
+    if tree.children.length == 0
+      return count
+    return Math.max(@getMaxTreeDepth(tree.children[0], count),
+              @getMaxTreeDepth(tree.children[1], count)) + 1

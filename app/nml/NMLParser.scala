@@ -26,13 +26,11 @@ class NMLParser(file: File) {
 
   def parse = {
     val data = XML.loadFile(file)
-    println("test")
     for {
       parameters <- (data \ "parameters")
       dataSetName <- (parameters \ "experiment" \ "@name")
       scale <- parseScale(parameters \ "scale")
     } yield {
-      println("reached")
       val activeNodeId = parseActiveNode(parameters \ "activeNode")
       val editPosition = parseEditPosition(parameters \ "editPosition")
       val time = parseTime(parameters \ "time")
@@ -41,41 +39,46 @@ class NMLParser(file: File) {
       Experiment(dataSetName.text, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
     }
   }
-  
-  
-  
 
   def verifyTrees(trees: List[Tree]): List[Tree] = {
-    trees.flatMap(splitIntoComponents)
-    //trees
+    createUniqueIds(trees.flatMap(splitIntoComponents))
   }
-  
+
+  def createUniqueIds(trees: List[Tree]) = {
+    trees.foldLeft(List[Tree]()) { (l, t) =>
+      if (l.isEmpty || l.find(_.id == t.id).isEmpty)
+        t :: l
+      else {
+        val alteredId = (l.maxBy(_.id).id + 1)
+        t.copy(id = alteredId) :: l
+      }
+    }
+  }
+
   def splitIntoComponents(tree: Tree): List[Tree] = {
     def buildTreeFromNode(node: models.graph.Node, sourceTree: Tree): Tree = {
-        val connectedEdges = sourceTree.edges.filter( e => e.target == node.id || e.source == node.id)
-        
-        val connectedNodes = connectedEdges.flatMap{
-          case Edge(s,t) if s == node.id => sourceTree.nodes.find( _.id == t)
-          case Edge(s,t) if t == node.id => sourceTree.nodes.find( _.id == s)
-        }
-        
-        val componentPart = Tree(tree.id, node :: connectedNodes, connectedEdges, tree.color)
-        
-        //println("node: \n"+ node + "\ncomponentPart: \n" + componentPart + "\ntree: \n" + sourceTree + "\n")
-        connectedNodes.foldLeft(componentPart)((tree, n) =>
-            tree ++ buildTreeFromNode(n, sourceTree -- componentPart))
+      val connectedEdges = sourceTree.edges.filter(e => e.target == node.id || e.source == node.id)
+
+      val connectedNodes = connectedEdges.flatMap {
+        case Edge(s, t) if s == node.id => sourceTree.nodes.find(_.id == t)
+        case Edge(s, t) if t == node.id => sourceTree.nodes.find(_.id == s)
+      }
+
+      val componentPart = Tree(tree.id, node :: connectedNodes, connectedEdges, tree.color)
+
+      connectedNodes.foldLeft(componentPart)((tree, n) =>
+        tree ++ buildTreeFromNode(n, sourceTree -- componentPart))
     }
-    
+
     var treeToProcess = tree
-    
+
     var components = List[Tree]()
-    
-    while(!treeToProcess.nodes.isEmpty){
+
+    while (!treeToProcess.nodes.isEmpty) {
       val component = buildTreeFromNode(treeToProcess.nodes.head, treeToProcess)
       treeToProcess = treeToProcess -- component
       components ::= component
     }
-    if(components.size > 1 ) Logger.debug("Splitted tree: " + components)
     components
   }
 
@@ -120,15 +123,15 @@ class NMLParser(file: File) {
       colorAlpha <- ((node \ "@color.a").text).toFloatOpt
     } yield {
       Color(colorRed, colorBlue, colorGreen, colorAlpha)
-    }) getOrElse( DEFAULT_COLOR )
+    }) getOrElse (DEFAULT_COLOR)
   }
 
   def parseTree(tree: Node): Option[Tree] = {
     (for {
-      id <- ((tree \ "@id").text).toIntOpt    
+      id <- ((tree \ "@id").text).toIntOpt
     } yield {
       val color = parseColor(tree)
-      Logger.debug("Parsing tree Id: %d".format(id))
+      Logger.trace("Parsing tree Id: %d".format(id))
       val nodes = (tree \ "nodes" \ "node").flatMap(parseNode).toMap
 
       val edges = (tree \ "edges" \ "edge").flatMap(parseEdge(nodes)).toList
@@ -152,25 +155,23 @@ class NMLParser(file: File) {
     for {
       source <- ((edge \ "@source").text).toIntOpt
       target <- ((edge \ "@target").text).toIntOpt
-      //sourceNode <- treeNodes.get(source)
-      //targetNode <- treeNodes.get(target)
     } yield {
       Edge(source, target)
     }
   }
-  
+
   def parseViewport(node: NodeSeq) = {
     ((node \ "@inVp").text).toIntOpt.getOrElse(DEFAULT_VIEWPORT)
   }
-  
+
   def parseResolution(node: NodeSeq) = {
     ((node \ "@inMag").text).toIntOpt.getOrElse(DEFAULT_RESOLUTION)
-  }  
- 
+  }
+
   def parseTimestamp(node: NodeSeq) = {
     ((node \ "@time").text).toIntOpt.getOrElse(DEFAULT_TIMESTAMP)
-  }  
-    
+  }
+
   def parseNode(node: Node) = {
     for {
       id <- ((node \ "@id").text).toIntOpt
@@ -179,7 +180,7 @@ class NMLParser(file: File) {
     } yield {
       val viewport = parseViewport(node)
       val resolution = parseResolution(node)
-      val timestamp = parseTimestamp(node)   
+      val timestamp = parseTimestamp(node)
       (id -> graph.Node(id, radius, position, viewport, resolution, timestamp))
     }
   }

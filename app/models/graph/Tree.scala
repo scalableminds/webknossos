@@ -13,6 +13,14 @@ import play.api.libs.json.JsValue
 case class Tree(id: Int, nodes: List[Node], edges: List[Edge], color: Color) {
   def addNodes(ns: List[Node]) = this.copy(nodes = nodes ::: ns)
   def addEdges(es: List[Edge]) = this.copy(edges = edges ::: es)
+  
+  def --(t: Tree) = {
+    Tree(id, nodes filterNot(t.nodes.contains), edges.filterNot(t.edges.contains), color)
+  }
+  
+  def ++(t:Tree) = {
+    Tree(id, (nodes ++ t.nodes).distinct, (edges ++ t.edges).distinct, color)
+  }
 }
 
 object Tree {

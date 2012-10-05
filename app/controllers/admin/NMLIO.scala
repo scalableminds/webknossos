@@ -24,7 +24,7 @@ object NMLIO extends Controller with Secured {
     request.body.file("nmlFile").map { nmlFile =>
       (new NMLParser(nmlFile.ref.file).parse).foreach { e =>
         Logger.debug("Successfully parsed nmlFile")
-        User.save(request.user.copy(tasks = List(e._id)))
+        User.save(request.user.copy(experiments = e._id :: request.user.experiments))
         Experiment.save(e)
       }
       Ok("File uploaded")
@@ -43,7 +43,7 @@ object NMLIO extends Controller with Secured {
     } yield {
       Ok(Xml.toXML(task)).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",
-        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(task.dataSetId)))
+        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(task.dataSetName)))
     }) getOrElse BadRequest
   }
 

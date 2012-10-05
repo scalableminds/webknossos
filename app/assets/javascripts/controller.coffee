@@ -131,6 +131,8 @@ class Controller
       {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : @setWaypoint}
       {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "r" : @onPreviewClick}
     )
+      ##{"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev, "r" : _.bind(View.onPreviewClick, View), "m" : _.bind(View.showNodeID, View)}
+    #)
 
   initKeyboard : ->
     
@@ -163,7 +165,8 @@ class Controller
       "down"          : => @moveY( @model.User.Configuration.moveValue)
 
       #misc keys
-      "n" : => Helper.toggle()
+      # TODO: what does this? I removed it, I need the key.
+      #"n" : => Helper.toggle()
       #"ctr + s"       : => @model.Route.pushImpl()
     )
     
@@ -181,6 +184,14 @@ class Controller
       #Zoom in/out
       "i" : => @cameraController.zoomIn()
       "o" : => @cameraController.zoomOut()
+
+      # delete active node
+      "delete" : =>
+        # just use the method implemented in gui
+        @gui.deleteActiveNode()
+
+      "n" : =>
+        @gui.createNewTree()
     )
 
   # for more buttons look at Input.Gamepad
@@ -228,6 +239,10 @@ class Controller
   moveZ : (z) => @move([0, 0, z])
 
   setWaypoint : (relativePosition, typeNumber) =>
+
+    if @model.User.Configuration.newNodeNewTree == true
+      @gui.createNewTree()
+
     curGlobalPos = @flycam.getGlobalPos()
     activePlane  = @flycam.getActivePlane()
     zoomFactor   = @flycam.getPlaneScalingFactor activePlane

@@ -13,7 +13,12 @@ import play.api.libs.json.JsBoolean
 import play.api.libs.json._
 
 case class UserConfiguration(
-  settings: Map[String, JsValue] )
+  settings: Map[String, JsValue] ){
+    
+  def settingsOrDefaults = {
+    UserConfiguration.defaultConfiguration.settings ++ settings
+  }
+}
 
 object UserConfiguration {
   val MaxSettings = 50
@@ -31,6 +36,7 @@ object UserConfiguration {
       "displayPreviewXY" -> JsBoolean( false ),
       "displayPreviewYZ" -> JsBoolean( false ),
       "displayPreviewXZ" -> JsBoolean( false ),
+      "newNodeNewTree" -> JsBoolean( false ),
       "nodesAsSpheres" -> JsBoolean( false ),
       "mouseInversionX" -> JsNumber( -1 ),
       "mouseInversionY" -> JsNumber( -1 ),

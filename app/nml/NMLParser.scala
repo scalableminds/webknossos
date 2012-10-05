@@ -16,20 +16,29 @@ import models.BranchPoint
 import brainflight.tools.geometry.Scale
 
 class NMLParser(file: File) {
+  val DEFAULT_EDIT_POSITION = Point3D(0, 0, 0)
+  val DEFAULT_TIME = 0
+  val DEFAULT_ACTIVE_NODE_ID = 1
+  val DEFAULT_COLOR = Color(1, 0, 0, 0)
+  val DEFAULT_VIEWPORT = 0
+  val DEFAULT_RESOLUTION = 0
+  val DEFAULT_TIMESTAMP = 0
+
   def parse = {
     val data = XML.loadFile(file)
+    println("test")
     for {
       parameters <- (data \ "parameters")
-      dataSetId <- (parameters \ "experiment" \ "@name")
-      editPosition <- parseEditPosition(parameters \ "editPosition")
+      dataSetName <- (parameters \ "experiment" \ "@name")
       scale <- parseScale(parameters \ "scale")
-      time <- ((parameters \ "time" \ "@ms").text).toIntOpt
-      activeNodeId <- ((parameters \ "activeNode" \ "@id").text).toIntOpt
-      dataSet <- DataSet.findOneByName(dataSetId.text)
     } yield {
+      println("reached")
+      val activeNodeId = parseActiveNode(parameters \ "activeNode")
+      val editPosition = parseEditPosition(parameters \ "editPosition")
+      val time = parseTime(parameters \ "time")
       val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
       val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
-      Experiment(dataSet._id, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
+      Experiment(dataSetName.text, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
     }
   }
   
@@ -70,8 +79,15 @@ class NMLParser(file: File) {
     components
   }
 
+  def parseActiveNode(node: NodeSeq) = {
+    (node \ "@id").text.toIntOpt.getOrElse(DEFAULT_ACTIVE_NODE_ID)
+  }
+
+  def parseTime(node: NodeSeq) = {
+    (node \ "@ms").text.toIntOpt.getOrElse(DEFAULT_TIME)
+  }
   def parseEditPosition(node: NodeSeq) = {
-    node.headOption.flatMap(parsePoint3D)
+    node.headOption.flatMap(parsePoint3D).getOrElse(DEFAULT_EDIT_POSITION)
   }
 
   def parseBranchPoint(trees: List[Tree])(node: Node) = {
@@ -97,21 +113,21 @@ class NMLParser(file: File) {
   }
 
   def parseColor(node: Node) = {
-    for {
+    (for {
       colorRed <- ((node \ "@color.r").text).toFloatOpt
       colorBlue <- ((node \ "@color.g").text).toFloatOpt
       colorGreen <- ((node \ "@color.b").text).toFloatOpt
       colorAlpha <- ((node \ "@color.a").text).toFloatOpt
     } yield {
       Color(colorRed, colorBlue, colorGreen, colorAlpha)
-    }
+    }) getOrElse( DEFAULT_COLOR )
   }
 
   def parseTree(tree: Node): Option[Tree] = {
     (for {
-      id <- ((tree \ "@id").text).toIntOpt
-      color <- parseColor(tree)
+      id <- ((tree \ "@id").text).toIntOpt    
     } yield {
+      val color = parseColor(tree)
       Logger.debug("Parsing tree Id: %d".format(id))
       val nodes = (tree \ "nodes" \ "node").flatMap(parseNode).toMap
 
@@ -142,16 +158,28 @@ class NMLParser(file: File) {
       Edge(source, target)
     }
   }
-
+  
+  def parseViewport(node: NodeSeq) = {
+    ((node \ "@inVp").text).toIntOpt.getOrElse(DEFAULT_VIEWPORT)
+  }
+  
+  def parseResolution(node: NodeSeq) = {
+    ((node \ "@inMag").text).toIntOpt.getOrElse(DEFAULT_RESOLUTION)
+  }  
+ 
+  def parseTimestamp(node: NodeSeq) = {
+    ((node \ "@time").text).toIntOpt.getOrElse(DEFAULT_TIMESTAMP)
+  }  
+    
   def parseNode(node: Node) = {
     for {
       id <- ((node \ "@id").text).toIntOpt
       radius <- ((node \ "@radius").text).toFloatOpt
       position <- parsePoint3D(node)
-      viewport <- ((node \ "@inVp").text).toIntOpt
-      resolution <- ((node \ "@inMag").text).toIntOpt
-      timestamp <- ((node \ "@time").text).toIntOpt
     } yield {
+      val viewport = parseViewport(node)
+      val resolution = parseResolution(node)
+      val timestamp = parseTimestamp(node)   
       (id -> graph.Node(id, radius, position, viewport, resolution, timestamp))
     }
   }

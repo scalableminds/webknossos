@@ -4,7 +4,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Reads
 import models.DataSet
 import brainflight.tools.geometry.Point3D
-import models.BasicDAO
+import models.basics.BasicDAO
 import models.BranchPoint
 import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId
@@ -17,23 +17,29 @@ import play.api.libs.json.Reads
 import play.api.libs.json.JsValue
 import play.api.libs.json.Format
 import brainflight.tools.geometry.Scale
+import models.Color
+import java.util.Date
 
-case class Experiment(dataSetId: ObjectId, trees: List[Tree], branchPoints: List[BranchPoint], time: Long, activeNodeId: Int, scale: Scale, editPosition: Point3D, _id: ObjectId = new ObjectId) {
+case class Experiment(dataSetName: String, trees: List[Tree], branchPoints: List[BranchPoint], timestamp: Long, activeNodeId: Int, scale: Scale, editPosition: Point3D, _id: ObjectId = new ObjectId) {
   def id = _id.toString
   def tree(treeId: Int) = trees.find(_.id == treeId)
   def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
+
+  val date = {
+    new Date(timestamp)
+  }
 }
 
 object Experiment extends BasicDAO[Experiment]("experiments") {
   implicit object ExperimentXMLWrites extends XMLWrites[Experiment] {
     def writes(e: Experiment) = {
-      (DataSet.findOneById(e.dataSetId).map { dataSet =>
+      (DataSet.findOneByName(e.dataSetName).map { dataSet =>
         <things>
           <parameters>
             <experiment name={ dataSet.name }/>
             <scale x={ e.scale.x.toString } y={ e.scale.y.toString } z={ e.scale.z.toString }/>
             <offset x="0" y="0" z="0"/>
-            <time ms={ e.time.toString }/>
+            <time ms={ e.timestamp.toString }/>
             <activeNode id={ e.activeNodeId.toString }/>
             <editPosition x={ e.editPosition.x.toString } y={ e.editPosition.y.toString } z={ e.editPosition.z.toString }/>
           </parameters>
@@ -57,13 +63,12 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     }
   }
 
-  def default = {
-    (for {
-      dataSet <- DataSet.findAll.headOption
-      exp <- findOne(MongoDBObject("dataSetId" -> dataSet._id))
-    } yield {
-      exp
-    }) getOrElse (throw new Exception("No Experiment found"))
+  def createNew = {
+    val d = DataSet.default
+    val tree = Tree(1, Nil, Nil, Color(1, 0, 0, 0))
+    val exp = Experiment(d.name, List(tree), Nil, 0, 1, Scale(12, 12, 24), Point3D(0, 0, 0))
+    Experiment.insert(exp)
+    exp
   }
 
   implicit object ExperimentFormat extends Format[Experiment] {

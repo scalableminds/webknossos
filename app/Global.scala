@@ -6,14 +6,26 @@ import brainflight.mail.DefaultMails
 import models.graph.Experiment
 import models.graph.Tree
 import models.graph.Node
+import play.api.libs.concurrent._
+import play.api.Play.current
+import akka.actor.Props
+import brainflight.mail.Mailer
+import brainflight.io.StartWatching
+import brainflight.io.DataSetChangeHandler
+import brainflight.io.DirectoryWatcherActor
+import models.basics.BasicEvolution
 
 object Global extends GlobalSettings {
-
+  
   override def onStart(app: Application) {
-    if (Play.current.mode == Mode.Dev)
-      InitialData.insert()
+    val DirectoryWatcher = Akka.system.actorOf( Props[DirectoryWatcherActor], name = "directoryWatcher" )
+    DirectoryWatcher ! StartWatching("binaryData", new DataSetChangeHandler)
+    
+    if (Play.current.mode == Mode.Dev){
+      BasicEvolution.runDBEvolution()
+      InitialData.insert() 
+    }
   }
-
 }
 
 /**
@@ -23,33 +35,15 @@ object Global extends GlobalSettings {
 object InitialData {
 
   def insert() = {
-    if ( DataSet.findAll.isEmpty ) {
-      DataSet.insert( DataSet(
-        "2012-06-28_Cortex",
-        Play.configuration.getString( "binarydata.path" ) getOrElse ( "binaryData/" )+"2012-06-28_Cortex",
-        List( 0, 1, 2, 3 ),
-        Point3D( 24 * 128, 16 * 128, 8 * 128) ) )
-    }
-
     if (Role.findAll.isEmpty) {
       Role.insert(Role("user", Nil))
       Role.insert(Role("admin", Permission("*", "*" :: Nil) :: Nil))
     }
 
-    if (Experiment.findAll.isEmpty) {
-      val d = DataSet.default
-      val p = Point3D(300, 300, 200)
-      val nodes = List(Node(1, 1, p, 0, 0, 0))
-      val tree = Tree(1, nodes, Nil, Color(1, 0, 0, 0))
-      val exp = Experiment(d._id, List(tree), Nil, 0, 1, Scale(12,12,24), p)
-      Experiment.insert(exp)
-    }
-
     if (User.findAll.isEmpty) {
-      val u = ("scmboy@scalableminds.com", "SCM Boy", "secret", List(Experiment.default._id))
+      val u = ("scmboy@scalableminds.com", "SCM Boy", "secret", List(Experiment.createNew._id))
       Seq(
         u).foreach(User.create _ tupled)
     }
   }
-
 }

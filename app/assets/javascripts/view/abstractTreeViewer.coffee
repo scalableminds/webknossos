@@ -2,10 +2,12 @@
 
 NODE_RADIUS = 2
 MAX_NODE_DISTANCE = 100
+CLICK_TRESHOLD = 4
 
 class AbsractTreeViewer
   constructor : (width, height) ->
     @canvas = $("<canvas>", {id : "abstractTreeViewerCanvas"})
+    @canvas.click(@onClick)
     $(@canvas).css(
         width : width
         height : height
@@ -22,6 +24,9 @@ class AbsractTreeViewer
     # clear Background
     @ctx.fillStyle = "#ffffff"
     @ctx.fillRect(0, 0, @width, @height)
+
+    # List of {x : ..., y : ..., id: ...} objects
+    @nodeList = []
 
     @nodeDistance = Math.min(@height / (@getMaxTreeDepth(tree) + 1), MAX_NODE_DISTANCE)
 
@@ -74,18 +79,22 @@ class AbsractTreeViewer
       xr = m
     
     # Draw the chain and the root, connect them.
+    node = tree
     for i in [0..chainCount]
-      @drawNode(xr, top + i * @nodeDistance)
+      @drawNode(xr, top + i * @nodeDistance, node.id)
+      node = node.children[0]
       if i != 0
         @drawEdge(xr, top + (i - 1) * @nodeDistance, xr, top + i * @nodeDistance)
 
     return [xr, top]
 
-  drawNode : (x, y) ->
+  drawNode : (x, y, id) ->
     @ctx.beginPath()
     @ctx.fillStyle = "#000000"
     @ctx.arc(x, y, NODE_RADIUS, 0, 2 * Math.PI)
     @ctx.fill()
+    # put it in nodeList
+    @nodeList.push({x : x, y : y, id : id})
 
   drawEdge : (x1, y1, x2, y2) ->
     @ctx.beginPath()
@@ -132,3 +141,14 @@ class AbsractTreeViewer
       return count
     return Math.max(@getMaxTreeDepth(tree.children[0], count),
               @getMaxTreeDepth(tree.children[1], count)) + 1
+
+  onClick : (evt) =>
+    id = @getIdFromPos(evt.offsetX, evt.offsetY)
+    if id and @nodeClickCallback
+      @nodeClickCallback(id)
+
+  getIdFromPos : (x, y) =>
+    for entry in @nodeList
+      if Math.abs(x - entry.x) <= CLICK_TRESHOLD &&
+          Math.abs(y - entry.y) <= CLICK_TRESHOLD
+        return entry.id

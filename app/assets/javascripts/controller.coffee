@@ -32,6 +32,8 @@ class Controller
     @flycam = new Flycam(VIEWPORT_WIDTH, @model)
     @view  = new View(@model, @flycam)
 
+    @view.setNodeClickCallback(@setActiveNode)
+
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model, [2000, 2000, 2000])
 
@@ -67,6 +69,7 @@ class Controller
         for mesh in meshes
           @view.addGeometry(mesh)
     
+        @view.drawTree(@model.Route.getTree())
         @view.on "render", (event) => @render()
         @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
         @sceneController.skeleton.on "newGeometries", (list, event) =>
@@ -279,10 +282,7 @@ class Controller
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
       vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex
-      @model.Route.setActiveNode(vertex.id)
-      @flycam.setGlobalPos(@model.Route.getActiveNodePos())
-      @gui.updateNodeAndTreeIds()
-      @sceneController.skeleton.setActiveNode()
+      @setActiveNode(vertex.nodeId)
       
       #@gui.setActiveNode(vertex.id)
       console.log intersects
@@ -290,6 +290,13 @@ class Controller
       #@flycam.setGlobalPos [vertex.x, vertex.y, vertex.z]
 
       #@updateRoute()
+
+  setActiveNode : (id) =>
+    @model.Route.setActiveNode(id)
+    @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+    @gui.updateNodeAndTreeIds()
+    @sceneController.skeleton.setActiveNode()
+    @view.drawTree(@model.Route.getTree())
 
   #Customize Options
   setMoveValue : (value) =>

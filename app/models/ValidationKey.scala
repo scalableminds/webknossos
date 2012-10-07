@@ -17,7 +17,7 @@ object ValidationKey extends BasicDAO[ValidationKey]( "validations" ) {
     key
   }
 
-  def find( validationKey: String ) = {
+  def findOneByKey( validationKey: String ) = {
     for {
       el <- findOne( MongoDBObject( "key" -> validationKey ) )
       user <- User.findOneById( el.userId )

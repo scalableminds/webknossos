@@ -220,6 +220,3 @@ class View
 
   drawTree : (tree) ->
     @abstractTreeViewer.drawTree(tree)
-
-  setNodeClickCallback : (callback) ->
-    @abstractTreeViewer.nodeClickCallback = callback

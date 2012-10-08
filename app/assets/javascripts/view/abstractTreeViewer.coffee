@@ -1,4 +1,6 @@
-### define ###
+### define
+libs/event_mixin : EventMixin
+###
 
 NODE_RADIUS = 2
 MAX_NODE_DISTANCE = 100
@@ -6,6 +8,9 @@ CLICK_TRESHOLD = 4
 
 class AbsractTreeViewer
   constructor : (width, height) ->
+
+    _.extend(this, new EventMixin())
+
     @canvas = $("<canvas>", {id : "abstractTreeViewerCanvas"})
     @canvas.click(@onClick)
     $(@canvas).css(
@@ -144,8 +149,8 @@ class AbsractTreeViewer
 
   onClick : (evt) =>
     id = @getIdFromPos(evt.offsetX, evt.offsetY)
-    if id and @nodeClickCallback
-      @nodeClickCallback(id)
+    if id
+      @trigger "nodeClick", id
 
   getIdFromPos : (x, y) =>
     for entry in @nodeList

@@ -298,7 +298,7 @@ Route =
       if point
         @activeNode = point
         @lastActiveNodeId = @activeNode.id
-        deferred.resolve(@activeNode.pos)
+        deferred.resolve(@activeNode.id)
       else
         deferred.reject()
 

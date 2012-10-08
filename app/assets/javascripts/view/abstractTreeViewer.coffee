@@ -6,6 +6,9 @@ NODE_RADIUS = 2
 MAX_NODE_DISTANCE = 100
 CLICK_TRESHOLD = 4
 
+MODE_NORMAL = 0     # draw every node and the complete tree
+MODE_NOCHAIN = 1    # draw only decision points
+
 class AbsractTreeViewer
   constructor : (width, height) ->
 
@@ -33,7 +36,9 @@ class AbsractTreeViewer
     # List of {x : ..., y : ..., id: ...} objects
     @nodeList = []
 
-    @nodeDistance = Math.min(@height / (@getMaxTreeDepth(tree) + 1), MAX_NODE_DISTANCE)
+    mode = MODE_NOCHAIN
+
+    @nodeDistance = Math.min(@height / (@getMaxTreeDepth(tree, mode) + 1), MAX_NODE_DISTANCE)
 
     # The algorithm works as follows:
     # A tree is given a left and right border that it can use. If
@@ -48,9 +53,12 @@ class AbsractTreeViewer
     # by recordWidths(), the second by drawTreeWithWidths().
 
     @recordWidths(tree)
-    @drawTreeWithWidths(tree, 0, @width, @nodeDistance)
+    @drawTreeWithWidths(tree, 0, @width, @nodeDistance, mode)
 
-  drawTreeWithWidths : (tree, left, right, top) -> 
+  drawTreeWithWidths : (tree, left, right, top, mode) ->
+    unless mode
+      mode = MODE_NORMAL
+
     # get the decision point
     decisionPoint = @getNextDecisionPoint(tree)
     # calculate m (middle that divides the left and right tree, if any)
@@ -71,25 +79,39 @@ class AbsractTreeViewer
 
     # if the decision point has (2) children, draw them and remember their prosition
     if decisionPoint.children.length > 0
-      c1 = @drawTreeWithWidths(decisionPoint.children[0], left,  m, top + (chainCount + 1) * @nodeDistance)
-      c2 = @drawTreeWithWidths(decisionPoint.children[1], m, right, top + (chainCount + 1) * @nodeDistance)
+      # Calculate the top of the children
+      if mode == MODE_NORMAL or chainCount < 3
+        topC = top + (chainCount + 1) * @nodeDistance
+      else if mode == MODE_NOCHAIN
+        topC = top + 3 * @nodeDistance
+
+      c1 = @drawTreeWithWidths(decisionPoint.children[0], left,  m, topC, mode)
+      c2 = @drawTreeWithWidths(decisionPoint.children[1], m, right, topC, mode)
       # set the root's x coordinate to be in between the decisionPoint's childs
       xr = (c1[0] + c2[0]) / 2
       # draw edges from last node in 'chain' (or root, if chain empty)
       # and the decisionPoint's children
-      @drawEdge(xr, top + chainCount * @nodeDistance, c1[0], c1[1])
-      @drawEdge(xr, top + chainCount * @nodeDistance, c2[0], c2[1])
+      @drawEdge(xr, topC - @nodeDistance, c1[0], c1[1])
+      @drawEdge(xr, topC - @nodeDistance, c2[0], c2[1])
     else
       # if decisionPoint is leaf, there's not much to do
       xr = m
     
-    # Draw the chain and the root, connect them.
-    node = tree
-    for i in [0..chainCount]
-      @drawNode(xr, top + i * @nodeDistance, node.id)
-      node = node.children[0]
-      if i != 0
-        @drawEdge(xr, top + (i - 1) * @nodeDistance, xr, top + i * @nodeDistance)
+    if mode == MODE_NORMAL or chainCount < 3
+      # Draw the chain and the root, connect them.
+      node = tree
+      for i in [0..chainCount]
+        @drawNode(xr, top + i * @nodeDistance, node.id)
+        node = node.children[0]
+        if i != 0
+          @drawEdge(xr, top + (i - 1) * @nodeDistance, xr, top + i * @nodeDistance)
+    else if mode == MODE_NOCHAIN
+      # Draw root, chain indicator and decision point
+      @drawNode(xr, top, tree.id)
+      @drawEdge(xr, top, xr, top + 0.5 * @nodeDistance)
+      @drawChainIndicator(xr, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance)
+      @drawEdge(xr, top + 1.5 * @nodeDistance, xr, top + 2 * @nodeDistance)
+      @drawNode(xr, top + 2 * @nodeDistance, decisionPoint.id)
 
     return [xr, top]
 
@@ -103,9 +125,19 @@ class AbsractTreeViewer
 
   drawEdge : (x1, y1, x2, y2) ->
     @ctx.beginPath()
-    @ctx.fillStyle = "#000000"
+    @ctx.strokeStyle = "#000000"
     @ctx.moveTo(x1, y1)
     @ctx.lineTo(x2, y2)
+    @ctx.stroke()
+
+  drawChainIndicator : (x, top, bottom) ->
+    # Draw a dashed line
+    dashLength = (bottom - top) / 7
+    @ctx.beginPath()
+    @ctx.strokeStyle = "#000000"
+    for i in [0, 1, 2]
+      @ctx.moveTo(x, top + (2 * i + 1) * dashLength)
+      @ctx.lineTo(x, top + (2 * i + 2) * dashLength)
     @ctx.stroke()
 
   # Decision point is any point with point.children.length != 1
@@ -132,20 +164,30 @@ class AbsractTreeViewer
       result += child.width
     return result
 
-  getMaxTreeDepth : (tree, count) ->
-    unless tree
-      return 0
+  getMaxTreeDepth : (tree, mode, count) ->
     unless count
-      count = 1
+      count = 0
+    unless tree
+      return count
+    unless mode
+      mode  = MODE_NORMAL
 
+    # One decision point
+    count++
+
+    # Count non decision points
+    chainCount = 0
     while tree.children.length == 1
       tree = tree.children[0]
-      count++
+      chainCount++
+    if mode == MODE_NOCHAIN
+      chainCount = Math.min(chainCount, 2)
+    count += chainCount
 
     if tree.children.length == 0
       return count
-    return Math.max(@getMaxTreeDepth(tree.children[0], count),
-              @getMaxTreeDepth(tree.children[1], count)) + 1
+    return Math.max(@getMaxTreeDepth(tree.children[0], mode, count),
+              @getMaxTreeDepth(tree.children[1], mode, count))
 
   onClick : (evt) =>
     id = @getIdFromPos(evt.offsetX, evt.offsetY)

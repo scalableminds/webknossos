@@ -75,7 +75,7 @@ object User extends BasicDAO[User]( "users" ) {
   }
     
   def verify( validationKey: String) = {
-    ValidationKey.find( validationKey ).map{ user =>
+    ValidationKey.findOneByKey( validationKey ).map{ user =>
       ValidationKey.remove( validationKey )
       save( user.copy( verified = true ) )
       true

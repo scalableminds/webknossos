@@ -39,16 +39,6 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     }
   }
 
-  def isNumber(s: String) = {
-    try {
-      s.toInt
-      true
-    } catch {
-      case e: NumberFormatException =>
-        false
-    }
-  }
-
   def listDirectories(f: File) = {
     f.listFiles().filter(_.isDirectory())
   }
@@ -57,7 +47,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     if (l.isEmpty)
       None
     else
-      Some(l.minBy(f => f.getName().toIntOpt.getOrElse(Int.MaxValue)))
+      Some(l.minBy(f => f.getName.toIntOpt.getOrElse(Int.MaxValue)))
   }
 
   def maxValueFromFiles(l: Array[File]): Option[Int] = {
@@ -75,9 +65,9 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
   }
 
   def dataSetFromFile(f: File): Option[DataSet] = {
-    if (f.isDirectory()) {
+    if (f.isDirectory) {
       Logger.trace("dataSetFromFile: " + f)
-      val resolutions = f.listFiles().filter(f => f.isDirectory() && isNumber(f.getName())).map(_.getName().toInt).toList
+      val resolutions = f.listFiles().filter(_.isDirectory).flatMap(_.getName.toIntOpt).toList
       (for {
         res <- highestResolutionDir(listDirectories(f))
         xs <- listDirectories(res).headOption

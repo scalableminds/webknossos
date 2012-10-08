@@ -15,10 +15,10 @@ import akka.dispatch.Terminate
 import play.api.Play
 import play.api.Logger
 
-case class StartWatching(val pathName: String, changeHandler: DirectoryChangeHandler)
+case class StartWatching(val pathName: String)
 case class StopWatching()
 
-class DirectoryWatcherActor extends Actor {
+class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor {
   
   val TICKER_INTERVAL = 10 minutes
   
@@ -28,16 +28,14 @@ class DirectoryWatcherActor extends Actor {
   
   val keys = new HashMap[WatchKey, Path]
   var shouldStop = false
-  var changeHandler: DirectoryChangeHandler = null
   var updateTicker: Cancellable = null
 
   def receive = {
     case StopWatching =>
       shouldStop = true
-    case StartWatching(pathName, handler) =>
+    case StartWatching(pathName) =>
       shouldStop = false
       val watchedPath = Paths.get(pathName)
-      changeHandler = handler
       start(watchedPath)
   }
 

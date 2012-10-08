@@ -67,7 +67,7 @@ class Controller
         for mesh in meshes
           @view.addGeometry(mesh)
     
-        @view.on "render", (event) => @render()
+        @view.on "render", @render
         @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
         @sceneController.skeleton.on "newGeometries", (list, event) =>
           for geometry in list
@@ -108,6 +108,11 @@ class Controller
 
             @gui = new Gui($("#optionswindow"), data, @model,
                             @sceneController, @cameraController, @flycam)
+            @gui.on "deleteActiveNode", @deleteActiveNode
+            @gui.on "createNewTree", @createNewTree
+            @gui.on "setActiveTree", (id) => @setActiveTree(id)
+            @gui.on "setActiveNode", (id) => @setActiveNode(id)
+            @gui.on "deleteActiveTree", @deleteActiveTree
 
             @cameraController.setRouteClippingDistance data.routeClippingDistance
             @sceneController.setRouteClippingDistance data.routeClippingDistance
@@ -175,10 +180,8 @@ class Controller
       "b" : => 
         @model.Route.putBranch()
       "j" : => @model.Route.popBranch().done(
-        (position) => 
-          @flycam.setGlobalPos(position)
-          @gui.updateNodeAndTreeIds()
-          @sceneController.skeleton.setActiveNode()
+        (id) => 
+          @setActiveNode(id)
         )
 
       #Zoom in/out
@@ -188,10 +191,10 @@ class Controller
       # delete active node
       "delete" : =>
         # just use the method implemented in gui
-        @gui.deleteActiveNode()
+        @deleteActiveNode()
 
       "n" : =>
-        @gui.createNewTree()
+        @createNewTree()
     )
 
   # for more buttons look at Input.Gamepad
@@ -224,7 +227,7 @@ class Controller
     gamepad : null
     deviceorientation : null
 
-  render : ->
+  render : =>
     @model.Binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
     if (@gui)
       @gui.updateGlobalPosition()
@@ -238,26 +241,18 @@ class Controller
   moveY : (y) => @move([0, y, 0])
   moveZ : (z) => @move([0, 0, z])
 
+
+  ########### Click callbacks
+  
   setWaypoint : (relativePosition, typeNumber) =>
-
-    if @model.User.Configuration.newNodeNewTree == true
-      @gui.createNewTree()
-
     curGlobalPos = @flycam.getGlobalPos()
-    activePlane  = @flycam.getActivePlane()
-    zoomFactor   = @flycam.getPlaneScalingFactor activePlane
+    zoomFactor   = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
     scaleFactor  = @view.scaleFactor
-    switch activePlane
+    switch @flycam.getActivePlane()
       when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2]]
       when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
       when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
-    @model.Route.put(position)
-    @gui.updateNodeAndTreeIds()
-    @gui.updateRadius()
-    @sceneController.setWaypoint()
-
-  #onPreviewClick : (position) =>
-  #  @sceneController.skeleton.onPreviewClick(position, @view.scaleFactor, @view.getCameras()[VIEW_3D])
+    @addNode(position)
 
   onPreviewClick : (position) =>
     scaleFactor = @view.scaleFactor
@@ -277,17 +272,47 @@ class Controller
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
       vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex
-      @model.Route.setActiveNode(vertex.id)
-      @flycam.setGlobalPos(@model.Route.getActiveNodePos())
-      @gui.updateNodeAndTreeIds()
-      @sceneController.skeleton.setActiveNode()
+      @setActiveNode(vertex.nodeId)
       
-      #@gui.setActiveNode(vertex.id)
       console.log intersects
-      # jump to the nodes position
-      #@flycam.setGlobalPos [vertex.x, vertex.y, vertex.z]
 
-      #@updateRoute()
+  ########### Model Interaction
+
+  addNode : (position) =>
+    if @model.User.Configuration.newNodeNewTree == true
+      @gui.createNewTree()
+    @model.Route.put(position)
+    @gui.updateNodeAndTreeIds()
+    @gui.updateRadius()
+    @sceneController.setWaypoint()
+
+  setActiveNode : (nodeId) =>
+    @model.Route.setActiveNode(nodeId)
+    @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+    @gui.update()
+    @sceneController.skeleton.setActiveNode()
+
+  deleteActiveNode : =>
+    @model.Route.deleteActiveNode()
+    @gui.update()
+    @sceneController.updateRoute()
+
+  createNewTree : =>
+    id = @model.Route.createNewTree()
+    @gui.update()
+    @sceneController.skeleton.createNewTree(id)
+
+  setActiveTree : (treeId) =>
+    @model.Route.setActiveTree(treeId)
+    @gui.update()
+    @sceneController.updateRoute()
+
+  deleteActiveTree : =>
+    @model.Route.deleteActiveTree()
+    @gui.update()
+    @sceneController.updateRoute()
+
+  ########### Input Properties
 
   #Customize Options
   setMoveValue : (value) =>

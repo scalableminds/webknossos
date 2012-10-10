@@ -61,7 +61,8 @@ object ExperimentController extends Controller with Secured {
     } yield {
       Json.obj(
         "name" -> (exp.dataSetName + " " + DateFormatter.format(exp.date)),
-        "id" -> exp.id)
+        "id" -> exp.id,
+        "isNew" -> false)
     }
   }
 
@@ -70,6 +71,24 @@ object ExperimentController extends Controller with Secured {
       "name" -> ("New on " + d.name),
       "id" -> d.id,
       "isNew" -> true))
+  }
+
+  def useAsActive(id: String, isNew: Boolean) = Authenticated { implicit request =>
+    val user = request.user
+    if (isNew) {
+      DataSet.findOneById(id).map { dataSet =>
+        val exp = Experiment.createNew(dataSet)
+        User.save(user.copy(experiments = exp._id :: request.user.experiments))
+        Ok
+      } getOrElse BadRequest("Couldn't find DataSet.")
+    } else {
+      user.experiments.find(_ == id).map { expId =>
+        val experiments = expId :: user.experiments.filterNot(_ == expId)
+        User.save(user.copy(experiments = experiments))
+        Ok
+      } getOrElse BadRequest("Coudln't find experiment.")
+    }
+    Ok
   }
 
   def list = Authenticated { implicit request =>

@@ -63,8 +63,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     }
   }
 
-  def createNew = {
-    val d = DataSet.default
+  def createNew(d: DataSet = DataSet.default) = {
     val tree = Tree(1, Nil, Nil, Color(1, 0, 0, 0))
     val exp = Experiment(d.name, List(tree), Nil, 0, 1, Scale(12, 12, 24), Point3D(0, 0, 0))
     Experiment.insert(exp)
@@ -86,7 +85,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       BRANCH_POINTS -> e.branchPoints,
       SCALE -> e.scale,
       EDIT_POSITION -> e.editPosition)
-
+ 
     def reads(js: JsValue): Experiment = {
 
       val id = (js \ ID).as[String]

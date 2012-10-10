@@ -27,16 +27,16 @@ class Gui
                                           "_blank", "width=700,height=400,location=no,menubar=no")
 
                 resume : false
-                dataset : null
-                changeDataset : -> 
+                experiments : null
+                selectedExperimentIndex : null
+                changeExperiment : => 
 
                   request(
                     method : "POST"
-                    url : "experiment"
-                    data : 
-                      dataset : @settings.dataset
-                      resume : @settings.resume
-                  ).done -> window.location.refresh()
+                    url : "/experiment"
+                    contentType : "application/json"
+                    data : @settings.experiments[@settings.selectedExperimentIndex]
+                  ).always -> window.location.reload()
 
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
                 lockZoom: data.lockZoom
@@ -75,14 +75,19 @@ class Gui
     
     fExperiment = @gui.addFolder("Experiment")
     request(
-      url : "/datasets"
-    ).done (datasets) =>
+      url : "/experiment"
+      responseType : "json"
+    ).done (experiments) =>
+      
+      @settings.experiments = experiments
 
-      (fExperiment.add @settings, "resume")
-                            .name("Resume Experiment")
-      (fExperiment.add @settings, "dataset", datasets)
+      options = {}
+      for experiment, i in experiments
+        options[experiment.name] = i
+
+      (fExperiment.add @settings, "selectedExperimentIndex", options)
                             .name("Datasets")
-      (fExperiment.add @settings, "changeDataset")
+      (fExperiment.add @settings, "changeExperiment")
                             .name("Apply")
 
     

@@ -28,14 +28,12 @@ class Gui
 
                 resume : false
                 experiments : null
-                selectedExperimentIndex : null
+                selectedExperimentIndex : 0
                 changeExperiment : => 
-
+                  experiment = @settings.experiments[@settings.selectedExperimentIndex]
                   request(
                     method : "POST"
-                    url : "/experiment"
-                    contentType : "application/json"
-                    data : @settings.experiments[@settings.selectedExperimentIndex]
+                    url : "/experiment?id=#{experiment.id}&isNew=#{experiment.isNew}"
                   ).always -> window.location.reload()
 
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]

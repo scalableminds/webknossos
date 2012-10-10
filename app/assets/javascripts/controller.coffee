@@ -277,12 +277,12 @@ class Controller
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
       vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex
-      @model.Route.setActiveNode(vertex.id)
+      @model.Route.setActiveNode(vertex.nodeId)
       @flycam.setGlobalPos(@model.Route.getActiveNodePos())
       @gui.updateNodeAndTreeIds()
       @sceneController.skeleton.setActiveNode()
       
-      #@gui.setActiveNode(vertex.id)
+      #@gui.setActiveNode(vertex.nodeId)
       console.log intersects
       # jump to the nodes position
       #@flycam.setGlobalPos [vertex.x, vertex.y, vertex.z]

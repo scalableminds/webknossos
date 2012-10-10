@@ -26,6 +26,18 @@ class Gui
                 download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
                                           "_blank", "width=700,height=400,location=no,menubar=no")
 
+                resume : false
+                dataset : null
+                changeDataset : -> 
+
+                  request(
+                    method : "POST"
+                    url : "experiment"
+                    data : 
+                      dataset : @settings.dataset
+                      resume : @settings.resume
+                  ).done -> window.location.refresh()
+
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
                 lockZoom: data.lockZoom
                 inverseX: data.mouseInversionX == 1
@@ -60,6 +72,19 @@ class Gui
                           .name("Upload NML")
     (fFile.add @settings, "download")
                           .name("Download NML")
+    
+    fExperiment = @gui.addFolder("Experiment")
+    request(
+      url : "/datasets"
+    ).done (datasets) =>
+
+      (fExperiment.add @settings, "resume")
+                            .name("Resume Experiment")
+      (fExperiment.add @settings, "dataset", datasets)
+                            .name("Datasets")
+      (fExperiment.add @settings, "changeDataset")
+                            .name("Apply")
+
     
     fPosition = @gui.addFolder("Position")
     (fPosition.add @settings, "position")
@@ -277,3 +302,8 @@ class Gui
     @settings.activeTreeID = @model.Route.getActiveTreeId()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
+
+  # Helper method to combine common update methods
+  update : ->
+    @updateNodeAndTreeIds()
+    @updateRadius()

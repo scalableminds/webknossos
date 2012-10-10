@@ -25,6 +25,7 @@ import models.DataSet
 import models.graph.Node
 import models.graph.Edge
 import brainflight.tools.geometry.Point3D
+import brainflight.format.DateFormatter
 
 /**
  * scalableminds - brainflight
@@ -53,13 +54,34 @@ object ExperimentController extends Controller with Secured {
       "experiment" -> experiment)
   }
 
-  def info(experimentId: String) = Authenticated { implicit request =>
-    Experiment.findOneById(experimentId).map(exp =>
-      Ok(createExperimentInformation(exp) ++ createDataSetInformation(exp.dataSetName))
-      ).getOrElse(BadRequest("Experiment with id '%s' not found.".format(experimentId)))
+  def createExperimentsList(user: User) = {
+    for {
+      expId <- user.experiments
+      exp <- Experiment.findOneById(expId)
+    } yield {
+      Json.obj(
+        "name" -> (exp.dataSetName + " " + DateFormatter.format(exp.date)),
+        "id" -> exp.id)
+    }
   }
 
-  def update(experimentId: String) = Authenticated(parse.json(maxLength=2097152)) { implicit request =>
+  def createNewExperimentList() = {
+    DataSet.findAll.map(d => Json.obj(
+      "name" -> ("New on " + d.name),
+      "id" -> d.id,
+      "isNew" -> true))
+  }
+
+  def list = Authenticated { implicit request =>
+    Ok(Json.toJson(createNewExperimentList ++ createExperimentsList(request.user)))
+  }
+
+  def info(experimentId: String) = Authenticated { implicit request =>
+    Experiment.findOneById(experimentId).map(exp =>
+      Ok(createExperimentInformation(exp) ++ createDataSetInformation(exp.dataSetName))).getOrElse(BadRequest("Experiment with id '%s' not found.".format(experimentId)))
+  }
+
+  def update(experimentId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
     (request.body).asOpt[Experiment].map { exp =>
       Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
       Ok

@@ -6,6 +6,9 @@ import brainflight.tools.geometry.Point3D
 import models.DataSet
 import akka.routing.Broadcast
 import akka.agent.Agent
+import play.api.libs.concurrent.Promise
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.Iteratee
     
 /**
  * Scalable Minds - Brainflight
@@ -24,21 +27,22 @@ class FileDataStore( cacheAgent: Agent[Map[DataBlockInformation, Data]])
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
    */
-  def loadBlock( dataSet: DataSet, point: Point3D, resolution: Int ): DataBlock = {
+  def loadBlock(dataSet: DataSet, point: Point3D, resolution: Int): Promise[DataBlock] = {
     ensureCacheMaxSize
-    val dataBlock = Data(
+    val dataEnum =
       try {
-        val binaryStream =
-          new FileInputStream( createFilename( dataSet, resolution, point ) )
-        inputStreamToByteArray( binaryStream )
+        Enumerator.fromFile(new File(createFilename(dataSet, resolution, point)))
       } catch {
         case e: FileNotFoundException =>
-          Logger.warn( "Block %s not found!".format( createFilename( dataSet, resolution, point ) ) )
+          Logger.warn("Block %s not found!".format(createFilename(dataSet, resolution, point)))
           // if the file block isn't found, a nullBlock is associated with 
           // the coordinates
-          nullBlock
-      })
-    val blockInfo = DataBlockInformation( dataSet.id, point, resolution )
-    DataBlock( blockInfo, dataBlock)
+          Enumerator(nullBlock)
+      }
+    val it = Iteratee.consume[Array[Byte]]()
+    dataEnum(it).flatMap(_.mapDone{ rawData =>
+      val blockInfo = DataBlockInformation(dataSet.id, point, resolution)
+      DataBlock(blockInfo, Data(rawData))
+    }.run)
   }
 }

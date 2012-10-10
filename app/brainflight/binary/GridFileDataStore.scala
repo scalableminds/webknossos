@@ -12,6 +12,7 @@ import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
 import models.DataSet
 import brainflight.tools.geometry.Cuboid
+import play.api.libs.concurrent.Promise
 
 class GridFileDataStore extends DataStore{
 	  //GridFs handle
@@ -28,13 +29,14 @@ class GridFileDataStore extends DataStore{
   /**
    * Load the binary data of the given coordinate from DB
    */
-  override def load(dataSet: DataSet, resolution: Int, cube: Cuboid): Array[Byte] = {
+
+  def load( dataSet: DataSet, resolution: Int, cube: Cuboid): Promise[Array[Byte]] = {
     //TODO: IMPLEMENT
-    new Array[Byte](0)
+    throw new Error("Not implemented.")
   }
-  override def load(dataSet: DataSet, resolution: Int, globalPoint: Point3D): Byte = {
+  override def load(dataSet: DataSet, resolution: Int, globalPoint: Point3D): Promise[Byte] = {
     // TODO: Insert upper bound
-    if (globalPoint.x < 0 || globalPoint.y < 0 || globalPoint.z < 0) return 0
+    if (globalPoint.x < 0 || globalPoint.y < 0 || globalPoint.z < 0) return Promise.pure(0)
 
     val x = globalPoint.x / 128
     val y = globalPoint.y / 128
@@ -61,7 +63,7 @@ class GridFileDataStore extends DataStore{
         }
     }
     val zB = (globalPoint.z % 256) / 2
-    byteArray((zB * 128 * 128 + (globalPoint.y % 128) * 128 + globalPoint.x % 128))
+    Promise.pure(byteArray((zB * 128 * 128 + (globalPoint.y % 128) * 128 + globalPoint.x % 128)))
   }
 
   def inputStreamToByteArray( is: InputStream ) = {

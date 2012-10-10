@@ -33,9 +33,7 @@ class Gui
                   experiment = @settings.experiments[@settings.selectedExperimentIndex]
                   request(
                     method : "POST"
-                    url : "/experiment"
-                    data : experiment
-                    contentType : "application/x-www-form-urlencoded"
+                    url : "/experiment?id=#{experiment.id}&isNew=#{experiment.isNew}"
                   ).always -> window.location.reload()
 
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]

@@ -133,7 +133,7 @@ object BinaryData extends Controller with Secured {
             case dataRequests @ MultipleDataRequest(_) =>
               handleMultiDataRequest(dataRequests, cubeSize, dataSet).map(
                 _.map{data => 
-                  println("%d ms".format(System.currentTimeMillis-t))
+                  //println("%d ms".format(System.currentTimeMillis-t))
                   channel.push(dataRequests.handle ++ data)})
             case _ =>
               Logger.error("Received unhandled message!")

@@ -1,6 +1,5 @@
 package models
 
-import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.dao.SalatDAO
 import play.api.Play
@@ -8,6 +7,8 @@ import play.api.Play.current
 import brainflight.tools.geometry.Vector3D
 import org.bson.types.ObjectId
 import models.basics.BasicDAO
+import com.mongodb.casbah.Imports.{ WriteConcern }
+import com.mongodb.casbah.query.Imports._
 
 /**
  * scalableminds - brainflight

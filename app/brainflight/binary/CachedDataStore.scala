@@ -4,6 +4,7 @@ import models.DataSet
 import brainflight.tools.geometry.Point3D
 import play.api.Play.current
 import play.api.Play
+import play.api.Logger
 import brainflight.tools.geometry.Point3D
 import models.DataSet
 import brainflight.tools.geometry.Cuboid
@@ -75,7 +76,7 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       val block = PointToBlock(globalPoint, resolution)
       val blockInfo = DataBlockInformation(dataSet.id, block, resolution)
 
-      (useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)).map(b => Promise.pure(b.value)).getOrElse (
+      (useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)).map(b => Promise.pure(b.value)).getOrElse(
         loadAndCacheData(dataSet, block, resolution)).map { byteArray =>
 
           lastUsed = Some(blockInfo -> Data(byteArray))
@@ -95,8 +96,8 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       val block = PointToBlock(cube.topLeft, resolution)
       val blockInfo = DataBlockInformation(dataSet.id, block, resolution)
 
-      (useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)).map(b => Promise.pure(b.value)) getOrElse (
-        loadAndCacheData(dataSet, block, resolution)).map { byteArray =>
+      ((useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)).map(b => Promise.pure(b.value)).getOrElse(
+        loadAndCacheData(dataSet, block, resolution))).map { byteArray =>
 
           lastUsed = Some(blockInfo -> Data(byteArray))
 
@@ -128,10 +129,10 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
             }
             x += 1
           }
-
           result
         }
     } else {
+      Logger.warn("DataSet doesn't contain " + cube)
       Promise.pure(new Array[Byte](cube.volume))
     }
   }

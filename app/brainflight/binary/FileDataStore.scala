@@ -41,6 +41,7 @@ class FileDataStore( cacheAgent: Agent[Map[DataBlockInformation, Data]])
       }
     val it = Iteratee.consume[Array[Byte]]()
     dataEnum(it).flatMap(_.mapDone{ rawData =>
+      Logger.trace("Loaded " + point + " Sum: " + rawData.sum + " Size: " + rawData.size)
       val blockInfo = DataBlockInformation(dataSet.id, point, resolution)
       DataBlock(blockInfo, Data(rawData))
     }.run)

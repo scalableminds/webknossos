@@ -46,7 +46,7 @@ object BinaryData extends Controller with Secured {
   val conf = Play.configuration
   val scaleFactors = Array(1, 1, 2)
 
-  implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
+  implicit val timeout = Timeout(20 seconds) //Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
   def resolutionFromExponent(exp: Int) =
     math.pow(2, exp).toInt
@@ -133,7 +133,7 @@ object BinaryData extends Controller with Secured {
             case dataRequests @ MultipleDataRequest(_) =>
               handleMultiDataRequest(dataRequests, cubeSize, dataSet).map(
                 _.map{data => 
-                  //println("%d ms".format(System.currentTimeMillis-t))
+                  println("%d ms".format(System.currentTimeMillis-t))
                   channel.push(dataRequests.handle ++ data)})
             case _ =>
               Logger.error("Received unhandled message!")

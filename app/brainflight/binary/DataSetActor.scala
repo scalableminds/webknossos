@@ -6,6 +6,7 @@ import models.DataSet
 import brainflight.tools.geometry.Cuboid
 import scala.collection.mutable.ArrayBuffer
 import akka.agent.Agent
+import play.api.Logger
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import akka.actor.ActorRef
@@ -28,6 +29,7 @@ class DataSetActor extends Actor {
     case MultiCubeRequest(requests) =>
       val resultPromis = Promise.sequence(requests.map(r =>
         dataStore.load(r.dataSet, r.resolution, r.points)))
-      sender ! resultPromis.map{results => Array.concat(results: _*)}
+      sender ! resultPromis.map{results => 
+        Array.concat(results: _*)}
   }
 } 

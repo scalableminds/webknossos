@@ -280,7 +280,7 @@ class Controller
 
   addNode : (position) =>
     if @model.User.Configuration.newNodeNewTree == true
-      @gui.createNewTree()
+      @createNewTree()
     @model.Route.put(position)
     @gui.updateNodeAndTreeIds()
     @gui.updateRadius()

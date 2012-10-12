@@ -152,7 +152,7 @@ class CameraController
 
   updateCamViewport : ->
     for i in [0..2]
-      @cameras[i].near = -@camDistance / @flycam.getPlaneScalingFactor(i)
+      @cameras[i].near = -@camDistance #/ @flycam.getPlaneScalingFactor(i)
       boundary     = WIDTH / 2 * @flycam.getPlaneScalingFactor(i)
       @cameras[i].left  = @cameras[i].bottom = -boundary
       @cameras[i].right = @cameras[i].top    =  boundary

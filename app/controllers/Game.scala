@@ -22,7 +22,7 @@ object Game extends Controller with Secured {
       case experimentId :: _ =>
         experimentId.toString
       case _ =>
-        val exp = Experiment.createNew
+        val exp = Experiment.createNew()
         User.save(request.user.copy(experiments = exp._id :: request.user.experiments))
         exp.id
     }

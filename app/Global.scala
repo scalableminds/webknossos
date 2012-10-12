@@ -43,7 +43,7 @@ object InitialData {
     }
 
     if (User.findAll.isEmpty) {
-      val u = ("scmboy@scalableminds.com", "SCM Boy", "secret", List(Experiment.createNew._id))
+      val u = ("scmboy@scalableminds.com", "SCM Boy", "secret", List(Experiment.createNew()._id))
       Seq(
         u).foreach(User.create _ tupled)
     }

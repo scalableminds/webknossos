@@ -2,7 +2,7 @@ package controllers
 
 import java.nio.ByteBuffer
 import akka.actor._
-import akka.dispatch.Future
+import akka.dispatch._
 import akka.util.duration._
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
@@ -37,71 +37,64 @@ import akka.routing.RoundRobinRouter
 
 object BinaryData extends Controller with Secured {
 
-  val dataSetActor = Akka.system.actorOf(Props[DataSetActor].withRouter(
-    RoundRobinRouter(nrOfInstances = 1)))
-
+  val dataSetActor = Akka.system.actorOf( Props[DataSetActor].withRouter(
+    RoundRobinRouter( nrOfInstances = 1 ) ) )
+    
   override val DefaultAccessRole = Role.User
 
   implicit val dispatcher = Akka.system.dispatcher
   val conf = Play.configuration
-  val scaleFactors = Array(1, 1, 2)
+  val scaleFactors = Array( 1, 1, 2 )
 
-  implicit val timeout = Timeout(20 seconds) //Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
+  implicit val timeout = Timeout( ( conf.getInt( "actor.defaultTimeout" ) getOrElse 5 ) seconds ) // needed for `?` below
 
-  def resolutionFromExponent(exp: Int) =
-    math.pow(2, exp).toInt
+  def resolutionFromExponent( exp: Int ) =
+    math.pow( 2, exp ).toInt
 
-  def cuboidFromPosition(position: Point3D, cubeSize: Int) = {
+  def cuboidFromPosition( position: Point3D, cubeSize: Int ) = {
     val cubeCorner = position.scale {
-      case (x, i) =>
-        x - x % (cubeSize / scaleFactors(i))
+      case ( x, i ) =>
+        x - x % ( cubeSize / scaleFactors( i ) )
     }
-    Cuboid(cubeCorner, cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2))
+    Cuboid( cubeCorner, cubeSize / scaleFactors( 0 ), cubeSize / scaleFactors( 1 ), cubeSize / scaleFactors( 2 ) )
   }
 
-  def handleMultiDataRequest(multi: MultipleDataRequest, cubeSize: Int, dataSet: DataSet) = {
-    val cubeRequests = multi.requests.map { request =>
-      val resolution = resolutionFromExponent(request.resolutionExponent)
-      val cuboid = cuboidFromPosition(request.position, cubeSize)
-      CubeRequest(dataSet, resolution, cuboid)
+  def handleMultiDataRequest( multi: MultipleDataRequest, cubeSize: Int, dataSet: DataSet) = {
+    val cubeRequests = multi.requests.map{ request =>
+      val resolution = resolutionFromExponent( request.resolutionExponent )
+      val cuboid = cuboidFromPosition( request.position, cubeSize )
+      CubeRequest( dataSet, resolution, cuboid )
     }
-
-    val future = (dataSetActor ? MultiCubeRequest(cubeRequests)) recover {
+    
+    val future = ( dataSetActor ? MultiCubeRequest( cubeRequests ) ) recover {
       case e: AskTimeoutException =>
-        Logger.warn("MultiCubeRequest to dataSetActor timed out!")
-        Promise.pure(new Array[Byte](0))
+        new Array[Byte]( 0 )
     }
 
-    future.mapTo[Promise[Array[Byte]]]
+    future.mapTo[Array[Byte]]
   }
-
+  
   /**
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
-  def requestViaAjax(dataSetId: String, cubeSize: Int) = Authenticated(parser = parse.raw) { implicit request =>
+  def requestViaAjax( dataSetId: String, cubeSize: Int ) = Authenticated( parser = parse.raw ) { implicit request =>
     Async {
-      val loadedData: Option[Promise[SimpleResult[_]]] = (for {
+      ( for {
         payload <- request.body.asBytes()
-        message <- BinaryProtocol.parseAjax(payload)
-        dataSet <- DataSet.findOneById(dataSetId)
+        message <- BinaryProtocol.parseAjax( payload )
+        dataSet <- DataSet.findOneById( dataSetId )
       } yield {
         message match {
           case dataRequests @ MultipleDataRequest(_) =>
-            for {
-              result <- handleMultiDataRequest(dataRequests, cubeSize, dataSet).asPromise
-              data <- result
-            } yield {
-              Ok(data)
-            }
+            handleMultiDataRequest(dataRequests, cubeSize, dataSet).asPromise.map( result =>
+              Ok( result ) )
           case _ =>
-            Promise.pure {
-              BadRequest("Unknown message.")
+            Akka.future{
+              BadRequest( "Unknown message." )
             }
         }
-      })
-
-      loadedData getOrElse (Promise.pure { BadRequest("Request body is to short: %d bytes".format(request.body.size)) })
+      } ) getOrElse ( Akka.future { BadRequest( "Request body is to short: %d bytes".format( request.body.size ) ) } )
     }
   }
   /**
@@ -112,34 +105,34 @@ object BinaryData extends Controller with Secured {
    * @param
    * 	modelType:	id of the model to use
    */
-  def requestViaWebsocket(dataSetId: String, cubeSize: Int) = AuthenticatedWebSocket[Array[Byte]]() { user =>
+  def requestViaWebsocket( dataSetId: String, cubeSize: Int ) = AuthenticatedWebSocket[Array[Byte]]() { user =>
     request =>
-      val dataSetOpt = DataSet.findOneById(dataSetId)
+      val dataSetOpt = DataSet.findOneById( dataSetId )
       var channelOpt: Option[Channel[Array[Byte]]] = None
 
       val output = Concurrent.unicast[Array[Byte]](
-        { c => channelOpt = Some(c) },
-        { Logger.debug("Data websocket completed") },
-        { case (e, i) => Logger.error("An error ocourd on websocket stream: " + e) })
+        { c => channelOpt = Some( c ) },
+        { Logger.debug( "Data websocket completed" ) },
+        { case ( e, i ) => Logger.error( "An error ocourd on websocket stream: " + e ) } )
 
-      val input = Iteratee.foreach[Array[Byte]](in => {
+      val input = Iteratee.foreach[Array[Byte]]( in => {
         // first 4 bytes are always used as a client handle
         val t = System.currentTimeMillis
         for {
           dataSet <- dataSetOpt
           channel <- channelOpt
         } {
-          BinaryProtocol.parseWebsocket(in).map {
-            case dataRequests @ MultipleDataRequest(_) =>
-              handleMultiDataRequest(dataRequests, cubeSize, dataSet).map(
-                _.map{data => 
-                  println("%d ms".format(System.currentTimeMillis-t))
-                  channel.push(dataRequests.handle ++ data)})
+          BinaryProtocol.parseWebsocket( in ).map {
+            case dataRequests @ MultipleDataRequest( _ ) =>
+              handleMultiDataRequest(dataRequests, cubeSize, dataSet).map{
+                  result => 
+                    println("%d ms".format(System.currentTimeMillis-t))
+                    channel.push( dataRequests.handle ++ result )}
             case _ =>
-              Logger.error("Received unhandled message!")
+              Logger.error( "Received unhandled message!" )
           }
         }
-      })
-      (input, output)
+      } )
+      ( input, output )
   }
 }

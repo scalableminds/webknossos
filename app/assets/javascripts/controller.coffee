@@ -140,6 +140,12 @@ class Controller
     #)
 
   initKeyboard : ->
+
+    # TODO: (from Georg) I do not get the difference between Keyboard
+    # and KeyboardNoLoop. KeyboardNoLoop implies that pressing the key
+    # longer will not trigger the callback several times, but this is
+    # false, apparently. I moved the space to KeyboardNoLoop, because
+    # it allows more accuracy.
     
     @input.keyboard = new Input.Keyboard(
 
@@ -160,8 +166,8 @@ class Controller
       "s"             : => @moveY( @model.User.Configuration.moveValue)
       "a"             : => @moveX(-@model.User.Configuration.moveValue)
       "d"             : => @moveX( @model.User.Configuration.moveValue)
-      "space"         : => @moveZ( @model.User.Configuration.moveValue)
-      "shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
+      #"space"         : => @moveZ( @model.User.Configuration.moveValue)
+      #"shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
 
       #Rotate in distance
       "left"          : => @moveX(-@model.User.Configuration.moveValue)
@@ -195,6 +201,10 @@ class Controller
 
       "n" : =>
         @createNewTree()
+
+      # Move
+      "space"         : => @moveZ( @model.User.Configuration.moveValue)
+      "shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
     )
 
   # for more buttons look at Input.Gamepad

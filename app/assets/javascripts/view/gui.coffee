@@ -29,6 +29,16 @@ class Gui
                 download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
                                           "_blank", "width=700,height=400,location=no,menubar=no")
 
+                resume : false
+                experiments : null
+                selectedExperimentIndex : 0
+                changeExperiment : => 
+                  experiment = @settings.experiments[@settings.selectedExperimentIndex]
+                  request(
+                    method : "POST"
+                    url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
+                  ).always -> window.location.reload()
+
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
                 lockZoom: data.lockZoom
                 inverseX: data.mouseInversionX == 1
@@ -63,6 +73,24 @@ class Gui
                           .name("Upload NML")
     (fFile.add @settings, "download")
                           .name("Download NML")
+    
+    fExperiment = @gui.addFolder("Experiment")
+    request(
+      url : "/experiment"
+      responseType : "json"
+    ).done (experiments) =>
+      
+      @settings.experiments = experiments
+
+      options = {}
+      for experiment, i in experiments
+        options[experiment.name] = i
+
+      (fExperiment.add @settings, "selectedExperimentIndex", options)
+                            .name("Datasets")
+      (fExperiment.add @settings, "changeExperiment")
+                            .name("Apply")
+
     
     fPosition = @gui.addFolder("Position")
     (fPosition.add @settings, "position")

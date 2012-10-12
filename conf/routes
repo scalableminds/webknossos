@@ -33,6 +33,8 @@ POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( d
 GET     /game/initialize                    controllers.Game.initialize
 
 # Experiment Stuff
+POST      /experiment                       controllers.ExperimentController.useAsActive(id: String, isNew: Boolean)
+GET       /experiment                       controllers.ExperimentController.list
 GET       /experiment/:experimentId         controllers.ExperimentController.info( experimentId: String )
 PUT       /experiment/:experimentId         controllers.ExperimentController.update( experimentId: String )
 

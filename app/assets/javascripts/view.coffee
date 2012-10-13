@@ -74,9 +74,7 @@ class View
     
     # FPS stats
     stats = new Stats()
-    stats.getDomElement().style.position = 'absolute'
-    stats.getDomElement().style.left = '0px'
-    stats.getDomElement().style.top = '0px'
+    stats.getDomElement().id = "stats"
     $("body").append stats.getDomElement() 
     @stats = stats
     @positionStats = $("#status")

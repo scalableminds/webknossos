@@ -1,14 +1,19 @@
 @(user: User)
 
-@main( Some(user) ){
+@main( Some(user), false ){
 
   <div id="issue-submit-page">
     <h1>Submit an issue</h1>
     <form action="/jira" method="post">
+      <label for="issue-type">Type:</label>
+      <select name="type" id="issue-type">
+        <option value="bug">Bug</option>
+        <option value="feature">Feature</option>
+      </select>
       <label for="issue-summary">Summary:</label>
-      <input type="text" name="summary" id="issue-summary" />
+      <input type="text" name="summary" id="issue-summary" autofocus/>
       <label for="issue-description">Description:</label>
-      <textarea name="description"></textarea>
+      <textarea name="description" id="issue-description"></textarea>
       <input type="submit" value="Send" />
     </form>
   </div>

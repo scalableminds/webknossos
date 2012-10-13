@@ -62,7 +62,7 @@ object Jira extends Controller with Secured {
     } yield {
       request.body
       createIssue(request.user, summary, description, issueType)
-      Ok
+      Ok(html.jira.close())
     }) getOrElse BadRequest("Missing parameters.")
   }
 }

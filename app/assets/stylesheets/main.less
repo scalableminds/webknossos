@@ -14,7 +14,6 @@ body {
     color: @mainColor;
     font: @defaultFont;
     -webkit-font-smoothing: antialised;
-    -webkit-user-select: none;
 }
 
 a {
@@ -23,6 +22,12 @@ a {
     &:hover {
         color: @linksHover;
     }
+}
+
+#stats {
+    position: fixed;
+    bottom: 0;
+    left: 0;
 }
 #render {
     width: 2*@standardViewportWidth+20px;
@@ -93,6 +98,51 @@ a {
 }
 #overlay > * {
     margin-bottom: 10px;
+}
+
+#issue-submit-button {
+    .button();
+    margin-left: 1em;
+}
+
+#issue-submit-page {
+
+    padding: 1em 0;
+
+    h1 {
+        font-size: 2em;
+        padding: 10px;
+    }
+    
+    form {
+        padding: 10px;
+
+        label {
+            display: block;
+        }
+        input[type=text],
+        textarea, 
+        select {
+            display: block;
+            width: 100%;
+            font-size: 1em;
+            margin-bottom: 20px;
+            margin-top: 7px;
+            padding: .5em;
+        }
+        select {
+            width: auto;
+            font-size: 1.5em;
+        }
+        textarea {
+            height: 9em;
+        }
+        input[type=submit] {
+            font-size: 1.2em;
+            .button();
+            padding: .2em 2em;
+        }
+    }
 }
 
 // --------------------------- IMPORTS

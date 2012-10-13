@@ -415,6 +415,10 @@ $ -> # document is ready!
     app = new AppRouter()
     drawer = new Drawer el: $("#projects")
 
+    $("#issue-submit-button").click (e) ->
+        window.open(this.href, "_blank", "width=700,height=470,location=no,menubar=no")
+        e.preventDefault()
+
     Backbone.history.start
         pushHistory: true
 

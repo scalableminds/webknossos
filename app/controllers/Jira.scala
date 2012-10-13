@@ -52,8 +52,14 @@ object Jira extends Controller with Secured {
     }
   }
 
-  def submit(summary: String, description: String) = Authenticated { implicit request =>
-    createIssue(request.user, summary, description)
-    Ok
+  def submit = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    (for{
+      summary <- request.body.get("summary").flatMap(_.headOption)
+      description <- request.body.get("description").flatMap(_.headOption)
+    } yield {
+      request.body
+      createIssue(request.user, summary, description)
+      Ok
+    }) getOrElse BadRequest("Missing parameters.")
   }
 }

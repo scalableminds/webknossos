@@ -8,7 +8,7 @@ GET     /index                              controllers.Application.index
 
 # Jira integration
 GET     /jira                               controllers.Jira.index
-POST    /jira                               controllers.Jira.submit(summary: String, description: String)
+POST    /jira                               controllers.Jira.submit
 
 # Authentication
 GET     /login                              controllers.Application.login

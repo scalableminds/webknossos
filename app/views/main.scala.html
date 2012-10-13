@@ -1,4 +1,4 @@
-@(userOpt: Option[User])(body: Html)
+@(userOpt: Option[User], showNavButtons: Boolean = true)(body: Html)
 
 <html>
     <head>
@@ -14,24 +14,27 @@
     <body>
         <header>
             <a href="@routes.Test.index" id="logo">Ox<span>alis</span></a>
-            <dl id="user">
-            @userOpt.map{ user =>
-    					<dt>@user.name <span>(@user.email)</span></dt>
-	            <dd>
-                <a href="@routes.Application.logout()">Logout</a>
-              </dd>
-    				}.getOrElse{
-    					<dd>
-                <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
-              </dd>
-    				  <dd>
-                <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
-              </dd>
-    	        <dd>
-                <a href="@routes.Application.login()">Login</a>
-              </dd>
-    				}
+            @if(showNavButtons){
+              <a href="@routes.Jira.index" id="issue-submit-button">Submit an issue</a>
+              <dl id="user">
+              @userOpt.map{ user =>
+                  <dt>@user.name <span>(@user.email)</span></dt>
+                  <dd>
+                    <a href="@routes.Application.logout()">Logout</a>
+                </dd>
+                }.getOrElse{
+                  <dd>
+                    <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
+                </dd>
+                  <dd>
+                    <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
+                </dd>
+                  <dd>
+                    <a href="@routes.Application.login()">Login</a>
+                </dd>
+                }
             </dl>
+           }
         </header>
         <!-- 
         <nav>

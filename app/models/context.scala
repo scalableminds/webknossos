@@ -36,7 +36,7 @@ package object context {
     val c = new Context {
       val name = "play-salat-context"
         
-        override val typeHintStrategy = StringTypeHintStrategy(when = TypeHintFrequency.WhenNecessary,
+        override val typeHintStrategy = StringTypeHintStrategy(when = TypeHintFrequency.Always,
             typeHint = "_typeHint")
     }
     c.registerClassLoader(Play.classloader)

@@ -416,7 +416,7 @@ $ -> # document is ready!
     drawer = new Drawer el: $("#projects")
 
     $("#issue-submit-button").click (e) ->
-        window.open(this.href, "_blank", "width=700,height=450,location=no,menubar=no")
+        window.open(this.href, "_blank", "width=700,height=470,location=no,menubar=no")
         e.preventDefault()
 
     Backbone.history.start

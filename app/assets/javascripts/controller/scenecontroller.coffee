@@ -78,12 +78,12 @@ class SceneController
             @planes[i].setVisible(false)
         # Distort the spheres so that in the plane's z-direction they have a radius as
         # big as the routeClippingDistance (alias planeShift)
-        for sphere in @skeleton.nodesSpheres.concat(@skeleton.activeNode)
-          scale = Math.max(sphere.scale.x, sphere.scale.y, sphere.scale.z)
-          scaleArray = [scale, scale, scale]
-          scaleArray[@flycam.getIndices(id)[2]] = Math.min(@planeShift / sphere.boundRadius,
-                                                      scaleArray[@flycam.getIndices(id)[2]])
-          sphere.scale.set(scaleArray[0], scaleArray[1], scaleArray[2])
+        #for sphere in @skeleton.nodesSpheres.concat(@skeleton.activeNode)
+        #  scale = Math.max(sphere.scale.x, sphere.scale.y, sphere.scale.z)
+        #  scaleArray = [scale, scale, scale]
+        #  scaleArray[@flycam.getIndices(id)[2]] = Math.min(@planeShift / sphere.boundRadius,
+        #                                              scaleArray[@flycam.getIndices(id)[2]])
+        #  sphere.scale.set(scaleArray[0], scaleArray[1], scaleArray[2])
       else
         @cube.visible = true
         for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
@@ -92,9 +92,9 @@ class SceneController
           @planes[i].setGrayCrosshairColor()
           @planes[i].setVisible(true)
           @planes[i].plane.visible = @displayPlane[i]
-        for sphere in @skeleton.nodesSpheres.concat(@skeleton.activeNode)
-          scale = Math.max(sphere.scale.x, sphere.scale.y, sphere.scale.z)
-          sphere.scale.set(scale, scale, scale)
+        #for sphere in @skeleton.nodesSpheres.concat(@skeleton.activeNode)
+        #  scale = Math.max(sphere.scale.x, sphere.scale.y, sphere.scale.z)
+        #  sphere.scale.set(scale, scale, scale)
 
   update : =>
     gPos         = @flycam.getGlobalPos()

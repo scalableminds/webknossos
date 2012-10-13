@@ -109,7 +109,7 @@ class Gui
                           .onChange(@setMouseInversionY)
 
     fView = @gui.addFolder("Planes")
-    (fView.add @settings, "routeClippingDistance", 1, 100)
+    (fView.add @settings, "routeClippingDistance", 1, 500)
                           .name("Clipping Distance")    
                           .onChange(@setRouteClippingDistance)
     (fView.add @settings, "displayCrosshairs")

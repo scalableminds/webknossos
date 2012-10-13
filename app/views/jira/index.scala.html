@@ -1,7 +1,15 @@
 @(user: User)
 
 @main( Some(user) ){
-  Submit an issue:
+
+  <h1>Submit an issue:</h1>
+  <form action="/jira" method="post" id="issue-submit-form">
+  	<label for="issue-summary">Summary:</label>
+  	<input type="text" name="summary" id="issue-summary" />
+  	<label for="issue-description">Description:</label>
+  	<textarea name="description"></textarea>
+  	<input type="submit" value="Send"/>
+  </form>
   
   
 }

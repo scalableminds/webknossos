@@ -41,6 +41,7 @@ object Jira extends Controller with Secured {
           "key" -> "OX"),
         "summary" -> summary,
         "customfield_10008" -> branchName,
+        "customfield_10301" -> user.email,
         "description" -> (description + "\n\n Reported by: %s (%s)".format(user.name, user.email)),
         "issuetype" -> Json.obj(
           "name" -> issueType))).toString

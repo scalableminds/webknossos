@@ -6,6 +6,10 @@
 GET     /                                   controllers.Test.index
 GET     /index                              controllers.Application.index
 
+# Jira integration
+GET     /jira                               controllers.Jira.index
+POST    /jira                               controllers.Jira.submit(title: String, message: String)
+
 # Authentication
 GET     /login                              controllers.Application.login
 POST    /login                              controllers.Application.authenticate

@@ -23,6 +23,7 @@ import play.api.Play.current
 object Jira extends Controller with Secured {
 
   val jiraUrl = "https://jira.scm.io"
+  val issueTypes = Map("bug" -> "Bug", "feature" -> "New Feature")
   val conf = Play.configuration
   val branchName = conf.getString( "branchname" ) getOrElse "master"
 
@@ -30,7 +31,7 @@ object Jira extends Controller with Secured {
     Ok(html.jira.index(request.user))
   }
 
-  def createIssue(user: User, summary: String, description: String) {
+  def createIssue(user: User, summary: String, description: String, issueType: String) {
     val auth = new String(Base64.encodeBase64("autoreporter:frw378iokl!24".getBytes))
     val client = Client.create();
 
@@ -42,7 +43,7 @@ object Jira extends Controller with Secured {
         "customfield_10008" -> branchName,
         "description" -> (description + "\n\n Reported by: %s (%s)".format(user.name, user.email)),
         "issuetype" -> Json.obj(
-          "name" -> "Bug"))).toString
+          "name" -> issueType))).toString
 
     usingSelfSignedCert {
       val webResource: WebResource = client.resource(jiraUrl + "/rest/api/2/issue")
@@ -56,9 +57,11 @@ object Jira extends Controller with Secured {
     (for{
       summary <- request.body.get("summary").flatMap(_.headOption)
       description <- request.body.get("description").flatMap(_.headOption)
+      postedType <- request.body.get("type").flatMap(_.headOption)
+      issueType <- issueTypes.get(postedType)
     } yield {
       request.body
-      createIssue(request.user, summary, description)
+      createIssue(request.user, summary, description, issueType)
       Ok
     }) getOrElse BadRequest("Missing parameters.")
   }

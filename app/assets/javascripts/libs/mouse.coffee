@@ -26,7 +26,6 @@ class Mouse
   changedCallbackY : $.noop()
   changedCallbackR : $.noop()
   changedCallbackMW : $.noop()
-  changedCallbackM : $.noop()
   activeCallback : $.noop()
 
 
@@ -41,13 +40,15 @@ class Mouse
     @activeCallback = activeCallback
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
-    $(@target).on 
+    $(window).on
       "mousemove" : @mouseMoved
-      "mousedown" : @mouseDown
       "mouseup"   : @mouseUp
+
+    $(@target).on 
+      "mouseup"   : @mouseUp
+      "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mousewheel" : @mouseWheel
-
       # fullscreen pointer lock
       # Firefox does not yet support Pointer Lock
       "webkitfullscreenchange" : @toogleMouseLock
@@ -84,33 +85,28 @@ class Mouse
   bindW : (callback) ->
     @changedCallbackMW = callback
 
-  bindM : (callback) ->
-    @changedCallbackM = callback
-
   unbind : ->
     $(@target).off 
-      "mousemove" : @mouseMoved
-      "mouseup" : @mouseUp
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "webkitfullscreenchange" : @toogleMouseLock
       "webkitpointerlocklost" : @unlockMouse
       "webkitpointerlockchange" : @unlockMouse  
-      "mousewheel" : @mouseWheel  
+      "mousewheel" : @mouseWheel 
+
+    $(window).off
+      "mousemove" : @mouseMoved
+      "mouseup" : @mouseUp
+
+    @changedCallback = null
 
   mouseMoved : (evt) =>
-    
-    { lastPosition, changedCallback } = @
-
-    # mouse moved in preview to show tooltip
-    if @changedCallbackM?
-      @changedCallbackM [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top]
 
     # regular mouse management
     unless @locked 
       if @buttonDown
-        distX =  (evt.pageX - lastPosition.x) * User.Configuration.mouseInversionX
-        distY =  (evt.pageY - lastPosition.y) * User.Configuration.mouseInversionY
+        distX =  (evt.pageX - @lastPosition.x) * User.Configuration.mouseInversionX
+        distY =  (evt.pageY - @lastPosition.y) * User.Configuration.mouseInversionY
         @changedCallbackX distX if distX isnt 0
         @changedCallbackY distY if distY isnt 0
 
@@ -127,8 +123,8 @@ class Mouse
       @changedCallbackX distX * User.Configuration.mouseRotateValue if distX isnt 0
       @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
 
-  mouseEnter : =>
-    if @activeCallback?
+  mouseEnter : (evt) =>
+    if !(evt.which == 1) and @activeCallback?
       @activeCallback()
 
   mouseWheel : (evt, delta) =>
@@ -142,8 +138,12 @@ class Mouse
       # on rightclick, return mouse position relative to the canvas
       @changedCallbackR [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
     else
+      if @activeCallback?
+        @activeCallback()
       $(@target).css("cursor", "none")
       @buttonDown = true
+
+    return false
 
   mouseUp : =>
     @buttonDown = false 

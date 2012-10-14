@@ -45,7 +45,7 @@ class ArrayBufferSocket
 class ArrayBufferSocket.WebSocket
 
   OPEN_TIMEOUT : 500
-  MESSAGE_TIMEOUT : 20000
+  MESSAGE_TIMEOUT : 2000
 
   pendingRequests : []
 

@@ -138,14 +138,14 @@ class PullQueue
 
               bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
               @cube.setBucketByZoomedAddress(bucket, bucketData)
-              #console.log "Success: ", bucket
+              console.log "Success: ", bucket
 
         =>
           
           for bucket in batch
 
             @cube.setBucketByZoomedAddress(bucket, null)
-            #console.log "Failed: ", bucket, zoomStep
+            console.log "Failed: ", bucket
     
     ).always =>
 

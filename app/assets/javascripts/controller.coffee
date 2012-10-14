@@ -136,8 +136,6 @@ class Controller
       {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : @setWaypoint}
       {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "r" : @onPreviewClick}
     )
-      ##{"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev, "r" : _.bind(View.onPreviewClick, View), "m" : _.bind(View.showNodeID, View)}
-    #)
 
   initKeyboard : ->
 

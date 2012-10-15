@@ -45,7 +45,7 @@ class ArrayBufferSocket
 class ArrayBufferSocket.WebSocket
 
   OPEN_TIMEOUT : 500
-  MESSAGE_TIMEOUT : 2000
+  MESSAGE_TIMEOUT : 20000
 
   pendingRequests : []
 
@@ -173,10 +173,11 @@ class ArrayBufferSocket.XmlHttpRequest
 
     data = new @requestBufferType(data) if _.isArray(data)
     Requester(
-      data : data.buffer
+      data : data
       url : @url
-      dataType : 'arraybuffer'
-    ).pipe (buffer) => new @responseBufferType(buffer)
+      dataType : 'arraybufferview'
+    ).pipe (buffer) =>
+      new @responseBufferType(buffer)
 
 
   close : ->

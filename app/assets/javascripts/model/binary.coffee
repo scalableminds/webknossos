@@ -1,7 +1,7 @@
 ### define
 model/binary/cube : Cube
 model/binary/pullqueue : PullQueue
-model/binary/renderer : Renderer
+model/binary/plane2d : Plane2D
 model/game : Game
 ###
 
@@ -36,9 +36,9 @@ class Binary
   PRELOADING : [0,100,200]
 
   planes : [
-    { layer : null, zoomStep : null, view : { u : 0, v : 1, w : 2 } }
-    { layer : null, zoomStep : null, view : { u : 2, v : 1, w : 0 } }
-    { layer : null, zoomStep : null, view : { u : 0, v : 2, w : 1 } }
+    new Plane2D()
+    new Plane2D()
+    new Plane2D()
   ]
 
 
@@ -55,26 +55,26 @@ class Binary
   constructor : () ->
 
     @cube = new Cube()
-    @queue = new PullQueue("5075a3a4e4b087b988d15aec", @cube) # TODO
+    @queue = new PullQueue("507b1796e4b0b75f0b2827bc", @cube) # TODO
 
-    @cube.on "bucketLoaded", (bucket, newZoomStep, oldZoomStep) =>
+#    @cube.on "bucketLoaded", (bucket, newZoomStep, oldZoomStep) =>
 
-      for i in [0..2] by 1
-        plane = @planes[i]
+ #     for i in [0..2] by 1
+#        plane = @planes[i]
 
-        continue unless plane.topLeftBucket
+  #      continue unless plane.topLeftBucket
 
-        if plane.layer >> 5 == bucket[plane.view.w] and oldZoomStep > plane.zoomStep
+   #     if plane.layer >> 5 == bucket[plane.view.w] and oldZoomStep > plane.zoomStep
+#
+ #         u = (bucket[plane.view.u] >> plane.zoomStep) - plane.topLeftBucket[plane.view.u]
+  #        v = (bucket[plane.view.v] >> plane.zoomStep) - plane.topLeftBucket[plane.view.v]
 
-          u = (bucket[plane.view.u] >> plane.zoomStep) - plane.topLeftBucket[plane.view.u]
-          v = (bucket[plane.view.v] >> plane.zoomStep) - plane.topLeftBucket[plane.view.v]
-
-          if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
-              #TODO Macro-Fix
-              tile = [u, v]
-              plane.tiles[tileIndexByTileMacro(tile)] = true
-              if u in [plane.area[0]..plane.area[2]] and v in [plane.area[1]..plane.area[3]]
-                plane.changed = true
+   #       if u in [0..@TEXTURE_SIZE >> 5] and v in [0..@TEXTURE_SIZE >> 5]
+    #          #TODO Macro-Fix
+     #         tile = [u, v]
+      #        plane.tiles[tileIndexByTileMacro(tile)] = true
+       #       if u in [plane.area[0]..plane.area[2]] and v in [plane.area[1]..plane.area[3]]
+        #        plane.changed = true
 
   ping : (position, zoomSteps, direction) ->
 
@@ -165,14 +165,14 @@ class Binary
     @queue.pull()
 
 
-  get : (position, zoomStep, area) ->
+  get : (position, zoomStep, area, plane) ->
 
-    $.when(@getSync(position, zoomStep, area))
+    $.when(@getSync(position, zoomStep, area, plane))
 
 
-  getSync : (position, zoomStep, area) ->
+  getSync : (position, zoomStep, area, plane) ->
 
-    null
+    @planes[plane].get(position, zoomStep, area)
 
 
   getBucketArray : (center, range_x, range_y, range_z) ->

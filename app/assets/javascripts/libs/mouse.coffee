@@ -24,8 +24,8 @@ class Mouse
   # stores the callbacks for mouse movement in each dimension
   changedCallbackX : $.noop()
   changedCallbackY : $.noop()
-  changedCallbackR : $.noop()
-  changedCallbackMW : $.noop()
+  changedCallbackRightclick : $.noop()
+  changedCallbackMouseWheel : $.noop()
   activeCallback : $.noop()
 
 
@@ -34,7 +34,6 @@ class Mouse
   # HTML object where the mouse attaches the events
   ###
   constructor : (target, activeCallback) ->
-    # @User = User
     @target = target
 
     @activeCallback = activeCallback
@@ -45,7 +44,6 @@ class Mouse
       "mouseup"   : @mouseUp
 
     $(@target).on 
-      "mouseup"   : @mouseUp
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mousewheel" : @mouseWheel
@@ -80,10 +78,16 @@ class Mouse
   # gets the relative mouse position as parameter
   ###
   bindR : (callback) ->
-    @changedCallbackR = callback
+    @changedCallbackRightclick = callback
+
+  ###
+  #Binds a function as callback when mousewheel was changed
+  #@param {Function} callback :
+  # gets the delta as parameter
+  ###
 
   bindW : (callback) ->
-    @changedCallbackMW = callback
+    @changedCallbackMouseWheel = callback
 
   unbind : ->
     $(@target).off 
@@ -124,19 +128,20 @@ class Mouse
       @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
 
   mouseEnter : (evt) =>
-    if !(evt.which == 1) and @activeCallback?
+    # don't invoke activeCallback, when leftclicking while entering
+    if evt.which != 1 and @activeCallback?
       @activeCallback()
 
   mouseWheel : (evt, delta) =>
-    if @changedCallbackMW?
-      @changedCallbackMW(delta)
+    if @changedCallbackMouseWheel?
+      @changedCallbackMouseWheel(delta)
       return false      # prevent scrolling the web page
     
   mouseDown : (evt) =>
     # check whether the mouseDown event is a rightclick
     if evt.which == 3
       # on rightclick, return mouse position relative to the canvas
-      @changedCallbackR [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
+      @changedCallbackRightclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
     else
       if @activeCallback?
         @activeCallback()

@@ -39,8 +39,11 @@ class Skeleton
         new THREE.SphereGeometry(1 / @model.Route.scaleX),
         new THREE.MeshLambertMaterial({
           color : 0xff0000
+          #transparent: true
+          #opacity: 0.5 })
           })
       )
+    @activeNode.doubleSided = true
 
     @reset()
 
@@ -220,12 +223,13 @@ class Skeleton
   pushNewNode : (radius, position, id) ->
     newNode = new THREE.Mesh(
       new THREE.SphereGeometry(1 / @model.Route.scaleX),
-      new THREE.MeshLambertMaterial({ color : 0xff0000 })
+      new THREE.MeshLambertMaterial({ color : 0xff0000})#, transparent: true, opacity: 0.5 })
     )
     newNode.scale = new THREE.Vector3(radius, radius, radius)
     newNode.position = new THREE.Vector3(position[0], position[1], position[2])
     newNode.nodeId = id
     newNode.visible = @disSpheres
+    newNode.doubleSided = true
     @nodesSpheres.push(newNode)
     return newNode
       

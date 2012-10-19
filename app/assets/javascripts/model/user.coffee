@@ -1,5 +1,5 @@
 ### define
-libs/request : request
+libs/request : Request
 ###
 
 # This takes care of the userdate. 
@@ -41,7 +41,7 @@ User.Configuration =
       @configDeferred.fail =>
         @configDeferred = null
 
-      request(url : '/user/configuration').then( 
+      Request.send(url : '/user/configuration').then( 
         
         (data) =>
           try

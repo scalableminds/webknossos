@@ -5,12 +5,6 @@ model/binary/plane2d : Plane2D
 model/game : Game
 ###
 
-# Macros
-
-tileIndexByTileMacro = (tile) ->
-
-  tile[0] * (@TEXTURE_SIZE >> 5) + tile[1]
-
 
 class Binary
 
@@ -35,27 +29,31 @@ class Binary
 
   PRELOADING : [0,100,200]
 
-  planes : [
-    new Plane2D()
-    new Plane2D()
-    new Plane2D()
-  ]
-
-
   #######################
 
-  cube : null
-  queue : null
 
   # Constants
   TEXTURE_SIZE : 512
   PING_THROTTLE_TIME : 1000
 
+  cube : null
+  queue : null
+  planes : null
+
 
   constructor : () ->
 
     @cube = new Cube()
-    @queue = new PullQueue("507b1796e4b0b75f0b2827bc", @cube) # TODO
+    @queue = new PullQueue("507b1796e4b0b75f0b2827bc", @cube)
+
+    @planes = [
+      new Plane2D(0, 1, 2, @cube)
+      new Plane2D(1, 0, 2, @cube)
+      new Plane2D(2, 0, 1, @cube)
+    ]
+
+#    @cube = new Cube()
+ #   @queue =  # TODO
 
 #    @cube.on "bucketLoaded", (bucket, newZoomStep, oldZoomStep) =>
 
@@ -172,7 +170,9 @@ class Binary
 
   getSync : (position, zoomStep, area, plane) ->
 
-    @planes[plane].get(position, zoomStep, area)
+    # TODO
+    if plane == 0
+      @planes[plane].get(position, zoomStep, area)
 
 
   getBucketArray : (center, range_x, range_y, range_z) ->

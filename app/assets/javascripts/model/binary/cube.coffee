@@ -7,6 +7,8 @@ class Cube
   cube : null
   cubeSize : null
   cubeOffset : null
+  # TODO
+  ready : false
 
   # Constants
   BUCKET_LENGTH : 32 * 32 * 16 # TODO
@@ -23,7 +25,7 @@ class Cube
   getBucketByAddress : (bucket) ->
 
     bucketIndex = @getBucketIndexByAddress(bucket)
-    
+
     if bucketIndex?
       @cube[bucketIndex]
     else
@@ -161,11 +163,11 @@ class Cube
     return
 
         
-  positionToZoomedAddress : (x, y, z, zoomStep) ->
+  positionToZoomedAddress : ([x, y, z], zoomStep) ->
 
-    [ x >> @cube.BUCKET_SIZE_P + zoomStep,
-      y >> @cube.BUCKET_SIZE_P + zoomStep,
-      z >> @cube.BUCKET_SIZE_P + zoomStep,
+    [ x >> @BUCKET_SIZE_P + zoomStep,
+      y >> @BUCKET_SIZE_P + zoomStep,
+      z >> @BUCKET_SIZE_P + zoomStep,
       zoomStep
     ]
 
@@ -182,7 +184,7 @@ class Cube
     max_y = Math.max(max_y, 0)
     max_z = Math.max(max_z, 0)
 
-    # First, we calculate the new dimension of the cuboid.
+    # First, we calculate the new dimension of the cuboid
     if oldCube
 
       oldUpperBound = new Uint32Array(3)
@@ -241,7 +243,7 @@ class Cube
 
     else
 
-      # Before, there wasn't any cube.
+      # Before, there wasn't any cube
       newCubeOffset = new Uint32Array(3)
       newCubeOffset[0] = Math.min(min_x, max_x)
       newCubeOffset[1] = Math.min(min_y, max_y)
@@ -257,3 +259,6 @@ class Cube
       @cube       = newCube
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
+
+    #TODO
+    @ready = true

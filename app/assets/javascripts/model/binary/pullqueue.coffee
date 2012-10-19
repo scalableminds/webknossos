@@ -18,6 +18,7 @@ class PullQueue
   ROUND_TRIP_TIME_SMOOTHER : .125
 
   constructor : (@dataSetId, @cube) ->
+    console.log @cube
 
 
   swap : (a, b) ->

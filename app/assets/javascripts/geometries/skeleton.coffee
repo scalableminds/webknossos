@@ -140,7 +140,7 @@ class Skeleton
       @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
     else
       @activeNodeSphere = null
-      @setNodeRadius(0)
+      #@setNodeRadius(0)
 
   setNodeRadius : (value) ->
     @activeNode.scale = new THREE.Vector3(value, value, value)

@@ -1,6 +1,7 @@
 ### define
 libs/datgui/dat.gui : DatGui
 libs/request : request
+libs/event_mixin : EventMixin
 ###
 
 PLANE_XY = 0
@@ -11,6 +12,8 @@ VIEW_3D  = 3
 class Gui 
   
   constructor : (container, data, model, sceneController, cameraController, flycam) ->
+    
+    _.extend(this, new EventMixin())
 
     @model = model
     @sceneController = sceneController
@@ -41,12 +44,12 @@ class Gui
                 nodesAsSpheres : data.nodesAsSpheres
 
                 activeTreeID : @model.Route.getActiveTreeId()
-                newTree : @createNewTree
-                deleteActiveTree : @deleteActiveTree
+                newTree : => @trigger "createNewTree"
+                deleteActiveTree : => @trigger "deleteActiveTree"
 
                 activeNodeID : @model.Route.getActiveNodeId()
                 newNodeNewTree : data.newNodeNewTree
-                deleteActiveNode : @deleteActiveNode
+                deleteActiveNode : => @trigger "deleteActiveNode"
                 radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
               }
     @gui  = new dat.GUI({autoPlace: false, width : 280, hideable : false})
@@ -108,7 +111,7 @@ class Gui
                           .min(1)
                           .step(1)
                           .name("Active Tree ID")
-                          .onFinishChange(@setActiveTree)
+                          .onFinishChange( (value) => @trigger "setActiveTree", value)
     (fTrees.add @settings, "newNodeNewTree")
                           .name("Soma clicking mode")
                           .onFinishChange(@setNewNodeNewTree)
@@ -123,7 +126,7 @@ class Gui
                           .min(1)
                           .step(1)
                           .name("Active Node ID")
-                          .onFinishChange(@setActiveNode)
+                          .onFinishChange( (value) => @trigger "setActiveNode", value)
     scale = @model.Route.scaleX
     (fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
                           .name("Radius")    
@@ -224,34 +227,7 @@ class Gui
       @model.User.Configuration.mouseInversionY = 1
     else
       @model.User.Configuration.mouseInversionY = -1
-    @model.User.Configuration.push()  
-
-  # called when value is changed in input field
-  setActiveTree : (value) =>
-    @model.Route.setActiveTree(value)
-    @updateNodeAndTreeIds()
-    @sceneController.updateRoute()
-
-  # called when value user switch to different active tree
-  #setActiveTreeId : (value) =>
-  #  @settings.activeTreeID = value
-  #  @activeTreeIdController.updateDisplay()
-
-  createNewTree : =>
-    id = @model.Route.createNewTree()
-    @updateNodeAndTreeIds()
-    @sceneController.skeleton.createNewTree(id)
-
-  deleteActiveTree : =>
-    @model.Route.deleteActiveTree()
-    @updateNodeAndTreeIds()
-    @sceneController.updateRoute()
-    
-  # called when value is changed in input field
-  setActiveNode : (value) =>
-    @flycam.setGlobalPos(@model.Route.setActiveNode(value))
-    @updateNodeAndTreeIds()
-    @sceneController.skeleton.setActiveNode()
+    @model.User.Configuration.push()
 
   setNewNodeNewTree : (value) =>
     @model.User.Configuration.newNodeNewTree = value
@@ -264,12 +240,8 @@ class Gui
     @flycam.hasChanged = true
 
   updateRadius : ->
-    @settings.radius = @model.Route.getActiveNodeRadius()
-
-  deleteActiveNode : =>
-    @model.Route.deleteActiveNode()
-    @updateNodeAndTreeIds()
-    @sceneController.updateRoute()
+    if @model.Route.getActiveNodeRadius()
+      @settings.radius = @model.Route.getActiveNodeRadius()
 
   # called when value user switch to different active node
   updateNodeAndTreeIds : =>
@@ -277,3 +249,8 @@ class Gui
     @settings.activeTreeID = @model.Route.getActiveTreeId()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
+
+  # Helper method to combine common update methods
+  update : ->
+    @updateNodeAndTreeIds()
+    @updateRadius()

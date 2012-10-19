@@ -33,7 +33,7 @@ import brainflight.tools.geometry.Point3D
  * Time: 11:27
  */
 
-object Task extends Controller with Secured {
+object ExperimentController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
   def createDataSetInformation(dataSetName: String) =
@@ -48,20 +48,21 @@ object Task extends Controller with Secured {
         Json.obj("error" -> "Couldn't find dataset.")
     }
 
-  def createTaskInformation(experiment: Experiment) = {
+  def createExperimentInformation(experiment: Experiment) = {
     Json.obj(
       "experiment" -> experiment)
   }
 
   def info(experimentId: String) = Authenticated { implicit request =>
     Experiment.findOneById(experimentId).map(exp =>
-      Ok(createTaskInformation(exp) ++ createDataSetInformation(exp.dataSetName))).getOrElse(BadRequest("Task not found."))
+      Ok(createExperimentInformation(exp) ++ createDataSetInformation(exp.dataSetName))
+      ).getOrElse(BadRequest("Experiment with id '%s' not found.".format(experimentId)))
   }
 
-  def update(expId: String) = Authenticated(parse.json(maxLength=2097152)) { implicit request =>
+  def update(experimentId: String) = Authenticated(parse.json(maxLength=2097152)) { implicit request =>
     (request.body).asOpt[Experiment].map { exp =>
-      Experiment.save(exp)
+      Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
       Ok
-    } getOrElse (BadRequest("Update failed."))
+    } getOrElse (BadRequest("Update for experiment with id '%s' failed.".format(experimentId)))
   }
 }

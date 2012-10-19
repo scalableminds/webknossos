@@ -298,7 +298,7 @@ Route =
       if point
         @activeNode = point
         @lastActiveNodeId = @activeNode.id
-        deferred.resolve(@activeNode.pos)
+        deferred.resolve(@activeNode.id)
       else
         deferred.reject()
 
@@ -438,6 +438,8 @@ Route =
     if @activeNode
       @activeNode.remove(id)
       @lastActiveNodeId = @activeNode.id
+    else
+      @deleteActiveTree()
     @push()
 
   deleteActiveTree : ->

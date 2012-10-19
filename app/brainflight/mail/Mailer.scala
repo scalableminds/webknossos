@@ -64,7 +64,7 @@ class Mailer extends Actor {
     // Content type
     val contentType = mail.contentType getOrElse guessContentType( mail )
 
-    var multiPartMail: MultiPartEmail = createEmail( mail )
+    val multiPartMail: MultiPartEmail = createEmail( mail )
 
     multiPartMail.setCharset( mail.charset )
 

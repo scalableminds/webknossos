@@ -25,7 +25,7 @@ object Jira extends Controller with Secured {
   val jiraUrl = "https://jira.scm.io"
   val issueTypes = Map("bug" -> "Bug", "feature" -> "New Feature")
   val conf = Play.configuration
-  val branchName = conf.getString( "branchname" ) getOrElse "master"
+  val branchName = conf.getString("branchname") getOrElse "master"
 
   def index = Authenticated { implicit request =>
     Ok(html.jira.index(request.user))
@@ -40,7 +40,8 @@ object Jira extends Controller with Secured {
         "project" -> Json.obj(
           "key" -> "OX"),
         "summary" -> summary,
-        "security" -> 10000,
+        "security" -> Json.obj(
+          "id" -> "10000"),
         "customfield_10008" -> branchName,
         "customfield_10301" -> user.email,
         "description" -> (description + "\n\n Reported by: %s (%s)".format(user.name, user.email)),
@@ -51,12 +52,12 @@ object Jira extends Controller with Secured {
       val webResource: WebResource = client.resource(jiraUrl + "/rest/api/2/issue")
 
       val response = webResource.header("Authorization", "Basic " + auth).`type`("application/json").accept("application/json").post(classOf[ClientResponse], issue);
-      println(response)
+      Logger.debug(response.toString)
     }
   }
 
   def submit = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for{
+    (for {
       summary <- request.body.get("summary").flatMap(_.headOption)
       description <- request.body.get("description").flatMap(_.headOption)
       postedType <- request.body.get("type").flatMap(_.headOption)

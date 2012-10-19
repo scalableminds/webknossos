@@ -26,6 +26,7 @@ import akka.pattern.AskTimeoutException
 import play.api.libs.iteratee.Concurrent.Channel
 import scala.collection.mutable.ArrayBuffer
 import akka.routing.RoundRobinRouter
+import play.api.libs.concurrent.execution.defaultContext
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 /**

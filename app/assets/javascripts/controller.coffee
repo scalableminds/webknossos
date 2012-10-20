@@ -136,10 +136,14 @@ class Controller
       {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : @setWaypoint}
       {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "r" : @onPreviewClick}
     )
-      ##{"x" : View.movePrevX, "y" : View.movePrevY, "w" : View.zoomPrev, "r" : _.bind(View.onPreviewClick, View), "m" : _.bind(View.showNodeID, View)}
-    #)
 
   initKeyboard : ->
+
+    # TODO: (from Georg) I do not get the difference between Keyboard
+    # and KeyboardNoLoop. KeyboardNoLoop implies that pressing the key
+    # longer will not trigger the callback several times, but this is
+    # false, apparently. I moved the space to KeyboardNoLoop, because
+    # it allows more accuracy.
     
     @input.keyboard = new Input.Keyboard(
 
@@ -160,8 +164,8 @@ class Controller
       "s"             : => @moveY( @model.User.Configuration.moveValue)
       "a"             : => @moveX(-@model.User.Configuration.moveValue)
       "d"             : => @moveX( @model.User.Configuration.moveValue)
-      "space"         : => @moveZ( @model.User.Configuration.moveValue)
-      "shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
+      #"space"         : => @moveZ( @model.User.Configuration.moveValue)
+      #"shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
 
       #Rotate in distance
       "left"          : => @moveX(-@model.User.Configuration.moveValue)
@@ -195,6 +199,10 @@ class Controller
 
       "n" : =>
         @createNewTree()
+
+      # Move
+      "space"         : => @moveZ( @model.User.Configuration.moveValue)
+      "shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
     )
 
   # for more buttons look at Input.Gamepad
@@ -273,14 +281,14 @@ class Controller
       vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex
       @setActiveNode(vertex.nodeId)
-      
+
       console.log intersects
 
   ########### Model Interaction
 
   addNode : (position) =>
     if @model.User.Configuration.newNodeNewTree == true
-      @gui.createNewTree()
+      @createNewTree()
     @model.Route.put(position)
     @gui.updateNodeAndTreeIds()
     @gui.updateRadius()

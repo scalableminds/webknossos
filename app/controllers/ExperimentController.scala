@@ -25,6 +25,7 @@ import models.DataSet
 import models.graph.Node
 import models.graph.Edge
 import brainflight.tools.geometry.Point3D
+import brainflight.format.DateFormatter
 
 /**
  * scalableminds - brainflight
@@ -53,13 +54,53 @@ object ExperimentController extends Controller with Secured {
       "experiment" -> experiment)
   }
 
-  def info(experimentId: String) = Authenticated { implicit request =>
-    Experiment.findOneById(experimentId).map(exp =>
-      Ok(createExperimentInformation(exp) ++ createDataSetInformation(exp.dataSetName))
-      ).getOrElse(BadRequest("Experiment with id '%s' not found.".format(experimentId)))
+  def createExperimentsList(user: User) = {
+    for {
+      expId <- user.experiments
+      exp <- Experiment.findOneById(expId)
+    } yield {
+      Json.obj(
+        "name" -> (exp.dataSetName + " " + DateFormatter.format(exp.date)),
+        "id" -> exp.id,
+        "isNew" -> false)
+    }
   }
 
-  def update(experimentId: String) = Authenticated(parse.json(maxLength=2097152)) { implicit request =>
+  def createNewExperimentList() = {
+    DataSet.findAll.map(d => Json.obj(
+      "name" -> ("New on " + d.name),
+      "id" -> d.id,
+      "isNew" -> true))
+  }
+
+  def useAsActive(id: String, isNew: Boolean) = Authenticated { implicit request =>
+    val user = request.user
+    if (isNew) {
+      DataSet.findOneById(id).map { dataSet =>
+        val exp = Experiment.createNew(dataSet)
+        User.save(user.copy(experiments = exp._id :: request.user.experiments))
+        Ok
+      } getOrElse BadRequest("Couldn't find DataSet.")
+    } else {
+      user.experiments.find(_ == id).map { expId =>
+        val experiments = expId :: user.experiments.filterNot(_ == expId)
+        User.save(user.copy(experiments = experiments))
+        Ok
+      } getOrElse BadRequest("Coudln't find experiment.")
+    }
+    Ok
+  }
+
+  def list = Authenticated { implicit request =>
+    Ok(Json.toJson(createNewExperimentList ++ createExperimentsList(request.user)))
+  }
+
+  def info(experimentId: String) = Authenticated { implicit request =>
+    Experiment.findOneById(experimentId).map(exp =>
+      Ok(createExperimentInformation(exp) ++ createDataSetInformation(exp.dataSetName))).getOrElse(BadRequest("Experiment with id '%s' not found.".format(experimentId)))
+  }
+
+  def update(experimentId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
     (request.body).asOpt[Experiment].map { exp =>
       Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
       Ok

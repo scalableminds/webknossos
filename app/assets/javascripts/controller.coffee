@@ -133,8 +133,8 @@ class Controller
     @input.mouses = new Input.Mouse(
       [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
       [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
-      {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : @setWaypoint}
-      {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "r" : @onPreviewClick}
+      {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "l" : @onPlaneClick, "r" : @setWaypoint}
+      {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "l" : @onPreviewClick}
     )
 
   initKeyboard : ->
@@ -249,7 +249,6 @@ class Controller
   moveY : (y) => @move([0, y, 0])
   moveZ : (z) => @move([0, 0, z])
 
-
   ########### Click callbacks
   
   setWaypoint : (relativePosition, typeNumber) =>
@@ -263,26 +262,42 @@ class Controller
     @addNode(position)
 
   onPreviewClick : (position) =>
+    @onClick(position, VIEW_3D)
+
+  onPlaneClick : (position) =>
+    plane = @flycam.getActivePlane()
+    @onClick(position, plane)
+
+  onClick : (position, plane) =>
     scaleFactor = @view.scaleFactor
-    camera      = @view.getCameras()[VIEW_3D]
+    camera      = @view.getCameras()[plane]
     # vector with direction from camera position to click position
     vector = new THREE.Vector3((position[0] / (384 * scaleFactor) ) * 2 - 1, - (position[1] / (384 * scaleFactor)) * 2 + 1, 0.5)
     
     # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()
     ray = projector.pickingRay(vector, camera)
-    ray.setThreshold(@flycam.getRayThreshold())
+    ray.setThreshold(@flycam.getRayThreshold(plane))
  
     # identify clicked object
     intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
 
-    if (intersects.length > 0 and intersects[0].distance >= 0)
-      # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
-      vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
-      # set the active Node to the one that has the ID stored in the vertex
-      @setActiveNode(vertex.nodeId)
+    if intersects.length > 0 and intersects[0].distance >= 0
+      intersectsCoord = [intersects[0].point.y, intersects[0].point.x, intersects[0].point.z]
+      globalPos = @flycam.getGlobalPos()
+      clickCoords = [globalPos[1], globalPos[0], globalPos[2]]
 
-      console.log intersects
+      # console.log clickCoords[2 - plane]
+      # console.log intersectsCoord[2 - plane]
+      # console.log @cameraController.getRouteClippingDistance()
+      # console.log Math.abs(clickCoords[2 - plane] - intersectsCoord[2 - plane])
+
+      # make sure you can't click nodes, that are clipped away (one can't see)
+      if plane == 3 or (Math.abs(clickCoords[2 - plane] - intersectsCoord[2 - plane]) < @cameraController.getRouteClippingDistance()/2)
+      # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
+        vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
+      # set the active Node to the one that has the ID stored in the vertex
+        @setActiveNode(vertex.nodeId)
 
   ########### Model Interaction
 
@@ -296,7 +311,9 @@ class Controller
 
   setActiveNode : (nodeId) =>
     @model.Route.setActiveNode(nodeId)
-    @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+    #### isn't centered anymore, was distracting in the viewports, wrote a mail to kevin to ask for his favourite behaviour
+    #@flycam.setGlobalPos(@model.Route.getActiveNodePos())
+    @flycam.hasChanged = true
     @gui.update()
     @sceneController.skeleton.setActiveNode()
 

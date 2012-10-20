@@ -26,6 +26,7 @@ class Mouse
   changedCallbackY : $.noop()
   changedCallbackRightclick : $.noop()
   changedCallbackMouseWheel : $.noop()
+  @changedCallbackLeftclick : $.noop()
   activeCallback : $.noop()
 
 
@@ -79,6 +80,14 @@ class Mouse
   ###
   bindR : (callback) ->
     @changedCallbackRightclick = callback
+
+  ###
+  #Binds a function as callback when canvas was leftclicked
+  #@param {Function} callback :
+  # gets the relative mouse position as parameter
+  ###
+  bindL : (callback) ->
+    @changedCallbackLeftclick = callback
 
   ###
   #Binds a function as callback when mousewheel was changed
@@ -138,15 +147,16 @@ class Mouse
       return false      # prevent scrolling the web page
     
   mouseDown : (evt) =>
-    # check whether the mouseDown event is a rightclick
-    if evt.which == 3
-      # on rightclick, return mouse position relative to the canvas
-      @changedCallbackRightclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
-    else
+    # check whether the mouseDown event is a leftclick
+    if evt.which == 1
       if @activeCallback?
         @activeCallback()
       $(@target).css("cursor", "none")
       @buttonDown = true
+      # on leftclick, return mouse position relative to the canvas
+      @changedCallbackLeftclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
+    else
+      @changedCallbackRightclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
 
     return false
 

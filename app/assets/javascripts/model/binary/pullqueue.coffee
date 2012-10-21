@@ -93,13 +93,13 @@ PullQueue =
 
     @pullLoadingCount++
     Cube.setRequestedZoomStepByZoomedAddress(bucket, zoomStep)
-    #console.log "Requested: ", bucket, zoomStep
+    console.log "Requested: ", bucket, zoomStep
 
     @loadBucketByAddress(bucket, zoomStep).then(
 
       (colors) =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, colors) if colors.length
-        #console.log "Success: ", bucket, zoomStep, colors
+        console.log "Success: ", bucket, zoomStep
 
       =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, null)
@@ -115,7 +115,7 @@ PullQueue =
       dataSetId = Route.data.dataSet.id
       console.log dataSetId
       new SimpleArrayBufferSocket(
-        defaultSender : new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{dataSetId}&cubeSize=32")
+        defaultSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{dataSetId}&cubeSize=32")#new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{dataSetId}&cubeSize=32")
         fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{dataSetId}&cubeSize=32")
         requestBufferType : Float32Array
         responseBufferType : Uint8Array

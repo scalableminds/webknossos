@@ -293,7 +293,7 @@ class Controller
       # console.log Math.abs(clickCoords[2 - plane] - intersectsCoord[2 - plane])
 
       # make sure you can't click nodes, that are clipped away (one can't see)
-      if plane == 3 or (Math.abs(clickCoords[2 - plane] - intersectsCoord[2 - plane]) < @cameraController.getRouteClippingDistance()/2)
+      if plane == 3 or (Math.abs(clickCoords[2 - plane] - intersectsCoord[2 - plane]) < @cameraController.getRouteClippingDistance())
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
         vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex

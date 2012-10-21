@@ -156,7 +156,8 @@ class Mouse
       # on leftclick, return mouse position relative to the canvas
       @changedCallbackLeftclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
     else
-      @changedCallbackRightclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
+      if @changedCallbackRightclick
+        @changedCallbackRightclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
 
     return false
 

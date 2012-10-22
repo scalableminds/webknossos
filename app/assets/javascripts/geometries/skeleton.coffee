@@ -135,12 +135,13 @@ class Skeleton
     # May be null
     @lastNodePosition = position
     if position
+      @activeNode.visible = true
       @activeNodeSphere = @getSphereIndexFromId(id)
       @setNodeRadius(@model.Route.getActiveNodeRadius())
       @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
     else
       @activeNodeSphere = null
-      #@setNodeRadius(0)
+      @activeNode.visible = false
 
   setNodeRadius : (value) ->
     @activeNode.scale = new THREE.Vector3(value, value, value)

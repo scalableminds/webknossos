@@ -7,6 +7,7 @@ import com.restfb.BaseFacebookClient
 import com.restfb.DefaultFacebookClient
 import play.api.Play
 import brainflight.security.Secured
+import play.api.libs.concurrent.execution.defaultContext
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 object FacebookLogin extends Controller {

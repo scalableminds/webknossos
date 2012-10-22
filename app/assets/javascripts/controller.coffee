@@ -185,7 +185,7 @@ class Controller
         @model.Route.putBranch()
       "j" : => @model.Route.popBranch().done(
         (id) => 
-          @setActiveNode(id)
+          @setActiveNode(id, true)
         )
 
       #Zoom in/out
@@ -298,18 +298,15 @@ class Controller
       intersectsCoord = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
       globalPos = @flycam.getGlobalPos()
 
-      # console.log clickCoords[2 - plane]
-      # console.log intersectsCoord[2 - plane]
-      # console.log @cameraController.getRouteClippingDistance()
-      # console.log Math.abs(clickCoords[2 - plane] - intersectsCoord[2 - plane])
-
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = @flycam.getIndices(plane)
       if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance())
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
         vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex
-        @setActiveNode(vertex.nodeId)
+      # center the node if click was in 3d-view
+        centered = plane == VIEW_3D
+        @setActiveNode(vertex.nodeId, centered)
 
   ########### Model Interaction
 
@@ -321,10 +318,10 @@ class Controller
     @gui.updateRadius()
     @sceneController.setWaypoint()
 
-  setActiveNode : (nodeId) =>
+  setActiveNode : (nodeId, centered) =>
     @model.Route.setActiveNode(nodeId)
-    #### isn't centered anymore, was distracting in the viewports, wrote a mail to kevin to ask for his favourite behaviour
-    #@flycam.setGlobalPos(@model.Route.getActiveNodePos())
+    if centered
+      @flycam.setGlobalPos(@model.Route.getActiveNodePos())
     @flycam.hasChanged = true
     @gui.update()
     @sceneController.skeleton.setActiveNode()

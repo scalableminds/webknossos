@@ -53,11 +53,23 @@ class Flycam2d
     for i in [0..2]
       @zoomOut i
 
+  # Used if the user wants to explicitly set the zoom step,
+  # rather than trusting on our equation.
+  setOverrideZoomStep : (value) ->
+    @overrideZoomStep = value
+    @hasChanged = true
+
   calculateIntegerZoomStep : (planeID) ->
     # round, because Model expects Integer
     @integerZoomSteps[planeID] = Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff)
     if @integerZoomSteps[planeID] < 0
       @integerZoomSteps[planeID] = 0
+    # overrideZoomStep only has an effect when it is larger than the optimal zoom step
+    if @overrideZoomStep
+      @integerZoomSteps[planeID] = Math.max(@overrideZoomStep, @integerZoomSteps[planeID])
+
+  getZoomStep : (planeID) ->
+    @zoomSteps[planeID]
 
   getIntegerZoomStep : (planeID) ->
     @integerZoomSteps[planeID]

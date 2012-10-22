@@ -189,8 +189,20 @@ class Controller
         )
 
       #Zoom in/out
-      "i" : => @cameraController.zoomIn()
-      "o" : => @cameraController.zoomOut()
+      "i" : =>
+        @cameraController.zoomIn()
+        # Remember Zoom Steps
+        @model.User.Configuration.zoom0 = @flycam.getZoomStep(0)
+        @model.User.Configuration.zoom1 = @flycam.getZoomStep(1)
+        @model.User.Configuration.zoom2 = @flycam.getZoomStep(2)
+        @model.User.Configuration.push()
+      "o" : =>
+        @cameraController.zoomOut()
+        # Remember Zoom Steps
+        @model.User.Configuration.zoom0 = @flycam.getZoomStep(0)
+        @model.User.Configuration.zoom1 = @flycam.getZoomStep(1)
+        @model.User.Configuration.zoom2 = @flycam.getZoomStep(2)
+        @model.User.Configuration.push()
 
       # delete active node
       "delete" : =>

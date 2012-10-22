@@ -22,7 +22,7 @@ object UserController extends Controller with Secured {
         BadRequest( "Unknown validation key." )
   }
 
-  def saveSettings = Authenticated( parser = parse.json( maxLength = 512 ) ) {
+  def saveSettings = Authenticated( parser = parse.json( maxLength = 2048 ) ) {
     implicit request =>
       request.body.asOpt[JsObject] map { settings =>
         val fields = settings.fields take ( UserConfiguration.MaxSettings ) filter ( UserConfiguration.isValidSetting )

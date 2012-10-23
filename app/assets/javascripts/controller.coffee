@@ -101,7 +101,7 @@ class Controller
   
         @model.User.Configuration.initialize().then(
           (data) =>
-            @flycam.setZoomSteps(data.zoom0, data.zoom1, data.zoom2)
+            @flycam.setZoomSteps(data.zoomXY, data.zoomYZ, data.zoomXZ)
             @flycam.setOverrideZoomStep(data.minZoomStep)
 
             @initMouse() if data.mouseActive is true
@@ -195,16 +195,16 @@ class Controller
       "i" : =>
         @cameraController.zoomIn()
         # Remember Zoom Steps
-        @model.User.Configuration.zoom0 = @flycam.getZoomStep(0)
-        @model.User.Configuration.zoom1 = @flycam.getZoomStep(1)
-        @model.User.Configuration.zoom2 = @flycam.getZoomStep(2)
+        @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
+        @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+        @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
         @model.User.Configuration.push()
       "o" : =>
         @cameraController.zoomOut()
         # Remember Zoom Steps
-        @model.User.Configuration.zoom0 = @flycam.getZoomStep(0)
-        @model.User.Configuration.zoom1 = @flycam.getZoomStep(1)
-        @model.User.Configuration.zoom2 = @flycam.getZoomStep(2)
+        @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
+        @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+        @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
         @model.User.Configuration.push()
 
       # delete active node

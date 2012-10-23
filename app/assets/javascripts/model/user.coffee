@@ -21,9 +21,9 @@ User.Configuration =
   displayCrosshair : null
   interpolation : null
   minZoomStep : null
-  zoom0 : null
-  zoom1 : null
-  zoom2 : null
+  zoomXY : null
+  zoomYZ : null
+  zoomXZ : null
   displayPreviewXY : null
   displayPreviewYZ : null
   displayPreviewXZ : null
@@ -59,9 +59,9 @@ User.Configuration =
               @displayCrosshair,
               @interpolation,
               @minZoomStep,
-              @zoom0,
-              @zoom1,
-              @zoom2,
+              @zoomXY,
+              @zoomYZ,
+              @zoomXZ,
               @displayPreviewXY,
               @displayPreviewYZ,
               @displayPreviewXZ,
@@ -104,9 +104,9 @@ User.Configuration =
         displayCrosshair : @displayCrosshair,
         interpolation : @interpolation,
         minZoomStep : @minZoomStep,
-        zoom0 : @zoom0,
-        zoom1 : @zoom1,
-        zoom2 : @zoom2,
+        zoomXY : @zoomXY,
+        zoomYZ : @zoomYZ,
+        zoomXZ : @zoomXZ,
         displayPreviewXY : @displayPreviewXY,
         displayPreviewYZ : @displayPreviewYZ,
         displayPreviewXZ : @displayPreviewXZ,

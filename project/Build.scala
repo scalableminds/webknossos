@@ -19,7 +19,6 @@ object ApplicationBuild extends Build {
     "com.sun.jersey" % "jersey-core" % "1.8",
     "reactivemongo" %% "reactivemongo" % "0.1-SNAPSHOT")
     
->>>>>>> Stashed changes
   val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
     resolvers += "repo.novus rels" at "http://repo.novus.com/releases/",
     resolvers += "repo.novus snaps" at "http://repo.novus.com/snapshots/",

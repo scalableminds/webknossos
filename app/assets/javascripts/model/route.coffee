@@ -275,6 +275,10 @@ Route =
 
     @push()
 
+  # INVARIANTS:
+  # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null
+  # activeNode: either null only if activeTree is empty (sentinel) or valid node
+
   putBranch : ->
 
     @initialize().done =>
@@ -359,12 +363,9 @@ Route =
       point.treeId = @activeTree.treeId
       @trees[@activeTree.treeIndex] = point
       @activeTree = point
+      @activeTree.parent = null
     @activeNode = point
     @lastActiveNodeId = @activeNode.id
-    #console.log @activeTree.toString()
-    #console.log @getNodeList()
-    #for item in @getNodeList()
-    #  console.log item.id
 
   getActiveNodeId : ->
     @lastActiveNodeId
@@ -407,8 +408,11 @@ Route =
       if tree.treeId == id
         @activeTree = tree
         break
-    @activeNode = @activeTree
-    @lastActiveNodeId = @activeNode.id
+    if @activeTree.isSentinel
+      @activeNode = null
+    else
+      @activeNode = @activeTree
+      @lastActiveNodeId = @activeNode.id
     @push()
 
   createNewTree : ->
@@ -419,6 +423,7 @@ Route =
     sentinel.treeId = @treeIdCount++
     # save Index, so we can access it once we have the root element
     sentinel.treeIndex = @trees.length
+    sentinel.isSentinel = true
     @trees.push(sentinel)
     @activeTree = sentinel
     @activeNode = null
@@ -439,6 +444,7 @@ Route =
       @activeNode.remove(id)
       @lastActiveNodeId = @activeNode.id
     else
+      # Root is deleted
       @deleteActiveTree()
     @push()
 
@@ -455,8 +461,9 @@ Route =
     # to create one.
     if @trees.length == 0
       @createNewTree()
-    @activeTree = @trees[0]
-    @activeNode = null
+    else
+      # just set the last tree to be the active one
+      @setActiveTree(@trees[@trees.length - 1].treeId)
     @push()
 
   getTree : (id) ->

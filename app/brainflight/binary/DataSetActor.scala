@@ -11,6 +11,7 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import akka.actor.ActorRef
 import play.api.libs.concurrent.Promise
+import play.api.libs.concurrent.execution.defaultContext
 
 case class SingleRequest(dataSet: DataSet, resolution: Int, point: Point3D)
 case class MultiCubeRequest(requests: Array[CubeRequest])

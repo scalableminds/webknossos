@@ -13,13 +13,18 @@ object ApplicationBuild extends Build {
     "com.restfb" % "restfb" % "1.6.9",
     "org.apache.commons" % "commons-email" % "1.2",
     "com.typesafe.akka" % "akka-testkit" % "2.0",
-    "com.typesafe.akka" % "akka-agent" % "2.0"
-  )
+    "com.typesafe.akka" % "akka-agent" % "2.0",
+    // Jira integration
+    "com.sun.jersey" % "jersey-client" % "1.8",
+    "com.sun.jersey" % "jersey-core" % "1.8",
+    "reactivemongo" %% "reactivemongo" % "0.1-SNAPSHOT")
+    
+>>>>>>> Stashed changes
   val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
     resolvers += "repo.novus rels" at "http://repo.novus.com/releases/",
     resolvers += "repo.novus snaps" at "http://repo.novus.com/snapshots/",
-    incrementalAssetsCompilation:=true
-  )
+    resolvers += "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/",
+    incrementalAssetsCompilation := true)
 
 }
             

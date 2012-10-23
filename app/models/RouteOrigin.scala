@@ -9,7 +9,6 @@ import org.bson.types.ObjectId
 import models.basics.BasicDAO
 import com.mongodb.casbah.Imports.{ WriteConcern }
 import com.mongodb.casbah.query.Imports._
-
 /**
  * scalableminds - brainflight
  * User: tmbo

@@ -11,6 +11,7 @@ import brainflight.tools.geometry.Cuboid
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import akka.agent.Agent
 import play.api.libs.concurrent.Promise
+import play.api.libs.concurrent.execution.defaultContext
 
 case class DataBlock(info: DataBlockInformation, data: Data)
 

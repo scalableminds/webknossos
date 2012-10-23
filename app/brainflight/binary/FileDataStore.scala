@@ -9,6 +9,7 @@ import akka.agent.Agent
 import play.api.libs.concurrent.Promise
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
+import play.api.libs.concurrent.execution.defaultContext
     
 /**
  * Scalable Minds - Brainflight
@@ -28,7 +29,9 @@ class FileDataStore( cacheAgent: Agent[Map[DataBlockInformation, Data]])
    * returns it.
    */
   def loadBlock(dataSet: DataSet, point: Point3D, resolution: Int): Promise[DataBlock] = {
+    val t = System.currentTimeMillis()
     ensureCacheMaxSize
+    
     val dataEnum =
       try {
         Enumerator.fromFile(new File(createFilename(dataSet, resolution, point)))
@@ -41,7 +44,7 @@ class FileDataStore( cacheAgent: Agent[Map[DataBlockInformation, Data]])
       }
     val it = Iteratee.consume[Array[Byte]]()
     dataEnum(it).flatMap(_.mapDone{ rawData =>
-      Logger.trace("Loaded " + point + " Sum: " + rawData.sum + " Size: " + rawData.size)
+      Logger.trace("Loaded: %d ms ".format(System.currentTimeMillis()-t))
       val blockInfo = DataBlockInformation(dataSet.id, point, resolution)
       DataBlock(blockInfo, Data(rawData))
     }.run)

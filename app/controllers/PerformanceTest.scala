@@ -8,7 +8,7 @@ import play.mvc.Results.Redirect
 import play.Logger
 import java.text.SimpleDateFormat
 import java.util.TimeZone
-import brainflight.binary.{ FileDataStore, GridFileDataStore }
+import brainflight.binary.{ FileDataStore, GridDataStore }
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.gridfs.Imports._
@@ -23,6 +23,8 @@ import akka.actor.ActorRef
 
 object PerformanceTest extends Controller {
   
+  implicit val system = Akka.system
+  
   val xBot = 10
   val xTop = 20
   val yBot = 20
@@ -31,9 +33,9 @@ object PerformanceTest extends Controller {
   val zTop = 30
 
   def timeGridFS() = Action {
-
+    val BinaryCacheAgent = Agent( Map[DataBlockInformation, Data]().empty )
     var gridFileDataStoreTime = -System.currentTimeMillis()
-    var dataStore = new GridFileDataStore
+    var dataStore = new GridDataStore( BinaryCacheAgent )
     for {
       x <- xBot to xTop
       y <- yBot to yTop
@@ -50,7 +52,6 @@ object PerformanceTest extends Controller {
 
   def timeFileDataStore() = Action {
     var fileDataStoreTime = -System.currentTimeMillis()
-    implicit val system = Akka.system
 
     val BinaryCacheAgent = Agent( Map[DataBlockInformation, Data]().empty )
     var dataStore = new FileDataStore( BinaryCacheAgent )

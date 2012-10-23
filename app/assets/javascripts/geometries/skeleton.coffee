@@ -132,7 +132,7 @@ class Skeleton
   setActiveNode : () =>
     id = @model.Route.getActiveNodeId()
     position = @model.Route.getActiveNodePos()
-    if @activeNodeSphere
+    if @activeNodeSphere and @disSpheres==true
       @activeNodeSphere.visible = true
     # May be null
     @lastNodePosition = position
@@ -147,6 +147,7 @@ class Skeleton
     else
       @activeNodeSphere = null
       @activeNode.visible = false
+    @flycam.hasChanged = true
 
   setNodeRadius : (value) ->
     @activeNode.scale = new THREE.Vector3(value, value, value)

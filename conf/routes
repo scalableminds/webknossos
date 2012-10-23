@@ -32,6 +32,7 @@ GET     /login/tw                           controllers.login.TwitterLogin.login
 # Binary Data
 GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int )
 POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int )
+GET     /binary/ajax				                controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
 
 # Game Stuff
 GET     /game/initialize                    controllers.Game.initialize

@@ -75,6 +75,17 @@ object BinaryData extends Controller with Secured {
     future.mapTo[Array[Byte]]
   }
   
+  def requestViaAjaxDebug(dataSetId: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated { implicit request =>
+    Async {
+      ( for {
+        dataSet <- DataSet.findOneById( dataSetId )
+      } yield {
+        val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x,y,z))))
+        handleMultiDataRequest(dataRequest, cubeSize, dataSet).asPromise.map( result =>
+              Ok( result ) )
+      } ) getOrElse ( Akka.future { BadRequest( "Request is invalid." ) } )
+    }
+  }
   /**
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.

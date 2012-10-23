@@ -101,6 +101,9 @@ class Controller
   
         @model.User.Configuration.initialize().then(
           (data) =>
+            @flycam.setZoomSteps(data.zoom0, data.zoom1, data.zoom2)
+            @flycam.setOverrideZoomStep(data.minZoomStep)
+
             @initMouse() if data.mouseActive is true
             @initKeyboard() if data.keyboardActive is true
             @initGamepad() if data.gamepadActive is true
@@ -111,7 +114,7 @@ class Controller
             @gui.on "deleteActiveNode", @deleteActiveNode
             @gui.on "createNewTree", @createNewTree
             @gui.on "setActiveTree", (id) => @setActiveTree(id)
-            @gui.on "setActiveNode", (id) => @setActiveNode(id)
+            @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
             @gui.on "deleteActiveTree", @deleteActiveTree
 
             @cameraController.setRouteClippingDistance data.routeClippingDistance

@@ -71,6 +71,12 @@ class Flycam2d
   getZoomStep : (planeID) ->
     @zoomSteps[planeID]
 
+  setZoomSteps : (zXY, zYZ, zXZ) ->
+    @zoomSteps = [zXZ, zYZ, zXZ]
+    @hasChanged = true
+    for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
+
   getIntegerZoomStep : (planeID) ->
     @integerZoomSteps[planeID]
 

@@ -155,6 +155,10 @@ Binary =
     unless position == @lastPosition and direction == @lastDirection and _.isEqual(zoomSteps, @lastZoomSteps)
 
       lastPosition = @lastPosition
+
+      unless lastPosition
+        lastPosition = [0, 0, 0]
+
       @lastPosition = position
       @lastZoomSteps = zoomSteps.slice(0)
       @lastDirection = direction

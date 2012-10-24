@@ -143,8 +143,6 @@ Binary =
 
     unless position == @lastPosition and direction == @lastDirection and _.isEqual(zoomSteps, @lastZoomSteps)
 
-      console.log "changed"
-
       @lastPosition = position
       @lastZoomSteps = zoomSteps.slice(0)
       @lastDirection = direction

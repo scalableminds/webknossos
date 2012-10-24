@@ -206,6 +206,8 @@ Binary =
           direction[2] / directionMax
         ]
 
+      console.log direction
+
       delta_x = delta_y = delta_z = 0
       direction_x = direction_y = direction_z = 0
       index = buckets.length

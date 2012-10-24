@@ -210,7 +210,7 @@ Binary =
         index--
         if buckets[index]
           # priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
-          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES8[index % @PRIORITIES.length] + @PRELOADING[level]
+          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES8[index % @PRIORITIES8.length] + @PRELOADING[level]
 
         unless i % buckets.length
           index = buckets.length

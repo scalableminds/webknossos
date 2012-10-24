@@ -82,7 +82,7 @@ Binary =
   TEXTURE_SIZE : 512
 
   # Priorities
-  PRIORITIES : [
+  PRIORITIES16 : [
     240, 239, 238, 237, 236, 235, 234, 233, 232, 231, 230, 229, 228, 227, 226, 225,
     241, 182, 181, 180, 179, 178, 177, 176, 175, 174, 173, 172, 171, 170, 169, 224,
     242, 183, 132, 131, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121, 168, 223,
@@ -99,6 +99,16 @@ Binary =
     253, 194, 143, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 157, 212,
     254, 195, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 211,
     255, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
+
+  PRIORITIES8 : [
+    56,  55,  54,  53,  52,  51,  50,  49,
+    57,  30,  29,  28,  27,  26,  25,  48,
+    58,  31,  12,  11,  10,   9,  24,  47,
+    59,  32,  13,   2,   1,   8,  23,  46,
+    60,  33,  14,   3,   0,   7,  22,  45,
+    61,  34,  15,   4,   5,   6,  21,  44,
+    62,  35,  16,  17,  18,  19,  20,  43,
+    63,  36,  37,  38,  39,  40,  41,  42]
 
   PRELOADING : [0,100,200]
 
@@ -154,8 +164,7 @@ Binary =
 
 
       resizeRadius = 4
-      priorityOffset = (256 - (resizeRadius << 1)*(resizeRadius << 1)) / 2
-
+      
       buckets  = @getBucketArray(zoomedPositionBucket, resizeRadius, resizeRadius, 0).concat(
                   @getBucketArray(zoomedPositionBucket, resizeRadius, 0, resizeRadius),
                   @getBucketArray(zoomedPositionBucket, 0, resizeRadius, resizeRadius))
@@ -201,7 +210,7 @@ Binary =
         index--
         if buckets[index]
           # priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
-          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES[priorityOffset + index % @PRIORITIES.length] + @PRELOADING[level]
+          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES8[index % @PRIORITIES.length] + @PRELOADING[level]
 
         unless i % buckets.length
           index = buckets.length

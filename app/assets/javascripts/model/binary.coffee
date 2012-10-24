@@ -200,11 +200,9 @@ Binary =
       directionMax = Math.abs(Math.max(direction[0], direction[1], direction[2]))
 
       unless directionMax = 0
-        direction = [
-          direction[0] / directionMax,
-          direction[1] / directionMax,
-          direction[2] / directionMax
-        ]
+        direction[0] /= directionMax;
+        direction[1] /= directionMax;
+        direction[2] /= directionMax;
 
       console.log direction
 

@@ -205,7 +205,7 @@ Binary =
         loadDirection[1] /= directionMax;
         loadDirection[2] /= directionMax;
 
-      console.log loadDirection
+      console.log direction, loadDirection
 
       delta_x = delta_y = delta_z = 0
       direction_x = direction_y = direction_z = 0

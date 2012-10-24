@@ -162,13 +162,12 @@ Binary =
       positionBucket = [position[0] >> 5, position[1] >> 5, position[2] >> 5]
       zoomedPositionBucket = [positionBucket[0] >> zoomSteps[0], positionBucket[1] >> zoomSteps[0], positionBucket[2] >> zoomSteps[0]]
 
-
       resizeRadius = 4
       
       buckets  = @getBucketArray(zoomedPositionBucket, resizeRadius, resizeRadius, 0).concat(
                   @getBucketArray(zoomedPositionBucket, resizeRadius, 0, resizeRadius),
                   @getBucketArray(zoomedPositionBucket, 0, resizeRadius, resizeRadius))
-
+      console.log buckets
 
       Cube.extendByBucketAddressExtent6(
         (zoomedPositionBucket[0] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] - resizeRadius) << zoomSteps[0],

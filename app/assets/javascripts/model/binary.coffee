@@ -159,6 +159,9 @@ Binary =
       unless lastPosition
         lastPosition = [0, 0, 0]
 
+      unless direction
+        direction = [1, 0, 0]
+
       @lastPosition = position
       @lastZoomSteps = zoomSteps.slice(0)
       @lastDirection = direction
@@ -187,19 +190,21 @@ Binary =
         position[1] - lastPosition[1],
         position[2] - lastPosition[2]
       ]
-      
-      directionMax = Math.abs(Math.max(newDirection[0], newDirection[1], newDirection[2]))
-      newDirectionMax = [
-          newDirection[0] / directionMax,
-          newDirection[1] / directionMax,
-          newDirection[2] / directionMax
-        ]
 
       direction = [
         direction[0] * 0.8 + newDirection[0] * 0.2,
         direction[1] * 0.8 + newDirection[1] * 0.2,
         direction[2] * 0.8 + newDirection[2] * 0.2
       ]
+
+      directionMax = Math.abs(Math.max(direction[0], direction[1], direction[2]))
+
+      unless directionMax = 0
+        direction = [
+          direction[0] / directionMax,
+          direction[1] / directionMax,
+          direction[2] / directionMax
+        ]
 
       delta_x = delta_y = delta_z = 0
       direction_x = direction_y = direction_z = 0

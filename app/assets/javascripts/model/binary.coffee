@@ -196,7 +196,7 @@ Binary =
         @lastDirection[2] * 0.8 + newDirection[2] * 0.2
       ]
 
-      directionMax = Math.abs(Math.max(direction[0], direction[1], direction[2]))
+      directionMax = Math.abs(Math.max(@lastDirection[0], @lastDirection[1], @lastDirection[2]))
 
       loadDirection = @lastDirection
       unless directionMax == 0

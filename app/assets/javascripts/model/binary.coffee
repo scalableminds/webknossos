@@ -199,12 +199,13 @@ Binary =
 
       directionMax = Math.abs(Math.max(direction[0], direction[1], direction[2]))
 
+      loadDirection = direction
       unless directionMax == 0
-        direction[0] /= directionMax;
-        direction[1] /= directionMax;
-        direction[2] /= directionMax;
+        loadDirection[0] /= directionMax;
+        loadDirection[1] /= directionMax;
+        loadDirection[2] /= directionMax;
 
-      console.log direction
+      console.log loadDirection
 
       delta_x = delta_y = delta_z = 0
       direction_x = direction_y = direction_z = 0
@@ -221,9 +222,9 @@ Binary =
           index = buckets.length
           level++
 
-          delta_x += direction[0]
-          delta_y += direction[1]
-          delta_z += direction[2]
+          delta_x += loadDirection[0]
+          delta_y += loadDirection[1]
+          delta_z += loadDirection[2]
           direction_x = Math.round(delta_x)
           direction_y = Math.round(delta_y)
           direction_z = Math.round(delta_z)

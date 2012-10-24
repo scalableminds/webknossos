@@ -221,6 +221,8 @@ class Controller
       # Move
       "space"         : => @moveZ( @model.User.Configuration.moveValue)
       "shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
+      # alternative key binding for Kevin
+      "ctrl + space"  : => @moveZ(-@model.User.Configuration.moveValue)
     )
 
   # for more buttons look at Input.Gamepad

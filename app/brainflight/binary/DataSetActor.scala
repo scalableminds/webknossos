@@ -21,7 +21,7 @@ class DataSetActor extends Actor {
   implicit val system = Akka.system
 
   val BinaryCacheAgent = Agent(Map[DataBlockInformation, Data]().empty)
-  val dataStore: DataStore = new FileDataStore(BinaryCacheAgent)
+  val dataStore: DataStore = new GridDataStore(BinaryCacheAgent)
   def receive = {
     case SingleRequest(dataSet, resolution, point) =>
       sender ! dataStore.load(dataSet, resolution, point)

@@ -74,16 +74,16 @@ object BinaryData extends Controller with Secured {
 
     future.mapTo[Promise[Array[Byte]]]
   }
-  
+
   def requestViaAjaxDebug(dataSetId: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated { implicit request =>
     Async {
-      ( for {
-        dataSet <- DataSet.findOneById( dataSetId )
+      (for {
+        dataSet <- DataSet.findOneById(dataSetId)
       } yield {
-        val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x,y,z))))
+        val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z))))
         handleMultiDataRequest(dataRequest, cubeSize, dataSet).asPromise.flatMap(_.map(result =>
-              Ok( result ) ))
-      } ) getOrElse ( Akka.future { BadRequest( "Request is invalid." ) } )
+          Ok(result)))
+      }) getOrElse (Akka.future { BadRequest("Request is invalid.") })
     }
   }
 
@@ -97,7 +97,7 @@ object BinaryData extends Controller with Secured {
         payload <- request.body.asBytes()
         message <- BinaryProtocol.parseAjax(payload)
         dataSet <- DataSet.findOneById(dataSetId)
-      } yield { 
+      } yield {
         message match {
           case dataRequests @ MultipleDataRequest(_) =>
             handleMultiDataRequest(dataRequests, cubeSize, dataSet).asPromise.flatMap(_.map(result =>
@@ -147,7 +147,23 @@ object BinaryData extends Controller with Secured {
           }
         }
       })*/
-        val input = Done[Array[Byte],Unit]((),Input.EOF)
+      val input = Done[Array[Byte], Unit]((), Input.EOF)
       (input, output)
   }
+
+  def createGrid(dataSetName: String) = Action {
+    import brainflight.binary.GridDataStore
+    import akka.agent.Agent
+    import brainflight.binary.DataBlockInformation
+    import brainflight.binary.Data
+
+    implicit val system = Akka.system
+    val BinaryCacheAgent = Agent(Map[DataBlockInformation, Data]().empty)
+
+    DataSet.findOneByName(dataSetName).map{dataSet =>
+      new GridDataStore(BinaryCacheAgent).create(dataSet, 1)
+      Ok
+    } getOrElse BadRequest("DataSet not found!")
+  }
+
 }

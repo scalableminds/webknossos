@@ -22,6 +22,9 @@ import java.io.File
 import scala.concurrent.Future
 import play.api.libs.concurrent.Promise
 import play.api.libs.concurrent.execution.defaultContext
+import models.GridDataSetPairing
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
 
 class GridDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]])
     extends CachedDataStore(cacheAgent) {
@@ -29,54 +32,71 @@ class GridDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]])
   lazy val connection = MongoConnection(List("localhost:27017"))
   // a GridFS store named 'attachments'
 
-  val gridFS = new BinaryDataFS(DB("play-shellgame", connection), "binarydata")
+  val gridFS = new BinaryDataFS(DB("binaryData", connection), "binarydata")
 
   // let's build an index on our gridfs chunks collection if none
   gridFS.ensureIndex()
 
-  def asyncLoadBlock(dataSet: DataSet, point: Point3D, resolution: Int): Future[Promise[Iteratee[_, Array[Byte]]]] = {
-    val r = gridFS.find(BSONDocument("_id" -> new BSONObjectID(point3DToId(point)))).toList
-    val arrayBuffer = new ArrayBuffer[Byte](128 * 128 * 128)
-    val it = Iteratee.consume[Array[Byte]]()
+  def asyncLoadBlock(dataSet: DataSet, point: Point3D, resolution: Int): Future[Iterable[Promise[Iteratee[_, Array[Byte]]]]] = {
+    GridDataSetPairing.findPrefix(dataSet).flatMap(s =>
+      Future.sequence(s.map { prefix =>
+        val r = gridFS.find(BSONDocument("_id" -> new BSONObjectID(point3DToId(prefix, point)))).toList
+        val arrayBuffer = new ArrayBuffer[Byte](128 * 128 * 128)
+        val it = Iteratee.consume[Array[Byte]]()
 
-    val f = r.map {
-      case file :: _ =>
-        val e = file.enumerate
-        e.apply(it)
-      case _ =>
-        throw new Exception("Couldn't find " + point)
-    }
-    f
+        val f = r.map {
+          case file :: _ =>
+            val e = file.enumerate
+            e.apply(it)
+          case _ =>
+            throw new Exception("Couldn't find " + point)
+        }
+        f
+      }.seq))
   }
 
   def loadBlock(dataSet: DataSet, point: Point3D, resolution: Int): Promise[DataBlock] = {
-    val future = asyncLoadBlock(dataSet, point, resolution)
-    val result: Promise[Promise[DataBlock]] = for {
-      promis <- future
-      x <- promis
-    } yield {
-      x.mapDone { rawData =>
-        val data = Data(rawData)
-        val blockInfo = DataBlockInformation(dataSet.id, point, resolution)
-        DataBlock(blockInfo, data)
-      }.run
-    }
+    val blockInfo = DataBlockInformation(dataSet.id, point, resolution)
+    asyncLoadBlock(dataSet, point, resolution).map { iter =>
 
-    result.flatMap(x => x)
+      val y = iter match {
+        case head :: _ =>
+          head.flatMap(_.mapDone { rawData =>
+            val data = Data(rawData)
+            val blockInfo = DataBlockInformation(dataSet.id, point, resolution)
+            DataBlock(blockInfo, data)
+          }.run)
+        case _ =>
+          Akka.future(DataBlock(blockInfo, Data(nullBlock)))
+      }
+      y
+    }.flatMap(x => x)
   }
 
-  def point3DToId(point: Point3D): String = {
-    "000000000000%04d%04d%04d".format(point.x, point.y, point.z)
+  def point3DToId(prefix: Int, point: Point3D): String = {
+    "%012d%04d%04d%04d".format(prefix, point.x, point.y, point.z)
   }
 
   def create(dataSet: DataSet, resolution: Int) = {
-    (0 to 1000) foreach { idx =>
-      val point = Point3D(idx / 88, (idx / 8) % 11, idx % 8)
-      val f = new File(createFilename(dataSet, resolution, point))
-      val it = gridFS.save(point3DToId(point), Some(new BSONObjectID(point3DToId(point))), Some("application/binary"))
-      Enumerator.fromFile(f)(it).map(_.mapDone { future =>
-        future.map(result => println("PutResult: " + result))
-      })
+    GridDataSetPairing.getOrCreatePrefix(dataSet).map { prefix =>
+      val max = dataSet.maxCoordinates
+      val maxX = ((max.x / 128.0).ceil - 1).toInt
+      val maxY = ((max.y / 128.0).ceil - 1).toInt
+      val maxZ = ((max.z / 128.0).ceil - 1).toInt
+
+      for {
+        x <- 0 to maxX
+        y <- 0 to maxY
+        z <- 0 to maxZ
+      } {
+        val point = Point3D(x, y, z)
+        val f = new File(createFilename(dataSet, resolution, point))
+        val pointId = point3DToId(prefix, point)
+        val it = gridFS.save(pointId, Some(new BSONObjectID(pointId)), Some("application/binary"))
+        Enumerator.fromFile(f)(it).map(_.mapDone { future =>
+          future.map(result => println("PutResult: " + result))
+        })
+      }
     }
   }
 }

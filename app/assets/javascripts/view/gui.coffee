@@ -47,6 +47,7 @@ class Gui
                 routeClippingDistance: data.routeClippingDistance
                 displayCrosshairs: data.displayCrosshair
                 interpolation : data.interpolation
+                minZoomStep : data.minZoomStep
 
                 displayPrevXY : data.displayPreviewXY
                 displayPrevYZ : data.displayPreviewYZ
@@ -118,6 +119,9 @@ class Gui
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
                           .onChange(@setInterpolation)
+    (fView.add @settings, "minZoomStep", [0, 1, 2, 3])
+                          .name("Min. Zoom Level")
+                          .onChange(@setMinZoomStep)
 
     fSkeleton = @gui.addFolder("Skeleton View")
     (fSkeleton.add @settings, "displayPrevXY")
@@ -172,6 +176,7 @@ class Gui
     fNodes.open()
 
   saveNow : =>
+    @model.User.Configuration.pushImpl()
     @model.Route.pushImpl()
       .fail( -> alert("Something went wrong with saving, please try again."))
       .done( -> alert("Successfully saved!"))
@@ -220,6 +225,12 @@ class Gui
   setInterpolation : (value) =>
     @sceneController.setInterpolation(value)
     @model.User.Configuration.interpolation = (Boolean) value
+    @model.User.Configuration.push()
+
+  setMinZoomStep : (value) =>
+    value = parseInt(value)
+    @flycam.setOverrideZoomStep(value)
+    @model.User.Configuration.minZoomStep = (Number) value
     @model.User.Configuration.push()
 
   setDisplayPreviewXY : (value) =>

@@ -4,6 +4,7 @@
 PLANE_XY           = 0
 PLANE_YZ           = 1
 PLANE_XZ           = 2
+VIEW_3D            = 3
 TEXTURE_WIDTH      = 512
 MAX_TEXTURE_OFFSET = 31     # maximum difference between requested coordinate and actual texture position
 ZOOM_DIFF          = 0.05
@@ -27,7 +28,7 @@ class Flycam2d
     @direction = [0, 0, 1]
     @hasChanged = true
     @activePlane = PLANE_XY
-    @rayThreshold = 100
+    @rayThreshold = [10, 10, 10, 100]
 
   #reset : ->
   #  @zoomSteps=[1,1,1]
@@ -52,11 +53,29 @@ class Flycam2d
     for i in [0..2]
       @zoomOut i
 
+  # Used if the user wants to explicitly set the zoom step,
+  # rather than trusting on our equation.
+  setOverrideZoomStep : (value) ->
+    @overrideZoomStep = value
+    @hasChanged = true
+
   calculateIntegerZoomStep : (planeID) ->
     # round, because Model expects Integer
     @integerZoomSteps[planeID] = Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff)
     if @integerZoomSteps[planeID] < 0
       @integerZoomSteps[planeID] = 0
+    # overrideZoomStep only has an effect when it is larger than the optimal zoom step
+    if @overrideZoomStep
+      @integerZoomSteps[planeID] = Math.max(@overrideZoomStep, @integerZoomSteps[planeID])
+
+  getZoomStep : (planeID) ->
+    @zoomSteps[planeID]
+
+  setZoomSteps : (zXY, zYZ, zXZ) ->
+    @zoomSteps = [zXY, zYZ, zXZ]
+    @hasChanged = true
+    for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
 
   getIntegerZoomStep : (planeID) ->
     @integerZoomSteps[planeID]
@@ -92,8 +111,8 @@ class Flycam2d
     "(x, y, z) = ("+position[0]+", "+position[1]+", "+position[2]+")"
 
   getGlobalPos : ->
-    @globalPosition
     @model.Route.globalPosition = @globalPosition
+    @globalPosition
 
   getTexturePosition : (planeID) ->
     @texturePosition[planeID]
@@ -147,7 +166,7 @@ class Flycam2d
     (@hasNewTexture[PLANE_XY] or @hasNewTexture[PLANE_YZ] or @hasNewTexture[PLANE_XZ])
 
   setRayThreshold : (cameraRight, cameraLeft) ->
-    @rayThreshold = 4 * (cameraRight - cameraLeft) / 384
+    @rayThreshold[VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384
 
-  getRayThreshold : ->
-    @rayThreshold
+  getRayThreshold : (planeID) ->
+    @rayThreshold[planeID]

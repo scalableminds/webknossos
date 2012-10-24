@@ -38,7 +38,7 @@ class Skeleton
     @activeNode = new THREE.Mesh(
         new THREE.SphereGeometry(1 / @model.Route.scaleX),
         new THREE.MeshLambertMaterial({
-          color : 0xff0000
+          color : 0x0000ff
           #transparent: true
           #opacity: 0.5 })
           })
@@ -132,16 +132,22 @@ class Skeleton
   setActiveNode : () =>
     id = @model.Route.getActiveNodeId()
     position = @model.Route.getActiveNodePos()
+    if @activeNodeSphere and @disSpheres==true
+      @activeNodeSphere.visible = true
     # May be null
     @lastNodePosition = position
     if position
       @activeNode.visible = true
       @activeNodeSphere = @getSphereIndexFromId(id)
+      # Hide activeNodeSphere, because activeNode is visible anyway
+      if @activeNodeSphere
+        @activeNodeSphere.visible = false
       @setNodeRadius(@model.Route.getActiveNodeRadius())
       @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
     else
       @activeNodeSphere = null
       @activeNode.visible = false
+    @flycam.hasChanged = true
 
   setNodeRadius : (value) ->
     @activeNode.scale = new THREE.Vector3(value, value, value)
@@ -250,4 +256,5 @@ class Skeleton
   setDisplaySpheres : (value) ->
     @disSpheres = value
     for sphere in @nodesSpheres
-      sphere.visible = value
+      if sphere != @activeNodeSphere
+        sphere.visible = value

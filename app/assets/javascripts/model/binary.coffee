@@ -101,14 +101,15 @@ Binary =
     255, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
 
   PRIORITIES8 : [
-    56,  55,  54,  53,  52,  51,  50,  49,
-    57,  30,  29,  28,  27,  26,  25,  48,
-    58,  31,  12,  11,  10,   9,  24,  47,
-    59,  32,  13,   2,   1,   8,  23,  46,
-    60,  33,  14,   3,   0,   7,  22,  45,
-    61,  34,  15,   4,   5,   6,  21,  44,
-    62,  35,  16,  17,  18,  19,  20,  43,
-    63,  36,  37,  38,  39,  40,  41,  42]
+    56,  55,  54,  53,  52,  51,  50,  49,  80,
+    57,  30,  29,  28,  27,  26,  25,  48,  79,
+    58,  31,  12,  11,  10,   9,  24,  47,  78,
+    59,  32,  13,   2,   1,   8,  23,  46,  77,
+    60,  33,  14,   3,   0,   7,  22,  45,  76,
+    61,  34,  15,   4,   5,   6,  21,  44,  75,
+    62,  35,  16,  17,  18,  19,  20,  43,  74,
+    63,  36,  37,  38,  39,  40,  41,  42,  73,
+    64,  65,  66,  67,  68,  69,  70,  71,  72]
 
   PRELOADING : [0,100,200]
 
@@ -167,7 +168,6 @@ Binary =
       buckets  = @getBucketArray(zoomedPositionBucket, resizeRadius, resizeRadius, 0).concat(
                   @getBucketArray(zoomedPositionBucket, resizeRadius, 0, resizeRadius),
                   @getBucketArray(zoomedPositionBucket, 0, resizeRadius, resizeRadius))
-      console.log buckets
 
       Cube.extendByBucketAddressExtent6(
         (zoomedPositionBucket[0] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] - resizeRadius) << zoomSteps[0],

@@ -150,21 +150,20 @@ Binary =
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
     @ping(position, zoomSteps, direction)
 
-  pingImpl : (position, zoomSteps, direction) ->
+  pingImpl : (position, zoomSteps) ->
 
-    unless _.isEqual(position, @lastPosition) and _.isEqual(direction, @lastDirection) and _.isEqual(zoomSteps, @lastZoomSteps)
+    unless _.isEqual(position, @lastPosition) and _.isEqual(zoomSteps, @lastZoomSteps)
 
       lastPosition = @lastPosition
 
       unless lastPosition
         lastPosition = [0, 0, 0]
 
-      unless direction
-        direction = [1, 0, 0]
+      unless lastDirection
+        @lastDirection = [1, 0, 0]
 
       @lastPosition = position
       @lastZoomSteps = zoomSteps.slice(0)
-      @lastDirection = direction
 
       console.time "ping"
 
@@ -191,22 +190,21 @@ Binary =
         position[2] - lastPosition[2]
       ]
 
-      direction = [
-        direction[0] * 0.8 + newDirection[0] * 0.2,
-        direction[1] * 0.8 + newDirection[1] * 0.2,
-        direction[2] * 0.8 + newDirection[2] * 0.2
+      @lastDirection = [
+        @lastDirection[0] * 0.8 + newDirection[0] * 0.2,
+        @lastDirection[1] * 0.8 + newDirection[1] * 0.2,
+        @lastDirection[2] * 0.8 + newDirection[2] * 0.2
       ]
-
-      console.log direction, newDirection, loadDirection
 
       directionMax = Math.abs(Math.max(direction[0], direction[1], direction[2]))
 
-      loadDirection = direction
+      loadDirection = @lastDirection
       unless directionMax == 0
         loadDirection[0] /= directionMax;
         loadDirection[1] /= directionMax;
         loadDirection[2] /= directionMax;
 
+      console.log @lastDirection, newDirection, loadDirection
 
       delta_x = delta_y = delta_z = 0
       direction_x = direction_y = direction_z = 0

@@ -153,7 +153,8 @@ Binary =
       zoomedPositionBucket = [positionBucket[0] >> zoomSteps[0], positionBucket[1] >> zoomSteps[0], positionBucket[2] >> zoomSteps[0]]
 
 
-      resizeRadius = 5
+      resizeRadius = 4
+      priorityOffset = (256 - (resizeRadius << 1)*(resizeRadius << 1)) / 2
 
       buckets  = @getBucketArray(zoomedPositionBucket, resizeRadius, resizeRadius, 0).concat(
                   @getBucketArray(zoomedPositionBucket, resizeRadius, 0, resizeRadius),
@@ -200,7 +201,7 @@ Binary =
         index--
         if buckets[index]
           # priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
-          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]
+          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES[priorityOffset + index % @PRIORITIES.length] + @PRELOADING[level]
 
         unless i % buckets.length
           index = buckets.length

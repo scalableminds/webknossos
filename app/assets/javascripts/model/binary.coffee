@@ -159,7 +159,7 @@ Binary =
       unless lastPosition
         lastPosition = [0, 0, 0]
 
-      unless lastDirection
+      unless @lastDirection
         @lastDirection = [1, 0, 0]
 
       @lastPosition = position

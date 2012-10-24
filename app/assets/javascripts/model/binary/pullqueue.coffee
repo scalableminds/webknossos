@@ -93,17 +93,17 @@ PullQueue =
 
     @pullLoadingCount++
     Cube.setRequestedZoomStepByZoomedAddress(bucket, zoomStep)
-    console.log "Requested: ", bucket, zoomStep
+    #console.log "Requested: ", bucket, zoomStep
 
     @loadBucketByAddress(bucket, zoomStep).then(
 
       (colors) =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, colors) if colors.length
-        console.log "Success: ", bucket, zoomStep
+        #console.log "Success: ", bucket, zoomStep
 
       =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, null)
-        console.log "Failed: ", bucket, zoomStep
+        #console.log "Failed: ", bucket, zoomStep
 
     ).always =>
       @pullLoadingCount--

@@ -152,7 +152,7 @@ Binary =
 
   pingImpl : (position, zoomSteps, direction) ->
 
-    unless position == @lastPosition and direction == @lastDirection and _.isEqual(zoomSteps, @lastZoomSteps)
+    unless _.isEqual(position, @lastPosition) and _.isEqual(direction, @lastDirection) and _.isEqual(zoomSteps, @lastZoomSteps)
 
       lastPosition = @lastPosition
 
@@ -197,6 +197,8 @@ Binary =
         direction[2] * 0.8 + newDirection[2] * 0.2
       ]
 
+      console.log direction, newDirection, loadDirection
+
       directionMax = Math.abs(Math.max(direction[0], direction[1], direction[2]))
 
       loadDirection = direction
@@ -205,7 +207,6 @@ Binary =
         loadDirection[1] /= directionMax;
         loadDirection[2] /= directionMax;
 
-      console.log direction, loadDirection
 
       delta_x = delta_y = delta_z = 0
       direction_x = direction_y = direction_z = 0

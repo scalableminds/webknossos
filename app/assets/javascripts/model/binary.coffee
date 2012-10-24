@@ -143,8 +143,6 @@ Binary =
 
     unless position == @lastPosition and direction == @lastDirection and _.isEqual(zoomSteps, @lastZoomSteps)
 
-      console.log "changed"
-
       @lastPosition = position
       @lastZoomSteps = zoomSteps.slice(0)
       @lastDirection = direction
@@ -154,22 +152,17 @@ Binary =
       positionBucket = [position[0] >> 5, position[1] >> 5, position[2] >> 5]
       zoomedPositionBucket = [positionBucket[0] >> zoomSteps[0], positionBucket[1] >> zoomSteps[0], positionBucket[2] >> zoomSteps[0]]
 
-      buckets   = @getBucketArray(zoomedPositionBucket, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6, 0).concat(
-                  @getBucketArray(zoomedPositionBucket, @TEXTURE_SIZE >> 6, 0, @TEXTURE_SIZE >> 6),
-                  @getBucketArray(zoomedPositionBucket, 0, @TEXTURE_SIZE >> 6, @TEXTURE_SIZE >> 6))
 
-      # Buckets of zoom step 3 so that there won't be any black
-#      @positionBucket3 = [position[0] >> (5 + 3), position[1] >> (5 + 3), position[2] >> (5 + 3)]
-#      buckets3  = @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0).concat(
-#                  @getBucketArray(@positionBucket3, @TEXTURE_SIZE >> (6 + 3 - zoomStep), 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep)),
-#                  @getBucketArray(@positionBucket3, 0, @TEXTURE_SIZE >> (6 + 3 - zoomStep), @TEXTURE_SIZE >> (6 + 3 - zoomStep)))
+      resizeRadius = 5
 
-      resizeRadius = (@TEXTURE_SIZE >> 6)
+      buckets  = @getBucketArray(zoomedPositionBucket, resizeRadius, resizeRadius, 0).concat(
+                  @getBucketArray(zoomedPositionBucket, resizeRadius, 0, resizeRadius),
+                  @getBucketArray(zoomedPositionBucket, 0, resizeRadius, resizeRadius))
+
 
       Cube.extendByBucketAddressExtent6(
         (zoomedPositionBucket[0] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] - resizeRadius) << zoomSteps[0],
         (zoomedPositionBucket[0] + resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] + resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] + resizeRadius) << zoomSteps[0]
-     #   0,0,0,200,200,200
       )
 
       console.time "queue"
@@ -202,23 +195,23 @@ Binary =
  #               PullQueue.insert [b[0] + i[0], b[1] + i[1], b[2] + i[2]], 3, priority + Math.abs(indexValue)*buckets3.length
  #     console.timeEnd "queue 1"
 
-      i = buckets.length #* @PRELOADING.length
+      i = buckets.length * @PRELOADING.length
       while i--
         index--
         if buckets[index]
-         # priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
-          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES[index % @PRIORITIES.length]# + @PRELOADING[level]# + buckets3.length
+          # priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
+          PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES[index % @PRIORITIES.length] + @PRELOADING[level]
 
         unless i % buckets.length
           index = buckets.length
           level++
 
-          #delta_x += direction[0]
-          #delta_y += direction[1]
-          #delta_z += direction[2]
-          #direction_x = Math.round(delta_x)
-          #direction_y = Math.round(delta_y)
-          #direction_z = Math.round(delta_z)
+          delta_x += direction[0]
+          delta_y += direction[1]
+          delta_z += direction[2]
+          direction_x = Math.round(delta_x)
+          direction_y = Math.round(delta_y)
+          direction_z = Math.round(delta_z)
 
     PullQueue.pull()
 

@@ -154,6 +154,7 @@ Binary =
 
     unless position == @lastPosition and direction == @lastDirection and _.isEqual(zoomSteps, @lastZoomSteps)
 
+      lastPosition = @lastPosition
       @lastPosition = position
       @lastZoomSteps = zoomSteps.slice(0)
       @lastDirection = direction
@@ -163,11 +164,11 @@ Binary =
       positionBucket = [position[0] >> 5, position[1] >> 5, position[2] >> 5]
       zoomedPositionBucket = [positionBucket[0] >> zoomSteps[0], positionBucket[1] >> zoomSteps[0], positionBucket[2] >> zoomSteps[0]]
 
-      resizeRadius = 4
+      resizeRadius = 6
       
-      buckets  = @getBucketArray(zoomedPositionBucket, resizeRadius, resizeRadius, 0).concat(
-                  @getBucketArray(zoomedPositionBucket, resizeRadius, 0, resizeRadius),
-                  @getBucketArray(zoomedPositionBucket, 0, resizeRadius, resizeRadius))
+      buckets  = @getBucketArray(zoomedPositionBucket, resizeRadius-2, resizeRadius-2, 0).concat(
+                  @getBucketArray(zoomedPositionBucket, resizeRadius-2, 0, resizeRadius-2),
+                  @getBucketArray(zoomedPositionBucket, 0, resizeRadius-2, resizeRadius-2))
 
       Cube.extendByBucketAddressExtent6(
         (zoomedPositionBucket[0] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[1] - resizeRadius) << zoomSteps[0], (zoomedPositionBucket[2] - resizeRadius) << zoomSteps[0],
@@ -177,38 +178,34 @@ Binary =
       console.time "queue"
       PullQueue.clear()
 
-      direction = [0,0,1]
-#      directionValue = Math.sqrt(direction[0]*direction[0] + direction[1]*direction[1] + direction[2]*direction[2])
-#      directionMax   = Math.max(direction[0], direction[1], direction[2])
-#      direction      = [direction[0]/directionMax, direction[1]/directionMax, direction[2]/directionMax]
+      newDirection = [
+        position[0] - lastPosition[0],
+        position[1] - lastPosition[1],
+        position[2] - lastPosition[2]
+      ]
+      
+      directionMax = Math.abs(Math.max(newDirection[0], newDirection[1], newDirection[2]))
+      newDirectionMax = [
+          newDirection[0] / directionMax,
+          newDirection[1] / directionMax,
+          newDirection[2] / directionMax
+        ]
 
-#      directionValue = Math.max(directionValue, 0.01)         # so there is no division by 0
-#      preloading = [0, Math.round(10/directionValue),         # TODO: optimze those values
-#                    Math.round(100/directionValue),
-#                    Math.round(200/directionValue),
-#                    Math.round(300/directionValue)]
-#
+      direction = [
+        direction[0] * 0.8 + newDirection[0] * 0.2,
+        direction[1] * 0.8 + newDirection[1] * 0.2,
+        direction[2] * 0.8 + newDirection[2] * 0.2
+      ]
+
       delta_x = delta_y = delta_z = 0
       direction_x = direction_y = direction_z = 0
       index = buckets.length
       level = 0
 
- #     if zoomStep != 3            # don't do this if you need to load the lowest resolution anyway
- #     for coordinate in [0..2]
- #         i = [0, 0, 0]
- #         for indexValue in [0, 1, -1]
- #           i[coordinate] = indexValue
- #           for b in buckets3
- #             if b
- #               priority = Math.max(Math.abs(b[0] - @positionBucket3[0]), Math.abs(b[1] - @positionBucket3[1]), Math.abs(b[2] - @positionBucket3[2]))
- #               PullQueue.insert [b[0] + i[0], b[1] + i[1], b[2] + i[2]], 3, priority + Math.abs(indexValue)*buckets3.length
- #     console.timeEnd "queue 1"
-
       i = buckets.length * @PRELOADING.length
       while i--
         index--
         if buckets[index]
-          # priority = Math.max(Math.abs(buckets[index][0] - @positionBucket[0]), Math.abs(buckets[index][1] - @positionBucket[1]), Math.abs(buckets[index][2] - @positionBucket3[2]))
           PullQueue.insert [buckets[index][0] + direction_x, buckets[index][1] + direction_y, buckets[index][2] + direction_z], zoomSteps[0], @PRIORITIES8[index % @PRIORITIES8.length] + @PRELOADING[level]
 
         unless i % buckets.length

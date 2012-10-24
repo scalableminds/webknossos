@@ -103,7 +103,7 @@ PullQueue =
 
       =>
         Cube.setBucketByZoomedAddress(bucket, zoomStep, null)
-        #console.log "Failed: ", bucket, zoomStep
+        console.log "Failed: ", bucket, zoomStep
 
     ).always =>
       @pullLoadingCount--

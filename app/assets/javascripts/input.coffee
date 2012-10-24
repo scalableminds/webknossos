@@ -104,8 +104,8 @@ class Input.Mouse
     m.bindX callback if axis is "x"
     m.bindY callback if axis is "y"
     m.bindR callback if axis is "r"
+    m.bindL callback if axis is "l"
     m.bindW callback if axis is "w"
-    m.bindM callback if axis is "m"
 
   setInversionX : (m, value) ->
     m.setInversionX value if m?

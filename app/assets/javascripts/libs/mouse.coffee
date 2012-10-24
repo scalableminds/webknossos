@@ -24,9 +24,9 @@ class Mouse
   # stores the callbacks for mouse movement in each dimension
   changedCallbackX : $.noop()
   changedCallbackY : $.noop()
-  changedCallbackR : $.noop()
-  changedCallbackMW : $.noop()
-  changedCallbackM : $.noop()
+  changedCallbackRightclick : $.noop()
+  changedCallbackMouseWheel : $.noop()
+  @changedCallbackLeftclick : $.noop()
   activeCallback : $.noop()
 
 
@@ -35,19 +35,19 @@ class Mouse
   # HTML object where the mouse attaches the events
   ###
   constructor : (target, activeCallback) ->
-    # @User = User
     @target = target
 
     @activeCallback = activeCallback
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
-    $(@target).on 
+    $(window).on
       "mousemove" : @mouseMoved
-      "mousedown" : @mouseDown
       "mouseup"   : @mouseUp
+
+    $(@target).on 
+      "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "mousewheel" : @mouseWheel
-
       # fullscreen pointer lock
       # Firefox does not yet support Pointer Lock
       "webkitfullscreenchange" : @toogleMouseLock
@@ -79,38 +79,47 @@ class Mouse
   # gets the relative mouse position as parameter
   ###
   bindR : (callback) ->
-    @changedCallbackR = callback
+    @changedCallbackRightclick = callback
+
+  ###
+  #Binds a function as callback when canvas was leftclicked
+  #@param {Function} callback :
+  # gets the relative mouse position as parameter
+  ###
+  bindL : (callback) ->
+    @changedCallbackLeftclick = callback
+
+  ###
+  #Binds a function as callback when mousewheel was changed
+  #@param {Function} callback :
+  # gets the delta as parameter
+  ###
 
   bindW : (callback) ->
-    @changedCallbackMW = callback
-
-  bindM : (callback) ->
-    @changedCallbackM = callback
+    @changedCallbackMouseWheel = callback
 
   unbind : ->
     $(@target).off 
-      "mousemove" : @mouseMoved
-      "mouseup" : @mouseUp
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
       "webkitfullscreenchange" : @toogleMouseLock
       "webkitpointerlocklost" : @unlockMouse
       "webkitpointerlockchange" : @unlockMouse  
-      "mousewheel" : @mouseWheel  
+      "mousewheel" : @mouseWheel 
+
+    $(window).off
+      "mousemove" : @mouseMoved
+      "mouseup" : @mouseUp
+
+    @changedCallback = null
 
   mouseMoved : (evt) =>
-    
-    { lastPosition, changedCallback } = @
-
-    # mouse moved in preview to show tooltip
-    if @changedCallbackM?
-      @changedCallbackM [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top]
 
     # regular mouse management
     unless @locked 
       if @buttonDown
-        distX =  (evt.pageX - lastPosition.x) * User.Configuration.mouseInversionX
-        distY =  (evt.pageY - lastPosition.y) * User.Configuration.mouseInversionY
+        distX =  (evt.pageX - @lastPosition.x) * User.Configuration.mouseInversionX
+        distY =  (evt.pageY - @lastPosition.y) * User.Configuration.mouseInversionY
         @changedCallbackX distX if distX isnt 0
         @changedCallbackY distY if distY isnt 0
 
@@ -127,23 +136,30 @@ class Mouse
       @changedCallbackX distX * User.Configuration.mouseRotateValue if distX isnt 0
       @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
 
-  mouseEnter : =>
-    if @activeCallback?
+  mouseEnter : (evt) =>
+    # don't invoke activeCallback, when leftclicking while entering
+    if evt.which != 1 and @activeCallback?
       @activeCallback()
 
   mouseWheel : (evt, delta) =>
-    if @changedCallbackMW?
-      @changedCallbackMW(delta)
+    if @changedCallbackMouseWheel?
+      @changedCallbackMouseWheel(delta)
       return false      # prevent scrolling the web page
     
   mouseDown : (evt) =>
-    # check whether the mouseDown event is a rightclick
-    if evt.which == 3
-      # on rightclick, return mouse position relative to the canvas
-      @changedCallbackR [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
-    else
+    # check whether the mouseDown event is a leftclick
+    if evt.which == 1
+      if @activeCallback?
+        @activeCallback()
       $(@target).css("cursor", "none")
       @buttonDown = true
+      # on leftclick, return mouse position relative to the canvas
+      @changedCallbackLeftclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
+    else
+      if @changedCallbackRightclick
+        @changedCallbackRightclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
+
+    return false
 
   mouseUp : =>
     @buttonDown = false 

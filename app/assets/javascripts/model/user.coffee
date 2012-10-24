@@ -20,6 +20,10 @@ User.Configuration =
   lockZoom : null
   displayCrosshair : null
   interpolation : null
+  minZoomStep : null
+  zoomXY : null
+  zoomYZ : null
+  zoomXZ : null
   displayPreviewXY : null
   displayPreviewYZ : null
   displayPreviewXZ : null
@@ -54,6 +58,10 @@ User.Configuration =
               @lockZoom,
               @displayCrosshair,
               @interpolation,
+              @minZoomStep,
+              @zoomXY,
+              @zoomYZ,
+              @zoomXZ,
               @displayPreviewXY,
               @displayPreviewYZ,
               @displayPreviewXZ,
@@ -95,6 +103,10 @@ User.Configuration =
         lockZoom : @lockZoom,
         displayCrosshair : @displayCrosshair,
         interpolation : @interpolation,
+        minZoomStep : @minZoomStep,
+        zoomXY : @zoomXY,
+        zoomYZ : @zoomYZ,
+        zoomXZ : @zoomXZ,
         displayPreviewXY : @displayPreviewXY,
         displayPreviewYZ : @displayPreviewYZ,
         displayPreviewXZ : @displayPreviewXZ,

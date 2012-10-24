@@ -150,9 +150,12 @@ class CameraController
     @camDistance = 2 * value # Plane is shifted so it's <value> to the back and the front
     @updateCamViewport()
 
+  getRouteClippingDistance : ->
+    @camDistance
+
   updateCamViewport : ->
     for i in [0..2]
-      @cameras[i].near = -@camDistance / @flycam.getPlaneScalingFactor(i)
+      @cameras[i].near = -@camDistance #/ @flycam.getPlaneScalingFactor(i)
       boundary     = WIDTH / 2 * @flycam.getPlaneScalingFactor(i)
       @cameras[i].left  = @cameras[i].bottom = -boundary
       @cameras[i].right = @cameras[i].top    =  boundary

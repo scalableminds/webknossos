@@ -1,5 +1,5 @@
 ### define
-libs/request : request
+libs/request : Request
 ###
 
 class SimpleArrayBufferSocket
@@ -164,7 +164,7 @@ class SimpleArrayBufferSocket.XmlHttpRequest
 
   send : (data) ->
     data = new @requestBufferType(data) if _.isArray(data)
-    request(
+    Request(
       data : data.buffer
       url : @url
       responseType : 'arraybuffer'

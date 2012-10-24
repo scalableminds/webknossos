@@ -63,26 +63,38 @@ class SceneController
     # This method is called for each of the four cams. Even
     # though they are all looking at the same scene, some
     # things have to be changed for each cam.
-    if id in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @cube.visible = false
-      for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-        if i == id
-          @planes[i].setOriginalCrosshairColor()
-          @planes[i].setVisible(true)
-          pos = @flycam.getGlobalPos().slice()
-          # Offset the plane so the user can see the route behind the plane
-          pos[@flycam.getIndices(i)[2]] += if i==PLANE_XY then @planeShift else -@planeShift
+    if @planeShift
+      if id in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+        @cube.visible = false
+        for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+          if i == id
+            @planes[i].setOriginalCrosshairColor()
+            @planes[i].setVisible(true)
+            pos = @flycam.getGlobalPos().slice()
+            # Offset the plane so the user can see the route behind the plane
+            pos[@flycam.getIndices(i)[2]] += if i==PLANE_XY then @planeShift else -@planeShift
+            @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))
+          else
+            @planes[i].setVisible(false)
+        # Distort the spheres so that in the plane's z-direction they have a radius as
+        # big as the routeClippingDistance (alias planeShift)
+        #for sphere in @skeleton.nodesSpheres.concat(@skeleton.activeNode)
+        #  scale = Math.max(sphere.scale.x, sphere.scale.y, sphere.scale.z)
+        #  scaleArray = [scale, scale, scale]
+        #  scaleArray[@flycam.getIndices(id)[2]] = Math.min(@planeShift / sphere.boundRadius,
+        #                                              scaleArray[@flycam.getIndices(id)[2]])
+        #  sphere.scale.set(scaleArray[0], scaleArray[1], scaleArray[2])
+      else
+        @cube.visible = true
+        for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+          pos = @flycam.getGlobalPos()
           @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))
-        else
-          @planes[i].setVisible(false)
-    else
-      @cube.visible = true
-      for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-        pos = @flycam.getGlobalPos()
-        @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))
-        @planes[i].setGrayCrosshairColor()
-        @planes[i].setVisible(true)
-        @planes[i].plane.visible = @displayPlane[i]
+          @planes[i].setGrayCrosshairColor()
+          @planes[i].setVisible(true)
+          @planes[i].plane.visible = @displayPlane[i]
+        #for sphere in @skeleton.nodesSpheres.concat(@skeleton.activeNode)
+        #  scale = Math.max(sphere.scale.x, sphere.scale.y, sphere.scale.z)
+        #  sphere.scale.set(scale, scale, scale)
 
   update : =>
     gPos         = @flycam.getGlobalPos()
@@ -110,7 +122,7 @@ class SceneController
     @flycam.hasChanged = true
 
   setRouteClippingDistance : (value) =>
-    @planeShift = value
+    @planeShift = 2 * value
 
   setInterpolation : (value) =>
     for plane in @planes

@@ -29,6 +29,16 @@ class Gui
                 download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
                                           "_blank", "width=700,height=400,location=no,menubar=no")
 
+                resume : false
+                experiments : null
+                selectedExperimentIndex : 0
+                changeExperiment : => 
+                  experiment = @settings.experiments[@settings.selectedExperimentIndex]
+                  request(
+                    method : "POST"
+                    url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
+                  ).always -> window.location.reload()
+
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
                 lockZoom: data.lockZoom
                 inverseX: data.mouseInversionX == 1
@@ -37,6 +47,7 @@ class Gui
                 routeClippingDistance: data.routeClippingDistance
                 displayCrosshairs: data.displayCrosshair
                 interpolation : data.interpolation
+                minZoomStep : data.minZoomStep
 
                 displayPrevXY : data.displayPreviewXY
                 displayPrevYZ : data.displayPreviewYZ
@@ -64,6 +75,24 @@ class Gui
     (fFile.add @settings, "download")
                           .name("Download NML")
     
+    fExperiment = @gui.addFolder("Experiment")
+    request(
+      url : "/experiment"
+      responseType : "json"
+    ).done (experiments) =>
+      
+      @settings.experiments = experiments
+
+      options = {}
+      for experiment, i in experiments
+        options[experiment.name] = i
+
+      (fExperiment.add @settings, "selectedExperimentIndex", options)
+                            .name("Datasets")
+      (fExperiment.add @settings, "changeExperiment")
+                            .name("Apply")
+
+    
     fPosition = @gui.addFolder("Position")
     (fPosition.add @settings, "position")
                           .name("Position")
@@ -81,7 +110,7 @@ class Gui
                           .onChange(@setMouseInversionY)
 
     fView = @gui.addFolder("Planes")
-    (fView.add @settings, "routeClippingDistance", 1, 100)
+    (fView.add @settings, "routeClippingDistance", 1, 500)
                           .name("Clipping Distance")    
                           .onChange(@setRouteClippingDistance)
     (fView.add @settings, "displayCrosshairs")
@@ -90,6 +119,9 @@ class Gui
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
                           .onChange(@setInterpolation)
+    (fView.add @settings, "minZoomStep", [0, 1, 2, 3])
+                          .name("Min. Zoom Level")
+                          .onChange(@setMinZoomStep)
 
     fSkeleton = @gui.addFolder("Skeleton View")
     (fSkeleton.add @settings, "displayPrevXY")
@@ -144,6 +176,7 @@ class Gui
     fNodes.open()
 
   saveNow : =>
+    @model.User.Configuration.pushImpl()
     @model.Route.pushImpl()
       .fail( -> alert("Something went wrong with saving, please try again."))
       .done( -> alert("Successfully saved!"))
@@ -192,6 +225,12 @@ class Gui
   setInterpolation : (value) =>
     @sceneController.setInterpolation(value)
     @model.User.Configuration.interpolation = (Boolean) value
+    @model.User.Configuration.push()
+
+  setMinZoomStep : (value) =>
+    value = parseInt(value)
+    @flycam.setOverrideZoomStep(value)
+    @model.User.Configuration.minZoomStep = (Number) value
     @model.User.Configuration.push()
 
   setDisplayPreviewXY : (value) =>

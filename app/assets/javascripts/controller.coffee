@@ -44,7 +44,7 @@ class Controller
     $("#render").bind "contextmenu", (event) ->
       event.preventDefault(); return
 
-    @canvases = $("#render")[0]
+    @canvasesAndNav = $("#main")[0]
 
     @prevControls = $('#prevControls')
     values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
@@ -151,11 +151,11 @@ class Controller
     @input.keyboard = new Input.Keyboard(
 
       #Fullscreen Mode
-      "f" : => 
-        canvases = @canvases
-        requestFullscreen = canvases.webkitRequestFullScreen or canvases.mozRequestFullScreen or canvases.RequestFullScreen
+      "f" : =>
+        canvasesAndNav = @canvasesAndNav
+        requestFullscreen = canvasesAndNav.webkitRequestFullScreen or canvasesAndNav.mozRequestFullScreen or canvasesAndNav.RequestFullScreen
         if requestFullscreen
-          requestFullscreen.call(canvases, canvases.ALLOW_KEYBOARD_INPUT)
+          requestFullscreen.call(canvasesAndNav, canvasesAndNav.ALLOW_KEYBOARD_INPUT)
 
     
       #ScaleTrianglesPlane

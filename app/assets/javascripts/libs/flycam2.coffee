@@ -96,14 +96,18 @@ class Flycam2d
     @direction = direction
 
   move : (p) -> #move by whatever is stored in this vector
-    @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
+    if @activePlane == PLANE_XY
+      # BAD consider the different resolution in z-direction
+      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+2*p[2]])
+    else
+      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
     # update the direction whenever the user moves
     @lastDirection = @direction
     @direction = [0.8 * @lastDirection[0] + 0.2 * p[0], 0.8 * @lastDirection[1] + 0.2 * p[1], 0.8 * @lastDirection[2] + 0.2 * p[2]]
 
   moveActivePlane : (p) ->
     ind = @getIndices @activePlane
-    f = (@getPlaneScalingFactor @activePlane)
+    f = Math.pow(2, @integerZoomSteps[@activePlane])
     @move([p[ind[0]]*f, p[ind[1]]*f, p[ind[2]]*f])
 
   toString : ->

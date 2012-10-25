@@ -36,6 +36,7 @@ class Mouse
   ###
   constructor : (target, activeCallback) ->
     @target = target
+    @shouldBeActive = false
 
     @activeCallback = activeCallback
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
@@ -47,6 +48,7 @@ class Mouse
     $(@target).on 
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
+      "mouseleave" : @mouseLeave
       "mousewheel" : @mouseWheel
       # fullscreen pointer lock
       # Firefox does not yet support Pointer Lock
@@ -102,6 +104,7 @@ class Mouse
     $(@target).off 
       "mousedown" : @mouseDown
       "mouseenter" : @mouseEnter
+      "mouseleave" : @mouseLeave
       "webkitfullscreenchange" : @toogleMouseLock
       "webkitpointerlocklost" : @unlockMouse
       "webkitpointerlockchange" : @unlockMouse  
@@ -137,9 +140,14 @@ class Mouse
       @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
 
   mouseEnter : (evt) =>
-    # don't invoke activeCallback, when leftclicking while entering
+    # don't invoke activeCallback, when leftclicking while entering, but remember to do it on mouseUp
     if evt.which != 1 and @activeCallback?
       @activeCallback()
+    else
+      @shouldBeActive = true
+
+  mouseLeave : =>
+    @shouldBeActive = false
 
   mouseWheel : (evt, delta) =>
     if @changedCallbackMouseWheel?
@@ -149,8 +157,6 @@ class Mouse
   mouseDown : (evt) =>
     # check whether the mouseDown event is a leftclick
     if evt.which == 1
-      if @activeCallback?
-        @activeCallback()
       $(@target).css("cursor", "none")
       @buttonDown = true
       # on leftclick, return mouse position relative to the canvas
@@ -162,7 +168,12 @@ class Mouse
     return false
 
   mouseUp : =>
-    @buttonDown = false 
+    # invoke activeCallback when view was entered while dragging the plane in another view
+    if @shouldBeActive == true
+        if @activeCallback?
+          @activeCallback()
+        @shouldBeActive = false
+    @buttonDown = false
     $(@target).css("cursor", "auto")
 
   toogleMouseLock : =>

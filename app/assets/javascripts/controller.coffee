@@ -44,7 +44,7 @@ class Controller
     $("#render").bind "contextmenu", (event) ->
       event.preventDefault(); return
 
-    @canvases = $("#render")[0]
+    @canvasesAndNav = $("#main")[0]
 
     @prevControls = $('#prevControls')
     values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
@@ -151,11 +151,11 @@ class Controller
     @input.keyboard = new Input.Keyboard(
 
       #Fullscreen Mode
-      "f" : => 
-        canvases = @canvases
-        requestFullscreen = canvases.webkitRequestFullScreen or canvases.mozRequestFullScreen or canvases.RequestFullScreen
+      "f" : =>
+        canvasesAndNav = @canvasesAndNav
+        requestFullscreen = canvasesAndNav.webkitRequestFullScreen or canvasesAndNav.mozRequestFullScreen or canvasesAndNav.RequestFullScreen
         if requestFullscreen
-          requestFullscreen.call(canvases, canvases.ALLOW_KEYBOARD_INPUT)
+          requestFullscreen.call(canvasesAndNav, canvasesAndNav.ALLOW_KEYBOARD_INPUT)
 
     
       #ScaleTrianglesPlane
@@ -218,6 +218,8 @@ class Controller
       # Move
       "space"         : => @moveZ( @model.User.Configuration.moveValue)
       "shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
+      # alternative key binding for Kevin
+      "ctrl + space"  : => @moveZ(-@model.User.Configuration.moveValue)
     )
 
   # for more buttons look at Input.Gamepad
@@ -303,7 +305,7 @@ class Controller
 
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = @flycam.getIndices(plane)
-      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance())
+      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance()+1)
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
         vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex

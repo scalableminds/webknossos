@@ -29,6 +29,7 @@ class Flycam2d
     @hasChanged = true
     @activePlane = PLANE_XY
     @rayThreshold = [10, 10, 10, 100]
+    @spaceDirection = 1
 
   #reset : ->
   #  @zoomSteps=[1,1,1]
@@ -95,20 +96,30 @@ class Flycam2d
   setDirection : (direction) ->
     @direction = direction
 
+  setSpaceDirection : ->
+    ind = @getIndices @activePlane
+    if @direction[ind[2]] <= 0
+      @spaceDirection = -1
+    else
+      @spaceDirection = 1
+
+  getSpaceDirection : ->
+    @spaceDirection
+
   move : (p) -> #move by whatever is stored in this vector
     if @activePlane == PLANE_XY
       # BAD consider the different resolution in z-direction
       @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+2*p[2]])
     else
       @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
-    # update the direction whenever the user moves
-    @lastDirection = @direction
-    @direction = [0.8 * @lastDirection[0] + 0.2 * p[0], 0.8 * @lastDirection[1] + 0.2 * p[1], 0.8 * @lastDirection[2] + 0.2 * p[2]]
-
+    
   moveActivePlane : (p) ->
     ind = @getIndices @activePlane
     f = Math.pow(2, @integerZoomSteps[@activePlane])
-    @move([p[ind[0]]*f, p[ind[1]]*f, p[ind[2]]*f])
+    # change direction of the value connected to space, based on the last direction
+    delta = [p[ind[0]]*f, p[ind[1]]*f, p[ind[2]]*f]
+    delta[ind[2]] *= @spaceDirection
+    @move(delta)
 
   toString : ->
     position = @globalPosition
@@ -122,11 +133,17 @@ class Flycam2d
     @texturePosition[planeID]
 
   setGlobalPos : (position) ->
+    p = [position[0] - @globalPosition[0], position[1] - @globalPosition[1], position[2] - @globalPosition[2]]
     @globalPosition = position
     @hasChanged = true
+    # update the direction whenever the user moves
+    @lastDirection = @direction
+    @direction = [0.8 * @lastDirection[0] + 0.2 * p[0], 0.8 * @lastDirection[1] + 0.2 * p[1], 0.8 * @lastDirection[2] + 0.2 * p[2]]
 
   setActivePlane : (activePlane) ->
     @activePlane = activePlane
+    # setSpaceDirection when entering a new viewport
+    @setSpaceDirection()
 
   getActivePlane : ->
     @activePlane

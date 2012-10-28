@@ -48,9 +48,12 @@ object InitialData {
       Seq(
         u).foreach(User.create _ tupled)
     }
-    
-    if(TaskSelectionAlgorithm.findAll.isEmpty) {
-      TaskSelectionAlgorithm.insert(TaskSelectionAlgorithm("return tasks[0]"))
+
+    if (TaskSelectionAlgorithm.findAll.isEmpty) {
+      TaskSelectionAlgorithm.insert(TaskSelectionAlgorithm(
+        """function simple(user, tasks){ 
+          |  return tasks[0];
+          |}""".stripMargin))
     }
   }
 }

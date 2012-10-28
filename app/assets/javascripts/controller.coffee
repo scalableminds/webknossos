@@ -186,9 +186,11 @@ class Controller
       #Branches
       "b" : => 
         @model.Route.putBranch()
+        @sceneController.skeleton.setBranchPoint(true)
       "j" : => @model.Route.popBranch().done(
         (id) => 
           @setActiveNode(id, true)
+          @sceneController.skeleton.setBranchPoint(false)
         )
 
       #Zoom in/out

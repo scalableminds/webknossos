@@ -9,6 +9,11 @@ PLANE_YZ = 1
 PLANE_XZ = 2
 VIEW_3D  = 3
 
+COLOR_NORMAL = 0xff0000
+COLOR_ACTIVE = 0x0000ff
+COLOR_BRANCH = 0x550000
+COLOR_BRANCH_ACTIVE = 0x000055
+
 class Skeleton
 
   # This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -38,7 +43,7 @@ class Skeleton
     @activeNode = new THREE.Mesh(
         new THREE.SphereGeometry(1 / @model.Route.scaleX),
         new THREE.MeshLambertMaterial({
-          color : 0x0000ff
+          color : COLOR_ACTIVE
           #transparent: true
           #opacity: 0.5 })
           })
@@ -60,8 +65,8 @@ class Skeleton
       routeGeometry.vertices.push(new THREE.Vector2(0,0))      # targets
       routeGeometryNodes.vertices.push(new THREE.Vector2(0,0)) # nodes
 
-    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 1}), THREE.LinePieces))
-    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: 0xff0000, size: 5, sizeAttenuation : false})))
+    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: COLOR_NORMAL, linewidth: 1}), THREE.LinePieces))
+    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: COLOR_NORMAL, size: 5, sizeAttenuation : false})))
     @ids.push(treeId)
     @curIndex.push(0)
 
@@ -129,7 +134,7 @@ class Skeleton
         @nodes[index].geometry.verticesNeedUpdate = true
     @setActiveNode()
 
-  setActiveNode : () =>
+  setActiveNode : =>
     id = @model.Route.getActiveNodeId()
     position = @model.Route.getActiveNodePos()
     if @activeNodeSphere and @disSpheres==true
@@ -138,15 +143,27 @@ class Skeleton
     @lastNodePosition = position
     if position
       @activeNode.visible = true
-      @activeNodeSphere = @getSphereIndexFromId(id)
+      @activeNodeSphere = @getSphereFromId(id)
       # Hide activeNodeSphere, because activeNode is visible anyway
       if @activeNodeSphere
         @activeNodeSphere.visible = false
+        if @activeNodeSphere.material.color.getHex() == COLOR_BRANCH
+          @activeNode.material.color.setHex(COLOR_BRANCH_ACTIVE)
+        else
+          @activeNode.material.color.setHex(COLOR_ACTIVE)
       @setNodeRadius(@model.Route.getActiveNodeRadius())
       @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
     else
       @activeNodeSphere = null
       @activeNode.visible = false
+    @flycam.hasChanged = true
+
+  setBranchPoint : (isBranchPoint) ->
+    colorActive = if isBranchPoint then COLOR_BRANCH_ACTIVE else COLOR_ACTIVE
+    colorNormal = if isBranchPoint then COLOR_BRANCH else COLOR_NORMAL
+    @activeNode.material.color.setHex(colorActive)
+    if @activeNodeSphere
+      @activeNodeSphere.material.color.setHex(colorNormal)
     @flycam.hasChanged = true
 
   setNodeRadius : (value) ->
@@ -230,7 +247,7 @@ class Skeleton
   pushNewNode : (radius, position, id) ->
     newNode = new THREE.Mesh(
       new THREE.SphereGeometry(1 / @model.Route.scaleX),
-      new THREE.MeshLambertMaterial({ color : 0xff0000})#, transparent: true, opacity: 0.5 })
+      new THREE.MeshLambertMaterial({ color : COLOR_NORMAL})#, transparent: true, opacity: 0.5 })
     )
     newNode.scale = new THREE.Vector3(radius, radius, radius)
     newNode.position = new THREE.Vector3(position[0], position[1], position[2])
@@ -248,7 +265,7 @@ class Skeleton
         return i
     return null
 
-  getSphereIndexFromId : (nodeId) ->
+  getSphereFromId : (nodeId) ->
     for node in @nodesSpheres
       if node.nodeId == nodeId
         return node

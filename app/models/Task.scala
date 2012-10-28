@@ -19,32 +19,38 @@ import akka.util.duration._
 import akka.pattern.AskTimeoutException
 import org.bson.types.ObjectId
 import akka.dispatch.Future
+import play.api.libs.concurrent.execution.defaultContext
+import akka.dispatch.Promise
 
 case class Task(
-    taskID: Int, 
-    zellId: Int, 
-    start: Point3D, 
-    priority: Int, 
-    created: Date, 
+    taskID: Int,
+    zellId: Int,
+    start: Point3D,
+    priority: Int,
+    created: Date,
     experiment: Option[Experiment],
     completedBy: Option[ObjectId],
     _id: ObjectId = new ObjectId) {
   def id = _id.toString
 }
 
-object Task extends BasicDAO[Task]("tasks"){
-  val jsExecutionActor = Akka.system.actorOf( Props[JsExecutionActor] )
+object Task extends BasicDAO[Task]("tasks") {
+  val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
-  implicit val timeout = Timeout( ( conf.getInt( "js.defaultTimeout" ) getOrElse 5 ) seconds ) // needed for `?` below
-  
-  
-  def nextTaskIdForUser(user: User): Future[Int] = {
-    val params = Map( "user" -> user, "tasks" -> Task.findAll.toArray)
-    
-    val future = ( jsExecutionActor ? JS( TaskSelectionAlgorithm.current.js, params ) ) recover {
-      case e: AskTimeoutException =>
-        ""
+  implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
+
+  def nextTaskIdForUser(user: User): Future[Option[Int]] = {
+    val tasks = Task.findAll.toArray
+    if (tasks.isEmpty) {
+      Promise.successful( None )( Akka.system.dispatcher)
+    } else {
+      val params = Map("user" -> user, "tasks" -> tasks)
+
+      val future = (jsExecutionActor ? JS(TaskSelectionAlgorithm.current.js, params)) recover {
+        case e: AskTimeoutException =>
+          ""
+      }
+      future.mapTo[Int].map(x => Some(x) )
     }
-    future.mapTo[Int]
   }
 }

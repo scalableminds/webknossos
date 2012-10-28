@@ -14,6 +14,7 @@ import brainflight.io.StartWatching
 import brainflight.io.DataSetChangeHandler
 import brainflight.io.DirectoryWatcherActor
 import models.basics.BasicEvolution
+import scala.collection.parallel.Tasks
 
 object Global extends GlobalSettings {
 
@@ -46,6 +47,10 @@ object InitialData {
       val u = ("scmboy@scalableminds.com", "SCM Boy", "secret", List(Experiment.createNew()._id))
       Seq(
         u).foreach(User.create _ tupled)
+    }
+    
+    if(TaskSelectionAlgorithm.findAll.isEmpty) {
+      TaskSelectionAlgorithm.insert(TaskSelectionAlgorithm("return tasks[0]"))
     }
   }
 }

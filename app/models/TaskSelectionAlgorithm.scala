@@ -7,7 +7,7 @@ import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
 import java.util.Date
 
-case class TaskSelectionAlgorithm(js: String, timestamp: Date, active: Boolean)
+case class TaskSelectionAlgorithm(js: String, active: Boolean = true, timestamp: Date = new Date)
 
 object TaskSelectionAlgorithm extends BasicDAO[TaskSelectionAlgorithm]("taskAlgorithms") {
   def current = {

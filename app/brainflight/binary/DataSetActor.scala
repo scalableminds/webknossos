@@ -16,15 +16,10 @@ case class MultiCubeRequest( requests: Array[CubeRequest] )
 case class CubeRequest( dataSet: DataSet, resolution: Int, points: Cuboid)
 
 class DataSetActor extends Actor {
-  implicit val system = ActorSystem("app")
+  implicit val system = ActorSystem("agents")
 
-  var BinaryCacheAgent: Agent[Map[DataBlockInformation, Data]] = null
-  var dataStore: DataStore = null
-  
-  override def preStart {
-    BinaryCacheAgent = Agent( Map[DataBlockInformation, Data]().empty )
-    dataStore = new FileDataStore(BinaryCacheAgent )
-  }
+  val BinaryCacheAgent = Agent( Map[DataBlockInformation, Data]().empty )
+  val dataStore = new FileDataStore(BinaryCacheAgent )
   
   def receive = {
     case SingleRequest( dataSet, resolution, point ) =>

@@ -44,9 +44,11 @@ class Gui
                 inverseX: data.mouseInversionX == 1
                 inverseY: data.mouseInversionY == 1
 
+                moveValue : data.moveValue
                 routeClippingDistance: data.routeClippingDistance
                 displayCrosshairs: data.displayCrosshair
                 interpolation : data.interpolation
+                minZoomStep : data.minZoomStep
 
                 displayPrevXY : data.displayPreviewXY
                 displayPrevYZ : data.displayPreviewYZ
@@ -109,7 +111,11 @@ class Gui
                           .onChange(@setMouseInversionY)
 
     fView = @gui.addFolder("Planes")
-    (fView.add @settings, "routeClippingDistance", 1, 500)
+    (fView.add @settings, "moveValue", 1, 3) 
+                          .step(0.25)
+                          .name("Move Value")    
+                          .onChange(@setMoveValue)
+    (fView.add @settings, "routeClippingDistance", 0.1, 200)
                           .name("Clipping Distance")    
                           .onChange(@setRouteClippingDistance)
     (fView.add @settings, "displayCrosshairs")
@@ -118,6 +124,9 @@ class Gui
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
                           .onChange(@setInterpolation)
+    (fView.add @settings, "minZoomStep", [0, 1, 2, 3])
+                          .name("Min. Zoom Level")
+                          .onChange(@setMinZoomStep)
 
     fSkeleton = @gui.addFolder("Skeleton View")
     (fSkeleton.add @settings, "displayPrevXY")
@@ -172,6 +181,7 @@ class Gui
     fNodes.open()
 
   saveNow : =>
+    @model.User.Configuration.pushImpl()
     @model.Route.pushImpl()
       .fail( -> alert("Something went wrong with saving, please try again."))
       .done( -> alert("Successfully saved!"))
@@ -202,6 +212,10 @@ class Gui
     pos = @flycam.getGlobalPos()
     @settings.position = Math.round(pos[0]) + ", " + Math.round(pos[1]) + ", " + Math.round(pos[2])
 
+  setMoveValue : (value) =>
+    @model.User.Configuration.moveValue = (Number) value
+    @model.User.Configuration.push()
+
   setRouteClippingDistance : (value) =>
     @model.User.Configuration.routeClippingDistance = (Number) value
     @cameraController.setRouteClippingDistance((Number) value)
@@ -220,6 +234,12 @@ class Gui
   setInterpolation : (value) =>
     @sceneController.setInterpolation(value)
     @model.User.Configuration.interpolation = (Boolean) value
+    @model.User.Configuration.push()
+
+  setMinZoomStep : (value) =>
+    value = parseInt(value)
+    @flycam.setOverrideZoomStep(value)
+    @model.User.Configuration.minZoomStep = (Number) value
     @model.User.Configuration.push()
 
   setDisplayPreviewXY : (value) =>

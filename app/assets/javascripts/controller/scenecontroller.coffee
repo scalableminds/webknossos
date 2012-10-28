@@ -122,7 +122,7 @@ class SceneController
     @flycam.hasChanged = true
 
   setRouteClippingDistance : (value) =>
-    @planeShift = value
+    @planeShift = 2 * value
 
   setInterpolation : (value) =>
     for plane in @planes

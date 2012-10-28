@@ -38,7 +38,7 @@ import play.api.libs.concurrent.execution.defaultContext
 
 object BinaryData extends Controller with Secured {
 
-  val dataSetActor = Akka.system.actorOf( Props[DataSetActor].withRouter(
+  val dataSetActor = Akka.system.actorOf( Props( new DataSetActor ).withRouter(
     RoundRobinRouter( nrOfInstances = 8 ) ) )
     
   override val DefaultAccessRole = Role.User

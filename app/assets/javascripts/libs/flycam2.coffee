@@ -4,6 +4,7 @@
 PLANE_XY           = 0
 PLANE_YZ           = 1
 PLANE_XZ           = 2
+VIEW_3D            = 3
 TEXTURE_WIDTH      = 512
 MAX_TEXTURE_OFFSET = 31     # maximum difference between requested coordinate and actual texture position
 ZOOM_DIFF          = 0.05
@@ -27,7 +28,8 @@ class Flycam2d
     @direction = [0, 0, 1]
     @hasChanged = true
     @activePlane = PLANE_XY
-    @rayThreshold = 100
+    @rayThreshold = [10, 10, 10, 100]
+    @spaceDirection = 1
 
   #reset : ->
   #  @zoomSteps=[1,1,1]
@@ -52,11 +54,29 @@ class Flycam2d
     for i in [0..2]
       @zoomOut i
 
+  # Used if the user wants to explicitly set the zoom step,
+  # rather than trusting on our equation.
+  setOverrideZoomStep : (value) ->
+    @overrideZoomStep = value
+    @hasChanged = true
+
   calculateIntegerZoomStep : (planeID) ->
     # round, because Model expects Integer
     @integerZoomSteps[planeID] = Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff)
     if @integerZoomSteps[planeID] < 0
       @integerZoomSteps[planeID] = 0
+    # overrideZoomStep only has an effect when it is larger than the optimal zoom step
+    if @overrideZoomStep
+      @integerZoomSteps[planeID] = Math.max(@overrideZoomStep, @integerZoomSteps[planeID])
+
+  getZoomStep : (planeID) ->
+    @zoomSteps[planeID]
+
+  setZoomSteps : (zXY, zYZ, zXZ) ->
+    @zoomSteps = [zXY, zYZ, zXZ]
+    @hasChanged = true
+    for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
 
   getIntegerZoomStep : (planeID) ->
     @integerZoomSteps[planeID]
@@ -76,34 +96,54 @@ class Flycam2d
   setDirection : (direction) ->
     @direction = direction
 
-  move : (p) -> #move by whatever is stored in this vector
-    @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
-    # update the direction whenever the user moves
-    @lastDirection = @direction
-    @direction = [0.8 * @lastDirection[0] + 0.2 * p[0], 0.8 * @lastDirection[1] + 0.2 * p[1], 0.8 * @lastDirection[2] + 0.2 * p[2]]
+  setSpaceDirection : ->
+    ind = @getIndices @activePlane
+    if @direction[ind[2]] <= 0
+      @spaceDirection = -1
+    else
+      @spaceDirection = 1
 
+  getSpaceDirection : ->
+    @spaceDirection
+
+  move : (p) -> #move by whatever is stored in this vector
+    if @activePlane == PLANE_XY
+      # BAD consider the different resolution in z-direction
+      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+2*p[2]])
+    else
+      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
+    
   moveActivePlane : (p) ->
     ind = @getIndices @activePlane
-    f = (@getPlaneScalingFactor @activePlane)
-    @move([p[ind[0]]*f, p[ind[1]]*f, p[ind[2]]*f])
+    f = Math.pow(2, @integerZoomSteps[@activePlane])
+    # change direction of the value connected to space, based on the last direction
+    delta = [p[ind[0]]*f, p[ind[1]]*f, p[ind[2]]*f]
+    delta[ind[2]] *= @spaceDirection
+    @move(delta)
 
   toString : ->
     position = @globalPosition
     "(x, y, z) = ("+position[0]+", "+position[1]+", "+position[2]+")"
 
   getGlobalPos : ->
-    @globalPosition
     @model.Route.globalPosition = @globalPosition
+    @globalPosition
 
   getTexturePosition : (planeID) ->
     @texturePosition[planeID]
 
   setGlobalPos : (position) ->
+    p = [position[0] - @globalPosition[0], position[1] - @globalPosition[1], position[2] - @globalPosition[2]]
     @globalPosition = position
     @hasChanged = true
+    # update the direction whenever the user moves
+    @lastDirection = @direction
+    @direction = [0.8 * @lastDirection[0] + 0.2 * p[0], 0.8 * @lastDirection[1] + 0.2 * p[1], 0.8 * @lastDirection[2] + 0.2 * p[2]]
 
   setActivePlane : (activePlane) ->
     @activePlane = activePlane
+    # setSpaceDirection when entering a new viewport
+    @setSpaceDirection()
 
   getActivePlane : ->
     @activePlane
@@ -147,7 +187,7 @@ class Flycam2d
     (@hasNewTexture[PLANE_XY] or @hasNewTexture[PLANE_YZ] or @hasNewTexture[PLANE_XZ])
 
   setRayThreshold : (cameraRight, cameraLeft) ->
-    @rayThreshold = 4 * (cameraRight - cameraLeft) / 384
+    @rayThreshold[VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384
 
-  getRayThreshold : ->
-    @rayThreshold
+  getRayThreshold : (planeID) ->
+    @rayThreshold[planeID]

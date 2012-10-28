@@ -44,7 +44,7 @@ class Controller
     $("#render").bind "contextmenu", (event) ->
       event.preventDefault(); return
 
-    @canvases = $("#render")[0]
+    @canvasesAndNav = $("#main")[0]
 
     @prevControls = $('#prevControls')
     values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
@@ -101,6 +101,9 @@ class Controller
   
         @model.User.Configuration.initialize().then(
           (data) =>
+            @flycam.setZoomSteps(data.zoomXY, data.zoomYZ, data.zoomXZ)
+            @flycam.setOverrideZoomStep(data.minZoomStep)
+
             @initMouse() if data.mouseActive is true
             @initKeyboard() if data.keyboardActive is true
             @initGamepad() if data.gamepadActive is true
@@ -111,7 +114,7 @@ class Controller
             @gui.on "deleteActiveNode", @deleteActiveNode
             @gui.on "createNewTree", @createNewTree
             @gui.on "setActiveTree", (id) => @setActiveTree(id)
-            @gui.on "setActiveNode", (id) => @setActiveNode(id)
+            @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
             @gui.on "deleteActiveTree", @deleteActiveTree
 
             @cameraController.setRouteClippingDistance data.routeClippingDistance
@@ -133,8 +136,8 @@ class Controller
     @input.mouses = new Input.Mouse(
       [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
       [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
-      {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "r" : @setWaypoint}
-      {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "r" : @onPreviewClick}
+      {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "l" : @onPlaneClick, "r" : @setWaypoint}
+      {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "l" : @onPreviewClick}
     )
 
   initKeyboard : ->
@@ -148,11 +151,11 @@ class Controller
     @input.keyboard = new Input.Keyboard(
 
       #Fullscreen Mode
-      "f" : => 
-        canvases = @canvases
-        requestFullscreen = canvases.webkitRequestFullScreen or canvases.mozRequestFullScreen or canvases.RequestFullScreen
+      "f" : =>
+        canvasesAndNav = @canvasesAndNav
+        requestFullscreen = canvasesAndNav.webkitRequestFullScreen or canvasesAndNav.mozRequestFullScreen or canvasesAndNav.RequestFullScreen
         if requestFullscreen
-          requestFullscreen.call(canvases, canvases.ALLOW_KEYBOARD_INPUT)
+          requestFullscreen.call(canvasesAndNav, canvasesAndNav.ALLOW_KEYBOARD_INPUT)
 
     
       #ScaleTrianglesPlane
@@ -185,12 +188,24 @@ class Controller
         @model.Route.putBranch()
       "j" : => @model.Route.popBranch().done(
         (id) => 
-          @setActiveNode(id)
+          @setActiveNode(id, true)
         )
 
       #Zoom in/out
-      "i" : => @cameraController.zoomIn()
-      "o" : => @cameraController.zoomOut()
+      "i" : =>
+        @cameraController.zoomIn()
+        # Remember Zoom Steps
+        @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
+        @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+        @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
+        @model.User.Configuration.push()
+      "o" : =>
+        @cameraController.zoomOut()
+        # Remember Zoom Steps
+        @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
+        @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+        @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
+        @model.User.Configuration.push()
 
       # delete active node
       "delete" : =>
@@ -203,6 +218,8 @@ class Controller
       # Move
       "space"         : => @moveZ( @model.User.Configuration.moveValue)
       "shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
+      # alternative key binding for Kevin
+      "ctrl + space"  : => @moveZ(-@model.User.Configuration.moveValue)
     )
 
   # for more buttons look at Input.Gamepad
@@ -249,7 +266,6 @@ class Controller
   moveY : (y) => @move([0, y, 0])
   moveZ : (z) => @move([0, 0, z])
 
-
   ########### Click callbacks
   
   setWaypoint : (relativePosition, typeNumber) =>
@@ -263,26 +279,39 @@ class Controller
     @addNode(position)
 
   onPreviewClick : (position) =>
+    @onClick(position, VIEW_3D)
+
+  onPlaneClick : (position) =>
+    plane = @flycam.getActivePlane()
+    @onClick(position, plane)
+
+  onClick : (position, plane) =>
     scaleFactor = @view.scaleFactor
-    camera      = @view.getCameras()[VIEW_3D]
+    camera      = @view.getCameras()[plane]
     # vector with direction from camera position to click position
     vector = new THREE.Vector3((position[0] / (384 * scaleFactor) ) * 2 - 1, - (position[1] / (384 * scaleFactor)) * 2 + 1, 0.5)
     
     # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()
     ray = projector.pickingRay(vector, camera)
-    ray.setThreshold(@flycam.getRayThreshold())
+    ray.setThreshold(@flycam.getRayThreshold(plane))
  
     # identify clicked object
     intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
 
-    if (intersects.length > 0 and intersects[0].distance >= 0)
-      # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
-      vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
-      # set the active Node to the one that has the ID stored in the vertex
-      @setActiveNode(vertex.nodeId)
+    if intersects.length > 0 and intersects[0].distance >= 0
+      intersectsCoord = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
+      globalPos = @flycam.getGlobalPos()
 
-      console.log intersects
+      # make sure you can't click nodes, that are clipped away (one can't see)
+      ind = @flycam.getIndices(plane)
+      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance()+1)
+      # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
+        vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
+      # set the active Node to the one that has the ID stored in the vertex
+      # center the node if click was in 3d-view
+        centered = plane == VIEW_3D
+        @setActiveNode(vertex.nodeId, centered)
 
   ########### Model Interaction
 
@@ -294,9 +323,11 @@ class Controller
     @gui.updateRadius()
     @sceneController.setWaypoint()
 
-  setActiveNode : (nodeId) =>
+  setActiveNode : (nodeId, centered) =>
     @model.Route.setActiveNode(nodeId)
-    @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+    if centered
+      @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+    @flycam.hasChanged = true
     @gui.update()
     @sceneController.skeleton.setActiveNode()
 

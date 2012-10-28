@@ -21,9 +21,11 @@ import org.bson.types.ObjectId
 import akka.dispatch.Future
 import play.api.libs.concurrent.execution.defaultContext
 import akka.dispatch.Promise
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 
 case class Task(
-    taskID: Int,
+    taskId: Int,
     zellId: Int,
     start: Point3D,
     priority: Int,
@@ -53,4 +55,17 @@ object Task extends BasicDAO[Task]("tasks") {
       future.mapTo[Int].map(x => Some(x) )
     }
   }
+  
+  implicit object TaskFormat extends Format[Task] {
+    val TASK_ID = "taskId"
+    val ZELL_ID = "zellId"
+    val START = "start"
+    val PRIORITY = "priority"
+    val CREATED = "created"
+
+    def writes(e: Task) = Json.obj(
+      TASK_ID -> e.taskId,
+      ZELL_ID -> e.zellId,
+      START -> e.start,
+      PRIORITY -> e.priority)  }
 }

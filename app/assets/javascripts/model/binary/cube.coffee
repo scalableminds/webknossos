@@ -170,6 +170,8 @@ Cube =
       if bucketIndex == undefined
         console.log "ERROR"
       bucket = cube[bucketIndex]
+      unless bucket
+        return 0
       if bucketData
         if zoomStep < bucket.zoomStep 
           bucket.data = bucketData

@@ -33,7 +33,7 @@ class Controller
     @view  = new View(@model, @flycam)
 
     # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model, [2000, 2000, 2000])
+    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -62,7 +62,7 @@ class Controller
       (position) =>
         # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
 
-        @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model)
+        @sceneController = new SceneController(@model.Route.data.dataSet.upperBoundary, @flycam, @model)
         meshes      = @sceneController.getMeshes()
         for mesh in meshes
           @view.addGeometry(mesh)

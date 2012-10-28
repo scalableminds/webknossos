@@ -8,6 +8,17 @@ import models.basics.BasicDAO
 import java.util.Date
 import brainflight.tools.geometry.Point3D
 import models.graph.Experiment
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+import akka.actor.Props
+import akka.pattern.ask
+import brainflight.js.JsExecutionActor
+import brainflight.js.JS
+import akka.util.Timeout
+import akka.util.duration._
+import akka.pattern.AskTimeoutException
+import org.bson.types.ObjectId
+import akka.dispatch.Future
 
 case class Task(
     taskID: Int, 
@@ -22,5 +33,18 @@ case class Task(
 }
 
 object Task extends BasicDAO[Task]("tasks"){
+  val jsExecutionActor = Akka.system.actorOf( Props[JsExecutionActor] )
+  val conf = current.configuration
+  implicit val timeout = Timeout( ( conf.getInt( "js.defaultTimeout" ) getOrElse 5 ) seconds ) // needed for `?` below
   
+  
+  def nextTaskIdForUser(user: User): Future[Int] = {
+    val params = Map( "user" -> user, "tasks" -> Task.findAll.toArray)
+    
+    val future = ( jsExecutionActor ? JS( TaskSelectionAlgorithm.current.js, params ) ) recover {
+      case e: AskTimeoutException =>
+        ""
+    }
+    future.mapTo[Int]
+  }
 }

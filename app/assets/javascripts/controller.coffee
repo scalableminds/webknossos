@@ -377,38 +377,38 @@ class Controller
     @model.User.Configuration.mouseRotateValue = (Number) value
     @model.User.Configuration.push()             
 
-  setMouseActivity : (value) =>
-    @model.User.Configuration.mouseActive = value
-    @model.User.Configuration.push()
-    if value is false
-      @input.mouse.unbind()
-      @input.mouse = null
-    else
-      @initMouse()
+  #setMouseActivity : (value) =>
+  #  @model.User.Configuration.mouseActive = value
+  #  @model.User.Configuration.push()
+  #  if value is false
+  #    @input.mouse.unbind()
+  #    @input.mouse = null
+  #  else
+  #    @initMouse()
 
-  setKeyboardActivity : (value) =>
-    @model.User.Configuration.keyboardActive = value 
-    @model.User.Configuration.push()
-    if value is false
-      @input.keyboard.unbind()
-      @input.keyboard = null
-    else
-      @initKeyboard()
+  #setKeyboardActivity : (value) =>
+  #  @model.User.Configuration.keyboardActive = value 
+  #  @model.User.Configuration.push()
+  #  if value is false
+  #    @input.keyboard.unbind()
+  #    @input.keyboard = null
+  #  else
+  #    @initKeyboard()
 
-  setGamepadActivity : (value) =>
-    @model.User.Configuration.gamepadActive = value  
-    @model.User.Configuration.push()   
-    if value is false
-      @input.gamepad.unbind()
-      @input.gamepad = null
-    else
-      @initGamepad()    
+  #setGamepadActivity : (value) =>
+  #  @model.User.Configuration.gamepadActive = value  
+  #  @model.User.Configuration.push()   
+  #  if value is false
+  #    @input.gamepad.unbind()
+  #    @input.gamepad = null
+  #  else
+  #    @initGamepad()    
 
-  setMotionSensorActivity : (value) =>
-    @model.User.Configuration.motionsensorActive = value
-    @model.User.Configuration.push()   
-    if value is false
-      @input.deviceorientation.unbind()
-      @input.deviceorientation = null
-    else
-      @initMotionsensor()
+  #setMotionSensorActivity : (value) =>
+  #  @model.User.Configuration.motionsensorActive = value
+  #  @model.User.Configuration.push()   
+  #  if value is false
+  #    @input.deviceorientation.unbind()
+  #    @input.deviceorientation = null
+  #  else
+  #    @initMotionsensor()

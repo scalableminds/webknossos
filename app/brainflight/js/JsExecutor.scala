@@ -13,14 +13,20 @@ class JsExecutor {
   val functionDef = "function executeMe(%s) { %s }; executeMe(%s);"
 
   def execute(fktBody: String, params: Map[String, Any]) = {
+    try {
 
-    val paramDef = params.keys.mkString(", ")
-    val fkt = functionDef.format(paramDef, fktBody, paramDef)
+      val paramDef = params.keys.mkString(", ")
+      val fkt = functionDef.format(paramDef, fktBody, paramDef)
 
-    val bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
+      val bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
 
-    bindings.putAll(params)
-    // evaluate JavaScript code from String
-    engine eval fkt
+      bindings.putAll(params)
+      // evaluate JavaScript code from String
+      engine eval fkt
+    } catch {
+      case e: Exception =>
+        System.err.println("Cached an Exception:")
+        e.printStackTrace()
+    }
   }
 }

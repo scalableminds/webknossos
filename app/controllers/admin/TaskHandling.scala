@@ -42,7 +42,7 @@ object TaskHandling extends Controller with Secured {
           TaskSelectionAlgorithm.use(alg)
         Ok
       } else
-        BadRequest("Invalid task selection algorithm.")
+        (new Status(422))("Invalid task selection algorithm.")
     }) getOrElse BadRequest("Missing parameters.")
 
   }

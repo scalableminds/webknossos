@@ -192,6 +192,7 @@ class Controller
           @setActiveNode(id, true)
           @sceneController.skeleton.setBranchPoint(false)
         )
+      "h" : @centerActiveNode
 
       #Zoom in/out
       "i" : =>
@@ -328,10 +329,13 @@ class Controller
   setActiveNode : (nodeId, centered) =>
     @model.Route.setActiveNode(nodeId)
     if centered
-      @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+      @centerActiveNode()
     @flycam.hasChanged = true
     @gui.update()
     @sceneController.skeleton.setActiveNode()
+
+  centerActiveNode : =>
+    @flycam.setGlobalPos(@model.Route.getActiveNodePos())
 
   deleteActiveNode : =>
     @model.Route.deleteActiveNode()

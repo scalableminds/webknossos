@@ -10,6 +10,13 @@ GET     /index                              controllers.Application.index
 GET     /jira                               controllers.Jira.index
 POST    /jira                               controllers.Jira.submit
 
+# Tasks
+GET     /tasks                              controllers.admin.TaskHandling.listTasks
+GET     /tasks/algorithm                    controllers.admin.TaskHandling.index
+POST    /tasks/algorithm                    controllers.admin.TaskHandling.submitAlgorithm
+GET     /tasks/algorithm/:id?use=true       controllers.admin.TaskHandling.useAlgorithm(id: String)
+
+
 # Authentication
 GET     /login                              controllers.Application.login
 POST    /login                              controllers.Application.authenticate

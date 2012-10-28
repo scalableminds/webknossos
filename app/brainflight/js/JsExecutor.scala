@@ -10,13 +10,13 @@ class JsExecutor {
   // create a JavaScript engine
   val engine = factory.getEngineByName("JavaScript")
 
-  val functionDef = "function executeMe(%s) { %s }; executeMe(%s);"
+  val functionDef = "var executeMe = %s; executeMe(%s);"
 
   def execute(fktBody: String, params: Map[String, Any]) = {
     try {
 
       val paramDef = params.keys.mkString(", ")
-      val fkt = functionDef.format(paramDef, fktBody, paramDef)
+      val fkt = functionDef.format( fktBody, paramDef)
 
       val bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
 

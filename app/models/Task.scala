@@ -23,6 +23,7 @@ import play.api.libs.concurrent.execution.defaultContext
 import akka.dispatch.Promise
 import play.api.libs.json.Format
 import play.api.libs.json.Json
+import play.api.libs.json.Writes
 
 case class Task(
     taskId: Int,
@@ -56,7 +57,7 @@ object Task extends BasicDAO[Task]("tasks") {
     }
   }
   
-  implicit object TaskFormat extends Format[Task] {
+  implicit object TaskFormat extends Writes[Task] {
     val TASK_ID = "taskId"
     val ZELL_ID = "zellId"
     val START = "start"

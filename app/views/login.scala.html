@@ -1,65 +1,62 @@
 @(form: Form[(String, String)])(implicit flash: Flash)
 
-<html>
-    <head>
-        <title>Brainflight</title>
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/login.css")">
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/jquery-1.6.4.js")"></script>
-    </head>
-    <body>
-        
-        <header>
-            <a href="@routes.Test.index" id="logo">Brain<span>flight</span></a>
-        </header>
-        
-        @helper.form(routes.Application.authenticate) {
-            
-            <h1>Sign in</h1>
-            
-            @form.globalError.map { error =>
-                <p class="error">
-                    @error.message
-                </p>
-            }
-            
-            @flash.get("success").map { message =>
-                <p class="success">
-                    @message
-                </p>
-            }
-            <dl>
-            <dd>
-                <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a><br />
-            </dd>
-            </dl>
-                        <dl>
-            <dd>
-                <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a><br />
-            </dd>
-            </dl>
-            <p>
-                <input type="email" name="email" placeholder="Email" value="@form("email").value">
-            </p>
-            <p>
-                <input type="password" name="password" placeholder="Password">
-            </p>
-            <p>
-                <button type="submit">Login</button>
-            </p>
-            <p align="left">
-                <a href="@routes.Application.register">Sign Up</a><br />
-                <a href="#">Password Lost</a>
-            </p>
-            
-        }
-        <!--
-        <p class="note">
-            Try <em>scmboy@@scalableminds.com</em> with <em>secret</em> as password.
-        </p>
-        -->    
-    </body>
-</html>
+@main( None, false ){
     
+  <div class="container">
+    <div class="well">
+      
+      @helper.form(routes.Application.authenticate, 'class -> "form-horizontal") {
+      
+        <legend>Login</legend>
+
+        @form.globalError.map { error =>
+          <div class="alert alert-error">
+            @error.message
+          </div>
+        }
+        
+        @flash.get("success").map { message =>
+          <div class="alert alert-success">
+            @message
+          </div>
+        }
+
+        <!-- 
+          <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
+          <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
+        -->
+        <div class="control-group">
+          <label class="control-label" for="loginEmail">Email</label>
+          <div class="controls">
+            <input id="loginEmail" type="email" name="email" placeholder="Email" value="@form("email").value">
+          </div>
+        </div>
+        <div class="control-group">
+          <label class="control-label" for="loginPassword">Password</label>
+          <div class="controls">
+            <input id="loginPassword" type="password" name="password" placeholder="Password">
+          </div>
+        </div>
+        <div class="control-group">
+          <div class="controls">
+            <p>
+              <button type="submit" class="btn btn-primary">Login</button>
+            </p>
+            <p>
+              <a href="@routes.Application.register">Sign Up</a><br />
+              <a href="#">Password Lost</a>
+            </p>
+          </div>
+        </div>        
+      }
+    </div>
+    <!--
+    <p class="note">
+      Try <em>scmboy@@scalableminds.com</em> with <em>secret</em> as password.
+    </p>
+    -->
+  </div>
+}
+  
 
 

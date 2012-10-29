@@ -2,20 +2,40 @@
 
 @main( Some(user), false ){
 
-  <div id="issue-submit-page">
-    <h1>Submit an issue</h1>
-    <form action="/jira" method="post">
-      <label for="issue-type">Type:</label>
-      <select name="type" id="issue-type">
-        <option value="bug">Bug</option>
-        <option value="feature">Feature</option>
-      </select>
-      <label for="issue-summary">Summary:</label>
-      <input type="text" name="summary" id="issue-summary" autofocus/>
-      <label for="issue-description">Description:</label>
-      <textarea name="description" id="issue-description"></textarea>
-      <input type="submit" value="Send" />
-    </form>
+  <div id="issue-submit">
+      
+    @helper.form(action = controllers.routes.Jira.index) {
+      
+      <legend>Submit issue</legend>
+
+      <div class="control-group">
+        <label class="control-label" for="issueType">Type</label>
+        <div class="controls">
+          <select name="type" id="issueType">
+            <option value="bug">Bug</option>
+            <option value="feature">Feature</option>
+          </select>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="issueSummary">Summary</label>
+        <div class="controls">
+          <input type="text" name="summary" id="issue-summary" autofocus/>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="issueDescription">Description</label>
+        <div class="controls">
+          <textarea name="description" id="issue-description"></textarea>
+        </div>
+      </div>
+      <div class="control-group">
+        <div class="controls">
+          <input type="submit" value="Send" class="btn btn-primary" />
+        </div>
+      </div>
+    }
+
   </div>
   
   

@@ -72,7 +72,7 @@ $.fn.editInPlace = (method, options...) ->
 $ -> # document is ready!
 
     $("#issue-submit-button").click (e) ->
-        window.open(this.href, "_blank", "width=700,height=470,location=no,menubar=no")
+        window.open(this.href, "_blank", "width=700,height=490,location=no,menubar=no")
         e.preventDefault()
 
 

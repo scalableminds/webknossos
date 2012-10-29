@@ -4,15 +4,15 @@
 // author: mda@zenexity.com - 2011
 // -----------------------------------
 
-@import 'libs/_reset.less';
-@import 'libs/_mate.less';
+// @import 'libs/_reset.less';
+// @import 'libs/_mate.less';
 @import 'libs/_theme.less';
 
 // ----------------------- MAIN STYLES
 body {
-    background: @mainBackground;
+    // background: @mainBackground;
     color: @mainColor;
-    font: @defaultFont;
+    // font: @defaultFont;
     -webkit-font-smoothing: antialised;
 }
 
@@ -86,8 +86,8 @@ a {
     width: 384px;
     height: 20px;
     position: relative;
-    top: 420;
-    left: 420;
+    top: 420px;
+    left: 420px;
     z-index: 30;
 }
 #overlay {
@@ -100,47 +100,21 @@ a {
     margin-bottom: 10px;
 }
 
-#issue-submit-button {
-    .button();
-    margin-left: 1em;
-}
 
-#issue-submit-page {
+#issue-submit {
 
-    padding: 1em 0;
+    padding: 10px;
 
-    h1 {
-        font-size: 2em;
-        padding: 10px;
-    }
-    
     form {
-        padding: 10px;
 
-        label {
-            display: block;
-        }
+        margin: 0;
+
         input[type=text],
-        textarea, 
-        select {
-            display: block;
-            width: 100%;
-            font-size: 1em;
-            margin-bottom: 20px;
-            margin-top: 7px;
-            padding: .5em;
-        }
-        select {
-            width: auto;
-            font-size: 1.5em;
+        textarea {
+            width: 600px;
         }
         textarea {
             height: 9em;
-        }
-        input[type=submit] {
-            font-size: 1.2em;
-            .button();
-            padding: .2em 2em;
         }
     }
 }
@@ -171,16 +145,7 @@ a {
         top: 1em;
         right: 1em;
         font-size: 1.2em;
-        .button();
     }
 }
 
-
-// --------------------------- IMPORTS
-@import 'main/_layout.less';        // General grid
-@import 'main/_widgets.less';       // Some shared elements
-@import 'main/_drawer.less';        // Project drawer
-@import 'main/_header.less';        // Top header + User bar
-@import 'main/_breadcrumb.less';    // Breadcrumb + App menu
-@import 'apps/_tasks.less';         // Tasks 
 

@@ -184,7 +184,7 @@ class View
 
       # scales the 3D-view controls
       prevControl = $("#prevControls")
-      prevControl.css({top: @scaleFactor * 440 + "px", left: @scaleFactor * 420 + "px"})
+      prevControl.css({top: @scaleFactor * 420 + "px", left: @scaleFactor * 420 + "px"})
 
       @resize()
 

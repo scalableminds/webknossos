@@ -33,7 +33,7 @@ class Controller
     @view  = new View(@model, @flycam)
 
     # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model, [2000, 2000, 2000])
+    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -62,7 +62,7 @@ class Controller
       (position) =>
         # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
 
-        @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model)
+        @sceneController = new SceneController(@model.Route.data.dataSet.upperBoundary, @flycam, @model)
         meshes      = @sceneController.getMeshes()
         for mesh in meshes
           @view.addGeometry(mesh)
@@ -186,10 +186,13 @@ class Controller
       #Branches
       "b" : => 
         @model.Route.putBranch()
+        @sceneController.skeleton.setBranchPoint(true)
       "j" : => @model.Route.popBranch().done(
         (id) => 
           @setActiveNode(id, true)
+          @sceneController.skeleton.setBranchPoint(false)
         )
+      "h" : @centerActiveNode
 
       #Zoom in/out
       "i" : =>
@@ -326,10 +329,13 @@ class Controller
   setActiveNode : (nodeId, centered) =>
     @model.Route.setActiveNode(nodeId)
     if centered
-      @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+      @centerActiveNode()
     @flycam.hasChanged = true
     @gui.update()
     @sceneController.skeleton.setActiveNode()
+
+  centerActiveNode : =>
+    @flycam.setGlobalPos(@model.Route.getActiveNodePos())
 
   deleteActiveNode : =>
     @model.Route.deleteActiveNode()
@@ -371,38 +377,38 @@ class Controller
     @model.User.Configuration.mouseRotateValue = (Number) value
     @model.User.Configuration.push()             
 
-  setMouseActivity : (value) =>
-    @model.User.Configuration.mouseActive = value
-    @model.User.Configuration.push()
-    if value is false
-      @input.mouse.unbind()
-      @input.mouse = null
-    else
-      @initMouse()
+  #setMouseActivity : (value) =>
+  #  @model.User.Configuration.mouseActive = value
+  #  @model.User.Configuration.push()
+  #  if value is false
+  #    @input.mouse.unbind()
+  #    @input.mouse = null
+  #  else
+  #    @initMouse()
 
-  setKeyboardActivity : (value) =>
-    @model.User.Configuration.keyboardActive = value 
-    @model.User.Configuration.push()
-    if value is false
-      @input.keyboard.unbind()
-      @input.keyboard = null
-    else
-      @initKeyboard()
+  #setKeyboardActivity : (value) =>
+  #  @model.User.Configuration.keyboardActive = value 
+  #  @model.User.Configuration.push()
+  #  if value is false
+  #    @input.keyboard.unbind()
+  #    @input.keyboard = null
+  #  else
+  #    @initKeyboard()
 
-  setGamepadActivity : (value) =>
-    @model.User.Configuration.gamepadActive = value  
-    @model.User.Configuration.push()   
-    if value is false
-      @input.gamepad.unbind()
-      @input.gamepad = null
-    else
-      @initGamepad()    
+  #setGamepadActivity : (value) =>
+  #  @model.User.Configuration.gamepadActive = value  
+  #  @model.User.Configuration.push()   
+  #  if value is false
+  #    @input.gamepad.unbind()
+  #    @input.gamepad = null
+  #  else
+  #    @initGamepad()    
 
-  setMotionSensorActivity : (value) =>
-    @model.User.Configuration.motionsensorActive = value
-    @model.User.Configuration.push()   
-    if value is false
-      @input.deviceorientation.unbind()
-      @input.deviceorientation = null
-    else
-      @initMotionsensor()
+  #setMotionSensorActivity : (value) =>
+  #  @model.User.Configuration.motionsensorActive = value
+  #  @model.User.Configuration.push()   
+  #  if value is false
+  #    @input.deviceorientation.unbind()
+  #    @input.deviceorientation = null
+  #  else
+  #    @initMotionsensor()

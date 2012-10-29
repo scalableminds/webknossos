@@ -50,16 +50,25 @@ class Input.Keyboard
 
     KeyboardJS.bind.key(
       key
-      =>
+      (evt) =>
+        # When first pressed, insert the callback into
+        # keyCallbackMap and start the buttonLoop.
+        # Then, ignore any other events fired from the operating
+        # system, because we're using our own loop.
+        # When control key is pressed, everything is ignored, because
+        # if there is any browser action attached to this (as with Ctrl + S)
+        # KeyboardJS does not receive the up event.
         unless @keyCallbackMap[key]?
-          @keyPressedCount++ 
-          @keyCallbackMap[key] = callback
-          @buttonLoop() if @keyPressedCount == 1
+          if not evt.ctrlKey
+            @keyPressedCount++ 
+            @keyCallbackMap[key] = callback
+            @buttonLoop() if @keyPressedCount == 1
 
         return
       =>
-        @keyPressedCount--
-        delete @keyCallbackMap[key]
+        if @keyCallbackMap[key]?
+          @keyPressedCount--
+          delete @keyCallbackMap[key]
         return
     )
 

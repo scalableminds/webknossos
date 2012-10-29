@@ -4,62 +4,64 @@
 @main( None, false ){
   
   <div class="container">
-    <div class="well">
-      
-      @helper.form(routes.Application.registrate, 'class -> "form-horizontal") {
-      
-        <legend>Sign up</legend>
-
-        @form.globalError.map { error =>
-          <div class="alert alert-error">
-            @error.message
-          </div>
-        }
+    <div class="span7 offset2 space-top">
+      <div class="well">
         
-        @form.error("password").map { error =>
-          <div class="alert alert-error">
-            @error.message
+        @helper.form(routes.Application.registrate, 'class -> "form-horizontal") {
+        
+          <legend>Sign up</legend>
+
+          @form.globalError.map { error =>
+            <div class="alert alert-error">
+              @error.message
+            </div>
+          }
+          
+          @form.error("password").map { error =>
+            <div class="alert alert-error">
+              @error.message
+            </div>
+          }
+
+          @flash.get("success").map { message =>
+            <div class="alert alert-success">
+              @message
+            </div>
+          }
+
+          <div class="control-group">
+            <label class="control-label" for="signupEmail">Email</label>
+            <div class="controls">
+              <input id="signupEmail" type="email" name="email" placeholder="Email" value="@form("email").value">
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="signupName">Name</label>
+            <div class="controls">
+              <input id="signupName" type="text" name="name" placeholder="Name" value="@form("name").value">
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="loginPassword">Password</label>
+            <div class="controls">
+              <input id="loginPassword" type="password" name="password" placeholder="Password">
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="loginPassword">Password (again)</label>
+            <div class="controls">
+              <input id="loginPassword" type="password" name="password.validation" placeholder="Password (again)">
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="controls">
+            <p>
+              <button type="submit" class="btn btn-primary">Sign up</button>
+            </p>
+            </div>
           </div>
         }
-
-        @flash.get("success").map { message =>
-          <div class="alert alert-success">
-            @message
-          </div>
-        }
-
-        <div class="control-group">
-          <label class="control-label" for="signupEmail">Email</label>
-          <div class="controls">
-            <input id="signupEmail" type="email" name="email" placeholder="Email" value="@form("email").value">
-          </div>
-        </div>
-        <div class="control-group">
-          <label class="control-label" for="signupName">Name</label>
-          <div class="controls">
-            <input id="signupName" type="text" name="name" placeholder="Name" value="@form("name").value">
-          </div>
-        </div>
-        <div class="control-group">
-          <label class="control-label" for="loginPassword">Password</label>
-          <div class="controls">
-            <input id="loginPassword" type="password" name="password" placeholder="Password">
-          </div>
-        </div>
-        <div class="control-group">
-          <label class="control-label" for="loginPassword">Password (again)</label>
-          <div class="controls">
-            <input id="loginPassword" type="password" name="password.validation" placeholder="Password (again)">
-          </div>
-        </div>
-        <div class="control-group">
-          <div class="controls">
-          <p>
-            <button type="submit" class="btn btn-primary">Sign up</button>
-          </p>
-          </div>
-        </div>
-      }
+      </div>
     </div>
   </div>
 }

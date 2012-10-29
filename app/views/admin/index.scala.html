@@ -3,23 +3,24 @@
 @import brainflight.format._
 
 @main(Some(user), false){
-    <article  class="tasks">
-          @users.map{ user =>
-                <div class="folder">
-                    <header>
-                        <h3>@user.name (@user.email)</h3>
-                        <span class="loader">Loading</span>
-                    </header>
-                    <ul class="list">
-                      @user.experiments.flatMap(i => models.graph.Experiment.findOneById(i)).sortBy(_.timestamp).map{ exp =>
-                          <li>
-                            <h4>@exp.dataSetName</h4>
-                            <a href="@controllers.admin.routes.NMLIO.download(exp.id)">Export NML</a> 
-                            <time datetime="@exp.date">@DateFormatter.format(exp.date)</time>
-                          </li>
-                        }
-                    </ul>
-                </div>
-        }
-    </article>
+  <div class="container">
+    @users.map{ user =>
+      <div class="folder">
+        <header>
+            <legend>@user.name (@user.email)</legend>
+        </header>
+        <table class="table table-striped">
+          <tbody>
+            @user.experiments.flatMap(i => models.graph.Experiment.findOneById(i)).sortBy(_.timestamp).map{ exp =>
+              <tr>
+                <td><strong>@exp.dataSetName</strong></h4>
+                <td><time datetime="@exp.date">@DateFormatter.format(exp.date)</time></td>
+                <td><a href="@controllers.admin.routes.NMLIO.download(exp.id)"><i class="icon-download"></i> Export NML</a></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+  }
+  </div>
 }

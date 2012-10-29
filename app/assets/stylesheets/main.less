@@ -64,15 +64,15 @@ a {
 }
 #planeyz {
     top: 0px;
-    left: (384+20)px;
+    left: @standardViewportWidth + 20px;
 }
 #planexz {
-    top: (384+20)px;
+    top: @standardViewportWidth + 20px;
     left: 0px;
 }
 #skeletonview {
-    top: (384+20)px;
-    left: (384+20)px;
+    top: @standardViewportWidth + 20px;
+    left: @standardViewportWidth + 20px;
     border-width: 0px;
 }
 //canvas {
@@ -149,3 +149,21 @@ a {
 }
 
 
+// Fixing datGUI from Bootstrap
+.dg {
+
+    font: 11px 'Lucida Grande', sans-serif;
+
+    input, select, textarea {
+        height: auto;
+        font-size: 11px;
+        line-height: normal;
+        border-radius: 0;
+    }
+    select {
+        width: auto;
+    }
+    .cr div div {
+        line-height: normal;
+    }
+}

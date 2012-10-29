@@ -3,52 +3,54 @@
 @main( None, false ){
     
   <div class="container">
-    <div class="well">
-      
-      @helper.form(routes.Application.authenticate, 'class -> "form-horizontal") {
-      
-        <legend>Login</legend>
-
-        @form.globalError.map { error =>
-          <div class="alert alert-error">
-            @error.message
-          </div>
-        }
+    <div class="span7 offset2 space-top">
+      <div class="well">
         
-        @flash.get("success").map { message =>
-          <div class="alert alert-success">
-            @message
-          </div>
-        }
+        @helper.form(routes.Application.authenticate, 'class -> "form-horizontal") {
+        
+          <legend>Login</legend>
 
-        <!-- 
-          <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
-          <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
-        -->
-        <div class="control-group">
-          <label class="control-label" for="loginEmail">Email</label>
-          <div class="controls">
-            <input id="loginEmail" type="email" name="email" placeholder="Email" value="@form("email").value">
+          @form.globalError.map { error =>
+            <div class="alert alert-error">
+              @error.message
+            </div>
+          }
+          
+          @flash.get("success").map { message =>
+            <div class="alert alert-success">
+              @message
+            </div>
+          }
+
+          <!-- 
+            <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
+            <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
+          -->
+          <div class="control-group">
+            <label class="control-label" for="loginEmail">Email</label>
+            <div class="controls">
+              <input id="loginEmail" type="email" name="email" placeholder="Email" value="@form("email").value">
+            </div>
           </div>
-        </div>
-        <div class="control-group">
-          <label class="control-label" for="loginPassword">Password</label>
-          <div class="controls">
-            <input id="loginPassword" type="password" name="password" placeholder="Password">
+          <div class="control-group">
+            <label class="control-label" for="loginPassword">Password</label>
+            <div class="controls">
+              <input id="loginPassword" type="password" name="password" placeholder="Password">
+            </div>
           </div>
-        </div>
-        <div class="control-group">
-          <div class="controls">
-            <p>
-              <button type="submit" class="btn btn-primary">Login</button>
-            </p>
-            <p>
-              <a href="@routes.Application.register">Sign Up</a><br />
-              <a href="#">Password Lost</a>
-            </p>
-          </div>
-        </div>        
-      }
+          <div class="control-group">
+            <div class="controls">
+              <p>
+                <button type="submit" class="btn btn-primary">Login</button>
+              </p>
+              <p>
+                <a href="@routes.Application.register">Sign Up</a><br />
+                <!-- <a href="#">Password Lost</a> -->
+              </p>
+            </div>
+          </div>        
+        }
+      </div>
     </div>
     <!--
     <p class="note">

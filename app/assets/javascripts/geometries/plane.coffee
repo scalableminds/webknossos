@@ -19,13 +19,26 @@ class Plane
   # This class is supposed to collect all the Geometries that belong to one single plane such as
   # the plane itself, its texture, borders and crosshairs.
 
-  constructor : (planeWidth, textureWidth, flycam, planeID, model) ->
+  constructor : (planeWidth, textureWidth, flycam, planeID, model, scaleVector) ->
     @flycam          = flycam
     @planeID         = planeID
     @model           = model
     @planeWidth      = planeWidth
     @textureWidth    = textureWidth
     @displayCosshair = true
+    @scaleVector     = scaleVector
+
+    # transform scaleVector (because they are rotated)
+    scaleArray   = [@scaleVector.x, @scaleVector.y, @scaleVector.z]
+    transformed  = new Array(3)
+    ind          = @flycam.getIndices(planeID)
+    for i in [0..2]
+      transformed[i] = scaleArray[ind[i]]
+    # Apparently y and z are switched for those guys...
+    @scaleVector = new THREE.Vector3(transformed[0], 1, transformed[1])
+    
+    console.log "scaleVector: "
+    console.log @scaleVector
 
     @createMeshes(planeWidth, textureWidth)
 
@@ -80,8 +93,11 @@ class Plane
       if @flycam.needsUpdate @planeID
         @flycam.notifyNewTexture @planeID
 
+      # HOTFIX: Hard-coded 2
+      tPos = @flycam.getTexturePosition(@planeID).slice()
+      tPos[2] *= 2
       if @model?
-        @model.Binary.get(@flycam.getTexturePosition(@planeID), @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID).done (buffer) =>
+        @model.Binary.get(tPos, @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID).done (buffer) =>
           if buffer
             @plane.texture.image.data.set(buffer)
             @flycam.hasNewTexture[@planeID] = true
@@ -101,7 +117,8 @@ class Plane
       map.offset.y = offsets[1] / @textureWidth;
 
   setScale : (factor) =>
-    @plane.scale = @prevBorders.scale = @crosshair[0].scale = @crosshair[1].scale = new THREE.Vector3(factor, factor, factor)
+    scaleVec = new THREE.Vector3().multiply(new THREE.Vector3(factor, factor, factor), @scaleVector)
+    @plane.scale = @prevBorders.scale = @crosshair[0].scale = @crosshair[1].scale = scaleVec
 
   setRotation : (rotVec) =>
     @plane.rotation = @prevBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec

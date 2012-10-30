@@ -30,10 +30,6 @@ class Controller
     # create Model, View and Flycam
     @model = new Model()
     @flycam = new Flycam(VIEWPORT_WIDTH, @model)
-    @view  = new View(@model, @flycam)
-
-    # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -46,21 +42,26 @@ class Controller
 
     @canvasesAndNav = $("#main")[0]
 
-    @prevControls = $('#prevControls')
-    values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
-    callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
-                      @cameraController.changePrevXZ, @cameraController.changePrevSV]
-    buttons       = new Array(4)
-    for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-      buttons[i] = document.createElement "input"
-      buttons[i].setAttribute "type", "button"
-      buttons[i].setAttribute "value", values[i]
-      buttons[i].addEventListener "click", callbacks[i], true
-      @prevControls.append buttons[i]
-
     @model.Route.initialize().then(
       (position) =>
         # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
+
+        @view  = new View(@model, @flycam)
+
+        # initialize Camera Controller
+        @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
+
+        @prevControls = $('#prevControls')
+        values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
+        callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
+                          @cameraController.changePrevXZ, @cameraController.changePrevSV]
+        buttons       = new Array(4)
+        for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
+          buttons[i] = document.createElement "input"
+          buttons[i].setAttribute "type", "button"
+          buttons[i].setAttribute "value", values[i]
+          buttons[i].addEventListener "click", callbacks[i], true
+          @prevControls.append buttons[i]
 
         @sceneController = new SceneController(@model.Route.data.dataSet.upperBoundary, @flycam, @model)
         meshes      = @sceneController.getMeshes()
@@ -256,7 +257,10 @@ class Controller
     deviceorientation : null
 
   render : =>
-    @model.Binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
+    # HOTFIX: Hard-coded 2
+    gPos = @flycam.getGlobalPos().slice()
+    gPos[2] *= 2
+    @model.Binary.ping(gPos, @flycam.getIntegerZoomSteps())
     if (@gui)
       @gui.updateGlobalPosition()
     @cameraController.update()

@@ -24,12 +24,19 @@ class CameraController
     @flycam        = flycam
     @model         = model
 
+    # vector which translates scene coorinates to camera coordinates
+    rScale = @model.Route.data.experiment.scale
+    rMin   = Math.min.apply(null, rScale)
+    @scaleVector = new THREE.Vector3(rScale[0] / rMin, rScale[1] / rMin, rScale[2] / rMin)
+    console.log "camera scaleVector"
+    console.log @scaleVector
+
     @updateCamViewport()
     @cameras[VIEW_3D].near = -100000
     @cameras[VIEW_3D].far  =  100000
 
   update : =>
-    gPos = @flycam.getGlobalPos()
+    gPos = @getCameraPos()
     @cameras[PLANE_XY].position = new THREE.Vector3(gPos[0]    , gPos[1]    , gPos[2] - 1)
     @cameras[PLANE_YZ].position = new THREE.Vector3(gPos[0] + 1, gPos[1]    , gPos[2])
     @cameras[PLANE_XZ].position = new THREE.Vector3(gPos[0]    , gPos[1] + 1, gPos[2])
@@ -163,3 +170,7 @@ class CameraController
       @cameras[i].right = @cameras[i].top    =  boundary
       @cameras[i].updateProjectionMatrix()
     @flycam.hasChanged = true
+
+  getCameraPos : ->
+    gPos = @flycam.getGlobalPos()
+    return [gPos[0] * @scaleVector.x, gPos[1] * @scaleVector.y, gPos[2] * @scaleVector.z]

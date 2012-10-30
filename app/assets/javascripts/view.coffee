@@ -66,6 +66,19 @@ class View
     for cam in @camera
       cam.lookAt(new THREE.Vector3( 0, 0, 0))
 
+    # Because the voxel coordinates do not have a cube shape but are distorted,
+    # we need to distort the entire scene to provide an illustration that is
+    # proportional to the actual size in nm.
+    # For some reason, all objects have to be put into a group object. Changing
+    # scene.scale does not have an effect.
+    @group = new THREE.Object3D
+    rScale = @model.Route.data.experiment.scale
+    rMin   = Math.min.apply(null, rScale)
+    # The dimension(s) with the highest resolution will not be distorted
+    @group.scale = new THREE.Vector3(rScale[0] / rMin, rScale[1] / rMin, rScale[2] / rMin)
+    # Add scene to the group, all Geometries are than added to group
+    @scene.add(@group)
+
     # Attach the canvas to the container
     @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
     container.append @renderer.domElement
@@ -138,10 +151,10 @@ class View
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
   addGeometry : (geometry) ->
-    @scene.add geometry
+    @group.add geometry
 
   removeGeometry : (geometry) ->
-    @scene.remove geometry
+    @group.remove geometry
 
   #Apply a single draw (not used right now)
   draw : ->

@@ -19,12 +19,13 @@ class Skeleton
   # This class is supposed to collect all the Geometries that belong to the skeleton, like
   # nodes, edges and trees
 
-  constructor : (maxRouteLen, flycam, model) ->
+  constructor : (maxRouteLen, flycam, model, scaleVector) ->
     _.extend(this, new EventMixin())
 
     @maxRouteLen  = maxRouteLen
     @flycam       = flycam
     @model        = model
+    @scaleVector  = scaleVector
     # Edges
     @routes       = []
     # Nodes
@@ -167,9 +168,10 @@ class Skeleton
     @flycam.hasChanged = true
 
   setNodeRadius : (value) ->
-    @activeNode.scale = new THREE.Vector3(value, value, value)
+    v = new THREE.Vector3(value, value, value)
+    @activeNode.scale = @calcScaleVector(v)
     if @activeNodeSphere
-      @activeNodeSphere.scale = new THREE.Vector3(value, value, value)
+      @activeNodeSphere.scale = @calcScaleVector(v)
 
   getMeshes : =>
     return [@activeNode].concat(@routes).concat(@nodes).concat(@nodesSpheres)
@@ -249,7 +251,7 @@ class Skeleton
       new THREE.SphereGeometry(1 / @model.Route.scaleX),
       new THREE.MeshLambertMaterial({ color : COLOR_NORMAL})#, transparent: true, opacity: 0.5 })
     )
-    newNode.scale = new THREE.Vector3(radius, radius, radius)
+    newNode.scale = @calcScaleVector(new THREE.Vector3(radius, radius, radius))
     newNode.position = new THREE.Vector3(position[0], position[1], position[2])
     newNode.nodeId = id
     newNode.visible = @disSpheres
@@ -275,3 +277,7 @@ class Skeleton
     for sphere in @nodesSpheres
       if sphere != @activeNodeSphere
         sphere.visible = value
+
+  # Helper function
+  calcScaleVector : (v) ->
+    return (new THREE.Vector3()).multiply(v, @scaleVector)

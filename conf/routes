@@ -3,8 +3,7 @@
 # ~~~~
 
 # The home page
-GET     /                                   controllers.Test.index
-GET     /index                              controllers.Application.index
+GET     /                                   controllers.Application.index
 
 # Jira integration
 GET     /jira                               controllers.Jira.index
@@ -52,11 +51,6 @@ PUT       /experiment/:experimentId         controllers.ExperimentController.upd
 # GET     /route/list                       controllers.Route.list
 # POST    /route/:id                        controllers.Route.blackBox(id: String)
 # GET			/route/:id												controllers.Route.getRoute(id: String)
-
-# Test pages
-GET     /test/                              controllers.Test.index
-GET     /test/demo                          controllers.Test.demo
-GET     /test/tests                         controllers.Test.tests
 
 #Performance test pages 
 GET     /performance/timegridfs             controllers.PerformanceTest.timeGridFS

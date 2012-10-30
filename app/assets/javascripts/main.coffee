@@ -68,6 +68,23 @@ $.fn.editInPlace = (method, options...) ->
             $.error("Method " + method + " does not exist.")
 
 
+$.fn.alertWithTimeout = (timeout = 3000) ->
+
+    this.each ->
+
+        $this = $(this)
+        $this.alert()
+        timerId = -1
+        $this.on 
+            "mouseover" : -> clearTimeout(timerId)
+            "mouseout" : -> 
+                timerId = setTimeout(
+                    -> $this.alert("close")
+                    timeout
+                )
+        $this.mouseout()
+
+
 # ------------------------------------- INIT APP
 $ -> # document is ready!
 
@@ -90,16 +107,31 @@ $ -> # document is ready!
 
             try
                 new Function(editor.getValue())
-                submitButton.attr("disabled", null)
+                submitButton.removeClass("disabled").popover("destroy")
             catch error                
-                submitButton.attr("disabled", "disabled")
+                submitButton.addClass("disabled")
+                submitButton.popover(
+                    placement : "left"
+                    title : "No good code. No save."
+                    content : error.toString()
+                    trigger : "hover"
+                )
 
         editor._emit("change")
+
+        displayMessage = (type, message) ->
+
+            $messageElement = $("<div>", class : "alert alert-#{type} fade in").text(message)
+            $messageElement.append($("<a>", class : "close", "data-dismiss" : "alert", href : "#").html("&times;"))
+            $messageElement.alertWithTimeout()
+            $this.find(".alert-container").append($messageElement)
 
       
         $this.submit (event) ->
 
             event.preventDefault()
+
+            return if $this.find("[type=submit]").hasClass("disabled")
 
             code = editor.getValue()
 
@@ -111,7 +143,8 @@ $ -> # document is ready!
                 type : "POST"
             ).then(
                 -> 
+                    displayMessage("success", "Saved!")
                 ->
-                    alert("Sorry, we couldn't save your code. Please double check your syntax.\nOtherwise, please copy your code changes and reload this page.")
+                    displayMessage("error" ,"Sorry, we couldn't save your code. Please double check your syntax.\nOtherwise, please copy your code changes and reload this page.")
             )
 

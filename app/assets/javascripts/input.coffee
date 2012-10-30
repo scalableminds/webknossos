@@ -25,12 +25,19 @@ Input = {}
 class Input.KeyboardNoLoop
 
   constructor : (bindings) ->
+
     for own key, callback of bindings
       @attach(key, callback)
+
 
   attach : (key, callback) ->
 
     KeyboardJS.bind.key(key, callback)
+
+
+  unbind : ->
+
+    KeyboardJS.unbind.key "all"
 
 
 # This module is "main" keyboard handler. 
@@ -45,6 +52,7 @@ class Input.Keyboard
   constructor : (bindings) ->
     for own key, callback of bindings
       @attach(key, callback)
+
 
   attach : (key, callback) ->
 
@@ -63,16 +71,20 @@ class Input.Keyboard
         return
     )
 
+
   # In order to continously fire callbacks we have to loop
   # through all the buttons that a marked as "pressed".
   buttonLoop : ->
+
     if @keyPressedCount > 0
       for own key, callback of @keyCallbackMap
         callback()
 
       setTimeout( (=> @buttonLoop()), @delay ) 
 
+
   unbind : ->
+
     KeyboardJS.unbind.key "all"
 
 

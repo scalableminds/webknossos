@@ -20,7 +20,7 @@ object TaskHandling extends Controller with Secured {
         if (TaskSelectionAlgorithm.isValidAlgorithm(code))
           Ok
         else
-          BadRequest("Invalid code")
+          (new Status(422))("Invalid task selection algorithm code.")
       case _ =>
         BadRequest("Missing parameters.")
     }
@@ -42,7 +42,7 @@ object TaskHandling extends Controller with Secured {
           TaskSelectionAlgorithm.use(alg)
         Ok
       } else
-        (new Status(422))("Invalid task selection algorithm.")
+        (new Status(422))("Invalid task selection algorithm code.")
     }) getOrElse BadRequest("Missing parameters.")
 
   }

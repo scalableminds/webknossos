@@ -61,7 +61,7 @@ object FacebookLogin extends Controller {
                 meObject.getFirstName + " " + meObject.getLastName,
                 "facebook" ) )
                 
-          Ok( html.test.index( user ) ).withSession( Secured.createSession(user) )
+          Ok( html.oxalis .index( user ) ).withSession( Secured.createSession(user) )
         } catch {
           case ( e ) => BadRequest( "Failed to login." )
         }

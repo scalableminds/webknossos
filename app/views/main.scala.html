@@ -15,9 +15,8 @@
   <body>
     <header class="navbar navbar-static-top navbar-inverse">
       <div class="navbar-inner">
-        <a class="brand" href="@routes.Application.index">Oxalis</a>
-
         @if(showNavButtons){
+          <a class="brand" href="@routes.Application.index">Oxalis</a>
           <ul class="nav">
             <li class="divider-vertical"></li>
             <li>
@@ -52,7 +51,6 @@
             
 
           }.getOrElse{
-
             <ul class="nav pull-right">
               <li>
                 <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
@@ -66,6 +64,8 @@
             </ul>
 
           }
+        } else {
+          <span class="brand">Oxalis</span>
         }
       </div>
     </header>

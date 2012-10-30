@@ -19,7 +19,6 @@ case class User(
     name: String,
     verified: Boolean = false,
     pwdHash: String = "",
-    experiments: List[ObjectId] = Nil,
     loginType: String = "local",
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: Set[String] = Set.empty,
@@ -68,8 +67,8 @@ object User extends BasicDAO[User]( "users" ) {
       if verifyPassword( password, user.pwdHash )
     } yield user
 
-  def create( email: String, name: String, password: String = "", experiments: List[ObjectId] = List()) = {
-    val user = User( email, name, false, hashPassword( password ), experiments )
+  def create( email: String, name: String, password: String = "") = {
+    val user = User( email, name, false, hashPassword( password ) )
     insert( user )
     user
   }

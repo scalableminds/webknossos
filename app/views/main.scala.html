@@ -15,7 +15,7 @@
   <body>
     <header class="navbar navbar-static-top navbar-inverse">
       <div class="navbar-inner">
-        <a class="brand" href="@routes.Test.index">Oxalis</a>
+        <a class="brand" href="@routes.Application.index">Oxalis</a>
 
         @if(showNavButtons){
           <ul class="nav">
@@ -40,10 +40,10 @@
 
             <ul class="nav pull-right">
               <li class="divider-vertical"></li>
-              <li class="navbar-text"><strong>@user.name</strong> <span>(@user.email)</span></li>
+              <li class="navbar-text"><i class="icon-user icon-white"></i>  <strong>@user.name</strong> <span>(@user.email)</span></li>
               <li class="divider-vertical"></li>
               <li>
-                <a href="@routes.Application.logout()">Logout</a>
+                <a href="@routes.Application.logout()"><i class="icon-off icon-white"></i> Logout</a>
               </li>
               <li class="divider-vertical"></li>
             </ul>           
@@ -60,7 +60,7 @@
                 <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
               </li>
               <li>
-                <a href="@routes.Application.login()">Login</a>
+                <a href="@controllers.routes.Application.login()">Login</a>
               </li>
             </ul>
 
@@ -68,40 +68,6 @@
         }
       </div>
     </header>
-    <!-- 
-    <nav>
-      <h4 class="dashboard"><a href="#/">Dashboard</a></h4>
-      <ul id="projects">
-        <li>
-          <span class="toggle"></span>
-          <h4 class="groupName">Static / Test</h4>
-          <span class="loader">Loading</span>
-          <ul>
-            <li>
-              <a class="name" href="@routes.Test.index">Index</a>
-            </li>
-            <li>
-              <a class="name" href="@routes.Test.demo">Demo</a>
-            </li>
-            <li>
-              <a class="name" href="@routes.Test.tests">Tests</a>
-            </li>
-          </ul>
-          <span class="toggle"></span>
-          <h4 class="groupName">Administration</h4>
-          <span class="loader">Loading</span>
-          <ul>
-            <li>
-              <a class="name" href="@controllers.admin.routes.NMLIO.uploadForm">NML Upload</a>
-            </li>
-            <li>
-              <a class="name" href="@controllers.admin.routes.NMLIO.downloadList">NML Download</a>
-            </li>
-          </ul>
-        </li>
-      </ul>
-    </nav>
-   -->
     <div id="mainContainer">
       @body
     </div>

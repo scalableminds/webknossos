@@ -272,13 +272,18 @@ class Controller
   ########### Click callbacks
   
   setWaypoint : (relativePosition, typeNumber) =>
-    curGlobalPos = @flycam.getGlobalPos()
-    zoomFactor   = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
-    scaleFactor  = @view.scaleFactor
+    curGlobalPos  = @flycam.getGlobalPos()
+    zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
+    activeNodePos = @model.Route.getActiveNodePos()
+    scaleFactor   = @view.scaleFactor
     switch @flycam.getActivePlane()
       when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2]]
       when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
       when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
+    # set the new trace direction
+    if activeNodePos
+      p = [position[0] - activeNodePos[0], position[1] - activeNodePos[1], position[2] - activeNodePos[2]]
+      @flycam.setDirection(p)
     @addNode(position)
 
   onPreviewClick : (position) =>

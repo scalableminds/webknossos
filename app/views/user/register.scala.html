@@ -10,22 +10,16 @@
         @helper.form(routes.Application.registrate, 'class -> "form-horizontal") {
         
           <legend>Sign up</legend>
-
-          @form.globalError.map { error =>
-            <div class="alert alert-error">
-              @error.message
-            </div>
-          }
           
-          @form.error("password").map { error =>
+          @form.errors.map { error =>
             <div class="alert alert-error">
-              @error.message
+              @Messages(error.message)
             </div>
           }
 
           @flash.get("success").map { message =>
             <div class="alert alert-success">
-              @message
+              @Messages(message)
             </div>
           }
 
@@ -44,7 +38,7 @@
           <div class="control-group">
             <label class="control-label" for="loginPassword">Password</label>
             <div class="controls">
-              <input id="loginPassword" type="password" name="password" placeholder="Password">
+              <input id="loginPassword" type="password" name="password.main" placeholder="Password">
             </div>
           </div>
           <div class="control-group">

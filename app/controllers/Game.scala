@@ -9,6 +9,7 @@ import models.DataSet
 import play.api.Logger
 import models.graph.Experiment
 import models.User
+import models.UsedExperiments
 
 object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -18,14 +19,15 @@ object Game extends Controller with Secured {
       "id" -> experimentId))
 
   def initialize = Authenticated { implicit request =>
-    val experimentId = request.user.experiments match {
-      case experimentId :: _ =>
-        experimentId.toString
+    val user = request.user
+    val experimentId = UsedExperiments.by(user) match {
+      case experiment :: _ =>
+        experiment.toString
       case _ =>
-        val exp = Experiment.createNew()
-        User.save(request.user.copy(experiments = exp._id :: request.user.experiments))
+        val exp = Experiment.createNew(user)
+        UsedExperiments.use(user, exp)
         exp.id
     }
-    Ok(createExperimentIDInfo(experimentId)) 
+    Ok(createExperimentIDInfo(experimentId))
   }
 }

@@ -27,12 +27,16 @@ import play.api.libs.json.Writes
 
 case class Task(
     taskId: Int,
-    zellId: Int,
+    dataSetName: String,
+    cellId: Int,
+    seedIdHeidelberg: Int,
+    taskType: ObjectId,
+    //requiredPermission: Int,
     start: Point3D,
-    priority: Int,
-    created: Date,
-    experiment: Option[Experiment],
-    completedBy: Option[ObjectId],
+    priority: Int = 100,
+    created: Date = new Date,
+    duplicationCount: Int = 1,
+    experiments: List[Experiment] = Nil,
     _id: ObjectId = new ObjectId) {
   def id = _id.toString
 }
@@ -59,14 +63,14 @@ object Task extends BasicDAO[Task]("tasks") {
   
   implicit object TaskFormat extends Writes[Task] {
     val TASK_ID = "taskId"
-    val ZELL_ID = "zellId"
+    val CELL_ID = "cellId"
     val START = "start"
     val PRIORITY = "priority"
     val CREATED = "created"
 
     def writes(e: Task) = Json.obj(
       TASK_ID -> e.taskId,
-      ZELL_ID -> e.zellId,
+      CELL_ID -> e.cellId,
       START -> e.start,
       PRIORITY -> e.priority)  }
 }

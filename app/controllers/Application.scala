@@ -34,15 +34,15 @@ object Application extends Controller with Secured{
       Some( ( user._1, user._2, ( "", "" ) ) )
 
     val passwordField = tuple( "main" -> text, "validation" -> text )
-      .verifying( "Passwords don't match", pw => pw._1 == pw._2 )
-      .verifying( "Password too short", pw => pw._1.length >= 6 )
+      .verifying( "error.password.nomatch", pw => pw._1 == pw._2 )
+      .verifying( "error.password.tooshort", pw => pw._1.length >= 6 )
 
     Form(
       mapping(
         "email" -> email,
         "name" -> text,
         "password" -> passwordField )( registerFormApply )( registerFormUnapply )
-        .verifying( "This email address is already in use",
+        .verifying( "error.email.inuse",
           user => User.findLocalByEmail( user._1 ).isEmpty ) )
   }
 
@@ -61,8 +61,7 @@ object Application extends Controller with Secured{
         {
           case ( email, name, password ) => {
             val user = User.create( email, name, password )
-            val key = ValidationKey.createFor( user )
-           Mailer ! Send( DefaultMails.registerMail( name, email, key ) )
+           Mailer ! Send( DefaultMails.registerMail( name, email ) )
             Redirect( routes.Application.index )
               .flashing( "success" -> "Thanks for your registration!" )
               .withSession( Secured.createSession( user ) )
@@ -73,7 +72,7 @@ object Application extends Controller with Secured{
   val loginForm = Form(
     tuple(
       "email" -> text,
-      "password" -> text ) verifying ( "Invalid email or password", result => result match {
+      "password" -> text ) verifying ( "error.login.invalid", result => result match {
         case ( email, password ) =>
           User.auth( email, password ).isDefined
       } ) )

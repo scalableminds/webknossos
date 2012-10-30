@@ -46,9 +46,12 @@ object InitialData {
     if (User.findAll.isEmpty) {
       val u = ("scmboy@scalableminds.com", "SCM Boy", "secret", List(Experiment.createNew()._id))
       Seq(
-        u).foreach(User.create _ tupled)
+        u).foreach{ values =>
+        val user = (User.create _ tupled)(values)
+        User.verify(user)
+      }
     }
-
+    
     if (TaskSelectionAlgorithm.findAll.isEmpty) {
       TaskSelectionAlgorithm.insert(TaskSelectionAlgorithm(
         """function simple(user, tasks){ 

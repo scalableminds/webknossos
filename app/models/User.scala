@@ -22,7 +22,7 @@ case class User(
     experiments: List[ObjectId] = Nil,
     loginType: String = "local",
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
-    roles: List[String] = "user" :: Nil,
+    roles: Set[String] = Set.empty,
     permissions: List[Permission] = Nil,
     _id: ObjectId = new ObjectId ) {
 
@@ -74,12 +74,10 @@ object User extends BasicDAO[User]( "users" ) {
     user
   }
     
-  def verify( validationKey: String) = {
-    ValidationKey.findOneByKey( validationKey ).map{ user =>
-      ValidationKey.remove( validationKey )
-      save( user.copy( verified = true ) )
-      true
-    } getOrElse false
+  def verify( user: User ) = {
+    val alteredUser = user.copy( verified = true, roles = user.roles + "user" )
+    save( alteredUser )
+    alteredUser
   }
 
   def createRemote( email: String, name: String, loginType: String ) = {

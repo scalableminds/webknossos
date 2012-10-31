@@ -1,0 +1,26 @@
+@(loggedInUser: User, experiments: List[models.graph.Experiment], taskTypes: List[TaskType])
+
+@import brainflight.format._
+
+@main(Some(loggedInUser)){
+  <div class="container">
+    <h3>Create from temporary experiment</h3>
+    @helper.form(controllers.admin.routes.TaskAdministration.createFromExperiment, 'class -> "form-inline") {
+		    <select name="experiment">
+		      @experiments.map{ exp =>
+		      	<option value="@exp.id"> @(exp.dataSetName + " " + DateFormatter.format(exp.date)) </option>
+		      }
+		    </select>
+		   	<select name="taskType">
+		      @taskTypes.map{ tt =>
+		      	<option value="@tt.id"> @tt.summary </option>
+		      }
+		    </select>
+		    <input type="text" placeholder="priority..." default="100" name="priority">
+		    <input type="text" placeholder="instances..." default="0" name="instances">
+		    <div class="form-actions">
+		  		<button type="submit" class="btn btn-primary">Create</button>
+		  	</div>
+	  	}
+  </div>
+}

@@ -84,6 +84,10 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
   def findFor(u: User) = {
     find( MongoDBObject("user" -> u._id) ).toList 
   }
+  
+  def findAllTemporary = {
+    find( MongoDBObject("temp" -> true) ).toList 
+  }
 
   implicit object ExperimentFormat extends Format[Experiment] {
     val ID = "id"

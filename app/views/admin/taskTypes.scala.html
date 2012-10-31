@@ -2,17 +2,17 @@
 
 @main(Some(loggedInUser)){
 	<div class="container">
-    <h3>Create from temporary experiment</h3>
-    @helper.form(controllers.admin.routes.TaskAdministration.createType, 'class -> "form-horizontal") {
-      <input type="text" placeholder="Summary" name="summary">
-      <input type="text" placeholder="Description" name="description">
-      <input type="text" placeholder="Expected Time (min)" name="expectedTime.minTime">
-      <input type="text" placeholder="Expected Time (max)" name="expectedTime.maxTime">
-      <input type="text" placeholder="Time Limit" name="expectedTime.maxHard">
-      <div class="form-actions">
+    <h3>Task types</h3>
+    <div class="well">
+      @helper.form(controllers.admin.routes.TaskAdministration.createType, 'class -> "form-horizontal") {
+        <input type="text" placeholder="Summary" name="summary">
+        <input type="text" placeholder="Description" name="description">
+        <input type="text" placeholder="Expected Time (min)" name="expectedTime.minTime">
+        <input type="text" placeholder="Expected Time (max)" name="expectedTime.maxTime">
+        <input type="text" placeholder="Time Limit" name="expectedTime.maxHard">
         <button type="submit" class="btn btn-primary">Create</button>
-      </div>
-    }
+      }
+    </div>
     <table class="table table-striped">
       <thead>
         <tr>

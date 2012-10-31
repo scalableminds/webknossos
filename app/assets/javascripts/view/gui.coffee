@@ -34,10 +34,11 @@ class Gui
                 selectedExperimentIndex : 0
                 changeExperiment : => 
                   experiment = @settings.experiments[@settings.selectedExperimentIndex]
-                  request(
-                    method : "POST"
-                    url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
-                  ).always -> window.location.reload()
+                  @model.Route.pushImpl().done ->
+                    request(
+                      method : "POST"
+                      url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
+                    ).always -> window.location.reload()
 
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
                 lockZoom: data.lockZoom
@@ -183,8 +184,10 @@ class Gui
   saveNow : =>
     @model.User.Configuration.pushImpl()
     @model.Route.pushImpl()
-      .fail( -> alert("Something went wrong with saving, please try again."))
-      .done( -> alert("Successfully saved!"))
+      .then( 
+        -> toastMessage("success", "Saved!")
+        -> toastMessage("error", "Couldn't save. Please try again.")
+      )
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")

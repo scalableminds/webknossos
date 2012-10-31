@@ -16,12 +16,9 @@ body {
     -webkit-font-smoothing: antialised;
 }
 
-a {
-    color: @links;
-    text-decoration: none;
-    &:hover {
-        color: @linksHover;
-    }
+.navbar .brand {
+    background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
+    padding-left: 43px;
 }
 
 #stats {
@@ -42,7 +39,7 @@ a {
     left: 0;
     z-index: 10;
 }
-#mainContainer {
+#main-container {
     position: absolute;
     top: @headerHeight;
     left: 0;
@@ -101,6 +98,13 @@ a {
 }
 
 
+#alert-container {
+    position: absolute;
+    right: 1em;
+    top: 6em;
+}
+
+
 #issue-submit {
 
     form {
@@ -136,11 +140,6 @@ a {
         right: 1em;
         font-size: 1.2em;
     }
-    .alert-container {
-        position: absolute;
-        right: 1em;
-        top: 6em;
-    }
 }
 
 .overlay {
@@ -171,6 +170,7 @@ a {
     }
     select {
         width: auto;
+        max-width: 100%;
     }
     .cr div div {
         line-height: normal;

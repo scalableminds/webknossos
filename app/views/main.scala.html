@@ -29,8 +29,24 @@
               </a>
               <ul class="dropdown-menu">
                 <li>
-                  <a href="@controllers.admin.routes.TaskHandling.index">Task algorithm editor</a>
-                  <a href="@controllers.admin.routes.UserAdministration.index">User administration</a>
+                  <a href="@controllers.admin.routes.UserAdministration.index">Users</a>
+                </li>  
+                <li class="dropdown-submenu">
+                  <a tabindex="-1" href="#">Tasks</a>
+                  <ul class="dropdown-menu">
+                      <li>
+                        <a href="@controllers.admin.routes.TaskAdministration.create">Create</a>
+                      </li>
+                      <li>
+                        <a href="@controllers.admin.routes.TaskAdministration.list">List</a>
+                      </li>
+                      <li>
+                        <a href="@controllers.admin.routes.TaskAdministration.types">Types</a>
+                      </li>
+                      <li>
+                        <a href="@controllers.admin.routes.TaskHandling.index">Algorithm</a>
+                      </li>
+                  </ul>
                 </li>
               </ul>
             </li>

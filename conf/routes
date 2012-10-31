@@ -53,6 +53,12 @@ GET     /admin/nmlupload                    controllers.admin.NMLIO.uploadForm
 POST    /admin/nmlupload                    controllers.admin.NMLIO.upload
 GET     /admin/nmldownload/:taskId          controllers.admin.NMLIO.download( taskId: String )
 
+GET     /admin/taskTypes                    controllers.admin.TaskAdministration.types
+POST    /admin/taskTypes/create             controllers.admin.TaskAdministration.createType
+
+GET     /admin/tasks                        controllers.admin.TaskAdministration.list
+GET     /admin/tasks/create                 controllers.admin.TaskAdministration.create
+POST    /admin/tasks/createFromExperiment   controllers.admin.TaskAdministration.createFromExperiment
 GET     /admin/users                        controllers.admin.UserAdministration.index
 GET     /admin/users/:id/verify             controllers.admin.UserAdministration.verifyUser(id: String)
 GET     /admin/users/:id/delete             controllers.admin.UserAdministration.deleteUser(id: String)

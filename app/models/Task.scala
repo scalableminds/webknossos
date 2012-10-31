@@ -26,7 +26,6 @@ import play.api.libs.json.Json
 import play.api.libs.json.Writes
 
 case class Task(
-    taskId: Int,
     dataSetName: String,
     cellId: Int,
     seedIdHeidelberg: Int,
@@ -34,8 +33,8 @@ case class Task(
     //requiredPermission: Int,
     start: Point3D,
     priority: Int = 100,
+    instances: Int = 1,
     created: Date = new Date,
-    duplicationCount: Int = 1,
     experiments: List[Experiment] = Nil,
     _id: ObjectId = new ObjectId) {
   def id = _id.toString
@@ -49,7 +48,7 @@ object Task extends BasicDAO[Task]("tasks") {
   def nextTaskIdForUser(user: User): Future[Option[Int]] = {
     val tasks = Task.findAll.toArray
     if (tasks.isEmpty) {
-      Promise.successful( None )( Akka.system.dispatcher)
+      Promise.successful(None)(Akka.system.dispatcher)
     } else {
       val params = Map("user" -> user, "tasks" -> tasks)
 
@@ -57,10 +56,10 @@ object Task extends BasicDAO[Task]("tasks") {
         case e: AskTimeoutException =>
           ""
       }
-      future.mapTo[Int].map(x => Some(x) )
+      future.mapTo[Int].map(x => Some(x))
     }
   }
-  
+
   implicit object TaskFormat extends Writes[Task] {
     val TASK_ID = "taskId"
     val CELL_ID = "cellId"
@@ -69,8 +68,9 @@ object Task extends BasicDAO[Task]("tasks") {
     val CREATED = "created"
 
     def writes(e: Task) = Json.obj(
-      TASK_ID -> e.taskId,
+      TASK_ID -> e.id,
       CELL_ID -> e.cellId,
       START -> e.start,
-      PRIORITY -> e.priority)  }
+      PRIORITY -> e.priority)
+  }
 }

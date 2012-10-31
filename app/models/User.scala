@@ -78,6 +78,12 @@ object User extends BasicDAO[User]( "users" ) {
     save( alteredUser )
     alteredUser
   }
+  
+  def addRole( user: User, role: String) = {
+    val alteredUser = user.copy( roles = user.roles + role )
+    save( alteredUser )
+    alteredUser    
+  }
 
   def createRemote( email: String, name: String, loginType: String ) = {
     val user = User( email, name, true, "", loginType = loginType )

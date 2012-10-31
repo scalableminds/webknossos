@@ -12,7 +12,7 @@ import models.TaskSelectionAlgorithm
 
 object TaskHandling extends Controller with Secured {
   // TODO remove comment in production
-  // override val DefaultAccessRole = Role( "admin" )
+  override val DefaultAccessRole = Role( "admin" )
 
   def testAlgorithm = Authenticated(parser = parse.urlFormEncoded){ implicit request =>
     request.body.get("code").flatMap(_.headOption) match {

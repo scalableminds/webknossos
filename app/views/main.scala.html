@@ -22,34 +22,36 @@
             <li>
               <a href="@routes.Jira.index" id="issue-submit-button"><i class="icon-fire icon-white"></i> Submit an issue</a>
             </li>
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                <b class="caret"></b>
-                Administration
-              </a>
-              <ul class="dropdown-menu">
-                <li>
-                  <a href="@controllers.admin.routes.UserAdministration.index">Users</a>
-                </li>  
-                <li class="dropdown-submenu">
-                  <a tabindex="-1" href="#">Tasks</a>
-                  <ul class="dropdown-menu">
-                      <li>
-                        <a href="@controllers.admin.routes.TaskAdministration.create">Create</a>
-                      </li>
-                      <li>
-                        <a href="@controllers.admin.routes.TaskAdministration.list">List</a>
-                      </li>
-                      <li>
-                        <a href="@controllers.admin.routes.TaskAdministration.types">Types</a>
-                      </li>
-                      <li>
-                        <a href="@controllers.admin.routes.TaskHandling.index">Algorithm</a>
-                      </li>
-                  </ul>
-                </li>
-              </ul>
-            </li>
+            @userOpt.filter( _.hasRole(Role("admin").get)).map{ user =>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                  <b class="caret"></b>
+                  Administration
+                </a>
+                <ul class="dropdown-menu">
+                  <li>
+                    <a href="@controllers.admin.routes.UserAdministration.index">Users</a>
+                  </li>  
+                  <li class="dropdown-submenu">
+                    <a tabindex="-1" href="#">Tasks</a>
+                    <ul class="dropdown-menu">
+                        <li>
+                          <a href="@controllers.admin.routes.TaskAdministration.create">Create</a>
+                        </li>
+                        <li>
+                          <a href="@controllers.admin.routes.TaskAdministration.list">List</a>
+                        </li>
+                        <li>
+                          <a href="@controllers.admin.routes.TaskAdministration.types">Types</a>
+                        </li>
+                        <li>
+                          <a href="@controllers.admin.routes.TaskHandling.index">Algorithm</a>
+                        </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            }
             <li>
               <a href="#" id="help-overlay"><i class="icon-info-sign icon-white">
               </i> Help</a>

@@ -171,7 +171,8 @@ class Skeleton
         @activeNodeSphere.material.color.setHex(colorNormal)
     else
       sphere = @getSphereFromId(nodeID)
-      sphere.material.color.setHex(colorNormal)
+      if sphere?
+        sphere.material.color.setHex(colorNormal)
     @flycam.hasChanged = true
 
   setNodeRadius : (value) ->

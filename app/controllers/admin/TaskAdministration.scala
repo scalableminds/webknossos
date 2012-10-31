@@ -14,8 +14,11 @@ import brainflight.mail.Send
 import brainflight.mail.DefaultMails
 import models.TimeSpan
 import brainflight.tools.ExtendedTypes._
+import models.Role
 
 object TaskAdministration extends Controller with Secured {
+  override val DefaultAccessRole = Role( "admin" )
+  
   def list = Authenticated { implicit request =>
     Ok(html.admin.taskList(request.user, Task.findAll, TaskType.findAll))
   }

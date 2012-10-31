@@ -8,8 +8,11 @@ import models.User
 import controllers.Application
 import brainflight.mail.Send
 import brainflight.mail.DefaultMails
+import models.Role
 
 object UserAdministration extends Controller with Secured {
+  override val DefaultAccessRole = Role( "admin" )
+  
   def index = Authenticated { implicit request =>
     Ok(html.admin.userAdministration(request.user, User.findAll))
 

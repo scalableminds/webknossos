@@ -48,6 +48,7 @@ object InitialData {
       Seq(
         u).foreach{ values =>
         val user = (User.create _ tupled)(values)
+        User.addRole(user, "admin")
         User.verify(user)
       }
     }

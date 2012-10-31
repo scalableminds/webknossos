@@ -1,5 +1,5 @@
 ### define
-libs/keyboard.0.2.2.min : KeyboardJS
+libs/keyboard : KeyboardJS
 libs/mouse : MouseLib
 libs/gamepad : GamepadJS
 ###

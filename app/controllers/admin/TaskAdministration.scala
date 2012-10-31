@@ -15,56 +15,57 @@ import brainflight.mail.DefaultMails
 import models.TimeSpan
 import brainflight.tools.ExtendedTypes._
 import models.Role
+import play.api.data._
+import play.api.data.Forms._
 
 object TaskAdministration extends Controller with Secured {
-  override val DefaultAccessRole = Role( "admin" )
-  
+
+  val taskTypeForm = Form(
+    mapping(
+      "summary" -> text,
+      "description" -> text,
+      "expectedTime" -> mapping(
+        "minTime" -> number,
+        "maxTime" -> number,
+        "maxHard" -> number)(TimeSpan.apply)(TimeSpan.unapply))(
+        TaskType.fromForm)(TaskType.toForm))
+
+  val taskForm = Form(
+    mapping(
+      "experiment" -> text,
+      "priority" -> number,
+      "instances" -> number,
+      "taskType" -> text)(Task.fromForm)(Task.toForm))
+
+  override val DefaultAccessRole = Role("admin")
+
   def list = Authenticated { implicit request =>
     Ok(html.admin.taskList(request.user, Task.findAll, TaskType.findAll))
   }
-  
+
   def types = Authenticated { implicit request =>
-    Ok(html.admin.taskTypes(request.user, TaskType.findAll))
+    Ok(html.admin.taskTypes(request.user, TaskType.findAll, taskTypeForm))
   }
 
   def create = Authenticated { implicit request =>
-    Ok(html.admin.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll))
+    Ok(html.admin.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll, taskForm))
   }
-  
+
   def createType = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for {
-      summary <- request.body.get("summary").flatMap(_.headOption)
-      description <- request.body.get("description").flatMap(_.headOption)
-      minTime <- request.body.get("minTime").flatMap(_.headOption.flatMap(_.toIntOpt))
-      maxTime <- request.body.get("maxTime").flatMap(_.headOption.flatMap(_.toIntOpt))
-      maxHard <- request.body.get("maxHard").flatMap(_.headOption.flatMap(_.toIntOpt))
-    } yield {
-      val t = TaskType(summary,
-        description,
-        TimeSpan(minTime, maxTime, maxHard))
-      TaskType.insert(t)
-      Ok(t.toString)
-    }) getOrElse BadRequest("Missing parameters.")
+    taskTypeForm.bindFromRequest.fold(
+      formWithErrors => BadRequest(html.admin.taskTypes(request.user, TaskType.findAll, formWithErrors)),
+      { t =>
+        TaskType.insert(t)
+        Ok(t.toString)
+      })
   }
 
   def createFromExperiment = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for {
-      eId <- request.body.get("experiment").flatMap(_.headOption)
-      priority <- request.body.get("priority").flatMap(_.headOption.flatMap(_.toIntOpt))
-      instances <- request.body.get("instances").flatMap(_.headOption.flatMap(_.toIntOpt))
-      taskTypeId <- request.body.get("taskType").flatMap(_.headOption)
-      taskType <- TaskType.findOneById(taskTypeId)
-      e <- Experiment.findOneById(eId)
-    } yield {
-      val t = Task(e.dataSetName,
-        0,
-        0,
-        taskType._id,
-        e.editPosition,
-        priority,
-        instances)
-      Task.insert(t)
-      Ok(t.toString)
-    }) getOrElse BadRequest("Missing parameters.")
+    taskForm.bindFromRequest.fold(
+      formWithErrors => BadRequest(html.admin.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll, formWithErrors)),
+      { t =>
+        Task.insert(t)
+        Ok(t.toString)
+      })
   }
 }

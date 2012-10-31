@@ -45,6 +45,19 @@ object Task extends BasicDAO[Task]("tasks") {
   val conf = current.configuration
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
+  def fromForm(experiment: String, priority: Int, instances: Int, taskTypeId: String) = 
+    Experiment.findOneById(experiment).flatMap(e => TaskType.findOneById(taskTypeId).map( taskType =>
+    Task(e.dataSetName,
+        0,
+        0,
+        taskType._id,
+        e.editPosition,
+        priority,
+        instances)))
+  
+  def toForm(t: Option[Task]): Option[(String, Int, Int, String)] = 
+    None
+  
   def nextTaskIdForUser(user: User): Future[Option[Int]] = {
     val tasks = Task.findAll.toArray
     if (tasks.isEmpty) {

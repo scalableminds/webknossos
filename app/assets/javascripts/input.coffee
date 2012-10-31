@@ -1,5 +1,5 @@
 ### define
-libs/keyboard.0.2.2.min : KeyboardJS
+libs/keyboard : KeyboardJS
 libs/mouse : MouseLib
 libs/gamepad : GamepadJS
 ###
@@ -50,16 +50,31 @@ class Input.Keyboard
 
     KeyboardJS.bind.key(
       key
-      =>
+      (evt, keys, key2) =>
+        # When first pressed, insert the callback into
+        # keyCallbackMap and start the buttonLoop.
+        # Then, ignore any other events fired from the operating
+        # system, because we're using our own loop.
+        # When control key is pressed, everything is ignored, because
+        # if there is any browser action attached to this (as with Ctrl + S)
+        # KeyboardJS does not receive the up event.
+        console.log key2 + " down"
         unless @keyCallbackMap[key]?
-          @keyPressedCount++ 
-          @keyCallbackMap[key] = callback
-          @buttonLoop() if @keyPressedCount == 1
+          if not evt.ctrlKey
+            @keyPressedCount++ 
+            @keyCallbackMap[key] = callback
+            @buttonLoop() if @keyPressedCount == 1
 
         return
-      =>
-        @keyPressedCount--
-        delete @keyCallbackMap[key]
+      (evt, keys, key2) =>
+        activeKeys = KeyboardJS.activeKeys()
+        console.log key2 + " up"
+        #for key of @keyCallbackMap
+        #  if activeKeys.indexOf(key) < 0
+        #    delete @keyCallbackMap[key]
+        if @keyCallbackMap[key]?
+          @keyPressedCount--
+          delete @keyCallbackMap[key]
         return
     )
 

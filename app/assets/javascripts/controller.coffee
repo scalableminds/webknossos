@@ -33,7 +33,7 @@ class Controller
     @view  = new View(@model, @flycam)
 
     # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model, [2000, 2000, 2000])
+    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -44,7 +44,7 @@ class Controller
     $("#render").bind "contextmenu", (event) ->
       event.preventDefault(); return
 
-    @canvases = $("#render")[0]
+    @canvasesAndNav = $("#main")[0]
 
     @prevControls = $('#prevControls')
     values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
@@ -62,7 +62,7 @@ class Controller
       (position) =>
         # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
 
-        @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model)
+        @sceneController = new SceneController(@model.Route.data.dataSet.upperBoundary, @flycam, @model)
         meshes      = @sceneController.getMeshes()
         for mesh in meshes
           @view.addGeometry(mesh)
@@ -154,11 +154,11 @@ class Controller
     @input.keyboard = new Input.Keyboard(
 
       #Fullscreen Mode
-      "f" : => 
-        canvases = @canvases
-        requestFullscreen = canvases.webkitRequestFullScreen or canvases.mozRequestFullScreen or canvases.RequestFullScreen
+      "f" : =>
+        canvasesAndNav = @canvasesAndNav
+        requestFullscreen = canvasesAndNav.webkitRequestFullScreen or canvasesAndNav.mozRequestFullScreen or canvasesAndNav.RequestFullScreen
         if requestFullscreen
-          requestFullscreen.call(canvases, canvases.ALLOW_KEYBOARD_INPUT)
+          requestFullscreen.call(canvasesAndNav, canvasesAndNav.ALLOW_KEYBOARD_INPUT)
 
     
       #ScaleTrianglesPlane
@@ -189,10 +189,13 @@ class Controller
       #Branches
       "b" : => 
         @model.Route.putBranch()
+        @sceneController.skeleton.setBranchPoint(true)
       "j" : => @model.Route.popBranch().done(
         (id) => 
           @setActiveNode(id, true)
+          @sceneController.skeleton.setBranchPoint(false)
         )
+      "h" : @centerActiveNode
 
       #Zoom in/out
       "i" : =>
@@ -272,13 +275,18 @@ class Controller
   ########### Click callbacks
   
   setWaypoint : (relativePosition, typeNumber) =>
-    curGlobalPos = @flycam.getGlobalPos()
-    zoomFactor   = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
-    scaleFactor  = @view.scaleFactor
+    curGlobalPos  = @flycam.getGlobalPos()
+    zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
+    activeNodePos = @model.Route.getActiveNodePos()
+    scaleFactor   = @view.scaleFactor
     switch @flycam.getActivePlane()
       when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2]]
       when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
       when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
+    # set the new trace direction
+    if activeNodePos
+      p = [position[0] - activeNodePos[0], position[1] - activeNodePos[1], position[2] - activeNodePos[2]]
+      @flycam.setDirection(p)
     @addNode(position)
 
   onPreviewClick : (position) =>
@@ -308,7 +316,7 @@ class Controller
 
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = @flycam.getIndices(plane)
-      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance())
+      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance()+1)
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
         vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex
@@ -330,11 +338,14 @@ class Controller
   setActiveNode : (nodeId, centered) =>
     @model.Route.setActiveNode(nodeId)
     if centered
-      @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+      @centerActiveNode()
     @flycam.hasChanged = true
     @gui.update()
     @sceneController.skeleton.setActiveNode()
     @view.drawTree(@model.Route.getTree())
+
+  centerActiveNode : =>
+    @flycam.setGlobalPos(@model.Route.getActiveNodePos())
 
   deleteActiveNode : =>
     @model.Route.deleteActiveNode()
@@ -387,38 +398,38 @@ class Controller
     @model.User.Configuration.mouseRotateValue = (Number) value
     @model.User.Configuration.push()             
 
-  setMouseActivity : (value) =>
-    @model.User.Configuration.mouseActive = value
-    @model.User.Configuration.push()
-    if value is false
-      @input.mouse.unbind()
-      @input.mouse = null
-    else
-      @initMouse()
+  #setMouseActivity : (value) =>
+  #  @model.User.Configuration.mouseActive = value
+  #  @model.User.Configuration.push()
+  #  if value is false
+  #    @input.mouse.unbind()
+  #    @input.mouse = null
+  #  else
+  #    @initMouse()
 
-  setKeyboardActivity : (value) =>
-    @model.User.Configuration.keyboardActive = value 
-    @model.User.Configuration.push()
-    if value is false
-      @input.keyboard.unbind()
-      @input.keyboard = null
-    else
-      @initKeyboard()
+  #setKeyboardActivity : (value) =>
+  #  @model.User.Configuration.keyboardActive = value 
+  #  @model.User.Configuration.push()
+  #  if value is false
+  #    @input.keyboard.unbind()
+  #    @input.keyboard = null
+  #  else
+  #    @initKeyboard()
 
-  setGamepadActivity : (value) =>
-    @model.User.Configuration.gamepadActive = value  
-    @model.User.Configuration.push()   
-    if value is false
-      @input.gamepad.unbind()
-      @input.gamepad = null
-    else
-      @initGamepad()    
+  #setGamepadActivity : (value) =>
+  #  @model.User.Configuration.gamepadActive = value  
+  #  @model.User.Configuration.push()   
+  #  if value is false
+  #    @input.gamepad.unbind()
+  #    @input.gamepad = null
+  #  else
+  #    @initGamepad()    
 
-  setMotionSensorActivity : (value) =>
-    @model.User.Configuration.motionsensorActive = value
-    @model.User.Configuration.push()   
-    if value is false
-      @input.deviceorientation.unbind()
-      @input.deviceorientation = null
-    else
-      @initMotionsensor()
+  #setMotionSensorActivity : (value) =>
+  #  @model.User.Configuration.motionsensorActive = value
+  #  @model.User.Configuration.push()   
+  #  if value is false
+  #    @input.deviceorientation.unbind()
+  #    @input.deviceorientation = null
+  #  else
+  #    @initMotionsensor()

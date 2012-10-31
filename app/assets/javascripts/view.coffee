@@ -182,11 +182,11 @@ class View
         $(div).height(HEIGHT)
 
       divYZ = $("#planeyz")
-      divYZ.css({left: @scaleFactor * (384 + 20) + "px"})
+      divYZ.css({left: @scaleFactor * 384 + 20 + "px"})
       divXZ = $("#planexz")
-      divXZ.css({top: @scaleFactor * (384 + 20) + "px"})
+      divXZ.css({top: @scaleFactor * 384 + 20 + "px"})
       divSkeleton = $("#skeletonview")
-      divSkeleton.css({left: @scaleFactor * (384 + 20) + "px", top: @scaleFactor * (384 + 20) + "px"})
+      divSkeleton.css({left: @scaleFactor * 384 + 20 + "px", top: @scaleFactor * 384 + 20 + "px"})
 
       # scales the 3D-view controls
       prevControl = $("#prevControls")

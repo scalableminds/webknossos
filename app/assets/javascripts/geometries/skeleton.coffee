@@ -134,6 +134,8 @@ class Skeleton
             @curIndex[index]++
         @routes[index].geometry.verticesNeedUpdate = true
         @nodes[index].geometry.verticesNeedUpdate = true
+    for branchPoint in @model.Route.branchStack
+      @setBranchPoint(true, branchPoint.id)
     @setActiveNode()
 
   setActiveNode : =>
@@ -160,12 +162,16 @@ class Skeleton
       @activeNode.visible = false
     @flycam.hasChanged = true
 
-  setBranchPoint : (isBranchPoint) ->
+  setBranchPoint : (isBranchPoint, nodeID) ->
     colorActive = if isBranchPoint then COLOR_BRANCH_ACTIVE else COLOR_ACTIVE
     colorNormal = if isBranchPoint then COLOR_BRANCH else COLOR_NORMAL
-    @activeNode.material.color.setHex(colorActive)
-    if @activeNodeSphere
-      @activeNodeSphere.material.color.setHex(colorNormal)
+    if not nodeID? or nodeID == @model.Route.getActiveNodeId()
+      @activeNode.material.color.setHex(colorActive)
+      if @activeNodeSphere
+        @activeNodeSphere.material.color.setHex(colorNormal)
+    else
+      sphere = @getSphereFromId(nodeID)
+      sphere.material.color.setHex(colorNormal)
     @flycam.hasChanged = true
 
   setNodeRadius : (value) ->

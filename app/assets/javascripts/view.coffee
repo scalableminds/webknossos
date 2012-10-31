@@ -106,7 +106,7 @@ class View
       Not every functionality displayed in the options has been implemented yet, but most of them.
       Please report any issues.</p>"
 
-    $('#help-overlay').popover({html: true, placement: 'bottom', trigger: 'hover', title: 'keyboard commands', content: keycommands, template: '<div class="popover overlay"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'})
+    $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: '<div class="popover overlay"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'})
 
     @first = true
     @newTextures = [true, true, true, true]

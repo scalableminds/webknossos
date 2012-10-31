@@ -15,5 +15,9 @@ case class TaskType(summary: String, description: String, expectedTime: TimeSpan
   def id = _id.toString
 }
 object TaskType extends BasicDAO[TaskType]("taskTypes") {
-
+  def fromForm(summary: String, description: String, expectedTime: TimeSpan) = 
+    TaskType(summary, description, expectedTime)
+    
+  def toForm(tt: TaskType) =
+    Some(tt.summary, tt.description, tt.expectedTime)
 }

@@ -155,6 +155,8 @@ Cube =
             if bucketIndex
               bucket = cube[bucketIndex]
               if bucketData
+                unless bucket?
+                  return 0
                 if zoomStep < bucket.zoomStep 
                   bucket.data = bucketData
                   @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)

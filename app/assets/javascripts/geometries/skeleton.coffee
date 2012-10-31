@@ -9,6 +9,8 @@ PLANE_YZ = 1
 PLANE_XZ = 2
 VIEW_3D  = 3
 
+TYPE_BRANCH = 1
+
 COLOR_NORMAL = 0xff0000
 COLOR_ACTIVE = 0x0000ff
 COLOR_BRANCH = 0x550000
@@ -147,7 +149,7 @@ class Skeleton
       # Hide activeNodeSphere, because activeNode is visible anyway
       if @activeNodeSphere
         @activeNodeSphere.visible = false
-        if @activeNodeSphere.material.color.getHex() == COLOR_BRANCH
+        if @model.Route.getActiveNodeType() == TYPE_BRANCH
           @activeNode.material.color.setHex(COLOR_BRANCH_ACTIVE)
         else
           @activeNode.material.color.setHex(COLOR_ACTIVE)

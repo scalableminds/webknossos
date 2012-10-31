@@ -115,7 +115,7 @@ class Gui
                           .step(0.25)
                           .name("Move Value")    
                           .onChange(@setMoveValue)
-    (fView.add @settings, "routeClippingDistance", 1, 500)
+    (fView.add @settings, "routeClippingDistance", 0.1, 200)
                           .name("Clipping Distance")    
                           .onChange(@setRouteClippingDistance)
     (fView.add @settings, "displayCrosshairs")

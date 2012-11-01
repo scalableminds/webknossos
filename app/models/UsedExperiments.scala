@@ -5,7 +5,6 @@ import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
-import models.graph.Experiment
 
 case class UsedExperiments(user: ObjectId, experiment: ObjectId, _id: ObjectId = new ObjectId)
 

@@ -7,7 +7,7 @@ import brainflight.security.Secured
 import models.Role
 import models.DataSet
 import play.api.Logger
-import models.graph.Experiment
+import models.Experiment
 import models.User
 import models.UsedExperiments
 

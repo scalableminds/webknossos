@@ -23,9 +23,7 @@ object Application extends Controller with Secured{
 
   val Mailer = Akka.system.actorOf( Props[Mailer], name = "mailActor" )
   
-  def index = Authenticated { implicit request =>
-    Ok( html.oxalis.index(request.user) )
-  }
+  def index = UserController.dashboard
 
   val registerForm: Form[( String, String, String )] = {
     def registerFormApply( user: String, name: String, password: Tuple2[String, String] ) =

@@ -6,7 +6,7 @@ import brainflight.security.Secured
 import views.html
 import models.User
 import nml._
-import models.graph.Experiment
+import models.Experiment
 import models.Role
 import nml.NMLParser
 import xml.Xml

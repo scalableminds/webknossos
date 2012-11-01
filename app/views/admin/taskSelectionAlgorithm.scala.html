@@ -1,4 +1,4 @@
-@(user:User, algorithms: List[models.TaskSelectionAlgorithm], current: models.TaskSelectionAlgorithm)
+@(user:User, algorithms: List[TaskSelectionAlgorithm], current: TaskSelectionAlgorithm)
 
 @main(Some(user)){
   @helper.form(action = controllers.admin.routes.TaskHandling.submitAlgorithm, 'id -> "task-selection-algoritm") {

@@ -13,7 +13,7 @@ import brainflight.tools.geometry.Vector3I._
 import models.{ User, TransformationMatrix }
 import models.Role
 import models.Origin
-import models.graph.Experiment
+import models.Experiment
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent.Channel

@@ -2,7 +2,8 @@ package nml
 
 import scala.xml.XML
 import models.DataSet
-import models.graph.{ Experiment, Tree, Edge }
+import models.graph.{ Tree, Edge }
+import models.Experiment
 import models.graph
 import models.Color
 import brainflight.tools.ExtendedTypes._

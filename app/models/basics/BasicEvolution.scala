@@ -2,12 +2,13 @@ package models.basics
 
 import models.DataSet
 import models.User
-import models.graph.Experiment
+import models.Task
+import models.Experiment
 import org.bson.types.ObjectId
 import play.api.Logger
 
 object BasicEvolution {
-  val watchedClasses = List(DataSet, User, Experiment)
+  val watchedClasses: List[BasicDAO[_]] = List(DataSet, User, Task, Experiment)
 
   def runDBEvolution() {
     val fakeObjectId = new ObjectId

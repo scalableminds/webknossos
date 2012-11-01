@@ -3,7 +3,7 @@ import play.api._
 import play.api.Play.current
 import models._
 import brainflight.mail.DefaultMails
-import models.graph.Experiment
+import models.Experiment
 import models.graph.Tree
 import models.graph.Node
 import play.api.libs.concurrent._

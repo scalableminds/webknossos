@@ -11,7 +11,6 @@ import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json._
 import scala.collection.immutable.HashMap
-import models.graph.Experiment
 import models.basics.BasicDAO
 
 case class User(
@@ -68,26 +67,18 @@ object User extends BasicDAO[User]( "users" ) {
     } yield user
 
   def create( email: String, name: String, password: String = "") = {
-    val user = User( email, name, false, hashPassword( password ) )
-    insert( user )
-    user
+    alterAndInsert(User( email, name, false, hashPassword( password ) ))
   }
     
   def verify( user: User ) = {
-    val alteredUser = user.copy( verified = true, roles = user.roles + "user" )
-    save( alteredUser )
-    alteredUser
+    alterAndSave(user.copy( verified = true, roles = user.roles + "user" ))
   }
   
   def addRole( user: User, role: String) = {
-    val alteredUser = user.copy( roles = user.roles + role )
-    save( alteredUser )
-    alteredUser    
+    alterAndSave(user.copy( roles = user.roles + role ))
   }
 
   def createRemote( email: String, name: String, loginType: String ) = {
-    val user = User( email, name, true, "", loginType = loginType )
-    insert( user )
-    user
+    alterAndInsert(User( email, name, true, "", loginType = loginType ))
   }
 }

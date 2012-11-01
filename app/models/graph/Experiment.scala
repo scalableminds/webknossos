@@ -1,25 +1,22 @@
-package models.graph
+package models
 
 import play.api.libs.json.JsValue
 import play.api.libs.json.Reads
-import models.DataSet
 import brainflight.tools.geometry.Point3D
 import models.basics.BasicDAO
-import models.BranchPoint
 import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
 import xml.Xml
 import xml.XMLWrites
-import Tree.TreeFormat
+import graph.Tree.TreeFormat
+import graph._
 import play.api.libs.json.Reads
 import play.api.libs.json.JsValue
 import play.api.libs.json.Format
 import brainflight.tools.geometry.Scale
-import models.Color
 import java.util.Date
-import models.User
 
 case class Experiment(
     user: ObjectId, 
@@ -30,7 +27,7 @@ case class Experiment(
     activeNodeId: Int, 
     scale: Scale, 
     editPosition: Point3D, 
-    temp: Boolean = false, 
+    taskId: Option[ObjectId] = None, 
     _id: ObjectId = new ObjectId) {
   def id = _id.toString
   def tree(treeId: Int) = trees.find(_.id == treeId)
@@ -42,6 +39,7 @@ case class Experiment(
 }
 
 object Experiment extends BasicDAO[Experiment]("experiments") {
+  
   implicit object ExperimentXMLWrites extends XMLWrites[Experiment] {
     def writes(e: Experiment) = {
       (DataSet.findOneByName(e.dataSetName).map { dataSet =>
@@ -75,8 +73,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
   }
 
   def createNew(u: User, d: DataSet = DataSet.default) = {
-    val tree = Tree(1, Nil, Nil, Color(1, 0, 0, 0))
-    val exp = Experiment(u._id, d.name, List(tree), Nil, 0, 1, Scale(12, 12, 24), Point3D(0, 0, 0), true)
+    val exp = Experiment(u._id, d.name, List(Tree.empty), Nil, 0, 1, Scale(12, 12, 24), Point3D(0, 0, 0), None)
     Experiment.insert(exp)
     exp
   }

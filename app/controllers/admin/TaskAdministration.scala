@@ -8,7 +8,7 @@ import models.User
 import models.Task
 import models.DataSet
 import models.TaskType
-import models.graph.Experiment
+import models.Experiment
 import controllers.Application
 import brainflight.mail.Send
 import brainflight.mail.DefaultMails

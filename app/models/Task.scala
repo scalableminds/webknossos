@@ -7,7 +7,6 @@ import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
 import java.util.Date
 import brainflight.tools.geometry.Point3D
-import models.graph.Experiment
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import akka.actor.Props
@@ -24,6 +23,8 @@ import akka.dispatch.Promise
 import play.api.libs.json.Format
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
+import models.graph.Tree
+import brainflight.tools.geometry.Scale
 
 case class Task(
     dataSetName: String,
@@ -35,9 +36,11 @@ case class Task(
     priority: Int = 100,
     instances: Int = 1,
     created: Date = new Date,
-    experiments: List[Experiment] = Nil,
+    experiments: List[ObjectId] = Nil,
     _id: ObjectId = new ObjectId) {
   def id = _id.toString
+  
+  def isFullyAssigned = experiments.size == instances
 }
 
 object Task extends BasicDAO[Task]("tasks") {
@@ -45,19 +48,36 @@ object Task extends BasicDAO[Task]("tasks") {
   val conf = current.configuration
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
-  def fromForm(experiment: String, priority: Int, instances: Int, taskTypeId: String) = 
-    Experiment.findOneById(experiment).flatMap(e => TaskType.findOneById(taskTypeId).map( taskType =>
-    Task(e.dataSetName,
+  def fromForm(experiment: String, priority: Int, instances: Int, taskTypeId: String) =
+    Experiment.findOneById(experiment).flatMap(e => TaskType.findOneById(taskTypeId).map(taskType =>
+      Task(e.dataSetName,
         0,
         0,
         taskType._id,
         e.editPosition,
         priority,
         instances)))
-  
-  def toForm(t: Option[Task]): Option[(String, Int, Int, String)] = 
+
+  def createExperimentFor(user: User, task: Task) = {
+    Experiment(user._id,
+      task.dataSetName,
+      List(Tree.empty),
+      Nil,
+      0,
+      1,
+      Scale(12, 12, 24),
+      task.start,
+      None)
+  }
+
+  def addExperiment(task: Task, experiment: Experiment) = {
+    alterAndSave(task.copy(
+      experiments = experiment._id :: task.experiments))
+  }
+
+  def toForm(t: Option[Task]): Option[(String, Int, Int, String)] =
     None
-  
+
   def nextTaskIdForUser(user: User): Future[Option[Int]] = {
     val tasks = Task.findAll.toArray
     if (tasks.isEmpty) {

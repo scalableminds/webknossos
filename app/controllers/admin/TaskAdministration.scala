@@ -34,7 +34,7 @@ object TaskAdministration extends Controller with Secured {
     mapping(
       "experiment" -> text,
       "priority" -> number,
-      "instances" -> number,
+      "taskInstances" -> number,
       "taskType" -> text)(Task.fromForm)(Task.toForm))
 
   override val DefaultAccessRole = Role("admin")

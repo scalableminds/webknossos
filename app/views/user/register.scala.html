@@ -1,5 +1,6 @@
 @(form: Form[(String, String, String)])(implicit flash: Flash)
 
+@import BootstrapHelpers._
 
 @main( None, false ){
   
@@ -23,36 +24,13 @@
             </div>
           }
 
-          <div class="control-group">
-            <label class="control-label" for="signupEmail">Email</label>
-            <div class="controls">
-              <input id="signupEmail" type="email" name="email" placeholder="Email" value="@form("email").value">
-            </div>
-          </div>
-          <div class="control-group">
-            <label class="control-label" for="signupName">Name</label>
-            <div class="controls">
-              <input id="signupName" type="text" name="name" placeholder="Name" value="@form("name").value">
-            </div>
-          </div>
-          <div class="control-group">
-            <label class="control-label" for="loginPassword">Password</label>
-            <div class="controls">
-              <input id="loginPassword" type="password" name="password.main" placeholder="Password">
-            </div>
-          </div>
-          <div class="control-group">
-            <label class="control-label" for="loginPassword">Password (again)</label>
-            <div class="controls">
-              <input id="loginPassword" type="password" name="password.validation" placeholder="Password (again)">
-            </div>
-          </div>
-          <div class="control-group">
-            <div class="controls">
-            <p>
-              <button type="submit" class="btn btn-primary">Sign up</button>
-            </p>
-            </div>
+          @helper.inputText(form("email"), 'type -> "email")
+          @helper.inputText(form("name"))
+          @helper.inputPassword(form("password.main"))
+          @helper.inputPassword(form("password.validation"))
+          
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Sign up</button>
           </div>
         }
       </div>

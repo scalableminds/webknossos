@@ -47,16 +47,15 @@ class Controller
     @canvasesAndNav = $("#main")[0]
 
     @prevControls = $('#prevControls')
+    @prevControls.addClass("btn-group")
     values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
     callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
                       @cameraController.changePrevXZ, @cameraController.changePrevSV]
     buttons       = new Array(4)
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-      buttons[i] = document.createElement "input"
-      buttons[i].setAttribute "type", "button"
-      buttons[i].setAttribute "value", values[i]
-      buttons[i].addEventListener "click", callbacks[i], true
-      @prevControls.append buttons[i]
+      buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
+      buttons[i].on("click", callbacks[i])
+      @prevControls.append(buttons[i])
 
     @model.Route.initialize().then(
       (position) =>

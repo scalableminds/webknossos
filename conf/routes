@@ -3,12 +3,18 @@
 # ~~~~
 
 # The home page
-GET     /                                   controllers.Test.index
-GET     /index                              controllers.Application.index
+GET     /                                   controllers.Application.index
 
 # Jira integration
 GET     /jira                               controllers.Jira.index
 POST    /jira                               controllers.Jira.submit
+
+# Tasks
+GET     /tasks                              controllers.admin.TaskHandling.listTasks
+GET     /tasks/algorithm                    controllers.admin.TaskHandling.index
+POST    /tasks/algorithm                    controllers.admin.TaskHandling.submitAlgorithm
+GET     /tasks/algorithm/:id?use=true       controllers.admin.TaskHandling.useAlgorithm(id: String)
+
 
 # Authentication
 GET     /login                              controllers.Application.login
@@ -16,7 +22,6 @@ POST    /login                              controllers.Application.authenticate
 GET     /logout                             controllers.Application.logout
 GET     /register                           controllers.Application.register
 POST    /register                           controllers.Application.registrate
-GET     /verify/:key                        controllers.UserController.verify( key: String )
 
 # User settings
 POST    /user/configuration                 controllers.UserController.saveSettings
@@ -42,24 +47,21 @@ GET       /experiment                       controllers.ExperimentController.lis
 GET       /experiment/:experimentId         controllers.ExperimentController.info( experimentId: String )
 PUT       /experiment/:experimentId         controllers.ExperimentController.update( experimentId: String )
 
-# GET     /route/list                       controllers.Route.list
-# POST    /route/:id                        controllers.Route.blackBox(id: String)
-# GET			/route/:id												controllers.Route.getRoute(id: String)
-
-# Test pages
-GET     /test/                              controllers.Test.index
-GET     /test/demo                          controllers.Test.demo
-GET     /test/tests                         controllers.Test.tests
-
-#Performance test pages 
-GET     /performance/timegridfs             controllers.PerformanceTest.timeGridFS
-GET     /performance/timefiledatastore      controllers.PerformanceTest.timeFileDataStore
-
 #Admin pages
 GET     /admin/nmldownload                  controllers.admin.NMLIO.downloadList
 GET     /admin/nmlupload                    controllers.admin.NMLIO.uploadForm
 POST    /admin/nmlupload                    controllers.admin.NMLIO.upload
 GET     /admin/nmldownload/:taskId          controllers.admin.NMLIO.download( taskId: String )
+
+GET     /admin/taskTypes                    controllers.admin.TaskAdministration.types
+POST    /admin/taskTypes/create             controllers.admin.TaskAdministration.createType
+
+GET     /admin/tasks                        controllers.admin.TaskAdministration.list
+GET     /admin/tasks/create                 controllers.admin.TaskAdministration.create
+POST    /admin/tasks/createFromExperiment   controllers.admin.TaskAdministration.createFromExperiment
+GET     /admin/users                        controllers.admin.UserAdministration.index
+GET     /admin/users/:id/verify             controllers.admin.UserAdministration.verifyUser(id: String)
+GET     /admin/users/:id/delete             controllers.admin.UserAdministration.deleteUser(id: String)
 
 # Javascript routing
 GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes

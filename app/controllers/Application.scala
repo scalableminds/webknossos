@@ -17,14 +17,14 @@ import controllers.admin._
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
 
-object Application extends Controller {
+object Application extends Controller with Secured{
 
   // -- Authentication
 
   val Mailer = Akka.system.actorOf( Props[Mailer], name = "mailActor" )
   
-  def index = Action {
-    Ok( html.index() )
+  def index = Authenticated { implicit request =>
+    Ok( html.oxalis.index(request.user) )
   }
 
   val registerForm: Form[( String, String, String )] = {
@@ -34,21 +34,21 @@ object Application extends Controller {
       Some( ( user._1, user._2, ( "", "" ) ) )
 
     val passwordField = tuple( "main" -> text, "validation" -> text )
-      .verifying( "Passwords don't match", pw => pw._1 == pw._2 )
-      .verifying( "Password too short", pw => pw._1.length >= 6 )
+      .verifying( "error.password.nomatch", pw => pw._1 == pw._2 )
+      .verifying( "error.password.tooshort", pw => pw._1.length >= 6 )
 
     Form(
       mapping(
         "email" -> email,
         "name" -> text,
         "password" -> passwordField )( registerFormApply )( registerFormUnapply )
-        .verifying( "This email address is already in use",
+        .verifying( "error.email.inuse",
           user => User.findLocalByEmail( user._1 ).isEmpty ) )
   }
 
   def register = Action {
     implicit request =>
-      Ok( html.register( registerForm ) )
+      Ok( html.user.register( registerForm ) )
   }
 
   /**
@@ -57,13 +57,12 @@ object Application extends Controller {
   def registrate = Action {
     implicit request =>
       registerForm.bindFromRequest.fold(
-        formWithErrors => BadRequest( html.register( formWithErrors ) ),
+        formWithErrors => BadRequest( html.user.register( formWithErrors ) ),
         {
           case ( email, name, password ) => {
             val user = User.create( email, name, password )
-            val key = ValidationKey.createFor( user )
-           Mailer ! Send( DefaultMails.registerMail( name, email, key ) )
-            Redirect( routes.Test.index )
+           Mailer ! Send( DefaultMails.registerMail( name, email ) )
+            Redirect( routes.Application.index )
               .flashing( "success" -> "Thanks for your registration!" )
               .withSession( Secured.createSession( user ) )
           }
@@ -73,7 +72,7 @@ object Application extends Controller {
   val loginForm = Form(
     tuple(
       "email" -> text,
-      "password" -> text ) verifying ( "Invalid email or password", result => result match {
+      "password" -> text ) verifying ( "error.login.invalid", result => result match {
         case ( email, password ) =>
           User.auth( email, password ).isDefined
       } ) )
@@ -83,7 +82,7 @@ object Application extends Controller {
    */
   def login = Action {
     implicit request =>
-      Ok( html.login( loginForm ) )
+      Ok( html.user.login( loginForm ) )
   }
 
   /**
@@ -93,10 +92,10 @@ object Application extends Controller {
     implicit request =>
       loginForm.bindFromRequest.fold(
         formWithErrors =>
-          BadRequest( html.login( formWithErrors ) ),
+          BadRequest( html.user.login( formWithErrors ) ),
         userForm => {
           val user = User.findLocalByEmail( userForm._1 ).get
-          Redirect( routes.Test.index )
+          Redirect( routes.Application.index )
             .withSession( Secured.createSession( user ) )
         } )
   }

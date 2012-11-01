@@ -1,0 +1,8 @@
+error.email=Please supply a valid email address.
+error.email.inuse=This email address is already in use
+
+error.password.nomatch=Passwords don't match
+error.password.tooshort=Password too short
+
+error.required=Please supply all needed values.
+err.login.invalid=Invalid email or password

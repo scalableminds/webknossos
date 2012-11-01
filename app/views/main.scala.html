@@ -1,78 +1,100 @@
 @(userOpt: Option[User], showNavButtons: Boolean = true)(body: Html)
-
+<!doctype html>
 <html>
-    <head>
-        <title>Oxalis</title>
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/jquery-1.7.1.js")"></script>
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/underscore-1.2.0.min.js")"></script>
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/backbone-min.js")"></script>
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
-        <script type="text/javascript" src="@routes.Application.javascriptRoutes"></script>
-    </head>
-    <body>
-        <header>
-            <a href="@routes.Test.index" id="logo">Ox<span>alis</span></a>
-            @if(showNavButtons){
-              <a href="@routes.Jira.index" id="issue-submit-button">Submit an issue</a>
-              <dl id="user">
-              @userOpt.map{ user =>
-                  <dt>@user.name <span>(@user.email)</span></dt>
-                  <dd>
-                    <a href="@routes.Application.logout()">Logout</a>
-                </dd>
-                }.getOrElse{
-                  <dd>
-                    <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
-                </dd>
-                  <dd>
-                    <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
-                </dd>
-                  <dd>
-                    <a href="@routes.Application.login()">Login</a>
-                </dd>
-                }
-            </dl>
-           }
-        </header>
-        <!-- 
-        <nav>
-            <h4 class="dashboard"><a href="#/">Dashboard</a></h4>
-            <ul id="projects">
-                <li>
-                    <span class="toggle"></span>
-                    <h4 class="groupName">Static / Test</h4>
-                    <span class="loader">Loading</span>
-                    <ul>
+  <head>
+    <title>Oxalis</title>
+    <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("css/bootstrap.min.css")">
+    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+    <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/jquery-1.7.1.js")"></script>
+    <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/underscore-1.2.0.min.js")"></script>
+    <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/bootstrap.min.js")"></script>
+    <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
+    <script type="text/javascript" src="@routes.Application.javascriptRoutes"></script>
+  </head>
+  <body>
+    <header class="navbar navbar-static-top navbar-inverse">
+      <div class="navbar-inner">
+        @if(showNavButtons){
+          <a class="brand" href="@routes.Application.index">Oxalis</a>
+          <ul class="nav">
+            <li class="divider-vertical"></li>
+            <li>
+              <a href="@routes.Jira.index" id="issue-submit-button"><i class="icon-fire icon-white"></i> Submit an issue</a>
+            </li>
+            @userOpt.filter( _.hasRole(Role("admin").get)).map{ user =>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                  <b class="caret"></b>
+                  Administration
+                </a>
+                <ul class="dropdown-menu">
+                  <li>
+                    <a href="@controllers.admin.routes.UserAdministration.index">Users</a>
+                  </li>  
+                  <li class="dropdown-submenu">
+                    <a tabindex="-1" href="#">Tasks</a>
+                    <ul class="dropdown-menu">
                         <li>
-                            <a class="name" href="@routes.Test.index">Index</a>
+                          <a href="@controllers.admin.routes.TaskAdministration.create">Create</a>
                         </li>
                         <li>
-                            <a class="name" href="@routes.Test.demo">Demo</a>
+                          <a href="@controllers.admin.routes.TaskAdministration.list">List</a>
                         </li>
                         <li>
-                            <a class="name" href="@routes.Test.tests">Tests</a>
+                          <a href="@controllers.admin.routes.TaskAdministration.types">Types</a>
+                        </li>
+                        <li>
+                          <a href="@controllers.admin.routes.TaskHandling.index">Algorithm</a>
                         </li>
                     </ul>
-                    <span class="toggle"></span>
-                    <h4 class="groupName">Administration</h4>
-                    <span class="loader">Loading</span>
-                    <ul>
-                        <li>
-                            <a class="name" href="@controllers.admin.routes.NMLIO.uploadForm">NML Upload</a>
-                        </li>
-                        <li>
-                            <a class="name" href="@controllers.admin.routes.NMLIO.downloadList">NML Download</a>
-                        </li>
-                    </ul>
-                </li>
+                  </li>
+                </ul>
+              </li>
+            }
+            <li>
+              <a href="#" id="help-overlay"><i class="icon-info-sign icon-white">
+              </i> Help</a>
+            </li>
+            <li class="divider-vertical"></li>
+          </ul>
+          @userOpt.map{ user =>
+
+            <ul class="nav pull-right">
+              <li class="divider-vertical"></li>
+              <li class="navbar-text"><i class="icon-user icon-white"></i>  <strong>@user.name</strong> <span>(@user.email)</span></li>
+              <li class="divider-vertical"></li>
+              <li>
+                <a href="@routes.Application.logout()"><i class="icon-off icon-white"></i> Logout</a>
+              </li>
+              <li class="divider-vertical"></li>
+            </ul>           
+            
+            
+
+          }.getOrElse{
+            <ul class="nav pull-right">
+              <li>
+                <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
+              </li>
+              <li>
+                <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
+              </li>
+              <li>
+                <a href="@controllers.routes.Application.login()">Login</a>
+              </li>
             </ul>
-        </nav>
-     -->
-        <div id="mainContainer">
-            @body
-        </div>
-    </body>
+
+          }
+        } else {
+          <span class="brand">Oxalis</span>
+        }
+      </div>
+    </header>
+    <div id="alert-container"></div>
+    <div id="main-container">
+      @body
+    </div>
+  </body>
 </html>
 

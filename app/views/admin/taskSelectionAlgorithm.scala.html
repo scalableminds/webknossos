@@ -1,0 +1,14 @@
+@(user:User, algorithms: List[models.TaskSelectionAlgorithm], current: models.TaskSelectionAlgorithm)
+
+@main(Some(user)){
+  @helper.form(action = controllers.admin.routes.TaskHandling.submitAlgorithm, 'id -> "task-selection-algoritm") {
+    
+    <div class="editor-wrapper">
+      <div id="editor">@current.js</div>
+    </div>
+    <input type="hidden" name="code" />
+    <input type="hidden" name="use" value="1" />
+    <input type="submit" value="Save" class="btn btn-primary btn-large">
+    <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/ace/ace.js")"></script>
+  }
+}

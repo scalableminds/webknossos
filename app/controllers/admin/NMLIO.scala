@@ -11,6 +11,7 @@ import models.Role
 import nml.NMLParser
 import xml.Xml
 import play.api.Logger
+import models.UsedExperiments
 
 object NMLIO extends Controller with Secured {
   // TODO remove comment in production
@@ -22,10 +23,11 @@ object NMLIO extends Controller with Secured {
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
     request.body.file("nmlFile").map { nmlFile =>
-      (new NMLParser(nmlFile.ref.file).parse).foreach { e =>
+      implicit val ctx = NMLContext(request.user)
+      (new NMLParser(nmlFile.ref.file).parse).foreach { exp =>
         Logger.debug("Successfully parsed nmlFile")
-        User.save(request.user.copy(experiments = e._id :: request.user.experiments))
-        Experiment.save(e)
+        Experiment.save(exp)
+        UsedExperiments.use(request.user, exp)
       }
       Ok("File uploaded")
     }.getOrElse {
@@ -34,7 +36,10 @@ object NMLIO extends Controller with Secured {
   }
 
   def downloadList = Authenticated { implicit request =>
-    Ok(html.admin.index(request.user, User.findAll))
+    val userExperiments = Experiment.findAll.groupBy(_.user).flatMap{ case (userId, experiments) =>
+      User.findOneById(userId).map( _ -> experiments) 
+    }
+    Ok(html.admin.nmldownload(request.user, userExperiments))
   }
 
   def download(taskId: String) = Authenticated { implicit request =>

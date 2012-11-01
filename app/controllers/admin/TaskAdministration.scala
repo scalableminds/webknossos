@@ -1,0 +1,71 @@
+package controllers.admin
+
+import play.api.mvc.Controller
+import play.api.mvc.Action
+import brainflight.security.Secured
+import views.html
+import models.User
+import models.Task
+import models.DataSet
+import models.TaskType
+import models.graph.Experiment
+import controllers.Application
+import brainflight.mail.Send
+import brainflight.mail.DefaultMails
+import models.TimeSpan
+import brainflight.tools.ExtendedTypes._
+import models.Role
+import play.api.data._
+import play.api.data.Forms._
+
+object TaskAdministration extends Controller with Secured {
+
+  val taskTypeForm = Form(
+    mapping(
+      "summary" -> text,
+      "description" -> text,
+      "expectedTime" -> mapping(
+        "minTime" -> number,
+        "maxTime" -> number,
+        "maxHard" -> number)(TimeSpan.apply)(TimeSpan.unapply))(
+        TaskType.fromForm)(TaskType.toForm))
+
+  val taskForm = Form(
+    mapping(
+      "experiment" -> text,
+      "priority" -> number,
+      "instances" -> number,
+      "taskType" -> text)(Task.fromForm)(Task.toForm))
+
+  override val DefaultAccessRole = Role("admin")
+
+  def list = Authenticated { implicit request =>
+    Ok(html.admin.taskList(request.user, Task.findAll, TaskType.findAll))
+  }
+
+  def types = Authenticated { implicit request =>
+    Ok(html.admin.taskTypes(request.user, TaskType.findAll, taskTypeForm))
+  }
+
+  def create = Authenticated { implicit request =>
+    Ok(html.admin.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll, taskForm))
+  }
+
+  def createType = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    taskTypeForm.bindFromRequest.fold(
+      formWithErrors => BadRequest(html.admin.taskTypes(request.user, TaskType.findAll, formWithErrors)),
+      { t =>
+        TaskType.insert(t)
+        Ok(t.toString)
+      })
+  }
+
+  def createFromExperiment = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    taskForm.bindFromRequest.fold(
+      formWithErrors => BadRequest(html.admin.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll, formWithErrors)),
+      { t =>
+        Task.insert(t)
+        Ok(t.toString)
+      })
+  }
+}

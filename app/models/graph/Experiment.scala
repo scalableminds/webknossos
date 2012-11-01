@@ -19,8 +19,19 @@ import play.api.libs.json.Format
 import brainflight.tools.geometry.Scale
 import models.Color
 import java.util.Date
+import models.User
 
-case class Experiment(dataSetName: String, trees: List[Tree], branchPoints: List[BranchPoint], timestamp: Long, activeNodeId: Int, scale: Scale, editPosition: Point3D, _id: ObjectId = new ObjectId) {
+case class Experiment(
+    user: ObjectId, 
+    dataSetName: String, 
+    trees: List[Tree], 
+    branchPoints: List[BranchPoint], 
+    timestamp: Long, 
+    activeNodeId: Int, 
+    scale: Scale, 
+    editPosition: Point3D, 
+    temp: Boolean = false, 
+    _id: ObjectId = new ObjectId) {
   def id = _id.toString
   def tree(treeId: Int) = trees.find(_.id == treeId)
   def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
@@ -63,11 +74,19 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     }
   }
 
-  def createNew(d: DataSet = DataSet.default) = {
+  def createNew(u: User, d: DataSet = DataSet.default) = {
     val tree = Tree(1, Nil, Nil, Color(1, 0, 0, 0))
-    val exp = Experiment(d.name, List(tree), Nil, 0, 1, Scale(12, 12, 24), Point3D(0, 0, 0))
+    val exp = Experiment(u._id, d.name, List(tree), Nil, 0, 1, Scale(12, 12, 24), Point3D(0, 0, 0), true)
     Experiment.insert(exp)
     exp
+  }
+  
+  def findFor(u: User) = {
+    find( MongoDBObject("user" -> u._id) ).toList 
+  }
+  
+  def findAllTemporary = {
+    find( MongoDBObject("temp" -> true) ).toList 
   }
 
   implicit object ExperimentFormat extends Format[Experiment] {

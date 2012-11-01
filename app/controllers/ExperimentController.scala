@@ -26,6 +26,7 @@ import models.graph.Node
 import models.graph.Edge
 import brainflight.tools.geometry.Point3D
 import brainflight.format.DateFormatter
+import models.UsedExperiments
 
 /**
  * scalableminds - brainflight
@@ -56,8 +57,7 @@ object ExperimentController extends Controller with Secured {
 
   def createExperimentsList(user: User) = {
     for {
-      expId <- user.experiments
-      exp <- Experiment.findOneById(expId)
+      exp <- Experiment.findFor(user)
     } yield {
       Json.obj(
         "name" -> (exp.dataSetName + " " + DateFormatter.format(exp.date)),
@@ -77,18 +77,16 @@ object ExperimentController extends Controller with Secured {
     val user = request.user
     if (isNew) {
       DataSet.findOneById(id).map { dataSet =>
-        val exp = Experiment.createNew(dataSet)
-        User.save(user.copy(experiments = exp._id :: request.user.experiments))
+        val exp = Experiment.createNew(user, dataSet)
+        UsedExperiments.use(user, exp)
         Ok
       } getOrElse BadRequest("Couldn't find DataSet.")
     } else {
-      user.experiments.find(_ == id).map { expId =>
-        val experiments = expId :: user.experiments.filterNot(_ == expId)
-        User.save(user.copy(experiments = experiments))
+      Experiment.findOneById(id).filter(_.user == user.id).map { exp =>
+        UsedExperiments.use(user, exp)
         Ok
       } getOrElse BadRequest("Coudln't find experiment.")
     }
-    Ok
   }
 
   def list = Authenticated { implicit request =>

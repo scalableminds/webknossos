@@ -1,4 +1,4 @@
-package models
+package models.user
 
 import play.api.db._
 import play.api.Play.current
@@ -12,6 +12,9 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Json._
 import scala.collection.immutable.HashMap
 import models.basics.BasicDAO
+import models.security.Permission
+import models.security.Implyable
+import models.security.Role
 
 case class User(
     email: String,

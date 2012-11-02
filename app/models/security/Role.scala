@@ -1,4 +1,4 @@
-package models
+package models.security
 
 import com.mongodb.casbah.Imports._
 import models.context._
@@ -27,6 +27,6 @@ object Role extends BasicDAO[Role]( "roles" ) {
     }
   }
 
-  def findOneByName( roleName: String ): Option[Role] =
+  def findOneByName( roleName: String ) =
     findOne( MongoDBObject( "name" -> roleName ) )
 }

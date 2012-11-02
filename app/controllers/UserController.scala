@@ -2,16 +2,14 @@ package controllers
 
 import brainflight.security.Secured
 import play.api.mvc.Controller
-import models.User
+import models.user._
 import play.api.mvc.Action
 import play.api.mvc.Request
 import play.api.libs.json.Json._
 import play.api.libs.json.JsValue
 import play.api.libs.json._
-import models.Role
-import models.UserConfiguration
-import models.Experiment
-import models.Task
+import models.security.Role
+import models.task._
 import views.html
 
 object UserController extends Controller with Secured {
@@ -26,7 +24,14 @@ object UserController extends Controller with Secured {
     val userTasks = taskExperiments.flatMap( e => 
       Task.findOneById(e.taskId.get).map(_ -> e))
       
-    Ok(html.oxalis.dashboard(user, tempExperiments, userTasks))
+    val loggedTime = TimeTracking.loggedTime(user)
+      
+    Ok(html.user.dashboard(user, tempExperiments, userTasks, loggedTime))
+  }
+  
+  def logTime(time: Int) = Authenticated{ implicit request =>
+    TimeTracking.logTime(request.user, time)
+    Ok
   }
 
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {

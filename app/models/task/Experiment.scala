@@ -1,4 +1,4 @@
-package models
+package models.task
 
 import play.api.libs.json.JsValue
 import play.api.libs.json.Reads
@@ -10,8 +10,10 @@ import play.api.libs.json.Writes
 import play.api.libs.json.Json
 import xml.Xml
 import xml.XMLWrites
-import graph.Tree.TreeFormat
-import graph._
+import models.binary.DataSet
+import models.graph.Tree.TreeFormat
+import models.graph._
+import models.user.User
 import play.api.libs.json.Reads
 import play.api.libs.json.JsValue
 import play.api.libs.json.Format
@@ -19,15 +21,15 @@ import brainflight.tools.geometry.Scale
 import java.util.Date
 
 case class Experiment(
-    user: ObjectId, 
-    dataSetName: String, 
-    trees: List[Tree], 
-    branchPoints: List[BranchPoint], 
-    timestamp: Long, 
-    activeNodeId: Int, 
-    scale: Scale, 
-    editPosition: Point3D, 
-    taskId: Option[ObjectId] = None, 
+    user: ObjectId,
+    dataSetName: String,
+    trees: List[Tree],
+    branchPoints: List[BranchPoint],
+    timestamp: Long,
+    activeNodeId: Int,
+    scale: Scale,
+    editPosition: Point3D,
+    taskId: Option[ObjectId] = None,
     _id: ObjectId = new ObjectId) {
   def id = _id.toString
   def tree(treeId: Int) = trees.find(_.id == treeId)
@@ -39,7 +41,7 @@ case class Experiment(
 }
 
 object Experiment extends BasicDAO[Experiment]("experiments") {
-  
+
   implicit object ExperimentXMLWrites extends XMLWrites[Experiment] {
     def writes(e: Experiment) = {
       (DataSet.findOneByName(e.dataSetName).map { dataSet =>
@@ -73,17 +75,23 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
   }
 
   def createNew(u: User, d: DataSet = DataSet.default) = {
-    val exp = Experiment(u._id, d.name, List(Tree.empty), Nil, 0, 1, Scale(12, 12, 24), Point3D(0, 0, 0), None)
-    Experiment.insert(exp)
-    exp
+    alterAndInsert(Experiment(u._id,
+      d.name,
+      List(Tree.empty),
+      Nil,
+      System.currentTimeMillis,
+      1,
+      Scale(12, 12, 24),
+      Point3D(0, 0, 0),
+      None))
   }
-  
+
   def findFor(u: User) = {
-    find( MongoDBObject("user" -> u._id) ).toList 
+    find(MongoDBObject("user" -> u._id)).toList
   }
-  
+
   def findAllTemporary = {
-    find( MongoDBObject("temp" -> true) ).toList 
+    find(MongoDBObject("temp" -> true)).toList
   }
 
   implicit object ExperimentFormat extends Format[Experiment] {
@@ -101,7 +109,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       BRANCH_POINTS -> e.branchPoints,
       SCALE -> e.scale,
       EDIT_POSITION -> e.editPosition)
- 
+
     def reads(js: JsValue): Experiment = {
 
       val id = (js \ ID).as[String]

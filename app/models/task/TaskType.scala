@@ -1,4 +1,4 @@
-package models
+package models.task
 
 import com.mongodb.casbah.Imports._
 import models.context._
@@ -15,6 +15,8 @@ case class TaskType(summary: String, description: String, expectedTime: TimeSpan
   def id = _id.toString
 }
 object TaskType extends BasicDAO[TaskType]("taskTypes") {
+  def empty = TaskType("","",TimeSpan(5, 10, 15))
+  
   def fromForm(summary: String, description: String, expectedTime: TimeSpan) = 
     TaskType(summary, description, expectedTime)
     

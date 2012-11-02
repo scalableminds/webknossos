@@ -4,12 +4,12 @@ import play.api.mvc.Controller
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import brainflight.security.Secured
-import models.Role
-import models.DataSet
+import models.security.Role
+import models.binary.DataSet
 import play.api.Logger
-import models.Experiment
-import models.User
-import models.UsedExperiments
+import models.task.Experiment
+import models.user._
+import models.task.UsedExperiments
 
 object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User

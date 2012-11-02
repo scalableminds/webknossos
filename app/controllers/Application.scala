@@ -4,7 +4,7 @@ import play.api._
 import play.api.mvc._
 import play.api.data._
 import play.api.Play.current
-import models._
+import models.user._
 import views._
 import play.mvc.Results.Redirect
 import play.api.data.Forms._
@@ -16,37 +16,51 @@ import brainflight.mail._
 import controllers.admin._
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
+import models.task.Experiment
+import models.task.UsedExperiments
 
-object Application extends Controller with Secured{
+object Application extends Controller with Secured {
 
   // -- Authentication
 
-  val Mailer = Akka.system.actorOf( Props[Mailer], name = "mailActor" )
+  val Mailer = Akka.system.actorOf(Props[Mailer], name = "mailActor")
+
+  def index = Authenticated { implicit request =>      
+    Ok(html.oxalis.trace(request.user))
+  }
   
-  def index = UserController.dashboard
+  def trace(experimentId: String) = Authenticated { implicit request =>
+    val user = request.user
+    
+    Experiment.findOneById(experimentId)
+      .filter( _.user == user._id)
+      .map(exp => UsedExperiments.use(user, exp))
+      
+    Ok(html.oxalis.trace(user))
+  }
 
-  val registerForm: Form[( String, String, String )] = {
-    def registerFormApply( user: String, name: String, password: Tuple2[String, String] ) =
-      ( user, name, password._1 )
-    def registerFormUnapply( user: Tuple3[String, String, String] ) =
-      Some( ( user._1, user._2, ( "", "" ) ) )
+  val registerForm: Form[(String, String, String)] = {
+    def registerFormApply(user: String, name: String, password: Tuple2[String, String]) =
+      (user, name, password._1)
+    def registerFormUnapply(user: Tuple3[String, String, String]) =
+      Some((user._1, user._2, ("", "")))
 
-    val passwordField = tuple( "main" -> text, "validation" -> text )
-      .verifying( "error.password.nomatch", pw => pw._1 == pw._2 )
-      .verifying( "error.password.tooshort", pw => pw._1.length >= 6 )
+    val passwordField = tuple("main" -> text, "validation" -> text)
+      .verifying("error.password.nomatch", pw => pw._1 == pw._2)
+      .verifying("error.password.tooshort", pw => pw._1.length >= 6)
 
     Form(
       mapping(
         "email" -> email,
         "name" -> text,
-        "password" -> passwordField )( registerFormApply )( registerFormUnapply )
-        .verifying( "error.email.inuse",
-          user => User.findLocalByEmail( user._1 ).isEmpty ) )
+        "password" -> passwordField)(registerFormApply)(registerFormUnapply)
+        .verifying("error.email.inuse",
+          user => User.findLocalByEmail(user._1).isEmpty))
   }
 
   def register = Action {
     implicit request =>
-      Ok( html.user.register( registerForm ) )
+      Ok(html.user.register(registerForm))
   }
 
   /**
@@ -55,32 +69,32 @@ object Application extends Controller with Secured{
   def registrate = Action {
     implicit request =>
       registerForm.bindFromRequest.fold(
-        formWithErrors => BadRequest( html.user.register( formWithErrors ) ),
+        formWithErrors => BadRequest(html.user.register(formWithErrors)),
         {
-          case ( email, name, password ) => {
-            val user = User.create( email, name, password )
-           Mailer ! Send( DefaultMails.registerMail( name, email ) )
-            Redirect( routes.Application.index )
-              .flashing( "success" -> "Thanks for your registration!" )
-              .withSession( Secured.createSession( user ) )
+          case (email, name, password) => {
+            val user = User.create(email, name, password)
+            Mailer ! Send(DefaultMails.registerMail(name, email))
+            Redirect(routes.Application.index)
+              .flashing("success" -> "Thanks for your registration!")
+              .withSession(Secured.createSession(user))
           }
-        } )
+        })
   }
 
   val loginForm = Form(
     tuple(
       "email" -> text,
-      "password" -> text ) verifying ( "error.login.invalid", result => result match {
-        case ( email, password ) =>
-          User.auth( email, password ).isDefined
-      } ) )
+      "password" -> text) verifying ("error.login.invalid", result => result match {
+        case (email, password) =>
+          User.auth(email, password).isDefined
+      }))
 
   /**
    * Login page.
    */
   def login = Action {
     implicit request =>
-      Ok( html.user.login( loginForm ) )
+      Ok(html.user.login(loginForm))
   }
 
   /**
@@ -90,31 +104,30 @@ object Application extends Controller with Secured{
     implicit request =>
       loginForm.bindFromRequest.fold(
         formWithErrors =>
-          BadRequest( html.user.login( formWithErrors ) ),
+          BadRequest(html.user.login(formWithErrors)),
         userForm => {
-          val user = User.findLocalByEmail( userForm._1 ).get
-          Redirect( routes.Application.index )
-            .withSession( Secured.createSession( user ) )
-        } )
+          val user = User.findLocalByEmail(userForm._1).get
+          Redirect(routes.Application.index)
+            .withSession(Secured.createSession(user))
+        })
   }
 
   /**
    * Logout and clean the session.
    */
   def logout = Action {
-    Redirect( routes.Application.login )
+    Redirect(routes.Application.login)
       .withNewSession
-      .flashing("success" -> "You've been logged out" )
+      .flashing("success" -> "You've been logged out")
   }
 
   // -- Javascript routing
 
   def javascriptRoutes = Action { implicit request =>
     Ok(
-      Routes.javascriptRouter( "jsRoutes" )( //fill in stuff which should be able to be called from js
-          controllers.admin.routes.javascript.NMLIO.upload, 
-          controllers.admin.routes.javascript.NMLIO.downloadList
-      ) ).as( "text/javascript" )
+      Routes.javascriptRouter("jsRoutes")( //fill in stuff which should be able to be called from js
+        controllers.admin.routes.javascript.NMLIO.upload,
+        controllers.admin.routes.javascript.NMLIO.downloadList)).as("text/javascript")
   }
 
 }

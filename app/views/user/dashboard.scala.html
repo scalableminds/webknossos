@@ -1,0 +1,61 @@
+@(loggedInUser: models.user.User, temporaryExperiments: List[models.task.Experiment], userTasks: List[(models.task.Task, models.task.Experiment)], trackedTime: Option[Map[models.user.PaymentInterval, Int]])
+
+@import brainflight.format._
+
+@main(Some(loggedInUser)){
+  <div class="container">
+    <h3>Tasks</h3>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th> # </th>
+          <th> Cell </th>
+          <th> DataSet </th>
+          <th> Start </th>
+          <th> </th>
+        </tr>
+      </thead>
+      <tbody>
+      @userTasks.map{ case (task, experiment)=> 
+        <tr>
+          <td> @task.id.drop(10) </td>
+          <td> @task.cellId </td>
+          <td> @task.taskType.map(_.summary).getOrElse("") </td>
+          <td> @task.dataSetName </td>
+          <td> @task.start </td>
+          <td> @experiment.id.drop(10)  </td>
+        </tr>
+      }
+      </tbody>
+    </table>
+    <button class="btn">Get a new task</button>
+  </div>
+
+  <div class="container">
+    <h3>Explorative experiments</h3>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th> # </th>
+          <th> DataSet </th>
+          <th> Trees </th>
+          <th> Last edited </th>
+          <th> </th>
+        </tr>
+      </thead>
+      <tbody>
+      @temporaryExperiments.map{ experiment => 
+        <tr>
+          <td> @experiment.id.drop(10) </td>
+          <td> @experiment.dataSetName </td>
+          <td> @experiment.trees.size </td>
+          <td> @DateFormatter.format(experiment.date) </td>
+          <td> <a href="@controllers.routes.Application.trace(experiment.id)"><i class="icon-random"></i> trace</a></td>
+        </tr>
+      }
+      </tbody>
+    </table>
+  </div>
+
+
+}

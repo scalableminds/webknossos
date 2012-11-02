@@ -4,11 +4,10 @@ import play.api.mvc.Controller
 import play.api.mvc.Action
 import brainflight.security.Secured
 import views.html
-import models.User
-import models.Role
-import models.Task
+import models.user.User
+import models.security.Role
+import models.task._
 import play.api.libs.json.Json
-import models.TaskSelectionAlgorithm
 
 object TaskHandling extends Controller with Secured {
   // TODO remove comment in production

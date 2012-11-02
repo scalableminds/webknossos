@@ -1,4 +1,4 @@
-package models
+package models.security
 
 abstract class Implyable {
   def implies( permission: Permission ): Boolean

@@ -1,9 +1,8 @@
 package models.basics
 
-import models.DataSet
-import models.User
-import models.Task
-import models.Experiment
+import models.binary._
+import models.user._
+import models.task._
 import org.bson.types.ObjectId
 import play.api.Logger
 

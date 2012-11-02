@@ -4,14 +4,14 @@ import play.api.mvc.Controller
 import play.api.mvc.Action
 import brainflight.security.Secured
 import views.html
-import models.User
+import models.user._
 import nml._
-import models.Experiment
-import models.Role
+import models.task.Experiment
+import models.security.Role
 import nml.NMLParser
 import xml.Xml
 import play.api.Logger
-import models.UsedExperiments
+import models.task.UsedExperiments
 
 object NMLIO extends Controller with Secured {
   // TODO remove comment in production

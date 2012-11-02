@@ -4,17 +4,14 @@ import play.api.mvc.Controller
 import play.api.mvc.Action
 import brainflight.security.Secured
 import views.html
-import models.User
-import models.Task
-import models.DataSet
-import models.TaskType
-import models.Experiment
+import models.user.User
+import models.task._
+import models.binary.DataSet
 import controllers.Application
 import brainflight.mail.Send
 import brainflight.mail.DefaultMails
-import models.TimeSpan
 import brainflight.tools.ExtendedTypes._
-import models.Role
+import models.security.Role
 import play.api.data._
 import play.api.data.Forms._
 
@@ -28,7 +25,7 @@ object TaskAdministration extends Controller with Secured {
         "minTime" -> number,
         "maxTime" -> number,
         "maxHard" -> number)(TimeSpan.apply)(TimeSpan.unapply))(
-        TaskType.fromForm)(TaskType.toForm))
+        TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
   val taskForm = Form(
     mapping(
@@ -40,7 +37,7 @@ object TaskAdministration extends Controller with Secured {
   override val DefaultAccessRole = Role("admin")
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.taskList(request.user, Task.findAll, TaskType.findAll))
+    Ok(html.admin.taskList(request.user, Task.findAll))
   }
 
   def types = Authenticated { implicit request =>

@@ -1,7 +1,7 @@
 package brainflight.mail
 
 import views._
-import models.User
+import models.user.User
 import play.api.Play
 
 object DefaultMails {

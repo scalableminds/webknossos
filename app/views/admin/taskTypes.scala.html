@@ -1,4 +1,4 @@
-@(loggedInUser: User, types: List[TaskType], form: Form[TaskType])
+@(loggedInUser: models.user.User, types: List[models.task.TaskType], form: Form[models.task.TaskType])
 
 @main(Some(loggedInUser)){
 	<div class="container">

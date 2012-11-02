@@ -1,4 +1,4 @@
-package models
+package models.task
 
 import com.mongodb.casbah.Imports._
 import models.context._
@@ -25,12 +25,13 @@ import play.api.libs.json.Json
 import play.api.libs.json.Writes
 import models.graph.Tree
 import brainflight.tools.geometry.Scale
+import models.user.User
 
 case class Task(
     dataSetName: String,
     cellId: Int,
     seedIdHeidelberg: Int,
-    taskType: ObjectId,
+    _taskType: ObjectId,
     //requiredPermission: Int,
     start: Point3D,
     priority: Int = 100,
@@ -39,6 +40,9 @@ case class Task(
     experiments: List[ObjectId] = Nil,
     _id: ObjectId = new ObjectId) {
   def id = _id.toString
+  
+  
+  lazy val taskType = TaskType.findOneById(_taskType)
   
   def isFullyAssigned = experiments.size == instances
 }

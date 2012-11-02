@@ -1,4 +1,4 @@
-@(loggedInUser: User, tasks: List[Task], taskTypes: List[TaskType])
+@(loggedInUser: models.user.User, tasks: List[models.task.Task])
 
 @main(Some(loggedInUser)){
   <div class="container">
@@ -23,7 +23,7 @@
           <td> @task.id.drop(10) </td>
           <td> @task.cellId </td>
           <td> @task.seedIdHeidelberg </td>
-          <td> @taskTypes.find(_._id == task.taskType).map(_.summary).getOrElse("") </td>
+          <td> @task.taskType.map(_.summary).getOrElse("") </td>
           <td> @task.dataSetName </td>
           <td> @task.start </td>
           <td> @task.priority </td>

@@ -4,11 +4,11 @@ import play.api.mvc.Controller
 import play.api.mvc.Action
 import brainflight.security.Secured
 import views.html
-import models.User
+import models.user.User
 import controllers.Application
 import brainflight.mail.Send
 import brainflight.mail.DefaultMails
-import models.Role
+import models.security.Role
 
 object UserAdministration extends Controller with Secured {
   override val DefaultAccessRole = Role( "admin" )

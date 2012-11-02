@@ -3,17 +3,17 @@ package controllers
 import play.api.Logger
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import models.BranchPoint
+import models.graph.BranchPoint
 import play.api.mvc._
 import org.bson.types.ObjectId
 import brainflight.tools.Math._
 import brainflight.security.Secured
 import brainflight.tools.geometry.Vector3I
 import brainflight.tools.geometry.Vector3I._
-import models.{ User, TransformationMatrix }
-import models.Role
-import models.Origin
-import models.Experiment
+import models.user.User
+import models.TransformationMatrix
+import models.security._
+import models.task.Experiment
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent.Channel
@@ -21,12 +21,12 @@ import play.api.libs.iteratee.Input
 import play.api.libs.iteratee.Done
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.Comet
-import models.DataSet
+import models.binary.DataSet
 import models.graph.Node
 import models.graph.Edge
 import brainflight.tools.geometry.Point3D
 import brainflight.format.DateFormatter
-import models.UsedExperiments
+import models.task.UsedExperiments
 
 /**
  * scalableminds - brainflight
@@ -82,7 +82,7 @@ object ExperimentController extends Controller with Secured {
         Ok
       } getOrElse BadRequest("Couldn't find DataSet.")
     } else {
-      Experiment.findOneById(id).filter(_.user == user.id).map { exp =>
+      Experiment.findOneById(id).filter(_.user == user._id).map { exp =>
         UsedExperiments.use(user, exp)
         Ok
       } getOrElse BadRequest("Coudln't find experiment.")

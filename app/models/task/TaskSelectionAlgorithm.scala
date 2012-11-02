@@ -1,4 +1,4 @@
-package models
+package models.task
 
 import com.mongodb.casbah.Imports._
 import models.context._

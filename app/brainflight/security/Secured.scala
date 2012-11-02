@@ -1,6 +1,6 @@
 package brainflight.security
 
-import models.User
+import models.user.User
 import play.api.mvc._
 import play.api.mvc.BodyParsers
 import play.api.mvc.Results._
@@ -12,7 +12,8 @@ import play.api.Play.current
 import play.api.libs.iteratee.Input
 import controllers.routes
 import play.api.libs.iteratee.Done
-import models.{ Role, Permission }
+import models.security.Role
+import models.security.Permission
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent
@@ -53,7 +54,7 @@ trait Secured {
   /**
    * Tries to extract the user from a request
    */
-  def maybeUser( implicit request: RequestHeader ): Option[models.User] = {
+  def maybeUser( implicit request: RequestHeader ): Option[User] = {
     for {
       userId <- userId( request )
       user <- User.findOneById( userId )

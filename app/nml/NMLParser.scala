@@ -1,9 +1,9 @@
 package nml
 
 import scala.xml.XML
-import models.DataSet
+import models.binary.DataSet
 import models.graph.{ Tree, Edge }
-import models.Experiment
+import models.task.Experiment
 import models.graph
 import models.Color
 import brainflight.tools.ExtendedTypes._
@@ -13,9 +13,9 @@ import scala.xml.NodeSeq
 import play.api.Logger
 import models.graph.Tree
 import java.io.File
-import models.BranchPoint
+import models.graph.BranchPoint
 import brainflight.tools.geometry.Scale
-import models.User
+import models.user.User
 
 case class NMLContext(user: User)
 

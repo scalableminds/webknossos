@@ -1,4 +1,4 @@
-package models
+package models.graph
 
 import play.api.libs.json.Writes
 import play.api.libs.json.Json

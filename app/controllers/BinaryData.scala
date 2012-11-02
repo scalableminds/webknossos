@@ -17,11 +17,11 @@ import Input.EOF
 import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
 import play.libs.Akka._
-import models.Role
+import models.security.Role
+import models.binary.DataSet
 import brainflight.binary._
 import brainflight.security.Secured
 import brainflight.tools.geometry.{ Point3D, Cuboid }
-import models.DataSet
 import akka.pattern.AskTimeoutException
 import play.api.libs.iteratee.Concurrent.Channel
 import scala.collection.mutable.ArrayBuffer

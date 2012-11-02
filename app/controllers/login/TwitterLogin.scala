@@ -59,8 +59,8 @@ object TwitterLogin extends Controller {
         val name = ( response.json \ "name" ).as[String]
         val email = ( response.json \ "screen_name" ).as[String] + "@TWITTER"
         
-        val user = models.User.authRemote( email, "twitter" ) getOrElse (
-          models.User.createRemote( email, name, "twitter" ) )
+        val user = models.user.User.authRemote( email, "twitter" ) getOrElse (
+          models.user.User.createRemote( email, name, "twitter" ) )
           
         Redirect( controllers.routes.Application.index() ).withSession( Secured.createSession(user) )
       } )

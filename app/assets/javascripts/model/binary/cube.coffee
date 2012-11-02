@@ -7,11 +7,9 @@ class Cube
   cube : null
   cubeSize : null
   cubeOffset : null
-  # TODO
-  ready : false
 
   # Constants
-  BUCKET_LENGTH : 32 * 32 * 16 # TODO
+  BUCKET_LENGTH : 32 * 32 * 32
   BUCKET_SIZE_P : 5
   ZOOM_STEP_COUNT : 4
 
@@ -22,14 +20,14 @@ class Cube
 
 
   # TODO: needed?
-  getBucketByAddress : (bucket) ->
+  #getBucketByAddress : (bucket) ->
 
-    bucketIndex = @getBucketIndexByAddress(bucket)
+  #  bucketIndex = @getBucketIndexByAddress(bucket)
 
-    if bucketIndex?
-      @cube[bucketIndex]
-    else
-      undefined
+  #  if bucketIndex?
+  #    @cube[bucketIndex]
+  #  else
+  #    undefined
 
 
   getBucketIndexByAddress : ([bucket_x, bucket_y, bucket_z]) ->

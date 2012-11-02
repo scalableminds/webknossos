@@ -75,21 +75,32 @@ $.fn.alertWithTimeout = (timeout = 3000) ->
         $this = $(this)
         $this.alert()
         timerId = -1
-        $this.on 
-            "mouseover" : -> clearTimeout(timerId)
-            "mouseout" : -> 
+
+        $this.hover(
+            ->
+                clearTimeout(timerId)
+            -> 
                 timerId = setTimeout(
                     -> $this.alert("close")
                     timeout
                 )
-        $this.mouseout()
+        )
+        $(window).one "mousemove", -> $this.mouseout()
 
-toastMessage = (type, message) ->
 
-    $messageElement = $("<div>", class : "alert alert-#{type} fade in").text(message)
-    $messageElement.append($("<a>", class : "close", "data-dismiss" : "alert", href : "#").html("&times;"))
-    $messageElement.alertWithTimeout()
+toastMessage = (type, message, sticky = false) ->
+
+    $messageElement = $("<div>", class : "alert alert-#{type} fade in").html(message)
+    $messageElement.prepend($("<a>", class : "close", "data-dismiss" : "alert", href : "#").html("&times;"))
+    if sticky
+        $messageElement.alert()
+    else
+        $messageElement.alertWithTimeout()
     $("#alert-container").append($messageElement)
+
+
+toastSuccess = (message, sticky) -> toastMessage("success", message, sticky)
+toastError = (message, sticky = true) -> toastMessage("error", message, sticky)
 
 
 # ------------------------------------- INIT APP
@@ -99,51 +110,71 @@ $ -> # document is ready!
         window.open(this.href, "_blank", "width=700,height=470,location=no,menubar=no")
         e.preventDefault()
 
+    $("#user-administration").each ->
+
+        $(this).find(".verify-button").click (event) ->
+
+            event.preventDefault()
+            $this = $(this)
+            $.ajax(url : this.href).then(
+                -> 
+                    toastSuccess("Successfully verified \"#{$this.parents("tr").data("name")}\".")
+                    $this.html("<i class=\"icon-ok\"></i>")
+                ->
+                    toastError("Couldn't verify user :-/")
+            )
+
 
     $("#task-selection-algoritm").each ->
 
         $this = $(this)
+        $form = $this.find("form")
+        $submitButton = $this.find("[type=submit]")
 
         editor = ace.edit("editor")
         editor.setTheme("ace/theme/twilight");
         editor.getSession().setMode("ace/mode/javascript");
 
-        submitButton = $this.find("[type=submit]")
 
         editor.on "change", ->
 
             try
                 new Function(editor.getValue())
-                submitButton.removeClass("disabled").popover("destroy")
+                $submitButton.removeClass("disabled").popover("destroy")
+
             catch error                
-                submitButton.addClass("disabled")
-                submitButton.popover(
+                $submitButton.addClass("disabled")
+                $submitButton.popover(
                     placement : "left"
                     title : "No good code. No save."
                     content : error.toString()
                     trigger : "hover"
                 )
 
-        editor._emit("change")
+        editor._emit("change") # init
      
-        $this.submit (event) ->
+        $form.submit (event) ->
 
             event.preventDefault()
 
-            return if $this.find("[type=submit]").hasClass("disabled")
+            return if $submitButton.hasClass("disabled")
 
             code = editor.getValue()
 
-            $this.find("[name=code]").val(code)
+            $form.find("[name=code]").val(code)
 
             $.ajax(
                 url : this.action
-                data : $this.serialize()
+                data : $form.serialize()
                 type : "POST"
             ).then(
                 -> 
-                    toastMessage("success", "Saved!")
+                    toastSuccess("Saved!")
                 ->
-                    toastMessage("error" ,"Sorry, we couldn't save your code. Please double check your syntax.\nOtherwise, please copy your code changes and reload this page.")
+                    toastError(
+                        """Sorry, we couldn't save your code. Please double check your syntax.<br/>
+                        Otherwise, please copy your code changes and reload this page."""
+                        true
+                    )
             )
 

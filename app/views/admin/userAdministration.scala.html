@@ -1,7 +1,7 @@
 @(loggedInUser: models.user.User, users: List[models.user.User])
 
 @main(Some(loggedInUser)){
-  <div class="container">
+  <div id="user-administration" class="container">
     @users.groupBy( _.roles).map{ case (roles, us) => 
       <h3> Roles: @roles </h3> 
       <table class="table table-striped">
@@ -16,14 +16,14 @@
         </thead>
         <tbody>
           @us.map{ user =>
-           <tr> 
+           <tr data-name="@user.name" data-id="@user.id"> 
              <td> @user.name </td> 
              <td> @user.email </td>
              <td> @user.roles </td>
              <td> @if(user.verified) {            
                <i class="icon-ok"></i>
              } else {
-               <a href="@controllers.admin.routes.UserAdministration.verifyUser(user.id)"> verify </a>
+               <a href="@controllers.admin.routes.UserAdministration.verifyUser(user.id)" class="verify-button"> verify </a>
              }
              </td>
              <td> 

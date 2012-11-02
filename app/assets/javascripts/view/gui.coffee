@@ -185,8 +185,8 @@ class Gui
     @model.User.Configuration.pushImpl()
     @model.Route.pushImpl()
       .then( 
-        -> toastMessage("success", "Saved!")
-        -> toastMessage("error", "Couldn't save. Please try again.")
+        -> toastSuccess("Saved!")
+        -> toastError("Couldn't save. Please try again.")
       )
 
   setPosFromString : (posString) =>

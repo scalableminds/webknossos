@@ -18,12 +18,11 @@ class CameraController
   # The Sceleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
   # View. It provides methods to set a certain View (animated).
 
-  constructor : (cameras, lights, flycam, model, upperBoundary) ->
+  constructor : (cameras, lights, flycam, model) ->
     @cameras       = cameras
     @lights        = lights
     @flycam        = flycam
     @model         = model
-    @upperBoundary = upperBoundary
 
     @updateCamViewport()
     @cameras[VIEW_3D].near = -100000
@@ -49,30 +48,33 @@ class CameraController
     # CORRECTION: You're telling lies, you need to use the up vector...
 
     camera = @cameras[VIEW_3D]
-    b = @upperBoundary
+    b = @model.Route.data.dataSet.upperBoundary
     time = 800
     @tween = new TWEEN.Tween({  middle: new THREE.Vector3(b[0]/2, b[1]/2, b[2]/2), upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera, flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
     switch id
       when VIEW_3D
         scale = Math.sqrt(b[0]*b[0]+b[1]*b[1])/1.8
-        @tween.to({  x: b[0]*0.8, y: b[1], z: b[2] / 5, upX: 0, upY: 0, upZ: -1, l: -scale+scale*(b[0]/ (b[0]+b[1])-0.5), r: scale+scale*(b[0]/(b[0]+b[1])-0.5), t: scale-scale*0.1, b: -scale-scale*0.1}, time)
+        # Calulate the x coordinate so that the vector from the camera to the cube's middle point is
+        # perpendicular to the vector going from (0, b[1], 0) to (b[0], 0, 0).
+        x = b[1] * b[1] / (2 * b[0]) + b[0] / 2
+        @tween.to({  x: x, y: b[1], z: b[2] * 0.1, upX: 0, upY: 0, upZ: -1, l: -scale, r: scale, t: scale-scale*0.1, b: -scale-scale*0.1}, time)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)
       when PLANE_XY
-        scale = (Math.max b[0], b[1])/1.75
+        scale = (Math.max b[0], b[1] * 1.12)/1.75
         @tween.to({  x: b[0]/2, y: b[1]/2, z: 0, upX: 0, upY: -1, upZ: 0, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (-90, 0, 90) -> (-90, 0, 0)
       when PLANE_YZ
-        scale = (Math.max b[1], b[2])/1.75
+        scale = (Math.max b[1] * 1.12, b[2])/1.75
         @tween.to({  x: b[0], y: b[1]/2, z: b[2]/2, upX: 0, upY: -1, upZ: 0, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
         .onUpdate(@updateCameraPrev)
         .start()
         #rotation: (0, 90, 0) -> (-90, 90, 0)
       when PLANE_XZ
-        scale = (Math.max b[0], b[2])/1.75
+        scale = (Math.max b[0], b[2] * 1.12)/1.75
         @tween.to({  x: b[0]/2, y: b[1], z: b[2]/2, upX: 0, upY: 0, upZ: -1, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
         .onUpdate(@updateCameraPrev)
         .start()

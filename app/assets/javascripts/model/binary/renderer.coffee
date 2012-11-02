@@ -18,8 +18,9 @@ class Renderer
 
   # Constants
   MAP_SIZE : 85 # 4⁰ + 4¹ + 4² + 4³
-  #DELTA : [9, 4, 0]
-  #REPEAT : [0, 0, 1]
+  DELTA : [9, 4, 0]
+  REPEAT : [0, 0, 1]
+
   RECURSION_PLACEHOLDER : {}
   
   constructor : () ->

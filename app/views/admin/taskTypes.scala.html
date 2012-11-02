@@ -1,0 +1,43 @@
+@(loggedInUser: User, types: List[TaskType], form: Form[TaskType])
+
+@main(Some(loggedInUser)){
+	<div class="container">
+    <h3>Task types</h3>
+    <div class="well">
+      @helper.form(controllers.admin.routes.TaskAdministration.createType, 'class -> "form-horizontal") {
+        <input type="text" placeholder="Summary" name="summary">
+        <input type="text" placeholder="Description" name="description">
+        <input type="text" placeholder="Expected Time (min)" name="expectedTime.minTime">
+        <input type="text" placeholder="Expected Time (max)" name="expectedTime.maxTime">
+        <input type="text" placeholder="Time Limit" name="expectedTime.maxHard">
+        <button type="submit" class="btn btn-primary">Create</button>
+      }
+    </div>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th> # </th>
+          <th> Summary </th>
+          <th> Description </th>
+          <th> Expected Time </th>
+          <th> Attached File </th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+	    @types.map{ tiepe => 
+	      <tr>
+	        <td> @tiepe.id </td>
+	        <td> @tiepe.summary </td>
+          <td> @tiepe.description </td>
+          <td> @tiepe.expectedTime </td>
+          <td> @tiepe.fileName.getOrElse("") </td>
+          <td> 
+            <a href="#TODO"><i class="icon-trash"></i> delete </a>
+          </td>
+	      </tr>
+	    }
+      </tbody>
+    </table>
+  </div>
+}

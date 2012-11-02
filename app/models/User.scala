@@ -19,10 +19,9 @@ case class User(
     name: String,
     verified: Boolean = false,
     pwdHash: String = "",
-    experiments: List[ObjectId] = Nil,
     loginType: String = "local",
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
-    roles: List[String] = "user" :: Nil,
+    roles: Set[String] = Set.empty,
     permissions: List[Permission] = Nil,
     _id: ObjectId = new ObjectId ) {
 
@@ -68,18 +67,22 @@ object User extends BasicDAO[User]( "users" ) {
       if verifyPassword( password, user.pwdHash )
     } yield user
 
-  def create( email: String, name: String, password: String = "", experiments: List[ObjectId] = List()) = {
-    val user = User( email, name, false, hashPassword( password ), experiments )
+  def create( email: String, name: String, password: String = "") = {
+    val user = User( email, name, false, hashPassword( password ) )
     insert( user )
     user
   }
     
-  def verify( validationKey: String) = {
-    ValidationKey.findOneByKey( validationKey ).map{ user =>
-      ValidationKey.remove( validationKey )
-      save( user.copy( verified = true ) )
-      true
-    } getOrElse false
+  def verify( user: User ) = {
+    val alteredUser = user.copy( verified = true, roles = user.roles + "user" )
+    save( alteredUser )
+    alteredUser
+  }
+  
+  def addRole( user: User, role: String) = {
+    val alteredUser = user.copy( roles = user.roles + role )
+    save( alteredUser )
+    alteredUser    
   }
 
   def createRemote( email: String, name: String, loginType: String ) = {

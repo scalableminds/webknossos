@@ -1,0 +1,65 @@
+@(form: Form[(String, String)])(implicit flash: Flash)
+
+@main( None, false ){
+    
+  <div class="container">
+    <div class="span7 offset2 space-top">
+      <div class="well">
+        
+        @helper.form(routes.Application.authenticate, 'class -> "form-horizontal") {
+        
+          <legend>Login</legend>
+
+          @form.globalError.map { error =>
+            <div class="alert alert-error">
+              @error.message
+            </div>
+          }
+          
+          @flash.get("success").map { message =>
+            <div class="alert alert-success">
+              @message
+            </div>
+          }
+
+          <!-- 
+            <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
+            <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
+          -->
+          <div class="control-group">
+            <label class="control-label" for="loginEmail">Email</label>
+            <div class="controls">
+              <input id="loginEmail" type="email" name="email" placeholder="Email" value="@form("email").value">
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="loginPassword">Password</label>
+            <div class="controls">
+              <input id="loginPassword" type="password" name="password" placeholder="Password">
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="controls">
+              <p>
+                <button type="submit" class="btn btn-primary">Login</button>
+              </p>
+              <p>
+                <a href="@routes.Application.register">Sign Up</a><br />
+                <!-- <a href="#">Password Lost</a> -->
+              </p>
+            </div>
+          </div>        
+        }
+      </div>
+      <p><small>Logo credits: <a href="http://thenounproject.com/noun/shamrock/#icon-No1195" target="_blank">Shamrock</a> designed by <a href="http://thenounproject.com/legologic" target="_blank">John O&#39;Shea</a> from The Noun Project</small></p>
+    </div>
+    <!--
+    <p class="note">
+      Try <em>scmboy@@scalableminds.com</em> with <em>secret</em> as password.
+    </p>
+    -->
+  </div>
+}
+  
+
+

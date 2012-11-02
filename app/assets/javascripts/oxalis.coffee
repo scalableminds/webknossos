@@ -1,4 +1,5 @@
 require.config 
+
   baseUrl : "/assets/javascripts"
   locale  : "de-de"
   paths : 
@@ -21,10 +22,11 @@ require.config
     "underscore" :
       exports : "_"
 
-require [
+define [
   "jquery" 
   "controller"
   "core_ext"
 ], ($, Controller) ->
 
-  controller = new Controller()
+  window.oxalis = new Controller()
+  return

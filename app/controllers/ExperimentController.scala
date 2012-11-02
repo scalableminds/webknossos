@@ -27,6 +27,7 @@ import models.graph.Edge
 import brainflight.tools.geometry.Point3D
 import brainflight.format.DateFormatter
 import models.task.UsedExperiments
+import models.user.TimeTracking
 
 /**
  * scalableminds - brainflight
@@ -101,6 +102,7 @@ object ExperimentController extends Controller with Secured {
   def update(experimentId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
     (request.body).asOpt[Experiment].map { exp =>
       Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
+      TimeTracking.logUserAction(request.user)
       Ok
     } getOrElse (BadRequest("Update for experiment with id '%s' failed.".format(experimentId)))
   }

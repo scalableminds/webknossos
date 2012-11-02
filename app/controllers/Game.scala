@@ -10,6 +10,7 @@ import play.api.Logger
 import models.task.Experiment
 import models.user._
 import models.task.UsedExperiments
+import views._
 
 object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -17,6 +18,20 @@ object Game extends Controller with Secured {
   def createExperimentIDInfo(experimentId: String) = Json.obj(
     "task" -> Json.obj(
       "id" -> experimentId))
+      
+  def index = Authenticated { implicit request =>      
+    Ok(html.oxalis.trace(request.user))
+  }
+  
+  def trace(experimentId: String) = Authenticated { implicit request =>
+    val user = request.user
+    
+    Experiment.findOneById(experimentId)
+      .filter( _.user == user._id)
+      .map(exp => UsedExperiments.use(user, exp))
+      
+    Ok(html.oxalis.trace(user))
+  }
 
   def initialize = Authenticated { implicit request =>
     val user = request.user

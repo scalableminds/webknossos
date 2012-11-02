@@ -1,0 +1,7 @@
+@(errorMessage: String, loggedInUser: Option[models.user.User] = None)
+
+@main(loggedInUser){
+	<div class="container">
+		@errorMessage
+	</div>
+}

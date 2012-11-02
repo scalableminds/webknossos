@@ -28,11 +28,6 @@ object UserController extends Controller with Secured {
       
     Ok(html.user.dashboard(user, tempExperiments, userTasks, loggedTime))
   }
-  
-  def logTime(time: Int) = Authenticated{ implicit request =>
-    TimeTracking.logTime(request.user, time)
-    Ok
-  }
 
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {
     implicit request =>

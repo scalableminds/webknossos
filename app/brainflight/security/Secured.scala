@@ -98,7 +98,7 @@ trait Secured {
            if ( hasAccess( user, role, permission ) ) 
              f(AuthenticatedRequest(user, request))
            else
-             Forbidden("You don't have enought rights to view this page.")
+             Forbidden(views.html.error.defaultError("You don't have enough permissions to access this site. Sorry :( \n If you recently registered, contact an admin to verify your account.",Some(user)))
         }.getOrElse( onUnauthorized(request) )      
     }
   }

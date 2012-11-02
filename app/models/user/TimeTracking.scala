@@ -7,46 +7,63 @@ import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
 import java.util.Date
 import java.util.Calendar
+import akka.util.duration._
 
-case class TimeEntry(time: Int, created: Date)
+case class TimeEntry(time: Long, timestamp: Long) {
+  val created = {
+    new Date(timestamp)
+  }
+}
 
-case class PaymentInterval(month: Int, year: Int)
+case class PaymentInterval(month: Int, year: Int){
+  override def toString = "%d/%d".format(month, year)
+}
 
 case class TimeTracking(user: ObjectId, timeEntries: List[TimeEntry], _id: ObjectId = new ObjectId) {
-  def logTime(time: Int) = {
-    val entry = TimeEntry(time, new Date())
-    copy(timeEntries = entry :: timeEntries)
-  }
 
   def sum(from: Date, to: Date) = {
-    timeEntries.filter(t => t.created.after(from) && t.created.before(to)).foldLeft(0)(_ + _.time)
+    timeEntries.filter(t => t.created.after(from) && t.created.before(to)).foldLeft(0L)(_ + _.time)
   }
 
   def splitIntoMonths = {
     val cal = Calendar.getInstance
     timeEntries.groupBy { t =>
       cal.setTime(t.created)
-      PaymentInterval(cal.get(Calendar.MONTH),cal.get(Calendar.YEAR))
+      PaymentInterval(cal.get(Calendar.MONTH) + 1, cal.get(Calendar.YEAR))
     }.map {
-      case (pI, entries) => (pI, entries.foldLeft(0)(_ + _.time))
+      case (pI, entries) => (pI, entries.foldLeft(0L)(_ + _.time) millis)
     }
   }
 }
 
 object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
-
-  def emptyTracking(user: User) = TimeTracking(user._id, Nil)
+  import akka.util.duration._
+  val MAX_PAUSE = (5 minutes).toMillis
   
+  def emptyTracking(user: User) = TimeTracking(user._id, Nil)
+
   def loggedTime(user: User) = {
     findOneByUser(user).map(_.splitIntoMonths)
   }
 
-  def findOneByUser(user: User) = 
+  def findOneByUser(user: User) =
     findOne(MongoDBObject("user" -> user._id))
-  
-  def logTime(user: User, time: Int) = {
-    findOneByUser(user)
-      .orElse(Some(emptyTracking(user)))
-      .map(tt => save(tt.logTime(time)))
+
+  def logUserAction(user: User) = {
+    val current = System.currentTimeMillis
+    findOneByUser(user) match {
+      case Some(timeTracker) =>
+        timeTracker.timeEntries match{
+          case lastEntry :: tail if current - lastEntry.timestamp < MAX_PAUSE =>
+            val entry = TimeEntry(lastEntry.time + current - lastEntry.timestamp, current )
+            alterAndSave(timeTracker.copy(timeEntries = entry :: tail))
+          case _ =>
+            val entry = TimeEntry(0, current)
+            alterAndSave(timeTracker.copy(timeEntries = entry :: timeTracker.timeEntries))
+        }
+      case _ =>
+        val entry = TimeEntry(0, current)
+        alterAndInsert(TimeTracking(user._id, List(entry)))
+    }
   }
 }

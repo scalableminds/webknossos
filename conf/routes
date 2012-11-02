@@ -3,9 +3,9 @@
 # ~~~~
 
 # The general pages
-GET     /                                   controllers.Application.index
-GET     /trace/:experimentId                controllers.Application.trace(experimentId: String)
-GET     /dash                               controllers.UserController.dashboard
+GET     /                                   controllers.Game.index
+GET     /trace/:experimentId                controllers.Game.trace(experimentId: String)
+GET     /dashboard                          controllers.UserController.dashboard
 
 # Jira integration
 GET     /jira                               controllers.Jira.index

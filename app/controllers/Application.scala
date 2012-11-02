@@ -25,20 +25,6 @@ object Application extends Controller with Secured {
 
   val Mailer = Akka.system.actorOf(Props[Mailer], name = "mailActor")
 
-  def index = Authenticated { implicit request =>      
-    Ok(html.oxalis.trace(request.user))
-  }
-  
-  def trace(experimentId: String) = Authenticated { implicit request =>
-    val user = request.user
-    
-    Experiment.findOneById(experimentId)
-      .filter( _.user == user._id)
-      .map(exp => UsedExperiments.use(user, exp))
-      
-    Ok(html.oxalis.trace(user))
-  }
-
   val registerForm: Form[(String, String, String)] = {
     def registerFormApply(user: String, name: String, password: Tuple2[String, String]) =
       (user, name, password._1)
@@ -74,7 +60,7 @@ object Application extends Controller with Secured {
           case (email, name, password) => {
             val user = User.create(email, name, password)
             Mailer ! Send(DefaultMails.registerMail(name, email))
-            Redirect(routes.Application.index)
+            Redirect(routes.Game.index)
               .flashing("success" -> "Thanks for your registration!")
               .withSession(Secured.createSession(user))
           }
@@ -107,7 +93,7 @@ object Application extends Controller with Secured {
           BadRequest(html.user.login(formWithErrors)),
         userForm => {
           val user = User.findLocalByEmail(userForm._1).get
-          Redirect(routes.Application.index)
+          Redirect(routes.Game.index)
             .withSession(Secured.createSession(user))
         })
   }

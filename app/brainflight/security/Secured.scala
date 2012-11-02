@@ -97,7 +97,7 @@ trait Secured {
            if ( hasAccess( user, role, permission ) ) 
              f(AuthenticatedRequest(user, request))
            else
-             Forbidden
+             Forbidden("You don't have enought rights to view this page.")
         }.getOrElse( onUnauthorized(request) )      
     }
   }

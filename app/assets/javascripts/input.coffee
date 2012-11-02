@@ -1,5 +1,5 @@
 ### define
-libs/keyboard.0.2.2.min : KeyboardJS
+libs/keyboard : KeyboardJS
 libs/mouse : MouseLib
 libs/gamepad : GamepadJS
 ###
@@ -25,12 +25,19 @@ Input = {}
 class Input.KeyboardNoLoop
 
   constructor : (bindings) ->
+
     for own key, callback of bindings
       @attach(key, callback)
+
 
   attach : (key, callback) ->
 
     KeyboardJS.bind.key(key, callback)
+
+
+  unbind : ->
+
+    KeyboardJS.unbind.key "all"
 
 
 # This module is "main" keyboard handler. 
@@ -46,11 +53,12 @@ class Input.Keyboard
     for own key, callback of bindings
       @attach(key, callback)
 
+
   attach : (key, callback) ->
 
     KeyboardJS.bind.key(
       key
-      (evt) =>
+      (evt, keys, key2) =>
         # When first pressed, insert the callback into
         # keyCallbackMap and start the buttonLoop.
         # Then, ignore any other events fired from the operating
@@ -58,6 +66,7 @@ class Input.Keyboard
         # When control key is pressed, everything is ignored, because
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
+        console.log key2 + " down"
         unless @keyCallbackMap[key]?
           if not evt.ctrlKey
             @keyPressedCount++ 
@@ -65,23 +74,32 @@ class Input.Keyboard
             @buttonLoop() if @keyPressedCount == 1
 
         return
-      =>
+      (evt, keys, key2) =>
+        activeKeys = KeyboardJS.activeKeys()
+        console.log key2 + " up"
+        #for key of @keyCallbackMap
+        #  if activeKeys.indexOf(key) < 0
+        #    delete @keyCallbackMap[key]
         if @keyCallbackMap[key]?
           @keyPressedCount--
           delete @keyCallbackMap[key]
         return
     )
 
+
   # In order to continously fire callbacks we have to loop
   # through all the buttons that a marked as "pressed".
   buttonLoop : ->
+
     if @keyPressedCount > 0
       for own key, callback of @keyCallbackMap
         callback()
 
       setTimeout( (=> @buttonLoop()), @delay ) 
 
+
   unbind : ->
+
     KeyboardJS.unbind.key "all"
 
 

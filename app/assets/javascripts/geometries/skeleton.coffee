@@ -9,6 +9,8 @@ PLANE_YZ = 1
 PLANE_XZ = 2
 VIEW_3D  = 3
 
+TYPE_BRANCH = 1
+
 COLOR_NORMAL = 0xff0000
 COLOR_ACTIVE = 0x0000ff
 COLOR_BRANCH = 0x550000
@@ -132,6 +134,8 @@ class Skeleton
             @curIndex[index]++
         @routes[index].geometry.verticesNeedUpdate = true
         @nodes[index].geometry.verticesNeedUpdate = true
+    for branchPoint in @model.Route.branchStack
+      @setBranchPoint(true, branchPoint.id)
     @setActiveNode()
 
   setActiveNode : =>
@@ -147,7 +151,7 @@ class Skeleton
       # Hide activeNodeSphere, because activeNode is visible anyway
       if @activeNodeSphere
         @activeNodeSphere.visible = false
-        if @activeNodeSphere.material.color.getHex() == COLOR_BRANCH
+        if @model.Route.getActiveNodeType() == TYPE_BRANCH
           @activeNode.material.color.setHex(COLOR_BRANCH_ACTIVE)
         else
           @activeNode.material.color.setHex(COLOR_ACTIVE)
@@ -158,12 +162,17 @@ class Skeleton
       @activeNode.visible = false
     @flycam.hasChanged = true
 
-  setBranchPoint : (isBranchPoint) ->
+  setBranchPoint : (isBranchPoint, nodeID) ->
     colorActive = if isBranchPoint then COLOR_BRANCH_ACTIVE else COLOR_ACTIVE
     colorNormal = if isBranchPoint then COLOR_BRANCH else COLOR_NORMAL
-    @activeNode.material.color.setHex(colorActive)
-    if @activeNodeSphere
-      @activeNodeSphere.material.color.setHex(colorNormal)
+    if not nodeID? or nodeID == @model.Route.getActiveNodeId()
+      @activeNode.material.color.setHex(colorActive)
+      if @activeNodeSphere
+        @activeNodeSphere.material.color.setHex(colorNormal)
+    else
+      sphere = @getSphereFromId(nodeID)
+      if sphere?
+        sphere.material.color.setHex(colorNormal)
     @flycam.hasChanged = true
 
   setNodeRadius : (value) ->

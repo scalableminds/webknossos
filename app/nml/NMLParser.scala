@@ -14,8 +14,11 @@ import models.graph.Tree
 import java.io.File
 import models.BranchPoint
 import brainflight.tools.geometry.Scale
+import models.User
 
-class NMLParser(file: File) {
+case class NMLContext(user: User)
+
+class NMLParser(file: File)(implicit ctx: NMLContext) {
   val DEFAULT_EDIT_POSITION = Point3D(0, 0, 0)
   val DEFAULT_TIME = 0
   val DEFAULT_ACTIVE_NODE_ID = 1
@@ -36,7 +39,7 @@ class NMLParser(file: File) {
       val time = parseTime(parameters \ "time")
       val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
       val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
-      Experiment(dataSetName.text, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
+      Experiment(ctx.user._id, dataSetName.text, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
     }
   }
 

@@ -56,10 +56,6 @@ object TaskHandling extends Controller with Secured {
     }
   }
 
-  def listTasks = Authenticated { implicit request =>
-    Ok(Json.toJson(Task.findAll))
-  }
-
   def listAlgorithms = Authenticated { implicit request =>
     Ok(Json.toJson(TaskSelectionAlgorithm.findAll))
   }

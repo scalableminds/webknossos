@@ -2,8 +2,8 @@
 
 @main(Some(loggedInUser)){
   <div id="user-administration" class="container">
-    @users.groupBy( _.roles).map{ case (roles, us) => 
-      <h3> Roles: @roles </h3> 
+    @users.groupBy( _.roles).toList.sortBy(_._1.size).map{ case (roles, us) => 
+      <h3> Roles: @roles.mkString(", ") </h3> 
       <table class="table table-striped">
         <thead>
           <tr>
@@ -19,7 +19,7 @@
            <tr data-name="@user.name" data-id="@user.id"> 
              <td> @user.name </td> 
              <td> @user.email </td>
-             <td> @user.roles </td>
+             <td> @user.roles.mkString(", ") </td>
              <td> @if(user.verified) {            
                <i class="icon-ok"></i>
              } else {

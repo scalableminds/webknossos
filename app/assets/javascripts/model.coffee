@@ -15,6 +15,6 @@ class Model
 
   constructor : (options) ->
 
-    @binary = Binary(options.dataSet.id)
+    @binary = new Binary(options.dataSet.id)
     #@route = new Route()
     #@user = new User()

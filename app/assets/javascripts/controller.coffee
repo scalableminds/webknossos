@@ -3,16 +3,17 @@ jquery : $
 underscore : _
 model : Model
 view : View
-input : Input
-helper : Helper
-geometries/plane : Plane
-controller/cameracontroller : CameraController
-controller/scenecontroller : SceneController
-view/gui : Gui
 libs/request : Request
-libs/event_mixin : EventMixin
 libs/flycam2 : Flycam
 ###
+
+#input : Input
+#helper : Helper
+#geometries/plane : Plane
+#controller/cameracontroller : CameraController
+#controller/scenecontroller : SceneController
+#view/gui : Gui
+#libs/event_mixin : EventMixin
 
 PLANE_XY         = 0
 PLANE_YZ         = 1
@@ -33,13 +34,12 @@ class Controller
 
       # create Model
       @model = new Model(options)
+      @flycam = new Flycam(VIEWPORT_SIZE, @model)
+      @view  = new View(@model, @flycam)
       
       return
 
   foo : ->
-
-    @flycam = new Flycam(VIEWPORT_SIZE, @model)
-    @view  = new View(@model, @flycam)
 
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)

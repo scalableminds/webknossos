@@ -23,7 +23,7 @@ require.config
       exports : "_"
 
 define [
-  "jquery" 
+  "jquery"
   "controller"
   "core_ext"
 ], ($, Controller) ->

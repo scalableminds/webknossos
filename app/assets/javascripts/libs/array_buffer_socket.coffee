@@ -1,5 +1,5 @@
 ### define
-libs/request : Requester
+libs/request : Request
 ###
 
 class ArrayBufferSocket
@@ -44,6 +44,7 @@ class ArrayBufferSocket
 
 class ArrayBufferSocket.WebSocket
 
+  # Constants
   OPEN_TIMEOUT : 500
   MESSAGE_TIMEOUT : 20000
 
@@ -171,15 +172,13 @@ class ArrayBufferSocket.XmlHttpRequest
 
   send : (data) ->
 
-    console.log "REQUEST: ", data
     data = new @requestBufferType(data) if _.isArray(data)
-    Requester(
+    Request.send(
       data : data
       url : @url
       dataType : 'arraybuffer'
     ).pipe (buffer) =>
 
-      #TODO
       if buffer
         console.log "RESPONSE: ", buffer, buffer.byteLength
         new @responseBufferType(buffer)

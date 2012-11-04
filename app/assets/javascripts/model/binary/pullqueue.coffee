@@ -5,20 +5,23 @@ libs/array_buffer_socket : ArrayBufferSocket
 
 class PullQueue
 
-  queue : []
-  cube : null
-
-  dataSetId : ""
-  batchCount : 0
-  roundTripTime : 0
-
   # Constants
   BATCH_LIMIT : 5
   BATCH_SIZE : 5
   ROUND_TRIP_TIME_SMOOTHER : .125
 
+  cube : null
+  queue : []
+
+  dataSetId : ""
+
+  batchCount : 0
+  roundTripTime : 0
+
+  
   constructor : (@dataSetId, @cube) ->
-    console.log @cube
+    
+    null
 
 
   swap : (a, b) ->
@@ -53,10 +56,6 @@ class PullQueue
 
 
   insert : (bucket, priority) ->
-
-    # First attempt to do some preloading
-#    if priority > 50 and bucket[3] < 3
-#      @insert([bucket[0] >> 1, bucket[1] >> 1, bucket[2] >> 1], bucket[3]+1, priority-50)
 
     # Buckets with a negative priority are not loaded
     return unless priority >= 0
@@ -120,7 +119,7 @@ class PullQueue
         zoomStep
         bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P),
         bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P),
-        bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P - 1)  # TODO
+        bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
       )
 
     # Measuring the time until response arrives to select appropriate preloading strategy 
@@ -139,14 +138,14 @@ class PullQueue
 
               bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
               @cube.setBucketByZoomedAddress(bucket, bucketData)
-              console.log "Success: ", bucket
+              #console.log "Success: ", bucket
 
         =>
           
           for bucket in batch
 
             @cube.setBucketByZoomedAddress(bucket, null)
-            console.log "Failed: ", bucket
+            #console.log "Failed: ", bucket
     
     ).always =>
 
@@ -160,14 +159,13 @@ class PullQueue
       roundTripTime
     else
       (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
-    console.log @roundTripTime
+
 
   getLoadBucketSocket : _.once ->
     
     new ArrayBufferSocket(
       senders : [
-        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array

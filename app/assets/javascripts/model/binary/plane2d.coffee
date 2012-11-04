@@ -1,5 +1,6 @@
 ### define
 model/binary/cube : Cube
+model/binary/pullqueue : Queue
 ###
 
 
@@ -29,6 +30,7 @@ class Plane2D
   v : 0
   w : 0
   cube : null
+  queue : null
 
   layer : 0
   zoomStep : 0
@@ -39,13 +41,20 @@ class Plane2D
   changed : true
 
 
-  constructor : (@u, @v, @w, @cube) ->
+  constructor : (@u, @v, @w, @cube, @queue) ->
 
     null
 
 
-  get : (position, zoomStep, area) ->
+  ping : (position, zoomStep) ->
 
+    @cube.extendByBucketAddressExtent([0, 0, 0], [7, 7, 7])
+    @queue.insert [0, 0, 0, zoomStep], zoomStep*2
+
+
+  get : (position, options) ->
+
+    return options + 1
     # TODO
     unless @cube.ready
       return null

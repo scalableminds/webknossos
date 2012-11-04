@@ -4,14 +4,14 @@ libs/event_mixin : EventMixin
 
 class Cube
 
-  cube : null
-  cubeSize : null
-  cubeOffset : null
-
   # Constants
   BUCKET_LENGTH : 32 * 32 * 32
   BUCKET_SIZE_P : 5
   ZOOM_STEP_COUNT : 4
+
+  cube : null
+  cubeSize : null
+  cubeOffset : null
 
 
   constructor : () ->
@@ -19,30 +19,22 @@ class Cube
     _.extend(@, new EventMixin())
 
 
-  # TODO: needed?
-  #getBucketByAddress : (bucket) ->
-
-  #  bucketIndex = @getBucketIndexByAddress(bucket)
-
-  #  if bucketIndex?
-  #    @cube[bucketIndex]
-  #  else
-  #    undefined
-
-
   getBucketIndexByAddress : ([bucket_x, bucket_y, bucket_z]) ->
 
     { cubeOffset, cubeSize } = @
 
+    return undefined unless cubeOffset? and cubeSize?
+
     if bucket_x >= cubeOffset[0] and bucket_x < cubeOffset[0] + cubeSize[0] and
-    bucket_y >= cubeOffset[1] and bucket_y < cubeOffset[1] + cubeSize[1] and
-    bucket_z >= cubeOffset[2] and bucket_z < cubeOffset[2] + cubeSize[2]
+       bucket_y >= cubeOffset[1] and bucket_y < cubeOffset[1] + cubeSize[1] and
+       bucket_z >= cubeOffset[2] and bucket_z < cubeOffset[2] + cubeSize[2]
     
       (bucket_x - cubeOffset[0]) * cubeSize[2] * cubeSize[1] +
       (bucket_y - cubeOffset[1]) * cubeSize[2] + 
       (bucket_z - cubeOffset[2])
     
     else
+
       undefined
 
 
@@ -60,7 +52,7 @@ class Cube
 
     bucketIndex = @getBucketIndexByAddress(bucket)
 
-    if @cube[bucketIndex]
+    if bucketIndex? and @cube[bucketIndex]
       @cube[bucketIndex].requestedZoomStep
     else
       @ZOOM_STEP_COUNT
@@ -109,7 +101,7 @@ class Cube
             if bucketData
               if zoomStep < bucket.zoomStep 
                 bucket.data = bucketData
-                @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
+                #@trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
                 bucket.zoomStep = zoomStep
             else
               bucket.requestedZoomStep = bucket.zoomStep
@@ -121,7 +113,7 @@ class Cube
       if bucketData
         if zoomStep < bucket.zoomStep 
           bucket.data = bucketData
-          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, 0], bucket.zoomStep)
+          #@trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, 0], bucket.zoomStep)
           bucket.zoomStep = 0
       else
         bucket.requestedZoomStep = bucket.zoomStep
@@ -174,7 +166,7 @@ class Cube
 
     { cube : oldCube, cubeOffset : oldCubeOffset, cubeSize : oldCubeSize } = @
 
-    # TODO: Make cube support negative bucket addresses
+    # Make sure, all cube dimensions are non-negative
     min_x = Math.max(min_x, 0)
     min_y = Math.max(min_y, 0)
     min_z = Math.max(min_z, 0)
@@ -257,6 +249,3 @@ class Cube
       @cube       = newCube
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
-
-    #TODO
-    @ready = true

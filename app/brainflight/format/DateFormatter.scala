@@ -8,7 +8,7 @@ import java.util.TimeZone
 object DateFormatter {
   def format(date: Date) = {
     val cal = new GregorianCalendar(TimeZone.getTimeZone("GMT+1"))
-    val sdf = new SimpleDateFormat("HH:mm:ss dd-MMM-yyyy")
+    val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm")
     sdf.setCalendar(cal)
     cal.setTime(date)
     sdf.format(date)

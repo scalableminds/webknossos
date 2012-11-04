@@ -99,7 +99,7 @@ $ -> # document is ready!
         e.preventDefault()
 
 
-    $("[data-ajax]").click (event) ->
+    $("a[data-ajax]").click (event) ->
         
         event.preventDefault()
         $this = $(this)
@@ -119,6 +119,27 @@ $ -> # document is ready!
                 toastError(message || "Error :-(")
                 $this.trigger("ajax-error", message)
         )
+
+
+    # $("form[data-ajax]").submit (event) ->
+
+    #     event.preventDefault()
+    #     $this = $(this)
+    #     $.ajax(
+    #         url : this.action
+    #         type : this.method || "POST"
+    #         data : $this.serialize()
+    #         dataType : "json"
+    #     ).then(
+
+    #         ({ html, message }) ->
+    #             toastSuccess(message || "Success :-)")
+    #             $this.trigger("ajax-success", message)
+
+    #         ({ message }) ->
+    #             toastError(message || "Error :-(")
+    #             $this.trigger("ajax-error", message)
+    #     )
 
 
     # Page specifics

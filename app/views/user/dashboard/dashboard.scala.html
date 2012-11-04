@@ -22,10 +22,10 @@
       }
       </tbody>
     </table>
-    <a href="@controllers.routes.TaskController.request">Get a new task</a>
-  </div>
+    <a href="@controllers.routes.TaskController.request" class="btn">Get a new task</a>
 
-  <div class="container">
+    <hr />
+
     <h3>Explorative experiments</h3>
     <table class="table table-striped">
       <thead>
@@ -49,17 +49,19 @@
       }
       </tbody>
     </table>
+
     <form>
-    	<select id="dataSet">
-    		@dataSets.map{ d => 
-    			<option value="@d._id"> @d.name </option>
-    		}
-    	</select>
-    	<input type="submit" value="Explore data set" class="btn"/>
+      <div class="input-append">
+        <select id="dataSet">
+          @dataSets.map{ d => 
+            <option value="@d._id"> @d.name </option>
+          }
+        </select>
+        <input type="submit" value="Explore data set" class="btn"/>
+      </div>
     </form>
-  </div>
-  @trackedTimeOpt.map{ trackedTime =>
-    <div class="container">
+
+    @trackedTimeOpt.map{ trackedTime =>
       <h3>Tracked Time</h3>
       <table class="table table-striped">
         <thead>
@@ -79,7 +81,7 @@
         }
         </tbody>
       </table>
-    </div>
-  }
+    }
+  </div>
 
 }

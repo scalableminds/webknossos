@@ -95,15 +95,16 @@ object ExperimentController extends Controller with Secured {
   }
 
   def info(experimentId: String) = Authenticated { implicit request =>
-    Experiment.findOneById(experimentId).map(exp =>
+    Experiment.findOneById(experimentId).filter(_.user == request.user._id).map(exp =>
       Ok(createExperimentInformation(exp) ++ createDataSetInformation(exp.dataSetName))).getOrElse(BadRequest("Experiment with id '%s' not found.".format(experimentId)))
   }
 
   def update(experimentId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
-    (request.body).asOpt[Experiment].map { exp =>
-      Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
-      TimeTracking.logUserAction(request.user)
-      Ok
-    } getOrElse (BadRequest("Update for experiment with id '%s' failed.".format(experimentId)))
+    Experiment.findOneById(experimentId).filter(_.user == request.user._id).flatMap{ _ =>
+      (request.body).asOpt[Experiment].map { exp =>
+        Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
+        TimeTracking.logUserAction(request.user)
+        Ok
+    }} getOrElse (BadRequest("Update for experiment with id '%s' failed.".format(experimentId)))
   }
 }

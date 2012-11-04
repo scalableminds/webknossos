@@ -10,6 +10,7 @@
         <tr>
           <th> # </th>
           <th> Cell </th>
+          <th> Task type </th>
           <th> DataSet </th>
           <th> Start </th>
           <th> </th>
@@ -23,12 +24,15 @@
           <td> @task.taskType.map(_.summary).getOrElse("") </td>
           <td> @task.dataSetName </td>
           <td> @task.start </td>
-          <td> @experiment.id.drop(10)  </td>
+          <td> @if(experiment.finished){ <i class="icon-ok"></i> Finished } else {
+          	<a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a><br/>
+          	<a href="@controllers.routes.TaskController.finish(experiment.id)"><i class="icon-ok-circle"></i> finish</a></td>
+          	}
         </tr>
       }
       </tbody>
     </table>
-    <button class="btn">Get a new task</button>
+    <a href="@controllers.routes.TaskController.request">Get a new task</a>
   </div>
 
   <div class="container">

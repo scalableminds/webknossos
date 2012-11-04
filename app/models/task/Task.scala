@@ -26,6 +26,7 @@ import play.api.libs.json.Writes
 import models.graph.Tree
 import brainflight.tools.geometry.Scale
 import models.user.User
+import play.api.Logger
 
 case class Task(
     dataSetName: String,
@@ -40,16 +41,28 @@ case class Task(
     experiments: List[ObjectId] = Nil,
     _id: ObjectId = new ObjectId) {
   def id = _id.toString
-  
-  
+
   lazy val taskType = TaskType.findOneById(_taskType)
-  
+
   def isFullyAssigned = experiments.size == instances
+  
+  // TODO: reconsider implementation...
+  def inProgress = 
+    experiments.map( Experiment.findOneById ).flatten.filter(!_.finished).size
+    
+  def completed = 
+    experiments.size - inProgress
+    
+  def open = 
+    instances - experiments.size
 }
 
 object Task extends BasicDAO[Task]("tasks") {
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
+  
+  val empty = Task("", 0, 0, null, Point3D(0,0,0))
+  
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
   def fromForm(experiment: String, priority: Int, instances: Int, taskTypeId: String) =
@@ -63,7 +76,7 @@ object Task extends BasicDAO[Task]("tasks") {
         instances)))
 
   def createExperimentFor(user: User, task: Task) = {
-    Experiment(user._id,
+    Experiment.alterAndInsert(Experiment(user._id,
       task.dataSetName,
       List(Tree.empty),
       Nil,
@@ -71,8 +84,11 @@ object Task extends BasicDAO[Task]("tasks") {
       1,
       Scale(12, 12, 24),
       task.start,
-      None)
+      Some(task._id)))
   }
+
+  def findAllAssignable =
+    findAll.filter(!_.isFullyAssigned)
 
   def addExperiment(task: Task, experiment: Experiment) = {
     alterAndSave(task.copy(
@@ -82,8 +98,8 @@ object Task extends BasicDAO[Task]("tasks") {
   def toForm(t: Option[Task]): Option[(String, Int, Int, String)] =
     None
 
-  def nextTaskIdForUser(user: User): Future[Option[Int]] = {
-    val tasks = Task.findAll.toArray
+  def nextTaskForUser(user: User): Future[Option[Task]] = {
+    val tasks = findAllAssignable.toArray
     if (tasks.isEmpty) {
       Promise.successful(None)(Akka.system.dispatcher)
     } else {
@@ -91,9 +107,17 @@ object Task extends BasicDAO[Task]("tasks") {
 
       val future = (jsExecutionActor ? JS(TaskSelectionAlgorithm.current.js, params)) recover {
         case e: AskTimeoutException =>
-          ""
+          Logger.warn("JS Execution actor didn't return in time!")
+          null
       }
-      future.mapTo[Int].map(x => Some(x))
+      future.mapTo[Promise[Task]].flatMap( _.map{ x =>
+        Option(x)
+      }).recover {
+        case e: Exception =>
+          Logger.error("Catched MAPTO exception: ")
+          e.printStackTrace()
+          None
+      }
     }
   }
 

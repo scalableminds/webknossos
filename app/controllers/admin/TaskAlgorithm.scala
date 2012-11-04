@@ -9,7 +9,7 @@ import models.security.Role
 import models.task._
 import play.api.libs.json.Json
 
-object TaskHandling extends Controller with Secured {
+object TaskAlgorithm extends Controller with Secured {
   // TODO remove comment in production
   override val DefaultAccessRole = Role( "admin" )
 

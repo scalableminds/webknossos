@@ -73,6 +73,10 @@ object User extends BasicDAO[User]( "users" ) {
     alterAndInsert(User( email, name, false, hashPassword( password ) ))
   }
     
+  def saveSettings(user: User, config: UserConfiguration) = {
+    alterAndSave(user.copy(configuration = config))
+  }
+    
   def verify( user: User ) = {
     alterAndSave(user.copy( verified = true, roles = user.roles + "user" ))
   }

@@ -14,7 +14,7 @@
           <th> Start </th>
           <th> Priority </th>
           <th> Created </th>
-          <th> Instances </th>
+          <th> States </th>
         </tr>
       </thead>
       <tbody>
@@ -28,7 +28,7 @@
           <td> @task.start </td>
           <td> @task.priority </td>
           <td> @task.created </td>
-          <td> @task.instances </td>
+          <td> @task.open Open<br /> @task.inProgress in Progress<br /> @task.completed Completed<br /></td>
         </tr>
       }
       </tbody>

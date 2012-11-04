@@ -19,6 +19,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Format
 import brainflight.tools.geometry.Scale
 import java.util.Date
+import com.mongodb.casbah.query._
 
 case class Experiment(
     user: ObjectId,
@@ -30,8 +31,12 @@ case class Experiment(
     scale: Scale,
     editPosition: Point3D,
     taskId: Option[ObjectId] = None,
+    finished: Boolean = false,
     _id: ObjectId = new ObjectId) {
   def id = _id.toString
+
+  def isExploratory = taskId.isEmpty
+
   def tree(treeId: Int) = trees.find(_.id == treeId)
   def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
 
@@ -85,6 +90,16 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       Point3D(0, 0, 0),
       None))
   }
+
+  def complete(experiment: Experiment) = {
+    alterAndSave(experiment.copy(finished = true))
+  }
+
+  def findOpenExperimentFor(user: User, isExploratory: Boolean) =
+    findOne(MongoDBObject("user" -> user._id, "finished" -> false, "taskId" -> MongoDBObject("$exists" -> isExploratory)))
+
+  def hasOpenExperiment(user: User, isExploratory: Boolean) =
+    findOpenExperimentFor(user, isExploratory).isDefined
 
   def findFor(u: User) = {
     find(MongoDBObject("user" -> u._id)).toList

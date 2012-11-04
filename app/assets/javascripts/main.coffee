@@ -121,29 +121,37 @@ $ -> # document is ready!
         )
 
 
-    # $("form[data-ajax]").submit (event) ->
+    $("form[data-ajax]").submit (event) ->
 
-    #     event.preventDefault()
-    #     $this = $(this)
-    #     $.ajax(
-    #         url : this.action
-    #         type : this.method || "POST"
-    #         data : $this.serialize()
-    #         dataType : "json"
-    #     ).then(
+        event.preventDefault()
+        $this = $(this)
+        $.ajax(
+            url : this.action
+            type : this.method || "POST"
+            data : $this.serialize()
+            dataType : "json"
+        ).then(
 
-    #         ({ html, message }) ->
-    #             toastSuccess(message || "Success :-)")
-    #             $this.trigger("ajax-success", message)
+            ({ html, message }) ->
+                toastSuccess(message || "Success :-)")
+                $this.trigger("ajax-success", message)
 
-    #         ({ message }) ->
-    #             toastError(message || "Error :-(")
-    #             $this.trigger("ajax-error", message)
-    #     )
+            ({ message }) ->
+                toastError(message || "Error :-(")
+                $this.trigger("ajax-error", message)
+        )
 
 
     # Page specifics
     route
+
+        "dashboard" : ->
+
+            # $.ajax(
+            #     type : "POST"
+            #     url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
+            # )
+
 
         "admin/tasks/algorithm" : ->
 

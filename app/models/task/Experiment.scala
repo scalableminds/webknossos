@@ -22,7 +22,7 @@ import java.util.Date
 import com.mongodb.casbah.query._
 
 case class Experiment(
-    user: ObjectId,
+    _user: ObjectId,
     dataSetName: String,
     trees: List[Tree],
     branchPoints: List[BranchPoint],
@@ -33,16 +33,19 @@ case class Experiment(
     taskId: Option[ObjectId] = None,
     finished: Boolean = false,
     _id: ObjectId = new ObjectId) {
-  def id = _id.toString
+
+  def user = User.findOneById(_user)
+
+  val date = {
+    new Date(timestamp)
+  }
+
+  lazy val id = _id.toString
 
   def isExploratory = taskId.isEmpty
 
   def tree(treeId: Int) = trees.find(_.id == treeId)
   def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
-
-  val date = {
-    new Date(timestamp)
-  }
 }
 
 object Experiment extends BasicDAO[Experiment]("experiments") {
@@ -96,13 +99,13 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
   }
 
   def findOpenExperimentFor(user: User, isExploratory: Boolean) =
-    findOne(MongoDBObject("user" -> user._id, "finished" -> false, "taskId" -> MongoDBObject("$exists" -> isExploratory)))
+    findOne(MongoDBObject("_user" -> user._id, "finished" -> false, "taskId" -> MongoDBObject("$exists" -> isExploratory)))
 
   def hasOpenExperiment(user: User, isExploratory: Boolean) =
     findOpenExperimentFor(user, isExploratory).isDefined
 
   def findFor(u: User) = {
-    find(MongoDBObject("user" -> u._id)).toList
+    find(MongoDBObject("_user" -> u._id)).toList
   }
 
   def findAllTemporary = {

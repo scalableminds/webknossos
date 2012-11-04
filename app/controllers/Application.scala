@@ -25,11 +25,11 @@ object Application extends Controller with Secured {
 
   val Mailer = Akka.system.actorOf(Props[Mailer], name = "mailActor")
 
-  val registerForm: Form[(String, String, String)] = {
-    def registerFormApply(user: String, name: String, password: Tuple2[String, String]) =
-      (user, name, password._1)
-    def registerFormUnapply(user: Tuple3[String, String, String]) =
-      Some((user._1, user._2, ("", "")))
+  val registerForm: Form[(String, String, String, String)] = {
+    def registerFormApply(user: String, firstName: String, lastName: String, password: Tuple2[String, String]) =
+      (user, firstName, lastName, password._1)
+    def registerFormUnapply(user: (String, String, String, String)) =
+      Some((user._1, user._2, user._3, ("", "")))
 
     val passwordField = tuple("main" -> text, "validation" -> text)
       .verifying("error.password.nomatch", pw => pw._1 == pw._2)
@@ -38,7 +38,8 @@ object Application extends Controller with Secured {
     Form(
       mapping(
         "email" -> email,
-        "name" -> text,
+        "firstName" -> nonEmptyText(2, 30),
+        "lastName" -> nonEmptyText(2,30),
         "password" -> passwordField)(registerFormApply)(registerFormUnapply)
         .verifying("error.email.inuse",
           user => User.findLocalByEmail(user._1).isEmpty))
@@ -57,9 +58,9 @@ object Application extends Controller with Secured {
       registerForm.bindFromRequest.fold(
         formWithErrors => BadRequest(html.user.register(formWithErrors)),
         {
-          case (email, name, password) => {
-            val user = User.create(email, name, password)
-            Mailer ! Send(DefaultMails.registerMail(name, email))
+          case (email, firstName, lastName, password) => {
+            val user = User.create(email, firstName, lastName, password)
+            Mailer ! Send(DefaultMails.registerMail(user.name, email))
             Redirect(routes.Game.index)
               .flashing("success" -> "Thanks for your registration!")
               .withSession(Secured.createSession(user))

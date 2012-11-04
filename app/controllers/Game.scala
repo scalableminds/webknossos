@@ -1,6 +1,5 @@
 package controllers
 
-import play.api.mvc.Controller
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import brainflight.security.Secured
@@ -30,7 +29,7 @@ object Game extends Controller with Secured {
     val user = request.user
     
     Experiment.findOneById(experimentId)
-      .filter( _.user == user._id)
+      .filter( _._user == user._id)
       .map(exp => UsedExperiments.use(user, exp))
       
     Ok(html.oxalis.trace(user))

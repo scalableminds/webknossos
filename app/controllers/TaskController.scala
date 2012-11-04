@@ -25,17 +25,17 @@ object TaskController extends Controller with Secured {
             val experiment = Task.createExperimentFor(user, task)
             Task.addExperiment(task, experiment)
             
-            Ok(experiment.id)
+            AjaxOk(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("task.new"))
           case _ =>
             BadRequest("There is no task available")
         }
       } else
-        Promise.pure(BadRequest("You already have an open experiment."))
+        Promise.pure(BadRequest("You already have an open task."))
     }
   }
   
   def finish(id: String) = Authenticated{ implicit request =>
-    Experiment.findOneById(id).filter(_.user == request.user._id).map{ e=>
+    Experiment.findOneById(id).filter(_._user == request.user._id).map{ e=>
       val alteredExp = Experiment.complete(e)
       e.taskId.flatMap(Task.findOneById).map{ task =>
         AjaxOk(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.finished"))

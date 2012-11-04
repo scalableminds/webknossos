@@ -6,6 +6,7 @@ import play.api.Play.current
 import models.security._
 import models.task._
 import models.user._
+import models.Color
 import models.graph._
 import models.basics.BasicEvolution
 import brainflight.mail.DefaultMails
@@ -39,20 +40,22 @@ object InitialData {
 
   def insert() = {
     if (Role.findAll.isEmpty) {
-      Role.insert(Role("user", Nil))
-      Role.insert(Role("admin", Permission("*", "*" :: Nil) :: Nil))
+      Role.insert(Role("user", Nil, Color(0.2274F, 0.5294F, 0.6784F, 1)))
+      Role.insert(Role("admin", Permission("*", "*" :: Nil) :: Nil, Color(0.2F, 0.2F, 0.2F, 1)))
     }
 
     if (User.findAll.isEmpty) {
-      val u = ("scmboy@scalableminds.com", "SCM Boy", "secret")
-      Seq(
-        u).foreach{ values =>
-        val user = (User.create _ tupled)(values)
-        User.addRole(user, "admin")
-        User.verify(user)
-      }
+      User.insert(User(
+        "scmboy@scalableminds.com",
+        "SCM",
+        "Boy",
+        true,
+        brainflight.security.SCrypt.hashPassword("secret"),
+        "local",
+        UserConfiguration.defaultConfiguration,
+        Set("user", "admin")))
     }
-    
+
     if (TaskSelectionAlgorithm.findAll.isEmpty) {
       TaskSelectionAlgorithm.insert(TaskSelectionAlgorithm(
         """function simple(user, tasks){ 

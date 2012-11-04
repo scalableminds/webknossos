@@ -59,7 +59,8 @@ object FacebookLogin extends Controller {
           val user = models.user.User.authRemote(meObject.getEmail, "facebook") getOrElse (
             models.user.User.createRemote(
               meObject.getEmail,
-              meObject.getFirstName + " " + meObject.getLastName,
+              meObject.getFirstName,
+              meObject.getLastName,
               "facebook"))
 
           UserController.dashboard(response)

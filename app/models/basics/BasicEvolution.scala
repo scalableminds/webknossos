@@ -3,11 +3,12 @@ package models.basics
 import models.binary._
 import models.user._
 import models.task._
+import models.security._
 import org.bson.types.ObjectId
 import play.api.Logger
 
 object BasicEvolution {
-  val watchedClasses: List[BasicDAO[_]] = List(DataSet, User, Task, Experiment)
+  val watchedClasses: List[BasicDAO[_]] = List(Role, DataSet, User, Task, Experiment)
 
   def runDBEvolution() {
     val fakeObjectId = new ObjectId

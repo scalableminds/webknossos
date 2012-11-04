@@ -19,7 +19,7 @@ object TaskAdministration extends Controller with Secured {
 
   val taskTypeForm = Form(
     mapping(
-      "summary" -> text,
+      "summary" -> nonEmptyText(2, 50),
       "description" -> text,
       "expectedTime" -> mapping(
         "minTime" -> number,
@@ -30,7 +30,7 @@ object TaskAdministration extends Controller with Secured {
   val taskForm = Form(
     mapping(
       "experiment" -> text.verifying("experiment.invalid", experiment => Experiment.findOneById(experiment).isDefined),
-      "taskType" -> text.verifying("taskType.invalid", task => Task.findOneById(task).isDefined),
+      "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
       "priority" -> number,
       "taskInstances" -> number)(Task.fromForm)(Task.toForm)).fill(Task.empty)
 

@@ -36,7 +36,7 @@ object NMLIO extends Controller with Secured {
   }
 
   def downloadList = Authenticated { implicit request =>
-    val userExperiments = Experiment.findAll.groupBy(_.user).flatMap{ case (userId, experiments) =>
+    val userExperiments = Experiment.findAll.groupBy(_._user).flatMap{ case (userId, experiments) =>
       User.findOneById(userId).map( _ -> experiments) 
     }
     Ok(html.admin.nml.nmldownload(request.user, userExperiments))

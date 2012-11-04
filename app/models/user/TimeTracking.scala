@@ -9,7 +9,7 @@ import java.util.Date
 import java.util.Calendar
 import akka.util.duration._
 
-case class TimeEntry(time: Long, timestamp: Long) {
+case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None) {
   val created = {
     new Date(timestamp)
   }

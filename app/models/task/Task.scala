@@ -38,17 +38,19 @@ case class Task(
     priority: Int = 100,
     instances: Int = 1,
     created: Date = new Date,
-    experiments: List[ObjectId] = Nil,
+    _experiments: List[ObjectId] = Nil,
     _id: ObjectId = new ObjectId) {
-  def id = _id.toString
+  
+  lazy val id = _id.toString
 
-  lazy val taskType = TaskType.findOneById(_taskType)
+  def taskType = TaskType.findOneById(_taskType)
+  
+  def experiments = _experiments.map(Experiment.findOneById).flatten
 
   def isFullyAssigned = experiments.size == instances
 
-  // TODO: reconsider implementation...
   def inProgress =
-    experiments.map(Experiment.findOneById).flatten.filter(!_.finished).size
+    experiments.filter(!_.finished).size
 
   def completed =
     experiments.size - inProgress
@@ -97,7 +99,7 @@ object Task extends BasicDAO[Task]("tasks") {
 
   def addExperiment(task: Task, experiment: Experiment) = {
     alterAndSave(task.copy(
-      experiments = experiment._id :: task.experiments))
+      _experiments = experiment._id :: task._experiments))
   }
 
   def toForm(t: Task): Option[(String, String, Int, Int)] = {

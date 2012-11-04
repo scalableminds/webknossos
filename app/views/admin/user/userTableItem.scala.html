@@ -1,11 +1,12 @@
 @(user: models.user.User)
 <tr data-name="@user.name" data-id="@user.id"> 
 	<td> <input type="checkbox" name="id[]" value="@user.id"> </td>
-	<td> @user.name </td> 
+	<td> @user.lastName </td>
+	<td> @user.firstName</td> 
 	<td> @user.email </td>
 	<td> 
 		@user.roles.map{ role =>
-  		<span class="label">@role</span>
+  		<span class="label" style="background-color:@models.security.Role.colorOf(role)">@role</span>
 		} 
 	</td>
 	<td> 

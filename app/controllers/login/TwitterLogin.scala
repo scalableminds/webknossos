@@ -56,11 +56,11 @@ object TwitterLogin extends Controller {
     WS.url( UserInformationURL )
       .sign( OAuthCalculator( KEY, tokens ) )
       .get().map( response => {
-        val name = ( response.json \ "name" ).as[String]
+        val Array(firstName, lastName) = ( response.json \ "name" ).as[String].split(" ")
         val email = ( response.json \ "screen_name" ).as[String] + "@TWITTER"
         
         val user = models.user.User.authRemote( email, "twitter" ) getOrElse (
-          models.user.User.createRemote( email, name, "twitter" ) )
+          models.user.User.createRemote( email, firstName, lastName, "twitter" ) )
           
         Redirect( controllers.routes.Game.index() ).withSession( Secured.createSession(user) )
       } )

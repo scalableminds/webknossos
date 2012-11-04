@@ -1,7 +1,6 @@
 package controllers
 
 import brainflight.security.Secured
-import play.api.mvc.Controller
 import models.user._
 import play.api.mvc.Action
 import play.api.mvc.Request

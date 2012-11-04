@@ -18,7 +18,8 @@ import models.security.Role
 
 case class User(
     email: String,
-    name: String,
+    firstName: String,
+    lastName: String,
     verified: Boolean = false,
     pwdHash: String = "",
     loginType: String = "local",
@@ -32,6 +33,10 @@ case class User(
     role <- Role.findOneByName(roleName)
   } yield role
   
+  val name = firstName + " " + lastName
+   
+  lazy val id = _id.toString
+  
   val ruleSet: List[Implyable] = 
     ( permissions ++ _roles )
 
@@ -43,8 +48,6 @@ case class User(
     ruleSet.find( _.implies( permission ) ).isDefined
   
   override def toString = email
-  
-  def id = _id.toString
 }
 
 object User extends BasicDAO[User]( "users" ) {
@@ -69,8 +72,8 @@ object User extends BasicDAO[User]( "users" ) {
       if verifyPassword( password, user.pwdHash )
     } yield user
 
-  def create( email: String, name: String, password: String = "") = {
-    alterAndInsert(User( email, name, false, hashPassword( password ) ))
+  def create( email: String, firstName: String, lastName: String, password: String = "") = {
+    alterAndInsert( User( email, firstName, lastName, false, hashPassword( password ) ))
   }
     
   def saveSettings(user: User, config: UserConfiguration) = {
@@ -85,7 +88,7 @@ object User extends BasicDAO[User]( "users" ) {
     alterAndSave(user.copy( roles = user.roles + role ))
   }
 
-  def createRemote( email: String, name: String, loginType: String ) = {
-    alterAndInsert(User( email, name, true, "", loginType = loginType ))
+  def createRemote( email: String, firstName: String, lastName: String, loginType: String ) = {
+    alterAndInsert(User( email, firstName, lastName, true, "", loginType = loginType ))
   }
 }

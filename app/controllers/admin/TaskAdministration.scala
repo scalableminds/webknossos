@@ -29,12 +29,14 @@ object TaskAdministration extends Controller with Secured {
 
   val taskForm = Form(
     mapping(
-      "experiment" -> text,
+      "experiment" -> text.verifying("experiment.invalid", experiment => Experiment.findOneById(experiment).isDefined),
+      "taskType" -> text.verifying("taskType.invalid", task => Task.findOneById(task).isDefined),
       "priority" -> number,
-      "taskInstances" -> number,
-      "taskType" -> text)(Task.fromForm)(Task.toForm)).fill(Some(Task.empty))
+      "taskInstances" -> number)(Task.fromForm)(Task.toForm)).fill(Task.empty)
 
   override val DefaultAccessRole = Role("admin")
+
+  def bulkCreate = TODO
 
   def list = Authenticated { implicit request =>
     Ok(html.admin.taskList(request.user, Task.findAll))

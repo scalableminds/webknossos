@@ -45,35 +45,40 @@ case class Task(
   lazy val taskType = TaskType.findOneById(_taskType)
 
   def isFullyAssigned = experiments.size == instances
-  
+
   // TODO: reconsider implementation...
-  def inProgress = 
-    experiments.map( Experiment.findOneById ).flatten.filter(!_.finished).size
-    
-  def completed = 
+  def inProgress =
+    experiments.map(Experiment.findOneById).flatten.filter(!_.finished).size
+
+  def completed =
     experiments.size - inProgress
-    
-  def open = 
+
+  def open =
     instances - experiments.size
 }
 
 object Task extends BasicDAO[Task]("tasks") {
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
-  
-  val empty = Task("", 0, 0, null, Point3D(0,0,0))
-  
+
+  val empty = Task("", 0, 0, null, Point3D(0, 0, 0))
+
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
-  def fromForm(experiment: String, priority: Int, instances: Int, taskTypeId: String) =
-    Experiment.findOneById(experiment).flatMap(e => TaskType.findOneById(taskTypeId).map(taskType =>
-      Task(e.dataSetName,
-        0,
-        0,
-        taskType._id,
-        e.editPosition,
-        priority,
-        instances)))
+  def fromForm(experiment: String, taskTypeId: String, priority: Int, instances: Int): Task =
+    (Experiment.findOneById(experiment), TaskType.findOneById(taskTypeId)) match {
+      case (Some(e), Some(taskType)) =>
+        Task(e.dataSetName,
+          0,
+          0,
+          taskType._id,
+          e.editPosition,
+          priority,
+          instances)
+      case _ =>
+        Logger.warn("Failed to create Task from form. Experiment: %s TaskType: %s".format(experiment, taskTypeId))
+        null
+    }
 
   def createExperimentFor(user: User, task: Task) = {
     Experiment.alterAndInsert(Experiment(user._id,
@@ -95,8 +100,9 @@ object Task extends BasicDAO[Task]("tasks") {
       experiments = experiment._id :: task.experiments))
   }
 
-  def toForm(t: Option[Task]): Option[(String, Int, Int, String)] =
-    None
+  def toForm(t: Task): Option[(String, String, Int, Int)] = {
+    Some(("", "", t.priority, t.instances))
+  }
 
   def nextTaskForUser(user: User): Future[Option[Task]] = {
     val tasks = findAllAssignable.toArray
@@ -110,7 +116,7 @@ object Task extends BasicDAO[Task]("tasks") {
           Logger.warn("JS Execution actor didn't return in time!")
           null
       }
-      future.mapTo[Promise[Task]].flatMap( _.map{ x =>
+      future.mapTo[Promise[Task]].flatMap(_.map { x =>
         Option(x)
       }).recover {
         case e: Exception =>

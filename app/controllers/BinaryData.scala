@@ -117,14 +117,13 @@ object BinaryData extends Controller with Secured {
         { case ( e, i ) => Logger.error( "An error ocourd on websocket stream: " + e ) } )
 
       val input = Iteratee.foreach[Array[Byte]]( in => {
-        // first 4 bytes are always used as a client handle
-       
+
         for {
           dataSet <- dataSetOpt
           channel <- channelOpt
         } {
           BinaryProtocol.parseWebsocket( in ).map {
-            case dataRequests @ MultipleDataRequest( _ ) =>
+            case dataRequests : MultipleDataRequest =>
               handleMultiDataRequest(dataRequests, cubeSize, dataSet).map( 
                   result => channel.push( dataRequests.handle ++ result ))
             case _ =>

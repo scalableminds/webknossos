@@ -1,6 +1,5 @@
 package controllers
 
-import play.api.mvc.Controller
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import brainflight.security.Secured
@@ -14,6 +13,7 @@ import views._
 import models.task.Task
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.execution.defaultContext
+import play.api.i18n.Messages
 
 object TaskController extends Controller with Secured {
   def request = Authenticated { implicit request =>
@@ -36,8 +36,10 @@ object TaskController extends Controller with Secured {
   
   def finish(id: String) = Authenticated{ implicit request =>
     Experiment.findOneById(id).filter(_.user == request.user._id).map{ e=>
-      Experiment.complete(e)
-      Ok
-    } getOrElse BadRequest("Experiment not found.")
+      val alteredExp = Experiment.complete(e)
+      e.taskId.flatMap(Task.findOneById).map{ task =>
+        AjaxOk(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.finished"))
+      } getOrElse BadRequest("Task not found")
+    } getOrElse BadRequest("Experiment not found")
   }
 }

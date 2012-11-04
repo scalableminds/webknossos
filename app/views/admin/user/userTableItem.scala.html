@@ -1,0 +1,20 @@
+@(user: models.user.User)
+<tr data-name="@user.name" data-id="@user.id"> 
+	<td> @user.name </td> 
+	<td> @user.email </td>
+	<td> 
+		@user.roles.map{ role =>
+  		<span class="label">@role</span>
+		} 
+	</td>
+	<td> 
+		@if(user.verified) {            
+  		<i class="icon-ok"></i>
+		} else {
+  		<a href="@controllers.admin.routes.UserAdministration.verifyUser(user.id)" data-ajax="replace-row"> verify </a>
+		}
+	</td>
+	<td> 
+  	<a href="@controllers.admin.routes.UserAdministration.deleteUser(user.id)"><i class="icon-trash"></i> delete </a>
+	</td>
+</tr>

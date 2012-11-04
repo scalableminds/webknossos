@@ -19,17 +19,7 @@
       </thead>
       <tbody>
       @tasks.map{ task => 
-        <tr>
-          <td> @task.id.drop(10) </td>
-          <td> @task.cellId </td>
-          <td> @task.seedIdHeidelberg </td>
-          <td> @task.taskType.map(_.summary).getOrElse("") </td>
-          <td> @task.dataSetName </td>
-          <td> @task.start </td>
-          <td> @task.priority </td>
-          <td> @task.created </td>
-          <td> @task.open Open<br /> @task.inProgress in Progress<br /> @task.completed Completed<br /></td>
-        </tr>
+        @taskTableItem(task)
       }
       </tbody>
     </table>

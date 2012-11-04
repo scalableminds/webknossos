@@ -32,15 +32,15 @@ class NMLParser(file: File)(implicit ctx: NMLContext) {
     val data = XML.loadFile(file)
     for {
       parameters <- (data \ "parameters")
-      dataSetName <- (parameters \ "experiment" \ "@name")
       scale <- parseScale(parameters \ "scale")
     } yield {
+      val dataSetName = parseDataSetName(parameters \ "experiment")
       val activeNodeId = parseActiveNode(parameters \ "activeNode")
       val editPosition = parseEditPosition(parameters \ "editPosition")
       val time = parseTime(parameters \ "time")
       val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
       val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
-      Experiment(ctx.user._id, dataSetName.text, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
+      Experiment(ctx.user._id, dataSetName, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
     }
   }
 
@@ -86,6 +86,12 @@ class NMLParser(file: File)(implicit ctx: NMLContext) {
     components
   }
 
+  def parseDataSetName(node: NodeSeq) = {
+    val rawDataSetName = (node \ "@name").text
+    val magRx = "_mag[0-9]*$".r
+    magRx.replaceAllIn(rawDataSetName, "")
+  }
+  
   def parseActiveNode(node: NodeSeq) = {
     (node \ "@id").text.toIntOpt.getOrElse(DEFAULT_ACTIVE_NODE_ID)
   }

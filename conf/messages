@@ -13,6 +13,10 @@ password.main=Password
 password.validation=Password (again)
 name=Name
 
+user.verified=has been verified
+user.deleted=has been deleted
+
+task.finished=Task is finished
 taskInstances=Task instances
 taskType=Task type
 taskType.invalid=Selected type doesn''t exist

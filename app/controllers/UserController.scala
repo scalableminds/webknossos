@@ -30,9 +30,7 @@ object UserController extends Controller with Secured {
     
     val dataSets = DataSet.findAll
       
-    Ok(html.user.dashboard(user, tempExperiments, userTasks, loggedTime, dataSets)).flashing(
-    "success" -> "The item has been created"
-  )
+    Ok(html.user.dashboard.dashboard(user, tempExperiments, userTasks, loggedTime, dataSets))
   }
 
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {

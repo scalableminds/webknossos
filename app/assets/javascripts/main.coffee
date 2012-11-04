@@ -1,30 +1,7 @@
-# -----------------------------------------------
-# MAIN
-# -----------------------------------------------
-# DISCLAMER :
-# If you're used to Backbone.js, you may be
-# confused by the absence of models, but the goal
-# of this sample is to demonstrate some features
-# of Play including the template engine.
-# I'm not using client-side templating nor models
-# for this purpose, and I do not recommend this
-# behavior for real life projects.
-# -----------------------------------------------
 
 # Just a log helper
 log = (args...) ->
     console.log.apply console, args if console.log?
-
-# ------------------------------- DROP DOWN MENUS
-$(".options dt, .users dt").live "click", (e) ->
-    e.preventDefault()
-    if $(e.target).parent().hasClass("opened")
-        $(e.target).parent().removeClass("opened")
-    else
-        $(e.target).parent().addClass("opened")
-        $(document).one "click", ->
-            $(e.target).parent().removeClass("opened")
-    false
 
 # --------------------------------- EDIT IN PLACE
 $.fn.editInPlace = (method, options...) ->
@@ -102,79 +79,101 @@ toastMessage = (type, message, sticky = false) ->
 toastSuccess = (message, sticky) -> toastMessage("success", message, sticky)
 toastError = (message, sticky = true) -> toastMessage("error", message, sticky)
 
+route = (routes) ->
+
+    url = window.location.pathname.substring(1)
+
+    if _.isFunction(routes[url])
+        routes[url].call($("#main-container")[0])
+    return
+
 
 # ------------------------------------- INIT APP
 $ -> # document is ready!
 
-    $("#issue-submit-button").click (e) ->
-        window.open(this.href, "_blank", "width=700,height=470,location=no,menubar=no")
+    # Progresssive enhancements
+    $("[data-newwindow]").click (e) ->
+
+        [ width, height ] = $(this).data("newwindow").split("x")
+        window.open(this.href, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
         e.preventDefault()
 
-    $("#user-administration").each ->
 
-        $(this).find(".verify-button").click (event) ->
-
-            event.preventDefault()
-            $this = $(this)
-            $.ajax(url : this.href).then(
-                -> 
-                    toastSuccess("Successfully verified \"#{$this.parents("tr").data("name")}\".")
-                    $this.html("<i class=\"icon-ok\"></i>")
-                ->
-                    toastError("Couldn't verify user :-/")
-            )
-
-
-    $("#task-selection-algoritm").each ->
-
+    $("[data-ajax]").click (event) ->
+        
+        event.preventDefault()
         $this = $(this)
-        $form = $this.find("form")
-        $submitButton = $this.find("[type=submit]")
+        $.ajax(url : this.href, dataType : "json").then(
 
-        editor = ace.edit("editor")
-        editor.setTheme("ace/theme/twilight");
-        editor.getSession().setMode("ace/mode/javascript");
+            ({ html, message }) ->
+
+                toastSuccess(message || "Success :-)")
+                $this.trigger("ajax-success", message)
+
+                for action in $this.data("ajax").split(",")
+                    switch action
+                        when "replace-row" then $this.parents("tr").replaceWith(html)
+                        when "reload" then window.location.reload()
+
+            ({ message }) ->
+                toastError(message || "Error :-(")
+                $this.trigger("ajax-error", message)
+        )
 
 
-        editor.on "change", ->
+    # Page specifics
+    route
 
-            try
-                new Function(editor.getValue())
-                $submitButton.removeClass("disabled").popover("destroy")
+        "admin/tasks/algorithm" : ->
 
-            catch error                
-                $submitButton.addClass("disabled")
-                $submitButton.popover(
-                    placement : "left"
-                    title : "No good code. No save."
-                    content : error.toString()
-                    trigger : "hover"
-                )
+            $this = $(this)
+            $form = $this.find("form")
+            $submitButton = $this.find("[type=submit]")
 
-        editor._emit("change") # init
-     
-        $form.submit (event) ->
+            editor = ace.edit("editor")
+            editor.setTheme("ace/theme/twilight");
+            editor.getSession().setMode("ace/mode/javascript");
 
-            event.preventDefault()
 
-            return if $submitButton.hasClass("disabled")
+            editor.on "change", ->
 
-            code = editor.getValue()
+                try
+                    new Function(editor.getValue())
+                    $submitButton.removeClass("disabled").popover("destroy")
 
-            $form.find("[name=code]").val(code)
-
-            $.ajax(
-                url : this.action
-                data : $form.serialize()
-                type : "POST"
-            ).then(
-                -> 
-                    toastSuccess("Saved!")
-                ->
-                    toastError(
-                        """Sorry, we couldn't save your code. Please double check your syntax.<br/>
-                        Otherwise, please copy your code changes and reload this page."""
-                        true
+                catch error                
+                    $submitButton.addClass("disabled")
+                    $submitButton.popover(
+                        placement : "left"
+                        title : "No good code. No save."
+                        content : error.toString()
+                        trigger : "hover"
                     )
-            )
+
+            editor._emit("change") # init
+         
+            $form.submit (event) ->
+
+                event.preventDefault()
+
+                return if $submitButton.hasClass("disabled")
+
+                code = editor.getValue()
+
+                $form.find("[name=code]").val(code)
+
+                $.ajax(
+                    url : this.action
+                    data : $form.serialize()
+                    type : "POST"
+                ).then(
+                    -> 
+                        toastSuccess("Saved!")
+                    ->
+                        toastError(
+                            """Sorry, we couldn't save your code. Please double check your syntax.<br/>
+                            Otherwise, please copy your code changes and reload this page."""
+                            true
+                        )
+                )
 

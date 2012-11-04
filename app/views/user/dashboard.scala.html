@@ -3,7 +3,7 @@
 @import brainflight.format._
 
 @main(Some(loggedInUser)){
-  <div class="container">
+  <div class="container" id="dashboard">
     <h3>Tasks</h3>
     <table class="table table-striped">
       <thead>
@@ -17,17 +17,21 @@
         </tr>
       </thead>
       <tbody>
-      @userTasks.map{ case (task, experiment)=> 
+      @userTasks.map{ case (task, experiment) => 
         <tr>
           <td> @task.id.drop(10) </td>
           <td> @task.cellId </td>
           <td> @task.taskType.map(_.summary).getOrElse("") </td>
           <td> @task.dataSetName </td>
           <td> @task.start </td>
-          <td> @if(experiment.finished){ <i class="icon-ok"></i> Finished } else {
-          	<a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a><br/>
-          	<a href="@controllers.routes.TaskController.finish(experiment.id)"><i class="icon-ok-circle"></i> finish</a></td>
-          	}
+          <td> 
+            @if(experiment.finished){ 
+              <i class="icon-ok"></i> Finished 
+            } else {
+              <a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a><br/>
+              <a href="@controllers.routes.TaskController.finish(experiment.id)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a>
+            }
+          </td>
         </tr>
       }
       </tbody>
@@ -61,27 +65,27 @@
     </table>
   </div>
   @trackedTimeOpt.map{ trackedTime =>
-	  <div class="container">
-	  	<h3>Tracked Time</h3>
-	  	<table class="table table-striped">
-	      <thead>
-	        <tr>
-	          <th> Month </th>
-	          <th> Worked </th>
-	          <th> Payed </th>
-	        </tr>
-	      </thead>
-	      <tbody>
-	      @trackedTime.map{ case (interval, time) => 
-	        <tr>
-	          <td> @interval </td>
-	          <td> @time.printHMS </td>
-	          <td> </td>
-	        </tr>
-	      }
-	      </tbody>
-	    </table>
-	  </div>
+    <div class="container">
+      <h3>Tracked Time</h3>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th> Month </th>
+            <th> Worked </th>
+            <th> Payed </th>
+          </tr>
+        </thead>
+        <tbody>
+        @trackedTime.map{ case (interval, time) => 
+          <tr>
+            <td> @interval </td>
+            <td> @time.printHMS </td>
+            <td> </td>
+          </tr>
+        }
+        </tbody>
+      </table>
+    </div>
   }
 
 }

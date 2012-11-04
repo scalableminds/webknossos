@@ -35,7 +35,7 @@
                     <a href="@controllers.admin.routes.UserAdministration.index">Users</a>
                   </li>  
                   <li class="dropdown-submenu">
-                    <a tabindex="-1" href="#">Tasks</a>
+                    <a tabindex="-1" href="@controllers.admin.routes.TaskAdministration.list">Tasks</a>
                     <ul class="dropdown-menu">
                         <li>
                           <a href="@controllers.admin.routes.TaskAdministration.create">Create</a>
@@ -55,7 +55,7 @@
               </li>
             }
            <li>
-              <a href="@routes.Jira.index" id="issue-submit-button"><i class="icon-fire icon-white"></i> Submit an issue</a>
+              <a href="@routes.Jira.index" data-newwindow="700x470"><i class="icon-fire icon-white"></i> Submit an issue</a>
             </li>
             <li>
               <a href="#" id="help-overlay"><i class="icon-info-sign icon-white">

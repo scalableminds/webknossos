@@ -2,37 +2,37 @@
 
 @main(Some(loggedInUser)){
   <div id="user-administration" class="container">
-    @users.groupBy( _.roles).toList.sortBy(_._1.size).map{ case (roles, us) => 
-      <h3> Roles: @roles.mkString(", ") </h3> 
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th> Username </th>
-            <th> Email </th>
-            <th> Role </th>
-            <th> Verified </th>
-            <th></th>
+    <h3> Users </h3> 
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th> Username </th>
+          <th> Email </th>
+          <th> Role </th>
+          <th> Verified </th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @users.map{ user =>
+          <tr data-name="@user.name" data-id="@user.id"> 
+            <td> @user.name </td> 
+            <td> @user.email </td>
+            <td> @user.roles.map{ role =>
+              <span class="label">@role</span>
+            } </td>
+            <td> @if(user.verified) {            
+              <i class="icon-ok"></i>
+            } else {
+              <a href="@controllers.admin.routes.UserAdministration.verifyUser(user.id)" data-ajax="replace-row"> verify </a>
+            }
+            </td>
+            <td> 
+              <a href="@controllers.admin.routes.UserAdministration.deleteUser(user.id)"><i class="icon-trash"></i> delete </a>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          @us.map{ user =>
-           <tr data-name="@user.name" data-id="@user.id"> 
-             <td> @user.name </td> 
-             <td> @user.email </td>
-             <td> @user.roles.mkString(", ") </td>
-             <td> @if(user.verified) {            
-               <i class="icon-ok"></i>
-             } else {
-               <a href="@controllers.admin.routes.UserAdministration.verifyUser(user.id)" class="verify-button"> verify </a>
-             }
-             </td>
-             <td> 
-               <a href="@controllers.admin.routes.UserAdministration.deleteUser(user.id)"><i class="icon-trash"></i> delete </a>
-             </td>
-           </tr>
-         }
-        </tbody>
-      </table>
-    }
+        }
+      </tbody>
+    </table>
   </div>
 }

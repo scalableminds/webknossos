@@ -1,5 +1,6 @@
 @(user: models.user.User)
 <tr data-name="@user.name" data-id="@user.id"> 
+	<td> <input type="checkbox" name="id[]" value="@user.id"> </td>
 	<td> @user.name </td> 
 	<td> @user.email </td>
 	<td> 

@@ -5,26 +5,27 @@
 
 @main(Some(loggedInUser)){
   <div class="container">
+    
     <h3>Create Task from temporary Experiment</h3>
-    @helper.form(controllers.admin.routes.TaskAdministration.createFromExperiment, 'class -> "form-horizontal") {
+    <div class="well">
+      @helper.form(controllers.admin.routes.TaskAdministration.createFromExperiment, 'class -> "form-horizontal") {
+          
+        @helper.select(form("experiment"), experiments.map { exp =>
+          exp.id -> (exp.dataSetName + " " + DateFormatter.format(exp.date)) 
+        })
         
-      @helper.select(form("experiment"), experiments.map { exp =>
-        exp.id -> (exp.dataSetName + " " + DateFormatter.format(exp.date)) 
-      })
-      
-      @helper.select(form("taskType"), taskTypes.map { tt =>
-        tt.id -> tt.summary
-      })
+        @helper.select(form("taskType"), taskTypes.map { tt =>
+          tt.id -> tt.summary
+        })
 
-      @helper.inputText(form("priority"), 'type -> "number", 'value -> 100)
-      @helper.inputText(form("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 0)
-      
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Create</button>
-      </div>
-    }
-
-    <hr />
+        @helper.inputText(form("priority"), 'type -> "number", 'value -> 100)
+        @helper.inputText(form("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 0)
+        
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
 
     <h3>Create Task</h3>
 
@@ -32,12 +33,14 @@
 
     <h3>Import Tasks in Bulk</h3>
 
-    <form>
-      <textarea class="input-fullwidth input-monospace" rows="20"></textarea>
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary pull-right">Import</button>
-      </div>
-    </form>
+    <div class="well">
+      <form>
+        <textarea class="input-fullwidth input-monospace" rows="20"></textarea>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary pull-right">Import</button>
+        </div>
+      </form>
+    </div>
 
   </div>
 }

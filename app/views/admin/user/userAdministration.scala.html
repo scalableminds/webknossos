@@ -2,10 +2,12 @@
 
 @main(Some(loggedInUser)){
   <div id="user-administration" class="container">
+    
     <h3> Users </h3> 
     <table class="table table-striped">
       <thead>
         <tr>
+          <th></th>
           <th> Username </th>
           <th> Email </th>
           <th> Role </th>
@@ -19,5 +21,16 @@
         }
       </tbody>
     </table>
+
+    <div class="btn-group">
+      <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+        Bulk Actions
+        <span class="caret"></span>
+      </a>
+      <ul class="dropdown-menu">
+        <li><a href="#">Verify</a></li> 
+      </ul>
+    </div>
+
   </div>
 }

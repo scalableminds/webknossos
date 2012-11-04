@@ -10,7 +10,9 @@ import play.api.libs.json.JsValue
 import play.api.libs.json._
 import models.security.Role
 import models.task._
+import models.binary.DataSet
 import views.html
+import play.api.Logger
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -25,8 +27,12 @@ object UserController extends Controller with Secured {
       Task.findOneById(e.taskId.get).map(_ -> e))
       
     val loggedTime = TimeTracking.loggedTime(user)
+    
+    val dataSets = DataSet.findAll
       
-    Ok(html.user.dashboard(user, tempExperiments, userTasks, loggedTime))
+    Ok(html.user.dashboard(user, tempExperiments, userTasks, loggedTime, dataSets)).flashing(
+    "success" -> "The item has been created"
+  )
   }
 
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {

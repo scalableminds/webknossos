@@ -26,7 +26,7 @@ object TaskAlgorithm extends Controller with Secured {
   }
 
   def index = Authenticated { implicit request =>
-    Ok(html.admin.taskSelectionAlgorithm(request.user, TaskSelectionAlgorithm.findAll, TaskSelectionAlgorithm.current))
+    Ok(html.admin.task.taskSelectionAlgorithm(request.user, TaskSelectionAlgorithm.findAll, TaskSelectionAlgorithm.current))
   }
 
   def submitAlgorithm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>

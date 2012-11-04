@@ -39,20 +39,20 @@ object TaskAdministration extends Controller with Secured {
   def bulkCreate = TODO
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.taskList(request.user, Task.findAll))
+    Ok(html.admin.task.taskList(request.user, Task.findAll))
   }
 
   def types = Authenticated { implicit request =>
-    Ok(html.admin.taskTypes(request.user, TaskType.findAll, taskTypeForm))
+    Ok(html.admin.task.taskTypes(request.user, TaskType.findAll, taskTypeForm))
   }
 
   def create = Authenticated { implicit request =>
-    Ok(html.admin.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll, taskForm))
+    Ok(html.admin.task.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll, taskForm))
   }
 
   def createType = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskTypeForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.admin.taskTypes(request.user, TaskType.findAll, formWithErrors)),
+      formWithErrors => BadRequest(html.admin.task.taskTypes(request.user, TaskType.findAll, formWithErrors)),
       { t =>
         TaskType.insert(t)
         Ok(t.toString)
@@ -61,7 +61,7 @@ object TaskAdministration extends Controller with Secured {
 
   def createFromExperiment = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.admin.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll, formWithErrors)),
+      formWithErrors => BadRequest(html.admin.task.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll, formWithErrors)),
       { t =>
         Task.insert(t)
         Ok(t.toString)

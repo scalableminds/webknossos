@@ -18,7 +18,7 @@ object NMLIO extends Controller with Secured {
   // override val DefaultAccessRole = Role( "admin" )
 
   def uploadForm = Authenticated { implicit request =>
-    Ok(html.admin.nmlupload(request.user))
+    Ok(html.admin.nml.nmlupload(request.user))
   }
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
@@ -39,7 +39,7 @@ object NMLIO extends Controller with Secured {
     val userExperiments = Experiment.findAll.groupBy(_.user).flatMap{ case (userId, experiments) =>
       User.findOneById(userId).map( _ -> experiments) 
     }
-    Ok(html.admin.nmldownload(request.user, userExperiments))
+    Ok(html.admin.nml.nmldownload(request.user, userExperiments))
   }
 
   def download(taskId: String) = Authenticated { implicit request =>

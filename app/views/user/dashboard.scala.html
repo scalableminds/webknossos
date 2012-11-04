@@ -1,4 +1,4 @@
-@(loggedInUser: models.user.User, temporaryExperiments: List[models.task.Experiment], userTasks: List[(models.task.Task, models.task.Experiment)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, akka.util.Duration]])
+@(loggedInUser: models.user.User, temporaryExperiments: List[models.task.Experiment], userTasks: List[(models.task.Task, models.task.Experiment)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, akka.util.Duration]], dataSets: List[models.binary.DataSet])
 
 @import brainflight.format._
 
@@ -59,6 +59,14 @@
       }
       </tbody>
     </table>
+    <form>
+    	<select id="dataSet">
+    		@dataSets.map{ d => 
+    			<option value="@d._id"> @d.name </option>
+    		}
+    	</select>
+    	<input type="submit" value="Explore data set" class="btn"/>
+    </form>
   </div>
   @trackedTimeOpt.map{ trackedTime =>
 	  <div class="container">

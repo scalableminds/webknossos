@@ -20,7 +20,10 @@ object Game extends Controller with Secured {
       "id" -> experimentId))
       
   def index = Authenticated { implicit request =>      
-    Ok(html.oxalis.trace(request.user))
+    if(Experiment.findFor(request.user).isEmpty)
+      Redirect(routes.UserController.dashboard)
+    else
+      Ok(html.oxalis.trace(request.user))
   }
   
   def trace(experimentId: String) = Authenticated { implicit request =>

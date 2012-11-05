@@ -110,10 +110,22 @@ $ -> # document is ready!
                 toastSuccess(message || "Success :-)")
                 $this.trigger("ajax-success", message)
 
+                options = {}
                 for action in $this.data("ajax").split(",")
-                    switch action
-                        when "replace-row" then $this.parents("tr").replaceWith(html)
-                        when "reload" then window.location.reload()
+                    [ key, value ] = action.split("=")
+                    options[key] = value ? true
+
+                if options["replace-row"] 
+                    $this.parents("tr").replaceWith(html)
+
+                if options["add-row"]
+                    context = if _.isString(options["add-row"]) then $(options["add-row"]) else $this
+                    context.find("tbody").append(html)
+
+                if options["reload"]
+                    window.location.reload()
+
+                return
 
             ({ message }) ->
                 toastError(message || "Error :-(")
@@ -136,7 +148,7 @@ $ -> # document is ready!
                 toastSuccess(message || "Success :-)")
                 $this.trigger("ajax-success", message)
 
-            ({ message }) ->
+            (message) ->
                 toastError(message || "Error :-(")
                 $this.trigger("ajax-error", message)
         )

@@ -5,7 +5,7 @@
 @main(Some(loggedInUser)){
   <div class="container" id="dashboard">
     <h3>Tasks</h3>
-    <table class="table table-striped">
+    <table class="table table-striped" id="dashboard-tasks">
       <thead>
         <tr>
           <th> # </th>
@@ -22,7 +22,7 @@
       }
       </tbody>
     </table>
-    <a href="@controllers.routes.TaskController.request" class="btn"  data-ajax="add-row">Get a new task</a>
+    <a href="@controllers.routes.TaskController.request" class="btn"  data-ajax="add-row=#dashboard-tasks">Get a new task</a>
 
     <hr />
 

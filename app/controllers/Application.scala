@@ -73,7 +73,7 @@ object Application extends Controller with Secured {
                   brainflight.security.SCrypt.hashPassword(password),
                   "local",
                   UserConfiguration.defaultConfiguration,
-                  Set("user", "admin")))
+                  Set("user")))
               else
                 User.create(email, firstName, lastName, password)
                 

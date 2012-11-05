@@ -53,7 +53,6 @@ POST    /admin/nmlupload                    controllers.admin.NMLIO.upload
 GET     /admin/nmldownload/:taskId          controllers.admin.NMLIO.download( taskId: String )
 
 
-
 # Admin Tasks
 GET     /admin/tasks/algorithm              controllers.admin.TaskAlgorithm.index
 POST    /admin/tasks/algorithm              controllers.admin.TaskAlgorithm.submitAlgorithm

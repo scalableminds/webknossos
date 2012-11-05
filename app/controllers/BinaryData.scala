@@ -117,7 +117,6 @@ object BinaryData extends Controller with Secured {
         { case ( e, i ) => Logger.error( "An error ocourd on websocket stream: " + e ) } )
 
       val input = Iteratee.foreach[Array[Byte]]( in => {
-
         for {
           dataSet <- dataSetOpt
           channel <- channelOpt

@@ -11,7 +11,6 @@ import brainflight.security.Secured
 import brainflight.tools.geometry.Vector3I
 import brainflight.tools.geometry.Vector3I._
 import models.user.User
-import models.TransformationMatrix
 import models.security._
 import models.task.Experiment
 import play.api.libs.iteratee.Concurrent

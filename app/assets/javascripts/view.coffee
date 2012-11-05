@@ -95,6 +95,7 @@ class View
         <tr><td>O</td><td>Zoom out</td></tr>
         <tr><td>B</td><td>Set branchpoint</td></tr>
         <tr><td>J</td><td>Jump to last branchpoint</td></tr>
+        <tr><td>H</td><td>Center active node</td></tr>
         <tr><td>N</td><td>Create new tree</td></tr>
         <tr><td><u>3D-view</u></td><td></td></tr>
         <tr><td>Mousewheel</td><td>Zoom in and out</td></tr>

@@ -3,12 +3,12 @@ model/binary/cube : Cube
 model/binary/pullqueue : Queue
 ###
 
-
 # Macros
 
 tileIndexByTileMacro = (tile) ->
 
   tile[0] * (@TEXTURE_SIZE >> @cube.BUCKET_SIZE_P) + tile[1]
+
 
 subTileMacro = (tile, index) ->
 
@@ -23,7 +23,7 @@ bufferOffsetByTileMacro = (tile, tileSize) ->
 class Plane2D
 
   # Constants
-  TEXTURE_SIZE : 512
+  TEXTURE_SIZE_P : 9
   MAP_SIZE : 85 # 4⁰ + 4¹ + 4² + 4³
 
   u : 0
@@ -46,27 +46,67 @@ class Plane2D
     null
 
 
-  ping : (position, zoomStep) ->
+  ping : (position, direction, zoomStep) ->
 
-    @cube.extendByBucketAddressExtent([0, 0, 0], [7, 7, 7])
-    @queue.insert [0, 0, 0, zoomStep], zoomStep*2
+    centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
+ 
+    topLeftBucket = centerBucket.slice(0)
+    topLeftBucket[@u] -= @TEXTURE_SIZE_P - 1
+    topLeftBucket[@v] -= @TEXTURE_SIZE_P - 1
+
+    bottomRightBucket = centerBucket.slice(0)
+    bottomRightBucket[@u] += @TEXTURE_SIZE_P - 1
+    bottomRightBucket[@v] += @TEXTURE_SIZE_P - 1
+    bottomRightBucket[@w] += 1
+
+    @cube.extendByBucketAddressExtent([
+      topLeftBucket[0] << zoomStep
+      topLeftBucket[1] << zoomStep
+      topLeftBucket[2] << zoomStep
+    ], [
+      bottomRightBucket[0] << zoomStep
+      bottomRightBucket[1] << zoomStep
+      bottomRightBucket[2] << zoomStep
+    ])
+
+    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1)
+
+    for bucket in buckets
+      @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], 0) if bucket?
 
 
-  get : (position, options) ->
+  getBucketArray : (center, range) ->
 
-    return options + 1
-    # TODO
-    unless @cube.ready
-      return null
+    buckets = []
+
+    for u in [-range...range]
+      for v in [-range...range]
+        bucket = center.slice(0)
+        bucket[@u] += u
+        bucket[@v] += v
+        buckets.push if _.min(bucket) >= 0 then bucket else null
+
+    buckets
+
+
+  get : (position, [zoomStep, area]) ->
+
+    # Making sure, position is top-left corner of some bucket
+    position = [
+      position[0] & ~0b11111
+      position[1] & ~0b11111
+      position[2] & ~0b11111
+    ]
 
     # Calculating the coordinates of the textures top-left corner
-    topLeftPosition = position
-    topLeftPosition[@u] -= (@TEXTURE_SIZE >> 1) << zoomStep
-    topLeftPosition[@v] -= (@TEXTURE_SIZE >> 1) << zoomStep
+    topLeftPosition = position.slice(0)
+    topLeftPosition[@u] -= 1 << @TEXTURE_SIZE_P - 1 + zoomStep
+    topLeftPosition[@v] -= 1 << @TEXTURE_SIZE_P - 1 + zoomStep
     layer = topLeftPosition[@w]
 
     topLeftBucket = @cube.positionToZoomedAddress(topLeftPosition, zoomStep)
 
+    # Converting area from voxels to buckets
     area = [
       area[0] >> @cube.BUCKET_SIZE_P
       area[1] >> @cube.BUCKET_SIZE_P
@@ -80,8 +120,8 @@ class Plane2D
       @zoomStep = zoomStep
       @topLeftBucket = topLeftBucket
       @area = area
-      @tiles = @getTileArray(topLeftBucket, @TEXTURE_SIZE >> @cube.BUCKET_SIZE_P)
-      @buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
+      @tiles = @getTileArray(topLeftBucket, 1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
+      @buffer = new Uint8Array(1 << 2 * @TEXTURE_SIZE_P)
       @changed = true
 
     # If the top-left-bucket has changed, still visible tiles are copied to their new location
@@ -91,13 +131,13 @@ class Plane2D
       oldBuffer = @buffer
 
       @topLeftBucket = topLeftBucket
-      @tiles = @getTileArray(topLeftBucket, @TEXTURE_SIZE >> @cube.BUCKET_SIZE_P)
-      @buffer = new Uint8Array(@TEXTURE_SIZE * @TEXTURE_SIZE)
+      @tiles = @getTileArray(topLeftBucket, 1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
+      @buffer = new Uint8Array(1 << 2 * @TEXTURE_SIZE_P)
       @changed = true
 
       # Calculating boundaries for copying
-      width = (@TEXTURE_SIZE >> Cube.BUCKET_SIZE_P) - Math.abs(@topLeftBucket[@u] - oldTopLeftBucket[@u])
-      height = (@TEXTURE_SIZE >> Cube.BUCKET_SIZE_P) - Math.abs(@topLeftBucket[@v] - oldTopLeftBucket[@v])
+      width = (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) - Math.abs(@topLeftBucket[@u] - oldTopLeftBucket[@u])
+      height = (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) - Math.abs(@topLeftBucket[@v] - oldTopLeftBucket[@v])
       oldOffset = [
         Math.max(@topLeftBucket[@u] - oldTopLeftBucket[@u], 0)
         Math.max(@topLeftBucket[@v] - oldTopLeftBucket[@v], 0)
@@ -119,7 +159,7 @@ class Plane2D
 
           if plane.tiles[newTileIndex] and not oldTiles[oldTileIndex]
             
-            @copyTile(newTile, oldTile, @buffer, oldBuffer)
+#            @copyTile(newTile, oldTile, @buffer, oldBuffer)
             @tiles[newTileIndex] = false
 
     # If something has changed, only changed tiles are drawn
@@ -132,15 +172,19 @@ class Plane2D
       for u in [area[2]..area[0]] by -1
         for v in [area[3]..area[1]] by -1
           
-          tile = [u, v, 0]
+          tile = [u, v, zoomStep]
           tileIndex = tileIndexByTileMacro(tile)
 
+          # Render tile if necessary and mark it as rendered
           if @tiles[tileIndex]
             @renderTile(tile, @buffer)
             @tiles[tileIndex] = false
+
       @buffer
     
     else
+
+      # If the texture didn't need to be changed...
       null
 
 
@@ -165,11 +209,11 @@ class Plane2D
 
   renderTile : (tile) ->
 
-    bucket = @topLeftBucket.slice(0)
-    bucket[@u] += tile[0]
-    bucket[@v] += tile[1]
+#    bucket = @topLeftBucket.slice(0)
+#    bucket[@u] += tile[0]
+#    bucket[@v] += tile[1]
 
-    map = @generateRenderMap(bucket)
+#    map = @generateRenderMap(bucket)
     #@renderSubTile(map, 0, tile, plane.zoomStep, plane)
 
 

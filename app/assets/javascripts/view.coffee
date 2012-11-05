@@ -136,7 +136,13 @@ class View
 
     TWEEN.update()
 
-    @model.binary.ping([1000, 2000, 3000], [0, 1, 2])
+    @model.binary.ping([800, 800, 600], [0, 1, 2])
+    @model.binary.get([800, 800, 600], [
+      [0, [100, 100, 400, 400]]
+      [1, [100, 100, 400, 400]]
+      [2, [100, 100, 400, 400]]
+    ])
+
     #@model.binary.get([1000, 2000, 3000], [0, 1, 2])
 #    @trigger "render"
 

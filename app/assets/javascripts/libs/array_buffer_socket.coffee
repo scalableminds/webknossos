@@ -180,10 +180,8 @@ class ArrayBufferSocket.XmlHttpRequest
     ).pipe (buffer) =>
 
       if buffer
-        console.log "RESPONSE: ", buffer, buffer.byteLength
         new @responseBufferType(buffer)
       else
-        console.log "RESPONSE: NONE"
         []
 
 

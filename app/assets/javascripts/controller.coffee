@@ -28,9 +28,9 @@ class Controller
 
   constructor : ->
 
-#    _.extend(this, new EventMixin())
+    _.extend(this, new EventMixin())
 
-    @initModel().done (options) =>
+    @requestInitData().done (options) =>
 
       # create Model
       @model = new Model(options)
@@ -141,7 +141,7 @@ class Controller
         alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
     )
 
-  initModel : ->
+  requestInitData : ->
 
     Request.send(
       url : "/game/initialize"

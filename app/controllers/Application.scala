@@ -26,6 +26,7 @@ object Application extends Controller with Secured {
   // -- Authentication
 
   val Mailer = Akka.system.actorOf(Props[Mailer], name = "mailActor")
+  val autoVerify = Play.configuration.getBoolean("application.enableAutoVerify") getOrElse false
 
   val registerForm: Form[(String, String, String, String)] = {
     def registerFormApply(user: String, firstName: String, lastName: String, password: Tuple2[String, String]) =
@@ -62,7 +63,20 @@ object Application extends Controller with Secured {
           Promise.pure(BadRequest(html.user.register(formWithErrors))),
         {
           case (email, firstName, lastName, password) => {
-            val user = User.create(email, firstName, lastName, password)
+            val user =
+              if(autoVerify)
+                User.alterAndSave(User(
+                  email,
+                  firstName,
+                  lastName,
+                  true,
+                  brainflight.security.SCrypt.hashPassword(password),
+                  "local",
+                  UserConfiguration.defaultConfiguration,
+                  Set("user", "admin")))
+              else
+                User.create(email, firstName, lastName, password)
+                
             BrainTracing.register(user, password).map { brainDBresult =>
               Mailer ! Send(DefaultMails.registerMail(user.name, email, brainDBresult))
               Redirect(routes.Game.index)

@@ -1,7 +1,6 @@
 ### define
 model : Model
 view : View
-libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
 model/game : Game
 ###
 

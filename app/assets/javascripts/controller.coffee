@@ -1,19 +1,16 @@
 ### define
 jquery : $
 underscore : _
+controller/cameracontroller : CameraController
+controller/scenecontroller : SceneController
 model : Model
 view : View
+view/gui : Gui
+input : Input
 libs/request : Request
-libs/flycam2 : Flycam
+libs/flycam : Flycam
+libs/event_mixin : EventMixin
 ###
-
-#input : Input
-#helper : Helper
-#geometries/plane : Plane
-#controller/cameracontroller : CameraController
-#controller/scenecontroller : SceneController
-#view/gui : Gui
-#libs/event_mixin : EventMixin
 
 PLANE_XY         = 0
 PLANE_YZ         = 1
@@ -34,112 +31,72 @@ class Controller
 
       # create Model
       @model = new Model(options)
-      @flycam = new Flycam(VIEWPORT_SIZE, @model)
+
+      @flycam = new Flycam(VIEWPORT_SIZE)
       @view  = new View(@model, @flycam)
-      
-      return
-
-  foo : ->
-
-    # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
-
-    # TODO
-    # FIXME probably not the best place?!
-    # avoid scrolling while pressing space
-    $(document).keydown (event) ->
-      if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault(); return
-
-    # TODO
-    # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
-      event.preventDefault(); return
-
-    @canvasesAndNav = $("#main")[0]
-
-    @prevControls = $('#prevControls')
-    @prevControls.addClass("btn-group")
-    values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
-    callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
-                      @cameraController.changePrevXZ, @cameraController.changePrevSV]
-    buttons       = new Array(4)
-    
-    for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-
-      buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
-      buttons[i].on("click", callbacks[i])
-      @prevControls.append(buttons[i])
-
-    @model.Route.initialize().then(
-      (position) =>
-        # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
-
-        @sceneController = new SceneController(@model.Route.data.dataSet.upperBoundary, @flycam, @model)
-        meshes      = @sceneController.getMeshes()
-        for mesh in meshes
-          @view.addGeometry(mesh)
-    
-        @view.on "render", @render
-        @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
-        @sceneController.skeleton.on "newGeometries", (list, event) =>
-          for geometry in list
-            @view.addGeometry(geometry)
-        @sceneController.skeleton.on "removeGeometries", (list, event) =>
-          for geometry in list
-            @view.removeGeometry(geometry)
-        
-        @flycam.setGlobalPos(position)
-        @cameraController.changePrevSV()
-
-        ########## TEST #############
-        #for i in [1..1000]
-        #  if Math.random() < 0.2
-        #    @model.Route.popBranch().done(
-        #      (position) => 
-        #        @flycam.setGlobalPos(position)
-        #        @sceneController.setActiveNodePosition(position)
-        #        #@gui.setActiveNodeId(@model.Route.getActiveNodeId())          #      )
-        #  pos = [Math.random() * 2000, Math.random() * 2000, Math.random() * 2000]
-        #  if Math.random() < 0.3
-        #    @model.Route.putBranch(pos)
-        #    @sceneController.setWaypoint()
-        #    #@gui.setActiveNodeId(@model.Route.getActiveNodeId())
-        #  else
-        #    @model.Route.putBranch(pos)
-        #    @sceneController.setWaypoint()
-        #    #@gui.setActiveNodeId(@model.Route.getActiveNodeId())
-
   
-        @model.User.Configuration.initialize().then(
-          (data) =>
-            @flycam.setZoomSteps(data.zoomXY, data.zoomYZ, data.zoomXZ)
-            @flycam.setOverrideZoomStep(data.minZoomStep)
+      # initialize Camera Controller
+      @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
-            @initMouse() if data.mouseActive is true
-            @initKeyboard() if data.keyboardActive is true
-            @initGamepad() if data.gamepadActive is true
-            @initMotionsensor() if data.motionsensorActive is true
+      @canvasesAndNav = $("#main")[0]
 
-            @gui = new Gui($("#optionswindow"), data, @model,
-                            @sceneController, @cameraController, @flycam)
-            @gui.on "deleteActiveNode", @deleteActiveNode
-            @gui.on "createNewTree", @createNewTree
-            @gui.on "setActiveTree", (id) => @setActiveTree(id)
-            @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
-            @gui.on "deleteActiveTree", @deleteActiveTree
+      @prevControls = $('#prevControls')
+      @prevControls.addClass("btn-group")
+      values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
+      callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
+                        @cameraController.changePrevXZ, @cameraController.changePrevSV]
+      buttons       = new Array(4)
+    
+      for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
 
-            @cameraController.setRouteClippingDistance data.routeClippingDistance
-            @sceneController.setRouteClippingDistance data.routeClippingDistance
-            @sceneController.setDisplayCrosshair data.displayCrosshair
-            @sceneController.setDisplaySV PLANE_XY, data.displayPreviewXY
-            @sceneController.setDisplaySV PLANE_YZ, data.displayPreviewYZ
-            @sceneController.setDisplaySV PLANE_XZ, data.displayPreviewXZ
-            @sceneController.skeleton.setDisplaySpheres data.nodesAsSpheres
-        )
+        buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
+        buttons[i].on("click", callbacks[i])
+        @prevControls.append(buttons[i])
+
+      @sceneController = new SceneController(@model.Route.data.dataSet.upperBoundary, @flycam, @model)
+      meshes      = @sceneController.getMeshes()
       
-      ->
-        alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
-    )
+      for mesh in meshes
+        @view.addGeometry(mesh)
+    
+      @view.on "render", @render
+      @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
+
+      @sceneController.skeleton.on "newGeometries", (list, event) =>
+        
+        for geometry in list
+          @view.addGeometry(geometry)
+        
+      @sceneController.skeleton.on "removeGeometries", (list, event) =>
+      
+        for geometry in list
+          @view.removeGeometry(geometry)
+        
+      # TODO
+      @flycam.setGlobalPos(position)
+      @flycam.setZoomSteps(data.zoomXY, data.zoomYZ, data.zoomXZ)
+      @flycam.setOverrideZoomStep(data.minZoomStep)
+
+      @initMouse()
+      @initKeyboard()
+
+      @gui = new Gui($("#optionswindow"), data, @model, @sceneController, @cameraController, @flycam)
+      @gui.on "deleteActiveNode", @deleteActiveNode
+      @gui.on "createNewTree", @createNewTree
+      @gui.on "setActiveTree", (id) => @setActiveTree(id)
+      @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
+      @gui.on "deleteActiveTree", @deleteActiveTree
+
+
+      @cameraController.changePrevSV()
+      @cameraController.setRouteClippingDistance data.routeClippingDistance
+      @sceneController.setRouteClippingDistance data.routeClippingDistance
+      @sceneController.setDisplayCrosshair data.displayCrosshair
+      @sceneController.setDisplaySV PLANE_XY, data.displayPreviewXY
+      @sceneController.setDisplaySV PLANE_YZ, data.displayPreviewYZ
+      @sceneController.setDisplaySV PLANE_XZ, data.displayPreviewXZ
+      @sceneController.skeleton.setDisplaySpheres data.nodesAsSpheres
+      
 
   requestInitData : ->
 
@@ -161,10 +118,16 @@ class Controller
           options.user = user
           options
 
+          ->
+
+        alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
+
+
   initMouse : ->
+
     # initializes an Input.Mouse object with the three canvas
     # elements and one pair of callbacks per canvas
-    @input.mouses = new Input.Mouse(
+    new Input.Mouse(
       [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
       [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
       {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "l" : @onPlaneClick, "r" : @setWaypoint}
@@ -172,14 +135,16 @@ class Controller
     )
 
   initKeyboard : ->
-
-    # TODO: (from Georg) I do not get the difference between Keyboard
-    # and KeyboardNoLoop. KeyboardNoLoop implies that pressing the key
-    # longer will not trigger the callback several times, but this is
-    # false, apparently. I moved the space to KeyboardNoLoop, because
-    # it allows more accuracy.
     
-    @input.keyboard = new Input.Keyboard(
+    # avoid scrolling while pressing space
+    $(document).keydown (event) ->
+      if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault();
+
+    # hide contextmenu, while rightclicking a canvas
+    $("#render").bind "contextmenu", (event) ->
+      event.preventDefault(); return
+
+    new Input.Keyboard(
 
       #Fullscreen Mode
       "f" : =>
@@ -256,38 +221,11 @@ class Controller
       "ctrl + space"  : => @moveZ(-@model.User.Configuration.moveValue)
     )
 
-  # for more buttons look at Input.Gamepad
-  #initGamepad : ->
-  #  @input.gamepad = new Input.Gamepad(
-  #      "ButtonA" : -> @view.move [0, 0, @model.User.Configuration.moveValue]
-  #      "ButtonB" : -> @view.move [0, 0, -@model.User.Configuration.moveValue]
-  #  )
-
-  #initMotionsensor : ->
-  #  @input.deviceorientation = new Input.Deviceorientation(
-    # TODO implement functionality
-    #  "x"  : View.yawDistance
-    #  "y" : View.pitchDistance
-   # )
-
-  #initDeviceOrientation : ->
-  #  @input.deviceorientation = new Input.Deviceorientation(
-    # TODO implement functionality
-    #  "x"  : View.yawDistance
-    #  "y" : View.pitchDistance
-  #  )
-
-  input :
-    mouses : null
-    mouseXY : null
-    mouseXZ : null
-    mouseYZ : null
-    keyboard : null
-    gamepad : null
-    deviceorientation : null
 
   render : =>
+
     @model.Binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
+    @model.Route.globalPosition = @flycam.getGlobalPos()
     if (@gui)
       @gui.updateGlobalPosition()
     @cameraController.update()
@@ -412,39 +350,3 @@ class Controller
   setMouseRotateValue : (value) =>
     @model.User.Configuration.mouseRotateValue = (Number) value
     @model.User.Configuration.push()             
-
-  #setMouseActivity : (value) =>
-  #  @model.User.Configuration.mouseActive = value
-  #  @model.User.Configuration.push()
-  #  if value is false
-  #    @input.mouse.unbind()
-  #    @input.mouse = null
-  #  else
-  #    @initMouse()
-
-  #setKeyboardActivity : (value) =>
-  #  @model.User.Configuration.keyboardActive = value 
-  #  @model.User.Configuration.push()
-  #  if value is false
-  #    @input.keyboard.unbind()
-  #    @input.keyboard = null
-  #  else
-  #    @initKeyboard()
-
-  #setGamepadActivity : (value) =>
-  #  @model.User.Configuration.gamepadActive = value  
-  #  @model.User.Configuration.push()   
-  #  if value is false
-  #    @input.gamepad.unbind()
-  #    @input.gamepad = null
-  #  else
-  #    @initGamepad()    
-
-  #setMotionSensorActivity : (value) =>
-  #  @model.User.Configuration.motionsensorActive = value
-  #  @model.User.Configuration.push()   
-  #  if value is false
-  #    @input.deviceorientation.unbind()
-  #    @input.deviceorientation = null
-  #  else
-  #    @initMotionsensor()

@@ -1,4 +1,6 @@
 ### define
+jquery : $
+underscore : _
 libs/request : request
 libs/event_mixin : EventMixin
 libs/json_socket : JsonSocket
@@ -27,11 +29,9 @@ Route =
   # Initializes this module and returns a position to start your work.
   initialize : _.once ->
 
-    Game.initialize().pipe =>
+    _.extend(this, new EventMixin())
 
-      _.extend(this, new EventMixin())
-
-      $.get("/experiment/#{Game.task.id}",
+    $.get("/experiment/#{Game.task.id}",
         (data) =>
           Route.data = data
           console.log "Route.data:"

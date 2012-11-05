@@ -36,7 +36,25 @@ object TaskAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role("admin")
 
-  def bulkCreate = TODO
+  def bulkCreate = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    request.request.body.get("data").flatMap(_.headOption).map{ data =>
+      data
+      .split("\n")
+      .map(_.split(" "))
+      .filter(_.size != 11)
+      .map{ params =>
+        for{
+          cellId <- params(1).toIntOpt
+          startX <- params(3).toIntOpt
+          startY <- params(4).toIntOpt
+          startZ <- params(5).toIntOpt
+          priority <- params(6).toIntOpt
+          instances <- params(7).toIntOpt
+        } yield 0//Task()
+      }
+      Ok
+    } getOrElse BadRequest("'data' parameter is mising")
+  }
 
   def list = Authenticated { implicit request =>
     Ok(html.admin.task.taskList(request.user, Task.findAll))
@@ -55,7 +73,7 @@ object TaskAdministration extends Controller with Secured {
       formWithErrors => BadRequest(html.admin.task.taskTypes(request.user, TaskType.findAll, formWithErrors)),
       { t =>
         TaskType.insert(t)
-        Ok(t.toString)
+        Ok(html.admin.task.taskTypes(request.user, TaskType.findAll, taskTypeForm))
       })
   }
 

@@ -3,6 +3,7 @@ package brainflight.mail
 import views._
 import models.user.User
 import play.api.Play
+import play.api.i18n.Messages
 
 object DefaultMails {
   /**
@@ -19,11 +20,11 @@ object DefaultMails {
    * Creates a registration mail which should allow the user to verify his 
    * account
    */
-  def registerMail( name: String, receiver: String ) =
+  def registerMail( name: String, receiver: String, brainDBresult: String ) =
     Mail(
         from = "no-reply@brainflight.net",
         subject = "Thanks for your registration on "+ uri,
-        bodyText = html.mail.register( name ).body,
+        bodyText = html.mail.register( name, Messages(brainDBresult) ).body,
         recipients = List( receiver )
     )
     

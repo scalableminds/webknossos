@@ -4,6 +4,7 @@ import play.api._
 import play.api.mvc._
 import play.api.data._
 import play.api.Play.current
+import play.api.libs.concurrent._
 import models.user._
 import views._
 import play.mvc.Results.Redirect
@@ -18,6 +19,7 @@ import play.api.libs.concurrent.Akka
 import akka.actor.Props
 import models.task.Experiment
 import models.task.UsedExperiments
+import brainflight.thirdparty.BrainTracing
 
 object Application extends Controller with Secured {
 
@@ -39,7 +41,7 @@ object Application extends Controller with Secured {
       mapping(
         "email" -> email,
         "firstName" -> nonEmptyText(2, 30),
-        "lastName" -> nonEmptyText(2,30),
+        "lastName" -> nonEmptyText(2, 30),
         "password" -> passwordField)(registerFormApply)(registerFormUnapply)
         .verifying("error.email.inuse",
           user => User.findLocalByEmail(user._1).isEmpty))
@@ -53,19 +55,22 @@ object Application extends Controller with Secured {
   /**
    * Handle registration form submission.
    */
-  def registrate = Action {
-    implicit request =>
+  def registrate = Action { implicit request =>
+    Async {
       registerForm.bindFromRequest.fold(
-        formWithErrors => BadRequest(html.user.register(formWithErrors)),
+        formWithErrors =>
+          Promise.pure(BadRequest(html.user.register(formWithErrors))),
         {
           case (email, firstName, lastName, password) => {
             val user = User.create(email, firstName, lastName, password)
-            Mailer ! Send(DefaultMails.registerMail(user.name, email))
-            Redirect(routes.Game.index)
-              .flashing("success" -> "Thanks for your registration!")
-              .withSession(Secured.createSession(user))
+            BrainTracing.register(user, password).map { brainDBresult =>
+              Mailer ! Send(DefaultMails.registerMail(user.name, email, brainDBresult))
+              Redirect(routes.Game.index)
+                .withSession(Secured.createSession(user))
+            }.asPromise
           }
         })
+    }
   }
 
   val loginForm = Form(

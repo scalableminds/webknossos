@@ -2,8 +2,7 @@
 
 @main( Some(user) ){
 <script src="@routes.Assets.at("javascripts/libs/modernizr-2.0.6.min.js")"></script>
-<script src="@routes.Assets.at("javascripts/libs/requirejs-1.0.7.js")"></script>
-<script src="@routes.Assets.at("javascripts/libs/mjs.js")"></script>
+<script data-main="/assets/javascripts/oxalis" src="@routes.Assets.at("javascripts/libs/requirejs.js")"></script>
   <div id="container">
     <div id="main" role="main">
       <div id="render">
@@ -28,8 +27,7 @@
     if (Modernizr.webgl)
       Modernizr.load([
         "@routes.Assets.at("javascripts/libs/threejs/Three.js")",
-        "@routes.Assets.at("javascripts/libs/threejs/stats.js")",
-        "@routes.Assets.at("javascripts/brainflight.js")"
+        "@routes.Assets.at("javascripts/libs/threejs/stats.js")"
       ]);
     else
       alert( "Sorry dude, you need WebGL for this. Get Chrome or Firefox." );

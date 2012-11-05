@@ -1,24 +1,27 @@
 ### define
+jquery : $
+underscore : _
 model : Model
 view : View
-geometry_factory : GeometryFactory
-libs/event_mixin : EventMixin
-input : Input
-helper : Helper
+libs/request : Request
 libs/flycam2 : Flycam
-geometries/plane : Plane
-view/gui : Gui
-controller/cameracontroller : CameraController
-controller/scenecontroller : SceneController
 ###
+
+#input : Input
+#helper : Helper
+#geometries/plane : Plane
+#controller/cameracontroller : CameraController
+#controller/scenecontroller : SceneController
+#view/gui : Gui
+#libs/event_mixin : EventMixin
 
 PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
-VIEWPORT_WIDTH   = 380
+VIEWPORT_SIZE    = 380
 WIDTH            = 384
-TEXTURE_WIDTH    = 512
+TEXTURE_SIZE     = 512
 
 
 class Controller
@@ -27,19 +30,27 @@ class Controller
 
     _.extend(this, new EventMixin())
 
-    # create Model, View and Flycam
-    @model = new Model()
-    @flycam = new Flycam(VIEWPORT_WIDTH, @model)
-    @view  = new View(@model, @flycam)
+    @requestInitData().done (options) =>
+
+      # create Model
+      @model = new Model(options)
+      @flycam = new Flycam(VIEWPORT_SIZE, @model)
+      @view  = new View(@model, @flycam)
+      
+      return
+
+  foo : ->
 
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
+    # TODO
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
       if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault(); return
 
+    # TODO
     # hide contextmenu, while rightclicking a canvas
     $("#render").bind "contextmenu", (event) ->
       event.preventDefault(); return
@@ -52,7 +63,9 @@ class Controller
     callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
                       @cameraController.changePrevXZ, @cameraController.changePrevSV]
     buttons       = new Array(4)
+    
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
+
       buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
       buttons[i].on("click", callbacks[i])
       @prevControls.append(buttons[i])
@@ -85,8 +98,7 @@ class Controller
         #      (position) => 
         #        @flycam.setGlobalPos(position)
         #        @sceneController.setActiveNodePosition(position)
-        #        #@gui.setActiveNodeId(@model.Route.getActiveNodeId())
-        #      )
+        #        #@gui.setActiveNodeId(@model.Route.getActiveNodeId())          #      )
         #  pos = [Math.random() * 2000, Math.random() * 2000, Math.random() * 2000]
         #  if Math.random() < 0.3
         #    @model.Route.putBranch(pos)
@@ -128,6 +140,26 @@ class Controller
       ->
         alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
     )
+
+  requestInitData : ->
+
+    Request.send(
+      url : "/game/initialize"
+      dataType : "json"
+    ).pipe (task) ->
+
+      Request.send(
+        url : "/experiment/#{task.task.id}"
+        dataType : "json"
+      ).pipe (options) ->
+
+        Request.send(
+          url : "/user/configuration"
+          dataType : "json"
+        ).pipe (user) ->
+
+          options.user = user
+          options
 
   initMouse : ->
     # initializes an Input.Mouse object with the three canvas

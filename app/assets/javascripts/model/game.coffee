@@ -1,5 +1,5 @@
 ### define
-libs/request : request
+libs/request : Request
 ###
 
 # This holds game specific data.
@@ -10,11 +10,9 @@ Game =
 
   initialize : -> 
     
-    request(
+    Request.send(
       url : "/game/initialize"
       responseType : "json"
     ).pipe (task) =>
       _.extend(this, task)
       return
-
-

@@ -1,11 +1,8 @@
 ### define 
-model/game : Game
 model/binary : Binary
-model/shader : Shader
 model/route : Route
-model/mesh : Mesh
-model/trianglesplane : Trianglesplane
 model/user : User
+underscore : _
 ###
 
 # This is the model. It takes care of the data including the 
@@ -14,15 +11,10 @@ model/user : User
 # All public operations are **asynchronous**. We return a promise
 # which you can react on.
 
-#Model = { Game, Binary, Shader, Route, Mesh, Trianglesplane, User }
-
 class Model
 
-  constructor : ->
-    @Game = Game
-    @Binary = Binary
-    @Shade = Shader
-    @Route = Route
-    @Mesh = Mesh
-    @Trianglesplane = Trianglesplane
-    @User = User
+  constructor : (options) ->
+
+    @binary = new Binary(options.dataSet.id)
+    #@route = new Route()
+    #@user = new User()

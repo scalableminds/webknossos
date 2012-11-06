@@ -21,29 +21,31 @@ class Skeleton
   # This class is supposed to collect all the Geometries that belong to the skeleton, like
   # nodes, edges and trees
 
-  constructor : (maxRouteLen, flycam, model) ->
+  maxRouteLen : 0
+  flycam : null
+  model : null
+
+  # Edges
+  routes : []
+  # Nodes
+  nodes : []
+  nodeSpheres : []
+  # Tree IDs
+  ids : []
+  # Current Index
+  curIndex : []
+  # whether or not display the spheres
+  disSpheres : true
+
+
+  constructor : (@maxRouteLen, @flycam, @model) ->
+
     _.extend(this, new EventMixin())
-
-    @maxRouteLen  = maxRouteLen
-    @flycam       = flycam
-    @model        = model
-    # Edges
-    @routes       = []
-    # Nodes
-    @nodes        = []
-    @nodesSpheres = []
-    # Tree IDs
-    @ids          = []
-    # Current Index
-    @curIndex     = []
-
-    # whether or not display the spheres
-    @disSpheres   = true
 
     # Create sphere to represent the active Node, radius is
     # 1 nm, so that @activeNode.scale is the radius in nm.
     @activeNode = new THREE.Mesh(
-        new THREE.SphereGeometry(1 / @model.Route.scaleX),
+        new THREE.SphereGeometry(1 / @model.route.scaleX),
         new THREE.MeshLambertMaterial({
           color : COLOR_ACTIVE
           #transparent: true
@@ -97,15 +99,15 @@ class Skeleton
     @nodes        = []
     @ids          = []
     @nodesSpheres = []
-    for tree in @model.Route.getTrees()
+    for tree in @model.route.getTrees()
       @createNewTree(tree.treeId)
     @loadSkeletonFromModel()
     # Add Spheres to the scene
     @trigger "newGeometries", @nodesSpheres
 
   loadSkeletonFromModel : ->
-    for tree in @model.Route.getTrees()
-      nodeList = @model.Route.getNodeList(tree)
+    for tree in @model.route.getTrees()
+      nodeList = @model.route.getNodeList(tree)
 
       index = @getIndexFromTreeId(tree.treeId)
 
@@ -134,13 +136,13 @@ class Skeleton
             @curIndex[index]++
         @routes[index].geometry.verticesNeedUpdate = true
         @nodes[index].geometry.verticesNeedUpdate = true
-    for branchPoint in @model.Route.branchStack
+    for branchPoint in @model.route.branchStack
       @setBranchPoint(true, branchPoint.id)
     @setActiveNode()
 
   setActiveNode : =>
-    id = @model.Route.getActiveNodeId()
-    position = @model.Route.getActiveNodePos()
+    id = @model.route.getActiveNodeId()
+    position = @model.route.getActiveNodePos()
     if @activeNodeSphere and @disSpheres==true
       @activeNodeSphere.visible = true
     # May be null
@@ -151,11 +153,11 @@ class Skeleton
       # Hide activeNodeSphere, because activeNode is visible anyway
       if @activeNodeSphere
         @activeNodeSphere.visible = false
-        if @model.Route.getActiveNodeType() == TYPE_BRANCH
+        if @model.route.getActiveNodeType() == TYPE_BRANCH
           @activeNode.material.color.setHex(COLOR_BRANCH_ACTIVE)
         else
           @activeNode.material.color.setHex(COLOR_ACTIVE)
-      @setNodeRadius(@model.Route.getActiveNodeRadius())
+      @setNodeRadius(@model.route.getActiveNodeRadius())
       @activeNode.position = new THREE.Vector3(position[0], position[1], position[2])
     else
       @activeNodeSphere = null
@@ -165,7 +167,7 @@ class Skeleton
   setBranchPoint : (isBranchPoint, nodeID) ->
     colorActive = if isBranchPoint then COLOR_BRANCH_ACTIVE else COLOR_ACTIVE
     colorNormal = if isBranchPoint then COLOR_BRANCH else COLOR_NORMAL
-    if not nodeID? or nodeID == @model.Route.getActiveNodeId()
+    if not nodeID? or nodeID == @model.route.getActiveNodeId()
       @activeNode.material.color.setHex(colorActive)
       if @activeNodeSphere
         @activeNodeSphere.material.color.setHex(colorNormal)
@@ -183,17 +185,17 @@ class Skeleton
   getMeshes : =>
     return [@activeNode].concat(@routes).concat(@nodes).concat(@nodesSpheres)
 
-  # Looks for the Active Point in Model.Route and adds it to
+  # Looks for the Active Point in model.route and adds it to
   # the Skeleton View
   setWaypoint : =>
     curGlobalPos = @flycam.getGlobalPos()
     activePlane  = @flycam.getActivePlane()
     zoomFactor   = @flycam.getPlaneScalingFactor activePlane
-    position     = @model.Route.getActiveNodePos()
-    typeNumber   = @model.Route.getActiveNodeType()
-    id           = @model.Route.getActiveNodeId()
-    index        = @getIndexFromTreeId(@model.Route.getTree().treeId)
-    radius       = @model.Route.getActiveNodeRadius()
+    position     = @model.route.getActiveNodePos()
+    typeNumber   = @model.route.getActiveNodeType()
+    id           = @model.route.getActiveNodeId()
+    index        = @getIndexFromTreeId(@model.route.getTree().treeId)
+    radius       = @model.route.getActiveNodeRadius()
 
     #if typeNumber == 0
       # calculate the global position of the rightclick
@@ -255,7 +257,7 @@ class Skeleton
 
   pushNewNode : (radius, position, id) ->
     newNode = new THREE.Mesh(
-      new THREE.SphereGeometry(1 / @model.Route.scaleX),
+      new THREE.SphereGeometry(1 / @model.route.scaleX),
       new THREE.MeshLambertMaterial({ color : COLOR_NORMAL})#, transparent: true, opacity: 0.5 })
     )
     newNode.scale = new THREE.Vector3(radius, radius, radius)
@@ -268,7 +270,7 @@ class Skeleton
       
   getIndexFromTreeId : (treeId) ->
     unless treeId
-      treeId = @model.Route.getTree().treeId
+      treeId = @model.route.getTree().treeId
     for i in [0..@ids.length]
       if @ids[i] == treeId
         return i

@@ -1,6 +1,6 @@
 ### define
 libs/datgui/dat.gui : DatGui
-libs/request : request
+libs/request : Request
 libs/event_mixin : EventMixin
 ###
 
@@ -10,62 +10,65 @@ PLANE_XZ = 2
 VIEW_3D  = 3
 
 class Gui 
+
+  model : null
+  sceneController : null
+  cameraController : null
+  flycam : null
   
-  constructor : (container, data, model, sceneController, cameraController, flycam) ->
+  constructor : (container, @model, @sceneController, @cameraController, @flycam) ->
     
     _.extend(this, new EventMixin())
 
-    @model = model
-    @sceneController = sceneController
-    @cameraController = cameraController
-    @flycam = flycam
     initPos = @flycam.getGlobalPos()
 
     # create GUI
-    modelRadius = @model.Route.getActiveNodeRadius()
-    @settings = { 
-                save : @saveNow
-                finish : @finish
-                upload : @uploadNML
-                download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
-                                          "_blank", "width=700,height=400,location=no,menubar=no")
+    modelRadius = @model.route.getActiveNodeRadius()
+    
+    @settings = {
+      save : @saveNow
+      finish : @finish
+      upload : @uploadNML
+      download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url, "_blank", "width=700,height=400,location=no,menubar=no")
 
-                resume : false
-                experiments : null
-                selectedExperimentIndex : 0
-                changeExperiment : => 
-                  experiment = @settings.experiments[@settings.selectedExperimentIndex]
-                  @model.Route.pushImpl().done ->
-                    request(
-                      method : "POST"
-                      url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
-                    ).always -> window.location.reload()
+      resume : false
+      experiments : null
+      selectedExperimentIndex : 0
+      changeExperiment : => 
+        experiment = @settings.experiments[@settings.selectedExperimentIndex]
+        @model.route.pushImpl().done ->
+          Request.send(
+            method : "POST"
+            url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
+          ).always -> window.location.reload()
 
-                position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
-                lockZoom: data.lockZoom
-                inverseX: data.mouseInversionX == 1
-                inverseY: data.mouseInversionY == 1
+      position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
+      lockZoom: @model.user.lockZoom
+      inverseX: @model.user.mouseInversionX == 1
+      inverseY: @model.user.mouseInversionY == 1
 
-                moveValue : data.moveValue
-                routeClippingDistance: data.routeClippingDistance
-                displayCrosshairs: data.displayCrosshair
-                interpolation : data.interpolation
-                minZoomStep : data.minZoomStep
+      moveValue : @model.user.moveValue
+      routeClippingDistance: @model.user.routeClippingDistance
+      displayCrosshairs: @model.user.displayCrosshair
+      interpolation : @model.user.interpolation
+      minZoomStep : @model.user.minZoomStep
 
-                displayPrevXY : data.displayPreviewXY
-                displayPrevYZ : data.displayPreviewYZ
-                displayPrevXZ : data.displayPreviewXZ
-                nodesAsSpheres : data.nodesAsSpheres
+      displayPrevXY : @model.user.displayPreviewXY
+      displayPrevYZ : @model.user.displayPreviewYZ
+      displayPrevXZ : @model.user.displayPreviewXZ
+      nodesAsSpheres : @model.user.nodesAsSpheres
 
-                activeTreeID : @model.Route.getActiveTreeId()
-                newTree : => @trigger "createNewTree"
-                deleteActiveTree : => @trigger "deleteActiveTree"
+      activeTreeID : @model.route.getActiveTreeId()
+      newTree : => @trigger "createNewTree"
+      deleteActiveTree : => @trigger "deleteActiveTree"
 
-                activeNodeID : @model.Route.getActiveNodeId()
-                newNodeNewTree : data.newNodeNewTree
-                deleteActiveNode : => @trigger "deleteActiveNode"
-                radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
-              }
+      activeNodeID : @model.route.getActiveNodeId()
+      newNodeNewTree : @model.user.newNodeNewTree
+      deleteActiveNode : => @trigger "deleteActiveNode"
+      
+      radius : if modelRadius then modelRadius else 10 * @model.route.scaleX
+    }
+
     @gui  = new dat.GUI({autoPlace: false, width : 280, hideable : false})
     
     container.append @gui.domElement
@@ -81,21 +84,17 @@ class Gui
                           .name("Download NML")
     
     fExperiment = @gui.addFolder("Experiment")
-    request(
-      url : "/experiment"
-      responseType : "json"
-    ).done (experiments) =>
-      
-      @settings.experiments = experiments
+    
+    @settings.experiments = @model.route.experiments
 
-      options = {}
-      for experiment, i in experiments
-        options[experiment.name] = i
+    options = {}
+    for experiment, i in @settings.experiments
+      options[experiment.name] = i
 
-      (fExperiment.add @settings, "selectedExperimentIndex", options)
-                            .name("Datasets")
-      (fExperiment.add @settings, "changeExperiment")
-                            .name("Apply")
+    (fExperiment.add @settings, "selectedExperimentIndex", options)
+                          .name("Datasets")
+    (fExperiment.add @settings, "changeExperiment")
+                          .name("Apply")
 
     
     fPosition = @gui.addFolder("Position")
@@ -147,12 +146,12 @@ class Gui
                           .onChange(@setNodeAsSpheres)
 
     fTrees = @gui.addFolder("Trees")
-    @activeTreeIdController =
-    (fTrees.add @settings, "activeTreeID")
-                          .min(1)
-                          .step(1)
-                          .name("Active Tree ID")
-                          .onFinishChange( (value) => @trigger "setActiveTree", value)
+    #@activeTreeIdController =
+    #(fTrees.add @settings, "activeTreeID")
+    #                      .min(1)
+    #                      .step(1)
+    #                      .name("Active Tree ID")
+    #                      .onFinishChange( (value) => @trigger "setActiveTree", value)
     (fTrees.add @settings, "newNodeNewTree")
                           .name("Soma clicking mode")
                           .onFinishChange(@setNewNodeNewTree)
@@ -162,17 +161,17 @@ class Gui
                           .name("Delete Active Tree")
 
     fNodes = @gui.addFolder("Nodes")
-    @activeNodeIdController =
-    (fNodes.add @settings, "activeNodeID")
-                          .min(1)
-                          .step(1)
-                          .name("Active Node ID")
-                          .onFinishChange( (value) => @trigger "setActiveNode", value)
-    scale = @model.Route.scaleX
-    (fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
-                          .name("Radius")    
-                          .listen()
-                          .onChange(@setNodeRadius)
+    #@activeNodeIdController =
+    #(fNodes.add @settings, "activeNodeID")
+    #                      .min(1)
+    #                      .step(1)
+    #                      .name("Active Node ID")
+    #                      .onFinishChange( (value) => @trigger "setActiveNode", value)
+    #scale = @model.route.scaleX
+    #(fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
+    #                      .name("Radius")    
+    #                      .listen()
+    #                      .onChange(@setNodeRadius)
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
@@ -185,8 +184,8 @@ class Gui
     fNodes.open()
 
   saveNow : =>
-    @model.User.Configuration.pushImpl()
-    @model.Route.pushImpl()
+    @model.user.pushImpl()
+    @model.route.pushImpl()
       .then( 
         -> toastSuccess("Saved!")
         -> toastError("Couldn't save. Please try again.")

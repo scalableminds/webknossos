@@ -1,5 +1,5 @@
 ### define 
-model/user : User
+model : Model
 libs/jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
 ###
 
@@ -29,16 +29,16 @@ class Mouse
   @changedCallbackLeftclick : $.noop()
   activeCallback : $.noop()
 
+  target : null
+  model : null
 
   ###
   #@param {Object} target : DOM Element
   # HTML object where the mouse attaches the events
   ###
-  constructor : (target, activeCallback) ->
-    @target = target
+  constructor : (@target, @activeCallback, @model) ->
     @shouldBeActive = false
 
-    @activeCallback = activeCallback
     navigator.pointer = navigator.webkitPointer or navigator.pointer or navigator.mozPointer
 
     $(window).on
@@ -121,8 +121,8 @@ class Mouse
     # regular mouse management
     unless @locked 
       if @buttonDown
-        distX =  (evt.pageX - @lastPosition.x) * User.Configuration.mouseInversionX
-        distY =  (evt.pageY - @lastPosition.y) * User.Configuration.mouseInversionY
+        distX =  (evt.pageX - @lastPosition.x) * @model.user.mouseInversionX
+        distY =  (evt.pageY - @lastPosition.y) * @model.user.mouseInversionY
         @changedCallbackX distX if distX isnt 0
         @changedCallbackY distY if distY isnt 0
 
@@ -134,10 +134,10 @@ class Mouse
     # Mouse lock returns MovementX/Y in addition to the regular properties
     # (these become static)   
     else
-      distX = evt.originalEvent.webkitMovementX * User.Configuration.mouseInversionX
-      distY = evt.originalEvent.webkitMovementY * User.Configuration.mouseInversionY
-      @changedCallbackX distX * User.Configuration.mouseRotateValue if distX isnt 0
-      @changedCallbackY distY * User.Configuration.mouseRotateValue if distY isnt 0
+      distX = evt.originalEvent.webkitMovementX * @model.user.mouseInversionX
+      distY = evt.originalEvent.webkitMovementY * @model.user.mouseInversionY
+      @changedCallbackX distX * @model.user.mouseRotateValue if distX isnt 0
+      @changedCallbackY distY * @model.user.mouseRotateValue if distY isnt 0
 
   mouseEnter : (evt) =>
     # don't invoke activeCallback, when leftclicking while entering, but remember to do it on mouseUp

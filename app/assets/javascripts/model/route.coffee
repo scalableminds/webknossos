@@ -26,8 +26,12 @@ class Route
   activeNode : null
   activeTree : null
 
+  dataSet : null
+  experiment : null
+  experiments : null
+
   # Initializes this module and returns a position to start your work.
-  constructor : (experiment) ->
+  constructor : (@dataSet, @experiment, @experiments) ->
 
     _.extend(this, new EventMixin())
 
@@ -225,8 +229,8 @@ class Route
     @activeNode.size
 
   getActiveTreeId : ->
-    if @activeTree
-      return @activeTree.treeId
+    unless @activeTree then return null
+    @activeTree.treeId
 
   setActiveNodeRadius : (radius) ->
     if @activeNode

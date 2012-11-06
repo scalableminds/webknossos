@@ -1,6 +1,7 @@
 package brainflight.binary
+
 import brainflight.tools.geometry.Point3D
-import models.DataSet
+import models.binary.DataSet
 import brainflight.tools.geometry.Cuboid
 
 /**

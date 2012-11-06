@@ -1,19 +1,20 @@
-import brainflight.tools.geometry._
+import akka.actor.Props
 import play.api._
 import play.api.Play.current
-import models._
-import brainflight.mail.DefaultMails
-import models.graph.Experiment
-import models.graph.Tree
-import models.graph.Node
 import play.api.libs.concurrent._
 import play.api.Play.current
-import akka.actor.Props
+import models.security._
+import models.task._
+import models.user._
+import models.Color
+import models.graph._
+import models.basics.BasicEvolution
+import brainflight.mail.DefaultMails
+import brainflight.tools.geometry._
 import brainflight.mail.Mailer
 import brainflight.io.StartWatching
 import brainflight.io.DataSetChangeHandler
 import brainflight.io.DirectoryWatcherActor
-import models.basics.BasicEvolution
 import scala.collection.parallel.Tasks
 
 object Global extends GlobalSettings {
@@ -39,24 +40,26 @@ object InitialData {
 
   def insert() = {
     if (Role.findAll.isEmpty) {
-      Role.insert(Role("user", Nil))
-      Role.insert(Role("admin", Permission("*", "*" :: Nil) :: Nil))
+      Role.insert(Role("user", Nil, Color(0.2274F, 0.5294F, 0.6784F, 1)))
+      Role.insert(Role("admin", Permission("*", "*" :: Nil) :: Nil, Color(0.2F, 0.2F, 0.2F, 1)))
     }
 
     if (User.findAll.isEmpty) {
-      val u = ("scmboy@scalableminds.com", "SCM Boy", "secret")
-      Seq(
-        u).foreach{ values =>
-        val user = (User.create _ tupled)(values)
-        User.addRole(user, "admin")
-        User.verify(user)
-      }
+      User.insert(User(
+        "scmboy@scalableminds.com",
+        "SCM",
+        "Boy",
+        true,
+        brainflight.security.SCrypt.hashPassword("secret"),
+        "local",
+        UserConfiguration.defaultConfiguration,
+        Set("user", "admin")))
     }
-    
+
     if (TaskSelectionAlgorithm.findAll.isEmpty) {
       TaskSelectionAlgorithm.insert(TaskSelectionAlgorithm(
         """function simple(user, tasks){ 
-          |  return tasks[0];
+          |  return tasks[0].id;
           |}""".stripMargin))
     }
   }

@@ -2,7 +2,7 @@ package brainflight.js
 
 import akka.actor.Actor
 import brainflight.tools.geometry.Point3D
-import models.DataSet
+import models.binary.DataSet
 import brainflight.tools.geometry.Cuboid
 import scala.collection.mutable.ArrayBuffer
 import akka.agent.Agent

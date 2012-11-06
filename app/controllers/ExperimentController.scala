@@ -3,17 +3,16 @@ package controllers
 import play.api.Logger
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import models.BranchPoint
+import models.graph.BranchPoint
 import play.api.mvc._
 import org.bson.types.ObjectId
 import brainflight.tools.Math._
 import brainflight.security.Secured
 import brainflight.tools.geometry.Vector3I
 import brainflight.tools.geometry.Vector3I._
-import models.{ User, TransformationMatrix }
-import models.Role
-import models.Origin
-import models.graph.Experiment
+import models.user.User
+import models.security._
+import models.task.Experiment
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent.Channel
@@ -21,12 +20,13 @@ import play.api.libs.iteratee.Input
 import play.api.libs.iteratee.Done
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.Comet
-import models.DataSet
+import models.binary.DataSet
 import models.graph.Node
 import models.graph.Edge
 import brainflight.tools.geometry.Point3D
 import brainflight.format.DateFormatter
-import models.UsedExperiments
+import models.task.UsedExperiments
+import models.user.TimeTracking
 
 /**
  * scalableminds - brainflight
@@ -82,11 +82,22 @@ object ExperimentController extends Controller with Secured {
         Ok
       } getOrElse BadRequest("Couldn't find DataSet.")
     } else {
-      Experiment.findOneById(id).filter(_.user == user.id).map { exp =>
+      Experiment.findOneById(id).filter(_._user == user._id).map { exp =>
         UsedExperiments.use(user, exp)
         Ok
       } getOrElse BadRequest("Coudln't find experiment.")
     }
+  }
+
+  def createExplorational = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    (for{
+      dataSetId <- request.body.get("dataSetId").flatMap(_.headOption)
+      dataSet <- DataSet.findOneById(dataSetId)
+    } yield {
+      val exp = Experiment.createNew(request.user, dataSet)
+      UsedExperiments.use(request.user, exp)
+      Redirect(routes.Game.index)
+    }) getOrElse BadRequest("Couldn't find DataSet.")
   }
 
   def list = Authenticated { implicit request =>
@@ -94,14 +105,17 @@ object ExperimentController extends Controller with Secured {
   }
 
   def info(experimentId: String) = Authenticated { implicit request =>
-    Experiment.findOneById(experimentId).map(exp =>
+    Experiment.findOneById(experimentId).filter(_._user == request.user._id).map(exp =>
       Ok(createExperimentInformation(exp) ++ createDataSetInformation(exp.dataSetName))).getOrElse(BadRequest("Experiment with id '%s' not found.".format(experimentId)))
   }
 
   def update(experimentId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
-    (request.body).asOpt[Experiment].map { exp =>
-      Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
-      Ok
+    Experiment.findOneById(experimentId).filter(_._user == request.user._id).flatMap { _ =>
+      (request.body).asOpt[Experiment].map { exp =>
+        Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
+        TimeTracking.logUserAction(request.user)
+        Ok
+      }
     } getOrElse (BadRequest("Update for experiment with id '%s' failed.".format(experimentId)))
   }
 }

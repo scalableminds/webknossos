@@ -20,6 +20,27 @@ body {
     background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
     padding-left: 43px;
 }
+.navbar span.brand:hover {
+    color: #999;
+}
+
+.well form {
+    margin-bottom: 0;
+}
+.well form .form-actions {
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.input-fullwidth {
+    width: 100%;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+.input-monospace {
+    font-family: Monaco, Consolas, "Lucida Console", "Courier New", monospace;
+}
 
 #stats {
     position: fixed;
@@ -100,8 +121,16 @@ body {
 
 #alert-container {
     position: absolute;
-    right: 1em;
-    top: 6em;
+    right: 20px;
+    top: 60px;
+    z-index: 100;
+    
+    .alert:hover {
+        right: 5px;
+        -webkit-transition: right .2s;
+        z-index: 10;
+        position: relative;
+    }
 }
 
 
@@ -122,23 +151,27 @@ body {
 }
 
 #task-selection-algoritm {
+
+    position: relative;
+    height: 100%;
+
     .editor-wrapper {
+
         position: absolute;
         background: #141414;
-        top: 0;
-        bottom: 0;
+        top: 50px;
+        bottom: 10px;
         width: 100%;
+        box-shadow: 0 0 10px #aaa;
+
         #editor {
             width: 100%;
-            top: 20px;
+            top: 0;
             bottom: 0;
         }
     }
     input[type=submit] {
-        position: absolute;
-        top: 1em;
-        right: 1em;
-        font-size: 1.2em;
+        margin: 10px 0;
     }
 }
 

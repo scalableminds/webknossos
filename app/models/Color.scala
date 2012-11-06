@@ -5,7 +5,9 @@ import play.api.libs.json.Writes
 import play.api.libs.json.JsValue
 import play.api.libs.json.Format
 
-case class Color( r: Float, g: Float, b: Float, a: Float)
+case class Color( r: Float, g: Float, b: Float, a: Float){
+  def toHTML = "#%x%x%x".format((r*255).toInt, (g*255).toInt, (b*255).toInt)
+}
 
 object Color {
   implicit object ColorFormat extends Format[Color] {

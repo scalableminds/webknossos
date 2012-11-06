@@ -1,10 +1,10 @@
-@(user: User)
+@(user: models.user.User)
 
 @main( Some(user), false ){
 
   <div id="issue-submit" class="container">
       
-    @helper.form(action = controllers.routes.Jira.index) {
+    @helper.form(action = controllers.routes.Jira.submit) {
       
       <legend>Submit issue</legend>
 

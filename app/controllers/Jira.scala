@@ -3,12 +3,12 @@ package controllers
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import brainflight.security.Secured
-import models.Role
-import models.DataSet
+import models.security.Role
+import models.binary.DataSet
 import play.api.mvc._
 import play.api.Logger
-import models.graph.Experiment
-import models.User
+import models.task.Experiment
+import models.user.User
 import org.apache.commons.codec.binary.Base64
 import com.sun.jersey.api.client.WebResource
 import com.sun.jersey.api.client.Client

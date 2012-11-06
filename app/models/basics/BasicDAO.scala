@@ -28,4 +28,15 @@ class BasicDAO[T <: AnyRef](collectionName:String)(implicit val m: Manifest[T])
     else
       None
   }
+  
+  def alter( op: T => Unit)( el: => T ) = {
+    op(el)
+    el
+  }
+  
+  def alterAndSave(el: T) = 
+    alter(save)(el)
+    
+  def alterAndInsert(el: T) = 
+    alter( e => insert(e))(el)
 }

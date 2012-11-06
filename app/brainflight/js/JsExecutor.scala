@@ -3,6 +3,11 @@ package brainflight.js
 import javax.script.ScriptEngineManager
 import javax.script.ScriptContext
 import collection.JavaConversions._
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+import akka.util.duration._
+import play.api.Logger
+import akka.dispatch.Promise
 
 class JsExecutor {
   // create a script engine manager
@@ -13,20 +18,36 @@ class JsExecutor {
   val functionDef = "var executeMe = %s; executeMe(%s);"
 
   def execute(fktBody: String, params: Map[String, Any]) = {
-    try {
+    val paramDef = params.keys.mkString(", ")
+    val fkt = functionDef.format(fktBody, paramDef)
+    implicit val excetutionContext = Akka.system.dispatcher
 
-      val paramDef = params.keys.mkString(", ")
-      val fkt = functionDef.format( fktBody, paramDef)
-
-      val bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
-
-      bindings.putAll(params)
-      // evaluate JavaScript code from String
-      engine eval fkt
-    } catch {
-      case e: Exception =>
-        System.err.println("Cached an Exception:")
-        e.printStackTrace()
+    val bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE)
+    bindings.putAll(params)
+    val promise = Promise[Object]()
+    // evaluate JavaScript code from String
+    val hello = new Thread(new Runnable {
+      def run() {
+        promise complete {
+          try {
+            Right(engine eval fkt)
+          } catch {
+            case e: Exception =>
+              System.err.println("Cached an Exception:")
+              e.printStackTrace()
+              Left(e)
+          }
+        }
+      }
+    })
+    hello.start()
+    Akka.system.scheduler.scheduleOnce(5 seconds) {
+      if(!promise.isCompleted){
+        Logger.warn("Destroying JS executer: Runntime expired.")
+        hello.stop()
+        promise.complete(Left(new Exception("Exceution timeout.")))
+      }
     }
+    promise
   }
 }

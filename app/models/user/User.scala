@@ -1,4 +1,4 @@
-package models
+package models.user
 
 import play.api.db._
 import play.api.Play.current
@@ -11,12 +11,15 @@ import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json._
 import scala.collection.immutable.HashMap
-import models.graph.Experiment
 import models.basics.BasicDAO
+import models.security.Permission
+import models.security.Implyable
+import models.security.Role
 
 case class User(
     email: String,
-    name: String,
+    firstName: String,
+    lastName: String,
     verified: Boolean = false,
     pwdHash: String = "",
     loginType: String = "local",
@@ -30,6 +33,10 @@ case class User(
     role <- Role.findOneByName(roleName)
   } yield role
   
+  val name = firstName + " " + lastName
+   
+  lazy val id = _id.toString
+  
   val ruleSet: List[Implyable] = 
     ( permissions ++ _roles )
 
@@ -41,8 +48,6 @@ case class User(
     ruleSet.find( _.implies( permission ) ).isDefined
   
   override def toString = email
-  
-  def id = _id.toString
 }
 
 object User extends BasicDAO[User]( "users" ) {
@@ -67,27 +72,23 @@ object User extends BasicDAO[User]( "users" ) {
       if verifyPassword( password, user.pwdHash )
     } yield user
 
-  def create( email: String, name: String, password: String = "") = {
-    val user = User( email, name, false, hashPassword( password ) )
-    insert( user )
-    user
+  def create( email: String, firstName: String, lastName: String, password: String = "") = {
+    alterAndInsert( User( email, firstName, lastName, false, hashPassword( password ) ))
+  }
+    
+  def saveSettings(user: User, config: UserConfiguration) = {
+    alterAndSave(user.copy(configuration = config))
   }
     
   def verify( user: User ) = {
-    val alteredUser = user.copy( verified = true, roles = user.roles + "user" )
-    save( alteredUser )
-    alteredUser
+    alterAndSave(user.copy( verified = true, roles = user.roles + "user" ))
   }
   
   def addRole( user: User, role: String) = {
-    val alteredUser = user.copy( roles = user.roles + role )
-    save( alteredUser )
-    alteredUser    
+    alterAndSave(user.copy( roles = user.roles + role ))
   }
 
-  def createRemote( email: String, name: String, loginType: String ) = {
-    val user = User( email, name, true, "", loginType = loginType )
-    insert( user )
-    user
+  def createRemote( email: String, firstName: String, lastName: String, loginType: String ) = {
+    alterAndInsert(User( email, firstName, lastName, true, "", loginType = loginType ))
   }
 }

@@ -1,47 +1,55 @@
-package models.graph
+package models.task
 
 import play.api.libs.json.JsValue
 import play.api.libs.json.Reads
-import models.DataSet
 import brainflight.tools.geometry.Point3D
 import models.basics.BasicDAO
-import models.BranchPoint
 import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
 import xml.Xml
 import xml.XMLWrites
-import Tree.TreeFormat
+import models.binary.DataSet
+import models.graph.Tree.TreeFormat
+import models.graph._
+import models.user.User
 import play.api.libs.json.Reads
 import play.api.libs.json.JsValue
 import play.api.libs.json.Format
 import brainflight.tools.geometry.Scale
-import models.Color
 import java.util.Date
-import models.User
+import com.mongodb.casbah.query._
 
 case class Experiment(
-    user: ObjectId, 
-    dataSetName: String, 
-    trees: List[Tree], 
-    branchPoints: List[BranchPoint], 
-    timestamp: Long, 
-    activeNodeId: Int, 
-    scale: Scale, 
-    editPosition: Point3D, 
-    temp: Boolean = false, 
+    _user: ObjectId,
+    dataSetName: String,
+    trees: List[Tree],
+    branchPoints: List[BranchPoint],
+    timestamp: Long,
+    activeNodeId: Int,
+    scale: Scale,
+    editPosition: Point3D,
+    taskId: Option[ObjectId] = None,
+    finished: Boolean = false,
     _id: ObjectId = new ObjectId) {
-  def id = _id.toString
-  def tree(treeId: Int) = trees.find(_.id == treeId)
-  def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
+
+  def user = User.findOneById(_user)
 
   val date = {
     new Date(timestamp)
   }
+
+  lazy val id = _id.toString
+
+  def isExploratory = taskId.isEmpty
+
+  def tree(treeId: Int) = trees.find(_.id == treeId)
+  def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
 }
 
 object Experiment extends BasicDAO[Experiment]("experiments") {
+
   implicit object ExperimentXMLWrites extends XMLWrites[Experiment] {
     def writes(e: Experiment) = {
       (DataSet.findOneByName(e.dataSetName).map { dataSet =>
@@ -75,18 +83,33 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
   }
 
   def createNew(u: User, d: DataSet = DataSet.default) = {
-    val tree = Tree(1, Nil, Nil, Color(1, 0, 0, 0))
-    val exp = Experiment(u._id, d.name, List(tree), Nil, 0, 1, Scale(12, 12, 24), Point3D(0, 0, 0), true)
-    Experiment.insert(exp)
-    exp
+    alterAndInsert(Experiment(u._id,
+      d.name,
+      List(Tree.empty),
+      Nil,
+      System.currentTimeMillis,
+      1,
+      Scale(12, 12, 24),
+      Point3D(0, 0, 0),
+      None))
   }
-  
+
+  def complete(experiment: Experiment) = {
+    alterAndSave(experiment.copy(finished = true))
+  }
+
+  def findOpenExperimentFor(user: User, isExploratory: Boolean) =
+    findOne(MongoDBObject("_user" -> user._id, "finished" -> false, "taskId" -> MongoDBObject("$exists" -> isExploratory)))
+
+  def hasOpenExperiment(user: User, isExploratory: Boolean) =
+    findOpenExperimentFor(user, isExploratory).isDefined
+
   def findFor(u: User) = {
-    find( MongoDBObject("user" -> u._id) ).toList 
+    find(MongoDBObject("_user" -> u._id)).toList
   }
-  
+
   def findAllTemporary = {
-    find( MongoDBObject("temp" -> true) ).toList 
+    find(MongoDBObject("temp" -> true)).toList
   }
 
   implicit object ExperimentFormat extends Format[Experiment] {
@@ -104,7 +127,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       BRANCH_POINTS -> e.branchPoints,
       SCALE -> e.scale,
       EDIT_POSITION -> e.editPosition)
- 
+
     def reads(js: JsValue): Experiment = {
 
       val id = (js \ ID).as[String]

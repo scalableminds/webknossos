@@ -1,16 +1,22 @@
-@(loggedInUser: User, types: List[TaskType], form: Form[TaskType])
+@(loggedInUser: models.user.User, types: List[models.task.TaskType], form: Form[models.task.TaskType])
+
+@import BootstrapHelpers._
 
 @main(Some(loggedInUser)){
 	<div class="container">
     <h3>Task types</h3>
     <div class="well">
       @helper.form(controllers.admin.routes.TaskAdministration.createType, 'class -> "form-horizontal") {
-        <input type="text" placeholder="Summary" name="summary">
-        <input type="text" placeholder="Description" name="description">
-        <input type="text" placeholder="Expected Time (min)" name="expectedTime.minTime">
-        <input type="text" placeholder="Expected Time (max)" name="expectedTime.maxTime">
-        <input type="text" placeholder="Time Limit" name="expectedTime.maxHard">
-        <button type="submit" class="btn btn-primary">Create</button>
+
+        @helper.inputText(form("summary"))
+        @helper.inputText(form("description"))
+        @helper.inputText(form("expectedTime.minTime"), 'type -> "number", 'min -> 0)
+        @helper.inputText(form("expectedTime.maxTime"), 'type -> "number", 'min -> 0)
+        @helper.inputText(form("expectedTime.maxHard"), 'type -> "number", 'min -> 0)
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
       }
     </div>
     <table class="table table-striped">

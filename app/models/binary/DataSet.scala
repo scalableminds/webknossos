@@ -1,4 +1,4 @@
-package models
+package models.binary
 
 import com.mongodb.casbah.Imports._
 import models.context._
@@ -36,12 +36,12 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
   def findOneByName(name: String) =
     findOne(MongoDBObject("name" -> name))
 
-  def updateOrCreate(d: DataSet) {
+  def updateOrCreate(d: DataSet) = {
     findOne(MongoDBObject("name" -> d.name)) match {
       case Some(stored) =>
-        save(d.copy(_id = stored._id, priority = stored.priority))
+        alterAndSave(d.copy(_id = stored._id, priority = stored.priority))
       case _ =>
-        save(d)
+        alterAndSave(d)
     }
   }
 

@@ -69,7 +69,7 @@ object UserAdministration extends Controller with Secured {
     } getOrElse BadRequest
   }
 
-  def delete = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+  def deleteBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     bulkOperation(deleteUser)(
       user => "Deleted %s".format(user.name),
       userId => "Couldn't delete user with id '%s'".format(userId))

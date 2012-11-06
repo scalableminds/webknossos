@@ -69,6 +69,7 @@ POST    /admin/tasks/createFromExperiment   controllers.admin.TaskAdministration
 # User Administration
 GET     /admin/users                        controllers.admin.UserAdministration.index
 POST    /admin/users/verify                 controllers.admin.UserAdministration.verifyBulk
+POST    /admin/users/delete                 controllers.admin.UserAdministration.deleteBulk
 GET     /admin/users/:id/verify             controllers.admin.UserAdministration.verify(id: String)
 GET     /admin/users/:id/delete             controllers.admin.UserAdministration.delete(id: String)
 

@@ -104,7 +104,7 @@ object UserAdministration extends Controller with Secured {
       bulkOperation(removeRole(roleName))(
         user => "Removed role from %s".format(user.name),
         userId => "Couldn't remove role from user with id '%s'".format(userId))
-    } getOrElse BadRequest("'role' parameter is missing")
+    } getOrElse AjaxBadRequest.error("Please choose a role")
   }
   
   def addRoleBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
@@ -112,6 +112,6 @@ object UserAdministration extends Controller with Secured {
       bulkOperation(addRole(roleName))(
         user => "Added role to %s".format(user.name),
         userId => "Couldn't add role to user with id '%s'".format(userId))
-    } getOrElse BadRequest("'role' parameter is missing")
+    } getOrElse AjaxBadRequest.error("Please choose a role")
   }
 }

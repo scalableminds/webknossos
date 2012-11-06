@@ -24,7 +24,7 @@ class Controller extends PlayController {
     def ajaxHTMLResult(html: Html, messages: Seq[(String, String)]) =
       Json.obj(
         "html" -> html.body,
-        "message" -> messages.map( m => Json.obj( m._1 -> m._2)))
+        "messages" -> messages.map( m => Json.obj( m._1 -> m._2)))
   }
 
   val AjaxOk = new AjaxResult(Ok)

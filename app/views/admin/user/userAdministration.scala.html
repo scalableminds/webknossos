@@ -1,4 +1,4 @@
-@(loggedInUser: models.user.User, users: List[models.user.User])
+@(loggedInUser: models.user.User, users: List[models.user.User], roles: List[models.security.Role])
 
 @main(Some(loggedInUser)){
   <div id="user-administration" class="container">

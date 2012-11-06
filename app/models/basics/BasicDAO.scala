@@ -34,9 +34,9 @@ class BasicDAO[T <: AnyRef](collectionName:String)(implicit val m: Manifest[T])
     el
   }
   
-  def alterAndSave(el: => T) = 
+  def alterAndSave(el: T) = 
     alter(save)(el)
     
-  def alterAndInsert(el: => T) = 
+  def alterAndInsert(el: T) = 
     alter( e => insert(e))(el)
 }

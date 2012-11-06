@@ -89,6 +89,17 @@ object ExperimentController extends Controller with Secured {
     }
   }
 
+  def createExplorational = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    (for{
+      dataSetId <- request.body.get("dataSetId").flatMap(_.headOption)
+      dataSet <- DataSet.findOneById(dataSetId)
+    } yield {
+      val exp = Experiment.createNew(request.user, dataSet)
+      UsedExperiments.use(request.user, exp)
+      Redirect(routes.Game.index)
+    }) getOrElse BadRequest("Couldn't find DataSet.")
+  }
+
   def list = Authenticated { implicit request =>
     Ok(Json.toJson(createNewExperimentList ++ createExperimentsList(request.user)))
   }
@@ -99,11 +110,12 @@ object ExperimentController extends Controller with Secured {
   }
 
   def update(experimentId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
-    Experiment.findOneById(experimentId).filter(_._user == request.user._id).flatMap{ _ =>
+    Experiment.findOneById(experimentId).filter(_._user == request.user._id).flatMap { _ =>
       (request.body).asOpt[Experiment].map { exp =>
         Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
         TimeTracking.logUserAction(request.user)
         Ok
-    }} getOrElse (BadRequest("Update for experiment with id '%s' failed.".format(experimentId)))
+      }
+    } getOrElse (BadRequest("Update for experiment with id '%s' failed.".format(experimentId)))
   }
 }

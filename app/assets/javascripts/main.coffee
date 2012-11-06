@@ -67,13 +67,28 @@ $.fn.alertWithTimeout = (timeout = 3000) ->
 
 toastMessage = (type, message, sticky = false) ->
 
-    $messageElement = $("<div>", class : "alert alert-#{type} fade in").html(message)
-    $messageElement.prepend($("<a>", class : "close", "data-dismiss" : "alert", href : "#").html("&times;"))
-    if sticky
-        $messageElement.alert()
+    if _.isArray(type) and not message?
+        messages = type
+        for message in messages
+            if message.success?
+                toastSuccess(message, sticky)
+            if message.error?
+                toastError(message, sticky)
+
+    else if _.isArray(message)
+        messages = messages
+        toastMessage(type, message, sticky) for message in messages
+        
     else
-        $messageElement.alertWithTimeout()
-    $("#alert-container").append($messageElement)
+        $messageElement = $("<div>", class : "alert alert-#{type} fade in").html(message)
+        $messageElement.prepend($("<a>", class : "close", "data-dismiss" : "alert", href : "#").html("&times;"))
+        if sticky
+            $messageElement.alert()
+        else
+            $messageElement.alertWithTimeout()
+        $("#alert-container").append($messageElement)
+
+    return
 
 
 toastSuccess = (message, sticky) -> toastMessage("success", message, sticky)
@@ -103,33 +118,53 @@ $ -> # document is ready!
         
         event.preventDefault()
         $this = $(this)
-        $.ajax(url : this.href, dataType : "json").then(
 
-            ({ html, message }) ->
+        options = {}
+        for action in $this.data("ajax").split(",")
+            [ key, value ] = action.split("=")
+            options[key] = value ? true
 
-                toastSuccess(message || "Success :-)")
-                $this.trigger("ajax-success", message)
+        ajaxOptions = 
+            url : this.href
+            dataType : "json"
 
-                options = {}
-                for action in $this.data("ajax").split(",")
-                    [ key, value ] = action.split("=")
-                    options[key] = value ? true
+        if options["submit"]
+            $form = $this.parents("form")
+            ajaxOptions["method"] = $form[0].method ? "POST"
+            ajaxOptions["data"] = $form.serialize()
+
+
+        $.ajax(ajaxOptions).then(
+
+            ({ html, messages }) ->
+
+                if messages?
+                    toastMessage(messages)
+                else
+                    toastSuccess(messages || "Success :-)")
+
+                $this.trigger("ajax-success", html, messages)
 
                 if options["replace-row"] 
                     $this.parents("tr").replaceWith(html)
 
+                if options["replace-table"]
+                    $(options["replace-table"]).replaceWith(html)
+
                 if options["add-row"]
-                    context = if _.isString(options["add-row"]) then $(options["add-row"]) else $this
-                    context.find("tbody").append(html)
+                    $(options["add-row"]).find("tbody").append(html)
 
                 if options["reload"]
                     window.location.reload()
 
                 return
 
-            ({ message }) ->
-                toastError(message || "Error :-(")
-                $this.trigger("ajax-error", message)
+            ({ messages }) ->
+                if messages?
+                    toastMessage(messages)
+                else
+                    toastError("Error :-/")
+                $this.trigger("ajax-error", messages)
         )
 
 

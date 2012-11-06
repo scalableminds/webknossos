@@ -4,34 +4,36 @@
   <div id="user-administration" class="container">
     
     <h3> Users </h3> 
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th></th>
-          <th> Last name </th>
-          <th> First name </th>
-          <th> Email </th>
-          <th> Role </th>
-          <th> Verified </th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @users.map{ user =>
-          @userTableItem(user)
-        }
-      </tbody>
-    </table>
+    <form method="post">
+      <table class="table table-striped" id="user-administration-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th> Last name </th>
+            <th> First name </th>
+            <th> Email </th>
+            <th> Role </th>
+            <th> Verified </th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @users.map{ user =>
+            @userTableItem(user)
+          }
+        </tbody>
+      </table>
 
-    <div class="btn-group">
-      <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-        Bulk Actions
-        <span class="caret"></span>
-      </a>
-      <ul class="dropdown-menu">
-        <li><a href="#">Verify</a></li> 
-      </ul>
-    </div>
+      <div class="btn-group">
+        <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+          Bulk Actions
+          <span class="caret"></span>
+        </a>
+        <ul class="dropdown-menu">
+          <li><a href="#" data-ajax="submit,replace-table=#user-administration-table">Verify</a></li> 
+        </ul>
+      </div>
+    </form>
 
   </div>
 }

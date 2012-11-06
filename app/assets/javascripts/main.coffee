@@ -71,9 +71,9 @@ toastMessage = (type, message, sticky = false) ->
         messages = type
         for message in messages
             if message.success?
-                toastSuccess(message, sticky)
+                toastSuccess(message.success)
             if message.error?
-                toastError(message, sticky)
+                toastError(message.error)
 
     else if _.isArray(message)
         messages = messages
@@ -91,8 +91,19 @@ toastMessage = (type, message, sticky = false) ->
     return
 
 
-toastSuccess = (message, sticky) -> toastMessage("success", message, sticky)
-toastError = (message, sticky = true) -> toastMessage("error", message, sticky)
+toastSuccess = (message, sticky) -> 
+    if message?
+        toastMessage("success", message, sticky)
+    else
+        toastMessage("success", "Success :-)", sticky)
+
+
+toastError = (message, sticky = true) -> 
+    if message?
+        toastMessage("error", message, sticky)
+    else
+        toastMessage("error", "Error :-/", sticky)
+        
 
 route = (routes) ->
 
@@ -130,7 +141,7 @@ $ -> # document is ready!
 
         if options["submit"]
             $form = $this.parents("form")
-            ajaxOptions["method"] = $form[0].method ? "POST"
+            ajaxOptions["type"] = $form[0].method ? "POST"
             ajaxOptions["data"] = $form.serialize()
 
 
@@ -141,7 +152,7 @@ $ -> # document is ready!
                 if messages?
                     toastMessage(messages)
                 else
-                    toastSuccess(messages || "Success :-)")
+                    toastSuccess("Success :-)")
 
                 $this.trigger("ajax-success", html, messages)
 
@@ -179,12 +190,12 @@ $ -> # document is ready!
             dataType : "json"
         ).then(
 
-            ({ html, message }) ->
-                toastSuccess(message || "Success :-)")
+            ({ html, messages }) ->
+                toastMessage(messages)
                 $this.trigger("ajax-success", message)
 
-            (message) ->
-                toastError(message || "Error :-(")
+            ({ messages }) ->
+                toastMessage(messages)
                 $this.trigger("ajax-error", message)
         )
 

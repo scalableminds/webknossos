@@ -7,15 +7,49 @@
     <form method="post">
       @userTable(users)
 
-      <div class="btn-group">
-        <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-          Bulk Actions
-          <span class="caret"></span>
-        </a>
-        <ul class="dropdown-menu">
-          <li><a href="@controllers.admin.routes.UserAdministration.verifyBulk" data-ajax="submit,replace-table=#user-administration-table">Verify</a></li> 
-        </ul>
+      <div class="form-actions">
+
+        <div class="form-inline">
+
+          <div class="btn-group">
+            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+              Bulk Actions
+              <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+              <li>
+                <a href="@controllers.admin.routes.UserAdministration.verifyBulk" data-ajax="submit,replace-table=#user-administration-table"> 
+                  <i class="icon-ok"></i> Verify
+                </a>
+              </li>
+              <li>
+                <a href="@controllers.admin.routes.UserAdministration.deleteBulk" data-ajax="submit,confirm,replace-table=#user-administration-table">
+                  <i class="icon-trash"></i> Delete
+                </a>
+              </li> 
+            </ul>
+          </div>
+
+          <div class="divider-vertical"></div>
+
+          <select name="role" class="input-medium">
+            <option>Modify roles...</option>
+            @roles.map{ role =>
+              <option value="@role.name">@role.name</option>
+            }
+          </select>
+          <a href="@controllers.admin.routes.UserAdministration.addRoleBulk" class="btn" data-ajax="submit,replace-table=#user-administration-table">
+            Add Role
+          </a>
+          <a href="@controllers.admin.routes.UserAdministration.removeRoleBulk" class="btn" data-ajax="submit,replace-table=#user-administration-table">
+            Remove Role
+          </a>
+        </div>
+
+        </div>
+
       </div>
+
     </form>
 
   </div>

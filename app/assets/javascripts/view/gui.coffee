@@ -2,6 +2,7 @@
 libs/datgui/dat.gui : DatGui
 libs/request : request
 libs/event_mixin : EventMixin
+routes : routes
 ###
 
 PLANE_XY = 0
@@ -193,7 +194,8 @@ class Gui
       )
 
   finish : =>
-    toastSuccess("Yeah. Finished. Maybe. Whatever.")
+    routes.controllers.TaskController.finish("123").ajax()
+    toastError("Yeah, thats not implemented yet.")
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
@@ -206,7 +208,7 @@ class Gui
     input.trigger("click")
     input.on("change", (evt) ->
       file = evt.target.files[0]
-      requestObject = jsRoutes.controllers.admin.NMLIO.upload()
+      requestObject = routes.controllers.admin.NMLIO.upload()
       xhr = new XMLHttpRequest()
       # Reload when done
       xhr.onload = -> window.location.reload()

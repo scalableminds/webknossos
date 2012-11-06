@@ -108,8 +108,8 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     find(MongoDBObject("_user" -> u._id)).toList
   }
 
-  def findAllTemporary = {
-    find(MongoDBObject("temp" -> true)).toList
+  def findAllExploratory = {
+    find(MongoDBObject("taskId" -> MongoDBObject("$exists" -> false))).toList
   }
 
   implicit object ExperimentFormat extends Format[Experiment] {

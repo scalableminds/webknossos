@@ -1,4 +1,4 @@
-@(loggedInUser: models.user.User, types: List[models.task.TaskType], form: Form[models.task.TaskType])
+@(loggedInUser: models.user.User, taskTypes: List[models.task.TaskType], form: Form[models.task.TaskType])
 
 @import BootstrapHelpers._
 
@@ -6,7 +6,7 @@
 	<div class="container">
     <h3>Task types</h3>
     <div class="well">
-      @helper.form(controllers.admin.routes.TaskAdministration.createType, 'class -> "form-horizontal") {
+      @helper.form(controllers.admin.routes.TaskTypeAdministration.create, 'class -> "form-horizontal") {
 
         @helper.inputText(form("summary"))
         @helper.inputText(form("description"))
@@ -31,15 +31,15 @@
         </tr>
       </thead>
       <tbody>
-	    @types.map{ tiepe => 
+	    @taskTypes.map{ taskType => 
 	      <tr>
-	        <td> @tiepe.id </td>
-	        <td> @tiepe.summary </td>
-          <td> @tiepe.description </td>
-          <td> @tiepe.expectedTime </td>
-          <td> @tiepe.fileName.getOrElse("") </td>
+	        <td> @taskType.id </td>
+	        <td> @taskType.summary </td>
+          <td> @taskType.description </td>
+          <td> @taskType.expectedTime </td>
+          <td> @taskType.fileName.getOrElse("") </td>
           <td> 
-            <a href="#TODO"><i class="icon-trash"></i> delete </a>
+            <a href="@controllers.admin.routes.TaskTypeAdministration.delete(taskType.id)" data-ajax="delete-row"><i class="icon-trash"></i> delete </a>
           </td>
 	      </tr>
 	    }

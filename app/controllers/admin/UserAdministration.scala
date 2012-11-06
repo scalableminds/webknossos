@@ -1,24 +1,36 @@
 package controllers.admin
 
-import controllers.Controller
-import play.api.mvc.Action
-import brainflight.security.Secured
-import views.html
-import models.user.User
-import controllers.Application
-import brainflight.mail.Send
+import akka.actor.actorRef2Scala
 import brainflight.mail.DefaultMails
-import models.security.Role
-import play.api.libs.json.Json
-import play.api.templates.Html
-import play.api.i18n.Messages
+import brainflight.mail.Send
 import brainflight.security.AuthenticatedRequest
+import brainflight.security.Secured
+import controllers.Application
+import controllers.Controller
+import models.security.Role
+import models.user.TimeTracking
+import models.user.User
+import play.api.i18n.Messages
+import views.html
 
 object UserAdministration extends Controller with Secured {
-  override val DefaultAccessRole = Role("admin")
-
+  
+  override val DefaultAccessRole = Role.Admin
+  
   def index = Authenticated { implicit request =>
     Ok(html.admin.user.userAdministration(request.user, User.findAll.sortBy(_.lastName)))
+  }
+  
+  def logTime(userId: String, time: String) = Authenticated { implicit request =>
+    User.findOneById(userId) map { user =>
+      TimeTracking.parseTime(time) match{
+        case Some(t) =>
+          TimeTracking.logTime(user, t)
+          Ok
+        case _ =>
+          BadRequest("Invalid time.")
+      }
+    } getOrElse BadRequest("Didn't find user")
   }
 
   def bulkOperation(operation: String => Option[User])(successMessage: User => String, errorMessage: String => String)(implicit request: AuthenticatedRequest[Map[String, Seq[String]]]) = {

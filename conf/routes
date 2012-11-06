@@ -59,12 +59,16 @@ GET     /admin/tasks/algorithm              controllers.admin.TaskAlgorithm.inde
 POST    /admin/tasks/algorithm              controllers.admin.TaskAlgorithm.submitAlgorithm
 GET     /admin/tasks/algorithm/:id?use=true controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
 
-GET     /admin/taskTypes                    controllers.admin.TaskAdministration.types
-POST    /admin/taskTypes/create             controllers.admin.TaskAdministration.createType
+GET     /admin/taskTypes                    controllers.admin.TaskTypeAdministration.list
+POST    /admin/taskTypes/create             controllers.admin.TaskTypeAdministration.create
+GET     /admin/taskTypes/:id/delete         controllers.admin.TaskTypeAdministration.delete(id: String)
 
 GET     /admin/tasks                        controllers.admin.TaskAdministration.list
 GET     /admin/tasks/create                 controllers.admin.TaskAdministration.create
+POST    /admin/tasks/createBulk             controllers.admin.TaskAdministration.createBulk
 POST    /admin/tasks/createFromExperiment   controllers.admin.TaskAdministration.createFromExperiment
+POST    /admin/tasks/createFromForm         controllers.admin.TaskAdministration.createFromForm
+
 
 # User Administration
 GET     /admin/users                        controllers.admin.UserAdministration.index

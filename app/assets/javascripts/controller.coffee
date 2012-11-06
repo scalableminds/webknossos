@@ -29,11 +29,17 @@ class Controller
 
     @requestInitData().done (options) =>
 
+      console.log options
+
       # create Model
       @model = new Model(options)
 
       @flycam = new Flycam(VIEWPORT_SIZE)
       @view  = new View(@model, @flycam)
+
+      return
+
+    foo : ->
   
       # initialize Camera Controller
       @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
@@ -53,7 +59,7 @@ class Controller
         buttons[i].on("click", callbacks[i])
         @prevControls.append(buttons[i])
 
-      @sceneController = new SceneController(@model.Route.data.dataSet.upperBoundary, @flycam, @model)
+      @sceneController = new SceneController(@model.route.data.dataSet.upperBoundary, @flycam, @model)
       meshes      = @sceneController.getMeshes()
       
       for mesh in meshes
@@ -113,14 +119,12 @@ class Controller
         Request.send(
           url : "/user/configuration"
           dataType : "json"
-        ).pipe (user) ->
+        ).pipe((user) ->
 
           options.user = user
           options
 
-          ->
-
-        alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
+        -> alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page."))
 
 
   initMouse : ->

@@ -50,14 +50,14 @@
       </tbody>
     </table>
 
-    @helper.form(action = controllers.routes.ExperimentController.createExplorational) {
-      <div class="input-append">
+    @helper.form(action = controllers.routes.ExperimentController.createExplorational, 'class -> "form-inline") {
+      <div>
         <select name="dataSetId">
           @dataSets.map{ d => 
             <option value="@d.id"> @d.name </option>
           }
         </select>
-        <input type="submit" value="Explore data set" class="btn" style="margin-left: 0.5em;"/>
+        <input type="submit" value="Explore data set" class="btn"/>
       </div>
     }
 

@@ -41,6 +41,27 @@ body {
 .input-monospace {
     font-family: Monaco, Consolas, "Lucida Console", "Courier New", monospace;
 }
+.divider-vertical {
+    display: inline-block;
+    vertical-align: middle;
+    height: 25px;
+    margin: 0 9px;
+    border-right: 1px solid #e5e5e5;
+}
+
+#alert-container {
+    position: absolute;
+    right: 20px;
+    top: 60px;
+    z-index: 100;
+
+    .alert {
+        cursor: default;
+    }
+    .alert:hover {
+        box-shadow: 0 0 10px rgba(100, 100, 100, .2);
+    }
+}
 
 #stats {
     position: fixed;
@@ -119,19 +140,6 @@ body {
 }
 
 
-#alert-container {
-    position: absolute;
-    right: 20px;
-    top: 60px;
-    z-index: 100;
-
-    .alert {
-        cursor: default;
-    }
-    .alert:hover {
-        box-shadow: 0 0 10px rgba(100, 100, 100, .2);
-    }
-}
 
 
 #issue-submit {

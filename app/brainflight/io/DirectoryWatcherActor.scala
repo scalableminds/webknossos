@@ -132,6 +132,7 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
 
   override def postStop() = {
     shouldStop = true
-    updateTicker.cancel()
+    if (updateTicker != null)
+      updateTicker.cancel()
   }
 }

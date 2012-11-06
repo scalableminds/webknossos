@@ -103,7 +103,7 @@ toastError = (message, sticky = true) ->
         toastMessage("error", message, sticky)
     else
         toastMessage("error", "Error :-/", sticky)
-        
+
 
 route = (routes) ->
 
@@ -139,6 +139,9 @@ $ -> # document is ready!
             url : this.href
             dataType : "json"
 
+        if options["confirm"]
+            return unless confirm("Are you sure?")
+
         if options["submit"]
             $form = $this.parents("form")
             ajaxOptions["type"] = $form[0].method ? "POST"
@@ -162,6 +165,9 @@ $ -> # document is ready!
                 if options["replace-table"]
                     $(options["replace-table"]).replaceWith(html)
 
+                if options["delete-row"]
+                    $this.parents("tr").remove()
+
                 if options["add-row"]
                     $(options["add-row"]).find("tbody").append(html)
 
@@ -177,7 +183,7 @@ $ -> # document is ready!
                     toastError("Error :-/")
                 $this.trigger("ajax-error", messages)
         )
-
+        
 
     $("form[data-ajax]").submit (event) ->
 
@@ -199,6 +205,13 @@ $ -> # document is ready!
                 $this.trigger("ajax-error", message)
         )
 
+
+    $("table input.select-all-rows").live "change", ->
+
+        $this = $(this)
+
+        $this.parents("table").find("tbody input.select-row").prop("checked", this.checked)
+        return
 
     # Page specifics
     route

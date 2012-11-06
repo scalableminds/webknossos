@@ -16,6 +16,9 @@ PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
+NO_KEY           = 0
+ALT_KEY          = 1
+SHIFT_KEY        = 2
 VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 TEXTURE_WIDTH    = 512
@@ -135,7 +138,7 @@ class Controller
     @input.mouses = new Input.Mouse(
       [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
       [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
-      {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "l" : @onPlaneClick, "r" : @setWaypoint}
+      {"x" : @moveX, "y" : @moveY, "w" : @scroll, "l" : @onPlaneClick, "r" : @setWaypoint}
       {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "l" : @onPreviewClick}
     )
 
@@ -162,14 +165,6 @@ class Controller
       "k" : => @view.scaleTrianglesPlane @model.User.Configuration.scaleValue
 
       #Move
-      "w"             : => @moveY(-@model.User.Configuration.moveValue)
-      "s"             : => @moveY( @model.User.Configuration.moveValue)
-      "a"             : => @moveX(-@model.User.Configuration.moveValue)
-      "d"             : => @moveX( @model.User.Configuration.moveValue)
-      #"space"         : => @moveZ( @model.User.Configuration.moveValue)
-      #"shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
-
-      #Rotate in distance
       "left"          : => @moveX(-@model.User.Configuration.moveValue)
       "right"         : => @moveX( @model.User.Configuration.moveValue)
       "up"            : => @moveY(-@model.User.Configuration.moveValue)
@@ -191,23 +186,13 @@ class Controller
           @setActiveNode(id, true)
           @sceneController.skeleton.setBranchPoint(false)
         )
-      "h" : @centerActiveNode
+      "s" : @centerActiveNode
 
       #Zoom in/out
       "i" : =>
-        @cameraController.zoomIn()
-        # Remember Zoom Steps
-        @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
-        @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-        @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-        @model.User.Configuration.push()
+        @zoomIn()
       "o" : =>
-        @cameraController.zoomOut()
-        # Remember Zoom Steps
-        @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
-        @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-        @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-        @model.User.Configuration.push()
+        @zoomOut()
 
       # delete active node
       "delete" : =>
@@ -218,10 +203,8 @@ class Controller
         @createNewTree()
 
       # Move
-      "space"         : => @moveZ( @model.User.Configuration.moveValue)
-      "shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
-      # alternative key binding for Kevin
-      "ctrl + space"  : => @moveZ(-@model.User.Configuration.moveValue)
+      "space, d"         : => @moveZ( @model.User.Configuration.moveValue)
+      "shift + space, ctrl + space, a" : => @moveZ(-@model.User.Configuration.moveValue)
     )
 
   # for more buttons look at Input.Gamepad
@@ -267,6 +250,43 @@ class Controller
   moveX : (x) => @move([x, 0, 0])
   moveY : (y) => @move([0, y, 0])
   moveZ : (z) => @move([0, 0, z])
+
+  zoomIn : =>
+    @cameraController.zoomIn()
+    # Remember Zoom Steps
+    @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
+    @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+    @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
+    @model.User.Configuration.push()
+
+  zoomOut : =>
+    @cameraController.zoomOut()
+    # Remember Zoom Steps
+    @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
+    @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+    @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
+    @model.User.Configuration.push()
+
+  setNodeRadius : (delta) =>
+    radius = @model.Route.getActiveNodeRadius() + delta
+    scale = @model.Route.scaleX
+    if radius < scale
+      radius = scale
+    else if radius > 1000 * scale
+      radius = 1000 * scale
+    @gui.setNodeRadius(radius)
+    @gui.updateRadius()
+
+  scroll : (delta, type) =>
+    switch type
+      when NO_KEY then @moveZ(delta)
+      when SHIFT_KEY then @setNodeRadius(delta)
+      when ALT_KEY
+        if delta > 0
+          @zoomIn()
+        else
+          @zoomOut()
+
 
   ########### Click callbacks
   

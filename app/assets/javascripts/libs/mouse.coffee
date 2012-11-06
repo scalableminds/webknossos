@@ -3,6 +3,10 @@ model/user : User
 libs/jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
 ###
 
+NO_KEY = 0
+ALT_KEY = 1
+SHIFT_KEY = 2
+
 class Mouse
 
   # This is our mouse library.
@@ -151,7 +155,12 @@ class Mouse
 
   mouseWheel : (evt, delta) =>
     if @changedCallbackMouseWheel?
-      @changedCallbackMouseWheel(delta)
+      if evt.shiftKey
+        @changedCallbackMouseWheel(delta, SHIFT_KEY)
+      else if evt.altKey
+        @changedCallbackMouseWheel(delta, ALT_KEY)
+      else
+        @changedCallbackMouseWheel(delta, NO_KEY)
       return false      # prevent scrolling the web page
     
   mouseDown : (evt) =>

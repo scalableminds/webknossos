@@ -26,8 +26,8 @@ object UserAdministration extends Controller with Secured {
       case Some(ids) =>
         val results = ids.map { userId =>
           operation(userId) match {
-            case Some(user) => ajaxError -> successMessage(user)
-            case _          => ajaxSuccess -> errorMessage(userId)
+            case Some(user) => ajaxSuccess -> successMessage(user)
+            case _          => ajaxError -> errorMessage(userId)
           }
         }
         AjaxOk(html.admin.user.userTable(User.findAll), results)

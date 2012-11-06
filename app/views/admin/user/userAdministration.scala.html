@@ -4,24 +4,7 @@
   <div id="user-administration" class="container">
     
     <h3> Users </h3> 
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th></th>
-          <th> Last name </th>
-          <th> First name </th>
-          <th> Email </th>
-          <th> Role </th>
-          <th> Verified </th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @users.map{ user =>
-          @userTableItem(user)
-        }
-      </tbody>
-    </table>
+    @userTable(users)
 
     <div class="btn-group">
       <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">

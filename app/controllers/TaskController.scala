@@ -24,8 +24,7 @@ object TaskController extends Controller with Secured {
           case Some(task) =>
             val experiment = Task.createExperimentFor(user, task)
             Task.addExperiment(task, experiment)
-            
-            AjaxOk(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("task.new"))
+            AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("task.new"))
           case _ =>
             BadRequest("There is no task available")
         }
@@ -38,7 +37,7 @@ object TaskController extends Controller with Secured {
     Experiment.findOneById(id).filter(_._user == request.user._id).map{ e=>
       val alteredExp = Experiment.complete(e)
       e.taskId.flatMap(Task.findOneById).map{ task =>
-        AjaxOk(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.finished"))
+        AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.finished"))
       } getOrElse BadRequest("Task not found")
     } getOrElse BadRequest("Experiment not found")
   }

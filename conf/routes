@@ -68,8 +68,9 @@ POST    /admin/tasks/createFromExperiment   controllers.admin.TaskAdministration
 
 # User Administration
 GET     /admin/users                        controllers.admin.UserAdministration.index
-GET     /admin/users/:id/verify             controllers.admin.UserAdministration.verifyUser(id: String)
-GET     /admin/users/:id/delete             controllers.admin.UserAdministration.deleteUser(id: String)
+POST    /admin/users/verify                 controllers.admin.UserAdministration.verifyBulk
+GET     /admin/users/:id/verify             controllers.admin.UserAdministration.verify(id: String)
+GET     /admin/users/:id/delete             controllers.admin.UserAdministration.delete(id: String)
 
 # Javascript routing
 GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes

@@ -13,10 +13,10 @@
 		@if(user.verified) {            
   		<i class="icon-ok"></i>
 		} else {
-  		<a href="@controllers.admin.routes.UserAdministration.verifyUser(user.id)" data-ajax="replace-row"> verify </a>
+  		<a href="@controllers.admin.routes.UserAdministration.verify(user.id)" data-ajax="replace-row"> verify </a>
 		}
 	</td>
 	<td> 
-  	<a href="@controllers.admin.routes.UserAdministration.deleteUser(user.id)"><i class="icon-trash"></i> delete </a>
+  	<a href="@controllers.admin.routes.UserAdministration.delete(user.id)"><i class="icon-trash"></i> delete </a>
 	</td>
 </tr>

@@ -14,16 +14,16 @@ import play.api.i18n.Messages
 import views.html
 
 object UserAdministration extends Controller with Secured {
-  
+
   override val DefaultAccessRole = Role.Admin
-  
+
   def index = Authenticated { implicit request =>
     Ok(html.admin.user.userAdministration(request.user, User.findAll.sortBy(_.lastName), Role.findAll.sortBy(_.name)))
   }
-  
+
   def logTime(userId: String, time: String) = Authenticated { implicit request =>
     User.findOneById(userId) map { user =>
-      TimeTracking.parseTime(time) match{
+      TimeTracking.parseTime(time) match {
         case Some(t) =>
           TimeTracking.logTime(user, t)
           Ok
@@ -44,7 +44,7 @@ object UserAdministration extends Controller with Secured {
         }
         AjaxOk(html.admin.user.userTable(User.findAll), results)
       case _ =>
-        BadRequest("Id parameter is missing.")
+        BadRequest("'id' parameter is missing.")
     }
   }
 
@@ -68,7 +68,7 @@ object UserAdministration extends Controller with Secured {
       userId => "Couldn't verify user with id '%s'".format(userId))
   }
 
-  def deleteUser(userId: String) = {
+  private def deleteUser(userId: String) = {
     User.findOneById(userId) map { user =>
       User.remove(user)
       user
@@ -85,5 +85,33 @@ object UserAdministration extends Controller with Secured {
     bulkOperation(deleteUser)(
       user => "Deleted %s".format(user.name),
       userId => "Couldn't delete user with id '%s'".format(userId))
+  }
+
+  private def addRole(roleName: String)(userId: String) = {
+    User.findOneById(userId) map { user =>
+      User.addRole(user, roleName)
+    }
+  }
+
+  private def removeRole(roleName: String)(userId: String) = {
+    User.findOneById(userId) map { user =>
+      User.removeRole(user, roleName)
+    }
+  }
+
+  def removeRoleBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    postParameter("role").map { roleName =>
+      bulkOperation(removeRole(roleName))(
+        user => "Removed role from %s".format(user.name),
+        userId => "Couldn't remove role from user with id '%s'".format(userId))
+    } getOrElse BadRequest("'role' parameter is missing")
+  }
+  
+  def addRoleBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    postParameter("role").map { roleName =>
+      bulkOperation(addRole(roleName))(
+        user => "Added role to %s".format(user.name),
+        userId => "Couldn't add role to user with id '%s'".format(userId))
+    } getOrElse BadRequest("'role' parameter is missing")
   }
 }

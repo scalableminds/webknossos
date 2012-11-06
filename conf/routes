@@ -76,6 +76,8 @@ POST    /admin/users/verify                 controllers.admin.UserAdministration
 POST    /admin/users/delete                 controllers.admin.UserAdministration.deleteBulk
 GET     /admin/users/:id/verify             controllers.admin.UserAdministration.verify(id: String)
 GET     /admin/users/:id/delete             controllers.admin.UserAdministration.delete(id: String)
+POST    /admin/users/addRole                controllers.admin.UserAdministration.addRoleBulk
+POST    /admin/users/removeRole             controllers.admin.UserAdministration.removeRoleBulk
 
 # Javascript routing
 GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes

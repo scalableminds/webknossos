@@ -5,8 +5,13 @@ import play.api.templates.Html
 import play.api.libs.json.Json
 import play.api.mvc.SimpleResult
 import play.api.libs.json.JsObject
+import brainflight.security.AuthenticatedRequest
 
 class Controller extends PlayController {
+  
+  def postParameter(parameter: String)(implicit request: AuthenticatedRequest[Map[String, Seq[String]]]) = 
+    request.body.get(parameter).flatMap(_.headOption)
+  
   class AjaxResult(status: Status) {
     
     def apply(html: Html, messages: Seq[(String, String)]) = 

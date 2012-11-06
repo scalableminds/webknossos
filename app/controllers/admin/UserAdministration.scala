@@ -50,8 +50,11 @@ object UserAdministration extends Controller with Secured {
 
   private def verifyUser(userId: String) = {
     User.findOneById(userId) map { user =>
-      Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-      User.verify(user)
+      if (!user.verified) {
+        Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
+        User.verify(user)
+      } else
+        user
     }
   }
 
@@ -106,7 +109,7 @@ object UserAdministration extends Controller with Secured {
         userId => "Couldn't remove role from user with id '%s'".format(userId))
     } getOrElse AjaxBadRequest.error("Please choose a role")
   }
-  
+
   def addRoleBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     postParameter("role").map { roleName =>
       bulkOperation(addRole(roleName))(

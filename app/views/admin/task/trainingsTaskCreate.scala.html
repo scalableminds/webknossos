@@ -14,7 +14,7 @@
         })  
 
         @helper.input(form("experience")) { (id, name, value, args) =>
-            <input type="text" name="@name" id="@id" data-source='@Json.toJson(experiences).toString' data-provide="typeahead" @toHtmlArgs(args)>
+            <input type="text" name="@name" id="@id" data-source='@Json.toJson(experiences).toString' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
         }
 
         @helper.inputText(form("gain"), 'type -> "number")

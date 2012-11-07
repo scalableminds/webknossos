@@ -12,8 +12,10 @@ import nml.NMLParser
 import xml.Xml
 import play.api.Logger
 import models.task.UsedExperiments
+import scala.xml.PrettyPrinter
 
 object NMLIO extends Controller with Secured {
+  val prettyPrinter = new PrettyPrinter(100, 2)
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )
 
@@ -46,7 +48,7 @@ object NMLIO extends Controller with Secured {
     (for {
       experiment <- Experiment.findOneById(experimentId)
     } yield {
-      Ok(Xml.toXML(experiment)).withHeaders(
+      Ok(prettyPrinter.format(Xml.toXML(experiment))).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",
         CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(experiment.dataSetName)))
     }) getOrElse BadRequest

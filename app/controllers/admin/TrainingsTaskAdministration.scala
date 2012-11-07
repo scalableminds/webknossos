@@ -12,6 +12,7 @@ import brainflight.security.AuthenticatedRequest
 import models.task.TaskType
 import models.binary.DataSet
 import models.task.Task
+import models.task.TrainingsExperiment
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
@@ -52,5 +53,11 @@ object TrainingsTaskAdministration extends Controller with Secured {
       AjaxOk.success("Trainings-Task successfuly deleted.")
     } getOrElse AjaxBadRequest.error("Trainings-Task not found.")
   }
-
+  
+  def review(trainingsExperimentId: String) = Authenticated { implicit request =>
+    TrainingsExperiment.findOneById(trainingsExperimentId) map { trainingsExperiment =>
+      TrainingsExperiment.assignReviewee(trainingsExperiment, request.user)
+      AjaxOk.success("Trainings-Task successfuly deleted.")
+    } getOrElse BadRequest("Trainings-Experiment not found.")
+  }
 }

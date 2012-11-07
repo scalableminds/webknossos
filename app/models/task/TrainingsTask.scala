@@ -29,7 +29,7 @@ object TrainingsTask extends BasicDAO[TrainingsTask]("trainingsTasks") {
       TrainingsTask(task, gain, loose)
     } getOrElse null
   }
-
+  
   def createExperimentFor(user: User, trainingsTask: TrainingsTask) = {
     val exp = Task.createExperimentFor(user, trainingsTask.task)
     TrainingsExperiment.alterAndInsert(TrainingsExperiment(exp))

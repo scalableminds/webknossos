@@ -21,8 +21,9 @@ object TrainingsTaskAdministration extends Controller with Secured {
   val trainingsTaskForm = Form(
     mapping(
       "task" -> text.verifying("task.invalid", task => Task.findOneById(task).isDefined),
+      "experience" -> text,
       "gain" -> number,
-      "loose" -> number)(TrainingsTask.fromForm)(TrainingsTask.toForm))
+      "lose" -> number)(TrainingsTask.fromForm)(TrainingsTask.toForm))
 
   def list = Authenticated { implicit request =>
     Ok(html.admin.task.trainingsTaskList(request.user, TrainingsTask.findAll))
@@ -33,7 +34,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
   }
   def create(taskId: String) = Authenticated { implicit request =>
     val form = Task.findOneById(taskId) map{ task =>
-      trainingsTaskForm.fill(TrainingsTask(task, 10, 5))
+      trainingsTaskForm.fill(TrainingsTask(task, "", 10, 5))
     } getOrElse trainingsTaskForm
     Ok(trainingsTaskCreateHTML(form))
   }

@@ -3,7 +3,7 @@
 @import brainflight.format._
 
 <tr>
-  <td class="details-toggle"> <i class="icon-chevron-right"></i> </td>
+  <td class="details-toggle"> <i class="icon-chevron-right"></i> <i class="icon-chevron-down"></i> </td>
   <td> @task.id.drop(18) </td>
   <td> @task.cellId </td>
   <td> @task.seedIdHeidelberg </td>
@@ -32,12 +32,7 @@
 </tr>
 <tr class="details-row">
   <td colspan="11">
-    <table class="table table-condensed">
-      <thead>
-        <th> Assignee </th>
-        <th> Updated at </th>
-        <th></th>
-      </thead>
+    <table class="table table-condensed table-nohead">
       <tbody>
         @task.experiments.map{ experiment =>
           <tr>

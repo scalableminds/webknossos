@@ -5,24 +5,26 @@
 
 @main(Some(loggedInUser)){
   <div class="container">
-	  <h3>Create Trainings-Task</h3>
-	  <div class="well">
-	    @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromForm, 'class -> "form-horizontal") {
-	      
-	      @helper.select(form("task"), tasks.map { task =>
+    <h3>Create Trainings-Task</h3>
+    <div class="well">
+      @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromForm, 'class -> "form-horizontal") {
+        
+        @helper.select(form("task"), tasks.map { task =>
           task.id -> (task.taskType.map(_.summary).getOrElse("") + "- start " + task.start.toString)
         })  
 
-        @helper.inputText(form("experience"), 'type -> "text", Symbol("data-source") -> Json.toJson(experiences).toString, Symbol("data-provide") -> "typeahead")
+        @helper.input(form("experience")) { (id, name, value, args) =>
+            <input type="text" name="@name" id="@id" data-source='@Json.toJson(experiences).toString' data-provide="typeahead" @toHtmlArgs(args)>
+        }
 
-	      @helper.inputText(form("gain"), 'type -> "number")
-	      
-	      @helper.inputText(form("lose"), 'type -> "number")
+        @helper.inputText(form("gain"), 'type -> "number")
+        
+        @helper.inputText(form("lose"), 'type -> "number")
 
-	      <div class="form-actions">
-	        <button type="submit" class="btn btn-primary">Create</button>
-	      </div>
-	    }
-	  </div>
-	</div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
+  </div>
 }

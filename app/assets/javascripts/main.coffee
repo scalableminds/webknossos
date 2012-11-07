@@ -185,32 +185,12 @@ $ -> # document is ready!
         )
         
 
-    $("form[data-ajax]").submit (event) ->
-
-        event.preventDefault()
-        $this = $(this)
-        $.ajax(
-            url : this.action
-            type : this.method || "POST"
-            data : $this.serialize()
-            dataType : "json"
-        ).then(
-
-            ({ html, messages }) ->
-                toastMessage(messages)
-                $this.trigger("ajax-success", message)
-
-            ({ messages }) ->
-                toastMessage(messages)
-                $this.trigger("ajax-error", message)
-        )
-
-
     $("table input.select-all-rows").live "change", ->
 
         $this = $(this)
         $this.parents("table").find("tbody input.select-row").prop("checked", this.checked)
         return
+        
 
     $("table.table-details").each ->
 
@@ -224,15 +204,17 @@ $ -> # document is ready!
             newState = !$toggle.hasClass("open")
 
             $toggle.parents("tr").next().toggleClass("hide", !newState)
-            $toggle.html(
-                if newState
-                    "<i class=\"icon-chevron-down\"></i>"
-                else
-                    "<i class=\"icon-chevron-right\"></i>"
-            )
             $toggle.toggleClass("open", newState)
 
 
+        $table.find(".details-toggle-all").click ->
+
+            $toggle = $(this)
+            newState = !$toggle.hasClass("open")
+
+            $table.find(".details-row").toggleClass("hide", !newState)
+            $table.find(".details-toggle").toggleClass("open", newState)
+            $toggle.toggleClass("open", newState)
 
 
 

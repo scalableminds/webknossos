@@ -3,9 +3,24 @@
 @main(Some(loggedInUser)){
   <div class="container">
     <h3>Tasks</h3>
-    <table class="table table-striped">
+    <p>
+      Task states:
+      <span title="Unassigned"> 
+        <i class="icon-play-circle"></i> Unassigned
+      </span>
+      |
+      <span title="in Progress"> 
+        <i class="icon-random"></i> in Progress
+      </span>
+      |
+      <span title="Completed">
+        <i class="icon-ok-circle"></i> Completed
+      </span>
+    </p>
+    <table class="table table-double-striped table-details">
       <thead>
         <tr>
+          <th></th>
           <th> # </th>
           <th> Cell </th>
           <th> HBerg-Id </th>
@@ -23,18 +38,5 @@
       }
       </tbody>
     </table>
-    <p>
-      <span title="Unassigned"> 
-        <i class="icon-play-circle"></i> Unassigned
-      </span>
-      |
-      <span title="in Progress"> 
-        <i class="icon-random"></i> in Progress
-      </span>
-      |
-      <span title="Completed">
-        <i class="icon-ok-circle"></i> Completed
-      </span>
-    </p>
   </div>
 }

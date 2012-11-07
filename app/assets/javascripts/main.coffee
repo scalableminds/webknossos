@@ -212,6 +212,30 @@ $ -> # document is ready!
         $this.parents("table").find("tbody input.select-row").prop("checked", this.checked)
         return
 
+    $("table.table-details").each ->
+
+        $table = $(this)
+
+        $table.find(".details-row").addClass("hide")
+
+        $table.find(".details-toggle").click ->
+
+            $toggle = $(this)
+            newState = !$toggle.hasClass("open")
+
+            $toggle.parents("tr").next().toggleClass("hide", !newState)
+            $toggle.html(
+                if newState
+                    "<i class=\"icon-chevron-down\"></i>"
+                else
+                    "<i class=\"icon-chevron-right\"></i>"
+            )
+            $toggle.toggleClass("open", newState)
+
+
+
+
+
 
     # Page specifics
     route

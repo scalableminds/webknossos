@@ -3,6 +3,7 @@
 @import brainflight.format._
 
 <tr>
+  <td class="details-toggle"> <i class="icon-chevron-right"></i> </td>
   <td> @task.id.drop(10) </td>
   <td> @task.cellId </td>
   <td> @task.seedIdHeidelberg </td>
@@ -25,10 +26,9 @@
     </span>
   </td>
 </tr>
-<tr></tr>
-<tr>
-  <td colspan="9">
-    <table class="table table-striped">
+<tr class="details-row">
+  <td colspan="10">
+    <table class="table table-condensed">
       <thead>
         <th> Assignee </th>
         <th> Updated at </th>

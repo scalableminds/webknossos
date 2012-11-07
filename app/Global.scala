@@ -42,6 +42,7 @@ object InitialData {
     if (Role.findAll.isEmpty) {
       Role.insert(Role("user", Nil, Color(0.2274F, 0.5294F, 0.6784F, 1)))
       Role.insert(Role("admin", Permission("*", "*" :: Nil) :: Nil, Color(0.2F, 0.2F, 0.2F, 1)))
+      Role.insert(Role("reviewer", Permission("review", "*" :: Nil) :: Nil, Color(0.2745F, 0.5333F, 0.2784F, 1)))
     }
 
     if (User.findAll.isEmpty) {

@@ -15,6 +15,7 @@ import models.basics.BasicDAO
 import models.security.Permission
 import models.security.Implyable
 import models.security.Role
+import models.user.Experience._
 
 case class User(
     email: String,
@@ -26,6 +27,7 @@ case class User(
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: Set[String] = Set.empty,
     permissions: List[Permission] = Nil,
+    experiences: Experiences = Map.empty,
     _id: ObjectId = new ObjectId) {
 
   val _roles = for {
@@ -76,6 +78,10 @@ object User extends BasicDAO[User]("users") {
 
   def saveSettings(user: User, config: UserConfiguration) = {
     alterAndSave(user.copy(configuration = config))
+  }
+  
+  def addExperience(user: User, name: String, value: Int) = {
+    alterAndSave(user.copy(experiences = user.experiences + (name -> value)))
   }
 
   def verify(user: User) = {

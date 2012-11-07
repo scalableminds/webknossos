@@ -1,13 +1,10 @@
 package models.user
 
-import com.mongodb.casbah.Imports._
-import models.context._
-import com.novus.salat.annotations._
-import com.novus.salat.dao.SalatDAO
-import models.basics.BasicDAO
+import models.task.TrainingsTask
 
-case class Experience(name: String ,value: Int)
-
-object Experience extends BasicDAO[Experience]("experiences"){
+object Experience {
   
+  type Experiences = Map[String, Int]
+  
+  def findAll = TrainingsTask.findAll.map(_.experience).toSet.toList
 }

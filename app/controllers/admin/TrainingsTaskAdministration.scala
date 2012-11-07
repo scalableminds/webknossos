@@ -13,6 +13,7 @@ import models.task.TaskType
 import models.binary.DataSet
 import models.task.Task
 import models.task.TrainingsExperiment
+import models.user.Experience
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
@@ -30,7 +31,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
   }
 
   def trainingsTaskCreateHTML(form: Form[TrainingsTask])(implicit request: AuthenticatedRequest[_]) = {
-    html.admin.task.trainingsTaskCreate(request.user, Task.findAll, form)
+    html.admin.task.trainingsTaskCreate(request.user, Task.findAll, Experience.findAll, form)
   }
   def create(taskId: String) = Authenticated { implicit request =>
     val form = Task.findOneById(taskId) map{ task =>

@@ -1,6 +1,7 @@
-@(loggedInUser: models.user.User, tasks: List[models.task.Task], form: Form[models.task.TrainingsTask])
+@(loggedInUser: models.user.User, tasks: List[models.task.Task], experiences: Seq[String], form: Form[models.task.TrainingsTask])
 
 @import controllers.BootstrapHelpers._
+@import play.api.libs.json.Json
 
 @main(Some(loggedInUser)){
   <div class="container">
@@ -12,7 +13,7 @@
           task.id -> (task.taskType.map(_.summary).getOrElse("") + "- start " + task.start.toString)
         })  
 
-        @helper.inputText(form("experience"), 'type -> "text")
+        @helper.inputText(form("experience"), 'type -> "text", Symbol("data-source") -> Json.toJson(experiences).toString, Symbol("data-provide") -> "typeahead")
 
 	      @helper.inputText(form("gain"), 'type -> "number")
 	      

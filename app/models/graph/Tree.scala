@@ -24,6 +24,9 @@ case class Tree(id: Int, nodes: List[Node], edges: List[Edge], color: Color) {
 }
 
 object Tree {
+  
+  def empty = Tree(1, Nil, Nil, Color(1, 0, 0, 0))
+  
   implicit object TreeXMLWrites extends XMLWrites[Tree] {
     def writes(t: Tree) =
       <thing id={ t.id.toString } color.r={ t.color.r.toString } color.g={ t.color.g.toString } color.b={ t.color.b.toString } color.a={ t.color.a.toString }>

@@ -1,30 +1,7 @@
-# -----------------------------------------------
-# MAIN
-# -----------------------------------------------
-# DISCLAMER :
-# If you're used to Backbone.js, you may be
-# confused by the absence of models, but the goal
-# of this sample is to demonstrate some features
-# of Play including the template engine.
-# I'm not using client-side templating nor models
-# for this purpose, and I do not recommend this
-# behavior for real life projects.
-# -----------------------------------------------
 
 # Just a log helper
 log = (args...) ->
     console.log.apply console, args if console.log?
-
-# ------------------------------- DROP DOWN MENUS
-$(".options dt, .users dt").live "click", (e) ->
-    e.preventDefault()
-    if $(e.target).parent().hasClass("opened")
-        $(e.target).parent().removeClass("opened")
-    else
-        $(e.target).parent().addClass("opened")
-        $(document).one "click", ->
-            $(e.target).parent().removeClass("opened")
-    false
 
 # --------------------------------- EDIT IN PLACE
 $.fn.editInPlace = (method, options...) ->
@@ -75,75 +52,158 @@ $.fn.alertWithTimeout = (timeout = 3000) ->
         $this = $(this)
         $this.alert()
         timerId = -1
-        $this.on 
-            "mouseover" : -> clearTimeout(timerId)
-            "mouseout" : -> 
+
+        $this.hover(
+            ->
+                clearTimeout(timerId)
+            -> 
                 timerId = setTimeout(
                     -> $this.alert("close")
                     timeout
                 )
-        $this.mouseout()
+        )
+        $(window).one "mousemove", -> $this.mouseout()
 
-toastMessage = (type, message) ->
 
-    $messageElement = $("<div>", class : "alert alert-#{type} fade in").text(message)
-    $messageElement.append($("<a>", class : "close", "data-dismiss" : "alert", href : "#").html("&times;"))
-    $messageElement.alertWithTimeout()
+toastMessage = (type, message, sticky = false) ->
+
+    $messageElement = $("<div>", class : "alert alert-#{type} fade in").html(message)
+    $messageElement.prepend($("<a>", class : "close", "data-dismiss" : "alert", href : "#").html("&times;"))
+    if sticky
+        $messageElement.alert()
+    else
+        $messageElement.alertWithTimeout()
     $("#alert-container").append($messageElement)
+
+
+toastSuccess = (message, sticky) -> toastMessage("success", message, sticky)
+toastError = (message, sticky = true) -> toastMessage("error", message, sticky)
+
+route = (routes) ->
+
+    url = window.location.pathname.substring(1)
+
+    if _.isFunction(routes[url])
+        routes[url].call($("#main-container")[0])
+    return
 
 
 # ------------------------------------- INIT APP
 $ -> # document is ready!
 
-    $("#issue-submit-button").click (e) ->
-        window.open(this.href, "_blank", "width=700,height=470,location=no,menubar=no")
+    # Progresssive enhancements
+    $("[data-newwindow]").click (e) ->
+
+        [ width, height ] = $(this).data("newwindow").split("x")
+        window.open(this.href, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
         e.preventDefault()
 
 
-    $("#task-selection-algoritm").each ->
-
+    $("a[data-ajax]").click (event) ->
+        
+        event.preventDefault()
         $this = $(this)
+        $.ajax(url : this.href, dataType : "json").then(
 
-        editor = ace.edit("editor")
-        editor.setTheme("ace/theme/twilight");
-        editor.getSession().setMode("ace/mode/javascript");
+            ({ html, message }) ->
 
-        submitButton = $this.find("[type=submit]")
+                toastSuccess(message || "Success :-)")
+                $this.trigger("ajax-success", message)
 
-        editor.on "change", ->
+                for action in $this.data("ajax").split(",")
+                    switch action
+                        when "replace-row" then $this.parents("tr").replaceWith(html)
+                        when "reload" then window.location.reload()
 
-            try
-                new Function(editor.getValue())
-                submitButton.removeClass("disabled").popover("destroy")
-            catch error                
-                submitButton.addClass("disabled")
-                submitButton.popover(
-                    placement : "left"
-                    title : "No good code. No save."
-                    content : error.toString()
-                    trigger : "hover"
+            ({ message }) ->
+                toastError(message || "Error :-(")
+                $this.trigger("ajax-error", message)
+        )
+
+
+    $("form[data-ajax]").submit (event) ->
+
+        event.preventDefault()
+        $this = $(this)
+        $.ajax(
+            url : this.action
+            type : this.method || "POST"
+            data : $this.serialize()
+            dataType : "json"
+        ).then(
+
+            ({ html, message }) ->
+                toastSuccess(message || "Success :-)")
+                $this.trigger("ajax-success", message)
+
+            ({ message }) ->
+                toastError(message || "Error :-(")
+                $this.trigger("ajax-error", message)
+        )
+
+
+    # Page specifics
+    route
+
+        "dashboard" : ->
+
+            # $.ajax(
+            #     type : "POST"
+            #     url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
+            # )
+
+
+        "admin/tasks/algorithm" : ->
+
+            $this = $(this)
+            $form = $this.find("form")
+            $submitButton = $this.find("[type=submit]")
+
+            editor = ace.edit("editor")
+            editor.setTheme("ace/theme/twilight");
+            editor.getSession().setMode("ace/mode/javascript");
+
+
+            editor.on "change", ->
+
+                try
+                    new Function(editor.getValue())
+                    $submitButton.removeClass("disabled").popover("destroy")
+
+                catch error                
+                    $submitButton.addClass("disabled")
+                    $submitButton.popover(
+                        placement : "left"
+                        title : "No good code. No save."
+                        content : error.toString()
+                        trigger : "hover"
+                    )
+
+            editor._emit("change") # init
+         
+            $form.submit (event) ->
+
+                event.preventDefault()
+
+                return if $submitButton.hasClass("disabled")
+
+                code = editor.getValue()
+
+                $form.find("[name=code]").val(code)
+
+                $.ajax(
+                    url : this.action
+                    data : $form.serialize()
+                    type : "POST"
+                ).then(
+                    -> 
+                        toastSuccess("Saved!")
+                    ->
+                        toastError(
+                            """Sorry, we couldn't save your code. Please double check your syntax.<br/>
+                            Otherwise, please copy your code changes and reload this page."""
+                            true
+                        )
                 )
 
-        editor._emit("change")
-     
-        $this.submit (event) ->
-
-            event.preventDefault()
-
-            return if $this.find("[type=submit]").hasClass("disabled")
-
-            code = editor.getValue()
-
-            $this.find("[name=code]").val(code)
-
-            $.ajax(
-                url : this.action
-                data : $this.serialize()
-                type : "POST"
-            ).then(
-                -> 
-                    toastMessage("success", "Saved!")
-                ->
-                    toastMessage("error" ,"Sorry, we couldn't save your code. Please double check your syntax.\nOtherwise, please copy your code changes and reload this page.")
-            )
 

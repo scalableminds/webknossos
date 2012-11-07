@@ -2,13 +2,7 @@
 libs/request : Request
 ###
 
-# This takes care of the userdate. 
-User = {}
-
-# Debounce for POST User.Configuration
-DEBOUNCE_TIME = 3000
-
-User.Configuration = 
+class User
 
   # userdata
   # default values are defined in server
@@ -37,63 +31,18 @@ User.Configuration =
   motionsensorActive : null
 
 
-  initialize : ->
-    unless @configDeferred
-      @push =  _.debounce @pushImpl, DEBOUNCE_TIME      
-      @configDeferred = $.Deferred()
+  constructor : (user) ->
 
-      @configDeferred.fail =>
-        @configDeferred = null
+    _.extend(@, user)
 
-      Request.send(url : '/user/configuration').then( 
-        
-        (data) =>
-          try
-            data = JSON.parse data
-            { @moveValue, 
-              @rotateValue, 
-              @scaleValue, 
-              @mouseRotateValue, 
-              @routeClippingDistance, 
-              @lockZoom,
-              @displayCrosshair,
-              @interpolation,
-              @minZoomStep,
-              @zoomXY,
-              @zoomYZ,
-              @zoomXZ,
-              @displayPreviewXY,
-              @displayPreviewYZ,
-              @displayPreviewXZ,
-              @newNodeNewTree,
-              @nodesAsSpheres,
-              @mouseInversionX,
-              @mouseInversionY,
-              @mouseActive, 
-              @keyboardActive,
-              @gamepadActive,
-              @motionsensorActive } = data
-
-          catch ex
-            @configDeferred.reject(ex)
-          
-          @configDeferred.resolve(data)
-
-        (err) =>
-          @configDeferred.reject(err)
-      )
-    
-      @configDeferred.promise()
-
-  push : null
 
   pushImpl : ->
     deferred = $.Deferred()
       
-    request(
-      url    : "/user/configuration"
-      method : 'POST'
-      contentType : "application/json"
+    Request.send(
+      url      : "/user/configuration"
+      type     : "POST"
+      dataType : "json"
       data   : { 
         moveValue : @moveValue,
         rotateValue : @rotateValue,
@@ -125,5 +74,3 @@ User.Configuration =
     ).always(-> deferred.resolve())
     
     deferred.promise()    
-
-User

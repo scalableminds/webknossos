@@ -2,7 +2,6 @@
 jquery : $
 underscore : _
 libs/flycam : Flycam
-libs/flycam2 : Flycam2d
 libs/Tween : TWEEN_LIB
 model/game : Game
 libs/event_mixin : EventMixin

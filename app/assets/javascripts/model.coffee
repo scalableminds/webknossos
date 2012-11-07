@@ -2,7 +2,6 @@
 model/binary : Binary
 model/route : Route
 model/user : User
-underscore : _
 ###
 
 # This is the model. It takes care of the data including the 
@@ -16,5 +15,5 @@ class Model
   constructor : (options) ->
 
     @binary = new Binary(options.dataSet.id)
-    #@route = new Route()
-    #@user = new User()
+    @route = new Route(options.dataSet, options.experiment, options.experiments)
+    @user = new User(options.user)

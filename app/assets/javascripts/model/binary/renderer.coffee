@@ -21,6 +21,8 @@ class Renderer
   DELTA : [9, 4, 0]
   REPEAT : [0, 0, 1]
 
+  SPECIALbucketData : null
+
   RECURSION_PLACEHOLDER : {}
   
   constructor : () ->

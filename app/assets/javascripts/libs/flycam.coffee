@@ -1,141 +1,189 @@
 ### define ###
+
+# constants (for active_plane)
+PLANE_XY           = 0
+PLANE_YZ           = 1
+PLANE_XZ           = 2
+VIEW_3D            = 3
+TEXTURE_WIDTH      = 512
+MAX_TEXTURE_OFFSET = 31     # maximum difference between requested coordinate and actual texture position
+ZOOM_DIFF          = 0.05
+MAX_ZOOM_TRESHOLD  = 2
   
-class Flycam
+class Flycam2d
 
-  constructor : (distance) ->
-    @defaultDistance = distance
-    @zoomStep = 0   
-    @reset()
-    @stepBack = [0, 0, -distance]
-    @stepFront = [0, 0, distance]
+  constructor : (width, model) ->
+    @model = model
+    initialBuffer = TEXTURE_WIDTH/2-width/2          # buffer: how many pixels is the texture larger than the canvas on each side?
+    @buffer = [initialBuffer, initialBuffer, initialBuffer]
+    @viewportWidth = width
+    # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
+    @maxZoomStepDiff = Math.min(Math.log(MAX_ZOOM_TRESHOLD) / Math.LN2, Math.log((TEXTURE_WIDTH-MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
+    @hasNewTexture = [false, false, false]
+    @zoomSteps = [0.0, 0.0, 0.0]
+    @integerZoomSteps = [0, 0, 0]
+  #  @reset()
+    @globalPosition = [0, 0, 0]
+    @texturePosition = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+    @direction = [0, 0, 1]
+    @hasChanged = true
+    @activePlane = PLANE_XY
+    @rayThreshold = [10, 10, 10, 100]
+    @spaceDirection = 1
+
+  #reset : ->
+  #  @zoomSteps=[1,1,1]
+
+  zoomIn : (planeID) ->
+    @zoomSteps[planeID] -= ZOOM_DIFF
+    @hasChanged = true
+    @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
+
+  zoomOut : (planeID) ->
+    # Make sure the max. zoom Step will not be exceded
+    if @zoomSteps[planeID] < 3+@maxZoomStepDiff - ZOOM_DIFF
+      @zoomSteps[planeID] += ZOOM_DIFF
+      @hasChanged = true
+      @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
+
+  zoomInAll : ->
+    for i in [0..2]
+      @zoomIn i
+
+  zoomOutAll : ->
+    for i in [0..2]
+      @zoomOut i
+
+  # Used if the user wants to explicitly set the zoom step,
+  # rather than trusting on our equation.
+  setOverrideZoomStep : (value) ->
+    @overrideZoomStep = value
     @hasChanged = true
 
-  reset : ->
-    @currentMatrix = M4x4.clone [ 
-      1, 0, 0, 0, 
-      0, 1, 0, 0, 
-      0, 0, 1, 0, 
-      0, 0, 0, 1 
-    ]
+  calculateIntegerZoomStep : (planeID) ->
+    # round, because Model expects Integer
+    @integerZoomSteps[planeID] = Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff)
+    if @integerZoomSteps[planeID] < 0
+      @integerZoomSteps[planeID] = 0
+    # overrideZoomStep only has an effect when it is larger than the optimal zoom step
+    if @overrideZoomStep
+      @integerZoomSteps[planeID] = Math.max(@overrideZoomStep, @integerZoomSteps[planeID])
 
-  zoomIn : ->
-    @zoomStep--
-    m = @currentMatrix
-    m[12] = m[12] << 1 
-    m[13] = m[13] << 1
-    m[14] = m[14] << 1
+  getZoomStep : (planeID) ->
+    @zoomSteps[planeID]
 
+  setZoomSteps : (zXY, zYZ, zXZ) ->
+    @zoomSteps = [zXY, zYZ, zXZ]
     @hasChanged = true
+    for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
 
-  zoomOut : ->
-    @zoomStep++
-    m = @currentMatrix
-    m[12] = m[12] >> 1 
-    m[13] = m[13] >> 1
-    m[14] = m[14] >> 1
+  getIntegerZoomStep : (planeID) ->
+    @integerZoomSteps[planeID]
 
-    @hasChanged = true
+  getIntegerZoomSteps : ->
+    @integerZoomSteps
 
-  getZoomStep : ->
-    @zoomStep   
+  getTextureScalingFactor : (planeID) ->
+    Math.pow(2, @zoomSteps[planeID])/Math.pow(2, @integerZoomSteps[planeID])
 
-  getMatrix : ->
-    M4x4.clone @currentMatrix
+  getPlaneScalingFactor : (planeID) ->
+    Math.pow(2, @zoomSteps[planeID])
 
-  getGlobalMatrix : ->
-    m = M4x4.clone @currentMatrix
-    m[12] = m[12] << @zoomStep
-    m[13] = m[13] << @zoomStep
-    m[14] = m[14] << @zoomStep
-    m
-  
-  setMatrix : (matrix) ->
-    @currentMatrix = matrix
-    @hasChanged = true
+  getDirection : ->
+    @direction
 
-  move : (p) ->
-    @currentMatrix = M4x4.translate([ p[0], p[1], p[2] ], @currentMatrix)
-    @hasChanged = true
+  setDirection : (direction) ->
+    @direction = direction
+
+  setSpaceDirection : ->
+    ind = @getIndices @activePlane
+    if @direction[ind[2]] <= 0
+      @spaceDirection = -1
+    else
+      @spaceDirection = 1
+
+  getSpaceDirection : ->
+    @spaceDirection
+
+  move : (p) -> #move by whatever is stored in this vector
+    if @activePlane == PLANE_XY
+      # BAD consider the different resolution in z-direction
+      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+2*p[2]])
+    else
+      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
     
-  getMovedNonPersistent : (p) ->
-    @move [ p[0], p[1], p[2] ]
-    output = M4x4.clone @currentMatrix
-    @move [ p[0], p[1], -p[2] ]
-    output
-
-  yaw : (angle) ->
-    @currentMatrix = M4x4.rotate(angle, [ 0, 1, 0 ], @currentMatrix)
-    @hasChanged = true
-
-  yawDistance : (angle) ->
-    @move(@stepBack)
-    @currentMatrix = M4x4.rotate(angle, [ 0, 1, 0 ], @currentMatrix)
-    @move(@stepFront)   
-
-  roll : (angle) ->
-    @currentMatrix = M4x4.rotate(angle, [ 0, 0, 1 ], @currentMatrix)    
-    @hasChanged = true
-
-  rollDistance : (angle) ->
-    @move(@stepBack)
-    @currentMatrix = M4x4.rotate(angle, [ 0, 0, 1 ], @currentMatrix)
-    @move(@stepFront)
-
-  pitch : (angle) ->
-    currentMatrix = M4x4.rotate(angle, [ 1, 0, 0 ], @currentMatrix)
-    @hasChanged = true
-
-  pitchDistance : (angle) ->
-    @move(@stepBack)
-    @currentMatrix = M4x4.rotate(angle, [ 1, 0, 0 ], @currentMatrix)
-    @move(@stepFront)
-
-  rotateOnAxis : (angle, axis) ->
-    @currentMatrix = M4x4.rotate(angle, axis, @currentMatrix)
-    @hasChanged = true 
-
-  rotateOnAxisDistance : (angle, axis) ->
-    @move(@stepBack)
-    @currentMatrix = M4x4.rotate(angle, axis, @currentMatrix)
-    @move(@stepFront)
+  moveActivePlane : (p) ->
+    ind = @getIndices @activePlane
+    f = Math.pow(2, @integerZoomSteps[@activePlane])
+    # change direction of the value connected to space, based on the last direction
+    delta = [p[ind[0]]*f, p[ind[1]]*f, p[ind[2]]*f]
+    delta[ind[2]] *= @spaceDirection
+    @move(delta)
 
   toString : ->
-    matrix = @currentMatrix
-    "[" + matrix[ 0] + ", " + matrix[ 1] + ", " + matrix[ 2] + ", " + matrix[ 3] + ", " +
-    matrix[ 4] + ", " + matrix[ 5] + ", " + matrix[ 6] + ", " + matrix[ 7] + ", " +
-    matrix[ 8] + ", " + matrix[ 9] + ", " + matrix[10] + ", " + matrix[11] + ", " +
-    matrix[12] + ", " + matrix[13] + ", " + matrix[14] + ", " + matrix[15] + "]"
-  
-  getPos : ->
-    matrix = @currentMatrix
-    [ matrix[12], matrix[13], matrix[14]]
+    position = @globalPosition
+    "(x, y, z) = ("+position[0]+", "+position[1]+", "+position[2]+")"
 
   getGlobalPos : ->
-    matrix = @currentMatrix
-    [ matrix[12] << @zoomStep, matrix[13] << @zoomStep, matrix[14] << @zoomStep ]
+    @globalPosition
 
-  setPos : (p) ->
-    matrix = @currentMatrix
-    matrix[12] = p[0]
-    matrix[13] = p[1]
-    matrix[14] = p[2]
+  getTexturePosition : (planeID) ->
+    @texturePosition[planeID]
 
-  getDir : ->
-    matrix = @currentMatrix
-    [ matrix[8], matrix[9], matrix[10] ]
-
-  setDir : (p) ->
-    matrix = @currentMatrix
-    matrix[8]  = p[0]
-    matrix[9]  = p[1]
-    matrix[10] = p[2]
-    
+  setGlobalPos : (position) ->
+    p = [position[0] - @globalPosition[0], position[1] - @globalPosition[1], position[2] - @globalPosition[2]]
+    @globalPosition = position
     @hasChanged = true
+    
+  setActivePlane : (activePlane) ->
+    @activePlane = activePlane
+    # setSpaceDirection when entering a new viewport
+    @setSpaceDirection()
 
-  getUp : ->
-    matrix = @currentMatrix
-    [ matrix[4], matrix[5], matrix[6] ]
+  getActivePlane : ->
+    @activePlane
 
-  getLeft : ->
-    matrix = @currentMatrix
-    [ matrix[0], matrix[1], matrix[2] ]
+  getIndices : (planeID) ->         # Returns a ordered 3-tuple [x, y, z] which
+    switch planeID                  # represents the dimensions from the viewpoint
+      when PLANE_XY then [0, 1, 2]  # of each plane. For example, moving along the
+      when PLANE_YZ then [2, 1, 0]  # X-Axis of the YZ-Plane is eqivalent to moving
+      when PLANE_XZ then [0, 2, 1]  # along the Z axis in the cube -> ind[0]=2
+
+  needsUpdate : (planeID) ->
+    area = @getArea planeID
+    ind  = @getIndices planeID
+    ((area[0] < 0) or (area[1] < 0) or (area[2] > TEXTURE_WIDTH) or (area[3] > TEXTURE_WIDTH) or
+    (@globalPosition[ind[2]] != @texturePosition[planeID][ind[2]]) or
+    (@zoomSteps[planeID] - (@integerZoomSteps[planeID]-1)) < @maxZoomStepDiff) or
+    (@zoomSteps[planeID] -  @integerZoomSteps[planeID]     > @maxZoomStepDiff)
+
+  getOffsets : (planeID) ->
+    ind = @getIndices planeID
+    [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID],
+      (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID]]
+
+  getArea : (planeID) ->
+    offsets = @getOffsets planeID
+    size    = @getTextureScalingFactor(planeID) * @viewportWidth
+    # two pixels larger, just to fight rounding mistakes
+    [offsets[0] - 1, offsets[1] - 1, offsets[0] + size + 1, offsets[1] + size + 1]
+
+  notifyNewTexture : (planeID) ->
+    @texturePosition[planeID] = @globalPosition.slice()    #copy that position
+    @calculateIntegerZoomStep planeID
+    # As the Model does not render textures for exact positions, the last 5 bits of
+    # the X and Y coordinates for each texture have to be set to 0
+    for i in [0..2]
+      if i != (planeID+2)%3
+        @texturePosition[planeID][i] &= -1 << (5 + @integerZoomSteps[planeID])
+    @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
+
+  hasNewTextures : ->
+    (@hasNewTexture[PLANE_XY] or @hasNewTexture[PLANE_YZ] or @hasNewTexture[PLANE_XZ])
+
+  setRayThreshold : (cameraRight, cameraLeft) ->
+    @rayThreshold[VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384
+
+  getRayThreshold : (planeID) ->
+    @rayThreshold[planeID]

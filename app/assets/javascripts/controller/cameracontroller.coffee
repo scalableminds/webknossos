@@ -1,8 +1,6 @@
 ### define
 model : Model
 view : View
-libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
-model/game : Game
 ###
 
 
@@ -18,11 +16,12 @@ class CameraController
   # The Sceleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
   # View. It provides methods to set a certain View (animated).
 
-  constructor : (cameras, lights, flycam, model) ->
-    @cameras       = cameras
-    @lights        = lights
-    @flycam        = flycam
-    @model         = model
+  cameras : null
+  lights : null
+  flycam : null
+  model : null
+
+  constructor : (@cameras, @lights, @flycam, @model) ->
 
     @updateCamViewport()
     @cameras[VIEW_3D].near = -100000
@@ -48,7 +47,7 @@ class CameraController
     # CORRECTION: You're telling lies, you need to use the up vector...
 
     camera = @cameras[VIEW_3D]
-    b = @model.Route.data.dataSet.upperBoundary
+    b = @model.route.dataSet.upperBoundary
     time = 800
     @tween = new TWEEN.Tween({  middle: new THREE.Vector3(b[0]/2, b[1]/2, b[2]/2), upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera, flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
     switch id
@@ -135,14 +134,14 @@ class CameraController
     @flycam.hasChanged = true
 
   zoomIn : =>
-    if @model.User.Configuration.lockZoom
+    if @model.user.lockZoom
       @flycam.zoomInAll()
     else 
       @flycam.zoomIn(@flycam.getActivePlane())
     @updateCamViewport()
 
   zoomOut : =>
-    if @model.User.Configuration.lockZoom
+    if @model.user.lockZoom
       @flycam.zoomOutAll()
     else 
       @flycam.zoomOut(@flycam.getActivePlane())

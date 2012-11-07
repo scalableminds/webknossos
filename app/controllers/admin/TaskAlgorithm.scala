@@ -4,13 +4,12 @@ import play.api.mvc.Controller
 import play.api.mvc.Action
 import brainflight.security.Secured
 import views.html
-import models.User
-import models.Role
-import models.Task
+import models.user.User
+import models.security.Role
+import models.task._
 import play.api.libs.json.Json
-import models.TaskSelectionAlgorithm
 
-object TaskHandling extends Controller with Secured {
+object TaskAlgorithm extends Controller with Secured {
   // TODO remove comment in production
   override val DefaultAccessRole = Role( "admin" )
 
@@ -27,7 +26,7 @@ object TaskHandling extends Controller with Secured {
   }
 
   def index = Authenticated { implicit request =>
-    Ok(html.admin.taskSelectionAlgorithm(request.user, TaskSelectionAlgorithm.findAll, TaskSelectionAlgorithm.current))
+    Ok(html.admin.task.taskSelectionAlgorithm(request.user, TaskSelectionAlgorithm.findAll, TaskSelectionAlgorithm.current))
   }
 
   def submitAlgorithm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
@@ -55,10 +54,6 @@ object TaskHandling extends Controller with Secured {
       case _ =>
         BadRequest("Algorithm not found.")
     }
-  }
-
-  def listTasks = Authenticated { implicit request =>
-    Ok(Json.toJson(Task.findAll))
   }
 
   def listAlgorithms = Authenticated { implicit request =>

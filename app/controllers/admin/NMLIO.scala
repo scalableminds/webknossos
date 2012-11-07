@@ -4,21 +4,21 @@ import play.api.mvc.Controller
 import play.api.mvc.Action
 import brainflight.security.Secured
 import views.html
-import models.User
+import models.user._
 import nml._
-import models.graph.Experiment
-import models.Role
+import models.task.Experiment
+import models.security.Role
 import nml.NMLParser
 import xml.Xml
 import play.api.Logger
-import models.UsedExperiments
+import models.task.UsedExperiments
 
 object NMLIO extends Controller with Secured {
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )
 
   def uploadForm = Authenticated { implicit request =>
-    Ok(html.admin.nmlupload(request.user))
+    Ok(html.admin.nml.nmlupload(request.user))
   }
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
@@ -36,10 +36,10 @@ object NMLIO extends Controller with Secured {
   }
 
   def downloadList = Authenticated { implicit request =>
-    val userExperiments = Experiment.findAll.groupBy(_.user).flatMap{ case (userId, experiments) =>
+    val userExperiments = Experiment.findAll.groupBy(_._user).flatMap{ case (userId, experiments) =>
       User.findOneById(userId).map( _ -> experiments) 
     }
-    Ok(html.admin.nmldownload(request.user, userExperiments))
+    Ok(html.admin.nml.nmldownload(request.user, userExperiments))
   }
 
   def download(taskId: String) = Authenticated { implicit request =>

@@ -1,4 +1,6 @@
-@(userOpt: Option[User], showNavButtons: Boolean = true)(body: Html)
+@(userOpt: Option[models.user.User], showNavButtons: Boolean = true)(body: Html)
+@import models.security.Role
+
 <!doctype html>
 <html>
   <head>
@@ -15,24 +17,25 @@
     <header class="navbar navbar-static-top navbar-inverse">
       <div class="navbar-inner">
         @if(showNavButtons){
-          <a class="brand" href="@routes.Application.index">Oxalis</a>
+          <a class="brand" href="@routes.Game.index">Oxalis</a>
           <ul class="nav">
             <li class="divider-vertical"></li>
             <li>
-              <a href="@routes.Jira.index" id="issue-submit-button"><i class="icon-fire icon-white"></i> Submit an issue</a>
+              <a href="@routes.UserController.dashboard"><i class="icon-home icon-white"></i> Dashboard</a>
             </li>
             @userOpt.filter( _.hasRole(Role("admin").get)).map{ user =>
               <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
-                  <b class="caret"></b>
+                  <i class="icon-wrench icon-white"></i>
                   Administration
+                  <b class="caret"></b>
                 </a>
                 <ul class="dropdown-menu">
                   <li>
                     <a href="@controllers.admin.routes.UserAdministration.index">Users</a>
                   </li>  
                   <li class="dropdown-submenu">
-                    <a tabindex="-1" href="#">Tasks</a>
+                    <a tabindex="-1" href="@controllers.admin.routes.TaskAdministration.list">Tasks</a>
                     <ul class="dropdown-menu">
                         <li>
                           <a href="@controllers.admin.routes.TaskAdministration.create">Create</a>
@@ -44,13 +47,16 @@
                           <a href="@controllers.admin.routes.TaskAdministration.types">Types</a>
                         </li>
                         <li>
-                          <a href="@controllers.admin.routes.TaskHandling.index">Algorithm</a>
+                          <a href="@controllers.admin.routes.TaskAlgorithm.index">Algorithm</a>
                         </li>
                     </ul>
                   </li>
                 </ul>
               </li>
             }
+           <li>
+              <a href="@routes.Jira.index" data-newwindow="700x470"><i class="icon-fire icon-white"></i> Submit an issue</a>
+            </li>
             <li>
               <a href="#" id="help-overlay"><i class="icon-info-sign icon-white">
               </i> Keyboard commands</a>
@@ -61,24 +67,26 @@
 
             <ul class="nav pull-right">
               <li class="divider-vertical"></li>
-              <li class="navbar-text"><i class="icon-user icon-white"></i>  <strong>@user.name</strong> <span>(@user.email)</span></li>
-              <li class="divider-vertical"></li>
-              <li>
-                <a href="@routes.Application.logout()"><i class="icon-off icon-white"></i> Logout</a>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                  <i class="icon-user icon-white"></i>  <strong>@user.name</strong> <span>(@user.email)</span>
+                  <b class="caret"></b>
+                </a>
+                <ul class="dropdown-menu">
+                  <li>
+                    <a href="#"><i class="icon-edit"></i> Edit Profile</a>
+                  </li>
+                  <li>
+                    <a href="@routes.Application.logout()"><i class="icon-off"></i> Logout</a>
+                  </li>
+                </ul>
               </li>
-              <li class="divider-vertical"></li>
             </ul>           
             
             
 
           }.getOrElse{
             <ul class="nav pull-right">
-              <li>
-                <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
-              </li>
-              <li>
-                <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
-              </li>
               <li>
                 <a href="@controllers.routes.Application.login()">Login</a>
               </li>

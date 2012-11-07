@@ -1,9 +1,11 @@
 @(form: Form[(String, String)])(implicit flash: Flash)
 
+@import BootstrapHelpers._
+
 @main( None, false ){
     
   <div class="container">
-    <div class="span7 offset2 space-top">
+    <div class="span9 offset1 space-top">
       <div class="well">
         
         @helper.form(routes.Application.authenticate, 'class -> "form-horizontal") {
@@ -22,32 +24,12 @@
             </div>
           }
 
-          <!-- 
-            <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
-            <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
-          -->
-          <div class="control-group">
-            <label class="control-label" for="loginEmail">Email</label>
-            <div class="controls">
-              <input id="loginEmail" type="email" name="email" placeholder="Email" value="@form("email").value">
-            </div>
-          </div>
-          <div class="control-group">
-            <label class="control-label" for="loginPassword">Password</label>
-            <div class="controls">
-              <input id="loginPassword" type="password" name="password" placeholder="Password">
-            </div>
-          </div>
-          <div class="control-group">
-            <div class="controls">
-              <p>
-                <button type="submit" class="btn btn-primary">Login</button>
-              </p>
-              <p>
-                <a href="@routes.Application.register">Sign Up</a><br />
-                <!-- <a href="#">Password Lost</a> -->
-              </p>
-            </div>
+          @helper.inputText(form("email"), 'type -> "email")
+          @helper.inputPassword(form("password"))
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Login</button>
+            <a href="@routes.Application.register" class="btn">Sign Up</a>
           </div>        
         }
       </div>

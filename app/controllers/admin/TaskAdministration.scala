@@ -16,6 +16,7 @@ import play.api.data.Forms.mapping
 import play.api.data.Forms.number
 import play.api.data.Forms.text
 import views.html
+import models.user.Experience
 import controllers.Controller
 
 object TaskAdministration extends Controller with Secured {
@@ -26,15 +27,20 @@ object TaskAdministration extends Controller with Secured {
     mapping(
       "experiment" -> text.verifying("experiment.invalid", experiment => Experiment.findOneById(experiment).isDefined),
       "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
+      "experience" -> mapping(
+        "domain" -> text,
+        "value" -> number)(Experience.apply)(Experience.unapply),
       "priority" -> number,
       "taskInstances" -> number)(Task.fromExperimentForm)(Task.toExperimentForm)).fill(Task.empty)
 
   val taskMapping = mapping(
     "dataSet" -> text.verifying("dataSet.invalid", name => DataSet.findOneByName(name).isDefined),
     "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
-    "cellId" -> number,
     "start" -> mapping(
       "point" -> text.verifying("point.invalid", p => p.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(Point3D.fromForm)(Point3D.toForm),
+    "experience" -> mapping(
+      "domain" -> text,
+      "value" -> number)(Experience.apply)(Experience.unapply),
     "priority" -> number,
     "taskInstances" -> number)(Task.fromForm)(Task.toForm)
 
@@ -46,7 +52,13 @@ object TaskAdministration extends Controller with Secured {
   }
 
   def taskCreateHTML(experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) =
-    html.admin.task.taskCreate(request.user, Experiment.findAllExploratory, TaskType.findAll, DataSet.findAll, experimentForm, taskForm)
+    html.admin.task.taskCreate(request.user,
+      Experiment.findAllExploratory,
+      TaskType.findAll,
+      DataSet.findAll,
+      Experience.findAllDomains,
+      experimentForm,
+      taskForm)
 
   def create = Authenticated { implicit request =>
     Ok(taskCreateHTML(taskForm, taskFromExperimentForm))
@@ -65,7 +77,7 @@ object TaskAdministration extends Controller with Secured {
       formWithErrors => BadRequest(taskCreateHTML(taskFromExperimentForm, formWithErrors)),
       { t =>
         Task.insert(t)
-        Ok(t.toString)
+        Redirect(routes.TaskAdministration.list)
       })
   }
 
@@ -83,27 +95,28 @@ object TaskAdministration extends Controller with Secured {
       val inserted = data
         .split("\n")
         .map(_.split(" "))
-        .filter(_.size == 8)
+        .filter(_.size == 9)
         .flatMap { params =>
           for {
-            cellId <- params(1).toIntOpt
-            taskTypeSummary = params(2)
+            experienceValue <- params(3).toIntOpt
+            x <- params(4).toIntOpt
+            y <- params(5).toIntOpt
+            z <- params(6).toIntOpt
+            priority <- params(7).toIntOpt
+            instances <- params(8).toIntOpt
+            taskTypeSummary = params(1)
             taskType <- TaskType.findOneBySumnary(taskTypeSummary)
-            x <- params(3).toIntOpt
-            y <- params(4).toIntOpt
-            z <- params(5).toIntOpt
-            priority <- params(6).toIntOpt
-            instances <- params(7).toIntOpt
           } yield {
             val dataSetName = params(0)
-            Task(dataSetName, cellId, 0, taskType._id, Point3D(x, y, z), priority, instances)
+            val experience = Experience(params(2), experienceValue)
+            Task(dataSetName, 0, taskType._id, Point3D(x, y, z), experience, priority, instances)
           }
         }
         .flatMap { t =>
           println("Created task: " + t)
           Task.insert(t)
         }
-      Ok("Inserted: " + inserted.mkString(" "))
+      Redirect(routes.TaskAdministration.list)
     } getOrElse BadRequest("'data' parameter is mising")
   }
 }

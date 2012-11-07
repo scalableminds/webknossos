@@ -9,9 +9,9 @@ import models.user.User
 
 case class TrainingsTask(
     task: Task,
-    experience: String,
-    gainExperience: Int,
-    loseExperience: Int,
+    experienceDomain: String,
+    experienceGain: Int,
+    experienceLoss: Int,
     _id: ObjectId = new ObjectId) {
 
   lazy val id = _id.toString
@@ -22,7 +22,7 @@ case class TrainingsTask(
 object TrainingsTask extends BasicDAO[TrainingsTask]("trainingsTasks") {
 
   def toForm(tt: TrainingsTask) = {
-    Some(tt.task.id,tt.experience, tt.gainExperience, tt.loseExperience)
+    Some(tt.task.id,tt.experienceDomain, tt.experienceGain, tt.experienceLoss)
   }
 
   def fromForm(taskId: String, experience: String, gain: Int, lose: Int) = {

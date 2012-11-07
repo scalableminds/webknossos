@@ -8,7 +8,7 @@ import org.bson.types.ObjectId
 import play.api.Logger
 
 object BasicEvolution {
-  val watchedClasses: List[BasicDAO[_]] = List(Role, DataSet, User, Task, Experiment)
+  val watchedClasses: List[BasicDAO[_]] = List(Role, DataSet, User, Task, Experiment, TrainingsExperiment, TrainingsTask)
 
   def runDBEvolution() {
     val fakeObjectId = new ObjectId

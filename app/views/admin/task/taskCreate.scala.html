@@ -1,7 +1,8 @@
-@(loggedInUser: models.user.User, experiments: List[models.task.Experiment], taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])
+@(loggedInUser: models.user.User, experiments: List[models.task.Experiment], taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])
 
 @import brainflight.format._
 @import controllers.BootstrapHelpers._
+@import play.api.libs.json.Json
 
 @main(Some(loggedInUser)){
   <div class="container">
@@ -18,6 +19,12 @@
         @helper.select(experimentForm("taskType"), taskTypes.map { tt =>
           tt.id -> tt.summary
         })
+
+        @helper.input(experimentForm("experience.domain")) { (id, name, value, args) =>
+          <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(experimentForm("experience.value"), 'type -> "number")
 
         @helper.inputText(experimentForm("priority"), 'type -> "number")
         @helper.inputText(experimentForm("taskInstances"), 'type -> "number", 'min -> 0)
@@ -39,7 +46,12 @@
         @helper.select(taskForm("taskType"), taskTypes.map { tt =>
           tt.id -> tt.summary
         })
-        @helper.inputText(taskForm("cellId"), 'type -> "number")
+
+        @helper.input(experimentForm("experience.domain")) { (id, name, value, args) =>
+          <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(experimentForm("experience.value"), 'type -> "number")
 
         @helper.inputText(taskForm("start.point"), 'type -> "text")
 
@@ -56,7 +68,7 @@
 
     <div class="well">
       One line for each task. The values are seperated by a space. Format: <br />
-      dataSet cellId taskTypeSummary x y z priority instances<br /><br />
+      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createBulk){
         <textarea class="input-fullwidth input-monospace" rows="20" name="data"></textarea>
         <div class="form-actions">

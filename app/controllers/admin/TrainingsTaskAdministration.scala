@@ -31,7 +31,10 @@ object TrainingsTaskAdministration extends Controller with Secured {
   }
 
   def trainingsTaskCreateHTML(form: Form[TrainingsTask])(implicit request: AuthenticatedRequest[_]) = {
-    html.admin.task.trainingsTaskCreate(request.user, Task.findAll, Experience.findAll, form)
+    html.admin.task.trainingsTaskCreate(request.user, 
+        Task.findAll, 
+        Experience.findAllDomains, 
+        form)
   }
   def create(taskId: String) = Authenticated { implicit request =>
     val form = Task.findOneById(taskId) map{ task =>

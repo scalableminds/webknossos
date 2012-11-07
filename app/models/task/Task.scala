@@ -27,24 +27,24 @@ import models.graph.Tree
 import brainflight.tools.geometry.Scale
 import models.user.User
 import play.api.Logger
+import models.user.Experience
 
 case class Task(
     dataSetName: String,
-    cellId: Int,
     seedIdHeidelberg: Int,
     _taskType: ObjectId,
-    //requiredPermission: Int,
     start: Point3D,
+    neededExperience: Experience = Experience.empty,
     priority: Int = 100,
     instances: Int = 1,
     created: Date = new Date,
     _experiments: List[ObjectId] = Nil,
     _id: ObjectId = new ObjectId) {
-  
+
   lazy val id = _id.toString
 
   def taskType = TaskType.findOneById(_taskType)
-  
+
   def experiments = _experiments.map(Experiment.findOneById).flatten
 
   def isFullyAssigned = experiments.size == instances
@@ -63,10 +63,9 @@ object Task extends BasicDAO[Task]("tasks") {
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
 
-  val empty = Task("", 0, 0, null, Point3D(0, 0, 0))
+  val empty = Task("", 0, null, Point3D(0, 0, 0))
 
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
-
 
   def createExperimentFor(user: User, task: Task) = {
     Experiment.alterAndInsert(Experiment(user._id,
@@ -88,50 +87,54 @@ object Task extends BasicDAO[Task]("tasks") {
       _experiments = experiment._id :: task._experiments))
   }
 
-  def toExperimentForm(t: Task): Option[(String, String, Int, Int)] = {
-    Some(("", "", t.priority, t.instances))
+  def toExperimentForm(t: Task): Option[(String, String, Experience, Int, Int)] = {
+    Some(("",
+      "",
+      t.neededExperience,
+      t.priority,
+      t.instances))
   }
-  
-  def fromExperimentForm(experiment: String, taskTypeId: String, priority: Int, instances: Int): Task =
-      (Experiment.findOneById(experiment), TaskType.findOneById(taskTypeId)) match {
+
+  def fromExperimentForm(experiment: String, taskTypeId: String, experience: Experience, priority: Int, instances: Int): Task =
+    (Experiment.findOneById(experiment), TaskType.findOneById(taskTypeId)) match {
       case (Some(e), Some(taskType)) =>
-      Task(e.dataSetName,
-          0,
+        Task(e.dataSetName,
           0,
           taskType._id,
           e.editPosition,
+          experience,
           priority,
           instances)
       case _ =>
-      Logger.warn("Failed to create Task from form. Experiment: %s TaskType: %s".format(experiment, taskTypeId))
-      null
-  }
-  
-  def fromForm(dataSetName: String, taskTypeId: String, cellId: Int, start: Point3D, priority: Int, instances: Int): Task =
-      TaskType.findOneById(taskTypeId) match {
+        Logger.warn("Failed to create Task from form. Experiment: %s TaskType: %s".format(experiment, taskTypeId))
+        null
+    }
+
+  def fromForm(dataSetName: String, taskTypeId: String, start: Point3D, experience: Experience, priority: Int, instances: Int): Task =
+    TaskType.findOneById(taskTypeId) match {
       case Some(taskType) =>
-      Task(dataSetName,
-          cellId,
+        Task(dataSetName,
           0,
           taskType._id,
           start,
+          experience,
           priority,
           instances)
       case _ =>
         Logger.warn("Failed to create Task from form. TaskType: %s".format(taskTypeId))
         null
-  }
-  
-  def toForm(t: Task): Option[(String, String, Int, Point3D, Int, Int)] = {
+    }
+
+  def toForm(t: Task): Option[(String, String, Point3D, Experience, Int, Int)] = {
     Some((
-        t.dataSetName, 
-        t.taskType.map(_.id).getOrElse(""), 
-        t.cellId,
-        t.start,
-        t.priority, 
-        t.instances))
-  }  
-  
+      t.dataSetName,
+      t.taskType.map(_.id).getOrElse(""),
+      t.start,
+      t.neededExperience,
+      t.priority,
+      t.instances))
+  }
+
   def nextTaskForUser(user: User): Future[Option[Task]] = {
     val tasks = findAllAssignable.toArray
     if (tasks.isEmpty) {
@@ -164,7 +167,6 @@ object Task extends BasicDAO[Task]("tasks") {
 
     def writes(e: Task) = Json.obj(
       TASK_ID -> e.id,
-      CELL_ID -> e.cellId,
       START -> e.start,
       PRIORITY -> e.priority)
   }

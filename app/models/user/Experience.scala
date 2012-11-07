@@ -2,9 +2,15 @@ package models.user
 
 import models.task.TrainingsTask
 
-object Experience {
+case class Experience(domain: String, value: Int){
   
+  override def toString = "%d @ %s".format(value, domain)
+}
+
+object Experience { 
+  
+  def empty = Experience("", 0)
   type Experiences = Map[String, Int]
   
-  def findAll = TrainingsTask.findAll.map(_.experience).toSet.toList
+  def findAllDomains = TrainingsTask.findAll.map(_.experienceDomain).toSet.toList
 }

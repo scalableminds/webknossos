@@ -29,7 +29,10 @@ dataSet.invalid=Selected data set doesn''t exist
 cellId=Cell Id
 
 start.point=Start
-point.invalid=Invalid format. Use smth. like: 4, 63, 24
+point.invalid=Invalid format. Use something like: 4, 63, 24
+
+experience.domain=Experience Domain
+experience.value=Min Experience
 
 priority=Priority
 experiment=Experiment

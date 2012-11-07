@@ -13,7 +13,7 @@
           task.id -> (task.taskType.map(_.summary).getOrElse("") + "- start " + task.start.toString)
         })  
 
-        @helper.inputText(form("experience"), 'type -> "text", Symbol("data-source") -> Json.toJson(experiences).toString, Symbol("data-provide") -> "typeahead")
+        @helper.inputText(form("experience"), 'type -> "text", Symbol("data-source") -> Json.stringify(Json.toJson(experiences)), Symbol("data-provide") -> "typeahead")
 
 	      @helper.inputText(form("gain"), 'type -> "number")
 	      

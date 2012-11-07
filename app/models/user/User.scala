@@ -84,6 +84,11 @@ object User extends BasicDAO[User]("users") {
     alterAndSave(user.copy(experiences = user.experiences + (name -> value)))
   }
 
+  def incExperience(user: User, name: String, value: Int) = {
+    val sum = (user.experiences.get(name) getOrElse 0) + value
+    alterAndSave(user.copy(experiences = user.experiences + (name -> sum)))
+  }
+  
   def verify(user: User) = {
     alterAndSave(user.copy(verified = true, roles = user.roles + "user"))
   }

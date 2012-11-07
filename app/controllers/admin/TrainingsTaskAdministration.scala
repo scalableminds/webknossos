@@ -59,7 +59,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
   def review(trainingsExperimentId: String) = Authenticated { implicit request =>
     TrainingsExperiment.findOneById(trainingsExperimentId) map { trainingsExperiment =>
       TrainingsExperiment.assignReviewee(trainingsExperiment, request.user)
-      AjaxOk.success("Trainings-Task successfuly deleted.")
+      Redirect(controllers.routes.Game.trace(trainingsExperimentId))
     } getOrElse BadRequest("Trainings-Experiment not found.")
   }
 }

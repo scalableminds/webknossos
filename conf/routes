@@ -51,7 +51,7 @@ PUT       /experiment/:experimentId         controllers.ExperimentController.upd
 GET     /admin/nmldownload                  controllers.admin.NMLIO.downloadList
 GET     /admin/nmlupload                    controllers.admin.NMLIO.uploadForm
 POST    /admin/nmlupload                    controllers.admin.NMLIO.upload
-GET     /admin/nmldownload/:taskId          controllers.admin.NMLIO.download( taskId: String )
+GET     /admin/nmldownload/:experimentId    controllers.admin.NMLIO.download( experimentId: String )
 
 
 # Admin Tasks

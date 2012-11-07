@@ -42,13 +42,13 @@ object NMLIO extends Controller with Secured {
     Ok(html.admin.nml.nmldownload(request.user, userExperiments))
   }
 
-  def download(taskId: String) = Authenticated { implicit request =>
+  def download(experimentId: String) = Authenticated { implicit request =>
     (for {
-      task <- Experiment.findOneById(taskId)
+      experiment <- Experiment.findOneById(experimentId)
     } yield {
-      Ok(Xml.toXML(task)).withHeaders(
+      Ok(Xml.toXML(experiment)).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",
-        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(task.dataSetName)))
+        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(experiment.dataSetName)))
     }) getOrElse BadRequest
   }
 

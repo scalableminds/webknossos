@@ -42,8 +42,8 @@
         @task.experiments.map{ experiment =>
           <tr>
             <td> @experiment.user.map(_.name).getOrElse("<Maik>") </td>
-            <td> @experiment.timestamp </td>
-            <td> <i class="icon-download"></i> download NML </th>
+            <td> @DateFormatter.format(experiment.date) </td>
+            <td> <a href="@controllers.admin.routes.NMLIO.download(experiment.id)"><i class="icon-download"></i> download NML </a></th>
           </tr>
         }
       </tbody>

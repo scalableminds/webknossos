@@ -4,7 +4,7 @@
 
 <tr>
   <td class="details-toggle"> <i class="icon-chevron-right"></i> </td>
-  <td> @task.id.drop(10) </td>
+  <td> @task.id.drop(18) </td>
   <td> @task.cellId </td>
   <td> @task.seedIdHeidelberg </td>
   <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
@@ -25,9 +25,13 @@
       @task.completed <i class="icon-ok-circle"></i>
     </span>
   </td>
+  <td>  
+    <a href="@controllers.admin.routes.TaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
+    <a href="@controllers.admin.routes.TrainingsTaskAdministration.create(task.id)"><i class="icon-road"></i> use for Training </a>
+  </td>
 </tr>
 <tr class="details-row">
-  <td colspan="10">
+  <td colspan="11">
     <table class="table table-condensed">
       <thead>
         <th> Assignee </th>

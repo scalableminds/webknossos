@@ -29,28 +29,28 @@
     </div>
 
     <h3>Create Task</h3>
-      <div class="well">
-        @helper.form(controllers.admin.routes.TaskAdministration.createFromForm, 'class -> "form-horizontal") {
-            
-          @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
-            dataSet.name -> dataSet.name 
-          })
+    <div class="well">
+      @helper.form(controllers.admin.routes.TaskAdministration.createFromForm, 'class -> "form-horizontal") {
           
-          @helper.select(taskForm("taskType"), taskTypes.map { tt =>
-            tt.id -> tt.summary
-          })
-          @helper.inputText(taskForm("cellId"), 'type -> "number")
+        @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
+          dataSet.name -> dataSet.name 
+        })
+        
+        @helper.select(taskForm("taskType"), taskTypes.map { tt =>
+          tt.id -> tt.summary
+        })
+        @helper.inputText(taskForm("cellId"), 'type -> "number")
 
-          @helper.inputText(taskForm("start.point"), 'type -> "text")
+        @helper.inputText(taskForm("start.point"), 'type -> "text")
 
-          @helper.inputText(taskForm("priority"), 'type -> "number")
-          @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 0)
-          
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Create</button>
-          </div>
-        }
-      </div>
+        @helper.inputText(taskForm("priority"), 'type -> "number")
+        @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 0)
+        
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
 
     <h3>Import Tasks in Bulk</h3>
 

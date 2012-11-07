@@ -2,7 +2,6 @@ package controllers.admin
 
 import scala.Array.canBuildFrom
 import scala.Option.option2Iterable
-
 import brainflight.security.AuthenticatedRequest
 import brainflight.security.Secured
 import brainflight.tools.ExtendedTypes.String2ExtendedString
@@ -16,8 +15,8 @@ import play.api.data.Form
 import play.api.data.Forms.mapping
 import play.api.data.Forms.number
 import play.api.data.Forms.text
-import play.api.mvc.Controller
 import views.html
+import controllers.Controller
 
 object TaskAdministration extends Controller with Secured {
 
@@ -30,30 +29,40 @@ object TaskAdministration extends Controller with Secured {
       "priority" -> number,
       "taskInstances" -> number)(Task.fromExperimentForm)(Task.toExperimentForm)).fill(Task.empty)
 
+  val taskMapping = mapping(
+    "dataSet" -> text.verifying("dataSet.invalid", name => DataSet.findOneByName(name).isDefined),
+    "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
+    "cellId" -> number,
+    "start" -> mapping(
+      "point" -> text.verifying("point.invalid", p => p.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(Point3D.fromForm)(Point3D.toForm),
+    "priority" -> number,
+    "taskInstances" -> number)(Task.fromForm)(Task.toForm)
+
   val taskForm = Form(
-    mapping(
-      "dataSet" -> text.verifying("dataSet.invalid", name => DataSet.findOneByName(name).isDefined),
-      "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
-      "cellId" -> number,
-      "start" -> mapping(
-        "point" -> text.verifying("point.invalid", p => p.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(Point3D.fromForm)(Point3D.toForm),
-      "priority" -> number,
-      "taskInstances" -> number)(Task.fromForm)(Task.toForm)).fill(Task.empty)
+    taskMapping).fill(Task.empty)
 
   def list = Authenticated { implicit request =>
     Ok(html.admin.task.taskList(request.user, Task.findAll))
   }
-  
-  def taskCreateHTML(experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) = 
+
+  def taskCreateHTML(experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) =
     html.admin.task.taskCreate(request.user, Experiment.findAllExploratory, TaskType.findAll, DataSet.findAll, experimentForm, taskForm)
 
   def create = Authenticated { implicit request =>
     Ok(taskCreateHTML(taskForm, taskFromExperimentForm))
   }
 
+  def delete(taskId: String) = Authenticated { implicit request =>
+    Task.findOneById(taskId).map { task =>
+      Task.remove(task)
+      AjaxOk.success("Task removed")
+    } getOrElse AjaxBadRequest.error("Task couldn't get removed (task not found)")
+
+  }
+
   def createFromForm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(taskCreateHTML(taskFromExperimentForm,formWithErrors)),
+      formWithErrors => BadRequest(taskCreateHTML(taskFromExperimentForm, formWithErrors)),
       { t =>
         Task.insert(t)
         Ok(t.toString)

@@ -1,0 +1,18 @@
+@(traingsTask: models.task.TrainingsTask)
+
+@import brainflight.format._
+
+<tr>
+  <td> @traingsTask.id.drop(10) </td>
+  <td> @traingsTask.task.cellId </td>
+  <td> @traingsTask.task.seedIdHeidelberg </td>
+  <td> @traingsTask.task.taskType.map(_.summary).getOrElse("<deleted>") </td>
+  <td> @traingsTask.task.dataSetName </td>
+  <td> @traingsTask.gainExperience </td>
+  <td> @traingsTask.looseExperience </td>
+  <td> @traingsTask.task.start </td>
+  <td> @DateFormatter.format(traingsTask.task.created) </td>
+  <td>  
+    <a href="#TODO" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+  </td>
+</tr>

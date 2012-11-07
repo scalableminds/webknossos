@@ -73,7 +73,7 @@ object Task extends BasicDAO[Task]("tasks") {
       task.dataSetName,
       List(Tree.empty),
       Nil,
-      0,
+      System.currentTimeMillis,
       1,
       Scale(12, 12, 24),
       task.start,

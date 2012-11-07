@@ -11,5 +11,38 @@
   <td> @task.start </td>
   <td> @task.priority </td>
   <td> @DateFormatter.format(task.created) </td>
-  <td> @task.open Open<br /> @task.inProgress in Progress<br /> @task.completed Completed<br /></td>
+  <td> 
+    <span title="Unassigned"> 
+      @task.open <i class="icon-play-circle"></i>
+    </span>
+    |
+    <span title="in Progress"> 
+      @task.inProgress <i class="icon-random"></i> 
+    </span>
+    |
+    <span title="Completed">
+      @task.completed <i class="icon-ok-circle"></i>
+    </span>
+  </td>
+</tr>
+<tr></tr>
+<tr>
+  <td colspan="9">
+    <table class="table table-striped">
+      <thead>
+        <th> Assignee </th>
+        <th> Updated at </th>
+        <th></th>
+      </thead>
+      <tbody>
+        @task.experiments.map{ experiment =>
+          <tr>
+            <td> @experiment.user.map(_.name).getOrElse("<Maik>") </td>
+            <td> @experiment.timestamp </td>
+            <td> <i class="icon-download"></i> download NML </th>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </td>
 </tr>

@@ -118,14 +118,14 @@ route = (routes) ->
 $ -> # document is ready!
 
     # Progresssive enhancements
-    $("[data-newwindow]").click (e) ->
+    $("[data-newwindow]").live "click", (e) ->
 
         [ width, height ] = $(this).data("newwindow").split("x")
         window.open(this.href, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
         e.preventDefault()
 
 
-    $("a[data-ajax]").click (event) ->
+    $("a[data-ajax]").live "click", (event) ->
         
         event.preventDefault()
         $this = $(this)
@@ -209,9 +209,9 @@ $ -> # document is ready!
     $("table input.select-all-rows").live "change", ->
 
         $this = $(this)
-
         $this.parents("table").find("tbody input.select-row").prop("checked", this.checked)
         return
+
 
     # Page specifics
     route

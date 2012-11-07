@@ -59,7 +59,7 @@ object InitialData {
     if (TaskSelectionAlgorithm.findAll.isEmpty) {
       TaskSelectionAlgorithm.insert(TaskSelectionAlgorithm(
         """function simple(user, tasks){ 
-          |  return tasks[0].id;
+          |  return tasks[0];
           |}""".stripMargin))
     }
   }

@@ -83,7 +83,8 @@ route = (routes) ->
 
     url = window.location.pathname.substring(1)
 
-    if _.isFunction(routes[url])
+    #if _.isFunction(routes[url])
+    if routes[url]?
         routes[url].call($("#main-container")[0])
     return
 

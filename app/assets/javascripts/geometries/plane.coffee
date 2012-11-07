@@ -80,10 +80,18 @@ class Plane
         @flycam.notifyNewTexture @planeID
 
       if @model?
-        @model.Binary.get(@flycam.getTexturePosition(@planeID), @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID).done (buffer) =>
-          if buffer
-            @plane.texture.image.data.set(buffer)
-            @flycam.hasNewTexture[@planeID] = true
+        result = @model.binary.get([300, 300, 200], [
+          [0, [100, 100, 400, 400]]
+          [1, [100, 100, 400, 400]]
+          [2, [100, 100, 400, 400]]
+        ])#.done (buffer) =>
+        #console.log "result:"
+        #console.log result
+        buffer = result[@planeID]
+      #  @model.Binary.get(@flycam.getTexturePosition(@planeID), @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID).done (buffer) =>
+        if buffer?
+          @plane.texture.image.data.set(buffer)
+          @flycam.hasNewTexture[@planeID] = true
 
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return

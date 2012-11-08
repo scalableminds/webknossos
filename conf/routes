@@ -73,6 +73,7 @@ POST    /admin/tasks/createFromForm         controllers.admin.TaskAdministration
 GET     /admin/trainingsTasks               controllers.admin.TrainingsTaskAdministration.list
 GET     /admin/trainingsTasks/create        controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
 POST    /admin/trainingsTasks/createFromForm controllers.admin.TrainingsTaskAdministration.createFromForm
+GET     /admin/trainingsTasks/:id/delete    controllers.admin.TrainingsTaskAdministration.delete(id: String)
 
 
 # User Administration

@@ -8,9 +8,9 @@ import models.binary.DataSet
 import play.api.Logger
 import models.task.Experiment
 import models.user._
+import models.task._
 import models.task.UsedExperiments
 import views._
-import models.task.Task
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.execution.defaultContext
 import play.api.i18n.Messages
@@ -26,16 +26,20 @@ object TaskController extends Controller with Secured {
             Task.addExperiment(task, experiment)
             AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("task.new"))
           case _ =>
-            BadRequest("There is no task available")
+            Training.findAllFor(user).headOption.map{ task =>
+              val experiment = Task.createExperimentFor(user, task)
+              Task.addExperiment(task, experiment)
+              AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("trainingstask.new"))
+            } getOrElse AjaxBadRequest.error("There is no task available")
         }
       } else
-        Promise.pure(BadRequest("You already have an open task."))
+        Promise.pure(AjaxBadRequest.error("You already have an open task."))
     }
   }
   
   def finish(id: String) = Authenticated{ implicit request =>
     Experiment.findOneById(id).filter(_._user == request.user._id).map{ e=>
-      val alteredExp = Experiment.complete(e)
+      val alteredExp = Experiment.finish(e)
       e.taskId.flatMap(Task.findOneById).map{ task =>
         AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.finished"))
       } getOrElse BadRequest("Task not found")

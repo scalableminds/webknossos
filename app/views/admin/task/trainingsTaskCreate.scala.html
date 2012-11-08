@@ -1,4 +1,4 @@
-@(loggedInUser: models.user.User, tasks: List[models.task.Task], experiences: Seq[String], form: Form[models.task.TrainingsTask])
+@(loggedInUser: models.user.User, tasks: List[models.task.Task], experiences: Seq[String], form: Form[models.task.Task])
 
 @import controllers.BootstrapHelpers._
 @import play.api.libs.json.Json
@@ -10,16 +10,16 @@
       @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromForm, 'class -> "form-horizontal") {
         
         @helper.select(form("task"), tasks.map { task =>
-          task.id -> (task.taskType.map(_.summary).getOrElse("") + "- start " + task.start.toString)
+          task.id -> (task.taskType.map(_.summary).getOrElse("") + " - start " + task.start.toString)
         })  
 
-        @helper.input(form("experience")) { (id, name, value, args) =>
+        @helper.input(form("training.domain")) { (id, name, value, args) =>
             <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
         }
 
-        @helper.inputText(form("gain"), 'type -> "number")
+        @helper.inputText(form("training.gain"), 'type -> "number")
         
-        @helper.inputText(form("lose"), 'type -> "number")
+        @helper.inputText(form("training.loss"), 'type -> "number")
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>

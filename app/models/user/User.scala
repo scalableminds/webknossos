@@ -27,7 +27,7 @@ case class User(
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: Set[String] = Set.empty,
     permissions: List[Permission] = Nil,
-    experiences: Experiences = Map.empty,
+    experiences: Map[String, Int] = Map.empty,
     _id: ObjectId = new ObjectId) {
 
   val _roles = for {

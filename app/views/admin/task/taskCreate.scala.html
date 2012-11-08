@@ -4,6 +4,10 @@
 @import controllers.BootstrapHelpers._
 @import play.api.libs.json.Json
 
+@taskTypeHelpLink() = {
+  <a href="@controllers.admin.routes.TaskTypeAdministration.list">Create a new Type</a>
+}
+
 @main(Some(loggedInUser)){
   <div class="container">
     
@@ -45,7 +49,7 @@
         
         @helper.select(taskForm("taskType"), taskTypes.map { tt =>
           tt.id -> tt.summary
-        })
+        }, Symbol("help-inline") -> taskTypeHelpLink)
 
         @helper.input(experimentForm("experience.domain")) { (id, name, value, args) =>
           <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>

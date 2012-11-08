@@ -39,6 +39,7 @@ case class Task(
     instances: Int = 1,
     created: Date = new Date,
     _experiments: List[ObjectId] = Nil,
+    training: Option[Training] = None,
     _id: ObjectId = new ObjectId) {
 
   lazy val id = _id.toString
@@ -48,6 +49,8 @@ case class Task(
   def experiments = _experiments.map(Experiment.findOneById).flatten
 
   def isFullyAssigned = experiments.size == instances
+
+  def isTraining = training.isDefined
 
   def inProgress =
     experiments.filter(!_.finished).size
@@ -79,6 +82,12 @@ object Task extends BasicDAO[Task]("tasks") {
       Some(task._id)))
   }
 
+  def findAllTrainings =
+    find(MongoDBObject("training" -> MongoDBObject("$exists" -> true))).toList
+
+  def findAllNonTrainings =
+    find(MongoDBObject("training" -> MongoDBObject("$exists" -> false))).toList
+
   def findAllAssignable =
     findAll.filter(!_.isFullyAssigned)
 
@@ -94,6 +103,14 @@ object Task extends BasicDAO[Task]("tasks") {
       t.priority,
       t.instances))
   }
+
+  def toTrainingForm(t: Task): Option[(String, Training)] =
+    Some(t.id  -> (t.training getOrElse Training.empty))
+
+  def fromTrainingForm(taskId: String, training: Training) =
+    Task.findOneById(taskId) map {
+      _.copy(training = Some(training))
+    } getOrElse null
 
   def fromExperimentForm(experiment: String, taskTypeId: String, experience: Experience, priority: Int, instances: Int): Task =
     (Experiment.findOneById(experiment), TaskType.findOneById(taskTypeId)) match {
@@ -135,8 +152,13 @@ object Task extends BasicDAO[Task]("tasks") {
       t.instances))
   }
 
+  def hasEnoughExperience(user: User)(task: Task) = {
+    val XP = user.experiences.get(task.neededExperience.domain) getOrElse 0
+    XP >= task.neededExperience.value
+  }
+
   def nextTaskForUser(user: User): Future[Option[Task]] = {
-    val tasks = findAllAssignable.toArray
+    val tasks = findAllAssignable.filter(hasEnoughExperience(user)).toArray
     if (tasks.isEmpty) {
       Promise.successful(None)(Akka.system.dispatcher)
     } else {

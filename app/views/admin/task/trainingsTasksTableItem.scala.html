@@ -1,16 +1,35 @@
-@(traingsTask: models.task.TrainingsTask)
+@(task: models.task.Task)
 
 @import brainflight.format._
 
 <tr>
-  <td> @traingsTask.id.drop(10) </td>
-  <td> @traingsTask.task.seedIdHeidelberg </td>
-  <td> @traingsTask.task.taskType.map(_.summary).getOrElse("<deleted>") </td>
-  <td> @traingsTask.task.dataSetName </td>
-  <td> @traingsTask.experienceDomain (+@traingsTask.experienceGain, -@traingsTask.experienceLoss) </td>
-  <td> @traingsTask.task.start </td>
-  <td> @DateFormatter.format(traingsTask.task.created) </td>
+  <td class="details-toggle"> <i class="icon-chevron-right"></i> <i class="icon-chevron-down"></i> </td>
+  <td> @task.id.drop(10) </td>
+  <td> @task.seedIdHeidelberg </td>
+  <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
+  <td> @task.dataSetName </td>
+  @task.training.map{ training =>
+  	<td> @training.domain (+@training.gain, -@training.loss) </td>
+  }.getOrElse( <td></td> )
+  <td> @task.start </td>
+  <td> @DateFormatter.format(task.created) </td>
+
   <td>  
-    <a href="#TODO" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+    <a href="@controllers.admin.routes.TrainingsTaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+  </td>
+</tr>
+<tr class="details-row" >
+  <td colspan="11">
+    <table class="table table-condensed table-nohead">
+      <tbody>
+        @task.experiments.map{ experiment =>
+          <tr>
+            <td> @experiment.user.map(_.name).getOrElse("<Maik>") </td>
+            <td> @DateFormatter.format(experiment.date) </td>
+            <td> <a href="@controllers.admin.routes.NMLIO.download(experiment.id)"><i class="icon-download"></i> download NML </a></th>
+          </tr>
+        }
+      </tbody>
+    </table>
   </td>
 </tr>

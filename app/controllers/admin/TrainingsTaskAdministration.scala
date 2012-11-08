@@ -4,7 +4,6 @@ import controllers.Controller
 import play.mvc.Security.Authenticated
 import brainflight.security.Secured
 import models.security.Role
-import models.task.TrainingsTask
 import views._
 import play.api.data.Form
 import play.api.data.Forms._
@@ -12,8 +11,9 @@ import brainflight.security.AuthenticatedRequest
 import models.task.TaskType
 import models.binary.DataSet
 import models.task.Task
-import models.task.TrainingsExperiment
 import models.user.Experience
+import models.task.Training
+import models.task.Experiment
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
@@ -22,23 +22,25 @@ object TrainingsTaskAdministration extends Controller with Secured {
   val trainingsTaskForm = Form(
     mapping(
       "task" -> text.verifying("task.invalid", task => Task.findOneById(task).isDefined),
-      "experience" -> text,
-      "gain" -> number,
-      "lose" -> number)(TrainingsTask.fromForm)(TrainingsTask.toForm))
+      "training" -> mapping(
+          "domain" -> text,
+          "gain" -> number,
+          "loss" -> number)(Training.apply)(Training.unapply))
+          (Task.fromTrainingForm)(Task.toTrainingForm))
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.task.trainingsTaskList(request.user, TrainingsTask.findAll))
+    Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
   }
 
-  def trainingsTaskCreateHTML(form: Form[TrainingsTask])(implicit request: AuthenticatedRequest[_]) = {
+  def trainingsTaskCreateHTML(form: Form[Task])(implicit request: AuthenticatedRequest[_]) = {
     html.admin.task.trainingsTaskCreate(request.user, 
-        Task.findAll, 
+        Task.findAllNonTrainings, 
         Experience.findAllDomains, 
         form)
   }
   def create(taskId: String) = Authenticated { implicit request =>
     val form = Task.findOneById(taskId) map{ task =>
-      trainingsTaskForm.fill(TrainingsTask(task, "", 10, 5))
+      trainingsTaskForm.fill(task)
     } getOrElse trainingsTaskForm
     Ok(trainingsTaskCreateHTML(form))
   }
@@ -47,21 +49,21 @@ object TrainingsTaskAdministration extends Controller with Secured {
     trainingsTaskForm.bindFromRequest.fold(
       formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors)),
       { t =>
-        TrainingsTask.insert(t)
-        Ok(html.admin.task.trainingsTaskList(request.user, TrainingsTask.findAll))
+        Task.save(t)
+        Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
       })
   }
 
-  def delete(trainingsTaskId: String) = Authenticated { implicit request =>
-    TrainingsTask.findOneById(trainingsTaskId) map { trainingsTask =>
-      TrainingsTask.remove(trainingsTask)
+  def delete(taskId: String) = Authenticated { implicit request =>
+    Task.findOneById(taskId) map { task =>
+      Task.remove(task)
       AjaxOk.success("Trainings-Task successfuly deleted.")
     } getOrElse AjaxBadRequest.error("Trainings-Task not found.")
   }
   
   def review(trainingsExperimentId: String) = Authenticated { implicit request =>
-    TrainingsExperiment.findOneById(trainingsExperimentId) map { trainingsExperiment =>
-      TrainingsExperiment.assignReviewee(trainingsExperiment, request.user)
+    Experiment.findOneById(trainingsExperimentId) map { experiment =>
+      Experiment.assignReviewee(experiment, request.user)
       Redirect(controllers.routes.Game.trace(trainingsExperimentId))
     } getOrElse BadRequest("Trainings-Experiment not found.")
   }

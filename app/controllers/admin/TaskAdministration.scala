@@ -48,7 +48,7 @@ object TaskAdministration extends Controller with Secured {
     taskMapping).fill(Task.empty)
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.task.taskList(request.user, Task.findAll))
+    Ok(html.admin.task.taskList(request.user, Task.findAllNonTrainings))
   }
 
   def taskCreateHTML(experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) =

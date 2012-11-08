@@ -22,8 +22,7 @@ object UserController extends Controller with Secured {
     val (tempExperiments, taskExperiments) = 
       experiments.partition(_.taskId.isEmpty)
       
-    val userTasks = taskExperiments.flatMap( e => 
-      Task.findOneById(e.taskId.get).map(_ -> e))
+    val userTasks = taskExperiments.flatMap(e => e.task.map(_ -> e ))
       
     val loggedTime = TimeTracking.loggedTime(user)
     

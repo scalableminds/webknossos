@@ -1,6 +1,6 @@
 package models.user
 
-import models.task.TrainingsTask
+import models.task._
 
 case class Experience(domain: String, value: Int){
   
@@ -12,5 +12,6 @@ object Experience {
   def empty = Experience("", 0)
   type Experiences = Map[String, Int]
   
-  def findAllDomains = TrainingsTask.findAll.map(_.experienceDomain).toSet.toList
+  // TODO: don't use tasks to find domain strings 
+  def findAllDomains = Task.findAll.flatMap(_.training.map(_.domain)).toSet.toList
 }

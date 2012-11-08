@@ -31,7 +31,8 @@ case class Experiment(
     scale: Scale,
     editPosition: Point3D,
     taskId: Option[ObjectId] = None,
-    finished: Boolean = false,
+    state: ExperimentState = InProgress,
+    review: Option[ExperimentReview] = None,
     _id: ObjectId = new ObjectId) {
 
   def user = User.findOneById(_user)
@@ -40,7 +41,13 @@ case class Experiment(
     new Date(timestamp)
   }
 
+  val finished = state.isFinished
+
   lazy val id = _id.toString
+
+  def isTrainingsExperiment = task.map(_.isTraining) getOrElse false
+
+  def task = taskId flatMap Task.findOneById
 
   def isExploratory = taskId.isEmpty
 
@@ -82,6 +89,12 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     }
   }
 
+  def assignReviewee(experiment: Experiment, user: User) = {
+    alterAndSave(experiment.copy(
+      state = InReview,
+      review = Some(ExperimentReview(user._id, System.currentTimeMillis()))))
+  }
+
   def createNew(u: User, d: DataSet = DataSet.default) = {
     alterAndInsert(Experiment(u._id,
       d.name,
@@ -90,12 +103,11 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       System.currentTimeMillis,
       1,
       Scale(12, 12, 24),
-      Point3D(0, 0, 0),
-      None))
+      Point3D(0, 0, 0)))
   }
 
-  def complete(experiment: Experiment) = {
-    alterAndSave(experiment.copy(finished = true))
+  def finish(experiment: Experiment) = {
+    alterAndSave(experiment.copy(state = Finished))
   }
 
   def findOpenExperimentFor(user: User, isExploratory: Boolean) =

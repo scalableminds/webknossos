@@ -176,8 +176,14 @@ $ -> # document is ready!
 
                 return
 
-            ({ messages }) ->
-                if messages?
+            (jqXHR) ->
+                try
+                  data = JSON.parse(jqXHR.responseText)
+
+                catch error
+                  return toastError("Internal Error :-(")
+
+                if (messages = data.messages)?
                     toastMessage(messages)
                 else
                     toastError("Error :-/")
@@ -190,7 +196,7 @@ $ -> # document is ready!
         $this = $(this)
         $this.parents("table").find("tbody input.select-row").prop("checked", this.checked)
         return
-        
+
 
     $("table.table-details").each ->
 

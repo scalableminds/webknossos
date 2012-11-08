@@ -22,7 +22,7 @@
         
         @helper.select(experimentForm("taskType"), taskTypes.map { tt =>
           tt.id -> tt.summary
-        })
+        }, Symbol("help-inline") -> taskTypeHelpLink)
 
         @helper.input(experimentForm("experience.domain")) { (id, name, value, args) =>
           <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>

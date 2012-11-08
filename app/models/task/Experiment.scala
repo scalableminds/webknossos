@@ -20,6 +20,7 @@ import play.api.libs.json.Format
 import brainflight.tools.geometry.Scale
 import java.util.Date
 import com.mongodb.casbah.query._
+import models.task.ExperimentState._
 
 case class Experiment(
     _user: ObjectId,

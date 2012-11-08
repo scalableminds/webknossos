@@ -1,27 +1,18 @@
 package models.task
 
-trait ExperimentState {
-  def isAssigned = false
-  def isFinished = false
-  def isInReview = false
-  def isInProgress = false
-}
+case class ExperimentState(
+  isAssigned: Boolean = false,
+  isFinished: Boolean = false,
+  isInReview: Boolean = false,
+  isInProgress: Boolean = false)
 
-trait Assigned extends ExperimentState  {
-  override def isAssigned = true
-}
+object ExperimentState{
+  val Assigned = ExperimentState(isAssigned = true)
+  val Unassigned = ExperimentState()
 
-object Unassigned extends ExperimentState
+  val InReview = Assigned.copy(isInReview = true)
 
-object InReview extends ExperimentState with Assigned {
-  override def isFinished = false
-  override def isInReview = true
-}
+  val InProgress = Assigned.copy(isInProgress = true)
 
-object InProgress extends ExperimentState with Assigned {
-  override def isInProgress = true
-}
-
-object Finished extends ExperimentState with Assigned {
-  override def isFinished = true
+  val Finished = Assigned.copy(isFinished = true)
 }

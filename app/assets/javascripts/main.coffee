@@ -160,16 +160,17 @@ $ -> # document is ready!
                 $this.trigger("ajax-success", html, messages)
 
                 if options["replace-row"] 
-                    $this.parents("tr").replaceWith(html)
+                    $this.parents("tr").first().replaceWith(html)
 
-                if options["replace-table"]
-                    $(options["replace-table"]).replaceWith(html)
 
                 if options["delete-row"]
-                    $this.parents("tr").remove()
+                    $this.parents("tr").first().remove()
 
                 if options["add-row"]
                     $(options["add-row"]).find("tbody").append(html)
+
+                if options["replace-table"]
+                    $(options["replace-table"]).replaceWith(html)
 
                 if options["reload"]
                     window.location.reload()
@@ -187,15 +188,53 @@ $ -> # document is ready!
                     toastMessage(messages)
                 else
                     toastError("Error :-/")
+
                 $this.trigger("ajax-error", messages)
         )
-        
+    
 
     $("table input.select-all-rows").live "change", ->
 
         $this = $(this)
         $this.parents("table").find("tbody input.select-row").prop("checked", this.checked)
         return
+
+
+    do ->
+
+        shiftKeyPressed = false
+        $(document).on 
+            "keydown" : (event) ->
+                shiftKeyPressed = event.shiftKey
+                return
+
+            "keyup" : (event) ->
+                if shiftKeyPressed and (event.which == 16 or event.which == 91)
+                    shiftKeyPressed = false
+            
+
+
+        $("table input.select-row").live "change", ->
+
+            $this = $(this)
+            $table = $this.parents("table").first()
+            $row = $this.parents("tr").first()
+
+            if (selectRowLast = $table.data("select-row-last")) and shiftKeyPressed
+                index = $row.prevAll().length
+                rows = if index < selectRowLast.index
+                    $row.nextUntil(selectRowLast.el)
+                else
+                    $row.prevUntil(selectRowLast.el)
+
+                rows.find("input.select-row").prop("checked", this.checked)
+
+                $table.data("select-row-last", null)
+            else
+                
+                $table.data("select-row-last", { el : $row, index : $row.prevAll().length })
+
+            return
 
 
     $("table.table-details").each ->

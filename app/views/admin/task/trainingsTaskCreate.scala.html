@@ -3,6 +3,10 @@
 @import controllers.BootstrapHelpers._
 @import play.api.libs.json.Json
 
+@taskHelpLink() = {
+  <a href="@controllers.admin.routes.TaskAdministration.create">Create a new Task</a>
+}
+
 @main(Some(loggedInUser)){
   <div class="container">
     <h3>Create Trainings-Task</h3>
@@ -11,7 +15,7 @@
         
         @helper.select(form("task"), tasks.map { task =>
           task.id -> (task.taskType.map(_.summary).getOrElse("") + " - start " + task.start.toString)
-        })  
+        }, Symbol("help-inline") -> taskHelpLink)
 
         @helper.input(form("training.domain")) { (id, name, value, args) =>
             <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>

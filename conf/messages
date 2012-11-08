@@ -45,3 +45,7 @@ description=Description
 expectedTime.minTime=Expected Time (min)
 expectedTime.maxTime=Expected Time (max)
 expectedTime.maxHard=Time limit
+gain=Gain
+lose=Loss
+experience=Experience
+task=Task

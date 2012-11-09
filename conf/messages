@@ -18,6 +18,7 @@ user.verified=has been verified
 user.deleted=has been deleted
 
 task.finished=Task is finished
+task.passedToReview=Task is now getting reviewed. This may take some time.
 task.new=You got a new task
 taskInstances=Task instances
 taskType=Task type

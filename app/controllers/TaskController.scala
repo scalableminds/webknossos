@@ -26,7 +26,7 @@ object TaskController extends Controller with Secured {
             Task.addExperiment(task, experiment)
             AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("task.new"))
           case _ =>
-            Training.findAllFor(user).headOption.map{ task =>
+            Training.findAllFor(user).headOption.map { task =>
               val experiment = Task.createExperimentFor(user, task)
               Task.addExperiment(task, experiment)
               AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("trainingstask.new"))
@@ -36,13 +36,23 @@ object TaskController extends Controller with Secured {
         Promise.pure(AjaxBadRequest.error("You already have an open task."))
     }
   }
-  
-  def finish(id: String) = Authenticated{ implicit request =>
-    Experiment.findOneById(id).filter(_._user == request.user._id).map{ e=>
-      val alteredExp = Experiment.finish(e)
-      e.taskId.flatMap(Task.findOneById).map{ task =>
-        AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.finished"))
-      } getOrElse BadRequest("Task not found")
-    } getOrElse BadRequest("Experiment not found")
+
+  def finish(experimentId: String) = Authenticated { implicit request =>
+    Experiment
+      .findOneById(experimentId)
+      .filter(_._user == request.user._id)
+      .map { experiment =>
+        if (experiment.isTrainingsExperiment) {
+          val alteredExp = Experiment.passToReview(experiment)
+          experiment.taskId.flatMap(Task.findOneById).map { task =>
+            AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.passedToReview"))
+          } getOrElse BadRequest("Task not found")
+        } else {
+          val alteredExp = Experiment.finish(experiment)
+          experiment.taskId.flatMap(Task.findOneById).map { task =>
+            AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.finished"))
+          } getOrElse BadRequest("Task not found")
+        }
+      } getOrElse BadRequest("Experiment not found")
   }
 }

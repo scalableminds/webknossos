@@ -58,9 +58,9 @@ object Jira extends Controller with Secured {
 
   def submit = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     (for {
-      summary <- request.body.get("summary").flatMap(_.headOption)
-      description <- request.body.get("description").flatMap(_.headOption)
-      postedType <- request.body.get("type").flatMap(_.headOption)
+      summary <- postParameter("summary")
+      description <- postParameter("description")
+      postedType <- postParameter("type")
       issueType <- issueTypes.get(postedType)
     } yield {
       request.body

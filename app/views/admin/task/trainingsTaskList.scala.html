@@ -18,7 +18,7 @@
       </thead>
       <tbody>
       @tasks.map{ task => 
-        @trainingsTasksTableItem(task)
+        @trainingsTasksTableItem(loggedInUser, task)
       }
       </tbody>
     </table>

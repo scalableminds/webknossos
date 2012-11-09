@@ -1,4 +1,4 @@
-@(task: models.task.Task)
+@(user: models.user.User, task: models.task.Task)
 
 @import brainflight.format._
 
@@ -23,11 +23,7 @@
     <table class="table table-condensed table-nohead">
       <tbody>
         @task.experiments.map{ experiment =>
-          <tr>
-            <td> @experiment.user.map(_.name).getOrElse("<Maik>") </td>
-            <td> @DateFormatter.format(experiment.date) </td>
-            <td> <a href="@controllers.admin.routes.NMLIO.download(experiment.id)"><i class="icon-download"></i> download NML </a></th>
-          </tr>
+        	@trainingsTasksDetailTableItem(user, experiment)
         }
       </tbody>
     </table>

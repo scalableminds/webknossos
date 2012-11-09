@@ -89,7 +89,7 @@ trait Secured {
    */
 
   def Authenticated[A](
-    parser: BodyParser[A],
+    parser: BodyParser[A] = BodyParsers.parse.anyContent,
     role: Option[Role] = DefaultAccessRole,
     permission: Option[Permission] = DefaultAccessPermission)(f: AuthenticatedRequest[A] => Result) = {
     Action(parser) { request =>

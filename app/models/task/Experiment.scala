@@ -96,6 +96,17 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       review = Some(ExperimentReview(user._id, System.currentTimeMillis()))))
   }
 
+  def unassignReviewee(experiment: Experiment) = {
+    alterAndSave(experiment.copy(
+      state = InReview,
+      review = None))
+  }
+
+  def finishReview(experiment: Experiment, comment: String) = {
+    val alteredReview = experiment.review.map(_.copy(comment = Some(comment)))
+    alterAndSave(experiment.copy(review = alteredReview))
+  }
+
   def createNew(u: User, d: DataSet = DataSet.default) = {
     alterAndInsert(Experiment(u._id,
       d.name,
@@ -109,6 +120,14 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
 
   def finish(experiment: Experiment) = {
     alterAndSave(experiment.copy(state = Finished))
+  }
+
+  def passToReview(experiment: Experiment) = {
+    alterAndSave(experiment.copy(state = InReview, review = None))
+  }
+
+  def reopen(experiment: Experiment) = {
+    alterAndSave(experiment.copy(state = Reopened))
   }
 
   def findOpenExperimentFor(user: User, isExploratory: Boolean) =

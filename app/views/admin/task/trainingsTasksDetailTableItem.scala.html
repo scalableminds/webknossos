@@ -1,0 +1,39 @@
+@(user: models.user.User, experiment: models.task.Experiment)
+
+@reviewLink() = {
+	<a href=@controllers.admin.routes.TrainingsExperimentAdministration.startReview(experiment.id) data-ajax="replace-row"><i class="icon-eye-open"></i> start review </a>	
+}
+
+@oxalisLink() = {
+  <a href="@controllers.routes.Game.reviewTrace(experiment.id)"><i class="icon-random"></i> view in oxalis </a><br />
+}
+
+@nmlDownloadLink() = {
+	<a href="@controllers.admin.routes.NMLIO.download(experiment.id)"><i class="icon-download"></i> download NML </a><br />
+}
+
+@finishReviewLink() = {
+  <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReview(experiment.id)"><i class="icon-penis"></i> finish review </a><br />
+}
+
+@abortReviewLink() = {
+  <a href="@controllers.admin.routes.TrainingsExperimentAdministration.abortReview(experiment.id)" data-ajax="replace-row; confirm"><i class="icon-penis"></i> abort review </a>
+}
+
+@import brainflight.format._
+
+<tr>
+	<td> @experiment.user.map(_.name).getOrElse("<Maik>") </td>
+	<td> @DateFormatter.format(experiment.date) </td>
+	<td>
+	@{experiment.review match{
+    case _ if experiment.finished =>
+      <i class="icon-ok"></i><text> finished</text>
+		case Some(r) if r.reviewee == user._id =>
+			oxalisLink() + nmlDownloadLink() + finishReviewLink() + abortReviewLink
+		case Some(r) if r.reviewee != user._id =>
+			<span>Already getting reviewed.</span>
+		case _ =>
+      reviewLink()
+	}}
+</tr>

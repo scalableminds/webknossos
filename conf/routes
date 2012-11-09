@@ -75,6 +75,11 @@ GET     /admin/trainingsTasks/create        controllers.admin.TrainingsTaskAdmin
 POST    /admin/trainingsTasks/createFromForm controllers.admin.TrainingsTaskAdministration.createFromForm
 GET     /admin/trainingsTasks/:id/delete    controllers.admin.TrainingsTaskAdministration.delete(id: String)
 
+GET     /admin/training/:id/startReview     controllers.admin.TrainingsExperimentAdministration.startReview(id: String)
+GET     /admin/training/:id/abortReview     controllers.admin.TrainingsExperimentAdministration.abortReview(id: String)
+GET     /admin/training/:id/finishReview    controllers.admin.TrainingsExperimentAdministration.finishReview(id: String)
+POST    /admin/training/:id/finishReview    controllers.admin.TrainingsExperimentAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
+
 
 # User Administration
 GET     /admin/users                        controllers.admin.UserAdministration.index
@@ -84,6 +89,8 @@ GET     /admin/users/:id/verify             controllers.admin.UserAdministration
 GET     /admin/users/:id/delete             controllers.admin.UserAdministration.delete(id: String)
 POST    /admin/users/addRole                controllers.admin.UserAdministration.addRoleBulk
 POST    /admin/users/removeRole             controllers.admin.UserAdministration.removeRoleBulk
+
+GET     /admin/experiments/:id/reviewTrace  controllers.Game.reviewTrace(id: String)
 
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.Application.javascriptRoutes

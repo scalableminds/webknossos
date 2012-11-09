@@ -34,6 +34,16 @@ object Game extends Controller with Secured {
       
     Ok(html.oxalis.trace(user))
   }
+  
+  def reviewTrace(experimentId: String) = Authenticated(role = Role.Admin){ implicit request =>
+    val user = request.user
+    
+    Experiment.findOneById(experimentId)
+      .map(exp => UsedExperiments.use(user, exp))
+      
+    // TODO: set oxalis to read only
+    Ok(html.oxalis.trace(user))
+  }
 
   def initialize = Authenticated { implicit request =>
     val user = request.user

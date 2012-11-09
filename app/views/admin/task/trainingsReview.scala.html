@@ -1,0 +1,23 @@
+@(loggedInUser: models.user.User, experiment: models.task.Experiment)
+
+@main(Some(loggedInUser)){
+  <div class="container">    
+    <h3>Review of Trainings-Experiment</h3>
+    @helper.form(action = controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, true)) {
+      <div class="control-group">
+        <label class="control-label" for="comment">Comment</label>
+        <div class="controls">
+          <textarea name="comment" id="comment"></textarea>
+        </div>
+      </div>
+      <div class="control-group">
+        <div class="controls">
+          <input type="submit" value="Accept tracing" class="btn btn-primary" />
+        </div>
+        <div class="controls">
+          <input type="submit" value="Reject training" class="btn btn red" />
+        </div>
+      </div>
+    }
+  </div>
+}

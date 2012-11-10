@@ -18,6 +18,7 @@ import play.api.data.Forms.text
 import views.html
 import models.user.Experience
 import controllers.Controller
+import play.api.i18n.Messages
 
 object TaskAdministration extends Controller with Secured {
 
@@ -67,7 +68,7 @@ object TaskAdministration extends Controller with Secured {
   def delete(taskId: String) = Authenticated { implicit request =>
     Task.findOneById(taskId).map { task =>
       Task.remove(task)
-      AjaxOk.success("Task removed")
+      AjaxOk.success(Messages("task.removed"))
     } getOrElse AjaxBadRequest.error("Task couldn't get removed (task not found)")
 
   }
@@ -113,7 +114,6 @@ object TaskAdministration extends Controller with Secured {
           }
         }
         .flatMap { t =>
-          println("Created task: " + t)
           Task.insert(t)
         }
       Redirect(routes.TaskAdministration.list)

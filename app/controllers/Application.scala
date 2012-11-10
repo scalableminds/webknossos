@@ -41,8 +41,8 @@ object Application extends Controller with Secured {
     Form(
       mapping(
         "email" -> email,
-        "firstName" -> nonEmptyText(2, 30),
-        "lastName" -> nonEmptyText(2, 30),
+        "firstName" -> nonEmptyText(1, 30),
+        "lastName" -> nonEmptyText(1, 30),
         "password" -> passwordField)(registerFormApply)(registerFormUnapply)
         .verifying("error.email.inuse",
           user => User.findLocalByEmail(user._1).isEmpty))

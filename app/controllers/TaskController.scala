@@ -29,11 +29,11 @@ object TaskController extends Controller with Secured {
             Training.findAllFor(user).headOption.map { task =>
               val experiment = Task.createExperimentFor(user, task)
               Task.addExperiment(task, experiment)
-              AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("trainingstask.new"))
-            } getOrElse AjaxBadRequest.error("There is no task available")
+              AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("training.new"))
+            } getOrElse AjaxBadRequest.error(Messages("task.unavailable"))
         }
       } else
-        Promise.pure(AjaxBadRequest.error("You already have an open task."))
+        Promise.pure(AjaxBadRequest.error(Messages("task.alreadyHasOpenOne")))
     }
   }
 
@@ -46,13 +46,13 @@ object TaskController extends Controller with Secured {
           val alteredExp = Experiment.passToReview(experiment)
           experiment.taskId.flatMap(Task.findOneById).map { task =>
             AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.passedToReview"))
-          } getOrElse BadRequest("Task not found")
+          } getOrElse BadRequest(Messages("task.notFound"))
         } else {
           val alteredExp = Experiment.finish(experiment)
           experiment.taskId.flatMap(Task.findOneById).map { task =>
             AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.finished"))
-          } getOrElse BadRequest("Task not found")
+          } getOrElse BadRequest(Messages("task.notFound"))
         }
-      } getOrElse BadRequest("Experiment not found")
+      } getOrElse BadRequest(Messages("experiment.notFound"))
   }
 }

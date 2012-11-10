@@ -17,7 +17,7 @@
 }
 
 @abortReviewLink() = {
-  <a href="@controllers.admin.routes.TrainingsExperimentAdministration.abortReview(experiment.id)" data-ajax="replace-row; confirm"><i class="icon-penis"></i> abort review </a>
+  <a href="@controllers.admin.routes.TrainingsExperimentAdministration.abortReview(experiment.id)" data-ajax="replace-row,confirm"><i class="icon-penis"></i> abort review </a>
 }
 
 @import brainflight.format._
@@ -30,7 +30,7 @@
     case _ if experiment.state.isFinished =>
       <i class="icon-ok"></i><text> finished</text>
     case _ if experiment.state.isInProgress =>
-      <i class="icon-time"></i><text> User is working</text>
+      <i class="icon-time"></i><text> User is working on the task</text>
 		case Some(r) if r.reviewee == user._id =>
 			oxalisLink() + nmlDownloadLink() + finishReviewLink() + abortReviewLink
 		case Some(r) if r.reviewee != user._id =>

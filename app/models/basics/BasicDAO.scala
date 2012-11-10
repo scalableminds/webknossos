@@ -6,6 +6,7 @@ import com.novus.salat.dao.SalatDAO
 import play.api.libs.json.JsArray._
 import play.api.libs.json._
 import org.bson.types.ObjectId
+import com.mongodb.casbah.MongoDB
 
 /**
  * scalableminds - brainflight

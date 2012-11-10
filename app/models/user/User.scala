@@ -28,6 +28,7 @@ case class User(
     roles: Set[String] = Set.empty,
     permissions: List[Permission] = Nil,
     experiences: Map[String, Int] = Map.empty,
+    lastActivity: Long = System.currentTimeMillis,
     _id: ObjectId = new ObjectId) {
 
   val _roles = for {
@@ -79,7 +80,7 @@ object User extends BasicDAO[User]("users") {
   def saveSettings(user: User, config: UserConfiguration) = {
     alterAndSave(user.copy(configuration = config))
   }
-  
+
   def addExperience(user: User, name: String, value: Int) = {
     alterAndSave(user.copy(experiences = user.experiences + (name -> value)))
   }
@@ -89,6 +90,12 @@ object User extends BasicDAO[User]("users") {
     alterAndSave(user.copy(experiences = user.experiences + (name -> sum)))
   }
   
+  def logUserActivity(userId: ObjectId, time: Long) = {
+    findOneById(userId).map{ user =>
+      alterAndSave(user.copy(lastActivity = time))
+    }
+  }
+
   def verify(user: User) = {
     alterAndSave(user.copy(verified = true, roles = user.roles + "user"))
   }
@@ -97,7 +104,7 @@ object User extends BasicDAO[User]("users") {
     alterAndSave(user.copy(roles = user.roles + role))
   }
   def removeRole(user: User, role: String) = {
-    alterAndSave(user.copy(roles = user.roles.filterNot( _ == role)))
+    alterAndSave(user.copy(roles = user.roles.filterNot(_ == role)))
   }
 
   def createRemote(email: String, firstName: String, lastName: String, loginType: String) = {

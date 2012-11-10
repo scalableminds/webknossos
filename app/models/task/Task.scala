@@ -81,6 +81,18 @@ object Task extends BasicDAO[Task]("tasks") {
       task.start,
       Some(task._id)))
   }
+  
+  override def remove(t: Task) = {
+    t.experiments.map{ experiment =>
+      Experiment.removeTask(experiment)
+    }
+    super.remove(t)
+  }
+  
+  def removeExperiment(task: Task, experiment: Experiment){
+    alterAndSave(task.copy(
+        _experiments = task._experiments.filterNot( _ == experiment._id)))
+  }
 
   def findAllOfOneType(isTraining: Boolean) =
     find(MongoDBObject("training" -> MongoDBObject("$exists" -> isTraining)))

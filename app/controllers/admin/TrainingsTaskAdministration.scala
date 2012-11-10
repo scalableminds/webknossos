@@ -23,7 +23,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
     mapping(
       "task" -> text.verifying("task.invalid", task => Task.findOneById(task).isDefined),
       "training" -> mapping(
-          "domain" -> text,
+          "domain" -> nonEmptyText(1, 50),
           "gain" -> number,
           "loss" -> number)(Training.apply)(Training.unapply))
           (Task.fromTrainingForm)(Task.toTrainingForm))

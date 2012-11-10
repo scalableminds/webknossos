@@ -56,7 +56,7 @@ object TrainingsExperimentAdministration extends Controller with Secured {
         Experiment.finish(alteredExperiment)
       } else
         Experiment.reopen(alteredExperiment)
-      Ok("Finished!")
+      Redirect(routes.TrainingsTaskAdministration.list)
     }) getOrElse BadRequest("Trainings-Experiment not found.")
   }
 }

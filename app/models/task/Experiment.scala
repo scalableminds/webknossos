@@ -87,6 +87,14 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       }) getOrElse (<error>DataSet not fount</error>)
     }
   }
+  
+  override def remove(experiment: Experiment) = {
+    experiment.task.map{
+      Task.removeExperiment(_, experiment)
+    }
+    UsedExperiments.removeAll(experiment)
+    super.remove(experiment)
+  }
 
   def assignReviewee(experiment: Experiment, user: User) = {
     alterAndSave(experiment.copy(
@@ -126,6 +134,10 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
 
   def reopen(experiment: Experiment) = {
     alterAndSave(experiment.copy(state = Reopened))
+  }
+  
+  def removeTask(experiment: Experiment) = {
+    alterAndSave(experiment.copy(taskId = None))
   }
 
   def findOpenExperimentFor(user: User, isExploratory: Boolean) =

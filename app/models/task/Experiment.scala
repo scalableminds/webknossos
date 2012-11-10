@@ -42,8 +42,6 @@ case class Experiment(
     new Date(timestamp)
   }
 
-  val finished = state.isFinished
-
   lazy val id = _id.toString
 
   def isTrainingsExperiment = task.map(_.isTraining) getOrElse false
@@ -131,7 +129,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
   }
 
   def findOpenExperimentFor(user: User, isExploratory: Boolean) =
-    findOne(MongoDBObject("_user" -> user._id, "finished" -> false, "taskId" -> MongoDBObject("$exists" -> isExploratory)))
+    findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "taskId" -> MongoDBObject("$exists" -> isExploratory)))
 
   def hasOpenExperiment(user: User, isExploratory: Boolean) =
     findOpenExperimentFor(user, isExploratory).isDefined

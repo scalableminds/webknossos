@@ -42,7 +42,7 @@ object TrainingsExperimentAdministration extends Controller with Secured {
   def finishReviewForm(training: String, passed: Boolean) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     (for {
       experiment <- Experiment.findOneById(training)
-      if !experiment.finished
+      if !experiment.state.isFinished
       review <- experiment.review
       if review.reviewee == request.user._id
       comment <- postParameter("comment")

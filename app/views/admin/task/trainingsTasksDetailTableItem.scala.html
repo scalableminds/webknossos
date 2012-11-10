@@ -27,8 +27,10 @@
 	<td> @DateFormatter.format(experiment.date) </td>
 	<td>
 	@{experiment.review match{
-    case _ if experiment.finished =>
+    case _ if experiment.state.isFinished =>
       <i class="icon-ok"></i><text> finished</text>
+    case _ if experiment.state.isInProgress =>
+      <i class="icon-time"></i><text> User is working</text>
 		case Some(r) if r.reviewee == user._id =>
 			oxalisLink() + nmlDownloadLink() + finishReviewLink() + abortReviewLink
 		case Some(r) if r.reviewee != user._id =>

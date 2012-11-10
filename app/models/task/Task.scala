@@ -53,7 +53,7 @@ case class Task(
   def isTraining = training.isDefined
 
   def inProgress =
-    experiments.filter(!_.finished).size
+    experiments.filter(!_.state.isFinished).size
 
   def completed =
     experiments.size - inProgress
@@ -82,14 +82,18 @@ object Task extends BasicDAO[Task]("tasks") {
       Some(task._id)))
   }
 
+  def findAllOfOneType(isTraining: Boolean) =
+    find(MongoDBObject("training" -> MongoDBObject("$exists" -> isTraining)))
+      .toList
+
   def findAllTrainings =
-    find(MongoDBObject("training" -> MongoDBObject("$exists" -> true))).toList
+    findAllOfOneType(isTraining = true)
 
   def findAllNonTrainings =
-    find(MongoDBObject("training" -> MongoDBObject("$exists" -> false))).toList
+    findAllOfOneType(isTraining = false)
 
-  def findAllAssignable =
-    findAll.filter(!_.isFullyAssigned)
+  def findAllAssignableNonTrainings =
+    findAllNonTrainings.filter(!_.isFullyAssigned)
 
   def addExperiment(task: Task, experiment: Experiment) = {
     alterAndSave(task.copy(
@@ -105,7 +109,7 @@ object Task extends BasicDAO[Task]("tasks") {
   }
 
   def toTrainingForm(t: Task): Option[(String, Training)] =
-    Some(t.id  -> (t.training getOrElse Training.empty))
+    Some(t.id -> (t.training getOrElse Training.empty))
 
   def fromTrainingForm(taskId: String, training: Training) =
     Task.findOneById(taskId) map {
@@ -158,7 +162,7 @@ object Task extends BasicDAO[Task]("tasks") {
   }
 
   def nextTaskForUser(user: User): Future[Option[Task]] = {
-    val tasks = findAllAssignable.filter(hasEnoughExperience(user)).toArray
+    val tasks = findAllAssignableNonTrainings.filter(hasEnoughExperience(user)).toArray
     if (tasks.isEmpty) {
       Promise.successful(None)(Akka.system.dispatcher)
     } else {

@@ -16,8 +16,10 @@ object Training {
   
   def empty = Training("", 10, 5)
 
-  def hasDoneTraining(user: User, t: Task) =
+  def hasDoneTraining(user: User, t: Task) = {
+    println("Has Done: " + t.experiments.find(_._user == user._id))
     t.experiments.find(_._user == user._id).isDefined
+  }
 
   def findAllFor(user: User) = {
     Task.findAllTrainings.filter(t => 

@@ -1,16 +1,23 @@
 @(task: models.task.Task, experiment: models.task.Experiment)
 
+@experimentLinks = {
+  <a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a><br/>
+  <a href="@controllers.routes.TaskController.finish(experiment.id)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a>
+}
+
 <tr>
   <td> @task.id.drop(10) </td>
   <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
   <td> @task.dataSetName </td>
   <td> @task.start </td>
   <td> 
-    @if(experiment.finished){ 
-      <i class="icon-ok"></i> Finished 
-    } else {
-      <a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a><br/>
-      <a href="@controllers.routes.TaskController.finish(experiment.id)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a>
-    }
+    @{experiment.state match{
+      case s if s.isFinished =>
+        <i class="icon-ok"></i><text> Finished</text>
+      case s if s.isInReview =>
+        <i class="icon-eye-open"></i><text> In Review</text>
+      case _ =>
+        experimentLinks
+    }}
   </td>
 </tr>

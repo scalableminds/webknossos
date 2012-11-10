@@ -90,7 +90,7 @@ GET     /admin/users/:id/delete             controllers.admin.UserAdministration
 POST    /admin/users/addRole                controllers.admin.UserAdministration.addRoleBulk
 POST    /admin/users/removeRole             controllers.admin.UserAdministration.removeRoleBulk
 
-GET     /admin/experiments/:id/reviewTrace  controllers.Game.reviewTrace(id: String)
+GET     /admin/experiments/:id/review       controllers.admin.TrainingsExperimentAdministration.oxalisReview(id: String)
 
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.Application.javascriptRoutes

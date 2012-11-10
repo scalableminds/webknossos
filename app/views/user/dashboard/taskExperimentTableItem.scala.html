@@ -7,7 +7,7 @@
 
 <tr>
   <td> @task.id.drop(10) </td>
-  <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
+  <td> @task.taskType.map(_.summary).getOrElse("<deleted>") - @experiment.experimentType</td>
   <td> @task.dataSetName </td>
   <td> @task.start </td>
   <td> 

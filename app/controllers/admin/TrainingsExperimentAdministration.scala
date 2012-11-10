@@ -11,12 +11,23 @@ object TrainingsExperimentAdministration extends Controller with Secured {
   val DefaultRole = Role.Admin
 
   def startReview(training: String) = Authenticated { implicit request =>
-    Experiment.findOneById(training) map { experiment =>
-      val altered = Experiment.assignReviewee(experiment, request.user)
+    (for{
+      experiment <- Experiment.findOneById(training)
+      altered <- Experiment.assignReviewee(experiment, request.user)
+    } yield {
       AjaxOk.success(
         html.admin.task.trainingsTasksDetailTableItem(request.user, altered),
         "You got assigned as reviewee.")
-    } getOrElse BadRequest("Trainings-Experiment not found.")
+    }) getOrElse BadRequest("Trainings-Experiment not found.")
+  }
+  
+  def oxalisReview(training: String) = Authenticated { implicit request =>
+    (for{
+      experiment <- Experiment.findOneById(training)
+      review <- experiment.review
+    } yield {
+      Redirect(controllers.routes.Game.trace(review.reviewExperiment.toString))
+    }) getOrElse BadRequest("Couldn't create review experiment.")
   }
 
   def abortReview(training: String) = Authenticated { implicit request =>

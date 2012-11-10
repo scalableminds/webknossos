@@ -21,6 +21,8 @@ import brainflight.tools.geometry.Scale
 import java.util.Date
 import com.mongodb.casbah.query._
 import models.task.ExperimentState._
+import ExperimentType._
+import nml.NMLParser
 
 case class Experiment(
     _user: ObjectId,
@@ -34,8 +36,12 @@ case class Experiment(
     taskId: Option[ObjectId] = None,
     state: ExperimentState = InProgress,
     review: Option[ExperimentReview] = None,
+    experimentType: ExperimentType.Value = ExperimentType.Explorational,
     _id: ObjectId = new ObjectId) {
 
+  /**
+   * Easy access methods
+   */
   def user = User.findOneById(_user)
 
   val date = {
@@ -44,14 +50,19 @@ case class Experiment(
 
   lazy val id = _id.toString
 
-  def isTrainingsExperiment = task.map(_.isTraining) getOrElse false
+  def isTrainingsExperiment = experimentType == ExperimentType.Training
 
   def task = taskId flatMap Task.findOneById
 
-  def isExploratory = taskId.isEmpty
+  def isExploratory = experimentType == ExperimentType.Explorational
 
+  /**
+   * Tree modification
+   */
   def tree(treeId: Int) = trees.find(_.id == treeId)
+
   def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
+
 }
 
 object Experiment extends BasicDAO[Experiment]("experiments") {
@@ -87,9 +98,34 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       }) getOrElse (<error>DataSet not fount</error>)
     }
   }
-  
+
+  def createReviewFor(user: User, sample: Experiment, training: Experiment) = {
+    sample.copy(
+      _id = new ObjectId,
+      _user = user._id,
+      trees =
+        NMLParser.createUniqueIds(training.trees ::: sample.trees),
+      timestamp = System.currentTimeMillis,
+      experimentType = ExperimentType.Review)
+  }
+
+  def createExperimentFor(user: User, task: Task) = {
+    alterAndInsert(Experiment(user._id,
+      task.dataSetName,
+      List(Tree.empty),
+      Nil,
+      System.currentTimeMillis,
+      1,
+      Scale(12, 12, 24),
+      task.start,
+      Some(task._id),
+      experimentType =
+        if (task.isTraining) ExperimentType.Training
+        else ExperimentType.Task))
+  }
+
   override def remove(experiment: Experiment) = {
-    experiment.task.map{
+    experiment.task.map {
       Task.removeExperiment(_, experiment)
     }
     UsedExperiments.removeAll(experiment)
@@ -97,9 +133,21 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
   }
 
   def assignReviewee(experiment: Experiment, user: User) = {
-    alterAndSave(experiment.copy(
-      state = InReview,
-      review = Some(ExperimentReview(user._id, System.currentTimeMillis()))))
+    for {
+      task <- experiment.task
+      sampleId <- task.training.map(_.sample)
+      sample <- Experiment.findOneById(sampleId)
+    } yield {
+      val reviewExperiment =
+        Experiment.createReviewFor(user, sample, experiment)
+      Experiment.insert(reviewExperiment)
+      alterAndSave(experiment.copy(
+        state = InReview,
+        review = Some(ExperimentReview(
+          user._id,
+          reviewExperiment._id,
+          System.currentTimeMillis()))))
+    }
   }
 
   def unassignReviewee(experiment: Experiment) = {
@@ -113,7 +161,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     alterAndSave(experiment.copy(review = alteredReview))
   }
 
-  def createNew(u: User, d: DataSet = DataSet.default) = {
+  def createExperimentFor(u: User, d: DataSet = DataSet.default) = {
     alterAndInsert(Experiment(u._id,
       d.name,
       List(Tree.empty),
@@ -121,7 +169,8 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       System.currentTimeMillis,
       1,
       Scale(12, 12, 24),
-      Point3D(0, 0, 0)))
+      Point3D(0, 0, 0),
+      experimentType = ExperimentType.Explorational))
   }
 
   def finish(experiment: Experiment) = {
@@ -135,7 +184,7 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
   def reopen(experiment: Experiment) = {
     alterAndSave(experiment.copy(state = Reopened))
   }
-  
+
   def removeTask(experiment: Experiment) = {
     alterAndSave(experiment.copy(taskId = None))
   }

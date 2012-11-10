@@ -19,6 +19,19 @@ import models.user.User
 
 case class NMLContext(user: User)
 
+object NMLParser {
+  def createUniqueIds(trees: List[Tree]) = {
+    trees.foldLeft(List[Tree]()) { (l, t) =>
+      if (l.isEmpty || l.find(_.id == t.id).isEmpty)
+        t :: l
+      else {
+        val alteredId = (l.maxBy(_.id).id + 1)
+        t.copy(id = alteredId) :: l
+      }
+    }
+  }
+}
+
 class NMLParser(file: File)(implicit ctx: NMLContext) {
   val DEFAULT_EDIT_POSITION = Point3D(0, 0, 0)
   val DEFAULT_TIME = 0
@@ -45,18 +58,7 @@ class NMLParser(file: File)(implicit ctx: NMLContext) {
   }
 
   def verifyTrees(trees: List[Tree]): List[Tree] = {
-    createUniqueIds(trees.flatMap(splitIntoComponents))
-  }
-
-  def createUniqueIds(trees: List[Tree]) = {
-    trees.foldLeft(List[Tree]()) { (l, t) =>
-      if (l.isEmpty || l.find(_.id == t.id).isEmpty)
-        t :: l
-      else {
-        val alteredId = (l.maxBy(_.id).id + 1)
-        t.copy(id = alteredId) :: l
-      }
-    }
+    NMLParser.createUniqueIds(trees.flatMap(splitIntoComponents))
   }
 
   def splitIntoComponents(tree: Tree): List[Tree] = {
@@ -91,7 +93,7 @@ class NMLParser(file: File)(implicit ctx: NMLContext) {
     val magRx = "_mag[0-9]*$".r
     magRx.replaceAllIn(rawDataSetName, "")
   }
-  
+
   def parseActiveNode(node: NodeSeq) = {
     (node \ "@id").text.toIntOpt.getOrElse(DEFAULT_ACTIVE_NODE_ID)
   }

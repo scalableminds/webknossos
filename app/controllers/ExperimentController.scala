@@ -77,7 +77,7 @@ object ExperimentController extends Controller with Secured {
     val user = request.user
     if (isNew) {
       DataSet.findOneById(id).map { dataSet =>
-        val exp = Experiment.createNew(user, dataSet)
+        val exp = Experiment.createExperimentFor(user, dataSet)
         UsedExperiments.use(user, exp)
         Ok
       } getOrElse BadRequest("Couldn't find DataSet.")
@@ -94,7 +94,7 @@ object ExperimentController extends Controller with Secured {
       dataSetId <- request.body.get("dataSetId").flatMap(_.headOption)
       dataSet <- DataSet.findOneById(dataSetId)
     } yield {
-      val exp = Experiment.createNew(request.user, dataSet)
+      val exp = Experiment.createExperimentFor(request.user, dataSet)
       UsedExperiments.use(request.user, exp)
       Redirect(routes.Game.index)
     }) getOrElse BadRequest("Couldn't find DataSet.")

@@ -47,14 +47,11 @@ object Game extends Controller with Secured {
 
   def initialize = Authenticated { implicit request =>
     val user = request.user
-    val experimentId = UsedExperiments.by(user) match {
+    UsedExperiments.by(user) match {
       case experiment :: _ =>
-        experiment.toString
+        Ok(createExperimentIDInfo(experiment.toString))
       case _ =>
-        val exp = Experiment.createNew(user)
-        UsedExperiments.use(user, exp)
-        exp.id
+        BadRequest("No open experiment found.")
     }
-    Ok(createExperimentIDInfo(experimentId))
   }
 }

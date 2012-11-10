@@ -67,20 +67,10 @@ object Task extends BasicDAO[Task]("tasks") {
   val conf = current.configuration
 
   val empty = Task("", 0, null, Point3D(0, 0, 0))
+  
+  val withEmptyTraining = empty.copy(training = Some(Training.empty))
 
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
-
-  def createExperimentFor(user: User, task: Task) = {
-    Experiment.alterAndInsert(Experiment(user._id,
-      task.dataSetName,
-      List(Tree.empty),
-      Nil,
-      System.currentTimeMillis,
-      1,
-      Scale(12, 12, 24),
-      task.start,
-      Some(task._id)))
-  }
   
   override def remove(t: Task) = {
     t.experiments.map{ experiment =>

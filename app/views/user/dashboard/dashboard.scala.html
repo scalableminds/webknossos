@@ -9,7 +9,7 @@
       <thead>
         <tr>
           <th> # </th>
-          <th> Task type </th>
+          <th> Type </th>
           <th> DataSet </th>
           <th> Start </th>
           <th> </th>
@@ -32,6 +32,7 @@
           <th> # </th>
           <th> DataSet </th>
           <th> Trees </th>
+          <th> Experiment-Type </th>
           <th> Last edited </th>
           <th> </th>
         </tr>
@@ -42,6 +43,7 @@
           <td> @experiment.id.drop(10) </td>
           <td> @experiment.dataSetName </td>
           <td> @experiment.trees.size </td>
+          <td> @experiment.experimentType </td>
           <td> @DateFormatter.format(experiment.date) </td>
           <td> <a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a></td>
         </tr>

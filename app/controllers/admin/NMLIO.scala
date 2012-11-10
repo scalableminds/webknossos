@@ -13,6 +13,7 @@ import xml.Xml
 import play.api.Logger
 import models.task.UsedExperiments
 import scala.xml.PrettyPrinter
+import models.task.ExperimentType
 
 object NMLIO extends Controller with Secured {
   val prettyPrinter = new PrettyPrinter(100, 2)
@@ -26,10 +27,11 @@ object NMLIO extends Controller with Secured {
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
     request.body.file("nmlFile").map { nmlFile =>
       implicit val ctx = NMLContext(request.user)
-      (new NMLParser(nmlFile.ref.file).parse).foreach { exp =>
+      (new NMLParser(nmlFile.ref.file).parse).foreach { experiment =>
         Logger.debug("Successfully parsed nmlFile")
-        Experiment.save(exp)
-        UsedExperiments.use(request.user, exp)
+        Experiment.save(experiment.copy(
+          experimentType = ExperimentType.Explorational))
+        UsedExperiments.use(request.user, experiment)
       }
       Ok("File uploaded")
     }.getOrElse {
@@ -38,8 +40,9 @@ object NMLIO extends Controller with Secured {
   }
 
   def downloadList = Authenticated { implicit request =>
-    val userExperiments = Experiment.findAll.groupBy(_._user).flatMap{ case (userId, experiments) =>
-      User.findOneById(userId).map( _ -> experiments) 
+    val userExperiments = Experiment.findAll.groupBy(_._user).flatMap {
+      case (userId, experiments) =>
+        User.findOneById(userId).map(_ -> experiments)
     }
     Ok(html.admin.nml.nmldownload(request.user, userExperiments))
   }

@@ -11,6 +11,7 @@ import java.util.Date
 
 case class ExperimentReview(
     reviewee: ObjectId,
+    reviewExperiment: ObjectId,
     timestamp: Long,
     comment: Option[String] = None,
     _id: ObjectId = new ObjectId) {

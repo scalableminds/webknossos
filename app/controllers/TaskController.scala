@@ -22,12 +22,12 @@ object TaskController extends Controller with Secured {
       if (!Experiment.hasOpenExperiment(request.user, true)) {
         Task.nextTaskForUser(request.user).asPromise.map {
           case Some(task) =>
-            val experiment = Task.createExperimentFor(user, task)
+            val experiment = Experiment.createExperimentFor(user, task)
             Task.addExperiment(task, experiment)
             AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("task.new"))
           case _ =>
             Training.findAllFor(user).headOption.map { task =>
-              val experiment = Task.createExperimentFor(user, task)
+              val experiment = Experiment.createExperimentFor(user, task)
               Task.addExperiment(task, experiment)
               AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, experiment), Messages("training.new"))
             } getOrElse AjaxBadRequest.error(Messages("task.unavailable"))

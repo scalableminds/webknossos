@@ -8,6 +8,8 @@ import play.api.libs.json._
 import org.bson.types.ObjectId
 import com.mongodb.casbah.MongoDB
 
+trait Persistence
+
 /**
  * scalableminds - brainflight
  * User: tmbo

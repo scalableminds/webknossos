@@ -1,31 +1,70 @@
-@(loggedInUser: models.user.User, tasks: List[models.task.Task], experiences: Seq[String], form: Form[models.task.Task])
+@(loggedInUser: models.user.User, tasks: List[models.task.Task], experiments: List[models.experiment.Experiment], taskTypes: List[models.task.TaskType], experiences: Seq[String], nmlForm: Form[models.task.Task], experimentForm: Form[models.task.Task])
 
 @import controllers.BootstrapHelpers._
 @import play.api.libs.json.Json
+@import brainflight.format._
 
 @taskHelpLink() = {
   <a href="@controllers.admin.routes.TaskAdministration.create">Create a new Task</a>
 }
 
+@taskTypeHelpLink() = {
+  <a href="@controllers.admin.routes.TaskTypeAdministration.list">Create a new Type</a>
+}
+
 @main(Some(loggedInUser)){
   <div class="container">
-    <h3>Create Trainings-Task</h3>
+    <h3>Create Trainings-Task with NML</h3>
     <div class="well">
       @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromForm, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
         
-        @helper.select(form("task"), tasks.map { task =>
+        @helper.select(nmlForm("task"), tasks.map { task =>
           task.id -> (task.taskType.map(_.summary).getOrElse("") + " - start " + task.start.toString)
         }, Symbol("help-inline") -> taskHelpLink)
 
-        @helper.input(form("training.domain")) { (id, name, value, args) =>
+        @helper.input(nmlForm("training.domain")) { (id, name, value, args) =>
             <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
         }
 
-        @helper.inputText(form("training.gain"), 'type -> "number")
+        @helper.inputText(nmlForm("training.gain"), 'type -> "number")
         
-        @helper.inputText(form("training.loss"), 'type -> "number")
+        @helper.inputText(nmlForm("training.loss"), 'type -> "number")
 
         <input type="file" name="nmlFile"> 
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
+
+    <h3>Create Trainings-Task from Experiment</h3>
+    <div class="well">
+      @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromExperiment, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
+        
+        @helper.select(experimentForm("experiment"), experiments.map { exp =>
+          exp.id -> (exp.dataSetName + " " + DateFormatter.format(exp.date)) 
+        })
+        
+        @helper.select(experimentForm("taskType"), taskTypes.map { tt =>
+          tt.id -> tt.summary
+        }, Symbol("help-inline") -> taskTypeHelpLink)
+
+        @helper.input(experimentForm("experience.domain")) { (id, name, value, args) =>
+          <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(experimentForm("experience.value"), 'type -> "number")
+
+        @helper.inputText(experimentForm("priority"), 'type -> "number")
+
+        @helper.input(experimentForm("training.domain")) { (id, name, value, args) =>
+            <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(experimentForm("training.gain"), 'type -> "number")
+        
+        @helper.inputText(experimentForm("training.loss"), 'type -> "number")
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>

@@ -1,4 +1,4 @@
-@(user: models.user.User, experiment: models.task.Experiment)
+@(user: models.user.User, experiment: models.experiment.Experiment)
 
 @reviewLink() = {
 	<a href=@controllers.admin.routes.TrainingsExperimentAdministration.startReview(experiment.id) data-ajax="replace-row"><i class="icon-eye-open"></i> start review </a>	

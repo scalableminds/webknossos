@@ -28,6 +28,7 @@ import brainflight.tools.geometry.Scale
 import models.user.User
 import play.api.Logger
 import models.user.Experience
+import models.experiment._
 
 case class Task(
     dataSetName: String,
@@ -104,7 +105,7 @@ object Task extends BasicDAO[Task]("tasks") {
 
   def toExperimentForm(t: Task): Option[(String, String, Experience, Int, Int)] = {
     Some(("",
-      "",
+      t.taskType.map(_.id).getOrElse(""),
       t.neededExperience,
       t.priority,
       t.instances))
@@ -118,6 +119,29 @@ object Task extends BasicDAO[Task]("tasks") {
       _.copy(training = Some(training))
     } getOrElse null
 
+  def fromTrainingsExperimentForm(experimentId: String, taskTypeId: String, experience: Experience, priority: Int, training: Training) = 
+    (for{
+      e <- Experiment.findOneById(experimentId)
+      taskType <- TaskType.findOneById(taskTypeId)
+    } yield {
+        Task(e.dataSetName,
+          0,
+          taskType._id,
+          e.editPosition,
+          experience,
+          priority,
+          Integer.MAX_VALUE,
+          training = Some(training.copy(sample = e._id)))
+    }) getOrElse null
+    
+  def toTrainingsExperimentForm(t: Task) = {
+    Some(("",
+      t.taskType.map(_.id).getOrElse(""),
+      t.neededExperience,
+      t.priority,
+      t.training getOrElse null))
+    }
+        
   def fromExperimentForm(experiment: String, taskTypeId: String, experience: Experience, priority: Int, instances: Int): Task =
     (Experiment.findOneById(experiment), TaskType.findOneById(taskTypeId)) match {
       case (Some(e), Some(taskType)) =>

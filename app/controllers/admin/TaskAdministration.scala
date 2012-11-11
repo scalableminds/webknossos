@@ -8,7 +8,7 @@ import brainflight.tools.ExtendedTypes.String2ExtendedString
 import brainflight.tools.geometry.Point3D
 import models.binary.DataSet
 import models.security.Role
-import models.task.Experiment
+import models.experiment.Experiment
 import models.task.Task
 import models.task.TaskType
 import play.api.data.Form
@@ -54,7 +54,7 @@ object TaskAdministration extends Controller with Secured {
 
   def taskCreateHTML(experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) =
     html.admin.task.taskCreate(request.user,
-      Experiment.findAllExploratory,
+      Experiment.findAllExploratory(request.user),
       TaskType.findAll,
       DataSet.findAll,
       Experience.findAllDomains,

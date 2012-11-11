@@ -6,14 +6,12 @@ import brainflight.security.Secured
 import views.html
 import models.user._
 import nml._
-import models.task.Experiment
 import models.security.Role
 import nml.NMLParser
 import xml.Xml
 import play.api.Logger
-import models.task.UsedExperiments
 import scala.xml.PrettyPrinter
-import models.task.ExperimentType
+import models.experiment._
 
 object NMLIO extends Controller with Secured {
   val prettyPrinter = new PrettyPrinter(100, 2)

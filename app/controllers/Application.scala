@@ -17,8 +17,8 @@ import brainflight.mail._
 import controllers.admin._
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
-import models.task.Experiment
-import models.task.UsedExperiments
+import models.experiment.Experiment
+import models.experiment.UsedExperiments
 import brainflight.thirdparty.BrainTracing
 
 object Application extends Controller with Secured {

@@ -3,7 +3,7 @@ package controllers.admin
 import brainflight.security.Secured
 import models.security.Role
 import controllers.Controller
-import models.task.Experiment
+import models.experiment.Experiment
 import views._
 import models.user.User
 

@@ -6,10 +6,10 @@ import brainflight.security.Secured
 import models.security.Role
 import models.binary.DataSet
 import play.api.Logger
-import models.task.Experiment
+import models.experiment.Experiment
 import models.user._
 import models.task._
-import models.task.UsedExperiments
+import models.experiment.UsedExperiments
 import views._
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.execution.defaultContext

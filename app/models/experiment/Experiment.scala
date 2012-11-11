@@ -1,4 +1,4 @@
-package models.task
+package models.experiment
 
 import play.api.libs.json.JsValue
 import play.api.libs.json.Reads
@@ -20,9 +20,9 @@ import play.api.libs.json.Format
 import brainflight.tools.geometry.Scale
 import java.util.Date
 import com.mongodb.casbah.query._
-import models.task.ExperimentState._
-import ExperimentType._
+import models.experiment.ExperimentState._
 import nml.NMLParser
+import models.task._
 
 case class Experiment(
     _user: ObjectId,
@@ -199,8 +199,10 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     find(MongoDBObject("_user" -> u._id)).toList
   }
 
-  def findAllExploratory = {
-    find(MongoDBObject("taskId" -> MongoDBObject("$exists" -> false))).toList
+  def findAllExploratory(user: User) = {
+    find(MongoDBObject(
+      "_user" -> user._id,
+      "taskId" -> MongoDBObject("$exists" -> false))).toList
   }
 
   implicit object ExperimentFormat extends Format[Experiment] {

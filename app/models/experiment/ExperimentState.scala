@@ -1,4 +1,4 @@
-package models.task
+package models.experiment
 
 case class ExperimentState(
   isAssigned: Boolean = false,

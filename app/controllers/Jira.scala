@@ -7,7 +7,7 @@ import models.security.Role
 import models.binary.DataSet
 import play.api.mvc._
 import play.api.Logger
-import models.task.Experiment
+import models.experiment.Experiment
 import models.user.User
 import org.apache.commons.codec.binary.Base64
 import com.sun.jersey.api.client.WebResource

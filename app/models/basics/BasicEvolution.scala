@@ -6,6 +6,7 @@ import models.task._
 import models.security._
 import org.bson.types.ObjectId
 import play.api.Logger
+import models.experiment._
 
 object BasicEvolution {
   val watchedClasses: List[BasicDAO[_]] = List(Role, DataSet, User, Task, Experiment)

@@ -1,4 +1,4 @@
-@(task: models.task.Task, experiment: models.task.Experiment)
+@(task: models.task.Task, experiment: models.experiment.Experiment)
 
 @experimentLinks = {
   <a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a><br/>

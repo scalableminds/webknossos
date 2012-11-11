@@ -12,7 +12,7 @@ import models.task._
 import models.binary.DataSet
 import views.html
 import play.api.Logger
-import models.task.ExperimentType
+import models.experiment._
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User

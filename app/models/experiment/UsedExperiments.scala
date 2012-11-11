@@ -1,4 +1,4 @@
-package models.task
+package models.experiment
 
 import com.mongodb.casbah.Imports._
 import models.context._

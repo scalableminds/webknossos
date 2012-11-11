@@ -37,7 +37,7 @@ start.point=Start
 point.invalid=Invalid format. Use something like: 4, 63, 24
 
 experience.domain=Experience Domain
-training.domain=Experience Domain
+training.domain=Trainings Domain
 experience.value=Min Experience
 training.gain=Experience Gain
 training.loss=Experience Loss

@@ -1,4 +1,4 @@
-package models.task
+package models.experiment
 
 import org.bson.types.ObjectId
 import com.mongodb.casbah.Imports._

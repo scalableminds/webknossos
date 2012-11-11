@@ -12,7 +12,7 @@ import brainflight.tools.geometry.Vector3I
 import brainflight.tools.geometry.Vector3I._
 import models.user.User
 import models.security._
-import models.task.Experiment
+import models.experiment.Experiment
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent.Channel
@@ -25,7 +25,7 @@ import models.graph.Node
 import models.graph.Edge
 import brainflight.tools.geometry.Point3D
 import brainflight.format.DateFormatter
-import models.task.UsedExperiments
+import models.experiment.UsedExperiments
 import models.user.TimeTracking
 
 /**

@@ -1,4 +1,4 @@
-package models.task
+package models.experiment
 
 object ExperimentType extends Enumeration {
   val Task = Value("Task")

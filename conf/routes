@@ -73,6 +73,7 @@ POST    /admin/tasks/createFromForm         controllers.admin.TaskAdministration
 GET     /admin/trainingsTasks               controllers.admin.TrainingsTaskAdministration.list
 GET     /admin/trainingsTasks/create        controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
 POST    /admin/trainingsTasks/createFromForm controllers.admin.TrainingsTaskAdministration.createFromForm
+POST    /admin/trainingsTasks/createFromExperiment controllers.admin.TrainingsTaskAdministration.createFromExperiment
 GET     /admin/trainingsTasks/:id/delete    controllers.admin.TrainingsTaskAdministration.delete(id: String)
 
 GET     /admin/training/:id/startReview     controllers.admin.TrainingsExperimentAdministration.startReview(id: String)

@@ -7,7 +7,7 @@ model/binary/pullqueue : Queue
 
 tileIndexByTileMacro = (tile) ->
 
-  tile[0] * (@TEXTURE_SIZE >> @cube.BUCKET_SIZE_P) + tile[1]
+  tile[0] * (1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P) + tile[1]
 
 
 subTileMacro = (tile, index) ->
@@ -32,8 +32,8 @@ class Plane2D
   cube : null
   queue : null
 
-  layer : 0
-  zoomStep : 0
+  layer : -1
+  zoomStep : -1
   topLeftBucket : []
   area : []
   tiles : []
@@ -89,7 +89,7 @@ class Plane2D
     buckets
 
 
-  get : (position, [zoomStep, area]) ->
+  get : (position, {zoomStep, area}) ->
 
     # Making sure, position is top-left corner of some bucket
     position = [
@@ -209,11 +209,11 @@ class Plane2D
 
   renderTile : (tile) ->
 
-#    bucket = @topLeftBucket.slice(0)
-#    bucket[@u] += tile[0]
-#    bucket[@v] += tile[1]
+    bucket = @topLeftBucket.slice(0)
+    bucket[@u] += tile[0]
+    bucket[@v] += tile[1]
 
-#    map = @generateRenderMap(bucket)
+    map = @generateRenderMap(bucket)
     #@renderSubTile(map, 0, tile, plane.zoomStep, plane)
 
 
@@ -280,6 +280,8 @@ class Plane2D
 
     map = new Array(@MAP_SIZE)
     
+    console.log bucket
+
     if @zoomStep
 
       offset_x = bucket[0] << @zoomStep

@@ -5,8 +5,8 @@ libs/event_mixin : EventMixin
 class Cube
 
   # Constants
-  BUCKET_LENGTH : 32 * 32 * 32
   BUCKET_SIZE_P : 5
+  BUCKET_LENGTH : 1 << @BUCKET_SIZE_P * 3
   ZOOM_STEP_COUNT : 4
 
   cube : null

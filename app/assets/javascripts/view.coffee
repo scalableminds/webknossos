@@ -135,15 +135,12 @@ class View
 
     TWEEN.update()
 
-    @model.binary.ping([800, 800, 600], [0, 1, 2])
-    @model.binary.get([800, 800, 600], [
-      [0, [100, 100, 400, 400]]
-      [1, [100, 100, 400, 400]]
-      [2, [100, 100, 400, 400]]
+    @model.binary.get([1000, 2000, 3000], [
+      {zoomStep : 0, area : [100, 100, 200, 200]}
+      {zoomStep : 1, area : [0, 0, 400, 400]}
+      {zoomStep : 2, area : [300, 300, 350, 500]}
     ])
-
-    #@model.binary.get([1000, 2000, 3000], [0, 1, 2])
-#    @trigger "render"
+    @trigger "render"
 
     # skip rendering if nothing has changed
     # This prevents you the GPU/CPU from constantly
@@ -151,28 +148,28 @@ class View
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
     
     # update postion and FPS displays
-#    position2d = @flycam.getGlobalPos()
-#    texturePositionXY = @flycam.texturePosition[0]
+    position2d = @flycam.getGlobalPos()
+    texturePositionXY = @flycam.texturePosition[0]
     # without rounding the position becomes really long and blocks the canvas mouse input
-#    position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
-#    texturePositionXY = [Math.round(texturePositionXY[0]),Math.round(texturePositionXY[1]),Math.round(texturePositionXY[2])]
+    position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
+    texturePositionXY = [Math.round(texturePositionXY[0]),Math.round(texturePositionXY[1]),Math.round(texturePositionXY[2])]
     #@positionStats.html "Flyflycam: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{@flycam.getIntegerZoomStep(@flycam.getActivePlane())}<br />activePlane: #{@flycam.getActivePlane()}" 
-#    @stats.update()
+    @stats.update()
 
-#    @newTextures[VIEW_3D] = @newTextures[0] or @newTextures[1] or @newTextures[2]
-#    viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
-#    @renderer.autoClear = true
-#    colors   = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
-#    if @flycam.hasChanged or @flycam.hasNewTextures()
-#      for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
-#        @trigger "renderCam", i
-#        @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
-#        @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
-#        @renderer.enableScissorTest(true)
-#        @renderer.setClearColorHex(colors[i], 1);
-#        @renderer.render @scene, @camera[i]
-#    @flycam.hasChanged = false
-#    @flycam.hasNewTexture = [false, false, false]
+    @newTextures[VIEW_3D] = @newTextures[0] or @newTextures[1] or @newTextures[2]
+    viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
+    @renderer.autoClear = true
+    colors   = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
+    if @flycam.hasChanged or @flycam.hasNewTextures()
+      for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
+        @trigger "renderCam", i
+        @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
+        @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
+        @renderer.enableScissorTest(true)
+        @renderer.setClearColorHex(colors[i], 1);
+        @renderer.render @scene, @camera[i]
+    @flycam.hasChanged = false
+    @flycam.hasNewTexture = [false, false, false]
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.

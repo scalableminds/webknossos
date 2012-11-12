@@ -85,11 +85,11 @@ class View
         <tr><td><u>General</u></td><td></td></tr>
         <tr><td>Leftclick or Arrow keys</td><td>Move</td></tr>
         <tr><td>Leftclick</td><td>Select node</td></tr>
-        <tr><td>F</td><td>Fullscreen</td></tr>
+        <tr><td>Q</td><td>Fullscreen</td></tr>
         <tr><td>K</td><td>Scale up viewports</td></tr>
         <tr><td>L</td><td>Scale down viewports</td></tr>
         <tr><td><u>Viewports</u></td><td></td></tr>
-        <tr><td>Mousewheel or A and D</td><td>Move along 3rd axis</td></tr>
+        <tr><td>Mousewheel or D and F</td><td>Move along 3rd axis</td></tr>
         <tr><td>Rightclick</td><td>Set tracepoint</td></tr>
         <tr><td>I or Alt + Mousewheel</td><td>Zoom in</td></tr>
         <tr><td>O or Alt + Mousewheel</td><td>Zoom out</td></tr>

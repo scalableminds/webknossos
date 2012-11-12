@@ -153,7 +153,7 @@ class Controller
     @input.keyboard = new Input.Keyboard(
 
       #Fullscreen Mode
-      "f" : =>
+      "q" : =>
         canvasesAndNav = @canvasesAndNav
         requestFullscreen = canvasesAndNav.webkitRequestFullScreen or canvasesAndNav.mozRequestFullScreen or canvasesAndNav.RequestFullScreen
         if requestFullscreen
@@ -203,8 +203,8 @@ class Controller
         @createNewTree()
 
       # Move
-      "space, d"         : => @moveZ( @model.User.Configuration.moveValue)
-      "shift + space, ctrl + space, a" : => @moveZ(-@model.User.Configuration.moveValue)
+      "space, f"         : => @moveZ( @model.User.Configuration.moveValue)
+      "shift + space, ctrl + space, d" : => @moveZ(-@model.User.Configuration.moveValue)
     )
 
   # for more buttons look at Input.Gamepad
@@ -268,7 +268,8 @@ class Controller
     @model.User.Configuration.push()
 
   setNodeRadius : (delta) =>
-    radius = @model.Route.getActiveNodeRadius() + delta
+    lastRadius = @model.Route.getActiveNodeRadius()
+    radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
     scale = @model.Route.scaleX
     if radius < scale
       radius = scale

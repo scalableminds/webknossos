@@ -76,7 +76,7 @@ object TrainingsExperimentAdministration extends Controller with Secured {
             Experiment.finish(alteredExperiment)
           } else
             Experiment.reopen(alteredExperiment)
-          Ok
+          AjaxOk("Trainings review finished.")
         }) getOrElse BadRequest("Trainings-Experiment not found.")
       })
   }

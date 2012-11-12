@@ -65,7 +65,7 @@ object TrainingsExperimentAdministration extends Controller with Secured {
           experiment <- Experiment.findOneById(training)
           if experiment.state.isInReview
           review <- experiment.review
-          if review.reviewee == request.user._id
+          if review._reviewee == request.user._id
           task <- experiment.task
           training <- task.training
           trainee <- experiment.user

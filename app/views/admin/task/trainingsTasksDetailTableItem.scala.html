@@ -31,9 +31,9 @@
       <i class="icon-ok"></i><text> finished</text>
     case _ if experiment.state.isInProgress =>
       <i class="icon-time"></i><text> User is working on the task</text>
-		case Some(r) if r.reviewee == user._id =>
+		case Some(r) if r._reviewee == user._id =>
 			oxalisLink() + nmlDownloadLink() + finishReviewLink() + abortReviewLink
-		case Some(r) if r.reviewee != user._id =>
+		case Some(r) if r._reviewee != user._id =>
 			<span>Already getting reviewed.</span>
 		case _ =>
       reviewLink()

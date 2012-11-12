@@ -63,7 +63,7 @@ object TrainingsExperimentAdministration extends Controller with Secured {
       { comment =>
         (for {
           experiment <- Experiment.findOneById(training)
-          if !experiment.state.isFinished
+          if experiment.state.isInReview
           review <- experiment.review
           if review.reviewee == request.user._id
           task <- experiment.task

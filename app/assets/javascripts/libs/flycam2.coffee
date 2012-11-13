@@ -35,14 +35,15 @@ class Flycam2d
   #  @zoomSteps=[1,1,1]
 
   zoomIn : (planeID) ->
-    @zoomSteps[planeID] -= ZOOM_DIFF
+    @zoomSteps[planeID] -= (1 + @zoomSteps[planeID]) / 1.5 * ZOOM_DIFF
     @hasChanged = true
     @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
 
   zoomOut : (planeID) ->
     # Make sure the max. zoom Step will not be exceded
-    if @zoomSteps[planeID] < 3+@maxZoomStepDiff - ZOOM_DIFF
-      @zoomSteps[planeID] += ZOOM_DIFF
+    delta = (1 + @zoomSteps[planeID]) / 1.5 * ZOOM_DIFF
+    if @zoomSteps[planeID] < 3+@maxZoomStepDiff - delta
+      @zoomSteps[planeID] += delta
       @hasChanged = true
       @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
 

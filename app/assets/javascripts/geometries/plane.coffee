@@ -93,11 +93,10 @@ class Plane
       if @flycam.needsUpdate @planeID
         @flycam.notifyNewTexture @planeID
 
-      # HOTFIX: Hard-coded 2
+      area = @flycam.getArea(@planeID)
       tPos = @flycam.getTexturePosition(@planeID).slice()
-      tPos[2] *= 2
       if @model?
-        @model.Binary.get(tPos, @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID).done (buffer) =>
+        @model.Binary.get(tPos, @flycam.getIntegerZoomStep(@planeID), area, @planeID).done (buffer) =>
           if buffer
             @plane.texture.image.data.set(buffer)
             @flycam.hasNewTexture[@planeID] = true
@@ -108,13 +107,12 @@ class Plane
       @plane.texture.needsUpdate = true
       @plane.material.map = @plane.texture
       
-      offsets = @flycam.getOffsets @planeID
       scalingFactor = @flycam.getTextureScalingFactor @planeID
       map = @plane.material.map
-      map.repeat.x = @planeWidth*scalingFactor / @textureWidth;  # (tWidth -4) ???
-      map.repeat.y = @planeWidth*scalingFactor / @textureWidth;
-      map.offset.x = offsets[0] / @textureWidth;
-      map.offset.y = offsets[1] / @textureWidth;
+      map.repeat.x = @planeWidth * scalingFactor / @textureWidth  # (tWidth -4) ???
+      map.repeat.y = @planeWidth * scalingFactor / @textureWidth
+      map.offset.x = area[0] / @textureWidth
+      map.offset.y = area[1] / @textureWidth
 
   setScale : (factor) =>
     scaleVec = new THREE.Vector3().multiply(new THREE.Vector3(factor, factor, factor), @scaleVector)

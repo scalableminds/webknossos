@@ -29,7 +29,6 @@ class Controller
 
     # create Model, View and Flycam
     @model = new Model()
-    @flycam = new Flycam(VIEWPORT_WIDTH, @model)
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -46,6 +45,7 @@ class Controller
       (position) =>
         # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
 
+        @flycam = new Flycam(VIEWPORT_WIDTH, @model)
         @view  = new View(@model, @flycam)
 
         # initialize Camera Controller

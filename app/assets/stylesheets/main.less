@@ -76,19 +76,39 @@ body {
 
         cursor: pointer;
 
-        .icon-chevron-down {
+        .caret-down {
             display: none;
         }
 
         &.open {
-            .icon-chevron-right {
+            .caret-right {
                 display: none;
             }
-            .icon-chevron-down {
+            .caret-down {
                 display: inline-block;
             }
         }
     }
+}
+
+.light-caret {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    vertical-align: middle;
+    content: "";
+}
+.caret-right {
+    .light-caret;
+    border-left: 4px solid #888;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+}
+.caret-down {
+    .light-caret;
+    border-top: 4px solid #888;
+    border-right: 4px solid transparent;
+    border-left: 4px solid transparent;
 }
 
 #alert-container {

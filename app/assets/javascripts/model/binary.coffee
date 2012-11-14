@@ -61,7 +61,7 @@ class Binary
       console.timeEnd "ping"
 
 
-  get : (position, options) ->
+  #get : (position, options) ->
 
-    for i in [0...Math.min(options.length, @planes.length)]
-      @planes[i].get(position, options[i]) if options[i]?
+   # for i in [0...Math.min(options.length, @planes.length)]
+    #  @planes[i].get(position, options[i]) if options[i]?

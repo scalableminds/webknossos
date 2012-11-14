@@ -1,6 +1,7 @@
 ### define
 model/binary/cube : Cube
 model/binary/pullqueue : Queue
+libs/event_mixin : EventMixin
 ###
 
 # Macros
@@ -17,14 +18,17 @@ subTileMacro = (tile, index) ->
 
 bufferOffsetByTileMacro = (tile, tileSize) ->
 
-  tile[0] * tileSize + tile[1] * tileSize * @TEXTURE_SIZE
+  tile[0] * (1 << tileSize) + tile[1] * (1 << tileSize) * (1 << @TEXTURE_SIZE_P)
 
 
 class Plane2D
 
   # Constants
   TEXTURE_SIZE_P : 9
+  BUCKETS_IN_A_ROW : 0
   MAP_SIZE : 85 # 4⁰ + 4¹ + 4² + 4³
+  RECURSION_PLACEHOLDER : {}
+  DELTA : [10, 5, 0]
 
   u : 0
   v : 0
@@ -43,7 +47,25 @@ class Plane2D
 
   constructor : (@u, @v, @w, @cube, @queue) ->
 
-    null
+    _.extend(@, new EventMixin())
+
+    @BUCKETS_IN_A_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
+
+    @on "bucketLoaded", (bucket, zoomStep, oldZoomStep) =>
+
+      # Checking, whether the new bucket intersects with the current layer and the zoomStep means an improvement
+      if @layer >> @cube.BUCKET_SIZE_P == bucket[@w] and oldZoomStep > @zoomStep
+
+        # Get the tile, the bucket would be drawn to
+        u = (bucket[@u] >> @zoomStep) - @topLeftBucket[@u]
+        v = (bucket[@v] >> @zoomStep) - @topLeftBucket[@v]
+
+        # If the tile is part of the texture, mark it as changed
+        if u in [0...@BUCKETS_IN_A_ROW] and v in [0...@BUCKETS_IN_A_ROW]
+          #TODO Macro-Fix
+          tile = [u, v]
+          @tiles[tileIndexByTileMacro(tile)] = true
+          @changed |= u in [@area[0]..@area[2]] and v in [@area[1]..@area[3]]
 
 
   ping : (position, direction, zoomStep) ->
@@ -91,6 +113,13 @@ class Plane2D
 
   get : (position, {zoomStep, area}) ->
 
+    $.when(@getImpl(position, zoomStep, area))
+
+  getImpl : (position, zoomStep, area) ->
+
+    # Saving the layer, we'll have to render
+    layer = position[@w]
+
     # Making sure, position is top-left corner of some bucket
     position = [
       position[0] & ~0b11111
@@ -102,7 +131,6 @@ class Plane2D
     topLeftPosition = position.slice(0)
     topLeftPosition[@u] -= 1 << @TEXTURE_SIZE_P - 1 + zoomStep
     topLeftPosition[@v] -= 1 << @TEXTURE_SIZE_P - 1 + zoomStep
-    layer = topLeftPosition[@w]
 
     topLeftBucket = @cube.positionToZoomedAddress(topLeftPosition, zoomStep)
 
@@ -120,8 +148,8 @@ class Plane2D
       @zoomStep = zoomStep
       @topLeftBucket = topLeftBucket
       @area = area
-      @tiles = @getTileArray(topLeftBucket, 1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
-      @buffer = new Uint8Array(1 << 2 * @TEXTURE_SIZE_P)
+      @tiles = @getTileArray(topLeftBucket, @BUCKETS_IN_A_ROW)
+      @buffer = new Uint8Array(1 << @TEXTURE_SIZE_P * 2)
       @changed = true
 
     # If the top-left-bucket has changed, still visible tiles are copied to their new location
@@ -131,8 +159,8 @@ class Plane2D
       oldBuffer = @buffer
 
       @topLeftBucket = topLeftBucket
-      @tiles = @getTileArray(topLeftBucket, 1 << @TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
-      @buffer = new Uint8Array(1 << 2 * @TEXTURE_SIZE_P)
+      @tiles = @getTileArray(topLeftBucket, @BUCKETS_IN_A_ROW)
+      @buffer = new Uint8Array(1 << @TEXTURE_SIZE_P * 2)
       @changed = true
 
       # Calculating boundaries for copying
@@ -157,9 +185,9 @@ class Plane2D
           oldTileIndex = tileIndexByTileMacro(oldTile)
           newTileIndex = tileIndexByTileMacro(newTile)
 
-          if plane.tiles[newTileIndex] and not oldTiles[oldTileIndex]
+          if @tiles[newTileIndex] and not oldTiles[oldTileIndex]
             
-#            @copyTile(newTile, oldTile, @buffer, oldBuffer)
+            #@copyTile(newTile, oldTile, @buffer, oldBuffer)
             @tiles[newTileIndex] = false
 
     # If something has changed, only changed tiles are drawn
@@ -204,7 +232,7 @@ class Plane2D
     destOffset = bufferOffsetByTileMacro(destTile, 1 << @cube.BUCKET_SIZE_P)
     sourceOffset = bufferOffsetByTileMacro(sourceTile, 1 << @cube.BUCKET_SIZE_P)
             
-    #TODO @renderToBuffer(destBuffer, destOffset, @TEXTURE_SIZE, 5, sourceBuffer, sourceOffset, 1, @TEXTURE_SIZE, 0, 0)        
+    @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, @cube.BUCKET_SIZE_P, sourceBuffer, sourceOffset, 1, 1 << @TEXTURE_SIZE_P, 0, 0)        
 
 
   renderTile : (tile) ->
@@ -214,10 +242,10 @@ class Plane2D
     bucket[@v] += tile[1]
 
     map = @generateRenderMap(bucket)
-    #@renderSubTile(map, 0, tile, plane.zoomStep, plane)
+    @renderSubTile(map, 0, tile, @zoomStep)
 
 
-  renderSubTile : (map, mapIndex, tile, tileZoomStep, plane) ->
+  renderSubTile : (map, mapIndex, tile, tileZoomStep) ->
 
     return unless map[mapIndex]
 
@@ -225,37 +253,36 @@ class Plane2D
 
       for i in [0..3] by 1
         subTile = subTileMacro(tile, i)
-        @renderSubTile(map, (mapIndex << 2) + 1 + i, subTile, tileZoomStep - 1, plane)
+        @renderSubTile(map, (mapIndex << 2) + 1 + i, subTile, tileZoomStep - 1)
 
     else
- 
-      tileSize = 5 - (plane.zoomStep - tileZoomStep)
-      bucket = Cube.getBucketByAddress(map[mapIndex])
-      skip = Math.max(plane.zoomStep - bucket.zoomStep, 0)
-      repeat = Math.max(bucket.zoomStep - plane.zoomStep, 0)
+
+      tileSize = @cube.BUCKET_SIZE_P - (@zoomStep - tileZoomStep)
+      bucket = @cube.getBucketByAddress(map[mapIndex])
+      skip = Math.max(@zoomStep - bucket.zoomStep, 0)
+      repeat = Math.max(bucket.zoomStep - @zoomStep, 0)
 
       destOffset = bufferOffsetByTileMacro(tile, tileSize)
 
       offsetMask = (1 << bucket.zoomStep - tileZoomStep) - 1;
-      scaleFactor = 5 - (bucket.zoomStep - tileZoomStep)
+      scaleFactor = @cube.BUCKET_SIZE_P - (bucket.zoomStep - tileZoomStep)
 
       sourceOffsets = [
-        (((plane.topLeftBucket[plane.view.u] << plane.zoomStep - tileZoomStep) + tile[0]) & offsetMask) << scaleFactor
-        (((plane.topLeftBucket[plane.view.v] << plane.zoomStep - tileZoomStep) + tile[1]) & offsetMask) << scaleFactor
-        (plane.layer >> bucket.zoomStep) & (1 << 5) - 1
+        (((@topLeftBucket[@u] << @zoomStep - tileZoomStep) + tile[0]) & offsetMask) << scaleFactor
+        (((@topLeftBucket[@v] << @zoomStep - tileZoomStep) + tile[1]) & offsetMask) << scaleFactor
+        (@layer >> bucket.zoomStep) & (1 << 5) - 1
       ]
 
-      sourceOffsets[plane.view.w] = sourceOffsets[plane.view.w] >> 1
-      sourceOffset = (sourceOffsets[0] << @DELTA[plane.view.u]) + (sourceOffsets[1] << @DELTA[plane.view.v]) + (sourceOffsets[2] << @DELTA[plane.view.w])
+      sourceOffset = (sourceOffsets[0] << @DELTA[@u]) + (sourceOffsets[1] << @DELTA[@v]) + (sourceOffsets[2] << @DELTA[@w])
 
-      @renderToBuffer(plane.buffer, destOffset, @TEXTURE_SIZE, tileSize, bucket.data, sourceOffset,
-        1 << (@DELTA[plane.view.u] + skip),
-        1 << (@DELTA[plane.view.v] + skip),
-        @REPEAT[plane.view.u] + repeat,
-        @REPEAT[plane.view.v] + repeat)
+      @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, tileSize, bucket.data, sourceOffset,
+        1 << (@DELTA[@u] + skip),
+        1 << (@DELTA[@v] + skip),
+        repeat,
+        repeat)
 
 
-  renderToBuffer : (destBuffer, destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat) ->
+  renderToBuffer : (destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat) ->
 
     i = 1 << (destSize << 1)
     destRowMask = (1 << destSize) - 1
@@ -263,7 +290,7 @@ class Plane2D
     sourceRowRepeatMask = (1 << destSize + sourceRowRepeat) - 1
 
     while i--
-      destBuffer[destOffset++] = sourceBuffer[sourceOffset]
+      @buffer[destOffset++] = sourceBuffer[sourceOffset]
      
       if (i & sourcePixelRepeatMask) == 0
         sourceOffset += sourcePixelDelta
@@ -275,20 +302,22 @@ class Plane2D
       if (i & sourceRowRepeatMask) == 0
         sourceOffset += sourceRowDelta
 
+    return
+
 
   generateRenderMap : (bucket) ->
 
     map = new Array(@MAP_SIZE)
     
-    console.log bucket
+    zoomStep = bucket[3]
 
-    if @zoomStep
+    if zoomStep
 
-      offset_x = bucket[0] << @zoomStep
-      offset_y = bucket[1] << @zoomStep
-      offset_z = bucket[2] << @zoomStep
+      offset_x = bucket[0] << zoomStep
+      offset_y = bucket[1] << zoomStep
+      offset_z = bucket[2] << zoomStep
 
-      width = 1 << @zoomStep
+      width = 1 << zoomStep
       for dx in [0...width] by 1
         for dy in [0...width] by 1
           for dz in [0...width] by 1

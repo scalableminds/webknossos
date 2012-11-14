@@ -7,7 +7,7 @@ class PullQueue
 
   # Constants
   BATCH_LIMIT : 5
-  BATCH_SIZE : 5
+  BATCH_SIZE : 20
   ROUND_TRIP_TIME_SMOOTHER : .125
 
   cube : null

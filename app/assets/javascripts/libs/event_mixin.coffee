@@ -2,7 +2,12 @@
 
 class EventMixin
 
+  __instance : null
+
   constructor : ->
+    
+    return EventMixin.__instance if typeof(EventMixin.__instance) == "object"
+    EventMixin.__instance = @
     @callbacks = {}
 
 

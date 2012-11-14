@@ -6,7 +6,7 @@ class Cube
 
   # Constants
   BUCKET_SIZE_P : 5
-  BUCKET_LENGTH : 1 << @BUCKET_SIZE_P * 3
+  BUCKET_LENGTH : 0
   ZOOM_STEP_COUNT : 4
 
   cube : null
@@ -17,6 +17,18 @@ class Cube
   constructor : () ->
     
     _.extend(@, new EventMixin())
+
+    @BUCKET_LENGTH = 1 << @BUCKET_SIZE_P * 3
+
+
+  getBucketByAddress : (bucket) ->
+
+    bucketIndex = @getBucketIndexByAddress(bucket)
+    
+    if bucketIndex?
+      @cube[bucketIndex]
+    else
+      undefined
 
 
   getBucketIndexByAddress : ([bucket_x, bucket_y, bucket_z]) ->
@@ -101,7 +113,7 @@ class Cube
             if bucketData
               if zoomStep < bucket.zoomStep 
                 bucket.data = bucketData
-                #@trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
+                @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
                 bucket.zoomStep = zoomStep
             else
               bucket.requestedZoomStep = bucket.zoomStep
@@ -113,7 +125,7 @@ class Cube
       if bucketData
         if zoomStep < bucket.zoomStep 
           bucket.data = bucketData
-          #@trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, 0], bucket.zoomStep)
+          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z], 0, bucket.zoomStep)
           bucket.zoomStep = 0
       else
         bucket.requestedZoomStep = bucket.zoomStep

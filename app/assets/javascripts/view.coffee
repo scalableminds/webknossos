@@ -135,11 +135,6 @@ class View
 
     TWEEN.update()
 
-    @model.binary.get([1000, 2000, 3000], [
-      {zoomStep : 0, area : [100, 100, 200, 200]}
-      {zoomStep : 1, area : [0, 0, 400, 400]}
-      {zoomStep : 2, area : [300, 300, 350, 500]}
-    ])
     @trigger "render"
 
     # skip rendering if nothing has changed

@@ -25,6 +25,8 @@ import play.api.libs.concurrent.execution.defaultContext
 import models.GridDataSetPairing
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
+import play.api.libs.iteratee.Input
+import play.api.libs.iteratee.Done
 
 class GridDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]])
     extends CachedDataStore(cacheAgent) {
@@ -49,7 +51,10 @@ class GridDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]])
             val e = file.enumerate
             e.apply(it)
           case _ =>
-            throw new Exception("Couldn't find " + point)
+            Logger.error("Couldn't find %s in %s".format(point, dataSet))
+            Promise.pure{
+              Done[Array[Byte], Array[Byte]](nullBlock, Input.Empty)
+            }
         }
         f
       }.seq))

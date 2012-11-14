@@ -16,11 +16,11 @@ import Input.EOF
 import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
 import play.libs.Akka._
-import models.Role
+import models.security.Role
+import models.binary.DataSet
 import brainflight.binary._
 import brainflight.security.Secured
 import brainflight.tools.geometry.{ Point3D, Cuboid }
-import models.DataSet
 import akka.dispatch.Future
 import akka.pattern.AskTimeoutException
 import play.api.libs.iteratee.Concurrent.Channel
@@ -38,9 +38,9 @@ import play.api.libs.concurrent.execution.defaultContext
 
 object BinaryData extends Controller with Secured {
 
-  val dataSetActor = Akka.system.actorOf(Props[DataSetActor].withRouter(
-    RoundRobinRouter(nrOfInstances = 10)))
-
+  val dataSetActor = Akka.system.actorOf( Props( new DataSetActor ).withRouter(
+    RoundRobinRouter( nrOfInstances = 10 ) ) )
+    
   override val DefaultAccessRole = Role.User
 
   implicit val dispatcher = Akka.system.dispatcher
@@ -128,26 +128,20 @@ object BinaryData extends Controller with Secured {
         { Logger.debug("Data websocket completed") },
         { case (e, i) => Logger.error("An error ocourd on websocket stream: " + e) })
 
-      /*val input = Iteratee.foreach[Array[Byte]](in => {
-        // first 4 bytes are always used as a client handle
-        val t = System.currentTimeMillis
+      val input = Iteratee.foreach[Array[Byte]]( in => {
         for {
           dataSet <- dataSetOpt
           channel <- channelOpt
         } {
-          BinaryProtocol.parseWebsocket(in).map {
-            case dataRequests @ MultipleDataRequest(_) =>
-              handleMultiDataRequest(dataRequests, cubeSize, dataSet).map( _.map{
-                result =>
-                  println("%d ms".format(System.currentTimeMillis - t))
-                  channel.push(dataRequests.handle ++ result)
-              })
+          BinaryProtocol.parseWebsocket( in ).map {
+            case dataRequests : MultipleDataRequest =>
+              handleMultiDataRequest(dataRequests, cubeSize, dataSet).map( _.map(
+                  result => channel.push( dataRequests.handle ++ result )))
             case _ =>
               Logger.error("Received unhandled message!")
           }
         }
-      })*/
-      val input = Done[Array[Byte], Unit]((), Input.EOF)
+      })
       (input, output)
   }
 

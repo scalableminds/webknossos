@@ -17,6 +17,8 @@ case class Point3D(x: Int, y:Int, z:Int){
     
   def hasGreaterCoordinateAs( other: Point3D ) = 
     x > other.x || y > other.y || z > other.z
+    
+  override def toString = "(%d, %d, %d)".format(x,y,z)
 }
 
 object Point3D{

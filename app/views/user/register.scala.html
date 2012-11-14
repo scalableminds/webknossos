@@ -1,0 +1,41 @@
+@(form: Form[(String, String, String, String)])(implicit flash: Flash)
+
+@import BootstrapHelpers._
+
+@main( None, false ){
+  
+  <div class="container">
+    <div class="span7 offset2 space-top">
+      <div class="well">
+        
+        @helper.form(routes.Application.registrate, 'class -> "form-horizontal") {
+        
+          <legend>Sign up</legend>
+          
+          @form.errors.map { error =>
+            <div class="alert alert-error">
+              @Messages(error.message)
+            </div>
+          }
+
+          @flash.get("success").map { message =>
+            <div class="alert alert-success">
+              @Messages(message)
+            </div>
+          }
+
+          @helper.inputText(form("email"), 'type -> "email")
+          @helper.inputText(form("firstName"))
+          @helper.inputText(form("lastName"))
+          @helper.inputPassword(form("password.main"))
+          @helper.inputPassword(form("password.validation"))
+          
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Sign up</button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+  

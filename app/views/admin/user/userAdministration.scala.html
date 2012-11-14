@@ -1,0 +1,37 @@
+@(loggedInUser: models.user.User, users: List[models.user.User])
+
+@main(Some(loggedInUser)){
+  <div id="user-administration" class="container">
+    
+    <h3> Users </h3> 
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th></th>
+          <th> Last name </th>
+          <th> First name </th>
+          <th> Email </th>
+          <th> Role </th>
+          <th> Verified </th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @users.map{ user =>
+          @userTableItem(user)
+        }
+      </tbody>
+    </table>
+
+    <div class="btn-group">
+      <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+        Bulk Actions
+        <span class="caret"></span>
+      </a>
+      <ul class="dropdown-menu">
+        <li><a href="#">Verify</a></li> 
+      </ul>
+    </div>
+
+  </div>
+}

@@ -1,0 +1,87 @@
+@(loggedInUser: models.user.User, temporaryExperiments: List[models.task.Experiment], userTasks: List[(models.task.Task, models.task.Experiment)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, akka.util.Duration]], dataSets: List[models.binary.DataSet])
+
+@import brainflight.format._
+
+@main(Some(loggedInUser)){
+  <div class="container" id="dashboard">
+    <h3>Tasks</h3>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th> # </th>
+          <th> Cell </th>
+          <th> Task type </th>
+          <th> DataSet </th>
+          <th> Start </th>
+          <th> </th>
+        </tr>
+      </thead>
+      <tbody>
+      @userTasks.map{ case (task, experiment) => 
+        @taskExperimentTableItem(task, experiment)
+      }
+      </tbody>
+    </table>
+    <a href="@controllers.routes.TaskController.request" class="btn"  data-ajax="add-row">Get a new task</a>
+
+    <hr />
+
+    <h3>Explorative experiments</h3>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th> # </th>
+          <th> DataSet </th>
+          <th> Trees </th>
+          <th> Last edited </th>
+          <th> </th>
+        </tr>
+      </thead>
+      <tbody>
+      @temporaryExperiments.map{ experiment => 
+        <tr>
+          <td> @experiment.id.drop(10) </td>
+          <td> @experiment.dataSetName </td>
+          <td> @experiment.trees.size </td>
+          <td> @DateFormatter.format(experiment.date) </td>
+          <td> <a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a></td>
+        </tr>
+      }
+      </tbody>
+    </table>
+
+    @helper.form(action = controllers.routes.ExperimentController.createExplorational) {
+      <div class="input-append">
+        <select name="dataSetId">
+          @dataSets.map{ d => 
+            <option value="@d.id"> @d.name </option>
+          }
+        </select>
+        <input type="submit" value="Explore data set" class="btn"/>
+      </div>
+    }
+
+    @trackedTimeOpt.map{ trackedTime =>
+      <h3>Tracked Time</h3>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th> Month </th>
+            <th> Worked </th>
+            <th> Payed </th>
+          </tr>
+        </thead>
+        <tbody>
+        @trackedTime.map{ case (interval, time) => 
+          <tr>
+            <td> @interval </td>
+            <td> @time.printHMS </td>
+            <td> </td>
+          </tr>
+        }
+        </tbody>
+      </table>
+    }
+  </div>
+
+}

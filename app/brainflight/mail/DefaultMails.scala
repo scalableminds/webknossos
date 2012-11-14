@@ -1,8 +1,9 @@
 package brainflight.mail
 
 import views._
-import models.User
+import models.user.User
 import play.api.Play
+import play.api.i18n.Messages
 
 object DefaultMails {
   /**
@@ -19,13 +20,19 @@ object DefaultMails {
    * Creates a registration mail which should allow the user to verify his 
    * account
    */
-  def registerMail( name: String, receiver: String, validationKey: String ) =
+  def registerMail( name: String, receiver: String, brainDBresult: String ) =
     Mail(
         from = "no-reply@brainflight.net",
-        subject = "Please verify your account on "+ uri,
-        bodyText = html.mail.register( 
-            name, 
-            uri + controllers.routes.UserController.verify( validationKey ).url).body,
+        subject = "Thanks for your registration on "+ uri,
+        bodyText = html.mail.register( name, Messages(brainDBresult) ).body,
+        recipients = List( receiver )
+    )
+    
+  def verifiedMail( name: String, receiver: String ) =
+    Mail(
+        from = "no-reply@brainflight.net",
+        subject = "Your account on "+ uri + "got activated",
+        bodyText = html.mail.validated( name ).body,
         recipients = List( receiver )
     )
 }

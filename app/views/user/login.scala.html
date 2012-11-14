@@ -1,0 +1,47 @@
+@(form: Form[(String, String)])(implicit flash: Flash)
+
+@import BootstrapHelpers._
+
+@main( None, false ){
+    
+  <div class="container">
+    <div class="span9 offset1 space-top">
+      <div class="well">
+        
+        @helper.form(routes.Application.authenticate, 'class -> "form-horizontal") {
+        
+          <legend>Login</legend>
+
+          @form.globalError.map { error =>
+            <div class="alert alert-error">
+              @error.message
+            </div>
+          }
+          
+          @flash.get("success").map { message =>
+            <div class="alert alert-success">
+              @message
+            </div>
+          }
+
+          @helper.inputText(form("email"), 'type -> "email")
+          @helper.inputPassword(form("password"))
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Login</button>
+            <a href="@routes.Application.register" class="btn">Sign Up</a>
+          </div>        
+        }
+      </div>
+      <p><small>Logo credits: <a href="http://thenounproject.com/noun/shamrock/#icon-No1195" target="_blank">Shamrock</a> designed by <a href="http://thenounproject.com/legologic" target="_blank">John O&#39;Shea</a> from The Noun Project</small></p>
+    </div>
+    <!--
+    <p class="note">
+      Try <em>scmboy@@scalableminds.com</em> with <em>secret</em> as password.
+    </p>
+    -->
+  </div>
+}
+  
+
+

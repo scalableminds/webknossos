@@ -3,7 +3,7 @@ package brainflight.binary
 import play.Logger
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import brainflight.tools.geometry.Point3D
-import models.DataSet
+import models.binary.DataSet
 import akka.routing.Broadcast
 import akka.agent.Agent
 import play.api.libs.concurrent.Promise

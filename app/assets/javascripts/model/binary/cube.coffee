@@ -77,9 +77,9 @@ Cube =
 
     { cube } = @
 
-    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "getRequestedZoomStepOfBucketByAddress3")
+    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
 
-    if cube[bucketIndex]
+    if bucketIndex? cube[bucketIndex]
       cube[bucketIndex].requestedZoomStep
     else
       @ZOOM_STEP_COUNT
@@ -98,7 +98,7 @@ Cube =
 
     { cube } = @
 
-    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "getZoomStepOfBucketByAddress3")
+    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
 
     if bucketIndex? and cube[bucketIndex]
       cube[bucketIndex].zoomStep
@@ -118,7 +118,7 @@ Cube =
 
     { cube } = @
 
-    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "getBucketByAddress3")
+    bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
     
     if bucketIndex?
       cube[bucketIndex]
@@ -150,33 +150,31 @@ Cube =
         for dy in [0...width] by 1
           for dz in [0...width] by 1
 
-            bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz, "setBucketByZoomedAddress")
-
-            if bucketIndex == undefined
-              console.log "ERROR"
-            bucket = cube[bucketIndex]
-
-            if bucketData
-              if zoomStep < bucket.zoomStep 
-                bucket.data = bucketData
-                @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
-                bucket.zoomStep = zoomStep
-            else
-              bucket.requestedZoomStep = bucket.zoomStep
+            bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz)
+            
+            if bucketIndex?
+              bucket = cube[bucketIndex]
+              if bucketData
+                if zoomStep < bucket.zoomStep 
+                  bucket.data = bucketData
+                  @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
+                  bucket.zoomStep = zoomStep
+              else
+                bucket.requestedZoomStep = bucket.zoomStep
 
     else
-      bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z, "setBucketByZoomedAddress")
-      
-      if bucketIndex == undefined
-        console.log "ERROR"
-      bucket = cube[bucketIndex]
-      if bucketData
-        if zoomStep < bucket.zoomStep 
-          bucket.data = bucketData
-          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z], 0, bucket.zoomStep)
-          bucket.zoomStep = 0
-      else
-        bucket.requestedZoomStep = bucket.zoomStep
+      bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)      
+      if bucketIndex?
+        bucket = cube[bucketIndex]
+        unless bucket
+          return 0
+        if bucketData
+          if zoomStep < bucket.zoomStep 
+            bucket.data = bucketData
+            @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z], 0, bucket.zoomStep)
+            bucket.zoomStep = 0
+        else
+          bucket.requestedZoomStep = bucket.zoomStep
 
     return
 
@@ -208,9 +206,7 @@ Cube =
 
             bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz)
 
-            if bucketIndex == undefined
-              console.log "ERROR"
-            if cube[bucketIndex]
+            if bucketIndex? and cube[bucketIndex]
               cube[bucketIndex].requestedZoomStep = Math.min(zoomStep, cube[bucketIndex].requestedZoomStep)
             else
               cube[bucketIndex] = { requestedZoomStep : zoomStep, zoomStep : @ZOOM_STEP_COUNT }
@@ -219,10 +215,7 @@ Cube =
 
       bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
 
-      if bucketIndex == undefined
-        console.log "ERROR"
-
-      if cube[bucketIndex]
+      if bucketIndex? and cube[bucketIndex]
         cube[bucketIndex].requestedZoomStep = 0
       else
         cube[bucketIndex] = { requestedZoomStep : 0, zoomStep : @ZOOM_STEP_COUNT }
@@ -259,7 +252,6 @@ Cube =
       bucketIndexByAddress3Macro(bucket_x, bucket_y, bucket_z)
 
     else
-
       undefined
 
         

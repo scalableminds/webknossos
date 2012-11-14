@@ -1,0 +1,32 @@
+error.email=Please supply a valid email address.
+error.email.inuse=This email address is already in use
+
+error.password.nomatch=Passwords don''t match
+error.password.tooshort=Password too short
+
+error.required=Please supply all needed values.
+error.login.invalid=Invalid email or password
+
+email=Email
+password=Password
+password.main=Password
+password.validation=Password (again)
+firstName=First Name
+lastName=Last Name
+
+user.verified=has been verified
+user.deleted=has been deleted
+
+task.finished=Task is finished
+task.new=You got a new task
+taskInstances=Task instances
+taskType=Task type
+taskType.invalid=Selected type doesn''t exist
+priority=Priority
+experiment=Experiment
+experiment.invalid=Selected experiment doesn''t exist
+summary=Summary
+description=Description
+expectedTime.minTime=Expected Time (min)
+expectedTime.maxTime=Expected Time (max)
+expectedTime.maxHard=Time limit

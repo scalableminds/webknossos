@@ -6,6 +6,7 @@ import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
+import models.binary.DataSet
 import reactivemongo.api._
 import reactivemongo.bson._
 import reactivemongo.bson.handlers.DefaultBSONHandlers._
@@ -33,7 +34,7 @@ object GridDataSetPairing {
     }
   }
 
-  import BinaryDB._
+  import context.BinaryDB._
   val collection = db.collection("dataSetPairing")
 
   def findPrefix(dataSet: DataSet) = {

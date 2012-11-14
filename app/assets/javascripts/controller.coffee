@@ -33,7 +33,7 @@ class Controller
     @view  = new View(@model, @flycam)
 
     # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model, [2000, 2000, 2000])
+    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
@@ -47,22 +47,21 @@ class Controller
     @canvasesAndNav = $("#main")[0]
 
     @prevControls = $('#prevControls')
+    @prevControls.addClass("btn-group")
     values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
     callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
                       @cameraController.changePrevXZ, @cameraController.changePrevSV]
     buttons       = new Array(4)
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-      buttons[i] = document.createElement "input"
-      buttons[i].setAttribute "type", "button"
-      buttons[i].setAttribute "value", values[i]
-      buttons[i].addEventListener "click", callbacks[i], true
-      @prevControls.append buttons[i]
+      buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
+      buttons[i].on("click", callbacks[i])
+      @prevControls.append(buttons[i])
 
     @model.Route.initialize().then(
       (position) =>
         # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
 
-        @sceneController = new SceneController([2000, 2000, 2000], @flycam, @model)
+        @sceneController = new SceneController(@model.Route.data.dataSet.upperBoundary, @flycam, @model)
         meshes      = @sceneController.getMeshes()
         for mesh in meshes
           @view.addGeometry(mesh)
@@ -186,10 +185,13 @@ class Controller
       #Branches
       "b" : => 
         @model.Route.putBranch()
+        @sceneController.skeleton.setBranchPoint(true)
       "j" : => @model.Route.popBranch().done(
         (id) => 
           @setActiveNode(id, true)
+          @sceneController.skeleton.setBranchPoint(false)
         )
+      "h" : @centerActiveNode
 
       #Zoom in/out
       "i" : =>
@@ -269,13 +271,18 @@ class Controller
   ########### Click callbacks
   
   setWaypoint : (relativePosition, typeNumber) =>
-    curGlobalPos = @flycam.getGlobalPos()
-    zoomFactor   = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
-    scaleFactor  = @view.scaleFactor
+    curGlobalPos  = @flycam.getGlobalPos()
+    zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
+    activeNodePos = @model.Route.getActiveNodePos()
+    scaleFactor   = @view.scaleFactor
     switch @flycam.getActivePlane()
       when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2]]
       when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
       when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
+    # set the new trace direction
+    if activeNodePos
+      p = [position[0] - activeNodePos[0], position[1] - activeNodePos[1], position[2] - activeNodePos[2]]
+      @flycam.setDirection(p)
     @addNode(position)
 
   onPreviewClick : (position) =>
@@ -326,10 +333,13 @@ class Controller
   setActiveNode : (nodeId, centered) =>
     @model.Route.setActiveNode(nodeId)
     if centered
-      @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+      @centerActiveNode()
     @flycam.hasChanged = true
     @gui.update()
     @sceneController.skeleton.setActiveNode()
+
+  centerActiveNode : =>
+    @flycam.setGlobalPos(@model.Route.getActiveNodePos())
 
   deleteActiveNode : =>
     @model.Route.deleteActiveNode()
@@ -371,38 +381,38 @@ class Controller
     @model.User.Configuration.mouseRotateValue = (Number) value
     @model.User.Configuration.push()             
 
-  setMouseActivity : (value) =>
-    @model.User.Configuration.mouseActive = value
-    @model.User.Configuration.push()
-    if value is false
-      @input.mouse.unbind()
-      @input.mouse = null
-    else
-      @initMouse()
+  #setMouseActivity : (value) =>
+  #  @model.User.Configuration.mouseActive = value
+  #  @model.User.Configuration.push()
+  #  if value is false
+  #    @input.mouse.unbind()
+  #    @input.mouse = null
+  #  else
+  #    @initMouse()
 
-  setKeyboardActivity : (value) =>
-    @model.User.Configuration.keyboardActive = value 
-    @model.User.Configuration.push()
-    if value is false
-      @input.keyboard.unbind()
-      @input.keyboard = null
-    else
-      @initKeyboard()
+  #setKeyboardActivity : (value) =>
+  #  @model.User.Configuration.keyboardActive = value 
+  #  @model.User.Configuration.push()
+  #  if value is false
+  #    @input.keyboard.unbind()
+  #    @input.keyboard = null
+  #  else
+  #    @initKeyboard()
 
-  setGamepadActivity : (value) =>
-    @model.User.Configuration.gamepadActive = value  
-    @model.User.Configuration.push()   
-    if value is false
-      @input.gamepad.unbind()
-      @input.gamepad = null
-    else
-      @initGamepad()    
+  #setGamepadActivity : (value) =>
+  #  @model.User.Configuration.gamepadActive = value  
+  #  @model.User.Configuration.push()   
+  #  if value is false
+  #    @input.gamepad.unbind()
+  #    @input.gamepad = null
+  #  else
+  #    @initGamepad()    
 
-  setMotionSensorActivity : (value) =>
-    @model.User.Configuration.motionsensorActive = value
-    @model.User.Configuration.push()   
-    if value is false
-      @input.deviceorientation.unbind()
-      @input.deviceorientation = null
-    else
-      @initMotionsensor()
+  #setMotionSensorActivity : (value) =>
+  #  @model.User.Configuration.motionsensorActive = value
+  #  @model.User.Configuration.push()   
+  #  if value is false
+  #    @input.deviceorientation.unbind()
+  #    @input.deviceorientation = null
+  #  else
+  #    @initMotionsensor()

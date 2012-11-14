@@ -1,0 +1,24 @@
+@(user: models.user.User, userExperiments: Map[models.user.User,List[models.task.Experiment]])
+
+@import brainflight.format._
+
+@main(Some(user), false){
+  <div class="container">
+    @userExperiments.map{ case (user, experiments) =>
+      <div class="folder">
+            <h5>@user.name (@user.email)</h5>
+        <table class="table table-striped">
+          <tbody>
+            @experiments.sortBy(_.timestamp).map{ exp =>
+              <tr>
+                <td><strong>@exp.dataSetName</strong></h4>
+                <td><time datetime="@exp.date">@DateFormatter.format(exp.date)</time></td>
+                <td><a href="@controllers.admin.routes.NMLIO.download(exp.id)"><i class="icon-download"></i> Export NML</a></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+  }
+  </div>
+}

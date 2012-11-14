@@ -154,6 +154,7 @@ Route =
           for branchpoint in data.experiment.branchPoints
             node = @findNodeInList(nodeList, branchpoint.id)
             if node
+              node.type = TYPE_BRANCH
               @branchStack.push(node)
             
           for tree in @trees
@@ -286,6 +287,7 @@ Route =
       #@addToBuffer(1, position)
       if @activeNode
         @branchStack.push(@activeNode)
+        @activeNode.type = TYPE_BRANCH
 
       #@putNewPoint(position, TYPE_BRANCH)
 
@@ -301,6 +303,7 @@ Route =
       deferred = new $.Deferred()
       if point
         @activeNode = point
+        @activeNode.type = TYPE_USUAL
         @lastActiveNodeId = @activeNode.id
         deferred.resolve(@activeNode.id)
       else

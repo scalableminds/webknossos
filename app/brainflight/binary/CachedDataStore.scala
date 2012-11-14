@@ -1,12 +1,11 @@
 package brainflight.binary
 
-import models.DataSet
 import brainflight.tools.geometry.Point3D
 import play.api.Play.current
 import play.api.Play
 import play.api.Logger
 import brainflight.tools.geometry.Point3D
-import models.DataSet
+import models.binary.DataSet
 import brainflight.tools.geometry.Cuboid
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import akka.agent.Agent

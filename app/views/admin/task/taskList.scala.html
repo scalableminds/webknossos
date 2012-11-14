@@ -1,0 +1,27 @@
+@(loggedInUser: models.user.User, tasks: List[models.task.Task])
+
+@main(Some(loggedInUser)){
+  <div class="container">
+    <h3>Tasks</h3>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th> # </th>
+          <th> Cell </th>
+          <th> HBerg-Id </th>
+          <th> Type </th>
+          <th> DataSet </th>
+          <th> Start </th>
+          <th> Priority </th>
+          <th> Created </th>
+          <th> States </th>
+        </tr>
+      </thead>
+      <tbody>
+      @tasks.map{ task => 
+        @taskTableItem(task)
+      }
+      </tbody>
+    </table>
+  </div>
+}

@@ -4,28 +4,30 @@ import play.api.mvc.Controller
 import play.api.mvc.Action
 import brainflight.security.Secured
 import views.html
-import models.User
+import models.user._
 import nml._
-import models.graph.Experiment
-import models.Role
+import models.task.Experiment
+import models.security.Role
 import nml.NMLParser
 import xml.Xml
 import play.api.Logger
+import models.task.UsedExperiments
 
 object NMLIO extends Controller with Secured {
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )
 
   def uploadForm = Authenticated { implicit request =>
-    Ok(html.admin.nmlupload(request.user))
+    Ok(html.admin.nml.nmlupload(request.user))
   }
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
     request.body.file("nmlFile").map { nmlFile =>
-      (new NMLParser(nmlFile.ref.file).parse).foreach { e =>
+      implicit val ctx = NMLContext(request.user)
+      (new NMLParser(nmlFile.ref.file).parse).foreach { exp =>
         Logger.debug("Successfully parsed nmlFile")
-        User.save(request.user.copy(experiments = e._id :: request.user.experiments))
-        Experiment.save(e)
+        Experiment.save(exp)
+        UsedExperiments.use(request.user, exp)
       }
       Ok("File uploaded")
     }.getOrElse {
@@ -34,7 +36,10 @@ object NMLIO extends Controller with Secured {
   }
 
   def downloadList = Authenticated { implicit request =>
-    Ok(html.admin.index(request.user, User.findAll))
+    val userExperiments = Experiment.findAll.groupBy(_._user).flatMap{ case (userId, experiments) =>
+      User.findOneById(userId).map( _ -> experiments) 
+    }
+    Ok(html.admin.nml.nmldownload(request.user, userExperiments))
   }
 
   def download(taskId: String) = Authenticated { implicit request =>

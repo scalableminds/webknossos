@@ -4,7 +4,11 @@ import brainflight.security.Secured
 import models.User
 import play.api.test.FakeRequest
 import models.Role
+<<<<<<< HEAD
+import models.security.Permission
+=======
 import models.Permission
+>>>>>>> dev
 
 object ExtendedFakeRequest {
   implicit def FakeRequest2ExtendedFakeRequest[T]( f: FakeRequest[T] ) = new ExtendedFakeRequest[T]( f )

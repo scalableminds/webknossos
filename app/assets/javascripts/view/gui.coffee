@@ -25,6 +25,7 @@ class Gui
     modelRadius = @model.Route.getActiveNodeRadius()
     @settings = { 
                 save : @saveNow
+                finish : @finish
                 upload : @uploadNML
                 download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
                                           "_blank", "width=700,height=400,location=no,menubar=no")
@@ -34,10 +35,11 @@ class Gui
                 selectedExperimentIndex : 0
                 changeExperiment : => 
                   experiment = @settings.experiments[@settings.selectedExperimentIndex]
-                  request(
-                    method : "POST"
-                    url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
-                  ).always -> window.location.reload()
+                  @model.Route.pushImpl().done ->
+                    request(
+                      method : "POST"
+                      url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
+                    ).always -> window.location.reload()
 
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
                 lockZoom: data.lockZoom
@@ -68,12 +70,14 @@ class Gui
     
     container.append @gui.domElement
 
-    fFile = @gui.addFolder("File")
-    (fFile.add @settings, "save")
+    fTask = @gui.addFolder("Task")
+    (fTask.add @settings, "save")
                           .name("Save now")
-    (fFile.add @settings, "upload")
+    (fTask.add @settings, "finish")
+                          .name("Finish task")
+    (fTask.add @settings, "upload")
                           .name("Upload NML")
-    (fFile.add @settings, "download")
+    (fTask.add @settings, "download")
                           .name("Download NML")
     
     fExperiment = @gui.addFolder("Experiment")
@@ -172,7 +176,7 @@ class Gui
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
-    fFile.open()
+    fTask.open()
     fPosition.open()
     #fControls.open()
     #fView.open()
@@ -183,8 +187,13 @@ class Gui
   saveNow : =>
     @model.User.Configuration.pushImpl()
     @model.Route.pushImpl()
-      .fail( -> alert("Something went wrong with saving, please try again."))
-      .done( -> alert("Successfully saved!"))
+      .then( 
+        -> toastSuccess("Saved!")
+        -> toastError("Couldn't save. Please try again.")
+      )
+
+  finish : =>
+    toastSuccess("Yeah. Finished. Maybe. Whatever.")
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")

@@ -43,12 +43,12 @@ object TaskController extends Controller with Secured {
       .filter(_._user == request.user._id)
       .map { experiment =>
         if (experiment.isTrainingsExperiment) {
-          val alteredExp = Experiment.passToReview(experiment)
+          val alteredExp = experiment.update(_.passToReview)
           experiment.taskId.flatMap(Task.findOneById).map { task =>
             AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.passedToReview"))
           } getOrElse BadRequest(Messages("task.notFound"))
         } else {
-          val alteredExp = Experiment.finish(experiment)
+          val alteredExp = experiment.update(_.finish)
           experiment.taskId.flatMap(Task.findOneById).map { task =>
             AjaxOk.success(html.user.dashboard.taskExperimentTableItem(task, alteredExp), Messages("task.finished"))
           } getOrElse BadRequest(Messages("task.notFound"))

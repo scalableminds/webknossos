@@ -18,7 +18,7 @@ object UsedExperiments extends BasicDAO[UsedExperiments]("usedExperiments") {
     find( MongoDBObject("user" -> user._id)).map(_.experiment).toList
   
   def removeAll(user: User) {
-    find(MongoDBObject("user" -> user._id)).toList.foreach(UsedExperiments.remove)
+    UsedExperiments.remove(MongoDBObject("user" -> user._id))
   }
   
   def removeAll(experiment: Experiment) {

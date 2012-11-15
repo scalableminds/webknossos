@@ -36,9 +36,9 @@ object TrainingsExperimentAdministration extends Controller with Secured {
     }) getOrElse BadRequest("Couldn't create review experiment.")
   }
 
-  def abortReview(training: String) = Authenticated { implicit request =>
-    Experiment.findOneById(training) map { experiment =>
-      val altered = Experiment.unassignReviewee(experiment)
+  def abortReview(trainingsId: String) = Authenticated { implicit request =>
+    Experiment.findOneById(trainingsId) map { training =>
+      val altered = training.update(_.unassign)
       AjaxOk.success(
         html.admin.task.trainingsTasksDetailTableItem(request.user, altered),
         "You got unassigned from this training.")
@@ -48,7 +48,7 @@ object TrainingsExperimentAdministration extends Controller with Secured {
   def finishReview(training: String) = Authenticated { implicit request =>
     Experiment.findOneById(training) map { experiment =>
       experiment.review match {
-        case Some(r) if r.reviewee == request.user._id =>
+        case Some(r) if r._reviewee == request.user._id =>
           Ok(html.admin.task.trainingsReview(request.user, experiment, reviewForm))
         case _ =>
           BadRequest("No open review found.")
@@ -70,12 +70,11 @@ object TrainingsExperimentAdministration extends Controller with Secured {
           training <- task.training
           trainee <- experiment.user
         } yield {
-          val alteredExperiment = Experiment.finishReview(experiment, comment)
           if (passed) {
             User.addExperience(trainee, training.domain, training.gain)
-            Experiment.finish(alteredExperiment)
+            experiment.update(_.finishReview(comment).finish)
           } else
-            Experiment.reopen(alteredExperiment)
+            experiment.update(_.finishReview(comment).reopen)
           AjaxOk.success("Trainings review finished.")
         }) getOrElse AjaxBadRequest.error("Trainings-Experiment not found.")
       })

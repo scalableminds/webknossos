@@ -37,6 +37,10 @@ class BasicDAO[T <: AnyRef](collectionName:String)(implicit val m: Manifest[T])
     el
   }
   
+  @deprecated
+  override def save(el: T) = super.save(el)
+  
+  @deprecated
   def alterAndSave(el: T) = 
     alter(save)(el)
     

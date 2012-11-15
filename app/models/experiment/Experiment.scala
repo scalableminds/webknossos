@@ -3,7 +3,6 @@ package models.experiment
 import play.api.libs.json.JsValue
 import play.api.libs.json.Reads
 import brainflight.tools.geometry.Point3D
-import models.basics.BasicDAO
 import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId
 import play.api.libs.json.Writes
@@ -22,7 +21,10 @@ import java.util.Date
 import com.mongodb.casbah.query._
 import models.experiment.ExperimentState._
 import nml.NMLParser
+import net.liftweb.json._
+import net.liftweb.json.Serialization.write
 import models.task._
+import models.basics._
 
 case class Experiment(
     _user: ObjectId,
@@ -37,8 +39,9 @@ case class Experiment(
     state: ExperimentState = InProgress,
     review: Option[ExperimentReview] = None,
     experimentType: ExperimentType.Value = ExperimentType.Explorational,
-    _id: ObjectId = new ObjectId) {
+    _id: ObjectId = new ObjectId) extends DAOCaseClass[Experiment] {
 
+  def dao = Experiment
   /**
    * Easy access methods
    */
@@ -63,6 +66,45 @@ case class Experiment(
 
   def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
 
+  /**
+   * State modifications
+   * always return a new instance!
+   */
+  def unassign =
+    this.copy(
+      state = InReview,
+      review = None)
+
+  def asReviewFor(training: Experiment, user: User) = {
+    this.copy(
+      _id = new ObjectId,
+      _user = user._id,
+      trees =
+        NMLParser.createUniqueIds(training.trees ::: this.trees),
+      timestamp = System.currentTimeMillis,
+      experimentType = ExperimentType.Review)
+  }
+
+  def finishReview(comment: String) = {
+    val alteredReview = this.review.map(_.copy(comment = Some(comment)))
+    this.copy(review = alteredReview)
+  }
+  
+    def finish = {
+    this.copy(state = Finished)
+  }
+
+  def passToReview = {
+    this.copy(state = InReview, review = None)
+  }
+
+  def reopen = {
+    this.copy(state = Reopened)
+  }
+
+  def removeTask= {
+    this.copy(taskId = None)
+  }
 }
 
 object Experiment extends BasicDAO[Experiment]("experiments") {
@@ -99,16 +141,6 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     }
   }
 
-  def createReviewFor(user: User, sample: Experiment, training: Experiment) = {
-    sample.copy(
-      _id = new ObjectId,
-      _user = user._id,
-      trees =
-        NMLParser.createUniqueIds(training.trees ::: sample.trees),
-      timestamp = System.currentTimeMillis,
-      experimentType = ExperimentType.Review)
-  }
-
   def createExperimentFor(user: User, task: Task) = {
     alterAndInsert(Experiment(user._id,
       task.dataSetName,
@@ -132,33 +164,23 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
     super.remove(experiment)
   }
 
-  def assignReviewee(experiment: Experiment, user: User) = {
+  def assignReviewee(trainingsExperiment: Experiment, user: User): Option[Experiment] = {
     for {
-      task <- experiment.task
+      task <- trainingsExperiment.task
       sampleId <- task.training.map(_.sample)
       sample <- Experiment.findOneById(sampleId)
     } yield {
-      val reviewExperiment =
-        Experiment.createReviewFor(user, sample, experiment)
+      val reviewExperiment = sample.asReviewFor(trainingsExperiment, user)
       Experiment.insert(reviewExperiment)
-      alterAndSave(experiment.copy(
-        state = InReview,
-        review = Some(ExperimentReview(
-          user._id,
-          reviewExperiment._id,
-          System.currentTimeMillis()))))
+      trainingsExperiment.update {
+        _.copy(
+          state = InReview,
+          review = Some(ExperimentReview(
+            user._id,
+            reviewExperiment._id,
+            System.currentTimeMillis())))
+      }
     }
-  }
-
-  def unassignReviewee(experiment: Experiment) = {
-    alterAndSave(experiment.copy(
-      state = InReview,
-      review = None))
-  }
-
-  def finishReview(experiment: Experiment, comment: String) = {
-    val alteredReview = experiment.review.map(_.copy(comment = Some(comment)))
-    alterAndSave(experiment.copy(review = alteredReview))
   }
 
   def createExperimentFor(u: User, d: DataSet = DataSet.default) = {
@@ -171,22 +193,6 @@ object Experiment extends BasicDAO[Experiment]("experiments") {
       Scale(12, 12, 24),
       Point3D(0, 0, 0),
       experimentType = ExperimentType.Explorational))
-  }
-
-  def finish(experiment: Experiment) = {
-    alterAndSave(experiment.copy(state = Finished))
-  }
-
-  def passToReview(experiment: Experiment) = {
-    alterAndSave(experiment.copy(state = InReview, review = None))
-  }
-
-  def reopen(experiment: Experiment) = {
-    alterAndSave(experiment.copy(state = Reopened))
-  }
-
-  def removeTask(experiment: Experiment) = {
-    alterAndSave(experiment.copy(taskId = None))
   }
 
   def findOpenExperimentFor(user: User, isExploratory: Boolean) =

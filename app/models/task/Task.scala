@@ -75,7 +75,7 @@ object Task extends BasicDAO[Task]("tasks") {
   
   override def remove(t: Task) = {
     t.experiments.map{ experiment =>
-      Experiment.removeTask(experiment)
+      experiment.update(_.removeTask)
     }
     super.remove(t)
   }

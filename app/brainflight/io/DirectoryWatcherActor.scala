@@ -84,7 +84,7 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
 
     registerAll(watchedPath)
     changeHandler.onStart(watchedPath)
-    updateTicker = context.system.scheduler.schedule(TICKER_INTERVAL, TICKER_INTERVAL)(
+    updateTicker = context.system.scheduler.schedule(0 seconds, TICKER_INTERVAL)(
       changeHandler.onTick(watchedPath))
     Akka.future {
       try {

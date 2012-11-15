@@ -3,10 +3,6 @@
 @experimentLinks = {
   <a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a><br/>
   <a href="@controllers.routes.TaskController.finish(experiment.id)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a>
-  @experiment.review.map(_.comment.map { comment =>
-     <br />
-     <span>Comment: @comment</span>
-  })
 }
 
 <tr>
@@ -15,13 +11,24 @@
   <td> @task.dataSetName </td>
   <td> @task.start </td>
   <td> 
-    @{experiment.state match{
-      case s if s.isFinished => 
+    @experiment.state match{
+      case s if s.isFinished => {
         <i class="icon-ok"></i><span> Finished</span>
-      case s if s.isInReview =>
+      }
+      case s if s.isInReview => {
         <i class="icon-eye-open"></i><span> In Review</span>
-      case _ =>
-        experimentLinks
-    }}
+      }
+      case _ => {
+        @experimentLinks
+        @experiment.review.flatMap(_.comment).map{ comment => 
+          <br />
+          <span>Comment: 
+            @comment.split("\n").map{ c =>
+              @c <br />
+            }
+          </span>
+        }
+      }
+    }
   </td>
 </tr>

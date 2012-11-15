@@ -11,8 +11,8 @@
         </div>
       </div>
       <div class="form-actions">
-        <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, true)" data-ajax="submit" class="btn btn-primary">Accept tracing</a>
-        <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, false)" data-ajax="submit" class="btn btn-danger">Reject tracing</a>
+        <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, true)" data-ajax="submit,redirect=@controllers.admin.routes.TrainingsTaskAdministration.list" class="btn btn-primary">Accept tracing</a>
+        <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, false)" data-ajax="submit,redirect=@controllers.admin.routes.TrainingsTaskAdministration.list" class="btn btn-danger">Reject tracing</a>
       </div>
     }
   </div>

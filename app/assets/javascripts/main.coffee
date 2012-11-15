@@ -176,6 +176,12 @@ $ -> # document is ready!
                 if options["reload"]
                     window.location.reload()
 
+                if options["redirect"]
+                    setTimeout(
+                        -> window.location.href = options["redirect"]
+                        500
+                    )
+
                 return
 
             (jqXHR) ->
@@ -269,6 +275,8 @@ $ -> # document is ready!
     route
 
         "dashboard" : ->
+
+            $("a[rel=popover]").popover()
 
             # $.ajax(
             #     type : "POST"

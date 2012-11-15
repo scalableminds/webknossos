@@ -3,6 +3,7 @@
 @experimentLinks = {
   <a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a><br/>
   <a href="@controllers.routes.TaskController.finish(experiment.id)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a>
+  
 }
 
 <tr>
@@ -14,6 +15,9 @@
     @experiment.state match{
       case s if s.isFinished => {
         <i class="icon-ok"></i><span> Finished</span>
+        @experiment.review.flatMap(_.comment).map{ comment => 
+          | <a href="#" rel="popover" data-title="Comment from Reviewer" data-placement="bottom" data-html="true" data-content="@comment.split("\n").map{ c => @c<br /> }">Comment <span class="caret-down"></span></a>
+        }
       }
       case s if s.isInReview => {
         <i class="icon-eye-open"></i><span> In Review</span>
@@ -21,12 +25,7 @@
       case _ => {
         @experimentLinks
         @experiment.review.flatMap(_.comment).map{ comment => 
-          <br />
-          <span>Comment: 
-            @comment.split("\n").map{ c =>
-              @c <br />
-            }
-          </span>
+          <a href="#" rel="popover" data-title="Comment from Reviewer" data-content="@comment">Comment <span class="caret-down"></span></a>
         }
       }
     }

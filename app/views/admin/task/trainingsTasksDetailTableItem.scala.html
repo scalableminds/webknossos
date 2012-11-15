@@ -13,11 +13,11 @@
 }
 
 @finishReviewLink() = {
-  <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReview(experiment.id)"><i class="icon-penis"></i> finish review </a><br />
+  <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReview(experiment.id)"><i class="icon-ok-sign"></i> finish review </a><br />
 }
 
 @abortReviewLink() = {
-  <a href="@controllers.admin.routes.TrainingsExperimentAdministration.abortReview(experiment.id)" data-ajax="replace-row,confirm"><i class="icon-penis"></i> abort review </a>
+  <a href="@controllers.admin.routes.TrainingsExperimentAdministration.abortReview(experiment.id)" data-ajax="replace-row,confirm"><i class="icon-remove-sign"></i> abort review </a>
 }
 
 @import brainflight.format._

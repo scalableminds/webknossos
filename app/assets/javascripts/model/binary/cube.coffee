@@ -111,7 +111,7 @@ class Cube
             bucket = @cube[bucketIndex]
 
             if bucketData
-              if zoomStep < bucket.zoomStep 
+              if zoomStep < bucket.zoomStep
                 bucket.data = bucketData
                 @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
                 bucket.zoomStep = zoomStep

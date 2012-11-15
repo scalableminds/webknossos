@@ -189,9 +189,9 @@ class Controller
     new Input.KeyboardNoLoop(
       #Branches
       "b" : => 
-        @model.Route.putBranch()
+        @model.route.putBranch()
         @sceneController.skeleton.setBranchPoint(true)
-      "j" : => @model.Route.popBranch().done(
+      "j" : => @model.route.popBranch().done(
         (id) => 
           @setActiveNode(id, true)
           @sceneController.skeleton.setBranchPoint(false)

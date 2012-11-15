@@ -115,8 +115,11 @@ class Plane2D
 
     $.when(@getImpl(position, zoomStep, area))
 
+
   getImpl : (position, zoomStep, area) ->
 
+    #@buffer = new Uint8Array(1 << @TEXTURE_SIZE_P * 2)
+    #return @buffer
     # Saving the layer, we'll have to render
     layer = position[@w]
 

@@ -1,6 +1,7 @@
 ### define
 model : Model
 view : View
+model/game : Game
 ###
 
 
@@ -83,6 +84,8 @@ class Plane
           if buffer
             @plane.texture.image.data.set(buffer)
             @flycam.hasNewTexture[@planeID] = true
+  
+      if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return
 
       @plane.texture.needsUpdate = true

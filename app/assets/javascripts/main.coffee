@@ -162,8 +162,9 @@ $ -> # document is ready!
                 if options["replace-row"] 
                     $this.parents("tr").first().replaceWith(html)
 
-
                 if options["delete-row"]
+                    if $this.parents("table").first().hasClass("table-details")
+                        $this.parents("tr").first().next().remove()
                     $this.parents("tr").first().remove()
 
                 if options["add-row"]

@@ -3,20 +3,16 @@
 @main(Some(loggedInUser)){
   <div class="container">    
     <h3>Review of Trainings-Experiment</h3>
-    @helper.form(action = controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, true)) {
+    @helper.form(action = controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, true), 'class -> "form-horizontal") {
       <div class="control-group">
         <label class="control-label" for="comment">Comment</label>
         <div class="controls">
-          <textarea name="comment" id="comment"></textarea>
+          <textarea name="comment" id="comment" class="input-xxlarge" rows="4"></textarea>
         </div>
       </div>
-      <div class="control-group">
-        <div class="controls">
-          <input type="submit" value="Accept tracing" class="btn btn-primary" />
-        </div>
-        <div class="controls">
-          <input type="submit" value="Reject training" class="btn btn red" />
-        </div>
+      <div class="form-actions">
+        <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, true)" data-ajax="submit" class="btn btn-primary">Accept tracing</a>
+        <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, false)" data-ajax="submit" class="btn btn-danger">Reject tracing</a>
       </div>
     }
   </div>

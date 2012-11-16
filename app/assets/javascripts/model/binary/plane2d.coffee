@@ -70,6 +70,8 @@ class Plane2D
 
   ping : (position, direction, zoomStep) ->
 
+    return unless @w == 2
+
     centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
  
     topLeftBucket = centerBucket.slice(0)
@@ -77,24 +79,29 @@ class Plane2D
     topLeftBucket[@v] -= @TEXTURE_SIZE_P - 1
 
     bottomRightBucket = centerBucket.slice(0)
-    bottomRightBucket[@u] += @TEXTURE_SIZE_P - 1
-    bottomRightBucket[@v] += @TEXTURE_SIZE_P - 1
-    bottomRightBucket[@w] += 1
+    bottomRightBucket[@u] += @TEXTURE_SIZE_P - 2
+    bottomRightBucket[@v] += @TEXTURE_SIZE_P - 2
 
     @cube.extendByBucketAddressExtent([
       topLeftBucket[0] << zoomStep
       topLeftBucket[1] << zoomStep
-      topLeftBucket[2] << zoomStep
+      (topLeftBucket[2] << zoomStep) - 2
     ], [
       bottomRightBucket[0] << zoomStep
       bottomRightBucket[1] << zoomStep
-      bottomRightBucket[2] << zoomStep
+      (bottomRightBucket[2] << zoomStep) + 2
     ])
 
     buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1)
 
     for bucket in buckets
-      @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], 0) if bucket?
+      if bucket?
+        priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
+        @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority)
+        bucket[@w]++
+        @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 1)
+        bucket[@w]++
+        @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 2)
 
 
   getBucketArray : (center, range) ->
@@ -118,8 +125,6 @@ class Plane2D
 
   getImpl : (position, zoomStep, area) ->
 
-    #@buffer = new Uint8Array(1 << @TEXTURE_SIZE_P * 2)
-    #return @buffer
     # Saving the layer, we'll have to render
     layer = position[@w]
 
@@ -190,7 +195,7 @@ class Plane2D
 
           if @tiles[newTileIndex] and not oldTiles[oldTileIndex]
             
-            #@copyTile(newTile, oldTile, @buffer, oldBuffer)
+            @copyTile(newTile, oldTile, oldBuffer)
             @tiles[newTileIndex] = false
 
     # If something has changed, only changed tiles are drawn
@@ -230,11 +235,11 @@ class Plane2D
     tiles
 
 
-  copyTile : (destBuffer, destTile, sourceBuffer, sourceTile) ->
+  copyTile : (destTile, sourceTile, sourceBuffer) ->
 
-    destOffset = bufferOffsetByTileMacro(destTile, 1 << @cube.BUCKET_SIZE_P)
-    sourceOffset = bufferOffsetByTileMacro(sourceTile, 1 << @cube.BUCKET_SIZE_P)
-            
+    destOffset = bufferOffsetByTileMacro(destTile, @cube.BUCKET_SIZE_P)
+    sourceOffset = bufferOffsetByTileMacro(sourceTile, @cube.BUCKET_SIZE_P)
+
     @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, @cube.BUCKET_SIZE_P, sourceBuffer, sourceOffset, 1, 1 << @TEXTURE_SIZE_P, 0, 0)        
 
 

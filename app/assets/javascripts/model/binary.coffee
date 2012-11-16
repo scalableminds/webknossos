@@ -7,7 +7,7 @@ model/binary/plane2d : Plane2D
 class Binary
 
   # Constants
-  PING_THROTTLE_TIME : 1000
+  PING_THROTTLE_TIME : 50
   DIRECTION_VECTOR_SMOOTHER : .125
 
   cube : null

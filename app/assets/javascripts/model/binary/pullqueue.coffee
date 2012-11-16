@@ -6,8 +6,8 @@ libs/array_buffer_socket : ArrayBufferSocket
 class PullQueue
 
   # Constants
-  BATCH_LIMIT : 5
-  BATCH_SIZE : 20
+  BATCH_LIMIT : 10
+  BATCH_SIZE : 10
   ROUND_TRIP_TIME_SMOOTHER : .125
 
   cube : null
@@ -137,8 +137,9 @@ class PullQueue
             for bucket, i in batch
 
               bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
-              @cube.setBucketByZoomedAddress(bucket, bucketData)
               #console.log "Success: ", bucket
+              @cube.setBucketByZoomedAddress(bucket, bucketData)
+              
 
         =>
           
@@ -160,12 +161,14 @@ class PullQueue
     else
       (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
 
+    console.log @roundTripTime
+
 
   getLoadBucketSocket : _.once ->
     
     new ArrayBufferSocket(
       senders : [
-        new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array

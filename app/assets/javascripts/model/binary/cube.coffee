@@ -21,16 +21,6 @@ class Cube
     @BUCKET_LENGTH = 1 << @BUCKET_SIZE_P * 3
 
 
-  getBucketByAddress : (bucket) ->
-
-    bucketIndex = @getBucketIndexByAddress(bucket)
-    
-    if bucketIndex?
-      @cube[bucketIndex]
-    else
-      undefined
-
-
   getBucketIndexByAddress : ([bucket_x, bucket_y, bucket_z]) ->
 
     { cubeOffset, cubeSize } = @
@@ -47,6 +37,16 @@ class Cube
     
     else
 
+      undefined
+
+
+  getBucketByAddress : (bucket) ->
+
+    bucketIndex = @getBucketIndexByAddress(bucket)
+    
+    if bucketIndex?
+      @cube[bucketIndex]
+    else
       undefined
 
 
@@ -121,6 +121,7 @@ class Cube
     else
       bucketIndex = @getBucketIndexByAddress([bucket_x, bucket_y, bucket_z])
 
+      #console.log "SET: ", [bucket_x, bucket_y, bucket_z], bucketIndex
       bucket = @cube[bucketIndex]
       if bucketData
         if zoomStep < bucket.zoomStep 
@@ -178,7 +179,7 @@ class Cube
 
     { cube : oldCube, cubeOffset : oldCubeOffset, cubeSize : oldCubeSize } = @
 
-    # Make sure, all cube dimensions are non-negative
+    # Make cube support negative bucket addresses
     min_x = Math.max(min_x, 0)
     min_y = Math.max(min_y, 0)
     min_z = Math.max(min_z, 0)
@@ -186,7 +187,7 @@ class Cube
     max_y = Math.max(max_y, 0)
     max_z = Math.max(max_z, 0)
 
-    # First, we calculate the new dimension of the cuboid
+    # First, we calculate the new dimension of the cuboid.
     if oldCube
 
       oldUpperBound = new Uint32Array(3)
@@ -195,14 +196,14 @@ class Cube
       oldUpperBound[2] = oldCubeOffset[2] + oldCubeSize[2]
       
       newCubeOffset = new Uint32Array(3)
-      newCubeOffset[0] = Math.min(min_x, oldCubeOffset[0])
-      newCubeOffset[1] = Math.min(min_y, oldCubeOffset[1])
-      newCubeOffset[2] = Math.min(min_z, oldCubeOffset[2])
+      newCubeOffset[0] = Math.min(min_x, max_x, oldCubeOffset[0])
+      newCubeOffset[1] = Math.min(min_y, max_y, oldCubeOffset[1])
+      newCubeOffset[2] = Math.min(min_z, max_z, oldCubeOffset[2])
       
       newCubeSize = new Uint32Array(3)
-      newCubeSize[0] = Math.max(max_x, oldUpperBound[0]) - newCubeOffset[0]
-      newCubeSize[1] = Math.max(max_y, oldUpperBound[1]) - newCubeOffset[1]
-      newCubeSize[2] = Math.max(max_z, oldUpperBound[2]) - newCubeOffset[2]
+      newCubeSize[0] = Math.max(min_x, max_x, oldUpperBound[0] - 1) - newCubeOffset[0] + 1
+      newCubeSize[1] = Math.max(min_y, max_y, oldUpperBound[1] - 1) - newCubeOffset[1] + 1
+      newCubeSize[2] = Math.max(min_z, max_z, oldUpperBound[2] - 1) - newCubeOffset[2] + 1
 
       # Just reorganize the existing buckets when the cube dimensions 
       # have changed. Transferring all old buckets to their new location.
@@ -216,15 +217,15 @@ class Cube
         newCube = new Array(newCubeSize[0] * newCubeSize[1] * newCubeSize[2])
         newIndex = 0
 
-        for x in [0..newCubeSize[0]]
+        for x in [0...newCubeSize[0]]
 
           if oldCubeOffset[0] <= x + newCubeOffset[0] < oldUpperBound[0]
 
-            for y in [0..newCubeSize[1]]
+            for y in [0...newCubeSize[1]]
 
               if oldCubeOffset[1] <= y + newCubeOffset[1] < oldUpperBound[1]
 
-                for z in [0..newCubeSize[2]]
+                for z in [0...newCubeSize[2]]
 
                   if oldCubeOffset[2] <= z + newCubeOffset[2] < oldUpperBound[2]
                     oldIndex = 
@@ -244,17 +245,16 @@ class Cube
         @cubeSize   = newCubeSize
 
     else
-
-      # Before, there wasn't any cube
+      # Before, there wasn't any cube.
       newCubeOffset = new Uint32Array(3)
-      newCubeOffset[0] = min_x
-      newCubeOffset[1] = min_y
-      newCubeOffset[2] = min_z
+      newCubeOffset[0] = Math.min(min_x, max_x)
+      newCubeOffset[1] = Math.min(min_y, max_y)
+      newCubeOffset[2] = Math.min(min_z, max_z)
       
       newCubeSize = new Uint32Array(3)
-      newCubeSize[0] = max_x - newCubeOffset[0]
-      newCubeSize[1] = max_y - newCubeOffset[1]
-      newCubeSize[2] = max_z - newCubeOffset[2]
+      newCubeSize[0] = Math.max(min_x, max_x) - newCubeOffset[0] + 1
+      newCubeSize[1] = Math.max(min_y, max_y) - newCubeOffset[1] + 1
+      newCubeSize[2] = Math.max(min_z, max_z) - newCubeOffset[2] + 1
       
       newCube = new Array(newCubeSize[0] * newCubeSize[1] * newCubeSize[2])
 

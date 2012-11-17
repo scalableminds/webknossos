@@ -6,9 +6,9 @@ import brainflight.security.Secured
 import models.security.Role
 import models.binary.DataSet
 import play.api.Logger
-import models.task.Experiment
+import models.experiment.Experiment
 import models.user._
-import models.task.UsedExperiments
+import models.experiment.UsedExperiments
 import views._
 
 object Game extends Controller with Secured {
@@ -19,7 +19,7 @@ object Game extends Controller with Secured {
       "id" -> experimentId))
       
   def index = Authenticated { implicit request =>      
-    if(Experiment.findFor(request.user).isEmpty)
+    if(UsedExperiments.by(request.user).isEmpty)
       Redirect(routes.UserController.dashboard)
     else
       Ok(html.oxalis.trace(request.user))
@@ -34,17 +34,24 @@ object Game extends Controller with Secured {
       
     Ok(html.oxalis.trace(user))
   }
+  
+  def reviewTrace(experimentId: String) = Authenticated(role = Role.Admin){ implicit request =>
+    val user = request.user
+    
+    Experiment.findOneById(experimentId)
+      .map(exp => UsedExperiments.use(user, exp))
+      
+    // TODO: set oxalis to read only
+    Ok(html.oxalis.trace(user))
+  }
 
   def initialize = Authenticated { implicit request =>
     val user = request.user
-    val experimentId = UsedExperiments.by(user) match {
+    UsedExperiments.by(user) match {
       case experiment :: _ =>
-        experiment.toString
+        Ok(createExperimentIDInfo(experiment.toString))
       case _ =>
-        val exp = Experiment.createNew(user)
-        UsedExperiments.use(user, exp)
-        exp.id
+        BadRequest("No open experiment found.")
     }
-    Ok(createExperimentIDInfo(experimentId))
   }
 }

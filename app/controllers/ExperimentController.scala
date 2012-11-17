@@ -12,7 +12,7 @@ import brainflight.tools.geometry.Vector3I
 import brainflight.tools.geometry.Vector3I._
 import models.user.User
 import models.security._
-import models.task.Experiment
+import models.experiment.Experiment
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent.Channel
@@ -25,7 +25,7 @@ import models.graph.Node
 import models.graph.Edge
 import brainflight.tools.geometry.Point3D
 import brainflight.format.DateFormatter
-import models.task.UsedExperiments
+import models.experiment.UsedExperiments
 import models.user.TimeTracking
 
 /**
@@ -77,7 +77,7 @@ object ExperimentController extends Controller with Secured {
     val user = request.user
     if (isNew) {
       DataSet.findOneById(id).map { dataSet =>
-        val exp = Experiment.createNew(user, dataSet)
+        val exp = Experiment.createExperimentFor(user, dataSet)
         UsedExperiments.use(user, exp)
         Ok
       } getOrElse BadRequest("Couldn't find DataSet.")
@@ -94,7 +94,7 @@ object ExperimentController extends Controller with Secured {
       dataSetId <- request.body.get("dataSetId").flatMap(_.headOption)
       dataSet <- DataSet.findOneById(dataSetId)
     } yield {
-      val exp = Experiment.createNew(request.user, dataSet)
+      val exp = Experiment.createExperimentFor(request.user, dataSet)
       UsedExperiments.use(request.user, exp)
       Redirect(routes.Game.index)
     }) getOrElse BadRequest("Couldn't find DataSet.")

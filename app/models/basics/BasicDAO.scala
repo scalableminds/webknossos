@@ -6,6 +6,9 @@ import com.novus.salat.dao.SalatDAO
 import play.api.libs.json.JsArray._
 import play.api.libs.json._
 import org.bson.types.ObjectId
+import com.mongodb.casbah.MongoDB
+
+trait Persistence
 
 /**
  * scalableminds - brainflight
@@ -34,6 +37,10 @@ class BasicDAO[T <: AnyRef](collectionName:String)(implicit val m: Manifest[T])
     el
   }
   
+  @deprecated
+  override def save(el: T) = super.save(el)
+  
+  @deprecated
   def alterAndSave(el: T) = 
     alter(save)(el)
     

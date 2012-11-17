@@ -1,4 +1,4 @@
-package models.task
+package models.experiment
 
 import com.mongodb.casbah.Imports._
 import models.context._
@@ -18,6 +18,10 @@ object UsedExperiments extends BasicDAO[UsedExperiments]("usedExperiments") {
     find( MongoDBObject("user" -> user._id)).map(_.experiment).toList
   
   def removeAll(user: User) {
-    find(MongoDBObject("user" -> user._id)).toList.foreach(UsedExperiments.remove)
+    UsedExperiments.remove(MongoDBObject("user" -> user._id))
+  }
+  
+  def removeAll(experiment: Experiment) {
+    find(MongoDBObject("experiment" -> experiment._id)).toList.foreach(UsedExperiments.remove)
   }
 }

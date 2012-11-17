@@ -12,6 +12,7 @@ import models.task._
 import models.binary.DataSet
 import views.html
 import play.api.Logger
+import models.experiment._
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -19,17 +20,22 @@ object UserController extends Controller with Secured {
   def dashboard = Authenticated { implicit request =>
     val user = request.user
     val experiments = Experiment.findFor(user)
-    val (tempExperiments, taskExperiments) = 
-      experiments.partition(_.taskId.isEmpty)
-      
-    val userTasks = taskExperiments.flatMap( e => 
-      Task.findOneById(e.taskId.get).map(_ -> e))
-      
+    val (taskExperiments, experimentalExperiments) =
+      experiments.partition(e =>
+        e.experimentType == ExperimentType.Task ||
+          e.experimentType == ExperimentType.Training)
+
+    val userTasks = taskExperiments.flatMap(e => e.task.map(_ -> e))
+
     val loggedTime = TimeTracking.loggedTime(user)
-    
+
     val dataSets = DataSet.findAll
-      
-    Ok(html.user.dashboard.dashboard(user, tempExperiments, userTasks, loggedTime, dataSets))
+
+    Ok(html.user.dashboard.dashboard(user,
+      experimentalExperiments,
+      userTasks,
+      loggedTime,
+      dataSets))
   }
 
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {

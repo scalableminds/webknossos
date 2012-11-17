@@ -17,8 +17,8 @@ import brainflight.mail._
 import controllers.admin._
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
-import models.task.Experiment
-import models.task.UsedExperiments
+import models.experiment.Experiment
+import models.experiment.UsedExperiments
 import brainflight.thirdparty.BrainTracing
 
 object Application extends Controller with Secured {
@@ -41,8 +41,8 @@ object Application extends Controller with Secured {
     Form(
       mapping(
         "email" -> email,
-        "firstName" -> nonEmptyText(2, 30),
-        "lastName" -> nonEmptyText(2, 30),
+        "firstName" -> nonEmptyText(1, 30),
+        "lastName" -> nonEmptyText(1, 30),
         "password" -> passwordField)(registerFormApply)(registerFormUnapply)
         .verifying("error.email.inuse",
           user => User.findLocalByEmail(user._1).isEmpty))
@@ -132,6 +132,7 @@ object Application extends Controller with Secured {
   def javascriptRoutes = Action { implicit request =>
     Ok(
       Routes.javascriptRouter("jsRoutes")( //fill in stuff which should be able to be called from js
+        controllers.routes.javascript.TaskController.finish,
         controllers.admin.routes.javascript.NMLIO.upload,
         controllers.admin.routes.javascript.NMLIO.downloadList)).as("text/javascript")
   }

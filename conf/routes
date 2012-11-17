@@ -51,7 +51,7 @@ PUT       /experiment/:experimentId         controllers.ExperimentController.upd
 GET     /admin/nmldownload                  controllers.admin.NMLIO.downloadList
 GET     /admin/nmlupload                    controllers.admin.NMLIO.uploadForm
 POST    /admin/nmlupload                    controllers.admin.NMLIO.upload
-GET     /admin/nmldownload/:taskId          controllers.admin.NMLIO.download( taskId: String )
+GET     /admin/nmldownload/:experimentId    controllers.admin.NMLIO.download( experimentId: String )
 
 
 # Admin Tasks
@@ -59,20 +59,42 @@ GET     /admin/tasks/algorithm              controllers.admin.TaskAlgorithm.inde
 POST    /admin/tasks/algorithm              controllers.admin.TaskAlgorithm.submitAlgorithm
 GET     /admin/tasks/algorithm/:id?use=true controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
 
-GET     /admin/taskTypes                    controllers.admin.TaskAdministration.types
-POST    /admin/taskTypes/create             controllers.admin.TaskAdministration.createType
+GET     /admin/taskTypes                    controllers.admin.TaskTypeAdministration.list
+POST    /admin/taskTypes/create             controllers.admin.TaskTypeAdministration.create
+GET     /admin/taskTypes/:id/delete         controllers.admin.TaskTypeAdministration.delete(id: String)
 
 GET     /admin/tasks                        controllers.admin.TaskAdministration.list
+GET     /admin/tasks/:id/delete             controllers.admin.TaskAdministration.delete(id: String)
 GET     /admin/tasks/create                 controllers.admin.TaskAdministration.create
+POST    /admin/tasks/createBulk             controllers.admin.TaskAdministration.createBulk
 POST    /admin/tasks/createFromExperiment   controllers.admin.TaskAdministration.createFromExperiment
+POST    /admin/tasks/createFromForm         controllers.admin.TaskAdministration.createFromForm
+
+GET     /admin/trainingsTasks               controllers.admin.TrainingsTaskAdministration.list
+GET     /admin/trainingsTasks/create        controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
+POST    /admin/trainingsTasks/createFromForm controllers.admin.TrainingsTaskAdministration.createFromForm
+POST    /admin/trainingsTasks/createFromExperiment controllers.admin.TrainingsTaskAdministration.createFromExperiment
+GET     /admin/trainingsTasks/:id/delete    controllers.admin.TrainingsTaskAdministration.delete(id: String)
+
+GET     /admin/training/:id/startReview     controllers.admin.TrainingsExperimentAdministration.startReview(id: String)
+GET     /admin/training/:id/abortReview     controllers.admin.TrainingsExperimentAdministration.abortReview(id: String)
+GET     /admin/training/:id/finishReview    controllers.admin.TrainingsExperimentAdministration.finishReview(id: String)
+POST    /admin/training/:id/finishReview    controllers.admin.TrainingsExperimentAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
+
 
 # User Administration
 GET     /admin/users                        controllers.admin.UserAdministration.index
-GET     /admin/users/:id/verify             controllers.admin.UserAdministration.verifyUser(id: String)
-GET     /admin/users/:id/delete             controllers.admin.UserAdministration.deleteUser(id: String)
+POST    /admin/users/verify                 controllers.admin.UserAdministration.verifyBulk
+POST    /admin/users/delete                 controllers.admin.UserAdministration.deleteBulk
+GET     /admin/users/:id/verify             controllers.admin.UserAdministration.verify(id: String)
+GET     /admin/users/:id/delete             controllers.admin.UserAdministration.delete(id: String)
+POST    /admin/users/addRole                controllers.admin.UserAdministration.addRoleBulk
+POST    /admin/users/removeRole             controllers.admin.UserAdministration.removeRoleBulk
+
+GET     /admin/experiments/:id/review       controllers.admin.TrainingsExperimentAdministration.oxalisReview(id: String)
 
 # Javascript routing
-GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes
+GET     /assets/javascripts/routes.js       controllers.Application.javascriptRoutes
 
 # Map static resources from the /public folder to the /public path
 GET     /assets/*file                       controllers.Assets.at(path="/public", file)

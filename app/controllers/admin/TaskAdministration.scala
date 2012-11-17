@@ -1,88 +1,122 @@
 package controllers.admin
 
-import play.api.mvc.Controller
-import play.api.mvc.Action
+import scala.Array.canBuildFrom
+import scala.Option.option2Iterable
+import brainflight.security.AuthenticatedRequest
 import brainflight.security.Secured
-import views.html
-import models.user.User
-import models.task._
+import brainflight.tools.ExtendedTypes.String2ExtendedString
+import brainflight.tools.geometry.Point3D
 import models.binary.DataSet
-import controllers.Application
-import brainflight.mail.Send
-import brainflight.mail.DefaultMails
-import brainflight.tools.ExtendedTypes._
 import models.security.Role
-import play.api.data._
-import play.api.data.Forms._
+import models.experiment.Experiment
+import models.task.Task
+import models.task.TaskType
+import play.api.data.Form
+import play.api.data.Forms.mapping
+import play.api.data.Forms.number
+import play.api.data.Forms.text
+import views.html
+import models.user.Experience
+import controllers.Controller
+import play.api.i18n.Messages
 
 object TaskAdministration extends Controller with Secured {
 
-  val taskTypeForm = Form(
-    mapping(
-      "summary" -> nonEmptyText(2, 50),
-      "description" -> text,
-      "expectedTime" -> mapping(
-        "minTime" -> number,
-        "maxTime" -> number,
-        "maxHard" -> number)(TimeSpan.apply)(TimeSpan.unapply))(
-        TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
+  override val DefaultAccessRole = Role.Admin
 
-  val taskForm = Form(
+  val taskFromExperimentForm = Form(
     mapping(
       "experiment" -> text.verifying("experiment.invalid", experiment => Experiment.findOneById(experiment).isDefined),
       "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
+      "experience" -> mapping(
+        "domain" -> text,
+        "value" -> number)(Experience.apply)(Experience.unapply),
       "priority" -> number,
-      "taskInstances" -> number)(Task.fromForm)(Task.toForm)).fill(Task.empty)
+      "taskInstances" -> number)(Task.fromExperimentForm)(Task.toExperimentForm)).fill(Task.empty)
 
-  override val DefaultAccessRole = Role("admin")
+  val taskMapping = mapping(
+    "dataSet" -> text.verifying("dataSet.invalid", name => DataSet.findOneByName(name).isDefined),
+    "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
+    "start" -> mapping(
+      "point" -> text.verifying("point.invalid", p => p.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(Point3D.fromForm)(Point3D.toForm),
+    "experience" -> mapping(
+      "domain" -> text,
+      "value" -> number)(Experience.apply)(Experience.unapply),
+    "priority" -> number,
+    "taskInstances" -> number)(Task.fromForm)(Task.toForm)
 
-  def bulkCreate = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    request.request.body.get("data").flatMap(_.headOption).map{ data =>
-      data
-      .split("\n")
-      .map(_.split(" "))
-      .filter(_.size != 11)
-      .map{ params =>
-        for{
-          cellId <- params(1).toIntOpt
-          startX <- params(3).toIntOpt
-          startY <- params(4).toIntOpt
-          startZ <- params(5).toIntOpt
-          priority <- params(6).toIntOpt
-          instances <- params(7).toIntOpt
-        } yield 0//Task()
-      }
-      Ok
-    } getOrElse BadRequest("'data' parameter is mising")
-  }
+  val taskForm = Form(
+    taskMapping).fill(Task.empty)
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.task.taskList(request.user, Task.findAll))
+    Ok(html.admin.task.taskList(request.user, Task.findAllNonTrainings))
   }
 
-  def types = Authenticated { implicit request =>
-    Ok(html.admin.task.taskTypes(request.user, TaskType.findAll, taskTypeForm))
-  }
+  def taskCreateHTML(experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) =
+    html.admin.task.taskCreate(request.user,
+      Experiment.findAllExploratory(request.user),
+      TaskType.findAll,
+      DataSet.findAll,
+      Experience.findAllDomains,
+      experimentForm,
+      taskForm)
 
   def create = Authenticated { implicit request =>
-    Ok(html.admin.task.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll, taskForm))
+    Ok(taskCreateHTML(taskForm, taskFromExperimentForm))
   }
 
-  def createType = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    taskTypeForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.admin.task.taskTypes(request.user, TaskType.findAll, formWithErrors)),
+  def delete(taskId: String) = Authenticated { implicit request =>
+    Task.findOneById(taskId).map { task =>
+      Task.remove(task)
+      AjaxOk.success(Messages("task.removed"))
+    } getOrElse AjaxBadRequest.error("Task couldn't get removed (task not found)")
+
+  }
+
+  def createFromForm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    taskForm.bindFromRequest.fold(
+      formWithErrors => BadRequest(taskCreateHTML(taskFromExperimentForm, formWithErrors)),
       { t =>
-        TaskType.insert(t)
-        Ok(html.admin.task.taskTypes(request.user, TaskType.findAll, taskTypeForm))
+        Task.insert(t)
+        Redirect(routes.TaskAdministration.list)
       })
   }
 
   def createFromExperiment = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    taskForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.admin.task.taskCreate(request.user, Experiment.findAllTemporary, TaskType.findAll, formWithErrors)),
+    taskFromExperimentForm.bindFromRequest.fold(
+      formWithErrors => BadRequest(taskCreateHTML(formWithErrors, taskForm)),
       { t =>
         Task.insert(t)
-        Ok(t.toString)
+        Redirect(routes.TaskAdministration.list)
       })
+  }
+
+  def createBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    request.request.body.get("data").flatMap(_.headOption).map { data =>
+      val inserted = data
+        .split("\n")
+        .map(_.split(" "))
+        .filter(_.size == 9)
+        .flatMap { params =>
+          for {
+            experienceValue <- params(3).toIntOpt
+            x <- params(4).toIntOpt
+            y <- params(5).toIntOpt
+            z <- params(6).toIntOpt
+            priority <- params(7).toIntOpt
+            instances <- params(8).toIntOpt
+            taskTypeSummary = params(1)
+            taskType <- TaskType.findOneBySumnary(taskTypeSummary)
+          } yield {
+            val dataSetName = params(0)
+            val experience = Experience(params(2), experienceValue)
+            Task(dataSetName, 0, taskType._id, Point3D(x, y, z), experience, priority, instances)
+          }
+        }
+        .flatMap { t =>
+          Task.insert(t)
+        }
+      Redirect(routes.TaskAdministration.list)
+    } getOrElse BadRequest("'data' parameter is mising")
   }
 }

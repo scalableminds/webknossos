@@ -1,42 +1,29 @@
 @(loggedInUser: models.user.User, tasks: List[models.task.Task])
 
-@main(Some(loggedInUser)){
+@main(Some(loggedInUser)) {
   <div class="container">
-    <h3>Tasks</h3>
-    <p>
-      Task states:
-      <span title="Unassigned"> 
-        <i class="icon-play-circle"></i> Unassigned
-      </span>
-      |
-      <span title="in Progress"> 
-        <i class="icon-random"></i> in Progress
-      </span>
-      |
-      <span title="Completed">
-        <i class="icon-ok-circle"></i> Completed
-      </span>
-    </p>
+    <h3>Trainings-Tasks</h3>
     <table class="table table-double-striped table-details">
       <thead>
         <tr>
           <th class="details-toggle-all"> <i class="caret-right"></i> <i class="caret-down"></i> </th>
           <th> # </th>
-          <th> H-Id </th>
+          <th> HBerg-Id </th>
           <th> Type </th>
           <th> DataSet </th>
-          <th> Experience</th>
+          <th> Experience Change </th>
           <th> Start </th>
-          <th> Priority </th>
           <th> Created </th>
-          <th> States </th>
         </tr>
       </thead>
       <tbody>
       @tasks.map{ task => 
-        @taskTableItem(task)
+        @trainingsTasksTableItem(loggedInUser, task)
       }
       </tbody>
     </table>
+    <p>
+      <a href="@controllers.admin.routes.TrainingsTaskAdministration.create()" class="btn">Create new...</a>
+    </p>
   </div>
 }

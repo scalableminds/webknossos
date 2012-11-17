@@ -12,7 +12,6 @@
     <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/underscore-1.2.0.min.js")"></script>
     <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/bootstrap.min.js")"></script>
     <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
-    <script type="text/javascript" src="@routes.Application.javascriptRoutes"></script>
   </head>
   <body>
     <header class="navbar navbar-static-top navbar-inverse">
@@ -45,10 +44,21 @@
                           <a href="@controllers.admin.routes.TaskAdministration.list">List</a>
                         </li>
                         <li>
-                          <a href="@controllers.admin.routes.TaskAdministration.types">Types</a>
+                          <a href="@controllers.admin.routes.TaskTypeAdministration.list">Types</a>
                         </li>
                         <li>
                           <a href="@controllers.admin.routes.TaskAlgorithm.index">Algorithm</a>
+                        </li>
+                    </ul>
+                  </li>
+                  <li class="dropdown-submenu">
+                    <a tabindex="-1" href="@controllers.admin.routes.TrainingsTaskAdministration.list">Trainings-Tasks</a>
+                    <ul class="dropdown-menu">
+                        <li>
+                          <a href="@controllers.admin.routes.TrainingsTaskAdministration.create()">Create</a>
+                        </li>
+                        <li>
+                          <a href="@controllers.admin.routes.TrainingsTaskAdministration.list">List</a>
                         </li>
                     </ul>
                   </li>

@@ -5,5 +5,8 @@
     <div class="controls">
         @elements.input
         <span class="help-inline errors">@elements.errors.mkString(", ")</span>
+        @elements.args.get(Symbol("help-inline")).map{ help =>
+        	<span class="help-inline">@help</span>
+        }
     </div>
 </div>

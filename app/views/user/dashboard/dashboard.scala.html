@@ -1,16 +1,15 @@
-@(loggedInUser: models.user.User, temporaryExperiments: List[models.task.Experiment], userTasks: List[(models.task.Task, models.task.Experiment)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, akka.util.Duration]], dataSets: List[models.binary.DataSet])
+@(loggedInUser: models.user.User, temporaryExperiments: List[models.experiment.Experiment], userTasks: List[(models.task.Task, models.experiment.Experiment)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, akka.util.Duration]], dataSets: List[models.binary.DataSet])
 
 @import brainflight.format._
 
 @main(Some(loggedInUser)){
   <div class="container" id="dashboard">
     <h3>Tasks</h3>
-    <table class="table table-striped">
+    <table class="table table-striped" id="dashboard-tasks">
       <thead>
         <tr>
           <th> # </th>
-          <th> Cell </th>
-          <th> Task type </th>
+          <th> Type </th>
           <th> DataSet </th>
           <th> Start </th>
           <th> </th>
@@ -22,7 +21,7 @@
       }
       </tbody>
     </table>
-    <a href="@controllers.routes.TaskController.request" class="btn"  data-ajax="add-row">Get a new task</a>
+    <a href="@controllers.routes.TaskController.request" class="btn"  data-ajax="add-row=#dashboard-tasks">Get a new task</a>
 
     <hr />
 
@@ -33,6 +32,7 @@
           <th> # </th>
           <th> DataSet </th>
           <th> Trees </th>
+          <th> Experiment-Type </th>
           <th> Last edited </th>
           <th> </th>
         </tr>
@@ -43,6 +43,7 @@
           <td> @experiment.id.drop(10) </td>
           <td> @experiment.dataSetName </td>
           <td> @experiment.trees.size </td>
+          <td> @experiment.experimentType </td>
           <td> @DateFormatter.format(experiment.date) </td>
           <td> <a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a></td>
         </tr>
@@ -50,8 +51,8 @@
       </tbody>
     </table>
 
-    @helper.form(action = controllers.routes.ExperimentController.createExplorational) {
-      <div class="input-append">
+    @helper.form(action = controllers.routes.ExperimentController.createExplorational, 'class -> "form-inline") {
+      <div>
         <select name="dataSetId">
           @dataSets.map{ d => 
             <option value="@d.id"> @d.name </option>

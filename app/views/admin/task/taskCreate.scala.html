@@ -1,25 +1,37 @@
-@(loggedInUser: models.user.User, experiments: List[models.task.Experiment], taskTypes: List[models.task.TaskType], form: Form[models.task.Task])
+@(loggedInUser: models.user.User, experiments: List[models.experiment.Experiment], taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])
 
 @import brainflight.format._
 @import controllers.BootstrapHelpers._
+@import play.api.libs.json.Json
+
+@taskTypeHelpLink() = {
+  <a href="@controllers.admin.routes.TaskTypeAdministration.list">Create a new Type</a>
+}
 
 @main(Some(loggedInUser)){
   <div class="container">
     
-    <h3>Create Task from temporary Experiment</h3>
+    <h3>Create Task from explorative Experiment</h3>
     <div class="well">
+      Every node in the experiment creates a new task. To create an explorative experiment go to the <a href="@routes.UserController.dashboard">dashboard</a>.<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createFromExperiment, 'class -> "form-horizontal") {
           
-        @helper.select(form("experiment"), experiments.map { exp =>
+        @helper.select(experimentForm("experiment"), experiments.map { exp =>
           exp.id -> (exp.dataSetName + " " + DateFormatter.format(exp.date)) 
         })
         
-        @helper.select(form("taskType"), taskTypes.map { tt =>
+        @helper.select(experimentForm("taskType"), taskTypes.map { tt =>
           tt.id -> tt.summary
-        })
+        }, Symbol("help-inline") -> taskTypeHelpLink)
 
-        @helper.inputText(form("priority"), 'type -> "number", 'value -> 100)
-        @helper.inputText(form("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 0)
+        @helper.input(experimentForm("experience.domain")) { (id, name, value, args) =>
+          <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(experimentForm("experience.value"), 'type -> "number")
+
+        @helper.inputText(experimentForm("priority"), 'type -> "number")
+        @helper.inputText(experimentForm("taskInstances"), 'type -> "number", 'min -> 0)
         
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
@@ -28,18 +40,45 @@
     </div>
 
     <h3>Create Task</h3>
+    <div class="well">
+      @helper.form(controllers.admin.routes.TaskAdministration.createFromForm, 'class -> "form-horizontal") {
+          
+        @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
+          dataSet.name -> dataSet.name 
+        })
+        
+        @helper.select(taskForm("taskType"), taskTypes.map { tt =>
+          tt.id -> tt.summary
+        }, Symbol("help-inline") -> taskTypeHelpLink)
 
-    <hr />
+        @helper.input(experimentForm("experience.domain")) { (id, name, value, args) =>
+          <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(experimentForm("experience.value"), 'type -> "number")
+
+        @helper.inputText(taskForm("start.point"), 'type -> "text")
+
+        @helper.inputText(taskForm("priority"), 'type -> "number")
+        @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 0)
+        
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
 
     <h3>Import Tasks in Bulk</h3>
 
     <div class="well">
-      <form>
-        <textarea class="input-fullwidth input-monospace" rows="20"></textarea>
+      One line for each task. The values are seperated by a space. Format: <br />
+      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances<br /><br />
+      @helper.form(controllers.admin.routes.TaskAdministration.createBulk){
+        <textarea class="input-fullwidth input-monospace" rows="20" name="data"></textarea>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary pull-right">Import</button>
         </div>
-      </form>
+      }
     </div>
 
   </div>

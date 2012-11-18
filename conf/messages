@@ -42,8 +42,10 @@ experience.value=Min Experience
 training.gain=Experience Gain
 training.loss=Experience Loss
 training.new=You got a new Trainings-Task
+nmlFile=Reference NML File
 
 priority=Priority
+tracing=Tracing
 experiment=Experiment
 experiment.invalid=Selected experiment doesn''t exist
 experiment.notFound=Experiment couldn''t be found.
@@ -56,3 +58,4 @@ gain=Gain
 lose=Loss
 experience=Experience
 task=Task
+

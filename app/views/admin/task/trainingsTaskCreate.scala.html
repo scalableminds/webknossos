@@ -15,8 +15,11 @@
 @main(Some(loggedInUser)){
   <div class="container">
     <h3>Create Trainings-Task with NML</h3>
+    <div class="row">
+      <p class="span8">The uploaded NML-file is used as a reference for the training. After a user has submitted his training result, it is getting compared with the reference.</p>
+    </div>
     <div class="well">
-      The uploaded NML-file is used as a sample for the training. After a user has submitted his training result, it is getting compared with the sample.
+    
       @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromForm, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
         
         @helper.select(nmlForm("task"), tasks.map { task =>
@@ -31,7 +34,12 @@
         
         @helper.inputText(nmlForm("training.loss"), 'type -> "number")
 
-        <input type="file" name="nmlFile"> 
+        <div class="control-group">
+          <label class="control-label" for="nmlFile">@Messages("nmlFile")</label>
+          <div class="controls">
+            <input type="file" name="nmlFile" id="nmlFile" /> 
+          </div>
+        </div>
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
@@ -40,8 +48,12 @@
     </div>
 
     <h3>Create Trainings-Task from Tracing</h3>
+    <div class="row">
+      <p class="span8">
+        The selected tracing is used as a reference for the training. After a user has submitted his training result, it is getting compared with the reference.
+      </p>
+    </div>
     <div class="well">
-      The given tracing is used as a sample for the training. After a user has submitted his training result, it is getting compared with the sample.
       @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromTracing, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
         
         @helper.select(tracingForm("tracing"), tracings.map { exp =>

@@ -31,14 +31,14 @@ Route =
 
       _.extend(this, new EventMixin())
 
-      $.get("/experiment/#{Game.task.id}",
+      $.get("/tracing/#{Game.task.id}",
         (data) =>
           Route.data = data
           console.log "Route.data:"
           console.log data
           @id        = data.dataSet.id
-          #@branchStack = data.experiment.branchPoints.map (a) -> new Float32Array(a)
-          #@branchStack = (data.experiment.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.experiment.branchPoints) # when data.experiment.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
+          #@branchStack = data.tracing.branchPoints.map (a) -> new Float32Array(a)
+          #@branchStack = (data.tracing.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.tracing.branchPoints) # when data.tracing.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
           @createBuffer()
 
           @idCount = 1
@@ -62,10 +62,10 @@ Route =
           #console.log "--------- TREE ---------"
           #console.log @tree.toString()
 
-          # Build sample data.experiment
-          #console.log "---------- Build data.experiment -----------"
-          #console.log data.experiment
-          #data.experiment = {
+          # Build sample data.tracing
+          #console.log "---------- Build data.tracing -----------"
+          #console.log data.tracing
+          #data.tracing = {
           #  activeNode : 6
           #  branchPoints : [{id : 1}, {id : 2}]
           #  editPosition : [400, 350, 200]
@@ -103,19 +103,19 @@ Route =
           #    }
           #  }
           #}
-          console.log "data.experiment:"
-          console.log data.experiment
+          console.log "data.tracing:"
+          console.log data.tracing
 
           #@recursionTest(0)
 
           # For trees that are disconnected
           lostTrees = []
 
-          ############ Load Tree from data.experiment ##############
-          @scaleX = data.experiment.scale[0]
-          @globalPosition = data.experiment.editPosition
+          ############ Load Tree from data.tracing ##############
+          @scaleX = data.tracing.scale[0]
+          @globalPosition = data.tracing.editPosition
           # get tree to build
-          for tree in data.experiment.trees
+          for tree in data.tracing.trees
             # Initialize nodes
             nodes = []
             i = 0
@@ -139,7 +139,7 @@ Route =
                   @trees.push(node)
                   treeFound = true
             # Set active Node
-            activeNodeT = @findNodeInList(nodes, data.experiment.activeNode)
+            activeNodeT = @findNodeInList(nodes, data.tracing.activeNode)
             if activeNodeT
               @activeNode = activeNodeT
               @lastActiveNodeId = @activeNode.id
@@ -151,7 +151,7 @@ Route =
           
           # Set branchpoints
           nodeList = @getNodeListOfAllTrees()
-          for branchpoint in data.experiment.branchPoints
+          for branchpoint in data.tracing.branchPoints
             node = @findNodeInList(nodeList, branchpoint.id)
             if node
               node.type = TYPE_BRANCH
@@ -180,7 +180,7 @@ Route =
               @pushImpl()
           )
 
-          deferred.resolve(data.experiment.editPosition)
+          deferred.resolve(data.tracing.editPosition)
           )
 
       deferred = new $.Deferred()
@@ -192,9 +192,9 @@ Route =
 
       deferred
 
-  # Returns an object that is structured the same way as data.experiment is
+  # Returns an object that is structured the same way as data.tracing is
   exportToNML : ->
-    result = Route.data.experiment
+    result = Route.data.tracing
     result.activeNode = @lastActiveNodeId
     result.branchPoints = []
     # Get Branchpoints
@@ -249,7 +249,7 @@ Route =
     @initialize().pipe =>
 
       request(
-          url : "/experiment/#{Game.task.id}"
+          url : "/tracing/#{Game.task.id}"
           method : "PUT"
           data : @exportToNML()
           contentType : "application/json"

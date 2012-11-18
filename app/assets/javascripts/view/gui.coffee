@@ -32,14 +32,14 @@ class Gui
                                           "_blank", "width=700,height=400,location=no,menubar=no")
 
                 resume : false
-                experiments : null
-                selectedExperimentIndex : 0
-                changeExperiment : => 
-                  experiment = @settings.experiments[@settings.selectedExperimentIndex]
+                tracings : null
+                selectedTracingIndex : 0
+                changeTracing : => 
+                  tracing = @settings.tracings[@settings.selectedTracingIndex]
                   @model.Route.pushImpl().done ->
                     request(
                       method : "POST"
-                      url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
+                      url : "/tracing?id=#{tracing.id}&isNew=#{Number(tracing.isNew)}"
                     ).always -> window.location.reload()
 
                 position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
@@ -81,21 +81,21 @@ class Gui
     (fTask.add @settings, "download")
                           .name("Download NML")
     
-    fExperiment = @gui.addFolder("Experiment")
+    fTracing = @gui.addFolder("Tracing")
     request(
-      url : "/experiment"
+      url : "/tracing"
       responseType : "json"
-    ).done (experiments) =>
+    ).done (tracings) =>
       
-      @settings.experiments = experiments
+      @settings.tracings = tracings
 
       options = {}
-      for experiment, i in experiments
-        options[experiment.name] = i
+      for tracing, i in tracings
+        options[tracing.name] = i
 
-      (fExperiment.add @settings, "selectedExperimentIndex", options)
+      (fTracing.add @settings, "selectedTracingIndex", options)
                             .name("Datasets")
-      (fExperiment.add @settings, "changeExperiment")
+      (fTracing.add @settings, "changeTracing")
                             .name("Apply")
 
     

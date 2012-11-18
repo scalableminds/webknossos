@@ -10,7 +10,7 @@ import models.Color
 import models.graph._
 import models.task._
 import models.binary._
-import models.experiment._
+import models.tracing._
 import models.basics.BasicEvolution
 import brainflight.mail.DefaultMails
 import brainflight.tools.geometry._
@@ -77,7 +77,7 @@ object InitialData {
         TimeSpan(5, 10, 15))
       TaskType.insert(tt)
       if (Task.findAll.isEmpty) {
-        val sample = Experiment.createExperimentFor(User.default)
+        val sample = Tracing.createTracingFor(User.default)
         
         Task.insert(Task(
           DataSet.default.name,

@@ -13,9 +13,9 @@ import models.binary.DataSet
 import models.task.Task
 import models.user.Experience
 import models.task.Training
-import models.experiment.Experiment
+import models.tracing.Tracing
 import nml._
-import models.experiment.ExperimentType
+import models.tracing.TracingType
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
@@ -29,9 +29,9 @@ object TrainingsTaskAdministration extends Controller with Secured {
         "gain" -> number,
         "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingForm)(Task.toTrainingForm)).fill(Task.withEmptyTraining)
 
-  val trainingsExperimentForm = Form(
+  val trainingsTracingForm = Form(
     mapping(
-      "experiment" -> text.verifying("experiment.invalid", exp => Experiment.findOneById(exp).isDefined),
+      "tracing" -> text.verifying("tracing.invalid", exp => Tracing.findOneById(exp).isDefined),
       "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
       "experience" -> mapping(
         "domain" -> text,
@@ -40,38 +40,38 @@ object TrainingsTaskAdministration extends Controller with Secured {
       "training" -> mapping(
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,
-        "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingsExperimentForm)(Task.toTrainingsExperimentForm))
+        "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingsTracingForm)(Task.toTrainingsTracingForm))
 
   def list = Authenticated { implicit request =>
     Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
   }
 
-  def trainingsTaskCreateHTML(taskForm: Form[Task], experimentForm: Form[Task])(implicit request: AuthenticatedRequest[_]) = {
+  def trainingsTaskCreateHTML(taskForm: Form[Task], tracingForm: Form[Task])(implicit request: AuthenticatedRequest[_]) = {
     html.admin.task.trainingsTaskCreate(request.user,
       Task.findAllNonTrainings,
-      Experiment.findAllExploratory(request.user),
+      Tracing.findAllExploratory(request.user),
       TaskType.findAll,
       Experience.findAllDomains,
       taskForm,
-      experimentForm)
+      tracingForm)
   }
 
   def create(taskId: String) = Authenticated { implicit request =>
     val form = Task.findOneById(taskId) map { task =>
       trainingsTaskForm.fill(task)
     } getOrElse trainingsTaskForm
-    Ok(trainingsTaskCreateHTML(trainingsTaskForm, trainingsExperimentForm))
+    Ok(trainingsTaskCreateHTML(trainingsTaskForm, trainingsTracingForm))
   }
 
-  def createFromExperiment = Authenticated(parser = parse.multipartFormData) { implicit request =>
-    trainingsExperimentForm.bindFromRequest.fold(
+  def createFromTracing = Authenticated(parser = parse.multipartFormData) { implicit request =>
+    trainingsTracingForm.bindFromRequest.fold(
       formWithErrors => BadRequest(trainingsTaskCreateHTML(trainingsTaskForm, formWithErrors)),
       { task =>
         (for {
           training <- task.training
-          sample <- Experiment.findOneById(training.sample)
+          sample <- Tracing.findOneById(training.sample)
         } yield {
-          Experiment.save(sample.copy(experimentType = ExperimentType.Sample))
+          Tracing.save(sample.copy(tracingType = TracingType.Sample))
           Task.save(task)
           Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
         }) getOrElse BadRequest("Couldn't create Training.")
@@ -80,16 +80,16 @@ object TrainingsTaskAdministration extends Controller with Secured {
 
   def createFromForm = Authenticated(parser = parse.multipartFormData) { implicit request =>
     trainingsTaskForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors, trainingsExperimentForm)),
+      formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors, trainingsTracingForm)),
       { task =>
         implicit val ctx = NMLContext(request.user)
         (for {
           nmlFile <- request.body.file("nmlFile")
-          experiment <- new NMLParser(nmlFile.ref.file).parse.headOption
+          tracing <- new NMLParser(nmlFile.ref.file).parse.headOption
         } yield {
-          Experiment.save(experiment.copy(experimentType = ExperimentType.Sample))
+          Tracing.save(tracing.copy(tracingType = TracingType.Sample))
           Task.save(task.copy(
-            training = task.training.map(_.copy(sample = experiment._id))))
+            training = task.training.map(_.copy(sample = tracing._id))))
           Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
         }) getOrElse BadRequest("No valid file attached.")
       })

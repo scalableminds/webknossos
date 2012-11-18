@@ -1,15 +1,15 @@
-@(user: models.user.User, userExperiments: Map[models.user.User,List[models.experiment.Experiment]])
+@(user: models.user.User, userTracings: Map[models.user.User,List[models.tracing.Tracing]])
 
 @import brainflight.format._
 
 @main(Some(user), false){
   <div class="container">
-    @userExperiments.map{ case (user, experiments) =>
+    @userTracings.map{ case (user, tracings) =>
       <div class="folder">
             <h5>@user.name (@user.email)</h5>
         <table class="table table-striped">
           <tbody>
-            @experiments.sortBy(_.timestamp).map{ exp =>
+            @tracings.sortBy(_.timestamp).map{ exp =>
               <tr>
                 <td><strong>@exp.dataSetName</strong></h4>
                 <td><time datetime="@exp.date">@DateFormatter.format(exp.date)</time></td>

@@ -8,7 +8,7 @@ import brainflight.tools.ExtendedTypes.String2ExtendedString
 import brainflight.tools.geometry.Point3D
 import models.binary.DataSet
 import models.security.Role
-import models.experiment.Experiment
+import models.tracing.Tracing
 import models.task.Task
 import models.task.TaskType
 import play.api.data.Form
@@ -24,15 +24,15 @@ object TaskAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
 
-  val taskFromExperimentForm = Form(
+  val taskFromTracingForm = Form(
     mapping(
-      "experiment" -> text.verifying("experiment.invalid", experiment => Experiment.findOneById(experiment).isDefined),
+      "tracing" -> text.verifying("tracing.invalid", tracing => Tracing.findOneById(tracing).isDefined),
       "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
       "experience" -> mapping(
         "domain" -> text,
         "value" -> number)(Experience.apply)(Experience.unapply),
       "priority" -> number,
-      "taskInstances" -> number)(Task.fromExperimentForm)(Task.toExperimentForm)).fill(Task.empty)
+      "taskInstances" -> number)(Task.fromTracingForm)(Task.toTracingForm)).fill(Task.empty)
 
   val taskMapping = mapping(
     "dataSet" -> text.verifying("dataSet.invalid", name => DataSet.findOneByName(name).isDefined),
@@ -52,17 +52,17 @@ object TaskAdministration extends Controller with Secured {
     Ok(html.admin.task.taskList(request.user, Task.findAllNonTrainings))
   }
 
-  def taskCreateHTML(experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) =
+  def taskCreateHTML(tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) =
     html.admin.task.taskCreate(request.user,
-      Experiment.findAllExploratory(request.user),
+      Tracing.findAllExploratory(request.user),
       TaskType.findAll,
       DataSet.findAll,
       Experience.findAllDomains,
-      experimentForm,
+      tracingForm,
       taskForm)
 
   def create = Authenticated { implicit request =>
-    Ok(taskCreateHTML(taskForm, taskFromExperimentForm))
+    Ok(taskCreateHTML(taskForm, taskFromTracingForm))
   }
 
   def delete(taskId: String) = Authenticated { implicit request =>
@@ -75,15 +75,15 @@ object TaskAdministration extends Controller with Secured {
 
   def createFromForm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(taskCreateHTML(taskFromExperimentForm, formWithErrors)),
+      formWithErrors => BadRequest(taskCreateHTML(taskFromTracingForm, formWithErrors)),
       { t =>
         Task.insert(t)
         Redirect(routes.TaskAdministration.list)
       })
   }
 
-  def createFromExperiment = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    taskFromExperimentForm.bindFromRequest.fold(
+  def createFromTracing = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    taskFromTracingForm.bindFromRequest.fold(
       formWithErrors => BadRequest(taskCreateHTML(formWithErrors, taskForm)),
       { t =>
         Task.insert(t)

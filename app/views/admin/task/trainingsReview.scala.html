@@ -1,9 +1,9 @@
-@(loggedInUser: models.user.User, experiment: models.experiment.Experiment, form: Form[String])
+@(loggedInUser: models.user.User, tracing: models.tracing.Tracing, form: Form[String])
 
 @main(Some(loggedInUser)){
   <div class="container">    
-    <h3>Review of Trainings-Experiment</h3>
-    @helper.form(action = controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, true), 'class -> "form-horizontal") {
+    <h3>Review of Trainings-Tracing</h3>
+    @helper.form(action = controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, true), 'class -> "form-horizontal") {
       <div class="control-group">
         <label class="control-label" for="comment">Comment</label>
         <div class="controls">
@@ -11,8 +11,8 @@
         </div>
       </div>
       <div class="form-actions">
-        <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, true)" data-ajax="submit,redirect=@controllers.admin.routes.TrainingsTaskAdministration.list" class="btn btn-primary">Accept tracing</a>
-        <a href="@controllers.admin.routes.TrainingsExperimentAdministration.finishReviewForm(experiment.id, false)" data-ajax="submit,redirect=@controllers.admin.routes.TrainingsTaskAdministration.list" class="btn btn-danger">Reject tracing</a>
+        <a href="@controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, true)" data-ajax="submit,redirect=@controllers.admin.routes.TrainingsTaskAdministration.list" class="btn btn-primary">Accept tracing</a>
+        <a href="@controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, false)" data-ajax="submit,redirect=@controllers.admin.routes.TrainingsTaskAdministration.list" class="btn btn-danger">Reject tracing</a>
       </div>
     }
   </div>

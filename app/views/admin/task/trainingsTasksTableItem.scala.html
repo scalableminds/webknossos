@@ -22,8 +22,8 @@
   <td colspan="11">
     <table class="table table-condensed table-nohead">
       <tbody>
-        @task.experiments.map{ experiment =>
-        	@trainingsTasksDetailTableItem(user, experiment)
+        @task.tracings.map{ tracing =>
+        	@trainingsTasksDetailTableItem(user, tracing)
         }
       </tbody>
     </table>

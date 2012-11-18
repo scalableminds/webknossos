@@ -280,7 +280,7 @@ $ -> # document is ready!
 
             # $.ajax(
             #     type : "POST"
-            #     url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
+            #     url : "/tracing?id=#{tracing.id}&isNew=#{Number(tracing.isNew)}"
             # )
 
 

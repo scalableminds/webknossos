@@ -1,4 +1,4 @@
-@(loggedInUser: models.user.User, experiments: List[models.experiment.Experiment], taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], experimentForm: Form[models.task.Task], taskForm: Form[models.task.Task])
+@(loggedInUser: models.user.User, tracings: List[models.tracing.Tracing], taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])
 
 @import brainflight.format._
 @import controllers.BootstrapHelpers._
@@ -11,27 +11,27 @@
 @main(Some(loggedInUser)){
   <div class="container">
     
-    <h3>Create Task from explorative Experiment</h3>
+    <h3>Create Task from explorative Tracing</h3>
     <div class="well">
-      Every node in the experiment creates a new task. To create an explorative experiment go to the <a href="@routes.UserController.dashboard">dashboard</a>.<br /><br />
-      @helper.form(controllers.admin.routes.TaskAdministration.createFromExperiment, 'class -> "form-horizontal") {
+      Every node in the tracing creates a new task. To create an explorative tracing go to the <a href="@routes.UserController.dashboard">dashboard</a>.<br /><br />
+      @helper.form(controllers.admin.routes.TaskAdministration.createFromTracing, 'class -> "form-horizontal") {
           
-        @helper.select(experimentForm("experiment"), experiments.map { exp =>
+        @helper.select(tracingForm("tracing"), tracings.map { exp =>
           exp.id -> (exp.dataSetName + " " + DateFormatter.format(exp.date)) 
         })
         
-        @helper.select(experimentForm("taskType"), taskTypes.map { tt =>
+        @helper.select(tracingForm("taskType"), taskTypes.map { tt =>
           tt.id -> tt.summary
         }, Symbol("help-inline") -> taskTypeHelpLink)
 
-        @helper.input(experimentForm("experience.domain")) { (id, name, value, args) =>
+        @helper.input(tracingForm("experience.domain")) { (id, name, value, args) =>
           <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
         }
 
-        @helper.inputText(experimentForm("experience.value"), 'type -> "number")
+        @helper.inputText(tracingForm("experience.value"), 'type -> "number")
 
-        @helper.inputText(experimentForm("priority"), 'type -> "number")
-        @helper.inputText(experimentForm("taskInstances"), 'type -> "number", 'min -> 0)
+        @helper.inputText(tracingForm("priority"), 'type -> "number")
+        @helper.inputText(tracingForm("taskInstances"), 'type -> "number", 'min -> 0)
         
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
@@ -51,11 +51,11 @@
           tt.id -> tt.summary
         }, Symbol("help-inline") -> taskTypeHelpLink)
 
-        @helper.input(experimentForm("experience.domain")) { (id, name, value, args) =>
+        @helper.input(tracingForm("experience.domain")) { (id, name, value, args) =>
           <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
         }
 
-        @helper.inputText(experimentForm("experience.value"), 'type -> "number")
+        @helper.inputText(tracingForm("experience.value"), 'type -> "number")
 
         @helper.inputText(taskForm("start.point"), 'type -> "text")
 

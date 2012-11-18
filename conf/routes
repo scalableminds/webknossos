@@ -4,7 +4,7 @@
 
 # The general pages
 GET     /                                   controllers.Game.index
-GET     /trace/:experimentId                controllers.Game.trace(experimentId: String)
+GET     /trace/:tracingId                   controllers.Game.trace(tracingId: String)
 GET     /dashboard                          controllers.UserController.dashboard
 
 # Tasks
@@ -40,18 +40,18 @@ POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( d
 # Game Stuff
 GET     /game/initialize                    controllers.Game.initialize
 
-# Experiment Stuff
-POST      /experiment                       controllers.ExperimentController.useAsActive(id: String, isNew: Boolean)
-POST      /experiment/create                controllers.ExperimentController.createExplorational
-GET       /experiment                       controllers.ExperimentController.list
-GET       /experiment/:experimentId         controllers.ExperimentController.info( experimentId: String )
-PUT       /experiment/:experimentId         controllers.ExperimentController.update( experimentId: String )
+# Tracing Stuff
+POST      /tracing                          controllers.TracingController.useAsActive(id: String, isNew: Boolean)
+POST      /tracing/create                   controllers.TracingController.createExplorational
+GET       /tracing                          controllers.TracingController.list
+GET       /tracing/:tracingId               controllers.TracingController.info( tracingId: String )
+PUT       /tracing/:tracingId               controllers.TracingController.update( tracingId: String )
 
 #Admin pages
 GET     /admin/nmldownload                  controllers.admin.NMLIO.downloadList
 GET     /admin/nmlupload                    controllers.admin.NMLIO.uploadForm
 POST    /admin/nmlupload                    controllers.admin.NMLIO.upload
-GET     /admin/nmldownload/:experimentId    controllers.admin.NMLIO.download( experimentId: String )
+GET     /admin/nmldownload/:tracingId       controllers.admin.NMLIO.download( tracingId: String )
 
 
 # Admin Tasks
@@ -67,19 +67,19 @@ GET     /admin/tasks                        controllers.admin.TaskAdministration
 GET     /admin/tasks/:id/delete             controllers.admin.TaskAdministration.delete(id: String)
 GET     /admin/tasks/create                 controllers.admin.TaskAdministration.create
 POST    /admin/tasks/createBulk             controllers.admin.TaskAdministration.createBulk
-POST    /admin/tasks/createFromExperiment   controllers.admin.TaskAdministration.createFromExperiment
+POST    /admin/tasks/createFromTracing      controllers.admin.TaskAdministration.createFromTracing
 POST    /admin/tasks/createFromForm         controllers.admin.TaskAdministration.createFromForm
 
 GET     /admin/trainingsTasks               controllers.admin.TrainingsTaskAdministration.list
 GET     /admin/trainingsTasks/create        controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
 POST    /admin/trainingsTasks/createFromForm controllers.admin.TrainingsTaskAdministration.createFromForm
-POST    /admin/trainingsTasks/createFromExperiment controllers.admin.TrainingsTaskAdministration.createFromExperiment
+POST    /admin/trainingsTasks/createFromTracing controllers.admin.TrainingsTaskAdministration.createFromTracing
 GET     /admin/trainingsTasks/:id/delete    controllers.admin.TrainingsTaskAdministration.delete(id: String)
 
-GET     /admin/training/:id/startReview     controllers.admin.TrainingsExperimentAdministration.startReview(id: String)
-GET     /admin/training/:id/abortReview     controllers.admin.TrainingsExperimentAdministration.abortReview(id: String)
-GET     /admin/training/:id/finishReview    controllers.admin.TrainingsExperimentAdministration.finishReview(id: String)
-POST    /admin/training/:id/finishReview    controllers.admin.TrainingsExperimentAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
+GET     /admin/training/:id/startReview     controllers.admin.TrainingsTracingAdministration.startReview(id: String)
+GET     /admin/training/:id/abortReview     controllers.admin.TrainingsTracingAdministration.abortReview(id: String)
+GET     /admin/training/:id/finishReview    controllers.admin.TrainingsTracingAdministration.finishReview(id: String)
+POST    /admin/training/:id/finishReview    controllers.admin.TrainingsTracingAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
 
 
 # User Administration
@@ -91,7 +91,7 @@ GET     /admin/users/:id/delete             controllers.admin.UserAdministration
 POST    /admin/users/addRole                controllers.admin.UserAdministration.addRoleBulk
 POST    /admin/users/removeRole             controllers.admin.UserAdministration.removeRoleBulk
 
-GET     /admin/experiments/:id/review       controllers.admin.TrainingsExperimentAdministration.oxalisReview(id: String)
+GET     /admin/tracings/:id/review          controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
 
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.Application.javascriptRoutes

@@ -1,4 +1,4 @@
-@(loggedInUser: models.user.User, temporaryExperiments: List[models.experiment.Experiment], userTasks: List[(models.task.Task, models.experiment.Experiment)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, akka.util.Duration]], dataSets: List[models.binary.DataSet])
+@(loggedInUser: models.user.User, explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, akka.util.Duration]], dataSets: List[models.binary.DataSet])
 
 @import brainflight.format._
 
@@ -16,8 +16,8 @@
         </tr>
       </thead>
       <tbody>
-      @userTasks.map{ case (task, experiment) => 
-        @taskExperimentTableItem(task, experiment)
+      @userTasks.map{ case (task, tracing) => 
+        @taskTracingTableItem(task, tracing)
       }
       </tbody>
     </table>
@@ -25,33 +25,33 @@
 
     <hr />
 
-    <h3>Explorative experiments</h3>
+    <h3>Explorative Tracings</h3>
     <table class="table table-striped">
       <thead>
         <tr>
           <th> # </th>
           <th> DataSet </th>
           <th> Trees </th>
-          <th> Experiment-Type </th>
+          <th> Tracing-Type </th>
           <th> Last edited </th>
           <th> </th>
         </tr>
       </thead>
       <tbody>
-      @temporaryExperiments.map{ experiment => 
+      @explorativeTracings.map{ tracing => 
         <tr>
-          <td> @experiment.id.drop(10) </td>
-          <td> @experiment.dataSetName </td>
-          <td> @experiment.trees.size </td>
-          <td> @experiment.experimentType </td>
-          <td> @DateFormatter.format(experiment.date) </td>
-          <td> <a href="@controllers.routes.Game.trace(experiment.id)"><i class="icon-random"></i> trace</a></td>
+          <td> @tracing.id.drop(10) </td>
+          <td> @tracing.dataSetName </td>
+          <td> @tracing.trees.size </td>
+          <td> @tracing.tracingType </td>
+          <td> @DateFormatter.format(tracing.date) </td>
+          <td> <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a></td>
         </tr>
       }
       </tbody>
     </table>
 
-    @helper.form(action = controllers.routes.ExperimentController.createExplorational, 'class -> "form-inline") {
+    @helper.form(action = controllers.routes.TracingController.createExplorational, 'class -> "form-inline") {
       <div>
         <select name="dataSetId">
           @dataSets.map{ d => 

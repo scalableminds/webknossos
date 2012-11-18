@@ -12,7 +12,7 @@ import brainflight.tools.geometry.Vector3I
 import brainflight.tools.geometry.Vector3I._
 import models.user.User
 import models.security._
-import models.experiment.Experiment
+import models.tracing.Tracing
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent.Channel
@@ -25,7 +25,7 @@ import models.graph.Node
 import models.graph.Edge
 import brainflight.tools.geometry.Point3D
 import brainflight.format.DateFormatter
-import models.experiment.UsedExperiments
+import models.tracing.UsedTracings
 import models.user.TimeTracking
 
 /**
@@ -35,7 +35,7 @@ import models.user.TimeTracking
  * Time: 11:27
  */
 
-object ExperimentController extends Controller with Secured {
+object TracingController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
   def createDataSetInformation(dataSetName: String) =
@@ -50,14 +50,14 @@ object ExperimentController extends Controller with Secured {
         Json.obj("error" -> "Couldn't find dataset.")
     }
 
-  def createExperimentInformation(experiment: Experiment) = {
+  def createTracingInformation(tracing: Tracing) = {
     Json.obj(
-      "experiment" -> experiment)
+      "tracing" -> tracing)
   }
 
-  def createExperimentsList(user: User) = {
+  def createTracingsList(user: User) = {
     for {
-      exp <- Experiment.findFor(user)
+      exp <- Tracing.findFor(user)
     } yield {
       Json.obj(
         "name" -> (exp.dataSetName + " " + DateFormatter.format(exp.date)),
@@ -66,7 +66,7 @@ object ExperimentController extends Controller with Secured {
     }
   }
 
-  def createNewExperimentList() = {
+  def createNewTracingList() = {
     DataSet.findAll.map(d => Json.obj(
       "name" -> ("New on " + d.name),
       "id" -> d.id,
@@ -77,15 +77,15 @@ object ExperimentController extends Controller with Secured {
     val user = request.user
     if (isNew) {
       DataSet.findOneById(id).map { dataSet =>
-        val exp = Experiment.createExperimentFor(user, dataSet)
-        UsedExperiments.use(user, exp)
+        val exp = Tracing.createTracingFor(user, dataSet)
+        UsedTracings.use(user, exp)
         Ok
       } getOrElse BadRequest("Couldn't find DataSet.")
     } else {
-      Experiment.findOneById(id).filter(_._user == user._id).map { exp =>
-        UsedExperiments.use(user, exp)
+      Tracing.findOneById(id).filter(_._user == user._id).map { exp =>
+        UsedTracings.use(user, exp)
         Ok
-      } getOrElse BadRequest("Coudln't find experiment.")
+      } getOrElse BadRequest("Coudln't find tracing.")
     }
   }
 
@@ -94,28 +94,28 @@ object ExperimentController extends Controller with Secured {
       dataSetId <- request.body.get("dataSetId").flatMap(_.headOption)
       dataSet <- DataSet.findOneById(dataSetId)
     } yield {
-      val exp = Experiment.createExperimentFor(request.user, dataSet)
-      UsedExperiments.use(request.user, exp)
+      val exp = Tracing.createTracingFor(request.user, dataSet)
+      UsedTracings.use(request.user, exp)
       Redirect(routes.Game.index)
     }) getOrElse BadRequest("Couldn't find DataSet.")
   }
 
   def list = Authenticated { implicit request =>
-    Ok(Json.toJson(createNewExperimentList ++ createExperimentsList(request.user)))
+    Ok(Json.toJson(createNewTracingList ++ createTracingsList(request.user)))
   }
 
-  def info(experimentId: String) = Authenticated { implicit request =>
-    Experiment.findOneById(experimentId).filter(_._user == request.user._id).map(exp =>
-      Ok(createExperimentInformation(exp) ++ createDataSetInformation(exp.dataSetName))).getOrElse(BadRequest("Experiment with id '%s' not found.".format(experimentId)))
+  def info(tracingId: String) = Authenticated { implicit request =>
+    Tracing.findOneById(tracingId).filter(_._user == request.user._id).map(exp =>
+      Ok(createTracingInformation(exp) ++ createDataSetInformation(exp.dataSetName))).getOrElse(BadRequest("Tracing with id '%s' not found.".format(tracingId)))
   }
 
-  def update(experimentId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
-    Experiment.findOneById(experimentId).filter(_._user == request.user._id).flatMap { _ =>
-      (request.body).asOpt[Experiment].map { exp =>
-        Experiment.save(exp.copy(timestamp = System.currentTimeMillis))
+  def update(tracingId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
+    Tracing.findOneById(tracingId).filter(_._user == request.user._id).flatMap { _ =>
+      (request.body).asOpt[Tracing].map { exp =>
+        Tracing.save(exp.copy(timestamp = System.currentTimeMillis))
         TimeTracking.logUserAction(request.user)
         Ok
       }
-    } getOrElse (BadRequest("Update for experiment with id '%s' failed.".format(experimentId)))
+    } getOrElse (BadRequest("Update for tracing with id '%s' failed.".format(tracingId)))
   }
 }

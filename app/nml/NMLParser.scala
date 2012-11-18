@@ -3,7 +3,7 @@ package nml
 import scala.xml.XML
 import models.binary.DataSet
 import models.graph.{ Tree, Edge }
-import models.experiment.Experiment
+import models.tracing.Tracing
 import models.graph
 import models.Color
 import brainflight.tools.ExtendedTypes._
@@ -47,13 +47,13 @@ class NMLParser(file: File)(implicit ctx: NMLContext) {
       parameters <- (data \ "parameters")
       scale <- parseScale(parameters \ "scale")
     } yield {
-      val dataSetName = parseDataSetName(parameters \ "experiment")
+      val dataSetName = parseDataSetName(parameters \ "tracing")
       val activeNodeId = parseActiveNode(parameters \ "activeNode")
       val editPosition = parseEditPosition(parameters \ "editPosition")
       val time = parseTime(parameters \ "time")
       val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
       val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
-      Experiment(ctx.user._id, dataSetName, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
+      Tracing(ctx.user._id, dataSetName, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
     }
   }
 

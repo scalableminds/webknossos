@@ -6,40 +6,40 @@ import brainflight.security.Secured
 import models.security.Role
 import models.binary.DataSet
 import play.api.Logger
-import models.experiment.Experiment
+import models.tracing.Tracing
 import models.user._
-import models.experiment.UsedExperiments
+import models.tracing.UsedTracings
 import views._
 
 object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
-  def createExperimentIDInfo(experimentId: String) = Json.obj(
+  def createTracingIDInfo(tracingId: String) = Json.obj(
     "task" -> Json.obj(
-      "id" -> experimentId))
+      "id" -> tracingId))
       
   def index = Authenticated { implicit request =>      
-    if(UsedExperiments.by(request.user).isEmpty)
+    if(UsedTracings.by(request.user).isEmpty)
       Redirect(routes.UserController.dashboard)
     else
       Ok(html.oxalis.trace(request.user))
   }
   
-  def trace(experimentId: String) = Authenticated { implicit request =>
+  def trace(tracingId: String) = Authenticated { implicit request =>
     val user = request.user
     
-    Experiment.findOneById(experimentId)
+    Tracing.findOneById(tracingId)
       .filter( _._user == user._id)
-      .map(exp => UsedExperiments.use(user, exp))
+      .map(exp => UsedTracings.use(user, exp))
       
     Ok(html.oxalis.trace(user))
   }
   
-  def reviewTrace(experimentId: String) = Authenticated(role = Role.Admin){ implicit request =>
+  def reviewTrace(tracingId: String) = Authenticated(role = Role.Admin){ implicit request =>
     val user = request.user
     
-    Experiment.findOneById(experimentId)
-      .map(exp => UsedExperiments.use(user, exp))
+    Tracing.findOneById(tracingId)
+      .map(exp => UsedTracings.use(user, exp))
       
     // TODO: set oxalis to read only
     Ok(html.oxalis.trace(user))
@@ -47,11 +47,11 @@ object Game extends Controller with Secured {
 
   def initialize = Authenticated { implicit request =>
     val user = request.user
-    UsedExperiments.by(user) match {
-      case experiment :: _ =>
-        Ok(createExperimentIDInfo(experiment.toString))
+    UsedTracings.by(user) match {
+      case tracing :: _ =>
+        Ok(createTracingIDInfo(tracing.toString))
       case _ =>
-        BadRequest("No open experiment found.")
+        BadRequest("No open tracing found.")
     }
   }
 }

@@ -11,7 +11,7 @@ import nml.NMLParser
 import xml.Xml
 import play.api.Logger
 import scala.xml.PrettyPrinter
-import models.experiment._
+import models.tracing._
 
 object NMLIO extends Controller with Secured {
   val prettyPrinter = new PrettyPrinter(100, 2)
@@ -25,11 +25,11 @@ object NMLIO extends Controller with Secured {
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
     request.body.file("nmlFile").map { nmlFile =>
       implicit val ctx = NMLContext(request.user)
-      (new NMLParser(nmlFile.ref.file).parse).foreach { experiment =>
+      (new NMLParser(nmlFile.ref.file).parse).foreach { tracing =>
         Logger.debug("Successfully parsed nmlFile")
-        Experiment.save(experiment.copy(
-          experimentType = ExperimentType.Explorational))
-        UsedExperiments.use(request.user, experiment)
+        Tracing.save(tracing.copy(
+          tracingType = TracingType.Explorational))
+        UsedTracings.use(request.user, tracing)
       }
       Ok("File uploaded")
     }.getOrElse {
@@ -38,20 +38,20 @@ object NMLIO extends Controller with Secured {
   }
 
   def downloadList = Authenticated { implicit request =>
-    val userExperiments = Experiment.findAll.groupBy(_._user).flatMap {
-      case (userId, experiments) =>
-        User.findOneById(userId).map(_ -> experiments)
+    val userTracings = Tracing.findAll.groupBy(_._user).flatMap {
+      case (userId, tracings) =>
+        User.findOneById(userId).map(_ -> tracings)
     }
-    Ok(html.admin.nml.nmldownload(request.user, userExperiments))
+    Ok(html.admin.nml.nmldownload(request.user, userTracings))
   }
 
-  def download(experimentId: String) = Authenticated { implicit request =>
+  def download(tracingId: String) = Authenticated { implicit request =>
     (for {
-      experiment <- Experiment.findOneById(experimentId)
+      tracing <- Tracing.findOneById(tracingId)
     } yield {
-      Ok(prettyPrinter.format(Xml.toXML(experiment))).withHeaders(
+      Ok(prettyPrinter.format(Xml.toXML(tracing))).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",
-        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(experiment.dataSetName)))
+        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(tracing.dataSetName)))
     }) getOrElse BadRequest
   }
 

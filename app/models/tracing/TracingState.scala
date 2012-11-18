@@ -1,14 +1,14 @@
-package models.experiment
+package models.tracing
 
-case class ExperimentState(
+case class TracingState(
   isAssigned: Boolean = false,
   isFinished: Boolean = false,
   isInReview: Boolean = false,
   isInProgress: Boolean = false)
 
-object ExperimentState{
-  val Assigned = ExperimentState(isAssigned = true)
-  val Unassigned = ExperimentState()
+object TracingState{
+  val Assigned = TracingState(isAssigned = true)
+  val Unassigned = TracingState()
 
   val InReview = Assigned.copy(isInReview = true)
 

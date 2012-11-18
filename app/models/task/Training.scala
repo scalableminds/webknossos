@@ -24,7 +24,7 @@ object Training {
     Training(domain, gain, loss, null)
 
   def hasDoneTraining(user: User, t: Task) = {
-    t.experiments.find(_._user == user._id).isDefined
+    t.tracings.find(_._user == user._id).isDefined
   }
 
   def findAllFor(user: User) = {

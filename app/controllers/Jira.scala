@@ -7,7 +7,7 @@ import models.security.Role
 import models.binary.DataSet
 import play.api.mvc._
 import play.api.Logger
-import models.experiment.Experiment
+import models.tracing.Tracing
 import models.user.User
 import org.apache.commons.codec.binary.Base64
 import com.sun.jersey.api.client.WebResource

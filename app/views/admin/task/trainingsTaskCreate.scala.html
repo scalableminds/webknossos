@@ -1,4 +1,4 @@
-@(loggedInUser: models.user.User, tasks: List[models.task.Task], experiments: List[models.experiment.Experiment], taskTypes: List[models.task.TaskType], experiences: Seq[String], nmlForm: Form[models.task.Task], experimentForm: Form[models.task.Task])
+@(loggedInUser: models.user.User, tasks: List[models.task.Task], tracings: List[models.tracing.Tracing], taskTypes: List[models.task.TaskType], experiences: Seq[String], nmlForm: Form[models.task.Task], tracingForm: Form[models.task.Task])
 
 @import controllers.BootstrapHelpers._
 @import play.api.libs.json.Json
@@ -38,33 +38,33 @@
       }
     </div>
 
-    <h3>Create Trainings-Task from Experiment</h3>
+    <h3>Create Trainings-Task from Tracing</h3>
     <div class="well">
-      @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromExperiment, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
+      @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromTracing, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
         
-        @helper.select(experimentForm("experiment"), experiments.map { exp =>
+        @helper.select(tracingForm("tracing"), tracings.map { exp =>
           exp.id -> (exp.dataSetName + " " + DateFormatter.format(exp.date)) 
         })
         
-        @helper.select(experimentForm("taskType"), taskTypes.map { tt =>
+        @helper.select(tracingForm("taskType"), taskTypes.map { tt =>
           tt.id -> tt.summary
         }, Symbol("help-inline") -> taskTypeHelpLink)
 
-        @helper.input(experimentForm("experience.domain")) { (id, name, value, args) =>
+        @helper.input(tracingForm("experience.domain")) { (id, name, value, args) =>
           <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
         }
 
-        @helper.inputText(experimentForm("experience.value"), 'type -> "number")
+        @helper.inputText(tracingForm("experience.value"), 'type -> "number")
 
-        @helper.inputText(experimentForm("priority"), 'type -> "number")
+        @helper.inputText(tracingForm("priority"), 'type -> "number")
 
-        @helper.input(experimentForm("training.domain")) { (id, name, value, args) =>
+        @helper.input(tracingForm("training.domain")) { (id, name, value, args) =>
             <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
         }
 
-        @helper.inputText(experimentForm("training.gain"), 'type -> "number")
+        @helper.inputText(tracingForm("training.gain"), 'type -> "number")
         
-        @helper.inputText(experimentForm("training.loss"), 'type -> "number")
+        @helper.inputText(tracingForm("training.loss"), 'type -> "number")
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>

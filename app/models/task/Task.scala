@@ -28,7 +28,7 @@ import brainflight.tools.geometry.Scale
 import models.user.User
 import play.api.Logger
 import models.user.Experience
-import models.experiment._
+import models.tracing._
 
 case class Task(
     dataSetName: String,
@@ -39,7 +39,7 @@ case class Task(
     priority: Int = 100,
     instances: Int = 1,
     created: Date = new Date,
-    _experiments: List[ObjectId] = Nil,
+    _tracings: List[ObjectId] = Nil,
     training: Option[Training] = None,
     _id: ObjectId = new ObjectId) {
 
@@ -47,20 +47,20 @@ case class Task(
 
   def taskType = TaskType.findOneById(_taskType)
 
-  def experiments = _experiments.map(Experiment.findOneById).flatten
+  def tracings = _tracings.map(Tracing.findOneById).flatten
 
-  def isFullyAssigned = experiments.size == instances
+  def isFullyAssigned = tracings.size == instances
 
   def isTraining = training.isDefined
 
   def inProgress =
-    experiments.filter(!_.state.isFinished).size
+    tracings.filter(!_.state.isFinished).size
 
   def completed =
-    experiments.size - inProgress
+    tracings.size - inProgress
 
   def open =
-    instances - experiments.size
+    instances - tracings.size
 }
 
 object Task extends BasicDAO[Task]("tasks") {
@@ -74,15 +74,15 @@ object Task extends BasicDAO[Task]("tasks") {
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
   
   override def remove(t: Task) = {
-    t.experiments.map{ experiment =>
-      experiment.update(_.removeTask)
+    t.tracings.map{ tracing =>
+      tracing.update(_.removeTask)
     }
     super.remove(t)
   }
   
-  def removeExperiment(task: Task, experiment: Experiment){
+  def removeTracing(task: Task, tracing: Tracing){
     alterAndSave(task.copy(
-        _experiments = task._experiments.filterNot( _ == experiment._id)))
+        _tracings = task._tracings.filterNot( _ == tracing._id)))
   }
 
   def findAllOfOneType(isTraining: Boolean) =
@@ -98,12 +98,12 @@ object Task extends BasicDAO[Task]("tasks") {
   def findAllAssignableNonTrainings =
     findAllNonTrainings.filter(!_.isFullyAssigned)
 
-  def addExperiment(task: Task, experiment: Experiment) = {
+  def addTracing(task: Task, tracing: Tracing) = {
     alterAndSave(task.copy(
-      _experiments = experiment._id :: task._experiments))
+      _tracings = tracing._id :: task._tracings))
   }
 
-  def toExperimentForm(t: Task): Option[(String, String, Experience, Int, Int)] = {
+  def toTracingForm(t: Task): Option[(String, String, Experience, Int, Int)] = {
     Some(("",
       t.taskType.map(_.id).getOrElse(""),
       t.neededExperience,
@@ -119,9 +119,9 @@ object Task extends BasicDAO[Task]("tasks") {
       _.copy(training = Some(training))
     } getOrElse null
 
-  def fromTrainingsExperimentForm(experimentId: String, taskTypeId: String, experience: Experience, priority: Int, training: Training) = 
+  def fromTrainingsTracingForm(tracingId: String, taskTypeId: String, experience: Experience, priority: Int, training: Training) = 
     (for{
-      e <- Experiment.findOneById(experimentId)
+      e <- Tracing.findOneById(tracingId)
       taskType <- TaskType.findOneById(taskTypeId)
     } yield {
         Task(e.dataSetName,
@@ -134,7 +134,7 @@ object Task extends BasicDAO[Task]("tasks") {
           training = Some(training.copy(sample = e._id)))
     }) getOrElse null
     
-  def toTrainingsExperimentForm(t: Task) = {
+  def toTrainingsTracingForm(t: Task) = {
     Some(("",
       t.taskType.map(_.id).getOrElse(""),
       t.neededExperience,
@@ -142,8 +142,8 @@ object Task extends BasicDAO[Task]("tasks") {
       t.training getOrElse null))
     }
         
-  def fromExperimentForm(experiment: String, taskTypeId: String, experience: Experience, priority: Int, instances: Int): Task =
-    (Experiment.findOneById(experiment), TaskType.findOneById(taskTypeId)) match {
+  def fromTracingForm(tracing: String, taskTypeId: String, experience: Experience, priority: Int, instances: Int): Task =
+    (Tracing.findOneById(tracing), TaskType.findOneById(taskTypeId)) match {
       case (Some(e), Some(taskType)) =>
         Task(e.dataSetName,
           0,
@@ -153,7 +153,7 @@ object Task extends BasicDAO[Task]("tasks") {
           priority,
           instances)
       case _ =>
-        Logger.warn("Failed to create Task from form. Experiment: %s TaskType: %s".format(experiment, taskTypeId))
+        Logger.warn("Failed to create Task from form. Tracing: %s TaskType: %s".format(tracing, taskTypeId))
         null
     }
 

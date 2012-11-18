@@ -1,6 +1,6 @@
-package models.experiment
+package models.tracing
 
-object ExperimentType extends Enumeration {
+object TracingType extends Enumeration {
   val Task = Value("Task")
   val Training = Value("Training")
   val Sample = Value("Trainings Sample")

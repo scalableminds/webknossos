@@ -1,4 +1,4 @@
-package models.experiment
+package models.tracing
 
 import org.bson.types.ObjectId
 import com.mongodb.casbah.Imports._
@@ -9,9 +9,9 @@ import models.basics.BasicDAO
 import models.user.User
 import java.util.Date
 
-case class ExperimentReview(
+case class TracingReview(
     _reviewee: ObjectId,
-    reviewExperiment: ObjectId,
+    reviewTracing: ObjectId,
     timestamp: Long,
     comment: Option[String] = None,
     _id: ObjectId = new ObjectId) {

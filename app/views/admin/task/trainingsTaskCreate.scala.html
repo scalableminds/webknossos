@@ -16,6 +16,7 @@
   <div class="container">
     <h3>Create Trainings-Task with NML</h3>
     <div class="well">
+      The uploaded NML-file is used as a sample for the training. After a user has submitted his training result, it is getting compared with the sample.
       @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromForm, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
         
         @helper.select(nmlForm("task"), tasks.map { task =>
@@ -40,6 +41,7 @@
 
     <h3>Create Trainings-Task from Tracing</h3>
     <div class="well">
+      The given tracing is used as a sample for the training. After a user has submitted his training result, it is getting compared with the sample.
       @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromTracing, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
         
         @helper.select(tracingForm("tracing"), tracings.map { exp =>

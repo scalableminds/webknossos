@@ -3,7 +3,14 @@
 <div class="@if(elements.hasErrors) { error } control-group">
     <label class="control-label" for="@elements.id">@elements.label</label>
     <div class="controls">
-        @elements.input
+        @elements.args.get(Symbol("input-append")).map{ append =>
+          <div class="input-append">
+            @elements.input
+            <span class="add-on">@append</span>
+          </div>
+        }.getOrElse{
+          @elements.input
+        }
         <span class="help-inline errors">@elements.errors.mkString(", ")</span>
         @elements.args.get(Symbol("help-inline")).map{ help =>
         	<span class="help-inline">@help</span>

@@ -44,7 +44,7 @@ class Controller
       if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault(); return
 
     # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
+    $("#main-container").bind "contextmenu", (event) ->
       event.preventDefault(); return
 
     @canvasesAndNav = $("#main")[0]

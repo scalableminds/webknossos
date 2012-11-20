@@ -112,7 +112,14 @@ Route =
           lostTrees = []
 
           ############ Load Tree from data.experiment ##############
+          
+          @scale = data.experiment.scale
+          # reciprocal of scale
+          @voxelPerNM = [0, 0, 0]
+          for i in [0..(@scale.length - 1)]
+            @voxelPerNM[i] = 1 / @scale[i]
           @scaleX = data.experiment.scale[0]
+
           @globalPosition = data.experiment.editPosition
           # get tree to build
           for tree in data.experiment.trees

@@ -29,11 +29,14 @@ class Plane
     @scaleVector     = scaleVector
 
     # transform scaleVector (because they are rotated)
-    scaleArray   = [@scaleVector.x, @scaleVector.y, @scaleVector.z]
     transformed  = new Array(3)
-    ind          = @flycam.getIndices(planeID)
+    # planeWidth means that the plane should be that many voxels wide in the
+    # dimension with the highest resolution. In all other dimensions, the plane
+    # is smaller in voxels, so that it is squared in nm.
+    maxVoxelPerNM = Math.max.apply(null, @model.Route.voxelPerNM)
     for i in [0..2]
-      transformed[i] = scaleArray[ind[i]]
+      transformed[i] = @model.Route.voxelPerNM[i] / maxVoxelPerNM
+    transformed = @flycam.transDim(transformed, @planeID)
     # Apparently y and z are switched for those guys...
     @scaleVector = new THREE.Vector3(transformed[0], 1, transformed[1])
     
@@ -109,8 +112,8 @@ class Plane
       
       scalingFactor = @flycam.getTextureScalingFactor @planeID
       map = @plane.material.map
-      map.repeat.x = @planeWidth * scalingFactor / @textureWidth  # (tWidth -4) ???
-      map.repeat.y = @planeWidth * scalingFactor / @textureWidth
+      map.repeat.x = (area[2] -  area[0]) / @textureWidth  # (tWidth -4) ???
+      map.repeat.y = (area[3] -  area[1]) / @textureWidth
       map.offset.x = area[0] / @textureWidth
       map.offset.y = area[1] / @textureWidth
 

@@ -25,7 +25,7 @@ class Skeleton
     @maxRouteLen  = maxRouteLen
     @flycam       = flycam
     @model        = model
-    @scaleVector  = scaleVector
+    @scaleVector  = @model.Route.voxelPerNM
     # Edges
     @routes       = []
     # Nodes

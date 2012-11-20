@@ -80,12 +80,11 @@ class Flycam2d
     @calculateBuffer()
 
   calculateBuffer : ->
-    scaleArray = @getSceneScalingArray()
     for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      ind = @getIndices(planeID)
+      scaleArray = @transDim(@getSceneScalingArray(), planeID)
       base = @viewportWidth * @getTextureScalingFactor(planeID) / 2
-      @buffer[planeID] = [TEXTURE_WIDTH/2 - base * scaleArray[ind[0]]/2,
-                          TEXTURE_WIDTH/2 - base * scaleArray[ind[1]]/2]
+      @buffer[planeID] = [TEXTURE_WIDTH/2 - base * scaleArray[0],
+                          TEXTURE_WIDTH/2 - base * scaleArray[1]]
 
   getIntegerZoomStep : (planeID) ->
     @integerZoomSteps[planeID]
@@ -99,8 +98,10 @@ class Flycam2d
   getPlaneScalingFactor : (planeID) ->
     Math.pow(2, @zoomSteps[planeID])
 
+  # Return array of factors which need to be multiplied with viewportWidth in order
+  # to get the plane size in voxels
   getSceneScalingArray : ->
-    rScale = @model.Route.data.experiment.scale
+    rScale = @model.Route.scale
     rMin   = Math.min.apply(null, rScale)
     [rScale[0] / rMin, rScale[1] / rMin, rScale[2] / rMin]
 
@@ -168,13 +169,21 @@ class Flycam2d
       when PLANE_YZ then [2, 1, 0]  # X-Axis of the YZ-Plane is eqivalent to moving
       when PLANE_XZ then [0, 2, 1]  # along the Z axis in the cube -> ind[0]=2
 
+  # Translate Dimension: Helper method to translate arrays with three elements
+  transDim : (array, planeID) ->
+    ind = @getIndices(planeID)
+    return [array[ind[0]], array[ind[1]], array[ind[2]]]
+
   needsUpdate : (planeID) ->
     area = @getArea planeID
     ind  = @getIndices planeID
-    ((area[0] < 0) or (area[1] < 0) or (area[2] > TEXTURE_WIDTH) or (area[3] > TEXTURE_WIDTH) or
+    res = ((area[0] < 0) or (area[1] < 0) or (area[2] > TEXTURE_WIDTH) or (area[3] > TEXTURE_WIDTH) or
     (@globalPosition[ind[2]] != @texturePosition[planeID][ind[2]]) or
     (@zoomSteps[planeID] - (@integerZoomSteps[planeID]-1)) < @maxZoomStepDiff) or
     (@zoomSteps[planeID] -  @integerZoomSteps[planeID]     > @maxZoomStepDiff)
+    if res
+      console.log "NEEDS UPDATE"
+    return res
 
   # return the coordinate of the upper left corner of the viewport as texture-relative coordinate
   getOffsets : (planeID) ->
@@ -189,7 +198,7 @@ class Flycam2d
     ind        = @getIndices(planeID)
     offsets = @getOffsets(planeID)
     size    = @getTextureScalingFactor(planeID) * @viewportWidth
-    # two pixels larger, just to fight rounding mistakes
+    # two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
     [offsets[0] - 1, offsets[1] - 1, offsets[0] + size * scaleArray[ind[0]] + 1, offsets[1] + size * scaleArray[ind[1]] + 1]
 
   notifyNewTexture : (planeID) ->

@@ -40,7 +40,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
       "training" -> mapping(
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,
-        "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingsTracingForm)(Task.toTrainingsTracingForm))
+        "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingsTracingForm)(Task.toTrainingsTracingForm)).fill(Task.withEmptyTraining)
 
   def list = Authenticated { implicit request =>
     Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))

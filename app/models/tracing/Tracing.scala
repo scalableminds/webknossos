@@ -103,7 +103,7 @@ case class Tracing(
   }
 
   def removeTask= {
-    this.copy(taskId = None)
+    this.copy(taskId = None, tracingType = TracingType.Orphan)
   }
 }
 

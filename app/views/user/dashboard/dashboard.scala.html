@@ -76,7 +76,7 @@
         @trackedTime.map{ case (interval, time) => 
           <tr>
             <td> @interval </td>
-            <td> @time.printHMS </td>
+            <td> @DateFormatter.formatTimeHumanReadable(time) </td>
             <td> </td>
           </tr>
         }

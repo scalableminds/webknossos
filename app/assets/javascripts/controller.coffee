@@ -368,9 +368,9 @@ class Controller
     @sceneController.updateRoute()
 
   createNewTree : =>
-    id = @model.Route.createNewTree()
+    [id, color] = @model.Route.createNewTree()
     @gui.update()
-    @sceneController.skeleton.createNewTree(id)
+    @sceneController.skeleton.createNewTree(id, color)
 
   setActiveTree : (treeId) =>
     @model.Route.setActiveTree(treeId)

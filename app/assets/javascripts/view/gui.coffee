@@ -24,50 +24,40 @@ class Gui
 
     # create GUI
     modelRadius = @model.Route.getActiveNodeRadius()
-    @settings = { 
-                save : @saveNow
-                finish : @finish
-                upload : @uploadNML
-                download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
-                                          "_blank", "width=700,height=400,location=no,menubar=no")
+    @settings = 
+      save : @saveNow
+      finish : @finish
+      upload : @uploadNML
+      download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
+                                "_blank", "width=700,height=400,location=no,menubar=no")
+      
+      position : "#{initPos[0]}, #{initPos[1]}, #{initPos[2]}"
+      lockZoom: data.lockZoom
+      inverseX: data.mouseInversionX == 1
+      inverseY: data.mouseInversionY == 1
 
-                resume : false
-                tracings : null
-                selectedTracingIndex : 0
-                changeTracing : => 
-                  tracing = @settings.tracings[@settings.selectedTracingIndex]
-                  @model.Route.pushImpl().done ->
-                    request(
-                      method : "POST"
-                      url : "/tracing?id=#{tracing.id}&isNew=#{Number(tracing.isNew)}"
-                    ).always -> window.location.reload()
+      moveValue : data.moveValue
+      routeClippingDistance: data.routeClippingDistance
+      displayCrosshairs: data.displayCrosshair
+      interpolation : data.interpolation
+      minZoomStep : data.minZoomStep
 
-                position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
-                lockZoom: data.lockZoom
-                inverseX: data.mouseInversionX == 1
-                inverseY: data.mouseInversionY == 1
+      displayPrevXY : data.displayPreviewXY
+      displayPrevYZ : data.displayPreviewYZ
+      displayPrevXZ : data.displayPreviewXZ
+      nodesAsSpheres : data.nodesAsSpheres
 
-                moveValue : data.moveValue
-                routeClippingDistance: data.routeClippingDistance
-                displayCrosshairs: data.displayCrosshair
-                interpolation : data.interpolation
-                minZoomStep : data.minZoomStep
+      activeTreeID : @model.Route.getActiveTreeId()
+      newTree : => @trigger "createNewTree"
+      deleteActiveTree : => @trigger "deleteActiveTree"
 
-                displayPrevXY : data.displayPreviewXY
-                displayPrevYZ : data.displayPreviewYZ
-                displayPrevXZ : data.displayPreviewXZ
-                nodesAsSpheres : data.nodesAsSpheres
+      activeNodeID : @model.Route.getActiveNodeId()
+      newNodeNewTree : data.newNodeNewTree
+      deleteActiveNode : => @trigger "deleteActiveNode"
+      radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
 
-                activeTreeID : @model.Route.getActiveTreeId()
-                newTree : => @trigger "createNewTree"
-                deleteActiveTree : => @trigger "deleteActiveTree"
 
-                activeNodeID : @model.Route.getActiveNodeId()
-                newNodeNewTree : data.newNodeNewTree
-                deleteActiveNode : => @trigger "deleteActiveNode"
-                radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
-              }
-    @gui  = new dat.GUI({autoPlace: false, width : 280, hideable : false})
+    @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
     
     container.append @gui.domElement
 
@@ -80,23 +70,6 @@ class Gui
                           .name("Upload NML")
     (fTask.add @settings, "download")
                           .name("Download NML")
-    
-    fTracing = @gui.addFolder("Tracing")
-    request(
-      url : "/tracing"
-      responseType : "json"
-    ).done (tracings) =>
-      
-      @settings.tracings = tracings
-
-      options = {}
-      for tracing, i in tracings
-        options[tracing.name] = i
-
-      (fTracing.add @settings, "selectedTracingIndex", options)
-                            .name("Datasets")
-      (fTracing.add @settings, "changeTracing")
-                            .name("Apply")
 
     
     fPosition = @gui.addFolder("Position")
@@ -184,6 +157,8 @@ class Gui
     #fSkeleton.open()
     fTrees.open()
     fNodes.open()
+
+    @gui.close()
 
   saveNow : =>
     @model.User.Configuration.pushImpl()

@@ -1,7 +1,7 @@
 package mvc
 
-import play.api.mvc.Results.Status
+import play.api.mvc.Results.{Status => HttpStatus}
 
 object Status {
-  val UnprocessableEntity = new Status(422)
+  val UnprocessableEntity = new HttpStatus(422)
 }

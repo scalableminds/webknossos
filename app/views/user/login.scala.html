@@ -14,7 +14,7 @@
 
           @form.globalError.map { error =>
             <div class="alert alert-error">
-              @error.message
+              @Messages(error.message)
             </div>
           }
           

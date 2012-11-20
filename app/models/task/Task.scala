@@ -27,87 +27,168 @@ import models.graph.Tree
 import brainflight.tools.geometry.Scale
 import models.user.User
 import play.api.Logger
+import models.user.Experience
+import models.tracing._
 
 case class Task(
     dataSetName: String,
-    cellId: Int,
     seedIdHeidelberg: Int,
     _taskType: ObjectId,
-    //requiredPermission: Int,
     start: Point3D,
+    neededExperience: Experience = Experience.empty,
     priority: Int = 100,
     instances: Int = 1,
     created: Date = new Date,
-    _experiments: List[ObjectId] = Nil,
+    _tracings: List[ObjectId] = Nil,
+    training: Option[Training] = None,
     _id: ObjectId = new ObjectId) {
-  
+
   lazy val id = _id.toString
 
   def taskType = TaskType.findOneById(_taskType)
-  
-  def experiments = _experiments.map(Experiment.findOneById).flatten
 
-  def isFullyAssigned = experiments.size == instances
+  def tracings = _tracings.map(Tracing.findOneById).flatten
+
+  def isFullyAssigned = tracings.size == instances
+
+  def isTraining = training.isDefined
 
   def inProgress =
-    experiments.filter(!_.finished).size
+    tracings.filter(!_.state.isFinished).size
 
   def completed =
-    experiments.size - inProgress
+    tracings.size - inProgress
 
   def open =
-    instances - experiments.size
+    instances - tracings.size
 }
 
 object Task extends BasicDAO[Task]("tasks") {
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
 
-  val empty = Task("", 0, 0, null, Point3D(0, 0, 0))
+  val empty = Task("", 0, null, Point3D(0, 0, 0))
+  
+  val withEmptyTraining = empty.copy(training = Some(Training.empty))
 
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
+  
+  override def remove(t: Task) = {
+    t.tracings.map{ tracing =>
+      tracing.update(_.removeTask)
+    }
+    super.remove(t)
+  }
+  
+  def removeTracing(task: Task, tracing: Tracing){
+    alterAndSave(task.copy(
+        _tracings = task._tracings.filterNot( _ == tracing._id)))
+  }
 
-  def fromForm(experiment: String, taskTypeId: String, priority: Int, instances: Int): Task =
-    (Experiment.findOneById(experiment), TaskType.findOneById(taskTypeId)) match {
-      case (Some(e), Some(taskType)) =>
+  def findAllOfOneType(isTraining: Boolean) =
+    find(MongoDBObject("training" -> MongoDBObject("$exists" -> isTraining)))
+      .toList
+
+  def findAllTrainings =
+    findAllOfOneType(isTraining = true)
+
+  def findAllNonTrainings =
+    findAllOfOneType(isTraining = false)
+
+  def findAllAssignableNonTrainings =
+    findAllNonTrainings.filter(!_.isFullyAssigned)
+
+  def addTracing(task: Task, tracing: Tracing) = {
+    alterAndSave(task.copy(
+      _tracings = tracing._id :: task._tracings))
+  }
+
+  def toTracingForm(t: Task): Option[(String, String, Experience, Int, Int)] = {
+    Some(("",
+      t.taskType.map(_.id).getOrElse(""),
+      t.neededExperience,
+      t.priority,
+      t.instances))
+  }
+
+  def toTrainingForm(t: Task): Option[(String, Training)] =
+    Some(t.id -> (t.training getOrElse Training.empty))
+
+  def fromTrainingForm(taskId: String, training: Training) =
+    Task.findOneById(taskId) map {
+      _.copy(training = Some(training))
+    } getOrElse null
+
+  def fromTrainingsTracingForm(tracingId: String, taskTypeId: String, experience: Experience, priority: Int, training: Training) = 
+    (for{
+      e <- Tracing.findOneById(tracingId)
+      taskType <- TaskType.findOneById(taskTypeId)
+    } yield {
         Task(e.dataSetName,
-          0,
           0,
           taskType._id,
           e.editPosition,
+          experience,
+          priority,
+          Integer.MAX_VALUE,
+          training = Some(training.copy(sample = e._id)))
+    }) getOrElse null
+    
+  def toTrainingsTracingForm(t: Task) = {
+    Some(("",
+      t.taskType.map(_.id).getOrElse(""),
+      t.neededExperience,
+      t.priority,
+      t.training getOrElse null))
+    }
+        
+  def fromTracingForm(tracing: String, taskTypeId: String, experience: Experience, priority: Int, instances: Int): Task =
+    (Tracing.findOneById(tracing), TaskType.findOneById(taskTypeId)) match {
+      case (Some(e), Some(taskType)) =>
+        Task(e.dataSetName,
+          0,
+          taskType._id,
+          e.editPosition,
+          experience,
           priority,
           instances)
       case _ =>
-        Logger.warn("Failed to create Task from form. Experiment: %s TaskType: %s".format(experiment, taskTypeId))
+        Logger.warn("Failed to create Task from form. Tracing: %s TaskType: %s".format(tracing, taskTypeId))
         null
     }
 
-  def createExperimentFor(user: User, task: Task) = {
-    Experiment.alterAndInsert(Experiment(user._id,
-      task.dataSetName,
-      List(Tree.empty),
-      Nil,
-      0,
-      1,
-      Scale(12, 12, 24),
-      task.start,
-      Some(task._id)))
+  def fromForm(dataSetName: String, taskTypeId: String, start: Point3D, experience: Experience, priority: Int, instances: Int): Task =
+    TaskType.findOneById(taskTypeId) match {
+      case Some(taskType) =>
+        Task(dataSetName,
+          0,
+          taskType._id,
+          start,
+          experience,
+          priority,
+          instances)
+      case _ =>
+        Logger.warn("Failed to create Task from form. TaskType: %s".format(taskTypeId))
+        null
+    }
+
+  def toForm(t: Task): Option[(String, String, Point3D, Experience, Int, Int)] = {
+    Some((
+      t.dataSetName,
+      t.taskType.map(_.id).getOrElse(""),
+      t.start,
+      t.neededExperience,
+      t.priority,
+      t.instances))
   }
 
-  def findAllAssignable =
-    findAll.filter(!_.isFullyAssigned)
-
-  def addExperiment(task: Task, experiment: Experiment) = {
-    alterAndSave(task.copy(
-      _experiments = experiment._id :: task._experiments))
-  }
-
-  def toForm(t: Task): Option[(String, String, Int, Int)] = {
-    Some(("", "", t.priority, t.instances))
+  def hasEnoughExperience(user: User)(task: Task) = {
+    val XP = user.experiences.get(task.neededExperience.domain) getOrElse 0
+    XP >= task.neededExperience.value
   }
 
   def nextTaskForUser(user: User): Future[Option[Task]] = {
-    val tasks = findAllAssignable.toArray
+    val tasks = findAllAssignableNonTrainings.filter(hasEnoughExperience(user)).toArray
     if (tasks.isEmpty) {
       Promise.successful(None)(Akka.system.dispatcher)
     } else {
@@ -138,7 +219,6 @@ object Task extends BasicDAO[Task]("tasks") {
 
     def writes(e: Task) = Json.obj(
       TASK_ID -> e.id,
-      CELL_ID -> e.cellId,
       START -> e.start,
       PRIORITY -> e.priority)
   }

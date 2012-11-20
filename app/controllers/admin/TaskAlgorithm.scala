@@ -1,17 +1,15 @@
 package controllers.admin
 
-import play.api.mvc.Controller
-import play.api.mvc.Action
 import brainflight.security.Secured
-import views.html
-import models.user.User
 import models.security.Role
-import models.task._
+import models.task.TaskSelectionAlgorithm
 import play.api.libs.json.Json
+import play.api.mvc.Controller
+import views.html
 
 object TaskAlgorithm extends Controller with Secured {
-  // TODO remove comment in production
-  override val DefaultAccessRole = Role( "admin" )
+
+  override val DefaultAccessRole = Role.Admin
 
   def testAlgorithm = Authenticated(parser = parse.urlFormEncoded){ implicit request =>
     request.body.get("code").flatMap(_.headOption) match {

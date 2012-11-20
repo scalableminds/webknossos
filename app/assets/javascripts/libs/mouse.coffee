@@ -166,6 +166,7 @@ class Mouse
   mouseDown : (evt) =>
     # check whether the mouseDown event is a leftclick
     if evt.which == 1
+      $(":focus").blur() # see OX-159
       $(@target).css("cursor", "none")
       @buttonDown = true
       # on leftclick, return mouse position relative to the canvas

@@ -8,6 +8,7 @@ import models.basics.BasicDAO
 import java.util.Date
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
+import models.tracing._
 
 case class TaskSelectionAlgorithm(js: String, active: Boolean = true, timestamp: Date = new Date, _id: ObjectId = new ObjectId){
   val id = _id.toString

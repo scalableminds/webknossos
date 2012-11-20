@@ -13,4 +13,7 @@ object DateFormatter {
     cal.setTime(date)
     sdf.format(date)
   }
+  def formatTimeHumanReadable(time: akka.util.Duration) = {
+  	"%dh %dm".format(time.toHours, (time.toMinutes % 60) / 5 * 5)
+  }
 }

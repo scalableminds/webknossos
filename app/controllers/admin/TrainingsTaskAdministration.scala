@@ -43,11 +43,11 @@ object TrainingsTaskAdministration extends Controller with Secured {
         "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingsTracingForm)(Task.toTrainingsTracingForm))
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
+    Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
   }
 
   def trainingsTaskCreateHTML(taskForm: Form[Task], tracingForm: Form[Task])(implicit request: AuthenticatedRequest[_]) = {
-    html.admin.task.trainingsTaskCreate(request.user,
+    html.admin.task.trainingsTaskCreate(
       Task.findAllNonTrainings,
       Tracing.findAllExploratory(request.user),
       TaskType.findAll,
@@ -73,7 +73,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
         } yield {
           Tracing.save(sample.copy(tracingType = TracingType.Sample))
           Task.save(task)
-          Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
+          Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
         }) getOrElse BadRequest("Couldn't create Training.")
       })
   }
@@ -90,7 +90,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
           Tracing.save(tracing.copy(tracingType = TracingType.Sample))
           Task.save(task.copy(
             training = task.training.map(_.copy(sample = tracing._id))))
-          Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
+          Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
         }) getOrElse BadRequest("No valid file attached.")
       })
   }

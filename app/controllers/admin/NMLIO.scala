@@ -1,6 +1,6 @@
 package controllers.admin
 
-import play.api.mvc.Controller
+import controllers.Controller
 import play.api.mvc.Action
 import brainflight.security.Secured
 import views.html
@@ -19,7 +19,7 @@ object NMLIO extends Controller with Secured {
   // override val DefaultAccessRole = Role( "admin" )
 
   def uploadForm = Authenticated { implicit request =>
-    Ok(html.admin.nml.nmlupload(request.user))
+    Ok(html.admin.nml.nmlupload())
   }
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
@@ -42,7 +42,7 @@ object NMLIO extends Controller with Secured {
       case (userId, tracings) =>
         User.findOneById(userId).map(_ -> tracings)
     }
-    Ok(html.admin.nml.nmldownload(request.user, userTracings))
+    Ok(html.admin.nml.nmldownload(userTracings))
   }
 
   def download(tracingId: String) = Authenticated { implicit request =>

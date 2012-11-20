@@ -1,6 +1,6 @@
-@(loggedInUser: models.user.User, tasks: List[models.task.Task])
+@(tasks: List[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
-@main(Some(loggedInUser)){
+@main(){
   <div class="container">
     <h3>Tasks</h3>
     <p>

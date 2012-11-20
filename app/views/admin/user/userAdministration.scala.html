@@ -1,6 +1,6 @@
-@(loggedInUser: models.user.User, users: List[models.user.User], roles: List[models.security.Role])
+@(users: List[models.user.User], roles: List[models.security.Role])(implicit session: brainflight.view.AuthedSessionData)
 
-@main(Some(loggedInUser)){
+@main(){
   <div id="user-administration" class="container">
     
     <h3> Users </h3> 

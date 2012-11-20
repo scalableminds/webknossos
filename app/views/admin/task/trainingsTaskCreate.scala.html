@@ -1,8 +1,6 @@
-@(loggedInUser: models.user.User, tasks: List[models.task.Task], tracings: List[models.tracing.Tracing], taskTypes: List[models.task.TaskType], experiences: Seq[String], nmlForm: Form[models.task.Task], tracingForm: Form[models.task.Task])
+@(tasks: List[models.task.Task], tracings: List[models.tracing.Tracing], taskTypes: List[models.task.TaskType], experiences: Seq[String], nmlForm: Form[models.task.Task], tracingForm: Form[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
-@import controllers.BootstrapHelpers._
 @import play.api.libs.json.Json
-@import brainflight.format._
 
 @taskHelpLink() = {
   <a href="@controllers.admin.routes.TaskAdministration.create">Create a new Task</a>
@@ -12,7 +10,7 @@
   <a href="@controllers.admin.routes.TaskTypeAdministration.list">Create a new Type</a>
 }
 
-@main(Some(loggedInUser)){
+@main(){
   <div class="container">
     <h3>Create Trainings-Task with NML</h3>
     <div class="row">
@@ -57,7 +55,7 @@
       @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromTracing, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
         
         @helper.select(tracingForm("tracing"), tracings.map { exp =>
-          exp.id -> (exp.dataSetName + " " + DateFormatter.format(exp.date)) 
+          exp.id -> (exp.dataSetName + " " + formatDate(exp.date)) 
         })
         
         @helper.select(tracingForm("taskType"), taskTypes.map { tt =>

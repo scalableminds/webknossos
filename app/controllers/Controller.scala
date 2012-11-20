@@ -6,8 +6,9 @@ import play.api.libs.json.Json
 import play.api.mvc.SimpleResult
 import play.api.libs.json.JsObject
 import brainflight.security.AuthenticatedRequest
+import brainflight.view.ProvidesSessionData
 
-class Controller extends PlayController {
+class Controller extends PlayController with ProvidesSessionData{
   
   def postParameter(parameter: String)(implicit request: AuthenticatedRequest[Map[String, Seq[String]]]) = 
     request.body.get(parameter).flatMap(_.headOption)

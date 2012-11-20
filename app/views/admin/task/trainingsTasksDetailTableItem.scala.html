@@ -24,7 +24,7 @@
 
 <tr>
   <td> @tracing.user.map(_.name).getOrElse("<Maik>") </td>
-  <td> @DateFormatter.format(tracing.date) </td>
+  <td> @formatDate(tracing.date) </td>
   <td>
   @{tracing.review match{
     case _ if tracing.state.isFinished =>

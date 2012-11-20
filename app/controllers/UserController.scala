@@ -31,7 +31,7 @@ object UserController extends Controller with Secured {
 
     val dataSets = DataSet.findAll
 
-    Ok(html.user.dashboard.dashboard(user,
+    Ok(html.user.dashboard.dashboard(
       tracingalTracings,
       userTasks,
       loggedTime,

@@ -24,9 +24,9 @@ import models.binary.DataSet
 import models.graph.Node
 import models.graph.Edge
 import brainflight.tools.geometry.Point3D
-import brainflight.format.DateFormatter
 import models.tracing.UsedTracings
 import models.user.TimeTracking
+import brainflight.view.helpers._
 
 /**
  * scalableminds - brainflight
@@ -60,7 +60,7 @@ object TracingController extends Controller with Secured {
       exp <- Tracing.findFor(user)
     } yield {
       Json.obj(
-        "name" -> (exp.dataSetName + " " + DateFormatter.format(exp.date)),
+        "name" -> (exp.dataSetName + "  " + formatDate(exp.date)),
         "id" -> exp.id,
         "isNew" -> false)
     }
@@ -90,7 +90,7 @@ object TracingController extends Controller with Secured {
   }
 
   def createExplorational = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for{
+    (for {
       dataSetId <- request.body.get("dataSetId").flatMap(_.headOption)
       dataSet <- DataSet.findOneById(dataSetId)
     } yield {

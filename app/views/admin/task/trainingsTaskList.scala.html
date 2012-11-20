@@ -1,6 +1,6 @@
-@(loggedInUser: models.user.User, tasks: List[models.task.Task])
+@(tasks: List[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
-@main(Some(loggedInUser)) {
+@main() {
   <div class="container">
     <h3>Trainings-Tasks</h3>
     <table class="table table-double-striped table-details">
@@ -18,7 +18,7 @@
       </thead>
       <tbody>
       @tasks.map{ task => 
-        @trainingsTasksTableItem(loggedInUser, task)
+        @trainingsTasksTableItem(session.user, task)
       }
       </tbody>
     </table>

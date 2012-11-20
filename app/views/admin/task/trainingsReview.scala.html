@@ -1,6 +1,6 @@
-@(loggedInUser: models.user.User, tracing: models.tracing.Tracing, form: Form[String])
+@(tracing: models.tracing.Tracing, form: Form[String])(implicit session: brainflight.view.AuthedSessionData)
 
-@main(Some(loggedInUser)){
+@main(){
   <div class="container">    
     <h3>Review of Trainings-Tracing</h3>
     @helper.form(action = controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, true), 'class -> "form-horizontal") {

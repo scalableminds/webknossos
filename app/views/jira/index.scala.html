@@ -1,6 +1,6 @@
-@(user: models.user.User)
+@()(implicit session: brainflight.view.AuthedSessionData)
 
-@main( Some(user), false ){
+@main( showNavButtons = false ){
 
   <div id="issue-submit" class="container">
       

@@ -1,7 +1,5 @@
 @(user: models.user.User, task: models.task.Task)
 
-@import brainflight.format._
-
 <tr>
   <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @task.id.drop(10) </td>
@@ -12,7 +10,7 @@
   	<td> @training.domain (+@training.gain, -@training.loss) </td>
   }.getOrElse( <td></td> )
   <td> @task.start </td>
-  <td> @DateFormatter.format(task.created) </td>
+  <td> @formatDate(task.created) </td>
 
   <td>  
     <a href="@controllers.admin.routes.TrainingsTaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>

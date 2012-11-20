@@ -1,8 +1,6 @@
-@(user: models.user.User, userTracings: Map[models.user.User,List[models.tracing.Tracing]])
+@(userTracings: Map[models.user.User,List[models.tracing.Tracing]])(implicit session: brainflight.view.AuthedSessionData)
 
-@import brainflight.format._
-
-@main(Some(user), false){
+@main(false){
   <div class="container">
     @userTracings.map{ case (user, tracings) =>
       <div class="folder">
@@ -12,7 +10,7 @@
             @tracings.sortBy(_.timestamp).map{ exp =>
               <tr>
                 <td><strong>@exp.dataSetName</strong></h4>
-                <td><time datetime="@exp.date">@DateFormatter.format(exp.date)</time></td>
+                <td><time datetime="@exp.date">@formatDate(exp.date)</time></td>
                 <td><a href="@controllers.admin.routes.NMLIO.download(exp.id)"><i class="icon-download"></i> Export NML</a></td>
               </tr>
             }

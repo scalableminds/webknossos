@@ -1,4 +1,4 @@
-@(userOpt: Option[models.user.User], showNavButtons: Boolean = true)(body: Html)
+@(showNavButtons: Boolean = true)(body: Html)(implicit session: brainflight.view.SessionData)
 
 <!doctype html>
 <html>
@@ -13,8 +13,15 @@
     <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
   </head>
   <body>
-    @mainHeader(userOpt, showNavButtons)    
-    <div id="alert-container"></div>
+    @mainHeader(showNavButtons)    
+    <div id="alert-container">
+      @session.flash.data.map{ f =>
+        <div class="alert alert-@f._1">
+          <a href="#" class="close" data-dismiss="alert">×</a>
+          @f._2
+        </div>
+      }
+    </div>
     <div id="main-container">
       @body
     </div>

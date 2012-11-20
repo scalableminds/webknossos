@@ -49,7 +49,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
     Tracing.findOneById(training) map { tracing =>
       tracing.review match {
         case Some(r) if r._reviewee == request.user._id =>
-          Ok(html.admin.task.trainingsReview(request.user, tracing, reviewForm))
+          Ok(html.admin.task.trainingsReview(tracing, reviewForm))
         case _ =>
           BadRequest("No open review found.")
       }

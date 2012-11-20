@@ -161,7 +161,7 @@ class Mouse
         @changedCallbackMouseWheel(delta, ALT_KEY)
       else
         @changedCallbackMouseWheel(delta, NO_KEY)
-      return false      # prevent scrolling the web page
+      evt.preventDefault()
     
   mouseDown : (evt) =>
     # check whether the mouseDown event is a leftclick
@@ -174,8 +174,7 @@ class Mouse
     else
       if @changedCallbackRightclick
         @changedCallbackRightclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
-
-    return false
+    evt.preventDefault()
 
   mouseUp : =>
     # invoke activeCallback when view was entered while dragging the plane in another view

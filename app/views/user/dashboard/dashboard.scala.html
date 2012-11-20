@@ -38,7 +38,7 @@
       <tbody>
       @explorativeTracings.map{ tracing => 
         <tr>
-          <td> @tracing.id.drop(10) </td>
+          <td> @formatHash(tracing.id) </td>
           <td> @tracing.dataSetName </td>
           <td> @tracing.trees.size </td>
           <td> @tracing.tracingType </td>

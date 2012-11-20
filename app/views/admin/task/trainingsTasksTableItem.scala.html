@@ -2,7 +2,7 @@
 
 <tr>
   <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
-  <td> @task.id.drop(10) </td>
+  <td> @formatHash(task.id) </td>
   <td> @task.seedIdHeidelberg </td>
   <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
   <td> @task.dataSetName </td>

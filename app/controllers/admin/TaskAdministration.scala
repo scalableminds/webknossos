@@ -88,7 +88,7 @@ object TaskAdministration extends Controller with Secured {
       { t =>
         Task.insert(t)
         Redirect(routes.TaskAdministration.list).flashing(
-            FlashSuccess("task.create.success"))
+            FlashSuccess(Messages("task.create.success")))
       })
   }
 

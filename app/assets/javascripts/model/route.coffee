@@ -1,7 +1,7 @@
 ### define
 jquery : $
 underscore : _
-libs/request : request
+libs/request : Request
 libs/event_mixin : EventMixin
 libs/json_socket : JsonSocket
 model/game : Game
@@ -21,39 +21,22 @@ TYPE_BRANCH = 1
 class Route
   
   # Variables
+  data : null
+  dataSet : null
   branchStack : []
   trees : []
   activeNode : null
   activeTree : null
 
-<<<<<<< HEAD
-  dataSet : null
-  experiment : null
-  experiments : null
-=======
   # Initializes this module and returns a position to start your work.
-  initialize : _.once ->
-
-    Game.initialize().pipe =>
-
-      _.extend(this, new EventMixin())
-
-      $.get("/tracing/#{Game.task.id}",
-        (data) =>
-          Route.data = data
-          
->>>>>>> c9ad73e019f74ff23ac51dd852dcfbb1c6a4e8f9
-
-  # Initializes this module and returns a position to start your work.
-  constructor : (@data) ->
+  constructor : (@data, @dataSet) ->
 
     _.extend(this, new EventMixin())
 
-    console.log "Route.data:"
-    console.log data
-    @id        = data.dataSet.id
-    #@branchStack = data.tracing.branchPoints.map (a) -> new Float32Array(a)
-    #@branchStack = (data.tracing.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.tracing.branchPoints) # when data.tracing.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
+    console.log "Route.data: ", @data
+    @id        = @dataSet.id
+    #@branchStack = @data.branchPoints.map (a) -> new Float32Array(a)
+    #@branchStack = (@data.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in @data.branchPoints) # when @data.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
     @createBuffer()
 
     @idCount = 1
@@ -77,10 +60,10 @@ class Route
     #console.log "--------- TREE ---------"
     #console.log @tree.toString()
 
-    # Build sample data.tracing
-    #console.log "---------- Build data.tracing -----------"
-    #console.log data.tracing
-    #data.tracing = {
+    # Build sample @data
+    #console.log "---------- Build @data -----------"
+    #console.log @data
+    #@data = {
     #  activeNode : 6
     #  branchPoints : [{id : 1}, {id : 2}]
     #  editPosition : [400, 350, 200]
@@ -118,19 +101,17 @@ class Route
     #    }
     #  }
     #}
-    console.log "data.tracing:"
-    console.log data.tracing
 
     #@recursionTest(0)
 
     # For trees that are disconnected
     lostTrees = []
 
-    ############ Load Tree from data.tracing ##############
-    @scaleX = data.tracing.scale[0]
-    @globalPosition = data.tracing.editPosition
+    ############ Load Tree from @data ##############
+    @scaleX = @data.scale[0]
+    @globalPosition = @data.editPosition
     # get tree to build
-    for tree in data.tracing.trees
+    for tree in @data.trees
       # Initialize nodes
       nodes = []
       i = 0
@@ -155,7 +136,7 @@ class Route
             @trees.push(node)
             treeFound = true
       # Set active Node
-      activeNodeT = @findNodeInList(nodes, data.tracing.activeNode)
+      activeNodeT = @findNodeInList(nodes, @data.activeNode)
       if activeNodeT
         @activeNode = activeNodeT
         @lastActiveNodeId = @activeNode.id
@@ -167,7 +148,7 @@ class Route
     
     # Set branchpoints
     nodeList = @getNodeListOfAllTrees()
-    for branchpoint in data.tracing.branchPoints
+    for branchpoint in @data.branchPoints
       node = @findNodeInList(nodeList, branchpoint.id)
       if node
         node.type = TYPE_BRANCH
@@ -196,12 +177,9 @@ class Route
         @pushImpl()
     )
 
-    deferred.resolve(data.tracing.editPosition)
-    )
-
-  # Returns an object that is structured the same way as data.tracing is
+  # Returns an object that is structured the same way as @data is
   exportToNML : ->
-    result = Route.data.tracing
+    result = @data
     result.activeNode = @lastActiveNodeId
     result.branchPoints = []
     # Get Branchpoints
@@ -254,19 +232,18 @@ class Route
 
     deferred = new $.Deferred()
 
-    @initialize().pipe =>
-
-      request(
-          url : "/tracing/#{Game.task.id}"
-          method : "PUT"
-          data : @exportToNML()
-          contentType : "application/json"
-        )
-      .fail =>
-        @push()
-        deferred.reject()
-      .done =>
-        deferred.resolve()
+    console.log "PUT"
+    Request.send(
+      url : "/tracing/#{@data.id}"
+      method : "PUT"
+      data : @exportToNML()
+      contentType : "application/json"
+    )
+    .fail =>
+      @push()
+      deferred.reject()
+    .done =>
+      deferred.resolve()
 
   createBuffer : ->
     @bufferIndex = 0
@@ -290,76 +267,69 @@ class Route
 
   putBranch : ->
 
-    @initialize().done =>
-      
-      #@addToBuffer(1, position)
-      if @activeNode
-        @branchStack.push(@activeNode)
-        @activeNode.type = TYPE_BRANCH
+    #@addToBuffer(1, position)
+    if @activeNode
+      @branchStack.push(@activeNode)
+      @activeNode.type = TYPE_BRANCH
 
-      #@putNewPoint(position, TYPE_BRANCH)
+    #@putNewPoint(position, TYPE_BRANCH)
 
     return
 
   popBranch : ->
 
-    @initialize().pipe =>
+    point = @branchStack.pop()
+    @push()
+    deferred = new $.Deferred()
+    if point
+      @activeNode = point
+      @activeNode.type = TYPE_USUAL
+      @lastActiveNodeId = @activeNode.id
+      deferred.resolve(@activeNode.id)
+    else
+      deferred.reject()
 
-      
-      point = @branchStack.pop()
-      @push()
-      deferred = new $.Deferred()
-      if point
-        @activeNode = point
-        @activeNode.type = TYPE_USUAL
-        @lastActiveNodeId = @activeNode.id
-        deferred.resolve(@activeNode.id)
-      else
-        deferred.reject()
+    #savedActiveNode = @activeNode
+    #if @activeNode
+    #  while (true)
+    #    @activeNode = @activeNode.parent
+    #    unless @activeNode
+    #      break
+    #    if (@activeNode.type == TYPE_BRANCH)
+    #      break
+    #deferred = new $.Deferred()
+    #unless @activeNode
+    #  @activeNode = savedActiveNode
+    #  deferred.reject()
+    #else
+    #  deferred.resolve(@activeNode.pos)
+    
+    
+    # Georg doesn't get the following lines
+    # { branchStack } = @
 
-      #savedActiveNode = @activeNode
-      #if @activeNode
-      #  while (true)
-      #    @activeNode = @activeNode.parent
-      #    unless @activeNode
-      #      break
-      #    if (@activeNode.type == TYPE_BRANCH)
-      #      break
-      #deferred = new $.Deferred()
-      #unless @activeNode
-      #  @activeNode = savedActiveNode
-      #  deferred.reject()
-      #else
-      #  deferred.resolve(@activeNode.pos)
-      
-      
-      # Georg doesn't get the following lines
-      #{ branchStack } = @
-
-      #if branchStack.length > 0
-      #  @addToBuffer(2)
-        #deferred.resolve(branchStack.pop())
-      #  deferred.resolve(@activeNode.pos)
-      #else
-      #  deferred.reject()
+    #if branchStack.length > 0
+    #  @addToBuffer(2)
+      #deferred.resolve(branchStack.pop())
+    #  deferred.resolve(@activeNode.pos)
+    #else
+    #  deferred.reject()
 
   # Add a point to the buffer. Just keep adding them.
   put : (position) ->
 
-    @initialize().done =>
+    position = V3.round(position, position)
+    lastPosition = @lastPosition
 
-      position = V3.round(position, position)
-      lastPosition = @lastPosition
+    if not lastPosition or 
+    lastPosition[0] != position[0] or 
+    lastPosition[1] != position[1] or 
+    lastPosition[2] != position[2]
+      @lastPosition = position
+      @addToBuffer(0, position)
 
-      if not lastPosition or 
-      lastPosition[0] != position[0] or 
-      lastPosition[1] != position[1] or 
-      lastPosition[2] != position[2]
-        @lastPosition = position
-        @addToBuffer(0, position)
-
-      @putNewPoint(position, TYPE_USUAL)
-      @push()
+    @putNewPoint(position, TYPE_USUAL)
+    @push()
 
     return
 
@@ -513,9 +483,3 @@ class Route
       if node.id == id
         return node
     return null
-
-  # Just to check how far we can go. I (Georg) had a call
-  # stack of about 20,000
-  recursionTest : (counter) ->
-    console.log(counter++)
-    return @recursionTest(counter)

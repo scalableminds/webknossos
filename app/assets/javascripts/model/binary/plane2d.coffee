@@ -51,7 +51,7 @@ class Plane2D
 
     @BUCKETS_IN_A_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
 
-    @on "bucketLoaded", (bucket, zoomStep, oldZoomStep) =>
+    @cube.on "bucketLoaded", (bucket, zoomStep, oldZoomStep) =>
 
       # Checking, whether the new bucket intersects with the current layer and the zoomStep means an improvement
       if @layer >> @cube.BUCKET_SIZE_P == bucket[@w] and oldZoomStep > @zoomStep
@@ -349,7 +349,7 @@ class Plane2D
 
     if not map[mapIndex] or map[mapIndex] == @RECURSION_PLACEHOLDER
       currentZoomStep = @cube.ZOOM_STEP_COUNT
-    else currentZoomStep =  @cube.getZoomStepOfBucketByAddress(map[mapIndex])
+    else currentZoomStep =  @cube.getZoomStepByAddress(map[mapIndex])
 
     # 
     if currentZoomStep <= tileZoomStep

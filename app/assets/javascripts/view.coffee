@@ -26,7 +26,7 @@ class View
 
   constructor : (model, flycam) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(@, new EventMixin())
 
     @model  = model
     @flycam = flycam
@@ -112,7 +112,7 @@ class View
       Please report any issues.</p>"
 
     popoverTemplate = '<div class="popover overlay"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
-    $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
+    #$('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
 
     @first = true
     @newTextures = [true, true, true, true]

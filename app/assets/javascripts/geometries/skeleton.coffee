@@ -39,7 +39,7 @@ class Skeleton
 
   constructor : (@maxRouteLen, @flycam, @model) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(@, new EventMixin())
 
     # Create sphere to represent the active Node, radius is
     # 1 nm, so that @activeNode.scale is the radius in nm.

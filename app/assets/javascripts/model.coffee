@@ -1,7 +1,7 @@
 ### define 
-model/binary : Binary
-model/route : Route
-model/user : User
+./model/binary : Binary
+./model/route : Route
+./model/user : User
 ###
 
 # This is the model. It takes care of the data including the 
@@ -14,6 +14,8 @@ class Model
 
   constructor : (options) ->
 
-    @binary = new Binary(options.dataSet)
-    @route = new Route(options.tracing)
+    console.log options
+
+    @binary = new Binary(options.dataSet.id)
+    @route = new Route(options.tracing, options.dataSet)
     @user = new User(options.user)

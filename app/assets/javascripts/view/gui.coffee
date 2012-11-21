@@ -3,6 +3,7 @@ libs/datgui/dat.gui : DatGui
 libs/request : Request
 libs/event_mixin : EventMixin
 routes : routes
+view/toast : Toast
 ###
 
 PLANE_XY = 0
@@ -23,8 +24,9 @@ class Gui
 
     initPos = @flycam.getGlobalPos()
 
+    data = @model.user
     # create GUI
-    modelRadius = @model.Route.getActiveNodeRadius()
+    modelRadius = @model.route.getActiveNodeRadius()
     @settings = 
       save : @saveNow
       finish : @finish
@@ -48,14 +50,14 @@ class Gui
       displayPrevXZ : data.displayPreviewXZ
       nodesAsSpheres : data.nodesAsSpheres
 
-      activeTreeID : @model.Route.getActiveTreeId()
+      activeTreeID : @model.route.getActiveTreeId()
       newTree : => @trigger "createNewTree"
       deleteActiveTree : => @trigger "deleteActiveTree"
 
-      activeNodeID : @model.Route.getActiveNodeId()
+      activeNodeID : @model.route.getActiveNodeId()
       newNodeNewTree : data.newNodeNewTree
       deleteActiveNode : => @trigger "deleteActiveNode"
-      radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
+      radius : if modelRadius then modelRadius else 10 * @model.route.scaleX
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
@@ -164,13 +166,13 @@ class Gui
     @model.user.pushImpl()
     @model.route.pushImpl()
       .then( 
-        -> toastSuccess("Saved!")
-        -> toastError("Couldn't save. Please try again.")
+        -> Toast.success("Saved!")
+        -> Toast.error("Couldn't save. Please try again.")
       )
 
   finish : =>
     routes.controllers.TaskController.finish("123").ajax()
-    toastError("Yeah, thats not implemented yet.")
+    Toast.error("Yeah, thats not implemented yet.")
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
@@ -199,88 +201,88 @@ class Gui
     @settings.position = Math.round(pos[0]) + ", " + Math.round(pos[1]) + ", " + Math.round(pos[2])
 
   setMoveValue : (value) =>
-    @model.User.Configuration.moveValue = (Number) value
-    @model.User.Configuration.push()
+    @model.user.moveValue = (Number) value
+    @model.user.push()
 
   setRouteClippingDistance : (value) =>
-    @model.User.Configuration.routeClippingDistance = (Number) value
+    @model.user.routeClippingDistance = (Number) value
     @cameraController.setRouteClippingDistance((Number) value)
     @sceneController.setRouteClippingDistance((Number) value)
-    @model.User.Configuration.push()   
+    @model.user.push()   
 
   setLockZoom : (value) =>
-    @model.User.Configuration.lockZoom = value
-    @model.User.Configuration.push()      
+    @model.user.lockZoom = value
+    @model.user.push()      
 
   setDisplayCrosshair : (value) =>
-    @model.User.Configuration.displayCrosshair = value
+    @model.user.displayCrosshair = value
     @sceneController.setDisplayCrosshair(value)
-    @model.User.Configuration.push()    
+    @model.user.push()    
 
   setInterpolation : (value) =>
     @sceneController.setInterpolation(value)
-    @model.User.Configuration.interpolation = (Boolean) value
-    @model.User.Configuration.push()
+    @model.user.interpolation = (Boolean) value
+    @model.user.push()
 
   setMinZoomStep : (value) =>
     value = parseInt(value)
     @flycam.setOverrideZoomStep(value)
-    @model.User.Configuration.minZoomStep = (Number) value
-    @model.User.Configuration.push()
+    @model.user.minZoomStep = (Number) value
+    @model.user.push()
 
   setDisplayPreviewXY : (value) =>
-    @model.User.Configuration.displayPreviewXY = value
+    @model.user.displayPreviewXY = value
     @sceneController.setDisplaySV PLANE_XY, value
-    @model.User.Configuration.push()      
+    @model.user.push()      
 
   setDisplayPreviewYZ : (value) =>
-    @model.User.Configuration.displayPreviewYZ = value
+    @model.user.displayPreviewYZ = value
     @sceneController.setDisplaySV PLANE_YZ, value
-    @model.User.Configuration.push()      
+    @model.user.push()      
 
   setDisplayPreviewXZ : (value) =>
-    @model.User.Configuration.displayPreviewXZ = value
+    @model.user.displayPreviewXZ = value
     @sceneController.setDisplaySV PLANE_XZ, value
-    @model.User.Configuration.push()      
+    @model.user.push()      
 
   setNodeAsSpheres : (value) =>
-    @model.User.Configuration.nodesAsSpheres = value
+    @model.user.nodesAsSpheres = value
     @sceneController.skeleton.setDisplaySpheres(value)
-    @model.User.Configuration.push()  
+    @model.user.push()  
     @flycam.hasChanged = true    
 
   setMouseInversionX : (value) =>
     if value is true
-      @model.User.Configuration.mouseInversionX = 1
+      @model.user.mouseInversionX = 1
     else
-      @model.User.Configuration.mouseInversionX = -1
-    @model.User.Configuration.push()         
+      @model.user.mouseInversionX = -1
+    @model.user.push()         
 
   setMouseInversionY : (value) =>
     if value is true
-      @model.User.Configuration.mouseInversionY = 1
+      @model.user.mouseInversionY = 1
     else
-      @model.User.Configuration.mouseInversionY = -1
-    @model.User.Configuration.push()
+      @model.user.mouseInversionY = -1
+    @model.user.push()
 
   setNewNodeNewTree : (value) =>
-    @model.User.Configuration.newNodeNewTree = value
-    @model.User.Configuration.push()      
+    @model.user.newNodeNewTree = value
+    @model.user.push()      
 
   setNodeRadius : (value) =>
-    @model.Route.setActiveNodeRadius(value)
+    @model.route.setActiveNodeRadius(value)
     # convert from nm to voxels, divide by resolution
     @sceneController.skeleton.setNodeRadius(value)
     @flycam.hasChanged = true
 
   updateRadius : ->
-    if @model.Route.getActiveNodeRadius()
-      @settings.radius = @model.Route.getActiveNodeRadius()
+    if @model.route.getActiveNodeRadius()
+      @settings.radius = @model.route.getActiveNodeRadius()
 
   # called when value user switch to different active node
   updateNodeAndTreeIds : =>
-    @settings.activeNodeID = @model.Route.lastActiveNodeId
-    @settings.activeTreeID = @model.Route.getActiveTreeId()
+    @settings.activeNodeID = @model.route.lastActiveNodeId
+    @settings.activeTreeID = @model.route.getActiveTreeId()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
 

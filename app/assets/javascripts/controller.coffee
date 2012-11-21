@@ -28,24 +28,24 @@ class Controller
 
   constructor : ->
 
-    _.extend(this, new EventMixin())
+    _.extend(@, new EventMixin())
 
     @requestInitData().done (options) =>
 
       # create Model
       @model = new Model(options)
 
-      @flycam = new Flycam(VIEWPORT_SIZE)
+      @flycam = new Flycam(VIEWPORT_WIDTH)
       @view  = new View(@model, @flycam)
-  
+
       # initialize Camera Controller
       @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
       @canvasesAndNav = $("#main")[0]
 
-    # hide contextmenu, while rightclicking a canvas
-    $("#main-container").bind "contextmenu", (event) ->
-      event.preventDefault(); return
+      # hide contextmenu, while rightclicking a canvas
+      $("#main-container").bind "contextmenu", (event) ->
+        event.preventDefault(); return
 
       @prevControls = $('#prevControls')
       @prevControls.addClass("btn-group")
@@ -65,7 +65,8 @@ class Controller
       
       for mesh in meshes
         @view.addGeometry(mesh)
-    
+
+      console.log "RENDERCALLBACK"
       @view.on "render", @render
       @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
 
@@ -80,7 +81,7 @@ class Controller
           @view.removeGeometry(geometry)
         
       # TODO
-      @flycam.setGlobalPos(@model.route.experiment.editPosition)
+      @flycam.setGlobalPos(@model.route.data.editPosition)
       @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
       @flycam.setOverrideZoomStep(@model.user.minZoomStep)
 
@@ -124,8 +125,8 @@ class Controller
 
           options = {}
           options.user = user
-          options.dataSet = task.task.id
-          options.tracing = tracing
+          options.dataSet = tracing.dataSet
+          options.tracing = tracing.tracing
           options
 
         -> alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page."))
@@ -168,15 +169,15 @@ class Controller
       "k" : => @view.scaleTrianglesPlane @model.user.scaleValue
 
       #Move
-      "left"          : => @moveX(-@model.User.Configuration.moveValue)
-      "right"         : => @moveX( @model.User.Configuration.moveValue)
-      "up"            : => @moveY(-@model.User.Configuration.moveValue)
-      "down"          : => @moveY( @model.User.Configuration.moveValue)
+      "left"          : => @moveX(-@model.user.moveValue)
+      "right"         : => @moveX( @model.user.moveValue)
+      "up"            : => @moveY(-@model.user.moveValue)
+      "down"          : => @moveY( @model.user.moveValue)
 
       #misc keys
       # TODO: what does this? I removed it, I need the key.
       #"n" : => Helper.toggle()
-      #"ctr + s"       : => @model.Route.pushImpl()
+      #"ctr + s"       : => @model.route.pushImpl()
     )
     
     new Input.KeyboardNoLoop(
@@ -206,8 +207,8 @@ class Controller
         @createNewTree()
 
       # Move
-      "space, f"         : => @moveZ( @model.User.Configuration.moveValue)
-      "shift + space, ctrl + space, d" : => @moveZ(-@model.User.Configuration.moveValue)
+      "space, f"         : => @moveZ( @model.user.moveValue)
+      "shift + space, ctrl + space, d" : => @moveZ(-@model.user.moveValue)
     )
 
 
@@ -230,23 +231,23 @@ class Controller
   zoomIn : =>
     @cameraController.zoomIn()
     # Remember Zoom Steps
-    @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
-    @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-    @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-    @model.User.Configuration.push()
+    @model.user.zoomXY = @flycam.getZoomStep(PLANE_XY)
+    @model.user.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+    @model.user.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
+    @model.user.push()
 
   zoomOut : =>
     @cameraController.zoomOut()
     # Remember Zoom Steps
-    @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
-    @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-    @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-    @model.User.Configuration.push()
+    @model.user.zoomXY = @flycam.getZoomStep(PLANE_XY)
+    @model.user.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+    @model.user.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
+    @model.user.push()
 
   setNodeRadius : (delta) =>
-    lastRadius = @model.Route.getActiveNodeRadius()
+    lastRadius = @model.route.getActiveNodeRadius()
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
-    scale = @model.Route.scaleX
+    scale = @model.route.scaleX
     if radius < scale
       radius = scale
     else if radius > 1000 * scale
@@ -322,13 +323,13 @@ class Controller
   addNode : (position) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
-    @model.Route.put(position)
+    @model.route.put(position)
     @gui.updateNodeAndTreeIds()
     @gui.updateRadius()
     @sceneController.setWaypoint()
 
   setActiveNode : (nodeId, centered) =>
-    @model.Route.setActiveNode(nodeId)
+    @model.route.setActiveNode(nodeId)
     if centered
       @centerActiveNode()
     @flycam.hasChanged = true
@@ -336,25 +337,25 @@ class Controller
     @sceneController.skeleton.setActiveNode()
 
   centerActiveNode : =>
-    @flycam.setGlobalPos(@model.Route.getActiveNodePos())
+    @flycam.setGlobalPos(@model.route.getActiveNodePos())
 
   deleteActiveNode : =>
-    @model.Route.deleteActiveNode()
+    @model.route.deleteActiveNode()
     @gui.update()
     @sceneController.updateRoute()
 
   createNewTree : =>
-    [id, color] = @model.Route.createNewTree()
+    [id, color] = @model.route.createNewTree()
     @gui.update()
     @sceneController.skeleton.createNewTree(id, color)
 
   setActiveTree : (treeId) =>
-    @model.Route.setActiveTree(treeId)
+    @model.route.setActiveTree(treeId)
     @gui.update()
     @sceneController.updateRoute()
 
   deleteActiveTree : =>
-    @model.Route.deleteActiveTree()
+    @model.route.deleteActiveTree()
     @gui.update()
     @sceneController.updateRoute()
 

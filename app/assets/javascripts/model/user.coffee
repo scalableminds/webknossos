@@ -36,6 +36,11 @@ class User
     _.extend(@, user)
 
 
+  push : ->
+
+    $.when(@pushImpl())
+
+
   pushImpl : ->
     deferred = $.Deferred()
       

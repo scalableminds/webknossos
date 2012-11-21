@@ -1,5 +1,13 @@
 @(usersWithoutATask: List[models.user.User], usersWithTasks: Map[models.user.User, models.task.TaskType], futureTasks: Map[models.user.User, models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
+@userDot(user: models.user.User) = {
+  @Html("\"" + user.name + "\" [shape=box];")
+}
+
+@edge(a: String, b: String) = {
+  @Html("\"" + a + "\"->\"" + b +"\";")
+}
+
 @main(){
   <div class="container">
     <h3>TaskType - User Overview</h3>
@@ -23,10 +31,10 @@
     </script>
     <script type="text/vnd.graphviz" id="graphData">
       digraph G {
-        @Html(usersWithoutATask.map( "\"" + _.name + "\" [shape=box];").mkString("\n"))
+        @Html(usersWithoutATask.map( userDot ).mkString("\n"))
         @Html(usersWithTasks.map( e =>
-            "\"" + e._1.name + "\"->\"" + e._2.summary +"\";").mkString("\n"))
-        @Html(usersWithTasks.keys.map( "\"" + _.name + "\" [shape=box];").mkString("\n"))
+          edge(e._1.name, e._2.summary)).mkString("\n"))
+        @Html(usersWithTasks.keys.map( userDot ).mkString("\n"))
       }
     </script>
   </div>

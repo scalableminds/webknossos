@@ -103,7 +103,7 @@ class Flycam2d
   getSceneScalingArray : ->
     rScale = @model.Route.scale
     rMin   = Math.min.apply(null, rScale)
-    [rScale[0] / rMin, rScale[1] / rMin, rScale[2] / rMin]
+    [rMin / rScale[0], rMin / rScale[1], rMin / rScale[2]]
 
   getDirection : ->
     @direction

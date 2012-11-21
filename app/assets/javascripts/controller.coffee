@@ -41,7 +41,8 @@ class Controller
     # FIXME probably not the best place?!
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
-      if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault(); return
+      event.preventDefault() if (event.which == 32 or 37 <= event.which <= 40) and !$(":focus").length
+      return
 
     # hide contextmenu, while rightclicking a canvas
     $("#main-container").bind "contextmenu", (event) ->

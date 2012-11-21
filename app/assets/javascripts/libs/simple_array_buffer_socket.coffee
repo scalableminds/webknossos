@@ -165,7 +165,7 @@ class SimpleArrayBufferSocket.XmlHttpRequest
   send : (data) ->
     data = new @requestBufferType(data) if _.isArray(data)
     Request(
-      data : data.buffer
+      data : data
       url : @url
       responseType : 'arraybuffer'
     ).pipe (buffer) => 

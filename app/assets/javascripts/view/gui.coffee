@@ -1,6 +1,5 @@
 ### define
 libs/datgui/dat.gui : DatGui
-libs/request : request
 libs/event_mixin : EventMixin
 routes : routes
 ###

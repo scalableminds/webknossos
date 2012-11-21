@@ -91,6 +91,7 @@ object TaskAdministration extends Controller with Secured {
             FlashSuccess(Messages("task.create.success")))
       })
   }
+  
 
   def createBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     request.request.body.get("data").flatMap(_.headOption).map { data =>

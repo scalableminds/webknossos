@@ -47,8 +47,11 @@ object InitialData {
   def insert() = {
     if (Role.findAll.isEmpty) {
       Role.insert(Role("user", Nil, Color(0.2274F, 0.5294F, 0.6784F, 1)))
-      Role.insert(Role("admin", Permission("*", "*" :: Nil) :: Nil, Color(0.2F, 0.2F, 0.2F, 1)))
-      Role.insert(Role("reviewer", Permission("review", "*" :: Nil) :: Nil, Color(0.2745F, 0.5333F, 0.2784F, 1)))
+      Role.insert(Role("admin", Permission("admin.*", "*" :: Nil) :: Nil, Color(0.2F, 0.2F, 0.2F, 1)))
+      Role.insert(Role("reviewer",
+        Permission("admin.review.*", "*" :: Nil) ::
+          Permission("admin.menu", "*" :: Nil) :: Nil,
+        Color(0.2745F, 0.5333F, 0.2784F, 1)))
     }
 
     if (User.findOneByEmail("scmboy@scalableminds.com").isEmpty) {
@@ -78,14 +81,14 @@ object InitialData {
       TaskType.insert(tt)
       if (Task.findAll.isEmpty) {
         val sample = Tracing.createTracingFor(User.default)
-        
+
         Task.insert(Task(
           DataSet.default.name,
           0,
           tt._id,
           Point3D(0, 0, 0),
           Experience("basic", 5)))
-          
+
         Task.insert(Task(
           DataSet.default.name,
           0,
@@ -95,10 +98,10 @@ object InitialData {
           100,
           Integer.MAX_VALUE,
           training = Some(Training(
-              "basic",
-              5,
-              5,
-              sample._id))))
+            "basic",
+            5,
+            5,
+            sample._id))))
       }
     }
   }

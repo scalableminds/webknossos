@@ -3,7 +3,7 @@ package controllers.admin
 import controllers.Controller
 import play.mvc.Security.Authenticated
 import brainflight.security.Secured
-import models.security.Role
+import models.security._
 import views._
 import play.api.data.Form
 import play.api.data.Forms._
@@ -19,7 +19,7 @@ import models.tracing.TracingType
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
-  override val DefaultAccessRole = Role.Admin
+  override val DefaultAccessPermission = Some(Permission("admin.review", List("access")))
 
   val trainingsTaskForm = Form(
     mapping(

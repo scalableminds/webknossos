@@ -3,6 +3,10 @@ model/user : User
 libs/jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
 ###
 
+NO_KEY = 0
+ALT_KEY = 1
+SHIFT_KEY = 2
+
 class Mouse
 
   # This is our mouse library.
@@ -151,12 +155,18 @@ class Mouse
 
   mouseWheel : (evt, delta) =>
     if @changedCallbackMouseWheel?
-      @changedCallbackMouseWheel(delta)
-      return false      # prevent scrolling the web page
+      if evt.shiftKey
+        @changedCallbackMouseWheel(delta, SHIFT_KEY)
+      else if evt.altKey
+        @changedCallbackMouseWheel(delta, ALT_KEY)
+      else
+        @changedCallbackMouseWheel(delta, NO_KEY)
+      evt.preventDefault()
     
   mouseDown : (evt) =>
     # check whether the mouseDown event is a leftclick
     if evt.which == 1
+      $(":focus").blur() # see OX-159
       $(@target).css("cursor", "none")
       @buttonDown = true
       # on leftclick, return mouse position relative to the canvas
@@ -164,8 +174,7 @@ class Mouse
     else
       if @changedCallbackRightclick
         @changedCallbackRightclick [evt.pageX - $(@target).offset().left, evt.pageY - $(@target).offset().top], 0
-
-    return false
+    evt.preventDefault()
 
   mouseUp : =>
     # invoke activeCallback when view was entered while dragging the plane in another view

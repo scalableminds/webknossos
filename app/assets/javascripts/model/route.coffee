@@ -31,14 +31,14 @@ Route =
 
       _.extend(this, new EventMixin())
 
-      $.get("/experiment/#{Game.task.id}",
+      $.get("/tracing/#{Game.task.id}",
         (data) =>
           Route.data = data
           console.log "Route.data:"
           console.log data
           @id        = data.dataSet.id
-          #@branchStack = data.experiment.branchPoints.map (a) -> new Float32Array(a)
-          #@branchStack = (data.experiment.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.experiment.branchPoints) # when data.experiment.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
+          #@branchStack = data.tracing.branchPoints.map (a) -> new Float32Array(a)
+          #@branchStack = (data.tracing.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.tracing.branchPoints) # when data.tracing.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
           @createBuffer()
 
           @idCount = 1
@@ -62,10 +62,10 @@ Route =
           #console.log "--------- TREE ---------"
           #console.log @tree.toString()
 
-          # Build sample data.experiment
-          #console.log "---------- Build data.experiment -----------"
-          #console.log data.experiment
-          #data.experiment = {
+          # Build sample data.tracing
+          #console.log "---------- Build data.tracing -----------"
+          #console.log data.tracing
+          #data.tracing = {
           #  activeNode : 6
           #  branchPoints : [{id : 1}, {id : 2}]
           #  editPosition : [400, 350, 200]
@@ -103,32 +103,33 @@ Route =
           #    }
           #  }
           #}
-          console.log "data.experiment:"
-          console.log data.experiment
+          console.log "data.tracing:"
+          console.log data.tracing
 
           #@recursionTest(0)
 
           # For trees that are disconnected
           lostTrees = []
-
-          ############ Load Tree from data.experiment ##############
           
-          @scale = data.experiment.scale
+          ############ Load Tree from data.tracing ##############
+          
+          @scale = data.tracing.scale
           # reciprocal of scale
           @voxelPerNM = [0, 0, 0]
           for i in [0..(@scale.length - 1)]
             @voxelPerNM[i] = 1 / @scale[i]
-          @scaleX = data.experiment.scale[0]
+          @scaleX = data.tracing.scale[0]
+          @globalPosition = data.tracing.editPosition
 
-          @globalPosition = data.experiment.editPosition
           # get tree to build
-          for tree in data.experiment.trees
+          for tree in data.tracing.trees
             # Initialize nodes
             nodes = []
             i = 0
+            treeColor = new THREE.Color().setRGB(tree.color[0..2]...).getHex()
             for node in tree.nodes
               if node
-                nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, 1))
+                nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, treeColor))
             # Initialize edges
             for edge in tree.edges
               sourceNode = @findNodeInList(nodes, edge.source)
@@ -146,7 +147,7 @@ Route =
                   @trees.push(node)
                   treeFound = true
             # Set active Node
-            activeNodeT = @findNodeInList(nodes, data.experiment.activeNode)
+            activeNodeT = @findNodeInList(nodes, data.tracing.activeNode)
             if activeNodeT
               @activeNode = activeNodeT
               @lastActiveNodeId = @activeNode.id
@@ -158,9 +159,10 @@ Route =
           
           # Set branchpoints
           nodeList = @getNodeListOfAllTrees()
-          for branchpoint in data.experiment.branchPoints
+          for branchpoint in data.tracing.branchPoints
             node = @findNodeInList(nodeList, branchpoint.id)
             if node
+              node.type = TYPE_BRANCH
               @branchStack.push(node)
             
           for tree in @trees
@@ -186,7 +188,7 @@ Route =
               @pushImpl()
           )
 
-          deferred.resolve(data.experiment.editPosition)
+          deferred.resolve(data.tracing.editPosition)
           )
 
       deferred = new $.Deferred()
@@ -198,9 +200,9 @@ Route =
 
       deferred
 
-  # Returns an object that is structured the same way as data.experiment is
+  # Returns an object that is structured the same way as data.tracing is
   exportToNML : ->
-    result = Route.data.experiment
+    result = Route.data.tracing
     result.activeNode = @lastActiveNodeId
     result.branchPoints = []
     # Get Branchpoints
@@ -214,7 +216,8 @@ Route =
         nodes = @getNodeList(tree)
         treeObj = {}
         result.trees.push(treeObj)
-        treeObj.color = [1, 0, 0, 0]
+        treeColor = new THREE.Color(tree.color)
+        treeObj.color = [treeColor.r, treeColor.g, treeColor.b, 1]
         treeObj.edges = []
         # Get Edges
         for node in nodes
@@ -255,7 +258,7 @@ Route =
     @initialize().pipe =>
 
       request(
-          url : "/experiment/#{Game.task.id}"
+          url : "/tracing/#{Game.task.id}"
           method : "PUT"
           data : @exportToNML()
           contentType : "application/json"
@@ -293,6 +296,7 @@ Route =
       #@addToBuffer(1, position)
       if @activeNode
         @branchStack.push(@activeNode)
+        @activeNode.type = TYPE_BRANCH
 
       #@putNewPoint(position, TYPE_BRANCH)
 
@@ -308,6 +312,7 @@ Route =
       deferred = new $.Deferred()
       if point
         @activeNode = point
+        @activeNode.type = TYPE_USUAL
         @lastActiveNodeId = @activeNode.id
         deferred.resolve(@activeNode.id)
       else
@@ -362,7 +367,7 @@ Route =
   putNewPoint : (position, type) ->
     unless @lastRadius
       @lastRadius = 10 * @scaleX
-    point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, 1)
+    point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, @activeTree.color)
     if @activeNode
       @activeNode.appendNext(point)
     else
@@ -422,11 +427,15 @@ Route =
       @lastActiveNodeId = @activeNode.id
     @push()
 
+  getNewTreeColor : ->
+    +("0x"+("000"+(Math.random()*(1<<24)|0).toString(16)).substr(-6))
+
   createNewTree : ->
     # Because a tree is represented by the root element and we
     # don't have any root element, we need a sentinel to save the
     # treeId and it's index within trees.
-    sentinel = new TracePoint(null, null, null, null, null, null)
+    treeColor = @getNewTreeColor()
+    sentinel = new TracePoint(null, null, null, null, null, treeColor)
     sentinel.treeId = @treeIdCount++
     # save Index, so we can access it once we have the root element
     sentinel.treeIndex = @trees.length
@@ -435,7 +444,7 @@ Route =
     @activeTree = sentinel
     @activeNode = null
     @push()
-    return sentinel.treeId
+    return [sentinel.treeId, sentinel.color]
 
   findNodeInTree : (id, tree) ->
     unless tree

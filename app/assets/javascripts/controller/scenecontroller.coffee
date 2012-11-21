@@ -46,17 +46,12 @@ class SceneController
 
     # TODO: Implement text 
 
-    # Some objects have to be distorted to undo the distortion done in view
-    rScale = @model.Route.data.experiment.scale
-    rMin   = Math.min.apply(null, rScale)
-    scaleVector = new THREE.Vector3(rMin / rScale[0], rMin / rScale[1], rMin / rScale[2])
-
-    @skeleton = new Skeleton(10000, @flycam, @model, scaleVector)
+    @skeleton = new Skeleton(10000, @flycam, @model)
 
     # create Meshes
     @planes = new Array(3)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @planes[i] = new Plane(VIEWPORT_WIDTH, TEXTURE_WIDTH, @flycam, i, @model, scaleVector)
+      @planes[i] = new Plane(VIEWPORT_WIDTH, TEXTURE_WIDTH, @flycam, i, @model)
 
     @planes[PLANE_XY].setRotation(new THREE.Vector3(-90 /180*Math.PI, 0, 0))
     @planes[PLANE_YZ].setRotation(new THREE.Vector3(-90 /180*Math.PI, 0, -90 /180*Math.PI))

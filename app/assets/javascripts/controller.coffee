@@ -16,6 +16,9 @@ PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
+NO_KEY           = 0
+ALT_KEY          = 1
+SHIFT_KEY        = 2
 VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 TEXTURE_WIDTH    = 512
@@ -36,11 +39,11 @@ class Controller
       if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault(); return
 
     # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
+    $("#main-container").bind "contextmenu", (event) ->
       event.preventDefault(); return
 
     @canvasesAndNav = $("#main")[0]
-
+    
     @model.Route.initialize().then(
       (position) =>
         # Game.initialize() is called within Model.Route.initialize(), so it is also finished at this time.
@@ -52,16 +55,15 @@ class Controller
         @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
         @prevControls = $('#prevControls')
+        @prevControls.addClass("btn-group")
         values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
         callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
                           @cameraController.changePrevXZ, @cameraController.changePrevSV]
         buttons       = new Array(4)
         for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-          buttons[i] = document.createElement "input"
-          buttons[i].setAttribute "type", "button"
-          buttons[i].setAttribute "value", values[i]
-          buttons[i].addEventListener "click", callbacks[i], true
-          @prevControls.append buttons[i]
+          buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
+          buttons[i].on("click", callbacks[i])
+          @prevControls.append(buttons[i])
 
         @sceneController = new SceneController(@model.Route.data.dataSet.upperBoundary, @flycam, @model)
         meshes      = @sceneController.getMeshes()
@@ -137,7 +139,7 @@ class Controller
     @input.mouses = new Input.Mouse(
       [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
       [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
-      {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "l" : @onPlaneClick, "r" : @setWaypoint}
+      {"x" : @moveX, "y" : @moveY, "w" : @scroll, "l" : @onPlaneClick, "r" : @setWaypoint}
       {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "l" : @onPreviewClick}
     )
 
@@ -152,7 +154,7 @@ class Controller
     @input.keyboard = new Input.Keyboard(
 
       #Fullscreen Mode
-      "f" : =>
+      "q" : =>
         canvasesAndNav = @canvasesAndNav
         requestFullscreen = canvasesAndNav.webkitRequestFullScreen or canvasesAndNav.mozRequestFullScreen or canvasesAndNav.RequestFullScreen
         if requestFullscreen
@@ -164,14 +166,6 @@ class Controller
       "k" : => @view.scaleTrianglesPlane @model.User.Configuration.scaleValue
 
       #Move
-      "w"             : => @moveY(-@model.User.Configuration.moveValue)
-      "s"             : => @moveY( @model.User.Configuration.moveValue)
-      "a"             : => @moveX(-@model.User.Configuration.moveValue)
-      "d"             : => @moveX( @model.User.Configuration.moveValue)
-      #"space"         : => @moveZ( @model.User.Configuration.moveValue)
-      #"shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
-
-      #Rotate in distance
       "left"          : => @moveX(-@model.User.Configuration.moveValue)
       "right"         : => @moveX( @model.User.Configuration.moveValue)
       "up"            : => @moveY(-@model.User.Configuration.moveValue)
@@ -193,23 +187,13 @@ class Controller
           @setActiveNode(id, true)
           @sceneController.skeleton.setBranchPoint(false)
         )
-      "h" : @centerActiveNode
+      "s" : @centerActiveNode
 
       #Zoom in/out
       "i" : =>
-        @cameraController.zoomIn()
-        # Remember Zoom Steps
-        @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
-        @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-        @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-        @model.User.Configuration.push()
+        @zoomIn()
       "o" : =>
-        @cameraController.zoomOut()
-        # Remember Zoom Steps
-        @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
-        @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-        @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-        @model.User.Configuration.push()
+        @zoomOut()
 
       # delete active node
       "delete" : =>
@@ -220,10 +204,8 @@ class Controller
         @createNewTree()
 
       # Move
-      "space"         : => @moveZ( @model.User.Configuration.moveValue)
-      "shift + space" : => @moveZ(-@model.User.Configuration.moveValue)
-      # alternative key binding for Kevin
-      "ctrl + space"  : => @moveZ(-@model.User.Configuration.moveValue)
+      "space, f"         : => @moveZ( @model.User.Configuration.moveValue)
+      "shift + space, ctrl + space, d" : => @moveZ(-@model.User.Configuration.moveValue)
     )
 
   # for more buttons look at Input.Gamepad
@@ -270,16 +252,59 @@ class Controller
   moveY : (y) => @move([0, y, 0])
   moveZ : (z) => @move([0, 0, z])
 
+  zoomIn : =>
+    @cameraController.zoomIn()
+    # Remember Zoom Steps
+    @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
+    @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+    @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
+    @model.User.Configuration.push()
+
+  zoomOut : =>
+    @cameraController.zoomOut()
+    # Remember Zoom Steps
+    @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
+    @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+    @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
+    @model.User.Configuration.push()
+
+  setNodeRadius : (delta) =>
+    lastRadius = @model.Route.getActiveNodeRadius()
+    radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
+    scale = @model.Route.scaleX
+    if radius < scale
+      radius = scale
+    else if radius > 1000 * scale
+      radius = 1000 * scale
+    @gui.setNodeRadius(radius)
+    @gui.updateRadius()
+
+  scroll : (delta, type) =>
+    switch type
+      when NO_KEY then @moveZ(delta)
+      when SHIFT_KEY then @setNodeRadius(delta)
+      when ALT_KEY
+        if delta > 0
+          @zoomIn()
+        else
+          @zoomOut()
+
+
   ########### Click callbacks
   
   setWaypoint : (relativePosition, typeNumber) =>
-    curGlobalPos = @flycam.getGlobalPos()
-    zoomFactor   = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
-    scaleFactor  = @view.scaleFactor
+    curGlobalPos  = @flycam.getGlobalPos()
+    zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
+    activeNodePos = @model.Route.getActiveNodePos()
+    scaleFactor   = @view.scaleFactor
     switch @flycam.getActivePlane()
       when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2]]
       when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
       when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
+    # set the new trace direction
+    if activeNodePos
+      p = [position[0] - activeNodePos[0], position[1] - activeNodePos[1], position[2] - activeNodePos[2]]
+      @flycam.setDirection(p)
     @addNode(position)
 
   onPreviewClick : (position) =>
@@ -344,9 +369,9 @@ class Controller
     @sceneController.updateRoute()
 
   createNewTree : =>
-    id = @model.Route.createNewTree()
+    [id, color] = @model.Route.createNewTree()
     @gui.update()
-    @sceneController.skeleton.createNewTree(id)
+    @sceneController.skeleton.createNewTree(id, color)
 
   setActiveTree : (treeId) =>
     @model.Route.setActiveTree(treeId)

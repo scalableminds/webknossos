@@ -2,6 +2,7 @@
 libs/datgui/dat.gui : DatGui
 libs/request : request
 libs/event_mixin : EventMixin
+routes : routes
 ###
 
 PLANE_XY = 0
@@ -23,75 +24,52 @@ class Gui
 
     # create GUI
     modelRadius = @model.Route.getActiveNodeRadius()
-    @settings = { 
-                save : @saveNow
-                upload : @uploadNML
-                download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
-                                          "_blank", "width=700,height=400,location=no,menubar=no")
+    @settings = 
+      save : @saveNow
+      finish : @finish
+      upload : @uploadNML
+      download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
+                                "_blank", "width=700,height=400,location=no,menubar=no")
+      
+      position : "#{initPos[0]}, #{initPos[1]}, #{initPos[2]}"
+      lockZoom: data.lockZoom
+      inverseX: data.mouseInversionX == 1
+      inverseY: data.mouseInversionY == 1
 
-                resume : false
-                experiments : null
-                selectedExperimentIndex : 0
-                changeExperiment : => 
-                  experiment = @settings.experiments[@settings.selectedExperimentIndex]
-                  request(
-                    method : "POST"
-                    url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
-                  ).always -> window.location.reload()
+      moveValue : data.moveValue
+      routeClippingDistance: data.routeClippingDistance
+      displayCrosshairs: data.displayCrosshair
+      interpolation : data.interpolation
+      minZoomStep : data.minZoomStep
 
-                position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
-                lockZoom: data.lockZoom
-                inverseX: data.mouseInversionX == 1
-                inverseY: data.mouseInversionY == 1
+      displayPrevXY : data.displayPreviewXY
+      displayPrevYZ : data.displayPreviewYZ
+      displayPrevXZ : data.displayPreviewXZ
+      nodesAsSpheres : data.nodesAsSpheres
 
-                moveValue : data.moveValue
-                routeClippingDistance: data.routeClippingDistance
-                displayCrosshairs: data.displayCrosshair
-                interpolation : data.interpolation
-                minZoomStep : data.minZoomStep
+      activeTreeID : @model.Route.getActiveTreeId()
+      newTree : => @trigger "createNewTree"
+      deleteActiveTree : => @trigger "deleteActiveTree"
 
-                displayPrevXY : data.displayPreviewXY
-                displayPrevYZ : data.displayPreviewYZ
-                displayPrevXZ : data.displayPreviewXZ
-                nodesAsSpheres : data.nodesAsSpheres
+      activeNodeID : @model.Route.getActiveNodeId()
+      newNodeNewTree : data.newNodeNewTree
+      deleteActiveNode : => @trigger "deleteActiveNode"
+      radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
 
-                activeTreeID : @model.Route.getActiveTreeId()
-                newTree : => @trigger "createNewTree"
-                deleteActiveTree : => @trigger "deleteActiveTree"
 
-                activeNodeID : @model.Route.getActiveNodeId()
-                newNodeNewTree : data.newNodeNewTree
-                deleteActiveNode : => @trigger "deleteActiveNode"
-                radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
-              }
-    @gui  = new dat.GUI({autoPlace: false, width : 280, hideable : false})
+    @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
     
     container.append @gui.domElement
 
-    fFile = @gui.addFolder("File")
-    (fFile.add @settings, "save")
+    fTask = @gui.addFolder("Task")
+    (fTask.add @settings, "save")
                           .name("Save now")
-    (fFile.add @settings, "upload")
+    (fTask.add @settings, "finish")
+                          .name("Finish task")
+    (fTask.add @settings, "upload")
                           .name("Upload NML")
-    (fFile.add @settings, "download")
+    (fTask.add @settings, "download")
                           .name("Download NML")
-    
-    fExperiment = @gui.addFolder("Experiment")
-    request(
-      url : "/experiment"
-      responseType : "json"
-    ).done (experiments) =>
-      
-      @settings.experiments = experiments
-
-      options = {}
-      for experiment, i in experiments
-        options[experiment.name] = i
-
-      (fExperiment.add @settings, "selectedExperimentIndex", options)
-                            .name("Datasets")
-      (fExperiment.add @settings, "changeExperiment")
-                            .name("Apply")
 
     
     fPosition = @gui.addFolder("Position")
@@ -172,7 +150,7 @@ class Gui
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
-    fFile.open()
+    fTask.open()
     fPosition.open()
     #fControls.open()
     #fView.open()
@@ -180,11 +158,19 @@ class Gui
     fTrees.open()
     fNodes.open()
 
+    @gui.close()
+
   saveNow : =>
     @model.User.Configuration.pushImpl()
     @model.Route.pushImpl()
-      .fail( -> alert("Something went wrong with saving, please try again."))
-      .done( -> alert("Successfully saved!"))
+      .then( 
+        -> toastSuccess("Saved!")
+        -> toastError("Couldn't save. Please try again.")
+      )
+
+  finish : =>
+    routes.controllers.TaskController.finish("123").ajax()
+    toastError("Yeah, thats not implemented yet.")
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
@@ -197,7 +183,7 @@ class Gui
     input.trigger("click")
     input.on("change", (evt) ->
       file = evt.target.files[0]
-      requestObject = jsRoutes.controllers.admin.NMLIO.upload()
+      requestObject = routes.controllers.admin.NMLIO.upload()
       xhr = new XMLHttpRequest()
       # Reload when done
       xhr.onload = -> window.location.reload()

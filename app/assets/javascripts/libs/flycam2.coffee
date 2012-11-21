@@ -7,7 +7,7 @@ PLANE_XZ           = 2
 VIEW_3D            = 3
 TEXTURE_WIDTH      = 512
 MAX_TEXTURE_OFFSET = 31     # maximum difference between requested coordinate and actual texture position
-ZOOM_DIFF          = 0.05
+ZOOM_DIFF          = 0.1
 MAX_ZOOM_TRESHOLD  = 2
   
 class Flycam2d
@@ -151,10 +151,7 @@ class Flycam2d
     p = [position[0] - @globalPosition[0], position[1] - @globalPosition[1], position[2] - @globalPosition[2]]
     @globalPosition = position
     @hasChanged = true
-    # update the direction whenever the user moves
-    @lastDirection = @direction
-    @direction = [0.8 * @lastDirection[0] + 0.2 * p[0], 0.8 * @lastDirection[1] + 0.2 * p[1], 0.8 * @lastDirection[2] + 0.2 * p[2]]
-
+    
   setActivePlane : (activePlane) ->
     @activePlane = activePlane
     # setSpaceDirection when entering a new viewport

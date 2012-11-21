@@ -1,0 +1,39 @@
+@()(implicit session: brainflight.view.AuthedSessionData)
+
+@main( ){
+<script src="@routes.Assets.at("javascripts/libs/modernizr-2.0.6.min.js")"></script>
+<script src="@routes.Assets.at("javascripts/libs/require-2.1.1.js")"></script>
+<script src="@routes.Assets.at("javascripts/libs/mjs.js")"></script>
+  <div id="container">
+    <div id="main" role="main">
+      <div id="render">
+        <div id="prevControls"></div>
+        <div id="planexy" class="inputcatcher"></div>
+        <div id="planeyz" class="inputcatcher"></div>
+        <div id="planexz" class="inputcatcher"></div>
+        <div id="skeletonview" class="inputcatcher"></div>
+      </div>
+      <div id="overlay">
+        <div id="status"></div>
+        <div id="optionswindow">
+        </div>
+      </div>  
+    </div>   
+  </div> <!--! end of #container -->
+
+  <!-- JavaScript at the bottom for fast page loading -->
+
+  <script>
+
+    if (Modernizr.webgl)
+      Modernizr.load([
+        "@routes.Assets.at("javascripts/libs/threejs/Three.js")",
+        "@routes.Assets.at("javascripts/libs/threejs/stats.js")",
+        "@routes.Assets.at("javascripts/brainflight.js")"
+      ]);
+    else
+      alert( "Sorry dude, you need WebGL for this. Get Chrome or Firefox." );
+      
+  </script>
+	
+}

@@ -19,14 +19,13 @@ class Plane
   # This class is supposed to collect all the Geometries that belong to one single plane such as
   # the plane itself, its texture, borders and crosshairs.
 
-  constructor : (planeWidth, textureWidth, flycam, planeID, model, scaleVector) ->
+  constructor : (planeWidth, textureWidth, flycam, planeID, model) ->
     @flycam          = flycam
     @planeID         = planeID
     @model           = model
     @planeWidth      = planeWidth
     @textureWidth    = textureWidth
     @displayCosshair = true
-    @scaleVector     = scaleVector
 
     # transform scaleVector (because they are rotated)
     transformed  = new Array(3)

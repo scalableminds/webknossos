@@ -3,12 +3,12 @@ package controllers
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import brainflight.security.Secured
-import models.Role
-import models.DataSet
+import models.security.Role
+import models.binary.DataSet
 import play.api.mvc._
 import play.api.Logger
-import models.graph.Experiment
-import models.User
+import models.tracing.Tracing
+import models.user.User
 import org.apache.commons.codec.binary.Base64
 import com.sun.jersey.api.client.WebResource
 import com.sun.jersey.api.client.Client
@@ -28,7 +28,7 @@ object Jira extends Controller with Secured {
   val branchName = conf.getString("branchname") getOrElse "master"
 
   def index = Authenticated { implicit request =>
-    Ok(html.jira.index(request.user))
+    Ok(html.jira.index())
   }
 
   def createIssue(user: User, summary: String, description: String, issueType: String) {
@@ -58,9 +58,9 @@ object Jira extends Controller with Secured {
 
   def submit = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     (for {
-      summary <- request.body.get("summary").flatMap(_.headOption)
-      description <- request.body.get("description").flatMap(_.headOption)
-      postedType <- request.body.get("type").flatMap(_.headOption)
+      summary <- postParameter("summary")
+      description <- postParameter("description")
+      postedType <- postParameter("type")
       issueType <- issueTypes.get(postedType)
     } yield {
       request.body

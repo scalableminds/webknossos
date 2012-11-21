@@ -79,7 +79,7 @@ Cube =
 
     bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
 
-    if cube[bucketIndex]
+    if bucketIndex? cube[bucketIndex]
       cube[bucketIndex].requestedZoomStep
     else
       @ZOOM_STEP_COUNT
@@ -152,7 +152,7 @@ Cube =
 
             bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz)
             
-            if bucketIndex
+            if bucketIndex?
               bucket = cube[bucketIndex]
               if bucketData
                 if zoomStep < bucket.zoomStep 
@@ -164,7 +164,7 @@ Cube =
 
     else
       bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)      
-      if bucketIndex
+      if bucketIndex?
         bucket = cube[bucketIndex]
         unless bucket
           return 0
@@ -206,7 +206,7 @@ Cube =
 
             bucketIndex = @bucketIndexByAddress3(x + dx, y + dy, z + dz)
 
-            if cube[bucketIndex]
+            if bucketIndex? and cube[bucketIndex]
               cube[bucketIndex].requestedZoomStep = Math.min(zoomStep, cube[bucketIndex].requestedZoomStep)
             else
               cube[bucketIndex] = { requestedZoomStep : zoomStep, zoomStep : @ZOOM_STEP_COUNT }
@@ -215,7 +215,7 @@ Cube =
 
       bucketIndex = @bucketIndexByAddress3(bucket_x, bucket_y, bucket_z)
 
-      if cube[bucketIndex]
+      if bucketIndex? and cube[bucketIndex]
         cube[bucketIndex].requestedZoomStep = 0
       else
         cube[bucketIndex] = { requestedZoomStep : 0, zoomStep : @ZOOM_STEP_COUNT }

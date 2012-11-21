@@ -25,11 +25,8 @@ class CameraController
     @model         = model
 
     # vector which translates scene coorinates to camera coordinates
-    rScale = @model.Route.data.experiment.scale
+    rScale = @model.Route.scale
     rMin   = Math.min.apply(null, rScale)
-    @scaleVector = new THREE.Vector3(rScale[0] / rMin, rScale[1] / rMin, rScale[2] / rMin)
-    console.log "camera scaleVector"
-    console.log @scaleVector
 
     @updateCamViewport()
     @cameras[VIEW_3D].near = -100000

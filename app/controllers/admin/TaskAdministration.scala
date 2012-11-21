@@ -8,7 +8,7 @@ import brainflight.tools.ExtendedTypes.String2ExtendedString
 import brainflight.tools.geometry.Point3D
 import models.binary.DataSet
 import models.security.Role
-import models.tracing.Tracing
+import models.tracing._
 import models.task.Task
 import models.user.User
 import models.task.TaskType
@@ -124,6 +124,10 @@ object TaskAdministration extends Controller with Secured {
   }
   
   def overview =  Authenticated { implicit request =>
-    Ok(html.admin.task.taskOverview(User.findAll, Task.findAll, Map.empty))
+    val taskLessUsers = User.findAll.filter(user => !Tracing.hasOpenTracing(user, false))
+    val usersWithTasks =Tracing.findAllOpen(TracingType.Task).flatMap{ tracing => 
+      tracing.task.flatMap( task => tracing.user.map(_ -> task))
+    }.toMap
+    Ok(html.admin.task.taskOverview(taskLessUsers, usersWithTasks, Map.empty))
   }
 }

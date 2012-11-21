@@ -204,6 +204,11 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
   def findFor(u: User) = {
     find(MongoDBObject("_user" -> u._id)).toList
   }
+  
+  def findAllOpen(tracingType: TracingType.Value) = {
+    find(MongoDBObject(
+     "state.isFinished" -> false, "taskId" -> MongoDBObject("$exists" -> true))).toList
+  }
 
   def findAllExploratory(user: User) = {
     find(MongoDBObject(

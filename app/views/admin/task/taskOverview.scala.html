@@ -1,4 +1,4 @@
-@(usersWithoutATask: List[models.user.User], tasks: List[models.task.Task], futureTasks: Map[models.user.User, models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
+@(usersWithoutATask: List[models.user.User], usersWithTasks: Map[models.user.User, models.task.Task], futureTasks: Map[models.user.User, models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
   <div class="container">
@@ -23,7 +23,10 @@
     </script>
     <script type="text/vnd.graphviz" id="graphData">
       digraph G {
-        a -> b;
+        @Html(usersWithoutATask.map( "\"" + _.name + "\" [shape=box];").mkString("\n"))
+        @Html(usersWithTasks.map( e =>
+            "\"" + e._1.name + "\"->\"" + formatHash(e._2.id) +"\";").mkString("\n"))
+        @Html(usersWithTasks.keys.map( "\"" + _.name + "\" [shape=box];").mkString("\n"))
       }
     </script>
   </div>

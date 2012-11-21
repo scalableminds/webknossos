@@ -1,4 +1,4 @@
-@(tasks: List[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
+@(usersWithoutATask: List[models.user.User], tasks: List[models.task.Task], futureTasks: Map[models.user.User, models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
   <div class="container">
@@ -16,6 +16,11 @@
       require(["libs/viz"], function (Viz) {
         console.log(Viz);
       });
+    </script>
+    <script type="text/vnd.graphviz" id="cluster">
+      digraph G {
+        
+      }
     </script>
   </div>
 }

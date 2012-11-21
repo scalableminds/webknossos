@@ -10,6 +10,7 @@ import models.binary.DataSet
 import models.security.Role
 import models.tracing.Tracing
 import models.task.Task
+import models.user.User
 import models.task.TaskType
 import play.api.data.Form
 import play.api.data.Forms.mapping
@@ -120,5 +121,9 @@ object TaskAdministration extends Controller with Secured {
         }
       Redirect(routes.TaskAdministration.list)
     } getOrElse BadRequest("'data' parameter is mising")
+  }
+  
+  def overview =  Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    Ok(html.admin.task.taskOverview(User.findAll, Task.findAll, Map.empty))
   }
 }

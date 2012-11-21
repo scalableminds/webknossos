@@ -69,6 +69,7 @@ GET     /admin/tasks/create                 controllers.admin.TaskAdministration
 POST    /admin/tasks/createBulk             controllers.admin.TaskAdministration.createBulk
 POST    /admin/tasks/createFromTracing      controllers.admin.TaskAdministration.createFromTracing
 POST    /admin/tasks/createFromForm         controllers.admin.TaskAdministration.createFromForm
+GET     /admin/tasks/overview               controllers.admin.TaskAdministration.overview
 
 GET     /admin/trainingsTasks               controllers.admin.TrainingsTaskAdministration.list
 GET     /admin/trainingsTasks/create        controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")

@@ -3,6 +3,8 @@
 @main(){
   <div class="container">
     <h3>Task-User Overview</h3>
+
+    <div class="graph"></div>
     
     <script async>
       require.config({
@@ -14,12 +16,14 @@
         }
       });
       require(["libs/viz"], function (Viz) {
-        console.log(Viz);
+        $(function () {
+          $(".graph").html(Viz($("#graphData").html(), "svg"));
+        });
       });
     </script>
-    <script type="text/vnd.graphviz" id="cluster">
+    <script type="text/vnd.graphviz" id="graphData">
       digraph G {
-        
+        a -> b;
       }
     </script>
   </div>

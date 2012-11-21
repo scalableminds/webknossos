@@ -123,7 +123,7 @@ object TaskAdministration extends Controller with Secured {
     } getOrElse BadRequest("'data' parameter is mising")
   }
   
-  def overview =  Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+  def overview =  Authenticated { implicit request =>
     Ok(html.admin.task.taskOverview(User.findAll, Task.findAll, Map.empty))
   }
 }

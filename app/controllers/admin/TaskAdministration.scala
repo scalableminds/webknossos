@@ -124,10 +124,14 @@ object TaskAdministration extends Controller with Secured {
   }
   
   def overview =  Authenticated { implicit request =>
-    val usersWithoutTask = User.findAll.filter(user => !Tracing.hasOpenTracing(user, false))
+    val allUsers = User.findAll
+    val allTaskTypes = TaskType.findAll
+    val usersWithoutTask = allUsers.filter(user => !Tracing.hasOpenTracing(user, false))
     val usersWithTasks =Tracing.findAllOpen(TracingType.Task).flatMap{ tracing => 
       tracing.task.flatMap( task => tracing.user.flatMap(user => task.taskType.map( user -> _)))
     }.toMap
-    Ok(html.admin.task.taskOverview(usersWithoutTask, usersWithTasks, Map.empty))
+    
+    //val futureTasks = simulateTaskAsignment(allUsers)
+    Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks, Map.empty))
   }
 }

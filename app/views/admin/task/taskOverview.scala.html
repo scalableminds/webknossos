@@ -1,4 +1,4 @@
-@(usersWithoutATask: List[models.user.User], usersWithTasks: Map[models.user.User, models.task.TaskType], futureTasks: Map[models.user.User, models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
+@(users: List[models.user.User], taskTypes: List[models.task.TaskType], usersWithTasks: Map[models.user.User, models.task.TaskType], futureTasks: Map[models.user.User, models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
 @import models.Color
 
@@ -6,6 +6,9 @@
   @Html("\"" + user.name + "\" [shape=box, color=\"" + Color.jet(math.min(50, user.lastActivityDays) * (256 / 50)).toHtml + "\"];")
 }
 
+@taskTypeDot(taskType: models.task.TaskType) = {
+  @Html("\"" + taskType.summary + "\"")
+}
 
 @edge(a: String, b: String) = {
   @Html("\"" + a + "\"->\"" + b +"\";")
@@ -23,10 +26,10 @@
       digraph G {
         graph [ bgcolor="transparent", colorscheme=X11 ];
         node [ fontname="Helvetica,Arial,sans-serif", fontsize=10.5, style=filled, color="#ffffff" ];
-        @Html(usersWithoutATask.map( userDot ).mkString("\n"))
+        @Html(taskTypes.map( taskTypeDot ).mkString("\n"))
+        @Html(users.map( userDot ).mkString("\n"))
         @Html(usersWithTasks.map( e =>
           edge(e._1.name, e._2.summary)).mkString("\n"))
-        @Html(usersWithTasks.keys.map( userDot ).mkString("\n"))
       }
     </script>
     <script async>

@@ -1,9 +1,7 @@
 @()(implicit session: brainflight.view.AuthedSessionData)
 
 @main( ){
-<script src="@routes.Assets.at("javascripts/libs/modernizr-2.0.6.min.js")"></script>
-<script src="@routes.Assets.at("javascripts/libs/require-2.1.1.js")"></script>
-<script src="@routes.Assets.at("javascripts/libs/mjs.js")"></script>
+  <script src="@routes.Assets.at("javascripts/oxalis.js")"></script>
   <div id="container">
     <div id="main" role="main">
       <div id="render">
@@ -23,17 +21,4 @@
 
   <!-- JavaScript at the bottom for fast page loading -->
 
-  <script>
-
-    if (Modernizr.webgl)
-      Modernizr.load([
-        "@routes.Assets.at("javascripts/libs/threejs/Three.js")",
-        "@routes.Assets.at("javascripts/libs/threejs/stats.js")",
-        "@routes.Assets.at("javascripts/brainflight.js")"
-      ]);
-    else
-      alert( "Sorry dude, you need WebGL for this. Get Chrome or Firefox." );
-      
-  </script>
-	
 }

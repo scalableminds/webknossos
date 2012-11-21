@@ -1,7 +1,6 @@
 ### define
 model : Model
 view : View
-libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
 model/game : Game
 ###
 
@@ -32,9 +31,9 @@ class Plane
     # planeWidth means that the plane should be that many voxels wide in the
     # dimension with the highest resolution. In all other dimensions, the plane
     # is smaller in voxels, so that it is squared in nm.
-    maxVoxelPerNM = Math.max.apply(null, @model.Route.voxelPerNM)
+    maxVoxelPerNM = Math.max.apply(null, @model.route.voxelPerNM)
     for i in [0..2]
-      transformed[i] = @model.Route.voxelPerNM[i] / maxVoxelPerNM
+      transformed[i] = @model.route.voxelPerNM[i] / maxVoxelPerNM
     transformed = @flycam.transDim(transformed, @planeID)
     # Apparently y and z are switched for those guys...
     @scaleVector = new THREE.Vector3(transformed[0], 1, transformed[1])
@@ -98,11 +97,11 @@ class Plane
       area = @flycam.getArea(@planeID)
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
-        @model.Binary.get(tPos, @flycam.getIntegerZoomStep(@planeID), area, @planeID).done (buffer) =>
+        @model.binary.planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(@planeID), area : @flycam.getArea(@planeID) }).done (buffer) =>
           if buffer
             @plane.texture.image.data.set(buffer)
             @flycam.hasNewTexture[@planeID] = true
-
+  
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return
 

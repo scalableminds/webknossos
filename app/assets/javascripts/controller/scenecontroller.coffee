@@ -124,7 +124,7 @@ class SceneController
 
   setRouteClippingDistance : (value) =>
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @planeShift[i] = 2 * value * @model.Route.voxelPerNM[i]
+      @planeShift[i] = 2 * value * @model.route.voxelPerNM[i]
 
   setInterpolation : (value) =>
     for plane in @planes

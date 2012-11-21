@@ -1,16 +1,28 @@
 ### define
 model/binary/cube : Cube
-model/route : Route
-libs/simple_array_buffer_socket : SimpleArrayBufferSocket
+libs/array_buffer_socket : ArrayBufferSocket
 ###
 
-PullQueue = 
+class PullQueue
 
   # Constants
-  PULL_DOWNLOAD_LIMIT : 100
+  BATCH_LIMIT : 10
+  BATCH_SIZE : 10
+  ROUND_TRIP_TIME_SMOOTHER : .125
 
+  cube : null
   queue : []
-  pullLoadingCount : 0
+
+  dataSetId : ""
+
+  batchCount : 0
+  roundTripTime : 0
+
+  
+  constructor : (@dataSetId, @cube) ->
+    
+    null
+
 
   swap : (a, b) ->
 
@@ -43,86 +55,122 @@ PullQueue =
       pos = child
 
 
-  insert : (bucket, zoomStep, priority) ->
+  insert : (bucket, priority) ->
 
-    queue = @queue
-
-#    if priority > 50 and zoomStep < 3
-#      @insert([bucket[0] >> 1, bucket[1] >> 1, bucket[2] >> 1], zoomStep+1, priority-50)
-
-    # Buckets with negative priority are not loaded
+    # Buckets with a negative priority are not loaded
     return unless priority >= 0
     
     # Checking whether bucket is already loaded
-    if Cube.getWorstRequestedZoomStepOfBucketByZoomedAddress(bucket, zoomStep) > zoomStep
-      b = { "bucket" : bucket, "zoomStep" : zoomStep, "priority" : priority }
-      queue.push(b)
-      @siftUp(queue.length - 1)
+    if @cube.getWorstRequestedZoomStepByZoomedAddress(bucket) > bucket[3]
+      @queue.push( { "bucket" : bucket, "priority" : priority } )
+      @siftUp(@queue.length - 1)
 
 
   removeFirst : ->
 
-    queue = @queue
+    # No buckets in the queue
+    return null unless @queue.length
 
-    return null unless queue.length
-    first = queue.splice(0, 1, queue[queue.length - 1])[0]
-    queue.pop()
+    # Receive and remove first itemfrom queue
+    first = @queue.splice(0, 1, @queue[@queue.length - 1])[0]
+    @queue.pop()
     @siftDown(0)
-    first
+
+    first.bucket
 
 
   clear : ->
 
-    queue = @queue
-
-    queue.length = 0
+    @queue.length = 0
 
 
+  # Starting to download some buckets
   pull : ->
 
-    { queue, PULL_DOWNLOAD_LIMIT } = @
+    while @batchCount < @BATCH_LIMIT and @queue.length
+      
+      batch = []
 
-    while @pullLoadingCount < PULL_DOWNLOAD_LIMIT and queue.length
-      { bucket, zoomStep } = @removeFirst()
+      while batch.length < @BATCH_SIZE and @queue.length
+        
+        bucket = @removeFirst()
 
-      if Cube.getWorstRequestedZoomStepOfBucketByZoomedAddress(bucket, zoomStep) > zoomStep
-        @pullBucket(bucket, zoomStep)
+        # Making sure bucket is still not loaded
+        continue if @cube.getWorstRequestedZoomStepByZoomedAddress(bucket) <= bucket[3]
+
+        batch.push bucket
+        @cube.setRequestedZoomStepByZoomedAddress(bucket)
+        #console.log "Requested: ", bucket
+
+      @pullBatch(batch) if batch.length > 0
 
 
-  pullBucket : (bucket, zoomStep) ->
+  # Loading a bunch of buckets
+  pullBatch : (batch) ->
 
-    @pullLoadingCount++
-    Cube.setRequestedZoomStepByZoomedAddress(bucket, zoomStep)
-    #console.log "Requested: ", bucket, zoomStep
+    @batchCount++
 
-    @loadBucketByAddress(bucket, zoomStep).then(
+    transmitBuffer = []
 
-      (colors) =>
-        Cube.setBucketByZoomedAddress(bucket, zoomStep, colors) if colors.length
-        #console.log "Success: ", bucket, zoomStep
+    for bucket in batch
 
-      =>
-        Cube.setBucketByZoomedAddress(bucket, zoomStep, null)
-        console.log "Failed: ", bucket, zoomStep
-
-    ).always =>
-      @pullLoadingCount--
-      @pull()
-
-  loadBucketSocket : _.once ->
-
-    Route.initialize().pipe ->
-      dataSetId = Route.data.dataSet.id
-      console.log dataSetId
-      new SimpleArrayBufferSocket(
-        defaultSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{dataSetId}&cubeSize=32")#new SimpleArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{dataSetId}&cubeSize=32")
-        fallbackSender : new SimpleArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{dataSetId}&cubeSize=32")
-        requestBufferType : Float32Array
-        responseBufferType : Uint8Array
+      zoomStep = bucket[3]
+      transmitBuffer.push(
+        zoomStep
+        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P),
+        bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P),
+        bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
       )
 
+    # Measuring the time until response arrives to select appropriate preloading strategy 
+    roundTripBeginTime = new Date()
 
-  loadBucketByAddress : (bucket, zoomStep) ->
+    @getLoadBucketSocket()
+      .send(transmitBuffer)
+      .pipe(
 
-    transmitBuffer = [ zoomStep, bucket[0] << (zoomStep + 5), bucket[1] << (zoomStep + 5), bucket[2] << (zoomStep + 4) ]
-    @loadBucketSocket().pipe (socket) -> socket.send(transmitBuffer)
+        (responseBuffer) =>
+
+          @addRoundTripTime(new Date() - roundTripBeginTime)
+
+          if responseBuffer?
+            for bucket, i in batch
+
+              bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
+              #console.log "Success: ", bucket
+              @cube.setBucketByZoomedAddress(bucket, bucketData)
+              
+
+        =>
+          
+          for bucket in batch
+
+            @cube.setBucketByZoomedAddress(bucket, null)
+            #console.log "Failed: ", bucket
+    
+    ).always =>
+
+      @batchCount--
+      @pull()
+
+
+  addRoundTripTime : (roundTripTime) ->
+
+    @roundTripTime = if @roundTripTime == 0
+      roundTripTime
+    else
+      (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
+
+    console.log @roundTripTime
+
+
+  getLoadBucketSocket : _.once ->
+    
+    new ArrayBufferSocket(
+      senders : [
+        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+      ]
+      requestBufferType : Float32Array
+      responseBufferType : Uint8Array
+    )

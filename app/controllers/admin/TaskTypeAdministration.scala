@@ -32,7 +32,7 @@ object TaskTypeAdministration extends Controller with Secured {
     taskTypeForm.bindFromRequest.fold(
       formWithErrors => BadRequest(html.admin.task.taskTypes(TaskType.findAll, formWithErrors)),
       { t =>
-        TaskType.insert(t)
+        TaskType.insertOne(t)
         Ok(html.admin.task.taskTypes(TaskType.findAll, taskTypeForm))
       })
   }

@@ -5,8 +5,7 @@ import brainflight.mail.DefaultMails
 import brainflight.mail.Send
 import brainflight.security.AuthenticatedRequest
 import brainflight.security.Secured
-import controllers.Application
-import controllers.Controller
+import controllers._
 import models.security.Role
 import models.user.TimeTracking
 import models.user.User
@@ -51,8 +50,8 @@ object UserAdministration extends Controller with Secured {
   private def verifyUser(userId: String) = {
     User.findOneById(userId) map { user =>
       if (!user.verified) {
-        Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-        User.verify(user)
+        Authentication.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
+        user.update(_.verify)
       } else
         user
     }
@@ -92,13 +91,13 @@ object UserAdministration extends Controller with Secured {
 
   private def addRole(roleName: String)(userId: String) = {
     User.findOneById(userId) map { user =>
-      User.addRole(user, roleName)
+      user.update(_.addRole(roleName))
     }
   }
 
   private def removeRole(roleName: String)(userId: String) = {
     User.findOneById(userId) map { user =>
-      User.removeRole(user, roleName)
+      user.update(_.removeRole(roleName))
     }
   }
 

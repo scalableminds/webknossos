@@ -6,7 +6,7 @@
     <div class="span9 offset1 space-top">
       <div class="well">
         
-        @helper.form(routes.Application.authenticate, 'class -> "form-horizontal") {
+        @helper.form(routes.Authentication.authenticate, 'class -> "form-horizontal") {
         
           <legend>Login</legend>
 
@@ -27,7 +27,7 @@
 
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Login</button>
-            <a href="@routes.Application.register" class="btn">Sign Up</a>
+            <a href="@routes.Authentication.register" class="btn">Sign Up</a>
           </div>        
         }
       </div>

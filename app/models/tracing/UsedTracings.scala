@@ -11,7 +11,7 @@ case class UsedTracings(user: ObjectId, tracing: ObjectId, _id: ObjectId = new O
 object UsedTracings extends BasicDAO[UsedTracings]("usedTracings") {
   def use(user: User, tracing: Tracing) {
     removeAll(user)
-    UsedTracings.insert(UsedTracings(user._id, tracing._id))
+    insertOne(UsedTracings(user._id, tracing._id))
   }
   
   def by(user: User) = 

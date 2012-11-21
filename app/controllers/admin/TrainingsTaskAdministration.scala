@@ -71,8 +71,8 @@ object TrainingsTaskAdministration extends Controller with Secured {
           training <- task.training
           sample <- Tracing.findOneById(training.sample)
         } yield {
-          Tracing.save(sample.copy(tracingType = TracingType.Sample))
-          Task.save(task)
+          sample.update(_.copy(tracingType = TracingType.Sample))
+          Task.insertOne(task)
           Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
         }) getOrElse BadRequest("Couldn't create Training.")
       })

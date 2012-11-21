@@ -9,6 +9,7 @@ import java.util.Date
 import java.util.Calendar
 import akka.util.duration._
 import brainflight.tools.ExtendedTypes._
+import models.basics.DAOCaseClass
 
 case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None) {
   val created = {
@@ -20,7 +21,9 @@ case class PaymentInterval(month: Int, year: Int) {
   override def toString = "%d/%d".format(month, year)
 }
 
-case class TimeTracking(user: ObjectId, timeEntries: List[TimeEntry], _id: ObjectId = new ObjectId) {
+case class TimeTracking(user: ObjectId, timeEntries: List[TimeEntry], _id: ObjectId = new ObjectId) extends DAOCaseClass[TimeTracking] {
+
+  val dao = TimeTracking
 
   def sum(from: Date, to: Date) = {
     timeEntries.filter(t => t.created.after(from) && t.created.before(to)).foldLeft(0L)(_ + _.time)
@@ -35,6 +38,12 @@ case class TimeTracking(user: ObjectId, timeEntries: List[TimeEntry], _id: Objec
       case (pI, entries) => (pI, entries.foldLeft(0L)(_ + _.time) millis)
     }
   }
+
+  def addTimeEntry(entry: TimeEntry) =
+    this.copy(timeEntries = entry :: this.timeEntries)
+
+  def setTimeEntries(entries: List[TimeEntry]) =
+    this.copy(timeEntries = entries)
 }
 
 object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
@@ -42,8 +51,8 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
   val MAX_PAUSE = (5 minutes).toMillis
 
   val timeRx = "(([0-9]+)d)?(\\s*([0-9]+)h)?(\\s*([0-9]+)m)?".r
-  
-  val hoursRx= "[0-9]+".r
+
+  val hoursRx = "[0-9]+".r
 
   def emptyTracking(user: User) = TimeTracking(user._id, Nil)
 
@@ -56,9 +65,9 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
     val entry = TimeEntry(time, current)
     findOneByUser(user) match {
       case Some(timeTracker) =>
-        alterAndSave(timeTracker.copy(timeEntries = entry :: timeTracker.timeEntries))
+        timeTracker.update(_.addTimeEntry(entry))
       case _ =>
-        alterAndInsert(TimeTracking(user._id, List(entry)))
+        insertOne(TimeTracking(user._id, List(entry)))
     }
   }
 
@@ -91,14 +100,14 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
         timeTracker.timeEntries match {
           case lastEntry :: tail if current - lastEntry.timestamp < MAX_PAUSE =>
             val entry = TimeEntry(lastEntry.time + current - lastEntry.timestamp, current)
-            alterAndSave(timeTracker.copy(timeEntries = entry :: tail))
+            timeTracker.update(_.setTimeEntries(entry :: tail))
           case _ =>
             val entry = TimeEntry(0, current)
-            alterAndSave(timeTracker.copy(timeEntries = entry :: timeTracker.timeEntries))
+            timeTracker.update(_.addTimeEntry(entry))
         }
       case _ =>
         val entry = TimeEntry(0, current)
-        alterAndInsert(TimeTracking(user._id, List(entry)))
+        insertOne(TimeTracking(user._id, List(entry)))
     }
   }
 }

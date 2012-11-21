@@ -16,19 +16,23 @@ import play.api.libs.concurrent.execution.defaultContext
 import play.api.i18n.Messages
 
 object TaskController extends Controller with Secured {
+  def createTracing(user: User, task: Task) = {
+    val tracing = Tracing.createTracingFor(user, task)
+    task.update(_.addTracing(tracing))
+    tracing
+  }
+
   def request = Authenticated { implicit request =>
     Async {
       val user = request.user
       if (!Tracing.hasOpenTracing(request.user, true)) {
         Task.nextTaskForUser(request.user).asPromise.map {
           case Some(task) =>
-            val tracing = Tracing.createTracingFor(user, task)
-            Task.addTracing(task, tracing)
+            val tracing = createTracing(user, task)
             AjaxOk.success(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("task.new"))
           case _ =>
             Training.findAllFor(user).headOption.map { task =>
-              val tracing = Tracing.createTracingFor(user, task)
-              Task.addTracing(task, tracing)
+              val tracing = createTracing(user, task)
               AjaxOk.success(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("training.new"))
             } getOrElse AjaxBadRequest.error(Messages("task.unavailable"))
         }

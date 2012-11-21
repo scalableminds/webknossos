@@ -4,7 +4,7 @@ import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
-import models.basics.BasicDAO
+import models.basics._
 import java.util.Date
 import brainflight.tools.geometry.Point3D
 import play.api.libs.concurrent.Akka
@@ -41,7 +41,9 @@ case class Task(
     created: Date = new Date,
     _tracings: List[ObjectId] = Nil,
     training: Option[Training] = None,
-    _id: ObjectId = new ObjectId) {
+    _id: ObjectId = new ObjectId) extends DAOCaseClass[Task] {
+
+  val dao = Task
 
   lazy val id = _id.toString
 
@@ -61,6 +63,17 @@ case class Task(
 
   def open =
     instances - tracings.size
+
+  def removeTracing(tracing: Tracing) = {
+    this.copy(
+      _tracings = this._tracings.filterNot(_ == tracing._id))
+  }
+
+  def addTracing(tracing: Tracing) = {
+    this.copy(
+      _tracings = tracing._id :: this._tracings)
+  }
+
 }
 
 object Task extends BasicDAO[Task]("tasks") {
@@ -68,21 +81,16 @@ object Task extends BasicDAO[Task]("tasks") {
   val conf = current.configuration
 
   val empty = Task("", 0, null, Point3D(0, 0, 0))
-  
+
   val withEmptyTraining = empty.copy(training = Some(Training.empty))
 
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
-  
+
   override def remove(t: Task) = {
-    t.tracings.map{ tracing =>
+    t.tracings.map { tracing =>
       tracing.update(_.removeTask)
     }
     super.remove(t)
-  }
-  
-  def removeTracing(task: Task, tracing: Tracing){
-    alterAndSave(task.copy(
-        _tracings = task._tracings.filterNot( _ == tracing._id)))
   }
 
   def findAllOfOneType(isTraining: Boolean) =
@@ -97,11 +105,6 @@ object Task extends BasicDAO[Task]("tasks") {
 
   def findAllAssignableNonTrainings =
     findAllNonTrainings.filter(!_.isFullyAssigned)
-
-  def addTracing(task: Task, tracing: Tracing) = {
-    alterAndSave(task.copy(
-      _tracings = tracing._id :: task._tracings))
-  }
 
   def toTracingForm(t: Task): Option[(String, String, Experience, Int, Int)] = {
     Some(("",
@@ -119,29 +122,29 @@ object Task extends BasicDAO[Task]("tasks") {
       _.copy(training = Some(training))
     } getOrElse null
 
-  def fromTrainingsTracingForm(tracingId: String, taskTypeId: String, experience: Experience, priority: Int, training: Training) = 
-    (for{
+  def fromTrainingsTracingForm(tracingId: String, taskTypeId: String, experience: Experience, priority: Int, training: Training) =
+    (for {
       e <- Tracing.findOneById(tracingId)
       taskType <- TaskType.findOneById(taskTypeId)
     } yield {
-        Task(e.dataSetName,
-          0,
-          taskType._id,
-          e.editPosition,
-          experience,
-          priority,
-          Integer.MAX_VALUE,
-          training = Some(training.copy(sample = e._id)))
+      Task(e.dataSetName,
+        0,
+        taskType._id,
+        e.editPosition,
+        experience,
+        priority,
+        Integer.MAX_VALUE,
+        training = Some(training.copy(sample = e._id)))
     }) getOrElse null
-    
+
   def toTrainingsTracingForm(t: Task) = {
     Some(("",
       t.taskType.map(_.id).getOrElse(""),
       t.neededExperience,
       t.priority,
       t.training getOrElse null))
-    }
-        
+  }
+
   def fromTracingForm(tracing: String, taskTypeId: String, experience: Experience, priority: Int, instances: Int): Task =
     (Tracing.findOneById(tracing), TaskType.findOneById(taskTypeId)) match {
       case (Some(e), Some(taskType)) =>

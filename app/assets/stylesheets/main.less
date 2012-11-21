@@ -117,6 +117,18 @@ body {
     border-left: 4px solid transparent;
 }
 
+@-webkit-keyframes rotation {
+    from {
+        -webkit-transform: rotate(0);
+    }
+    to {
+        -webkit-transform: rotate(360deg);
+    }
+}
+.rotating {
+    -webkit-animation: rotation 1s linear infinite;
+}
+
 #alert-container {
     position: absolute;
     right: 20px;

@@ -4,8 +4,20 @@
   <div class="container">
     <h3>TaskType - User Overview</h3>
 
-    <div class="graph"></div>
-    
+    <div class="graph well">
+      <p><i class="icon-refresh rotating"></i> Loading ...</p>
+    </div>
+
+    <script type="text/vnd.graphviz" id="graphData">
+      digraph G {
+        graph [ bgcolor="transparent" ];
+        node [ fontname="Helvetica,Arial,sans-serif", fontsize=10.5 ];
+        @Html(usersWithTasks.map( e =>
+            "\"" + e._1.name + "\"->\"" + e._2.summary +"\";").mkString("\n"))
+        @Html(usersWithTasks.keys.map( "\"" + _.name + "\" [shape=box,style=filled,fillcolor=blue];").mkString("\n"))
+        @Html(usersWithoutATask.map( "\"" + _.name + "\" [shape=box,style=filled,fillcolor=lightgreen];").mkString("\n"))
+      }
+    </script>
     <script async>
       require.config({
         baseUrl : "/assets/javascripts",
@@ -21,13 +33,6 @@
         });
       });
     </script>
-    <script type="text/vnd.graphviz" id="graphData">
-      digraph G {
-        @Html(usersWithoutATask.map( "\"" + _.name + "\" [shape=box];").mkString("\n"))
-        @Html(usersWithTasks.map( e =>
-            "\"" + e._1.name + "\"->\"" + e._2.summary +"\";").mkString("\n"))
-        @Html(usersWithTasks.keys.map( "\"" + _.name + "\" [shape=box];").mkString("\n"))
-      }
-    </script>
+
   </div>
 }

@@ -29,7 +29,7 @@ object Role extends BasicDAO[Role]( "roles" ) {
   }
   
   def colorOf(role: String) = {
-    apply(role).map( _.color.toHTML) getOrElse "#000000"
+    apply(role).map( _.color.toHtml) getOrElse "#000000"
   }
 
   def findOneByName( roleName: String ) =

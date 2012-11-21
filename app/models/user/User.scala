@@ -81,6 +81,9 @@ case class User(
   def removeRole(role: String) = {
     this.copy(roles = this.roles.filterNot(_ == role))
   }
+
+  def lastActivityDays = 
+    (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 }
 
 object User extends BasicDAO[User]("users") {

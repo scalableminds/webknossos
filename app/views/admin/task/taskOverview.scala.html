@@ -1,8 +1,11 @@
 @(usersWithoutATask: List[models.user.User], usersWithTasks: Map[models.user.User, models.task.TaskType], futureTasks: Map[models.user.User, models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
+@import models.Color
+
 @userDot(user: models.user.User) = {
-  @Html("\"" + user.name + "\" [shape=box,style=filled,fillcolor=lightgreen];")
+  @Html("\"" + user.name + "\" [shape=box, color=\"" + Color.jet(math.min(50, user.lastActivityDays) * (256 / 50)).toHtml + "\"];")
 }
+
 
 @edge(a: String, b: String) = {
   @Html("\"" + a + "\"->\"" + b +"\";")
@@ -18,8 +21,8 @@
 
     <script type="text/vnd.graphviz" id="graphData">
       digraph G {
-        graph [ bgcolor="transparent" ];
-        node [ fontname="Helvetica,Arial,sans-serif", fontsize=10.5 ];
+        graph [ bgcolor="transparent", colorscheme=X11 ];
+        node [ fontname="Helvetica,Arial,sans-serif", fontsize=10.5, style=filled, color="#ffffff" ];
         @Html(usersWithoutATask.map( userDot ).mkString("\n"))
         @Html(usersWithTasks.map( e =>
           edge(e._1.name, e._2.summary)).mkString("\n"))

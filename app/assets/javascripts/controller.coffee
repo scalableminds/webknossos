@@ -257,10 +257,7 @@ class Controller
     deviceorientation : null
 
   render : =>
-    # HOTFIX: Hard-coded 2
-    gPos = @flycam.getGlobalPos().slice()
-    gPos[2] *= 2
-    @model.Binary.ping(gPos, @flycam.getIntegerZoomSteps())
+    @model.Binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
     if (@gui)
       @gui.updateGlobalPosition()
     @cameraController.update()

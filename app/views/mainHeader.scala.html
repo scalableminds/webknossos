@@ -76,7 +76,7 @@
                 <a href="#"><i class="icon-edit"></i> Edit Profile</a>
               </li>
               <li>
-                <a href="@routes.Application.logout()"><i class="icon-off"></i> Logout</a>
+                <a href="@routes.Authentication.logout()"><i class="icon-off"></i> Logout</a>
               </li>
             </ul>
           </li>
@@ -87,7 +87,7 @@
       }.getOrElse{
         <ul class="nav pull-right">
           <li>
-            <a href="@controllers.routes.Application.login()">Login</a>
+            <a href="@controllers.routes.Authentication.login()">Login</a>
           </li>
         </ul>
 

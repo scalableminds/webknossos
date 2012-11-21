@@ -41,7 +41,6 @@ object Game extends Controller with Secured {
     Tracing.findOneById(tracingId)
       .map(exp => UsedTracings.use(user, exp))
       
-    // TODO: set oxalis to read only
     Ok(html.oxalis.trace())
   }
 

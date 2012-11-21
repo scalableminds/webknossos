@@ -31,8 +31,8 @@ class ActivityMonitor extends Actor{
       
       collectedActivities.send{ activities =>
         activities.map{
-          case (user, time) =>
-            User.logUserActivity(user, time)
+          case (userId, time) =>
+            User.findOneById(userId).map( _.update( _.logActivity(time)))
         }
         Map[ObjectId, Long]().empty
       }

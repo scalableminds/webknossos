@@ -34,7 +34,7 @@ object TaskAlgorithm extends Controller with Secured {
     } yield {
       if (TaskSelectionAlgorithm.isValidAlgorithm(code)) {
         val alg = TaskSelectionAlgorithm(code)
-        TaskSelectionAlgorithm.insert(alg)
+        TaskSelectionAlgorithm.insertOne(alg)
         if (use == "1")
           TaskSelectionAlgorithm.use(alg)
         Ok

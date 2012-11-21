@@ -11,7 +11,7 @@ import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json._
 import scala.collection.immutable.HashMap
-import models.basics.BasicDAO
+import models.basics._
 import models.security.Permission
 import models.security.Implyable
 import models.security.Role
@@ -29,7 +29,9 @@ case class User(
     permissions: List[Permission] = Nil,
     experiences: Map[String, Int] = Map.empty,
     lastActivity: Long = System.currentTimeMillis,
-    _id: ObjectId = new ObjectId) {
+    _id: ObjectId = new ObjectId) extends DAOCaseClass[User]{
+  
+  val dao = User
 
   val _roles = for {
     roleName <- roles
@@ -50,6 +52,35 @@ case class User(
     ruleSet.find(_.implies(permission)).isDefined
 
   override def toString = email
+
+  def changeSettings(config: UserConfiguration) = {
+    this.copy(configuration = config)
+  }
+
+  def addExperience(name: String, value: Int) = {
+    this.copy(experiences = this.experiences + (name -> value))
+  }
+
+  def increaseExperience(name: String, value: Int) = {
+    val sum = (this.experiences.get(name) getOrElse 0) + value
+    this.copy(experiences = this.experiences + (name -> sum))
+  }
+
+  def logActivity(time: Long) = {
+    this.copy(lastActivity = time)
+  }
+
+  def verify() = {
+    this.copy(verified = true, roles = this.roles + "user")
+  }
+
+  def addRole(role: String) = {
+    this.copy(roles = this.roles + role)
+  }
+
+  def removeRole(role: String) = {
+    this.copy(roles = this.roles.filterNot(_ == role))
+  }
 }
 
 object User extends BasicDAO[User]("users") {
@@ -73,41 +104,11 @@ object User extends BasicDAO[User]("users") {
       if verifyPassword(password, user.pwdHash)
     } yield user
 
-  def create(email: String, firstName: String, lastName: String, password: String = "") = {
-    alterAndInsert(User(email, firstName, lastName, false, hashPassword(password)))
-  }
-
-  def saveSettings(user: User, config: UserConfiguration) = {
-    alterAndSave(user.copy(configuration = config))
-  }
-
-  def addExperience(user: User, name: String, value: Int) = {
-    alterAndSave(user.copy(experiences = user.experiences + (name -> value)))
-  }
-
-  def incExperience(user: User, name: String, value: Int) = {
-    val sum = (user.experiences.get(name) getOrElse 0) + value
-    alterAndSave(user.copy(experiences = user.experiences + (name -> sum)))
-  }
-  
-  def logUserActivity(userId: ObjectId, time: Long) = {
-    findOneById(userId).map{ user =>
-      alterAndSave(user.copy(lastActivity = time))
-    }
-  }
-
-  def verify(user: User) = {
-    alterAndSave(user.copy(verified = true, roles = user.roles + "user"))
-  }
-
-  def addRole(user: User, role: String) = {
-    alterAndSave(user.copy(roles = user.roles + role))
-  }
-  def removeRole(user: User, role: String) = {
-    alterAndSave(user.copy(roles = user.roles.filterNot(_ == role)))
+  def create(email: String, firstName: String, lastName: String, password: String = ""): User = {
+    User(email, firstName, lastName, false, hashPassword(password))
   }
 
   def createRemote(email: String, firstName: String, lastName: String, loginType: String) = {
-    alterAndInsert(User(email, firstName, lastName, true, "", loginType = loginType))
+    insertOne(User(email, firstName, lastName, true, "", loginType = loginType))
   }
 }

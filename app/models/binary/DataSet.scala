@@ -6,6 +6,7 @@ import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import brainflight.tools.geometry.Point3D
 import models.basics.BasicDAO
+import models.basics.DAOCaseClass
 
 case class DataSet(
     name: String,
@@ -13,7 +14,10 @@ case class DataSet(
     supportedResolutions: List[Int],
     maxCoordinates: Point3D,
     priority: Int = 0,
-    _id: ObjectId = new ObjectId) {
+    _id: ObjectId = new ObjectId) extends DAOCaseClass[DataSet] {
+
+  def dao = DataSet
+  
   val id = _id.toString
 
   /**
@@ -39,9 +43,9 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
   def updateOrCreate(d: DataSet) = {
     findOne(MongoDBObject("name" -> d.name)) match {
       case Some(stored) =>
-        alterAndSave(d.copy(_id = stored._id, priority = stored.priority))
+        d.update( _.copy(_id = stored._id, priority = stored.priority))
       case _ =>
-        alterAndSave(d)
+        insertOne(d)
     }
   }
 

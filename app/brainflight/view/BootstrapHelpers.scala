@@ -1,8 +1,8 @@
-package controllers
+package brainflight.view
 
 import views.html.helper.FieldConstructor
 
-object BootstrapHelpers {
+trait BootstrapHelpers {
     
   implicit val bootsrapFields = FieldConstructor(views.html.BootstrapFieldConstructor.f)    
     

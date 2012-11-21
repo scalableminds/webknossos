@@ -4,6 +4,7 @@ import models.user.User
 import play.api.mvc._
 import play.api.mvc.BodyParsers
 import play.api.mvc.Results._
+import play.api.i18n.Messages
 import play.api.mvc.Request
 import play.api.Play
 import play.api.mvc.WebSocket
@@ -17,6 +18,11 @@ import models.security.Permission
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent
+import play.api.libs.concurrent.Akka
+import akka.actor.Props
+import brainflight.user.ActivityMonitor
+import brainflight.user.UserActivity
+import brainflight.view.AuthedSessionData
 
 case class AuthenticatedRequest[A](
   val user: User, request: Request[A]) extends WrappedRequest(request)
@@ -26,6 +32,8 @@ object Secured {
    * Key used to store authentication information in the client cookie
    */
   val SessionInformationKey = "userId"
+    
+  val ActivityMonitor = Akka.system.actorOf(Props[ActivityMonitor], name = "activityMonitor")
 
   /**
    * Creates a map which can be added to a cookie to set a session
@@ -89,18 +97,19 @@ trait Secured {
    */
 
   def Authenticated[A](
-    parser: BodyParser[A],
+    parser: BodyParser[A] = BodyParsers.parse.anyContent,
     role: Option[Role] = DefaultAccessRole,
     permission: Option[Permission] = DefaultAccessPermission)(f: AuthenticatedRequest[A] => Result) = {
     Action(parser) { request =>
       maybeUser(request).map { user =>
+        Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
         if (user.verified) {
           if (hasAccess(user, role, permission))
             f(AuthenticatedRequest(user, request))
           else
-            Forbidden(views.html.error.defaultError("You don't have enough permissions to access this site. Sorry :(", Some(user)))
+            Forbidden(views.html.error.defaultError(Messages("user.noPermission"))(AuthedSessionData(user, request.flash)))
         } else {
-          Forbidden(views.html.error.defaultError("Your account hasn't been activated yet. After you have uploaded all requested information to braintracing.org, an admin will verify your acount.", Some(user)))
+          Forbidden(views.html.error.defaultError(Messages("user.notVerified"))(AuthedSessionData(user, request.flash)))
         }
       }.getOrElse(onUnauthorized(request))
     }

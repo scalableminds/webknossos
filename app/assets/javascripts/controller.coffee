@@ -16,7 +16,10 @@ PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
-VIEWPORT_SIZE    = 380
+NO_KEY           = 0
+ALT_KEY          = 1
+SHIFT_KEY        = 2
+VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 TEXTURE_SIZE     = 512
 
@@ -39,6 +42,10 @@ class Controller
       @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
       @canvasesAndNav = $("#main")[0]
+
+    # hide contextmenu, while rightclicking a canvas
+    $("#main-container").bind "contextmenu", (event) ->
+      event.preventDefault(); return
 
       @prevControls = $('#prevControls')
       @prevControls.addClass("btn-group")
@@ -106,28 +113,22 @@ class Controller
     ).pipe (task) ->
 
       Request.send(
-        url : "/experiment"
+        url : "/tracing/#{task.task.id}"
         dataType : "json"
-      ).pipe (experiments) ->     
+      ).pipe (tracing) ->
 
         Request.send(
-          url : "/experiment/#{task.task.id}"
+          url : "/user/configuration"
           dataType : "json"
-        ).pipe (experiment) ->
+        ).pipe((user) ->
 
-          Request.send(
-            url : "/user/configuration"
-            dataType : "json"
-          ).pipe((user) ->
+          options = {}
+          options.user = user
+          options.dataSet = task.task.id
+          options.tracing = tracing
+          options
 
-            options = {}
-            options.user = user
-            options.dataSet = experiment.dataSet
-            options.experiment = experiment.experiment
-            options.experiments = experiments
-            options
-
-          -> alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page."))
+        -> alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page."))
 
 
   initMouse : ->
@@ -137,7 +138,7 @@ class Controller
     new Input.Mouse(
       [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
       [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
-      {"x" : @moveX, "y" : @moveY, "w" : @moveZ, "l" : @onPlaneClick, "r" : @setWaypoint}
+      {"x" : @moveX, "y" : @moveY, "w" : @scroll, "l" : @onPlaneClick, "r" : @setWaypoint}
       {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "l" : @onPreviewClick}
       @model
     )
@@ -155,7 +156,7 @@ class Controller
     new Input.Keyboard(
 
       #Fullscreen Mode
-      "f" : =>
+      "q" : =>
         canvasesAndNav = @canvasesAndNav
         requestFullscreen = canvasesAndNav.webkitRequestFullScreen or canvasesAndNav.mozRequestFullScreen or canvasesAndNav.RequestFullScreen
         if requestFullscreen
@@ -167,18 +168,10 @@ class Controller
       "k" : => @view.scaleTrianglesPlane @model.user.scaleValue
 
       #Move
-      "w"             : => @moveY(-@model.user.moveValue)
-      "s"             : => @moveY( @model.user.moveValue)
-      "a"             : => @moveX(-@model.user.moveValue)
-      "d"             : => @moveX( @model.user.moveValue)
-      #"space"         : => @moveZ( @model.user.moveValue)
-      #"shift + space" : => @moveZ(-@model.user.moveValue)
-
-      #Rotate in distance
-      "left"          : => @moveX(-@model.user.moveValue)
-      "right"         : => @moveX( @model.user.moveValue)
-      "up"            : => @moveY(-@model.user.moveValue)
-      "down"          : => @moveY( @model.user.moveValue)
+      "left"          : => @moveX(-@model.User.Configuration.moveValue)
+      "right"         : => @moveX( @model.User.Configuration.moveValue)
+      "up"            : => @moveY(-@model.User.Configuration.moveValue)
+      "down"          : => @moveY( @model.User.Configuration.moveValue)
 
       #misc keys
       # TODO: what does this? I removed it, I need the key.
@@ -196,23 +189,13 @@ class Controller
           @setActiveNode(id, true)
           @sceneController.skeleton.setBranchPoint(false)
         )
-      "h" : @centerActiveNode
+      "s" : @centerActiveNode
 
       #Zoom in/out
       "i" : =>
-        @cameraController.zoomIn()
-        # Remember Zoom Steps
-        @model.user.zoomXY = @flycam.getZoomStep(PLANE_XY)
-        @model.user.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-        @model.user.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-        @model.user.push()
+        @zoomIn()
       "o" : =>
-        @cameraController.zoomOut()
-        # Remember Zoom Steps
-        @model.user.zoomXY = @flycam.getZoomStep(PLANE_XY)
-        @model.user.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-        @model.user.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-        @model.user.push()
+        @zoomOut()
 
       # delete active node
       "delete" : =>
@@ -223,10 +206,8 @@ class Controller
         @createNewTree()
 
       # Move
-      "space"         : => @moveZ( @model.user.moveValue)
-      "shift + space" : => @moveZ(-@model.user.moveValue)
-      # alternative key binding for Kevin
-      "ctrl + space"  : => @moveZ(-@model.user.moveValue)
+      "space, f"         : => @moveZ( @model.User.Configuration.moveValue)
+      "shift + space, ctrl + space, d" : => @moveZ(-@model.User.Configuration.moveValue)
     )
 
 
@@ -245,6 +226,44 @@ class Controller
   moveX : (x) => @move([x, 0, 0])
   moveY : (y) => @move([0, y, 0])
   moveZ : (z) => @move([0, 0, z])
+
+  zoomIn : =>
+    @cameraController.zoomIn()
+    # Remember Zoom Steps
+    @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
+    @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+    @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
+    @model.User.Configuration.push()
+
+  zoomOut : =>
+    @cameraController.zoomOut()
+    # Remember Zoom Steps
+    @model.User.Configuration.zoomXY = @flycam.getZoomStep(PLANE_XY)
+    @model.User.Configuration.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
+    @model.User.Configuration.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
+    @model.User.Configuration.push()
+
+  setNodeRadius : (delta) =>
+    lastRadius = @model.Route.getActiveNodeRadius()
+    radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
+    scale = @model.Route.scaleX
+    if radius < scale
+      radius = scale
+    else if radius > 1000 * scale
+      radius = 1000 * scale
+    @gui.setNodeRadius(radius)
+    @gui.updateRadius()
+
+  scroll : (delta, type) =>
+    switch type
+      when NO_KEY then @moveZ(delta)
+      when SHIFT_KEY then @setNodeRadius(delta)
+      when ALT_KEY
+        if delta > 0
+          @zoomIn()
+        else
+          @zoomOut()
+
 
   ########### Click callbacks
   
@@ -325,9 +344,9 @@ class Controller
     @sceneController.updateRoute()
 
   createNewTree : =>
-    id = @model.Route.createNewTree()
+    [id, color] = @model.Route.createNewTree()
     @gui.update()
-    @sceneController.skeleton.createNewTree(id)
+    @sceneController.skeleton.createNewTree(id, color)
 
   setActiveTree : (treeId) =>
     @model.Route.setActiveTree(treeId)

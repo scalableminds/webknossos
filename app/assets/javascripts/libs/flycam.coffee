@@ -7,7 +7,7 @@ PLANE_XZ           = 2
 VIEW_3D            = 3
 TEXTURE_WIDTH      = 512
 MAX_TEXTURE_OFFSET = 31     # maximum difference between requested coordinate and actual texture position
-ZOOM_DIFF          = 0.05
+ZOOM_DIFF          = 0.1
 MAX_ZOOM_TRESHOLD  = 2
   
 class Flycam2d

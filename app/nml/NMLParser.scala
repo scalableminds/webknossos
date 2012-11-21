@@ -3,7 +3,7 @@ package nml
 import scala.xml.XML
 import models.binary.DataSet
 import models.graph.{ Tree, Edge }
-import models.task.Experiment
+import models.tracing.Tracing
 import models.graph
 import models.Color
 import brainflight.tools.ExtendedTypes._
@@ -18,6 +18,19 @@ import brainflight.tools.geometry.Scale
 import models.user.User
 
 case class NMLContext(user: User)
+
+object NMLParser {
+  def createUniqueIds(trees: List[Tree]) = {
+    trees.foldLeft(List[Tree]()) { (l, t) =>
+      if (l.isEmpty || l.find(_.id == t.id).isEmpty)
+        t :: l
+      else {
+        val alteredId = (l.maxBy(_.id).id + 1)
+        t.copy(id = alteredId) :: l
+      }
+    }
+  }
+}
 
 class NMLParser(file: File)(implicit ctx: NMLContext) {
   val DEFAULT_EDIT_POSITION = Point3D(0, 0, 0)
@@ -34,29 +47,18 @@ class NMLParser(file: File)(implicit ctx: NMLContext) {
       parameters <- (data \ "parameters")
       scale <- parseScale(parameters \ "scale")
     } yield {
-      val dataSetName = parseDataSetName(parameters \ "experiment")
+      val dataSetName = parseDataSetName(parameters \ "tracing")
       val activeNodeId = parseActiveNode(parameters \ "activeNode")
       val editPosition = parseEditPosition(parameters \ "editPosition")
       val time = parseTime(parameters \ "time")
       val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
       val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
-      Experiment(ctx.user._id, dataSetName, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
+      Tracing(ctx.user._id, dataSetName, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
     }
   }
 
   def verifyTrees(trees: List[Tree]): List[Tree] = {
-    createUniqueIds(trees.flatMap(splitIntoComponents))
-  }
-
-  def createUniqueIds(trees: List[Tree]) = {
-    trees.foldLeft(List[Tree]()) { (l, t) =>
-      if (l.isEmpty || l.find(_.id == t.id).isEmpty)
-        t :: l
-      else {
-        val alteredId = (l.maxBy(_.id).id + 1)
-        t.copy(id = alteredId) :: l
-      }
-    }
+    NMLParser.createUniqueIds(trees.flatMap(splitIntoComponents))
   }
 
   def splitIntoComponents(tree: Tree): List[Tree] = {
@@ -91,7 +93,7 @@ class NMLParser(file: File)(implicit ctx: NMLContext) {
     val magRx = "_mag[0-9]*$".r
     magRx.replaceAllIn(rawDataSetName, "")
   }
-  
+
   def parseActiveNode(node: NodeSeq) = {
     (node \ "@id").text.toIntOpt.getOrElse(DEFAULT_ACTIVE_NODE_ID)
   }

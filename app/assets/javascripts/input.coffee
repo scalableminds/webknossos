@@ -66,7 +66,6 @@ class Input.Keyboard
         # When control key is pressed, everything is ignored, because
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
-        console.log key2 + " down"
         unless @keyCallbackMap[key]?
           if not evt.ctrlKey
             @keyPressedCount++ 
@@ -76,7 +75,6 @@ class Input.Keyboard
         return
       (evt, keys, key2) =>
         activeKeys = KeyboardJS.activeKeys()
-        console.log key2 + " up"
         #for key of @keyCallbackMap
         #  if activeKeys.indexOf(key) < 0
         #    delete @keyCallbackMap[key]

@@ -26,18 +26,182 @@ class Route
   activeNode : null
   activeTree : null
 
+<<<<<<< HEAD
   dataSet : null
   experiment : null
   experiments : null
+=======
+  # Initializes this module and returns a position to start your work.
+  initialize : _.once ->
+
+    Game.initialize().pipe =>
+
+      _.extend(this, new EventMixin())
+
+      $.get("/tracing/#{Game.task.id}",
+        (data) =>
+          Route.data = data
+          
+>>>>>>> c9ad73e019f74ff23ac51dd852dcfbb1c6a4e8f9
 
   # Initializes this module and returns a position to start your work.
-  constructor : (@dataSet, @experiment, @experiments) ->
+  constructor : (@data) ->
 
     _.extend(this, new EventMixin())
 
-  # Returns an object that is structured the same way as data.experiment is
+    console.log "Route.data:"
+    console.log data
+    @id        = data.dataSet.id
+    #@branchStack = data.tracing.branchPoints.map (a) -> new Float32Array(a)
+    #@branchStack = (data.tracing.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in data.tracing.branchPoints) # when data.tracing.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
+    @createBuffer()
+
+    @idCount = 1
+    @treeIdCount = 1
+    @trees = []
+    @activeNode = null
+    # Used to save in NML file, is always defined
+    @lastActiveNodeId = 1
+    @activeTree = null
+    
+    # Build sample tree
+    #@putNewPoint([300, 300, 200], TYPE_USUAL)
+    #branch = @putNewPoint([300, 320, 200], TYPE_BRANCH)
+    #@putNewPoint([340, 340, 200], TYPE_USUAL)
+    #@putNewPoint([360, 380, 200], TYPE_USUAL)
+    #@activeNode = branch
+    #branch = @putNewPoint([340, 280, 200], TYPE_BRANCH)
+    #@putNewPoint([360, 270, 200], TYPE_USUAL)
+    #@activeNode = branch
+    #@putNewPoint([360, 290, 200], TYPE_USUAL)
+    #console.log "--------- TREE ---------"
+    #console.log @tree.toString()
+
+    # Build sample data.tracing
+    #console.log "---------- Build data.tracing -----------"
+    #console.log data.tracing
+    #data.tracing = {
+    #  activeNode : 6
+    #  branchPoints : [{id : 1}, {id : 2}]
+    #  editPosition : [400, 350, 200]
+    #  id : "5029141a44aebdd7a089a062"
+    #  trees : {
+    #    1 : {
+    #      color : [1, 0, 0, 0]
+    #      edges : [{source : 1, target : 3},
+    #               {source : 3, target : 4},
+    #               {source : 1, target : 2},
+    #               {source : 2, target : 5},
+    #               {source : 2, target : 6},
+    #               {source : 2, target : 7}]
+    #      id : 1
+    #      nodes : {
+    #        1 : { id : 1, position : [300, 300, 200], radius : 1}
+    #        2 : { id : 2, position : [350, 350, 200], radius : 1}
+    #        3 : { id : 3, position : [300, 350, 200], radius : 1}
+    #        4 : { id : 4, position : [300, 400, 200], radius : 1}
+    #        5 : { id : 5, position : [400, 300, 200], radius : 1}
+    #        6 : { id : 6, position : [400, 350, 200], radius : 1}
+    #        7 : { id : 7, position : [400, 400, 200], radius : 1}
+    #      }
+    #    }
+    #    5 : {
+    #      color : [1, 0, 0, 0]
+    #      edges : [{source : 8, target : 9},
+    #               {source : 9, target : 10}]
+    #      id : 2
+    #      nodes : {
+    #        8 : { id : 8, position : [350, 400, 200], radius : 1}
+    #        9 : { id : 9, position : [400, 450, 200], radius : 1}
+    #        10 : { id : 10, position : [350, 450, 200], radius : 1}
+    #      }
+    #    }
+    #  }
+    #}
+    console.log "data.tracing:"
+    console.log data.tracing
+
+    #@recursionTest(0)
+
+    # For trees that are disconnected
+    lostTrees = []
+
+    ############ Load Tree from data.tracing ##############
+    @scaleX = data.tracing.scale[0]
+    @globalPosition = data.tracing.editPosition
+    # get tree to build
+    for tree in data.tracing.trees
+      # Initialize nodes
+      nodes = []
+      i = 0
+      treeColor = new THREE.Color().setRGB(tree.color[0..2]...).getHex()
+      for node in tree.nodes
+        if node
+          nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, treeColor))
+      # Initialize edges
+      for edge in tree.edges
+        sourceNode = @findNodeInList(nodes, edge.source)
+        targetNode  = @findNodeInList(nodes, edge.target)
+        sourceNode.appendNext(targetNode)
+        targetNode.parent = sourceNode
+      # Find root (only node without parent)
+      treeFound = false
+      for node in nodes
+        unless node.parent
+          if treeFound == true
+            lostTrees.push(node)
+          else
+            node.treeId = tree.id
+            @trees.push(node)
+            treeFound = true
+      # Set active Node
+      activeNodeT = @findNodeInList(nodes, data.tracing.activeNode)
+      if activeNodeT
+        @activeNode = activeNodeT
+        @lastActiveNodeId = @activeNode.id
+        # Active Tree is the one last added
+        @activeTree = @trees[@trees.length - 1]
+      # Set idCount
+      for node in nodes
+        @idCount = Math.max(node.id + 1, @idCount);
+    
+    # Set branchpoints
+    nodeList = @getNodeListOfAllTrees()
+    for branchpoint in data.tracing.branchPoints
+      node = @findNodeInList(nodeList, branchpoint.id)
+      if node
+        node.type = TYPE_BRANCH
+        @branchStack.push(node)
+      
+    for tree in @trees
+      @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
+    for tree in lostTrees
+      savedActiveNode = @activeNode
+      @createNewTree()
+      # Restore active node
+      @activeNode = savedActiveNode
+      tree.treeId = @activeTree.treeId
+      @trees[@activeTree.treeIndex] = tree
+      @activeTree = tree
+    unless @activeTree
+      if @trees.length > 0
+        @activeTree = @trees[0]
+      else
+        @createNewTree()
+
+    $(window).on(
+      "unload"
+      => 
+        @putBranch(@lastPosition) if @lastPosition
+        @pushImpl()
+    )
+
+    deferred.resolve(data.tracing.editPosition)
+    )
+
+  # Returns an object that is structured the same way as data.tracing is
   exportToNML : ->
-    result = Route.data.experiment
+    result = Route.data.tracing
     result.activeNode = @lastActiveNodeId
     result.branchPoints = []
     # Get Branchpoints
@@ -51,7 +215,8 @@ class Route
         nodes = @getNodeList(tree)
         treeObj = {}
         result.trees.push(treeObj)
-        treeObj.color = [1, 0, 0, 0]
+        treeColor = new THREE.Color(tree.color)
+        treeObj.color = [treeColor.r, treeColor.g, treeColor.b, 1]
         treeObj.edges = []
         # Get Edges
         for node in nodes
@@ -92,7 +257,7 @@ class Route
     @initialize().pipe =>
 
       request(
-          url : "/experiment/#{Game.task.id}"
+          url : "/tracing/#{Game.task.id}"
           method : "PUT"
           data : @exportToNML()
           contentType : "application/json"
@@ -201,7 +366,7 @@ class Route
   putNewPoint : (position, type) ->
     unless @lastRadius
       @lastRadius = 10 * @scaleX
-    point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, 1)
+    point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, @activeTree.color)
     if @activeNode
       @activeNode.appendNext(point)
     else
@@ -261,11 +426,15 @@ class Route
       @lastActiveNodeId = @activeNode.id
     @push()
 
+  getNewTreeColor : ->
+    +("0x"+("000"+(Math.random()*(1<<24)|0).toString(16)).substr(-6))
+
   createNewTree : ->
     # Because a tree is represented by the root element and we
     # don't have any root element, we need a sentinel to save the
     # treeId and it's index within trees.
-    sentinel = new TracePoint(null, null, null, null, null, null)
+    treeColor = @getNewTreeColor()
+    sentinel = new TracePoint(null, null, null, null, null, treeColor)
     sentinel.treeId = @treeIdCount++
     # save Index, so we can access it once we have the root element
     sentinel.treeIndex = @trees.length
@@ -274,7 +443,7 @@ class Route
     @activeTree = sentinel
     @activeNode = null
     @push()
-    return sentinel.treeId
+    return [sentinel.treeId, sentinel.color]
 
   findNodeInTree : (id, tree) ->
     unless tree

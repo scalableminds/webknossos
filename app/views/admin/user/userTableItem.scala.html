@@ -1,6 +1,6 @@
 @(user: models.user.User)
 <tr data-name="@user.name" data-id="@user.id"> 
-	<td> <input type="checkbox" name="id[]" value="@user.id"> </td>
+	<td> <input type="checkbox" name="id" value="@user.id" class="select-row"> </td>
 	<td> @user.lastName </td>
 	<td> @user.firstName</td> 
 	<td> @user.email </td>
@@ -13,10 +13,10 @@
 		@if(user.verified) {            
   		<i class="icon-ok"></i>
 		} else {
-  		<a href="@controllers.admin.routes.UserAdministration.verifyUser(user.id)" data-ajax="replace-row"> verify </a>
+  		<a href="@controllers.admin.routes.UserAdministration.verify(user.id)" data-ajax="replace-row"> verify </a>
 		}
 	</td>
 	<td> 
-  	<a href="@controllers.admin.routes.UserAdministration.deleteUser(user.id)"><i class="icon-trash"></i> delete </a>
+  	<a href="@controllers.admin.routes.UserAdministration.delete(user.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
 	</td>
 </tr>

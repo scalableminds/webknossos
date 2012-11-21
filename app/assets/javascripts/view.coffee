@@ -82,25 +82,28 @@ class View
 
     # help overlay
     keycommands =
-      "<table width='450'>
-        <tr><td><u>General</u></td><td></td></tr>
-        <tr><td>Leftclick or WASD or ULDR</td><td>Move</td></tr>
-        <tr><td>Leftclick</td><td>Select node</td></tr>
-        <tr><td>F</td><td>Fullscreen</td></tr>
-        <tr><td>K</td><td>Scale up viewports</td></tr>
-        <tr><td>L</td><td>Scale down viewports</td></tr>
-        <tr><td><u>Viewports</u></td><td></td></tr>
-        <tr><td>Mousewheel or Space (+ Shift or Ctrl)</td><td>Move along 3rd axis</td></tr>
-        <tr><td>Rightclick</td><td>Set tracepoint</td></tr>
-        <tr><td>I</td><td>Zoom in</td></tr>
-        <tr><td>O</td><td>Zoom out</td></tr>
-        <tr><td>B</td><td>Set branchpoint</td></tr>
-        <tr><td>J</td><td>Jump to last branchpoint</td></tr>
-        <tr><td>H</td><td>Center active node</td></tr>
-        <tr><td>N</td><td>Create new tree</td></tr>
-        <tr><td><u>3D-view</u></td><td></td></tr>
-        <tr><td>Mousewheel</td><td>Zoom in and out</td></tr>
-        <tr><td> </td><td> </td></tr>
+      "<table class=\"table table-condensed table-nohead\">
+        <tbody>
+          <tr><th colspan=\"2\">General</th></tr>
+          <tr><td>Leftclick or Arrow keys</td><td>Move</td></tr>
+          <tr><td>Leftclick</td><td>Select node</td></tr>
+          <tr><td>Q</td><td>Fullscreen</td></tr>
+          <tr><td>K</td><td>Scale up viewports</td></tr>
+          <tr><td>L</td><td>Scale down viewports</td></tr>
+          <tr><th colspan=\"2\">Viewports</th></tr>
+          <tr><td>Mousewheel or D and F</td><td>Move along 3rd axis</td></tr>
+          <tr><td>Rightclick</td><td>Set tracepoint</td></tr>
+          <tr><td>I or Alt + Mousewheel</td><td>Zoom in</td></tr>
+          <tr><td>O or Alt + Mousewheel</td><td>Zoom out</td></tr>
+          <tr><td>B</td><td>Set branchpoint</td></tr>
+          <tr><td>J</td><td>Jump to last branchpoint</td></tr>
+          <tr><td>S</td><td>Center active node</td></tr>
+          <tr><td>Shift + Mousewheel</td><td>Change active node size</td></tr>
+          <tr><td>N</td><td>Create new tree</td></tr>
+          <tr><th colspan=\"2\">3D-view</th></tr>
+          <tr><td>Mousewheel</td><td>Zoom in and out</td></tr>
+          <tr><td> </td><td> </td></tr>
+        </tbody>
       </table>
       <br>
       <p>All other options like node-radius, moving speed, clipping distance can be adjusted in the options located to the left.
@@ -108,7 +111,8 @@ class View
       Not every functionality displayed in the options has been implemented yet, but most of them.
       Please report any issues.</p>"
 
-    #$('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: '<div class="popover overlay"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'})
+    popoverTemplate = '<div class="popover overlay"><div class="arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
+    $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
 
     @first = true
     @newTextures = [true, true, true, true]

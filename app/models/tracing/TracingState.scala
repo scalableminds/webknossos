@@ -13,8 +13,6 @@ object TracingState{
   val InReview = Assigned.copy(isInReview = true)
 
   val InProgress = Assigned.copy(isInProgress = true)
-  
-  val Reopened = Assigned.copy(isFinished = false)
 
   val Finished = Assigned.copy(isFinished = true)
 }

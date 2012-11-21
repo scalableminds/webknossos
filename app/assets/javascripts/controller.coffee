@@ -45,7 +45,7 @@ class Controller
       return
 
     # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
+    $("#main-container").bind "contextmenu", (event) ->
       event.preventDefault(); return
 
     @canvasesAndNav = $("#main")[0]
@@ -369,9 +369,9 @@ class Controller
     @sceneController.updateRoute()
 
   createNewTree : =>
-    id = @model.Route.createNewTree()
+    [id, color] = @model.Route.createNewTree()
     @gui.update()
-    @sceneController.skeleton.createNewTree(id)
+    @sceneController.skeleton.createNewTree(id, color)
 
   setActiveTree : (treeId) =>
     @model.Route.setActiveTree(treeId)

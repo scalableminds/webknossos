@@ -89,8 +89,8 @@ case class Tracing(
     val alteredReview = this.review.map(_.copy(comment = Some(comment)))
     this.copy(review = alteredReview)
   }
-  
-    def finish = {
+
+  def finish = {
     this.copy(state = Finished)
   }
 
@@ -99,11 +99,11 @@ case class Tracing(
   }
 
   def reopen = {
-    this.copy(state = Reopened)
+    this.copy(state = InProgress)
   }
 
-  def removeTask= {
-    this.copy(taskId = None)
+  def removeTask = {
+    this.copy(taskId = None, tracingType = TracingType.Orphan)
   }
 }
 

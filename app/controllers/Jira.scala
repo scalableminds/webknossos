@@ -28,7 +28,7 @@ object Jira extends Controller with Secured {
   val branchName = conf.getString("branchname") getOrElse "master"
 
   def index = Authenticated { implicit request =>
-    Ok(html.jira.index(request.user))
+    Ok(html.jira.index())
   }
 
   def createIssue(user: User, summary: String, description: String, issueType: String) {

@@ -49,11 +49,11 @@ object TaskAdministration extends Controller with Secured {
     taskMapping).fill(Task.empty)
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.task.taskList(request.user, Task.findAllNonTrainings))
+    Ok(html.admin.task.taskList(Task.findAllNonTrainings))
   }
 
   def taskCreateHTML(tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) =
-    html.admin.task.taskCreate(request.user,
+    html.admin.task.taskCreate(
       Tracing.findAllExploratory(request.user),
       TaskType.findAll,
       DataSet.findAll,
@@ -87,9 +87,11 @@ object TaskAdministration extends Controller with Secured {
       formWithErrors => BadRequest(taskCreateHTML(formWithErrors, taskForm)),
       { t =>
         Task.insert(t)
-        Redirect(routes.TaskAdministration.list)
+        Redirect(routes.TaskAdministration.list).flashing(
+            FlashSuccess(Messages("task.create.success")))
       })
   }
+  
 
   def createBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     request.request.body.get("data").flatMap(_.headOption).map { data =>

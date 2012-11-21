@@ -2,12 +2,12 @@
 
 @tracingLinks = {
   <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
-  <a href="@controllers.routes.TaskController.finish(tracing.id)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a>
+  <a href="@controllers.routes.TaskController.finish(tracing.id)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a><br/>
   
 }
 
 <tr>
-  <td> @task.id.drop(10) </td>
+  <td> @formatHash(task.id) </td>
   <td> @task.taskType.map(_.summary).getOrElse("<deleted>") - @tracing.tracingType</td>
   <td> @task.dataSetName </td>
   <td> @task.start </td>
@@ -16,7 +16,7 @@
       case s if s.isFinished => {
         <i class="icon-ok"></i><span> Finished</span>
         @tracing.review.flatMap(_.comment).map{ comment => 
-          | <a href="#" rel="popover" data-title="Comment from Reviewer" data-placement="bottom" data-html="true" data-content="@comment.split("\n").map{ c => @c<br /> }">Comment <span class="caret-down"></span></a>
+          | <a href="#" rel="popover" data-title="Comment from Reviewer" data-placement="bottom" data-html="true" data-content="@comment.split("\n").map{ c => @c<br /> }">Review Comment <span class="caret-down"></span></a>
         }
       }
       case s if s.isInReview => {
@@ -25,7 +25,7 @@
       case _ => {
         @tracingLinks
         @tracing.review.flatMap(_.comment).map{ comment => 
-          <a href="#" rel="popover" data-title="Comment from Reviewer" data-content="@comment">Comment <span class="caret-down"></span></a>
+          <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-content="@comment"><i class="icon-eye-open"></i> Review failed. Comment <span class="caret-down"></span></a>
         }
       }
     }

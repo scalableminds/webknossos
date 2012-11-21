@@ -1,8 +1,6 @@
-@(form: Form[(String, String)])(implicit flash: Flash)
+@(form: Form[(String, String)])(implicit session: brainflight.view.SessionData)
 
-@import BootstrapHelpers._
-
-@main( None, false ){
+@main( showNavButtons = false ){
     
   <div class="container">
     <div class="span9 offset1 space-top">
@@ -18,7 +16,7 @@
             </div>
           }
           
-          @flash.get("success").map { message =>
+          @session.flash.get("success").map { message =>
             <div class="alert alert-success">
               @message
             </div>

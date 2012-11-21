@@ -1,14 +1,12 @@
-@(loggedInUser: models.user.User, tracings: List[models.tracing.Tracing], taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])
+@(tracings: List[models.tracing.Tracing], taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
-@import brainflight.format._
-@import controllers.BootstrapHelpers._
 @import play.api.libs.json.Json
 
 @taskTypeHelpLink() = {
   <a href="@controllers.admin.routes.TaskTypeAdministration.list">Create a new Type</a>
 }
 
-@main(Some(loggedInUser)){
+@main(){
   <div class="container">
     
     <h3>Create Task from explorative Tracing</h3>
@@ -17,7 +15,7 @@
       @helper.form(controllers.admin.routes.TaskAdministration.createFromTracing, 'class -> "form-horizontal") {
           
         @helper.select(tracingForm("tracing"), tracings.map { exp =>
-          exp.id -> (exp.dataSetName + " " + DateFormatter.format(exp.date)) 
+          exp.id -> (exp.dataSetName + " " + formatDate(exp.date)) 
         })
         
         @helper.select(tracingForm("taskType"), taskTypes.map { tt =>

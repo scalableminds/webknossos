@@ -1,6 +1,6 @@
-@(user: models.user.User)
+@()(implicit session: brainflight.view.AuthedSessionData)
 
-@main(Some(user)){
+@main(){
   @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data") {
       <input type="file" name="nmlFile">
     <p>

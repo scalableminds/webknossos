@@ -22,7 +22,7 @@ object Game extends Controller with Secured {
     if(UsedTracings.by(request.user).isEmpty)
       Redirect(routes.UserController.dashboard)
     else
-      Ok(html.oxalis.trace(request.user))
+      Ok(html.oxalis.trace())
   }
   
   def trace(tracingId: String) = Authenticated { implicit request =>
@@ -32,7 +32,7 @@ object Game extends Controller with Secured {
       .filter( _._user == user._id)
       .map(exp => UsedTracings.use(user, exp))
       
-    Ok(html.oxalis.trace(user))
+    Ok(html.oxalis.trace())
   }
   
   def reviewTrace(tracingId: String) = Authenticated(role = Role.Admin){ implicit request =>
@@ -42,7 +42,7 @@ object Game extends Controller with Secured {
       .map(exp => UsedTracings.use(user, exp))
       
     // TODO: set oxalis to read only
-    Ok(html.oxalis.trace(user))
+    Ok(html.oxalis.trace())
   }
 
   def initialize = Authenticated { implicit request =>

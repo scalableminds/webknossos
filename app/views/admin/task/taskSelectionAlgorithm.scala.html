@@ -1,6 +1,6 @@
-@(user: models.user.User, algorithms: List[models.task.TaskSelectionAlgorithm], current: models.task.TaskSelectionAlgorithm)
+@(algorithms: List[models.task.TaskSelectionAlgorithm], current: models.task.TaskSelectionAlgorithm)(implicit session: brainflight.view.AuthedSessionData)
 
-@main(Some(user)){
+@main(){
   <div class="container" id="task-selection-algoritm">
     @helper.form(action = controllers.admin.routes.TaskAlgorithm.submitAlgorithm) {
       

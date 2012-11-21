@@ -19,6 +19,8 @@ object ApplicationBuild extends Build {
     "com.sun.jersey" % "jersey-core" % "1.8"
   )
   val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
+    templatesImport += "brainflight.view.helpers._",
+    templatesImport += "brainflight.view._",
     resolvers += "repo.novus rels" at "http://repo.novus.com/releases/",
     resolvers += "repo.novus snaps" at "http://repo.novus.com/snapshots/",
     incrementalAssetsCompilation:=true

@@ -1,8 +1,6 @@
-@(loggedInUser: models.user.User, explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, akka.util.Duration]], dataSets: List[models.binary.DataSet])
+@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, akka.util.Duration]], dataSets: List[models.binary.DataSet])(implicit session: brainflight.view.AuthedSessionData)
 
-@import brainflight.format._
-
-@main(Some(loggedInUser)){
+@main(){
   <div class="container" id="dashboard">
     <h3>Tasks</h3>
     <table class="table table-striped" id="dashboard-tasks">
@@ -40,11 +38,11 @@
       <tbody>
       @explorativeTracings.map{ tracing => 
         <tr>
-          <td> @tracing.id.drop(10) </td>
+          <td> @formatHash(tracing.id) </td>
           <td> @tracing.dataSetName </td>
           <td> @tracing.trees.size </td>
           <td> @tracing.tracingType </td>
-          <td> @DateFormatter.format(tracing.date) </td>
+          <td> @formatDate(tracing.date) </td>
           <td> <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a></td>
         </tr>
       }
@@ -76,7 +74,7 @@
         @trackedTime.map{ case (interval, time) => 
           <tr>
             <td> @interval </td>
-            <td> @DateFormatter.formatTimeHumanReadable(time) </td>
+            <td> @formatTimeHumanReadable(time) </td>
             <td> </td>
           </tr>
         }

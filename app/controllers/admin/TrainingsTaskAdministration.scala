@@ -3,7 +3,7 @@ package controllers.admin
 import controllers.Controller
 import play.mvc.Security.Authenticated
 import brainflight.security.Secured
-import models.security.Role
+import models.security._
 import views._
 import play.api.data.Form
 import play.api.data.Forms._
@@ -19,7 +19,7 @@ import models.tracing.TracingType
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
-  override val DefaultAccessRole = Role.Admin
+  override val DefaultAccessPermission = Some(Permission("admin.review", List("access")))
 
   val trainingsTaskForm = Form(
     mapping(
@@ -40,14 +40,14 @@ object TrainingsTaskAdministration extends Controller with Secured {
       "training" -> mapping(
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,
-        "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingsTracingForm)(Task.toTrainingsTracingForm))
+        "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingsTracingForm)(Task.toTrainingsTracingForm)).fill(Task.withEmptyTraining)
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
+    Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
   }
 
   def trainingsTaskCreateHTML(taskForm: Form[Task], tracingForm: Form[Task])(implicit request: AuthenticatedRequest[_]) = {
-    html.admin.task.trainingsTaskCreate(request.user,
+    html.admin.task.trainingsTaskCreate(
       Task.findAllNonTrainings,
       Tracing.findAllExploratory(request.user),
       TaskType.findAll,
@@ -73,7 +73,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
         } yield {
           Tracing.save(sample.copy(tracingType = TracingType.Sample))
           Task.save(task)
-          Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
+          Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
         }) getOrElse BadRequest("Couldn't create Training.")
       })
   }
@@ -90,7 +90,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
           Tracing.save(tracing.copy(tracingType = TracingType.Sample))
           Task.save(task.copy(
             training = task.training.map(_.copy(sample = tracing._id))))
-          Ok(html.admin.task.trainingsTaskList(request.user, Task.findAllTrainings))
+          Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
         }) getOrElse BadRequest("No valid file attached.")
       })
   }

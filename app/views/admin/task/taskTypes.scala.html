@@ -1,8 +1,6 @@
-@(loggedInUser: models.user.User, taskTypes: List[models.task.TaskType], form: Form[models.task.TaskType])
+@(taskTypes: List[models.task.TaskType], form: Form[models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
 
-@import BootstrapHelpers._
-
-@main(Some(loggedInUser)){
+@main(){
 	<div class="container">
     <h3>Task types</h3>
     <div class="well">
@@ -33,7 +31,7 @@
       <tbody>
 	    @taskTypes.map{ taskType => 
 	      <tr>
-	        <td> @taskType.id </td>
+	        <td> @formatHash(taskType.id) </td>
 	        <td> @taskType.summary </td>
           <td> @taskType.description </td>
           <td> @taskType.expectedTime </td>

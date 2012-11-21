@@ -7,7 +7,7 @@ PLANE_XZ           = 2
 VIEW_3D            = 3
 TEXTURE_WIDTH      = 512
 MAX_TEXTURE_OFFSET = 31     # maximum difference between requested coordinate and actual texture position
-ZOOM_DIFF          = 0.05
+ZOOM_DIFF          = 0.1
 MAX_ZOOM_TRESHOLD  = 2
   
 class Flycam2d
@@ -35,15 +35,14 @@ class Flycam2d
   #  @zoomSteps=[1,1,1]
 
   zoomIn : (planeID) ->
-    @zoomSteps[planeID] -= (1 + @zoomSteps[planeID]) / 1.5 * ZOOM_DIFF
+    @zoomSteps[planeID] -= ZOOM_DIFF
     @hasChanged = true
     @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
 
   zoomOut : (planeID) ->
     # Make sure the max. zoom Step will not be exceded
-    delta = (1 + @zoomSteps[planeID]) / 1.5 * ZOOM_DIFF
-    if @zoomSteps[planeID] < 3+@maxZoomStepDiff - delta
-      @zoomSteps[planeID] += delta
+    if @zoomSteps[planeID] < 3+@maxZoomStepDiff - ZOOM_DIFF
+      @zoomSteps[planeID] += ZOOM_DIFF
       @hasChanged = true
       @buffer[planeID] = TEXTURE_WIDTH/2-@viewportWidth*@getTextureScalingFactor(planeID)/2
 

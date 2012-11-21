@@ -4,8 +4,8 @@ import brainflight.security.Secured
 import models.security.Role
 import models.task.TaskSelectionAlgorithm
 import play.api.libs.json.Json
-import play.api.mvc.Controller
 import views.html
+import controllers.Controller
 
 object TaskAlgorithm extends Controller with Secured {
 
@@ -24,7 +24,7 @@ object TaskAlgorithm extends Controller with Secured {
   }
 
   def index = Authenticated { implicit request =>
-    Ok(html.admin.task.taskSelectionAlgorithm(request.user, TaskSelectionAlgorithm.findAll, TaskSelectionAlgorithm.current))
+    Ok(html.admin.task.taskSelectionAlgorithm(TaskSelectionAlgorithm.findAll, TaskSelectionAlgorithm.current))
   }
 
   def submitAlgorithm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>

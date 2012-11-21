@@ -25,15 +25,15 @@ object TaskTypeAdministration extends Controller with Secured {
         TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.task.taskTypes(request.user, TaskType.findAll, taskTypeForm))
+    Ok(html.admin.task.taskTypes(TaskType.findAll, taskTypeForm))
   }
 
   def create = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskTypeForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.admin.task.taskTypes(request.user, TaskType.findAll, formWithErrors)),
+      formWithErrors => BadRequest(html.admin.task.taskTypes(TaskType.findAll, formWithErrors)),
       { t =>
         TaskType.insert(t)
-        Ok(html.admin.task.taskTypes(request.user, TaskType.findAll, taskTypeForm))
+        Ok(html.admin.task.taskTypes(TaskType.findAll, taskTypeForm))
       })
   }
   

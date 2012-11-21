@@ -24,9 +24,9 @@ import models.binary.DataSet
 import models.graph.Node
 import models.graph.Edge
 import brainflight.tools.geometry.Point3D
-import brainflight.format.DateFormatter
 import models.tracing.UsedTracings
 import models.user.TimeTracking
+import brainflight.view.helpers._
 
 /**
  * scalableminds - brainflight
@@ -57,11 +57,11 @@ object TracingController extends Controller with Secured {
 
   def createTracingsList(user: User) = {
     for {
-      exp <- Tracing.findFor(user)
+      tracing <- Tracing.findFor(user)
     } yield {
       Json.obj(
-        "name" -> (exp.dataSetName + " " + DateFormatter.format(exp.date)),
-        "id" -> exp.id,
+        "name" -> (tracing.dataSetName + "  " + formatDate(tracing.date)),
+        "id" -> tracing.id,
         "isNew" -> false)
     }
   }
@@ -77,25 +77,25 @@ object TracingController extends Controller with Secured {
     val user = request.user
     if (isNew) {
       DataSet.findOneById(id).map { dataSet =>
-        val exp = Tracing.createTracingFor(user, dataSet)
-        UsedTracings.use(user, exp)
+        val tracing = Tracing.createTracingFor(user, dataSet)
+        UsedTracings.use(user, tracing)
         Ok
       } getOrElse BadRequest("Couldn't find DataSet.")
     } else {
-      Tracing.findOneById(id).filter(_._user == user._id).map { exp =>
-        UsedTracings.use(user, exp)
+      Tracing.findOneById(id).filter(_._user == user._id).map { tracing =>
+        UsedTracings.use(user, tracing)
         Ok
       } getOrElse BadRequest("Coudln't find tracing.")
     }
   }
 
   def createExplorational = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for{
+    (for {
       dataSetId <- request.body.get("dataSetId").flatMap(_.headOption)
       dataSet <- DataSet.findOneById(dataSetId)
     } yield {
-      val exp = Tracing.createTracingFor(request.user, dataSet)
-      UsedTracings.use(request.user, exp)
+      val tracing = Tracing.createTracingFor(request.user, dataSet)
+      UsedTracings.use(request.user, tracing)
       Redirect(routes.Game.index)
     }) getOrElse BadRequest("Couldn't find DataSet.")
   }
@@ -111,8 +111,8 @@ object TracingController extends Controller with Secured {
 
   def update(tracingId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
     Tracing.findOneById(tracingId).filter(_._user == request.user._id).flatMap { _ =>
-      (request.body).asOpt[Tracing].map { exp =>
-        Tracing.save(exp.copy(timestamp = System.currentTimeMillis))
+      (request.body).asOpt[Tracing].map { tracing =>
+        Tracing.save(tracing.copy(timestamp = System.currentTimeMillis))
         TimeTracking.logUserAction(request.user)
         Ok
       }

@@ -119,9 +119,10 @@ Route =
             # Initialize nodes
             nodes = []
             i = 0
+            treeColor = new THREE.Color().setRGB(tree.color[0..2]...).getHex()
             for node in tree.nodes
               if node
-                nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, 1))
+                nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, treeColor))
             # Initialize edges
             for edge in tree.edges
               sourceNode = @findNodeInList(nodes, edge.source)
@@ -208,7 +209,8 @@ Route =
         nodes = @getNodeList(tree)
         treeObj = {}
         result.trees.push(treeObj)
-        treeObj.color = [1, 0, 0, 0]
+        treeColor = new THREE.Color(tree.color)
+        treeObj.color = [treeColor.r, treeColor.g, treeColor.b, 1]
         treeObj.edges = []
         # Get Edges
         for node in nodes
@@ -358,7 +360,7 @@ Route =
   putNewPoint : (position, type) ->
     unless @lastRadius
       @lastRadius = 10 * @scaleX
-    point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, 1)
+    point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, @activeTree.color)
     if @activeNode
       @activeNode.appendNext(point)
     else
@@ -418,11 +420,15 @@ Route =
       @lastActiveNodeId = @activeNode.id
     @push()
 
+  getNewTreeColor : ->
+    +("0x"+("000"+(Math.random()*(1<<24)|0).toString(16)).substr(-6))
+
   createNewTree : ->
     # Because a tree is represented by the root element and we
     # don't have any root element, we need a sentinel to save the
     # treeId and it's index within trees.
-    sentinel = new TracePoint(null, null, null, null, null, null)
+    treeColor = @getNewTreeColor()
+    sentinel = new TracePoint(null, null, null, null, null, treeColor)
     sentinel.treeId = @treeIdCount++
     # save Index, so we can access it once we have the root element
     sentinel.treeIndex = @trees.length
@@ -431,7 +437,7 @@ Route =
     @activeTree = sentinel
     @activeNode = null
     @push()
-    return sentinel.treeId
+    return [sentinel.treeId, sentinel.color]
 
   findNodeInTree : (id, tree) ->
     unless tree

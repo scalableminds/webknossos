@@ -129,6 +129,13 @@ body {
     -webkit-animation: rotation 1s linear infinite;
 }
 
+svg a:hover {
+    text-decoration: none;
+    &[href] {
+        cursor: pointer;
+    }
+}
+
 #alert-container {
     position: absolute;
     right: 20px;
@@ -202,7 +209,7 @@ body {
 //    border-color: @mainBackground;
 //}
 #prevControls {
-    width: 384px;
+    float: left;
     height: 20px;
     position: relative;
     top: 420px;

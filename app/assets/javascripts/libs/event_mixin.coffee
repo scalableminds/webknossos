@@ -3,6 +3,7 @@
 class EventMixin
 
   constructor : ->
+    
     @callbacks = {}
 
 

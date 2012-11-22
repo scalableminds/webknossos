@@ -31,8 +31,6 @@ trait DAOCaseClass[T <: AnyRef] { this: T =>
     }
 
     Option(before.get(ID)).map { id =>
-      println("updateDBO: " + after)
-      println("unset: " + unset)
       dao.update(
         MongoDBObject(ID -> id),
         MongoDBObject(

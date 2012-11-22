@@ -95,7 +95,8 @@ class Gui
                           .step(0.25)
                           .name("Move Value")    
                           .onChange(@setMoveValue)
-    (fView.add @settings, "routeClippingDistance", 0.1, 200)
+    scale = @model.route.scaleX
+    (fView.add @settings, "routeClippingDistance", 1, 1000 * scale)
                           .name("Clipping Distance")    
                           .onChange(@setRouteClippingDistance)
     (fView.add @settings, "displayCrosshairs")
@@ -123,12 +124,12 @@ class Gui
                           .onChange(@setNodeAsSpheres)
 
     fTrees = @gui.addFolder("Trees")
-    #@activeTreeIdController =
-    #(fTrees.add @settings, "activeTreeID")
-    #                      .min(1)
-    #                      .step(1)
-    #                      .name("Active Tree ID")
-    #                      .onFinishChange( (value) => @trigger "setActiveTree", value)
+    @activeTreeIdController =
+    (fTrees.add @settings, "activeTreeID")
+                          .min(1)
+                          .step(1)
+                          .name("Active Tree ID")
+                          .onFinishChange( (value) => @trigger "setActiveTree", value)
     (fTrees.add @settings, "newNodeNewTree")
                           .name("Soma clicking mode")
                           .onFinishChange(@setNewNodeNewTree)
@@ -138,17 +139,16 @@ class Gui
                           .name("Delete Active Tree")
 
     fNodes = @gui.addFolder("Nodes")
-    #@activeNodeIdController =
-    #(fNodes.add @settings, "activeNodeID")
-    #                      .min(1)
-    #                      .step(1)
-    #                      .name("Active Node ID")
-    #                      .onFinishChange( (value) => @trigger "setActiveNode", value)
-    #scale = @model.route.scaleX
-    #(fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
-    #                      .name("Radius")    
-    #                      .listen()
-    #                      .onChange(@setNodeRadius)
+    @activeNodeIdController =
+    (fNodes.add @settings, "activeNodeID")
+                          .min(1)
+                          .step(1)
+                          .name("Active Node ID")
+                          .onFinishChange( (value) => @trigger "setActiveNode", value)
+    (fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
+                          .name("Radius")    
+                          .listen()
+                          .onChange(@setNodeRadius)
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 

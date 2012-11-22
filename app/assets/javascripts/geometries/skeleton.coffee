@@ -43,7 +43,7 @@ class Skeleton
     @maxRouteLen  = maxRouteLen
     @flycam       = flycam
     @model        = model
-    @scaleVector  = @model.route.voxelPerNM
+    @scaleVector  = new THREE.Vector3(@model.route.voxelPerNM...)
     # Edges
     @routes       = []
     # Nodes
@@ -57,7 +57,7 @@ class Skeleton
     # Create sphere to represent the active Node, radius is
     # 1 nm, so that @activeNode.scale is the radius in nm.
     @activeNode = new THREE.Mesh(
-        new THREE.SphereGeometry(1 / @model.route.scaleX),
+        new THREE.SphereGeometry(1),
         new THREE.MeshLambertMaterial({
           color : COLOR_ACTIVE
           #transparent: true
@@ -275,7 +275,7 @@ class Skeleton
 
   pushNewNode : (radius, position, id, color) ->
     newNode = new THREE.Mesh(
-      new THREE.SphereGeometry(1 / @model.route.scaleX),
+      new THREE.SphereGeometry(1),
       new THREE.MeshLambertMaterial({ color : color})#, transparent: true, opacity: 0.5 })
     )
     newNode.scale = @calcScaleVector(new THREE.Vector3(radius, radius, radius))

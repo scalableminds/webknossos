@@ -74,7 +74,7 @@ class SceneController
           ind = @flycam.getIndices(i)
           # Offset the plane so the user can see the route behind the plane
           pos[ind[2]] += if i==PLANE_XY then @planeShift[ind[2]] else -@planeShift[ind[2]]
-          @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))
+          @planes[i].setPosition(new THREE.Vector3(pos...))
         else
           @planes[i].setVisible(false)
       # Distort the spheres so that in the plane's z-direction they have a radius as
@@ -123,6 +123,7 @@ class SceneController
     @flycam.hasChanged = true
 
   setRouteClippingDistance : (value) =>
+    # convert nm to voxel
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       @planeShift[i] = 2 * value * @model.route.voxelPerNM[i]
 

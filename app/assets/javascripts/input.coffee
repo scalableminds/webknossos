@@ -128,7 +128,7 @@ class Input.Mouse
     @mouseXY = new MouseLib(objectsToTrack[0], activeCallbacks[0], model)
     @mouseYZ = new MouseLib(objectsToTrack[1], activeCallbacks[1], model)
     @mouseXZ = new MouseLib(objectsToTrack[2], activeCallbacks[2], model)
-    @mousePrev = new MouseLib(objectsToTrack[3])
+    @mousePrev = new MouseLib(objectsToTrack[3], null, model)
 
     for own axis, callback of bindingsPlanes
       @attach(@mouseXY, axis, callback)

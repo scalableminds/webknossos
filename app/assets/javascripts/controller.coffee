@@ -205,8 +205,13 @@ class Controller
         @createNewTree()
 
       # Move
-      "space, f"         : => @moveZ( @model.user.moveValue)
-      "shift + space, ctrl + space, d" : => @moveZ(-@model.user.moveValue)
+      "space"         : => @moveZ( @model.user.moveValue)
+      "f"         : => @moveZ( @model.user.moveValue)
+      #"space, f"         : => @moveZ( @model.user.moveValue)
+      "shift + space" : => @moveZ(-@model.user.moveValue)
+      "ctrl + space" : => @moveZ(-@model.user.moveValue)
+      "d" : => @moveZ(-@model.user.moveValue)
+      #"shift + space, ctrl + space, d" : => @moveZ(-@model.user.moveValue)
     )
 
 

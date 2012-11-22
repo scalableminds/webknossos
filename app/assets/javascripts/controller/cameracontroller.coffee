@@ -28,8 +28,9 @@ class CameraController
     rMin   = Math.min.apply(null, rScale)
 
     @updateCamViewport()
-    @cameras[VIEW_3D].near = -100000
-    @cameras[VIEW_3D].far  =  100000
+    for cam in @cameras
+      cam.near = -100000
+      cam.far  =  100000
 
   update : =>
     gPos = @flycam.getGlobalPos()

@@ -37,7 +37,7 @@ case class Tracing(
     editPosition: Point3D,
     taskId: Option[ObjectId] = None,
     state: TracingState = InProgress,
-    review: Option[TracingReview] = None,
+    review: List[TracingReview] = Nil,
     tracingType: TracingType.Value = TracingType.Explorational,
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Tracing] {
 
@@ -70,10 +70,10 @@ case class Tracing(
    * State modifications
    * always return a new instance!
    */
-  def unassign =
+  def unassignReviewer =
     this.copy(
-      state = InReview,
-      review = None)
+      state = ReadyForReview,
+      review = if (this.review.isEmpty) Nil else review.tail)
 
   def asReviewFor(training: Tracing, user: User) = {
     this.copy(
@@ -86,7 +86,12 @@ case class Tracing(
   }
 
   def finishReview(comment: String) = {
-    val alteredReview = this.review.map(_.copy(comment = Some(comment)))
+    val alteredReview = this.review match {
+      case head :: tail =>
+        head.copy(comment = Some(comment)) :: tail
+      case _ =>
+        Nil
+    }
     this.copy(review = alteredReview)
   }
 
@@ -95,8 +100,16 @@ case class Tracing(
   }
 
   def passToReview = {
-    this.copy(state = InReview, review = None)
+    this.copy(state = ReadyForReview)
   }
+
+  def assignReviewer(user: User, reviewTracing: Tracing) =
+    this.copy(
+      state = InReview,
+      review = TracingReview(
+        user._id,
+        reviewTracing._id,
+        System.currentTimeMillis()) :: this.review)
 
   def reopen = {
     this.copy(state = InProgress)
@@ -140,7 +153,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       }) getOrElse (<error>DataSet not fount</error>)
     }
   }
-  
+
   def createTracingFor(user: User, task: Task) = {
     insertOne(Tracing(user._id,
       task.dataSetName,
@@ -172,14 +185,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     } yield {
       val reviewTracing = sample.asReviewFor(trainingsTracing, user)
       insertOne(reviewTracing)
-      trainingsTracing.update {
-        _.copy(
-          state = InReview,
-          review = Some(TracingReview(
-            user._id,
-            reviewTracing._id,
-            System.currentTimeMillis())))
-      }
+      trainingsTracing.update(_.assignReviewer(user, reviewTracing))
     }
   }
 
@@ -204,10 +210,10 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
   def findFor(u: User) = {
     find(MongoDBObject("_user" -> u._id)).toList
   }
-  
+
   def findAllOpen(tracingType: TracingType.Value) = {
     find(MongoDBObject(
-     "state.isFinished" -> false, "taskId" -> MongoDBObject("$exists" -> true))).toList
+      "state.isFinished" -> false, "taskId" -> MongoDBObject("$exists" -> true))).toList
   }
 
   def findAllExploratory(user: User) = {

@@ -19,6 +19,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
   def startReview(training: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(training)
+      if(tracing.state.isReadyForReview)
       altered <- Tracing.assignReviewee(tracing, request.user)
     } yield {
       AjaxOk.success(
@@ -30,7 +31,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
   def oxalisReview(training: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(training)
-      review <- tracing.review
+      review <- tracing.review.headOption
     } yield {
       Redirect(controllers.routes.Game.trace(review.reviewTracing.toString))
     }) getOrElse BadRequest("Couldn't create review tracing.")
@@ -38,7 +39,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
 
   def abortReview(trainingsId: String) = Authenticated { implicit request =>
     Tracing.findOneById(trainingsId) map { training =>
-      val altered = training.update(_.unassign)
+      val altered = training.update( _.unassignReviewer )
       AjaxOk.success(
         html.admin.task.trainingsTasksDetailTableItem(request.user, altered),
         "You got unassigned from this training.")
@@ -48,7 +49,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
   def finishReview(training: String) = Authenticated { implicit request =>
     Tracing.findOneById(training) map { tracing =>
       tracing.review match {
-        case Some(r) if r._reviewee == request.user._id =>
+        case r :: _ if r._reviewee == request.user._id && tracing.state.isInReview =>
           Ok(html.admin.task.trainingsReview(tracing, reviewForm))
         case _ =>
           BadRequest("No open review found.")
@@ -64,7 +65,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
         (for {
           tracing <- Tracing.findOneById(training)
           if tracing.state.isInReview
-          review <- tracing.review
+          review <- tracing.review.headOption
           if review._reviewee == request.user._id
           task <- tracing.task
           training <- task.training

@@ -3,7 +3,26 @@
 @tracingLinks = {
   <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
   <a href="@controllers.routes.TaskController.finish(tracing.id)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a><br/>
-  
+}
+
+@linkText(failed: Boolean) = {
+  @if(failed) {
+    Review failed - 
+  } else {
+    Review - 
+  }
+}
+
+@displayComments(failed: Boolean, comments: List[String]) = {
+  @comments match{
+    case head :: tail => {
+      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-content="@head"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
+    }
+    case _ => {
+
+    }
+  }
+
 }
 
 <tr>
@@ -14,19 +33,15 @@
   <td> 
     @tracing.state match{
       case s if s.isFinished => {
-        <i class="icon-ok"></i><span> Finished</span>
-        @tracing.review.flatMap(_.comment).map{ comment => 
-          | <a href="#" rel="popover" data-title="Comment from Reviewer" data-placement="bottom" data-html="true" data-content="@comment.split("\n").map{ c => @c<br /> }">Review Comment <span class="caret-down"></span></a>
-        }
+        <i class="icon-ok"></i><span> Finished</span><br />
+        @displayComments(false, tracing.review.flatMap( _.comment ))
       }
-      case s if s.isInReview => {
+      case s if s.isInReview || s.isReadyForReview => {
         <i class="icon-eye-open"></i><span> In Review</span>
       }
       case _ => {
         @tracingLinks
-        @tracing.review.flatMap(_.comment).map{ comment => 
-          <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-content="@comment"><i class="icon-eye-open"></i> Review failed. Comment <span class="caret-down"></span></a>
-        }
+        @displayComments(true, tracing.review.flatMap( _.comment ))
       }
     }
   </td>

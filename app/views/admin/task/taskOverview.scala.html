@@ -3,7 +3,7 @@
 @import models.Color
 
 @userDot(user: models.user.User) = {
-  @Html("\"" + user.name + "\" [shape=box, color=\"" + Color.jet(math.min(50, user.lastActivityDays) * (128 / 50) + 128).toHtml + "\"];")
+  @Html("\"" + user.name + "\" [tooltip=\"Last Activity: "+user.lastActivityDays+" days ago\", shape=box, color=\"" + Color.jet(math.min(50, user.lastActivityDays) * (128 / 50) + 128).toHtml + "\"];")
 }
 
 @taskTypeDot(taskType: models.task.TaskType) = {

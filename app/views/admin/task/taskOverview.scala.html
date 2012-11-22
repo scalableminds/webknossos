@@ -24,9 +24,7 @@
 
     <script type="text/vnd.graphviz" id="graphData">
       digraph G {
-        size="9.5";
-        ratio="compress";
-        graph [ bgcolor="transparent", colorscheme=svg ];
+        graph [ bgcolor="transparent", size="9.5,", rankdir=TB ];
         node [ fontname="Helvetica,Arial,sans-serif", fontsize=10.5, style=filled, fillcolor="#ffffff", pencolor="black" ];
         @Html(taskTypes.map( taskTypeDot ).mkString("\n"))
         @Html(users.map( userDot ).mkString("\n"))

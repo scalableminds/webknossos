@@ -1,7 +1,6 @@
 ### define
 model : Model
 view : View
-libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
 model/game : Game
 ###
 
@@ -26,6 +25,21 @@ class Plane
     @planeWidth      = planeWidth
     @textureWidth    = textureWidth
     @displayCosshair = true
+
+    # transform scaleVector (because they are rotated)
+    transformed  = new Array(3)
+    # planeWidth means that the plane should be that many voxels wide in the
+    # dimension with the highest resolution. In all other dimensions, the plane
+    # is smaller in voxels, so that it is squared in nm.
+    maxVoxelPerNM = Math.max.apply(null, @model.route.voxelPerNM)
+    for i in [0..2]
+      transformed[i] = @model.route.voxelPerNM[i] / maxVoxelPerNM
+    transformed = @flycam.transDim(transformed, @planeID)
+    # Apparently y and z are switched for those guys...
+    @scaleVector = new THREE.Vector3(transformed[0], 1, transformed[1])
+    
+    console.log "scaleVector: "
+    console.log @scaleVector
 
     @createMeshes(planeWidth, textureWidth)
 
@@ -80,28 +94,30 @@ class Plane
       if @flycam.needsUpdate @planeID
         @flycam.notifyNewTexture @planeID
 
+      area = @flycam.getArea(@planeID)
+      tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
-        @model.Binary.get(@flycam.getTexturePosition(@planeID), @flycam.getIntegerZoomStep(@planeID), @flycam.getArea(@planeID), @planeID).done (buffer) =>
+        @model.binary.planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(@planeID), area : @flycam.getArea(@planeID) }).done (buffer) =>
           if buffer
             @plane.texture.image.data.set(buffer)
             @flycam.hasNewTexture[@planeID] = true
-
+  
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return
 
       @plane.texture.needsUpdate = true
       @plane.material.map = @plane.texture
       
-      offsets = @flycam.getOffsets @planeID
       scalingFactor = @flycam.getTextureScalingFactor @planeID
       map = @plane.material.map
-      map.repeat.x = @planeWidth*scalingFactor / @textureWidth;  # (tWidth -4) ???
-      map.repeat.y = @planeWidth*scalingFactor / @textureWidth;
-      map.offset.x = offsets[0] / @textureWidth;
-      map.offset.y = offsets[1] / @textureWidth;
+      map.repeat.x = (area[2] -  area[0]) / @textureWidth  # (tWidth -4) ???
+      map.repeat.y = (area[3] -  area[1]) / @textureWidth
+      map.offset.x = area[0] / @textureWidth
+      map.offset.y = area[1] / @textureWidth
 
   setScale : (factor) =>
-    @plane.scale = @prevBorders.scale = @crosshair[0].scale = @crosshair[1].scale = new THREE.Vector3(factor, factor, factor)
+    scaleVec = new THREE.Vector3().multiply(new THREE.Vector3(factor, factor, factor), @scaleVector)
+    @plane.scale = @prevBorders.scale = @crosshair[0].scale = @crosshair[1].scale = scaleVec
 
   setRotation : (rotVec) =>
     @plane.rotation = @prevBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec

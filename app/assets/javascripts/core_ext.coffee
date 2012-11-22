@@ -1,3 +1,10 @@
+### define 
+m4x4 : M4x4
+v3 : V3
+jquery : $
+underscore : _
+###
+
 # Applies an affine transformation matrix on an array of points.
 M4x4.transformPointsAffine = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
 

@@ -129,10 +129,12 @@ class Flycam2d
       @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
     
   moveActivePlane : (p) ->
-    ind = @getIndices @activePlane
-    f = Math.pow(2, @integerZoomSteps[@activePlane])
+    p = @transDim(p, @activePlane)
+    ind = @getIndices(@activePlane)
+    zoomFactor = Math.pow(2, @integerZoomSteps[@activePlane])
+    scaleFactor = @getSceneScalingArray()
+    delta = [p[0]*zoomFactor*scaleFactor[0], p[1]*zoomFactor*scaleFactor[1], p[2]*zoomFactor*scaleFactor[2]]
     # change direction of the value connected to space, based on the last direction
-    delta = [p[ind[0]]*f, p[ind[1]]*f, p[ind[2]]*f]
     delta[ind[2]] *= @spaceDirection
     @move(delta)
 

@@ -1,7 +1,7 @@
 ### define
-model/binary/cube : Cube
-model/binary/pullqueue : Queue
-libs/event_mixin : EventMixin
+./cube : Cube
+./pullqueue : Queue
+../../libs/event_mixin : EventMixin
 ###
 
 # Macros
@@ -70,8 +70,6 @@ class Plane2D
 
   ping : (position, direction, zoomStep) ->
 
-    return unless @w == 2
-
     centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
  
     topLeftBucket = centerBucket.slice(0)
@@ -83,13 +81,13 @@ class Plane2D
     bottomRightBucket[@v] += @TEXTURE_SIZE_P - 2
 
     @cube.extendByBucketAddressExtent([
-      topLeftBucket[0] << zoomStep
-      topLeftBucket[1] << zoomStep
-      (topLeftBucket[2] << zoomStep) - 2
+      (topLeftBucket[0] - 2)<< zoomStep
+      (topLeftBucket[1] - 2) << zoomStep
+      (topLeftBucket[2] - 2) << zoomStep
     ], [
-      bottomRightBucket[0] << zoomStep
-      bottomRightBucket[1] << zoomStep
-      (bottomRightBucket[2] << zoomStep) + 2
+      ((bottomRightBucket[0] + 3) << zoomStep) - 1
+      ((bottomRightBucket[1] + 3) << zoomStep) - 1
+      ((bottomRightBucket[2] + 3) << zoomStep) - 1
     ])
 
     buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1)

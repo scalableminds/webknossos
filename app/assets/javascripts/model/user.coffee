@@ -1,5 +1,5 @@
 ### define
-libs/request : Request
+../libs/request : Request
 ###
 
 class User

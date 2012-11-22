@@ -1,5 +1,5 @@
 ### define
-libs/event_mixin : EventMixin
+../../libs/event_mixin : EventMixin
 ###
 
 class Cube
@@ -98,11 +98,13 @@ class Cube
   setBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
       
     if zoomStep
+
       x = bucket_x << zoomStep
       y = bucket_y << zoomStep
       z = bucket_z << zoomStep
 
       width = 1 << zoomStep
+
       for dx in [0...width] by 1
         for dy in [0...width] by 1
           for dz in [0...width] by 1
@@ -121,7 +123,6 @@ class Cube
     else
       bucketIndex = @getBucketIndexByAddress([bucket_x, bucket_y, bucket_z])
 
-      #console.log "SET: ", [bucket_x, bucket_y, bucket_z], bucketIndex
       bucket = @cube[bucketIndex]
       if bucketData
         if zoomStep < bucket.zoomStep 
@@ -261,3 +262,6 @@ class Cube
       @cube       = newCube
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
+
+    #console.log "RESIZE     ", [min_x,min_y,min_z], [max_x,max_y,max_z]
+    #console.log "RESIZED TO ", @cubeOffset, [@cubeOffset[0]+@cubeSize[0]-1,@cubeOffset[1]+@cubeSize[1]-1,@cubeOffset[2]+@cubeSize[2]-1]

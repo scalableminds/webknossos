@@ -37,7 +37,7 @@ Toast =
     else if _.isArray(message)
       messages = messages
       @message(type, message, sticky) for message in messages
-      
+
     else
       $messageElement = $("<div>", class : "alert alert-#{type} fade in").html(message)
       $messageElement.prepend($("<a>", class : "close", "data-dismiss" : "alert", href : "#").html("&times;"))

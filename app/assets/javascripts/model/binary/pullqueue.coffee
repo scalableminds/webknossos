@@ -1,6 +1,6 @@
 ### define
-model/binary/cube : Cube
-libs/array_buffer_socket : ArrayBufferSocket
+./cube : Cube
+../../libs/array_buffer_socket : ArrayBufferSocket
 ###
 
 class PullQueue
@@ -161,14 +161,12 @@ class PullQueue
     else
       (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
 
-    console.log @roundTripTime
-
 
   getLoadBucketSocket : _.once ->
     
     new ArrayBufferSocket(
       senders : [
-        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array

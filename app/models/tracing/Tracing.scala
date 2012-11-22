@@ -204,8 +204,11 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
   def findOpenTracingFor(user: User, isExploratory: Boolean) =
     findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "taskId" -> MongoDBObject("$exists" -> isExploratory)))
 
+  def findOpenTrainingFor(user: User) =
+    findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "tracingType" -> "Training"))    
+    
   def hasOpenTracing(user: User, isExploratory: Boolean) =
-    findOpenTracingFor(user, isExploratory).isDefined
+    findOpenTracingFor(user, isExploratory).isDefined 
 
   def findFor(u: User) = {
     find(MongoDBObject("_user" -> u._id)).toList

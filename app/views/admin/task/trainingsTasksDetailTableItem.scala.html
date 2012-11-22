@@ -31,11 +31,13 @@
       <i class="icon-ok"></i><span> finished (reviewed by )</span>
     case _ if tracing.state.isInProgress =>
       <i class="icon-time"></i><span> User is working on the task</span>
-    case Some(r) if r._reviewee == user._id =>
+    case r :: _ if r._reviewee == user._id && tracing.state.isInReview =>
       oxalisLink() + nmlDownloadLink() + finishReviewLink() + abortReviewLink
-    case Some(r) if r._reviewee != user._id =>
-      <span>Already getting reviewed.</span>
-    case _ =>
+    case r :: _ if r._reviewee != user._id && tracing.state.isInReview =>
+      <i class="icon-eye-open"></i><span> Already getting reviewed.</span>
+    case _ if tracing.state.isReadyForReview =>
       reviewLink()
+    case _ =>
+      "Invalid state."
   }}
 </tr>

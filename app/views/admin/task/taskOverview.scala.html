@@ -3,7 +3,7 @@
 @import models.Color
 
 @userDot(user: models.user.User) = {
-  @Html("\"" + user.name + "\" [tooltip=\"Last Activity: "+user.lastActivityDays+" days ago\", shape=box, color=\"" + Color.jet(math.min(50, user.lastActivityDays) * (128 / 50) + 128).toHtml + "\"];")
+  @Html("\"" + user.name + "\" [id=\""+ user.id +"\", shape=box, color=\"" + Color.jet(math.min(50, user.lastActivityDays) * (128 / 50) + 128).toHtml + "\"];")
 }
 
 @taskTypeDot(taskType: models.task.TaskType) = {
@@ -12,6 +12,14 @@
 
 @edge(a: String, b: String) = {
   @Html("\"" + a + "\"->\"" + b +"\";")
+}
+
+@userToolTip(user: models.user.User) = { 
+  Last Activity: @user.lastActivityDays days ago<br /> 
+  Experiences: <br />
+  @user.experiences.map{ experience =>
+    @experience._1 : @experience._2 <br />
+  }
 }
 
 @main(){
@@ -47,6 +55,14 @@
       require(["libs/viz"], function (Viz) {
         $(function () {
           $(".graph").html(Viz($("#graphData").html(), "svg"));
+          @users.map{ user =>
+            $("#@user.id.toLowerCase > text").popover({
+              title: "@user.name",
+              html: true,
+              trigger: "hover",
+              content: "@userToolTip(user).trim"
+            })
+          }
         });
       });
     </script>

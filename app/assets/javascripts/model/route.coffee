@@ -1,11 +1,10 @@
 ### define
 jquery : $
 underscore : _
-libs/request : Request
-libs/event_mixin : EventMixin
-libs/json_socket : JsonSocket
-model/game : Game
-model/tracepoint : TracePointClass
+../libs/request : Request
+../libs/event_mixin : EventMixin
+../libs/json_socket : JsonSocket
+./tracepoint : TracePointClass
 ###
 
 # This takes care of the route. 

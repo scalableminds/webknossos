@@ -66,7 +66,6 @@ class Controller
       for mesh in meshes
         @view.addGeometry(mesh)
 
-      console.log "RENDERCALLBACK"
       @view.on "render", @render
       @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
 

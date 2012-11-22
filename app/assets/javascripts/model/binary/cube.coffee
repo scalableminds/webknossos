@@ -1,5 +1,5 @@
 ### define
-libs/event_mixin : EventMixin
+../../libs/event_mixin : EventMixin
 ###
 
 class Cube

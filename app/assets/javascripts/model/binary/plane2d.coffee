@@ -1,7 +1,7 @@
 ### define
-model/binary/cube : Cube
-model/binary/pullqueue : Queue
-libs/event_mixin : EventMixin
+./cube : Cube
+./pullqueue : Queue
+../../libs/event_mixin : EventMixin
 ###
 
 # Macros

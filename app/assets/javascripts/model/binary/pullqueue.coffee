@@ -1,6 +1,6 @@
 ### define
-model/binary/cube : Cube
-libs/array_buffer_socket : ArrayBufferSocket
+./cube : Cube
+../../libs/array_buffer_socket : ArrayBufferSocket
 ###
 
 class PullQueue

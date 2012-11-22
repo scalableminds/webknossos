@@ -191,7 +191,11 @@ object Task extends BasicDAO[Task]("tasks") {
   }
 
   def nextTaskForUser(user: User): Future[Option[Task]] = {
-    val tasks = findAllAssignableNonTrainings.filter(hasEnoughExperience(user)).toArray
+    nextTaskForUser(
+      user,
+      findAllAssignableNonTrainings.filter(hasEnoughExperience(user)).toArray)
+  }
+  private def nextTaskForUser(user: User, tasks: Array[Task]): Future[Option[Task]] = {
     if (tasks.isEmpty) {
       Promise.successful(None)(Akka.system.dispatcher)
     } else {
@@ -210,6 +214,38 @@ object Task extends BasicDAO[Task]("tasks") {
           e.printStackTrace()
           None
       }
+    }
+  }
+
+  def simulateTaskAssignment(users: List[User]) = {
+    def f(users: List[User], tasks: Map[ObjectId, Task], result: Map[User, Task]): Future[Map[User, Task]] = {
+      users match {
+        case user :: tail =>
+          simulateTaskAssignments(user, tasks).flatMap {
+            case Some((task, alertedtasks)) =>
+              f(tail, alertedtasks, result + (user -> task))
+            case _ =>
+              f(tail, tasks, result)
+          }
+        case _ =>
+          Future(result)(Akka.system.dispatcher)
+      }
+    }
+    val nonTrainings = findAllAssignableNonTrainings.map(t => t._id -> t).toMap
+    f(users, nonTrainings, Map.empty)
+  }
+  
+  def simulateTaskAssignments(user: User, tasks: Map[ObjectId, Task]) = {
+    val openTask = Tracing.findOpenTracingFor(user, false).flatMap(_.task).map(_._id) getOrElse null
+    val tasksAvailable = tasks.values.filter( t =>
+        hasEnoughExperience(user)(t) && openTask != t._id)
+    nextTaskForUser(user, tasksAvailable.toArray).map {
+      case Some(task) =>
+        Some(task -> (tasks + (task._id -> task.copy(_tracings = new ObjectId :: task._tracings))))
+      case _ =>
+        Training.findAllFor(user).headOption.map { task =>
+          task -> tasks
+        }
     }
   }
 

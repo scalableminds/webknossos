@@ -1,4 +1,4 @@
-@(users: List[models.user.User], taskTypes: List[models.task.TaskType], usersWithTasks: Map[models.user.User, models.task.TaskType], futureTasks: Map[models.user.User, models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
+@(users: List[models.user.User], taskTypes: List[models.task.TaskType], usersWithTasks: Map[models.user.User, models.task.TaskType], futureTasks: Map[models.user.User, models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
 
 @import models.Color
 
@@ -29,6 +29,9 @@
         @Html(taskTypes.map( taskTypeDot ).mkString("\n"))
         @Html(users.map( userDot ).mkString("\n"))
         @Html(usersWithTasks.map( e =>
+          edge(e._1.name, e._2.summary)).mkString("\n"))
+        edge [ color=red];
+        @Html(futureTasks.map( e =>
           edge(e._1.name, e._2.summary)).mkString("\n"))
       }
     </script>

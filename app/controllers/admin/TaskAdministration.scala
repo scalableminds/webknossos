@@ -20,6 +20,8 @@ import views.html
 import models.user.Experience
 import controllers.Controller
 import play.api.i18n.Messages
+import play.api.libs.concurrent._
+import play.api.libs.concurrent.execution.defaultContext
 
 object TaskAdministration extends Controller with Secured {
 
@@ -89,10 +91,9 @@ object TaskAdministration extends Controller with Secured {
       { t =>
         Task.insertOne(t)
         Redirect(routes.TaskAdministration.list).flashing(
-            FlashSuccess(Messages("task.create.success")))
+          FlashSuccess(Messages("task.create.success")))
       })
   }
-  
 
   def createBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     request.request.body.get("data").flatMap(_.headOption).map { data =>
@@ -122,16 +123,20 @@ object TaskAdministration extends Controller with Secured {
       Redirect(routes.TaskAdministration.list)
     } getOrElse BadRequest("'data' parameter is mising")
   }
-  
-  def overview =  Authenticated { implicit request =>
-    val allUsers = User.findAll
-    val allTaskTypes = TaskType.findAll
-    val usersWithoutTask = allUsers.filter(user => !Tracing.hasOpenTracing(user, false))
-    val usersWithTasks =Tracing.findAllOpen(TracingType.Task).flatMap{ tracing => 
-      tracing.task.flatMap( task => tracing.user.flatMap(user => task.taskType.map( user -> _)))
-    }.toMap
-    
-    //val futureTasks = simulateTaskAsignment(allUsers)
-    Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks, Map.empty))
+
+  def overview = Authenticated { implicit request =>
+    Async {
+      val allUsers = User.findAll
+      val allTaskTypes = TaskType.findAll
+      val usersWithoutTask = allUsers.filter(user => !Tracing.hasOpenTracing(user, false))
+      val usersWithTasks = Tracing.findAllOpen(TracingType.Task).flatMap { tracing =>
+        tracing.task.flatMap(task => tracing.user.flatMap(user => task.taskType.map(user -> _)))
+      }.toMap
+
+      Task.simulateTaskAssignment(allUsers).asPromise.map { futureTasks =>
+        val futureTaskTypes = futureTasks.flatMap( e => e._2.taskType.map( e._1 -> _))
+        Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks, futureTaskTypes))
+      }
+    }
   }
 }

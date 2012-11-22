@@ -48,8 +48,8 @@ class Binary
 
     unless _.isEqual(position, @lastPosition) and _.isEqual(options, @lastOptions)
 
-      @lastPosition = position
-      @lastOptions = options
+      @lastPosition = position.slice
+      @lastOptions = options.slice
 
       console.time "ping"
       @queue.clear()

@@ -161,8 +161,6 @@ class PullQueue
     else
       (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
 
-    console.log @roundTripTime
-
 
   getLoadBucketSocket : _.once ->
     

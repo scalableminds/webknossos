@@ -131,7 +131,9 @@ body {
 
 svg a:hover {
     text-decoration: none;
-    cursor: pointer;
+    &[href] {
+        cursor: pointer;
+    }
 }
 
 #alert-container {
@@ -207,7 +209,7 @@ svg a:hover {
 //    border-color: @mainBackground;
 //}
 #prevControls {
-    width: 384px;
+    float: left;
     height: 20px;
     position: relative;
     top: 420px;

@@ -1,7 +1,8 @@
 ### define
 libs/keyboard : KeyboardJS
-libs/mouse : MouseLib
 libs/gamepad : GamepadJS
+libs/event_mixin : EventMixin
+libs/jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
 ###
 
 Input = {}
@@ -115,47 +116,130 @@ class Input.Keyboard
 
 
 # The mouse module.
-# This one basically just provides the public interface
-# for mouse handling. Nothing fancy here.
-#class Input.Mouse
-# It needs three mouses
-# because at every canvas(=objectToTrack) there needs
-# to be a different callback.
+# Events: over, out, leftClick, rightClick, leftDownMove
 class Input.Mouse
-  
-  constructor : (objectsToTrack, activeCallbacks, bindingsPlanes, bindingsPrev, model) ->
-    # create three mouses for each plane
-    @mouseXY = new MouseLib(objectsToTrack[0], activeCallbacks[0], model)
-    @mouseYZ = new MouseLib(objectsToTrack[1], activeCallbacks[1], model)
-    @mouseXZ = new MouseLib(objectsToTrack[2], activeCallbacks[2], model)
-    @mousePrev = new MouseLib(objectsToTrack[3], null, model)
 
-    for own axis, callback of bindingsPlanes
-      @attach(@mouseXY, axis, callback)
-      @attach(@mouseYZ, axis, callback)
-      @attach(@mouseXZ, axis, callback)
-    
-    for own axis, callback of bindingsPrev
-      @attach(@mousePrev, axis, callback)
+  constructor : (@$target, initialBindings) ->
 
-  attach : (m, axis, callback) ->
-    m.bindX callback if axis is "x"
-    m.bindY callback if axis is "y"
-    m.bindR callback if axis is "r"
-    m.bindL callback if axis is "l"
-    m.bindW callback if axis is "w"
+    _.extend(this, new EventMixin())
 
-  setInversionX : (m, value) ->
-    m.setInversionX value if m?
+    @isLeftDown = false
+    @isMouseOver = false
+    @lastPosition = null
 
-  setInversionY : (m, value) ->
-    m.setInversionY value if m?
+    $(window).on
+      "mousemove" : @mouseMove
+      "mouseup"   : @mouseUp
 
-  setRotateValue : (m, value) ->
-    m.setRotateValue value if m?
+    @$target.on 
+      "mousedown" : @mouseDown
+      "mouseenter" : @mouseEnter
+      "mouseleave" : @mouseLeave
+      "mousewheel" : @mouseWheel
 
-  unbind : (m) ->
-    m.unbind()
+    @on(initialBindings)
+    @attach = @on
+
+
+  unbind : ->
+
+    $(window).off
+      "mousemove" : @mouseMove
+      "mouseup" : @mouseUp
+
+    @$target.off 
+      "mousedown" : @mouseDown
+      "mouseenter" : @mouseEnter
+      "mouseleave" : @mouseLeave
+      "mousewheel" : @mouseWheel 
+
+
+  isHit : (event) ->
+
+    { pageX, pageY } = event
+    { left, top } = @$target.offset()
+
+    left <= pageX <= left + @$target.width() and
+    top <= pageY <= top + @$target.height()
+
+
+  mouseDown : (event) =>
+
+    event.preventDefault()
+
+    @lastPosition = 
+      x : event.pageX - @$target.offset().left
+      y : event.pageY - @$target.offset().top
+
+    # check whether the mouseDown event is a leftclick
+    if event.which == 1
+      $(":focus").blur() # see OX-159
+
+      @leftDown = true
+      @trigger("leftClick", [@lastPosition.x, @lastPosition.y])
+
+    else
+      @trigger("rightClick", [@lastPosition.x, @lastPosition.y])
+
+    return
+
+
+  mouseUp : (event) =>
+
+    if @isMouseOver
+      @mouseLeave(which : 0) unless @isHit(event)
+    else
+      @mouseEnter(which : 0) if @isHit(event)
+
+    @leftDown = false
+    return
+
+
+  mouseMove : (event) =>
+
+    if @leftDown
+      
+      newPosition =
+        x : event.pageX - @$target.offset().left
+        y : event.pageY - @$target.offset().top
+      
+      deltaX = (newPosition.x - @lastPosition.x)
+      deltaY = (newPosition.y - @lastPosition.y)
+
+      unless deltaX == 0 and deltaY == 0
+        @trigger("leftDownMove", x : deltaX, y : deltaY)
+        @lastPosition = newPosition
+
+    return
+
+
+  mouseEnter : (event) =>
+
+    if event.which == 0
+      @isMouseOver = true
+      @trigger("over")
+    return
+
+
+  mouseLeave : (event) =>
+
+    if event.which == 0
+      @isMouseOver = false
+      @trigger("out")
+    return
+
+
+  mouseWheel : (event, delta) =>
+
+    event.preventDefault()
+    if event.shiftKey
+      @trigger("scroll", delta, "shift")
+    else if event.altKey
+      @trigger("scroll", delta, "alt")
+    else
+      @trigger("scroll", delta, null)
+
+    return
 
     
 # This module completly handles the device orientation / 

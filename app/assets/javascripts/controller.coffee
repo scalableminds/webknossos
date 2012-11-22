@@ -16,9 +16,6 @@ PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
-NO_KEY           = 0
-ALT_KEY          = 1
-SHIFT_KEY        = 2
 VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 TEXTURE_SIZE     = 512
@@ -132,15 +129,28 @@ class Controller
 
   initMouse : ->
 
-    # initializes an Input.Mouse object with the three canvas
-    # elements and one pair of callbacks per canvas
-    new Input.Mouse(
-      [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
-      [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
-      {"x" : @moveX, "y" : @moveY, "w" : @scroll, "l" : @onPlaneClick, "r" : @setWaypoint}
-      {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "l" : @onPreviewClick}
-      @model
+    for planeId in ["xy", "yz", "xz"]
+      new Input.Mouse($("#plane#{planeId}"),
+        over : @view["setActivePlane#{planeId.toUpperCase()}"]
+        leftDownMove : (delta) => 
+          @move [
+            delta.x * @model.user.mouseInversionX
+            delta.y * @model.user.mouseInversionX
+            0
+          ]
+        scroll : @scroll
+        leftClick : @onPlaneClick
+        rightClick : @setWaypoint
+      )
+
+    new Input.Mouse($("#skeletonview"),
+      leftDownMove : (delta) => 
+        @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
+        @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
+      scroll : @cameraController.zoomPrev
+      leftClick : @onPreviewClick
     )
+
 
   initKeyboard : ->
     
@@ -163,14 +173,14 @@ class Controller
 
     
       #ScaleTrianglesPlane
-      "l" : => @view.scaleTrianglesPlane -@model.user.scaleValue
-      "k" : => @view.scaleTrianglesPlane @model.user.scaleValue
+      "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
+      "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
 
       #Move
-      "left"          : => @moveX(-@model.user.moveValue)
-      "right"         : => @moveX( @model.user.moveValue)
-      "up"            : => @moveY(-@model.user.moveValue)
-      "down"          : => @moveY( @model.user.moveValue)
+      "left"  : => @moveX(-@model.user.moveValue)
+      "right" : => @moveX( @model.user.moveValue)
+      "up"    : => @moveY(-@model.user.moveValue)
+      "down"  : => @moveY( @model.user.moveValue)
 
       #misc keys
       # TODO: what does this? I removed it, I need the key.
@@ -205,8 +215,8 @@ class Controller
         @createNewTree()
 
       # Move
-      "space"         : => @moveZ( @model.user.moveValue)
-      "f"         : => @moveZ( @model.user.moveValue)
+      "space" : => @moveZ( @model.user.moveValue)
+      "f" : => @moveZ( @model.user.moveValue)
       #"space, f"         : => @moveZ( @model.user.moveValue)
       "shift + space" : => @moveZ(-@model.user.moveValue)
       "ctrl + space" : => @moveZ(-@model.user.moveValue)
@@ -224,7 +234,7 @@ class Controller
     @cameraController.update()
     @sceneController.update()
 
-  move  : (v) =>                 # v: Vector represented as array of length 3
+  move : (v) =>                 # v: Vector represented as array of length 3
     @flycam.moveActivePlane(v)
 
   moveX : (x) => @move([x, 0, 0])
@@ -260,9 +270,9 @@ class Controller
 
   scroll : (delta, type) =>
     switch type
-      when NO_KEY then @moveZ(delta)
-      when SHIFT_KEY then @setNodeRadius(delta)
-      when ALT_KEY
+      when null then @moveZ(delta)
+      when "shift" then @setNodeRadius(delta)
+      when "alt"
         if delta > 0
           @zoomIn()
         else

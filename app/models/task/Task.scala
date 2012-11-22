@@ -51,7 +51,7 @@ case class Task(
 
   def tracings = _tracings.map(Tracing.findOneById).flatten
 
-  def isFullyAssigned = tracings.size == instances
+  def isFullyAssigned = _tracings.size == instances
 
   def isTraining = training.isDefined
 
@@ -238,7 +238,7 @@ object Task extends BasicDAO[Task]("tasks") {
   def simulateTaskAssignments(user: User, tasks: Map[ObjectId, Task]) = {
     val openTask = Tracing.findOpenTracingFor(user, false).flatMap(_.task).map(_._id) getOrElse null
     val tasksAvailable = tasks.values.filter( t =>
-        hasEnoughExperience(user)(t) && openTask != t._id)
+        hasEnoughExperience(user)(t) && openTask != t._id && !t.isFullyAssigned)
     nextTaskForUser(user, tasksAvailable.toArray).map {
       case Some(task) =>
         Some(task -> (tasks + (task._id -> task.copy(_tracings = new ObjectId :: task._tracings))))

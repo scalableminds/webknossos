@@ -3,7 +3,7 @@
 @import models.Color
 
 @userDot(user: models.user.User) = {
-  @Html("\"" + user.name + "\" [shape=box, color=\"" + Color.jet(math.min(50, user.lastActivityDays) * (256 / 50)).toHtml + "\"];")
+  @Html("\"" + user.name + "\" [shape=box, color=\"" + Color.jet(math.min(50, user.lastActivityDays) * (128 / 50) + 128).toHtml + "\"];")
 }
 
 @taskTypeDot(taskType: models.task.TaskType) = {
@@ -24,7 +24,7 @@
 
     <script type="text/vnd.graphviz" id="graphData">
       digraph G {
-        graph [ bgcolor="transparent", colorscheme=X11 ];
+        graph [ bgcolor="transparent", colorscheme=svg ];
         node [ fontname="Helvetica,Arial,sans-serif", fontsize=10.5, style=filled, color="#ffffff" ];
         @Html(taskTypes.map( taskTypeDot ).mkString("\n"))
         @Html(users.map( userDot ).mkString("\n"))

@@ -77,7 +77,7 @@ object TaskAdministration extends Controller with Secured {
     taskForm.bindFromRequest.fold(
       formWithErrors => BadRequest(taskCreateHTML(taskFromTracingForm, formWithErrors)),
       { t =>
-        Task.insert(t)
+        Task.insertOne(t)
         Redirect(routes.TaskAdministration.list)
       })
   }
@@ -86,7 +86,7 @@ object TaskAdministration extends Controller with Secured {
     taskFromTracingForm.bindFromRequest.fold(
       formWithErrors => BadRequest(taskCreateHTML(formWithErrors, taskForm)),
       { t =>
-        Task.insert(t)
+        Task.insertOne(t)
         Redirect(routes.TaskAdministration.list).flashing(
             FlashSuccess(Messages("task.create.success")))
       })
@@ -115,8 +115,8 @@ object TaskAdministration extends Controller with Secured {
             Task(dataSetName, 0, taskType._id, Point3D(x, y, z), experience, priority, instances)
           }
         }
-        .flatMap { t =>
-          Task.insert(t)
+        .map { t =>
+          Task.insertOne(t)
         }
       Redirect(routes.TaskAdministration.list)
     } getOrElse BadRequest("'data' parameter is mising")

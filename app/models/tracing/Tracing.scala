@@ -142,7 +142,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
   }
 
   def createTracingFor(user: User, task: Task) = {
-    alterAndInsert(Tracing(user._id,
+    insertOne(Tracing(user._id,
       task.dataSetName,
       List(Tree.empty),
       Nil,
@@ -158,7 +158,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
 
   override def remove(tracing: Tracing) = {
     tracing.task.map {
-      Task.removeTracing(_, tracing)
+      _.update(_.removeTracing(tracing))
     }
     UsedTracings.removeAll(tracing)
     super.remove(tracing)
@@ -171,7 +171,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       sample <- Tracing.findOneById(sampleId)
     } yield {
       val reviewTracing = sample.asReviewFor(trainingsTracing, user)
-      Tracing.insert(reviewTracing)
+      insertOne(reviewTracing)
       trainingsTracing.update {
         _.copy(
           state = InReview,
@@ -184,7 +184,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
   }
 
   def createTracingFor(u: User, d: DataSet = DataSet.default) = {
-    alterAndInsert(Tracing(u._id,
+    insertOne(Tracing(u._id,
       d.name,
       List(Tree.empty),
       Nil,

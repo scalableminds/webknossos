@@ -46,16 +46,16 @@ object InitialData {
 
   def insert() = {
     if (Role.findAll.isEmpty) {
-      Role.insert(Role("user", Nil, Color(0.2274F, 0.5294F, 0.6784F, 1)))
-      Role.insert(Role("admin", Permission("admin.*", "*" :: Nil) :: Nil, Color(0.2F, 0.2F, 0.2F, 1)))
-      Role.insert(Role("reviewer",
+      Role.insertOne(Role("user", Nil, Color(0.2274F, 0.5294F, 0.6784F, 1)))
+      Role.insertOne(Role("admin", Permission("admin.*", "*" :: Nil) :: Nil, Color(0.2F, 0.2F, 0.2F, 1)))
+      Role.insertOne(Role("reviewer",
         Permission("admin.review.*", "*" :: Nil) ::
           Permission("admin.menu", "*" :: Nil) :: Nil,
         Color(0.2745F, 0.5333F, 0.2784F, 1)))
     }
 
     if (User.findOneByEmail("scmboy@scalableminds.com").isEmpty) {
-      User.insert(User(
+      User.insertOne(User(
         "scmboy@scalableminds.com",
         "SCM",
         "Boy",
@@ -67,7 +67,7 @@ object InitialData {
     }
 
     if (TaskSelectionAlgorithm.findAll.isEmpty) {
-      TaskSelectionAlgorithm.insert(TaskSelectionAlgorithm(
+      TaskSelectionAlgorithm.insertOne(TaskSelectionAlgorithm(
         """function simple(user, tasks){ 
           |  return tasks[0];
           |}""".stripMargin))
@@ -78,18 +78,18 @@ object InitialData {
         "ek_0563_BipolarCells",
         "Check those cells out!",
         TimeSpan(5, 10, 15))
-      TaskType.insert(tt)
+      TaskType.insertOne(tt)
       if (Task.findAll.isEmpty) {
         val sample = Tracing.createTracingFor(User.default)
 
-        Task.insert(Task(
+        Task.insertOne(Task(
           DataSet.default.name,
           0,
           tt._id,
           Point3D(0, 0, 0),
           Experience("basic", 5)))
 
-        Task.insert(Task(
+        Task.insertOne(Task(
           DataSet.default.name,
           0,
           tt._id,

@@ -42,7 +42,7 @@ object UserController extends Controller with Secured {
     implicit request =>
       request.body.asOpt[JsObject] map { settings =>
         val fields = settings.fields take (UserConfiguration.MaxSettings) filter (UserConfiguration.isValidSetting)
-        User.saveSettings(request.user, UserConfiguration(fields.toMap))
+        request.user.update( _.changeSettings(UserConfiguration(fields.toMap)))
         Ok
       } getOrElse (BadRequest)
   }

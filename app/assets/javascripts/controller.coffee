@@ -34,7 +34,6 @@ class Controller
 
       # create Model
       @model = new Model(options)
-
       @flycam = new Flycam(VIEWPORT_WIDTH, @model)
       @view  = new View(@model, @flycam)
 

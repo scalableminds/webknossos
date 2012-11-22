@@ -71,7 +71,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
           trainee <- tracing.user
         } yield {
           if (passed) {
-            User.addExperience(trainee, training.domain, training.gain)
+            trainee.update(_.addExperience(training.domain, training.gain))
             tracing.update(_.finishReview(comment).finish)
           } else
             tracing.update(_.finishReview(comment).reopen)

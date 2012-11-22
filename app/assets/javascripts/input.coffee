@@ -24,20 +24,28 @@ Input = {}
 # Pressing a button will only fire an event once.
 class Input.KeyboardNoLoop
 
-  constructor : (bindings) ->
+  constructor : (initialBindings) ->
 
-    for own key, callback of bindings
+    @bindings = []
+
+    for own key, callback of initialBindings
       @attach(key, callback)
 
 
   attach : (key, callback) ->
 
-    KeyboardJS.bind.key(key, callback)
+    binding = KeyboardJS.on(key, 
+      (event) -> 
+        callback(event) unless $(":focus").length
+        return
+    )
+    @bindings.push(binding)
 
 
   unbind : ->
 
-    KeyboardJS.unbind.key "all"
+    binding.clear() for binding in @bindings
+    return
 
 
 # This module is "main" keyboard handler. 
@@ -45,20 +53,23 @@ class Input.KeyboardNoLoop
 # fire the attached callback.
 class Input.Keyboard
 
-  delay : 1000 / 30
-  keyCallbackMap : {}
-  keyPressedCount : 0
+  DELAY : 1000 / 30
 
-  constructor : (bindings) ->
-    for own key, callback of bindings
+  constructor : (initialBindings) ->
+
+    @keyCallbackMap = {}
+    @keyPressedCount = 0
+    @bindings = []
+
+    for own key, callback of initialBindings
       @attach(key, callback)
 
 
   attach : (key, callback) ->
 
-    KeyboardJS.bind.key(
+    binding = KeyboardJS.on(
       key
-      (evt, keys, key2) =>
+      (event) =>
         # When first pressed, insert the callback into
         # keyCallbackMap and start the buttonLoop.
         # Then, ignore any other events fired from the operating
@@ -66,23 +77,24 @@ class Input.Keyboard
         # When control key is pressed, everything is ignored, because
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
-        unless @keyCallbackMap[key]?
-          if not evt.ctrlKey
+
+        unless @keyCallbackMap[key]? or $(":focus").length
+          if not event.ctrlKey
             @keyPressedCount++ 
             @keyCallbackMap[key] = callback
             @buttonLoop() if @keyPressedCount == 1
 
         return
-      (evt, keys, key2) =>
-        activeKeys = KeyboardJS.activeKeys()
-        #for key of @keyCallbackMap
-        #  if activeKeys.indexOf(key) < 0
-        #    delete @keyCallbackMap[key]
+
+      =>
+        
         if @keyCallbackMap[key]?
           @keyPressedCount--
           delete @keyCallbackMap[key]
+
         return
     )
+    @bindings.push(binding)
 
 
   # In order to continously fire callbacks we have to loop
@@ -93,12 +105,13 @@ class Input.Keyboard
       for own key, callback of @keyCallbackMap
         callback()
 
-      setTimeout( (=> @buttonLoop()), @delay ) 
+      setTimeout( (=> @buttonLoop()), @DELAY ) 
 
 
   unbind : ->
 
-    KeyboardJS.unbind.key "all"
+    binding.clear() for binding in @bindings
+    return
 
 
 # The mouse module.

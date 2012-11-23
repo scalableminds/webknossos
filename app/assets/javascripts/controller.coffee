@@ -321,7 +321,7 @@ class Controller
 
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = @flycam.getIndices(plane)
-      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance()+1)
+      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance(ind[2])+1)
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
         vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex

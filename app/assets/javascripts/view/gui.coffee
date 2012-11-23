@@ -31,7 +31,7 @@ class Gui
       save : @saveNow
       finish : @finish
       upload : @uploadNML
-      download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
+      download : => window.open(routes.controllers.admin.NMLIO.downloadList().url,
                                 "_blank", "width=700,height=400,location=no,menubar=no")
       
       position : "#{initPos[0]}, #{initPos[1]}, #{initPos[2]}"
@@ -185,15 +185,12 @@ class Gui
     input.trigger("click")
     input.on("change", (evt) ->
       file = evt.target.files[0]
-      requestObject = routes.controllers.admin.NMLIO.upload()
-      xhr = new XMLHttpRequest()
-      # Reload when done
-      xhr.onload = -> window.location.reload()
-      xhr.open(requestObject.method, requestObject.url, true)
-      # send it as form data
-      formData = new FormData()
-      formData.append("nmlFile", file)
-      xhr.send(formData)
+      Request.send(
+        _.extend(routes.controllers.admin.NMLIO.upload(),
+          formData :
+            nmlFile : file
+        )
+      ).done -> window.location.reload()
     )
 
   updateGlobalPosition : =>

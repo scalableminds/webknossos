@@ -39,10 +39,6 @@ class Controller
 
       @canvasesAndNav = $("#main")[0]
 
-      # hide contextmenu, while rightclicking a canvas
-      $("#main-container").bind "contextmenu", (event) ->
-        event.preventDefault(); return
-
       @prevControls = $('#prevControls')
       @prevControls.addClass("btn-group")
       values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
@@ -55,6 +51,8 @@ class Controller
         buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
         buttons[i].on("click", callbacks[i])
         @prevControls.append(buttons[i])
+
+      @view.createKeyboardCommandOverlay()
 
       @sceneController = new SceneController(@model.route.dataSet.upperBoundary, @flycam, @model)
       meshes = @sceneController.getMeshes()

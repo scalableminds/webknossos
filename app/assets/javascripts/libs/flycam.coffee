@@ -29,7 +29,7 @@ class Flycam2d
     @direction = [0, 0, 1]
     @hasChanged = true
     @activePlane = PLANE_XY
-    @rayThreshold = [10, 10, 10, 100]
+    @rayThreshold = [50, 50, 50, 100]
     @spaceDirection = 1
 
   #reset : ->
@@ -217,4 +217,7 @@ class Flycam2d
     @rayThreshold[VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384
 
   getRayThreshold : (planeID) ->
-    @rayThreshold[planeID]
+    if planeID < 3
+      return @rayThreshold[planeID] * (@integerZoomSteps[planeID] + 1)
+    else
+      return @rayThreshold[planeID]

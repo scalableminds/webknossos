@@ -446,7 +446,6 @@ class Route
         index = i
         break
     @trees.splice(index, 1)
-    console.log @trees
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0

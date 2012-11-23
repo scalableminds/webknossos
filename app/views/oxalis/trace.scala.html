@@ -12,8 +12,27 @@
         <div id="skeletonview" class="inputcatcher"></div>
       </div>
       <div id="overlay">
-        <div id="status"></div>
-        <div id="optionswindow">
+        <div id="buttonbar">
+          <a href="#" class="btn">Save</a>
+          <a href="#" class="btn">Finish</a>
+          <a href="#" id="help-overlay" class="btn"><i class="icon-info-sign icon-black">
+          </i> Keys</a>
+        </div>
+        <div id="dataset" class="well well-small">Dataset</div>
+        <div class="tabbable">
+          <ul class="nav nav-tabs">
+            <li class="active"><a href="#tab1" data-toggle="tab">Review comments</a></li>
+            <li><a href="#tab2" data-toggle="tab">Options</a></li>
+          </ul>
+          <div class="tab-content">
+            <div class="tab-pane active" id="tab1">
+              <div id="review-comments"></div>
+            </div>
+            <div class="tab-pane" id="tab2">
+              <div id="status"></div>
+              <div id="optionswindow"></div>
+            </div>
+          </div>
         </div>
       </div>  
     </div>   

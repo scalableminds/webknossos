@@ -1,9 +1,9 @@
 ### define
-libs/simple_worker : SimpleWorker
+libs/dispatched_worker : DispatchedWorker
 ###
 
 load : (name, parentRequire, load, config) ->
 
-  load(new SimpleWorker(parentRequire.toUrl(name)))
+  load(new DispatchedWorker(parentRequire.toUrl(name)))
   return
 

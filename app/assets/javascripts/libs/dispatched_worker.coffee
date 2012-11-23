@@ -3,11 +3,11 @@ jquery : $
 underscore : _
 ###
 
-# `SimpleWorker` is a wrapper around the WebWorker API. First you
+# `DispatchedWorker` is a wrapper around the WebWorker API. First you
 # initialize it providing url of the javascript worker code. Afterwards
 # you can request work using `send` and wait for the result using the
 # returned deferred.
-class SimpleWorker
+class DispatchedWorker
 
   constructor : (url) ->
     @worker = new Worker(url)
@@ -37,7 +37,7 @@ class SimpleWorker
     deferred.promise()
 
 
-class SimpleWorker.Pool
+class DispatchedWorker.Pool
 
   constructor : (@url, @workerLimit = 3) ->
     @queue = []
@@ -60,7 +60,7 @@ class SimpleWorker.Pool
 
   spawnWorker : ->
 
-    worker = new SimpleWorker(@url)
+    worker = new DispatchedWorker(@url)
     worker.busy = false
     
     workerReset = =>
@@ -90,4 +90,4 @@ class SimpleWorker.Pool
     deferred = $.Deferred()
     @queue.push { data, deferred }
 
-SimpleWorker
+DispatchedWorker

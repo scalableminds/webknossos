@@ -39,6 +39,7 @@ class Input.KeyboardNoLoop
       (event) -> 
         callback(event) unless $(":focus").length
         return
+      ->
     )
     @bindings.push(binding)
 

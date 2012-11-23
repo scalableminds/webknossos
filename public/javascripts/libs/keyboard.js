@@ -224,7 +224,7 @@
 	if(window.addEventListener) {
 		window.addEventListener('keydown', keydown, false);
 		window.addEventListener('keyup', keyup, false);
-		window.addEventListener('onblur', blur, false);
+		window.addEventListener('blur', blur, false);
 	} else if(window.attachEvent) {
 		window.attachEvent('onkeydown', keydown);
 		window.attachEvent('onkeyup', keyup);
@@ -233,8 +233,8 @@
 		throw new Error('Cannot bind to keydown event. Both addEventListener and attachEvent are unsupported by your browser.');
 	}
 
-	KeyboardJS.activeKeys = getActiveKeys;
 	KeyboardJS.on = createBinding;
+	KeyboardJS.activeKeys = getActiveKeys;
 	KeyboardJS.clear = removeBindingByKeyCombo;
 	KeyboardJS.clear.key = removeBindingByKeyName;
 	KeyboardJS.locale = getSetLocale;
@@ -243,8 +243,8 @@
 	KeyboardJS.macro.remove = removeMacro;
 	KeyboardJS.getKey = getKeyName;
 	KeyboardJS.combo = {};
-	KeyboardJS.combo.parse = parseKeyCombo;
-	KeyboardJS.combo.stringify = stringifyKeyCombo;
+	KeyboardJS.parse = parseKeyCombo;
+	KeyboardJS.stringify = stringifyKeyCombo;
 
 	window.map = map;
 	window.macros = macros;
@@ -655,7 +655,6 @@
 	 * @param  {String} keyName The key name string.
 	 */
 	function removeActiveKey(keyName) {
-		if(keyName === 'super') { activeKeys = []; }
 		activeKeys.splice(activeKeys.indexOf(keyName), 1);
 	}
 

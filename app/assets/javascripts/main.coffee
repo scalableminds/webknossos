@@ -5,10 +5,14 @@ require.config
     "jquery" : "libs/jquery-1.7.1"
     "underscore" : "libs/underscore-1.2.0.min"
     "bootstrap" : "libs/bootstrap.min"
+    "worker" : "libs/worker_plugin"
+
   shim : 
     "underscore" :
       exports : "_"
     "bootstrap" : [ "jquery" ]
+    "libs/viz" :
+      exports : "Viz"
 
 require [
   "jquery"
@@ -195,6 +199,28 @@ require [
         #     type : "POST"
         #     url : "/tracing?id=#{tracing.id}&isNew=#{Number(tracing.isNew)}"
         # )
+
+      "admin/tasks/overview" : ->
+
+        require ["worker!libs/viz"], (VizWorker) ->
+
+          graphSource = $("#graphData").html()
+          userData = JSON.parse($("#userData").html())
+
+          VizWorker.send(
+            source : graphSource
+            format : "svg"
+          ).done (svgResult) ->
+
+            $(".graph").html(svgResult)
+
+            userData.map (user) ->
+              $("#" + user.id + " > text").popover(
+                title: user.name,
+                html: true,
+                trigger: "hover",
+                content: user.tooltip
+              )
 
 
       "admin/tasks/algorithm" : ->

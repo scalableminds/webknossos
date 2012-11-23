@@ -1,4 +1,7 @@
-### define ###
+### define 
+jquery : $
+underscore : _
+###
 
 # `SimpleWorker` is a wrapper around the WebWorker API. First you
 # initialize it providing url of the javascript worker code. Afterwards
@@ -9,29 +12,30 @@ class SimpleWorker
   constructor : (url) ->
     @worker = new Worker(url)
 
-    @worker.onerror = (err) -> 
-      console?.error(err)
+    @worker.onerror = (err) -> console?.error(err)
+
   
   # Returns a `$.Deferred` object representing the completion state.
-  send : (data) ->  
+  send : (payload) ->  
     
-    deferred = $.Deferred()
+    deferred = new $.Deferred()
 
-    workerHandle = data.workerHandle = Math.random()
+    workerHandle = Math.random()
 
-    workerMessageCallback = (event) =>
+    workerMessageCallback = ({ data : packet }) =>
       
-      if (result = event.data).workerHandle == workerHandle
+      if packet.workerHandle == workerHandle
         @worker.removeEventListener("message", workerMessageCallback, false)
-        if err = result.err
-          deferred.reject(err)
+        if packet.error
+          deferred.reject(packet.error)
         else 
-          deferred.resolve(result)
+          deferred.resolve(packet.payload)
 
     @worker.addEventListener("message", workerMessageCallback, false)
-    @worker.postMessage(data)
+    @worker.postMessage { workerHandle, payload }
 
     deferred.promise()
+
 
 class SimpleWorker.Pool
 

@@ -9,6 +9,7 @@ class PullQueue
   BATCH_LIMIT : 10
   BATCH_SIZE : 10
   ROUND_TRIP_TIME_SMOOTHER : .125
+  BUCKET_TIME_SMOOTHER : .125
 
   cube : null
   queue : []
@@ -154,12 +155,17 @@ class PullQueue
       @pull()
 
 
-  addRoundTripTime : (roundTripTime) ->
+  updateConnectionInfo : (roundTripTime, bucketCount) ->
 
-    @roundTripTime = if @roundTripTime == 0
-      roundTripTime
+    if @roundTripTime? and @bucketTime?
+      @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
+      @bucketTime = (1 - @BUCKET_TIME_SMOOTHER) * @bucketTime + @BUCKET_TIME_SMOOTHER * (new Date() - @lastReceiveTime) / bucketCount
     else
-      (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
+      @roundTripTime = roundTripTime
+      @bucketTime = roundTripTime / bucketCount
+
+    @bucketsPerSecond = 1000 / @bucketTime
+    @lastReceiveTime = new Date()
 
 
   getLoadBucketSocket : _.once ->

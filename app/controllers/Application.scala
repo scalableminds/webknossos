@@ -4,9 +4,15 @@ import brainflight.security.Secured
 import play.api.mvc.Action
 import play.api.mvc._
 import play.api._
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+import akka.actor.Props
+import brainflight.mail.Mailer
 
 object Application extends Controller with Secured {
 
+  val Mailer = Akka.system.actorOf(Props[Mailer], name = "mailActor")
+  
   // -- Javascript routing
 
   def javascriptRoutes = Action { implicit request =>

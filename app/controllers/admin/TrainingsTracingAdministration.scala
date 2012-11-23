@@ -8,6 +8,9 @@ import views._
 import models.user.User
 import play.api.data._
 import play.api.data.Forms._
+import controllers.Application
+import brainflight.mail.Send
+import brainflight.mail.DefaultMails
 
 object TrainingsTracingAdministration extends Controller with Secured {
   val DefaultRole = Role.Admin
@@ -19,7 +22,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
   def startReview(training: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(training)
-      if(tracing.state.isReadyForReview)
+      if (tracing.state.isReadyForReview)
       altered <- Tracing.assignReviewee(tracing, request.user)
     } yield {
       AjaxOk.success(
@@ -39,7 +42,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
 
   def abortReview(trainingsId: String) = Authenticated { implicit request =>
     Tracing.findOneById(trainingsId) map { training =>
-      val altered = training.update( _.unassignReviewer )
+      val altered = training.update(_.unassignReviewer)
       AjaxOk.success(
         html.admin.task.trainingsTasksDetailTableItem(request.user, altered),
         "You got unassigned from this training.")
@@ -74,8 +77,13 @@ object TrainingsTracingAdministration extends Controller with Secured {
           if (passed) {
             trainee.update(_.addExperience(training.domain, training.gain))
             tracing.update(_.finishReview(comment).finish)
-          } else
+            Application.Mailer ! Send(
+              DefaultMails.trainingsSuccessMail(trainee.name, trainee.email, comment))
+          } else {
             tracing.update(_.finishReview(comment).reopen)
+            Application.Mailer ! Send(
+              DefaultMails.trainingsFailureMail(trainee.name, trainee.email, comment))
+          }
           AjaxOk.success("Trainings review finished.")
         }) getOrElse AjaxBadRequest.error("Trainings-Tracing not found.")
       })

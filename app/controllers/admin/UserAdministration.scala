@@ -50,7 +50,7 @@ object UserAdministration extends Controller with Secured {
   private def verifyUser(userId: String) = {
     User.findOneById(userId) map { user =>
       if (!user.verified) {
-        Authentication.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
+        Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
         user.update(_.verify)
       } else
         user

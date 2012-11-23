@@ -13,6 +13,8 @@ require.config
     "bootstrap" : [ "jquery" ]
     "libs/viz" :
       exports : "Viz"
+    "routes" :
+      exports : "jsRoutes"
 
 require [
   "jquery"

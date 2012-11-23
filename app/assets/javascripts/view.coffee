@@ -159,15 +159,8 @@ class View
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
     
     # update postion and FPS displays
-    position2d = @flycam.getGlobalPos()
-    texturePositionXY = @flycam.texturePosition[0]
-    # without rounding the position becomes really long and blocks the canvas mouse input
-    position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
-    texturePositionXY = [Math.round(texturePositionXY[0]),Math.round(texturePositionXY[1]),Math.round(texturePositionXY[2])]
-    #@positionStats.html "Flyflycam: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{@flycam.getIntegerZoomStep(@flycam.getActivePlane())}<br />activePlane: #{@flycam.getActivePlane()}" 
     @stats.update()
 
-    @newTextures[VIEW_3D] = @newTextures[0] or @newTextures[1] or @newTextures[2]
     viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
     @renderer.autoClear = true
     colors   = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffffff]

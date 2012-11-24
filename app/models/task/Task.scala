@@ -195,6 +195,7 @@ object Task extends BasicDAO[Task]("tasks") {
       user,
       findAllAssignableNonTrainings.filter(hasEnoughExperience(user)).toArray)
   }
+  
   private def nextTaskForUser(user: User, tasks: Array[Task]): Future[Option[Task]] = {
     if (tasks.isEmpty) {
       Promise.successful(None)(Akka.system.dispatcher)

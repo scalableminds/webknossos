@@ -28,8 +28,6 @@ class Gui
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
     @settings = 
-      save : @saveNow
-      finish : @finish
       upload : @uploadNML
       download : => window.open(routes.controllers.admin.NMLIO.downloadList().url,
                                 "_blank", "width=700,height=400,location=no,menubar=no")
@@ -65,10 +63,6 @@ class Gui
     container.append @gui.domElement
 
     fTask = @gui.addFolder("Task")
-    (fTask.add @settings, "save")
-                          .name("Save now")
-    (fTask.add @settings, "finish")
-                          .name("Finish task")
     (fTask.add @settings, "upload")
                           .name("Upload NML")
     (fTask.add @settings, "download")
@@ -167,10 +161,6 @@ class Gui
         -> Toast.success("Saved!")
         -> Toast.error("Couldn't save. Please try again.")
       )
-
-  finish : =>
-    routes.controllers.TaskController.finish("123").ajax()
-    Toast.error("Yeah, thats not implemented yet.")
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")

@@ -79,6 +79,7 @@ case class Tracing(
     this.copy(
       _id = new ObjectId,
       _user = user._id,
+      state = TracingState.Assigned,
       trees =
         NMLParser.createUniqueIds(training.trees ::: this.trees),
       timestamp = System.currentTimeMillis,

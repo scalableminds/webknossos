@@ -1,4 +1,4 @@
-@()(implicit session: brainflight.view.AuthedSessionData)
+@(tracing: models.tracing.Tracing)(implicit session: brainflight.view.AuthedSessionData)
 
 @main( ){
   <script src="@routes.Assets.at("javascripts/oxalis.js")"></script>
@@ -14,7 +14,7 @@
       <div id="overlay">
         <div id="buttonbar">
           <a href="#" class="btn">Save</a>
-          <a href="#" class="btn">Finish</a>
+          <a href="@controllers.routes.TracingController.finishWithRedirect(tracing.id)" class="btn">Finish</a>
           <a href="#" id="help-overlay" class="btn"><i class="icon-info-sign icon-black">
           </i> Keys</a>
         </div>

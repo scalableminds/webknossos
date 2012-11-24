@@ -40,23 +40,4 @@ object TaskController extends Controller with Secured {
         Promise.pure(AjaxBadRequest.error(Messages("task.alreadyHasOpenOne")))
     }
   }
-
-  def finish(tracingId: String) = Authenticated { implicit request =>
-    Tracing
-      .findOneById(tracingId)
-      .filter(_._user == request.user._id)
-      .map { tracing =>
-        if (tracing.isTrainingsTracing) {
-          val alteredExp = tracing.update(_.passToReview)
-          tracing.taskId.flatMap(Task.findOneById).map { task =>
-            AjaxOk.success(html.user.dashboard.taskTracingTableItem(task, alteredExp), Messages("task.passedToReview"))
-          } getOrElse BadRequest(Messages("task.notFound"))
-        } else {
-          val alteredExp = tracing.update(_.finish)
-          tracing.taskId.flatMap(Task.findOneById).map { task =>
-            AjaxOk.success(html.user.dashboard.taskTracingTableItem(task, alteredExp), Messages("task.finished"))
-          } getOrElse BadRequest(Messages("task.notFound"))
-        }
-      } getOrElse BadRequest(Messages("tracing.notFound"))
-  }
 }

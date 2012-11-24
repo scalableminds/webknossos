@@ -17,31 +17,37 @@ object Game extends Controller with Secured {
   def createTracingIDInfo(tracingId: String) = Json.obj(
     "task" -> Json.obj(
       "id" -> tracingId))
-      
-  def index = Authenticated { implicit request =>      
-    if(UsedTracings.by(request.user).isEmpty)
-      Redirect(routes.UserController.dashboard)
-    else
-      Ok(html.oxalis.trace())
+
+  def index = Authenticated { implicit request =>
+    UsedTracings
+      .by(request.user)
+      .headOption
+      .flatMap(Tracing.findOneById)
+      .map(tracing => Ok(html.oxalis.trace(tracing)))
+      .getOrElse(Redirect(routes.UserController.dashboard))
   }
-  
+
   def trace(tracingId: String) = Authenticated { implicit request =>
     val user = request.user
-    
+
     Tracing.findOneById(tracingId)
-      .filter( _._user == user._id)
-      .map(exp => UsedTracings.use(user, exp))
-      
-    Ok(html.oxalis.trace())
+      .filter(_._user == user._id)
+      .map { tracing =>
+        UsedTracings.use(user, tracing)
+        Ok(html.oxalis.trace(tracing))
+      }
+      .getOrElse(BadRequest("Tracing not found."))
   }
-  
-  def reviewTrace(tracingId: String) = Authenticated(role = Role.Admin){ implicit request =>
+
+  def reviewTrace(tracingId: String) = Authenticated(role = Role.Admin) { implicit request =>
     val user = request.user
-    
+
     Tracing.findOneById(tracingId)
-      .map(exp => UsedTracings.use(user, exp))
-      
-    Ok(html.oxalis.trace())
+      .map { tracing =>
+        UsedTracings.use(user, tracing)
+        Ok(html.oxalis.trace(tracing))
+      }
+      .getOrElse(BadRequest("Tracing not found."))
   }
 
   def initialize = Authenticated { implicit request =>

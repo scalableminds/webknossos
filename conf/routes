@@ -9,7 +9,6 @@ GET     /dashboard                          controllers.UserController.dashboard
 
 # Tasks
 GET     /tasks/requestTask                  controllers.TaskController.request
-GET     /tasks/:id/finish                   controllers.TaskController.finish(id: String)
 
 # Jira integration
 GET     /jira                               controllers.Jira.index
@@ -41,11 +40,13 @@ POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( d
 GET     /game/initialize                    controllers.Game.initialize
 
 # Tracing Stuff
-POST      /tracing                          controllers.TracingController.useAsActive(id: String, isNew: Boolean)
-POST      /tracing/create                   controllers.TracingController.createExplorational
-GET       /tracing                          controllers.TracingController.list
-GET       /tracing/:tracingId               controllers.TracingController.info( tracingId: String )
-PUT       /tracing/:tracingId               controllers.TracingController.update( tracingId: String )
+POST    /tracing                            controllers.TracingController.useAsActive(id: String, isNew: Boolean)
+POST    /tracing/create                     controllers.TracingController.createExplorational
+GET     /tracing                            controllers.TracingController.list
+GET     /tracing/:tracingId                 controllers.TracingController.info( tracingId: String )
+PUT     /tracing/:tracingId                 controllers.TracingController.update( tracingId: String )
+GET     /tracing/:tracingId/finishAndRedirect  controllers.TracingController.finishWithRedirect( tracingId: String )
+GET     /tracing/:tracingId/finish          controllers.TracingController.finish( tracingId: String )
 
 #Admin pages
 GET     /admin/nmldownload                  controllers.admin.NMLIO.downloadList

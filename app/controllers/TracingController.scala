@@ -27,6 +27,10 @@ import brainflight.tools.geometry.Point3D
 import models.tracing.UsedTracings
 import models.user.TimeTracking
 import brainflight.view.helpers._
+import models.task.Task
+import views._
+import play.api.i18n.Messages
+import models.tracing.UsedTracings
 
 /**
  * scalableminds - brainflight
@@ -118,4 +122,43 @@ object TracingController extends Controller with Secured {
       }
     } getOrElse (BadRequest("Update for tracing with id '%s' failed.".format(tracingId)))
   }
+
+  private def finishTracing(user: User, tracingId: String): Either[String, (Task, Tracing, String)] = {
+    Tracing
+      .findOneById(tracingId)
+      .filter(tracing => tracing._user == user._id && tracing.state.isInProgress)
+      .map { tracing =>
+        if (tracing.isTrainingsTracing) {
+          val alteredExp = tracing.update(_.passToReview)
+          tracing.taskId.flatMap(Task.findOneById).map { task =>
+            UsedTracings.removeAll(user)
+            Right((task, alteredExp, Messages("task.passedToReview")))
+          } getOrElse (Left(Messages("task.notFound")))
+        } else {
+          val alteredExp = tracing.update(_.finish)
+          tracing.taskId.flatMap(Task.findOneById).map { task =>
+            UsedTracings.removeAll(user)
+            Right((task, alteredExp, Messages("task.finished")))
+          } getOrElse Left(Messages("task.notFound"))
+        }
+      } getOrElse Left(Messages("tracing.notFound"))
+  }
+
+  def finish(tracingId: String) = Authenticated { implicit request =>
+    finishTracing(request.user, tracingId).fold(
+      error =>
+        AjaxBadRequest.error(error),
+      success =>
+        AjaxOk.success(
+          html.user.dashboard.taskTracingTableItem(success._1, success._2), success._3))
+  }
+
+  def finishWithRedirect(tracingId: String) = Authenticated { implicit request =>
+    finishTracing(request.user, tracingId).fold(
+      error =>
+        BadRequest(error),
+      success =>
+        Redirect(routes.UserController.dashboard).flashing("success" -> success._3))
+  }
+
 }

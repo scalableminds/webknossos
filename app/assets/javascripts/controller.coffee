@@ -127,6 +127,11 @@ class Controller
 
   initMouse : ->
 
+    # hide contextmenu, while rightclicking a canvas
+    $("#render").bind "contextmenu", (event) ->
+      event.preventDefault()
+      return
+
     for planeId in ["xy", "yz", "xz"]
       new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
@@ -154,11 +159,8 @@ class Controller
     
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
-      if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault();
-
-    # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
-      event.preventDefault(); return
+      event.preventDefault() if (event.which == 32 or 37 <= event.which <= 40) and !$(":focus").length
+      return
 
     new Input.Keyboard(
 
@@ -321,7 +323,7 @@ class Controller
 
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = @flycam.getIndices(plane)
-      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance()+1)
+      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance(ind[2])+1)
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
         vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex

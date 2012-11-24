@@ -13,6 +13,8 @@ require.config
     "bootstrap" : [ "jquery" ]
     "libs/viz" :
       exports : "Viz"
+    "routes" :
+      exports : "jsRoutes"
 
 require [
   "jquery"
@@ -135,6 +137,7 @@ require [
         "keyup" : (event) ->
           if shiftKeyPressed and (event.which == 16 or event.which == 91)
             shiftKeyPressed = false
+          return
         
 
 

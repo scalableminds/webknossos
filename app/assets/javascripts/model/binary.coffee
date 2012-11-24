@@ -55,8 +55,8 @@ class Binary
       console.log "Connection: latency:", @queue.roundTripTime, "bucketsPerSecond:", @queue.bucketsPerSecond
       @queue.clear()
 
-      for i in [0...Math.min(options.length, @planes.length)]
-        @planes[i].ping(position, @direction, options[i]) if options[i]? 
+      #for i in [0...Math.min(options.length, @planes.length)]
+      @planes[0].ping(position, @direction, options[0]) if options[0]? 
 
       @queue.pull()
       console.timeEnd "ping"

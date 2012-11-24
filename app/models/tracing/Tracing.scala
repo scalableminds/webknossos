@@ -201,6 +201,10 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       Point3D(0, 0, 0),
       tracingType = TracingType.Explorational))
   }
+  
+  def findTrainingForReviewTracing(tracing: Tracing) = {
+    findOne(MongoDBObject("review.reviewTracing" -> tracing._id))
+  }
 
   def findOpenTracingFor(user: User, isExploratory: Boolean) =
     findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "taskId" -> MongoDBObject("$exists" -> isExploratory)))

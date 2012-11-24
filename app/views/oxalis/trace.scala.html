@@ -1,4 +1,4 @@
-@(tracing: models.tracing.Tracing)(implicit session: brainflight.view.AuthedSessionData)
+@(tracing: models.tracing.Tracing)(additionalHTML: Html)(implicit session: brainflight.view.AuthedSessionData)
 
 @import models.tracing.TracingType
 
@@ -32,7 +32,9 @@
           </ul>
           <div class="tab-content">
             <div class="tab-pane active" id="tab1">
-              <div id="review-comments"></div>
+              <div id="review-comments">
+                @additionalHTML
+              </div>
             </div>
             <div class="tab-pane" id="tab2">
               <div id="status"></div>

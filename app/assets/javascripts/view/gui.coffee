@@ -160,8 +160,6 @@ class Gui
     fTrees.open()
     fNodes.open()
 
-    @gui.close()
-
   saveNow : =>
     @model.user.pushImpl()
     @model.route.pushImpl()

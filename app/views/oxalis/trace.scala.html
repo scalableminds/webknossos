@@ -1,5 +1,7 @@
 @(tracing: models.tracing.Tracing)(implicit session: brainflight.view.AuthedSessionData)
 
+@import models.tracing.TracingType
+
 @main( ){
   <script src="@routes.Assets.at("javascripts/oxalis.js")"></script>
   <div id="container">
@@ -14,9 +16,13 @@
       <div id="overlay">
         <div id="buttonbar">
           <a href="#" class="btn">Save</a>
-          <a href="@controllers.routes.TracingController.finishWithRedirect(tracing.id)" class="btn">Finish</a>
-          <a href="#" id="help-overlay" class="btn"><i class="icon-info-sign icon-black">
-          </i> Keys</a>
+          @if(tracing.tracingType == TracingType.Task || tracing.tracingType == TracingType.Training){
+            <a href="@controllers.routes.TracingController.finishWithRedirect(tracing.id)" class="btn">Finish</a>
+          }
+          @if(tracing.tracingType != TracingType.Training){
+            <a href="@controllers.admin.routes.NMLIO.download(tracing.id)" class="btn"><i class="icon-download icon-black"></i> NML</a>
+          }
+          <a href="#" id="help-overlay" class="btn"><i class="icon-info-sign icon-black"></i> Keys</a>
         </div>
         <div id="dataset" class="well well-small">@tracing.tracingType<br />DataSet: @tracing.dataSetName</div>
         <div class="tabbable">

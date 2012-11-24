@@ -15,7 +15,7 @@
       </div>
       <div id="overlay">
         <div id="buttonbar">
-          <a href="#" class="btn">Save</a>
+          <a href="#" onclick="window.oxalis.gui.saveNow()" class="btn">Save</a>
           @if(tracing.tracingType == TracingType.Task || tracing.tracingType == TracingType.Training){
             <a href="@controllers.routes.TracingController.finishWithRedirect(tracing.id)" class="btn">Finish</a>
           }

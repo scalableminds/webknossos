@@ -2,7 +2,6 @@
 libs/datgui/dat.gui : DatGui
 libs/request : Request
 libs/event_mixin : EventMixin
-routes : routes
 view/toast : Toast
 ###
 
@@ -28,11 +27,6 @@ class Gui
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
     @settings = 
-      save : @saveNow
-      finish : @finish
-      upload : @uploadNML
-      download : => window.open(routes.controllers.admin.NMLIO.downloadList().url,
-                                "_blank", "width=700,height=400,location=no,menubar=no")
       
       position : "#{initPos[0]}, #{initPos[1]}, #{initPos[2]}"
       lockZoom: data.lockZoom
@@ -63,16 +57,6 @@ class Gui
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
 
     container.append @gui.domElement
-
-    fTask = @gui.addFolder("Task")
-    (fTask.add @settings, "save")
-                          .name("Save now")
-    (fTask.add @settings, "finish")
-                          .name("Finish task")
-    (fTask.add @settings, "upload")
-                          .name("Upload NML")
-    (fTask.add @settings, "download")
-                          .name("Download NML")
     
     fPosition = @gui.addFolder("Position")
     (fPosition.add @settings, "position")
@@ -152,7 +136,6 @@ class Gui
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
-    fTask.open()
     fPosition.open()
     #fControls.open()
     #fView.open()
@@ -168,28 +151,10 @@ class Gui
         -> Toast.error("Couldn't save. Please try again.")
       )
 
-  finish : =>
-    routes.controllers.TaskController.finish("123").ajax()
-    Toast.error("Yeah, thats not implemented yet.")
-
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
     pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
     @flycam.setGlobalPos(pos)
-
-  uploadNML : =>
-    # Create dummy input field
-    input = $("<input>", type : "file")
-    input.trigger("click")
-    input.on("change", (evt) ->
-      file = evt.target.files[0]
-      Request.send(
-        _.extend(routes.controllers.admin.NMLIO.upload(),
-          formData :
-            nmlFile : file
-        )
-      ).done -> window.location.reload()
-    )
 
   updateGlobalPosition : =>
     pos = @flycam.getGlobalPos()

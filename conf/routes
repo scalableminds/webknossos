@@ -46,7 +46,9 @@ GET     /tracing                            controllers.TracingController.list
 GET     /tracing/:tracingId                 controllers.TracingController.info( tracingId: String )
 PUT     /tracing/:tracingId                 controllers.TracingController.update( tracingId: String )
 GET     /tracing/:tracingId/finishAndRedirect  controllers.TracingController.finishWithRedirect( tracingId: String )
-GET     /tracing/:tracingId/finish          controllers.TracingController.finish( tracingId: String )
+GET     /tracing/:tracingId/finish          controllers.TracingController.finish( tracingId: String, explorational: Boolean = false )
+GET     /tracing/:tracingId/finishExperimental controllers.TracingController.finish( tracingId: String, explorational: Boolean = true )
+
 
 #Admin pages
 GET     /admin/nmldownload                  controllers.admin.NMLIO.downloadList
@@ -90,6 +92,7 @@ POST    /admin/users/verify                 controllers.admin.UserAdministration
 POST    /admin/users/delete                 controllers.admin.UserAdministration.deleteBulk
 GET     /admin/users/:id/verify             controllers.admin.UserAdministration.verify(id: String)
 GET     /admin/users/:id/delete             controllers.admin.UserAdministration.delete(id: String)
+GET     /admin/users/:id/loginAs            controllers.admin.UserAdministration.loginAsUser(id: String)
 POST    /admin/users/addRole                controllers.admin.UserAdministration.addRoleBulk
 POST    /admin/users/removeRole             controllers.admin.UserAdministration.removeRoleBulk
 

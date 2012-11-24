@@ -37,14 +37,7 @@
       </thead>
       <tbody>
       @explorativeTracings.map{ tracing => 
-        <tr>
-          <td> @formatHash(tracing.id) </td>
-          <td> @tracing.dataSetName </td>
-          <td> @tracing.trees.size </td>
-          <td> @tracing.tracingType </td>
-          <td> @formatDate(tracing.date) </td>
-          <td> <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a></td>
-        </tr>
+        @explorativeTracingTableItem(tracing)
       }
       </tbody>
     </table>
@@ -63,7 +56,7 @@
       <div class="controls">
         <input type="file" name="nmlFile" id="nmlFile" /> 
       </div>
-      <input type="submit" value="Upload NMl & explore" class="btn"/>
+      <input type="submit" value="Upload NML & explore" class="btn"/>
     }
     </div>
     @trackedTimeOpt.map{ trackedTime =>

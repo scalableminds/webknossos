@@ -6,7 +6,7 @@ import brainflight.mail.Send
 import brainflight.security.AuthenticatedRequest
 import brainflight.security.Secured
 import controllers._
-import models.security.Role
+import models.security._
 import models.user.TimeTracking
 import models.user.User
 import play.api.i18n.Messages
@@ -99,6 +99,13 @@ object UserAdministration extends Controller with Secured {
     User.findOneById(userId) map { user =>
       user.update(_.removeRole(roleName))
     }
+  }
+
+  def loginAsUser(userId: String) = Authenticated(permission = Some(Permission("admin.ghost"))) { implicit request =>
+    User.findOneById(userId) map { user =>
+      Redirect(controllers.routes.UserController.dashboard)
+        .withSession(Secured.createSession(user))
+    } getOrElse (BadRequest("User not found."))
   }
 
   def removeRoleBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>

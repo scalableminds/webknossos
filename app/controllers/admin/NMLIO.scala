@@ -23,17 +23,24 @@ object NMLIO extends Controller with Secured {
   }
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
-    request.body.file("nmlFile").map { nmlFile =>
+    request.body.file("nmlFile").flatMap { nmlFile =>
       implicit val ctx = NMLContext(request.user)
-      (new NMLParser(nmlFile.ref.file).parse).foreach { tracing =>
-        Logger.debug("Successfully parsed nmlFile")
-        Tracing.save(tracing.copy(
-          tracingType = TracingType.Explorational))
-        UsedTracings.use(request.user, tracing)
-      }
-      Ok("File uploaded")
+      (new NMLParser(nmlFile.ref.file).parse)
+        .map { tracing =>
+          Logger.debug("Successfully parsed nmlFile")
+          Tracing.save(tracing.copy(
+            tracingType = TracingType.Explorational))
+          UsedTracings.use(request.user, tracing)
+          tracing
+        }
+        .headOption
+        .map { tracing =>
+          Redirect(controllers.routes.Game.trace(tracing.id)).flashing(
+            "success" -> "NML upload successful")
+        }
     }.getOrElse {
-      BadRequest("Missing file")
+      Redirect(controllers.routes.UserController.dashboard).flashing(
+        "error" -> "Missing file")
     }
   }
 

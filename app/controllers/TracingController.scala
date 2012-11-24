@@ -27,6 +27,10 @@ import brainflight.tools.geometry.Point3D
 import models.tracing.UsedTracings
 import models.user.TimeTracking
 import brainflight.view.helpers._
+import models.task.Task
+import views._
+import play.api.i18n.Messages
+import models.tracing.UsedTracings
 
 /**
  * scalableminds - brainflight
@@ -118,4 +122,47 @@ object TracingController extends Controller with Secured {
       }
     } getOrElse (BadRequest("Update for tracing with id '%s' failed.".format(tracingId)))
   }
+
+  private def finishTracing(user: User, tracingId: String): Either[String, (Tracing, String)] = {
+    Tracing
+      .findOneById(tracingId)
+      .filter(tracing => tracing._user == user._id && tracing.state.isInProgress)
+      .map { tracing =>
+        if (tracing.isTrainingsTracing) {
+          val alteredTracing = tracing.update(_.passToReview)
+          tracing.taskId.flatMap(Task.findOneById).map { task =>
+            UsedTracings.removeAll(user)
+            Right((alteredTracing, Messages("task.passedToReview")))
+          } getOrElse (Right(alteredTracing, Messages("tracing.finished")))
+        } else {
+          val alteredTracing = tracing.update(_.finish)
+          tracing.taskId.flatMap(Task.findOneById).map { task =>
+            UsedTracings.removeAll(user)
+            Right((alteredTracing, Messages("task.finished")))
+          } getOrElse (Right(alteredTracing, Messages("tracing.finished")))
+        }
+      } getOrElse Left(Messages("tracing.notFound"))
+  }
+
+  def finish(tracingId: String, experimental: Boolean) = Authenticated { implicit request =>
+    finishTracing(request.user, tracingId).fold(
+      error =>
+        AjaxBadRequest.error(error),
+      success =>
+        if (experimental)
+          AjaxOk.success(success._2)
+        else
+          success._1.taskId.flatMap(Task.findOneById).map { task =>
+            AjaxOk.success(html.user.dashboard.taskTracingTableItem(task, success._1), success._2)
+          }.getOrElse(AjaxBadRequest.error("task.notfound")))
+  }
+
+  def finishWithRedirect(tracingId: String) = Authenticated { implicit request =>
+    finishTracing(request.user, tracingId).fold(
+      error =>
+        BadRequest(error),
+      success =>
+        Redirect(routes.UserController.dashboard).flashing("success" -> success._2))
+  }
+
 }

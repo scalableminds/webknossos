@@ -1,19 +1,12 @@
 @(tracing: models.tracing.Tracing, form: Form[String])(implicit session: brainflight.view.AuthedSessionData)
-
-@main(){
-  <div class="container">    
-    <h3>Review of Trainings-Tracing</h3>
-    @helper.form(action = controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, true), 'class -> "form-horizontal") {
-      <div class="control-group">
-        <label class="control-label" for="comment">Comment</label>
-        <div class="controls">
-          <textarea name="comment" id="comment" class="input-xxlarge" rows="4"></textarea>
-        </div>
-      </div>
-      <div class="form-actions">
-        <a href="@controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, true)" data-ajax="submit,redirect=@controllers.admin.routes.TrainingsTaskAdministration.list" class="btn btn-primary">Accept tracing</a>
-        <a href="@controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, false)" data-ajax="submit,redirect=@controllers.admin.routes.TrainingsTaskAdministration.list" class="btn btn-danger">Reject tracing</a>
-      </div>
-    }
+<h5>Review of Trainings-Tracing</h5>
+@helper.form(action = controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, true), 'class -> "form-vertical") {
+  <div class="control-group">
+    <label class="control-label" for="comment">Comment</label>
+    <div class="controls">
+      <textarea name="comment" id="comment" class="input-xlarge" style="box-sizing: border-box;" rows="15"></textarea>
+    </div>
   </div>
+  <a href="@controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, true)" data-ajax="submit,redirect=@controllers.admin.routes.TrainingsTaskAdministration.list" class="btn btn-primary">Accept tracing</a>
+  <a href="@controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, false)" data-ajax="submit,redirect=@controllers.admin.routes.TrainingsTaskAdministration.list" class="btn btn-danger">Reject tracing</a>
 }

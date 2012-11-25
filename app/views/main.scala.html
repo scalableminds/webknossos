@@ -1,78 +1,34 @@
-@(userOpt: Option[User], showNavButtons: Boolean = true)(body: Html)
+@(showNavButtons: Boolean = true)(body: Html)(implicit session: brainflight.view.SessionData)
 
+<!doctype html>
 <html>
-    <head>
-        <title>Oxalis</title>
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/jquery-1.7.1.js")"></script>
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/underscore-1.2.0.min.js")"></script>
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/backbone-min.js")"></script>
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
-        <script type="text/javascript" src="@routes.Application.javascriptRoutes"></script>
-    </head>
-    <body>
-        <header>
-            <a href="@routes.Test.index" id="logo">Ox<span>alis</span></a>
-            @if(showNavButtons){
-              <a href="@routes.Jira.index" id="issue-submit-button">Submit an issue</a>
-              <dl id="user">
-              @userOpt.map{ user =>
-                  <dt>@user.name <span>(@user.email)</span></dt>
-                  <dd>
-                    <a href="@routes.Application.logout()">Logout</a>
-                </dd>
-                }.getOrElse{
-                  <dd>
-                    <a href="@controllers.login.routes.FacebookLogin.login()">Login with Facebook</a>
-                </dd>
-                  <dd>
-                    <a href="@controllers.login.routes.TwitterLogin.login()">Login with Twitter</a>
-                </dd>
-                  <dd>
-                    <a href="@routes.Application.login()">Login</a>
-                </dd>
-                }
-            </dl>
-           }
-        </header>
-        <!-- 
-        <nav>
-            <h4 class="dashboard"><a href="#/">Dashboard</a></h4>
-            <ul id="projects">
-                <li>
-                    <span class="toggle"></span>
-                    <h4 class="groupName">Static / Test</h4>
-                    <span class="loader">Loading</span>
-                    <ul>
-                        <li>
-                            <a class="name" href="@routes.Test.index">Index</a>
-                        </li>
-                        <li>
-                            <a class="name" href="@routes.Test.demo">Demo</a>
-                        </li>
-                        <li>
-                            <a class="name" href="@routes.Test.tests">Tests</a>
-                        </li>
-                    </ul>
-                    <span class="toggle"></span>
-                    <h4 class="groupName">Administration</h4>
-                    <span class="loader">Loading</span>
-                    <ul>
-                        <li>
-                            <a class="name" href="@controllers.admin.routes.NMLIO.uploadForm">NML Upload</a>
-                        </li>
-                        <li>
-                            <a class="name" href="@controllers.admin.routes.NMLIO.downloadList">NML Download</a>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-        </nav>
-     -->
-        <div id="mainContainer">
-            @body
+  <head>
+    <title>Oxalis</title>
+    <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("css/bootstrap.min.css")">
+    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+    <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/require-2.1.1.js")"></script>
+    <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
+  </head>
+  <body>
+    @mainHeader(showNavButtons)    
+    <div id="alert-container">
+      @session.flash.data.map{ f =>
+        <div class="alert alert-@f._1">
+          <a href="#" class="close" data-dismiss="alert">×</a>
+          @f._2
         </div>
-    </body>
+      }
+    </div>
+    <div id="main-container">
+      @body
+    </div>
+    <!-- Prompt IE 6 users to install Chrome Frame. Remove this if you want to support IE 6.
+       chromium.org/developers/how-tos/chrome-frame-getting-started -->
+    <!--[if lt IE 9 ]>
+      <script src="//ajax.googleapis.com/ajax/libs/chrome-frame/1.0.3/CFInstall.min.js"></script>
+      <script>window.attachEvent('onload',function(){CFInstall.check({mode:'overlay'})})</script>
+    <![endif]-->
+  </body>
 </html>
 

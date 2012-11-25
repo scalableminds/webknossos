@@ -1,0 +1,83 @@
+@(tracings: List[models.tracing.Tracing], taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
+
+@import play.api.libs.json.Json
+
+@taskTypeHelpLink() = {
+  <a href="@controllers.admin.routes.TaskTypeAdministration.list">Create a new Type</a>
+}
+
+@main(){
+  <div class="container">
+    
+    <h3>Create Task from explorative Tracing</h3>
+    <div class="well">
+      Every node in the tracing creates a new task. To create an explorative tracing go to the <a href="@routes.UserController.dashboard">dashboard</a>.<br /><br />
+      @helper.form(controllers.admin.routes.TaskAdministration.createFromTracing, 'class -> "form-horizontal") {
+          
+        @helper.select(tracingForm("tracing"), tracings.map { exp =>
+          exp.id -> (exp.dataSetName + " " + formatDate(exp.date)) 
+        })
+        
+        @helper.select(tracingForm("taskType"), taskTypes.map { tt =>
+          tt.id -> tt.summary
+        }, Symbol("help-inline") -> taskTypeHelpLink)
+
+        @helper.input(tracingForm("experience.domain")) { (id, name, value, args) =>
+          <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(tracingForm("experience.value"), 'type -> "number")
+
+        @helper.inputText(tracingForm("priority"), 'type -> "number")
+        @helper.inputText(tracingForm("taskInstances"), 'type -> "number", 'min -> 0)
+        
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
+
+    <h3>Create Task</h3>
+    <div class="well">
+      @helper.form(controllers.admin.routes.TaskAdministration.createFromForm, 'class -> "form-horizontal") {
+          
+        @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
+          dataSet.name -> dataSet.name 
+        })
+        
+        @helper.select(taskForm("taskType"), taskTypes.map { tt =>
+          tt.id -> tt.summary
+        }, Symbol("help-inline") -> taskTypeHelpLink)
+
+        @helper.input(tracingForm("experience.domain")) { (id, name, value, args) =>
+          <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(tracingForm("experience.value"), 'type -> "number")
+
+        @helper.inputText(taskForm("start.point"), 'type -> "text")
+
+        @helper.inputText(taskForm("priority"), 'type -> "number")
+        @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 0)
+        
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
+
+    <h3>Import Tasks in Bulk</h3>
+
+    <div class="well">
+      One line for each task. The values are seperated by a space. Format: <br />
+      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances<br /><br />
+      @helper.form(controllers.admin.routes.TaskAdministration.createBulk){
+        <textarea class="input-fullwidth input-monospace" rows="20" name="data"></textarea>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary pull-right">Import</button>
+        </div>
+      }
+    </div>
+
+  </div>
+}

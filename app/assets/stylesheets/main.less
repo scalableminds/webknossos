@@ -4,23 +4,154 @@
 // author: mda@zenexity.com - 2011
 // -----------------------------------
 
-@import 'libs/_reset.less';
-@import 'libs/_mate.less';
+// @import 'libs/_reset.less';
+// @import 'libs/_mate.less';
 @import 'libs/_theme.less';
 
 // ----------------------- MAIN STYLES
 body {
-    background: @mainBackground;
+    // background: @mainBackground;
     color: @mainColor;
-    font: @defaultFont;
+    // font: @defaultFont;
     -webkit-font-smoothing: antialised;
 }
 
-a {
-    color: @links;
+.navbar .brand {
+    background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
+    padding-left: 43px;
+}
+.navbar span.brand:hover {
+    color: #999;
+}
+
+.well form {
+    margin-bottom: 0;
+}
+.well form .form-actions {
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+.input-fullwidth {
+    width: 100%;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+.input-monospace {
+    font-family: Monaco, Consolas, "Lucida Console", "Courier New", monospace;
+}
+.divider-vertical {
+    display: inline-block;
+    vertical-align: middle;
+    height: 25px;
+    margin: 0 9px;
+    border-right: 1px solid #e5e5e5;
+}
+
+.popover {
+    width: 400px;
+}
+
+.table-double-striped > tbody {
+    & > tr:nth-child(4n+1) > td,
+    & > tr:nth-child(4n+2) > td {
+        background-color: #f9f9f9
+    }
+}
+
+.table-nohead {
+    tbody tr:nth-child(1) {
+        td, th {
+            border-top: none;
+        }
+    }
+}
+
+.table .table {
+    margin-bottom: 0;
+}
+
+.table-details {
+
+    .details-row > td {
+        box-shadow: inset 0 0 10px rgba(180, 180, 180, .2);
+    }
+    .details-toggle,
+    .details-toggle-all {
+
+        cursor: pointer;
+
+        .caret-down {
+            display: none;
+        }
+
+        &.open {
+            .caret-right {
+                display: none;
+            }
+            .caret-down {
+                display: inline-block;
+            }
+        }
+    }
+}
+
+.light-caret {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    vertical-align: middle;
+    content: "";
+}
+.caret-right {
+    .light-caret;
+    border-left: 4px solid #888;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+}
+.caret-down {
+    .light-caret;
+    border-top: 4px solid #888;
+    border-right: 4px solid transparent;
+    border-left: 4px solid transparent;
+}
+
+@-webkit-keyframes rotation {
+    from {
+        -webkit-transform: rotate(0);
+    }
+    to {
+        -webkit-transform: rotate(360deg);
+    }
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+.rotating {
+    -webkit-animation: rotation 1s linear infinite;
+}
+
+svg a:hover {
     text-decoration: none;
-    &:hover {
-        color: @linksHover;
+    &[href] {
+        cursor: pointer;
+    }
+}
+
+#alert-container {
+    position: absolute;
+    right: 20px;
+    top: 60px;
+    z-index: 100;
+
+    .alert {
+        cursor: default;
+    }
+    .alert:hover {
+        box-shadow: 0 0 10px rgba(100, 100, 100, .2);
     }
 }
 
@@ -42,7 +173,7 @@ a {
     left: 0;
     z-index: 10;
 }
-#mainContainer {
+#main-container {
     position: absolute;
     top: @headerHeight;
     left: 0;
@@ -64,15 +195,15 @@ a {
 }
 #planeyz {
     top: 0px;
-    left: (384+20)px;
+    left: @standardViewportWidth + 20px;
 }
 #planexz {
-    top: (384+20)px;
+    top: @standardViewportWidth + 20px;
     left: 0px;
 }
 #skeletonview {
-    top: (384+20)px;
-    left: (384+20)px;
+    top: @standardViewportWidth + 20px;
+    left: @standardViewportWidth + 20px;
     border-width: 0px;
 }
 //canvas {
@@ -83,15 +214,16 @@ a {
 //    border-color: @mainBackground;
 //}
 #prevControls {
-    width: 384px;
+    float: left;
     height: 20px;
     position: relative;
-    top: 420;
-    left: 420;
+    top: 420px;
+    left: 420px;
     z-index: 30;
 }
 #overlay {
     position: absolute;
+    width: 280px;
     top: 0;
     left: 0;
     padding: 10px;
@@ -99,57 +231,93 @@ a {
 #overlay > * {
     margin-bottom: 10px;
 }
-
-#issue-submit-button {
-    .button();
-    margin-left: 1em;
+#overlay .nav-tabs > li > a {
+    padding-top: 4px;
+    padding-bottom: 4px;
 }
 
-#issue-submit-page {
 
-    padding: 1em 0;
+#issue-submit {
 
-    h1 {
-        font-size: 2em;
-        padding: 10px;
-    }
-    
     form {
-        padding: 10px;
 
-        label {
-            display: block;
-        }
+        margin: 0;
+
         input[type=text],
-        textarea, 
-        select {
-            display: block;
-            width: 100%;
-            font-size: 1em;
-            margin-bottom: 20px;
-            margin-top: 7px;
-            padding: .5em;
-        }
-        select {
-            width: auto;
-            font-size: 1.5em;
+        textarea {
+            width: 600px;
         }
         textarea {
             height: 9em;
         }
-        input[type=submit] {
-            font-size: 1.2em;
-            .button();
-            padding: .2em 2em;
-        }
     }
 }
 
-// --------------------------- IMPORTS
-@import 'main/_layout.less';        // General grid
-@import 'main/_widgets.less';       // Some shared elements
-@import 'main/_drawer.less';        // Project drawer
-@import 'main/_header.less';        // Top header + User bar
-@import 'main/_breadcrumb.less';    // Breadcrumb + App menu
-@import 'apps/_tasks.less';         // Tasks 
+#task-selection-algoritm {
 
+    position: relative;
+    height: 100%;
+
+    .editor-wrapper {
+
+        position: absolute;
+        background: #141414;
+        top: 50px;
+        bottom: 10px;
+        width: 100%;
+        box-shadow: 0 0 10px #aaa;
+
+        #editor {
+            width: 100%;
+            top: 0;
+            bottom: 0;
+        }
+    }
+    input[type=submit] {
+        margin: 10px 0;
+    }
+}
+
+.key-arrow {
+    left: 170px !important;
+}
+
+.key-overlay {
+    width: 700px;
+    margin-left: 180px;
+}
+
+.graph.well svg {
+    max-width: 900px;
+}
+
+@media screen and (max-width: 960px) {
+    .container {
+        width: auto;
+        margin: 0 10px;
+    }
+}
+
+.space-top {
+    margin-top: 30px;
+}
+
+// Fixing datGUI from Bootstrap
+.dg {
+
+    font: 11px 'Lucida Grande', sans-serif;
+
+    input, select, textarea {
+        height: auto;
+        font-size: 11px;
+        line-height: normal;
+        border-radius: 0;
+    }
+    select {
+        width: auto;
+        max-width: 100%;
+    }
+    .cr div div {
+        line-height: normal;
+    }
+}

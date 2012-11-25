@@ -1,5 +1,5 @@
 ### define
-libs/request : requester
+libs/request : Request
 ###
 
 class ArrayBufferSocket
@@ -44,6 +44,7 @@ class ArrayBufferSocket
 
 class ArrayBufferSocket.WebSocket
 
+  # Constants
   OPEN_TIMEOUT : 500
   MESSAGE_TIMEOUT : 20000
 
@@ -90,7 +91,7 @@ class ArrayBufferSocket.WebSocket
       socket.addEventListener(
         "message"
         (event) =>
-          
+
           buffer = event.data
           handle = new Float32Array(buffer, 0, 1)[0]
           
@@ -120,6 +121,7 @@ class ArrayBufferSocket.WebSocket
 
 
   close : ->
+
     if @socket
       @socket.close()
       @socket = null
@@ -158,7 +160,6 @@ class ArrayBufferSocket.WebSocket
     { transmitBuffer, socketHandle }
 
 
-
   _window = window ? self
   @prototype.WebSocketImpl = if _window.MozWebSocket then _window.MozWebSocket else _window.WebSocket
 
@@ -172,11 +173,16 @@ class ArrayBufferSocket.XmlHttpRequest
   send : (data) ->
 
     data = new @requestBufferType(data) if _.isArray(data)
-    requester(
-      data : data.buffer
+    Request.send(
+      data : data
       url : @url
       dataType : 'arraybuffer'
-    ).pipe (buffer) => new @responseBufferType(buffer)
+    ).pipe (buffer) =>
+
+      if buffer
+        new @responseBufferType(buffer)
+      else
+        []
 
 
   close : ->

@@ -1,6 +1,7 @@
 ### define
+jquery : $
+underscore : _
 libs/flycam : Flycam
-libs/flycam2 : Flycam2d
 libs/Tween : TWEEN_LIB
 model/game : Game
 libs/event_mixin : EventMixin
@@ -25,7 +26,7 @@ class View
 
   constructor : (model, flycam) ->
 
-    _.extend(this, new EventMixin())
+    _.extend(@, new EventMixin())
 
     @model  = model
     @flycam = flycam
@@ -65,6 +66,18 @@ class View
     @camera[VIEW_3D].up          = new THREE.Vector3( 0,  0, -1)
     for cam in @camera
       cam.lookAt(new THREE.Vector3( 0, 0, 0))
+
+    # Because the voxel coordinates do not have a cube shape but are distorted,
+    # we need to distort the entire scene to provide an illustration that is
+    # proportional to the actual size in nm.
+    # For some reason, all objects have to be put into a group object. Changing
+    # scene.scale does not have an effect.
+    @group = new THREE.Object3D
+    rScale = @model.route.scale
+    # The dimension(s) with the highest resolution will not be distorted
+    @group.scale = new THREE.Vector3(rScale[0], rScale[1], rScale[2])
+    # Add scene to the group, all Geometries are than added to group
+    @scene.add(@group)
 
     # Attach the canvas to the container
     @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
@@ -138,10 +151,10 @@ class View
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
   addGeometry : (geometry) ->
-    @scene.add geometry
+    @group.add geometry
 
   removeGeometry : (geometry) ->
-    @scene.remove geometry
+    @group.remove geometry
 
   #Apply a single draw (not used right now)
   draw : ->
@@ -184,7 +197,7 @@ class View
 
       # scales the 3D-view controls
       prevControl = $("#prevControls")
-      prevControl.css({top: @scaleFactor * 440 + "px", left: @scaleFactor * 420 + "px"})
+      prevControl.css({top: @scaleFactor * 420 + "px", left: @scaleFactor * 420 + "px"})
 
       @resize()
 
@@ -209,3 +222,28 @@ class View
 
   getLights  : =>
     @lights
+
+  createKeyboardCommandOverlay : ->
+
+    keycommands =
+      "<table class=\"table table-condensed table-nohead\">
+        <tbody>
+          <tr><th colspan=\"2\">General</th><th colspan=\"2\">Viewports</th></tr>
+          <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Mousewheel or D and F</td><td>Move along 3rd axis</td></tr>
+          <tr><td>Leftclick</td><td>Select node</td><td>Rightclick</td><td>Set tracepoint</td></tr>
+          <tr><td>Q</td><td>Fullscreen</td><td>I or Alt + Mousewheel</td><td>Zoom in</td></tr>
+          <tr><td>K</td><td>Scale up viewports</td><td>O or Alt + Mousewheel</td><td>Zoom out</td></tr>
+          <tr><td>L</td><td>Scale down viewports</td><td>B</td><td>Set branchpoint</td></tr>
+          <tr><td>Del</td><td>Delete active node</td><td>J</td><td>Jump to last branchpoint</td></tr>
+          <tr><td> </td><td> </td><td>S</td><td>Center active node</td></tr>
+          <tr><th colspan=\"2\">3D-view</th><td>Shift + Mousewheel</td><td>Change active node size</td></tr>
+          <tr><td>Mousewheel</td><td>Zoom in and out</td><td>N</td><td>Create new tree</td></tr>
+        </tbody>
+      </table>
+      <br>
+      <p>All other options like node-radius, moving speed, clipping distance can be adjusted in the options located to the left.
+      Select the different categories to open/close them.
+      Please report any issues.</p>"
+
+    popoverTemplate = '<div class="popover key-overlay"><div class="arrow key-arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
+    $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})

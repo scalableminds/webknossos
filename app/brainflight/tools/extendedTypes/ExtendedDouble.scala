@@ -22,6 +22,12 @@ class ExtendedDouble( d: Double ) {
     d <= EPSILON && d >= -EPSILON
 
   /**
+   * Makes sure the double is in the given interval.
+   */
+  def clamp(low: Double, high: Double) = 
+    math.min(high, math.max(low, d))
+
+  /**
    * Converts this double into an array of bytes
    */
   def toBinary = {

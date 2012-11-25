@@ -1,0 +1,5 @@
+@(comment: String)
+@defining("([0-9]+)\\s*,\\s*([0-9]+)\\s*,\\s*([0-9]+)"r) { rx =>
+  @Html(rx.replaceAllIn(org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(comment).replaceAll("\n", "<br /><br />"), m => 
+    "<a href=\"#\" onclick=\"window.oxalis.flycam.setGlobalPos([%s, %s, %s])\">%s</a>".format(m.group(1),m.group(2),m.group(3),m.group(0))))
+}

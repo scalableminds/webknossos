@@ -1,7 +1,8 @@
 ### define
 libs/datgui/dat.gui : DatGui
-libs/request : request
+libs/request : Request
 libs/event_mixin : EventMixin
+view/toast : Toast
 ###
 
 PLANE_XY = 0
@@ -10,95 +11,50 @@ PLANE_XZ = 2
 VIEW_3D  = 3
 
 class Gui 
+
+  model : null
+  sceneController : null
+  cameraController : null
+  flycam : null
   
-  constructor : (container, data, model, sceneController, cameraController, flycam) ->
+  constructor : (container, @model, @sceneController, @cameraController, @flycam) ->
     
     _.extend(this, new EventMixin())
 
-    @model = model
-    @sceneController = sceneController
-    @cameraController = cameraController
-    @flycam = flycam
-    initPos = @flycam.getGlobalPos()
-
+    data = @model.user
     # create GUI
-    modelRadius = @model.Route.getActiveNodeRadius()
-    @settings = { 
-                save : @saveNow
-                upload : @uploadNML
-                download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
-                                          "_blank", "width=700,height=400,location=no,menubar=no")
-
-                resume : false
-                experiments : null
-                selectedExperimentIndex : 0
-                changeExperiment : => 
-                  experiment = @settings.experiments[@settings.selectedExperimentIndex]
-                  request(
-                    method : "POST"
-                    url : "/experiment?id=#{experiment.id}&isNew=#{Number(experiment.isNew)}"
-                  ).always -> window.location.reload()
-
-                position : initPos[0] + ", " + initPos[1] + ", " + initPos[2]
-                lockZoom: data.lockZoom
-                inverseX: data.mouseInversionX == 1
-                inverseY: data.mouseInversionY == 1
-
-                moveValue : data.moveValue
-                routeClippingDistance: data.routeClippingDistance
-                displayCrosshairs: data.displayCrosshair
-                interpolation : data.interpolation
-                minZoomStep : data.minZoomStep
-
-                displayPrevXY : data.displayPreviewXY
-                displayPrevYZ : data.displayPreviewYZ
-                displayPrevXZ : data.displayPreviewXZ
-                nodesAsSpheres : data.nodesAsSpheres
-
-                activeTreeID : @model.Route.getActiveTreeId()
-                newTree : => @trigger "createNewTree"
-                deleteActiveTree : => @trigger "deleteActiveTree"
-
-                activeNodeID : @model.Route.getActiveNodeId()
-                newNodeNewTree : data.newNodeNewTree
-                deleteActiveNode : => @trigger "deleteActiveNode"
-                radius : if modelRadius then modelRadius else 10 * @model.Route.scaleX
-              }
-    @gui  = new dat.GUI({autoPlace: false, width : 280, hideable : false})
-    
-    container.append @gui.domElement
-
-    fFile = @gui.addFolder("File")
-    (fFile.add @settings, "save")
-                          .name("Save now")
-    (fFile.add @settings, "upload")
-                          .name("Upload NML")
-    (fFile.add @settings, "download")
-                          .name("Download NML")
-    
-    fExperiment = @gui.addFolder("Experiment")
-    request(
-      url : "/experiment"
-      responseType : "json"
-    ).done (experiments) =>
+    modelRadius = @model.route.getActiveNodeRadius()
+    @settings = 
       
-      @settings.experiments = experiments
+      lockZoom: data.lockZoom
+      inverseX: data.mouseInversionX == 1
+      inverseY: data.mouseInversionY == 1
 
-      options = {}
-      for experiment, i in experiments
-        options[experiment.name] = i
+      moveValue : data.moveValue
+      routeClippingDistance: data.routeClippingDistance
+      displayCrosshairs: data.displayCrosshair
+      interpolation : data.interpolation
+      minZoomStep : data.minZoomStep
 
-      (fExperiment.add @settings, "selectedExperimentIndex", options)
-                            .name("Datasets")
-      (fExperiment.add @settings, "changeExperiment")
-                            .name("Apply")
+      displayPrevXY : data.displayPreviewXY
+      displayPrevYZ : data.displayPreviewYZ
+      displayPrevXZ : data.displayPreviewXZ
+      nodesAsSpheres : data.nodesAsSpheres
 
+      activeTreeID : @model.route.getActiveTreeId()
+      newTree : => @trigger "createNewTree"
+      deleteActiveTree : => @trigger "deleteActiveTree"
+
+      activeNodeID : @model.route.getActiveNodeId()
+      newNodeNewTree : data.newNodeNewTree
+      deleteActiveNode : => @trigger "deleteActiveNode"
+      radius : if modelRadius then modelRadius else 10 * @model.route.scaleX
+
+
+    @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
+
+    container.append @gui.domElement
     
-    fPosition = @gui.addFolder("Position")
-    (fPosition.add @settings, "position")
-                          .name("Position")
-                          .listen()
-                          .onFinishChange(@setPosFromString)
     fControls = @gui.addFolder("Controls")
     (fControls.add @settings, "lockZoom")
                           .name("Lock Zoom")
@@ -115,7 +71,8 @@ class Gui
                           .step(0.25)
                           .name("Move Value")    
                           .onChange(@setMoveValue)
-    (fView.add @settings, "routeClippingDistance", 0.1, 200)
+    scale = @model.route.scaleX
+    (fView.add @settings, "routeClippingDistance", 1, 1000 * scale)
                           .name("Clipping Distance")    
                           .onChange(@setRouteClippingDistance)
     (fView.add @settings, "displayCrosshairs")
@@ -164,7 +121,6 @@ class Gui
                           .step(1)
                           .name("Active Node ID")
                           .onFinishChange( (value) => @trigger "setActiveNode", value)
-    scale = @model.Route.scaleX
     (fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
                           .name("Radius")    
                           .listen()
@@ -172,8 +128,6 @@ class Gui
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
-    fFile.open()
-    fPosition.open()
     #fControls.open()
     #fView.open()
     #fSkeleton.open()
@@ -181,120 +135,109 @@ class Gui
     fNodes.open()
 
   saveNow : =>
-    @model.User.Configuration.pushImpl()
-    @model.Route.pushImpl()
-      .fail( -> alert("Something went wrong with saving, please try again."))
-      .done( -> alert("Successfully saved!"))
+    @model.user.pushImpl()
+    @model.route.pushImpl()
+      .then( 
+        -> Toast.success("Saved!")
+        -> Toast.error("Couldn't save. Please try again.")
+      )
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
-    pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
-    @flycam.setGlobalPos(pos)
+    if stringArray.length == 3
+      pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
+      if !isNaN(pos[0]) and !isNaN(pos[1]) and !isNaN(pos[2])
+        @flycam.setGlobalPos(pos)
+        return
+    @updateGlobalPosition(@flycam.getGlobalPos())
 
-  uploadNML : =>
-    # Create dummy input field
-    input = $("<input>", type : "file")
-    input.trigger("click")
-    input.on("change", (evt) ->
-      file = evt.target.files[0]
-      requestObject = jsRoutes.controllers.admin.NMLIO.upload()
-      xhr = new XMLHttpRequest()
-      # Reload when done
-      xhr.onload = -> window.location.reload()
-      xhr.open(requestObject.method, requestObject.url, true)
-      # send it as form data
-      formData = new FormData()
-      formData.append("nmlFile", file)
-      xhr.send(formData)
-    )
-
-  updateGlobalPosition : =>
-    pos = @flycam.getGlobalPos()
-    @settings.position = Math.round(pos[0]) + ", " + Math.round(pos[1]) + ", " + Math.round(pos[2])
+  updateGlobalPosition : (globalPos) =>
+    stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
+    $("#globalPos").val(stringPos)
 
   setMoveValue : (value) =>
-    @model.User.Configuration.moveValue = (Number) value
-    @model.User.Configuration.push()
+    @model.user.moveValue = (Number) value
+    @model.user.push()
 
   setRouteClippingDistance : (value) =>
-    @model.User.Configuration.routeClippingDistance = (Number) value
+    @model.user.routeClippingDistance = (Number) value
     @cameraController.setRouteClippingDistance((Number) value)
     @sceneController.setRouteClippingDistance((Number) value)
-    @model.User.Configuration.push()   
+    @model.user.push()   
 
   setLockZoom : (value) =>
-    @model.User.Configuration.lockZoom = value
-    @model.User.Configuration.push()      
+    @model.user.lockZoom = value
+    @model.user.push()      
 
   setDisplayCrosshair : (value) =>
-    @model.User.Configuration.displayCrosshair = value
+    @model.user.displayCrosshair = value
     @sceneController.setDisplayCrosshair(value)
-    @model.User.Configuration.push()    
+    @model.user.push()    
 
   setInterpolation : (value) =>
     @sceneController.setInterpolation(value)
-    @model.User.Configuration.interpolation = (Boolean) value
-    @model.User.Configuration.push()
+    @model.user.interpolation = (Boolean) value
+    @model.user.push()
 
   setMinZoomStep : (value) =>
     value = parseInt(value)
     @flycam.setOverrideZoomStep(value)
-    @model.User.Configuration.minZoomStep = (Number) value
-    @model.User.Configuration.push()
+    @model.user.minZoomStep = (Number) value
+    @model.user.push()
 
   setDisplayPreviewXY : (value) =>
-    @model.User.Configuration.displayPreviewXY = value
+    @model.user.displayPreviewXY = value
     @sceneController.setDisplaySV PLANE_XY, value
-    @model.User.Configuration.push()      
+    @model.user.push()      
 
   setDisplayPreviewYZ : (value) =>
-    @model.User.Configuration.displayPreviewYZ = value
+    @model.user.displayPreviewYZ = value
     @sceneController.setDisplaySV PLANE_YZ, value
-    @model.User.Configuration.push()      
+    @model.user.push()      
 
   setDisplayPreviewXZ : (value) =>
-    @model.User.Configuration.displayPreviewXZ = value
+    @model.user.displayPreviewXZ = value
     @sceneController.setDisplaySV PLANE_XZ, value
-    @model.User.Configuration.push()      
+    @model.user.push()      
 
   setNodeAsSpheres : (value) =>
-    @model.User.Configuration.nodesAsSpheres = value
+    @model.user.nodesAsSpheres = value
     @sceneController.skeleton.setDisplaySpheres(value)
-    @model.User.Configuration.push()  
+    @model.user.push()  
     @flycam.hasChanged = true    
 
   setMouseInversionX : (value) =>
     if value is true
-      @model.User.Configuration.mouseInversionX = 1
+      @model.user.mouseInversionX = 1
     else
-      @model.User.Configuration.mouseInversionX = -1
-    @model.User.Configuration.push()         
+      @model.user.mouseInversionX = -1
+    @model.user.push()         
 
   setMouseInversionY : (value) =>
     if value is true
-      @model.User.Configuration.mouseInversionY = 1
+      @model.user.mouseInversionY = 1
     else
-      @model.User.Configuration.mouseInversionY = -1
-    @model.User.Configuration.push()
+      @model.user.mouseInversionY = -1
+    @model.user.push()
 
   setNewNodeNewTree : (value) =>
-    @model.User.Configuration.newNodeNewTree = value
-    @model.User.Configuration.push()      
+    @model.user.newNodeNewTree = value
+    @model.user.push()      
 
   setNodeRadius : (value) =>
-    @model.Route.setActiveNodeRadius(value)
+    @model.route.setActiveNodeRadius(value)
     # convert from nm to voxels, divide by resolution
     @sceneController.skeleton.setNodeRadius(value)
     @flycam.hasChanged = true
 
   updateRadius : ->
-    if @model.Route.getActiveNodeRadius()
-      @settings.radius = @model.Route.getActiveNodeRadius()
+    if @model.route.getActiveNodeRadius()
+      @settings.radius = @model.route.getActiveNodeRadius()
 
   # called when value user switch to different active node
   updateNodeAndTreeIds : =>
-    @settings.activeNodeID = @model.Route.lastActiveNodeId
-    @settings.activeTreeID = @model.Route.getActiveTreeId()
+    @settings.activeNodeID = @model.route.lastActiveNodeId
+    @settings.activeTreeID = @model.route.getActiveTreeId()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
 

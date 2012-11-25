@@ -10,7 +10,7 @@ import scala.collection.JavaConverters._
 import com.mongodb.casbah.gridfs.Imports._
 import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
-import models.DataSet
+import models.binary.DataSet
 import brainflight.tools.geometry.Cuboid
 
 class GridFileDataStore extends DataStore{

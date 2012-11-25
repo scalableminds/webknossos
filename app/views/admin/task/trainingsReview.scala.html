@@ -1,0 +1,5 @@
+@(tracing: models.tracing.Tracing, form: Form[String])(implicit session: brainflight.view.AuthedSessionData)
+
+@main(){
+  @trainingsReviewItem(tracing, form)
+}

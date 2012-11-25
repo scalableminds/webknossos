@@ -1,0 +1,64 @@
+@(tracing: models.tracing.Tracing)(additionalHtml: Html)(implicit session: brainflight.view.AuthedSessionData)
+
+@import models.tracing.TracingType
+
+@main( ){
+  <script src="@routes.Assets.at("javascripts/oxalis.js")"></script>
+  <div id="container">
+    <div id="main" role="main">
+      <div id="render">
+        <div id="prevControls"></div>
+        <div id="planexy" class="inputcatcher"></div>
+        <div id="planeyz" class="inputcatcher"></div>
+        <div id="planexz" class="inputcatcher"></div>
+        <div id="skeletonview" class="inputcatcher"></div>
+      </div>
+      <div id="overlay">
+        <a href="#" onclick="window.oxalis.gui.saveNow()" class="btn btn-primary">Save</a>
+        <div id="buttonbar" class="btn-group inline-block">
+          @if(tracing.tracingType == TracingType.Task || tracing.tracingType == TracingType.Training){
+            <a href="@controllers.routes.TracingController.finishWithRedirect(tracing.id)" class="btn btn-small"><i class="icon-ok-circle"></i> Finish</a>
+          }
+          @if(tracing.tracingType != TracingType.Training){
+            <a href="@controllers.admin.routes.NMLIO.download(tracing.id)" class="btn btn-small"><i class="icon-download"></i> NML</a>
+          }
+          <a href="#" id="help-overlay" class="btn btn-small"><i class="icon-question-sign"></i> Help</a>
+        </div>
+        <div id="dataset" class="well well-small">@tracing.tracingType<br />DataSet: @tracing.dataSetName<br /></div>
+        <div class="input-prepend">
+          <span class="add-on">Position</span>
+          <input id="globalPos" type="text" onblur="window.oxalis.gui.setPosFromString(this.value)" onchange="window.oxalis.gui.setPosFromString(this.value)">
+        </div>
+        <div class="tabbable">
+          <ul class="nav nav-tabs">
+            @if(additionalHtml.body != ""){
+              <li class="active"><a href="#tab1" data-toggle="tab">Review</a></li>
+              <li>
+            } else {
+              <li class="active">
+            }
+            <a href="#tab2" data-toggle="tab">Options</a></li>
+          </ul>
+          <div class="tab-content">
+            @if(additionalHtml.body != ""){
+              <div class="tab-pane active" id="tab1">
+                <div id="review-comments">
+                  @additionalHtml
+                </div>
+              </div>
+              <div class="tab-pane" id="tab2">
+            } else {
+              <div class="tab-pane active" id="tab2">
+            }
+              <div id="status"></div>
+              <div id="optionswindow"></div>
+            </div>
+          </div>
+        </div>
+      </div>  
+    </div>   
+  </div> <!--! end of #container -->
+
+  <!-- JavaScript at the bottom for fast page loading -->
+
+}

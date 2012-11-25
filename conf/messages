@@ -1,0 +1,69 @@
+error.email=Please supply a valid email address.
+error.email.inuse=This email address is already in use
+
+error.password.nomatch=Passwords don''t match
+error.password.tooshort=Password too short
+
+error.required=Please supply all needed values.
+error.login.invalid=Invalid email or password
+
+email=Email
+password=Password
+password.main=Password
+password.validation=Password (again)
+firstName=First Name
+lastName=Last Name
+
+user.verified=has been verified
+user.notVerified=Your account hasn''t been activated yet. After you have uploaded all requested information to braintracing.org, an admin will verify your acount.
+user.noPermission=You don''t have enough permissions to access this site. Sorry :(
+user.deleted=has been deleted
+
+task.create.success=Task successfully created
+task.finished=Task is finished
+task.passedToReview=Task is now getting reviewed. This may take some time.
+task.new=You got a new task
+task.alreadyHasOpenOne=You already have an open task.
+task.unavailable=There is currently no task available.
+task.notFound=Task couldn''t be found.
+task.removed=The task got removed
+
+taskInstances=Task instances
+
+taskType=Task type
+taskType.invalid=Selected type doesn''t exist
+
+dataSet=Data Set
+dataSet.invalid=Selected data set doesn''t exist
+
+cellId=Cell Id
+
+start.point=Start
+point.invalid=Invalid format. Use something like: 4, 63, 24
+
+experience=Experience
+experience.domain=Experience Domain
+experience.value=Min Experience
+
+training.domain=Trainings Domain
+training.gain=Experience Gain
+training.loss=Experience Loss
+training.new=You got a new Trainings-Task
+
+nmlFile=Reference NML File
+
+priority=Priority
+
+tracing=Tracing
+tracing.invalid=Selected training doesn''t exist
+tracing.notFound=Tracing couldn''t be found.
+
+summary=Summary
+description=Description
+expectedTime.minTime=Expected Time (min)
+expectedTime.maxTime=Expected Time (max)
+expectedTime.maxHard=Time limit
+gain=Gain
+lose=Loss
+task=Task
+

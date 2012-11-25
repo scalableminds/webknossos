@@ -1,0 +1,48 @@
+@(task: models.task.Task, tracing: models.tracing.Tracing)
+
+@tracingLinks = {
+  <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
+  <a href="@controllers.routes.TracingController.finish(tracing.id, false)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a><br/>
+}
+
+@linkText(failed: Boolean) = {
+  @if(failed) {
+    Review failed - 
+  } else {
+    Review - 
+  }
+}
+
+@displayComments(failed: Boolean, comments: List[String]) = {
+  @comments match{
+    case head :: tail => {
+      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-content="@head"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
+    }
+    case _ => {
+
+    }
+  }
+
+}
+
+<tr>
+  <td> @formatHash(task.id) </td>
+  <td> @task.taskType.map(_.summary).getOrElse("<deleted>") - @tracing.tracingType</td>
+  <td> @task.dataSetName </td>
+  <td> @task.start </td>
+  <td> 
+    @tracing.state match{
+      case s if s.isFinished => {
+        <i class="icon-ok"></i><span> Finished</span><br />
+        @displayComments(false, tracing.review.flatMap( _.comment ))
+      }
+      case s if s.isInReview || s.isReadyForReview => {
+        <i class="icon-eye-open"></i><span> In Review</span>
+      }
+      case _ => {
+        @tracingLinks
+        @displayComments(true, tracing.review.flatMap( _.comment ))
+      }
+    }
+  </td>
+</tr>

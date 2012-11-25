@@ -31,11 +31,8 @@ object Jira extends Controller with Secured {
     Ok(html.jira.index())
   }
 
-  def createIssue(user: User, summary: String, description: String, issueType: String) {
-    val auth = new String(Base64.encodeBase64("autoreporter:frw378iokl!24".getBytes))
-    val client = Client.create();
-
-    val issue = Json.obj(
+  def createIssueJson(user: User, summary: String, description: String, issueType: String) = {
+    Json.obj(
       "fields" -> Json.obj(
         "project" -> Json.obj(
           "key" -> "OX"),
@@ -47,11 +44,23 @@ object Jira extends Controller with Secured {
         "description" -> (description + "\n\n Reported by: %s (%s)".format(user.name, user.email)),
         "issuetype" -> Json.obj(
           "name" -> issueType))).toString
+  }
+
+  def createIssue(user: User, summary: String, description: String, issueType: String) {
+    val auth = new String(Base64.encodeBase64("autoreporter:frw378iokl!24".getBytes))
+    val client = Client.create();
+
+    val issue = createIssueJson(user, summary, description, issueType)
 
     usingSelfSignedCert {
       val webResource: WebResource = client.resource(jiraUrl + "/rest/api/2/issue")
 
-      val response = webResource.header("Authorization", "Basic " + auth).`type`("application/json").accept("application/json").post(classOf[ClientResponse], issue);
+      val response = webResource
+        .header("Authorization", "Basic " + auth)
+        .`type`("application/json")
+        .accept("application/json")
+        .post(classOf[ClientResponse], issue)
+        
       Logger.debug(response.toString)
     }
   }

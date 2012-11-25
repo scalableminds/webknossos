@@ -1,4 +1,4 @@
-@(tracing: models.tracing.Tracing)(additionalHTML: Html)(implicit session: brainflight.view.AuthedSessionData)
+@(tracing: models.tracing.Tracing)(additionalHtml: Html)(implicit session: brainflight.view.AuthedSessionData)
 
 @import models.tracing.TracingType
 
@@ -27,16 +27,25 @@
         <div id="dataset" class="well well-small">@tracing.tracingType<br />DataSet: @tracing.dataSetName</div>
         <div class="tabbable">
           <ul class="nav nav-tabs">
-            <li class="active"><a href="#tab1" data-toggle="tab">Review comments</a></li>
-            <li><a href="#tab2" data-toggle="tab">Options</a></li>
+            @if(additionalHtml.body != ""){
+              <li class="active"><a href="#tab1" data-toggle="tab">Review</a></li>
+              <li>
+            } else {
+              <li class="active">
+            }
+            <a href="#tab2" data-toggle="tab">Options</a></li>
           </ul>
           <div class="tab-content">
-            <div class="tab-pane active" id="tab1">
-              <div id="review-comments">
-                @additionalHTML
+            @if(additionalHtml.body != ""){
+              <div class="tab-pane active" id="tab1">
+                <div id="review-comments">
+                  @additionalHtml
+                </div>
               </div>
-            </div>
-            <div class="tab-pane" id="tab2">
+              <div class="tab-pane" id="tab2">
+            } else {
+              <div class="tab-pane active" id="tab2">
+            }
               <div id="status"></div>
               <div id="optionswindow"></div>
             </div>

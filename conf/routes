@@ -6,6 +6,7 @@
 GET     /                                   controllers.Game.index
 GET     /trace/:tracingId                   controllers.Game.trace(tracingId: String)
 GET     /dashboard                          controllers.UserController.dashboard
+GET     /game/initialize                    controllers.Game.initialize
 
 # Tasks
 GET     /tasks/requestTask                  controllers.TaskController.request
@@ -21,26 +22,20 @@ GET     /logout                             controllers.Authentication.logout
 GET     /register                           controllers.Authentication.register
 POST    /register                           controllers.Authentication.registrate
 
+GET     /login/fb                           controllers.login.FacebookLogin.login
+GET     /login/fb/code                      controllers.login.FacebookLogin.loginCode(code: String)
+GET     /login/tw                           controllers.login.TwitterLogin.login
+
 # User settings
 POST    /user/configuration                 controllers.UserController.saveSettings
 GET     /user/configuration                 controllers.UserController.showSettings
-
-# Facebook
-GET     /login/fb                           controllers.login.FacebookLogin.login
-GET     /login/fb/code                      controllers.login.FacebookLogin.loginCode(code: String)
-
-# Twitter
-GET     /login/tw                           controllers.login.TwitterLogin.login
 
 # Binary Data
 GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int )
 POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int )
 
-# Game Stuff
-GET     /game/initialize                    controllers.Game.initialize
 
 # Tracing Stuff
-POST    /tracing                            controllers.TracingController.useAsActive(id: String, isNew: Boolean)
 POST    /tracing/create                     controllers.TracingController.createExplorational
 GET     /tracing                            controllers.TracingController.list
 GET     /tracing/:tracingId                 controllers.TracingController.info( tracingId: String )
@@ -51,10 +46,8 @@ GET     /tracing/:tracingId/finishExperimental controllers.TracingController.fin
 
 
 #Admin pages
-GET     /admin/nmldownload                  controllers.admin.NMLIO.downloadList
-GET     /admin/nmlupload                    controllers.admin.NMLIO.uploadForm
-POST    /admin/nmlupload                    controllers.admin.NMLIO.upload
-GET     /admin/nmldownload/:tracingId       controllers.admin.NMLIO.download( tracingId: String )
+GET     /admin/nml/upload                    controllers.admin.NMLIO.uploadForm
+POST    /admin/nml/upload                    controllers.admin.NMLIO.upload
 
 
 # Admin Tasks
@@ -97,6 +90,7 @@ POST    /admin/users/addRole                controllers.admin.UserAdministration
 POST    /admin/users/removeRole             controllers.admin.UserAdministration.removeRoleBulk
 
 GET     /admin/tracings/:id/review          controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
+GET     /admin/tracings/:id/download        controllers.admin.NMLIO.download( id: String )
 
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.Application.javascriptRoutes

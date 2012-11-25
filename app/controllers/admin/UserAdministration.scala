@@ -20,11 +20,11 @@ object UserAdministration extends Controller with Secured {
     Ok(html.admin.user.userAdministration(User.findAll.sortBy(_.lastName), Role.findAll.sortBy(_.name)))
   }
 
-  def logTime(userId: String, time: String) = Authenticated { implicit request =>
+  def logTime(userId: String, time: String, note: String) = Authenticated { implicit request =>
     User.findOneById(userId) map { user =>
       TimeTracking.parseTime(time) match {
         case Some(t) =>
-          TimeTracking.logTime(user, t)
+          TimeTracking.logTime(user, t, note)
           Ok
         case _ =>
           BadRequest("Invalid time.")

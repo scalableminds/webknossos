@@ -127,7 +127,7 @@ class Cube
       if bucketData
         if zoomStep < bucket.zoomStep 
           bucket.data = bucketData
-          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z], 0, bucket.zoomStep)
+          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, 0], 0, bucket.zoomStep)
           bucket.zoomStep = 0
       else
         bucket.requestedZoomStep = bucket.zoomStep

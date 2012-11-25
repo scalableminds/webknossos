@@ -6,7 +6,7 @@
 class PullQueue
 
   # Constants
-  BATCH_LIMIT : 20
+  BATCH_LIMIT : 10
   BATCH_SIZE : 5
   ROUND_TRIP_TIME_SMOOTHER : .125
   BUCKET_TIME_SMOOTHER : .125
@@ -133,7 +133,6 @@ class PullQueue
         (responseBuffer) =>
 
           @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length)
-
           if responseBuffer?
             for bucket, i in batch
 

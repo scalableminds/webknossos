@@ -196,6 +196,25 @@ require [
 
       "dashboard" : ->
 
+        $("#nml-explore-form").each ->
+
+          $form = $(this)
+
+          $form.find("[type=file]").remove()
+
+          $form.find("[type=submit]").click (event) ->
+
+            event.preventDefault()
+            $input = $("<input>", type : "file", name : "nmlFile", class : "hide")
+
+            $input.change ->
+              if this.files.length
+                $form.append(this)
+                $form.submit()
+
+            $input.click()
+
+
         $("a[rel=popover]").popover()
 
         # $.ajax(

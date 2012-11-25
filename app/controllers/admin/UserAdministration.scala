@@ -15,9 +15,11 @@ import views.html
 object UserAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
+  
+  def allUsers = User.findAll.sortBy(_.lastName)
 
   def index = Authenticated { implicit request =>
-    Ok(html.admin.user.userAdministration(User.findAll.sortBy(_.lastName), Role.findAll.sortBy(_.name)))
+    Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name)))
   }
 
   def logTime(userId: String, time: String, note: String) = Authenticated { implicit request =>
@@ -41,9 +43,9 @@ object UserAdministration extends Controller with Secured {
             case _          => ajaxError -> errorMessage(userId)
           }
         }
-        AjaxOk(html.admin.user.userTable(User.findAll), results)
+        AjaxOk(html.admin.user.userTable(allUsers), results)
       case _ =>
-        BadRequest("'id' parameter is missing.")
+        AjaxBadRequest.error("No user chosen")
     }
   }
 

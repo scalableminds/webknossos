@@ -44,17 +44,10 @@ object NMLIO extends Controller with Secured {
     }
   }
 
-  def downloadList = Authenticated { implicit request =>
-    val userTracings = Tracing.findAll.groupBy(_._user).flatMap {
-      case (userId, tracings) =>
-        User.findOneById(userId).map(_ -> tracings)
-    }
-    Ok(html.admin.nml.nmldownload(userTracings))
-  }
-
   def download(tracingId: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(tracingId)
+      if !tracing.isTrainingsTracing
     } yield {
       Ok(prettyPrinter.format(Xml.toXML(tracing))).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",

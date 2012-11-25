@@ -20,10 +20,15 @@ object UserController extends Controller with Secured {
   def dashboard = Authenticated { implicit request =>
     val user = request.user
     val tracings = Tracing.findFor(user)
-    val (taskTracings, tracingalTracings) =
+    val (taskTracings, allExplorationalTracings) =
       tracings.partition(e =>
         e.tracingType == TracingType.Task ||
           e.tracingType == TracingType.Training)
+
+    val explorationalTracings = 
+      allExplorationalTracings
+      .filter(!_.state.isFinished)
+      .sortBy( -_.timestamp )
 
     val userTasks = taskTracings.flatMap(e => e.task.map(_ -> e))
 
@@ -32,7 +37,7 @@ object UserController extends Controller with Secured {
     val dataSets = DataSet.findAll
 
     Ok(html.user.dashboard.dashboard(
-      tracingalTracings,
+      explorationalTracings,
       userTasks,
       loggedTime,
       dataSets))
@@ -42,7 +47,7 @@ object UserController extends Controller with Secured {
     implicit request =>
       request.body.asOpt[JsObject] map { settings =>
         val fields = settings.fields take (UserConfiguration.MaxSettings) filter (UserConfiguration.isValidSetting)
-        request.user.update( _.changeSettings(UserConfiguration(fields.toMap)))
+        request.user.update(_.changeSettings(UserConfiguration(fields.toMap)))
         Ok
       } getOrElse (BadRequest)
   }

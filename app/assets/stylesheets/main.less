@@ -125,6 +125,11 @@ body {
         -webkit-transform: rotate(360deg);
     }
 }
+
+.inline-block {
+    display: inline-block;
+}
+
 .rotating {
     -webkit-animation: rotation 1s linear infinite;
 }
@@ -226,8 +231,10 @@ svg a:hover {
 #overlay > * {
     margin-bottom: 10px;
 }
-
-
+#overlay .nav-tabs > li > a {
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
 
 
 #issue-submit {
@@ -278,6 +285,10 @@ svg a:hover {
 .key-overlay {
     width: 700px;
     margin-left: 180px;
+}
+
+.graph.well svg {
+    max-width: 900px;
 }
 
 @media screen and (max-width: 960px) {

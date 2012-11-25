@@ -137,6 +137,7 @@ require [
         "keyup" : (event) ->
           if shiftKeyPressed and (event.which == 16 or event.which == 91)
             shiftKeyPressed = false
+          return
         
 
 
@@ -194,6 +195,25 @@ require [
     route
 
       "dashboard" : ->
+
+        $("#nml-explore-form").each ->
+
+          $form = $(this)
+
+          $form.find("[type=file]").remove()
+
+          $form.find("[type=submit]").click (event) ->
+
+            event.preventDefault()
+            $input = $("<input>", type : "file", name : "nmlFile", class : "hide")
+
+            $input.change ->
+              if this.files.length
+                $form.append(this)
+                $form.submit()
+
+            $input.click()
+
 
         $("a[rel=popover]").popover()
 

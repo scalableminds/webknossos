@@ -37,7 +37,7 @@ class Input.KeyboardNoLoop
 
     binding = KeyboardJS.on(key, 
       (event) -> 
-        callback(event) unless $(":focus").length
+        callback() unless $(":focus").length
         return
     )
     @bindings.push(binding)

@@ -16,6 +16,7 @@ import play.api.libs.concurrent.execution.defaultContext
 import play.api.i18n.Messages
 
 object TaskController extends Controller with Secured {
+  
   def createTracing(user: User, task: Task) = {
     val tracing = Tracing.createTracingFor(user, task)
     task.update(_.addTracing(tracing))

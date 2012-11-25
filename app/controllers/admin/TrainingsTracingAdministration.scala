@@ -84,6 +84,8 @@ object TrainingsTracingAdministration extends Controller with Secured {
             Application.Mailer ! Send(
               DefaultMails.trainingsFailureMail(trainee.name, trainee.email, comment))
           }
+          Tracing.findOneById(review.reviewTracing).map( reviewTracing =>
+            reviewTracing.update(_.finish))
           AjaxOk.success("Trainings review finished.")
         }) getOrElse AjaxBadRequest.error("Trainings-Tracing not found.")
       })

@@ -72,14 +72,6 @@ class Controller
       
         for geometry in list
           @view.removeGeometry(geometry)
-        
-      # TODO
-      @flycam.setGlobalPos(@model.route.data.editPosition)
-      @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
-      @flycam.setOverrideZoomStep(@model.user.minZoomStep)
-
-      @initMouse()
-      @initKeyboard()
 
       @gui = new Gui($("#optionswindow"), @model, @sceneController, @cameraController, @flycam)
       @gui.on "deleteActiveNode", @deleteActiveNode
@@ -88,6 +80,14 @@ class Controller
       @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
       @gui.on "deleteActiveTree", @deleteActiveTree
 
+      @flycam.on "globalPositionChanged", (position) => @gui.updateGlobalPosition(position)
+
+      @flycam.setGlobalPos(@model.route.data.editPosition)
+      @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
+      @flycam.setOverrideZoomStep(@model.user.minZoomStep)
+
+      @initMouse()
+      @initKeyboard()
 
       @cameraController.changePrevSV()
       @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
@@ -227,8 +227,6 @@ class Controller
 
     @model.binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
     @model.route.globalPosition = @flycam.getGlobalPos()
-    if (@gui)
-      @gui.updateGlobalPosition()
     @cameraController.update()
     @sceneController.update()
 

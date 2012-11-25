@@ -21,14 +21,11 @@ class Gui
     
     _.extend(this, new EventMixin())
 
-    initPos = @flycam.getGlobalPos()
-
     data = @model.user
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
     @settings = 
       
-      position : "#{initPos[0]}, #{initPos[1]}, #{initPos[2]}"
       lockZoom: data.lockZoom
       inverseX: data.mouseInversionX == 1
       inverseY: data.mouseInversionY == 1
@@ -58,11 +55,6 @@ class Gui
 
     container.append @gui.domElement
     
-    fPosition = @gui.addFolder("Position")
-    (fPosition.add @settings, "position")
-                          .name("Position")
-                          .listen()
-                          .onFinishChange(@setPosFromString)
     fControls = @gui.addFolder("Controls")
     (fControls.add @settings, "lockZoom")
                           .name("Lock Zoom")
@@ -136,7 +128,6 @@ class Gui
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
-    fPosition.open()
     #fControls.open()
     #fView.open()
     #fSkeleton.open()
@@ -153,12 +144,16 @@ class Gui
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
-    pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
-    @flycam.setGlobalPos(pos)
+    if stringArray.length == 3
+      pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
+      if !isNaN(pos[0]) and !isNaN(pos[1]) and !isNaN(pos[2])
+        @flycam.setGlobalPos(pos)
+        return
+    @updateGlobalPosition(@flycam.getGlobalPos())
 
-  updateGlobalPosition : =>
-    pos = @flycam.getGlobalPos()
-    @settings.position = Math.round(pos[0]) + ", " + Math.round(pos[1]) + ", " + Math.round(pos[2])
+  updateGlobalPosition : (globalPos) =>
+    stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
+    $("#globalPos").val(stringPos)
 
   setMoveValue : (value) =>
     @model.user.moveValue = (Number) value

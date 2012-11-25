@@ -268,7 +268,7 @@ require [
           catch error                
             $submitButton.addClass("disabled")
             $submitButton.popover(
-              placement : "left"
+              placement : "right"
               title : "No good code. No save."
               content : error.toString()
               trigger : "hover"

@@ -47,6 +47,7 @@ object NMLIO extends Controller with Secured {
   def download(tracingId: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(tracingId)
+      if !tracing.isTrainingsTracing
     } yield {
       Ok(prettyPrinter.format(Xml.toXML(tracing))).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",

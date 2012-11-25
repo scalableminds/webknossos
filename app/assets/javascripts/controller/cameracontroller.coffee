@@ -29,8 +29,8 @@ class CameraController
 
     @updateCamViewport()
     for cam in @cameras
-      cam.near = -100000
-      cam.far  =  100000
+      cam.near = -1000000
+      cam.far  =  1000000
 
   update : =>
     gPos = @flycam.getGlobalPos()

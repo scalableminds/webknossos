@@ -1,24 +1,22 @@
-@(form: Form[(String, String)])(implicit flash: Flash)
+@(form: Form[(String, String)])(implicit session: brainflight.view.SessionData)
 
-@import BootstrapHelpers._
-
-@main( None, false ){
+@main( showNavButtons = false ){
     
   <div class="container">
     <div class="span9 offset1 space-top">
       <div class="well">
         
-        @helper.form(routes.Application.authenticate, 'class -> "form-horizontal") {
+        @helper.form(routes.Authentication.authenticate, 'class -> "form-horizontal") {
         
           <legend>Login</legend>
 
           @form.globalError.map { error =>
             <div class="alert alert-error">
-              @error.message
+              @Messages(error.message)
             </div>
           }
           
-          @flash.get("success").map { message =>
+          @session.flash.get("success").map { message =>
             <div class="alert alert-success">
               @message
             </div>
@@ -29,7 +27,7 @@
 
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Login</button>
-            <a href="@routes.Application.register" class="btn">Sign Up</a>
+            <a href="@routes.Authentication.register" class="btn">Sign Up</a>
           </div>        
         }
       </div>

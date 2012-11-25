@@ -12,31 +12,42 @@ import models.task._
 import models.binary.DataSet
 import views.html
 import play.api.Logger
+import models.tracing._
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
   def dashboard = Authenticated { implicit request =>
     val user = request.user
-    val experiments = Experiment.findFor(user)
-    val (tempExperiments, taskExperiments) = 
-      experiments.partition(_.taskId.isEmpty)
-      
-    val userTasks = taskExperiments.flatMap( e => 
-      Task.findOneById(e.taskId.get).map(_ -> e))
-      
+    val tracings = Tracing.findFor(user)
+    val (taskTracings, allExplorationalTracings) =
+      tracings.partition(e =>
+        e.tracingType == TracingType.Task ||
+          e.tracingType == TracingType.Training)
+
+    val explorationalTracings = 
+      allExplorationalTracings
+      .filter(!_.state.isFinished)
+      .sortBy( -_.timestamp )
+
+    val userTasks = taskTracings.flatMap(e => e.task.map(_ -> e))
+
     val loggedTime = TimeTracking.loggedTime(user)
-    
+
     val dataSets = DataSet.findAll
-      
-    Ok(html.user.dashboard.dashboard(user, tempExperiments, userTasks, loggedTime, dataSets))
+
+    Ok(html.user.dashboard.dashboard(
+      explorationalTracings,
+      userTasks,
+      loggedTime,
+      dataSets))
   }
 
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {
     implicit request =>
       request.body.asOpt[JsObject] map { settings =>
         val fields = settings.fields take (UserConfiguration.MaxSettings) filter (UserConfiguration.isValidSetting)
-        User.saveSettings(request.user, UserConfiguration(fields.toMap))
+        request.user.update(_.changeSettings(UserConfiguration(fields.toMap)))
         Ok
       } getOrElse (BadRequest)
   }

@@ -11,14 +11,16 @@ import brainflight.tools.ExtendedTypes._
 class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {
     val file = path.asInstanceOf[PathImpl].getFile
+    val files = file.listFiles()
 
-    file.listFiles().map { f =>
-      if (f.isDirectory()) {
-        dataSetFromFile(f).map { dataSet =>
-          DataSet.updateOrCreate(dataSet)
+    if (files != null)
+      files.map { f =>
+        if (f.isDirectory()) {
+          dataSetFromFile(f).map { dataSet =>
+            DataSet.updateOrCreate(dataSet)
+          }
         }
       }
-    }
   }
 
   def onTick(path: Path) {

@@ -2,49 +2,66 @@ package controllers
 
 import play.api.libs.json.Json._
 import play.api.libs.json._
+import play.api.templates.Html
 import brainflight.security.Secured
 import models.security.Role
 import models.binary.DataSet
 import play.api.Logger
-import models.task.Experiment
+import models.tracing.Tracing
 import models.user._
-import models.task.UsedExperiments
+import models.tracing.UsedTracings
 import views._
+import brainflight.security.AuthenticatedRequest
+import models.tracing.TracingType
 
 object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
-  def createExperimentIDInfo(experimentId: String) = Json.obj(
+  def createTracingIDInfo(tracingId: String) = Json.obj(
     "task" -> Json.obj(
-      "id" -> experimentId))
-      
-  def index = Authenticated { implicit request =>      
-    if(Experiment.findFor(request.user).isEmpty)
-      Redirect(routes.UserController.dashboard)
-    else
-      Ok(html.oxalis.trace(request.user))
+      "id" -> tracingId))
+
+  def htmlForTracing(tracing: Tracing)(implicit request: AuthenticatedRequest[_]) = {
+    val additionalHtml =
+      (if (tracing.tracingType == TracingType.Review){
+        Tracing.findTrainingForReviewTracing(tracing).map{ training =>
+          html.admin.task.trainingsReviewItem(training, admin.TrainingsTracingAdministration.reviewForm)
+        }
+      }else
+        tracing.review.headOption.flatMap(_.comment).map(comment =>
+          html.oxalis.trainingsComment(comment))
+      ).getOrElse(Html.empty)
+    html.oxalis.trace(tracing)(additionalHtml)
   }
-  
-  def trace(experimentId: String) = Authenticated { implicit request =>
+
+  def index = Authenticated { implicit request =>
+    UsedTracings
+      .by(request.user)
+      .headOption
+      .flatMap(Tracing.findOneById)
+      .map(tracing => Ok(htmlForTracing(tracing)))
+      .getOrElse(Redirect(routes.UserController.dashboard))
+  }
+
+  def trace(tracingId: String) = Authenticated { implicit request =>
     val user = request.user
-    
-    Experiment.findOneById(experimentId)
-      .filter( _._user == user._id)
-      .map(exp => UsedExperiments.use(user, exp))
-      
-    Ok(html.oxalis.trace(user))
+
+    Tracing.findOneById(tracingId)
+      .filter(_._user == user._id)
+      .map { tracing =>
+        UsedTracings.use(user, tracing)
+        Ok(htmlForTracing(tracing))
+      }
+      .getOrElse(BadRequest("Tracing not found."))
   }
 
   def initialize = Authenticated { implicit request =>
     val user = request.user
-    val experimentId = UsedExperiments.by(user) match {
-      case experiment :: _ =>
-        experiment.toString
+    UsedTracings.by(user) match {
+      case tracing :: _ =>
+        Ok(createTracingIDInfo(tracing.toString))
       case _ =>
-        val exp = Experiment.createNew(user)
-        UsedExperiments.use(user, exp)
-        exp.id
+        BadRequest("No open tracing found.")
     }
-    Ok(createExperimentIDInfo(experimentId))
   }
 }

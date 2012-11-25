@@ -7,7 +7,7 @@ import models.security.Role
 import models.binary.DataSet
 import play.api.mvc._
 import play.api.Logger
-import models.task.Experiment
+import models.tracing.Tracing
 import models.user.User
 import org.apache.commons.codec.binary.Base64
 import com.sun.jersey.api.client.WebResource
@@ -28,14 +28,11 @@ object Jira extends Controller with Secured {
   val branchName = conf.getString("branchname") getOrElse "master"
 
   def index = Authenticated { implicit request =>
-    Ok(html.jira.index(request.user))
+    Ok(html.jira.index())
   }
 
-  def createIssue(user: User, summary: String, description: String, issueType: String) {
-    val auth = new String(Base64.encodeBase64("autoreporter:frw378iokl!24".getBytes))
-    val client = Client.create();
-
-    val issue = Json.obj(
+  def createIssueJson(user: User, summary: String, description: String, issueType: String) = {
+    Json.obj(
       "fields" -> Json.obj(
         "project" -> Json.obj(
           "key" -> "OX"),
@@ -47,20 +44,32 @@ object Jira extends Controller with Secured {
         "description" -> (description + "\n\n Reported by: %s (%s)".format(user.name, user.email)),
         "issuetype" -> Json.obj(
           "name" -> issueType))).toString
+  }
+
+  def createIssue(user: User, summary: String, description: String, issueType: String) {
+    val auth = new String(Base64.encodeBase64("autoreporter:frw378iokl!24".getBytes))
+    val client = Client.create();
+
+    val issue = createIssueJson(user, summary, description, issueType)
 
     usingSelfSignedCert {
       val webResource: WebResource = client.resource(jiraUrl + "/rest/api/2/issue")
 
-      val response = webResource.header("Authorization", "Basic " + auth).`type`("application/json").accept("application/json").post(classOf[ClientResponse], issue);
+      val response = webResource
+        .header("Authorization", "Basic " + auth)
+        .`type`("application/json")
+        .accept("application/json")
+        .post(classOf[ClientResponse], issue)
+        
       Logger.debug(response.toString)
     }
   }
 
   def submit = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     (for {
-      summary <- request.body.get("summary").flatMap(_.headOption)
-      description <- request.body.get("description").flatMap(_.headOption)
-      postedType <- request.body.get("type").flatMap(_.headOption)
+      summary <- postParameter("summary")
+      description <- postParameter("description")
+      postedType <- postParameter("type")
       issueType <- issueTypes.get(postedType)
     } yield {
       request.body

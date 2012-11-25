@@ -1,37 +1,56 @@
-@(loggedInUser: models.user.User, users: List[models.user.User])
+@(users: List[models.user.User], roles: List[models.security.Role])(implicit session: brainflight.view.AuthedSessionData)
 
-@main(Some(loggedInUser)){
+@main(){
   <div id="user-administration" class="container">
     
     <h3> Users </h3> 
-    <table class="table table-striped">
-      <thead>
-        <tr>
-          <th></th>
-          <th> Last name </th>
-          <th> First name </th>
-          <th> Email </th>
-          <th> Role </th>
-          <th> Verified </th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @users.map{ user =>
-          @userTableItem(user)
-        }
-      </tbody>
-    </table>
+    <form method="post">
+      @userTable(users)
 
-    <div class="btn-group">
-      <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
-        Bulk Actions
-        <span class="caret"></span>
-      </a>
-      <ul class="dropdown-menu">
-        <li><a href="#">Verify</a></li> 
-      </ul>
-    </div>
+      <div class="form-actions">
+
+        <div class="form-inline">
+
+          <div class="btn-group">
+            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+              Bulk Actions
+              <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+              <li>
+                <a href="@controllers.admin.routes.UserAdministration.verifyBulk" data-ajax="submit,replace-table=#user-administration-table"> 
+                  <i class="icon-ok"></i> Verify
+                </a>
+              </li>
+              <li>
+                <a href="@controllers.admin.routes.UserAdministration.deleteBulk" data-ajax="submit,confirm,replace-table=#user-administration-table">
+                  <i class="icon-trash"></i> Delete
+                </a>
+              </li> 
+            </ul>
+          </div>
+
+          <div class="divider-vertical"></div>
+
+          <select name="role" class="input-medium">
+            <option>Modify roles...</option>
+            @roles.map{ role =>
+              <option value="@role.name">@role.name</option>
+            }
+          </select>
+          <a href="@controllers.admin.routes.UserAdministration.addRoleBulk" class="btn" data-ajax="submit,replace-table=#user-administration-table">
+            Add Role
+          </a>
+          <a href="@controllers.admin.routes.UserAdministration.removeRoleBulk" class="btn" data-ajax="submit,replace-table=#user-administration-table">
+            Remove Role
+          </a>
+        </div>
+
+        </div>
+
+      </div>
+
+    </form>
 
   </div>
 }

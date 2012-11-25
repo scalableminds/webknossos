@@ -22,4 +22,8 @@ object TaskType extends BasicDAO[TaskType]("taskTypes") {
     
   def toForm(tt: TaskType) =
     Some(tt.summary, tt.description, tt.expectedTime)
+    
+  def findOneBySumnary(summary: String) = {
+    findOne(MongoDBObject("summary" -> summary))
+  }
 }

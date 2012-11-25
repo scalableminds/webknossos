@@ -1,14 +1,12 @@
-@(form: Form[(String, String, String, String)])(implicit flash: Flash)
+@(form: Form[(String, String, String, String)])(implicit session: brainflight.view.SessionData)
 
-@import BootstrapHelpers._
-
-@main( None, false ){
+@main( showNavButtons = false ){
   
   <div class="container">
     <div class="span7 offset2 space-top">
       <div class="well">
         
-        @helper.form(routes.Application.registrate, 'class -> "form-horizontal") {
+        @helper.form(routes.Authentication.registrate, 'class -> "form-horizontal") {
         
           <legend>Sign up</legend>
           
@@ -18,7 +16,7 @@
             </div>
           }
 
-          @flash.get("success").map { message =>
+          @session.flash.get("success").map { message =>
             <div class="alert alert-success">
               @Messages(message)
             </div>

@@ -1,8 +1,6 @@
 ### define
 model : Model
 view : View
-libs/threejs/fonts/helvetiker_regular.typeface : helvetiker
-model/game : Game
 ###
 
 
@@ -18,26 +16,36 @@ class CameraController
   # The Sceleton View Camera Controller handles the orthographic camera which is looking at the Skeleton
   # View. It provides methods to set a certain View (animated).
 
-  constructor : (cameras, lights, flycam, model) ->
-    @cameras       = cameras
-    @lights        = lights
-    @flycam        = flycam
-    @model         = model
+  cameras : null
+  lights : null
+  flycam : null
+  model : null
+
+  constructor : (@cameras, @lights, @flycam, @model) ->
+
+    # vector which translates scene coorinates to camera coordinates
+    rScale = @model.route.scale
+    rMin   = Math.min.apply(null, rScale)
 
     @updateCamViewport()
-    @cameras[VIEW_3D].near = -100000
-    @cameras[VIEW_3D].far  =  100000
+    for cam in @cameras
+      cam.near = -100000
+      cam.far  =  100000
 
   update : =>
     gPos = @flycam.getGlobalPos()
-    @cameras[PLANE_XY].position = new THREE.Vector3(gPos[0]    , gPos[1]    , gPos[2] - 1)
-    @cameras[PLANE_YZ].position = new THREE.Vector3(gPos[0] + 1, gPos[1]    , gPos[2])
-    @cameras[PLANE_XZ].position = new THREE.Vector3(gPos[0]    , gPos[1] + 1, gPos[2])
+    # camera porition's unit is nm, so convert it.
+    cPos = [0, 0, 0]
+    for i in [0..2]
+      cPos[i] = gPos[i] * @model.route.scale[i]
+    @cameras[PLANE_XY].position = new THREE.Vector3(cPos[0]    , cPos[1]    , cPos[2] - 1)
+    @cameras[PLANE_YZ].position = new THREE.Vector3(cPos[0] + 1, cPos[1]    , cPos[2])
+    @cameras[PLANE_XZ].position = new THREE.Vector3(cPos[0]    , cPos[1] + 1, cPos[2])
 
     # offset the lights very far
-    @lights[PLANE_XY].position = new THREE.Vector3(gPos[0]         , gPos[1]         , gPos[2] - 100000)
-    @lights[PLANE_YZ].position = new THREE.Vector3(gPos[0] + 100000, gPos[1]         , gPos[2])
-    @lights[PLANE_XZ].position = new THREE.Vector3(gPos[0]         , gPos[1] + 100000, gPos[2])
+    @lights[PLANE_XY].position = new THREE.Vector3(cPos[0]         , cPos[1]         , cPos[2] - 100000)
+    @lights[PLANE_YZ].position = new THREE.Vector3(cPos[0] + 100000, cPos[1]         , cPos[2])
+    @lights[PLANE_XZ].position = new THREE.Vector3(cPos[0]         , cPos[1] + 100000, cPos[2])
 
   changePrev : (id) ->
     # In order for the rotation to be correct, it is not sufficient
@@ -48,7 +56,10 @@ class CameraController
     # CORRECTION: You're telling lies, you need to use the up vector...
 
     camera = @cameras[VIEW_3D]
-    b = @model.Route.data.dataSet.upperBoundary
+    b = @model.route.dataSet.upperBoundary.slice()
+    # convert voxel to nm
+    for i in [0..(b.length - 1)]
+      b[i] *= @model.route.scale[i]
     time = 800
     @tween = new TWEEN.Tween({  middle: new THREE.Vector3(b[0]/2, b[1]/2, b[2]/2), upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera, flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
     switch id
@@ -135,14 +146,14 @@ class CameraController
     @flycam.hasChanged = true
 
   zoomIn : =>
-    if @model.User.Configuration.lockZoom
+    if @model.user.lockZoom
       @flycam.zoomInAll()
     else 
       @flycam.zoomIn(@flycam.getActivePlane())
     @updateCamViewport()
 
   zoomOut : =>
-    if @model.User.Configuration.lockZoom
+    if @model.user.lockZoom
       @flycam.zoomOutAll()
     else 
       @flycam.zoomOut(@flycam.getActivePlane())
@@ -152,14 +163,16 @@ class CameraController
     @camDistance = 2 * value # Plane is shifted so it's <value> to the back and the front
     @updateCamViewport()
 
-  getRouteClippingDistance : ->
-    @camDistance
+  getRouteClippingDistance : (planeID) ->
+    @camDistance * @model.route.voxelPerNM[planeID]
 
   updateCamViewport : ->
-    for i in [0..2]
+    # Plane size is WIDTH voxels of the highest resolution, being the lowest scale
+    scaleFactor = Math.min.apply(null, @model.route.scale)
+    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       @cameras[i].near = -@camDistance #/ @flycam.getPlaneScalingFactor(i)
       boundary     = WIDTH / 2 * @flycam.getPlaneScalingFactor(i)
-      @cameras[i].left  = @cameras[i].bottom = -boundary
-      @cameras[i].right = @cameras[i].top    =  boundary
+      @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor
+      @cameras[i].right = @cameras[i].top    =  boundary * scaleFactor
       @cameras[i].updateProjectionMatrix()
     @flycam.hasChanged = true

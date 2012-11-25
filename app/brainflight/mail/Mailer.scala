@@ -43,6 +43,7 @@ class Mailer extends Actor {
   val smtpSsl = conf.getBoolean( "mail.smtp.ssl" ).get
   val smtpUser = conf.getString( "mail.smtp.user" ).get
   val smtpPass = conf.getString( "mail.smtp.pass" ).get
+  val subjectPrefix = "Oxalis | "
 
   def receive = {
     case Send( mail ) =>
@@ -75,7 +76,7 @@ class Mailer extends Actor {
     mail.ccRecipients.foreach( setAddress( _ ) ( multiPartMail.addCc _ ))
     mail.bccRecipients.foreach( setAddress( _ ) ( multiPartMail.addBcc _ ))
 
-    multiPartMail.setSubject( mail.subject )
+    multiPartMail.setSubject( subjectPrefix + mail.subject )
     mail.headers foreach { case (key,value) => multiPartMail.addHeader(key, value) }
 
     // do the work to prepare sending on SMTP

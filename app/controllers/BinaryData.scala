@@ -45,7 +45,7 @@ object BinaryData extends Controller with Secured {
 
   implicit val dispatcher = Akka.system.dispatcher
   val conf = Play.configuration
-  val scaleFactors = Array(1, 1, 2)
+  val scaleFactors = Array( 1, 1, 1 )
 
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 

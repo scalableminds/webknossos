@@ -1,39 +1,43 @@
-### define ###
+### define 
+jquery : $
+underscore : _
+###
 
-# `SimpleWorker` is a wrapper around the WebWorker API. First you
+# `DispatchedWorker` is a wrapper around the WebWorker API. First you
 # initialize it providing url of the javascript worker code. Afterwards
 # you can request work using `send` and wait for the result using the
 # returned deferred.
-class SimpleWorker
+class DispatchedWorker
 
   constructor : (url) ->
     @worker = new Worker(url)
 
-    @worker.onerror = (err) -> 
-      console?.error(err)
+    @worker.onerror = (err) -> console?.error(err)
+
   
   # Returns a `$.Deferred` object representing the completion state.
-  send : (data) ->  
+  send : (payload) ->  
     
-    deferred = $.Deferred()
+    deferred = new $.Deferred()
 
-    workerHandle = data.workerHandle = Math.random()
+    workerHandle = Math.random()
 
-    workerMessageCallback = (event) =>
+    workerMessageCallback = ({ data : packet }) =>
       
-      if (result = event.data).workerHandle == workerHandle
+      if packet.workerHandle == workerHandle
         @worker.removeEventListener("message", workerMessageCallback, false)
-        if err = result.err
-          deferred.reject(err)
+        if packet.error
+          deferred.reject(packet.error)
         else 
-          deferred.resolve(result)
+          deferred.resolve(packet.payload)
 
     @worker.addEventListener("message", workerMessageCallback, false)
-    @worker.postMessage(data)
+    @worker.postMessage { workerHandle, payload }
 
     deferred.promise()
 
-class SimpleWorker.Pool
+
+class DispatchedWorker.Pool
 
   constructor : (@url, @workerLimit = 3) ->
     @queue = []
@@ -56,7 +60,7 @@ class SimpleWorker.Pool
 
   spawnWorker : ->
 
-    worker = new SimpleWorker(@url)
+    worker = new DispatchedWorker(@url)
     worker.busy = false
     
     workerReset = =>
@@ -86,4 +90,4 @@ class SimpleWorker.Pool
     deferred = $.Deferred()
     @queue.push { data, deferred }
 
-SimpleWorker
+DispatchedWorker

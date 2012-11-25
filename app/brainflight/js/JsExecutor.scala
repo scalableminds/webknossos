@@ -26,7 +26,7 @@ class JsExecutor {
     bindings.putAll(params)
     val promise = Promise[Object]()
     // evaluate JavaScript code from String
-    val hello = new Thread(new Runnable {
+    val jsThread = new Thread(new Runnable {
       def run() {
         promise complete {
           try {
@@ -40,11 +40,11 @@ class JsExecutor {
         }
       }
     })
-    hello.start()
+    jsThread.start()
     Akka.system.scheduler.scheduleOnce(5 seconds) {
       if(!promise.isCompleted){
         Logger.warn("Destroying JS executer: Runntime expired.")
-        hello.stop()
+        jsThread.stop()
         promise.complete(Left(new Exception("Exceution timeout.")))
       }
     }

@@ -20,6 +20,8 @@ object ApplicationBuild extends Build {
     "reactivemongo" %% "reactivemongo" % "0.1-SNAPSHOT")
     
   val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
+    templatesImport += "brainflight.view.helpers._",
+    templatesImport += "brainflight.view._",
     resolvers += "repo.novus rels" at "http://repo.novus.com/releases/",
     resolvers += "repo.novus snaps" at "http://repo.novus.com/snapshots/",
     resolvers += "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/",

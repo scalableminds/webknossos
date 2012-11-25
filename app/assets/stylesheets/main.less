@@ -41,6 +41,119 @@ body {
 .input-monospace {
     font-family: Monaco, Consolas, "Lucida Console", "Courier New", monospace;
 }
+.divider-vertical {
+    display: inline-block;
+    vertical-align: middle;
+    height: 25px;
+    margin: 0 9px;
+    border-right: 1px solid #e5e5e5;
+}
+
+.popover {
+    width: 400px;
+}
+
+.table-double-striped > tbody {
+    & > tr:nth-child(4n+1) > td,
+    & > tr:nth-child(4n+2) > td {
+        background-color: #f9f9f9
+    }
+}
+
+.table-nohead {
+    tbody tr:nth-child(1) {
+        td, th {
+            border-top: none;
+        }
+    }
+}
+
+.table .table {
+    margin-bottom: 0;
+}
+
+.table-details {
+
+    .details-row > td {
+        box-shadow: inset 0 0 10px rgba(180, 180, 180, .2);
+    }
+    .details-toggle,
+    .details-toggle-all {
+
+        cursor: pointer;
+
+        .caret-down {
+            display: none;
+        }
+
+        &.open {
+            .caret-right {
+                display: none;
+            }
+            .caret-down {
+                display: inline-block;
+            }
+        }
+    }
+}
+
+.light-caret {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    vertical-align: middle;
+    content: "";
+}
+.caret-right {
+    .light-caret;
+    border-left: 4px solid #888;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+}
+.caret-down {
+    .light-caret;
+    border-top: 4px solid #888;
+    border-right: 4px solid transparent;
+    border-left: 4px solid transparent;
+}
+
+@-webkit-keyframes rotation {
+    from {
+        -webkit-transform: rotate(0);
+    }
+    to {
+        -webkit-transform: rotate(360deg);
+    }
+}
+
+.inline-block {
+    display: inline-block;
+}
+
+.rotating {
+    -webkit-animation: rotation 1s linear infinite;
+}
+
+svg a:hover {
+    text-decoration: none;
+    &[href] {
+        cursor: pointer;
+    }
+}
+
+#alert-container {
+    position: absolute;
+    right: 20px;
+    top: 60px;
+    z-index: 100;
+
+    .alert {
+        cursor: default;
+    }
+    .alert:hover {
+        box-shadow: 0 0 10px rgba(100, 100, 100, .2);
+    }
+}
 
 #stats {
     position: fixed;
@@ -101,7 +214,7 @@ body {
 //    border-color: @mainBackground;
 //}
 #prevControls {
-    width: 384px;
+    float: left;
     height: 20px;
     position: relative;
     top: 420px;
@@ -110,6 +223,7 @@ body {
 }
 #overlay {
     position: absolute;
+    width: 280px;
     top: 0;
     left: 0;
     padding: 10px;
@@ -117,20 +231,9 @@ body {
 #overlay > * {
     margin-bottom: 10px;
 }
-
-
-#alert-container {
-    position: absolute;
-    right: 20px;
-    top: 60px;
-    z-index: 100;
-    
-    .alert:hover {
-        right: 5px;
-        -webkit-transition: right .2s;
-        z-index: 10;
-        position: relative;
-    }
+#overlay .nav-tabs > li > a {
+    padding-top: 4px;
+    padding-bottom: 4px;
 }
 
 
@@ -175,8 +278,17 @@ body {
     }
 }
 
-.overlay {
-    width: 450px;
+.key-arrow {
+    left: 170px !important;
+}
+
+.key-overlay {
+    width: 700px;
+    margin-left: 180px;
+}
+
+.graph.well svg {
+    max-width: 900px;
 }
 
 @media screen and (max-width: 960px) {

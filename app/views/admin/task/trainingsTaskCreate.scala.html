@@ -1,0 +1,87 @@
+@(tasks: List[models.task.Task], tracings: List[models.tracing.Tracing], taskTypes: List[models.task.TaskType], experiences: Seq[String], nmlForm: Form[models.task.Task], tracingForm: Form[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
+
+@import play.api.libs.json.Json
+
+@taskHelpLink() = {
+  <a href="@controllers.admin.routes.TaskAdministration.create">Create a new Task</a>
+}
+
+@taskTypeHelpLink() = {
+  <a href="@controllers.admin.routes.TaskTypeAdministration.list">Create a new Type</a>
+}
+
+@main(){
+  <div class="container">
+    <h3>Create Trainings-Task with NML</h3>
+    <div class="row">
+      <p class="span8">The uploaded NML-file is used as a reference for the training. After a user has submitted his training result, it is getting compared with the reference.</p>
+    </div>
+    <div class="well">
+    
+      @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromForm, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
+        
+        @helper.select(nmlForm("task"), tasks.map { task =>
+          task.id -> (task.taskType.map(_.summary).getOrElse("") + " - start " + task.start.toString)
+        }, Symbol("help-inline") -> taskHelpLink)
+
+        @helper.input(nmlForm("training.domain")) { (id, name, value, args) =>
+            <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(nmlForm("training.gain"), 'type -> "number")
+        
+        @helper.inputText(nmlForm("training.loss"), 'type -> "number")
+
+        <div class="control-group">
+          <label class="control-label" for="nmlFile">@Messages("nmlFile")</label>
+          <div class="controls">
+            <input type="file" name="nmlFile" id="nmlFile" /> 
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
+
+    <h3>Create Trainings-Task from Tracing</h3>
+    <div class="row">
+      <p class="span8">
+        The selected tracing is used as a reference for the training. After a user has submitted his training result, it is getting compared with the reference.
+      </p>
+    </div>
+    <div class="well">
+      @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromTracing, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
+        
+        @helper.select(tracingForm("tracing"), tracings.map { exp =>
+          exp.id -> (exp.dataSetName + " " + formatDate(exp.date)) 
+        })
+        
+        @helper.select(tracingForm("taskType"), taskTypes.map { tt =>
+          tt.id -> tt.summary
+        }, Symbol("help-inline") -> taskTypeHelpLink)
+
+        @helper.input(tracingForm("experience.domain")) { (id, name, value, args) =>
+          <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(tracingForm("experience.value"), 'type -> "number")
+
+        @helper.inputText(tracingForm("priority"), 'type -> "number")
+
+        @helper.input(tracingForm("training.domain")) { (id, name, value, args) =>
+            <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+        }
+
+        @helper.inputText(tracingForm("training.gain"), 'type -> "number")
+        
+        @helper.inputText(tracingForm("training.loss"), 'type -> "number")
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
+  </div>
+}

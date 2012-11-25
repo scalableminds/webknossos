@@ -1,15 +1,46 @@
 @(task: models.task.Task)
 
-@import brainflight.format._
 
 <tr>
-  <td> @task.id.drop(10) </td>
-  <td> @task.cellId </td>
+  <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+  <td> @formatHash(task.id) </td>
   <td> @task.seedIdHeidelberg </td>
-  <td> @task.taskType.map(_.summary).getOrElse("") </td>
+  <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
   <td> @task.dataSetName </td>
+  <td> @task.neededExperience </td>
   <td> @task.start </td>
   <td> @task.priority </td>
-  <td> @DateFormatter.format(task.created) </td>
-  <td> @task.open Open<br /> @task.inProgress in Progress<br /> @task.completed Completed<br /></td>
+  <td> @formatDate(task.created) </td>
+  <td> 
+    <span title="Unassigned"> 
+      @task.open <i class="icon-play-circle"></i>
+    </span>
+    |
+    <span title="in Progress"> 
+      @task.inProgress <i class="icon-random"></i> 
+    </span>
+    |
+    <span title="Completed">
+      @task.completed <i class="icon-ok-circle"></i>
+    </span>
+  </td>
+  <td>  
+    <a href="@controllers.admin.routes.TaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
+    <a href="@controllers.admin.routes.TrainingsTaskAdministration.create(task.id)"><i class="icon-road"></i> use for Training </a>
+  </td>
+</tr>
+<tr class="details-row" >
+  <td colspan="11">
+    <table class="table table-condensed table-nohead">
+      <tbody>
+        @task.tracings.map{ tracing =>
+          <tr>
+            <td> @tracing.user.map(_.name).getOrElse("<Maik>") </td>
+            <td> @formatDate(tracing.date) </td>
+            <td> <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download NML </a></th>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </td>
 </tr>

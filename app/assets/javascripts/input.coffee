@@ -1,7 +1,8 @@
 ### define
 libs/keyboard : KeyboardJS
-libs/mouse : MouseLib
 libs/gamepad : GamepadJS
+libs/event_mixin : EventMixin
+libs/jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
 ###
 
 Input = {}
@@ -24,20 +25,28 @@ Input = {}
 # Pressing a button will only fire an event once.
 class Input.KeyboardNoLoop
 
-  constructor : (bindings) ->
+  constructor : (initialBindings) ->
 
-    for own key, callback of bindings
+    @bindings = []
+
+    for own key, callback of initialBindings
       @attach(key, callback)
 
 
   attach : (key, callback) ->
 
-    KeyboardJS.bind.key(key, callback)
+    binding = KeyboardJS.on(key, 
+      (event) -> 
+        callback() unless $(":focus").length
+        return
+    )
+    @bindings.push(binding)
 
 
   unbind : ->
 
-    KeyboardJS.unbind.key "all"
+    binding.clear() for binding in @bindings
+    return
 
 
 # This module is "main" keyboard handler. 
@@ -45,20 +54,23 @@ class Input.KeyboardNoLoop
 # fire the attached callback.
 class Input.Keyboard
 
-  delay : 1000 / 30
-  keyCallbackMap : {}
-  keyPressedCount : 0
+  DELAY : 1000 / 30
 
-  constructor : (bindings) ->
-    for own key, callback of bindings
+  constructor : (initialBindings) ->
+
+    @keyCallbackMap = {}
+    @keyPressedCount = 0
+    @bindings = []
+
+    for own key, callback of initialBindings
       @attach(key, callback)
 
 
   attach : (key, callback) ->
 
-    KeyboardJS.bind.key(
+    binding = KeyboardJS.on(
       key
-      (evt, keys, key2) =>
+      (event) =>
         # When first pressed, insert the callback into
         # keyCallbackMap and start the buttonLoop.
         # Then, ignore any other events fired from the operating
@@ -66,25 +78,24 @@ class Input.Keyboard
         # When control key is pressed, everything is ignored, because
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
-        console.log key2 + " down"
-        unless @keyCallbackMap[key]?
-          if not evt.ctrlKey
+
+        unless @keyCallbackMap[key]? or $(":focus").length
+          if not event.ctrlKey
             @keyPressedCount++ 
             @keyCallbackMap[key] = callback
             @buttonLoop() if @keyPressedCount == 1
 
         return
-      (evt, keys, key2) =>
-        activeKeys = KeyboardJS.activeKeys()
-        console.log key2 + " up"
-        #for key of @keyCallbackMap
-        #  if activeKeys.indexOf(key) < 0
-        #    delete @keyCallbackMap[key]
+
+      =>
+        
         if @keyCallbackMap[key]?
           @keyPressedCount--
           delete @keyCallbackMap[key]
+
         return
     )
+    @bindings.push(binding)
 
 
   # In order to continously fire callbacks we have to loop
@@ -95,56 +106,140 @@ class Input.Keyboard
       for own key, callback of @keyCallbackMap
         callback()
 
-      setTimeout( (=> @buttonLoop()), @delay ) 
+      setTimeout( (=> @buttonLoop()), @DELAY ) 
 
 
   unbind : ->
 
-    KeyboardJS.unbind.key "all"
+    binding.clear() for binding in @bindings
+    return
 
 
 # The mouse module.
-# This one basically just provides the public interface
-# for mouse handling. Nothing fancy here.
-#class Input.Mouse
-# It needs three mouses
-# because at every canvas(=objectToTrack) there needs
-# to be a different callback.
+# Events: over, out, leftClick, rightClick, leftDownMove
 class Input.Mouse
-  
-  constructor : (objectsToTrack, activeCallbacks, bindingsPlanes, bindingsPrev) ->
-    # create three mouses for each plane
-    @mouseXY = new MouseLib(objectsToTrack[0], activeCallbacks[0])
-    @mouseYZ = new MouseLib(objectsToTrack[1], activeCallbacks[1])
-    @mouseXZ = new MouseLib(objectsToTrack[2], activeCallbacks[2])
-    @mousePrev = new MouseLib(objectsToTrack[3])
 
-    for own axis, callback of bindingsPlanes
-      @attach(@mouseXY, axis, callback)
-      @attach(@mouseYZ, axis, callback)
-      @attach(@mouseXZ, axis, callback)
-    
-    for own axis, callback of bindingsPrev
-      @attach(@mousePrev, axis, callback)
+  constructor : (@$target, initialBindings) ->
 
-  attach : (m, axis, callback) ->
-    m.bindX callback if axis is "x"
-    m.bindY callback if axis is "y"
-    m.bindR callback if axis is "r"
-    m.bindL callback if axis is "l"
-    m.bindW callback if axis is "w"
+    _.extend(this, new EventMixin())
 
-  setInversionX : (m, value) ->
-    m.setInversionX value if m?
+    @isLeftDown = false
+    @isMouseOver = false
+    @lastPosition = null
 
-  setInversionY : (m, value) ->
-    m.setInversionY value if m?
+    $(window).on
+      "mousemove" : @mouseMove
+      "mouseup"   : @mouseUp
 
-  setRotateValue : (m, value) ->
-    m.setRotateValue value if m?
+    @$target.on 
+      "mousedown" : @mouseDown
+      "mouseenter" : @mouseEnter
+      "mouseleave" : @mouseLeave
+      "mousewheel" : @mouseWheel
 
-  unbind : (m) ->
-    m.unbind()
+    @on(initialBindings)
+    @attach = @on
+
+
+  unbind : ->
+
+    $(window).off
+      "mousemove" : @mouseMove
+      "mouseup" : @mouseUp
+
+    @$target.off 
+      "mousedown" : @mouseDown
+      "mouseenter" : @mouseEnter
+      "mouseleave" : @mouseLeave
+      "mousewheel" : @mouseWheel 
+
+
+  isHit : (event) ->
+
+    { pageX, pageY } = event
+    { left, top } = @$target.offset()
+
+    left <= pageX <= left + @$target.width() and
+    top <= pageY <= top + @$target.height()
+
+
+  mouseDown : (event) =>
+
+    event.preventDefault()
+
+    @lastPosition = 
+      x : event.pageX - @$target.offset().left
+      y : event.pageY - @$target.offset().top
+
+    # check whether the mouseDown event is a leftclick
+    if event.which == 1
+      $(":focus").blur() # see OX-159
+
+      @leftDown = true
+      @trigger("leftClick", [@lastPosition.x, @lastPosition.y])
+
+    else
+      @trigger("rightClick", [@lastPosition.x, @lastPosition.y])
+
+    return
+
+
+  mouseUp : (event) =>
+
+    if @isMouseOver
+      @mouseLeave(which : 0) unless @isHit(event)
+    else
+      @mouseEnter(which : 0) if @isHit(event)
+
+    @leftDown = false
+    return
+
+
+  mouseMove : (event) =>
+
+    if @leftDown
+      
+      newPosition =
+        x : event.pageX - @$target.offset().left
+        y : event.pageY - @$target.offset().top
+      
+      deltaX = (newPosition.x - @lastPosition.x)
+      deltaY = (newPosition.y - @lastPosition.y)
+
+      unless deltaX == 0 and deltaY == 0
+        @trigger("leftDownMove", x : deltaX, y : deltaY)
+        @lastPosition = newPosition
+
+    return
+
+
+  mouseEnter : (event) =>
+
+    if event.which == 0
+      @isMouseOver = true
+      @trigger("over")
+    return
+
+
+  mouseLeave : (event) =>
+
+    if event.which == 0
+      @isMouseOver = false
+      @trigger("out")
+    return
+
+
+  mouseWheel : (event, delta) =>
+
+    event.preventDefault()
+    if event.shiftKey
+      @trigger("scroll", delta, "shift")
+    else if event.altKey
+      @trigger("scroll", delta, "alt")
+    else
+      @trigger("scroll", delta, null)
+
+    return
 
     
 # This module completly handles the device orientation / 

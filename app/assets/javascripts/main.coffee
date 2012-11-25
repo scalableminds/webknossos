@@ -6,6 +6,7 @@ require.config
     "underscore" : "libs/underscore-1.2.0.min"
     "bootstrap" : "libs/bootstrap.min"
     "worker" : "libs/worker_plugin"
+  
 
   shim : 
     "underscore" :
@@ -224,7 +225,7 @@ require [
 
       "admin/tasks/overview" : ->
 
-        require ["worker!libs/viz"], (VizWorker) ->
+        require [ "worker!libs/viz" ], (VizWorker) ->
 
           graphSource = $("#graphData").html()
           userData = JSON.parse($("#userData").html())
@@ -250,6 +251,8 @@ require [
         $this = $(this)
         $form = $this.find("form")
         $submitButton = $this.find("[type=submit]")
+
+        # no require here, ace gets loaded via script tag
 
         editor = ace.edit("editor")
         editor.setTheme("ace/theme/twilight");

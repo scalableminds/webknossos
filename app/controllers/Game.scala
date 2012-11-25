@@ -25,7 +25,7 @@ object Game extends Controller with Secured {
     val additionalHtml =
       (if (tracing.tracingType == TracingType.Review){
         Tracing.findTrainingForReviewTracing(tracing).map{ training =>
-          html.admin.task.trainingsReview(training, admin.TrainingsTracingAdministration.reviewForm)
+          html.admin.task.trainingsReviewItem(training, admin.TrainingsTracingAdministration.reviewForm)
         }
       }else
         tracing.review.headOption.flatMap(_.comment).map(comment =>

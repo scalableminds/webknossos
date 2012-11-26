@@ -14,8 +14,14 @@ class Model
 
   constructor : (options) ->
 
-    console.log options
-
     @binary = new Binary(options.dataSet.id)
     @route = new Route(options.tracing, options.dataSet)
     @user = new User(options.user)
+
+    worker = new Worker('./assets/javascripts/model/pullworker.js');
+    
+    worker.onmessage = (event) ->
+    
+    	console.log "WORKER:", event
+
+    worker.postMessage("Hallo Welt!")

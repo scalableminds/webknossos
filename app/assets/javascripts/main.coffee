@@ -16,6 +16,9 @@ require.config
       exports : "Viz"
     "routes" :
       exports : "jsRoutes"
+    "libs/ace/ace" :
+      exports : "ace"
+
 
 require [
   "jquery"
@@ -26,11 +29,11 @@ require [
      
   route = (routes) ->
 
-    url = window.location.pathname.substring(1)
+    javaTemplate = $("#main-container").data("template")
 
     #if _.isFunction(routes[url])
-    if routes[url]?
-      routes[url].call($("#main-container")[0])
+    if routes[javaTemplate]?
+      routes[javaTemplate].call($("#main-container")[0])
     return
 
 
@@ -195,13 +198,11 @@ require [
     # Page specifics
     route
 
-      "dashboard" : ->
+      "views.html.user.dashboard.dashboard$" : ->
 
         $("#nml-explore-form").each ->
 
           $form = $(this)
-
-          $form.find("[type=file]").remove()
 
           $form.find("[type=submit]").click (event) ->
 
@@ -218,12 +219,24 @@ require [
 
         $("a[rel=popover]").popover()
 
-        # $.ajax(
-        #     type : "POST"
-        #     url : "/tracing?id=#{tracing.id}&isNew=#{Number(tracing.isNew)}"
-        # )
 
-      "admin/tasks/overview" : ->
+      "views.html.oxalis.trace$" : ->
+
+        $("#trace-finish-button, #trace-download-button").click (event) ->
+
+          event.preventDefault()
+
+          window.oxalis.gui.saveNow().done => 
+            window.location.href = this.href
+
+
+        $("#trace-save-button").click (event) ->
+
+          event.preventDefault()
+          window.oxalis.gui.saveNow()
+
+
+      "views.html.admin.task.taskOverview$" : ->
 
         require [ "worker!libs/viz" ], (VizWorker) ->
 
@@ -246,57 +259,57 @@ require [
               )
 
 
-      "admin/tasks/algorithm" : ->
+      "views.html.admin.task.taskSelectionAlgorithm$" : ->
 
         $this = $(this)
         $form = $this.find("form")
         $submitButton = $this.find("[type=submit]")
 
-        # no require here, ace gets loaded via script tag
+        require ["libs/ace/ace"], (ace) ->
 
-        editor = ace.edit("editor")
-        editor.setTheme("ace/theme/twilight");
-        editor.getSession().setMode("ace/mode/javascript");
+          editor = ace.edit("editor")
+          editor.setTheme("ace/theme/twilight");
+          editor.getSession().setMode("ace/mode/javascript");
 
 
-        editor.on "change", ->
+          editor.on "change", ->
 
-          try
-            new Function(editor.getValue())
-            $submitButton.removeClass("disabled").popover("destroy")
+            try
+              new Function(editor.getValue())
+              $submitButton.removeClass("disabled").popover("destroy")
 
-          catch error                
-            $submitButton.addClass("disabled")
-            $submitButton.popover(
-              placement : "right"
-              title : "No good code. No save."
-              content : error.toString()
-              trigger : "hover"
-            )
-
-        editor._emit("change") # init
-       
-        $form.submit (event) ->
-
-          event.preventDefault()
-
-          return if $submitButton.hasClass("disabled")
-
-          code = editor.getValue()
-
-          $form.find("[name=code]").val(code)
-
-          $.ajax(
-            url : this.action
-            data : $form.serialize()
-            type : "POST"
-          ).then(
-            -> 
-              Toast.success("Saved!")
-            ->
-              Toast.error(
-                """Sorry, we couldn't save your code. Please double check your syntax.<br/>
-                Otherwise, please copy your code changes and reload this page."""
-                true
+            catch error                
+              $submitButton.addClass("disabled")
+              $submitButton.popover(
+                placement : "right"
+                title : "No good code. No save."
+                content : error.toString()
+                trigger : "hover"
               )
-          )
+
+          editor._emit("change") # init
+         
+          $form.submit (event) ->
+
+            event.preventDefault()
+
+            return if $submitButton.hasClass("disabled")
+
+            code = editor.getValue()
+
+            $form.find("[name=code]").val(code)
+
+            $.ajax(
+              url : this.action
+              data : $form.serialize()
+              type : "POST"
+            ).then(
+              -> 
+                Toast.success("Saved!")
+              ->
+                Toast.error(
+                  """Sorry, we couldn't save your code. Please double check your syntax.<br/>
+                  Otherwise, please copy your code changes and reload this page."""
+                  true
+                )
+            )

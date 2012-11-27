@@ -80,8 +80,6 @@ class Controller
       @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
       @gui.on "deleteActiveTree", @deleteActiveTree
 
-      @flycam.on "globalPositionChanged", (position) => @gui.updateGlobalPosition(position)
-
       @flycam.setGlobalPos(@model.route.data.editPosition)
       @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
       @flycam.setOverrideZoomStep(@model.user.minZoomStep)

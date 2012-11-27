@@ -40,7 +40,7 @@ class Mailer extends Actor {
   val enabled = conf.getBoolean("mail.enabled").get
   val smtpHost = conf.getString("mail.smtp.host").get
   val smtpPort = conf.getInt("mail.smtp.port").get
-  val smtpSsl = conf.getBoolean("mail.smtp.ssl").get
+  val smtpTls = conf.getBoolean("mail.smtp.tls").get
   val smtpUser = conf.getString("mail.smtp.user").get
   val smtpPass = conf.getString("mail.smtp.pass").get
   val subjectPrefix = "Oxalis | "
@@ -82,7 +82,7 @@ class Mailer extends Actor {
       // do the work to prepare sending on SMTP
       multiPartMail.setHostName(smtpHost)
       multiPartMail.setSmtpPort(smtpPort)
-      multiPartMail.setSSL(smtpSsl)
+      multiPartMail.setTLS(smtpTls)
       multiPartMail.setAuthenticator(new DefaultAuthenticator(smtpUser, smtpPass))
       multiPartMail.setDebug(false)
 

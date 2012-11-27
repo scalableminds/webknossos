@@ -1,9 +1,5 @@
 importScripts('../libs/require-2.1.1.js')
 
-### define
-./array_buffer_socket : ArrayBufferSocket
-###
-
 class PullWorker
 
   # Constants

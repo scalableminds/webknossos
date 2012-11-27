@@ -6,7 +6,7 @@
 class PullQueue
 
   # Constants
-  BATCH_LIMIT : 10
+  BATCH_LIMIT : 5
   BATCH_SIZE : 5
   ROUND_TRIP_TIME_SMOOTHER : .125
   BUCKET_TIME_SMOOTHER : .125
@@ -133,19 +133,18 @@ class PullQueue
         (responseBuffer) =>
 
           @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length)
-          if responseBuffer?
-            for bucket, i in batch
+   #       if responseBuffer?
+  #          for bucket, i in batch
 
-              bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
+              #bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
               #console.log "Success: ", bucket
-              @cube.setBucketByZoomedAddress(bucket, bucketData)
+              #@cube.setBucketByZoomedAddress(bucket, bucketData)
               
-
-        =>
+        #=>
           
-          for bucket in batch
+        #  for bucket in batch
 
-            @cube.setBucketByZoomedAddress(bucket, null)
+            #@cube.setBucketByZoomedAddress(bucket, null)
             #console.log "Failed: ", bucket
     
     ).always =>
@@ -156,15 +155,23 @@ class PullQueue
 
   updateConnectionInfo : (roundTripTime, bucketCount) ->
 
-    if @roundTripTime? and @bucketTime?
-      @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
-      @bucketTime = (1 - @BUCKET_TIME_SMOOTHER) * @bucketTime + @BUCKET_TIME_SMOOTHER * (new Date() - @lastReceiveTime) / bucketCount
-    else
-      @roundTripTime = roundTripTime
-      @bucketTime = roundTripTime / bucketCount
+    @bucketCount = 0 unless @bucketCount?
+    @roundTripTimes = [] unless @roundTripTimes?
+    @roundTripTimes.push roundTripTime
+    @bucketCount += bucketCount
 
-    @bucketsPerSecond = 1000 / @bucketTime
-    @lastReceiveTime = new Date()
+    if @bucketCount == 1000
+      console.log @roundTripTimes
+      console.timeEnd "pull"
+    #if @roundTripTime? and @bucketTime?
+    #  @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
+    #  @bucketTime = (1 - @BUCKET_TIME_SMOOTHER) * @bucketTime + @BUCKET_TIME_SMOOTHER * (new Date() - @lastReceiveTime) / bucketCount
+ #   else
+  #    @roundTripTime = roundTripTime
+   #   @bucketTime = roundTripTime / bucketCount
+
+    #@bucketsPerSecond = 1000 / @bucketTime
+    #@lastReceiveTime = new Date()
 
 
   getLoadBucketSocket : _.once ->
@@ -172,7 +179,7 @@ class PullQueue
     new ArrayBufferSocket(
       senders : [
         new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        #new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array

@@ -161,8 +161,17 @@ class PullQueue
     @bucketCount += bucketCount
 
     if @bucketCount == 1000
-      console.log @roundTripTimes
       console.timeEnd "pull"
+      console.log @roundTripTimes
+      
+      sum = 0
+      for t in @roundTripTimes
+        sum += t
+
+      avg = sum / @roundTripTimes.length
+      console.log sum, @roundTripTimes.length
+      console.log "ping - min:", _.min(@roundTripTimes), "max:", _.max(@roundTripTimes), "avg:", avg
+
     #if @roundTripTime? and @bucketTime?
     #  @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
     #  @bucketTime = (1 - @BUCKET_TIME_SMOOTHER) * @bucketTime + @BUCKET_TIME_SMOOTHER * (new Date() - @lastReceiveTime) / bucketCount

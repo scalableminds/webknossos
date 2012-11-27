@@ -90,7 +90,7 @@ $ ->
             )
 
 
-    "views.html.admin.task.taskSelectionAlgorithm" : ->
+    "admin.task.taskSelectionAlgorithm" : ->
 
       $this = $(this)
       $form = $this.find("form")

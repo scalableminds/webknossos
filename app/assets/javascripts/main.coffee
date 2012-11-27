@@ -204,8 +204,6 @@ require [
 
           $form = $(this)
 
-          $form.find("[type=file]").remove()
-
           $form.find("[type=submit]").click (event) ->
 
             event.preventDefault()

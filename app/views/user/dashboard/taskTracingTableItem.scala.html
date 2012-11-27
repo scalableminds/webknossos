@@ -16,7 +16,7 @@
 @displayComments(failed: Boolean, comments: List[String]) = {
   @comments match{
     case head :: tail => {
-      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-content="@head"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
+      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
     }
     case _ => {
 

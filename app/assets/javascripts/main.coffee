@@ -1,5 +1,5 @@
-require.config 
-  
+require.config
+
   baseUrl : "/assets/javascripts"
 
   paths :
@@ -13,7 +13,7 @@ require.config
     "m4x4" : "libs/m4x4"
     "dat" : "libs/dat.gui.min"
 
-  shim : 
+  shim :
     "underscore" :
       exports : "_"
     "bootstrap" : [ "jquery" ]
@@ -23,15 +23,15 @@ require.config
       exports : "jsRoutes"
     "libs/ace/ace" :
       exports : "ace"
-    "three" : 
+    "three" :
       exports : "THREE"
-    "stats" : 
+    "stats" :
       exports : "Stats"
-    "v3" : 
+    "v3" :
       exports : "V3"
-    "m4x4" : 
+    "m4x4" :
       exports : "M4x4"
-      
+
 
 require [
   "jquery"
@@ -40,5 +40,6 @@ require [
   "./main/enhancements"
   "./main/routing"
 ], ->
-     
-  
+
+
+

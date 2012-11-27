@@ -11,19 +11,27 @@ class LevelCreator
 
   constructor : ->
 
-    @canvas = $("#previewCanvas").getContext("2d")
-    $("#previewSlider").on "change", ->
+    @canvas = $("#preview-canvas")[0].getContext("2d")
+
+    $slider = $("#preview-slider")
+    $slider.on "change", ->
       @updatePreview()
 
-    $("requestButton").on "click", ->
-      @requestStack()
+    $("#request-button").on "click", =>
 
-  requestStack : ->
+      dimensions =
+        x : parseInt( $("#dim-x").val() )
+        y : parseInt( $("#dim-y").val() )
+        numSlides : parseInt( $("#dim-z").val() )
 
-    dimensions =
-      x : parseInt( $("#dimX").val() )
-      y : parseInt( $("#dimY").val() )
-      numSlides : parseInt( $("#dimZ").val() )
+      $slider[0].max = dimensions.numSlides
+
+      @requestStack(dimensions)
+
+    $("#dimension-modal").modal("show")
+
+
+  requestStack : (dimensions) ->
 
     Request.send(
       url : "/......."
@@ -33,13 +41,14 @@ class LevelCreator
     )
 
 
-  registerPlugin : ( plugin ) ->
-
-    plugins.add plugin
-
   updatePreview : ->
 
-    @canvas
+    sliderValue = $("#preview-slider")[0].value
+
+
+    image = imageData.splice(  )
+
+    @canvas.putImageData()
 
 
 

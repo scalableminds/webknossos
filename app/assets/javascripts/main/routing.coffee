@@ -57,7 +57,7 @@ $ ->
 
           event.preventDefault()
 
-          oxalis.gui.saveNow().done => 
+          oxalis.gui.saveNow().done =>
             window.location.href = this.href
 
 
@@ -109,7 +109,7 @@ $ ->
             new Function(editor.getValue())
             $submitButton.removeClass("disabled").popover("destroy")
 
-          catch error                
+          catch error
             $submitButton.addClass("disabled")
             $submitButton.popover(
               placement : "right"
@@ -119,7 +119,7 @@ $ ->
             )
 
         editor._emit("change") # init
-       
+
         $form.submit (event) ->
 
           event.preventDefault()
@@ -135,7 +135,7 @@ $ ->
             data : $form.serialize()
             type : "POST"
           ).then(
-            -> 
+            ->
               Toast.success("Saved!")
             ->
               Toast.error(
@@ -144,3 +144,8 @@ $ ->
                 true
               )
           )
+
+
+    "admin.creator.levelCreator" : ->
+      require ["level_creator"], (LevelCreator) ->
+        new LevelCreator()

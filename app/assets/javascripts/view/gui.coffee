@@ -134,6 +134,17 @@ class Gui
     fTrees.open()
     fNodes.open()
 
+    @flycam.on "globalPositionChanged", (position) => 
+
+      @updateGlobalPosition(position)
+      return
+
+    $("#trace-position-input").on "change", (event) => 
+
+      @setPosFromString(event.target.value)
+      return
+
+
   saveNow : =>
     @model.user.pushImpl()
     @model.route.pushImpl()
@@ -153,7 +164,7 @@ class Gui
 
   updateGlobalPosition : (globalPos) =>
     stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
-    $("#globalPos").val(stringPos)
+    $("#trace-position-input").val(stringPos)
 
   setMoveValue : (value) =>
     @model.user.moveValue = (Number) value

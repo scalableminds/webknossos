@@ -92,6 +92,9 @@ POST    /admin/users/removeRole             controllers.admin.UserAdministration
 GET     /admin/tracings/:id/review          controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
 GET     /admin/tracings/:id/download        controllers.admin.NMLIO.download( id: String )
 
+# Level Creator
+GET     /admin/creator                      controllers.admin.LevelCreator.index
+
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.Application.javascriptRoutes
 

@@ -126,6 +126,7 @@ object TaskAdministration extends Controller with Secured {
 
   def overview = Authenticated { implicit request =>
     Async {
+      play.api.templates.Html
       val allUsers = User.findAll
       val allTaskTypes = TaskType.findAll
       val usersWithoutTask = allUsers.filter(user => !Tracing.hasOpenTracing(user, false))

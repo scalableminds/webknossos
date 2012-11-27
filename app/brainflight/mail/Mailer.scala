@@ -22,8 +22,7 @@ import play.api.Configuration._
 
 import views._
 
-
-case class Send( mail: Mail)
+case class Send(mail: Mail)
 
 /**
  * this class providers a wrapper for sending email in Play! 2.0
@@ -38,16 +37,17 @@ case class Send( mail: Mail)
 class Mailer extends Actor {
 
   val conf = play.api.Play.current.configuration
-  val smtpHost = conf.getString( "mail.smtp.host" ).get
-  val smtpPort = conf.getInt( "mail.smtp.port" ).get
-  val smtpSsl = conf.getBoolean( "mail.smtp.ssl" ).get
-  val smtpUser = conf.getString( "mail.smtp.user" ).get
-  val smtpPass = conf.getString( "mail.smtp.pass" ).get
+  val enabled = conf.getBoolean("mail.enabled").get
+  val smtpHost = conf.getString("mail.smtp.host").get
+  val smtpPort = conf.getInt("mail.smtp.port").get
+  val smtpSsl = conf.getBoolean("mail.smtp.ssl").get
+  val smtpUser = conf.getString("mail.smtp.user").get
+  val smtpPass = conf.getString("mail.smtp.pass").get
   val subjectPrefix = "Oxalis | "
 
   def receive = {
-    case Send( mail ) =>
-      send( mail )
+    case Send(mail) =>
+      send(mail)
   }
 
   /**
@@ -60,33 +60,36 @@ class Mailer extends Actor {
    * like view.Mails.templateHtml(tags).
    * @return
    */
-  def send( mail: Mail ) = {
+  def send(mail: Mail) = {
+    if (enabled) {
+      // Content type
+      val contentType = mail.contentType getOrElse guessContentType(mail)
 
-    // Content type
-    val contentType = mail.contentType getOrElse guessContentType( mail )
+      val multiPartMail: MultiPartEmail = createEmail(mail)
 
-    val multiPartMail: MultiPartEmail = createEmail( mail )
+      multiPartMail.setCharset(mail.charset)
 
-    multiPartMail.setCharset( mail.charset )
+      setAddress(mail.from)(multiPartMail.setFrom _)
+      if (mail.replyTo.isDefined)
+        setAddress(mail.replyTo.get)(multiPartMail.addReplyTo _)
+      mail.recipients.foreach(setAddress(_)(multiPartMail.addTo _))
+      mail.ccRecipients.foreach(setAddress(_)(multiPartMail.addCc _))
+      mail.bccRecipients.foreach(setAddress(_)(multiPartMail.addBcc _))
 
-    setAddress( mail.from ) ( multiPartMail.setFrom _ )
-    if( mail.replyTo.isDefined )
-      setAddress( mail.replyTo.get ) ( multiPartMail.addReplyTo _ )
-    mail.recipients.foreach( setAddress( _ ) ( multiPartMail.addTo _ ))
-    mail.ccRecipients.foreach( setAddress( _ ) ( multiPartMail.addCc _ ))
-    mail.bccRecipients.foreach( setAddress( _ ) ( multiPartMail.addBcc _ ))
+      multiPartMail.setSubject(subjectPrefix + mail.subject)
+      mail.headers foreach { case (key, value) => multiPartMail.addHeader(key, value) }
 
-    multiPartMail.setSubject( subjectPrefix + mail.subject )
-    mail.headers foreach { case (key,value) => multiPartMail.addHeader(key, value) }
+      // do the work to prepare sending on SMTP
+      multiPartMail.setHostName(smtpHost)
+      multiPartMail.setSmtpPort(smtpPort)
+      multiPartMail.setSSL(smtpSsl)
+      multiPartMail.setAuthenticator(new DefaultAuthenticator(smtpUser, smtpPass))
+      multiPartMail.setDebug(false)
 
-    // do the work to prepare sending on SMTP
-    multiPartMail.setHostName( smtpHost )
-    multiPartMail.setSmtpPort( smtpPort )
-    multiPartMail.setSSL( smtpSsl )
-    multiPartMail.setAuthenticator( new DefaultAuthenticator( smtpUser, smtpPass ) )
-    multiPartMail.setDebug( false )
-
-    multiPartMail.send
+      multiPartMail.send
+    } else {
+      ""
+    }
   }
 
   /**
@@ -95,17 +98,17 @@ class Mailer extends Actor {
    * @param emailAddress
    * @param setter
    */
-  private def setAddress( emailAddress: String )( setter: ( String, String ) => _ ) {
-    if ( emailAddress != null ) {
+  private def setAddress(emailAddress: String)(setter: (String, String) => _) {
+    if (emailAddress != null) {
       try {
-        val iAddress = new InternetAddress( emailAddress )
+        val iAddress = new InternetAddress(emailAddress)
         val address = iAddress.getAddress()
         val name = iAddress.getPersonal()
 
-        setter( address, name )
+        setter(address, name)
       } catch {
         case e: Exception =>
-          setter( emailAddress, null )
+          setter(emailAddress, null)
       }
     }
   }
@@ -117,15 +120,15 @@ class Mailer extends Actor {
    * @param bodyHtml
    * @return
    */
-  private def createEmail( mail: Mail ): MultiPartEmail = {
-    if ( mail.bodyHtml == "" ) {
+  private def createEmail(mail: Mail): MultiPartEmail = {
+    if (mail.bodyHtml == "") {
       val email = new MultiPartEmail()
-      email.setMsg( mail.bodyText )
+      email.setMsg(mail.bodyText)
       email
     } else {
-      val email = new HtmlEmail().setHtmlMsg( mail.bodyHtml )
-      if ( mail.bodyText != "" ) 
-        email.setTextMsg( mail.bodyText )
+      val email = new HtmlEmail().setHtmlMsg(mail.bodyHtml)
+      if (mail.bodyText != "")
+        email.setTextMsg(mail.bodyText)
       email
     }
   }
@@ -135,7 +138,7 @@ class Mailer extends Actor {
    *
    * @param bodyHtml
    */
-  private def guessContentType( mail: Mail ) =
-    if ( mail.bodyHtml != "" ) "text/html" else "text/plain"
+  private def guessContentType(mail: Mail) =
+    if (mail.bodyHtml != "") "text/html" else "text/plain"
 
 }

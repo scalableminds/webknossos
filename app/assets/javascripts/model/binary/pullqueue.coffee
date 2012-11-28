@@ -27,16 +27,18 @@ class PullQueue
     @bucketCount = 0
     @roundTripTimes = []
     @tests = [
-      { batchSize: 1, batchLimit: 1, socket: @getLoadBucketWebsocket(), desc: "Websocket 1/1" }
-      { batchSize: 100, batchLimit: 1, socket: @getLoadBucketWebsocket(), desc: "Websocket 100/1" }
-      { batchSize: 1, batchLimit: 100, socket: @getLoadBucketWebsocket(), desc: "Websocket 1/100" }
+#      { batchSize: 1, batchLimit: 1, socket: @getLoadBucketAjax(), desc: "Ajax 1/1" }
+#      { batchSize: 100, batchLimit: 1, socket: @getLoadBucketAjax(), desc: "Ajax 100/1" }
+#      { batchSize: 1, batchLimit: 100, socket: @getLoadBucketAjax(), desc: "Ajax 1/100" }
+#      { batchSize: 10, batchLimit: 10, socket: @getLoadBucketAjax(), desc: "Ajax 10/10" }
+#      { batchSize: 5, batchLimit: 5, socket: @getLoadBucketAjax(), desc: "Ajax 5/5" }
+
+      { batchSize: 1, batchLimit: 10, socket: @getLoadBucketWebsocket(), desc: "Websocket 1/10" }
+      { batchSize: 2, batchLimit: 10, socket: @getLoadBucketWebsocket(), desc: "Websocket 2/10" }
       { batchSize: 10, batchLimit: 10, socket: @getLoadBucketWebsocket(), desc: "Websocket 10/10" }
-      { batchSize: 5, batchLimit: 5, socket: @getLoadBucketWebsocket(), desc: "Websocket 5/5" }
-      { batchSize: 1, batchLimit: 1, socket: @getLoadBucketAjax(), desc: "Ajax 1/1" }
-      { batchSize: 100, batchLimit: 1, socket: @getLoadBucketAjax(), desc: "Ajax 100/1" }
-      { batchSize: 1, batchLimit: 100, socket: @getLoadBucketAjax(), desc: "Ajax 1/100" }
-      { batchSize: 10, batchLimit: 10, socket: @getLoadBucketAjax(), desc: "Ajax 10/10" }
-      { batchSize: 5, batchLimit: 5, socket: @getLoadBucketAjax(), desc: "Ajax 5/5" }
+      { batchSize: 1, batchLimit: 7, socket: @getLoadBucketWebsocket(), desc: "Websocket 1/7" }
+      { batchSize: 2, batchLimit: 7, socket: @getLoadBucketWebsocket(), desc: "Websocket 2/7" }
+      { batchSize: 10, batchLimit: 7, socket: @getLoadBucketWebsocket(), desc: "Websocket 10/7" }
     ]
 
   fillQueue : ->

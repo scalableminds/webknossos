@@ -37,7 +37,7 @@ class LevelCreator
       url : "/......."
       method : "GET"
       data : dimensions
-      contentType : "application/json"
+      contentType : "application/x-www-form-urlencoded"
     )
 
 

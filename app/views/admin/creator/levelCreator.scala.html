@@ -2,7 +2,7 @@
 
 @main(){
 
-  <div class="container">
+  <div class="container" id="level-creator">
 
     <div id="dimension-modal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
       <div class="modal-header">
@@ -40,9 +40,48 @@
       </div>
     </div>
 
-    <div>
-      <canvas id="preview-canvas" width="250" height="150"></canvas>
-      <input id="preview-slider" type="range" min="0"></input>
+    <div class="row">
+
+      <div class="span9">
+        <h3>Preview</h3>
+        <div>
+          <canvas id="preview-canvas" width="250" height="150"></canvas>
+        </div>
+        <input id="preview-slider" type="range"></input>
+
+        <table class="table table-striped">
+          <tbody>
+            <tr>
+              <td>
+                <div class="layer-filter-group" style="left : 20px; width : 30px;">PEEEEENIIIISSS</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div>
+          <a class="btn"><i class="icon-plus"></i> Add layer</a>
+        </div>
+      </div>
+
+      <div class="span3">
+        <h3>Properties</h3>
+        <table class="table table-striped">
+          <thead>
+          </thead>
+          <tbody>
+            <tr>
+              <th>Start #</th>
+              <td><input type="number" min="0" max="200" class="input-small" value="0" /></td>
+            </tr>
+            <tr>
+              <th>End #</th>
+              <td><input type="number" min="0" max="200" class="input-small" value="10" /></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
     </div>
+
   </div>
 }

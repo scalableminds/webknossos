@@ -12,9 +12,10 @@ class Cube
   cube : null
   cubeSize : null
   cubeOffset : null
+  upperBoundary : null
 
 
-  constructor : () ->
+  constructor : (@upperBoundary) ->
     
     _.extend(@, new EventMixin())
 

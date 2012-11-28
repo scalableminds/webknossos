@@ -1,7 +1,6 @@
 ### define
 jquery : $
-underscore : _
-libs/flycam : Flycam
+model/flycam : Flycam
 libs/Tween : TWEEN_LIB
 model/game : Game
 libs/event_mixin : EventMixin

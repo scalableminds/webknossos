@@ -22,7 +22,7 @@ class Binary
 
     @dataSetId = dataSet.id
 
-    @cube = new Cube()
+    @cube = new Cube(dataSet.upperBoundary)
     @queue = new PullQueue(@dataSetId, @cube)
 
     @planes = [

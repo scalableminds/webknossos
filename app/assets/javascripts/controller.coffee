@@ -7,7 +7,7 @@ model : Model
 view : View
 view/gui : Gui
 input : Input
-libs/flycam : Flycam
+model/flycam : Flycam
 libs/event_mixin : EventMixin
 ###
 
@@ -54,7 +54,7 @@ class Controller
 
       @view.createKeyboardCommandOverlay()
 
-      @sceneController = new SceneController(@model.route.dataSet.upperBoundary, @flycam, @model)
+      @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
       meshes = @sceneController.getMeshes()
       
       for mesh in meshes
@@ -317,8 +317,6 @@ class Controller
     if centered
       @centerActiveNode()
     @flycam.hasChanged = true
-    @gui.update()
-    @sceneController.skeleton.setActiveNode()
 
   centerActiveNode : =>
     @flycam.setGlobalPos(@model.route.getActiveNodePos())
@@ -329,9 +327,7 @@ class Controller
     @sceneController.updateRoute()
 
   createNewTree : =>
-    [id, color] = @model.route.createNewTree()
-    @gui.update()
-    @sceneController.skeleton.createNewTree(id, color)
+    @model.route.createNewTree()
 
   setActiveTree : (treeId) =>
     @model.route.setActiveTree(treeId)

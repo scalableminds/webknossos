@@ -63,11 +63,11 @@ class Skeleton
       )
     @activeNode.doubleSided = true
 
-    @route.on "newActiveNode" ->
-      @setActiveNode()
+    @route.on("newActiveNode", ->
+      @setActiveNode())
 
-    @route.on "newTree" ->
-      @createNewTree()
+    @route.on("newTree", (treeId, treeColor) ->
+      @createNewTree(treeId, treeColor))
 
     @reset()
 

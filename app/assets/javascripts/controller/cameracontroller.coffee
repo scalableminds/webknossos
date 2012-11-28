@@ -56,7 +56,7 @@ class CameraController
     # CORRECTION: You're telling lies, you need to use the up vector...
 
     camera = @cameras[VIEW_3D]
-    b = @model.route.dataSet.upperBoundary.slice()
+    b = @model.binary.cube.upperBoundary.slice()
     # convert voxel to nm
     for i in [0..(b.length - 1)]
       b[i] *= @model.route.scale[i]

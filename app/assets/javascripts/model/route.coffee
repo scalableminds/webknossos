@@ -23,7 +23,7 @@ class Route
   activeNode : null
   activeTree : null
 
-  constructor : (tracing) ->
+  constructor : (@data) ->
 
     _.extend(this, new EventMixin())
 
@@ -49,7 +49,7 @@ class Route
     @voxelPerNM = [0, 0, 0]
     for i in [0..(@scale.length - 1)]
       @voxelPerNM[i] = 1 / @scale[i]
-    @scaleX = data.scale[0]
+    @scaleX = @data.scale[0]
     @globalPosition = data.editPosition
 
     # get tree to build
@@ -333,7 +333,7 @@ class Route
         break
     @push()
 
-    @trigger "newActiveNode"
+    @trigger("newActiveNode")
 
 
   setActiveTree : (id) ->
@@ -372,7 +372,8 @@ class Route
     @activeTree = sentinel
     @activeNode = null
     @push()
-    return [sentinel.treeId, sentinel.color]
+
+    @trigger("newTree", sentinel.treeId, sentinel.color)
 
   findNodeInTree : (id, tree) ->
     unless tree

@@ -144,6 +144,9 @@ class Gui
       @setPosFromString(event.target.value)
       return
 
+    @model.route.on("newActiveNode", =>
+      @update())
+
 
   saveNow : =>
     @model.user.pushImpl()

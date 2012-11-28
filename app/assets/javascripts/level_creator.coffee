@@ -72,20 +72,26 @@ class LevelCreator
 
     { width, height } = @canvas
 
-    imageData = @context.getImageData(0, 0, width, height)
+    imageDataObject = @context.getImageData(0, 0, width, height)
+    imageData = imageDataObject.data
+
+    sourceData = @data
 
     indexSource = sliderValue * width * height
     indexTarget = 0
+
     for x in [0...width]
       for y in [0...height]
-        for color in [0...3] # r,g,b
-          imageData.data[indexTarget++] = @data[indexSource]
+        # r,g,b
+        imageData[indexTarget++] = sourceData[indexSource]
+        imageData[indexTarget++] = sourceData[indexSource]
+        imageData[indexTarget++] = sourceData[indexSource]
 
         # alpha
-        imageData.data[indexTarget++] = 255
+        imageData[indexTarget++] = 255
         indexSource++
 
-    @context.putImageData(imageData, 0, 0)
+    @context.putImageData(imageDataObject, 0, 0)
 
 
 

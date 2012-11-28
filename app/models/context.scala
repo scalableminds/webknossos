@@ -6,8 +6,7 @@ import com.mongodb.casbah.MongoConnection
 import play.Configuration
 
 package object context {
-
-  private def createConnection(dbName: String) = {
+  val db = {
     import com.mongodb.casbah.commons.Imports._
     import com.mongodb.casbah.MongoConnection
     import play.api.Play.current
@@ -16,9 +15,17 @@ package object context {
 
     val url = conf.getString("mongo.url").getOrElse("127.0.0.1")
     val port = conf.getInt("mongo.port").getOrElse(27017)
+    
+    MongoConnection(url, port)
+  }
 
-    val connection = MongoConnection(url, port)(dbName)
+  private def createConnection(dbName: String) = {
+    import com.mongodb.casbah.commons.Imports._
+    import play.api.Play.current
+    import play.api.Play
+    val conf = Play.configuration
 
+    val connection = db(dbName)
     for {
       dbuser <- conf.getString("mongo.user")
       dbpasswd <- conf.getString("mongo.password")

@@ -219,8 +219,8 @@ class Route
             resolution : 0
           })
 
-    console.log "NML-Objekt"
-    console.log result
+#    console.log "NML-Objekt"
+#    console.log result
     return result
 
 
@@ -233,11 +233,11 @@ class Route
 
   pushImpl : ->
 
-    console.log "pushing..."
+#    console.log "pushing..."
 
     deferred = new $.Deferred()
 
-    console.log "PUT"
+#    console.log "PUT"
     Request.send(
       url : "/tracing/#{@data.id}"
       method : "PUT"

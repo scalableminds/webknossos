@@ -32,7 +32,7 @@ class Binary
 
   ping : _.once (position, options) ->
 
-    @perfTest()
+    @queue.perfTest()
     #@ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
     #@ping(position, options)
 
@@ -67,16 +67,4 @@ class Binary
 
    # for i in [0...Math.min(options.length, @planes.length)]
     #  @planes[i].get(position, options[i]) if options[i]?
-
-  perfTest : ->
-
-    @cube.extendByBucketAddressExtent([0, 0, 0], [25, 25, 25])
-
-    @queue.clear()
-    for x in [10...20]
-      for y in [10...20]
-        for z in [10...20]
-          @queue.insert([x, y, z, 0], 1)
-    console.time "pull"
-    @queue.pull()
 

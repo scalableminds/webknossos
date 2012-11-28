@@ -36,14 +36,11 @@ class Skeleton
   # whether or not display the spheres
   disSpheres : true
 
-  constructor : (@maxRouteLen, @flycam, @model) ->
+  constructor : (@maxRouteLen, @flycam, @route) ->
 
     _.extend(@, new EventMixin())
 
-    @maxRouteLen  = maxRouteLen
-    @flycam       = flycam
-    @model        = model
-    @scaleVector  = new THREE.Vector3(@model.route.voxelPerNM...)
+    @scaleVector  = new THREE.Vector3(@route.voxelPerNM...)
     # Edges
     @routes       = []
     # Nodes
@@ -65,6 +62,12 @@ class Skeleton
           })
       )
     @activeNode.doubleSided = true
+
+    @route.on "newActiveNode" ->
+      @setActiveNode()
+
+    @route.on "newTree" ->
+      @createNewTree()
 
     @reset()
 
@@ -112,7 +115,7 @@ class Skeleton
     @ids          = []
     @nodesSpheres = []
 
-    for tree in @model.route.getTrees()
+    for tree in @route.getTrees()
       @createNewTree(tree.treeId, tree.color)
     
     @loadSkeletonFromModel()
@@ -120,8 +123,8 @@ class Skeleton
     @trigger "newGeometries", @nodesSpheres
 
   loadSkeletonFromModel : ->
-    for tree in @model.route.getTrees()
-      nodeList = @model.route.getNodeList(tree)
+    for tree in @route.getTrees()
+      nodeList = @route.getNodeList(tree)
 
       index = @getIndexFromTreeId(tree.treeId)
 
@@ -150,13 +153,13 @@ class Skeleton
             @curIndex[index]++
         @routes[index].geometry.verticesNeedUpdate = true
         @nodes[index].geometry.verticesNeedUpdate = true
-    for branchPoint in @model.route.branchStack
+    for branchPoint in @route.branchStack
       @setBranchPoint(true, branchPoint.id)
     @setActiveNode()
 
   setActiveNode : =>
-    id = @model.route.getActiveNodeId()
-    position = @model.route.getActiveNodePos()
+    id = @route.getActiveNodeId()
+    position = @route.getActiveNodePos()
     if @activeNodeSphere and @disSpheres==true
       @activeNodeSphere.visible = true
     # May be null
@@ -167,12 +170,12 @@ class Skeleton
       # Hide activeNodeSphere, because activeNode is visible anyway
       if @activeNodeSphere
         @activeNodeSphere.visible = false
-        if @model.route.getActiveNodeType() == TYPE_BRANCH
+        if @route.getActiveNodeType() == TYPE_BRANCH
           @activeNode.material.color.setHex(COLOR_BRANCH_ACTIVE)
         else
           @activeNode.material.color.setHex(COLOR_ACTIVE)
 
-      @setNodeRadius(@model.route.getActiveNodeRadius())
+      @setNodeRadius(@route.getActiveNodeRadius())
       @activeNode.position = new THREE.Vector3(position...)
     else
       @activeNodeSphere = null
@@ -181,9 +184,9 @@ class Skeleton
 
   setBranchPoint : (isBranchPoint, nodeID) ->
     colorActive = if isBranchPoint then COLOR_BRANCH_ACTIVE else COLOR_ACTIVE
-    treeColor = @model.route.getTree().color
+    treeColor = @route.getTree().color
     colorNormal = if isBranchPoint then COLOR_BRANCH else treeColor
-    if not nodeID? or nodeID == @model.route.getActiveNodeId()
+    if not nodeID? or nodeID == @route.getActiveNodeId()
       @activeNode.material.color.setHex(colorActive)
       if @activeNodeSphere
         @activeNodeSphere.material.color.setHex(colorNormal)
@@ -208,12 +211,12 @@ class Skeleton
     curGlobalPos = @flycam.getGlobalPos()
     activePlane  = @flycam.getActivePlane()
     zoomFactor   = @flycam.getPlaneScalingFactor activePlane
-    position     = @model.route.getActiveNodePos()
-    typeNumber   = @model.route.getActiveNodeType()
-    id           = @model.route.getActiveNodeId()
-    index        = @getIndexFromTreeId(@model.route.getTree().treeId)
-    color        = @model.route.getTree().color
-    radius       = @model.route.getActiveNodeRadius()
+    position     = @route.getActiveNodePos()
+    typeNumber   = @route.getActiveNodeType()
+    id           = @route.getActiveNodeId()
+    index        = @getIndexFromTreeId(@route.getTree().treeId)
+    color        = @route.getTree().color
+    radius       = @route.getActiveNodeRadius()
 
     #if typeNumber == 0
       # calculate the global position of the rightclick
@@ -288,7 +291,7 @@ class Skeleton
       
   getIndexFromTreeId : (treeId) ->
     unless treeId
-      treeId = @model.route.getTree().treeId
+      treeId = @route.getTree().treeId
     for i in [0..@ids.length]
       if @ids[i] == treeId
         return i

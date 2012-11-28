@@ -46,7 +46,7 @@ class SceneController
 
     # TODO: Implement text 
 
-    @skeleton = new Skeleton(10000, @flycam, @model)
+    @skeleton = new Skeleton(10000, @flycam, @model.route)
 
     # create Meshes
     @planes = new Array(3)

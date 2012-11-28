@@ -3,7 +3,6 @@ jquery : $
 underscore : _
 ../libs/request : Request
 ../libs/event_mixin : EventMixin
-../libs/json_socket : JsonSocket
 ./tracepoint : TracePointClass
 ###
 
@@ -32,7 +31,6 @@ class Route
     _.extend(this, new EventMixin())
 
     console.log "Route.data: ", @data
-    @id        = @dataSet.id
     #@branchStack = @data.branchPoints.map (a) -> new Float32Array(a)
     #@branchStack = (@data.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in @data.branchPoints) # when @data.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
     @createBuffer()
@@ -44,70 +42,13 @@ class Route
     # Used to save in NML file, is always defined
     @lastActiveNodeId = 1
     @activeTree = null
-    
-    # Build sample tree
-    #@putNewPoint([300, 300, 200], TYPE_USUAL)
-    #branch = @putNewPoint([300, 320, 200], TYPE_BRANCH)
-    #@putNewPoint([340, 340, 200], TYPE_USUAL)
-    #@putNewPoint([360, 380, 200], TYPE_USUAL)
-    #@activeNode = branch
-    #branch = @putNewPoint([340, 280, 200], TYPE_BRANCH)
-    #@putNewPoint([360, 270, 200], TYPE_USUAL)
-    #@activeNode = branch
-    #@putNewPoint([360, 290, 200], TYPE_USUAL)
-    #console.log "--------- TREE ---------"
-    #console.log @tree.toString()
-
-    # Build sample @data
-    #console.log "---------- Build @data -----------"
-    #console.log @data
-    #@data = {
-    #  activeNode : 6
-    #  branchPoints : [{id : 1}, {id : 2}]
-    #  editPosition : [400, 350, 200]
-    #  id : "5029141a44aebdd7a089a062"
-    #  trees : {
-    #    1 : {
-    #      color : [1, 0, 0, 0]
-    #      edges : [{source : 1, target : 3},
-    #               {source : 3, target : 4},
-    #               {source : 1, target : 2},
-    #               {source : 2, target : 5},
-    #               {source : 2, target : 6},
-    #               {source : 2, target : 7}]
-    #      id : 1
-    #      nodes : {
-    #        1 : { id : 1, position : [300, 300, 200], radius : 1}
-    #        2 : { id : 2, position : [350, 350, 200], radius : 1}
-    #        3 : { id : 3, position : [300, 350, 200], radius : 1}
-    #        4 : { id : 4, position : [300, 400, 200], radius : 1}
-    #        5 : { id : 5, position : [400, 300, 200], radius : 1}
-    #        6 : { id : 6, position : [400, 350, 200], radius : 1}
-    #        7 : { id : 7, position : [400, 400, 200], radius : 1}
-    #      }
-    #    }
-    #    5 : {
-    #      color : [1, 0, 0, 0]
-    #      edges : [{source : 8, target : 9},
-    #               {source : 9, target : 10}]
-    #      id : 2
-    #      nodes : {
-    #        8 : { id : 8, position : [350, 400, 200], radius : 1}
-    #        9 : { id : 9, position : [400, 450, 200], radius : 1}
-    #        10 : { id : 10, position : [350, 450, 200], radius : 1}
-    #      }
-    #    }
-    #  }
-    #}
-
-    #@recursionTest(0)
 
     # For trees that are disconnected
     lostTrees = []
 
     ############ Load Tree from @data ##############
     
-    @scale = data.scale
+    @scale = @data.scale
     # reciprocal of scale
     @voxelPerNM = [0, 0, 0]
     for i in [0..(@scale.length - 1)]

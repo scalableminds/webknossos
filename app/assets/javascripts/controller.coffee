@@ -7,7 +7,6 @@ model : Model
 view : View
 view/gui : Gui
 input : Input
-libs/request : Request
 libs/flycam : Flycam
 libs/event_mixin : EventMixin
 ###
@@ -27,10 +26,11 @@ class Controller
 
     _.extend(@, new EventMixin())
 
-    @requestInitData().done (options) =>
+    @model = new Model()
+
+    @model.initialize().done =>
 
       # create Model
-      @model = new Model(options)
       @flycam = new Flycam(VIEWPORT_WIDTH, @model)
       @view  = new View(@model, @flycam)
 
@@ -95,32 +95,6 @@ class Controller
       @sceneController.setDisplaySV PLANE_YZ, @model.user.displayPreviewYZ
       @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
       @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
-      
-
-  requestInitData : ->
-
-    Request.send(
-      url : "/game/initialize"
-      dataType : "json"
-    ).pipe (task) ->
-
-      Request.send(
-        url : "/tracing/#{task.task.id}"
-        dataType : "json"
-      ).pipe (tracing) ->
-
-        Request.send(
-          url : "/user/configuration"
-          dataType : "json"
-        ).pipe((user) ->
-
-          options = {}
-          options.user = user
-          options.dataSet = tracing.dataSet
-          options.tracing = tracing.tracing
-          options
-
-        -> alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page."))
 
 
   initMouse : ->

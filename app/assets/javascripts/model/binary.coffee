@@ -18,7 +18,9 @@ class Binary
   direction : [0, 0, 0]
   
 
-  constructor : (@dataSetId) ->
+  constructor : (dataSet) ->
+
+    @dataSetId = dataSet.id
 
     @cube = new Cube()
     @queue = new PullQueue(@dataSetId, @cube)

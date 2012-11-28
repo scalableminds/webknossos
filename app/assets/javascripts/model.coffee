@@ -2,6 +2,8 @@
 ./model/binary : Binary
 ./model/route : Route
 ./model/user : User
+./model/flycam : Flycam
+./libs/request : Request
 ###
 
 # This is the model. It takes care of the data including the 
@@ -12,10 +14,27 @@
 
 class Model
 
-  constructor : (options) ->
+  initialize : (TEXTURE_SIZE_P, VIEWPORT_SIZE) =>
 
-    console.log options
+	  Request.send(
+      url : "/game/initialize"
+      dataType : "json"
+    ).pipe (task) =>
 
-    @binary = new Binary(options.dataSet.id)
-    @route = new Route(options.tracing, options.dataSet)
-    @user = new User(options.user)
+      Request.send(
+        url : "/tracing/#{task.task.id}"
+        dataType : "json"
+      ).pipe (tracing) =>
+
+        Request.send(
+          url : "/user/configuration"
+          dataType : "json"
+        ).pipe((user) =>
+
+          @binary = new Binary(tracing.dataSet, TEXTURE_SIZE_P)
+          @route = new Route(tracing.tracing, tracing.dataSet)
+          @user = new User(user)
+          console.log @route
+          #@flycam = new Flycam(TEXTURE_SIZE_P, VIEWPORT_SIZE)
+
+        -> alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page."))

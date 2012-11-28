@@ -55,7 +55,7 @@ abstract class DataModel {
       val x = moveVector._1 + (a11 * px + a12 * py + a13 * pz)
       val y = moveVector._2 + (a21 * px + a22 * py + a23 * pz)
       val z = moveVector._3 + (a31 * px + a32 * py + a33 * pz)
-      result.update(idx, Vector3D(x, y, z))
+      result(idx) = Vector3D(x, y, z)
       idx += 1
     }
     Logger.debug("rotateAndMove: %d ms".format(System.currentTimeMillis() - t))
@@ -77,15 +77,21 @@ class CubeModel(xMax: Int, yMax: Int, zMax: Int) extends DataModel {
   val polygons = null
 
   override val containingCoordinates = {
+    val xhMax = xMax / 2
+    val yhMax = yMax / 2
+    val zhMax = zMax / 2
+
     val t = System.currentTimeMillis()
     val array = new Array[Tuple3[Int, Int, Int]](zMax * yMax * xMax)
-    var z = 0
+    var z = - zhMax
+    var y = 0
+    var x = 0
     var idx = 0
-    while (z < zMax) {
-      var y = 0
-      while (y < yMax) {
-        var x = 0
-        while (x < xMax) {
+    while (z < zhMax) {
+      y = - yhMax
+      while (y < yhMax) {
+        x = - xhMax
+        while (x < xhMax) {
           array(idx) = (x, y, z)
           x += 1
           idx += 1

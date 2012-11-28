@@ -1,6 +1,6 @@
 package brainflight.tools.geometry
 
-case class TransformationMatrix(value: List[Float]) {
+case class TransformationMatrix(value: Array[Float]) {
   /**
    * Extract the translation from the transformation matrix
    */
@@ -24,6 +24,6 @@ object TransformationMatrix {
     val y = Vector3D(0, 1, 0)
     val ny = (y - nz * (nz ° y) - nx * (nx ° y)).normalize
 
-    TransformationMatrix(List(nx.x, nx.y, nx.z, 0, ny.x, ny.y, ny.z, 0, nz.x, nz.y, nz.z, 0, pos.translation.x, pos.translation.y, pos.translation.z, 1).map(_.toFloat))
+    TransformationMatrix(Array(nx.x, nx.y, nx.z, 0, ny.x, ny.y, ny.z, 0, nz.x, nz.y, nz.z, 0, pos.translation.x, pos.translation.y, pos.translation.z, 1).map(_.toFloat))
   }
 }

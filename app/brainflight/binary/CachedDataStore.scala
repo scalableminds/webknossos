@@ -132,7 +132,7 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
     }
   }
 
-  def getColor(point: Point3D, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Byte = {
+  def getColor(point: Point3D, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Double = {
     val block = PointToBlock(point, resolution)
     val color = blockMap.get(block) match {
       case Some(byteArray) =>
@@ -141,18 +141,18 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
         println("Didn't find block! :(")
         0.toByte
     }
-    color //.map(0xff & _.asInstanceOf[Int])
+    (0xff & color.asInstanceOf[Int])
   }
 
-  /*def interpolatedColor(point: Vector3D, r: Int, b: Map[Point3D, Array[Byte]]) = {
+  def interpolatedColor(point: Vector3D, r: Int, b: Map[Point3D, Array[Byte]]) = {
     val x = point.x.toInt
     val y = point.y.toInt
     val z = point.z.toInt
 
-    val ceiled = Vector3D(x, y, z)
-    /*if (point == ceiled) {
-      getColor(Point3D(x, y, z), r, b)
-    } else {*/
+    val floored = Vector3D(x, y, z)
+    if (point == floored) {
+      getColor(Point3D(x, y, z), r, b).toByte
+    } else {
       val q = Array(
         getColor(Point3D(x, y, z), r, b),
         getColor(Point3D(x, y, z + 1), r, b),
@@ -163,9 +163,9 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
         getColor(Point3D(x + 1, y + 1, z), r, b),
         getColor(Point3D(x + 1, y + 1, z + 1), r, b))
 
-      Interpolator.triLerp(point - ceiled, q).round.toByte
-    //}
-  }*/
+      Interpolator.triLerp(point - floored, q).round.toByte
+    }
+  }
 
   override def loadInterpolated(dataSet: DataSet, resolution: Int, globalPoints: Array[Vector3D]): Array[Byte] = {
     val t = System.currentTimeMillis()
@@ -208,8 +208,8 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       val t2 = System.currentTimeMillis()
       while (iter.hasNext) {
         val point = iter.next
-        val color = getColor(point.toPoint3D, resolution, blockMap) //interpolatedColor(point, resolution, blockMap)
-        result.update(idx, color)
+        val color = interpolatedColor(point, resolution, blockMap)
+        result(idx) = color
         idx += 1
       }
       Logger.debug("loading&interp: %d ms, Sum: ".format(System.currentTimeMillis() - t2, result.sum))

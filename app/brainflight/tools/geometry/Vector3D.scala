@@ -18,9 +18,13 @@ import play.Logger
  * Vector in 3D space
  */
 case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
+  
   def normalize = {
     val length = sqrt(square(x) + square(y) + square(z))
-    new Vector3D(x / length, y / length, z / length)
+    if(length != 0)
+      Vector3D(x / length, y / length, z / length)
+    else
+      this
   }
 
   def -(o: Vector3D): Vector3D = {

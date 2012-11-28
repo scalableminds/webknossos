@@ -1,5 +1,6 @@
 ### define
 libs/request : Request
+routes : routes
 ###
 
 class LevelCreator
@@ -14,30 +15,38 @@ class LevelCreator
     @canvas = $("#preview-canvas")[0].getContext("2d")
 
     $slider = $("#preview-slider")
-    $slider.on "change", ->
+    $slider.on "change", =>
       @updatePreview()
 
-    $("#request-button").on "click", =>
+    $("#dimension-modal").modal(
+      show : true
+      keyboard : false
+      backdrop : "static"
+    )
 
-      dimensions =
-        x : parseInt( $("#dim-x").val() )
-        y : parseInt( $("#dim-y").val() )
-        numSlides : parseInt( $("#dim-z").val() )
+    $("#dimension-modal").on "submit", (event) =>
 
-      $slider[0].max = dimensions.numSlides
+      event.preventDefault()
 
-      @requestStack(dimensions)
+      dimensions = [
+        parseInt( $("#dim-x").val() )
+        parseInt( $("#dim-y").val() )
+        parseInt( $("#dim-z").val() )
+      ]
 
-    $("#dimension-modal").modal("show")
+      $slider[0].max = dimensions[2]
+
+      @requestStack(dimensions).done -> $("#dimension-modal").modal("hide")
+      $("#dimension-modal").find("[type=submit]").addClass("disabled").prepend("<i class=\"icon-refresh icon-white rotating\"></i> ")
+
+
+
 
 
   requestStack : (dimensions) ->
 
     Request.send(
-      url : "/......."
-      method : "GET"
-      data : dimensions
-      contentType : "application/json"
+      routes.controllers.BinaryData.arbitraryViaAjax(dimensions...)
     )
 
 
@@ -46,9 +55,9 @@ class LevelCreator
     sliderValue = $("#preview-slider")[0].value
 
 
-    image = imageData.splice(  )
+    # image = imageData.splice(  )
 
-    @canvas.putImageData()
+    # @canvas.putImageData()
 
 
 

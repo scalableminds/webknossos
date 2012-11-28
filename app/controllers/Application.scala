@@ -18,7 +18,9 @@ object Application extends Controller with Secured {
   def javascriptRoutes = Action { implicit request =>
     Ok(
       Routes.javascriptRouter("jsRoutes")( //fill in stuff which should be able to be called from js
-        controllers.admin.routes.javascript.NMLIO.upload)).as("text/javascript")
+        controllers.admin.routes.javascript.NMLIO.upload,
+        controllers.routes.javascript.BinaryData.arbitraryViaAjax
+      )).as("text/javascript")
   }
 
 }

@@ -33,7 +33,7 @@ GET     /user/configuration                 controllers.UserController.showSetti
 # Binary Data
 GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int )
 POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int )
-
+GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(width: Int, height: Int, depth: Int)
 
 # Tracing Stuff
 POST    /tracing/create                     controllers.TracingController.createExplorational

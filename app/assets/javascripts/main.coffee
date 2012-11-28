@@ -37,9 +37,10 @@ require [
   "jquery"
   "underscore"
   "bootstrap"
-  "./main/enhancements"
-  "./main/routing"
 ], ->
 
-
-
+  require [
+    "./main/enhancements"
+    "./main/routing"
+  ], ->
+     

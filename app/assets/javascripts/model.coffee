@@ -34,7 +34,6 @@ class Model
           @binary = new Binary(tracing.dataSet, TEXTURE_SIZE_P)
           @route = new Route(tracing.tracing, tracing.dataSet)
           @user = new User(user)
-          console.log @route
           #@flycam = new Flycam(TEXTURE_SIZE_P, VIEWPORT_SIZE)
 
         -> alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page."))

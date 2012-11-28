@@ -18,19 +18,15 @@ TYPE_BRANCH = 1
 
 class Route
   
-  # Variables
-  data : null
-  dataSet : null
   branchStack : []
   trees : []
   activeNode : null
   activeTree : null
 
-  constructor : (@data, @dataSet) ->
+  constructor : (tracing) ->
 
     _.extend(this, new EventMixin())
 
-    console.log "Route.data: ", @data
     #@branchStack = @data.branchPoints.map (a) -> new Float32Array(a)
     #@branchStack = (@data.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in @data.branchPoints) # when @data.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
     @createBuffer()
@@ -294,16 +290,20 @@ class Route
     @activeNode = point
     @lastActiveNodeId = @activeNode.id
 
+
   getActiveNodeId : ->
+
     @lastActiveNodeId
 
+
   getActiveNodePos : ->
-    unless @activeNode then return null
-    @activeNode.pos
+
+    if @activeNode then @activeNode.pos else null
+
 
   getActiveNodeType : ->
-    unless @activeNode then return null
-    @activeNode.type
+
+    if @activeNode then @activeNode.type
 
   getActiveNodeRadius : ->
     unless @activeNode then return null
@@ -314,12 +314,16 @@ class Route
     @activeTree.treeId
 
   setActiveNodeRadius : (radius) ->
+
     if @activeNode
       @activeNode.size = radius
       @lastRadius = radius
+
     @push()
 
+
   setActiveNode : (id) ->
+
     for tree in @trees
       findResult = @findNodeInTree(id, tree)
       if findResult
@@ -328,7 +332,9 @@ class Route
         @activeTree = tree
         break
     @push()
-    return @activeNode.pos
+
+    @trigger "newActiveNode"
+
 
   setActiveTree : (id) ->
     for tree in @trees

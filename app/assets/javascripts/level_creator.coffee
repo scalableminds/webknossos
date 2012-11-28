@@ -1,6 +1,7 @@
 ### define
 libs/request : Request
 routes : routes
+libs/ace/ace : Ace
 ###
 
 class LevelCreator
@@ -12,7 +13,14 @@ class LevelCreator
 
   constructor : ->
 
-    @canvas = $("#preview-canvas")[0].getContext("2d")
+    @data = null
+
+    editor = Ace.edit("editor")
+    editor.setTheme("ace/theme/twilight")
+    editor.getSession().setMode("ace/mode/coffee")
+
+    @canvas = $("#preview-canvas")[0]
+    @context = @canvas.getContext("2d")
 
     $slider = $("#preview-slider")
     $slider.on "change", =>
@@ -34,10 +42,13 @@ class LevelCreator
         parseInt( $("#dim-z").val() )
       ]
 
-      $slider[0].max = dimensions[2]
+      $slider[0].max = dimensions[2] - 1
 
       @requestStack(dimensions).done -> $("#dimension-modal").modal("hide")
-      $("#dimension-modal").find("[type=submit]").addClass("disabled").prepend("<i class=\"icon-refresh icon-white rotating\"></i> ")
+
+      $("#dimension-modal").find("[type=submit]")
+        .addClass("disabled")
+        .prepend("<i class=\"icon-refresh icon-white rotating\"></i> ")
 
 
 
@@ -46,19 +57,35 @@ class LevelCreator
   requestStack : (dimensions) ->
 
     Request.send(
-      routes.controllers.BinaryData.arbitraryViaAjax(dimensions...)
-    )
+      _.extend(
+        routes.controllers.BinaryData.arbitraryViaAjax(dimensions...),
+        dataType : "arraybuffer"
+      )
+    ).done (buffer) => 
+      @data = new Uint8Array(buffer)
+      @updatePreview()
 
 
   updatePreview : ->
 
     sliderValue = $("#preview-slider")[0].value
 
+    { width, height } = @canvas
 
-    # image = imageData.splice(  )
+    imageData = @context.getImageData(0, 0, width, height)
 
-    # @canvas.putImageData()
+    indexSource = sliderValue * width * height
+    indexTarget = 0
+    for x in [0...width]
+      for y in [0...height]
+        for color in [0...3] # r,g,b
+          imageData.data[indexTarget++] = @data[indexSource]
 
+        # alpha
+        imageData.data[indexTarget++] = 255
+        indexSource++
+
+    @context.putImageData(imageData, 0, 0)
 
 
 

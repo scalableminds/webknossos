@@ -147,5 +147,10 @@ $ ->
 
 
     "admin.creator.levelCreator" : ->
+
       require ["level_creator"], (LevelCreator) ->
+
         new LevelCreator()
+
+
+        

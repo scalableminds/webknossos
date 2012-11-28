@@ -37,34 +37,44 @@
       </div>
     </form>
 
+    <h3>Preview</h3>
     <div class="row">
-
-      <div class="span9">
-        <h3>Preview</h3>
-        <div>
+      <div class="span10">
+        <div class="well" id="preview">
           <canvas id="preview-canvas" width="250" height="150"></canvas>
         </div>
-        <input id="preview-slider" type="range"></input>
+        <input id="preview-slider" type="range" value="0"></input>
+      </div>
 
+      <div class="span2">
+        <h5>Zoom</h5>
+        <p>
+          <input type="range" min="-10" max="10" value="0" />
+          <button class="btn btn-small">Reset</button>
+        </p>
+      </div>
+    </div>
+
+    
+    <div class="row">
+
+      <div class="span8"> 
+        <h3>Editor</h3>
         <div id="editor">time(10, 40) ->
   recolor("#ff0000")
   time(30, 40) ->
     fadeOut()</div>
       </div>
 
-      <div class="span3">
-        <h3>Properties</h3>
+      <div class="span4">
+        <h3>Assets</h3>
         <table class="table table-striped">
-          <thead>
-          </thead>
           <tbody>
             <tr>
-              <th>Start #</th>
-              <td><input type="number" min="0" max="200" class="input-small" value="0" /></td>
-            </tr>
-            <tr>
-              <th>End #</th>
-              <td><input type="number" min="0" max="200" class="input-small" value="10" /></td>
+              <td>colormap.png</td>
+              <td>
+                <a href="#"><i class="icon-trash"></i></a>
+              </td>
             </tr>
           </tbody>
         </table>

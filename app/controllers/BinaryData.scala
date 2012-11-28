@@ -78,11 +78,12 @@ object BinaryData extends Controller with Secured {
 
   def arbitraryViaAjax(width: Int, height: Int, depth: Int) = Authenticated(parser = parse.raw) { implicit request =>
     Async {
+      val t = System.currentTimeMillis()
       val dataSet = DataSet.default
       val position = Point3D(554, 543, 523)
-      val direction = brainflight.tools.geometry.Vector3D(1, 1, 1)
+      val direction = (1.0, 1.0, 1.0)
 
-      val point = Vector3D(position.x, position.y, position.z)
+      val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
       val m = new CubeModel(width, height, depth)
       val points = m.rotateAndMove(point, direction)
       val future = dataSetActor ? ArbitraryRequest(dataSet, 1, points) recover {
@@ -90,7 +91,10 @@ object BinaryData extends Controller with Secured {
           Logger.error("calculateImages: AskTimeoutException")
           Array.fill[Byte](height * width * depth)(0)
       }
-      future.mapTo[Array[Byte]].asPromise.map(data => Ok(data))
+      future.mapTo[Array[Byte]].asPromise.map{data => 
+        Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
+        Ok(data)
+      }
     }
   }
 

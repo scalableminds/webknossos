@@ -57,6 +57,8 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
   }
 
   def toVector3I = Vector3I(x.round.toInt, y.round.toInt, z.round.toInt)
+  
+  def toPoint3D = Point3D(x.toInt, y.toInt, z.toInt)
 
   def °(o: Vector3D) = x * o.x + y * o.y + z * o.z
 

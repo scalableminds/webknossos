@@ -10,7 +10,6 @@ import brainflight.tools.geometry.Point3D
 import play.api.Logger
 import brainflight.tools.geometry._
 
-
 /**
  * Scalable Minds - Brainflight
  * User: tmbo
@@ -29,19 +28,47 @@ abstract class DataModel {
   // specifies the polygons the model consists of
   val polygons: List[Polygon]
 
-  def rotateAndMove(moveVector: Vector3D, axis: Vector3D): Array[Vector3D] = {
-    val t = System.currentTimeMillis()
-    
-    val start = OrientedPosition(moveVector, axis)
-    val transformationMatrix = TransformationMatrix.fromOrientedPosition(start)
-    val result = containingCoordinates.map(_.transformAffine(transformationMatrix.value.toArray))
-    
+  def rotateAndMove(moveVector: Tuple3[Double, Double, Double], axis: Tuple3[Double, Double, Double]): Array[Vector3D] = {
+    var t = System.currentTimeMillis()
+    // orthogonal vector to (0,1,0) and rotation vector
+    val ortho = normalizeVector((axis._3, 0, -axis._1))
+
+    // dot product of (0,1,0) and rotation
+    val dotProd = axis._2
+    // transformation of dot product for cosA
+    val cosA = dotProd / sqrt(square(axis._1) + square(axis._2) + square(axis._3))
+    val sinA = sqrt(1 - square(cosA))
+
+    //calculate rotation matrix
+    val a11 = cosA + square(ortho._1) * (1 - cosA); val a12 = -ortho._3 * sinA; val a13 = ortho._1 * ortho._3 * (1 - cosA)
+    val a21 = ortho._3 * sinA; val a22 = cosA; val a23 = -ortho._1 * sinA;
+    val a31 = ortho._1 * ortho._3 * (1 - cosA); val a32 = ortho._1 * sinA; val a33 = cosA + square(ortho._3) * (1 - cosA);
+
+    val size = containingCoordinates.size
+    var result = new Array[Vector3D](size)
+    var idx = 0
+    val iter = containingCoordinates.iterator
+
+    while (iter.hasNext) {
+      val (px, py, pz) = iter.next
+      // see rotation matrix and helmert-transformation for more details
+      val x = moveVector._1 + (a11 * px + a12 * py + a13 * pz)
+      val y = moveVector._2 + (a21 * px + a22 * py + a23 * pz)
+      val z = moveVector._3 + (a31 * px + a32 * py + a33 * pz)
+      result.update(idx, Vector3D(x, y, z))
+      idx += 1
+    }
     Logger.debug("rotateAndMove: %d ms".format(System.currentTimeMillis() - t))
     result
   }
-    
+
+  def normalizeVector(v: Tuple3[Double, Double, Double]): Tuple3[Double, Double, Double] = {
+    var l = sqrt(square(v._1) + square(v._2) + square(v._3))
+    if (l > 0) (v._1 / l, v._2 / l, v._3 / l) else v
+  }
+
   // calculate all coordinates which are in the model boundary
-  def containingCoordinates: Array[Vector3D]
+  def containingCoordinates: Array[Tuple3[Int, Int, Int]]
 }
 
 class CubeModel(xMax: Int, yMax: Int, zMax: Int) extends DataModel {
@@ -49,14 +76,25 @@ class CubeModel(xMax: Int, yMax: Int, zMax: Int) extends DataModel {
 
   val polygons = null
 
-  val containingCoordinates = {
+  override val containingCoordinates = {
     val t = System.currentTimeMillis()
-    val result = (for {z <- 0 until zMax
-                y <- 0 until yMax
-                x <- 0 until xMax
-    } yield Vector3D(x-(xMax/2).toInt, y-(yMax/2).toInt, z)).toArray
-    
-    Logger.debug("containingCoordinates: %d ms".format(System.currentTimeMillis()-t))
-    result
+    val array = new Array[Tuple3[Int, Int, Int]](zMax * yMax * xMax)
+    var z = 0
+    var idx = 0
+    while (z < zMax) {
+      var y = 0
+      while (y < yMax) {
+        var x = 0
+        while (x < xMax) {
+          array(idx) = (x, y, z)
+          x += 1
+          idx += 1
+        }
+        y += 1
+      }
+      z += 1
+    }
+    Logger.debug("containingCoordinates: %d ms".format(System.currentTimeMillis() - t))
+    array
   }
 }

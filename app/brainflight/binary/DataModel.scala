@@ -77,20 +77,24 @@ class CubeModel(xMax: Int, yMax: Int, zMax: Int) extends DataModel {
   val polygons = null
 
   override val containingCoordinates = {
-    val xhMax = xMax / 2
-    val yhMax = yMax / 2
-    val zhMax = zMax / 2
+    val xhMax = xMax / 2.0
+    val yhMax = yMax / 2.0
+    val zhMax = zMax / 2.0
+    
+    val fxhMax = xhMax.floor.toInt
+    val fyhMax = yhMax.floor.toInt
+    val fzhMax = zhMax.floor.toInt
 
     val t = System.currentTimeMillis()
     val array = new Array[Tuple3[Int, Int, Int]](zMax * yMax * xMax)
-    var z = - zhMax
+    var z = - fzhMax
     var y = 0
     var x = 0
     var idx = 0
     while (z < zhMax) {
-      y = - yhMax
+      y = - fyhMax
       while (y < yhMax) {
-        x = - xhMax
+        x = - fxhMax
         while (x < xhMax) {
           array(idx) = (x, y, z)
           x += 1

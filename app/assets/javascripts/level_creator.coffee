@@ -44,6 +44,9 @@ class LevelCreator
 
       $slider[0].max = dimensions[2] - 1
 
+      @canvas.width = dimensions[0]
+      @canvas.height = dimensions[1]
+
       @requestStack(dimensions).done -> $("#dimension-modal").modal("hide")
 
       $("#dimension-modal").find("[type=submit]")

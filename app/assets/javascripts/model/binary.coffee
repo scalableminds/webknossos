@@ -32,9 +32,8 @@ class Binary
 
   ping : _.once (position, options) ->
 
-    @queue.perfTest()
-    #@ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    #@ping(position, options)
+    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
+    @ping(position, options)
 
 
   pingImpl : (position, options) ->

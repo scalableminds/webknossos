@@ -1,12 +1,54 @@
-importScripts('../libs/require-2.1.1.js')
+socket = null
 
-class PullWorker
+initialize = (url) ->
 
-  # Constants
-  queue : []
-  dataSetId : ""
-  batchCount : 0
+  socket = new WebSocketImpl(url)
+  socket.binaryType = 'arraybuffer'
+      
+  socket.onopen = ->
+    postMessage({ message: 'open' })
 
-onmessage = (message) ->
+  socket.onerror = (err) ->
+    postMessage({ message: 'error', error: err })
+     
+  socket.addEventListener(
+    "close" 
+    (code, reason) => 
 
-  postMessage(message.data)
+      @socket = null
+          
+      postMessage({ message: 'close' })
+  )
+
+  socket.addEventListener(
+    "message"
+    (event) =>
+      webkitPostMessage({ message: 'data', buffer: event.data })
+  )
+
+
+send = (data) ->
+  @socket.send(data)
+
+
+close = ->
+
+    if @socket
+      @socket.close()
+      @socket = null
+
+
+WebSocketImpl = if self.MozWebSocket then self.MozWebSocket else self.WebSocket
+
+self.onmessage = (message) ->
+
+  switch message.data.message
+
+    when 'initialize'
+      initialize(message.data.url)
+
+    when 'send'
+      send(message.data.buffer)
+
+    when 'close'
+      close()

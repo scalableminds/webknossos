@@ -67,8 +67,6 @@ class Mailer extends Actor {
 
       val multiPartMail: MultiPartEmail = createEmail(mail)
 
-      multiPartMail.setCharset(mail.charset)
-
       setAddress(mail.from)(multiPartMail.setFrom _)
       if (mail.replyTo.isDefined)
         setAddress(mail.replyTo.get)(multiPartMail.addReplyTo _)
@@ -85,7 +83,6 @@ class Mailer extends Actor {
       multiPartMail.setTLS(smtpTls)
       multiPartMail.setAuthenticator(new DefaultAuthenticator(smtpUser, smtpPass))
       multiPartMail.setDebug(false)
-
       multiPartMail.send
     } else {
       ""
@@ -123,10 +120,13 @@ class Mailer extends Actor {
   private def createEmail(mail: Mail): MultiPartEmail = {
     if (mail.bodyHtml == "") {
       val email = new MultiPartEmail()
+      email.setCharset(mail.charset)
       email.setMsg(mail.bodyText)
       email
     } else {
-      val email = new HtmlEmail().setHtmlMsg(mail.bodyHtml)
+      val email = new HtmlEmail()
+      email.setCharset(mail.charset)
+      email.setHtmlMsg(mail.bodyHtml)
       if (mail.bodyText != "")
         email.setTextMsg(mail.bodyText)
       email

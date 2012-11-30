@@ -73,9 +73,8 @@ class View
     # For some reason, all objects have to be put into a group object. Changing
     # scene.scale does not have an effect.
     @group = new THREE.Object3D
-    rScale = @model.route.scale
     # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = new THREE.Vector3(rScale[0], rScale[1], rScale[2])
+    @group.scale = @model.scaleInfo.getNmPerVoxelVector()
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
 

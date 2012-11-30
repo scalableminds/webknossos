@@ -37,11 +37,11 @@ class Skeleton
   # whether or not display the spheres
   disSpheres : true
 
-  constructor : (@maxRouteLen, @flycam, @route) ->
+  constructor : (@maxRouteLen, @flycam, @model) ->
 
     _.extend(this, new EventMixin())
 
-    @scaleVector  = new THREE.Vector3(@route.voxelPerNM...)
+    @scaleVector  = @model.scaleInfo.getVoxelPerNMVector()
     # Edges
     @routes       = []
     # Nodes
@@ -51,6 +51,7 @@ class Skeleton
     @ids          = []
     # Current Index
     @curIndex     = []
+    @route        = @model.route
 
     # Create sphere to represent the active Node, radius is
     # 1 nm, so that @activeNode.scale is the radius in nm.

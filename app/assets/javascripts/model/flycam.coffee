@@ -38,15 +38,12 @@ class Flycam2d
     @rayThreshold = [50, 50, 50, 100]
     @spaceDirection = 1
 
-  #reset : ->
-  #  @zoomSteps=[1,1,1]
-
   zoomIn : (planeID) ->
     @setZoomStep(planeID, @zoomSteps[planeID] - ZOOM_DIFF)
 
   zoomOut : (planeID) ->
     # Make sure the max. zoom Step will not be exceded
-    if @zoomSteps[planeID] < 3+@maxZoomStepDiff - ZOOM_DIFF
+    if @zoomSteps[planeID] < 3 + @maxZoomStepDiff - ZOOM_DIFF
       @setZoomStep(planeID, @zoomSteps[planeID] + ZOOM_DIFF)
 
   zoomInAll : ->
@@ -87,7 +84,7 @@ class Flycam2d
 
   calculateBuffer : ->
     for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      scaleArray = Dimensions.transDim(@getSceneScalingArray(), planeID)
+      scaleArray = Dimensions.transDim(@model.scaleInfo.baseVoxelFactors, planeID)
       base = @viewportWidth * @getTextureScalingFactor(planeID) / 2
       @buffer[planeID] = [TEXTURE_WIDTH/2 - base * scaleArray[0],
                           TEXTURE_WIDTH/2 - base * scaleArray[1]]
@@ -103,13 +100,6 @@ class Flycam2d
 
   getPlaneScalingFactor : (planeID) ->
     Math.pow(2, @zoomSteps[planeID])
-
-  # Return array of factors which need to be multiplied with viewportWidth in order
-  # to get the plane size in voxels
-  getSceneScalingArray : ->
-    rScale = @model.route.scale
-    rMin   = Math.min.apply(null, rScale)
-    [rMin / rScale[0], rMin / rScale[1], rMin / rScale[2]]
 
   getDirection : ->
     @direction
@@ -138,7 +128,7 @@ class Flycam2d
     p = Dimensions.transDim(p, @activePlane)
     ind = Dimensions.getIndices(@activePlane)
     zoomFactor = Math.pow(2, @integerZoomSteps[@activePlane])
-    scaleFactor = @getSceneScalingArray()
+    scaleFactor = @model.scaleInfo.baseVoxelFactors
     delta = [p[0]*zoomFactor*scaleFactor[0], p[1]*zoomFactor*scaleFactor[1], p[2]*zoomFactor*scaleFactor[2]]
     # change direction of the value connected to space, based on the last direction
     delta[ind[2]] *= @spaceDirection
@@ -176,8 +166,6 @@ class Flycam2d
     (@globalPosition[ind[2]] != @texturePosition[planeID][ind[2]]) or
     (@zoomSteps[planeID] - (@integerZoomSteps[planeID]-1)) < @maxZoomStepDiff) or
     (@zoomSteps[planeID] -  @integerZoomSteps[planeID]     > @maxZoomStepDiff)
-    #if res
-    #  console.log "NEEDS UPDATE"
     return res
 
   # return the coordinate of the upper left corner of the viewport as texture-relative coordinate
@@ -189,7 +177,7 @@ class Flycam2d
   # returns [left, top, right, bottom] array
   getArea : (planeID) ->
     # convert scale vector to array in order to be able to use getIndices()
-    scaleArray = @getSceneScalingArray()
+    scaleArray = @model.scaleInfo.baseVoxelFactors
     ind        = Dimensions.getIndices(planeID)
     offsets = @getOffsets(planeID)
     size    = @getTextureScalingFactor(planeID) * @viewportWidth

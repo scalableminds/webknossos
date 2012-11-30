@@ -47,7 +47,7 @@ class SceneController
 
     # TODO: Implement text 
 
-    @skeleton = new Skeleton(10000, @flycam, @model.route)
+    @skeleton = new Skeleton(10000, @flycam, @model)
 
     # create Meshes
     @planes = new Array(3)
@@ -115,7 +115,7 @@ class SceneController
   setRouteClippingDistance : (value) =>
     # convert nm to voxel
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @planeShift[i] = 2 * value * @model.route.voxelPerNM[i]
+      @planeShift[i] = 2 * value * @model.scaleInfo.voxelPerNM[i]
 
   setInterpolation : (value) =>
     for plane in @planes

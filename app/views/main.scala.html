@@ -1,5 +1,7 @@
 @(showNavButtons: Boolean = true)(body: Html)(implicit session: brainflight.view.SessionData)
 
+@import akka.util.Reflect
+
 <!doctype html>
 <html>
   <head>
@@ -8,9 +10,6 @@
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("css/bootstrap.min.css")">
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
     <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/require-2.1.1.js")"></script>
-    <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/jquery-1.7.1.js")"></script>
-    <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/underscore-1.2.0.min.js")"></script>
-    <script type="text/javascript" src="@routes.Assets.at("javascripts/libs/bootstrap.min.js")"></script>
     <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
   </head>
   <body>
@@ -23,7 +22,7 @@
         </div>
       }
     </div>
-    <div id="main-container">
+    <div id="main-container" data-template="@Reflect.getCallerClass.map( _(7).getName() )">
       @body
     </div>
     <!-- Prompt IE 6 users to install Chrome Frame. Remove this if you want to support IE 6.

@@ -37,29 +37,25 @@
       </thead>
       <tbody>
       @explorativeTracings.map{ tracing => 
-        <tr>
-          <td> @formatHash(tracing.id) </td>
-          <td> @tracing.dataSetName </td>
-          <td> @tracing.trees.size </td>
-          <td> @tracing.tracingType </td>
-          <td> @formatDate(tracing.date) </td>
-          <td> <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a></td>
-        </tr>
+        @explorativeTracingTableItem(tracing)
       }
       </tbody>
     </table>
 
-    @helper.form(action = controllers.routes.TracingController.createExplorational, 'class -> "form-inline") {
-      <div>
-        <select name="dataSetId">
-          @dataSets.map{ d => 
-            <option value="@d.id"> @d.name </option>
-          }
-        </select>
-        <input type="submit" value="Explore data set" class="btn"/>
-      </div>
+    <div>
+    @helper.form(action = controllers.routes.TracingController.createExplorational, 'class -> "form-inline inline-block") {
+      <select name="dataSetId">
+        @dataSets.map{ d => 
+          <option value="@d.id"> @d.name </option>
+        }
+      </select>
+      <button type="submit" class="btn"><i class="icon-search"></i> Explore data set</button>
     }
-
+    <div class="divider-vertical"></div>
+    @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
+      <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button
+    }
+    </div>
     @trackedTimeOpt.map{ trackedTime =>
       <h3>Tracked Time</h3>
       <table class="table table-striped">

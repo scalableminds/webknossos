@@ -15,16 +15,12 @@ import play.api.libs.iteratee.Input
 import brainflight.security.Secured
 import brainflight.mail._
 import controllers.admin._
-import play.api.libs.concurrent.Akka
-import akka.actor.Props
 import models.tracing.Tracing
 import models.tracing.UsedTracings
 import brainflight.thirdparty.BrainTracing
 
 object Authentication extends Controller with Secured {
   // -- Authentication
-
-  val Mailer = Akka.system.actorOf(Props[Mailer], name = "mailActor")
 
   val autoVerify = Play.configuration.getBoolean("application.enableAutoVerify") getOrElse false
 
@@ -80,7 +76,8 @@ object Authentication extends Controller with Secured {
                 User.insertOne(User.create(email, firstName, lastName, password))
 
             BrainTracing.register(user, password).map { brainDBresult =>
-              Mailer ! Send(DefaultMails.registerMail(user.name, email, brainDBresult))
+              Application.Mailer ! Send(
+                  DefaultMails.registerMail(user.name, email, brainDBresult))
               Redirect(routes.Game.index)
                 .withSession(Secured.createSession(user))
             }.asPromise

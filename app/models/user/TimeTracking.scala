@@ -10,10 +10,25 @@ import java.util.Calendar
 import akka.util.duration._
 import brainflight.tools.ExtendedTypes._
 import models.basics.DAOCaseClass
+import models.tracing.Tracing
 
-case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None) {
+case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, tracing: Option[Tracing] = None) {
   val created = {
     new Date(timestamp)
+  }
+
+  def tracingEquals(other: Tracing): Boolean =
+    tracingEquals(Some(other))
+
+  def tracingEquals(other: Option[Tracing]): Boolean = {
+    (tracing, other) match {
+      case (Some(tracing), Some(other)) =>
+        tracing._id == other._id
+      case (None, None) =>
+        true
+      case _ =>
+        false
+    }
   }
 }
 
@@ -60,9 +75,9 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
     findOneByUser(user).map(_.splitIntoMonths)
   }
 
-  def logTime(user: User, time: Long) = {
+  def logTime(user: User, time: Long, note: String) = {
     val current = System.currentTimeMillis
-    val entry = TimeEntry(time, current)
+    val entry = TimeEntry(time, current, note = Option(note))
     findOneByUser(user) match {
       case Some(timeTracker) =>
         timeTracker.update(_.addTimeEntry(entry))
@@ -77,15 +92,15 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
   def parseTime(s: String) = {
     s match {
       case timeRx(_, d, _, h, _, m) if d != null || h != null || m != null =>
-        Some(toMilliseconds(d, h, m))
+        Some(inMillis(d, h, m))
       case hoursRx(h) if h != null =>
-        Some(toMilliseconds("0", h, "0"))
+        Some(inMillis("0", h, "0"))
       case _ =>
         None
     }
   }
 
-  def toMilliseconds(d: String, h: String, m: String) = {
+  def inMillis(d: String, h: String, m: String) = {
     val ds = d.toIntOpt.getOrElse(0)
     val hs = h.toIntOpt.getOrElse(0)
     val ms = m.toIntOpt.getOrElse(0)
@@ -93,20 +108,23 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
     ((ds * 24 + hs) * 60 + ms) * 60000L
   }
 
-  def logUserAction(user: User) = {
+  def logUserAction(user: User, tracing: Tracing): TimeTracking =
+    logUserAction(user, Some(tracing))
+
+  def logUserAction(user: User, tracing: Option[Tracing]): TimeTracking = {
     val current = System.currentTimeMillis
     findOneByUser(user) match {
       case Some(timeTracker) =>
         timeTracker.timeEntries match {
-          case lastEntry :: tail if current - lastEntry.timestamp < MAX_PAUSE =>
-            val entry = TimeEntry(lastEntry.time + current - lastEntry.timestamp, current)
+          case lastEntry :: tail if current - lastEntry.timestamp < MAX_PAUSE && lastEntry.tracingEquals(tracing) =>
+            val entry = lastEntry.copy(time = lastEntry.time + current - lastEntry.timestamp, timestamp = current)
             timeTracker.update(_.setTimeEntries(entry :: tail))
           case _ =>
-            val entry = TimeEntry(0, current)
+            val entry = TimeEntry(0, current, tracing = tracing)
             timeTracker.update(_.addTimeEntry(entry))
         }
       case _ =>
-        val entry = TimeEntry(0, current)
+        val entry = TimeEntry(0, current, tracing = tracing)
         insertOne(TimeTracking(user._id, List(entry)))
     }
   }

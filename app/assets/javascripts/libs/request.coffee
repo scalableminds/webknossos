@@ -4,6 +4,8 @@ Request =
 
   send : (options) ->
 
+    options.type ||= options.method
+
     if options.dataType == "blob" or options.dataType == "arraybuffer"
       
       deferred = $.Deferred()
@@ -18,6 +20,10 @@ Request =
       xhr.open options.type, options.url, true
       xhr.responseType = options.dataType 
       xhr.setRequestHeader("Content-Type", options.contentType) if options.contentType
+
+      if options.formData? and not options.data
+        options.data = new FormData()
+        options.data.append(key, value) for key, value of options.formData
 
       xhr.onload = ->
         if @status == 200

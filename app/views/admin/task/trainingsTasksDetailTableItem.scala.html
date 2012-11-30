@@ -20,6 +20,16 @@
   <a href="@controllers.admin.routes.TrainingsTracingAdministration.abortReview(tracing.id)" data-ajax="replace-row,confirm"><i class="icon-remove-sign"></i> abort review </a>
 }
 
+@finishedLabel(reviews: List[models.tracing.TracingReview]) = {
+  <i class="icon-ok"></i><span> finished @reviews.headOption.flatMap(_.reviewee).map{user => 
+    (reviewed by @user.name)
+  }</span>
+}
+
+@alreadyInReviewLabel(review: models.tracing.TracingReview) = {
+  <i class="icon-eye-open"></i><span> Already getting reviewed by @review.reviewee.map( _.name).</span>
+}
+
 @import brainflight.format._
 
 <tr>
@@ -27,14 +37,14 @@
   <td> @formatDate(tracing.date) </td>
   <td>
   @{tracing.review match{
-    case _ if tracing.state.isFinished =>
-      <i class="icon-ok"></i><span> finished (reviewed by )</span>
+    case r if tracing.state.isFinished =>
+      finishedLabel(r)
     case _ if tracing.state.isInProgress =>
       <i class="icon-time"></i><span> User is working on the task</span>
     case r :: _ if r._reviewee == user._id && tracing.state.isInReview =>
       oxalisLink() + nmlDownloadLink() + finishReviewLink() + abortReviewLink
     case r :: _ if r._reviewee != user._id && tracing.state.isInReview =>
-      <i class="icon-eye-open"></i><span> Already getting reviewed.</span>
+      alreadyInReviewLabel(r)
     case _ if tracing.state.isReadyForReview =>
       reviewLink()
     case _ =>

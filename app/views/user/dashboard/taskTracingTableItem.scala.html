@@ -2,7 +2,7 @@
 
 @tracingLinks = {
   <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
-  <a href="@controllers.routes.TaskController.finish(tracing.id)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a><br/>
+  <a href="@controllers.routes.TracingController.finish(tracing.id, false)" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a><br/>
 }
 
 @linkText(failed: Boolean) = {
@@ -16,7 +16,7 @@
 @displayComments(failed: Boolean, comments: List[String]) = {
   @comments match{
     case head :: tail => {
-      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-content="@head"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
+      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
     }
     case _ => {
 

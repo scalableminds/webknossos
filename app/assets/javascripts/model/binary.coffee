@@ -18,9 +18,11 @@ class Binary
   direction : [0, 0, 0]
   
 
-  constructor : (@dataSetId) ->
+  constructor : (dataSet) ->
 
-    @cube = new Cube()
+    @dataSetId = dataSet.id
+
+    @cube = new Cube(dataSet.upperBoundary)
     @queue = new PullQueue(@dataSetId, @cube)
 
     @planes = [
@@ -52,6 +54,7 @@ class Binary
       @lastOptions = options.slice()
 
       console.time "ping"
+      #console.log "Connection: latency:", @queue.roundTripTime, "bucketsPerSecond:", @queue.bucketsPerSecond
       @queue.clear()
 
       for i in [0...Math.min(options.length, @planes.length)]

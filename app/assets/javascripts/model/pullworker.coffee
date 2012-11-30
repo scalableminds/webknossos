@@ -2,14 +2,14 @@ socket = null
 
 initialize = (url) ->
 
-  socket = new WebSocketImpl(url)
+  socket = new WebSocket(url)
   socket.binaryType = 'arraybuffer'
       
   socket.onopen = ->
     postMessage({ message: 'open' })
 
   socket.onerror = (err) ->
-    postMessage({ message: 'error', error: err })
+    postMessage({ message: 'error', error: err.toString() })
      
   socket.addEventListener(
     "close" 
@@ -23,7 +23,7 @@ initialize = (url) ->
   socket.addEventListener(
     "message"
     (event) =>
-      webkitPostMessage({ message: 'data', buffer: event.data })
+      webkitPostMessage({ message: 'data', buffer: event.data }, [ event.data ])
   )
 
 
@@ -36,9 +36,6 @@ close = ->
     if @socket
       @socket.close()
       @socket = null
-
-
-WebSocketImpl = if self.MozWebSocket then self.MozWebSocket else self.WebSocket
 
 self.onmessage = (message) ->
 

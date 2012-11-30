@@ -5,7 +5,7 @@ import models.basics.BasicDAO
 import brainflight.tools.geometry.Point3D
 import org.bson.types.ObjectId
 
-case class Mission(start: MissionStart, end: Point3D, dataSetName: String,  propableSolutions: Map[Int, Int], _id: ObjectId = new ObjectId) extends DAOCaseClass[Mission]{
+case class Mission(dataSetName: String, start: MissionStart, end: MissionEnd, errorCenter: Point3D, _id: ObjectId = new ObjectId) extends DAOCaseClass[Mission]{
   val dao = Mission
 }
 

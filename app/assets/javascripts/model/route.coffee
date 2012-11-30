@@ -207,32 +207,7 @@ class Route
       deferred.resolve(@activeNode.id)
     else
       deferred.reject()
-
-    #savedActiveNode = @activeNode
-    #if @activeNode
-    #  while (true)
-    #    @activeNode = @activeNode.parent
-    #    unless @activeNode
-    #      break
-    #    if (@activeNode.type == TYPE_BRANCH)
-    #      break
-    #deferred = new $.Deferred()
-    #unless @activeNode
-    #  @activeNode = savedActiveNode
-    #  deferred.reject()
-    #else
-    #  deferred.resolve(@activeNode.pos)
-    
-    
-    # Georg doesn't get the following lines
-    # { branchStack } = @
-
-    #if branchStack.length > 0
-    #  @addToBuffer(2)
-      #deferred.resolve(branchStack.pop())
-    #  deferred.resolve(@activeNode.pos)
-    #else
-    #  deferred.reject()
+      
 
   addNode : (position, type) ->
     unless @lastRadius
@@ -251,35 +226,34 @@ class Route
 
     @trigger("newNode")
 
-  getActiveNodeId : ->
 
+  getActiveNodeId : ->
     @lastActiveNodeId
 
-
   getActiveNodePos : ->
-
     if @activeNode then @activeNode.pos else null
 
-
   getActiveNodeType : ->
-
-    if @activeNode then @activeNode.type
+    if @activeNode then @activeNode.type else null
 
   getActiveNodeRadius : ->
-    unless @activeNode then return null
-    @activeNode.size
+    if @activeNode then @activeNode.size else null
 
   getActiveTreeId : ->
-    unless @activeTree then return null
-    @activeTree.treeId
+    if @activeTree then @activeTree.treeId else null
+    
 
   setActiveNodeRadius : (radius) ->
-
+    if radius < @scaleX
+      radius = @scaleX
+    else if radius > 1000 * @scaleX
+      radius = 1000 * @scaleX
     if @activeNode
       @activeNode.size = radius
       @lastRadius = radius
-
     @push()
+
+    @trigger("newActiveNodeRadius", radius)
 
 
   setActiveNode : (id) ->

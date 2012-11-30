@@ -170,27 +170,21 @@ class Controller
       "s" : @centerActiveNode
 
       #Zoom in/out
-      "i" : =>
-        @zoomIn()
-      "o" : =>
-        @zoomOut()
+      "i" : => @zoomIn()
+      "o" : => @zoomOut()
 
-      # delete active node
-      "delete" : =>
-        # just use the method implemented in gui
-        @deleteActiveNode()
+      #Delete active node
+      "delete" : => @deleteActiveNode()
 
-      "n" : =>
-        @createNewTree()
+      "n" : => @createNewTree()
 
-      # Move
+      #Move
       "space" : => @moveZ( @model.user.moveValue)
       "f" : => @moveZ( @model.user.moveValue)
-      #"space, f"         : => @moveZ( @model.user.moveValue)
+
       "shift + space" : => @moveZ(-@model.user.moveValue)
       "ctrl + space" : => @moveZ(-@model.user.moveValue)
       "d" : => @moveZ(-@model.user.moveValue)
-      #"shift + space, ctrl + space, d" : => @moveZ(-@model.user.moveValue)
     )
 
 
@@ -201,8 +195,7 @@ class Controller
     @cameraController.update()
     @sceneController.update()
 
-  move : (v) =>                 # v: Vector represented as array of length 3
-    @flycam.moveActivePlane(v)
+  move : (v) => @flycam.moveActivePlane(v)
 
   moveX : (x) => @move([x, 0, 0])
   moveY : (y) => @move([0, y, 0])
@@ -227,13 +220,7 @@ class Controller
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
-    scale = @model.route.scaleX
-    if radius < scale
-      radius = scale
-    else if radius > 1000 * scale
-      radius = 1000 * scale
-    @gui.setNodeRadius(radius)
-    @gui.updateRadius()
+    @model.route.setActiveNodeRadius(radius)
 
   scroll : (delta, type) =>
     switch type
@@ -292,7 +279,6 @@ class Controller
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = @flycam.getIndices(plane)
       if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance(ind[2])+1)
-      # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
         vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex
       # center the node if click was in 3d-view
@@ -339,7 +325,6 @@ class Controller
   #Customize Options
   setMoveValue : (value) =>
     @model.user.moveValue = (Number) value
-
     @model.user.push()
 
   setRotateValue : (value) =>

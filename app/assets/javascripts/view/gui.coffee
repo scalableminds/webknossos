@@ -159,6 +159,8 @@ class Gui
     @model.route.on("newNode", =>
       @update())
 
+    @model.route.on("newActiveNodeRadius", (radius) =>
+      @updateRadius(radius))
 
   saveNow : =>
     @model.user.pushImpl()
@@ -254,11 +256,11 @@ class Gui
     @model.route.setActiveNodeRadius(value)
     # convert from nm to voxels, divide by resolution
     @sceneController.skeleton.setNodeRadius(value)
-    @flycam.hasChanged = true
 
-  updateRadius : ->
-    if @model.route.getActiveNodeRadius()
-      @settings.radius = @model.route.getActiveNodeRadius()
+  updateRadius : (value) ->
+    if value then @settings.radius = value
+    else if (value = @model.route.getActiveNodeRadius())
+      @settings.radius = value
 
   # called when value user switch to different active node
   updateNodeAndTreeIds : =>

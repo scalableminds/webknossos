@@ -84,6 +84,9 @@ class Skeleton
     @route.on("setBranch", (isBranchPoint) =>
       @setBranchPoint(isBranchPoint))
 
+    @route.on("newActiveNodeRadius", (radius) =>
+      @setNodeRadius(radius))
+
     @reset()
 
   createNewTree : (treeId, treeColor) ->
@@ -211,17 +214,16 @@ class Skeleton
         sphere.material.color.setHex(colorNormal)
     @flycam.hasChanged = true
 
-  setNodeRadius : (value) ->
-    v = new THREE.Vector3(value, value, value)
-    @activeNode.scale = @calcScaleVector(v)
+  setNodeRadius : (radius) ->
+    vRadius = new THREE.Vector3(radius, radius, radius)
+    @activeNode.scale = @calcScaleVector(vRadius)
     if @activeNodeSphere
-      @activeNodeSphere.scale = @calcScaleVector(v)
+      @activeNodeSphere.scale = @calcScaleVector(vRadius)
+    @flycam.hasChanged = true
 
   getMeshes : =>
     return [@activeNode].concat(@routes).concat(@nodes).concat(@nodesSpheres)
 
-  # Looks for the Active Point in model.route and adds it to
-  # the Skeleton View
   setWaypoint : =>
     curGlobalPos = @flycam.getGlobalPos()
     activePlane  = @flycam.getActivePlane()
@@ -232,14 +234,7 @@ class Skeleton
     index        = @getIndexFromTreeId(@route.getTree().treeId)
     color        = @route.getTree().color
     radius       = @route.getActiveNodeRadius()
-
-    #if typeNumber == 0
-      # calculate the global position of the rightclick
-    #  switch activePlane
-    #    when PLANE_XY then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2]]
-    #    when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (@curWidth/2 - position[1])/@x*zoomFactor, curGlobalPos[2] - (@curWidth/2 - position[0])/@x*zoomFactor]
-    #    when PLANE_XZ then position = [curGlobalPos[0] - (@curWidth/2 - position[0])/@x*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (@curWidth/2 - position[1])/@x*zoomFactor]
-      
+   
     unless @curIndex[index]
       @curIndex[index] = 0
       @lastNodePosition = position

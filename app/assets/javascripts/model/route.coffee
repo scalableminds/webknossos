@@ -12,8 +12,7 @@ underscore : _
 BUFFER_SIZE = 262144 # 1024 * 1204 / 4
 PUSH_THROTTLE_TIME = 30000 # 30s
 INIT_TIMEOUT = 10000 # 10s
-
-TYPE_USUAL  = 0
+TYPE_USUAL = 0
 TYPE_BRANCH = 1
 
 class Route
@@ -29,7 +28,6 @@ class Route
 
     #@branchStack = @data.branchPoints.map (a) -> new Float32Array(a)
     #@branchStack = (@data.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in @data.branchPoints) # when @data.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
-    @createBuffer()
 
     @idCount = 1
     @treeIdCount = 1
@@ -115,7 +113,7 @@ class Route
     $(window).on(
       "unload"
       => 
-        @putBranch(@lastPosition) if @lastPosition
+        @pushBranch()
         @pushImpl()
     )
 
@@ -164,17 +162,13 @@ class Route
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.
   push : ->
-    console.log "push()"
     @push = _.throttle(_.mutexDeferred(@pushImpl, -1), PUSH_THROTTLE_TIME)
     @push()
 
   pushImpl : ->
 
-    console.log "pushing..."
-
     deferred = new $.Deferred()
 
-    console.log "PUT"
     Request.send(
       url : "/tracing/#{@data.id}"
       method : "PUT"
@@ -187,36 +181,17 @@ class Route
     .done =>
       deferred.resolve()
 
-  createBuffer : ->
-    @bufferIndex = 0
-    @buffer = new Float32Array(BUFFER_SIZE)
-
-  addToBuffer : (typeNumber, value) ->
-
-    @buffer[@bufferIndex++] = typeNumber
-
-    if value and typeNumber != 2
-      @buffer.set(value, @bufferIndex)
-      @bufferIndex += 3
-
-    #console.log @buffer.subarray(0, 50)
-
-    @push()
-
   # INVARIANTS:
   # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null
   # activeNode: either null only if activeTree is empty (sentinel) or valid node
 
-  putBranch : ->
+  pushBranch : ->
 
-    #@addToBuffer(1, position)
     if @activeNode
       @branchStack.push(@activeNode)
       @activeNode.type = TYPE_BRANCH
 
-    #@putNewPoint(position, TYPE_BRANCH)
-
-    return
+      @trigger("setBranch", true)
 
   popBranch : ->
 
@@ -226,7 +201,9 @@ class Route
     if point
       @activeNode = point
       @activeNode.type = TYPE_USUAL
-      @lastActiveNodeId = @activeNode.id
+
+      @trigger("setBranch", false)
+
       deferred.resolve(@activeNode.id)
     else
       deferred.reject()
@@ -257,25 +234,7 @@ class Route
     #else
     #  deferred.reject()
 
-  # Add a point to the buffer. Just keep adding them.
-  put : (position) ->
-
-    position = V3.round(position, position)
-    lastPosition = @lastPosition
-
-    if not lastPosition or 
-    lastPosition[0] != position[0] or 
-    lastPosition[1] != position[1] or 
-    lastPosition[2] != position[2]
-      @lastPosition = position
-      @addToBuffer(0, position)
-
-    @putNewPoint(position, TYPE_USUAL)
-    @push()
-
-    return
-
-  putNewPoint : (position, type) ->
+  addNode : (position, type) ->
     unless @lastRadius
       @lastRadius = 10 * @scaleX
     point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, @activeTree.color)
@@ -290,6 +249,7 @@ class Route
     @activeNode = point
     @lastActiveNodeId = @activeNode.id
 
+    @trigger("newNode")
 
   getActiveNodeId : ->
 
@@ -348,6 +308,8 @@ class Route
       @lastActiveNodeId = @activeNode.id
     @push()
 
+    @trigger("newActiveTree")
+
   getNewTreeColor : ->
     switch @treeIdCount
       when 1 then return 0xFF0000
@@ -393,6 +355,8 @@ class Route
       @deleteActiveTree()
     @push()
 
+    @trigger("deleteActiveNode")
+
   deleteActiveTree : ->
     # There should always be an active Tree
     # Find index of activeTree
@@ -409,6 +373,8 @@ class Route
       # just set the last tree to be the active one
       @setActiveTree(@trees[@trees.length - 1].treeId)
     @push()
+
+    @trigger("deleteActiveTree")
 
   getTree : (id) ->
     unless id

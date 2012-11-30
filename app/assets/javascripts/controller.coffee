@@ -15,6 +15,8 @@ PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
+TYPE_USUAL       = 0
+TYPE_BRANCH      = 1
 VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 TEXTURE_SIZE     = 512
@@ -162,14 +164,9 @@ class Controller
     
     new Input.KeyboardNoLoop(
       #Branches
-      "b" : => 
-        @model.route.putBranch()
-        @sceneController.skeleton.setBranchPoint(true)
-      "j" : => @model.route.popBranch().done(
-        (id) => 
-          @setActiveNode(id, true)
-          @sceneController.skeleton.setBranchPoint(false)
-        )
+      "b" : => @pushBranch()
+      "j" : => @popBranch() 
+
       "s" : @centerActiveNode
 
       #Zoom in/out
@@ -307,37 +304,35 @@ class Controller
   addNode : (position) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
-    @model.route.put(position)
-    @gui.updateNodeAndTreeIds()
-    @gui.updateRadius()
-    @sceneController.setWaypoint()
+    @model.route.addNode(position, TYPE_USUAL)
+
+  pushBranch : =>
+    @model.route.pushBranch()
+
+  popBranch : =>
+    @model.route.popBranch().done((id) => 
+      @setActiveNode(id, true)
+    )
 
   setActiveNode : (nodeId, centered) =>
     @model.route.setActiveNode(nodeId)
     if centered
       @centerActiveNode()
-    @flycam.hasChanged = true
 
   centerActiveNode : =>
     @flycam.setGlobalPos(@model.route.getActiveNodePos())
 
   deleteActiveNode : =>
     @model.route.deleteActiveNode()
-    @gui.update()
-    @sceneController.updateRoute()
 
   createNewTree : =>
     @model.route.createNewTree()
 
   setActiveTree : (treeId) =>
     @model.route.setActiveTree(treeId)
-    @gui.update()
-    @sceneController.updateRoute()
 
   deleteActiveTree : =>
     @model.route.deleteActiveTree()
-    @gui.update()
-    @sceneController.updateRoute()
 
   ########### Input Properties
 

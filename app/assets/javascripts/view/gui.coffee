@@ -147,6 +147,18 @@ class Gui
     @model.route.on("newActiveNode", =>
       @update())
 
+    @model.route.on("newActiveTree", =>
+      @update())
+
+    @model.route.on("deleteActiveTree", =>
+      @update())
+
+    @model.route.on("deleteActiveNode", =>
+      @update())
+
+    @model.route.on("newNode", =>
+      @update())
+
 
   saveNow : =>
     @model.user.pushImpl()

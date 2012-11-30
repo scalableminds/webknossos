@@ -38,7 +38,7 @@ class Skeleton
 
   constructor : (@maxRouteLen, @flycam, @route) ->
 
-    _.extend(@, new EventMixin())
+    _.extend(this, new EventMixin())
 
     @scaleVector  = new THREE.Vector3(@route.voxelPerNM...)
     # Edges
@@ -63,11 +63,26 @@ class Skeleton
       )
     @activeNode.doubleSided = true
 
-    @route.on("newActiveNode", ->
+    @route.on("newActiveNode", =>
       @setActiveNode())
 
-    @route.on("newTree", (treeId, treeColor) ->
+    @route.on("newTree", (treeId, treeColor) =>
       @createNewTree(treeId, treeColor))
+
+    @route.on("newActiveTree", =>
+      @reset())
+
+    @route.on("deleteActiveTree", =>
+      @reset())
+
+    @route.on("deleteActiveNode", =>
+      @reset())
+
+    @route.on("newNode", =>
+      @setWaypoint())
+
+    @route.on("setBranch", (isBranchPoint) =>
+      @setBranchPoint(isBranchPoint))
 
     @reset()
 

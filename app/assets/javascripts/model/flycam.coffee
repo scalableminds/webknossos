@@ -1,12 +1,13 @@
 ### define
 libs/event_mixin : EventMixin
+libs/dimensions : DimensionsHelper
 ###
 
 # constants (for active_plane)
-PLANE_XY           = 0
-PLANE_YZ           = 1
-PLANE_XZ           = 2
-VIEW_3D            = 3
+PLANE_XY           = Dimensions.PLANE_XY
+PLANE_YZ           = Dimensions.PLANE_YZ
+PLANE_XZ           = Dimensions.PLANE_XZ
+VIEW_3D            = Dimensions.VIEW_3D
 TEXTURE_WIDTH      = 512
 MAX_TEXTURE_OFFSET = 31     # maximum difference between requested coordinate and actual texture position
 ZOOM_DIFF          = 0.1
@@ -86,7 +87,7 @@ class Flycam2d
 
   calculateBuffer : ->
     for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      scaleArray = @transDim(@getSceneScalingArray(), planeID)
+      scaleArray = Dimensions.transDim(@getSceneScalingArray(), planeID)
       base = @viewportWidth * @getTextureScalingFactor(planeID) / 2
       @buffer[planeID] = [TEXTURE_WIDTH/2 - base * scaleArray[0],
                           TEXTURE_WIDTH/2 - base * scaleArray[1]]
@@ -117,7 +118,7 @@ class Flycam2d
     @direction = direction
 
   setSpaceDirection : ->
-    ind = @getIndices @activePlane
+    ind = Dimensions.getIndices @activePlane
     if @direction[ind[2]] <= 0
       @spaceDirection = -1
     else
@@ -134,8 +135,8 @@ class Flycam2d
       @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
     
   moveActivePlane : (p) ->
-    p = @transDim(p, @activePlane)
-    ind = @getIndices(@activePlane)
+    p = Dimensions.transDim(p, @activePlane)
+    ind = Dimensions.getIndices(@activePlane)
     zoomFactor = Math.pow(2, @integerZoomSteps[@activePlane])
     scaleFactor = @getSceneScalingArray()
     delta = [p[0]*zoomFactor*scaleFactor[0], p[1]*zoomFactor*scaleFactor[1], p[2]*zoomFactor*scaleFactor[2]]
@@ -168,20 +169,9 @@ class Flycam2d
   getActivePlane : ->
     @activePlane
 
-  getIndices : (planeID) ->         # Returns a ordered 3-tuple [x, y, z] which
-    switch planeID                  # represents the dimensions from the viewpoint
-      when PLANE_XY then [0, 1, 2]  # of each plane. For example, moving along the
-      when PLANE_YZ then [2, 1, 0]  # X-Axis of the YZ-Plane is eqivalent to moving
-      when PLANE_XZ then [0, 2, 1]  # along the Z axis in the cube -> ind[0]=2
-
-  # Translate Dimension: Helper method to translate arrays with three elements
-  transDim : (array, planeID) ->
-    ind = @getIndices(planeID)
-    return [array[ind[0]], array[ind[1]], array[ind[2]]]
-
   needsUpdate : (planeID) ->
     area = @getArea planeID
-    ind  = @getIndices planeID
+    ind  = Dimensions.getIndices planeID
     res = ((area[0] < 0) or (area[1] < 0) or (area[2] > TEXTURE_WIDTH) or (area[3] > TEXTURE_WIDTH) or
     (@globalPosition[ind[2]] != @texturePosition[planeID][ind[2]]) or
     (@zoomSteps[planeID] - (@integerZoomSteps[planeID]-1)) < @maxZoomStepDiff) or
@@ -192,7 +182,7 @@ class Flycam2d
 
   # return the coordinate of the upper left corner of the viewport as texture-relative coordinate
   getOffsets : (planeID) ->
-    ind = @getIndices planeID
+    ind = Dimensions.getIndices planeID
     [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID][0],
       (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID][1]]
 
@@ -200,7 +190,7 @@ class Flycam2d
   getArea : (planeID) ->
     # convert scale vector to array in order to be able to use getIndices()
     scaleArray = @getSceneScalingArray()
-    ind        = @getIndices(planeID)
+    ind        = Dimensions.getIndices(planeID)
     offsets = @getOffsets(planeID)
     size    = @getTextureScalingFactor(planeID) * @viewportWidth
     # two pixels larger, just to fight rounding mistakes (important for mouse click conversion)

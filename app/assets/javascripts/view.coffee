@@ -4,6 +4,7 @@ model/flycam : Flycam
 libs/Tween : TWEEN_LIB
 model/game : Game
 libs/event_mixin : EventMixin
+libs/dimensions : DimensionsHelper
 model/route : Route
 ###
 
@@ -16,10 +17,10 @@ model/route : Route
 # display 512px out of 512px total width and height
 #CAM_DISTANCE = 384/2 # alt: 384/2  #alt: 96
 VIEWPORT_WIDTH = 380
-PLANE_XY = 0
-PLANE_YZ = 1
-PLANE_XZ = 2
-VIEW_3D  = 3
+PLANE_XY       = Dimensions.PLANE_XY
+PLANE_YZ       = Dimensions.PLANE_YZ
+PLANE_XZ       = Dimensions.PLANE_XZ
+VIEW_3D        = Dimensions.VIEW_3D
 
 class View
 

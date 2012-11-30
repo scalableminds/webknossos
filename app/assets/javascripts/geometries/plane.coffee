@@ -2,13 +2,14 @@
 model : Model
 view : View
 model/game : Game
+libs/dimensions : DimensionsHelper
 ###
 
 
-PLANE_XY         = 0
-PLANE_YZ         = 1
-PLANE_XZ         = 2
-VIEW_3D          = 3
+PLANE_XY         = Dimensions.PLANE_XY
+PLANE_YZ         = Dimensions.PLANE_YZ
+PLANE_XZ         = Dimensions.PLANE_XZ
+VIEW_3D          = Dimensions.VIEW_3D
 BORDER_COLORS    = [0xff0000, 0x0000ff, 0x00ff00]
 CROSSHAIR_COLORS = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
 GRAY_CH_COLOR    = 0x222222
@@ -34,7 +35,7 @@ class Plane
     maxVoxelPerNM = Math.max.apply(null, @model.route.voxelPerNM)
     for i in [0..2]
       transformed[i] = @model.route.voxelPerNM[i] / maxVoxelPerNM
-    transformed = @flycam.transDim(transformed, @planeID)
+    transformed = Dimensions.transDim(transformed, @planeID)
     # Apparently y and z are switched for those guys...
     @scaleVector = new THREE.Vector3(transformed[0], 1, transformed[1])
     

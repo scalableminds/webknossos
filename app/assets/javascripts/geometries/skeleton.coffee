@@ -2,12 +2,13 @@
 model : Model
 model/route : Route
 libs/event_mixin : EventMixin
+libs/dimensions : DimensionsHelper
 ###
 
-PLANE_XY = 0
-PLANE_YZ = 1
-PLANE_XZ = 2
-VIEW_3D  = 3
+PLANE_XY           = Dimensions.PLANE_XY
+PLANE_YZ           = Dimensions.PLANE_YZ
+PLANE_XZ           = Dimensions.PLANE_XZ
+VIEW_3D            = Dimensions.VIEW_3D
 
 TYPE_BRANCH = 1
 

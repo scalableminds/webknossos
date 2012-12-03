@@ -32,6 +32,9 @@ class LevelCreator
       backdrop : "static"
     )
 
+    $("#dimension-modal [type=submit]").on "click", (event) ->
+      event.preventDefault() if $(this).hasClass("disabled")
+
     $("#dimension-modal").on "submit", (event) =>
 
       event.preventDefault()

@@ -32,7 +32,8 @@
 
     <script type="text/vnd.graphviz" id="graphData">
       digraph G {
-        size="9.5,";
+        size="10,10";
+        overlap=false;
         graph [ bgcolor="transparent" ];
         node [ fontname="Helvetica,Arial,sans-serif", fontsize=10.5, style=filled, fillcolor="#ffffff", pencolor="black" ];
         @Html(taskTypes.map( taskTypeDot ).mkString("\n"))

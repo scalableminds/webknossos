@@ -206,6 +206,7 @@ class Route
 
       deferred.resolve(@activeNode.id)
     else
+      @trigger("emptyBranchStack")
       deferred.reject()
       
 

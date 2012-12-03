@@ -108,7 +108,7 @@ class Gui
                           .onFinishChange( (value) => @trigger "setActiveTree", value)
     (fTrees.add @settings, "newNodeNewTree")
                           .name("Soma clicking mode")
-                          .onFinishChange(@setNewNodeNewTree)
+                          .onChange(@setNewNodeNewTree)
     (fTrees.add @settings, "newTree")
                           .name("Create New Tree")
     (fTrees.add @settings, "deleteActiveTree")

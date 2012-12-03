@@ -4,6 +4,7 @@ model/flycam : Flycam
 libs/Tween : TWEEN_LIB
 model/game : Game
 libs/event_mixin : EventMixin
+view/toast : Toast
 model/route : Route
 ###
 
@@ -98,6 +99,9 @@ class View
 
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
+
+    @model.route.on("emptyBranchStack", =>
+      Toast.error("No more branchpoints", false))
     
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do

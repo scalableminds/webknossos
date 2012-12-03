@@ -1,13 +1,14 @@
 ### define
 model : Model
 view : View
+libs/dimensions : DimensionsHelper
 ###
 
 
-PLANE_XY         = 0
-PLANE_YZ         = 1
-PLANE_XZ         = 2
-VIEW_3D          = 3
+PLANE_XY         = Dimensions.PLANE_XY
+PLANE_YZ         = Dimensions.PLANE_YZ
+PLANE_XZ         = Dimensions.PLANE_XZ
+VIEW_3D          = Dimensions.VIEW_3D
 VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 
@@ -23,10 +24,6 @@ class CameraController
 
   constructor : (@cameras, @lights, @flycam, @model) ->
 
-    # vector which translates scene coorinates to camera coordinates
-    rScale = @model.route.scale
-    rMin   = Math.min.apply(null, rScale)
-
     @updateCamViewport()
     for cam in @cameras
       cam.near = -1000000
@@ -35,9 +32,7 @@ class CameraController
   update : =>
     gPos = @flycam.getGlobalPos()
     # camera porition's unit is nm, so convert it.
-    cPos = [0, 0, 0]
-    for i in [0..2]
-      cPos[i] = gPos[i] * @model.route.scale[i]
+    cPos = @model.scaleInfo.voxelToNm(gPos)
     @cameras[PLANE_XY].position = new THREE.Vector3(cPos[0]    , cPos[1]    , cPos[2] - 1)
     @cameras[PLANE_YZ].position = new THREE.Vector3(cPos[0] + 1, cPos[1]    , cPos[2])
     @cameras[PLANE_XZ].position = new THREE.Vector3(cPos[0]    , cPos[1] + 1, cPos[2])
@@ -56,10 +51,7 @@ class CameraController
     # CORRECTION: You're telling lies, you need to use the up vector...
 
     camera = @cameras[VIEW_3D]
-    b = @model.binary.cube.upperBoundary.slice()
-    # convert voxel to nm
-    for i in [0..(b.length - 1)]
-      b[i] *= @model.route.scale[i]
+    b = @model.scaleInfo.voxelToNm(@model.binary.cube.upperBoundary)
     time = 800
     @tween = new TWEEN.Tween({  middle: new THREE.Vector3(b[0]/2, b[1]/2, b[2]/2), upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera, flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
     switch id
@@ -167,8 +159,7 @@ class CameraController
     @camDistance * @model.route.voxelPerNM[planeID]
 
   updateCamViewport : ->
-    # Plane size is WIDTH voxels of the highest resolution, being the lowest scale
-    scaleFactor = Math.min.apply(null, @model.route.scale)
+    scaleFactor = @model.scaleInfo.baseVoxel
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       @cameras[i].near = -@camDistance #/ @flycam.getPlaneScalingFactor(i)
       boundary     = WIDTH / 2 * @flycam.getPlaneScalingFactor(i)

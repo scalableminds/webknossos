@@ -14,6 +14,9 @@ PUSH_THROTTLE_TIME = 30000 # 30s
 INIT_TIMEOUT = 10000 # 10s
 TYPE_USUAL = 0
 TYPE_BRANCH = 1
+# Max and min radius in base voxels (see scaleInfo.baseVoxel)
+MIN_RADIUS = 1
+MAX_RADIUS = 1000
 
 class Route
   
@@ -22,7 +25,7 @@ class Route
   activeNode : null
   activeTree : null
 
-  constructor : (@data) ->
+  constructor : (@data, dataSet, @scaleInfo) ->
 
     _.extend(this, new EventMixin())
 
@@ -42,12 +45,6 @@ class Route
 
     ############ Load Tree from @data ##############
     
-    @scale = @data.scale
-    # reciprocal of scale
-    @voxelPerNM = [0, 0, 0]
-    for i in [0..(@scale.length - 1)]
-      @voxelPerNM[i] = 1 / @scale[i]
-    @scaleX = @data.scale[0]
     @globalPosition = data.editPosition
 
     # get tree to build
@@ -212,7 +209,7 @@ class Route
 
   addNode : (position, type) ->
     unless @lastRadius
-      @lastRadius = 10 * @scaleX
+      @lastRadius = 10 * @scaleInfo.baseVoxel
     point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, @activeTree.color)
     if @activeNode
       @activeNode.appendNext(point)
@@ -245,10 +242,9 @@ class Route
     
 
   setActiveNodeRadius : (radius) ->
-    if radius < @scaleX
-      radius = @scaleX
-    else if radius > 1000 * @scaleX
-      radius = 1000 * @scaleX
+    # make sure radius is within bounds
+    radius = Math.min(MAX_RADIUS * @scaleInfo.baseVoxel)
+    radius = Math.max(MIN_RADIUS * @scaleInfo.baseVoxel)
     if @activeNode
       @activeNode.size = radius
       @lastRadius = radius

@@ -3,12 +3,13 @@ libs/datgui/dat.gui : DatGui
 libs/request : Request
 libs/event_mixin : EventMixin
 view/toast : Toast
+libs/dimensions : DimensionsHelper
 ###
 
-PLANE_XY = 0
-PLANE_YZ = 1
-PLANE_XZ = 2
-VIEW_3D  = 3
+PLANE_XY           = Dimensions.PLANE_XY
+PLANE_YZ           = Dimensions.PLANE_YZ
+PLANE_XZ           = Dimensions.PLANE_XZ
+VIEW_3D            = Dimensions.VIEW_3D
 
 class Gui 
 
@@ -48,7 +49,7 @@ class Gui
       activeNodeID : @model.route.getActiveNodeId()
       newNodeNewTree : data.newNodeNewTree
       deleteActiveNode : => @trigger "deleteActiveNode"
-      radius : if modelRadius then modelRadius else 10 * @model.route.scaleX
+      radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
@@ -71,7 +72,7 @@ class Gui
                           .step(0.25)
                           .name("Move Value")    
                           .onChange(@setMoveValue)
-    scale = @model.route.scaleX
+    scale = @model.scaleInfo.baseVoxel
     (fView.add @settings, "routeClippingDistance", 1, 1000 * scale)
                           .name("Clipping Distance")    
                           .onChange(@setRouteClippingDistance)

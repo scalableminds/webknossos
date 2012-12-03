@@ -5,6 +5,7 @@ libs/Tween : TWEEN_LIB
 model/game : Game
 libs/event_mixin : EventMixin
 view/toast : Toast
+libs/dimensions : DimensionsHelper
 model/route : Route
 ###
 
@@ -17,10 +18,10 @@ model/route : Route
 # display 512px out of 512px total width and height
 #CAM_DISTANCE = 384/2 # alt: 384/2  #alt: 96
 VIEWPORT_WIDTH = 380
-PLANE_XY = 0
-PLANE_YZ = 1
-PLANE_XZ = 2
-VIEW_3D  = 3
+PLANE_XY       = Dimensions.PLANE_XY
+PLANE_YZ       = Dimensions.PLANE_YZ
+PLANE_XZ       = Dimensions.PLANE_XZ
+VIEW_3D        = Dimensions.VIEW_3D
 
 class View
 
@@ -73,9 +74,8 @@ class View
     # For some reason, all objects have to be put into a group object. Changing
     # scene.scale does not have an effect.
     @group = new THREE.Object3D
-    rScale = @model.route.scale
     # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = new THREE.Vector3(rScale[0], rScale[1], rScale[2])
+    @group.scale = @model.scaleInfo.getNmPerVoxelVector()
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
 
@@ -128,15 +128,8 @@ class View
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
     
     # update postion and FPS displays
-    position2d = @flycam.getGlobalPos()
-    texturePositionXY = @flycam.texturePosition[0]
-    # without rounding the position becomes really long and blocks the canvas mouse input
-    position2d = [Math.round(position2d[0]),Math.round(position2d[1]),Math.round(position2d[2])]
-    texturePositionXY = [Math.round(texturePositionXY[0]),Math.round(texturePositionXY[1]),Math.round(texturePositionXY[2])]
-    #@positionStats.html "Flyflycam: #{position2d}<br />texturePositionXY: #{texturePositionXY}<br />ZoomStep #{@flycam.getIntegerZoomStep(@flycam.getActivePlane())}<br />activePlane: #{@flycam.getActivePlane()}" 
     @stats.update()
 
-    @newTextures[VIEW_3D] = @newTextures[0] or @newTextures[1] or @newTextures[2]
     viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
     @renderer.autoClear = true
     colors   = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffffff]

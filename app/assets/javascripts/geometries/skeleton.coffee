@@ -2,12 +2,13 @@
 model : Model
 model/route : Route
 libs/event_mixin : EventMixin
+libs/dimensions : DimensionsHelper
 ###
 
-PLANE_XY = 0
-PLANE_YZ = 1
-PLANE_XZ = 2
-VIEW_3D  = 3
+PLANE_XY           = Dimensions.PLANE_XY
+PLANE_YZ           = Dimensions.PLANE_YZ
+PLANE_XZ           = Dimensions.PLANE_XZ
+VIEW_3D            = Dimensions.VIEW_3D
 
 TYPE_BRANCH = 1
 
@@ -36,11 +37,11 @@ class Skeleton
   # whether or not display the spheres
   disSpheres : true
 
-  constructor : (@maxRouteLen, @flycam, @route) ->
+  constructor : (@maxRouteLen, @flycam, @model) ->
 
     _.extend(this, new EventMixin())
 
-    @scaleVector  = new THREE.Vector3(@route.voxelPerNM...)
+    @scaleVector  = @model.scaleInfo.getVoxelPerNMVector()
     # Edges
     @routes       = []
     # Nodes
@@ -50,6 +51,7 @@ class Skeleton
     @ids          = []
     # Current Index
     @curIndex     = []
+    @route        = @model.route
 
     # Create sphere to represent the active Node, radius is
     # 1 nm, so that @activeNode.scale is the radius in nm.

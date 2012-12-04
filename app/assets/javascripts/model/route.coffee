@@ -243,8 +243,8 @@ class Route
 
   setActiveNodeRadius : (radius) ->
     # make sure radius is within bounds
-    radius = Math.min(MAX_RADIUS * @scaleInfo.baseVoxel)
-    radius = Math.max(MIN_RADIUS * @scaleInfo.baseVoxel)
+    radius = Math.min(MAX_RADIUS * @scaleInfo.baseVoxel, radius)
+    radius = Math.max(MIN_RADIUS * @scaleInfo.baseVoxel, radius)
     if @activeNode
       @activeNode.size = radius
       @lastRadius = radius

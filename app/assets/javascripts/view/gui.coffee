@@ -255,8 +255,6 @@ class Gui
 
   setNodeRadius : (value) =>
     @model.route.setActiveNodeRadius(value)
-    # convert from nm to voxels, divide by resolution
-    @sceneController.skeleton.setNodeRadius(value)
 
   updateRadius : (value) ->
     if value then @settings.radius = value

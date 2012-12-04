@@ -241,7 +241,7 @@ class Controller
     zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
     activeNodePos = @model.route.getActiveNodePos()
     scaleFactor   = @view.scaleFactor
-    planeRatio    = @flycam.getSceneScalingArray()
+    planeRatio    = @model.scaleInfo.baseVoxelFactors
     switch @flycam.getActivePlane()
       when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*planeRatio[0]*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*planeRatio[1]*zoomFactor, curGlobalPos[2]]
       when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*planeRatio[1]*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*planeRatio[2]*zoomFactor]

@@ -28,6 +28,11 @@ class TracePoint
   remove : (id) ->
     for i in [0..@children.length]
       if @children[i].id == id
+        if @children[i].children.length
+          for child in @children[i].children
+            # fix parent and children relations
+            @appendNext(child)
+            child.parent = @
         # Remove child
         @children.splice(i, 1)
         return

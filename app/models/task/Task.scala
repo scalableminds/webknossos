@@ -195,6 +195,7 @@ object Task extends BasicDAO[Task]("tasks") {
       user,
       findAllAssignableNonTrainings.filter(hasEnoughExperience(user)).toArray)
   }
+  
   private def nextTaskForUser(user: User, tasks: Array[Task]): Future[Option[Task]] = {
     if (tasks.isEmpty) {
       Promise.successful(None)(Akka.system.dispatcher)
@@ -218,21 +219,17 @@ object Task extends BasicDAO[Task]("tasks") {
   }
   
   def simulateFinishOfCurrentTask(user: User) = {
-    println("User: " + user)
-    println("Tracing: " + Tracing.findOpenTracingFor(user, false))
     (for{
       tracing <- Tracing.findOpenTrainingFor(user)
       if(tracing.isTrainingsTracing)
       task <- tracing.task
       training <- task.training
     } yield {
-      println("added Experience for user")
       user.addExperience(training.domain, training.gain)
     }) getOrElse user
   }
 
   def simulateTaskAssignment(users: List[User]) = {
-    println("got here!")
     val preparedUsers = users.map( simulateFinishOfCurrentTask )
     def f(users: List[User], tasks: Map[ObjectId, Task], result: Map[User, Task]): Future[Map[User, Task]] = {
       users match {

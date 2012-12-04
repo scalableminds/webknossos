@@ -1,4 +1,6 @@
-### define ###
+### define
+libs/event_mixin : EventMixin
+###
 
 # constants (for active_plane)
 PLANE_XY           = 0
@@ -13,6 +15,9 @@ MAX_ZOOM_TRESHOLD  = 2
 class Flycam2d
 
   constructor : (width, model) ->
+
+    _.extend(this, new EventMixin())
+
     @model = model
     @viewportWidth = width
     # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
@@ -29,7 +34,7 @@ class Flycam2d
     @direction = [0, 0, 1]
     @hasChanged = true
     @activePlane = PLANE_XY
-    @rayThreshold = [10, 10, 10, 100]
+    @rayThreshold = [50, 50, 50, 100]
     @spaceDirection = 1
 
   #reset : ->
@@ -152,6 +157,7 @@ class Flycam2d
   setGlobalPos : (position) ->
     p = [position[0] - @globalPosition[0], position[1] - @globalPosition[1], position[2] - @globalPosition[2]]
     @globalPosition = position
+    @trigger("globalPositionChanged", position)
     @hasChanged = true
     
   setActivePlane : (activePlane) ->
@@ -217,4 +223,7 @@ class Flycam2d
     @rayThreshold[VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384
 
   getRayThreshold : (planeID) ->
-    @rayThreshold[planeID]
+    if planeID < 3
+      return @rayThreshold[planeID] * (@integerZoomSteps[planeID] + 1)
+    else
+      return @rayThreshold[planeID]

@@ -23,31 +23,31 @@ object NMLIO extends Controller with Secured {
   }
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
-    request.body.file("nmlFile").map { nmlFile =>
+    request.body.file("nmlFile").flatMap { nmlFile =>
       implicit val ctx = NMLContext(request.user)
-      (new NMLParser(nmlFile.ref.file).parse).foreach { tracing =>
-        Logger.debug("Successfully parsed nmlFile")
-        Tracing.save(tracing.copy(
-          tracingType = TracingType.Explorational))
-        UsedTracings.use(request.user, tracing)
-      }
-      Ok("File uploaded")
+      (new NMLParser(nmlFile.ref.file).parse)
+        .map { tracing =>
+          Logger.debug("Successfully parsed nmlFile")
+          Tracing.save(tracing.copy(
+            tracingType = TracingType.Explorational))
+          UsedTracings.use(request.user, tracing)
+          tracing
+        }
+        .headOption
+        .map { tracing =>
+          Redirect(controllers.routes.Game.trace(tracing.id)).flashing(
+            "success" -> "NML upload successful")
+        }
     }.getOrElse {
-      BadRequest("Missing file")
+      Redirect(controllers.routes.UserController.dashboard).flashing(
+        "error" -> "Missing file")
     }
-  }
-
-  def downloadList = Authenticated { implicit request =>
-    val userTracings = Tracing.findAll.groupBy(_._user).flatMap {
-      case (userId, tracings) =>
-        User.findOneById(userId).map(_ -> tracings)
-    }
-    Ok(html.admin.nml.nmldownload(userTracings))
   }
 
   def download(tracingId: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(tracingId)
+      if !tracing.isTrainingsTracing
     } yield {
       Ok(prettyPrinter.format(Xml.toXML(tracing))).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",

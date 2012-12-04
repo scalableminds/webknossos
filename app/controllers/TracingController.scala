@@ -27,6 +27,10 @@ import brainflight.tools.geometry.Point3D
 import models.tracing.UsedTracings
 import models.user.TimeTracking
 import brainflight.view.helpers._
+import models.task.Task
+import views._
+import play.api.i18n.Messages
+import models.tracing.UsedTracings
 
 /**
  * scalableminds - brainflight
@@ -73,22 +77,6 @@ object TracingController extends Controller with Secured {
       "isNew" -> true))
   }
 
-  def useAsActive(id: String, isNew: Boolean) = Authenticated { implicit request =>
-    val user = request.user
-    if (isNew) {
-      DataSet.findOneById(id).map { dataSet =>
-        val tracing = Tracing.createTracingFor(user, dataSet)
-        UsedTracings.use(user, tracing)
-        Ok
-      } getOrElse BadRequest("Couldn't find DataSet.")
-    } else {
-      Tracing.findOneById(id).filter(_._user == user._id).map { tracing =>
-        UsedTracings.use(user, tracing)
-        Ok
-      } getOrElse BadRequest("Coudln't find tracing.")
-    }
-  }
-
   def createExplorational = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     (for {
       dataSetId <- request.body.get("dataSetId").flatMap(_.headOption)
@@ -105,17 +93,76 @@ object TracingController extends Controller with Secured {
   }
 
   def info(tracingId: String) = Authenticated { implicit request =>
-    Tracing.findOneById(tracingId).filter(_._user == request.user._id).map(exp =>
-      Ok(createTracingInformation(exp) ++ createDataSetInformation(exp.dataSetName))).getOrElse(BadRequest("Tracing with id '%s' not found.".format(tracingId)))
+    Tracing
+      .findOneById(tracingId)
+      .filter(_._user == request.user._id)
+      .map(tracing =>
+        Ok(createTracingInformation(tracing) ++
+          createDataSetInformation(tracing.dataSetName)))
+      .getOrElse(BadRequest("Tracing with id '%s' not found.".format(tracingId)))
   }
 
   def update(tracingId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
-    Tracing.findOneById(tracingId).filter(_._user == request.user._id).flatMap { _ =>
-      (request.body).asOpt[Tracing].map { tracing =>
-        Tracing.save(tracing.copy(timestamp = System.currentTimeMillis))
-        TimeTracking.logUserAction(request.user)
-        Ok
+    Tracing
+      .findOneById(tracingId)
+      .filter(_._user == request.user._id)
+      .flatMap { _ =>
+        (request.body).asOpt[Tracing].map { tracing =>
+          Tracing.save(tracing.copy(timestamp = System.currentTimeMillis))
+          TimeTracking.logUserAction(request.user, tracing)
+          Ok
+        }
       }
-    } getOrElse (BadRequest("Update for tracing with id '%s' failed.".format(tracingId)))
+      .getOrElse(BadRequest("Update for tracing with id '%s' failed.".format(tracingId)))
   }
+
+  private def finishTracing(user: User, tracingId: String): Either[String, (Tracing, String)] = {
+    def finishTask(tracing: Tracing, message: String) = {
+      tracing.taskId.flatMap(Task.findOneById).map { task =>
+        UsedTracings.removeAll(user)
+        Right((tracing, message))
+      } getOrElse (Right(tracing, Messages("tracing.finished")))
+    }
+
+    Tracing
+      .findOneById(tracingId)
+      .filter(tracing => tracing._user == user._id && tracing.state.isInProgress)
+      .map { tracing =>
+        if (tracing.isTrainingsTracing) {
+          finishTask(tracing.update(_.passToReview), Messages("task.passedToReview"))
+        } else {
+          finishTask(tracing.update(_.finish), Messages("task.finished"))
+        }
+      }
+      .getOrElse(Left(Messages("tracing.notFound")))
+  }
+
+  def finish(tracingId: String, experimental: Boolean) = Authenticated { implicit request =>
+    finishTracing(request.user, tracingId).fold(
+      error => AjaxBadRequest.error(error),
+      {
+        case (tracing, message) =>
+          if (experimental)
+            AjaxOk.success(message)
+          else
+            tracing
+              .taskId
+              .flatMap(Task.findOneById)
+              .map { task =>
+                AjaxOk.success(html.user.dashboard.taskTracingTableItem(task, tracing), message)
+              }
+              .getOrElse(AjaxBadRequest.error("task.notfound"))
+      })
+  }
+
+  def finishWithRedirect(tracingId: String) = Authenticated { implicit request =>
+    finishTracing(request.user, tracingId).fold(
+      error =>
+        BadRequest(error),
+      {
+        case (_, message) =>
+          Redirect(routes.UserController.dashboard).flashing("success" -> message)
+      })
+  }
+
 }

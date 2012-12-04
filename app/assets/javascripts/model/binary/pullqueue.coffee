@@ -7,8 +7,9 @@ class PullQueue
 
   # Constants
   BATCH_LIMIT : 10
-  BATCH_SIZE : 10
+  BATCH_SIZE : 5
   ROUND_TRIP_TIME_SMOOTHER : .125
+  BUCKET_TIME_SMOOTHER : .125
 
   cube : null
   queue : []
@@ -113,7 +114,6 @@ class PullQueue
     transmitBuffer = []
 
     for bucket in batch
-
       zoomStep = bucket[3]
       transmitBuffer.push(
         zoomStep
@@ -131,8 +131,7 @@ class PullQueue
 
         (responseBuffer) =>
 
-          @addRoundTripTime(new Date() - roundTripBeginTime)
-
+          @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length)
           if responseBuffer?
             for bucket, i in batch
 
@@ -153,20 +152,24 @@ class PullQueue
       @batchCount--
       @pull()
 
+  updateConnectionInfo : (roundTripTime, bucketCount) ->
 
-  addRoundTripTime : (roundTripTime) ->
-
-    @roundTripTime = if @roundTripTime == 0
-      roundTripTime
+    if @roundTripTime? and @bucketTime?
+      @roundTripTime = (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
+      @bucketTime = (1 - @BUCKET_TIME_SMOOTHER) * @bucketTime + @BUCKET_TIME_SMOOTHER * (new Date() - @lastReceiveTime) / bucketCount
     else
-      (1 - @ROUND_TRIP_TIME_SMOOTHER) * @roundTripTime + @ROUND_TRIP_TIME_SMOOTHER * roundTripTime
+      @roundTripTime = roundTripTime
+      @bucketTime = roundTripTime / bucketCount
+
+    @bucketsPerSecond = 1000 / @bucketTime
+    @lastReceiveTime = new Date()
 
 
   getLoadBucketSocket : _.once ->
     
     new ArrayBufferSocket(
       senders : [
-        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array

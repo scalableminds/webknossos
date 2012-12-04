@@ -108,11 +108,12 @@ class Cube
       for dx in [0...width] by 1
         for dy in [0...width] by 1
           for dz in [0...width] by 1
-
             bucketIndex = @getBucketIndexByAddress([x + dx, y + dy, z + dz])
             bucket = @cube[bucketIndex]
 
             if bucketData
+              unless bucket?
+                return 0
               if zoomStep < bucket.zoomStep
                 bucket.data = bucketData
                 @trigger("bucketLoaded", [x + dx, y + dy, z + dz], zoomStep, bucket.zoomStep)
@@ -127,7 +128,7 @@ class Cube
       if bucketData
         if zoomStep < bucket.zoomStep 
           bucket.data = bucketData
-          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z], 0, bucket.zoomStep)
+          @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, 0], 0, bucket.zoomStep)
           bucket.zoomStep = 0
       else
         bucket.requestedZoomStep = bucket.zoomStep

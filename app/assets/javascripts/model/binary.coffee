@@ -52,6 +52,7 @@ class Binary
       @lastOptions = options.slice()
 
       console.time "ping"
+      #console.log "Connection: latency:", @queue.roundTripTime, "bucketsPerSecond:", @queue.bucketsPerSecond
       @queue.clear()
 
       for i in [0...Math.min(options.length, @planes.length)]

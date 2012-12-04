@@ -2,7 +2,6 @@
 libs/datgui/dat.gui : DatGui
 libs/request : Request
 libs/event_mixin : EventMixin
-routes : routes
 view/toast : Toast
 ###
 
@@ -22,19 +21,11 @@ class Gui
     
     _.extend(this, new EventMixin())
 
-    initPos = @flycam.getGlobalPos()
-
     data = @model.user
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
     @settings = 
-      save : @saveNow
-      finish : @finish
-      upload : @uploadNML
-      download : => window.open(jsRoutes.controllers.admin.NMLIO.downloadList().url,
-                                "_blank", "width=700,height=400,location=no,menubar=no")
       
-      position : "#{initPos[0]}, #{initPos[1]}, #{initPos[2]}"
       lockZoom: data.lockZoom
       inverseX: data.mouseInversionX == 1
       inverseY: data.mouseInversionY == 1
@@ -63,22 +54,7 @@ class Gui
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
 
     container.append @gui.domElement
-
-    fTask = @gui.addFolder("Task")
-    (fTask.add @settings, "save")
-                          .name("Save now")
-    (fTask.add @settings, "finish")
-                          .name("Finish task")
-    (fTask.add @settings, "upload")
-                          .name("Upload NML")
-    (fTask.add @settings, "download")
-                          .name("Download NML")
     
-    fPosition = @gui.addFolder("Position")
-    (fPosition.add @settings, "position")
-                          .name("Position")
-                          .listen()
-                          .onFinishChange(@setPosFromString)
     fControls = @gui.addFolder("Controls")
     (fControls.add @settings, "lockZoom")
                           .name("Lock Zoom")
@@ -152,15 +128,22 @@ class Gui
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
-    fTask.open()
-    fPosition.open()
     #fControls.open()
     #fView.open()
     #fSkeleton.open()
     fTrees.open()
     fNodes.open()
 
-    @gui.close()
+    @flycam.on "globalPositionChanged", (position) => 
+
+      @updateGlobalPosition(position)
+      return
+
+    $("#trace-position-input").on "change", (event) => 
+
+      @setPosFromString(event.target.value)
+      return
+
 
   saveNow : =>
     @model.user.pushImpl()
@@ -170,35 +153,18 @@ class Gui
         -> Toast.error("Couldn't save. Please try again.")
       )
 
-  finish : =>
-    routes.controllers.TaskController.finish("123").ajax()
-    Toast.error("Yeah, thats not implemented yet.")
-
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
-    pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
-    @flycam.setGlobalPos(pos)
+    if stringArray.length == 3
+      pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
+      if !isNaN(pos[0]) and !isNaN(pos[1]) and !isNaN(pos[2])
+        @flycam.setGlobalPos(pos)
+        return
+    @updateGlobalPosition(@flycam.getGlobalPos())
 
-  uploadNML : =>
-    # Create dummy input field
-    input = $("<input>", type : "file")
-    input.trigger("click")
-    input.on("change", (evt) ->
-      file = evt.target.files[0]
-      requestObject = routes.controllers.admin.NMLIO.upload()
-      xhr = new XMLHttpRequest()
-      # Reload when done
-      xhr.onload = -> window.location.reload()
-      xhr.open(requestObject.method, requestObject.url, true)
-      # send it as form data
-      formData = new FormData()
-      formData.append("nmlFile", file)
-      xhr.send(formData)
-    )
-
-  updateGlobalPosition : =>
-    pos = @flycam.getGlobalPos()
-    @settings.position = Math.round(pos[0]) + ", " + Math.round(pos[1]) + ", " + Math.round(pos[2])
+  updateGlobalPosition : (globalPos) =>
+    stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
+    $("#trace-position-input").val(stringPos)
 
   setMoveValue : (value) =>
     @model.user.moveValue = (Number) value

@@ -79,6 +79,7 @@ case class Tracing(
     this.copy(
       _id = new ObjectId,
       _user = user._id,
+      state = TracingState.Assigned,
       trees =
         NMLParser.createUniqueIds(training.trees ::: this.trees),
       timestamp = System.currentTimeMillis,
@@ -199,6 +200,10 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       Scale(12, 12, 24),
       Point3D(0, 0, 0),
       tracingType = TracingType.Explorational))
+  }
+  
+  def findTrainingForReviewTracing(tracing: Tracing) = {
+    findOne(MongoDBObject("review.reviewTracing" -> tracing._id))
   }
 
   def findOpenTracingFor(user: User, isExploratory: Boolean) =

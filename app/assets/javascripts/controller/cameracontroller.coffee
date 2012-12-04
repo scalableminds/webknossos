@@ -29,8 +29,8 @@ class CameraController
 
     @updateCamViewport()
     for cam in @cameras
-      cam.near = -100000
-      cam.far  =  100000
+      cam.near = -1000000
+      cam.far  =  1000000
 
   update : =>
     gPos = @flycam.getGlobalPos()
@@ -163,8 +163,8 @@ class CameraController
     @camDistance = 2 * value # Plane is shifted so it's <value> to the back and the front
     @updateCamViewport()
 
-  getRouteClippingDistance : ->
-    @camDistance
+  getRouteClippingDistance : (planeID) ->
+    @camDistance * @model.route.voxelPerNM[planeID]
 
   updateCamViewport : ->
     # Plane size is WIDTH voxels of the highest resolution, being the lowest scale

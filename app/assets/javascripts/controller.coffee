@@ -16,9 +16,6 @@ PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
-NO_KEY           = 0
-ALT_KEY          = 1
-SHIFT_KEY        = 2
 VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 TEXTURE_SIZE     = 512
@@ -42,10 +39,6 @@ class Controller
 
       @canvasesAndNav = $("#main")[0]
 
-      # hide contextmenu, while rightclicking a canvas
-      $("#main-container").bind "contextmenu", (event) ->
-        event.preventDefault(); return
-
       @prevControls = $('#prevControls')
       @prevControls.addClass("btn-group")
       values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
@@ -58,6 +51,8 @@ class Controller
         buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
         buttons[i].on("click", callbacks[i])
         @prevControls.append(buttons[i])
+
+      @view.createKeyboardCommandOverlay()
 
       @sceneController = new SceneController(@model.route.dataSet.upperBoundary, @flycam, @model)
       meshes = @sceneController.getMeshes()
@@ -77,14 +72,6 @@ class Controller
       
         for geometry in list
           @view.removeGeometry(geometry)
-        
-      # TODO
-      @flycam.setGlobalPos(@model.route.data.editPosition)
-      @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
-      @flycam.setOverrideZoomStep(@model.user.minZoomStep)
-
-      @initMouse()
-      @initKeyboard()
 
       @gui = new Gui($("#optionswindow"), @model, @sceneController, @cameraController, @flycam)
       @gui.on "deleteActiveNode", @deleteActiveNode
@@ -93,6 +80,12 @@ class Controller
       @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
       @gui.on "deleteActiveTree", @deleteActiveTree
 
+      @flycam.setGlobalPos(@model.route.data.editPosition)
+      @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
+      @flycam.setOverrideZoomStep(@model.user.minZoomStep)
+
+      @initMouse()
+      @initKeyboard()
 
       @cameraController.changePrevSV()
       @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
@@ -132,25 +125,40 @@ class Controller
 
   initMouse : ->
 
-    # initializes an Input.Mouse object with the three canvas
-    # elements and one pair of callbacks per canvas
-    new Input.Mouse(
-      [$("#planexy"), $("#planeyz"), $("#planexz"), $("#skeletonview")]
-      [@view.setActivePlaneXY, @view.setActivePlaneYZ, @view.setActivePlaneXZ]
-      {"x" : @moveX, "y" : @moveY, "w" : @scroll, "l" : @onPlaneClick, "r" : @setWaypoint}
-      {"x" : @cameraController.movePrevX, "y" : @cameraController.movePrevY, "w" : @cameraController.zoomPrev, "l" : @onPreviewClick}
-      @model
+    # hide contextmenu, while rightclicking a canvas
+    $("#render").bind "contextmenu", (event) ->
+      event.preventDefault()
+      return
+
+    for planeId in ["xy", "yz", "xz"]
+      new Input.Mouse($("#plane#{planeId}"),
+        over : @view["setActivePlane#{planeId.toUpperCase()}"]
+        leftDownMove : (delta) => 
+          @move [
+            delta.x * @model.user.mouseInversionX
+            delta.y * @model.user.mouseInversionX
+            0
+          ]
+        scroll : @scroll
+        leftClick : @onPlaneClick
+        rightClick : @setWaypoint
+      )
+
+    new Input.Mouse($("#skeletonview"),
+      leftDownMove : (delta) => 
+        @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
+        @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
+      scroll : @cameraController.zoomPrev
+      leftClick : @onPreviewClick
     )
+
 
   initKeyboard : ->
     
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
-      if event.which == 32 or 37 <= event.which <= 40 then event.preventDefault();
-
-    # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
-      event.preventDefault(); return
+      event.preventDefault() if (event.which == 32 or 37 <= event.which <= 40) and !$(":focus").length
+      return
 
     new Input.Keyboard(
 
@@ -163,14 +171,14 @@ class Controller
 
     
       #ScaleTrianglesPlane
-      "l" : => @view.scaleTrianglesPlane -@model.user.scaleValue
-      "k" : => @view.scaleTrianglesPlane @model.user.scaleValue
+      "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
+      "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
 
       #Move
-      "left"          : => @moveX(-@model.user.moveValue)
-      "right"         : => @moveX( @model.user.moveValue)
-      "up"            : => @moveY(-@model.user.moveValue)
-      "down"          : => @moveY( @model.user.moveValue)
+      "left"  : => @moveX(-@model.user.moveValue)
+      "right" : => @moveX( @model.user.moveValue)
+      "up"    : => @moveY(-@model.user.moveValue)
+      "down"  : => @moveY( @model.user.moveValue)
 
       #misc keys
       # TODO: what does this? I removed it, I need the key.
@@ -205,8 +213,8 @@ class Controller
         @createNewTree()
 
       # Move
-      "space"         : => @moveZ( @model.user.moveValue)
-      "f"         : => @moveZ( @model.user.moveValue)
+      "space" : => @moveZ( @model.user.moveValue)
+      "f" : => @moveZ( @model.user.moveValue)
       #"space, f"         : => @moveZ( @model.user.moveValue)
       "shift + space" : => @moveZ(-@model.user.moveValue)
       "ctrl + space" : => @moveZ(-@model.user.moveValue)
@@ -219,12 +227,10 @@ class Controller
 
     @model.binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
     @model.route.globalPosition = @flycam.getGlobalPos()
-    if (@gui)
-      @gui.updateGlobalPosition()
     @cameraController.update()
     @sceneController.update()
 
-  move  : (v) =>                 # v: Vector represented as array of length 3
+  move : (v) =>                 # v: Vector represented as array of length 3
     @flycam.moveActivePlane(v)
 
   moveX : (x) => @move([x, 0, 0])
@@ -260,9 +266,9 @@ class Controller
 
   scroll : (delta, type) =>
     switch type
-      when NO_KEY then @moveZ(delta)
-      when SHIFT_KEY then @setNodeRadius(delta)
-      when ALT_KEY
+      when null then @moveZ(delta)
+      when "shift" then @setNodeRadius(delta)
+      when "alt"
         if delta > 0
           @zoomIn()
         else
@@ -276,10 +282,11 @@ class Controller
     zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
     activeNodePos = @model.route.getActiveNodePos()
     scaleFactor   = @view.scaleFactor
+    planeRatio    = @flycam.getSceneScalingArray()
     switch @flycam.getActivePlane()
-      when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2]]
-      when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor]
-      when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*zoomFactor]
+      when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*planeRatio[0]*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*planeRatio[1]*zoomFactor, curGlobalPos[2]]
+      when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*planeRatio[1]*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*planeRatio[2]*zoomFactor]
+      when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*planeRatio[0]*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*planeRatio[2]*zoomFactor]
     # set the new trace direction
     if activeNodePos
       p = [position[0] - activeNodePos[0], position[1] - activeNodePos[1], position[2] - activeNodePos[2]]
@@ -313,7 +320,7 @@ class Controller
 
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = @flycam.getIndices(plane)
-      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance()+1)
+      if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance(ind[2])+1)
       # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
         vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex

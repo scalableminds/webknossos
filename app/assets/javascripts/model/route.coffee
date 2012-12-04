@@ -402,7 +402,14 @@ class Route
     @push()
 
   getNewTreeColor : ->
-    +("0x"+("000"+(Math.random()*(1<<24)|0).toString(16)).substr(-6))
+    switch @treeIdCount
+      when 1 then return 0xFF0000
+      when 2 then return 0x00FF00
+      when 3 then return 0x0000FF
+      when 4 then return 0xFF00FF
+      when 5 then return 0xFFFF00
+      else  
+        new THREE.Color().setHSV(Math.random(), 1, 1).getHex()
 
   createNewTree : ->
     # Because a tree is represented by the root element and we
@@ -446,7 +453,6 @@ class Route
         index = i
         break
     @trees.splice(index, 1)
-    console.log @trees
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0

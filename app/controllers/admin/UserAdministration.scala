@@ -6,7 +6,7 @@ import brainflight.mail.Send
 import brainflight.security.AuthenticatedRequest
 import brainflight.security.Secured
 import controllers._
-import models.security.Role
+import models.security._
 import models.user.TimeTracking
 import models.user.User
 import play.api.i18n.Messages
@@ -15,16 +15,18 @@ import views.html
 object UserAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
+  
+  def allUsers = User.findAll.sortBy(_.lastName)
 
   def index = Authenticated { implicit request =>
-    Ok(html.admin.user.userAdministration(User.findAll.sortBy(_.lastName), Role.findAll.sortBy(_.name)))
+    Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name)))
   }
 
-  def logTime(userId: String, time: String) = Authenticated { implicit request =>
+  def logTime(userId: String, time: String, note: String) = Authenticated { implicit request =>
     User.findOneById(userId) map { user =>
       TimeTracking.parseTime(time) match {
         case Some(t) =>
-          TimeTracking.logTime(user, t)
+          TimeTracking.logTime(user, t, note)
           Ok
         case _ =>
           BadRequest("Invalid time.")
@@ -41,16 +43,16 @@ object UserAdministration extends Controller with Secured {
             case _          => ajaxError -> errorMessage(userId)
           }
         }
-        AjaxOk(html.admin.user.userTable(User.findAll), results)
+        AjaxOk(html.admin.user.userTable(allUsers), results)
       case _ =>
-        BadRequest("'id' parameter is missing.")
+        AjaxBadRequest.error("No user chosen")
     }
   }
 
   private def verifyUser(userId: String) = {
     User.findOneById(userId) map { user =>
       if (!user.verified) {
-        Authentication.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
+        Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
         user.update(_.verify)
       } else
         user
@@ -99,6 +101,13 @@ object UserAdministration extends Controller with Secured {
     User.findOneById(userId) map { user =>
       user.update(_.removeRole(roleName))
     }
+  }
+
+  def loginAsUser(userId: String) = Authenticated(permission = Some(Permission("admin.ghost"))) { implicit request =>
+    User.findOneById(userId) map { user =>
+      Redirect(controllers.routes.UserController.dashboard)
+        .withSession(Secured.createSession(user))
+    } getOrElse (BadRequest("User not found."))
   }
 
   def removeRoleBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>

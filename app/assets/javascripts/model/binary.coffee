@@ -18,9 +18,11 @@ class Binary
   direction : [0, 0, 0]
   
 
-  constructor : (@dataSetId) ->
+  constructor : (dataSet) ->
 
-    @cube = new Cube()
+    @dataSetId = dataSet.id
+
+    @cube = new Cube(dataSet.upperBoundary)
     @queue = new PullQueue(@dataSetId, @cube)
 
     @planes = [

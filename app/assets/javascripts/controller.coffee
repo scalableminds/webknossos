@@ -7,15 +7,17 @@ model : Model
 view : View
 view/gui : Gui
 input : Input
-libs/request : Request
-libs/flycam : Flycam
+model/flycam : Flycam
 libs/event_mixin : EventMixin
+libs/dimensions : DimensionsHelper
 ###
 
 PLANE_XY         = 0
 PLANE_YZ         = 1
 PLANE_XZ         = 2
 VIEW_3D          = 3
+TYPE_USUAL       = 0
+TYPE_BRANCH      = 1
 VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 TEXTURE_SIZE     = 512
@@ -27,10 +29,11 @@ class Controller
 
     _.extend(@, new EventMixin())
 
-    @requestInitData().done (options) =>
+    @model = new Model()
+
+    @model.initialize().done =>
 
       # create Model
-      @model = new Model(options)
       @flycam = new Flycam(VIEWPORT_WIDTH, @model)
       @view  = new View(@model, @flycam)
 
@@ -54,7 +57,7 @@ class Controller
 
       @view.createKeyboardCommandOverlay()
 
-      @sceneController = new SceneController(@model.route.dataSet.upperBoundary, @flycam, @model)
+      @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
       meshes = @sceneController.getMeshes()
       
       for mesh in meshes
@@ -95,32 +98,6 @@ class Controller
       @sceneController.setDisplaySV PLANE_YZ, @model.user.displayPreviewYZ
       @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
       @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
-      
-
-  requestInitData : ->
-
-    Request.send(
-      url : "/game/initialize"
-      dataType : "json"
-    ).pipe (task) ->
-
-      Request.send(
-        url : "/tracing/#{task.task.id}"
-        dataType : "json"
-      ).pipe (tracing) ->
-
-        Request.send(
-          url : "/user/configuration"
-          dataType : "json"
-        ).pipe((user) ->
-
-          options = {}
-          options.user = user
-          options.dataSet = tracing.dataSet
-          options.tracing = tracing.tracing
-          options
-
-        -> alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page."))
 
 
   initMouse : ->
@@ -188,38 +165,27 @@ class Controller
     
     new Input.KeyboardNoLoop(
       #Branches
-      "b" : => 
-        @model.route.putBranch()
-        @sceneController.skeleton.setBranchPoint(true)
-      "j" : => @model.route.popBranch().done(
-        (id) => 
-          @setActiveNode(id, true)
-          @sceneController.skeleton.setBranchPoint(false)
-        )
+      "b" : => @pushBranch()
+      "j" : => @popBranch() 
+
       "s" : @centerActiveNode
 
       #Zoom in/out
-      "i" : =>
-        @zoomIn()
-      "o" : =>
-        @zoomOut()
+      "i" : => @zoomIn()
+      "o" : => @zoomOut()
 
-      # delete active node
-      "delete" : =>
-        # just use the method implemented in gui
-        @deleteActiveNode()
+      #Delete active node
+      "delete" : => @deleteActiveNode()
 
-      "n" : =>
-        @createNewTree()
+      "n" : => @createNewTree()
 
-      # Move
+      #Move
       "space" : => @moveZ( @model.user.moveValue)
       "f" : => @moveZ( @model.user.moveValue)
-      #"space, f"         : => @moveZ( @model.user.moveValue)
+
       "shift + space" : => @moveZ(-@model.user.moveValue)
       "ctrl + space" : => @moveZ(-@model.user.moveValue)
       "d" : => @moveZ(-@model.user.moveValue)
-      #"shift + space, ctrl + space, d" : => @moveZ(-@model.user.moveValue)
     )
 
 
@@ -230,8 +196,7 @@ class Controller
     @cameraController.update()
     @sceneController.update()
 
-  move : (v) =>                 # v: Vector represented as array of length 3
-    @flycam.moveActivePlane(v)
+  move : (v) => @flycam.moveActivePlane(v)
 
   moveX : (x) => @move([x, 0, 0])
   moveY : (y) => @move([0, y, 0])
@@ -256,13 +221,7 @@ class Controller
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
-    scale = @model.route.scaleX
-    if radius < scale
-      radius = scale
-    else if radius > 1000 * scale
-      radius = 1000 * scale
-    @gui.setNodeRadius(radius)
-    @gui.updateRadius()
+    @model.route.setActiveNodeRadius(radius)
 
   scroll : (delta, type) =>
     switch type
@@ -282,7 +241,7 @@ class Controller
     zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
     activeNodePos = @model.route.getActiveNodePos()
     scaleFactor   = @view.scaleFactor
-    planeRatio    = @flycam.getSceneScalingArray()
+    planeRatio    = @model.scaleInfo.baseVoxelFactors
     switch @flycam.getActivePlane()
       when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*planeRatio[0]*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*planeRatio[1]*zoomFactor, curGlobalPos[2]]
       when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*planeRatio[1]*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*planeRatio[2]*zoomFactor]
@@ -319,9 +278,8 @@ class Controller
       globalPos = @flycam.getGlobalPos()
 
       # make sure you can't click nodes, that are clipped away (one can't see)
-      ind = @flycam.getIndices(plane)
+      ind = Dimensions.getIndices(plane)
       if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance(ind[2])+1)
-      # intersects[0].object.material.color.setHex(Math.random() * 0xffffff)
         vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
       # set the active Node to the one that has the ID stored in the vertex
       # center the node if click was in 3d-view
@@ -333,48 +291,41 @@ class Controller
   addNode : (position) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
-    @model.route.put(position)
-    @gui.updateNodeAndTreeIds()
-    @gui.updateRadius()
-    @sceneController.setWaypoint()
+    @model.route.addNode(position, TYPE_USUAL)
+
+  pushBranch : =>
+    @model.route.pushBranch()
+
+  popBranch : =>
+    @model.route.popBranch().done((id) => 
+      @setActiveNode(id, true)
+    )
 
   setActiveNode : (nodeId, centered) =>
     @model.route.setActiveNode(nodeId)
     if centered
       @centerActiveNode()
-    @flycam.hasChanged = true
-    @gui.update()
-    @sceneController.skeleton.setActiveNode()
 
   centerActiveNode : =>
     @flycam.setGlobalPos(@model.route.getActiveNodePos())
 
   deleteActiveNode : =>
     @model.route.deleteActiveNode()
-    @gui.update()
-    @sceneController.updateRoute()
 
   createNewTree : =>
-    [id, color] = @model.route.createNewTree()
-    @gui.update()
-    @sceneController.skeleton.createNewTree(id, color)
+    @model.route.createNewTree()
 
   setActiveTree : (treeId) =>
     @model.route.setActiveTree(treeId)
-    @gui.update()
-    @sceneController.updateRoute()
 
   deleteActiveTree : =>
     @model.route.deleteActiveTree()
-    @gui.update()
-    @sceneController.updateRoute()
 
   ########### Input Properties
 
   #Customize Options
   setMoveValue : (value) =>
     @model.user.moveValue = (Number) value
-
     @model.user.push()
 
   setRotateValue : (value) =>

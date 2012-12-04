@@ -43,4 +43,3 @@ require [
     "./main/enhancements"
     "./main/routing"
   ], ->
-     

@@ -49,16 +49,16 @@
       <div class="span2">
         <h5>Zoom</h5>
         <p>
-          <input type="range" min="-10" max="10" value="0" />
-          <button class="btn btn-small">Reset</button>
+          <input type="range" min="-2" max="10" value="0" id="zoom-slider"/>
+          <button class="btn btn-small" id="zoom-reset">Reset</button>
         </p>
       </div>
     </div>
 
-    
+
     <div class="row">
 
-      <div class="span8"> 
+      <div class="span8">
         <h3>Editor</h3>
         <div id="editor">time(10, 40) ->
   recolor("#ff0000")
@@ -66,8 +66,22 @@
     fadeOut()</div>
       </div>
 
-      <div class="span4">
+      <div class="span4" id="assets">
         <h3>Assets</h3>
+        <div>
+          <form id="fileupload" action="" method="POST" enctype="multipart/form-data">
+            <div class="row fileupload-buttonbar">
+                <span class="btn btn-success fileinput-button">
+                    <i class="icon-plus icon-white"></i>
+                    <span>Add files...</span>
+                    <input type="file" name="files[]" multiple="">
+                </span>
+                <button type="submit" class="btn btn-primary start">
+                    <i class="icon-upload icon-white"></i>
+                    <span>Start upload</span>
+                </button>
+            </div>
+        </div>
         <table class="table table-striped">
           <tbody>
             <tr>

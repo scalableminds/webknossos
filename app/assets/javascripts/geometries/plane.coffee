@@ -57,10 +57,10 @@ class Plane
     @crosshair          = new Array(2)
     for i in [0..1]
       crosshairGeometries[i] = new THREE.Geometry()
-      crosshairGeometries[i].vertices.push(new THREE.Vector3(-pWidth/2*i, 0, -pWidth/2*(1-i)))
-      crosshairGeometries[i].vertices.push(new THREE.Vector3( -25*i, 0,  -25*(1-i)))
-      crosshairGeometries[i].vertices.push(new THREE.Vector3( 25*i, 0, 25*(1-i)))
-      crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i, 0,  pWidth/2*(1-i)))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3(-pWidth/2*i, -pWidth/2*(1-i), 0))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3( -25*i,  -25*(1-i), 0))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3( 25*i, 25*(1-i), 0))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i,  pWidth/2*(1-i), 0))
       @crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({color: CROSSHAIR_COLORS[@planeID][i], linewidth: 1}), THREE.LinePieces)
       
     # create borders

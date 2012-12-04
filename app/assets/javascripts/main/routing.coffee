@@ -50,8 +50,6 @@ $ ->
       ], (Controller) ->
 
         oxalis = window.oxalis = new Controller()
-        return
-
 
         $("#trace-finish-button, #trace-download-button").click (event) ->
 
@@ -65,6 +63,8 @@ $ ->
 
           event.preventDefault()
           oxalis.gui.saveNow()
+
+        return
 
 
     "admin.task.taskOverview" : ->

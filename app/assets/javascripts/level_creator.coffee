@@ -2,6 +2,8 @@
 libs/request : Request
 routes : routes
 libs/ace/ace : Ace
+coffee-script : CoffeeScript
+view/toast : Toast
 ###
 
 class LevelCreator
@@ -15,9 +17,11 @@ class LevelCreator
 
     @data = null
 
-    editor = Ace.edit("editor")
-    editor.setTheme("ace/theme/twilight")
-    editor.getSession().setMode("ace/mode/coffee")
+    @editor = Ace.edit("editor")
+    @editor.setTheme("ace/theme/twilight")
+    @editor.getSession().setMode("ace/mode/coffee")
+
+    @editor.on "change", => console.log(@compile())
 
     @canvas = $("#preview-canvas")[0]
     @context = @canvas.getContext("2d")
@@ -57,7 +61,39 @@ class LevelCreator
         .prepend("<i class=\"icon-refresh icon-white rotating\"></i> ")
 
 
+  compile : ->
 
+    try
+
+      functionBody = CoffeeScript.compile(@editor.getValue(), bare : true)
+      func = new Function(
+        "plugins"
+        "with(plugins) { #{functionBody} }"
+      )
+      
+      plugins = 
+        time : (t, data, options) ->
+
+          if options.start <= t <= options.end
+            (cb) -> cb()
+          else
+            return
+
+        time : (a, b) ->
+          console.log "from #{a} > #{b}"
+          (cb) -> cb()
+
+        recolor : (color) ->
+          console.log "recoloring #{color}"
+
+        fadeOut : ->
+          console.log "fading.."
+
+      return func
+
+    catch err
+
+      return
 
 
   requestStack : (dimensions) ->

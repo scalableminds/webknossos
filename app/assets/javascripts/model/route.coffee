@@ -333,16 +333,20 @@ class Route
     unless @activeNode
       return
     id = @activeNode.id
+    hasNoChildren = false
     @activeNode = @activeNode.parent
     if @activeNode
-      @activeNode.remove(id)
+      hasNoChildren = @activeNode.remove(id)
       @lastActiveNodeId = @activeNode.id
     else
       # Root is deleted
       @deleteActiveTree()
     @push()
 
-    @trigger("deleteActiveNode")
+    if hasNoChildren
+      @trigger("deleteLastNode", id)
+    else
+      @trigger("deleteActiveNode")
 
   deleteActiveTree : ->
     # There should always be an active Tree

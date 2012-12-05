@@ -77,6 +77,9 @@ class Skeleton
     @route.on("deleteActiveNode", =>
       @reset())
 
+    @route.on("deleteLastNode", (id) =>
+      @deleteLastNode(id))
+
     @route.on("newNode", =>
       @setWaypoint())
 
@@ -289,6 +292,29 @@ class Skeleton
       @setNodeRadius(radius)
       @curIndex[index]++
       @flycam.hasChanged = true
+
+  deleteLastNode : (id) ->
+    index = @getIndexFromTreeId(@route.getTree().treeId)
+
+    if @nodes[index].geometry.vertices[@curIndex[index]-1].nodeId == id
+      sphere = @getSphereFromId(id)
+
+      if @curIndex[index] > 0
+        @curIndex[index]--
+        @lastNodePosition = @nodes[index].geometry.vertices[@curIndex[index]]
+        @routes[index].geometry.vertices[2 * @curIndex[index]] = new THREE.Vector2(0,0)
+        @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector2(0,0)
+        @nodes[index].geometry.vertices[@curIndex[index]] = new THREE.Vector2(0,0)
+        @routes[index].geometry.verticesNeedUpdate = true
+        @nodes[index].geometry.verticesNeedUpdate = true
+      else
+        @lastNodePosition = null
+
+      @trigger("removeGeometries", [sphere])
+      @setActiveNode()
+      @flycam.hasChanged = true
+    else
+      @reset()
 
   pushNewNode : (radius, position, id, color) ->
     newNode = new THREE.Mesh(

@@ -49,7 +49,6 @@ object Level extends BasicKnowledgeDAO[Level]("levels") {
   val assetsBaseFolder = {
     val folderName =
       Play.current.configuration.getString("levelCreator.assetsDirecory").getOrElse("levels")
-    println("folderName" + folderName)
     (new File(folderName).mkdirs())
     folderName
   }

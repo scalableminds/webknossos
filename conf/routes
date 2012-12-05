@@ -96,6 +96,7 @@ GET     /admin/tracings/:id/download        controllers.admin.NMLIO.download( id
 GET     /admin/creator                      controllers.admin.LevelCreator.index
 GET     /admin/level                        controllers.admin.LevelCreator.list
 POST    /admin/level/create                 controllers.admin.LevelCreator.create
+GET     /admin/level/:name/assets           controllers.admin.LevelCreator.listAssets(name: String)
 POST    /admin/level/:name/uploadAsset      controllers.admin.LevelCreator.uploadAsset(name: String)
 GET     /admin/level/:name/deleteAsset/*asset controllers.admin.LevelCreator.deleteAsset(name: String, asset: String)
 GET     /admin/level/:name/asset/*asset     controllers.admin.LevelCreator.retrieveAsset(name: String, asset: String)

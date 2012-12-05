@@ -37,8 +37,7 @@ object LevelCreator extends Controller with Secured {
         Level
       .findOneByName(levelName)
       .map { level =>
-        level.assets
-        Ok
+        Ok(level.assets.map(_.getName).mkString(", "))
       }
       .getOrElse(BadRequest("Level not found."))
   }

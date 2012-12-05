@@ -97,10 +97,6 @@ class LevelCreator
           else
             return
 
-        time : (a, b) ->
-          console.log "from #{a} > #{b}"
-          (cb) -> cb()
-
         recolor : (color) ->
           console.log "recoloring #{color}"
 

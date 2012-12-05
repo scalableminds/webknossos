@@ -1,6 +1,4 @@
-### define
-libs/jquery-fileupload/jquery.fileupload : FileUpload
-###
+### define ###
 
 class AssetHandler
 

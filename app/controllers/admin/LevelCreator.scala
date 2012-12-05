@@ -32,6 +32,16 @@ object LevelCreator extends Controller with Secured {
       }
     } getOrElse BadRequest("Invalid request or level.")
   }
+  
+  def listAssets(levelName: String) = Authenticated{ implicit request =>
+        Level
+      .findOneByName(levelName)
+      .map { level =>
+        level.assets
+        Ok
+      }
+      .getOrElse(BadRequest("Level not found."))
+  }
 
   def retrieveAsset(levelName: String, asset: String) = Authenticated { implicit request =>
     Level
@@ -40,6 +50,20 @@ object LevelCreator extends Controller with Secured {
         level.retrieveAsset(asset) match {
           case Some(assetFile) =>
             Ok.sendFile(assetFile, true)
+          case _ =>
+            BadRequest("Asset not found.")
+        }
+      }
+      .getOrElse(BadRequest("Level not found."))
+  }
+  
+  def deleteAsset(levelName: String, asset: String) = Authenticated { implicit request =>
+    Level
+      .findOneByName(levelName)
+      .map { level =>
+        level.deleteAsset(asset) match {
+          case true =>
+            Ok
           case _ =>
             BadRequest("Asset not found.")
         }

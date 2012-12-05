@@ -15,12 +15,24 @@ case class Level(name: String) extends DAOCaseClass[Level] {
   private def assetFile(name: String) =
     new File(assetsFolder + "/" + name)
 
+  def assets = {
+    new File(assetsFolder).listFiles()
+  }
+  
   def retrieveAsset(name: String) = {
     val f = assetFile(name)
     if (f.getPath.startsWith(assetsFolder) && f.exists)
       Some(f)
     else
       None
+  }
+
+  def deleteAsset(name: String) = {
+    val f = assetFile(name)
+    if (f.getPath.startsWith(assetsFolder) && f.exists)
+      f.delete()
+    else
+      false
   }
 
   def addAsset(fileName: String, file: File) = {

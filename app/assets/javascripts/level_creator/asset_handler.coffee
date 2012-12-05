@@ -1,5 +1,5 @@
-### define
-###
+### define ###
+
 
 class AssetHandler
 
@@ -8,19 +8,20 @@ class AssetHandler
 
   $form = $("#fileupload")
 
-  $("#assets").find("[type=submit]").click ->
+  $("#assets").find("[type=submit]").click (event) ->
 
-    $input = $("<input>", type : "file", name : "nmlFile", class : "hide", multiple : true)
+
+    event.preventDefault()
+
+    $input = $("<input>", type : "file", name : "asset", class : "hide", multiple : true)
 
     $input.change ->
-      if this.files.length
+      if @files.length
 
-        console.log this.files
-
-        this.files.forEach( file, ->
+        for key, file of @files
           $("#assets tbody").append("<tr><td>#{file.name}</td><td><a href=\"#\"><i class=\"icon-trash\"></i></a></td></tr>")
-        )
 
+        $form.append(@)
         $form.submit()
 
 

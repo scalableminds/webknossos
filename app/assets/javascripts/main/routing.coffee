@@ -77,17 +77,23 @@ $ ->
         VizWorker.send(
           source : graphSource
           format : "svg"
-        ).done (svgResult) ->
+          layoutEngine : "neato"
+        ).then(
+          (svgResult) ->
 
-          $(".graph").html(svgResult)
+            $(".graph").html(svgResult)
 
-          userData.map (user) ->
-            $("#" + user.id + " > text").popover(
-              title: user.name,
-              html: true,
-              trigger: "hover",
-              content: user.tooltip
-            )
+            userData.map (user) ->
+              $("#" + user.id + " > text").popover(
+                title: user.name,
+                html: true,
+                trigger: "hover",
+                content: user.tooltip
+              )
+          
+          (error) ->
+            $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error}")
+        )
 
 
     "admin.task.taskSelectionAlgorithm" : ->
@@ -151,5 +157,3 @@ $ ->
       require ["level_creator"], (LevelCreator) ->
 
         new LevelCreator()
-
-

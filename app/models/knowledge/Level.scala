@@ -5,10 +5,13 @@ import java.io.File
 import com.mongodb.casbah.commons.MongoDBObject
 import org.apache.commons.io.FileUtils
 import play.api.Play
+import org.bson.types.ObjectId
 
-case class Level(name: String) extends DAOCaseClass[Level] {
+case class Level(name: String , _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
 
+  lazy val id = _id.toString
+  
   val assetsFolder =
     Level.assetsBaseFolder + "/" + name + "/assets"
 
@@ -46,6 +49,14 @@ case class Level(name: String) extends DAOCaseClass[Level] {
 
 object Level extends BasicKnowledgeDAO[Level]("levels") {
 
+  def fromForm(name: String) = {
+    Level(name)
+  }
+  
+  def toForm(level: Level) = {
+    Some(level.name)
+  }
+  
   val assetsBaseFolder = {
     val folderName =
       Play.current.configuration.getString("levelCreator.assetsDirecory").getOrElse("levels")

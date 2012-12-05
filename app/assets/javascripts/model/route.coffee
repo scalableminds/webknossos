@@ -162,12 +162,15 @@ class Route
     return result
 
 
-  # Pushes the buffered route to the server. Pushing happens at most 
-  # every 30 seconds.
   push : ->
     @savedCurrentState = false
-    @push = _.throttle(_.mutexDeferred(@pushImpl, -1), PUSH_THROTTLE_TIME)
-    @push()
+    @pushDebounced()
+
+  # Pushes the buffered route to the server. Pushing happens at most 
+  # every 30 seconds.
+  pushDebounced : ->
+    @pushDebounced = _.throttle(_.mutexDeferred(@pushImpl, -1), PUSH_THROTTLE_TIME)
+    @pushDebounced()
 
   pushImpl : ->
 

@@ -157,4 +157,3 @@ $ ->
       require ["level_creator"], (LevelCreator) ->
 
         new LevelCreator()
-

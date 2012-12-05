@@ -12,6 +12,7 @@ object ApplicationBuild extends Build {
     "com.novus" %% "salat" % "1.9.1",
     "com.restfb" % "restfb" % "1.6.9",
     "org.apache.commons" % "commons-email" % "1.2",
+    "commons-io" % "commons-io" % "1.3.2",
     "com.typesafe.akka" % "akka-testkit" % "2.0",
     "com.typesafe.akka" % "akka-agent" % "2.0",
     // Jira integration

@@ -2,6 +2,7 @@
 libs/request : Request
 routes : routes
 libs/ace/ace : Ace
+model/creator : Model
 ###
 
 class LevelCreator
@@ -10,10 +11,13 @@ class LevelCreator
   stack : null
   canvas : null
   imageData : null
+  model : null
 
   constructor : ->
 
     @data = null
+
+    @model = new Model()
 
     editor = Ace.edit("editor")
     editor.setTheme("ace/theme/twilight")

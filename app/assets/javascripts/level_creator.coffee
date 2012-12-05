@@ -20,8 +20,10 @@ class LevelCreator
 
   constructor : ->
 
+    @levelName = $("#level-creator").data("level-name")
+
     @data = null
-    @assetHandler = new AssetHandler()
+    @assetHandler = new AssetHandler(@levelName)
 
     @model = new Model()
 
@@ -88,8 +90,8 @@ class LevelCreator
         "plugins"
         "with(plugins) { #{functionBody} }"
       )
-      
-      plugins = 
+
+      plugins =
         time : (t, data, options) ->
 
           if options.start <= t <= options.end

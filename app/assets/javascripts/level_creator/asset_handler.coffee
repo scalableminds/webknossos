@@ -1,30 +1,46 @@
-### define ###
+### define
+libs/request : Request
+routes : Routes
+###
 
 
 class AssetHandler
 
-  constructor : ->
+  constructor : ( @levelName ) ->
 
 
-  $form = $("#fileupload")
+    $form = $("#assets-upload")
 
-  $("#assets").find("[type=submit]").click (event) ->
+    $form.find("[type=submit]").click (event) =>
 
+      event.preventDefault()
 
-    event.preventDefault()
+      $input = $("<input>", type : "file", class : "hide", multiple : true)
 
-    $input = $("<input>", type : "file", name : "asset", class : "hide", multiple : true)
+      input = $input[0]
+      $input.change =>
 
-    $input.change ->
-      if @files.length
+        return unless input.files.length
 
-        for key, file of @files
-          $("#assets tbody").append("<tr><td>#{file.name}</td><td><a href=\"#\"><i class=\"icon-trash\"></i></a></td></tr>")
+        formData = new FormData()
+        formData.append("asset", file) for file in input.files
 
-        $form.append(@)
-        $form.submit()
+        Request.send(
+          url : $form[0].action
+          formData : formData
+          type : "POST"
+        ).done =>
 
+          for file in input.files
+            $("#assets tbody").append("""
+              <tr>
+                <td>#{file.name}</td>
+                <td>
+                  <a href="#{Routes.controllers.admin.LevelCreator.deleteAsset(@levelName, file.name).url}" data-ajax="confirm,delete-row"><i class="icon-trash"></i>
+                  </a>
+                </td>
+              </tr>""")
 
-    $input.click()
+      $input.click()
 
   fetchAsset : (name) ->

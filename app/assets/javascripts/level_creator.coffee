@@ -2,6 +2,7 @@
 libs/request : Request
 routes : routes
 libs/ace/ace : Ace
+level_creator/asset_handler : AssetHandler
 ###
 
 class LevelCreator
@@ -11,9 +12,12 @@ class LevelCreator
   canvas : null
   imageData : null
 
+  assetHandler : null
+
   constructor : ->
 
     @data = null
+    @assetHandler = new AssetHandler()
 
     editor = Ace.edit("editor")
     editor.setTheme("ace/theme/twilight")
@@ -25,6 +29,16 @@ class LevelCreator
     $slider = $("#preview-slider")
     $slider.on "change", =>
       @updatePreview()
+
+    # zooming
+    $zoomSlider = $("#zoom-slider")
+    $zoomSlider.on "change", =>
+      @zoomPreview()
+
+    $("#zoom-reset").click( =>
+      $zoomSlider.val(0)
+      @zoomPreview()
+    )
 
     $("#dimension-modal").modal(
       show : true
@@ -60,6 +74,8 @@ class LevelCreator
 
 
 
+
+
   requestStack : (dimensions) ->
 
     Request.send(
@@ -67,7 +83,7 @@ class LevelCreator
         routes.controllers.BinaryData.arbitraryViaAjax(dimensions...),
         dataType : "arraybuffer"
       )
-    ).done (buffer) => 
+    ).done (buffer) =>
       @data = new Uint8Array(buffer)
       @updatePreview()
 
@@ -98,6 +114,19 @@ class LevelCreator
         indexSource++
 
     @context.putImageData(imageDataObject, 0, 0)
+
+  zoomPreview : ->
+
+    zoomValue = $("#zoom-slider")[0].value
+    factor = 50
+
+    { width, height } = @canvas
+    width  += factor * zoomValue
+    height += factor * zoomValue
+
+    $canvas = $(@canvas)
+    $canvas.css("width", width)
+    $canvas.css("height", height)
 
 
 

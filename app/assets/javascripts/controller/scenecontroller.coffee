@@ -133,11 +133,3 @@ class SceneController
     result = result.concat(@skeleton.getMeshes())
     result.push(@cube)
     return result
-
-  # Will completely reload the trees from model.
-  # This needs to be done at initialization or whenever
-  # the skeleton is changes in a way that can't efficiently
-  # applied to the particle system, like deleting nodes.
-  updateRoute : ->
-    @skeleton.reset()
-    @flycam.hasChanged = true

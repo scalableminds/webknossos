@@ -297,7 +297,7 @@ class Controller
     @model.route.pushBranch()
 
   popBranch : =>
-    @model.route.popBranch().done((id) => 
+    _.defer => @model.route.popBranch().done((id) => 
       @setActiveNode(id, true)
     )
 

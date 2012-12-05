@@ -64,8 +64,8 @@ object Level extends BasicKnowledgeDAO[Level]("levels") {
     folderName
   }
 
-  val LevelNameRx = "[0-9A-Za-z\\_\\-]+"r
-  val AssetsNameRx = "[0-9A-Za-z\\_\\-\\.]+"r
+  val LevelNameRx = "[0-9A-Za-z\\_\\-\\s\\t]+"r
+  val AssetsNameRx = "[0-9A-Za-z\\_\\-\\.\\s\\t]+"r
 
   def create(name: String) =
     if (isValidLevelName(name))

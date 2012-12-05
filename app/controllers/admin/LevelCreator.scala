@@ -43,11 +43,11 @@ object LevelCreator extends Controller with Secured {
     request.body.file("asset").flatMap { assetFile =>
       Level.findOneByName(levelName).map { level =>
         if (level.addAsset(assetFile.filename, assetFile.ref.file))
-          Ok
+          AjaxOk.success(Messages("level.assets.uploadSuccess"))
         else
-          BadRequest("Could not upload.")
+          AjaxBadRequest.error("Could not upload.")
       }
-    } getOrElse BadRequest("Invalid request or level.")
+    } getOrElse AjaxBadRequest.error("Invalid request or level.")
   }
 
   def listAssets(levelName: String) = Authenticated { implicit request =>
@@ -79,12 +79,12 @@ object LevelCreator extends Controller with Secured {
       .map { level =>
         level.deleteAsset(asset) match {
           case true =>
-            Ok
+            AjaxOk.success(Messages("level.assets.deleted"))
           case _ =>
-            BadRequest("Asset not found.")
+            AjaxBadRequest.error("Asset not found.")
         }
       }
-      .getOrElse(BadRequest("Level not found."))
+      .getOrElse(AjaxBadRequest.error("Level not found."))
   }
 
   def create = Authenticated(parser = parse.urlFormEncoded) { implicit request =>

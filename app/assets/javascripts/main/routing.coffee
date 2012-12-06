@@ -1,6 +1,8 @@
 ### define
 jquery : $
 underscore : _
+view/toast : Toast
+libs/keyboard : KeyboardJS
 ###
 
 $ ->
@@ -108,12 +110,15 @@ $ ->
         editor.setTheme("ace/theme/twilight");
         editor.getSession().setMode("ace/mode/javascript");
 
-
+        isValid = true
+        isDirty = false
+        
         editor.on "change", ->
 
           try
             new Function(editor.getValue())
             $submitButton.removeClass("disabled").popover("destroy")
+            isValid = true
 
           catch error                
             $submitButton.addClass("disabled")
@@ -123,12 +128,18 @@ $ ->
               content : error.toString()
               trigger : "hover"
             )
+            isValid = false
 
-        editor._emit("change") # init
-       
-        $form.submit (event) ->
+        editor._emit("change") # for init
 
-          event.preventDefault()
+        editor.on "change", -> isDirty = true
+
+        $(window).on "beforeunload", (event) ->
+
+          "You have unsaved code. Do you really want to leave this site?" if isDirty
+            
+
+        save = ->
 
           return if $submitButton.hasClass("disabled")
 
@@ -137,11 +148,12 @@ $ ->
           $form.find("[name=code]").val(code)
 
           $.ajax(
-            url : this.action
+            url : $form.attr("action")
             data : $form.serialize()
             type : "POST"
           ).then(
             -> 
+              isDirty = false
               Toast.success("Saved!")
             ->
               Toast.error(
@@ -150,3 +162,16 @@ $ ->
                 true
               )
           )
+       
+        KeyboardJS.on "super+s,ctrl+s", (event) ->
+
+          event.preventDefault()
+          event.stopPropagation()
+          save()
+
+
+        $form.submit (event) ->
+
+          event.preventDefault()
+          save()
+          

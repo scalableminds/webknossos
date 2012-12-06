@@ -5,7 +5,7 @@
   <td> @level.name </td>
   <td> @level.width x @level.height x @level.depth </td>
   <td>  
-    <a href="@controllers.admin.routes.LevelCreator.delete(level.name)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
-    <a href="@controllers.admin.routes.LevelCreator.use(level.name)"><i class="icon-road"></i> use </a>
+    <a href="@controllers.admin.routes.LevelCreator.delete(level.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
+    <a href="@controllers.admin.routes.LevelCreator.use(level.id)"><i class="icon-road"></i> use </a>
   </td>
 </tr>

@@ -2,7 +2,7 @@
 
 @main(){
 
-  <div class="container" id="level-creator" data-level-name="@level.name">
+  <div class="container" id="level-creator" data-level-name="@level.id">
 
     <form id="dimension-modal" action="#" class="modal hide fade form-horizontal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
       <div class="modal-header">
@@ -37,7 +37,7 @@
       </div>
     </form>
 
-    <h3>Preview</h3>
+    <h3>Preview - @level.name</h3>
     <div class="row">
       <div class="span10">
         <div class="well" id="preview">
@@ -69,7 +69,7 @@
       <div class="span4" id="assets">
         <h3>Assets</h3>
         <div>
-          <form id="assets-upload" action="@controllers.admin.routes.LevelCreator.uploadAsset(level.name)" method="POST" enctype="multipart/form-data">
+          <form id="assets-upload" action="@controllers.admin.routes.LevelCreator.uploadAsset(level.id)" method="POST" enctype="multipart/form-data">
             <button type="submit" class="btn btn-success">
               <i class="icon-plus icon-white"></i> Add files...
             </button>
@@ -81,7 +81,7 @@
               <tr>
                 <td>@file.getName</td>
                 <td>
-                  <a href="@controllers.admin.routes.LevelCreator.deleteAsset(level.name, file.getName)" data-ajax="confirm,delete-row">
+                  <a href="@controllers.admin.routes.LevelCreator.deleteAsset(level.id, file.getName)" data-ajax="confirm,delete-row">
                     <i class="icon-trash"></i>
                   </a>
                 </td>

@@ -27,11 +27,59 @@ class LevelCreator
 
     @model = new Model()
 
+    # editor init
     @editor = Ace.edit("editor")
     @editor.setTheme("ace/theme/twilight")
     @editor.getSession().setMode("ace/mode/coffee")
 
-    @editor.on "change", => console.log(@compile())
+    $form = $("#editor-container").find("form")
+    $saveCodeButton = $form.find("[type=submit]")
+
+    @editor.on "change", =>
+      console.log(@compile())
+
+      code = @compile()
+      if code instanceof Function
+        $saveCodeButton.removeClass("disabled").popover("destroy")
+
+      else
+
+        $saveCodeButton.addClass("disabled")
+        $saveCodeButton.popover(
+          placement : "right"
+          title : "No good code. No save."
+          content : code
+          trigger : "hover"
+        )
+
+    @editor._emit("change") # init
+
+    $form.submit (event) =>
+
+      event.preventDefault()
+
+      return if $saveCodeButton.hasClass("disabled")
+
+      code = @editor.getValue()
+
+      $form.find("[name=code]").val(code)
+
+      $.ajax(
+        url : $form[0].action
+        data : $form.serialize()
+        type : "POST"
+      ).then(
+        ->
+          Toast.success("Saved!")
+        ->
+          Toast.error(
+            """Sorry, we couldn't save your code. Please double check your syntax.<br/>
+            Otherwise, please copy your code changes and reload this page."""
+            true
+          )
+      )
+
+    ####
 
     @canvas = $("#preview-canvas")[0]
     @context = @canvas.getContext("2d")
@@ -92,7 +140,7 @@ class LevelCreator
 
     catch err
 
-      return
+      return err.toString()
 
 
 

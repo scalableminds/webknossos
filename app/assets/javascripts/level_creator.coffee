@@ -46,7 +46,7 @@ class LevelCreator
       @zoomPreview()
 
     $("#zoom-reset").click( =>
-      $zoomSlider.val(0)
+      $zoomSlider.val(1)
       @zoomPreview()
     )
 
@@ -136,6 +136,7 @@ class LevelCreator
 
     @context.putImageData(imageDataObject, 0, 0)
 
+
   zoomPreview : ->
 
     zoomValue = $("#zoom-slider")[0].value
@@ -146,8 +147,10 @@ class LevelCreator
     height += factor * zoomValue
 
     $canvas = $(@canvas)
-    $canvas.css("width", width)
-    $canvas.css("height", height)
+    $canvas.css(
+      width : width * zoomValue
+      height : height * zoomValue
+    )
 
 
 

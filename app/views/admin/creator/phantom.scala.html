@@ -1,0 +1,17 @@
+@(level: models.knowledge.Level, outputFilepattern: String)
+
+var page = require('webpage').create();
+
+page.viewportSize = { width: @level.width, height : @level.height };
+page.content = '<html><body><canvas id="surface"></canvas></body></html>';
+
+for( var i = 0; i < @level.depth; i++ ) {
+	(function (i) {
+		page.evaluate(function() {
+			document.body.innerHTML = "<h1>Frame #" + i + "</h1>";
+		});
+		page.render(@{outputFilepattern}.replace("%i", i));
+	})(i);
+}
+
+phantom.exit();

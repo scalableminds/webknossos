@@ -36,7 +36,6 @@ class LevelCreator
     $saveCodeButton = $form.find("[type=submit]")
 
     @editor.on "change", =>
-      console.log(@compile())
 
       code = @compile()
       if code instanceof Function
@@ -159,7 +158,11 @@ class LevelCreator
 
   updatePreview : ->
 
-    sliderValue = $("#preview-slider")[0].value
+    return unless @data
+
+    slider = $("#preview-slider")[0]
+    sliderValue = slider.value
+    t = sliderValue - Math.floor(sliderValue)
 
     { width, height } = @canvas
 
@@ -168,21 +171,32 @@ class LevelCreator
 
     sourceData = @data
 
-    indexSource = sliderValue * width * height
+    indexSourceLower = Math.floor(sliderValue) * width * height
+    indexSourceUpper = (Math.floor(sliderValue) + 1) * width * height
     indexTarget = 0
 
     for x in [0...width]
       for y in [0...height]
+
+        #interpolation
+        dataLower = sourceData[indexSourceLower]
+        dataUpper = sourceData[indexSourceUpper]
+
+        interplotationData = dataLower + t * (dataUpper - dataLower)
+
         # r,g,b
-        imageData[indexTarget++] = sourceData[indexSource]
-        imageData[indexTarget++] = sourceData[indexSource]
-        imageData[indexTarget++] = sourceData[indexSource]
+        imageData[indexTarget++] = interplotationData
+        imageData[indexTarget++] = interplotationData
+        imageData[indexTarget++] = interplotationData
 
         # alpha
         imageData[indexTarget++] = 255
-        indexSource++
+        indexSourceLower++
+        indexSourceUpper++
 
     @context.putImageData(imageDataObject, 0, 0)
+
+    console.log interplotationData
 
 
   zoomPreview : ->

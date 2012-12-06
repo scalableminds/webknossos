@@ -25,7 +25,11 @@ case class Level(
     new File(assetsFolder + "/" + name)
 
   def assets = {
-    new File(assetsFolder).listFiles()
+    val f = new File(assetsFolder).listFiles()
+    if(f == null)
+      Array[File]()
+    else
+      f
   }
   
   def alterCode(c: String) = {

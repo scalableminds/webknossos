@@ -7,7 +7,13 @@ import org.apache.commons.io.FileUtils
 import play.api.Play
 import org.bson.types.ObjectId
 
-case class Level(name: String , _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
+case class Level(
+    name: String , 
+    width: Int,
+    height: Int,
+    depth: Int,
+    code: String = "",
+    _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
 
   lazy val id = _id.toString
@@ -20,6 +26,10 @@ case class Level(name: String , _id: ObjectId = new ObjectId) extends DAOCaseCla
 
   def assets = {
     new File(assetsFolder).listFiles()
+  }
+  
+  def alterCode(c: String) = {
+    copy(code = c)
   }
   
   def retrieveAsset(name: String) = {
@@ -49,12 +59,14 @@ case class Level(name: String , _id: ObjectId = new ObjectId) extends DAOCaseCla
 
 object Level extends BasicKnowledgeDAO[Level]("levels") {
 
-  def fromForm(name: String) = {
-    Level(name)
+  def fromForm(name: String, width: Int, height: Int, depth: Int) = {
+    Level(name, width, height, depth)
   }
   
+  val empty = Level("", 250, 150, 30)
+  
   def toForm(level: Level) = {
-    Some(level.name)
+    Some(level.name, level.width, level.height, level.depth)
   }
   
   val assetsBaseFolder = {
@@ -67,9 +79,9 @@ object Level extends BasicKnowledgeDAO[Level]("levels") {
   val LevelNameRx = "[0-9A-Za-z\\_\\-\\s\\t]+"r
   val AssetsNameRx = "[0-9A-Za-z\\_\\-\\.\\s\\t]+"r
 
-  def create(name: String) =
+  /*def create(name: String) =
     if (isValidLevelName(name))
-      insert(Level(name))
+      insert(Level(name))*/
 
   def findOneByName(name: String) =
     findOne(MongoDBObject("name" -> name))

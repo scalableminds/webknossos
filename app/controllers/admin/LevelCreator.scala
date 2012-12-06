@@ -17,7 +17,10 @@ object LevelCreator extends Controller with Secured {
 
   val levelForm = Form(
     mapping(
-      "name" -> text.verifying("level.invalidName", Level.isValidLevelName _))(Level.fromForm)(Level.toForm))
+      "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
+      "width" -> number,
+      "height" -> number,
+      "depth" -> number)(Level.fromForm)(Level.toForm)).fill(Level.empty)
 
   def use(levelName: String) = Authenticated { implicit request =>
     Level
@@ -38,7 +41,16 @@ object LevelCreator extends Controller with Secured {
       .getOrElse(AjaxBadRequest.error("Level not found."))
   }
 
-  
+  def submitCode(levelName: String) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    (for {
+      code <- request.body.get("code").flatMap(_.headOption)
+      level <- Level.findOneByName(levelName)
+    } yield {
+      level.update(_.alterCode(code))
+      AjaxOk.success("level.codeSaved")
+    }) getOrElse AjaxBadRequest.error("Missing parameters.")
+  }
+
   def uploadAsset(levelName: String) = Authenticated(parse.multipartFormData) { implicit request =>
     request.body.file("asset").flatMap { assetFile =>
       Level.findOneByName(levelName).map { level =>

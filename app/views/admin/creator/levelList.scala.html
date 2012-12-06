@@ -6,6 +6,9 @@
     <div class="well">
       @helper.form(controllers.admin.routes.LevelCreator.create, 'class -> "form-horizontal") {
         @helper.inputText(form("name"))
+        @helper.inputText(form("width"), 'type -> "number")
+        @helper.inputText(form("height"), 'type -> "number")
+        @helper.inputText(form("depth"), 'type -> "number")
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
         </div>
@@ -17,6 +20,7 @@
         <tr>
           <th> # </th>
           <th> Name </th>
+          <th> Dimensions </th>
           <th> </th>
         </tr>
       </thead>

@@ -2,40 +2,7 @@
 
 @main(){
 
-  <div class="container" id="level-creator" data-level-name="@level.id">
-
-    <form id="dimension-modal" action="#" class="modal hide fade form-horizontal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-      <div class="modal-header">
-        <h3 id="myModalLabel">Stack Dimensions</h3>
-      </div>
-      <div class="modal-body">
-
-        <fieldset>
-          <div class="control-group">
-            <label class="control-label">Width</label>
-            <div class="controls">
-              <input id="dim-x" type="text" value="1">
-            </div>
-          </div>
-          <div class="control-group">
-            <label class="control-label">Height</label>
-            <div class="controls">
-              <input id="dim-y" type="text" value="150">
-            </div>
-          </div>
-          <div class="control-group">
-            <label class="control-label">Number of Slides</label>
-            <div class="controls">
-              <input id="dim-z" type="text" value="30">
-            </div>
-          </div>
-        </fieldset>
-
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary" type="submit" aria-hidden="true">Request Stack</button>
-      </div>
-    </form>
+  <div class="container" id="level-creator" data-level-id="@level.id" data-level-width="@level.width" data-level-height="@level.height" data-level-depth="@level.depth">
 
     <h3>Preview - @level.name</h3>
     <div class="row">

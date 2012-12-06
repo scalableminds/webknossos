@@ -20,7 +20,7 @@ class LevelCreator
 
   constructor : ->
 
-    @levelName = $("#level-creator").data("level-name")
+    @levelName = $("#level-creator").data("level-id")
 
     @data = null
     @assetHandler = new AssetHandler(@levelName)
@@ -50,35 +50,18 @@ class LevelCreator
       @zoomPreview()
     )
 
-    $("#dimension-modal").modal(
-      show : true
-      keyboard : false
-      backdrop : "static"
-    )
+    dimensions = [
+      parseInt( $("#level-creator").data("level-width")  )
+      parseInt( $("#level-creator").data("level-height") )
+      parseInt( $("#level-creator").data("level-depth")  )
+    ]
 
-    $("#dimension-modal [type=submit]").on "click", (event) ->
-      event.preventDefault() if $(this).hasClass("disabled")
+    $slider[0].max = dimensions[2] - 1
 
-    $("#dimension-modal").on "submit", (event) =>
+    @canvas.width = dimensions[0]
+    @canvas.height = dimensions[1]
 
-      event.preventDefault()
-
-      dimensions = [
-        parseInt( $("#dim-x").val() )
-        parseInt( $("#dim-y").val() )
-        parseInt( $("#dim-z").val() )
-      ]
-
-      $slider[0].max = dimensions[2] - 1
-
-      @canvas.width = dimensions[0]
-      @canvas.height = dimensions[1]
-
-      @requestStack(dimensions).done -> $("#dimension-modal").modal("hide")
-
-      $("#dimension-modal").find("[type=submit]")
-        .addClass("disabled")
-        .prepend("<i class=\"icon-refresh icon-white rotating\"></i> ")
+    @requestStack(dimensions)
 
 
   compile : ->

@@ -171,6 +171,9 @@ class Skeleton
             @nodes[index].geometry.vertices[@curIndex[index]].nodeId = node.id
             @pushNewNode(radius, node2Pos, node.id, tree.color)
             @curIndex[index]++
+        #geometries = Dimensions.createGeometries(nodeList)
+        #@nodes[index].geometry = geometries.nodesGeometry
+        #@routes[index].geometry = geometries.edgesGeometry
         @routes[index].geometry.verticesNeedUpdate = true
         @nodes[index].geometry.verticesNeedUpdate = true
     for branchPoint in @route.branchStack
@@ -224,7 +227,7 @@ class Skeleton
     @flycam.hasChanged = true
 
   getMeshes : =>
-    return [@activeNode].concat(@routes).concat(@nodes).concat(@nodesSpheres)
+    return [@activeNode].concat(@nodes).concat(@nodesSpheres).concat(@routes)
 
   setWaypoint : =>
     curGlobalPos = @flycam.getGlobalPos()

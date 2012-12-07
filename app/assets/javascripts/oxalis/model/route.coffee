@@ -1,8 +1,8 @@
 ### define
 jquery : $
 underscore : _
-../libs/request : Request
-../libs/event_mixin : EventMixin
+../../libs/request : Request
+../../libs/event_mixin : EventMixin
 ./tracepoint : TracePointClass
 ###
 

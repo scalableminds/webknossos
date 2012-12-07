@@ -1,8 +1,8 @@
 ### define
-model : Model
-model/route : Route
-libs/event_mixin : EventMixin
-libs/dimensions : DimensionsHelper
+../model : Model
+../model/route : Route
+../model/dimensions : DimensionsHelper
+../../libs/event_mixin : EventMixin
 ###
 
 PLANE_XY           = Dimensions.PLANE_XY

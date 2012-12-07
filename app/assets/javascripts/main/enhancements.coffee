@@ -1,7 +1,7 @@
 ### define 
 jquery : $
 underscore : _
-view/toast : Toast
+../libs/toast : Toast
 ###
 
 $ ->

@@ -1,8 +1,7 @@
 ### define
-model : Model
-view : View
-model/game : Game
-libs/dimensions : DimensionsHelper
+../model : Model
+../view : View
+../model/dimensions : DimensionsHelper
 ###
 
 

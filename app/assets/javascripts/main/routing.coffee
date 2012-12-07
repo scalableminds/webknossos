@@ -1,8 +1,8 @@
 ### define
 jquery : $
 underscore : _
-view/toast : Toast
-libs/keyboard : KeyboardJS
+../libs/toast : Toast
+../libs/keyboard : KeyboardJS
 ###
 
 $ ->
@@ -45,8 +45,8 @@ $ ->
     "oxalis.trace" : ->
 
       require [
-        "./controller"
-        "./core_ext"
+        "./oxalis/controller"
+        "./libs/core_ext"
         "three"
         "stats"
       ], (Controller) ->

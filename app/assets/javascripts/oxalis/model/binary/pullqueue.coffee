@@ -1,6 +1,6 @@
 ### define
 ./cube : Cube
-../../libs/array_buffer_socket : ArrayBufferSocket
+../../../libs/array_buffer_socket : ArrayBufferSocket
 ###
 
 class PullQueue

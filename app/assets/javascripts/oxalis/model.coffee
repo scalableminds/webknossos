@@ -4,7 +4,7 @@
 ./model/user : User
 ./model/scaleinfo : ScaleInfoClass
 ./model/flycam : Flycam
-./libs/request : Request
+../libs/request : Request
 ###
 
 # This is the model. It takes care of the data including the 

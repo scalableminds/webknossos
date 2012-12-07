@@ -1,6 +1,6 @@
 ### define
-libs/event_mixin : EventMixin
-libs/dimensions : DimensionsHelper
+../../libs/event_mixin : EventMixin
+./dimensions : DimensionsHelper
 ###
 
 # constants (for active_plane)

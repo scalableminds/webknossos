@@ -157,8 +157,8 @@ class Route
             resolution : 0
           })
 
-    console.log "NML-Objekt"
-    console.log result
+#    console.log "NML-Objekt"
+#    console.log result
     return result
 
 

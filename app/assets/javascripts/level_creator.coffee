@@ -6,6 +6,7 @@ coffee-script : CoffeeScript
 view/toast : Toast
 level_creator/asset_handler : AssetHandler
 level_creator/plugins : Plugins
+level_creator/preprocessor : Preprocessor
 ###
 
 class LevelCreator
@@ -17,6 +18,7 @@ class LevelCreator
   model : null
 
   assetHandler : null
+  preprocessor : null
 
   constructor : ->
 
@@ -24,6 +26,7 @@ class LevelCreator
 
     @data = null
     @assetHandler = new AssetHandler(@levelName)
+    @preprocessor = new Preprocessor()
     @plugins = new Plugins(@assetHandler)
 
     # editor init

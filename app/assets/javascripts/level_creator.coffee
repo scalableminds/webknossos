@@ -4,8 +4,9 @@ routes : routes
 libs/ace/ace : Ace
 coffee-script : CoffeeScript
 view/toast : Toast
-model/creator : Model
 level_creator/asset_handler : AssetHandler
+level_creator/plugins : Plugins
+level_creator/preprocessor : Preprocessor
 ###
 
 class LevelCreator
@@ -17,6 +18,7 @@ class LevelCreator
   model : null
 
   assetHandler : null
+  preprocessor : null
 
   constructor : ->
 
@@ -24,14 +26,61 @@ class LevelCreator
 
     @data = null
     @assetHandler = new AssetHandler(@levelName)
+    @preprocessor = new Preprocessor()
+    @plugins = new Plugins(@assetHandler)
 
-    @model = new Model()
-
+    # editor init
     @editor = Ace.edit("editor")
     @editor.setTheme("ace/theme/twilight")
     @editor.getSession().setMode("ace/mode/coffee")
 
-    @editor.on "change", => console.log(@compile())
+    $form = $("#editor-container").find("form")
+    $saveCodeButton = $form.find("[type=submit]")
+
+    @editor.on "change", =>
+
+      code = @compile()
+      if code instanceof Function
+        $saveCodeButton.removeClass("disabled").popover("destroy")
+
+      else
+
+        $saveCodeButton.addClass("disabled")
+        $saveCodeButton.popover(
+          placement : "right"
+          title : "No good code. No save."
+          content : code
+          trigger : "hover"
+        )
+
+    @editor._emit("change") # init
+
+    $form.submit (event) =>
+
+      event.preventDefault()
+
+      return if $saveCodeButton.hasClass("disabled")
+
+      code = @editor.getValue()
+
+      $form.find("[name=code]").val(code)
+
+      $.ajax(
+        url : $form[0].action
+        data : $form.serialize()
+        type : "POST"
+      ).then(
+        ->
+          Toast.success("Saved!")
+        ->
+          Toast.error(
+            """Sorry, we couldn't save your code. Please double check your syntax.<br/>
+            Otherwise, please copy your code changes and reload this page."""
+            true
+          )
+      )
+
+    ####
 
     @canvas = $("#preview-canvas")[0]
     @context = @canvas.getContext("2d")
@@ -92,7 +141,7 @@ class LevelCreator
 
     catch err
 
-      return
+      return err.toString()
 
 
 
@@ -111,7 +160,11 @@ class LevelCreator
 
   updatePreview : ->
 
-    sliderValue = $("#preview-slider")[0].value
+    return unless @data
+
+    slider = $("#preview-slider")[0]
+    sliderValue = slider.value
+    t = sliderValue - Math.floor(sliderValue)
 
     { width, height } = @canvas
 
@@ -120,21 +173,32 @@ class LevelCreator
 
     sourceData = @data
 
-    indexSource = sliderValue * width * height
+    indexSourceLower = Math.floor(sliderValue) * width * height
+    indexSourceUpper = (Math.floor(sliderValue) + 1) * width * height
     indexTarget = 0
 
     for x in [0...width]
       for y in [0...height]
+
+        #interpolation
+        dataLower = sourceData[indexSourceLower]
+        dataUpper = sourceData[indexSourceUpper]
+
+        interplotationData = dataLower + t * (dataUpper - dataLower)
+
         # r,g,b
-        imageData[indexTarget++] = sourceData[indexSource]
-        imageData[indexTarget++] = sourceData[indexSource]
-        imageData[indexTarget++] = sourceData[indexSource]
+        imageData[indexTarget++] = interplotationData
+        imageData[indexTarget++] = interplotationData
+        imageData[indexTarget++] = interplotationData
 
         # alpha
         imageData[indexTarget++] = 255
-        indexSource++
+        indexSourceLower++
+        indexSourceUpper++
 
     @context.putImageData(imageDataObject, 0, 0)
+
+    console.log interplotationData
 
 
   zoomPreview : ->

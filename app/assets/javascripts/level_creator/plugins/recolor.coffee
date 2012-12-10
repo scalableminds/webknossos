@@ -7,10 +7,10 @@ class Recolor
 
   DESCRIPTION : "Recolors the input with a bmp colormap"
 
-  PARAMETER : "raw: Uint8Array of RGBA, 
+  PARAMETER : "rgba: Uint8Array of RGBA,
                name: name of the colormap"
 
-  EXAMPLE : "plugin.process(rawArr, 'blue')"
+  EXAMPLE : "plugin.execute(rgbaArr, 'blue')"
 
   BITMAP_HEADER_SIZE : 54
   URL_BASE : "/assets/images/"
@@ -28,23 +28,25 @@ class Recolor
     @addColorMap @DEFAULT_COLOR
 
 
-  process : (raw, name) ->
+  execute : (options) ->
+
+    { input : {rgba} , name } = options
 
     colormap = @colormaps[name]
 
     unless colormap?
-      return raw
+      return rgba
 
-    for i in [0..raw.length/4]
-      r = raw[i + 0]
-      g = raw[i + 1]
-      b = raw[i + 2]
+    for i in [0..rgba.length/4]
+      r = rgba[i + 0]
+      g = rgba[i + 1]
+      b = rgba[i + 2]
       luminance = Math.floor((0.2126*r) + (0.7152*g) + (0.0722*b))
-      raw[i + 0] = colormap[luminance + 0]
-      raw[i + 1] = colormap[luminance + 1]
-      raw[i + 2] = colormap[luminance + 2]
+      rgba[i + 0] = colormap[luminance + 0]
+      rgba[i + 1] = colormap[luminance + 1]
+      rgba[i + 2] = colormap[luminance + 2]
 
-    raw
+    rgba
 
 
   addColorMap : (name) ->
@@ -59,14 +61,14 @@ class Recolor
         =>
           console.log "error loading colormap #{name}"
       )
-    
+
 
   getSocket : () ->
-    
+
     new ArrayBufferSocket(
       senders : [
         new ArrayBufferSocket.XmlHttpRequest("")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array
-    )  
+    )

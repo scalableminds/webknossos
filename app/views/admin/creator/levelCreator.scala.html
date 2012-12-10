@@ -8,6 +8,7 @@
     <div class="row">
       <div class="span10">
         <div class="well" id="preview">
+          <canvas id="output-canvas" width="250" height="150"></canvas>
           <canvas id="preview-canvas" width="250" height="150"></canvas>
         </div>
         <input id="preview-slider" type="range" value="0" step=".5"></input>
@@ -29,7 +30,7 @@
         <h3>Editor</h3>
         @helper.form(action = controllers.admin.routes.LevelCreator.submitCode(level.id)) {
 
-        <input type="submit" value="Save" class="btn btn-primary">
+        <input type="submit" value="Save" class="btn btn-primary"/>
         <input type="hidden" name="code" />
         <input type="hidden" name="use" value="1" />
 

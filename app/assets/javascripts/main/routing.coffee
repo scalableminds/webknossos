@@ -1,6 +1,8 @@
 ### define
 jquery : $
 underscore : _
+libs/toast : Toast
+libs/keyboard : KeyboardJS
 ###
 
 $ ->
@@ -43,15 +45,13 @@ $ ->
     "oxalis.trace" : ->
 
       require [
-        "./controller"
-        "./core_ext"
+        "./oxalis/controller"
+        "./libs/core_ext"
         "three"
         "stats"
       ], (Controller) ->
 
         oxalis = window.oxalis = new Controller()
-        return
-
 
         $("#trace-finish-button, #trace-download-button").click (event) ->
 
@@ -65,6 +65,8 @@ $ ->
 
           event.preventDefault()
           oxalis.gui.saveNow()
+
+        return
 
 
     "admin.task.taskOverview" : ->
@@ -90,7 +92,7 @@ $ ->
                 trigger: "hover",
                 content: user.tooltip
               )
-          
+
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error}")
         )
@@ -108,12 +110,15 @@ $ ->
         editor.setTheme("ace/theme/twilight");
         editor.getSession().setMode("ace/mode/javascript");
 
+        isValid = true
+        isDirty = false
 
         editor.on "change", ->
 
           try
             new Function(editor.getValue())
             $submitButton.removeClass("disabled").popover("destroy")
+            isValid = true
 
           catch error
             $submitButton.addClass("disabled")
@@ -123,12 +128,19 @@ $ ->
               content : error.toString()
               trigger : "hover"
             )
+            isValid = false
 
         editor._emit("change") # init
 
-        $form.submit (event) ->
 
-          event.preventDefault()
+        editor.on "change", -> isDirty = true
+
+        $(window).on "beforeunload", (event) ->
+
+          "You have unsaved code. Do you really want to leave this site?" if isDirty
+
+
+        save = ->
 
           return if $submitButton.hasClass("disabled")
 
@@ -137,11 +149,12 @@ $ ->
           $form.find("[name=code]").val(code)
 
           $.ajax(
-            url : this.action
+            url : $form.attr("action")
             data : $form.serialize()
             type : "POST"
           ).then(
             ->
+              isDirty = false
               Toast.success("Saved!")
             ->
               Toast.error(
@@ -151,9 +164,22 @@ $ ->
               )
           )
 
+        KeyboardJS.on "super+s,ctrl+s", (event) ->
+
+          event.preventDefault()
+          event.stopPropagation()
+          save()
+
+
+        $form.submit (event) ->
+
+          event.preventDefault()
+          save()
+
 
     "admin.creator.levelCreator" : ->
 
-      require ["level_creator"], (LevelCreator) ->
+      require ["./level_creator"], (LevelCreator) ->
 
-        new LevelCreator()
+        window.levelCreator = new LevelCreator()
+

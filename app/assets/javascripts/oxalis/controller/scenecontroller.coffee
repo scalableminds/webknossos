@@ -1,15 +1,16 @@
 ### define
-model : Model
-view : View
-geometries/plane : Plane
-geometries/skeleton : Skeleton
+../model : Model
+../view : View
+../geometries/plane : Plane
+../geometries/skeleton : Skeleton
+../model/dimensions : DimensionsHelper
 ###
 
 
-PLANE_XY         = 0
-PLANE_YZ         = 1
-PLANE_XZ         = 2
-VIEW_3D          = 3
+PLANE_XY         = Dimensions.PLANE_XY
+PLANE_YZ         = Dimensions.PLANE_YZ
+PLANE_XZ         = Dimensions.PLANE_XZ
+VIEW_3D          = Dimensions.VIEW_3D
 WIDTH            = 384
 VIEWPORT_WIDTH   = 380
 TEXTURE_WIDTH    = 512
@@ -71,20 +72,12 @@ class SceneController
           @planes[i].setOriginalCrosshairColor()
           @planes[i].setVisible(true)
           pos = @flycam.getGlobalPos().slice()
-          ind = @flycam.getIndices(i)
+          ind = Dimensions.getIndices(i)
           # Offset the plane so the user can see the route behind the plane
           pos[ind[2]] += if i==PLANE_XY then @planeShift[ind[2]] else -@planeShift[ind[2]]
           @planes[i].setPosition(new THREE.Vector3(pos...))
         else
           @planes[i].setVisible(false)
-      # Distort the spheres so that in the plane's z-direction they have a radius as
-      # big as the routeClippingDistance (alias planeShift)
-      #for sphere in @skeleton.nodesSpheres.concat(@skeleton.activeNode)
-      #  scale = Math.max(sphere.scale.x, sphere.scale.y, sphere.scale.z)
-      #  scaleArray = [scale, scale, scale]
-      #  scaleArray[@flycam.getIndices(id)[2]] = Math.min(@planeShift / sphere.boundRadius,
-      #                                              scaleArray[@flycam.getIndices(id)[2]])
-      #  sphere.scale.set(scaleArray[0], scaleArray[1], scaleArray[2])
     else
       @cube.visible = true
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
@@ -93,9 +86,6 @@ class SceneController
         @planes[i].setGrayCrosshairColor()
         @planes[i].setVisible(true)
         @planes[i].plane.visible = @displayPlane[i]
-      #for sphere in @skeleton.nodesSpheres.concat(@skeleton.activeNode)
-      #  scale = Math.max(sphere.scale.x, sphere.scale.y, sphere.scale.z)
-      #  sphere.scale.set(scale, scale, scale)
 
   update : =>
     gPos         = @flycam.getGlobalPos()
@@ -125,7 +115,7 @@ class SceneController
   setRouteClippingDistance : (value) =>
     # convert nm to voxel
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @planeShift[i] = 2 * value * @model.route.voxelPerNM[i]
+      @planeShift[i] = 2 * value * @model.scaleInfo.voxelPerNM[i]
 
   setInterpolation : (value) =>
     for plane in @planes
@@ -143,11 +133,3 @@ class SceneController
     result = result.concat(@skeleton.getMeshes())
     result.push(@cube)
     return result
-
-  # Will completely reload the trees from model.
-  # This needs to be done at initialization or whenever
-  # the skeleton is changes in a way that can't efficiently
-  # applied to the particle system, like deleting nodes.
-  updateRoute : ->
-    @skeleton.reset()
-    @flycam.hasChanged = true

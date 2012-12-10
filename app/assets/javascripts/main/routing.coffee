@@ -182,4 +182,3 @@ $ ->
       require ["./level_creator"], (LevelCreator) ->
 
         window.levelCreator = new LevelCreator()
-

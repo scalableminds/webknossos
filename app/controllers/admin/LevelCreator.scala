@@ -11,6 +11,7 @@ import play.api.data.Forms.mapping
 import play.api.data.Forms.number
 import play.api.data.Forms.text
 import play.api.i18n.Messages
+import play.api.libs.json.Json
 
 object LevelCreator extends Controller with Secured {
   override def DefaultAccessRole = Role.Admin
@@ -66,7 +67,7 @@ object LevelCreator extends Controller with Secured {
     Level
       .findOneById(levelId)
       .map { level =>
-        Ok(level.assets.map(_.getName).mkString(", "))
+        Ok(Json.toJson(level.assets.map(_.getName)))
       }
       .getOrElse(BadRequest("Level not found."))
   }

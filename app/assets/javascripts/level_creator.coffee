@@ -7,6 +7,7 @@ libs/ace/ace : Ace
 coffee-script : CoffeeScript
 ./level_creator/asset_handler : AssetHandler
 ./level_creator/plugins : Plugins
+level_creator/preprocessor : Preprocessor
 ###
 
 class LevelCreator
@@ -18,13 +19,17 @@ class LevelCreator
   model : null
 
   assetHandler : null
+  preprocessor : null
 
   constructor : ->
 
     @levelName = $("#level-creator").data("level-id")
 
     @data = null
+
     @assetHandler = new AssetHandler(@levelName)
+    @preprocessor = new Preprocessor()
+    @plugins = new Plugins(@assetHandler)
 
     # editor init
     @editor = Ace.edit("editor")
@@ -182,16 +187,16 @@ class LevelCreator
         startFrame = options.start
         endFrame = options.end
 
-        console.log sliderValue
-
         if startFrame <= sliderValue <= endFrame
-          (cb) -> cb()
+          (cb) ->
+            cb()
+            # merge magic
         else
           ->
 
       importSlides : (options) =>
 
-        index = ( sliderValue ) * 250  *  150
+        index = ( sliderValue + startFrame) * 250  *  150
         inputData = @interpolateFrame(inputData, index, true )
 
     for key, plugin of @plugins
@@ -283,8 +288,10 @@ class LevelCreator
         outputData[indexTarget++] = data
         outputData[indexTarget++] = data
 
-        upperIndex++
-        lowerIndex++
+        #skip alpha value
+        indexTarget++
+        upperIndex += 4
+        lowerIndex += 4
 
     outputData
 

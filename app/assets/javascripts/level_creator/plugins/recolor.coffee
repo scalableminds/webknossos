@@ -37,14 +37,15 @@ class Recolor
     unless colormap?
       return rgba
 
-    for i in [0..rgba.length/4]
-      r = rgba[i + 0]
-      g = rgba[i + 1]
-      b = rgba[i + 2]
-      luminance = Math.floor((0.2126*r) + (0.7152*g) + (0.0722*b))
-      rgba[i + 0] = colormap[luminance + 0]
-      rgba[i + 1] = colormap[luminance + 1]
-      rgba[i + 2] = colormap[luminance + 2]
+    for i in [0..rgba.length / 4]
+      j = i * 4
+      r = rgba[j + 0]
+      g = rgba[j + 1]
+      b = rgba[j + 2]
+      luminance = Math.floor((0.2126*r) + (0.7152*g) + (0.0722*b)) * 3
+      rgba[j + 0] = colormap[luminance + 0]
+      rgba[j + 1] = colormap[luminance + 1]
+      rgba[j + 2] = colormap[luminance + 2]
 
     rgba
 

@@ -5,6 +5,6 @@
 
 class Plugins
 
-  constructor : () ->
+  constructor : (assetHandler) ->
 
-    @recolor = new Recolor()
+    @recolor = new Recolor(assetHandler)

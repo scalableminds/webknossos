@@ -16,8 +16,6 @@ class PluginRenderer
     @plugins = new Plugins(@assetHandler)
     @preprocessor = new Preprocessor(@assetHandler)
 
-    @func = null
-
     @requestStack(dimensions)
 
 
@@ -74,9 +72,7 @@ class PluginRenderer
 
       importSlides : ->
 
-    for key of @plugins
-
-      _plugins[key] = ->
+    (_plugins[key] = ->) for key of @plugins
 
     func(_plugins)
 
@@ -103,9 +99,9 @@ class PluginRenderer
         startFrame = options.start
         endFrame = options.end
 
-        if startFrame <= t <= endFrame
-          (cb) =>
-            cb()
+        if startFrame <= t < endFrame
+          (callback) =>
+            callback()
             @alphaBlendBuffer(frameBuffer, inputData.rgba)
             inputData = null
         else
@@ -126,7 +122,10 @@ class PluginRenderer
         _.extend( options, input : inputData )
         plugin.execute(options)
 
-    func(_plugins)
+    try
+      func(_plugins)
+    catch err
+      console.error(err)
 
     frameBuffer
 
@@ -159,13 +158,22 @@ class PluginRenderer
   alphaBlendBuffer : (backgroundBuffer, foregroundBuffer) ->
 
     for i in [0...backgroundBuffer.length] by 4
-      alphaForeground = foregroundBuffer[i + 3] / 255
-      alphaBackground = backgroundBuffer[i + 3] / 255
 
-      backgroundBuffer[i    ] = foregroundBuffer[i    ] * alphaForeground + backgroundBuffer[i    ] * alphaBackground * (1 - alphaForeground)
-      backgroundBuffer[i + 1] = foregroundBuffer[i + 1] * alphaForeground + backgroundBuffer[i + 1] * alphaBackground * (1 - alphaForeground)
-      backgroundBuffer[i + 2] = foregroundBuffer[i + 2] * alphaForeground + backgroundBuffer[i + 2] * alphaBackground * (1 - alphaForeground)
-      backgroundBuffer[i + 3] = 255 * (alphaForeground + alphaBackground * (1 - alphaForeground))
+      rF = foregroundBuffer[i]
+      gF = foregroundBuffer[i + 1]
+      bF = foregroundBuffer[i + 2]
+      aF = foregroundBuffer[i + 3] / 255
+
+      rB = backgroundBuffer[i]
+      gB = backgroundBuffer[i + 1]
+      bB = backgroundBuffer[i + 2]
+      aB = backgroundBuffer[i + 3] / 255
+
+
+      backgroundBuffer[i    ] = rF * aF + rB * aB * (1 - aF)
+      backgroundBuffer[i + 1] = gF * aF + gB * aB * (1 - aF)
+      backgroundBuffer[i + 2] = bF * aF + bB * aB * (1 - aF)
+      backgroundBuffer[i + 3] = 255 * (aF + aB * (1 - aF))
 
     return
 

@@ -59,10 +59,6 @@ class AssetHandler
       @loadAsset(asset) for asset in assets
       return
 
-    @getBlob  = _.memoize(@getBlob)
-    @getArray = _.memoize(@getArray)
-    @getImage = _.memoize(@getImage)
-
   
   loadAsset : (name) ->
 

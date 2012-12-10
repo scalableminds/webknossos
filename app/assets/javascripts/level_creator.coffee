@@ -4,8 +4,8 @@ routes : routes
 libs/ace/ace : Ace
 coffee-script : CoffeeScript
 view/toast : Toast
-model/creator : Model
 level_creator/asset_handler : AssetHandler
+level_creator/plugins : Plugins
 ###
 
 class LevelCreator
@@ -24,8 +24,7 @@ class LevelCreator
 
     @data = null
     @assetHandler = new AssetHandler(@levelName)
-
-    @model = new Model()
+    @plugins = new Plugins()
 
     # editor init
     @editor = Ace.edit("editor")

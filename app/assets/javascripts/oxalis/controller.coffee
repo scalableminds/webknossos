@@ -59,6 +59,7 @@ class Controller
       @view.createDoubleJumpModal()
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
+
       meshes = @sceneController.getMeshes()
       
       for mesh in meshes
@@ -196,6 +197,7 @@ class Controller
     @model.route.globalPosition = @flycam.getGlobalPos()
     @cameraController.update()
     @sceneController.update()
+    @model.route.rendered()
 
   move : (v) => @flycam.moveActivePlane(v)
 

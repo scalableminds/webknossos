@@ -417,6 +417,9 @@ class Route
       result = result.concat(@getNodeList(tree))
     return result
 
+  rendered : ->
+    @trigger("rendered")
+
   # Helper method used in initialization
   findNodeInList : (list, id) ->
     for node in list

@@ -140,7 +140,6 @@ class View
         @renderer.enableScissorTest(true)
         @renderer.setClearColorHex(colors[i], 1);
         @renderer.render @scene, @camera[i]
-        @trigger("rendered")
     @flycam.hasChanged = false
     @flycam.hasNewTexture = [false, false, false]
   

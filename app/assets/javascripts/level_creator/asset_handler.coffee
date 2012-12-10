@@ -1,30 +1,46 @@
 ### define
-libs/jquery-fileupload/jquery.fileupload : FileUpload
+libs/request : Request
+routes : Routes
 ###
+
 
 class AssetHandler
 
-  constructor : ->
+  constructor : ( @levelName ) ->
 
 
-  $form = $("#fileupload")
+    $form = $("#assets-upload")
 
-  $("#assets").find("[type=submit]").click ->
+    $form.find("[type=submit]").click (event) =>
 
-    $input = $("<input>", type : "file", name : "nmlFile", class : "hide", multiple : true)
+      event.preventDefault()
 
-    $input.change ->
-      if this.files.length
+      $input = $("<input>", type : "file", class : "hide", multiple : true)
 
-        console.log this.files
+      input = $input[0]
+      $input.change =>
 
-        this.files.forEach( file, ->
-          $("#assets tbody").append("<tr><td>#{file.name}</td><td><a href=\"#\"><i class=\"icon-trash\"></i></a></td></tr>")
-        )
+        return unless input.files.length
 
-        $form.submit()
+        formData = new FormData()
+        formData.append("asset", file) for file in input.files
 
+        Request.send(
+          url : $form[0].action
+          formData : formData
+          type : "POST"
+        ).done =>
 
-    $input.click()
+          for file in input.files
+            $("#assets tbody").append("""
+              <tr>
+                <td>#{file.name}</td>
+                <td>
+                  <a href="#{Routes.controllers.admin.LevelCreator.deleteAsset(@levelName, file.name).url}" data-ajax="confirm,delete-row"><i class="icon-trash"></i>
+                  </a>
+                </td>
+              </tr>""")
+
+      $input.click()
 
   fetchAsset : (name) ->

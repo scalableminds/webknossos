@@ -12,6 +12,7 @@ require.config
     "v3" : "libs/v3"
     "m4x4" : "libs/m4x4"
     "dat" : "libs/dat.gui.min"
+    "coffee-script" : "libs/coffee-script-1.4.0.min"
 
   shim :
     "underscore" :

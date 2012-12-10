@@ -261,16 +261,21 @@ svg a:hover {
         height: 20px;
     }
 
+    #preview {
+        resize: both;
+    }
     #preview canvas {
         margin: 0 auto;
         display: block;
-        max-width: 100%;
     }
 
     #preview-slider {
         width: 100%;
     }
 
+    #zoom-slider {
+        width: 100%;
+    }
     #editor {
         position: relative;
         width: 100%;
@@ -365,27 +370,14 @@ svg a:hover {
     }
 }
 
-.fileinput-button {
-  position: relative;
-  overflow: hidden;
-  float: left;
-  margin-right: 4px;
-  margin-left: 5px;
-}
-.fileinput-button input {
-  position: absolute;
-  top: 0;
-  right: 0;
-  margin: 0;
-  opacity: 0;
-  filter: alpha(opacity=0);
-  transform: translate(-300px, 0) scale(4);
-  font-size: 23px;
-  direction: ltr;
-  cursor: pointer;
-}
-
 #preview {
     overflow: auto;
     height: 175px;
 }
+
+#editor-container {
+    input[type=submit] {
+        margin: 10px 0;
+    }
+}
+

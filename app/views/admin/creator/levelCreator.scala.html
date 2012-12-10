@@ -1,55 +1,22 @@
-@()(implicit session: brainflight.view.AuthedSessionData)
+@(level: models.knowledge.Level)(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
 
-  <div class="container" id="level-creator">
+  <div class="container" id="level-creator" data-level-id="@level.id" data-level-width="@level.width" data-level-height="@level.height" data-level-depth="@level.depth">
 
-    <form id="dimension-modal" action="#" class="modal hide fade form-horizontal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-      <div class="modal-header">
-        <h3 id="myModalLabel">Stack Dimensions</h3>
-      </div>
-      <div class="modal-body">
-
-        <fieldset>
-          <div class="control-group">
-            <label class="control-label">Width</label>
-            <div class="controls">
-              <input id="dim-x" type="text" value="250">
-            </div>
-          </div>
-          <div class="control-group">
-            <label class="control-label">Height</label>
-            <div class="controls">
-              <input id="dim-y" type="text" value="150">
-            </div>
-          </div>
-          <div class="control-group">
-            <label class="control-label">Number of Slides</label>
-            <div class="controls">
-              <input id="dim-z" type="text" value="30">
-            </div>
-          </div>
-        </fieldset>
-
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary" type="submit" aria-hidden="true">Request Stack</button>
-      </div>
-    </form>
-
-    <h3>Preview</h3>
+    <h3>Preview - @level.name</h3>
     <div class="row">
       <div class="span10">
         <div class="well" id="preview">
           <canvas id="preview-canvas" width="250" height="150"></canvas>
         </div>
-        <input id="preview-slider" type="range" value="0"></input>
+        <input id="preview-slider" type="range" value="0" step=".5"></input>
       </div>
 
       <div class="span2">
         <h5>Zoom</h5>
         <p>
-          <input type="range" min="-2" max="10" value="0" id="zoom-slider"/>
+          <input type="range" min="0.2" max="5" step=".4" value="1" id="zoom-slider"/>
           <button class="btn btn-small" id="zoom-reset">Reset</button>
         </p>
       </div>
@@ -58,33 +25,43 @@
 
     <div class="row">
 
-      <div class="span8">
+      <div class="span8" id="editor-container">
         <h3>Editor</h3>
-        <div id="editor">time(10, 40) ->
-  recolor("#ff0000")
-  time(30, 40) ->
-    fadeOut()</div>
+        @helper.form(action = controllers.admin.routes.LevelCreator.submitCode(level.id)) {
+
+        <input type="submit" value="Save" class="btn btn-primary">
+        <input type="hidden" name="code" />
+        <input type="hidden" name="use" value="1" />
+
+        <div class="editor-wrapper">
+          <div id="editor">@level.code</div>
+        </div>
+        }
+
       </div>
+
 
       <div class="span4" id="assets">
         <h3>Assets</h3>
         <div>
-          <form id="fileupload" action="" method="POST" enctype="multipart/form-data">
-            <div class="row">
-               <button type="submit" class="btn btn-success">
-                  <i class="icon-plus icon-white"></i>
-                  <span>Add files...</span>
-                </button>
-            </div>
+          <form id="assets-upload" action="@controllers.admin.routes.LevelCreator.uploadAsset(level.id)" method="POST" enctype="multipart/form-data">
+            <button type="submit" class="btn btn-success">
+              <i class="icon-plus icon-white"></i> Add files...
+            </button>
+          </form>
         </div>
         <table class="table table-striped">
           <tbody>
-            <tr>
-              <td>colormap.png</td>
-              <td>
-                <a href="#"><i class="icon-trash"></i></a>
-              </td>
-            </tr>
+            @level.assets.map{ file =>
+              <tr>
+                <td>@file.getName</td>
+                <td>
+                  <a href="@controllers.admin.routes.LevelCreator.deleteAsset(level.id, file.getName)" data-ajax="confirm,delete-row">
+                    <i class="icon-trash"></i>
+                  </a>
+                </td>
+              </tr>
+            }
           </tbody>
         </table>
       </div>

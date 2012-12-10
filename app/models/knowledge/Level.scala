@@ -5,22 +5,51 @@ import java.io.File
 import com.mongodb.casbah.commons.MongoDBObject
 import org.apache.commons.io.FileUtils
 import play.api.Play
+import org.bson.types.ObjectId
 
-case class Level(name: String) extends DAOCaseClass[Level] {
+case class Level(
+    name: String , 
+    width: Int,
+    height: Int,
+    depth: Int,
+    code: String = "",
+    _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
 
+  lazy val id = _id.toString
+  
   val assetsFolder =
     Level.assetsBaseFolder + "/" + name + "/assets"
 
   private def assetFile(name: String) =
     new File(assetsFolder + "/" + name)
 
+  def assets = {
+    val f = new File(assetsFolder).listFiles()
+    if(f == null)
+      Array[File]()
+    else
+      f
+  }
+  
+  def alterCode(c: String) = {
+    copy(code = c)
+  }
+  
   def retrieveAsset(name: String) = {
     val f = assetFile(name)
     if (f.getPath.startsWith(assetsFolder) && f.exists)
       Some(f)
     else
       None
+  }
+
+  def deleteAsset(name: String) = {
+    val f = assetFile(name)
+    if (f.getPath.startsWith(assetsFolder) && f.exists)
+      f.delete()
+    else
+      false
   }
 
   def addAsset(fileName: String, file: File) = {
@@ -34,20 +63,25 @@ case class Level(name: String) extends DAOCaseClass[Level] {
 
 object Level extends BasicKnowledgeDAO[Level]("levels") {
 
+  def fromForm(name: String, width: Int, height: Int, depth: Int) = {
+    Level(name, width, height, depth)
+  }
+  
+  val empty = Level("", 250, 150, 30)
+  
+  def toForm(level: Level) = {
+    Some(level.name, level.width, level.height, level.depth)
+  }
+  
   val assetsBaseFolder = {
     val folderName =
       Play.current.configuration.getString("levelCreator.assetsDirecory").getOrElse("levels")
-    println("folderName" + folderName)
     (new File(folderName).mkdirs())
     folderName
   }
 
-  val LevelNameRx = "[0-9A-Za-z\\_\\-]+"r
-  val AssetsNameRx = "[0-9A-Za-z\\_\\-\\.]+"r
-
-  def create(name: String) =
-    if (isValidLevelName(name))
-      insert(Level(name))
+  val LevelNameRx = "[0-9A-Za-z\\_\\-\\s\\t]+"r
+  val AssetsNameRx = "[0-9A-Za-z\\_\\-\\.\\s\\t]+"r
 
   def findOneByName(name: String) =
     findOne(MongoDBObject("name" -> name))

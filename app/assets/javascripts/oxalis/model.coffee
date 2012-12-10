@@ -32,6 +32,7 @@ class Model
           dataType : "json"
         ).pipe((user) =>
 
+          console.log tracing
           @binary = new Binary(tracing.dataSet, TEXTURE_SIZE_P)
           @scaleInfo = new ScaleInfo(tracing.tracing.scale)
           @route = new Route(tracing.tracing, tracing.dataSet, @scaleInfo)

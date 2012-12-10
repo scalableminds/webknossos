@@ -16,7 +16,7 @@ class Recolor
   constructor : (@assetHandler) ->
 
 
-  process : ({input : {rgba}, colorMapName}) ->
+  execute : ({input : {rgba}, colorMapName}) ->
 
     colorMap = @assetHandler.getArray(colorMapName, Uint8Array).subarray(@BITMAP_HEADER_SIZE)
 

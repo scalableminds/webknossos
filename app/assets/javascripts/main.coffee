@@ -3,15 +3,15 @@ require.config
   baseUrl : "/assets/javascripts"
 
   paths :
-    "jquery" : "libs/jquery-1.7.1"
-    "underscore" : "libs/underscore-1.2.0.min"
-    "bootstrap" : "libs/bootstrap.min"
-    "worker" : "libs/worker_plugin"
-    "three": "libs/threejs/three"
-    "stats" : "libs/threejs/stats"
-    "v3" : "libs/v3"
-    "m4x4" : "libs/m4x4"
-    "dat" : "libs/dat.gui.min"
+    "jquery" : "./libs/jquery-1.7.1"
+    "underscore" : "./libs/underscore-1.2.0.min"
+    "bootstrap" : "./libs/bootstrap.min"
+    "worker" : "./libs/worker_plugin"
+    "three": "./libs/threejs/three"
+    "stats" : "./libs/threejs/stats"
+    "v3" : "./libs/v3"
+    "m4x4" : "./libs/m4x4"
+    "dat" : "./libs/dat.gui.min"
 
   shim : 
     "underscore" :
@@ -43,5 +43,5 @@ require [
     "./main/enhancements"
     "./main/routing"
   ], ->
-     
+
   

@@ -1,7 +1,7 @@
 ### define
 ./cube : Cube
 ./pullqueue : Queue
-../../libs/event_mixin : EventMixin
+../../../libs/event_mixin : EventMixin
 ###
 
 # Macros

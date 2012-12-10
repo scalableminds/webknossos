@@ -1,9 +1,9 @@
 ### define
-libs/datgui/dat.gui : DatGui
-libs/request : Request
-libs/event_mixin : EventMixin
-view/toast : Toast
-libs/dimensions : DimensionsHelper
+../../libs/datgui/dat.gui : DatGui
+../../libs/request : Request
+../../libs/event_mixin : EventMixin
+../../libs/toast : Toast
+../model/dimensions : DimensionsHelper
 ###
 
 PLANE_XY           = Dimensions.PLANE_XY
@@ -255,8 +255,6 @@ class Gui
 
   setNodeRadius : (value) =>
     @model.route.setActiveNodeRadius(value)
-    # convert from nm to voxels, divide by resolution
-    @sceneController.skeleton.setNodeRadius(value)
 
   updateRadius : (value) ->
     if value then @settings.radius = value

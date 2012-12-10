@@ -1,15 +1,15 @@
 ### define
 jquery : $
 underscore : _
-controller/cameracontroller : CameraController
-controller/scenecontroller : SceneController
-model : Model
-view : View
-view/gui : Gui
-input : Input
-model/flycam : Flycam
-libs/event_mixin : EventMixin
-libs/dimensions : DimensionsHelper
+./controller/cameracontroller : CameraController
+./controller/scenecontroller : SceneController
+./model : Model
+./model/dimensions : DimensionsHelper
+./view : View
+./view/gui : Gui
+./model/flycam : Flycam
+../libs/event_mixin : EventMixin
+../libs/input : Input
 ###
 
 PLANE_XY         = 0
@@ -297,7 +297,7 @@ class Controller
     @model.route.pushBranch()
 
   popBranch : =>
-    @model.route.popBranch().done((id) => 
+    _.defer => @model.route.popBranch().done((id) => 
       @setActiveNode(id, true)
     )
 

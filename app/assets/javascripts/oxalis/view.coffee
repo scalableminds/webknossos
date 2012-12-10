@@ -1,12 +1,11 @@
 ### define
 jquery : $
-model/flycam : Flycam
-libs/Tween : TWEEN_LIB
-model/game : Game
-libs/event_mixin : EventMixin
-view/toast : Toast
-libs/dimensions : DimensionsHelper
-model/route : Route
+./model/flycam : Flycam
+./model/route : Route
+./model/dimensions : DimensionsHelper
+../libs/toast : Toast
+../libs/event_mixin : EventMixin
+../libs/Tween : TWEEN_LIB
 ###
 
 #model : Model

@@ -56,6 +56,7 @@ class Controller
         @prevControls.append(buttons[i])
 
       @view.createKeyboardCommandOverlay()
+      @view.createDoubleJumpModal()
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
       meshes = @sceneController.getMeshes()

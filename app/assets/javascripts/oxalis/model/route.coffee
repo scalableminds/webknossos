@@ -204,21 +204,45 @@ class Route
 
   popBranch : ->
     deferred = new $.Deferred()
-    #if @doubleBranchPop
-    #  if !confirm("You didn't add a node after jumping to this branchpoint, do you really want to jump again?")
-    #    return deferred.reject()
-    point = @branchStack.pop()
-    @push()
-    if point
-      @activeNode = point
-      @activeNode.type = TYPE_USUAL
+    if @doubleBranchPop
+      @showBranchModal().done(=>
+        point = @branchStack.pop()
+        @push()
+        if point
+          @activeNode = point
+          @activeNode.type = TYPE_USUAL
 
-      @trigger("setBranch", false)
-      @doubleBranchPop = true
-      deferred.resolve(@activeNode.id)
+          @trigger("setBranch", false)
+          @doubleBranchPop = true
+          deferred.resolve(@activeNode.id)
+        else
+          @trigger("emptyBranchStack")
+          deferred.reject())
     else
-      @trigger("emptyBranchStack")
-      deferred.reject()
+      point = @branchStack.pop()
+      @push()
+      if point
+        @activeNode = point
+        @activeNode.type = TYPE_USUAL
+
+        @trigger("setBranch", false)
+        @doubleBranchPop = true
+        deferred.resolve(@activeNode.id)
+      else
+        @trigger("emptyBranchStack")
+        deferred.reject()
+    deferred
+
+  showBranchModal : ->
+    @branchDeferred = new $.Deferred()
+    $("#double-jump").modal("show")
+    return @branchDeferred
+
+  rejectBranchDeferred : ->
+    @branchDeferred.reject()
+
+  resolveBranchDeferred : ->
+    @branchDeferred.resolve()
       
 
   addNode : (position, type) ->

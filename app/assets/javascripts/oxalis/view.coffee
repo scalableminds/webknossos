@@ -218,6 +218,24 @@ class View
   getLights  : =>
     @lights
 
+  createDoubleJumpModal : ->
+    $("#double-jump").append("<div class=\"modal-body\">
+            <p>You didn't add a node after jumping to this branchpoint, do you really want to jump again?</p>
+          </div>
+          <div class=\"modal-footer\">
+            <a href=\"#\" id=\"jump-button\" class=\"btn\">Jump again</a>
+            <a href=\"#\" id=\"cancel-button\" class=\"btn\">Cancel</a>
+          </div>")
+
+    $("#jump-button").on("click", => 
+      @model.route.resolveBranchDeferred()
+      $("#double-jump").modal("hide"))
+
+    $("#cancel-button").on("click", => 
+      @model.route.rejectBranchDeferred()
+      $("#double-jump").modal("hide"))
+
+
   createKeyboardCommandOverlay : ->
 
     keycommands =

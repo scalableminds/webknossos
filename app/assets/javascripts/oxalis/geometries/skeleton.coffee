@@ -93,6 +93,7 @@ class Skeleton
 
   createNewTree : (treeId, treeColor) ->
     # create route to show in previewBox and pre-allocate buffers
+
     routeGeometry = new THREE.Geometry()
     routeGeometryNodes = new THREE.Geometry()
     routeGeometry.dynamic = true
@@ -100,14 +101,17 @@ class Skeleton
 
     for i in [1..@maxRouteLen]
       # workaround to hide the unused vertices
-      routeGeometry.vertices.push(new THREE.Vector2(0,0))      # sources
-      routeGeometry.vertices.push(new THREE.Vector2(0,0))      # targets
+      # routeGeometry.vertices.push(new THREE.Vector2(0,0))      # sources
+      # routeGeometry.vertices.push(new THREE.Vector2(0,0))      # targets
       routeGeometryNodes.vertices.push(new THREE.Vector2(0,0)) # nodes
 
     @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: treeColor, linewidth: 1}), THREE.LinePieces))
     @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: treeColor, size: 5, sizeAttenuation : false})))
     @ids.push(treeId)
     @curIndex.push(0)
+
+    index = @getIndexFromTreeId(treeId)
+    @edgesBuffer[index] = new Float32Array(@maxRouteLen * 2 * 3)
 
     # Initialize the tree
     @clearRoute(treeId)
@@ -120,8 +124,8 @@ class Skeleton
     index = @getIndexFromTreeId(treeId)
     for i in [0..@maxRouteLen - 1]
       # workaround to hide the unused vertices
-      @routes[index].geometry.vertices[2 * i]     = new THREE.Vector2(0,0)
-      @routes[index].geometry.vertices[2 * i + 1] = new THREE.Vector2(0,0)
+      #@routes[index].geometry.vertices[2 * i]     = new THREE.Vector2(0,0)
+      #@routes[index].geometry.vertices[2 * i + 1] = new THREE.Vector2(0,0)
       @nodes[index].geometry.vertices[i] = new THREE.Vector2(0,0)
       @routes[index].geometry.verticesNeedUpdate = true
       @nodes[index].geometry.verticesNeedUpdate = true
@@ -133,6 +137,7 @@ class Skeleton
   # the skeleton is changes in a way that can't efficiently
   # applied to the particle system, like deleting nodes, trees.
   reset : ->
+    console.log "reseeeeeeeeeet"
     if (@ids.length > 0)
       @trigger "removeGeometries", @routes.concat(@nodes).concat(@nodesSpheres)
     @routes       = []
@@ -140,12 +145,13 @@ class Skeleton
     @ids          = []
     @nodesSpheres = []
 
+    @edgesBuffer = new Array(@route.getTrees().length)
     for tree in @route.getTrees()
       @createNewTree(tree.treeId, tree.color)
-    
-    @loadSkeletonFromModel()
+
     # Add Spheres to the scene
     @trigger "newGeometries", @nodesSpheres
+    @trigger "waitForRender"
 
   loadSkeletonFromModel : ->
     for tree in @route.getTrees()
@@ -169,13 +175,22 @@ class Skeleton
             radius = node.size
             nodePos = node.parent.pos
             node2Pos = node.pos
-            @routes[index].geometry.vertices[2 * @curIndex[index]]     = new THREE.Vector3(nodePos...)
-            @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(node2Pos...)
+            #@routes[index].geometry.vertices[2 * @curIndex[index]]     = new THREE.Vector3(nodePos...)
+            #@routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(node2Pos...)
+            @edgesBuffer[index].set(nodePos, (2 * @curIndex[index] - 2) * 3)
+            @edgesBuffer[index].set(node2Pos, (2 * @curIndex[index] - 1) * 3)
             @nodes[index].geometry.vertices[@curIndex[index]]    = new THREE.Vector3(node2Pos...)
             # Assign the ID to the vertex, so we can access it later
             @nodes[index].geometry.vertices[@curIndex[index]].nodeId = node.id
             @pushNewNode(radius, node2Pos, node.id, tree.color)
             @curIndex[index]++
+        #geometries = Dimensions.createGeometries(nodeList)
+        #@nodes[index].geometry = geometries.nodesGeometry
+        #@routes[index].geometry = geometries.edgesGeometry
+
+        @routes[index].geometry.__vertexArray = @edgesBuffer[index]
+        @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index] - 1)
+
         @routes[index].geometry.verticesNeedUpdate = true
         @nodes[index].geometry.verticesNeedUpdate = true
     for branchPoint in @route.branchStack
@@ -257,8 +272,8 @@ class Skeleton
       #position[1] = Math.random() * 5000
       #position[2] = Math.random() * 5000
 
-      @routes[index].geometry.vertices[2 * @curIndex[index]] = new THREE.Vector3(@lastNodePosition...)
-      @routes[index].geometry.vertices[2 * @curIndex[index] + 1] = new THREE.Vector3(position...)
+      @edgesBuffer[index].set(@lastNodePosition, (2 * @curIndex[index] - 2) * 3)
+      @edgesBuffer[index].set(position, (2 * @curIndex[index] - 1) * 3)
       @nodes[index].geometry.vertices[@curIndex[index]] = new THREE.Vector3(position...)
       # Assign the ID to the vertex, so we can access it later
       @nodes[index].geometry.vertices[@curIndex[index]].nodeId = id
@@ -270,9 +285,6 @@ class Skeleton
       #  @routeView[i].geometry.vertices[2 * @curIndex] = new THREE.Vector3(@lastNodePosition[ind[0]], -@lastNodePosition[ind[1]], -@lastNodePosition[ind[2]])
       #  @routeView[i].geometry.vertices[2 * @curIndex + 1] = new THREE.Vector3(position[ind[0]], -position[ind[1]], -position[ind[2]])
       #  @routeView[i].geometry.verticesNeedUpdate = true
-
-      @routes[index].geometry.verticesNeedUpdate = true
-      @nodes[index].geometry.verticesNeedUpdate = true
       
       #TEST CUBES
       #particle = new THREE.Mesh(new THREE.CubeGeometry(30, 30, 30, 1, 1, 1), new THREE.MeshBasicMaterial({color: 0xff0000}))
@@ -280,6 +292,12 @@ class Skeleton
       #particle.position.y = Game.dataSet.upperBoundary[2] - position[2]
       #particle.position.z = position[1]
       #@addGeometry VIEW_3D, particle
+
+      @routes[index].geometry.__vertexArray = @edgesBuffer[index]
+      @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index])
+
+      @routes[index].geometry.verticesNeedUpdate = true
+      @nodes[index].geometry.verticesNeedUpdate = true
 
       # Animation to center waypoint position
       @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})

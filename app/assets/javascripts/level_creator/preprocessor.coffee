@@ -6,7 +6,11 @@ class Preprocessor
 
   DESCRIPTION : "Generates all metadata from the original grey values"
 
-  PARAMETER : {input: {raw: 'Uint8Array'}, width: 'int', height: 'int'}
+  PARAMETER : 
+    input: 
+      raw: 'Uint8Array'
+    width: 'int'
+    height: 'int'
 
 
   directions : [ 
@@ -16,10 +20,10 @@ class Preprocessor
     {x:  0,  y: -1}
   ]
 
-  constructor : () ->
+  constructor : ->
 
 
-  process : ({input : {raw}, width, height}) ->
+  execute : ({ input : { raw }, width, height }) ->
 
     segments = @getSegments(raw, width, height)
 

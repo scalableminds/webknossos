@@ -30,14 +30,14 @@ class Recolor
 
   execute : (options) ->
 
-    { input : {rgba} , name } = options
+    { input : { rgba } , name } = options
 
     colormap = @colormaps[name]
 
     unless colormap?
       return rgba
 
-    for i in [0..rgba.length / 4]
+    for i in [0...rgba.length / 4]
       j = i * 4
       r = rgba[j + 0]
       g = rgba[j + 1]

@@ -4,10 +4,8 @@ libs/keyboard : KeyboardJS
 libs/toast : Toast
 routes : routes
 libs/ace/ace : Ace
-coffee-script : CoffeeScript
 ./level_creator/asset_handler : AssetHandler
-./level_creator/plugins : Plugins
-level_creator/preprocessor : Preprocessor
+./level_creator/plugin_renderer : PluginRenderer
 ###
 
 class LevelCreator
@@ -19,17 +17,22 @@ class LevelCreator
   model : null
 
   assetHandler : null
-  preprocessor : null
+  preplugin_renderer : null
 
   constructor : ->
 
     @levelName = $("#level-creator").data("level-id")
 
-    @data = null
+    @dimensions = [
+      parseInt( $("#level-creator").data("level-width")  )
+      parseInt( $("#level-creator").data("level-height") )
+      parseInt( $("#level-creator").data("level-depth")  )
+    ]
 
     @assetHandler = new AssetHandler(@levelName)
-    @preprocessor = new Preprocessor()
-    @plugins = new Plugins(@assetHandler)
+    @plugin_renderer = new PluginRenderer(@dimensions, @assetHandler)
+
+    ####
 
     # editor init
     @editor = Ace.edit("editor")
@@ -38,12 +41,15 @@ class LevelCreator
 
     $form = $("#editor-container").find("form")
     $saveCodeButton = $form.find("[type=submit]")
-    $saveCodeButton.click( => @execute())
+    $saveCodeButton.click => @updatePreview()
 
     @editor.on "change", =>
 
-      code = @compile()
-      if code instanceof Function
+      @plugin_renderer.setCode(@editor.getValue())
+
+      error = @plugin_renderer.compile()
+
+      if _.isFunction(error)
         $saveCodeButton.removeClass("disabled").popover("destroy")
 
       else
@@ -52,7 +58,7 @@ class LevelCreator
         $saveCodeButton.popover(
           placement : "right"
           title : "No good code. No save."
-          content : code
+          content : error
           trigger : "hover"
         )
 
@@ -93,8 +99,8 @@ class LevelCreator
     @canvas = $("#preview-canvas")[0]
     @context = @canvas.getContext("2d")
 
-    $slider = $("#preview-slider")
-    $slider.on "change", =>
+    @$slider = $("#preview-slider")
+    @$slider.on "change", =>
       @updatePreview()
 
     # zooming
@@ -102,199 +108,27 @@ class LevelCreator
     $zoomSlider.on "change", =>
       @zoomPreview()
 
-    $("#zoom-reset").click( =>
+    $("#zoom-reset").click =>
       $zoomSlider.val(1)
       @zoomPreview()
-    )
-
-    @dimensions = [
-      parseInt( $("#level-creator").data("level-width")  )
-      parseInt( $("#level-creator").data("level-height") )
-      parseInt( $("#level-creator").data("level-depth")  )
-    ]
-
-    $slider[0].max = @dimensions[2] - 1
 
     @canvas.width = @dimensions[0]
     @canvas.height = @dimensions[1]
 
-    @requestStack(@dimensions)
-
     ####
-
-    @plugins = new Plugins()
-
-
-  compile : ->
-
-    try
-
-      functionBody = CoffeeScript.compile(@editor.getValue(), bare : true)
-      func = new Function(
-        "plugins"
-        "with(plugins) { #{functionBody} }"
-      )
-
-      return func
-
-    catch err
-
-      return err.toString()
-
-
-  currentLength : ->
-
-    func = @compile()
-
-    length = 0
-
-    _plugins =
-
-      time : (options) ->
-
-        length = Math.max(options.end, length)
-        (cb) -> cb()
-
-    for key of @plugins
-
-      _plugins[key.toLowerCase()] = ->
-
-    func(_plugins)
-
-    length
-
-
-  execute : ->
-
-    unless @data
-      return
-
-    func = @compile()
-
-    startFrame = 0
-    endFrame = 0
-
-    slider = $("#preview-slider")[0]
-    sliderValue = Math.floor(slider.value)
-
-    inputDataObject = @copyArrayBufferToImageBuffer(new Uint8Array(@data),0)
-    inputData = inputDataObject.data
-    _plugins =
-
-
-      time : (options) =>
-
-        startFrame = options.start
-        endFrame = options.end
-
-        if startFrame <= sliderValue <= endFrame
-          (cb) ->
-            cb()
-            # merge magic
-        else
-          ->
-
-      importSlides : (options) =>
-
-        index = ( sliderValue + startFrame) * 250  *  150
-        inputData = @interpolateFrame(inputData, index, true )
-
-    for key, plugin of @plugins
-
-      _plugins[key.toLowerCase()] = (options) ->
-
-        _.extend( options, input : { rgba : inputData } )
-        inputData = plugin.execute(options)
-
-    func(_plugins)
-
-    inputDataObject.data.set(inputData)
-    @inputData = inputDataObject
-    @updateOutput()
-
-
-  requestStack : (dimensions) ->
-
-    Request.send(
-      _.extend(
-        routes.controllers.BinaryData.arbitraryViaAjax(dimensions...),
-        dataType : "arraybuffer"
-      )
-    ).done (buffer) =>
-      @data = new Uint8Array(buffer)
-      @updatePreview()
 
 
   updatePreview : ->
 
-    return unless @data
+    sliderValue = Math.floor(@$slider.val())
+    
+    imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
 
-    slider = $("#preview-slider")[0]
-    sliderValue = Math.floor(slider.value)
+    imageData.data.set(@plugin_renderer.render(sliderValue))
 
-    imageData = @copyArrayBufferToImageBuffer(@data, sliderValue)
     @context.putImageData(imageData, 0, 0)
 
-  updateOutput : ->
-    canvas = $("#output-canvas")[0]
-    context = canvas.getContext("2d")
-    context.putImageData(@inputData, 0, 0)
-
-  copyArrayBufferToImageBuffer : ( arrayBuffer, frameIndex ) ->
-    sourceData = arrayBuffer
-    { width, height } = @canvas
-
-    imageDataObject = @context.getImageData(0, 0, width, height)
-    imageData = imageDataObject.data
-
-    indexSource = frameIndex * width * height
-    indexTarget = 0
-
-    for x in [0...width]
-      for y in [0...height]
-
-        # r,g,b
-        imageData[indexTarget++] = sourceData[indexSource]
-        imageData[indexTarget++] = sourceData[indexSource]
-        imageData[indexTarget++] = sourceData[indexSource]
-
-        # alpha
-        imageData[indexTarget++] = 255
-        indexSource++
-    imageDataObject
-
-  interpolateFrame : (@sourceData, index, interpolation) ->
-
-    outputData = new Uint8Array(sourceData)
-    t = index - Math.floor(index)
-
-    upperIndex = Math.floor(index) + 1
-    lowerIndex = Math.floor(index)
-    indexTarget = index
-
-    { width, height } = @canvas
-
-    for x in [0...width]
-      for y in [0...height]
-
-        data = lowerData = sourceData[lowerIndex]
-
-        if interpolation
-          upperData = sourceData[upperIndex]
-          data = lowerData + t * (upperData - lowerData)
-
-        # rgb values
-        outputData[indexTarget++] = data
-        outputData[indexTarget++] = data
-        outputData[indexTarget++] = data
-
-        #skip alpha value
-        indexTarget++
-        upperIndex += 4
-        lowerIndex += 4
-
-    outputData
-
+    @$slider.prop( max : @plugin_renderer.getLength() )
 
 
   zoomPreview : ->

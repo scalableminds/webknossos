@@ -118,11 +118,7 @@ class Flycam2d
     @spaceDirection
 
   move : (p) -> #move by whatever is stored in this vector
-    if @activePlane == PLANE_XY
-      # BAD consider the different resolution in z-direction
-      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+2*p[2]])
-    else
-      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
+    @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
     
   moveActivePlane : (p) ->
     p = Dimensions.transDim(p, @activePlane)

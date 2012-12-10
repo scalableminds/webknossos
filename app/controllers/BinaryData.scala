@@ -18,7 +18,7 @@ import play.api.libs.concurrent._
 import play.api.libs.json.JsValue
 import play.libs.Akka._
 import models.security.Role
-import models.binary.DataSet
+import models.binary._
 import brainflight.binary._
 import brainflight.security.Secured
 import brainflight.tools.geometry.{ Point3D, Cuboid }
@@ -29,13 +29,6 @@ import akka.routing.RoundRobinRouter
 import play.api.libs.concurrent.execution.defaultContext
 import brainflight.tools.geometry.Vector3D
 //import scala.concurrent.ExecutionContext.Implicits.global
-
-/**
- * scalableminds - brainflight
- * User: tmbo
- * Date: 11.12.11
- * Time: 13:21
- */
 
 object BinaryData extends Controller with Secured {
 
@@ -61,11 +54,11 @@ object BinaryData extends Controller with Secured {
     Cuboid(cubeCorner, cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2))
   }
 
-  def handleMultiDataRequest(multi: MultipleDataRequest, cubeSize: Int, dataSet: DataSet) = {
+  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int) = {
     val cubeRequests = multi.requests.map { request =>
       val resolution = resolutionFromExponent(request.resolutionExponent)
       val cuboid = cuboidFromPosition(request.position, cubeSize)
-      CubeRequest(dataSet, resolution, cuboid)
+      CubeRequest(dataSet, dataLayer, resolution, cuboid)
     }
 
     val future = (dataSetActor ? MultiCubeRequest(cubeRequests)) recover {
@@ -80,13 +73,15 @@ object BinaryData extends Controller with Secured {
     Async {
       val t = System.currentTimeMillis()
       val dataSet = DataSet.default
+      //FIXME
+      val dataLayer = dataSet.dataLayers(ColorLayer().identifier)
       val position = Point3D(554, 543, 523)
       val direction = (1.0, 1.0, 1.0)
 
       val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
       val m = new CubeModel(width, height, depth)
       val points = m.rotateAndMove(point, direction)
-      val future = dataSetActor ? ArbitraryRequest(dataSet, 1, points) recover {
+      val future = dataSetActor ? ArbitraryRequest(dataSet, dataLayer, 1, points) recover {
         case e: AskTimeoutException =>
           Logger.error("calculateImages: AskTimeoutException")
           Array.fill[Byte](height * width * depth)(0)
@@ -102,16 +97,17 @@ object BinaryData extends Controller with Secured {
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
-  def requestViaAjax(dataSetId: String, cubeSize: Int) = Authenticated(parser = parse.raw) { implicit request =>
+  def requestViaAjax(dataSetId: String, dataLayerName: String, cubeSize: Int) = Authenticated(parser = parse.raw) { implicit request =>
     Async {
       (for {
         payload <- request.body.asBytes()
         message <- BinaryProtocol.parseAjax(payload)
         dataSet <- DataSet.findOneById(dataSetId)
+        dataLayer <- dataSet.dataLayers.get(dataLayerName)
       } yield {
         message match {
           case dataRequests @ MultipleDataRequest(_) =>
-            handleMultiDataRequest(dataRequests, cubeSize, dataSet).asPromise.map(result =>
+            handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).asPromise.map(result =>
               Ok(result))
           case _ =>
             Akka.future {
@@ -129,7 +125,7 @@ object BinaryData extends Controller with Secured {
    * @param
    * 	modelType:	id of the model to use
    */
-  def requestViaWebsocket(dataSetId: String, cubeSize: Int) = AuthenticatedWebSocket[Array[Byte]]() { user =>
+  def requestViaWebsocket(dataSetId: String, dataLayerName: String, cubeSize: Int) = AuthenticatedWebSocket[Array[Byte]]() { user =>
     request =>
       val dataSetOpt = DataSet.findOneById(dataSetId)
       var channelOpt: Option[Channel[Array[Byte]]] = None
@@ -142,11 +138,12 @@ object BinaryData extends Controller with Secured {
       val input = Iteratee.foreach[Array[Byte]](in => {
         for {
           dataSet <- dataSetOpt
+          dataLayer <- dataSet.dataLayers.get(dataLayerName)
           channel <- channelOpt
         } {
           BinaryProtocol.parseWebsocket(in).map {
             case dataRequests: MultipleDataRequest =>
-              handleMultiDataRequest(dataRequests, cubeSize, dataSet).map(
+              handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).map(
                 result => channel.push(dataRequests.handle ++ result))
             case _ =>
               Logger.error("Received unhandled message!")

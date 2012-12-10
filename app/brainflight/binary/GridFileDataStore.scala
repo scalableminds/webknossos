@@ -11,7 +11,7 @@ import scala.collection.JavaConverters._
 import com.mongodb.casbah.gridfs.Imports._
 import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
-import models.binary.DataSet
+import models.binary._
 import brainflight.tools.geometry.Cuboid
 import brainflight.tools.geometry.Vector3D
 
@@ -30,16 +30,16 @@ class GridFileDataStore extends DataStore{
   /**
    * Load the binary data of the given coordinate from DB
    */
-  override def load(dataSet: DataSet, resolution: Int, cube: Cuboid): Array[Byte] = {
+  override def load(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, cube: Cuboid): Array[Byte] = {
     //TODO: IMPLEMENT
     new Array[Byte](0)
   }
   
-  override def loadInterpolated(dataSet: DataSet, resolution: Int, points: Array[Vector3D]) = {
+  override def loadInterpolated(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, points: Array[Vector3D]) = {
     new Array[Byte](0)
   }
   
-  override def load(dataSet: DataSet, resolution: Int, globalPoint: Point3D): Byte = {
+  override def load(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, globalPoint: Point3D): Byte = {
     // TODO: Insert upper bound
     if (globalPoint.x < 0 || globalPoint.y < 0 || globalPoint.z < 0) return 0
 
@@ -62,7 +62,7 @@ class GridFileDataStore extends DataStore{
             fileCache += (((x,y,z), binData))
             binData
           case None => 
-            Logger.info("Did not find file %s".format(createFilename(dataSet, resolution, point)))
+            Logger.info("Did not find file %s".format(createFilename(dataSet, dataLayer, resolution, point)))
             fileCache += (((x,y,z),nullBlock))
             nullBlock
         }
@@ -90,18 +90,18 @@ class GridFileDataStore extends DataStore{
     "%04d%04d%04d".format(point.x,point.y,point.z)
   }
   
-  private def create(dataSet: DataSet, resolution: Int, point: Point3D):Array[Byte] ={
+  private def create(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D):Array[Byte] ={
     try{
-      val IS = new FileInputStream(createFilename(dataSet, resolution, point))
+      val IS = new FileInputStream(createFilename(dataSet, dataLayer, resolution, block))
       gridfs(IS) { fh=>
-      fh.filename = convertCoordinatesToString(point)
+      fh.filename = convertCoordinatesToString(block)
       fh.contentType = "application"
       }
       inputStreamToByteArray(IS)
     }
     catch {
       case e: FileNotFoundException =>
-        Logger.warn("%s not found!".format(createFilename(dataSet, resolution, point)));
+        Logger.warn("%s not found!".format(createFilename(dataSet, dataLayer, resolution, block)));
         nullBlock
     }
   }

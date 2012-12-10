@@ -14,6 +14,7 @@ case class DataSet(
     supportedResolutions: List[Int],
     maxCoordinates: Point3D,
     priority: Int = 0,
+    dataLayers: Map[String, DataLayer] = Map(ColorLayer().identifier -> ColorLayer()),
     _id: ObjectId = new ObjectId) extends DAOCaseClass[DataSet] {
 
   def dao = DataSet

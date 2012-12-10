@@ -1,7 +1,7 @@
 package brainflight.binary
 
 import brainflight.tools.geometry.Point3D
-import models.binary.DataSet
+import models.binary._
 import brainflight.tools.geometry.Cuboid
 import brainflight.tools.geometry.Vector3D
 
@@ -13,11 +13,12 @@ abstract class DataStore {
   /**
    * Loads the data of a given point from the data source
    */
-  def load( dataSet: DataSet, resolution: Int, point: Point3D ): Byte
+  
+  def load( dataSet: DataSet, layer: DataLayer, resolution: Int, point: Point3D): Byte
 
-  def load( dataSet: DataSet, resolution: Int, cube: Cuboid): Array[Byte]
+  def load( dataSet: DataSet, layer: DataLayer, resolution: Int, cube: Cuboid): Array[Byte]
 
-  def loadInterpolated( dataSet: DataSet, resolution: Int, points: Array[Vector3D] ): Array[Byte]
+  def loadInterpolated( dataSet: DataSet, layer: DataLayer, resolution: Int, points: Array[Vector3D]): Array[Byte]
   
   /**
    * Gives the data store the possibility to clean up its mess on shutdown/clean
@@ -36,12 +37,16 @@ abstract class DataStore {
    *  
    *  where DATAPATH, DATASETID, RESOLUTION, X, Y and Z are parameters.
    */
-  def createFilename( dataSet: DataSet, resolution: Int, point: Point3D ) =
-    "%s/%d/x%04d/y%04d/z%04d/%s_mag%d_x%04d_y%04d_z%04d.raw".format( 
+  def createFilename( dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D) =
+    "%s/%s/%d/x%04d/y%04d/z%04d/%s_mag%d_x%04d_y%04d_z%04d.raw".format( 
         dataSet.baseDir,
+        dataLayer.folder,
         resolution, 
         point.x, point.y, point.z, 
         dataSet.name, 
         resolution, 
         point.x, point.y, point.z )
+  
+        
+  
 }

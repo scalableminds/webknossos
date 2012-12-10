@@ -4,7 +4,7 @@ import brainflight.tools.geometry.Point3D
 import play.api.Play.current
 import play.api.Play
 import brainflight.tools.geometry.Point3D
-import models.binary.DataSet
+import models.binary.{DataSet, DataLayer}
 import brainflight.tools.geometry.Cuboid
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import akka.agent.Agent
@@ -16,17 +16,12 @@ case class DataBlock( info: DataBlockInformation, data: Data)
 
 case class DataBlockInformation(
     dataSetId: String,
-    point: Point3D,
-    resolution: Int)
-    
+    dataLayer: DataLayer,
+    resolution: Int,
+    block: Point3D
+    )
+
 case class Data( value: Array[Byte])
-    
-/**
- * Scalable Minds - Brainflight
- * User: tom
- * Date: 10/11/11
- * Time: 12:20 PM
- */
 
 /**
  * A data store implementation which uses the hdd as data storage
@@ -60,19 +55,19 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       case _ => 
         None
     }
-  }  
+  }
     
   /**
    * Load the binary data of the given coordinate from file
    */
-  override def load( dataSet: DataSet, resolution: Int, globalPoint: Point3D ): Byte = {
+  override def load( dataSet: DataSet, dataLayer: DataLayer, resolution: Int, globalPoint: Point3D ): Byte = {
     if ( dataSet doesContain globalPoint ) {
       val block = PointToBlock( globalPoint, resolution )     
-      val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
+      val blockInfo = DataBlockInformation( dataSet.id, dataLayer, resolution, block)
       
       val byteArray: Array[Byte] =
         ((useLastUsed( blockInfo ) orElse cacheAgent().get( blockInfo )) getOrElse (
-              loadAndCacheData( dataSet, block, resolution ) )).value
+              loadAndCacheData( dataSet, dataLayer, resolution, block ) )).value
       
       lastUsed = Some(blockInfo -> Data(byteArray))
        
@@ -85,14 +80,14 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   /*
    * Load the binary data of the given coordinate from file
    */
-  override def load( dataSet: DataSet, resolution: Int, cube: Cuboid ): Array[Byte] = { 
+  override def load( dataSet: DataSet, dataLayer: DataLayer, resolution: Int, cube: Cuboid ): Array[Byte] = { 
     if ( dataSet doesContain cube.topLeft ) { 
       val block = PointToBlock( cube.topLeft, resolution )     
-      val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
+      val blockInfo = DataBlockInformation( dataSet.id, dataLayer, resolution, block )
       
       val byteArray: Array[Byte] =
         ((useLastUsed( blockInfo ) orElse cacheAgent().get( blockInfo )) getOrElse {
-              loadAndCacheData( dataSet, block, resolution ) }).value
+              loadAndCacheData( dataSet, dataLayer, resolution,  block ) }).value
       
       lastUsed = Some(blockInfo -> Data(byteArray))
        
@@ -167,14 +162,14 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
     }
   }
 
-  override def loadInterpolated(dataSet: DataSet, resolution: Int, globalPoints: Array[Vector3D]): Array[Byte] = {
+  override def loadInterpolated(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, globalPoints: Array[Vector3D]): Array[Byte] = {
     val t = System.currentTimeMillis()
     def loadFromSomewhere(dataSet: DataSet, resolution: Int, block: Point3D): Array[Byte] = {
-      val blockInfo = DataBlockInformation(dataSet.id, block, resolution)
+      val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
 
       ((useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)).map(
         d => d.value) getOrElse (
-          loadAndCacheData(dataSet, block, resolution).value))
+          loadAndCacheData(dataSet, dataLayer, resolution, block).value))
     }
     val maxVector = globalPoints.foldLeft((0.0, 0.0, 0.0))((b, e) => (
       math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
@@ -220,10 +215,10 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
    */
-  def loadBlock( dataSet: DataSet, point: Point3D, resolution: Int ): DataBlock
+  def loadBlock( dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D ): DataBlock
 
-  def loadAndCacheData( dataSet: DataSet, point: Point3D, resolution: Int ): Data = {
-    val block = loadBlock( dataSet, point, resolution)
+  def loadAndCacheData( dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D ): Data = {
+    val block = loadBlock( dataSet, dataLayer, resolution, point)
     cacheAgent send( _ + (block.info -> block.data))
     block.data
   }

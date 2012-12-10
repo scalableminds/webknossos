@@ -80,10 +80,9 @@ class Input.Keyboard
         # KeyboardJS does not receive the up event.
 
         unless @keyCallbackMap[key]? or $(":focus").length
-          if not event.ctrlKey
-            @keyPressedCount++ 
-            @keyCallbackMap[key] = callback
-            @buttonLoop() if @keyPressedCount == 1
+          @keyPressedCount++ 
+          @keyCallbackMap[key] = callback
+          @buttonLoop() if @keyPressedCount == 1
 
         return
 

@@ -3,7 +3,7 @@
 var page = require('webpage').create();
 
 page.viewportSize = { width: @level.width, height : @level.height };
-page.content = '<html><body><canvas id="surface"></canvas></body></html>';
+page.content = "<html><body></body></html>";
 
 for( var i = 0; i < @level.depth; i++ ) {
 	(function (i) {

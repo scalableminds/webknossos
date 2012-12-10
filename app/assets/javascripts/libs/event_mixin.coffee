@@ -25,6 +25,27 @@ class EventMixin
     this
 
 
+  one : (type, callback) ->
+
+    wrappedCallback = (args...) =>
+
+      callback(args...)
+      @off(type, wrappedCallback)
+
+
+    unless _.isObject(type)
+
+     @on(type, wrappedCallback)
+
+    else
+
+      map = type
+      for own type, callback of map
+        @on(type, wrappedCallback)
+
+    this
+
+
   off : (type, callback) ->
 
     if _.isArray(@callbacks[type])

@@ -31,8 +31,7 @@ class AssetHandler
             formData.append("asset", file) 
 
             fileReader = new FileReader()
-            fileReader.onload = (e) =>
-              @assetStore[file.name] = e.target.result
+            fileReader.onload = (e) => @assetStore[file.name] = e.target.result
             fileReader.readAsArrayBuffer(file)
 
         Request.send(

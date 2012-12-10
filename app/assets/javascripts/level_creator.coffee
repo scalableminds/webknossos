@@ -24,7 +24,7 @@ class LevelCreator
 
     @data = null
     @assetHandler = new AssetHandler(@levelName)
-    @plugins = new Plugins()
+    @plugins = new Plugins(@assetHandler)
 
     # editor init
     @editor = Ace.edit("editor")

@@ -41,7 +41,6 @@ class LevelCreator
 
     @$form = $("#editor-container form")
     @$saveCodeButton = @$form.find("[type=submit]")
-    @$saveCodeButton.click => @updatePreview()
 
     @editor.on "change", => @updatePreview()
 
@@ -121,7 +120,7 @@ class LevelCreator
       imageData.data.set(frameBuffer)
       @context.putImageData(imageData, 0, 0)
 
-      @$slider.prop( max : @pluginRenderer.getLength() )
+      @$slider.prop( max : @pluginRenderer.getLength() - @$slider.prop("step") )
 
       $("#preview-error").html("")
       @$saveCodeButton.removeClass("disabled").popover("destroy")

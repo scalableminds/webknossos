@@ -3,7 +3,7 @@ package brainflight.io
 import java.io.File
 import name.pachler.nio.file.Path
 import name.pachler.nio.file.impl.PathImpl
-import models.binary.DataSet
+import models.binary._
 import brainflight.tools.geometry.Point3D
 import play.api.Logger
 import brainflight.tools.ExtendedTypes._
@@ -71,7 +71,8 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
       Logger.trace("dataSetFromFile: " + f)
       val resolutions = f.listFiles().filter(_.isDirectory).flatMap(_.getName.toIntOpt).toList
       (for {
-        res <- highestResolutionDir(listDirectories(f))
+        colorLayer <- listDirectories(f).find(dir => dir.getName == ColorLayer.identifier)
+        res <- highestResolutionDir(listDirectories(colorLayer))
         xs <- listDirectories(res).headOption
         ys <- listDirectories(xs).headOption
         xMax <- maxValueFromFiles(res.listFiles())
@@ -82,7 +83,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
       }) map { 
         case (xMax, yMax, zMax) =>
         val maxCoordinates = Point3D((xMax+1) * 128, (yMax+1) * 128, (zMax+1) * 128)
-        DataSet(f.getName(), f.getAbsolutePath(), resolutions, maxCoordinates)
+        DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, dataLayers=Map[String, DataLayer](ColorLayer.identifier -> ColorLayer(supportedResolutions = resolutions)))
       }
     } else
       None

@@ -32,13 +32,6 @@ import views._
 import play.api.i18n.Messages
 import models.tracing.UsedTracings
 
-/**
- * scalableminds - brainflight
- * User: tmbo
- * Date: 19.12.11
- * Time: 11:27
- */
-
 object TracingController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
@@ -48,7 +41,9 @@ object TracingController extends Controller with Secured {
         Json.obj(
           "dataSet" -> Json.obj(
             "id" -> dataSet.id,
-            "resolutions" -> dataSet.supportedResolutions,
+            "dataLayers" -> dataSet.dataLayers.toList.map{case (id, layer) => 
+              Json.obj("id" -> id,
+                       "resolutions" -> layer.supportedResolutions)},
             "upperBoundary" -> dataSet.maxCoordinates))
       case _ =>
         Json.obj("error" -> "Couldn't find dataset.")

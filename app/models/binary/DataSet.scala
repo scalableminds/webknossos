@@ -11,10 +11,9 @@ import models.basics.DAOCaseClass
 case class DataSet(
     name: String,
     baseDir: String,
-    supportedResolutions: List[Int],
     maxCoordinates: Point3D,
     priority: Int = 0,
-    dataLayers: Map[String, DataLayer] = Map(ColorLayer().identifier -> ColorLayer()),
+    dataLayers: Map[String, DataLayer] = Map(ColorLayer.identifier -> ColorLayer.default),
     _id: ObjectId = new ObjectId) extends DAOCaseClass[DataSet] {
 
   def dao = DataSet

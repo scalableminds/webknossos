@@ -74,7 +74,7 @@ object BinaryData extends Controller with Secured {
       val t = System.currentTimeMillis()
       val dataSet = DataSet.default
       //FIXME
-      val dataLayer = dataSet.dataLayers(ColorLayer().identifier)
+      val dataLayer = dataSet.dataLayers(ColorLayer.identifier)
       val position = Point3D(554, 543, 523)
       val direction = (1.0, 1.0, 1.0)
 

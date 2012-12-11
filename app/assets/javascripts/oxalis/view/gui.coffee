@@ -68,7 +68,7 @@ class Gui
                           .onChange(@setMouseInversionY)
 
     fView = @gui.addFolder("Planes")
-    (fView.add @settings, "moveValue", 1, 3) 
+    (fView.add @settings, "moveValue", 1, 10) 
                           .step(0.25)
                           .name("Move Value")    
                           .onChange(@setMoveValue)

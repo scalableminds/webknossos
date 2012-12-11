@@ -184,10 +184,10 @@ class Controller
       #Move
       "space" : (first) => @moveZ( @model.user.moveValue, first)
       "f" : (first) => @moveZ( @model.user.moveValue, first)
+      "d" : (first) => @moveZ( - @model.user.moveValue, first)
 
       "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
       "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
-      "d" : => @moveZ(-@model.user.moveValue)
     )
 
 
@@ -208,7 +208,7 @@ class Controller
       activePlane = @flycam.getActivePlane()
       @flycam.move(Dimensions.transDim(
         [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep(activePlane)],
-        activePlane))
+        activePlane), activePlane)
     else
       @move([0, 0, z])
 

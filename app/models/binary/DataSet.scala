@@ -37,8 +37,8 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
     all.maxBy(_.priority)
   }
   
-  def deleteAllExcept(ids: Array[ObjectId]) = {
-    removeByIds(DataSet.findAll.map(_._id).filterNot(ids.contains))
+  def deleteAllExcept(names: Array[String]) = {
+    removeByIds(DataSet.findAll.filterNot( d => names.contains(d.name)).map(_._id))
   }
 
   def findOneByName(name: String) =

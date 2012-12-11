@@ -38,6 +38,8 @@ case class ExecLogger(var messages: List[String] = Nil,
 }
 
 class LevelCreateActor extends Actor{
+  val server = "localhost"
+  val port = Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000)
   def receive = {
     case CreateLevel(level) =>
       createLevel(level)
@@ -53,9 +55,10 @@ class LevelCreateActor extends Actor{
   
   def createLevel(level: Level) = {
     val logger = new ExecLogger
-    val js = html.admin.creator.phantom(level, "temp%i.png", "http://localhost:9000" + controllers.admin.routes.LevelCreator.use(level.id)).body
+    val js = html.admin.creator.phantom(level, "temp%i.png", "http://%s:%d".format(server, port) + controllers.admin.routes.LevelCreator.use(level.id)).body
     val file = createTempFile(js)
     println("phantomjs " + file.getAbsolutePath())
-    //("phantomjs %s".format(file.getAbsolutePath)) !! logger
+    ("phantomjs %s".format(file.getAbsolutePath)) !! logger
+    println("Finished phantomjs.")
   }
 }

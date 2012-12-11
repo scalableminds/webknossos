@@ -125,7 +125,7 @@ class Flycam2d
   moveActivePlane : (p) -> # vector of voxels in BaseVoxels
     p = Dimensions.transDim(p, @activePlane)
     ind = Dimensions.getIndices(@activePlane)
-    zoomFactor = 1 << @integerZoomSteps[@activePlane]
+    zoomFactor = Math.pow(2, @zoomSteps[@activePlane])
     scaleFactor = @scaleInfo.baseVoxelFactors
     delta = [p[0]*zoomFactor*scaleFactor[0], p[1]*zoomFactor*scaleFactor[1], p[2]*zoomFactor*scaleFactor[2]]
     # change direction of the value connected to space, based on the last direction

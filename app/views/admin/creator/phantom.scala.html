@@ -2,16 +2,36 @@
 
 var page = require('webpage').create();
 
-page.viewportSize = { width: @level.width, height : @level.height };
-page.content = "<html><body></body></html>";
+page.viewportSize = { width : 1000, height : 1000 };
 
-for( var i = 0; i < @level.depth; i++ ) {
-	(function (i) {
-		page.evaluate(function() {
-			document.body.innerHTML = "<h1>Frame #" + i + "</h1>";
-		});
-		page.render(@{outputFilepattern}.replace("%i", i));
-	})(i);
+var i = 0;
+var length = 0;
+
+var render = function() {
+  
+  page.evaluate(function() {
+    window.levelCreator.headlessRendering(i);
+  });
+    
+  page.onCallback = function (data) {
+    page.render(@{outputFilepattern}.replace("%i", i));
+    i++;
+
+    if (i < length) {
+      render();
+    } else {
+      phantom.exit();
+    }
+  }
 }
 
-phantom.exit();
+page.onCallback = function (data) {
+  if (data.message == "initialized") {
+
+    page.clipRect = { width : data.width, height : data.height };
+
+    length = data.length;
+  }
+}
+
+page.open("");

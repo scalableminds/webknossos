@@ -265,6 +265,16 @@ svg a:hover {
         resize: both;
         overflow: auto;
         height: 175px;
+        position: relative;
+    }
+    #preview-error {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        max-width: 50%;
+        z-index: 100;
+        padding: 10px;
+        background: rgba(245,245,245,.8);
     }
     #preview canvas {
         display: block;

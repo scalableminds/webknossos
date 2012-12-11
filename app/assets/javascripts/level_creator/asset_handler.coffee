@@ -1,4 +1,7 @@
 ### define
+underscore : _
+jquery : $
+libs/event_mixin : EventMixin
 libs/request : Request
 routes : Routes
 ###
@@ -7,10 +10,18 @@ routes : Routes
 class AssetHandler
 
   WINDOW_URL : window.URL || window.webkitURL
+  SUPPORTED_IMAGE_TYPES :
+    ".bmp" : "image/bitmap"
+    ".jpg" : "image/jpeg"
+    ".gif" : "image/gif"
+    ".png" : "image/png"
 
   constructor : ( @levelId ) ->
 
+    _.extend(this, new EventMixin())
+
     @assetStore = {}
+    @imageStore = {}
 
     $form = $("#assets-upload")
 
@@ -52,11 +63,15 @@ class AssetHandler
 
       $input.click()
 
+    #### init
+
     Request.send(
       url : Routes.controllers.admin.LevelCreator.listAssets(@levelId).url
       dataType : "json"
     ).done (assets) =>
-      @loadAsset(asset) for asset in assets
+      deferreds = (@loadAsset(asset) for asset in assets)
+      $.when(deferreds...).done => @trigger("initialized")
+
       return
 
   
@@ -66,12 +81,33 @@ class AssetHandler
       url : Routes.controllers.admin.LevelCreator.retrieveAsset(@levelId, name).url
       dataType : "arraybuffer"
     ).done (data) =>
+
       @assetStore[name] = data
+
+      extension = name.substring(name.lastIndexOf("."))
+      if @SUPPORTED_IMAGE_TYPES[extension]?
+
+        blob = @getBlob(name, @SUPPORTED_IMAGE_TYPES[extension])
+
+        deferred = new $.Deferred()
+
+        image = new Image()
+        image.onload = =>
+          @WINDOW_URL.revokeObjectURL(image.src)
+          @imageStore[name] = image
+          deferred.resolve()
+
+        image.src = @WINDOW_URL.createObjectURL(blob)
+
+        deferred
+
+      else
+        true
 
 
   getArrayBuffer : (name) ->
 
-    throw new Error("Asset not found.") unless @assetStore[name]?
+    throw new Error("Asset \"#{name}\" not found.") unless @assetStore[name]?
     @assetStore[name]
 
 
@@ -80,23 +116,31 @@ class AssetHandler
     new arrayType(@getArrayBuffer(name))
 
 
-  getBlob : (name) ->
+  getBlob : (name, mimeType) ->
 
-    new Blob([ @getArray(name) ])
+    if mimeType?
+      new Blob([ @getArray(name) ], type : mimeType )
+    else
+      new Blob([ @getArray(name) ])
 
 
-  getImage : (name, mimeType = "image/png") ->
 
-    console.warn("AssetHandler.getImage returns an image which is asynchronously populated.")
+  getImage : (name) ->
 
-    blob = @getBlob(name).slice(0, -1, mimeType)
+    throw new Error("Image \"#{name}\" not found.") unless @imageStore[name]?
+    @imageStore[name]
 
-    image = new Image()
-    image.onload = =>
-      @WINDOW_URL.revokeObjectURL(image.src)
-    image.src = @WINDOW_URL.createObjectURL(blob)
 
-    image
+  getPixelArray : (name) ->
+
+    image = @getImage(name)
+
+    canvas = $("<canvas>")[0]
+    context = canvas.getContext("2d")
+    canvas.width = image.width
+    canvas.height = image.height
+    context.drawImage(image, 0, 0)
+    context.getImageData(0, 0, canvas.width, canvas.height).data
 
 
 

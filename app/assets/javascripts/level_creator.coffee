@@ -17,7 +17,7 @@ class LevelCreator
   model : null
 
   assetHandler : null
-  preplugin_renderer : null
+  prepluginRenderer : null
 
   constructor : ->
 
@@ -30,7 +30,7 @@ class LevelCreator
     ]
 
     @assetHandler = new AssetHandler(@levelName)
-    @plugin_renderer = new PluginRenderer(@dimensions, @assetHandler)
+    @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler)
 
     ####
 
@@ -39,40 +39,21 @@ class LevelCreator
     @editor.setTheme("ace/theme/twilight")
     @editor.getSession().setMode("ace/mode/coffee")
 
-    $form = $("#editor-container").find("form")
-    $saveCodeButton = $form.find("[type=submit]")
-    $saveCodeButton.click => @updatePreview()
+    @$form = $("#editor-container form")
+    @$saveCodeButton = @$form.find("[type=submit]")
+    @$saveCodeButton.click => @updatePreview()
 
-    @editor.on "change", =>
+    @editor.on "change", => @updatePreview()
 
-      @plugin_renderer.setCode(@editor.getValue())
-
-      error = @plugin_renderer.compile()
-
-      if _.isFunction(error)
-        $saveCodeButton.removeClass("disabled").popover("destroy")
-
-      else
-
-        $saveCodeButton.addClass("disabled")
-        $saveCodeButton.popover(
-          placement : "right"
-          title : "No good code. No save."
-          content : error
-          trigger : "hover"
-        )
-
-    @editor._emit("change") # init
-
-    $form.submit (event) =>
+    @$form.submit (event) =>
 
       event.preventDefault()
 
-      return if $saveCodeButton.hasClass("disabled")
+      return if @$saveCodeButton.hasClass("disabled")
 
       code = @editor.getValue()
 
-      $form.find("[name=code]").val(code)
+      @$form.find("[name=code]").val(code)
 
       $.ajax(
         url : $form[0].action
@@ -92,11 +73,12 @@ class LevelCreator
     KeyboardJS.on "super+s,ctrl+s", (event) =>
       event.preventDefault()
       event.stopPropagation()
-      $saveCodeButton.click()
+      @$form.submit()
 
     ####
 
-    @canvas = $("#preview-canvas")[0]
+    @$canvas = $("#preview-canvas")
+    @canvas = @$canvas[0]
     @context = @canvas.getContext("2d")
 
     @$slider = $("#preview-slider")
@@ -117,6 +99,13 @@ class LevelCreator
 
     ####
 
+    @assetHandler.on "initialized", => @updatePreview()
+    @pluginRenderer.on "initialized", => @updatePreview()
+
+    if window.callPhantom?
+      @assetHandler.on "initialized", =>
+        @prepareHeadlessRendering()
+      
 
   updatePreview : ->
 
@@ -124,11 +113,31 @@ class LevelCreator
     
     imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
 
-    imageData.data.set(@plugin_renderer.render(sliderValue))
+    @pluginRenderer.setCode(@editor.getValue())
+    
+    try
 
-    @context.putImageData(imageData, 0, 0)
+      frameBuffer = @pluginRenderer.render(sliderValue)
+      imageData.data.set(frameBuffer)
+      @context.putImageData(imageData, 0, 0)
 
-    @$slider.prop( max : @plugin_renderer.getLength() )
+      @$slider.prop( max : @pluginRenderer.getLength() )
+
+      $("#preview-error").html("")
+      @$saveCodeButton.removeClass("disabled").popover("destroy")
+
+    catch error
+
+      @$saveCodeButton
+        .addClass("disabled")
+        .popover(
+          placement : "right"
+          title : "No good code. No save."
+          content : error
+          trigger : "hover"
+        )
+
+      $("#preview-error").html("<i class=\"icon-warning-sign\"></i> #{error}")
 
 
   zoomPreview : ->
@@ -142,6 +151,32 @@ class LevelCreator
       width : width * zoomValue
       height : height * zoomValue
     )
+
+
+  prepareHeadlessRendering : ->
+
+    @$canvas.css(
+      position : "fixed"
+      top : 0
+      left : 0
+      width : @canvas.width
+      height : @canvas.height
+      zIndex : 2000
+    )
+
+    window.callPhantom( 
+      message : "initialized"
+      length : @pluginRenderer.getLength()
+      width : @canvas.width
+      height : @canvas.height
+    )
+
+
+  headlessRenderung : (t) ->
+
+    window.callPhantom( message : "rendered" )
+
+
 
 
 

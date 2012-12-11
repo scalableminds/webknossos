@@ -182,11 +182,11 @@ class Controller
       "n" : => @createNewTree()
 
       #Move
-      "space" : => @moveZ( @model.user.moveValue)
-      "f" : => @moveZ( @model.user.moveValue)
+      "space" : (first) => @moveZ( @model.user.moveValue, first)
+      "f" : (first) => @moveZ( @model.user.moveValue, first)
 
-      "shift + space" : => @moveZ(-@model.user.moveValue)
-      "ctrl + space" : => @moveZ(-@model.user.moveValue)
+      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
+      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
       "d" : => @moveZ(-@model.user.moveValue)
     )
 
@@ -203,7 +203,14 @@ class Controller
 
   moveX : (x) => @move([x, 0, 0])
   moveY : (y) => @move([0, y, 0])
-  moveZ : (z) => @move([0, 0, z])
+  moveZ : (z, first) =>
+    if(first)
+      activePlane = @flycam.getActivePlane()
+      @flycam.move(Dimensions.transDim(
+        [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep(activePlane)],
+        activePlane))
+    else
+      @move([0, 0, z])
 
   zoomIn : =>
     @cameraController.zoomIn()

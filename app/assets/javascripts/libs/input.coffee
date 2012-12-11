@@ -28,6 +28,7 @@ class Input.KeyboardNoLoop
   constructor : (initialBindings) ->
 
     @bindings = []
+    @keyCount = 0
 
     for own key, callback of initialBindings
       @attach(key, callback)
@@ -36,8 +37,12 @@ class Input.KeyboardNoLoop
   attach : (key, callback) ->
 
     binding = KeyboardJS.on(key, 
-      (event) -> 
-        callback() unless $(":focus").length
+      (event) => 
+        @keyCount++
+        callback(@keyCount <= 2) unless $(":focus").length
+        return
+      () =>
+        @keyCount = 0
         return
     )
     @bindings.push(binding)

@@ -13,6 +13,9 @@ class ArrayBufferSocket
 
     _.extend(this, options)
 
+
+  open : ->
+
     @sender = @senders[0]
     @sender.open(this)
   
@@ -40,6 +43,10 @@ class ArrayBufferSocket
         else
           null
     )
+
+  close : ->
+
+    @sender.close()
 
 
 class ArrayBufferSocket.WebSocket

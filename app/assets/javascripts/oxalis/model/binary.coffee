@@ -40,6 +40,11 @@ class Binary
     @ping(position, options)
 
 
+  updateLookupTable : (brightness, contrast) ->
+
+    console.log brightness, contrast
+
+
   pingImpl : (position, options) ->
 
     if @lastPosition?

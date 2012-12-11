@@ -35,7 +35,7 @@ class Gui
       routeClippingDistance: data.routeClippingDistance
       displayCrosshairs: data.displayCrosshair
 
-      4Bit : data.4Bit
+      fourBit : data.fourBit
       brightness : data.brightness
       contrast : data.contrast
       interpolation : data.interpolation
@@ -84,8 +84,8 @@ class Gui
                           .name("Show Crosshairs")
                           .onChange(@setDisplayCrosshair)
 
-    fView = @gui.addFolder("Planes")
-    (fView.add @settings, "4Bit")
+    fView = @gui.addFolder("Voxel")
+    (fView.add @settings, "fourBit")
                           .name("4 Bit")
                           .onChange(@set4Bit)
     (fView.add @settings, "brightness", -256, 256) 
@@ -227,7 +227,7 @@ class Gui
 
   set4Bit : (value) =>
     @model.binary.queue.set4Bit(value)
-    @model.user.4Bit = (Boolean) value
+    @model.user.fourBit = (Boolean) value
     @model.user.push()
 
   setBrightnessAndContrast : =>

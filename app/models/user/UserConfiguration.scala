@@ -33,7 +33,7 @@ object UserConfiguration {
       "lockZoom" -> JsBoolean( true ),
       "displayCrosshair" -> JsBoolean( true ),
       "interpolation" -> JsBoolean( true ),
-      "4Bit" -> JsBoolean( true ),
+      "fourBit" -> JsBoolean( true ),
       "brightness" -> JsNumber( 0 ),
       "contrast" -> JsNumber( 1 ),
       "minZoomStep" -> JsNumber( 0 ),

@@ -299,6 +299,7 @@ class Controller
         # center the node if click was in 3d-view
         centered = plane == VIEW_3D
         @setActiveNode(nodeID, centered)
+        break
 
   ########### Model Interaction
 

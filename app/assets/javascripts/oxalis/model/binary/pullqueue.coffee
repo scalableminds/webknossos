@@ -137,10 +137,13 @@ class PullQueue
           if responseBuffer?
             for bucket, i in batch
 
-              bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
+              if @fourBit
+                bucketData = @decode(responseBuffer.subarray(i * (@cube.BUCKET_LENGTH >> 1), (i + 1) * (@cube.BUCKET_LENGTH >> 1)))
+              else
+                bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
+
               #console.log "Success: ", bucket
               @cube.setBucketByZoomedAddress(bucket, bucketData)
-              
 
         =>
           
@@ -174,13 +177,28 @@ class PullQueue
     @socket.open()
 
 
+  decode : (colors) ->
+
+    # Expand 4-bit data
+    newColors = new Uint8Array(colors.length << 1)
+
+    index = 0
+    while index < newColors.length
+      value = colors[index >> 1] 
+      newColors[index] = value & 0b11110000
+      index++
+      newColors[index] = value << 4
+      index++
+
+    newColors
+
   initializeLoadBuckets : ->
 
     @socket4Bit = new ArrayBufferSocket(
       senders : [
-        #new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=true&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=true&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&halfbyte=1&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        #new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfByte=1&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfByte=1&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&halfByte=1&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array
@@ -188,9 +206,9 @@ class PullQueue
 
     @socket8Bit = new ArrayBufferSocket(
       senders : [
-        #new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=false&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=false&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&halfbyte=0&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        #new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfByte=0&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfByte=0&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&halfByte=0&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array

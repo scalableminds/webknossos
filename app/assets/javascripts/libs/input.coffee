@@ -1,8 +1,8 @@
 ### define
-libs/keyboard : KeyboardJS
-libs/gamepad : GamepadJS
-libs/event_mixin : EventMixin
-libs/jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
+./keyboard : KeyboardJS
+./gamepad : GamepadJS
+./event_mixin : EventMixin
+./jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
 ###
 
 Input = {}
@@ -28,6 +28,7 @@ class Input.KeyboardNoLoop
   constructor : (initialBindings) ->
 
     @bindings = []
+    @keyCount = 0
 
     for own key, callback of initialBindings
       @attach(key, callback)
@@ -36,8 +37,12 @@ class Input.KeyboardNoLoop
   attach : (key, callback) ->
 
     binding = KeyboardJS.on(key, 
-      (event) -> 
-        callback() unless $(":focus").length
+      (event) => 
+        @keyCount++
+        callback(@keyCount <= 2) unless $(":focus").length
+        return
+      () =>
+        @keyCount = 0
         return
     )
     @bindings.push(binding)
@@ -80,10 +85,9 @@ class Input.Keyboard
         # KeyboardJS does not receive the up event.
 
         unless @keyCallbackMap[key]? or $(":focus").length
-          if not event.ctrlKey
-            @keyPressedCount++ 
-            @keyCallbackMap[key] = callback
-            @buttonLoop() if @keyPressedCount == 1
+          @keyPressedCount++ 
+          @keyCallbackMap[key] = callback
+          @buttonLoop() if @keyPressedCount == 1
 
         return
 

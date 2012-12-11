@@ -1,7 +1,8 @@
 ### define
 ./cube : Cube
 ./pullqueue : Queue
-../../libs/event_mixin : EventMixin
+../dimensions : DimensionHelper
+../../../libs/event_mixin : EventMixin
 ###
 
 # Macros
@@ -24,12 +25,13 @@ bufferOffsetByTileMacro = (tile, tileSize) ->
 class Plane2D
 
   # Constants
-  TEXTURE_SIZE_P : 9
+  TEXTURE_SIZE_P : 0
   BUCKETS_IN_A_ROW : 0
   MAP_SIZE : 85 # 4⁰ + 4¹ + 4² + 4³
   RECURSION_PLACEHOLDER : {}
   DELTA : [10, 5, 0]
 
+  index : null
   u : 0
   v : 0
   w : 0
@@ -45,11 +47,13 @@ class Plane2D
   changed : true
 
 
-  constructor : (@u, @v, @w, @cube, @queue) ->
+  constructor : (@index, @cube, @queue, @TEXTURE_SIZE_P) ->
 
     _.extend(@, new EventMixin())
 
     @BUCKETS_IN_A_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
+
+    [@u, @v, @w] = Dimensions.getIndices(@index)
 
     @cube.on "bucketLoaded", (bucket, zoomStep, oldZoomStep) =>
 

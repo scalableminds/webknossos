@@ -1,8 +1,7 @@
 ### define
-model : Model
-view : View
-model/game : Game
-libs/dimensions : DimensionsHelper
+../model : Model
+../view : View
+../model/dimensions : DimensionsHelper
 ###
 
 
@@ -34,10 +33,6 @@ class Plane
     transformed = Dimensions.transDim(@model.scaleInfo.baseVoxelFactors, @planeID)
     # Apparently y and z are switched for those guys...
     @scaleVector = new THREE.Vector3(transformed[0], 1, transformed[1])
-    
-    console.log "scaleVector: "
-    console.log @scaleVector
-
     @createMeshes(planeWidth, textureWidth)
 
   createMeshes : (pWidth, tWidth) ->

@@ -1,26 +1,27 @@
 ### define
 jquery : $
 underscore : _
-controller/cameracontroller : CameraController
-controller/scenecontroller : SceneController
-model : Model
-view : View
-view/gui : Gui
-input : Input
-model/flycam : Flycam
-libs/event_mixin : EventMixin
-libs/dimensions : DimensionsHelper
+./controller/cameracontroller : CameraController
+./controller/scenecontroller : SceneController
+./model : Model
+./model/dimensions : DimensionsHelper
+./view : View
+./view/gui : Gui
+./model/flycam : Flycam
+../libs/event_mixin : EventMixin
+../libs/input : Input
 ###
 
-PLANE_XY         = 0
-PLANE_YZ         = 1
-PLANE_XZ         = 2
-VIEW_3D          = 3
+PLANE_XY         = Dimensions.PLANE_XY
+PLANE_YZ         = Dimensions.PLANE_YZ
+PLANE_XZ         = Dimensions.PLANE_XZ
+VIEW_3D          = Dimensions.VIEW_3D
 TYPE_USUAL       = 0
 TYPE_BRANCH      = 1
 VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 TEXTURE_SIZE     = 512
+TEXTURE_SIZE_P   = 9
 
 
 class Controller
@@ -31,10 +32,9 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize().done =>
+    @model.initialize(TEXTURE_SIZE_P, VIEWPORT_WIDTH).done =>
 
-      # create Model
-      @flycam = new Flycam(VIEWPORT_WIDTH, @model)
+      @flycam = @model.flycam
       @view  = new View(@model, @flycam)
 
       # initialize Camera Controller
@@ -56,8 +56,10 @@ class Controller
         @prevControls.append(buttons[i])
 
       @view.createKeyboardCommandOverlay()
+      @view.createDoubleJumpModal()
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
+
       meshes = @sceneController.getMeshes()
       
       for mesh in meshes
@@ -180,11 +182,11 @@ class Controller
       "n" : => @createNewTree()
 
       #Move
-      "space" : => @moveZ( @model.user.moveValue)
-      "f" : => @moveZ( @model.user.moveValue)
+      "space" : (first) => @moveZ( @model.user.moveValue, first)
+      "f" : (first) => @moveZ( @model.user.moveValue, first)
 
-      "shift + space" : => @moveZ(-@model.user.moveValue)
-      "ctrl + space" : => @moveZ(-@model.user.moveValue)
+      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
+      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
       "d" : => @moveZ(-@model.user.moveValue)
     )
 
@@ -195,12 +197,20 @@ class Controller
     @model.route.globalPosition = @flycam.getGlobalPos()
     @cameraController.update()
     @sceneController.update()
+    @model.route.rendered()
 
   move : (v) => @flycam.moveActivePlane(v)
 
   moveX : (x) => @move([x, 0, 0])
   moveY : (y) => @move([0, y, 0])
-  moveZ : (z) => @move([0, 0, z])
+  moveZ : (z, first) =>
+    if(first)
+      activePlane = @flycam.getActivePlane()
+      @flycam.move(Dimensions.transDim(
+        [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep(activePlane)],
+        activePlane))
+    else
+      @move([0, 0, z])
 
   zoomIn : =>
     @cameraController.zoomIn()
@@ -272,6 +282,7 @@ class Controller
  
     # identify clicked object
     intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
+    #console.log "Intersects: ", intersects
 
     if intersects.length > 0 and intersects[0].distance >= 0
       intersectsCoord = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]

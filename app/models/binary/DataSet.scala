@@ -36,6 +36,10 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
       throw new Exception("No default data set found!")
     all.maxBy(_.priority)
   }
+  
+  def deleteAllExcept(ids: Array[ObjectId]) = {
+    removeByIds(DataSet.findAll.map(_._id).filterNot(ids.contains))
+  }
 
   def findOneByName(name: String) =
     findOne(MongoDBObject("name" -> name))

@@ -12,10 +12,10 @@ underscore : _
 ../libs/input : Input
 ###
 
-PLANE_XY         = 0
-PLANE_YZ         = 1
-PLANE_XZ         = 2
-VIEW_3D          = 3
+PLANE_XY         = Dimensions.PLANE_XY
+PLANE_YZ         = Dimensions.PLANE_YZ
+PLANE_XZ         = Dimensions.PLANE_XZ
+VIEW_3D          = Dimensions.VIEW_3D
 TYPE_USUAL       = 0
 TYPE_BRANCH      = 1
 VIEWPORT_WIDTH   = 380
@@ -275,6 +275,7 @@ class Controller
  
     # identify clicked object
     intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
+    #console.log "Intersects: ", intersects
 
     if intersects.length > 0 and intersects[0].distance >= 0
       intersectsCoord = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]

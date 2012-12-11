@@ -1,21 +1,21 @@
 ### define
 jquery : $
 underscore : _
-controller/cameracontroller : CameraController
-controller/scenecontroller : SceneController
-model : Model
-view : View
-view/gui : Gui
-input : Input
-model/flycam : Flycam
-libs/event_mixin : EventMixin
-libs/dimensions : DimensionsHelper
+./controller/cameracontroller : CameraController
+./controller/scenecontroller : SceneController
+./model : Model
+./model/dimensions : DimensionsHelper
+./view : View
+./view/gui : Gui
+./model/flycam : Flycam
+../libs/event_mixin : EventMixin
+../libs/input : Input
 ###
 
-PLANE_XY         = 0
-PLANE_YZ         = 1
-PLANE_XZ         = 2
-VIEW_3D          = 3
+PLANE_XY         = Dimensions.PLANE_XY
+PLANE_YZ         = Dimensions.PLANE_YZ
+PLANE_XZ         = Dimensions.PLANE_XZ
+VIEW_3D          = Dimensions.VIEW_3D
 TYPE_USUAL       = 0
 TYPE_BRANCH      = 1
 VIEWPORT_WIDTH   = 380
@@ -56,8 +56,10 @@ class Controller
         @prevControls.append(buttons[i])
 
       @view.createKeyboardCommandOverlay()
+      @view.createDoubleJumpModal()
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
+
       meshes = @sceneController.getMeshes()
       
       for mesh in meshes
@@ -195,6 +197,7 @@ class Controller
     @model.route.globalPosition = @flycam.getGlobalPos()
     @cameraController.update()
     @sceneController.update()
+    @model.route.rendered()
 
   move : (v) => @flycam.moveActivePlane(v)
 
@@ -272,6 +275,7 @@ class Controller
  
     # identify clicked object
     intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
+    console.log "Intersects: ", intersects
 
     if intersects.length > 0 and intersects[0].distance >= 0
       intersectsCoord = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
@@ -297,7 +301,7 @@ class Controller
     @model.route.pushBranch()
 
   popBranch : =>
-    @model.route.popBranch().done((id) => 
+    _.defer => @model.route.popBranch().done((id) => 
       @setActiveNode(id, true)
     )
 

@@ -1,8 +1,8 @@
 ### define
 jquery : $
 underscore : _
-../libs/request : Request
-../libs/event_mixin : EventMixin
+../../libs/request : Request
+../../libs/event_mixin : EventMixin
 ./tracepoint : TracePointClass
 ###
 
@@ -42,6 +42,9 @@ class Route
 
     # For trees that are disconnected
     lostTrees = []
+
+    @doubleBranchPop = false
+    @savedCurrentState = true
 
     ############ Load Tree from @data ##############
     
@@ -108,10 +111,13 @@ class Route
         @createNewTree()
 
     $(window).on(
-      "unload"
-      => 
-        @pushBranch()
-        @pushImpl()
+      "beforeunload"
+      =>
+        if !@savedCurrentState
+          @pushImpl()
+          return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
+        else
+          return
     )
 
   # Returns an object that is structured the same way as @data is
@@ -151,16 +157,20 @@ class Route
             resolution : 0
           })
 
-    console.log "NML-Objekt"
-    console.log result
+#    console.log "NML-Objekt"
+#    console.log result
     return result
 
 
+  push : ->
+    @savedCurrentState = false
+    @pushDebounced()
+
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.
-  push : ->
-    @push = _.throttle(_.mutexDeferred(@pushImpl, -1), PUSH_THROTTLE_TIME)
-    @push()
+  pushDebounced : ->
+    @pushDebounced = _.throttle(_.mutexDeferred(@pushImpl, -1), PUSH_THROTTLE_TIME)
+    @pushDebounced()
 
   pushImpl : ->
 
@@ -176,6 +186,7 @@ class Route
       @push()
       deferred.reject()
     .done =>
+      @savedCurrentState = true
       deferred.resolve()
 
   # INVARIANTS:
@@ -187,24 +198,51 @@ class Route
     if @activeNode
       @branchStack.push(@activeNode)
       @activeNode.type = TYPE_BRANCH
+      @push()
 
       @trigger("setBranch", true)
 
   popBranch : ->
-
-    point = @branchStack.pop()
-    @push()
     deferred = new $.Deferred()
-    if point
-      @activeNode = point
-      @activeNode.type = TYPE_USUAL
+    if @doubleBranchPop
+      @showBranchModal().done(=>
+        point = @branchStack.pop()
+        @push()
+        if point
+          @activeNode = point
+          @activeNode.type = TYPE_USUAL
 
-      @trigger("setBranch", false)
-
-      deferred.resolve(@activeNode.id)
+          @trigger("setBranch", false)
+          @doubleBranchPop = true
+          deferred.resolve(@activeNode.id)
+        else
+          @trigger("emptyBranchStack")
+          deferred.reject())
     else
-      @trigger("emptyBranchStack")
-      deferred.reject()
+      point = @branchStack.pop()
+      @push()
+      if point
+        @activeNode = point
+        @activeNode.type = TYPE_USUAL
+
+        @trigger("setBranch", false)
+        @doubleBranchPop = true
+        deferred.resolve(@activeNode.id)
+      else
+        @trigger("emptyBranchStack")
+        deferred.reject()
+    deferred
+
+  showBranchModal : ->
+    @branchDeferred = new $.Deferred()
+    $("#double-jump").modal("show")
+    return @branchDeferred
+
+  rejectBranchDeferred : ->
+    @branchDeferred.reject()
+
+  resolveBranchDeferred : ->
+    @branchDeferred.resolve()
       
 
   addNode : (position, type) ->
@@ -221,6 +259,8 @@ class Route
       @activeTree.parent = null
     @activeNode = point
     @lastActiveNodeId = @activeNode.id
+    @doubleBranchPop = false
+    @push()
 
     @trigger("newNode")
 
@@ -243,8 +283,8 @@ class Route
 
   setActiveNodeRadius : (radius) ->
     # make sure radius is within bounds
-    radius = Math.min(MAX_RADIUS * @scaleInfo.baseVoxel)
-    radius = Math.max(MIN_RADIUS * @scaleInfo.baseVoxel)
+    radius = Math.min(MAX_RADIUS * @scaleInfo.baseVoxel, radius)
+    radius = Math.max(MIN_RADIUS * @scaleInfo.baseVoxel, radius)
     if @activeNode
       @activeNode.size = radius
       @lastRadius = radius
@@ -317,16 +357,20 @@ class Route
     unless @activeNode
       return
     id = @activeNode.id
+    hasNoChildren = false
     @activeNode = @activeNode.parent
     if @activeNode
-      @activeNode.remove(id)
+      hasNoChildren = @activeNode.remove(id)
       @lastActiveNodeId = @activeNode.id
     else
       # Root is deleted
       @deleteActiveTree()
     @push()
 
-    @trigger("deleteActiveNode")
+    if hasNoChildren
+      @trigger("deleteLastNode", id)
+    else
+      @trigger("deleteActiveNode")
 
   deleteActiveTree : ->
     # There should always be an active Tree
@@ -372,6 +416,9 @@ class Route
     for tree in @trees
       result = result.concat(@getNodeList(tree))
     return result
+
+  rendered : ->
+    @trigger("rendered")
 
   # Helper method used in initialization
   findNodeInList : (list, id) ->

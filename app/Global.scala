@@ -36,6 +36,10 @@ object Global extends GlobalSettings {
       Akka.system.scheduler.scheduleOnce(1 second)(InitialData.insert())
     }
   }
+  
+  override def onStop(app: Application){
+    models.context.db.close()
+  }
 }
 
 /**

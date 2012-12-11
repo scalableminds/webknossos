@@ -4,7 +4,7 @@
 ./model/user : User
 ./model/scaleinfo : ScaleInfoClass
 ./model/flycam : Flycam
-./libs/request : Request
+../libs/request : Request
 ###
 
 # This is the model. It takes care of the data including the 
@@ -32,8 +32,10 @@ class Model
           dataType : "json"
         ).pipe((user) =>
 
+          console.log tracing
           @binary = new Binary(tracing.dataSet, TEXTURE_SIZE_P)
           @scaleInfo = new ScaleInfo(tracing.tracing.scale)
+          console.log @scaleInfo.baseVoxelFactors
           @route = new Route(tracing.tracing, tracing.dataSet, @scaleInfo)
           @user = new User(user)
           #@flycam = new Flycam(TEXTURE_SIZE_P, VIEWPORT_SIZE)

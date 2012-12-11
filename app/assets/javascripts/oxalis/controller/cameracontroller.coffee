@@ -1,7 +1,7 @@
 ### define
-model : Model
-view : View
-libs/dimensions : DimensionsHelper
+../model : Model
+../view : View
+../model/dimensions : DimensionsHelper
 ###
 
 
@@ -156,7 +156,7 @@ class CameraController
     @updateCamViewport()
 
   getRouteClippingDistance : (planeID) ->
-    @camDistance * @model.route.voxelPerNM[planeID]
+    @camDistance * @model.scaleInfo.voxelPerNM[planeID]
 
   updateCamViewport : ->
     scaleFactor = @model.scaleInfo.baseVoxel

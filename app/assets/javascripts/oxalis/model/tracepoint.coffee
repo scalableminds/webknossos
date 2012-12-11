@@ -26,16 +26,19 @@ class TracePoint
     return null
 
   remove : (id) ->
-    for i in [0..@children.length]
+    isLastNode = false
+    for i in [0...@children.length]
       if @children[i].id == id
         if @children[i].children.length
           for child in @children[i].children
             # fix parent and children relations
             @appendNext(child)
             child.parent = @
+        else
+          isLastNode = true
         # Remove child
         @children.splice(i, 1)
-        return
+        return isLastNode
 
   getChildren : ->
     return @children

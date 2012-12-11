@@ -1,12 +1,11 @@
 ### define
 jquery : $
-model/flycam : Flycam
-libs/Tween : TWEEN_LIB
-model/game : Game
-libs/event_mixin : EventMixin
-view/toast : Toast
-libs/dimensions : DimensionsHelper
-model/route : Route
+./model/flycam : Flycam
+./model/route : Route
+./model/dimensions : DimensionsHelper
+../libs/toast : Toast
+../libs/event_mixin : EventMixin
+../libs/Tween : TWEEN_LIB
 ###
 
 #model : Model
@@ -218,6 +217,24 @@ class View
 
   getLights  : =>
     @lights
+
+  createDoubleJumpModal : ->
+    $("#double-jump").append("<div class=\"modal-body\">
+            <p>You didn't add a node after jumping to this branchpoint, do you really want to jump again?</p>
+          </div>
+          <div class=\"modal-footer\">
+            <a href=\"#\" id=\"jump-button\" class=\"btn\">Jump again</a>
+            <a href=\"#\" id=\"cancel-button\" class=\"btn\">Cancel</a>
+          </div>")
+
+    $("#jump-button").on("click", => 
+      @model.route.resolveBranchDeferred()
+      $("#double-jump").modal("hide"))
+
+    $("#cancel-button").on("click", => 
+      @model.route.rejectBranchDeferred()
+      $("#double-jump").modal("hide"))
+
 
   createKeyboardCommandOverlay : ->
 

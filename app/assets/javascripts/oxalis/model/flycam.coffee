@@ -1,6 +1,6 @@
 ### define
-libs/event_mixin : EventMixin
-libs/dimensions : DimensionsHelper
+../../libs/event_mixin : EventMixin
+./dimensions : DimensionsHelper
 ###
 
 # constants (for active_plane)
@@ -118,16 +118,12 @@ class Flycam2d
     @spaceDirection
 
   move : (p) -> #move by whatever is stored in this vector
-    if @activePlane == PLANE_XY
-      # BAD consider the different resolution in z-direction
-      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+2*p[2]])
-    else
-      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
+    @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
     
-  moveActivePlane : (p) ->
+  moveActivePlane : (p) -> # vector of voxels in BaseVoxels
     p = Dimensions.transDim(p, @activePlane)
     ind = Dimensions.getIndices(@activePlane)
-    zoomFactor = Math.pow(2, @integerZoomSteps[@activePlane])
+    zoomFactor = Math.pow(2, @zoomSteps[@activePlane])
     scaleFactor = @model.scaleInfo.baseVoxelFactors
     delta = [p[0]*zoomFactor*scaleFactor[0], p[1]*zoomFactor*scaleFactor[1], p[2]*zoomFactor*scaleFactor[2]]
     # change direction of the value connected to space, based on the last direction

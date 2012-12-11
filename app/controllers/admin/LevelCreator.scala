@@ -78,7 +78,7 @@ object LevelCreator extends Controller with Secured {
       .getOrElse(BadRequest("Level not found."))
   }
 
-  def run(levelId: String) = Authenticated { implicit request =>
+  def produce(levelId: String) = Authenticated { implicit request =>
     Level
       .findOneById(levelId)
       .map { level =>

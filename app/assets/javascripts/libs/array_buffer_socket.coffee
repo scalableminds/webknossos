@@ -120,14 +120,6 @@ class ArrayBufferSocket.WebSocket
     @openDeferred.promise()
 
 
-  close : ->
-
-    if @socket
-      @socket.close()
-      @socket = null
-      @openDeferred = null
-
-
   send : (data) ->
 
     @initialize().pipe =>
@@ -150,6 +142,14 @@ class ArrayBufferSocket.WebSocket
       deferred.promise()
 
 
+  close : ->
+
+    if @socket
+      @socket.close()
+      @socket = null
+      @openDeferred = null
+
+
   createPackage : (data) ->
 
     transmitBuffer    = new @requestBufferType(1 + data.length)
@@ -159,6 +159,122 @@ class ArrayBufferSocket.WebSocket
 
     { transmitBuffer, socketHandle }
 
+
+  _window = window ? self
+  @prototype.WebSocketImpl = if _window.MozWebSocket then _window.MozWebSocket else _window.WebSocket
+
+
+class ArrayBufferSocket.WebWorker
+
+  # Constants
+  OPEN_TIMEOUT : 500
+  MESSAGE_TIMEOUT : 20000
+
+  pendingRequests : []
+
+  constructor : (@url) ->
+
+
+  open : ({ @responseBufferType, @requestBufferType }) ->
+    
+    @initialize()
+
+
+  initialize : ->
+
+    unless @worker and @openDeferred
+
+      unless @WebSocketImpl?
+        return openDeferred.reject("No WebSocekt support").promise()
+
+      openDeferred = @openDeferred = $.Deferred()
+
+      console.log "Creating worker"
+      @worker = new Worker('./assets/javascripts/model/pullworker.js')
+      @worker.addEventListener(
+        "message"
+        (event) =>
+
+          switch event.data.message
+            
+            when 'open'
+              openDeferred.resolve()
+            
+            when 'error'
+              console.error("socket error", event.error)
+            
+            when 'close'
+              @worker = null
+              request.reject("socket closed") for request in @pendingRequests
+              @pendingRequests.length = 0
+              console.error("socket closed", "#{code}: #{reason}")
+            
+            when 'data'
+              buffer = event.data.buffer
+              handle = new Float32Array(buffer, 0, 1)[0]
+
+              for request in @pendingRequests when request.handle == handle
+   
+                _.removeElement(@pendingRequests, request)
+ 
+                if buffer.byteLength > 4
+                  request.resolve(new @responseBufferType(buffer, 4))
+                else
+                  request.reject()
+
+                break              
+      )
+
+      @worker.postMessage({ message: 'initialize', url: @url })
+
+      setTimeout(
+        => 
+          if not @worker
+            openDeferred.reject("timeout")
+        @OPEN_TIMEOUT
+      )
+    
+    @openDeferred.promise()
+
+
+  send : (data) ->
+
+    @initialize().pipe =>
+    
+      { transmitBuffer, socketHandle } = @createPackage(data)
+
+      deferred = $.Deferred()
+      deferred.handle = socketHandle
+
+      @pendingRequests.push(deferred)
+      @worker.webkitPostMessage({ message: 'send', buffer: transmitBuffer.buffer })
+
+      setTimeout(
+        => 
+          _.removeElement(@pendingRequests, deferred) if deferred.state() == "pending"
+          deferred.reject("timeout")
+        @MESSAGE_TIMEOUT
+      )
+
+      deferred.promise()
+
+
+  close : ->
+
+    if @worker
+      @worker.postMessage({ message: 'close' })
+      @worker = null
+      @openDeferred = null
+
+
+  createPackage : (data) ->
+
+    transmitBuffer    = new @requestBufferType(1 + data.length)
+    transmitBuffer[0] = Math.random()
+    transmitBuffer.set(data, 1)
+    socketHandle      = transmitBuffer[0]
+
+    { transmitBuffer, socketHandle }
 
   _window = window ? self
   @prototype.WebSocketImpl = if _window.MozWebSocket then _window.MozWebSocket else _window.WebSocket

@@ -1,5 +1,5 @@
 ### define
-../../libs/event_mixin : EventMixin
+../../../libs/event_mixin : EventMixin
 ###
 
 class Cube
@@ -12,9 +12,10 @@ class Cube
   cube : null
   cubeSize : null
   cubeOffset : null
+  upperBoundary : null
 
 
-  constructor : () ->
+  constructor : (@upperBoundary) ->
     
     _.extend(@, new EventMixin())
 

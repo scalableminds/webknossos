@@ -1,8 +1,8 @@
 ### define
-libs/keyboard : KeyboardJS
-libs/gamepad : GamepadJS
-libs/event_mixin : EventMixin
-libs/jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
+./keyboard : KeyboardJS
+./gamepad : GamepadJS
+./event_mixin : EventMixin
+./jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
 ###
 
 Input = {}

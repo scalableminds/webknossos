@@ -43,4 +43,5 @@ require [
   require [
     "./main/enhancements"
     "./main/routing"
+    "libs/core_ext"
   ], ->

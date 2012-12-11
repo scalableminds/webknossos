@@ -73,7 +73,7 @@ object LevelCreator extends Controller with Secured {
     Level
       .findOneById(levelId)
       .map { level =>
-        Ok(Json.arr(level.assets.map(_.getName)))
+        Ok(Json.toJson(level.assets.map(_.getName)))
       }
       .getOrElse(BadRequest("Level not found."))
   }

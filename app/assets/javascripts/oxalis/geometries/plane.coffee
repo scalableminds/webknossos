@@ -1,14 +1,14 @@
 ### define
-model : Model
-view : View
-model/game : Game
+../model : Model
+../view : View
+../model/dimensions : DimensionsHelper
 ###
 
 
-PLANE_XY         = 0
-PLANE_YZ         = 1
-PLANE_XZ         = 2
-VIEW_3D          = 3
+PLANE_XY         = Dimensions.PLANE_XY
+PLANE_YZ         = Dimensions.PLANE_YZ
+PLANE_XZ         = Dimensions.PLANE_XZ
+VIEW_3D          = Dimensions.VIEW_3D
 BORDER_COLORS    = [0xff0000, 0x0000ff, 0x00ff00]
 CROSSHAIR_COLORS = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
 GRAY_CH_COLOR    = 0x222222
@@ -26,15 +26,11 @@ class Plane
     @textureWidth    = textureWidth
     @displayCosshair = true
 
-    # transform scaleVector (because they are rotated)
-    transformed  = new Array(3)
     # planeWidth means that the plane should be that many voxels wide in the
     # dimension with the highest resolution. In all other dimensions, the plane
     # is smaller in voxels, so that it is squared in nm.
-    maxVoxelPerNM = Math.max.apply(null, @model.route.voxelPerNM)
-    for i in [0..2]
-      transformed[i] = @model.route.voxelPerNM[i] / maxVoxelPerNM
-    transformed = @flycam.transDim(transformed, @planeID)
+    # --> model.scaleInfo.baseVoxel
+    transformed = Dimensions.transDim(@model.scaleInfo.baseVoxelFactors, @planeID)
     # Apparently y and z are switched for those guys...
     @scaleVector = new THREE.Vector3(transformed[0], 1, transformed[1])
     

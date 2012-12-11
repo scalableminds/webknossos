@@ -18,9 +18,11 @@ class Binary
   direction : [0, 0, 0]
   
 
-  constructor : (@dataSetId) ->
+  constructor : (dataSet) ->
 
-    @cube = new Cube()
+    @dataSetId = dataSet.id
+
+    @cube = new Cube(dataSet.upperBoundary)
     @queue = new PullQueue(@dataSetId, @cube)
 
     @planes = [
@@ -30,7 +32,7 @@ class Binary
     ]
 
 
-  ping : (position, options) ->
+  ping : _.once (position, options) ->
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
     @ping(position, options)
@@ -66,3 +68,4 @@ class Binary
 
    # for i in [0...Math.min(options.length, @planes.length)]
     #  @planes[i].get(position, options[i]) if options[i]?
+

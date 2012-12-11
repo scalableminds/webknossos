@@ -1,12 +1,11 @@
 ### define
 libs/request : Request
+libs/keyboard : KeyboardJS
+libs/toast : Toast
 routes : routes
 libs/ace/ace : Ace
-coffee-script : CoffeeScript
-view/toast : Toast
-level_creator/asset_handler : AssetHandler
-level_creator/plugins : Plugins
-level_creator/preprocessor : Preprocessor
+./level_creator/asset_handler : AssetHandler
+./level_creator/plugin_renderer : PluginRenderer
 ###
 
 class LevelCreator
@@ -14,20 +13,26 @@ class LevelCreator
   plugins : []
   stack : null
   canvas : null
-  imageData : null
+  data : null
   model : null
 
   assetHandler : null
-  preprocessor : null
+  preplugin_renderer : null
 
   constructor : ->
 
     @levelName = $("#level-creator").data("level-id")
 
-    @data = null
+    @dimensions = [
+      parseInt( $("#level-creator").data("level-width")  )
+      parseInt( $("#level-creator").data("level-height") )
+      parseInt( $("#level-creator").data("level-depth")  )
+    ]
+
     @assetHandler = new AssetHandler(@levelName)
-    @preprocessor = new Preprocessor()
-    @plugins = new Plugins(@assetHandler)
+    @plugin_renderer = new PluginRenderer(@dimensions, @assetHandler)
+
+    ####
 
     # editor init
     @editor = Ace.edit("editor")
@@ -36,11 +41,15 @@ class LevelCreator
 
     $form = $("#editor-container").find("form")
     $saveCodeButton = $form.find("[type=submit]")
+    $saveCodeButton.click => @updatePreview()
 
     @editor.on "change", =>
 
-      code = @compile()
-      if code instanceof Function
+      @plugin_renderer.setCode(@editor.getValue())
+
+      error = @plugin_renderer.compile()
+
+      if _.isFunction(error)
         $saveCodeButton.removeClass("disabled").popover("destroy")
 
       else
@@ -49,7 +58,7 @@ class LevelCreator
         $saveCodeButton.popover(
           placement : "right"
           title : "No good code. No save."
-          content : code
+          content : error
           trigger : "hover"
         )
 
@@ -80,13 +89,18 @@ class LevelCreator
           )
       )
 
+    KeyboardJS.on "super+s,ctrl+s", (event) =>
+      event.preventDefault()
+      event.stopPropagation()
+      $saveCodeButton.click()
+
     ####
 
     @canvas = $("#preview-canvas")[0]
     @context = @canvas.getContext("2d")
 
-    $slider = $("#preview-slider")
-    $slider.on "change", =>
+    @$slider = $("#preview-slider")
+    @$slider.on "change", =>
       @updatePreview()
 
     # zooming
@@ -94,121 +108,34 @@ class LevelCreator
     $zoomSlider.on "change", =>
       @zoomPreview()
 
-    $("#zoom-reset").click( =>
+    $("#zoom-reset").click =>
       $zoomSlider.val(1)
       @zoomPreview()
-    )
 
-    dimensions = [
-      parseInt( $("#level-creator").data("level-width")  )
-      parseInt( $("#level-creator").data("level-height") )
-      parseInt( $("#level-creator").data("level-depth")  )
-    ]
+    @canvas.width = @dimensions[0]
+    @canvas.height = @dimensions[1]
 
-    $slider[0].max = dimensions[2] - 1
-
-    @canvas.width = dimensions[0]
-    @canvas.height = dimensions[1]
-
-    @requestStack(dimensions)
-
-
-  compile : ->
-
-    try
-
-      functionBody = CoffeeScript.compile(@editor.getValue(), bare : true)
-      func = new Function(
-        "plugins"
-        "with(plugins) { #{functionBody} }"
-      )
-
-      plugins =
-        time : (t, data, options) ->
-
-          if options.start <= t <= options.end
-            (cb) -> cb()
-          else
-            return
-
-        recolor : (color) ->
-          console.log "recoloring #{color}"
-
-        fadeOut : ->
-          console.log "fading.."
-
-      return func
-
-    catch err
-
-      return err.toString()
-
-
-
-
-  requestStack : (dimensions) ->
-
-    Request.send(
-      _.extend(
-        routes.controllers.BinaryData.arbitraryViaAjax(dimensions...),
-        dataType : "arraybuffer"
-      )
-    ).done (buffer) =>
-      @data = new Uint8Array(buffer)
-      @updatePreview()
+    ####
 
 
   updatePreview : ->
 
-    return unless @data
+    sliderValue = Math.floor(@$slider.val())
+    
+    imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
 
-    slider = $("#preview-slider")[0]
-    sliderValue = slider.value
-    t = sliderValue - Math.floor(sliderValue)
+    imageData.data.set(@plugin_renderer.render(sliderValue))
 
-    { width, height } = @canvas
+    @context.putImageData(imageData, 0, 0)
 
-    imageDataObject = @context.getImageData(0, 0, width, height)
-    imageData = imageDataObject.data
-
-    sourceData = @data
-
-    indexSourceLower = Math.floor(sliderValue) * width * height
-    indexSourceUpper = (Math.floor(sliderValue) + 1) * width * height
-    indexTarget = 0
-
-    for x in [0...width]
-      for y in [0...height]
-
-        #interpolation
-        dataLower = sourceData[indexSourceLower]
-        dataUpper = sourceData[indexSourceUpper]
-
-        interplotationData = dataLower + t * (dataUpper - dataLower)
-
-        # r,g,b
-        imageData[indexTarget++] = interplotationData
-        imageData[indexTarget++] = interplotationData
-        imageData[indexTarget++] = interplotationData
-
-        # alpha
-        imageData[indexTarget++] = 255
-        indexSourceLower++
-        indexSourceUpper++
-
-    @context.putImageData(imageDataObject, 0, 0)
-
-    console.log interplotationData
+    @$slider.prop( max : @plugin_renderer.getLength() )
 
 
   zoomPreview : ->
 
     zoomValue = $("#zoom-slider")[0].value
-    factor = 50
 
     { width, height } = @canvas
-    width  += factor * zoomValue
-    height += factor * zoomValue
 
     $canvas = $(@canvas)
     $canvas.css(

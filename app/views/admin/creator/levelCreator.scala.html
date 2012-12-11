@@ -16,7 +16,7 @@
       <div class="span2">
         <h5>Zoom</h5>
         <p>
-          <input type="range" min="0.2" max="5" step=".4" value="1" id="zoom-slider"/>
+          <input type="range" min="0.2" max="5" step=".1" value="1" id="zoom-slider"/>
           <button class="btn btn-small" id="zoom-reset">Reset</button>
         </p>
       </div>
@@ -29,7 +29,7 @@
         <h3>Editor</h3>
         @helper.form(action = controllers.admin.routes.LevelCreator.submitCode(level.id)) {
 
-        <input type="submit" value="Save" class="btn btn-primary">
+        <input type="submit" value="Save" class="btn btn-primary"/>
         <input type="hidden" name="code" />
         <input type="hidden" name="use" value="1" />
 

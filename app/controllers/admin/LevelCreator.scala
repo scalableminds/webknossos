@@ -12,9 +12,15 @@ import play.api.data.Forms.number
 import play.api.data.Forms.text
 import play.api.i18n.Messages
 import play.api.libs.json.Json
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+import akka.actor.Props
+import brainflight.knowledge.LevelCreateActor
+import brainflight.knowledge.CreateLevel
 
 object LevelCreator extends Controller with Secured {
   override def DefaultAccessRole = Role.Admin
+  val levelCreateActor = Akka.system.actorOf(Props(new LevelCreateActor))
 
   val levelForm = Form(
     mapping(
@@ -68,6 +74,16 @@ object LevelCreator extends Controller with Secured {
       .findOneById(levelId)
       .map { level =>
         Ok(Json.arr(level.assets.map(_.getName)))
+      }
+      .getOrElse(BadRequest("Level not found."))
+  }
+
+  def run(levelId: String) = Authenticated { implicit request =>
+    Level
+      .findOneById(levelId)
+      .map { level =>
+        levelCreateActor ! CreateLevel(level)
+        Ok("On my way")
       }
       .getOrElse(BadRequest("Level not found."))
   }

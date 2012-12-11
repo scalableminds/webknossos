@@ -7,10 +7,10 @@ page.content = '<html><body><canvas id="surface"></canvas></body></html>';
 
 for( var i = 0; i < @level.depth; i++ ) {
 	(function (i) {
-		page.evaluate(function() {
+		page.evaluate(function(i) {
 			document.body.innerHTML = "<h1>Frame #" + i + "</h1>";
-		});
-		page.render(@{outputFilepattern}.replace("%i", i));
+		}, i);
+		page.render("@{outputFilepattern}".replace("%i", i));
 	})(i);
 }
 

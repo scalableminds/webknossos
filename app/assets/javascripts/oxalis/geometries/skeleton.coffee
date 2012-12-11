@@ -229,7 +229,7 @@ class Skeleton
     @flycam.hasChanged = true
 
   getMeshes : =>
-    return [@activeNode].concat(@routes).concat(@nodes).concat(@nodesSpheres)
+    return [@activeNode].concat(@nodes).concat(@nodesSpheres).concat(@routes)
 
   setWaypoint : =>
     curGlobalPos = @flycam.getGlobalPos()
@@ -270,7 +270,7 @@ class Skeleton
       # Assign the ID to the vertex, so we can access it later
       @nodes[index].geometry.nodeIDs.push(id)
 
-      @trigger "newGeometries", [@pushNewNode(radius, position, id, color)]
+      @pushNewNode(radius, position, id, color)
 
       @routes[index].geometry.verticesNeedUpdate = true
       @nodes[index].geometry.verticesNeedUpdate = true
@@ -324,7 +324,7 @@ class Skeleton
     newNode.visible = @disSpheres
     newNode.doubleSided = true
     @nodesSpheres.push(newNode)
-    return newNode
+    @trigger "newGeometries", [newNode]
       
   getIndexFromTreeId : (treeId) ->
     unless treeId

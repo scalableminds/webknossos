@@ -96,6 +96,7 @@ class Controller
       @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
       @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
       @sceneController.setDisplayCrosshair @model.user.displayCrosshair
+      @sceneController.setInterpolation @model.user.interpolation
       @sceneController.setDisplaySV PLANE_XY, @model.user.displayPreviewXY
       @sceneController.setDisplaySV PLANE_YZ, @model.user.displayPreviewYZ
       @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ

@@ -34,6 +34,10 @@ class Gui
       moveValue : data.moveValue
       routeClippingDistance: data.routeClippingDistance
       displayCrosshairs: data.displayCrosshair
+
+      4Bit : data.4Bit
+      brightness : data.brightness
+      contrast : data.contrast
       interpolation : data.interpolation
       minZoomStep : data.minZoomStep
 
@@ -79,6 +83,19 @@ class Gui
     (fView.add @settings, "displayCrosshairs")
                           .name("Show Crosshairs")
                           .onChange(@setDisplayCrosshair)
+
+    fView = @gui.addFolder("Planes")
+    (fView.add @settings, "4Bit")
+                          .name("4 Bit")
+                          .onChange(@set4Bit)
+    (fView.add @settings, "brightness", -256, 256) 
+                          .step(5)
+                          .name("Brightness")    
+                          .onChange(@setBrightnessAndContrast)
+    (fView.add @settings, "contrast", 0.5, 5) 
+                          .step(0.1)
+                          .name("Contrast")    
+                          .onChange(@setBrightnessAndContrast)
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
                           .onChange(@setInterpolation)
@@ -206,6 +223,17 @@ class Gui
   setInterpolation : (value) =>
     @sceneController.setInterpolation(value)
     @model.user.interpolation = (Boolean) value
+    @model.user.push()
+
+  set4Bit : (value) =>
+    @model.binary.queue.set4Bit(value)
+    @model.user.4Bit = (Boolean) value
+    @model.user.push()
+
+  setBrightnessAndContrast : =>
+    @model.binary.updateLookupTable(@settings.brightness, @settings.contrast)
+    @model.user.brightness = (Number) @settings.brightness
+    @model.user.contrast = (Number) @settings.contrast
     @model.user.push()
 
   setMinZoomStep : (value) =>

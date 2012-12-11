@@ -21,6 +21,7 @@ TYPE_BRANCH      = 1
 VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 TEXTURE_SIZE     = 512
+TEXTURE_SIZE_P   = 9
 
 
 class Controller
@@ -31,10 +32,9 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize().done =>
+    @model.initialize(TEXTURE_SIZE_P, VIEWPORT_WIDTH).done =>
 
-      # create Model
-      @flycam = new Flycam(VIEWPORT_WIDTH, @model)
+      @flycam = @model.flycam
       @view  = new View(@model, @flycam)
 
       # initialize Camera Controller

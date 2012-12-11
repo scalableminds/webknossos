@@ -25,7 +25,7 @@ class Route
   activeNode : null
   activeTree : null
 
-  constructor : (@data, dataSet, @scaleInfo) ->
+  constructor : (@data, dataSet, @scaleInfo, @flycam) ->
 
     _.extend(this, new EventMixin())
 
@@ -47,8 +47,6 @@ class Route
     @savedCurrentState = true
 
     ############ Load Tree from @data ##############
-    
-    @globalPosition = data.editPosition
 
     # get tree to build
     for tree in @data.trees
@@ -128,7 +126,7 @@ class Route
     # Get Branchpoints
     for branchPoint in @branchStack
       result.branchPoints.push({id : branchPoint.id})
-    result.editPosition = @globalPosition
+    result.editPosition = @flycam.getGlobalPos
     result.trees = []
     for tree in @trees
       # Don't save empty trees (id is null)

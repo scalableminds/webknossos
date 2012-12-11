@@ -328,7 +328,6 @@
 		if(typeof keyCombo === 'string') {
 			keyCombo = parseKeyCombo(keyCombo);
 		}
-		console.log('BIND', keyCombo);
 		for(kI = 0; kI < keyCombo.length; kI += 1) {
 			binding = {};
 

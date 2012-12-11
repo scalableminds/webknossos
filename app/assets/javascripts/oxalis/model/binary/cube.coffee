@@ -195,8 +195,6 @@ class Cube
     max_y = Math.min(max_y, @upperBoundary[1] >> @BUCKET_SIZE_P)
     max_z = Math.min(max_z, @upperBoundary[2] >> @BUCKET_SIZE_P)
 
-    console.log "RESIZING TO ", min_x, min_y, min_z, max_x, max_y, max_z
-
     # First, we calculate the new dimension of the cuboid.
     if oldCube
 
@@ -271,6 +269,3 @@ class Cube
       @cube       = newCube
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
-
-    #console.log "RESIZE     ", [min_x,min_y,min_z], [max_x,max_y,max_z]
-    #console.log "RESIZED TO ", @cubeOffset, [@cubeOffset[0]+@cubeSize[0]-1,@cubeOffset[1]+@cubeSize[1]-1,@cubeOffset[2]+@cubeSize[2]-1]

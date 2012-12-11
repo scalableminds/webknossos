@@ -279,15 +279,16 @@ class Controller
     intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
     console.log "Intersects: ", intersects
 
-    if intersects.length > 0 and intersects[0].distance >= 0
+    #if intersects.length > 0 and intersects[0].distance >= 0
+    for intersect in intersects
       
-      index = intersects[0].index
-      nodeID = intersects[0].object.geometry.nodeIDs[index]
+      index = intersect.index
+      nodeID = intersect.object.geometry.nodeIDs[index]
       console.log "nodeID: ", nodeID
 
       #intersectsCoord = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
       #intersectsCoord = @model.route.getNode(nodeID).pos
-      posArray = intersects[0].object.geometry.__vertexArray
+      posArray = intersect.object.geometry.__vertexArray
       intersectsCoord = [posArray[3 * index], posArray[3 * index + 1], posArray[3 * index + 2]]
       globalPos = @flycam.getGlobalPos()
 

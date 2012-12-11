@@ -84,6 +84,7 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
    */
   override def load( dataSet: DataSet, resolution: Int, cube: Cuboid, halfbyte: Boolean = false ): Array[Byte] = { 
     if ( dataSet doesContain cube.topLeft ) { 
+      println("halfbyte: " + halfbyte)
       val block = PointToBlock( cube.topLeft, resolution )     
       val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
       

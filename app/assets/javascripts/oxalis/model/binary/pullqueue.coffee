@@ -6,8 +6,8 @@
 class PullQueue
 
   # Constants
-  BATCH_LIMIT : 10
-  BATCH_SIZE : 5
+  BATCH_LIMIT : 4
+  BATCH_SIZE : 1
   ROUND_TRIP_TIME_SMOOTHER : .125
   BUCKET_TIME_SMOOTHER : .125
 
@@ -167,10 +167,10 @@ class PullQueue
     @lastReceiveTime = new Date()
 
 
-  set4Bit : (fourBit) ->
+  set4Bit : (@fourBit) ->
 
     @socket.close() if @socket?
-    @socket = if fourBit then @socket4Bit else @socket8Bit
+    @socket = if @fourBit then @socket4Bit else @socket8Bit
     @socket.open()
 
 
@@ -178,9 +178,9 @@ class PullQueue
 
     @socket4Bit = new ArrayBufferSocket(
       senders : [
-        new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=true&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=true&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&halfbyte=true&cubeSize=#{1 << @cube.BUCKET_SIZE_P}&halfbyte=true")
+        #new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=true&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=true&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&halfbyte=1&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array
@@ -188,9 +188,9 @@ class PullQueue
 
     @socket8Bit = new ArrayBufferSocket(
       senders : [
-        new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=false&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=false&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&halfbyte=false&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        #new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=false&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        #new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfbyte=false&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&halfbyte=0&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array

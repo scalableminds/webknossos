@@ -213,7 +213,7 @@ class ArrayBufferSocket.WebWorker
               @worker = null
               request.reject("socket closed") for request in @pendingRequests
               @pendingRequests.length = 0
-              console.error("socket closed", "#{code}: #{reason}")
+              console.error("socket closed", "#{event.data.closeCode}: #{event.data.closeReason}")
             
             when 'data'
               buffer = event.data.buffer

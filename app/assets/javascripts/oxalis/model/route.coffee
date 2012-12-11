@@ -126,7 +126,7 @@ class Route
     # Get Branchpoints
     for branchPoint in @branchStack
       result.branchPoints.push({id : branchPoint.id})
-    result.editPosition = @flycam.getGlobalPos
+    result.editPosition = @flycam.getGlobalPos()
     result.trees = []
     for tree in @trees
       # Don't save empty trees (id is null)

@@ -271,24 +271,33 @@ class Controller
     # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()
     ray = projector.pickingRay(vector, camera)
-    #ray.setThreshold(@flycam.getRayThreshold(plane))
+    ray.threshold = @flycam.getRayThreshold(plane)
+
+    ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
  
     # identify clicked object
     intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
     console.log "Intersects: ", intersects
 
     if intersects.length > 0 and intersects[0].distance >= 0
-      intersectsCoord = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
+      
+      index = intersects[0].index
+      nodeID = intersects[0].object.geometry.nodeIDs[index]
+      console.log "nodeID: ", nodeID
+
+      #intersectsCoord = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
+      #intersectsCoord = @model.route.getNode(nodeID).pos
+      posArray = intersects[0].object.geometry.__vertexArray
+      intersectsCoord = [posArray[3 * index], posArray[3 * index + 1], posArray[3 * index + 2]]
       globalPos = @flycam.getGlobalPos()
 
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = Dimensions.getIndices(plane)
       if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance(ind[2])+1)
-        vertex = intersects[0].object.geometry.vertices[intersects[0].vertex]
-      # set the active Node to the one that has the ID stored in the vertex
-      # center the node if click was in 3d-view
+        # set the active Node to the one that has the ID stored in the vertex
+        # center the node if click was in 3d-view
         centered = plane == VIEW_3D
-        @setActiveNode(vertex.nodeId, centered)
+        @setActiveNode(nodeID, centered)
 
   ########### Model Interaction
 

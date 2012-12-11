@@ -194,10 +194,11 @@ class Flycam2d
     (@hasNewTexture[PLANE_XY] or @hasNewTexture[PLANE_YZ] or @hasNewTexture[PLANE_XZ])
 
   setRayThreshold : (cameraRight, cameraLeft) ->
-    @rayThreshold[VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384
+    # in nm
+    @rayThreshold[VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384 * @model.scaleInfo.baseVoxel
 
   getRayThreshold : (planeID) ->
     if planeID < 3
-      return @rayThreshold[planeID] * (@integerZoomSteps[planeID] + 1)
+      return @rayThreshold[planeID] * (@zoomSteps[planeID] + 1) * @model.scaleInfo.baseVoxel
     else
       return @rayThreshold[planeID]

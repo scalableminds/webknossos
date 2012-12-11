@@ -2932,6 +2932,40 @@ THREE.Frustum.__v1 = new THREE.Vector3();
 
 			} );
 
+		} else if ( object instanceof THREE.ParticleSystem ) {
+
+			// ATTENTION! This entire section (else if block) has been added by Georg
+			var positionArray = object.geometry.__vertexArray;
+			var numVertices   = object.geometry.__webglParticleCount;
+
+			for (var i = 0; i < numVertices; i++) {
+
+				var pos = [positionArray[3 * i], positionArray[3 * i + 1], positionArray[3 * i + 2]];
+				if(ray.__scalingFactors !== undefined){
+					// OK, this really is VERY dirty
+					pos[0] *= ray.__scalingFactors[0];
+					pos[1] *= ray.__scalingFactors[1];
+					pos[2] *= ray.__scalingFactors[2];
+				}
+				//  Set this to be a Vector.
+				//  I found this in object.MatrixWorld.getPosition and I assume that using the
+				//  THREE.Matrix4.__v1 vector is performing better than creating a new Vector3
+				pos = THREE.Matrix4.__v1.set( pos[0], pos[1], pos[2] );
+				var distance = distanceFromIntersection( ray.origin, ray.direction, pos );
+
+				if(distance < ray.threshold){
+					intersects.push( {
+
+						distance: distance,
+						point: pos,
+						face: null,
+						object: object,
+						index: i
+
+					} );
+				}
+			};
+
 		} else if ( object instanceof THREE.Mesh ) {
 
 			// Checking boundingSphere

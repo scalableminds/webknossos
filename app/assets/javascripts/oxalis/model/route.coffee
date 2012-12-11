@@ -279,6 +279,13 @@ class Route
 
   getActiveTreeId : ->
     if @activeTree then @activeTree.treeId else null
+
+
+  getNode : (id) ->
+    for tree in @trees
+      findResult = @findNodeInTree(id, tree)
+      if findResult then return findResult
+    return null
     
 
   setActiveNodeRadius : (radius) ->

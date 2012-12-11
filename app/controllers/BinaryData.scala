@@ -79,7 +79,7 @@ object BinaryData extends Controller with Secured {
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
-  def requestViaAjax( dataSetId: String, cubeSize: Int, halfByte: Boolean = false ) = Authenticated( parser = parse.raw ) { implicit request =>
+  def requestViaAjax( dataSetId: String, cubeSize: Int, halfByte: Boolean ) = Authenticated( parser = parse.raw ) { implicit request =>
     Async {
       ( for {
         payload <- request.body.asBytes()
@@ -106,7 +106,7 @@ object BinaryData extends Controller with Secured {
    * @param
    * 	modelType:	id of the model to use
    */
-  def requestViaWebsocket( dataSetId: String, cubeSize: Int, halfByte: Boolean = false  ) = AuthenticatedWebSocket[Array[Byte]]() { user =>
+  def requestViaWebsocket( dataSetId: String, cubeSize: Int, halfByte: Boolean ) = AuthenticatedWebSocket[Array[Byte]]() { user =>
     request =>
       val dataSetOpt = DataSet.findOneById( dataSetId )
       var channelOpt: Option[Channel[Array[Byte]]] = None

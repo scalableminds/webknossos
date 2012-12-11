@@ -60,11 +60,11 @@ object BinaryData extends Controller with Secured {
     Cuboid( cubeCorner, cubeSize / scaleFactors( 0 ), cubeSize / scaleFactors( 1 ), cubeSize / scaleFactors( 2 ) )
   }
 
-  def handleMultiDataRequest( multi: MultipleDataRequest, cubeSize: Int, dataSet: DataSet) = {
+  def handleMultiDataRequest( multi: MultipleDataRequest, cubeSize: Int, dataSet: DataSet, halfByte: Boolean) = {
     val cubeRequests = multi.requests.map{ request =>
       val resolution = resolutionFromExponent( request.resolutionExponent )
       val cuboid = cuboidFromPosition( request.position, cubeSize )
-      CubeRequest( dataSet, resolution, cuboid )
+      CubeRequest( dataSet, resolution, cuboid, halfByte )
     }
     
     val future = ( dataSetActor ? MultiCubeRequest( cubeRequests ) ) recover {
@@ -79,7 +79,7 @@ object BinaryData extends Controller with Secured {
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
-  def requestViaAjax( dataSetId: String, cubeSize: Int ) = Authenticated( parser = parse.raw ) { implicit request =>
+  def requestViaAjax( dataSetId: String, cubeSize: Int, halfByte: Boolean = false ) = Authenticated( parser = parse.raw ) { implicit request =>
     Async {
       ( for {
         payload <- request.body.asBytes()
@@ -88,7 +88,7 @@ object BinaryData extends Controller with Secured {
       } yield {
         message match {
           case dataRequests @ MultipleDataRequest(_) =>
-            handleMultiDataRequest(dataRequests, cubeSize, dataSet).asPromise.map( result =>
+            handleMultiDataRequest(dataRequests, cubeSize, dataSet, halfByte).asPromise.map( result =>
               Ok( result ) )
           case _ =>
             Akka.future{
@@ -106,7 +106,7 @@ object BinaryData extends Controller with Secured {
    * @param
    * 	modelType:	id of the model to use
    */
-  def requestViaWebsocket( dataSetId: String, cubeSize: Int ) = AuthenticatedWebSocket[Array[Byte]]() { user =>
+  def requestViaWebsocket( dataSetId: String, cubeSize: Int, halfByte: Boolean = false  ) = AuthenticatedWebSocket[Array[Byte]]() { user =>
     request =>
       val dataSetOpt = DataSet.findOneById( dataSetId )
       var channelOpt: Option[Channel[Array[Byte]]] = None
@@ -123,7 +123,7 @@ object BinaryData extends Controller with Secured {
         } {
           BinaryProtocol.parseWebsocket( in ).map {
             case dataRequests : MultipleDataRequest =>
-              handleMultiDataRequest(dataRequests, cubeSize, dataSet).map( 
+              handleMultiDataRequest(dataRequests, cubeSize, dataSet, halfByte).map( 
                   result => channel.push( dataRequests.handle ++ result ))
             case _ =>
               Logger.error( "Received unhandled message!" )

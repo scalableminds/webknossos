@@ -17,7 +17,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
           DataSet.updateOrCreate(dataSet)
-          dataSet._id
+          dataSet.name
         }
       }
       DataSet.deleteAllExcept(foundDataSets)

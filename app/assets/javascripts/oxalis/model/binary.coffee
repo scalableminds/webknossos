@@ -16,10 +16,11 @@ class Binary
   cube : null
   queue : null
   planes : []
+  lookUpTable : null
 
   dataSetId : ""
   direction : [0, 0, 0]
-  
+
 
   constructor : (flycam, dataSet, @TEXTURE_SIZE_P) ->
 
@@ -38,11 +39,6 @@ class Binary
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
     @ping(position, options)
-
-
-  updateLookupTable : (brightness, contrast) ->
-
-    console.log brightness, contrast
 
 
   pingImpl : (position, options) ->
@@ -78,4 +74,13 @@ class Binary
 
    # for i in [0...Math.min(options.length, @planes.length)]
     #  @planes[i].get(position, options[i]) if options[i]?
+
+
+  updateLookupTable : (brightness, contrast) ->
+
+    @lookUpTable = new Uint8Array(255)
+
+#    for i in [0..255]
+ #     @lookUpTable[i] = (i + brightness)
+    console.log brightness, contrast
 

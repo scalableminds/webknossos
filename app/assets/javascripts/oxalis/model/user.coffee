@@ -14,6 +14,9 @@ class User
   lockZoom : null
   displayCrosshair : null
   interpolation : null
+  fourBit : null
+  brightness : null
+  contrast : null
   minZoomStep : null
   zoomXY : null
   zoomYZ : null
@@ -57,6 +60,9 @@ class User
         lockZoom : @lockZoom,
         displayCrosshair : @displayCrosshair,
         interpolation : @interpolation,
+        fourBit: @fourBit,
+        brightness: @brightness,
+        contrast: @contrast, 
         minZoomStep : @minZoomStep,
         zoomXY : @zoomXY,
         zoomYZ : @zoomYZ,

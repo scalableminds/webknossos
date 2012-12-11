@@ -37,7 +37,7 @@ class Flycam2d
     @direction = [0, 0, 1]
     @hasChanged = true
     @activePlane = PLANE_XY
-    @rayThreshold = [50, 50, 50, 100]
+    @rayThreshold = [10, 10, 10, 100]
     @spaceDirection = 1
 
   zoomIn : (planeID) ->
@@ -196,10 +196,11 @@ class Flycam2d
     (@hasNewTexture[PLANE_XY] or @hasNewTexture[PLANE_YZ] or @hasNewTexture[PLANE_XZ])
 
   setRayThreshold : (cameraRight, cameraLeft) ->
+    # in nm
     @rayThreshold[VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384
 
   getRayThreshold : (planeID) ->
     if planeID < 3
-      return @rayThreshold[planeID] * (@integerZoomSteps[planeID] + 1)
+      return @rayThreshold[planeID] * Math.pow(2, @zoomSteps[planeID]) * @scaleInfo.baseVoxel
     else
       return @rayThreshold[planeID]

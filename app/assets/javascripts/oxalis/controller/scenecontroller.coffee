@@ -54,9 +54,9 @@ class SceneController
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       @planes[i] = new Plane(VIEWPORT_WIDTH, TEXTURE_WIDTH, @flycam, i, @model)
 
-    @planes[PLANE_XY].setRotation(new THREE.Vector3(-90 /180*Math.PI, 0, 0))
-    @planes[PLANE_YZ].setRotation(new THREE.Vector3(-90 /180*Math.PI, 0, -90 /180*Math.PI))
-    @planes[PLANE_XZ].setRotation(new THREE.Vector3(0, 0, 0))
+    @planes[PLANE_XY].setRotation(new THREE.Vector3( Math.PI , 0, 0))
+    @planes[PLANE_YZ].setRotation(new THREE.Vector3( Math.PI, 1/2 * Math.PI, 0))
+    @planes[PLANE_XZ].setRotation(new THREE.Vector3( - 1/2 * Math.PI, 0, 0))
 
   vec : (x, y, z) ->
     new THREE.Vector3(x, y, z)
@@ -89,7 +89,7 @@ class SceneController
 
   update : =>
     gPos         = @flycam.getGlobalPos()
-    globalPosVec = new THREE.Vector3(gPos[0], gPos[1], gPos[2])
+    globalPosVec = new THREE.Vector3(gPos...)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       
       @planes[i].updateTexture()

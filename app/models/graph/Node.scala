@@ -8,6 +8,6 @@ case class Node(id: Int, radius: Float, position: Point3D, viewport: Int, resolu
 object Node {
   implicit object NodeXMLWrites extends XMLWrites[Node] {
     def writes(n: Node) =
-      <node id={ n.id.toString } radius={ n.radius.toString } x={ n.position.x.toString } y={ n.position.y.toString } z={ (n.position.z/2).toString } inVp={ n.viewport.toString } inMag={ n.resolution.toString } time={ n.timestamp.toString }/>
+      <node id={ n.id.toString } radius={ n.radius.toString } x={ n.position.x.toString } y={ n.position.y.toString } z={ (n.position.z).toString } inVp={ n.viewport.toString } inMag={ n.resolution.toString } time={ n.timestamp.toString }/>
   }
 }

@@ -2,6 +2,7 @@
 underscore : _
 coffee-script : CoffeeScript
 libs/request : Request
+libs/event_mixin : EventMixin
 routes : Routes
 ./plugins : Plugins
 ./preprocessor : Preprocessor
@@ -10,6 +11,8 @@ routes : Routes
 class PluginRenderer
 
   constructor : (dimensions, @assetHandler) ->
+
+    _.extend(this, new EventMixin())
 
     [ @width, @height, @depth ] = dimensions
 
@@ -28,6 +31,7 @@ class PluginRenderer
       )
     ).done (buffer) =>
       @data = { rgba : new Uint8Array(buffer) }
+      @trigger("initialized")
 
 
   setCode : (code) ->
@@ -42,19 +46,11 @@ class PluginRenderer
 
   compile : (code) ->
 
-    try
-
-      functionBody = CoffeeScript.compile(@code, bare : true)
-      func = new Function(
-        "plugins"
-        "with(plugins) { #{functionBody} }"
-      )
-
-      return func
-
-    catch err
-
-      return err.toString()
+    functionBody = CoffeeScript.compile(@code, bare : true)
+    func = new Function(
+      "plugins"
+      "with(plugins) { #{functionBody} }"
+    )
 
 
   getLength : ->
@@ -111,21 +107,20 @@ class PluginRenderer
 
         _.defaults(options, scale : 1)
 
-        inputData = 
+        inputData =
           rgba : @getRGBASlide( (t - startFrame) * options.scale + options.start )
 
 
     for key, plugin of @plugins
+      do (plugin) ->
 
-      _plugins[key] = (options) ->
+        _plugins[key] = (options) ->
+          options = {} unless options? #if plugin has no options
 
-        _.extend( options, input : inputData )
-        plugin.execute(options)
+          _.extend( options, input : inputData )
+          plugin.execute(options)
 
-    try
-      func(_plugins)
-    catch err
-      console.error(err)
+    func(_plugins)
 
     frameBuffer
 

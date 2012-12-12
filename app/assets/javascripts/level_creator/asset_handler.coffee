@@ -1,4 +1,7 @@
 ### define
+underscore : _
+jquery : $
+libs/event_mixin : EventMixin
 libs/request : Request
 routes : Routes
 ###
@@ -7,10 +10,20 @@ routes : Routes
 class AssetHandler
 
   WINDOW_URL : window.URL || window.webkitURL
+  BLOB_BUILDER : window.WebKitBlobBuilder || window.MozBlobBuilder || window.MSBlobBuilder || window.BlobBuilder
+
+  SUPPORTED_IMAGE_TYPES :
+    ".bmp" : "image/bitmap"
+    ".jpg" : "image/jpeg"
+    ".gif" : "image/gif"
+    ".png" : "image/png"
 
   constructor : ( @levelId ) ->
 
+    _.extend(this, new EventMixin())
+
     @assetStore = {}
+    @imageStore = {}
 
     $form = $("#assets-upload")
 
@@ -52,11 +65,15 @@ class AssetHandler
 
       $input.click()
 
+    #### init
+
     Request.send(
       url : Routes.controllers.admin.LevelCreator.listAssets(@levelId).url
       dataType : "json"
     ).done (assets) =>
-      @loadAsset(asset) for asset in assets
+      deferreds = (@loadAsset(asset) for asset in assets)
+      $.when(deferreds...).done => @trigger("initialized")
+
       return
 
   
@@ -65,13 +82,35 @@ class AssetHandler
     Request.send(
       url : Routes.controllers.admin.LevelCreator.retrieveAsset(@levelId, name).url
       dataType : "arraybuffer"
-    ).done (data) =>
+    ).pipe (data) =>
+
       @assetStore[name] = data
+
+      extension = name.substring(name.lastIndexOf("."))
+      if @SUPPORTED_IMAGE_TYPES[extension]?
+
+        blob = @getBlob(name, @SUPPORTED_IMAGE_TYPES[extension])
+
+        deferred = new $.Deferred()
+
+        image = $("<image>")[0]
+        image.onload = =>
+          @imageStore[name] = image
+          deferred.resolve()
+
+        # HACK: PhantomJS doesn't fire onload when using Blob urls
+        # relying on browser cache here
+        image.src = Routes.controllers.admin.LevelCreator.retrieveAsset(@levelId, name).url
+
+        deferred
+
+      else
+        true
 
 
   getArrayBuffer : (name) ->
 
-    throw new Error("Asset not found.") unless @assetStore[name]?
+    throw new Error("Asset \"#{name}\" not found.") unless @assetStore[name]?
     @assetStore[name]
 
 
@@ -80,23 +119,34 @@ class AssetHandler
     new arrayType(@getArrayBuffer(name))
 
 
-  getBlob : (name) ->
+  getBlob : (name, mimeType) ->
 
-    new Blob([ @getArray(name) ])
+    try
+      new Blob([ @getArray(name) ], type : mimeType )
+
+    # HACK PhantomJS doesn't yet support new Blob(...)
+    catch error
+      blobBuilder = new @BLOB_BUILDER()
+      blobBuilder.append(@getArray(name))
+      blobBuilder.getBlob(mimeType)
 
 
-  getImage : (name, mimeType = "image/png") ->
+  getImage : (name) ->
 
-    console.warn("AssetHandler.getImage returns an image which is asynchronously populated.")
+    throw new Error("Image \"#{name}\" not found.") unless @imageStore[name]?
+    @imageStore[name]
 
-    blob = @getBlob(name).slice(0, -1, mimeType)
 
-    image = new Image()
-    image.onload = =>
-      @WINDOW_URL.revokeObjectURL(image.src)
-    image.src = @WINDOW_URL.createObjectURL(blob)
+  getPixelArray : (name) ->
 
-    image
+    image = @getImage(name)
+
+    canvas = $("<canvas>")[0]
+    context = canvas.getContext("2d")
+    canvas.width = image.width
+    canvas.height = image.height
+    context.drawImage(image, 0, 0)
+    context.getImageData(0, 0, canvas.width, canvas.height).data
 
 
 

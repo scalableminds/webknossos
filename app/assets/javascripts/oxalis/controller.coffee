@@ -89,6 +89,9 @@ class Controller
       @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
       @flycam.setQuality(@model.user.quality)
 
+      @model.binary.queue.set4Bit(@model.user.fourBit)
+      @model.binary.updateLookupTable(@model.user.brightness, @model.user.contrast)
+
       @initMouse()
       @initKeyboard()
 

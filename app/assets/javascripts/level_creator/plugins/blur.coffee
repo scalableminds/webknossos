@@ -14,7 +14,7 @@ class Blur
   KERNEL = [ 1, 2, 1, 2, 4, 2, 1, 2, 1 ]
 
 
-  execute : ({ input : { rgba }, radius, dimensions  }) ->
+  execute : ({ input : { rgba, dimensions }, radius }) ->
 
     @dimensions = dimensions
     @rgba = rgba

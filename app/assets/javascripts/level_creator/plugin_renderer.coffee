@@ -1,37 +1,20 @@
 ### define
 underscore : _
 coffee-script : CoffeeScript
-libs/request : Request
-libs/event_mixin : EventMixin
 routes : Routes
+libs/event_mixin : EventMixin
 ./plugins : Plugins
-./preprocessor : Preprocessor
+./buffer_utils : BufferUtils
 ###
 
 class PluginRenderer
 
-  constructor : (@dimensions, @assetHandler) ->
-
-    _.extend(this, new EventMixin())
+  constructor : (@dimensions, @assetHandler, @dataHandler) ->
 
     [ @width, @height, @depth ] = dimensions
 
     @plugins = new Plugins(@assetHandler)
-    @preprocessor = new Preprocessor(@assetHandler)
 
-    @requestStack(dimensions)
-
-
-  requestStack : (dimensions) ->
-
-    Request.send(
-      _.extend(
-        Routes.controllers.BinaryData.arbitraryViaAjax(dimensions...)
-        dataType : "arraybuffer"
-      )
-    ).done (buffer) =>
-      @data = { rgba : new Uint8Array(buffer) }
-      @trigger("initialized")
 
 
   setCode : (code) ->
@@ -77,17 +60,15 @@ class PluginRenderer
 
   render : (t) ->
 
-    unless @data
-      return new Uint8Array( @width * @height * 4 )
+    frameBuffer = new Uint8Array( @width * @height * 4 )
+    return frameBuffer unless @dataHandler.deferred("initialized").state() == "resolved"
 
     func = @compile()
 
     startFrame = 0
     endFrame = 0
 
-    frameBuffer = new Uint8Array( @width * @height * 4 )
     inputData = null
-    dimensions = @dimensions
 
     _plugins =
 
@@ -96,10 +77,10 @@ class PluginRenderer
         startFrame = options.start
         endFrame = options.end
 
-        if startFrame <= t < endFrame
+        if startFrame <= t <= endFrame
           (callback) =>
             callback()
-            @alphaBlendBuffer(frameBuffer, inputData.rgba)
+            BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba)
             inputData = null
         else
           ->
@@ -108,8 +89,13 @@ class PluginRenderer
 
         _.defaults(options, scale : 1)
 
+        slideOffset = (t - startFrame) * options.scale + options.start
         inputData =
-          rgba : @getRGBASlide( (t - startFrame) * options.scale + options.start )
+          rgba : @dataHandler.getRGBASlide( slideOffset )
+          # segmentation : @dataHandler.getSegmentationSlide( slideOffset )
+          dimensions : @dimensions
+
+        # @plugins.segmentImporter(input : inputData)
 
 
     for key, plugin of @plugins
@@ -119,7 +105,6 @@ class PluginRenderer
           options = {} unless options? #if plugin has no options
 
           _.extend( options, input : inputData )
-          _.extend( options, dimensions : dimensions )
           plugin.execute(options)
 
     func(_plugins)
@@ -127,67 +112,3 @@ class PluginRenderer
     frameBuffer
 
 
-  getGrayscaleSlide : (t) ->
-
-    delta = t - Math.floor(t)
-
-    slideLength = @width * @height
-
-    lowerData = new Uint8Array(
-      @data.rgba.subarray(Math.floor(t) * slideLength, Math.floor(t + 1) * slideLength)
-    )
-
-    return lowerData if delta == 0
-
-    upperData = @data.rgba.subarray(Math.floor(t + 1) * slideLength, Math.floor(t + 2) * slideLength)
-
-    for i in [0...slideLength] by 1
-      lowerData[i] = lowerData[i] + delta * (upperData[i] - lowerData[i])
-
-    lowerData
-
-
-  getRGBASlide : (t) ->
-
-    @copyGrayscaleBufferToRGBABuffer( @getGrayscaleSlide(t) )
-
-
-  alphaBlendBuffer : (backgroundBuffer, foregroundBuffer) ->
-
-    for i in [0...backgroundBuffer.length] by 4
-
-      rF = foregroundBuffer[i]
-      gF = foregroundBuffer[i + 1]
-      bF = foregroundBuffer[i + 2]
-      aF = foregroundBuffer[i + 3] / 255
-
-      rB = backgroundBuffer[i]
-      gB = backgroundBuffer[i + 1]
-      bB = backgroundBuffer[i + 2]
-      aB = backgroundBuffer[i + 3] / 255
-
-
-      backgroundBuffer[i    ] = rF * aF + rB * aB * (1 - aF)
-      backgroundBuffer[i + 1] = gF * aF + gB * aB * (1 - aF)
-      backgroundBuffer[i + 2] = bF * aF + bB * aB * (1 - aF)
-      backgroundBuffer[i + 3] = 255 * (aF + aB * (1 - aF))
-
-    return
-
-
-  copyGrayscaleBufferToRGBABuffer : ( source ) ->
-
-    output = new Uint8Array( source.length * 4 )
-
-    j = 0
-    for i in [0...source.length]
-
-        # r,g,b
-        output[j++] = source[i]
-        output[j++] = source[i]
-        output[j++] = source[i]
-
-        # alpha
-        output[j++] = 255
-
-    output

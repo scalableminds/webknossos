@@ -45,13 +45,13 @@ class Binary
       plane.updateLookUpTable(lookUpTable)
 
 
-  ping : _.once (position, options) ->
+  ping : _.once (position, {zoomStep, area}) ->
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @ping(position, options)
+    @ping(position, {zoomStep, area})
 
 
-  pingImpl : (position, options) ->
+  pingImpl : (position, {zoomStep, area}) ->
 
     if @lastPosition?
       
@@ -61,19 +61,20 @@ class Binary
         (1 - @DIRECTION_VECTOR_SMOOTHER) * @direction[2] + @DIRECTION_VECTOR_SMOOTHER * (position[2] - @lastPosition[2])
       ]
 
-    unless _.isEqual(position, @lastPosition) and _.isEqual(options, @lastOptions)
+    unless _.isEqual(position, @lastPosition) and _.isEqual(zoomStep, @lastZoomStep) and _.isEqual(area, @lastArea)
 
       console.log position, @queue.roundTripTime, @queue.bucketsPerSecond
 
       @lastPosition = position.slice()
-      @lastOptions = options.slice()
+      @lastZoomStep = zoomStep.slice()
+      @lastArea     = area.slice()
 
       console.time "ping"
       @queue.clear()
 
 
       for plane in @planes
-        plane.ping(position, @direction, options[plane.index]) if options[plane.index]? 
+        plane.ping(position, @direction, zoomStep[plane.index], area[plane.index]) if zoomStep[plane.index]? and area[plane.index]? 
 
       @queue.pull()
       console.timeEnd "ping"

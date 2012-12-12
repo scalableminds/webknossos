@@ -198,7 +198,8 @@ class Controller
 
   render : =>
 
-    @model.binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
+    @model.binary.ping(@flycam.getGlobalPos(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(PLANE_XY),
+                        @flycam.getArea(PLANE_YZ), @flycam.getArea(PLANE_XZ)]})
     @model.route.globalPosition = @flycam.getGlobalPos()
     @cameraController.update()
     @sceneController.update()

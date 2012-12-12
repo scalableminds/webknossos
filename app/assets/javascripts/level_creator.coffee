@@ -21,7 +21,8 @@ class LevelCreator
 
   constructor : ->
 
-    @levelName = $("#level-creator").data("level-id")
+    @levelId = $("#level-creator").data("level-id")
+    @taskId = $("#level-creator").data("level-task-id")
 
     @dimensions = [
       parseInt( $("#level-creator").data("level-width")  )
@@ -29,8 +30,9 @@ class LevelCreator
       parseInt( $("#level-creator").data("level-depth")  )
     ]
 
-    @assetHandler = new AssetHandler(@levelName)
-    @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler)
+    @dataHandler = new DataHandler(@dimensions, @levelId, @taskId)
+    @assetHandler = new AssetHandler(@levelId)
+    @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler, @dataHandler)
 
     ####
 
@@ -63,8 +65,7 @@ class LevelCreator
           Toast.success("Saved!")
         ->
           Toast.error(
-            """Sorry, we couldn't save your code. Please double check your syntax.<br/>
-            Otherwise, please copy your code changes and reload this page."""
+            "Sorry, we couldn't save your code. Please try again."
             true
           )
       )

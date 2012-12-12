@@ -9,7 +9,7 @@ libs/request : Request
 
 class DataHandler
 
-	constructor : (@dimensions) ->
+	constructor : (@dimensions, @levelId, @taskId) ->
 
 		EventMixin.extend(this)
 
@@ -26,7 +26,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.BinaryData.arbitraryViaAjax(@dimensions...)
+        Routes.controllers.BinaryData.arbitraryViaAjax(@levelId, @taskId)
         dataType : "arraybuffer"
       )
     ).pipe (buffer) => new Uint8Array(buffer)

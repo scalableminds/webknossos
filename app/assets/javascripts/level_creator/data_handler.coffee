@@ -26,7 +26,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.BinaryData.arbitraryViaAjax(@levelId, @taskId)
+        Routes.controllers.BinaryData.arbitraryViaAjax("color", @levelId, @taskId)
         dataType : "arraybuffer"
       )
     ).pipe (buffer) => new Uint8Array(buffer)

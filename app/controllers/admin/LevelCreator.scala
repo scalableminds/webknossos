@@ -11,9 +11,16 @@ import play.api.data.Forms.mapping
 import play.api.data.Forms.number
 import play.api.data.Forms.text
 import play.api.i18n.Messages
+import play.api.libs.json.Json
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+import akka.actor.Props
+import brainflight.knowledge.LevelCreateActor
+import brainflight.knowledge.CreateLevel
 
 object LevelCreator extends Controller with Secured {
   override def DefaultAccessRole = Role.Admin
+  val levelCreateActor = Akka.system.actorOf(Props(new LevelCreateActor))
 
   val levelForm = Form(
     mapping(
@@ -22,11 +29,11 @@ object LevelCreator extends Controller with Secured {
       "height" -> number,
       "depth" -> number)(Level.fromForm)(Level.toForm)).fill(Level.empty)
 
-  def use(levelId: String) = Authenticated { implicit request =>
+  def use(levelId: String, taskId: String) = Authenticated { implicit request =>
     Level
       .findOneById(levelId)
       .map { level =>
-        Ok(html.admin.creator.levelCreator(level))
+        Ok(html.admin.creator.levelCreator(level, taskId))
       }
       .getOrElse(BadRequest("Level not found."))
   }
@@ -66,7 +73,17 @@ object LevelCreator extends Controller with Secured {
     Level
       .findOneById(levelId)
       .map { level =>
-        Ok(level.assets.map(_.getName).mkString(", "))
+        Ok(Json.toJson(level.assets.map(_.getName)))
+      }
+      .getOrElse(BadRequest("Level not found."))
+  }
+
+  def produce(levelId: String) = Authenticated { implicit request =>
+    Level
+      .findOneById(levelId)
+      .map { level =>
+        levelCreateActor ! CreateLevel(level)
+        Ok("On my way")
       }
       .getOrElse(BadRequest("Level not found."))
   }

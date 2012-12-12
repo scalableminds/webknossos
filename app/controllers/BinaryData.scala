@@ -28,6 +28,7 @@ import scala.collection.mutable.ArrayBuffer
 import akka.routing.RoundRobinRouter
 import play.api.libs.concurrent.execution.defaultContext
 import brainflight.tools.geometry.Vector3D
+import models.knowledge.Level
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 object BinaryData extends Controller with Secured {
@@ -69,26 +70,29 @@ object BinaryData extends Controller with Secured {
     future.mapTo[Array[Byte]]
   }
 
-  def arbitraryViaAjax(width: Int, height: Int, depth: Int) = Authenticated(parser = parse.raw) { implicit request =>
+  def arbitraryViaAjax(levelId: String, taskId: String) = Authenticated(parser = parse.raw) { implicit request =>
     Async {
-      val t = System.currentTimeMillis()
-      val dataSet = DataSet.default
-      //FIXME
-      val dataLayer = dataSet.dataLayers(ColorLayer.identifier)
-      val position = Point3D(554, 543, 523)
-      val direction = (1.0, 1.0, 1.0)
-
-      val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
-      val m = new CubeModel(width, height, depth)
-      val points = m.rotateAndMove(point, direction)
-      val future = dataSetActor ? ArbitraryRequest(dataSet, dataLayer, 1, points) recover {
-        case e: AskTimeoutException =>
-          Logger.error("calculateImages: AskTimeoutException")
-          Array.fill[Byte](height * width * depth)(0)
-      }
-      future.mapTo[Array[Byte]].asPromise.map{data => 
-        Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
-        Ok(data)
+      Level.findOneById(levelId).map{ level =>
+        val t = System.currentTimeMillis()
+        val dataSet = DataSet.default
+        val dataLayer = dataSet.dataLayers(ColorLayer.identifier)
+        val position = Point3D(554, 543, 523)
+        val direction = (1.0, 1.0, 1.0)
+  
+        val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
+        val m = new CubeModel(level.width, level.height, level.depth)
+        val points = m.rotateAndMove(point, direction)
+        val future = dataSetActor ? ArbitraryRequest(dataSet, dataLayer, 1, points) recover {
+          case e: AskTimeoutException =>
+            Logger.error("calculateImages: AskTimeoutException")
+            Array.fill[Byte](level.height * level.width * level.depth)(0)
+        }
+        future.mapTo[Array[Byte]].asPromise.map{data => 
+          Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
+          Ok(data)
+        }
+      } getOrElse {
+        Akka.future( BadRequest("Level not found.") )
       }
     }
   }

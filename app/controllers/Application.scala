@@ -19,6 +19,8 @@ object Application extends Controller with Secured {
     Ok(
       Routes.javascriptRouter("jsRoutes")( //fill in stuff which should be able to be called from js
         controllers.admin.routes.javascript.LevelCreator.deleteAsset,
+        controllers.admin.routes.javascript.LevelCreator.listAssets,
+        controllers.admin.routes.javascript.LevelCreator.retrieveAsset,
         controllers.admin.routes.javascript.NMLIO.upload,
         controllers.routes.javascript.BinaryData.arbitraryViaAjax
       )).as("text/javascript")

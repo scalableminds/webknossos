@@ -1,20 +1,24 @@
-### define ###
+### define 
+underscore : _
+jquery : $
+###
 
 class EventMixin
 
   constructor : ->
-    
-    @callbacks = {}
+
+    @__callbacks = {}
+    @__deferreds = {}
 
 
   on : (type, callback) ->
 
     unless _.isObject(type)
 
-      unless _.isArray(@callbacks[type])
-        @callbacks[type] = [ callback ]
+      unless _.isArray(@__callbacks[type])
+        @__callbacks[type] = [ callback ]
       else
-        @callbacks[type].push(callback)
+        @__callbacks[type].push(callback)
 
     else
 
@@ -25,19 +29,87 @@ class EventMixin
     this
 
 
+  one : (type, callback) ->
+
+    wrappedCallback = (args...) =>
+
+      callback(args...)
+      @off(type, wrappedCallback)
+
+
+    unless _.isObject(type)
+
+     @on(type, wrappedCallback)
+
+    else
+
+      map = type
+      for own type, callback of map
+        @on(type, wrappedCallback)
+
+    this
+
+
   off : (type, callback) ->
 
-    if _.isArray(@callbacks[type])
-      _.removeElement(@callbacks[type], callback)
+    if _.isArray(@__callbacks[type])
+      _.removeElement(@__callbacks[type], callback)
     this
 
 
   trigger : (type, args...) ->
 
-    aborted = false
-    args = args.concat [stop : -> aborted = true]
-    if _.isArray(@callbacks[type])
-      for callback in @callbacks[type]
+    if deferred = @__deferreds[type]
+      deferred.resolve(args...)
+
+    if _.isArray(@__callbacks[type])
+      for callback in @__callbacks[type]
         callback.apply(this, args)
-        return false if aborted
-    true
+
+    this
+
+
+  ask : (type, args...) ->
+
+    if _.isArray(@__callbacks[type])
+      for callback in @__callbacks[type]
+        answer = callback.apply(this, args)
+        return answer unless answer == undefined
+    return
+
+
+  passthrough : (obj, type, renamedType = type) ->
+
+    if _.isArray(type)
+
+      types = type
+      for type in types
+        @passthrough(obj, type, type) 
+
+    else if _.isObject(type)
+
+      typeMap = type
+      for type, renamedType of typeMap
+        @passthrough(obj, type, renamedType) 
+
+    else
+
+      obj.on type, (args...) => 
+        @trigger(renamedType, args...)
+      
+    this
+
+
+  addDeferred : (type) ->
+
+    @__deferreds[type] = new $.Deferred()
+
+
+  deferred : (type) ->
+
+    @__deferreds[type]
+
+
+  @extend : (obj) ->
+
+    _.extend(obj, new this())

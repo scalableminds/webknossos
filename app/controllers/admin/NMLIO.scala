@@ -40,7 +40,7 @@ object NMLIO extends Controller with Secured {
         }
     }.getOrElse {
       Redirect(controllers.routes.UserController.dashboard).flashing(
-        "error" -> "Missing file")
+        "error" -> "Invalid file")
     }
   }
 

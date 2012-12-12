@@ -38,8 +38,10 @@
 })(this, function(env) {
 	var KeyboardJS = {}, locales, locale, map, macros, activeKeys = [], bindings = [], activeBindings = [], activeMacros = [];
 
+	//INDEXOF POLLYFILL
 	[].indexOf||(Array.prototype.indexOf=function(a,b,c){for(c=this.length,b=(c+~~b)%c;b<c&&(!(b in this)||this[b]!==a);b++);return b^c?b:-1;});
 
+	//BUNDLED LOCALES
 	locales = {
 		'us': {
 			"map": {
@@ -221,20 +223,20 @@
 	locale = 'us';
 	map = locales[locale].map;
 	macros = locales[locale].macros;
-	if(window.addEventListener) {
-		window.addEventListener('keydown', keydown, false);
-		window.addEventListener('keyup', keyup, false);
-		window.addEventListener('blur', blur, false);
-	} else if(window.attachEvent) {
-		window.attachEvent('onkeydown', keydown);
-		window.attachEvent('onkeyup', keyup);
-		window.attachEvent('onblur', blur);
+	if(document.addEventListener) {
+		document.addEventListener('keydown', keydown, false);
+		document.addEventListener('keyup', keyup, false);
+		document.addEventListener('blur', blur, false);
+	} else if(document.attachEvent) {
+		document.attachEvent('onkeydown', keydown);
+		document.attachEvent('onkeyup', keyup);
+		document.attachEvent('onblur', blur);
 	} else {
 		throw new Error('Cannot bind to keydown event. Both addEventListener and attachEvent are unsupported by your browser.');
 	}
 
-	KeyboardJS.on = createBinding;
 	KeyboardJS.activeKeys = getActiveKeys;
+	KeyboardJS.on = createBinding;
 	KeyboardJS.clear = removeBindingByKeyCombo;
 	KeyboardJS.clear.key = removeBindingByKeyName;
 	KeyboardJS.locale = getSetLocale;
@@ -243,8 +245,8 @@
 	KeyboardJS.macro.remove = removeMacro;
 	KeyboardJS.getKey = getKeyName;
 	KeyboardJS.combo = {};
-	KeyboardJS.parse = parseKeyCombo;
-	KeyboardJS.stringify = stringifyKeyCombo;
+	KeyboardJS.combo.parse = parseKeyCombo;
+	KeyboardJS.combo.stringify = stringifyKeyCombo;
 
 	window.map = map;
 	window.macros = macros;
@@ -322,56 +324,77 @@
 		}
 	}
 	function createBinding(keyCombo, keyDownCallback, keyUpCallback) {
-		var binding = {}, bindingApi = {};
-		if(typeof keyCombo === 'object' && typeof keyCombo.push === 'function') {
-			keyCombo = stringifyKeyCombo(keyCombo);
+		var binding, subBindings = [], bindingApi = {}, kI, subCombo;
+		if(typeof keyCombo === 'string') {
+			keyCombo = parseKeyCombo(keyCombo);
 		}
-		if(typeof keyCombo === 'function') {
-			keyCombo = false;
-			keyUpCallback = keyDownCallback;
-			keyDownCallback = keyCombo;
+		for(kI = 0; kI < keyCombo.length; kI += 1) {
+			binding = {};
+
+			subCombo = stringifyKeyCombo([keyCombo[kI]]);
+
+			if(typeof subCombo === 'function') {
+				subCombo = false;
+				keyUpCallback = keyDownCallback;
+				keyDownCallback = subCombo;
+			}
+
+			if(subCombo !== false && typeof subCombo !== 'string') { throw new Error('Failed to bind key combo. The key combo must be string.'); }
+			binding.keyCombo = subCombo;
+			binding.keyDownCallback = [];
+			binding.keyUpCallback = [];
+			if(keyDownCallback) { binding.keyDownCallback.push(keyDownCallback); }
+			if(keyUpCallback) { binding.keyUpCallback.push(keyUpCallback); }
+			bindings.push(binding);
+			subBindings.push(binding);
 		}
-		if(keyCombo !== false && typeof keyCombo !== 'string') { throw new Error('Failed to bind key combo. The key combo must be string.'); }
-		binding.keyCombo = keyCombo;
-		binding.keyDownCallback = [];
-		binding.keyUpCallback = [];
-		if(keyDownCallback) { binding.keyDownCallback.push(keyDownCallback); }
-		if(keyUpCallback) { binding.keyUpCallback.push(keyUpCallback); }
-		bindings.push(binding);
+
 		return {
 			"clear": clear,
 			"on": on
 		};
 
 		function clear() {
-			bindings.splice(bindings.indexOf(binding), 1);
+			var bI;
+			for(bI = 0; bI < subBindings.length; bI += 1) {
+				bindings.splice(bindings.indexOf(subBindings[bI]), 1);
+			}
 		}
 
 		function on(eventName   ) {
-			var callbacks, cI;
-			console.log(eventName);
+			var callbacks, cI, bI;
+
 			if(typeof eventName !== 'string') { throw new Error('Cannot bind callback. The event name must be a string.'); }
 			if(eventName !== 'keyup' && eventName !== 'keydown') { throw new Error('Cannot bind callback. The event name must be a "keyup" or "keydown".'); }
 			callbacks = Array.prototype.slice.apply(arguments, [1]);
 			for(cI = 0; cI < callbacks.length; cI += 1) {
 				if(typeof callbacks[cI] === 'function') {
 					if(eventName === 'keyup') {
-						binding.keyUpCallback.push(callbacks[cI]);
+						for(bI = 0; bI < subBindings.length; bI += 1) {
+							subBindings[bI].keyUpCallback.push(callbacks[cI]);
+						}
 					} else {
-						binding.keyDownCallback.push(callbacks[cI]);
+						for(bI = 0; bI < subBindings.length; bI += 1) {
+							subBindings[bI].keyDownCallback.push(callbacks[cI]);
+						}
 					}
 				}
 			}
+
 			return { "clear": clear };
 
 			function clear() {
-				var cI;
+				var cI, bI;
 				for(cI = 0; cI < callbacks.length; cI += 1) {
 					if(typeof callbacks[cI] === 'function') {
 						if(eventName === 'keyup') {
-							binding.keyUpCallback.splice(binding.keyUpCallback.indexOf(callbacks[cI]), 1);
+							for(bI = 0; bI < subBindings.length; bI += 1) {
+								subBindings[bI].keyUpCallback.splice(subBindings[bI].keyUpCallback.indexOf(callbacks[cI]), 1);
+							}
 						} else {
-							binding.keyDownCallback.splice(binding.keyDownCallback.indexOf(callbacks[cI]), 1);
+							for(bI = 0; bI < subBindings.length; bI += 1) {
+								subBindings[bI].keyDownCallback.splice(subBindings[bI].keyDownCallback.indexOf(callbacks[cI]), 1);
+							}
 						}
 					}
 				}
@@ -381,7 +404,7 @@
 	function removeBindingByKeyCombo(keyCombo) {
 		var bI, binding, keyName;
 		for(bI = 0; bI < bindings.length; bI += 1) {
-			binding = bindings[bi];
+			binding = bindings[bI];
 			if(compareCombos(keyCombo, binding.keyCombo)) {
 				bindings.splice(bI, 1); bI -= 1;
 			}
@@ -390,7 +413,7 @@
 	function removeBindingByKeyName(keyName) {
 		var bI, cI, binding;
 		for(bI = 0; bI < bindings.length; bI += 1) {
-			binding = bindings[bi];
+			binding = bindings[bI];
 			for(cI = 0; cI < binding.keyCombo.length; cI += 1) {
 				if(binding.keyCombo[kI].indexOf(keyName) > -1) {
 					bindings.splice(bI, 1); bI -= 1;
@@ -655,6 +678,7 @@
 	 * @param  {String} keyName The key name string.
 	 */
 	function removeActiveKey(keyName) {
+		if(keyName === 'super') { activeKeys = []; } //remove all key on release of super.
 		activeKeys.splice(activeKeys.indexOf(keyName), 1);
 	}
 

@@ -158,6 +158,9 @@ class Gui
       @updateGlobalPosition(position)
       return
 
+    @flycam.on "zoomFactorChanged", (factor) =>
+      $("#zoomFactor").html("<p>Zoom factor: " + factor + "</p>")
+
     $("#trace-position-input").on "change", (event) => 
 
       @setPosFromString(event.target.value)

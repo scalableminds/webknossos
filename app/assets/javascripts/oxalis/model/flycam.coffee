@@ -82,6 +82,7 @@ class Flycam2d
     @zoomSteps[planeID] = zoomStep
     @hasChanged = true
     @calculateBuffer()
+    @trigger "zoomFactorChanged", Math.pow(2, @zoomSteps[0])
 
   calculateBuffer : ->
     for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]

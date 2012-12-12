@@ -10,7 +10,7 @@ routes : Routes
 
 class PluginRenderer
 
-  constructor : (dimensions, @assetHandler) ->
+  constructor : (@dimensions, @assetHandler) ->
 
     _.extend(this, new EventMixin())
 
@@ -87,6 +87,7 @@ class PluginRenderer
 
     frameBuffer = new Uint8Array( @width * @height * 4 )
     inputData = null
+    dimensions = @dimensions
 
     _plugins =
 
@@ -118,6 +119,7 @@ class PluginRenderer
           options = {} unless options? #if plugin has no options
 
           _.extend( options, input : inputData )
+          _.extend( options, dimensions : dimensions )
           plugin.execute(options)
 
     func(_plugins)

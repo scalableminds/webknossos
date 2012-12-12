@@ -112,7 +112,7 @@ class Skeleton
     @curIndex.push(0)
 
     @setActiveNode()
-    
+
     @trigger "newGeometries", [@routes[@routes.length - 1], @nodes[@nodes.length - 1]]
 
 
@@ -239,7 +239,7 @@ class Skeleton
     index        = @getIndexFromTreeId(@route.getTree().treeId)
     color        = @route.getTree().color
     radius       = @route.getActiveNodeRadius()
-   
+
     unless @curIndex[index]
       @curIndex[index] = 0
       @lastNodePosition = position

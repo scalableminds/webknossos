@@ -259,7 +259,7 @@ class Route
     @lastActiveNodeId = @activeNode.id
     @doubleBranchPop = false
     @push()
-
+    
     @trigger("newNode")
 
 

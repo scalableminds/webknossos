@@ -312,7 +312,11 @@ class Controller
   addNode : (position) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
-    @model.route.addNode(position, TYPE_USUAL)
+      @model.route.one("rendered", =>
+        @model.route.one("rendered", =>
+          @model.route.addNode(position, TYPE_USUAL)))
+    else
+      @model.route.addNode(position, TYPE_USUAL)
 
   pushBranch : =>
     @model.route.pushBranch()

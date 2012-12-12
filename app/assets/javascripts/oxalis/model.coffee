@@ -5,6 +5,7 @@
 ./model/scaleinfo : ScaleInfoClass
 ./model/flycam : Flycam
 ../libs/request : Request
+../libs/toast : Toast
 ###
 
 # This is the model. It takes care of the data including the 
@@ -27,15 +28,21 @@ class Model
         dataType : "json"
       ).pipe (tracing) =>
 
-        Request.send(
-          url : "/user/configuration"
-          dataType : "json"
-        ).pipe((user) =>
+        if tracing.error
+          Toast.error(tracing.error)
 
-          @scaleInfo = new ScaleInfo(tracing.tracing.scale)
-          @flycam = new Flycam(VIEWPORT_SIZE, @scaleInfo)
-          @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)          
-          @route = new Route(tracing.tracing, tracing.dataSet, @scaleInfo, @flycam)
-          @user = new User(user)
+        else
+          Request.send(
+            url : "/user/configuration"
+            dataType : "json"
+          ).pipe(
+            (user) =>
 
-        -> alert("Ooops. We couldn't communicate with our mother ship. Please try to reload this page."))
+              @scaleInfo = new ScaleInfo(tracing.tracing.scale)
+              @flycam = new Flycam(VIEWPORT_SIZE, @scaleInfo)
+              @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)          
+              @route = new Route(tracing.tracing, tracing.dataSet, @scaleInfo, @flycam)
+              @user = new User(user)
+
+            -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
+          )

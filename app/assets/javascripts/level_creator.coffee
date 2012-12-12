@@ -1,11 +1,12 @@
 ### define
 libs/request : Request
+libs/keyboard : KeyboardJS
+libs/toast : Toast
 routes : routes
 libs/ace/ace : Ace
-coffee-script : CoffeeScript
-view/toast : Toast
-model/creator : Model
-level_creator/asset_handler : AssetHandler
+./level_creator/asset_handler : AssetHandler
+./level_creator/data_handler : DataHandler
+./level_creator/plugin_renderer : PluginRenderer
 ###
 
 class LevelCreator
@@ -13,206 +14,190 @@ class LevelCreator
   plugins : []
   stack : null
   canvas : null
-  imageData : null
+  data : null
   model : null
 
   assetHandler : null
+  prepluginRenderer : null
 
   constructor : ->
 
-    @levelName = $("#level-creator").data("level-id")
+    @levelId = $("#level-creator").data("level-id")
+    @taskId = $("#level-creator").data("level-task-id")
 
-    @data = null
-    @assetHandler = new AssetHandler(@levelName)
+    @dimensions = [
+      parseInt( $("#level-creator").data("level-width")  )
+      parseInt( $("#level-creator").data("level-height") )
+      parseInt( $("#level-creator").data("level-depth")  )
+    ]
 
-    @model = new Model()
+    @dataHandler = new DataHandler(@dimensions, @levelId, @taskId)
+    @assetHandler = new AssetHandler(@levelId)
+    @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler, @dataHandler)
+
+    #### code editor
 
     # editor init
     @editor = Ace.edit("editor")
     @editor.setTheme("ace/theme/twilight")
     @editor.getSession().setMode("ace/mode/coffee")
 
-    $form = $("#editor-container").find("form")
-    $saveCodeButton = $form.find("[type=submit]")
+    @$form = $("#editor-container form")
+    @$saveCodeButton = @$form.find("[type=submit]")
 
-    @editor.on "change", =>
+    @editor.on "change", => @updatePreview()
 
-      code = @compile()
-      if code instanceof Function
-        $saveCodeButton.removeClass("disabled").popover("destroy")
-
-      else
-
-        $saveCodeButton.addClass("disabled")
-        $saveCodeButton.popover(
-          placement : "right"
-          title : "No good code. No save."
-          content : code
-          trigger : "hover"
-        )
-
-    @editor._emit("change") # init
-
-    $form.submit (event) =>
+    @$form.submit (event) =>
 
       event.preventDefault()
 
-      return if $saveCodeButton.hasClass("disabled")
+      return if @$saveCodeButton.hasClass("disabled")
 
       code = @editor.getValue()
 
-      $form.find("[name=code]").val(code)
+      @$form.find("[name=code]").val(code)
 
       $.ajax(
-        url : $form[0].action
-        data : $form.serialize()
+        url : @$form[0].action
+        data : @$form.serialize()
         type : "POST"
       ).then(
         ->
           Toast.success("Saved!")
         ->
           Toast.error(
-            """Sorry, we couldn't save your code. Please double check your syntax.<br/>
-            Otherwise, please copy your code changes and reload this page."""
+            "Sorry, we couldn't save your code. Please try again."
             true
           )
       )
 
-    ####
+    KeyboardJS.on "super+s,ctrl+s", (event) =>
+      event.preventDefault()
+      event.stopPropagation()
+      @$form.submit()
 
-    @canvas = $("#preview-canvas")[0]
+    #### preview
+
+    @$canvas = $("#preview-canvas")
+    @canvas = @$canvas[0]
     @context = @canvas.getContext("2d")
 
-    $slider = $("#preview-slider")
-    $slider.on "change", =>
+    @$slider = $("#preview-slider")
+    @$slider.on "change", =>
       @updatePreview()
 
-    # zooming
+    #### zooming
     $zoomSlider = $("#zoom-slider")
     $zoomSlider.on "change", =>
       @zoomPreview()
 
-    $("#zoom-reset").click( =>
+    $("#zoom-reset").click =>
       $zoomSlider.val(1)
       @zoomPreview()
-    )
 
-    dimensions = [
-      parseInt( $("#level-creator").data("level-width")  )
-      parseInt( $("#level-creator").data("level-height") )
-      parseInt( $("#level-creator").data("level-depth")  )
-    ]
+    @canvas.width = @dimensions[0]
+    @canvas.height = @dimensions[1]
 
-    $slider[0].max = dimensions[2] - 1
+    
+    #### resource init
 
-    @canvas.width = dimensions[0]
-    @canvas.height = dimensions[1]
-
-    @requestStack(dimensions)
-
-
-  compile : ->
-
-    try
-
-      functionBody = CoffeeScript.compile(@editor.getValue(), bare : true)
-      func = new Function(
-        "plugins"
-        "with(plugins) { #{functionBody} }"
-      )
-
-      plugins =
-        time : (t, data, options) ->
-
-          if options.start <= t <= options.end
-            (cb) -> cb()
-          else
-            return
-
-        recolor : (color) ->
-          console.log "recoloring #{color}"
-
-        fadeOut : ->
-          console.log "fading.."
-
-      return func
-
-    catch err
-
-      return err.toString()
-
-
-
-
-  requestStack : (dimensions) ->
-
-    Request.send(
-      _.extend(
-        routes.controllers.BinaryData.arbitraryViaAjax(dimensions...),
-        dataType : "arraybuffer"
-      )
-    ).done (buffer) =>
-      @data = new Uint8Array(buffer)
+    @assetHandler.on "initialized", => 
       @updatePreview()
+      Toast.success("Assets loaded.")
 
+    @dataHandler.on "initialized", => 
+      @updatePreview()
+      Toast.success("Slide data loaded.")
+
+    #### headless init
+    
+    if window.callPhantom?
+      $.when(
+        @assetHandler.deferred("initialized")
+        @dataHandler.deferred("initialized")
+      ).done =>
+        @prepareHeadlessRendering()
+      
 
   updatePreview : ->
 
-    return unless @data
+    sliderValue = Math.floor(@$slider.val())
+    
+    imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
 
-    slider = $("#preview-slider")[0]
-    sliderValue = slider.value
-    t = sliderValue - Math.floor(sliderValue)
+    @pluginRenderer.setCode(@editor.getValue())
+    
+    try
 
-    { width, height } = @canvas
+      frameBuffer = @pluginRenderer.render(sliderValue)
+      imageData.data.set(frameBuffer)
+      @context.putImageData(imageData, 0, 0)
 
-    imageDataObject = @context.getImageData(0, 0, width, height)
-    imageData = imageDataObject.data
+      @$slider.prop( max : @pluginRenderer.getLength() )
 
-    sourceData = @data
+      $("#preview-error").html("")
+      @$saveCodeButton.removeClass("disabled").popover("destroy")
 
-    indexSourceLower = Math.floor(sliderValue) * width * height
-    indexSourceUpper = (Math.floor(sliderValue) + 1) * width * height
-    indexTarget = 0
+    catch error
 
-    for x in [0...width]
-      for y in [0...height]
+      @$saveCodeButton
+        .addClass("disabled")
+        .popover(
+          placement : "right"
+          title : "No good code. No save."
+          content : error
+          trigger : "hover"
+        )
 
-        #interpolation
-        dataLower = sourceData[indexSourceLower]
-        dataUpper = sourceData[indexSourceUpper]
-
-        interplotationData = dataLower + t * (dataUpper - dataLower)
-
-        # r,g,b
-        imageData[indexTarget++] = interplotationData
-        imageData[indexTarget++] = interplotationData
-        imageData[indexTarget++] = interplotationData
-
-        # alpha
-        imageData[indexTarget++] = 255
-        indexSourceLower++
-        indexSourceUpper++
-
-    @context.putImageData(imageDataObject, 0, 0)
-
-    console.log interplotationData
+      $("#preview-error").html("<i class=\"icon-warning-sign\"></i> #{error}")
 
 
   zoomPreview : ->
 
     zoomValue = $("#zoom-slider")[0].value
-    factor = 50
 
     { width, height } = @canvas
-    width  += factor * zoomValue
-    height += factor * zoomValue
 
     $canvas = $(@canvas)
     $canvas.css(
       width : width * zoomValue
       height : height * zoomValue
     )
+
+
+  prepareHeadlessRendering : ->
+
+    @$canvas.css(
+      position : "fixed"
+      top : 0
+      left : 0
+      width : @canvas.width
+      height : @canvas.height
+      zIndex : 2000
+    )
+
+    window.callPhantom( 
+      message : "initialized"
+      length : @pluginRenderer.getLength()
+      width : @canvas.width
+      height : @canvas.height
+    )
+
+
+  headlessRendering : (t) ->
+
+    imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
+    imageDataData = imageData.data
+    frameBuffer = @pluginRenderer.render(t)
+    # HACK Phantom doesn't support Uint8ClampedArray yet
+    for i in [0...frameBuffer.length] by 1
+      imageDataData[i] = frameBuffer[i]
+    @context.putImageData(imageData, 0, 0)
+
+
+    window.callPhantom( message : "rendered" )
+
+
 
 
 

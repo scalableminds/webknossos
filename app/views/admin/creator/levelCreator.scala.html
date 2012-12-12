@@ -1,13 +1,14 @@
-@(level: models.knowledge.Level)(implicit session: brainflight.view.AuthedSessionData)
+@(level: models.knowledge.Level, taskId: String)(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
 
-  <div class="container" id="level-creator" data-level-id="@level.id" data-level-width="@level.width" data-level-height="@level.height" data-level-depth="@level.depth">
+  <div class="container" id="level-creator" data-level-id="@level.id" data-level-task-id="@taskId" data-level-width="@level.width" data-level-height="@level.height" data-level-depth="@level.depth">
 
     <h3>Preview - @level.name</h3>
     <div class="row">
       <div class="span10">
         <div class="well" id="preview">
+          <p id="preview-error"></p>
           <canvas id="preview-canvas" width="250" height="150"></canvas>
         </div>
         <input id="preview-slider" type="range" value="0" step=".5"></input>
@@ -16,7 +17,7 @@
       <div class="span2">
         <h5>Zoom</h5>
         <p>
-          <input type="range" min="0.2" max="5" step=".4" value="1" id="zoom-slider"/>
+          <input type="range" min="0.2" max="5" step=".1" value="1" id="zoom-slider"/>
           <button class="btn btn-small" id="zoom-reset">Reset</button>
         </p>
       </div>
@@ -29,7 +30,7 @@
         <h3>Editor</h3>
         @helper.form(action = controllers.admin.routes.LevelCreator.submitCode(level.id)) {
 
-        <input type="submit" value="Save" class="btn btn-primary">
+        <input type="submit" value="Save" class="btn btn-primary"/>
         <input type="hidden" name="code" />
         <input type="hidden" name="use" value="1" />
 

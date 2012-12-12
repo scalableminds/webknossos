@@ -23,6 +23,8 @@ import play.api.i18n.Messages
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.execution.defaultContext
 
+import java.lang.Cloneable
+
 object TaskAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin

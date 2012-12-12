@@ -375,7 +375,7 @@ class Route
     if hasNoChildren
       @trigger("deleteLastNode", id)
     else
-      @trigger("deleteActiveNode")
+      @trigger("deleteActiveNode", id)
 
   deleteActiveTree : ->
     # There should always be an active Tree

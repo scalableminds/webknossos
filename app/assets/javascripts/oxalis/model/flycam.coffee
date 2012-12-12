@@ -64,7 +64,7 @@ class Flycam2d
 
   calculateIntegerZoomStep : (planeID) ->
     # round, because Model expects Integer
-    @integerZoomSteps[planeID] = 2 + Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff)
+    @integerZoomSteps[planeID] = Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff)
     if @integerZoomSteps[planeID] < 0
       @integerZoomSteps[planeID] = 0
     # overrideZoomStep only has an effect when it is larger than the optimal zoom step

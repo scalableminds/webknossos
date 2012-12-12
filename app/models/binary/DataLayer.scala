@@ -18,7 +18,7 @@ case class SegmentationLayer(elementSize: Int = 8, supportedResolutions: List[In
 }
 
 object ColorLayer{
-  val default = ColorLayer(8, List(1, 2, 3, 4))
+  val default = ColorLayer(8, List(1))
   val identifier = "color"
 }
 

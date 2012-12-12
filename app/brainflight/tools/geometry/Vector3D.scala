@@ -18,10 +18,10 @@ import play.Logger
  * Vector in 3D space
  */
 case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
-  
+
   def normalize = {
     val length = sqrt(square(x) + square(y) + square(z))
-    if(length != 0)
+    if (length != 0)
       Vector3D(x / length, y / length, z / length)
     else
       this
@@ -61,7 +61,7 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
   }
 
   def toVector3I = Vector3I(x.round.toInt, y.round.toInt, z.round.toInt)
-  
+
   def toPoint3D = Point3D(x.toInt, y.toInt, z.toInt)
 
   def °(o: Vector3D) = x * o.x + y * o.y + z * o.z
@@ -71,4 +71,15 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
   def toTuple = (x, y, z)
 
   override def toString = "(%f, %f, %f)".format(x, y, z)
+}
+
+object Vector3D {
+  implicit object Vector3DReads extends Reads[Vector3D] {
+    def reads(json: JsValue) = json match {
+      case JsArray(ts) if ts.size == 3 =>
+        val c = ts.map(fromJson[Double](_))
+        Vector3D(c(0), c(1), c(2))
+      case _ => throw new RuntimeException("List expected")
+    }
+  }
 }

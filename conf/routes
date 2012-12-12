@@ -11,6 +11,9 @@ GET     /game/initialize                    controllers.Game.initialize
 # Tasks
 GET     /tasks/requestTask                  controllers.TaskController.request
 
+# Missions
+POST    /missions                           controllers.admin.MissionAdministration.insertMissions
+
 # Jira integration
 GET     /jira                               controllers.Jira.index
 POST    /jira                               controllers.Jira.submit

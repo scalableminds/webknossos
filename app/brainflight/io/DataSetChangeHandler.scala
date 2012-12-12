@@ -82,7 +82,6 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
         yMax <- maxValueFromFiles(xs.listFiles())
         zMax <- maxValueFromFiles(ys.listFiles())
       } yield {
-          Logger.info("%s\n%s\n%s".format(colorLayer.getName(), resolutions.mkString(", "), res.getName()))
           val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
           DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, dataLayers = Map[String, DataLayer](ColorLayer.identifier -> ColorLayer(supportedResolutions = resolutions)))
       }

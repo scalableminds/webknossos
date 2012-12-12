@@ -1,254 +1,254 @@
-define [
-  "jquery"
-  "underscore"
-  "lib/event_mixin"
-  "lib/matrix3"
-  "lib/utils"
-], ($, _, EventMixin, Matrix3, Utils) ->
+### define
+jquery : $
+underscore : _
+lib/event_mixin : EventMixin
+lib/matrix3 : Matrix3
+lib/utils : Utils
+###
 
-  cloneTouch = (touch) ->
+cloneTouch = (touch) ->
 
-    { clientX : touch.clientX, clientY : touch.clientY }
-
-
-  class GestureRecognizer
-
-    constructor : (@eventHost) ->
-
-      _.extend(this, new EventMixin())
-
-      @isActive = false
-
-      @eventHost.on(
-        touchstart : @onTouchStart
-        touchmove : @onTouchMove
-        touchend : @onTouchEnd
-      )
+  { clientX : touch.clientX, clientY : touch.clientY }
 
 
-    destroy : ->
+class GestureRecognizer
 
-      @eventHost.off(
-        touchstart : @onTouchStart
-        touchmove : @onTouchMove
-        touchend : @onTouchEnd
-      )
+  constructor : (@eventHost) ->
 
+    _.extend(this, new EventMixin())
 
-    cancel : ->
+    @isActive = false
 
-      @isActive = false
-
-
-  class GestureRecognizer.OneFingerDrag extends GestureRecognizer
+    @eventHost.on(
+      touchstart : @onTouchStart
+      touchmove : @onTouchMove
+      touchend : @onTouchEnd
+    )
 
 
-    onTouchStart : (event) =>
+  destroy : ->
 
-      touches = event.targetTouches
-
-      if touches.length == 1
-
-        @isActive = true
-
-        @startTouch = @lastTouch = cloneTouch(touches[0])
-        @startTime  = @lastTime  = Date.now()
-
-        @lastEventData = @eventData(event)
-        @trigger("start", @lastEventData)
-
-      else
-
-        @cancel()
-
-      return
+    @eventHost.off(
+      touchstart : @onTouchStart
+      touchmove : @onTouchMove
+      touchend : @onTouchEnd
+    )
 
 
-    onTouchMove : (event) =>
+  cancel : ->
 
-      if @isActive
-
-        touch = event.targetTouches[0]
-
-        @lastEventData = @eventData(event)
-        @lastTouch = cloneTouch(touch)
-        @lastTime  = Date.now()
-
-        @trigger("move", @lastEventData)
-
-      return
+    @isActive = false
 
 
-    onTouchEnd : (event) =>
-
-      if @isActive
-
-        @trigger("end", @lastEventData)
-        @cancel()
-
-      return
+class GestureRecognizer.OneFingerDrag extends GestureRecognizer
 
 
-    eventData : (event) ->
+  onTouchStart : (event) =>
+
+    touches = event.targetTouches
+
+    if touches.length == 1
+
+      @isActive = true
+
+      @startTouch = @lastTouch = cloneTouch(touches[0])
+      @startTime  = @lastTime  = Date.now()
+
+      @lastEventData = @eventData(event)
+      @trigger("start", @lastEventData)
+
+    else
+
+      @cancel()
+
+    return
+
+
+  onTouchMove : (event) =>
+
+    if @isActive
 
       touch = event.targetTouches[0]
 
-      delta =
-        startX : touch.clientX - @startTouch.clientX
-        startY : touch.clientY - @startTouch.clientY
-        startTime : Date.now() - @startTime
+      @lastEventData = @eventData(event)
+      @lastTouch = cloneTouch(touch)
+      @lastTime  = Date.now()
 
-        lastX : touch.clientX - @lastTouch.clientX
-        lastY : touch.clientY - @lastTouch.clientX
-        lastTime : Date.now() - @lastTime
+      @trigger("move", @lastEventData)
 
-      delta.startDistance = Utils.distance(delta.startX, delta.startY)
-      delta.lastDistance  = Utils.distance(delta.lastX, delta.lastY)
-
-      velocity =
-        overallX : delta.startX / delta.startTime
-        overallY : delta.startY / delta.startTime
-        overall  : delta.startDistance / delta.startTime
-
-      { delta, velocity, touch, originalEvent : event }
+    return
 
 
-  class GestureRecognizer.TwoFingerPinch extends GestureRecognizer
+  onTouchEnd : (event) =>
+
+    if @isActive
+
+      @trigger("end", @lastEventData)
+      @cancel()
+
+    return
 
 
-    onTouchStart : (event) =>
+  eventData : (event) ->
 
-      touches = event.targetTouches
+    touch = event.targetTouches[0]
 
-      if touches.length == 2
+    delta =
+      startX : touch.clientX - @startTouch.clientX
+      startY : touch.clientY - @startTouch.clientY
+      startTime : Date.now() - @startTime
 
-        @isActive = true
+      lastX : touch.clientX - @lastTouch.clientX
+      lastY : touch.clientY - @lastTouch.clientX
+      lastTime : Date.now() - @lastTime
 
-        @startMatrix = [
-          1, 0, 0
-          0, 1, 0
-          0, 0, 1
-        ]
+    delta.startDistance = Utils.distance(delta.startX, delta.startY)
+    delta.lastDistance  = Utils.distance(delta.lastX, delta.lastY)
 
-        [ touch0, touch1 ] = touches
+    velocity =
+      overallX : delta.startX / delta.startTime
+      overallY : delta.startY / delta.startTime
+      overall  : delta.startDistance / delta.startTime
 
-        @startDistance = Utils.distance(
-          touch1.clientX - touch0.clientX
-          touch1.clientY - touch0.clientY
-        )
-
-        @startTouches = [
-          cloneTouch(touch0)
-          cloneTouch(touch1)
-        ]
-
-        @lastEventData = @eventData(event)
-
-        @trigger("start", @lastEventData)
-
-      else
-
-        @cancel()
-
-      return
+    { delta, velocity, touch, originalEvent : event }
 
 
-    onTouchMove : (event) =>
-
-      if @isActive
-
-        @lastEventData = @eventData(event)
-        @trigger("move", @lastEventData)
-
-      return
+class GestureRecognizer.TwoFingerPinch extends GestureRecognizer
 
 
-    onTouchEnd : (event) =>
+  onTouchStart : (event) =>
 
-      if @isActive
+    touches = event.targetTouches
 
-        @trigger("end", @lastEventData)
-        @cancel()
+    if touches.length == 2
 
-      return
+      @isActive = true
 
+      @startMatrix = [
+        1, 0, 0
+        0, 1, 0
+        0, 0, 1
+      ]
 
-    eventData : (event) ->
+      [ touch0, touch1 ] = touches
 
-      [ touch0, touch1 ] = event.targetTouches
-
-      deltaScale = Utils.distance(
+      @startDistance = Utils.distance(
         touch1.clientX - touch0.clientX
         touch1.clientY - touch0.clientY
-      ) / @startDistance
+      )
 
-      deltaX = touch0.clientX - @startTouches[0].clientX
-      deltaY = touch0.clientY - @startTouches[0].clientY
+      @startTouches = [
+        cloneTouch(touch0)
+        cloneTouch(touch1)
+      ]
 
-      {
-        matrix :
-          Matrix3.translate(
-            Matrix3.scale(
-              Matrix3.translate(
-                Matrix3.translate(@startMatrix, deltaX, deltaY)
-                - touch0.clientX
-                - touch0.clientY
-              )
-              deltaScale
+      @lastEventData = @eventData(event)
+
+      @trigger("start", @lastEventData)
+
+    else
+
+      @cancel()
+
+    return
+
+
+  onTouchMove : (event) =>
+
+    if @isActive
+
+      @lastEventData = @eventData(event)
+      @trigger("move", @lastEventData)
+
+    return
+
+
+  onTouchEnd : (event) =>
+
+    if @isActive
+
+      @trigger("end", @lastEventData)
+      @cancel()
+
+    return
+
+
+  eventData : (event) ->
+
+    [ touch0, touch1 ] = event.targetTouches
+
+    deltaScale = Utils.distance(
+      touch1.clientX - touch0.clientX
+      touch1.clientY - touch0.clientY
+    ) / @startDistance
+
+    deltaX = touch0.clientX - @startTouches[0].clientX
+    deltaY = touch0.clientY - @startTouches[0].clientY
+
+    {
+      matrix :
+        Matrix3.translate(
+          Matrix3.scale(
+            Matrix3.translate(
+              Matrix3.translate(@startMatrix, deltaX, deltaY)
+              - touch0.clientX
+              - touch0.clientY
             )
-            touch0.clientX,
-            touch0.clientY
+            deltaScale
           )
-        touches : [ touch0, touch1 ]
+          touch0.clientX,
+          touch0.clientY
+        )
+      touches : [ touch0, touch1 ]
+      originalEvent : event
+    }
+
+
+class GestureRecognizer.Tap extends GestureRecognizer
+
+  MOVEMENT_THRESHOLD : 10
+
+  onTouchStart : (event) =>
+
+    touches = event.targetTouches
+
+    if touches.length == 1
+
+      @isActive = true
+
+      @startTouch = cloneTouch(touches[0])
+
+      @trigger("start",
+        touch : @startTouch
         originalEvent : event
-      }
+      )
+
+    return
 
 
-  class GestureRecognizer.Tap extends GestureRecognizer
+  onTouchMove : (event) =>
 
-    MOVEMENT_THRESHOLD : 10
+    if @isActive
 
-    onTouchStart : (event) =>
+      touch = event.targetTouches[0]
 
-      touches = event.targetTouches
-
-      if touches.length == 1
-
-        @isActive = true
-
-        @startTouch = cloneTouch(touches[0])
-
-        @trigger("start",
-          touch : @startTouch
-          originalEvent : event
-        )
-
-      return
-
-
-    onTouchMove : (event) =>
-
-      if @isActive
-
-        touch = event.targetTouches[0]
-
-        unless @startTouch.clientX - @MOVEMENT_THRESHOLD <= touch.clientX <= @startTouch.clientX + @MOVEMENT_THRESHOLD and
-        @startTouch.clientY - @MOVEMENT_THRESHOLD <= touch.clientY <= @startTouch.clientY + @MOVEMENT_THRESHOLD
-          @cancel()
-
-      return
-
-
-    onTouchEnd : (event) =>
-
-      if @isActive
-
-        @trigger("end",
-          touch : @startTouch
-          originalEvent : event
-        )
+      unless @startTouch.clientX - @MOVEMENT_THRESHOLD <= touch.clientX <= @startTouch.clientX + @MOVEMENT_THRESHOLD and
+      @startTouch.clientY - @MOVEMENT_THRESHOLD <= touch.clientY <= @startTouch.clientY + @MOVEMENT_THRESHOLD
         @cancel()
 
-      return
+    return
 
-  GestureRecognizer
+
+  onTouchEnd : (event) =>
+
+    if @isActive
+
+      @trigger("end",
+        touch : @startTouch
+        originalEvent : event
+      )
+      @cancel()
+
+    return
+
+GestureRecognizer

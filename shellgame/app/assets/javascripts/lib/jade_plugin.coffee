@@ -1,18 +1,20 @@
-define [
-  "jquery"
-  "underscore"
-  "jadeEngine"
-], ($, _, Jade) ->
+### define
+jquery : $
+underscore : _
+jadeEngine : Jade
+###
 
-  getAndCompile = _.memoize (url) ->
+getAndCompile = _.memoize (url) ->
 
-    $.ajax(url).pipe (data) -> Jade.compile(data)
+  $.ajax(url).pipe (data) -> Jade.compile(data)
 
 
-  load : (name, parentRequire, load, config) ->
+JadePlugin = 
 
-    url = parentRequire.toUrl("#{name}.jade")
+	load : (name, parentRequire, load, config) ->
 
-    getAndCompile(url).done (data) -> load(data)
+	  url = parentRequire.toUrl("#{name}.jade")
 
-    return
+	  getAndCompile(url).done (data) -> load(data)
+
+	  return

@@ -1,5 +1,6 @@
-define [
-  "./views/scrubbable_image_sequence"
-  "./views/swipable_image_sequence"
-], (ScrubbableImageStack, SwipableImageStack) ->
-  { ScrubbableImageStack, SwipableImageStack }
+### define
+./views/scrubbable_image_sequence : ScrubbableImageStack
+./views/swipable_image_sequence : SwipableImageStack
+###
+
+{ ScrubbableImageStack, SwipableImageStack }

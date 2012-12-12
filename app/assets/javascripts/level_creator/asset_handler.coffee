@@ -20,7 +20,7 @@ class AssetHandler
 
   constructor : ( @levelId ) ->
 
-    _.extend(this, new EventMixin())
+    EventMixin.extend(this)
 
     @assetStore = {}
     @imageStore = {}
@@ -66,6 +66,8 @@ class AssetHandler
       $input.click()
 
     #### init
+
+    @addDeferred("initialized")
 
     Request.send(
       url : Routes.controllers.admin.LevelCreator.listAssets(@levelId).url

@@ -98,11 +98,19 @@ class LevelCreator
 
     ####
 
-    @assetHandler.on "initialized", => @updatePreview()
-    @pluginRenderer.on "initialized", => @updatePreview()
+    assetDeferred = new $.Deferred()
+    pluginDeferred = new $.Deferred()
+
+    @assetHandler.on "initialized", => 
+      @updatePreview()
+      assetDeferred.resolve()
+
+    @pluginRenderer.on "initialized", => 
+      @updatePreview()
+      pluginDeferred.resolve()
 
     if window.callPhantom?
-      @assetHandler.on "initialized", =>
+      $.when(assetDeferred, pluginDeferred).done =>
         @prepareHeadlessRendering()
       
 
@@ -171,7 +179,16 @@ class LevelCreator
     )
 
 
-  headlessRenderung : (t) ->
+  headlessRendering : (t) ->
+
+    imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
+    imageDataData = imageData.data
+    frameBuffer = @pluginRenderer.render(t)
+    # HACK Phantom doesn't support Uint8ClampedArray yet
+    for i in [0...frameBuffer.length] by 1
+      imageDataData[i] = frameBuffer[i]
+    @context.putImageData(imageData, 0, 0)
+
 
     window.callPhantom( message : "rendered" )
 

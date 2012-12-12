@@ -4,34 +4,48 @@ var page = require('webpage').create();
 
 page.viewportSize = { width : 1000, height : 1000 };
 
+
 var i = 0;
 var length = 0;
 
-var render = function() {
+var triggerRender = function() {
   
-  page.evaluate(function() {
+  console.log("rendering frame #" + i);
+  page.evaluate(function(i) {
     window.levelCreator.headlessRendering(i);
-  });
-    
-  page.onCallback = function (data) {
-    page.render(@{outputFilepattern}.replace("%i", i));
-    i++;
+  }, i);
+}
 
+page.onCallback = function (data) {
+
+  console.log(data.message);
+
+  if (data.message == "initialized") {
+
+    page.clipRect = { top : 0, height : 0, width : data.width, height : data.height };
+
+    length = data.length;
+
+    console.log("" + length + " frames available");
+    triggerRender();
+  }
+
+  if (data.message == "rendered") {
+
+    page.render("@{outputFilepattern}".replace("%i", i));
+    console.log("rendered frame #" + i + " to " + "@{outputFilepattern}".replace("%i", i));
+    
+    i++;
     if (i < length) {
-      render();
+      triggerRender();
     } else {
       phantom.exit();
     }
   }
 }
 
-page.onCallback = function (data) {
-  if (data.message == "initialized") {
+page.onConsoleMessage = function(msg) {
+  console.log( "CONSOLE: " + msg );
+};
 
-    page.clipRect = { width : data.width, height : data.height };
-
-    length = data.length;
-  }
-}
-
-page.open("");
+page.open("@{levelUrl}");

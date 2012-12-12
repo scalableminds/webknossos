@@ -10,6 +10,8 @@ routes : Routes
 class AssetHandler
 
   WINDOW_URL : window.URL || window.webkitURL
+  BLOB_BUILDER : window.WebKitBlobBuilder || window.MozBlobBuilder || window.MSBlobBuilder || window.BlobBuilder
+
   SUPPORTED_IMAGE_TYPES :
     ".bmp" : "image/bitmap"
     ".jpg" : "image/jpeg"
@@ -80,7 +82,7 @@ class AssetHandler
     Request.send(
       url : Routes.controllers.admin.LevelCreator.retrieveAsset(@levelId, name).url
       dataType : "arraybuffer"
-    ).done (data) =>
+    ).pipe (data) =>
 
       @assetStore[name] = data
 
@@ -91,13 +93,14 @@ class AssetHandler
 
         deferred = new $.Deferred()
 
-        image = new Image()
+        image = $("<image>")[0]
         image.onload = =>
-          @WINDOW_URL.revokeObjectURL(image.src)
           @imageStore[name] = image
           deferred.resolve()
 
-        image.src = @WINDOW_URL.createObjectURL(blob)
+        # HACK: PhantomJS doesn't fire onload when using Blob urls
+        # relying on browser cache here
+        image.src = Routes.controllers.admin.LevelCreator.retrieveAsset(@levelId, name).url
 
         deferred
 
@@ -118,11 +121,14 @@ class AssetHandler
 
   getBlob : (name, mimeType) ->
 
-    if mimeType?
+    try
       new Blob([ @getArray(name) ], type : mimeType )
-    else
-      new Blob([ @getArray(name) ])
 
+    # HACK PhantomJS doesn't yet support new Blob(...)
+    catch error
+      blobBuilder = new @BLOB_BUILDER()
+      blobBuilder.append(@getArray(name))
+      blobBuilder.getBlob(mimeType)
 
 
   getImage : (name) ->

@@ -3,7 +3,7 @@ require.config
   baseUrl : "/assets/javascripts"
 
   paths :
-    "jquery" : "libs/jquery-1.7.1"
+    "jquery" : "libs/jquery-1.8.3.min"
     "underscore" : "libs/underscore-1.2.0.min"
     "bootstrap" : "libs/bootstrap.min"
     "worker" : "libs/worker_plugin"

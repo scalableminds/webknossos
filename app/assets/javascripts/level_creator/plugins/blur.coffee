@@ -11,59 +11,83 @@ class Blur
       rgba: "Uint8Array"
     radius: "integer"
 
-  KERNEL = [ 1, 2, 1, 2, 4, 2, 1, 2, 1 ]
 
+  kernel : null
+  kernelSize : 0
+  kernelSum : 0
+
+  constructor : ->
+    @radius = 2
+    @makeKernel(@radius)
 
   execute : ({ input : { rgba, dimensions }, radius }) ->
 
-    @dimensions = dimensions
-    @rgba = rgba
+    width = dimensions[0]
+    height = dimensions[1]
 
-    for i in [0...rgba.length] by 4
-      r = 0
-      g = 0
-      b = 0
+    if @radius isnt radius and typeof radius isnt "undefined"
+      @radius = radius
+      @makeKernel(radius)
 
-      kernelCount = 0;
+    kernel = @kernel
+    kernelSize = @kernelSize
 
-      #Apply kernel
-      for y in [-1..1]
-        for x in [-1..1]
-          neighbor =
-            r : @getPixel(i + 0, x, y)
-            g : @getPixel(i + 1, x, y)
-            b : @getPixel(i + 2, x, y)
+    for y in [0...height] by 1
+      for x in [0...width] by 1
 
-          r += KERNEL[kernelCount] * neighbor.r
-          g += KERNEL[kernelCount] * neighbor.g
-          b += KERNEL[kernelCount] * neighbor.b
-          kernelCount++
+        r = 0
+        g = 0
+        b = 0
+        a = 0
 
-      r /= 16
-      g /= 16
-      b /= 16
+        for j in [1 - kernelSize...kernelSize] by 1
+          if y + j < 0 or y + j >= height
+            continue
 
-      rgba[i + 0] = r
-      rgba[i + 1] = g
-      rgba[i + 2] = b
+          for i in [1 - kernelSize...kernelSize] by 1
+            if x + i < 0 or x + i >= width
+              continue
+
+            r += rgba[4 * ((y + j) * width + (x + i)) + 0] * kernel[Math.abs(j)][Math.abs(i)];
+            g += rgba[4 * ((y + j) * width + (x + i)) + 1] * kernel[Math.abs(j)][Math.abs(i)];
+            b += rgba[4 * ((y + j) * width + (x + i)) + 2] * kernel[Math.abs(j)][Math.abs(i)];
+            a += rgba[4 * ((y + j) * width + (x + i)) + 3] * kernel[Math.abs(j)][Math.abs(i)];
+
+        rgba[4 * (y * width + x) + 0] = r / @kernelSum;
+        rgba[4 * (y * width + x) + 1] = g / @kernelSum;
+        rgba[4 * (y * width + x) + 2] = b / @kernelSum;
+        rgba[4 * (y * width + x) + 3] = a / @kernelSum;
 
     rgba
 
 
-  getPixel : (_index, x, y) ->
+  makeKernel : (radius) ->
 
-    width = @dimensions[0]
-    height = @dimensions[1]
+    sigma = radius
+    ss = sigma * sigma
+    factor = 2 * Math.PI * ss
+    kernel = []
+    kernel.push([])
 
-    x *= 4
+    for i in [0...7] by 1
+      g = Math.exp(-(i * i) / (2 * ss)) / factor
+      if g < 0.001
+        break
+      kernel[0].push(g)
 
-    index = _index + width * 4 * y + x
+    kernelSize = i
+    for j in [1...kernelSize] by 1
+      kernel.push([])
 
-    #clamp
-    if index < 0
-      return 0
+      for i in [0...kernelSize] by 1
+        g = Math.exp(-(i * i + j * j) / (2 * ss)) / factor
+        kernel[j].push(g)
 
-    if index > height * width * 4
-      return 0
+    kernelSum = 0
+    for j in [1 - kernelSize...kernelSize] by 1
+      for i in [1 - kernelSize...kernelSize] by 1
+        kernelSum += kernel[Math.abs(j)][Math.abs(i)]
 
-    @rgba[ index ]
+    @kernel = kernel
+    @kernelSize = kernelSize
+    @kernelSum = kernelSum

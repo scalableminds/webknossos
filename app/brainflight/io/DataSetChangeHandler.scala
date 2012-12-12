@@ -13,14 +13,16 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     val file = path.asInstanceOf[PathImpl].getFile
     val files = file.listFiles()
 
-    if (files != null)
-      files.map { f =>
-        if (f.isDirectory()) {
-          dataSetFromFile(f).map { dataSet =>
-            DataSet.updateOrCreate(dataSet)
-          }
+    if (files != null){
+      val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
+        dataSetFromFile(f).map { dataSet =>
+          DataSet.updateOrCreate(dataSet)
+          dataSet.name
         }
       }
+println("Found datasets " + foundDataSets.mkString(","))
+      //DataSet.deleteAllExcept(foundDataSets)
+    }
   }
 
   def onTick(path: Path) {
@@ -79,10 +81,10 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
         zMax <- maxValueFromFiles(ys.listFiles())
       } yield {
         (xMax, yMax, zMax)
-      }) map { 
+      }) map {
         case (xMax, yMax, zMax) =>
-        val maxCoordinates = Point3D((xMax+1) * 128, (yMax+1) * 128, (zMax+1) * 128)
-        DataSet(f.getName(), f.getAbsolutePath(), resolutions, maxCoordinates)
+          val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
+          DataSet(f.getName(), f.getAbsolutePath(), resolutions, maxCoordinates)
       }
     } else
       None

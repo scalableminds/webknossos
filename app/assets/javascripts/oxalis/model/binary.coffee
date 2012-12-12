@@ -19,7 +19,7 @@ class Binary
 
   dataSetId : ""
   direction : [0, 0, 0]
-  
+
 
   constructor : (flycam, dataSet, @TEXTURE_SIZE_P) ->
 
@@ -32,6 +32,17 @@ class Binary
     @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P)
     @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P)
     @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P)
+
+
+  updateLookupTable : (brightness, contrast) ->
+
+    lookUpTable = new Uint8Array(256)
+
+    for i in [0..255]
+      lookUpTable[i] = Math.max(Math.min((i + brightness) * contrast, 255), 0)
+
+    for plane in @planes
+      plane.updateLookUpTable(lookUpTable)
 
 
   ping : _.once (position, options) ->
@@ -73,4 +84,3 @@ class Binary
 
    # for i in [0...Math.min(options.length, @planes.length)]
     #  @planes[i].get(position, options[i]) if options[i]?
-

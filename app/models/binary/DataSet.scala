@@ -48,7 +48,7 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
   def updateOrCreate(d: DataSet) = {
     findOne(MongoDBObject("name" -> d.name)) match {
       case Some(stored) =>
-        d.update( _.copy(_id = stored._id, priority = stored.priority))
+        stored.update(_ => d.copy(_id = stored._id, priority = stored.priority))
       case _ =>
         insertOne(d)
     }

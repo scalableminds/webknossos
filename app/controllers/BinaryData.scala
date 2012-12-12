@@ -70,26 +70,27 @@ object BinaryData extends Controller with Secured {
     future.mapTo[Array[Byte]]
   }
 
-  def arbitraryViaAjax(levelId: String, taskId: String) = Authenticated(parser = parse.raw) { implicit request =>
+  def arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String) = Authenticated(parser = parse.raw) { implicit request =>
     Async {
-      Level.findOneById(levelId).map{ level =>
+      Level.findOneById(levelId).flatMap{ level =>
         val t = System.currentTimeMillis()
         val dataSet = DataSet.default
-        val dataLayer = dataSet.dataLayers(ColorLayer.identifier)
-        val position = Point3D(554, 543, 523)
-        val direction = (1.0, 1.0, 1.0)
-  
-        val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
-        val m = new CubeModel(level.width, level.height, level.depth)
-        val points = m.rotateAndMove(point, direction)
-        val future = dataSetActor ? ArbitraryRequest(dataSet, dataLayer, 1, points) recover {
-          case e: AskTimeoutException =>
-            Logger.error("calculateImages: AskTimeoutException")
-            Array.fill[Byte](level.height * level.width * level.depth)(0)
-        }
-        future.mapTo[Array[Byte]].asPromise.map{data => 
-          Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
-          Ok(data)
+        dataSet.dataLayers.get(dataLayerName).map{dataLayer => 
+          val position = Point3D(554, 543, 523)
+          val direction = (1.0, 1.0, 1.0)
+    
+          val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
+          val m = new CubeModel(level.width, level.height, level.depth)
+          val points = m.rotateAndMove(point, direction)
+          val future = dataSetActor ? ArbitraryRequest(dataSet, dataLayer, 1, points) recover {
+            case e: AskTimeoutException =>
+              Logger.error("calculateImages: AskTimeoutException")
+              Array.fill[Byte](level.height * level.width * level.depth)(0)
+          }
+          future.mapTo[Array[Byte]].asPromise.map{data => 
+            Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
+            Ok(data)
+          }
         }
       } getOrElse {
         Akka.future( BadRequest("Level not found.") )

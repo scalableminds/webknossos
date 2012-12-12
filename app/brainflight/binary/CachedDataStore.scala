@@ -102,28 +102,31 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       val result = new Array[Byte](cube.volume * bytesPerElement)
 
       var idx = 0
-      var x = 0
+      var x = startX
       var y = 0
-      var z = startZ
-     
+      var z = 0
+      var byte = 0
 
-      val edgeX = cube.edgeLengthX * bytesPerElement
+      val edgeX = cube.edgeLengthX
       val edgeY = cube.edgeLengthY
       val edgeZ = cube.edgeLengthZ
 
-      while (z < startZ + edgeZ) {
+      while (x < startX + edgeX) {
         y = startY
         while (y < startY + edgeY) {
-          x = startX
-          val baseAddress = y * 128 * bytesPerElement + z * 128 * 128 * bytesPerElement
-          while (x < startX + edgeX) {
-            result.update(idx, byteArray(baseAddress + x))
-            idx += 1
-            x += 1
+          z = startZ
+          while (z < startZ + edgeZ) {
+            byte = 0
+            while (byte < bytesPerElement) {
+              result.update(idx, byteArray(z * 128 * 128 * bytesPerElement + y * 128 * bytesPerElement + x * bytesPerElement + byte))
+              idx += 1
+              z += 1
+              byte += 1
+            }
           }
           y += 1
         }
-        z += 1
+        x += 1
       }
 
       result

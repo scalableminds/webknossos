@@ -25,6 +25,7 @@ class Gui
     data = @model.user
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
+    @qualityArray = ["high", "medium", "low"]
     @settings = 
       
       lockZoom: data.lockZoom
@@ -35,7 +36,7 @@ class Gui
       routeClippingDistance: data.routeClippingDistance
       displayCrosshairs: data.displayCrosshair
       interpolation : data.interpolation
-      minZoomStep : data.minZoomStep
+      quality : @qualityArray[data.quality]
 
       displayPrevXY : data.displayPreviewXY
       displayPrevYZ : data.displayPreviewYZ
@@ -82,9 +83,9 @@ class Gui
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
                           .onChange(@setInterpolation)
-    (fView.add @settings, "minZoomStep", [0, 1, 2, 3])
-                          .name("Min. Zoom Level")
-                          .onChange(@setMinZoomStep)
+    (fView.add @settings, "quality", @qualityArray)
+                          .name("Quality")
+                          .onChange(@setQuality)
 
     fSkeleton = @gui.addFolder("Skeleton View")
     (fSkeleton.add @settings, "displayPrevXY")
@@ -208,10 +209,12 @@ class Gui
     @model.user.interpolation = (Boolean) value
     @model.user.push()
 
-  setMinZoomStep : (value) =>
-    value = parseInt(value)
-    @flycam.setOverrideZoomStep(value)
-    @model.user.minZoomStep = (Number) value
+  setQuality : (value) =>
+    for i in [0..(@qualityArray.length - 1)]
+      if @qualityArray[i] == value
+        value = i
+    @flycam.setQuality(value)
+    @model.user.quality = (Number) value
     @model.user.push()
 
   setDisplayPreviewXY : (value) =>

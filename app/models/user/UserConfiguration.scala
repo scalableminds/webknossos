@@ -33,7 +33,7 @@ object UserConfiguration {
       "lockZoom" -> JsBoolean( true ),
       "displayCrosshair" -> JsBoolean( true ),
       "interpolation" -> JsBoolean( true ),
-      "minZoomStep" -> JsNumber( 0 ),
+      "quality" -> JsNumber( 0 ),
       "zoomXY" -> JsNumber( 0 ),
       "zoomYZ" -> JsNumber( 0 ),
       "zoomXZ" -> JsNumber( 0 ),

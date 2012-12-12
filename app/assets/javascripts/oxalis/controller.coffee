@@ -87,7 +87,7 @@ class Controller
 
       @flycam.setGlobalPos(@model.route.data.editPosition)
       @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
-      @flycam.setOverrideZoomStep(@model.user.minZoomStep)
+      @flycam.setQuality(@model.user.quality)
 
       @initMouse()
       @initKeyboard()

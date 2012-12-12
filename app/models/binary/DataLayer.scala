@@ -19,15 +19,15 @@ case class SegmentationLayer(elementSize: Int = 8, supportedResolutions: List[In
 
 object ColorLayer{
   val default = ColorLayer(8, List(1))
-  val identifier = "color"
+  def identifier = "color"
 }
 
 object ClassificationLayer{
   val default = ClassificationLayer(8, List(1), List("mito"))
-  val identifier = "classification"
+  def identifier = "classification"
 }
 
 object SegmentationLayer{
   val default = SegmentationLayer(16, List(1))
-  val identifier = "segmentation"
+  def identifier = "segmentation"
 }

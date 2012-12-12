@@ -20,7 +20,7 @@ class Blur
     @radius = 2
     @makeKernel(@radius)
 
-  execute : ({ input : { rgba }, radius, dimensions  }) ->
+  execute : ({ input : { rgba, dimensions }, radius }) ->
 
     width = dimensions[0]
     height = dimensions[1]

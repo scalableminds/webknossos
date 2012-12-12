@@ -1,4 +1,5 @@
 ### define
+../buffer_utils : BufferUtils
 ###
 
 
@@ -10,10 +11,10 @@ class Recolor
     input :
       rgba: "Uint8Array"
     colorMapName: "string"
-    r : "integer"
-    g : "integer"
-    b : "integer"
-    a : "integer"
+    r : "uint8"
+    g : "uint8"
+    b : "uint8"
+    a : "uint8"
 
   assetHandler : null
 
@@ -27,7 +28,8 @@ class Recolor
       @applyColorMap( rgba, colorMapName )
 
     if r? and g? and b? and a?
-      @applySingleColor( rgba, r, g, b, a)
+      @applySingleColor( rgba, r, g, b, a )
+
 
   applyColorMap : ( rgba, colorMapName ) ->
 
@@ -46,7 +48,8 @@ class Recolor
 
     rgba
 
-  applySingleColor : ( rgba, r, g, b, a)->
+
+  applySingleColor : ( rgba, r, g, b, a ) ->
 
     colorBuffer = new Uint8Array( rgba.length )
 
@@ -57,28 +60,7 @@ class Recolor
       colorBuffer[i + 2] = b
       colorBuffer[i + 3] = a
 
-    @alphaBlendBuffer(rgba, colorBuffer)
+    BufferUtils.alphaBlendBuffer(rgba, colorBuffer)
 
     rgba
 
-  alphaBlendBuffer : (backgroundBuffer, foregroundBuffer) ->
-
-    for i in [0...backgroundBuffer.length] by 4
-
-      rF = foregroundBuffer[i]
-      gF = foregroundBuffer[i + 1]
-      bF = foregroundBuffer[i + 2]
-      aF = foregroundBuffer[i + 3] / 255
-
-      rB = backgroundBuffer[i]
-      gB = backgroundBuffer[i + 1]
-      bB = backgroundBuffer[i + 2]
-      aB = backgroundBuffer[i + 3] / 255
-
-
-      backgroundBuffer[i    ] = rF * aF + rB * aB * (1 - aF)
-      backgroundBuffer[i + 1] = gF * aF + gB * aB * (1 - aF)
-      backgroundBuffer[i + 2] = bF * aF + bB * aB * (1 - aF)
-      backgroundBuffer[i + 3] = 255 * (aF + aB * (1 - aF))
-
-    return

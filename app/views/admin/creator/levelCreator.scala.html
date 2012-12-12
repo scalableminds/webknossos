@@ -1,8 +1,8 @@
-@(level: models.knowledge.Level)(implicit session: brainflight.view.AuthedSessionData)
+@(level: models.knowledge.Level, taskId: String)(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
 
-  <div class="container" id="level-creator" data-level-id="@level.id" data-level-width="@level.width" data-level-height="@level.height" data-level-depth="@level.depth">
+  <div class="container" id="level-creator" data-level-id="@level.id" data-level-task-id="@taskId" data-level-width="@level.width" data-level-height="@level.height" data-level-depth="@level.depth">
 
     <h3>Preview - @level.name</h3>
     <div class="row">

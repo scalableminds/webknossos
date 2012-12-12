@@ -5,6 +5,7 @@ libs/toast : Toast
 routes : routes
 libs/ace/ace : Ace
 ./level_creator/asset_handler : AssetHandler
+./level_creator/data_handler : DataHandler
 ./level_creator/plugin_renderer : PluginRenderer
 ###
 
@@ -21,7 +22,8 @@ class LevelCreator
 
   constructor : ->
 
-    @levelName = $("#level-creator").data("level-id")
+    @levelId = $("#level-creator").data("level-id")
+    @taskId = $("#level-creator").data("level-task-id")
 
     @dimensions = [
       parseInt( $("#level-creator").data("level-width")  )
@@ -29,10 +31,11 @@ class LevelCreator
       parseInt( $("#level-creator").data("level-depth")  )
     ]
 
-    @assetHandler = new AssetHandler(@levelName)
-    @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler)
+    @dataHandler = new DataHandler(@dimensions, @levelId, @taskId)
+    @assetHandler = new AssetHandler(@levelId)
+    @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler, @dataHandler)
 
-    ####
+    #### code editor
 
     # editor init
     @editor = Ace.edit("editor")
@@ -55,16 +58,15 @@ class LevelCreator
       @$form.find("[name=code]").val(code)
 
       $.ajax(
-        url : $form[0].action
-        data : $form.serialize()
+        url : @$form[0].action
+        data : @$form.serialize()
         type : "POST"
       ).then(
         ->
           Toast.success("Saved!")
         ->
           Toast.error(
-            """Sorry, we couldn't save your code. Please double check your syntax.<br/>
-            Otherwise, please copy your code changes and reload this page."""
+            "Sorry, we couldn't save your code. Please try again."
             true
           )
       )
@@ -74,7 +76,7 @@ class LevelCreator
       event.stopPropagation()
       @$form.submit()
 
-    ####
+    #### preview
 
     @$canvas = $("#preview-canvas")
     @canvas = @$canvas[0]
@@ -84,7 +86,7 @@ class LevelCreator
     @$slider.on "change", =>
       @updatePreview()
 
-    # zooming
+    #### zooming
     $zoomSlider = $("#zoom-slider")
     $zoomSlider.on "change", =>
       @zoomPreview()
@@ -96,21 +98,24 @@ class LevelCreator
     @canvas.width = @dimensions[0]
     @canvas.height = @dimensions[1]
 
-    ####
-
-    assetDeferred = new $.Deferred()
-    pluginDeferred = new $.Deferred()
+    
+    #### resource init
 
     @assetHandler.on "initialized", => 
       @updatePreview()
-      assetDeferred.resolve()
+      Toast.success("Assets loaded.")
 
-    @pluginRenderer.on "initialized", => 
+    @dataHandler.on "initialized", => 
       @updatePreview()
-      pluginDeferred.resolve()
+      Toast.success("Slide data loaded.")
 
+    #### headless init
+    
     if window.callPhantom?
-      $.when(assetDeferred, pluginDeferred).done =>
+      $.when(
+        @assetHandler.deferred("initialized")
+        @dataHandler.deferred("initialized")
+      ).done =>
         @prepareHeadlessRendering()
       
 
@@ -128,7 +133,7 @@ class LevelCreator
       imageData.data.set(frameBuffer)
       @context.putImageData(imageData, 0, 0)
 
-      @$slider.prop( max : @pluginRenderer.getLength() - @$slider.prop("step") )
+      @$slider.prop( max : @pluginRenderer.getLength() )
 
       $("#preview-error").html("")
       @$saveCodeButton.removeClass("disabled").popover("destroy")

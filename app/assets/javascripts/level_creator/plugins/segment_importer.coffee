@@ -2,7 +2,7 @@
 underscore : _
 ###
 
-class Preprocessor
+class SegmentImporter
 
   DESCRIPTION : "Generates all metadata from the original grey values"
 
@@ -20,51 +20,57 @@ class Preprocessor
     {x:  0,  y: -1}
   ]
 
-  constructor : ->
+  execute : ({ input }) ->
 
+    { segmentation, dimensions } = input
 
-  execute : ({ input : { raw }, width, height }) ->
+    segments = @getSegments(segmentation, dimensions)
 
-    segments = @getSegments(raw, width, height)
-
-    @setCenter segments
-    @setDistance segments
+    @setCenter(segments)
+    @setDistance(segments)
 
     for segment in segments
-      @setPath raw, segment
-      @setArtPath segment
+      @setPath(segmentation, segment, dimensions)
+      @setArtPath(segment, dimensions)
 
-    segments
+    input.segments = segments
 
 
-  getSegments : (raw, width, height) ->
+  getSegments : (segmentation, [ width, height ]) ->
 
     segments = []
 
-    for h in [0...height] by 1
-      for w in [0...width] by 1
-        value = slide[h * height + w] 
+    i = 0
+    for y in [0...height] by 1
+      for x in [0...width] by 1
 
-        if value is 0
-          continue
+        value = segmentation[i]
+        i++
 
-        #is segment allready there
-        segment = null
-        for s in segments
-          if s.value is value
-            segment = s
-            break
+        continue if value is 0
 
-        unless segment?
+        #is segment already there
+        segment = _.detect(segements, (s) -> s.value is value)
+
+        if segment?
+          
+          #set boundries
+          segment.xMin = Math.min(x, segment.xMin)
+          segment.xMax = Math.max(x, segment.xMax)
+
+          segment.yMin = Math.min(y, segment.yMin)
+          segment.yMax = Math.max(y, segment.yMax)
+
+        else
           segment = { 
             value: value 
-            xMin: w
-            xMax: w
-            yMin: h
-            yMax: h
+            xMin: x
+            xMax: x
+            yMin: y
+            yMax: y
             pathStart: {
-              x: w 
-              y: h 
+              x: x
+              y: y
             } 
             size: 1
             center: {
@@ -72,20 +78,7 @@ class Preprocessor
               y: 0
             }
           }
-          segments.push segment
-
-        #set boundries
-        if w < segment.xMin
-          segment.xMin = w
-
-        if w > segment.xMax 
-          segment.xMax = w
-
-        if h < segment.yMin
-          segment.yMin = h
-
-        if h > segment.yMax
-          segment.yMax = h
+          segments.push(segment)
 
         #size
         segment.size++
@@ -100,9 +93,7 @@ class Preprocessor
       segment.center.y = (segment.yMax + segment.yMin) * 0.5
 
 
-  setDistance : (segments) ->
-
-    { width, height } = @
+  setDistance : (segments, [ width, height ]) ->
 
     for segment in segments
       dx = segment.center.x - width * 0.5
@@ -110,9 +101,9 @@ class Preprocessor
       segment.distance = Math.sqrt(dx*dx + dy*dy)
 
 
-  setPath : (segmentationData, segment) ->
+  setPath : (segmentationData, segment, [ width, height ]) ->
 
-    { width, height, directions } = @
+    { directions } = @
 
     path = []
     direction = 0
@@ -156,10 +147,8 @@ class Preprocessor
     segment.path = path
 
 
-  setArtPath : (segment) ->
+  setArtPath : (segment, [ width, height ]) ->
 
-    { width, height } = @
-    
     path = []
     radius = Math.sqrt(segment.size) * 0.5
     count = segment.path.length * 0.5

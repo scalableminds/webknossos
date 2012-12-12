@@ -5,8 +5,7 @@ var page = require('webpage').create();
 page.viewportSize = { width : 1000, height : 1000 };
 
 
-var i = 0;
-var length = 0;
+var i = 0, length = 0;
 
 var triggerRender = function() {
   
@@ -46,6 +45,10 @@ page.onCallback = function (data) {
 
 page.onConsoleMessage = function(msg) {
   console.log( "CONSOLE: " + msg );
-};
+}
+
+page.onError = function() {
+  phantom.exit();
+}
 
 page.open("@{levelUrl}");

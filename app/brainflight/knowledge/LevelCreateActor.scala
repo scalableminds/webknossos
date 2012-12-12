@@ -55,7 +55,15 @@ class LevelCreateActor extends Actor{
   
   def createLevel(level: Level) = {
     val logger = new ExecLogger
-    val js = html.admin.creator.phantom(level, "temp%i.png", "http://%s:%d".format(server, port) + controllers.admin.routes.LevelCreator.use(level.id)).body
+    val taskId = "1"
+    val imagesPath = "data/levels/%s/stack/%s/".format(level.name, taskId)
+    val levelUrl = "http://%s:%d".format(server, port) + 
+      controllers.admin.routes.LevelCreator.use(level.id, taskId)
+      
+    val js = html.admin.creator.phantom(
+        level, 
+        imagesPath + "stackImage%i.png", 
+        levelUrl).body
     val file = createTempFile(js)
     println("phantomjs " + file.getAbsolutePath())
     ("phantomjs %s".format(file.getAbsolutePath)) !! logger

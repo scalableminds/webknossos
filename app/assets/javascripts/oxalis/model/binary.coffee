@@ -53,6 +53,22 @@ class Binary
 
   pingImpl : (position, options) ->
 
+  # QueueTest TODO: remove?
+
+  #  console.time "Queue1"
+  #  for i in [0..1000]
+  #    x = Math.random()
+  #    @queue.insert([], x)
+  #  console.timeEnd "Queue1"
+
+  #  @queue2 = new Array(1000)
+  #  console.time "Queue2"
+  #  for i in [0..1000]
+  #    x = Math.random()
+  #    @queue2.push({bucket: [], priority: x})
+  #  @queue2.sort((a,b) => a.priority - b.priority)
+  #  console.timeEnd "Queue2"
+
     if @lastPosition?
       
       @direction = [
@@ -63,14 +79,13 @@ class Binary
 
     unless _.isEqual(position, @lastPosition) and _.isEqual(options, @lastOptions)
 
-      console.log position, @queue.roundTripTime, @queue.bucketsPerSecond
+     # console.log position, @queue.roundTripTime, @queue.bucketsPerSecond
 
       @lastPosition = position.slice()
       @lastOptions = options.slice()
 
       console.time "ping"
       @queue.clear()
-
 
       for plane in @planes
         plane.ping(position, @direction, options[plane.index]) if options[plane.index]? 

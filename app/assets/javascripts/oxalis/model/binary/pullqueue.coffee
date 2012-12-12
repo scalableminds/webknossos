@@ -65,7 +65,7 @@ class PullQueue
     return unless priority >= 0
     
     # Checking whether bucket is already loaded
-    if @cube.getWorstRequestedZoomStepByZoomedAddress(bucket) > bucket[3]
+    if @cube.requestBucketByZoomedAddress(bucket)
       @queue.push( { "bucket" : bucket, "priority" : priority } )
       @siftUp(@queue.length - 1)
 
@@ -98,12 +98,7 @@ class PullQueue
       while batch.length < @BATCH_SIZE and @queue.length
         
         bucket = @removeFirst()
-
-        # Making sure bucket is still not loaded
-        continue if @cube.getWorstRequestedZoomStepByZoomedAddress(bucket) <= bucket[3]
-
         batch.push bucket
-        @cube.setRequestedZoomStepByZoomedAddress(bucket)
         #console.log "Requested: ", bucket
 
       @pullBatch(batch) if batch.length > 0

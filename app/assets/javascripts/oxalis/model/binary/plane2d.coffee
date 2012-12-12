@@ -84,24 +84,6 @@ class Plane2D
   ping : (position, direction, zoomStep) ->
 
     centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
- 
-    topLeftBucket = centerBucket.slice(0)
-    topLeftBucket[@u] -= @TEXTURE_SIZE_P - 1
-    topLeftBucket[@v] -= @TEXTURE_SIZE_P - 1
-
-    bottomRightBucket = centerBucket.slice(0)
-    bottomRightBucket[@u] += @TEXTURE_SIZE_P - 2
-    bottomRightBucket[@v] += @TEXTURE_SIZE_P - 2
-
-    @cube.extendByBucketAddressExtent([
-      (topLeftBucket[0] - 2)<< zoomStep
-      (topLeftBucket[1] - 2) << zoomStep
-      (topLeftBucket[2] - 2) << zoomStep
-    ], [
-      ((bottomRightBucket[0] + 3) << zoomStep) - 1
-      ((bottomRightBucket[1] + 3) << zoomStep) - 1
-      ((bottomRightBucket[2] + 3) << zoomStep) - 1
-    ])
 
     buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1)
 
@@ -251,7 +233,7 @@ class Plane2D
     destOffset = bufferOffsetByTileMacro(destTile, @cube.BUCKET_SIZE_P)
     sourceOffset = bufferOffsetByTileMacro(sourceTile, @cube.BUCKET_SIZE_P)
 
-    @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, @cube.BUCKET_SIZE_P, sourceBuffer, sourceOffset, 1, 1 << @TEXTURE_SIZE_P, 0, 0)
+    @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, @cube.BUCKET_SIZE_P, sourceBuffer, sourceOffset, 1, 1 << @TEXTURE_SIZE_P, 0, 0, false)
 
 
   renderTile : (tile) ->
@@ -294,39 +276,15 @@ class Plane2D
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@u]) + (sourceOffsets[1] << @DELTA[@v]) + (sourceOffsets[2] << @DELTA[@w])
 
-      @renderToBufferLookup(destOffset, 1 << @TEXTURE_SIZE_P, tileSize, bucket.data, sourceOffset,
+      @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, tileSize, bucket.data, sourceOffset,
         1 << (@DELTA[@u] + skip),
         1 << (@DELTA[@v] + skip),
         repeat,
-        repeat)
-
-  # TODO combine almost identical code
-  renderToBufferLookup : (destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat) ->
-
-    lookUpTable = @lookUpTable
-
-    i = 1 << (destSize << 1)
-    destRowMask = (1 << destSize) - 1
-    sourcePixelRepeatMask = (1 << sourcePixelRepeat) - 1
-    sourceRowRepeatMask = (1 << destSize + sourceRowRepeat) - 1
-
-    while i--
-      @buffer[destOffset++] = lookUpTable[sourceBuffer[sourceOffset]]
-     
-      if (i & sourcePixelRepeatMask) == 0
-        sourceOffset += sourcePixelDelta
-      
-      if (i & destRowMask) == 0
-        destOffset += destRowDelta - (1 << destSize)
-        sourceOffset -= sourcePixelDelta << (destSize - sourcePixelRepeat)
-
-      if (i & sourceRowRepeatMask) == 0
-        sourceOffset += sourceRowDelta
-
-    return
+        repeat,
+        true)
 
 
-  renderToBuffer : (destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat) ->
+  renderToBuffer : (destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat, mapColors) ->
 
     lookUpTable = @lookUpTable
 
@@ -336,7 +294,7 @@ class Plane2D
     sourceRowRepeatMask = (1 << destSize + sourceRowRepeat) - 1
 
     while i--
-      @buffer[destOffset++] = sourceBuffer[sourceOffset]
+      @buffer[destOffset++] = if mapColors then lookUpTable[sourceBuffer[sourceOffset]] else sourceBuffer[sourceOffset]
      
       if (i & sourcePixelRepeatMask) == 0
         sourceOffset += sourcePixelDelta

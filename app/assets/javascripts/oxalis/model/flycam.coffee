@@ -15,12 +15,14 @@ MAX_ZOOM_TRESHOLD  = 2
   
 class Flycam2d
 
-  constructor : (width, model) ->
+  scaleInfo : null
+  viewportWidth : 0
+
+
+  constructor : (@viewportWidth, @scaleInfo) ->
 
     _.extend(this, new EventMixin())
 
-    @model = model
-    @viewportWidth = width
     # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
     @maxZoomStepDiff = Math.min(Math.log(MAX_ZOOM_TRESHOLD) / Math.LN2, Math.log((TEXTURE_WIDTH-MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
     @hasNewTexture = [false, false, false]
@@ -35,7 +37,7 @@ class Flycam2d
     @direction = [0, 0, 1]
     @hasChanged = true
     @activePlane = PLANE_XY
-    @rayThreshold = [50, 50, 50, 100]
+    @rayThreshold = [10, 10, 10, 100]
     @spaceDirection = 1
 
   zoomIn : (planeID) ->
@@ -62,7 +64,7 @@ class Flycam2d
 
   calculateIntegerZoomStep : (planeID) ->
     # round, because Model expects Integer
-    @integerZoomSteps[planeID] = Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff)
+    @integerZoomSteps[planeID] = 2 + Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff)
     if @integerZoomSteps[planeID] < 0
       @integerZoomSteps[planeID] = 0
     # overrideZoomStep only has an effect when it is larger than the optimal zoom step
@@ -84,7 +86,7 @@ class Flycam2d
 
   calculateBuffer : ->
     for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      scaleArray = Dimensions.transDim(@model.scaleInfo.baseVoxelFactors, planeID)
+      scaleArray = Dimensions.transDim(@scaleInfo.baseVoxelFactors, planeID)
       base = @viewportWidth * @getTextureScalingFactor(planeID) / 2
       @buffer[planeID] = [TEXTURE_WIDTH/2 - base * scaleArray[0],
                           TEXTURE_WIDTH/2 - base * scaleArray[1]]
@@ -106,6 +108,7 @@ class Flycam2d
 
   setDirection : (direction) ->
     @direction = direction
+    @setSpaceDirection()
 
   setSpaceDirection : ->
     ind = Dimensions.getIndices @activePlane
@@ -117,36 +120,31 @@ class Flycam2d
   getSpaceDirection : ->
     @spaceDirection
 
-  move : (p) -> #move by whatever is stored in this vector
-    if @activePlane == PLANE_XY
-      # BAD consider the different resolution in z-direction
-      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+2*p[2]])
-    else
-      @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
+  move : (p, planeID) ->  #move by whatever is stored in this vector
+    if(planeID?)          # if planeID is given, use it to manipulate z
+      # change direction of the value connected to space, based on the last direction
+      p[Dimensions.getIndices(planeID)[2]] *= @spaceDirection
+    @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
     
-  moveActivePlane : (p) ->
+  moveActivePlane : (p) -> # vector of voxels in BaseVoxels
     p = Dimensions.transDim(p, @activePlane)
     ind = Dimensions.getIndices(@activePlane)
-    zoomFactor = Math.pow(2, @integerZoomSteps[@activePlane])
-    scaleFactor = @model.scaleInfo.baseVoxelFactors
+    zoomFactor = Math.pow(2, @zoomSteps[@activePlane])
+    scaleFactor = @scaleInfo.baseVoxelFactors
     delta = [p[0]*zoomFactor*scaleFactor[0], p[1]*zoomFactor*scaleFactor[1], p[2]*zoomFactor*scaleFactor[2]]
-    # change direction of the value connected to space, based on the last direction
-    delta[ind[2]] *= @spaceDirection
-    @move(delta)
+    @move(delta, @activePlane)
 
   toString : ->
     position = @globalPosition
     "(x, y, z) = ("+position[0]+", "+position[1]+", "+position[2]+")"
 
   getGlobalPos : ->
-    @model.route.globalPosition = @globalPosition
     @globalPosition
 
   getTexturePosition : (planeID) ->
     @texturePosition[planeID]
 
   setGlobalPos : (position) ->
-    p = [position[0] - @globalPosition[0], position[1] - @globalPosition[1], position[2] - @globalPosition[2]]
     @globalPosition = position
     @trigger("globalPositionChanged", position)
     @hasChanged = true
@@ -177,7 +175,7 @@ class Flycam2d
   # returns [left, top, right, bottom] array
   getArea : (planeID) ->
     # convert scale vector to array in order to be able to use getIndices()
-    scaleArray = @model.scaleInfo.baseVoxelFactors
+    scaleArray = @scaleInfo.baseVoxelFactors
     ind        = Dimensions.getIndices(planeID)
     offsets = @getOffsets(planeID)
     size    = @getTextureScalingFactor(planeID) * @viewportWidth
@@ -198,10 +196,11 @@ class Flycam2d
     (@hasNewTexture[PLANE_XY] or @hasNewTexture[PLANE_YZ] or @hasNewTexture[PLANE_XZ])
 
   setRayThreshold : (cameraRight, cameraLeft) ->
+    # in nm
     @rayThreshold[VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384
 
   getRayThreshold : (planeID) ->
     if planeID < 3
-      return @rayThreshold[planeID] * (@integerZoomSteps[planeID] + 1)
+      return @rayThreshold[planeID] * Math.pow(2, @zoomSteps[planeID]) * @scaleInfo.baseVoxel
     else
       return @rayThreshold[planeID]

@@ -2,6 +2,8 @@
 ./binary/cube : Cube
 ./binary/pullqueue : PullQueue
 ./binary/plane2d : Plane2D
+./binary/ping_strategy : PingStrategy
+./dimensions : DimensionHelper
 ###
 
 class Binary
@@ -9,6 +11,7 @@ class Binary
   # Constants
   PING_THROTTLE_TIME : 50
   DIRECTION_VECTOR_SMOOTHER : .125
+  TEXTURE_SIZE_P : 0
 
   cube : null
   queue : null
@@ -18,18 +21,17 @@ class Binary
   direction : [0, 0, 0]
   
 
-  constructor : (dataSet) ->
+  constructor : (flycam, dataSet, @TEXTURE_SIZE_P) ->
 
     @dataSetId = dataSet.id
 
     @cube = new Cube(dataSet.upperBoundary)
     @queue = new PullQueue(@dataSetId, @cube)
 
-    @planes = [
-      new Plane2D(0, 1, 2, @cube, @queue)
-      new Plane2D(2, 1, 0, @cube, @queue)
-      new Plane2D(0, 2, 1, @cube, @queue)
-    ]
+    @planes = []
+    @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P)
+    @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P)
+    @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P)
 
 
   ping : _.once (position, options) ->
@@ -50,20 +52,23 @@ class Binary
 
     unless _.isEqual(position, @lastPosition) and _.isEqual(options, @lastOptions)
 
+      console.log position, @queue.roundTripTime, @queue.bucketsPerSecond
+
       @lastPosition = position.slice()
       @lastOptions = options.slice()
 
       console.time "ping"
-      #console.log "Connection: latency:", @queue.roundTripTime, "bucketsPerSecond:", @queue.bucketsPerSecond
       @queue.clear()
 
-      for i in [0...Math.min(options.length, @planes.length)]
-        @planes[i].ping(position, @direction, options[i]) if options[i]? 
+
+      for plane in @planes
+        plane.ping(position, @direction, options[plane.index]) if options[plane.index]? 
 
       @queue.pull()
       console.timeEnd "ping"
 
 
+  # Not used anymore. Instead the planes get-functions are called directly.
   #get : (position, options) ->
 
    # for i in [0...Math.min(options.length, @planes.length)]

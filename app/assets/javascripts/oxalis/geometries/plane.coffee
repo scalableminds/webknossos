@@ -30,13 +30,9 @@ class Plane
     # dimension with the highest resolution. In all other dimensions, the plane
     # is smaller in voxels, so that it is squared in nm.
     # --> model.scaleInfo.baseVoxel
-    transformed = Dimensions.transDim(@model.scaleInfo.baseVoxelFactors, @planeID)
-    # Apparently y and z are switched for those guys...
-    @scaleVector = new THREE.Vector3(transformed[0], 1, transformed[1])
+    scaleArray = Dimensions.transDim(@model.scaleInfo.baseVoxelFactors, @planeID)
+    @scaleVector = new THREE.Vector3(scaleArray...)
     
-    console.log "scaleVector: "
-    console.log @scaleVector
-
     @createMeshes(planeWidth, textureWidth)
 
   createMeshes : (pWidth, tWidth) ->
@@ -46,7 +42,7 @@ class Plane
     # create texture
     texture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     texture.needsUpdate = true
-    textureMaterial     = new THREE.MeshBasicMaterial({wireframe : false, map: planeGeo.texture})
+    textureMaterial     = new THREE.MeshBasicMaterial({wireframe : false})
 
     # create mesh
     @plane = new THREE.Mesh( planeGeo, textureMaterial )
@@ -57,19 +53,19 @@ class Plane
     @crosshair          = new Array(2)
     for i in [0..1]
       crosshairGeometries[i] = new THREE.Geometry()
-      crosshairGeometries[i].vertices.push(new THREE.Vector3(-pWidth/2*i, 0, -pWidth/2*(1-i)))
-      crosshairGeometries[i].vertices.push(new THREE.Vector3( -25*i, 0,  -25*(1-i)))
-      crosshairGeometries[i].vertices.push(new THREE.Vector3( 25*i, 0, 25*(1-i)))
-      crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i, 0,  pWidth/2*(1-i)))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3(-pWidth/2*i, -pWidth/2*(1-i), 0))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3( -25*i,  -25*(1-i), 0))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3( 25*i, 25*(1-i), 0))
+      crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i,  pWidth/2*(1-i), 0))
       @crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({color: CROSSHAIR_COLORS[@planeID][i], linewidth: 1}), THREE.LinePieces)
       
     # create borders
     prevBordersGeo = new THREE.Geometry()
-    prevBordersGeo.vertices.push(new THREE.Vector3(-pWidth/2, 0, -pWidth/2))
-    prevBordersGeo.vertices.push(new THREE.Vector3(-pWidth/2, 0,  pWidth/2))
-    prevBordersGeo.vertices.push(new THREE.Vector3( pWidth/2, 0,  pWidth/2))
-    prevBordersGeo.vertices.push(new THREE.Vector3( pWidth/2, 0, -pWidth/2))
-    prevBordersGeo.vertices.push(new THREE.Vector3(-pWidth/2, 0, -pWidth/2))
+    prevBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2, -pWidth/2, 0))
+    prevBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2,  pWidth/2, 0))
+    prevBordersGeo.vertices.push(new THREE.Vector3(  pWidth/2,  pWidth/2, 0))
+    prevBordersGeo.vertices.push(new THREE.Vector3(  pWidth/2, -pWidth/2, 0))
+    prevBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2, -pWidth/2, 0))
     @prevBorders = new THREE.Line(prevBordersGeo, new THREE.LineBasicMaterial({color: BORDER_COLORS[@planeID], linewidth: 1}))
 
   setDisplayCrosshair : (value) =>
@@ -109,7 +105,8 @@ class Plane
       map.repeat.x = (area[2] -  area[0]) / @textureWidth  # (tWidth -4) ???
       map.repeat.y = (area[3] -  area[1]) / @textureWidth
       map.offset.x = area[0] / @textureWidth
-      map.offset.y = area[1] / @textureWidth
+      # THREE moved (0, 0) to bottom-left, apparently
+      map.offset.y = 1 - area[3] / @textureWidth
 
   setScale : (factor) =>
     scaleVec = new THREE.Vector3().multiply(new THREE.Vector3(factor, factor, factor), @scaleVector)

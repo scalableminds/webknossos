@@ -189,7 +189,6 @@ class ArrayBufferSocket.WebWorker
 
       openDeferred = @openDeferred = $.Deferred()
 
-      console.log "Creating worker"
       @worker = new Worker('./assets/javascripts/model/pullworker.js')
       @worker.addEventListener(
         "message"

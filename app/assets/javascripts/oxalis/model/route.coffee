@@ -25,7 +25,7 @@ class Route
   activeNode : null
   activeTree : null
 
-  constructor : (@data, dataSet, @scaleInfo) ->
+  constructor : (@data, dataSet, @scaleInfo, @flycam) ->
 
     _.extend(this, new EventMixin())
 
@@ -47,8 +47,6 @@ class Route
     @savedCurrentState = true
 
     ############ Load Tree from @data ##############
-    
-    @globalPosition = data.editPosition
 
     # get tree to build
     for tree in @data.trees
@@ -128,7 +126,7 @@ class Route
     # Get Branchpoints
     for branchPoint in @branchStack
       result.branchPoints.push({id : branchPoint.id})
-    result.editPosition = @globalPosition
+    result.editPosition = @flycam.getGlobalPos()
     result.trees = []
     for tree in @trees
       # Don't save empty trees (id is null)
@@ -204,21 +202,45 @@ class Route
 
   popBranch : ->
     deferred = new $.Deferred()
-    #if @doubleBranchPop
-    #  if !confirm("You didn't add a node after jumping to this branchpoint, do you really want to jump again?")
-    #    return deferred.reject()
-    point = @branchStack.pop()
-    @push()
-    if point
-      @activeNode = point
-      @activeNode.type = TYPE_USUAL
+    if @doubleBranchPop
+      @showBranchModal().done(=>
+        point = @branchStack.pop()
+        @push()
+        if point
+          @activeNode = point
+          @activeNode.type = TYPE_USUAL
 
-      @trigger("setBranch", false)
-      @doubleBranchPop = true
-      deferred.resolve(@activeNode.id)
+          @trigger("setBranch", false)
+          @doubleBranchPop = true
+          deferred.resolve(@activeNode.id)
+        else
+          @trigger("emptyBranchStack")
+          deferred.reject())
     else
-      @trigger("emptyBranchStack")
-      deferred.reject()
+      point = @branchStack.pop()
+      @push()
+      if point
+        @activeNode = point
+        @activeNode.type = TYPE_USUAL
+
+        @trigger("setBranch", false)
+        @doubleBranchPop = true
+        deferred.resolve(@activeNode.id)
+      else
+        @trigger("emptyBranchStack")
+        deferred.reject()
+    deferred
+
+  showBranchModal : ->
+    @branchDeferred = new $.Deferred()
+    $("#double-jump").modal("show")
+    return @branchDeferred
+
+  rejectBranchDeferred : ->
+    @branchDeferred.reject()
+
+  resolveBranchDeferred : ->
+    @branchDeferred.resolve()
       
 
   addNode : (position, type) ->
@@ -255,6 +277,13 @@ class Route
 
   getActiveTreeId : ->
     if @activeTree then @activeTree.treeId else null
+
+
+  getNode : (id) ->
+    for tree in @trees
+      findResult = @findNodeInTree(id, tree)
+      if findResult then return findResult
+    return null
     
 
   setActiveNodeRadius : (radius) ->
@@ -392,6 +421,9 @@ class Route
     for tree in @trees
       result = result.concat(@getNodeList(tree))
     return result
+
+  rendered : ->
+    @trigger("rendered")
 
   # Helper method used in initialization
   findNodeInList : (list, id) ->

@@ -190,6 +190,11 @@ class Cube
     max_y = Math.max(max_y, 0)
     max_z = Math.max(max_z, 0)
 
+    # Make sure cube doesn't get bigger than dataset
+    max_x = Math.min(max_x, @upperBoundary[0] >> @BUCKET_SIZE_P)
+    max_y = Math.min(max_y, @upperBoundary[1] >> @BUCKET_SIZE_P)
+    max_z = Math.min(max_z, @upperBoundary[2] >> @BUCKET_SIZE_P)
+
     # First, we calculate the new dimension of the cuboid.
     if oldCube
 
@@ -264,6 +269,3 @@ class Cube
       @cube       = newCube
       @cubeOffset = newCubeOffset
       @cubeSize   = newCubeSize
-
-    #console.log "RESIZE     ", [min_x,min_y,min_z], [max_x,max_y,max_z]
-    #console.log "RESIZED TO ", @cubeOffset, [@cubeOffset[0]+@cubeSize[0]-1,@cubeOffset[1]+@cubeSize[1]-1,@cubeOffset[2]+@cubeSize[2]-1]

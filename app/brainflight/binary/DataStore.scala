@@ -14,7 +14,7 @@ abstract class DataStore {
    * Loads the data of a given point from the data source
    */
   
-  def load( dataSet: DataSet, layer: DataLayer, resolution: Int, point: Point3D): Byte
+  def load( dataSet: DataSet, layer: DataLayer, resolution: Int, point: Point3D): Array[Byte]
 
   def load( dataSet: DataSet, layer: DataLayer, resolution: Int, cube: Cuboid): Array[Byte]
 
@@ -48,5 +48,5 @@ abstract class DataStore {
         point.x, point.y, point.z )
   
         
-  
+  val voxelsPerFile = 128 * 128 * 128
 }

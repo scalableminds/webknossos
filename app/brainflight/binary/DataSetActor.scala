@@ -11,7 +11,7 @@ import play.api.Play.current
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
 import brainflight.tools.geometry.Vector3D
-
+//TODO: rename points to cube
 case class SingleRequest( dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D )
 case class MultiCubeRequest( requests: Array[CubeRequest] )
 case class CubeRequest( dataSet: DataSet, dataLayer: DataLayer, resolution: Int, points: Cuboid)

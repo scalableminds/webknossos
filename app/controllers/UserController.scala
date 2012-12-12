@@ -10,7 +10,7 @@ import play.api.libs.json._
 import models.security.Role
 import models.task._
 import models.binary.DataSet
-import views.html
+import views._
 import play.api.Logger
 import models.tracing._
 

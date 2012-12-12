@@ -129,116 +129,123 @@ $.bindDeferred = (target, source) ->
     .progress(-> target.notify.apply(target, arguments))
 
 
-_.debounceOrThrottleDeferred = (func, waitDebounce, waitThrottle) ->
+_.mixin(
 
-  timeoutDebounce = null
-  deferred = null
-  throttled = false
-  
-  ->
-    context = this
-    args = arguments
+  toCamelCase : (string) ->
 
-    deferred.reject() if deferred
-    deferred = $.Deferred()
+    "#{string[0].toLowerCase}#{string.substring(1)}"
+
+  debounceOrThrottleDeferred : (func, waitDebounce, waitThrottle) ->
+
+    timeoutDebounce = null
+    deferred = null
+    throttled = false
     
-    caller = ->
-      result = func.apply(context, args)
-      setTimeout(unthrottler, waitThrottle)
-      throttled = true
-      if result
-        $.bindDeferred(deferred, result)
-      else
-        deferred.reject()
+    ->
+      context = this
+      args = arguments
 
-    unthrottler = ->
-      throttled = false
-
-    debouncer = ->
-      timeoutDebounce = null
-      caller()
-
-    clearTimeout(timeoutDebounce)
-    if throttled
-      timeoutDebounce = setTimeout(debouncer, waitDebounce)
-    else
-      caller()
-
-    deferred.promise()
-
-_.debounceDeferred = (func, wait) ->
-  timeout = null
-  deferred = null
-  ->
-    context = this
-    args = arguments
-
-    deferred.reject() if deferred
-    deferred = $.Deferred()
-    
-    later = ->
-      timeout = null
-      result = func.apply(context, args)
-      if result
-        $.bindDeferred(deferred, result)
-      else
-        deferred.reject()
-
-    clearTimeout(timeout)
-    timeout = setTimeout(later, wait)
-
-    deferred.promise()
-
-
-# `_.throttle2` makes a function only be executed once in a given
-# time span -- no matter how often you it. We don't recomment to use 
-# any input parameters, because you cannot know which are used and 
-# which are dropped. In contrast to `_.throttle`, the function
-# at the beginning of the time span.
-_.throttle2 = (func, wait, resume = true) ->
-  timeout = more = false
-
-  ->
-    context = @
-    args = arguments
-    if timeout == false
-      _.defer -> func.apply(context, args)
-      timeout = setTimeout (
-        -> 
-          timeout = false
-          func.apply(context, args) if more
-          more = false
-        ), wait
-    else
-      more = resume and true
-
-# Returns a wrapper function that rejects all invocations while an 
-# instance of the function is still running. The mutex can be 
-# cleared with a predefined timeout. The wrapped function is
-# required to return a `$.Deferred` at all times.
-_.mutexDeferred = (func, timeout = 20000) ->
-
-  deferred = null
-
-  (args...) ->
-
-    unless deferred
+      deferred.reject() if deferred
+      deferred = $.Deferred()
       
-      deferred = _deferred = func.apply(this, args)
-      unless timeout < 0
-        setTimeout((-> 
-          deferred = null if deferred == _deferred
-        ), timeout) 
-      deferred.always -> deferred = null
-      deferred
+      caller = ->
+        result = func.apply(context, args)
+        setTimeout(unthrottler, waitThrottle)
+        throttled = true
+        if result
+          $.bindDeferred(deferred, result)
+        else
+          deferred.reject()
 
-    else
-      $.Deferred().reject("mutex").promise()
+      unthrottler = ->
+        throttled = false
 
-# Removes the first occurrence of given element from an array.
-_.removeElement = (array, element) ->
-  if (index = array.indexOf(element)) != -1
-    array.splice(index, 1)
+      debouncer = ->
+        timeoutDebounce = null
+        caller()
+
+      clearTimeout(timeoutDebounce)
+      if throttled
+        timeoutDebounce = setTimeout(debouncer, waitDebounce)
+      else
+        caller()
+
+      deferred.promise()
+
+  debounceDeferred : (func, wait) ->
+    timeout = null
+    deferred = null
+    ->
+      context = this
+      args = arguments
+
+      deferred.reject() if deferred
+      deferred = $.Deferred()
+      
+      later = ->
+        timeout = null
+        result = func.apply(context, args)
+        if result
+          $.bindDeferred(deferred, result)
+        else
+          deferred.reject()
+
+      clearTimeout(timeout)
+      timeout = setTimeout(later, wait)
+
+      deferred.promise()
+
+
+  # `_.throttle2` makes a function only be executed once in a given
+  # time span -- no matter how often you it. We don't recomment to use 
+  # any input parameters, because you cannot know which are used and 
+  # which are dropped. In contrast to `_.throttle`, the function
+  # at the beginning of the time span.
+  throttle2 : (func, wait, resume = true) ->
+    timeout = more = false
+
+    ->
+      context = @
+      args = arguments
+      if timeout == false
+        _.defer -> func.apply(context, args)
+        timeout = setTimeout (
+          -> 
+            timeout = false
+            func.apply(context, args) if more
+            more = false
+          ), wait
+      else
+        more = resume and true
+
+  # Returns a wrapper function that rejects all invocations while an 
+  # instance of the function is still running. The mutex can be 
+  # cleared with a predefined timeout. The wrapped function is
+  # required to return a `$.Deferred` at all times.
+  mutexDeferred : (func, timeout = 20000) ->
+
+    deferred = null
+
+    (args...) ->
+
+      unless deferred
+        
+        deferred = _deferred = func.apply(this, args)
+        unless timeout < 0
+          setTimeout((-> 
+            deferred = null if deferred == _deferred
+          ), timeout) 
+        deferred.always -> deferred = null
+        deferred
+
+      else
+        $.Deferred().reject("mutex").promise()
+
+  # Removes the first occurrence of given element from an array.
+  removeElement : (array, element) ->
+    if (index = array.indexOf(element)) != -1
+      array.splice(index, 1)
+)
 
 # Works like `$.when`. However, there is a notification when one
 # of the deferreds completes.

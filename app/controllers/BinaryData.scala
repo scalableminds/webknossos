@@ -76,7 +76,7 @@ object BinaryData extends Controller with Secured {
         val t = System.currentTimeMillis()
         val dataSet = DataSet.default
         dataSet.dataLayers.get(dataLayerName).map{dataLayer => 
-          val position = Point3D(554, 543, 523)
+          val position = Point3D(1920, 2048, 2432)
           val direction = (1.0, 1.0, 1.0)
     
           val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)

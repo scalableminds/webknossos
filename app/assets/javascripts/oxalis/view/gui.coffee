@@ -305,10 +305,10 @@ class Gui
     @model.route.setComment(value)
 
   prevComment : =>
-    @trigger "setActiveNode", @model.route.nextCommentNodeID(true)
+    @trigger "setActiveNode", @model.route.nextCommentNodeID(false)
 
   nextComment : =>
-    @trigger "setActiveNode", @model.route.nextCommentNodeID(false)
+    @trigger "setActiveNode", @model.route.nextCommentNodeID(true)
 
   updateRadius : (value) ->
     if value then @settings.radius = value

@@ -55,6 +55,9 @@ class Gui
       newNodeNewTree : data.newNodeNewTree
       deleteActiveNode : => @trigger "deleteActiveNode"
       radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
+      comment : ""
+      prevComment : @prevComment
+      nextComment : @nextComment
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
@@ -144,6 +147,14 @@ class Gui
                           .name("Radius")    
                           .listen()
                           .onChange(@setNodeRadius)
+    @commentController =
+    (fNodes.add @settings, "comment")
+                          .name("Comment")
+                          .onChange(@setComment)
+    (fNodes.add @settings, "prevComment")
+                          .name("Previous Comment")
+    (fNodes.add @settings, "nextComment")
+                          .name("Next Comment")
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
@@ -290,19 +301,28 @@ class Gui
   setNodeRadius : (value) =>
     @model.route.setActiveNodeRadius(value)
 
+  setComment : (value) =>
+    @model.route.setComment(value)
+
+  prevComment : =>
+    @trigger "setActiveNode", @model.route.nextCommentNodeID(true)
+
+  nextComment : =>
+    @trigger "setActiveNode", @model.route.nextCommentNodeID(false)
+
   updateRadius : (value) ->
     if value then @settings.radius = value
     else if (value = @model.route.getActiveNodeRadius())
       @settings.radius = value
 
-  # called when value user switch to different active node
-  updateNodeAndTreeIds : =>
-    @settings.activeNodeID = @model.route.lastActiveNodeId
-    @settings.activeTreeID = @model.route.getActiveTreeId()
-    @activeNodeIdController.updateDisplay()
-    @activeTreeIdController.updateDisplay()
-
   # Helper method to combine common update methods
   update : ->
-    @updateNodeAndTreeIds()
+    # called when value user switch to different active node
+    @settings.activeNodeID = @model.route.lastActiveNodeId
+    @settings.activeTreeID = @model.route.getActiveTreeId()
+    @settings.comment      = @model.route.getComment()
+    @activeNodeIdController.updateDisplay()
+    @activeTreeIdController.updateDisplay()
+    @commentController.updateDisplay()
+
     @updateRadius()

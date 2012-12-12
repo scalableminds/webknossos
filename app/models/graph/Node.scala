@@ -3,7 +3,7 @@ package models.graph
 import brainflight.tools.geometry.Point3D
 import xml.XMLWrites
 
-case class Node(id: Int, radius: Float, position: Point3D, viewport: Int, resolution: Int, timestamp: Long, comment: Option[String] = None)
+case class Node(id: Int, radius: Float, position: Point3D, viewport: Int, resolution: Int, timestamp: Long)
 
 object Node {
   implicit object NodeXMLWrites extends XMLWrites[Node] {

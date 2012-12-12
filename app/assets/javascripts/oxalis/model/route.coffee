@@ -324,13 +324,20 @@ class Route
       for i in [0...@comments.length]
         if(@comments[i].node == @activeNode.id)
           @comments.splice(i, 1)
+          break
       @comments.push({node: @activeNode.id, content: commentText})
 
   getComment : (nodeID) ->
-    unless nodeID? then nodeID = @activeNode.id
+    unless nodeID? then nodeID = @activeNode.id if @activeNode
     for comment in @comments
       if comment.node == nodeID then return comment.content
     return ""
+
+  deleteComment : (nodeID) ->
+    for i in [0...@comments.length]
+      if(@comments[i].node == nodeID)
+        @comments.splice(i, 1)
+        return
 
   nextCommentNodeID : (forward) ->
     unless @activeNode?
@@ -404,6 +411,7 @@ class Route
     hasNoChildren = false
     @activeNode = @activeNode.parent
     if @activeNode
+      @deleteComment(id)
       hasNoChildren = @activeNode.remove(id)
       @lastActiveNodeId = @activeNode.id
       if hasNoChildren
@@ -423,6 +431,9 @@ class Route
         index = i
         break
     @trees.splice(index, 1)
+    # remove comments of all nodes inside that tree
+    for node in @getNodeList(@activeTree)
+      @deleteComment(node.id)
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0

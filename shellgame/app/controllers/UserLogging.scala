@@ -11,6 +11,8 @@ object UserLogging extends controllers.Controller{
     current.configuration.getString("shellgame.shellgameAssetsPath").get
 
   val LOG_FILES_ROOT = shellgameAssetsPath + "userlogs"
+  
+  new File(LOG_FILES_ROOT).mkdirs()
 
   def writeToFile(fileName: String, content: String, append: Boolean = true): Boolean = {
     writeToFile(new File(fileName), content, append)
@@ -33,7 +35,7 @@ object UserLogging extends controllers.Controller{
     if (id.matches("^[a-zA-Z0-9]*$")) {
       postParameter("log") match {
         case Some(log) =>
-          if (writeToFile("%s/%s.log".format(LOG_FILES_ROOT, id), log.mkString("", "\n", "\n")))
+          if (writeToFile("%s/%s.log".format(LOG_FILES_ROOT, id), log))
             Ok
           else
             BadRequest("Write to file failed.")

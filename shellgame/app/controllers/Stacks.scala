@@ -6,9 +6,10 @@ import play.api.Play.current
 object Stacks extends controllers.Controller {
   val stackPath = current.configuration.getString("braingames.stackPath").get
 
-  def image(stackName: String, stackNumber: Int, imageName: String) =
+  def image(stackName: String, taskId: String, imageName: String) = {
     controllers.Assets.at(
       path = stackPath,
-      file = "%s/stacks/%d/%s".format(stackName, stackNumber, imageName))
+      file = "%s/stacks/%s/%s".format(stackName, taskId, imageName))
+  }
 
 }

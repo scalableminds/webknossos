@@ -74,11 +74,11 @@ class Skeleton
     @route.on("newTree", (treeId, treeColor) =>
       @createNewTree(treeId, treeColor))
 
-    @route.on("deleteActiveTree", =>
-      @reset())
+    @route.on("deleteActiveTree", (index) =>
+      @deleteActiveTree(index))
 
-    @route.on("deleteActiveNode", =>
-      @reset())
+    @route.on("deleteActiveNode", (id) =>
+      @deleteNode(id))
 
     @route.on("deleteLastNode", (id) =>
       @deleteLastNode(id))
@@ -99,7 +99,7 @@ class Skeleton
 
     routeGeometry = new THREE.Geometry()
     routeGeometryNodes = new THREE.Geometry()
-    routeGeometryNodes.nodeIDs = []
+    routeGeometryNodes.nodeIDs = new Int32Array(@maxRouteLen * 3)
     routeGeometry.dynamic = true
     routeGeometryNodes.dynamic = true
 
@@ -112,7 +112,7 @@ class Skeleton
     @curIndex.push(0)
 
     @setActiveNode()
-    
+
     @trigger "newGeometries", [@routes[@routes.length - 1], @nodes[@nodes.length - 1]]
 
 
@@ -129,6 +129,7 @@ class Skeleton
     @nodesSpheres = []
     @edgesBuffer  = []
     @nodesBuffer  = []
+    @curIndex     = []
 
     for tree in @route.getTrees()
       @createNewTree(tree.treeId, tree.color)
@@ -154,7 +155,7 @@ class Skeleton
           nodePos = nodeList[0].pos
           @nodesBuffer[index].set(nodePos, @curIndex[index] * 3)
           # Assign the ID to the vertex, so we can access it later
-          @nodes[index].geometry.nodeIDs.push(nodeList[0].id)
+          @nodes[index].geometry.nodeIDs.set([nodeList[0].id], @curIndex[index])
           @pushNewNode(radius, nodePos, nodeList[0].id, tree.color)
         @curIndex[index]++
         for node in nodeList
@@ -162,12 +163,11 @@ class Skeleton
             radius = node.size
             nodePos = node.parent.pos
             node2Pos = node.pos
-
             @edgesBuffer[index].set(nodePos, (2 * @curIndex[index] - 2) * 3)
             @edgesBuffer[index].set(node2Pos, (2 * @curIndex[index] - 1) * 3)
             @nodesBuffer[index].set(node2Pos, @curIndex[index] * 3)
             # Assign the ID to the vertex, so we can access it later
-            @nodes[index].geometry.nodeIDs.push(node.id)
+            @nodes[index].geometry.nodeIDs.set([node.id], @curIndex[index])
             @pushNewNode(radius, node2Pos, node.id, tree.color)
             @curIndex[index]++
 
@@ -234,14 +234,12 @@ class Skeleton
   setWaypoint : =>
     curGlobalPos = @flycam.getGlobalPos()
     activePlane  = @flycam.getActivePlane()
-    zoomFactor   = @flycam.getPlaneScalingFactor activePlane
     position     = @route.getActiveNodePos()
-    typeNumber   = @route.getActiveNodeType()
     id           = @route.getActiveNodeId()
     index        = @getIndexFromTreeId(@route.getTree().treeId)
     color        = @route.getTree().color
     radius       = @route.getActiveNodeRadius()
-   
+
     unless @curIndex[index]
       @curIndex[index] = 0
       @lastNodePosition = position
@@ -250,12 +248,6 @@ class Skeleton
 
     if @curIndex[index] < @maxRouteLen
 
-    #PERFORMANCE TEST
-    #for k in [0...@maxRouteLen] 
-      #@curIndex = k
-      #position[0] = Math.random() * 5000
-      #position[1] = Math.random() * 5000
-      #position[2] = Math.random() * 5000
       if @curIndex[index] > 0
         @edgesBuffer[index].set(@lastNodePosition, (2 * @curIndex[index] - 2) * 3)
         @edgesBuffer[index].set(position, (2 * @curIndex[index] - 1) * 3)
@@ -264,11 +256,10 @@ class Skeleton
         @routes[index].geometry.__webglLineCount = 2 * @curIndex[index]
 
       @nodesBuffer[index].set(position, @curIndex[index] * 3)
+      @nodes[index].geometry.nodeIDs.set([id], @curIndex[index])
 
       @nodes[index].geometry.__vertexArray = @nodesBuffer[index]
       @nodes[index].geometry.__webglParticleCount = @curIndex[index] + 1
-      # Assign the ID to the vertex, so we can access it later
-      @nodes[index].geometry.nodeIDs.push(id)
 
       @pushNewNode(radius, position, id, color)
 
@@ -277,7 +268,7 @@ class Skeleton
 
       # Animation to center waypoint position
       @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
-      @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 300)
+      @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 100)
       @waypointAnimation.onUpdate ->
         @flycam.setGlobalPos [@globalPosX, @globalPosY, @globalPosZ]
       @waypointAnimation.start()
@@ -295,9 +286,6 @@ class Skeleton
 
       if @curIndex[index] > 0
         @curIndex[index]--
-        @lastNodePosition = [@nodes[index].geometry.__vertexArray[(@curIndex[index] * 3)],
-                            @nodes[index].geometry.__vertexArray[(@curIndex[index] * 3 + 1)],
-                            @nodes[index].geometry.__vertexArray[(@curIndex[index] * 3 + 2)]]
 
         @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index] - 1)
         @nodes[index].geometry.__webglParticleCount = @curIndex[index]
@@ -311,7 +299,70 @@ class Skeleton
       @setActiveNode()
       @flycam.hasChanged = true
     else
-      @reset()
+      @deleteNode(id)
+
+  deleteNode : (id) ->
+    sphere = @getSphereFromId(id)
+
+    @refreshActiveTree()
+
+    @trigger("removeGeometries", [sphere])
+    @setActiveNode()
+    @flycam.hasChanged = true
+
+  refreshActiveTree : ->
+
+    # rebuild buffer from nodelist
+    tree = @route.getTree()
+    nodeList = @route.getNodeList(tree)
+    index = @getIndexFromTreeId(tree.treeId)
+    @curIndex[index] = 0
+
+    if nodeList.length > 0
+      nodePos = nodeList[0].pos
+      @nodesBuffer[index].set(nodePos, @curIndex[index] * 3)
+      @nodes[index].geometry.nodeIDs.set([nodeList[0].id], @curIndex[index])
+
+    @curIndex[index]++
+
+    for node in nodeList
+      if node.parent
+        nodePos = node.parent.pos
+        node2Pos = node.pos
+
+        @edgesBuffer[index].set(nodePos, (2 * @curIndex[index] - 2) * 3)
+        @edgesBuffer[index].set(node2Pos, (2 * @curIndex[index] - 1) * 3)
+
+        @nodesBuffer[index].set(node2Pos, @curIndex[index] * 3)
+        @nodes[index].geometry.nodeIDs.set([node.id], @curIndex[index])
+
+        @curIndex[index]++
+
+    @routes[index].geometry.__vertexArray = @edgesBuffer[index]
+    @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index] - 1)
+    @nodes[index].geometry.__vertexArray = @nodesBuffer[index]
+    @nodes[index].geometry.__webglParticleCount = @curIndex[index]
+
+    @routes[index].geometry.verticesNeedUpdate = true
+    @nodes[index].geometry.verticesNeedUpdate = true
+
+  deleteActiveTree : (index) ->
+
+    # Remove all geometries and spheres
+    nodeSpheres = (@getSphereFromId(nodeID) for nodeID in @nodes[index].geometry.nodeIDs.subarray(0, @curIndex[index]))
+    @trigger "removeGeometries", [@routes[index]].concat([@nodes[index]]).concat(nodeSpheres)
+
+    # Remove entries
+    @ids.splice(index, 1)
+    @routes.splice(index, 1)
+    @nodes.splice(index, 1)
+    @nodesSpheres.splice(index, 1)
+    @edgesBuffer.splice(index, 1)
+    @nodesBuffer.splice(index, 1)
+    @curIndex.splice(index, 1)
+
+    @setActiveNode()
+    @flycam.hasChanged = true
 
   pushNewNode : (radius, position, id, color) ->
     newNode = new THREE.Mesh(

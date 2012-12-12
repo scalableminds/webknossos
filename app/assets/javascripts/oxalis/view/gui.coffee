@@ -25,6 +25,7 @@ class Gui
     data = @model.user
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
+    @qualityArray = ["high", "medium", "low"]
     @settings = 
       
       lockZoom: data.lockZoom
@@ -34,8 +35,12 @@ class Gui
       moveValue : data.moveValue
       routeClippingDistance: data.routeClippingDistance
       displayCrosshairs: data.displayCrosshair
+
+      fourBit : data.fourBit
+      brightness : data.brightness
+      contrast : data.contrast
       interpolation : data.interpolation
-      minZoomStep : data.minZoomStep
+      quality : @qualityArray[data.quality]
 
       displayPrevXY : data.displayPreviewXY
       displayPrevYZ : data.displayPreviewYZ
@@ -50,6 +55,9 @@ class Gui
       newNodeNewTree : data.newNodeNewTree
       deleteActiveNode : => @trigger "deleteActiveNode"
       radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
+      comment : ""
+      prevComment : @prevComment
+      nextComment : @nextComment
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
@@ -79,12 +87,25 @@ class Gui
     (fView.add @settings, "displayCrosshairs")
                           .name("Show Crosshairs")
                           .onChange(@setDisplayCrosshair)
+
+    fView = @gui.addFolder("Voxel")
+    (fView.add @settings, "fourBit")
+                          .name("4 Bit")
+                          .onChange(@set4Bit)
+    (fView.add @settings, "brightness", -256, 256) 
+                          .step(5)
+                          .name("Brightness")    
+                          .onChange(@setBrightnessAndContrast)
+    (fView.add @settings, "contrast", 0.5, 5) 
+                          .step(0.1)
+                          .name("Contrast")    
+                          .onChange(@setBrightnessAndContrast)
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
                           .onChange(@setInterpolation)
-    (fView.add @settings, "minZoomStep", [0, 1, 2, 3])
-                          .name("Min. Zoom Level")
-                          .onChange(@setMinZoomStep)
+    (fView.add @settings, "quality", @qualityArray)
+                          .name("Quality")
+                          .onChange(@setQuality)
 
     fSkeleton = @gui.addFolder("Skeleton View")
     (fSkeleton.add @settings, "displayPrevXY")
@@ -126,6 +147,14 @@ class Gui
                           .name("Radius")    
                           .listen()
                           .onChange(@setNodeRadius)
+    @commentController =
+    (fNodes.add @settings, "comment")
+                          .name("Comment")
+                          .onChange(@setComment)
+    (fNodes.add @settings, "prevComment")
+                          .name("Previous Comment")
+    (fNodes.add @settings, "nextComment")
+                          .name("Next Comment")
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
@@ -139,6 +168,9 @@ class Gui
 
       @updateGlobalPosition(position)
       return
+
+    @flycam.on "zoomFactorChanged", (factor) =>
+      $("#zoomFactor").html("<p>Zoom factor: " + factor + "</p>")
 
     $("#trace-position-input").on "change", (event) => 
 
@@ -208,10 +240,23 @@ class Gui
     @model.user.interpolation = (Boolean) value
     @model.user.push()
 
-  setMinZoomStep : (value) =>
-    value = parseInt(value)
-    @flycam.setOverrideZoomStep(value)
-    @model.user.minZoomStep = (Number) value
+  set4Bit : (value) =>
+    @model.binary.queue.set4Bit(value)
+    @model.user.fourBit = (Boolean) value
+    @model.user.push()
+
+  setBrightnessAndContrast : =>
+    @model.binary.updateLookupTable(@settings.brightness, @settings.contrast)
+    @model.user.brightness = (Number) @settings.brightness
+    @model.user.contrast = (Number) @settings.contrast
+    @model.user.push()
+
+  setQuality : (value) =>
+    for i in [0..(@qualityArray.length - 1)]
+      if @qualityArray[i] == value
+        value = i
+    @flycam.setQuality(value)
+    @model.user.quality = (Number) value
     @model.user.push()
 
   setDisplayPreviewXY : (value) =>
@@ -256,19 +301,28 @@ class Gui
   setNodeRadius : (value) =>
     @model.route.setActiveNodeRadius(value)
 
+  setComment : (value) =>
+    @model.route.setComment(value)
+
+  prevComment : =>
+    @trigger "setActiveNode", @model.route.nextCommentNodeID(false)
+
+  nextComment : =>
+    @trigger "setActiveNode", @model.route.nextCommentNodeID(true)
+
   updateRadius : (value) ->
     if value then @settings.radius = value
     else if (value = @model.route.getActiveNodeRadius())
       @settings.radius = value
 
-  # called when value user switch to different active node
-  updateNodeAndTreeIds : =>
-    @settings.activeNodeID = @model.route.lastActiveNodeId
-    @settings.activeTreeID = @model.route.getActiveTreeId()
-    @activeNodeIdController.updateDisplay()
-    @activeTreeIdController.updateDisplay()
-
   # Helper method to combine common update methods
   update : ->
-    @updateNodeAndTreeIds()
+    # called when value user switch to different active node
+    @settings.activeNodeID = @model.route.lastActiveNodeId
+    @settings.activeTreeID = @model.route.getActiveTreeId()
+    @settings.comment      = @model.route.getComment()
+    @activeNodeIdController.updateDisplay()
+    @activeTreeIdController.updateDisplay()
+    @commentController.updateDisplay()
+
     @updateRadius()

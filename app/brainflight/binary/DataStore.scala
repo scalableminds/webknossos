@@ -15,7 +15,7 @@ abstract class DataStore {
    */
   def load( dataSet: DataSet, resolution: Int, point: Point3D ): Byte
 
-  def load( dataSet: DataSet, resolution: Int, cube: Cuboid): Array[Byte]
+  def load( dataSet: DataSet, resolution: Int, cube: Cuboid, halfByte: Boolean = false): Array[Byte]
 
   def loadInterpolated( dataSet: DataSet, resolution: Int, points: Array[Vector3D] ): Array[Byte]
   

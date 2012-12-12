@@ -82,8 +82,8 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   /*
    * Load the binary data of the given coordinate from file
    */
-  override def load( dataSet: DataSet, resolution: Int, cube: Cuboid ): Array[Byte] = { 
-    if ( dataSet doesContain cube.topLeft ) { 
+  override def load( dataSet: DataSet, resolution: Int, cube: Cuboid, halfbyte: Boolean = false ): Array[Byte] = { 
+    if ( dataSet doesContain cube.topLeft ) {
       val block = PointToBlock( cube.topLeft, resolution )     
       val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
       
@@ -92,13 +92,12 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
               loadAndCacheData( dataSet, block, resolution ) }).value
       
       lastUsed = Some(blockInfo -> Data(byteArray))
-       
       
       val startX = (cube.topLeft.x / resolution) % 128 
       val startY = (cube.topLeft.y / resolution) % 128 
       val startZ = (cube.topLeft.z / resolution) % 128 
       
-      val result = new Array[Byte]( cube.volume )
+      val result = new Array[Byte]( if(halfbyte) cube.volume/2 else cube.volume)
       
       var idx = 0
       var y = 0
@@ -109,12 +108,26 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       val edgeY = cube.edgeLengthY
       val edgeZ = cube.edgeLengthZ
       
+      var prevPixelColor: Byte = 0
+      
       while( x < startX + edgeX){
         y = startY
         while( y < startY + edgeY){
           z = startZ
           while( z < startZ + edgeZ){
-            result.update( idx, byteArray( ( z * 128 * 128 + y * 128 + x ) ))
+            if(halfbyte){
+              val pixelColor = (byteArray( ( z * 128 * 128 + y * 128 + x ) ) & 0xF0).toByte
+              if(idx % 2 == 1){
+                val twoPixelColor = 
+                  (prevPixelColor | (pixelColor >> 4 & 0x0F) ).asInstanceOf[Byte]
+                result.update( idx / 2, twoPixelColor)
+              } else {
+                prevPixelColor = pixelColor
+              }
+            } else {
+              result.update( idx, byteArray( ( z * 128 * 128 + y * 128 + x ) ))
+            }
+            
             idx += 1
             z+=1
           } 

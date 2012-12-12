@@ -25,6 +25,7 @@ class Gui
     data = @model.user
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
+    @qualityArray = ["high", "medium", "low"]
     @settings = 
       
       lockZoom: data.lockZoom
@@ -34,8 +35,12 @@ class Gui
       moveValue : data.moveValue
       routeClippingDistance: data.routeClippingDistance
       displayCrosshairs: data.displayCrosshair
+
+      fourBit : data.fourBit
+      brightness : data.brightness
+      contrast : data.contrast
       interpolation : data.interpolation
-      minZoomStep : data.minZoomStep
+      quality : @qualityArray[data.quality]
 
       displayPrevXY : data.displayPreviewXY
       displayPrevYZ : data.displayPreviewYZ
@@ -79,12 +84,25 @@ class Gui
     (fView.add @settings, "displayCrosshairs")
                           .name("Show Crosshairs")
                           .onChange(@setDisplayCrosshair)
+
+    fView = @gui.addFolder("Voxel")
+    (fView.add @settings, "fourBit")
+                          .name("4 Bit")
+                          .onChange(@set4Bit)
+    (fView.add @settings, "brightness", -256, 256) 
+                          .step(5)
+                          .name("Brightness")    
+                          .onChange(@setBrightnessAndContrast)
+    (fView.add @settings, "contrast", 0.5, 5) 
+                          .step(0.1)
+                          .name("Contrast")    
+                          .onChange(@setBrightnessAndContrast)
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
                           .onChange(@setInterpolation)
-    (fView.add @settings, "minZoomStep", [0, 1, 2, 3])
-                          .name("Min. Zoom Level")
-                          .onChange(@setMinZoomStep)
+    (fView.add @settings, "quality", @qualityArray)
+                          .name("Quality")
+                          .onChange(@setQuality)
 
     fSkeleton = @gui.addFolder("Skeleton View")
     (fSkeleton.add @settings, "displayPrevXY")
@@ -139,6 +157,9 @@ class Gui
 
       @updateGlobalPosition(position)
       return
+
+    @flycam.on "zoomFactorChanged", (factor) =>
+      $("#zoomFactor").html("<p>Zoom factor: " + factor + "</p>")
 
     $("#trace-position-input").on "change", (event) => 
 
@@ -208,10 +229,23 @@ class Gui
     @model.user.interpolation = (Boolean) value
     @model.user.push()
 
-  setMinZoomStep : (value) =>
-    value = parseInt(value)
-    @flycam.setOverrideZoomStep(value)
-    @model.user.minZoomStep = (Number) value
+  set4Bit : (value) =>
+    @model.binary.queue.set4Bit(value)
+    @model.user.fourBit = (Boolean) value
+    @model.user.push()
+
+  setBrightnessAndContrast : =>
+    @model.binary.updateLookupTable(@settings.brightness, @settings.contrast)
+    @model.user.brightness = (Number) @settings.brightness
+    @model.user.contrast = (Number) @settings.contrast
+    @model.user.push()
+
+  setQuality : (value) =>
+    for i in [0..(@qualityArray.length - 1)]
+      if @qualityArray[i] == value
+        value = i
+    @flycam.setQuality(value)
+    @model.user.quality = (Number) value
     @model.user.push()
 
   setDisplayPreviewXY : (value) =>

@@ -28,6 +28,8 @@ class Binary
     @cube = new Cube(dataSet.upperBoundary)
     @queue = new PullQueue(@dataSetId, @cube)
 
+    @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
+
     @planes = []
     @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P)
     @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P)
@@ -72,9 +74,18 @@ class Binary
       console.time "ping"
       @queue.clear()
 
+      for strategy in @pingStrategies 
+        if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
 
-      for plane in @planes
-        plane.ping(position, @direction, zoomStep[plane.index], area[plane.index]) if zoomStep[plane.index]? and area[plane.index]? 
+          { pullQueue, extent } = strategy.ping(position, @direction, zoomStep[0], area[0]) if zoomStep[0]? and area[0]? 
+
+          @cube.extendByBucketAddressExtent(extent...)
+
+          for entry in pullQueue
+            console.log entry...
+            @queue.insert(entry...)
+
+          break
 
       @queue.pull()
       console.timeEnd "ping"

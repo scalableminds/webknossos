@@ -29,11 +29,11 @@ object LevelCreator extends Controller with Secured {
       "height" -> number,
       "depth" -> number)(Level.fromForm)(Level.toForm)).fill(Level.empty)
 
-  def use(levelId: String, taskId: String) = Authenticated { implicit request =>
+  def use(levelId: String, missionId: String) = Authenticated { implicit request =>
     Level
       .findOneById(levelId)
       .map { level =>
-        Ok(html.admin.creator.levelCreator(level, taskId))
+        Ok(html.admin.creator.levelCreator(level, missionId))
       }
       .getOrElse(BadRequest("Level not found."))
   }

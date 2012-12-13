@@ -31,11 +31,11 @@ POST    /user/configuration                 controllers.UserController.saveSetti
 GET     /user/configuration                 controllers.UserController.showSettings
 
 # Binary Data
-GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int )
-POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int )
-GET     /binary/ajax				                controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
+GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(levelId: String, taskId: String)
+GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int, halfByte: Boolean )
+POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int, halfByte: Boolean )
 GET     /binary/create                      controllers.BinaryData.createGrid(dataSetName: String)
-
+GET     /binary/ajax                        controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
 
 # Tracing Stuff
 POST    /tracing/create                     controllers.TracingController.createExplorational
@@ -93,6 +93,18 @@ POST    /admin/users/removeRole             controllers.admin.UserAdministration
 
 GET     /admin/tracings/:id/review          controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
 GET     /admin/tracings/:id/download        controllers.admin.NMLIO.download( id: String )
+
+# Level Creator
+GET     /admin/level                        controllers.admin.LevelCreator.list
+POST    /admin/level/create                 controllers.admin.LevelCreator.create
+GET     /admin/level/:id/assets             controllers.admin.LevelCreator.listAssets(id: String)
+GET     /admin/level/:id/delete             controllers.admin.LevelCreator.delete(id: String)
+GET     /admin/level/:id                    controllers.admin.LevelCreator.use(id: String, missionId: String)
+POST    /admin/level/:id/code               controllers.admin.LevelCreator.submitCode(id: String)
+GET     /admin/level/:id/produce            controllers.admin.LevelCreator.produce(id: String)
+POST    /admin/level/:id/uploadAsset        controllers.admin.LevelCreator.uploadAsset(id: String)
+GET     /admin/level/:id/deleteAsset/*asset controllers.admin.LevelCreator.deleteAsset(id: String, asset: String)
+GET     /admin/level/:id/asset/*asset       controllers.admin.LevelCreator.retrieveAsset(id: String, asset: String)
 
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.Application.javascriptRoutes

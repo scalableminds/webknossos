@@ -13,14 +13,16 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     val file = path.asInstanceOf[PathImpl].getFile
     val files = file.listFiles()
 
-    if (files != null)
-      files.map { f =>
-        if (f.isDirectory()) {
-          dataSetFromFile(f).map { dataSet =>
-            DataSet.updateOrCreate(dataSet)
-          }
+    if (files != null){
+      val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
+        dataSetFromFile(f).map { dataSet =>
+          DataSet.updateOrCreate(dataSet)
+          dataSet.name
         }
       }
+println("Found datasets " + foundDataSets.mkString(","))
+      //DataSet.deleteAllExcept(foundDataSets)
+    }
   }
 
   def onTick(path: Path) {
@@ -74,14 +76,15 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
         res <- highestResolutionDir(listDirectories(f))
         xs <- listDirectories(res).headOption
         ys <- listDirectories(xs).headOption
-        maxX <- maxValueFromFiles(res.listFiles())
-        maxY <- maxValueFromFiles(xs.listFiles())
-        maxZ <- maxValueFromFiles(ys.listFiles())
+        xMax <- maxValueFromFiles(res.listFiles())
+        yMax <- maxValueFromFiles(xs.listFiles())
+        zMax <- maxValueFromFiles(ys.listFiles())
       } yield {
-        (maxX, maxY, maxZ)
-      }) map { coords =>
-        val maxCoordinates = Point3D(coords._1 * 128, coords._2 * 128, coords._3 * 128)
-        DataSet(f.getName(), f.getAbsolutePath(), resolutions, maxCoordinates)
+        (xMax, yMax, zMax)
+      }) map {
+        case (xMax, yMax, zMax) =>
+          val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
+          DataSet(f.getName(), f.getAbsolutePath(), resolutions, maxCoordinates)
       }
     } else
       None

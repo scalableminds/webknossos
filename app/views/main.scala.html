@@ -1,5 +1,7 @@
 @(showNavButtons: Boolean = true)(body: Html)(implicit session: brainflight.view.SessionData)
 
+@import akka.util.Reflect
+
 <!doctype html>
 <html>
   <head>
@@ -20,7 +22,7 @@
         </div>
       }
     </div>
-    <div id="main-container">
+    <div id="main-container" data-template="@Reflect.getCallerClass.map( _(7).getName() )">
       @body
     </div>
     <!-- Prompt IE 6 users to install Chrome Frame. Remove this if you want to support IE 6.

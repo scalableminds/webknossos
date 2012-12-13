@@ -27,6 +27,8 @@ import play.api.libs.iteratee.Concurrent.Channel
 import scala.collection.mutable.ArrayBuffer
 import akka.routing.RoundRobinRouter
 import play.api.libs.concurrent.execution.defaultContext
+import brainflight.tools.geometry.Vector3D
+import models.knowledge.Level
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
@@ -40,17 +42,17 @@ object BinaryData extends Controller with Secured {
 
   val dataSetActor = Akka.system.actorOf( Props( new DataSetActor ).withRouter(
     RoundRobinRouter( nrOfInstances = 10 ) ) )
-    
+
   override val DefaultAccessRole = Role.User
 
   implicit val dispatcher = Akka.system.dispatcher
   val conf = Play.configuration
-  val scaleFactors = Array( 1, 1, 1 )
+  val scaleFactors = Array(1, 1, 1)
 
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
-  def resolutionFromExponent(exp: Int) =
-    math.pow(2, exp).toInt
+  def resolutionFromExponent(resolutionExponent: Int) =
+    math.pow(2, resolutionExponent).toInt
 
   def cuboidFromPosition(position: Point3D, cubeSize: Int) = {
     val cubeCorner = position.scale {
@@ -60,11 +62,11 @@ object BinaryData extends Controller with Secured {
     Cuboid(cubeCorner, cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2))
   }
 
-  def handleMultiDataRequest(multi: MultipleDataRequest, cubeSize: Int, dataSet: DataSet): Future[Promise[Array[Byte]]] = {
-    val cubeRequests = multi.requests.map { request =>
-      val resolution = resolutionFromExponent(request.resolutionExponent)
-      val cuboid = cuboidFromPosition(request.position, cubeSize)
-      CubeRequest(dataSet, resolution, cuboid)
+  def handleMultiDataRequest( multi: MultipleDataRequest, cubeSize: Int, dataSet: DataSet, halfByte: Boolean): Future[Promise[Array[Byte]]] = {
+    val cubeRequests = multi.requests.map{ request =>
+      val resolution = resolutionFromExponent( request.resolutionExponent )
+      val cuboid = cuboidFromPosition( request.position, cubeSize )
+      CubeRequest( dataSet, resolution, cuboid, halfByte )
     }
 
     val future = (dataSetActor ? MultiCubeRequest(cubeRequests)) recover {
@@ -81,17 +83,42 @@ object BinaryData extends Controller with Secured {
         dataSet <- DataSet.findOneById(dataSetId)
       } yield {
         val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z))))
-        handleMultiDataRequest(dataRequest, cubeSize, dataSet).asPromise.flatMap(_.map(result =>
+        handleMultiDataRequest(dataRequest, cubeSize, dataSet, false).asPromise.flatMap(_.map(result =>
           Ok(result)))
       }) getOrElse (Akka.future { BadRequest("Request is invalid.") })
     }
   }
 
+  def arbitraryViaAjax(levelId: String, taskId: String) = Authenticated(parser = parse.raw) { implicit request =>
+    Async {
+      Level.findOneById(levelId).map{ level =>
+        val t = System.currentTimeMillis()
+        val dataSet = DataSet.default
+        val position = Point3D(554, 543, 523)
+        val direction = (1.0, 1.0, 1.0)
+  
+        val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
+        val m = new CubeModel(level.width, level.height, level.depth)
+        val points = m.rotateAndMove(point, direction)
+        val future = dataSetActor ? ArbitraryRequest(dataSet, 1, points) recover {
+          case e: AskTimeoutException =>
+            Logger.error("calculateImages: AskTimeoutException")
+            Array.fill[Byte](level.height * level.width * level.depth)(0)
+        }
+        future.mapTo[Array[Byte]].asPromise.map{data => 
+          Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
+          Ok(data)
+        }
+      } getOrElse {
+        Akka.future( BadRequest("Level not found.") )
+      }
+    }
+  }
   /**
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
-  def requestViaAjax(dataSetId: String, cubeSize: Int) = Authenticated(parser = parse.raw) { implicit request =>
+  def requestViaAjax( dataSetId: String, cubeSize: Int, halfByte: Boolean ) = Authenticated( parser = parse.raw ) { implicit request =>
     Async {
       (for {
         payload <- request.body.asBytes()
@@ -100,8 +127,8 @@ object BinaryData extends Controller with Secured {
       } yield {
         message match {
           case dataRequests @ MultipleDataRequest(_) =>
-            handleMultiDataRequest(dataRequests, cubeSize, dataSet).asPromise.flatMap(_.map(result =>
-              Ok(result)))
+            handleMultiDataRequest(dataRequests, cubeSize, dataSet, halfByte).asPromise.flatMap(_.map( result =>
+              Ok( result ) ) )
           case _ =>
             Akka.future {
               BadRequest("Unknown message.")
@@ -118,7 +145,7 @@ object BinaryData extends Controller with Secured {
    * @param
    * 	modelType:	id of the model to use
    */
-  def requestViaWebsocket(dataSetId: String, cubeSize: Int) = AuthenticatedWebSocket[Array[Byte]]() { user =>
+  def requestViaWebsocket( dataSetId: String, cubeSize: Int, halfByte: Boolean ) = AuthenticatedWebSocket[Array[Byte]]() { user =>
     request =>
       val dataSetOpt = DataSet.findOneById(dataSetId)
       var channelOpt: Option[Channel[Array[Byte]]] = None
@@ -128,14 +155,14 @@ object BinaryData extends Controller with Secured {
         { Logger.debug("Data websocket completed") },
         { case (e, i) => Logger.error("An error ocourd on websocket stream: " + e) })
 
-      val input = Iteratee.foreach[Array[Byte]]( in => {
+      val input = Iteratee.foreach[Array[Byte]](in => {
         for {
           dataSet <- dataSetOpt
           channel <- channelOpt
         } {
           BinaryProtocol.parseWebsocket( in ).map {
             case dataRequests : MultipleDataRequest =>
-              handleMultiDataRequest(dataRequests, cubeSize, dataSet).map( _.map(
+              handleMultiDataRequest(dataRequests, cubeSize, dataSet, halfByte).map( _.map(
                   result => channel.push( dataRequests.handle ++ result )))
             case _ =>
               Logger.error("Received unhandled message!")

@@ -5,6 +5,7 @@ import models.binary.DataSet
 import brainflight.tools.geometry.Cuboid
 import play.api.libs.concurrent.Promise
 import play.api.libs.concurrent.execution.defaultContext
+import brainflight.tools.geometry.Vector3D
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
@@ -16,8 +17,10 @@ abstract class DataStore {
    */
   def load( dataSet: DataSet, resolution: Int, point: Point3D ): Promise[Byte]
 
-  def load( dataSet: DataSet, resolution: Int, cube: Cuboid): Promise[Array[Byte]]
+  def load( dataSet: DataSet, resolution: Int, cube: Cuboid, halfByte: Boolean = false): Promise[Array[Byte]]
 
+  def loadInterpolated( dataSet: DataSet, resolution: Int, points: Array[Vector3D] ): Promise[Array[Byte]]
+  
   /**
    * Gives the data store the possibility to clean up its mess on shutdown/clean
    */

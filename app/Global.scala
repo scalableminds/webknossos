@@ -20,21 +20,28 @@ import brainflight.io.DataSetChangeHandler
 import brainflight.io.DirectoryWatcherActor
 import scala.collection.parallel.Tasks
 import akka.util.duration._
+import akka.pattern.ask
+import akka.util.Timeout
 
 object Global extends GlobalSettings {
 
+  implicit val timeout = Timeout(5 seconds)
   override def onStart(app: Application) {
     val DirectoryWatcher = Akka.system.actorOf(
       Props(new DirectoryWatcherActor(new DataSetChangeHandler)),
       name = "directoryWatcher")
-    DirectoryWatcher ! StartWatching("binaryData")
+    DirectoryWatcher ? StartWatching("binaryData")
 
     if (Play.current.mode == Mode.Dev) {
       BasicEvolution.runDBEvolution()
       // Data insertion needs to be delayed, because the dataSets need to be
       // found by the DirectoryWatcher first
-      Akka.system.scheduler.scheduleOnce(1 second)(InitialData.insert())
+      InitialData.insert()
     }
+  }
+  
+  override def onStop(app: Application){
+    models.context.db.close()
   }
 }
 

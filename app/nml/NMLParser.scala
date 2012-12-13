@@ -17,6 +17,7 @@ import models.graph.BranchPoint
 import brainflight.tools.geometry.Scale
 import models.user.User
 import com.sun.org.apache.xerces.internal.impl.io.MalformedByteSequenceException
+import models.graph.Comment
 
 case class NMLContext(user: User)
 
@@ -54,8 +55,9 @@ class NMLParser(file: File)(implicit ctx: NMLContext) {
         val editPosition = parseEditPosition(parameters \ "editPosition")
         val time = parseTime(parameters \ "time")
         val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
+        val comments = parseComments(data \ "comments").toList
         val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
-        Tracing(ctx.user._id, dataSetName, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
+        Tracing(ctx.user._id, dataSetName, trees, branchPoints.toList, time, activeNodeId, scale, editPosition, comments)
       }
     } catch {
       case e: Exception =>
@@ -160,6 +162,16 @@ class NMLParser(file: File)(implicit ctx: NMLContext) {
       else
         None
     }).flatMap(x => x)
+  }
+  
+  def parseComments(comments: NodeSeq) = {
+    for {
+      comment <- comments \ "comment"
+      node <- ((comment \ "@node").text).toIntOpt
+    } yield {
+      val content = (comment \ "@content").text
+      Comment(node, content)
+    }
   }
 
   def findRootNode(treeNodes: Map[Int, Node], edges: List[Edge]) = {

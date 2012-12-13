@@ -53,7 +53,7 @@ class ArrayBufferSocket.WebSocket
 
   # Constants
   OPEN_TIMEOUT : 500
-  MESSAGE_TIMEOUT : 20000
+  MESSAGE_TIMEOUT : 10000
 
   pendingRequests : []
 
@@ -175,7 +175,7 @@ class ArrayBufferSocket.WebWorker
 
   # Constants
   OPEN_TIMEOUT : 500
-  MESSAGE_TIMEOUT : 20000
+  MESSAGE_TIMEOUT : 10000
 
   pendingRequests : []
 
@@ -288,6 +288,8 @@ class ArrayBufferSocket.WebWorker
 
 class ArrayBufferSocket.XmlHttpRequest
 
+  MESSAGE_TIMEOUT : 10000
+
   constructor : (@url) ->
 
   open : ({ @responseBufferType, @requestBufferType }) ->
@@ -299,6 +301,7 @@ class ArrayBufferSocket.XmlHttpRequest
       data : data
       url : @url
       dataType : 'arraybuffer'
+      timeout : @MESSAGE_TIMEOUT
     ).pipe (buffer) =>
 
       if buffer

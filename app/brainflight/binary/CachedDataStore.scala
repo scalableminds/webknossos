@@ -4,7 +4,7 @@ import brainflight.tools.geometry.Point3D
 import play.api.Play.current
 import play.api.Play
 import brainflight.tools.geometry.Point3D
-import models.binary.{ DataSet, DataLayer }
+import models.binary._
 import brainflight.tools.geometry.Cuboid
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import akka.agent.Agent
@@ -134,6 +134,18 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       new Array[Byte](cube.volume * dataLayer.bytesPerElement)
     }
   }
+  
+  //TODO: make this more dry!!!
+  def getBytes(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Array[Byte] = {
+    val block = PointToBlock(globalPoint, resolution)
+    blockMap.get(block) match {
+      case Some(byteArray) => 
+        getLocalBytes(GlobalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
+      case _ => 
+        println("Didn't find block! :(")
+        nullValues(bytesPerElement)
+    }
+  }
 
   def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): Array[Byte] = {
 
@@ -159,15 +171,15 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
     }
     (0xff & color.asInstanceOf[Int])
   }
-
-  def interpolatedColor(point: Vector3D, r: Int, b: Map[Point3D, Array[Byte]]) = {
+  
+  def interpolatedColor(point: Vector3D, eS: Int, r: Int, b: Map[Point3D, Array[Byte]]):Array[Byte] = {
     val x = point.x.toInt
     val y = point.y.toInt
     val z = point.z.toInt
 
     val floored = Vector3D(x, y, z)
     if (point == floored) {
-      getColor(Point3D(x, y, z), r, b).toByte
+      Array[Byte](getColor(Point3D(x, y, z), r, b).toByte)
     } else {
       val q = Array(
         getColor(Point3D(x, y, z), r,  b),
@@ -179,8 +191,14 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
         getColor(Point3D(x + 1, y + 1, z), r, b),
         getColor(Point3D(x + 1, y + 1, z + 1), r, b))
 
-      Interpolator.triLerp(point - floored, q).round.toByte
+      Array[Byte](Interpolator.triLerp(point - floored, q).round.toByte)
     }
+  }
+  
+  def nearestNeighbor(point: Vector3D, bytesPerElement: Int, resolution: Int, b: Map[Point3D, Array[Byte]]) = {
+    val byte = point.x % bytesPerElement
+    val x = (point.x - byte + (if (bytesPerElement - 2 * byte >= 0) 0 else bytesPerElement)).toInt
+    getBytes(Point3D(x, point.y.round.toInt, point.z.round.toInt), bytesPerElement, resolution, b)
   }
   //TODO: different interpolation Strategies for Color and seg/class
   override def loadInterpolated(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, globalPoints: Array[Vector3D]): Array[Byte] = {
@@ -217,16 +235,26 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
 
     Logger.debug("loadFromSomewhere: %d ms".format(System.currentTimeMillis() - t))
     val blockMap = blockPoints.zip(blockData).toMap
-    val size = globalPoints.size
-    var result = new Array[Byte](size)
+    val elementCount = globalPoints.size
+    var result = new Array[Byte](elementCount * dataLayer.bytesPerElement)
     var idx = 0
+    val interpolationStrategy = dataLayer match{
+      case l: ColorLayer => interpolatedColor _
+      case l: ClassificationLayer => nearestNeighbor _
+      case l: SegmentationLayer => nearestNeighbor _
+    }
     val iter = globalPoints.iterator
     val t2 = System.currentTimeMillis()
+
     while (iter.hasNext) {
       val point = iter.next
-      val color = interpolatedColor(point, resolution, blockMap)
-      result(idx) = color
-      idx += 1
+      val values = interpolationStrategy(point, dataLayer.bytesPerElement, resolution, blockMap)
+      var j = 0
+      while (j < values.size){
+        result(idx) = values(j)
+        idx += 1
+        j += 1
+      }
     }
     Logger.debug("loading&interp: %d ms, Sum: ".format(System.currentTimeMillis() - t2, result.sum))
     result

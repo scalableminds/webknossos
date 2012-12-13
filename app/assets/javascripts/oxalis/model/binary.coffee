@@ -63,8 +63,6 @@ class Binary
 
     unless _.isEqual(position, @lastPosition) and _.isEqual(options, @lastOptions)
 
-      console.log @cube.requests, position, @queue.roundTripTime, @queue.bucketsPerSecond
-
       @lastPosition = position.slice()
       @lastOptions = options.slice()
 

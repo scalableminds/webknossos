@@ -7,7 +7,7 @@ class PullQueue
 
   # Constants
   BATCH_LIMIT : 7
-  BATCH_SIZE : 5
+  BATCH_SIZE : 4
   ROUND_TRIP_TIME_SMOOTHER : .125
   BUCKET_TIME_SMOOTHER : .125
 
@@ -25,7 +25,7 @@ class PullQueue
   
   constructor : (@dataSetId, @cube) ->
     
-    @initializeLoadBuckets()
+    @initializeLoadSockets()
 
 
   swap : (a, b) ->
@@ -65,7 +65,7 @@ class PullQueue
     return unless priority >= 0
     
     # Checking whether bucket is already loaded
-    if @cube.requestBucketByZoomedAddress(bucket)
+    unless @cube.isBucketRequestedByZoomedAddress(bucket)
       @queue.push( { "bucket" : bucket, "priority" : priority } )
       @siftUp(@queue.length - 1)
 
@@ -98,9 +98,10 @@ class PullQueue
       while batch.length < @BATCH_SIZE and @queue.length
         
         bucket = @removeFirst()
-        batch.push bucket
-        @cube.requests++
-        #console.log "Requested: ", bucket
+        unless @cube.isBucketRequestedByZoomedAddress(bucket)
+          batch.push bucket
+          @cube.requestBucketByZoomedAddress(bucket)
+          # console.log "Requested: ", bucket
 
       @pullBatch(batch) if batch.length > 0
 
@@ -138,7 +139,7 @@ class PullQueue
               else
                 bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
 
-              #console.log "Success: ", bucket
+              # console.log "Success: ", bucket
               @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>
@@ -146,12 +147,13 @@ class PullQueue
           for bucket in batch
 
             @cube.setBucketByZoomedAddress(bucket, null)
-            #console.log "Failed: ", bucket
+            # console.log "Failed: ", bucket
     
     ).always =>
 
       @batchCount--
       @pull()
+
 
   updateConnectionInfo : (roundTripTime, bucketCount) ->
 
@@ -188,7 +190,7 @@ class PullQueue
 
     newColors
 
-  initializeLoadBuckets : ->
+  initializeLoadSockets : ->
 
     @socket4Bit = new ArrayBufferSocket(
       senders : [

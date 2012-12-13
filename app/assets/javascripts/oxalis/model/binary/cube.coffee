@@ -12,7 +12,6 @@ class Cube
   LOOKUP_DEPTH_DOWN : 0
 
   LOADING_PLACEHOLDER : {}
-  requests : 0
   cube : null
   upperBoundary : null
 
@@ -39,21 +38,18 @@ class Cube
         (cubeBoundary[2] + 1) >> 1
       ]
 
-    console.log @
-
 
   getBucketIndexByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
-    cube = @cube[zoomStep]
-    boundary = cube.boundary
+    boundary = @cube[zoomStep].boundary
 
     if bucket_x >= 0 and bucket_x < boundary[0] and
     bucket_y >= 0 and bucket_y < boundary[1] and
     bucket_z >= 0 and bucket_z < boundary[2] and
     zoomStep >= 0 and zoomStep < @ZOOM_STEP_COUNT
 
-      bucket_x * cube.boundary[2] * cube.boundary[1] +
-      bucket_y * cube.boundary[2] +
+      bucket_x * boundary[2] * boundary[1] +
+      bucket_y * boundary[2] +
       bucket_z
 
     else
@@ -61,41 +57,56 @@ class Cube
       undefined
 
 
-  getBucketDataByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+  getBucketByZoomedAddress : (address) ->
 
-    cube = @cube[zoomStep]
+    buckets = @cube[address[3]].buckets
+    bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    bucketIndex = @getBucketIndexByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
+    if bucketIndex?
+      buckets[bucketIndex]
+    else
+      undefined
 
-    if bucketIndex? and cube.buckets[bucketIndex]?
 
-      cube.buckets[bucketIndex].data
+  getBucketDataByZoomedAddress : (address) ->
+
+    bucket = @getBucketByZoomedAddress(address)
+    if bucket? then bucket.data else null
+
+
+  isBucketRequestedByZoomedAddress : (address) ->
+
+    buckets = @cube[address[3]].buckets
+    bucketIndex = @getBucketIndexByZoomedAddress(address)
+
+    if bucketIndex?
+
+      bucket = buckets[bucketIndex]
+      bucket? and (bucket.level <= @LOOKUP_DEPTH_UP or bucket.data == @LOADING_PLACEHOLDER)
 
     else
 
-      undefined    
+      true
 
 
-  requestBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+  isBucketLoadedByZoomedAddress : (address) ->
 
-    cube = @cube[zoomStep]
-    bucketIndex = @getBucketIndexByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
-
-    return false if not bucketIndex? or cube.buckets[bucketIndex]? and (cube.buckets[bucketIndex].level <= @LOOKUP_DEPTH_UP or cube.buckets[bucketIndex].data == @LOADING_PLACEHOLDER)
-    
-    cube.buckets[bucketIndex] = { data: @LOADING_PLACEHOLDER, level: @ZOOM_STEP_COUNT }
-    return true
+    bucket = @getBucketByZoomedAddress(address)
+    return bucket? and bucket.level == 0
 
 
-  isBucketLoaded : (bucket) ->
+  requestBucketByZoomedAddress : (address) ->
 
-#    bucketData = @getBucketDataByZoomedAddress(bucket)
-  #   bucketData? and bucketData != @LOADING_PLACEHOLDER
+    return if @isBucketRequestedByZoomedAddress(address)
 
-    cube = @cube[bucket[3]]
-    bucketIndex = @getBucketIndexByZoomedAddress(bucket)
-    bucketData = cube.buckets[bucketIndex]
-    bucketData? and bucketData.data != @LOADING_PLACEHOLDER
+    buckets = @cube[address[3]].buckets 
+    bucketIndex = @getBucketIndexByZoomedAddress(address)
+
+    if buckets[bucketIndex]?
+      buckets[bucketIndex].data = @LOADING_PLACEHOLDER
+    else
+      buckets[bucketIndex] = { data: @LOADING_PLACEHOLDER, level: @ZOOM_STEP_COUNT }
+
 
   updateLevel : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
@@ -138,14 +149,11 @@ class Cube
 
   setBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
 
-    cube = @cube[zoomStep]
-
-    bucketIndex = @getBucketIndexByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
+    bucket = @getBucketByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
     
     if bucketData?
-      @requests--
-      cube.buckets[bucketIndex].data = bucketData
-      cube.buckets[bucketIndex].level = 0
+      bucket.data = bucketData
+      bucket.level = 0
       @updateLevel([
         bucket_x >> 1
         bucket_y >> 1
@@ -156,7 +164,7 @@ class Cube
 
     else
 
-      cube.buckets[bucketIndex].data = null
+      bucket.data = null
 
 
   positionToZoomedAddress : ([x, y, z], zoomStep) ->

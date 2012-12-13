@@ -86,18 +86,19 @@ class Plane2D
 
   ping : (position, direction, zoomStep) ->
 
-    centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
+    console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond
 
-    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 7)
+    centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
+    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 4)
 
     for bucket in buckets
       if bucket?
         priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
         @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority)
-        #bucket[@w]++
-        #@queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 1)
-        #bucket[@w]++
-        #@queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 2)
+        bucket[@w]++
+        @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 1)
+        bucket[@w]++
+        @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 2)
 
 
   getBucketArray : (center, range) ->
@@ -317,7 +318,7 @@ class Plane2D
 
     map = new Array(@MAP_SIZE)
 
-    if @cube.isBucketLoaded(bucket)
+    if @cube.isBucketLoadedByZoomedAddress(bucket)
 
       return [bucket]
 

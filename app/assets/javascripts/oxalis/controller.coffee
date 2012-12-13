@@ -65,25 +65,25 @@ class Controller
       for mesh in meshes
         @view.addGeometry(mesh)
 
-      @view.on "render", @render
-      @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
+      @view.on
+        render : => @render()
+        renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
-      @sceneController.skeleton.on "newGeometries", (list, event) =>
-        
-        for geometry in list
-          @view.addGeometry(geometry)
-        
-      @sceneController.skeleton.on "removeGeometries", (list, event) =>
-      
-        for geometry in list
-          @view.removeGeometry(geometry)
+      @sceneController.skeleton.on
+        newGeometries : (list, event) =>
+          for geometry in list
+            @view.addGeometry(geometry)
+        removeGeometries : (list, event) =>
+          for geometry in list
+            @view.removeGeometry(geometry)
 
       @gui = new Gui($("#optionswindow"), @model, @sceneController, @cameraController, @flycam)
-      @gui.on "deleteActiveNode", @deleteActiveNode
-      @gui.on "createNewTree", @createNewTree
-      @gui.on "setActiveTree", (id) => @setActiveTree(id)
-      @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
-      @gui.on "deleteActiveTree", @deleteActiveTree
+      @gui.on
+        deleteActiveNode : @deleteActiveNode
+        createNewTree : @createNewTree
+        setActiveTree : (id) => @setActiveTree(id)
+        setActiveNode : (id) => @setActiveNode(id, false) # not centered
+        deleteActiveTree : @deleteActiveTree
       @gui.update()
 
       @flycam.setGlobalPos(@model.route.data.editPosition)
@@ -196,7 +196,7 @@ class Controller
     )
 
 
-  render : =>
+  render : ->
 
     @model.binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
     @model.route.globalPosition = @flycam.getGlobalPos()

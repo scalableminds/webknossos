@@ -12,7 +12,7 @@ case class Mission(dataSetName: String, start: MissionStart, possibleEnds: List[
   val dao = Mission
 }
 
-object Mission extends BasicKnowledgeDAO[Mission]("mission") {
+object Mission extends BasicKnowledgeDAO[Mission]("missions") {
 
   def createWithoutDataSet(start: MissionStart, possibleEnds: List[PossibleEnd]) =
     Mission("", start, possibleEnds)

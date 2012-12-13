@@ -29,6 +29,6 @@ src/main/scala/rebel.xml
 *.zip
 *.skp
 *.mtl
-shellgame/target
-shellgame/logs
-shellgame/shellgame-assets
+modules/shellgame/target
+modules/shellgame/logs
+modules/shellgame/shellgame-assets

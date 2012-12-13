@@ -19,6 +19,7 @@ boot/
 *.class
 *.keep
 *.pyc
+*.sc
 lifttemplate.iml
 lifttemplate.ipr
 lifttemplate.iws

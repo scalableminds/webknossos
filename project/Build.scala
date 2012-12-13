@@ -34,13 +34,13 @@ object ApplicationBuild extends Build {
     incrementalAssetsCompilation:=true
   )
 
-  val shellgame = PlayProject("shellgame", "0.1", shellgameDependencies, mainLang = SCALA, path = file("shellgame")).settings(
+  val shellgame = PlayProject("shellgame", "0.1", shellgameDependencies, mainLang = SCALA, path = file("modules") / "shellgame").settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers += "repo.novus rels" at "http://repo.novus.com/releases/",
     resolvers += "repo.novus snaps" at "http://repo.novus.com/snapshots/",
     playAssetsDirectories ++= Seq(
-        file("shellgame") / "shellgame-assets",
+        file("modules") / "shellgame" / "shellgame-assets",
         file("data")
     ),
     incrementalAssetsCompilation:=true

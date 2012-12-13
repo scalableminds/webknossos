@@ -48,5 +48,5 @@ abstract class DataStore {
         point.x, point.y, point.z )
   
         
-  val voxelsPerFile = 128 * 128 * 128
+  val elementsPerFile = 128 * 128 * 128
 }

@@ -29,8 +29,8 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
 
   val conf = Play.configuration
   //TODO: blocksize values to kick out magic numbers
-  lazy val nullBlock = (for (x <- 0 to 128 * 128 * 128) yield 0.toByte).toArray
-  
+  lazy val nullArray:Array[Array[Byte]] = (for (bytesPerElement <- List(1,2,4,8)) yield (for (x <- 0 to 128 * 128 * 128 * bytesPerElement) yield 0.toByte).toArray).toArray
+  def nullBlock(bytesPerElement: Int) = nullArray((scala.math.log(bytesPerElement)/scala.math.log(2)).toInt)
   def nullValues(bytesPerElement: Int) = (for (x <- 0 to bytesPerElement) yield 0.toByte).toArray
 
   // defines the maximum count of cached file handles
@@ -150,7 +150,8 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): Array[Byte] = {
 
     val address = (localPoint.x + localPoint.y * 128 + localPoint.z * 128 * 128) * bytesPerElement
-    
+    if (address > data.size)
+      Logger.info("address: %d , Point: (%d, %d, %d), EPB: %d, dataSize: %d".format(address, localPoint.x, localPoint.y, localPoint.z, bytesPerElement, data.size))
     val bytes = new Array[Byte](bytesPerElement)
     var i = 0
     while (i < bytesPerElement) {
@@ -285,8 +286,8 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   /**
    *  Read file contents to a byteArray
    */
-  def inputStreamToByteArray(is: InputStream, elementSize: Int = 8) = {
-    val byteCount = voxelsPerFile * elementSize / 8
+  def inputStreamToByteArray(is: InputStream, bytesPerElement: Int) = {
+    val byteCount = elementsPerFile * bytesPerElement
     val byteArray = new Array[Byte](byteCount)
     is.read(byteArray, 0, byteCount)
     //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")

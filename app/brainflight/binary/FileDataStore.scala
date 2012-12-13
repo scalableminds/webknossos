@@ -23,13 +23,13 @@ class FileDataStore( cacheAgent: Agent[Map[DataBlockInformation, Data]])
       try {
         val binaryStream =
           new FileInputStream( createFilename( dataSet, dataLayer, resolution, block ) )
-        inputStreamToByteArray( binaryStream )
+        inputStreamToByteArray( binaryStream, dataLayer.bytesPerElement )
       } catch {
         case e: FileNotFoundException =>
           Logger.warn( "Block %s not found!".format( createFilename( dataSet, dataLayer, resolution, block ) ) )
           // if the file block isn't found, a nullBlock is associated with 
           // the coordinates
-          nullBlock
+          nullBlock(dataLayer.bytesPerElement)
       })
     val blockInfo = DataBlockInformation( dataSet.id, dataLayer, resolution, block )
     DataBlock( blockInfo, dataBlock)

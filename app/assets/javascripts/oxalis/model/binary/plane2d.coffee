@@ -27,7 +27,7 @@ class Plane2D
   # Constants
   TEXTURE_SIZE_P : 0
   BUCKETS_IN_A_ROW : 0
-  MAP_SIZE : 85 # 4⁰ + 4¹ + 4² + 4³
+  MAP_SIZE : 0
   RECURSION_PLACEHOLDER : {}
   DELTA : [10, 5, 0]
 
@@ -54,16 +54,19 @@ class Plane2D
 
     @BUCKETS_IN_A_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
 
+    for i in [0..@cube.LOOKUP_DEPTH_DOWN]
+      @MAP_SIZE += 1 << (2 * i)
+
     [@u, @v, @w] = Dimensions.getIndices(@index)
 
-    @cube.on "bucketLoaded", (bucket, zoomStep, oldZoomStep) =>
+    @cube.on "bucketLoaded", (bucket) =>
 
-      # Checking, whether the new bucket intersects with the current layer and the zoomStep means an improvement
-      if @layer >> @cube.BUCKET_SIZE_P == bucket[@w] and oldZoomStep > @zoomStep
+      # Checking, whether the new bucket intersects with the current layer
+      if @layer >> (@cube.BUCKET_SIZE_P + bucket[3]) == bucket[@w]
 
         # Get the tile, the bucket would be drawn to
-        u = (bucket[@u] >> @zoomStep) - @topLeftBucket[@u]
-        v = (bucket[@v] >> @zoomStep) - @topLeftBucket[@v]
+        u = bucket[@u] - @topLeftBucket[@u]
+        v = bucket[@v] - @topLeftBucket[@v]
 
         # If the tile is part of the texture, mark it as changed
         if u in [0...@BUCKETS_IN_A_ROW] and v in [0...@BUCKETS_IN_A_ROW]
@@ -85,16 +88,16 @@ class Plane2D
 
     centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
 
-    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1)
+    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 7)
 
     for bucket in buckets
       if bucket?
         priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
         @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority)
-        bucket[@w]++
-        @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 1)
-        bucket[@w]++
-        @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 2)
+        #bucket[@w]++
+        #@queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 1)
+        #bucket[@w]++
+        #@queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 2)
 
 
   getBucketArray : (center, range) ->
@@ -177,8 +180,8 @@ class Plane2D
       ]
 
       # Copying tiles
-      for du in [0...width] by 1
-        for dv in [0...height] by 1
+      for du in [1...width] by 1
+        for dv in [1...height] by 1
 
           oldTile = [oldOffset[0] + du, oldOffset[1] + dv]
           newTile = [newOffset[0] + du, newOffset[1] + dv]
@@ -197,7 +200,7 @@ class Plane2D
       @changed = false
       
       # Tiles are rendered from the bottom-right to the top-left corner
-      # to make linear interpolation possible
+      # to make linear interpolation possible in the future
       for u in [area[2]..area[0]] by -1
         for v in [area[3]..area[1]] by -1
           
@@ -258,25 +261,26 @@ class Plane2D
 
     else
 
+      bucketZoomStep = map[mapIndex][3]
       tileSize = @cube.BUCKET_SIZE_P - (@zoomStep - tileZoomStep)
-      bucket = @cube.getBucketByAddress(map[mapIndex])
-      skip = Math.max(@zoomStep - bucket.zoomStep, 0)
-      repeat = Math.max(bucket.zoomStep - @zoomStep, 0)
-
+      skip = Math.max(@zoomStep - bucketZoomStep, 0)
+      repeat = Math.max(bucketZoomStep - @zoomStep, 0)
       destOffset = bufferOffsetByTileMacro(tile, tileSize)
 
-      offsetMask = (1 << bucket.zoomStep - tileZoomStep) - 1;
-      scaleFactor = @cube.BUCKET_SIZE_P - (bucket.zoomStep - tileZoomStep)
+      offsetMask = (1 << bucketZoomStep - tileZoomStep) - 1;
+      scaleFactor = @cube.BUCKET_SIZE_P - (bucketZoomStep - tileZoomStep)
 
       sourceOffsets = [
         (((@topLeftBucket[@u] << @zoomStep - tileZoomStep) + tile[0]) & offsetMask) << scaleFactor
         (((@topLeftBucket[@v] << @zoomStep - tileZoomStep) + tile[1]) & offsetMask) << scaleFactor
-        (@layer >> bucket.zoomStep) & (1 << 5) - 1
+        (@layer >> bucketZoomStep) & (1 << 5) - 1
       ]
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@u]) + (sourceOffsets[1] << @DELTA[@v]) + (sourceOffsets[2] << @DELTA[@w])
 
-      @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, tileSize, bucket.data, sourceOffset,
+      bucketData = @cube.getBucketDataByZoomedAddress(map[mapIndex])
+
+      @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, tileSize, bucketData, sourceOffset,
         1 << (@DELTA[@u] + skip),
         1 << (@DELTA[@v] + skip),
         repeat,
@@ -312,6 +316,14 @@ class Plane2D
   generateRenderMap : (bucket) ->
 
     map = new Array(@MAP_SIZE)
+
+    if @cube.isBucketLoaded(bucket)
+
+      return [bucket]
+
+    else
+
+      return [undefined]
     
     zoomStep = bucket[3]
 

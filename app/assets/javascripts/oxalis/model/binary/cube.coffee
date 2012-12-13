@@ -9,10 +9,10 @@ class Cube
   BUCKET_LENGTH : 0
   ZOOM_STEP_COUNT : 10
   LOOKUP_DEPTH_UP : 2
-  LOOKUP_DEPTH_DOWN : 3
+  LOOKUP_DEPTH_DOWN : 0
 
   LOADING_PLACEHOLDER : {}
-
+  requests : 0
   cube : null
   upperBoundary : null
 
@@ -39,14 +39,41 @@ class Cube
         (cubeBoundary[2] + 1) >> 1
       ]
 
+    console.log @
+
 
   getBucketIndexByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
     cube = @cube[zoomStep]
+    boundary = cube.boundary
 
-    bucket_x * cube.boundary[2] * cube.boundary[1] +
-    bucket_y * cube.boundary[1] +
-    bucket_z
+    if bucket_x >= 0 and bucket_x < boundary[0] and
+    bucket_y >= 0 and bucket_y < boundary[1] and
+    bucket_z >= 0 and bucket_z < boundary[2] and
+    zoomStep >= 0 and zoomStep < @ZOOM_STEP_COUNT
+
+      bucket_x * cube.boundary[2] * cube.boundary[1] +
+      bucket_y * cube.boundary[2] +
+      bucket_z
+
+    else
+
+      undefined
+
+
+  getBucketDataByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+
+    cube = @cube[zoomStep]
+
+    bucketIndex = @getBucketIndexByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
+
+    if bucketIndex? and cube.buckets[bucketIndex]?
+
+      cube.buckets[bucketIndex].data
+
+    else
+
+      undefined    
 
 
   requestBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
@@ -54,56 +81,21 @@ class Cube
     cube = @cube[zoomStep]
     bucketIndex = @getBucketIndexByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
 
-    unless cube.buckets[bucketIndex]?
-      cube.buckets[bucketIndex] = { data: @LOADING_PLACEHOLDER, level: @ZOOM_STEP_COUNT }
-      return true
-
-    return cube.buckets[bucketIndex].level > @LOOKUP_DEPTH_DOWN and cube.buckets[bucketIndex].data != @LOADING_PLACEHOLDER
-
-
-  getZoomStepByAddress : (bucket) ->
-
-#    bucketIndex = @getBucketIndexByAddress(bucket)
-
- #   if bucketIndex? and @cube[bucketIndex]
-  #    @cube[bucketIndex].zoomStep
-   # else
-    #  @ZOOM_STEP_COUNT
-
-
-  getRequestedZoomStepByAddress : (bucket) ->
-
-#    bucketIndex = @getBucketIndexByAddress(bucket)
-
- #   if bucketIndex? and @cube[bucketIndex]
-  #    @cube[bucketIndex].requestedZoomStep
-   # else
-    #  @ZOOM_STEP_COUNT
-
-
-  getWorstRequestedZoomStepByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
-
-#    if zoomStep
-
- #     x = bucket_x << zoomStep
-  #    y = bucket_y << zoomStep
-   #   z = bucket_z << zoomStep
-
-    #  worstZoomStep = 0
-     # tmp = 0
-      #width = 1 << zoomStep
-#      for dx in [0...width] by 1
- #       for dy in [0...width] by 1
-  #        for dz in [0...width] by 1
-   #         tmp = @getRequestedZoomStepByAddress([x + dx, y + dy, z + dz])
-    #        worstZoomStep = tmp if tmp > worstZoomStep
-     #       return worstZoomStep if worstZoomStep == @ZOOM_STEP_COUNT
+    return false if not bucketIndex? or cube.buckets[bucketIndex]? and (cube.buckets[bucketIndex].level <= @LOOKUP_DEPTH_UP or cube.buckets[bucketIndex].data == @LOADING_PLACEHOLDER)
     
-      #worstZoomStep
+    cube.buckets[bucketIndex] = { data: @LOADING_PLACEHOLDER, level: @ZOOM_STEP_COUNT }
+    return true
 
-#    else
 
- #     @getRequestedZoomStepByAddress([bucket_x, bucket_y, bucket_z])
+  isBucketLoaded : (bucket) ->
+
+#    bucketData = @getBucketDataByZoomedAddress(bucket)
+  #   bucketData? and bucketData != @LOADING_PLACEHOLDER
+
+    cube = @cube[bucket[3]]
+    bucketIndex = @getBucketIndexByZoomedAddress(bucket)
+    bucketData = cube.buckets[bucketIndex]
+    bucketData? and bucketData.data != @LOADING_PLACEHOLDER
 
   updateLevel : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
@@ -134,7 +126,7 @@ class Cube
 
           bucket.level = Math.max(bucket.level, subCube.buckets[subBucketIndex].level + 1)
 
-    if bucket.level < oldBucketLevel and bucket.level < @LOOKUP_DEPTH_DOWN
+    if bucket.level < oldBucketLevel and bucket.level < @LOOKUP_DEPTH_UP
 
       @updateLevel([
         bucket_x >> 1
@@ -151,7 +143,7 @@ class Cube
     bucketIndex = @getBucketIndexByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
     
     if bucketData?
-
+      @requests--
       cube.buckets[bucketIndex].data = bucketData
       cube.buckets[bucketIndex].level = 0
       @updateLevel([
@@ -160,6 +152,7 @@ class Cube
         bucket_z >> 1
         zoomStep + 1
       ])
+      @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, zoomStep])
 
     else
 

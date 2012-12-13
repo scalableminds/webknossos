@@ -174,6 +174,7 @@ class LevelCreator
       width : @canvas.width
       height : @canvas.height
       zIndex : 2000
+      backgroundColor : "white"
     )
 
     window.callPhantom( 

@@ -30,7 +30,7 @@ class GridFileDataStore extends DataStore{
   /**
    * Load the binary data of the given coordinate from DB
    */
-  override def load(dataSet: DataSet, resolution: Int, cube: Cuboid): Array[Byte] = {
+  override def load(dataSet: DataSet, resolution: Int, cube: Cuboid, halfByte: Boolean = false): Array[Byte] = {
     //TODO: IMPLEMENT
     new Array[Byte](0)
   }

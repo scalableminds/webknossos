@@ -1,5 +1,7 @@
-define ->
-  
+### define ###
+
+Matrix3 =
+
   inverse : (mat) ->
 
     a00 = mat[0]

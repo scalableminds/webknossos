@@ -1,5 +1,5 @@
-define [
-  "lib/event_mixin"
-], (EventMixin) ->
+### define
+lib/event_mixin : EventMixin
+###
 
-  new EventMixin()
+new EventMixin()

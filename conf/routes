@@ -31,9 +31,9 @@ POST    /user/configuration                 controllers.UserController.saveSetti
 GET     /user/configuration                 controllers.UserController.showSettings
 
 # Binary Data
-GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int )
-POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int )
 GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(levelId: String, taskId: String)
+GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int, halfByte: Boolean )
+POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int, halfByte: Boolean )
 
 # Tracing Stuff
 POST    /tracing/create                     controllers.TracingController.createExplorational

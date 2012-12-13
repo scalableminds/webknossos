@@ -8,9 +8,8 @@ class SegmentImporter
 
   PARAMETER : 
     input: 
-      raw: 'Uint8Array'
-    width: 'int'
-    height: 'int'
+      segmentation: 'Uint8Array'
+      dimensions : '[x, y, z]'
 
 
   directions : [ 

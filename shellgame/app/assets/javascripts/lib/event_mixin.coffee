@@ -1,77 +1,115 @@
-define [
-  "underscore"
-], (_) ->
-  class EventMixin
+### define 
+underscore : _
+jquery : $
+###
 
-    constructor : ->
+class EventMixin
 
-      @callbacks = {}
+  constructor : ->
+
+    @__callbacks = {}
+    @__deferreds = {}
 
 
-    on : (type, callback) ->
+  on : (type, callback) ->
 
-      unless _.isObject(type)
+    unless _.isObject(type)
 
-        unless _.isArray(@callbacks[type])
-          @callbacks[type] = [ callback ]
-        else
-          @callbacks[type].push(callback)
-
+      unless _.isArray(@__callbacks[type])
+        @__callbacks[type] = [ callback ]
       else
+        @__callbacks[type].push(callback)
 
-        map = type
-        for own type, callback of map
-          @on(type, callback)
+    else
 
-      this
+      map = type
+      for own type, callback of map
+        @on(type, callback)
 
-
-    off : (type, callback) ->
-
-      if _.isArray(@callbacks[type])
-        _.removeElement(@callbacks[type], callback)
-      this
+    this
 
 
-    trigger : (type, args...) ->
+  one : (type, callback) ->
 
-      if _.isArray(@callbacks[type])
-        for callback in @callbacks[type]
-          callback.apply(this, args)
-      this
+    wrappedCallback = (args...) =>
 
-
-    ask : (type, args...) ->
-
-      if _.isArray(@callbacks[type])
-        for callback in @callbacks[type]
-          answer = callback.apply(this, args)
-          return answer unless answer == undefined
-      return
+      callback(args...)
+      @off(type, wrappedCallback)
 
 
-    passthrough : (obj, type, renamedType = type) ->
+    unless _.isObject(type)
 
-      if _.isArray(type)
+     @on(type, wrappedCallback)
 
-        types = type
-        for type in types
-          @passthrough(obj, type, type) 
+    else
 
-      else if _.isObject(type)
+      map = type
+      for own type, callback of map
+        @on(type, wrappedCallback)
 
-        typeMap = type
-        for type, renamedType of typeMap
-          @passthrough(obj, type, renamedType) 
-
-      else
-
-        obj.on type, (args...) => 
-          @trigger(renamedType, args...)
-        
-      this
+    this
 
 
-    @extend : (obj) ->
+  off : (type, callback) ->
 
-      _.extend(obj, new this())
+    if _.isArray(@__callbacks[type])
+      _.removeElement(@__callbacks[type], callback)
+    this
+
+
+  trigger : (type, args...) ->
+
+    if deferred = @__deferreds[type]
+      deferred.resolve(args...)
+
+    if _.isArray(@__callbacks[type])
+      for callback in @__callbacks[type]
+        callback.apply(this, args)
+
+    this
+
+
+  ask : (type, args...) ->
+
+    if _.isArray(@__callbacks[type])
+      for callback in @__callbacks[type]
+        answer = callback.apply(this, args)
+        return answer unless answer == undefined
+    return
+
+
+  passthrough : (obj, type, renamedType = type) ->
+
+    if _.isArray(type)
+
+      types = type
+      for type in types
+        @passthrough(obj, type, type) 
+
+    else if _.isObject(type)
+
+      typeMap = type
+      for type, renamedType of typeMap
+        @passthrough(obj, type, renamedType) 
+
+    else
+
+      obj.on type, (args...) => 
+        @trigger(renamedType, args...)
+      
+    this
+
+
+  addDeferred : (type) ->
+
+    @__deferreds[type] = new $.Deferred()
+
+
+  deferred : (type) ->
+
+    @__deferreds[type]
+
+
+  @extend : (obj) ->
+
+    _.extend(obj, new this())

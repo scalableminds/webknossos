@@ -37,6 +37,7 @@ class Plane2D
   w : 0
   cube : null
   queue : null
+  lookUpTable : null
 
   layer : -1
   zoomStep : -1
@@ -70,6 +71,14 @@ class Plane2D
           tile = [u, v]
           @tiles[tileIndexByTileMacro(tile)] = true
           @changed |= u in [@area[0]..@area[2]] and v in [@area[1]..@area[3]]
+
+
+  updateLookUpTable : (@lookUpTable) ->
+
+    for i in [0..@tiles.length]
+      @tiles[i] = true
+
+    @changed = true
 
 
   ping : (position, direction, zoomStep) ->
@@ -242,7 +251,7 @@ class Plane2D
     destOffset = bufferOffsetByTileMacro(destTile, @cube.BUCKET_SIZE_P)
     sourceOffset = bufferOffsetByTileMacro(sourceTile, @cube.BUCKET_SIZE_P)
 
-    @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, @cube.BUCKET_SIZE_P, sourceBuffer, sourceOffset, 1, 1 << @TEXTURE_SIZE_P, 0, 0)        
+    @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, @cube.BUCKET_SIZE_P, sourceBuffer, sourceOffset, 1, 1 << @TEXTURE_SIZE_P, 0, 0)
 
 
   renderTile : (tile) ->
@@ -285,14 +294,41 @@ class Plane2D
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@u]) + (sourceOffsets[1] << @DELTA[@v]) + (sourceOffsets[2] << @DELTA[@w])
 
-      @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, tileSize, bucket.data, sourceOffset,
+      @renderToBufferLookup(destOffset, 1 << @TEXTURE_SIZE_P, tileSize, bucket.data, sourceOffset,
         1 << (@DELTA[@u] + skip),
         1 << (@DELTA[@v] + skip),
         repeat,
         repeat)
 
+  # TODO combine almost identical code
+  renderToBufferLookup : (destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat) ->
+
+    lookUpTable = @lookUpTable
+
+    i = 1 << (destSize << 1)
+    destRowMask = (1 << destSize) - 1
+    sourcePixelRepeatMask = (1 << sourcePixelRepeat) - 1
+    sourceRowRepeatMask = (1 << destSize + sourceRowRepeat) - 1
+
+    while i--
+      @buffer[destOffset++] = lookUpTable[sourceBuffer[sourceOffset]]
+     
+      if (i & sourcePixelRepeatMask) == 0
+        sourceOffset += sourcePixelDelta
+      
+      if (i & destRowMask) == 0
+        destOffset += destRowDelta - (1 << destSize)
+        sourceOffset -= sourcePixelDelta << (destSize - sourcePixelRepeat)
+
+      if (i & sourceRowRepeatMask) == 0
+        sourceOffset += sourceRowDelta
+
+    return
+
 
   renderToBuffer : (destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat) ->
+
+    lookUpTable = @lookUpTable
 
     i = 1 << (destSize << 1)
     destRowMask = (1 << destSize) - 1

@@ -1,47 +1,45 @@
-define [
-  "underscore"
-  "jquery"
-  "kinetic"
-  "lib/event_mixin"
-  "./loading_view"
-  "./error_view"
-], (_, $, Kinetic, EventMixin, LoadingView, ErrorView) ->
+### define
+underscore : _
+jquery : $
+kinetic : Kinetic
+lib/event_mixin : EventMixin
+###
 
-  class Sequence
+class Sequence
 
-    constructor : (@view, @model, @layer) ->
+  constructor : (@view, @model, @layer) ->
 
-      EventMixin.extend(this)
+    EventMixin.extend(this)
 
 
-    @load : ->
+  @load : ->
 
-      (new $.Deferred).resolve().promise()
+    (new $.Deferred).resolve().promise()
 
-    @possibleNexts : (model) ->
+  @possibleNexts : (model) ->
 
-      buffer = if model.next
-        [ model.next ]
-      else
-        [ ] 
+    buffer = if model.next
+      [ model.next ]
+    else
+      [ ] 
 
-      if model.actions?
-        buffer = buffer.concat(model.actions
-          .filter( (a) -> _.isObject(a.next[0]) )
-          .map( (a) -> a.next )
-        )
+    if model.actions?
+      buffer = buffer.concat(model.actions
+        .filter( (a) -> _.isObject(a.next[0]) )
+        .map( (a) -> a.next )
+      )
 
-      buffer
-      
+    buffer
+    
 
-    render : ->
+  render : ->
 
-    draw : ->
+  draw : ->
 
-      @layer.draw()
+    @layer.draw()
 
-    destroy : ->
+  destroy : ->
 
-      @layer.removeChildren()
+    @layer.removeChildren()
 
 

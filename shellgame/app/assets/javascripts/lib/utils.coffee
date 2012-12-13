@@ -1,5 +1,9 @@
-define ->
+### define 
+jquery : $
+###
   
+Utils = 
+
   distance : (a, b) ->
 
     Math.sqrt(a * a + b * b)

@@ -11,6 +11,7 @@ import xml.Xml
 import xml.XMLWrites
 import models.binary.DataSet
 import models.graph.Tree.TreeFormat
+import models.graph.Comment
 import models.graph._
 import models.user.User
 import play.api.libs.json.Reads
@@ -35,6 +36,7 @@ case class Tracing(
     activeNodeId: Int,
     scale: Scale,
     editPosition: Point3D,
+    comments: List[Comment] = Nil,
     taskId: Option[ObjectId] = None,
     state: TracingState = InProgress,
     review: List[TracingReview] = Nil,
@@ -123,38 +125,6 @@ case class Tracing(
 
 object Tracing extends BasicDAO[Tracing]("tracings") {
 
-  implicit object TracingXMLWrites extends XMLWrites[Tracing] {
-    def writes(e: Tracing) = {
-      (DataSet.findOneByName(e.dataSetName).map { dataSet =>
-        <things>
-          <parameters>
-            <tracing name={ dataSet.name }/>
-            <scale x={ e.scale.x.toString } y={ e.scale.y.toString } z={ e.scale.z.toString }/>
-            <offset x="0" y="0" z="0"/>
-            <time ms={ e.timestamp.toString }/>
-            <activeNode id={ e.activeNodeId.toString }/>
-            <editPosition x={ e.editPosition.x.toString } y={ e.editPosition.y.toString } z={ e.editPosition.z.toString }/>
-          </parameters>
-          { e.trees.map(e => Xml.toXML(e)) }
-          <comments>
-            {
-              for {
-                tree <- e.trees
-                node <- tree.nodes
-                comment <- node.comment
-              } yield {
-                <comment node={ node.id.toString } content={ comment }/>
-              }
-            }
-          </comments>
-          <branchpoints>
-            { e.branchPoints.map(BranchPoint.toXML) }
-          </branchpoints>
-        </things>
-      }) getOrElse (<error>DataSet not fount</error>)
-    }
-  }
-
   def createTracingFor(user: User, task: Task) = {
     insertOne(Tracing(user._id,
       task.dataSetName,
@@ -164,7 +134,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       1,
       Scale(12, 12, 24),
       task.start,
-      Some(task._id),
+      taskId = Some(task._id),
       tracingType =
         if (task.isTraining) TracingType.Training
         else TracingType.Task))
@@ -230,6 +200,30 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       "taskId" -> MongoDBObject("$exists" -> false))).toList
   }
 
+  implicit object TracingXMLWrites extends XMLWrites[Tracing] {
+    def writes(e: Tracing) = {
+      (DataSet.findOneByName(e.dataSetName).map { dataSet =>
+        <things>
+          <parameters>
+            <tracing name={ dataSet.name }/>
+            <scale x={ e.scale.x.toString } y={ e.scale.y.toString } z={ e.scale.z.toString }/>
+            <offset x="0" y="0" z="0"/>
+            <time ms={ e.timestamp.toString }/>
+            <activeNode id={ e.activeNodeId.toString }/>
+            <editPosition x={ e.editPosition.x.toString } y={ e.editPosition.y.toString } z={ e.editPosition.z.toString }/>
+          </parameters>
+          { e.trees.map(t => Xml.toXML(t)) }
+          <branchpoints>
+            { e.branchPoints.map(BranchPoint.toXML) }
+          </branchpoints>
+          <comments>
+            { e.comments.map(c => Xml.toXML(c)) }
+          </comments>
+        </things>
+      }) getOrElse (<error>DataSet not fount</error>)
+    }
+  }
+  
   implicit object TracingFormat extends Format[Tracing] {
     val ID = "id"
     val TREES = "trees"
@@ -237,6 +231,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     val BRANCH_POINTS = "branchPoints"
     val EDIT_POSITION = "editPosition"
     val SCALE = "scale"
+    val COMMENTS = "comments"
 
     def writes(e: Tracing) = Json.obj(
       ID -> e.id,
@@ -244,18 +239,20 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       ACTIVE_NODE -> e.activeNodeId,
       BRANCH_POINTS -> e.branchPoints,
       SCALE -> e.scale,
+      COMMENTS -> e.comments,
       EDIT_POSITION -> e.editPosition)
 
     def reads(js: JsValue): Tracing = {
 
       val id = (js \ ID).as[String]
       val trees = (js \ TREES).as[List[Tree]]
+      val comments = (js \ COMMENTS).as[List[Comment]]
       val activeNode = (js \ ACTIVE_NODE).as[Int]
       val branchPoints = (js \ BRANCH_POINTS).as[List[BranchPoint]]
       val editPosition = (js \ EDIT_POSITION).as[Point3D]
       Tracing.findOneById(id) match {
         case Some(exp) =>
-          exp.copy(trees = trees, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition)
+          exp.copy(trees = trees, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition, comments = comments)
         case _ =>
           throw new RuntimeException("Valid tracing id expected")
       }

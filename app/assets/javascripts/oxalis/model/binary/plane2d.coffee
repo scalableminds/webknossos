@@ -87,7 +87,7 @@ class Plane2D
   ping : (position, direction, zoomStep) ->
 
     centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
-    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 6)
+    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 4)
 
     for bucket in buckets
       if bucket?

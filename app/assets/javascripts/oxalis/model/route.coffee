@@ -22,6 +22,7 @@ class Route
   
   branchStack : []
   trees : []
+  comments : []
   activeNode : null
   activeTree : null
 
@@ -35,6 +36,7 @@ class Route
     @idCount = 1
     @treeIdCount = 1
     @trees = []
+    @comments = []
     @activeNode = null
     # Used to save in NML file, is always defined
     @lastActiveNodeId = 1
@@ -91,6 +93,9 @@ class Route
       if node
         node.type = TYPE_BRANCH
         @branchStack.push(node)
+
+    if @data.comments?
+      @comments = @data.comments
       
     for tree in @trees
       @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
@@ -127,6 +132,7 @@ class Route
     for branchPoint in @branchStack
       result.branchPoints.push({id : branchPoint.id})
     result.editPosition = @flycam.getGlobalPos()
+    result.comments = @comments
     result.trees = []
     for tree in @trees
       # Don't save empty trees (id is null)
@@ -259,7 +265,7 @@ class Route
     @lastActiveNodeId = @activeNode.id
     @doubleBranchPop = false
     @push()
-
+    
     @trigger("newNode")
 
 
@@ -310,6 +316,39 @@ class Route
     @push()
 
     @trigger("newActiveNode")
+
+
+  setComment : (commentText) ->
+    if(@activeNode?)
+      # remove any existing comments for that node
+      for i in [0...@comments.length]
+        if(@comments[i].node == @activeNode.id)
+          @comments.splice(i, 1)
+      @comments.push({node: @activeNode.id, content: commentText})
+
+  getComment : (nodeID) ->
+    unless nodeID? then nodeID = @activeNode.id
+    for comment in @comments
+      if comment.node == nodeID then return comment.content
+    return ""
+
+  nextCommentNodeID : (forward) ->
+    unless @activeNode?
+      if @comments.length > 0 then return @comments[0].node
+
+    if @comments.length == 0
+      return null
+
+    for i in [0...@comments.length]
+      if @comments[i].node == @activeNode.id
+        if forward
+          return @comments[(i + 1) % @comments.length].node
+        else
+          if i == 0 then return @comments[@comments.length - 1].node
+          else
+            return @comments[(i - 1)].node
+
+    return @comments[0].node
 
 
   setActiveTree : (id) ->
@@ -367,15 +406,14 @@ class Route
     if @activeNode
       hasNoChildren = @activeNode.remove(id)
       @lastActiveNodeId = @activeNode.id
+      if hasNoChildren
+        @trigger("deleteLastNode", id)
+      else
+        @trigger("deleteActiveNode", id)
     else
       # Root is deleted
       @deleteActiveTree()
     @push()
-
-    if hasNoChildren
-      @trigger("deleteLastNode", id)
-    else
-      @trigger("deleteActiveNode")
 
   deleteActiveTree : ->
     # There should always be an active Tree
@@ -394,7 +432,7 @@ class Route
       @setActiveTree(@trees[@trees.length - 1].treeId)
     @push()
 
-    @trigger("deleteActiveTree")
+    @trigger("deleteActiveTree", index)
 
   getTree : (id) ->
     unless id

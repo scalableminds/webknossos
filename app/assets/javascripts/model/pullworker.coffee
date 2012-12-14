@@ -16,8 +16,8 @@ initialize = (url) ->
     (code, reason) => 
 
       @socket = null
-          
-      postMessage({ message: 'close' })
+      #TODO post REAL values (code and reason)
+      postMessage({ message: 'close', closeCode: 123, closeReason: 'reason' })
   )
 
   socket.addEventListener(

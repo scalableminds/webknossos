@@ -34,9 +34,11 @@ POST    /user/configuration                 controllers.UserController.saveSetti
 GET     /user/configuration                 controllers.UserController.showSettings
 
 # Binary Data
-GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
-POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
+
+GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int, halfByte: Boolean )
+POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int, halfByte: Boolean )
 GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String)
+
 
 # Tracing Stuff
 POST    /tracing/create                     controllers.TracingController.createExplorational
@@ -100,7 +102,7 @@ GET     /admin/level                        controllers.admin.LevelCreator.list
 POST    /admin/level/create                 controllers.admin.LevelCreator.create
 GET     /admin/level/:id/assets             controllers.admin.LevelCreator.listAssets(id: String)
 GET     /admin/level/:id/delete             controllers.admin.LevelCreator.delete(id: String)
-GET     /admin/level/:id                    controllers.admin.LevelCreator.use(id: String, taskId: String)
+GET     /admin/level/:id                    controllers.admin.LevelCreator.use(id: String, missionId: String)
 POST    /admin/level/:id/code               controllers.admin.LevelCreator.submitCode(id: String)
 GET     /admin/level/:id/produce            controllers.admin.LevelCreator.produce(id: String)
 POST    /admin/level/:id/uploadAsset        controllers.admin.LevelCreator.uploadAsset(id: String)

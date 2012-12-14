@@ -82,7 +82,8 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   /*
    * Load the binary data of the given coordinate from file
    */
-  override def load(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, cube: Cuboid): Array[Byte] = {
+
+  override def load(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, cube: Cuboid, halfByte: Boolean = false): Array[Byte] = {
     if (dataSet doesContain cube.topLeft) {
       val block = PointToBlock(cube.topLeft, resolution)
       val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
@@ -94,13 +95,13 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
         }).value
 
       lastUsed = Some(blockInfo -> Data(byteArray))
-
-      val startX = (cube.topLeft.x / resolution) % 128
-      val startY = (cube.topLeft.y / resolution) % 128
-      val startZ = (cube.topLeft.z / resolution) % 128
-
-      val result = new Array[Byte](cube.volume * bytesPerElement)
-
+      
+      val startX = (cube.topLeft.x / resolution) % 128 
+      val startY = (cube.topLeft.y / resolution) % 128 
+      val startZ = (cube.topLeft.z / resolution) % 128 
+      
+      val result = new Array[Byte]( if(halfByte) cube.volume/2 else cube.volume * bytesPerElement)
+      
       var idx = 0
       var x = startX
       var y = 0
@@ -111,20 +112,34 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       val edgeY = cube.edgeLengthY
       val edgeZ = cube.edgeLengthZ
 
-      while (x < startX + edgeX) {
+      var prevPixelColor: Byte = 0
+      
+      while( x < startX + edgeX){
         y = startY
         while (y < startY + edgeY) {
           z = startZ
-          while (z < startZ + edgeZ) {
-            byte = 0
-            while (byte < bytesPerElement) {
-              result.update(idx, byteArray(z * 128 * 128 * bytesPerElement + y * 128 * bytesPerElement + x * bytesPerElement + byte))
+          while( z < startZ + edgeZ){
+            if(halfByte){
+              val pixelColor = (byteArray( ( z * 128 * 128 + y * 128 + x ) ) & 0xF0).toByte
+              if(idx % 2 == 1){
+                val twoPixelColor = 
+                  (prevPixelColor | (pixelColor >> 4 & 0x0F) ).asInstanceOf[Byte]
+                result.update( idx / 2, twoPixelColor)
+              } else {
+                prevPixelColor = pixelColor
+              }       
               idx += 1
-              z += 1
-              byte += 1
+            } else {
+              byte = 0
+              while (byte < bytesPerElement) {
+                result.update(idx, byteArray(z * 128 * 128 * bytesPerElement + y * 128 * bytesPerElement + x * bytesPerElement + byte))
+                idx += 1
+                byte += 1
+              }
             }
-          }
-          y += 1
+            z += 1
+          } 
+          y+=1
         }
         x += 1
       }

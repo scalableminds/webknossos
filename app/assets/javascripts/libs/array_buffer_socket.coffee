@@ -13,6 +13,9 @@ class ArrayBufferSocket
 
     _.extend(this, options)
 
+
+  open : ->
+
     @sender = @senders[0]
     @sender.open(this)
   
@@ -40,6 +43,10 @@ class ArrayBufferSocket
         else
           null
     )
+
+  close : ->
+
+    @sender.close()
 
 
 class ArrayBufferSocket.WebSocket
@@ -206,7 +213,7 @@ class ArrayBufferSocket.WebWorker
               @worker = null
               request.reject("socket closed") for request in @pendingRequests
               @pendingRequests.length = 0
-              console.error("socket closed", "#{code}: #{reason}")
+              console.error("socket closed", "#{event.data.closeCode}: #{event.data.closeReason}")
             
             when 'data'
               buffer = event.data.buffer

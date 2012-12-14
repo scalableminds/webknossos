@@ -84,10 +84,14 @@ class Controller
       @gui.on "setActiveTree", (id) => @setActiveTree(id)
       @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
       @gui.on "deleteActiveTree", @deleteActiveTree
+      @gui.update()
 
       @flycam.setGlobalPos(@model.route.data.editPosition)
       @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
-      @flycam.setOverrideZoomStep(@model.user.minZoomStep)
+      @flycam.setQuality(@model.user.quality)
+
+      @model.binary.queue.set4Bit(@model.user.fourBit)
+      @model.binary.updateLookupTable(@model.user.brightness, @model.user.contrast)
 
       @initMouse()
       @initKeyboard()
@@ -285,17 +289,12 @@ class Controller
  
     # identify clicked object
     intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
-    console.log "Intersects: ", intersects
-
     #if intersects.length > 0 and intersects[0].distance >= 0
     for intersect in intersects
       
       index = intersect.index
       nodeID = intersect.object.geometry.nodeIDs[index]
-      console.log "nodeID: ", nodeID
 
-      #intersectsCoord = [intersects[0].point.x, intersects[0].point.y, intersects[0].point.z]
-      #intersectsCoord = @model.route.getNode(nodeID).pos
       posArray = intersect.object.geometry.__vertexArray
       intersectsCoord = [posArray[3 * index], posArray[3 * index + 1], posArray[3 * index + 2]]
       globalPos = @flycam.getGlobalPos()
@@ -314,7 +313,11 @@ class Controller
   addNode : (position) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
-    @model.route.addNode(position, TYPE_USUAL)
+      @model.route.one("rendered", =>
+        @model.route.one("rendered", =>
+          @model.route.addNode(position, TYPE_USUAL)))
+    else
+      @model.route.addNode(position, TYPE_USUAL)
 
   pushBranch : =>
     @model.route.pushBranch()

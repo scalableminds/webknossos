@@ -7,7 +7,7 @@ class Cube
   # Constants
   BUCKET_SIZE_P : 5
   BUCKET_LENGTH : 0
-  ZOOM_STEP_COUNT : 10
+  ZOOM_STEP_COUNT : 0
   LOOKUP_DEPTH_UP : 2
   LOOKUP_DEPTH_DOWN : 0
 
@@ -16,7 +16,7 @@ class Cube
   upperBoundary : null
 
 
-  constructor : (@upperBoundary) ->
+  constructor : (@upperBoundary, @ZOOM_STEP_COUNT) ->
 
     _.extend(@, new EventMixin())
 

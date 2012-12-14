@@ -25,7 +25,7 @@ class Binary
 
     @dataSetId = dataSet.id
 
-    @cube = new Cube(dataSet.upperBoundary)
+    @cube = new Cube(dataSet.upperBoundary, dataSet.resolutions.length)
     @queue = new PullQueue(@dataSetId, @cube)
 
     @planes = []
@@ -71,9 +71,8 @@ class Binary
       #console.time "ping"
       @queue.clear()
 
-      #for plane in @planes
-      plane = @planes[0]
-      plane.ping(position, @direction, options[plane.index]) if options[plane.index]? 
+      for plane in @planes
+        plane.ping(position, @direction, options[plane.index]) if options[plane.index]? 
 
       @queue.pull()
       #console.timeEnd "ping"

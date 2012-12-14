@@ -312,84 +312,29 @@ class Plane2D
     return
 
 
-  generateRenderMap : (bucket) ->
+  generateRenderMap : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+
+    return [[bucket_x, bucket_y, bucket_z, zoomStep]] if @cube.isBucketLoadedByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
 
     map = new Array(@MAP_SIZE)
-
-    if @cube.isBucketLoadedByZoomedAddress(bucket)
-
-      return [bucket]
-
-    else
-
-      return [undefined]
+    map[0] = undefined
     
-    zoomStep = bucket[3]
+    for i in [Math.min(@cube.LOOKUP_DEPTH_UP, @cube.ZOOM_STEP_COUNT - zoomStep - 1)...0]
 
-    if zoomStep
-
-      offset_x = bucket[0] << zoomStep
-      offset_y = bucket[1] << zoomStep
-      offset_z = bucket[2] << zoomStep
-
-      width = 1 << zoomStep
-      for dx in [0...width] by 1
-        for dy in [0...width] by 1
-          for dz in [0...width] by 1
-            subBucket = [offset_x + dx, offset_y + dy, offset_z + dz]
-            subBucketZoomStep = @cube.getZoomStepByAddress(subBucket)
-
-            if @layer >> (subBucketZoomStep + @cube.BUCKET_SIZE_P) == subBucket[@w] >> subBucketZoomStep
-              @addBucketToRenderMap(map, 0, subBucket, subBucketZoomStep, [bucket[@u], bucket[@v]], zoomStep)
-
-      map
-
-    else
-
-      if @cube.getZoomStepByAddress(bucket) < @cube.ZOOM_STEP_COUNT
-        [ bucket ]
-      else
-        [ undefined ]
-
-
-  addBucketToRenderMap : (map, mapIndex, bucket, bucketZoomStep, tile, tileZoomStep) ->
-
-    if not map[mapIndex] or map[mapIndex] == @RECURSION_PLACEHOLDER
-      currentZoomStep = @cube.ZOOM_STEP_COUNT
-    else currentZoomStep =  @cube.getZoomStepByAddress(map[mapIndex])
-
-    # 
-    if currentZoomStep <= tileZoomStep
-      return
-
-    # 
-    if bucketZoomStep == tileZoomStep
-      map[mapIndex] = bucket
-      return
-
-    # 
-    if bucketZoomStep < tileZoomStep
+      bucket = [
+        bucket_x >> i
+        bucket_y >> i
+        bucket_z >> i
+        zoomStep + i
+      ]
       
-      for i in [0..3] by 1
-        subTile = subTileMacro(tile, i)
-        zoomDifference = tileZoomStep - 1
-        subBucket = [bucket[0] >> zoomDifference, bucket[1] >> zoomDifference, bucket[2] >> zoomDifference]
-        
-        if subBucket[@u] == subTile[0] and subBucket[@v] == subTile[1]
-          @addBucketToRenderMap(map, (mapIndex << 2) + 1 + i, bucket, bucketZoomStep, subTile, tileZoomStep - 1)
-        else
-          if map[mapIndex] != @RECURSION_PLACEHOLDER
-            @addBucketToRenderMap(map, (mapIndex << 2) + 1 + i, map[mapIndex], currentZoomStep, subTile, tileZoomStep - 1)
+      map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
 
-      map[mapIndex] = @RECURSION_PLACEHOLDER
-      return
+#    enhanceRenderMap(map, mapIndex, bucket, 1)
 
-    if map[mapIndex] == @RECURSION_PLACEHOLDER
+    map
 
-      for i in [0..3] by 1
-        subTile = subTileMacro(tile, i)
-        @addBucketToRenderMap(map, (mapIndex << 2) + 1 + i, bucket, bucketZoomStep, subTile, tileZoomStep - 1)
-      return
 
-    if currentZoomStep > bucketZoomStep
-      map[mapIndex] = bucket
+  enhanceRenderMap : (map, mapIndex, bucket, backup, level) ->
+
+    

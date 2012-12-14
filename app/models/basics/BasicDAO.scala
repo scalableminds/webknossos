@@ -20,8 +20,8 @@ trait Persistence
 /**
  * Basis for all mapper objects
  */
-class BasicDAO[T <: AnyRef](collectionName: String)(implicit val m: Manifest[T])
-    extends SalatDAO[T, ObjectId](collection = DB.connection(collectionName)) {
+class BasicDAO[T <: AnyRef](collectionName: String, connection: MongoDB = DB.connection)(implicit val m: Manifest[T])
+    extends SalatDAO[T, ObjectId](collection = connection(collectionName)) {
 
   def findAll = find(MongoDBObject.empty).toList
 

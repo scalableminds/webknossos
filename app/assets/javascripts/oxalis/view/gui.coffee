@@ -164,39 +164,25 @@ class Gui
     fTrees.open()
     fNodes.open()
 
-    @flycam.on "globalPositionChanged", (position) => 
-
-      @updateGlobalPosition(position)
-      return
-
-    @flycam.on "zoomFactorChanged", (factor) =>
-      $("#zoomFactor").html("<p>Zoom factor: " + factor + "</p>")
-
     $("#trace-position-input").on "change", (event) => 
 
       @setPosFromString(event.target.value)
       return
 
-    @model.route.on("newActiveNode", =>
-      @update())
+    @flycam.on
+                globalPositionChanged : (position) => 
+                  @updateGlobalPosition(position)
+                zoomFactorChanged : (factor) =>
+                  $("#zoomFactor").html("<p>Zoom factor: " + factor + "</p>")
 
-    @model.route.on("newActiveTree", =>
-      @update())
-
-    @model.route.on("deleteActiveTree", =>
-      @update())
-
-    @model.route.on("deleteActiveNode", =>
-      @update())
-
-    @model.route.on("deleteLastNode", =>
-      @update())
-
-    @model.route.on("newNode", =>
-      @update())
-
-    @model.route.on("newActiveNodeRadius", (radius) =>
-      @updateRadius(radius))
+    @model.route.on  
+                      newActiveNode    : => @update()
+                      newActiveTree    : => @update()
+                      deleteActiveTree : => @update()
+                      deleteActiveNode : => @update()
+                      deleteLastNode   : => @update()
+                      newNode          : => @update()
+                      newActiveNodeRadius : (radius) =>@updateRadius(radius) 
 
   saveNow : =>
     @model.user.pushImpl()

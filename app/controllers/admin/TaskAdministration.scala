@@ -23,6 +23,8 @@ import play.api.i18n.Messages
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.execution.defaultContext
 
+import java.lang.Cloneable
+
 object TaskAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
@@ -126,6 +128,7 @@ object TaskAdministration extends Controller with Secured {
 
   def overview = Authenticated { implicit request =>
     Async {
+      play.api.templates.Html
       val allUsers = User.findAll
       val allTaskTypes = TaskType.findAll
       val usersWithoutTask = allUsers.filter(user => !Tracing.hasOpenTracing(user, false))

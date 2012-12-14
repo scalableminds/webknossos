@@ -1,3 +1,4 @@
+
 package brainflight.binary
 
 import collection.mutable.HashMap
@@ -12,6 +13,7 @@ import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
 import models.binary.DataSet
 import brainflight.tools.geometry.Cuboid
+import brainflight.tools.geometry.Vector3D
 
 class GridFileDataStore extends DataStore{
 	  //GridFs handle
@@ -32,6 +34,11 @@ class GridFileDataStore extends DataStore{
     //TODO: IMPLEMENT
     new Array[Byte](0)
   }
+  
+  override def loadInterpolated(dataSet: DataSet, resolution: Int, points: Array[Vector3D]) = {
+    new Array[Byte](0)
+  }
+  
   override def load(dataSet: DataSet, resolution: Int, globalPoint: Point3D): Byte = {
     // TODO: Insert upper bound
     if (globalPoint.x < 0 || globalPoint.y < 0 || globalPoint.z < 0) return 0

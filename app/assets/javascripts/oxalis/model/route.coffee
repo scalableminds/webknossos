@@ -4,6 +4,7 @@ underscore : _
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
 ./tracepoint : TracePointClass
+./tracetree : TraceTreeClass
 ###
 
 # This takes care of the route. 
@@ -51,62 +52,44 @@ class Route
     ############ Load Tree from @data ##############
 
     # get tree to build
-    for tree in @data.trees
+    for treeData in @data.trees
+      # Create new tree
+      tree = new TraceTree(treeData.id, new THREE.Color().setRGB(treeData.color[0..2]...).getHex())
       # Initialize nodes
-      nodes = []
       i = 0
-      treeColor = new THREE.Color().setRGB(tree.color[0..2]...).getHex()
-      for node in tree.nodes
+      for node in treeData.nodes
         if node
-          nodes.push(new TracePoint(null, TYPE_USUAL, node.id, node.position, node.radius, treeColor))
+          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius))
+          # idCount should be bigger than any other id
+          @idCount = Math.max(node.id + 1, @idCount);
       # Initialize edges
-      for edge in tree.edges
-        sourceNode = @findNodeInList(nodes, edge.source)
-        targetNode  = @findNodeInList(nodes, edge.target)
+      for edge in treeData.edges
+        sourceNode = @findNodeInList(tree.nodes, edge.source)
+        targetNode  = @findNodeInList(tree.nodes, edge.target)
         sourceNode.appendNext(targetNode)
-        targetNode.parent = sourceNode
-      # Find root (only node without parent)
-      treeFound = false
-      for node in nodes
-        unless node.parent
-          if treeFound == true
-            lostTrees.push(node)
-          else
-            node.treeId = tree.id
-            @trees.push(node)
-            treeFound = true
+        targetNode.appendNext(sourceNode)
       # Set active Node
-      activeNodeT = @findNodeInList(nodes, @data.activeNode)
+      activeNodeT = @findNodeInList(tree.nodes, @data.activeNode)
       if activeNodeT
         @activeNode = activeNodeT
         @lastActiveNodeId = @activeNode.id
         # Active Tree is the one last added
-        @activeTree = @trees[@trees.length - 1]
-      # Set idCount
-      for node in nodes
-        @idCount = Math.max(node.id + 1, @idCount);
+        @activeTree = tree
+
+      @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
+      @trees.push(tree)
     
     # Set branchpoints
     nodeList = @getNodeListOfAllTrees()
     for branchpoint in @data.branchPoints
       node = @findNodeInList(nodeList, branchpoint.id)
-      if node
+      if node?
         node.type = TYPE_BRANCH
         @branchStack.push(node)
 
     if @data.comments?
       @comments = @data.comments
       
-    for tree in @trees
-      @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
-    for tree in lostTrees
-      savedActiveNode = @activeNode
-      @createNewTree()
-      # Restore active node
-      @activeNode = savedActiveNode
-      tree.treeId = @activeTree.treeId
-      @trees[@activeTree.treeIndex] = tree
-      @activeTree = tree
     unless @activeTree
       if @trees.length > 0
         @activeTree = @trees[0]
@@ -136,8 +119,8 @@ class Route
     result.trees = []
     for tree in @trees
       # Don't save empty trees (id is null)
-      if tree.id
-        nodes = @getNodeList(tree)
+      if tree.nodes.length
+        nodes = tree.nodes
         treeObj = {}
         result.trees.push(treeObj)
         treeColor = new THREE.Color(tree.color)
@@ -145,8 +128,9 @@ class Route
         treeObj.edges = []
         # Get Edges
         for node in nodes
-          for child in node.getChildren()
-            treeObj.edges.push({source : node.id, target : child.id})
+          for neighbor in node.neighbors
+            if node.id < neighbor.id  # to prevent saving the same edge twice
+              treeObj.edges.push({source : node.id, target : neighbor.id})
         treeObj.id = tree.treeId
         treeObj.nodes = []
         # Get Nodes
@@ -154,7 +138,7 @@ class Route
           treeObj.nodes.push({
             id : node.id
             position : node.pos
-            radius : node.size
+            radius : node.radius
             # TODO: Those are dummy values
             viewport : 0
             timestamp : 0
@@ -250,17 +234,14 @@ class Route
       
 
   addNode : (position, type) ->
-    unless @lastRadius
+    unless @lastRadius?
       @lastRadius = 10 * @scaleInfo.baseVoxel
-    point = new TracePoint(@activeNode, type, @idCount++, position, @lastRadius, @activeTree.color)
+      if @activeNode? then @lastRadius = @activeNode.radius
+    point = new TracePoint(type, @idCount++, position, @lastRadius)
+    @activeTree.nodes.push(point)
     if @activeNode
       @activeNode.appendNext(point)
-    else
-      # Tree has to be empty, so replace sentinel with point
-      point.treeId = @activeTree.treeId
-      @trees[@activeTree.treeIndex] = point
-      @activeTree = point
-      @activeTree.parent = null
+      point.appendNext(@activeNode)
     @activeNode = point
     @lastActiveNodeId = @activeNode.id
     @doubleBranchPop = false
@@ -268,6 +249,9 @@ class Route
     
     @trigger("newNode")
 
+
+  getActiveNode : ->
+    @activeNode
 
   getActiveNodeId : ->
     @lastActiveNodeId
@@ -279,7 +263,7 @@ class Route
     if @activeNode then @activeNode.type else null
 
   getActiveNodeRadius : ->
-    if @activeNode then @activeNode.size else null
+    if @activeNode then @activeNode.radius else null
 
   getActiveTreeId : ->
     if @activeTree then @activeTree.treeId else null
@@ -287,8 +271,8 @@ class Route
 
   getNode : (id) ->
     for tree in @trees
-      findResult = @findNodeInTree(id, tree)
-      if findResult then return findResult
+      for node in tree.nodes
+        if node.id == id then return node
     return null
     
 
@@ -297,7 +281,7 @@ class Route
     radius = Math.min(MAX_RADIUS * @scaleInfo.baseVoxel, radius)
     radius = Math.max(MIN_RADIUS * @scaleInfo.baseVoxel, radius)
     if @activeNode
-      @activeNode.size = radius
+      @activeNode.radius = radius
       @lastRadius = radius
     @push()
 
@@ -307,12 +291,12 @@ class Route
   setActiveNode : (id) ->
 
     for tree in @trees
-      findResult = @findNodeInTree(id, tree)
-      if findResult
-        @activeNode = findResult
-        @lastActiveNodeId = @activeNode.id
-        @activeTree = tree
-        break
+      for node in tree.nodes
+        if node.id == id
+          @activeNode = node
+          @lastActiveNodeId = @activeNode.id
+          @activeTree = tree
+          break
     @push()
 
     @trigger("newActiveNode")
@@ -328,7 +312,7 @@ class Route
       @comments.push({node: @activeNode.id, content: commentText})
 
   getComment : (nodeID) ->
-    unless nodeID? then nodeID = @activeNode.id if @activeNode
+    unless nodeID? then nodeID = @activeNode.id if @activeNode?
     for comment in @comments
       if comment.node == nodeID then return comment.content
     return ""
@@ -363,10 +347,10 @@ class Route
       if tree.treeId == id
         @activeTree = tree
         break
-    if @activeTree.isSentinel
+    if @activeTree.nodes.length == 0
       @activeNode = null
     else
-      @activeNode = @activeTree
+      @activeNode = @activeTree.nodes[0]
       @lastActiveNodeId = @activeNode.id
     @push()
 
@@ -383,44 +367,47 @@ class Route
         new THREE.Color().setHSV(Math.random(), 1, 1).getHex()
 
   createNewTree : ->
-    # Because a tree is represented by the root element and we
-    # don't have any root element, we need a sentinel to save the
-    # treeId and it's index within trees.
-    treeColor = @getNewTreeColor()
-    sentinel = new TracePoint(null, null, null, null, null, treeColor)
-    sentinel.treeId = @treeIdCount++
-    # save Index, so we can access it once we have the root element
-    sentinel.treeIndex = @trees.length
-    sentinel.isSentinel = true
-    @trees.push(sentinel)
-    @activeTree = sentinel
+    tree = new TraceTree(@treeIdCount++, @getNewTreeColor())
+    @trees.push(tree)
+    @activeTree = tree
     @activeNode = null
     @push()
 
-    @trigger("newTree", sentinel.treeId, sentinel.color)
-
-  findNodeInTree : (id, tree) ->
-    unless tree
-      tree = @activeTree
-    if tree.id == id then tree else tree.findNodeById(id, tree)
+    @trigger("newTree", tree.treeId, tree.color)
 
   deleteActiveNode : ->
-    unless @activeNode
+    unless @activeNode?
       return
-    id = @activeNode.id
-    hasNoChildren = false
-    @activeNode = @activeNode.parent
-    if @activeNode
-      @deleteComment(id)
-      hasNoChildren = @activeNode.remove(id)
-      @lastActiveNodeId = @activeNode.id
-      if hasNoChildren
-        @trigger("deleteLastNode", id)
-      else
-        @trigger("deleteActiveNode", id)
+
+    @deleteComment(@activeNode.id)
+    for neighbor in @activeNode.neighbors
+      neighbor.removeNeighbor(@activeNode.id)
+    @activeTree.removeNode(@activeNode.id)
+
+    deletedNode = @activeNode
+    
+    if deletedNode.neighbors.length > 1
+      # Need to split tree
+      newTrees = []
+      for i in [0...@activeNode.neighbors.length]
+        unless i == 0
+          # create new tree for all neighbors, except the first
+          @createNewTree()
+
+        @activeTree.nodes = []
+        @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
+        @activeNode = deletedNode.neighbors[i]
+        newTrees.push(@activeTree)
+
+      @trigger("reloadTrees", newTrees)
+        
+    else if @activeNode.neighbors.length == 1
+      # no children, so just remove it.
+      @activeNode = deletedNode.neighbors[0]
+      @trigger("deleteActiveNode", deletedNode)
     else
-      # Root is deleted
       @deleteActiveTree()
+    
     @push()
 
   deleteActiveTree : ->
@@ -432,7 +419,7 @@ class Route
         break
     @trees.splice(index, 1)
     # remove comments of all nodes inside that tree
-    for node in @getNodeList(@activeTree)
+    for node in @activeTree.nodes
       @deleteComment(node.id)
     # Because we always want an active tree, check if we need
     # to create one.
@@ -456,19 +443,29 @@ class Route
   getTrees : ->
     @trees
 
-  getNodeList : (tree) ->
-    unless tree
-      tree = @activeTree
-    result = [tree]
-    for c in tree.getChildren()
-      if c
-        result = result.concat(@getNodeList(c))
-    return result
+  # returns a list of nodes that are connected to the parent
+  #
+  # ASSUMPTION:    we are dealing with a tree, circles would
+  #                break this algorithm
+  getNodeListForRoot : (result, root, previous) ->
+    result.push(root)
+    next = root.getNext(previous)
+    while next?
+      if _.isArray(next)
+        for neighbor in next
+          @getNodeListForRoot(result, neighbor, root)
+        return
+      else
+        result.push(next)
+        newNext = next.getNext(root)
+        root = next
+        next = newNext
+
 
   getNodeListOfAllTrees : ->
     result = []
     for tree in @trees
-      result = result.concat(@getNodeList(tree))
+      result = result.concat(tree.nodes)
     return result
 
   rendered : ->

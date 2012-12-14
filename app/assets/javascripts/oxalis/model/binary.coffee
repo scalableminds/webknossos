@@ -82,7 +82,6 @@ class Binary
           @cube.extendByBucketAddressExtent(extent...)
 
           for entry in pullQueue
-            console.log entry...
             @queue.insert(entry...)
 
           break

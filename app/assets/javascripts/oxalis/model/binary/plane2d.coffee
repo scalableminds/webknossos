@@ -81,46 +81,46 @@ class Plane2D
     @changed = true
 
 
-  ping : (position, direction, zoomStep, area) ->
+  # ping : (position, direction, zoomStep, area) ->
 
-    centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
+  #   centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
  
-    topLeftBucket = centerBucket.slice(0)
-    topLeftBucket[@u] -= @TEXTURE_SIZE_P - 1
-    topLeftBucket[@v] -= @TEXTURE_SIZE_P - 1
+  #   topLeftBucket = centerBucket.slice(0)
+  #   topLeftBucket[@u] -= @TEXTURE_SIZE_P - 1
+  #   topLeftBucket[@v] -= @TEXTURE_SIZE_P - 1
 
-    bottomRightBucket = centerBucket.slice(0)
-    bottomRightBucket[@u] += @TEXTURE_SIZE_P - 2
-    bottomRightBucket[@v] += @TEXTURE_SIZE_P - 2
+  #   bottomRightBucket = centerBucket.slice(0)
+  #   bottomRightBucket[@u] += @TEXTURE_SIZE_P - 2
+  #   bottomRightBucket[@v] += @TEXTURE_SIZE_P - 2
 
-    @cube.extendByBucketAddressExtent([
-      (topLeftBucket[0] - 2)<< zoomStep
-      (topLeftBucket[1] - 2) << zoomStep
-      (topLeftBucket[2] - 2) << zoomStep
-    ], [
-      ((bottomRightBucket[0] + 3) << zoomStep) - 1
-      ((bottomRightBucket[1] + 3) << zoomStep) - 1
-      ((bottomRightBucket[2] + 3) << zoomStep) - 1
-    ])
+  #   @cube.extendByBucketAddressExtent([
+  #     (topLeftBucket[0] - 2)<< zoomStep
+  #     (topLeftBucket[1] - 2) << zoomStep
+  #     (topLeftBucket[2] - 2) << zoomStep
+  #   ], [
+  #     ((bottomRightBucket[0] + 3) << zoomStep) - 1
+  #     ((bottomRightBucket[1] + 3) << zoomStep) - 1
+  #     ((bottomRightBucket[2] + 3) << zoomStep) - 1
+  #   ])
 
-    # Converting area from voxels to buckets
-    area = [
-      area[0] >> @cube.BUCKET_SIZE_P
-      area[1] >> @cube.BUCKET_SIZE_P
-      area[2] - 1 >> @cube.BUCKET_SIZE_P
-      area[3] - 1 >> @cube.BUCKET_SIZE_P
-    ]
+  #   # Converting area from voxels to buckets
+  #   area = [
+  #     area[0] >> @cube.BUCKET_SIZE_P
+  #     area[1] >> @cube.BUCKET_SIZE_P
+  #     area[2] - 1 >> @cube.BUCKET_SIZE_P
+  #     area[3] - 1 >> @cube.BUCKET_SIZE_P
+  #   ]
 
-    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, area)
+  #   buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, area)
 
-    for bucket in buckets
-      if bucket?
-        priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
-        @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority)
-        bucket[@w]++
-        @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 1)
-        bucket[@w]++
-        @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 2)
+  #   for bucket in buckets
+  #     if bucket?
+  #       priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
+  #       @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority)
+  #       bucket[@w]++
+  #       @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 1)
+  #       bucket[@w]++
+  #       @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 2)
 
 
   getBucketArray : (center, range, area) ->

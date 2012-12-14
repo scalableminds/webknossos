@@ -330,11 +330,46 @@ class Plane2D
       
       map[0] = bucket if @cube.isBucketLoadedByZoomedAddress(bucket)
 
-#    enhanceRenderMap(map, mapIndex, bucket, 1)
+    if zoomStep and @enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], @cube.LOOKUP_DEPTH_DOWN)
+
+      map[0] = @RECURSION_PLACEHOLDER
+      console.log map
 
     map
 
 
-  enhanceRenderMap : (map, mapIndex, bucket, backup, level) ->
+  enhanceRenderMap : (map, mapIndex, [bucket_x, bucket_y, bucket_z, zoomStep], fallback, level) ->
 
-    
+    enhanced = false
+
+    if @cube.isBucketLoadedByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep]) 
+
+      map[mapIndex] = [bucket_x, bucket_y, bucket_z, zoomStep]
+      enhanced = true
+
+    else
+
+      map[mapIndex] = fallback
+
+    dw = @layer >> (5 + zoomStep - 1) & 0b1
+
+    recursive = false
+
+    if level and zoomStep
+
+      for du in [0..1]
+        for dv in [0..1]
+
+          subBucket = [bucket_x << 1, bucket_y << 1, bucket_z << 1, zoomStep - 1]
+          subBucket[@u] += du
+          subBucket[@v] += dv
+          subBucket[@w] += dw
+
+          recursive |= @enhanceRenderMap(map, (mapIndex << 2) + 2 * dv + du + 1, subBucket, map[mapIndex], level - 1)
+
+    if recursive
+
+      map[mapIndex] = @RECURSION_PLACEHOLDER
+      enhanced = true
+
+    return enhanced

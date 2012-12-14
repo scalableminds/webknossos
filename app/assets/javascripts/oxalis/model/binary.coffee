@@ -66,6 +66,8 @@ class Binary
       @lastPosition = position.slice()
       @lastOptions = options.slice()
 
+      #console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond
+
       #console.time "ping"
       @queue.clear()
 

@@ -86,10 +86,8 @@ class Plane2D
 
   ping : (position, direction, zoomStep) ->
 
-    console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond
-
     centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
-    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 4)
+    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 6)
 
     for bucket in buckets
       if bucket?

@@ -101,7 +101,7 @@ class PullQueue
         unless @cube.isBucketRequestedByZoomedAddress(bucket)
           batch.push bucket
           @cube.requestBucketByZoomedAddress(bucket)
-          # console.log "Requested: ", bucket
+          #console.log "Requested: ", bucket
 
       @pullBatch(batch) if batch.length > 0
 
@@ -131,23 +131,23 @@ class PullQueue
         (responseBuffer) =>
 
           @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length)
-          if responseBuffer?
-            for bucket, i in batch
 
-              if @fourBit
-                bucketData = @decode(responseBuffer.subarray(i * (@cube.BUCKET_LENGTH >> 1), (i + 1) * (@cube.BUCKET_LENGTH >> 1)))
-              else
-                bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
+          for bucket, i in batch
 
-              # console.log "Success: ", bucket
-              @cube.setBucketByZoomedAddress(bucket, bucketData)
+            if @fourBit
+              bucketData = @decode(responseBuffer.subarray(i * (@cube.BUCKET_LENGTH >> 1), (i + 1) * (@cube.BUCKET_LENGTH >> 1)))
+            else
+              bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
+
+            #console.log "Success: ", bucket
+            @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>
           
           for bucket in batch
 
             @cube.setBucketByZoomedAddress(bucket, null)
-            # console.log "Failed: ", bucket
+            #console.log "Failed: ", bucket
     
     ).always =>
 

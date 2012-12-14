@@ -263,7 +263,7 @@ class Route
     if @activeNode then @activeNode.type else null
 
   getActiveNodeRadius : ->
-    if @activeNode then @activeNode.size else null
+    if @activeNode then @activeNode.radius else null
 
   getActiveTreeId : ->
     if @activeTree then @activeTree.treeId else null
@@ -386,7 +386,7 @@ class Route
 
     deletedNode = @activeNode
     
-    if @activeNode.neighbors.length > 1
+    if deletedNode.neighbors.length > 1
       # Need to split tree
       newTrees = []
       for i in [0...@activeNode.neighbors.length]
@@ -403,8 +403,8 @@ class Route
         
     else if @activeNode.neighbors.length == 1
       # no children, so just remove it.
-      @trigger("deleteActiveNode", deletedNode)
       @activeNode = deletedNode.neighbors[0]
+      @trigger("deleteActiveNode", deletedNode)
     else
       @deleteActiveTree()
     
@@ -454,6 +454,7 @@ class Route
       if _.isArray(next)
         for neighbor in next
           @getNodeListForRoot(result, neighbor, root)
+        return
       else
         result.push(next)
         newNext = next.getNext(root)

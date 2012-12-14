@@ -13,8 +13,6 @@ VIEW_3D            = Dimensions.VIEW_3D
 TYPE_BRANCH = 1
 
 COLOR_ACTIVE = 0x0000ff
-COLOR_BRANCH = 0x550000
-COLOR_BRANCH_ACTIVE = 0x000055
 
 class Skeleton
 
@@ -77,7 +75,10 @@ class Skeleton
       newNode : => @setWaypoint()
       setBranch : (isBranchPoint) => @setBranchPoint(isBranchPoint)
       newActiveNodeRadius : (radius) => @setNodeRadius(radius)
-      reloadTrees : (trees) => @loadSkeletonFromModel(trees)
+      reloadTrees : (trees) =>
+        @route.one("rendered", =>
+          @route.one("rendered", =>
+            @loadSkeletonFromModel(trees)))
 
     @reset()
 
@@ -143,7 +144,7 @@ class Skeleton
         @nodesBuffer[index].set(node.pos, @curIndex[index] * 3)
         # Assign the ID to the vertex, so we can access it later
         @nodes[index].geometry.nodeIDs.set([node.id], @curIndex[index])
-        @pushNewNode(node.size, node.pos, node.id, tree.color)
+        #@pushNewNode(node.radius, node.pos, node.id, tree.color)
         @curIndex[index]++
 
         # Add edges to neighbor, if neighbor id is smaller
@@ -165,6 +166,7 @@ class Skeleton
       @nodes[index].geometry.verticesNeedUpdate = true
     for branchPoint in @route.branchStack
       @setBranchPoint(true, branchPoint.id)
+
     @setActiveNode()
 
   setActiveNode : =>
@@ -193,9 +195,9 @@ class Skeleton
     @flycam.hasChanged = true
 
   setBranchPoint : (isBranchPoint, nodeID) ->
-    colorActive = if isBranchPoint then COLOR_ACTIVE * 0.8 else COLOR_ACTIVE
+    colorActive = if isBranchPoint then COLOR_ACTIVE * 0.7 else COLOR_ACTIVE
     treeColor = @route.getTree().color
-    colorNormal = if isBranchPoint then treeColor * 0.8 else treeColor
+    colorNormal = if isBranchPoint then treeColor * 0.7 else treeColor
     if not nodeID? or nodeID == @route.getActiveNodeId()
       @activeNode.material.color.setHex(colorActive)
       if @activeNodeSphere
@@ -288,13 +290,14 @@ class Skeleton
     for i in [0...@curIndex]
       found = true
       for j in [0..5]
-        found &= @routes[index].geometry.__vertexArray[6 * i + j] == edgeArray[j]
+        found &= Math.abs(@routes[index].geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.01
       if found
         edgesIndex = i
         break
     for i in [0..5]
       @routes[index].geometry.__vertexArray[edgesIndex * 6 + i] =
         @routes[index].geometry.__vertexArray[(@curIndex - 2) * 6 + i]
+    
 
     @curIndex[index]--
     @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index] - 1)

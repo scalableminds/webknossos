@@ -8,7 +8,7 @@ class Cube
   BUCKET_SIZE_P : 5
   BUCKET_LENGTH : 0
   ZOOM_STEP_COUNT : 0
-  LOOKUP_DEPTH_UP : 2
+  LOOKUP_DEPTH_UP : 0
   LOOKUP_DEPTH_DOWN : 1
 
   LOADING_PLACEHOLDER : {}
@@ -20,6 +20,7 @@ class Cube
 
     _.extend(@, new EventMixin())
 
+    @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT
     @BUCKET_LENGTH = 1 << @BUCKET_SIZE_P * 3
     @cube = []
 

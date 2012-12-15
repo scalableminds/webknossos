@@ -12,15 +12,19 @@ class DrawArtCells
       segments: '[]'
       relativeTime : 'float' # 0 <= time <= 1
       dimensions : '[]'
+    customTime : 'float' # 0 <= time <= 1
 
 
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments, relativeTime, dimensions }}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions }, customTime}) ->
 
     width = dimensions[0]
     height = dimensions[1]
+
+    if customTime?
+      relativeTime = customTime
 
     canvas = $("<canvas>")[0]
     canvas.width = width

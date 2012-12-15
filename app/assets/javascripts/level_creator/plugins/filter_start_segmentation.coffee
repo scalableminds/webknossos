@@ -10,8 +10,7 @@ class FilterStartSegmentation
       segmentation: 'Uint8Array'
       segments: '[]'
       mission: '{}'
-    width: 'int'
-    height: 'int'
+      dimensions : '[]'
     mode: 'string' # e.g. "in" returns start segmentation, "out" returns all other segmentation
 
 
@@ -21,7 +20,10 @@ class FilterStartSegmentation
 
   execute : (options) ->
 
-    { input: { rgba, segmentations, segments, mission }, width, height, mode } = options
+    { input: { rgba, segmentations, segments, mission, dimensions }, mode } = options
+
+    width = dimensions[0]
+    height = dimensions[1]
 
     values = []
     startValue = mission.start.id

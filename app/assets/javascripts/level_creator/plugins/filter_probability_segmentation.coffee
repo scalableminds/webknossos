@@ -9,9 +9,8 @@ class FilterProbabilitySegmentation
       rgba: 'Uint8Array'
       segmentation: 'Uint8Array'
       segments: '[]'
-      mission: '[]'
-    width: 'int'
-    height: 'int'
+      mission: '{}'
+      dimensions : '[]'
     mode: 'string' # e.g. "in" returns all probability segmentation, "out" returns all other segmentation
 
 
@@ -21,7 +20,10 @@ class FilterProbabilitySegmentation
 
   execute : (options) ->
 
-    { input: { rgba, segmentations, segments, mission }, width, height, mode } = options
+    { input: { rgba, segmentations, segments, mission, dimensions }, mode } = options
+
+    width = dimensions[0]
+    height = dimensions[1]
 
     values = []
     missionValues = []

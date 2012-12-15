@@ -9,8 +9,7 @@ class FilterSegmentationByDistance
       rgba: 'Uint8Array'
       segmentation: 'Uint8Array'
       segments: '[]'
-    width: 'int'
-    height: 'int'
+      dimensions : '[]'
     distance : 'int'
     comparisonMode : 'string' # e.g. '<='
 
@@ -21,8 +20,11 @@ class FilterSegmentationByDistance
 
   execute : (options) ->
 
-    { input: { rgba, segmentations, segments }, width, height, distance, comparisonMode } = options
+    { input: { rgba, segmentations, segments, dimensions }, distance, comparisonMode } = options
 
+    width = dimensions[0]
+    height = dimensions[1]
+    
     values = []
     compareFunc = new Function("a","b", "return a #{comparisonMode} b;")
 

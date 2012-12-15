@@ -25,7 +25,7 @@ class PullQueue
   
   constructor : (@dataSetId, @cube) ->
     
-    @initializeLoadBuckets()
+    @initializeLoadSockets()
 
 
   swap : (a, b) ->
@@ -65,7 +65,7 @@ class PullQueue
     return unless priority >= 0
     
     # Checking whether bucket is already loaded
-    if @cube.getWorstRequestedZoomStepByZoomedAddress(bucket) > bucket[3]
+    unless @cube.isBucketRequestedByZoomedAddress(bucket)
       @queue.push( { "bucket" : bucket, "priority" : priority } )
       @siftUp(@queue.length - 1)
 
@@ -98,13 +98,10 @@ class PullQueue
       while batch.length < @BATCH_SIZE and @queue.length
         
         bucket = @removeFirst()
-
-        # Making sure bucket is still not loaded
-        continue if @cube.getWorstRequestedZoomStepByZoomedAddress(bucket) <= bucket[3]
-
-        batch.push bucket
-        @cube.setRequestedZoomStepByZoomedAddress(bucket)
-        #console.log "Requested: ", bucket
+        unless @cube.isBucketRequestedByZoomedAddress(bucket)
+          batch.push bucket
+          @cube.requestBucketByZoomedAddress(bucket)
+          #console.log "Requested: ", bucket
 
       @pullBatch(batch) if batch.length > 0
 
@@ -134,16 +131,16 @@ class PullQueue
         (responseBuffer) =>
 
           @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length)
-          if responseBuffer?
-            for bucket, i in batch
 
-              if @fourBit
-                bucketData = @decode(responseBuffer.subarray(i * (@cube.BUCKET_LENGTH >> 1), (i + 1) * (@cube.BUCKET_LENGTH >> 1)))
-              else
-                bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
+          for bucket, i in batch
 
-              #console.log "Success: ", bucket
-              @cube.setBucketByZoomedAddress(bucket, bucketData)
+            if @fourBit
+              bucketData = @decode(responseBuffer.subarray(i * (@cube.BUCKET_LENGTH >> 1), (i + 1) * (@cube.BUCKET_LENGTH >> 1)))
+            else
+              bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
+
+            #console.log "Success: ", bucket
+            @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>
           
@@ -156,6 +153,7 @@ class PullQueue
 
       @batchCount--
       @pull()
+
 
   updateConnectionInfo : (roundTripTime, bucketCount) ->
 
@@ -192,7 +190,7 @@ class PullQueue
 
     newColors
 
-  initializeLoadBuckets : ->
+  initializeLoadSockets : ->
 
     @socket4Bit = new ArrayBufferSocket(
       senders : [

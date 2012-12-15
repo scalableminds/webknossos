@@ -15,6 +15,8 @@ class Recolor
     g : "uint8"
     b : "uint8"
     a : "uint8"
+    color : "rgba(200, 50, 10, 0.9)"
+    clear : "bool" # clears rgba before recolor
 
   assetHandler : null
 
@@ -22,7 +24,11 @@ class Recolor
   constructor : (@assetHandler) ->
 
 
-  execute : ({ input : { rgba }, colorMapName, r, g, b, a, color }) ->
+  execute : ({ input : { rgba }, colorMapName, r, g, b, a, color, clear }) ->
+
+    if clear
+      for i in [0...rgba.length]
+        rgba[i] = 0
 
     if colorMapName?
       @applyColorMap( rgba, colorMapName )

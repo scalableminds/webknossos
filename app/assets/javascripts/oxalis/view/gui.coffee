@@ -189,6 +189,9 @@ class Gui
     @model.route.on("deleteActiveNode", =>
       @update())
 
+    @model.route.on("deleteLastNode", =>
+      @update())
+
     @model.route.on("newNode", =>
       @update())
 

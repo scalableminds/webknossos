@@ -37,14 +37,14 @@ abstract class DataModel {
   }
   
   protected def rotateAndMove[T](
-    moveVector: (Double, Double, Double) = (0, 0, 0),
-    axis: (Double, Double, Double) = (0, 0, 0))
+    moveVector: (Double, Double, Double),
+    axis: (Double, Double, Double))
     (coordinates: ((Double, Double, Double) => Array[T]) => Array[T])
     (f: (Double, Double, Double) => Array[T])
     (implicit manifest: ClassManifest[T]): Array[T] = {
     
     if (axis._1 == 0 && axis._2 == 0 && axis._3 == 0) {
-      simpleMove(coordinates, moveVector)(f)
+      simpleMove(moveVector, coordinates)(f)
     } else {
       var t = System.currentTimeMillis()
       // orthogonal vector to (0,1,0) and rotation vector
@@ -82,7 +82,9 @@ abstract class DataModel {
     }
   }
 
-  protected def simpleMove[T](coordinates: ((Double, Double, Double) => Array[T]) => Array[T], moveVector: (Double, Double, Double))(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]) = {
+  protected def simpleMove[T](
+      moveVector: (Double, Double, Double),
+      coordinates: ((Double, Double, Double) => Array[T]) => Array[T])(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]) = {
     coordinates {
       case (px, py, pz) =>
         val x = moveVector._1 + px
@@ -141,8 +143,8 @@ case class Cuboid(
   
       val t = System.currentTimeMillis()
       val array = new Array[T](width * height * depth * extendArrayBy)
-      var y = topLeft.y
       var x = topLeft.x
+      var y = topLeft.y
       var z = topLeft.z
       var idx = 0
       while (z < zhMax) {
@@ -157,7 +159,7 @@ case class Cuboid(
               i+=1
             }
             x += 1
-            idx += 1
+            idx += extendArrayBy
           }
           y += 1
         }

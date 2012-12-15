@@ -25,7 +25,7 @@ class Binary
 
     @dataSetId = dataSet.id
 
-    @cube = new Cube(dataSet.upperBoundary, dataSet.resolutions.length)
+    @cube = new Cube(dataSet.upperBoundary, dataSet.dataLayers.color.resolutions.length)
     @queue = new PullQueue(@dataSetId, @cube)
 
     @planes = []

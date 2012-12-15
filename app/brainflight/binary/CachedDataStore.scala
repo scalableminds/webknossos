@@ -39,13 +39,13 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
    * Uses the coordinates of a point to calculate the data block the point
    * lays in.
    */
-  def PointToBlock(point: Point3D, resolution: Int) =
+  def pointToBlock(point: Point3D, resolution: Int) =
     Point3D(
       point.x / blockLength / resolution,
       point.y / blockLength / resolution,
       point.z / blockLength / resolution)
 
-  def GlobalToLocal(point: Point3D, resolution: Int) =
+  def globalToLocal(point: Point3D, resolution: Int) =
     Point3D(
       (point.x / resolution) % blockLength,
       (point.y / resolution) % blockLength,
@@ -81,30 +81,25 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
 
     val minCorner = cube.minCorner
 
-    val minPoint = Point3D(math.max(minCorner._1 - 1, 0).toInt, math.max(minCorner._2 - 1, 0).toInt, math.max(minCorner._3 - 1, 0).toInt)
+    val minPoint = Point3D(math.max(roundDown(minCorner._1), 0), math.max(roundDown(minCorner._2), 0), math.max(roundDown(minCorner._3), 0))
 
-    val minBlock = PointToBlock(minPoint, dataRequest.resolution)
-    val maxBlock = PointToBlock(Point3D(maxCorner._1.ceil.toInt + 1, maxCorner._2.ceil.toInt + 1, maxCorner._3.ceil.toInt + 1), dataRequest.resolution)
+    val minBlock = pointToBlock(minPoint, dataRequest.resolution)
+    val maxBlock = pointToBlock(Point3D(roundUp(maxCorner._1), roundUp(maxCorner._2), roundUp(maxCorner._3)), dataRequest.resolution)
 
-    var blockPoints: List[Point3D] = Nil
-    var blockData: List[Array[Byte]] = Nil
-
-    for {
+    val blockMap = (for {
       x <- minBlock.x to maxBlock.x
       y <- minBlock.y to maxBlock.y
       z <- minBlock.z to maxBlock.z
-    } {
+    } yield {
       val p = Point3D(x, y, z)
-      blockPoints ::= p
-      blockData ::= loadFromSomewhere(
+      p -> loadFromSomewhere(
         dataRequest.dataSet,
         dataRequest.layer,
         dataRequest.resolution,
         p)
-    }
+    }).toMap
 
     Logger.debug("loadFromSomewhere: %d ms".format(System.currentTimeMillis() - t))
-    val blockMap = blockPoints.zip(blockData).toMap
 
     val interpolate = dataRequest.layer.interpolate(dataRequest.resolution, blockMap, getBytes _) _
 
@@ -119,10 +114,10 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   }
 
   def getBytes(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Array[Byte] = {
-    val block = PointToBlock(globalPoint, resolution)
+    val block = pointToBlock(globalPoint, resolution)
     blockMap.get(block) match {
       case Some(byteArray) =>
-        getLocalBytes(GlobalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
+        getLocalBytes(globalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
       case _ =>
         println("Didn't find block! :(")
         nullValue(bytesPerElement)
@@ -132,15 +127,18 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): Array[Byte] = {
 
     val address = (localPoint.x + localPoint.y * 128 + localPoint.z * 128 * 128) * bytesPerElement
-    if (address > data.size)
+    if (address > data.size){
       Logger.info("address: %d , Point: (%d, %d, %d), EPB: %d, dataSize: %d".format(address, localPoint.x, localPoint.y, localPoint.z, bytesPerElement, data.size))
-    val bytes = new Array[Byte](bytesPerElement)
-    var i = 0
-    while (i < bytesPerElement) {
-      bytes.update(i, data(address + i))
-      i += 1
+      throw new IndexOutOfBoundsException
+    } else {
+      val bytes = new Array[Byte](bytesPerElement)
+      var i = 0
+      while (i < bytesPerElement) {
+        bytes.update(i, data(address + i))
+        i += 1
+      }
+      bytes
     }
-    bytes
   }
 
   /**

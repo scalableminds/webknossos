@@ -53,9 +53,10 @@ trait TrilerpInterpolation {
     val z = point.z.toInt
 
     val floored = Vector3D(x, y, z)
-    if (point == floored) {
-      Array(colorF(Point3D(x, y, z)).toByte)
-    } else {
+    /*if (point == floored) {*/
+    Array(byteLoader(Point3D(x,y,z), 1, resolution, blockMap)(0))
+      //Array(getColor(byteLoader, resolution, blockMap)(Point3D(x, y, z)).toByte)
+   /* } else {
       val q = Array(
         colorF(Point3D(x, y, z)),
         colorF(Point3D(x, y, z + 1)),
@@ -67,7 +68,7 @@ trait TrilerpInterpolation {
         colorF(Point3D(x + 1, y + 1, z + 1)))
 
       Array(Interpolator.triLerp(point - floored, q).round.toByte)
-    }
+    }*/
   }
 }
 

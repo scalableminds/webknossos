@@ -41,9 +41,9 @@ object TracingController extends Controller with Secured {
         Json.obj(
           "dataSet" -> Json.obj(
             "id" -> dataSet.id,
-            "dataLayers" -> dataSet.dataLayers.toList.map{case (id, layer) => 
-              Json.obj("id" -> id,
-                       "resolutions" -> layer.supportedResolutions)},
+            "dataLayers" -> Json.toJson(dataSet.dataLayers.map{case (id, layer) => 
+              id -> Json.obj(
+                       "resolutions" -> layer.supportedResolutions)}),
             "upperBoundary" -> dataSet.maxCoordinates))
       case _ =>
         Json.obj("error" -> "Couldn't find dataset.")

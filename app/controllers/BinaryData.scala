@@ -57,6 +57,7 @@ object BinaryData extends Controller with Secured {
 
   def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, halfByte: Boolean) = {
     val cubeRequests = multi.requests.map { request =>
+      println("Requested: " + request)
       val resolution = resolutionFromExponent(request.resolutionExponent)
       val cuboid = cuboidFromPosition(request.position, cubeSize)
       SingleRequest(
@@ -151,7 +152,7 @@ object BinaryData extends Controller with Secured {
       val dataSetOpt = DataSet.findOneById(dataSetId)
       var channelOpt: Option[Channel[Array[Byte]]] = None
 
-      val output = Concurrent.unicast[Array[Byte]](
+      /*val output = Concurrent.unicast[Array[Byte]](
         { c => channelOpt = Some(c) },
         { Logger.debug("Data websocket completed") },
         { case (e, i) => Logger.error("An error ocourd on websocket stream: " + e) })
@@ -171,6 +172,13 @@ object BinaryData extends Controller with Secured {
           }
         }
       })
-      (input, output)
+      (input, output)*/
+
+      val iteratee = Done[Array[Byte], Unit]((), Input.EOF)
+
+      // Send an error and close the socket
+      val enumerator = Enumerator[Array[Byte]]().andThen(Enumerator.enumInput(Input.EOF))
+
+      (iteratee, enumerator)
   }
 }

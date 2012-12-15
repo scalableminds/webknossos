@@ -333,7 +333,6 @@ class Plane2D
     if zoomStep and @enhanceRenderMap(map, 0, [bucket_x, bucket_y, bucket_z, zoomStep], map[0], @cube.LOOKUP_DEPTH_DOWN)
 
       map[0] = @RECURSION_PLACEHOLDER
-      console.log map
 
     map
 

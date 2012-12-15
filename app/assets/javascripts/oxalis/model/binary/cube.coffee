@@ -76,7 +76,6 @@ class Cube
 
   isBucketRequestedByZoomedAddress : (address) ->
 
-    #console.log "isRequested", address
     buckets = @cube[address[3]].buckets
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
@@ -92,14 +91,12 @@ class Cube
 
   isBucketLoadedByZoomedAddress : (address) ->
 
-    #console.log "isLoaded", address
     bucket = @getBucketByZoomedAddress(address)
     return bucket? and bucket.level == 0
 
 
   requestBucketByZoomedAddress : (address) ->
 
-    #console.log "request", address
     return if @isBucketRequestedByZoomedAddress(address)
 
     buckets = @cube[address[3]].buckets 
@@ -152,7 +149,6 @@ class Cube
 
   setBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
 
-    #console.log "set", [bucket_x, bucket_y, bucket_z, zoomStep]
     bucket = @getBucketByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
     
     if bucketData?

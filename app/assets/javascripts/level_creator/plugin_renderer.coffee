@@ -105,7 +105,7 @@ class PluginRenderer
           dimensions : @dimensions
         )
 
-        # @plugins.segmentImporter(input : inputData)
+        @plugins.segmentImporter.execute(input : inputData)
 
 
     for key, plugin of @plugins

@@ -1,4 +1,6 @@
-### define ###
+### define 
+../buffer_utils : BufferUtils
+###
 
 class DrawArtCells
 
@@ -29,8 +31,7 @@ class DrawArtCells
     context.fillStyle = "rgba(0, 0, 255, 1)"
     context.strokeStyle = "rgba(0, 0, 0, 1)"
     context.lineWidth = 2
-    context.putImageData(rgba, 0, 0)
-
+    
     for segment in segments
 
       path = segment.path
@@ -56,5 +57,7 @@ class DrawArtCells
       context.fill()
       context.stroke()    
 
+    canvasData = context.getImageData(0, 0, width, height).data
+    BufferUtils.alphaBlendBuffer(rgba, canvasData)
 
-    context.getImageData(0, 0, width, height).data      
+    rgba

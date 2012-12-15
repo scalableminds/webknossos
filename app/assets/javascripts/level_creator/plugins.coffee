@@ -6,6 +6,7 @@
 ./plugins/draw_art_cells : DrawArtCells
 ./plugins/filter_probability_segmentation : FilterProbabilitySegmentation
 ./plugins/filter_start_segmentation : FilterStartSegmentation
+./plugins/fade : Fade
 ###
 
 
@@ -15,6 +16,7 @@ class Plugins
 
     @recolor = new Recolor(assetHandler)
     @blur = new Blur()
+    @fade = new Fade()
     @segmentImporter = new SegmentImporter()
     @filterSegmentationByDistance = new FilterSegmentationByDistance()
     @filterProbabilitySegmentation = new FilterProbabilitySegmentation()

@@ -154,7 +154,7 @@ class Skeleton
             @edgesBuffer[index].set( neighbor.pos, (edgesIndex++) * 3 )
             @edgesBuffer[index].set(     node.pos, (edgesIndex++) * 3 )
 
-      if edgesIndex != (2 * (@curIndex[index] - 1)) or (@curIndex == 0 and edgesIndex == 0)
+      if edgesIndex != (2 * (@curIndex[index] - 1)) and !(@curIndex[index] == 0 and edgesIndex == 0)
         console.error("edgesIndex does not equal (2 * (@curIndex[index] - 1) !!!")
 
       @routes[index].geometry.__vertexArray = @edgesBuffer[index]
@@ -272,14 +272,19 @@ class Skeleton
       return
 
     index = @getIndexFromTreeId(@route.getTree().treeId)
-    for i in [0...@curIndex]
+
+    for i in [0...@curIndex[index]]
       if @nodes[index].geometry.nodeIDs[i] == node.id
         nodesIndex = i
         break
 
+    # swap IDs
+    @nodes[index].geometry.nodeIDs[nodesIndex] = @nodes[index].geometry.nodeIDs[@curIndex[index]-1]
+
+    # swap nodes
     for i in [0..2]
       @nodes[index].geometry.__vertexArray[nodesIndex * 3 + i] =
-        @nodes[index].geometry.__vertexArray[(@curIndex - 1) * 3 + i]
+        @nodes[index].geometry.__vertexArray[(@curIndex[index] - 1) * 3 + i]
 
     # Delete Edge by finding it in the array
     # ASSUMPTION edges always go from smaller ID to bigger ID
@@ -287,16 +292,18 @@ class Skeleton
       edgeArray = node.pos.concat(node.neighbors[0].pos)
     else
       edgeArray = node.neighbors[0].pos.concat(node.pos)
-    for i in [0...@curIndex]
+    for i in [0...@curIndex[index]]
       found = true
       for j in [0..5]
         found &= Math.abs(@routes[index].geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.01
       if found
         edgesIndex = i
         break
+
+    # swap edges
     for i in [0..5]
       @routes[index].geometry.__vertexArray[edgesIndex * 6 + i] =
-        @routes[index].geometry.__vertexArray[(@curIndex - 2) * 6 + i]
+        @routes[index].geometry.__vertexArray[(@curIndex[index] - 2) * 6 + i]
     
 
     @curIndex[index]--
@@ -338,7 +345,7 @@ class Skeleton
     newNode.doubleSided = true
     @nodesSpheres.push(newNode)
     @trigger "newGeometries", [newNode]
-      
+
   getIndexFromTreeId : (treeId) ->
     unless treeId
       treeId = @route.getTree().treeId

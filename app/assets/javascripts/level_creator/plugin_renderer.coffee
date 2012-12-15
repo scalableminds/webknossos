@@ -96,7 +96,10 @@ class PluginRenderer
 
       importSlides : (options) =>
 
-        _.defaults(options, scale : 1)
+        _.defaults(options, scale : "auto")
+
+        if options.scale == "auto"
+          options.scale = (options.end - options.start) / (endFrame - startFrame)
 
         slideOffset = (t - startFrame) * options.scale + options.start
         _.extend(inputData,

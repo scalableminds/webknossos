@@ -1,6 +1,6 @@
 ### define ###
 
-class FilterSegmentsByDistance
+class FilterSegmentationByDistance
 
   DESCRIPTION : "Returns all segments that are farer or nearer than the given distance"
 

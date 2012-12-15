@@ -2,7 +2,7 @@
 ./plugins/recolor : Recolor
 ./plugins/blur : Blur
 ./plugins/segment_importer : SegmentImporter
-./plugins/filter_segments_by_distance : FilterSegmentsByDistance
+./plugins/filter_segmentation_by_distance : FilterSegmentationByDistance
 ./plugins/draw_art_cells : DrawArtCells
 ###
 
@@ -14,5 +14,5 @@ class Plugins
     @recolor = new Recolor(assetHandler)
     @blur = new Blur()
     @segmentImporter = new SegmentImporter()
-    @filterSegmentsByDistance = new FilterSegmentsByDistance()
+    @filterSegmentationByDistance = new FilterSegmentationByDistance()
     @drawArtCells = new DrawArtCells()

@@ -21,14 +21,15 @@ BufferUtils =
 
     output
 	
-	alphaBlendBuffer : (backgroundBuffer, foregroundBuffer) ->
+  
+	alphaBlendBuffer : (backgroundBuffer, foregroundBuffer, foregroundAlpha = 1) ->
 
     for i in [0...backgroundBuffer.length] by 4
 
       rF = foregroundBuffer[i]
       gF = foregroundBuffer[i + 1]
       bF = foregroundBuffer[i + 2]
-      aF = foregroundBuffer[i + 3] / 255
+      aF = (foregroundBuffer[i + 3] / 255) * foregroundAlpha
 
       rB = backgroundBuffer[i]
       gB = backgroundBuffer[i + 1]

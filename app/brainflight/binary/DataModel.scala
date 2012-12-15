@@ -147,23 +147,23 @@ case class Cuboid(
       var y = topLeft.y
       var z = topLeft.z
       var idx = 0
-      while (z < zhMax) {
+      while (x < xhMax) {
         y = topLeft.y
         while (y < yhMax) {
-          x = topLeft.x
-          while (x < xhMax) {
+          z = topLeft.z
+          while (z < zhMax) {
             var i = 0
             val r = f(x, y, z)
             while(i < extendArrayBy){
               array.update(idx + i, r(i)) 
               i+=1
             }
-            x += 1
+            z += 1
             idx += extendArrayBy
           }
           y += 1
         }
-        z += 1
+        x += 1
       }
       Logger.debug("containingCoordinates: %d ms".format(System.currentTimeMillis() - t))
       array

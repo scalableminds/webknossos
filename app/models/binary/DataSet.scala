@@ -41,8 +41,8 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
   // */
   
   def default = {
-    DataSet("e_k0563", 
-            "binaryData/e_k0563", 
+    DataSet("100527_k0563", 
+            "binaryData/100527_k0563", 
             Point3D(2048, 2176, 2560),
             0,
             Map[String, DataLayer](

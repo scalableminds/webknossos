@@ -75,8 +75,10 @@ class PluginRenderer
 
       time : (options) =>
 
+        _.defaults(options, alpha : 1)
         startFrame = options.start
         endFrame = options.end
+
 
         if startFrame <= t <= endFrame
           (callback) =>
@@ -84,8 +86,10 @@ class PluginRenderer
               rgba : new Uint8Array( 4 * pixelCount )
               segmentation : new Uint8Array( pixelCount )
               dimensions : @dimensions
+              relativeTime : (t - startFrame) / (endFrame - startFrame)
+              absoluteTime : t
             callback()
-            BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba)
+            BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
             inputData = null
         else
           ->

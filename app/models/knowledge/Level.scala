@@ -12,7 +12,7 @@ case class Level(
     width: Int,
     height: Int,
     depth: Int,
-    code: String = "",
+    code: String = Level.defaultCode,
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
 
@@ -103,4 +103,14 @@ object Level extends BasicKnowledgeDAO[Level]("levels") {
         false
     }
   }
+
+  val defaultCode = """
+    |time(start : 0, end : 10) ->
+    |  importSlides(start : 0, end : 10)
+    |  recolor(colorMapName : "blue2.bmp")
+    |  blur(radius : 10)
+    |  
+    |time(start : 10, end : 30) ->
+    |  importSlides(start : 10, end : 20, scale : .5) 
+  """.stripMargin
 }

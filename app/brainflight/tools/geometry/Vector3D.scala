@@ -26,7 +26,16 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
     else
       this
   }
-
+  
+  def dx(d: Double) = 
+      Vector3D(x + d, y, z)
+      
+  def dy(d: Double) = 
+      Vector3D(x, y + d, z)
+      
+  def dz(d: Double) = 
+    Vector3D(x, y, z + d)
+  
   def -(o: Vector3D): Vector3D = {
     new Vector3D(x - o.x, y - o.y, z - o.z)
   }
@@ -74,6 +83,12 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
 }
 
 object Vector3D {
+  def apply(p: Point3D): Vector3D =
+    Vector3D(p.x, p.y, p.z)
+  
+  def apply(p: (Double, Double, Double)): Vector3D =
+    Vector3D(p._1, p._2, p._3)
+    
   implicit object Vector3DReads extends Reads[Vector3D] {
     def reads(json: JsValue) = json match {
       case JsArray(ts) if ts.size == 3 =>

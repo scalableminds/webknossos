@@ -21,45 +21,75 @@ import brainflight.tools.geometry._
  * All possible data models the client should be able to request need to be defined here and registered in Boot.scala
  * A binary data model defines which binary data is responded given a viewpoint and an axis
  */
+
 abstract class DataModel {
-  // every model needs a unique id, it is used to request the model via get http request
-  val id: String
-
-  // specifies the polygons the model consists of
-  val polygons: List[Polygon]
-
-  def rotateAndMove(moveVector: Tuple3[Double, Double, Double], axis: Tuple3[Double, Double, Double]): Array[Vector3D] = {
-    var t = System.currentTimeMillis()
-    // orthogonal vector to (0,1,0) and rotation vector
-    val ortho = normalizeVector((axis._3, 0, -axis._1))
-
-    // dot product of (0,1,0) and rotation
-    val dotProd = axis._2
-    // transformation of dot product for cosA
-    val cosA = dotProd / sqrt(square(axis._1) + square(axis._2) + square(axis._3))
-    val sinA = sqrt(1 - square(cosA))
-
-    //calculate rotation matrix
-    val a11 = cosA + square(ortho._1) * (1 - cosA); val a12 = -ortho._3 * sinA; val a13 = ortho._1 * ortho._3 * (1 - cosA)
-    val a21 = ortho._3 * sinA; val a22 = cosA; val a23 = -ortho._1 * sinA;
-    val a31 = ortho._1 * ortho._3 * (1 - cosA); val a32 = ortho._1 * sinA; val a33 = cosA + square(ortho._3) * (1 - cosA);
-
-    val size = containingCoordinates.size
-    var result = new Array[Vector3D](size)
-    var idx = 0
-    val iter = containingCoordinates.iterator
-
-    while (iter.hasNext) {
-      val (px, py, pz) = iter.next
-      // see rotation matrix and helmert-transformation for more details
-      val x = moveVector._1 + (a11 * px + a12 * py + a13 * pz)
-      val y = moveVector._2 + (a21 * px + a22 * py + a23 * pz)
-      val z = moveVector._3 + (a31 * px + a32 * py + a33 * pz)
-      result(idx) = Vector3D(x, y, z)
-      idx += 1
+  
+  protected def rotateAndMove(
+    moveVector: (Double, Double, Double),
+    axis: (Double, Double, Double),
+    coordinates: Array[Vector3D]
+  ): Array[Vector3D] = {
+    def ff(f: (Double, Double, Double) => Array[Vector3D]):Array[Vector3D] = {
+      coordinates.map(c => f(c.x, c.y, c.z)(0))
     }
-    Logger.debug("rotateAndMove: %d ms".format(System.currentTimeMillis() - t))
-    result
+    
+    rotateAndMove(moveVector, axis)(ff)((x, y, z) => Array(Vector3D(x,y,z)))
+  }
+  
+  protected def rotateAndMove[T](
+    moveVector: (Double, Double, Double) = (0, 0, 0),
+    axis: (Double, Double, Double) = (0, 0, 0))
+    (coordinates: ((Double, Double, Double) => Array[T]) => Array[T])
+    (f: (Double, Double, Double) => Array[T])
+    (implicit manifest: ClassManifest[T]): Array[T] = {
+    
+    if (axis._1 == 0 && axis._2 == 0 && axis._3 == 0) {
+      simpleMove(coordinates, moveVector)(f)
+    } else {
+      var t = System.currentTimeMillis()
+      // orthogonal vector to (0,1,0) and rotation vector
+      val ortho = normalizeVector((axis._3, 0, -axis._1))
+
+      // dot product of (0,1,0) and rotation
+      val dotProd = axis._2
+      // transformation of dot product for cosA
+      val cosA = dotProd / sqrt(square(axis._1) + square(axis._2) + square(axis._3))
+      val sinA = sqrt(1 - square(cosA))
+
+      //calculate rotation matrix
+      val a11 = cosA + square(ortho._1) * (1 - cosA);
+      val a12 = -ortho._3 * sinA;
+      val a13 = ortho._1 * ortho._3 * (1 - cosA)
+
+      val a21 = ortho._3 * sinA;
+      val a22 = cosA;
+      val a23 = -ortho._1 * sinA;
+
+      val a31 = ortho._1 * ortho._3 * (1 - cosA);
+      val a32 = ortho._1 * sinA;
+      val a33 = cosA + square(ortho._3) * (1 - cosA);
+
+      val result = coordinates {
+        case (px, py, pz) =>
+          val x = moveVector._1 + (a11 * px + a12 * py + a13 * pz)
+          val y = moveVector._2 + (a21 * px + a22 * py + a23 * pz)
+          val z = moveVector._3 + (a31 * px + a32 * py + a33 * pz)
+          f(x, y, z)
+      }
+
+      Logger.debug("rotateAndMove: %d ms".format(System.currentTimeMillis() - t))
+      result
+    }
+  }
+
+  protected def simpleMove[T](coordinates: ((Double, Double, Double) => Array[T]) => Array[T], moveVector: (Double, Double, Double))(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]) = {
+    coordinates {
+      case (px, py, pz) =>
+        val x = moveVector._1 + px
+        val y = moveVector._2 + py
+        val z = moveVector._3 + pz
+        f(x, y, z)
+    }
   }
 
   def normalizeVector(v: Tuple3[Double, Double, Double]): Tuple3[Double, Double, Double] = {
@@ -68,43 +98,73 @@ abstract class DataModel {
   }
 
   // calculate all coordinates which are in the model boundary
-  def containingCoordinates: Array[Tuple3[Int, Int, Int]]
+  def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]): Array[T] 
 }
 
-class CubeModel(xMax: Int, yMax: Int, zMax: Int) extends DataModel {
-  val id = "cube"
+case class Cuboid(
+    width: Int,
+    height: Int,
+    depth: Int,
+    topLeftOpt: Option[Vector3D] = None,
+    moveVector: (Double, Double, Double) = (0, 0, 0),
+    axis: (Double, Double, Double) = (0, 0, 0)) extends DataModel {
+  
+  private val topLeft = topLeftOpt getOrElse {
+    val xh = (width / 2.0).floor
+    val yh = (height / 2.0).floor
+    val zh = (depth / 2.0).floor
+    Vector3D(-xh, -yh, -zh)
+  }
+  
+  lazy val corners = rotateAndMove(moveVector, axis, Array(
+      topLeft, 
+      topLeft.dx(width), 
+      topLeft.dy(height), 
+      topLeft.dx(width).dy(height), 
+      topLeft.dz(depth), 
+      topLeft.dz(depth).dx(width), 
+      topLeft.dz(depth).dy(height), 
+      topLeft.dz(depth).dx(width).dy(height)))
+      
+  lazy val maxCorner = corners.foldLeft((0.0, 0.0, 0.0))((b, e) => (
+    math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
+      
+  lazy val minCorner= corners.foldLeft(maxCorner)((b, e) => (
+    math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
+  
 
-  val polygons = null
-
-  override val containingCoordinates = {
-    val xhMax = xMax / 2.0
-    val yhMax = yMax / 2.0
-    val zhMax = zMax / 2.0
-    
-    val fxhMax = xhMax.floor.toInt
-    val fyhMax = yhMax.floor.toInt
-    val fzhMax = zhMax.floor.toInt
-
-    val t = System.currentTimeMillis()
-    val array = new Array[Tuple3[Int, Int, Int]](zMax * yMax * xMax)
-    var z = - fzhMax
-    var y = 0
-    var x = 0
-    var idx = 0
-    while (z < zhMax) {
-      y = - fyhMax
-      while (y < yhMax) {
-        x = - fxhMax
-        while (x < xhMax) {
-          array(idx) = (x, y, z)
-          x += 1
-          idx += 1
+  override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]): Array[T] = {
+    rotateAndMove(moveVector, axis){ (f: (Double, Double, Double) => Array[T]) =>
+      val xhMax = topLeft.x + width
+      val yhMax = topLeft.y + height
+      val zhMax = topLeft.z + depth
+  
+      val t = System.currentTimeMillis()
+      val array = new Array[T](width * height * depth * extendArrayBy)
+      var y = topLeft.y
+      var x = topLeft.x
+      var z = topLeft.z
+      var idx = 0
+      while (z < zhMax) {
+        y = topLeft.y
+        while (y < yhMax) {
+          x = topLeft.x
+          while (x < xhMax) {
+            var i = 0
+            val r = f(x, y, z)
+            while(i < extendArrayBy){
+              array.update(idx + i, r(i)) 
+              i+=1
+            }
+            x += 1
+            idx += 1
+          }
+          y += 1
         }
-        y += 1
+        z += 1
       }
-      z += 1
-    }
-    Logger.debug("containingCoordinates: %d ms".format(System.currentTimeMillis() - t))
-    array
+      Logger.debug("containingCoordinates: %d ms".format(System.currentTimeMillis() - t))
+      array
+    }(f)
   }
 }

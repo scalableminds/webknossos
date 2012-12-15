@@ -1,33 +1,98 @@
 package models.binary
 
+import brainflight.tools.geometry.Point3D
+import brainflight.tools.geometry.Vector3D
+import brainflight.tools.Interpolator
+
 sealed trait DataLayer {
   val folder: String
   val elementSize: Int
   val supportedResolutions: List[Int]
   def bytesPerElement = elementSize / 8
+
+  def interpolate(
+    resolution: Int,
+    blockMap: Map[Point3D, Array[Byte]],
+    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte]
 }
 
-case class ColorLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1)) extends DataLayer{
+case class ColorLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1)) extends DataLayer with TrilerpInterpolation {
   val folder = ColorLayer.identifier
 }
-case class ClassificationLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1), order: List[String]) extends DataLayer {
+case class ClassificationLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1), order: List[String]) extends DataLayer with NearestNeighborInterpolation {
   val folder = ClassificationLayer.identifier
 }
-case class SegmentationLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1)) extends DataLayer {
+case class SegmentationLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1)) extends DataLayer with NearestNeighborInterpolation {
   val folder = SegmentationLayer.identifier
 }
 
-object ColorLayer{
+object ColorLayer {
   val default = ColorLayer(8, List(1))
   def identifier = "color"
 }
 
-object ClassificationLayer{
-  val default = ClassificationLayer(8, List(1), List("mito"))
-  def identifier = "classification"
+trait TrilerpInterpolation {
+
+  def getColor(
+    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte],
+    resolution: Int,
+    blockMap: Map[Point3D, Array[Byte]])(point: Point3D): Double = {
+
+    val color = byteLoader(point, 1, resolution, blockMap)(0)
+    (0xff & color.asInstanceOf[Int])
+  }
+
+  def interpolate(
+    resolution: Int,
+    blockMap: Map[Point3D, Array[Byte]],
+    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte] = {
+
+    val colorF = getColor(byteLoader, resolution, blockMap) _
+    val x = point.x.toInt
+    val y = point.y.toInt
+    val z = point.z.toInt
+
+    val floored = Vector3D(x, y, z)
+    if (point == floored) {
+      Array(colorF(Point3D(x, y, z)).toByte)
+    } else {
+      val q = Array(
+        colorF(Point3D(x, y, z)),
+        colorF(Point3D(x, y, z + 1)),
+        colorF(Point3D(x, y + 1, z)),
+        colorF(Point3D(x, y + 1, z + 1)),
+        colorF(Point3D(x + 1, y, z)),
+        colorF(Point3D(x + 1, y, z + 1)),
+        colorF(Point3D(x + 1, y + 1, z)),
+        colorF(Point3D(x + 1, y + 1, z + 1)))
+
+      Array(Interpolator.triLerp(point - floored, q).round.toByte)
+    }
+  }
 }
 
-object SegmentationLayer{
+trait NearestNeighborInterpolation {
+  def bytesPerElement: Int
+
+  def interpolate(
+    resolution: Int,
+    blockMap: Map[Point3D, Array[Byte]],
+    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte] = {
+    
+    val byte = point.x % bytesPerElement
+    val x = (point.x - byte + (if (bytesPerElement - 2 * byte >= 0) 0 else bytesPerElement)).toInt
+    byteLoader(Point3D(x, point.y.round.toInt, point.z.round.toInt), bytesPerElement, resolution, blockMap)
+  }
+
+}
+
+object ClassificationLayer {
+  val default = ClassificationLayer(8, List(1), List("mito"))
+  def identifier = "classification"
+
+}
+
+object SegmentationLayer {
   val default = SegmentationLayer(16, List(1))
   def identifier = "segmentation"
 }

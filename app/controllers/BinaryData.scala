@@ -21,7 +21,7 @@ import models.security.Role
 import models.binary._
 import brainflight.binary._
 import brainflight.security.Secured
-import brainflight.tools.geometry.{ Point3D, Cuboid }
+import brainflight.tools.geometry.Point3D
 import akka.pattern.AskTimeoutException
 import play.api.libs.iteratee.Concurrent.Channel
 import scala.collection.mutable.ArrayBuffer
@@ -48,18 +48,24 @@ object BinaryData extends Controller with Secured {
     math.pow(2, resolutionExponent).toInt
 
   def cuboidFromPosition(position: Point3D, cubeSize: Int) = {
-    val cubeCorner = position.scale {
+    val cubeCorner = Vector3D(position.scale {
       case (x, i) =>
         x - x % (cubeSize / scaleFactors(i))
-    }
-    Cuboid(cubeCorner, cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2))
+    })
+    Cuboid(cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2), Some(cubeCorner))
   }
 
-  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, halfByte:Boolean) = {
+  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, halfByte: Boolean) = {
     val cubeRequests = multi.requests.map { request =>
       val resolution = resolutionFromExponent(request.resolutionExponent)
       val cuboid = cuboidFromPosition(request.position, cubeSize)
-      CubeRequest(dataSet, dataLayer, resolution, cuboid, halfByte)
+      SingleRequest(
+        DataRequest(
+          dataSet,
+          dataLayer,
+          resolution,
+          cuboid,
+          useHalfByte = halfByte))
     }
 
     val future = (dataSetActor ? MultiCubeRequest(cubeRequests)) recover {
@@ -72,28 +78,37 @@ object BinaryData extends Controller with Secured {
 
   def arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String) = Authenticated(parser = parse.raw) { implicit request =>
     Async {
-      Level.findOneById(levelId).flatMap{ level =>
+      Level.findOneById(levelId).flatMap { level =>
         val t = System.currentTimeMillis()
         val dataSet = DataSet.default
-        dataSet.dataLayers.get(dataLayerName).map{dataLayer => 
+        dataSet.dataLayers.get(dataLayerName).map { dataLayer =>
           val position = Point3D(1920, 2048, 2432)
           val direction = (1.0, 1.0, 1.0)
-    
+
           val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
-          val m = new CubeModel(level.width, level.height, level.depth)
-          val points = m.rotateAndMove(point, direction)
-          val future = dataSetActor ? ArbitraryRequest(dataSet, dataLayer, 1, points) recover {
-            case e: AskTimeoutException =>
-              Logger.error("calculateImages: AskTimeoutException")
-              Array.fill[Byte](level.height * level.width * level.depth)(0)
-          }
-          future.mapTo[Array[Byte]].asPromise.map{data => 
-            Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
-            Ok(data)
-          }
+          val m = Cuboid(level.width, level.height, level.depth, moveVector = point, axis = direction)
+          val future =
+            dataSetActor ? SingleRequest(DataRequest(
+              dataSet,
+              dataLayer,
+              1,
+              m,
+              isArbitrary = true,
+              useInterpolation = true))
+
+          future
+            .recover {
+              case e: AskTimeoutException =>
+                Logger.error("calculateImages: AskTimeoutException")
+                Array.fill[Byte](level.height * level.width * level.depth)(0)
+            }
+            .mapTo[Array[Byte]].asPromise.map { data =>
+              Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
+              Ok(data)
+            }
         }
       } getOrElse {
-        Akka.future( BadRequest("Level not found.") )
+        Akka.future(BadRequest("Level not found."))
       }
     }
   }

@@ -5,12 +5,12 @@ import play.api.Play.current
 import play.api.Play
 import brainflight.tools.geometry.Point3D
 import models.binary._
-import brainflight.tools.geometry.Cuboid
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import akka.agent.Agent
 import brainflight.tools.geometry.Vector3D
 import brainflight.tools.Interpolator
 import play.api.Logger
+import brainflight.tools.Math._
 
 case class DataBlock(info: DataBlockInformation, data: Data)
 
@@ -27,12 +27,6 @@ case class Data(value: Array[Byte])
  */
 abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]]) extends DataStore {
 
-  val conf = Play.configuration
-  //TODO: blocksize values to kick out magic numbers
-  lazy val nullArray:Array[Array[Byte]] = (for (bytesPerElement <- List(1,2,4,8)) yield (for (x <- 0 to 128 * 128 * 128 * bytesPerElement) yield 0.toByte).toArray).toArray
-  def nullBlock(bytesPerElement: Int) = nullArray((scala.math.log(bytesPerElement)/scala.math.log(2)).toInt)
-  def nullValues(bytesPerElement: Int) = (for (x <- 0 to bytesPerElement) yield 0.toByte).toArray
-
   // defines the maximum count of cached file handles
   val maxCacheSize = conf.getInt("bindata.cacheMaxSize") getOrElse 100
 
@@ -41,15 +35,21 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
 
   var lastUsed: Option[Tuple2[DataBlockInformation, Data]] = None
 
-  val cacheId = this.hashCode
   /**
    * Uses the coordinates of a point to calculate the data block the point
    * lays in.
    */
   def PointToBlock(point: Point3D, resolution: Int) =
-    Point3D(point.x / 128 / resolution, point.y / 128 / resolution, point.z / 128 / resolution)
+    Point3D(
+      point.x / blockLength / resolution,
+      point.y / blockLength / resolution,
+      point.z / blockLength / resolution)
 
-  def GlobalToLocal(point: Point3D, resolution: Int) = Point3D((point.x / resolution) % 128, (point.y / resolution) % 128, (point.z / resolution) % 128)
+  def GlobalToLocal(point: Point3D, resolution: Int) =
+    Point3D(
+      (point.x / resolution) % blockLength,
+      (point.y / resolution) % blockLength,
+      (point.z / resolution) % blockLength)
 
   def useLastUsed(blockInfo: DataBlockInformation) = {
     lastUsed.flatMap {
@@ -60,105 +60,72 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
     }
   }
 
-  /**
-   * Load the binary data of the given coordinate from file
-   */
-  override def load(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, globalPoint: Point3D): Array[Byte] = {
-    if (dataSet doesContain globalPoint) {
-      val block = PointToBlock(globalPoint, resolution)
+  override def load(dataRequest: DataRequest): Array[Byte] = {
+    def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Array[Byte] = {
       val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
 
       val byteArray: Array[Byte] =
-        ((useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)) getOrElse (
-          loadAndCacheData(dataSet, dataLayer, resolution, block))).value
+        ((useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)).map(
+          d => d.value) getOrElse (
+            loadAndCacheData(dataSet, dataLayer, resolution, block).value))
 
       lastUsed = Some(blockInfo -> Data(byteArray))
-      getLocalBytes(GlobalToLocal(globalPoint, resolution), dataLayer.bytesPerElement, byteArray)
-    } else {
-      return nullValues(dataLayer.bytesPerElement)
+      byteArray
     }
+
+    val t = System.currentTimeMillis()
+
+    val cube = dataRequest.cuboid
+
+    val maxCorner = cube.maxCorner
+
+    val minCorner = cube.minCorner
+
+    val minPoint = Point3D(math.max(minCorner._1 - 1, 0).toInt, math.max(minCorner._2 - 1, 0).toInt, math.max(minCorner._3 - 1, 0).toInt)
+
+    val minBlock = PointToBlock(minPoint, dataRequest.resolution)
+    val maxBlock = PointToBlock(Point3D(maxCorner._1.ceil.toInt + 1, maxCorner._2.ceil.toInt + 1, maxCorner._3.ceil.toInt + 1), dataRequest.resolution)
+
+    var blockPoints: List[Point3D] = Nil
+    var blockData: List[Array[Byte]] = Nil
+
+    for {
+      x <- minBlock.x to maxBlock.x
+      y <- minBlock.y to maxBlock.y
+      z <- minBlock.z to maxBlock.z
+    } {
+      val p = Point3D(x, y, z)
+      blockPoints ::= p
+      blockData ::= loadFromSomewhere(
+        dataRequest.dataSet,
+        dataRequest.layer,
+        dataRequest.resolution,
+        p)
+    }
+
+    Logger.debug("loadFromSomewhere: %d ms".format(System.currentTimeMillis() - t))
+    val blockMap = blockPoints.zip(blockData).toMap
+
+    val interpolate = dataRequest.layer.interpolate(dataRequest.resolution, blockMap, getBytes _) _
+
+    val result = cube.withContainingCoordinates(extendArrayBy = dataRequest.layer.bytesPerElement) {
+      case point =>
+        // TODO: Remove Wrapper
+        interpolate(Vector3D(point))
+    }
+
+    Logger.debug("loading&interp: %d ms, Sum: ".format(System.currentTimeMillis() - t, result.sum))
+    result
   }
 
-  /*
-   * Load the binary data of the given coordinate from file
-   */
-
-  override def load(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, cube: Cuboid, halfByte: Boolean = false): Array[Byte] = {
-    if (dataSet doesContain cube.topLeft) {
-      val block = PointToBlock(cube.topLeft, resolution)
-      val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
-      val bytesPerElement = dataLayer.bytesPerElement
-      
-      val byteArray: Array[Byte] =
-        ((useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)) getOrElse {
-          loadAndCacheData(dataSet, dataLayer, resolution, block)
-        }).value
-
-      lastUsed = Some(blockInfo -> Data(byteArray))
-      
-      val startX = (cube.topLeft.x / resolution) % 128 
-      val startY = (cube.topLeft.y / resolution) % 128 
-      val startZ = (cube.topLeft.z / resolution) % 128 
-      
-      val result = new Array[Byte]( if(halfByte) cube.volume/2 else cube.volume * bytesPerElement)
-      
-      var idx = 0
-      var x = startX
-      var y = 0
-      var z = 0
-      var byte = 0
-
-      val edgeX = cube.edgeLengthX
-      val edgeY = cube.edgeLengthY
-      val edgeZ = cube.edgeLengthZ
-
-      var prevPixelColor: Byte = 0
-      
-      while( x < startX + edgeX){
-        y = startY
-        while (y < startY + edgeY) {
-          z = startZ
-          while( z < startZ + edgeZ){
-            if(halfByte){
-              val pixelColor = (byteArray( ( z * 128 * 128 + y * 128 + x ) ) & 0xF0).toByte
-              if(idx % 2 == 1){
-                val twoPixelColor = 
-                  (prevPixelColor | (pixelColor >> 4 & 0x0F) ).asInstanceOf[Byte]
-                result.update( idx / 2, twoPixelColor)
-              } else {
-                prevPixelColor = pixelColor
-              }       
-              idx += 1
-            } else {
-              byte = 0
-              while (byte < bytesPerElement) {
-                result.update(idx, byteArray(z * 128 * 128 * bytesPerElement + y * 128 * bytesPerElement + x * bytesPerElement + byte))
-                idx += 1
-                byte += 1
-              }
-            }
-            z += 1
-          } 
-          y+=1
-        }
-        x += 1
-      }
-
-      result
-    } else {
-      new Array[Byte](cube.volume * dataLayer.bytesPerElement)
-    }
-  }
-  
-  //TODO: make this more dry!!!
   def getBytes(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Array[Byte] = {
     val block = PointToBlock(globalPoint, resolution)
     blockMap.get(block) match {
-      case Some(byteArray) => 
+      case Some(byteArray) =>
         getLocalBytes(GlobalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
-      case _ => 
+      case _ =>
         println("Didn't find block! :(")
-        nullValues(bytesPerElement)
+        nullValue(bytesPerElement)
     }
   }
 
@@ -174,106 +141,6 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       i += 1
     }
     bytes
-  }
-  
-  def getColor(point: Point3D, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Double = {
-    val block = PointToBlock(point, resolution)
-    val color = blockMap.get(block) match {
-      case Some(byteArray) =>
-        byteArray((((point.z / resolution) % 128) * 128 * 128 + ((point.y / resolution) % 128) * 128 + (point.x / resolution) % 128))
-      case _ =>
-        println("Didn't find block! :(")
-        0.toByte
-    }
-    (0xff & color.asInstanceOf[Int])
-  }
-  
-  def interpolatedColor(point: Vector3D, eS: Int, r: Int, b: Map[Point3D, Array[Byte]]):Array[Byte] = {
-    val x = point.x.toInt
-    val y = point.y.toInt
-    val z = point.z.toInt
-
-    val floored = Vector3D(x, y, z)
-    if (point == floored) {
-      Array[Byte](getColor(Point3D(x, y, z), r, b).toByte)
-    } else {
-      val q = Array(
-        getColor(Point3D(x, y, z), r,  b),
-        getColor(Point3D(x, y, z + 1), r,  b),
-        getColor(Point3D(x, y + 1, z), r,  b),
-        getColor(Point3D(x, y + 1, z + 1), r,  b),
-        getColor(Point3D(x + 1, y, z), r,  b),
-        getColor(Point3D(x + 1, y, z + 1), r,  b),
-        getColor(Point3D(x + 1, y + 1, z), r, b),
-        getColor(Point3D(x + 1, y + 1, z + 1), r, b))
-
-      Array[Byte](Interpolator.triLerp(point - floored, q).round.toByte)
-    }
-  }
-  
-  def nearestNeighbor(point: Vector3D, bytesPerElement: Int, resolution: Int, b: Map[Point3D, Array[Byte]]) = {
-    val byte = point.x % bytesPerElement
-    val x = (point.x - byte + (if (bytesPerElement - 2 * byte >= 0) 0 else bytesPerElement)).toInt
-    getBytes(Point3D(x, point.y.round.toInt, point.z.round.toInt), bytesPerElement, resolution, b)
-  }
-  //TODO: different interpolation Strategies for Color and seg/class
-  override def loadInterpolated(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, globalPoints: Array[Vector3D]): Array[Byte] = {
-    val t = System.currentTimeMillis()
-    def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Array[Byte] = {
-      val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
-
-      ((useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)).map(
-        d => d.value) getOrElse (
-          loadAndCacheData(dataSet, dataLayer, resolution, block).value))
-    }
-    val maxVector = globalPoints.foldLeft((0.0, 0.0, 0.0))((b, e) => (
-      math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
-    var minVector = globalPoints.foldLeft(maxVector)((b, e) => (
-      math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
-
-    val minPoint = Point3D(math.max(minVector._1 - 1, 0).toInt, math.max(minVector._2 - 1, 0).toInt, math.max(minVector._3 - 1, 0).toInt)
-
-    val minBlock = PointToBlock(minPoint, resolution)
-    val maxBlock = PointToBlock(Point3D(maxVector._1.ceil.toInt + 1, maxVector._2.ceil.toInt + 1, maxVector._3.ceil.toInt + 1), resolution)
-
-    var blockPoints: List[Point3D] = Nil
-    var blockData: List[Array[Byte]] = Nil
-
-    for {
-      x <- minBlock.x to maxBlock.x
-      y <- minBlock.y to maxBlock.y
-      z <- minBlock.z to maxBlock.z
-    } {
-      val p = Point3D(x, y, z)
-      blockPoints ::= p
-      blockData ::= loadFromSomewhere(dataSet, dataLayer, resolution, p)
-    }
-
-    Logger.debug("loadFromSomewhere: %d ms".format(System.currentTimeMillis() - t))
-    val blockMap = blockPoints.zip(blockData).toMap
-    val elementCount = globalPoints.size
-    var result = new Array[Byte](elementCount * dataLayer.bytesPerElement)
-    var idx = 0
-    val interpolationStrategy = dataLayer match{
-      case l: ColorLayer => interpolatedColor _
-      case l: ClassificationLayer => nearestNeighbor _
-      case l: SegmentationLayer => nearestNeighbor _
-    }
-    val iter = globalPoints.iterator
-    val t2 = System.currentTimeMillis()
-
-    while (iter.hasNext) {
-      val point = iter.next
-      val values = interpolationStrategy(point, dataLayer.bytesPerElement, resolution, blockMap)
-      var j = 0
-      while (j < values.size){
-        result(idx) = values(j)
-        idx += 1
-        j += 1
-      }
-    }
-    Logger.debug("loading&interp: %d ms, Sum: ".format(System.currentTimeMillis() - t2, result.sum))
-    result
   }
 
   /**

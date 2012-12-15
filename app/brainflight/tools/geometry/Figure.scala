@@ -8,10 +8,6 @@ import scala.collection.mutable.ArrayBuffer
 
 abstract class Figure
 
-case class Cuboid( topLeft: Point3D, edgeLengthX: Int, edgeLengthY: Int, edgeLengthZ: Int) extends Figure{
-  val volume = edgeLengthX * edgeLengthY * edgeLengthZ
-}
-
 case class ConvexFigure( polygons: Seq[Polygon] ) extends Figure{
 
   def isInside( point: Tuple3[Double,Double,Double], polygonOfPoint: Polygon = null ) = {

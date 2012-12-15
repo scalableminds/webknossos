@@ -69,9 +69,10 @@ class Skeleton
     @route.on
       newActiveNode : => @setActiveNode()
       newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
-      deleteActiveTree : (index) => @deleteActiveTree(index)
+      deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)
       deleteLastNode : (id) => @deleteLastNode(id)
+      mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) => @mergeTree(lastTreeID, lastNodePosition, activeNodePosition)
       newNode : => @setWaypoint()
       setBranch : (isBranchPoint) => @setBranchPoint(isBranchPoint)
       newActiveNodeRadius : (radius) => @setNodeRadius(radius)
@@ -144,7 +145,8 @@ class Skeleton
         @nodesBuffer[index].set(node.pos, @curIndex[index] * 3)
         # Assign the ID to the vertex, so we can access it later
         @nodes[index].geometry.nodeIDs.set([node.id], @curIndex[index])
-        #@pushNewNode(node.radius, node.pos, node.id, tree.color)
+        # currently disabled due to performance issues
+        # @pushNewNode(node.radius, node.pos, node.id, tree.color)
         @curIndex[index]++
 
         # Add edges to neighbor, if neighbor id is smaller
@@ -315,7 +317,32 @@ class Skeleton
     @setActiveNode()
     @flycam.hasChanged = true
 
-  deleteActiveTree : (index) ->
+  mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) ->
+    lastIndex = @getIndexFromTreeId(lastTreeID)
+    index = @getIndexFromTreeId(@route.getTree().treeId)
+
+    # merge IDs
+    @nodes[index].geometry.nodeIDs.set(@nodes[lastIndex].geometry.nodeIDs.subarray(0, @curIndex[lastIndex]), @curIndex[index])
+
+    # merge nodes
+    @nodes[index].geometry.__vertexArray.set(@nodes[lastIndex].geometry.__vertexArray.subarray(0, @curIndex[lastIndex] * 3), @curIndex[index] * 3)
+
+    # merge edges
+    if @curIndex[index] == 1
+      @routes[index].geometry.__vertexArray = @edgesBuffer[index]
+    @routes[index].geometry.__vertexArray.set([lastNodePosition..., activeNodePosition...], (@curIndex[index] - 1) * 6)
+    @routes[index].geometry.__vertexArray.set(@routes[lastIndex].geometry.__vertexArray.subarray(0, (@curIndex[lastIndex] - 1) * 6), (@curIndex[index]) * 6)
+
+    @curIndex[index] += @curIndex[lastIndex]
+    @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index] - 1)
+    @nodes[index].geometry.__webglParticleCount = @curIndex[index]
+    @routes[index].geometry.verticesNeedUpdate = true
+    @nodes[index].geometry.verticesNeedUpdate = true
+    @flycam.hasChanged = true
+
+    #@deleteTree(lastIndex)
+
+  deleteTree : (index) ->
 
     # Remove all geometries and spheres
     nodeSpheres = (@getSphereFromId(nodeID) for nodeID in @nodes[index].geometry.nodeIDs.subarray(0, @curIndex[index]))

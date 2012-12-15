@@ -288,11 +288,12 @@ class Route
     @trigger("newActiveNodeRadius", radius)
 
 
-  setActiveNode : (id) ->
-
+  setActiveNode : (nodeID, mergeTree) ->
+    lastActiveNode = @activeNode
+    lastActiveTree = @activeTree
     for tree in @trees
       for node in tree.nodes
-        if node.id == id
+        if node.id == nodeID
           @activeNode = node
           @lastActiveNodeId = @activeNode.id
           @activeTree = tree
@@ -300,6 +301,9 @@ class Route
     @push()
 
     @trigger("newActiveNode")
+
+    if mergeTree
+      @mergeTree(lastActiveNode, lastActiveTree)
 
 
   setComment : (commentText) ->
@@ -410,16 +414,19 @@ class Route
     
     @push()
 
-  deleteActiveTree : ->
-    # There should always be an active Tree
-    # Find index of activeTree
+  deleteTree : (id) ->
+
+    unless id
+      id = @activeTree.treeId
+    tree = @getTree(id)
+
     for i in [0..@trees.length]
-      if @trees[i].treeId == @activeTree.treeId
+      if @trees[i].treeId == tree.treeId
         index = i
         break
     @trees.splice(index, 1)
     # remove comments of all nodes inside that tree
-    for node in @activeTree.nodes
+    for node in tree.nodes
       @deleteComment(node.id)
     # Because we always want an active tree, check if we need
     # to create one.
@@ -430,7 +437,25 @@ class Route
       @setActiveTree(@trees[@trees.length - 1].treeId)
     @push()
 
-    @trigger("deleteActiveTree", index)
+    @trigger("deleteTree", index)
+
+  mergeTree : (lastNode, lastTree) ->
+    activeNodeID = @activeNode.id
+    if lastNode.id != activeNodeID
+      if lastTree.treeId != @activeTree.treeId
+        @activeTree.nodes = @activeTree.nodes.concat(lastTree.nodes)
+        @activeNode.appendNext(lastNode)
+        lastNode.appendNext(@activeNode)
+        @push()
+
+        @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
+
+        @deleteTree(lastTree.treeId)
+
+        @setActiveNode(activeNodeID)
+      else
+        @trigger("mergeDifferentTrees")
+
 
   getTree : (id) ->
     unless id

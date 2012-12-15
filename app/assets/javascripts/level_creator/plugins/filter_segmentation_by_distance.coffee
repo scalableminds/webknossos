@@ -20,7 +20,7 @@ class FilterSegmentationByDistance
 
   execute : (options) ->
 
-    { input: { rgba, segmentations, segments, dimensions }, distance, comparisonMode } = options
+    { input: { rgba, segmentation, segments, dimensions }, distance, comparisonMode } = options
 
     width = dimensions[0]
     height = dimensions[1]
@@ -32,10 +32,11 @@ class FilterSegmentationByDistance
       if compareFunc(segment.distance, distance)
         values.push segment.value
 
+    j = 0
     for h in [0...height] by 1
       for w in [0...width] by 1
-        i = h * height + w
-        s = segmentations[i]
+        i = h * width + w
+        s = segmentation[i]
 
         if _.contains(values, s) is false
           rgba[i * 4 + 3] = 0

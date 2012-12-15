@@ -38,7 +38,7 @@ class FilterStartSegmentation
 
     for h in [0...height] by 1
       for w in [0...width] by 1
-        i = h * height + w
+        i = h * width + w
         s = segmentations[i]
 
         if _.contains(values, s) is false

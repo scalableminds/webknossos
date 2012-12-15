@@ -25,7 +25,7 @@ class Binary
 
     @dataSetId = dataSet.id
 
-    @cube = new Cube(dataSet.upperBoundary)
+    @cube = new Cube(dataSet.upperBoundary, dataSet.resolutions.length)
     @queue = new PullQueue(@dataSetId, @cube)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
@@ -65,21 +65,16 @@ class Binary
 
     unless _.isEqual(position, @lastPosition) and _.isEqual(zoomStep, @lastZoomStep) and _.isEqual(area, @lastArea)
 
-      console.log position, @queue.roundTripTime, @queue.bucketsPerSecond
-
       @lastPosition = position.slice()
       @lastZoomStep = zoomStep.slice()
       @lastArea     = area.slice()
 
-      console.time "ping"
-      @queue.clear()
+      console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond
 
       for strategy in @pingStrategies 
         if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
 
-          { pullQueue, extent } = strategy.ping(position, @direction, zoomStep[0], area[0]) if zoomStep[0]? and area[0]? 
-
-          @cube.extendByBucketAddressExtent(extent...)
+          pullQueue = strategy.ping(position, @direction, zoomStep[0], area[0]) if zoomStep[0]? and area[0]? 
 
           for entry in pullQueue
             @queue.insert(entry...)
@@ -87,7 +82,6 @@ class Binary
           break
 
       @queue.pull()
-      console.timeEnd "ping"
 
 
   # Not used anymore. Instead the planes get-functions are called directly.

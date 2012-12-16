@@ -1,8 +1,7 @@
 package models.knowledge
 
 import brainflight.tools.geometry._
-import play.api.libs.json.JsValue
-import play.api.libs.json.Reads
+import play.api.libs.json._
 
 case class MissionStart(
   position: Point3D,
@@ -11,7 +10,7 @@ case class MissionStart(
   centerOfMass: Point3D)
 
 object MissionStart {
-  implicit object MissionStartReads extends Reads[MissionStart] {
+  implicit object MissionStartReads extends Format[MissionStart] {
     val POSITION = "position"
     val DIRECTION = "direction"
     val ID = "id"
@@ -23,5 +22,13 @@ object MissionStart {
         (js \ DIRECTION).as[Vector3D],
         (js \ ID).as[Int],
         (js \ CENTER).as[Point3D])
+    
+    def writes(missionStart: MissionStart) = Json.obj(
+        POSITION -> missionStart.position,
+        DIRECTION -> missionStart.direction,
+        ID -> missionStart.startId,
+        CENTER -> missionStart.centerOfMass
+    )
+    
   }
 }

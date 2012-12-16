@@ -89,12 +89,14 @@ object Vector3D {
   def apply(p: (Double, Double, Double)): Vector3D =
     Vector3D(p._1, p._2, p._3)
     
-  implicit object Vector3DReads extends Reads[Vector3D] {
+  implicit object Vector3DReads extends Format[Vector3D] {
     def reads(json: JsValue) = json match {
       case JsArray(ts) if ts.size == 3 =>
         val c = ts.map(fromJson[Double](_))
         Vector3D(c(0), c(1), c(2))
       case _ => throw new RuntimeException("List expected")
     }
+    
+    def writes(v: Vector3D) = Json.toJson(List(v.x, v.y, v.z))
   }
 }

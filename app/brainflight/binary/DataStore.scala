@@ -15,8 +15,6 @@ case class DataRequest(
   layer: DataLayer, 
   resolution: Int,
   cuboid: Cuboid,
-  useInterpolation: Boolean = false,
-  isArbitrary: Boolean = false,
   useHalfByte: Boolean = false
 )
 abstract class DataStore {

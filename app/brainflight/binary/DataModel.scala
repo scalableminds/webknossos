@@ -23,26 +23,22 @@ import brainflight.tools.geometry._
  */
 
 abstract class DataModel {
-  
+
   protected def rotateAndMove(
     moveVector: (Double, Double, Double),
     axis: (Double, Double, Double),
-    coordinates: Array[Vector3D]
-  ): Array[Vector3D] = {
-    def ff(f: (Double, Double, Double) => Array[Vector3D]):Array[Vector3D] = {
+    coordinates: Array[Vector3D]): Array[Vector3D] = {
+    def ff(f: (Double, Double, Double) => Array[Vector3D]): Array[Vector3D] = {
       coordinates.map(c => f(c.x, c.y, c.z)(0))
     }
-    
-    rotateAndMove(moveVector, axis)(ff)((x, y, z) => Array(Vector3D(x,y,z)))
+
+    rotateAndMove(moveVector, axis)(ff)((x, y, z) => Array(Vector3D(x, y, z)))
   }
-  
+
   protected def rotateAndMove[T](
     moveVector: (Double, Double, Double),
-    axis: (Double, Double, Double))
-    (coordinates: ((Double, Double, Double) => Array[T]) => Array[T])
-    (f: (Double, Double, Double) => Array[T])
-    (implicit manifest: ClassManifest[T]): Array[T] = {
-    
+    axis: (Double, Double, Double))(coordinates: ((Double, Double, Double) => Array[T]) => Array[T])(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]): Array[T] = {
+
     if (axis._1 == 0 && axis._2 == 0 && axis._3 == 0) {
       simpleMove(moveVector, coordinates)(f)
     } else {
@@ -76,15 +72,13 @@ abstract class DataModel {
           val z = moveVector._3 + (a31 * px + a32 * py + a33 * pz)
           f(x, y, z)
       }
-
-      Logger.debug("rotateAndMove: %d ms".format(System.currentTimeMillis() - t))
       result
     }
   }
 
   protected def simpleMove[T](
-      moveVector: (Double, Double, Double),
-      coordinates: ((Double, Double, Double) => Array[T]) => Array[T])(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]) = {
+    moveVector: (Double, Double, Double),
+    coordinates: ((Double, Double, Double) => Array[T]) => Array[T])(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]) = {
     coordinates {
       case (px, py, pz) =>
         val x = moveVector._1 + px
@@ -100,49 +94,53 @@ abstract class DataModel {
   }
 
   // calculate all coordinates which are in the model boundary
-  def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]): Array[T] 
+  def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]): Array[T]
 }
 
 case class Cuboid(
-    width: Int,
-    height: Int,
-    depth: Int,
+    _width: Int,
+    _height: Int,
+    _depth: Int,
+    resolution: Int,
     topLeftOpt: Option[Vector3D] = None,
     moveVector: (Double, Double, Double) = (0, 0, 0),
     axis: (Double, Double, Double) = (0, 0, 0)) extends DataModel {
-  
+
+  val width = resolution * _width
+  val height = resolution * _height
+  val depth = resolution * _depth
+
   private val topLeft = topLeftOpt getOrElse {
     val xh = (width / 2.0).floor
     val yh = (height / 2.0).floor
     val zh = (depth / 2.0).floor
     Vector3D(-xh, -yh, -zh)
   }
-  
+
   lazy val corners = rotateAndMove(moveVector, axis, Array(
-      topLeft, 
-      topLeft.dx(width), 
-      topLeft.dy(height), 
-      topLeft.dx(width).dy(height), 
-      topLeft.dz(depth), 
-      topLeft.dz(depth).dx(width), 
-      topLeft.dz(depth).dy(height), 
-      topLeft.dz(depth).dx(width).dy(height)))
-      
+    topLeft,
+    topLeft.dx(width),
+    topLeft.dy(height),
+    topLeft.dx(width).dy(height),
+    topLeft.dz(depth),
+    topLeft.dz(depth).dx(width),
+    topLeft.dz(depth).dy(height),
+    topLeft.dz(depth).dx(width).dy(height)))
+
   lazy val maxCorner = corners.foldLeft((0.0, 0.0, 0.0))((b, e) => (
     math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
-      
-  lazy val minCorner= corners.foldLeft(maxCorner)((b, e) => (
+
+  lazy val minCorner = corners.foldLeft(maxCorner)((b, e) => (
     math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
-  
 
   override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]): Array[T] = {
-    rotateAndMove(moveVector, axis){ (f: (Double, Double, Double) => Array[T]) =>
+    rotateAndMove(moveVector, axis) { (f: (Double, Double, Double) => Array[T]) =>
       val xhMax = topLeft.x + width
       val yhMax = topLeft.y + height
       val zhMax = topLeft.z + depth
-  
+
       val t = System.currentTimeMillis()
-      val array = new Array[T](width * height * depth * extendArrayBy)
+      val array = new Array[T](_width * _height * _depth * extendArrayBy)
       var x = topLeft.x
       var y = topLeft.y
       var z = topLeft.z
@@ -154,18 +152,17 @@ case class Cuboid(
           while (z < zhMax) {
             var i = 0
             val r = f(x, y, z)
-            while(i < extendArrayBy){
-              array.update(idx + i, r(i)) 
-              i+=1
+            while (i < extendArrayBy) {
+              array.update(idx + i, r(i))
+              i += 1
             }
-            z += 1
+            z += resolution
             idx += extendArrayBy
           }
-          y += 1
+          y += resolution
         }
-        x += 1
+        x += resolution
       }
-      Logger.debug("containingCoordinates: %d ms".format(System.currentTimeMillis() - t))
       array
     }(f)
   }

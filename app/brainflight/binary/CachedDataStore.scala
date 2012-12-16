@@ -99,8 +99,6 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
         p)
     }).toMap
 
-    Logger.debug("loadFromSomewhere: %d ms".format(System.currentTimeMillis() - t))
-
     val interpolate = dataRequest.layer.interpolate(dataRequest.resolution, blockMap, getBytes _) _
 
     val result = cube.withContainingCoordinates(extendArrayBy = dataRequest.layer.bytesPerElement) {
@@ -108,9 +106,26 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
         // TODO: Remove Wrapper
         interpolate(Vector3D(point))
     }
+    
+    if (dataRequest.useHalfByte)
+      convertToHalfByte(result)
+    else
+      result
+  }
 
-    Logger.debug("loading&interp: %d ms, Sum: ".format(System.currentTimeMillis() - t, result.sum))
-    result
+  def convertToHalfByte(a: Array[Byte]) = {
+    val aSize = a.size
+    val compressedSize = if (aSize % 2 == 0) aSize / 2 else aSize / 2 + 1
+    val compressed = new Array[Byte](compressedSize)
+    var i = 0
+    while (i * 2 + 1 < aSize) {
+      val first = (a(i * 2) & 0xF0).toByte
+      val second = (a(i * 2 + 1) & 0xF0).toByte >> 4 & 0x0F
+      val value = (first | second).asInstanceOf[Byte]
+      compressed.update(i, value)
+      i += 1
+    }
+    compressed
   }
 
   def getBytes(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Array[Byte] = {
@@ -119,7 +134,7 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       case Some(byteArray) =>
         getLocalBytes(globalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
       case _ =>
-        println("Didn't find block! :(")
+        Logger.error("Didn't find block! :(")
         nullValue(bytesPerElement)
     }
   }
@@ -127,8 +142,8 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): Array[Byte] = {
 
     val address = (localPoint.x + localPoint.y * 128 + localPoint.z * 128 * 128) * bytesPerElement
-    if (address > data.size){
-      Logger.info("address: %d , Point: (%d, %d, %d), EPB: %d, dataSize: %d".format(address, localPoint.x, localPoint.y, localPoint.z, bytesPerElement, data.size))
+    if (address > data.size) {
+      Logger.error("address: %d , Point: (%d, %d, %d), EPB: %d, dataSize: %d".format(address, localPoint.x, localPoint.y, localPoint.z, bytesPerElement, data.size))
       throw new IndexOutOfBoundsException
     } else {
       val bytes = new Array[Byte](bytesPerElement)

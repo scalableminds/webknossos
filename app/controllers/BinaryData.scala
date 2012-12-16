@@ -47,19 +47,18 @@ object BinaryData extends Controller with Secured {
   def resolutionFromExponent(resolutionExponent: Int) =
     math.pow(2, resolutionExponent).toInt
 
-  def cuboidFromPosition(position: Point3D, cubeSize: Int) = {
+  def cuboidFromPosition(position: Point3D, cubeSize: Int, resolution: Int) = {
     val cubeCorner = Vector3D(position.scale {
       case (x, i) =>
         x - x % (cubeSize / scaleFactors(i))
     })
-    Cuboid(cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2), Some(cubeCorner))
+    Cuboid(cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2), resolution, Some(cubeCorner))
   }
 
   def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, halfByte: Boolean) = {
     val cubeRequests = multi.requests.map { request =>
-      println("Requested: " + request)
       val resolution = resolutionFromExponent(request.resolutionExponent)
-      val cuboid = cuboidFromPosition(request.position, cubeSize)
+      val cuboid = cuboidFromPosition(request.position, cubeSize, resolution)
       SingleRequest(
         DataRequest(
           dataSet,
@@ -87,15 +86,13 @@ object BinaryData extends Controller with Secured {
           val direction = (1.0, 1.0, 1.0)
 
           val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
-          val m = Cuboid(level.width, level.height, level.depth, moveVector = point, axis = direction)
+          val m = Cuboid(level.width, level.height, level.depth, 1, moveVector = point, axis = direction)
           val future =
             dataSetActor ? SingleRequest(DataRequest(
               dataSet,
               dataLayer,
               1,
-              m,
-              isArbitrary = true,
-              useInterpolation = true))
+              m))
 
           future
             .recover {
@@ -152,7 +149,7 @@ object BinaryData extends Controller with Secured {
       val dataSetOpt = DataSet.findOneById(dataSetId)
       var channelOpt: Option[Channel[Array[Byte]]] = None
 
-      /*val output = Concurrent.unicast[Array[Byte]](
+      val output = Concurrent.unicast[Array[Byte]](
         { c => channelOpt = Some(c) },
         { Logger.debug("Data websocket completed") },
         { case (e, i) => Logger.error("An error ocourd on websocket stream: " + e) })
@@ -172,13 +169,6 @@ object BinaryData extends Controller with Secured {
           }
         }
       })
-      (input, output)*/
-
-      val iteratee = Done[Array[Byte], Unit]((), Input.EOF)
-
-      // Send an error and close the socket
-      val enumerator = Enumerator[Array[Byte]]().andThen(Enumerator.enumInput(Input.EOF))
-
-      (iteratee, enumerator)
+      (input, output)
   }
 }

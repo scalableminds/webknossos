@@ -141,7 +141,6 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   }
 
   def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): ArrayBuffer[Byte] = {
-
     val address = (localPoint.x + localPoint.y * 128 + localPoint.z * 128 * 128) * bytesPerElement
     if (address > data.size) {
       Logger.error("address: %d , Point: (%d, %d, %d), EPB: %d, dataSize: %d".format(address, localPoint.x, localPoint.y, localPoint.z, bytesPerElement, data.size))

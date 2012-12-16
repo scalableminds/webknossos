@@ -7,6 +7,7 @@
 ./plugins/filter_probability_segmentation : FilterProbabilitySegmentation
 ./plugins/filter_start_segmentation : FilterStartSegmentation
 ./plugins/fade : Fade
+./plugins/cloudify : Cloudify
 ###
 
 
@@ -22,3 +23,4 @@ class Plugins
     @filterProbabilitySegmentation = new FilterProbabilitySegmentation()
     @filterStartSegmentation = new FilterStartSegmentation()
     @drawArtCells = new DrawArtCells()
+    @cloudify = new Cloudify()

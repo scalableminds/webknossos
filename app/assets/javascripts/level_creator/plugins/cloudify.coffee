@@ -5,7 +5,7 @@
 
 class Cloudify
 
-  DESCRIPTION : "Makes clouds out of the given input"
+  DESCRIPTION : "Makes colored clouds out of the given input"
 
   PARAMETER :
     input :
@@ -25,7 +25,7 @@ class Cloudify
     @cloud.onload = => @ready = true
 
 
-  execute : ({ input : { rgba, dimensions }}) ->
+  execute : ({ input : { rgba, dimensions }, r, g, b, a}) ->
 
     { cloud, ready, size } = @
 
@@ -40,26 +40,23 @@ class Cloudify
     canvas.height = height    
 
     context = canvas.getContext("2d")
+    
+    for h in [0...height] by size*0.3
+      for w in [0...width] by size*0.3
 
-    i = 0
-    j = 0
-    while i < 50 and j < 1000
-      j++
-      x = Math.floor(Math.random() * width)
-      y = Math.floor(Math.random() * height)
+        x = w + Math.floor(Math.random() * size - size*0.5)
+        y = h + Math.floor(Math.random() * size - size*0.5)
 
-      a = rgba[(y * width + x) * 4 + 3]
-      
-      if a is 0
-        continue
-
-      context.drawImage(cloud, x - size*0.5, y - size*0.5)
-      i++
+        testA = rgba[(y * width + x) * 4 + 3]
+        
+        if testA isnt 0
+          context.drawImage(cloud, x - size*0.5, y - size*0.5)
 
 
     canvasData = context.getImageData(0, 0, width, height).data
     for l in [0...canvasData.length] by 4
-      rgba[l + 0] = 0
-      rgba[l + 1] = 0
-      rgba[l + 2] = 0
-      rgba[l + 3] = canvasData[l + 3]
+      ao = canvasData[l + 3]
+      rgba[l + 0] = r
+      rgba[l + 1] = g
+      rgba[l + 2] = b
+      rgba[l + 3] = ao * a

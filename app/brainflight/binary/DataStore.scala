@@ -62,7 +62,7 @@ abstract class DataStore {
     new Array[Byte](blockSize * bytesPerElement)
 
   def nullValue(bytesPerElement: Int) =
-    new Array[Byte](bytesPerElement).toBuffer.asInstanceOf[ArrayBuffer[Byte]]
+    new Array[Byte](bytesPerElement)
     
     lazy val nullArray: Array[Array[Byte]] = 
     Array(1,2,4,8).map(bytesPerElement => createNullArray(blockSize, bytesPerElement))

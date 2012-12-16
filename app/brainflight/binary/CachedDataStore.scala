@@ -110,8 +110,9 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
     
     if (dataRequest.useHalfByte)
       convertToHalfByte(result)
-    else
+    else{
       result
+    }
   }
 
   def convertToHalfByte(a: ArrayBuffer[Byte]) = {
@@ -129,7 +130,7 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
     compressed
   }
 
-  def getBytes(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): ArrayBuffer[Byte] = {
+  def getBytes(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Array[Byte] = {
     val block = pointToBlock(globalPoint, resolution)
     blockMap.get(block) match {
       case Some(byteArray) =>
@@ -140,16 +141,16 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
     }
   }
 
-  def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): ArrayBuffer[Byte] = {
+  def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): Array[Byte] = {
     val address = (localPoint.x + localPoint.y * 128 + localPoint.z * 128 * 128) * bytesPerElement
     if (address > data.size) {
       Logger.error("address: %d , Point: (%d, %d, %d), EPB: %d, dataSize: %d".format(address, localPoint.x, localPoint.y, localPoint.z, bytesPerElement, data.size))
       throw new IndexOutOfBoundsException
     } else {
-      val bytes = new ArrayBuffer[Byte](bytesPerElement)
+      val bytes = new Array[Byte](bytesPerElement)
       var i = 0
       while (i < bytesPerElement) {
-        bytes += data(address + i)
+        bytes.update(i, data(address + i))
         i += 1
       }
       bytes

@@ -13,6 +13,7 @@ class PullQueue
 
   cube : null
   queue : []
+
   socket : null
   socket4Bit : null
   socket8Bit : null

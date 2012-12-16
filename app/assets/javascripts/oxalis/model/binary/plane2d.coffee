@@ -318,7 +318,7 @@ class Plane2D
 
     map = new Array(@MAP_SIZE)
     map[0] = undefined
-    
+
     for i in [Math.min(@cube.LOOKUP_DEPTH_UP, @cube.ZOOM_STEP_COUNT - zoomStep - 1)...0]
 
       bucket = [

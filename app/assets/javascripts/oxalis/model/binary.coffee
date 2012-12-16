@@ -53,6 +53,8 @@ class Binary
 
   pingImpl : (position, options) ->
 
+    @cube.collectGarbage()
+
     if @lastPosition?
       
       @direction = [
@@ -66,7 +68,7 @@ class Binary
       @lastPosition = position.slice()
       @lastOptions = options.slice()
 
-      console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond
+      console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond, @cube.bucketCount
 
       #console.time "ping"
       @queue.clear()

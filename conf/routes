@@ -12,8 +12,8 @@ GET     /game/initialize                    controllers.Game.initialize
 GET     /tasks/requestTask                  controllers.TaskController.request
 
 # Missions
-POST    /missions                           controllers.admin.MissionAdministration.insertMissions
-GET     /missions                           controllers.Knowledge.missions(dataSetId: String)
+POST    /missions                           controllers.admin.MissionAdministration.insertMissions(dataSetName: String)
+GET     /missions                           controllers.Knowledge.missions(dataSetName: String)
 
 # Jira integration
 GET     /jira                               controllers.Jira.index

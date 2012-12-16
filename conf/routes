@@ -13,6 +13,7 @@ GET     /tasks/requestTask                  controllers.TaskController.request
 
 # Missions
 POST    /missions                           controllers.admin.MissionAdministration.insertMissions
+GET     /missions                           controllers.Knowledge.missions(dataSetId: String)
 
 # Jira integration
 GET     /jira                               controllers.Jira.index

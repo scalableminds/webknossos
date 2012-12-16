@@ -5,33 +5,18 @@ import play.api.mvc._
 import play.api.data._
 import play.api.libs.json._
 import play.api.Play.current
-import java.io.File
-import scala.io.Source
 import models.knowledge.Mission
+import models.binary.DataSet
 
+object Knowledge extends Controller with Secured {
 
-object Knowledge extends Controller with Secured{
-  
-  val KnowledgeDirectory = "/home/deployboy/knowledge"
-  
-  def updateKnowledge() = Action {
-    for(knowledgeFile <- new File(KnowledgeDirectory).listFiles){
-      extractKnowledge(knowledgeFile)
-      markAsKnown(knowledgeFile)
-    }
-    Ok("ok")
-  }
-  
-  def extractKnowledge(file: File) = {
-    val source = Source.fromFile(file)
-    val content = source.getLines.mkString("/n")
-    val json = Json.parse(content)
-    for {task <- (json \ "tasks").asOpt[List[JsValue]]
-    } println ("do something")
-    
-  }
-  
-  def markAsKnown(file: File) = {
-    file.renameTo(new File(KnowledgeDirectory+"/"+file.getName))
+  def missions(dataSetId: String) = Authenticated { implicit request =>
+    (for {
+      dataSet <- DataSet.findOneById(dataSetId)
+      missions <- Mission.findByDataSetName(dataSet.name)
+
+    } yield {
+      println(missions.mkString)
+      Ok(Json.toJson(missions))}) getOrElse BadRequest("No dataset with id %s found".format(dataSetId))
   }
 }

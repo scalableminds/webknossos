@@ -20,8 +20,8 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
           dataSet.name
         }
       }
-println("Found datasets " + foundDataSets.mkString(","))
-      //DataSet.deleteAllExcept(foundDataSets)
+      Logger.info("Found datasets " + foundDataSets.mkString(","))
+      DataSet.deleteAllExcept(foundDataSets)
     }
   }
 

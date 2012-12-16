@@ -3,6 +3,7 @@ package brainflight.binary
 import brainflight.tools.geometry.Vector3I
 import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
+import play.api.Logger
 
 trait Handle {
   var handle: Array[Byte] = Array()
@@ -66,9 +67,9 @@ object BinaryProtocol {
    * Each float consists of 4 bytes.
    */
   def parseWebsocket( in: Array[Byte] ): Option[BinaryMessage] = {
-    if ( in.length >= MinWebSocketRequestSize && in.length % 4 == 0 ) {
-      val ( binPayload, binHandle ) = in.splitAt( RequestSize )
-      assert(binHandle.size == 4, "Wrong handle size: " + binHandle)
+    Logger.trace("Websocket incoming payload. size: " + in.length)
+    if ( in.length >= MinWebSocketRequestSize && in.length % 4 == 1 ) {
+      val ( binPayload, binHandle ) = in.splitAt( in.length - 1 )
       parsePayload( binPayload ).map { message =>
         message.setHandle( binHandle )
         message

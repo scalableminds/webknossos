@@ -162,8 +162,11 @@ object BinaryData extends Controller with Secured {
         } {
           BinaryProtocol.parseWebsocket(in).map {
             case dataRequests: MultipleDataRequest =>
-              handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize, halfByte).map(
-                result => channel.push((result ++= dataRequests.handle).toArray))
+              Logger.trace("Websocket DataRequests: " + dataRequests.requests.mkString(", "))
+              handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize, halfByte).map{ result =>
+                Logger.trace("Websocket result size: " + result.size)
+                channel.push((result ++= dataRequests.handle).toArray)
+              }
             case _ =>
               Logger.error("Received unhandled message!")
           }

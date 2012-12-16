@@ -89,7 +89,7 @@ class ArrayBufferSocket.WebSocket
 
           @socket = null
           
-          request.reject("socket closed") for request in @pendingRequests
+          request.reject("socket closed") for request in @pendingRequests when request?
           @pendingRequests.length = 0
           
           console?.error("socket closed", "#{code}: #{reason}")
@@ -102,7 +102,7 @@ class ArrayBufferSocket.WebSocket
         (event) =>
 
           buffer = event.data
-          handle = new Uint8Array(buffer, buffer.byteLength - 2, 1)[0]
+          handle = new Uint8Array(buffer, buffer.byteLength - 1, 1)[0]
           
           request = @pendingRequests[handle]
             
@@ -138,7 +138,7 @@ class ArrayBufferSocket.WebSocket
       deferred.handle = socketHandle
       
       @pendingRequests[socketHandle] = deferred
-      @socket.send(transmitBuffer.buffer)
+      @socket.send(transmitBuffer)
     
       setTimeout(
         => 
@@ -168,7 +168,7 @@ class ArrayBufferSocket.WebSocket
     transmitBuffer = new ArrayBuffer(dataLength + 1)
 
     payloadBuffer = new @requestBufferType(transmitBuffer, 0, data.length)
-    transmitBuffer.set(data)
+    payloadBuffer.set(data)
     
     handleBuffer = new Uint8Array(transmitBuffer, dataLength, 1)
     socketHandle = handleBuffer[0] = @nextHandle

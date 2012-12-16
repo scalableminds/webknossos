@@ -9,6 +9,7 @@ import scala.collection.parallel.ParSeq
 import brainflight.tools.geometry.Point3D
 import play.api.Logger
 import brainflight.tools.geometry._
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Scalable Minds - Brainflight
@@ -27,17 +28,17 @@ abstract class DataModel {
   protected def rotateAndMove(
     moveVector: (Double, Double, Double),
     axis: (Double, Double, Double),
-    coordinates: Array[Vector3D]): Array[Vector3D] = {
-    def ff(f: (Double, Double, Double) => Array[Vector3D]): Array[Vector3D] = {
+    coordinates: ArrayBuffer[Vector3D]): ArrayBuffer[Vector3D] = {
+    def ff(f: (Double, Double, Double) => ArrayBuffer[Vector3D]): ArrayBuffer[Vector3D] = {
       coordinates.map(c => f(c.x, c.y, c.z)(0))
     }
 
-    rotateAndMove(moveVector, axis)(ff)((x, y, z) => Array(Vector3D(x, y, z)))
+    rotateAndMove(moveVector, axis)(ff)((x, y, z) => ArrayBuffer(Vector3D(x, y, z)))
   }
 
   protected def rotateAndMove[T](
     moveVector: (Double, Double, Double),
-    axis: (Double, Double, Double))(coordinates: ((Double, Double, Double) => Array[T]) => Array[T])(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]): Array[T] = {
+    axis: (Double, Double, Double))(coordinates: ((Double, Double, Double) => ArrayBuffer[T]) => ArrayBuffer[T])(f: (Double, Double, Double) => ArrayBuffer[T]): ArrayBuffer[T] = {
 
     if (axis._1 == 0 && axis._2 == 0 && axis._3 == 0) {
       simpleMove(moveVector, coordinates)(f)
@@ -78,7 +79,7 @@ abstract class DataModel {
 
   protected def simpleMove[T](
     moveVector: (Double, Double, Double),
-    coordinates: ((Double, Double, Double) => Array[T]) => Array[T])(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]) = {
+    coordinates: ((Double, Double, Double) => ArrayBuffer[T]) => ArrayBuffer[T])(f: (Double, Double, Double) => ArrayBuffer[T]): ArrayBuffer[T] = {
     coordinates {
       case (px, py, pz) =>
         val x = moveVector._1 + px
@@ -94,7 +95,7 @@ abstract class DataModel {
   }
 
   // calculate all coordinates which are in the model boundary
-  def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]): Array[T]
+  def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => ArrayBuffer[T]): ArrayBuffer[T]
 }
 
 case class Cuboid(
@@ -117,7 +118,7 @@ case class Cuboid(
     Vector3D(-xh, -yh, -zh)
   }
 
-  lazy val corners = rotateAndMove(moveVector, axis, Array(
+  lazy val corners = rotateAndMove(moveVector, axis, ArrayBuffer(
     topLeft,
     topLeft.dx(width),
     topLeft.dy(height),
@@ -133,14 +134,14 @@ case class Cuboid(
   lazy val minCorner = corners.foldLeft(maxCorner)((b, e) => (
     math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
 
-  override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit manifest: ClassManifest[T]): Array[T] = {
-    rotateAndMove(moveVector, axis) { (f: (Double, Double, Double) => Array[T]) =>
+  override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => ArrayBuffer[T]): ArrayBuffer[T] = {
+    rotateAndMove(moveVector, axis) { (f: (Double, Double, Double) => ArrayBuffer[T]) =>
       val xhMax = topLeft.x + width
       val yhMax = topLeft.y + height
       val zhMax = topLeft.z + depth
 
       val t = System.currentTimeMillis()
-      val array = new Array[T](_width * _height * _depth * extendArrayBy)
+      val array = new ArrayBuffer[T](_width * _height * _depth * extendArrayBy)
       var x = topLeft.x
       var y = topLeft.y
       var z = topLeft.z
@@ -150,12 +151,7 @@ case class Cuboid(
         while (y < yhMax) {
           z = topLeft.z
           while (z < zhMax) {
-            var i = 0
-            val r = f(x, y, z)
-            while (i < extendArrayBy) {
-              array.update(idx + i, r(i))
-              i += 1
-            }
+            array ++= f(x, y, z)
             z += resolution
             idx += extendArrayBy
           }

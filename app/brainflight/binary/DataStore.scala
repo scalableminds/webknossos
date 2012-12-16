@@ -5,6 +5,7 @@ import models.binary._
 import brainflight.tools.geometry.Vector3D
 import play.api.Play
 import brainflight.tools.Math._
+import scala.collection.mutable.ArrayBuffer
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
@@ -28,7 +29,7 @@ abstract class DataStore {
   /**
    * Loads the data of a given point from the data source
    */
-  def load(dataRequest: DataRequest): Array[Byte]
+  def load(dataRequest: DataRequest): ArrayBuffer[Byte]
 
   /** 
    * Gives the data store the possibility to clean up its mess on shutdown/clean
@@ -61,7 +62,7 @@ abstract class DataStore {
     new Array[Byte](blockSize * bytesPerElement)
 
   def nullValue(bytesPerElement: Int) =
-    new Array[Byte](bytesPerElement)
+    new Array[Byte](bytesPerElement).toBuffer.asInstanceOf[ArrayBuffer[Byte]]
     
     lazy val nullArray: Array[Array[Byte]] = 
     Array(1,2,4,8).map(bytesPerElement => createNullArray(blockSize, bytesPerElement))

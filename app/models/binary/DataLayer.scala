@@ -3,6 +3,7 @@ package models.binary
 import brainflight.tools.geometry.Point3D
 import brainflight.tools.geometry.Vector3D
 import brainflight.tools.Interpolator
+import scala.collection.mutable.ArrayBuffer
 
 sealed trait DataLayer {
   val folder: String
@@ -13,7 +14,7 @@ sealed trait DataLayer {
   def interpolate(
     resolution: Int,
     blockMap: Map[Point3D, Array[Byte]],
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte]
+    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => ArrayBuffer[Byte])(point: Vector3D): ArrayBuffer[Byte]
 }
 
 case class ColorLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1)) extends DataLayer with TrilerpInterpolation {
@@ -34,7 +35,7 @@ object ColorLayer {
 trait TrilerpInterpolation {
 
   def getColor(
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte],
+    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => ArrayBuffer[Byte],
     resolution: Int,
     blockMap: Map[Point3D, Array[Byte]])(point: Point3D): Double = {
 
@@ -45,7 +46,7 @@ trait TrilerpInterpolation {
   def interpolate(
     resolution: Int,
     blockMap: Map[Point3D, Array[Byte]],
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte] = {
+    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => ArrayBuffer[Byte])(point: Vector3D): ArrayBuffer[Byte] = {
 
     val colorF = getColor(byteLoader, resolution, blockMap) _
     val x = point.x.toInt
@@ -54,7 +55,7 @@ trait TrilerpInterpolation {
 
     val floored = Vector3D(x, y, z)
     if (point == floored) {
-      Array(getColor(byteLoader, resolution, blockMap)(Point3D(x, y, z)).toByte)
+      ArrayBuffer(getColor(byteLoader, resolution, blockMap)(Point3D(x, y, z)).toByte)
     } else {
       val q = Array(
         colorF(Point3D(x, y, z)),
@@ -66,7 +67,7 @@ trait TrilerpInterpolation {
         colorF(Point3D(x + 1, y + 1, z)),
         colorF(Point3D(x + 1, y + 1, z + 1)))
 
-      Array(Interpolator.triLerp(point - floored, q).round.toByte)
+      ArrayBuffer(Interpolator.triLerp(point - floored, q).round.toByte)
     }
   }
 }
@@ -77,7 +78,7 @@ trait NearestNeighborInterpolation {
   def interpolate(
     resolution: Int,
     blockMap: Map[Point3D, Array[Byte]],
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte] = {
+    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => ArrayBuffer[Byte])(point: Vector3D): ArrayBuffer[Byte] = {
     
     val byte = point.x % bytesPerElement
     val x = (point.x - byte + (if (bytesPerElement - 2 * byte >= 0) 0 else bytesPerElement)).toInt

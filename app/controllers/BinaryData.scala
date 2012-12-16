@@ -70,10 +70,10 @@ object BinaryData extends Controller with Secured {
 
     val future = (dataSetActor ? MultiCubeRequest(cubeRequests)) recover {
       case e: AskTimeoutException =>
-        new Array[Byte](0)
+        new ArrayBuffer[Byte](0)
     }
 
-    future.mapTo[Array[Byte]]
+    future.mapTo[ArrayBuffer[Byte]]
   }
 
   def arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String) = Authenticated(parser = parse.raw) { implicit request =>
@@ -126,7 +126,7 @@ object BinaryData extends Controller with Secured {
         message match {
           case dataRequests @ MultipleDataRequest(_) =>
             handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize, halfByte).asPromise.map(result =>
-              Ok(result))
+              Ok(result.toArray))
           case _ =>
             Akka.future {
               BadRequest("Unknown message.")
@@ -163,7 +163,7 @@ object BinaryData extends Controller with Secured {
           BinaryProtocol.parseWebsocket(in).map {
             case dataRequests: MultipleDataRequest =>
               handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize, halfByte).map(
-                result => channel.push(dataRequests.handle ++ result))
+                result => channel.push((result ++= dataRequests.handle).toArray))
             case _ =>
               Logger.error("Received unhandled message!")
           }

@@ -11,6 +11,7 @@ import brainflight.tools.geometry.Vector3D
 import brainflight.tools.Interpolator
 import play.api.Logger
 import brainflight.tools.Math._
+import scala.collection.mutable.ArrayBuffer
 
 case class DataBlock(info: DataBlockInformation, data: Data)
 
@@ -60,7 +61,7 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
     }
   }
 
-  override def load(dataRequest: DataRequest): Array[Byte] = {
+  override def load(dataRequest: DataRequest): ArrayBuffer[Byte] = {
     def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Array[Byte] = {
       val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
 
@@ -113,22 +114,22 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       result
   }
 
-  def convertToHalfByte(a: Array[Byte]) = {
+  def convertToHalfByte(a: ArrayBuffer[Byte]) = {
     val aSize = a.size
     val compressedSize = if (aSize % 2 == 0) aSize / 2 else aSize / 2 + 1
-    val compressed = new Array[Byte](compressedSize)
+    val compressed = new ArrayBuffer[Byte](compressedSize)
     var i = 0
     while (i * 2 + 1 < aSize) {
       val first = (a(i * 2) & 0xF0).toByte
       val second = (a(i * 2 + 1) & 0xF0).toByte >> 4 & 0x0F
       val value = (first | second).asInstanceOf[Byte]
-      compressed.update(i, value)
+      compressed += value
       i += 1
     }
     compressed
   }
 
-  def getBytes(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Array[Byte] = {
+  def getBytes(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): ArrayBuffer[Byte] = {
     val block = pointToBlock(globalPoint, resolution)
     blockMap.get(block) match {
       case Some(byteArray) =>
@@ -139,17 +140,17 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
     }
   }
 
-  def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): Array[Byte] = {
+  def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): ArrayBuffer[Byte] = {
 
     val address = (localPoint.x + localPoint.y * 128 + localPoint.z * 128 * 128) * bytesPerElement
     if (address > data.size) {
       Logger.error("address: %d , Point: (%d, %d, %d), EPB: %d, dataSize: %d".format(address, localPoint.x, localPoint.y, localPoint.z, bytesPerElement, data.size))
       throw new IndexOutOfBoundsException
     } else {
-      val bytes = new Array[Byte](bytesPerElement)
+      val bytes = new ArrayBuffer[Byte](bytesPerElement)
       var i = 0
       while (i < bytesPerElement) {
-        bytes.update(i, data(address + i))
+        bytes += data(address + i)
         i += 1
       }
       bytes

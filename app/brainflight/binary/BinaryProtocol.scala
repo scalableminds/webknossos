@@ -67,7 +67,8 @@ object BinaryProtocol {
    */
   def parseWebsocket( in: Array[Byte] ): Option[BinaryMessage] = {
     if ( in.length >= MinWebSocketRequestSize && in.length % 4 == 0 ) {
-      val ( binHandle, binPayload ) = in.splitAt( HandleLength )
+      val ( binPayload, binHandle ) = in.splitAt( RequestSize )
+      assert(binHandle.size == 4, "Wrong handle size: " + binHandle)
       parsePayload( binPayload ).map { message =>
         message.setHandle( binHandle )
         message

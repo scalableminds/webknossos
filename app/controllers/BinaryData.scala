@@ -98,11 +98,11 @@ object BinaryData extends Controller with Secured {
             .recover {
               case e: AskTimeoutException =>
                 Logger.error("calculateImages: AskTimeoutException")
-                Array.fill[Byte](level.height * level.width * level.depth)(0)
+                new Array[Byte](level.height * level.width * level.depth).toBuffer
             }
-            .mapTo[Array[Byte]].asPromise.map { data =>
+            .mapTo[ArrayBuffer[Byte]].asPromise.map { data =>
               Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
-              Ok(data)
+              Ok(data.toArray)
             }
         }
       } getOrElse {

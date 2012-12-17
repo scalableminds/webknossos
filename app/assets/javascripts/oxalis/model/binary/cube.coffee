@@ -67,39 +67,6 @@ class Cube
         (cubeBoundary[2] + 1) >> 1
       ]
 
-    #@test()
-
-
-  testSetSubBuckets : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
-
-    return if zoomStep == -1
-
-    for dx in [0..1]
-      for dy in [0..1]
-        for dz in [0..1]
-          @requestBucketByZoomedAddress([(bucket_x << 1) + dx, (bucket_y << 1) + dy, (bucket_z << 1) + dz, zoomStep - 1])
-          @setBucketByZoomedAddress([(bucket_x << 1) + dx, (bucket_y << 1) + dy, (bucket_z << 1) + dz, zoomStep - 1], 'DATA')
-
-
-  testSetAllSubBuckets : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
-
-    return if zoomStep == -1
-
-    for dx in [0..1]
-      for dy in [0..1]
-        for dz in [0..1]
-          @setBucketByZoomedAddress([(bucket_x << 1) + dx, (bucket_y << 1) + dy, (bucket_z << 1) + dz, zoomStep - 1], 'DATA')
-          @testSetAllSubBuckets([(bucket_x << 1) + dx, (bucket_y << 1) + dy, (bucket_z << 1) + dz, zoomStep - 1])
-
-
-  test : () ->
-
-    bucket = [10,10,10,1]
-    @testSetSubBuckets(bucket)
-    console.log @getBucketByZoomedAddress(bucket)
-    @tryCollectBucket([20,20,20,0])
-    console.log @getBucketByZoomedAddress(bucket)
-
 
   getBucketIndexByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
@@ -136,7 +103,7 @@ class Cube
 
     if bucket?
 
-      @access.push(address)
+      @access.unshift(address)
       bucket.access++
       bucket.data
 
@@ -191,7 +158,7 @@ class Cube
     if bucketData?
 
       @bucketCount++
-      @access.push([bucket_x, bucket_y, bucket_z, zoomStep])
+      @access.unshift([bucket_x, bucket_y, bucket_z, zoomStep])
 
       bucket.access++
       bucket.data = bucketData
@@ -293,7 +260,7 @@ class Cube
 
     while @bucketCount > @MAXIMUM_BUCKET_COUNT and @access.length
 
-      @tryCollectBucket(@access.shift())
+      @tryCollectBucket(@access.pop())
 
 
   positionToZoomedAddress : ([x, y, z], zoomStep) ->

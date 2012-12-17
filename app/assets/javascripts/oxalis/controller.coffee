@@ -148,10 +148,10 @@ class Controller
 
       #Fullscreen Mode
       "q" : =>
-        canvasesAndNav = @canvasesAndNav
-        requestFullscreen = canvasesAndNav.webkitRequestFullScreen or canvasesAndNav.mozRequestFullScreen or canvasesAndNav.RequestFullScreen
+        body = $("body")[0]
+        requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
         if requestFullscreen
-          requestFullscreen.call(canvasesAndNav, canvasesAndNav.ALLOW_KEYBOARD_INPUT)
+          requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
     
       #ScaleTrianglesPlane

@@ -35,7 +35,7 @@ object LevelCreator extends Controller with Secured {
       .map { level =>
         Ok(html.admin.creator.levelCreator(level, missionId))
       }
-      .getOrElse(BadRequest("Level not found."))
+      .getOrElse(BadRequest(Messages("level.notFound")))
   }
 
   def delete(levelId: String) = Authenticated { implicit request =>
@@ -45,7 +45,7 @@ object LevelCreator extends Controller with Secured {
         Level.remove(level)
         AjaxOk.success(Messages("level.removed"))
       }
-      .getOrElse(AjaxBadRequest.error("Level not found."))
+      .getOrElse(AjaxBadRequest.error(Messages("level.notFound")))
   }
 
   def submitCode(levelId: String) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
@@ -54,8 +54,8 @@ object LevelCreator extends Controller with Secured {
       level <- Level.findOneById(levelId)
     } yield {
       level.update(_.alterCode(code))
-      AjaxOk.success("level.codeSaved")
-    }) getOrElse AjaxBadRequest.error("Missing parameters.")
+      AjaxOk.success(Messages("level.codeSaved"))
+    }) getOrElse AjaxBadRequest.error(Messages("level.notFound"))
   }
 
   def uploadAsset(levelId: String) = Authenticated(parse.multipartFormData) { implicit request =>
@@ -64,9 +64,9 @@ object LevelCreator extends Controller with Secured {
         if (level.addAsset(assetFile.filename, assetFile.ref.file))
           AjaxOk.success(Messages("level.assets.uploadSuccess"))
         else
-          AjaxBadRequest.error("Could not upload.")
+          AjaxBadRequest.error(Messages("level.assets.uploadFailed"))
       }
-    } getOrElse AjaxBadRequest.error("Invalid request or level.")
+    } getOrElse AjaxBadRequest.error(Messages("level.notFound"))
   }
 
   def listAssets(levelId: String) = Authenticated { implicit request =>
@@ -75,7 +75,7 @@ object LevelCreator extends Controller with Secured {
       .map { level =>
         Ok(Json.toJson(level.assets.map(_.getName)))
       }
-      .getOrElse(BadRequest("Level not found."))
+      .getOrElse(AjaxBadRequest.error(Messages("level.notFound")))
   }
 
   def produce(levelId: String) = Authenticated { implicit request =>
@@ -83,9 +83,9 @@ object LevelCreator extends Controller with Secured {
       .findOneById(levelId)
       .map { level =>
         levelCreateActor ! CreateLevel(level)
-        Ok("On my way")
+        AjaxOk.success(Messages("level.creationInProgress"))
       }
-      .getOrElse(BadRequest("Level not found."))
+      .getOrElse(AjaxBadRequest.error(Messages("level.notFound")))
   }
 
   def retrieveAsset(levelId: String, asset: String) = Authenticated { implicit request =>
@@ -96,10 +96,10 @@ object LevelCreator extends Controller with Secured {
           case Some(assetFile) =>
             Ok.sendFile(assetFile, true)
           case _ =>
-            BadRequest("Asset not found.")
+            BadRequest(Messages("level.assets.notFound"))
         }
       }
-      .getOrElse(BadRequest("Level not found."))
+      .getOrElse(BadRequest(Messages("level.notFound")))
   }
 
   def deleteAsset(levelId: String, asset: String) = Authenticated { implicit request =>
@@ -110,10 +110,10 @@ object LevelCreator extends Controller with Secured {
           case true =>
             AjaxOk.success(Messages("level.assets.deleted"))
           case _ =>
-            AjaxBadRequest.error("Asset not found.")
+            AjaxBadRequest.error(Messages("level.assets.notFound"))
         }
       }
-      .getOrElse(AjaxBadRequest.error("Level not found."))
+      .getOrElse(AjaxBadRequest.error(Messages("level.notFound")))
   }
 
   def create = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
@@ -124,7 +124,7 @@ object LevelCreator extends Controller with Secured {
           Level.insertOne(t)
           Ok(html.admin.creator.levelList(Level.findAll, levelForm))
         } else
-          BadRequest("Invalid level name")
+          BadRequest(Messages("level.invalidName"))
       })
   }
 

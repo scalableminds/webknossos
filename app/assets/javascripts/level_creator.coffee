@@ -168,14 +168,13 @@ class LevelCreator
   prepareHeadlessRendering : ->
 
     @$canvas.css(
-      position : "fixed"
-      top : 0
-      left : 0
       width : @canvas.width
       height : @canvas.height
-      zIndex : 2000
-      backgroundColor : "white"
-    )
+    ).appendTo("body")
+
+    $("body")
+      .css(backgroundColor : "transparent")
+      .children().filter(":not(#preview-canvas)").hide()
 
     window.callPhantom( 
       message : "initialized"

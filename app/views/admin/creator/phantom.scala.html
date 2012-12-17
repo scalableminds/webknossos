@@ -35,7 +35,7 @@ page.onCallback = function (data) {
     console.log("rendered frame #" + i + " to " + "@{outputFilepattern}".replace("%i", i));
     
     i++;
-    if (i < length) {
+    if (i <= length) {
       triggerRender();
     } else {
       phantom.exit();

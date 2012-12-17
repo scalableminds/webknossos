@@ -1,4 +1,6 @@
-### define ###
+### define 
+../buffer_utils : BufferUtils
+###
 
 
 class Fade
@@ -14,24 +16,21 @@ class Fade
     mode: "string" # in or out
 
 
-  constructor : () ->
+  constructor : ->
 
 
-  execute : ({ input : { rgba, absoluteTime }, start, end, mode }) ->
+  execute : ({ input , start, end, mode }) ->
 
-    unless start <= absoluteTime <= end
-      return rgba
+    { rgba, absoluteTime } = input
 
-    p = (absoluteTime - start) / (end - start)
-    p1 = 1 - p      
+    return unless start <= absoluteTime <= end
 
-    if mode is "in"
-      startAlpha = 0
-      for i in [0...rgba.length/4]
-        endAlpha = rgba[i * 4 + 3]
-        rgba[i * 4 + 3] = (startAlpha * p1) + (endAlpha * p)
-    else
-      endAlpha = 0
-      for i in [0...rgba.length/4]
-        startAlpha = rgba[i * 4 + 3]
-        rgba[i * 4 + 3] = (startAlpha * p1) + (endAlpha * p)
+    t = (absoluteTime - start) / (end - start)
+    
+    t = 1 - t if mode == "out"
+
+    newRgba = new Uint8Array(rgba.length)
+
+    BufferUtils.alphaBlendBuffer(newRgba, rgba, t)
+
+    input.rgba = newRgba

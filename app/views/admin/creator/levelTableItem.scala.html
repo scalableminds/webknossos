@@ -6,7 +6,7 @@
   <td> @level.width x @level.height x @level.depth </td>
   <td>  
     <a href="@controllers.admin.routes.LevelCreator.use(level.id, "1")"><i class="icon-pencil"></i> edit</a><br />
-    <a href="@controllers.admin.routes.LevelCreator.produce(level.id)"><i class="icon-retweet"></i> produce</a><br />
+    <a href="@controllers.admin.routes.LevelCreator.produce(level.id)" data-ajax><i class="icon-retweet"></i> produce</a><br />
     <a href="@controllers.admin.routes.LevelCreator.delete(level.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
   </td>
 </tr>

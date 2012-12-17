@@ -5,7 +5,7 @@ import scala.collection.mutable.ArrayBuffer
 import brainflight.tools.Math._
 
 class EmptyDataStore extends DataStore{
-  val nullBlockBuffers = nullArray.map(_.toStream.asInstanceOf[ArrayBuffer[Byte]])
+  val nullBlockBuffers = nullArray.map(_.toBuffer.asInstanceOf[ArrayBuffer[Byte]])
 
   def load(dataRequest: DataRequest) = {
     Promise.pure{

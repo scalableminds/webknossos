@@ -2,8 +2,12 @@
 ./plugins/recolor : Recolor
 ./plugins/blur : Blur
 ./plugins/segment_importer : SegmentImporter
-./plugins/filter_segments_by_distance : FilterSegmentsByDistance
+./plugins/filter_segmentation_by_distance : FilterSegmentationByDistance
 ./plugins/draw_art_cells : DrawArtCells
+./plugins/filter_probability_segmentation : FilterProbabilitySegmentation
+./plugins/filter_start_segmentation : FilterStartSegmentation
+./plugins/fade : Fade
+./plugins/cloudify : Cloudify
 ###
 
 
@@ -13,6 +17,10 @@ class Plugins
 
     @recolor = new Recolor(assetHandler)
     @blur = new Blur()
+    @fade = new Fade()
     @segmentImporter = new SegmentImporter()
-    @filterSegmentsByDistance = new FilterSegmentsByDistance()
+    @filterSegmentationByDistance = new FilterSegmentationByDistance()
+    @filterProbabilitySegmentation = new FilterProbabilitySegmentation()
+    @filterStartSegmentation = new FilterStartSegmentation()
     @drawArtCells = new DrawArtCells()
+    @cloudify = new Cloudify()

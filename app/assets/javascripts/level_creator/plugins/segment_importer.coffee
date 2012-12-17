@@ -26,7 +26,7 @@ class SegmentImporter
     segments = @getSegments(segmentation, dimensions)
 
     @setCenter(segments)
-    @setDistance(segments)
+    @setDistance(segments, dimensions)
 
     for segment in segments
       @setPath(segmentation, segment, dimensions)
@@ -46,10 +46,10 @@ class SegmentImporter
         value = segmentation[i]
         i++
 
-        continue if value is 0
+        #continue if value is 0
 
         #is segment already there
-        segment = _.detect(segements, (s) -> s.value is value)
+        segment = _.detect(segments, (s) -> s.value is value)
 
         if segment?
           
@@ -117,8 +117,14 @@ class SegmentImporter
     while (x isnt startX or y isnt startY) or i < 5
       i++
       
-      front = segmentationData[(y + directions[direction].y ) * 
-        height + (x + directions[direction].x)]
+      if 0 <= (y + directions[direction].y) < height and 
+      0 <= (x + directions[direction].x) < width
+        front = segmentationData[(y + directions[direction].y ) * 
+          height + (x + directions[direction].x)]  
+
+      else
+        front = -1
+
 
       if front is value
         x += directions[direction].x
@@ -130,12 +136,25 @@ class SegmentImporter
         leftDirection = (direction + 3) % 4
         backDirection = (leftDirection + 3) % 4
 
-        left = segmentationData[(y + directions[leftDirection].y ) * height + 
-          (x + directions[leftDirection].x)] 
+        if 0 <= (y + directions[leftDirection].y) < height and 
+        0 <= (x + directions[leftDirection].x) < width
+          left = segmentationData[(y + directions[leftDirection].y ) * height + 
+            (x + directions[leftDirection].x)]            
+        else
+          left = -1
 
-        leftBack = segmentationData[(y + directions[leftDirection].y + 
-          directions[backDirection].y) * height + 
-          (x + directions[leftDirection].x + directions[backDirection].x)] 
+
+        if 0 <= (y + directions[leftDirection].y) < height and
+        0 <= (y + directions[backDirection].y) < height and
+        0 <= (x + directions[leftDirection].x) < width and
+        0 <= (x + directions[backDirection].x) < width
+
+          leftBack = segmentationData[(y + directions[leftDirection].y + 
+            directions[backDirection].y) * height + 
+            (x + directions[leftDirection].x + directions[backDirection].x)] 
+        else
+          leftBack = -1
+
 
         if leftBack isnt value and left is value
           direction = (direction + 3) % 4

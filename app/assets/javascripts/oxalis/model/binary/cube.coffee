@@ -191,17 +191,20 @@ class Cube
     if bucketData?
 
       @bucketCount++
+      @access.push([bucket_x, bucket_y, bucket_z, zoomStep])
+
+      bucket.access++
       bucket.data = bucketData
       bucket.level = 0
 
       # the bucket with a lower zoomStep can maybe be assembled
       # from buckets with the current zoomStep now
-      @updateBucketChain([
-        bucket_x >> 1
-        bucket_y >> 1
-        bucket_z >> 1
-        zoomStep + 1
-      ])
+      #@updateBucketChain([
+      #  bucket_x >> 1
+      #  bucket_y >> 1
+      #  bucket_z >> 1
+      #  zoomStep + 1
+      #])
 
       @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, zoomStep])
 
@@ -271,13 +274,13 @@ class Cube
 
       # if buckets with a lower zoomStep rely on this bucket
       # they need to get informed
-      @updateBucket([bucket_x, bucket_y, bucket_z, zoomStep])
-      @updateBucketChain([
-        bucket_x >> 1
-        bucket_y >> 1
-        bucket_z >> 1
-        zoomStep + 1
-      ])
+      #@updateBucket([bucket_x, bucket_y, bucket_z, zoomStep])
+      #@updateBucketChain([
+      #  bucket_x >> 1
+      #  bucket_y >> 1
+      #  bucket_z >> 1
+      #  zoomStep + 1
+      #])
       true
 
     else

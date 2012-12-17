@@ -146,18 +146,18 @@ case class Cuboid(
       var y = topLeft.y
       var z = topLeft.z
       var idx = 0
-      while (x < xhMax) {
+      while (z < zhMax) {
         y = topLeft.y
         while (y < yhMax) {
-          z = topLeft.z
-          while (z < zhMax) {
+          x = topLeft.x
+          while (x < xhMax) {
             array ++= f(x, y, z)
-            z += resolution
+            x += resolution
             idx += extendArrayBy
           }
           y += resolution
         }
-        x += resolution
+        z += resolution
       }
       array
     }(f)

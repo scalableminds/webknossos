@@ -3,7 +3,7 @@ package brainflight.io
 import java.io.File
 import name.pachler.nio.file.Path
 import name.pachler.nio.file.impl.PathImpl
-import models.binary.DataSet
+import models.binary._
 import brainflight.tools.geometry.Point3D
 import play.api.Logger
 import brainflight.tools.ExtendedTypes._
@@ -12,16 +12,16 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {
     val file = path.asInstanceOf[PathImpl].getFile
     val files = file.listFiles()
-
-    if (files != null){
+    Logger.trace("DataSetChangeHandler.onStart: files: %s".format(files.mkString(", ")))
+    if (files != null) {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
           DataSet.updateOrCreate(dataSet)
           dataSet.name
         }
       }
-println("Found datasets " + foundDataSets.mkString(","))
-      //DataSet.deleteAllExcept(foundDataSets)
+      Logger.info("Found datasets " + foundDataSets.mkString(","))
+      DataSet.deleteAllExcept(foundDataSets)
     }
   }
 
@@ -71,23 +71,22 @@ println("Found datasets " + foundDataSets.mkString(","))
   def dataSetFromFile(f: File): Option[DataSet] = {
     if (f.isDirectory) {
       Logger.trace("dataSetFromFile: " + f)
-      val resolutions = f.listFiles().filter(_.isDirectory).flatMap(_.getName.toIntOpt).toList
-      (for {
-        res <- highestResolutionDir(listDirectories(f))
+      
+      for {
+        colorLayer <- listDirectories(f).find(dir => dir.getName == ColorLayer.identifier)
+        resolutionDirectories = listDirectories(colorLayer)
+        resolutions = resolutionDirectories.flatMap(_.getName.toIntOpt).toList
+        res <- highestResolutionDir(resolutionDirectories)
         xs <- listDirectories(res).headOption
         ys <- listDirectories(xs).headOption
         xMax <- maxValueFromFiles(res.listFiles())
         yMax <- maxValueFromFiles(xs.listFiles())
         zMax <- maxValueFromFiles(ys.listFiles())
       } yield {
-        (xMax, yMax, zMax)
-      }) map {
-        case (xMax, yMax, zMax) =>
           val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
-          DataSet(f.getName(), f.getAbsolutePath(), resolutions, maxCoordinates)
+          DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, dataLayers = Map[String, DataLayer](ColorLayer.identifier -> ColorLayer(supportedResolutions = resolutions)))
       }
-    } else
-      None
+    } else None
   }
 
 }

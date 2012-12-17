@@ -53,11 +53,13 @@ class ArrayBufferSocket.WebSocket
 
   # Constants
   OPEN_TIMEOUT : 500
-  MESSAGE_TIMEOUT : 20000
+  MESSAGE_TIMEOUT : 10000
 
-  pendingRequests : []
 
   constructor : (@url) ->
+
+    @pendingRequests = new Array(256)
+    @nextHandle = 0
 
   open : ({ @responseBufferType, @requestBufferType }) ->
     
@@ -87,7 +89,7 @@ class ArrayBufferSocket.WebSocket
 
           @socket = null
           
-          request.reject("socket closed") for request in @pendingRequests
+          request.reject("socket closed") for request in @pendingRequests when request?
           @pendingRequests.length = 0
           
           console?.error("socket closed", "#{code}: #{reason}")
@@ -100,18 +102,17 @@ class ArrayBufferSocket.WebSocket
         (event) =>
 
           buffer = event.data
-          handle = new Float32Array(buffer, 0, 1)[0]
+          handle = new Uint8Array(buffer, buffer.byteLength - 1, 1)[0]
           
-          for request in @pendingRequests when request.handle == handle
+          request = @pendingRequests[handle]
             
-            _.removeElement(@pendingRequests, request)
+          @pendingRequests[handle] = undefined
 
-            if buffer.byteLength > 4
-              request.resolve(new @responseBufferType(buffer, 4))
-            else
-              request.reject()
-            
-            break
+          if buffer.byteLength > 1
+            request.resolve(new @responseBufferType(buffer, 0, (buffer.byteLength - 1) / @responseBufferType.BYTES_PER_ELEMENT))
+          else
+            request.reject()
+
           return
           
         false
@@ -136,8 +137,8 @@ class ArrayBufferSocket.WebSocket
       deferred = $.Deferred()
       deferred.handle = socketHandle
       
-      @pendingRequests.push(deferred)
-      @socket.send(transmitBuffer.buffer)
+      @pendingRequests[socketHandle] = deferred
+      @socket.send(transmitBuffer)
     
       setTimeout(
         => 
@@ -159,10 +160,20 @@ class ArrayBufferSocket.WebSocket
 
   createPackage : (data) ->
 
-    transmitBuffer    = new @requestBufferType(1 + data.length)
-    transmitBuffer[0] = Math.random()
-    transmitBuffer.set(data, 1)
-    socketHandle      = transmitBuffer[0]
+    dataLength = if data.byteLength?
+      data.byteLength
+    else
+      data.length * @requestBufferType.BYTES_PER_ELEMENT
+
+    transmitBuffer = new ArrayBuffer(dataLength + 1)
+
+    payloadBuffer = new @requestBufferType(transmitBuffer, 0, data.length)
+    payloadBuffer.set(data)
+    
+    handleBuffer = new Uint8Array(transmitBuffer, dataLength, 1)
+    socketHandle = handleBuffer[0] = @nextHandle
+
+    @nextHandle = (@nextHandle + 1) % 256
 
     { transmitBuffer, socketHandle }
 
@@ -175,7 +186,7 @@ class ArrayBufferSocket.WebWorker
 
   # Constants
   OPEN_TIMEOUT : 500
-  MESSAGE_TIMEOUT : 20000
+  MESSAGE_TIMEOUT : 10000
 
   pendingRequests : []
 
@@ -288,6 +299,8 @@ class ArrayBufferSocket.WebWorker
 
 class ArrayBufferSocket.XmlHttpRequest
 
+  MESSAGE_TIMEOUT : 10000
+
   constructor : (@url) ->
 
   open : ({ @responseBufferType, @requestBufferType }) ->
@@ -299,6 +312,7 @@ class ArrayBufferSocket.XmlHttpRequest
       data : data
       url : @url
       dataType : 'arraybuffer'
+      timeout : @MESSAGE_TIMEOUT
     ).pipe (buffer) =>
 
       if buffer

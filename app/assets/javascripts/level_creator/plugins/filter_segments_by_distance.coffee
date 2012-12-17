@@ -11,7 +11,7 @@ class FilterSegmentsByDistance
       segments: '[]'
     width: 'int'
     height: 'int'
-    distance : ''
+    distance : 'int'
     comparisonMode : 'string' # e.g. '<='
 
 

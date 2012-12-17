@@ -11,6 +11,10 @@ GET     /game/initialize                    controllers.Game.initialize
 # Tasks
 GET     /tasks/requestTask                  controllers.TaskController.request
 
+# Missions
+POST    /missions                           controllers.admin.MissionAdministration.insertMissions
+GET     /missions                           controllers.Knowledge.missions(dataSetId: String)
+
 # Jira integration
 GET     /jira                               controllers.Jira.index
 POST    /jira                               controllers.Jira.submit
@@ -31,11 +35,11 @@ POST    /user/configuration                 controllers.UserController.saveSetti
 GET     /user/configuration                 controllers.UserController.showSettings
 
 # Binary Data
-GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(levelId: String, taskId: String)
-GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int, halfByte: Boolean )
-POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int, halfByte: Boolean )
-GET     /binary/create                      controllers.BinaryData.createGrid(dataSetName: String)
-GET     /binary/ajax                        controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
+GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String)
+GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int, halfByte: Boolean )
+POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int, halfByte: Boolean )
+GET     /binary/create                      controllers.BinaryData.createGrid(dataSetName: String, dataLayerName: String)
+GET     /binary/ajax                        controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
 
 # Tracing Stuff
 POST    /tracing/create                     controllers.TracingController.createExplorational

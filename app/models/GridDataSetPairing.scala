@@ -14,13 +14,14 @@ import scala.concurrent.Future
 import play.api.libs.concurrent.execution.defaultContext
 import reactivemongo.bson.handlers.BSONWriter
 import play.api.libs.concurrent.Akka
+import models.binary.DataLayer
 /**
  * scalableminds - brainflight
  * User: tmbo
  * Date: 10.12.11
  * Time: 12:58
  */
-case class GridDataSetPairing(dataSetName: String, dataPrefix: Int, _id: ObjectId = new ObjectId) {
+case class GridDataSetPairing(dataSetName: String, dataLayerName: String, resolution: Int, dataPrefix: Int, _id: ObjectId = new ObjectId) {
   def id = _id.toString
 }
 
@@ -30,6 +31,8 @@ object GridDataSetPairing {
       BSONDocument(
         "_id" -> BSONObjectID(gridPrairing.id),
         "dataSetName" -> BSONString(gridPrairing.dataSetName),
+        "dataLayerName" -> BSONString(gridPrairing.dataLayerName),
+        "resolution" -> BSONInteger(gridPrairing.resolution),
         "dataPrefix" -> BSONInteger(gridPrairing.dataPrefix))
     }
   }
@@ -37,8 +40,11 @@ object GridDataSetPairing {
   import context.BinaryDB._
   val collection = db.collection("dataSetPairing")
 
-  def findPrefix(dataSet: DataSet) = {
-    val query = BSONDocument("dataSetName" -> BSONString(dataSet.name))
+  def findPrefix(dataSet: DataSet, dataLayer: DataLayer, resolution: Int) = {
+    val query = BSONDocument(
+        "dataSetName" -> BSONString(dataSet.name),
+        "dataLayerName" -> BSONString(dataLayer.folder),
+        "resolution" -> BSONInteger(resolution))
 
     // get a Cursor[BSONDocument]
     val cursor = collection.find(query)
@@ -59,12 +65,12 @@ object GridDataSetPairing {
     }
   }
 
-  def getOrCreatePrefix(dataSet: DataSet) = {
-    findPrefix(dataSet).flatMap {
+  def getOrCreatePrefix(dataSet: DataSet, dataLayer: DataLayer, resolution: Int) = {
+    findPrefix(dataSet, dataLayer, resolution).flatMap {
       case Some(p) => Akka.future { p }
       case _ =>
         createNextPrefix.map { prefix =>
-          collection.insert(GridDataSetPairing(dataSet.name, prefix))
+          collection.insert(GridDataSetPairing(dataSet.name, dataLayer.folder, resolution, prefix))
           prefix
         }
     }

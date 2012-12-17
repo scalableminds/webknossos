@@ -16,7 +16,7 @@ import play.api.libs.concurrent.execution.defaultContext
  */
 class FileDataStore( cacheAgent: Agent[Map[DataBlockInformation, Data]]) 
   extends CachedDataStore( cacheAgent ){
-
+  import DataStore._
   /**
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
@@ -29,10 +29,7 @@ class FileDataStore( cacheAgent: Agent[Map[DataBlockInformation, Data]])
         Enumerator.fromFile(new File(createFilename( dataSet, dataLayer, resolution, block )))
       } catch {
         case e: FileNotFoundException =>
-          Logger.warn("Block %s not found!".format(createFilename( dataSet, dataLayer, resolution, block )))
-          // if the file block isn't found, a nullBlock is associated with 
-          // the coordinates
-          Enumerator(nullBlock(dataLayer.bytesPerElement))
+          throw new DataNotFoundException
       }
     val it = Iteratee.consume[Array[Byte]]()
     dataEnum(it).flatMap(_.mapDone{ rawData =>

@@ -77,12 +77,14 @@ object BinaryData extends Controller with Secured {
     future.mapTo[Promise[ArrayBuffer[Byte]]]
   }
 
-  def requestViaAjaxDebug(dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated { implicit request =>
+  def requestViaAjaxDebug(dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolutionExponent: Int) = Authenticated { implicit request =>
     Async {
       (for {
         dataSet <- DataSet.findOneById(dataSetId)
         dataLayer <- dataSet.dataLayers.get(dataLayerName)
       } yield {
+        println("I am on it.")
+        val resolution = resolutionFromExponent(resolutionExponent)
         val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z))))
         handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize, false).asPromise.flatMap(_.map(result =>
           Ok(result.toArray)))
@@ -193,23 +195,4 @@ object BinaryData extends Controller with Secured {
       })
       (input, output)
   }
-
-  def createGrid(dataSetName: String, dataLayerName: String) = Action {
-    import brainflight.binary.GridDataStore
-    import akka.agent.Agent
-    import brainflight.binary.DataBlockInformation
-    import brainflight.binary.Data
-
-    implicit val system = Akka.system
-    val BinaryCacheAgent = Agent(Map[DataBlockInformation, Data]().empty)
-
-    (for {
-      dataSet <- DataSet.findOneByName(dataSetName)
-      dataLayer <- dataSet.dataLayers.get(dataLayerName)
-    } yield {
-      new GridDataStore(BinaryCacheAgent).create(dataSet, dataLayer, 1)
-      Ok
-    }) getOrElse BadRequest("DataSet not found!")
-  }
-
 }

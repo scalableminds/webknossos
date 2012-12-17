@@ -38,7 +38,6 @@ GET     /user/configuration                 controllers.UserController.showSetti
 GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String)
 GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int, halfByte: Boolean )
 POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int, halfByte: Boolean )
-GET     /binary/create                      controllers.BinaryData.createGrid(dataSetName: String, dataLayerName: String)
 GET     /binary/ajax                        controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
 
 # Tracing Stuff
@@ -109,6 +108,11 @@ GET     /admin/level/:id/produce            controllers.admin.LevelCreator.produ
 POST    /admin/level/:id/uploadAsset        controllers.admin.LevelCreator.uploadAsset(id: String)
 GET     /admin/level/:id/deleteAsset/*asset controllers.admin.LevelCreator.deleteAsset(id: String, asset: String)
 GET     /admin/level/:id/asset/*asset       controllers.admin.LevelCreator.retrieveAsset(id: String, asset: String)
+
+# Binary Administration
+GET     /admin/binaryDB                    controllers.admin.BinaryDataAdministration.list
+GET     /admin/binaryDB/insert             controllers.admin.BinaryDataAdministration.insertIntoDB(dataSetName: String)
+GET     /admin/binaryDB/insertionState     controllers.admin.BinaryDataAdministration.insertionProgress
 
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.Application.javascriptRoutes

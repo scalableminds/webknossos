@@ -25,7 +25,7 @@ class Binary
 
     @dataSetId = dataSet.id
 
-    @cube = new Cube(dataSet.upperBoundary)
+    @cube = new Cube(dataSet.upperBoundary, dataSet.resolutions.length)
     @queue = new PullQueue(@dataSetId, @cube)
 
     @planes = []
@@ -63,20 +63,19 @@ class Binary
 
     unless _.isEqual(position, @lastPosition) and _.isEqual(options, @lastOptions)
 
-      console.log position, @queue.roundTripTime, @queue.bucketsPerSecond
-
       @lastPosition = position.slice()
       @lastOptions = options.slice()
 
-      console.time "ping"
-      @queue.clear()
+      console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond
 
+      #console.time "ping"
+      @queue.clear()
 
       for plane in @planes
         plane.ping(position, @direction, options[plane.index]) if options[plane.index]? 
 
       @queue.pull()
-      console.timeEnd "ping"
+      #console.timeEnd "ping"
 
 
   # Not used anymore. Instead the planes get-functions are called directly.

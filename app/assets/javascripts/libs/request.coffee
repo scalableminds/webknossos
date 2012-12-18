@@ -43,6 +43,12 @@ Request =
 
       xhr.send(options.data)
 
+      if options.timeout?
+        setTimeout(
+          -> deferred.reject("timeout")
+          options.timeout
+        )
+
       deferred.promise()
 
     else

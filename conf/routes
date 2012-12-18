@@ -2,67 +2,110 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# The home page
-GET     /                                   controllers.Test.index
-GET     /index                              controllers.Application.index
+# The general pages
+GET     /                                   controllers.Game.index
+GET     /trace/:tracingId                   controllers.Game.trace(tracingId: String)
+GET     /dashboard                          controllers.UserController.dashboard
+GET     /game/initialize                    controllers.Game.initialize
+
+# Tasks
+GET     /tasks/requestTask                  controllers.TaskController.request
 
 # Jira integration
 GET     /jira                               controllers.Jira.index
 POST    /jira                               controllers.Jira.submit
 
 # Authentication
-GET     /login                              controllers.Application.login
-POST    /login                              controllers.Application.authenticate
-GET     /logout                             controllers.Application.logout
-GET     /register                           controllers.Application.register
-POST    /register                           controllers.Application.registrate
-GET     /verify/:key                        controllers.UserController.verify( key: String )
+GET     /login                              controllers.Authentication.login
+POST    /login                              controllers.Authentication.authenticate
+GET     /logout                             controllers.Authentication.logout
+GET     /register                           controllers.Authentication.register
+POST    /register                           controllers.Authentication.registrate
+
+GET     /login/fb                           controllers.login.FacebookLogin.login
+GET     /login/fb/code                      controllers.login.FacebookLogin.loginCode(code: String)
+GET     /login/tw                           controllers.login.TwitterLogin.login
 
 # User settings
 POST    /user/configuration                 controllers.UserController.saveSettings
 GET     /user/configuration                 controllers.UserController.showSettings
 
-# Facebook
-GET     /login/fb                           controllers.login.FacebookLogin.login
-GET     /login/fb/code                      controllers.login.FacebookLogin.loginCode(code: String)
-
-# Twitter
-GET     /login/tw                           controllers.login.TwitterLogin.login
-
 # Binary Data
-GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int )
-POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int )
+GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(levelId: String, taskId: String)
+GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int, halfByte: Boolean )
+POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int, halfByte: Boolean )
 
-# Game Stuff
-GET     /game/initialize                    controllers.Game.initialize
+# Tracing Stuff
+POST    /tracing/create                     controllers.TracingController.createExplorational
+GET     /tracing                            controllers.TracingController.list
+GET     /tracing/:tracingId                 controllers.TracingController.info( tracingId: String )
+PUT     /tracing/:tracingId                 controllers.TracingController.update( tracingId: String )
+GET     /tracing/:tracingId/finishAndRedirect  controllers.TracingController.finishWithRedirect( tracingId: String )
+GET     /tracing/:tracingId/finish          controllers.TracingController.finish( tracingId: String, explorational: Boolean = false )
+GET     /tracing/:tracingId/finishExperimental controllers.TracingController.finish( tracingId: String, explorational: Boolean = true )
 
-# Experiment Stuff
-POST      /experiment                       controllers.ExperimentController.useAsActive(id: String, isNew: Boolean)
-GET       /experiment                       controllers.ExperimentController.list
-GET       /experiment/:experimentId         controllers.ExperimentController.info( experimentId: String )
-PUT       /experiment/:experimentId         controllers.ExperimentController.update( experimentId: String )
-
-# GET     /route/list                       controllers.Route.list
-# POST    /route/:id                        controllers.Route.blackBox(id: String)
-# GET			/route/:id												controllers.Route.getRoute(id: String)
-
-# Test pages
-GET     /test/                              controllers.Test.index
-GET     /test/demo                          controllers.Test.demo
-GET     /test/tests                         controllers.Test.tests
-
-#Performance test pages 
-GET     /performance/timegridfs             controllers.PerformanceTest.timeGridFS
-GET     /performance/timefiledatastore      controllers.PerformanceTest.timeFileDataStore
 
 #Admin pages
-GET     /admin/nmldownload                  controllers.admin.NMLIO.downloadList
-GET     /admin/nmlupload                    controllers.admin.NMLIO.uploadForm
-POST    /admin/nmlupload                    controllers.admin.NMLIO.upload
-GET     /admin/nmldownload/:taskId          controllers.admin.NMLIO.download( taskId: String )
+GET     /admin/nml/upload                    controllers.admin.NMLIO.uploadForm
+POST    /admin/nml/upload                    controllers.admin.NMLIO.upload
+
+
+# Admin Tasks
+GET     /admin/tasks/algorithm              controllers.admin.TaskAlgorithm.index
+POST    /admin/tasks/algorithm              controllers.admin.TaskAlgorithm.submitAlgorithm
+GET     /admin/tasks/algorithm/:id?use=true controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
+
+GET     /admin/taskTypes                    controllers.admin.TaskTypeAdministration.list
+POST    /admin/taskTypes/create             controllers.admin.TaskTypeAdministration.create
+GET     /admin/taskTypes/:id/delete         controllers.admin.TaskTypeAdministration.delete(id: String)
+
+GET     /admin/tasks                        controllers.admin.TaskAdministration.list
+GET     /admin/tasks/:id/delete             controllers.admin.TaskAdministration.delete(id: String)
+GET     /admin/tasks/create                 controllers.admin.TaskAdministration.create
+POST    /admin/tasks/createBulk             controllers.admin.TaskAdministration.createBulk
+POST    /admin/tasks/createFromTracing      controllers.admin.TaskAdministration.createFromTracing
+POST    /admin/tasks/createFromForm         controllers.admin.TaskAdministration.createFromForm
+GET     /admin/tasks/overview               controllers.admin.TaskAdministration.overview
+
+GET     /admin/trainingsTasks               controllers.admin.TrainingsTaskAdministration.list
+GET     /admin/trainingsTasks/create        controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
+POST    /admin/trainingsTasks/createFromForm controllers.admin.TrainingsTaskAdministration.createFromForm
+POST    /admin/trainingsTasks/createFromTracing controllers.admin.TrainingsTaskAdministration.createFromTracing
+GET     /admin/trainingsTasks/:id/delete    controllers.admin.TrainingsTaskAdministration.delete(id: String)
+
+GET     /admin/training/:id/startReview     controllers.admin.TrainingsTracingAdministration.startReview(id: String)
+GET     /admin/training/:id/abortReview     controllers.admin.TrainingsTracingAdministration.abortReview(id: String)
+GET     /admin/training/:id/finishReview    controllers.admin.TrainingsTracingAdministration.finishReview(id: String)
+POST    /admin/training/:id/finishReview    controllers.admin.TrainingsTracingAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
+
+
+# User Administration
+GET     /admin/users                        controllers.admin.UserAdministration.index
+POST    /admin/users/verify                 controllers.admin.UserAdministration.verifyBulk
+POST    /admin/users/delete                 controllers.admin.UserAdministration.deleteBulk
+GET     /admin/users/:id/verify             controllers.admin.UserAdministration.verify(id: String)
+GET     /admin/users/:id/delete             controllers.admin.UserAdministration.delete(id: String)
+GET     /admin/users/:id/loginAs            controllers.admin.UserAdministration.loginAsUser(id: String)
+POST    /admin/users/addRole                controllers.admin.UserAdministration.addRoleBulk
+POST    /admin/users/removeRole             controllers.admin.UserAdministration.removeRoleBulk
+
+GET     /admin/tracings/:id/review          controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
+GET     /admin/tracings/:id/download        controllers.admin.NMLIO.download( id: String )
+
+# Level Creator
+GET     /admin/level                        controllers.admin.LevelCreator.list
+POST    /admin/level/create                 controllers.admin.LevelCreator.create
+GET     /admin/level/:id/assets             controllers.admin.LevelCreator.listAssets(id: String)
+GET     /admin/level/:id/delete             controllers.admin.LevelCreator.delete(id: String)
+GET     /admin/level/:id                    controllers.admin.LevelCreator.use(id: String, missionId: String)
+POST    /admin/level/:id/code               controllers.admin.LevelCreator.submitCode(id: String)
+GET     /admin/level/:id/produce            controllers.admin.LevelCreator.produce(id: String)
+POST    /admin/level/:id/uploadAsset        controllers.admin.LevelCreator.uploadAsset(id: String)
+GET     /admin/level/:id/deleteAsset/*asset controllers.admin.LevelCreator.deleteAsset(id: String, asset: String)
+GET     /admin/level/:id/asset/*asset       controllers.admin.LevelCreator.retrieveAsset(id: String, asset: String)
 
 # Javascript routing
-GET     /assets/javascripts/routes          controllers.Application.javascriptRoutes
+GET     /assets/javascripts/routes.js       controllers.Application.javascriptRoutes
 
 # Map static resources from the /public folder to the /public path
 GET     /assets/*file                       controllers.Assets.at(path="/public", file)

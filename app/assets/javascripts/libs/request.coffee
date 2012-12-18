@@ -1,45 +1,60 @@
-### define ###
+### define
+jquery : $
+underscore : _
+###
 
-request = (options) ->
+Request =
 
-  deferred = $.Deferred()
+  send : (options) ->
 
-  _.defaults(options,
-    method: 'GET',
-    responseType: null,
-    data: null
-    contentType: null
-  )
+    options.type ||= options.method
 
-  return deferred.reject('No url defined').promise() unless options.url
+    if options.dataType == "blob" or options.dataType == "arraybuffer" or options.formData?
 
-  if options.data
-    options.data = JSON.stringify(options.data) if options.contentType == 'application/json'
-    options.data = jQuery.param(options.data)   if options.contentType == 'application/x-www-form-urlencoded'
-    options.method = 'POST' if options.method == 'GET'
+      deferred = $.Deferred()
 
-  xhr = new XMLHttpRequest()
-  xhr.open options.method, options.url, true
-  if options.responseType && options.responseType != "json"
-    xhr.responseType = options.responseType 
-  xhr.setRequestHeader('Content-Type', options.contentType) if options.contentType
+      return deferred.reject("No url defined").promise() unless options.url
 
-  xhr.onload = ->
-    if @status == 200
-      if options.responseType == "json"
-        try
-          data = JSON.parse @response
-        catch error
-          return deferred.reject(error)
-        deferred.resolve(data)
-      else
-        deferred.resolve(@response)
+      _.defaults(options, type: "GET", data: null)
+
+      options.type = "POST" if options.type == "GET" and options.data
+
+      xhr = new XMLHttpRequest()
+      xhr.open options.type, options.url, true
+      xhr.responseType = options.dataType if options.dataType?
+      xhr.setRequestHeader("Content-Type", options.contentType) if options.contentType
+
+      if options.formData? and not options.data
+        if options.formData instanceof FormData
+          options.data = options.formData
+        else
+          options.data = new FormData()
+          options.data.append(key, value) for key, value of options.formData
+
+
+      xhr.onload = ->
+        if @status == 200
+          deferred.resolve(@response)
+        else
+          deferred.reject(@statusText)
+
+      xhr.onerror = (err) ->
+        deferred.reject(err)
+
+      xhr.send(options.data)
+
+      if options.timeout?
+        setTimeout(
+          -> deferred.reject("timeout")
+          options.timeout
+        )
+
+      deferred.promise()
+
     else
-      deferred.reject(@statusText)
-  
-  xhr.onerror = (err) ->
-    deferred.reject(err)
 
-  xhr.send(options.data)
+      if options.data
+        options.data = JSON.stringify(options.data)
+        options.contentType = "application/json" unless options.contentType
 
-  deferred.promise()
+      $.ajax(options)

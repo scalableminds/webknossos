@@ -1,14 +1,16 @@
 package brainflight.binary
 
-import models.DataSet
 import brainflight.tools.geometry.Point3D
 import play.api.Play.current
 import play.api.Play
 import brainflight.tools.geometry.Point3D
-import models.DataSet
+import models.binary.DataSet
 import brainflight.tools.geometry.Cuboid
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import akka.agent.Agent
+import brainflight.tools.geometry.Vector3D
+import brainflight.tools.Interpolator
+import play.api.Logger
 
 case class DataBlock( info: DataBlockInformation, data: Data)
 
@@ -83,8 +85,8 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   /*
    * Load the binary data of the given coordinate from file
    */
-  override def load( dataSet: DataSet, resolution: Int, cube: Cuboid ): Array[Byte] = { 
-    if ( dataSet doesContain cube.topLeft ) { 
+  override def load( dataSet: DataSet, resolution: Int, cube: Cuboid, halfbyte: Boolean = false ): Array[Byte] = { 
+    if ( dataSet doesContain cube.topLeft ) {
       val block = PointToBlock( cube.topLeft, resolution )     
       val blockInfo = DataBlockInformation( dataSet.id, block, resolution )
       
@@ -93,13 +95,12 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
               loadAndCacheData( dataSet, block, resolution ) }).value
       
       lastUsed = Some(blockInfo -> Data(byteArray))
-       
       
       val startX = (cube.topLeft.x / resolution) % 128 
       val startY = (cube.topLeft.y / resolution) % 128 
       val startZ = (cube.topLeft.z / resolution) % 128 
       
-      val result = new Array[Byte]( cube.volume )
+      val result = new Array[Byte]( if(halfbyte) cube.volume/2 else cube.volume)
       
       var idx = 0
       var y = 0
@@ -110,12 +111,26 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       val edgeY = cube.edgeLengthY
       val edgeZ = cube.edgeLengthZ
       
+      var prevPixelColor: Byte = 0
+      
       while( x < startX + edgeX){
         y = startY
         while( y < startY + edgeY){
           z = startZ
           while( z < startZ + edgeZ){
-            result.update( idx, byteArray( ( z * 128 * 128 + y * 128 + x ) ))
+            if(halfbyte){
+              val pixelColor = (byteArray( ( z * 128 * 128 + y * 128 + x ) ) & 0xF0).toByte
+              if(idx % 2 == 1){
+                val twoPixelColor = 
+                  (prevPixelColor | (pixelColor >> 4 & 0x0F) ).asInstanceOf[Byte]
+                result.update( idx / 2, twoPixelColor)
+              } else {
+                prevPixelColor = pixelColor
+              }
+            } else {
+              result.update( idx, byteArray( ( z * 128 * 128 + y * 128 + x ) ))
+            }
+            
             idx += 1
             z+=1
           } 
@@ -129,6 +144,91 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       new Array[Byte]( cube.volume )
     }
   }
+
+  def getColor(point: Point3D, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Double = {
+    val block = PointToBlock(point, resolution)
+    val color = blockMap.get(block) match {
+      case Some(byteArray) =>
+        byteArray((((point.z / resolution) % 128) * 128 * 128 + ((point.y / resolution) % 128) * 128 + (point.x / resolution) % 128))
+      case _ =>
+        println("Didn't find block! :(")
+        0.toByte
+    }
+    (0xff & color.asInstanceOf[Int])
+  }
+
+  def interpolatedColor(point: Vector3D, r: Int, b: Map[Point3D, Array[Byte]]) = {
+    val x = point.x.toInt
+    val y = point.y.toInt
+    val z = point.z.toInt
+
+    val floored = Vector3D(x, y, z)
+    if (point == floored) {
+      getColor(Point3D(x, y, z), r, b).toByte
+    } else {
+      val q = Array(
+        getColor(Point3D(x, y, z), r, b),
+        getColor(Point3D(x, y, z + 1), r, b),
+        getColor(Point3D(x, y + 1, z), r, b),
+        getColor(Point3D(x, y + 1, z + 1), r, b),
+        getColor(Point3D(x + 1, y, z), r, b),
+        getColor(Point3D(x + 1, y, z + 1), r, b),
+        getColor(Point3D(x + 1, y + 1, z), r, b),
+        getColor(Point3D(x + 1, y + 1, z + 1), r, b))
+
+      Interpolator.triLerp(point - floored, q).round.toByte
+    }
+  }
+
+  override def loadInterpolated(dataSet: DataSet, resolution: Int, globalPoints: Array[Vector3D]): Array[Byte] = {
+    val t = System.currentTimeMillis()
+    def loadFromSomewhere(dataSet: DataSet, resolution: Int, block: Point3D): Array[Byte] = {
+      val blockInfo = DataBlockInformation(dataSet.id, block, resolution)
+
+      ((useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)).map(
+        d => d.value) getOrElse (
+          loadAndCacheData(dataSet, block, resolution).value))
+    }
+    val maxVector = globalPoints.foldLeft((0.0, 0.0, 0.0))((b, e) => (
+      math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
+    var minVector = globalPoints.foldLeft(maxVector)((b, e) => (
+      math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
+
+    val minPoint = Point3D(math.max(minVector._1 - 1, 0).toInt, math.max(minVector._2 - 1, 0).toInt, math.max(minVector._3 - 1, 0).toInt)
+
+    val minBlock = PointToBlock(minPoint, resolution)
+    val maxBlock = PointToBlock(Point3D(maxVector._1.ceil.toInt + 1, maxVector._2.ceil.toInt + 1, maxVector._3.ceil.toInt + 1), resolution)
+
+    var blockPoints: List[Point3D] = Nil
+    var blockData: List[Array[Byte]] = Nil
+
+    for {
+      x <- minBlock.x to maxBlock.x
+      y <- minBlock.y to maxBlock.y
+      z <- minBlock.z to maxBlock.z
+    } {
+      val p = Point3D(x, y, z)
+      blockPoints ::= p
+      blockData ::= loadFromSomewhere(dataSet, resolution, p)
+    }
+    
+      Logger.debug("loadFromSomewhere: %d ms".format(System.currentTimeMillis() - t))
+      val blockMap = blockPoints.zip(blockData).toMap
+      val size = globalPoints.size
+      var result = new Array[Byte](size)
+      var idx = 0
+      val iter = globalPoints.iterator
+      val t2 = System.currentTimeMillis()
+      while (iter.hasNext) {
+        val point = iter.next
+        val color = interpolatedColor(point, resolution, blockMap)
+        result(idx) = color
+        idx += 1
+      }
+      Logger.debug("loading&interp: %d ms, Sum: ".format(System.currentTimeMillis() - t2, result.sum))
+      result
+  }
+  
   /**
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.

@@ -1,8 +1,9 @@
 package nml
 
 import scala.xml.XML
-import models.DataSet
-import models.graph.{ Experiment, Tree, Edge }
+import models.binary.DataSet
+import models.graph.{ Tree, Edge }
+import models.tracing.Tracing
 import models.graph
 import models.Color
 import brainflight.tools.ExtendedTypes._
@@ -12,38 +13,15 @@ import scala.xml.NodeSeq
 import play.api.Logger
 import models.graph.Tree
 import java.io.File
-import models.BranchPoint
+import models.graph.BranchPoint
 import brainflight.tools.geometry.Scale
+import models.user.User
+import com.sun.org.apache.xerces.internal.impl.io.MalformedByteSequenceException
+import models.graph.Comment
 
-class NMLParser(file: File) {
-  val DEFAULT_EDIT_POSITION = Point3D(0, 0, 0)
-  val DEFAULT_TIME = 0
-  val DEFAULT_ACTIVE_NODE_ID = 1
-  val DEFAULT_COLOR = Color(1, 0, 0, 0)
-  val DEFAULT_VIEWPORT = 0
-  val DEFAULT_RESOLUTION = 0
-  val DEFAULT_TIMESTAMP = 0
+case class NMLContext(user: User)
 
-  def parse = {
-    val data = XML.loadFile(file)
-    for {
-      parameters <- (data \ "parameters")
-      dataSetName <- (parameters \ "experiment" \ "@name")
-      scale <- parseScale(parameters \ "scale")
-    } yield {
-      val activeNodeId = parseActiveNode(parameters \ "activeNode")
-      val editPosition = parseEditPosition(parameters \ "editPosition")
-      val time = parseTime(parameters \ "time")
-      val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
-      val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
-      Experiment(dataSetName.text, trees, branchPoints.toList, time, activeNodeId, scale, editPosition)
-    }
-  }
-
-  def verifyTrees(trees: List[Tree]): List[Tree] = {
-    createUniqueIds(trees.flatMap(splitIntoComponents))
-  }
-
+object NMLParser {
   def createUniqueIds(trees: List[Tree]) = {
     trees.foldLeft(List[Tree]()) { (l, t) =>
       if (l.isEmpty || l.find(_.id == t.id).isEmpty)
@@ -53,6 +31,43 @@ class NMLParser(file: File) {
         t.copy(id = alteredId) :: l
       }
     }
+  }
+}
+
+class NMLParser(file: File)(implicit ctx: NMLContext) {
+  val DEFAULT_EDIT_POSITION = Point3D(0, 0, 0)
+  val DEFAULT_TIME = 0
+  val DEFAULT_ACTIVE_NODE_ID = 1
+  val DEFAULT_COLOR = Color(1, 0, 0, 0)
+  val DEFAULT_VIEWPORT = 0
+  val DEFAULT_RESOLUTION = 0
+  val DEFAULT_TIMESTAMP = 0
+
+  def parse: Seq[Tracing] = {
+    try{
+      val data = XML.loadFile(file)
+      for {
+        parameters <- (data \ "parameters")
+        scale <- parseScale(parameters \ "scale")
+      } yield {
+        val dataSetName = parseDataSetName(parameters \ "experiment")
+        val activeNodeId = parseActiveNode(parameters \ "activeNode")
+        val editPosition = parseEditPosition(parameters \ "editPosition")
+        val time = parseTime(parameters \ "time")
+        val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
+        val comments = parseComments(data \ "comments").toList
+        val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
+        Tracing(ctx.user._id, dataSetName, trees, branchPoints.toList, time, activeNodeId, scale, editPosition, comments)
+      }
+    } catch {
+      case e: Exception =>
+        Logger.error("Failed to parse NML due to " + e)
+        List()
+    }
+  }
+
+  def verifyTrees(trees: List[Tree]): List[Tree] = {
+    NMLParser.createUniqueIds(trees.flatMap(splitIntoComponents))
   }
 
   def splitIntoComponents(tree: Tree): List[Tree] = {
@@ -80,6 +95,12 @@ class NMLParser(file: File) {
       components ::= component
     }
     components
+  }
+
+  def parseDataSetName(node: NodeSeq) = {
+    val rawDataSetName = (node \ "@name").text
+    val magRx = "_mag[0-9]*$".r
+    magRx.replaceAllIn(rawDataSetName, "")
   }
 
   def parseActiveNode(node: NodeSeq) = {
@@ -141,6 +162,16 @@ class NMLParser(file: File) {
       else
         None
     }).flatMap(x => x)
+  }
+  
+  def parseComments(comments: NodeSeq) = {
+    for {
+      comment <- comments \ "comment"
+      node <- ((comment \ "@node").text).toIntOpt
+    } yield {
+      val content = (comment \ "@content").text
+      Comment(node, content)
+    }
   }
 
   def findRootNode(treeNodes: Map[Int, Node], edges: List[Edge]) = {

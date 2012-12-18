@@ -1,0 +1,101 @@
+@(showNavButtons: Boolean = true)(implicit session: brainflight.view.SessionData)
+
+@import models.security._
+
+<header class="navbar navbar-static-top navbar-inverse">
+  <div class="navbar-inner">
+    @if(showNavButtons){
+      <a class="brand" href="@routes.Game.index">Oxalis</a>
+      <ul class="nav">
+        <li class="divider-vertical"></li>
+        <li>
+          <a href="@routes.UserController.dashboard"><i class="icon-home icon-white"></i> Dashboard</a>
+        </li>
+        @session.userOpt.filter( _.hasPermission(Permission("admin.menu"))).map{ user =>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+              <i class="icon-wrench icon-white"></i>
+              Administration
+              <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+              <li>
+                <a href="@controllers.admin.routes.LevelCreator.list">Level creator</a>
+              </li>             
+              <li>
+                <a href="@controllers.admin.routes.UserAdministration.index">Users</a>
+              </li>  
+              <li class="dropdown-submenu">
+                <a tabindex="-1" href="@controllers.admin.routes.TaskAdministration.list">Tasks</a>
+                <ul class="dropdown-menu">
+                    <li>
+                      <a href="@controllers.admin.routes.TaskAdministration.create">Create</a>
+                    </li>
+                    <li>
+                      <a href="@controllers.admin.routes.TaskAdministration.list">List</a>
+                    </li>
+                    <li>
+                      <a href="@controllers.admin.routes.TaskAdministration.overview">Overview</a>
+                    </li>
+                    <li>
+                      <a href="@controllers.admin.routes.TaskTypeAdministration.list">Types</a>
+                    </li>
+                    <li>
+                      <a href="@controllers.admin.routes.TaskAlgorithm.index">Algorithm</a>
+                    </li>
+                </ul>
+              </li>
+              <li class="dropdown-submenu">
+                <a tabindex="-1" href="@controllers.admin.routes.TrainingsTaskAdministration.list">Trainings-Tasks</a>
+                <ul class="dropdown-menu">
+                    <li>
+                      <a href="@controllers.admin.routes.TrainingsTaskAdministration.create()">Create</a>
+                    </li>
+                    <li>
+                      <a href="@controllers.admin.routes.TrainingsTaskAdministration.list">List</a>
+                    </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        }
+       <li>
+          <a href="@routes.Jira.index" data-newwindow="700x470"><i class="icon-fire icon-white"></i> Submit an issue</a>
+        </li>
+        <li class="divider-vertical"></li>
+      </ul>
+      @session.userOpt.map{ user =>
+
+        <ul class="nav pull-right">
+          <li class="divider-vertical"></li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+              <i class="icon-user icon-white"></i>  <strong>@user.name</strong> <span>(@user.email)</span>
+              <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+              <li>
+                <a href="#"><i class="icon-edit"></i> Edit Profile</a>
+              </li>
+              <li>
+                <a href="@routes.Authentication.logout()"><i class="icon-off"></i> Logout</a>
+              </li>
+            </ul>
+          </li>
+        </ul>           
+        
+        
+
+      }.getOrElse{
+        <ul class="nav pull-right">
+          <li>
+            <a href="@controllers.routes.Authentication.login()">Login</a>
+          </li>
+        </ul>
+
+      }
+    } else {
+      <span class="brand">Oxalis</span>
+    }
+  </div>
+</header>

@@ -24,6 +24,9 @@ case class Tree(id: Int, nodes: List[Node], edges: List[Edge], color: Color) {
 }
 
 object Tree {
+  
+  def empty = Tree(1, Nil, Nil, Color(1, 0, 0, 0))
+  
   implicit object TreeXMLWrites extends XMLWrites[Tree] {
     def writes(t: Tree) =
       <thing id={ t.id.toString } color.r={ t.color.r.toString } color.g={ t.color.g.toString } color.b={ t.color.b.toString } color.a={ t.color.a.toString }>
@@ -55,10 +58,9 @@ object Tree {
     val VIEWPORT = "viewport"
     val RESOLUTION = "resolution"
     val TIMESTAMP = "timestamp"
-    val COMMENT = "comment"
 
     def writes(n: Node): JsObject = {
-      val j = Json.obj(
+      Json.obj(
         ID -> n.id,
         RADIUS -> n.radius,
         POSITION -> n.position,
@@ -66,10 +68,6 @@ object Tree {
         RESOLUTION -> n.resolution,
         TIMESTAMP -> n.timestamp
       )
-      n.comment match {
-        case Some(c) => j ++ Json.obj("comment" -> c)
-        case _       => j
-      }
     }
 
     def reads(js: JsValue) =
@@ -78,8 +76,7 @@ object Tree {
         (js \ POSITION).as[Point3D],
         (js \ VIEWPORT).as[Int],
         (js \ RESOLUTION).as[Int],
-        (js \ TIMESTAMP).as[Long],
-        (js \ COMMENT).asOpt[String])
+        (js \ TIMESTAMP).as[Long])
   }
 
   implicit object TreeFormat extends Format[Tree] {

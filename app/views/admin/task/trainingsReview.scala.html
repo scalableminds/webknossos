@@ -1,0 +1,7 @@
+@(tracing: models.tracing.Tracing, form: Form[String])(implicit session: brainflight.view.AuthedSessionData)
+
+@main(){
+	<div class="container">
+  	@trainingsReviewItem(tracing, form)
+  </div>
+}

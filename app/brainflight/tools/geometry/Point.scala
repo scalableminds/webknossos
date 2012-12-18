@@ -17,9 +17,23 @@ case class Point3D(x: Int, y:Int, z:Int){
     
   def hasGreaterCoordinateAs( other: Point3D ) = 
     x > other.x || y > other.y || z > other.z
+    
+  override def toString = "(%d, %d, %d)".format(x,y,z)
 }
 
 object Point3D{
+  val formRx = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
+  def toForm(p: Point3D) = Some( "%d, %d, %d".format(p.x,p.y,p.z))  
+  
+  def fromForm(s: String) = {
+    s match{
+      case formRx(x,y,z) =>
+        Point3D(Integer.parseInt(x),Integer.parseInt(y),Integer.parseInt(z))
+      case _ =>
+        null
+    }
+  }
+  
   def fromArray[T <%Int ](array: Array[T]) = 
     if( array.size >= 3 )
       Some( Point3D( array(0), array(1), array(2) ) )

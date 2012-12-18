@@ -1,0 +1,16 @@
+@(algorithms: List[models.task.TaskSelectionAlgorithm], current: models.task.TaskSelectionAlgorithm)(implicit session: brainflight.view.AuthedSessionData)
+
+@main(){
+  <div class="container" id="task-selection-algoritm">
+    @helper.form(action = controllers.admin.routes.TaskAlgorithm.submitAlgorithm) {
+      
+      <input type="submit" value="Save" class="btn btn-primary">
+      <input type="hidden" name="code" />
+      <input type="hidden" name="use" value="1" />
+
+      <div class="editor-wrapper">
+        <div id="editor">@current.js</div>
+      </div>
+    }
+  </div>
+}

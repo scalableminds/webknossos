@@ -1,0 +1,56 @@
+@(users: List[models.user.User], taskTypes: List[models.task.TaskType], usersWithTasks: Map[models.user.User, models.task.TaskType], futureTasks: Map[models.user.User, models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
+
+@import models.Color
+
+@userDot(user: models.user.User) = {
+  @Html("\"" + user.name + "\" [id=\""+ user.id +"\", shape=box, fillcolor=\"" + Color.jet(math.min(50, user.lastActivityDays) * (128 / 50) + 128).toHtml + "\"];")
+}
+
+@taskTypeDot(taskType: models.task.TaskType) = {
+  @Html("\"" + taskType.summary + "\"")
+}
+
+@edge(a: String, b: String) = {
+  @Html("\"" + a + "\"->\"" + b +"\";")
+}
+
+@userToolTip(user: models.user.User) = { 
+  Last Activity: @user.lastActivityDays days ago<br /> 
+  Experiences: <br />
+  @user.experiences.map{ experience =>
+    @experience._1 : @experience._2 <br />
+  }
+}
+
+@main(){
+  <div class="container">
+    <h3>TaskType - User Overview</h3>
+    <p>All ovals symbolize task types. Users are drawn as rectangles. Blue lines symbolize the next task type the user gets, after he has finished his current task. If the user currently has a task, then there is a black arrow drawn to the task type of the task. </p>
+    <div class="graph well">
+      <p><i class="icon-refresh rotating"></i> Loading ...</p>
+    </div>
+
+    <script type="text/vnd.graphviz" id="graphData">
+      digraph G {
+        size="10,10";
+        overlap=false;
+        graph [ bgcolor="transparent" ];
+        node [ fontname="Helvetica,Arial,sans-serif", fontsize=10.5, style=filled, fillcolor="#ffffff", pencolor="black" ];
+        @Html(taskTypes.map( taskTypeDot ).mkString("\n"))
+        @Html(users.map( userDot ).mkString("\n"))
+        @Html(usersWithTasks.map( e =>
+          edge(e._1.name, e._2.summary)).mkString("\n"))
+        edge [ color=blue ];
+        @Html(futureTasks.map( e =>
+          edge(e._1.name, e._2.summary)).mkString("\n"))
+      }
+    </script>
+    <script type="text/json" id="userData">
+      [
+        @Html(users.map{ user =>
+          "{ \"id\" : \"" + user.id.toLowerCase + "\", \"name\" : \"" + user.name + "\", \"tooltip\" : \"" + userToolTip(user).trim + "\" }"
+        }.mkString(",\n"))
+      ]
+    </script>
+  </div>
+}

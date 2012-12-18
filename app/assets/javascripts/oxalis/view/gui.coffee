@@ -173,7 +173,11 @@ class Gui
                 globalPositionChanged : (position) => 
                   @updateGlobalPosition(position)
                 zoomFactorChanged : (factor) =>
-                  $("#zoomFactor").html("<p>Zoom factor: " + factor + "</p>")
+                  nm = factor * 384 * @model.scaleInfo.baseVoxel
+                  if(nm<1000)
+                    $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
+                  else
+                    $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " mm</p>")
 
     @model.route.on  
                       newActiveNode    : => @update()

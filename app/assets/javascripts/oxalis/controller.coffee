@@ -120,8 +120,8 @@ class Controller
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
-            delta.x * @model.user.mouseInversionX
-            delta.y * @model.user.mouseInversionX
+            delta.x * @model.user.mouseInversionX / @view.scaleFactor
+            delta.y * @model.user.mouseInversionX / @view.scaleFactor
             0
           ]
         scroll : @scroll

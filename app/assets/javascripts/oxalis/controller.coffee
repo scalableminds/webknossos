@@ -194,6 +194,8 @@ class Controller
       "space" : (first) => @moveZ( @model.user.moveValue, first)
       "f" : (first) => @moveZ( @model.user.moveValue, first)
       "d" : (first) => @moveZ( - @model.user.moveValue, first)
+      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
+      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
 
       "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
       "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)

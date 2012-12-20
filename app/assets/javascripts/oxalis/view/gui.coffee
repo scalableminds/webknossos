@@ -76,8 +76,8 @@ class Gui
                           .onChange(@setMouseInversionY)
 
     fView = @gui.addFolder("Planes")
-    (fView.add @settings, "moveValue", 1, 10) 
-                          .step(0.25)
+    (fView.add @settings, "moveValue", 0.1, 10) 
+                          .step(0.1)
                           .name("Move Value")    
                           .onChange(@setMoveValue)
     scale = @model.scaleInfo.baseVoxel

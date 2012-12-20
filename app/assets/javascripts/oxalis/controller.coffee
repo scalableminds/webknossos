@@ -29,6 +29,7 @@ class Controller
   constructor : ->
 
     _.extend(@, new EventMixin())
+    @fullScreen = false
 
     @model = new Model()
 
@@ -146,14 +147,6 @@ class Controller
 
     new Input.Keyboard(
 
-      #Fullscreen Mode
-      "q" : =>
-        body = $("body")[0]
-        requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
-        if requestFullscreen
-          requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
-
-    
       #ScaleTrianglesPlane
       "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
       "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
@@ -171,6 +164,10 @@ class Controller
     )
     
     new Input.KeyboardNoLoop(
+
+      #Fullscreen Mode
+      "q" : => @toggleFullScreen()
+
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 
@@ -253,6 +250,19 @@ class Controller
           @zoomIn()
         else
           @zoomOut()
+
+  toggleFullScreen : =>
+    if @fullScreen
+      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
+      @fullScreen = false
+      if cancelFullscreen
+        cancelFullscreen.call(document)
+    else
+      body = $("body")[0]
+      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
+      @fullScreen = true
+      if requestFullscreen
+        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
 
   ########### Click callbacks

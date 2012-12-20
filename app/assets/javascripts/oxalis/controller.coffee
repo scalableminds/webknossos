@@ -184,7 +184,11 @@ class Controller
       #Delete active node
       "delete" : => @deleteActiveNode()
 
-      "n" : => @createNewTree()
+      "c" : => @createNewTree()
+
+      #Comments
+      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
+      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
 
       #Move
       "space" : (first) => @moveZ( @model.user.moveValue, first)

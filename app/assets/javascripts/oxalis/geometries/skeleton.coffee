@@ -185,7 +185,8 @@ class Skeleton
       if @activeNodeSphere
         @activeNodeSphere.visible = false
         if @route.getActiveNodeType() == TYPE_BRANCH
-          @activeNode.material.color.setHex(COLOR_BRANCH_ACTIVE)
+          treeColor = @route.getTree().color
+          @activeNode.material.color.setHex(treeColor * 0.7)
         else
           @activeNode.material.color.setHex(COLOR_ACTIVE)
 

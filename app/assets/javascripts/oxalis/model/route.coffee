@@ -242,7 +242,10 @@ class Route
     if @activeNode
       @activeNode.appendNext(point)
       point.appendNext(@activeNode)
-    @activeNode = point
+      @activeNode = point
+    else
+      @activeNode = point
+      @pushBranch()
     @lastActiveNodeId = @activeNode.id
     @doubleBranchPop = false
     @push()

@@ -21,8 +21,7 @@ class DataSetActor extends Actor {
   implicit val system = ActorSystem("agents")
 
   val BinaryCacheAgent = Agent(Map[DataBlockInformation, Data]().empty)
-  val dataStores = List(new GridDataStore(BinaryCacheAgent),
-      new FileDataStore(BinaryCacheAgent), new EmptyDataStore)
+  val dataStores = List(new GridDataStore(BinaryCacheAgent), new FileDataStore(BinaryCacheAgent), new EmptyDataStore(BinaryCacheAgent))
 
   def receive = {
     case SingleRequest(dataRequest) =>
@@ -35,16 +34,17 @@ class DataSetActor extends Actor {
         results.foldLeft(new ArrayBuffer[Byte](size))(_ ++= _)
       }
   }
-  
+
   def loadFromSomewhere(dataRequest: DataRequest) = {
     def loadFromStore(dataStores: List[DataStore]): Promise[ArrayBuffer[Byte]] = dataStores match {
       case h :: tail =>
-        h.load(dataRequest).recoverWith{
+        h.load(dataRequest).recoverWith {
           case e: DataNotFoundException =>
+            println("Not found: " + e.toString)
             loadFromStore(tail)
         }
       case _ =>
-        throw new DataNotFoundException
+        throw new DataNotFoundException("DataSetActor")
     }
     loadFromStore(dataStores)
   }

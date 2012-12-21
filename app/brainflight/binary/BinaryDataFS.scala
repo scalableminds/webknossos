@@ -26,6 +26,6 @@ class BinaryDataFS(d: DB[Collection] with DBMetaCommands, p: String = "fs") exte
    * @return an iteratee to be applied to an enumerator of chunks of bytes.
    */
   override def save(name: String, id: Option[BSONValue], contentType: Option[String] = None)(implicit ctx: ExecutionContext): Iteratee[Array[Byte], Future[ReadFileEntry]] =
-    FileToWrite(id, name, contentType).iteratee(this, 4194304)
+    FileToWrite(id, name, contentType).iteratee(this, 2359296)
 
 }

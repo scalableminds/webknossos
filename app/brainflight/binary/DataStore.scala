@@ -20,7 +20,7 @@ case class DataRequest(
   cuboid: Cuboid,
   useHalfByte: Boolean = false)
   
-class DataNotFoundException extends Exception("Could not find the data")  
+class DataNotFoundException(message: String) extends Exception(message + " Could not find the data")  
 
 abstract class DataStore {
 

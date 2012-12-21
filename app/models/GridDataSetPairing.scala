@@ -21,11 +21,13 @@ import models.binary.DataLayer
  * Date: 10.12.11
  * Time: 12:58
  */
-case class GridDataSetPairing(dataSetName: String, dataLayerName: String, resolution: Int, dataPrefix: Int, _id: ObjectId = new ObjectId) {
+case class GridDataSetPairing(dataSetName: String, dataLayerName: String, resolution: Int, dataPrefix: Long, _id: ObjectId = new ObjectId) {
   def id = _id.toString
 }
 
 object GridDataSetPairing {
+  import models.context.BinaryDB._
+  
   implicit object GridDataSetPairingBSONWriter extends BSONWriter[GridDataSetPairing] {
     def toBSON(gridPrairing: GridDataSetPairing) = {
       BSONDocument(
@@ -33,11 +35,10 @@ object GridDataSetPairing {
         "dataSetName" -> BSONString(gridPrairing.dataSetName),
         "dataLayerName" -> BSONString(gridPrairing.dataLayerName),
         "resolution" -> BSONInteger(gridPrairing.resolution),
-        "dataPrefix" -> BSONInteger(gridPrairing.dataPrefix))
+        "dataPrefix" -> BSONLong(gridPrairing.dataPrefix))
     }
   }
 
-  import context.BinaryDB._
   val collection = db.collection("dataSetPairing")
 
   def findPrefix(dataSet: DataSet, dataLayer: DataLayer, resolution: Int) = {
@@ -45,18 +46,18 @@ object GridDataSetPairing {
         "dataSetName" -> BSONString(dataSet.name),
         "dataLayerName" -> BSONString(dataLayer.folder),
         "resolution" -> BSONInteger(resolution))
-
+        
     // get a Cursor[BSONDocument]
     val cursor = collection.find(query)
     cursor.headOption.map {
-      _.map {
-        _.getAs[BSONInteger]("dataPrefix").get.value
+      _.map { d =>
+        d.getAs[BSONLong]("dataPrefix").get.value
       }
     }
   }
 
-  private def createNextPrefix: Future[Int] = {
-    collection.find(BSONDocument()).toList.map(_.map(_.getAs[BSONInteger]("dataPrefix").get.value)).map { prefixValues =>
+  private def createNextPrefix: Future[Long] = {
+    collection.find(BSONDocument()).toList.map(_.map(_.getAs[BSONLong]("dataPrefix").get.value)).map { prefixValues =>
       if (prefixValues.isEmpty) {
         0
       } else {

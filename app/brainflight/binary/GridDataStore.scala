@@ -33,7 +33,7 @@ case class InsertBinary(dataSet: DataSet)
 case class InsertionState()
 
 class BinaryData2DBActor extends Actor {
-  val insertionState = Agent[Map[DataSet, Double]](Map())(Akka.system)
+  val insertionState = Agent[Map[DataSet, (Int, Int)]](Map())(Akka.system)
 
   //GridFs handle
   lazy val connection = MongoConnection(List("localhost:27017"))
@@ -47,7 +47,8 @@ class BinaryData2DBActor extends Actor {
         create(dataSet)
       }
     case InsertionState() =>
-      sender ! insertionState()
+      val state = insertionState()
+      sender ! state.mapValues(i => i._1 / i._2.toDouble)
   }
 
   def create(dataSet: DataSet) = {
@@ -60,7 +61,7 @@ class BinaryData2DBActor extends Actor {
         val maxZ = ((max.z / 128.0).ceil - 1).toInt
 
         var idx = 0
-        val maxAll: Double = maxX * maxY * maxZ
+        val maxAll = maxX * maxY * maxZ
         for {
           x <- 0 to maxX
           y <- 0 to maxY
@@ -73,7 +74,10 @@ class BinaryData2DBActor extends Actor {
           val progress = idx / maxAll
           Enumerator.fromFile(f)(it).map(_.mapDone { future =>
             future.map(result =>
-              insertionState send (_.updated(dataSet, progress)))
+              insertionState send { d =>
+                val p = d.get(dataSet) getOrElse (0 -> 0)
+                d.updated(dataSet, (p._1 + 1 -> maxAll))
+              })
           })
           idx += 1
         }
@@ -94,45 +98,43 @@ class GridDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]])
   // let's build an index on our gridfs chunks collection if none
   gridFS.ensureIndex()
 
-  def asyncLoadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Future[Iterable[Promise[Iteratee[_, Array[Byte]]]]] = {
-    GridDataSetPairing.findPrefix(dataSet, dataLayer, resolution).flatMap(s =>
-      Future.sequence(s.map { prefix =>
-        val r = gridFS.find(BSONDocument(
-          "_id" -> new BSONObjectID(GridDataStore.point3DToId(prefix, block)))).toList
-        val arrayBuffer = new ArrayBuffer[Byte](128 * 128 * 128)
-        val it = Iteratee.consume[Array[Byte]]()
+  def asyncLoadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Future[Iteratee[_, Array[Byte]]] = {
+    GridDataSetPairing.findPrefix(dataSet, dataLayer, resolution).flatMap {
+      _ match {
+        case Some(prefix) =>
+          val r = gridFS.find(BSONDocument(
+            "_id" -> new BSONObjectID(GridDataStore.point3DToId(prefix, block)))).toList
+          val arrayBuffer = new ArrayBuffer[Byte](128 * 128 * 128)
+          val it = Iteratee.consume[Array[Byte]]()
 
-        val f = r.map {
-          case file :: _ =>
-            val e = file.enumerate
-            e.apply(it)
-          case _ =>
-            throw new DataNotFoundException
-        }
-        f
-      }.seq))
+          val f = r.flatMap {
+            case file :: _ =>
+              val e = file.enumerate
+              e.apply(it)
+            case _ =>
+              Future.failed(new DataNotFoundException("GRIDFS1"))
+          }
+          f
+        case _ =>
+          Future.failed(new DataNotFoundException("GRIDFS1"))
+      }
+    }
   }
 
   def loadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Promise[DataBlock] = {
     val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
-    asyncLoadBlock(dataSet, dataLayer, resolution, block).map { iter =>
-      val y = iter match {
-        case head :: _ =>
-          head.flatMap(_.mapDone { rawData =>
-            val data = Data(rawData)
-            val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
-            DataBlock(blockInfo, data)
-          }.run)
-        case _ =>
-          throw new DataNotFoundException
-      }
-      y
-    }.flatMap(x => x)
+    asyncLoadBlock(dataSet, dataLayer, resolution, block).flatMap {
+      _.mapDone { rawData =>
+        val data = Data(rawData)
+        val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
+        DataBlock(blockInfo, data)
+      }.run
+    }
   }
 }
 
 object GridDataStore {
-  def point3DToId(prefix: Int, point: Point3D): String = {
+  def point3DToId(prefix: Long, point: Point3D): String = {
     "%012d%04d%04d%04d".format(prefix, point.x, point.y, point.z)
   }
 }

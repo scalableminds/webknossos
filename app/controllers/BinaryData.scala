@@ -31,11 +31,12 @@ import brainflight.tools.geometry.Vector3D
 import models.knowledge.Level
 import brainflight.binary.Cuboid
 import akka.agent.Agent
+import akka.routing.RoundRobinRouter
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 object BinaryData extends Controller with Secured {
 
-  val dataSetActor = Akka.system.actorOf(Props(new DataSetActor))
+  val dataSetActor = Akka.system.actorOf(Props(new DataSetActor).withRouter(new RoundRobinRouter(10)))
 
   override val DefaultAccessRole = Role.User
 
@@ -77,14 +78,12 @@ object BinaryData extends Controller with Secured {
     future.mapTo[Promise[ArrayBuffer[Byte]]]
   }
 
-  def requestViaAjaxDebug(dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolutionExponent: Int) = Authenticated { implicit request =>
+  def requestViaAjaxDebug(dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated { implicit request =>
     Async {
       (for {
         dataSet <- DataSet.findOneById(dataSetId)
         dataLayer <- dataSet.dataLayers.get(dataLayerName)
       } yield {
-        println("I am on it.")
-        val resolution = resolutionFromExponent(resolutionExponent)
         val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z))))
         handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize, false).asPromise.flatMap(_.map(result =>
           Ok(result.toArray)))

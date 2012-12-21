@@ -37,8 +37,6 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   // defines how many file handles are deleted when the limit is reached
   val dropCount = conf.getInt("bindata.cacheDropCount") getOrElse 20
 
-  var lastUsed: Option[Tuple2[DataBlockInformation, Data]] = None
-
   /**
    * Uses the coordinates of a point to calculate the data block the point
    * lays in.
@@ -55,18 +53,10 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
       (point.y / resolution) % blockLength,
       (point.z / resolution) % blockLength)
 
-  def useLastUsed(blockInfo: DataBlockInformation) =
-    lastUsed.flatMap {
-      case (info, data) if info == blockInfo =>
-        Some(data)
-      case _ =>
-        None
-    }
-
   override def load(dataRequest: DataRequest): Promise[ArrayBuffer[Byte]] = {
     def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Promise[Array[Byte]] = {
       val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
-      (useLastUsed(blockInfo) orElse cacheAgent().get(blockInfo)).map(b => Promise.pure(b.value)).getOrElse(
+      cacheAgent().get(blockInfo).map(b => Promise.pure(b.value)).getOrElse(
               loadAndCacheData(dataSet, dataLayer, resolution, block).map(_.value))
     }
 
@@ -161,6 +151,7 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   def loadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D): Promise[DataBlock]
 
   def loadAndCacheData(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D): Promise[Data] = {
+    ensureCacheMaxSize
     loadBlock(dataSet, dataLayer, resolution, point).map { block =>
       cacheAgent send (_ + (block.info -> block.data))
       block.data

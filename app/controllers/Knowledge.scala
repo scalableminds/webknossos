@@ -10,13 +10,12 @@ import models.binary.DataSet
 
 object Knowledge extends Controller with Secured {
 
-  def missions(dataSetId: String) = Authenticated { implicit request =>
+  def missions(dataSetName: String) = Authenticated { implicit request =>
     (for {
-      dataSet <- DataSet.findOneById(dataSetId)
+      dataSet <- DataSet.findOneByName(dataSetName)
       missions <- Mission.findByDataSetName(dataSet.name)
-
     } yield {
-      println(missions.mkString)
-      Ok(Json.toJson(missions))}) getOrElse BadRequest("No dataset with id %s found".format(dataSetId))
+      Ok(Json.toJson(missions))
+    }) getOrElse BadRequest("No dataset or Mission for dataset %s found".format(dataSetName))
   }
 }

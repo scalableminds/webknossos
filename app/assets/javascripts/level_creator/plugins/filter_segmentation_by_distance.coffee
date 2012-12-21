@@ -1,6 +1,6 @@
 ### define ###
 
-class FilterSegmentsByDistance
+class FilterSegmentationByDistance
 
   DESCRIPTION : "Returns all segments that are farer or nearer than the given distance"
 
@@ -9,8 +9,7 @@ class FilterSegmentsByDistance
       rgba: 'Uint8Array'
       segmentation: 'Uint8Array'
       segments: '[]'
-    width: 'int'
-    height: 'int'
+      dimensions : '[]'
     distance : 'int'
     comparisonMode : 'string' # e.g. '<='
 
@@ -21,8 +20,11 @@ class FilterSegmentsByDistance
 
   execute : (options) ->
 
-    { input: { rgba, segmentations, segments }, width, height, distance, comparisonMode } = options
+    { input: { rgba, segmentation, segments, dimensions }, distance, comparisonMode } = options
 
+    width = dimensions[0]
+    height = dimensions[1]
+    
     values = []
     compareFunc = new Function("a","b", "return a #{comparisonMode} b;")
 
@@ -30,10 +32,11 @@ class FilterSegmentsByDistance
       if compareFunc(segment.distance, distance)
         values.push segment.value
 
+    j = 0
     for h in [0...height] by 1
       for w in [0...width] by 1
-        i = h * height + w
-        s = segmentations[i]
+        i = h * width + w
+        s = segmentation[i]
 
         if _.contains(values, s) is false
           rgba[i * 4 + 3] = 0

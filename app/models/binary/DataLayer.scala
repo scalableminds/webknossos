@@ -4,6 +4,7 @@ import brainflight.tools.geometry.Point3D
 import brainflight.tools.geometry.Vector3D
 import brainflight.tools.Interpolator
 import scala.collection.mutable.ArrayBuffer
+import play.api.libs.json._
 
 trait TrilerpInterpolation {
 
@@ -71,10 +72,29 @@ sealed trait DataLayer {
     byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte]
 }
 
+trait DataLayerJsonFormat[T <: DataLayer] extends Format[T]{
+  val BYTES_PER_ELEMENT="bytesPerElement"
+  val SUPPORTED_RESOLUTIONS="supportedResolutions"
+    
+  def elementClassToBitCount(elementClass: String) = elementClass match {
+    case "uint8" => 8
+    case "uint16" => 16
+    case "uint32" => 32
+    case "uint64" => 64
+    case _ => throw new IllegalArgumentException("illegal element class (%s) for DataLayer".format(elementClass))
+  }
+  
+  def writes(dataLayer: T) = Json.obj(
+      BYTES_PER_ELEMENT -> dataLayer.bytesPerElement,
+      SUPPORTED_RESOLUTIONS -> Json.toJson(dataLayer.supportedResolutions)
+  )
+  
+}
+
 case class ColorLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1)) extends DataLayer with TrilerpInterpolation {
   val folder = ColorLayer.identifier
 }
-case class ClassificationLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1), order: List[String]) extends DataLayer with NearestNeighborInterpolation {
+case class ClassificationLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1), flags: List[String]) extends DataLayer with NearestNeighborInterpolation {
   val folder = ClassificationLayer.identifier
 }
 case class SegmentationLayer(elementSize: Int = 8, supportedResolutions: List[Int] = List(1)) extends DataLayer with NearestNeighborInterpolation {
@@ -84,15 +104,28 @@ case class SegmentationLayer(elementSize: Int = 8, supportedResolutions: List[In
 object ColorLayer {
   val default = ColorLayer(8, List(1))
   def identifier = "color"
+   
+  implicit object ColorLayerFormat extends DataLayerJsonFormat[ColorLayer] {
+    def reads(js: JsValue) = ColorLayer(elementClassToBitCount((js \ "class").as[String]))
+  }
 }
 
 object ClassificationLayer {
   val default = ClassificationLayer(8, List(1), List("mito"))
   def identifier = "classification"
-
+    
+  implicit object ClassificationLayerFormat extends DataLayerJsonFormat[ClassificationLayer] {
+    val FLAGS = "flags"
+    def reads(js: JsValue) = ClassificationLayer(elementClassToBitCount((js \ "class").as[String]), List(1), (js \ "flags").as[List[String]])
+    override def writes(layer: ClassificationLayer) = super.writes(layer).as[JsObject] ++ Json.obj(FLAGS -> Json.toJson(layer.flags))
+  }
 }
 
-object SegmentationLayer {
+object SegmentationLayer{
   val default = SegmentationLayer(16, List(1))
   def identifier = "segmentation"
+    
+  implicit object SegmentationLayerFormat extends DataLayerJsonFormat[SegmentationLayer] {
+    def reads(js: JsValue) = SegmentationLayer(elementClassToBitCount((js \ "class").as[String]))
+  }
 }

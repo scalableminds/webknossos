@@ -6,6 +6,8 @@ import brainflight.tools.geometry.Point3D
 import org.bson.types.ObjectId
 import com.mongodb.casbah.commons.MongoDBObject
 import play.api.libs.json._
+import com.novus.salat._
+import models.context._
 
 case class Mission(dataSetName: String, start: MissionStart, possibleEnds: List[PossibleEnd], _id: ObjectId = new ObjectId) extends DAOCaseClass[Mission] {
   val dao = Mission
@@ -15,8 +17,14 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
 
   def createWithoutDataSet(start: MissionStart, possibleEnds: List[PossibleEnd]) =
     Mission("", start, possibleEnds)
-    
+
   def findByDataSetName(dataSetName: String) = Option(find(MongoDBObject("dataSetName" -> dataSetName)).toList)
+
+  def hasAlreadyBeenInserted(mission: Mission): Boolean = {
+    (findOne(MongoDBObject(
+      "dataSetName" -> mission.dataSetName,
+      "start" -> grater[MissionStart].asDBObject(mission.start)))).isDefined
+  }
 
   implicit object MissionReads extends Format[Mission] {
     val START = "start"
@@ -27,8 +35,7 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
         (js \ POSSIBLE_ENDS).as[List[PossibleEnd]])
 
     def writes(mission: Mission) = Json.obj(
-        START -> mission.start,
-        POSSIBLE_ENDS -> Json.toJson(mission.possibleEnds)
-    )
+      START -> mission.start,
+      POSSIBLE_ENDS -> Json.toJson(mission.possibleEnds))
   }
 }

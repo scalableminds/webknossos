@@ -75,8 +75,10 @@ class PluginRenderer
 
       time : (options) =>
 
+        _.defaults(options, alpha : 1)
         startFrame = options.start
         endFrame = options.end
+
 
         if startFrame <= t <= endFrame
           (callback) =>
@@ -84,15 +86,20 @@ class PluginRenderer
               rgba : new Uint8Array( 4 * pixelCount )
               segmentation : new Uint8Array( pixelCount )
               dimensions : @dimensions
+              relativeTime : (t - startFrame) / (endFrame - startFrame)
+              absoluteTime : t
             callback()
-            BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba)
+            BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
             inputData = null
         else
           ->
 
       importSlides : (options) =>
 
-        _.defaults(options, scale : 1)
+        _.defaults(options, scale : "auto")
+
+        if options.scale == "auto"
+          options.scale = (options.end - options.start) / (endFrame - startFrame)
 
         slideOffset = (t - startFrame) * options.scale + options.start
         _.extend(inputData,
@@ -101,7 +108,7 @@ class PluginRenderer
           dimensions : @dimensions
         )
 
-        # @plugins.segmentImporter(input : inputData)
+        @plugins.segmentImporter.execute(input : inputData)
 
 
     for key, plugin of @plugins

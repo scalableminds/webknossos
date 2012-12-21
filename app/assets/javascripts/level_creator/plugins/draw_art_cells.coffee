@@ -1,4 +1,6 @@
-### define ###
+### define 
+../buffer_utils : BufferUtils
+###
 
 class DrawArtCells
 
@@ -8,15 +10,21 @@ class DrawArtCells
     input: 
       rgba: 'Uint8Array'
       segments: '[]'
-    width: 'int'
-    height: 'int'
-    time : 'float' # 0 <= time <= 1
+      relativeTime : 'float' # 0 <= time <= 1
+      dimensions : '[]'
+    customTime : 'float' # 0 <= time <= 1
 
 
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments }, width, height, time}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions }, customTime}) ->
+
+    width = dimensions[0]
+    height = dimensions[1]
+
+    if customTime?
+      relativeTime = customTime
 
     canvas = $("<canvas>")[0]
     canvas.width = width
@@ -27,8 +35,7 @@ class DrawArtCells
     context.fillStyle = "rgba(0, 0, 255, 1)"
     context.strokeStyle = "rgba(0, 0, 0, 1)"
     context.lineWidth = 2
-    context.putImageData(rgba, 0, 0)
-
+    
     for segment in segments
 
       path = segment.path
@@ -36,17 +43,17 @@ class DrawArtCells
 
       context.beginPath()
 
-      x = path[0] * time + artPath[0] * (1 - time)
-      y = path[1] * time + artPath[1] * (1 - time)      
+      x = path[0] * relativeTime + artPath[0] * (1 - relativeTime)
+      y = path[1] * relativeTime + artPath[1] * (1 - relativeTime)      
 
       context.moveTo(x, y)
 
       i = 0
 
       while i < path.length
-        x = path[i] * time + artPath[i] * (1 - time)
+        x = path[i] * relativeTime + artPath[i] * (1 - relativeTime)
         i++
-        y = path[i] * time + artPath[i] * (1 - time)
+        y = path[i] * relativeTime + artPath[i] * (1 - relativeTime)
         i++
 
         context.lineTo(x, y)
@@ -54,5 +61,7 @@ class DrawArtCells
       context.fill()
       context.stroke()    
 
+    canvasData = context.getImageData(0, 0, width, height).data
+    BufferUtils.alphaBlendBuffer(rgba, canvasData)
 
-    context.getImageData(0, 0, width, height).data      
+    rgba

@@ -15,6 +15,8 @@ class Recolor
     g : "uint8"
     b : "uint8"
     a : "uint8"
+    color : "rgba(200, 50, 10, 0.9)"
+    clear : "bool" # clears rgba before recolor
 
   assetHandler : null
 
@@ -22,13 +24,21 @@ class Recolor
   constructor : (@assetHandler) ->
 
 
-  execute : ({ input : { rgba }, colorMapName, r, g, b, a }) ->
+  execute : ({ input : { rgba }, colorMapName, r, g, b, a, color, clear }) ->
+
+    if clear
+      for i in [0...rgba.length]
+        rgba[i] = 0
 
     if colorMapName?
       @applyColorMap( rgba, colorMapName )
 
-    if r? and g? and b? and a?
-      @applySingleColor( rgba, r, g, b, a )
+    else 
+      if color?
+        [r, g, b, a] = @parseColor(color)
+
+      if r? or g? or b?
+        @applySingleColor( rgba, r, g, b, a )
 
 
   applyColorMap : ( rgba, colorMapName ) ->
@@ -49,7 +59,7 @@ class Recolor
     rgba
 
 
-  applySingleColor : ( rgba, r, g, b, a ) ->
+  applySingleColor : ( rgba, r = 255, g = 255, b = 255, a = 1 ) ->
 
     colorBuffer = new Uint8Array( rgba.length )
 
@@ -58,9 +68,67 @@ class Recolor
       colorBuffer[i + 0] = r
       colorBuffer[i + 1] = g
       colorBuffer[i + 2] = b
-      colorBuffer[i + 3] = a
+      colorBuffer[i + 3] = a * 255
 
     BufferUtils.alphaBlendBuffer(rgba, colorBuffer)
 
     rgba
+
+
+  parseColor : (colorName) ->
+    # http://stackoverflow.com/questions/11068240/what-is-the-most-efficient-way-to-parse-a-css-color-in-javascript
+
+    if m = colorName.match(/^#([0-9a-fA-F]{3})$/i)
+      # in three-character format, each value is multiplied by 0x11 to give an
+      # even scale from 0x00 to 0xff
+      return [
+        parseInt(m[1].charAt(0),16)*0x11
+        parseInt(m[1].charAt(1),16)*0x11
+        parseInt(m[1].charAt(2),16)*0x11
+        1
+      ]
+
+    if m = colorName.match(/^#([0-9a-fA-F]{4})$/i)
+      # in three-character format, each value is multiplied by 0x11 to give an
+      # even scale from 0x00 to 0xff
+      return [
+        parseInt(m[1].charAt(0), 16)*0x11
+        parseInt(m[1].charAt(1), 16)*0x11
+        parseInt(m[1].charAt(2), 16)*0x11
+        parseInt(m[1].charAt(3), 16) / 16
+      ]
+
+    if m = colorName.match(/^#([0-9a-fA-F]{6})$/i)
+      return [
+        parseInt(m[1].substr(0,2),16)
+        parseInt(m[1].substr(2,2),16)
+        parseInt(m[1].substr(4,2),16)
+        1
+      ]
+
+    if m = colorName.match(/^#([0-9a-fA-F]{8})$/i)
+      return [
+        parseInt(m[1].substr(0,2),16)
+        parseInt(m[1].substr(2,2),16)
+        parseInt(m[1].substr(4,2),16)
+        parseInt(m[1].substr(6,2),16)
+      ]
+
+    if m = colorName.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i)
+      return [
+        parseInt(m[1])
+        parseInt(m[2])
+        parseInt(m[3])
+        1
+      ]
+
+    if m = colorName.match(/^rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\,\s*(\d*\.?\w+)\s*\)$/i)
+      return [
+        parseInt(m[1])
+        parseInt(m[2])
+        parseInt(m[3])
+        parseFloat(m[4])
+      ]
+
+    throw new Error("\"#{colorName}\" is not a valid color.")
 

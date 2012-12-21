@@ -36,8 +36,8 @@ GET     /user/configuration                 controllers.UserController.showSetti
 
 # Binary Data
 
-GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int, halfByte: Boolean )
-POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int, halfByte: Boolean )
+GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
+POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
 GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String)
 
 

@@ -36,7 +36,7 @@ import akka.routing.RoundRobinRouter
 
 object BinaryData extends Controller with Secured {
 
-  val dataSetActor = Akka.system.actorOf(Props(new DataSetActor).withRouter(new RoundRobinRouter(10)))
+  val dataSetActor = Akka.system.actorOf(Props(new DataSetActor).withRouter(new RoundRobinRouter(3)))
 
   override val DefaultAccessRole = Role.User
 

@@ -164,6 +164,7 @@ abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]
   def loadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D): DataBlock
 
   def loadAndCacheData(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D): Data = {
+    ensureCacheMaxSize
     val block = loadBlock(dataSet, dataLayer, resolution, point)
     cacheAgent send (_ + (block.info -> block.data))
     block.data

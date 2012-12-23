@@ -13,150 +13,41 @@ import play.api.libs.concurrent.execution.defaultContext
 import brainflight.tools.geometry.Vector3D
 import brainflight.tools.Interpolator
 import play.api.Logger
-import brainflight.tools.Math._
 import scala.collection.mutable.ArrayBuffer
 
-case class DataBlock(info: DataBlockInformation, data: Data)
-
-case class DataBlockInformation(
-  dataSetId: String,
-  dataLayer: DataLayer,
-  resolution: Int,
-  block: Point3D)
+case class DataBlock(info: LoadBlock, data: Data)
 
 case class Data(value: Array[Byte])
 
 /**
  * A data store implementation which uses the hdd as data storage
  */
-abstract class CachedDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]]) extends DataStore {
+abstract class CachedDataStore(cacheAgent: Agent[Map[LoadBlock, Data]]) extends DataStore { this: DataStore =>
+  
+  val conf = Play.current.configuration
 
   // defines the maximum count of cached file handles
   val maxCacheSize = conf.getInt("bindata.cacheMaxSize") getOrElse 100
 
   // defines how many file handles are deleted when the limit is reached
   val dropCount = conf.getInt("bindata.cacheDropCount") getOrElse 20
-
-  /**
-   * Uses the coordinates of a point to calculate the data block the point
-   * lays in.
-   */
-  def pointToBlock(point: Point3D, resolution: Int) =
-    Point3D(
-      point.x / blockLength / resolution,
-      point.y / blockLength / resolution,
-      point.z / blockLength / resolution)
-
-  def globalToLocal(point: Point3D, resolution: Int) =
-    Point3D(
-      (point.x / resolution) % blockLength,
-      (point.y / resolution) % blockLength,
-      (point.z / resolution) % blockLength)
-
-  override def load(dataRequest: DataRequest): Promise[ArrayBuffer[Byte]] = {
-    def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Promise[Array[Byte]] = {
-      val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
-      cacheAgent().get(blockInfo).map(b => Promise.pure(b.value)).getOrElse(
-              loadAndCacheData(dataSet, dataLayer, resolution, block).map(_.value))
-    }
-
-    val t = System.currentTimeMillis()
-
-    val cube = dataRequest.cuboid
-
-    val maxCorner = cube.maxCorner
-
-    val minCorner = cube.minCorner
-
-    val minPoint = Point3D(math.max(roundDown(minCorner._1), 0), math.max(roundDown(minCorner._2), 0), math.max(roundDown(minCorner._3), 0))
-
-    val minBlock = pointToBlock(minPoint, dataRequest.resolution)
-    val maxBlock = pointToBlock(Point3D(roundUp(maxCorner._1), roundUp(maxCorner._2), roundUp(maxCorner._3)), dataRequest.resolution)
-
-    Promise.sequence(for {
-      x <- minBlock.x to maxBlock.x
-      y <- minBlock.y to maxBlock.y
-      z <- minBlock.z to maxBlock.z
-    } yield {
-      val p = Point3D(x, y, z)
-      loadFromSomewhere(
-        dataRequest.dataSet,
-        dataRequest.layer,
-        dataRequest.resolution,
-        p).map(p -> _)
-    }).map(_.toMap).map { blockMap =>
-
-      val interpolate = dataRequest.layer.interpolate(dataRequest.resolution, blockMap, getBytes _) _
-
-      val result = cube.withContainingCoordinates(extendArrayBy = dataRequest.layer.bytesPerElement) {
-        case point =>
-          // TODO: Remove Wrapper
-          interpolate(Vector3D(point))
-      }
-
-      if (dataRequest.useHalfByte)
-        convertToHalfByte(result)
-      else {
-        result
-      }
-    }
-  }
-
-  def convertToHalfByte(a: ArrayBuffer[Byte]) = {
-    val aSize = a.size
-    val compressedSize = if (aSize % 2 == 0) aSize / 2 else aSize / 2 + 1
-    val compressed = new ArrayBuffer[Byte](compressedSize)
-    var i = 0
-    while (i * 2 + 1 < aSize) {
-      val first = (a(i * 2) & 0xF0).toByte
-      val second = (a(i * 2 + 1) & 0xF0).toByte >> 4 & 0x0F
-      val value = (first | second).asInstanceOf[Byte]
-      compressed += value
-      i += 1
-    }
-    compressed
-  }
-
-  def getBytes(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Array[Byte] = {
-    val block = pointToBlock(globalPoint, resolution)
-    blockMap.get(block) match {
-      case Some(byteArray) =>
-        getLocalBytes(globalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
-      case _ =>
-        Logger.error("Didn't find block! :(")
-        nullValue(bytesPerElement)
-    }
-  }
-
-  def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): Array[Byte] = {
-    val address = (localPoint.x + localPoint.y * 128 + localPoint.z * 128 * 128) * bytesPerElement
-    if (address > data.size) {
-      Logger.error("address: %d , Point: (%d, %d, %d), EPB: %d, dataSize: %d".format(address, localPoint.x, localPoint.y, localPoint.z, bytesPerElement, data.size))
-      throw new IndexOutOfBoundsException
-    } else {
-      val bytes = new Array[Byte](bytesPerElement)
-      var i = 0
-      while (i < bytesPerElement) {
-        bytes.update(i, data(address + i))
-        i += 1
-      }
-      bytes
-    }
-  }
-
+  
   /**
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
    */
-  def loadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D): Promise[DataBlock]
+  def loadBlock(blockInfo: LoadBlock): Promise[DataBlock]
 
-  def loadAndCacheData(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D): Promise[Data] = {
-    ensureCacheMaxSize
-    loadBlock(dataSet, dataLayer, resolution, point).map { block =>
-      cacheAgent send (_ + (block.info -> block.data))
-      block.data
+  def load(blockInfo: LoadBlock): Promise[Array[Byte]] = {
+    cacheAgent().get(blockInfo).map(b => Promise.pure(b.value)).getOrElse{
+      ensureCacheMaxSize
+      loadBlock(blockInfo).map { block =>
+        cacheAgent send (_ + (blockInfo -> block.data))
+        block.data.value
+      }
     }
   }
+    
 
   /**
    * Function to restrict the cache to a maximum size. Should be

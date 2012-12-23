@@ -36,7 +36,7 @@ import akka.routing.RoundRobinRouter
 
 object BinaryData extends Controller with Secured {
 
-  val dataSetActor = Akka.system.actorOf(Props(new DataSetActor).withRouter(new RoundRobinRouter(3)))
+  val dataRequestActor = Akka.system.actorOf(Props(new DataRequestActor), name = "dataRequestActor")//.withRouter(new RoundRobinRouter(3)))
 
   override val DefaultAccessRole = Role.User
 
@@ -57,7 +57,7 @@ object BinaryData extends Controller with Secured {
     Cuboid(cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2), resolution, Some(cubeCorner))
   }
 
-  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, halfByte: Boolean): Future[Promise[ArrayBuffer[Byte]]] = {
+  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int, halfByte: Boolean): Future[ArrayBuffer[Byte]] = {
     val cubeRequests = multi.requests.map { request =>
       val resolution = resolutionFromExponent(request.resolutionExponent)
       val cuboid = cuboidFromPosition(request.position, cubeSize, resolution)
@@ -70,12 +70,13 @@ object BinaryData extends Controller with Secured {
           useHalfByte = halfByte))
     }
 
-    val future = (dataSetActor ? MultiCubeRequest(cubeRequests)) recover {
+    val future = (dataRequestActor ? MultiCubeRequest(cubeRequests)) recover {
       case e: AskTimeoutException =>
-        Promise.pure(new ArrayBuffer[Byte](0))
+        Logger.warn("Data request to DataRequestActor timed out!")
+        new ArrayBuffer[Byte](0)
     }
 
-    future.mapTo[Promise[ArrayBuffer[Byte]]]
+    future.mapTo[ArrayBuffer[Byte]]
   }
 
   def requestViaAjaxDebug(dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated { implicit request =>
@@ -85,8 +86,8 @@ object BinaryData extends Controller with Secured {
         dataLayer <- dataSet.dataLayers.get(dataLayerName)
       } yield {
         val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z))))
-        handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize, false).asPromise.flatMap(_.map(result =>
-          Ok(result.toArray)))
+        handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize, false).asPromise.map(result =>
+          Ok(result.toArray))
       }) getOrElse (Akka.future { BadRequest("Request is invalid.") })
     }
   }
@@ -103,7 +104,7 @@ object BinaryData extends Controller with Secured {
           val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
           val m = Cuboid(level.width, level.height, level.depth, 1, moveVector = point, axis = direction)
           val future =
-            dataSetActor ? SingleRequest(DataRequest(
+            dataRequestActor ? SingleRequest(DataRequest(
               dataSet,
               dataLayer,
               1,
@@ -139,9 +140,9 @@ object BinaryData extends Controller with Secured {
       } yield {
         message match {
           case dataRequests @ MultipleDataRequest(_) =>
-            handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize, halfByte).asPromise.flatMap(_.map { result =>
+            handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize, halfByte).asPromise.map { result =>
               Ok(result.toArray)
-            })
+            }
           case _ =>
             Akka.future {
               BadRequest("Unknown message.")
@@ -179,10 +180,10 @@ object BinaryData extends Controller with Secured {
             BinaryProtocol.parseWebsocket(in).map {
               case dataRequests: MultipleDataRequest =>
                 Logger.trace("Websocket DataRequests: " + dataRequests.requests.mkString(", "))
-                handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize, halfByte).map(_.map { result =>
+                handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize, halfByte).map{ result =>
                   Logger.trace("Websocket result size: " + result.size)
                   channel.push((result ++= dataRequests.handle).toArray)
-                })
+                }
               case _ =>
                 Logger.error("Received unhandled message!")
             }

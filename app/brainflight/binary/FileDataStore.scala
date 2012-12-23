@@ -15,25 +15,23 @@ import scala.concurrent.Future
 /**
  * A data store implementation which uses the hdd as data storage
  */
-class FileDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]])
+class FileDataStore(cacheAgent: Agent[Map[LoadBlock, Data]])
     extends CachedDataStore(cacheAgent) {
   import DataStore._
   /**
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
    */
-  def loadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Promise[DataBlock] = {
+  def loadBlock(dataInfo: LoadBlock): Promise[DataBlock] = {
     ensureCacheMaxSize
-    println("loading from FILE " + block)
     try {
       val dataEnum =
-        Enumerator.fromFile(new File(createFilename(dataSet, dataLayer, resolution, block)))
+        Enumerator.fromFile(new File(createFilename(dataInfo)))
 
       val it = Iteratee.consume[Array[Byte]]()
 
       dataEnum(it).flatMap(_.mapDone { rawData =>
-        val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
-        DataBlock(blockInfo, Data(rawData))
+        DataBlock(dataInfo, Data(rawData))
       }.run)
     } catch {
       case e: FileNotFoundException =>

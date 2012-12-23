@@ -46,7 +46,6 @@ object BinaryDataAdministration extends Controller with Secured {
   def insertIntoDB(dataSetName: String) = Authenticated { implicit request =>
     import brainflight.binary.GridDataStore
     import akka.agent.Agent
-    import brainflight.binary.DataBlockInformation
     import brainflight.binary.Data
 
     implicit val system = Akka.system

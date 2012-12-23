@@ -68,10 +68,10 @@ class BinaryData2DBActor extends Actor {
           z <- 0 to maxZ
         } {
           val block = Point3D(x, y, z)
-          val f = new File(DataStore.createFilename(dataSet, dataLayer, resolution, block))
+          val blockInfo = LoadBlock(dataSet, dataLayer, resolution, block)
+          val f = new File(DataStore.createFilename(blockInfo))
           val blockId = GridDataStore.point3DToId(prefix, block)
           val it = gridFS.save(blockId, Some(new BSONObjectID(blockId)), Some("application/binary"))
-          val progress = idx / maxAll
           Enumerator.fromFile(f)(it).map(_.mapDone { future =>
             future.map(result =>
               insertionState send { d =>
@@ -86,7 +86,7 @@ class BinaryData2DBActor extends Actor {
   }
 }
 
-class GridDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]])
+class GridDataStore(cacheAgent: Agent[Map[LoadBlock, Data]])
     extends CachedDataStore(cacheAgent) {
   import DataStore._
   //GridFs handle
@@ -98,13 +98,12 @@ class GridDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]])
   // let's build an index on our gridfs chunks collection if none
   gridFS.ensureIndex()
 
-  def asyncLoadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Future[Iteratee[_, Array[Byte]]] = {
-    GridDataSetPairing.findPrefix(dataSet, dataLayer, resolution).flatMap {
+  def asyncLoadBlock(blockInfo: LoadBlock): Future[Iteratee[_, Array[Byte]]] = {
+    GridDataSetPairing.findPrefix(blockInfo.dataSet, blockInfo.dataLayer, blockInfo.resolution).flatMap {
       _ match {
         case Some(prefix) =>
           val r = gridFS.find(BSONDocument(
-            "_id" -> new BSONObjectID(GridDataStore.point3DToId(prefix, block)))).toList
-          val arrayBuffer = new ArrayBuffer[Byte](128 * 128 * 128)
+            "_id" -> new BSONObjectID(GridDataStore.point3DToId(prefix, blockInfo.block)))).toList
           val it = Iteratee.consume[Array[Byte]]()
 
           val f = r.flatMap {
@@ -116,17 +115,15 @@ class GridDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]])
           }
           f
         case _ =>
-          Future.failed(new DataNotFoundException("GRIDFS1"))
+          Future.failed(new DataNotFoundException("GRIDFS2"))
       }
     }
   }
 
-  def loadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Promise[DataBlock] = {
-    val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
-    asyncLoadBlock(dataSet, dataLayer, resolution, block).flatMap {
+  def loadBlock(blockInfo: LoadBlock): Promise[DataBlock] = {
+    asyncLoadBlock(blockInfo).flatMap {
       _.mapDone { rawData =>
         val data = Data(rawData)
-        val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
         DataBlock(blockInfo, data)
       }.run
     }

@@ -80,12 +80,11 @@ abstract class DataModel {
   protected def simpleMove[T](
     moveVector: (Double, Double, Double),
     coordinates: ((Double, Double, Double) => Array[T]) => ArrayBuffer[T])(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
-    coordinates {
-      case (px, py, pz) =>
-        val x = moveVector._1 + px
-        val y = moveVector._2 + py
-        val z = moveVector._3 + pz
-        f(x, y, z)
+    coordinates { (px, py, pz) =>
+      val x = moveVector._1 + px
+      val y = moveVector._2 + py
+      val z = moveVector._3 + pz
+      f(x, y, z)
     }
   }
 
@@ -118,7 +117,7 @@ case class Cuboid(
     Vector3D(-xh, -yh, -zh)
   }
 
-  lazy val corners = rotateAndMove(moveVector, axis, ArrayBuffer(
+  val corners = rotateAndMove(moveVector, axis, ArrayBuffer(
     topLeft,
     topLeft.dx(width),
     topLeft.dy(height),
@@ -128,10 +127,10 @@ case class Cuboid(
     topLeft.dz(depth).dy(height),
     topLeft.dz(depth).dx(width).dy(height)))
 
-  lazy val maxCorner = corners.foldLeft((0.0, 0.0, 0.0))((b, e) => (
+  val maxCorner = corners.foldLeft((0.0, 0.0, 0.0))((b, e) => (
     math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
 
-  lazy val minCorner = corners.foldLeft(maxCorner)((b, e) => (
+  val minCorner = corners.foldLeft(maxCorner)((b, e) => (
     math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
 
   override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {

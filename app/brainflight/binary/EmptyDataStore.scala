@@ -7,15 +7,15 @@ import akka.agent.Agent
 import models.binary.DataSet
 import models.binary.DataLayer
 import brainflight.tools.geometry.Point3D
+import play.api.Logger
 
-class EmptyDataStore(cacheAgent: Agent[Map[DataBlockInformation, Data]])
+class EmptyDataStore(cacheAgent: Agent[Map[LoadBlock, Data]])
     extends CachedDataStore(cacheAgent) {
   val nullBlock = new Array[Byte](elementsPerFile)
 
-  def loadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D): Promise[DataBlock] = {
+  def loadBlock(blockInfo: LoadBlock): Promise[DataBlock] = {
     Promise.pure {
-      val blockInfo = DataBlockInformation(dataSet.id, dataLayer, resolution, block)
-      DataBlock(blockInfo, Data(nullBlock))
+      DataBlock(blockInfo, Data(nullFile(blockInfo.dataLayer.bytesPerElement)))
     }
   }
 }

@@ -16,16 +16,20 @@ object ApplicationBuild extends Build {
     "commons-io" % "commons-io" % "1.3.2",
     "com.typesafe.akka" % "akka-testkit" % "2.0",
     "com.typesafe.akka" % "akka-agent" % "2.0",
+    "com.typesafe.akka" % "akka-remote" % "2.0",
     // Jira integration
     "com.sun.jersey" % "jersey-client" % "1.8",
     "com.sun.jersey" % "jersey-core" % "1.8",
     "reactivemongo" %% "reactivemongo" % "0.1-SNAPSHOT")
 
-  val shellgameDependencies = Seq(
-
-  )
+  val shellgameDependencies = Seq()
   
-  val oxalis = PlayProject(appName, appVersion, oxalisDependencies, mainLang = SCALA).settings(
+  lazy val dataStoreDependencies = Seq(
+    "com.sun.jersey" % "jersey-client" % "1.8",
+    "com.sun.jersey" % "jersey-core" % "1.8",
+    "com.typesafe.akka" % "akka-remote" % "2.0") 
+  
+  lazy val oxalis: Project = PlayProject(appName, appVersion, oxalisDependencies, mainLang = SCALA).settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers += "repo.novus rels" at "http://repo.novus.com/releases/",
@@ -35,7 +39,7 @@ object ApplicationBuild extends Build {
     incrementalAssetsCompilation:=true
   )
 
-  val shellgame = PlayProject("shellgame", "0.1", shellgameDependencies, mainLang = SCALA, path = file("modules") / "shellgame").settings(
+  lazy val shellgame = PlayProject("shellgame", "0.1", shellgameDependencies, mainLang = SCALA, path = file("modules") / "shellgame").settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers += "repo.novus rels" at "http://repo.novus.com/releases/",
@@ -47,5 +51,10 @@ object ApplicationBuild extends Build {
     incrementalAssetsCompilation:=true
   ).dependsOn(oxalis).aggregate(oxalis)
 
+  lazy val datastore: Project = Project("datastore", file("modules") / "datastore", dependencies = Seq(oxalis)).settings(
+    libraryDependencies ++= dataStoreDependencies,
+    resolvers += "repo.novus rels" at "http://repo.novus.com/releases/",
+    resolvers += "repo.novus snaps" at "http://repo.novus.com/snapshots/"
+  ).aggregate(oxalis)
 }
             

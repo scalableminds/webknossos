@@ -60,7 +60,7 @@ trait NearestNeighborInterpolation {
   }
 }
 
-sealed trait DataLayer {
+sealed trait DataLayer{
   val folder: String
   val elementSize: Int
   val supportedResolutions: List[Int]

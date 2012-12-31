@@ -16,19 +16,15 @@ import akka.util.duration._
 import akka.pattern.pipe
 import akka.actor.Status
 import java.util.concurrent.TimeoutException
+import java.io.InputStream
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
  * system or db implementation) must implement to be used
  */
-case class DataRequest(
-  dataSet: DataSet,
-  layer: DataLayer,
-  resolution: Int,
-  cuboid: Cuboid,
-  useHalfByte: Boolean = false)
 
-case class LoadBlock(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D)
+case class LoadBlock(dataSetBaseDir: String, dataSetName: String, dataLayerName: String, bytesPerElement: Int, resolution: Int,
+                     x: Int, y: Int, z: Int)
 
 class DataNotFoundException(message: String) extends Exception(message + " Could not find the data")
 
@@ -38,45 +34,36 @@ abstract class DataStore extends Actor {
   val MAX_RESOLUTION_EXPONENT = 9
   val MAX_BYTES_PER_ELEMENT = 8
 
-  val loading = Agent(Map[LoadBlock, Promise[Array[Byte]]]())(context.system)
-
   /**
    * Loads the data of a given point from the data source
    */
   def load(dataInfo: LoadBlock): Promise[Array[Byte]]
 
   def receive = {
-    case request @ LoadBlock(dataSet, dataLayer, resolution, block) =>
+    case request @ LoadBlock(dataSetBaseDir, dataSetName, dataLayerName, bytesPerElement, resolution, x, y, z) =>
       if (resolution > MAX_RESOLUTION_EXPONENT)
         sender ! new IndexOutOfBoundsException("Resolution not supported")
       else {
         val s = sender
-        loading.future(50 milliseconds).recover {
-          case e: TimeoutException =>
-            Map[LoadBlock, Promise[Array[Byte]]]()
-        }.map { loadingCache =>
-          val promise = loadingCache.get(request).getOrElse {
-            val p = load(request)
-            loading send (_ + (request -> p))
-            p
-          }
-          promise.onComplete {
-            case Right(a) =>
-              s ! a
-              loading send (_ - request)
-            case Left(e) =>
-              Logger.warn(block + " DataStore couldn't load block: " + e)
-              s ! e
-              loading send (_ - request)
-          }
+        load(request).onComplete {
+          case Left(e) =>
+            s ! e
+          case Right(d) =>
+            s ! d
         }
       }
   }
 
   /**
-   * Gives the data store the possibility to clean up its mess on shutdown/clean
+   *  Read file contents to a byteArray
    */
-  def cleanUp()
+  def inputStreamToByteArray(is: InputStream, bytesPerElement: Int) = {
+    val byteCount = elementsPerFile * bytesPerElement
+    val byteArray = new Array[Byte](byteCount)
+    is.read(byteArray, 0, byteCount)
+    //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
+    byteArray
+  }
 
   /**
    * Creates the file-name of the cube based on the data set id, resolution
@@ -104,28 +91,28 @@ abstract class DataStore extends Actor {
     nullBlocks(log2(bytesPerElement).toInt)
 
   val elementsPerFile = 128 * 128 * 128
-  
-  lazy val nullFiles: Stream[Array[Byte]] = 
+
+  lazy val nullFiles: Stream[Array[Byte]] =
     (1 to MAX_BYTES_PER_ELEMENT).toStream.map { bytesPerElement =>
       new Array[Byte](elementsPerFile * bytesPerElement)
-  }
-  
+    }
+
   def nullFile(bytesPerElement: Int) = nullFiles(bytesPerElement)
 }
 
 object DataStore {
 
-  val blockLength = Play.current.configuration.getInt("binary.blockLength") getOrElse 128
+  val blockLength = 128
 
   val blockSize = blockLength * blockLength * blockLength
 
   def createFilename(dataInfo: LoadBlock) =
     "%s/%s/%d/x%04d/y%04d/z%04d/%s_mag%d_x%04d_y%04d_z%04d.raw".format(
-      dataInfo.dataSet.baseDir,
-      dataInfo.dataLayer.folder,
+      dataInfo.dataSetBaseDir,
+      dataInfo.dataLayerName,
       dataInfo.resolution,
-      dataInfo.block.x, dataInfo.block.y, dataInfo.block.z,
-      dataInfo.dataSet.name,
+      dataInfo.x, dataInfo.y, dataInfo.z,
+      dataInfo.dataSetName,
       dataInfo.resolution,
-      dataInfo.block.x, dataInfo.block.y, dataInfo.block.z)
+      dataInfo.x, dataInfo.y, dataInfo.z)
 }

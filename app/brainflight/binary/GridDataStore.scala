@@ -67,10 +67,9 @@ class BinaryData2DBActor extends Actor {
           y <- 0 to maxY
           z <- 0 to maxZ
         } {
-          val block = Point3D(x, y, z)
-          val blockInfo = LoadBlock(dataSet, dataLayer, resolution, block)
+          val blockInfo = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.folder, dataLayer.bytesPerElement, resolution, x, y, z)
           val f = new File(DataStore.createFilename(blockInfo))
-          val blockId = GridDataStore.point3DToId(prefix, block)
+          val blockId = GridDataStore.blockToId(prefix, x, y, z)
           val it = gridFS.save(blockId, Some(new BSONObjectID(blockId)), Some("application/binary"))
           Enumerator.fromFile(f)(it).map(_.mapDone { future =>
             future.map(result =>
@@ -86,8 +85,8 @@ class BinaryData2DBActor extends Actor {
   }
 }
 
-class GridDataStore(cacheAgent: Agent[Map[LoadBlock, Data]])
-    extends CachedDataStore(cacheAgent) {
+class GridDataStore
+    extends DataStore {
   import DataStore._
   //GridFs handle
   lazy val connection = MongoConnection(List("localhost:27017"))
@@ -98,18 +97,18 @@ class GridDataStore(cacheAgent: Agent[Map[LoadBlock, Data]])
   // let's build an index on our gridfs chunks collection if none
   gridFS.ensureIndex()
 
-  def asyncLoadBlock(blockInfo: LoadBlock): Future[Iteratee[_, Array[Byte]]] = {
-    GridDataSetPairing.findPrefix(blockInfo.dataSet, blockInfo.dataLayer, blockInfo.resolution).flatMap {
+  def load(blockInfo: LoadBlock): Promise[Array[Byte]] = {
+    GridDataSetPairing.findPrefix(blockInfo.dataSetName, blockInfo.dataLayerName, blockInfo.resolution).flatMap {
       _ match {
         case Some(prefix) =>
           val r = gridFS.find(BSONDocument(
-            "_id" -> new BSONObjectID(GridDataStore.point3DToId(prefix, blockInfo.block)))).toList
+            "_id" -> new BSONObjectID(GridDataStore.blockToId(prefix, blockInfo.x, blockInfo.y, blockInfo.z)))).toList
           val it = Iteratee.consume[Array[Byte]]()
 
           val f = r.flatMap {
             case file :: _ =>
               val e = file.enumerate
-              e.apply(it)
+              e.run(it)
             case _ =>
               Future.failed(new DataNotFoundException("GRIDFS1"))
           }
@@ -119,19 +118,10 @@ class GridDataStore(cacheAgent: Agent[Map[LoadBlock, Data]])
       }
     }
   }
-
-  def loadBlock(blockInfo: LoadBlock): Promise[DataBlock] = {
-    asyncLoadBlock(blockInfo).flatMap {
-      _.mapDone { rawData =>
-        val data = Data(rawData)
-        DataBlock(blockInfo, data)
-      }.run
-    }
-  }
 }
 
 object GridDataStore {
-  def point3DToId(prefix: Long, point: Point3D): String = {
-    "%012d%04d%04d%04d".format(prefix, point.x, point.y, point.z)
+  def blockToId(prefix: Long, x: Int, y: Int, z: Int): String = {
+    "%012d%04d%04d%04d".format(prefix, x, y, z)
   }
 }

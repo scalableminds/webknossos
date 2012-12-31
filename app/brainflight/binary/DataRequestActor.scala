@@ -20,21 +20,26 @@ import akka.util.Timeout
 import akka.util.duration._
 import akka.dispatch.Future
 import akka.pattern.pipe
+import com.typesafe.config.ConfigFactory
+import play.api.Play
+import brainflight.ActorSystems
 
 case class SingleRequest(dataRequest: DataRequest)
 case class MultiCubeRequest(requests: Seq[SingleRequest])
 
-class DataRequestActor extends Actor {
+class DataRequestActor extends Actor with DataCache{
   import DataStore._
-  implicit val system = context.system
-  implicit val dataBlockLoadTimeout = Timeout(5 seconds)
 
-  val BinaryCacheAgent = Agent(Map[LoadBlock, Data]().empty)
-  val dataStores = List[ActorRef](
-    context.actorOf(Props(new GridDataStore(BinaryCacheAgent)), name = "gridStore"),
-    context.actorOf(Props(new FileDataStore(BinaryCacheAgent)), name = "fileStore"),
-    context.actorOf(Props(new EmptyDataStore(BinaryCacheAgent)), name = "emptyStore"))
+  implicit val dataBlockLoadTimeout = Timeout(10 seconds)
+  implicit val system = ActorSystems.dataRequestSystem
+  
+  val remotePath = Play.current.configuration.getString("datarequest.remotepath").get
 
+  lazy val dataStores = List[ActorRef](
+    system.actorFor(remotePath+"/user/gridDataStore"),
+    system.actorFor(remotePath+"/user/fileDataStore"),
+    system.actorOf(Props(new EmptyDataStore()), name = "emptyDataStore"))  
+    
   def receive = {
     case SingleRequest(dataRequest) =>
       load(dataRequest) pipeTo sender
@@ -47,27 +52,32 @@ class DataRequestActor extends Actor {
           val size = results.map(_.size).sum
           s ! results.foldLeft(new ArrayBuffer[Byte](size))(_ ++= _)
         case Left(e) =>
-          Logger.error("DataRequestActor Error for Request %s. Error: %s".format(requests.toString, e.toString))
+          Logger.error("DataRequestActor Error for Request. Error: %s".format(e.toString))
       }
   }
 
   def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D) = {
+    val block2Load = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.folder, dataLayer.bytesPerElement, resolution, block.x, block.y, block.z)
+
     def loadFromStore(dataStores: List[ActorRef]): Future[Array[Byte]] = dataStores match {
       case a :: tail =>
         Logger.trace("Sending request: " + block + " to " + a.path)
-        (a ? LoadBlock(dataSet, dataLayer, resolution, block)).mapTo[Array[Byte]].recoverWith {
+        (a ? block2Load).mapTo[Array[Byte]].recoverWith {
           case e: AskTimeoutException =>
-            Logger.warn("%s/%s %s DataRequestActor: Not response in time.".format(dataSet.name, dataLayer.folder, block.toString))
+            Logger.warn("(%s/%s %s) %s: Not response in time.".format(dataSet.name, dataLayer.folder, block.toString, a.path))
             loadFromStore(tail)
           case e: ClassCastException =>
             // TODO: find a better way to catch the DataNotFoundException
-            Logger.warn("%s/%s %s DataRequestActor: Not found using %s.".format(dataSet.name, dataLayer.folder, block.toString, a.path))
+            Logger.warn("(%s/%s %s) %s: Not found.".format(dataSet.name, dataLayer.folder, block.toString, a.path))
             loadFromStore(tail)
         }
       case _ =>
         throw new DataNotFoundException("DataSetActor")
     }
-    loadFromStore(dataStores)
+    
+    withCache(block2Load){
+      loadFromStore(dataStores)
+    }
   }
 
   def pointToBlock(point: Point3D, resolution: Int) =

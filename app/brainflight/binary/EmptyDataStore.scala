@@ -9,13 +9,13 @@ import models.binary.DataLayer
 import brainflight.tools.geometry.Point3D
 import play.api.Logger
 
-class EmptyDataStore(cacheAgent: Agent[Map[LoadBlock, Data]])
-    extends CachedDataStore(cacheAgent) {
+class EmptyDataStore
+    extends DataStore {
   val nullBlock = new Array[Byte](elementsPerFile)
 
-  def loadBlock(blockInfo: LoadBlock): Promise[DataBlock] = {
+  def load(blockInfo: LoadBlock): Promise[Array[Byte]] = {
     Promise.pure {
-      DataBlock(blockInfo, Data(nullFile(blockInfo.dataLayer.bytesPerElement)))
+      nullFile(blockInfo.bytesPerElement)
     }
   }
 }

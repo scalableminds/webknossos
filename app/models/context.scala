@@ -1,54 +1,46 @@
 package models
 
 import play.Configuration
+import com.typesafe.config.ConfigFactory
 
 package object context {
-  val db = {
+  val conf = ConfigFactory.load()
+  lazy val db = {
     import com.mongodb.casbah.commons.Imports._
     import com.mongodb.casbah.MongoConnection
-    import play.api.Play.current
-    import play.api.Play
-    val conf = Play.configuration
 
-    val url = conf.getString("mongo.url").getOrElse("127.0.0.1")
-    val port = conf.getInt("mongo.port").getOrElse(27017)
-    
+    val url = conf.getString("mongo.url")
+    val port = conf.getInt("mongo.port")
+
     MongoConnection(url, port)
   }
 
   private def createConnection(dbName: String) = {
     import com.mongodb.casbah.commons.Imports._
-    import play.api.Play.current
-    import play.api.Play
-    val conf = Play.configuration
 
     val connection = db(dbName)
-    for {
-      dbuser <- conf.getString("mongo.user")
-      dbpasswd <- conf.getString("mongo.password")
-    } connection.authenticate(dbuser, dbpasswd)
+    val needsAuth = conf.getBoolean("mongo.needsAuth")
+    if (needsAuth) {
+      val dbuser = conf.getString("mongo.user")
+      val dbpasswd = conf.getString("mongo.password")
+      connection.authenticate(dbuser, dbpasswd)
+    }
     connection
   }
 
   object DB {
-    import play.api.Play.current
-    import play.api.Play
-
     lazy val connection = createConnection(
-      Play.configuration.getString("mongo.dbname").getOrElse("salat-dao"))
+      conf.getString("mongo.dbname"))
 
   }
 
   object KnowledgeDB {
-    import play.api.Play
-    import play.api.Play.current
-
     lazy val connection =
       createConnection(
-        Play.configuration.getString("mongo.knowledgedb.dbname").getOrElse("salat-dao"))
+        conf.getString("mongo.knowledgedb.dbname"))
   }
 
-  implicit val ctx = {
+  implicit lazy val ctx = {
     import com.novus.salat._
     import play.api.Play
     import play.api.Play.current
@@ -70,9 +62,8 @@ package object context {
     import reactivemongo.bson._
     import reactivemongo.bson.handlers.DefaultBSONHandlers._
     import play.api.libs.concurrent.execution.defaultContext
-    
-    val conf = play.api.Play.current.configuration
-    val dbName = conf.getString("mongo.binary.dbname").getOrElse("binaryData")
+
+    val dbName = conf.getString("mongo.binary.dbname")
 
     lazy val connection = MongoConnection(List("localhost:27017"))
     // a GridFS store named 'attachments'

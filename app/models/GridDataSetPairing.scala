@@ -1,11 +1,7 @@
 package models
 
-import play.api.Play.current
 import play.mvc._
 import com.mongodb.casbah.Imports._
-import models.context._
-import com.novus.salat.dao.SalatDAO
-import models.basics.BasicDAO
 import models.binary.DataSet
 import reactivemongo.api._
 import reactivemongo.bson._
@@ -13,7 +9,6 @@ import reactivemongo.bson.handlers.DefaultBSONHandlers._
 import scala.concurrent.Future
 import play.api.libs.concurrent.execution.defaultContext
 import reactivemongo.bson.handlers.BSONWriter
-import play.api.libs.concurrent.Akka
 import models.binary.DataLayer
 /**
  * scalableminds - brainflight
@@ -27,7 +22,7 @@ case class GridDataSetPairing(dataSetName: String, dataLayerName: String, resolu
 
 object GridDataSetPairing {
   import models.context.BinaryDB._
-  
+
   implicit object GridDataSetPairingBSONWriter extends BSONWriter[GridDataSetPairing] {
     def toBSON(gridPrairing: GridDataSetPairing) = {
       BSONDocument(
@@ -41,12 +36,12 @@ object GridDataSetPairing {
 
   val collection = db.collection("dataSetPairing")
 
-  def findPrefix(dataSet: DataSet, dataLayer: DataLayer, resolution: Int) = {
+  def findPrefix(dataSetName: String, dataLayerName: String, resolution: Int) = {
     val query = BSONDocument(
-        "dataSetName" -> BSONString(dataSet.name),
-        "dataLayerName" -> BSONString(dataLayer.folder),
-        "resolution" -> BSONInteger(resolution))
-        
+      "dataSetName" -> BSONString(dataSetName),
+      "dataLayerName" -> BSONString(dataLayerName),
+      "resolution" -> BSONInteger(resolution))
+
     // get a Cursor[BSONDocument]
     val cursor = collection.find(query)
     cursor.headOption.map {
@@ -67,8 +62,8 @@ object GridDataSetPairing {
   }
 
   def getOrCreatePrefix(dataSet: DataSet, dataLayer: DataLayer, resolution: Int) = {
-    findPrefix(dataSet, dataLayer, resolution).flatMap {
-      case Some(p) => Akka.future { p }
+    findPrefix(dataSet.name, dataLayer.folder, resolution).flatMap {
+      case Some(p) => Future.successful(p)
       case _ =>
         createNextPrefix.map { prefix =>
           collection.insert(GridDataSetPairing(dataSet.name, dataLayer.folder, resolution, prefix))

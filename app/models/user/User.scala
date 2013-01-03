@@ -1,6 +1,5 @@
 package models.user
 
-import play.api.db._
 import play.api.Play.current
 import com.mongodb.casbah.Imports._
 import models.context._

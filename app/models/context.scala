@@ -2,6 +2,7 @@ package models
 
 import play.Configuration
 import com.typesafe.config.ConfigFactory
+import play.api.libs.concurrent.Execution.Implicits._
 
 package object context {
   val conf = ConfigFactory.load()
@@ -61,7 +62,6 @@ package object context {
     import reactivemongo.bson.BSONObjectID
     import reactivemongo.bson._
     import reactivemongo.bson.handlers.DefaultBSONHandlers._
-    import play.api.libs.concurrent.execution.defaultContext
 
     val dbName = conf.getString("mongo.binary.dbname")
 

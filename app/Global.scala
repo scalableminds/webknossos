@@ -17,13 +17,14 @@ import brainflight.tools.geometry._
 import brainflight.mail.Mailer
 import brainflight.io._
 import scala.collection.parallel.Tasks
-import akka.util.duration._
 import akka.pattern.ask
 import akka.util.Timeout
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
 import scala.collection.JavaConversions._
 import brainflight.ActorSystems
+import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 
 object Global extends GlobalSettings {
 

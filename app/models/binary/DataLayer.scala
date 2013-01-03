@@ -106,7 +106,8 @@ object ColorLayer {
   def identifier = "color"
    
   implicit object ColorLayerFormat extends DataLayerJsonFormat[ColorLayer] {
-    def reads(js: JsValue) = ColorLayer(elementClassToBitCount((js \ "class").as[String]))
+    def reads(js: JsValue) = 
+      JsSuccess(ColorLayer(elementClassToBitCount((js \ "class").as[String])))
   }
 }
 
@@ -116,7 +117,8 @@ object ClassificationLayer {
     
   implicit object ClassificationLayerFormat extends DataLayerJsonFormat[ClassificationLayer] {
     val FLAGS = "flags"
-    def reads(js: JsValue) = ClassificationLayer(elementClassToBitCount((js \ "class").as[String]), List(1), (js \ "flags").as[List[String]])
+    def reads(js: JsValue) = 
+      JsSuccess(ClassificationLayer(elementClassToBitCount((js \ "class").as[String]), List(1), (js \ "flags").as[List[String]]))
     override def writes(layer: ClassificationLayer) = super.writes(layer).as[JsObject] ++ Json.obj(FLAGS -> Json.toJson(layer.flags))
   }
 }
@@ -126,6 +128,7 @@ object SegmentationLayer{
   def identifier = "segmentation"
     
   implicit object SegmentationLayerFormat extends DataLayerJsonFormat[SegmentationLayer] {
-    def reads(js: JsValue) = SegmentationLayer(elementClassToBitCount((js \ "class").as[String]))
+    def reads(js: JsValue) = 
+      JsSuccess(SegmentationLayer(elementClassToBitCount((js \ "class").as[String])))
   }
 }

@@ -16,14 +16,15 @@ import models.task.Training
 import models.tracing.Tracing
 import nml._
 import models.tracing.TracingType
+import play.api.i18n.Messages
 
 object TrainingsTaskAdministration extends Controller with Secured {
-
+  //finished localization
   override val DefaultAccessPermission = Some(Permission("admin.review", List("access")))
 
   val trainingsTaskForm = Form(
     mapping(
-      "task" -> text.verifying("task.invalid", task => Task.findOneById(task).isDefined),
+      "task" -> text.verifying("task.notFound", task => Task.findOneById(task).isDefined),
       "training" -> mapping(
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,
@@ -31,8 +32,8 @@ object TrainingsTaskAdministration extends Controller with Secured {
 
   val trainingsTracingForm = Form(
     mapping(
-      "tracing" -> text.verifying("tracing.invalid", exp => Tracing.findOneById(exp).isDefined),
-      "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
+      "tracing" -> text.verifying("tracing.notFound", exp => Tracing.findOneById(exp).isDefined),
+      "taskType" -> text.verifying("taskType.notFound", task => TaskType.findOneById(task).isDefined),
       "experience" -> mapping(
         "domain" -> text,
         "value" -> number)(Experience.apply)(Experience.unapply),
@@ -67,14 +68,14 @@ object TrainingsTaskAdministration extends Controller with Secured {
     trainingsTracingForm.bindFromRequest.fold(
       formWithErrors => BadRequest(trainingsTaskCreateHTML(trainingsTaskForm, formWithErrors)),
       { task =>
-        (for {
-          training <- task.training
-          sample <- Tracing.findOneById(training.sample)
+        for {
+          training <- task.training ?~ Messages("task.training.notFound")
+          sample <- Tracing.findOneById(training.sample) ?~ Messages("trask.training.sample.notFound")
         } yield {
           sample.update(_.copy(tracingType = TracingType.Sample))
           Task.insertOne(task)
           Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
-        }) getOrElse BadRequest("Couldn't create Training.")
+        }
       })
   }
 
@@ -83,22 +84,24 @@ object TrainingsTaskAdministration extends Controller with Secured {
       formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors, trainingsTracingForm)),
       { task =>
         implicit val ctx = NMLContext(request.user)
-        (for {
-          nmlFile <- request.body.file("nmlFile")
-          tracing <- new NMLParser(nmlFile.ref.file).parse.headOption
+        for {
+          nmlFile <- request.body.file("nmlFile")  ?~ Messages("nml.file.notFound")
+          tracing <- new NMLParser(nmlFile.ref.file).parse.headOption ?~ Messages("nml.file.invalid")
         } yield {
           Tracing.save(tracing.copy(tracingType = TracingType.Sample))
           Task.save(task.copy(
             training = task.training.map(_.copy(sample = tracing._id))))
           Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
-        }) getOrElse BadRequest("No valid file attached.")
+        }
       })
   }
 
   def delete(taskId: String) = Authenticated { implicit request =>
-    Task.findOneById(taskId) map { task =>
+    for{
+      task <- Task.findOneById(taskId) ?~ Messages("task.training.notFound")
+    } yield {
       Task.remove(task)
-      AjaxOk.success("Trainings-Task successfuly deleted.")
-    } getOrElse AjaxBadRequest.error("Trainings-Task not found.")
+      JsonOk(Messages("task.training.deleted"))
+    }
   }
 }

@@ -18,6 +18,8 @@ import controllers.admin._
 import models.tracing.Tracing
 import models.tracing.UsedTracings
 import brainflight.thirdparty.BrainTracing
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.Messages
 
 object Authentication extends Controller with Secured {
   // -- Authentication
@@ -33,8 +35,8 @@ object Authentication extends Controller with Secured {
       Some((user._1, user._2, user._3, ("", "")))
 
     val passwordField = tuple("main" -> text, "validation" -> text)
-      .verifying("error.password.nomatch", pw => pw._1 == pw._2)
-      .verifying("error.password.tooshort", pw => pw._1.length >= 6)
+      .verifying("user.password.nomatch", pw => pw._1 == pw._2)
+      .verifying("user.password.tooshort", pw => pw._1.length >= 6)
 
     Form(
       mapping(
@@ -42,7 +44,7 @@ object Authentication extends Controller with Secured {
         "firstName" -> nonEmptyText(1, 30),
         "lastName" -> nonEmptyText(1, 30),
         "password" -> passwordField)(registerFormApply)(registerFormUnapply)
-        .verifying("error.email.inuse",
+        .verifying("user.email.alreadyInUse",
           user => User.findLocalByEmail(user._1).isEmpty))
   }
 
@@ -80,7 +82,7 @@ object Authentication extends Controller with Secured {
                   DefaultMails.registerMail(user.name, email, brainDBresult))
               Redirect(routes.Game.index)
                 .withSession(Secured.createSession(user))
-            }.asPromise
+            }
           }
         })
     }
@@ -89,7 +91,7 @@ object Authentication extends Controller with Secured {
   val loginForm = Form(
     tuple(
       "email" -> text,
-      "password" -> text) verifying ("error.login.invalid", result => result match {
+      "password" -> text) verifying ("user.login.failed", result => result match {
         case (email, password) =>
           User.auth(email, password).isDefined
       }))
@@ -123,6 +125,6 @@ object Authentication extends Controller with Secured {
   def logout = Action {
     Redirect(routes.Authentication.login)
       .withNewSession
-      .flashing("success" -> "You've been logged out")
+      .flashing("success" -> Messages("user.login.success"))
   }
 }

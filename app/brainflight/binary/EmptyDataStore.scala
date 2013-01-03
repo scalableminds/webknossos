@@ -1,6 +1,7 @@
 package brainflight.binary
 
 import play.api.libs.concurrent.Promise
+import scala.concurrent.Future
 import scala.collection.mutable.ArrayBuffer
 import brainflight.tools.Math._
 import akka.agent.Agent
@@ -13,8 +14,8 @@ class EmptyDataStore
     extends DataStore {
   val nullBlock = new Array[Byte](elementsPerFile)
 
-  def load(blockInfo: LoadBlock): Promise[Array[Byte]] = {
-    Promise.pure {
+  def load(blockInfo: LoadBlock): Future[Array[Byte]] = {
+    Future.successful {
       nullFile(blockInfo.bytesPerElement)
     }
   }

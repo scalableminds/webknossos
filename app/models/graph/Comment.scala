@@ -1,9 +1,7 @@
 package models.graph
 
 import xml.XMLWrites
-import play.api.libs.json.Format
-import play.api.libs.json.Json
-import play.api.libs.json.JsValue
+import play.api.libs.json._
 
 case class Comment(node: Int, content: String)
 
@@ -17,8 +15,8 @@ object Comment {
       CONTENT -> e.content)
 
     def reads(js: JsValue) =
-      Comment((js \ NODE).as[Int],
-        (js \ CONTENT).as[String])
+      JsSuccess(Comment((js \ NODE).as[Int],
+        (js \ CONTENT).as[String]))
   }
   
   implicit object CommentXMLWrites extends XMLWrites[Comment] {

@@ -20,7 +20,7 @@ import play.api.libs.iteratee.Enumerator
 import java.io.File
 import scala.concurrent.Future
 import play.api.libs.concurrent.Promise
-import play.api.libs.concurrent.execution.defaultContext
+import play.api.libs.concurrent.Execution.Implicits._
 import models.GridDataSetPairing
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
@@ -97,7 +97,7 @@ class GridDataStore
   // let's build an index on our gridfs chunks collection if none
   gridFS.ensureIndex()
 
-  def load(blockInfo: LoadBlock): Promise[Array[Byte]] = {
+  def load(blockInfo: LoadBlock): Future[Array[Byte]] = {
     GridDataSetPairing.findPrefix(blockInfo.dataSetName, blockInfo.dataLayerName, blockInfo.resolution).flatMap {
       _ match {
         case Some(prefix) =>

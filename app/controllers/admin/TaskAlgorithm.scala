@@ -6,21 +6,19 @@ import models.task.TaskSelectionAlgorithm
 import play.api.libs.json.Json
 import views.html
 import controllers.Controller
+import play.api.i18n.Messages
 
 object TaskAlgorithm extends Controller with Secured {
-
+  //finished localization
   override val DefaultAccessRole = Role.Admin
 
-  def testAlgorithm = Authenticated(parser = parse.urlFormEncoded){ implicit request =>
-    request.body.get("code").flatMap(_.headOption) match {
-      case Some(code) =>
-        if (TaskSelectionAlgorithm.isValidAlgorithm(code))
-          Ok
-        else
-          (new Status(422))("Invalid task selection algorithm code.")
-      case _ =>
-        BadRequest("Missing parameters.")
-    }
+  def testAlgorithm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    (for {
+      code <- postParameter("code") ?~ Messages("taskAlgorithm.notSupplied")
+      if (TaskSelectionAlgorithm.isValidAlgorithm(code))
+    } yield {
+      Ok
+    }) ?~ Messages("taskAlgorithm.invalid") ~> 422
   }
 
   def index = Authenticated { implicit request =>
@@ -29,28 +27,24 @@ object TaskAlgorithm extends Controller with Secured {
 
   def submitAlgorithm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     (for {
-      code <- request.body.get("code").flatMap(_.headOption)
-      use <- request.body.get("use").flatMap(_.headOption)
+      code <- postParameter("code") ?~ Messages("taskAlgorithm.notSupplied")
+      use <- postParameter("use") ?~ Messages("taskAlgorithm.use.notSupplied")
+      if (TaskSelectionAlgorithm.isValidAlgorithm(code))
     } yield {
-      if (TaskSelectionAlgorithm.isValidAlgorithm(code)) {
-        val alg = TaskSelectionAlgorithm(code)
-        TaskSelectionAlgorithm.insertOne(alg)
-        if (use == "1")
-          TaskSelectionAlgorithm.use(alg)
-        Ok
-      } else
-        (new Status(422))("Invalid task selection algorithm code.")
-    }) getOrElse BadRequest("Missing parameters.")
-
+      val alg = TaskSelectionAlgorithm(code)
+      TaskSelectionAlgorithm.insertOne(alg)
+      if (use == "1")
+        TaskSelectionAlgorithm.use(alg)
+      Ok
+    }) ?~ Messages("taskAlgorithm.invalid") ~> 422
   }
 
   def useAlgorithm(id: String) = Authenticated { implicit request =>
-    TaskSelectionAlgorithm.findOneById(id) match {
-      case Some(alg) => 
-        TaskSelectionAlgorithm.use(alg)
-        Ok
-      case _ =>
-        BadRequest("Algorithm not found.")
+    for {
+      algorithm <- TaskSelectionAlgorithm.findOneById(id) ?~ Messages("taskAlgorithm.notFound")
+    } yield {
+      TaskSelectionAlgorithm.use(algorithm)
+      Ok
     }
   }
 

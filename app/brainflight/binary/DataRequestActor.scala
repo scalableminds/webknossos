@@ -10,15 +10,16 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import akka.actor._
 import play.api.libs.concurrent.Promise
-import play.api.libs.concurrent.execution.defaultContext
+import play.api.libs.concurrent.Execution.Implicits._
 import akka.actor.ActorSystem
 import brainflight.tools.geometry.Vector3D
 import brainflight.tools.Math._
 import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
-import akka.util.duration._
-import akka.dispatch.Future
+import scala.util._
+import scala.concurrent.duration._
+import scala.concurrent.Future
 import akka.pattern.pipe
 import com.typesafe.config.ConfigFactory
 import play.api.Play
@@ -48,10 +49,10 @@ class DataRequestActor extends Actor with DataCache{
         load(r.dataRequest))
       val s = sender
       resultsPromise.onComplete {
-        case Right(results) =>
+        case Success(results) =>
           val size = results.map(_.size).sum
           s ! results.foldLeft(new ArrayBuffer[Byte](size))(_ ++= _)
-        case Left(e) =>
+        case Failure(e) =>
           Logger.error("DataRequestActor Error for Request. Error: %s".format(e.toString))
       }
   }

@@ -8,11 +8,13 @@ import views._
 import models.user.User
 import play.api.data._
 import play.api.data.Forms._
+import play.api.i18n.Messages
 import controllers.Application
 import brainflight.mail.Send
 import brainflight.mail.DefaultMails
 
 object TrainingsTracingAdministration extends Controller with Secured {
+  // finished localization
   val DefaultRole = Role.Admin
 
   val reviewForm = Form(
@@ -21,43 +23,44 @@ object TrainingsTracingAdministration extends Controller with Secured {
 
   def startReview(training: String) = Authenticated { implicit request =>
     (for {
-      tracing <- Tracing.findOneById(training)
+      tracing <- Tracing.findOneById(training) ?~ Messages("tracing.notFound")
       if (tracing.state.isReadyForReview)
-      altered <- Tracing.assignReviewee(tracing, request.user)
+      altered <- Tracing.assignReviewee(tracing, request.user) ?~ Messages("tracing.review.assignFailed")
     } yield {
-      AjaxOk.success(
+      JsonOk(
         html.admin.task.trainingsTasksDetailTableItem(request.user, altered),
-        "You got assigned as reviewee.")
-    }) getOrElse BadRequest("Trainings-Tracing not found.")
+        Messages("tracing.review.assigned"))
+    }) ?~ Messages("tracing.review.notReady")
   }
 
   def oxalisReview(training: String) = Authenticated { implicit request =>
-    (for {
-      tracing <- Tracing.findOneById(training)
-      review <- tracing.review.headOption
+    for {
+      tracing <- Tracing.findOneById(training) ?~ Messages("tracing.notFound")
+      review <- tracing.review.headOption ?~ Messages("tracing.review.notFound")
     } yield {
       Redirect(controllers.routes.Game.trace(review.reviewTracing.toString))
-    }) getOrElse BadRequest("Couldn't create review tracing.")
+    }
   }
 
   def abortReview(trainingsId: String) = Authenticated { implicit request =>
-    Tracing.findOneById(trainingsId) map { training =>
+    for {
+      training <- Tracing.findOneById(trainingsId) ?~ Messages("tracing.review.notFound")
+    } yield {
       val altered = training.update(_.unassignReviewer)
-      AjaxOk.success(
+      JsonOk(
         html.admin.task.trainingsTasksDetailTableItem(request.user, altered),
-        "You got unassigned from this training.")
-    } getOrElse BadRequest("Trainings-Tracing not found.")
+        Messages("tracing.review.unassigned"))
+    }
   }
 
-  def finishReview(training: String) = Authenticated { implicit request =>
-    Tracing.findOneById(training) map { tracing =>
-      tracing.review match {
-        case r :: _ if r._reviewee == request.user._id && tracing.state.isInReview =>
-          Ok(html.admin.task.trainingsReview(tracing, reviewForm))
-        case _ =>
-          BadRequest("No open review found.")
-      }
-    } getOrElse BadRequest("Trainings-Tracing not found.")
+  def finishReview(trainingId: String) = Authenticated { implicit request =>
+    (for {
+      tracing <- Tracing.findOneById(trainingId) ?~ Messages("tracing.notFound")
+      review <- tracing.review.headOption ?~ Messages("tracing.review.notFound")
+      if (review._reviewee == request.user._id && tracing.state.isInReview)
+    } yield {
+      Ok(html.admin.task.trainingsReview(tracing, reviewForm))
+    }) ?~ Messages("tracing.review.finishFailed")
   }
 
   def finishReviewForm(training: String, passed: Boolean) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
@@ -66,13 +69,13 @@ object TrainingsTracingAdministration extends Controller with Secured {
         BadRequest,
       { comment =>
         (for {
-          tracing <- Tracing.findOneById(training)
+          tracing <- Tracing.findOneById(training) ?~ Messages("tracing.notFound")
           if tracing.state.isInReview
-          review <- tracing.review.headOption
+          review <- tracing.review.headOption ?~ Messages("tracing.review.notFound")
           if review._reviewee == request.user._id
-          task <- tracing.task
-          training <- task.training
-          trainee <- tracing.user
+          task <- tracing.task ?~ Messages("tracing.task.notFound")
+          training <- task.training ?~ Messages("tracing.training.notFound")
+          trainee <- tracing.user ?~ Messages("tracing.user.notFound")
         } yield {
           if (passed) {
             trainee.update(_.addExperience(training.domain, training.gain))
@@ -84,10 +87,10 @@ object TrainingsTracingAdministration extends Controller with Secured {
             Application.Mailer ! Send(
               DefaultMails.trainingsFailureMail(trainee.name, trainee.email, comment))
           }
-          Tracing.findOneById(review.reviewTracing).map( reviewTracing =>
+          Tracing.findOneById(review.reviewTracing).map(reviewTracing =>
             reviewTracing.update(_.finish))
-          AjaxOk.success("Trainings review finished.")
-        }) getOrElse AjaxBadRequest.error("Trainings-Tracing not found.")
+          JsonOk(Messages("tracing.review.finished"))
+        }) ?~ Messages("tracing.review.finishFailed")
       })
   }
 }

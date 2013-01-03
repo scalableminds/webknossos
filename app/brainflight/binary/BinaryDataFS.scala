@@ -10,7 +10,6 @@ import reactivemongo.bson.handlers._
 import reactivemongo.bson.handlers.DefaultBSONHandlers._
 import reactivemongo.core.commands.{ GetLastError, LastError }
 import reactivemongo.core.protocol.Response
-import reactivemongo.utils.{ RichBuffer => _, _ }
 import scala.concurrent.{ Future, ExecutionContext }
 import reactivemongo.api.gridfs._
 

@@ -9,9 +9,10 @@ import models.task.TaskType
 import play.api.data.Forms._
 import play.api.data.Form
 import models.task.TimeSpan
+import play.api.i18n.Messages
 
 object TaskTypeAdministration extends Controller with Secured {
-
+  //finished localization
   override val DefaultAccessRole = Role.Admin
 
   val taskTypeForm = Form(
@@ -38,9 +39,11 @@ object TaskTypeAdministration extends Controller with Secured {
   }
   
   def delete(taskTypeId: String) = Authenticated { implicit request =>
-    TaskType.findOneById(taskTypeId) map { taskType =>
+    for{
+      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+    } yield {
       TaskType.remove(taskType)
-      AjaxOk.success("TaskType '%s' successfuly deleted.".format(taskType.summary))
-    } getOrElse AjaxBadRequest.error("TaskType not found.")
+      JsonOk(Messages("taskType.deleted", taskType.summary))
+    }
   }
 }

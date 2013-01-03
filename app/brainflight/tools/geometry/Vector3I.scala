@@ -6,6 +6,7 @@ import play.api.libs.json.JsArray._
 import play.api.libs.json._
 import play.api.libs.json.Json._
 import play.Logger
+import play.api.data.validation.ValidationError
 
 case class Vector3I( val x: Int, val y: Int, val z: Int){
 
@@ -50,9 +51,13 @@ object Vector3I{
   implicit object Vector3IReads extends Reads[Vector3I] {
     def reads( json: JsValue ) = json match {
       case JsArray( ts ) if ts.size == 3 =>
-        val c = ts.map( fromJson[Int]( _ ) )
-        Vector3I( c( 0 ), c( 1 ), c( 2 ) )
-      case _ => throw new RuntimeException( "List expected" )
+        val c = ts.map( fromJson[Int]( _ ) ).flatMap( _.asOpt)
+        if(c.size != 3)
+          JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.array.invalidContent"))))
+        else
+          JsSuccess(Vector3I(c(0), c(1), c(2)))
+      case _ =>
+        JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.point3DArray"))))
     }
   }
 }

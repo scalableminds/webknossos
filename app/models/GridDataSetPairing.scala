@@ -7,7 +7,7 @@ import reactivemongo.api._
 import reactivemongo.bson._
 import reactivemongo.bson.handlers.DefaultBSONHandlers._
 import scala.concurrent.Future
-import play.api.libs.concurrent.execution.defaultContext
+import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.handlers.BSONWriter
 import models.binary.DataLayer
 /**

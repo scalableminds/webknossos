@@ -14,12 +14,12 @@ import akka.pattern.ask
 import brainflight.js.JsExecutionActor
 import brainflight.js.JS
 import akka.util.Timeout
-import akka.util.duration._
+import scala.concurrent.duration._
 import akka.pattern.AskTimeoutException
 import org.bson.types.ObjectId
-import akka.dispatch.Future
-import play.api.libs.concurrent.execution.defaultContext
-import akka.dispatch.Promise
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Promise
 import play.api.libs.json.Format
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
@@ -198,7 +198,7 @@ object Task extends BasicDAO[Task]("tasks") {
   
   private def nextTaskForUser(user: User, tasks: Array[Task]): Future[Option[Task]] = {
     if (tasks.isEmpty) {
-      Promise.successful(None)(Akka.system.dispatcher)
+      Future.successful(None)
     } else {
       val params = Map("user" -> user, "tasks" -> tasks)
 
@@ -207,7 +207,7 @@ object Task extends BasicDAO[Task]("tasks") {
           Logger.warn("JS Execution actor didn't return in time!")
           null
       }
-      future.mapTo[Promise[Task]].flatMap(_.map { x =>
+      future.mapTo[Future[Task]].flatMap(_.map { x =>
         Option(x)
       }).recover {
         case e: Exception =>
@@ -241,7 +241,7 @@ object Task extends BasicDAO[Task]("tasks") {
               f(tail, tasks, result)
           }
         case _ =>
-          Future(result)(Akka.system.dispatcher)
+          Future.successful(result)
       }
     }
     val nonTrainings = findAllAssignableNonTrainings.map(t => t._id -> t).toMap

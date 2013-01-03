@@ -1,8 +1,10 @@
 package brainflight.binary
 
 import brainflight.tools.geometry.Point3D
+import scala.concurrent.Promise
+import scala.concurrent.Future
 import play.api.libs.concurrent.Promise
-import play.api.libs.concurrent.execution.defaultContext
+import play.api.libs.concurrent.Execution.Implicits._
 import models.binary._
 import brainflight.tools.geometry.Vector3D
 import play.api.Play
@@ -12,11 +14,12 @@ import akka.actor.Actor
 import play.api.Logger
 import akka.agent.Agent
 import akka.util.Timeout
-import akka.util.duration._
+import scala.concurrent.duration._
 import akka.pattern.pipe
 import akka.actor.Status
 import java.util.concurrent.TimeoutException
 import java.io.InputStream
+import scala.util._
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
@@ -37,7 +40,7 @@ abstract class DataStore extends Actor {
   /**
    * Loads the data of a given point from the data source
    */
-  def load(dataInfo: LoadBlock): Promise[Array[Byte]]
+  def load(dataInfo: LoadBlock): Future[Array[Byte]]
 
   def receive = {
     case request @ LoadBlock(dataSetBaseDir, dataSetName, dataLayerName, bytesPerElement, resolution, x, y, z) =>
@@ -46,9 +49,9 @@ abstract class DataStore extends Actor {
       else {
         val s = sender
         load(request).onComplete {
-          case Left(e) =>
+          case Failure(e) =>
             s ! e
-          case Right(d) =>
+          case Success(d) =>
             s ! d
         }
       }

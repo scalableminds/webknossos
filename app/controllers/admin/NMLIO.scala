@@ -12,6 +12,7 @@ import xml.Xml
 import play.api.Logger
 import scala.xml.PrettyPrinter
 import models.tracing._
+import play.api.i18n.Messages
 
 object NMLIO extends Controller with Secured {
   val prettyPrinter = new PrettyPrinter(100, 2)
@@ -36,23 +37,23 @@ object NMLIO extends Controller with Secured {
         .headOption
         .map { tracing =>
           Redirect(controllers.routes.Game.trace(tracing.id)).flashing(
-            "success" -> "NML upload successful")
+            "success" -> Messages("nml.file.uploadSuccess"))
         }
     }.getOrElse {
       Redirect(controllers.routes.UserController.dashboard).flashing(
-        "error" -> "Invalid file")
+        "error" -> Messages("nml.file.invalid"))
     }
   }
 
   def download(tracingId: String) = Authenticated { implicit request =>
     (for {
-      tracing <- Tracing.findOneById(tracingId)
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
       if !tracing.isTrainingsTracing
     } yield {
       Ok(prettyPrinter.format(Xml.toXML(tracing))).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",
         CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(tracing.dataSetName)))
-    }) getOrElse BadRequest
+    }) ?~ Messages("tracing.training.notFound")
   }
 
 }

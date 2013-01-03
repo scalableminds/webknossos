@@ -13,6 +13,7 @@ import models.tracing.UsedTracings
 import views._
 import brainflight.security.AuthenticatedRequest
 import models.tracing.TracingType
+import play.api.i18n.Messages
 
 object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -23,14 +24,13 @@ object Game extends Controller with Secured {
 
   def htmlForTracing(tracing: Tracing)(implicit request: AuthenticatedRequest[_]) = {
     val additionalHtml =
-      (if (tracing.tracingType == TracingType.Review){
-        Tracing.findTrainingForReviewTracing(tracing).map{ training =>
+      (if (tracing.tracingType == TracingType.Review) {
+        Tracing.findTrainingForReviewTracing(tracing).map { training =>
           html.admin.task.trainingsReviewItem(training, admin.TrainingsTracingAdministration.reviewForm)
         }
-      }else
+      } else
         tracing.review.headOption.flatMap(_.comment).map(comment =>
-          html.oxalis.trainingsComment(comment))
-      ).getOrElse(Html.empty)
+          html.oxalis.trainingsComment(comment))).getOrElse(Html.empty)
     html.oxalis.trace(tracing)(additionalHtml)
   }
 
@@ -45,23 +45,21 @@ object Game extends Controller with Secured {
 
   def trace(tracingId: String) = Authenticated { implicit request =>
     val user = request.user
-
-    Tracing.findOneById(tracingId)
-      .filter(_._user == user._id)
-      .map { tracing =>
-        UsedTracings.use(user, tracing)
-        Ok(htmlForTracing(tracing))
-      }
-      .getOrElse(BadRequest("Tracing not found."))
+    (for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      if (tracing._user == user._id)
+    } yield {
+      UsedTracings.use(user, tracing)
+      Ok(htmlForTracing(tracing))
+    }) ?~ Messages("notAllowed") ~> 403
   }
 
   def initialize = Authenticated { implicit request =>
     val user = request.user
-    UsedTracings.by(user) match {
-      case tracing :: _ =>
-        Ok(createTracingIDInfo(tracing.toString))
-      case _ =>
-        BadRequest("No open tracing found.")
+    for {
+      tracing <- UsedTracings.by(user).headOption ?~ Messages("tracing.open.notFound")
+    } yield {
+      Ok(createTracingIDInfo(tracing.toString))
     }
   }
 }

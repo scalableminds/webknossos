@@ -1,9 +1,11 @@
 package models
 
-import play.api.libs.json.Json
+import play.api.libs.json.Json._
+import play.api.libs.json._
 import play.api.libs.json.Writes
 import play.api.libs.json.JsValue
 import play.api.libs.json.Format
+import play.api.data.validation.ValidationError
 
 import brainflight.tools.ExtendedTypes._
 
@@ -23,14 +25,17 @@ object Color {
   }
   implicit object ColorFormat extends Format[Color] {
     def writes(c: Color) = Json.arr(c.r, c.g, c.b, c.a)
-    def reads(js: JsValue) = {
-      js.as[List[Float]] match{
-        case r :: g :: b :: a :: Nil =>
-          Color(r, g, b, a)
-        case _ =>
-          throw new RuntimeException("Color expected.")
-      }
-      
+    // TODO: Rewrite to use new json features of play
+    // http://mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/
+    def reads(json: JsValue) = json match {
+      case JsArray(ts) if ts.size == 3 =>
+        val c = ts.map(fromJson[Float](_)).flatMap(_.asOpt)
+        if(c.size != 4)
+          JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.array.invalidContent"))))
+        else
+          JsSuccess(Color(c(0), c(1), c(2), c(3)))
+      case _ =>
+        JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.point3DArray"))))
     }
   }
 }

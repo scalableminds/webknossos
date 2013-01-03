@@ -8,13 +8,14 @@ import akka.actor.Props
 import brainflight.binary._
 import models.binary.DataSet
 import akka.util.Timeout
-import akka.util.duration._
+import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import play.api.libs.concurrent._
 import views._
 import play.api.libs.json.Json
-import play.api.libs.concurrent.execution.defaultContext
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.i18n.Messages
 
 object BinaryDataAdministration extends Controller with Secured {
 
@@ -30,7 +31,7 @@ object BinaryDataAdministration extends Controller with Secured {
           case e: AskTimeoutException =>
             Promise.pure(Map[DataSet, Double]())
         }
-        .mapTo[Map[DataSet, Double]].asPromise.map { states =>
+        .mapTo[Map[DataSet, Double]].map { states =>
           Ok(Json.toJson(states.map {
             case (dataSet, state) =>
               dataSet.name -> state
@@ -50,9 +51,11 @@ object BinaryDataAdministration extends Controller with Secured {
 
     implicit val system = Akka.system
 
-    DataSet.findOneByName(dataSetName).map { dataSet =>
+    for {
+      dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
+    } yield {
       dataInsertionActor ! InsertBinary(dataSet)
       Ok
-    }.getOrElse(BadRequest("DataSet not found!"))
+    }
   }
 }

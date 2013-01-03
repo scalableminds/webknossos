@@ -5,17 +5,18 @@ import scala.collection.JavaConverters._
 import name.pachler.nio.file._
 import name.pachler.nio.file.impl.PathImpl
 import akka.actor._
-import akka.util.duration._
 import play.api.libs.json._
 import play.api.libs.iteratee._
 import play.api.libs.concurrent._
 import akka.util.Timeout
 import akka.pattern.ask
-import akka.dispatch.Terminate
 import play.api.Play
+import akka.util
 import play.api.Logger
-import akka.dispatch.Future
 import play.utils.Threads
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.Future
 
 case class StartWatching(val pathName: String)
 case class StopWatching()
@@ -134,6 +135,7 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
   }
 
   override def postStop() = {
+    super.postStop()
     shouldStop = true
     if (updateTicker != null)
       updateTicker.cancel()

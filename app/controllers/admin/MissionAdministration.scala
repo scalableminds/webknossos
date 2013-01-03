@@ -10,6 +10,7 @@ import play.api.Logger
 import scala.io.Source
 import java.io.File
 import play.api.libs.json._
+import play.api.i18n.Messages
 
 object MissionAdministration extends Controller with Secured {
   override def DefaultAccessRole = Role.Admin

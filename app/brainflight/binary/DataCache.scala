@@ -7,15 +7,15 @@ import models.binary._
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import akka.agent.Agent
 import play.api.libs.concurrent.Promise
-import play.api.libs.concurrent.execution.defaultContext
+import play.api.libs.concurrent.Execution.Implicits._
 import brainflight.tools.geometry.Vector3D
 import brainflight.tools.Interpolator
 import play.api.Logger
 import scala.collection.mutable.ArrayBuffer
 import akka.actor.Actor
-import akka.dispatch.Future
+import scala.concurrent.Future
 import akka.actor.ActorSystem
-import akka.util.duration._
+import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
 import akka.dispatch.OnSuccess
 

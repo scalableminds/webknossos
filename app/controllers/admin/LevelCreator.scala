@@ -30,90 +30,75 @@ object LevelCreator extends Controller with Secured {
       "depth" -> number)(Level.fromForm)(Level.toForm)).fill(Level.empty)
 
   def use(levelId: String, missionId: String) = Authenticated { implicit request =>
-    Level
-      .findOneById(levelId)
-      .map { level =>
-        Ok(html.admin.creator.levelCreator(level, missionId))
-      }
-      .getOrElse(BadRequest("Level not found."))
+    for {
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+    } yield {
+      Ok(html.admin.creator.levelCreator(level, missionId))
+    }
   }
 
   def delete(levelId: String) = Authenticated { implicit request =>
-    Level
-      .findOneById(levelId)
-      .map { level =>
-        Level.remove(level)
-        AjaxOk.success(Messages("level.removed"))
-      }
-      .getOrElse(AjaxBadRequest.error("Level not found."))
+    for {
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+    } yield {
+      Level.remove(level)
+      JsonOk(Messages("level.removed"))
+    }
   }
 
   def submitCode(levelId: String) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for {
-      code <- request.body.get("code").flatMap(_.headOption)
-      level <- Level.findOneById(levelId)
+    for {
+      code <- postParameter("code") ?~ Messages("level.code.notSupplied")
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
     } yield {
       level.update(_.alterCode(code))
-      AjaxOk.success("level.codeSaved")
-    }) getOrElse AjaxBadRequest.error("Missing parameters.")
+      JsonOk("level.code.saved")
+    }
   }
 
   def uploadAsset(levelId: String) = Authenticated(parse.multipartFormData) { implicit request =>
-    request.body.file("asset").flatMap { assetFile =>
-      Level.findOneById(levelId).map { level =>
-        if (level.addAsset(assetFile.filename, assetFile.ref.file))
-          AjaxOk.success(Messages("level.assets.uploadSuccess"))
-        else
-          AjaxBadRequest.error("Could not upload.")
-      }
-    } getOrElse AjaxBadRequest.error("Invalid request or level.")
+    (for {
+      assetFile <- request.body.file("asset") ?~ Messages("level.assets.notSupplied")
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+      if (level.addAsset(assetFile.filename, assetFile.ref.file))
+    } yield {
+      JsonOk(Messages("level.assets.uploaded"))
+    }) ?~ Messages("level.assets.uploadFailed")
   }
 
   def listAssets(levelId: String) = Authenticated { implicit request =>
-    Level
-      .findOneById(levelId)
-      .map { level =>
-        Ok(Json.toJson(level.assets.map(_.getName)))
-      }
-      .getOrElse(BadRequest("Level not found."))
+    for {
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+    } yield {
+      Ok(Json.toJson(level.assets.map(_.getName)))
+    }
   }
 
   def produce(levelId: String) = Authenticated { implicit request =>
-    Level
-      .findOneById(levelId)
-      .map { level =>
-        levelCreateActor ! CreateLevel(level)
-        Ok("On my way")
-      }
-      .getOrElse(BadRequest("Level not found."))
+    for {
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+    } yield {
+      levelCreateActor ! CreateLevel(level)
+      Ok(Messages("level.creation.inProgress"))
+    }
   }
 
   def retrieveAsset(levelId: String, asset: String) = Authenticated { implicit request =>
-    Level
-      .findOneById(levelId)
-      .map { level =>
-        level.retrieveAsset(asset) match {
-          case Some(assetFile) =>
-            Ok.sendFile(assetFile, true)
-          case _ =>
-            BadRequest("Asset not found.")
-        }
-      }
-      .getOrElse(BadRequest("Level not found."))
+    for {
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+      assetFile <- level.retrieveAsset(asset) ?~ Messages("level.assets.notFound")
+    } yield {
+      Ok.sendFile(assetFile, true)
+    }
   }
 
   def deleteAsset(levelId: String, asset: String) = Authenticated { implicit request =>
-    Level
-      .findOneById(levelId)
-      .map { level =>
-        level.deleteAsset(asset) match {
-          case true =>
-            AjaxOk.success(Messages("level.assets.deleted"))
-          case _ =>
-            AjaxBadRequest.error("Asset not found.")
-        }
-      }
-      .getOrElse(AjaxBadRequest.error("Level not found."))
+    (for {
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+      if (level.deleteAsset(asset))
+    } yield {
+      JsonOk(Messages("level.assets.deleted"))
+    }) ?~ Messages("level.assets.deleteFailed")
   }
 
   def create = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
@@ -124,7 +109,7 @@ object LevelCreator extends Controller with Secured {
           Level.insertOne(t)
           Ok(html.admin.creator.levelList(Level.findAll, levelForm))
         } else
-          BadRequest("Invalid level name")
+          BadRequest(Messages("level.invalidName"))
       })
   }
 

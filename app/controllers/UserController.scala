@@ -13,6 +13,7 @@ import models.binary.DataSet
 import views._
 import play.api.Logger
 import models.tracing._
+import play.api.i18n.Messages
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -45,11 +46,11 @@ object UserController extends Controller with Secured {
 
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {
     implicit request =>
-      request.body.asOpt[JsObject] map { settings =>
+      request.body.asOpt[JsObject].map { settings =>
         val fields = settings.fields take (UserConfiguration.MaxSettings) filter (UserConfiguration.isValidSetting)
         request.user.update(_.changeSettings(UserConfiguration(fields.toMap)))
         Ok
-      } getOrElse (BadRequest)
+      } ?~ Messages("user.settings.invalid")
   }
 
   def showSettings = Authenticated {

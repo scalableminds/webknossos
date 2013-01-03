@@ -4,11 +4,13 @@ import brainflight.security.SCrypt._
 import models.user.User
 import play.api.libs.ws.WS
 import com.ning.http.client.Realm.AuthScheme
-import play.api.libs.concurrent.execution.defaultContext
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
 import play.api.Play.current
 import play.api.Play
-import akka.dispatch.Promise
+import scala.concurrent.Promise
+import scala.concurrent.Future
+import scala.util._
 import play.api.libs.concurrent.Akka
 
 object BrainTracing {
@@ -19,9 +21,7 @@ object BrainTracing {
 
   val isActive = Play.configuration.getBoolean("braintracing.active") getOrElse false
   
-  implicit val excetutionContext = Akka.system.dispatcher
-  
-  def register(user: User, password: String): Promise[String] = {
+  def register(user: User, password: String): Future[String] = {
     val pwHash = md5(password)
     if (isActive) {
       val result = Promise[String]()
@@ -38,17 +38,17 @@ object BrainTracing {
         .map { response =>
           result complete (response.status match {
             case 200 =>
-              Right("braintracing.new")
+              Success("braintracing.new")
             case 304 =>
-              Right("braintracing.exists")
+              Success("braintracing.exists")
             case _ =>
-              Right("braintraceing.error")
+              Success("braintraceing.error")
           })
           Logger.info("Creation of account %s returned Status: %s Body: %s".format(user.email, response.status, response.body))
         }
-      result
+      result.future
     } else {
-      Promise.successful("braintracing.new")
+      Future.successful("braintracing.new")
     }
   }
 }

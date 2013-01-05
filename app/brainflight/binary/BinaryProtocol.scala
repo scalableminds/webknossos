@@ -1,8 +1,8 @@
 package brainflight.binary
 
 import brainflight.tools.geometry.Vector3I
-import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
+import braingames.util.ExtendedTypes.ExtendedByteArray
 import play.api.Logger
 
 trait Handle {

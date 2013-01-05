@@ -3,8 +3,6 @@ package brainflight.binary
 import play.Logger
 import java.io.{ FileNotFoundException, InputStream, FileInputStream }
 import scala.collection.JavaConverters._
-import brainflight.tools.ExtendedTypes._
-import brainflight.tools.geometry.Point3D
 import models.binary.DataSet
 import akka.agent.Agent
 import scala.io.Codec.charset2codec

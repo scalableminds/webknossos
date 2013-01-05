@@ -3,10 +3,12 @@ package brainflight.io
 import java.io.File
 import name.pachler.nio.file.Path
 import name.pachler.nio.file.impl.PathImpl
-import models.binary._
 import brainflight.tools.geometry.Point3D
 import play.api.Logger
-import brainflight.tools.ExtendedTypes._
+import braingames.util.ExtendedTypes.ExtendedString
+import models.binary.DataSet
+import models.binary.ColorLayer
+import models.binary.DataLayer
 
 class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {

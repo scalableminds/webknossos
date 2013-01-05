@@ -6,7 +6,7 @@ import models.graph.{ Tree, Edge }
 import models.tracing.Tracing
 import models.graph
 import models.Color
-import brainflight.tools.ExtendedTypes._
+import braingames.util.ExtendedTypes.ExtendedString
 import brainflight.tools.geometry.Point3D
 import scala.xml.Node
 import scala.xml.NodeSeq

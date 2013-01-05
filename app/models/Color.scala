@@ -7,7 +7,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Format
 import play.api.data.validation.ValidationError
 
-import brainflight.tools.ExtendedTypes._
+import braingames.util.ExtendedTypes.ExtendedDouble
 
 case class Color( r: Double, g: Double, b: Double, a: Double){
   def toHtml = "#%02x%02x%02x".format((r*255).toInt, (g*255).toInt, (b*255).toInt)

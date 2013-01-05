@@ -21,7 +21,7 @@ import akka.dispatch.OnSuccess
 
 case class DataBlock(info: LoadBlock, data: Data)
 
-case class Data(value: Array[Byte])
+case class Data(val value: Array[Byte]) extends AnyVal
 
 /**
  * A data store implementation which uses the hdd as data storage

@@ -4,7 +4,7 @@ import scala.Array.canBuildFrom
 import scala.Option.option2Iterable
 import brainflight.security.AuthenticatedRequest
 import brainflight.security.Secured
-import brainflight.tools.ExtendedTypes.String2ExtendedString
+import braingames.util.ExtendedTypes.ExtendedString
 import brainflight.tools.geometry.Point3D
 import models.binary.DataSet
 import models.security.Role

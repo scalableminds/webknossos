@@ -28,19 +28,27 @@ import brainflight.ActorSystems
 case class SingleRequest(dataRequest: DataRequest)
 case class MultiCubeRequest(requests: Seq[SingleRequest])
 
-class DataRequestActor extends Actor with DataCache{
+class DataRequestActor extends Actor with DataCache {
   import DataStore._
 
   implicit val dataBlockLoadTimeout = Timeout(10 seconds)
   implicit val system = ActorSystems.dataRequestSystem
-  
-  val remotePath = Play.current.configuration.getString("datarequest.remotepath").get
+  val conf = Play.current.configuration
+  val remotePath = conf.getString("datarequest.remotepath").get
+  val useRemote = conf.getBoolean("bindata.useRemote").get
 
   lazy val dataStores = List[ActorRef](
-    system.actorFor(remotePath+"/user/gridDataStore"),
-    system.actorFor(remotePath+"/user/fileDataStore"),
-    system.actorOf(Props(new EmptyDataStore()), name = "emptyDataStore"))  
-    
+    actorForWithLocalFallback[GridDataStore]("gridDataStore"),
+    actorForWithLocalFallback[FileDataStore]("fileDataStore"),
+    system.actorOf(Props(new EmptyDataStore()), name = "emptyDataStore"))
+
+  def actorForWithLocalFallback[T <: Actor](name: String)(implicit evidence: scala.reflect.ClassTag[T]) = {
+    if (useRemote)
+      system.actorFor(remotePath + "/user/" + name)
+    else
+      system.actorOf(Props[T], name = name)
+  }
+
   def receive = {
     case SingleRequest(dataRequest) =>
       load(dataRequest) pipeTo sender
@@ -75,8 +83,8 @@ class DataRequestActor extends Actor with DataCache{
       case _ =>
         throw new DataNotFoundException("DataSetActor")
     }
-    
-    withCache(block2Load){
+
+    withCache(block2Load) {
       loadFromStore(dataStores)
     }
   }

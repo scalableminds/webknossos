@@ -21,8 +21,10 @@ import brainflight.thirdparty.BrainTracing
 
 object Authentication extends Controller with Secured {
   // -- Authentication
+  override def DefaultAccessRole = None
 
-  val autoVerify = Play.configuration.getBoolean("application.enableAutoVerify") getOrElse false
+  val autoVerify =
+    Play.configuration.getBoolean("application.enableAutoVerify") getOrElse false
 
   val registerForm: Form[(String, String, String, String)] = {
 
@@ -62,24 +64,18 @@ object Authentication extends Controller with Secured {
         {
           case (email, firstName, lastName, password) => {
             val user =
-              if (autoVerify)
-                User.insertOne(User(
-                  email,
-                  firstName,
-                  lastName,
-                  true,
-                  brainflight.security.SCrypt.hashPassword(password),
-                  "local",
-                  UserConfiguration.defaultConfiguration,
-                  Set("user")))
-              else
-                User.insertOne(User.create(email, firstName, lastName, password))
+              User.create(email, firstName, lastName, password, autoVerify)
 
             BrainTracing.register(user, password).map { brainDBresult =>
               Application.Mailer ! Send(
-                  DefaultMails.registerMail(user.name, email, brainDBresult))
-              Redirect(routes.Game.index)
-                .withSession(Secured.createSession(user))
+                DefaultMails.registerMail(user.name, email, brainDBresult))
+              if (autoVerify) {
+                Redirect(routes.Game.index)
+                  .withSession(Secured.createSession(user))
+              } else {
+                Redirect(routes.Authentication.login)
+                  .flashing("success" -> "An account has been created. An administrator is going to unlock you soon.")
+              }
             }.asPromise
           }
         })

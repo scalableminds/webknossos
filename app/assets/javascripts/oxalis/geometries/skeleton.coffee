@@ -81,6 +81,7 @@ class Skeleton
         @route.one("rendered", =>
           @route.one("rendered", =>
             @loadSkeletonFromModel(trees)))
+      removeSpheresOfTree : (nodes) => @removeSpheresOfTree(nodes)
 
     @reset()
 
@@ -384,10 +385,24 @@ class Skeleton
         return i
     return null
 
+  removeSpheresOfTree : (nodes) ->
+    nodeSpheres = (@popSphereFromId(node.id) for node in nodes)
+    @trigger "removeGeometries", nodeSpheres
+
   getSphereFromId : (nodeId) ->
     for node in @nodesSpheres
       if node.nodeId == nodeId
         return node
+
+  popSphereFromId : (nodeId) ->
+    i = 0
+    while i < @nodesSpheres.length
+      if @nodesSpheres[i].nodeId == nodeId
+        node = @nodesSpheres[i]
+        @nodesSpheres.splice(i, 1)
+        return node
+      else
+        i++
 
   setDisplaySpheres : (value) ->
     @disSpheres = value

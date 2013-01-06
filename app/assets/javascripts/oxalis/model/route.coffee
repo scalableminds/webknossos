@@ -397,6 +397,7 @@ class Route
     if deletedNode.neighbors.length > 1
       # Need to split tree
       newTrees = []
+      @trigger("removeSpheresOfTree", @activeTree.nodes.concat(deletedNode))
       for i in [0...@activeNode.neighbors.length]
         unless i == 0
           # create new tree for all neighbors, except the first

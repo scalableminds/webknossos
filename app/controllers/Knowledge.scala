@@ -11,6 +11,7 @@ import models.knowledge.Mission
 
 
 object Knowledge extends Controller with Secured{
+  override val DefaultAccessRole = Role.Admin
   
   val KnowledgeDirectory = "/home/deployboy/knowledge"
   

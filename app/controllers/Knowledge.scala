@@ -8,6 +8,7 @@ import play.api.Play.current
 import java.io.File
 import scala.io.Source
 import models.knowledge.Mission
+import models.security.Role
 
 
 object Knowledge extends Controller with Secured{

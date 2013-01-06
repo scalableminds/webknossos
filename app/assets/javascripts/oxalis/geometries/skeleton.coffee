@@ -68,29 +68,15 @@ class Skeleton
       )
     @activeNode.doubleSided = true
 
-    @route.on("newActiveNode", =>
-      @setActiveNode())
-
-    @route.on("newTree", (treeId, treeColor) =>
-      @createNewTree(treeId, treeColor))
-
-    @route.on("deleteActiveTree", (index) =>
-      @deleteActiveTree(index))
-
-    @route.on("deleteActiveNode", (id) =>
-      @deleteNode(id))
-
-    @route.on("deleteLastNode", (id) =>
-      @deleteLastNode(id))
-
-    @route.on("newNode", =>
-      @setWaypoint())
-
-    @route.on("setBranch", (isBranchPoint) =>
-      @setBranchPoint(isBranchPoint))
-
-    @route.on("newActiveNodeRadius", (radius) =>
-      @setNodeRadius(radius))
+    @route.on
+      newActiveNode : => @setActiveNode()
+      newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
+      deleteActiveTree : (index) => @deleteActiveTree(index)
+      deleteActiveNode : (id) => @deleteNode(id)
+      deleteLastNode : (id) => @deleteLastNode(id)
+      newNode : => @setWaypoint()
+      setBranch : (isBranchPoint) => @setBranchPoint(isBranchPoint)
+      newActiveNodeRadius : (radius) => @setNodeRadius(radius)
 
     @reset()
 

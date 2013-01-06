@@ -76,8 +76,8 @@ class Gui
                           .onChange(@setMouseInversionY)
 
     fView = @gui.addFolder("Planes")
-    (fView.add @settings, "moveValue", 1, 10) 
-                          .step(0.25)
+    (fView.add @settings, "moveValue", 0.1, 10) 
+                          .step(0.1)
                           .name("Move Value")    
                           .onChange(@setMoveValue)
     scale = @model.scaleInfo.baseVoxel
@@ -164,39 +164,29 @@ class Gui
     fTrees.open()
     fNodes.open()
 
-    @flycam.on "globalPositionChanged", (position) => 
-
-      @updateGlobalPosition(position)
-      return
-
-    @flycam.on "zoomFactorChanged", (factor) =>
-      $("#zoomFactor").html("<p>Zoom factor: " + factor + "</p>")
-
     $("#trace-position-input").on "change", (event) => 
 
       @setPosFromString(event.target.value)
       return
 
-    @model.route.on("newActiveNode", =>
-      @update())
+    @flycam.on
+                globalPositionChanged : (position) => 
+                  @updateGlobalPosition(position)
+                zoomFactorChanged : (factor) =>
+                  nm = factor * 384 * @model.scaleInfo.baseVoxel
+                  if(nm<1000)
+                    $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
+                  else
+                    $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " mm</p>")
 
-    @model.route.on("newActiveTree", =>
-      @update())
-
-    @model.route.on("deleteActiveTree", =>
-      @update())
-
-    @model.route.on("deleteActiveNode", =>
-      @update())
-
-    @model.route.on("deleteLastNode", =>
-      @update())
-
-    @model.route.on("newNode", =>
-      @update())
-
-    @model.route.on("newActiveNodeRadius", (radius) =>
-      @updateRadius(radius))
+    @model.route.on  
+                      newActiveNode    : => @update()
+                      newActiveTree    : => @update()
+                      deleteActiveTree : => @update()
+                      deleteActiveNode : => @update()
+                      deleteLastNode   : => @update()
+                      newNode          : => @update()
+                      newActiveNodeRadius : (radius) =>@updateRadius(radius) 
 
   saveNow : =>
     @model.user.pushImpl()

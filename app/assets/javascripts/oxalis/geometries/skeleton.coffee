@@ -148,7 +148,7 @@ class Skeleton
         # Assign the ID to the vertex, so we can access it later
         @nodes[index].geometry.nodeIDs.set([node.id], @curIndex[index])
         # currently disabled due to performance issues
-        @pushNewNode(node.radius, node.pos, node.id, tree.color, node.type)
+        # @pushNewNode(node.radius, node.pos, node.id, tree.color, node.type)
         @curIndex[index]++
 
         # Add edges to neighbor, if neighbor id is smaller
@@ -168,8 +168,8 @@ class Skeleton
 
       @routes[index].geometry.verticesNeedUpdate = true
       @nodes[index].geometry.verticesNeedUpdate = true
-    for branchPoint in @route.branchStack
-      @setBranchPoint(true, branchPoint.id)
+    #for branchPoint in @route.branchStack
+    #  @setBranchPoint(true, branchPoint.id)
 
     @setActiveNode()
 
@@ -253,7 +253,7 @@ class Skeleton
       @nodes[index].geometry.__vertexArray = @nodesBuffer[index]
       @nodes[index].geometry.__webglParticleCount = @curIndex[index] + 1
 
-      @pushNewNode(radius, position, id, color, type)
+      # @pushNewNode(radius, position, id, color, type)
 
       @routes[index].geometry.verticesNeedUpdate = true
       @nodes[index].geometry.verticesNeedUpdate = true

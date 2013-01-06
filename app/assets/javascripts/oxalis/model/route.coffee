@@ -221,6 +221,14 @@ class Route
         deferred.reject()
     deferred
 
+  deleteBranch : (nodeID) ->
+    i = 0
+    while i < @branchStack.length
+      if @branchStack[i].nodeId == nodeID
+        @branchStack.splice(i, 1)
+      else
+        i++
+
   showBranchModal : ->
     @branchDeferred = new $.Deferred()
     $("#double-jump").modal("show")

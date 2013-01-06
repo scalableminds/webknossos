@@ -46,48 +46,34 @@ class PingStrategy.DslSlow extends PingStrategy
   roundTripTimeRangeStart : 0
   roundTripTimeRangeEnd : Infinity
 
-  ping : (position, direction, zoomStep, area) ->
+  ping : (position, direction, zoomStep, area, activePlane) ->
 
-    [@u, @v, @w] = Dimensions.getIndices(0)
+    pullQueue = [] 
 
-    pullQueue = []
+    for plane in [0..2]
+      [@u, @v, @w] = Dimensions.getIndices(plane)
 
-    # Converting area from voxels to buckets
-    area = [
-      area[0] >> @cube.BUCKET_SIZE_P
-      area[1] >> @cube.BUCKET_SIZE_P
-      area[2] - 1 >> @cube.BUCKET_SIZE_P
-      area[3] - 1 >> @cube.BUCKET_SIZE_P
-    ]
+      # Converting area from voxels to buckets
+      bucketArea = [
+        area[plane][0] >> @cube.BUCKET_SIZE_P
+        area[plane][1] >> @cube.BUCKET_SIZE_P
+        area[plane][2] - 1 >> @cube.BUCKET_SIZE_P
+        area[plane][3] - 1 >> @cube.BUCKET_SIZE_P
+      ]
 
-    centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
-    buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, area)
+      centerBucket = @cube.positionToZoomedAddress(position, zoomStep[plane])
+      buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, bucketArea)
 
-    for bucket in buckets
-      if bucket?
-        priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
-        pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority])
-        if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
-        pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority << 1])
-        if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
-        pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority << 2])
-
-
-    # [@u, @v, @w] = Dimensions.getIndices(1)
-    # buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, area)
-
-    # for bucket in buckets
-    #   if bucket?
-    #     priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
-    #     pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority << 3])
-
-    # [@u, @v, @w] = Dimensions.getIndices(2)
-    # buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, area)
-
-    # for bucket in buckets
-    #   if bucket?
-    #     priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
-    #     pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority << 3])
+      for bucket in buckets
+        if bucket?
+          priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
+          pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep[plane]], priority])
+          if plane == activePlane
+            # preload only for active plane
+            if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
+            pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep[plane]], priority << 1])
+            if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
+            pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep[plane]], priority << 2])
 
     pullQueue
 
@@ -95,7 +81,6 @@ class PingStrategy.DslSlow extends PingStrategy
   getBucketArray : (center, range, area) ->
 
     buckets = []
-
     for u in [-(range-area[0])..(area[2]-range)]
       for v in [-(range-area[1])..(area[3]-range)]
         bucket = center.slice(0)

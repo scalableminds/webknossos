@@ -413,7 +413,7 @@ class Route
       @activeNode = deletedNode.neighbors[0]
       @trigger("deleteActiveNode", deletedNode)
     else
-      @deleteActiveTree()
+      @deleteTree()
     
     @push()
 

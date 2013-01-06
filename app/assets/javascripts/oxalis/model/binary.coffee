@@ -47,13 +47,13 @@ class Binary
       plane.updateLookUpTable(lookUpTable)
 
 
-  ping : _.once (position, {zoomStep, area}) ->
+  ping : _.once (position, {zoomStep, area, activePlane}) ->
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @ping(position, {zoomStep, area})
+    @ping(position, {zoomStep, area, activePlane})
 
 
-  pingImpl : (position, {zoomStep, area}) ->
+  pingImpl : (position, {zoomStep, area, activePlane}) ->
 
     if @lastPosition?
       
@@ -74,7 +74,7 @@ class Binary
       for strategy in @pingStrategies 
         if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
 
-          pullQueue = strategy.ping(position, @direction, zoomStep[0], area[0]) if zoomStep[0]? and area[0]? 
+          pullQueue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
 
           for entry in pullQueue
             @queue.insert(entry...)

@@ -10,6 +10,7 @@ PLANE_YZ           = Dimensions.PLANE_YZ
 PLANE_XZ           = Dimensions.PLANE_XZ
 VIEW_3D            = Dimensions.VIEW_3D
 
+TYPE_NORMAL = 0
 TYPE_BRANCH = 1
 
 COLOR_ACTIVE = 0x0000ff
@@ -74,7 +75,7 @@ class Skeleton
       deleteLastNode : (id) => @deleteLastNode(id)
       mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) => @mergeTree(lastTreeID, lastNodePosition, activeNodePosition)
       newNode : => @setWaypoint()
-      setBranch : (isBranchPoint) => @setBranchPoint(isBranchPoint)
+      setBranch : (isBranchPoint, nodeID) => @setBranchPoint(isBranchPoint, nodeID)
       newActiveNodeRadius : (radius) => @setNodeRadius(radius)
       reloadTrees : (trees) =>
         @route.one("rendered", =>
@@ -146,7 +147,7 @@ class Skeleton
         # Assign the ID to the vertex, so we can access it later
         @nodes[index].geometry.nodeIDs.set([node.id], @curIndex[index])
         # currently disabled due to performance issues
-        # @pushNewNode(node.radius, node.pos, node.id, tree.color)
+        @pushNewNode(node.radius, node.pos, node.id, tree.color, node.type)
         @curIndex[index]++
 
         # Add edges to neighbor, if neighbor id is smaller
@@ -185,8 +186,7 @@ class Skeleton
       if @activeNodeSphere
         @activeNodeSphere.visible = false
         if @route.getActiveNodeType() == TYPE_BRANCH
-          treeColor = @route.getTree().color
-          @activeNode.material.color.setHex(treeColor * 0.7)
+          @activeNode.material.color.setHex(COLOR_ACTIVE * 0.7)
         else
           @activeNode.material.color.setHex(COLOR_ACTIVE)
 
@@ -229,6 +229,7 @@ class Skeleton
     index        = @getIndexFromTreeId(@route.getTree().treeId)
     color        = @route.getTree().color
     radius       = @route.getActiveNodeRadius()
+    type         = @route.getActiveNodeType()
 
     unless @curIndex[index]
       @curIndex[index] = 0
@@ -251,7 +252,7 @@ class Skeleton
       @nodes[index].geometry.__vertexArray = @nodesBuffer[index]
       @nodes[index].geometry.__webglParticleCount = @curIndex[index] + 1
 
-      @pushNewNode(radius, position, id, color)
+      @pushNewNode(radius, position, id, color, type)
 
       @routes[index].geometry.verticesNeedUpdate = true
       @nodes[index].geometry.verticesNeedUpdate = true
@@ -361,7 +362,8 @@ class Skeleton
     @setActiveNode()
     @flycam.hasChanged = true
 
-  pushNewNode : (radius, position, id, color) ->
+  pushNewNode : (radius, position, id, color, type) ->
+    color = if type == TYPE_BRANCH then color * 0.7 else color
     newNode = new THREE.Mesh(
       new THREE.SphereGeometry(1),
       new THREE.MeshLambertMaterial({ color : color})#, transparent: true, opacity: 0.5 })

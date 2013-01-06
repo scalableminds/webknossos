@@ -200,7 +200,7 @@ class Route
           @activeNode = point
           @activeNode.type = TYPE_USUAL
 
-          @trigger("setBranch", false)
+          @trigger("setBranch", false, @activeNode.id)
           @doubleBranchPop = true
           deferred.resolve(@activeNode.id)
         else
@@ -213,7 +213,7 @@ class Route
         @activeNode = point
         @activeNode.type = TYPE_USUAL
 
-        @trigger("setBranch", false)
+        @trigger("setBranch", false, @activeNode.id)
         @doubleBranchPop = true
         deferred.resolve(@activeNode.id)
       else
@@ -245,6 +245,7 @@ class Route
       @activeNode = point
     else
       @activeNode = point
+      point.type = TYPE_BRANCH
       @pushBranch()
     @lastActiveNodeId = @activeNode.id
     @doubleBranchPop = false

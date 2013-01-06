@@ -19,6 +19,7 @@ import models.tracing.TracingType
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
+  override val DefaultAccessRole = Role.User
   override val DefaultAccessPermission = Some(Permission("admin.review", List("access")))
 
   val trainingsTaskForm = Form(

@@ -50,7 +50,7 @@ trait Secured {
    * Defines the access role which is used if no role is passed to an
    * authenticated action
    */
-  def DefaultAccessRole: Option[Role] = None
+  def DefaultAccessRole: Option[Role]
 
   /**
    * Defines the default permission used for authenticated actions if not
@@ -107,9 +107,9 @@ trait Secured {
           if (hasAccess(user, role, permission))
             f(AuthenticatedRequest(user, request))
           else
-            Forbidden(views.html.error.defaultError(Messages("user.noPermission"))(AuthedSessionData(user, request.flash)))
+            Forbidden(views.html.error.defaultError(Messages("user.noPermission"), true)(AuthedSessionData(user, request.flash)))
         } else {
-          Forbidden(views.html.error.defaultError(Messages("user.notVerified"))(AuthedSessionData(user, request.flash)))
+          Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash)))
         }
       }.getOrElse(onUnauthorized(request))
     }

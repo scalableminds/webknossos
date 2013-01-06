@@ -10,7 +10,7 @@ import akka.actor.Props
 import brainflight.mail.Mailer
 
 object Application extends Controller with Secured {
-
+  override val DefaultAccessRole = None
   val Mailer = Akka.system.actorOf(Props[Mailer], name = "mailActor")
   
   // -- Javascript routing

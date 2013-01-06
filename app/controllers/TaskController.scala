@@ -16,6 +16,8 @@ import play.api.libs.concurrent.execution.defaultContext
 import play.api.i18n.Messages
 
 object TaskController extends Controller with Secured {
+    override val DefaultAccessRole = Role.User
+  
   
   def createTracing(user: User, task: Task) = {
     val tracing = Tracing.createTracingFor(user, task)

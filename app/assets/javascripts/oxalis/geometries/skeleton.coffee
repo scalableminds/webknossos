@@ -348,14 +348,13 @@ class Skeleton
   deleteTree : (index) ->
 
     # Remove all geometries and spheres
-    nodeSpheres = (@getSphereFromId(nodeID) for nodeID in @nodes[index].geometry.nodeIDs.subarray(0, @curIndex[index]))
+    nodeSpheres = (@popSphereFromId(nodeID) for nodeID in @nodes[index].geometry.nodeIDs.subarray(0, @curIndex[index]))
     @trigger "removeGeometries", [@routes[index]].concat([@nodes[index]]).concat(nodeSpheres)
 
     # Remove entries
     @ids.splice(index, 1)
     @routes.splice(index, 1)
     @nodes.splice(index, 1)
-    @nodesSpheres.splice(index, 1)
     @edgesBuffer.splice(index, 1)
     @nodesBuffer.splice(index, 1)
     @curIndex.splice(index, 1)

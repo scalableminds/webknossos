@@ -224,7 +224,7 @@ class Route
   deleteBranch : (nodeID) ->
     i = 0
     while i < @branchStack.length
-      if @branchStack[i].nodeId == nodeID
+      if @branchStack[i].id == nodeID
         @branchStack.splice(i, 1)
       else
         i++
@@ -401,6 +401,9 @@ class Route
     @activeTree.removeNode(@activeNode.id)
 
     deletedNode = @activeNode
+
+    if deletedNode.type == TYPE_BRANCH
+      @deleteBranch(deletedNode.id)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree

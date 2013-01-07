@@ -30,10 +30,12 @@ object ApplicationBuild extends Build {
     "repo.novus rels" at "http://repo.novus.com/releases/",
     "repo.novus snaps" at "http://repo.novus.com/snapshots/",
     "sonatype rels" at "https://oss.sonatype.org/content/repositories/releases/",
-    "sonatype rels" at "https://oss.sonatype.org/content/repositories/snapshots/",
+    "sonatype snaps" at "https://oss.sonatype.org/content/repositories/snapshots/",
     "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/"
   )
   val shellgameDependencies = Seq()
+  
+  val levelcreatorDependencies = Seq()
   
   lazy val dataStoreDependencies = Seq(
     "org.scala-lang" % "scala-reflect" % "2.10.0",
@@ -44,6 +46,7 @@ object ApplicationBuild extends Build {
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
+    offline := true,
     resolvers ++= dependencyResolvers,
     playAssetsDirectories += file("data")
   )
@@ -63,5 +66,13 @@ object ApplicationBuild extends Build {
     resolvers ++= dependencyResolvers,
     scalaVersion := "2.10.0"
   ).aggregate(oxalis)
+  
+  lazy val levelcreator = play.Project("levelcreator", "0.1", levelcreatorDependencies, path = file("modules") / "levelcreator").settings(
+    templatesImport += "brainflight.view.helpers._",
+    templatesImport += "brainflight.view._",
+    offline := true,
+    resolvers ++= dependencyResolvers,
+    playAssetsDirectories += file("data")
+  ).dependsOn(oxalis).aggregate(oxalis)
 }
             

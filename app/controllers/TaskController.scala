@@ -14,6 +14,7 @@ import views._
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
+import braingames.mvc.Controller
 
 object TaskController extends Controller with Secured {
   

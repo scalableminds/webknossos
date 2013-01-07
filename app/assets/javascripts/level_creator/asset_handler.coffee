@@ -58,7 +58,7 @@ class AssetHandler
               <tr>
                 <td>#{file.name}</td>
                 <td>
-                  <a href="#{Routes.controllers.admin.LevelCreator.deleteAsset(@levelId, file.name).url}" data-ajax="confirm,delete-row"><i class="icon-trash"></i>
+                  <a href="#{Routes.controllers.LevelCreator.deleteAsset(@levelId, file.name).url}" data-ajax="confirm,delete-row"><i class="icon-trash"></i>
                   </a>
                 </td>
               </tr>""")
@@ -70,7 +70,7 @@ class AssetHandler
     @addDeferred("initialized")
 
     Request.send(
-      url : Routes.controllers.admin.LevelCreator.listAssets(@levelId).url
+      url : Routes.controllers.LevelCreator.listAssets(@levelId).url
       dataType : "json"
     ).done (assets) =>
       deferreds = (@loadAsset(asset) for asset in assets)
@@ -82,7 +82,7 @@ class AssetHandler
   loadAsset : (name) ->
 
     Request.send(
-      url : Routes.controllers.admin.LevelCreator.retrieveAsset(@levelId, name).url
+      url : Routes.controllers.LevelCreator.retrieveAsset(@levelId, name).url
       dataType : "arraybuffer"
     ).pipe (data) =>
 
@@ -102,7 +102,7 @@ class AssetHandler
 
         # HACK: PhantomJS doesn't fire onload when using Blob urls
         # relying on browser cache here
-        image.src = Routes.controllers.admin.LevelCreator.retrieveAsset(@levelId, name).url
+        image.src = Routes.controllers.LevelCreator.retrieveAsset(@levelId, name).url
 
         deferred
 

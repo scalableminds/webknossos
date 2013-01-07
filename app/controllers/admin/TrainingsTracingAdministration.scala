@@ -2,7 +2,7 @@ package controllers.admin
 
 import brainflight.security.Secured
 import models.security.Role
-import controllers.Controller
+import braingames.mvc.Controller
 import models.tracing.Tracing
 import views._
 import models.user.User

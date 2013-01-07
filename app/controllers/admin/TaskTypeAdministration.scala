@@ -1,6 +1,6 @@
 package controllers.admin
 
-import controllers.Controller
+import braingames.mvc.Controller
 import play.mvc.Security.Authenticated
 import brainflight.security.Secured
 import models.security.Role

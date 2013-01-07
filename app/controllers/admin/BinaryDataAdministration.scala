@@ -1,6 +1,6 @@
 package controllers.admin
 
-import controllers.Controller
+import braingames.mvc.Controller
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import brainflight.security.Secured

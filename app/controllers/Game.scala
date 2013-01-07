@@ -14,6 +14,7 @@ import views._
 import brainflight.security.AuthenticatedRequest
 import models.tracing.TracingType
 import play.api.i18n.Messages
+import braingames.mvc.Controller
 
 object Game extends Controller with Secured {
   override val DefaultAccessRole = Role.User

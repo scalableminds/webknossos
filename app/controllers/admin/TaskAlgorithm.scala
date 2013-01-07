@@ -5,7 +5,7 @@ import models.security.Role
 import models.task.TaskSelectionAlgorithm
 import play.api.libs.json.Json
 import views.html
-import controllers.Controller
+import braingames.mvc.Controller
 import play.api.i18n.Messages
 
 object TaskAlgorithm extends Controller with Secured {

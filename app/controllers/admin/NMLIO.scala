@@ -1,6 +1,6 @@
 package controllers.admin
 
-import controllers.Controller
+import braingames.mvc.Controller
 import play.api.mvc.Action
 import brainflight.security.Secured
 import views.html

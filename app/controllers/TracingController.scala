@@ -32,6 +32,7 @@ import views._
 import play.api.i18n.Messages
 import models.tracing.UsedTracings
 import net.liftweb.common._
+import braingames.mvc.Controller
 
 object TracingController extends Controller with Secured {
   override val DefaultAccessRole = Role.User

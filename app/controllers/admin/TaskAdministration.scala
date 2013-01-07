@@ -18,7 +18,7 @@ import play.api.data.Forms.number
 import play.api.data.Forms.text
 import views.html
 import models.user.Experience
-import controllers.Controller
+import braingames.mvc.Controller
 import play.api.i18n.Messages
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._

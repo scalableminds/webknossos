@@ -14,6 +14,7 @@ import views._
 import play.api.Logger
 import models.tracing._
 import play.api.i18n.Messages
+import braingames.mvc.Controller
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User

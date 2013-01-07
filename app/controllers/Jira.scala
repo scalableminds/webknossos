@@ -20,6 +20,7 @@ import brainflight.security.InsecureSSLSocketFactory._
 import play.api.Play
 import play.api.Play.current
 import play.api.i18n.Messages
+import braingames.mvc.Controller
 
 object Jira extends Controller with Secured {
 

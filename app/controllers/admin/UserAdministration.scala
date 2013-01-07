@@ -12,6 +12,7 @@ import models.user.User
 import play.api.i18n.Messages
 import views.html
 import net.liftweb.common._
+import braingames.mvc.Controller
 
 object UserAdministration extends Controller with Secured {
   //finished localization

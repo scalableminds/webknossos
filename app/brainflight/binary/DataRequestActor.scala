@@ -32,10 +32,14 @@ class DataRequestActor extends Actor with DataCache {
   import DataStore._
 
   implicit val dataBlockLoadTimeout = Timeout(10 seconds)
-  implicit val system = ActorSystems.dataRequestSystem
   val conf = Play.current.configuration
   val remotePath = conf.getString("datarequest.remotepath").get
   val useRemote = conf.getBoolean("bindata.useRemote").get
+  implicit val system =
+    if (useRemote)
+      ActorSystems.dataRequestSystem
+    else
+      context.system
 
   lazy val dataStores = List[ActorRef](
     actorForWithLocalFallback[GridDataStore]("gridDataStore"),

@@ -7,7 +7,7 @@ import scala.concurrent.duration._
 import akka.pattern.{ ask, pipe }
 import akka.util.Timeout
 import play.api._
-import play.api.mvc._
+import braingames.mvc.Controller
 import play.api.mvc.AsyncResult
 import play.api.data._
 import play.api.libs.json.Json._
@@ -94,40 +94,7 @@ object BinaryData extends Controller with Secured {
       }
     }
   }
-
-  def arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String) = Authenticated(parser = parse.raw) { implicit request =>
-    Async {
-      val t = System.currentTimeMillis()
-      val dataSet = DataSet.default
-      for {
-        level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-        dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
-      } yield {
-        val position = Point3D(1920, 2048, 2432)
-        val direction = (1.0, 1.0, 1.0)
-
-        val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
-        val m = Cuboid(level.width, level.height, level.depth, 1, moveVector = point, axis = direction)
-        val future =
-          dataRequestActor ? SingleRequest(DataRequest(
-            dataSet,
-            dataLayer,
-            1,
-            m))
-
-        future
-          .recover {
-            case e: AskTimeoutException =>
-              Logger.error("calculateImages: AskTimeoutException")
-              new Array[Byte](level.height * level.width * level.depth).toBuffer
-          }
-          .mapTo[ArrayBuffer[Byte]].map { data =>
-            Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
-            Ok(data.toArray)
-          }
-      }
-    }
-  }
+  
   /**
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.

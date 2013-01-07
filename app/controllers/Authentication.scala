@@ -1,7 +1,7 @@
 package controllers
 
 import play.api._
-import play.api.mvc._
+import play.api.mvc.Action
 import play.api.data._
 import play.api.Play.current
 import play.api.libs.concurrent._
@@ -20,6 +20,7 @@ import models.tracing.UsedTracings
 import brainflight.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
+import braingames.mvc.Controller
 
 object Authentication extends Controller with Secured {
   // -- Authentication

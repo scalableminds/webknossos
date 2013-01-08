@@ -13,7 +13,7 @@ object ApplicationBuild extends Build {
     "org.mongodb" %% "casbah-core" % "2.5.0-SNAPSHOT",
     "org.mongodb" %% "casbah-query" % "2.5.0-SNAPSHOT",
     "org.mongodb" %% "casbah-gridfs" % "2.5.0-SNAPSHOT",
-    "com.novus" % "salat-core_2.10" % "1.9.2-SNAPSHOT",
+    "com.novus" %% "salat-core" % "1.9.2-SNAPSHOT",
     "com.restfb" % "restfb" % "1.6.11",
     "commons-io" % "commons-io" % "1.3.2",
     "org.apache.commons" % "commons-email" % "1.2",
@@ -46,7 +46,6 @@ object ApplicationBuild extends Build {
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
-    offline := true,
     resolvers ++= dependencyResolvers,
     playAssetsDirectories += file("data")
   )
@@ -70,7 +69,6 @@ object ApplicationBuild extends Build {
   lazy val levelcreator = play.Project("levelcreator", "0.1", levelcreatorDependencies, path = file("modules") / "levelcreator").settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
-    offline := true,
     resolvers ++= dependencyResolvers,
     playAssetsDirectories += file("data")
   ).dependsOn(oxalis).aggregate(oxalis)

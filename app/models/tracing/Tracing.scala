@@ -256,7 +256,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       val editPosition = (js \ EDIT_POSITION).as[Point3D]
       Tracing.findOneById(id) match {
         case Some(exp) =>
-          exp.copy(trees = trees, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition, comments = comments)
+          exp.copy(trees = trees, version = version, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition, comments = comments)
         case _ =>
           throw new RuntimeException("Valid tracing id expected")
       }

@@ -50,6 +50,8 @@ class Route
 
     ############ Load Tree from @data ##############
 
+    @version = @data.version
+
     # get tree to build
     for tree in @data.trees
       # Initialize nodes
@@ -126,6 +128,7 @@ class Route
   # Returns an object that is structured the same way as @data is
   exportToNML : ->
     result = @data
+    result.version = @version + 1
     result.activeNode = @lastActiveNodeId
     result.branchPoints = []
     # Get Branchpoints

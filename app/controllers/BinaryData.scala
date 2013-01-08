@@ -70,7 +70,8 @@ object BinaryData extends Controller with Secured {
           dataLayer,
           resolution,
           cuboid,
-          useHalfByte = halfByte))
+          useHalfByte = halfByte,
+          skipInterpolation = true))
     }
 
     val future = (dataRequestActor ? MultiCubeRequest(cubeRequests)) recover {

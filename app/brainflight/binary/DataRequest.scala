@@ -10,4 +10,5 @@ case class DataRequest(
   layer: DataLayer,
   resolution: Int,
   cuboid: Cuboid,
-  useHalfByte: Boolean = false)
+  useHalfByte: Boolean = false,
+  skipInterpolation: Boolean)

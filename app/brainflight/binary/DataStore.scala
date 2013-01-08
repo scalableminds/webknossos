@@ -101,6 +101,7 @@ abstract class DataStore extends Actor {
     }
 
   def nullFile(bytesPerElement: Int) = nullFiles(bytesPerElement)
+
 }
 
 object DataStore {

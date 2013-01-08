@@ -24,6 +24,8 @@ import akka.pattern.pipe
 import com.typesafe.config.ConfigFactory
 import play.api.Play
 import brainflight.ActorSystems
+import scala.collection.immutable.HashMap
+import akka.routing.RoundRobinRouter
 
 case class SingleRequest(dataRequest: DataRequest)
 case class MultiCubeRequest(requests: Seq[SingleRequest])
@@ -50,7 +52,7 @@ class DataRequestActor extends Actor with DataCache {
     if (useRemote)
       system.actorFor(remotePath + "/user/" + name)
     else
-      system.actorOf(Props[T], name = name)
+      system.actorOf(Props[T].withRouter(RoundRobinRouter(nrOfInstances = 5)), name = name)
   }
 
   def receive = {
@@ -130,9 +132,16 @@ class DataRequestActor extends Actor with DataCache {
         dataRequest.layer,
         dataRequest.resolution,
         p).map(p -> _)
-    }.map(_.toMap).map { blockMap =>
-
-      val interpolate = dataRequest.layer.interpolate(dataRequest.resolution, blockMap, getBytes _) _
+    }.map(HashMap() ++ _).map { blockMap =>
+ 
+      val interpolate = 
+        if(dataRequest.skipInterpolation){
+          def f(p: Vector3D) = {
+            getBytes(p.toPoint3D, 1, dataRequest.resolution, blockMap)
+          }
+          f _
+        } else 
+          dataRequest.layer.interpolate(dataRequest.resolution, blockMap, getBytes _) _
 
       val result = cube.withContainingCoordinates(extendArrayBy = dataRequest.layer.bytesPerElement) {
         case point =>

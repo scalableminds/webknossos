@@ -26,6 +26,8 @@ import play.api.libs.iteratee.Input
 import play.api.libs.iteratee.Done
 import models.binary.DataLayer
 import akka.actor.Actor
+import scala.concurrent.Promise
+import play.api.libs.iteratee.Cont
 
 case class InsertBinary(dataSet: DataSet)
 case class InsertionState()
@@ -103,14 +105,13 @@ class GridDataStore
             "_id" -> new BSONObjectID(GridDataStore.blockToId(prefix, blockInfo.x, blockInfo.y, blockInfo.z)))).toList
           val it = Iteratee.consume[Array[Byte]]()
 
-          val f = r.flatMap {
+          r.flatMap {
             case file :: _ =>
               val e = file.enumerate
               e.run(it)
             case _ =>
               Future.failed(new DataNotFoundException("GRIDFS1"))
           }
-          f
         case _ =>
           Future.failed(new DataNotFoundException("GRIDFS2"))
       }

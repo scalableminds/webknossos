@@ -27,10 +27,10 @@ trait TrilerpInterpolation {
     val y = point.y.toInt
     val z = point.z.toInt
 
-    val floored = Vector3D(x, y, z)
-    if (point == floored) {
-      Array(getColor(byteLoader, resolution, blockMap)(Point3D(x, y, z)).toByte)
+    if (point.x == x && point.y == y & point.z == z) {
+      Array(colorF(Point3D(x, y, z)).toByte)
     } else {
+      val floored = Vector3D(x, y, z)
       val q = Array(
         colorF(Point3D(x, y, z)),
         colorF(Point3D(x, y, z + 1)),

@@ -444,6 +444,8 @@ class Route
     # remove comments of all nodes inside that tree
     for node in tree.nodes
       @deleteComment(node.id)
+      if node.type == TYPE_BRANCH
+        @deleteBranch(node.id)
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0

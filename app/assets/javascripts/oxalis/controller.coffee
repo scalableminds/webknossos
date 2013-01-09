@@ -335,7 +335,9 @@ class Controller
       @centerActiveNode()
 
   centerActiveNode : =>
-    @flycam.setGlobalPos(@model.route.getActiveNodePos())
+    position = @model.route.getActiveNodePos()
+    if position
+      @flycam.setGlobalPos(position)
 
   deleteActiveNode : =>
     @model.route.deleteActiveNode()

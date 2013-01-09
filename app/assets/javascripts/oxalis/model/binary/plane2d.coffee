@@ -29,7 +29,7 @@ class Plane2D
   BUCKETS_IN_A_ROW : 0
   MAP_SIZE : 0
   RECURSION_PLACEHOLDER : {}
-  DELTA : [10, 5, 0]
+  DELTA : [0, 5, 10]
 
   index : null
   u : 0

@@ -48,10 +48,10 @@ class Blur
             if x + i < 0 or x + i >= width
               continue
 
-            r += rgba[4 * ((y + j) * width + (x + i)) + 0] * kernel[Math.abs(j)][Math.abs(i)];
-            g += rgba[4 * ((y + j) * width + (x + i)) + 1] * kernel[Math.abs(j)][Math.abs(i)];
-            b += rgba[4 * ((y + j) * width + (x + i)) + 2] * kernel[Math.abs(j)][Math.abs(i)];
-            a += rgba[4 * ((y + j) * width + (x + i)) + 3] * kernel[Math.abs(j)][Math.abs(i)];
+            r += rgba[4 * ((y + j) * width + (x + i)) + 0] * kernel[Math.abs(j)][Math.abs(i)]
+            g += rgba[4 * ((y + j) * width + (x + i)) + 1] * kernel[Math.abs(j)][Math.abs(i)]
+            b += rgba[4 * ((y + j) * width + (x + i)) + 2] * kernel[Math.abs(j)][Math.abs(i)]
+            a += rgba[4 * ((y + j) * width + (x + i)) + 3] * kernel[Math.abs(j)][Math.abs(i)]
 
         rgba[4 * (y * width + x) + 0] = r / @kernelSum;
         rgba[4 * (y * width + x) + 1] = g / @kernelSum;

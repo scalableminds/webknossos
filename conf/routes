@@ -11,6 +11,10 @@ GET     /game/initialize                    controllers.Game.initialize
 # Tasks
 GET     /tasks/requestTask                  controllers.TaskController.request
 
+# Missions
+POST    /missions                           controllers.admin.MissionAdministration.insertMissions(dataSetName: String)
+GET     /missions                           controllers.Knowledge.missions(dataSetName: String)
+
 # Jira integration
 GET     /jira                               controllers.Jira.index
 POST    /jira                               controllers.Jira.submit
@@ -31,9 +35,11 @@ POST    /user/configuration                 controllers.UserController.saveSetti
 GET     /user/configuration                 controllers.UserController.showSettings
 
 # Binary Data
-GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(levelId: String, taskId: String)
-GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, cubeSize: Int, halfByte: Boolean )
-POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, cubeSize: Int, halfByte: Boolean )
+
+GET			/binary/ws													controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
+POST    /binary/ajax				                controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
+GET     /binary/arbitrary/ajax              controllers.BinaryData.arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String)
+
 
 # Tracing Stuff
 POST    /tracing/create                     controllers.TracingController.createExplorational

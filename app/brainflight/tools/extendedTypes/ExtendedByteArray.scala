@@ -3,7 +3,6 @@ package brainflight.tools.extendedTypes
 import java.nio.ByteBuffer
 import scala.math._
 
-
 class ExtendedByteArray( b: Array[Byte] ) {
   /**
    * Converts this array of bytes to one float value
@@ -19,6 +18,11 @@ class ExtendedByteArray( b: Array[Byte] ) {
    * Converts this array of bytes to one int value
    */
   def toIntFromFloat = toFloat.toInt
+  
+  def toBooleanFromFloat = b match{
+    case Array(0x3F, -0x80, 0x0, 0x0) => true
+    case _ => false
+  }
 
   /**
    * Splits this collection into smaller sub-arrays each containing exactly 

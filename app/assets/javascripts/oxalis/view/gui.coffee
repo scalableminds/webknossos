@@ -182,6 +182,7 @@ class Gui
                       deleteActiveNode : => @update()
                       deleteLastNode   : => @update()
                       newNode          : => @update()
+                      newTree          : => @update()
                       newActiveNodeRadius : (radius) =>@updateRadius(radius) 
 
   saveNow : =>

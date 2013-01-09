@@ -13,7 +13,7 @@ VIEW_3D            = Dimensions.VIEW_3D
 TYPE_NORMAL = 0
 TYPE_BRANCH = 1
 
-MAX_BRANCHES = 100
+MAX_BRANCHES = 200
 
 COLOR_ACTIVE = 0x0000ff
 
@@ -91,6 +91,8 @@ class Skeleton
       newNode : => @setWaypoint()
       setBranch : (isBranchPoint, nodeID) => 
         @setBranchPoint(isBranchPoint, nodeID)
+        @updateBranches()
+      deleteBranch : =>
         @updateBranches()
       # spheres currently disabled
       #newActiveNodeRadius : (radius) => @setNodeRadius(radius)

@@ -228,6 +228,7 @@ class Route
         @branchStack.splice(i, 1)
       else
         i++
+    @trigger("deleteBranch")
 
   showBranchModal : ->
     @branchDeferred = new $.Deferred()
@@ -431,6 +432,8 @@ class Route
     @push()
 
   deleteTree : (id) ->
+    unless @activeNode?
+      return
 
     unless id
       id = @activeTree.treeId

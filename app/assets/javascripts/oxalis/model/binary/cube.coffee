@@ -1,5 +1,6 @@
 ### define
 ../../../libs/event_mixin : EventMixin
+../../../libs/ring_buffer : RingBuffer
 ###
 
 class Cube
@@ -10,13 +11,13 @@ class Cube
   ZOOM_STEP_COUNT : 0
   LOOKUP_DEPTH_UP : 0
   LOOKUP_DEPTH_DOWN : 1
-  MAXIMUM_BUCKET_COUNT : 5000
+  MAXIMUM_BUCKET_COUNT : 500
 
   LOADING_PLACEHOLDER : {}
 
   cube : null
   upperBoundary : null
-  access : []
+  access : null
   bucketCount : 0
 
 
@@ -50,6 +51,7 @@ class Cube
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT
     @BUCKET_LENGTH = 1 << @BUCKET_SIZE_P * 3
     @cube = []
+    @access = new RingBuffer(@MAXIMUM_BUCKET_COUNT * 30)
 
     # Initializing the cube-arrays with boundaries
     cubeBoundary = [

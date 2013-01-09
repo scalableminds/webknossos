@@ -26,12 +26,13 @@ class Route
   activeNode : null
   activeTree : null
 
-  constructor : (@data, dataSet, @scaleInfo, @flycam) ->
+  constructor : (@data, @scaleInfo, @flycam) ->
 
     _.extend(this, new EventMixin())
 
     #@branchStack = @data.branchPoints.map (a) -> new Float32Array(a)
     #@branchStack = (@data.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in @data.branchPoints) # when @data.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
+
 
     @idCount = 1
     @treeIdCount = 1
@@ -181,7 +182,12 @@ class Route
 
   pushImpl : ->
 
-    deferred = new $.Deferred()
+    # do not allow multiple pushes, before result is there (breaks versioning)
+    # still, return the deferred of the pending push, so that it will be informed about success
+    if @pushDeferred?
+      return @pushDeferred
+
+    @pushDeferred = new $.Deferred()
 
     Request.send(
       url : "/tracing/#{@data.id}"
@@ -189,12 +195,25 @@ class Route
       data : @exportToNML()
       contentType : "application/json"
     )
-    .fail =>
+    .fail (responseObject) =>
+      if responseObject.responseText? && responseObject.responseText != ""
+        # restore whatever is send as the response
+        response = JSON.parse(responseObject.responseText)
+        if response.messages?[0]?.error?
+          if response.messages[0].error == "tracing.dirtyState"
+            $(window).on(
+              "beforeunload"
+              =>
+                return "Sorry, but the current state is inconsistent, you'll need to reload.")
+            window.location.reload()
       @push()
-      deferred.reject()
-    .done =>
+      @pushDeferred.reject()
+      @pushDeferred = null
+    .done (response) =>
+      @version = response.version
       @savedCurrentState = true
-      deferred.resolve()
+      @pushDeferred.resolve()
+      @pushDeferred = null
 
   # INVARIANTS:
   # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null

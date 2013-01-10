@@ -44,15 +44,15 @@ class DataRequestActor extends Actor with DataCache {
       context.system
 
   lazy val dataStores = List[ActorRef](
-    actorForWithLocalFallback[GridDataStore]("gridDataStore"),
-    actorForWithLocalFallback[FileDataStore]("fileDataStore"),
+      actorForWithLocalFallback[FileDataStore]("fileDataStore"),
+      actorForWithLocalFallback[GridDataStore]("gridDataStore"),
     system.actorOf(Props(new EmptyDataStore()), name = "emptyDataStore"))
 
   def actorForWithLocalFallback[T <: Actor](name: String)(implicit evidence: scala.reflect.ClassTag[T]) = {
     if (useRemote)
       system.actorFor(remotePath + "/user/" + name)
     else
-      system.actorOf(Props[T].withRouter(RoundRobinRouter(nrOfInstances = 5)), name = name)
+      system.actorOf(Props[T], name = name)
   }
 
   def receive = {
@@ -119,7 +119,7 @@ class DataRequestActor extends Actor with DataCache {
 
     val minBlock = pointToBlock(minPoint, dataRequest.resolution)
     val maxBlock = pointToBlock(Point3D(roundUp(maxCorner._1), roundUp(maxCorner._2), roundUp(maxCorner._3)), dataRequest.resolution)
-
+    
     val blocks = for {
       x <- minBlock.x to maxBlock.x
       y <- minBlock.y to maxBlock.y
@@ -133,20 +133,16 @@ class DataRequestActor extends Actor with DataCache {
         dataRequest.resolution,
         p).map(p -> _)
     }.map(HashMap() ++ _).map { blockMap =>
- 
-      val interpolate = 
-        if(dataRequest.skipInterpolation){
-          def f(p: Vector3D) = {
-            getBytes(p.toPoint3D, 1, dataRequest.resolution, blockMap)
-          }
-          f _
-        } else 
-          dataRequest.layer.interpolate(dataRequest.resolution, blockMap, getBytes _) _
 
-      val result = cube.withContainingCoordinates(extendArrayBy = dataRequest.layer.bytesPerElement) {
-        case point =>
-          interpolate(Vector3D(point))
+      @inline
+      def interpolatedData(px: Double, py: Double, pz: Double) = {
+        if (dataRequest.skipInterpolation)
+          getBytes(Point3D(px.toInt, py.toInt, pz.toInt), 1, dataRequest.resolution, blockMap)
+        else
+          dataRequest.layer.interpolate(dataRequest.resolution, blockMap, getBytes _)(Vector3D(px, py, pz))
       }
+
+      val result = cube.withContainingCoordinates(extendArrayBy = dataRequest.layer.bytesPerElement)(interpolatedData)
 
       if (dataRequest.useHalfByte)
         convertToHalfByte(result)

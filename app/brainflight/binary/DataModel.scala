@@ -10,6 +10,7 @@ import brainflight.tools.geometry.Point3D
 import play.api.Logger
 import brainflight.tools.geometry._
 import scala.collection.mutable.ArrayBuffer
+import play.api.libs.iteratee.Enumerator
 
 /**
  * Scalable Minds - Brainflight
@@ -36,6 +37,7 @@ abstract class DataModel {
     rotateAndMove(moveVector, axis)(ff)((x, y, z) => Array(Vector3D(x, y, z)))
   }
 
+  @inline
   protected def rotateAndMove[T](
     moveVector: (Double, Double, Double),
     axis: (Double, Double, Double))(coordinates: ((Double, Double, Double) => Array[T]) => ArrayBuffer[T])(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
@@ -66,17 +68,19 @@ abstract class DataModel {
       val a32 = ortho._1 * sinA;
       val a33 = cosA + square(ortho._3) * (1 - cosA);
 
-      val result = coordinates {
-        case (px, py, pz) =>
+      @inline
+      def coordinateTransformer(px: Double, py: Double, pz: Double) = {
           val x = moveVector._1 + (a11 * px + a12 * py + a13 * pz)
           val y = moveVector._2 + (a21 * px + a22 * py + a23 * pz)
           val z = moveVector._3 + (a31 * px + a32 * py + a33 * pz)
           f(x, y, z)
       }
-      result
+      
+      coordinates(coordinateTransformer)
     }
   }
-
+  
+  @inline
   protected def simpleMove[T](
     moveVector: (Double, Double, Double),
     coordinates: ((Double, Double, Double) => Array[T]) => ArrayBuffer[T])(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
@@ -119,13 +123,13 @@ case class Cuboid(
 
   val corners = rotateAndMove(moveVector, axis, ArrayBuffer(
     topLeft,
-    topLeft.dx(width),
-    topLeft.dy(height),
-    topLeft.dx(width).dy(height),
-    topLeft.dz(depth),
-    topLeft.dz(depth).dx(width),
-    topLeft.dz(depth).dy(height),
-    topLeft.dz(depth).dx(width).dy(height)))
+    topLeft.dx(width-1),
+    topLeft.dy(height-1),
+    topLeft.dx(width-1).dy(height-1),
+    topLeft.dz(depth-1),
+    topLeft.dz(depth-1).dx(width-1),
+    topLeft.dz(depth-1).dy(height-1),
+    topLeft.dz(depth-1).dx(width-1).dy(height-1)))
 
   val maxCorner = corners.foldLeft((0.0, 0.0, 0.0))((b, e) => (
     math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
@@ -133,9 +137,9 @@ case class Cuboid(
   val minCorner = corners.foldLeft(maxCorner)((b, e) => (
     math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
 
-  override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
-    rotateAndMove(moveVector, axis) { (f: (Double, Double, Double) => Array[T]) =>
-      val xhMax = topLeft.x + width
+  @inline
+  private def looper[T](extendArrayBy: Int)( f: (Double, Double, Double)  => Array[T]) = {
+    val xhMax = topLeft.x + width
       val yhMax = topLeft.y + height
       val zhMax = topLeft.z + depth
 
@@ -159,6 +163,9 @@ case class Cuboid(
         z += resolution
       }
       array
-    }(f)
+  }  
+    
+  override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
+    rotateAndMove(moveVector, axis)( looper[T](extendArrayBy))(f)
   }
 }

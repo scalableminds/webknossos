@@ -27,6 +27,7 @@ initialize = (url) ->
 
 
 send = (data) ->
+
   @socket.send(data)
 
 

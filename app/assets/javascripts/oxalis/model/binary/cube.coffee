@@ -51,7 +51,7 @@ class Cube
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT
     @BUCKET_LENGTH = 1 << @BUCKET_SIZE_P * 3
     @cube = []
-    @access = new RingBuffer(@MAXIMUM_BUCKET_COUNT * 30)
+    @access = new RingBuffer(@MAXIMUM_BUCKET_COUNT * 20)
 
     # Initializing the cube-arrays with boundaries
     cubeBoundary = [
@@ -260,7 +260,7 @@ class Cube
   # remove buckets until cube is within bucketCount-limit
   collectGarbage : ->
 
-    while @bucketCount > @MAXIMUM_BUCKET_COUNT and @access.length
+    while (@bucketCount > @MAXIMUM_BUCKET_COUNT or @access.length / @access.capacity > 0.9) and @access.length
 
       @tryCollectBucket(@access.pop())
 

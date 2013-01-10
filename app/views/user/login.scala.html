@@ -15,12 +15,6 @@
               @Messages(error.message)
             </div>
           }
-          
-          @session.flash.get("success").map { message =>
-            <div class="alert alert-success">
-              @message
-            </div>
-          }
 
           @helper.inputText(form("email"), 'type -> "email")
           @helper.inputPassword(form("password"))

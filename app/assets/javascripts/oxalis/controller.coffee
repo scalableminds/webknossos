@@ -29,6 +29,7 @@ class Controller
   constructor : ->
 
     _.extend(@, new EventMixin())
+    @fullScreen = false
 
     @model = new Model()
 
@@ -119,8 +120,8 @@ class Controller
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
-            delta.x * @model.user.mouseInversionX
-            delta.y * @model.user.mouseInversionX
+            delta.x * @model.user.mouseInversionX / @view.scaleFactor
+            delta.y * @model.user.mouseInversionX / @view.scaleFactor
             0
           ]
         scroll : @scroll
@@ -146,14 +147,6 @@ class Controller
 
     new Input.Keyboard(
 
-      #Fullscreen Mode
-      "q" : =>
-        canvasesAndNav = @canvasesAndNav
-        requestFullscreen = canvasesAndNav.webkitRequestFullScreen or canvasesAndNav.mozRequestFullScreen or canvasesAndNav.RequestFullScreen
-        if requestFullscreen
-          requestFullscreen.call(canvasesAndNav, canvasesAndNav.ALLOW_KEYBOARD_INPUT)
-
-    
       #ScaleTrianglesPlane
       "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
       "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
@@ -171,6 +164,10 @@ class Controller
     )
     
     new Input.KeyboardNoLoop(
+
+      #Fullscreen Mode
+      "q" : => @toggleFullScreen()
+
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 
@@ -184,12 +181,18 @@ class Controller
       #Delete active node
       "delete" : => @deleteActiveNode()
 
-      "n" : => @createNewTree()
+      "c" : => @createNewTree()
+
+      #Comments
+      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
+      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
 
       #Move
       "space" : (first) => @moveZ( @model.user.moveValue, first)
       "f" : (first) => @moveZ( @model.user.moveValue, first)
       "d" : (first) => @moveZ( - @model.user.moveValue, first)
+      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
+      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
 
       "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
       "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
@@ -248,6 +251,19 @@ class Controller
           @zoomIn()
         else
           @zoomOut()
+
+  toggleFullScreen : =>
+    if @fullScreen
+      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
+      @fullScreen = false
+      if cancelFullscreen
+        cancelFullscreen.call(document)
+    else
+      body = $("body")[0]
+      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
+      @fullScreen = true
+      if requestFullscreen
+        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
 
   ########### Click callbacks

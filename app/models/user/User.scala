@@ -29,8 +29,8 @@ case class User(
     permissions: List[Permission] = Nil,
     experiences: Map[String, Int] = Map.empty,
     lastActivity: Long = System.currentTimeMillis,
-    _id: ObjectId = new ObjectId) extends DAOCaseClass[User]{
-  
+    _id: ObjectId = new ObjectId) extends DAOCaseClass[User] {
+
   val dao = User
 
   val _roles = for {
@@ -82,7 +82,7 @@ case class User(
     this.copy(roles = this.roles.filterNot(_ == role))
   }
 
-  def lastActivityDays = 
+  def lastActivityDays =
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 }
 
@@ -107,8 +107,13 @@ object User extends BasicDAO[User]("users") {
       if verifyPassword(password, user.pwdHash)
     } yield user
 
-  def create(email: String, firstName: String, lastName: String, password: String = ""): User = {
-    User(email, firstName, lastName, false, hashPassword(password))
+  def create(email: String, firstName: String, lastName: String, password: String, isVerified: Boolean): User = {
+    val u = User(email, firstName, lastName, false, hashPassword(password))
+    
+    if(isVerified)
+      User.insertOne(u.verify)
+    else
+      User.insertOne(u)
   }
 
   def createRemote(email: String, firstName: String, lastName: String, loginType: String) = {

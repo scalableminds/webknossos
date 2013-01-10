@@ -39,11 +39,10 @@ import models.knowledge.Level
  */
 
 object BinaryData extends Controller with Secured {
+  override val DefaultAccessRole = Role.User
 
   val dataSetActor = Akka.system.actorOf(Props(new DataSetActor).withRouter(
     RoundRobinRouter(nrOfInstances = 8)))
-
-  override val DefaultAccessRole = Role.User
 
   implicit val dispatcher = Akka.system.dispatcher
   val conf = Play.configuration
@@ -151,8 +150,11 @@ object BinaryData extends Controller with Secured {
         } {
           BinaryProtocol.parseWebsocket( in ).map {
             case dataRequests : MultipleDataRequest =>
-              handleMultiDataRequest(dataRequests, cubeSize, dataSet, halfByte).map( 
-                  result => channel.push( dataRequests.handle ++ result ))
+              Logger.trace("Websocket DataRequests: " + dataRequests.requests.mkString(", "))
+              handleMultiDataRequest(dataRequests, cubeSize, dataSet, halfByte).map{ result => 
+                Logger.trace("Websocket result size: " + result.size)
+                channel.push(result ++ dataRequests.handle )
+              }
             case _ =>
               Logger.error("Received unhandled message!")
           }

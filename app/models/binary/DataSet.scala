@@ -11,9 +11,9 @@ import models.basics.DAOCaseClass
 case class DataSet(
     name: String,
     baseDir: String,
-    supportedResolutions: List[Int],
     maxCoordinates: Point3D,
     priority: Int = 0,
+    dataLayers: Map[String, DataLayer] = Map(ColorLayer.identifier -> ColorLayer.default),
     _id: ObjectId = new ObjectId) extends DAOCaseClass[DataSet] {
 
   def dao = DataSet
@@ -29,12 +29,26 @@ case class DataSet(
 }
 
 object DataSet extends BasicDAO[DataSet]("dataSets") {
+  /*
   def default = {
     //find(MongoDBObject())
+    
     val all = DataSet.findAll
     if (all.isEmpty)
       throw new Exception("No default data set found!")
     all.maxBy(_.priority)
+  }
+  // */
+  
+  def default = {
+    DataSet("e_k0563", 
+            "binaryData/e_k0563", 
+            Point3D(2048, 2176, 2560),
+            0,
+            Map[String, DataLayer](
+                ColorLayer.identifier -> ColorLayer.default, 
+                ClassificationLayer.identifier -> ClassificationLayer.default,
+                SegmentationLayer.identifier -> SegmentationLayer.default))
   }
   
   def deleteAllExcept(names: Array[String]) = {
@@ -47,7 +61,7 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
   def updateOrCreate(d: DataSet) = {
     findOne(MongoDBObject("name" -> d.name)) match {
       case Some(stored) =>
-        d.update( _.copy(_id = stored._id, priority = stored.priority))
+        stored.update(_ => d.copy(_id = stored._id, priority = stored.priority))
       case _ =>
         insertOne(d)
     }

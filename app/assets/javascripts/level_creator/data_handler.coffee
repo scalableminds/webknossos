@@ -9,24 +9,48 @@ libs/request : Request
 
 class DataHandler
 
-	constructor : (@dimensions, @levelId, @taskId) ->
+  constructor : (@dimensions, @levelId, @taskId) ->
 
-		EventMixin.extend(this)
+    EventMixin.extend(this)
 
-		[ @width, @height, @depth ] = @dimensions
+    [ @width, @height, @depth ] = @dimensions
 
-		@addDeferred("initialized")
+    @addDeferred("initialized")
 
-		$.when(@requestRGBA()).done ( rgba ) =>
-			@data = { rgba }
-			@trigger("initialized")
+    $.when(
+      @requestRGBA()
+      @requestSegmentation()
+      @requestClassification()
+    ).done ( rgba, segmentation, classification ) =>
+      @data = { rgba, segmentation, classification }
+      @trigger("initialized")
 
 
-	requestRGBA : ->
+  requestRGBA : ->
 
     Request.send(
       _.extend(
-        Routes.controllers.BinaryData.arbitraryViaAjax(@levelId, @taskId)
+        Routes.controllers.BinaryData.arbitraryViaAjax("color", @levelId, @taskId)
+        dataType : "arraybuffer"
+      )
+    ).pipe (buffer) => new Uint8Array(buffer)
+
+
+  requestSegmentation : ->
+
+    Request.send(
+      _.extend(
+        Routes.controllers.BinaryData.arbitraryViaAjax("segmentation", @levelId, @taskId)
+        dataType : "arraybuffer"
+      )
+    ).pipe (buffer) => new Uint16Array(buffer)
+
+
+  requestClassification : ->
+
+    Request.send(
+      _.extend(
+        Routes.controllers.BinaryData.arbitraryViaAjax("classification", @levelId, @taskId)
         dataType : "arraybuffer"
       )
     ).pipe (buffer) => new Uint8Array(buffer)

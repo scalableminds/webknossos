@@ -48,6 +48,7 @@ object Point3D{
       case _ => throw new RuntimeException("List expected")
     }
   }
+  
   implicit object Point3DWrites extends Writes[Point3D] {
     def writes(v: Point3D) = {
       val l = List(v.x, v.y, v.z)

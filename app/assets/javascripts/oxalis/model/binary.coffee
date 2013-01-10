@@ -25,7 +25,7 @@ class Binary
 
     @dataSetId = dataSet.id
 
-    @cube = new Cube(dataSet.upperBoundary, dataSet.resolutions.length)
+    @cube = new Cube(dataSet.upperBoundary, dataSet.dataLayers.color.resolutions.length)
     @queue = new PullQueue(@dataSetId, @cube)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
@@ -55,6 +55,8 @@ class Binary
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
 
+    @cube.collectGarbage()
+
     if @lastPosition?
       
       @direction = [
@@ -69,7 +71,7 @@ class Binary
       @lastZoomStep = zoomStep.slice()
       @lastArea     = area.slice()
 
-      console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond
+      console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond, @cube.bucketCount
 
       for strategy in @pingStrategies 
         if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)

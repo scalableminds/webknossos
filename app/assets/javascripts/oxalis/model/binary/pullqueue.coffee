@@ -13,9 +13,6 @@ class PullQueue
 
   cube : null
   queue : []
-  socket : null
-  socket4Bit : null
-  socket8Bit : null
 
   dataSetId : ""
 
@@ -24,8 +21,6 @@ class PullQueue
 
   
   constructor : (@dataSetId, @cube) ->
-    
-    @initializeLoadSockets()
 
 
   swap : (a, b) ->
@@ -112,11 +107,11 @@ class PullQueue
     @batchCount++
 
     transmitBuffer = []
-
     for bucket in batch
       zoomStep = bucket[3]
       transmitBuffer.push(
         zoomStep
+        if @fourBit and zoomStep == 0 then 1 else 0
         bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P),
         bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P),
         bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
@@ -125,7 +120,7 @@ class PullQueue
     # Measuring the time until response arrives to select appropriate preloading strategy 
     roundTripBeginTime = new Date()
 
-    @socket.send(transmitBuffer)
+    @getLoadSocket().send(transmitBuffer)
       .pipe(
 
         (responseBuffer) =>
@@ -134,7 +129,7 @@ class PullQueue
 
           for bucket, i in batch
 
-            if @fourBit
+            if transmitBuffer[5 * i + 1]
               bucketData = @decode(responseBuffer.subarray(i * (@cube.BUCKET_LENGTH >> 1), (i + 1) * (@cube.BUCKET_LENGTH >> 1)))
             else
               bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
@@ -168,13 +163,6 @@ class PullQueue
     @lastReceiveTime = new Date()
 
 
-  set4Bit : (@fourBit) ->
-
-    @socket.close() if @socket?
-    @socket = if @fourBit then @socket4Bit else @socket8Bit
-    @socket.open()
-
-
   decode : (colors) ->
 
     # Expand 4-bit data
@@ -190,19 +178,12 @@ class PullQueue
 
     newColors
 
-  initializeLoadSockets : ->
+  set4Bit : (@fourBit) ->
 
-    @socket4Bit = new ArrayBufferSocket(
-      senders : [
-        # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfByte=1&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfByte=1&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&halfByte=1&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-      ]
-      requestBufferType : Float32Array
-      responseBufferType : Uint8Array
-    )
 
-    @socket8Bit = new ArrayBufferSocket(
+  getLoadSocket : _.once ->
+
+    new ArrayBufferSocket(
       senders : [
         # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfByte=0&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfByte=0&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")

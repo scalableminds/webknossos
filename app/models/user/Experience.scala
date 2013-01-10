@@ -8,7 +8,7 @@ case class Experience(domain: String, value: Int) {
     if (domain == "" && value == 0)
       "<nothing>"
     else
-      "%s: %d".format(domain, value)
+      s"$domain: $value"
   }
 }
 

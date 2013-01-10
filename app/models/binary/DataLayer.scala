@@ -81,7 +81,7 @@ trait DataLayerJsonFormat[T <: DataLayer] extends Format[T]{
     case "uint16" => 16
     case "uint32" => 32
     case "uint64" => 64
-    case _ => throw new IllegalArgumentException("illegal element class (%s) for DataLayer".format(elementClass))
+    case _ => throw new IllegalArgumentException(s"illegal element class ($elementClass) for DataLayer")
   }
   
   def writes(dataLayer: T) = Json.obj(

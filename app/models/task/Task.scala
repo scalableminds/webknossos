@@ -156,7 +156,7 @@ object Task extends BasicDAO[Task]("tasks") {
           priority,
           instances)
       case _ =>
-        Logger.warn("Failed to create Task from form. Tracing: %s TaskType: %s".format(tracing, taskTypeId))
+        Logger.warn(s"Failed to create Task from form. Tracing: $tracing TaskType: $taskTypeId")
         null
     }
 
@@ -171,7 +171,7 @@ object Task extends BasicDAO[Task]("tasks") {
           priority,
           instances)
       case _ =>
-        Logger.warn("Failed to create Task from form. TaskType: %s".format(taskTypeId))
+        Logger.warn(s"Failed to create Task from form. TaskType: $taskTypeId")
         null
     }
 

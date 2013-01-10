@@ -44,7 +44,7 @@ object BrainTracing {
             case _ =>
               Success("braintraceing.error")
           })
-          Logger.info("Creation of account %s returned Status: %s Body: %s".format(user.email, response.status, response.body))
+          Logger.trace(s"Creation of account ${user.email} returned Status: ${response.status} Body: ${response.body}")
         }
       result.future
     } else {

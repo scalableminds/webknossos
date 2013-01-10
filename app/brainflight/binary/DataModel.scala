@@ -70,16 +70,16 @@ abstract class DataModel {
 
       @inline
       def coordinateTransformer(px: Double, py: Double, pz: Double) = {
-          val x = moveVector._1 + (a11 * px + a12 * py + a13 * pz)
-          val y = moveVector._2 + (a21 * px + a22 * py + a23 * pz)
-          val z = moveVector._3 + (a31 * px + a32 * py + a33 * pz)
-          f(x, y, z)
+        val x = moveVector._1 + (a11 * px + a12 * py + a13 * pz)
+        val y = moveVector._2 + (a21 * px + a22 * py + a23 * pz)
+        val z = moveVector._3 + (a31 * px + a32 * py + a33 * pz)
+        f(x, y, z)
       }
-      
+
       coordinates(coordinateTransformer)
     }
   }
-  
+
   @inline
   protected def simpleMove[T](
     moveVector: (Double, Double, Double),
@@ -123,13 +123,13 @@ case class Cuboid(
 
   val corners = rotateAndMove(moveVector, axis, ArrayBuffer(
     topLeft,
-    topLeft.dx(width-1),
-    topLeft.dy(height-1),
-    topLeft.dx(width-1).dy(height-1),
-    topLeft.dz(depth-1),
-    topLeft.dz(depth-1).dx(width-1),
-    topLeft.dz(depth-1).dy(height-1),
-    topLeft.dz(depth-1).dx(width-1).dy(height-1)))
+    topLeft.dx(width - 1),
+    topLeft.dy(height - 1),
+    topLeft.dx(width - 1).dy(height - 1),
+    topLeft.dz(depth - 1),
+    topLeft.dz(depth - 1).dx(width - 1),
+    topLeft.dz(depth - 1).dy(height - 1),
+    topLeft.dz(depth - 1).dx(width - 1).dy(height - 1)))
 
   val maxCorner = corners.foldLeft((0.0, 0.0, 0.0))((b, e) => (
     math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
@@ -138,34 +138,34 @@ case class Cuboid(
     math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
 
   @inline
-  private def looper[T](extendArrayBy: Int)( f: (Double, Double, Double)  => Array[T]) = {
+  private def looper[T](extendArrayBy: Int)(f: (Double, Double, Double) => Array[T]) = {
     val xhMax = topLeft.x + width
-      val yhMax = topLeft.y + height
-      val zhMax = topLeft.z + depth
+    val yhMax = topLeft.y + height
+    val zhMax = topLeft.z + depth
 
-      val t = System.currentTimeMillis()
-      val array = new ArrayBuffer[T](_width * _height * _depth * extendArrayBy)
-      var x = topLeft.x
-      var y = topLeft.y
-      var z = topLeft.z
-      var idx = 0
-      while (z < zhMax) {
-        y = topLeft.y
-        while (y < yhMax) {
-          x = topLeft.x
-          while (x < xhMax) {
-            array ++= f(x, y, z)
-            x += resolution
-            idx += extendArrayBy
-          }
-          y += resolution
+    val t = System.currentTimeMillis()
+    val array = new ArrayBuffer[T](_width * _height * _depth * extendArrayBy)
+    var x = topLeft.x
+    var y = topLeft.y
+    var z = topLeft.z
+    var idx = 0
+    while (z < zhMax) {
+      y = topLeft.y
+      while (y < yhMax) {
+        x = topLeft.x
+        while (x < xhMax) {
+          array ++= f(x, y, z)
+          x += resolution
+          idx += extendArrayBy
         }
-        z += resolution
+        y += resolution
       }
-      array
-  }  
-    
+      z += resolution
+    }
+    array
+  }
+
   override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
-    rotateAndMove(moveVector, axis)( looper[T](extendArrayBy))(f)
+    rotateAndMove(moveVector, axis)(looper[T](extendArrayBy))(f)
   }
 }

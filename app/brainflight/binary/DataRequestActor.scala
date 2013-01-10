@@ -44,13 +44,13 @@ class DataRequestActor extends Actor with DataCache {
       context.system
 
   lazy val dataStores = List[ActorRef](
-      actorForWithLocalFallback[FileDataStore]("fileDataStore"),
-      actorForWithLocalFallback[GridDataStore]("gridDataStore"),
+    actorForWithLocalFallback[FileDataStore]("fileDataStore"),
+    actorForWithLocalFallback[GridDataStore]("gridDataStore"),
     system.actorOf(Props(new EmptyDataStore()), name = "emptyDataStore"))
 
   def actorForWithLocalFallback[T <: Actor](name: String)(implicit evidence: scala.reflect.ClassTag[T]) = {
     if (useRemote)
-      system.actorFor(remotePath + "/user/" + name)
+      system.actorFor(s"$remotePath/user/$name")
     else
       system.actorOf(Props[T], name = name)
   }
@@ -67,7 +67,7 @@ class DataRequestActor extends Actor with DataCache {
           val size = results.map(_.size).sum
           s ! results.foldLeft(new ArrayBuffer[Byte](size))(_ ++= _)
         case Failure(e) =>
-          Logger.error("DataRequestActor Error for Request. Error: %s".format(e.toString))
+          Logger.error(s"DataRequestActor Error for Request. Error: $e")
       }
   }
 
@@ -76,14 +76,14 @@ class DataRequestActor extends Actor with DataCache {
 
     def loadFromStore(dataStores: List[ActorRef]): Future[Array[Byte]] = dataStores match {
       case a :: tail =>
-        Logger.trace("Sending request: " + block + " to " + a.path)
+        Logger.trace(s"Sending request: $block to ${a.path}")
         (a ? block2Load).mapTo[Array[Byte]].recoverWith {
           case e: AskTimeoutException =>
-            Logger.warn("(%s/%s %s) %s: Not response in time.".format(dataSet.name, dataLayer.folder, block.toString, a.path))
+            Logger.warn(s"(${dataSet.name}/${dataLayer.folder} $block) ${a.path}: Not response in time.")
             loadFromStore(tail)
           case e: ClassCastException =>
             // TODO: find a better way to catch the DataNotFoundException
-            Logger.warn("(%s/%s %s) %s: Not found.".format(dataSet.name, dataLayer.folder, block.toString, a.path))
+            Logger.warn(s"(${dataSet.name}/${dataLayer.folder} $block) ${a.path}: Not found.")
             loadFromStore(tail)
         }
       case _ =>
@@ -119,7 +119,7 @@ class DataRequestActor extends Actor with DataCache {
 
     val minBlock = pointToBlock(minPoint, dataRequest.resolution)
     val maxBlock = pointToBlock(Point3D(roundUp(maxCorner._1), roundUp(maxCorner._2), roundUp(maxCorner._3)), dataRequest.resolution)
-    
+
     val blocks = for {
       x <- minBlock.x to maxBlock.x
       y <- minBlock.y to maxBlock.y

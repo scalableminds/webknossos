@@ -29,7 +29,7 @@ import scala.util._
 case class LoadBlock(dataSetBaseDir: String, dataSetName: String, dataLayerName: String, bytesPerElement: Int, resolution: Int,
                      x: Int, y: Int, z: Int)
 
-class DataNotFoundException(message: String) extends Exception(message + " Could not find the data")
+class DataNotFoundException(message: String) extends Exception(s"$message Could not find the data")
 
 abstract class DataStore extends Actor {
   import DataStore._

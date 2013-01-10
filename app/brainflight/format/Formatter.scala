@@ -23,7 +23,7 @@ trait Formatter {
   def formatHash(id: ObjectId): String = {
     formatHash(id.toString)
   }
-  
+
   def formatTimeHumanReadable(time: Duration) = {
     "%dh %dm".format(time.toHours, (time.toMinutes % 60) / 5 * 5)
   }

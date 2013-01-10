@@ -80,7 +80,7 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
 
   def toTuple = (x, y, z)
 
-  override def toString = "(%f, %f, %f)".format(x, y, z)
+  override def toString = s"($x, $y, $z)"
 }
 
 object Vector3D {

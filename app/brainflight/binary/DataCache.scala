@@ -48,7 +48,7 @@ trait DataCache {
       cache send (_ + (blockInfo -> p))
       p.onFailure {
         case e =>
-          Logger.warn("(%d, %d, %d) DataStore couldn't load block: %s".format(blockInfo.x, blockInfo.y, blockInfo.z, e.toString))
+          Logger.warn(s"(${blockInfo.x}, ${blockInfo.y}, ${blockInfo.z}) DataStore couldn't load block: ${e.toString}")
       }
       p
     }

@@ -34,7 +34,7 @@ class JsExecutor {
             Success(engine eval fkt)
           } catch {
             case e: Exception =>
-              System.err.println("Cached an Exception:")
+              Logger.error("Cached an Exception:")
               e.printStackTrace()
               Failure(e)
           }
@@ -43,7 +43,7 @@ class JsExecutor {
     })
     jsThread.start()
     Akka.system.scheduler.scheduleOnce(5 seconds) {
-      if(!promise.isCompleted){
+      if (!promise.isCompleted) {
         Logger.warn("Destroying JS executer: Runntime expired.")
         jsThread.stop()
         promise.complete(Failure(new Exception("Exceution timeout.")))

@@ -6,6 +6,7 @@ import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
 import models.Color
+import play.api.Logger
 
 case class Role( name: String, permissions: List[Permission], color: Color, _id: ObjectId = new ObjectId ) extends Implyable {
   def implies( permission: Permission ) =
@@ -21,7 +22,7 @@ object Role extends BasicDAO[Role]( "roles" ) {
   def apply( roleName: String ): Option[Role] = {
     val r = findOneByName( roleName )
     if ( r.isEmpty ) {
-      log.error( "Requested Role doesn't exist in DB: " + roleName )
+      Logger.error( s"Requested Role doesn't exist in DB: $roleName" )
       Some(EmptyRole)
     } else {
       r

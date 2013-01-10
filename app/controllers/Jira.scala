@@ -68,15 +68,14 @@ object Jira extends Controller with Secured {
   }
 
   def submit = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for {
+    for {
       summary <- postParameter("summary") ?~ Messages("jira.summary.notSupplied")
       description <- postParameter("description") ?~ Messages("jira.description.notSupplied")
       postedType <- postParameter("type") ?~ Messages("jira.type.notSupplied")
       issueType <- issueTypes.get(postedType) ?~ Messages("jira.type.invalid")
     } yield {
-      request.body
       createIssue(request.user, summary, description, issueType)
       Ok(html.jira.close())
-    }) 
+    } 
   }
 }

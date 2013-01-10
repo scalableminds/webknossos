@@ -125,10 +125,10 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
             }
           }
         } catch {
-          case ie: InterruptedException                             => println("InterruptedException: " + ie)
+          case ie: InterruptedException                             => Logger.error(s"InterruptedException: $ie")
           case e: name.pachler.nio.file.ClosedWatchServiceException =>
           // everything is fine, the actor is going to get shut down
-          case e: Exception                                         => println("Exception: " + e)
+          case e: Exception                                         => Logger.error(s"Exception: $e")
         }
       }(context.dispatcher)
     }

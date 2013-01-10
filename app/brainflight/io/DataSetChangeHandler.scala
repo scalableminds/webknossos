@@ -14,7 +14,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {
     val file = path.asInstanceOf[PathImpl].getFile
     val files = file.listFiles()
-    Logger.trace("DataSetChangeHandler.onStart: files: %s".format(files.mkString(", ")))
+    Logger.trace(s"DataSetChangeHandler.onStart: files: ${files.mkString(", ")}")
     if (files != null) {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
@@ -22,7 +22,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
           dataSet.name
         }
       }
-      Logger.info("Found datasets " + foundDataSets.mkString(","))
+      Logger.info(s"Found datasets: ${foundDataSets.mkString(",")}")
       DataSet.deleteAllExcept(foundDataSets)
     }
   }
@@ -72,8 +72,8 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
 
   def dataSetFromFile(f: File): Option[DataSet] = {
     if (f.isDirectory) {
-      Logger.trace("dataSetFromFile: " + f)
-      
+      Logger.trace(s"dataSetFromFile: $f")
+
       for {
         colorLayer <- listDirectories(f).find(dir => dir.getName == ColorLayer.identifier)
         resolutionDirectories = listDirectories(colorLayer)
@@ -85,8 +85,8 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
         yMax <- maxValueFromFiles(xs.listFiles())
         zMax <- maxValueFromFiles(ys.listFiles())
       } yield {
-          val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
-          DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, dataLayers = Map[String, DataLayer](ColorLayer.identifier -> ColorLayer(supportedResolutions = resolutions)))
+        val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
+        DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, dataLayers = Map[String, DataLayer](ColorLayer.identifier -> ColorLayer(supportedResolutions = resolutions)))
       }
     } else None
   }

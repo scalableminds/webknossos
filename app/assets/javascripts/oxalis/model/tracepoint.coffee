@@ -28,6 +28,27 @@ class TracePoint
         res.push(neighbor)
     return res
 
+  buildTree : (parent = null) =>
+    @setChildRelation(parent)
+
+    childrenIterator = @children
+    parentIterator   = @
+    
+    while childrenIterator.length == 1
+      childrenIterator[0].setChildRelation(parentIterator)
+      parentIterator = childrenIterator[0]
+      childrenIterator = parentIterator.children
+    
+    for child in childrenIterator
+      child.buildTree(parentIterator)
+
+  setChildRelation : (@parent) =>
+    @children = @getNext(@parent)
+    unless @children?
+      @children = []
+    unless _.isArray(@children)
+      @children = [@children]
+
   removeNeighbor : (id) ->
     for i in [0...@neighbors.length]
       if @neighbors[i].id == id

@@ -38,6 +38,8 @@ class Controller
       @flycam = @model.flycam
       @view  = new View(@model, @flycam)
 
+      @view.drawTree(@model.route.getTree())
+
       # initialize Camera Controller
       @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
@@ -69,6 +71,7 @@ class Controller
       @view.on
         render : => @render()
         renderCam : (id, event) => @sceneController.updateSceneForCam(id)
+        abstractTreeClick : (id) => @setActiveNode(id, true, false)
 
       @sceneController.skeleton.on
         newGeometries : (list, event) =>

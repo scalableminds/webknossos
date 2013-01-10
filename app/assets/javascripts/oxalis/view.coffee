@@ -3,6 +3,7 @@ jquery : $
 ./model/flycam : Flycam
 ./model/route : Route
 ./model/dimensions : DimensionsHelper
+./view/abstractTreeViewer : AbstractTreeViewer
 ../libs/toast : Toast
 ../libs/event_mixin : EventMixin
 ../libs/Tween : TWEEN_LIB
@@ -34,6 +35,7 @@ class View
     # The "render" div serves as a container for the canvas, that is 
     # attached to it once a renderer has been initalized.
     container = $("#render")
+    abstractTreeContainer = $("#abstractTreeViewer")
     # Create a 4x4 grid
     @curWidth = WIDTH = (container.width()-20)/2
     HEIGHT = (container.height()-20)/2
@@ -83,7 +85,13 @@ class View
     container.append @renderer.domElement
 
     @setActivePlaneXY()
-    
+
+    # Create Abstract Tree Viewer
+    @abstractTreeViewer = new AbstractTreeViewer(abstractTreeContainer.width(), abstractTreeContainer.height())
+    abstractTreeContainer.append @abstractTreeViewer.canvas
+    @abstractTreeViewer.on
+      nodeClick : (id) => @trigger("abstractTreeClick", id)
+
     # FPS stats
     stats = new Stats()
     stats.getDomElement().id = "stats"
@@ -102,8 +110,14 @@ class View
     @model.route.on("emptyBranchStack", =>
       Toast.error("No more branchpoints", false))
 
-    @model.route.on("mergeDifferentTrees", =>
-      Toast.error("You can't merge nodes within the same tree", false))
+    @model.route.on({
+                      newActiveNode : => @drawTree(),
+                      newActiveTree : => @drawTree(),
+                      deleteTree : => @drawTree(),
+                      deleteActiveNode : => @drawTree(),
+                      newNode : => @drawTree(),
+                      mergeDifferentTrees : ->
+                            Toast.error("You can't merge nodes within the same tree", false)  })
     
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
@@ -220,6 +234,15 @@ class View
 
   getLights  : =>
     @lights
+
+  drawTree : ->
+    # Use node with minimal ID as root
+    for node in @model.route.getTree().nodes
+      if root?
+        if root.id > node.id then root = node
+      else 
+        root = node
+    @abstractTreeViewer.drawTree(root, @model.route.getActiveNodeId())
 
   createDoubleJumpModal : ->
     $("#double-jump").append("<div class=\"modal-body\">

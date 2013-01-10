@@ -28,7 +28,7 @@ class AbsractTreeViewer
     @width = width
     @height = height
 
-  drawTree : (tree) ->
+  drawTree : (tree, @activeNodeId) ->
     # clear Background
     @ctx.fillStyle = "#ffffff"
     @ctx.fillRect(0, 0, @width, @height)
@@ -41,6 +41,9 @@ class AbsractTreeViewer
 
     mode = MODE_NOCHAIN
 
+    # TODO: Actually, I though that buildTree() is pretty heavy, but
+    # I do not experience performance issues, even with large trees.
+    # Still, this might not need to be done on every single draw...
     tree.buildTree()
     @nodeDistance = Math.min(@height / (@getMaxTreeDepth(tree, mode) + 1), MAX_NODE_DISTANCE)
 
@@ -122,7 +125,8 @@ class AbsractTreeViewer
   drawNode : (x, y, id) ->
     @ctx.beginPath()
     @ctx.fillStyle = "#000000"
-    @ctx.arc(x, y, NODE_RADIUS, 0, 2 * Math.PI)
+    radius = if (id == @activeNodeId) then 2 * NODE_RADIUS else NODE_RADIUS
+    @ctx.arc(x, y, radius, 0, 2 * Math.PI)
     @ctx.fill()
     # put it in nodeList
     @nodeList.push({x : x, y : y, id : id})

@@ -111,11 +111,11 @@ class View
       Toast.error("No more branchpoints", false))
 
     @model.route.on({
-                      newActiveNode : => @drawTree(@model.route.getTree()),
-                      newActiveTree : => @drawTree(@model.route.getTree()),
-                      deleteActiveTree : => @drawTree(@model.route.getTree()),
-                      deleteActiveNode : => @drawTree(@model.route.getTree()),
-                      newNode : => @drawTree(@model.route.getTree()),
+                      newActiveNode : => @drawTree(),
+                      newActiveTree : => @drawTree(),
+                      deleteTree : => @drawTree(),
+                      deleteActiveNode : => @drawTree(),
+                      newNode : => @drawTree(),
                       mergeDifferentTrees : ->
                             Toast.error("You can't merge nodes within the same tree", false)  })
     
@@ -235,14 +235,14 @@ class View
   getLights  : =>
     @lights
 
-  drawTree : (tree) ->
+  drawTree : ->
     # Use node with minimal ID as root
-    for node in tree.nodes
+    for node in @model.route.getTree().nodes
       if root?
         if root.id > node.id then root = node
       else 
         root = node
-    @abstractTreeViewer.drawTree(root)
+    @abstractTreeViewer.drawTree(root, @model.route.getActiveNodeId())
 
   createDoubleJumpModal : ->
     $("#double-jump").append("<div class=\"modal-body\">

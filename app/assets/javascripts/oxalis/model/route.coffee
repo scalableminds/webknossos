@@ -431,9 +431,12 @@ class Route
     
     @push()
 
-  deleteTree : (id) ->
+  deleteTree : (id, deleteBranches) ->
     unless @activeNode?
       return
+
+    unless deleteBranches?
+      deleteBranches = true
 
     unless id
       id = @activeTree.treeId
@@ -447,7 +450,7 @@ class Route
     # remove comments of all nodes inside that tree
     for node in tree.nodes
       @deleteComment(node.id)
-      if node.type == TYPE_BRANCH
+      if deleteBranches and node.type == TYPE_BRANCH
         @deleteBranch(node.id)
     # Because we always want an active tree, check if we need
     # to create one.
@@ -471,7 +474,7 @@ class Route
 
         @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
 
-        @deleteTree(lastTree.treeId)
+        @deleteTree(lastTree.treeId, false)
 
         @setActiveNode(activeNodeID)
       else

@@ -13,6 +13,7 @@ MAX_TEXTURE_OFFSET = 31     # maximum difference between requested coordinate an
 ZOOM_DIFF          = 0.1
 MAX_ZOOM_TRESHOLD  = 2
 MAX_ZOOM_STEP      = 4
+
   
 class Flycam2d
 
@@ -40,6 +41,7 @@ class Flycam2d
     @activePlane = PLANE_XY
     @rayThreshold = [10, 10, 10, 100]
     @spaceDirection = 1
+    @quality = 0        # offset of integer zoom step to the best-quality zoom level
 
   zoomIn : (planeID) ->
     @setZoomStep(planeID, @zoomSteps[planeID] - ZOOM_DIFF)
@@ -59,18 +61,15 @@ class Flycam2d
 
   # Used if the user wants to explicitly set the zoom step,
   # rather than trusting on our equation.
-  setOverrideZoomStep : (value) ->
-    @overrideZoomStep = value
+  setQuality : (value) ->
+    @quality = value
     @hasChanged = true
 
   calculateIntegerZoomStep : (planeID) ->
     # round, because Model expects Integer
-    @integerZoomSteps[planeID] = Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff)
-    if @integerZoomSteps[planeID] < 0
-      @integerZoomSteps[planeID] = 0
-    # overrideZoomStep only has an effect when it is larger than the optimal zoom step
-    if @overrideZoomStep
-      @integerZoomSteps[planeID] = Math.max(@overrideZoomStep, @integerZoomSteps[planeID])
+    @integerZoomSteps[planeID] = Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff + @quality)
+    @integerZoomSteps[planeID] = Math.min(@integerZoomSteps[planeID], MAX_ZOOM_STEP)
+    @integerZoomSteps[planeID] = Math.max(@integerZoomSteps[planeID], 0)
 
   getZoomStep : (planeID) ->
     @zoomSteps[planeID]
@@ -84,6 +83,7 @@ class Flycam2d
     @zoomSteps[planeID] = zoomStep
     @hasChanged = true
     @calculateBuffer()
+    @trigger "zoomFactorChanged", Math.pow(2, @zoomSteps[0])
 
   calculateBuffer : ->
     for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]

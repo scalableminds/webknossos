@@ -29,6 +29,7 @@ class Controller
   constructor : ->
 
     _.extend(@, new EventMixin())
+    @fullScreen = false
 
     @model = new Model()
 
@@ -65,29 +66,30 @@ class Controller
       for mesh in meshes
         @view.addGeometry(mesh)
 
-      @view.on "render", @render
-      @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
+      @view.on
+        render : => @render()
+        renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
-      @sceneController.skeleton.on "newGeometries", (list, event) =>
-        
-        for geometry in list
-          @view.addGeometry(geometry)
-        
-      @sceneController.skeleton.on "removeGeometries", (list, event) =>
-      
-        for geometry in list
-          @view.removeGeometry(geometry)
+      @sceneController.skeleton.on
+        newGeometries : (list, event) =>
+          for geometry in list
+            @view.addGeometry(geometry)
+        removeGeometries : (list, event) =>
+          for geometry in list
+            @view.removeGeometry(geometry)
 
       @gui = new Gui($("#optionswindow"), @model, @sceneController, @cameraController, @flycam)
-      @gui.on "deleteActiveNode", @deleteActiveNode
-      @gui.on "createNewTree", @createNewTree
-      @gui.on "setActiveTree", (id) => @setActiveTree(id)
-      @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
-      @gui.on "deleteActiveTree", @deleteActiveTree
+      @gui.on
+        deleteActiveNode : @deleteActiveNode
+        createNewTree : @createNewTree
+        setActiveTree : (id) => @setActiveTree(id)
+        setActiveNode : (id) => @setActiveNode(id, false) # not centered
+        deleteActiveTree : @deleteActiveTree
+      @gui.update()
 
       @flycam.setGlobalPos(@model.route.data.editPosition)
       @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
-      @flycam.setOverrideZoomStep(@model.user.minZoomStep)
+      @flycam.setQuality(@model.user.quality)
 
       @model.binary.queue.set4Bit(@model.user.fourBit)
       @model.binary.updateLookupTable(@model.user.brightness, @model.user.contrast)
@@ -118,8 +120,8 @@ class Controller
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
-            delta.x * @model.user.mouseInversionX
-            delta.y * @model.user.mouseInversionX
+            delta.x * @model.user.mouseInversionX / @view.scaleFactor
+            delta.y * @model.user.mouseInversionX / @view.scaleFactor
             0
           ]
         scroll : @scroll
@@ -145,14 +147,6 @@ class Controller
 
     new Input.Keyboard(
 
-      #Fullscreen Mode
-      "q" : =>
-        canvasesAndNav = @canvasesAndNav
-        requestFullscreen = canvasesAndNav.webkitRequestFullScreen or canvasesAndNav.mozRequestFullScreen or canvasesAndNav.RequestFullScreen
-        if requestFullscreen
-          requestFullscreen.call(canvasesAndNav, canvasesAndNav.ALLOW_KEYBOARD_INPUT)
-
-    
       #ScaleTrianglesPlane
       "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
       "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
@@ -170,6 +164,10 @@ class Controller
     )
     
     new Input.KeyboardNoLoop(
+
+      #Fullscreen Mode
+      "q" : => @toggleFullScreen()
+
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 
@@ -183,19 +181,25 @@ class Controller
       #Delete active node
       "delete" : => @deleteActiveNode()
 
-      "n" : => @createNewTree()
+      "c" : => @createNewTree()
+
+      #Comments
+      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
+      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
 
       #Move
       "space" : (first) => @moveZ( @model.user.moveValue, first)
       "f" : (first) => @moveZ( @model.user.moveValue, first)
       "d" : (first) => @moveZ( - @model.user.moveValue, first)
+      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
+      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
 
       "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
       "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
     )
 
 
-  render : =>
+  render : ->
 
     @model.binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
     @model.route.globalPosition = @flycam.getGlobalPos()
@@ -246,6 +250,19 @@ class Controller
           @zoomIn()
         else
           @zoomOut()
+
+  toggleFullScreen : =>
+    if @fullScreen
+      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
+      @fullScreen = false
+      if cancelFullscreen
+        cancelFullscreen.call(document)
+    else
+      body = $("body")[0]
+      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
+      @fullScreen = true
+      if requestFullscreen
+        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
 
   ########### Click callbacks
@@ -312,7 +329,11 @@ class Controller
   addNode : (position) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
-    @model.route.addNode(position, TYPE_USUAL)
+      @model.route.one("rendered", =>
+        @model.route.one("rendered", =>
+          @model.route.addNode(position, TYPE_USUAL)))
+    else
+      @model.route.addNode(position, TYPE_USUAL)
 
   pushBranch : =>
     @model.route.pushBranch()

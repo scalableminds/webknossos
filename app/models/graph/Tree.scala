@@ -58,10 +58,9 @@ object Tree {
     val VIEWPORT = "viewport"
     val RESOLUTION = "resolution"
     val TIMESTAMP = "timestamp"
-    val COMMENT = "comment"
 
     def writes(n: Node): JsObject = {
-      val j = Json.obj(
+      Json.obj(
         ID -> n.id,
         RADIUS -> n.radius,
         POSITION -> n.position,
@@ -69,10 +68,6 @@ object Tree {
         RESOLUTION -> n.resolution,
         TIMESTAMP -> n.timestamp
       )
-      n.comment match {
-        case Some(c) => j ++ Json.obj("comment" -> c)
-        case _       => j
-      }
     }
 
     def reads(js: JsValue) =
@@ -81,8 +76,7 @@ object Tree {
         (js \ POSITION).as[Point3D],
         (js \ VIEWPORT).as[Int],
         (js \ RESOLUTION).as[Int],
-        (js \ TIMESTAMP).as[Long],
-        (js \ COMMENT).asOpt[String])
+        (js \ TIMESTAMP).as[Long])
   }
 
   implicit object TreeFormat extends Format[Tree] {

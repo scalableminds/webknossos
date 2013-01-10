@@ -4,13 +4,7 @@ TYPE_BRANCH = 1
 # This class should represent a Trace Point
 class TracePoint
 
-  constructor : (parent, type, id, pos, size, color) ->
-    @parent   = parent
-    @type     = type
-    @id       = id
-    @pos      = pos
-    @size     = size
-    @color    = color
+  constructor : (@parent, @type, @id, @pos, @size, @color) ->
     @children = []
 
   appendNext : (next) ->

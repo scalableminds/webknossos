@@ -1,8 +1,8 @@
 ### define
 jquery : $
 underscore : _
-../libs/toast : Toast
-../libs/keyboard : KeyboardJS
+libs/toast : Toast
+libs/keyboard : KeyboardJS
 ###
 
 $ ->
@@ -57,7 +57,7 @@ $ ->
 
           event.preventDefault()
 
-          oxalis.gui.saveNow().done => 
+          oxalis.gui.saveNow().done =>
             window.location.href = this.href
 
 
@@ -92,7 +92,7 @@ $ ->
                 trigger: "hover",
                 content: user.tooltip
               )
-          
+
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error}")
         )
@@ -112,7 +112,7 @@ $ ->
 
         isValid = true
         isDirty = false
-        
+
         editor.on "change", ->
 
           try
@@ -120,7 +120,7 @@ $ ->
             $submitButton.removeClass("disabled").popover("destroy")
             isValid = true
 
-          catch error                
+          catch error
             $submitButton.addClass("disabled")
             $submitButton.popover(
               placement : "right"
@@ -130,14 +130,15 @@ $ ->
             )
             isValid = false
 
-        editor._emit("change") # for init
+        editor._emit("change") # init
+
 
         editor.on "change", -> isDirty = true
 
         $(window).on "beforeunload", (event) ->
 
           "You have unsaved code. Do you really want to leave this site?" if isDirty
-            
+
 
         save = ->
 
@@ -152,7 +153,7 @@ $ ->
             data : $form.serialize()
             type : "POST"
           ).then(
-            -> 
+            ->
               isDirty = false
               Toast.success("Saved!")
             ->
@@ -162,7 +163,7 @@ $ ->
                 true
               )
           )
-       
+
         KeyboardJS.on "super+s,ctrl+s", (event) ->
 
           event.preventDefault()
@@ -174,4 +175,10 @@ $ ->
 
           event.preventDefault()
           save()
-          
+
+
+    "admin.creator.levelCreator" : ->
+
+      require ["./level_creator"], (LevelCreator) ->
+
+        window.levelCreator = new LevelCreator()

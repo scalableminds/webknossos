@@ -25,6 +25,7 @@ class Gui
     data = @model.user
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
+    @qualityArray = ["high", "medium", "low"]
     @settings = 
       
       lockZoom: data.lockZoom
@@ -39,7 +40,7 @@ class Gui
       brightness : data.brightness
       contrast : data.contrast
       interpolation : data.interpolation
-      minZoomStep : data.minZoomStep
+      quality : @qualityArray[data.quality]
 
       displayPrevXY : data.displayPreviewXY
       displayPrevYZ : data.displayPreviewYZ
@@ -54,6 +55,9 @@ class Gui
       newNodeNewTree : data.newNodeNewTree
       deleteActiveNode : => @trigger "deleteActiveNode"
       radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
+      comment : ""
+      prevComment : @prevComment
+      nextComment : @nextComment
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
@@ -72,8 +76,8 @@ class Gui
                           .onChange(@setMouseInversionY)
 
     fView = @gui.addFolder("Planes")
-    (fView.add @settings, "moveValue", 1, 10) 
-                          .step(0.25)
+    (fView.add @settings, "moveValue", 0.1, 10) 
+                          .step(0.1)
                           .name("Move Value")    
                           .onChange(@setMoveValue)
     scale = @model.scaleInfo.baseVoxel
@@ -99,9 +103,9 @@ class Gui
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
                           .onChange(@setInterpolation)
-    (fView.add @settings, "minZoomStep", [0, 1, 2, 3])
-                          .name("Min. Zoom Level")
-                          .onChange(@setMinZoomStep)
+    (fView.add @settings, "quality", @qualityArray)
+                          .name("Quality")
+                          .onChange(@setQuality)
 
     fSkeleton = @gui.addFolder("Skeleton View")
     (fSkeleton.add @settings, "displayPrevXY")
@@ -143,6 +147,14 @@ class Gui
                           .name("Radius")    
                           .listen()
                           .onChange(@setNodeRadius)
+    @commentController =
+    (fNodes.add @settings, "comment")
+                          .name("Comment")
+                          .onChange(@setComment)
+    (fNodes.add @settings, "prevComment")
+                          .name("Previous Comment")
+    (fNodes.add @settings, "nextComment")
+                          .name("Next Comment")
     (fNodes.add @settings, "deleteActiveNode")
                           .name("Delete Active Node")
 
@@ -152,33 +164,29 @@ class Gui
     fTrees.open()
     fNodes.open()
 
-    @flycam.on "globalPositionChanged", (position) => 
-
-      @updateGlobalPosition(position)
-      return
-
     $("#trace-position-input").on "change", (event) => 
 
       @setPosFromString(event.target.value)
       return
 
-    @model.route.on("newActiveNode", =>
-      @update())
+    @flycam.on
+                globalPositionChanged : (position) => 
+                  @updateGlobalPosition(position)
+                zoomFactorChanged : (factor) =>
+                  nm = factor * 384 * @model.scaleInfo.baseVoxel
+                  if(nm<1000)
+                    $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
+                  else
+                    $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " mm</p>")
 
-    @model.route.on("newActiveTree", =>
-      @update())
-
-    @model.route.on("deleteActiveTree", =>
-      @update())
-
-    @model.route.on("deleteActiveNode", =>
-      @update())
-
-    @model.route.on("newNode", =>
-      @update())
-
-    @model.route.on("newActiveNodeRadius", (radius) =>
-      @updateRadius(radius))
+    @model.route.on  
+                      newActiveNode    : => @update()
+                      newActiveTree    : => @update()
+                      deleteActiveTree : => @update()
+                      deleteActiveNode : => @update()
+                      deleteLastNode   : => @update()
+                      newNode          : => @update()
+                      newActiveNodeRadius : (radius) =>@updateRadius(radius) 
 
   saveNow : =>
     @model.user.pushImpl()
@@ -236,10 +244,12 @@ class Gui
     @model.user.contrast = (Number) @settings.contrast
     @model.user.push()
 
-  setMinZoomStep : (value) =>
-    value = parseInt(value)
-    @flycam.setOverrideZoomStep(value)
-    @model.user.minZoomStep = (Number) value
+  setQuality : (value) =>
+    for i in [0..(@qualityArray.length - 1)]
+      if @qualityArray[i] == value
+        value = i
+    @flycam.setQuality(value)
+    @model.user.quality = (Number) value
     @model.user.push()
 
   setDisplayPreviewXY : (value) =>
@@ -284,19 +294,28 @@ class Gui
   setNodeRadius : (value) =>
     @model.route.setActiveNodeRadius(value)
 
+  setComment : (value) =>
+    @model.route.setComment(value)
+
+  prevComment : =>
+    @trigger "setActiveNode", @model.route.nextCommentNodeID(false)
+
+  nextComment : =>
+    @trigger "setActiveNode", @model.route.nextCommentNodeID(true)
+
   updateRadius : (value) ->
     if value then @settings.radius = value
     else if (value = @model.route.getActiveNodeRadius())
       @settings.radius = value
 
-  # called when value user switch to different active node
-  updateNodeAndTreeIds : =>
-    @settings.activeNodeID = @model.route.lastActiveNodeId
-    @settings.activeTreeID = @model.route.getActiveTreeId()
-    @activeNodeIdController.updateDisplay()
-    @activeTreeIdController.updateDisplay()
-
   # Helper method to combine common update methods
   update : ->
-    @updateNodeAndTreeIds()
+    # called when value user switch to different active node
+    @settings.activeNodeID = @model.route.lastActiveNodeId
+    @settings.activeTreeID = @model.route.getActiveTreeId()
+    @settings.comment      = @model.route.getComment()
+    @activeNodeIdController.updateDisplay()
+    @activeTreeIdController.updateDisplay()
+    @commentController.updateDisplay()
+
     @updateRadius()

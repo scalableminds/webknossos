@@ -17,7 +17,7 @@ class User
   fourBit : null
   brightness : null
   contrast : null
-  minZoomStep : null
+  quality : null
   zoomXY : null
   zoomYZ : null
   zoomXZ : null
@@ -63,7 +63,7 @@ class User
         fourBit: @fourBit,
         brightness: @brightness,
         contrast: @contrast, 
-        minZoomStep : @minZoomStep,
+        quality : @quality,
         zoomXY : @zoomXY,
         zoomYZ : @zoomYZ,
         zoomXZ : @zoomXZ,

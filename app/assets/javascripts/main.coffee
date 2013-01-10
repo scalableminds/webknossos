@@ -1,19 +1,20 @@
-require.config 
-  
+require.config
+
   baseUrl : "/assets/javascripts"
 
   paths :
-    "jquery" : "./libs/jquery-1.7.1"
-    "underscore" : "./libs/underscore-1.2.0.min"
-    "bootstrap" : "./libs/bootstrap.min"
-    "worker" : "./libs/worker_plugin"
-    "three": "./libs/threejs/three"
-    "stats" : "./libs/threejs/stats"
-    "v3" : "./libs/v3"
-    "m4x4" : "./libs/m4x4"
-    "dat" : "./libs/dat.gui.min"
+    "jquery" : "libs/jquery-1.8.3.min"
+    "underscore" : "libs/lodash-1.0.0-rc.2.min"
+    "bootstrap" : "libs/bootstrap.min"
+    "worker" : "libs/worker_plugin"
+    "three": "libs/threejs/three"
+    "stats" : "libs/threejs/stats"
+    "v3" : "libs/v3"
+    "m4x4" : "libs/m4x4"
+    "dat" : "libs/dat.gui.min"
+    "coffee-script" : "libs/coffee-script-1.4.0.min"
 
-  shim : 
+  shim :
     "underscore" :
       exports : "_"
     "bootstrap" : [ "jquery" ]
@@ -23,15 +24,15 @@ require.config
       exports : "jsRoutes"
     "libs/ace/ace" :
       exports : "ace"
-    "three" : 
+    "three" :
       exports : "THREE"
-    "stats" : 
+    "stats" :
       exports : "Stats"
-    "v3" : 
+    "v3" :
       exports : "V3"
-    "m4x4" : 
+    "m4x4" :
       exports : "M4x4"
-      
+
 
 require [
   "jquery"
@@ -42,6 +43,5 @@ require [
   require [
     "./main/enhancements"
     "./main/routing"
+    "libs/core_ext"
   ], ->
-
-  

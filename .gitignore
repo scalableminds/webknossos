@@ -1,3 +1,4 @@
+.worksheet/
 .DS_STORE
 RUNNING_PID
 .cache
@@ -11,6 +12,7 @@ target/
 binarydata/
 binaryData/
 binaryData
+data/
 boot/
 .idea/
 .idea_modules/
@@ -18,6 +20,7 @@ boot/
 *.class
 *.keep
 *.pyc
+*.sc
 lifttemplate.iml
 lifttemplate.ipr
 lifttemplate.iws
@@ -26,3 +29,6 @@ src/main/scala/rebel.xml
 *.zip
 *.skp
 *.mtl
+modules/shellgame/target
+modules/shellgame/logs
+modules/shellgame/shellgame-assets

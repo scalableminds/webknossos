@@ -27,7 +27,7 @@ object UserConfiguration {
     Map(
       "moveValue" -> JsNumber( 1 ),
       "rotateValue" -> JsNumber( 0.01 ),
-      "scaleValue" -> JsNumber( 0.05 ),
+      "scaleValue" -> JsNumber( 0.02 ),
       "mouseRotateValue" -> JsNumber( 0.004 ),
       "routeClippingDistance" -> JsNumber( 100 ),
       "lockZoom" -> JsBoolean( true ),
@@ -36,7 +36,7 @@ object UserConfiguration {
       "fourBit" -> JsBoolean( true ),
       "brightness" -> JsNumber( 0 ),
       "contrast" -> JsNumber( 1 ),
-      "minZoomStep" -> JsNumber( 0 ),
+      "quality" -> JsNumber( 0 ),
       "zoomXY" -> JsNumber( 0 ),
       "zoomYZ" -> JsNumber( 0 ),
       "zoomXZ" -> JsNumber( 0 ),

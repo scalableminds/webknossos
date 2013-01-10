@@ -191,10 +191,11 @@ class Gui
                       newNode          : => @update()
                       newTree          : => @update()
                       newActiveNodeRadius : (radius) =>@updateRadius(radius) 
+                      PushFailed       : -> Toast.error("Auto-Save failed!")
 
   saveNow : =>
     @model.user.pushImpl()
-    @model.route.pushImpl()
+    @model.route.pushNow()
       .then( 
         -> Toast.success("Saved!")
         -> Toast.error("Couldn't save. Please try again.")

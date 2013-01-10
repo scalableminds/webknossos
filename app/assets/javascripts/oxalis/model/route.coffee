@@ -100,7 +100,7 @@ class Route
       "beforeunload"
       =>
         if !@savedCurrentState
-          @pushImpl()
+          @pushImpl(true)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return
@@ -157,10 +157,14 @@ class Route
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.
   pushDebounced : ->
-    @pushDebounced = _.throttle(_.mutexDeferred(@pushImpl, -1), PUSH_THROTTLE_TIME)
+    saveFkt = => @pushImpl(true)
+    @pushDebounced = _.throttle(_.mutexDeferred( saveFkt, -1), PUSH_THROTTLE_TIME)
     @pushDebounced()
 
-  pushImpl : ->
+  pushNow :->   # Interface for view & controller
+    return @pushImpl(false)
+
+  pushImpl : (notifyOnFailure) ->
 
     deferred = new $.Deferred()
 
@@ -172,6 +176,8 @@ class Route
     )
     .fail =>
       @push()
+      if (notifyOnFailure)
+        @trigger("PushFailed");
       deferred.reject()
     .done =>
       @savedCurrentState = true

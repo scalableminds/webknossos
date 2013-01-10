@@ -16,9 +16,12 @@ import views._
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
+import models.security.Role
 
 object BinaryDataAdministration extends Controller with Secured {
 
+  override val DefaultAccessRole = Role.Admin
+  
   val dataInsertionActor = Akka.system.actorOf(Props(new BinaryData2DBActor))
 
   implicit val timeout = Timeout(5 seconds)

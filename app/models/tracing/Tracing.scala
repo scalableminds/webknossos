@@ -198,7 +198,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       (DataSet.findOneByName(e.dataSetName).map { dataSet =>
         <things>
           <parameters>
-            <tracing name={ dataSet.name }/>
+            <experiment name={ dataSet.name }/>
             <scale x={ e.scale.x.toString } y={ e.scale.y.toString } z={ e.scale.z.toString }/>
             <offset x="0" y="0" z="0"/>
             <time ms={ e.timestamp.toString }/>

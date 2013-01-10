@@ -12,7 +12,7 @@ import models.task.TimeSpan
 import play.api.i18n.Messages
 
 object TaskTypeAdministration extends Controller with Secured {
-  //finished localization
+
   override val DefaultAccessRole = Role.Admin
 
   val taskTypeForm = Form(

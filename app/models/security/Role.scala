@@ -7,6 +7,7 @@ import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
 import models.Color
 import play.api.Logger
+import play.api.Play
 
 case class Role( name: String, permissions: List[Permission], color: Color, _id: ObjectId = new ObjectId ) extends Implyable {
   def implies( permission: Permission ) =
@@ -26,6 +27,13 @@ object Role extends BasicDAO[Role]( "roles" ) {
       Some(EmptyRole)
     } else {
       r
+    }
+  }
+  
+  def ensureImportantRoles() {
+    if(User.isEmpty || Admin.isEmpty){
+      Logger.error("Application is going to get shutdown, because not all required roles are present.")
+      Play.stop()
     }
   }
   

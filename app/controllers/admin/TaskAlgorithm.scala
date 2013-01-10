@@ -9,7 +9,7 @@ import braingames.mvc.Controller
 import play.api.i18n.Messages
 
 object TaskAlgorithm extends Controller with Secured {
-  //finished localization
+
   override val DefaultAccessRole = Role.Admin
 
   def testAlgorithm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>

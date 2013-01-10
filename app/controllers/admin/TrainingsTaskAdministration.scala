@@ -19,7 +19,8 @@ import models.tracing.TracingType
 import play.api.i18n.Messages
 
 object TrainingsTaskAdministration extends Controller with Secured {
-  //finished localization
+  
+  override val DefaultAccessRole = Role.User
   override val DefaultAccessPermission = Some(Permission("admin.review", List("access")))
 
   val trainingsTaskForm = Form(

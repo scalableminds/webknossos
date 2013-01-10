@@ -201,7 +201,8 @@ class Controller
 
   render : ->
 
-    @model.binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
+    @model.binary.ping(@flycam.getGlobalPos(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(PLANE_XY),
+                        @flycam.getArea(PLANE_YZ), @flycam.getArea(PLANE_XZ)], activePlane: @flycam.getActivePlane()})
     @model.route.globalPosition = @flycam.getGlobalPos()
     @cameraController.update()
     @sceneController.update()
@@ -283,14 +284,14 @@ class Controller
       @flycam.setDirection(p)
     @addNode(position)
 
-  onPreviewClick : (position) =>
-    @onClick(position, VIEW_3D)
+  onPreviewClick : (position, shiftPressed) =>
+    @onClick(position, VIEW_3D, shiftPressed)
 
-  onPlaneClick : (position) =>
+  onPlaneClick : (position, shiftPressed) =>
     plane = @flycam.getActivePlane()
-    @onClick(position, plane)
+    @onClick(position, plane, shiftPressed)
 
-  onClick : (position, plane) =>
+  onClick : (position, plane, shiftPressed) =>
     scaleFactor = @view.scaleFactor
     camera      = @view.getCameras()[plane]
     # vector with direction from camera position to click position
@@ -318,10 +319,11 @@ class Controller
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = Dimensions.getIndices(plane)
       if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance(ind[2])+1)
+
         # set the active Node to the one that has the ID stored in the vertex
         # center the node if click was in 3d-view
         centered = plane == VIEW_3D
-        @setActiveNode(nodeID, centered)
+        @setActiveNode(nodeID, centered, shiftPressed)
         break
 
   ########### Model Interaction
@@ -343,13 +345,15 @@ class Controller
       @setActiveNode(id, true)
     )
 
-  setActiveNode : (nodeId, centered) =>
-    @model.route.setActiveNode(nodeId)
+  setActiveNode : (nodeId, centered, mergeTree) =>
+    @model.route.setActiveNode(nodeId, mergeTree)
     if centered
       @centerActiveNode()
 
   centerActiveNode : =>
-    @flycam.setGlobalPos(@model.route.getActiveNodePos())
+    position = @model.route.getActiveNodePos()
+    if position
+      @flycam.setGlobalPos(position)
 
   deleteActiveNode : =>
     @model.route.deleteActiveNode()
@@ -361,7 +365,7 @@ class Controller
     @model.route.setActiveTree(treeId)
 
   deleteActiveTree : =>
-    @model.route.deleteActiveTree()
+    @model.route.deleteTree()
 
   ########### Input Properties
 

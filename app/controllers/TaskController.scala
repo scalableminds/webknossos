@@ -17,6 +17,8 @@ import play.api.i18n.Messages
 import braingames.mvc.Controller
 
 object TaskController extends Controller with Secured {
+    override val DefaultAccessRole = Role.User
+  
   
   def createTracing(user: User, task: Task) = {
     val tracing = Tracing.createTracingFor(user, task)

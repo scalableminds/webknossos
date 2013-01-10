@@ -1,12 +1,22 @@
-### define ###
+### define
+../dimensions : DimensionHelper
+###
 
 class PingStrategy
+
+  # Constants
+  TEXTURE_SIZE_P : 0
+
 
   velocityRangeStart : 0
   velocityRangeEnd : 0
 
   roundTripTimeRangeStart : 0
-  roundTripTimeRangeEnd : 0  
+  roundTripTimeRangeEnd : 0
+
+  cube : null
+
+  constructor : (@cube, @TEXTURE_SIZE_P) ->
 
 
   inVelocityRange : (value) ->
@@ -28,24 +38,61 @@ class PingStrategy
     }
 
 
-  getExtentObject : (poly0, poly1, zoom0, zoom1) ->
-    
-    min_x : Math.min(poly0.min_x << zoom0, poly1.min_x << zoom1)
-    min_y : Math.min(poly0.min_y << zoom0, poly1.min_y << zoom1)
-    min_z : Math.min(poly0.min_z << zoom0, poly1.min_z << zoom1)
-    max_x : Math.max(poly0.max_x << zoom0, poly1.max_x << zoom1)
-    max_y : Math.max(poly0.max_y << zoom0, poly1.max_y << zoom1)
-    max_z : Math.max(poly0.max_z << zoom0, poly1.max_z << zoom1)
+class PingStrategy.DslSlow extends PingStrategy
+
+  velocityRangeStart : 0
+  velocityRangeEnd : Infinity
+
+  roundTripTimeRangeStart : 0
+  roundTripTimeRangeEnd : Infinity
+
+  ping : (position, direction, zoomStep, area, activePlane) ->
+
+    pullQueue = [] 
+
+    for plane in [0..2]
+      [@u, @v, @w] = Dimensions.getIndices(plane)
+
+      # Converting area from voxels to buckets
+      bucketArea = [
+        area[plane][0] >> @cube.BUCKET_SIZE_P
+        area[plane][1] >> @cube.BUCKET_SIZE_P
+        area[plane][2] - 1 >> @cube.BUCKET_SIZE_P
+        area[plane][3] - 1 >> @cube.BUCKET_SIZE_P
+      ]
+
+      centerBucket = @cube.positionToZoomedAddress(position, zoomStep[plane])
+      buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, bucketArea)
+
+      for bucket in buckets
+        if bucket?
+          priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
+          pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep[plane]], priority])
+          if plane == activePlane
+            # preload only for active plane
+            if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
+            pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep[plane]], priority << 1])
+            if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
+            pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep[plane]], priority << 2])
+
+    pullQueue
 
 
-  modifyMatrixForPoly : (matrix, zoomStep) ->
-    
-    matrix[12] >>= (5 + zoomStep)
-    matrix[13] >>= (5 + zoomStep)
-    matrix[14] >>= (5 + zoomStep)
-    matrix[12] += 1
-    matrix[13] += 1
-    matrix[14] += 1 
+  getBucketArray : (center, range, area) ->
+
+    buckets = []
+    for u in [-(range-area[0])..(area[2]-range)]
+      for v in [-(range-area[1])..(area[3]-range)]
+        bucket = center.slice(0)
+        bucket[@u] += u
+        bucket[@v] += v
+        buckets.push if _.min(bucket) >= 0 then bucket else null
+
+    buckets
+
+
+  strategyName : ->
+    "DSL_SLOW"
 
 
 PingStrategy

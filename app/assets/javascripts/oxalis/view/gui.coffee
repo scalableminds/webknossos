@@ -10,6 +10,7 @@ PLANE_XY           = Dimensions.PLANE_XY
 PLANE_YZ           = Dimensions.PLANE_YZ
 PLANE_XZ           = Dimensions.PLANE_XZ
 VIEW_3D            = Dimensions.VIEW_3D
+VIEWPORT_WIDTH     = 380
 
 class Gui 
 
@@ -172,12 +173,14 @@ class Gui
     @flycam.on
                 globalPositionChanged : (position) => 
                   @updateGlobalPosition(position)
-                zoomFactorChanged : (factor) =>
-                  nm = factor * 384 * @model.scaleInfo.baseVoxel
+                zoomFactorChanged : (factor, step) =>
+                  nm = factor * VIEWPORT_WIDTH * @model.scaleInfo.baseVoxel
                   if(nm<1000)
                     $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
+                  else if (nm<1000000)
+                    $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " μm</p>")
                   else
-                    $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " mm</p>")
+                    $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
     @model.route.on  
                       newActiveNode    : => @update()
@@ -186,6 +189,7 @@ class Gui
                       deleteActiveNode : => @update()
                       deleteLastNode   : => @update()
                       newNode          : => @update()
+                      newTree          : => @update()
                       newActiveNodeRadius : (radius) =>@updateRadius(radius) 
 
   saveNow : =>

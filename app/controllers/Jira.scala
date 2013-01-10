@@ -23,7 +23,8 @@ import play.api.i18n.Messages
 import braingames.mvc.Controller
 
 object Jira extends Controller with Secured {
-
+  override val DefaultAccessRole = Role.User
+  
   val jiraUrl = "https://jira.scm.io"
   val issueTypes = Map("bug" -> "Bug", "feature" -> "New Feature")
   val conf = Play.configuration

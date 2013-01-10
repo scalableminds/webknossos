@@ -14,8 +14,8 @@ import brainflight.mail.Send
 import brainflight.mail.DefaultMails
 
 object TrainingsTracingAdministration extends Controller with Secured {
-  // finished localization
-  val DefaultRole = Role.Admin
+
+  override val DefaultAccessRole = Role.Admin
 
   val reviewForm = Form(
     single(

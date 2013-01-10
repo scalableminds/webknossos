@@ -15,7 +15,7 @@ import net.liftweb.common._
 import braingames.mvc.Controller
 
 object UserAdministration extends Controller with Secured {
-  //finished localization
+
   override val DefaultAccessRole = Role.Admin
 
   def allUsers = User.findAll.sortBy(_.lastName)

@@ -38,10 +38,9 @@ import play.api.i18n.Messages
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 object BinaryData extends Controller with Secured {
+  override val DefaultAccessRole = Role.User
 
   val dataRequestActor = Akka.system.actorOf(Props(new DataRequestActor), name = "dataRequestActor") //.withRouter(new RoundRobinRouter(3)))
-
-  override val DefaultAccessRole = Role.User
 
   implicit val dispatcher = Akka.system.dispatcher
   val conf = Play.configuration

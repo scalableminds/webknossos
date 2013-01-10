@@ -15,6 +15,8 @@ import models.tracing._
 import play.api.i18n.Messages
 
 object NMLIO extends Controller with Secured {
+  override val DefaultAccessRole = Role.User
+  
   val prettyPrinter = new PrettyPrinter(100, 2)
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )

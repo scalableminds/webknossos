@@ -41,6 +41,7 @@ case class Tracing(
     state: TracingState = InProgress,
     review: List[TracingReview] = Nil,
     tracingType: TracingType.Value = TracingType.Explorational,
+    version: Int = 0,
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Tracing] {
 
   def dao = Tracing
@@ -226,6 +227,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
   
   implicit object TracingFormat extends Format[Tracing] {
     val ID = "id"
+    val VERSION = "version"
     val TREES = "trees"
     val ACTIVE_NODE = "activeNode"
     val BRANCH_POINTS = "branchPoints"
@@ -235,6 +237,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
 
     def writes(e: Tracing) = Json.obj(
       ID -> e.id,
+      VERSION -> e.version,
       TREES -> e.trees.map(TreeFormat.writes),
       ACTIVE_NODE -> e.activeNodeId,
       BRANCH_POINTS -> e.branchPoints,
@@ -245,6 +248,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     def reads(js: JsValue): Tracing = {
 
       val id = (js \ ID).as[String]
+      val version = (js \ VERSION).as[Int]
       val trees = (js \ TREES).as[List[Tree]]
       val comments = (js \ COMMENTS).as[List[Comment]]
       val activeNode = (js \ ACTIVE_NODE).as[Int]
@@ -252,7 +256,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       val editPosition = (js \ EDIT_POSITION).as[Point3D]
       Tracing.findOneById(id) match {
         case Some(exp) =>
-          exp.copy(trees = trees, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition, comments = comments)
+          exp.copy(trees = trees, version = version, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition, comments = comments)
         case _ =>
           throw new RuntimeException("Valid tracing id expected")
       }

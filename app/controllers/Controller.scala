@@ -9,32 +9,43 @@ import brainflight.security.AuthenticatedRequest
 import brainflight.view.ProvidesSessionData
 import play.api.mvc.Request
 
-class Controller extends PlayController with ProvidesSessionData{
-  
-  implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]) = 
+class Controller extends PlayController with ProvidesSessionData {
+
+  implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]) =
     r.request
-  
-  def postParameter(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) = 
+
+  def postParameter(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
     request.body.get(parameter).flatMap(_.headOption)
-    
+
   class AjaxResult(status: Status) {
-    
-    def apply(html: Html, messages: Seq[(String, String)]) = 
+
+    def apply(html: Html, messages: Seq[(String, String)]) =
       status(ajaxHTMLResult(html, messages))
 
-    def success(html: Html, message: String) = status(ajaxHTMLResult(html, Seq(
-      ajaxSuccess -> message)))
+    def success(html: Html, message: String) =
+      status(ajaxHTMLResult(html, Seq(ajaxSuccess -> message)))
+      
+    def success(json: JsObject, message: String) =
+      status(json ++ ajaxMessages(Seq(ajaxSuccess -> message)))
 
-    def error(html: Html, message: String) = status(ajaxHTMLResult(html, Seq(
-      ajaxError -> message)))
+    def error(html: Html, message: String) =
+      status(ajaxHTMLResult(html, Seq(ajaxError -> message)))
 
-    def success(message: String): SimpleResult[JsObject] = success(Html.empty, message)
-    def error(message: String): SimpleResult[JsObject] = error(Html.empty, message)
+    def error(json: JsObject, message: String) =
+      status(json ++ ajaxMessages(Seq(ajaxError -> message)))
+
+    def success(message: String): SimpleResult[JsObject] =
+      success(Html.empty, message)
+
+    def error(message: String): SimpleResult[JsObject] =
+      error(Html.empty, message)
 
     def ajaxHTMLResult(html: Html, messages: Seq[(String, String)]) =
-      Json.obj(
-        "html" -> html.body,
-        "messages" -> messages.map( m => Json.obj( m._1 -> m._2)))
+      Json.obj("html" -> html.body) ++ ajaxMessages(messages)
+
+    def ajaxMessages(messages: Seq[(String, String)]) =
+      Json.obj("messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
+
   }
 
   val AjaxOk = new AjaxResult(Ok)

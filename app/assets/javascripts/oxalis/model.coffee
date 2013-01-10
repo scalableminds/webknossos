@@ -39,8 +39,8 @@ class Model
             (user) =>
 
               @scaleInfo = new ScaleInfo(tracing.tracing.scale)
-              @flycam = new Flycam(VIEWPORT_SIZE, @scaleInfo)
-              @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)          
+              @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)    
+              @flycam = new Flycam(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT)      
               @route = new Route(tracing.tracing, tracing.dataSet, @scaleInfo, @flycam)
               @user = new User(user)
 

@@ -12,7 +12,6 @@ TEXTURE_WIDTH      = 512
 MAX_TEXTURE_OFFSET = 31     # maximum difference between requested coordinate and actual texture position
 ZOOM_DIFF          = 0.1
 MAX_ZOOM_TRESHOLD  = 2
-MAX_ZOOM_STEP      = 4
 
   
 class Flycam2d
@@ -21,9 +20,11 @@ class Flycam2d
   viewportWidth : 0
 
 
-  constructor : (@viewportWidth, @scaleInfo) ->
+  constructor : (@viewportWidth, @scaleInfo, @zoomStepCount) ->
 
     _.extend(this, new EventMixin())
+
+    console.log "ZoomStepCount: ", @zoomStepCount
 
     # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
     @maxZoomStepDiff = Math.min(Math.log(MAX_ZOOM_TRESHOLD) / Math.LN2, Math.log((TEXTURE_WIDTH-MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
@@ -48,7 +49,7 @@ class Flycam2d
 
   zoomOut : (planeID) ->
     # Make sure the max. zoom Step will not be exceded
-    if @zoomSteps[planeID] < MAX_ZOOM_STEP + @maxZoomStepDiff - ZOOM_DIFF
+    if @zoomSteps[planeID] < @zoomStepCount + @maxZoomStepDiff - ZOOM_DIFF
       @setZoomStep(planeID, @zoomSteps[planeID] + ZOOM_DIFF)
 
   zoomInAll : ->
@@ -68,7 +69,7 @@ class Flycam2d
   calculateIntegerZoomStep : (planeID) ->
     # round, because Model expects Integer
     @integerZoomSteps[planeID] = Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff + @quality)
-    @integerZoomSteps[planeID] = Math.min(@integerZoomSteps[planeID], MAX_ZOOM_STEP)
+    @integerZoomSteps[planeID] = Math.min(@integerZoomSteps[planeID], @zoomStepCount)
     @integerZoomSteps[planeID] = Math.max(@integerZoomSteps[planeID], 0)
 
   getZoomStep : (planeID) ->

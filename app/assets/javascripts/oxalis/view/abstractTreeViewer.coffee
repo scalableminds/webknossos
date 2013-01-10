@@ -4,7 +4,7 @@ libs/event_mixin : EventMixin
 
 NODE_RADIUS = 2
 MAX_NODE_DISTANCE = 100
-CLICK_TRESHOLD = 4
+CLICK_TRESHOLD = 6
 
 MODE_NORMAL = 0     # draw every node and the complete tree
 MODE_NOCHAIN = 1    # draw only decision points

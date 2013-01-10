@@ -241,9 +241,9 @@ class View
     @curTheme = themeID
     @abstractTreeViewer.setTheme(themeID)
     if themeID == THEME_BRIGHT
-      $("#main-container").attr('class', 'bright')
+      $("body").attr('class', 'bright')
     if themeID == THEME_DARK
-      $("#main-container").attr('class', 'dark')
+      $("body").attr('class', 'dark')
     @drawTree()
 
   getCameras : =>

@@ -101,14 +101,17 @@ object TracingController extends Controller with Secured {
     Tracing
       .findOneById(tracingId)
       .filter(_._user == request.user._id)
-      .flatMap { _ =>
+      .flatMap { oldTracing =>
         (request.body).asOpt[Tracing].map { tracing =>
-          Tracing.save(tracing.copy(timestamp = System.currentTimeMillis))
-          TimeTracking.logUserAction(request.user, tracing)
-          Ok
+          if (tracing.version == oldTracing.version + 1) {
+            Tracing.save(tracing.copy(timestamp = System.currentTimeMillis))
+            TimeTracking.logUserAction(request.user, tracing)
+            AjaxOk.success(Json.obj("version" -> tracing.version), "tracing.saved")
+          } else
+            AjaxBadRequest.error(createTracingInformation(oldTracing), "tracing.dirtyState")
         }
       }
-      .getOrElse(BadRequest("Update for tracing with id '%s' failed.".format(tracingId)))
+      .getOrElse(AjaxBadRequest.error("Update for tracing with id '%s' failed.".format(tracingId)))
   }
 
   private def finishTracing(user: User, tracingId: String): Either[String, (Tracing, String)] = {

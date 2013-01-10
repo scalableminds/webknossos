@@ -9,6 +9,14 @@ CLICK_TRESHOLD = 4
 MODE_NORMAL = 0     # draw every node and the complete tree
 MODE_NOCHAIN = 1    # draw only decision points
 
+THEME_BRIGHT    = 0
+THEME_DARK      = 1
+
+COLOR_BG_BRIGHT = "#ffffff"
+COLOR_VG_BRIGHT = "#000000"
+COLOR_BG_DARK   = "#000000"
+COLOR_VG_DARK   = "#ffffff"
+
 class AbsractTreeViewer
   constructor : (width, height) ->
 
@@ -21,6 +29,7 @@ class AbsractTreeViewer
         height : height
         border : "2px"
       )
+    @setTheme(THEME_BRIGHT)
     @canvas[0].width = @canvas.width()
     @canvas[0].height = @canvas.height()
     @ctx = @canvas[0].getContext("2d")
@@ -28,9 +37,19 @@ class AbsractTreeViewer
     @width = width
     @height = height
 
+  setTheme : (themeId) ->
+    @theme = themeId
+    if themeId == THEME_BRIGHT
+      @bgColor = COLOR_BG_BRIGHT
+      @vgColor = COLOR_VG_BRIGHT
+    if themeId == THEME_DARK
+      @bgColor = COLOR_BG_DARK
+      @vgColor = COLOR_VG_DARK
+
+
   drawTree : (tree, @activeNodeId) ->
     # clear Background
-    @ctx.fillStyle = "#ffffff"
+    @ctx.fillStyle = @bgColor
     @ctx.fillRect(0, 0, @width, @height)
 
     unless tree?
@@ -124,7 +143,7 @@ class AbsractTreeViewer
 
   drawNode : (x, y, id) ->
     @ctx.beginPath()
-    @ctx.fillStyle = "#000000"
+    @ctx.fillStyle = @vgColor
     radius = if (id == @activeNodeId) then 2 * NODE_RADIUS else NODE_RADIUS
     @ctx.arc(x, y, radius, 0, 2 * Math.PI)
     @ctx.fill()
@@ -133,7 +152,7 @@ class AbsractTreeViewer
 
   drawEdge : (x1, y1, x2, y2) ->
     @ctx.beginPath()
-    @ctx.strokeStyle = "#000000"
+    @ctx.strokeStyle = @vgColor
     @ctx.moveTo(x1, y1)
     @ctx.lineTo(x2, y2)
     @ctx.stroke()
@@ -142,7 +161,7 @@ class AbsractTreeViewer
     # Draw a dashed line
     dashLength = (bottom - top) / 7
     @ctx.beginPath()
-    @ctx.strokeStyle = "#000000"
+    @ctx.strokeStyle = @vgColor
     for i in [0, 1, 2]
       @ctx.moveTo(x, top + (2 * i + 1) * dashLength)
       @ctx.lineTo(x, top + (2 * i + 2) * dashLength)

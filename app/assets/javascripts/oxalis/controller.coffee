@@ -168,8 +168,9 @@ class Controller
     
     new Input.KeyboardNoLoop(
 
-      #Fullscreen Mode
+      #View
       "q" : => @toggleFullScreen()
+      "t" : => @view.toggleTheme()
 
       #Branches
       "b" : => @pushBranch()

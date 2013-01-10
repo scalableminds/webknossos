@@ -23,6 +23,9 @@ PLANE_YZ       = Dimensions.PLANE_YZ
 PLANE_XZ       = Dimensions.PLANE_XZ
 VIEW_3D        = Dimensions.VIEW_3D
 
+THEME_BRIGHT   = 0
+THEME_DARK     = 1
+
 class View
 
   constructor : (model, flycam) ->
@@ -91,6 +94,7 @@ class View
     abstractTreeContainer.append @abstractTreeViewer.canvas
     @abstractTreeViewer.on
       nodeClick : (id) => @trigger("abstractTreeClick", id)
+    @setTheme(THEME_BRIGHT)
 
     # FPS stats
     stats = new Stats()
@@ -229,6 +233,19 @@ class View
       #catcherStyle.borderColor  = "#f8f800"   #  else "#C7D1D8"
       $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
 
+  toggleTheme : =>
+    if @curTheme == THEME_BRIGHT then @setTheme(THEME_DARK  )
+    else if @curTheme == THEME_DARK   then @setTheme(THEME_BRIGHT)
+
+  setTheme : (themeID) =>
+    @curTheme = themeID
+    @abstractTreeViewer.setTheme(themeID)
+    if themeID == THEME_BRIGHT
+      $("#main-container").attr('class', 'bright')
+    if themeID == THEME_DARK
+      $("#main-container").attr('class', 'dark')
+    @drawTree()
+
   getCameras : =>
     @camera
 
@@ -277,6 +294,7 @@ class View
           <tr><td>Shift + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
           <tr><td>P</td><td>Previous comment</td><td>Shift + Mousewheel</td><td>Change active node size</td></tr>
           <tr><td>N</td><td>Next comment</td><td>C</td><td>Create new tree</td></tr>
+          <tr><td>T</td><td>Toggle theme</td><td></td><td></td></tr>
           <tr><th colspan=\"2\">3D-view</th><td></td><td></td></tr>
           <tr><td>Mousewheel</td><td>Zoom in and out</td><td></td><td></td></tr>
         </tbody>

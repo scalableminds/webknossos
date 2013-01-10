@@ -113,7 +113,9 @@ class View
                       newActiveTree : => @drawTree(@model.route.getTree()),
                       deleteActiveTree : => @drawTree(@model.route.getTree()),
                       deleteActiveNode : => @drawTree(@model.route.getTree()),
-                      newNode : => @drawTree(@model.route.getTree())  })
+                      newNode : => @drawTree(@model.route.getTree()),
+                      mergeDifferentTrees : ->
+                            Toast.error("You can't merge nodes within the same tree", false)  })
     
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
@@ -263,10 +265,12 @@ class View
           <tr><td>Q</td><td>Fullscreen</td><td>I or Alt + Mousewheel</td><td>Zoom in</td></tr>
           <tr><td>K</td><td>Scale up viewports</td><td>O or Alt + Mousewheel</td><td>Zoom out</td></tr>
           <tr><td>L</td><td>Scale down viewports</td><td>B</td><td>Set branchpoint</td></tr>
-          <tr><td>Del</td><td>Delete active node</td><td>J</td><td>Jump to last branchpoint</td></tr>
-          <tr><td> </td><td> </td><td>S</td><td>Center active node</td></tr>
-          <tr><th colspan=\"2\">3D-view</th><td>Shift + Mousewheel</td><td>Change active node size</td></tr>
-          <tr><td>Mousewheel</td><td>Zoom in and out</td><td>N</td><td>Create new tree</td></tr>
+          <tr><td>Del</td><td>Delete node/Split trees</td><td>J</td><td>Jump to last branchpoint</td></tr>
+          <tr><td>Shift + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
+          <tr><td>P</td><td>Previous comment</td><td>Shift + Mousewheel</td><td>Change active node size</td></tr>
+          <tr><td>N</td><td>Next comment</td><td>C</td><td>Create new tree</td></tr>
+          <tr><th colspan=\"2\">3D-view</th><td></td><td></td></tr>
+          <tr><td>Mousewheel</td><td>Zoom in and out</td><td></td><td></td></tr>
         </tbody>
       </table>
       <br>

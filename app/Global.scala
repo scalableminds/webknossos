@@ -10,6 +10,7 @@ import models.Color
 import models.graph._
 import models.task._
 import models.binary._
+import models.security.Role
 import models.tracing._
 import models.basics.BasicEvolution
 import brainflight.mail.DefaultMails
@@ -38,6 +39,8 @@ object Global extends GlobalSettings {
       // found by the DirectoryWatcher first
       InitialData.insert()
     }
+    
+    Role.ensureImportantRoles()
   }
   
   override def onStop(app: Application){

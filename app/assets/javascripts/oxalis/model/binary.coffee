@@ -28,6 +28,8 @@ class Binary
     @cube = new Cube(dataSet.upperBoundary, dataSet.resolutions.length)
     @queue = new PullQueue(@dataSetId, @cube)
 
+    @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
+
     @planes = []
     @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P)
     @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P)
@@ -45,13 +47,13 @@ class Binary
       plane.updateLookUpTable(lookUpTable)
 
 
-  ping : _.once (position, options) ->
+  ping : _.once (position, {zoomStep, area, activePlane}) ->
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @ping(position, options)
+    @ping(position, {zoomStep, area, activePlane})
 
 
-  pingImpl : (position, options) ->
+  pingImpl : (position, {zoomStep, area, activePlane}) ->
 
     if @lastPosition?
       
@@ -61,21 +63,25 @@ class Binary
         (1 - @DIRECTION_VECTOR_SMOOTHER) * @direction[2] + @DIRECTION_VECTOR_SMOOTHER * (position[2] - @lastPosition[2])
       ]
 
-    unless _.isEqual(position, @lastPosition) and _.isEqual(options, @lastOptions)
+    unless _.isEqual(position, @lastPosition) and _.isEqual(zoomStep, @lastZoomStep) and _.isEqual(area, @lastArea)
 
       @lastPosition = position.slice()
-      @lastOptions = options.slice()
+      @lastZoomStep = zoomStep.slice()
+      @lastArea     = area.slice()
 
       console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond
 
-      #console.time "ping"
-      @queue.clear()
+      for strategy in @pingStrategies 
+        if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
 
-      for plane in @planes
-        plane.ping(position, @direction, options[plane.index]) if options[plane.index]? 
+          pullQueue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
+
+          for entry in pullQueue
+            @queue.insert(entry...)
+
+          break
 
       @queue.pull()
-      #console.timeEnd "ping"
 
 
   # Not used anymore. Instead the planes get-functions are called directly.

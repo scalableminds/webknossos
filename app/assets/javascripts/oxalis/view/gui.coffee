@@ -10,6 +10,7 @@ PLANE_XY           = Dimensions.PLANE_XY
 PLANE_YZ           = Dimensions.PLANE_YZ
 PLANE_XZ           = Dimensions.PLANE_XZ
 VIEW_3D            = Dimensions.VIEW_3D
+VIEWPORT_WIDTH     = 380
 
 class Gui 
 
@@ -76,8 +77,8 @@ class Gui
                           .onChange(@setMouseInversionY)
 
     fView = @gui.addFolder("Planes")
-    (fView.add @settings, "moveValue", 1, 10) 
-                          .step(0.25)
+    (fView.add @settings, "moveValue", 0.1, 10) 
+                          .step(0.1)
                           .name("Move Value")    
                           .onChange(@setMoveValue)
     scale = @model.scaleInfo.baseVoxel
@@ -164,39 +165,32 @@ class Gui
     fTrees.open()
     fNodes.open()
 
-    @flycam.on "globalPositionChanged", (position) => 
-
-      @updateGlobalPosition(position)
-      return
-
-    @flycam.on "zoomFactorChanged", (factor) =>
-      $("#zoomFactor").html("<p>Zoom factor: " + factor + "</p>")
-
     $("#trace-position-input").on "change", (event) => 
 
       @setPosFromString(event.target.value)
       return
 
-    @model.route.on("newActiveNode", =>
-      @update())
+    @flycam.on
+                globalPositionChanged : (position) => 
+                  @updateGlobalPosition(position)
+                zoomFactorChanged : (factor, step) =>
+                  nm = factor * VIEWPORT_WIDTH * @model.scaleInfo.baseVoxel
+                  if(nm<1000)
+                    $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
+                  else if (nm<1000000)
+                    $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " μm</p>")
+                  else
+                    $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
-    @model.route.on("newActiveTree", =>
-      @update())
-
-    @model.route.on("deleteActiveTree", =>
-      @update())
-
-    @model.route.on("deleteActiveNode", =>
-      @update())
-
-    @model.route.on("deleteLastNode", =>
-      @update())
-
-    @model.route.on("newNode", =>
-      @update())
-
-    @model.route.on("newActiveNodeRadius", (radius) =>
-      @updateRadius(radius))
+    @model.route.on  
+                      newActiveNode    : => @update()
+                      newActiveTree    : => @update()
+                      deleteActiveTree : => @update()
+                      deleteActiveNode : => @update()
+                      deleteLastNode   : => @update()
+                      newNode          : => @update()
+                      newTree          : => @update()
+                      newActiveNodeRadius : (radius) =>@updateRadius(radius) 
 
   saveNow : =>
     @model.user.pushImpl()

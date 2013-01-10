@@ -82,7 +82,7 @@ class Flycam2d
     @zoomSteps[planeID] = zoomStep
     @hasChanged = true
     @calculateBuffer()
-    @trigger "zoomFactorChanged", Math.pow(2, @zoomSteps[0])
+    @trigger "zoomFactorChanged", Math.pow(2, @zoomSteps[0]), @zoomSteps[0]
 
   calculateBuffer : ->
     for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
@@ -180,7 +180,8 @@ class Flycam2d
     offsets = @getOffsets(planeID)
     size    = @getTextureScalingFactor(planeID) * @viewportWidth
     # two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
-    [offsets[0] - 1, offsets[1] - 1, offsets[0] + size * scaleArray[ind[0]] + 1, offsets[1] + size * scaleArray[ind[1]] + 1]
+    #[offsets[0] - 1, offsets[1] - 1, offsets[0] + size * scaleArray[ind[0]] + 1, offsets[1] + size * scaleArray[ind[1]] + 1]
+    [offsets[0], offsets[1], offsets[0] + size * scaleArray[ind[0]], offsets[1] + size * scaleArray[ind[1]]]
 
   notifyNewTexture : (planeID) ->
     @texturePosition[planeID] = @globalPosition.slice()    #copy that position

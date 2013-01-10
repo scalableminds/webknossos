@@ -10,11 +10,12 @@ PLANE_YZ           = Dimensions.PLANE_YZ
 PLANE_XZ           = Dimensions.PLANE_XZ
 VIEW_3D            = Dimensions.VIEW_3D
 
+TYPE_NORMAL = 0
 TYPE_BRANCH = 1
 
+MAX_BRANCHES = 200
+
 COLOR_ACTIVE = 0x0000ff
-COLOR_BRANCH = 0x550000
-COLOR_BRANCH_ACTIVE = 0x000055
 
 class Skeleton
 
@@ -58,39 +59,48 @@ class Skeleton
 
     # Create sphere to represent the active Node, radius is
     # 1 nm, so that @activeNode.scale is the radius in nm.
-    @activeNode = new THREE.Mesh(
-        new THREE.SphereGeometry(1),
-        new THREE.MeshLambertMaterial({
-          color : COLOR_ACTIVE
-          #transparent: true
-          #opacity: 0.5 })
-          })
-      )
-    @activeNode.doubleSided = true
+    # @activeNode = new THREE.Mesh(
+    #     new THREE.SphereGeometry(1),
+    #     new THREE.MeshLambertMaterial({
+    #       color : COLOR_ACTIVE
+    #       #transparent: true
+    #       #opacity: 0.5 })
+    #       })
+    #   )
+    # @activeNode.doubleSided = true
 
-    @route.on("newActiveNode", =>
-      @setActiveNode())
+    activeNodeGeometry = new THREE.Geometry()
+    @activeNodeParticle = new THREE.ParticleSystem(
+      activeNodeGeometry,
+        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 10, sizeAttenuation : false}))
+    activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
 
-    @route.on("newTree", (treeId, treeColor) =>
-      @createNewTree(treeId, treeColor))
+    routeGeometryBranchPoints = new THREE.Geometry()
+    routeGeometryBranchPoints.dynamic = true
+    @branches = new THREE.ParticleSystem(
+        routeGeometryBranchPoints,
+        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE * 0.7, size: 8, sizeAttenuation : false}))
 
-    @route.on("deleteActiveTree", (index) =>
-      @deleteActiveTree(index))
-
-    @route.on("deleteActiveNode", (id) =>
-      @deleteNode(id))
-
-    @route.on("deleteLastNode", (id) =>
-      @deleteLastNode(id))
-
-    @route.on("newNode", =>
-      @setWaypoint())
-
-    @route.on("setBranch", (isBranchPoint) =>
-      @setBranchPoint(isBranchPoint))
-
-    @route.on("newActiveNodeRadius", (radius) =>
-      @setNodeRadius(radius))
+    @route.on
+      newActiveNode : => @setActiveNode()
+      newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
+      deleteTree : (index) => @deleteTree(index)
+      deleteActiveNode : (node) => @deleteNode(node)
+      deleteLastNode : (id) => @deleteLastNode(id)
+      mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) => @mergeTree(lastTreeID, lastNodePosition, activeNodePosition)
+      newNode : => @setWaypoint()
+      setBranch : (isBranchPoint, nodeID) => 
+        @setBranchPoint(isBranchPoint, nodeID)
+        @updateBranches()
+      deleteBranch : =>
+        @updateBranches()
+      # spheres currently disabled
+      #newActiveNodeRadius : (radius) => @setNodeRadius(radius)
+      reloadTrees : (trees) =>
+        @route.one("rendered", =>
+          @route.one("rendered", =>
+            @loadSkeletonFromModel(trees)))
+      removeSpheresOfTree : (nodes) => @removeSpheresOfTree(nodes)
 
     @reset()
 
@@ -141,45 +151,48 @@ class Skeleton
       @route.one("rendered", =>
         @loadSkeletonFromModel()))
 
-  loadSkeletonFromModel : ->
-    for tree in @route.getTrees()
-      nodeList = @route.getNodeList(tree)
+  loadSkeletonFromModel : (trees) ->
+    unless trees? then trees = @model.route.getTrees()
+    for tree in trees
+      nodeList = tree.nodes
 
       index = @getIndexFromTreeId(tree.treeId)
+      @curIndex[index] = 0
+      # We need to remember this, because it might temporaryly be
+      # something other than (@curIndex[index] - 1)
+      edgesIndex = 0
 
-      # Check that we are not dealing with a sentinel
-      if nodeList[0].id
-        # Draw first Node, because it has no parent and therefore isn't drawn in the loop below
-        if nodeList.length > 0
-          radius = nodeList[0].size
-          nodePos = nodeList[0].pos
-          @nodesBuffer[index].set(nodePos, @curIndex[index] * 3)
-          # Assign the ID to the vertex, so we can access it later
-          @nodes[index].geometry.nodeIDs.set([nodeList[0].id], @curIndex[index])
-          @pushNewNode(radius, nodePos, nodeList[0].id, tree.color)
+      for node in nodeList
+        @nodesBuffer[index].set(node.pos, @curIndex[index] * 3)
+        # Assign the ID to the vertex, so we can access it later
+        @nodes[index].geometry.nodeIDs.set([node.id], @curIndex[index])
+        # currently disabled due to performance issues
+        # @pushNewNode(node.radius, node.pos, node.id, tree.color, node.type)
         @curIndex[index]++
-        for node in nodeList
-          if node.parent
-            radius = node.size
-            nodePos = node.parent.pos
-            node2Pos = node.pos
-            @edgesBuffer[index].set(nodePos, (2 * @curIndex[index] - 2) * 3)
-            @edgesBuffer[index].set(node2Pos, (2 * @curIndex[index] - 1) * 3)
-            @nodesBuffer[index].set(node2Pos, @curIndex[index] * 3)
-            # Assign the ID to the vertex, so we can access it later
-            @nodes[index].geometry.nodeIDs.set([node.id], @curIndex[index])
-            @pushNewNode(radius, node2Pos, node.id, tree.color)
-            @curIndex[index]++
 
-        @routes[index].geometry.__vertexArray = @edgesBuffer[index]
-        @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index] - 1)
-        @nodes[index].geometry.__vertexArray = @nodesBuffer[index]
-        @nodes[index].geometry.__webglParticleCount = @curIndex[index]
+        # Add edges to neighbor, if neighbor id is smaller
+        # (so we don't add the same edge twice)
+        for neighbor in node.neighbors
+          if neighbor.id < node.id
+            @edgesBuffer[index].set( neighbor.pos, (edgesIndex++) * 3 )
+            @edgesBuffer[index].set(     node.pos, (edgesIndex++) * 3 )
 
-        @routes[index].geometry.verticesNeedUpdate = true
-        @nodes[index].geometry.verticesNeedUpdate = true
-    for branchPoint in @route.branchStack
-      @setBranchPoint(true, branchPoint.id)
+      if edgesIndex != (2 * (@curIndex[index] - 1)) and !(@curIndex[index] == 0 and edgesIndex == 0)
+        console.error("edgesIndex does not equal (2 * (@curIndex[index] - 1) !!!")
+
+      @routes[index].geometry.__vertexArray = @edgesBuffer[index]
+      @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index] - 1)
+      @nodes[index].geometry.__vertexArray = @nodesBuffer[index]
+      @nodes[index].geometry.__webglParticleCount = @curIndex[index]
+
+      @routes[index].geometry.verticesNeedUpdate = true
+      @nodes[index].geometry.verticesNeedUpdate = true
+    # for branchPoint in @route.branchStack
+    #   @setBranchPoint(true, branchPoint.id)
+    @updateBranches()
+    # add branchesParticleSystem to scene
+    @trigger "newGeometries", [@branches]
+
     @setActiveNode()
 
   setActiveNode : =>
@@ -190,29 +203,29 @@ class Skeleton
     # May be null
     @lastNodePosition = position
     if position
-      @activeNode.visible = true
+      @activeNodeParticle.visible = true
       @activeNodeSphere = @getSphereFromId(id)
       # Hide activeNodeSphere, because activeNode is visible anyway
-      if @activeNodeSphere
-        @activeNodeSphere.visible = false
-        if @route.getActiveNodeType() == TYPE_BRANCH
-          @activeNode.material.color.setHex(COLOR_BRANCH_ACTIVE)
-        else
-          @activeNode.material.color.setHex(COLOR_ACTIVE)
+      #if @activeNodeSphere
+      #  @activeNodeSphere.visible = false
+      if @route.getActiveNodeType() == TYPE_BRANCH
+        @activeNodeParticle.material.color.setHex(COLOR_ACTIVE * 0.7)
+      else
+        @activeNodeParticle.material.color.setHex(COLOR_ACTIVE)
 
-      @setNodeRadius(@route.getActiveNodeRadius())
-      @activeNode.position = new THREE.Vector3(position...)
+      # @setNodeRadius(@route.getActiveNodeRadius())
+      @activeNodeParticle.position = new THREE.Vector3(position[0] + 0.01, position[1] + 0.01, position[2] - 0.01)
     else
-      @activeNodeSphere = null
-      @activeNode.visible = false
+      #@activeNodeSphere = null
+      @activeNodeParticle.visible = false
     @flycam.hasChanged = true
 
   setBranchPoint : (isBranchPoint, nodeID) ->
-    colorActive = if isBranchPoint then COLOR_BRANCH_ACTIVE else COLOR_ACTIVE
+    colorActive = if isBranchPoint then COLOR_ACTIVE * 0.7 else COLOR_ACTIVE
     treeColor = @route.getTree().color
-    colorNormal = if isBranchPoint then COLOR_BRANCH else treeColor
+    colorNormal = if isBranchPoint then treeColor * 0.7 else treeColor
     if not nodeID? or nodeID == @route.getActiveNodeId()
-      @activeNode.material.color.setHex(colorActive)
+      @activeNodeParticle.material.color.setHex(colorActive)
       if @activeNodeSphere
         @activeNodeSphere.material.color.setHex(colorNormal)
     else
@@ -229,7 +242,7 @@ class Skeleton
     @flycam.hasChanged = true
 
   getMeshes : =>
-    return [@activeNode].concat(@nodes).concat(@nodesSpheres).concat(@routes)
+    return [@activeNodeParticle].concat(@nodes).concat(@nodesSpheres).concat(@routes)
 
   setWaypoint : =>
     curGlobalPos = @flycam.getGlobalPos()
@@ -239,6 +252,7 @@ class Skeleton
     index        = @getIndexFromTreeId(@route.getTree().treeId)
     color        = @route.getTree().color
     radius       = @route.getActiveNodeRadius()
+    type         = @route.getActiveNodeType()
 
     unless @curIndex[index]
       @curIndex[index] = 0
@@ -261,7 +275,7 @@ class Skeleton
       @nodes[index].geometry.__vertexArray = @nodesBuffer[index]
       @nodes[index].geometry.__webglParticleCount = @curIndex[index] + 1
 
-      @pushNewNode(radius, position, id, color)
+      # @pushNewNode(radius, position, id, color, type)
 
       @routes[index].geometry.verticesNeedUpdate = true
       @nodes[index].geometry.verticesNeedUpdate = true
@@ -274,89 +288,95 @@ class Skeleton
       @waypointAnimation.start()
     
       @setActiveNode()
-      @setNodeRadius(radius)
+      #@setNodeRadius(radius)
       @curIndex[index]++
       @flycam.hasChanged = true
 
-  deleteLastNode : (id) ->
+  deleteNode : (node) ->
+
+    if node.neighbors.length != 1
+      console.error("Delete node that does not have exactly 1 neighbor?!")
+      return
+
     index = @getIndexFromTreeId(@route.getTree().treeId)
 
-    if @nodes[index].geometry.nodeIDs[@curIndex[index]-1]== id
-      sphere = @getSphereFromId(id)
+    for i in [0...@curIndex[index]]
+      if @nodes[index].geometry.nodeIDs[i] == node.id
+        nodesIndex = i
+        break
 
-      if @curIndex[index] > 0
-        @curIndex[index]--
+    # swap IDs
+    @nodes[index].geometry.nodeIDs[nodesIndex] = @nodes[index].geometry.nodeIDs[@curIndex[index]-1]
 
-        @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index] - 1)
-        @nodes[index].geometry.__webglParticleCount = @curIndex[index]
+    # swap nodes
+    for i in [0..2]
+      @nodes[index].geometry.__vertexArray[nodesIndex * 3 + i] =
+        @nodes[index].geometry.__vertexArray[(@curIndex[index] - 1) * 3 + i]
 
-        @routes[index].geometry.verticesNeedUpdate = true
-        @nodes[index].geometry.verticesNeedUpdate = true
-      else
-        @lastNodePosition = null
-
-      @trigger("removeGeometries", [sphere])
-      @setActiveNode()
-      @flycam.hasChanged = true
+    # Delete Edge by finding it in the array
+    # ASSUMPTION edges always go from smaller ID to bigger ID
+    if node.id < node.neighbors[0].id
+      edgeArray = node.pos.concat(node.neighbors[0].pos)
     else
-      @deleteNode(id)
+      edgeArray = node.neighbors[0].pos.concat(node.pos)
+    for i in [0...@curIndex[index]]
+      found = true
+      for j in [0..5]
+        found &= Math.abs(@routes[index].geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.01
+      if found
+        edgesIndex = i
+        break
 
-  deleteNode : (id) ->
-    sphere = @getSphereFromId(id)
+    # swap edges
+    for i in [0..5]
+      @routes[index].geometry.__vertexArray[edgesIndex * 6 + i] =
+        @routes[index].geometry.__vertexArray[(@curIndex[index] - 2) * 6 + i]
+    
 
-    @refreshActiveTree()
-
-    @trigger("removeGeometries", [sphere])
+    @curIndex[index]--
+    @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index] - 1)
+    @nodes[index].geometry.__webglParticleCount = @curIndex[index]
+    @routes[index].geometry.verticesNeedUpdate = true
+    @nodes[index].geometry.verticesNeedUpdate = true
+    @trigger("removeGeometries", [@getSphereFromId(node.id)])
     @setActiveNode()
     @flycam.hasChanged = true
 
-  refreshActiveTree : ->
+  mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) ->
+    lastIndex = @getIndexFromTreeId(lastTreeID)
+    index = @getIndexFromTreeId(@route.getTree().treeId)
 
-    # rebuild buffer from nodelist
-    tree = @route.getTree()
-    nodeList = @route.getNodeList(tree)
-    index = @getIndexFromTreeId(tree.treeId)
-    @curIndex[index] = 0
+    # merge IDs
+    @nodes[index].geometry.nodeIDs.set(@nodes[lastIndex].geometry.nodeIDs.subarray(0, @curIndex[lastIndex]), @curIndex[index])
 
-    if nodeList.length > 0
-      nodePos = nodeList[0].pos
-      @nodesBuffer[index].set(nodePos, @curIndex[index] * 3)
-      @nodes[index].geometry.nodeIDs.set([nodeList[0].id], @curIndex[index])
+    # merge nodes
+    @nodes[index].geometry.__vertexArray.set(@nodes[lastIndex].geometry.__vertexArray.subarray(0, @curIndex[lastIndex] * 3), @curIndex[index] * 3)
 
-    @curIndex[index]++
+    # merge edges
+    if @curIndex[index] == 1
+      @routes[index].geometry.__vertexArray = @edgesBuffer[index]
+    @routes[index].geometry.__vertexArray.set([lastNodePosition..., activeNodePosition...], (@curIndex[index] - 1) * 6)
+    @routes[index].geometry.__vertexArray.set(@routes[lastIndex].geometry.__vertexArray.subarray(0, (@curIndex[lastIndex] - 1) * 6), (@curIndex[index]) * 6)
 
-    for node in nodeList
-      if node.parent
-        nodePos = node.parent.pos
-        node2Pos = node.pos
-
-        @edgesBuffer[index].set(nodePos, (2 * @curIndex[index] - 2) * 3)
-        @edgesBuffer[index].set(node2Pos, (2 * @curIndex[index] - 1) * 3)
-
-        @nodesBuffer[index].set(node2Pos, @curIndex[index] * 3)
-        @nodes[index].geometry.nodeIDs.set([node.id], @curIndex[index])
-
-        @curIndex[index]++
-
-    @routes[index].geometry.__vertexArray = @edgesBuffer[index]
+    @curIndex[index] += @curIndex[lastIndex]
     @routes[index].geometry.__webglLineCount = 2 * (@curIndex[index] - 1)
-    @nodes[index].geometry.__vertexArray = @nodesBuffer[index]
     @nodes[index].geometry.__webglParticleCount = @curIndex[index]
-
     @routes[index].geometry.verticesNeedUpdate = true
     @nodes[index].geometry.verticesNeedUpdate = true
+    @flycam.hasChanged = true
 
-  deleteActiveTree : (index) ->
+    #@deleteTree(lastIndex)
+
+  deleteTree : (index) ->
 
     # Remove all geometries and spheres
-    nodeSpheres = (@getSphereFromId(nodeID) for nodeID in @nodes[index].geometry.nodeIDs.subarray(0, @curIndex[index]))
+    nodeSpheres = (@popSphereFromId(nodeID) for nodeID in @nodes[index].geometry.nodeIDs.subarray(0, @curIndex[index]))
     @trigger "removeGeometries", [@routes[index]].concat([@nodes[index]]).concat(nodeSpheres)
 
     # Remove entries
     @ids.splice(index, 1)
     @routes.splice(index, 1)
     @nodes.splice(index, 1)
-    @nodesSpheres.splice(index, 1)
     @edgesBuffer.splice(index, 1)
     @nodesBuffer.splice(index, 1)
     @curIndex.splice(index, 1)
@@ -364,7 +384,22 @@ class Skeleton
     @setActiveNode()
     @flycam.hasChanged = true
 
-  pushNewNode : (radius, position, id, color) ->
+  updateBranches : ->
+    branchpoints = @route.branchStack
+    for i in [0..MAX_BRANCHES]
+      if i < branchpoints.length
+        @branches.geometry.vertices[i] = new THREE.Vector3(
+          branchpoints[i].pos[0] + 0.01,
+          branchpoints[i].pos[1] + 0.01,
+          branchpoints[i].pos[2] - 0.01)
+      else
+        @branches.geometry.vertices[i] = new THREE.Vector2(0, 0)
+    @branches.geometry.verticesNeedUpdate = true
+    @flycam.hasChanged = true
+
+
+  pushNewNode : (radius, position, id, color, type) ->
+    color = if type == TYPE_BRANCH then color * 0.7 else color
     newNode = new THREE.Mesh(
       new THREE.SphereGeometry(1),
       new THREE.MeshLambertMaterial({ color : color})#, transparent: true, opacity: 0.5 })
@@ -376,7 +411,7 @@ class Skeleton
     newNode.doubleSided = true
     @nodesSpheres.push(newNode)
     @trigger "newGeometries", [newNode]
-      
+
   getIndexFromTreeId : (treeId) ->
     unless treeId
       treeId = @route.getTree().treeId
@@ -385,10 +420,24 @@ class Skeleton
         return i
     return null
 
+  removeSpheresOfTree : (nodes) ->
+    nodeSpheres = (@popSphereFromId(node.id) for node in nodes)
+    @trigger "removeGeometries", nodeSpheres
+
   getSphereFromId : (nodeId) ->
     for node in @nodesSpheres
       if node.nodeId == nodeId
         return node
+
+  popSphereFromId : (nodeId) ->
+    i = 0
+    while i < @nodesSpheres.length
+      if @nodesSpheres[i].nodeId == nodeId
+        node = @nodesSpheres[i]
+        @nodesSpheres.splice(i, 1)
+        return node
+      else
+        i++
 
   setDisplaySpheres : (value) ->
     @disSpheres = value

@@ -8,9 +8,11 @@ import play.api.Play.current
 import java.io.File
 import scala.io.Source
 import models.knowledge.Mission
+import models.security.Role
 
 
 object Knowledge extends Controller with Secured{
+  override val DefaultAccessRole = Role.Admin
   
   val KnowledgeDirectory = "/home/deployboy/knowledge"
   

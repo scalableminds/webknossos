@@ -29,6 +29,7 @@ class Controller
   constructor : ->
 
     _.extend(@, new EventMixin())
+    @fullScreen = false
 
     @model = new Model()
 
@@ -67,26 +68,25 @@ class Controller
       for mesh in meshes
         @view.addGeometry(mesh)
 
-      @view.on "render", @render
-      @view.on "renderCam", (id, event) => @sceneController.updateSceneForCam(id)
-      @view.abstractTreeViewer.on "nodeClick", (nodeID) => @setActiveNode(nodeID, true)
+      @view.on
+        render : => @render()
+        renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
-      @sceneController.skeleton.on "newGeometries", (list, event) =>
-        
-        for geometry in list
-          @view.addGeometry(geometry)
-        
-      @sceneController.skeleton.on "removeGeometries", (list, event) =>
-      
-        for geometry in list
-          @view.removeGeometry(geometry)
+      @sceneController.skeleton.on
+        newGeometries : (list, event) =>
+          for geometry in list
+            @view.addGeometry(geometry)
+        removeGeometries : (list, event) =>
+          for geometry in list
+            @view.removeGeometry(geometry)
 
       @gui = new Gui($("#optionswindow"), @model, @sceneController, @cameraController, @flycam)
-      @gui.on "deleteActiveNode", @deleteActiveNode
-      @gui.on "createNewTree", @createNewTree
-      @gui.on "setActiveTree", (id) => @setActiveTree(id)
-      @gui.on "setActiveNode", (id) => @setActiveNode(id, false) # not centered
-      @gui.on "deleteActiveTree", @deleteActiveTree
+      @gui.on
+        deleteActiveNode : @deleteActiveNode
+        createNewTree : @createNewTree
+        setActiveTree : (id) => @setActiveTree(id)
+        setActiveNode : (id) => @setActiveNode(id, false) # not centered
+        deleteActiveTree : @deleteActiveTree
       @gui.update()
 
       @flycam.setGlobalPos(@model.route.data.editPosition)
@@ -122,8 +122,8 @@ class Controller
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
-            delta.x * @model.user.mouseInversionX
-            delta.y * @model.user.mouseInversionX
+            delta.x * @model.user.mouseInversionX / @view.scaleFactor
+            delta.y * @model.user.mouseInversionX / @view.scaleFactor
             0
           ]
         scroll : @scroll
@@ -149,14 +149,6 @@ class Controller
 
     new Input.Keyboard(
 
-      #Fullscreen Mode
-      "q" : =>
-        body = $("body")[0]
-        requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
-        if requestFullscreen
-          requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
-
-    
       #ScaleTrianglesPlane
       "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
       "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
@@ -174,6 +166,10 @@ class Controller
     )
     
     new Input.KeyboardNoLoop(
+
+      #Fullscreen Mode
+      "q" : => @toggleFullScreen()
+
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 
@@ -187,21 +183,28 @@ class Controller
       #Delete active node
       "delete" : => @deleteActiveNode()
 
-      "n" : => @createNewTree()
+      "c" : => @createNewTree()
+
+      #Comments
+      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
+      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
 
       #Move
       "space" : (first) => @moveZ( @model.user.moveValue, first)
       "f" : (first) => @moveZ( @model.user.moveValue, first)
       "d" : (first) => @moveZ( - @model.user.moveValue, first)
+      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
+      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
 
       "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
       "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
     )
 
 
-  render : =>
+  render : ->
 
-    @model.binary.ping(@flycam.getGlobalPos(), @flycam.getIntegerZoomSteps())
+    @model.binary.ping(@flycam.getGlobalPos(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(PLANE_XY),
+                        @flycam.getArea(PLANE_YZ), @flycam.getArea(PLANE_XZ)], activePlane: @flycam.getActivePlane()})
     @model.route.globalPosition = @flycam.getGlobalPos()
     @cameraController.update()
     @sceneController.update()
@@ -251,6 +254,19 @@ class Controller
         else
           @zoomOut()
 
+  toggleFullScreen : =>
+    if @fullScreen
+      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
+      @fullScreen = false
+      if cancelFullscreen
+        cancelFullscreen.call(document)
+    else
+      body = $("body")[0]
+      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
+      @fullScreen = true
+      if requestFullscreen
+        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
+
 
   ########### Click callbacks
   
@@ -270,14 +286,14 @@ class Controller
       @flycam.setDirection(p)
     @addNode(position)
 
-  onPreviewClick : (position) =>
-    @onClick(position, VIEW_3D)
+  onPreviewClick : (position, shiftPressed) =>
+    @onClick(position, VIEW_3D, shiftPressed)
 
-  onPlaneClick : (position) =>
+  onPlaneClick : (position, shiftPressed) =>
     plane = @flycam.getActivePlane()
-    @onClick(position, plane)
+    @onClick(position, plane, shiftPressed)
 
-  onClick : (position, plane) =>
+  onClick : (position, plane, shiftPressed) =>
     scaleFactor = @view.scaleFactor
     camera      = @view.getCameras()[plane]
     # vector with direction from camera position to click position
@@ -305,10 +321,11 @@ class Controller
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = Dimensions.getIndices(plane)
       if plane == VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance(ind[2])+1)
+
         # set the active Node to the one that has the ID stored in the vertex
         # center the node if click was in 3d-view
         centered = plane == VIEW_3D
-        @setActiveNode(nodeID, centered)
+        @setActiveNode(nodeID, centered, shiftPressed)
         break
 
   ########### Model Interaction
@@ -330,13 +347,15 @@ class Controller
       @setActiveNode(id, true)
     )
 
-  setActiveNode : (nodeId, centered) =>
-    @model.route.setActiveNode(nodeId)
+  setActiveNode : (nodeId, centered, mergeTree) =>
+    @model.route.setActiveNode(nodeId, mergeTree)
     if centered
       @centerActiveNode()
 
   centerActiveNode : =>
-    @flycam.setGlobalPos(@model.route.getActiveNodePos())
+    position = @model.route.getActiveNodePos()
+    if position
+      @flycam.setGlobalPos(position)
 
   deleteActiveNode : =>
     @model.route.deleteActiveNode()
@@ -348,7 +367,7 @@ class Controller
     @model.route.setActiveTree(treeId)
 
   deleteActiveTree : =>
-    @model.route.deleteActiveTree()
+    @model.route.deleteTree()
 
   ########### Input Properties
 

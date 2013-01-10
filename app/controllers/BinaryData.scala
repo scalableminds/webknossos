@@ -39,11 +39,10 @@ import models.knowledge.Level
  */
 
 object BinaryData extends Controller with Secured {
+  override val DefaultAccessRole = Role.User
 
   val dataSetActor = Akka.system.actorOf(Props(new DataSetActor).withRouter(
     RoundRobinRouter(nrOfInstances = 8)))
-
-  override val DefaultAccessRole = Role.User
 
   implicit val dispatcher = Akka.system.dispatcher
   val conf = Play.configuration

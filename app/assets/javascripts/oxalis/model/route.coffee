@@ -203,8 +203,8 @@ class Route
           if response.messages[0].error == "tracing.dirtyState"
             $(window).on(
               "beforeunload"
-              =>
-                return "Sorry, but the current state is inconsistent, you'll need to reload.")
+              =>return null)
+            alert("Sorry, but the current state is inconsistent. A reload is necessary.")
             window.location.reload()
       @push()
       @pushDeferred.reject()

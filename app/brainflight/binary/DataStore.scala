@@ -58,17 +58,6 @@ abstract class DataStore extends Actor {
   }
 
   /**
-   *  Read file contents to a byteArray
-   */
-  def inputStreamToByteArray(is: InputStream, bytesPerElement: Int) = {
-    val byteCount = elementsPerFile * bytesPerElement
-    val byteArray = new Array[Byte](byteCount)
-    is.read(byteArray, 0, byteCount)
-    //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
-    byteArray
-  }
-
-  /**
    * Creates the file-name of the cube based on the data set id, resolution
    * and coordinates.
    *

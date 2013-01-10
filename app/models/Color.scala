@@ -28,7 +28,7 @@ object Color {
     // TODO: Rewrite to use new json features of play
     // http://mandubian.com/2012/09/08/unveiling-play-2-dot-1-json-api-part1-jspath-reads-combinators/
     def reads(json: JsValue) = json match {
-      case JsArray(ts) if ts.size == 3 =>
+      case JsArray(ts) if ts.size == 4 =>
         val c = ts.map(fromJson[Float](_)).flatMap(_.asOpt)
         if(c.size != 4)
           JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.array.invalidContent"))))

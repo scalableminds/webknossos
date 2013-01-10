@@ -18,6 +18,7 @@ import akka.actor.ActorSystem
 import scala.concurrent.duration._
 import java.util.concurrent.TimeoutException
 import akka.dispatch.OnSuccess
+import play.api.Play
 
 case class DataBlock(info: LoadBlock, data: Data)
 
@@ -31,10 +32,10 @@ trait DataCache {
   lazy val cache = Agent(Map[LoadBlock, Future[Array[Byte]]]().empty)
 
   // defines the maximum count of cached file handles
-  val maxCacheSize = 100
+  val maxCacheSize = Play.current.configuration.getInt("bindata.cacheMaxSize") getOrElse 100
 
   // defines how many file handles are deleted when the limit is reached
-  val dropCount = 20
+  val dropCount = Play.current.configuration.getInt("bindata.cacheDropCount") getOrElse 20
 
   /**
    * Loads the due to x,y and z defined block into the cache array and

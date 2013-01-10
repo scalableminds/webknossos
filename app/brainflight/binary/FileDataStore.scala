@@ -20,16 +20,26 @@ class FileDataStore extends DataStore {
    * returns it.
    */
   def load(dataInfo: LoadBlock): Future[Array[Byte]] = {
-    try {
-      val dataEnum =
-        Enumerator.fromFile(new File(createFilename(dataInfo)))
+    Future {
+      try {
+        val binaryStream =
+          new FileInputStream(createFilename(dataInfo))
+        inputStreamToByteArray(binaryStream)
 
-      val it = Iteratee.consume[Array[Byte]]()
-
-      dataEnum.run(it)
-    } catch {
-      case e: FileNotFoundException =>
-        Future.failed(new DataNotFoundException("FILEDATASTORE"))
+      } catch {
+        case e: FileNotFoundException =>
+          throw new DataNotFoundException("FILEDATASTORE")
+      }
     }
+  }
+
+  /**
+   *  Read file contents to a byteArray
+   */
+  def inputStreamToByteArray(is: InputStream) = {
+    val byteArray = new Array[Byte](2097152)
+    is.read(byteArray, 0, 2097152)
+    //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
+    byteArray
   }
 }

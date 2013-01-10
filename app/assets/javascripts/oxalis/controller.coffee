@@ -71,6 +71,7 @@ class Controller
       @view.on
         render : => @render()
         renderCam : (id, event) => @sceneController.updateSceneForCam(id)
+        abstractTreeClick : (id) => @setActiveNode(id, true, false)
 
       @sceneController.skeleton.on
         newGeometries : (list, event) =>

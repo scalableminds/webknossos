@@ -89,6 +89,8 @@ class View
     # Create Abstract Tree Viewer
     @abstractTreeViewer = new AbstractTreeViewer(abstractTreeContainer.width(), abstractTreeContainer.height())
     abstractTreeContainer.append @abstractTreeViewer.canvas
+    @abstractTreeViewer.on
+      nodeClick : (id) => @trigger("abstractTreeClick", id)
 
     # FPS stats
     stats = new Stats()
@@ -234,7 +236,13 @@ class View
     @lights
 
   drawTree : (tree) ->
-    @abstractTreeViewer.drawTree(tree)
+    # Use node with minimal ID as root
+    for node in tree.nodes
+      if root?
+        if root.id > node.id then root = node
+      else 
+        root = node
+    @abstractTreeViewer.drawTree(root)
 
   createDoubleJumpModal : ->
     $("#double-jump").append("<div class=\"modal-body\">

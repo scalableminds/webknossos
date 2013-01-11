@@ -1,6 +1,4 @@
 ### define
-../model : Model
-../view : View
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
 ../model/dimensions : DimensionsHelper

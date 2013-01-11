@@ -110,7 +110,6 @@ class Flycam2d
 
   setDirection : (direction) ->
     @direction = direction
-    @setSpaceDirection()
 
   setSpaceDirection : ->
     ind = Dimensions.getIndices @activePlane

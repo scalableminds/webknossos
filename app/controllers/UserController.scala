@@ -46,9 +46,11 @@ object UserController extends Controller with Secured {
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {
     implicit request =>
       request.body.asOpt[JsObject] map { settings =>
-        val fields = settings.fields take (UserConfiguration.MaxSettings) filter (UserConfiguration.isValidSetting)
-        request.user.update(_.changeSettings(UserConfiguration(fields.toMap)))
-        Ok
+        if(UserConfiguration.isValid(settings)){
+          request.user.update(_.changeSettings(UserConfiguration(settings.fields.toMap)))
+          Ok
+        } else
+          BadRequest("Invalid settings")
       } getOrElse (BadRequest)
   }
 

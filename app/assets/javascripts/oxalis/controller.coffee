@@ -7,7 +7,6 @@ underscore : _
 ./model/dimensions : DimensionsHelper
 ./view : View
 ./view/gui : Gui
-./model/flycam : Flycam
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
 ###
@@ -22,6 +21,7 @@ VIEWPORT_WIDTH   = 380
 WIDTH            = 384
 TEXTURE_SIZE     = 512
 TEXTURE_SIZE_P   = 9
+DISTANCE_3D      = 140
 
 
 class Controller
@@ -33,7 +33,7 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize(TEXTURE_SIZE_P, VIEWPORT_WIDTH).done =>
+    @model.initialize(TEXTURE_SIZE_P, VIEWPORT_WIDTH, DISTANCE_3D).done =>
 
       @flycam = @model.flycam
       @view  = new View(@model, @flycam)

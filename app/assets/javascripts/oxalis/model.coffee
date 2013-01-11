@@ -3,7 +3,8 @@
 ./model/route : Route
 ./model/user : User
 ./model/scaleinfo : ScaleInfoClass
-./model/flycam : Flycam
+./model/flycam2d : Flycam2d
+./model/flycam3d : Flycam3d
 ../libs/request : Request
 ../libs/toast : Toast
 ###
@@ -16,7 +17,7 @@
 
 class Model
 
-  initialize : (TEXTURE_SIZE_P, VIEWPORT_SIZE) =>
+  initialize : (TEXTURE_SIZE_P, VIEWPORT_SIZE, DISTANCE_3D) =>
 
 	  Request.send(
       url : "/game/initialize"
@@ -40,7 +41,8 @@ class Model
 
               @scaleInfo = new ScaleInfo(tracing.tracing.scale)
               @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)    
-              @flycam = new Flycam(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1)      
+              @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1)      
+              @flycam3d = new Flycam3d(DISTANCE_3D)
               @route = new Route(tracing.tracing, @scaleInfo, @flycam)
               @user = new User(user)
 

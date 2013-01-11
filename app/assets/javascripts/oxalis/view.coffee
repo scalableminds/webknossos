@@ -1,6 +1,5 @@
 ### define
 jquery : $
-./model/flycam : Flycam
 ./model/route : Route
 ./model/dimensions : DimensionsHelper
 ./view/abstractTreeViewer : AbstractTreeViewer

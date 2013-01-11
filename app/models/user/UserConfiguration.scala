@@ -53,7 +53,7 @@ object UserConfiguration {
       "motionsensorActive" -> JsBoolean( false ) ) )
 
   def isValidSetting( field: Tuple2[String, JsValue] ) = {
-    val ( _, value ) = field
-    ( value.asOpt[String] ).isDefined || ( value.asOpt[Int] ).isDefined || ( value.asOpt[Boolean] ).isDefined
+    val ( key, _ ) = field
+    defaultConfiguration.settings.get(key)
   }
 }

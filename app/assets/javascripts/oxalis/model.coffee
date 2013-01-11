@@ -39,9 +39,9 @@ class Model
             (user) =>
 
               @scaleInfo = new ScaleInfo(tracing.tracing.scale)
-              @flycam = new Flycam(VIEWPORT_SIZE, @scaleInfo)
-              @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)          
-              @route = new Route(tracing.tracing, tracing.dataSet, @scaleInfo, @flycam)
+              @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)    
+              @flycam = new Flycam(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1)      
+              @route = new Route(tracing.tracing, @scaleInfo, @flycam)
               @user = new User(user)
 
             -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")

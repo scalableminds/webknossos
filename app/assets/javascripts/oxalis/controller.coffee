@@ -38,6 +38,8 @@ class Controller
       @flycam = @model.flycam
       @view  = new View(@model, @flycam)
 
+      @view.drawTree(@model.route.getTree())
+
       # initialize Camera Controller
       @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
@@ -69,6 +71,7 @@ class Controller
       @view.on
         render : => @render()
         renderCam : (id, event) => @sceneController.updateSceneForCam(id)
+        abstractTreeClick : (id) => @setActiveNode(id, true, false)
 
       @sceneController.skeleton.on
         newGeometries : (list, event) =>
@@ -142,7 +145,7 @@ class Controller
     
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
-      event.preventDefault() if (event.which == 32 or 37 <= event.which <= 40) and !$(":focus").length
+      event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
     new Input.Keyboard(
@@ -165,8 +168,9 @@ class Controller
     
     new Input.KeyboardNoLoop(
 
-      #Fullscreen Mode
+      #View
       "q" : => @toggleFullScreen()
+      "t" : => @view.toggleTheme()
 
       #Branches
       "b" : => @pushBranch()
@@ -245,7 +249,7 @@ class Controller
   scroll : (delta, type) =>
     switch type
       when null then @moveZ(delta)
-      when "shift" then @setNodeRadius(delta)
+      # when "shift" then @setNodeRadius(delta)
       when "alt"
         if delta > 0
           @zoomIn()

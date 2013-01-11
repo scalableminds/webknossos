@@ -10,7 +10,7 @@
 
 // ----------------------- MAIN STYLES
 body {
-    // background: @mainBackground;
+    //background: #000000;
     color: @mainColor;
     // font: @defaultFont;
     -webkit-font-smoothing: antialised;
@@ -165,6 +165,18 @@ svg a:hover {
     bottom: 0;
     left: 0;
 }
+.bright {
+    background : #fff;
+    p {
+        color : #000;
+    }
+}
+.dark {
+    background : #000;
+    p {
+        color : #fff;
+    }
+}
 #render {
     width: 2*@standardViewportWidth+20px;
     height: 2*@standardViewportWidth+20px;
@@ -177,6 +189,14 @@ svg a:hover {
     top: 0;
     left: 0;
     z-index: 10;
+}
+#abstractTreeViewer {
+    top: 0px;
+    left: 2*@standardViewportWidth+20px+10px;
+    width : 200px;
+    height : 2*@standardViewportWidth + 20px;
+    border-width: 1px;
+    position:relative;
 }
 #main-container {
     position: absolute;

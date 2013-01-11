@@ -118,9 +118,9 @@ class Gui
     (fSkeleton.add @settings, "displayPrevXZ")
                           .name("Display XZ-Plane")
                           .onChange(@setDisplayPreviewXZ)
-    (fSkeleton.add @settings, "nodesAsSpheres")
-                          .name("Nodes as Spheres")
-                          .onChange(@setNodeAsSpheres)
+    # (fSkeleton.add @settings, "nodesAsSpheres")
+    #                       .name("Nodes as Spheres")
+    #                       .onChange(@setNodeAsSpheres)
 
     fTrees = @gui.addFolder("Trees")
     @activeTreeIdController =
@@ -144,10 +144,10 @@ class Gui
                           .step(1)
                           .name("Active Node ID")
                           .onFinishChange( (value) => @trigger "setActiveNode", value)
-    (fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
-                          .name("Radius")    
-                          .listen()
-                          .onChange(@setNodeRadius)
+    # (fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
+    #                       .name("Radius")    
+    #                       .listen()
+    #                       .onChange(@setNodeRadius)
     @commentController =
     (fNodes.add @settings, "comment")
                           .name("Comment")
@@ -190,11 +190,12 @@ class Gui
                       deleteLastNode   : => @update()
                       newNode          : => @update()
                       newTree          : => @update()
-                      newActiveNodeRadius : (radius) =>@updateRadius(radius) 
+                      # newActiveNodeRadius : (radius) =>@updateRadius(radius) 
+                      PushFailed       : -> Toast.error("Auto-Save failed!")
 
   saveNow : =>
     @model.user.pushImpl()
-    @model.route.pushImpl()
+    @model.route.pushNow()
       .then( 
         -> Toast.success("Saved!")
         -> Toast.error("Couldn't save. Please try again.")
@@ -271,11 +272,11 @@ class Gui
     @sceneController.setDisplaySV PLANE_XZ, value
     @model.user.push()      
 
-  setNodeAsSpheres : (value) =>
-    @model.user.nodesAsSpheres = value
-    @sceneController.skeleton.setDisplaySpheres(value)
-    @model.user.push()  
-    @flycam.hasChanged = true    
+  # setNodeAsSpheres : (value) =>
+  #   @model.user.nodesAsSpheres = value
+  #   @sceneController.skeleton.setDisplaySpheres(value)
+  #   @model.user.push()  
+  #   @flycam.hasChanged = true    
 
   setMouseInversionX : (value) =>
     if value is true
@@ -295,8 +296,8 @@ class Gui
     @model.user.newNodeNewTree = value
     @model.user.push()      
 
-  setNodeRadius : (value) =>
-    @model.route.setActiveNodeRadius(value)
+  # setNodeRadius : (value) =>
+  #   @model.route.setActiveNodeRadius(value)
 
   setComment : (value) =>
     @model.route.setComment(value)
@@ -307,10 +308,10 @@ class Gui
   nextComment : =>
     @trigger "setActiveNode", @model.route.nextCommentNodeID(true)
 
-  updateRadius : (value) ->
-    if value then @settings.radius = value
-    else if (value = @model.route.getActiveNodeRadius())
-      @settings.radius = value
+  # updateRadius : (value) ->
+  #   if value then @settings.radius = value
+  #   else if (value = @model.route.getActiveNodeRadius())
+  #     @settings.radius = value
 
   # Helper method to combine common update methods
   update : ->
@@ -322,4 +323,4 @@ class Gui
     @activeTreeIdController.updateDisplay()
     @commentController.updateDisplay()
 
-    @updateRadius()
+    # @updateRadius()

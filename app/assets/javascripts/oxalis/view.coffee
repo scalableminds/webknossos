@@ -3,6 +3,7 @@ jquery : $
 ./model/flycam : Flycam
 ./model/route : Route
 ./model/dimensions : DimensionsHelper
+./view/abstractTreeViewer : AbstractTreeViewer
 ../libs/toast : Toast
 ../libs/event_mixin : EventMixin
 ../libs/Tween : TWEEN_LIB
@@ -22,6 +23,9 @@ PLANE_YZ       = Dimensions.PLANE_YZ
 PLANE_XZ       = Dimensions.PLANE_XZ
 VIEW_3D        = Dimensions.VIEW_3D
 
+THEME_BRIGHT   = 0
+THEME_DARK     = 1
+
 class View
 
   constructor : (model, flycam) ->
@@ -34,6 +38,7 @@ class View
     # The "render" div serves as a container for the canvas, that is 
     # attached to it once a renderer has been initalized.
     container = $("#render")
+    abstractTreeContainer = $("#abstractTreeViewer")
     # Create a 4x4 grid
     @curWidth = WIDTH = (container.width()-20)/2
     HEIGHT = (container.height()-20)/2
@@ -83,7 +88,14 @@ class View
     container.append @renderer.domElement
 
     @setActivePlaneXY()
-    
+
+    # Create Abstract Tree Viewer
+    @abstractTreeViewer = new AbstractTreeViewer(abstractTreeContainer.width(), abstractTreeContainer.height())
+    abstractTreeContainer.append @abstractTreeViewer.canvas
+    @abstractTreeViewer.on
+      nodeClick : (id) => @trigger("abstractTreeClick", id)
+    @setTheme(THEME_BRIGHT)
+
     # FPS stats
     stats = new Stats()
     stats.getDomElement().id = "stats"
@@ -102,8 +114,14 @@ class View
     @model.route.on("emptyBranchStack", =>
       Toast.error("No more branchpoints", false))
 
-    @model.route.on("mergeDifferentTrees", =>
-      Toast.error("You can't merge nodes within the same tree", false))
+    @model.route.on({
+                      newActiveNode : => @drawTree(),
+                      newActiveTree : => @drawTree(),
+                      deleteTree : => @drawTree(),
+                      deleteActiveNode : => @drawTree(),
+                      newNode : => @drawTree(),
+                      mergeDifferentTrees : ->
+                            Toast.error("You can't merge nodes within the same tree", false)  })
     
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
@@ -215,11 +233,33 @@ class View
       #catcherStyle.borderColor  = "#f8f800"   #  else "#C7D1D8"
       $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
 
+  toggleTheme : =>
+    if @curTheme == THEME_BRIGHT then @setTheme(THEME_DARK  )
+    else if @curTheme == THEME_DARK   then @setTheme(THEME_BRIGHT)
+
+  setTheme : (themeID) =>
+    @curTheme = themeID
+    @abstractTreeViewer.setTheme(themeID)
+    if themeID == THEME_BRIGHT
+      $("body").attr('class', 'bright')
+    if themeID == THEME_DARK
+      $("body").attr('class', 'dark')
+    @drawTree()
+
   getCameras : =>
     @camera
 
   getLights  : =>
     @lights
+
+  drawTree : ->
+    # Use node with minimal ID as root
+    for node in @model.route.getTree().nodes
+      if root?
+        if root.id > node.id then root = node
+      else 
+        root = node
+    @abstractTreeViewer.drawTree(root, @model.route.getActiveNodeId())
 
   createDoubleJumpModal : ->
     $("#double-jump").append("<div class=\"modal-body\">
@@ -252,14 +292,15 @@ class View
           <tr><td>L</td><td>Scale down viewports</td><td>B</td><td>Set branchpoint</td></tr>
           <tr><td>Del</td><td>Delete node/Split trees</td><td>J</td><td>Jump to last branchpoint</td></tr>
           <tr><td>Shift + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
-          <tr><td>P</td><td>Previous comment</td><td>Shift + Mousewheel</td><td>Change active node size</td></tr>
-          <tr><td>N</td><td>Next comment</td><td>C</td><td>Create new tree</td></tr>
+          <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
+          <tr><td>N</td><td>Next comment</td><td></td><td></td></tr>
+          <tr><td>T</td><td>Toggle theme</td><td></td><td></td></tr>
           <tr><th colspan=\"2\">3D-view</th><td></td><td></td></tr>
           <tr><td>Mousewheel</td><td>Zoom in and out</td><td></td><td></td></tr>
         </tbody>
       </table>
       <br>
-      <p>All other options like node-radius, moving speed, clipping distance can be adjusted in the options located to the left.
+      <p>All other options like moving speed, clipping distance can be adjusted in the options located to the left.
       Select the different categories to open/close them.
       Please report any issues.</p>"
 

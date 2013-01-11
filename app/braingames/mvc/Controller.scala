@@ -71,6 +71,9 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
       createResult(jsonHTMLResult(html, Seq(jsonError -> message)))
   }
 
+  def apply(json: JsObject, message: String) =
+    createResult(json ++ jsonMessages(Seq(jsonSuccess -> message)))
+  
   def apply(message: String): SimpleResult[JsObject] =
     apply(Html.empty, message)
 
@@ -80,10 +83,14 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
         Json.obj()
       case body =>
         Json.obj("html" -> body)
-    }
-    htmlJson ++ Json.obj(
-      "messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
+    } 
+    
+    htmlJson ++ jsonMessages(messages)
   }
+  
+  def jsonMessages(messages: Seq[(String, String)]) = 
+    Json.obj(
+      "messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
 }
 
 trait JsonResults extends JsonResultAttribues {

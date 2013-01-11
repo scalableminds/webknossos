@@ -38,6 +38,11 @@ object ExtendedTypes {
      */
     def toIntFromFloat = toFloat.toInt
 
+    def toBooleanFromFloat = b match {
+      case Array(0x3F, -0x80, 0x0, 0x0) => true
+      case _                            => false
+    }
+
     /**
      * Splits this collection into smaller sub-arrays each containing exactly
      * subCollectionSize entries (except the last sub-array which may contain less)

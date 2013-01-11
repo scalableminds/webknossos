@@ -27,12 +27,13 @@ class Route
   activeNode : null
   activeTree : null
 
-  constructor : (@data, dataSet, @scaleInfo, @flycam) ->
+  constructor : (@data, @scaleInfo, @flycam) ->
 
     _.extend(this, new EventMixin())
 
     #@branchStack = @data.branchPoints.map (a) -> new Float32Array(a)
     #@branchStack = (@data.trees[branchPoint.treeId].nodes[branchPoint.id].position for branchPoint in @data.branchPoints) # when @data.trees[branchPoint.treeId]?.id? == branchPoint.treeId)
+
 
     @idCount = 1
     @treeIdCount = 1
@@ -50,6 +51,8 @@ class Route
     @savedCurrentState = true
 
     ############ Load Tree from @data ##############
+
+    @version = @data.version
 
     # get tree to build
     for treeData in @data.trees
@@ -100,7 +103,7 @@ class Route
       "beforeunload"
       =>
         if !@savedCurrentState
-          @pushImpl()
+          @pushImpl(true)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return
@@ -109,6 +112,7 @@ class Route
   # Returns an object that is structured the same way as @data is
   exportToNML : ->
     result = @data
+    result.version = @version + 1
     result.activeNode = @lastActiveNodeId
     result.branchPoints = []
     # Get Branchpoints
@@ -157,12 +161,21 @@ class Route
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.
   pushDebounced : ->
-    @pushDebounced = _.throttle(_.mutexDeferred(@pushImpl, -1), PUSH_THROTTLE_TIME)
+    saveFkt = => @pushImpl(true)
+    @pushDebounced = _.throttle(_.mutexDeferred( saveFkt, -1), PUSH_THROTTLE_TIME)
     @pushDebounced()
 
-  pushImpl : ->
+  pushNow :->   # Interface for view & controller
+    return @pushImpl(false)
 
-    deferred = new $.Deferred()
+  pushImpl : (notifyOnFailure) ->
+
+    # do not allow multiple pushes, before result is there (breaks versioning)
+    # still, return the deferred of the pending push, so that it will be informed about success
+    if @pushDeferred?
+      return @pushDeferred
+
+    @pushDeferred = new $.Deferred()
 
     Request.send(
       url : "/tracing/#{@data.id}"
@@ -170,12 +183,27 @@ class Route
       data : @exportToNML()
       contentType : "application/json"
     )
-    .fail =>
+    .fail (responseObject) =>
+      if responseObject.responseText? && responseObject.responseText != ""
+        # restore whatever is send as the response
+        response = JSON.parse(responseObject.responseText)
+        if response.messages?[0]?.error?
+          if response.messages[0].error == "tracing.dirtyState"
+            $(window).on(
+              "beforeunload"
+              =>return null)
+            alert("Sorry, but the current state is inconsistent. A reload is necessary.")
+            window.location.reload()
       @push()
-      deferred.reject()
-    .done =>
+      if (notifyOnFailure)
+        @trigger("PushFailed");
+      @pushDeferred.reject()
+      @pushDeferred = null
+    .done (response) =>
+      @version = response.version
       @savedCurrentState = true
-      deferred.resolve()
+      @pushDeferred.resolve()
+      @pushDeferred = null
 
   # INVARIANTS:
   # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null

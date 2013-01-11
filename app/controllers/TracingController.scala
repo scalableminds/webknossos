@@ -59,7 +59,7 @@ object TracingController extends Controller with Secured {
   }
 
   def createTracingsList(user: User) = {
-    Tracing.findFor(user).map{ tracing =>
+    Tracing.findFor(user).map { tracing =>
       Json.obj(
         "name" -> (tracing.dataSetName + "  " + formatDate(tracing.date)),
         "id" -> tracing.id,
@@ -92,7 +92,7 @@ object TracingController extends Controller with Secured {
   def info(tracingId: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if(tracing._user == request.user._id)
+      if (tracing._user == request.user._id)
     } yield {
       Ok(createTracingInformation(tracing) ++
         createDataSetInformation(tracing.dataSetName))
@@ -102,19 +102,22 @@ object TracingController extends Controller with Secured {
   def update(tracingId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if(tracing._user == request.user._id)
+      if (tracing._user == request.user._id)
       updatedTracing <- (request.body).asOpt[Tracing] ?~ Messages("tracing.invalid")
     } yield {
-      Tracing.save(updatedTracing.copy(timestamp = System.currentTimeMillis))
-      TimeTracking.logUserAction(request.user, updatedTracing)
-      Ok
+      if (updatedTracing.version == tracing.version + 1) {
+        Tracing.save(updatedTracing.copy(timestamp = System.currentTimeMillis))
+        TimeTracking.logUserAction(request.user, updatedTracing)
+        JsonOk(Json.obj("version" -> tracing.version), "tracing.saved")
+      } else
+        JsonBadRequest(createTracingInformation(tracing), "tracing.dirtyState")
     }) ?~ Messages("notAllowed") ~> 403
   }
 
   private def finishTracing(user: User, tracingId: String): Box[(Tracing, String)] = {
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if( tracing._user == user._id && tracing.state.isInProgress) 
+      if (tracing._user == user._id && tracing.state.isInProgress)
     } yield {
       UsedTracings.removeAll(tracing)
       tracing match {

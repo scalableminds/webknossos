@@ -242,7 +242,6 @@ class View
 
   setTheme : (themeID) =>
     @curTheme = themeID
-    @abstractTreeViewer.setTheme(themeID)
     if themeID == THEME_BRIGHT
       $("body").attr('class', 'bright')
     if themeID == THEME_DARK

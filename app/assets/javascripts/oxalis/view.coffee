@@ -115,12 +115,15 @@ class View
       Toast.error("No more branchpoints", false))
 
     @model.route.on({
-                      newActiveNode : => @drawTree(),
-                      newActiveTree : => @drawTree(),
-                      deleteTree : => @drawTree(),
-                      deleteActiveNode : => @drawTree(),
-                      newNode : => @drawTree(),
-                      mergeDifferentTrees : ->
+                      newActiveNode        : => @drawTree(),
+                      newActiveTree        : => @drawTree(),
+                      newTree              : => @drawTree(),
+                      mergeTree            : => @drawTree(),
+                      reloadTrees          : => @drawTree(),
+                      deleteTree           : => @drawTree(),
+                      deleteActiveNode     : => @drawTree(),
+                      newNode              : => @drawTree(),
+                      mergeDifferentTrees  : ->
                             Toast.error("You can't merge nodes within the same tree", false)  })
     
     # refresh the scene once a bucket is loaded

@@ -60,10 +60,11 @@ class Flycam2d
     for i in [0..2]
       @zoomOut i
 
-  # Used if the user wants to explicitly set the zoom step,
-  # rather than trusting on our equation.
+  # Set offset to the best-possible zoom step
   setQuality : (value) ->
     @quality = value
+    for i in [0..2]
+      @calculateIntegerZoomStep(i)
     @hasChanged = true
 
   calculateIntegerZoomStep : (planeID) ->

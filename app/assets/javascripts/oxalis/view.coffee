@@ -292,15 +292,15 @@ class View
           <tr><td>L</td><td>Scale down viewports</td><td>B</td><td>Set branchpoint</td></tr>
           <tr><td>Del</td><td>Delete node/Split trees</td><td>J</td><td>Jump to last branchpoint</td></tr>
           <tr><td>Shift + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
-          <tr><td>P</td><td>Previous comment</td><td>Shift + Mousewheel</td><td>Change active node size</td></tr>
-          <tr><td>N</td><td>Next comment</td><td>C</td><td>Create new tree</td></tr>
+          <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
+          <tr><td>N</td><td>Next comment</td><td></td><td></td></tr>
           <tr><td>T</td><td>Toggle theme</td><td></td><td></td></tr>
           <tr><th colspan=\"2\">3D-view</th><td></td><td></td></tr>
           <tr><td>Mousewheel</td><td>Zoom in and out</td><td></td><td></td></tr>
         </tbody>
       </table>
       <br>
-      <p>All other options like node-radius, moving speed, clipping distance can be adjusted in the options located to the left.
+      <p>All other options like moving speed, clipping distance can be adjusted in the options located to the left.
       Select the different categories to open/close them.
       Please report any issues.</p>"
 

@@ -249,7 +249,7 @@ class Controller
   scroll : (delta, type) =>
     switch type
       when null then @moveZ(delta)
-      when "shift" then @setNodeRadius(delta)
+      # when "shift" then @setNodeRadius(delta)
       when "alt"
         if delta > 0
           @zoomIn()

@@ -62,8 +62,6 @@ class Controller2d
     for mesh in meshes
       @view.addGeometry(mesh)
 
-
-
     @gui = new Gui($("#optionswindow"), @model, @sceneController, @cameraController, @flycam)
 
     @gui.update()
@@ -85,6 +83,16 @@ class Controller2d
     @sceneController.setDisplaySV PLANE_YZ, @model.user.displayPreviewYZ
     @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
     @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
+
+
+  start : ->
+
+    @view.start()
+
+
+  stop : ->
+
+    @view.stop()
 
 
   bind : ->
@@ -118,11 +126,37 @@ class Controller2d
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
       @prevButtons[i].on("click", callbacks[i])
 
-
+ 
   unbind : ->
     
     for binding in @bindings
       binding.unbind()
+
+    @view.off
+      render : => @render()
+      renderCam : (id, event) => @sceneController.updateSceneForCam(id)
+      abstractTreeClick : (id) => @setActiveNode(id, true, false)
+
+    @sceneController.skeleton.off
+      newGeometries : (list, event) =>
+        for geometry in list
+          @view.addGeometry(geometry)
+      removeGeometries : (list, event) =>
+        for geometry in list
+          @view.removeGeometry(geometry)    
+
+    @gui.off
+      deleteActiveNode : @deleteActiveNode
+      createNewTree : @createNewTree
+      setActiveTree : (id) => @setActiveTree(id)
+      setActiveNode : (id) => @setActiveNode(id, false) # not centered
+      deleteActiveTree : @deleteActiveTree
+
+    callbacks = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
+                @cameraController.changePrevXZ, @cameraController.changePrevSV]
+    
+    for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
+      @prevButtons[i].off("click", callbacks[i])      
    
 
   initMouse : ->

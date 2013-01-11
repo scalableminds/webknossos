@@ -30,6 +30,7 @@ class Controller
 
       @controller2d = new Controller2d(@model)
       @controller2d.bind()
+      @controller2d.start()
       @controller3d = new Controller3d(@model)
 
       @initMouse()

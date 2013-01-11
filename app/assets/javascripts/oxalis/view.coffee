@@ -33,6 +33,7 @@ class View
 
     @model  = model
     @flycam = flycam
+    @running = false
 
     # The "render" div serves as a container for the canvas, that is 
     # attached to it once a renderer has been initalized.
@@ -91,8 +92,7 @@ class View
     # Create Abstract Tree Viewer
     @abstractTreeViewer = new AbstractTreeViewer(abstractTreeContainer.width(), abstractTreeContainer.height())
     abstractTreeContainer.append @abstractTreeViewer.canvas
-    @abstractTreeViewer.on
-      nodeClick : (id) => @trigger("abstractTreeClick", id)
+
     @setTheme(THEME_BRIGHT)
 
     # FPS stats
@@ -105,23 +105,13 @@ class View
     @first = true
     @newTextures = [true, true, true, true]
     # start the rendering loop
-    @animate()
 
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
 
-    @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))
 
-    @model.route.on({
-                      newActiveNode : => @drawTree(),
-                      newActiveTree : => @drawTree(),
-                      deleteTree : => @drawTree(),
-                      deleteActiveNode : => @drawTree(),
-                      newNode : => @drawTree(),
-                      mergeDifferentTrees : ->
-                            Toast.error("You can't merge nodes within the same tree", false)  })
-    
+
+
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
@@ -131,7 +121,8 @@ class View
 
     @renderFunction()
 
-    window.requestAnimationFrame => @animate()
+    if @running is true
+      window.requestAnimationFrame => @animate()
 
   # This is the main render function.
   # All 3D meshes and the trianglesplane are rendered here.
@@ -269,14 +260,6 @@ class View
             <a href=\"#\" id=\"cancel-button\" class=\"btn\">Cancel</a>
           </div>")
 
-    $("#jump-button").on("click", => 
-      @model.route.resolveBranchDeferred()
-      $("#double-jump").modal("hide"))
-
-    $("#cancel-button").on("click", => 
-      @model.route.rejectBranchDeferred()
-      $("#double-jump").modal("hide"))
-
 
   createKeyboardCommandOverlay : ->
 
@@ -305,3 +288,66 @@ class View
 
     popoverTemplate = '<div class="popover key-overlay"><div class="arrow key-arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
     $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
+
+
+  bind : ->
+    
+    @abstractTreeViewer.on
+      nodeClick : (id) => @trigger("abstractTreeClick", id)
+
+    @model.route.on("emptyBranchStack", =>
+      Toast.error("No more branchpoints", false))     
+
+    @model.route.on({
+      newActiveNode : => @drawTree(),
+      newActiveTree : => @drawTree(),
+      deleteTree : => @drawTree(),
+      deleteActiveNode : => @drawTree(),
+      newNode : => @drawTree(),
+      mergeDifferentTrees : ->
+        Toast.error("You can't merge nodes within the same tree", false)  })
+
+    $("#jump-button").on("click", => 
+      @model.route.resolveBranchDeferred()
+      $("#double-jump").modal("hide"))
+
+    $("#cancel-button").on("click", => 
+      @model.route.rejectBranchDeferred()
+      $("#double-jump").modal("hide"))
+
+
+  unbind : ->
+
+    @abstractTreeViewer.off
+      nodeClick : (id) => @trigger("abstractTreeClick", id)
+
+    @model.route.off("emptyBranchStack", =>
+      Toast.error("No more branchpoints", false))     
+
+    @model.route.off({
+      newActiveNode : => @drawTree(),
+      newActiveTree : => @drawTree(),
+      deleteTree : => @drawTree(),
+      deleteActiveNode : => @drawTree(),
+      newNode : => @drawTree(),
+      mergeDifferentTrees : ->
+        Toast.error("You can't merge nodes within the same tree", false)  })
+
+    $("#jump-button").off("click", => 
+      @model.route.resolveBranchDeferred()
+      $("#double-jump").modal("hide"))
+
+    $("#cancel-button").off("click", => 
+      @model.route.rejectBranchDeferred()
+      $("#double-jump").modal("hide"))   
+
+    
+  stop : ->
+
+    @running = false 
+
+
+  start : ->
+
+    @running = true
+    @animate()

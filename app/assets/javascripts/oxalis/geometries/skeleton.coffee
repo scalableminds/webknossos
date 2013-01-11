@@ -86,7 +86,6 @@ class Skeleton
       newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)
-      deleteLastNode : (id) => @deleteLastNode(id)
       mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) => @mergeTree(lastTreeID, lastNodePosition, activeNodePosition)
       newNode : => @setWaypoint()
       setBranch : (isBranchPoint, nodeID) => 

@@ -127,12 +127,14 @@ class PullQueue
 
           @updateConnectionInfo(new Date() - roundTripBeginTime, batch.length)
 
+          offset = 0
+
           for bucket, i in batch
 
-            if transmitBuffer[5 * i + 1]
-              bucketData = @decode(responseBuffer.subarray(i * (@cube.BUCKET_LENGTH >> 1), (i + 1) * (@cube.BUCKET_LENGTH >> 1)))
+            if transmitBuffer[i * 5 + 1]
+              bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
             else
-              bucketData = responseBuffer.subarray(i * @cube.BUCKET_LENGTH, (i + 1) * @cube.BUCKET_LENGTH)
+              bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
 
             #console.log "Success: ", bucket
             @cube.setBucketByZoomedAddress(bucket, bucketData)
@@ -185,9 +187,9 @@ class PullQueue
 
     new ArrayBufferSocket(
       senders : [
-        # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfByte=0&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&halfByte=0&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&halfByte=0&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array

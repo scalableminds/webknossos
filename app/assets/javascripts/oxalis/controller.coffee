@@ -145,7 +145,7 @@ class Controller
     
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
-      event.preventDefault() if (event.which == 32 or 37 <= event.which <= 40) and !$(":focus").length
+      event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
     new Input.Keyboard(
@@ -249,7 +249,7 @@ class Controller
   scroll : (delta, type) =>
     switch type
       when null then @moveZ(delta)
-      when "shift" then @setNodeRadius(delta)
+      # when "shift" then @setNodeRadius(delta)
       when "alt"
         if delta > 0
           @zoomIn()

@@ -301,6 +301,8 @@
 			document.addEventListener('keydown', keydown, false);
 			document.addEventListener('keyup', keyup, false);
 			window.addEventListener('blur', reset, false);
+			window.addEventListener('webkitfullscreenchange', reset, false);
+			window.addEventListener('fullscreenchange', reset, false);
 		} else if(window.attachEvent) {
 			document.attachEvent('onkeydown', keydown);
 			document.attachEvent('onkeyup', keyup);

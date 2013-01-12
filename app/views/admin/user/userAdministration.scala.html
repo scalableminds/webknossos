@@ -32,8 +32,8 @@
 
           <div class="divider-vertical"></div>
 
-          <select name="role" class="input-medium">
-            <option>Modify roles...</option>
+          <select name="role" class="input-medium" required data-invalid-message="Please select a role.">
+            <option value="">Modify roles...</option>
             @roles.map{ role =>
               <option value="@role.name">@role.name</option>
             }

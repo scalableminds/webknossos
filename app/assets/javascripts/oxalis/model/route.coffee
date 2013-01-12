@@ -467,33 +467,34 @@ class Route
     unless @activeNode?
       return
 
-    unless deleteBranches?
-      deleteBranches = true
+    if confirm("Do you really want to delete the whole tree?")
+      unless deleteBranches?
+        deleteBranches = true
 
-    unless id
-      id = @activeTree.treeId
-    tree = @getTree(id)
+      unless id
+        id = @activeTree.treeId
+      tree = @getTree(id)
 
-    for i in [0..@trees.length]
-      if @trees[i].treeId == tree.treeId
-        index = i
-        break
-    @trees.splice(index, 1)
-    # remove comments of all nodes inside that tree
-    for node in tree.nodes
-      @deleteComment(node.id)
-      if deleteBranches and node.type == TYPE_BRANCH
-        @deleteBranch(node.id)
-    # Because we always want an active tree, check if we need
-    # to create one.
-    if @trees.length == 0
-      @createNewTree()
-    else
-      # just set the last tree to be the active one
-      @setActiveTree(@trees[@trees.length - 1].treeId)
-    @push()
+      for i in [0..@trees.length]
+        if @trees[i].treeId == tree.treeId
+          index = i
+          break
+      @trees.splice(index, 1)
+      # remove comments of all nodes inside that tree
+      for node in tree.nodes
+        @deleteComment(node.id)
+        if deleteBranches and node.type == TYPE_BRANCH
+          @deleteBranch(node.id)
+      # Because we always want an active tree, check if we need
+      # to create one.
+      if @trees.length == 0
+        @createNewTree()
+      else
+        # just set the last tree to be the active one
+        @setActiveTree(@trees[@trees.length - 1].treeId)
+      @push()
 
-    @trigger("deleteTree", index)
+      @trigger("deleteTree", index)
 
   mergeTree : (lastNode, lastTree) ->
     activeNodeID = @activeNode.id

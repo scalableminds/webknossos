@@ -375,7 +375,7 @@ class Controller
     @model.route.setActiveTree(treeId)
 
   deleteActiveTree : =>
-    @model.route.deleteTree()
+    @model.route.deleteTree(true)
 
   ########### Input Properties
 

@@ -280,6 +280,22 @@ class View
       @model.route.rejectBranchDeferred()
       $("#double-jump").modal("hide"))
 
+  createFirstVisToggle : ->
+    $("#first-vis-toggle").append("<div class=\"modal-body\">
+            <p>You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.</p>
+          </div>
+          <div class=\"modal-footer\">
+            <a href=\"#\" id=\"ok-button\" class=\"btn\">OK, Got it.</a>
+          </div>")
+
+    $("#ok-button").on("click", => 
+      $("#first-vis-toggle").modal("hide"))
+
+  showFirstVisToggle : ->
+    $("#first-vis-toggle").modal("show")
+
+  hideFirstVisToggle : ->
+    $("#first-vis-toggle").modal("hide")
 
   createKeyboardCommandOverlay : ->
 
@@ -297,6 +313,7 @@ class View
           <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
           <tr><td>N</td><td>Next comment</td><td></td><td></td></tr>
           <tr><td>T</td><td>Toggle theme</td><td></td><td></td></tr>
+          <tr><td>1</td><td>Toggle Skeleton Visibility</td><td></td><td></td></tr>
           <tr><th colspan=\"2\">3D-view</th><td></td><td></td></tr>
           <tr><td>Mousewheel</td><td>Zoom in and out</td><td></td><td></td></tr>
         </tbody>

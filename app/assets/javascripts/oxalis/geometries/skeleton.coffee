@@ -447,3 +447,11 @@ class Skeleton
   # Helper function
   calcScaleVector : (v) ->
     return (new THREE.Vector3()).multiply(v, @scaleVector)
+
+  setVisibility : (isVisible) ->
+    for mesh in @getMeshes()
+      mesh.visible = isVisible
+    if isVisible
+      @setActiveNode()
+      @setDisplaySpheres(@disSpheres)
+    @flycam.hasChanged = true

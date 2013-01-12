@@ -60,6 +60,7 @@ class Controller
 
       @view.createKeyboardCommandOverlay()
       @view.createDoubleJumpModal()
+      @view.createFirstVisToggle()
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
 
@@ -171,6 +172,11 @@ class Controller
       #View
       "q" : => @toggleFullScreen()
       "t" : => @view.toggleTheme()
+      "1" : =>
+        if @sceneController.toggleSkeletonVisibility()
+          @view.showFirstVisToggle()
+      "enter" : =>
+        @view.hideFirstVisToggle()
 
       #Branches
       "b" : => @pushBranch()

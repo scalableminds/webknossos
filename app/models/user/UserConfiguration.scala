@@ -33,7 +33,7 @@ object UserConfiguration {
       "displayCrosshair" -> JsBoolean(true),
       "interpolation" -> JsBoolean(false),
       "fourBit" -> JsBoolean(true),
-      "briConNames" -> JsArray(Seq(JsString("default"), JsString("st8x2"), JsString("st7x2"))),
+      "briConNames" -> JsArray(Seq(JsString("default"), JsString("st08x2"), JsString("07x2"))),
       "brightness" -> JsArray(Seq(JsNumber(0), JsNumber(-90), JsNumber(-70))),
       "contrast" -> JsArray(Seq(JsNumber(1), JsNumber(2.4), JsNumber(2.4))),
       "quality" -> JsNumber(0),

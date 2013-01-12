@@ -95,7 +95,7 @@ class Controller
       @flycam.setQuality(@model.user.quality)
 
       @model.binary.queue.set4Bit(@model.user.fourBit)
-      @model.binary.updateLookupTable(@model.user.brightness, @model.user.contrast)
+      @model.binary.updateLookupTable(@gui.settings.brightness, @gui.settings.contrast)
 
       @initMouse()
       @initKeyboard()

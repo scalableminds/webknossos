@@ -53,6 +53,7 @@ class Route
     ############ Load Tree from @data ##############
 
     @version = @data.version
+    console.log "Tracing data: ", @data
 
     # get tree to build
     for treeData in @data.trees
@@ -62,7 +63,7 @@ class Route
       i = 0
       for node in treeData.nodes
         if node
-          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius))
+          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp))
           # idCount should be bigger than any other id
           @idCount = Math.max(node.id + 1, @idCount);
       # Initialize edges
@@ -145,7 +146,7 @@ class Route
             radius : node.radius
             # TODO: Those are dummy values
             viewport : 0
-            timestamp : 0
+            timestamp : node.time
             resolution : 0
           })
 
@@ -177,10 +178,13 @@ class Route
 
     @pushDeferred = new $.Deferred()
 
+    data = @exportToNML()
+    console.log "Sending data: ", data
+
     Request.send(
       url : "/tracing/#{@data.id}"
       method : "PUT"
-      data : @exportToNML()
+      data : data
       contentType : "application/json"
     )
     .fail (responseObject) =>
@@ -274,7 +278,7 @@ class Route
     unless @lastRadius?
       @lastRadius = 10 * @scaleInfo.baseVoxel
       if @activeNode? then @lastRadius = @activeNode.radius
-    point = new TracePoint(type, @idCount++, position, @lastRadius)
+    point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime())
     @activeTree.nodes.push(point)
     if @activeNode
       @activeNode.appendNext(point)
@@ -455,14 +459,23 @@ class Route
       @activeNode = deletedNode.neighbors[0]
       @trigger("deleteActiveNode", deletedNode)
     else
-      @deleteTree()
+      @deleteTree(false)
     
     @push()
 
-  deleteTree : (id, deleteBranches) ->
+  deleteTree : (notify, id, deleteBranches) ->
     unless @activeNode?
       return
 
+    if notify
+      if confirm("Do you really want to delete the whole tree?")
+        @reallyDeleteTree(id, deleteBranches)
+      else
+        return
+    else
+      @reallyDeleteTree(id, deleteBranches)
+
+  reallyDeleteTree : (id, deleteBranches) ->
     unless deleteBranches?
       deleteBranches = true
 
@@ -502,7 +515,7 @@ class Route
 
         @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
 
-        @deleteTree(lastTree.treeId, false)
+        @deleteTree(false, lastTree.treeId, false)
 
         @setActiveNode(activeNodeID)
       else

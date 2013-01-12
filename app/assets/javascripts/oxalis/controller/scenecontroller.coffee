@@ -133,3 +133,13 @@ class SceneController
     result = result.concat(@skeleton.getMeshes())
     result.push(@cube)
     return result
+
+  toggleSkeletonVisibility : ->
+    # Return whether this was the first toggle
+    res = false
+    unless @showSkeleton?
+      res = true
+      @showSkeleton = true
+    @showSkeleton = not @showSkeleton
+    @skeleton.setVisibility(@showSkeleton)
+    return res

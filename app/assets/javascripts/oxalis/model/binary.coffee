@@ -18,12 +18,14 @@ class Binary
   planes : []
 
   dataSetId : ""
+  dataSetName : ""
   direction : [0, 0, 0]
 
 
   constructor : (flycam, dataSet, @TEXTURE_SIZE_P) ->
 
     @dataSetId = dataSet.id
+    @dataSetName = dataSet.name
 
     @cube = new Cube(dataSet.upperBoundary, dataSet.dataLayers.color.resolutions.length)
     @queue = new PullQueue(@dataSetId, @cube)

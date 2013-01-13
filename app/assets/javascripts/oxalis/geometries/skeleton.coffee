@@ -189,8 +189,6 @@ class Skeleton
     # for branchPoint in @route.branchStack
     #   @setBranchPoint(true, branchPoint.id)
     @updateBranches()
-    # add branchesParticleSystem to scene
-    @trigger "newGeometries", [@branches]
 
     @setActiveNode()
 
@@ -241,7 +239,7 @@ class Skeleton
     @flycam.hasChanged = true
 
   getMeshes : =>
-    return [@activeNodeParticle].concat(@nodes).concat(@nodesSpheres).concat(@routes)
+    return [@activeNodeParticle].concat(@nodes).concat(@nodesSpheres).concat(@routes).concat(@branches)
 
   setWaypoint : =>
     curGlobalPos = @flycam.getGlobalPos()

@@ -17,6 +17,7 @@ TEXTURE_SIZE_P   = 9
 DISTANCE_3D      = 140
 
 
+
 class Controller
 
   constructor : ->
@@ -31,7 +32,11 @@ class Controller
       @controller2d = new Controller2d(@model)
       @controller2d.bind()
       @controller2d.start()
+      @controller2d.unbind()
+      @controller2d.stop()      
       @controller3d = new Controller3d(@model)
+      @controller3d.bind()
+
 
       @initMouse()
       @initKeyboard()

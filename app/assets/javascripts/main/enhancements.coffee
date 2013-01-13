@@ -33,6 +33,13 @@ $ ->
 
     if options["submit"]
       $form = $this.parents("form")
+      unless $form[0].checkValidity()
+        $form.find(":input")
+          .filter( -> not this.checkValidity() )
+          .each( ->
+            Toast.error( $(this).data("invalid-message") || this.validationMessage )
+          )
+        return
       ajaxOptions["type"] = $form[0].method ? "POST"
       ajaxOptions["data"] = $form.serialize()
 

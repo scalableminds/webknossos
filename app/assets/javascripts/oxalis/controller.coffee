@@ -60,6 +60,7 @@ class Controller
 
       @view.createKeyboardCommandOverlay()
       @view.createDoubleJumpModal()
+      @view.createFirstVisToggle()
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
 
@@ -95,7 +96,7 @@ class Controller
       @flycam.setQuality(@model.user.quality)
 
       @model.binary.queue.set4Bit(@model.user.fourBit)
-      @model.binary.updateLookupTable(@model.user.brightness, @model.user.contrast)
+      @model.binary.updateLookupTable(@gui.settings.brightness, @gui.settings.contrast)
 
       @initMouse()
       @initKeyboard()
@@ -145,7 +146,7 @@ class Controller
     
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
-      event.preventDefault() if (event.which == 32 or 37 <= event.which <= 40) and !$(":focus").length
+      event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
     new Input.Keyboard(
@@ -171,6 +172,11 @@ class Controller
       #View
       "q" : => @toggleFullScreen()
       "t" : => @view.toggleTheme()
+      "1" : =>
+        if @sceneController.toggleSkeletonVisibility()
+          @view.showFirstVisToggle()
+      "enter" : =>
+        @view.hideFirstVisToggle()
 
       #Branches
       "b" : => @pushBranch()
@@ -249,7 +255,7 @@ class Controller
   scroll : (delta, type) =>
     switch type
       when null then @moveZ(delta)
-      when "shift" then @setNodeRadius(delta)
+      # when "shift" then @setNodeRadius(delta)
       when "alt"
         if delta > 0
           @zoomIn()
@@ -369,7 +375,7 @@ class Controller
     @model.route.setActiveTree(treeId)
 
   deleteActiveTree : =>
-    @model.route.deleteTree()
+    @model.route.deleteTree(true)
 
   ########### Input Properties
 

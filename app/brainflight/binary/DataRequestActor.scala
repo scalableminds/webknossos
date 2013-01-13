@@ -44,8 +44,8 @@ class DataRequestActor extends Actor with DataCache {
       context.system
 
   lazy val dataStores = List[ActorRef](
-    actorForWithLocalFallback[FileDataStore]("fileDataStore"),
     actorForWithLocalFallback[GridDataStore]("gridDataStore"),
+    actorForWithLocalFallback[FileDataStore]("fileDataStore"),
     system.actorOf(Props(new EmptyDataStore()), name = "emptyDataStore"))
 
   def actorForWithLocalFallback[T <: Actor](name: String)(implicit evidence: scala.reflect.ClassTag[T]) = {

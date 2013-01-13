@@ -28,6 +28,7 @@ import models.binary.DataLayer
 import akka.actor.Actor
 import scala.concurrent.Promise
 import play.api.libs.iteratee.Cont
+import reactivemongo.api.gridfs.Implicits._
 
 case class InsertBinary(dataSet: DataSet)
 case class InsertionState()
@@ -39,7 +40,7 @@ class BinaryData2DBActor extends Actor {
   lazy val connection = MongoConnection(List("localhost:27017"))
   // a GridFS store named 'attachments'
 
-  val gridFS = new BinaryDataFS(DB("binaryData", connection), "binarydata")
+  val gridFS = new GridFS(DB("binaryData", connection), "binarydata")
 
   def receive = {
     case InsertBinary(dataSet) =>
@@ -60,7 +61,6 @@ class BinaryData2DBActor extends Actor {
         val maxY = ((max.y / 128.0).ceil - 1).toInt
         val maxZ = ((max.z / 128.0).ceil - 1).toInt
 
-        var idx = 0
         val maxAll = maxX * maxY * maxZ
         for {
           x <- 0 to maxX
@@ -70,15 +70,14 @@ class BinaryData2DBActor extends Actor {
           val blockInfo = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.folder, dataLayer.bytesPerElement, resolution, x, y, z)
           val f = new File(DataStore.createFilename(blockInfo))
           val blockId = GridDataStore.blockToId(prefix, x, y, z)
-          val it = gridFS.save(blockId, Some(new BSONObjectID(blockId)), Some("application/binary"))
-          Enumerator.fromFile(f)(it).map(_.mapDone { future =>
-            future.map(result =>
-              insertionState send { d =>
-                val p = d.get(dataSet) getOrElse (0 -> 0)
-                d.updated(dataSet, (p._1 + 1 -> maxAll))
-              })
-          })
-          idx += 1
+          val meta = DefaultFileToSave(blockId, id = new BSONObjectID(blockId))
+          val enumerator = Enumerator.fromFile(f)
+          val it = gridFS.save(enumerator, meta, 2359296)
+          it.map(result =>
+            insertionState send { d =>
+              val p = d.get(dataSet) getOrElse (0 -> 0)
+              d.updated(dataSet, (p._1 + 1 -> maxAll))
+            })
         }
       }
     }
@@ -92,7 +91,7 @@ class GridDataStore
   lazy val connection = MongoConnection(List("localhost:27017"))
   // a GridFS store named 'attachments'
 
-  val gridFS = new BinaryDataFS(DB("binaryData", connection), "binarydata")
+  val gridFS = new GridFS(DB("binaryData", connection), "binarydata")
 
   // let's build an index on our gridfs chunks collection if none
   gridFS.ensureIndex()
@@ -102,16 +101,16 @@ class GridDataStore
       _ match {
         case Some(prefix) =>
           val r = gridFS.find(BSONDocument(
-            "_id" -> new BSONObjectID(GridDataStore.blockToId(prefix, blockInfo.x, blockInfo.y, blockInfo.z)))).toList
+            "_id" -> new BSONObjectID(GridDataStore.blockToId(prefix, blockInfo.x, blockInfo.y, blockInfo.z)))).headOption
           val it = Iteratee.consume[Array[Byte]]()
 
-          r.flatMap {
-            case file :: _ =>
-              val e = file.enumerate
+         r.flatMap(_ match {
+            case Some(file) =>
+              val e = gridFS.enumerate(file)
               e.run(it)
             case _ =>
               Future.failed(new DataNotFoundException("GRIDFS1"))
-          }
+          })
         case _ =>
           Future.failed(new DataNotFoundException("GRIDFS2"))
       }

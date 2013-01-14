@@ -43,6 +43,10 @@
     </table>
 
     <div>
+    @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
+      <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button
+    }
+    <div class="divider-vertical"></div>
     @helper.form(action = controllers.routes.TracingController.createExplorational, 'class -> "form-inline inline-block") {
       <select name="dataSetId">
         @dataSets.map{ d => 
@@ -50,10 +54,6 @@
         }
       </select>
       <button type="submit" class="btn"><i class="icon-search"></i> Explore data set</button>
-    }
-    <div class="divider-vertical"></div>
-    @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
-      <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button
     }
     </div>
     @trackedTimeOpt.map{ trackedTime =>

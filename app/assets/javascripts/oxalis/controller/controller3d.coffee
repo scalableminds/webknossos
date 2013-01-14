@@ -52,9 +52,9 @@ class Controller3d
       crossHair.setPosition(0, 0, -1)
       @view.addGeometry(crossHair)
 
-    @view.on "render", (force, event) => @doRender(force, event)
+    @view.on "render", (force, event) => @render(force, event)
 
-    #@model.binary.on "bucketLoaded", => @view.draw()
+    @model.binary.cube.on "bucketLoaded", => @view.draw()
 
     @cam.on "changed", =>
       @trigger("matrixChanged", @cam.getMatrix())
@@ -62,13 +62,18 @@ class Controller3d
     @view.draw()
 
 
-  doRender : (forceUpdate, event) ->
+  render : (forceUpdate, event) ->
+
+    #@model.binary.ping(@flycam.getGlobalPos(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(PLANE_XY),
+    #                    @flycam.getArea(PLANE_YZ), @flycam.getArea(PLANE_XZ)], activePlane: @flycam.getActivePlane()})
+    #@model.route.globalPosition = @cam.getGlobalPos()
+    @model.route.rendered()
 
     # skip rendering if nothing has changed
     # This prevents you the GPU/CPU from constantly
     # working and keeps your lap cool
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
-    return event.stop() unless @cam.flush() or forceUpdate
+    #return event.stop() unless @cam.flush() or forceUpdate
 
     # sends current position to Model for calculating current 
     # speed and preloading data

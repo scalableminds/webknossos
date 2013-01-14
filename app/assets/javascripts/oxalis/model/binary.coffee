@@ -1,8 +1,10 @@
 ### define
+./binary/interpolation_collector : InterpolationCollector
 ./binary/cube : Cube
 ./binary/pullqueue : PullQueue
 ./binary/plane2d : Plane2D
 ./binary/ping_strategy : PingStrategy
+./binary/ping_strategy_3d : PingStrategy3d
 ./dimensions : DimensionHelper
 ###
 
@@ -29,6 +31,7 @@ class Binary
     @queue = new PullQueue(@dataSetId, @cube)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
+    @pingStrategies3d = [new PingStrategy3d.DslSlow()]
 
     @planes = []
     @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P)
@@ -91,3 +94,12 @@ class Binary
 
    # for i in [0...Math.min(options.length, @planes.length)]
     #  @planes[i].get(position, options[i]) if options[i]?
+
+
+  # A synchronized implementation of `get`. Cuz its faster.
+  getByVerticesSync : (vertices) ->
+
+    InterpolationCollector.bulkCollect(
+      vertices
+      @cube.getRawCubeData()
+    )

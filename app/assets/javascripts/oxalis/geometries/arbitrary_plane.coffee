@@ -69,7 +69,7 @@ class ArbitraryPlane
       # ATTENTION
       # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
       # the data attribute is only available for DataTexture (in other cases it is only texture.image)
-      texture.image.data.set(@binary.getSync(newVertices))
+      texture.image.data.set(@binary.getByVerticesSync(newVertices))
 
       # Update the texture data and make sure the new texture
       # is used by the Mesh's material.

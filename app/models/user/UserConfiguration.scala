@@ -50,7 +50,8 @@ object UserConfiguration {
       "mouseActive" -> JsBoolean(true),
       "keyboardActive" -> JsBoolean(true),
       "gamepadActive" -> JsBoolean(false),
-      "motionsensorActive" -> JsBoolean(false)))
+      "motionsensorActive" -> JsBoolean(false),
+      "firstVisToggle" -> JsBoolean(true)))
 
   val MaxSettings = defaultConfiguration.settings.size
 

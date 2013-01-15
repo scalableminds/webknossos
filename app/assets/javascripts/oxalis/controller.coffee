@@ -171,10 +171,13 @@ class Controller
       "q" : => @toggleFullScreen()
       "t" : => @view.toggleTheme()
       "1" : =>
-        if @sceneController.toggleSkeletonVisibility()
+        @sceneController.toggleSkeletonVisibility()
+        # Show warning, if this is the first time to use
+        # this function for this user
+        if @model.user.firstVisToggle
           @view.showFirstVisToggle()
-      "enter" : =>
-        @view.hideModal()
+          @model.user.firstVisToggle = false
+          @model.user.push()
 
       #Branches
       "b" : => @pushBranch()

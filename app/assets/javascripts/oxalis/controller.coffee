@@ -21,6 +21,7 @@ DISTANCE_3D      = 140
 class Controller
 
   mode : 0
+  
 
   constructor : ->
 
@@ -96,8 +97,3 @@ class Controller
 
     if @mode isnt 0
       @switch()
-
-
-
-
- 

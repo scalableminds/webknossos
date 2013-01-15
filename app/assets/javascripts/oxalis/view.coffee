@@ -102,9 +102,6 @@ class View
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
 
-
-
-
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
@@ -222,7 +219,6 @@ class View
 
   setTheme : (themeID) =>
     @curTheme = themeID
-    @abstractTreeViewer.setTheme(themeID)
     if themeID == THEME_BRIGHT
       $("body").attr('class', 'bright')
     if themeID == THEME_DARK
@@ -254,6 +250,22 @@ class View
           </div>")
 
 
+  createFirstVisToggle : ->
+    $("#first-vis-toggle").append("<div class=\"modal-body\">
+            <p>You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.</p>
+          </div>
+          <div class=\"modal-footer\">
+            <a href=\"#\" id=\"ok-button\" class=\"btn\">OK, Got it.</a>
+          </div>")
+
+
+  showFirstVisToggle : ->
+    $("#first-vis-toggle").modal("show")
+
+  hideFirstVisToggle : ->
+    $("#first-vis-toggle").modal("hide")
+
+
   createKeyboardCommandOverlay : ->
 
     keycommands =
@@ -270,6 +282,7 @@ class View
           <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
           <tr><td>N</td><td>Next comment</td><td></td><td></td></tr>
           <tr><td>T</td><td>Toggle theme</td><td></td><td></td></tr>
+          <tr><td>1</td><td>Toggle Skeleton Visibility</td><td></td><td></td></tr>          
           <tr><td>M</td><td>Toggle mode</td><td></td><td></td></tr>
           <tr><th colspan=\"2\">3D-view</th><td></td><td></td></tr>
           <tr><td>Leftclick or Arrow keys</td><td>Rotation</td><td></td><td></td></tr>
@@ -294,17 +307,23 @@ class View
       nodeClick : (id) => @trigger("abstractTreeClick", id)
 
     @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))     
+      Toast.error("No more branchpoints", false)) 
+
+    $("#ok-button").on("click", => 
+      $("#first-vis-toggle").modal("hide"))    
 
     @model.route.on({
-      newActiveNode : => @drawTree(),
-      newActiveTree : => @drawTree(),
-      deleteTree : => @drawTree(),
-      deleteActiveNode : => @drawTree(),
-      newNode : => @drawTree(),
-      mergeDifferentTrees : ->
+      newActiveNode        : => @drawTree(),
+      newActiveTree        : => @drawTree(),
+      newTree              : => @drawTree(),
+      mergeTree            : => @drawTree(),
+      reloadTrees          : => @drawTree(),
+      deleteTree           : => @drawTree(),
+      deleteActiveNode     : => @drawTree(),
+      newNode              : => @drawTree(),
+      mergeDifferentTrees  : ->
         Toast.error("You can't merge nodes within the same tree", false)  })
-
+    
     $("#jump-button").on("click", => 
       @model.route.resolveBranchDeferred()
       $("#double-jump").modal("hide"))
@@ -322,22 +341,29 @@ class View
     @model.route.off("emptyBranchStack", =>
       Toast.error("No more branchpoints", false))     
 
-    @model.route.off({
-      newActiveNode : => @drawTree(),
-      newActiveTree : => @drawTree(),
-      deleteTree : => @drawTree(),
-      deleteActiveNode : => @drawTree(),
-      newNode : => @drawTree(),
-      mergeDifferentTrees : ->
-        Toast.error("You can't merge nodes within the same tree", false)  })
+    $("#ok-button").off("click", => 
+      $("#first-vis-toggle").modal("hide"))    
 
+    @model.route.off({
+      newActiveNode        : => @drawTree(),
+      newActiveTree        : => @drawTree(),
+      newTree              : => @drawTree(),
+      mergeTree            : => @drawTree(),
+      reloadTrees          : => @drawTree(),
+      deleteTree           : => @drawTree(),
+      deleteActiveNode     : => @drawTree(),
+      newNode              : => @drawTree(),
+      mergeDifferentTrees  : ->
+        Toast.error("You can't merge nodes within the same tree", false)  })
+    
     $("#jump-button").off("click", => 
       @model.route.resolveBranchDeferred()
       $("#double-jump").modal("hide"))
 
     $("#cancel-button").off("click", => 
       @model.route.rejectBranchDeferred()
-      $("#double-jump").modal("hide"))   
+      $("#double-jump").modal("hide"))
+ 
 
     
   stop : ->

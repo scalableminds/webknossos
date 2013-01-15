@@ -41,7 +41,7 @@ class Flycam2d
     @hasChanged = true
     @activePlane = PLANE_XY
     @rayThreshold = [10, 10, 10, 100]
-    @spaceDirection = 1
+    @spaceDirection = [1, 1, 1]
     @quality = 0        # offset of integer zoom step to the best-quality zoom level
 
   zoomIn : (planeID) ->
@@ -60,10 +60,11 @@ class Flycam2d
     for i in [0..2]
       @zoomOut i
 
-  # Used if the user wants to explicitly set the zoom step,
-  # rather than trusting on our equation.
+  # Set offset to the best-possible zoom step
   setQuality : (value) ->
     @quality = value
+    for i in [0..2]
+      @calculateIntegerZoomStep(i)
     @hasChanged = true
 
   calculateIntegerZoomStep : (planeID) ->
@@ -114,10 +115,8 @@ class Flycam2d
 
   setSpaceDirection : ->
     ind = Dimensions.getIndices @activePlane
-    if @direction[ind[2]] <= 0
-      @spaceDirection = -1
-    else
-      @spaceDirection = 1
+    if @direction[ind[0]] <= 0 then @spaceDirection[ind[0]] = -1 else @spaceDirection[ind[0]] = 1
+    if @direction[ind[1]] <= 0 then @spaceDirection[ind[1]] = -1 else @spaceDirection[ind[1]] = 1
 
   getSpaceDirection : ->
     @spaceDirection
@@ -125,7 +124,7 @@ class Flycam2d
   move : (p, planeID) ->  #move by whatever is stored in this vector
     if(planeID?)          # if planeID is given, use it to manipulate z
       # change direction of the value connected to space, based on the last direction
-      p[Dimensions.getIndices(planeID)[2]] *= @spaceDirection
+      p[Dimensions.getIndices(planeID)[2]] *= @spaceDirection[Dimensions.getIndices(planeID)[2]]
     @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
     
   moveActivePlane : (p) -> # vector of voxels in BaseVoxels
@@ -153,8 +152,6 @@ class Flycam2d
     
   setActivePlane : (activePlane) ->
     @activePlane = activePlane
-    # setSpaceDirection when entering a new viewport
-    @setSpaceDirection()
 
   getActivePlane : ->
     @activePlane

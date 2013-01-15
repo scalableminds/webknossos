@@ -13,47 +13,59 @@ import play.api.libs.json.JsBoolean
 import play.api.libs.json._
 
 case class UserConfiguration(
-  settings: Map[String, JsValue] ){
-    
+    settings: Map[String, JsValue]) {
+
   def settingsOrDefaults = {
     UserConfiguration.defaultConfiguration.settings ++ settings
   }
 }
 
 object UserConfiguration {
-  val MaxSettings = 50
 
   val defaultConfiguration = UserConfiguration(
     Map(
-      "moveValue" -> JsNumber( 1 ),
-      "rotateValue" -> JsNumber( 0.01 ),
-      "scaleValue" -> JsNumber( 0.02 ),
-      "mouseRotateValue" -> JsNumber( 0.004 ),
-      "routeClippingDistance" -> JsNumber( 100 ),
-      "lockZoom" -> JsBoolean( true ),
-      "displayCrosshair" -> JsBoolean( true ),
-      "interpolation" -> JsBoolean( true ),
-      "fourBit" -> JsBoolean( true ),
-      "brightness" -> JsNumber( 0 ),
-      "contrast" -> JsNumber( 1 ),
-      "quality" -> JsNumber( 0 ),
-      "zoomXY" -> JsNumber( 0 ),
-      "zoomYZ" -> JsNumber( 0 ),
-      "zoomXZ" -> JsNumber( 0 ),
-      "displayPreviewXY" -> JsBoolean( false ),
-      "displayPreviewYZ" -> JsBoolean( false ),
-      "displayPreviewXZ" -> JsBoolean( false ),
-      "newNodeNewTree" -> JsBoolean( false ),
-      "nodesAsSpheres" -> JsBoolean( false ),
-      "mouseInversionX" -> JsNumber( -1 ),
-      "mouseInversionY" -> JsNumber( -1 ),
-      "mouseActive" -> JsBoolean( true ),
-      "keyboardActive" -> JsBoolean( true ),
-      "gamepadActive" -> JsBoolean( false ),
-      "motionsensorActive" -> JsBoolean( false ) ) )
+      "moveValue" -> JsNumber(1),
+      "rotateValue" -> JsNumber(0.01),
+      "scaleValue" -> JsNumber(0.02),
+      "mouseRotateValue" -> JsNumber(0.004),
+      "routeClippingDistance" -> JsNumber(100),
+      "lockZoom" -> JsBoolean(true),
+      "displayCrosshair" -> JsBoolean(true),
+      "interpolation" -> JsBoolean(false),
+      "fourBit" -> JsBoolean(true),
+      "briConNames" -> JsArray(Seq(JsString("default"), JsString("st08x2"), JsString("07x2"))),
+      "brightness" -> JsArray(Seq(JsNumber(0), JsNumber(-90), JsNumber(-70))),
+      "contrast" -> JsArray(Seq(JsNumber(1), JsNumber(2.4), JsNumber(2.4))),
+      "quality" -> JsNumber(0),
+      "zoomXY" -> JsNumber(2),
+      "zoomYZ" -> JsNumber(2),
+      "zoomXZ" -> JsNumber(2),
+      "displayPreviewXY" -> JsBoolean(false),
+      "displayPreviewYZ" -> JsBoolean(false),
+      "displayPreviewXZ" -> JsBoolean(false),
+      "newNodeNewTree" -> JsBoolean(false),
+      "nodesAsSpheres" -> JsBoolean(false),
+      "mouseInversionX" -> JsNumber(-1),
+      "mouseInversionY" -> JsNumber(-1),
+      "mouseActive" -> JsBoolean(true),
+      "keyboardActive" -> JsBoolean(true),
+      "gamepadActive" -> JsBoolean(false),
+      "motionsensorActive" -> JsBoolean(false)))
 
-  def isValidSetting( field: Tuple2[String, JsValue] ) = {
-    val ( _, value ) = field
-    ( value.asOpt[String] ).isDefined || ( value.asOpt[Int] ).isDefined || ( value.asOpt[Boolean] ).isDefined
+  val MaxSettings = defaultConfiguration.settings.size
+
+  def isValid(js: JsObject) = {
+    js
+      .fields
+      .filter {
+        case (s, _) =>
+          defaultConfiguration.settings.find(_._1 == s).isEmpty
+      }
+      .isEmpty
+  }
+
+  def isValidSetting(field: Tuple2[String, JsValue]) = {
+    val (key, _) = field
+    defaultConfiguration.settings.get(key)
   }
 }

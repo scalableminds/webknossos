@@ -19,6 +19,10 @@ user.notVerified=Your account hasn''t been activated yet. After you have uploade
 user.noPermission=You don''t have enough permissions to access this site. Sorry :(
 user.deleted=has been deleted
 
+braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on oxalis to login.
+braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
+braintracing.exists=Great, you already have an account on braintracing.org. Please double check that you have uploaded all requested information.
+
 task.create.success=Task successfully created
 task.finished=Task is finished
 task.passedToReview=Task is now getting reviewed. This may take some time.

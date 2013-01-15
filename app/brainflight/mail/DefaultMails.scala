@@ -16,34 +16,42 @@ object DefaultMails {
    */
   val uri = conf.getString("http.uri") getOrElse ("http://localhost")
 
+  val defaultFrom = "no-reply@oxalis.at"
   /**
    * Creates a registration mail which should allow the user to verify his
    * account
    */
+  def registerAdminNotifyerMail(name: String, brainDBResult: String) = 
+    Mail(
+        from = defaultFrom,
+        subject = "A new user ("+name+") registered on oxalis.at",
+        bodyText = html.mail.registerAdminNotify(name, brainDBResult).body,
+        recipients = List("braintracing@neuro.mpg.de"))
+  
   def registerMail(name: String, receiver: String, brainDBresult: String) =
     Mail(
-      from = "no-reply@oxalis.at",
+      from = defaultFrom,
       subject = "Thanks for your registration on " + uri,
       bodyText = html.mail.register(name, Messages(brainDBresult)).body,
       recipients = List(receiver))
 
   def verifiedMail(name: String, receiver: String) =
     Mail(
-      from = "no-reply@oxalis.at",
+      from = defaultFrom,
       subject = "Your account on " + uri + "got activated",
       bodyText = html.mail.validated(name).body,
       recipients = List(receiver))
 
   def trainingsSuccessMail(name: String, receiver: String, comment: String) =
     Mail(
-      from = "no-reply@oxalis.at",
+      from = defaultFrom,
       subject = "Trainings task completed.",
       bodyText = html.mail.trainingsSuccess(name, comment).body,
       recipients = List(receiver))
 
   def trainingsFailureMail(name: String, receiver: String, comment: String) =
     Mail(
-      from = "no-reply@oxalis.at",
+      from = defaultFrom,
       subject = "Please correct your trainings tracing.",
       bodyText = html.mail.trainingsFailure(name, comment).body,
       recipients = List(receiver))

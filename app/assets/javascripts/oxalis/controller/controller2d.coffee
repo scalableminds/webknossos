@@ -4,10 +4,10 @@ underscore : _
 ./cameracontroller : CameraController
 ./scenecontroller : SceneController
 ../model/dimensions : DimensionsHelper
-../view : View
 ../view/gui : Gui
 ../../libs/event_mixin : EventMixin
 ../../libs/input : Input
+../view : View
 ###
 
 PLANE_XY         = Dimensions.PLANE_XY
@@ -31,6 +31,7 @@ class Controller2d
 
     _.extend(@, new EventMixin())
 
+    @fullScreen = false
 
     @flycam = @model.flycam
     @view  = new View(@model, @flycam, stats)
@@ -45,15 +46,18 @@ class Controller2d
     @prevControls = $('#prevControls')
     @prevControls.addClass("btn-group")
     values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
-
-    @prevButtons  = new Array(4)
+    callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
+                      @cameraController.changePrevXZ, @cameraController.changePrevSV]
+    @buttons       = new Array(4)
   
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @prevButtons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
-      @prevControls.append(@prevButtons[i])
+
+      @buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
+      @prevControls.append(@buttons[i])
 
     @view.createKeyboardCommandOverlay()
     @view.createDoubleJumpModal()
+    @view.createFirstVisToggle()
 
     @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
 
@@ -63,7 +67,6 @@ class Controller2d
       @view.addGeometry(mesh)
 
     @gui = new Gui($("#optionswindow"), @model, @sceneController, @cameraController, @flycam)
-
     @gui.update()
 
     @flycam.setGlobalPos(@model.route.data.editPosition)
@@ -71,8 +74,7 @@ class Controller2d
     @flycam.setQuality(@model.user.quality)
 
     @model.binary.queue.set4Bit(@model.user.fourBit)
-    @model.binary.updateLookupTable(@model.user.brightness, @model.user.contrast)
-
+    @model.binary.updateLookupTable(@gui.settings.brightness, @gui.settings.contrast)
 
     @cameraController.changePrevSV()
     @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
@@ -83,6 +85,103 @@ class Controller2d
     @sceneController.setDisplaySV PLANE_YZ, @model.user.displayPreviewYZ
     @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
     @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
+
+
+  initMouse : ->
+
+    # hide contextmenu, while rightclicking a canvas
+    $("#render").bind "contextmenu", (event) ->
+      event.preventDefault()
+      return
+
+    for planeId in ["xy", "yz", "xz"]
+      @bindings.push new Input.Mouse($("#plane#{planeId}"),
+        over : @view["setActivePlane#{planeId.toUpperCase()}"]
+        leftDownMove : (delta) => 
+          @move [
+            delta.x * @model.user.mouseInversionX / @view.scaleFactor
+            delta.y * @model.user.mouseInversionX / @view.scaleFactor
+            0
+          ]
+        scroll : @scroll
+        leftClick : @onPlaneClick
+        rightClick : @setWaypoint
+      )
+
+    @bindings.push new Input.Mouse($("#skeletonview"),
+      leftDownMove : (delta) => 
+        @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
+        @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
+      scroll : @cameraController.zoomPrev
+      leftClick : @onPreviewClick
+    )
+
+
+  initKeyboard : ->
+    
+    # avoid scrolling while pressing space
+    $(document).keydown (event) ->
+      event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
+      return
+
+    @bindings.push new Input.Keyboard(
+
+      #ScaleTrianglesPlane
+      "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
+      "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
+
+      #Move
+      "left"  : => @moveX(-@model.user.moveValue)
+      "right" : => @moveX( @model.user.moveValue)
+      "up"    : => @moveY(-@model.user.moveValue)
+      "down"  : => @moveY( @model.user.moveValue)
+
+      #misc keys
+      # TODO: what does this? I removed it, I need the key.
+      #"n" : => Helper.toggle()
+      #"ctr + s"       : => @model.route.pushImpl()
+    )
+    
+    @bindings.push new Input.KeyboardNoLoop(
+
+      #View
+      "q" : => @toggleFullScreen()
+      "t" : => @view.toggleTheme()
+      "1" : =>
+        if @sceneController.toggleSkeletonVisibility()
+          @view.showFirstVisToggle()
+      "enter" : =>
+        @view.hideFirstVisToggle()
+
+      #Branches
+      "b" : => @pushBranch()
+      "j" : => @popBranch() 
+
+      "s" : @centerActiveNode
+
+      #Zoom in/out
+      "i" : => @zoomIn()
+      "o" : => @zoomOut()
+
+      #Delete active node
+      "delete" : => @deleteActiveNode()
+
+      "c" : => @createNewTree()
+
+      #Comments
+      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
+      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
+
+      #Move
+      "space" : (first) => @moveZ( @model.user.moveValue, first)
+      "f" : (first) => @moveZ( @model.user.moveValue, first)
+      "d" : (first) => @moveZ( - @model.user.moveValue, first)
+      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
+      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
+
+      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
+      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
+    )
 
 
   start : ->
@@ -124,7 +223,7 @@ class Controller2d
                 @cameraController.changePrevXZ, @cameraController.changePrevSV]
     
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @prevButtons[i].on("click", callbacks[i])
+      @buttons[i].on("click", callbacks[i])
 
 
   unbind : ->
@@ -156,90 +255,8 @@ class Controller2d
                 @cameraController.changePrevXZ, @cameraController.changePrevSV]
     
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @prevButtons[i].off("click", callbacks[i])      
+      @buttons[i].off("click", callbacks[i])      
    
-
-  initMouse : ->
-
-    for planeId in ["xy", "yz", "xz"]
-      @bindings.push new Input.Mouse($("#plane#{planeId}"),
-        over : @view["setActivePlane#{planeId.toUpperCase()}"]
-        leftDownMove : (delta) => 
-          @move [
-            delta.x * @model.user.mouseInversionX / @view.scaleFactor
-            delta.y * @model.user.mouseInversionX / @view.scaleFactor
-            0
-          ]
-        scroll : @scroll
-        leftClick : @onPlaneClick
-        rightClick : @setWaypoint
-      )
-
-    @bindings.push new Input.Mouse($("#skeletonview"),
-      leftDownMove : (delta) => 
-        @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
-        @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
-      scroll : @cameraController.zoomPrev
-      leftClick : @onPreviewClick
-    )
-
-
-  initKeyboard : ->
-    
-    @bindings.push new Input.Keyboard(
-
-      #ScaleTrianglesPlane
-      "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
-      "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
-
-      #Move
-      "left"  : => @moveX(-@model.user.moveValue)
-      "right" : => @moveX( @model.user.moveValue)
-      "up"    : => @moveY(-@model.user.moveValue)
-      "down"  : => @moveY( @model.user.moveValue)
-
-      #misc keys
-      # TODO: what does this? I removed it, I need the key.
-      #"n" : => Helper.toggle()
-      #"ctr + s"       : => @model.route.pushImpl()
-    )
-    
-    @bindings.push new Input.KeyboardNoLoop(
-
-      #View
-      "q" : => @toggleFullScreen()
-      "t" : => @view.toggleTheme()
-
-      #Branches
-      "b" : => @pushBranch()
-      "j" : => @popBranch() 
-
-      "s" : @centerActiveNode
-
-      #Zoom in/out
-      "i" : => @zoomIn()
-      "o" : => @zoomOut()
-
-      #Delete active node
-      "delete" : => @deleteActiveNode()
-
-      "c" : => @createNewTree()
-
-      #Comments
-      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
-      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
-
-      #Move
-      "space" : (first) => @moveZ( @model.user.moveValue, first)
-      "f" : (first) => @moveZ( @model.user.moveValue, first)
-      "d" : (first) => @moveZ( - @model.user.moveValue, first)
-      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
-      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
-
-      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
-      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
-    ) 
-
 
   render : ->
 
@@ -249,7 +266,6 @@ class Controller2d
     @cameraController.update()
     @sceneController.update()
     @model.route.rendered()
-
 
   move : (v) => @flycam.moveActivePlane(v)
 
@@ -408,7 +424,7 @@ class Controller2d
     @model.route.setActiveTree(treeId)
 
   deleteActiveTree : =>
-    @model.route.deleteTree()
+    @model.route.deleteTree(true)
 
   ########### Input Properties
 
@@ -427,4 +443,4 @@ class Controller2d
 
   setMouseRotateValue : (value) =>
     @model.user.mouseRotateValue = (Number) value
-    @model.user.push()             
+    @model.user.push() 

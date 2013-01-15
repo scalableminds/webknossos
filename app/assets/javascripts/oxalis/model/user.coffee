@@ -15,6 +15,7 @@ class User
   displayCrosshair : null
   interpolation : null
   fourBit : null
+  briConNames : null
   brightness : null
   contrast : null
   quality : null
@@ -61,6 +62,7 @@ class User
         displayCrosshair : @displayCrosshair,
         interpolation : @interpolation,
         fourBit: @fourBit,
+        briConNames : @briConNames,
         brightness: @brightness,
         contrast: @contrast, 
         quality : @quality,

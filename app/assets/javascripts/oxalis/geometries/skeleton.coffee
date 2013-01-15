@@ -86,7 +86,6 @@ class Skeleton
       newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)
-      deleteLastNode : (id) => @deleteLastNode(id)
       mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) => @mergeTree(lastTreeID, lastNodePosition, activeNodePosition)
       newNode : => @setWaypoint()
       setBranch : (isBranchPoint, nodeID) => 
@@ -448,3 +447,11 @@ class Skeleton
   # Helper function
   calcScaleVector : (v) ->
     return (new THREE.Vector3()).multiply(v, @scaleVector)
+
+  setVisibility : (isVisible) ->
+    for mesh in @getMeshes()
+      mesh.visible = isVisible
+    if isVisible
+      @setActiveNode()
+      @setDisplaySpheres(@disSpheres)
+    @flycam.hasChanged = true

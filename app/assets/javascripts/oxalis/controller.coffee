@@ -59,8 +59,6 @@ class Controller
         @prevControls.append(buttons[i])
 
       @view.createKeyboardCommandOverlay()
-      @view.createDoubleJumpModal()
-      @view.createFirstVisToggle()
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
 
@@ -176,7 +174,7 @@ class Controller
         if @sceneController.toggleSkeletonVisibility()
           @view.showFirstVisToggle()
       "enter" : =>
-        @view.hideFirstVisToggle()
+        @view.hideModal()
 
       #Branches
       "b" : => @pushBranch()

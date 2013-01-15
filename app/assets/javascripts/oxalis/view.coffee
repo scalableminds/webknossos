@@ -123,8 +123,11 @@ class View
                       deleteTree           : => @drawTree(),
                       deleteActiveNode     : => @drawTree(),
                       newNode              : => @drawTree(),
+                      doubleBranch         : (callback) => @showBranchModal(callback)
                       mergeDifferentTrees  : ->
                             Toast.error("You can't merge nodes within the same tree", false)  })
+
+    @modalCallbacks = {}
     
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
@@ -263,39 +266,39 @@ class View
         root = node
     @abstractTreeViewer.drawTree(root, @model.route.getActiveNodeId())
 
-  createDoubleJumpModal : ->
-    $("#double-jump").append("<div class=\"modal-body\">
-            <p>You didn't add a node after jumping to this branchpoint, do you really want to jump again?</p>
-          </div>
-          <div class=\"modal-footer\">
-            <a href=\"#\" id=\"jump-button\" class=\"btn\">Jump again</a>
-            <a href=\"#\" id=\"cancel-button\" class=\"btn\">Cancel</a>
-          </div>")
+  # buttons: [{id:..., label:..., callback:...}, ...]
+  showModal : (text, buttons) ->
 
-    $("#jump-button").on("click", => 
-      @model.route.resolveBranchDeferred()
-      $("#double-jump").modal("hide"))
+    html =  "<div class=\"modal-body\"><p>" + text + "</p></div>"
 
-    $("#cancel-button").on("click", => 
-      @model.route.rejectBranchDeferred()
-      $("#double-jump").modal("hide"))
+    html += "<div class=\"modal-footer\">"
+    for button in buttons
+      html += "<a href=\"#\" id=\"" + button.id + "\" class=\"btn\">" +
+                    button.label + "</a>"
+    html += "</div>"
 
-  createFirstVisToggle : ->
-    $("#first-vis-toggle").append("<div class=\"modal-body\">
-            <p>You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.</p>
-          </div>
-          <div class=\"modal-footer\">
-            <a href=\"#\" id=\"ok-button\" class=\"btn\">OK, Got it.</a>
-          </div>")
+    $("#modal").html(html)
 
-    $("#ok-button").on("click", => 
-      $("#first-vis-toggle").modal("hide"))
+    for button in buttons
+      @modalCallbacks[button.id] = button.callback
+      $("#" + button.id).on("click", (evt) =>
+        callback = @modalCallbacks[evt.target.id]
+        if callback? then callback()
+        $("#modal").modal("hide"))
+
+    $("#modal").modal("show")
 
   showFirstVisToggle : ->
-    $("#first-vis-toggle").modal("show")
+    @showModal("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
+      [{id: "ok-button", label: "OK, Got it."}])
 
-  hideFirstVisToggle : ->
-    $("#first-vis-toggle").modal("hide")
+  showBranchModal : (callback) ->
+    @showModal("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+      [{id: "jump-button", label: "Jump again", callback: callback},
+       {id: "cancel-button", label: "Cancel"}])
+
+  hideModal : ->
+    $("#modal").modal("hide")
 
   createKeyboardCommandOverlay : ->
 

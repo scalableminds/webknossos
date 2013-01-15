@@ -38,31 +38,31 @@ subPointMacro = (output, xd, yd, zd) ->
   sub_y = y0
   sub_z = z0
   
-  ## We use bitmasks to handle x, y and z coordinates.
-  ## `31     = 00000 00000 11111`
-  #if zd
-  #  sub_z++
-  #  if (basePointIndex & 31) == 31
-  #    # The point seems to be at the right border.
-  #    bucketIndex++
-  #    # Bound checking.
-  #    continue if bucketIndex % sizeZ == 0
-  #
-  ## `992   = 00000 11111 00000`
-  #if yd
-  #  sub_y++
-  #  if (basePointIndex & 992) == 992
-  #    # The point is to at the bottom border.
-  #    bucketIndex += sizeZ
-  #    # Bound checking.
-  #    continue if bucketIndex % sizeZY == 0
-  #  
-  ## `31744 = 11111 00000 00000`
-  #if xd
-  #  sub_x++
-  #  if (basePointIndex & 31744) == 31744
-  #    # The point seems to be at the back border.
-  #    bucketIndex += sizeZY
+  # We use bitmasks to handle x, y and z coordinates.
+  # `31     = 00000 00000 11111`
+  if zd
+    sub_z++
+    if (basePointIndex & 31744) == 31744
+      # The point seems to be at the right border.
+      bucketIndex++
+      # Bound checking.
+      continue if bucketIndex % sizeZ == 0
+  
+  # `992   = 00000 11111 00000`
+  if yd
+    sub_y++
+    if (basePointIndex & 992) == 992
+      # The point is to at the bottom border.
+      bucketIndex += sizeZ
+      # Bound checking.
+      continue if bucketIndex % sizeZY == 0
+    
+  # `31744 = 11111 00000 00000`
+  if xd
+    sub_x++
+    if (basePointIndex & 31) == 31
+      # The point seems to be at the back border.
+      bucketIndex += sizeZY
 
   
   if bucketIndex == lastBucketIndex
@@ -130,7 +130,7 @@ collectLoopMacro = (x, y, z, buffer, j, cube, min_x, min_y, min_z, max_x, max_y,
   subPointMacro(output4, 0, 0, 1)
   subPointMacro(output5, 1, 0, 1)
   subPointMacro(output6, 0, 1, 1)
-  subPointMacro(output7, 1, 1, 1)
+  subPointMacro(output7, 1, 1, 1) 
 
   buffer[j] = trilinearMacro(output0, output1, output2, output3, output4, output5, output6, output7, xd, yd, zd)
 

@@ -57,6 +57,7 @@ class ArbitraryView
       @animate()
       # Dont forget to handle window resizing!
       $(window).on "resize", @resize
+      @resize()
 
 
   stop : ->

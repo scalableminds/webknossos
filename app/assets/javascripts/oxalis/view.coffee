@@ -270,8 +270,13 @@ class View
           <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
           <tr><td>N</td><td>Next comment</td><td></td><td></td></tr>
           <tr><td>T</td><td>Toggle theme</td><td></td><td></td></tr>
+          <tr><td>M</td><td>Toggle mode</td><td></td><td></td></tr>
           <tr><th colspan=\"2\">3D-view</th><td></td><td></td></tr>
-          <tr><td>Mousewheel</td><td>Zoom in and out</td><td></td><td></td></tr>
+          <tr><td>Leftclick or Arrow keys</td><td>Rotation</td><td></td><td></td></tr>
+          <tr><td>W A S D</td><td>Strafe</td><td></td><td></td></tr>
+          <tr><td>Space, Shift + Space</td><td>Forward, Backward</td><td></td><td></td></tr>
+          <tr><td>K, L</td><td>Scale viewports</td><td></td><td></td></tr>
+          <tr><td>I, O</td><td>Zoom in and out</td><td></td><td></td></tr>
         </tbody>
       </table>
       <br>

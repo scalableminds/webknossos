@@ -7,7 +7,7 @@ import play.api.Logger
 
 class EmptyDataStore
     extends DataStore {
-  val nullBlock = new Array[Byte](elementsPerFile)
+  val nullBlock = new Array[Byte](DataStore.blockSize)
 
   def load(blockInfo: LoadBlock): Future[Array[Byte]] = {
     Future.successful {

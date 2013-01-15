@@ -82,11 +82,9 @@ abstract class DataStore extends Actor {
   def nullBlock(bytesPerElement: Int) =
     nullBlocks(log2(bytesPerElement).toInt)
 
-  val elementsPerFile = 128 * 128 * 128
-
   lazy val nullFiles: Stream[Array[Byte]] =
     (1 to MAX_BYTES_PER_ELEMENT).toStream.map { bytesPerElement =>
-      new Array[Byte](elementsPerFile * bytesPerElement)
+      new Array[Byte](blockSize * bytesPerElement)
     }
 
   def nullFile(bytesPerElement: Int) = nullFiles(bytesPerElement)

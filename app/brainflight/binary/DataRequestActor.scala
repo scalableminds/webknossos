@@ -35,8 +35,8 @@ class DataRequestActor extends Actor with DataCache {
 
   implicit val dataBlockLoadTimeout = Timeout(10 seconds)
   val conf = Play.current.configuration
-  val remotePath = conf.getString("datarequest.remotepath").get
-  val useRemote = conf.getBoolean("bindata.useRemote").get
+  val remotePath = conf.getString("datarequest.remotepath").getOrElse("")
+  val useRemote = conf.getBoolean("bindata.useRemote").getOrElse(false)
   implicit val system =
     if (useRemote)
       ActorSystems.dataRequestSystem
@@ -44,8 +44,8 @@ class DataRequestActor extends Actor with DataCache {
       context.system
 
   lazy val dataStores = List[ActorRef](
-    actorForWithLocalFallback[GridDataStore]("gridDataStore"),
     actorForWithLocalFallback[FileDataStore]("fileDataStore"),
+    actorForWithLocalFallback[GridDataStore]("gridDataStore"),
     system.actorOf(Props(new EmptyDataStore()), name = "emptyDataStore"))
 
   def actorForWithLocalFallback[T <: Actor](name: String)(implicit evidence: scala.reflect.ClassTag[T]) = {
@@ -179,7 +179,7 @@ class DataRequestActor extends Actor with DataCache {
   }
 
   def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): Array[Byte] = {
-    val address = (localPoint.x + localPoint.y * 128 + localPoint.z * 128 * 128) * bytesPerElement
+    val address = (localPoint.x + localPoint.y * blockLength + localPoint.z * blockLength * blockLength) * bytesPerElement
     val bytes = new Array[Byte](bytesPerElement)
     var i = 0
     while (i < bytesPerElement) {

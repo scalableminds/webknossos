@@ -30,7 +30,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.ArbitraryBinaryData.viaAjax("color", @levelId, @taskId)
+        Routes.controllers.levelcreator.ArbitraryBinaryData.viaAjax("color", @levelId, @taskId)
         dataType : "arraybuffer"
       )
     ).pipe (buffer) => new Uint8Array(buffer)
@@ -40,7 +40,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.ArbitraryBinaryData.viaAjax("segmentation", @levelId, @taskId)
+        Routes.controllers.levelcreator.ArbitraryBinaryData.viaAjax("segmentation", @levelId, @taskId)
         dataType : "arraybuffer"
       )
     ).pipe (buffer) => new Uint16Array(buffer)
@@ -50,7 +50,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.ArbitraryBinaryData.viaAjax("classification", @levelId, @taskId)
+        Routes.controllers.levelcreator.ArbitraryBinaryData.viaAjax("classification", @levelId, @taskId)
         dataType : "arraybuffer"
       )
     ).pipe (buffer) => new Uint8Array(buffer)

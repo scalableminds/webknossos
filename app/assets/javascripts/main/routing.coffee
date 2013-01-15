@@ -177,7 +177,7 @@ $ ->
           save()
 
 
-    "levelCreator" : ->
+    "levelcreator.levelCreator" : ->
 
       require ["./level_creator"], (LevelCreator) ->
 

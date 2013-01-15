@@ -76,13 +76,12 @@ class Controller3d
   initMouse : ->
     @input.mouse = new Input.Mouse(
       @canvas
-      "x" : (distX) =>
+      leftDownMove : (delta) =>
         @cam.yawDistance(
-          distX * @model.user.configuration.mouseInversionX * @model.user.configuration.mouseRotateValue
-        )
-      "y" : (distY) =>
+          delta.x * @model.user.mouseInversionX * @model.user.mouseRotateValue
+        );
         @cam.pitchDistance(
-          distY * @model.user.configuration.mouseInversionY * @model.user.configuration.mouseRotateValue
+          delta.y * @model.user.mouseInversionY * @model.user.mouseRotateValue
         )
     )
 

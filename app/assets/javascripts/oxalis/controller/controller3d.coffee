@@ -137,6 +137,10 @@ class Controller3d
       "shift + right" : => @cam.yaw -@model.user.rotateValue
       "shift + up"    : => @cam.pitch -@model.user.rotateValue
       "shift + down"  : => @cam.pitch @model.user.rotateValue
+
+      #Zoom in/out
+      "i" : => @cam.zoomIn()
+      "o" : => @cam.zoomOut()      
     )
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
@@ -147,10 +151,6 @@ class Controller3d
       #Branches
       #"b" : => Model.Route.putBranch(@cam.getMatrix())
       #"h" : => Model.Route.popBranch().done((matrix) => @cam.setMatrix(matrix))
-
-      #Zoom in/out
-      "i" : => @cam.zoomIn()
-      "o" : => @cam.zoomOut()
     )
 
 

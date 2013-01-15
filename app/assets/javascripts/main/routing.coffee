@@ -57,8 +57,8 @@ $ ->
 
           event.preventDefault()
 
-          oxalis.gui.saveNow().done =>
-            window.controller2d.location.href = this.href
+          oxalis.controller2d.gui.saveNow().done =>
+            window.location.href = this.href
 
 
         $("#trace-save-button").click (event) ->

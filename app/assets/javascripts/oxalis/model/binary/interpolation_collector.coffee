@@ -139,7 +139,7 @@ InterpolationCollector =
 
   bulkCollect : (vertices, cubeData) ->
 
-    buffer = new Float32Array(vertices.length / 3)
+    buffer = new Uint8Array(vertices.length / 3)
 
     if cubeData
 

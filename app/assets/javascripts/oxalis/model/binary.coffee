@@ -21,6 +21,7 @@ class Binary
 
   dataSetId : ""
   direction : [0, 0, 0]
+  lastLookUpTable : null
 
 
   constructor : (flycam, dataSet, @TEXTURE_SIZE_P) ->
@@ -42,6 +43,7 @@ class Binary
   updateLookupTable : (brightness, contrast) ->
 
     lookUpTable = new Uint8Array(256)
+    @lastLookUpTable = lookUpTable
 
     for i in [0..255]
       lookUpTable[i] = Math.max(Math.min((i + brightness) * contrast, 255), 0)
@@ -122,7 +124,15 @@ class Binary
   # A synchronized implementation of `get`. Cuz its faster.
   getByVerticesSync : (vertices) ->
 
-    InterpolationCollector.bulkCollect(
+    { lastLookUpTable } = @
+
+    colors = InterpolationCollector.bulkCollect(
       vertices
       @cube.getArbitraryCube()
     )
+
+    for i in [0...colors.length] by 1
+      l = colors[i]
+      colors[i] = lastLookUpTable[l]
+
+    colors

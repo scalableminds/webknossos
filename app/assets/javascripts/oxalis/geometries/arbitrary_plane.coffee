@@ -60,31 +60,16 @@ class ArbitraryPlane
     if @isDirty
 
       { mesh, cam } = this
-      texture = mesh.material.uniforms["brainData"].texture
+      #texture = mesh.material.uniforms["brainData"].value
 
       m = @cam.getMatrix()
 
       newVertices = M4x4.transformPointsAffine m, @queryVertices
+      newArray = @binary.getByVerticesSync(newVertices)
+ 
+      @mesh.texture.image.data.set(newArray)
+      @mesh.texture.needsUpdate = true
 
-      # ATTENTION
-      # when playing around with texture please look at setTexture() (line 5752 in WebGLRenderer)
-      # the data attribute is only available for DataTexture (in other cases it is only texture.image)
-      texture.image.data.set(@binary.getByVerticesSync(newVertices))
-
-      # Update the texture data and make sure the new texture
-      # is used by the Mesh's material.
-      texture.needsUpdate = true
-
-      #mesh.matrix.set m[0], m[4], m[8], m[12],
-      #                m[1], m[5], m[9], m[13],
-      #                m[2], m[6], m[10], m[14],
-      #                m[3], m[7], m[11], m[15]
-
-      #mesh.matrixWorldNeedsUpdate = true
-      #mesh.matrix.rotateX -90 / 180 * Math.PI
-      #mesh.matrix.rotateX(0.7)    
-      #mesh.matrix.rotateY(Math.PI)  
-      #mesh.matrix.translate(new THREE.Vector3(0,20,0))
       @isDirty = false
 
 
@@ -136,33 +121,31 @@ class ArbitraryPlane
   createMesh : ->
 
     { height, width } = this
-    plane = new THREE.PlaneGeometry(width, height, 1, 1)
-    #plane.transparent = true
-    # arguments: data, width, height, format, type, mapping, wrapS, wrapT, magFilter, minFilter
-    texture = new THREE.DataTexture(
-      new Uint8Array(width * height),
-      width,
-      height,
-      THREE.LuminanceFormat,
-      THREE.UnsignedByteType,
-      new THREE.UVMapping(),
-      THREE.ClampToEdgeWrapping,
-      THREE.ClampToEdgeWrapping,
-      THREE.LinearMipmapLinearFilter,
-      THREE.LinearMipmapLinearFilter
-    )
+    # create plane
+    planeGeo = new THREE.PlaneGeometry(width, height, 1, 1)
 
+    # create texture
+    texture             = new THREE.DataTexture(new Uint8Array(width*height), width, height, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     texture.needsUpdate = true
+    textureMaterial     = new THREE.MeshBasicMaterial({wireframe : false, map : texture})
 
-    colorCorrectionMap = THREE.ImageUtils.loadTexture("assets/textures/color_correction_map9d.png")
+    # create mesh
+    plane = new THREE.Mesh( planeGeo, textureMaterial )
+    plane.texture = texture
+    plane.rotation.y = Math.PI
+    #@mesh.material.map = @mesh.texture  
+    #  @mesh.material.needsUpdate = true
+    mesh = plane
 
-    shaderUniforms =
-      brainData : { type: "t", value: 0, texture: texture },
-      colorMap : { type: "t", value: 1, texture: colorCorrectionMap }
-      color :    { type: "c", value: new THREE.Color( 0x30D158 ) }
+    #colorCorrectionMap = THREE.ImageUtils.loadTexture("assets/textures/color_correction_map9d.png")
 
-    #textureMaterial = new THREE.MeshBasicMaterial( wireframe: false, map: texture )
+    #shaderUniforms =
+    #  brainData : { type: "t", value: texture },
+    #  colorMap : { type: "t", value: colorCorrectionMap }
+    #  color :    { type: "c", value: new THREE.Color( 0x30D158 ) }
 
+    #@textureMaterial = new THREE.MeshBasicMaterial( wireframe: false, map: texture )
+    #textureMaterial = new THREE.MeshBasicMaterial({wireframe : false})
     # shader idea from Nvidia:
     # http://http.developer.nvidia.com/GPUGems/gpugems_ch22.html
 
@@ -184,8 +167,6 @@ class ArbitraryPlane
 
       varying vec2 vUv;
 
-      const float MIN_ALPHA = 0.1;
-
       void main() {
 
         vec4 inputColor = texture2D( brainData, vUv );
@@ -199,15 +180,19 @@ class ArbitraryPlane
       }
       """
 
-    shaderMaterial = new THREE.ShaderMaterial(
-      uniforms : shaderUniforms
-      vertexShader : vertexShader
-      fragmentShader : fragmentShader
-    )
+    #basicM = new THREE.MeshBasicMaterial
+    #@shaderMaterial = new THREE.ShaderMaterial(
+    #  uniforms : shaderUniforms
+    #  vertexShader : vertexShader
+    #  fragmentShader : fragmentShader
+    #)
+    #textureMaterial.side = THREE.DoubleSide
     #shaderMaterial.transparent = true
-    mesh = new THREE.Mesh( plane, shaderMaterial )
-    mesh.rotation.x = -90 / 180 * Math.PI
-    mesh.scale.x = mesh.scale.z = 2
+    #mesh = new THREE.Mesh( plane, @shaderMaterial )
+    #mesh = new THREE.Mesh( plane, textureMaterial )
+    #mesh.rotation.y = Math.PI
+    #mesh.scale.x = mesh.scale.z = mesh.scale.y = 2
+    #mesh.texture = texture
     #mesh.matrixAutoUpdate = false
 
     mesh

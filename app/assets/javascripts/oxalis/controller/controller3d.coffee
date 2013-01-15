@@ -35,6 +35,7 @@ class Controller3d
     _.extend(this, new EventMixin())
 
     @canvas = canvas = $("#arbitraryplane")
+    canvas.hide()
    
     
     @cam = @model.flycam3d
@@ -51,13 +52,6 @@ class Controller3d
     Mesh.load("crosshair.js").done (crossHair) =>   
       crossHair.setPosition(0, 0, -1)
       @view.addGeometry(crossHair)
-
-    @view.on "render", (force, event) => @render(force, event)
-
-    @model.binary.cube.on "bucketLoaded", => @view.draw()
-
-    @cam.on "changed", =>
-      @trigger("matrixChanged", @cam.getMatrix())
 
     @view.draw()
 
@@ -147,13 +141,31 @@ class Controller3d
     @initKeyboard()
     @initMouse()
 
+    @view.on "render", (force, event) => @render(force, event)
+
+    @model.binary.cube.on "bucketLoaded", => @view.draw()
+
+    @cam.on "changed", =>
+      @trigger("matrixChanged", @cam.getMatrix())    
+
   unbind : ->
 
     @input.unbind()
+    @view.off "render", (force, event) => @render(force, event)
+
+    @model.binary.cube.on "bucketLoaded", => @view.draw()
+
+    @cam.off "changed", =>
+      @trigger("matrixChanged", @cam.getMatrix())       
 
   show : ->
+    @canvas.show()
+    @view.start()
 
   hide : ->
+    @canvas.hide()
+    @view.stop()
+
 
 
     #@model.stop()

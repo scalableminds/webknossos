@@ -11,10 +11,10 @@ pointIndexMacro = (pointIndex, x, y, z, zoomStep) ->
 
   pointIndex = 
     (
-      ((x & coordMask) << (10 - zoomStep)) +
+      ((z & coordMask) << (10 - zoomStep)) +
       ((y & coordMask) << (5 - zoomStep)) +
-      ((z & coordMask) >> (zoomStep))
-    ) >> 1
+      ((x & coordMask) >> (zoomStep))
+    ) >> 0
 
 # Finding points adjacent to the already found one.
 # We make use of the bucket structure and index arithmetic to optimize
@@ -87,14 +87,16 @@ subPointMacro = (output, xd, yd, zd) ->
 
 # Trilinear interpolation (Point is in a cube)
 trilinearMacro = (p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2) ->
-  p000 * (1 - d0) * (1 - d1) * (1 - d2) +
-  p100 * d0 * (1 - d1) * (1 - d2) + 
-  p010 * (1 - d0) * d1 * (1 - d2) + 
-  p110 * d0 * d1 * (1 - d2) +
-  p001 * (1 - d0) * (1 - d1) * d2 + 
-  p101 * d0 * (1 - d1) * d2 + 
-  p011 * (1 - d0) * d1 * d2 + 
-  p111 * d0 * d1 * d2
+  #p000 * (1 - d0) * (1 - d1) * (1 - d2) +
+  #p100 * d0 * (1 - d1) * (1 - d2) + 
+  #p010 * (1 - d0) * d1 * (1 - d2) + 
+  #p110 * d0 * d1 * (1 - d2) +
+  #p001 * (1 - d0) * (1 - d1) * d2 + 
+  #p101 * d0 * (1 - d1) * d2 + 
+  #p011 * (1 - d0) * d1 * d2 + 
+  #p111 * d0 * d1 * d2
+  p000
+
 
 # This macro is used for collecting and interpolating the data.
 # It aims to be fast, therefore the code is ugly.
@@ -117,9 +119,9 @@ collectLoopMacro = (x, y, z, buffer, j, cube, min_x, min_y, min_z, max_x, max_y,
     ((z0 - min_z) >> 5)
 
   basePointIndex = 
-    ((x0 & 31) << 10) + 
+    ((z0 & 31) << 10) + 
     ((y0 & 31) << 5) +
-    ((z0 & 31))      
+    ((x0 & 31))      
     
   # trilinear x,y,z
   subPointMacro(output0, 0, 0, 0)
@@ -142,17 +144,17 @@ InterpolationCollector =
 
     if cubeData
 
-      { cube, cubeSize, cubeOffset } = cubeData
+      { buckets, boundary } = cubeData
 
-      sizeZ   = cubeSize[2]
-      sizeZY  = cubeSize[2] * cubeSize[1]
+      sizeZ   = boundary[2]
+      sizeZY  = boundary[2] * boundary[1]
       
-      min_x = cubeOffset[0] << 5
-      min_y = cubeOffset[1] << 5
-      min_z = cubeOffset[2] << 5
-      max_x = min_x + (cubeSize[0] << 5) - 1
-      max_y = min_y + (cubeSize[1] << 5) - 1
-      max_z = min_z + (cubeSize[2] << 5) - 1
+      min_x = 0 #cubeOffset[0] << 5
+      min_y = 0 #cubeOffset[1] << 5
+      min_z = 0 #cubeOffset[2] << 5
+      max_x = min_x + (boundary[0] << 5) - 1
+      max_y = min_y + (boundary[1] << 5) - 1
+      max_z = min_z + (boundary[2] << 5) - 1
 
       lastBucket = null
       lastBucketIndex = -1
@@ -174,7 +176,7 @@ InterpolationCollector =
           x, y, z,
           buffer, 
           j, 
-          cube, 
+          buckets, 
           min_x, min_y, min_z,
           max_x, max_y, max_z,
           sizeZ, sizeZY)

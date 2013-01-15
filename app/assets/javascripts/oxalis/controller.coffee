@@ -20,6 +20,8 @@ DISTANCE_3D      = 140
 
 class Controller
 
+  mode : 0
+
   constructor : ->
 
     _.extend(@, new EventMixin())
@@ -32,10 +34,7 @@ class Controller
       @controller2d = new Controller2d(@model)
       @controller2d.bind()
       @controller2d.start()
-      @controller2d.unbind()
-      @controller2d.stop()      
       @controller3d = new Controller3d(@model)
-      @controller3d.bind()
 
 
       @initMouse()
@@ -56,6 +55,31 @@ class Controller
     $(document).keydown (event) ->
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
+
+    new Input.KeyboardNoLoop(
+
+      #ScaleTrianglesPlane
+      "m" : => @switch()
+    )
+
+
+  switch : ->
+    if @mode is 0
+      @controller2d.unbind()
+      @controller2d.stop() 
+      @initKeyboard()     
+
+      @controller3d.bind()
+      @controller3d.show()
+      @mode = 1
+    else
+      @controller3d.unbind()
+      @controller3d.hide()      
+      @initKeyboard()
+
+      @controller2d.bind()
+      @controller2d.start()
+      @mode = 0
 
 
 

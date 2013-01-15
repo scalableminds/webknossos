@@ -101,5 +101,5 @@ class Binary
 
     InterpolationCollector.bulkCollect(
       vertices
-      @cube.getRawCubeData()
+      @cube.getArbitraryCube()
     )

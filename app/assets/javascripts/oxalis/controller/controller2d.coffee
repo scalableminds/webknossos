@@ -196,6 +196,8 @@ class Controller2d
 
   bind : ->
 
+    @view.bind()
+
     @initMouse()
     @initKeyboard()
 
@@ -227,6 +229,8 @@ class Controller2d
 
 
   unbind : ->
+
+    @view.unbind()
     
     for binding in @bindings
       binding.unbind()

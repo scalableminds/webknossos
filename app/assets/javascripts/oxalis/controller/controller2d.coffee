@@ -27,13 +27,13 @@ class Controller2d
   bindings : []
 
 
-  constructor : (@model) ->
+  constructor : (@model, stats) ->
 
     _.extend(@, new EventMixin())
 
 
     @flycam = @model.flycam
-    @view  = new View(@model, @flycam)
+    @view  = new View(@model, @flycam, stats)
 
     @view.drawTree(@model.route.getTree())
 
@@ -126,7 +126,7 @@ class Controller2d
     for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
       @prevButtons[i].on("click", callbacks[i])
 
- 
+
   unbind : ->
     
     for binding in @bindings

@@ -89,6 +89,29 @@ class Binary
       @queue.pull()
 
 
+  arbitraryPing : _.once (matrix) ->
+
+    @arbitraryPing = _.throttle(@arbitraryPingImpl, @PING_THROTTLE_TIME)
+    @arbitraryPing(matrix)
+
+
+  arbitraryPingImpl : (matrix) ->
+
+    @cube.collectGarbage()
+
+    for strategy in @pingStrategies3d 
+      if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
+        
+        pullQueue = strategy.ping(matrix)
+      
+        for entry in pullQueue
+          @queue.insert(entry...)
+
+        break
+
+    @queue.pull() 
+
+
   # Not used anymore. Instead the planes get-functions are called directly.
   #get : (position, options) ->
 

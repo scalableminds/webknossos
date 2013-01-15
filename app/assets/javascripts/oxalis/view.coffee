@@ -27,12 +27,10 @@ THEME_DARK     = 1
 
 class View
 
-  constructor : (model, flycam) ->
+  constructor : (@model, @flycam, @stats) ->
 
     _.extend(@, new EventMixin())
 
-    @model  = model
-    @flycam = flycam
     @running = false
 
     # The "render" div serves as a container for the canvas, that is 
@@ -95,11 +93,6 @@ class View
 
     @setTheme(THEME_BRIGHT)
 
-    # FPS stats
-    stats = new Stats()
-    stats.getDomElement().id = "stats"
-    $("body").append stats.getDomElement() 
-    @stats = stats
     @positionStats = $("#status")
 
     @first = true

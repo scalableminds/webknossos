@@ -88,7 +88,7 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
       bucket_y = testAddresses[i++]
       bucket_z = testAddresses[i++]
 
-      pullQueue.push bucket_x, bucket_y, bucket_z, 1
+      pullQueue.push [[bucket_x, bucket_y, bucket_z, 1], 0]
 
     #-----------
     matrix0 = M4x4.clone(matrix)
@@ -104,7 +104,7 @@ class PingStrategy3d.DslSlow extends PingStrategy3d
       bucket_y = testAddresses[i++]
       bucket_z = testAddresses[i++]
 
-      pullQueue.push bucket_x, bucket_y, bucket_z, 0
+      pullQueue.push [[bucket_x, bucket_y, bucket_z, 0], 0]
     #-----------
 
     pullQueue

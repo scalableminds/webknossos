@@ -11,7 +11,7 @@ libs/request : Request
 
 class Controller3d
 
-  WIDTH : 128
+  WIDTH : 256
   HEIGHT : 128
 
   plane : null
@@ -30,7 +30,7 @@ class Controller3d
       @keyboard?.unbind()
 
 
-  constructor : (@model) ->
+  constructor : (@model, stats) ->
 
     _.extend(this, new EventMixin())
 
@@ -39,12 +39,11 @@ class Controller3d
    
     
     @cam = @model.flycam3d
-    @view = new ArbitraryView(canvas, @cam)    
+    @view = new ArbitraryView(canvas, @cam, stats)    
 
     @plane = new ArbitraryPlane(@cam, @model.binary, @WIDTH, @HEIGHT)  
     @view.addGeometry @plane
 
-    @cam.setPos([1924, 1543, 1823])
 
     @input = _.extend({}, @input)
     
@@ -58,7 +57,7 @@ class Controller3d
 
   render : (forceUpdate, event) ->
 
-    #@model.binary.ping(@flycam.getGlobalPos(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(PLANE_XY),
+    @model.binary.arbitraryPing(@cam.getMatrix())
     #                    @flycam.getArea(PLANE_YZ), @flycam.getArea(PLANE_XZ)], activePlane: @flycam.getActivePlane()})
     #@model.route.globalPosition = @cam.getGlobalPos()
     @model.route.rendered()
@@ -161,6 +160,7 @@ class Controller3d
   show : ->
     @canvas.show()
     @view.start()
+    @view.draw()    
 
   hide : ->
     @canvas.hide()

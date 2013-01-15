@@ -20,7 +20,7 @@ class ArbitraryView
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam) ->
+  constructor : (canvas, @dataCam, @stats) ->
 
     _.extend(this, new EventMixin())
 
@@ -31,7 +31,7 @@ class ArbitraryView
     height = @container.height()
 
     # Initialize main THREE.js components
-    @renderer = new THREE.WebGLRenderer( clearColor: 0xff0000, clearAlpha: 1, antialias: false )
+    @renderer = new THREE.WebGLRenderer( clearColor: 0x000000, clearAlpha: 0.9, antialias: false )
 
     @camera = camera = new THREE.PerspectiveCamera(90, width / height, 0.1, 1000)
     #camera.matrixAutoUpdate = false
@@ -47,14 +47,6 @@ class ArbitraryView
     @renderer.setSize(width, height)
     #@renderer.sortObjects = false
     @container.append(@renderer.domElement)
-
-    #FPS stats
-    @stats = new Stats()
-    statsDomElement = @stats.getDomElement()
-    statsDomElement.id = "fps-stats"
-    $("body").append(statsDomElement)
-
-    @start()
 
 
   start : ->
@@ -78,7 +70,7 @@ class ArbitraryView
 
     return unless @isRunning
 
-    if @trigger("render", @forceUpdate) or 1 #@forceUpdate
+    if @trigger("render", @forceUpdate) or @forceUpdate
 
       { camera, stats, geometries, renderer, scene } = @
 
@@ -87,20 +79,6 @@ class ArbitraryView
 
       for geometry in geometries when geometry.update?
         geometry.update()
-
-      #m = @dataCam.getMatrix()
- 
-      #camera.matrix.set m[0], m[4], m[8],  m[12], 
-      #                  m[1], m[5], m[9],  m[13], 
-      #                  m[2], m[6], m[10], m[14], 
-      #                  m[3], m[7], m[11], m[15]
-
-
-      #camera.matrix.translate(@cameraPosition)  
-      #camera.matrix.rotateY(Math.PI)
-      ##camera.matrix.rotateX(-0.7)
-
-      #camera.matrixWorldNeedsUpdate = true
 
       renderer.render scene, camera
 

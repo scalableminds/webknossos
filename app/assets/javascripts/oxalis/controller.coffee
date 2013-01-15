@@ -31,10 +31,15 @@ class Controller
 
     @model.initialize(TEXTURE_SIZE_P, VIEWPORT_WIDTH, DISTANCE_3D).done =>
 
-      @controller2d = new Controller2d(@model)
+      # FPS stats
+      stats = new Stats()
+      stats.getDomElement().id = "stats"
+      $("body").append stats.getDomElement() 
+
+      @controller2d = new Controller2d(@model, stats)
       @controller2d.bind()
       @controller2d.start()
-      @controller3d = new Controller3d(@model)
+      @controller3d = new Controller3d(@model, stats)
 
 
       @initMouse()
@@ -70,6 +75,7 @@ class Controller
       @initKeyboard()     
 
       @controller3d.bind()
+      @controller3d.cam.setPos(@controller2d.flycam.getGlobalPos())
       @controller3d.show()
       @mode = 1
     else
@@ -77,7 +83,9 @@ class Controller
       @controller3d.hide()      
       @initKeyboard()
 
+
       @controller2d.bind()
+      @controller2d.flycam.setGlobalPos(@controller3d.cam.getPosition())
       @controller2d.start()
       @mode = 0
 

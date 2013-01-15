@@ -57,7 +57,7 @@ class ArbitraryPlane
 
   update : ->
 
-    if @isDirty
+    if true #@isDirty
 
       { mesh, cam } = this
       #texture = mesh.material.uniforms["brainData"].value
@@ -132,7 +132,7 @@ class ArbitraryPlane
     # create mesh
     plane = new THREE.Mesh( planeGeo, textureMaterial )
     plane.texture = texture
-    plane.rotation.y = Math.PI
+    plane.rotation.x = Math.PI
     #@mesh.material.map = @mesh.texture  
     #  @mesh.material.needsUpdate = true
     mesh = plane

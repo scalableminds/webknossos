@@ -65,10 +65,12 @@ class Controller
 
       #ScaleTrianglesPlane
       "m" : => @switch()
+      "esc" : => @leave3d()
     )
 
 
   switch : ->
+    
     if @mode is 0
       @controller2d.unbind()
       @controller2d.stop() 
@@ -88,6 +90,12 @@ class Controller
       @controller2d.flycam.setGlobalPos(@controller3d.cam.getPosition())
       @controller2d.start()
       @mode = 0
+
+
+  leave3d : ->
+
+    if @mode isnt 0
+      @switch()
 
 
 

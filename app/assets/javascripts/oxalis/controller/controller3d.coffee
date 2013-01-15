@@ -18,7 +18,7 @@ class Controller3d
   cam : null
 
   fullscreen : false
-
+  lastNodeMatrix : null
 
   model : null
   view : null
@@ -45,12 +45,10 @@ class Controller3d
     @cam = @model.flycam3d
     @view = new ArbitraryView(canvas, @cam, stats)    
 
-    @plane = new ArbitraryPlane(@cam, @model.binary, @WIDTH, @HEIGHT)  
+    @plane = new ArbitraryPlane(@cam, @model.binary, @WIDTH, @HEIGHT)
     @view.addGeometry @plane
 
-
     @input = _.extend({}, @input)
-    
 
     Mesh.load("crosshair.js").done (crossHair) =>   
       crossHair.setPosition(0, 0, -1)
@@ -61,23 +59,31 @@ class Controller3d
 
   render : (forceUpdate, event) ->
 
-    @model.binary.arbitraryPing(@cam.getMatrix())
-    #                    @flycam.getArea(PLANE_YZ), @flycam.getArea(PLANE_XZ)], activePlane: @flycam.getActivePlane()})
-    #@model.route.globalPosition = @cam.getGlobalPos()
+    matrix = @cam.getMatrix()
+
+    @model.binary.arbitraryPing(matrix)
+
+    unless @lastNodeMatrix?
+      @lastNodeMatrix = matrix
+
+    lastNodeMatrix = @lastNodeMatrix
+
+    vector = [
+      lastNodeMatrix[12] - matrix[12]
+      lastNodeMatrix[13] - matrix[13]
+      lastNodeMatrix[14] - matrix[14]
+    ]
+    vectorLength = V3.length(vector)
+
+    if vectorLength > 10
+      @setWaypoint()
+      @lastNodeMatrix = matrix
+
     @model.route.rendered()
 
-    # skip rendering if nothing has changed
-    # This prevents you the GPU/CPU from constantly
-    # working and keeps your lap cool
-    # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
-    #return event.stop() unless @cam.flush() or forceUpdate
 
-    # sends current position to Model for calculating current 
-    # speed and preloading data
-    #@model.binary.notifyMatrix @cam.getMatrix()
+  toggleFullScreen : ->
 
-
-  toggleFullScreen : =>
     if @fullScreen
       cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
       @fullScreen = false
@@ -89,8 +95,6 @@ class Controller3d
       @fullScreen = true
       if requestFullscreen
         requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
-
-
 
 
   initMouse : ->
@@ -105,11 +109,10 @@ class Controller3d
         )
     )
 
+
   initKeyboard : ->
     
     @input.keyboard = new Input.Keyboard(
-
-
 
       #Scaleplane
       "l" : => @plane?.applyScale -@model.user.scaleValue
@@ -148,9 +151,8 @@ class Controller3d
       #Zoom in/out
       "i" : => @cam.zoomIn()
       "o" : => @cam.zoomOut()
-
-
     )
+
 
   bind : ->
 
@@ -164,6 +166,7 @@ class Controller3d
     @cam.on "changed", =>
       @trigger("matrixChanged", @cam.getMatrix())    
 
+
   unbind : ->
 
     @input.unbind()
@@ -174,16 +177,34 @@ class Controller3d
     @cam.off "changed", =>
       @trigger("matrixChanged", @cam.getMatrix())       
 
+
   show : ->
+
     @canvas.show()
     @view.start()
     @view.draw()    
 
+
   hide : ->
+
     @canvas.hide()
     @view.stop()
 
 
+  addNode : (position) =>
 
-    #@model.stop()
-    #@view.stop()    
+    if @model.user.newNodeNewTree == true
+      @createNewTree()
+      @model.route.one("rendered", =>
+        @model.route.one("rendered", =>
+          @model.route.addNode(position, TYPE_USUAL)))
+    else
+      @model.route.addNode(position, TYPE_USUAL)
+
+
+  setWaypoint : () =>
+
+    position  = @cam.getPosition()
+    activeNodePos = @model.route.getActiveNodePos()
+
+    @addNode(position)      

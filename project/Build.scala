@@ -37,6 +37,8 @@ object ApplicationBuild extends Build {
   
   val levelcreatorDependencies = Seq()
   
+  val isoshaderDependencies = Seq()
+  
   lazy val dataStoreDependencies = Seq(
     "org.scala-lang" % "scala-reflect" % "2.10.0",
     "com.sun.jersey" % "jersey-client" % "1.8",
@@ -67,6 +69,13 @@ object ApplicationBuild extends Build {
   ).aggregate(oxalis)
   
   lazy val levelcreator = play.Project("levelcreator", "0.1", levelcreatorDependencies, path = file("modules") / "levelcreator").settings(
+    templatesImport += "brainflight.view.helpers._",
+    templatesImport += "brainflight.view._",
+    resolvers ++= dependencyResolvers,
+    playAssetsDirectories += file("data")
+  ).dependsOn(oxalis).aggregate(oxalis)
+  
+  lazy val isoshader = play.Project("isoshader", "0.1", isoshaderDependencies, path = file("modules") / "isoshader").settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,

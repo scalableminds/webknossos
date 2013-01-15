@@ -60,14 +60,13 @@ class ArbitraryPlane
     if true #@isDirty
 
       { mesh, cam } = this
-      #texture = mesh.material.uniforms["brainData"].value
 
-      m = @cam.getMatrix()
+      matrix = @cam.getZoomedMatrix()
 
-      newVertices = M4x4.transformPointsAffine m, @queryVertices
-      newArray = @binary.getByVerticesSync(newVertices)
+      newVertices = M4x4.transformPointsAffine matrix, @queryVertices
+      newColors = @binary.getByVerticesSync(newVertices)
  
-      @mesh.texture.image.data.set(newArray)
+      @mesh.texture.image.data.set(newColors)
       @mesh.texture.needsUpdate = true
 
       @isDirty = false
@@ -113,8 +112,7 @@ class ArbitraryPlane
     x = Number(@mesh.scale.x) + Number(delta)
 
     if x > .5 and x < 10
-      # why z? keep in mind the plane is rotated 90°
-      @mesh.scale.x = @mesh.scale.z = x
+      @mesh.scale.x = @mesh.scale.y = @mesh.scale.z = x
       @cam.update()
 
 

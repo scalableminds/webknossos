@@ -17,6 +17,8 @@ class Controller3d
   plane : null
   cam : null
 
+  fullscreen : false
+
 
   model : null
   view : null
@@ -24,10 +26,12 @@ class Controller3d
   input :
     mouse : null
     keyboard : null
+    keyboardNoLoop : null
 
     unbind : ->
       @mouse?.unbind()
       @keyboard?.unbind()
+      @keyboardNoLoop?.unbind()
 
 
   constructor : (@model, stats) ->
@@ -73,6 +77,22 @@ class Controller3d
     #@model.binary.notifyMatrix @cam.getMatrix()
 
 
+  toggleFullScreen : =>
+    if @fullScreen
+      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
+      @fullScreen = false
+      if cancelFullscreen
+        cancelFullscreen.call(document)
+    else
+      body = $("#arbitraryplane")[0]
+      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
+      @fullScreen = true
+      if requestFullscreen
+        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
+
+
+
+
   initMouse : ->
     @input.mouse = new Input.Mouse(
       @canvas
@@ -89,12 +109,7 @@ class Controller3d
     
     @input.keyboard = new Input.Keyboard(
 
-      #Fullscreen Mode
-      "f" : => 
-        canvas = @canvas
-        requestFullscreen = canvas.webkitRequestFullScreen or canvas.mozRequestFullScreen or canvas.RequestFullScreen
-        if requestFullscreen
-          requestFullscreen.call(canvas, canvas.ALLOW_KEYBOARD_INPUT)
+
 
       #Scaleplane
       "l" : => @plane?.applyScale -@model.user.scaleValue
@@ -121,15 +136,18 @@ class Controller3d
       "shift + down"  : => @cam.pitch @model.user.rotateValue
     )
     
-    new Input.KeyboardNoLoop(
+    @input.keyboardNoLoop = new Input.KeyboardNoLoop(
+
+      #Fullscreen Mode
+      "q" : => @toggleFullScreen()
 
       #Branches
       #"b" : => Model.Route.putBranch(@cam.getMatrix())
       #"h" : => Model.Route.popBranch().done((matrix) => @cam.setMatrix(matrix))
 
       #Zoom in/out
-      #"o" : => @cam.zoomIn()
-      #"p" : => @cam.zoomOut()
+      "i" : => @cam.zoomIn()
+      "o" : => @cam.zoomOut()
 
 
     )

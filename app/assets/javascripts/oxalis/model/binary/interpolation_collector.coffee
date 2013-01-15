@@ -38,31 +38,31 @@ subPointMacro = (output, xd, yd, zd) ->
   sub_y = y0
   sub_z = z0
   
-  # We use bitmasks to handle x, y and z coordinates.
-  # `31     = 00000 00000 11111`
-  if zd
-    sub_z++
-    if (basePointIndex & 31) == 31
-      # The point seems to be at the right border.
-      bucketIndex++
-      # Bound checking.
-      continue if bucketIndex % sizeZ == 0
-  
-  # `992   = 00000 11111 00000`
-  if yd
-    sub_y++
-    if (basePointIndex & 992) == 992
-      # The point is to at the bottom border.
-      bucketIndex += sizeZ
-      # Bound checking.
-      continue if bucketIndex % sizeZY == 0
-    
-  # `31744 = 11111 00000 00000`
-  if xd
-    sub_x++
-    if (basePointIndex & 31744) == 31744
-      # The point seems to be at the back border.
-      bucketIndex += sizeZY
+  ## We use bitmasks to handle x, y and z coordinates.
+  ## `31     = 00000 00000 11111`
+  #if zd
+  #  sub_z++
+  #  if (basePointIndex & 31) == 31
+  #    # The point seems to be at the right border.
+  #    bucketIndex++
+  #    # Bound checking.
+  #    continue if bucketIndex % sizeZ == 0
+  #
+  ## `992   = 00000 11111 00000`
+  #if yd
+  #  sub_y++
+  #  if (basePointIndex & 992) == 992
+  #    # The point is to at the bottom border.
+  #    bucketIndex += sizeZ
+  #    # Bound checking.
+  #    continue if bucketIndex % sizeZY == 0
+  #  
+  ## `31744 = 11111 00000 00000`
+  #if xd
+  #  sub_x++
+  #  if (basePointIndex & 31744) == 31744
+  #    # The point seems to be at the back border.
+  #    bucketIndex += sizeZY
 
   
   if bucketIndex == lastBucketIndex
@@ -87,15 +87,14 @@ subPointMacro = (output, xd, yd, zd) ->
 
 # Trilinear interpolation (Point is in a cube)
 trilinearMacro = (p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2) ->
-  #p000 * (1 - d0) * (1 - d1) * (1 - d2) +
-  #p100 * d0 * (1 - d1) * (1 - d2) + 
-  #p010 * (1 - d0) * d1 * (1 - d2) + 
-  #p110 * d0 * d1 * (1 - d2) +
-  #p001 * (1 - d0) * (1 - d1) * d2 + 
-  #p101 * d0 * (1 - d1) * d2 + 
-  #p011 * (1 - d0) * d1 * d2 + 
-  #p111 * d0 * d1 * d2
-  p000
+  p000 * (1 - d0) * (1 - d1) * (1 - d2) +
+  p100 * d0 * (1 - d1) * (1 - d2) + 
+  p010 * (1 - d0) * d1 * (1 - d2) + 
+  p110 * d0 * d1 * (1 - d2) +
+  p001 * (1 - d0) * (1 - d1) * d2 + 
+  p101 * d0 * (1 - d1) * d2 + 
+  p011 * (1 - d0) * d1 * d2 + 
+  p111 * d0 * d1 * d2
 
 
 # This macro is used for collecting and interpolating the data.

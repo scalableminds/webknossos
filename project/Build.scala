@@ -47,6 +47,7 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
+    offline := true,
     playAssetsDirectories += file("data")
   )
 
@@ -70,6 +71,7 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
+    offline := true,
     playAssetsDirectories += file("data")
   ).dependsOn(oxalis).aggregate(oxalis)
 }

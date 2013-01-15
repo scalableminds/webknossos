@@ -31,7 +31,7 @@ object ArbitraryBinaryData extends Controller {
   def viaAjax(dataLayerName: String, levelId: String, taskId: String) = Action(parse.raw) { implicit request =>
     Async {
       val t = System.currentTimeMillis()
-      val dataSet = DataSet.default
+      val dataSet = DataSet.findOneByName("e_k0563").get
       for {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")

@@ -62,24 +62,7 @@ class Controller3d
   render : (forceUpdate, event) ->
 
     matrix = @cam.getMatrix()
-
     @model.binary.arbitraryPing(matrix)
-
-    unless @lastNodeMatrix?
-      @lastNodeMatrix = matrix
-
-    lastNodeMatrix = @lastNodeMatrix
-
-    vector = [
-      lastNodeMatrix[12] - matrix[12]
-      lastNodeMatrix[13] - matrix[13]
-      lastNodeMatrix[14] - matrix[14]
-    ]
-    vectorLength = V3.length(vector)
-
-    if vectorLength > 10
-      @setWaypoint()
-      @lastNodeMatrix = matrix
 
     @model.route.rendered()
 
@@ -125,7 +108,9 @@ class Controller3d
       "s" : => @cam.move [0, @model.user.moveValue, 0]
       "a" : => @cam.move [-@model.user.moveValue, 0, 0]
       "d" : => @cam.move [@model.user.moveValue, 0, 0]
-      "space" : =>  @cam.move [0, 0, @model.user.moveValue]
+      "space" : =>  
+        @cam.move [0, 0, @model.user.moveValue]
+        @moved()
       "shift + space" : => @cam.move [0, 0, -@model.user.moveValue]
       
       #Rotate in distance
@@ -238,3 +223,25 @@ class Controller3d
 
     @model.route.setActiveNode(nodeId, mergeTree)
     @cam.setPos @model.route.getActiveNodePos()  
+
+
+  moved : =>
+
+    matrix = @cam.getMatrix()
+
+    unless @lastNodeMatrix?
+      @lastNodeMatrix = matrix
+      @setWaypoint()
+
+    lastNodeMatrix = @lastNodeMatrix
+
+    vector = [
+      lastNodeMatrix[12] - matrix[12]
+      lastNodeMatrix[13] - matrix[13]
+      lastNodeMatrix[14] - matrix[14]
+    ]
+    vectorLength = V3.length(vector)
+
+    if vectorLength > 10
+      @setWaypoint()
+      @lastNodeMatrix = matrix    

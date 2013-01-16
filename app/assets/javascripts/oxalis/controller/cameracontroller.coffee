@@ -33,9 +33,9 @@ class CameraController
     gPos = @flycam.getGlobalPos()
     # camera porition's unit is nm, so convert it.
     cPos = @model.scaleInfo.voxelToNm(gPos)
-    @cameras[PLANE_XY].position = new THREE.Vector3(cPos[0]    , cPos[1]    , cPos[2] - 1)
-    @cameras[PLANE_YZ].position = new THREE.Vector3(cPos[0] + 1, cPos[1]    , cPos[2])
-    @cameras[PLANE_XZ].position = new THREE.Vector3(cPos[0]    , cPos[1] + 1, cPos[2])
+    @cameras[PLANE_XY].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
+    @cameras[PLANE_YZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
+    @cameras[PLANE_XZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
 
     # offset the lights very far
     @lights[PLANE_XY].position = new THREE.Vector3(cPos[0]         , cPos[1]         , cPos[2] - 100000)
@@ -152,7 +152,7 @@ class CameraController
     @updateCamViewport()
 
   setRouteClippingDistance : (value) ->
-    @camDistance = 2 * value # Plane is shifted so it's <value> to the back and the front
+    @camDistance = value # Plane is shifted so it's <value> to the back and the front
     @updateCamViewport()
 
   getRouteClippingDistance : (planeID) ->

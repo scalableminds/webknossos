@@ -37,7 +37,7 @@ class CellLayer
 
       @edgeBuffer.set(pos, @curIndex * 3)
       @edge.geometry.__vertexArray = @edgeBuffer
-      @edge.geometry.__webglLineCount = @curIndex
+      @edge.geometry.__webglLineCount = @curIndex + 1
       @edge.geometry.verticesNeedUpdate = true
       
       @curIndex++

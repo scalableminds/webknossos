@@ -139,7 +139,11 @@ class Controller
           else if @mode = MODE_VOLUME
             @drawVolume([pos.x, pos.y])
         scroll : @scroll
-        leftClick : @onPlaneClick
+        leftClick : (pos, shiftPressed) =>
+          if @mode == MODE_NORMAL
+            @onPlaneClick(pos, shiftPressed)
+          else if @mode == MODE_VOLUME
+            @drawVolume(pos)
         rightClick : @setWaypoint
       )
 
@@ -206,6 +210,7 @@ class Controller
       "m" : =>  # Toggle Mode
         if @mode == MODE_NORMAL 
           @mode = MODE_VOLUME
+          @model.volumeTracing.startNewLayer()
         else 
           @mode = MODE_NORMAL
 
@@ -235,6 +240,10 @@ class Controller
   moveX : (x) => @move([x, 0, 0])
   moveY : (y) => @move([0, y, 0])
   moveZ : (z, first) =>
+    if @mode == MODE_VOLUME
+      @model.volumeTracing.startNewLayer()
+      @cameraController.setRouteClippingDistance(1)
+      @sceneController.setRouteClippingDistance(1)
     if(first)
       activePlane = @flycam.getActivePlane()
       @flycam.move(Dimensions.transDim(

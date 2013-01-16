@@ -61,7 +61,7 @@ case class User(
     this.copy(experiences = this.experiences + (name -> value))
   }
   
-  def removeExperience(name: String) = {
+  def deleteExperience(name: String) = {
     this.copy(experiences = this.experiences.filterNot(_._1 == name))
   }  
 
@@ -82,7 +82,7 @@ case class User(
     this.copy(roles = this.roles + role)
   }
 
-  def removeRole(role: String) = {
+  def deleteRole(role: String) = {
     this.copy(roles = this.roles.filterNot(_ == role))
   }
 

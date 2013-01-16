@@ -93,10 +93,10 @@ GET     /admin/users/:id/verify             controllers.admin.UserAdministration
 GET     /admin/users/:id/delete             controllers.admin.UserAdministration.delete(id: String)
 GET     /admin/users/:id/loginAs            controllers.admin.UserAdministration.loginAsUser(id: String)
 POST    /admin/users/role                   controllers.admin.UserAdministration.addRoleBulk
-DELETE  /admin/users/role                   controllers.admin.UserAdministration.removeRoleBulk
+DELETE  /admin/users/role                   controllers.admin.UserAdministration.deleteRoleBulk
 POST    /admin/users/experience             controllers.admin.UserAdministration.setExperienceBulk
-DELETE  /admin/users/experience             controllers.admin.UserAdministration.removeExperienceBulk
-POST    /admin/users/experience/increase    controllers.admin.UserAdministration.setExperienceBulk
+DELETE  /admin/users/experience             controllers.admin.UserAdministration.deleteExperienceBulk
+POST    /admin/users/experience/increase    controllers.admin.UserAdministration.increaseExperienceBulk
 
 GET     /admin/tracings/:id/review          controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
 GET     /admin/tracings/:id/download        controllers.admin.NMLIO.download( id: String )

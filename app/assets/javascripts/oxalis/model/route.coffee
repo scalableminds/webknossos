@@ -162,7 +162,7 @@ class Route
   # every 30 seconds.
   pushDebounced : ->
     saveFkt = => @pushImpl(true)
-    @pushDebounced = _.throttle(_.mutexDeferred( saveFkt, -1), PUSH_THROTTLE_TIME)
+    @pushDebounced = _.throttle(saveFkt, PUSH_THROTTLE_TIME)
     @pushDebounced()
 
   pushNow :->   # Interface for view & controller
@@ -196,7 +196,7 @@ class Route
             window.location.reload()
       @push()
       if (notifyOnFailure)
-        @trigger("PushFailed");
+        @trigger("pushFailed");
       @pushDeferred.reject()
       @pushDeferred = null
     .done (response) =>

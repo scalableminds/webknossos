@@ -19,13 +19,13 @@ object MissionAdministration extends Controller {
 
   def insertMissions(dataSetName: String) = Action { implicit request =>
     (for {
-      dataSet <- DataSet.findOneByName(dataSetName)
-      missionData = new File(dataSet.baseDir + "/meta.json")
+      dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
+      missionData = new File(dataSet.baseDir + "/meta.json") 
       if missionData.exists()
     } yield {
       val missions = new MissionJsonParser().parse(JsonFromFile(missionData)).filterNot(Mission.hasAlreadyBeenInserted).map(Mission.insertOne)
       Ok("Inserted %s new missions.".format(missions.size))
-    }) getOrElse BadRequest("Missing meta file!")
+    }) ?~ Messages("mission.metaFile.notFound")
   }
 
 //  def insertMissions = Authenticated(parse.multipartFormData) { implicit request =>

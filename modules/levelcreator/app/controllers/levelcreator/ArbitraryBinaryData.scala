@@ -36,7 +36,7 @@ object ArbitraryBinaryData extends Controller {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
       } yield {
-        val position = Point3D(200, 200, 200)
+        val position = Point3D(1792, 1920, 2304)
         val direction = (1.0, 1.0, 1.0)
 
         val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)

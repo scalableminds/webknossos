@@ -211,7 +211,8 @@ class Input.Mouse
       deltaY = (newPosition.y - @lastPosition.y)
 
       unless deltaX == 0 and deltaY == 0
-        @trigger("leftDownMove", x : deltaX, y : deltaY)
+        @trigger("leftDownMove", {x : deltaX, y : deltaY},
+          {x : newPosition.x, y: newPosition.y})
         @lastPosition = newPosition
 
     return

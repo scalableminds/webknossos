@@ -1,5 +1,5 @@
 ### define 
-./volumelayer : VolumeLayer
+./volumelayer : VolumeLayerClass
 ###
 
 class VolumeCell
@@ -11,4 +11,4 @@ class VolumeCell
   createLayer : ->
     layer = new VolumeLayer()
     @layers.push(layer)
-    return @layer
+    return layer

@@ -1,25 +1,35 @@
 ### define 
 ./volumecell : VolumeCell
+../../libs/event_mixin : EventMixin
 ###
+
+MODE_LASSO = 0
+MODE_DRAW  = 1
 
 class VolumeTracing
 
-  MODE_LASSO : 0
-  MODE_DRAW  : 1
-
   constructor : () ->
+    _.extend(@, new EventMixin())
+
     @cells        = []         # List of VolumeCells
     @currentCell  = null
     @currentLayer = null
+    @mode         = MODE_LASSO
 
   createCell : (id) ->
     @currentCell = new VolumeCell(id)
     @cells.push(@currentCell)
+    @startNewLayer()
 
-  startLayer : ->
-    @currentNewLayer = @currentCell.createLayer()
+  startNewLayer : ->
+    # just for testing
+    unless @currentCell?
+      @createCell(1)
+    @currentLayer = @currentCell.createLayer()
+    @trigger "newLayer"
 
-  addToLayer : (x, y, z) ->
-    unless @currentLayer
+  addToLayer : (pos) ->
+    unless @currentLayer?
       @startNewLayer()
-    @currentLayer.addContour(x, y, z)
+    @currentLayer.addContour(pos)
+    @trigger "newContour", pos

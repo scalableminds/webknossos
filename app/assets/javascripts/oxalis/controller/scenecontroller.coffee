@@ -3,7 +3,9 @@
 ../view : View
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
+../geometries/celllayer : CellLayer
 ../model/dimensions : DimensionsHelper
+../../libs/event_mixin : EventMixin
 ###
 
 
@@ -20,13 +22,14 @@ class SceneController
   # This class collects all the meshes displayed in the Sceleton View and updates position and scale of each
   # element depending on the provided flycam.
 
-  constructor : (upperBoundary, flycam, model) ->
-    @upperBoundary = upperBoundary
-    @flycam        = flycam
-    @model         = model
+  constructor : (@upperBoundary, @flycam, @model) ->
+    _.extend(@, new EventMixin())
+
     @current       = 0
     @displayPlane  = [true, true, true]
     @planeShift    = [0, 0, 0]
+
+    @model.volumeTracing.on "newLayer", => @newCellLayer()
 
     @createMeshes()
 
@@ -47,7 +50,8 @@ class SceneController
 
     # TODO: Implement text 
 
-    @skeleton = new Skeleton(10000, @flycam, @model)
+    @cellLayer = null
+    @skeleton  = new Skeleton(10000, @flycam, @model)
 
     # create Meshes
     @planes = new Array(3)
@@ -133,3 +137,7 @@ class SceneController
     result = result.concat(@skeleton.getMeshes())
     result.push(@cube)
     return result
+
+  newCellLayer : ->
+    @cellLayer = new CellLayer(@flycam, @model)
+    @trigger "newGeometries", @cellLayer.getMeshes()

@@ -7,5 +7,5 @@ class VolumeLayer
     @contourList = []
     @comment     = ""
 
-  addContour : (x, y, z) ->
-  	@contourList.push([x, y, z])
+  addContour : (pos) ->
+  	@contourList.push(pos)

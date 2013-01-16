@@ -67,19 +67,19 @@ class Controller3d
     @model.route.rendered()
 
 
-  toggleFullScreen : ->
-
-    if @fullScreen
-      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
-      @fullScreen = false
-      if cancelFullscreen
-        cancelFullscreen.call(document)
-    else
-      body = $("#arbitraryplane")[0]
-      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
-      @fullScreen = true
-      if requestFullscreen
-        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
+  #toggleFullScreen : ->
+  #
+  #  if @fullScreen
+  #    cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
+  #    @fullScreen = false
+  #    if cancelFullscreen
+  #      cancelFullscreen.call(document)
+  #  else
+  #    body = $("#arbitraryplane")[0]
+  #    requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
+  #    @fullScreen = true
+  #    if requestFullscreen
+  #      requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
 
   initMouse : ->
@@ -133,7 +133,7 @@ class Controller3d
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
       #Fullscreen Mode
-      "q" : => @toggleFullScreen()
+      #"q" : => @toggleFullScreen()
 
       #Reset Matrix
       "r" : => @cam.resetRotation()

@@ -99,6 +99,18 @@ class View
     @newTextures = [true, true, true, true]
     # start the rendering loop
 
+    @model.route.on({
+      newActiveNode        : => @drawTree(),
+      newActiveTree        : => @drawTree(),
+      newTree              : => @drawTree(),
+      mergeTree            : => @drawTree(),
+      reloadTrees          : => @drawTree(),
+      deleteTree           : => @drawTree(),
+      deleteActiveNode     : => @drawTree(),
+      newNode              : => @drawTree(),
+      mergeDifferentTrees  : ->
+        Toast.error("You can't merge nodes within the same tree", false)  })
+
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
 
@@ -280,16 +292,19 @@ class View
           <tr><td>Del</td><td>Delete node/Split trees</td><td>J</td><td>Jump to last branchpoint</td></tr>
           <tr><td>Shift + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
           <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
-          <tr><td>N</td><td>Next comment</td><td></td><td></td></tr>
-          <tr><td>T</td><td>Toggle theme</td><td></td><td></td></tr>
+          <tr><td>N</td><td>Next comment</td><th colspan=\"2\">3D-view</th><td></td></tr>
+          <tr><td>T</td><td>Toggle theme</td><td>Mousewheel</td><td>Zoom in and out</td></tr>
           <tr><td>1</td><td>Toggle Skeleton Visibility</td><td></td><td></td></tr>          
           <tr><td>M</td><td>Toggle mode</td><td></td><td></td></tr>
-          <tr><th colspan=\"2\">3D-view</th><td></td><td></td></tr>
-          <tr><td>Leftclick or Arrow keys</td><td>Rotation</td><td></td><td></td></tr>
+          <tr><th colspan=\"2\">Flightmode</th><td></td><td></td></tr>
+          <tr><td>Mouse or Arrow keys</td><td>Rotation</td><td></td><td></td></tr>
+          <tr><td>Shift + Mouse or Shift + Arrow keys</td><td>Rotation around Axis</td><td></td><td></td></tr>
           <tr><td>W A S D</td><td>Strafe</td><td></td><td></td></tr>
           <tr><td>Space, Shift + Space</td><td>Forward, Backward</td><td></td><td></td></tr>
           <tr><td>K, L</td><td>Scale viewports</td><td></td><td></td></tr>
           <tr><td>I, O</td><td>Zoom in and out</td><td></td><td></td></tr>
+          <tr><td>R</td><td>Reset rotation</td><td></td><td></td></tr>         
+          <tr><td>B, J</td><td>Set, Jump to last branchpoint</td><td></td><td></td></tr>  
         </tbody>
       </table>
       <br>
@@ -312,17 +327,7 @@ class View
     $("#ok-button").on("click", => 
       $("#first-vis-toggle").modal("hide"))    
 
-    @model.route.on({
-      newActiveNode        : => @drawTree(),
-      newActiveTree        : => @drawTree(),
-      newTree              : => @drawTree(),
-      mergeTree            : => @drawTree(),
-      reloadTrees          : => @drawTree(),
-      deleteTree           : => @drawTree(),
-      deleteActiveNode     : => @drawTree(),
-      newNode              : => @drawTree(),
-      mergeDifferentTrees  : ->
-        Toast.error("You can't merge nodes within the same tree", false)  })
+
     
     $("#jump-button").on("click", => 
       @model.route.resolveBranchDeferred()
@@ -344,17 +349,17 @@ class View
     $("#ok-button").off("click", => 
       $("#first-vis-toggle").modal("hide"))    
 
-    @model.route.off({
-      newActiveNode        : => @drawTree(),
-      newActiveTree        : => @drawTree(),
-      newTree              : => @drawTree(),
-      mergeTree            : => @drawTree(),
-      reloadTrees          : => @drawTree(),
-      deleteTree           : => @drawTree(),
-      deleteActiveNode     : => @drawTree(),
-      newNode              : => @drawTree(),
-      mergeDifferentTrees  : ->
-        Toast.error("You can't merge nodes within the same tree", false)  })
+    #@model.route.off({
+    #  newActiveNode        : => @drawTree(),
+    #  newActiveTree        : => @drawTree(),
+    #  newTree              : => @drawTree(),
+    #  mergeTree            : => @drawTree(),
+    #  reloadTrees          : => @drawTree(),
+    #  deleteTree           : => @drawTree(),
+    #  deleteActiveNode     : => @drawTree(),
+    #  newNode              : => @drawTree(),
+    #  mergeDifferentTrees  : ->
+    #    Toast.error("You can't merge nodes within the same tree", false)  })
     
     $("#jump-button").off("click", => 
       @model.route.resolveBranchDeferred()

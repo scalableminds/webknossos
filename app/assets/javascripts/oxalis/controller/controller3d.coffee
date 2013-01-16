@@ -148,9 +148,12 @@ class Controller3d
       #Fullscreen Mode
       "q" : => @toggleFullScreen()
 
+      #Reset Matrix
+      "r" : => @cam.resetRotation()
+
       #Branches
-      #"b" : => Model.Route.putBranch(@cam.getMatrix())
-      #"h" : => Model.Route.popBranch().done((matrix) => @cam.setMatrix(matrix))
+      "b" : => @pushBranch()
+      "j" : => @popBranch() 
     )
 
 
@@ -207,4 +210,22 @@ class Controller3d
     position  = @cam.getPosition()
     activeNodePos = @model.route.getActiveNodePos()
 
-    @addNode(position)      
+    @addNode(position)    
+
+
+  pushBranch : ->
+
+    @model.route.pushBranch()
+
+
+  popBranch : ->
+
+    _.defer => @model.route.popBranch().done((id) => 
+      @setActiveNode(id, true)
+    )
+
+
+  setActiveNode : (nodeId, centered, mergeTree) ->
+
+    @model.route.setActiveNode(nodeId, mergeTree)
+    @cam.setPos @model.route.getActiveNodePos()  

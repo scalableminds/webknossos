@@ -301,7 +301,7 @@ class View
           <tr><td>Shift + Mouse or Shift + Arrow</td><td>Rotation around Axis</td><td>W A S D</td><td>Strafe</td></tr>
           <tr><td>Space, Shift + Space</td><td>Forward, Backward</td><td>B, J</td><td>Set, Jump to last branchpoint</td></tr>
           <tr><td>K, L</td><td>Scale viewports</td><td>I, O</td><td>Zoom in and out</td><td></td></tr>
-          <tr><td>R, T</td><td>Start, stop recording waypoints</td><td>R</td><td>Reset rotation</td></tr> 
+          <tr><td>T, Z</td><td>Start, stop recording waypoints</td><td>R</td><td>Reset rotation</td></tr> 
         </tbody>
       </table>
       <br>

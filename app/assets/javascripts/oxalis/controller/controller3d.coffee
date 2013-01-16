@@ -158,8 +158,8 @@ class Controller3d
       "j" : => @popBranch() 
 
       #Recording of Waypoints
-      "r" : => @record = true
-      "t" : => @record = false      
+      "t" : => @record = true
+      "z" : => @record = false      
     )
 
 

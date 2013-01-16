@@ -13,6 +13,8 @@ case class Experience(domain: String, value: Int) {
 }
 
 object Experience {
+  implicit def MapToExperienceList(m: Map[String, Int]) =
+    m.map(e => Experience(e._1, e._2)).toList
 
   def empty = Experience("", 0)
   type Experiences = Map[String, Int]

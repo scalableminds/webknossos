@@ -11,11 +11,14 @@ import models.user.TimeTracking
 import models.user.User
 import play.api.i18n.Messages
 import views.html
+import play.api.data.Form
+import play.api.data.Forms._
+import brainflight.tools.ExtendedTypes._
 
 object UserAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
-  
+
   def allUsers = User.findAll.sortBy(_.lastName)
 
   def index = Authenticated { implicit request =>
@@ -60,6 +63,13 @@ object UserAdministration extends Controller with Secured {
   }
 
   def verify(userId: String) = Authenticated { implicit request =>
+    verifyUser(userId) map { user =>
+      AjaxOk.success(html.admin.user.userTableItem(user), user.name + Messages("user.verified"))
+    } getOrElse
+      BadRequest
+  }
+
+  def changExperience(userId: String) = Authenticated { implicit request =>
     verifyUser(userId) map { user =>
       AjaxOk.success(html.admin.user.userTableItem(user), user.name + Messages("user.verified"))
     } getOrElse
@@ -125,4 +135,55 @@ object UserAdministration extends Controller with Secured {
         userId => "Couldn't add role to user with id '%s'".format(userId))
     } getOrElse AjaxBadRequest.error("Please choose a role")
   }
+
+  def increaseExperience(domain: String, value: Int)(userId: String) = {
+    User.findOneById(userId) map { user =>
+      user.update(_.increaseExperience(domain, value))
+    }
+  }
+
+  def setExperience(domain: String, value: Int)(userId: String) = {
+    User.findOneById(userId) map { user =>
+      user.update(_.setExperience(domain, value))
+    }
+  }
+
+  def removeExperience(domain: String)(userId: String) = {
+    User.findOneById(userId) map { user =>
+      user.update(_.removeExperience(domain))
+    }
+  }
+
+  def increaseExperienceBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    (for {
+      domain <- postParameter("experience-domain") //?~ Messages("experience.domain.invalid")
+      value <- postParameter("experience-value").flatMap(_.toIntOpt) //?~ Messages("experience.value.invalid")
+    } yield {
+      bulkOperation(increaseExperience(domain, value))(
+        user => "Added experience to %s".format(user.name),
+        userId => "Couldn't add experience to user with id '%s'".format(userId))
+    }) getOrElse AjaxBadRequest.error("invalid")
+  }
+
+  def setExperienceBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    (for {
+      domain <- postParameter("experience-domain") //?~ Messages("experience.domain.invalid")
+      value <- postParameter("experience-value").flatMap(_.toIntOpt) //?~ Messages("experience.value.invalid")
+    } yield {
+      bulkOperation(setExperience(domain, value))(
+        user => "Set experience of %s".format(user.name),
+        userId => "Couldn't set experience of user with id '%s'".format(userId))
+    }) getOrElse AjaxBadRequest.error("invalid")
+  }
+
+  def removeExperienceBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    (for {
+      domain <- postParameter("experience-domain") //?~ Messages("experience.domain.invalid")
+    } yield {
+      bulkOperation(removeExperience(domain))(
+        user => "Removed experience from %s".format(user.name),
+        userId => "Couldn't remove experience from user with id '%s'".format(userId))
+    }) getOrElse AjaxBadRequest.error("invalid")
+  }
+
 }

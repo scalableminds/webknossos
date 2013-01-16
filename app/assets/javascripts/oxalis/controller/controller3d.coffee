@@ -104,7 +104,7 @@ class Controller3d
       @canvas
       leftDownMove : (delta) =>
         @cam.yawDistance(
-          delta.x * @model.user.mouseInversionX * @model.user.mouseRotateValue
+          -delta.x * @model.user.mouseInversionX * @model.user.mouseRotateValue
         );
         @cam.pitchDistance(
           delta.y * @model.user.mouseInversionY * @model.user.mouseRotateValue

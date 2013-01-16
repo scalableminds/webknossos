@@ -92,7 +92,7 @@ class Gui
                           .onChange(@setMouseInversionY)
 
     fFlightcontrols = @gui.addFolder("Flighcontrols")
-    (fFlightcontrols.add @settings, "mouseRotateValue", 0.001, 0.01)
+    (fFlightcontrols.add @settings, "mouseRotateValue", 0.001, 0.02)
                           .step(0.001)
                           .name("Mouse Rotation")
                           .onChange(@setMouseRotateValue)

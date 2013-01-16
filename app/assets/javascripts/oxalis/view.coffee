@@ -298,13 +298,10 @@ class View
           <tr><td>M</td><td>Toggle mode</td><td></td><td></td></tr>
           <tr><th colspan=\"2\">Flightmode</th><td></td><td></td></tr>
           <tr><td>Mouse or Arrow keys</td><td>Rotation</td><td></td><td></td></tr>
-          <tr><td>Shift + Mouse or Shift + Arrow keys</td><td>Rotation around Axis</td><td></td><td></td></tr>
-          <tr><td>W A S D</td><td>Strafe</td><td></td><td></td></tr>
-          <tr><td>Space, Shift + Space</td><td>Forward, Backward</td><td></td><td></td></tr>
-          <tr><td>K, L</td><td>Scale viewports</td><td></td><td></td></tr>
-          <tr><td>I, O</td><td>Zoom in and out</td><td></td><td></td></tr>
-          <tr><td>R</td><td>Reset rotation</td><td></td><td></td></tr>         
-          <tr><td>B, J</td><td>Set, Jump to last branchpoint</td><td></td><td></td></tr>  
+          <tr><td>Shift + Mouse or Shift + Arrow</td><td>Rotation around Axis</td><td>W A S D</td><td>Strafe</td></tr>
+          <tr><td>Space, Shift + Space</td><td>Forward, Backward</td><td>B, J</td><td>Set, Jump to last branchpoint</td></tr>
+          <tr><td>K, L</td><td>Scale viewports</td><td>I, O</td><td>Zoom in and out</td><td></td></tr>
+          <tr><td>R, T</td><td>Start, stop recording waypoints</td><td>R</td><td>Reset rotation</td></tr> 
         </tbody>
       </table>
       <br>

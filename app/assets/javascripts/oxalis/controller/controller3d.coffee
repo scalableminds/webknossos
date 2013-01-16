@@ -23,6 +23,8 @@ class Controller3d
   model : null
   view : null
 
+  record : false
+
   input :
     mouse : null
     keyboard : null
@@ -154,6 +156,10 @@ class Controller3d
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 
+
+      #Recording of Waypoints
+      "r" : => @record = true
+      "t" : => @record = false      
     )
 
 
@@ -206,6 +212,9 @@ class Controller3d
 
 
   setWaypoint : () =>
+
+    unless @record 
+      return
 
     position  = @cam.getPosition()
     activeNodePos = @model.route.getActiveNodePos()

@@ -23,8 +23,7 @@ class CellLayer
     edgeGeometry.dynamic = true
 
     @edgeBuffer = new Float32Array(MAX_EDGE_POINTS * 3)
-    #{color: 0xff0000, linewidth: 2}, THREE.LineStrip
-    @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial(), THREE.LinePieces)
+    @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 4}), THREE.LineStrip)
     @curIndex = 0
 
   getMeshes : ->
@@ -38,9 +37,12 @@ class CellLayer
 
       @edgeBuffer.set(pos, @curIndex * 3)
       @edge.geometry.__vertexArray = @edgeBuffer
+      @edge.geometry.__webglLineCount = @curIndex
       @edge.geometry.verticesNeedUpdate = true
       
       @curIndex++
+      if @curIndex % 100 == 0
+        console.log "Celllayer curIndex:", @curIndex, "MAX_EDGE_POINTS", MAX_EDGE_POINTS
       @flycam.hasChanged = true
 
   # Helper function

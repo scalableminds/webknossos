@@ -6,7 +6,7 @@ import brainflight.security.Secured
 import models.security.Role
 import models.knowledge.Mission
 import models.binary.DataSet
-import braingames.levelcreator.MissionJsonParser
+import braingames.levelcreator.{MetaJsonParser, DataLayerSettings, MetaJson}
 import play.api.Logger
 import scala.io.Source
 import java.io.File
@@ -17,14 +17,19 @@ object MissionAdministration extends Controller {
 
   def JsonFromFile(file: File) = Json.parse(Source.fromFile(file).getLines.mkString)
 
-  def insertMissions(dataSetName: String) = Action { implicit request =>
+  def insertMetaData(dataSetName: String) = Action { implicit request =>
     (for {
       dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
       missionData = new File(dataSet.baseDir + "/meta.json") 
       if missionData.exists()
-    } yield {
-      val missions = new MissionJsonParser().parse(JsonFromFile(missionData)).filterNot(Mission.hasAlreadyBeenInserted).map(Mission.insertOne)
-      Ok("Inserted %s new missions.".format(missions.size))
+      MetaJson <- MetaJsonParser.parse(JsonFromFile(missionData)) ?~ Messages("Meta.json parsing Error")
+    } yield {     
+      val newMissions = MetaJson.missions.filterNot(Mission.hasAlreadyBeenInserted)
+      newMissions.map(Mission.insertOne)
+      
+      DataSet.updateOrCreate(dataSet.copy(dataLayers = MetaJson.dataLayerSettings.dataLayers))
+      
+      Ok("Inserted %s new missions and updated DataLayers %s.".format(newMissions.size, MetaJson.dataLayerSettings.dataLayers.keys))
     }) ?~ Messages("mission.metaFile.notFound")
   }
 

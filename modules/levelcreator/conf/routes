@@ -17,7 +17,7 @@ GET     /level/:id/asset/*asset             controllers.levelcreator.LevelCreato
 GET     /binary/arbitrary/ajax              controllers.levelcreator.ArbitraryBinaryData.viaAjax(dataLayerName: String, levelId: String, taskId: String)
 
 GET     /missions                           controllers.levelcreator.MissionController.missions(dataSetName: String)
-POST    /missions                           controllers.levelcreator.admin.MissionAdministration.insertMissions(dataSetName: String)
+POST    /missions                           controllers.levelcreator.admin.MissionAdministration.insertMetaData(dataSetName: String)
 
 
 # Javascript routing

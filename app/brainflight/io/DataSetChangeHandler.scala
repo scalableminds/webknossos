@@ -9,6 +9,7 @@ import braingames.util.ExtendedTypes.ExtendedString
 import models.binary.DataSet
 import models.binary.ColorLayer
 import models.binary.DataLayer
+import net.liftweb.common.Box
 
 class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {
@@ -19,6 +20,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
           DataSet.updateOrCreate(dataSet)
+          println(MetaJsonHandler.insertMetaData(dataSet.name) openOr "test")
           dataSet.name
         }
       }

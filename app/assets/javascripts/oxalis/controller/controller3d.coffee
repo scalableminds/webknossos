@@ -143,7 +143,9 @@ class Controller3d
       "j" : => @popBranch() 
 
       #Recording of Waypoints
-      "t" : => @record = true
+      "t" : => 
+        @record = true
+        @setWaypoint()
       "z" : => @record = false      
     )
 
@@ -231,7 +233,6 @@ class Controller3d
 
     unless @lastNodeMatrix?
       @lastNodeMatrix = matrix
-      @setWaypoint()
 
     lastNodeMatrix = @lastNodeMatrix
 

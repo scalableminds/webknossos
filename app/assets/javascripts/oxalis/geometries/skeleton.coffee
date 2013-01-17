@@ -81,6 +81,8 @@ class Skeleton
         routeGeometryBranchPoints,
         new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE * 0.7, size: 8, sizeAttenuation : false}))
 
+    @updateBranches()
+
     @route.on
       newActiveNode : => @setActiveNode()
       newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)

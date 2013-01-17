@@ -8,6 +8,7 @@
   <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
   <td> @task.dataSetName </td>
   <td> @task.neededExperience </td>
+  <td> @task.neededExperience </td>
   <td> @task.start </td>
   <td> @task.priority </td>
   <td> @formatDate(task.created) </td>
@@ -30,7 +31,7 @@
   </td>
 </tr>
 <tr class="details-row" >
-  <td colspan="11">
+  <td colspan="12">
     <table class="table table-condensed table-nohead">
       <tbody>
         @task.tracings.map{ tracing =>

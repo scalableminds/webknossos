@@ -7,14 +7,14 @@ underscore : _
 $ ->
 
   # Progresssive enhancements
-  $("[data-newwindow]").live "click", (e) ->
+  $(document).on "click", "[data-newwindow]", (e) ->
 
     [ width, height ] = $(this).data("newwindow").split("x")
     window.open(this.href, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
     e.preventDefault()
 
 
-  $("a[data-ajax]").live "click", (event) ->
+  $(document).on "click", "a[data-ajax]", (event) ->
     
     event.preventDefault()
     $this = $(this)
@@ -96,7 +96,7 @@ $ ->
     )
   
 
-  $("table input.select-all-rows").live "change", ->
+  $(document).on "change", "table input.select-all-rows", ->
 
     $this = $(this)
     $this.parents("table").find("tbody input.select-row").prop("checked", this.checked)
@@ -118,7 +118,7 @@ $ ->
       
 
 
-    $("table input.select-row").live "change", ->
+    $(document).on "change", "table input.select-row", ->
 
       $this = $(this)
       $table = $this.parents("table").first()

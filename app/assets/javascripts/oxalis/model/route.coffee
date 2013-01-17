@@ -224,20 +224,16 @@ class Route
 
   popBranch : ->
     deferred = new $.Deferred()
-    if @doubleBranchPop
-      @showBranchModal().done(=>
+    if @branchStack.length and @doubleBranchPop
+      @trigger( "doubleBranch", =>
         point = @branchStack.pop()
         @push()
-        if point
-          @activeNode = point
-          @activeNode.type = TYPE_USUAL
+        @activeNode = point
+        @activeNode.type = TYPE_USUAL
 
-          @trigger("setBranch", false, @activeNode.id)
-          @doubleBranchPop = true
-          deferred.resolve(@activeNode.id)
-        else
-          @trigger("emptyBranchStack")
-          deferred.reject())
+        @trigger("setBranch", false, @activeNode.id)
+        @doubleBranchPop = true
+        deferred.resolve(@activeNode.id))
     else
       point = @branchStack.pop()
       @push()
@@ -261,11 +257,6 @@ class Route
       else
         i++
     @trigger("deleteBranch")
-
-  showBranchModal : ->
-    @branchDeferred = new $.Deferred()
-    $("#double-jump").modal("show")
-    return @branchDeferred
 
   rejectBranchDeferred : ->
     @branchDeferred.reject()

@@ -9,7 +9,8 @@ import braingames.util.ExtendedTypes.ExtendedString
 import models.binary.DataSet
 import models.binary.ColorLayer
 import models.binary.DataLayer
-import net.liftweb.common.Box
+import net.liftweb.common._
+import models.knowledge.Mission
 
 class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {
@@ -20,7 +21,12 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
           DataSet.updateOrCreate(dataSet)
-          println(MetaJsonHandler.insertMetaData(dataSet.name) openOr "test")
+          MetaJsonHandler.extractMetaData(dataSet.name) match {
+            case Full(metaData) => insertMetaData(dataSet, metaData)
+            case Failure(msg, _, _) => Logger.error(msg)
+            //TODO: understand boxes
+            case Empty => Logger.info("empty box")
+          }
           dataSet.name
         }
       }
@@ -91,6 +97,21 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
         DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, dataLayers = Map[String, DataLayer](ColorLayer.identifier -> ColorLayer(supportedResolutions = resolutions)))
       }
     } else None
+  }
+  
+  def insertMetaData(dataSet: DataSet, metaData: MetaData) = {
+      val newMissions = metaData.missions.filterNot(Mission.hasAlreadyBeenInserted)
+      insertMissions(newMissions)     
+      insertDataLayers(dataSet, metaData.dataLayerSettings.dataLayers)
+      Logger.info(s"${dataSet.name}: Inserted ${newMissions.size} new missions and updated DataLayers ${metaData.dataLayerSettings.dataLayers.keys}.")
+  }
+  
+  def insertMissions(missions: List[Mission]) = {
+    missions.foreach(Mission.insertOne)
+  }
+  
+  def insertDataLayers(dataSet: DataSet, newDataLayers: Map[String, DataLayer]) = {
+    DataSet.updateOrCreate(dataSet.copy(dataLayers = newDataLayers))
   }
 
 }

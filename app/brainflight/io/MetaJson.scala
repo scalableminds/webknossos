@@ -14,12 +14,12 @@ import net.liftweb.common.Box
 
 
 case class DataLayerSettings(dataSetName: String, dataLayers: Map[String, DataLayer])
-case class MetaJson(dataLayerSettings: DataLayerSettings, missions: List[Mission])
+case class MetaData(dataLayerSettings: DataLayerSettings, missions: List[Mission])
 
 object MetaJsonHandler extends BoxImplicits{
 
   def parseSettings(js: JsObject) = {
-    Logger.info("MissionJsonParser->parseSettings: about to parse")
+    Logger.trace("MissionJsonParser->parseSettings: about to parse")
     for {
       settingsObj <- (js \ "settings").asOpt[JsObject]
       dataSetName <- (settingsObj \ "dataset").asOpt[String]
@@ -36,7 +36,6 @@ object MetaJsonHandler extends BoxImplicits{
       }
       
       val dataLayers = Map(ColorLayer.identifier -> colorLayer) ++ segmentationLayer ++ classificationLayer
-      Logger.info(dataLayers.mkString)
       DataLayerSettings(dataSetName, dataLayers)
     }
   }
@@ -47,37 +46,26 @@ object MetaJsonHandler extends BoxImplicits{
     } yield {missions.map(_.copy(dataSetName = associatedDataSet))}
   }
 
-  def parse(js: JsValue): Option[MetaJson] = {
+  def parse(js: JsValue): Option[MetaData] = {
     for {
       jsObj <- js.asOpt[JsObject]
       settings <- parseSettings(jsObj)
       missions <- parseMissions(jsObj, settings.dataSetName)
-    } yield MetaJson(settings, missions)
+    } yield MetaData(settings, missions)
   }
   
   def JsonFromFile(file: File) = Json.parse(Source.fromFile(file).getLines.mkString)
 
-  def insertMetaData(dataSetName: String): Box[String] = {
+  def extractMetaData(dataSetName: String): Box[MetaData] = {
     (for {
-      dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
+      dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages(s"$dataSetName: dataSet.notFound")
       missionData = new File(dataSet.baseDir + "/meta.json") 
       if missionData.exists()
-      MetaJson <- parse(JsonFromFile(missionData)) ?~ Messages("Meta.json parsing Error")
+      metaData <- parse(JsonFromFile(missionData)) ?~ Messages(s"$dataSetName: Meta.json parsing Error")
     } yield {    
-      
-      val newMissions = MetaJson.missions.filterNot(Mission.hasAlreadyBeenInserted)
-      insertMissions(newMissions)     
-      insertDataLayers(dataSet, MetaJson.dataLayerSettings.dataLayers)
-      
-      "Inserted %s new missions and updated DataLayers %s.".format(newMissions.size, MetaJson.dataLayerSettings.dataLayers.keys)
-    }) ?~ Messages("mission.metaFile.notFound") 
+      metaData
+    }) ?~ Messages(s"$dataSetName: meta.json not found") 
   }
   
-  def insertMissions(missions: List[Mission]) = {
-    missions.foreach(Mission.insertOne)
-  }
-  
-  def insertDataLayers(dataSet: DataSet, newDataLayers: Map[String, DataLayer]) = {
-    DataSet.updateOrCreate(dataSet.copy(dataLayers = newDataLayers))
-  }
+
 }

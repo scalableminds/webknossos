@@ -33,6 +33,7 @@ GET     /login/tw                           controllers.login.TwitterLogin.login
 # User settings
 POST    /user/configuration                 controllers.UserController.saveSettings
 GET     /user/configuration                 controllers.UserController.showSettings
+GET     /user/configuration/default         controllers.UserController.defaultSettings
 
 # Binary Data
 

@@ -22,7 +22,8 @@ object Application extends Controller with Secured {
         controllers.admin.routes.javascript.LevelCreator.listAssets,
         controllers.admin.routes.javascript.LevelCreator.retrieveAsset,
         controllers.admin.routes.javascript.NMLIO.upload,
-        controllers.routes.javascript.BinaryData.arbitraryViaAjax
+        controllers.routes.javascript.BinaryData.arbitraryViaAjax,
+        controllers.routes.javascript.UserController.defaultSettings
       )).as("text/javascript")
   }
 

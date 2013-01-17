@@ -58,4 +58,9 @@ object UserController extends Controller with Secured {
     implicit request =>
       Ok(toJson(request.user.configuration.settingsOrDefaults))
   }
+  
+  def defaultSettings = Authenticated {
+    implicit request =>
+      Ok(toJson(UserConfiguration.defaultConfiguration.settings))
+  }
 }

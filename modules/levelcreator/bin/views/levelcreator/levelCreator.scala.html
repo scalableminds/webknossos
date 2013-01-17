@@ -30,13 +30,14 @@
         <h3>Editor</h3>
         @helper.form(action = controllers.levelcreator.routes.LevelCreator.submitCode(level.id)) {
 
-        <input type="submit" value="Save" class="btn btn-primary"/>
-        <input type="hidden" name="code" />
-        <input type="hidden" name="use" value="1" />
+          <input type="submit" value="Save" class="btn btn-primary"/>
+          <a href="@controllers.admin.routes.LevelCreator.produce(level.id)" class="btn" data-ajax><i class="icon-retweet"></i> Produce</a>
+          <input type="hidden" name="code" />
+          <input type="hidden" name="use" value="1" />
 
-        <div class="editor-wrapper">
-          <div id="editor">@level.code</div>
-        </div>
+          <div class="editor-wrapper">
+            <div id="editor">@level.code</div>
+          </div>
         }
 
       </div>

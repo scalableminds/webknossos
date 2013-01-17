@@ -28,7 +28,7 @@ class ResultBox[T <: Result](b: Box[T]) {
     case Failure(msg, _, _) =>
       new JsonResult(BAD_REQUEST)(msg)
     case Empty =>
-      new JsonResult(NOT_FOUND)("Couldn't found the requested ressource.")
+      new JsonResult(NOT_FOUND)("Couldn't find the requested ressource.")
   }
 }
 

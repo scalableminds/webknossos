@@ -120,14 +120,18 @@ class Route
     for branchPoint in @branchStack
       result.branchPoints.push({id : branchPoint.id})
     result.editPosition = @flycam.getGlobalPos()
-    result.comments = @comments
-    result.trees = []
+    #result.comments = @comments
+    result.trees = @buildTreesList()
+    return result
+
+  buildTreesList : ->
+    trees = []
     for tree in @trees
       # Don't save empty trees (id is null)
       if tree.nodes.length
         nodes = tree.nodes
         treeObj = {}
-        result.trees.push(treeObj)
+        trees.push(treeObj)
         treeColor = new THREE.Color(tree.color)
         treeObj.color = [treeColor.r, treeColor.g, treeColor.b, 1]
         treeObj.edges = []
@@ -140,19 +144,21 @@ class Route
         treeObj.nodes = []
         # Get Nodes
         for node in nodes
-          treeObj.nodes.push({
+          nodeObj = {
             id : node.id
             position : node.pos
             radius : node.radius
+            comment : ""
             # TODO: Those are dummy values
             viewport : 0
             timestamp : node.time
             resolution : 0
-          })
-
-#    console.log "NML-Objekt"
-#    console.log result
-    return result
+          }
+          for comment in @comments
+            if comment.node == nodeObj.id
+              nodeObj.comment = comment.content
+          treeObj.nodes.push(nodeObj)
+    return trees
 
 
   push : ->

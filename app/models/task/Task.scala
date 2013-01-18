@@ -225,7 +225,7 @@ object Task extends BasicDAO[Task]("tasks") {
       task <- tracing.task
       training <- task.training
     } yield {
-      user.addExperience(training.domain, training.gain)
+      user.increaseExperience(training.domain, training.gain)
     }) getOrElse user
   }
 

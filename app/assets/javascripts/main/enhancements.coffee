@@ -18,6 +18,7 @@ $ ->
     
     event.preventDefault()
     $this = $(this)
+    $form = $this.parents("form").first()
 
     options = {}
     for action in $this.data("ajax").split(",")
@@ -32,15 +33,16 @@ $ ->
       return unless confirm("Are you sure?")
 
     if options["submit"]
-      $form = $this.parents("form")
-      unless $form[0].checkValidity()
-        $form.find(":input")
-          .filter( -> not this.checkValidity() )
-          .each( ->
+      $validationGroup = $this.parents("form, [data-validation-group]").first()
+      isValid = true
+      $validationGroup.find(":input")
+        .each( ->
+          unless this.checkValidity()
+            isValid = false
             Toast.error( $(this).data("invalid-message") || this.validationMessage )
-          )
-        return
-      ajaxOptions["type"] = $form[0].method ? "POST"
+        )
+      return unless isValid
+      ajaxOptions["type"] = options.method ? $form[0].method ? "POST"
       ajaxOptions["data"] = $form.serialize()
 
 

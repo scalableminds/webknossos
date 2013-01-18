@@ -22,13 +22,15 @@ class StateLogger
       action : action
       value : value
     })
+    @push()
 
   #### TREES
 
   treeObject : (tree) ->
+    treeColor = new THREE.Color(tree.color)
     return {
       id: tree.treeId
-      color: tree.color
+      color: [treeColor.r, treeColor.g, treeColor.b, 1]
       }
 
   createTree : (tree) ->
@@ -42,14 +44,15 @@ class StateLogger
       id: tree.treeId
       })
 
-  moveTree : (sourceTree, targetTree) ->
+  mergeTree : (sourceTree, targetTree, lastNodeId, activeNodeId) ->
     # Copy all edges and nodes from sourceTree to
     # targetTree, while leaving targetTree's properties
     # unchanged. Then, delete sourceTree.
-    @pushDiff("moveTree", {
+    @pushDiff("mergeTree", {
         sourceId : sourceTree.treeId
         targetId : targetTree.treeId
       })
+    @createEdge(lastNodeId, activeNodeId, targetTree.treeId)
 
   #### NODES and EDGED
 
@@ -89,7 +92,7 @@ class StateLogger
       })
 
   createEdge : (source, target, treeId) ->
-    # used when edges are set manualle, e.g. for merging trees
+    # used when edges are set manually, e.g. for merging trees
     @pushDiff("createEdge", {
       treeId : treeId
       source : source

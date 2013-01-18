@@ -193,7 +193,8 @@ class Route
       @pushBranch()
     @lastActiveNodeId = @activeNode.id
     @doubleBranchPop = false
-    @stateLogger.push()
+
+    @stateLogger.createNode(point, @activeTree.treeId)
     
     @trigger("newNode")
 
@@ -231,7 +232,8 @@ class Route
     if @activeNode
       @activeNode.radius = radius
       @lastRadius = radius
-    @stateLogger.push()
+
+    @stateLogger.updateNode(@activeNode, @activeTree.treeId)
 
     @trigger("newActiveNodeRadius", radius)
 
@@ -262,6 +264,7 @@ class Route
           @comments.splice(i, 1)
           break
       @comments.push({node: @activeNode.id, content: commentText})
+      @stateLogger.push()
 
   getComment : (nodeID) ->
     unless nodeID? then nodeID = @activeNode.id if @activeNode?
@@ -273,7 +276,7 @@ class Route
     for i in [0...@comments.length]
       if(@comments[i].node == nodeID)
         @comments.splice(i, 1)
-        return
+        @stateLogger.push()
 
   nextCommentNodeID : (forward) ->
     unless @activeNode?
@@ -323,7 +326,8 @@ class Route
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null
-    @stateLogger.push()
+
+    @stateLogger.createTree(tree)
 
     @trigger("newTree", tree.treeId, tree.color)
 
@@ -337,12 +341,14 @@ class Route
     @activeTree.removeNode(@activeNode.id)
 
     deletedNode = @activeNode
+    @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
     if deletedNode.type == TYPE_BRANCH
       @deleteBranch(deletedNode.id)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree
+      # TODO: Handle with stateLogger
       newTrees = []
       @trigger("removeSpheresOfTree", @activeTree.nodes.concat(deletedNode))
       for i in [0...@activeNode.neighbors.length]
@@ -363,8 +369,6 @@ class Route
       @trigger("deleteActiveNode", deletedNode)
     else
       @deleteTree(false)
-    
-    @stateLogger.push()
 
   deleteTree : (notify, id, deleteBranches) ->
     unless @activeNode?
@@ -403,7 +407,7 @@ class Route
     else
       # just set the last tree to be the active one
       @setActiveTree(@trees[@trees.length - 1].treeId)
-    @stateLogger.push()
+    @stateLogger.deleteTree(tree)
 
     @trigger("deleteTree", index)
 
@@ -414,7 +418,8 @@ class Route
         @activeTree.nodes = @activeTree.nodes.concat(lastTree.nodes)
         @activeNode.appendNext(lastNode)
         lastNode.appendNext(@activeNode)
-        @stateLogger.push()
+        
+        @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
         @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
 

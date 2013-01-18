@@ -76,7 +76,7 @@ case class Tracing(
 
   def addTree(tree: DBTree) = this.copy(_trees = tree._id :: _trees)
 
-  def removeTree(tree: DBTree) = this.copy(_trees = tree._id :: _trees)
+  def removeTree(tree: DBTree) = this.copy(_trees = _trees.filterNot(_ == tree._id))
 
   /**
    * State modifications

@@ -76,6 +76,7 @@ case class DeleteNode(value: JsObject) extends TracingUpdate {
     val treeId = (value \ "treeId").as[Int]
     t.tree(treeId).map { tree =>
       DBTree.deleteNode(nodeId, tree._id)
+      DBTree.deleteEdgesOfNode(nodeId, tree._id)
     }
     t
   }

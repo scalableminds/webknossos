@@ -28,8 +28,8 @@ class Gui
     modelRadius = @model.route.getActiveNodeRadius()
     @qualityArray = ["high", "medium", "low"]
 
-    datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
-    @datasetPosition = @initDatasetPosition(data.briConNames, datasetPostfix)
+    @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
+    @datasetPosition = @initDatasetPosition(data.briConNames)
     
     @settings = 
       
@@ -45,6 +45,7 @@ class Gui
       briConNames : data.briConNames
       brightness : data.brightness[@datasetPosition]
       contrast : data.contrast[@datasetPosition]
+      resetBrightnessAndContrast : => @resetBrightnessAndContrast()
       interpolation : data.interpolation
       quality : @qualityArray[data.quality]
 
@@ -67,7 +68,7 @@ class Gui
 
     if @datasetPosition == 0
       # add new dataset to settings
-      @model.user.briConNames.push(datasetPostfix)
+      @model.user.briConNames.push(@datasetPostfix)
       @model.user.brightness.push(@settings.brightness)
       @model.user.contrast.push(@settings.contrast)
       @dataSetPosition = data.briConNames.size - 1
@@ -105,14 +106,18 @@ class Gui
     (fView.add @settings, "fourBit")
                           .name("4 Bit")
                           .onChange(@set4Bit)
+    @brightnessController =
     (fView.add @settings, "brightness", -256, 256) 
                           .step(5)
                           .name("Brightness")    
                           .onChange(@setBrightnessAndContrast)
+    @contrastController =
     (fView.add @settings, "contrast", 0.5, 5) 
                           .step(0.1)
                           .name("Contrast")    
                           .onChange(@setBrightnessAndContrast)
+    (fView.add @settings, "resetBrightnessAndContrast")
+                          .name("Reset To Default")
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
                           .onChange(@setInterpolation)
@@ -222,10 +227,10 @@ class Gui
         return
     @updateGlobalPosition(@flycam.getGlobalPos())
 
-  initDatasetPosition : (briConNames, datasetPostfix) ->
+  initDatasetPosition : (briConNames) ->
 
     for i in [0...briConNames.length]
-      if briConNames[i] == datasetPostfix
+      if briConNames[i] == @datasetPostfix
         datasetPosition = i
     unless datasetPosition
       # take default values
@@ -270,6 +275,20 @@ class Gui
     @model.user.brightness[@datasetPosition] = (Number) @settings.brightness
     @model.user.contrast[@datasetPosition] = (Number) @settings.contrast
     @model.user.push()
+
+  resetBrightnessAndContrast : =>
+    Request.send(
+      url : "/user/configuration/default"
+      dataType : "json"
+    ).done (defaultData) =>
+      defaultDatasetPosition = @initDatasetPosition(defaultData.briConNames)
+
+      @settings.brightness = defaultData.brightness[defaultDatasetPosition]
+      @settings.contrast = defaultData.contrast[defaultDatasetPosition]
+      @setBrightnessAndContrast()
+      @brightnessController.updateDisplay()
+      @contrastController.updateDisplay()
+
 
   setQuality : (value) =>
     for i in [0..(@qualityArray.length - 1)]

@@ -1,9 +1,10 @@
-package models.graph
+package nml
 
 import xml.XMLWrites
 import play.api.libs.json.Format
 import play.api.libs.json.Json
 import play.api.libs.json.JsValue
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
 
 case class Comment(node: Int, content: String)
 

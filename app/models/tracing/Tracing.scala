@@ -10,8 +10,8 @@ import play.api.libs.json.Json
 import xml.Xml
 import xml.XMLWrites
 import models.binary.DataSet
-import models.graph.Tree.TreeFormat
-import models.graph.Comment
+import DBTree.DBTreeFormat
+import nml.Comment
 import models.graph._
 import models.user.User
 import play.api.libs.json.Reads
@@ -22,15 +22,15 @@ import java.util.Date
 import com.mongodb.casbah.query._
 import models.tracing.TracingState._
 import nml.NMLParser
-import net.liftweb.json._
-import net.liftweb.json.Serialization.write
 import models.task._
 import models.basics._
+import nml._
+import play.api.Logger
 
 case class Tracing(
     _user: ObjectId,
     dataSetName: String,
-    trees: List[Tree],
+    _trees: List[ObjectId],
     branchPoints: List[BranchPoint],
     timestamp: Long,
     activeNodeId: Int,
@@ -65,9 +65,18 @@ case class Tracing(
   /**
    * Tree modification
    */
-  def tree(treeId: Int) = trees.find(_.id == treeId)
+  def trees = {
+    val trees = _trees.flatMap(treeOid => DBTree.findOneById(treeOid))
+    if (trees.size != _trees.size)
+      Logger.error("Trees are incomplete!")
+    trees
+  }
 
-  def updateTree(tree: Tree) = this.copy(trees = tree :: trees.filter(_.id == tree.id))
+  def tree(treeId: Int) = DBTree.findOneWithTreeId(_trees, treeId)
+
+  def addTree(tree: DBTree) = this.copy(_trees = tree._id :: _trees)
+
+  def removeTree(tree: DBTree) = this.copy(_trees = tree._id :: _trees)
 
   /**
    * State modifications
@@ -79,12 +88,12 @@ case class Tracing(
       review = if (this.review.isEmpty) Nil else review.tail)
 
   def asReviewFor(training: Tracing, user: User) = {
+    val trees = DBTree.createUniqueIds(training.trees ::: this.trees).map(DBTree.deepCopy)
     this.copy(
       _id = new ObjectId,
       _user = user._id,
       state = TracingState.Assigned,
-      trees =
-        NMLParser.createUniqueIds(training.trees ::: this.trees),
+      _trees = trees.map(_._id),
       timestamp = System.currentTimeMillis,
       tracingType = TracingType.Review)
   }
@@ -126,10 +135,22 @@ case class Tracing(
 
 object Tracing extends BasicDAO[Tracing]("tracings") {
 
+  def executeUpdateFromJson(js: JsValue, tracing: Tracing): Option[Tracing] = {
+    try {
+      val updater = js.as[TracingUpdate]
+      Some(updater.executeUpdate(tracing))
+    } catch {
+      case e: java.lang.RuntimeException =>
+        Logger.error("Invalid json: " + e)
+        None
+    }
+  }
+
   def createTracingFor(user: User, task: Task) = {
+    val tree = DBTree.createEmptyTree
     insertOne(Tracing(user._id,
       task.dataSetName,
-      List(Tree.empty),
+      List(tree._id),
       Nil,
       System.currentTimeMillis,
       1,
@@ -139,6 +160,21 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       tracingType =
         if (task.isTraining) TracingType.Training
         else TracingType.Task))
+  }
+
+  def createFromNMLFor(user: User, nml: NML, tracingType: TracingType.Value) = {
+    val trees = nml.trees.map(t => DBTree.insertOne(t))
+    insertOne(Tracing(
+      user._id,
+      nml.dataSetName,
+      trees.map(_._id),
+      nml.branchPoints,
+      nml.timeStamp,
+      nml.activeNodeId,
+      nml.scale,
+      nml.editPosition,
+      nml.comments,
+      tracingType = tracingType))
   }
 
   override def remove(tracing: Tracing) = {
@@ -162,9 +198,10 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
   }
 
   def createTracingFor(u: User, d: DataSet = DataSet.default) = {
+    val tree = DBTree.createEmptyTree
     insertOne(Tracing(u._id,
       d.name,
-      List(Tree.empty),
+      List(tree._id),
       Nil,
       System.currentTimeMillis,
       1,
@@ -172,7 +209,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       Point3D(0, 0, 0),
       tracingType = TracingType.Explorational))
   }
-  
+
   def findTrainingForReviewTracing(tracing: Tracing) = {
     findOne(MongoDBObject("review.reviewTracing" -> tracing._id))
   }
@@ -181,10 +218,10 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "taskId" -> MongoDBObject("$exists" -> isExploratory)))
 
   def findOpenTrainingFor(user: User) =
-    findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "tracingType" -> "Training"))    
-    
+    findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "tracingType" -> "Training"))
+
   def hasOpenTracing(user: User, isExploratory: Boolean) =
-    findOpenTracingFor(user, isExploratory).isDefined 
+    findOpenTracingFor(user, isExploratory).isDefined
 
   def findFor(u: User) = {
     find(MongoDBObject("_user" -> u._id)).toList
@@ -224,8 +261,8 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       }) getOrElse (<error>DataSet not fount</error>)
     }
   }
-  
-  implicit object TracingFormat extends Format[Tracing] {
+
+  implicit object TracingWrites extends Writes[Tracing] {
     val ID = "id"
     val VERSION = "version"
     val TREES = "trees"
@@ -238,14 +275,14 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     def writes(e: Tracing) = Json.obj(
       ID -> e.id,
       VERSION -> e.version,
-      TREES -> e.trees.map(TreeFormat.writes),
+      TREES -> e.trees.map(DBTreeFormat.writes),
       ACTIVE_NODE -> e.activeNodeId,
       BRANCH_POINTS -> e.branchPoints,
       SCALE -> e.scale,
       COMMENTS -> e.comments,
       EDIT_POSITION -> e.editPosition)
 
-    def reads(js: JsValue): Tracing = {
+    /*def reads(js: JsValue): Tracing = {
 
       val id = (js \ ID).as[String]
       val version = (js \ VERSION).as[Int]
@@ -260,6 +297,6 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
         case _ =>
           throw new RuntimeException("Valid tracing id expected")
       }
-    }
+    }*/
   }
 }

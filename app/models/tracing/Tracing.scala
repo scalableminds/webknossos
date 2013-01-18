@@ -74,7 +74,10 @@ case class Tracing(
 
   def tree(treeId: Int) = DBTree.findOneWithTreeId(_trees, treeId)
 
-  def addTree(tree: DBTree) = this.copy(_trees = tree._id :: _trees)
+  def addTree(tree: DBTree) = {
+    // TODO: ensure unique ids for nodes
+    this.copy(_trees = tree._id :: _trees)
+  }
 
   def removeTree(tree: DBTree) = this.copy(_trees = _trees.filterNot(_ == tree._id))
 
@@ -135,10 +138,10 @@ case class Tracing(
 
 object Tracing extends BasicDAO[Tracing]("tracings") {
 
-  def executeUpdateFromJson(js: JsValue, tracing: Tracing): Option[Tracing] = {
+  def createUpdateFromJson(js: JsValue): Option[TracingUpdate] = {
     try {
-      val updater = js.as[TracingUpdate]
-      Some(updater.executeUpdate(tracing))
+      val updater = js.as[TracingUpdater]
+      Some(updater.createUpdate())
     } catch {
       case e: java.lang.RuntimeException =>
         Logger.error("Invalid json: " + e)

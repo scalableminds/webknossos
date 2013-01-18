@@ -6,7 +6,7 @@ import models.tracing.Tracing
 import models.Color
 import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
-import scala.xml.{ Node => XMLNode } 
+import scala.xml.{ Node => XMLNode }
 import scala.xml.NodeSeq
 import play.api.Logger
 import java.io.File
@@ -15,7 +15,7 @@ import models.user.User
 import com.sun.org.apache.xerces.internal.impl.io.MalformedByteSequenceException
 
 object NMLParser {
-  
+
   def createUniqueIds(trees: List[Tree]) = {
     trees.foldLeft(List[Tree]()) { (l, t) =>
       if (l.isEmpty || l.find(_.treeId == t.treeId).isEmpty)
@@ -38,7 +38,7 @@ class NMLParser(file: File) {
   val DEFAULT_TIMESTAMP = 0
 
   def parse: Seq[NML] = {
-    try{
+    try {
       val data = XML.loadFile(file)
       for {
         parameters <- (data \ "parameters")
@@ -48,7 +48,8 @@ class NMLParser(file: File) {
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
         val editPosition = parseEditPosition(parameters \ "editPosition")
         val time = parseTime(parameters \ "time")
-        val trees = verifyTrees((data \ "thing").flatMap(parseTree).toList)
+        val parsedTrees = parseTrees((data \ "thing"))
+        val trees = verifyTrees(parsedTrees.toList)
         val comments = parseComments(data \ "comments").toList
         val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
         NML(dataSetName, trees, branchPoints.toList, time, activeNodeId, scale, editPosition, comments)
@@ -89,6 +90,18 @@ class NMLParser(file: File) {
       components ::= component
     }
     components
+  }
+
+  def parseTrees(nodes: NodeSeq) = {
+    nodes.foldLeft((0, List[Tree]())) {
+      case ((nextNodeId, trees), xml) =>
+        parseTree(xml, nextNodeId) match {
+          case Some(tree) =>
+            (nextNodeId + tree.nodes.size, tree :: trees)
+          case _ =>
+            (nextNodeId, trees)
+        }
+    }._2
   }
 
   def parseDataSetName(node: NodeSeq) = {
@@ -141,13 +154,11 @@ class NMLParser(file: File) {
     }) getOrElse (DEFAULT_COLOR)
   }
 
-  def parseTree(tree: XMLNode): Option[Tree] = {
-    (for {
-      id <- ((tree \ "@id").text).toIntOpt
-    } yield {
+  def parseTree(tree: XMLNode, nextNodeId: Int): Option[Tree] = {
+    ((tree \ "@id").text).toIntOpt.flatMap { id =>
       val color = parseColor(tree)
       Logger.trace("Parsing tree Id: %d".format(id))
-      val nodes = (tree \ "nodes" \ "node").flatMap(parseNode).toMap
+      val nodes = (tree \ "nodes" \ "node").flatMap(parseNode(nextNodeId)).toMap
 
       val edges = (tree \ "edges" \ "edge").flatMap(parseEdge(nodes)).toList
 
@@ -155,9 +166,9 @@ class NMLParser(file: File) {
         Some(Tree(id, nodes.values.toList, edges, color))
       else
         None
-    }).flatMap(x => x)
+    }
   }
-  
+
   def parseComments(comments: NodeSeq) = {
     for {
       comment <- comments \ "comment"
@@ -176,12 +187,14 @@ class NMLParser(file: File) {
     treeNodes.find(node => !childNodes.contains(node)).map(_._2)
   }
 
-  def parseEdge(treeNodes: Map[Int, Node])(edge: XMLNode) = {
+  def parseEdge(nodeMapping: Map[Int, Node])(edge: XMLNode) = {
     for {
       source <- ((edge \ "@source").text).toIntOpt
       target <- ((edge \ "@target").text).toIntOpt
+      mappedSource <- nodeMapping.get(source)
+      mappedTarget <- nodeMapping.get(target)
     } yield {
-      Edge(source, target)
+      Edge(mappedSource.id, mappedTarget.id)
     }
   }
 
@@ -197,7 +210,8 @@ class NMLParser(file: File) {
     ((node \ "@time").text).toIntOpt.getOrElse(DEFAULT_TIMESTAMP)
   }
 
-  def parseNode(node: XMLNode) = {
+  def parseNode(startNodeId: Int)(node: XMLNode) = {
+    var nextId = startNodeId
     for {
       id <- ((node \ "@id").text).toIntOpt
       radius <- ((node \ "@radius").text).toFloatOpt
@@ -206,7 +220,8 @@ class NMLParser(file: File) {
       val viewport = parseViewport(node)
       val resolution = parseResolution(node)
       val timestamp = parseTimestamp(node)
-      (id -> Node(id, radius, position, viewport, resolution, timestamp))
+      nextId += 1
+      (id -> Node(nextId - 1, radius, position, viewport, resolution, timestamp))
     }
   }
 }

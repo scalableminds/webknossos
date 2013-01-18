@@ -67,7 +67,7 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
   }
 
   def updateNode(node: Node, treeOid: ObjectId) = {
-    nodes.update(MongoDBObject("_treeId" -> treeOid, "node.id" -> node.id), MongoDBObject( "$set" -> MongoDBObject(
+    nodes.update(MongoDBObject("_treeId" -> treeOid, "node.id" -> node.id), MongoDBObject("$set" -> MongoDBObject(
       "node" -> MongoDBObject(
         "id" -> node.id,
         "radius" -> node.radius,
@@ -75,6 +75,21 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
         "viewport" -> node.viewport,
         "resolution" -> node.resolution,
         "timestamp" -> node.timestamp))), false, false)
+  }
+
+  def moveNode(nodeId: Int, sourceOid: ObjectId, targetOid: ObjectId) = {
+    nodes.update(MongoDBObject("_treeId" -> sourceOid, "node.id" -> nodeId), MongoDBObject("$set" -> MongoDBObject(
+      "_treeId" -> targetOid)))
+  }
+  
+  def moveAllNodes(sourceOid: ObjectId, targetOid: ObjectId) = {
+    nodes.update(MongoDBObject("_treeId" -> sourceOid), MongoDBObject("$set" -> MongoDBObject(
+      "_treeId" -> targetOid)))
+  }
+
+  def moveAllEdges(sourceOid: ObjectId, targetOid: ObjectId) = {
+    edges.update(MongoDBObject("_treeId" -> sourceOid), MongoDBObject("$set" -> MongoDBObject(
+      "_treeId" -> targetOid)))
   }
   
   def insertEdge(edge: Edge, treeOid: ObjectId) = {
@@ -84,13 +99,13 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
   def deleteEdge(edge: Edge, treeOid: ObjectId) = {
     edges.remove(MongoDBObject("_treeId" -> treeOid, "edge.source" -> edge.source, "edge.target" -> edge.target))
   }
-  
+
   def deleteEdgesOfNode(nodeId: Int, treeOid: ObjectId) = {
     edges.remove(MongoDBObject("_treeId" -> treeOid, "$or" -> MongoDBList(
-        MongoDBObject("edge.source" -> nodeId),
-        MongoDBObject("edge.target" -> nodeId))))
+      MongoDBObject("edge.source" -> nodeId),
+      MongoDBObject("edge.target" -> nodeId))))
   }
- 
+
   // TODO: remove code duplication -> NMLParser.createUniqueIds
   def createUniqueIds(trees: List[DBTree]) = {
     trees.foldLeft(List[DBTree]()) { (l, t) =>

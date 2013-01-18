@@ -97,10 +97,13 @@ class StateLogger
       })
 
   concatUpdateTracing : (array) ->
+    branchPoints = []
+    for branchPoint in @route.branchStack
+      branchPoints.push({id : branchPoint.id})
     return array.concat( {
       action : "updateTracing"
       value : {
-        branchPoints : @route.branchPoints
+        branchPoints : branchPoints
         comments : @route.comments
         activeNodeId : @route.getActiveNodeId()
         editPosition : @flycam.getGlobalPos()
@@ -120,7 +123,7 @@ class StateLogger
     @pushDebounced = _.throttle(_.mutexDeferred( saveFkt, -1), PUSH_THROTTLE_TIME)
     @pushDebounced()
 
-  pushNow :->   # Interface for view & controller 
+  pushNow : ->   # Interface for view & controller 
     return @pushImpl(false)
 
   pushImpl : (notifyOnFailure) ->
@@ -138,7 +141,7 @@ class StateLogger
     console.log "Sending data: ", data
 
     Request.send(
-      url : "/tracing/#{@dataId}?version=#{@version}"
+      url : "/tracing/#{@dataId}?version=#{(@version + 1)}"
       method : "PUT"
       data : data
       contentType : "application/json"

@@ -14,6 +14,7 @@ import play.api.libs.json.Json
 import nml.Tree
 import nml.Node
 import nml.Edge
+import com.mongodb.casbah.commons.MongoDBList
 
 case class DBTree(treeId: Int, color: Color, _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree] {
   val dao = DBTree
@@ -47,9 +48,11 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
   def insertOne(t: Tree): DBTree = {
     val tree = insertOne(DBTree.createFrom(t))
     t.nodes.map { n =>
-      nodes.insert(DBNode.createFrom(n, tree._id))
+      println("inserting NODE")
+      println(nodes.insert(DBNode.createFrom(n, tree._id)))
     }
     t.edges.map { e =>
+      println("inserting EDGE")
       edges.insert(DBEdge.createFrom(e, tree._id))
     }
     tree
@@ -80,6 +83,12 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
 
   def deleteEdge(edge: Edge, treeOid: ObjectId) = {
     edges.remove(MongoDBObject("_treeId" -> treeOid, "edge.source" -> edge.source, "edge.target" -> edge.target))
+  }
+  
+  def deleteEdgesOfNode(nodeId: Int, treeOid: ObjectId) = {
+    edges.remove(MongoDBObject("_treeId" -> treeOid, "$or" -> MongoDBList(
+        MongoDBObject("edge.source" -> nodeId),
+        MongoDBObject("edge.target" -> nodeId))))
   }
  
   // TODO: remove code duplication -> NMLParser.createUniqueIds

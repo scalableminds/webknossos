@@ -28,6 +28,7 @@ object NMLIO extends Controller with Secured {
     request.body.file("nmlFile").flatMap { nmlFile =>
       (new NMLParser(nmlFile.ref.file).parse)
         .map { nml =>
+          println("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
           Logger.debug("Successfully parsed nmlFile")
           val tracing = Tracing.createFromNMLFor(request.user, nml, TracingType.Explorational)
           UsedTracings.use(request.user, tracing)

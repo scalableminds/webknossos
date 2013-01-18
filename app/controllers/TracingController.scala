@@ -113,7 +113,7 @@ object TracingController extends Controller with Secured {
                 case (x,_) => x
               } match {
                 case Some(tracing) =>
-                  Tracing.save(tracing.copy(timestamp = System.currentTimeMillis, version = version + 1))
+                  Tracing.save(tracing.copy(timestamp = System.currentTimeMillis, version = version))
                   TimeTracking.logUserAction(request.user, tracing)
                   AjaxOk.success(Json.obj("version" -> (version + 1)), "tracing.saved")
                 case _ =>

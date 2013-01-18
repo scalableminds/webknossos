@@ -11,6 +11,7 @@ object TracingUpdate {
         case "createTree"    => CreateTree(value)
         case "deleteTree"    => DeleteTree(value)
         case "updateTree"    => UpdateTree(value)
+        case "mergeTree"     => MergeTree(value)
         case "createNode"    => CreateNode(value)
         case "deleteNode"    => DeleteNode(value)
         case "updateNode"    => UpdateNode(value)
@@ -54,6 +55,20 @@ case class UpdateTree(value: JsObject) extends TracingUpdate {
       tree.update(_.copy(color = color, treeId = id))
     }
     t
+  }
+}
+
+case class MergeTree(value: JsObject) extends TracingUpdate {
+  def executeUpdate(t: Tracing) = {
+    val sourceId = (value \ "sourceId").as[Int]
+    val targetId = (value \ "targetId").as[Int]
+    (for{
+      source <- t.tree(sourceId)
+      target <- t.tree(targetId)
+    } yield {
+      //tree.update(_.copy(color = color, treeId = id))
+      t.update(_.removeTree(source))
+    }) getOrElse t
   }
 }
 

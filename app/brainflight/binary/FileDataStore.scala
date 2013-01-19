@@ -24,7 +24,7 @@ class FileDataStore extends DataStore {
       try {
         val binaryStream =
           new FileInputStream(createFilename(dataInfo))
-        inputStreamToByteArray(binaryStream)
+        inputStreamToByteArray(binaryStream, dataInfo.bytesPerElement)
 
       } catch {
         case e: FileNotFoundException =>
@@ -36,8 +36,8 @@ class FileDataStore extends DataStore {
   /**
    *  Read file contents to a byteArray
    */
-  def inputStreamToByteArray(is: InputStream) = {
-    val byteArray = new Array[Byte](DataStore.blockSize)
+  def inputStreamToByteArray(is: InputStream, bytesPerElement: Int) = {
+    val byteArray = new Array[Byte](DataStore.blockSize * bytesPerElement)
     is.read(byteArray, 0, DataStore.blockSize)
     //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
     byteArray

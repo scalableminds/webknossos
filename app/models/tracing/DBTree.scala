@@ -15,6 +15,7 @@ import nml.Tree
 import nml.Node
 import nml.Edge
 import com.mongodb.casbah.commons.MongoDBList
+import com.mongodb.casbah.query.Implicits._
 
 case class DBTree(treeId: Int, color: Color, _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree] {
   val dao = DBTree
@@ -77,9 +78,28 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
         "timestamp" -> node.timestamp))), false, false)
   }
 
-  def moveNode(nodeId: Int, sourceOid: ObjectId, targetOid: ObjectId) = {
-    nodes.update(MongoDBObject("_treeId" -> sourceOid, "node.id" -> nodeId), MongoDBObject("$set" -> MongoDBObject(
-      "_treeId" -> targetOid)), false, false)
+  def moveTreeComponent(nodeIds: List[Int], sourceOid: ObjectId, targetOid: ObjectId) = {
+    nodes.update(
+      ("node.id" $in nodeIds) ++
+        ("_treeId" -> sourceOid),
+      MongoDBObject("$set" -> MongoDBObject(
+        "_treeId" -> targetOid)), false, true)
+
+    edges.update(
+      ("edge.source" $in nodeIds) ++
+        ("edge.target" $in nodeIds) ++
+        ("_treeId" -> sourceOid),
+      MongoDBObject("$set" -> MongoDBObject(
+        "_treeId" -> targetOid)), false, true)
+
+    edges.remove(
+      MongoDBObject(
+        "_treeId" -> sourceOid,
+        "$or" -> MongoDBList(
+          ("edge.source" $nin nodeIds) ++
+            ("edge.target" $in nodeIds),
+          ("edge.source" $in nodeIds) ++
+            ("edge.target" $nin nodeIds))))
   }
 
   def moveAllNodes(sourceOid: ObjectId, targetOid: ObjectId) = {
@@ -125,9 +145,9 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
       .limit(1)
       .toList
       .headOption
-      .map( _.node.id )
+      .map(_.node.id)
   }
-  
+
   def increaseNodeIds(tree: DBTree, inc: Int) = {
     nodes.update(MongoDBObject("_treeId" -> tree._id), MongoDBObject("$inc" -> MongoDBObject("node.id" -> inc)), false, true)
     edges.update(MongoDBObject("_treeId" -> tree._id), MongoDBObject("$inc" -> MongoDBObject("edge.source" -> inc, "edge.target" -> inc)), false, true)

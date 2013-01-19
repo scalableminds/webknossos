@@ -8,17 +8,17 @@ object TracingUpdater {
     def reads(js: JsValue) = {
       val value = (js \ "value").as[JsObject]
       (js \ "action").as[String] match {
-        case "createTree"    => CreateTree(value)
-        case "deleteTree"    => DeleteTree(value)
-        case "updateTree"    => UpdateTree(value)
-        case "mergeTree"     => MergeTree(value)
-        case "createNode"    => CreateNode(value)
-        case "deleteNode"    => DeleteNode(value)
-        case "updateNode"    => UpdateNode(value)
-        case "moveNode"      => MoveNode(value)
-        case "createEdge"    => CreateEdge(value)
-        case "deleteEdge"    => DeleteEdge(value)
-        case "updateTracing" => UpdateTracing(value)
+        case "createTree"        => CreateTree(value)
+        case "deleteTree"        => DeleteTree(value)
+        case "updateTree"        => UpdateTree(value)
+        case "mergeTree"         => MergeTree(value)
+        case "moveTreeComponent" => MoveTreeComponent(value)
+        case "createNode"        => CreateNode(value)
+        case "deleteNode"        => DeleteNode(value)
+        case "updateNode"        => UpdateNode(value)
+        case "createEdge"        => CreateEdge(value)
+        case "deleteEdge"        => DeleteEdge(value)
+        case "updateTracing"     => UpdateTracing(value)
       }
     }
   }
@@ -78,9 +78,27 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
       } yield {
         DBTree.moveAllNodes(source._id, target._id)
         DBTree.moveAllEdges(source._id, target._id)
-        
+
         t.update(_.removeTree(source))
       }) getOrElse t
+    }
+  }
+}
+
+case class MoveTreeComponent(value: JsObject) extends TracingUpdater {
+  import nml.Node
+  def createUpdate() = {
+    val nodeIds = (value \ "nodeIds").as[List[Int]]
+    val sourceId = (value \ "sourceId").as[Int]
+    val targetId = (value \ "targetId").as[Int]
+    TracingUpdate { t =>
+      for {
+        source <- t.tree(sourceId)
+        target <- t.tree(targetId)
+      } {
+        DBTree.moveTreeComponent(nodeIds, source._id, target._id)
+      }
+      t
     }
   }
 }
@@ -123,24 +141,6 @@ case class UpdateNode(value: JsObject) extends TracingUpdater {
       t.tree(treeId).map { tree =>
         DBTree.updateNode(node, tree._id)
       }
-      t
-    }
-  }
-}
-
-case class MoveNode(value: JsObject) extends TracingUpdater {
-  import nml.Node
-  def createUpdate() = {
-    val nodeId = (value \ "id").as[Int]
-    val sourceId = (value \ "sourceId").as[Int]
-    val targetId = (value \ "targetId").as[Int]
-    TracingUpdate { t =>
-      for {
-        source <- t.tree(sourceId)
-        target <- t.tree(targetId)
-      } {
-        DBTree.moveNode(nodeId, source._id, target._id)
-      } 
       t
     }
   }

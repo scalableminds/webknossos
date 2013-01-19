@@ -37,7 +37,7 @@ case class CreateTree(value: JsObject) extends TracingUpdater {
     val color = (value \ "color").as[Color]
     TracingUpdate { t =>
       val tree = DBTree.insertOne(DBTree(id, color))
-      t.update(_.addTree(tree))
+      t.update(_.addEmptyTree(tree))
     }
   }
 }

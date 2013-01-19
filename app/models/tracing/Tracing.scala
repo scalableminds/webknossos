@@ -73,11 +73,13 @@ case class Tracing(
   }
 
   def tree(treeId: Int) = DBTree.findOneWithTreeId(_trees, treeId)
-
-  def addTree(tree: DBTree) = {
-    // TODO: ensure unique ids for nodes
-    this.copy(_trees = tree._id :: _trees)
+  
+  def maxNodeId = {
+    DBTree.maxNodeId(this.trees)
   }
+  
+  def addEmptyTree(tree: DBTree) = 
+    this.copy(_trees = tree._id :: _trees)
 
   def removeTree(tree: DBTree) = this.copy(_trees = _trees.filterNot(_ == tree._id))
 
@@ -89,17 +91,6 @@ case class Tracing(
     this.copy(
       state = ReadyForReview,
       review = if (this.review.isEmpty) Nil else review.tail)
-
-  def asReviewFor(training: Tracing, user: User) = {
-    val trees = DBTree.createUniqueIds(training.trees ::: this.trees).map(DBTree.deepCopy)
-    this.copy(
-      _id = new ObjectId,
-      _user = user._id,
-      state = TracingState.Assigned,
-      _trees = trees.map(_._id),
-      timestamp = System.currentTimeMillis,
-      tracingType = TracingType.Review)
-  }
 
   def finishReview(comment: String) = {
     val alteredReview = this.review match {
@@ -148,6 +139,31 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
         None
     }
   }
+  
+  def createReviewFor(tracing: Tracing, training: Tracing, user: User) = {
+    val trees = Tracing.addTrees(tracing, training.trees).trees.map(DBTree.deepCopy)
+    tracing.copy(
+      _id = new ObjectId,
+      _user = user._id,
+      state = TracingState.Assigned,
+      _trees = trees.map(_._id),
+      timestamp = System.currentTimeMillis,
+      tracingType = TracingType.Review)
+  }
+  
+  def addTree(tracing: Tracing, tree: DBTree) = {
+    // TODO: ensure unique ids for nodes
+    tracing.maxNodeId.map{ maxId =>
+      DBTree.increaseNodeIds(tree, maxId)
+    }
+    tracing.update(_.copy(_trees = tree._id :: tracing._trees))
+  }
+  
+  def addTrees(tracing: Tracing, trees: List[DBTree]) = {
+    trees.foldLeft(tracing){
+      case (tracing, tree) => addTree(tracing, tree)
+    }
+  }
 
   def createTracingFor(user: User, task: Task) = {
     val tree = DBTree.createEmptyTree
@@ -194,7 +210,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       sampleId <- task.training.map(_.sample)
       sample <- Tracing.findOneById(sampleId)
     } yield {
-      val reviewTracing = sample.asReviewFor(trainingsTracing, user)
+      val reviewTracing = createReviewFor(sample, trainingsTracing, user)
       insertOne(reviewTracing)
       trainingsTracing.update(_.assignReviewer(user, reviewTracing))
     }

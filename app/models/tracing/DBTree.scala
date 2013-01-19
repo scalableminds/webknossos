@@ -79,19 +79,19 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
 
   def moveNode(nodeId: Int, sourceOid: ObjectId, targetOid: ObjectId) = {
     nodes.update(MongoDBObject("_treeId" -> sourceOid, "node.id" -> nodeId), MongoDBObject("$set" -> MongoDBObject(
-      "_treeId" -> targetOid)))
+      "_treeId" -> targetOid)), false, false)
   }
-  
+
   def moveAllNodes(sourceOid: ObjectId, targetOid: ObjectId) = {
     nodes.update(MongoDBObject("_treeId" -> sourceOid), MongoDBObject("$set" -> MongoDBObject(
-      "_treeId" -> targetOid)))
+      "_treeId" -> targetOid)), false, true)
   }
 
   def moveAllEdges(sourceOid: ObjectId, targetOid: ObjectId) = {
     edges.update(MongoDBObject("_treeId" -> sourceOid), MongoDBObject("$set" -> MongoDBObject(
-      "_treeId" -> targetOid)))
+      "_treeId" -> targetOid)), false, true)
   }
-  
+
   def insertEdge(edge: Edge, treeOid: ObjectId) = {
     edges.insert(DBEdge(edge, treeOid))
   }
@@ -116,6 +116,21 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
         t.copy(treeId = alteredId) :: l
       }
     }
+  }
+
+  def maxNodeId(trees: List[DBTree]) = {
+    nodes
+      .find(MongoDBObject("$or" -> MongoDBList(trees.map(t => MongoDBObject("_treeId" -> t._id)))))
+      .sort(MongoDBObject("node.id" -> -1))
+      .limit(1)
+      .toList
+      .headOption
+      .map( _.node.id )
+  }
+  
+  def increaseNodeIds(tree: DBTree, inc: Int) = {
+    nodes.update(MongoDBObject("_treeId" -> tree._id), MongoDBObject("$inc" -> MongoDBObject("node.id" -> inc)), false, true)
+    edges.update(MongoDBObject("_treeId" -> tree._id), MongoDBObject("$inc" -> MongoDBObject("edge.source" -> inc, "edge.target" -> inc)), false, true)
   }
 
   def createEmptyTree = {

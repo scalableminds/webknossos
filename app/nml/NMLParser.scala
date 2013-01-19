@@ -49,7 +49,7 @@ class NMLParser(file: File) {
         val editPosition = parseEditPosition(parameters \ "editPosition")
         val time = parseTime(parameters \ "time")
         val parsedTrees = parseTrees((data \ "thing"))
-        val trees = verifyTrees(parsedTrees.toList)
+        val trees = verifyTrees(parsedTrees)
         val comments = parseComments(data \ "comments").toList
         val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees))
         NML(dataSetName, trees, branchPoints.toList, time, activeNodeId, scale, editPosition, comments)
@@ -158,12 +158,20 @@ class NMLParser(file: File) {
     ((tree \ "@id").text).toIntOpt.flatMap { id =>
       val color = parseColor(tree)
       Logger.trace("Parsing tree Id: %d".format(id))
-      val nodes = (tree \ "nodes" \ "node").flatMap(parseNode(nextNodeId)).toMap
+      val (_,nodeMapping) = (tree \ "nodes" \ "node").foldLeft((nextNodeId, Map[Int, Node]())){
+        case ((nextNodeId, nodeMapping), nodeXml) =>
+          parseNode(nextNodeId)(nodeXml) match{
+            case Some(mapping) => 
+              (nextNodeId+1, nodeMapping + mapping)
+            case _ =>
+              (nextNodeId, nodeMapping)
+          }
+      }
 
-      val edges = (tree \ "edges" \ "edge").flatMap(parseEdge(nodes)).toList
+      val edges = (tree \ "edges" \ "edge").flatMap(parseEdge(nodeMapping)).toList
 
-      if (nodes.size > 0)
-        Some(Tree(id, nodes.values.toList, edges, color))
+      if (nodeMapping.size > 0)
+        Some(Tree(id, nodeMapping.values.toList, edges, color))
       else
         None
     }
@@ -210,8 +218,7 @@ class NMLParser(file: File) {
     ((node \ "@time").text).toIntOpt.getOrElse(DEFAULT_TIMESTAMP)
   }
 
-  def parseNode(startNodeId: Int)(node: XMLNode) = {
-    var nextId = startNodeId
+  def parseNode(nextNodeId: Int)(node: XMLNode) = {
     for {
       id <- ((node \ "@id").text).toIntOpt
       radius <- ((node \ "@radius").text).toFloatOpt
@@ -220,8 +227,7 @@ class NMLParser(file: File) {
       val viewport = parseViewport(node)
       val resolution = parseResolution(node)
       val timestamp = parseTimestamp(node)
-      nextId += 1
-      (id -> Node(nextId - 1, radius, position, viewport, resolution, timestamp))
+      (id -> Node(nextNodeId, radius, position, viewport, resolution, timestamp))
     }
   }
 }

@@ -91,6 +91,13 @@ class StateLogger
       id: node.id
       })
 
+  moveNode : (sourceId, targetId, id) ->
+    @pushDiff("moveNode", {
+      sourceId : sourceId
+      targetId : targetId
+      id : id
+      })
+
   createEdge : (source, target, treeId) ->
     # used when edges are set manually, e.g. for merging trees
     @pushDiff("createEdge", {

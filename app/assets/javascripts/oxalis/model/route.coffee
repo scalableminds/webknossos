@@ -363,9 +363,11 @@ class Route
         @activeNode = deletedNode.neighbors[i]
         newTrees.push(@activeTree)
 
-        for node in @activeTree.nodes
-          if @activeTree.treeId != oldActiveTreeId
-            @stateLogger.moveNode(oldActiveTreeId, @activeTree.treeId, node.id)
+        if @activeTree.treeId != oldActiveTreeId
+          nodeIds = []
+          for node in @activeTree.nodes
+            nodeIds.push(node.id)
+          @stateLogger.moveTreeComponent(oldActiveTreeId, @activeTree.treeId, nodeIds)
 
       @trigger("reloadTrees", newTrees)
         

@@ -91,11 +91,11 @@ class StateLogger
       id: node.id
       })
 
-  moveNode : (sourceId, targetId, id) ->
-    @pushDiff("moveNode", {
+  moveTreeComponent : (sourceId, targetId, nodeIds) ->
+    @pushDiff("moveTreeComponent", {
       sourceId : sourceId
       targetId : targetId
-      id : id
+      nodeIds : nodeIds
       })
 
   createEdge : (source, target, treeId) ->

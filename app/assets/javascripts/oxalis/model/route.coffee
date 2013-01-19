@@ -351,6 +351,8 @@ class Route
       # TODO: Handle with stateLogger
       newTrees = []
       @trigger("removeSpheresOfTree", @activeTree.nodes.concat(deletedNode))
+      oldActiveTreeId = @activeTree.treeId
+
       for i in [0...@activeNode.neighbors.length]
         unless i == 0
           # create new tree for all neighbors, except the first
@@ -360,6 +362,10 @@ class Route
         @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
         @activeNode = deletedNode.neighbors[i]
         newTrees.push(@activeTree)
+
+        for node in @activeTree.nodes
+          if @activeTree.treeId != oldActiveTreeId
+            @stateLogger.moveNode(oldActiveTreeId, @activeTree.treeId, node.id)
 
       @trigger("reloadTrees", newTrees)
         

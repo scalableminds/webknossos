@@ -105,18 +105,14 @@ object TracingController extends Controller with Secured {
       .findOneById(tracingId)
       .filter(_._user == request.user._id).map { oldTracing =>
         if (version == oldTracing.version + 1) {
-          (request.body) match {
+          request.body match {
             case JsArray(jsUpdates) =>
-              val updates = jsUpdates.flatMap { Tracing.createUpdateFromJson }
-              if (jsUpdates.size == updates.size) {
-                val tracing = updates.foldLeft(oldTracing) {
-                  case (tracing, updater) => updater.update(tracing)
-                }
-                Tracing.save(tracing.copy(timestamp = System.currentTimeMillis, version = version))
-                TimeTracking.logUserAction(request.user, tracing)
-                AjaxOk.success(Json.obj("version" -> version), "tracing.saved")
-              } else {
-                AjaxBadRequest.error("Invalid update Json")
+              Tracing.updateFromJson(jsUpdates, oldTracing) match {
+                case Some(tracing) =>
+                  TimeTracking.logUserAction(request.user, tracing)
+                  AjaxOk.success(Json.obj("version" -> version), "tracing.saved")
+                case _ =>
+                  AjaxBadRequest.error("Invalid update Json")
               }
             case _ =>
               Logger.error("Invalid update json.")

@@ -7,6 +7,7 @@ import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
+import play.api.libs.json.JsObject
 import xml.Xml
 import xml.XMLWrites
 import models.binary.DataSet
@@ -72,12 +73,12 @@ case class Tracing(
   }
 
   def tree(treeId: Int) = DBTree.findOneWithTreeId(_trees, treeId)
-  
+
   def maxNodeId = {
     DBTree.maxNodeId(this.trees)
   }
-  
-  def addEmptyTree(tree: DBTree) = 
+
+  def addEmptyTree(tree: DBTree) =
     this.copy(_trees = tree._id :: _trees)
 
   def removeTree(tree: DBTree) = this.copy(_trees = _trees.filterNot(_ == tree._id))
@@ -126,25 +127,25 @@ case class Tracing(
   }
 }
 
-trait TracingFactory{
-  
-}
-
 object Tracing extends BasicDAO[Tracing]("tracings") {
-
-  def createUpdateFromJson(js: JsValue): Option[TracingUpdate] = {
-    try {
-      val updater = js.as[TracingUpdater]
-      Some(updater.createUpdate())
-    } catch {
-      case e: java.lang.RuntimeException =>
-        Logger.error("Invalid json: " + e)
-        None
+  
+  def updateFromJson(jsUpdates: Seq[JsValue], oldTracing: Tracing) : Option[Tracing] = {
+    val updates = jsUpdates.flatMap { TracingUpdater.createUpdateFromJson }
+    if (jsUpdates.size == updates.size) {
+      val tracing = updates.foldLeft(oldTracing) {
+        case (tracing, updater) => updater.update(tracing)
+      }
+      Tracing.save(tracing.copy(timestamp = System.currentTimeMillis, version = tracing.version + 1))
+      Some(tracing)
+    } else {
+      None
     }
   }
-  
+
   def createReviewFor(tracing: Tracing, training: Tracing, user: User) = {
-    val trees = Tracing.addTrees(tracing, training.trees).trees.map(DBTree.createAndInsertDeepCopy)
+    val trees = Tracing
+      .addTrees(tracing, training.trees)
+      .trees.map(DBTree.createAndInsertDeepCopy)
     tracing.copy(
       _id = new ObjectId,
       _user = user._id,
@@ -153,17 +154,16 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       timestamp = System.currentTimeMillis,
       tracingType = TracingType.Review)
   }
-  
+
   def addTree(tracing: Tracing, tree: DBTree) = {
-    // TODO: ensure unique ids for nodes
-    tracing.maxNodeId.map{ maxId =>
+    tracing.maxNodeId.map { maxId =>
       DBTree.increaseNodeIds(tree, maxId)
     }
     tracing.update(_.copy(_trees = tree._id :: tracing._trees))
   }
-  
+
   def addTrees(tracing: Tracing, trees: List[DBTree]) = {
-    trees.foldLeft(tracing){
+    trees.foldLeft(tracing) {
       case (tracing, tree) => addTree(tracing, tree)
     }
   }

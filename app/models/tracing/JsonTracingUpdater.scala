@@ -2,8 +2,10 @@ package models.tracing
 
 import play.api.libs.json._
 import models.Color
+import play.api.Logger
 
 object TracingUpdater {
+
   implicit object TracingUpdateReads extends Reads[TracingUpdater] {
     def reads(js: JsValue) = {
       val value = (js \ "value").as[JsObject]
@@ -23,6 +25,16 @@ object TracingUpdater {
     }
   }
 
+  def createUpdateFromJson(js: JsValue): Option[TracingUpdate] = {
+    try {
+      val updater = js.as[TracingUpdater]
+      Some(updater.createUpdate())
+    } catch {
+      case e: java.lang.RuntimeException =>
+        Logger.error("Invalid json: " + e)
+        None
+    }
+  }
 }
 
 case class TracingUpdate(update: Tracing => Tracing)

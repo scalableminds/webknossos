@@ -6,7 +6,6 @@ import play.api.libs.json.Format
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import play.api.libs.json.JsValue
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import xml.XMLWrites
 
 case class Node(id: Int, radius: Float, position: Point3D, viewport: Int, resolution: Int, timestamp: Long)

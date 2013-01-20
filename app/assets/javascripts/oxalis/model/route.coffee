@@ -132,7 +132,7 @@ class Route
         point = @branchStack.pop()
         @stateLogger.push()
         if point
-          @activeNode = point
+          @setActiveNode(point.id)
           @activeNode.type = TYPE_USUAL
 
           @trigger("setBranch", false, @activeNode.id)
@@ -145,7 +145,7 @@ class Route
       point = @branchStack.pop()
       @stateLogger.push()
       if point
-        @activeNode = point
+        @setActiveNode(point.id)
         @activeNode.type = TYPE_USUAL
 
         @trigger("setBranch", false, @activeNode.id)
@@ -238,7 +238,7 @@ class Route
     @trigger("newActiveNodeRadius", radius)
 
 
-  setActiveNode : (nodeID, mergeTree) ->
+  setActiveNode : (nodeID, mergeTree = false) ->
     lastActiveNode = @activeNode
     lastActiveTree = @activeTree
     for tree in @trees
@@ -348,7 +348,6 @@ class Route
     
     if deletedNode.neighbors.length > 1
       # Need to split tree
-      # TODO: Handle with stateLogger
       newTrees = []
       @trigger("removeSpheresOfTree", @activeTree.nodes.concat(deletedNode))
       oldActiveTreeId = @activeTree.treeId
@@ -360,7 +359,7 @@ class Route
 
         @activeTree.nodes = []
         @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
-        @activeNode = deletedNode.neighbors[i]
+        @setActiveNode(deletedNode.neighbors[i].id)
         newTrees.push(@activeTree)
 
         if @activeTree.treeId != oldActiveTreeId
@@ -373,7 +372,7 @@ class Route
         
     else if @activeNode.neighbors.length == 1
       # no children, so just remove it.
-      @activeNode = deletedNode.neighbors[0]
+      @setActiveNode(deletedNode.neighbors[0].id)
       @trigger("deleteActiveNode", deletedNode)
     else
       @deleteTree(false)

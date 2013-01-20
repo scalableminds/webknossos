@@ -126,6 +126,10 @@ case class Tracing(
   }
 }
 
+trait TracingFactory{
+  
+}
+
 object Tracing extends BasicDAO[Tracing]("tracings") {
 
   def createUpdateFromJson(js: JsValue): Option[TracingUpdate] = {
@@ -140,7 +144,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
   }
   
   def createReviewFor(tracing: Tracing, training: Tracing, user: User) = {
-    val trees = Tracing.addTrees(tracing, training.trees).trees.map(DBTree.deepCopy)
+    val trees = Tracing.addTrees(tracing, training.trees).trees.map(DBTree.createAndInsertDeepCopy)
     tracing.copy(
       _id = new ObjectId,
       _user = user._id,

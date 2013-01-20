@@ -27,12 +27,15 @@ trait DBTreeFactory {
   def createFrom(t: Tree) = {
     DBTree(t.treeId, t.color)
   }
+  def createCopy(t: DBTree) = {
+    t.copy(_id = new ObjectId)
+  }
 }
 
 object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
 
-  def deepCopy(t: DBTree) = {
-    val parent = t.copy(_id = new ObjectId)
+  def createAndInsertDeepCopy(t: DBTree) = {
+    val parent = createCopy(t)
     insert(parent).map { oid =>
       nodes.findByParentId(t._id).map { n =>
         nodes.insert(n.copy(_treeId = oid, _id = new ObjectId))

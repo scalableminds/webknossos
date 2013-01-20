@@ -3,7 +3,6 @@ package models.tracing
 import models.Color
 import org.bson.types.ObjectId
 import models.basics._
-import models.graph._
 import models.context._
 import com.mongodb.casbah.commons.MongoDBObject
 import xml.Xml
@@ -50,11 +49,11 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
     val tree = insertOne(DBTree.createFrom(t))
     t.nodes.map { n =>
       println("inserting NODE")
-      println(nodes.insert(DBNode.createFrom(n, tree._id)))
+      println(nodes.insert(DBNode(n, tree._id)))
     }
     t.edges.map { e =>
       println("inserting EDGE")
-      edges.insert(DBEdge.createFrom(e, tree._id))
+      edges.insert(DBEdge(e, tree._id))
     }
     tree
   }

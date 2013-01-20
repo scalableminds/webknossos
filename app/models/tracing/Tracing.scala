@@ -12,7 +12,6 @@ import xml.XMLWrites
 import models.binary.DataSet
 import DBTree.DBTreeFormat
 import nml.Comment
-import models.graph._
 import models.user.User
 import play.api.libs.json.Reads
 import play.api.libs.json.JsValue

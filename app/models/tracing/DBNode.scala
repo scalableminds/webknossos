@@ -10,9 +10,6 @@ import org.bson.types.ObjectId
 case class DBNode(node: Node, _treeId: ObjectId, _id: ObjectId = new ObjectId)
 
 object DBNode{
-  def createFrom(n: Node, _treeId: ObjectId) = {
-    DBNode(n, _treeId)
-  }
 
   implicit object DBNodeXMLWrites extends XMLWrites[DBNode] {
     import Node._

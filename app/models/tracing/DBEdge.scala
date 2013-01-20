@@ -10,9 +10,6 @@ import org.bson.types.ObjectId
 case class DBEdge(edge: Edge, _treeId: ObjectId, _id: ObjectId = new ObjectId)
 
 object DBEdge {
-  def createFrom(e: Edge, _treeId: ObjectId) = {
-    DBEdge(e, _treeId)
-  }
 
   implicit object DBEdgeXMLWrites extends XMLWrites[DBEdge] {
     import Edge._

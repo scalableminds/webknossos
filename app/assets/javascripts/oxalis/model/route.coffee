@@ -100,6 +100,10 @@ class Route
       else
         @createNewTree()
 
+    #@createNewTree()
+    #for i in [0...10000]
+    #  @addNode([Math.random() * 2000, Math.random() * 2000, Math.random() * 2000], TYPE_USUAL)
+
     $(window).on(
       "beforeunload"
       =>

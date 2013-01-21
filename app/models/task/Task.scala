@@ -23,7 +23,6 @@ import akka.dispatch.Promise
 import play.api.libs.json.Format
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
-import models.graph.Tree
 import brainflight.tools.geometry.Scale
 import models.user.User
 import play.api.Logger

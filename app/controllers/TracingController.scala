@@ -3,7 +3,7 @@ package controllers
 import play.api.Logger
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import models.graph.BranchPoint
+import nml.BranchPoint
 import play.api.mvc._
 import org.bson.types.ObjectId
 import brainflight.tools.Math._
@@ -21,8 +21,8 @@ import play.api.libs.iteratee.Done
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.Comet
 import models.binary.DataSet
-import models.graph.Node
-import models.graph.Edge
+import nml.Node
+import nml.Edge
 import brainflight.tools.geometry.Point3D
 import models.tracing.UsedTracings
 import models.user.TimeTracking
@@ -42,9 +42,11 @@ object TracingController extends Controller with Secured {
           "dataSet" -> Json.obj(
             "id" -> dataSet.id,
             "name" -> dataSet.name,
-            "dataLayers" -> Json.toJson(dataSet.dataLayers.map{case (id, layer) => 
-              id -> Json.obj(
-                       "resolutions" -> layer.supportedResolutions)}),
+            "dataLayers" -> Json.toJson(dataSet.dataLayers.map {
+              case (id, layer) =>
+                id -> Json.obj(
+                  "resolutions" -> layer.supportedResolutions)
+            }),
             "upperBoundary" -> dataSet.maxCoordinates))
       case _ =>
         Json.obj("error" -> "Couldn't find dataset.")
@@ -98,19 +100,26 @@ object TracingController extends Controller with Secured {
       .getOrElse(BadRequest("Tracing with id '%s' not found.".format(tracingId)))
   }
 
-  def update(tracingId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
+  def update(tracingId: String, version: Int) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
     Tracing
       .findOneById(tracingId)
-      .filter(_._user == request.user._id)
-      .flatMap { oldTracing =>
-        (request.body).asOpt[Tracing].map { tracing =>
-          if (tracing.version == oldTracing.version + 1) {
-            Tracing.save(tracing.copy(timestamp = System.currentTimeMillis))
-            TimeTracking.logUserAction(request.user, tracing)
-            AjaxOk.success(Json.obj("version" -> tracing.version), "tracing.saved")
-          } else
-            AjaxBadRequest.error(createTracingInformation(oldTracing), "tracing.dirtyState")
-        }
+      .filter(_._user == request.user._id).map { oldTracing =>
+        if (version == oldTracing.version + 1) {
+          request.body match {
+            case JsArray(jsUpdates) =>
+              Tracing.updateFromJson(jsUpdates, oldTracing) match {
+                case Some(tracing) =>
+                  TimeTracking.logUserAction(request.user, tracing)
+                  AjaxOk.success(Json.obj("version" -> version), "tracing.saved")
+                case _ =>
+                  AjaxBadRequest.error("Invalid update Json")
+              }
+            case _ =>
+              Logger.error("Invalid update json.")
+              AjaxBadRequest.error("Invalid update Json")
+          }
+        } else
+          AjaxBadRequest.error(createTracingInformation(oldTracing), "tracing.dirtyState")
       }
       .getOrElse(AjaxBadRequest.error("Update for tracing with id '%s' failed.".format(tracingId)))
   }

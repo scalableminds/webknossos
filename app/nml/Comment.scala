@@ -1,4 +1,4 @@
-package models.graph
+package nml
 
 import xml.XMLWrites
 import play.api.libs.json.Format

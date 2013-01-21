@@ -12,7 +12,7 @@ import brainflight.tools.ExtendedTypes._
 import models.basics.DAOCaseClass
 import models.tracing.Tracing
 
-case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, tracing: Option[Tracing] = None) {
+case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, tracing: Option[ObjectId] = None) {
   val created = {
     new Date(timestamp)
   }
@@ -23,7 +23,7 @@ case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, t
   def tracingEquals(other: Option[Tracing]): Boolean = {
     (tracing, other) match {
       case (Some(tracing), Some(other)) =>
-        tracing._id == other._id
+        tracing == other._id
       case (None, None) =>
         true
       case _ =>
@@ -120,11 +120,11 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
             val entry = lastEntry.copy(time = lastEntry.time + current - lastEntry.timestamp, timestamp = current)
             timeTracker.update(_.setTimeEntries(entry :: tail))
           case _ =>
-            val entry = TimeEntry(0, current, tracing = tracing)
+            val entry = TimeEntry(0, current, tracing = tracing.map(_._id))
             timeTracker.update(_.addTimeEntry(entry))
         }
       case _ =>
-        val entry = TimeEntry(0, current, tracing = tracing)
+        val entry = TimeEntry(0, current, tracing = tracing.map(_._id))
         insertOne(TimeTracking(user._id, List(entry)))
     }
   }

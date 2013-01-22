@@ -198,7 +198,7 @@ class View
   
   scaleTrianglesPlane : (delta) =>
     @scaleFactor = 1 unless @scaleFactor
-    if (@scaleFactor+delta > 0.75) and (@scaleFactor+delta < 1.5)
+    if (@scaleFactor+delta > 0.65) and (@scaleFactor+delta < 2)
       @scaleFactor += Number(delta)
       @curWidth = WIDTH = HEIGHT = @scaleFactor * 384
       container = $("#render")
@@ -220,6 +220,10 @@ class View
       # scales the 3D-view controls
       prevControl = $("#prevControls")
       prevControl.css({top: @scaleFactor * 420 + "px", left: @scaleFactor * 420 + "px"})
+
+      # move abstract tree viewer
+      abstractTreeViewer = $("#abstractTreeViewer")
+      abstractTreeViewer.css({left: 2 * WIDTH + 20 + 10 + "px"})
 
       @resize()
 

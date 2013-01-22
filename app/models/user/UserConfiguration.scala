@@ -26,7 +26,7 @@ object UserConfiguration {
     Map(
       "moveValue" -> JsNumber(1),
       "rotateValue" -> JsNumber(0.01),
-      "scaleValue" -> JsNumber(0.02),
+      "scaleValue" -> JsNumber(0.05),
       "mouseRotateValue" -> JsNumber(0.004),
       "routeClippingDistance" -> JsNumber(100),
       "lockZoom" -> JsBoolean(true),

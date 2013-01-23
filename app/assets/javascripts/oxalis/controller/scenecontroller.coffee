@@ -27,6 +27,7 @@ class SceneController
     @current       = 0
     @displayPlane  = [true, true, true]
     @planeShift    = [0, 0, 0]
+    @showSkeleton  = true
 
     @createMeshes()
 
@@ -47,7 +48,7 @@ class SceneController
 
     # TODO: Implement text 
 
-    @skeleton = new Skeleton(10000, @flycam, @model)
+    @skeleton = new Skeleton(1000000, @flycam, @model)
 
     # create Meshes
     @planes = new Array(3)
@@ -133,3 +134,7 @@ class SceneController
     result = result.concat(@skeleton.getMeshes())
     result.push(@cube)
     return result
+
+  toggleSkeletonVisibility : ->
+    @showSkeleton = not @showSkeleton
+    @skeleton.setVisibility(@showSkeleton)

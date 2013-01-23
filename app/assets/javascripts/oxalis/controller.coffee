@@ -73,7 +73,6 @@ class Controller
         )
 
       @view.createKeyboardCommandOverlay()
-      @view.createDoubleJumpModal()
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
 
@@ -109,7 +108,7 @@ class Controller
       @flycam.setQuality(@model.user.quality)
 
       @model.binary.queue.set4Bit(@model.user.fourBit)
-      @model.binary.updateLookupTable(@model.user.brightness, @model.user.contrast)
+      @model.binary.updateLookupTable(@gui.settings.brightness, @gui.settings.contrast)
 
       @initMouse()
       @initKeyboard()
@@ -185,6 +184,14 @@ class Controller
       #View
       "q" : => @toggleFullScreen()
       "t" : => @view.toggleTheme()
+      "1" : =>
+        @sceneController.toggleSkeletonVisibility()
+        # Show warning, if this is the first time to use
+        # this function for this user
+        if @model.user.firstVisToggle
+          @view.showFirstVisToggle()
+          @model.user.firstVisToggle = false
+          @model.user.push()
 
       #Branches
       "b" : => @pushBranch()
@@ -401,7 +408,7 @@ class Controller
     @model.route.setActiveTree(treeId)
 
   deleteActiveTree : =>
-    @model.route.deleteTree()
+    @model.route.deleteTree(true)
 
   ########### Input Properties
 

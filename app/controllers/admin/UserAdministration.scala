@@ -9,10 +9,12 @@ import controllers._
 import models.security._
 import models.user.TimeTracking
 import models.user.User
+import models.user.Experience
 import play.api.i18n.Messages
 import views.html
 import net.liftweb.common._
 import braingames.mvc.Controller
+import braingames.util.ExtendedTypes.ExtendedString
 
 object UserAdministration extends Controller with Secured {
 
@@ -21,7 +23,7 @@ object UserAdministration extends Controller with Secured {
   def allUsers = User.findAll.sortBy(_.lastName)
 
   def index = Authenticated { implicit request =>
-    Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name)))
+    Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains))
   }
 
   def logTime(userId: String, time: String, note: String) = Authenticated { implicit request =>
@@ -98,11 +100,11 @@ object UserAdministration extends Controller with Secured {
     }
   }
 
-  private def removeRole(roleName: String)(userId: String) = {
+  private def deleteRole(roleName: String)(userId: String) = {
     for {
       user <- User.findOneById(userId) ?~ Messages("user.unknown")
     } yield {
-      user.update(_.removeRole(roleName))
+      user.update(_.deleteRole(roleName))
     }
   }
 
@@ -115,11 +117,11 @@ object UserAdministration extends Controller with Secured {
     }
   }
 
-  def removeRoleBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+  def deleteRoleBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     for {
       roleName <- postParameter("role") ?~ Messages("role.invalid")
     } yield {
-      bulkOperation(removeRole(roleName))(
+      bulkOperation(deleteRole(roleName))(
         user => Messages("role.removed", user.name))
     }
   }
@@ -132,4 +134,52 @@ object UserAdministration extends Controller with Secured {
         user => Messages("role.added", user.name))
     }
   }
+
+  def increaseExperience(domain: String, value: Int)(userId: String) = {
+    User.findOneById(userId) map { user =>
+      user.update(_.increaseExperience(domain, value))
+    }
+  }
+
+  def setExperience(domain: String, value: Int)(userId: String) = {
+    User.findOneById(userId) map { user =>
+      user.update(_.setExperience(domain, value))
+    }
+  }
+
+  def deleteExperience(domain: String)(userId: String) = {
+    User.findOneById(userId) map { user =>
+      user.update(_.deleteExperience(domain))
+    }
+  }
+
+  def increaseExperienceBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    for {
+      domain <- postParameter("experience-domain") ?~ Messages("experience.domain.invalid")
+      value <- postParameter("experience-value").flatMap(_.toIntOpt) ?~ Messages("experience.value.invalid")
+    } yield {
+      bulkOperation(increaseExperience(domain, value))(
+        user => Messages("user.experience.increased", user.name))
+    }
+  }
+
+  def setExperienceBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    for {
+      domain <- postParameter("experience-domain") ?~ Messages("experience.domain.invalid")
+      value <- postParameter("experience-value").flatMap(_.toIntOpt) ?~ Messages("experience.value.invalid")
+    } yield {
+      bulkOperation(setExperience(domain, value))(
+        user => Messages("user.experience.set", user.name))
+    }
+  }
+
+  def deleteExperienceBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    for {
+      domain <- postParameter("experience-domain") ?~ Messages("experience.domain.invalid")
+    } yield {
+      bulkOperation(deleteExperience(domain))(
+        user => Messages("user.experience.removed", user.name))
+    }
+  }
+
 }

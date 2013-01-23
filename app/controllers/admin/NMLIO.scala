@@ -27,12 +27,11 @@ object NMLIO extends Controller with Secured {
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
     request.body.file("nmlFile").flatMap { nmlFile =>
-      implicit val ctx = NMLContext(request.user)
       (new NMLParser(nmlFile.ref.file).parse)
-        .map { tracing =>
+        .map { nml =>
+          println("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
           Logger.debug("Successfully parsed nmlFile")
-          Tracing.save(tracing.copy(
-            tracingType = TracingType.Explorational))
+          val tracing = Tracing.createFromNMLFor(request.user, nml, TracingType.Explorational)
           UsedTracings.use(request.user, tracing)
           tracing
         }

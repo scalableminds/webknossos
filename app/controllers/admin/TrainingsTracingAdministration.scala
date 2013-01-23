@@ -78,7 +78,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
           trainee <- tracing.user ?~ Messages("tracing.user.notFound")
         } yield {
           if (passed) {
-            trainee.update(_.addExperience(training.domain, training.gain))
+            trainee.update(_.increaseExperience(training.domain, training.gain))
             tracing.update(_.finishReview(comment).finish)
             Application.Mailer ! Send(
               DefaultMails.trainingsSuccessMail(trainee.name, trainee.email, comment))

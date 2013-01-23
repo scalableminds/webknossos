@@ -27,6 +27,10 @@ class Gui
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
     @qualityArray = ["high", "medium", "low"]
+
+    datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
+    @datasetPosition = @initDatasetPosition(data.briConNames, datasetPostfix)
+
     @settings = 
       
       lockZoom: data.lockZoom
@@ -38,8 +42,9 @@ class Gui
       displayCrosshairs: data.displayCrosshair
 
       fourBit : data.fourBit
-      brightness : data.brightness
-      contrast : data.contrast
+      briConNames : data.briConNames
+      brightness : data.brightness[@datasetPosition]
+      contrast : data.contrast[@datasetPosition]
       interpolation : data.interpolation
       quality : @qualityArray[data.quality]
 
@@ -59,6 +64,13 @@ class Gui
       comment : ""
       prevComment : @prevComment
       nextComment : @nextComment
+
+    if @datasetPosition == 0
+      # add new dataset to settings
+      @model.user.briConNames.push(datasetPostfix)
+      @model.user.brightness.push(@settings.brightness)
+      @model.user.contrast.push(@settings.contrast)
+      @dataSetPosition = data.briConNames.size - 1
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
@@ -193,6 +205,8 @@ class Gui
                       # newActiveNodeRadius : (radius) =>@updateRadius(radius) 
                       pushFailed       : -> Toast.error("Auto-Save failed!")
 
+    @createTooltips()
+
   saveNow : =>
     @model.user.pushImpl()
     @model.route.pushNow()
@@ -209,6 +223,19 @@ class Gui
         @flycam.setGlobalPos(pos)
         return
     @updateGlobalPosition(@flycam.getGlobalPos())
+
+  initDatasetPosition : (briConNames, datasetPostfix) ->
+
+    for i in [0...briConNames.length]
+      if briConNames[i] == datasetPostfix
+        datasetPosition = i
+    unless datasetPosition
+      # take default values
+      datasetPosition = 0
+    datasetPosition
+
+  createTooltips : ->
+      $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
 
   updateGlobalPosition : (globalPos) =>
     stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
@@ -245,8 +272,8 @@ class Gui
 
   setBrightnessAndContrast : =>
     @model.binary.updateLookupTable(@settings.brightness, @settings.contrast)
-    @model.user.brightness = (Number) @settings.brightness
-    @model.user.contrast = (Number) @settings.contrast
+    @model.user.brightness[@datasetPosition] = (Number) @settings.brightness
+    @model.user.contrast[@datasetPosition] = (Number) @settings.contrast
     @model.user.push()
 
   setQuality : (value) =>

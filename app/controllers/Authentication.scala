@@ -72,6 +72,8 @@ object Authentication extends Controller with Secured {
             BrainTracing.register(user, password).map { brainDBresult =>
               Application.Mailer ! Send(
                 DefaultMails.registerMail(user.name, email, brainDBresult))
+              Application.Mailer ! Send(
+                DefaultMails.registerAdminNotifyerMail(user.name, brainDBresult))
               if (autoVerify) {
                 Redirect(routes.Game.index)
                   .withSession(Secured.createSession(user))

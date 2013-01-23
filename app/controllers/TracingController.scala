@@ -3,7 +3,7 @@ package controllers
 import play.api.Logger
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import models.graph.BranchPoint
+import nml.BranchPoint
 import play.api.mvc._
 import org.bson.types.ObjectId
 import brainflight.tools.Math._
@@ -21,8 +21,8 @@ import play.api.libs.iteratee.Done
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.Comet
 import models.binary.DataSet
-import models.graph.Node
-import models.graph.Edge
+import nml.Node
+import nml.Edge
 import brainflight.tools.geometry.Point3D
 import models.tracing.UsedTracings
 import models.user.TimeTracking
@@ -43,6 +43,7 @@ object TracingController extends Controller with Secured {
         Json.obj(
           "dataSet" -> Json.obj(
             "id" -> dataSet.id,
+            "name" -> dataSet.name,
             "dataLayers" -> Json.toJson(dataSet.dataLayers.map {
               case (id, layer) =>
                 id -> Json.obj(
@@ -99,19 +100,28 @@ object TracingController extends Controller with Secured {
     }) ?~ Messages("notAllowed") ~> 403
   }
 
-  def update(tracingId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
+  def update(tracingId: String, version: Int) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
     (for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if (tracing._user == request.user._id)
-      updatedTracing <- (request.body).asOpt[Tracing] ?~ Messages("tracing.invalid")
+      oldTracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      if (oldTracing._user == request.user._id)
     } yield {
-      if (updatedTracing.version == tracing.version + 1) {
-        Tracing.save(updatedTracing.copy(timestamp = System.currentTimeMillis))
-        TimeTracking.logUserAction(request.user, updatedTracing)
-        JsonOk(Json.obj("version" -> tracing.version), "tracing.saved")
-      } else
-        JsonBadRequest(createTracingInformation(tracing), "tracing.dirtyState")
-    }) ?~ Messages("notAllowed") ~> 403
+        if (version == oldTracing.version + 1) {
+          request.body match {
+            case JsArray(jsUpdates) =>
+              Tracing.updateFromJson(jsUpdates, oldTracing) match {
+                case Some(tracing) =>
+                  TimeTracking.logUserAction(request.user, tracing)
+                  JsonOk(Json.obj("version" -> version), "tracing.saved")
+                case _ =>
+                  JsonBadRequest("Invalid update Json")
+              }
+            case _ =>
+              Logger.error("Invalid update json.")
+              JsonBadRequest("Invalid update Json")
+          }
+        } else
+          JsonBadRequest(createTracingInformation(oldTracing), "tracing.dirtyState")
+      }) ?~ Messages("notAllowed") ~> 403
   }
 
   private def finishTracing(user: User, tracingId: String): Box[(Tracing, String)] = {

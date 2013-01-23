@@ -23,7 +23,6 @@ import scala.concurrent.Promise
 import play.api.libs.json.Format
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
-import models.graph.Tree
 import brainflight.tools.geometry.Scale
 import models.user.User
 import play.api.Logger
@@ -225,7 +224,7 @@ object Task extends BasicDAO[Task]("tasks") {
       task <- tracing.task
       training <- task.training
     } yield {
-      user.addExperience(training.domain, training.gain)
+      user.increaseExperience(training.domain, training.gain)
     }) getOrElse user
   }
 

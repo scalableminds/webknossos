@@ -30,7 +30,7 @@ case class DataSet(
 }
 
 object DataSet extends BasicDAO[DataSet]("dataSets") {
-  
+
   def default = {
     //find(MongoDBObject())
     

@@ -18,12 +18,14 @@ class Binary
   planes : []
 
   dataSetId : ""
+  dataSetName : ""
   direction : [0, 0, 0]
 
 
   constructor : (flycam, dataSet, @TEXTURE_SIZE_P) ->
 
     @dataSetId = dataSet.id
+    @dataSetName = dataSet.name
 
     @cube = new Cube(dataSet.upperBoundary, dataSet.dataLayers.color.resolutions.length)
     @queue = new PullQueue(@dataSetId, @cube)
@@ -39,12 +41,14 @@ class Binary
   updateLookupTable : (brightness, contrast) ->
 
     lookUpTable = new Uint8Array(256)
+    lookUpTableMag1 = new Uint8Array(256)
 
     for i in [0..255]
       lookUpTable[i] = Math.max(Math.min((i + brightness) * contrast, 255), 0)
+      lookUpTableMag1[i] = Math.max(Math.min((i + brightness + 8) * contrast, 255), 0)
 
     for plane in @planes
-      plane.updateLookUpTable(lookUpTable)
+      plane.updateLookUpTables(lookUpTable, lookUpTableMag1)
 
 
   ping : _.once (position, {zoomStep, area, activePlane}) ->

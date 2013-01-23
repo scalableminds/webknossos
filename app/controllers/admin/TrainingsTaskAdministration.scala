@@ -84,12 +84,11 @@ object TrainingsTaskAdministration extends Controller with Secured {
     trainingsTaskForm.bindFromRequest.fold(
       formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors, trainingsTracingForm)),
       { task =>
-        implicit val ctx = NMLContext(request.user)
         for {
-          nmlFile <- request.body.file("nmlFile")  ?~ Messages("nml.file.notFound")
-          tracing <- new NMLParser(nmlFile.ref.file).parse.headOption ?~ Messages("nml.file.invalid")
+          nmlFile <- request.body.file("nmlFile") ?~ Messages("nml.file.notFound")
+          nml <- new NMLParser(nmlFile.ref.file).parse.headOption ?~ Messages("nml.file.invalid")
         } yield {
-          Tracing.save(tracing.copy(tracingType = TracingType.Sample))
+          val tracing = Tracing.createFromNMLFor(request.user, nml, TracingType.Sample)
           Task.save(task.copy(
             training = task.training.map(_.copy(sample = tracing._id))))
           Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))

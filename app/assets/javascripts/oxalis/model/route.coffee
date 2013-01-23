@@ -5,13 +5,13 @@ underscore : _
 ../../libs/event_mixin : EventMixin
 ./tracepoint : TracePointClass
 ./tracetree : TraceTreeClass
+./statelogger : StateLogger
 ###
 
 # This takes care of the route. 
   
 # Constants
 BUFFER_SIZE = 262144 # 1024 * 1204 / 4
-PUSH_THROTTLE_TIME = 30000 # 30s
 INIT_TIMEOUT = 10000 # 10s
 TYPE_USUAL = 0
 TYPE_BRANCH = 1
@@ -48,11 +48,11 @@ class Route
     lostTrees = []
 
     @doubleBranchPop = false
-    @savedCurrentState = true
 
     ############ Load Tree from @data ##############
 
-    @version = @data.version
+    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id)
+    console.log "Tracing data: ", @data
 
     # get tree to build
     for treeData in @data.trees
@@ -62,7 +62,7 @@ class Route
       i = 0
       for node in treeData.nodes
         if node
-          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius))
+          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp))
           # idCount should be bigger than any other id
           @idCount = Math.max(node.id + 1, @idCount);
       # Initialize edges
@@ -99,146 +99,53 @@ class Route
       else
         @createNewTree()
 
+    #@createNewTree()
+    #for i in [0...10000]
+    #  @addNode([Math.random() * 2000, Math.random() * 2000, Math.random() * 2000], TYPE_USUAL)
+
     $(window).on(
       "beforeunload"
       =>
-        if !@savedCurrentState
-          @pushImpl(true)
+        if !@stateLogger.savedCurrentState
+          @stateLogger.pushImpl(true)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return
     )
 
-  # Returns an object that is structured the same way as @data is
-  exportToNML : ->
-    result = @data
-    result.version = @version + 1
-    result.activeNode = @lastActiveNodeId
-    result.branchPoints = []
-    # Get Branchpoints
-    for branchPoint in @branchStack
-      result.branchPoints.push({id : branchPoint.id})
-    result.editPosition = @flycam.getGlobalPos()
-    result.comments = @comments
-    result.trees = []
-    for tree in @trees
-      # Don't save empty trees (id is null)
-      if tree.nodes.length
-        nodes = tree.nodes
-        treeObj = {}
-        result.trees.push(treeObj)
-        treeColor = new THREE.Color(tree.color)
-        treeObj.color = [treeColor.r, treeColor.g, treeColor.b, 1]
-        treeObj.edges = []
-        # Get Edges
-        for node in nodes
-          for neighbor in node.neighbors
-            if node.id < neighbor.id  # to prevent saving the same edge twice
-              treeObj.edges.push({source : node.id, target : neighbor.id})
-        treeObj.id = tree.treeId
-        treeObj.nodes = []
-        # Get Nodes
-        for node in nodes
-          treeObj.nodes.push({
-            id : node.id
-            position : node.pos
-            radius : node.radius
-            # TODO: Those are dummy values
-            viewport : 0
-            timestamp : 0
-            resolution : 0
-          })
-
-#    console.log "NML-Objekt"
-#    console.log result
-    return result
-
-
-  push : ->
-    @savedCurrentState = false
-    @pushDebounced()
-
-  # Pushes the buffered route to the server. Pushing happens at most 
-  # every 30 seconds.
-  pushDebounced : ->
-    saveFkt = => @pushImpl(true)
-    @pushDebounced = _.throttle(saveFkt, PUSH_THROTTLE_TIME)
-    @pushDebounced()
-
-  pushNow :->   # Interface for view & controller
-    return @pushImpl(false)
-
-  pushImpl : (notifyOnFailure) ->
-
-    # do not allow multiple pushes, before result is there (breaks versioning)
-    # still, return the deferred of the pending push, so that it will be informed about success
-    if @pushDeferred?
-      return @pushDeferred
-
-    @pushDeferred = new $.Deferred()
-
-    Request.send(
-      url : "/tracing/#{@data.id}"
-      method : "PUT"
-      data : @exportToNML()
-      contentType : "application/json"
-    )
-    .fail (responseObject) =>
-      if responseObject.responseText? && responseObject.responseText != ""
-        # restore whatever is send as the response
-        response = JSON.parse(responseObject.responseText)
-        if response.messages?[0]?.error?
-          if response.messages[0].error == "tracing.dirtyState"
-            $(window).on(
-              "beforeunload"
-              =>return null)
-            alert("Sorry, but the current state is inconsistent. A reload is necessary.")
-            window.location.reload()
-      @push()
-      if (notifyOnFailure)
-        @trigger("pushFailed");
-      @pushDeferred.reject()
-      @pushDeferred = null
-    .done (response) =>
-      @version = response.version
-      @savedCurrentState = true
-      @pushDeferred.resolve()
-      @pushDeferred = null
-
   # INVARIANTS:
   # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null
   # activeNode: either null only if activeTree is empty (sentinel) or valid node
+
+  pushNow : ->
+    @stateLogger.pushNow()
 
   pushBranch : ->
 
     if @activeNode
       @branchStack.push(@activeNode)
       @activeNode.type = TYPE_BRANCH
-      @push()
+      @stateLogger.push()
 
       @trigger("setBranch", true)
 
   popBranch : ->
     deferred = new $.Deferred()
-    if @doubleBranchPop
-      @showBranchModal().done(=>
+    if @branchStack.length and @doubleBranchPop
+      @trigger( "doubleBranch", =>
         point = @branchStack.pop()
-        @push()
-        if point
-          @activeNode = point
-          @activeNode.type = TYPE_USUAL
+        @stateLogger.push()
+        @setActiveNode(point.id)
+        @activeNode.type = TYPE_USUAL
 
-          @trigger("setBranch", false, @activeNode.id)
-          @doubleBranchPop = true
-          deferred.resolve(@activeNode.id)
-        else
-          @trigger("emptyBranchStack")
-          deferred.reject())
+        @trigger("setBranch", false, @activeNode.id)
+        @doubleBranchPop = true
+        deferred.resolve(@activeNode.id))
     else
       point = @branchStack.pop()
-      @push()
+      @stateLogger.push()
       if point
-        @activeNode = point
+        @setActiveNode(point.id)
         @activeNode.type = TYPE_USUAL
 
         @trigger("setBranch", false, @activeNode.id)
@@ -258,11 +165,6 @@ class Route
         i++
     @trigger("deleteBranch")
 
-  showBranchModal : ->
-    @branchDeferred = new $.Deferred()
-    $("#double-jump").modal("show")
-    return @branchDeferred
-
   rejectBranchDeferred : ->
     @branchDeferred.reject()
 
@@ -274,7 +176,7 @@ class Route
     unless @lastRadius?
       @lastRadius = 10 * @scaleInfo.baseVoxel
       if @activeNode? then @lastRadius = @activeNode.radius
-    point = new TracePoint(type, @idCount++, position, @lastRadius)
+    point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime())
     @activeTree.nodes.push(point)
     if @activeNode
       @activeNode.appendNext(point)
@@ -286,7 +188,8 @@ class Route
       @pushBranch()
     @lastActiveNodeId = @activeNode.id
     @doubleBranchPop = false
-    @push()
+
+    @stateLogger.createNode(point, @activeTree.treeId)
     
     @trigger("newNode")
 
@@ -324,12 +227,13 @@ class Route
     if @activeNode
       @activeNode.radius = radius
       @lastRadius = radius
-    @push()
+
+    @stateLogger.updateNode(@activeNode, @activeTree.treeId)
 
     @trigger("newActiveNodeRadius", radius)
 
 
-  setActiveNode : (nodeID, mergeTree) ->
+  setActiveNode : (nodeID, mergeTree = false) ->
     lastActiveNode = @activeNode
     lastActiveTree = @activeTree
     for tree in @trees
@@ -339,7 +243,7 @@ class Route
           @lastActiveNodeId = @activeNode.id
           @activeTree = tree
           break
-    @push()
+    @stateLogger.push()
 
     @trigger("newActiveNode")
 
@@ -355,6 +259,7 @@ class Route
           @comments.splice(i, 1)
           break
       @comments.push({node: @activeNode.id, content: commentText})
+      @stateLogger.push()
 
   getComment : (nodeID) ->
     unless nodeID? then nodeID = @activeNode.id if @activeNode?
@@ -366,7 +271,7 @@ class Route
     for i in [0...@comments.length]
       if(@comments[i].node == nodeID)
         @comments.splice(i, 1)
-        return
+        @stateLogger.push()
 
   nextCommentNodeID : (forward) ->
     unless @activeNode?
@@ -397,7 +302,7 @@ class Route
     else
       @activeNode = @activeTree.nodes[0]
       @lastActiveNodeId = @activeNode.id
-    @push()
+    @stateLogger.push()
 
     @trigger("newActiveTree")
 
@@ -416,7 +321,8 @@ class Route
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null
-    @push()
+
+    @stateLogger.createTree(tree)
 
     @trigger("newTree", tree.treeId, tree.color)
 
@@ -430,6 +336,7 @@ class Route
     @activeTree.removeNode(@activeNode.id)
 
     deletedNode = @activeNode
+    @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
     if deletedNode.type == TYPE_BRANCH
       @deleteBranch(deletedNode.id)
@@ -438,6 +345,8 @@ class Route
       # Need to split tree
       newTrees = []
       @trigger("removeSpheresOfTree", @activeTree.nodes.concat(deletedNode))
+      oldActiveTreeId = @activeTree.treeId
+
       for i in [0...@activeNode.neighbors.length]
         unless i == 0
           # create new tree for all neighbors, except the first
@@ -445,24 +354,37 @@ class Route
 
         @activeTree.nodes = []
         @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
-        @activeNode = deletedNode.neighbors[i]
+        @setActiveNode(deletedNode.neighbors[i].id)
         newTrees.push(@activeTree)
+
+        if @activeTree.treeId != oldActiveTreeId
+          nodeIds = []
+          for node in @activeTree.nodes
+            nodeIds.push(node.id)
+          @stateLogger.moveTreeComponent(oldActiveTreeId, @activeTree.treeId, nodeIds)
 
       @trigger("reloadTrees", newTrees)
         
     else if @activeNode.neighbors.length == 1
       # no children, so just remove it.
-      @activeNode = deletedNode.neighbors[0]
+      @setActiveNode(deletedNode.neighbors[0].id)
       @trigger("deleteActiveNode", deletedNode)
     else
-      @deleteTree()
-    
-    @push()
+      @deleteTree(false)
 
-  deleteTree : (id, deleteBranches) ->
+  deleteTree : (notify, id, deleteBranches) ->
     unless @activeNode?
       return
 
+    if notify
+      if confirm("Do you really want to delete the whole tree?")
+        @reallyDeleteTree(id, deleteBranches)
+      else
+        return
+    else
+      @reallyDeleteTree(id, deleteBranches)
+
+  reallyDeleteTree : (id, deleteBranches) ->
     unless deleteBranches?
       deleteBranches = true
 
@@ -487,7 +409,7 @@ class Route
     else
       # just set the last tree to be the active one
       @setActiveTree(@trees[@trees.length - 1].treeId)
-    @push()
+    @stateLogger.deleteTree(tree)
 
     @trigger("deleteTree", index)
 
@@ -498,11 +420,12 @@ class Route
         @activeTree.nodes = @activeTree.nodes.concat(lastTree.nodes)
         @activeNode.appendNext(lastNode)
         lastNode.appendNext(@activeNode)
-        @push()
+        
+        @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
         @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
 
-        @deleteTree(lastTree.treeId, false)
+        @deleteTree(false, lastTree.treeId, false)
 
         @setActiveNode(activeNodeID)
       else

@@ -36,6 +36,12 @@ body:-webkit-full-screen {
     margin-bottom: 0;
 }
 
+.container.wide {
+    margin-left: 20px;
+    margin-right: 20px;
+    width: auto;
+}
+
 .input-fullwidth {
     width: 100%;
     -webkit-box-sizing: border-box;
@@ -52,6 +58,10 @@ body:-webkit-full-screen {
     height: 25px;
     margin: 0 9px;
     border-right: 1px solid #e5e5e5;
+}
+
+.form-actions fieldset {
+    display: inline-block;
 }
 
 .popover {
@@ -170,10 +180,16 @@ svg a:hover {
     p {
         color : #000;
     }
+    #abstractTreeViewer {
+        color : #000;
+    }
 }
 .dark {
     background : #000;
     p {
+        color : #fff;
+    }
+    #abstractTreeViewer {
         color : #fff;
     }
 }
@@ -193,7 +209,7 @@ svg a:hover {
 #abstractTreeViewer {
     top: 0px;
     left: 2*@standardViewportWidth+20px+10px;
-    width : 200px;
+    width : 300px;
     height : 2*@standardViewportWidth + 20px;
     border-width: 1px;
     position:relative;

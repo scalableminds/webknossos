@@ -56,9 +56,13 @@ case class User(
     this.copy(configuration = config)
   }
 
-  def addExperience(name: String, value: Int) = {
+  def setExperience(name: String, value: Int) = {
     this.copy(experiences = this.experiences + (name -> value))
   }
+  
+  def deleteExperience(name: String) = {
+    this.copy(experiences = this.experiences.filterNot(_._1 == name))
+  }  
 
   def increaseExperience(name: String, value: Int) = {
     val sum = (this.experiences.get(name) getOrElse 0) + value
@@ -77,7 +81,7 @@ case class User(
     this.copy(roles = this.roles + role)
   }
 
-  def removeRole(role: String) = {
+  def deleteRole(role: String) = {
     this.copy(roles = this.roles.filterNot(_ == role))
   }
 

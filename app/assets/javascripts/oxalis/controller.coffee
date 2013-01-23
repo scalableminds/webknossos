@@ -319,9 +319,9 @@ class Controller
     intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
     #if intersects.length > 0 and intersects[0].distance >= 0
     for intersect in intersects
-      
+
       index = intersect.index
-      nodeID = intersect.object.geometry.nodeIDs[index]
+      nodeID = intersect.object.geometry.nodeIDs.getAllElements()[index]
 
       posArray = intersect.object.geometry.__vertexArray
       intersectsCoord = [posArray[3 * index], posArray[3 * index + 1], posArray[3 * index + 2]]

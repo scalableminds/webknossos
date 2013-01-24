@@ -81,12 +81,13 @@ class Skeleton
         routeGeometryBranchPoints,
         new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE * 0.7, size: 8, sizeAttenuation : false}))
 
+    @updateBranches()
+
     @route.on
       newActiveNode : => @setActiveNode()
       newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)
-      deleteLastNode : (id) => @deleteLastNode(id)
       mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) => @mergeTree(lastTreeID, lastNodePosition, activeNodePosition)
       newNode : => @setWaypoint()
       setBranch : (isBranchPoint, nodeID) => 
@@ -190,8 +191,6 @@ class Skeleton
     # for branchPoint in @route.branchStack
     #   @setBranchPoint(true, branchPoint.id)
     @updateBranches()
-    # add branchesParticleSystem to scene
-    @trigger "newGeometries", [@branches]
 
     @setActiveNode()
 
@@ -242,7 +241,7 @@ class Skeleton
     @flycam.hasChanged = true
 
   getMeshes : =>
-    return [@activeNodeParticle].concat(@nodes).concat(@nodesSpheres).concat(@routes)
+    return [@activeNodeParticle].concat(@nodes).concat(@nodesSpheres).concat(@routes).concat(@branches)
 
   setWaypoint : =>
     curGlobalPos = @flycam.getGlobalPos()
@@ -448,3 +447,11 @@ class Skeleton
   # Helper function
   calcScaleVector : (v) ->
     return (new THREE.Vector3()).multiply(v, @scaleVector)
+
+  setVisibility : (isVisible) ->
+    for mesh in @getMeshes()
+      mesh.visible = isVisible
+    if isVisible
+      @setActiveNode()
+      @setDisplaySpheres(@disSpheres)
+    @flycam.hasChanged = true

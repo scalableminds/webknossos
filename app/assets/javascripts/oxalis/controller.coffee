@@ -51,19 +51,32 @@ class Controller
 
       @prevControls = $('#prevControls')
       @prevControls.addClass("btn-group")
-      values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
-      callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
-                        @cameraController.changePrevXZ, @cameraController.changePrevSV]
-      buttons       = new Array(4)
-    
-      for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
+      buttons = [
+          name : "3D View"
+          callback : @cameraController.changePrevSV
+        ,
+          name : "XY Plane"
+          callback : @cameraController.changePrevXY
+          color : "#f00"
+        ,
+          name : "YZ Plane"
+          callback : @cameraController.changePrevYZ
+          color : "#00f"
+        ,
+          name : "XZ Plane"
+          callback : @cameraController.changePrevXZ
+          color : "#0f0"
+      ]
 
-        buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
-        buttons[i].on("click", callbacks[i])
-        @prevControls.append(buttons[i])
+      for button in buttons
+
+        @prevControls.append(
+          $("<button>", type : "button", class : "btn btn-small")
+            .html("#{if button.color then "<span style=\"background: #{button.color}\"></span>" else ""}#{button.name}")
+            .on("click", button.callback)
+        )
 
       @view.createKeyboardCommandOverlay()
-      @view.createDoubleJumpModal()
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
 
@@ -103,7 +116,7 @@ class Controller
       @flycam.setQuality(@model.user.quality)
 
       @model.binary.queue.set4Bit(@model.user.fourBit)
-      @model.binary.updateLookupTable(@model.user.brightness, @model.user.contrast)
+      @model.binary.updateLookupTable(@gui.settings.brightness, @gui.settings.contrast)
 
       @initMouse()
       @initKeyboard()
@@ -186,6 +199,14 @@ class Controller
       #View
       "q" : => @toggleFullScreen()
       "t" : => @view.toggleTheme()
+      "1" : =>
+        @sceneController.toggleSkeletonVisibility()
+        # Show warning, if this is the first time to use
+        # this function for this user
+        if @model.user.firstVisToggle
+          @view.showFirstVisToggle()
+          @model.user.firstVisToggle = false
+          @model.user.push()
 
       #Branches
       "b" : => @pushBranch()
@@ -302,10 +323,15 @@ class Controller
   setWaypoint : (relativePosition, typeNumber) =>
     position = @calculateGlobalPos(relativePosition)
     activeNodePos = @model.route.getActiveNodePos()
+    scaleFactor   = @view.scaleFactor
+    planeRatio    = @model.scaleInfo.baseVoxelFactors
     # set the new trace direction
     if activeNodePos
-      p = [position[0] - activeNodePos[0], position[1] - activeNodePos[1], position[2] - activeNodePos[2]]
-      @flycam.setDirection(p)
+      @flycam.setDirection([
+        position[0] - activeNodePos[0], 
+        position[1] - activeNodePos[1], 
+        position[2] - activeNodePos[2]
+      ])
     @addNode(position)
 
   drawVolume : (relativePosition) ->
@@ -317,13 +343,25 @@ class Controller
     zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
     scaleFactor   = @view.scaleFactor
     planeRatio    = @model.scaleInfo.baseVoxelFactors
-    switch @flycam.getActivePlane()
-      when PLANE_XY
-        position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - clickPos[0])/scaleFactor*planeRatio[0]*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - clickPos[1])/scaleFactor*planeRatio[1]*zoomFactor, curGlobalPos[2]]
-      when PLANE_YZ
-        position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - clickPos[1])/scaleFactor*planeRatio[1]*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - clickPos[0])/scaleFactor*planeRatio[2]*zoomFactor]
-      when PLANE_XZ
-        position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - clickPos[0])/scaleFactor*planeRatio[0]*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - clickPos[1])/scaleFactor*planeRatio[2]*zoomFactor]
+    position = switch @flycam.getActivePlane()
+      when PLANE_XY 
+        [
+          curGlobalPos[0] - (WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+          curGlobalPos[2]
+        ]
+      when PLANE_YZ 
+        [
+          curGlobalPos[0], 
+          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[2] * zoomFactor
+        ]
+      when PLANE_XZ 
+        [
+          curGlobalPos[0] - (WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+          curGlobalPos[1], 
+          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor
+        ]
     return position
 
   onPreviewClick : (position, shiftPressed) =>
@@ -407,7 +445,7 @@ class Controller
     @model.route.setActiveTree(treeId)
 
   deleteActiveTree : =>
-    @model.route.deleteTree()
+    @model.route.deleteTree(true)
 
   ########### Input Properties
 

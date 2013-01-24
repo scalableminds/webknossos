@@ -1,0 +1,34 @@
+@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level])(implicit session: brainflight.view.UnAuthedSessionData)
+
+@main(){
+  <div class="container">
+    <h3>Levels</h3>
+    <div class="well">
+      @helper.form(controllers.levelcreator.routes.LevelCreator.create, 'class -> "form-horizontal") {
+        @helper.inputText(form("name"))
+        @helper.inputText(form("width"), 'type -> "number")
+        @helper.inputText(form("height"), 'type -> "number")
+        @helper.inputText(form("depth"), 'type -> "number")
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
+
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th> # </th>
+          <th> Name </th>
+          <th> Dimensions </th>
+          <th> </th>
+        </tr>
+      </thead>
+      <tbody>
+      @levels.map{ level => 
+        @levelTableItem(level)
+      }
+      </tbody>
+    </table>
+  </div>
+}

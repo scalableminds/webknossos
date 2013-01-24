@@ -6,8 +6,9 @@ import play.api.libs.json.JsArray._
 import play.api.libs.json._
 import play.api.libs.json.Json._
 import play.Logger
-
+import play.api.data.validation.ValidationError
 /**
+
  * scalableminds - brainflight
  * User: tmbo
  * Date: 17.11.11
@@ -79,7 +80,7 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
 
   def toTuple = (x, y, z)
 
-  override def toString = "(%f, %f, %f)".format(x, y, z)
+  override def toString = s"($x, $y, $z)"
 }
 
 object Vector3D {
@@ -92,11 +93,17 @@ object Vector3D {
   implicit object Vector3DReads extends Format[Vector3D] {
     def reads(json: JsValue) = json match {
       case JsArray(ts) if ts.size == 3 =>
-        val c = ts.map(fromJson[Double](_))
-        Vector3D(c(0), c(1), c(2))
-      case _ => throw new RuntimeException("List expected")
+        ts.map(fromJson[Double](_)) match{
+          case JsSuccess(a, _) :: JsSuccess(b, _) :: JsSuccess(c, _) :: _ =>
+            JsSuccess(Vector3D(a, b, c))
+          case _ =>
+            JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.array.invalidContent"))))
+        }
+      case _ => 
+        JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.listExpected"))))
     }
     
-    def writes(v: Vector3D) = Json.toJson(List(v.x, v.y, v.z))
+    def writes(v: Vector3D) = 
+      Json.toJson(List(v.x, v.y, v.z))
   }
 }

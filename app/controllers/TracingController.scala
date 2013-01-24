@@ -3,7 +3,7 @@ package controllers
 import play.api.Logger
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import models.graph.BranchPoint
+import nml.BranchPoint
 import play.api.mvc._
 import org.bson.types.ObjectId
 import brainflight.tools.Math._
@@ -21,8 +21,8 @@ import play.api.libs.iteratee.Done
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.Comet
 import models.binary.DataSet
-import models.graph.Node
-import models.graph.Edge
+import nml.Node
+import nml.Edge
 import brainflight.tools.geometry.Point3D
 import models.tracing.UsedTracings
 import models.user.TimeTracking
@@ -31,6 +31,8 @@ import models.task.Task
 import views._
 import play.api.i18n.Messages
 import models.tracing.UsedTracings
+import net.liftweb.common._
+import braingames.mvc.Controller
 
 object TracingController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -41,12 +43,15 @@ object TracingController extends Controller with Secured {
         Json.obj(
           "dataSet" -> Json.obj(
             "id" -> dataSet.id,
-            "dataLayers" -> Json.toJson(dataSet.dataLayers.map{case (id, layer) => 
-              id -> Json.obj(
-                       "resolutions" -> layer.supportedResolutions)}),
+            "name" -> dataSet.name,
+            "dataLayers" -> Json.toJson(dataSet.dataLayers.map {
+              case (id, layer) =>
+                id -> Json.obj(
+                  "resolutions" -> layer.supportedResolutions)
+            }),
             "upperBoundary" -> dataSet.maxCoordinates))
       case _ =>
-        Json.obj("error" -> "Couldn't find dataset.")
+        Json.obj("error" -> Messages("dataSet.notFound"))
     }
 
   def createTracingInformation(tracing: Tracing) = {
@@ -55,9 +60,7 @@ object TracingController extends Controller with Secured {
   }
 
   def createTracingsList(user: User) = {
-    for {
-      tracing <- Tracing.findFor(user)
-    } yield {
+    Tracing.findFor(user).map { tracing =>
       Json.obj(
         "name" -> (tracing.dataSetName + "  " + formatDate(tracing.date)),
         "id" -> tracing.id,
@@ -73,14 +76,14 @@ object TracingController extends Controller with Secured {
   }
 
   def createExplorational = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for {
-      dataSetId <- request.body.get("dataSetId").flatMap(_.headOption)
-      dataSet <- DataSet.findOneById(dataSetId)
+    for {
+      dataSetId <- postParameter("dataSetId") ?~ Messages("dataSet.notSupplied")
+      dataSet <- DataSet.findOneById(dataSetId) ?~ Messages("dataSet.notFound")
     } yield {
       val tracing = Tracing.createTracingFor(request.user, dataSet)
       UsedTracings.use(request.user, tracing)
       Redirect(routes.Game.index)
-    }) getOrElse BadRequest("Couldn't find DataSet.")
+    }
   }
 
   def list = Authenticated { implicit request =>
@@ -88,79 +91,76 @@ object TracingController extends Controller with Secured {
   }
 
   def info(tracingId: String) = Authenticated { implicit request =>
-    Tracing
-      .findOneById(tracingId)
-      .filter(_._user == request.user._id)
-      .map(tracing =>
-        Ok(createTracingInformation(tracing) ++
-          createDataSetInformation(tracing.dataSetName)))
-      .getOrElse(BadRequest("Tracing with id '%s' not found.".format(tracingId)))
+    (for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      if (tracing._user == request.user._id)
+    } yield {
+      Ok(createTracingInformation(tracing) ++
+        createDataSetInformation(tracing.dataSetName))
+    }) ?~ Messages("notAllowed") ~> 403
   }
 
-  def update(tracingId: String) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
-    Tracing
-      .findOneById(tracingId)
-      .filter(_._user == request.user._id)
-      .flatMap { oldTracing =>
-        (request.body).asOpt[Tracing].map { tracing =>
-          if (tracing.version == oldTracing.version + 1) {
-            Tracing.save(tracing.copy(timestamp = System.currentTimeMillis))
-            TimeTracking.logUserAction(request.user, tracing)
-            AjaxOk.success(Json.obj("version" -> tracing.version), "tracing.saved")
-          } else
-            AjaxBadRequest.error(createTracingInformation(oldTracing), "tracing.dirtyState")
-        }
-      }
-      .getOrElse(AjaxBadRequest.error("Update for tracing with id '%s' failed.".format(tracingId)))
+  def update(tracingId: String, version: Int) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
+    (for {
+      oldTracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      if (oldTracing._user == request.user._id)
+    } yield {
+        if (version == oldTracing.version + 1) {
+          request.body match {
+            case JsArray(jsUpdates) =>
+              Tracing.updateFromJson(jsUpdates, oldTracing) match {
+                case Some(tracing) =>
+                  TimeTracking.logUserAction(request.user, tracing)
+                  JsonOk(Json.obj("version" -> version), "tracing.saved")
+                case _ =>
+                  JsonBadRequest("Invalid update Json")
+              }
+            case _ =>
+              Logger.error("Invalid update json.")
+              JsonBadRequest("Invalid update Json")
+          }
+        } else
+          JsonBadRequest(createTracingInformation(oldTracing), "tracing.dirtyState")
+      }) ?~ Messages("notAllowed") ~> 403
   }
 
-  private def finishTracing(user: User, tracingId: String): Either[String, (Tracing, String)] = {
-    def finishTask(tracing: Tracing, message: String) = {
-      tracing.taskId.flatMap(Task.findOneById).map { task =>
-        UsedTracings.removeAll(user)
-        Right((tracing, message))
-      } getOrElse (Right(tracing, Messages("tracing.finished")))
-    }
-
-    Tracing
-      .findOneById(tracingId)
-      .filter(tracing => tracing._user == user._id && tracing.state.isInProgress)
-      .map { tracing =>
-        if (tracing.isTrainingsTracing) {
-          finishTask(tracing.update(_.passToReview), Messages("task.passedToReview"))
-        } else {
-          finishTask(tracing.update(_.finish), Messages("task.finished"))
-        }
+  private def finishTracing(user: User, tracingId: String): Box[(Tracing, String)] = {
+    (for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      if (tracing._user == user._id && tracing.state.isInProgress)
+    } yield {
+      UsedTracings.removeAll(tracing)
+      tracing match {
+        case tracing if tracing.taskId.isEmpty =>
+          tracing.update(_.finish) -> Messages("tracing.finished")
+        case tracing if tracing.isTrainingsTracing =>
+          tracing.update(_.passToReview) -> Messages("task.passedToReview")
+        case _ =>
+          tracing.update(_.finish) -> Messages("task.finished")
       }
-      .getOrElse(Left(Messages("tracing.notFound")))
+    }) ?~ Messages("tracing.notPossible")
   }
 
   def finish(tracingId: String, experimental: Boolean) = Authenticated { implicit request =>
-    finishTracing(request.user, tracingId).fold(
-      error => AjaxBadRequest.error(error),
-      {
-        case (tracing, message) =>
-          if (experimental)
-            AjaxOk.success(message)
-          else
-            tracing
-              .taskId
-              .flatMap(Task.findOneById)
-              .map { task =>
-                AjaxOk.success(html.user.dashboard.taskTracingTableItem(task, tracing), message)
-              }
-              .getOrElse(AjaxBadRequest.error("task.notfound"))
-      })
+    finishTracing(request.user, tracingId).map {
+      case (tracing, message) =>
+        if (experimental)
+          JsonOk(message)
+        else
+          (for {
+            taskId <- tracing.taskId ?~ Messages("tracing.task.notFound")
+            task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+          } yield {
+            JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), message)
+          }) asResult
+    }
   }
 
   def finishWithRedirect(tracingId: String) = Authenticated { implicit request =>
-    finishTracing(request.user, tracingId).fold(
-      error =>
-        BadRequest(error),
-      {
-        case (_, message) =>
-          Redirect(routes.UserController.dashboard).flashing("success" -> message)
-      })
+    finishTracing(request.user, tracingId).map {
+      case (_, message) =>
+        Redirect(routes.UserController.dashboard).flashing("success" -> message)
+    }
   }
 
 }

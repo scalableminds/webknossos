@@ -19,7 +19,7 @@ case class Level(
   lazy val id = _id.toString
   
   val assetsFolder =
-    Level.assetsBaseFolder + "/" + name + "/assets"
+    s"${Level.assetsBaseFolder}/$name/assets"
 
   private def assetFile(name: String) =
     new File(assetsFolder + "/" + name)

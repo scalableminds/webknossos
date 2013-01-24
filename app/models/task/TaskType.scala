@@ -8,7 +8,7 @@ import models.basics.BasicDAO
 
 case class TimeSpan(min: Int, max: Int, maxHard: Int){
   
-  override def toString = "%d - %d, Limit: %d".format(min, max, maxHard)
+  override def toString = s"$min - $max, Limit: $maxHard"
 }
 
 case class TaskType(summary: String, description: String, expectedTime: TimeSpan, fileName: Option[String] = None, _id: ObjectId = new ObjectId) {

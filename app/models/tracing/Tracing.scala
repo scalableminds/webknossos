@@ -1,22 +1,16 @@
 package models.tracing
 
-import play.api.libs.json.JsValue
-import play.api.libs.json.Reads
 import brainflight.tools.geometry.Point3D
 import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId
-import play.api.libs.json.Writes
-import play.api.libs.json.Json
-import play.api.libs.json.JsObject
+import play.api.libs.json._
+import play.api.data.validation.ValidationError
 import xml.Xml
 import xml.XMLWrites
 import models.binary.DataSet
 import DBTree.DBTreeFormat
 import nml.Comment
 import models.user.User
-import play.api.libs.json.Reads
-import play.api.libs.json.JsValue
-import play.api.libs.json.Format
 import brainflight.tools.geometry.Scale
 import java.util.Date
 import com.mongodb.casbah.query._
@@ -296,6 +290,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
 
     def writes(e: Tracing) = Json.obj(
       ID -> e.id,
+      TREES -> e.trees,
       VERSION -> e.version,
       TREES -> e.trees.map(DBTreeFormat.writes),
       ACTIVE_NODE -> e.activeNodeId,
@@ -315,9 +310,9 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       val editPosition = (js \ EDIT_POSITION).as[Point3D]
       Tracing.findOneById(id) match {
         case Some(exp) =>
-          exp.copy(trees = trees, version = version, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition, comments = comments)
+          JsSuccess(exp.copy(trees = trees, version = version, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition, comments = comments))
         case _ =>
-          throw new RuntimeException("Valid tracing id expected")
+          JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.objectid"))))
       }
     }*/
   }

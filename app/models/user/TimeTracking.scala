@@ -7,10 +7,10 @@ import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
 import java.util.Date
 import java.util.Calendar
-import akka.util.duration._
-import brainflight.tools.ExtendedTypes._
+import scala.concurrent.duration._
 import models.basics.DAOCaseClass
 import models.tracing.Tracing
+import braingames.util.ExtendedTypes.ExtendedString
 
 case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, tracing: Option[ObjectId] = None) {
   val created = {
@@ -62,7 +62,6 @@ case class TimeTracking(user: ObjectId, timeEntries: List[TimeEntry], _id: Objec
 }
 
 object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
-  import akka.util.duration._
   val MAX_PAUSE = (5 minutes).toMillis
 
   val timeRx = "(([0-9]+)d)?(\\s*([0-9]+)h)?(\\s*([0-9]+)m)?".r

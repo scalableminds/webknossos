@@ -12,9 +12,9 @@ import models.user.User
 import models.user.Experience
 import play.api.i18n.Messages
 import views.html
-import play.api.data.Form
-import play.api.data.Forms._
-import brainflight.tools.ExtendedTypes._
+import net.liftweb.common._
+import braingames.mvc.Controller
+import braingames.util.ExtendedTypes.ExtendedString
 
 object UserAdministration extends Controller with Secured {
 
@@ -27,114 +27,112 @@ object UserAdministration extends Controller with Secured {
   }
 
   def logTime(userId: String, time: String, note: String) = Authenticated { implicit request =>
-    User.findOneById(userId) map { user =>
-      TimeTracking.parseTime(time) match {
-        case Some(t) =>
-          TimeTracking.logTime(user, t, note)
-          Ok
-        case _ =>
-          BadRequest("Invalid time.")
-      }
-    } getOrElse BadRequest("Didn't find user")
-  }
-
-  def bulkOperation(operation: String => Option[User])(successMessage: User => String, errorMessage: String => String)(implicit request: AuthenticatedRequest[Map[String, Seq[String]]]) = {
-    request.body.get("id") match {
-      case Some(ids) =>
-        val results = ids.map { userId =>
-          operation(userId) match {
-            case Some(user) => ajaxSuccess -> successMessage(user)
-            case _          => ajaxError -> errorMessage(userId)
-          }
-        }
-        AjaxOk(html.admin.user.userTable(allUsers), results)
-      case _ =>
-        AjaxBadRequest.error("No user chosen")
+    for {
+      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+      time <- TimeTracking.parseTime(time) ?~ Messages("time.invalidFormat")
+    } yield {
+      TimeTracking.logTime(user, time, note)
+      JsonOk
     }
   }
 
+  def bulkOperation(operation: String => Box[User])(successMessage: User => String)(implicit request: AuthenticatedRequest[Map[String, Seq[String]]]) = {
+    (for {
+      ids <- request.body.get("id") ?~ Messages("user.bulk.empty")
+    } yield {
+      val results = ids.map { userId =>
+        operation(userId) match {
+          case Full(user)         => jsonSuccess -> successMessage(user)
+          case Failure(msg, _, _) => jsonError -> msg
+          case Empty              => jsonError -> (Messages("user.bulk.failedFor", userId))
+        }
+      }
+      JsonOk(html.admin.user.userTable(allUsers), results)
+    }).asResult
+  }
+
   private def verifyUser(userId: String) = {
-    User.findOneById(userId) map { user =>
-      if (!user.verified) {
-        Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-        user.update(_.verify)
-      } else
-        user
+    for {
+      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+      if (!user.verified)
+    } yield {
+      Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
+      user.update(_.verify)
     }
   }
 
   def verify(userId: String) = Authenticated { implicit request =>
-    verifyUser(userId) map { user =>
-      AjaxOk.success(html.admin.user.userTableItem(user), user.name + Messages("user.verified"))
-    } getOrElse
-      BadRequest
-  }
-
-  def changExperience(userId: String) = Authenticated { implicit request =>
-    verifyUser(userId) map { user =>
-      AjaxOk.success(html.admin.user.userTableItem(user), user.name + Messages("user.verified"))
-    } getOrElse
-      BadRequest
+    for {
+      user <- verifyUser(userId) ?~ Messages("user.verifyFailed")
+    } yield {
+      JsonOk(html.admin.user.userTableItem(user), Messages("user.verified", user.name))
+    }
   }
 
   def verifyBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    bulkOperation(verifyUser)(
-      user => "Verified %s".format(user.name),
-      userId => "Couldn't verify user with id '%s'".format(userId))
+    bulkOperation(verifyUser)(user => Messages("user.verified", user.name))
   }
 
   private def deleteUser(userId: String) = {
-    User.findOneById(userId) map { user =>
+    for {
+      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+    } yield {
       User.remove(user)
       user
     }
   }
 
   def delete(userId: String) = Authenticated { implicit request =>
-    deleteUser(userId) map { user =>
-      AjaxOk.success(user.name + Messages("user.deleted"))
-    } getOrElse BadRequest
+    deleteUser(userId).map { user =>
+      JsonOk(Messages("user.deleted", user.name))
+    }
   }
 
   def deleteBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    bulkOperation(deleteUser)(
-      user => "Deleted %s".format(user.name),
-      userId => "Couldn't delete user with id '%s'".format(userId))
+    bulkOperation(deleteUser)(user => Messages("user.deleted", user.name))
   }
 
   private def addRole(roleName: String)(userId: String) = {
-    User.findOneById(userId) map { user =>
+    for {
+      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+    } yield {
       user.update(_.addRole(roleName))
     }
   }
 
   private def deleteRole(roleName: String)(userId: String) = {
-    User.findOneById(userId) map { user =>
+    for {
+      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+    } yield {
       user.update(_.deleteRole(roleName))
     }
   }
 
   def loginAsUser(userId: String) = Authenticated(permission = Some(Permission("admin.ghost"))) { implicit request =>
-    User.findOneById(userId) map { user =>
+    for {
+      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+    } yield {
       Redirect(controllers.routes.UserController.dashboard)
         .withSession(Secured.createSession(user))
-    } getOrElse (BadRequest("User not found."))
+    }
   }
 
   def deleteRoleBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    postParameter("role").map { roleName =>
+    for {
+      roleName <- postParameter("role") ?~ Messages("role.invalid")
+    } yield {
       bulkOperation(deleteRole(roleName))(
-        user => "Removed role from %s".format(user.name),
-        userId => "Couldn't remove role from user with id '%s'".format(userId))
-    } getOrElse AjaxBadRequest.error("Please choose a role")
+        user => Messages("role.removed", user.name))
+    }
   }
 
   def addRoleBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    postParameter("role").map { roleName =>
+    for {
+      roleName <- postParameter("role") ?~ Messages("role.invalid")
+    } yield {
       bulkOperation(addRole(roleName))(
-        user => "Added role to %s".format(user.name),
-        userId => "Couldn't add role to user with id '%s'".format(userId))
-    } getOrElse AjaxBadRequest.error("Please choose a role")
+        user => Messages("role.added", user.name))
+    }
   }
 
   def increaseExperience(domain: String, value: Int)(userId: String) = {
@@ -156,35 +154,32 @@ object UserAdministration extends Controller with Secured {
   }
 
   def increaseExperienceBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for {
-      domain <- postParameter("experience-domain") //?~ Messages("experience.domain.invalid")
-      value <- postParameter("experience-value").flatMap(_.toIntOpt) //?~ Messages("experience.value.invalid")
+    for {
+      domain <- postParameter("experience-domain") ?~ Messages("experience.domain.invalid")
+      value <- postParameter("experience-value").flatMap(_.toIntOpt) ?~ Messages("experience.value.invalid")
     } yield {
       bulkOperation(increaseExperience(domain, value))(
-        user => "Added experience to %s".format(user.name),
-        userId => "Couldn't add experience to user with id '%s'".format(userId))
-    }) getOrElse AjaxBadRequest.error("invalid")
+        user => Messages("user.experience.increased", user.name))
+    }
   }
 
   def setExperienceBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for {
-      domain <- postParameter("experience-domain") //?~ Messages("experience.domain.invalid")
-      value <- postParameter("experience-value").flatMap(_.toIntOpt) //?~ Messages("experience.value.invalid")
+    for {
+      domain <- postParameter("experience-domain") ?~ Messages("experience.domain.invalid")
+      value <- postParameter("experience-value").flatMap(_.toIntOpt) ?~ Messages("experience.value.invalid")
     } yield {
       bulkOperation(setExperience(domain, value))(
-        user => "Set experience of %s".format(user.name),
-        userId => "Couldn't set experience of user with id '%s'".format(userId))
-    }) getOrElse AjaxBadRequest.error("invalid")
+        user => Messages("user.experience.set", user.name))
+    }
   }
 
   def deleteExperienceBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    (for {
-      domain <- postParameter("experience-domain") //?~ Messages("experience.domain.invalid")
+    for {
+      domain <- postParameter("experience-domain") ?~ Messages("experience.domain.invalid")
     } yield {
       bulkOperation(deleteExperience(domain))(
-        user => "Removed experience from %s".format(user.name),
-        userId => "Couldn't remove experience from user with id '%s'".format(userId))
-    }) getOrElse AjaxBadRequest.error("invalid")
+        user => Messages("user.experience.removed", user.name))
+    }
   }
 
 }

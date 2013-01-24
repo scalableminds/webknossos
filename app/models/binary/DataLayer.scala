@@ -27,10 +27,10 @@ trait TrilerpInterpolation {
     val y = point.y.toInt
     val z = point.z.toInt
 
-    val floored = Vector3D(x, y, z)
-    if (point == floored) {
-      Array(getColor(byteLoader, resolution, blockMap)(Point3D(x, y, z)).toByte)
+    if (point.x == x && point.y == y & point.z == z) {
+      Array(colorF(Point3D(x, y, z)).toByte)
     } else {
+      val floored = Vector3D(x, y, z)
       val q = Array(
         colorF(Point3D(x, y, z)),
         colorF(Point3D(x, y, z + 1)),
@@ -60,7 +60,7 @@ trait NearestNeighborInterpolation {
   }
 }
 
-sealed trait DataLayer {
+sealed trait DataLayer{
   val folder: String
   val elementSize: Int
   val supportedResolutions: List[Int]
@@ -81,7 +81,7 @@ trait DataLayerJsonFormat[T <: DataLayer] extends Format[T]{
     case "uint16" => 16
     case "uint32" => 32
     case "uint64" => 64
-    case _ => throw new IllegalArgumentException("illegal element class (%s) for DataLayer".format(elementClass))
+    case _ => throw new IllegalArgumentException(s"illegal element class ($elementClass) for DataLayer")
   }
   
   def writes(dataLayer: T) = Json.obj(
@@ -106,17 +106,18 @@ object ColorLayer {
   def identifier = "color"
    
   implicit object ColorLayerFormat extends DataLayerJsonFormat[ColorLayer] {
-    def reads(js: JsValue) = ColorLayer(elementClassToBitCount((js \ "class").as[String]))
+    def reads(js: JsValue) = 
+      JsSuccess(ColorLayer(elementClassToBitCount((js \ "class").as[String]), (js \ "resolutions").as[List[Int]]))
   }
 }
 
 object ClassificationLayer {
   val default = ClassificationLayer(8, List(1), List("mito"))
   def identifier = "classification"
-    
   implicit object ClassificationLayerFormat extends DataLayerJsonFormat[ClassificationLayer] {
     val FLAGS = "flags"
-    def reads(js: JsValue) = ClassificationLayer(elementClassToBitCount((js \ "class").as[String]), List(1), (js \ "flags").as[List[String]])
+    def reads(js: JsValue) = 
+      JsSuccess(ClassificationLayer(elementClassToBitCount((js \ "class").as[String]), (js \ "resolutions").as[List[Int]], (js \ "flags").as[List[String]]))
     override def writes(layer: ClassificationLayer) = super.writes(layer).as[JsObject] ++ Json.obj(FLAGS -> Json.toJson(layer.flags))
   }
 }
@@ -126,6 +127,7 @@ object SegmentationLayer{
   def identifier = "segmentation"
     
   implicit object SegmentationLayerFormat extends DataLayerJsonFormat[SegmentationLayer] {
-    def reads(js: JsValue) = SegmentationLayer(elementClassToBitCount((js \ "class").as[String]))
+    def reads(js: JsValue) = 
+      JsSuccess(SegmentationLayer(elementClassToBitCount((js \ "class").as[String]),(js \ "resolutions").as[List[Int]]))
   }
 }

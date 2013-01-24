@@ -1,12 +1,13 @@
 package brainflight.user
 
 import akka.actor._
-import akka.util.duration._
+import scala.concurrent.duration._
 import models.user.User
 import akka.agent.Agent
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import org.bson.types.ObjectId
+import play.api.libs.concurrent.Execution.Implicits._
 
 
 case class FlushActivities()

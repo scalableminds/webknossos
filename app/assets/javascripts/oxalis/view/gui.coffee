@@ -203,7 +203,7 @@ class Gui
                       newNode          : => @update()
                       newTree          : => @update()
                       # newActiveNodeRadius : (radius) =>@updateRadius(radius) 
-                      PushFailed       : -> Toast.error("Auto-Save failed!")
+                      pushFailed       : -> Toast.error("Auto-Save failed!")
 
     @createTooltips()
 

@@ -157,7 +157,7 @@ svg a:hover {
 }
 
 #alert-container {
-    position: absolute;
+    position: fixed;
     right: 20px;
     top: 60px;
     z-index: 100;
@@ -262,6 +262,13 @@ svg a:hover {
     left: 420px;
     z-index: 30;
 }
+#prevControls .btn > span {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
 #overlay {
     position: absolute;
     width: 280px;
@@ -345,9 +352,8 @@ svg a:hover {
     #editor-container {
         input[type=submit] {
             margin: 10px 0;
+        }
     }
-}
-
 }
 
 

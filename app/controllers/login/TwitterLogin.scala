@@ -1,7 +1,7 @@
 package controllers.login
 
 import views._
-
+import play.api.libs.concurrent.Execution.Implicits._
 import play.Logger
 import play.api._
 import play.api.libs.ws._
@@ -14,8 +14,6 @@ import play.api.libs.concurrent._
 import play.api.libs.iteratee._
 import com.ning.http.client.Realm.AuthScheme
 import brainflight.security.Secured
-import play.api.libs.concurrent.execution.defaultContext
-//import scala.concurrent.ExecutionContext.Implicits.global
 
 object TwitterLogin extends Controller {
 

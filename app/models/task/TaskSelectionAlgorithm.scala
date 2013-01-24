@@ -24,8 +24,8 @@ object TaskSelectionAlgorithm extends BasicDAO[TaskSelectionAlgorithm]("taskAlgo
   }
   
   def use(alg: TaskSelectionAlgorithm) {
-    update(MongoDBObject.empty, $set("active" -> false), false, true)
-    update(MongoDBObject("_id" -> alg._id), $set("active" -> true))
+    update(MongoDBObject.empty, $set(List("active" -> false)), false, true)
+    update(MongoDBObject("_id" -> alg._id), $set(List("active" -> true)))
   }
 
   def isValidAlgorithm(js: String) = true // TODO: implement testing strategie

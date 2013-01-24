@@ -15,34 +15,42 @@ import models.basics.BasicEvolution
 import brainflight.mail.DefaultMails
 import brainflight.tools.geometry._
 import brainflight.mail.Mailer
-import brainflight.io.StartWatching
-import brainflight.io.DataSetChangeHandler
-import brainflight.io.DirectoryWatcherActor
+import brainflight.io._
 import scala.collection.parallel.Tasks
-import akka.util.duration._
 import akka.pattern.ask
 import akka.util.Timeout
+import akka.actor.ActorSystem
+import com.typesafe.config.ConfigFactory
+import scala.collection.JavaConversions._
+import brainflight.ActorSystems
+import scala.concurrent.duration._
+import play.api.libs.concurrent.Execution.Implicits._
 
 object Global extends GlobalSettings {
 
-  implicit val timeout = Timeout(5 seconds)
-  override def onStart(app: Application) {
-    val DirectoryWatcher = Akka.system.actorOf(
-      Props(new DirectoryWatcherActor(new DataSetChangeHandler)),
-      name = "directoryWatcher")
-    DirectoryWatcher ? StartWatching("binaryData")
+  lazy val DirectoryWatcher = Akka.system.actorOf(
+    Props(new DirectoryWatcherActor(new DataSetChangeHandler)),
+    name = "directoryWatcher")
 
-    if (Play.current.mode == Mode.Dev) {
-      BasicEvolution.runDBEvolution()
-      // Data insertion needs to be delayed, because the dataSets need to be
-      // found by the DirectoryWatcher first
-      InitialData.insert()
-    }
-    
-    Role.ensureImportantRoles()
+  override def onStart(app: Application) {
+      implicit val timeout = Timeout(5 seconds)
+      (DirectoryWatcher ? StartWatching("binaryData")).onSuccess {
+        case x =>
+          if (Play.current.mode == Mode.Dev) {
+            BasicEvolution.runDBEvolution()
+            // Data insertion needs to be delayed, because the dataSets need to be
+            // found by the DirectoryWatcher first
+            InitialData.insert()
+          }
+      }
+      if (Play.current.mode == Mode.Prod)
+        Role.ensureImportantRoles()
   }
-  
-  override def onStop(app: Application){
+
+  override def onStop(app: Application) {
+    ActorSystems.dataRequestSystem.shutdown
+    DirectoryWatcher ! StopWatching
+    models.context.BinaryDB.connection.close()
     models.context.db.close()
   }
 }

@@ -26,6 +26,7 @@ case class DataSet(
   def doesContain(point: Point3D) =
     point.x >= 0 && point.y >= 0 && point.z >= 0 && // lower bound
       !(point hasGreaterCoordinateAs maxCoordinates)
+      
 }
 
 object DataSet extends BasicDAO[DataSet]("dataSets") {

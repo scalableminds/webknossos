@@ -9,7 +9,7 @@ object TracingUpdater {
   implicit object TracingUpdateReads extends Reads[TracingUpdater] {
     def reads(js: JsValue) = {
       val value = (js \ "value").as[JsObject]
-      (js \ "action").as[String] match {
+      JsSuccess((js \ "action").as[String] match {
         case "createTree"        => CreateTree(value)
         case "deleteTree"        => DeleteTree(value)
         case "updateTree"        => UpdateTree(value)
@@ -21,7 +21,7 @@ object TracingUpdater {
         case "createEdge"        => CreateEdge(value)
         case "deleteEdge"        => DeleteEdge(value)
         case "updateTracing"     => UpdateTracing(value)
-      }
+      })
     }
   }
 

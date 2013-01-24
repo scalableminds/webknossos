@@ -4,7 +4,7 @@ import scala.xml.XML
 import models.binary.DataSet
 import models.tracing.Tracing
 import models.Color
-import brainflight.tools.ExtendedTypes._
+import braingames.util.ExtendedTypes.ExtendedString
 import brainflight.tools.geometry.Point3D
 import scala.xml.{ Node => XMLNode }
 import scala.xml.NodeSeq

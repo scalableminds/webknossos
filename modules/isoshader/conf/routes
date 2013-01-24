@@ -1,0 +1,11 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET     /                           controllers.isoshader.Application.index
+
+GET     /assets/isoshader/*file     controllers.isoshader.Assets.at(path="/modules/isoshader/public", file)
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.at(path="/public", file)

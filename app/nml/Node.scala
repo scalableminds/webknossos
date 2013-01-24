@@ -2,10 +2,7 @@ package nml
 
 import brainflight.tools.geometry.Point3D
 import com.novus.salat.annotations._
-import play.api.libs.json.Format
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
-import play.api.libs.json.JsValue
+import play.api.libs.json._
 import xml.XMLWrites
 
 case class Node(id: Int, radius: Float, position: Point3D, viewport: Int, resolution: Int, timestamp: Long)
@@ -36,11 +33,11 @@ object Node {
     }
 
     def reads(js: JsValue) =
-      Node((js \ ID).as[Int],
+      JsSuccess(Node((js \ ID).as[Int],
         (js \ RADIUS).as[Float],
         (js \ POSITION).as[Point3D],
         (js \ VIEWPORT).as[Int],
         (js \ RESOLUTION).as[Int],
-        (js \ TIMESTAMP).as[Long])
+        (js \ TIMESTAMP).as[Long]))
   }
 }

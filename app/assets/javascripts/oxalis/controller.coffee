@@ -327,14 +327,14 @@ class Controller
       ])
     @addNode(position)
 
-  onPreviewClick : (position, shiftPressed) =>
-    @onClick(position, VIEW_3D, shiftPressed)
+  onPreviewClick : (position, shiftAltPressed) =>
+    @onClick(position, VIEW_3D, shiftAltPressed)
 
-  onPlaneClick : (position, shiftPressed) =>
+  onPlaneClick : (position, shiftAltPressed) =>
     plane = @flycam.getActivePlane()
-    @onClick(position, plane, shiftPressed)
+    @onClick(position, plane, shiftAltPressed)
 
-  onClick : (position, plane, shiftPressed) =>
+  onClick : (position, plane, shiftAltPressed) =>
     scaleFactor = @view.scaleFactor
     camera      = @view.getCameras()[plane]
     # vector with direction from camera position to click position
@@ -366,7 +366,7 @@ class Controller
         # set the active Node to the one that has the ID stored in the vertex
         # center the node if click was in 3d-view
         centered = plane == VIEW_3D
-        @setActiveNode(nodeID, centered, shiftPressed)
+        @setActiveNode(nodeID, centered, shiftAltPressed)
         break
 
   ########### Model Interaction

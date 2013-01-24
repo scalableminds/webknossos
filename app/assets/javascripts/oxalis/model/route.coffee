@@ -99,8 +99,8 @@ class Route
       else
         @createNewTree()
 
-    tracingType = $('#container').data("tracing-type")
-    if (tracingType == "Task" or tracingType == "Training") and !nodeList.length
+    tracingType = data.tracingType
+    if (tracingType == "Task" or tracingType == "Training") and nodeList.length == 0
       @addNode(data.editPosition)
 
     #@createNewTree()

@@ -43,7 +43,8 @@ object Global extends GlobalSettings {
             InitialData.insert()
           }
       }
-      Role.ensureImportantRoles()
+      if (Play.current.mode == Mode.Prod)
+        Role.ensureImportantRoles()
   }
 
   override def onStop(app: Application) {

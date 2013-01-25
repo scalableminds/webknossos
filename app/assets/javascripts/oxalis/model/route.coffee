@@ -99,6 +99,10 @@ class Route
       else
         @createNewTree()
 
+    tracingType = data.tracingType
+    if (tracingType == "Task" or tracingType == "Training") and nodeList.length == 0
+      @addNode(data.editPosition)
+
     #@createNewTree()
     #for i in [0...10000]
     #  @addNode([Math.random() * 2000, Math.random() * 2000, Math.random() * 2000], TYPE_USUAL)

@@ -316,7 +316,7 @@ class View
           <tr><td>K</td><td>Scale up viewports</td><td>O or Alt + Mousewheel</td><td>Zoom out</td></tr>
           <tr><td>L</td><td>Scale down viewports</td><td>B</td><td>Set branchpoint</td></tr>
           <tr><td>Del</td><td>Delete node/Split trees</td><td>J</td><td>Jump to last branchpoint</td></tr>
-          <tr><td>Shift + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
+          <tr><td>Shift + Alt + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
           <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
           <tr><td>N</td><td>Next comment</td><td></td><td></td></tr>
           <tr><td>T</td><td>Toggle theme</td><td></td><td></td></tr>

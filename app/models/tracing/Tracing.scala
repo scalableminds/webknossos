@@ -287,6 +287,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     val EDIT_POSITION = "editPosition"
     val SCALE = "scale"
     val COMMENTS = "comments"
+    val TRACING_TYPE = "tracingType"
 
     def writes(e: Tracing) = Json.obj(
       ID -> e.id,
@@ -297,7 +298,8 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       BRANCH_POINTS -> e.branchPoints,
       SCALE -> e.scale,
       COMMENTS -> e.comments,
-      EDIT_POSITION -> e.editPosition)
+      EDIT_POSITION -> e.editPosition,
+      TRACING_TYPE -> e.tracingType.toString)
 
     /*def reads(js: JsValue): Tracing = {
 

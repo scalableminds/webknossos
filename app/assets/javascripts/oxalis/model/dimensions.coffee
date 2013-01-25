@@ -18,3 +18,17 @@ Dimensions =
   transDim : (array, planeID) ->
     ind = @getIndices(planeID)
     return [array[ind[0]], array[ind[1]], array[ind[2]]]
+
+  # Return the plane in which dim is always the same
+  planeForThirdDimension : (dim) ->
+    switch dim
+      when 2 then @PLANE_XY
+      when 0 then @PLANE_YZ
+      when 1 then @PLANE_XZ
+
+  # Opposite of planeForThirdDimension
+  thirdDimensionForPlane : (planeID) ->
+    switch planeID
+      when @PLANE_XY then 2
+      when @PLANE_YZ then 0
+      when @PLANE_XZ then 1

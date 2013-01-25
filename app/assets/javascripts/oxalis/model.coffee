@@ -44,7 +44,7 @@ class Model
               @flycam = new Flycam(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1)      
               @route = new Route(tracing.tracing, @scaleInfo, @flycam)
               @user = new User(user)
-              @volumeTracing = new VolumeTracing()
+              @volumeTracing = new VolumeTracing(@flycam)
 
             -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
           )

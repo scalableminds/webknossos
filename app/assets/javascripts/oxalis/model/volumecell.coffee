@@ -1,5 +1,6 @@
 ### define 
 ./volumelayer : VolumeLayer
+./dimensions : DimensionsHelper
 ###
 
 class VolumeCell
@@ -8,10 +9,18 @@ class VolumeCell
 
     @layers = []            # List of VolumeLayers
 
-  createLayer : (planeId) ->
-    layer = new VolumeLayer(planeId)
+  createLayer : (planeId, thirdDimensionValue) ->
+    if @getLayer(planeId, thirdDimensionValue) != null
+      return null
+    layer = new VolumeLayer(planeId, thirdDimensionValue)
     @layers.push(layer)
     return layer
+
+  getLayer : (planeId, thirdDimensionValue) ->
+    for layer in @layers
+      if layer.plane == planeId and layer.thirdDimensionValue == thirdDimensionValue
+        return layer
+    return null
 
   getVoxelArray : ->
 

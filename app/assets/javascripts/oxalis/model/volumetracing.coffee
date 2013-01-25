@@ -1,6 +1,7 @@
 ### define 
 ./volumecell : VolumeCell
 ../../libs/event_mixin : EventMixin
+./dimensions : DimensionsHelper
 ###
 
 MODE_LASSO = 0
@@ -10,7 +11,7 @@ CLOSE_THRESHOLD = 3
 
 class VolumeTracing
 
-  constructor : () ->
+  constructor : (@flycam) ->
     _.extend(@, new EventMixin())
 
     @cells        = []         # List of VolumeCells
@@ -22,13 +23,17 @@ class VolumeTracing
     @currentCell = new VolumeCell(id)
     @cells.push(@currentCell)
 
-  startNewLayer : (planeId) ->
+  startNewLayer : (planeId = @flycam.getActivePlane()) ->
+    if currentLayer?
+      return
     # just for testing
     unless @currentCell?
       @createCell(1)
-    @currentLayer = @currentCell.createLayer(planeId)
-    @startPos = null
-    @trigger "newLayer"
+    pos = @flycam.getGlobalPos()
+    thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
+    @currentLayer = @currentCell.createLayer(planeId, thirdDimValue)
+    if @currentLayer?
+      @trigger "newLayer"
 
   addToLayer : (pos) ->
     unless @currentLayer?
@@ -47,6 +52,7 @@ class VolumeTracing
     @currentLayer.addContour(@startPos)
     @trigger "newContour", @startPos
     @currentLayer = null
+    @startPos = null
 
   distance : (pos1, pos2) ->
     sumOfSquares = 0

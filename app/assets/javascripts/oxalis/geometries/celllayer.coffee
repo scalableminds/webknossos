@@ -13,7 +13,13 @@ class CellLayer
     @scaleVector  = @model.scaleInfo.getVoxelPerNMVector()
     @curIndex     = 0
 
-    @model.volumeTracing.on "newContour", (pos) => @addEdgePoint(pos)
+    @model.volumeTracing.on({
+      newContour : (pos) => @addEdgePoint(pos)
+      updateLayer : (contourList) =>
+        @reset()
+        for pos in contourList
+          @addEdgePoint(pos)
+      })
 
     @reset()
 

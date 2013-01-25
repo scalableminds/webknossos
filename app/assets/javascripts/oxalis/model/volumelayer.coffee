@@ -8,24 +8,20 @@ PLANE_XZ         = Dimensions.PLANE_XZ
 
 class VolumeLayer
   
-  constructor : (@plane, @time) ->
+  constructor : (@plane, @thirdDimensionValue, @time) ->
     
     unless @time?
       @time = (new Date()).getTime()
     @contourList = []
     @comment     = ""
     #@plane       = null
-    @thirdDimensionValue = null
     @maxCoord    = null
     @minCoord    = null
 
   addContour : (pos) ->
     @contourList.push(pos)
 
-    unless @thirdDimensionValue?
-      # Forst contour, initialize some stuff
-      thirdDimension = Dimensions.thirdDimensionForPlane(@plane)
-      @thirdDimensionValue = pos[thirdDimension]
+    unless @maxCoord?
       @maxCoord = pos.slice()
       @minCoord = pos.slice()
 

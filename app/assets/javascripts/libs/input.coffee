@@ -195,6 +195,8 @@ class Input.Mouse
     else
       @mouseEnter(which : 0) if @isHit(event)
 
+    if event.which == 1
+      @trigger("leftMouseUp")
     @leftDown = false
     return
 

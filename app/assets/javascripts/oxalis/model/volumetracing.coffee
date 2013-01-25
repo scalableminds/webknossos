@@ -21,13 +21,12 @@ class VolumeTracing
   createCell : (id) ->
     @currentCell = new VolumeCell(id)
     @cells.push(@currentCell)
-    @startNewLayer()
 
-  startNewLayer : ->
+  startNewLayer : (planeId) ->
     # just for testing
     unless @currentCell?
       @createCell(1)
-    @currentLayer = @currentCell.createLayer()
+    @currentLayer = @currentCell.createLayer(planeId)
     @startPos = null
     @trigger "newLayer"
 
@@ -35,21 +34,19 @@ class VolumeTracing
     unless @currentLayer?
       return
     unless @startPos?
-      # Save where it started to notify when shape closed
+      # Save where it started to close shape
       @startPos = pos.slice()
-      @startPosLeft = false
 
     @currentLayer.addContour(pos)
     @trigger "newContour", pos
 
-    distance = @distance(pos, @startPos)
-    if (not @startPosLeft) and distance > CLOSE_THRESHOLD
-      @startPosLeft = true
-    else if @startPosLeft and distance < CLOSE_THRESHOLD
-      # Done! Close shape.
-      @currentLayer.addContour(@startPos)
-      @trigger "newContour", @startPos
-      @currentLayer = null
+  finishLayer : ->
+    unless @currentLayer?
+      return
+
+    @currentLayer.addContour(@startPos)
+    @trigger "newContour", @startPos
+    @currentLayer = null
 
   distance : (pos1, pos2) ->
     sumOfSquares = 0

@@ -1,5 +1,5 @@
 ### define 
-./dimensions : Dimensions
+./dimensions : DimensionsHelper
 ###
 
 PLANE_XY         = Dimensions.PLANE_XY
@@ -8,7 +8,7 @@ PLANE_XZ         = Dimensions.PLANE_XZ
 
 class VolumeLayer
   
-  constructor : (@time, @plane) ->
+  constructor : (@plane, @time) ->
     
     unless @time?
       @time = (new Date()).getTime()
@@ -26,8 +26,8 @@ class VolumeLayer
       # Forst contour, initialize some stuff
       thirdDimension = Dimensions.thirdDimensionForPlane(@plane)
       @thirdDimensionValue = pos[thirdDimension]
-      @maxCoord = pos.sclice()
-      @minCoord = pos.sclice()
+      @maxCoord = pos.slice()
+      @minCoord = pos.slice()
 
     for i in [0..2]
       @minCoord[i] = Math.min(@minCoord[i], pos[i])

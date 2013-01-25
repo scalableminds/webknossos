@@ -156,7 +156,10 @@ class Controller
           if @mode == MODE_NORMAL
             @onPlaneClick(pos, shiftPressed)
           else if @mode == MODE_VOLUME
-            @drawVolume(pos)
+            @model.volumeTracing.startNewLayer()
+        leftMouseUp : =>
+          if @mode == MODE_VOLUME
+            @model.volumeTracing.finishLayer()
         rightClick : @setWaypoint
       )
 
@@ -231,7 +234,6 @@ class Controller
       "m" : =>  # Toggle Mode
         if @mode == MODE_NORMAL 
           @mode = MODE_VOLUME
-          @model.volumeTracing.startNewLayer()
         else 
           @mode = MODE_NORMAL
 
@@ -262,7 +264,6 @@ class Controller
   moveY : (y) => @move([0, y, 0])
   moveZ : (z, first) =>
     if @mode == MODE_VOLUME
-      @model.volumeTracing.startNewLayer()
       @cameraController.setRouteClippingDistance(1)
       @sceneController.setRouteClippingDistance(1)
     if(first)

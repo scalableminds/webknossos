@@ -3,6 +3,7 @@
 # ~~~~
 
 # Level Creator
+GET     /                                   controllers.levelcreator.LevelCreator.list
 GET     /level                              controllers.levelcreator.LevelCreator.list
 POST    /level/create                       controllers.levelcreator.LevelCreator.create
 GET     /level/:id/assets                   controllers.levelcreator.LevelCreator.listAssets(id: String)

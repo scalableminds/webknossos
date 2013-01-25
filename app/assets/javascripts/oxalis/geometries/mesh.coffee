@@ -38,7 +38,7 @@ class Mesh
     deferred = new $.Deferred()
 
     new THREE.JSONLoader().load(
-      "assets/mesh/" + filename
+      "/assets/mesh/" + filename
       (geometry) =>
         deferred.resolve(new this(geometry))
     )

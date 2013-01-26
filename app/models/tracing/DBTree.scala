@@ -16,7 +16,7 @@ import nml.Edge
 import com.mongodb.casbah.commons.MongoDBList
 import com.mongodb.casbah.query.Implicits._
 
-case class DBTree(treeId: Int, color: Color, _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree] {
+case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree] {
   val dao = DBTree
 
   def nodes = DBTree.nodes.findByParentId(_id).toList
@@ -24,9 +24,10 @@ case class DBTree(treeId: Int, color: Color, _id: ObjectId = new ObjectId) exten
 }
 
 trait DBTreeFactory {
-  def createFrom(t: Tree) = {
-    DBTree(t.treeId, t.color)
+  def createFrom(tracingId: ObjectId, t: Tree) = {
+    DBTree(tracingId, t.treeId, t.color)
   }
+  
   def createCopy(t: DBTree) = {
     t.copy(_id = new ObjectId)
   }
@@ -48,8 +49,8 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
     parent
   }
 
-  def insertOne(t: Tree): DBTree = {
-    val tree = insertOne(DBTree.createFrom(t))
+  def insertOne(tracingId: ObjectId, t: Tree): DBTree = {
+    val tree = insertOne(DBTree.createFrom(tracingId, t))
     t.nodes.map { n =>
       println("inserting NODE")
       println(nodes.insert(DBNode(n, tree._id)))
@@ -155,12 +156,16 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
     edges.update(MongoDBObject("_treeId" -> tree._id), MongoDBObject("$inc" -> MongoDBObject("edge.source" -> inc, "edge.target" -> inc)), false, true)
   }
 
-  def createEmptyTree = {
+  /*def createEmptyTree = {
     insertOne(DBTree(1, Color(1, 0, 0, 0)))
+  }*/
+  
+  def findAllWithTracingId(tracingId: ObjectId) = {
+    find(MongoDBObject("_tracing" -> tracingId))
   }
 
-  def findOneWithTreeId(ts: List[ObjectId], treeId: Int) = {
-    findOne(MongoDBObject("_id" -> MongoDBObject("$in" -> ts), "treeId" -> treeId))
+  def findOneWithTreeId(tracingId: ObjectId, treeId: Int) = {
+    findOne(MongoDBObject("_tracing" -> tracingId, "treeId" -> treeId))
   }
 
   val nodes = new ChildCollection[DBNode, ObjectId](collection = DB.connection("nodes"), parentIdField = "_treeId") {}

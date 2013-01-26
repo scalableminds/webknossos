@@ -29,17 +29,15 @@ object TaskAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
 
-  val taskFromTracingForm = Form(
+  val taskFromNMLForm = Form(
     mapping(
-      "tracing" -> text.verifying("tracing.notFound", tracing => Tracing.findOneById(tracing).isDefined),
       "taskType" -> text.verifying("taskType.notFound", task => TaskType.findOneById(task).isDefined),
       "experience" -> mapping(
         "domain" -> text,
         "value" -> number)(Experience.apply)(Experience.unapply),
       "priority" -> number,
       "taskInstances" -> number,
-    "project" -> text.verifying("project.notFound", project => project == "" || Project.findOneByName(project).isDefined)
-    )(Task.fromTracingForm)(Task.toTracingForm)).fill(Task.empty)
+      "project" -> text.verifying("project.notFound", project => project == "" || Project.findOneByName(project).isDefined))(TaskSkeleton.fromNMLForm)(TaskSkeleton.toNMLForm)).fill(TaskSkeleton.empty)
 
   val taskMapping = mapping(
     "dataSet" -> text.verifying("dataSet.notFound", name => DataSet.findOneByName(name).isDefined),
@@ -51,8 +49,7 @@ object TaskAdministration extends Controller with Secured {
       "value" -> number)(Experience.apply)(Experience.unapply),
     "priority" -> number,
     "taskInstances" -> number,
-    "project" -> text.verifying("project.notFound", project => project == "" || Project.findOneByName(project).isDefined)
-    )(Task.fromForm)(Task.toForm)
+    "project" -> text.verifying("project.notFound", project => project == "" || Project.findOneByName(project).isDefined))(Task.fromForm)(Task.toForm)
 
   val taskForm = Form(
     taskMapping).fill(Task.empty)
@@ -63,7 +60,6 @@ object TaskAdministration extends Controller with Secured {
 
   def taskCreateHTML(tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) =
     html.admin.task.taskCreate(
-      Tracing.findAllExploratory(request.user),
       TaskType.findAll,
       DataSet.findAll,
       Experience.findAllDomains,
@@ -71,39 +67,46 @@ object TaskAdministration extends Controller with Secured {
       taskForm)
 
   def create = Authenticated { implicit request =>
-    Ok(taskCreateHTML(taskForm, taskFromTracingForm))
+    Ok(taskCreateHTML(taskForm, taskFromNMLForm))
   }
 
   def delete(taskId: String) = Authenticated { implicit request =>
-    for{
+    for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {
       Task.remove(task)
       JsonOk(Messages("task.removed"))
-    } 
+    }
   }
 
   def createFromForm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(taskCreateHTML(taskFromTracingForm, formWithErrors)),
+      formWithErrors => BadRequest(taskCreateHTML(taskFromNMLForm, formWithErrors)),
       { t =>
         Task.insertOne(t)
         Redirect(routes.TaskAdministration.list)
       })
   }
 
-  def createFromTracing = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    taskFromTracingForm.bindFromRequest.fold(
+  def createFromNML = Authenticated(parser = parse.multipartFormData) { implicit request =>
+    taskFromNMLForm.bindFromRequest.fold(
       formWithErrors => BadRequest(taskCreateHTML(formWithErrors, taskForm)),
       { t =>
-        Task.insertOne(t)
-        Redirect(routes.TaskAdministration.list).flashing(
-          FlashSuccess(Messages("task.createSuccess")))
+        for {
+          nmlFile <- request.body.file("nmlFile") ?~ Messages("nml.file.notFound")
+          nmls <- NMLIO.extractFromFile(nmlFile.ref.file)
+        } yield {
+          nmls.map{ nml =>
+            Task.insertOne(t.completeWithNml)
+            Redirect(routes.TaskAdministration.list).flashing(
+              FlashSuccess(Messages("task.createSuccess")))
+          }
+        }
       })
   }
 
   def createBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    for{
+    for {
       data <- postParameter("data") ?~ Messages("task.bulk.notSupplied")
     } yield {
       val inserted = data
@@ -121,7 +124,7 @@ object TaskAdministration extends Controller with Secured {
             taskTypeSummary = params(1)
             taskType <- TaskType.findOneBySumnary(taskTypeSummary)
           } yield {
-            val project = if(params.size >= 9) Project.findOneByName(params(9)).map(_.name) else None
+            val project = if (params.size >= 9) Project.findOneByName(params(9)).map(_.name) else None
             val dataSetName = params(0)
             val experience = Experience(params(2), experienceValue)
             Task(dataSetName, 0, taskType._id, Point3D(x, y, z), experience, priority, instances, _project = project)
@@ -145,7 +148,7 @@ object TaskAdministration extends Controller with Secured {
       }.toMap
 
       Task.simulateTaskAssignment(allUsers).map { futureTasks =>
-        val futureTaskTypes = futureTasks.flatMap( e => e._2.taskType.map( e._1 -> _))
+        val futureTaskTypes = futureTasks.flatMap(e => e._2.taskType.map(e._1 -> _))
         Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks, futureTaskTypes))
       }
     }

@@ -13,6 +13,12 @@ import java.io.File
 import brainflight.tools.geometry.Scale
 import models.user.User
 import com.sun.org.apache.xerces.internal.impl.io.MalformedByteSequenceException
+import java.io.InputStream
+import java.io.FileInputStream
+import net.liftweb.common.Box
+import net.liftweb.common.Box._
+import net.liftweb.common.Box
+import net.liftweb.common.Failure
 
 object NMLParser {
 
@@ -28,7 +34,7 @@ object NMLParser {
   }
 }
 
-class NMLParser(file: File) {
+class NMLParser(in: InputStream) {
   val DEFAULT_EDIT_POSITION = Point3D(0, 0, 0)
   val DEFAULT_TIME = 0
   val DEFAULT_ACTIVE_NODE_ID = 1
@@ -36,13 +42,16 @@ class NMLParser(file: File) {
   val DEFAULT_VIEWPORT = 0
   val DEFAULT_RESOLUTION = 0
   val DEFAULT_TIMESTAMP = 0
+  
+  def this(file: File) = 
+    this(new FileInputStream(file))
 
-  def parse: Seq[NML] = {
+  def parse: Box[NML] = {
     try {
-      val data = XML.loadFile(file)
+      val data = XML.load(in)
       for {
-        parameters <- (data \ "parameters")
-        scale <- parseScale(parameters \ "scale")
+        parameters <- (data \ "parameters").headOption ?~ "No parameters section found"
+        scale <- parseScale(parameters \ "scale") ?~ "Couldn't parse scale"
       } yield {
         val dataSetName = parseDataSetName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
@@ -57,7 +66,7 @@ class NMLParser(file: File) {
     } catch {
       case e: Exception =>
         Logger.error("Failed to parse NML due to " + e)
-        List()
+        Failure("Couldn't parse nml: " + e.toString)
     }
   }
 

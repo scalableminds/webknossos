@@ -1,4 +1,4 @@
-@(tracings: List[models.tracing.Tracing], taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
+@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
 @import play.api.libs.json.Json
 
@@ -12,12 +12,8 @@
     <h3>Create Task from explorative Tracing</h3>
     <div class="well">
       Every node in the tracing creates a new task. To create an explorative tracing go to the <a href="@routes.UserController.dashboard">dashboard</a>.<br /><br />
-      @helper.form(controllers.admin.routes.TaskAdministration.createFromTracing, 'class -> "form-horizontal") {
-          
-        @helper.select(tracingForm("tracing"), tracings.map { exp =>
-          exp.id -> (exp.dataSetName + " " + formatDate(exp.date)) 
-        })
-        
+      @helper.form(controllers.admin.routes.TaskAdministration.createFromTracing, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
+
         @helper.select(tracingForm("taskType"), taskTypes.map { tt =>
           tt.id -> tt.summary
         }, Symbol("help-inline") -> taskTypeHelpLink)
@@ -31,6 +27,14 @@
         @helper.inputText(tracingForm("priority"), 'type -> "number")
         @helper.inputText(tracingForm("taskInstances"), 'type -> "number", 'min -> 0)
         @helper.inputText(tracingForm("project"))
+
+        <div class="control-group">
+          <label class="control-label" for="nmlFile">@Messages("nmlFile")</label>
+          <div class="controls">
+            <input type="file" name="nmlFile" id="nmlFile" /> 
+          </div>
+        </div>
+
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
         </div>

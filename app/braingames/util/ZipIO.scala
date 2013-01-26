@@ -10,6 +10,7 @@ import java.io.OutputStream
 import java.io.InputStream
 import scala.collection.immutable.TreeSet
 import play.api.Logger
+import java.util.zip.ZipFile
 
 object ZipIO {
   /** The size of the byte or char buffer used in various methods.*/
@@ -32,6 +33,15 @@ object ZipIO {
         zip.closeEntry()
     }
     zip.close()
+  }
+  
+  def unzip(file: File): Iterator[InputStream] = {
+    unzip( new java.util.zip.ZipFile(file))
+  }
+  
+  def unzip(zip: ZipFile):Iterator[InputStream] = {
+    import collection.JavaConverters._
+    zip.entries.asScala.map( entry => zip.getInputStream(entry))
   }
 
   private def normalizeName(name: String) =

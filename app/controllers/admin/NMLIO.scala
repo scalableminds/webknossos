@@ -36,13 +36,28 @@ object NMLIO extends Controller with Secured {
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )
 
+  def extractFromZip(file: File): Box[Iterator[Nml]] = {
+    val nmls = ZipIO.unzip(file).map(nml => (new NMLParser(nml)).parse)
+    nmls.find( _.isEmpty) orElse Full(nmls)
+  }
+  
+  def extractFromNML(file: File) = 
+    new NMLParser(file).parse
+    
+  def extractFromFile(file: File): Box[Iterator[Nml]] = {
+    if(file.getName().endsWith(".zip")){
+      extractFromZip(file)
+    } else
+      extractFromNML(file).map(r => List(r))
+  }  
+    
   def uploadForm = Authenticated { implicit request =>
     Ok(html.admin.nml.nmlupload())
   }
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
     request.body.file("nmlFile").flatMap { nmlFile =>
-      (new NMLParser(nmlFile.ref.file).parse)
+      extractFromNML(nmlFile.ref.file)
         .map { nml =>
           println("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
           Logger.debug("Successfully parsed nmlFile")

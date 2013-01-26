@@ -24,14 +24,13 @@ import play.api.Logger
 case class Tracing(
     _user: ObjectId,
     dataSetName: String,
-    _trees: List[ObjectId],
     branchPoints: List[BranchPoint],
     timestamp: Long,
     activeNodeId: Int,
     scale: Scale,
     editPosition: Point3D,
     comments: List[Comment] = Nil,
-    taskId: Option[ObjectId] = None,
+    _task: Option[ObjectId] = None,
     state: TracingState = InProgress,
     review: List[TracingReview] = Nil,
     tracingType: TracingType.Value = TracingType.Explorational,
@@ -44,29 +43,18 @@ case class Tracing(
    */
   def user = User.findOneById(_user)
 
-  val date = {
-    new Date(timestamp)
-  }
+  val date = new Date(timestamp)
 
   lazy val id = _id.toString
 
-  def isTrainingsTracing = tracingType == TracingType.Training
-
-  def task = taskId flatMap Task.findOneById
-
-  def isExploratory = tracingType == TracingType.Explorational
+  def task = _task flatMap Task.findOneById
 
   /**
    * Tree modification
    */
-  def trees = {
-    val trees = _trees.flatMap(treeOid => DBTree.findOneById(treeOid))
-    if (trees.size != _trees.size)
-      Logger.error("Trees are incomplete!")
-    trees
-  }
+  def trees = DBTree.findAllWithTracingId(_id)
 
-  def tree(treeId: Int) = DBTree.findOneWithTreeId(_trees, treeId)
+  def tree(treeId: Int) = DBTree.findOneWithTreeId(_id, treeId)
 
   def maxNodeId = {
     DBTree.maxNodeId(this.trees)
@@ -117,7 +105,7 @@ case class Tracing(
   }
 
   def removeTask = {
-    this.copy(taskId = None, tracingType = TracingType.Orphan)
+    this.copy(_task = None, tracingType = TracingType.Orphan)
   }
 }
 
@@ -194,11 +182,16 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
   }
 
   override def remove(tracing: Tracing) = {
-    tracing.task.map {
-      _.update(_.removeTracing(tracing))
-    }
     UsedTracings.removeAll(tracing)
     super.remove(tracing)
+  }
+  
+  def removeAllWithTaskId(tid: ObjectId) = {
+    remove(MongoDBObject("_task" -> tid))
+  }
+  
+  def findByTaskId(tid: ObjectId) = {
+    find(MongoDBObject("_task" -> tid))
   }
 
   def assignReviewee(trainingsTracing: Tracing, user: User): Option[Tracing] = {
@@ -231,7 +224,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
   }
 
   def findOpenTracingFor(user: User, isExploratory: Boolean) =
-    findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "taskId" -> MongoDBObject("$exists" -> isExploratory)))
+    findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "_task" -> MongoDBObject("$exists" -> isExploratory)))
 
   def findOpenTrainingFor(user: User) =
     findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "tracingType" -> "Training"))
@@ -245,13 +238,13 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
 
   def findAllOpen(tracingType: TracingType.Value) = {
     find(MongoDBObject(
-      "state.isFinished" -> false, "taskId" -> MongoDBObject("$exists" -> true))).toList
+      "state.isFinished" -> false, "_task" -> MongoDBObject("$exists" -> true))).toList
   }
 
   def findAllExploratory(user: User) = {
     find(MongoDBObject(
       "_user" -> user._id,
-      "taskId" -> MongoDBObject("$exists" -> false))).toList
+      "_task" -> MongoDBObject("$exists" -> false))).toList
   }
 
   implicit object TracingXMLWrites extends XMLWrites[Tracing] {

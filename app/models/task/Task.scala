@@ -14,16 +14,15 @@ import akka.pattern.ask
 import brainflight.js.JsExecutionActor
 import brainflight.js.JS
 import akka.util.Timeout
-import akka.util.duration._
+import scala.concurrent.duration._
 import akka.pattern.AskTimeoutException
 import org.bson.types.ObjectId
-import akka.dispatch.Future
-import play.api.libs.concurrent.execution.defaultContext
-import akka.dispatch.Promise
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Promise
 import play.api.libs.json.Format
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
-import models.graph.Tree
 import brainflight.tools.geometry.Scale
 import models.user.User
 import play.api.Logger
@@ -156,7 +155,7 @@ object Task extends BasicDAO[Task]("tasks") {
           priority,
           instances)
       case _ =>
-        Logger.warn("Failed to create Task from form. Tracing: %s TaskType: %s".format(tracing, taskTypeId))
+        Logger.warn(s"Failed to create Task from form. Tracing: $tracing TaskType: $taskTypeId")
         null
     }
 
@@ -171,7 +170,7 @@ object Task extends BasicDAO[Task]("tasks") {
           priority,
           instances)
       case _ =>
-        Logger.warn("Failed to create Task from form. TaskType: %s".format(taskTypeId))
+        Logger.warn(s"Failed to create Task from form. TaskType: $taskTypeId")
         null
     }
 
@@ -198,7 +197,7 @@ object Task extends BasicDAO[Task]("tasks") {
   
   private def nextTaskForUser(user: User, tasks: Array[Task]): Future[Option[Task]] = {
     if (tasks.isEmpty) {
-      Promise.successful(None)(Akka.system.dispatcher)
+      Future.successful(None)
     } else {
       val params = Map("user" -> user, "tasks" -> tasks)
 
@@ -207,7 +206,7 @@ object Task extends BasicDAO[Task]("tasks") {
           Logger.warn("JS Execution actor didn't return in time!")
           null
       }
-      future.mapTo[Promise[Task]].flatMap(_.map { x =>
+      future.mapTo[Future[Task]].flatMap(_.map { x =>
         Option(x)
       }).recover {
         case e: Exception =>
@@ -225,7 +224,7 @@ object Task extends BasicDAO[Task]("tasks") {
       task <- tracing.task
       training <- task.training
     } yield {
-      user.addExperience(training.domain, training.gain)
+      user.increaseExperience(training.domain, training.gain)
     }) getOrElse user
   }
 
@@ -241,7 +240,7 @@ object Task extends BasicDAO[Task]("tasks") {
               f(tail, tasks, result)
           }
         case _ =>
-          Future(result)(Akka.system.dispatcher)
+          Future.successful(result)
       }
     }
     val nonTrainings = findAllAssignableNonTrainings.map(t => t._id -> t).toMap

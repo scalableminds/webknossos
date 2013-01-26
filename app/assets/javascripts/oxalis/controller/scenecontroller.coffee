@@ -25,6 +25,7 @@ class SceneController
     @current       = 0
     @displayPlane  = [true, true, true]
     @planeShift    = [0, 0, 0]
+    @showSkeleton  = true
 
     @createMeshes()
 
@@ -45,7 +46,7 @@ class SceneController
 
     # TODO: Implement text 
 
-    @skeleton = new Skeleton(10000, @flycam, @model)
+    @skeleton = new Skeleton(1000000, @flycam, @model)
 
     # create Meshes
     @planes = new Array(3)
@@ -133,11 +134,5 @@ class SceneController
     return result
 
   toggleSkeletonVisibility : ->
-    # Return whether this was the first toggle
-    res = false
-    unless @showSkeleton?
-      res = true
-      @showSkeleton = true
     @showSkeleton = not @showSkeleton
     @skeleton.setVisibility(@showSkeleton)
-    return res

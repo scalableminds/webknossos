@@ -1,7 +1,9 @@
-@(users: List[models.user.User], roles: List[models.security.Role])(implicit session: brainflight.view.AuthedSessionData)
+@(users: List[models.user.User], roles: List[models.security.Role], experiences: List[String])(implicit session: brainflight.view.AuthedSessionData)
+
+@import play.api.libs.json.Json
 
 @main(){
-  <div id="user-administration" class="container">
+  <div id="user-administration" class="container wide">
     
     <h3> Users </h3> 
     <form method="post">
@@ -18,12 +20,12 @@
             </a>
             <ul class="dropdown-menu">
               <li>
-                <a href="@controllers.admin.routes.UserAdministration.verifyBulk" data-ajax="submit,replace-table=#user-administration-table"> 
+                <a @ajaxAttributes(controllers.admin.routes.UserAdministration.verifyBulk, "submit,replace-table=#user-administration-table")> 
                   <i class="icon-ok"></i> Verify
                 </a>
               </li>
               <li>
-                <a href="@controllers.admin.routes.UserAdministration.deleteBulk" data-ajax="submit,confirm,replace-table=#user-administration-table">
+                <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteBulk, "submit,confirm,replace-table=#user-administration-table")>
                   <i class="icon-trash"></i> Delete
                 </a>
               </li> 
@@ -32,18 +34,38 @@
 
           <div class="divider-vertical"></div>
 
-          <select name="role" class="input-medium" required data-invalid-message="Please select a role.">
-            <option value="">Modify roles...</option>
-            @roles.map{ role =>
-              <option value="@role.name">@role.name</option>
-            }
-          </select>
-          <a href="@controllers.admin.routes.UserAdministration.addRoleBulk" class="btn" data-ajax="submit,replace-table=#user-administration-table">
-            Add Role
-          </a>
-          <a href="@controllers.admin.routes.UserAdministration.removeRoleBulk" class="btn" data-ajax="submit,replace-table=#user-administration-table">
-            Remove Role
-          </a>
+          <fieldset data-validation-group>
+            <select name="role" class="input-medium" required data-invalid-message="Please select a role.">
+              <option value="">Modify roles...</option>
+              @roles.map{ role =>
+                <option value="@role.name">@role.name</option>
+              }
+            </select>
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.addRoleBulk, "submit,replace-table=#user-administration-table") class="btn">
+              Add Role
+            </a>
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteRoleBulk, "submit,replace-table=#user-administration-table") class="btn">
+              Remove Role
+            </a>
+          </fieldset>
+
+          <div class="divider-vertical"></div>
+
+          <fieldset data-validation-group>
+            <input type="text" class="input-small" name="experience-domain" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" required data-invalid-message="Please enter a experience domain.">
+            <input type="number" class="input-small" name="experience-value" value="0" required data-invalid-message="Please specify a experience value.">
+
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.increaseExperienceBulk, "submit,replace-table=#user-administration-table") class="btn">
+              Increase Experience
+            </a>
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.setExperienceBulk, "submit,replace-table=#user-administration-table") class="btn">
+              Set Experience
+            </a>
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteExperienceBulk, "confirm,submit,replace-table=#user-administration-table") class="btn">
+              Delete Experience
+            </a>
+          </fieldset>
+
         </div>
 
         </div>

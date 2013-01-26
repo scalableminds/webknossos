@@ -4,7 +4,7 @@ import scala.Array.canBuildFrom
 import scala.Option.option2Iterable
 import brainflight.security.AuthenticatedRequest
 import brainflight.security.Secured
-import brainflight.tools.ExtendedTypes.String2ExtendedString
+import braingames.util.ExtendedTypes.ExtendedString
 import brainflight.tools.geometry.Point3D
 import models.binary.DataSet
 import models.security.Role
@@ -18,10 +18,10 @@ import play.api.data.Forms.number
 import play.api.data.Forms.text
 import views.html
 import models.user.Experience
-import controllers.Controller
+import braingames.mvc.Controller
 import play.api.i18n.Messages
 import play.api.libs.concurrent._
-import play.api.libs.concurrent.execution.defaultContext
+import play.api.libs.concurrent.Execution.Implicits._
 
 import java.lang.Cloneable
 
@@ -31,8 +31,8 @@ object TaskAdministration extends Controller with Secured {
 
   val taskFromTracingForm = Form(
     mapping(
-      "tracing" -> text.verifying("tracing.invalid", tracing => Tracing.findOneById(tracing).isDefined),
-      "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
+      "tracing" -> text.verifying("tracing.notFound", tracing => Tracing.findOneById(tracing).isDefined),
+      "taskType" -> text.verifying("taskType.notFound", task => TaskType.findOneById(task).isDefined),
       "experience" -> mapping(
         "domain" -> text,
         "value" -> number)(Experience.apply)(Experience.unapply),
@@ -40,8 +40,8 @@ object TaskAdministration extends Controller with Secured {
       "taskInstances" -> number)(Task.fromTracingForm)(Task.toTracingForm)).fill(Task.empty)
 
   val taskMapping = mapping(
-    "dataSet" -> text.verifying("dataSet.invalid", name => DataSet.findOneByName(name).isDefined),
-    "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
+    "dataSet" -> text.verifying("dataSet.notFound", name => DataSet.findOneByName(name).isDefined),
+    "taskType" -> text.verifying("taskType.notFound", task => TaskType.findOneById(task).isDefined),
     "start" -> mapping(
       "point" -> text.verifying("point.invalid", p => p.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(Point3D.fromForm)(Point3D.toForm),
     "experience" -> mapping(
@@ -71,11 +71,12 @@ object TaskAdministration extends Controller with Secured {
   }
 
   def delete(taskId: String) = Authenticated { implicit request =>
-    Task.findOneById(taskId).map { task =>
+    for{
+      task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+    } yield {
       Task.remove(task)
-      AjaxOk.success(Messages("task.removed"))
-    } getOrElse AjaxBadRequest.error("Task couldn't get removed (task not found)")
-
+      JsonOk(Messages("task.removed"))
+    } 
   }
 
   def createFromForm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
@@ -93,12 +94,14 @@ object TaskAdministration extends Controller with Secured {
       { t =>
         Task.insertOne(t)
         Redirect(routes.TaskAdministration.list).flashing(
-          FlashSuccess(Messages("task.create.success")))
+          FlashSuccess(Messages("task.createSuccess")))
       })
   }
 
   def createBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    request.request.body.get("data").flatMap(_.headOption).map { data =>
+    for{
+      data <- postParameter("data") ?~ Messages("task.bulk.notSupplied")
+    } yield {
       val inserted = data
         .split("\n")
         .map(_.split(" "))
@@ -123,7 +126,7 @@ object TaskAdministration extends Controller with Secured {
           Task.insertOne(t)
         }
       Redirect(routes.TaskAdministration.list)
-    } getOrElse BadRequest("'data' parameter is mising")
+    }
   }
 
   def overview = Authenticated { implicit request =>
@@ -136,7 +139,7 @@ object TaskAdministration extends Controller with Secured {
         tracing.task.flatMap(task => tracing.user.flatMap(user => task.taskType.map(user -> _)))
       }.toMap
 
-      Task.simulateTaskAssignment(allUsers).asPromise.map { futureTasks =>
+      Task.simulateTaskAssignment(allUsers).map { futureTasks =>
         val futureTaskTypes = futureTasks.flatMap( e => e._2.taskType.map( e._1 -> _))
         Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks, futureTaskTypes))
       }

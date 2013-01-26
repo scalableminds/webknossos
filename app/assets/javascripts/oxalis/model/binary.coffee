@@ -46,12 +46,14 @@ class Binary
 
     lookUpTable = new Uint8Array(256)
     @lastLookUpTable = lookUpTable
+    lookUpTableMag1 = new Uint8Array(256)
 
     for i in [0..255]
       lookUpTable[i] = Math.max(Math.min((i + brightness) * contrast, 255), 0)
+      lookUpTableMag1[i] = Math.max(Math.min((i + brightness + 8) * contrast, 255), 0)
 
     for plane in @planes
-      plane.updateLookUpTable(lookUpTable)
+      plane.updateLookUpTables(lookUpTable, lookUpTableMag1)
 
 
   ping : _.once (position, {zoomStep, area, activePlane}) ->

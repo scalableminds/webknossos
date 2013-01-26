@@ -30,7 +30,7 @@ class Gui
 
     datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(data.briConNames, datasetPostfix)
-    
+
     @settings = 
 
       rotateValue : data.rotateValue
@@ -227,7 +227,9 @@ class Gui
                       newNode          : => @update()
                       newTree          : => @update()
                       # newActiveNodeRadius : (radius) =>@updateRadius(radius) 
-                      PushFailed       : -> Toast.error("Auto-Save failed!")
+                      pushFailed       : -> Toast.error("Auto-Save failed!")
+
+    @createTooltips()
 
   saveNow : =>
     @model.user.pushImpl()
@@ -255,6 +257,9 @@ class Gui
       # take default values
       datasetPosition = 0
     datasetPosition
+
+  createTooltips : ->
+      $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
 
   updateGlobalPosition : (globalPos) =>
     stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])

@@ -31,8 +31,8 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
     val POSSIBLE_ENDS = "possibleEnds"
 
     def reads(js: JsValue) =
-      Mission.createWithoutDataSet((js \ START).as[MissionStart],
-        (js \ POSSIBLE_ENDS).as[List[PossibleEnd]])
+      JsSuccess(Mission.createWithoutDataSet((js \ START).as[MissionStart],
+        (js \ POSSIBLE_ENDS).as[List[PossibleEnd]]))
 
     def writes(mission: Mission) = Json.obj(
       START -> mission.start,

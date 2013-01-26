@@ -38,6 +38,7 @@ class Plane2D
   cube : null
   queue : null
   lookUpTable : null
+  lookUpTableMag1 : null
 
   layer : -1
   zoomStep : -1
@@ -76,7 +77,7 @@ class Plane2D
           @changed |= u in [@area[0]..@area[2]] and v in [@area[1]..@area[3]]
 
 
-  updateLookUpTable : (@lookUpTable) ->
+  updateLookUpTables : (@lookUpTable, @lookUpTableMag1) ->
 
     for i in [0..@tiles.length]
       @tiles[i] = true
@@ -243,7 +244,7 @@ class Plane2D
     destOffset = bufferOffsetByTileMacro(destTile, @cube.BUCKET_SIZE_P)
     sourceOffset = bufferOffsetByTileMacro(sourceTile, @cube.BUCKET_SIZE_P)
 
-    @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, @cube.BUCKET_SIZE_P, sourceBuffer, sourceOffset, 1, 1 << @TEXTURE_SIZE_P, 0, 0, false)
+    @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, @cube.BUCKET_SIZE_P, sourceBuffer, sourceOffset, 1, 1 << @TEXTURE_SIZE_P, 0, 0, 0, false)
 
 
   renderTile : (tile) ->
@@ -292,12 +293,13 @@ class Plane2D
         1 << (@DELTA[@v] + skip),
         repeat,
         repeat,
+        bucketZoomStep,
         true)
 
 
-  renderToBuffer : (destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat, mapColors) ->
+  renderToBuffer : (destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat, bucketZoomStep, mapColors) ->
 
-    lookUpTable = @lookUpTable
+    lookUpTable = if bucketZoomStep == 0 then @lookUpTableMag1 else @lookUpTable
 
     i = 1 << (destSize << 1)
     destRowMask = (1 << destSize) - 1

@@ -1,6 +1,5 @@
 package models.user
 
-import play.api.db._
 import play.api.Play.current
 import com.mongodb.casbah.Imports._
 import models.context._
@@ -28,7 +27,7 @@ object UserConfiguration {
       "moveValue3d" -> JsNumber(1),
       "rotateValue" -> JsNumber(0.01),
       "crosshairSize" -> JsNumber(0.5),
-      "scaleValue" -> JsNumber(0.02),
+      "scaleValue" -> JsNumber(0.05),
       "mouseRotateValue" -> JsNumber(0.004),
       "routeClippingDistance" -> JsNumber(100),
       "lockZoom" -> JsBoolean(true),
@@ -52,7 +51,8 @@ object UserConfiguration {
       "mouseActive" -> JsBoolean(true),
       "keyboardActive" -> JsBoolean(true),
       "gamepadActive" -> JsBoolean(false),
-      "motionsensorActive" -> JsBoolean(false)))
+      "motionsensorActive" -> JsBoolean(false),
+      "firstVisToggle" -> JsBoolean(true)))
 
   val MaxSettings = defaultConfiguration.settings.size
 

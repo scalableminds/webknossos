@@ -12,8 +12,9 @@ import models.task._
 import models.tracing.UsedTracings
 import views._
 import play.api.libs.concurrent._
-import play.api.libs.concurrent.execution.defaultContext
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
+import braingames.mvc.Controller
 
 object TaskController extends Controller with Secured {
     override val DefaultAccessRole = Role.User
@@ -29,18 +30,20 @@ object TaskController extends Controller with Secured {
     Async {
       val user = request.user
       if (!Tracing.hasOpenTracing(request.user, true)) {
-        Task.nextTaskForUser(request.user).asPromise.map {
+        Task.nextTaskForUser(request.user).map {
           case Some(task) =>
             val tracing = createTracing(user, task)
-            AjaxOk.success(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("task.new"))
+            JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("task.assigned"))
           case _ =>
-            Training.findAllFor(user).headOption.map { task =>
+            for{
+              task <- Training.findAllFor(user).headOption ?~ Messages("task.unavailable")
+            } yield {
               val tracing = createTracing(user, task)
-              AjaxOk.success(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("training.new"))
-            } getOrElse AjaxBadRequest.error(Messages("task.unavailable"))
+              JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("task.training.assigned"))
+            } 
         }
       } else
-        Promise.pure(AjaxBadRequest.error(Messages("task.alreadyHasOpenOne")))
+        Promise.pure(JsonBadRequest(Messages("task.alreadyHasOpenOne")))
     }
   }
 }

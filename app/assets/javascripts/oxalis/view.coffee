@@ -99,6 +99,12 @@ class View
     @newTextures = [true, true, true, true]
     # start the rendering loop
 
+    # Dont forget to handle window resizing!
+    $(window).resize( => @.resize() )
+
+    @model.route.on("emptyBranchStack", =>
+      Toast.error("No more branchpoints", false))    
+
     @model.route.on({
       newActiveNode        : => @drawTree(),
       newActiveTree        : => @drawTree(),
@@ -108,12 +114,12 @@ class View
       deleteTree           : => @drawTree(),
       deleteActiveNode     : => @drawTree(),
       newNode              : => @drawTree(),
+      doubleBranch         : (callback) => @showBranchModal(callback)      
       mergeDifferentTrees  : ->
         Toast.error("You can't merge nodes within the same tree", false)  })
 
-    # Dont forget to handle window resizing!
-    $(window).resize( => @.resize() )
-
+    @modalCallbacks = {}
+    
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
@@ -184,7 +190,7 @@ class View
   
   scaleTrianglesPlane : (delta) =>
     @scaleFactor = 1 unless @scaleFactor
-    if (@scaleFactor+delta > 0.75) and (@scaleFactor+delta < 1.5)
+    if (@scaleFactor+delta > 0.65) and (@scaleFactor+delta < 2)
       @scaleFactor += Number(delta)
       @curWidth = WIDTH = HEIGHT = @scaleFactor * 384
       container = $("#render")
@@ -206,6 +212,10 @@ class View
       # scales the 3D-view controls
       prevControl = $("#prevControls")
       prevControl.css({top: @scaleFactor * 420 + "px", left: @scaleFactor * 420 + "px"})
+
+      # move abstract tree viewer
+      abstractTreeViewer = $("#abstractTreeViewer")
+      abstractTreeViewer.css({left: 2 * WIDTH + 20 + 10 + "px"})
 
       @resize()
 
@@ -252,30 +262,40 @@ class View
         root = node
     @abstractTreeViewer.drawTree(root, @model.route.getActiveNodeId())
 
-  createDoubleJumpModal : ->
-    $("#double-jump").append("<div class=\"modal-body\">
-            <p>You didn't add a node after jumping to this branchpoint, do you really want to jump again?</p>
-          </div>
-          <div class=\"modal-footer\">
-            <a href=\"#\" id=\"jump-button\" class=\"btn\">Jump again</a>
-            <a href=\"#\" id=\"cancel-button\" class=\"btn\">Cancel</a>
-          </div>")
+  # buttons: [{id:..., label:..., callback:...}, ...]
+  showModal : (text, buttons) ->
 
+    html =  "<div class=\"modal-body\"><p>" + text + "</p></div>"
 
-  createFirstVisToggle : ->
-    $("#first-vis-toggle").append("<div class=\"modal-body\">
-            <p>You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.</p>
-          </div>
-          <div class=\"modal-footer\">
-            <a href=\"#\" id=\"ok-button\" class=\"btn\">OK, Got it.</a>
-          </div>")
+    html += "<div class=\"modal-footer\">"
+    for button in buttons
+      html += "<a href=\"#\" id=\"" + button.id + "\" class=\"btn\">" +
+                    button.label + "</a>"
+    html += "</div>"
+
+    $("#modal").html(html)
+
+    for button in buttons
+      @modalCallbacks[button.id] = button.callback
+      $("#" + button.id).on("click", (evt) =>
+        callback = @modalCallbacks[evt.target.id]
+        if callback? then callback()
+        $("#modal").modal("hide"))
+
+    $("#modal").modal("show")
 
 
   showFirstVisToggle : ->
-    $("#first-vis-toggle").modal("show")
+    @showModal("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
+      [{id: "ok-button", label: "OK, Got it."}])
 
-  hideFirstVisToggle : ->
-    $("#first-vis-toggle").modal("hide")
+  showBranchModal : (callback) ->
+    @showModal("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+      [{id: "jump-button", label: "Jump again", callback: callback},
+       {id: "cancel-button", label: "Cancel"}])
+
+  hideModal : ->
+    $("#modal").modal("hide")
 
 
   createKeyboardCommandOverlay : ->
@@ -290,7 +310,7 @@ class View
           <tr><td>K</td><td>Scale up viewports</td><td>O or Alt + Mousewheel</td><td>Zoom out</td></tr>
           <tr><td>L</td><td>Scale down viewports</td><td>B</td><td>Set branchpoint</td></tr>
           <tr><td>Del</td><td>Delete node/Split trees</td><td>J</td><td>Jump to last branchpoint</td></tr>
-          <tr><td>Shift + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
+          <tr><td>Shift + Alt + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
           <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
           <tr><td>N</td><td>Next comment</td><th colspan=\"2\">3D-view</th><td></td></tr>
           <tr><td>T</td><td>Toggle theme</td><td>Mousewheel</td><td>Zoom in and out</td></tr>
@@ -321,19 +341,6 @@ class View
     @model.route.on("emptyBranchStack", =>
       Toast.error("No more branchpoints", false)) 
 
-    $("#ok-button").on("click", => 
-      $("#first-vis-toggle").modal("hide"))    
-
-
-    
-    $("#jump-button").on("click", => 
-      @model.route.resolveBranchDeferred()
-      $("#double-jump").modal("hide"))
-
-    $("#cancel-button").on("click", => 
-      @model.route.rejectBranchDeferred()
-      $("#double-jump").modal("hide"))
-
 
   unbind : ->
 
@@ -342,30 +349,6 @@ class View
 
     @model.route.off("emptyBranchStack", =>
       Toast.error("No more branchpoints", false))     
-
-    $("#ok-button").off("click", => 
-      $("#first-vis-toggle").modal("hide"))    
-
-    #@model.route.off({
-    #  newActiveNode        : => @drawTree(),
-    #  newActiveTree        : => @drawTree(),
-    #  newTree              : => @drawTree(),
-    #  mergeTree            : => @drawTree(),
-    #  reloadTrees          : => @drawTree(),
-    #  deleteTree           : => @drawTree(),
-    #  deleteActiveNode     : => @drawTree(),
-    #  newNode              : => @drawTree(),
-    #  mergeDifferentTrees  : ->
-    #    Toast.error("You can't merge nodes within the same tree", false)  })
-    
-    $("#jump-button").off("click", => 
-      @model.route.resolveBranchDeferred()
-      $("#double-jump").modal("hide"))
-
-    $("#cancel-button").off("click", => 
-      @model.route.rejectBranchDeferred()
-      $("#double-jump").modal("hide"))
- 
 
     
   stop : ->

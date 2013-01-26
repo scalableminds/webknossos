@@ -1,0 +1,28 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Level Creator
+GET     /                                   controllers.levelcreator.LevelCreator.list
+GET     /level                              controllers.levelcreator.LevelCreator.list
+POST    /level/create                       controllers.levelcreator.LevelCreator.create
+GET     /level/:id/assets                   controllers.levelcreator.LevelCreator.listAssets(id: String)
+GET     /level/:id/delete                   controllers.levelcreator.LevelCreator.delete(id: String)
+GET     /level/:id                          controllers.levelcreator.LevelCreator.use(id: String, missionId: String)
+POST    /level/:id/code                     controllers.levelcreator.LevelCreator.submitCode(id: String)
+GET     /level/:id/produce                  controllers.levelcreator.LevelCreator.produce(id: String)
+POST    /level/:id/uploadAsset              controllers.levelcreator.LevelCreator.uploadAsset(id: String)
+GET     /level/:id/deleteAsset/*asset       controllers.levelcreator.LevelCreator.deleteAsset(id: String, asset: String)
+GET     /level/:id/asset/*asset             controllers.levelcreator.LevelCreator.retrieveAsset(id: String, asset: String)
+
+GET     /binary/arbitrary/ajax              controllers.levelcreator.ArbitraryBinaryData.viaAjax(dataLayerName: String, levelId: String, taskId: String)
+
+GET     /missions                           controllers.levelcreator.MissionController.missions(dataSetName: String)
+
+# Javascript routing
+GET     /assets/javascripts/routes.js       controllers.levelcreator.Application.javascriptRoutes
+
+GET     /assets/level/*file                 controllers.levelcreator.Assets.at(path="/modules/levelcreator/public", file)
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file                       controllers.Assets.at(path="/public", file)

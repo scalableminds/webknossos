@@ -45,15 +45,30 @@ class Controller2d
 
     @prevControls = $('#prevControls')
     @prevControls.addClass("btn-group")
-    values        = ["XY Plane", "YZ Plane", "XZ Plane", "3D View"]
-    callbacks     = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
-                      @cameraController.changePrevXZ, @cameraController.changePrevSV]
-    @buttons       = new Array(4)
-  
-    for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
 
-      @buttons[i] = $("<input>", type : "button", class : "btn btn-small", value : values[i])
-      @prevControls.append(@buttons[i])
+    @buttons = [
+        name : "3D View"
+        callback : @cameraController.changePrevSV
+      ,
+        name : "XY Plane"
+        callback : @cameraController.changePrevXY
+        color : "#f00"
+      ,
+        name : "YZ Plane"
+        callback : @cameraController.changePrevYZ
+        color : "#00f"
+      ,
+        name : "XZ Plane"
+        callback : @cameraController.changePrevXZ
+        color : "#0f0"
+    ]
+
+    for button in @buttons
+
+      button.control = @prevControls.append(
+        $("<button>", type : "button", class : "btn btn-small")
+          .html("#{if button.color then "<span style=\"background: #{button.color}\"></span>" else ""}#{button.name}")
+      )    
 
     @view.createKeyboardCommandOverlay()
     @view.createDoubleJumpModal()
@@ -95,7 +110,7 @@ class Controller2d
       return
 
     for planeId in ["xy", "yz", "xz"]
-      @bindings.push new Input.Mouse($("#plane#{planeId}"),
+      new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
@@ -108,7 +123,7 @@ class Controller2d
         rightClick : @setWaypoint
       )
 
-    @bindings.push new Input.Mouse($("#skeletonview"),
+    new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
         @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
         @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
@@ -148,10 +163,13 @@ class Controller2d
       "q" : => @toggleFullScreen()
       "t" : => @view.toggleTheme()
       "1" : =>
-        if @sceneController.toggleSkeletonVisibility()
+        @sceneController.toggleSkeletonVisibility()
+        # Show warning, if this is the first time to use
+        # this function for this user
+        if @model.user.firstVisToggle
           @view.showFirstVisToggle()
-      "enter" : =>
-        @view.hideFirstVisToggle()
+          @model.user.firstVisToggle = false
+          @model.user.push()
 
       #Branches
       "b" : => @pushBranch()
@@ -221,11 +239,8 @@ class Controller2d
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
       deleteActiveTree : @deleteActiveTree
 
-    callbacks = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
-                @cameraController.changePrevXZ, @cameraController.changePrevSV]
-    
-    for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @buttons[i].on("click", callbacks[i])
+    for button in @buttons
+      button.control.on("click", button.callback)  
 
 
   unbind : ->
@@ -254,12 +269,9 @@ class Controller2d
       setActiveTree : (id) => @setActiveTree(id)
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
       deleteActiveTree : @deleteActiveTree
-
-    callbacks = [@cameraController.changePrevXY, @cameraController.changePrevYZ,
-                @cameraController.changePrevXZ, @cameraController.changePrevSV]
     
-    for i in [VIEW_3D, PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @buttons[i].off("click", callbacks[i])      
+    for button in @buttons
+      button.control.off("click", button.callback)      
    
 
   render : ->
@@ -337,24 +349,42 @@ class Controller2d
     activeNodePos = @model.route.getActiveNodePos()
     scaleFactor   = @view.scaleFactor
     planeRatio    = @model.scaleInfo.baseVoxelFactors
-    switch @flycam.getActivePlane()
-      when PLANE_XY then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*planeRatio[0]*zoomFactor, curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*planeRatio[1]*zoomFactor, curGlobalPos[2]]
-      when PLANE_YZ then position = [curGlobalPos[0], curGlobalPos[1] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*planeRatio[1]*zoomFactor, curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*planeRatio[2]*zoomFactor]
-      when PLANE_XZ then position = [curGlobalPos[0] - (WIDTH*scaleFactor/2 - relativePosition[0])/scaleFactor*planeRatio[0]*zoomFactor, curGlobalPos[1], curGlobalPos[2] - (WIDTH*scaleFactor/2 - relativePosition[1])/scaleFactor*planeRatio[2]*zoomFactor]
+    position = switch @flycam.getActivePlane()
+      when PLANE_XY 
+        [
+          curGlobalPos[0] - (WIDTH * scaleFactor / 2 - relativePosition[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - relativePosition[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+          curGlobalPos[2]
+        ]
+      when PLANE_YZ 
+        [
+          curGlobalPos[0], 
+          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - relativePosition[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - relativePosition[0]) / scaleFactor * planeRatio[2] * zoomFactor
+        ]
+      when PLANE_XZ 
+        [
+          curGlobalPos[0] - (WIDTH * scaleFactor / 2 - relativePosition[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+          curGlobalPos[1], 
+          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - relativePosition[1]) / scaleFactor * planeRatio[2] * zoomFactor
+        ]
     # set the new trace direction
     if activeNodePos
-      p = [position[0] - activeNodePos[0], position[1] - activeNodePos[1], position[2] - activeNodePos[2]]
-      @flycam.setDirection(p)
+      @flycam.setDirection([
+        position[0] - activeNodePos[0], 
+        position[1] - activeNodePos[1], 
+        position[2] - activeNodePos[2]
+      ])
     @addNode(position)
 
-  onPreviewClick : (position, shiftPressed) =>
-    @onClick(position, VIEW_3D, shiftPressed)
+  onPreviewClick : (position, shiftAltPressed) =>
+    @onClick(position, VIEW_3D, shiftAltPressed)
 
-  onPlaneClick : (position, shiftPressed) =>
+  onPlaneClick : (position, shiftAltPressed) =>
     plane = @flycam.getActivePlane()
-    @onClick(position, plane, shiftPressed)
+    @onClick(position, plane, shiftAltPressed)
 
-  onClick : (position, plane, shiftPressed) =>
+  onClick : (position, plane, shiftAltPressed) =>
     scaleFactor = @view.scaleFactor
     camera      = @view.getCameras()[plane]
     # vector with direction from camera position to click position
@@ -386,7 +416,7 @@ class Controller2d
         # set the active Node to the one that has the ID stored in the vertex
         # center the node if click was in 3d-view
         centered = plane == VIEW_3D
-        @setActiveNode(nodeID, centered, shiftPressed)
+        @setActiveNode(nodeID, centered, shiftAltPressed)
         break
 
   ########### Model Interaction

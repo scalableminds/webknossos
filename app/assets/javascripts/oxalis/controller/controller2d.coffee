@@ -71,8 +71,6 @@ class Controller2d
       )    
 
     @view.createKeyboardCommandOverlay()
-    @view.createDoubleJumpModal()
-    @view.createFirstVisToggle()
 
     @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
 

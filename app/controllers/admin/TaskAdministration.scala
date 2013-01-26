@@ -22,8 +22,8 @@ import braingames.mvc.Controller
 import play.api.i18n.Messages
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
-
 import java.lang.Cloneable
+import models.task.Project
 
 object TaskAdministration extends Controller with Secured {
 
@@ -37,7 +37,9 @@ object TaskAdministration extends Controller with Secured {
         "domain" -> text,
         "value" -> number)(Experience.apply)(Experience.unapply),
       "priority" -> number,
-      "taskInstances" -> number)(Task.fromTracingForm)(Task.toTracingForm)).fill(Task.empty)
+      "taskInstances" -> number,
+    "project" -> text.verifying("project.notFound", project => project == "" || Project.findOneByName(project).isDefined)
+    )(Task.fromTracingForm)(Task.toTracingForm)).fill(Task.empty)
 
   val taskMapping = mapping(
     "dataSet" -> text.verifying("dataSet.notFound", name => DataSet.findOneByName(name).isDefined),
@@ -48,7 +50,9 @@ object TaskAdministration extends Controller with Secured {
       "domain" -> text,
       "value" -> number)(Experience.apply)(Experience.unapply),
     "priority" -> number,
-    "taskInstances" -> number)(Task.fromForm)(Task.toForm)
+    "taskInstances" -> number,
+    "project" -> text.verifying("project.notFound", project => project == "" || Project.findOneByName(project).isDefined)
+    )(Task.fromForm)(Task.toForm)
 
   val taskForm = Form(
     taskMapping).fill(Task.empty)
@@ -105,7 +109,7 @@ object TaskAdministration extends Controller with Secured {
       val inserted = data
         .split("\n")
         .map(_.split(" "))
-        .filter(_.size == 9)
+        .filter(_.size >= 8)
         .flatMap { params =>
           for {
             experienceValue <- params(3).toIntOpt
@@ -117,9 +121,10 @@ object TaskAdministration extends Controller with Secured {
             taskTypeSummary = params(1)
             taskType <- TaskType.findOneBySumnary(taskTypeSummary)
           } yield {
+            val project = if(params.size >= 9) Project.findOneByName(params(9)).map(_.name) else None
             val dataSetName = params(0)
             val experience = Experience(params(2), experienceValue)
-            Task(dataSetName, 0, taskType._id, Point3D(x, y, z), experience, priority, instances)
+            Task(dataSetName, 0, taskType._id, Point3D(x, y, z), experience, priority, instances, _project = project)
           }
         }
         .map { t =>

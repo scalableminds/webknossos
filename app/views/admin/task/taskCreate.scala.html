@@ -30,7 +30,7 @@
 
         @helper.inputText(tracingForm("priority"), 'type -> "number")
         @helper.inputText(tracingForm("taskInstances"), 'type -> "number", 'min -> 0)
-        
+        @helper.inputText(tracingForm("project"))
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
         </div>
@@ -59,7 +59,7 @@
 
         @helper.inputText(taskForm("priority"), 'type -> "number")
         @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 0)
-        
+        @helper.inputText(tracingForm("project"))
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
         </div>
@@ -70,7 +70,7 @@
 
     <div class="well">
       One line for each task. The values are seperated by a space. Format: <br />
-      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances<br /><br />
+      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances (opt: project)<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createBulk){
         <textarea class="input-fullwidth input-monospace" rows="20" name="data"></textarea>
         <div class="form-actions">

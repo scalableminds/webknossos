@@ -92,7 +92,6 @@ class Controller
 
       @sceneController.on
         newGeometries : (list, event) =>
-          console.log "addGeometries:", list
           for geometry in list
             @view.addGeometry(geometry)
       @sceneController.skeleton.on

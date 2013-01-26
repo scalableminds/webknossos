@@ -45,7 +45,7 @@ class CellGeometry
           @update(pos)
         })
 
-      @reset()
+      @createMeshes()
 
     update : (pos) ->
       layer = @cell.getLayer(@planeId, pos[@thirdDimension])
@@ -58,24 +58,24 @@ class CellGeometry
         else
           @id = null
 
-    reset : ->
+    createMeshes : ->
 
       edgeGeometry = new THREE.Geometry()
       edgeGeometry.dynamic = true
 
       @edgeBuffer = new Float32Array(MAX_EDGE_POINTS * 3)
       @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 4}), THREE.LineStrip)
+      @reset()
+
+    reset : ->
       @curIndex = 0
+      @edge.geometry.__webglLineCount = 0
+      @edge.geometry.verticesNeedUpdate = true
 
     getMeshes : ->
       return [@edge]
 
     addEdgePoint : (pos) ->
-
-      console.log "addEdgePoint:", pos
-
-      curGlobalPos = @model.flycam.getGlobalPos()
-      activePlane  = @model.flycam.getActivePlane()
 
       if @curIndex < MAX_EDGE_POINTS
 

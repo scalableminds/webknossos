@@ -8,7 +8,7 @@ PLANE_XZ         = Dimensions.PLANE_XZ
 
 class VolumeLayer
   
-  constructor : (@plane, @thirdDimensionValue, @time) ->
+  constructor : (@plane, @thirdDimensionValue, @id, @time) ->
     
     unless @time?
       @time = (new Date()).getTime()

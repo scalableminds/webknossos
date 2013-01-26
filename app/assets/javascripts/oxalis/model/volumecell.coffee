@@ -8,11 +8,12 @@ class VolumeCell
   constructor : (@id) ->
 
     @layers = []            # List of VolumeLayers
+    @idCount = 1
 
   createLayer : (planeId, thirdDimensionValue) ->
     if @getLayer(planeId, thirdDimensionValue) != null
       return null
-    layer = new VolumeLayer(planeId, thirdDimensionValue)
+    layer = new VolumeLayer(planeId, thirdDimensionValue, @idCount++)
     @layers.push(layer)
     return layer
 

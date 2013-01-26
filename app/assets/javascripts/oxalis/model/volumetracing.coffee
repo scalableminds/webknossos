@@ -22,6 +22,7 @@ class VolumeTracing
   createCell : (id) ->
     @currentCell = new VolumeCell(id)
     @cells.push(@currentCell)
+    @trigger "newCell", @currentCell
 
   startNewLayer : (planeId = @flycam.getActivePlane()) ->
     if currentLayer?
@@ -43,14 +44,14 @@ class VolumeTracing
       @startPos = pos.slice()
 
     @currentLayer.addContour(pos)
-    @trigger "newContour", pos
+    @trigger "newContour", @currentLayer.id, pos
 
   finishLayer : ->
     unless @currentLayer?
       return
 
     @currentLayer.addContour(@startPos)
-    @trigger "newContour", @startPos
+    @trigger "newContour", @currentLayer.id, @startPos
     @currentLayer = null
     @startPos = null
 

@@ -3,7 +3,7 @@
 ../view : View
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
-../geometries/celllayer : CellLayer
+../geometries/cellgeometry : CellGeometry
 ../model/dimensions : DimensionsHelper
 ../../libs/event_mixin : EventMixin
 ###
@@ -30,7 +30,7 @@ class SceneController
     @planeShift    = [0, 0, 0]
     @showSkeleton  = true
 
-    @model.volumeTracing.on "newLayer", => @newCellLayer()
+    @model.volumeTracing.on "newCell", (cell) => @newCell(cell)
 
     @createMeshes()
 
@@ -51,7 +51,6 @@ class SceneController
 
     # TODO: Implement text 
 
-    @cellLayer = null
     @skeleton  = new Skeleton(1000000, @flycam, @model)
 
     # create Meshes
@@ -140,9 +139,9 @@ class SceneController
     result.push(@cube)
     return result
 
-  newCellLayer : ->
-    @cellLayer = new CellLayer(@flycam, @model)
-    @trigger "newGeometries", @cellLayer.getMeshes()
+  newCell : (cellModel) ->
+    @cell = new CellGeometry(@model, cellModel)
+    @trigger "newGeometries", @cell.getMeshes()
 
   toggleSkeletonVisibility : ->
     @showSkeleton = not @showSkeleton

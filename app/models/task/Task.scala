@@ -39,6 +39,7 @@ case class Task(
     instances: Int = 1,
     created: Date = new Date,
     _tracings: List[ObjectId] = Nil,
+    _project: Option[String] = None,
     training: Option[Training] = None,
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Task] {
 
@@ -47,6 +48,8 @@ case class Task(
   lazy val id = _id.toString
 
   def taskType = TaskType.findOneById(_taskType)
+
+  def project = _project.flatMap(name => Project.findOneByName(name))
 
   def tracings = _tracings.map(Tracing.findOneById).flatten
 
@@ -96,6 +99,10 @@ object Task extends BasicDAO[Task]("tasks") {
     find(MongoDBObject("training" -> MongoDBObject("$exists" -> isTraining)))
       .toList
 
+  def findAllByProject(project: String) =
+    find(MongoDBObject("_project" -> project))
+      .toList
+
   def findAllTrainings =
     findAllOfOneType(isTraining = true)
 
@@ -105,27 +112,31 @@ object Task extends BasicDAO[Task]("tasks") {
   def findAllAssignableNonTrainings =
     findAllNonTrainings.filter(!_.isFullyAssigned)
 
-  def toTracingForm(t: Task): Option[(String, String, Experience, Int, Int)] = {
+  def toTracingForm(t: Task): Option[(String, String, Experience, Int, Int, String)] = {
     Some(("",
       t.taskType.map(_.id).getOrElse(""),
       t.neededExperience,
       t.priority,
-      t.instances))
+      t.instances,
+      t.project.map(_.name) getOrElse ""))
   }
 
   def toTrainingForm(t: Task): Option[(String, Training)] =
-    Some(t.id -> (t.training getOrElse Training.empty))
+    Some((t.id, (t.training getOrElse Training.empty)))
 
   def fromTrainingForm(taskId: String, training: Training) =
     Task.findOneById(taskId) map {
       _.copy(training = Some(training))
     } getOrElse null
 
-  def fromTrainingsTracingForm(tracingId: String, taskTypeId: String, experience: Experience, priority: Int, training: Training) =
+  def fromTrainingsTracingForm(tracingId: String, taskTypeId: String, experience: Experience, priority: Int, training: Training, projectName: String) =
     (for {
       e <- Tracing.findOneById(tracingId)
       taskType <- TaskType.findOneById(taskTypeId)
     } yield {
+      val project =
+          if (projectName != "") Project.findOneByName(projectName).map(_.name)
+          else None
       Task(e.dataSetName,
         0,
         taskType._id,
@@ -133,6 +144,7 @@ object Task extends BasicDAO[Task]("tasks") {
         experience,
         priority,
         Integer.MAX_VALUE,
+        _project = project,
         training = Some(training.copy(sample = e._id)))
     }) getOrElse null
 
@@ -141,47 +153,59 @@ object Task extends BasicDAO[Task]("tasks") {
       t.taskType.map(_.id).getOrElse(""),
       t.neededExperience,
       t.priority,
-      t.training getOrElse null))
+      t.training getOrElse null,
+      t.project.map(_.name) getOrElse ""))
   }
 
-  def fromTracingForm(tracing: String, taskTypeId: String, experience: Experience, priority: Int, instances: Int): Task =
+  def fromTracingForm(tracing: String, taskTypeId: String, experience: Experience, priority: Int, instances: Int, projectName: String): Task =
     (Tracing.findOneById(tracing), TaskType.findOneById(taskTypeId)) match {
       case (Some(e), Some(taskType)) =>
+        val project =
+          if (projectName != "") Project.findOneByName(projectName).map(_.name)
+          else None
+
         Task(e.dataSetName,
           0,
           taskType._id,
           e.editPosition,
           experience,
           priority,
-          instances)
+          instances,
+          _project = project)
       case _ =>
         Logger.warn(s"Failed to create Task from form. Tracing: $tracing TaskType: $taskTypeId")
         null
     }
 
-  def fromForm(dataSetName: String, taskTypeId: String, start: Point3D, experience: Experience, priority: Int, instances: Int): Task =
+  def fromForm(dataSetName: String, taskTypeId: String, start: Point3D, experience: Experience, priority: Int, instances: Int, projectName: String): Task =
     TaskType.findOneById(taskTypeId) match {
       case Some(taskType) =>
+        val project =
+          if (projectName != "") Project.findOneByName(projectName).map(_.name)
+          else None
+
         Task(dataSetName,
           0,
           taskType._id,
           start,
           experience,
           priority,
-          instances)
+          instances,
+          _project = project)
       case _ =>
         Logger.warn(s"Failed to create Task from form. TaskType: $taskTypeId")
         null
     }
 
-  def toForm(t: Task): Option[(String, String, Point3D, Experience, Int, Int)] = {
+  def toForm(t: Task): Option[(String, String, Point3D, Experience, Int, Int, String)] = {
     Some((
       t.dataSetName,
       t.taskType.map(_.id).getOrElse(""),
       t.start,
       t.neededExperience,
       t.priority,
-      t.instances))
+      t.instances,
+      t.project.map(_.name) getOrElse ""))
   }
 
   def hasEnoughExperience(user: User)(task: Task) = {
@@ -194,7 +218,7 @@ object Task extends BasicDAO[Task]("tasks") {
       user,
       findAllAssignableNonTrainings.filter(hasEnoughExperience(user)).toArray)
   }
-  
+
   private def nextTaskForUser(user: User, tasks: Array[Task]): Future[Option[Task]] = {
     if (tasks.isEmpty) {
       Future.successful(None)
@@ -216,11 +240,11 @@ object Task extends BasicDAO[Task]("tasks") {
       }
     }
   }
-  
+
   def simulateFinishOfCurrentTask(user: User) = {
-    (for{
+    (for {
       tracing <- Tracing.findOpenTrainingFor(user)
-      if(tracing.isTrainingsTracing)
+      if (tracing.isTrainingsTracing)
       task <- tracing.task
       training <- task.training
     } yield {
@@ -229,7 +253,7 @@ object Task extends BasicDAO[Task]("tasks") {
   }
 
   def simulateTaskAssignment(users: List[User]) = {
-    val preparedUsers = users.map( simulateFinishOfCurrentTask )
+    val preparedUsers = users.map(simulateFinishOfCurrentTask)
     def f(users: List[User], tasks: Map[ObjectId, Task], result: Map[User, Task]): Future[Map[User, Task]] = {
       users match {
         case user :: tail =>
@@ -246,11 +270,11 @@ object Task extends BasicDAO[Task]("tasks") {
     val nonTrainings = findAllAssignableNonTrainings.map(t => t._id -> t).toMap
     f(preparedUsers, nonTrainings, Map.empty)
   }
-  
+
   def simulateTaskAssignments(user: User, tasks: Map[ObjectId, Task]) = {
     val openTask = Tracing.findOpenTracingFor(user, false).flatMap(_.task).map(_._id) getOrElse null
-    val tasksAvailable = tasks.values.filter( t =>
-        hasEnoughExperience(user)(t) && openTask != t._id && !t.isFullyAssigned)
+    val tasksAvailable = tasks.values.filter(t =>
+      hasEnoughExperience(user)(t) && openTask != t._id && !t.isFullyAssigned)
     nextTaskForUser(user, tasksAvailable.toArray).map {
       case Some(task) =>
         Some(task -> (tasks + (task._id -> task.copy(_tracings = new ObjectId :: task._tracings))))

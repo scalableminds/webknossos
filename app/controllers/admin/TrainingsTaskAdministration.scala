@@ -17,9 +17,10 @@ import models.tracing.Tracing
 import nml._
 import models.tracing.TracingType
 import play.api.i18n.Messages
+import models.task.Project
 
 object TrainingsTaskAdministration extends Controller with Secured {
-  
+
   override val DefaultAccessRole = Role.User
   override val DefaultAccessPermission = Some(Permission("admin.review", List("access")))
 
@@ -42,7 +43,8 @@ object TrainingsTaskAdministration extends Controller with Secured {
       "training" -> mapping(
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,
-        "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingsTracingForm)(Task.toTrainingsTracingForm)).fill(Task.withEmptyTraining)
+        "loss" -> number)(Training.fromForm)(Training.toForm),
+      "project" -> text.verifying("project.notFound", project => project == "" || Project.findOneByName(project).isDefined))(Task.fromTrainingsTracingForm)(Task.toTrainingsTracingForm)).fill(Task.withEmptyTraining)
 
   def list = Authenticated { implicit request =>
     Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
@@ -97,7 +99,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
   }
 
   def delete(taskId: String) = Authenticated { implicit request =>
-    for{
+    for {
       task <- Task.findOneById(taskId) ?~ Messages("task.training.notFound")
     } yield {
       Task.remove(task)

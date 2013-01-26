@@ -13,6 +13,21 @@ import play.api.Logger
 import scala.xml.PrettyPrinter
 import models.tracing._
 import play.api.i18n.Messages
+import models.task.Project
+import models.task.Task
+import java.io.BufferedOutputStream
+import java.io.ByteArrayOutputStream
+import java.util.zip.ZipOutputStream
+import braingames.util.ZipIO
+import java.io.StringReader
+import java.io.InputStream
+import org.xml.sax.InputSource
+import play.api.mvc.SimpleResult
+import play.api.mvc.ResponseHeader
+import java.io.File
+import play.api.libs.Files.TemporaryFile
+import java.io.FileOutputStream
+import org.apache.commons.io.IOUtils
 
 object NMLIO extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -55,6 +70,22 @@ object NMLIO extends Controller with Secured {
         CONTENT_TYPE -> "application/octet-stream",
         CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(tracing.dataSetName)))
     }) ?~ Messages("tracing.training.notFound")
+  }
+  
+  def projectDownload(projectName: String) = Authenticated { implicit request =>
+    for {
+      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
+    } yield {
+      val tracings = Task.findAllByProject(project.name).flatMap(_.tracings)
+      val zipStreams = tracings.map{tracing => 
+        val xml = prettyPrinter.format(Xml.toXML(tracing))
+        (IOUtils.toInputStream(xml, "UTF-8") -> (tracing._id+".nml"))
+      }
+      val zipped = new TemporaryFile(new File(projectName + "_nmls.zip"))
+      ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
+      
+      Ok.sendFile(zipped.file)
+    }
   }
 
 }

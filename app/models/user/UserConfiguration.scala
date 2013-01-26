@@ -25,7 +25,9 @@ object UserConfiguration {
   val defaultConfiguration = UserConfiguration(
     Map(
       "moveValue" -> JsNumber(1),
+      "moveValue3d" -> JsNumber(1),
       "rotateValue" -> JsNumber(0.01),
+      "crosshairSize" -> JsNumber(0.5),
       "scaleValue" -> JsNumber(0.02),
       "mouseRotateValue" -> JsNumber(0.004),
       "routeClippingDistance" -> JsNumber(100),

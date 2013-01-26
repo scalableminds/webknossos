@@ -34,7 +34,9 @@ class Gui
     @settings = 
 
       rotateValue : data.rotateValue
+      moveValue3d : data.moveValue3d
       mouseRotateValue : data.mouseRotateValue
+      crosshairSize : data.crosshairSize
       
       lockZoom: data.lockZoom
       inverseX: data.mouseInversionX == 1
@@ -100,10 +102,14 @@ class Gui
                           .step(0.001)
                           .name("Keyboard Rotation Value")
                           .onChange(@setRotateValue)
-    (fFlightcontrols.add @settings, "moveValue", 0.1, 10) 
+    (fFlightcontrols.add @settings, "moveValue3d", 0.1, 10) 
                           .step(0.1)
                           .name("Move Value")    
-                          .onChange(@setMoveValue)
+                          .onChange(@setMoveValue3d)
+    (fFlightcontrols.add @settings, "crosshairSize", 0.1, 1) 
+                          .step(0.1)
+                          .name("Crosshair size")    
+                          .onChange(@setCrosshairSize)                          
 
 
     fView = @gui.addFolder("Planes")
@@ -265,6 +271,14 @@ class Gui
   setMoveValue : (value) =>
     @model.user.moveValue = (Number) value
     @model.user.push()
+
+  setMoveValue3d : (value) =>
+    @model.user.moveValue3d = (Number) value
+    @model.user.push()    
+
+  setCrosshairSize : (value) =>
+    @model.user.setValue("crosshairSize", (Number) value)
+    @model.user.push()    
 
   setRouteClippingDistance : (value) =>
     @model.user.routeClippingDistance = (Number) value

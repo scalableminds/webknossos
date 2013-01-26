@@ -6,6 +6,7 @@ libs/request : Request
 ../../libs/input : Input
 ../geometries/arbitrary_plane : ArbitraryPlane
 ../geometries/mesh : Mesh
+../geometries/crosshair : Crosshair
 ../view/arbitrary_view : ArbitraryView
 ###
 
@@ -15,6 +16,7 @@ class Controller3d
   HEIGHT : 128
 
   plane : null
+  crosshair : null
   cam : null
 
   fullscreen : false
@@ -52,9 +54,8 @@ class Controller3d
 
     @input = _.extend({}, @input)
 
-    Mesh.load("crosshair.js").done (crossHair) =>   
-      crossHair.setPosition(0, 0, -1)
-      @view.addGeometry(crossHair)
+    @crosshair = new Crosshair(model.user.crosshairSize)
+    @view.addGeometry(@crosshair)
 
     @view.draw()
 
@@ -65,21 +66,6 @@ class Controller3d
     @model.binary.arbitraryPing(matrix)
 
     @model.route.rendered()
-
-
-  #toggleFullScreen : ->
-  #
-  #  if @fullScreen
-  #    cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
-  #    @fullScreen = false
-  #    if cancelFullscreen
-  #      cancelFullscreen.call(document)
-  #  else
-  #    body = $("#arbitraryplane")[0]
-  #    requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
-  #    @fullScreen = true
-  #    if requestFullscreen
-  #      requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
 
   initMouse : ->
@@ -99,19 +85,19 @@ class Controller3d
     
     @input.keyboard = new Input.Keyboard(
 
-      #Scaleplane
-      "l" : => @plane?.applyScale -@model.user.scaleValue
-      "k" : => @plane?.applyScale  @model.user.scaleValue
+      #Scale plane
+      "l" : => @plane.applyScale -@model.user.scaleValue
+      "k" : => @plane.applyScale  @model.user.scaleValue
 
       #Move   
-      "w" : => @cam.move [0, -@model.user.moveValue, 0]
-      "s" : => @cam.move [0, @model.user.moveValue, 0]
-      "a" : => @cam.move [-@model.user.moveValue, 0, 0]
-      "d" : => @cam.move [@model.user.moveValue, 0, 0]
+      "w" : => @cam.move [0, -@model.user.moveValue3d, 0]
+      "s" : => @cam.move [0, @model.user.moveValue3d, 0]
+      "a" : => @cam.move [-@model.user.moveValue3d, 0, 0]
+      "d" : => @cam.move [@model.user.moveValue3d, 0, 0]
       "space" : =>  
-        @cam.move [0, 0, @model.user.moveValue]
+        @cam.move [0, 0, @model.user.moveValue3d]
         @moved()
-      "shift + space" : => @cam.move [0, 0, -@model.user.moveValue]
+      "shift + space" : => @cam.move [0, 0, -@model.user.moveValue3d]
       
       #Rotate in distance
       "left"  : => @cam.yawDistance -@model.user.rotateValue
@@ -146,7 +132,7 @@ class Controller3d
       "t" : => 
         @record = true
         @setWaypoint()
-      "z" : => @record = false      
+      "z" : => @record = false
     )
 
 
@@ -160,7 +146,11 @@ class Controller3d
     @model.binary.cube.on "bucketLoaded", => @view.draw()
 
     @cam.on "changed", =>
-      @trigger("matrixChanged", @cam.getMatrix())    
+      @trigger("matrixChanged", @cam.getMatrix())
+
+    @model.user.on "crosshairSizeChanged", (value) =>
+      @crosshair.setScale(value)
+
 
 
   unbind : ->
@@ -171,7 +161,10 @@ class Controller3d
     @model.binary.cube.on "bucketLoaded", => @view.draw()
 
     @cam.off "changed", =>
-      @trigger("matrixChanged", @cam.getMatrix())       
+      @trigger("matrixChanged", @cam.getMatrix())
+
+    @model.user.on "crosshairSizeChanged", (value) =>
+      @crosshair.setScale(value)      
 
 
   show : ->

@@ -1,5 +1,6 @@
 ### define
 ../../libs/request : Request
+libs/event_mixin : EventMixin
 ###
 
 class User
@@ -7,7 +8,9 @@ class User
   # userdata
   # default values are defined in server
   moveValue : null
+  moveValue3d : null
   rotateValue : null
+  crosshairSize : null
   scaleValue : null
   mouseRotateValue : null
   routeClippingDistance : null
@@ -37,7 +40,14 @@ class User
 
   constructor : (user) ->
 
+    _.extend(this, new EventMixin())
     _.extend(@, user)
+
+
+  setValue : (name, value) ->
+
+    @[name] = value
+    @trigger(name + "Changed", value)
 
 
   push : ->
@@ -54,7 +64,9 @@ class User
       dataType : "json"
       data   : { 
         moveValue : @moveValue,
+        moveValue3d : @moveValue3d,
         rotateValue : @rotateValue,
+        crosshairSize : @crosshairSize,
         scaleValue : @scaleValue,
         mouseRotateValue : @mouseRotateValue,
         routeClippingDistance : @routeClippingDistance,

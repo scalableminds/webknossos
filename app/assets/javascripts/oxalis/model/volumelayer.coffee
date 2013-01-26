@@ -59,14 +59,20 @@ class VolumeLayer
     point = @get2DCoordinate(voxelCoordinate)
 
     for contour in @contourList
+
       contour2d = @get2DCoordinate(contour)
       newQuadrant = @getQuadrantWithRespectToPoint(contour2d, point)
       prevQuadrant = if quadrant? then quadrant else newQuadrant
       quadrant = newQuadrant
-      if Math.abs(prevQuadrant - quadrant) > 1 or quadrant == 0
+      
+      if Math.abs(prevQuadrant - quadrant) == 2 or quadrant == 0
         # point is on the edge, considered within the polygon
         return true
-      totalDiff += quadrant - prevQuadrant
+      diff = quadrant - prevQuadrant
+      # special cases if quadrants are 4 and 1
+      if diff ==  3 then diff = -1
+      if diff == -3 then diff =  1
+      totalDiff -= diff
 
     return totalDiff != 0
 
@@ -82,12 +88,13 @@ class VolumeLayer
   getQuadrantWithRespectToPoint : (vertex, point) ->
     xDiff = vertex[0] - point[0]
     yDiff = vertex[1] - point[1]
+
+    if xDiff == 0 and yDiff == 0
+      # Vertex and point have the same coordinates
+      return 0
     
     switch
-      when xDiff < 0 and yDiff > 0 then return 1
-      when xDiff < 0 and yDiff < 0 then return 2
-      when xDiff > 0 and yDiff < 0 then return 3
-      when xDiff > 0 and yDiff > 0 then return 4
-
-    # Now, vertex and point have the same coordinates
-    return 0
+      when xDiff <= 0 and yDiff >  0 then return 1
+      when xDiff <= 0 and yDiff <= 0 then return 2
+      when xDiff >  0 and yDiff <= 0 then return 3
+      when xDiff >  0 and yDiff >  0 then return 4

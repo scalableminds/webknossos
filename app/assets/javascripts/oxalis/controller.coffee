@@ -160,7 +160,11 @@ class Controller
         leftMouseUp : =>
           if @mode == MODE_VOLUME
             @model.volumeTracing.finishLayer()
-        rightClick : @setWaypoint
+        rightClick : (pos) =>
+          if @mode == MODE_VOLUME
+            @withinPolygonCheck(pos)
+          else
+            @setWaypoint(pos)
       )
 
     new Input.Mouse($("#skeletonview"),
@@ -321,7 +325,7 @@ class Controller
 
   ########### Click callbacks
   
-  setWaypoint : (relativePosition, typeNumber) =>
+  setWaypoint : (relativePosition) =>
     position = @calculateGlobalPos(relativePosition)
     activeNodePos = @model.route.getActiveNodePos()
     scaleFactor   = @view.scaleFactor
@@ -334,6 +338,16 @@ class Controller
         position[2] - activeNodePos[2]
       ])
     @addNode(position)
+  
+  withinPolygonCheck : (relativePosition) =>
+    position = @calculateGlobalPos(relativePosition)
+    cell = @sceneController.cell.cell
+    activePlane = @flycam.getActivePlane()
+    thirdDimValue = position[Dimensions.thirdDimensionForPlane(activePlane)]
+    layer = cell.getLayer(activePlane, thirdDimValue)
+
+    console.log "Point in Polygon:", layer.containsVoxel(position)
+    
 
   drawVolume : (relativePosition) ->
     pos = @calculateGlobalPos(relativePosition)

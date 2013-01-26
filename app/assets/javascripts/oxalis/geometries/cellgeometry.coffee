@@ -11,7 +11,7 @@ PLANE_XZ         = Dimensions.PLANE_XZ
 
 class CellGeometry
 
-  constructor : (model, cell) ->
+  constructor : (model, @cell) ->
 
     @layers = []      # One layer per plane
     for i in [0..2]

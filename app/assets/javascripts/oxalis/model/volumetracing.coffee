@@ -7,7 +7,10 @@
 MODE_LASSO = 0
 MODE_DRAW  = 1
 
-CLOSE_THRESHOLD = 3
+# Point in polygon algorithm expects the path to be
+# continous. Therefore, we need to ensure, that no
+# edge is longer than specified.
+MAX_EDGE_LENGTH = 2
 
 class VolumeTracing
 
@@ -43,17 +46,21 @@ class VolumeTracing
       # Save where it started to close shape
       @startPos = pos.slice()
 
-    @currentLayer.addContour(pos)
-    @trigger "newContour", @currentLayer.id, pos
+    for contour in @interpolationList(@prevPos, pos)
+      @currentLayer.addContour(contour)
+      @trigger "newContour", @currentLayer.id, contour
+      #console.log "contour", contour
+
+    @prevPos = pos.slice()
 
   finishLayer : ->
     unless @currentLayer?
       return
 
-    @currentLayer.addContour(@startPos)
-    @trigger "newContour", @currentLayer.id, @startPos
+    @addToLayer(@startPos)
     @currentLayer = null
     @startPos = null
+    @prevPos = null
 
   distance : (pos1, pos2) ->
     sumOfSquares = 0
@@ -61,3 +68,23 @@ class VolumeTracing
       diff = pos1[i] - pos2[i]
       sumOfSquares += diff * diff
     return Math.sqrt(sumOfSquares)
+
+  interpolationList : (posSource, posTarget) ->
+    # ensure that no edge is longer than MAX_EDGE_LENGTH
+    unless posSource?
+      return [posTarget]
+    distance = @distance(posSource, posTarget)
+    if distance <= MAX_EDGE_LENGTH
+      return [posTarget]
+
+    pieces = distance / MAX_EDGE_LENGTH
+    diff = [(posTarget[0] - posSource[0]) / pieces,
+            (posTarget[1] - posSource[1]) / pieces,
+            (posTarget[2] - posSource[2]) / pieces]
+
+    res = []
+    for i in [0..Math.floor(pieces)]
+      res.push([posSource[0] + i * diff[0],
+                posSource[1] + i * diff[1],
+                posSource[2] + i * diff[2]])
+    return res.concat([posTarget])

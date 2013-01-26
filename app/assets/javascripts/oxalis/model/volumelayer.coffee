@@ -67,6 +67,7 @@ class VolumeLayer
       
       if Math.abs(prevQuadrant - quadrant) == 2 or quadrant == 0
         # point is on the edge, considered within the polygon
+        console.log "Point is ON the edge", prevQuadrant, quadrant
         return true
       diff = quadrant - prevQuadrant
       # special cases if quadrants are 4 and 1
@@ -74,6 +75,11 @@ class VolumeLayer
       if diff == -3 then diff =  1
       totalDiff -= diff
 
+      #if prevQuadrant != quadrant
+      #  console.log prevQuadrant, "-->", quadrant
+      
+
+    #console.log "totalDiff", totalDiff
     return totalDiff != 0
 
   get2DCoordinate : (coord3d) ->

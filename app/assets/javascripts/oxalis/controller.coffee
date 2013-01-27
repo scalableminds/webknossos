@@ -16,17 +16,21 @@ TEXTURE_SIZE     = 512
 TEXTURE_SIZE_P   = 9
 DISTANCE_3D      = 140
 
+MODE_2D          = 0
+MODE_3D          = 1
 
 
 class Controller
 
-  mode : 0
+  mode : null
   
 
   constructor : ->
 
     _.extend(@, new EventMixin())
+    
     @fullScreen = false
+    @mode = MODE_2D
 
     @model = new Model()
 
@@ -66,13 +70,12 @@ class Controller
 
       #ScaleTrianglesPlane
       "m" : => @switch()
-      "esc" : => @leave3d()
     )
 
 
   switch : ->
     
-    if @mode is 0
+    if @mode is MODE_2D
       @controller2d.unbind()
       @controller2d.stop() 
       @initKeyboard()     
@@ -80,7 +83,7 @@ class Controller
       @controller3d.bind()
       @controller3d.cam.setPos(@controller2d.flycam.getGlobalPos())
       @controller3d.show()
-      @mode = 1
+      @mode = MODE_3D
     else
       @controller3d.unbind()
       @controller3d.hide()      
@@ -90,10 +93,4 @@ class Controller
       @controller2d.bind()
       @controller2d.flycam.setGlobalPos(@controller3d.cam.getPosition())
       @controller2d.start()
-      @mode = 0
-
-
-  leave3d : ->
-
-    if @mode isnt 0
-      @switch()
+      @mode = MODE_2D

@@ -12,7 +12,7 @@ libs/request : Request
 
 class Controller3d
 
-  WIDTH : 256
+  WIDTH : 128
   HEIGHT : 128
 
   plane : null

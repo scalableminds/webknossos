@@ -23,6 +23,7 @@ class PlaneController
   bindings : []
   model : null
   view : null
+  gui : null
 
 
   constructor : (@model, stats, @gui ) ->

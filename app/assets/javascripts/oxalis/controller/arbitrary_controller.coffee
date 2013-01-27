@@ -3,9 +3,8 @@ jquery : $
 underscore : _
 libs/event_mixin : EventMixin
 libs/request : Request
-../../libs/input : Input
+libs/input : Input
 ../geometries/arbitrary_plane : ArbitraryPlane
-../geometries/mesh : Mesh
 ../geometries/crosshair : Crosshair
 ../view/arbitrary_view : ArbitraryView
 ###
@@ -49,7 +48,7 @@ class ArbitraryController
     @cam = @model.flycam3d
     @view = new ArbitraryView(canvas, @cam, stats)    
 
-    @plane = new ArbitraryPlane(@cam, @model.binary, @WIDTH, @HEIGHT)
+    @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
     @view.addGeometry @plane
 
     @input = _.extend({}, @input)
@@ -118,18 +117,19 @@ class ArbitraryController
     )
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
-
-      #Fullscreen Mode
-      #"q" : => @toggleFullScreen()
-
+      
+      #Branches
+      "b" : => @pushBranch()
+      "j" : => @popBranch() 
+      
       #Reset Matrix
       "r" : => @cam.resetRotation()
 
       #Recording of Waypoints
-      "t" : => 
+      "z" : => 
         @record = true
         @setWaypoint()
-      "z" : => @record = false
+      "u" : => @record = false
     )
 
 

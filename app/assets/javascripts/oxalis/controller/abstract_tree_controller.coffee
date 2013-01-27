@@ -39,11 +39,6 @@ class AbstractTreeController
       })
 
 
-  unbind : ->
-
-    { view } = @
-
-
   drawTree : ->
 
     { view, model } = @

@@ -108,7 +108,7 @@ class Controller2d
       return
 
     for planeId in ["xy", "yz", "xz"]
-      new Input.Mouse($("#plane#{planeId}"),
+      @bindings.push new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
@@ -121,7 +121,7 @@ class Controller2d
         rightClick : @setWaypoint
       )
 
-    new Input.Mouse($("#skeletonview"),
+    @bindings.push new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
         @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
         @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)

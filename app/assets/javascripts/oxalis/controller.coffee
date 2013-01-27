@@ -3,6 +3,7 @@ jquery : $
 underscore : _
 ./controller/controller2d : Controller2d
 ./controller/controller3d : Controller3d
+./controller/abstract_tree_controller : AbstractTreeController
 ./model : Model
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
@@ -23,6 +24,10 @@ MODE_3D          = 1
 class Controller
 
   mode : null
+  view : null
+  controller2d : null
+  controller3d : null
+  abstractTreeController : null
   
 
   constructor : ->
@@ -41,10 +46,14 @@ class Controller
       stats.getDomElement().id = "stats"
       $("body").append stats.getDomElement() 
 
+
+
       @controller2d = new Controller2d(@model, stats)
       @controller2d.bind()
       @controller2d.start()
       @controller3d = new Controller3d(@model, stats)
+
+      abstractTreeController = new AbstractTreeController(@model)      
 
 
       @initMouse()
@@ -67,6 +76,10 @@ class Controller
       return
 
     new Input.KeyboardNoLoop(
+
+      #View
+      "q" : => @toggleFullScreen()
+
 
       #ScaleTrianglesPlane
       "m" : => @switch()
@@ -94,3 +107,19 @@ class Controller
       @controller2d.flycam.setPosition(@controller3d.cam.getPosition())
       @controller2d.start()
       @mode = MODE_2D
+
+
+  toggleFullScreen : ->
+
+    if @fullScreen
+      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
+      @fullScreen = false
+      if cancelFullscreen
+        cancelFullscreen.call(document)
+    else
+      body = $("body")[0]
+      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
+      @fullScreen = true
+      if requestFullscreen
+        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
+

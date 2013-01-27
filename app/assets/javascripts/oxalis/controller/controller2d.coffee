@@ -25,18 +25,16 @@ TEXTURE_SIZE_P   = 9
 class Controller2d
 
   bindings : []
+  model : null
+  view : null
 
 
-  constructor : (@model, stats) ->
+  constructor : (@model, stats ) ->
 
     _.extend(@, new EventMixin())
 
-    @fullScreen = false
-
     @flycam = @model.flycam
-    @view  = new View(@model, @flycam, stats)
-
-    @view.drawTree(@model.route.getTree())
+    @view  = new View(@model, @flycam, stats)    
 
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
@@ -158,8 +156,7 @@ class Controller2d
     @bindings.push new Input.KeyboardNoLoop(
 
       #View
-      "q" : => @toggleFullScreen()
-      "t" : => @view.toggleTheme()
+      "t" : => @view.toggleTheme()      
       "1" : =>
         @sceneController.toggleSkeletonVisibility()
         # Show warning, if this is the first time to use
@@ -220,7 +217,7 @@ class Controller2d
     @view.on
       render : => @render()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
-      abstractTreeClick : (id) => @setActiveNode(id, true, false)
+
 
     @sceneController.skeleton.on
       newGeometries : (list, event) =>
@@ -251,7 +248,6 @@ class Controller2d
     @view.off
       render : => @render()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
-      abstractTreeClick : (id) => @setActiveNode(id, true, false)
 
     @sceneController.skeleton.off
       newGeometries : (list, event) =>
@@ -324,19 +320,6 @@ class Controller2d
           @zoomIn()
         else
           @zoomOut()
-
-  toggleFullScreen : =>
-    if @fullScreen
-      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
-      @fullScreen = false
-      if cancelFullscreen
-        cancelFullscreen.call(document)
-    else
-      body = $("body")[0]
-      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
-      @fullScreen = true
-      if requestFullscreen
-        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
 
   ########### Click callbacks

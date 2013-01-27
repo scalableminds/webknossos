@@ -70,7 +70,7 @@ class SceneController
         if i == id
           @planes[i].setOriginalCrosshairColor()
           @planes[i].setVisible(true)
-          pos = @flycam.getGlobalPos().slice()
+          pos = @flycam.getPosition().slice()
           ind = Dimensions.getIndices(i)
           # Offset the plane so the user can see the route behind the plane
           pos[ind[2]] += if i==PLANE_XY then @planeShift[ind[2]] else -@planeShift[ind[2]]
@@ -80,14 +80,14 @@ class SceneController
     else
       @cube.visible = true
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-        pos = @flycam.getGlobalPos()
+        pos = @flycam.getPosition()
         @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))
         @planes[i].setGrayCrosshairColor()
         @planes[i].setVisible(true)
         @planes[i].plane.visible = @displayPlane[i]
 
   update : =>
-    gPos         = @flycam.getGlobalPos()
+    gPos         = @flycam.getPosition()
     globalPosVec = new THREE.Vector3(gPos...)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       

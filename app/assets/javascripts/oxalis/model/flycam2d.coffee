@@ -35,7 +35,7 @@ class Flycam2d
     # --> two dimensional array with buffer[planeID][dimension], dimension: x->0, y->1
     @buffer = [[0, 0], [0, 0], [0, 0]]
     @calculateBuffer()
-    @globalPosition = [0, 0, 0]
+    @position = [0, 0, 0]
     @texturePosition = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
     @direction = [0, 0, 1]
     @hasChanged = true
@@ -125,7 +125,7 @@ class Flycam2d
     if(planeID?)          # if planeID is given, use it to manipulate z
       # change direction of the value connected to space, based on the last direction
       p[Dimensions.getIndices(planeID)[2]] *= @spaceDirection[Dimensions.getIndices(planeID)[2]]
-    @setGlobalPos([@globalPosition[0]+p[0], @globalPosition[1]+p[1], @globalPosition[2]+p[2]])
+    @setPosition([@position[0]+p[0], @position[1]+p[1], @position[2]+p[2]])
     
   moveActivePlane : (p) -> # vector of voxels in BaseVoxels
     p = Dimensions.transDim(p, @activePlane)
@@ -136,18 +136,18 @@ class Flycam2d
     @move(delta, @activePlane)
 
   toString : ->
-    position = @globalPosition
+    position = @position
     "(x, y, z) = ("+position[0]+", "+position[1]+", "+position[2]+")"
 
-  getGlobalPos : ->
-    @globalPosition
+  getPosition : ->
+    @position
 
   getTexturePosition : (planeID) ->
     @texturePosition[planeID]
 
-  setGlobalPos : (position) ->
-    @globalPosition = position
-    @trigger("globalPositionChanged", position)
+  setPosition : (position) ->
+    @position = position
+    @trigger("positionChanged", position)
     @hasChanged = true
     
   setActivePlane : (activePlane) ->
@@ -160,7 +160,7 @@ class Flycam2d
     area = @getArea planeID
     ind  = Dimensions.getIndices planeID
     res = ((area[0] < 0) or (area[1] < 0) or (area[2] > TEXTURE_WIDTH) or (area[3] > TEXTURE_WIDTH) or
-    (@globalPosition[ind[2]] != @texturePosition[planeID][ind[2]]) or
+    (@position[ind[2]] != @texturePosition[planeID][ind[2]]) or
     (@zoomSteps[planeID] - (@integerZoomSteps[planeID]-1)) < @maxZoomStepDiff) or
     (@zoomSteps[planeID] -  @integerZoomSteps[planeID]     > @maxZoomStepDiff)
     return res
@@ -168,8 +168,8 @@ class Flycam2d
   # return the coordinate of the upper left corner of the viewport as texture-relative coordinate
   getOffsets : (planeID) ->
     ind = Dimensions.getIndices planeID
-    [ (@globalPosition[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID][0],
-      (@globalPosition[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID][1]]
+    [ (@position[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID][0],
+      (@position[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID][1]]
 
   # returns [left, top, right, bottom] array
   getArea : (planeID) ->
@@ -183,7 +183,7 @@ class Flycam2d
     [offsets[0], offsets[1], offsets[0] + size * scaleArray[ind[0]], offsets[1] + size * scaleArray[ind[1]]]
 
   notifyNewTexture : (planeID) ->
-    @texturePosition[planeID] = @globalPosition.slice()    #copy that position
+    @texturePosition[planeID] = @position.slice()    #copy that position
     @calculateIntegerZoomStep planeID
     # As the Model does not render textures for exact positions, the last 5 bits of
     # the X and Y coordinates for each texture have to be set to 0

@@ -82,7 +82,7 @@ class Controller2d
     @gui = new Gui($("#optionswindow"), @model, @sceneController, @cameraController, @flycam)
     @gui.update()
 
-    @flycam.setGlobalPos(@model.route.data.editPosition)
+    @flycam.setPosition(@model.route.data.editPosition)
     @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
     @flycam.setQuality(@model.user.quality)
 
@@ -274,9 +274,9 @@ class Controller2d
 
   render : ->
 
-    @model.binary.ping(@flycam.getGlobalPos(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(PLANE_XY),
+    @model.binary.ping(@flycam.getPosition(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(PLANE_XY),
                         @flycam.getArea(PLANE_YZ), @flycam.getArea(PLANE_XZ)], activePlane: @flycam.getActivePlane()})
-    @model.route.globalPosition = @flycam.getGlobalPos()
+    @model.route.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()
     @model.route.rendered()
@@ -342,7 +342,7 @@ class Controller2d
   ########### Click callbacks
   
   setWaypoint : (relativePosition, typeNumber) =>
-    curGlobalPos  = @flycam.getGlobalPos()
+    curGlobalPos  = @flycam.getPosition()
     zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
     activeNodePos = @model.route.getActiveNodePos()
     scaleFactor   = @view.scaleFactor
@@ -405,7 +405,7 @@ class Controller2d
 
       posArray = intersect.object.geometry.__vertexArray
       intersectsCoord = [posArray[3 * index], posArray[3 * index + 1], posArray[3 * index + 2]]
-      globalPos = @flycam.getGlobalPos()
+      globalPos = @flycam.getPosition()
 
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = Dimensions.getIndices(plane)
@@ -444,7 +444,7 @@ class Controller2d
   centerActiveNode : =>
     position = @model.route.getActiveNodePos()
     if position
-      @flycam.setGlobalPos(position)
+      @flycam.setPosition(position)
 
   deleteActiveNode : =>
     @model.route.deleteActiveNode()

@@ -81,7 +81,7 @@ class Plane
 
   updateTexture : =>
 
-      globalPos = @flycam.getGlobalPos()
+      globalPos = @flycam.getPosition()
 
       if @flycam.needsUpdate @planeID
         @flycam.notifyNewTexture @planeID

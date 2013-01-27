@@ -30,7 +30,7 @@ class CameraController
       cam.far  =  1000000
 
   update : =>
-    gPos = @flycam.getGlobalPos()
+    gPos = @flycam.getPosition()
     # camera porition's unit is nm, so convert it.
     cPos = @model.scaleInfo.voxelToNm(gPos)
     @cameras[PLANE_XY].position = new THREE.Vector3(cPos[0]    , cPos[1]    , cPos[2] - 1)

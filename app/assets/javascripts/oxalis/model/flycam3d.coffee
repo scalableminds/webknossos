@@ -212,7 +212,7 @@ class Flycam3d
     position
 
 
-  setPos : (p) ->
+  setPosition : (p) ->
 
     matrix = @currentMatrix
     matrix[12] = p[0]
@@ -220,14 +220,13 @@ class Flycam3d
     matrix[14] = p[2]
 
 
-  getDir : ->
+  getDirection : ->
 
     matrix = @currentMatrix
     [ matrix[8], matrix[9], matrix[10] ]
 
 
   getUp : ->
-
 
     matrix = @currentMatrix
     [ matrix[4], matrix[5], matrix[6] ]

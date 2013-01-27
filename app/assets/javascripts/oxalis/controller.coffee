@@ -28,7 +28,7 @@ class Controller
   constructor : ->
 
     _.extend(@, new EventMixin())
-    
+
     @fullScreen = false
     @mode = MODE_2D
 
@@ -81,7 +81,7 @@ class Controller
       @initKeyboard()     
 
       @controller3d.bind()
-      @controller3d.cam.setPos(@controller2d.flycam.getGlobalPos())
+      @controller3d.cam.setPosition(@controller2d.flycam.getPosition())
       @controller3d.show()
       @mode = MODE_3D
     else
@@ -91,6 +91,6 @@ class Controller
 
 
       @controller2d.bind()
-      @controller2d.flycam.setGlobalPos(@controller3d.cam.getPosition())
+      @controller2d.flycam.setPosition(@controller3d.cam.getPosition())
       @controller2d.start()
       @mode = MODE_2D

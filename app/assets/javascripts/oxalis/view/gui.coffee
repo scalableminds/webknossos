@@ -207,7 +207,7 @@ class Gui
       return
 
     @flycam.on
-                globalPositionChanged : (position) => 
+                positionChanged : (position) => 
                   @updateGlobalPosition(position)
                 zoomFactorChanged : (factor, step) =>
                   nm = factor * VIEWPORT_WIDTH * @model.scaleInfo.baseVoxel
@@ -244,9 +244,9 @@ class Gui
     if stringArray.length == 3
       pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
       if !isNaN(pos[0]) and !isNaN(pos[1]) and !isNaN(pos[2])
-        @flycam.setGlobalPos(pos)
+        @flycam.setPosition(pos)
         return
-    @updateGlobalPosition(@flycam.getGlobalPos())
+    @updateGlobalPosition(@flycam.getPosition())
 
   initDatasetPosition : (briConNames, datasetPostfix) ->
 

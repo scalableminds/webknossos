@@ -217,7 +217,7 @@ class Controller3d
   setActiveNode : (nodeId, centered, mergeTree) ->
 
     @model.route.setActiveNode(nodeId, mergeTree)
-    @cam.setPos @model.route.getActiveNodePos()  
+    @cam.setPosition @model.route.getActiveNodePos()  
 
 
   moved : =>

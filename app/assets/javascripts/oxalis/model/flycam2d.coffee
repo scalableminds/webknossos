@@ -145,10 +145,13 @@ class Flycam2d
   getTexturePosition : (planeID) ->
     @texturePosition[planeID]
 
-  setPosition : (position) ->
+  setPositionSilent : (position) ->
     @position = position
-    @trigger("positionChanged", position)
     @hasChanged = true
+
+  setPosition : (position) ->
+    @setPositionSilent(position)
+    @trigger("positionChanged", position)
     
   setActivePlane : (activePlane) ->
     @activePlane = activePlane

@@ -6,7 +6,7 @@ underscore : _
 
 updateMacro = (a) ->
 
-  @trigger("changed", true)
+  @trigger("changed", @currentMatrix)
   @hasChanged = true
 
 transformationWithDistanceMacro = (transformation) ->
@@ -29,11 +29,11 @@ class Flycam3d
 
   constructor : (@distance) ->
 
+    _.extend(this, new EventMixin())
+
     @reset()
     @distanceVecNegative = [0, 0, -distance]
     @distanceVecPositive = [0, 0, distance]
-
-    _.extend(this, new EventMixin())
 
 
   reset : ->
@@ -44,6 +44,8 @@ class Flycam3d
       0, 0, 1, 0, 
       0, 0, 0, 1 
     ]
+    updateMacro()
+
 
   resetRotation : ->
 
@@ -52,6 +54,8 @@ class Flycam3d
     m[4] = 0; m[5] = 1; m[6] = 0; m[7] = 0; 
     m[8] = 0; m[9] = 0; m[10] = 1; m[11] = 0; 
     m[15] = 1; 
+    updateMacro()
+
 
   update : -> 
 
@@ -89,13 +93,6 @@ class Flycam3d
     M4x4.clone @currentMatrix
 
 
-  getServerMatrix : ->
-
-    matrix = @getMatrix()
-    matrix[14] /= 2
-    matrix
-
-
   getZoomedMatrix : ->
 
     matrix = @getMatrix()
@@ -105,13 +102,6 @@ class Flycam3d
   setMatrix : (matrix) ->
 
     @currentMatrix = M4x4.clone(matrix)
-    updateMacro()
-
-
-  setServerMatrix : (matrix) ->
-
-    @currentMatrix = M4x4.clone(matrix)
-    @currentMatrix[14] *= 2
     updateMacro()
 
 
@@ -205,19 +195,18 @@ class Flycam3d
     [ matrix[12], matrix[13], matrix[14]]
 
 
-  getServerPosition : ->
-
-    position = @getPosition()
-    position[2] /= 2
-    position
-
-
-  setPosition : (p) ->
+  setPositionSilent : (p) ->
 
     matrix = @currentMatrix
     matrix[12] = p[0]
     matrix[13] = p[1]
     matrix[14] = p[2]
+
+
+  setPosition : (p) ->
+
+    @setPositionSilent(p)
+    updateMacro()
 
 
   getDirection : ->

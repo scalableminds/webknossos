@@ -107,7 +107,7 @@ class Gui
                           .name("Move Value")    
                           .onChange(@setMoveValue3d)
     (fFlightcontrols.add @settings, "crosshairSize", 0.1, 1) 
-                          .step(0.1)
+                          .step(0.01)
                           .name("Crosshair size")    
                           .onChange(@setCrosshairSize)                          
 

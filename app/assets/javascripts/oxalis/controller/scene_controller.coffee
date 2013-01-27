@@ -28,6 +28,7 @@ class SceneController
     @showSkeleton  = true
 
     @createMeshes()
+    @bind()
 
   createMeshes : ->
     # Cube
@@ -136,3 +137,23 @@ class SceneController
   toggleSkeletonVisibility : ->
     @showSkeleton = not @showSkeleton
     @skeleton.setVisibility(@showSkeleton)
+
+  bind : ->
+
+    @model.user.on "routeClippingDistanceChanged", (value) =>
+      @setRouteClippingDistance(value)
+
+    @model.user.on "displayCrosshairChanged", (value) =>
+      @setDisplayCrosshair(value)
+    
+    @model.user.on "interpolationChanged", (value) =>
+      @setInterpolation(value)
+
+    @model.user.on "displayPreviewXYChanged", (value) =>
+      @setDisplaySV PLANE_XY, value
+
+    @model.user.on "displayPreviewYZChanged", (value) =>
+      @setDisplaySV PLANE_YZ, value
+
+    @model.user.on "displayPreviewXZChanged", (value) =>
+      @setDisplaySV PLANE_XZ, value      

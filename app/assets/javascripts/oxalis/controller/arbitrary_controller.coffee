@@ -57,6 +57,7 @@ class ArbitraryController
     @crosshair = new Crosshair(model.user.crosshairSize)
     @view.addGeometry(@crosshair)
 
+    @bind()
     @view.draw()
 
 
@@ -124,10 +125,6 @@ class ArbitraryController
       #Reset Matrix
       "r" : => @cam.resetRotation()
 
-      #Branches
-      "b" : => @pushBranch()
-      "j" : => @popBranch() 
-
       #Recording of Waypoints
       "t" : => 
         @record = true
@@ -138,46 +135,28 @@ class ArbitraryController
 
   bind : ->
 
-    @initKeyboard()
-    @initMouse()
-
     @view.on "render", (force, event) => @render(force, event)
 
     @model.binary.cube.on "bucketLoaded", => @view.draw()
-
-    @cam.on "changed", =>
-      @trigger("matrixChanged", @cam.getMatrix())
 
     @model.user.on "crosshairSizeChanged", (value) =>
       @crosshair.setScale(value)
 
 
+  start : ->
 
-  unbind : ->
-
-    @input.unbind()
-    @view.off "render", (force, event) => @render(force, event)
-
-    @model.binary.cube.on "bucketLoaded", => @view.draw()
-
-    @cam.off "changed", =>
-      @trigger("matrixChanged", @cam.getMatrix())
-
-    @model.user.on "crosshairSizeChanged", (value) =>
-      @crosshair.setScale(value)      
-
-
-  show : ->
-
+    @initKeyboard()
+    @initMouse()
     @canvas.show()
     @view.start()
-    @view.draw()    
+    @view.draw()     
+ 
 
+  stop : ->
 
-  hide : ->
-
-    @canvas.hide()
     @view.stop()
+    @input.unbind()
+    @canvas.hide()
 
 
   addNode : (position) =>
@@ -220,7 +199,7 @@ class ArbitraryController
     @cam.setPosition @model.route.getActiveNodePos()  
 
 
-  moved : =>
+  moved : ->
 
     matrix = @cam.getMatrix()
 

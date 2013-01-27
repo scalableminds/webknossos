@@ -5,15 +5,13 @@ underscore : _
 ./controller/arbitrary_controller : ArbitraryController
 ./controller/abstract_tree_controller : AbstractTreeController
 ./model : Model
+./view : View
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
+./view/gui : Gui
 ###
 
-TYPE_USUAL       = 0
-TYPE_BRANCH      = 1
 VIEWPORT_WIDTH   = 380
-WIDTH            = 384
-TEXTURE_SIZE     = 512
 TEXTURE_SIZE_P   = 9
 DISTANCE_3D      = 140
 
@@ -46,15 +44,15 @@ class Controller
       stats.getDomElement().id = "stats"
       $("body").append stats.getDomElement() 
 
+      @view = new View()
 
+      @gui = @createGui()
 
-      @planeController = new PlaneController(@model, stats)
-      @planeController.bind()
-      @planeController.start()
+      @planeController = new PlaneController(@model, stats, @gui)
+
       @arbitraryController = new ArbitraryController(@model, stats)
 
-      abstractTreeController = new AbstractTreeController(@model)      
-
+      @abstractTreeController = new AbstractTreeController(@model)      
 
       @initMouse()
       @initKeyboard()
@@ -78,33 +76,32 @@ class Controller
     new Input.KeyboardNoLoop(
 
       #View
+      "t" : => 
+        @view.toggleTheme()       
+        @abstractTreeController.drawTree()
       "q" : => @toggleFullScreen()
 
+      #Delete active node
+      "delete" : => @deleteActiveNode()
 
-      #ScaleTrianglesPlane
-      "m" : => @switch()
+      "c" : => @createNewTree()
+
+
+      #Activate ArbitraryView
+      "m" : => @toggleArbitraryView()
     )
 
 
-  switch : ->
+  toggleArbitraryView : ->
     
     if @mode is MODE_2D
-      @planeController.unbind()
-      @planeController.stop() 
+      @planeController.stop()
       @initKeyboard()     
-
-      @arbitraryController.bind()
-      @arbitraryController.cam.setPosition(@planeController.flycam.getPosition())
-      @arbitraryController.show()
+      @arbitraryController.start()
       @mode = MODE_3D
     else
-      @arbitraryController.unbind()
-      @arbitraryController.hide()      
+      @arbitraryController.stop()     
       @initKeyboard()
-
-
-      @planeController.bind()
-      @planeController.flycam.setPosition(@arbitraryController.cam.getPosition())
       @planeController.start()
       @mode = MODE_2D
 
@@ -123,3 +120,56 @@ class Controller
       if requestFullscreen
         requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
+
+  createGui : ->
+
+    { model } = @
+
+    gui = new Gui($("#optionswindow"), model)
+    gui.update()  
+
+    model.binary.queue.set4Bit(model.user.fourBit)
+    model.binary.updateLookupTable(gui.settings.brightness, gui.settings.contrast)
+
+    gui.on
+      deleteActiveNode : @deleteActiveNode
+      createNewTree : @createNewTree
+      setActiveTree : (id) => @setActiveTree(id)
+      setActiveNode : (id) => @setActiveNode(id, false) # not centered
+      deleteActiveTree : @deleteActiveTree
+
+    gui
+
+
+  deleteActiveNode : ->
+
+    @model.route.deleteActiveNode()    
+
+
+  createNewTree : ->
+
+    @model.route.createNewTree()
+
+
+  setActiveTree : (treeId) ->
+
+    @model.route.setActiveTree(treeId)
+
+
+  setActiveNode : (nodeId, centered, mergeTree) ->
+
+    @model.route.setActiveNode(nodeId, mergeTree)
+    if centered
+      @centerActiveNode()
+
+
+  centerActiveNode : ->
+
+    position = @model.route.getActiveNodePos()
+    if position
+      @model.flycam.setPosition(position)
+
+
+  deleteActiveTree : ->
+
+    @model.route.deleteTree(true)

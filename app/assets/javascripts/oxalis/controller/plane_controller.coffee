@@ -4,10 +4,9 @@ underscore : _
 ./camera_controller : CameraController
 ./scene_controller : SceneController
 ../model/dimensions : DimensionsHelper
-../view/gui : Gui
 ../../libs/event_mixin : EventMixin
 ../../libs/input : Input
-../view : View
+../view/plane_view : PlaneView
 ###
 
 PLANE_XY         = Dimensions.PLANE_XY
@@ -16,10 +15,7 @@ PLANE_XZ         = Dimensions.PLANE_XZ
 VIEW_3D          = Dimensions.VIEW_3D
 TYPE_USUAL       = 0
 TYPE_BRANCH      = 1
-VIEWPORT_WIDTH   = 380
 WIDTH            = 384
-TEXTURE_SIZE     = 512
-TEXTURE_SIZE_P   = 9
 
 
 class PlaneController
@@ -29,12 +25,12 @@ class PlaneController
   view : null
 
 
-  constructor : (@model, stats ) ->
+  constructor : (@model, stats, @gui ) ->
 
     _.extend(@, new EventMixin())
 
     @flycam = @model.flycam
-    @view  = new View(@model, @flycam, stats)    
+    @view  = new PlaneView(@model, @flycam, stats)    
 
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
@@ -68,8 +64,6 @@ class PlaneController
           .html("#{if button.color then "<span style=\"background: #{button.color}\"></span>" else ""}#{button.name}")
       )    
 
-    @view.createKeyboardCommandOverlay()
-
     @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
 
     meshes = @sceneController.getMeshes()
@@ -77,15 +71,9 @@ class PlaneController
     for mesh in meshes
       @view.addGeometry(mesh)
 
-    @gui = new Gui($("#optionswindow"), @model, @sceneController, @cameraController, @flycam)
-    @gui.update()
-
     @flycam.setPosition(@model.route.data.editPosition)
     @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
     @flycam.setQuality(@model.user.quality)
-
-    @model.binary.queue.set4Bit(@model.user.fourBit)
-    @model.binary.updateLookupTable(@gui.settings.brightness, @gui.settings.contrast)
 
     @cameraController.changePrevSV()
     @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
@@ -96,6 +84,9 @@ class PlaneController
     @sceneController.setDisplaySV PLANE_YZ, @model.user.displayPreviewYZ
     @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
     @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
+
+    @bind()
+    @start()
 
 
   initMouse : ->
@@ -155,8 +146,7 @@ class PlaneController
     
     @bindings.push new Input.KeyboardNoLoop(
 
-      #View
-      "t" : => @view.toggleTheme()      
+      #View     
       "1" : =>
         @sceneController.toggleSkeletonVisibility()
         # Show warning, if this is the first time to use
@@ -176,11 +166,6 @@ class PlaneController
       "i" : => @zoomIn()
       "o" : => @zoomOut()
 
-      #Delete active node
-      "delete" : => @deleteActiveNode()
-
-      "c" : => @createNewTree()
-
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
       "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
@@ -199,11 +184,16 @@ class PlaneController
 
   start : ->
 
+    @initMouse()
+    @initKeyboard()
     @view.start()
 
 
   stop : ->
 
+    @view.unbind()
+    for binding in @bindings
+      binding.unbind()
     @view.stop()
 
 
@@ -218,7 +208,6 @@ class PlaneController
       render : => @render()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
-
     @sceneController.skeleton.on
       newGeometries : (list, event) =>
         for geometry in list
@@ -227,46 +216,9 @@ class PlaneController
         for geometry in list
           @view.removeGeometry(geometry)    
 
-    @gui.on
-      deleteActiveNode : @deleteActiveNode
-      createNewTree : @createNewTree
-      setActiveTree : (id) => @setActiveTree(id)
-      setActiveNode : (id) => @setActiveNode(id, false) # not centered
-      deleteActiveTree : @deleteActiveTree
-
     for button in @buttons
       button.control.on("click", button.callback)  
-
-
-  unbind : ->
-
-    @view.unbind()
-    
-    for binding in @bindings
-      binding.unbind()
-
-    @view.off
-      render : => @render()
-      renderCam : (id, event) => @sceneController.updateSceneForCam(id)
-
-    @sceneController.skeleton.off
-      newGeometries : (list, event) =>
-        for geometry in list
-          @view.addGeometry(geometry)
-      removeGeometries : (list, event) =>
-        for geometry in list
-          @view.removeGeometry(geometry)    
-
-    @gui.off
-      deleteActiveNode : @deleteActiveNode
-      createNewTree : @createNewTree
-      setActiveTree : (id) => @setActiveTree(id)
-      setActiveNode : (id) => @setActiveNode(id, false) # not centered
-      deleteActiveTree : @deleteActiveTree
-    
-    for button in @buttons
-      button.control.off("click", button.callback)      
-   
+ 
 
   render : ->
 
@@ -434,28 +386,3 @@ class PlaneController
 
   createNewTree : =>
     @model.route.createNewTree()
-
-  setActiveTree : (treeId) =>
-    @model.route.setActiveTree(treeId)
-
-  deleteActiveTree : =>
-    @model.route.deleteTree(true)
-
-  ########### Input Properties
-
-  #Customize Options
-  setMoveValue : (value) =>
-    @model.user.moveValue = (Number) value
-    @model.user.push()
-
-  setRotateValue : (value) =>
-    @model.user.rotateValue = (Number) value 
-    @model.user.push()   
-
-  setScaleValue : (value) =>
-    @model.user.scaleValue = (Number) value  
-    @model.user.push()         
-
-  setMouseRotateValue : (value) =>
-    @model.user.mouseRotateValue = (Number) value
-    @model.user.push() 

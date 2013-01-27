@@ -88,7 +88,9 @@ class ArbitraryView
     window.requestAnimationFrame => @animate()
    
 
-  draw : -> @forceUpdate = true
+  draw : -> 
+
+    @forceUpdate = true
 
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.

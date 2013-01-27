@@ -1,8 +1,8 @@
 ### define
 jquery : $
 underscore : _
-./controller/controller2d : Controller2d
-./controller/controller3d : Controller3d
+./controller/plane_controller : PlaneController
+./controller/arbitrary_controller : ArbitraryController
 ./controller/abstract_tree_controller : AbstractTreeController
 ./model : Model
 ../libs/event_mixin : EventMixin
@@ -25,8 +25,8 @@ class Controller
 
   mode : null
   view : null
-  controller2d : null
-  controller3d : null
+  planeController : null
+  arbitraryController : null
   abstractTreeController : null
   
 
@@ -48,10 +48,10 @@ class Controller
 
 
 
-      @controller2d = new Controller2d(@model, stats)
-      @controller2d.bind()
-      @controller2d.start()
-      @controller3d = new Controller3d(@model, stats)
+      @planeController = new PlaneController(@model, stats)
+      @planeController.bind()
+      @planeController.start()
+      @arbitraryController = new ArbitraryController(@model, stats)
 
       abstractTreeController = new AbstractTreeController(@model)      
 
@@ -89,23 +89,23 @@ class Controller
   switch : ->
     
     if @mode is MODE_2D
-      @controller2d.unbind()
-      @controller2d.stop() 
+      @planeController.unbind()
+      @planeController.stop() 
       @initKeyboard()     
 
-      @controller3d.bind()
-      @controller3d.cam.setPosition(@controller2d.flycam.getPosition())
-      @controller3d.show()
+      @arbitraryController.bind()
+      @arbitraryController.cam.setPosition(@planeController.flycam.getPosition())
+      @arbitraryController.show()
       @mode = MODE_3D
     else
-      @controller3d.unbind()
-      @controller3d.hide()      
+      @arbitraryController.unbind()
+      @arbitraryController.hide()      
       @initKeyboard()
 
 
-      @controller2d.bind()
-      @controller2d.flycam.setPosition(@controller3d.cam.getPosition())
-      @controller2d.start()
+      @planeController.bind()
+      @planeController.flycam.setPosition(@arbitraryController.cam.getPosition())
+      @planeController.start()
       @mode = MODE_2D
 
 

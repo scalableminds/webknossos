@@ -10,7 +10,7 @@ libs/request : Request
 ../view/arbitrary_view : ArbitraryView
 ###
 
-class Controller3d
+class ArbitraryController
 
   WIDTH : 128
   HEIGHT : 128

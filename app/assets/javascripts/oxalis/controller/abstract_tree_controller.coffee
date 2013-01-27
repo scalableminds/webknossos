@@ -6,7 +6,6 @@
 class AbstractTreeController
 
 
-  container : null
   model : null
   view : null
 
@@ -40,12 +39,9 @@ class AbstractTreeController
       })
 
 
-
   unbind : ->
 
     { view } = @
-
-
 
 
   drawTree : ->

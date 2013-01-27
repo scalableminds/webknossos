@@ -1,8 +1,8 @@
 ### define
 jquery : $
 underscore : _
-./cameracontroller : CameraController
-./scenecontroller : SceneController
+./camera_controller : CameraController
+./scene_controller : SceneController
 ../model/dimensions : DimensionsHelper
 ../view/gui : Gui
 ../../libs/event_mixin : EventMixin
@@ -22,7 +22,7 @@ TEXTURE_SIZE     = 512
 TEXTURE_SIZE_P   = 9
 
 
-class Controller2d
+class PlaneController
 
   bindings : []
   model : null

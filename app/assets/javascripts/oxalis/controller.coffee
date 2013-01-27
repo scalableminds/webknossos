@@ -96,12 +96,12 @@ class Controller
     
     if @mode is MODE_2D
       @planeController.stop()
-      @initKeyboard()     
+      #@initKeyboard()     
       @arbitraryController.start()
       @mode = MODE_3D
     else
       @arbitraryController.stop()     
-      @initKeyboard()
+      #@initKeyboard()
       @planeController.start()
       @mode = MODE_2D
 

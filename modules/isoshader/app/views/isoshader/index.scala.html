@@ -1,7 +1,31 @@
 @(message: String)
 
-@main("Welcome to Play 2.1") {
-    
-    @play20.welcome(message)
-    
+@main() {
+
+    <div id="toolbar">
+      <div style="float: right;">
+        <button title="Press F11 to enter or leave fullscreen mode">fullscreen</button>
+      </div>
+
+      <button>show code</button>
+      <select id="quality">
+        <option>0.5</option>
+        <option>1</option>
+        <option>2</option>
+        <option>4</option>
+        <option>8</option>
+      </select>
+
+      <select id="shading">
+        <option>Normal</option>
+        <option>Fog</option>
+        <option>Cam Light</option>
+        <option>Fog 2</option>
+        <option>Translucent</option>
+      </select>
+      <a title="Readme" href="readme.html">help</a>
+    </div>
+
+    <canvas id="webgl_canvas"></canvas>
+
 }

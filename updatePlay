@@ -6,4 +6,5 @@ echo "[info] Cleaning brainflight..."
 ./clean
 echo "[info] Building play..."
 cd playframework/framework
-./build build-repository
+./build publish-local
+

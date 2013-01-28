@@ -23,7 +23,7 @@ object Role extends BasicDAO[Role]( "roles" ) {
   def apply( roleName: String ): Option[Role] = {
     val r = findOneByName( roleName )
     if ( r.isEmpty ) {
-      log.error( "Requested Role doesn't exist in DB: " + roleName )
+      Logger.error( s"Requested Role doesn't exist in DB: $roleName" )
       Some(EmptyRole)
     } else {
       r

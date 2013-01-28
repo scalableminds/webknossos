@@ -1,40 +1,61 @@
 package brainflight.binary
 
 import brainflight.tools.geometry.Point3D
+import scala.concurrent.Promise
+import scala.concurrent.Future
+import play.api.libs.concurrent.Promise
+import play.api.libs.concurrent.Execution.Implicits._
 import models.binary._
 import brainflight.tools.geometry.Vector3D
 import play.api.Play
 import brainflight.tools.Math._
 import scala.collection.mutable.ArrayBuffer
+import akka.actor.Actor
+import play.api.Logger
+import akka.agent.Agent
+import akka.util.Timeout
+import scala.concurrent.duration._
+import akka.pattern.pipe
+import akka.actor.Status
+import java.util.concurrent.TimeoutException
+import java.io.InputStream
+import scala.util._
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
  * system or db implementation) must implement to be used
  */
-case class DataRequest(
-  dataSet: DataSet, 
-  layer: DataLayer, 
-  resolution: Int,
-  cuboid: Cuboid,
-  useHalfByte: Boolean = false
-)
-abstract class DataStore {
-  
-  val conf = Play.current.configuration
-  
-  val blockLength = conf.getInt("binary.blockLength") getOrElse 128
-  
-  val blockSize = blockLength * blockLength * blockLength
-  
+
+case class LoadBlock(dataSetBaseDir: String, dataSetName: String, dataLayerName: String, bytesPerElement: Int, resolution: Int,
+                     x: Int, y: Int, z: Int)
+
+class DataNotFoundException(message: String) extends Exception(s"$message Could not find the data")
+
+abstract class DataStore extends Actor {
+  import DataStore._
+
+  val MAX_RESOLUTION_EXPONENT = 9
+  val MAX_BYTES_PER_ELEMENT = 8
+
   /**
    * Loads the data of a given point from the data source
    */
-  def load(dataRequest: DataRequest): ArrayBuffer[Byte]
+  def load(dataInfo: LoadBlock): Future[Array[Byte]]
 
-  /** 
-   * Gives the data store the possibility to clean up its mess on shutdown/clean
-   */
-  def cleanUp()
+  def receive = {
+    case request @ LoadBlock(dataSetBaseDir, dataSetName, dataLayerName, bytesPerElement, resolution, x, y, z) =>
+      if (resolution > MAX_RESOLUTION_EXPONENT)
+        sender ! new IndexOutOfBoundsException("Resolution not supported")
+      else {
+        val s = sender
+        load(request).onComplete {
+          case Failure(e) =>
+            s ! e
+          case Success(d) =>
+            s ! d
+        }
+      }
+  }
 
   /**
    * Creates the file-name of the cube based on the data set id, resolution
@@ -48,27 +69,41 @@ abstract class DataStore {
    *
    *  where DATAPATH, DATASETID, RESOLUTION, X, Y and Z are parameters.
    */
-  def createFilename(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, point: Point3D) =
-    "%s/%s/%d/x%04d/y%04d/z%04d/%s_mag%d_x%04d_y%04d_z%04d.raw".format(
-      dataSet.baseDir,
-      dataLayer.folder,
-      resolution,
-      point.x, point.y, point.z,
-      dataSet.name,
-      resolution,
-      point.x, point.y, point.z)
 
   def createNullArray(blockSize: Int, bytesPerElement: Int) =
     new Array[Byte](blockSize * bytesPerElement)
 
-  def nullValue(bytesPerElement: Int) =
-    new Array[Byte](bytesPerElement)
-    
-    lazy val nullArray: Array[Array[Byte]] = 
-    Array(1,2,4,8).map(bytesPerElement => createNullArray(blockSize, bytesPerElement))
-    
-  def nullBlock(bytesPerElement: Int) = 
-    nullArray(log2(bytesPerElement).toInt)  
-    
-  val elementsPerFile = 128 * 128 * 128
+  lazy val nullBlocks: Array[Array[Byte]] =
+    (0 to MAX_RESOLUTION_EXPONENT).toArray.map { exp =>
+      val bytesPerElement = math.pow(2, exp).toInt
+      createNullArray(blockSize, bytesPerElement)
+    }
+
+  def nullBlock(bytesPerElement: Int) =
+    nullBlocks(log2(bytesPerElement).toInt)
+
+  lazy val nullFiles: Stream[Array[Byte]] =
+    (1 to MAX_BYTES_PER_ELEMENT).toStream.map { bytesPerElement =>
+      new Array[Byte](blockSize * bytesPerElement)
+    }
+
+  def nullFile(bytesPerElement: Int) = nullFiles(bytesPerElement)
+
+}
+
+object DataStore {
+
+  val blockLength = 128
+
+  val blockSize = blockLength * blockLength * blockLength
+
+  def createFilename(dataInfo: LoadBlock) =
+    "%s/%s/%d/x%04d/y%04d/z%04d/%s_mag%d_x%04d_y%04d_z%04d.raw".format(
+      dataInfo.dataSetBaseDir,
+      dataInfo.dataLayerName,
+      dataInfo.resolution,
+      dataInfo.x, dataInfo.y, dataInfo.z,
+      dataInfo.dataSetName,
+      dataInfo.resolution,
+      dataInfo.x, dataInfo.y, dataInfo.z)
 }

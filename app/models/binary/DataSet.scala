@@ -26,10 +26,11 @@ case class DataSet(
   def doesContain(point: Point3D) =
     point.x >= 0 && point.y >= 0 && point.z >= 0 && // lower bound
       !(point hasGreaterCoordinateAs maxCoordinates)
+      
 }
 
 object DataSet extends BasicDAO[DataSet]("dataSets") {
-  /*
+
   def default = {
     //find(MongoDBObject())
     
@@ -37,18 +38,6 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
     if (all.isEmpty)
       throw new Exception("No default data set found!")
     all.maxBy(_.priority)
-  }
-  // */
-  
-  def default = {
-    DataSet("e_k0563", 
-            "binaryData/e_k0563", 
-            Point3D(2048, 2176, 2560),
-            0,
-            Map[String, DataLayer](
-                ColorLayer.identifier -> ColorLayer.default, 
-                ClassificationLayer.identifier -> ClassificationLayer.default,
-                SegmentationLayer.identifier -> SegmentationLayer.default))
   }
   
   def deleteAllExcept(names: Array[String]) = {

@@ -1,4 +1,4 @@
-@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, akka.util.Duration]], dataSets: List[models.binary.DataSet])(implicit session: brainflight.view.AuthedSessionData)
+@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[models.binary.DataSet])(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
   <div class="container" id="dashboard">
@@ -44,7 +44,7 @@
 
     <div>
     @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
-      <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button
+      <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button>
     }
     <div class="divider-vertical"></div>
     @helper.form(action = controllers.routes.TracingController.createExplorational, 'class -> "form-inline inline-block") {

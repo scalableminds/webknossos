@@ -57,14 +57,14 @@ $ ->
 
           event.preventDefault()
 
-          oxalis.gui.saveNow().done =>
+          oxalis.controller2d.gui.saveNow().done =>
             window.location.href = this.href
 
 
         $("#trace-save-button").click (event) ->
 
           event.preventDefault()
-          oxalis.gui.saveNow()
+          oxalis.controller2d.gui.saveNow()
 
         return
 
@@ -177,7 +177,7 @@ $ ->
           save()
 
 
-    "admin.creator.levelCreator" : ->
+    "levelcreator.levelCreator" : ->
 
       require ["./level_creator"], (LevelCreator) ->
 

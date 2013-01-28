@@ -1,8 +1,8 @@
 package brainflight.binary
 
 import brainflight.tools.geometry.Vector3I
-import brainflight.tools.ExtendedTypes._
 import brainflight.tools.geometry.Point3D
+import braingames.util.ExtendedTypes.ExtendedByteArray
 import play.api.Logger
 
 trait Handle {
@@ -75,7 +75,7 @@ object BinaryProtocol {
    * Each float consists of 4 bytes.
    */
   def parseWebsocket(in: Array[Byte]): Option[BinaryMessage] = {
-    Logger.trace("Websocket incoming payload. size: " + in.length)
+    Logger.trace(s"Websocket incoming payload. size: ${in.length}")
     if (in.length >= MinWebSocketRequestSize && in.length % 4 == 1) {
       val (binPayload, binHandle) = in.splitAt(in.length - 1)
       parsePayload(binPayload).map { message =>

@@ -20,7 +20,7 @@ object BasicEvolution {
       } catch {
         case e: java.lang.Exception =>  
           clazz.collection.drop
-          Logger.warn("Droped '%s' collection because of schema / grater inconsistency".format(clazz))
+          Logger.warn(s"Droped '$clazz' collection because of schema / grater inconsistency")
       }
     }
   }

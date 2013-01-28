@@ -9,12 +9,12 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import akka.actor.ActorRef
 
-case class JS( fktBody: String, params: Map[String, Any])
+case class JS(fktBody: String, params: Map[String, Any])
 
 class JsExecutionActor extends Actor {
   val jsExecutor = new JsExecutor
   def receive = {
-    case JS( fktBody, params ) =>
-      sender ! jsExecutor.execute( fktBody, params )
+    case JS(fktBody, params) =>
+      sender ! jsExecutor.execute(fktBody, params)
   }
 } 

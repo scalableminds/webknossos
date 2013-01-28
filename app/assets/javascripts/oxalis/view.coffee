@@ -1,6 +1,5 @@
 ### define
 jquery : $
-./model/flycam : Flycam
 ./model/route : Route
 ./model/dimensions : DimensionsHelper
 ./view/abstractTreeViewer : AbstractTreeViewer
@@ -28,12 +27,11 @@ THEME_DARK     = 1
 
 class View
 
-  constructor : (model, flycam) ->
+  constructor : (@model, @flycam, @stats) ->
 
     _.extend(@, new EventMixin())
 
-    @model  = model
-    @flycam = flycam
+    @running = false
 
     # The "render" div serves as a container for the canvas, that is 
     # attached to it once a renderer has been initalized.
@@ -92,40 +90,33 @@ class View
     # Create Abstract Tree Viewer
     @abstractTreeViewer = new AbstractTreeViewer(abstractTreeContainer.width(), abstractTreeContainer.height())
     abstractTreeContainer.append @abstractTreeViewer.canvas
-    @abstractTreeViewer.on
-      nodeClick : (id) => @trigger("abstractTreeClick", id)
+
     @setTheme(THEME_BRIGHT)
 
-    # FPS stats
-    stats = new Stats()
-    stats.getDomElement().id = "stats"
-    $("body").append stats.getDomElement() 
-    @stats = stats
     @positionStats = $("#status")
 
     @first = true
     @newTextures = [true, true, true, true]
     # start the rendering loop
-    @animate()
 
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
 
     @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))
+      Toast.error("No more branchpoints", false))    
 
     @model.route.on({
-                      newActiveNode        : => @drawTree(),
-                      newActiveTree        : => @drawTree(),
-                      newTree              : => @drawTree(),
-                      mergeTree            : => @drawTree(),
-                      reloadTrees          : => @drawTree(),
-                      deleteTree           : => @drawTree(),
-                      deleteActiveNode     : => @drawTree(),
-                      newNode              : => @drawTree(),
-                      doubleBranch         : (callback) => @showBranchModal(callback)
-                      mergeDifferentTrees  : ->
-                            Toast.error("You can't merge nodes within the same tree", false)  })
+      newActiveNode        : => @drawTree(),
+      newActiveTree        : => @drawTree(),
+      newTree              : => @drawTree(),
+      mergeTree            : => @drawTree(),
+      reloadTrees          : => @drawTree(),
+      deleteTree           : => @drawTree(),
+      deleteActiveNode     : => @drawTree(),
+      newNode              : => @drawTree(),
+      doubleBranch         : (callback) => @showBranchModal(callback)      
+      mergeDifferentTrees  : ->
+        Toast.error("You can't merge nodes within the same tree", false)  })
 
     @modalCallbacks = {}
     
@@ -138,7 +129,8 @@ class View
 
     @renderFunction()
 
-    window.requestAnimationFrame => @animate()
+    if @running is true
+      window.requestAnimationFrame => @animate()
 
   # This is the main render function.
   # All 3D meshes and the trianglesplane are rendered here.
@@ -198,7 +190,7 @@ class View
   
   scaleTrianglesPlane : (delta) =>
     @scaleFactor = 1 unless @scaleFactor
-    if (@scaleFactor+delta > 0.75) and (@scaleFactor+delta < 1.5)
+    if (@scaleFactor+delta > 0.65) and (@scaleFactor+delta < 2)
       @scaleFactor += Number(delta)
       @curWidth = WIDTH = HEIGHT = @scaleFactor * 384
       container = $("#render")
@@ -220,6 +212,10 @@ class View
       # scales the 3D-view controls
       prevControl = $("#prevControls")
       prevControl.css({top: @scaleFactor * 420 + "px", left: @scaleFactor * 420 + "px"})
+
+      # move abstract tree viewer
+      abstractTreeViewer = $("#abstractTreeViewer")
+      abstractTreeViewer.css({left: 2 * WIDTH + 20 + 10 + "px"})
 
       @resize()
 
@@ -288,6 +284,7 @@ class View
 
     $("#modal").modal("show")
 
+
   showFirstVisToggle : ->
     @showModal("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
       [{id: "ok-button", label: "OK, Got it."}])
@@ -299,6 +296,7 @@ class View
 
   hideModal : ->
     $("#modal").modal("hide")
+
 
   createKeyboardCommandOverlay : ->
 
@@ -312,13 +310,18 @@ class View
           <tr><td>K</td><td>Scale up viewports</td><td>O or Alt + Mousewheel</td><td>Zoom out</td></tr>
           <tr><td>L</td><td>Scale down viewports</td><td>B</td><td>Set branchpoint</td></tr>
           <tr><td>Del</td><td>Delete node/Split trees</td><td>J</td><td>Jump to last branchpoint</td></tr>
-          <tr><td>Shift + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
+          <tr><td>Shift + Alt + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
           <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
-          <tr><td>N</td><td>Next comment</td><td></td><td></td></tr>
-          <tr><td>T</td><td>Toggle theme</td><td></td><td></td></tr>
-          <tr><td>1</td><td>Toggle Skeleton Visibility</td><td></td><td></td></tr>
-          <tr><th colspan=\"2\">3D-view</th><td></td><td></td></tr>
-          <tr><td>Mousewheel</td><td>Zoom in and out</td><td></td><td></td></tr>
+          <tr><td>N</td><td>Next comment</td><th colspan=\"2\">3D-view</th><td></td></tr>
+          <tr><td>T</td><td>Toggle theme</td><td>Mousewheel</td><td>Zoom in and out</td></tr>
+          <tr><td>1</td><td>Toggle Skeleton Visibility</td><td></td><td></td></tr>          
+          <tr><td>M</td><td>Toggle mode</td><td></td><td></td></tr>
+          <tr><th colspan=\"2\">Flightmode</th><td></td><td></td></tr>
+          <tr><td>Mouse or Arrow keys</td><td>Rotation</td><td></td><td></td></tr>
+          <tr><td>Shift + Mouse or Shift + Arrow</td><td>Rotation around Axis</td><td>W A S D</td><td>Strafe</td></tr>
+          <tr><td>Space, Shift + Space</td><td>Forward, Backward</td><td>B, J</td><td>Set, Jump to last branchpoint</td></tr>
+          <tr><td>K, L</td><td>Scale viewports</td><td>I, O</td><td>Zoom in and out</td><td></td></tr>
+          <tr><td>T, Z</td><td>Start, stop recording waypoints</td><td>R</td><td>Reset rotation</td></tr> 
         </tbody>
       </table>
       <br>
@@ -328,3 +331,32 @@ class View
 
     popoverTemplate = '<div class="popover key-overlay"><div class="arrow key-arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
     $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
+
+
+  bind : ->
+    
+    @abstractTreeViewer.on
+      nodeClick : (id) => @trigger("abstractTreeClick", id)
+
+    @model.route.on("emptyBranchStack", =>
+      Toast.error("No more branchpoints", false)) 
+
+
+  unbind : ->
+
+    @abstractTreeViewer.off
+      nodeClick : (id) => @trigger("abstractTreeClick", id)
+
+    @model.route.off("emptyBranchStack", =>
+      Toast.error("No more branchpoints", false))     
+
+    
+  stop : ->
+
+    @running = false 
+
+
+  start : ->
+
+    @running = true
+    @animate()

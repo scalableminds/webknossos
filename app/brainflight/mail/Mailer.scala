@@ -1,7 +1,7 @@
 package brainflight.mail
 
 import akka.actor._
-import akka.util.duration._
+import scala.concurrent.duration._
 import play.api.libs.json._
 import play.api.libs.iteratee._
 import play.api.libs.concurrent._

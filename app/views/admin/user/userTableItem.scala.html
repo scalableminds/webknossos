@@ -9,6 +9,10 @@
   		<span class="label" style="background-color:@models.security.Role.colorOf(role)">@role</span>
 		} 
 	</td>
+	<td>
+		@user.experiences.map{ experience =>
+			<span class="label">@experience._1 @experience._2</span>
+		}
 	<td> 
 		@if(user.verified) {            
   		<i class="icon-ok"></i>

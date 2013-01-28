@@ -3,8 +3,9 @@
 @import models.tracing.TracingType
 
 @main( ){
-  <div id="container">
+  <div id="container" data-tracing-type="@tracing.tracingType">
     <div id="main" role="main">
+      <div id="arbitraryplane"></div>      
       <div id="render">
         <div id="prevControls"></div>
         <div id="modal" class="modal hide fade"></div>

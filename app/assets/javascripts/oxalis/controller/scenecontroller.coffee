@@ -1,6 +1,4 @@
 ### define
-../model : Model
-../view : View
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
 ../model/dimensions : DimensionsHelper
@@ -48,7 +46,7 @@ class SceneController
 
     # TODO: Implement text 
 
-    @skeleton = new Skeleton(10000, @flycam, @model)
+    @skeleton = new Skeleton(@flycam, @model)
 
     # create Meshes
     @planes = new Array(3)

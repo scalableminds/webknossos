@@ -23,7 +23,7 @@ object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
       implicit val timeout = Timeout(5 seconds)
-      (DirectoryWatcher ? StartWatching("binaryData")).onSuccess {
+      (DirectoryWatcher ? StartWatching("knowledge")).onSuccess {
         case x =>
           if (Play.current.mode == Mode.Dev) {
             BasicEvolution.runDBEvolution()

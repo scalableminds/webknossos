@@ -1,8 +1,10 @@
 ### define
+./binary/interpolation_collector : InterpolationCollector
 ./binary/cube : Cube
 ./binary/pullqueue : PullQueue
 ./binary/plane2d : Plane2D
 ./binary/ping_strategy : PingStrategy
+./binary/ping_strategy_3d : PingStrategy3d
 ./dimensions : DimensionHelper
 ###
 
@@ -20,6 +22,7 @@ class Binary
   dataSetId : ""
   dataSetName : ""
   direction : [0, 0, 0]
+  lastLookUpTable : null
 
 
   constructor : (flycam, dataSet, @TEXTURE_SIZE_P) ->
@@ -31,6 +34,7 @@ class Binary
     @queue = new PullQueue(@dataSetId, @cube)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
+    @pingStrategies3d = [new PingStrategy3d.DslSlow()]
 
     @planes = []
     @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P)
@@ -41,6 +45,7 @@ class Binary
   updateLookupTable : (brightness, contrast) ->
 
     lookUpTable = new Uint8Array(256)
+    @lastLookUpTable = lookUpTable
     lookUpTableMag1 = new Uint8Array(256)
 
     for i in [0..255]
@@ -90,8 +95,48 @@ class Binary
       @queue.pull()
 
 
+  arbitraryPing : _.once (matrix) ->
+
+    @arbitraryPing = _.throttle(@arbitraryPingImpl, @PING_THROTTLE_TIME)
+    @arbitraryPing(matrix)
+
+
+  arbitraryPingImpl : (matrix) ->
+
+    @cube.collectGarbage()
+
+    for strategy in @pingStrategies3d 
+      if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
+        
+        pullQueue = strategy.ping(matrix)
+      
+        for entry in pullQueue
+          @queue.insert(entry...)
+
+        break
+
+    @queue.pull() 
+
+
   # Not used anymore. Instead the planes get-functions are called directly.
   #get : (position, options) ->
 
    # for i in [0...Math.min(options.length, @planes.length)]
     #  @planes[i].get(position, options[i]) if options[i]?
+
+
+  # A synchronized implementation of `get`. Cuz its faster.
+  getByVerticesSync : (vertices) ->
+
+    { lastLookUpTable } = @
+
+    colors = InterpolationCollector.bulkCollect(
+      vertices
+      @cube.getArbitraryCube()
+    )
+
+    for i in [0...colors.length] by 1
+      l = colors[i]
+      colors[i] = lastLookUpTable[l]
+
+    colors

@@ -12,10 +12,12 @@ class Cube
   LOOKUP_DEPTH_UP : 0
   LOOKUP_DEPTH_DOWN : 1
   MAXIMUM_BUCKET_COUNT : 5000
+  ARBITRARY_MAX_ZOOMSTEP : 2
 
   LOADING_PLACEHOLDER : {}
 
-  cube : null
+  arbitraryCube : null
+  cubes : null
   upperBoundary : null
   access : null
   bucketCount : 0
@@ -50,7 +52,7 @@ class Cube
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT
     @BUCKET_LENGTH = 1 << @BUCKET_SIZE_P * 3
-    @cube = []
+    @cubes = []
     @access = new RingBuffer(@MAXIMUM_BUCKET_COUNT * 20)
 
     # Initializing the cube-arrays with boundaries
@@ -60,9 +62,11 @@ class Cube
       @upperBoundary[2] >> @BUCKET_SIZE_P
     ]
 
+    @arbitraryCube = { boundary: cubeBoundary.slice(), buckets: new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]) }
+
     for i in [0..@ZOOM_STEP_COUNT]
 
-      @cube[i] = { boundary: cubeBoundary.slice(), buckets: new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]) }
+      @cubes[i] = { boundary: cubeBoundary.slice(), buckets: new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]) }
       cubeBoundary = [
         (cubeBoundary[0] + 1) >> 1
         (cubeBoundary[1] + 1) >> 1
@@ -70,9 +74,14 @@ class Cube
       ]
 
 
+  getArbitraryCube : ->
+
+    @arbitraryCube
+
+
   getBucketIndexByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
-    boundary = @cube[zoomStep].boundary
+    boundary = @cubes[zoomStep].boundary
 
     if bucket_x >= 0 and bucket_x < boundary[0] and
     bucket_y >= 0 and bucket_y < boundary[1] and
@@ -90,7 +99,7 @@ class Cube
 
   getBucketByZoomedAddress : (address) ->
 
-    buckets = @cube[address[3]].buckets
+    buckets = @cubes[address[3]].buckets
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
     if bucketIndex?
@@ -116,7 +125,7 @@ class Cube
 
   isBucketRequestedByZoomedAddress : (address) ->
 
-    buckets = @cube[address[3]].buckets
+    buckets = @cubes[address[3]].buckets
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
     # if the bucket lies inseide the dataset
@@ -143,7 +152,7 @@ class Cube
     # return if no request is needed
     return if @isBucketRequestedByZoomedAddress(address)
 
-    buckets = @cube[address[3]].buckets 
+    buckets = @cubes[address[3]].buckets 
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
     # mark the bucket as requested
@@ -177,6 +186,29 @@ class Cube
 
       @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, zoomStep])
 
+      if zoomStep <= @ARBITRARY_MAX_ZOOMSTEP
+
+        arbitraryCube = @arbitraryCube.buckets
+        width = 1 << zoomStep
+
+        for dx in [0...width] by 1
+          for dy in [0...width] by 1
+            for dz in [0...width] by 1
+
+              subBucket = [
+                (bucket_x << zoomStep) + dx
+                (bucket_y << zoomStep) + dy
+                (bucket_z << zoomStep) + dz
+                0
+              ]
+
+              bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
+
+              if not arbitraryCube[bucketIndex] or arbitraryCube[bucketIndex].zoomStep > zoomStep
+
+                bucketData.zoomStep = zoomStep
+                arbitraryCube[bucketIndex] = bucketData
+
     else
 
       bucket.data = null
@@ -186,7 +218,7 @@ class Cube
 
     return false if zoomStep == 0 or zoomStep == @ZOOM_STEP_COUNT 
 
-    cube = @cube[zoomStep]
+    cube = @cubes[zoomStep]
     bucketIndex = @getBucketIndexByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
 
     cube.buckets[bucketIndex] = { data: null, level: @LOOKUP_DEPTH_DOWN + 1, access: 0 } unless cube.buckets[bucketIndex]?
@@ -198,7 +230,7 @@ class Cube
     oldBucketLevel = bucket.level
     bucket.level = 0
 
-    subCube = @cube[zoomStep - 1]
+    subCube = @cubes[zoomStep - 1]
 
     for dx in [0..1]
       for dy in [0..1]

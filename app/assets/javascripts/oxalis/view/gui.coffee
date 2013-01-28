@@ -32,6 +32,11 @@ class Gui
     @datasetPosition = @initDatasetPosition(data.briConNames, datasetPostfix)
 
     @settings = 
+
+      rotateValue : data.rotateValue
+      moveValue3d : data.moveValue3d
+      mouseRotateValue : data.mouseRotateValue
+      crosshairSize : data.crosshairSize
       
       lockZoom: data.lockZoom
       inverseX: data.mouseInversionX == 1
@@ -87,6 +92,25 @@ class Gui
     (fControls.add @settings, "inverseY")
                           .name("Inverse Y")
                           .onChange(@setMouseInversionY)
+
+    fFlightcontrols = @gui.addFolder("Flighcontrols")
+    (fFlightcontrols.add @settings, "mouseRotateValue", 0.001, 0.02)
+                          .step(0.001)
+                          .name("Mouse Rotation")
+                          .onChange(@setMouseRotateValue)
+    (fFlightcontrols.add @settings, "rotateValue", 0.001, 0.08)
+                          .step(0.001)
+                          .name("Keyboard Rotation Value")
+                          .onChange(@setRotateValue)
+    (fFlightcontrols.add @settings, "moveValue3d", 0.1, 10) 
+                          .step(0.1)
+                          .name("Move Value")    
+                          .onChange(@setMoveValue3d)
+    (fFlightcontrols.add @settings, "crosshairSize", 0.1, 1) 
+                          .step(0.1)
+                          .name("Crosshair size")    
+                          .onChange(@setCrosshairSize)                          
+
 
     fView = @gui.addFolder("Planes")
     (fView.add @settings, "moveValue", 0.1, 10) 
@@ -241,9 +265,25 @@ class Gui
     stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
     $("#trace-position-input").val(stringPos)
 
+  setMouseRotateValue : (value) =>
+    @model.user.mouseRotateValue = (Number) value
+    @model.user.push()
+
+  setRotateValue : (value) =>
+    @model.user.rotateValue = (Number) value
+    @model.user.push()    
+
   setMoveValue : (value) =>
     @model.user.moveValue = (Number) value
     @model.user.push()
+
+  setMoveValue3d : (value) =>
+    @model.user.moveValue3d = (Number) value
+    @model.user.push()    
+
+  setCrosshairSize : (value) =>
+    @model.user.setValue("crosshairSize", (Number) value)
+    @model.user.push()    
 
   setRouteClippingDistance : (value) =>
     @model.user.routeClippingDistance = (Number) value

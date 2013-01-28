@@ -27,9 +27,10 @@
 
 <tr>
   <td> @formatHash(task.id) </td>
-  <td> @task.taskType.map(_.summary).getOrElse("<deleted>") - @tracing.tracingType</td>
-  <td> @task.dataSetName </td>
-  <td> @task.start </td>
+  @defining(task.taskType){ taskType =>
+  <td> @taskType.map(_.summary).getOrElse("<deleted>") - @tracing.tracingType</td>
+  <td> @taskType.map(_.description).getOrElse("") </td>
+  }
   <td> 
     @tracing.state match{
       case s if s.isFinished => {

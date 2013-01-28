@@ -68,14 +68,13 @@ GET      /admin/tasks                              controllers.admin.TaskAdminis
 GET      /admin/tasks/:id/delete                   controllers.admin.TaskAdministration.delete(id: String)
 GET      /admin/tasks/create                       controllers.admin.TaskAdministration.create
 POST     /admin/tasks/createBulk                   controllers.admin.TaskAdministration.createBulk
-POST     /admin/tasks/createFromTracing            controllers.admin.TaskAdministration.createFromTracing
+POST     /admin/tasks/createFromNML                controllers.admin.TaskAdministration.createFromNML
 POST     /admin/tasks/createFromForm               controllers.admin.TaskAdministration.createFromForm
 GET      /admin/tasks/overview                     controllers.admin.TaskAdministration.overview
 
 GET      /admin/trainingsTasks                     controllers.admin.TrainingsTaskAdministration.list
 GET      /admin/trainingsTasks/create              controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
 POST     /admin/trainingsTasks/createFromForm      controllers.admin.TrainingsTaskAdministration.createFromForm
-POST     /admin/trainingsTasks/createFromTracing   controllers.admin.TrainingsTaskAdministration.createFromTracing
 GET      /admin/trainingsTasks/:id/delete          controllers.admin.TrainingsTaskAdministration.delete(id: String)
 
 GET      /admin/training/:id/startReview           controllers.admin.TrainingsTracingAdministration.startReview(id: String)

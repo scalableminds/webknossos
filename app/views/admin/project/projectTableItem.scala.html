@@ -16,18 +16,19 @@
         @project.tasks.map{ task =>
           <tr>
             <td> @formatHash(task.id) </td>
-            <td> 
-              <span title="Unassigned"> 
-                @task.open <i class="icon-play-circle"></i>
-              </span>
-              |
-              <span title="in Progress"> 
-                @task.inProgress <i class="icon-random"></i> 
-              </span>
-              |
-              <span title="Completed">
-                @task.completed <i class="icon-ok-circle"></i>
-              </span>
+            <td> @defining(task.status){ status =>
+                <span title="Unassigned"> 
+                  @status.open <i class="icon-play-circle"></i>
+                </span>
+                |
+                <span title="in Progress"> 
+                  @status.inProgress <i class="icon-random"></i> 
+                </span>
+                |
+                <span title="Completed">
+                  @status.completed <i class="icon-ok-circle"></i>
+                </span>
+              }
             </td>
           </tr>
         }

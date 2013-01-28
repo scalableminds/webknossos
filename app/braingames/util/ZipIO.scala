@@ -34,14 +34,21 @@ object ZipIO {
     }
     zip.close()
   }
-  
-  def unzip(file: File): Iterator[InputStream] = {
-    unzip( new java.util.zip.ZipFile(file))
+
+  def unzip(file: File): List[InputStream] = {
+    val r = unzip(new java.util.zip.ZipFile(file))
+    Logger.trace(s"ZIP file contaings ${r.size} files")
+    r
   }
-  
-  def unzip(zip: ZipFile):Iterator[InputStream] = {
+
+  def unzip(zip: ZipFile): List[InputStream] = {
     import collection.JavaConverters._
-    zip.entries.asScala.map( entry => zip.getInputStream(entry))
+    zip
+      .entries
+      .asScala
+      .filter(e => !e.isDirectory())
+      .map(entry => zip.getInputStream(entry))
+      .toList
   }
 
   private def normalizeName(name: String) =

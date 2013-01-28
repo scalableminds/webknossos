@@ -17,6 +17,7 @@ import com.mongodb.casbah.query._
 import models.tracing.TracingState._
 import nml.NMLParser
 import models.task._
+import models.Color
 import models.basics._
 import nml._
 import play.api.Logger
@@ -52,18 +53,11 @@ case class Tracing(
   /**
    * Tree modification
    */
-  def trees = DBTree.findAllWithTracingId(_id)
+  def trees = DBTree.findAllWithTracingId(_id).toList
 
   def tree(treeId: Int) = DBTree.findOneWithTreeId(_id, treeId)
 
-  def maxNodeId = {
-    DBTree.maxNodeId(this.trees)
-  }
-
-  def addEmptyTree(tree: DBTree) =
-    this.copy(_trees = tree._id :: _trees)
-
-  def removeTree(tree: DBTree) = this.copy(_trees = _trees.filterNot(_ == tree._id))
+  def maxNodeId = DBTree.maxNodeId(this.trees)
 
   /**
    * State modifications
@@ -110,8 +104,18 @@ case class Tracing(
 }
 
 object Tracing extends BasicDAO[Tracing]("tracings") {
-  
-  def updateFromJson(jsUpdates: Seq[JsValue], oldTracing: Tracing) : Option[Tracing] = {
+  def tracingBase(taskId: ObjectId, userId: ObjectId, dataSetName: String): Tracing =
+    Tracing(userId,
+      dataSetName,
+      Nil,
+      System.currentTimeMillis,
+      1,
+      Scale(12, 12, 24),
+      Point3D(0, 0, 0),
+      _task = Some(taskId),
+      tracingType = TracingType.TracingBase)
+
+  def updateFromJson(jsUpdates: Seq[JsValue], oldTracing: Tracing): Option[Tracing] = {
     val updates = jsUpdates.flatMap { TracingUpdater.createUpdateFromJson }
     if (jsUpdates.size == updates.size) {
       val tracing = updates.foldLeft(oldTracing) {
@@ -124,74 +128,75 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     }
   }
 
-  def createReviewFor(tracing: Tracing, training: Tracing, user: User) = {
-    val trees = Tracing
-      .addTrees(tracing, training.trees)
-      .trees.map(DBTree.createAndInsertDeepCopy)
-    tracing.copy(
-      _id = new ObjectId,
+  def createTracingBase(taskId: ObjectId, userId: ObjectId, dataSetName: String, start: Point3D) = {
+    val tracing = insertOne(tracingBase(taskId, userId, dataSetName).copy(editPosition = start))
+    val tree = Tree(1, List(Node(1, start)), Nil, Color.RED)
+    DBTree.insertOne(tracing._id, tree)
+    tracing
+  }
+
+  def createTracingBase(taskId: ObjectId, userId: ObjectId, nml: NML) = {
+    val tracing = insertOne(fromNML(userId, nml).copy(
+      tracingType = TracingType.TracingBase, _task = Some(taskId)))
+
+    nml.trees.map(tree => DBTree.insertOne(tracing._id, tree))
+    tracing
+  }
+
+  def createReviewFor(sample: Tracing, training: Tracing, user: User) = {
+    val reviewTracing = createAndInsertDeepCopy(training.copy(
       _user = user._id,
       state = TracingState.Assigned,
-      _trees = trees.map(_._id),
       timestamp = System.currentTimeMillis,
-      tracingType = TracingType.Review)
-  }
+      tracingType = TracingType.Review))
 
-  def addTree(tracing: Tracing, tree: DBTree) = {
-    tracing.maxNodeId.map { maxId =>
-      DBTree.increaseNodeIds(tree, maxId)
-    }
-    tracing.update(_.copy(_trees = tree._id :: tracing._trees))
-  }
+    DBTree.cloneAndAddTrees(sample._id, reviewTracing._id)
 
-  def addTrees(tracing: Tracing, trees: List[DBTree]) = {
-    trees.foldLeft(tracing) {
-      case (tracing, tree) => addTree(tracing, tree)
-    }
+    reviewTracing
   }
 
   def createTracingFor(user: User, task: Task) = {
-    val tree = DBTree.createEmptyTree
-    insertOne(Tracing(user._id,
-      task.dataSetName,
-      List(tree._id),
-      Nil,
-      System.currentTimeMillis,
-      1,
-      Scale(12, 12, 24),
-      task.start,
-      taskId = Some(task._id),
-      tracingType =
-        if (task.isTraining) TracingType.Training
-        else TracingType.Task))
+    task.tracingBase.map { tracingBase =>
+      task.update(_.assigneOnce)
+
+      createAndInsertDeepCopy(tracingBase.copy(
+        _user = user._id,
+        timestamp = System.currentTimeMillis,
+        state = InProgress,
+        tracingType = TracingType.Task))
+    }
   }
 
-  def createFromNMLFor(user: User, nml: NML, tracingType: TracingType.Value) = {
-    val trees = nml.trees.map(t => DBTree.insertOne(t))
-    insertOne(Tracing(
-      user._id,
+  def createAndInsertDeepCopy(source: Tracing) = {
+    val tracing = insertOne(source.copy(_id = new ObjectId))
+    DBTree.findAllWithTracingId(source._id).map(tree => DBTree.createAndInsertDeepCopy(tree, tracing._id, 0))
+    tracing
+  }
+
+  def createSample(taskId: ObjectId, tracing: Tracing) = {
+    createAndInsertDeepCopy(tracing.copy(
+      tracingType = TracingType.Sample,
+      _task = Some(taskId)))
+  }
+
+  def fromNML(userId: ObjectId, nml: NML) = {
+    Tracing(
+      userId,
       nml.dataSetName,
-      trees.map(_._id),
       nml.branchPoints,
-      nml.timeStamp,
+      System.currentTimeMillis,
       nml.activeNodeId,
       nml.scale,
       nml.editPosition,
-      nml.comments,
-      tracingType = tracingType))
+      nml.comments)
   }
 
-  override def remove(tracing: Tracing) = {
-    UsedTracings.removeAll(tracing)
-    super.remove(tracing)
-  }
-  
-  def removeAllWithTaskId(tid: ObjectId) = {
-    remove(MongoDBObject("_task" -> tid))
-  }
-  
-  def findByTaskId(tid: ObjectId) = {
-    find(MongoDBObject("_task" -> tid))
+  def createFromNMLFor(userId: ObjectId, nml: NML, tracingType: TracingType.Value) = {
+    val tracing = insertOne(fromNML(userId, nml).copy(
+      tracingType = tracingType))
+
+    nml.trees.map(tree => DBTree.insertOne(tracing._id, tree))
+    tracing
   }
 
   def assignReviewee(trainingsTracing: Tracing, user: User): Option[Tracing] = {
@@ -201,51 +206,66 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       sample <- Tracing.findOneById(sampleId)
     } yield {
       val reviewTracing = createReviewFor(sample, trainingsTracing, user)
-      insertOne(reviewTracing)
       trainingsTracing.update(_.assignReviewer(user, reviewTracing))
     }
   }
 
   def createTracingFor(u: User, d: DataSet = DataSet.default) = {
-    val tree = DBTree.createEmptyTree
-    insertOne(Tracing(u._id,
+    val tracing = insertOne(Tracing(u._id,
       d.name,
-      List(tree._id),
       Nil,
       System.currentTimeMillis,
       1,
       Scale(12, 12, 24),
       Point3D(0, 0, 0),
+      state = InProgress,
       tracingType = TracingType.Explorational))
+
+    DBTree.createEmptyTree(tracing._id)
+    tracing
   }
 
-  def findTrainingForReviewTracing(tracing: Tracing) = {
+  def findTrainingForReviewTracing(tracing: Tracing) =
     findOne(MongoDBObject("review.reviewTracing" -> tracing._id))
-  }
 
-  def findOpenTracingFor(user: User, isExploratory: Boolean) =
-    findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "_task" -> MongoDBObject("$exists" -> isExploratory)))
-
-  def findOpenTrainingFor(user: User) =
+  /*def findOpenTrainingFor(user: User) =
     findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "tracingType" -> "Training"))
+*/
+  def hasOpenTracing(user: User, tracingType: TracingType.Value) =
+    !findOpenTracingsFor(user, tracingType).isEmpty
 
-  def hasOpenTracing(user: User, isExploratory: Boolean) =
-    findOpenTracingFor(user, isExploratory).isDefined
-
-  def findFor(u: User) = {
-    find(MongoDBObject("_user" -> u._id)).toList
-  }
-
-  def findAllOpen(tracingType: TracingType.Value) = {
+  def findFor(u: User) =
     find(MongoDBObject(
-      "state.isFinished" -> false, "_task" -> MongoDBObject("$exists" -> true))).toList
-  }
+      "_user" -> u._id)).toList
 
-  def findAllExploratory(user: User) = {
+  def findOpenTracingFor(user: User, tracingType: TracingType.Value) = 
+    findOpenTracingsFor(user, tracingType).headOption
+      
+  def findOpenTracingsFor(user: User, tracingType: TracingType.Value) =
     find(MongoDBObject(
       "_user" -> user._id,
-      "_task" -> MongoDBObject("$exists" -> false))).toList
+      "state.isFinished" -> false,
+      "tracingType" -> tracingType.toString())).toList
+
+  def findOpen(tracingType: TracingType.Value) =
+    find(MongoDBObject(
+      "state.isFinished" -> false,
+      "tracingType" -> tracingType.toString)).toList
+
+  override def remove(tracing: Tracing) = {
+    UsedTracings.removeAll(tracing)
+    DBTree.removeAllWithTracingId(tracing._id)
+    super.remove(tracing)
   }
+
+  def removeAllWithTaskId(tid: ObjectId) =
+    remove(MongoDBObject("_task" -> tid))
+
+  def findByTaskId(tid: ObjectId) =
+    find(MongoDBObject("_task" -> tid)).toList
+
+  def findByTaskIdAndType(tid: ObjectId, tracingType: TracingType.Value) =
+    find(MongoDBObject("_task" -> tid, "tracingType" -> tracingType.toString)).toList
 
   implicit object TracingXMLWrites extends XMLWrites[Tracing] {
     def writes(e: Tracing) = {

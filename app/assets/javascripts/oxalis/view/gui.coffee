@@ -76,7 +76,7 @@ class Gui
       @model.user.briConNames.push(@datasetPostfix)
       @model.user.brightness.push(@settings.brightness)
       @model.user.contrast.push(@settings.contrast)
-      @dataSetPosition = data.briConNames.size - 1
+      @dataSetPosition = data.briConNames.length - 1
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)

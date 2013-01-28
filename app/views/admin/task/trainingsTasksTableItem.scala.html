@@ -5,11 +5,11 @@
   <td> @formatHash(task.id) </td>
   <td> @task.seedIdHeidelberg </td>
   <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
-  <td> @task.dataSetName </td>
+  <td> @task.tracingBase.map(_.dataSetName) </td>
+  <td> @task.tracingBase.map(_.editPosition) </td>
   @task.training.map{ training =>
   	<td> @training.domain (+@training.gain, -@training.loss) </td>
   }.getOrElse( <td></td> )
-  <td> @task.start </td>
   <td> @formatDate(task.created) </td>
 
   <td>  

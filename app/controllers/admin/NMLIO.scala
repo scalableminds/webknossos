@@ -28,6 +28,7 @@ import java.io.File
 import play.api.libs.Files.TemporaryFile
 import java.io.FileOutputStream
 import org.apache.commons.io.IOUtils
+import net.liftweb.common._
 
 object NMLIO extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -36,19 +37,22 @@ object NMLIO extends Controller with Secured {
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )
 
-  def extractFromZip(file: File): Box[Iterator[Nml]] = {
+  def extractFromZip(file: File): List[NML] = {
     val nmls = ZipIO.unzip(file).map(nml => (new NMLParser(nml)).parse)
-    nmls.find( _.isEmpty) orElse Full(nmls)
+    nmls.flatten
   }
   
   def extractFromNML(file: File) = 
     new NMLParser(file).parse
     
-  def extractFromFile(file: File): Box[Iterator[Nml]] = {
-    if(file.getName().endsWith(".zip")){
+  def extractFromFile(file: File, fileName: String): List[NML] = {
+    if(fileName.endsWith(".zip")){
+      Logger.debug("Extracting from ZIP file")
       extractFromZip(file)
-    } else
-      extractFromNML(file).map(r => List(r))
+    } else {
+      Logger.debug("Extracting from NML file")
+      List(extractFromNML(file)).flatten
+    }
   }  
     
   def uploadForm = Authenticated { implicit request =>
@@ -61,7 +65,7 @@ object NMLIO extends Controller with Secured {
         .map { nml =>
           println("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
           Logger.debug("Successfully parsed nmlFile")
-          val tracing = Tracing.createFromNMLFor(request.user, nml, TracingType.Explorational)
+          val tracing = Tracing.createFromNMLFor(request.user._id, nml, TracingType.Explorational)
           UsedTracings.use(request.user, tracing)
           tracing
         }
@@ -79,7 +83,7 @@ object NMLIO extends Controller with Secured {
   def download(tracingId: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if !tracing.isTrainingsTracing
+      if !Task.isTrainingsTracing(tracing)
     } yield {
       Ok(prettyPrinter.format(Xml.toXML(tracing))).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",

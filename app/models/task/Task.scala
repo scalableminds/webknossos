@@ -28,37 +28,11 @@ import models.user.User
 import play.api.Logger
 import models.user.Experience
 import models.tracing._
+import nml.Tree
 
-case class TaskSkeleton(taskType: ObjectId, neededExperience: Experience, priority: Int = 100,
-                        instances: Int = 1, project: String)
-
-object TaskSkeleton {
-  def toNMLForm(t: TaskSkeleton): Option[(String, Experience, Int, Int, String)] = {
-    Some((
-      t.taskType.toString,
-      t.neededExperience,
-      t.priority,
-      t.instances,
-      t.project))
-  }
-
-  def fromNMLForm(taskTypeId: String, experience: Experience, priority: Int, instances: Int, projectName: String): TaskSkeleton =
-    TaskType.findOneById(taskTypeId) match {
-      case Some(taskType) =>
-        TaskSkeleton(
-          taskType._id,
-          experience,
-          priority,
-          instances,
-          projectName)
-      case _ =>
-        Logger.warn(s"Failed to create Task from form. TaskType: $taskTypeId")
-        null
-    }
-}
+case class CompletionStatus(open: Int, inProgress: Int, completed: Int)
 
 case class Task(
-    dataSetName: String,
     seedIdHeidelberg: Int,
     _taskType: ObjectId,
     neededExperience: Experience = Experience.empty,
@@ -78,38 +52,41 @@ case class Task(
 
   def project = _project.flatMap(name => Project.findOneByName(name))
 
-  def tracings = Tracing.findByTaskId(_id)
+  def tracings =
+    Tracing.findByTaskIdAndType(_id, TracingType.Task)
 
-  def isFullyAssigned = instances >= assignedInstances
+  def isFullyAssigned = instances <= assignedInstances
 
   def isTraining = training.isDefined
 
-  //def inProgress =
-  //  tracings.filter(!_.state.isFinished).size
+  def tracingBase = Tracing.findByTaskIdAndType(_id, TracingType.TracingBase).headOption
 
-  //def completed =
-  //  tracings.size - inProgress
+  def assigneOnce = this.copy(assignedInstances = assignedInstances + 1)
 
-  //def open =
-  //  instances - tracings.size
+  def status = {
+    val inProgress = tracings.filter(!_.state.isFinished).size
+    CompletionStatus(
+      open = instances - assignedInstances,
+      inProgress = inProgress,
+      completed = assignedInstances - inProgress)
+  }
 }
 
 object Task extends BasicDAO[Task]("tasks") {
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
-  
+
   //val withEmptyTraining = empty.copy(training = Some(Training.empty))
 
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
-  def createTracingBase( p: Point3D) = {
-    
-    
-  }
-  
   override def remove(t: Task) = {
     Tracing.removeAllWithTaskId(t._id)
     super.remove(t)
+  }
+
+  def isTrainingsTracing(tracing: Tracing) = {
+    tracing.task.map(_.isTraining) getOrElse false
   }
 
   def findAllOfOneType(isTraining: Boolean) =
@@ -129,6 +106,17 @@ object Task extends BasicDAO[Task]("tasks") {
   def findAllAssignableNonTrainings =
     findAllNonTrainings.filter(!_.isFullyAssigned)
 
+  def createAndInsertDeepCopy(source: Task, includeUserTracings: Boolean = true) = {
+    val task = insertOne(source.copy(_id = new ObjectId))
+    Tracing
+      .findByTaskId(source._id)
+      .foreach { tracing =>
+        if (includeUserTracings || TracingType.isSystemTracing(tracing))
+          Tracing.createAndInsertDeepCopy(tracing.copy(_task = Some(task._id)))
+      }
+    task
+  }
+
   def toTrainingForm(t: Task): Option[(String, Training)] =
     Some((t.id, (t.training getOrElse Training.empty)))
 
@@ -136,65 +124,6 @@ object Task extends BasicDAO[Task]("tasks") {
     Task.findOneById(taskId) map {
       _.copy(training = Some(training))
     } getOrElse null
-
-  def fromTrainingsTracingForm(tracingId: String, taskTypeId: String, experience: Experience, priority: Int, training: Training, projectName: String) =
-    (for {
-      e <- Tracing.findOneById(tracingId)
-      taskType <- TaskType.findOneById(taskTypeId)
-    } yield {
-      val project =
-        if (projectName != "") Project.findOneByName(projectName).map(_.name)
-        else None
-      Task(e.dataSetName,
-        0,
-        taskType._id,
-        e.editPosition,
-        experience,
-        priority,
-        Integer.MAX_VALUE,
-        _project = project,
-        training = Some(training.copy(sample = e._id)))
-    }) getOrElse null
-
-  def toTrainingsTracingForm(t: Task) = {
-    Some(("",
-      t.taskType.map(_.id).getOrElse(""),
-      t.neededExperience,
-      t.priority,
-      t.training getOrElse null,
-      t.project.map(_.name) getOrElse ""))
-  }
-
-  def fromForm(dataSetName: String, taskTypeId: String, start: Point3D, experience: Experience, priority: Int, instances: Int, projectName: String): Task =
-    TaskType.findOneById(taskTypeId) match {
-      case Some(taskType) =>
-        val project =
-          if (projectName != "") Project.findOneByName(projectName).map(_.name)
-          else None
-
-        Task(dataSetName,
-          0,
-          taskType._id,
-          start,
-          experience,
-          priority,
-          instances,
-          _project = project)
-      case _ =>
-        Logger.warn(s"Failed to create Task from form. TaskType: $taskTypeId")
-        null
-    }
-
-  def toForm(t: Task): Option[(String, String, Point3D, Experience, Int, Int, String)] = {
-    Some((
-      t.dataSetName,
-      t.taskType.map(_.id).getOrElse(""),
-      t.start,
-      t.neededExperience,
-      t.priority,
-      t.instances,
-      t.project.map(_.name) getOrElse ""))
-  }
 
   def hasEnoughExperience(user: User)(task: Task) = {
     val XP = user.experiences.get(task.neededExperience.domain) getOrElse 0
@@ -231,9 +160,9 @@ object Task extends BasicDAO[Task]("tasks") {
 
   def simulateFinishOfCurrentTask(user: User) = {
     (for {
-      tracing <- Tracing.findOpenTrainingFor(user)
-      if (tracing.isTrainingsTracing)
+      tracing <- Tracing.findOpenTracingFor(user, TracingType.Task)
       task <- tracing.task
+      if (task.isTraining)
       training <- task.training
     } yield {
       user.increaseExperience(training.domain, training.gain)
@@ -260,12 +189,12 @@ object Task extends BasicDAO[Task]("tasks") {
   }
 
   def simulateTaskAssignments(user: User, tasks: Map[ObjectId, Task]) = {
-    val openTask = Tracing.findOpenTracingFor(user, false).flatMap(_.task).map(_._id) getOrElse null
+    val openTask = Tracing.findOpenTracingFor(user, TracingType.Task).flatMap(_.task).map(_._id) getOrElse null
     val tasksAvailable = tasks.values.filter(t =>
       hasEnoughExperience(user)(t) && openTask != t._id && !t.isFullyAssigned)
     nextTaskForUser(user, tasksAvailable.toArray).map {
       case Some(task) =>
-        Some(task -> (tasks + (task._id -> task.copy(assignedInstances = task.assignedInstances + 1 ))))
+        Some(task -> (tasks + (task._id -> task.copy(assignedInstances = task.assignedInstances + 1))))
       case _ =>
         Training.findAllFor(user).headOption.map { task =>
           task -> tasks

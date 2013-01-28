@@ -1,6 +1,7 @@
 @(tracing: models.tracing.Tracing)(additionalHtml: Html)(implicit session: brainflight.view.AuthedSessionData)
 
 @import models.tracing.TracingType
+@import models.task.Task
 
 @main( ){
   <div id="container" data-tracing-type="@tracing.tracingType">
@@ -18,10 +19,10 @@
       <div id="overlay">
         <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
         <div id="buttonbar" class="btn-group inline-block">
-          @if(tracing.tracingType == TracingType.Task || tracing.tracingType == TracingType.Training){
+          @if(tracing.tracingType == TracingType.Task){
             <a href="@controllers.routes.TracingController.finishWithRedirect(tracing.id)" class="btn btn-small" id="trace-finish-button"><i class="icon-ok-circle"></i> Finish</a>
           }
-          @if(tracing.tracingType != TracingType.Training){
+          @if(!Task.isTrainingsTracing(tracing)){
             <a href="@controllers.admin.routes.NMLIO.download(tracing.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
           }
           <a href="#" id="help-overlay" class="btn btn-small"><i class="icon-question-sign"></i> Help</a>

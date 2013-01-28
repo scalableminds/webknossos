@@ -162,7 +162,7 @@ class Skeleton
       if nodeList.length
         @nodesBuffer[index].pushMany(node.pos for node in nodeList)
         # Assign the ID to the vertex, so we can access it later
-        @nodes[index].geometry.nodeIDs.pushMany([node.id] for node in nodeList)
+        @nodes[index].geometry.nodeIDs.pushSubarray(node.id for node in nodeList)
 
       for node in nodeList
         # currently disabled due to performance issues

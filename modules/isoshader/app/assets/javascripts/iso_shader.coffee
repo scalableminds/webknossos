@@ -57,9 +57,9 @@ class Isoshader
 
     threshold_speed = 0.01
     max_dt = 0.2
-    debug_mode = 0
+    @debug_mode = 0
     max_debug_mode = 2
-    shading_type = 3
+    @shading_type = 3
 
     @initSurfaces()
     @initKeyboard()
@@ -78,8 +78,8 @@ class Isoshader
       surface = {}
       surface.threshold = 0.61
       surface.uniform_name = "surface_#{i}"
-      surface.draw_surface = 0
-      surface.draw_map = 0
+      surface.draw_surface = 1
+      surface.draw_map = 1
 
       surface.draw_surface = 1 if not @surfaces[1].draw_surface_set
 
@@ -93,8 +93,10 @@ class Isoshader
 
     # Initialize main THREE.js components
     @renderer = new THREE.WebGLRenderer( canvas: @canvas[0], clearColor: 0xffffff, antialias: true, preserveDrawingBuffer: true  )
-    @camera = new THREE.PerspectiveCamera(90, width / height, 0.1, 10000)
+    #@camera = new THREE.PerspectiveCamera(90, width /   height, 0.1, 10000)
     @scene = new THREE.Scene()
+    @camera = new THREE.Camera()
+    @camera.position.z = 1
 
     @scene.add(@camera)
     #@camera.lookAt(new THREE.Vector3( 0, 0, 0 ))
@@ -129,10 +131,12 @@ class Isoshader
     parameters = @parameters
 
     shaderUniforms =
-      time :          { type: "f", value: parameters.time }
-      resolution :    { type: "v2", value: new THREE.Vector2(parameters.screenWidth, parameters.screenHeight) }
-      camera_matrix : { type: "m4", value: new THREE.Matrix4(@camera_matrix) }
-      backbuffer :    { type: "backbuffer", value: new THREE.Texture() } #unused right now
+      time :          { type: "f", value: parameters.time },
+      resolution :    { type: "v2", value: new THREE.Vector2(parameters.screenWidth, parameters.screenHeight) },
+      camera_matrix : { type: "m4", value: new THREE.Matrix4(@camera_matrix) },
+      shading_type :  { type: "i", value : @shading_type},
+      debug_mode :    { type: "i", value : @debug_mode},
+      backbuffer :    { type: "backbuffer", value: new THREE.Texture() }, #unused right now
       mouse :         { type: "mouse", value: new THREE.Vector2(parameters.mouseX, parameters.mouseY) } #unused
 
     for i in [0 .. @surfaces.length - 1]
@@ -140,7 +144,7 @@ class Isoshader
       texture = new THREE.Texture( @assetHandler.getFile("texture")[i] )
       texture.needsUpdate = true
 
-      shaderUniforms["surface_#{i}.texture"] =      { type: "t", value: 0, texture: texture }
+      shaderUniforms["surface_#{i}.texture"] =      { type: "t", value: texture }
       shaderUniforms["surface_#{i}.threshold"] =    { type: "f", value: @surfaces[i].threshold }
       shaderUniforms["surface_#{i}.draw_surface"] = { type: "i", value: @surfaces[i].draw_surface }
       shaderUniforms["surface_#{i}.draw_map"] =     { type: "i", value: @surfaces[i].draw_map }
@@ -156,14 +160,14 @@ class Isoshader
 
     input = new Input.KeyboardNoLoop(
       #enable or disable surface
-      "m" : @surfaces[0].draw_surface = +!@surfaces[0].draw_surface
-      "p" : @surfaces[1].draw_surface = +!@surfaces[1].draw_surface
+      "m" : => @surfaces[0].draw_surface = +!@surfaces[0].draw_surface
+      "p" : => @surfaces[1].draw_surface = +!@surfaces[1].draw_surface
 
       # thresholds
-      "," : @surfaces[0].threshold
-      "." : @surfaces[0].threshold
-      "[" : @surfaces[1].threshold
-      "]" : @surfaces[1].threshold
+      "," : => @surfaces[0].threshold
+      "." : => @surfaces[0].threshold
+      "[" : => @surfaces[1].threshold
+      "]" : => @surfaces[1].threshold
 
       "t" :  ->
 
@@ -211,9 +215,9 @@ class Isoshader
     parameters.time = Date.now() - parameters.startTime
     @cam_matrix = glMatrix.mat4.fromRotationTranslation(@cam_matrix, @cam.dir, @cam.pos)
 
-    @shaderMaterial.uniforms["time"] = parameters.time / 1000
-    @shaderMaterial.uniforms["resolution"] = new THREE.Vector2(parameters.screenWidth, parameters.screenHeight)
-    @shaderMaterial.uniforms["camera_matrix"] = new THREE.Matrix4(@camera_matrix) #array or single values???
+    @shaderMaterial.uniforms["time"].value = parameters.time / 1000
+    @shaderMaterial.uniforms["resolution"].value = new THREE.Vector2(parameters.screenWidth, parameters.screenHeight)
+    @shaderMaterial.uniforms["camera_matrix"].value = new THREE.Matrix4(@camera_matrix) #array or single values???
 
     #both unused right now in shader
     #@shaderMaterial.uniforms["backbuffer"] = new THREE.Texture()
@@ -246,6 +250,6 @@ class Isoshader
     @parameters.screenHeight = height
 
     @renderer.setSize( width, height )
-    @camera.aspect = width / height
-    @camera.updateProjectionMatrix()
+    #@camera.aspect = width / height
+    #@camera.updateProjectionMatrix()
 

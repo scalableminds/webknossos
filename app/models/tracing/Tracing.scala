@@ -30,12 +30,12 @@ case class Tracing(
     activeNodeId: Int,
     scale: Scale,
     editPosition: Point3D,
-    tracingSettings: TracingSettings,
     comments: List[Comment] = Nil,
     _task: Option[ObjectId] = None,
     state: TracingState = InProgress,
     review: List[TracingReview] = Nil,
     tracingType: TracingType.Value = TracingType.Explorational,
+    tracingSettings: TracingSettings = TracingSettings.default,
     version: Int = 0,
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Tracing] {
 
@@ -105,7 +105,7 @@ case class Tracing(
 }
 
 object Tracing extends BasicDAO[Tracing]("tracings") {
-  def tracingBase(taskId: ObjectId, userId: ObjectId, dataSetName: String): Tracing =
+  def tracingBase(task: Task, userId: ObjectId, dataSetName: String): Tracing =
     Tracing(userId,
       dataSetName,
       Nil,
@@ -113,7 +113,8 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       1,
       Scale(12, 12, 24),
       Point3D(0, 0, 0),
-      _task = Some(taskId),
+      tracingSettings = task.tracingSettings,
+      _task = Some(task._id),
       tracingType = TracingType.TracingBase)
 
   def updateFromJson(jsUpdates: Seq[JsValue], oldTracing: Tracing): Option[Tracing] = {
@@ -129,16 +130,17 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     }
   }
 
-  def createTracingBase(taskId: ObjectId, userId: ObjectId, dataSetName: String, start: Point3D) = {
-    val tracing = insertOne(tracingBase(taskId, userId, dataSetName).copy(editPosition = start))
+  def createTracingBase(task: Task, userId: ObjectId, dataSetName: String, start: Point3D) = {
+    val tracing = insertOne(tracingBase(task, userId, dataSetName).copy(editPosition = start))
     val tree = Tree(1, List(Node(1, start)), Nil, Color.RED)
     DBTree.insertOne(tracing._id, tree)
     tracing
   }
 
-  def createTracingBase(taskId: ObjectId, userId: ObjectId, nml: NML) = {
+  def createTracingBase(task: Task, userId: ObjectId, nml: NML) = {
     val tracing = insertOne(fromNML(userId, nml).copy(
-      tracingType = TracingType.TracingBase, _task = Some(taskId)))
+      tracingType = TracingType.TracingBase,
+      tracingSettings = task.tracingSettings, _task = Some(task._id)))
 
     nml.trees.map(tree => DBTree.insertOne(tracing._id, tree))
     tracing
@@ -302,9 +304,11 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     val SCALE = "scale"
     val COMMENTS = "comments"
     val TRACING_TYPE = "tracingType"
+    val SETTINGS = "settings"
 
     def writes(e: Tracing) = Json.obj(
       ID -> e.id,
+      SETTINGS -> e.tracingSettings,
       TREES -> e.trees,
       VERSION -> e.version,
       TREES -> e.trees.map(DBTreeFormat.writes),

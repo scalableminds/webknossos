@@ -14,12 +14,8 @@ case class TimeSpan(min: Int, max: Int, maxHard: Int){
   override def toString = s"$min - $max, Limit: $maxHard"
 }
 
-case class TaskType(summary: String, description: String, expectedTime: TimeSpan, settings: TracingSettings = TracingSettings(), fileName: Option[String] = None, _id: ObjectId = new ObjectId) {
+case class TaskType(summary: String, description: String, expectedTime: TimeSpan, tracingSettings: TracingSettings = TracingSettings.default, fileName: Option[String] = None, _id: ObjectId = new ObjectId) {
   lazy val id = _id.toString
-}
-
-object TimeSpan{
-  implicit val TimeSpanWrites = Json.writes[TimeSpan]
 }
 
 object TaskType extends BasicDAO[TaskType]("taskTypes") {
@@ -29,11 +25,9 @@ object TaskType extends BasicDAO[TaskType]("taskTypes") {
     TaskType(summary, description, expectedTime, TracingSettings(allowedModes.toList))
     
   def toForm(tt: TaskType) =
-    Some(tt.summary, tt.description, tt.settings.allowedModes, tt.expectedTime)
+    Some((tt.summary, tt.description, tt.tracingSettings.allowedModes, tt.expectedTime))
     
   def findOneBySumnary(summary: String) = {
     findOne(MongoDBObject("summary" -> summary))
   }
-  
-  implicit val TaskTypeWrites = Json.writes[TaskType]
 }

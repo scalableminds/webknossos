@@ -56,8 +56,6 @@ object TracingController extends Controller with Secured {
 
   def createTracingInformation(tracing: Tracing) = {
     Json.obj(
-      "settings" -> 
-        tracing.task.flatMap(_.taskType).getOrElse(Json.obj()),
       "tracing" -> tracing)
   }
 

@@ -91,6 +91,7 @@ object InitialData {
     }
 
     if (TaskType.findAll.isEmpty) {
+      val user = User.findOneByEmail("scmboy@scalableminds.com").get
       val tt = TaskType(
         "ek_0563_BipolarCells",
         "Check those cells out!",
@@ -99,18 +100,15 @@ object InitialData {
       if (Task.findAll.isEmpty) {
         val sample = Tracing.createTracingFor(User.default)
 
-        Task.insertOne(Task(
-          DataSet.default.name,
+        var t = Task.insertOne(Task(
           0,
           tt._id,
-          Point3D(0, 0, 0),
           Experience("basic", 5)))
+        Tracing.createTracingBase(t._id, user._id, DataSet.default.name, Point3D(50, 50, 50))
 
-        Task.insertOne(Task(
-          DataSet.default.name,
+        t = Task.insertOne(Task(
           0,
           tt._id,
-          Point3D(50, 50, 50),
           Experience.empty,
           100,
           Integer.MAX_VALUE,
@@ -119,6 +117,7 @@ object InitialData {
             5,
             5,
             sample._id))))
+        Tracing.createTracingBase(t._id, user._id, DataSet.default.name, Point3D(0, 0, 0))
       }
     }
   }

@@ -5,24 +5,26 @@
   <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @formatHash(task.id) </td>
   <td> @task.seedIdHeidelberg </td>
+  <td> @task.project.map(_.name).getOrElse("") </td>
   <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
-  <td> @task.dataSetName </td>
+  <td> @task.tracingBase.map(_.dataSetName) </td>
+  <td> @task.tracingBase.map(_.editPosition) </td>
   <td> @task.neededExperience </td>
-  <td> @task.start </td>
   <td> @task.priority </td>
   <td> @formatDate(task.created) </td>
-  <td> 
-    <span title="Unassigned"> 
-      @task.open <i class="icon-play-circle"></i>
-    </span>
-    |
-    <span title="in Progress"> 
-      @task.inProgress <i class="icon-random"></i> 
-    </span>
-    |
-    <span title="Completed">
-      @task.completed <i class="icon-ok-circle"></i>
-    </span>
+  <td> @defining(task.status){ status =>
+      <span title="Unassigned"> 
+        @status.open <i class="icon-play-circle"></i>
+      </span>
+      |
+      <span title="in Progress"> 
+        @status.inProgress <i class="icon-random"></i> 
+      </span>
+      |
+      <span title="Completed">
+        @status.completed <i class="icon-ok-circle"></i>
+      </span>
+    }
   </td>
   <td>  
     <a href="@controllers.admin.routes.TaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />

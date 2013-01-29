@@ -14,6 +14,8 @@ case class Color( r: Double, g: Double, b: Double, a: Double){
 }
 
 object Color {
+  lazy val RED = Color(1, 0, 0, 1)
+  
   def jet(value: Float) = {
     val fourValue = value / 64.0
     Color(

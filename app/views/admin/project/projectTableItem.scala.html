@@ -1,0 +1,38 @@
+@(project: models.task.Project)
+
+
+<tr>
+  <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+  <td> @project.name </td>
+  <td>  
+    <a href="@controllers.admin.routes.ProjectAdministration.delete(project.name)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
+    <a href="@controllers.admin.routes.NMLIO.projectDownload(project.name)"><i class="icon-download"></i> download </a>
+  </td>
+</tr>
+<tr class="details-row" >
+  <td colspan="12">
+    <table class="table table-condensed table-nohead">
+      <tbody>
+        @project.tasks.map{ task =>
+          <tr>
+            <td> @formatHash(task.id) </td>
+            <td> @defining(task.status){ status =>
+                <span title="Unassigned"> 
+                  @status.open <i class="icon-play-circle"></i>
+                </span>
+                |
+                <span title="in Progress"> 
+                  @status.inProgress <i class="icon-random"></i> 
+                </span>
+                |
+                <span title="Completed">
+                  @status.completed <i class="icon-ok-circle"></i>
+                </span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </td>
+</tr>

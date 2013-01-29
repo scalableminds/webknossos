@@ -133,9 +133,9 @@ object TracingController extends Controller with Secured {
     } yield {
       UsedTracings.removeAll(tracing)
       tracing match {
-        case tracing if tracing.taskId.isEmpty =>
+        case tracing if tracing._task.isEmpty =>
           tracing.update(_.finish) -> Messages("tracing.finished")
-        case tracing if tracing.isTrainingsTracing =>
+        case tracing if Task.isTrainingsTracing(tracing) =>
           tracing.update(_.passToReview) -> Messages("task.passedToReview")
         case _ =>
           tracing.update(_.finish) -> Messages("task.finished")
@@ -150,7 +150,7 @@ object TracingController extends Controller with Secured {
           JsonOk(message)
         else
           (for {
-            taskId <- tracing.taskId ?~ Messages("tracing.task.notFound")
+            taskId <- tracing._task ?~ Messages("tracing.task.notFound")
             task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
           } yield {
             JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), message)

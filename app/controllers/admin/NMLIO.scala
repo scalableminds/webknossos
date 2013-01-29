@@ -13,6 +13,22 @@ import play.api.Logger
 import scala.xml.PrettyPrinter
 import models.tracing._
 import play.api.i18n.Messages
+import models.task.Project
+import models.task.Task
+import java.io.BufferedOutputStream
+import java.io.ByteArrayOutputStream
+import java.util.zip.ZipOutputStream
+import braingames.util.ZipIO
+import java.io.StringReader
+import java.io.InputStream
+import org.xml.sax.InputSource
+import play.api.mvc.SimpleResult
+import play.api.mvc.ResponseHeader
+import java.io.File
+import play.api.libs.Files.TemporaryFile
+import java.io.FileOutputStream
+import org.apache.commons.io.IOUtils
+import net.liftweb.common._
 
 object NMLIO extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -21,17 +37,35 @@ object NMLIO extends Controller with Secured {
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )
 
+  def extractFromZip(file: File): List[NML] = {
+    val nmls = ZipIO.unzip(file).map(nml => (new NMLParser(nml)).parse)
+    nmls.flatten
+  }
+  
+  def extractFromNML(file: File) = 
+    new NMLParser(file).parse
+    
+  def extractFromFile(file: File, fileName: String): List[NML] = {
+    if(fileName.endsWith(".zip")){
+      Logger.debug("Extracting from ZIP file")
+      extractFromZip(file)
+    } else {
+      Logger.debug("Extracting from NML file")
+      List(extractFromNML(file)).flatten
+    }
+  }  
+    
   def uploadForm = Authenticated { implicit request =>
     Ok(html.admin.nml.nmlupload())
   }
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
     request.body.file("nmlFile").flatMap { nmlFile =>
-      (new NMLParser(nmlFile.ref.file).parse)
+      extractFromNML(nmlFile.ref.file)
         .map { nml =>
           println("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
           Logger.debug("Successfully parsed nmlFile")
-          val tracing = Tracing.createFromNMLFor(request.user, nml, TracingType.Explorational)
+          val tracing = Tracing.createFromNMLFor(request.user._id, nml, TracingType.Explorational)
           UsedTracings.use(request.user, tracing)
           tracing
         }
@@ -49,12 +83,28 @@ object NMLIO extends Controller with Secured {
   def download(tracingId: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if !tracing.isTrainingsTracing
+      if !Task.isTrainingsTracing(tracing)
     } yield {
       Ok(prettyPrinter.format(Xml.toXML(tracing))).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",
         CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(tracing.dataSetName)))
     }) ?~ Messages("tracing.training.notFound")
+  }
+  
+  def projectDownload(projectName: String) = Authenticated { implicit request =>
+    for {
+      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
+    } yield {
+      val tracings = Task.findAllByProject(project.name).flatMap(_.tracings)
+      val zipStreams = tracings.map{tracing => 
+        val xml = prettyPrinter.format(Xml.toXML(tracing))
+        (IOUtils.toInputStream(xml, "UTF-8") -> (tracing._id+".nml"))
+      }
+      val zipped = new TemporaryFile(new File(projectName + "_nmls.zip"))
+      ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
+      
+      Ok.sendFile(zipped.file)
+    }
   }
 
 }

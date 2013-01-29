@@ -1,4 +1,4 @@
-@(tracings: List[models.tracing.Tracing], taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
+@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String)], taskForm: Form[(String, String, brainflight.tools.geometry.Point3D, models.user.Experience, Int, Int, String)])(implicit session: brainflight.view.AuthedSessionData)
 
 @import play.api.libs.json.Json
 
@@ -11,26 +11,30 @@
     
     <h3>Create Task from explorative Tracing</h3>
     <div class="well">
-      Every node in the tracing creates a new task. To create an explorative tracing go to the <a href="@routes.UserController.dashboard">dashboard</a>.<br /><br />
-      @helper.form(controllers.admin.routes.TaskAdministration.createFromTracing, 'class -> "form-horizontal") {
-          
-        @helper.select(tracingForm("tracing"), tracings.map { exp =>
-          exp.id -> (exp.dataSetName + " " + formatDate(exp.date)) 
-        })
-        
-        @helper.select(tracingForm("taskType"), taskTypes.map { tt =>
+      Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip).<br /><br />
+      @helper.form(controllers.admin.routes.TaskAdministration.createFromNML, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
+
+        @helper.select(nmlForm("taskType"), taskTypes.map { tt =>
           tt.id -> tt.summary
         }, Symbol("help-inline") -> taskTypeHelpLink)
 
-        @helper.input(tracingForm("experience.domain")) { (id, name, value, args) =>
+        @helper.input(nmlForm("experience.domain")) { (id, name, value, args) =>
           <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
         }
 
-        @helper.inputText(tracingForm("experience.value"), 'type -> "number")
+        @helper.inputText(nmlForm("experience.value"), 'type -> "number")
 
-        @helper.inputText(tracingForm("priority"), 'type -> "number")
-        @helper.inputText(tracingForm("taskInstances"), 'type -> "number", 'min -> 0)
-        
+        @helper.inputText(nmlForm("priority"), 'type -> "number")
+        @helper.inputText(nmlForm("taskInstances"), 'type -> "number", 'min -> 0)
+        @helper.inputText(nmlForm("project"))
+
+        <div class="control-group">
+          <label class="control-label" for="nmlFile">@Messages("nmlFile")</label>
+          <div class="controls">
+            <input type="file" name="nmlFile" id="nmlFile" /> 
+          </div>
+        </div>
+
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
         </div>
@@ -49,17 +53,17 @@
           tt.id -> tt.summary
         }, Symbol("help-inline") -> taskTypeHelpLink)
 
-        @helper.input(tracingForm("experience.domain")) { (id, name, value, args) =>
+        @helper.input(taskForm("experience.domain")) { (id, name, value, args) =>
           <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
         }
 
-        @helper.inputText(tracingForm("experience.value"), 'type -> "number")
+        @helper.inputText(taskForm("experience.value"), 'type -> "number")
 
         @helper.inputText(taskForm("start.point"), 'type -> "text")
 
         @helper.inputText(taskForm("priority"), 'type -> "number")
         @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 0)
-        
+        @helper.inputText(taskForm("project"))
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
         </div>
@@ -70,7 +74,7 @@
 
     <div class="well">
       One line for each task. The values are seperated by a space. Format: <br />
-      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances<br /><br />
+      dataSet taskTypeSummary experienceDomain minExperience x y z priority instances (opt: project)<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createBulk){
         <textarea class="input-fullwidth input-monospace" rows="20" name="data"></textarea>
         <div class="form-actions">

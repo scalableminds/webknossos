@@ -7,6 +7,7 @@ precision mediump float;
 /// both textures must use same resolution
 /// when the texture resolution is 512, voxel resolution 512x512x256 is used, due to texture size limitations
 /// the z is presumed to have half the resolution
+#define TEXTURE_RES 128
 /// You can adjust the following constants
 #if(TEXTURE_RES==512)
 const vec3 data_scale=vec3(512,512,512);

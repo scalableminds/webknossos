@@ -1,9 +1,10 @@
 ### define
 libs/request : Request
 libs/input : Input
-libs/Three : THREE
-libs/gl_matrix : Mat4
-./isoshader/compressor : Compressor
+libs/gl-matrix : glMatrix
+three : THREE
+stats : Stats
+./isoshader/asset_handler : AssetHandler
 ###
 
 class Isoshader
@@ -11,8 +12,9 @@ class Isoshader
 
   constructor : ->
 
-    initHelpers()
-    compressor = new Compressor()
+    @assetHandler = new AssetHandler()
+    @canvas = $("#webgl_canvas")
+
 
     @quality = 2
     @quality_levels = [ 0.5, 1, 2, 4, 8 ]
@@ -27,20 +29,19 @@ class Isoshader
       screenWidth: 0
       screenHeight: 0
 
-    cam =
-      pos: vec3.createFrom(10,10,10)
-      dir: quat4.createFrom(0,0,0,1)
+    @cam =
+      pos: glMatrix.vec3.fromValues(10, 10, 10)
+      dir: glMatrix.quat.fromValues(0, 0, 0, 1)
       mouse_is_down: false
       mouse_prev_x: 0
       mouse_prev_y: 0
       keys:[]
       prev_update_time: Date.now()
 
+    @cam_matrix = []
+    @cam_matrix = glMatrix.mat4.fromRotationTranslation(@cam_matrix, @cam.dir, @cam.pos)
+
     @surfaces = [{},{}]
-
-    @data_0 = "rawBig.raw.png"
-    @data_1 = "skel_strongerDT.png"
-
     surface_uniforms = ["texture","threshold","draw_surface","draw_map"]
 
     turn_speed = 0.003
@@ -60,44 +61,38 @@ class Isoshader
     max_debug_mode = 2
     shading_type = 3
 
+    @initSurfaces()
     @initKeyboard()
     @initMouse()
     @initGUI()
+    @initThreeJS()
 
-    $.when(
-      request(url : "/assets/shader/vertexShader.vs"),
-      request(url : "/assets/shader/example.fs")
-    ).pipe (vertexShader, fragmentShader) =>
-        @shader =
-          vertexShader : vertexShader
-          fragmentShader :  fragmentShader
-
-        @initThreeJS()
-        @initShader()
-        @createRenderTargets()
+    $.when(@assetHandler).then (assetHandler) =>
+      @assetHandler = assetHandler
+      @initGeometry()
 
 
   initSurfaces : ->
 
     for i in [0 .. @surfaces.length - 1]
-      surfaces.threshold = 0.61
-      surfaces.uniform_name = "surface_#{i}"
-      surfaces.draw_surface = 0
-      surfaces.draw_map = 0
+      surface = {}
+      surface.threshold = 0.61
+      surface.uniform_name = "surface_#{i}"
+      surface.draw_surface = 0
+      surface.draw_map = 0
 
-      surfaces.texture = THREE.ImageUtils.loadTexture("assets/images/#{@data_#{i}}")
-      surfaces.draw_surface = 1 if not surfaces[1].draw_surface_set
-      surfaces.draw_map = 1
+      surface.draw_surface = 1 if not @surfaces[1].draw_surface_set
+
+      @surfaces[i] = surface
 
 
   initThreeJS : ->
 
-    @canvas = $("#webgl_canvas")
     width  = @canvas.width()
     height = @canvas.height()
 
     # Initialize main THREE.js components
-    @renderer = new THREE.WebGLRenderer( canvas: @canvas, clearColor: 0xffffff, antialias: true, preserveDrawingBuffer: true  )
+    @renderer = new THREE.WebGLRenderer( canvas: @canvas[0], clearColor: 0xffffff, antialias: true, preserveDrawingBuffer: true  )
     @camera = new THREE.PerspectiveCamera(90, width / height, 0.1, 10000)
     @scene = new THREE.Scene()
 
@@ -112,13 +107,22 @@ class Isoshader
     statsDomElement.id = "fps-stats"
     $("body").append(statsDomElement)
 
-    # start the rendering loop
     @resize()
-    @animate()
 
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
 
+
+  initGeometry : ->
+
+    geometry = new THREE.PlaneGeometry(1,1,1,1)
+    material = @initShader()
+
+    mesh = new THREE.Mesh(geometry, material)
+    @scene.add(mesh)
+
+    # start the rendering loop
+    @animate()
 
   initShader : ->
 
@@ -127,35 +131,39 @@ class Isoshader
     shaderUniforms =
       time :          { type: "f", value: parameters.time }
       resolution :    { type: "v2", value: new THREE.Vector2(parameters.screenWidth, parameters.screenHeight) }
-      camera_matrix : { type: "m4", value: new THREE.Matrix4(camera_matrix) }
+      camera_matrix : { type: "m4", value: new THREE.Matrix4(@camera_matrix) }
       backbuffer :    { type: "backbuffer", value: new THREE.Texture() } #unused right now
-      mouse :         { type: "mouse", value: new THREE.Vector2(parameters.mouseX, mouseY) } #unused
+      mouse :         { type: "mouse", value: new THREE.Vector2(parameters.mouseX, parameters.mouseY) } #unused
 
     for i in [0 .. @surfaces.length - 1]
-      shaderUniforms["surface_#{i}.texture"] = { type: "t", value: 0, texture: @surfaces[i].texture }
-      shaderUniforms["surface_#{i}.threshold"] = { type: "f", value: @surfaces[i].threshold }
+
+      texture = new THREE.Texture( @assetHandler.getFile("texture")[i] )
+      texture.needsUpdate = true
+
+      shaderUniforms["surface_#{i}.texture"] =      { type: "t", value: 0, texture: texture }
+      shaderUniforms["surface_#{i}.threshold"] =    { type: "f", value: @surfaces[i].threshold }
       shaderUniforms["surface_#{i}.draw_surface"] = { type: "i", value: @surfaces[i].draw_surface }
-      shaderUniforms["surface_#{i}.draw_map"] = { type: "i", value: @surfaces[i].draw_map }
+      shaderUniforms["surface_#{i}.draw_map"] =     { type: "i", value: @surfaces[i].draw_map }
 
     @shaderMaterial = new THREE.ShaderMaterial(
       uniforms : shaderUniforms
-      vertexShader : @shader.vertexShader
-      fragmentShader : @shader.fragmentShader
+      vertexShader : @assetHandler.getFile("vertexShader")
+      fragmentShader : @assetHandler.getFile("fragmentShader")
     )
 
 
   initKeyboard : ->
 
-    input = new Input.KeyBoardNoLoop(
+    input = new Input.KeyboardNoLoop(
       #enable or disable surface
       "m" : @surfaces[0].draw_surface = +!@surfaces[0].draw_surface
       "p" : @surfaces[1].draw_surface = +!@surfaces[1].draw_surface
 
       # thresholds
-      "," : @surface[0].threshold
-      "." : @surface[0].threshold
-      "[" : @surface[1].threshold
-      "]" : @surface[1].threshold
+      "," : @surfaces[0].threshold
+      "." : @surfaces[0].threshold
+      "[" : @surfaces[1].threshold
+      "]" : @surfaces[1].threshold
 
       "t" :  ->
 
@@ -194,31 +202,32 @@ class Isoshader
 
   createRenderTargets : ->
 
+
   updateUniforms : ->
 
     parameters = @parameters
     shaderMaterial = @ShaderMaterial
 
     parameters.time = Date.now() - parameters.startTime
-    cam_matrix = Mat4.fromRotationTranslation(cam.dir, cam.pos);
+    @cam_matrix = glMatrix.mat4.fromRotationTranslation(@cam_matrix, @cam.dir, @cam.pos)
 
-    shaderMaterial.uniforms["time"] = parameters.time / 1000
-    shaderMaterial.uniforms["resolution"] = new THREE.Vector2(parameters.screenWidth, parameters.screenHeight)
-    shaderMaterial.uniforms["camera_matrix"] = new THREE.Matrix4(camera_matrix) #array or single values???
+    @shaderMaterial.uniforms["time"] = parameters.time / 1000
+    @shaderMaterial.uniforms["resolution"] = new THREE.Vector2(parameters.screenWidth, parameters.screenHeight)
+    @shaderMaterial.uniforms["camera_matrix"] = new THREE.Matrix4(@camera_matrix) #array or single values???
 
     #both unused right now in shader
-    #shaderMaterial.uniforms["backbuffer"] = new THREE.Texture()
-    #shaderMaterial.uniforms["mouse"] = new THREE.Vector2(parameters.mouseX, mouseY)
+    #@shaderMaterial.uniforms["backbuffer"] = new THREE.Texture()
+    #@shaderMaterial.uniforms["mouse"] = new THREE.Vector2(parameters.mouseX, parameters.mouseY)
 
 
   animate : ->
 
     @updateUniforms()
 
+    @stats.update()
     @renderer.render @scene, @camera
+
     window.requestAnimationFrame => @animate()
-
-
 
 
   resize : ->
@@ -227,17 +236,16 @@ class Isoshader
     height = window.innerHeight / @quality
 
     #needs both with/height and style width/height
-    canvas.width(width)
-    canvas.height(height)
+    @canvas.width(width)
+    @canvas.height(height)
 
-    canvas.css("width", window.innerWidth)
-    canvas.css("height", window.innerHeight)
+    @canvas.css("width", window.innerWidth)
+    @canvas.css("height", window.innerHeight)
 
-    parameters.screenWidth = width
-    parameters.screenHeight = height
+    @parameters.screenWidth = width
+    @parameters.screenHeight = height
 
     @renderer.setSize( width, height )
     @camera.aspect = width / height
     @camera.updateProjectionMatrix()
-    @draw()
 

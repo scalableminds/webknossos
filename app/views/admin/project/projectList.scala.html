@@ -1,13 +1,28 @@
-@(projects: List[models.task.Project])(implicit session: brainflight.view.AuthedSessionData)
+@(projects: List[models.task.Project], form: Form[(String, String)], users: List[models.user.User])(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
   <div class="container wide">
     <h3>Projects</h3>
+    <div class="well">
+      @helper.form(controllers.admin.routes.ProjectAdministration.create, 'class -> "form-horizontal") {
+
+        @helper.inputText(form("projectName"))
+        @helper.select(form("owner"), users.map { user =>
+          user.id -> user.name
+        })
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
+
     <table class="table table-double-striped table-details">
       <thead>
         <tr>
           <th class="details-toggle-all"> <i class="caret-right"></i> <i class="caret-down"></i> </th>
           <th> Name</th>
+          <th> Owner</th>      
           <th> </th>
         </tr>
       </thead>

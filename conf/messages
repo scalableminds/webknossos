@@ -15,7 +15,7 @@ lastName=Last Name
 
 user.verified={0} has been verified
 user.verifyFailed=Couldn't verify user
-user.unknown=User not found
+user.notFound=User not found
 user.notVerified=Your account hasn''t been activated yet. After you have uploaded all requested information to braintracing.org, an admin will verify your acount.
 user.noPermission=You don''t have enough permissions to access this site. Sorry :(
 user.deleted={0} has been deleted
@@ -56,10 +56,15 @@ nml.file.uploadSuccess=Successfully uploaded file
 nml.file.notFound=Couldn''t extract NML file
 nml.file.invalid=Couldn''t parse NML file
 
+owner=Owner
+
 priority=Priority
 
 project=Project
+projectName=Project Name
 project.notFound=Project couldn''t be found
+project.nameAlreadyInUse=Name already used
+project.createSuccess=Project successfully created
 
 role.invalid=Invalid role
 role.removed=Removed role from {0}

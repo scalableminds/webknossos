@@ -16,7 +16,8 @@ object ZipIO {
   /** The size of the byte or char buffer used in various methods.*/
 
   def zip(sources: Seq[(InputStream, String)], out: OutputStream) =
-    writeZip(sources, new ZipOutputStream(out))
+    if(sources.size > 0)
+      writeZip(sources, new ZipOutputStream(out))
 
   private def writeZip(sources: Seq[(InputStream, String)], zip: ZipOutputStream) = {
     val files = sources.map { case (file, name) => (file, normalizeName(name)) }

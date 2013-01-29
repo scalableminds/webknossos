@@ -171,3 +171,4 @@ class Controller
   deleteActiveTree : ->
 
     @model.route.deleteTree(true)
+

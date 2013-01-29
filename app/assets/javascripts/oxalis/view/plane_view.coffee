@@ -93,14 +93,6 @@ class PlaneView
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
 
-    @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))    
-
-    @model.route.on({
-      doubleBranch         : (callback) => @showBranchModal(callback)      
-      mergeDifferentTrees  : ->
-        Toast.error("You can't merge nodes within the same tree", false)  })
-
     @modalCallbacks = {}
     
     # refresh the scene once a bucket is loaded
@@ -260,19 +252,16 @@ class PlaneView
     $("#modal").modal("hide")
 
 
-
   bind : ->
-    
+
     @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false)) 
+      Toast.error("No more branchpoints", false))    
 
-
-  unbind : ->
-
-
-    @model.route.off("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))     
-
+    @model.route.on({
+      doubleBranch         : (callback) => @showBranchModal(callback)      
+      mergeDifferentTrees  : ->
+        Toast.error("You can't merge nodes within the same tree", false)  })
+    
     
   stop : ->
 

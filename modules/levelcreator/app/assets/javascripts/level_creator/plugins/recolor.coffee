@@ -5,18 +5,20 @@
 
 class Recolor
 
+  PUBLIC : true
+  COMMAND : "recolor"
+  FRIENDLY_NAME : "Recolor"
   DESCRIPTION : "Recolors the input with a colormap or a single color value"
-
   PARAMETER :
     input :
       rgba: "Uint8Array"
     colorMapName: "string"
-    r : "uint8"
-    g : "uint8"
-    b : "uint8"
-    a : "uint8"
-    color : "rgba(200, 50, 10, 0.9)"
-    clear : "bool" # clears rgba before recolor
+    r : "0 - 255"
+    g : "0 - 255"
+    b : "0 - 255"
+    a : "0 - 255"
+    color : "\"rgba(200, 50, 10, 0.9)\""
+    clear : "true, false" # clears rgba before recolor
 
   assetHandler : null
 

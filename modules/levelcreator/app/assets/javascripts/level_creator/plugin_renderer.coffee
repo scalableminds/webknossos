@@ -9,12 +9,15 @@ libs/event_mixin : EventMixin
 
 class PluginRenderer
 
+  plugins : null
+
+
   constructor : (@dimensions, @assetHandler, @dataHandler) ->
 
     [ @width, @height, @depth ] = dimensions
 
     @plugins = new Plugins(@assetHandler)
-
+    @createSidebar()
 
 
   setCode : (code) ->
@@ -123,5 +126,51 @@ class PluginRenderer
     func(_plugins)
 
     frameBuffer
+
+
+  createSidebar : ->
+
+    { plugins } = @
+
+    containerName = "#plugins"
+    i = 0
+    html = ""
+    for pluginName of plugins
+
+      plugin = plugins[pluginName]
+
+      continue if plugin.PUBLIC is false
+
+      bodyId = "collapseBody" + i
+
+      parameterHtml = ""
+      for parameterName of plugin.PARAMETER
+        continue if parameterName is "input"
+        parameterHtml += 
+          "<dt>" + parameterName + "</dt>" +
+          "<dd>" + plugin.PARAMETER[parameterName] + "</dd>"
+
+      html += 
+        "<div class=\"accordion-group\">" +
+          "<div class=\"accordion-heading\">" +
+            "<a class=\"accordion-toggle\" " +
+                "data-toggle=\"collapse\" " +
+                "data-parent=\"" + containerName + "\" " +
+                "href=\"#" + bodyId + "\">" +
+              plugin.FRIENDLY_NAME +
+            "</a>" +
+          "</div>" +
+          "<div id=\"" + bodyId + "\" class=\"accordion-body collapse\">" +
+            "<div class=\"accordion-inner\">" +
+              plugin.DESCRIPTION +
+              "<dl class=\"dl-horizontal\">" +
+                parameterHtml +
+              "</dl>" +
+            "</div>" +
+          "</div>" +
+        "</div>"
+      i++        
+
+    $(containerName).html(html)
 
 

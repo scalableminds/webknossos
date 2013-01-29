@@ -4,15 +4,17 @@
 
 class DrawArtCells
 
-  DESCRIPTION : "Draws the morphing art cells (produced by segment importer) depending on a given time"
-
+  PUBLIC : true
+  COMMAND : "drawArtCells"
+  FRIENDLY_NAME : "Draw Art Cells"  
+  DESCRIPTION : "Draws the morphing art cells"
   PARAMETER : 
     input: 
       rgba: 'Uint8Array'
       segments: '[]'
       relativeTime : 'float' # 0 <= time <= 1
       dimensions : '[]'
-    customTime : 'float' # 0 <= time <= 1
+    customTime : '0.0 - 1.0'
 
 
   constructor : () ->

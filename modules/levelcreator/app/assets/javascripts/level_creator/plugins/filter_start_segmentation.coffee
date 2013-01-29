@@ -2,8 +2,10 @@
 
 class FilterStartSegmentation
 
-  DESCRIPTION : "Returns the start segmentation or filters it"
-
+  PUBLIC : true
+  COMMAND : "filterStartSegmentation"
+  FRIENDLY_NAME : "Filter Start Segmentation"
+  DESCRIPTION : "Returns the start segmentation or filters it"  
   PARAMETER : 
     input: 
       rgba: 'Uint8Array'
@@ -11,7 +13,7 @@ class FilterStartSegmentation
       segments: '[]'
       mission: '{}'
       dimensions : '[]'
-    mode: 'string' # e.g. "in" returns start segmentation, "out" returns all other segmentation
+    mode: '\"in\", \"out\"' # e.g. "in" returns start segmentation, "out" returns all other segmentation
 
 
   constructor : () ->

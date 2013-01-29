@@ -4,12 +4,14 @@
 
 class Blur
 
+  PUBLIC : true
+  COMAMND : "blur"
+  FRIENDLY_NAME : "Blur"
   DESCRIPTION : "Blurs the input image with gussian blur."
-
   PARAMETER :
     input :
       rgba: "Uint8Array"
-    radius: "integer"
+    radius: "0.0 - 10.0"
 
 
   kernel : null

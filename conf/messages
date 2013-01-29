@@ -62,6 +62,7 @@ priority=Priority
 
 project=Project
 projectName=Project Name
+project.removed=Project got removed
 project.notFound=Project couldn''t be found
 project.nameAlreadyInUse=Name already used
 project.createSuccess=Project successfully created

@@ -28,7 +28,7 @@ object ProjectAdministration extends Controller with Secured {
       project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
     } yield {
       Project.remove(project)
-      Ok
+      JsonOk(Messages("project.removed"))
     }
   }
 

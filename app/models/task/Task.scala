@@ -56,6 +56,8 @@ case class Task(
     Tracing.findByTaskIdAndType(_id, TracingType.Task)
 
   def isFullyAssigned = instances <= assignedInstances
+  
+  def tracingSettings = taskType.map(_.tracingSettings) getOrElse TracingSettings.default
 
   def isTraining = training.isDefined
 

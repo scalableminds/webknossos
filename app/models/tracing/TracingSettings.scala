@@ -14,6 +14,8 @@ object TracingSettings{
   val ARBITRARY = "arbitrary"
   val NOBRANCH = "nobranch"
     
+  val default = TracingSettings()  
+    
   implicit val TracingWrites: Writes[TracingSettings] = new Writes[TracingSettings]{
     def writes(t: TracingSettings) = {
       Json.obj("allowedModes" -> t.allowedModes)

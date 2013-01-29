@@ -5,7 +5,7 @@ import play.api.libs.json._
 trait BasicSettings{
   def defaultConfiguration: { def settings: Map[String, JsValue]}
   
-  val MaxSettings = defaultConfiguration.settings.size
+  def MaxSettings = defaultConfiguration.settings.size
   
   def isValid(js: JsObject) = {
     js

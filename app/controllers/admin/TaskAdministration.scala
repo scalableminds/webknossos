@@ -102,7 +102,7 @@ object TaskAdministration extends Controller with Secured {
               priority,
               instances,
               _project = project.map(_.name)))
-            Tracing.createTracingBase(task._id, request.user._id, dataSetName, start)
+            Tracing.createTracingBase(task, request.user._id, dataSetName, start)
             Redirect(routes.TaskAdministration.list).flashing(
               FlashSuccess(Messages("task.createSuccess")))
           }
@@ -129,7 +129,7 @@ object TaskAdministration extends Controller with Secured {
               _project = project.map(_.name))
             nmls.foreach { nml =>
               val task = Task.createAndInsertDeepCopy(baseTask)
-              Tracing.createTracingBase(task._id, request.user._id, nml)
+              Tracing.createTracingBase(task, request.user._id, nml)
             }
             Redirect(routes.TaskAdministration.list).flashing(
               FlashSuccess(Messages("task.bulk.createSuccess", nmls.size)))
@@ -166,7 +166,7 @@ object TaskAdministration extends Controller with Secured {
               priority,
               instances,
               _project = project))
-            Tracing.createTracingBase(task._id, request.user._id, dataSetName, Point3D(x, y, z))
+            Tracing.createTracingBase(task, request.user._id, dataSetName, Point3D(x, y, z))
             task
           }
         }

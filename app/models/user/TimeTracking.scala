@@ -11,6 +11,7 @@ import scala.concurrent.duration._
 import models.basics.DAOCaseClass
 import models.tracing.Tracing
 import braingames.util.ExtendedTypes.ExtendedString
+import brainflight.thirdparty.BrainTracing
 
 case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, tracing: Option[ObjectId] = None) {
   val created = {
@@ -116,7 +117,9 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
       case Some(timeTracker) =>
         timeTracker.timeEntries match {
           case lastEntry :: tail if current - lastEntry.timestamp < MAX_PAUSE && lastEntry.tracingEquals(tracing) =>
-            val entry = lastEntry.copy(time = lastEntry.time + current - lastEntry.timestamp, timestamp = current)
+            val time = current - lastEntry.timestamp
+              BrainTracing.logTime(user, time)
+            val entry = lastEntry.copy(time = lastEntry.time + time, timestamp = current)
             timeTracker.update(_.setTimeEntries(entry :: tail))
           case _ =>
             val entry = TimeEntry(0, current, tracing = tracing.map(_._id))

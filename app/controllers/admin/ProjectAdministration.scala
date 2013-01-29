@@ -24,7 +24,12 @@ object ProjectAdministration extends Controller with Secured {
   }
 
   def delete(projectName: String) = Authenticated { implicit reuqest =>
-    Ok
+    for{
+      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
+    } yield {
+      Project.remove(project)
+      Ok
+    }
   }
 
   def create = Authenticated(parser = parse.urlFormEncoded) { implicit request =>

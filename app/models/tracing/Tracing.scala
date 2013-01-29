@@ -30,6 +30,7 @@ case class Tracing(
     activeNodeId: Int,
     scale: Scale,
     editPosition: Point3D,
+    tracingSettings: TracingSettings,
     comments: List[Comment] = Nil,
     taskId: Option[ObjectId] = None,
     state: TracingState = InProgress,

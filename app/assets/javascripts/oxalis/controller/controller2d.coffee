@@ -390,13 +390,13 @@ class Controller2d
     
     # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()
-    ray = projector.pickingRay(vector, camera)
-    ray.threshold = @flycam.getRayThreshold(plane)
+    raycaster = projector.pickingRay(vector, camera)
+    raycaster.ray.threshold = @flycam.getRayThreshold(plane)
 
-    ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
+    raycaster.ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
  
     # identify clicked object
-    intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
+    intersects = raycaster.intersectObjects(@sceneController.skeleton.nodes)
     #if intersects.length > 0 and intersects[0].distance >= 0
     for intersect in intersects
       

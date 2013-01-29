@@ -62,6 +62,7 @@ POST     /admin/taskTypes/create                   controllers.admin.TaskTypeAdm
 GET      /admin/taskTypes/:id/delete               controllers.admin.TaskTypeAdministration.delete(id: String)
 
 GET      /admin/projects                           controllers.admin.ProjectAdministration.list
+POST     /admin/projects/create                    controllers.admin.ProjectAdministration.create
 GET      /admin/projects/:name/delete              controllers.admin.ProjectAdministration.delete(name: String)
 GET      /admin/projects/:name/download            controllers.admin.NMLIO.projectDownload(name: String)
 

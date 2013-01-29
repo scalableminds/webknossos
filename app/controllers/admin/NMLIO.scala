@@ -32,7 +32,7 @@ import net.liftweb.common._
 
 object NMLIO extends Controller with Secured {
   override val DefaultAccessRole = Role.User
-  
+
   val prettyPrinter = new PrettyPrinter(100, 2)
   // TODO remove comment in production
   // override val DefaultAccessRole = Role( "admin" )
@@ -41,20 +41,20 @@ object NMLIO extends Controller with Secured {
     val nmls = ZipIO.unzip(file).map(nml => (new NMLParser(nml)).parse)
     nmls.flatten
   }
-  
-  def extractFromNML(file: File) = 
+
+  def extractFromNML(file: File) =
     new NMLParser(file).parse
-    
+
   def extractFromFile(file: File, fileName: String): List[NML] = {
-    if(fileName.endsWith(".zip")){
+    if (fileName.endsWith(".zip")) {
       Logger.debug("Extracting from ZIP file")
       extractFromZip(file)
     } else {
       Logger.debug("Extracting from NML file")
       List(extractFromNML(file)).flatten
     }
-  }  
-    
+  }
+
   def uploadForm = Authenticated { implicit request =>
     Ok(html.admin.nml.nmlupload())
   }
@@ -90,19 +90,22 @@ object NMLIO extends Controller with Secured {
         CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(tracing.dataSetName)))
     }) ?~ Messages("tracing.training.notFound")
   }
-  
+
   def projectDownload(projectName: String) = Authenticated { implicit request =>
     for {
       project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
     } yield {
-      val tracings = Task.findAllByProject(project.name).flatMap(_.tracings)
-      val zipStreams = tracings.map{tracing => 
-        val xml = prettyPrinter.format(Xml.toXML(tracing))
-        (IOUtils.toInputStream(xml, "UTF-8") -> (tracing._id+".nml"))
+      val taskWithtracings = Task
+        .findAllByProject(project.name)
+        .map(task => task -> task.tracings)
+      val zipStreams = taskWithtracings.flatMap {
+        case (task, tracings) => tracings.map { tracing =>
+          val xml = prettyPrinter.format(Xml.toXML(tracing))
+          (IOUtils.toInputStream(xml, "UTF-8") -> (s"${task.id}_${tracing.id}.nml"))
+        }
       }
       val zipped = new TemporaryFile(new File(projectName + "_nmls.zip"))
       ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
-      
       Ok.sendFile(zipped.file)
     }
   }

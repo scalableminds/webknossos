@@ -33,7 +33,7 @@ object Global extends GlobalSettings {
     name = "directoryWatcher")
 
   override def onStart(app: Application) {
-      implicit val timeout = Timeout(60 seconds)
+      implicit val timeout = Timeout(5 seconds)
       (DirectoryWatcher ? StartWatching("binaryData")).onSuccess {
         case x =>
           if (Play.current.mode == Mode.Dev) {

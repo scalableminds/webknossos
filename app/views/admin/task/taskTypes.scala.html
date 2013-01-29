@@ -1,5 +1,7 @@
 @(taskTypes: List[models.task.TaskType], form: Form[models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
 
+@import models.tracing.TracingSettings._
+
 @main(){
 	<div class="container">
     <h3>Task types</h3>
@@ -8,6 +10,11 @@
 
         @helper.inputText(form("summary"))
         @helper.textarea(form("description"))
+
+        @helper.checkbox(field = form("allowedModes[]"), 'value-> OXALIS, '_label -> "Allow oxalis")
+        @helper.checkbox(field = form("allowedModes[]"), 'value-> ARBITRARY, '_label -> "Allow arbitrary")
+        @helper.checkbox(field = form("allowedModes[]"), 'value-> NOBRANCH, '_label -> "Allow nobranch")
+
         @helper.inputText(form("expectedTime.minTime"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")
         @helper.inputText(form("expectedTime.maxTime"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")
         @helper.inputText(form("expectedTime.maxHard"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")

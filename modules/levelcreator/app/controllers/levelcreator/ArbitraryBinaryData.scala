@@ -25,8 +25,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 object ArbitraryBinaryData extends Controller {
   val dataRequestActor = Akka.system.actorOf(Props(new DataRequestActor), name = "dataRequestActor") //.withRouter(new RoundRobinRouter(3)))
-  val conf = Play.configuration
-  implicit val timeout = Timeout(5 seconds) // needed for `?` below
+  val conf = Play.current.configuration
+  implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
   def viaAjax(dataLayerName: String, levelId: String, taskId: String) = Action(parse.raw) { implicit request =>
     Async {

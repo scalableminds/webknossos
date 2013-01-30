@@ -119,6 +119,7 @@ taskInstances=Task instances
 taskType=Task type
 taskType.notFound=Selected task type doesn''t exist
 taskType.deleted=Task type '{0}' successfully deleted
+taskType.emptyModeSelection=Please select at least one tracing mode
 
 taskAlgorithm.notSupplied=No algorithm supplied
 taskAlgorithm.notFound=Couldn''t find algorithm

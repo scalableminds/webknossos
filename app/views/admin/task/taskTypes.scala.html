@@ -13,7 +13,7 @@
 
         @helper.checkbox(field = form("allowedModes[]"), 'value-> OXALIS, '_label -> "Allow oxalis")
         @helper.checkbox(field = form("allowedModes[]"), 'value-> ARBITRARY, '_label -> "Allow arbitrary")
-        @helper.checkbox(field = form("allowedModes[]"), 'value-> NOBRANCH, '_label -> "Allow nobranch")
+        @helper.checkbox(field = form("branchPointsAllowed"), '_label -> "Allow Branchpoints")
 
         @helper.inputText(form("expectedTime.minTime"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")
         @helper.inputText(form("expectedTime.maxTime"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")

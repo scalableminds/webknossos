@@ -6,22 +6,25 @@ underscore : _
 ./model : Model
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
+../libs/toast : Toast
 ###
 
-TYPE_USUAL       = 0
-TYPE_BRANCH      = 1
-VIEWPORT_WIDTH   = 380
-WIDTH            = 384
-TEXTURE_SIZE     = 512
-TEXTURE_SIZE_P   = 9
-DISTANCE_3D      = 140
-
+TYPE_USUAL        = 0
+TYPE_BRANCH       = 1
+VIEWPORT_WIDTH    = 380
+WIDTH             = 384
+TEXTURE_SIZE      = 512
+TEXTURE_SIZE_P    = 9
+DISTANCE_3D       = 140
+ALLOWED_OXALIS    = MODE_OXALIS    = 0
+ALLOWED_ARBITRARY = MODE_ARBITRARY = 1
 
 
 class Controller
 
-  mode : 0
-  
+  allowedModes : []
+  mode : MODE_OXALIS
+
 
   constructor : ->
 
@@ -30,7 +33,12 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize(TEXTURE_SIZE_P, VIEWPORT_WIDTH, DISTANCE_3D).done =>
+    @model.initialize(TEXTURE_SIZE_P, VIEWPORT_WIDTH, DISTANCE_3D).done (settings) =>
+
+      for allowedMode in settings.allowedModes
+        @allowedModes.push switch allowedMode
+          when "oxalis" then ALLOWED_OXALIS
+          when "arbitrary" then ALLOWED_ARBITRARY
 
       # FPS stats
       stats = new Stats()
@@ -45,6 +53,13 @@ class Controller
 
       @initMouse()
       @initKeyboard()
+
+
+      if ALLOWED_OXALIS not in @allowedModes
+        if ALLOWED_ARBITRARY in @allowedModes
+          @switch()
+        else
+          Toast.error("There was no valid allowed tracing mode specified.")
 
 
   initMouse : ->
@@ -72,7 +87,7 @@ class Controller
 
   switch : ->
     
-    if @mode is 0
+    if @mode is MODE_OXALIS and ALLOWED_ARBITRARY in @allowedModes
       @controller2d.unbind()
       @controller2d.stop() 
       @initKeyboard()     
@@ -80,8 +95,8 @@ class Controller
       @controller3d.bind()
       @controller3d.cam.setPos(@controller2d.flycam.getGlobalPos())
       @controller3d.show()
-      @mode = 1
-    else
+      @mode = MODE_ARBITRARY
+    else if @mode is MODE_ARBITRARY and ALLOWED_OXALIS in @allowedModes
       @controller3d.unbind()
       @controller3d.hide()      
       @initKeyboard()
@@ -90,10 +105,10 @@ class Controller
       @controller2d.bind()
       @controller2d.flycam.setGlobalPos(@controller3d.cam.getPosition())
       @controller2d.start()
-      @mode = 0
+      @mode = MODE_OXALIS
 
 
   leave3d : ->
 
-    if @mode isnt 0
+    if @mode isnt MODE_OXALIS
       @switch()

@@ -39,6 +39,7 @@ object TaskAdministration extends Controller with Secured {
       "taskInstances" -> number,
       "project" -> text.verifying("project.notFound",
         project => project == "" || Project.findOneByName(project).isDefined)))
+    .fill(("", Experience.empty, 100, 10, ""))
 
   val taskMapping = tuple(
     "dataSet" -> text.verifying("dataSet.notFound",
@@ -57,7 +58,7 @@ object TaskAdministration extends Controller with Secured {
       project => project == "" || Project.findOneByName(project).isDefined))
 
   val taskForm = Form(
-    taskMapping)
+    taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "")
 
   def list = Authenticated { implicit request =>
     Ok(html.admin.task.taskList(Task.findAllNonTrainings))
@@ -86,7 +87,7 @@ object TaskAdministration extends Controller with Secured {
       JsonOk(Messages("task.removed"))
     }
   }
-  
+
   def cancelTracing(tracingId: String) = Authenticated { implicit request =>
     for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")

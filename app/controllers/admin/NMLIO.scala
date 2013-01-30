@@ -34,23 +34,19 @@ object NMLIO extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
   val prettyPrinter = new PrettyPrinter(100, 2)
-  // TODO remove comment in production
-  // override val DefaultAccessRole = Role( "admin" )
-
-  def extractFromZip(file: File): List[NML] = {
-    val nmls = ZipIO.unzip(file).map(nml => (new NMLParser(nml)).parse)
-    nmls.flatten
-  }
+  
+  def extractFromZip(file: File): List[NML] =
+    ZipIO.unzip(file).map(nml => (new NMLParser(nml)).parse).flatten
 
   def extractFromNML(file: File) =
     new NMLParser(file).parse
 
   def extractFromFile(file: File, fileName: String): List[NML] = {
     if (fileName.endsWith(".zip")) {
-      Logger.debug("Extracting from ZIP file")
+      Logger.trace("Extracting from ZIP file")
       extractFromZip(file)
     } else {
-      Logger.debug("Extracting from NML file")
+      Logger.trace("Extracting from NML file")
       List(extractFromNML(file)).flatten
     }
   }
@@ -91,14 +87,14 @@ object NMLIO extends Controller with Secured {
     }) ?~ Messages("tracing.training.notFound")
   }
 
-  def projectDownload(projectName: String) = Authenticated { implicit request =>
+  def projectDownload(projectName: String) = Authenticated(role = Role.Admin) { implicit request =>
     for {
       project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
     } yield {
-      val taskWithtracings = Task
+      val tasksWithtracings = Task
         .findAllByProject(project.name)
         .map(task => task -> task.tracings.filter(_.state.isFinished))
-      val zipStreams = taskWithtracings.flatMap {
+      val zipStreams = tasksWithtracings.flatMap {
         case (task, tracings) => tracings.map { tracing =>
           val xml = prettyPrinter.format(Xml.toXML(tracing))
           (IOUtils.toInputStream(xml, "UTF-8") -> (s"${task.id}_${tracing.id}.nml"))
@@ -110,12 +106,12 @@ object NMLIO extends Controller with Secured {
     }
   }
 
-  def taskDownload(taskId: String) = Authenticated { implicit request =>
+  def taskDownload(taskId: String) = Authenticated(role = Role.Admin) { implicit request =>
     for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {
-      val taskWithtracings = task.tracings.filter(_.state.isFinished)
-      val zipStreams = taskWithtracings.map { tracing =>
+      val tasksWithtracings = task.tracings.filter(_.state.isFinished)
+      val zipStreams = tasksWithtracings.map { tracing =>
         val xml = prettyPrinter.format(Xml.toXML(tracing))
         (IOUtils.toInputStream(xml, "UTF-8") -> (s"${task.id}_${tracing.id}.nml"))
       }

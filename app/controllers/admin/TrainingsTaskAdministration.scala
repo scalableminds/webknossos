@@ -33,6 +33,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,
         "loss" -> number)(Training.fromForm)(Training.toForm)))
+        .fill("", "", Training.empty)
 
   def taskToForm(t: Task) = {
     (t.id, "", Training.empty)

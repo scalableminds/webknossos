@@ -7,7 +7,7 @@
   <td> @project.owner.map(_.name).getOrElse("<deleted>") </td>
   <td>  
     <a href="@controllers.admin.routes.ProjectAdministration.delete(project.name)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
-    <a href="@controllers.admin.routes.NMLIO.projectDownload(project.name)"><i class="icon-download"></i> download all related tracings</a>
+    <a href="@controllers.admin.routes.NMLIO.projectDownload(project.name)"><i class="icon-download"></i> download finished tracings</a>
   </td>
 </tr>
 <tr class="details-row" >

@@ -11,8 +11,8 @@
         @helper.inputText(form("summary"))
         @helper.textarea(form("description"))
 
-        @helper.checkbox(field = form("allowedModes[]"), 'value-> OXALIS, '_label -> "Allow Oxalis")
-        @helper.checkbox(field = form("allowedModes[]"), 'value-> ARBITRARY, '_label -> "Allow Arbitrary")
+        @helper.checkbox(field = form("allowedModes[]"), 'value-> OXALIS, '_label -> "Allow Oxalis", 'checked -> "checked")
+        @helper.checkbox(field = form("allowedModes[]"), 'value-> ARBITRARY, '_label -> "Allow Arbitrary", 'checked -> "checked")
         @helper.checkbox(field = form("branchPointsAllowed"), '_label -> "Allow Branchpoints")
 
         @helper.inputText(form("expectedTime.minTime"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")

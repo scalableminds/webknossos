@@ -70,6 +70,7 @@ object TaskAdministration extends Controller with Secured {
       TaskType.findAll,
       DataSet.findAll,
       Experience.findAllDomains,
+      Project.findAll,
       taskFromNMLForm,
       taskForm)
 

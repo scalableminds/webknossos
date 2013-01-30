@@ -142,6 +142,13 @@ $ ->
 
       return
 
+  if window.location.hash
+    $(window.location.hash).addClass("highlighted")
+
+  $(window).on "hashchange", ->
+    $(".highlighted").removeClass("highlighted")
+    $(window.location.hash).addClass("highlighted")
+
 
   $("table.table-details").each ->
 

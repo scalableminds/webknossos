@@ -1,4 +1,4 @@
-@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], nmlForm: Form[(String, models.user.Experience, Int, Int, String)], taskForm: Form[(String, String, brainflight.tools.geometry.Point3D, models.user.Experience, Int, Int, String)])(implicit session: brainflight.view.AuthedSessionData)
+@(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], projects: List[models.task.Project], nmlForm: Form[(String, models.user.Experience, Int, Int, String)], taskForm: Form[(String, String, brainflight.tools.geometry.Point3D, models.user.Experience, Int, Int, String)])(implicit session: brainflight.view.AuthedSessionData)
 
 @import play.api.libs.json.Json
 
@@ -26,7 +26,10 @@
 
         @helper.inputText(nmlForm("priority"), 'type -> "number")
         @helper.inputText(nmlForm("taskInstances"), 'type -> "number", 'min -> 1)
-        @helper.inputText(nmlForm("project"))
+
+        @helper.select(nmlForm("project"), ("" -> "") +: projects.map { project =>
+          project.name -> project.name 
+        })
 
         <div class="control-group">
           <label class="control-label" for="nmlFile">@Messages("nmlFile")</label>
@@ -63,7 +66,11 @@
 
         @helper.inputText(taskForm("priority"), 'type -> "number")
         @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 1)
-        @helper.inputText(taskForm("project"))
+
+        @helper.select(taskForm("project"), ("" -> "") +: projects.map { project =>
+          project.name -> project.name 
+        })
+
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
         </div>

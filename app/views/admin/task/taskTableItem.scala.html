@@ -1,32 +1,32 @@
 @(task: models.task.Task)
 
 
-<tr>
+<tr id="@task.id">
   <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @formatHash(task.id) </td>
   <td> @task.seedIdHeidelberg </td>
   <td> @task.project.map(_.name).getOrElse("") </td>
   <td> 
-    <a href="@controllers.admin.routes.TaskTypeAdministration.list">
+    <a href="@controllers.admin.routes.TaskTypeAdministration.list#@task.taskType.map(_.id)">
       @task.taskType.map(_.summary).getOrElse("<deleted>") 
     </a>
   </td>
   <td> @task.tracingBase.map(_.dataSetName) </td>
   <td> @task.tracingBase.map(_.editPosition) </td>
-  <td> @task.neededExperience </td>
+  <td> <span class="label"> @task.neededExperience </span> </td>
   <td> @task.priority </td>
   <td> @formatDate(task.created) </td>
   <td> @defining(task.status){ status =>
       <span title="Unassigned"> 
-        @status.open <i class="icon-play-circle"></i>
+        <i class="icon-play-circle"></i> @status.open ppen
       </span>
-      |
+      <br />
       <span title="in Progress"> 
-        @status.inProgress <i class="icon-random"></i> 
+        <i class="icon-random"></i> @status.inProgress in Progress
       </span>
-      |
+      <br />
       <span title="Completed">
-        @status.completed <i class="icon-ok-circle"></i>
+        <i class="icon-ok-circle"></i> @status.completed completed
       </span>
     }
   </td>

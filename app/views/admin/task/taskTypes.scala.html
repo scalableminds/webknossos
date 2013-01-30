@@ -39,7 +39,7 @@
       </thead>
       <tbody>
 	    @taskTypes.map{ taskType => 
-	      <tr>
+	      <tr id="@taskType.id">
 	        <td> @formatHash(taskType.id) </td>
 	        <td> @taskType.summary </td>
           <td> @taskType.description </td>

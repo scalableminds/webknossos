@@ -1,7 +1,7 @@
 @(projects: List[models.task.Project], form: Form[(String, String)], users: List[models.user.User])(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
-  <div class="container wide">
+  <div class="container">
     <h3>Projects</h3>
     <div class="well">
       @helper.form(controllers.admin.routes.ProjectAdministration.create, 'class -> "form-horizontal") {

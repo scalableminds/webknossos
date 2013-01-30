@@ -1,5 +1,6 @@
 ### define 
 jquery : $
+../libs/toast : Toast
 ###
 
 class View
@@ -8,22 +9,31 @@ class View
   THEME_BRIGHT   : 0
   THEME_DARK     : 1
 
-  curentTheme : null
+  currentTheme : null
 
 
-  constructor : ->
+  constructor : (@model) ->
 
     { THEME_BRIGHT } = @
    
     @setTheme(THEME_BRIGHT)
     @createKeyboardCommandOverlay()
 
+    @model.route.on("emptyBranchStack", =>
+      Toast.error("No more branchpoints", false))
+
+    @model.route.on("noBranchPoints", =>
+      Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false))
+
+    @model.route.on("wrongDirection", =>
+      Toast.error("You are tracing into the wrong direction"))
+
 
   toggleTheme : ->
 
-    { curentTheme, THEME_BRIGHT, THEME_DARK } = @
+    { currentTheme, THEME_BRIGHT, THEME_DARK } = @
 
-    if curentTheme is THEME_BRIGHT 
+    if currentTheme is THEME_BRIGHT 
       @setTheme(THEME_DARK)
     else
       @setTheme(THEME_BRIGHT)
@@ -38,7 +48,7 @@ class View
     else
       $("body").attr('class', 'dark')
 
-    @curentTheme = theme
+    @currentTheme = theme
 
 
   createKeyboardCommandOverlay : ->
@@ -74,4 +84,3 @@ class View
 
     popoverTemplate = '<div class="popover key-overlay"><div class="arrow key-arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
     $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
-

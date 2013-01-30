@@ -25,6 +25,18 @@ class PlaneController
   view : null
   gui : null
 
+  input :
+    skeletonMouse : null
+    planeMouse : null
+    keyboard : null
+    keyboardNoLoop : null
+
+    unbind : ->
+      @skeletonMouse?.unbind()
+      @planeMouse?.unbind()
+      @keyboard?.unbind()
+      @keyboardNoLoop?.unbind()
+
 
   constructor : (@model, stats, @gui ) ->
 
@@ -86,6 +98,7 @@ class PlaneController
     @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
     @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
 
+    @initMouse()
     @bind()
     @start()
 
@@ -98,7 +111,7 @@ class PlaneController
       return
 
     for planeId in ["xy", "yz", "xz"]
-      @bindings.push new Input.Mouse($("#plane#{planeId}"),
+      @input.planeMouse = new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
@@ -111,7 +124,7 @@ class PlaneController
         rightClick : @setWaypoint
       )
 
-    @bindings.push new Input.Mouse($("#skeletonview"),
+    @input.skeletonMouse = new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
         @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
         @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
@@ -127,7 +140,7 @@ class PlaneController
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-    @bindings.push new Input.Keyboard(
+    @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
       "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
@@ -145,7 +158,7 @@ class PlaneController
       #"ctr + s"       : => @model.route.pushImpl()
     )
     
-    @bindings.push new Input.KeyboardNoLoop(
+    @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
       #View     
       "1" : =>
@@ -185,24 +198,19 @@ class PlaneController
 
   start : ->
 
-    @initMouse()
     @initKeyboard()
     @view.start()
 
 
   stop : ->
 
-    for binding in @bindings
-      binding.unbind()
+    @input.unbind()
     @view.stop()
 
 
   bind : ->
 
     @view.bind()
-
-    @initMouse()
-    @initKeyboard()
 
     @view.on
       render : => @render()

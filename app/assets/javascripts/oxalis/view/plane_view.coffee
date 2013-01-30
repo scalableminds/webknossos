@@ -252,10 +252,7 @@ class PlaneView
     $("#modal").modal("hide")
 
 
-  bind : ->
-
-    @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))    
+  bind : ->  
 
     @model.route.on({
       doubleBranch         : (callback) => @showBranchModal(callback)      

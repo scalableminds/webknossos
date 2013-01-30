@@ -65,6 +65,8 @@ case class Task(
 
   def assigneOnce = this.copy(assignedInstances = assignedInstances + 1)
 
+  def unassigneOnce = this.copy(assignedInstances = assignedInstances - 1)
+  
   def status = {
     val inProgress = tracings.filter(!_.state.isFinished).size
     CompletionStatus(

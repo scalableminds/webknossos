@@ -21,6 +21,7 @@ import models.Color
 import models.basics._
 import nml._
 import play.api.Logger
+import com.mongodb.casbah.commons.MongoDBList
 
 case class Tracing(
     _user: ObjectId,
@@ -77,6 +78,11 @@ case class Tracing(
         Nil
     }
     this.copy(review = alteredReview)
+  }
+  
+  def cancel = {
+    task.map( _.update(_.unassigneOnce))
+    this.copy(state = Unassigned)
   }
 
   def finish = {
@@ -170,6 +176,24 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     }
   }
 
+  def freeTacingsOfUser(userId: ObjectId) = {
+    find(MongoDBObject(
+      "_user" -> userId,
+      "state.isFinished" -> false,
+      "tracingType" -> TracingType.Task.toString))
+      .toList
+      .flatMap(_._task.flatMap(Task.findOneById))
+      .map(_.update(_.unassigneOnce))
+
+    update(
+      MongoDBObject(
+        "_user" -> userId,
+        "tracingType" -> MongoDBObject("$in" -> TracingType.UserTracings.map(_.toString))),
+      MongoDBObject(
+        "$set" -> MongoDBObject(
+          "state.isAssigned" -> false)))
+  }
+
   def createAndInsertDeepCopy(source: Tracing) = {
     val tracing = insertOne(source.copy(_id = new ObjectId))
     DBTree.findAllWithTracingId(source._id).map(tree => DBTree.createAndInsertDeepCopy(tree, tracing._id, 0))
@@ -239,20 +263,23 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
 
   def findFor(u: User) =
     find(MongoDBObject(
-      "_user" -> u._id)).toList
+      "_user" -> u._id,
+      "state.isAssigned" -> true)).toList
 
-  def findOpenTracingFor(user: User, tracingType: TracingType.Value) = 
+  def findOpenTracingFor(user: User, tracingType: TracingType.Value) =
     findOpenTracingsFor(user, tracingType).headOption
-      
+
   def findOpenTracingsFor(user: User, tracingType: TracingType.Value) =
     find(MongoDBObject(
       "_user" -> user._id,
       "state.isFinished" -> false,
+      "state.isAssigned" -> true,
       "tracingType" -> tracingType.toString())).toList
 
   def findOpen(tracingType: TracingType.Value) =
     find(MongoDBObject(
       "state.isFinished" -> false,
+      "state.isAssigned" -> true,
       "tracingType" -> tracingType.toString)).toList
 
   override def remove(tracing: Tracing) = {
@@ -268,7 +295,12 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     find(MongoDBObject("_task" -> tid)).toList
 
   def findByTaskIdAndType(tid: ObjectId, tracingType: TracingType.Value) =
-    find(MongoDBObject("_task" -> tid, "tracingType" -> tracingType.toString)).toList
+    find(MongoDBObject(
+      "_task" -> tid,
+      "tracingType" -> tracingType.toString,
+      "$or" -> MongoDBList(
+          "state.isAssigned" -> true,
+          "state.isFinished" -> true))).toList
 
   implicit object TracingXMLWrites extends XMLWrites[Tracing] {
     def writes(e: Tracing) = {

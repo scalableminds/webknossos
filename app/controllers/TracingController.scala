@@ -136,22 +136,6 @@ object TracingController extends Controller with Secured {
           }) asResult
     }
   }
-  
-  def cancel(tracingId: String) = Authenticated { implicit request =>
-    Tracing.findOneById(tracingId).map( t => println("State: " + t.state) )
-    (for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if (tracing._user == request.user._id && tracing.state.isInProgress)
-    } yield {
-      UsedTracings.removeAll(tracing)
-      tracing match {
-        case t if t.tracingType == TracingType.Task =>
-          tracing.update(_.cancel)
-          JsonOk(Messages("task.cancelled"))
-      }
-    }) ?~ Messages("tracing.notPossible")
-  }
-
 
   def finishWithRedirect(tracingId: String) = Authenticated { implicit request =>
     finishTracing(request.user, tracingId).map {

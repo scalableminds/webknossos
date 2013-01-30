@@ -6,7 +6,7 @@
 class Recolor
 
   PUBLIC : true
-  COMMAND : "recolor"
+  COMMAND : "recolor()"
   FRIENDLY_NAME : "Recolor"
   DESCRIPTION : "Recolors the input with a colormap or a single color value"
   PARAMETER :

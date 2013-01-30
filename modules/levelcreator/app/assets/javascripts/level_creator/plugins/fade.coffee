@@ -6,7 +6,7 @@
 class Fade
 
   PUBLIC : true
-  COMMAND : "fade"
+  COMMAND : "fade()"
   FRIENDLY_NAME : "Fade"  
   DESCRIPTION : "Fades the input rgba in or out"
   PARAMETER :

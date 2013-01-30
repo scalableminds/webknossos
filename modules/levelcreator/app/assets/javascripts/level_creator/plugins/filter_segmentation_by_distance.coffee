@@ -3,7 +3,7 @@
 class FilterSegmentationByDistance
 
   PUBLIC : true
-  COMMAND : "filterSegmentationByDistance"
+  COMMAND : "filterSegmentationByDistance()"
   FRIENDLY_NAME : "Filter Segmentation by Distance"
   DESCRIPTION : "Returns all segments that are farer or nearer than the given distance"
   PARAMETER : 

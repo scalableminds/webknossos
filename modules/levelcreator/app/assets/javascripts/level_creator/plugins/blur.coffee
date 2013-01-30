@@ -5,7 +5,7 @@
 class Blur
 
   PUBLIC : true
-  COMAMND : "blur"
+  COMMAND : "blur()"
   FRIENDLY_NAME : "Blur"
   DESCRIPTION : "Blurs the input image with gussian blur."
   PARAMETER :

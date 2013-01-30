@@ -6,7 +6,7 @@
 class Cloudify
 
   PUBLIC : true
-  COMMAND : "cloudify"
+  COMMAND : "cloudify()"
   FRIENDLY_NAME : "Cloudify"  
   DESCRIPTION : "Makes colored clouds out of the given input"
   PARAMETER :

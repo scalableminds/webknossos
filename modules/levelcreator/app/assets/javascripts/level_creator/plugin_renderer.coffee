@@ -173,7 +173,10 @@ class PluginRenderer
           "</div>" +
           "<div id=\"" + bodyId + "\" class=\"accordion-body collapse\">" +
             "<div class=\"accordion-inner\">" +
-              plugin.DESCRIPTION +
+              "<dl>" +
+                "<dt>" + plugin.COMMAND + "</dt>" +
+                "<dd>" + plugin.DESCRIPTION + "</dd>" +
+              "</dl>" +
               "<h5>Parameter:</h5>" +
               "<dl class=\"dl-horizontal\">" +
                 parameterHtml +

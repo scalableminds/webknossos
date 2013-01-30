@@ -19,6 +19,21 @@ class Recolor
     a : "0 - 255"
     color : "\"rgba(200, 50, 10, 0.9)\""
     clear : "true, false" # clears rgba before recolor
+  EXAMPLES : [
+      { description : "recoloring using RGB", lines :
+        [ "time(start: 0, end : 10) ->"
+          "  importSlides(start:0, end: 10)"
+          "  recolor(r: 0, g: 0, b: 255, a: 170)"
+        ]
+      }
+      { description : "recoloring using a colorMap", lines :
+        [ "time(start: 0, end : 10) ->"
+          "  importSlides(start:0, end: 10)"
+          "  recolor(colorMapName: \"blue.bmp\")"
+        ]
+      }      
+    ]
+
 
   assetHandler : null
 

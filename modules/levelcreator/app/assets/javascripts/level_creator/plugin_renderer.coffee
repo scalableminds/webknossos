@@ -142,6 +142,17 @@ class PluginRenderer
       continue if plugin.PUBLIC is false
 
       bodyId = "collapseBody" + i
+        
+      exampleHTML = ""
+      if plugin.EXAMPLES?
+        for example in plugin.EXAMPLES
+          exampleHTML += example.description 
+          exampleHTML += "<pre class=\"prettyprint linenums\">"
+          exampleHTML += "<ol class=\"linenums\">"
+          for line in example.lines
+            exampleHTML += "<li><span class=\"pln\">" + line + "</span></li>" #<br>"
+          exampleHTML += "</ol>"
+          exampleHTML += "</pre>"            
 
       parameterHtml = ""
       for parameterName of plugin.PARAMETER
@@ -163,9 +174,12 @@ class PluginRenderer
           "<div id=\"" + bodyId + "\" class=\"accordion-body collapse\">" +
             "<div class=\"accordion-inner\">" +
               plugin.DESCRIPTION +
+              "<h5>Parameter:</h5>" +
               "<dl class=\"dl-horizontal\">" +
                 parameterHtml +
               "</dl>" +
+              "<h5>Examples:</h5>" +
+              exampleHTML +
             "</div>" +
           "</div>" +
         "</div>"

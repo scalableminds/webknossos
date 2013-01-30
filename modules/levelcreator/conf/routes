@@ -14,6 +14,7 @@ GET     /level/:id/produce                  controllers.levelcreator.LevelCreato
 POST    /level/:id/uploadAsset              controllers.levelcreator.LevelCreator.uploadAsset(id: String)
 GET     /level/:id/deleteAsset/*asset       controllers.levelcreator.LevelCreator.deleteAsset(id: String, asset: String)
 GET     /level/:id/asset/*asset             controllers.levelcreator.LevelCreator.retrieveAsset(id: String, asset: String)
+GET     /level/:id/stacks                   controllers.levelcreator.LevelCreator.stackList(id: String)
 
 GET     /binary/arbitrary/ajax              controllers.levelcreator.ArbitraryBinaryData.viaAjax(dataLayerName: String, levelId: String, taskId: String)
 

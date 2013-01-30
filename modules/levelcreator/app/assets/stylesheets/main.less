@@ -20,12 +20,16 @@ body:-webkit-full-screen {
   height: 100%;
 }
 
-.navbar .brand {
-    background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
-    padding-left: 43px;
+.navbar-inner {
+    background: #4D1A1A;
 }
-.navbar span.brand:hover {
-    color: #999;
+
+.navbar .brand {
+    color: #aaa;
+    text-shadow: 0 -1px 0 rgba(0,0,0,0.25);
+}
+.navbar .brand:hover {
+    color: #fff;
 }
 
 .well form {
@@ -52,54 +56,6 @@ body:-webkit-full-screen {
     height: 25px;
     margin: 0 9px;
     border-right: 1px solid #e5e5e5;
-}
-
-.popover {
-    width: 400px;
-}
-
-.table-double-striped > tbody {
-    & > tr:nth-child(4n+1) > td,
-    & > tr:nth-child(4n+2) > td {
-        background-color: #f9f9f9
-    }
-}
-
-.table-nohead {
-    tbody tr:nth-child(1) {
-        td, th {
-            border-top: none;
-        }
-    }
-}
-
-.table .table {
-    margin-bottom: 0;
-}
-
-.table-details {
-
-    .details-row > td {
-        box-shadow: inset 0 0 10px rgba(180, 180, 180, .2);
-    }
-    .details-toggle,
-    .details-toggle-all {
-
-        cursor: pointer;
-
-        .caret-down {
-            display: none;
-        }
-
-        &.open {
-            .caret-right {
-                display: none;
-            }
-            .caret-down {
-                display: inline-block;
-            }
-        }
-    }
 }
 
 .light-caret {
@@ -160,128 +116,6 @@ svg a:hover {
     }
 }
 
-#stats {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-}
-.bright {
-    background : #fff;
-    p {
-        color : #000;
-    }
-}
-.dark {
-    background : #000;
-    p {
-        color : #fff;
-    }
-}
-#render {
-    width: 2*@standardViewportWidth+20px;
-    height: 2*@standardViewportWidth+20px;
-    position: absolute;
-    top: 20px;
-    left: 300px;
-}
-#render canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 10;
-}
-#abstractTreeViewer {
-    top: 0px;
-    left: 2*@standardViewportWidth+20px+10px;
-    width : 200px;
-    height : 2*@standardViewportWidth + 20px;
-    border-width: 1px;
-    position:relative;
-}
-#main-container {
-    position: absolute;
-    top: @headerHeight;
-    left: 0;
-    right: 0;
-    bottom: 0;
-}
-.inputcatcher {
-    width: @standardViewportWidth - 2px;
-    height: @standardViewportWidth - 2px;
-    border-width: 1px;
-    border-style:solid;
-    border-color: #ffff00;
-    position: absolute;
-    z-index: 20;
-}
-#planexy {
-    top: 0px;
-    left: 0px;
-}
-#planeyz {
-    top: 0px;
-    left: @standardViewportWidth + 20px;
-}
-#planexz {
-    top: @standardViewportWidth + 20px;
-    left: 0px;
-}
-#skeletonview {
-    top: @standardViewportWidth + 20px;
-    left: @standardViewportWidth + 20px;
-    border-width: 0px;
-}
-//canvas {
-//    margin-right: 20px;
-//    margin-bottom: 20px;
-//    border-width: 2px;
-//    border-style:solid;
-//    border-color: @mainBackground;
-//}
-#prevControls {
-    float: left;
-    height: 20px;
-    position: relative;
-    top: 420px;
-    left: 420px;
-    z-index: 30;
-}
-#overlay {
-    position: absolute;
-    width: 280px;
-    top: 0;
-    left: 0;
-    padding: 10px;
-}
-#overlay > * {
-    margin-bottom: 10px;
-}
-#overlay .nav-tabs > li > a {
-    padding-top: 4px;
-    padding-bottom: 4px;
-}
-#overlay .nav-tabs {
-    margin-top: 25px;
-    margin-bottom: 0;
-}
-#review-comments {
-    max-height: 500px;
-    overflow-y: auto;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-top: none;
-}
-
-#credits {
-    margin-top: 100px;
-    border-radius: 0;
-    color: #888;
-
-    section {
-        margin-top: 4em;
-    }
-}
-
 #level-creator {
 
     .layer-filter-group {
@@ -335,90 +169,10 @@ svg a:hover {
 }
 
 
-#issue-submit {
-
-    form {
-
-        margin: 0;
-
-        input[type=text],
-        textarea {
-            width: 600px;
-        }
-        textarea {
-            height: 9em;
-        }
-    }
-}
-
-#task-selection-algoritm {
-
-    position: relative;
-    height: 100%;
-
-    .editor-wrapper {
-
-        position: absolute;
-        background: #141414;
-        top: 50px;
-        bottom: 10px;
-        width: 100%;
-        box-shadow: 0 0 10px #aaa;
-
-        #editor {
-            width: 100%;
-            top: 0;
-            bottom: 0;
-        }
-    }
-    input[type=submit] {
-        margin: 10px 0;
-    }
-}
-
-.key-arrow {
-    left: 170px !important;
-}
-
-.key-overlay {
-    width: 700px;
-    margin-left: 180px;
-}
-
-.graph.well svg {
-    max-width: 900px;
-}
-
 @media screen and (max-width: 960px) {
     .container {
         width: auto;
         margin: 0 10px;
     }
 }
-
-.space-top {
-    margin-top: 30px;
-}
-
-// Fixing datGUI from Bootstrap
-.dg {
-
-    font: 11px 'Lucida Grande', sans-serif;
-
-    input, select, textarea {
-        height: auto;
-        font-size: 11px;
-        line-height: normal;
-        border-radius: 0;
-    }
-    select {
-        width: auto;
-        max-width: 100%;
-    }
-    .cr div div {
-        line-height: normal;
-    }
-}
-
-
 

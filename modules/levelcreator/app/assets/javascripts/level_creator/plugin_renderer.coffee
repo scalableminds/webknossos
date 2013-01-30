@@ -87,7 +87,7 @@ class PluginRenderer
           (callback) =>
             inputData =
               rgba : new Uint8Array( 4 * pixelCount )
-              segmentation : new Uint8Array( pixelCount )
+              segmentation : new Uint16Array( pixelCount )
               dimensions : @dimensions
               relativeTime : (t - startFrame) / (endFrame - startFrame)
               absoluteTime : t
@@ -107,7 +107,7 @@ class PluginRenderer
         slideOffset = (t - startFrame) * options.scale + options.start
         _.extend(inputData,
           rgba : @dataHandler.getRGBASlide( slideOffset )
-          # segmentation : @dataHandler.getSegmentationSlide( slideOffset )
+          segmentation : @dataHandler.getSegmentationSlide( slideOffset )
           dimensions : @dimensions
         )
 

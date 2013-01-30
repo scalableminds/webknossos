@@ -9,7 +9,7 @@ class FilterStartSegmentation
   PARAMETER : 
     input: 
       rgba: 'Uint8Array'
-      segmentation: 'Uint8Array'
+      segmentation: 'Uint16Array'
       segments: '[]'
       mission: '{}'
       dimensions : '[]'

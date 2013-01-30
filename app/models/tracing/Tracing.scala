@@ -182,8 +182,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       "state.isFinished" -> false,
       "tracingType" -> TracingType.Task.toString))
       .toList
-      .flatMap(_._task.flatMap(Task.findOneById))
-      .map(_.update(_.unassigneOnce))
+      .flatMap(_.update(_.cancel))
 
     update(
       MongoDBObject(

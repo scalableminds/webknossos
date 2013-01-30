@@ -6,13 +6,13 @@ object TracingType extends Enumeration {
   val Explorational = Value("Explorational")
   val Review = Value("Trainings Review")
   
-  val UserTracings = List( Task, Explorational, Review)
+  val UserTracings = List(Task, Explorational, Review)
 
   // system types
   val Sample = Value("Trainings Sample")
   val TracingBase = Value("Tracing Base")
   
-  val SystemTracings = List( )//Sample, TracingBase)
+  val SystemTracings = List(Sample, TracingBase)
   
   // tracings where the task got deleted
   val Orphan = Value("Orphan")

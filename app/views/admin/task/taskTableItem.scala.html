@@ -5,7 +5,13 @@
   <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @formatHash(task.id) </td>
   <td> @task.seedIdHeidelberg </td>
-  <td> @task.project.map(_.name).getOrElse("") </td>
+  <td> 
+    @task.project.map{ project =>
+      <a href="@controllers.admin.routes.ProjectAdministration.list#@project.name">
+        @project.name
+      </a>
+    }
+  </td>
   <td> 
     <a href="@controllers.admin.routes.TaskTypeAdministration.list#@task.taskType.map(_.id)">
       @task.taskType.map(_.summary).getOrElse("<deleted>") 
@@ -17,17 +23,11 @@
   <td> @task.priority </td>
   <td> @formatDate(task.created) </td>
   <td> @defining(task.status){ status =>
-      <span title="Unassigned"> 
-        <i class="icon-play-circle"></i> @status.open ppen
-      </span>
+      <i class="icon-play-circle"></i> @status.open open
       <br />
-      <span title="in Progress"> 
-        <i class="icon-random"></i> @status.inProgress in Progress
-      </span>
+      <i class="icon-random"></i> @status.inProgress active
       <br />
-      <span title="Completed">
-        <i class="icon-ok-circle"></i> @status.completed completed
-      </span>
+      <i class="icon-ok-circle"></i> @status.completed done
     }
   </td>
   <td>  

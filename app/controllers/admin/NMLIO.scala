@@ -97,7 +97,7 @@ object NMLIO extends Controller with Secured {
     } yield {
       val taskWithtracings = Task
         .findAllByProject(project.name)
-        .map(task => task -> task.tracings)
+        .map(task => task -> task.tracings.filter(_.state.isFinished))
       val zipStreams = taskWithtracings.flatMap {
         case (task, tracings) => tracings.map { tracing =>
           val xml = prettyPrinter.format(Xml.toXML(tracing))
@@ -110,4 +110,18 @@ object NMLIO extends Controller with Secured {
     }
   }
 
+  def taskDownload(taskId: String) = Authenticated { implicit request =>
+    for {
+      task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+    } yield {
+      val taskWithtracings = task.tracings.filter(_.state.isFinished)
+      val zipStreams = taskWithtracings.map { tracing =>
+        val xml = prettyPrinter.format(Xml.toXML(tracing))
+        (IOUtils.toInputStream(xml, "UTF-8") -> (s"${task.id}_${tracing.id}.nml"))
+      }
+      val zipped = new TemporaryFile(new File(task.id + "_nmls.zip"))
+      ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
+      Ok.sendFile(zipped.file)
+    }
+  }
 }

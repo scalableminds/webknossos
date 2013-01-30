@@ -39,11 +39,11 @@ GET      /binary/arbitrary/ajax                    controllers.BinaryData.arbitr
 
 # Tracing Stuff
 POST     /tracing/create                           controllers.TracingController.createExplorational
-GET      /tracing                                  controllers.TracingController.list
 GET      /tracing/:tracingId                       controllers.TracingController.info( tracingId: String )
 PUT      /tracing/:tracingId                       controllers.TracingController.update( tracingId: String, version: Int )
 GET      /tracing/:tracingId/finishAndRedirect     controllers.TracingController.finishWithRedirect( tracingId: String )
 GET      /tracing/:tracingId/finish                controllers.TracingController.finish( tracingId: String, explorational: Boolean = false )
+GET      /tracing/:tracingId/cancel                controllers.TracingController.cancel( tracingId: String )
 GET      /tracing/:tracingId/finishExperimental    controllers.TracingController.finish( tracingId: String, explorational: Boolean = true )
 
 
@@ -68,6 +68,7 @@ GET      /admin/projects/:name/download            controllers.admin.NMLIO.proje
 
 GET      /admin/tasks                              controllers.admin.TaskAdministration.list
 GET      /admin/tasks/:id/delete                   controllers.admin.TaskAdministration.delete(id: String)
+GET      /admin/tasks/:id/download                 controllers.admin.NMLIO.taskDownload(id: String)
 GET      /admin/tasks/create                       controllers.admin.TaskAdministration.create
 POST     /admin/tasks/createBulk                   controllers.admin.TaskAdministration.createBulk
 POST     /admin/tasks/createFromNML                controllers.admin.TaskAdministration.createFromNML

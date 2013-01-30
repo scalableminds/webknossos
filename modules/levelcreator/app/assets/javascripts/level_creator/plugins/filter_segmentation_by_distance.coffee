@@ -2,16 +2,26 @@
 
 class FilterSegmentationByDistance
 
+  PUBLIC : true
+  COMMAND : "filterSegmentationByDistance()"
+  FRIENDLY_NAME : "Filter Segmentation by Distance"
   DESCRIPTION : "Returns all segments that are farer or nearer than the given distance"
-
   PARAMETER : 
     input: 
       rgba: 'Uint8Array'
-      segmentation: 'Uint8Array'
+      segmentation: 'Uint16Array'
       segments: '[]'
       dimensions : '[]'
     distance : 'int'
-    comparisonMode : 'string' # e.g. '<='
+    mode : '\"<\", \"<=\", \">\", \"=>\"' # e.g. '<='
+  EXAMPLES : [
+      { description : "Displaying cells near the middle", lines :
+        [ "time(start: 0, end : 10) ->"
+          "  importSlides(start:0, end: 10)"
+          "  filterSegmentationByDistance(distance: 100, mode: \"<\")"
+        ]
+      }
+    ]
 
 
   constructor : () ->
@@ -20,13 +30,13 @@ class FilterSegmentationByDistance
 
   execute : (options) ->
 
-    { input: { rgba, segmentation, segments, dimensions }, distance, comparisonMode } = options
+    { input: { rgba, segmentation, segments, dimensions }, distance, mode } = options
 
     width = dimensions[0]
     height = dimensions[1]
     
     values = []
-    compareFunc = new Function("a","b", "return a #{comparisonMode} b;")
+    compareFunc = new Function("a","b", "return a #{mode} b;")
 
     for segment in segments
       if compareFunc(segment.distance, distance)

@@ -14,9 +14,9 @@ import play.api.Play.current
 import models.binary._
 import akka.util.Timeout
 import brainflight.binary._
-import models.knowledge.Level
+import models.knowledge._
 import braingames.mvc.Controller
-import play.api.i18n.Messages
+import play.api.i18n.Messages 
 import brainflight.tools.geometry._
 import akka.pattern.ask
 import akka.pattern.AskTimeoutException
@@ -25,7 +25,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 object ArbitraryBinaryData extends Controller {
   val dataRequestActor = Akka.system.actorOf(Props(new DataRequestActor), name = "dataRequestActor") //.withRouter(new RoundRobinRouter(3)))
-  val conf = Play.configuration
+
+  val conf = Play.current.configuration
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
   def viaAjax(dataLayerName: String, levelId: String, taskId: String) = Action(parse.raw) { implicit request =>
@@ -60,6 +61,41 @@ object ArbitraryBinaryData extends Controller {
             Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
             Ok(data.toArray)
           }
+      }
+    }
+  }
+    
+  def missionViaAjax(dataSetName: String, levelId: String, missionStartId: String, dataLayerName: String) = 
+    Action { implicit request => 
+    Async {
+      val t = System.currentTimeMillis()
+      for {
+        dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataset.notFound")
+        level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+        mission <- Mission.findByStartId(missionStartId) ?~ Messages("mission.notFound")
+        dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
+      } yield {
+        (dataRequestActor ? SingleRequest(DataRequest(
+          dataSet,
+          dataLayer,
+          1, // TODO resolution needed?
+          Cuboid(level.width, 
+              level.height, 
+              level.depth, 
+              1, 
+              moveVector = Vector3D(mission.start.position).toTuple, 
+              axis = mission.start.direction.toTuple),
+          useHalfByte = false,
+          skipInterpolation = false)))
+        .recover{
+          case e: AskTimeoutException =>
+            Logger.error("calculateImages: AskTimeoutException")
+            new Array[Byte](level.height * level.width * level.depth * dataLayer.bytesPerElement).toBuffer
+        }
+        .mapTo[ArrayBuffer[Byte]].map { data =>
+          Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
+          Ok(data.toArray)
+        }
       }
     }
   }

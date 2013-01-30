@@ -15,7 +15,6 @@ class LevelCreator
   stack : null
   canvas : null
   data : null
-  model : null
 
   assetHandler : null
   prepluginRenderer : null
@@ -117,7 +116,8 @@ class LevelCreator
         @dataHandler.deferred("initialized")
       ).done =>
         @prepareHeadlessRendering()
-      
+
+    
 
   updatePreview : ->
 

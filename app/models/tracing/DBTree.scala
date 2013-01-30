@@ -16,7 +16,7 @@ import nml.Edge
 import com.mongodb.casbah.commons.MongoDBList
 import com.mongodb.casbah.query.Implicits._
 
-case class DBTree(treeId: Int, color: Color, _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree] {
+case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree] {
   val dao = DBTree
 
   def nodes = DBTree.nodes.findByParentId(_id).toList
@@ -24,38 +24,53 @@ case class DBTree(treeId: Int, color: Color, _id: ObjectId = new ObjectId) exten
 }
 
 trait DBTreeFactory {
-  def createFrom(t: Tree) = {
-    DBTree(t.treeId, t.color)
+  def createFrom(tracingId: ObjectId, t: Tree) = {
+    DBTree(tracingId, t.treeId, t.color)
   }
-  def createCopy(t: DBTree) = {
-    t.copy(_id = new ObjectId)
+
+  def createCopy(t: DBTree, tid: ObjectId) = {
+    t.copy(_id = new ObjectId, _tracing = tid)
   }
 }
 
 object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
 
-  def createAndInsertDeepCopy(t: DBTree) = {
-    val parent = createCopy(t)
-    insert(parent).map { oid =>
-      nodes.findByParentId(t._id).map { n =>
-        nodes.insert(n.copy(_treeId = oid, _id = new ObjectId))
-      }
-      edges.findByParentId(t._id).map { e =>
-        edges.insert(e.copy(_treeId = oid, _id = new ObjectId))
-      }
+  /*def createAndInsertDeepCopy(t: DBTree): DBTree = {
+    createAndInsertDeepCopy(t, t._tracing, 0)
+  }*/
 
+  def createAndInsertDeepCopy(tree: DBTree, newTracing: ObjectId, nodeIdOffset: Int) = {
+    val parent = createCopy(tree, newTracing)
+    insert(parent).map { oid =>
+      findNodesByTree(tree._id).map { n =>
+        nodes.insert(n.copy(
+          _treeId = oid,
+          _id = new ObjectId,
+          node = n.node.copy(id = n.node.id + nodeIdOffset)))
+      }
+      findEdgesByTree(tree._id).map { e =>
+        edges.insert(e.copy(
+          _treeId = oid,
+          _id = new ObjectId,
+          edge = e.edge.copy(source = e.edge.source + nodeIdOffset, target = e.edge.target + nodeIdOffset)))
+      }
     }
     parent
   }
 
-  def insertOne(t: Tree): DBTree = {
-    val tree = insertOne(DBTree.createFrom(t))
+  def findNodesByTree(tid: ObjectId) = {
+    nodes.find(MongoDBObject("_treeId" -> tid)).toList
+  }
+  def findEdgesByTree(tid: ObjectId) = {
+    edges.find(MongoDBObject("_treeId" -> tid)).toList
+  }
+
+  def insertOne(tracingId: ObjectId, t: Tree): DBTree = {
+    val tree = insertOne(DBTree.createFrom(tracingId, t))
     t.nodes.map { n =>
-      println("inserting NODE")
-      println(nodes.insert(DBNode(n, tree._id)))
+      nodes.insert(DBNode(n, tree._id))
     }
     t.edges.map { e =>
-      println("inserting EDGE")
       edges.insert(DBEdge(e, tree._id))
     }
     tree
@@ -140,28 +155,48 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
     }
   }
 
+  def cloneAndAddTrees(sourceId: ObjectId, targetId: ObjectId) = {
+    val targetMinId = minNodeId(findAllWithTracingId(targetId))
+    val sourceMaxId = maxNodeId(findAllWithTracingId(sourceId))
+    val nodeIdOffset = math.max(sourceMaxId + 1 - targetMinId, 0)
+
+    findAllWithTracingId(sourceId)
+      .map(tree => createAndInsertDeepCopy(tree, targetId, nodeIdOffset))
+  }
+
   def maxNodeId(trees: List[DBTree]) = {
+    lastNode(trees, false).map(_.node.id) getOrElse 0
+  }
+
+  def minNodeId(trees: List[DBTree]) = {
+    lastNode(trees, true).map(_.node.id) getOrElse 0
+  }
+
+  def lastNode(trees: List[DBTree], desc: Boolean) = {
     nodes
-      .find(MongoDBObject("$or" -> MongoDBList(trees.map(t => MongoDBObject("_treeId" -> t._id)))))
-      .sort(MongoDBObject("node.id" -> -1))
+      .find(MongoDBObject("_treeId" -> MongoDBObject("$in" -> MongoDBList(trees.map(t => t._id)))))
+      .sort(MongoDBObject("node.id" -> (if (desc) -1 else 1)))
       .limit(1)
       .toList
       .headOption
-      .map(_.node.id)
   }
 
-  def increaseNodeIds(tree: DBTree, inc: Int) = {
+  /*def increaseNodeIds(tree: DBTree, inc: Int) = {
     nodes.update(MongoDBObject("_treeId" -> tree._id), MongoDBObject("$inc" -> MongoDBObject("node.id" -> inc)), false, true)
     edges.update(MongoDBObject("_treeId" -> tree._id), MongoDBObject("$inc" -> MongoDBObject("edge.source" -> inc, "edge.target" -> inc)), false, true)
-  }
+  }*/
 
-  def createEmptyTree = {
-    insertOne(DBTree(1, Color(1, 0, 0, 0)))
-  }
+  def createEmptyTree(tracing: ObjectId) =
+    insertOne(DBTree(tracing, 1, Color(1, 0, 0, 0)))
 
-  def findOneWithTreeId(ts: List[ObjectId], treeId: Int) = {
-    findOne(MongoDBObject("_id" -> MongoDBObject("$in" -> ts), "treeId" -> treeId))
-  }
+  def findAllWithTracingId(tracingId: ObjectId) =
+    find(MongoDBObject("_tracing" -> tracingId)).toList
+
+  def removeAllWithTracingId(tracingId: ObjectId) =
+    remove(MongoDBObject("_tracing" -> tracingId))
+
+  def findOneWithTreeId(tracingId: ObjectId, treeId: Int) =
+    findOne(MongoDBObject("_tracing" -> tracingId, "treeId" -> treeId))
 
   val nodes = new ChildCollection[DBNode, ObjectId](collection = DB.connection("nodes"), parentIdField = "_treeId") {}
   val edges = new ChildCollection[DBEdge, ObjectId](collection = DB.connection("edges"), parentIdField = "_treeId") {}

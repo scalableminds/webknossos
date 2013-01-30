@@ -9,7 +9,10 @@ CLICK_TRESHOLD = 6
 MODE_NORMAL = 0     # draw every node and the complete tree
 MODE_NOCHAIN = 1    # draw only decision points
 
-class AbsractTreeViewer
+
+class AbstractTreeView
+
+
   constructor : (width, height) ->
 
     _.extend(this, new EventMixin())

@@ -4,11 +4,11 @@ underscore : _
 
 class SegmentImporter
 
+  PUBLIC : false
   DESCRIPTION : "Generates all metadata from the original grey values"
-
   PARAMETER : 
     input: 
-      segmentation: 'Uint8Array'
+      segmentation: 'Uint16Array'
       dimensions : '[x, y, z]'
 
 

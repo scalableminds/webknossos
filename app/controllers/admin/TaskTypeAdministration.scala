@@ -19,6 +19,8 @@ object TaskTypeAdministration extends Controller with Secured {
     mapping(
       "summary" -> nonEmptyText(2, 50),
       "description" -> text,
+      "allowedModes" -> seq(text).verifying("taskType.emptyModeSelection", l => !l.isEmpty),
+      "branchPointsAllowed" -> boolean,
       "expectedTime" -> mapping(
         "minTime" -> number,
         "maxTime" -> number,

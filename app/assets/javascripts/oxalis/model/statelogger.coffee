@@ -116,7 +116,7 @@ class StateLogger
         branchPoints : branchPoints
         comments : @route.comments
         activeNodeId : @route.getActiveNodeId()
-        editPosition : @flycam.getGlobalPos()
+        editPosition : @flycam.getPosition()
       }
     })
 

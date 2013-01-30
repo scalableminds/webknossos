@@ -31,7 +31,7 @@ class ArbitraryView
     height = @container.height()
 
     # Initialize main THREE.js components
-    @renderer = new THREE.WebGLRenderer( clearColor: 0x000000, clearAlpha: 0.9, antialias: false )
+    @renderer = new THREE.WebGLRenderer( clearColor: 0x000000, clearAlpha: 1.0, antialias: false )
 
     @camera = camera = new THREE.PerspectiveCamera(90, width / height, 0.1, 1000)
     #camera.matrixAutoUpdate = false
@@ -88,7 +88,9 @@ class ArbitraryView
     window.requestAnimationFrame => @animate()
    
 
-  draw : -> @forceUpdate = true
+  draw : -> 
+
+    @forceUpdate = true
 
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.

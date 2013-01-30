@@ -13,11 +13,24 @@ class Cloudify
     input :
       rgba: "Uint8Array"
       dimensions : '[]'
+    r : "0 - 255"
+    g : "0 - 255"
+    b : "0 - 255"
+    a : "0 - 255"
+  EXAMPLES : [
+      { description : "recoloring using RGB", lines :
+        [ "time(start: 0, end : 10) ->"
+          "  importSlides(start:0, end: 10)"
+          "  filterSegmentationByDistance(distance: 100, mode: \"<\")"
+          "  cloudify(r: 0, g: 0, b: 255, a: 170)"
+        ]
+      }
+    ]    
 
 
   ready: false
   cloud: null
-  size: 32
+  size: 16
 
 
   constructor : () ->
@@ -62,3 +75,5 @@ class Cloudify
       rgba[l + 1] = g
       rgba[l + 2] = b
       rgba[l + 3] = ao * a
+
+    rgba

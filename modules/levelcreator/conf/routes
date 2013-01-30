@@ -16,10 +16,12 @@ GET     /level/:id/deleteAsset/*asset       controllers.levelcreator.LevelCreato
 GET     /level/:id/asset/*asset             controllers.levelcreator.LevelCreator.retrieveAsset(id: String, asset: String)
 GET     /level/:id/stacks                   controllers.levelcreator.LevelCreator.stackList(id: String)
 
+#Getting binary Data
 GET     /binary/arbitrary/ajax              controllers.levelcreator.ArbitraryBinaryData.viaAjax(dataLayerName: String, levelId: String, taskId: String)
-
-GET     /missions                           controllers.levelcreator.MissionController.missions(dataSetName: String)
-
+GET     /binary/ajax                        controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(dataSetName: String, levelId: String, missionStartId: String, dataLayerName: String) 
+#Mission Data
+GET     /missions                           controllers.levelcreator.MissionController.getMissions(dataSetName: String)
+GET     /mission                            controllers.levelcreator.MissionController.getRandomMission(dataSetName: String)
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.levelcreator.Application.javascriptRoutes
 

@@ -79,6 +79,7 @@ object InitialData {
   }
   def insertUsers() = {
     if (User.findOneByEmail("scmboy@scalableminds.com").isEmpty) {
+      println("inserted")
       User.insertOne(User(
         "scmboy@scalableminds.com",
         "SCM",

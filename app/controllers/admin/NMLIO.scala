@@ -50,7 +50,7 @@ object NMLIO extends Controller with Secured {
       List(extractFromNML(file)).flatten
     }
   }
-
+  
   def uploadForm = Authenticated { implicit request =>
     Ok(html.admin.nml.nmlupload())
   }

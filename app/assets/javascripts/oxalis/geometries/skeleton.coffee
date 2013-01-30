@@ -14,8 +14,6 @@ VIEW_3D            = Dimensions.VIEW_3D
 TYPE_NORMAL = 0
 TYPE_BRANCH = 1
 
-MAX_BRANCHES = 200
-
 COLOR_ACTIVE = 0x0000ff
 
 class Skeleton
@@ -79,6 +77,7 @@ class Skeleton
     @branches = new THREE.ParticleSystem(
         routeGeometryBranchPoints,
         new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE * 0.7, size: 8, sizeAttenuation : false}))
+    @branchesBuffer = new ResizableBuffer(3)
 
     @updateBranches()
 
@@ -126,12 +125,18 @@ class Skeleton
 
 
   # Will completely reload the trees from model.
-  # This needs to be done at initialization or whenever
-  # the skeleton is changes in a way that can't efficiently
-  # applied to the particle system, like deleting nodes, trees.
+  # This needs to be done at initialization
   reset : ->
     if (@ids.length > 0)
       @trigger "removeGeometries", @routes.concat(@nodes).concat(@nodesSpheres)
+
+    for threeLine in @routes
+      threeLine.geometry.dispose()
+      threeLine.material.dispose()
+    for threeParticleSystem in @nodes
+      threeParticleSystem.geometry.dispose()
+      threeParticleSystem.material.dispose()
+
     @routes       = []
     @nodes        = []
     @ids          = []
@@ -366,6 +371,12 @@ class Skeleton
     nodeSpheres = (@popSphereFromId(nodeID) for nodeID in @nodes[index].geometry.nodeIDs.getAllElements())
     @trigger "removeGeometries", [@routes[index]].concat([@nodes[index]]).concat(nodeSpheres)
 
+    # deallocate memory for THREE geometries and materials
+    @routes[index].geometry.dispose()
+    @routes[index].material.dispose()
+    @nodes[index].geometry.dispose()
+    @nodes[index].material.dispose()
+
     # Remove entries
     @ids.splice(index, 1)
     @routes.splice(index, 1)
@@ -377,15 +388,17 @@ class Skeleton
     @flycam.hasChanged = true
 
   updateBranches : ->
+
     branchpoints = @route.branchStack
-    for i in [0..MAX_BRANCHES]
-      if i < branchpoints.length
-        @branches.geometry.vertices[i] = new THREE.Vector3(
-          branchpoints[i].pos[0] + 0.01,
-          branchpoints[i].pos[1] + 0.01,
-          branchpoints[i].pos[2] - 0.01)
-      else
-        @branches.geometry.vertices[i] = new THREE.Vector2(0, 0)
+
+    @branchesBuffer.clear()
+    @branchesBuffer.pushMany([
+      branchpoint.pos[0] + 0.01,
+      branchpoint.pos[1] + 0.01, 
+      branchpoint.pos[2] - 0.01] for branchpoint in branchpoints)
+
+    @branches.geometry.__vertexArray = @branchesBuffer.getBuffer()
+    @branches.geometry.__webglParticleCount = @branchesBuffer.getLength()
     @branches.geometry.verticesNeedUpdate = true
     @flycam.hasChanged = true
 
@@ -439,7 +452,7 @@ class Skeleton
 
   # Helper function
   calcScaleVector : (v) ->
-    return (new THREE.Vector3()).multiply(v, @scaleVector)
+    return (new THREE.Vector3()).multiplyVectors(v, @scaleVector)
 
   setVisibility : (isVisible) ->
     for mesh in @getMeshes()

@@ -52,7 +52,7 @@ class Controller
       stats.getDomElement().id = "stats"
       $("body").append stats.getDomElement() 
 
-      @view = new View()
+      @view = new View(@model)
 
       @gui = @createGui()
 

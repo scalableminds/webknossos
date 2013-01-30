@@ -27,16 +27,13 @@ class Route
   comments : []
   activeNode : null
   activeTree : null
+  firstEdgeDirection : null
+
 
 
   constructor : (@data, @scaleInfo, @flycam) ->
 
     _.extend(this, new EventMixin())
-
-    @branchPointsAllowed = @data.settings.branchPointsAllowed
-    if @branchPointsAllowed
-      # dirty but this actually is what needs to be done
-      TYPE_BRANCH = TYPE_USUAL
 
     @idCount = 1
     @treeIdCount = 1
@@ -71,7 +68,7 @@ class Route
       # Initialize edges
       for edge in treeData.edges
         sourceNode = @findNodeInList(tree.nodes, edge.source)
-        targetNode  = @findNodeInList(tree.nodes, edge.target)
+        targetNode = @findNodeInList(tree.nodes, edge.target)
         sourceNode.appendNext(targetNode)
         targetNode.appendNext(sourceNode)
       # Set active Node
@@ -105,6 +102,20 @@ class Route
     tracingType = data.tracingType
     if (tracingType == "Task" or tracingType == "Training") and nodeList.length == 0
       @addNode(data.editPosition)
+
+    @branchPointsAllowed = @data.settings.branchPointsAllowed
+    if not @branchPointsAllowed
+      # dirty but this actually is what needs to be done
+      TYPE_BRANCH = TYPE_USUAL
+
+      #calculate direction of first edge in nm
+      firstEdge = @data.trees[0]?.edges[0]
+      if firstEdge
+        sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, firstEdge.source).pos)
+        targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, firstEdge.target).pos)
+        @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
+                               targetNodeNm[1] - sourceNodeNm[1],
+                               targetNodeNm[2] - sourceNodeNm[2]]
 
     #@createNewTree()
     #for i in [0...10000]
@@ -198,26 +209,46 @@ class Route
 
   addNode : (position, type) ->
 
-    unless @lastRadius?
-      @lastRadius = 10 * @scaleInfo.baseVoxel
-      if @activeNode? then @lastRadius = @activeNode.radius
-    point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime())
-    @activeTree.nodes.push(point)
-    if @activeNode
-      @activeNode.appendNext(point)
-      point.appendNext(@activeNode)
-      @activeNode = point
-    else
-      @activeNode = point
-      point.type = TYPE_BRANCH
-      if @branchPointsAllowed
-        @pushBranch()
-    @lastActiveNodeId = @activeNode.id
-    @doubleBranchPop = false
+    if @ensureDirection(position)
+      unless @lastRadius?
+        @lastRadius = 10 * @scaleInfo.baseVoxel
+        if @activeNode? then @lastRadius = @activeNode.radius
+      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime())
+      @activeTree.nodes.push(point)
+      if @activeNode
+        @activeNode.appendNext(point)
+        point.appendNext(@activeNode)
+        @activeNode = point
+      else
+        @activeNode = point
+        point.type = TYPE_BRANCH
+        if @branchPointsAllowed
+          @pushBranch()
+      @lastActiveNodeId = @activeNode.id
+      @doubleBranchPop = false
 
-    @stateLogger.createNode(point, @activeTree.treeId)
-    
-    @trigger("newNode")
+      @stateLogger.createNode(point, @activeTree.treeId)
+      
+      @trigger("newNode")
+    else
+      @trigger("wrongDirection")
+
+
+  ensureDirection : (position) ->
+
+    if (!@branchPointsAllowed and @activeTree.nodes.length == 2 and
+        @firstEdgeDirection and @activeTree.treeId == @trees[0].treeId)
+      sourceNodeNm = @scaleInfo.voxelToNm(@activeTree.nodes[1].pos)
+      targetNodeNm = @scaleInfo.voxelToNm(position)
+      secondEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
+                             targetNodeNm[1] - sourceNodeNm[1],
+                             targetNodeNm[2] - sourceNodeNm[2]]
+
+      return (@firstEdgeDirection[0] * secondEdgeDirection[0] +
+              @firstEdgeDirection[1] * secondEdgeDirection[1] +
+              @firstEdgeDirection[2] * secondEdgeDirection[2] > 0)
+    else
+      true
 
 
   getActiveNode : -> @activeNode

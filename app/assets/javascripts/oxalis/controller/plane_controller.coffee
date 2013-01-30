@@ -25,6 +25,18 @@ class PlaneController
   view : null
   gui : null
 
+  input :
+    skeletonMouse : null
+    planeMouse : null
+    keyboard : null
+    keyboardNoLoop : null
+
+    unbind : ->
+      @skeletonMouse?.unbind()
+      @planeMouse?.unbind()
+      @keyboard?.unbind()
+      @keyboardNoLoop?.unbind()
+
 
   constructor : (@model, stats, @gui ) ->
 
@@ -41,7 +53,7 @@ class PlaneController
     @prevControls = $('#prevControls')
     @prevControls.addClass("btn-group")
 
-    @buttons = [
+    buttons = [
         name : "3D View"
         callback : @cameraController.changePrevSV
       ,
@@ -58,11 +70,12 @@ class PlaneController
         color : "#0f0"
     ]
 
-    for button in @buttons
+    for button in buttons
 
       button.control = @prevControls.append(
         $("<button>", type : "button", class : "btn btn-small")
           .html("#{if button.color then "<span style=\"background: #{button.color}\"></span>" else ""}#{button.name}")
+          .on("click", button.callback)
       )    
 
     @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
@@ -86,6 +99,7 @@ class PlaneController
     @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
     @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
 
+    @initMouse()
     @bind()
     @start()
 
@@ -98,7 +112,7 @@ class PlaneController
       return
 
     for planeId in ["xy", "yz", "xz"]
-      @bindings.push new Input.Mouse($("#plane#{planeId}"),
+      @input.planeMouse = new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
@@ -111,7 +125,7 @@ class PlaneController
         rightClick : @setWaypoint
       )
 
-    @bindings.push new Input.Mouse($("#skeletonview"),
+    @input.skeletonMouse = new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
         @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
         @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
@@ -127,7 +141,7 @@ class PlaneController
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-    @bindings.push new Input.Keyboard(
+    @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
       "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
@@ -145,7 +159,7 @@ class PlaneController
       #"ctr + s"       : => @model.route.pushImpl()
     )
     
-    @bindings.push new Input.KeyboardNoLoop(
+    @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
       #View     
       "1" : =>
@@ -185,24 +199,19 @@ class PlaneController
 
   start : ->
 
-    @initMouse()
     @initKeyboard()
     @view.start()
 
 
   stop : ->
 
-    for binding in @bindings
-      binding.unbind()
+    @input.unbind()
     @view.stop()
 
 
   bind : ->
 
     @view.bind()
-
-    @initMouse()
-    @initKeyboard()
 
     @view.on
       render : => @render()
@@ -216,9 +225,6 @@ class PlaneController
         for geometry in list
           @view.removeGeometry(geometry)    
 
-    for button in @buttons
-      button.control.on("click", button.callback)  
- 
 
   render : ->
 
@@ -325,13 +331,13 @@ class PlaneController
     
     # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()
-    ray = projector.pickingRay(vector, camera)
-    ray.threshold = @flycam.getRayThreshold(plane)
+    raycaster = projector.pickingRay(vector, camera)
+    raycaster.ray.threshold = @flycam.getRayThreshold(plane)
 
-    ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
+    raycaster.ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
  
     # identify clicked object
-    intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
+    intersects = raycaster.intersectObjects(@sceneController.skeleton.nodes)
     #if intersects.length > 0 and intersects[0].distance >= 0
     for intersect in intersects
       

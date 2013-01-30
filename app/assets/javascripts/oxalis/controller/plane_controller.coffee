@@ -53,7 +53,7 @@ class PlaneController
     @prevControls = $('#prevControls')
     @prevControls.addClass("btn-group")
 
-    @buttons = [
+    buttons = [
         name : "3D View"
         callback : @cameraController.changePrevSV
       ,
@@ -70,11 +70,12 @@ class PlaneController
         color : "#0f0"
     ]
 
-    for button in @buttons
+    for button in buttons
 
       button.control = @prevControls.append(
         $("<button>", type : "button", class : "btn btn-small")
           .html("#{if button.color then "<span style=\"background: #{button.color}\"></span>" else ""}#{button.name}")
+          .on("click", button.callback)
       )    
 
     @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
@@ -224,9 +225,6 @@ class PlaneController
         for geometry in list
           @view.removeGeometry(geometry)    
 
-    for button in @buttons
-      button.control.on("click", button.callback)  
- 
 
   render : ->
 

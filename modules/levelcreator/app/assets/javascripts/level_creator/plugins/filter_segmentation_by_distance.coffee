@@ -14,6 +14,14 @@ class FilterSegmentationByDistance
       dimensions : '[]'
     distance : 'int'
     mode : '\"<\", \"<=\", \">\", \"=>\"' # e.g. '<='
+  EXAMPLES : [
+      { description : "Displaying cells near the middle", lines :
+        [ "time(start: 0, end : 10) ->"
+          "  importSlides(start:0, end: 10)"
+          "  filterSegmentationByDistance(distance: 100, mode: \"<\")"
+        ]
+      }
+    ]
 
 
   constructor : () ->

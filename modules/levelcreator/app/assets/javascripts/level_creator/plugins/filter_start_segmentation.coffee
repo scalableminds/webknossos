@@ -2,7 +2,7 @@
 
 class FilterStartSegmentation
 
-  PUBLIC : true
+  PUBLIC : false
   COMMAND : "filterStartSegmentation()"
   FRIENDLY_NAME : "Filter Start Segmentation"
   DESCRIPTION : "Returns the start segmentation or filters it"  

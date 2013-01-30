@@ -2,7 +2,7 @@
 
 class FilterProbabilitySegmentation
 
-  PUBLIC : true
+  PUBLIC : false
   COMMAND : "filterProbabilitySegmentation()"
   FRIENDLY_NAME : "Filter Probability/End Segmentation"
   DESCRIPTION : "Returns all probablilty segmentation or filters it"

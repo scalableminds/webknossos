@@ -215,6 +215,13 @@ class Flycam3d
     [ matrix[8], matrix[9], matrix[10] ]
 
 
+  setDirection : (d) ->
+
+    matrix = @currentMatrix
+    matrix[8] = d[0]
+    matrix[9] = d[1]
+    matrix[10] = d[2]
+
   getUp : ->
 
     matrix = @currentMatrix

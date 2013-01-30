@@ -18,6 +18,9 @@ class VolumeCell
     return layer
 
   getLayer : (planeId, thirdDimensionValue) ->
+
+    thirdDimensionValue = Dimensions.round(thirdDimensionValue)
+
     for layer in @layers
       if layer.plane == planeId and layer.thirdDimensionValue == thirdDimensionValue
         return layer

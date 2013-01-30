@@ -33,13 +33,15 @@ class VolumeTracing
     # just for testing
     unless @currentCell?
       @createCell(1)
-    pos = @flycam.getGlobalPos()
+    pos = Dimensions.roundCoordinate(@flycam.getGlobalPos())
     thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
     @currentLayer = @currentCell.createLayer(planeId, thirdDimValue)
     if @currentLayer?
       @trigger "newLayer"
 
   addToLayer : (pos) ->
+
+    pos = Dimensions.roundCoordinate(pos)
     unless @currentLayer?
       return
     unless @startPos?
@@ -84,7 +86,9 @@ class VolumeTracing
 
     res = []
     for i in [0..Math.floor(pieces)]
-      res.push([posSource[0] + i * diff[0],
-                posSource[1] + i * diff[1],
-                posSource[2] + i * diff[2]])
+      res.push(Dimensions.roundCoordinate([
+                  posSource[0] + i * diff[0],
+                  posSource[1] + i * diff[1],
+                  posSource[2] + i * diff[2]
+                  ]))
     return res.concat([posTarget])

@@ -48,13 +48,18 @@ class CellGeometry
       @createMeshes()
 
     update : (pos) ->
+
       layer = @cell.getLayer(@planeId, pos[@thirdDimension])
+
       if not layer? or layer.id != @id
+        
         @reset()
         if layer?
           @id = layer.id
+
           for vertex in layer.contourList
             @addEdgePoint(vertex)
+        
         else
           @id = null
 
@@ -77,9 +82,14 @@ class CellGeometry
 
     addEdgePoint : (pos) ->
 
+      # pos might be integer, but the third dimension needs to be exact.
+      globalPos = @model.flycam.getGlobalPos()
+      edgePoint = pos.slice()
+      edgePoint[@thirdDimension] = globalPos[@thirdDimension]
+
       if @curIndex < MAX_EDGE_POINTS
 
-        @edgeBuffer.set(pos, @curIndex * 3)
+        @edgeBuffer.set(edgePoint, @curIndex * 3)
         @edge.geometry.__vertexArray = @edgeBuffer
         @edge.geometry.__webglLineCount = @curIndex + 1
         @edge.geometry.verticesNeedUpdate = true

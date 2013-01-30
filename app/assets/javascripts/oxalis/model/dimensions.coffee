@@ -32,3 +32,13 @@ Dimensions =
       when @PLANE_XY then 2
       when @PLANE_YZ then 0
       when @PLANE_XZ then 1
+
+  # Floor number, as done at texture rendering
+  round : (number) ->
+    return ~~number
+
+  roundCoordinate : (coordinate) ->
+    res = coordinate.slice()
+    for i in [0...res.length]
+      res[i] = @round(res[i])
+    return res

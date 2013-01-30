@@ -267,9 +267,6 @@ class Controller
   moveX : (x) => @move([x, 0, 0])
   moveY : (y) => @move([0, y, 0])
   moveZ : (z, first) =>
-    if @mode == MODE_VOLUME
-      @cameraController.setRouteClippingDistance(1)
-      @sceneController.setRouteClippingDistance(1)
     if(first)
       activePlane = @flycam.getActivePlane()
       @flycam.move(Dimensions.transDim(

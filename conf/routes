@@ -43,7 +43,6 @@ GET      /tracing/:tracingId                       controllers.TracingController
 PUT      /tracing/:tracingId                       controllers.TracingController.update( tracingId: String, version: Int )
 GET      /tracing/:tracingId/finishAndRedirect     controllers.TracingController.finishWithRedirect( tracingId: String )
 GET      /tracing/:tracingId/finish                controllers.TracingController.finish( tracingId: String, explorational: Boolean = false )
-GET      /tracing/:tracingId/cancel                controllers.TracingController.cancel( tracingId: String )
 GET      /tracing/:tracingId/finishExperimental    controllers.TracingController.finish( tracingId: String, explorational: Boolean = true )
 
 
@@ -74,6 +73,7 @@ POST     /admin/tasks/createBulk                   controllers.admin.TaskAdminis
 POST     /admin/tasks/createFromNML                controllers.admin.TaskAdministration.createFromNML
 POST     /admin/tasks/createFromForm               controllers.admin.TaskAdministration.createFromForm
 GET      /admin/tasks/overview                     controllers.admin.TaskAdministration.overview
+GET      /admin/tracings/:tracingId/cancel         controllers.admin.TaskAdministration.cancelTracing( tracingId: String )
 
 GET      /admin/trainingsTasks                     controllers.admin.TrainingsTaskAdministration.list
 GET      /admin/trainingsTasks/create              controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")

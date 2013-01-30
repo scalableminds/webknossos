@@ -85,6 +85,19 @@ object TaskAdministration extends Controller with Secured {
       JsonOk(Messages("task.removed"))
     }
   }
+  
+  def cancelTracing(tracingId: String) = Authenticated { implicit request =>
+    for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+    } yield {
+      UsedTracings.removeAll(tracing)
+      tracing match {
+        case t if t.tracingType == TracingType.Task =>
+          tracing.update(_.cancel)
+          JsonOk(Messages("task.cancelled"))
+      }
+    }
+  }
 
   def createFromForm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(

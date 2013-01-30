@@ -41,7 +41,12 @@
             <td> @tracing.user.map(_.name).getOrElse("<deleted>") </td>
             <td> @formatDate(tracing.date) </td>
             <td> @if(tracing.state.isFinished){ <i class="icon-ok-circle"></i> Finished } else { <i class="icon-random"></i> In Progress } </td>
-            <td> <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download NML </a></th>
+            <td> 
+              <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download NML </a><br />
+              @if(!tracing.state.isFinished){ 
+                <a href="@controllers.admin.routes.TaskAdministration.cancelTracing(tracing.id)" data-ajax="delete-row,confirm"><i class="icon-remove"></i> cancel</a><br/>
+              }
+            </td>
           </tr>
         }
       </tbody>

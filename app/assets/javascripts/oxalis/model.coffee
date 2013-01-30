@@ -45,6 +45,7 @@ class Model
               @flycam3d = new Flycam3d(DISTANCE_3D)
               @route = new Route(tracing.tracing, @scaleInfo, @flycam)
               @user = new User(user)
-
+              
+              tracing.tracing.settings
             -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
           )

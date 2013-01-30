@@ -103,7 +103,7 @@ class View
     $(window).resize( => @.resize() )
 
     @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))    
+      Toast.error("No more branchpoints", false))
 
     @model.route.on({
       newActiveNode        : => @drawTree(),
@@ -338,17 +338,11 @@ class View
     @abstractTreeViewer.on
       nodeClick : (id) => @trigger("abstractTreeClick", id)
 
-    @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false)) 
-
 
   unbind : ->
 
     @abstractTreeViewer.off
       nodeClick : (id) => @trigger("abstractTreeClick", id)
-
-    @model.route.off("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))     
 
     
   stop : ->

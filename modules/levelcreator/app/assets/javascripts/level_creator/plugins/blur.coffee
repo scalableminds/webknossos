@@ -4,12 +4,22 @@
 
 class Blur
 
+  PUBLIC : true
+  COMMAND : "blur()"
+  FRIENDLY_NAME : "Blur"
   DESCRIPTION : "Blurs the input image with gussian blur."
-
   PARAMETER :
     input :
       rgba: "Uint8Array"
-    radius: "integer"
+    radius: "0.0 - 10.0"
+  EXAMPLES : [
+      { description : "blurs the whole slide", lines :
+        [ "time(start: 0, end : 10) ->"
+          "  importSlides(start:0, end: 10)"
+          "  blur(radius : 2)"
+        ]
+      }
+    ]
 
 
   kernel : null

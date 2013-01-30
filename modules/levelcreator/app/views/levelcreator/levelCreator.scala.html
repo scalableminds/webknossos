@@ -2,72 +2,89 @@
 
 @main(){
 
-  <div class="container" id="level-creator" data-level-id="@level.id" data-level-task-id="@missionId" data-level-width="@level.width" data-level-height="@level.height" data-level-depth="@level.depth">
+  <div class="container-fluid" id="level-creator" data-level-id="@level.id" data-level-task-id="@missionId" data-level-width="@level.width" data-level-height="@level.height" data-level-depth="@level.depth">
 
-    <h3>Preview - @level.name</h3>
-    <div class="row">
-      <div class="span10">
-        <div class="well" id="preview">
-          <p id="preview-error"></p>
-          <canvas id="preview-canvas" width="250" height="150"></canvas>
+    <div class="row-fluid">
+
+      <!--Sidebar content-->
+      <div class="span4">
+        <h3>Plugins</h3>
+
+        <div class="accordion" id="plugins">
+
         </div>
-        <input id="preview-slider" type="range" value="0" step=".5"></input>
-      </div>
 
-      <div class="span2">
-        <h5>Zoom</h5>
-        <p>
-          <input type="range" min="0.2" max="5" step=".1" value="1" id="zoom-slider"/>
-          <button class="btn btn-small" id="zoom-reset">Reset</button>
-        </p>
-      </div>
-    </div>
+      </div>      
 
+      <!--Body content-->
+      <div class="span8">
+        <h3>Preview - @level.name</h3>
+        <div class="row">
+          <div class="span10">
+            <div class="well" id="preview">
+              <p id="preview-error"></p>
+              <canvas id="preview-canvas" width="250" height="150"></canvas>
+            </div>
+            <input id="preview-slider" type="range" value="0" step=".5"></input>
+          </div>
 
-    <div class="row">
-
-      <div class="span8" id="editor-container">
-        <h3>Editor</h3>
-        @helper.form(action = controllers.levelcreator.routes.LevelCreator.submitCode(level.id)) {
-
-        <input type="submit" value="Save" class="btn btn-primary"/>
-        <input type="hidden" name="code" />
-        <input type="hidden" name="use" value="1" />
-
-        <div class="editor-wrapper">
-          <div id="editor">@level.code</div>
+          <div class="span2">
+            <h5>Zoom</h5>
+            <p>
+              <input type="range" min="0.2" max="5" step=".1" value="1" id="zoom-slider"/>
+              <button class="btn btn-small" id="zoom-reset">Reset</button>
+            </p>
+          </div>
         </div>
-        }
-
-      </div>
 
 
-      <div class="span4" id="assets">
-        <h3>Assets</h3>
-        <div>
-          <form id="assets-upload" action="@controllers.levelcreator.routes.LevelCreator.uploadAsset(level.id)" method="POST" enctype="multipart/form-data">
-            <button type="submit" class="btn btn-success">
-              <i class="icon-plus icon-white"></i> Add files...
-            </button>
-          </form>
-        </div>
-        <table class="table table-striped">
-          <tbody>
-            @level.assets.map{ file =>
-              <tr>
-                <td>@file.getName</td>
-                <td>
-                  <a href="@controllers.levelcreator.routes.LevelCreator.deleteAsset(level.id, file.getName)" data-ajax="confirm,delete-row">
-                    <i class="icon-trash"></i>
-                  </a>
-                </td>
-              </tr>
+        <div class="row">
+
+          <div class="span8" id="editor-container">
+            <h3>Editor</h3>
+            @helper.form(action = controllers.levelcreator.routes.LevelCreator.submitCode(level.id)) {
+
+            <input type="submit" value="Save" class="btn btn-primary"/>
+            <input type="hidden" name="code" />
+            <input type="hidden" name="use" value="1" />
+
+            <div class="editor-wrapper">
+              <div id="editor">@level.code</div>
+            </div>
             }
-          </tbody>
-        </table>
-      </div>
 
-    </div>
+          </div>
+
+
+          <div class="span4" id="assets">
+            <h3>Assets</h3>
+            <div>
+              <form id="assets-upload" action="@controllers.levelcreator.routes.LevelCreator.uploadAsset(level.id)" method="POST" enctype="multipart/form-data">
+                <button type="submit" class="btn btn-success">
+                  <i class="icon-plus icon-white"></i> Add files...
+                </button>
+              </form>
+            </div>
+            <table class="table table-striped">
+              <tbody>
+                @level.assets.map{ file =>
+                  <tr>
+                    <td>@file.getName</td>
+                    <td>
+                      <a href="@controllers.levelcreator.routes.LevelCreator.deleteAsset(level.id, file.getName)" data-ajax="confirm,delete-row">
+                        <i class="icon-trash"></i>
+                      </a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </div>
+    </diV>  
 
   </div>
 }

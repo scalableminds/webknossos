@@ -25,6 +25,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 
 object ArbitraryBinaryData extends Controller {
   val dataRequestActor = Akka.system.actorOf(Props(new DataRequestActor), name = "dataRequestActor") //.withRouter(new RoundRobinRouter(3)))
+
   val conf = Play.current.configuration
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 

@@ -5,8 +5,10 @@
 
 class Cloudify
 
+  PUBLIC : true
+  COMMAND : "cloudify()"
+  FRIENDLY_NAME : "Cloudify"  
   DESCRIPTION : "Makes colored clouds out of the given input"
-
   PARAMETER :
     input :
       rgba: "Uint8Array"

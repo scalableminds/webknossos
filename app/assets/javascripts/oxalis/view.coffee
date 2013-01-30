@@ -105,6 +105,9 @@ class View
     @model.route.on("emptyBranchStack", =>
       Toast.error("No more branchpoints", false))
 
+    @model.route.on("noBranchPoints", =>
+      Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false))
+
     @model.route.on({
       newActiveNode        : => @drawTree(),
       newActiveTree        : => @drawTree(),

@@ -28,8 +28,13 @@
 <tr>
   <td> @formatHash(task.id) </td>
   @defining(task.taskType){ taskType =>
-  <td> @taskType.map(_.summary).getOrElse("<deleted>") - @tracing.tracingType</td>
-  <td> @taskType.map(_.description).getOrElse("") </td>
+    <td> @taskType.map(_.summary).getOrElse("<deleted>") - @tracing.tracingType</td>
+    <td> @taskType.map(_.description).getOrElse("") </td>
+    <td>
+      @taskType.toList.flatMap(_.tracingSettings.allowedModes).map{ mode =>
+        <span class="label"> @mode.capitalize </span>
+      }
+    </td>
   }
   <td> 
     @tracing.state match{

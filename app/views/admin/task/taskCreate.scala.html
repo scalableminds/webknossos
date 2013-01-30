@@ -25,7 +25,7 @@
         @helper.inputText(nmlForm("experience.value"), 'type -> "number")
 
         @helper.inputText(nmlForm("priority"), 'type -> "number")
-        @helper.inputText(nmlForm("taskInstances"), 'type -> "number", 'min -> 0)
+        @helper.inputText(nmlForm("taskInstances"), 'type -> "number", 'min -> 1)
         @helper.inputText(nmlForm("project"))
 
         <div class="control-group">
@@ -62,7 +62,7 @@
         @helper.inputText(taskForm("start.point"), 'type -> "text")
 
         @helper.inputText(taskForm("priority"), 'type -> "number")
-        @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 0)
+        @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 1)
         @helper.inputText(taskForm("project"))
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>

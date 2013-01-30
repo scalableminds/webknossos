@@ -31,7 +31,7 @@ class Route
 
 
 
-  constructor : (@data, @scaleInfo, @flycam) ->
+  constructor : (@data, @scaleInfo, @flycam, @flycam3d) ->
 
     _.extend(this, new EventMixin())
 
@@ -116,6 +116,9 @@ class Route
         @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
                                targetNodeNm[1] - sourceNodeNm[1],
                                targetNodeNm[2] - sourceNodeNm[2]]
+
+        @flycam.setSpaceDirection(@firstEdgeDirection)
+        @flycam3d.setDirection(V3.normalize(@firstEdgeDirection))
 
     #@createNewTree()
     #for i in [0...10000]

@@ -140,7 +140,7 @@ class Route
 
         @trigger("setBranch", true)
     else
-      Toast.Error("Setting branchpoints isn't necessary in this tracing mode.", false)
+      @trigger("noBranchPoints")
 
 
   popBranch : ->
@@ -172,7 +172,7 @@ class Route
           deferred.reject()
       deferred
     else
-      Toast.Error("Setting branchpoints isn't necessary in this tracing mode.", false)
+      @trigger("noBranchPoints")
       deferred.reject()
 
   deleteBranch : (nodeID) ->
@@ -210,7 +210,8 @@ class Route
     else
       @activeNode = point
       point.type = TYPE_BRANCH
-      @pushBranch()
+      if @branchPointsAllowed
+        @pushBranch()
     @lastActiveNodeId = @activeNode.id
     @doubleBranchPop = false
 

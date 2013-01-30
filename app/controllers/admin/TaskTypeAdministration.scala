@@ -20,6 +20,7 @@ object TaskTypeAdministration extends Controller with Secured {
       "summary" -> nonEmptyText(2, 50),
       "description" -> text,
       "allowedModes" -> seq(text),
+      "branchPointsAllowed" -> boolean,
       "expectedTime" -> mapping(
         "minTime" -> number,
         "maxTime" -> number,

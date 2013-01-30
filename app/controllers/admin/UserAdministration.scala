@@ -15,6 +15,7 @@ import views.html
 import net.liftweb.common._
 import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
+import models.tracing.Tracing
 
 object UserAdministration extends Controller with Secured {
 
@@ -78,6 +79,7 @@ object UserAdministration extends Controller with Secured {
       user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
       User.remove(user)
+      Tracing.freeTacingsOfUser(user._id)
       user
     }
   }

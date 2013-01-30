@@ -239,7 +239,7 @@ class Skeleton
     return [@activeNodeParticle].concat(@nodes).concat(@nodesSpheres).concat(@routes).concat(@branches)
 
   setWaypoint : =>
-    curGlobalPos = @flycam.getGlobalPos()
+    curGlobalPos = @flycam.getPosition()
     activePlane  = @flycam.getActivePlane()
     position     = @route.getActiveNodePos()
     id           = @route.getActiveNodeId()
@@ -274,7 +274,7 @@ class Skeleton
     @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
     @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 100)
     @waypointAnimation.onUpdate ->
-      @flycam.setGlobalPos [@globalPosX, @globalPosY, @globalPosZ]
+      @flycam.setPosition [@globalPosX, @globalPosY, @globalPosZ]
     @waypointAnimation.start()
   
     @setActiveNode()

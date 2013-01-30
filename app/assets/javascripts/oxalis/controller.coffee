@@ -1,35 +1,42 @@
 ### define
 jquery : $
 underscore : _
-./controller/controller2d : Controller2d
-./controller/controller3d : Controller3d
+./controller/plane_controller : PlaneController
+./controller/arbitrary_controller : ArbitraryController
+./controller/abstract_tree_controller : AbstractTreeController
 ./model : Model
+./view : View
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
+./view/gui : Gui
 ../libs/toast : Toast
 ###
 
-TYPE_USUAL        = 0
-TYPE_BRANCH       = 1
-VIEWPORT_WIDTH    = 380
-WIDTH             = 384
-TEXTURE_SIZE      = 512
-TEXTURE_SIZE_P    = 9
-DISTANCE_3D       = 140
+VIEWPORT_WIDTH   = 380
+TEXTURE_SIZE_P   = 9
+DISTANCE_3D      = 140
+
 ALLOWED_OXALIS    = MODE_OXALIS    = 0
 ALLOWED_ARBITRARY = MODE_ARBITRARY = 1
 
 
 class Controller
 
+  mode : null
+  view : null
+  planeController : null
+  arbitraryController : null
+  abstractTreeController : null
   allowedModes : []
   mode : MODE_OXALIS
-
+  
 
   constructor : ->
 
     _.extend(@, new EventMixin())
+
     @fullScreen = false
+    @mode = MODE_OXALIS
 
     @model = new Model()
 
@@ -45,19 +52,22 @@ class Controller
       stats.getDomElement().id = "stats"
       $("body").append stats.getDomElement() 
 
-      @controller2d = new Controller2d(@model, stats)
-      @controller2d.bind()
-      @controller2d.start()
-      @controller3d = new Controller3d(@model, stats)
+      @view = new View()
 
+      @gui = @createGui()
+
+      @planeController = new PlaneController(@model, stats, @gui)
+
+      @arbitraryController = new ArbitraryController(@model, stats)
+
+      @abstractTreeController = new AbstractTreeController(@model)      
 
       @initMouse()
       @initKeyboard()
 
-
       if ALLOWED_OXALIS not in @allowedModes
         if ALLOWED_ARBITRARY in @allowedModes
-          @switch()
+          @toggleArbitraryView()
         else
           Toast.error("There was no valid allowed tracing mode specified.")
 
@@ -79,36 +89,99 @@ class Controller
 
     new Input.KeyboardNoLoop(
 
-      #ScaleTrianglesPlane
-      "m" : => @switch()
-      "esc" : => @leave3d()
+      #View
+      "t" : => 
+        @view.toggleTheme()       
+        @abstractTreeController.drawTree()
+      "q" : => @toggleFullScreen()
+
+      #Delete active node
+      "delete" : => @deleteActiveNode()
+
+      "c" : => @createNewTree()
+
+
+      #Activate ArbitraryView
+      "m" : => @toggleArbitraryView()
     )
 
 
-  switch : ->
+  toggleArbitraryView : ->
     
     if @mode is MODE_OXALIS and ALLOWED_ARBITRARY in @allowedModes
-      @controller2d.unbind()
-      @controller2d.stop() 
-      @initKeyboard()     
-
-      @controller3d.bind()
-      @controller3d.cam.setPos(@controller2d.flycam.getGlobalPos())
-      @controller3d.show()
+      @planeController.stop()
+      @arbitraryController.start()
       @mode = MODE_ARBITRARY
     else if @mode is MODE_ARBITRARY and ALLOWED_OXALIS in @allowedModes
-      @controller3d.unbind()
-      @controller3d.hide()      
-      @initKeyboard()
-
-
-      @controller2d.bind()
-      @controller2d.flycam.setGlobalPos(@controller3d.cam.getPosition())
-      @controller2d.start()
+      @arbitraryController.stop()
+      @planeController.start()
       @mode = MODE_OXALIS
 
 
-  leave3d : ->
+  toggleFullScreen : ->
 
-    if @mode isnt MODE_OXALIS
-      @switch()
+    if @fullScreen
+      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
+      @fullScreen = false
+      if cancelFullscreen
+        cancelFullscreen.call(document)
+    else
+      body = $("body")[0]
+      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
+      @fullScreen = true
+      if requestFullscreen
+        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
+
+
+  createGui : ->
+
+    { model } = @
+
+    gui = new Gui($("#optionswindow"), model)
+    gui.update()  
+
+    model.binary.queue.set4Bit(model.user.fourBit)
+    model.binary.updateLookupTable(gui.settings.brightness, gui.settings.contrast)
+
+    gui.on
+      deleteActiveNode : @deleteActiveNode
+      createNewTree : @createNewTree
+      setActiveTree : (id) => @setActiveTree(id)
+      setActiveNode : (id) => @setActiveNode(id, false) # not centered
+      deleteActiveTree : @deleteActiveTree
+
+    gui
+
+
+  deleteActiveNode : ->
+
+    @model.route.deleteActiveNode()    
+
+
+  createNewTree : ->
+
+    @model.route.createNewTree()
+
+
+  setActiveTree : (treeId) ->
+
+    @model.route.setActiveTree(treeId)
+
+
+  setActiveNode : (nodeId, centered, mergeTree) ->
+
+    @model.route.setActiveNode(nodeId, mergeTree)
+    if centered
+      @centerActiveNode()
+
+
+  centerActiveNode : ->
+
+    position = @model.route.getActiveNodePos()
+    if position
+      @model.flycam.setPosition(position)
+
+
+  deleteActiveTree : ->
+
+    @model.route.deleteTree(true)

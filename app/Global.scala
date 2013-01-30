@@ -33,7 +33,8 @@ object Global extends GlobalSettings {
     name = "directoryWatcher")
 
   override def onStart(app: Application) {
-    implicit val timeout = Timeout(20 seconds)
+    val conf = Play.current.configuration
+    implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5))
     if (Play.current.mode == Mode.Dev) {
       InitialData.insertRoles
       InitialData.insertUsers

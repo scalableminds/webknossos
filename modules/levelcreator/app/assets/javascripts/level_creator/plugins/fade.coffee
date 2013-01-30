@@ -5,15 +5,17 @@
 
 class Fade
 
+  PUBLIC : true
+  COMMAND : "fade()"
+  FRIENDLY_NAME : "Fade"  
   DESCRIPTION : "Fades the input rgba in or out"
-
   PARAMETER :
     input :
       rgba: "Uint8Array"
       absoluteTime: "int"
     start: "int"
     end: "int"
-    mode: "string" # in or out
+    mode: "\"in\", \"out\""
 
 
   constructor : ->

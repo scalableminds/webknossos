@@ -108,6 +108,9 @@ class View
     @model.route.on("noBranchPoints", =>
       Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false))
 
+    @model.route.on("wrongDirection", =>
+      Toast.error("You are tracing into the wrong direction"))
+
     @model.route.on({
       newActiveNode        : => @drawTree(),
       newActiveTree        : => @drawTree(),

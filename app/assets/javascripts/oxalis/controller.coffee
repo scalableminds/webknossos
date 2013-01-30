@@ -9,14 +9,15 @@ underscore : _
 ../libs/event_mixin : EventMixin
 ../libs/input : Input
 ./view/gui : Gui
+../libs/toast : Toast
 ###
 
 VIEWPORT_WIDTH   = 380
 TEXTURE_SIZE_P   = 9
 DISTANCE_3D      = 140
 
-MODE_2D          = 0
-MODE_3D          = 1
+ALLOWED_OXALIS    = MODE_OXALIS    = 0
+ALLOWED_ARBITRARY = MODE_ARBITRARY = 1
 
 
 class Controller
@@ -26,6 +27,8 @@ class Controller
   planeController : null
   arbitraryController : null
   abstractTreeController : null
+  allowedModes : []
+  mode : MODE_OXALIS
   
 
   constructor : ->
@@ -33,11 +36,16 @@ class Controller
     _.extend(@, new EventMixin())
 
     @fullScreen = false
-    @mode = MODE_2D
+    @mode = MODE_OXALIS
 
     @model = new Model()
 
-    @model.initialize(TEXTURE_SIZE_P, VIEWPORT_WIDTH, DISTANCE_3D).done =>
+    @model.initialize(TEXTURE_SIZE_P, VIEWPORT_WIDTH, DISTANCE_3D).done (settings) =>
+
+      for allowedMode in settings.allowedModes
+        @allowedModes.push switch allowedMode
+          when "oxalis" then ALLOWED_OXALIS
+          when "arbitrary" then ALLOWED_ARBITRARY
 
       # FPS stats
       stats = new Stats()
@@ -56,6 +64,12 @@ class Controller
 
       @initMouse()
       @initKeyboard()
+
+      if ALLOWED_OXALIS not in @allowedModes
+        if ALLOWED_ARBITRARY in @allowedModes
+          @toggleArbitraryView()
+        else
+          Toast.error("There was no valid allowed tracing mode specified.")
 
 
   initMouse : ->
@@ -94,14 +108,14 @@ class Controller
 
   toggleArbitraryView : ->
     
-    if @mode is MODE_2D
+    if @mode is MODE_OXALIS and ALLOWED_ARBITRARY in @allowedModes
       @planeController.stop()
       @arbitraryController.start()
-      @mode = MODE_3D
-    else
+      @mode = MODE_ARBITRARY
+    else if @mode is MODE_ARBITRARY and ALLOWED_OXALIS in @allowedModes
       @arbitraryController.stop()
       @planeController.start()
-      @mode = MODE_2D
+      @mode = MODE_OXALIS
 
 
   toggleFullScreen : ->
@@ -171,4 +185,3 @@ class Controller
   deleteActiveTree : ->
 
     @model.route.deleteTree(true)
-

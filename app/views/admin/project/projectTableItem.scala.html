@@ -1,0 +1,51 @@
+@(project: models.task.Project)
+
+
+<tr id="@project.name">
+  <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+  <td> @project.name </td>
+  <td> @project.owner.map(_.name).getOrElse("<deleted>") </td>
+  <td>  
+    <a href="@controllers.admin.routes.ProjectAdministration.delete(project.name)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
+    <a href="@controllers.admin.routes.NMLIO.projectDownload(project.name)"><i class="icon-download"></i> download finished tracings</a>
+  </td>
+</tr>
+<tr class="details-row" >
+  <td colspan="12">
+    <table class="table table-condensed table-nohead">
+      <tbody>
+        @project.tasks.map{ task =>
+          <tr>
+            <td> 
+              <a href="@controllers.admin.routes.TaskAdministration.list#@task.id">
+                @formatHash(task.id)
+              </a>
+            </td>
+            <td>
+              <a href="@controllers.admin.routes.TaskTypeAdministration.list#@task.taskType.map(_.id)">
+                @task.taskType.map(_.summary)
+              </a>
+            </td>
+            <td>
+              @task.tracingBase.map(_.dataSetName)
+            </td>
+            <td> @defining(task.status){ status =>
+                <span title="Unassigned"> 
+                  <i class="icon-play-circle"></i> @status.open open
+                </span>
+                |
+                <span title="in Progress"> 
+                  <i class="icon-random"></i> @status.inProgress active
+                </span>
+                |
+                <span title="Completed">
+                  <i class="icon-ok-circle"></i> @status.completed done
+                </span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </td>
+</tr>

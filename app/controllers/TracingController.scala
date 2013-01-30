@@ -33,6 +33,7 @@ import play.api.i18n.Messages
 import models.tracing.UsedTracings
 import net.liftweb.common._
 import braingames.mvc.Controller
+import models.tracing.TracingType
 
 object TracingController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -59,22 +60,6 @@ object TracingController extends Controller with Secured {
       "tracing" -> tracing)
   }
 
-  def createTracingsList(user: User) = {
-    Tracing.findFor(user).map { tracing =>
-      Json.obj(
-        "name" -> (tracing.dataSetName + "  " + formatDate(tracing.date)),
-        "id" -> tracing.id,
-        "isNew" -> false)
-    }
-  }
-
-  def createNewTracingList() = {
-    DataSet.findAll.map(d => Json.obj(
-      "name" -> ("New on " + d.name),
-      "id" -> d.id,
-      "isNew" -> true))
-  }
-
   def createExplorational = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     for {
       dataSetId <- postParameter("dataSetId") ?~ Messages("dataSet.notSupplied")
@@ -84,10 +69,6 @@ object TracingController extends Controller with Secured {
       UsedTracings.use(request.user, tracing)
       Redirect(routes.Game.index)
     }
-  }
-
-  def list = Authenticated { implicit request =>
-    Ok(Json.toJson(createNewTracingList ++ createTracingsList(request.user)))
   }
 
   def info(tracingId: String) = Authenticated { implicit request =>
@@ -131,9 +112,9 @@ object TracingController extends Controller with Secured {
     } yield {
       UsedTracings.removeAll(tracing)
       tracing match {
-        case tracing if tracing.taskId.isEmpty =>
+        case tracing if tracing._task.isEmpty =>
           tracing.update(_.finish) -> Messages("tracing.finished")
-        case tracing if tracing.isTrainingsTracing =>
+        case tracing if Task.isTrainingsTracing(tracing) =>
           tracing.update(_.passToReview) -> Messages("task.passedToReview")
         case _ =>
           tracing.update(_.finish) -> Messages("task.finished")
@@ -148,7 +129,7 @@ object TracingController extends Controller with Secured {
           JsonOk(message)
         else
           (for {
-            taskId <- tracing.taskId ?~ Messages("tracing.task.notFound")
+            taskId <- tracing._task ?~ Messages("tracing.task.notFound")
             task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
           } yield {
             JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), message)

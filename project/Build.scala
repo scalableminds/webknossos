@@ -9,10 +9,10 @@ object ApplicationBuild extends Build {
   val appVersion = "0.1"
 
   val oxalisDependencies = Seq(
-    "org.mongodb" %% "casbah-commons" % "2.5.0-SNAPSHOT",
-    "org.mongodb" %% "casbah-core" % "2.5.0-SNAPSHOT",
-    "org.mongodb" %% "casbah-query" % "2.5.0-SNAPSHOT",
-    "org.mongodb" %% "casbah-gridfs" % "2.5.0-SNAPSHOT",
+    "org.mongodb" %% "casbah-commons" % "2.5.0",
+    "org.mongodb" %% "casbah-core" % "2.5.0",
+    "org.mongodb" %% "casbah-query" % "2.5.0",
+    "org.mongodb" %% "casbah-gridfs" % "2.5.0",
     "com.novus" %% "salat-core" % "1.9.2-SNAPSHOT",
     "com.restfb" % "restfb" % "1.6.11",
     "commons-io" % "commons-io" % "1.3.2",
@@ -49,7 +49,7 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
-    offline := true,
+    //offline := true,
     playAssetsDirectories += file("data")
   )
 
@@ -73,7 +73,7 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
-    offline := true,
+    //offline := true,
     playAssetsDirectories += file("data")
   ).dependsOn(oxalis).aggregate(oxalis)
   

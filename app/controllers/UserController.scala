@@ -21,11 +21,9 @@ object UserController extends Controller with Secured {
 
   def dashboard = Authenticated { implicit request =>
     val user = request.user
-    val tracings = Tracing.findFor(user)
+    val tracings = Tracing.findFor(user).filter(t => !TracingType.isSystemTracing(t))
     val (taskTracings, allExplorationalTracings) =
-      tracings.partition(e =>
-        e.tracingType == TracingType.Task ||
-          e.tracingType == TracingType.Training)
+      tracings.partition(_.tracingType == TracingType.Task)
 
     val explorationalTracings = 
       allExplorationalTracings

@@ -28,6 +28,10 @@ body:-webkit-full-screen {
     color: #999;
 }
 
+.label {
+    margin-right: .2em;
+}
+
 .well form {
     margin-bottom: 0;
 }
@@ -87,6 +91,10 @@ body:-webkit-full-screen {
     margin-bottom: 0;
 }
 
+.table tr.highlighted > td {
+    background: #fcf8e3 !important;
+}
+
 .table-details {
 
     .details-row > td {
@@ -139,6 +147,11 @@ body:-webkit-full-screen {
     to {
         -webkit-transform: rotate(360deg);
     }
+}
+
+.icon-random {
+    width: 14px;
+    background-position: -217px -120px;
 }
 
 .inline-block {
@@ -207,12 +220,11 @@ svg a:hover {
     z-index: 10;
 }
 #arbitraryplane {
-    top: 0px;
-    left: 0px;
-    width: 100%;
-    height: 100%;
-    border-width: 0px;
-    position: absolute;  
+    width: 2*@standardViewportWidth+20px;
+    height: 2*@standardViewportWidth+20px;
+    position: absolute;
+    top: 20px;
+    left: 300px;
     z-index: 100;
 }
 #abstractTreeViewer {

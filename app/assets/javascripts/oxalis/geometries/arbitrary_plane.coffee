@@ -27,6 +27,7 @@ class ArbitraryPlane
 
   sphericalCapRadius : 0
   cam : null
+  model : null
 
   mesh : null
 
@@ -37,14 +38,20 @@ class ArbitraryPlane
   height : 0
 
 
-  constructor : (@cam, @binary, @width = 128, @height = 128) ->
+  constructor : (@cam, @model, @width = 128, @height = 128) ->
 
     @sphericalCapRadius = @cam.distance
     @queryVertices = @calculateQueryVertices()
     @mesh = @createMesh()
 
-    @cam.on "changed", => @isDirty = true
-    #@binary.on "bucketLoaded", => @isDirty = true
+    @cam.on "changed", => 
+      @isDirty = true
+
+    @model.flycam.on "positionChanged", => 
+      @isDirty = true      
+
+    @model.binary.cube.on "bucketLoaded", => 
+      @isDirty = true
 
     throw "width needs to be a power of 2" unless Math.log(width) / Math.LN2 % 1 != 1
     throw "height needs to be a power of 2" unless Math.log(height) / Math.LN2 % 1 != 1
@@ -57,20 +64,19 @@ class ArbitraryPlane
 
   update : ->
 
-    if true #@isDirty
+    if @isDirty
 
       { mesh, cam } = this
 
       matrix = @cam.getZoomedMatrix()
 
       newVertices = M4x4.transformPointsAffine matrix, @queryVertices
-      newColors = @binary.getByVerticesSync(newVertices)
+      newColors = @model.binary.getByVerticesSync(newVertices)
  
       @mesh.texture.image.data.set(newColors)
       @mesh.texture.needsUpdate = true
 
       @isDirty = false
-
 
 
   calculateQueryVertices : ->
@@ -131,67 +137,6 @@ class ArbitraryPlane
     plane = new THREE.Mesh( planeGeo, textureMaterial )
     plane.texture = texture
     plane.rotation.x = Math.PI
-    #@mesh.material.map = @mesh.texture  
-    #  @mesh.material.needsUpdate = true
-    mesh = plane
 
-    #colorCorrectionMap = THREE.ImageUtils.loadTexture("assets/textures/color_correction_map9d.png")
-
-    #shaderUniforms =
-    #  brainData : { type: "t", value: texture },
-    #  colorMap : { type: "t", value: colorCorrectionMap }
-    #  color :    { type: "c", value: new THREE.Color( 0x30D158 ) }
-
-    #@textureMaterial = new THREE.MeshBasicMaterial( wireframe: false, map: texture )
-    #textureMaterial = new THREE.MeshBasicMaterial({wireframe : false})
-    # shader idea from Nvidia:
-    # http://http.developer.nvidia.com/GPUGems/gpugems_ch22.html
-
-    vertexShader =
-      """
-      varying vec2 vUv;
-
-      void main() {
-
-        vUv = vec2( uv.x, uv.y );
-        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-
-      }"""
-
-    fragmentShader =
-    """
-      uniform sampler2D brainData;
-      uniform sampler2D colorMap;
-
-      varying vec2 vUv;
-
-      void main() {
-
-        vec4 inputColor = texture2D( brainData, vUv );
-
-        vec3 outColor;
-        outColor.r = texture2D( colorMap, vec2( inputColor.r, 1.0 ) ).r;
-        outColor.g = texture2D( colorMap, vec2( inputColor.g, 1.0 ) ).g;
-        outColor.b = texture2D( colorMap, vec2( inputColor.b, 1.0 ) ).b;
-
-        gl_FragColor = vec4( outColor.rgb, 1.0);
-      }
-      """
-
-    #basicM = new THREE.MeshBasicMaterial
-    #@shaderMaterial = new THREE.ShaderMaterial(
-    #  uniforms : shaderUniforms
-    #  vertexShader : vertexShader
-    #  fragmentShader : fragmentShader
-    #)
-    #textureMaterial.side = THREE.DoubleSide
-    #shaderMaterial.transparent = true
-    #mesh = new THREE.Mesh( plane, @shaderMaterial )
-    #mesh = new THREE.Mesh( plane, textureMaterial )
-    #mesh.rotation.y = Math.PI
-    #mesh.scale.x = mesh.scale.z = mesh.scale.y = 2
-    #mesh.texture = texture
-    #mesh.matrixAutoUpdate = false
-
-    mesh
+    plane
 

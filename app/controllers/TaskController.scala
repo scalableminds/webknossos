@@ -15,32 +15,29 @@ import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import braingames.mvc.Controller
+import models.tracing.TracingType
 
 object TaskController extends Controller with Secured {
-    override val DefaultAccessRole = Role.User
-  
-  
-  def createTracing(user: User, task: Task) = {
-    val tracing = Tracing.createTracingFor(user, task)
-    task.update(_.addTracing(tracing))
-    tracing
-  }
+  override val DefaultAccessRole = Role.User
 
   def request = Authenticated { implicit request =>
     Async {
       val user = request.user
-      if (!Tracing.hasOpenTracing(request.user, true)) {
+      if (!Tracing.hasOpenTracing(request.user, TracingType.Task)) {
         Task.nextTaskForUser(request.user).map {
           case Some(task) =>
-            val tracing = createTracing(user, task)
-            JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("task.assigned"))
-          case _ =>
-            for{
-              task <- Training.findAllFor(user).headOption ?~ Messages("task.unavailable")
+            for {
+              tracing <- Tracing.createTracingFor(user, task) ?~ Messages("tracing.creationFailed")
             } yield {
-              val tracing = createTracing(user, task)
+              JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("task.assigned"))
+            }
+          case _ =>
+            for {
+              task <- Training.findAssignableFor(user).headOption ?~ Messages("task.unavailable")
+              tracing <- Tracing.createTracingFor(user, task) ?~ Messages("tracing.creationFailed")
+            } yield {
               JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("task.training.assigned"))
-            } 
+            }
         }
       } else
         Promise.pure(JsonBadRequest(Messages("task.alreadyHasOpenOne")))

@@ -2,16 +2,18 @@
 
 class FilterProbabilitySegmentation
 
+  PUBLIC : false
+  COMMAND : "filterProbabilitySegmentation()"
+  FRIENDLY_NAME : "Filter Probability/End Segmentation"
   DESCRIPTION : "Returns all probablilty segmentation or filters it"
-
   PARAMETER : 
     input: 
       rgba: 'Uint8Array'
-      segmentation: 'Uint8Array'
+      segmentation: 'Uint16Array'
       segments: '[]'
       mission: '{}'
       dimensions : '[]'
-    mode: 'string' # e.g. "in" returns all probability segmentation, "out" returns all other segmentation
+    mode: '\"in\", \"out\"' # e.g. "in" returns all probability segmentation, "out" returns all other segmentation
 
 
   constructor : () ->

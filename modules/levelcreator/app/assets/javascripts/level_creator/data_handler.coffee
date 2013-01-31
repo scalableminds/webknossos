@@ -99,11 +99,18 @@ class DataHandler
 
   getSegmentationSlide : (t) ->
 
-    t = Math.min(Math.round(t), @depth - 1)
+    t = Math.min(t, @depth - 1)
+    delta = t - Math.floor(t)
 
     slideLength = @width * @height
 
-    new Uint8Array(
-      @data.segmentation.subarray(t * slideLength,t * slideLength)
-    )
+    if delta <= 0.5
+      segmentationData = new Uint16Array(
+        @data.segmentation.subarray(Math.floor(t) * slideLength, Math.floor(t + 1) * slideLength)
+      )
+    else
+      segmentationData = new Uint16Array(
+        @data.segmentation.subarray(Math.floor(t + 1) * slideLength, Math.floor(t + 2) * slideLength)
+      )    
 
+    segmentationData

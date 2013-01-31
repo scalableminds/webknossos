@@ -38,7 +38,7 @@ class FileDataStore extends DataStore {
    */
   def inputStreamToByteArray(is: InputStream, bytesPerElement: Int) = {
     val byteArray = new Array[Byte](DataStore.blockSize * bytesPerElement)
-    is.read(byteArray, 0, DataStore.blockSize)
+    is.read(byteArray, 0, DataStore.blockSize * bytesPerElement)
     //assert(is.skip(1) == 0, "INPUT STREAM NOT EMPTY")
     byteArray
   }

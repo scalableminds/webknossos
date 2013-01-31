@@ -9,10 +9,10 @@ object ApplicationBuild extends Build {
   val appVersion = "0.1"
 
   val oxalisDependencies = Seq(
-    "org.mongodb" %% "casbah-commons" % "2.5.0-SNAPSHOT",
-    "org.mongodb" %% "casbah-core" % "2.5.0-SNAPSHOT",
-    "org.mongodb" %% "casbah-query" % "2.5.0-SNAPSHOT",
-    "org.mongodb" %% "casbah-gridfs" % "2.5.0-SNAPSHOT",
+    "org.mongodb" %% "casbah-commons" % "2.5.0",
+    "org.mongodb" %% "casbah-core" % "2.5.0",
+    "org.mongodb" %% "casbah-query" % "2.5.0",
+    "org.mongodb" %% "casbah-gridfs" % "2.5.0",
     "com.novus" %% "salat-core" % "1.9.2-SNAPSHOT",
     "com.restfb" % "restfb" % "1.6.11",
     "commons-io" % "commons-io" % "1.3.2",
@@ -23,8 +23,8 @@ object ApplicationBuild extends Build {
     // Jira integration
     "com.sun.jersey" % "jersey-client" % "1.8",
     "com.sun.jersey" % "jersey-core" % "1.8",
-    "reactivemongo" % "reactivemongo_2.10.0" % "0.1-SNAPSHOT",
-    "org.scala-lang" % "scala-reflect" % "2.10.0-RC1")
+    "org.reactivemongo" %% "reactivemongo" % "0.8",
+    "org.scala-lang" % "scala-reflect" % "2.10.0")
 
   val dependencyResolvers = Seq(
     "repo.novus rels" at "http://repo.novus.com/releases/",

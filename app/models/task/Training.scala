@@ -6,6 +6,8 @@ import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
 import models.user.User
+import models.tracing.Tracing
+import models.tracing.TracingType
 
 case class Training(
     domain: String,
@@ -23,12 +25,7 @@ object Training {
   def fromForm(domain: String, gain: Int, loss: Int) =
     Training(domain, gain, loss, null)
 
-  def hasDoneTraining(user: User, t: Task) = {
-    t.tracings.find(_._user == user._id).isDefined
-  }
-
-  def findAllFor(user: User) = {
-    Task.findAllTrainings.filter(t => 
-      Task.hasEnoughExperience(user)(t) && !hasDoneTraining(user, t))
+  def findAssignableFor(user: User) = {
+    Task.findAssignableFor(user, shouldBeTraining = true)
   }
 }

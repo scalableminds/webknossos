@@ -23,7 +23,7 @@ class Recolor
       { description : "recoloring using RGB", lines :
         [ "time(start: 0, end : 10) ->"
           "  importSlides(start:0, end: 10)"
-          "  recolor(r: 0, g: 0, b: 255, a: 170)"
+          "  recolor(r: 0, g: 0, b: 255, a: 0.3)"
         ]
       }
       { description : "recoloring using a colorMap", lines :
@@ -82,15 +82,15 @@ class Recolor
 
     for i in [0...rgba.length] by 4
 
-      #if colorBuffer[i + 3] is 0 
-      #  continue
+      if rgba[i + 3] is 0 
+        continue
 
       colorBuffer[i + 0] = r
       colorBuffer[i + 1] = g
       colorBuffer[i + 2] = b
       colorBuffer[i + 3] = a * 255
 
-    BufferUtils.alphaBlendBuffer(colorBuffer, rgba)
+    BufferUtils.alphaBlendBuffer(rgba, colorBuffer)
 
     rgba
 

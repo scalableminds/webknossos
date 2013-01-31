@@ -23,7 +23,7 @@ object ApplicationBuild extends Build {
     // Jira integration
     "com.sun.jersey" % "jersey-client" % "1.8",
     "com.sun.jersey" % "jersey-core" % "1.8",
-    "reactivemongo" % "reactivemongo_2.10.0" % "0.8",
+    "org.reactivemongo" %% "reactivemongo" % "0.8",
     "org.scala-lang" % "scala-reflect" % "2.10.0")
 
   val dependencyResolvers = Seq(

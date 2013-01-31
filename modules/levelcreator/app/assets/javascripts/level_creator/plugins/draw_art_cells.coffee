@@ -10,11 +10,11 @@ class DrawArtCells
   DESCRIPTION : "Draws the morphing art cells"
   PARAMETER : 
     input: 
-      rgba: 'Uint8Array'
-      segments: '[]'
-      relativeTime : 'float' # 0 <= time <= 1
-      dimensions : '[]'
-    customTime : '0.0 - 1.0'
+      rgba: "Uint8Array"
+      segments: "[]"
+      relativeTime : "float" # 0 <= time <= 1
+      dimensions : "[]"
+    customTime : "0.0 - 1.0 (opt)"
 
 
   constructor : () ->

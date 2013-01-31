@@ -30,12 +30,6 @@ class Fade
     ]    
 
 
-  importSlides(start : 0, end : 15)
-  filterSortedSegmentation(sorting: "distance", order: "asc", count: 3)
-  filterSortedSegmentation(sorting: "size", order: "desc", count: 2)
-  recolor(r: 0, g: 0, b: 255, a: 0.3)
-  fade(start: 10, end: 15, mode: "in") 
-
   constructor : ->
 
 

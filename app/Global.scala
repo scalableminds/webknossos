@@ -34,7 +34,7 @@ object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     val conf = Play.current.configuration
-    implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5))
+    implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 25))
     if (Play.current.mode == Mode.Dev) {
       InitialData.insertRoles
       InitialData.insertUsers

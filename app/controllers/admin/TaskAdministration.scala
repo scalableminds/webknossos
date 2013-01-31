@@ -159,7 +159,7 @@ object TaskAdministration extends Controller with Secured {
       val inserted = data
         .split("\n")
         .map(_.split(" "))
-        .filter(_.size >= 8)
+        .filter(_.size >= 9)
         .flatMap { params =>
           for {
             experienceValue <- params(3).toIntOpt
@@ -171,7 +171,7 @@ object TaskAdministration extends Controller with Secured {
             taskTypeSummary = params(1)
             taskType <- TaskType.findOneBySumnary(taskTypeSummary)
           } yield {
-            val project = if (params.size >= 9) Project.findOneByName(params(9)).map(_.name) else None
+            val project = if (params.size >= 10) Project.findOneByName(params(9)).map(_.name) else None
             val dataSetName = params(0)
             val experience = Experience(params(2), experienceValue)
             val task = Task.insertOne(Task(

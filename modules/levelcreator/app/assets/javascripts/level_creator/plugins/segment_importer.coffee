@@ -83,7 +83,8 @@ class SegmentImporter
             weightedCenter: {
               x: 0
               y: 0
-            }            
+            }
+            display : true
           }
 
           segments.push(segment)

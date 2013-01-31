@@ -37,8 +37,10 @@ class DrawArtCells
     context.fillStyle = "rgba(0, 0, 255, 1)"
     context.strokeStyle = "rgba(0, 0, 0, 1)"
     context.lineWidth = 2
+
+    activeSegments = _.filter(segments, (segment) -> segment.display is true)
     
-    for segment in segments
+    for segment in activeSegments
 
       path = segment.path
       artPath = segment.artPath

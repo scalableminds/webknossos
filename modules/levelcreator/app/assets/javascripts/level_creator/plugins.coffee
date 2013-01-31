@@ -3,6 +3,7 @@
 ./plugins/blur : Blur
 ./plugins/segment_importer : SegmentImporter
 ./plugins/filter_segmentation_by_distance : FilterSegmentationByDistance
+./plugins/filter_sorted_segmentation : FilterSortedSegmentation
 ./plugins/draw_art_cells : DrawArtCells
 ./plugins/filter_probability_segmentation : FilterProbabilitySegmentation
 ./plugins/filter_start_segmentation : FilterStartSegmentation
@@ -24,3 +25,4 @@ class Plugins
     @filterStartSegmentation = new FilterStartSegmentation()
     @drawArtCells = new DrawArtCells()
     @cloudify = new Cloudify()
+    @filterSortedSegmentation = new FilterSortedSegmentation()

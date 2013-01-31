@@ -1,4 +1,6 @@
-### define ###
+### define 
+underscore : _
+###
 
 class FilterSegmentationByDistance
 
@@ -36,15 +38,20 @@ class FilterSegmentationByDistance
     height = dimensions[1]
     
     values = []
+    activeSegments = _.filter(segments, (segment) -> segment.display is true) 
     compareFunc = new Function("a","b", "return a #{mode} b;")
 
-    for segment in segments
+    for segment in activeSegments
       if weighted? and weighted is false
         if compareFunc(segment.absoluteDistance, distance)
           values.push segment.value
       else
         if compareFunc(segment.weightedDistance, distance)
-          values.push segment.value        
+          values.push segment.value    
+
+    for segment in activeSegments
+      if _.contains(values, segment.value) is false
+        segment.display = false             
 
     j = 0
     for h in [0...height] by 1

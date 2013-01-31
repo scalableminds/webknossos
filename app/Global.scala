@@ -39,7 +39,7 @@ object Global extends GlobalSettings {
     if (Play.current.mode == Mode.Dev) {
       InitialData.insertRoles
       InitialData.insertUsers
-      InitialData.insertTaskAlgorithm
+      InitialData.insertTaskAlgorithms
     }
 
     (DirectoryWatcher ? StartWatching("binaryData")).onComplete {
@@ -50,7 +50,7 @@ object Global extends GlobalSettings {
           // found by the DirectoryWatcher first
           InitialData.insertTasks
         }
-        Logger.info("Directory Watcher finished.")
+        Logger.info("Directory start completed")
       case Failure(e) =>
         Logger.error(e.toString)
     }
@@ -97,7 +97,7 @@ object InitialData {
     }
   }
 
-  def insertTaskAlgorithm() = {
+  def insertTaskAlgorithms() = {
     if (TaskSelectionAlgorithm.findAll.isEmpty) {
       TaskSelectionAlgorithm.insertOne(TaskSelectionAlgorithm(
         """function simple(user, tasks){ 
@@ -105,9 +105,8 @@ object InitialData {
           |}""".stripMargin))
     }
   }
-  
-  def insertTasks() = {
 
+  def insertTasks() = {
     if (TaskType.findAll.isEmpty) {
       val user = User.findOneByEmail("scmboy@scalableminds.com").get
       val tt = TaskType(

@@ -25,6 +25,7 @@ import scala.collection.JavaConversions._
 import brainflight.ActorSystems
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
+import scala.util._
 
 object Global extends GlobalSettings {
 
@@ -40,14 +41,17 @@ object Global extends GlobalSettings {
       InitialData.insertUsers
     }
 
-    (DirectoryWatcher ? StartWatching("binaryData")).onSuccess {
-      case x =>
+    (DirectoryWatcher ? StartWatching("binaryData")).onComplete {
+      case Success(x) =>
         if (Play.current.mode == Mode.Dev) {
           BasicEvolution.runDBEvolution()
           // Data insertion needs to be delayed, because the dataSets need to be
           // found by the DirectoryWatcher first
           InitialData.insertTasks
         }
+        Logger.info("Directory Watcher finished.")
+      case Failure(e) =>
+        Logger.error(e.toString)
     }
     if (Play.current.mode == Mode.Prod)
       Role.ensureImportantRoles()

@@ -43,7 +43,6 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
       shouldStop = false
       val watchedPath = Paths.get(pathName)
       start(watchedPath)
-      Logger.warn(s"finished: ${System.currentTimeMillis-t} ms")
       sender ! true
   }
 

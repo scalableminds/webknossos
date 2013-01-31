@@ -39,6 +39,7 @@ object Global extends GlobalSettings {
     if (Play.current.mode == Mode.Dev) {
       InitialData.insertRoles
       InitialData.insertUsers
+      InitialData.insertTaskAlgorithm
     }
 
     (DirectoryWatcher ? StartWatching("binaryData")).onComplete {
@@ -96,13 +97,16 @@ object InitialData {
     }
   }
 
-  def insertTasks() = {
+  def insertTaskAlgorithm() = {
     if (TaskSelectionAlgorithm.findAll.isEmpty) {
       TaskSelectionAlgorithm.insertOne(TaskSelectionAlgorithm(
         """function simple(user, tasks){ 
           |  return tasks[0];
           |}""".stripMargin))
     }
+  }
+  
+  def insertTasks() = {
 
     if (TaskType.findAll.isEmpty) {
       val user = User.findOneByEmail("scmboy@scalableminds.com").get

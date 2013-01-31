@@ -23,8 +23,8 @@ object ApplicationBuild extends Build {
     // Jira integration
     "com.sun.jersey" % "jersey-client" % "1.8",
     "com.sun.jersey" % "jersey-core" % "1.8",
-    "reactivemongo" % "reactivemongo_2.10.0" % "0.1-SNAPSHOT",
-    "org.scala-lang" % "scala-reflect" % "2.10.0-RC1")
+    "reactivemongo" % "reactivemongo_2.10.0" % "0.8",
+    "org.scala-lang" % "scala-reflect" % "2.10.0")
 
   val dependencyResolvers = Seq(
     "repo.novus rels" at "http://repo.novus.com/releases/",
@@ -49,7 +49,7 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
-    //offline := true,
+    offline := true,
     playAssetsDirectories += file("data")
   )
 
@@ -73,7 +73,7 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
-    //offline := true,
+    offline := true,
     playAssetsDirectories += file("data")
   ).dependsOn(oxalis).aggregate(oxalis)
   

@@ -79,9 +79,9 @@ case class Tracing(
     }
     this.copy(review = alteredReview)
   }
-  
+
   def cancel = {
-    task.map( _.update(_.unassigneOnce))
+    task.map(_.update(_.unassigneOnce))
     this.copy(state = Unassigned)
   }
 
@@ -265,6 +265,12 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       "_user" -> u._id,
       "state.isAssigned" -> true)).toList
 
+  def findFor(u: User, tracingType: TracingType.Value) =
+    find(MongoDBObject(
+      "_user" -> u._id,
+      "state.isAssigned" -> true,
+      "tracingType" -> tracingType.toString)).toList
+
   def findOpenTracingFor(user: User, tracingType: TracingType.Value) =
     findOpenTracingsFor(user, tracingType).headOption
 
@@ -298,8 +304,8 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
       "_task" -> tid,
       "tracingType" -> tracingType.toString,
       "$or" -> MongoDBList(
-          "state.isAssigned" -> true,
-          "state.isFinished" -> true))).toList
+        "state.isAssigned" -> true,
+        "state.isFinished" -> true))).toList
 
   implicit object TracingXMLWrites extends XMLWrites[Tracing] {
     def writes(e: Tracing) = {

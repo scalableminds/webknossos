@@ -16,7 +16,7 @@ class Recolor
     r : "0 - 255"
     g : "0 - 255"
     b : "0 - 255"
-    a : "0 - 255"
+    a : "0.0 - 1.0"
     color : "\"rgba(200, 50, 10, 0.9)\""
     clear : "true, false" # clears rgba before recolor
   EXAMPLES : [
@@ -82,12 +82,15 @@ class Recolor
 
     for i in [0...rgba.length] by 4
 
+      #if colorBuffer[i + 3] is 0 
+      #  continue
+
       colorBuffer[i + 0] = r
       colorBuffer[i + 1] = g
       colorBuffer[i + 2] = b
       colorBuffer[i + 3] = a * 255
 
-    BufferUtils.alphaBlendBuffer(rgba, colorBuffer)
+    BufferUtils.alphaBlendBuffer(colorBuffer, rgba)
 
     rgba
 

@@ -16,13 +16,13 @@ class Cloudify
     r : "0 - 255"
     g : "0 - 255"
     b : "0 - 255"
-    a : "0 - 255"
+    a : "0.0 - 1.0"
   EXAMPLES : [
       { description : "recoloring using RGB", lines :
         [ "time(start: 0, end : 10) ->"
           "  importSlides(start:0, end: 10)"
-          "  filterSegmentationByDistance(distance: 100, mode: \"<\")"
-          "  cloudify(r: 0, g: 0, b: 255, a: 170)"
+          "  filterSegmentationByDistance(distance: 40, mode: \"<\")"
+          "  cloudify(r: 0, g: 0, b: 255, a: 0.3)"
         ]
       }
     ]    
@@ -59,12 +59,12 @@ class Cloudify
     for h in [0...height] by size*0.3
       for w in [0...width] by size*0.3
 
-        x = w + Math.floor(Math.random() * size - size*0.5)
-        y = h + Math.floor(Math.random() * size - size*0.5)
+        x = Math.floor( w + (Math.random() * size - size*0.5))
+        y = Math.floor( h + (Math.random() * size - size*0.5))
 
         testA = rgba[(y * width + x) * 4 + 3]
         
-        if testA isnt 0
+        if testA? and testA isnt 0
           context.drawImage(cloud, x - size*0.5, y - size*0.5)
 
 

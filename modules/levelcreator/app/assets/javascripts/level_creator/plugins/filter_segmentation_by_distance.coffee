@@ -30,7 +30,7 @@ class FilterSegmentationByDistance
 
   execute : (options) ->
 
-    { input: { rgba, segmentation, segments, dimensions }, distance, mode } = options
+    { input: { rgba, segmentation, segments, dimensions }, distance, weighted, mode } = options
 
     width = dimensions[0]
     height = dimensions[1]
@@ -39,8 +39,12 @@ class FilterSegmentationByDistance
     compareFunc = new Function("a","b", "return a #{mode} b;")
 
     for segment in segments
-      if compareFunc(segment.distance, distance)
-        values.push segment.value
+      if weighted? and weighted is false
+        if compareFunc(segment.absoluteDistance, distance)
+          values.push segment.value
+      else
+        if compareFunc(segment.weightedDistance, distance)
+          values.push segment.value        
 
     j = 0
     for h in [0...height] by 1

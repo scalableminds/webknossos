@@ -25,8 +25,10 @@ class SegmentImporter
 
     segments = @getSegments(segmentation, dimensions)
 
-    @setCenter(segments)
-    @setDistance(segments, dimensions)
+    @setAbsoluteCenter(segments)
+    @setAbsoluteDistance(segments, dimensions)
+    @setWeightedCenter(segments)
+    @setWeightedDistance(segments, dimensions)
 
     for segment in segments
       @setPath(segmentation, segment, dimensions)
@@ -67,37 +69,61 @@ class SegmentImporter
             xMax: x
             yMin: y
             yMax: y
+            aggregatedX : 0
+            aggregatedY : 0
             pathStart: {
               x: x
               y: y
             } 
             size: 1
-            center: {
+            absoluteCenter: {
               x: 0
               y: 0
             }
+            weightedCenter: {
+              x: 0
+              y: 0
+            }            
           }
+
           segments.push(segment)
 
         #size
         segment.size++
+        segment.aggregatedX += x
+        segment.aggregatedY += y
 
     segments
 
 
-  setCenter : (segments) ->
+  setAbsoluteCenter : (segments) ->
 
     for segment in segments
-      segment.center.x = (segment.xMax + segment.xMin) * 0.5
-      segment.center.y = (segment.yMax + segment.yMin) * 0.5
+      segment.absoluteCenter.x = (segment.xMax + segment.xMin) * 0.5
+      segment.absoluteCenter.y = (segment.yMax + segment.yMin) * 0.5
 
 
-  setDistance : (segments, [ width, height ]) ->
+  setWeightedCenter : (segments) ->
 
     for segment in segments
-      dx = segment.center.x - width * 0.5
-      dy = segment.center.y - height * 0.5
-      segment.distance = Math.sqrt(dx*dx + dy*dy)
+      segment.weightedCenter.x = segment.aggregatedX / segment.size
+      segment.weightedCenter.y = segment.aggregatedY / segment.size      
+
+
+  setAbsoluteDistance : (segments, [ width, height ]) ->
+
+    for segment in segments
+      dx = segment.absoluteCenter.x - width * 0.5
+      dy = segment.absoluteCenter.y - height * 0.5
+      segment.absoluteDistance = Math.sqrt(dx*dx + dy*dy)
+
+
+  setWeightedDistance : (segments, [ width, height ]) ->
+
+    for segment in segments
+      dx = segment.weightedCenter.x - width * 0.5
+      dy = segment.weightedCenter.y - height * 0.5
+      segment.weightedDistance = Math.sqrt(dx*dx + dy*dy)
 
 
   setPath : (segmentationData, segment, [ width, height ]) ->
@@ -171,11 +197,11 @@ class SegmentImporter
     radius = Math.sqrt(segment.size) * 0.5
     count = segment.path.length * 0.5
 
-    mx = segment.center.x - (width*0.5)
-    my = segment.center.y - (height*0.5)
+    mx = segment.weightedCenter.x - (width*0.5)
+    my = segment.weightedCenter.y - (height*0.5)
 
-    mx += segment.center.x
-    my += segment.center.y
+    mx += segment.weightedCenter.x
+    my += segment.weightedCenter.y
 
     for i in [count..0] by -1
     

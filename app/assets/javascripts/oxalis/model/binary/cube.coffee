@@ -94,29 +94,27 @@ class Cube
 
   getBucketByZoomedAddress : (address) ->
 
+    cube = @cubes[address[3]]
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    if bucketIndex? and @cubes[address[3]][bucketIndex] != @LOADING_PLACEHOLDER
-      @cubes[address[3]][bucketIndex]
+    if bucketIndex? and bucket = cube[bucketIndex] != @LOADING_PLACEHOLDER
+      bucket
     else
       null
 
 
   isBucketRequestedByZoomedAddress : (address) ->
 
+    cube = @cubes[address[3]]
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
     # if the bucket does not lie inside the dataset, return true
-    if bucketIndex?
-      @cubes[address[3]][bucketIndex]?
-    else
-      true
+    not bucketIndex? or cube[bucketIndex]?
 
 
   isBucketLoadedByZoomedAddress : (address) ->
 
-    bucket = @getBucketByZoomedAddress(address)
-    return bucket? and bucket != @LOADING_PLACEHOLDER
+    @getBucketByZoomedAddress(address)?
 
 
   requestBucketByZoomedAddress : (address) ->
@@ -124,106 +122,117 @@ class Cube
     # return if no request is needed
     return if @isBucketRequestedByZoomedAddress(address)
 
+    cube = @cubes[address[3]]
     bucketIndex = @getBucketIndexByZoomedAddress(address)
-    @cubes[address[3]][bucketIndex] = @LOADING_PLACEHOLDER
+    cube[bucketIndex] = @LOADING_PLACEHOLDER
 
 
-  setBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
+  setBucketByZoomedAddress : (address, bucketData) ->
 
     if bucketData?
 
-      bucketIndex = @getBucketIndexByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
+      cube = @cubes[address[3]]
+      bucketIndex = @getBucketIndexByZoomedAddress(address)
 
       @bucketCount++
       @access.unshift([bucket_x, bucket_y, bucket_z, zoomStep])
-
       bucketData.access = 1
-      @cubes[zoomStep][bucketIndex] = bucketData
+      bucketData.zoomStep = zoomStep
+
+      cube[bucketIndex] = bucketData
+
+      setArbitraryBucketByZoomedAddress(address, bucketData) if zoomStep <= @ARBITRARY_MAX_ZOOMSTEP
 
       @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, zoomStep])
 
-      if zoomStep <= @ARBITRARY_MAX_ZOOMSTEP
 
-        width = 1 << zoomStep
+  setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
 
-        for dx in [0...width] by 1
-          for dy in [0...width] by 1
-            for dz in [0...width] by 1
+    cube = @arbitraryCube
 
-              subBucket = [
-                (bucket_x << zoomStep) + dx
-                (bucket_y << zoomStep) + dy
-                (bucket_z << zoomStep) + dz
-                0
-              ]
+    width = 1 << zoomStep
 
-              subBucketIndex = @getBucketIndexByZoomedAddress(subBucket)
-              bucket = @arbitraryCube[subBucketIndex]
+    for dx in [0...width] by 1
+      for dy in [0...width] by 1
+        for dz in [0...width] by 1
 
-              if not bucket? or bucket.zoomStep > zoomStep
+          subBucket = [
+            (bucket_x << zoomStep) + dx
+            (bucket_y << zoomStep) + dy
+            (bucket_z << zoomStep) + dz
+            0
+          ]
 
-                @arbitraryCube[bucketIndex] = bucketData
+          bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
+          bucket = cube[bucketIndex]
+
+          cube[bucketIndex] = bucketData if not bucket? or bucket.zoomStep > zoomStep
 
 
-  accessBuckets : (buckets) ->
+  accessBuckets : (addressList) ->
 
-    for bucketAddress in buckets
+    for address in addressList
 
-      bucket = @getBucketByZoomedAddress(bucketAddress)
-      
+      bucket = @getBucketByZoomedAddress(address)
+
       if bucket?
 
-        @access.unshift(bucketAddress)
+        @access.unshift(address)
         bucket.access++
 
 
   # tries to remove the bucket from the cube
-  # and returns whether removing was successful
   tryCollectBucket : (address) ->
 
+    cube = @cubes[address[3]]
     bucketIndex = @getBucketIndexByZoomedAddress(address)
-    bucket = @cubes[address[3]][bucketIndex]
+    bucket = cube[bucketIndex]
 
     # if the bucket is no longer in the access-queue
     if bucket? and --bucket.access <= 0
 
       # remove it
       @bucketCount--
-      @cubes[address[3]][bucketIndex] = null
+      cube[bucketIndex] = null
 
-      if zoomStep <= @ARBITRARY_MAX_ZOOMSTEP
+      collectArbitraryBucket(address) if zoomStep <= @ARBITRARY_MAX_ZOOMSTEP
 
-        substituteAddress = address
-        substitute = null
 
-        while not substitute? and substituteAddress[3] <= @ARBITRARY_MAX_ZOOMSTEP
+  collectArbitraryBucket : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
 
-          substituteAddress = [
-            substituteAddress[0] >> 1
-            substituteAddress[1] >> 1
-            substituteAddress[2] >> 1
-            substituteAddress[3] + 1
+    cube = @arbitraryCube
+
+    substitute = null
+    substituteAddress = [
+      bucket_x >> 1
+      bucket_y >> 1
+      bucket_z >> 1
+      zoomStep + 1
+    ]
+
+    while substituteAddress[3] <= @ARBITRARY_MAX_ZOOMSTEP and not (substitute = @getBucketByZoomedAddress(substituteAddress))?
+
+          substituteAddress[0] >>= 1
+          substituteAddress[1] >>= 1
+          substituteAddress[2] >>= 1
+          substituteAddress[3]++
+
+    width = 1 << zoomStep
+
+    for dx in [0...width] by 1
+      for dy in [0...width] by 1
+        for dz in [0...width] by 1
+
+          subBucket = [
+            (bucket_x << zoomStep) + dx
+            (bucket_y << zoomStep) + dy
+            (bucket_z << zoomStep) + dz
+             0
           ]
 
-          substitute = @getBucketIndexByZoomedAddress(substituteAddress)
-
-        width = 1 << zoomStep
-
-        for dx in [0...width] by 1
-          for dy in [0...width] by 1
-            for dz in [0...width] by 1
-
-              subBucket = [
-                (bucket_x << zoomStep) + dx
-                (bucket_y << zoomStep) + dy
-                (bucket_z << zoomStep) + dz
-                0
-              ]
-
-              subBucketIndex = @getBucketIndexByZoomedAddress(subBucket)
+          bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
               
-              if @arbitraryCube[subBucketIndex] == bucket
-                @arbitraryCube[subBucketIndex] = substitute
+          cube[bucketIndex] = substitute if cube[bucketIndex] == bucket
 
 
   # remove buckets until cube is within bucketCount-limit

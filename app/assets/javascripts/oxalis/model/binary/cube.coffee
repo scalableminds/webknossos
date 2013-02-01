@@ -97,7 +97,7 @@ class Cube
     cube = @cubes[address[3]]
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    if bucketIndex? and bucket = cube[bucketIndex] != @LOADING_PLACEHOLDER
+    if bucketIndex? and (bucket = cube[bucketIndex]) != @LOADING_PLACEHOLDER
       bucket
     else
       null
@@ -135,15 +135,14 @@ class Cube
       bucketIndex = @getBucketIndexByZoomedAddress(address)
 
       @bucketCount++
-      @access.unshift([bucket_x, bucket_y, bucket_z, zoomStep])
+      @access.unshift(address)
       bucketData.access = 1
-      bucketData.zoomStep = zoomStep
+      bucketData.zoomStep = address[3]
 
       cube[bucketIndex] = bucketData
 
-      setArbitraryBucketByZoomedAddress(address, bucketData) if zoomStep <= @ARBITRARY_MAX_ZOOMSTEP
-
-      @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, zoomStep])
+      #@setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
+      @trigger("bucketLoaded", address)
 
 
   setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
@@ -195,10 +194,10 @@ class Cube
       @bucketCount--
       cube[bucketIndex] = null
 
-      collectArbitraryBucket(address) if zoomStep <= @ARBITRARY_MAX_ZOOMSTEP
+      @collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
 
 
-  collectArbitraryBucket : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+  collectArbitraryBucket : ([bucket_x, bucket_y, bucket_z, zoomStep], oldBucket) ->
 
     cube = @arbitraryCube
 
@@ -232,7 +231,7 @@ class Cube
 
           bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
               
-          cube[bucketIndex] = substitute if cube[bucketIndex] == bucket
+          cube[bucketIndex] = substitute if cube[bucketIndex] == oldBucket
 
 
   # remove buckets until cube is within bucketCount-limit

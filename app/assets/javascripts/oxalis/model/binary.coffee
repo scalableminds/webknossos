@@ -80,7 +80,7 @@ class Binary
       @lastZoomStep = zoomStep.slice()
       @lastArea     = area.slice()
 
-      # console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond, @cube.bucketCount
+      console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond, @cube.bucketCount
 
       for strategy in @pingStrategies 
         if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)

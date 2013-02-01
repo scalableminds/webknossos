@@ -54,11 +54,14 @@ class Cube
       @upperBoundary[2] >> @BUCKET_SIZE_P
     ]
 
-    @arbitraryCube = { boundary: cubeBoundary.slice(), buckets: new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]) }
+    @arbitraryCube = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
+    @arbitraryCube.boundary = cubeBoundary.slice()
 
     for i in [0..@ZOOM_STEP_COUNT]
 
-      @cubes[i] = { boundary: cubeBoundary.slice(), buckets: new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]) }
+      @cubes[i] = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
+      @cubes[i].boundary = cubeBoundary.slice()
+
       cubeBoundary = [
         (cubeBoundary[0] + 1) >> 1
         (cubeBoundary[1] + 1) >> 1
@@ -91,52 +94,29 @@ class Cube
 
   getBucketByZoomedAddress : (address) ->
 
-    buckets = @cubes[address[3]].buckets
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    if bucketIndex?
-      buckets[bucketIndex]
+    if bucketIndex? and @cubes[address[3]][bucketIndex] != @LOADING_PLACEHOLDER
+      @cubes[address[3]][bucketIndex]
     else
-      undefined
-
-
-  getBucketDataByZoomedAddress : (address) ->
-
-    bucket = @getBucketByZoomedAddress(address)
-
-    if bucket? and bucket.data != @LOADING_PLACEHOLDER
-
-      @access.unshift(address)
-      bucket.access++
-      bucket.data
-
-    else
-
       null
 
 
   isBucketRequestedByZoomedAddress : (address) ->
 
-    buckets = @cubes[address[3]].buckets
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    # if the bucket lies inseide the dataset
+    # if the bucket does not lie inside the dataset, return true
     if bucketIndex?
-
-      # check whether bucket exists at all and is already requested or even loaded
-      bucket = buckets[bucketIndex]
-      bucket? and bucket.data?
-
+      @cubes[address[3]][bucketIndex]?
     else
-
-      # else their is no point requesting it
       true
 
 
   isBucketLoadedByZoomedAddress : (address) ->
 
     bucket = @getBucketByZoomedAddress(address)
-    return bucket? and bucket.data? and bucket.data != @LOADING_PLACEHOLDER
+    return bucket? and bucket != @LOADING_PLACEHOLDER
 
 
   requestBucketByZoomedAddress : (address) ->
@@ -144,33 +124,26 @@ class Cube
     # return if no request is needed
     return if @isBucketRequestedByZoomedAddress(address)
 
-    buckets = @cubes[address[3]].buckets 
     bucketIndex = @getBucketIndexByZoomedAddress(address)
-
-    # mark the bucket as requested
-    if buckets[bucketIndex]?
-      buckets[bucketIndex].data = @LOADING_PLACEHOLDER
-    else
-      buckets[bucketIndex] = { data: @LOADING_PLACEHOLDER, access: 0 }
+    @cubes[address[3]][bucketIndex] = @LOADING_PLACEHOLDER
 
 
   setBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
 
-    bucket = @getBucketByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
-    
     if bucketData?
+
+      bucketIndex = @getBucketIndexByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
 
       @bucketCount++
       @access.unshift([bucket_x, bucket_y, bucket_z, zoomStep])
 
-      bucket.access++
-      bucket.data = bucketData
+      bucketData.access = 1
+      @cubes[zoomStep][bucketIndex] = bucketData
 
       @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, zoomStep])
 
       if zoomStep <= @ARBITRARY_MAX_ZOOMSTEP
 
-        arbitraryCube = @arbitraryCube.buckets
         width = 1 << zoomStep
 
         for dx in [0...width] by 1
@@ -184,30 +157,73 @@ class Cube
                 0
               ]
 
-              bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
+              subBucketIndex = @getBucketIndexByZoomedAddress(subBucket)
+              bucket = @arbitraryCube[subBucketIndex]
 
-              if not arbitraryCube[bucketIndex] or arbitraryCube[bucketIndex].zoomStep > zoomStep
+              if not bucket? or bucket.zoomStep > zoomStep
 
-                bucketData.zoomStep = zoomStep
-                #arbitraryCube[bucketIndex] = bucketData
+                @arbitraryCube[bucketIndex] = bucketData
 
-    else
 
-      bucket.data = null
+  accessBuckets : (buckets) ->
+
+    for bucketAddress in buckets
+
+      bucket = @getBucketByZoomedAddress(bucketAddress)
+      
+      if bucket?
+
+        @access.unshift(bucketAddress)
+        bucket.access++
 
 
   # tries to remove the bucket from the cube
   # and returns whether removing was successful
-  tryCollectBucket : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+  tryCollectBucket : (address) ->
 
-    bucket = @getBucketByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
+    bucketIndex = @getBucketIndexByZoomedAddress(address)
+    bucket = @cubes[address[3]][bucketIndex]
 
     # if the bucket is no longer in the access-queue
     if bucket? and --bucket.access <= 0
 
       # remove it
       @bucketCount--
-      bucket.data = null
+      @cubes[address[3]][bucketIndex] = null
+
+      if zoomStep <= @ARBITRARY_MAX_ZOOMSTEP
+
+        substituteAddress = address
+        substitute = null
+
+        while not substitute? and substituteAddress[3] <= @ARBITRARY_MAX_ZOOMSTEP
+
+          substituteAddress = [
+            substituteAddress[0] >> 1
+            substituteAddress[1] >> 1
+            substituteAddress[2] >> 1
+            substituteAddress[3] + 1
+          ]
+
+          substitute = @getBucketIndexByZoomedAddress(substituteAddress)
+
+        width = 1 << zoomStep
+
+        for dx in [0...width] by 1
+          for dy in [0...width] by 1
+            for dz in [0...width] by 1
+
+              subBucket = [
+                (bucket_x << zoomStep) + dx
+                (bucket_y << zoomStep) + dy
+                (bucket_z << zoomStep) + dz
+                0
+              ]
+
+              subBucketIndex = @getBucketIndexByZoomedAddress(subBucket)
+              
+              if @arbitraryCube[subBucketIndex] == bucket
+                @arbitraryCube[subBucketIndex] = substitute
 
 
   # remove buckets until cube is within bucketCount-limit

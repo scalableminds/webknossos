@@ -16,14 +16,14 @@ class Recolor
     r : "0 - 255"
     g : "0 - 255"
     b : "0 - 255"
-    a : "0 - 255"
+    a : "0.0 - 1.0"
     color : "\"rgba(200, 50, 10, 0.9)\""
     clear : "true, false" # clears rgba before recolor
   EXAMPLES : [
       { description : "recoloring using RGB", lines :
         [ "time(start: 0, end : 10) ->"
           "  importSlides(start:0, end: 10)"
-          "  recolor(r: 0, g: 0, b: 255, a: 170)"
+          "  recolor(r: 0, g: 0, b: 255, a: 0.3)"
         ]
       }
       { description : "recoloring using a colorMap", lines :
@@ -81,6 +81,9 @@ class Recolor
     colorBuffer = new Uint8Array( rgba.length )
 
     for i in [0...rgba.length] by 4
+
+      if rgba[i + 3] is 0 
+        continue
 
       colorBuffer[i + 0] = r
       colorBuffer[i + 1] = g

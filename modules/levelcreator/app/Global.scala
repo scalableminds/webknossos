@@ -27,10 +27,11 @@ object Global extends GlobalSettings {
       (DirectoryWatcher ? StartWatching("knowledge")).onSuccess {
         case x =>
           if (Play.current.mode == Mode.Dev) {
-            BasicEvolution.runDBEvolution()
+            //BasicEvolution.runDBEvolution()
             // Data insertion needs to be delayed, because the dataSets need to be
             // found by the DirectoryWatcher first
-            InitialData.insert()
+            //InitialData.insert()
+            Logger.info("starting in Dev mode")
           }
       }
   }

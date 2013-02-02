@@ -39,6 +39,7 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
     case StopWatching =>
       shouldStop = true
     case StartWatching(pathName) =>
+      val t = System.currentTimeMillis()
       shouldStop = false
       val watchedPath = Paths.get(pathName)
       start(watchedPath)

@@ -9,6 +9,7 @@
 ./plugins/filter_start_segmentation : FilterStartSegmentation
 ./plugins/fade : Fade
 ./plugins/cloudify : Cloudify
+./plugins/write : Write
 ###
 
 
@@ -21,6 +22,7 @@ class Plugins
     @filterProbabilitySegmentation = new FilterProbabilitySegmentation()
     @filterStartSegmentation = new FilterStartSegmentation()
     @recolor = new Recolor(assetHandler)
+    @write = new Write()
     @blur = new Blur()
     @segmentImporter = new SegmentImporter()
     @cloudify = new Cloudify()

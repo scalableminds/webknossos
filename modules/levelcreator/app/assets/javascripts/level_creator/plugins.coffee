@@ -11,6 +11,7 @@
 ./plugins/cloudify : Cloudify
 ./plugins/write : Write
 ./plugins/filter_all : FilterAll
+./plugins/draw_image : DrawImage
 ###
 
 
@@ -18,6 +19,7 @@ class Plugins
 
   constructor : (assetHandler) ->
     
+    @segmentImporter = new SegmentImporter()    
     @filterSortedSegmentation = new FilterSortedSegmentation()
     @filterSegmentationByDistance = new FilterSegmentationByDistance()
     @filterEndSegmentation = new FilterEndSegmentation()
@@ -25,8 +27,8 @@ class Plugins
     @filterAll = new FilterAll()
     @recolor = new Recolor(assetHandler)
     @write = new Write()
+    @drawImage = new DrawImage(assetHandler)
     @blur = new Blur()
-    @segmentImporter = new SegmentImporter()
-    @cloudify = new Cloudify()
+    @cloudify = new Cloudify()    
     @drawArtCells = new DrawArtCells()    
     @fade = new Fade()    

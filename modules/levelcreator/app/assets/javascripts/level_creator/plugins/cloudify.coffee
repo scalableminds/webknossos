@@ -62,6 +62,11 @@ class Cloudify
         x = Math.floor( w + (Math.random() * size - size*0.5))
         y = Math.floor( h + (Math.random() * size - size*0.5))
 
+        x = 0 if x < 0
+        y = 0 if y < 0
+        x = width - 1 if x > width
+        y = height - 1 if y > height
+
         testA = rgba[(y * width + x) * 4 + 3]
         
         if testA? and testA isnt 0
@@ -71,9 +76,9 @@ class Cloudify
     canvasData = context.getImageData(0, 0, width, height).data
     for l in [0...canvasData.length] by 4
       ao = canvasData[l + 3]
-      rgba[l + 0] = r
-      rgba[l + 1] = g
-      rgba[l + 2] = b
-      rgba[l + 3] = ao * a
+      rgba[l + 0] = r || 0
+      rgba[l + 1] = g || 0
+      rgba[l + 2] = b || 0
+      rgba[l + 3] = ao * (a || 1)
 
     rgba

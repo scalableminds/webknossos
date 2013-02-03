@@ -11,7 +11,9 @@ object Application extends Controller {
         controllers.levelcreator.routes.javascript.LevelCreator.deleteAsset,
         controllers.levelcreator.routes.javascript.LevelCreator.listAssets,
         controllers.levelcreator.routes.javascript.LevelCreator.retrieveAsset,
-        controllers.levelcreator.routes.javascript.ArbitraryBinaryData.viaAjax
+        controllers.levelcreator.routes.javascript.ArbitraryBinaryData.viaAjax,
+        controllers.levelcreator.routes.javascript.ArbitraryBinaryData.missionViaAjax,
+        controllers.levelcreator.routes.javascript.MissionController.getRandomMission
       )).as("text/javascript")
   }
   

@@ -91,6 +91,7 @@ class PluginRenderer
               dimensions : @dimensions
               relativeTime : (t - startFrame) / (endFrame - startFrame)
               absoluteTime : t
+              mission : @dataHandler.getMissionData()
             callback()
             BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
             inputData = null

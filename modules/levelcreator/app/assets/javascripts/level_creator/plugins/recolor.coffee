@@ -1,5 +1,6 @@
 ### define
 ../buffer_utils : BufferUtils
+../color_utils : ColorUtils
 ###
 
 
@@ -13,12 +14,8 @@ class Recolor
     input :
       rgba: "Uint8Array"
     colorMapName: "string"
-    r : "0 - 255"
-    g : "0 - 255"
-    b : "0 - 255"
-    a : "0.0 - 1.0"
-    color : "\"rgba(200, 50, 10, 0.9)\""
-    clear : "true, false" # clears rgba before recolor
+    color : "\"rgba(200, 50, 10, 0.9)\" or \"#0f00ff42\""
+    #clear : "true, false" # clears rgba before recolor
   EXAMPLES : [
       { description : "recoloring using RGB", lines :
         [ "time(start: 0, end : 10) ->"
@@ -52,7 +49,7 @@ class Recolor
 
     else 
       if color?
-        [r, g, b, a] = @parseColor(color)
+        [r, g, b, a] = ColorUtils.parseColor(color)
 
       if r? or g? or b?
         @applySingleColor( rgba, r, g, b, a )
@@ -94,61 +91,4 @@ class Recolor
 
     rgba
 
-
-  parseColor : (colorName) ->
-    # http://stackoverflow.com/questions/11068240/what-is-the-most-efficient-way-to-parse-a-css-color-in-javascript
-
-    if m = colorName.match(/^#([0-9a-fA-F]{3})$/i)
-      # in three-character format, each value is multiplied by 0x11 to give an
-      # even scale from 0x00 to 0xff
-      return [
-        parseInt(m[1].charAt(0),16)*0x11
-        parseInt(m[1].charAt(1),16)*0x11
-        parseInt(m[1].charAt(2),16)*0x11
-        1
-      ]
-
-    if m = colorName.match(/^#([0-9a-fA-F]{4})$/i)
-      # in three-character format, each value is multiplied by 0x11 to give an
-      # even scale from 0x00 to 0xff
-      return [
-        parseInt(m[1].charAt(0), 16)*0x11
-        parseInt(m[1].charAt(1), 16)*0x11
-        parseInt(m[1].charAt(2), 16)*0x11
-        parseInt(m[1].charAt(3), 16) / 16
-      ]
-
-    if m = colorName.match(/^#([0-9a-fA-F]{6})$/i)
-      return [
-        parseInt(m[1].substr(0,2),16)
-        parseInt(m[1].substr(2,2),16)
-        parseInt(m[1].substr(4,2),16)
-        1
-      ]
-
-    if m = colorName.match(/^#([0-9a-fA-F]{8})$/i)
-      return [
-        parseInt(m[1].substr(0,2),16)
-        parseInt(m[1].substr(2,2),16)
-        parseInt(m[1].substr(4,2),16)
-        parseInt(m[1].substr(6,2),16)
-      ]
-
-    if m = colorName.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i)
-      return [
-        parseInt(m[1])
-        parseInt(m[2])
-        parseInt(m[3])
-        1
-      ]
-
-    if m = colorName.match(/^rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\,\s*(\d*\.?\w+)\s*\)$/i)
-      return [
-        parseInt(m[1])
-        parseInt(m[2])
-        parseInt(m[3])
-        parseFloat(m[4])
-      ]
-
-    throw new Error("\"#{colorName}\" is not a valid color.")
 

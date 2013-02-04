@@ -13,6 +13,7 @@
 ./plugins/filter_all : FilterAll
 ./plugins/draw_image : DrawImage
 ./plugins/color_all : ColorAll
+./plugins/color_segments_randomly : ColorSegmentsRandomly
 ###
 
 
@@ -28,6 +29,7 @@ class Plugins
     @filterAll = new FilterAll()
     @recolor = new Recolor(assetHandler)
     @colorAll = new ColorAll()
+    @colorSegmentsRandomly = new ColorSegmentsRandomly()
     @write = new Write()
     @drawImage = new DrawImage(assetHandler)
     @blur = new Blur()

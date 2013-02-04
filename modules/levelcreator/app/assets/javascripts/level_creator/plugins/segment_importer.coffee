@@ -1,5 +1,6 @@
 ### define 
 underscore : _
+../libs/jenkins: Jenkins
 ###
 
 class SegmentImporter
@@ -29,6 +30,7 @@ class SegmentImporter
     @setAbsoluteDistance(segments, dimensions)
     @setWeightedCenter(segments)
     @setWeightedDistance(segments, dimensions)
+    @setRandomColor(segments)
 
     for segment in segments
       @setPath(segmentation, segment, dimensions)
@@ -85,6 +87,11 @@ class SegmentImporter
               y: 0
             }
             display : true
+            randomColor : {
+              r: 0
+              g: 0
+              b: 0
+            }
           }
 
           segments.push(segment)
@@ -125,6 +132,15 @@ class SegmentImporter
       dx = segment.weightedCenter.x - width * 0.5
       dy = segment.weightedCenter.y - height * 0.5
       segment.weightedDistance = Math.sqrt(dx*dx + dy*dy)
+
+
+  setRandomColor : (segments) ->
+
+    for segment in segments
+      color = Jenkins.hashlittle2("#{segment.value}", 0, 0)
+      segment.randomColor.r = color.b % 256
+      segment.randomColor.g = Math.abs((color.b >> 4) % 256)
+      segment.randomColor.b = color.c % 256
 
 
   setPath : (segmentationData, segment, [ width, height ]) ->

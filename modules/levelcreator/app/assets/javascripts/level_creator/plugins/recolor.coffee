@@ -20,7 +20,7 @@ class Recolor
       { description : "recoloring using RGB", lines :
         [ "time(start: 0, end : 10) ->"
           "  importSlides(start:0, end: 10)"
-          "  recolor(r: 0, g: 0, b: 255, a: 0.3)"
+          "  recolor(color: \"rgba(0, 0, 255, 0.3)\")"
         ]
       }
       { description : "recoloring using a colorMap", lines :

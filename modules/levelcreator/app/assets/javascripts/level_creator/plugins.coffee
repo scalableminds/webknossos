@@ -12,6 +12,7 @@
 ./plugins/write : Write
 ./plugins/filter_all : FilterAll
 ./plugins/draw_image : DrawImage
+./plugins/color_all : ColorAll
 ###
 
 
@@ -26,6 +27,7 @@ class Plugins
     @filterStartSegmentation = new FilterStartSegmentation()
     @filterAll = new FilterAll()
     @recolor = new Recolor(assetHandler)
+    @colorAll = new ColorAll()
     @write = new Write()
     @drawImage = new DrawImage(assetHandler)
     @blur = new Blur()

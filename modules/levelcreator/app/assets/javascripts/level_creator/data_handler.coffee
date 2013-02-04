@@ -10,7 +10,7 @@ libs/toast : Toast
 
 class DataHandler
 
-  DATA_SET_ID : "e_k0563"
+  DATA_SET_ID : "2012-09-28_ex145_07x2"
 
   constructor : (@dimensions, @levelId, @taskId) ->
 

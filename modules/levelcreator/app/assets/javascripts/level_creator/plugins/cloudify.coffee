@@ -67,8 +67,8 @@ class Cloudify
 
         x = 0 if x < 0
         y = 0 if y < 0
-        x = width - 1 if x > width
-        y = height - 1 if y > height
+        x = width - 1 if x >= width
+        y = height - 1 if y >= height
 
         testA = rgba[(y * width + x) * 4 + 3]
         

@@ -11,6 +11,8 @@ libs/ace/ace : Ace
 
 class LevelCreator
 
+  EDIT_DEBOUNCE_TIME : 1000
+
   plugins : []
   stack : null
   canvas : null
@@ -44,7 +46,7 @@ class LevelCreator
     @$form = $("#editor-container form")
     @$saveCodeButton = @$form.find("[type=submit]")
 
-    @editor.on "change", => @updatePreview()
+    @editor.on "change", => @debouncedUpdatePreview()
 
     @$form.submit (event) =>
 
@@ -117,7 +119,11 @@ class LevelCreator
       ).done =>
         @prepareHeadlessRendering()
 
-    
+
+  debouncedUpdatePreview : ->
+
+    @debouncedUpdatePreview = _.debounce(@updatePreview, @EDIT_DEBOUNCE_TIME)    
+
 
   updatePreview : ->
 

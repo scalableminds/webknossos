@@ -10,6 +10,8 @@ libs/toast : Toast
 
 class DataHandler
 
+  DATA_SET_ID : "e_k0563"
+
   constructor : (@dimensions, @levelId, @taskId) ->
 
     EventMixin.extend(this)
@@ -19,24 +21,28 @@ class DataHandler
     @addDeferred("initialized")
 
     $.when(
-      @requestGray()
-      @requestSegmentation()
-      @requestClassification()
+      @requestMissionData()
     ).then(
+      ( mission ) =>
 
-      ( gray, segmentation, classification ) =>
+        $.when(
+          @requestGray(mission.start.id)
+          @requestSegmentation(mission.start.id)
+          @requestClassification(mission.start.id)
+        ).then(
+          ( gray, segmentation, classification ) =>
 
-        @data = { gray, segmentation, classification }
-        @trigger("initialized")
-        
-    )
+            @data = { gray, segmentation, classification, mission }
+            @trigger("initialized")
+        )
+    )    
 
 
-  requestGray : ->
+  requestGray : (startId) ->
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.viaAjax("color", @levelId, @taskId)
+        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@DATA_SET_ID, @levelId, startId, "color")
         dataType : "arraybuffer"
       )
     ).then(
@@ -45,11 +51,11 @@ class DataHandler
     )
 
 
-  requestSegmentation : ->
+  requestSegmentation : (startId) ->
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.viaAjax("segmentation", @levelId, @taskId)
+        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@DATA_SET_ID, @levelId, startId, "segmentation")
         dataType : "arraybuffer"
       )
     ).then(
@@ -58,16 +64,29 @@ class DataHandler
     )
 
 
-  requestClassification : ->
+  requestClassification : (startId) ->
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.viaAjax("classification", @levelId, @taskId)
+        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@DATA_SET_ID, @levelId, startId, "classification")
         dataType : "arraybuffer"
       )
     ).then(
       (buffer) => new Uint8Array(buffer)
       (xhr) -> Toast.error("Couldn't load classification data layer.")
+    )
+
+
+  requestMissionData : ->
+
+    Request.send(
+      _.extend(
+        Routes.controllers.levelcreator.MissionController.getRandomMission(@DATA_SET_ID)
+        dataType : "json"
+      )
+    ).then(
+      (mission) => mission
+      (xhr) -> Toast.error("Couldn't load meta data.")
     )
       
 
@@ -114,3 +133,8 @@ class DataHandler
       )    
 
     segmentationData
+
+
+  getMissionData : ->
+
+    @data.mission

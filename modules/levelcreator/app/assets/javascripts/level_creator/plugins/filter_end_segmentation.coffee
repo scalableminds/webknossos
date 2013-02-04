@@ -1,11 +1,11 @@
 ### define ###
 
-class FilterStartSegmentation
+class FilterEndSegmentation
 
   PUBLIC : true
-  COMMAND : "filterStartSegmentation()"
-  FRIENDLY_NAME : "Filter Start Segmentation"
-  DESCRIPTION : "Returns the start segmentation or filters it"  
+  COMMAND : "filterEndSegmentation()"
+  FRIENDLY_NAME : "Filter End Segmentation"
+  DESCRIPTION : "Returns all end segmentations or filters it"
   PARAMETER : 
     input: 
       rgba: "Uint8Array"
@@ -13,18 +13,23 @@ class FilterStartSegmentation
       segments: "[]"
       mission: "{}"
       dimensions : "[]"
-    mode: "\"in\", \"out\"" # e.g. "in" returns start segmentation, "out" returns all other segmentation
+    mode: "\"in\", \"out\""
   EXAMPLES : [
-      { description : "Show all but start segmentation", lines :
+      { description : "Cloudify the end Segmentation", lines :
         [ "time(start : 0, end : 30) ->"
           "  importSlides(start : 0, end : 30)"
-          "  filterStartSegmentation(mode: \"out\")"
+          ""
+          "time(start : 0, end : 30) ->"
+          "  importSlides(start : 0, end : 30)"
+          "  filterAll()"
+          "  filterEndSegmentation(mode:\"in\")"
+          "  cloudify(r: 0, g: 255, b: 255, a: 0.5)"
         ]
       }
     ]
 
-
   constructor : () ->
+
 
 
   execute : (options) ->
@@ -35,19 +40,23 @@ class FilterStartSegmentation
     height = dimensions[1]
 
     values = []
-    startValue = mission.start.id
+    endValues = []
+
+    for possibleEnd in mission.possibleEnds
+      endValues.push possibleEnd.id
 
     if mode is "in"
       for segment in segments
-        if segment.value is startValue
-          segment.display = true   
-      values = [startValue]   
-    else
+        if _.contains(endValues, segment.value) is true
+          segment.display = true
+      values = endValues
+    else # out
       for segment in segments
-        if segment.value isnt startValue
+        if _.contains(endValues, segment.value) is false
           values.push segment.value
         else
           segment.display = false
+
 
     for h in [0...height] by 1
       for w in [0...width] by 1

@@ -13,9 +13,10 @@ class SmoothEdges
     input :
       rgba: "Uint8Array"
       dimensions : '[]'
-    threshold : "0-8"
-    rounds : "0-5"
-    fill : "true, false"
+    removeThreshold : "0-8, default: 5"
+    removePasses : "0-5, default: 2"
+    fillPasses : "0-5, default: 3"
+    fillAlpha : "\"linear\", \"proportional\" (default)"
   EXAMPLES : [
       { description : "Smooth end and start segments with default values", lines :
         [ "time(start : 0, end : 10) ->"
@@ -32,30 +33,34 @@ class SmoothEdges
   constructor : () ->
 
 
-  execute : ({ input : { rgba, dimensions }, threshold, rounds, fill}) ->
+  execute : ({ input : { rgba, dimensions }, removeThreshold, removePasses, fillPasses, fillAlpha}) ->
 
-    threshold = 5 unless threshold?   
-    rounds = 2 unless rounds?
-    fill = true unless fill?
+    removeThreshold = 5 unless removeThreshold?   
+    removePasses = 2 unless removePasses?
+    fillPasses = 3 unless fillPasses?
+    fillAlpha = "proportional" unless fillAlpha?
 
-    for i in [0..rounds] by 1
-      @smooth(dimensions, rgba, threshold)
+    for i in [0...removePasses] by 1
+      @smooth(dimensions, rgba, removeThreshold)
 
-    for i in [0...threshold] by 1
-      @smooth(dimensions, rgba, threshold - 1 - i)
+    if removePasses > 0
+      for i in [removeThreshold-1..1] by -1
+        @smooth(dimensions, rgba, i)
 
-    if fill
-      @fill(dimensions, rgba, 1)
+    for i in [0..fillPasses-1] by 1
+      
+      if fillAlpha is "proportional"
+        g = i / (fillPasses)
+        t = 1 - (g * g * g)
+        t = t * t * t
+      else
+        t = (1 / fillPasses) * (fillPasses - i)
 
-    if fill
-      @fill(dimensions, rgba, 0.8)
-
-    if fill
-      @fill(dimensions, rgba, 0.5)
+      @fillPasses(dimensions, rgba, t)
 
     rgba
 
-  smooth : (dimensions, rgba, threshold) ->
+  smooth : (dimensions, rgba, removeThreshold) ->
 
     width = dimensions[0]
     height = dimensions[1]
@@ -89,7 +94,7 @@ class SmoothEdges
         #left down
         neighbours++ if rgba[base - width * 4 - 4] isnt 0 or h - 1 < 0 or w - 1 < 0
 
-        if neighbours >= threshold
+        if neighbours >= removeThreshold
           tempBuffer[base] = rgba[base]        
         else
           tempBuffer[base] = 0
@@ -100,7 +105,7 @@ class SmoothEdges
     rgba
 
 
-  fill : (dimensions, rgba, alpha) ->
+  fillPasses : (dimensions, rgba, alpha) ->
 
     width = dimensions[0]
     height = dimensions[1]
@@ -117,21 +122,21 @@ class SmoothEdges
           continue
 
         #left
-        tempBuffer[base - 4]             = a if rgba[base - 4] is 0
+        tempBuffer[base - 4]             = a if rgba[base - 4] is 0 and w - 1 > 0
         #left up if 
-        tempBuffer[base + width * 4 - 4] = a if rgba[base + width * 4 - 4] is 0
+        tempBuffer[base + width * 4 - 4] = a if rgba[base + width * 4 - 4] is 0 and w - 1 > 0 and h + 1 > height
         #up if 
-        tempBuffer[base + width * 4]     = a if rgba[base + width * 4] is 0
+        tempBuffer[base + width * 4]     = a if rgba[base + width * 4] is 0 and h + 1 > height
         #right up if 
-        tempBuffer[base + width * 4 + 4] = a if rgba[base + width * 4 + 4] is 0
+        tempBuffer[base + width * 4 + 4] = a if rgba[base + width * 4 + 4] is 0 and h + 1 > height and w + 1 > width
         #right if 
-        tempBuffer[base + 4]             = a if rgba[base + 4] is 0
+        tempBuffer[base + 4]             = a if rgba[base + 4] is 0 and w + 1 > width
         #right down if 
-        tempBuffer[base - width * 4 + 4] = a if rgba[base - width * 4 + 4] is 0
+        tempBuffer[base - width * 4 + 4] = a if rgba[base - width * 4 + 4] is 0 and h - 1 > 0 and w + 1 > width
         #down if 
-        tempBuffer[base - width * 4]     = a if rgba[base - width * 4] is 0
+        tempBuffer[base - width * 4]     = a if rgba[base - width * 4] is 0 and h - 1 > 0
         #left down if 
-        tempBuffer[base - width * 4 - 4] = a if rgba[base - width * 4 - 4] is 0
+        tempBuffer[base - width * 4 - 4] = a if rgba[base - width * 4 - 4] is 0 and h - 1 > 0 and w - 1 > 0
 
 
 

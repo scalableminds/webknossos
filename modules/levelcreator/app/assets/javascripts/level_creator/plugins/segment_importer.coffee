@@ -27,6 +27,9 @@ class SegmentImporter
 
     { segmentation, dimensions } = input
 
+    for i in [0...2] by 1
+      @smooth(dimensions, segmentation, 5)
+
     segments = @getSegments(segmentation, dimensions)
 
     @setAbsoluteCenter(segments)
@@ -53,7 +56,7 @@ class SegmentImporter
         value = segmentation[i]
         i++
 
-        #continue if value is 0
+        continue if value is 0
 
         #is segment already there
         segment = _.detect(segments, (s) -> s.value is value)
@@ -240,3 +243,49 @@ class SegmentImporter
 
 
     segment.artPath = path
+
+
+  smooth : (dimensions, segmentation, removeThreshold) ->
+
+    width = dimensions[0]
+    height = dimensions[1]
+
+    tempBuffer = new Uint16Array(segmentation.length)
+
+    for h in [0...height] by 1
+      for w in [0...width] by 1
+        
+        base = (h * width + w)
+        
+        a = segmentation[base]
+        if segmentation[base] is 0 
+          continue
+
+        neighbours = 0
+
+        #left
+        neighbours++ if segmentation[base - 1] is a or w - 1 < 0
+        #left up
+        neighbours++ if segmentation[base + width - 1] is a or w - 1 < 0 or h + 1 > height
+        #up
+        neighbours++ if segmentation[base + width ] is a or h + 1 > height
+        #right up
+        neighbours++ if segmentation[base + width + 1] is a or h + 1 > height or w + 1 > width
+        #right
+        neighbours++ if segmentation[base + 1] is a or w + 1 > width
+        #right down
+        neighbours++ if segmentation[base - width + 1] is a or h - 1 < 0 or w + 1 > width
+        #down
+        neighbours++ if segmentation[base - width ] is a or h - 1 < 0
+        #left down
+        neighbours++ if segmentation[base - width - 1] is a or h - 1 < 0 or w - 1 < 0
+
+        if neighbours >= removeThreshold
+          tempBuffer[base] = segmentation[base]        
+        else
+          tempBuffer[base] = 0
+
+    for i in [0...segmentation.length]
+      segmentation[i] = tempBuffer[i]
+
+    segmentation

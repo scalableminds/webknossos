@@ -4,7 +4,7 @@
 
 class DrawArtCells
 
-  PUBLIC : true
+  PUBLIC : false
   COMMAND : "drawArtCells()"
   FRIENDLY_NAME : "Draw Art Cells"  
   DESCRIPTION : "Draws the morphing art cells"

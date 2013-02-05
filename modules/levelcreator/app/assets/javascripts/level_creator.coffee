@@ -20,6 +20,7 @@ class LevelCreator
 
   assetHandler : null
   prepluginRenderer : null
+  processing : false
 
   constructor : ->
 
@@ -127,6 +128,9 @@ class LevelCreator
 
   updatePreview : ->
 
+    if @processing
+      return
+
     sliderValue = Math.floor(@$slider.val())
     
     imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
@@ -157,6 +161,8 @@ class LevelCreator
 
       $("#preview-error").html("<i class=\"icon-warning-sign\"></i> #{error}")
 
+
+    @processing = false
 
   zoomPreview : ->
 

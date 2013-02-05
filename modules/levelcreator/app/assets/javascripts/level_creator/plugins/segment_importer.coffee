@@ -13,12 +13,15 @@ class SegmentImporter
       dimensions : '[x, y, z]'
 
 
+  Z_FACTOR : 2
+
   directions : [ 
     {x: -1,  y:  0} 
     {x:  0,  y:  1}
     {x:  1,  y:  0}
     {x:  0,  y: -1}
   ]
+
 
   execute : ({ input }) ->
 

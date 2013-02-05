@@ -14,6 +14,7 @@
 ./plugins/draw_image : DrawImage
 ./plugins/color_all : ColorAll
 ./plugins/color_segments_randomly : ColorSegmentsRandomly
+./plugins/smooth_edges : SmoothEdges
 ###
 
 
@@ -33,6 +34,8 @@ class Plugins
     @write = new Write()
     @drawImage = new DrawImage(assetHandler)
     @blur = new Blur()
-    @cloudify = new Cloudify()    
+    @cloudify = new Cloudify()
+    @smoothEdges = new SmoothEdges()
     @drawArtCells = new DrawArtCells()    
-    @fade = new Fade()    
+    @fade = new Fade()
+

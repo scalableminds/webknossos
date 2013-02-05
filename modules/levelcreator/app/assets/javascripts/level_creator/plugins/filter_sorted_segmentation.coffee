@@ -15,7 +15,7 @@ class FilterSortedSegmentation
       segments: "[]"
       dimensions : "[]"
     sorting : "size, distance"
-    order : "asc, desc"
+    order : "\"asc\", \"desc\""
     count : "Number"
   EXAMPLES : [
       { description : "Displaying the three biggest segments", lines :

@@ -147,7 +147,7 @@ class PluginRenderer
       exampleHTML = ""
       if plugin.EXAMPLES?
         for example in plugin.EXAMPLES
-          exampleHTML += example.description 
+          exampleHTML += "<span>" + example.description + "</span>"
           exampleHTML += "<pre class=\"prettyprint linenums\">"
           exampleHTML += "<ol class=\"linenums\">"
           for line in example.lines

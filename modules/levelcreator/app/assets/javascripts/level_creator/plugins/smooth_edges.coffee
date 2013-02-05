@@ -124,15 +124,15 @@ class SmoothEdges
         #left
         tempBuffer[base - 4]             = a if rgba[base - 4] is 0 and w - 1 > 0
         #left up if 
-        tempBuffer[base + width * 4 - 4] = a if rgba[base + width * 4 - 4] is 0 and w - 1 > 0 and h + 1 > height
+        tempBuffer[base + width * 4 - 4] = a if rgba[base + width * 4 - 4] is 0 and w - 1 > 0 and h + 1 < height
         #up if 
-        tempBuffer[base + width * 4]     = a if rgba[base + width * 4] is 0 and h + 1 > height
+        tempBuffer[base + width * 4]     = a if rgba[base + width * 4] is 0 and h + 1 < height
         #right up if 
-        tempBuffer[base + width * 4 + 4] = a if rgba[base + width * 4 + 4] is 0 and h + 1 > height and w + 1 > width
+        tempBuffer[base + width * 4 + 4] = a if rgba[base + width * 4 + 4] is 0 and h + 1 < height and w + 1 < width
         #right if 
-        tempBuffer[base + 4]             = a if rgba[base + 4] is 0 and w + 1 > width
+        tempBuffer[base + 4]             = a if rgba[base + 4] is 0 and w + 1 < width
         #right down if 
-        tempBuffer[base - width * 4 + 4] = a if rgba[base - width * 4 + 4] is 0 and h - 1 > 0 and w + 1 > width
+        tempBuffer[base - width * 4 + 4] = a if rgba[base - width * 4 + 4] is 0 and h - 1 > 0 and w + 1 < width
         #down if 
         tempBuffer[base - width * 4]     = a if rgba[base - width * 4] is 0 and h - 1 > 0
         #left down if 

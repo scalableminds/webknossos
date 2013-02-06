@@ -4,9 +4,9 @@
     <td> @tracing.dataSetName </td>
     @defining(models.tracing.Tracing.statisticsForTracing(tracing)){ stats => 
       <td> 
-        <i class="icon-sitemap"></i> @stats.numberOfTrees 
-        <i class="icon-circle"></i> @stats.numberOfNodes  
-        <i class="icon-minus"></i> @stats.numberOfEdges
+        <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
+        <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
+        <span title="Edges"><i class="icon-resize-horizontal"></i> @stats.numberOfEdges</span>
       </td>
     }
     <td> @tracing.tracingType </td>

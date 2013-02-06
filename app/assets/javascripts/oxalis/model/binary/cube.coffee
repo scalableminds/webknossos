@@ -11,7 +11,7 @@ class Cube
   ZOOM_STEP_COUNT : 0
   LOOKUP_DEPTH_UP : 0
   LOOKUP_DEPTH_DOWN : 1
-  MAXIMUM_BUCKET_COUNT : 500
+  MAXIMUM_BUCKET_COUNT : 5000
   ARBITRARY_MAX_ZOOMSTEP : 2
 
   LOADING_PLACEHOLDER : {}
@@ -141,7 +141,7 @@ class Cube
 
       cube[bucketIndex] = bucketData
 
-      #@setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
+      @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
       @trigger("bucketLoaded", address)
 
 

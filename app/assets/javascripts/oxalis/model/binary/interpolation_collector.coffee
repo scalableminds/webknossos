@@ -73,9 +73,15 @@ subPointMacro = (output, xd, yd, zd) ->
 
   else if bucketIndex < cube.length and (bucket = cube[bucketIndex])?
 
-    accessedBuckets.push [sub_x, sub_y, sub_z, bucketZoomStep]
-
     bucketZoomStep = bucket.zoomStep || 0
+
+    accessedBuckets.push [
+      sub_x >> bucketZoomStep
+      sub_y >> bucketZoomStep
+      sub_z >> bucketZoomStep
+      bucketZoomStep
+    ]
+
     pointIndexMacro(pointIndex, sub_x, sub_y, sub_z, bucketZoomStep)
 
     lastBucket = bucket

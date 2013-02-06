@@ -1,12 +1,16 @@
 import sbt._
 import Keys._
-
+import com.typesafe.config._
 import PlayProject._
 
 object ApplicationBuild extends Build {
+  val conf = ConfigFactory.parseFile(new File("conf/application.conf"))
 
-  val appName = "oxalis"
-  val appVersion = "0.1"
+  val appName    = conf.getString("application.name").toLowerCase
+  val appVersion = "%s.%s.%s".format(
+    conf.getString("application.major"),
+    conf.getString("application.minor"),
+    conf.getString("application.revision"))
 
   val oxalisDependencies = Seq(
     "org.mongodb" %% "casbah-commons" % "2.5.0",

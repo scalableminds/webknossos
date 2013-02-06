@@ -92,6 +92,8 @@ tracing.training.notFound=Couldn''t find training for tracing
 tracing.user.notFound=Couldn''t find a user for the tracing
 tracing.open.notFound=No open tracing found
 tracing.notPossible=Couldn''t access tracing
+tracing.setName=Successfully named tracing
+tracing.invalidName=Tracing name is invalid
 
 jira.summary.notSupplied=No summary supplied
 jira.description.notSupplied=No description supplied

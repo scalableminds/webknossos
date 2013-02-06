@@ -1,5 +1,6 @@
 ### define 
 ../buffer_utils : BufferUtils
+../color_utils : ColorUtils
 ###
 
 
@@ -13,16 +14,13 @@ class Cloudify
     input :
       rgba: "Uint8Array"
       dimensions : '[]'
-    r : "0 - 255"
-    g : "0 - 255"
-    b : "0 - 255"
-    a : "0.0 - 1.0"
+    color : "\"rgba(200, 50, 10, 0.9)\" or \"#0f00ff42\""
   EXAMPLES : [
-      { description : "recoloring using RGB", lines :
+      { description : "Cloudify the segments in the center", lines :
         [ "time(start: 0, end : 10) ->"
           "  importSlides(start:0, end: 10)"
           "  filterSegmentationByDistance(distance: 40, mode: \"<\")"
-          "  cloudify(r: 0, g: 0, b: 255, a: 0.3)"
+          "  cloudify(color: \"rgba(200, 50, 10, 0.9)\")"
         ]
       }
     ]    
@@ -40,12 +38,17 @@ class Cloudify
     @cloud.onload = => @ready = true
 
 
-  execute : ({ input : { rgba, dimensions }, r, g, b, a}) ->
+  execute : ({ input : { rgba, dimensions }, color}) ->
 
     { cloud, ready, size } = @
 
     unless ready
       return rgba
+
+    if color?
+        [r, g, b, a] = ColorUtils.parseColor(color)
+    else
+        [r, g, b, a] = [0, 0, 0, 1]
 
     width = dimensions[0]
     height = dimensions[1]
@@ -59,8 +62,13 @@ class Cloudify
     for h in [0...height] by size*0.3
       for w in [0...width] by size*0.3
 
-        x = Math.floor( w + (Math.random() * size - size*0.5))
-        y = Math.floor( h + (Math.random() * size - size*0.5))
+        x = Math.floor( w + (Math.random() * size - size * 0.5))
+        y = Math.floor( h + (Math.random() * size - size * 0.5))
+
+        x = 0 if x < 0
+        y = 0 if y < 0
+        x = width - 1 if x >= width
+        y = height - 1 if y >= height
 
         testA = rgba[(y * width + x) * 4 + 3]
         

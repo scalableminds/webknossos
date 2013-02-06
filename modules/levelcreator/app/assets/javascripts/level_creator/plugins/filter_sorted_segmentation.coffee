@@ -15,7 +15,7 @@ class FilterSortedSegmentation
       segments: "[]"
       dimensions : "[]"
     sorting : "size, distance"
-    order : "asc, desc"
+    order : "\"asc\", \"desc\""
     count : "Number"
   EXAMPLES : [
       { description : "Displaying the three biggest segments", lines :
@@ -65,7 +65,6 @@ class FilterSortedSegmentation
       if _.contains(values, segment.value) is false
         segment.display = false
 
-    j = 0
     for h in [0...height] by 1
       for w in [0...width] by 1
         i = h * width + w

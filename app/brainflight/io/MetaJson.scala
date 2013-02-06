@@ -56,16 +56,10 @@ object MetaJsonHandler extends BoxImplicits{
   
   def JsonFromFile(file: File) = Json.parse(Source.fromFile(file).getLines.mkString)
 
-  def extractMetaData(dataSetName: String): Box[MetaData] = {
-    (for {
-      dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages(s"$dataSetName: dataSet.notFound")
-      missionData = new File(dataSet.baseDir + "/meta.json") 
-      if missionData.exists()
-      metaData <- parse(JsonFromFile(missionData)) ?~ Messages(s"$dataSetName: Meta.json parsing Error")
-    } yield {    
-      metaData
-    }) ?~ Messages(s"$dataSetName: meta.json not found") 
+  def extractMetaData(dataSet: DataSet): Box[MetaData] = {
+    val missionData = new File(dataSet.baseDir + "/meta.json") 
+    if(missionData.exists())
+      parse(JsonFromFile(missionData)) ?~ Messages(s"$dataSet.name: Meta.json parsing Error")
+    else None ?~ Messages(s"$dataSet.name: meta.json not found") 
   }
-  
-
 }

@@ -26,7 +26,7 @@ class View
       Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false))
 
     @model.route.on("wrongDirection", =>
-      Toast.error("You are tracing into the wrong direction"))
+      Toast.error("You're tracing in the wrong direction"))
 
 
   toggleTheme : ->

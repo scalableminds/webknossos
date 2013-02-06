@@ -10,11 +10,11 @@ class FilterSegmentationByDistance
   DESCRIPTION : "Returns all segments that are farer or nearer than the given distance"
   PARAMETER : 
     input: 
-      rgba: 'Uint8Array'
-      segmentation: 'Uint16Array'
-      segments: '[]'
-      dimensions : '[]'
-    distance : 'int'
+      rgba: "Uint8Array"
+      segmentation: "Uint16Array"
+      segments: "[]"
+      dimensions : "[]"
+    distance : "int"
     mode : '\"<\", \"<=\", \">\", \"=>\"' # e.g. '<='
   EXAMPLES : [
       { description : "Displaying cells near the middle", lines :

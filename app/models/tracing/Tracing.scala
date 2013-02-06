@@ -38,6 +38,7 @@ case class Tracing(
     tracingType: TracingType.Value = TracingType.Explorational,
     tracingSettings: TracingSettings = TracingSettings.default,
     version: Int = 0,
+    _name: Option[String] = None,
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Tracing] {
 
   def dao = Tracing
@@ -45,6 +46,8 @@ case class Tracing(
    * Easy access methods
    */
   def user = User.findOneById(_user)
+  
+  val name = _name getOrElse ""
 
   val date = new Date(timestamp)
 

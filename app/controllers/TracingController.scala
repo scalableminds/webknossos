@@ -86,23 +86,23 @@ object TracingController extends Controller with Secured {
       oldTracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
       if (oldTracing._user == request.user._id)
     } yield {
-        if (version == oldTracing.version + 1) {
-          request.body match {
-            case JsArray(jsUpdates) =>
-              Tracing.updateFromJson(jsUpdates, oldTracing) match {
-                case Some(tracing) =>
-                  TimeTracking.logUserAction(request.user, tracing)
-                  JsonOk(Json.obj("version" -> version), "tracing.saved")
-                case _ =>
-                  JsonBadRequest("Invalid update Json")
-              }
-            case _ =>
-              Logger.error("Invalid update json.")
-              JsonBadRequest("Invalid update Json")
-          }
-        } else
-          JsonBadRequest(createTracingInformation(oldTracing), "tracing.dirtyState")
-      }) ?~ Messages("notAllowed") ~> 403
+      if (version == oldTracing.version + 1) {
+        request.body match {
+          case JsArray(jsUpdates) =>
+            Tracing.updateFromJson(jsUpdates, oldTracing) match {
+              case Some(tracing) =>
+                TimeTracking.logUserAction(request.user, tracing)
+                JsonOk(Json.obj("version" -> version), "tracing.saved")
+              case _ =>
+                JsonBadRequest("Invalid update Json")
+            }
+          case _ =>
+            Logger.error("Invalid update json.")
+            JsonBadRequest("Invalid update Json")
+        }
+      } else
+        JsonBadRequest(createTracingInformation(oldTracing), "tracing.dirtyState")
+    }) ?~ Messages("notAllowed") ~> 403
   }
 
   private def finishTracing(user: User, tracingId: String): Box[(Tracing, String)] = {
@@ -144,4 +144,15 @@ object TracingController extends Controller with Secured {
     }
   }
 
+  def nameExplorativeTracing(tracingId: String) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      name <- postParameter("name") ?~ Messages("tracing.invalidName")
+    } yield {
+      tracing.update(_.copy(_name = Some(name)))
+      JsonOk(
+        html.user.dashboard.explorativeTracingTableItem(tracing),
+        Messages("tracing.setName"))
+    }
+  }
 }

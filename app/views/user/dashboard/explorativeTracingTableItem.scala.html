@@ -2,7 +2,13 @@
   <tr>
     <td> @formatHash(tracing.id) </td>
     <td> @tracing.dataSetName </td>
-    <td> @tracing.trees.size </td>
+    @defining(models.tracing.Tracing.statisticsForTracing(tracing)){ stats => 
+      <td> 
+        <i class="icon-sitemap"></i> @stats.numberOfTrees 
+        <i class="icon-circle"></i> @stats.numberOfNodes  
+        <i class="icon-minus"></i> @stats.numberOfEdges
+      </td>
+    }
     <td> @tracing.tracingType </td>
     <td> @formatDate(tracing.date) </td>
     <td> <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br />

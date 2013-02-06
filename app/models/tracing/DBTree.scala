@@ -21,6 +21,12 @@ case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, _id: ObjectId =
 
   def nodes = DBTree.nodes.findByParentId(_id).toList
   def edges = DBTree.edges.findByParentId(_id).toList
+
+  def numberOfNodes =
+    DBTree.nodes.countByParentId(_id)
+
+  def numberOfEdges =
+    DBTree.edges.countByParentId(_id)
 }
 
 trait DBTreeFactory {

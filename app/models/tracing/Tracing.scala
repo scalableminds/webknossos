@@ -110,7 +110,7 @@ case class Tracing(
   }
 }
 
-object Tracing extends BasicDAO[Tracing]("tracings") {
+object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics{
   def tracingBase(task: Task, userId: ObjectId, dataSetName: String): Tracing =
     Tracing(userId,
       dataSetName,

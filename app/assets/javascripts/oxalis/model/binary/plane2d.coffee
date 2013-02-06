@@ -38,6 +38,7 @@ class Plane2D
   cube : null
   queue : null
   lookUpTable : null
+  lookUpTableMag1 : null
 
   layer : -1
   zoomStep : -1
@@ -76,35 +77,12 @@ class Plane2D
           @changed |= u in [@area[0]..@area[2]] and v in [@area[1]..@area[3]]
 
 
-  updateLookUpTable : (@lookUpTable) ->
+  updateLookUpTables : (@lookUpTable, @lookUpTableMag1) ->
 
     for i in [0..@tiles.length]
       @tiles[i] = true
 
     @changed = true
-
-
-  # ping : (position, direction, zoomStep, area) ->
-
-  #   centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
-  #   # Converting area from voxels to buckets
-  #   area = [
-  #     area[0] >> @cube.BUCKET_SIZE_P
-  #     area[1] >> @cube.BUCKET_SIZE_P
-  #     area[2] - 1 >> @cube.BUCKET_SIZE_P
-  #     area[3] - 1 >> @cube.BUCKET_SIZE_P
-  #   ]
-
-  #   buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, area)
-
-  #   for bucket in buckets
-  #     if bucket?
-  #       priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
-  #       @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority)
-  #       bucket[@w]++
-  #       @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 1)
-  #       bucket[@w]++
-  #       @queue.insert([bucket[0], bucket[1], bucket[2], zoomStep], priority << 2)
 
 
   getBucketArray : (center, range, area) ->
@@ -243,7 +221,7 @@ class Plane2D
     destOffset = bufferOffsetByTileMacro(destTile, @cube.BUCKET_SIZE_P)
     sourceOffset = bufferOffsetByTileMacro(sourceTile, @cube.BUCKET_SIZE_P)
 
-    @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, @cube.BUCKET_SIZE_P, sourceBuffer, sourceOffset, 1, 1 << @TEXTURE_SIZE_P, 0, 0, false)
+    @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, @cube.BUCKET_SIZE_P, sourceBuffer, sourceOffset, 1, 1 << @TEXTURE_SIZE_P, 0, 0, 0, false)
 
 
   renderTile : (tile) ->
@@ -285,19 +263,21 @@ class Plane2D
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@u]) + (sourceOffsets[1] << @DELTA[@v]) + (sourceOffsets[2] << @DELTA[@w])
 
-      bucketData = @cube.getBucketDataByZoomedAddress(map[mapIndex])
+      bucketData = @cube.getBucketByZoomedAddress(map[mapIndex])
+      @cube.accessBuckets([map[mapIndex]])
 
       @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, tileSize, bucketData, sourceOffset,
         1 << (@DELTA[@u] + skip),
         1 << (@DELTA[@v] + skip),
         repeat,
         repeat,
+        bucketZoomStep,
         true)
 
 
-  renderToBuffer : (destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat, mapColors) ->
+  renderToBuffer : (destOffset, destRowDelta, destSize, sourceBuffer, sourceOffset, sourcePixelDelta, sourceRowDelta, sourcePixelRepeat, sourceRowRepeat, bucketZoomStep, mapColors) ->
 
-    lookUpTable = @lookUpTable
+    lookUpTable = if bucketZoomStep == 0 then @lookUpTableMag1 else @lookUpTable
 
     i = 1 << (destSize << 1)
     destRowMask = (1 << destSize) - 1

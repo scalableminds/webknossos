@@ -1,0 +1,3 @@
+#!/bin/bash
+
+playframework/play "project levelcreator" "run -Dhttp.port=9091"

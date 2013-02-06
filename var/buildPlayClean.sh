@@ -2,5 +2,5 @@
 
 cd ../playframework/framework
 ./cleanEverything
-./build build-repository
+./build publish-local
 

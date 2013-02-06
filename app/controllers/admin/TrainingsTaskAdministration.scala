@@ -1,6 +1,6 @@
 package controllers.admin
 
-import controllers.Controller
+import braingames.mvc.Controller
 import play.mvc.Security.Authenticated
 import brainflight.security.Secured
 import models.security._
@@ -16,6 +16,9 @@ import models.task.Training
 import models.tracing.Tracing
 import nml._
 import models.tracing.TracingType
+import play.api.i18n.Messages
+import models.task.Project
+import java.util.Date
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
@@ -23,83 +26,62 @@ object TrainingsTaskAdministration extends Controller with Secured {
   override val DefaultAccessPermission = Some(Permission("admin.review", List("access")))
 
   val trainingsTaskForm = Form(
-    mapping(
-      "task" -> text.verifying("task.invalid", task => Task.findOneById(task).isDefined),
+    tuple(
+      "task" -> text.verifying("task.notFound", task => Task.findOneById(task).isDefined),
+      "tracing" -> text.verifying("tracing.notFound", exp => Tracing.findOneById(exp).isDefined),
       "training" -> mapping(
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,
-        "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingForm)(Task.toTrainingForm)).fill(Task.withEmptyTraining)
+        "loss" -> number)(Training.fromForm)(Training.toForm)))
+        .fill("", "", Training.empty)
 
-  val trainingsTracingForm = Form(
-    mapping(
-      "tracing" -> text.verifying("tracing.invalid", exp => Tracing.findOneById(exp).isDefined),
-      "taskType" -> text.verifying("taskType.invalid", task => TaskType.findOneById(task).isDefined),
-      "experience" -> mapping(
-        "domain" -> text,
-        "value" -> number)(Experience.apply)(Experience.unapply),
-      "priority" -> number,
-      "training" -> mapping(
-        "domain" -> nonEmptyText(1, 50),
-        "gain" -> number,
-        "loss" -> number)(Training.fromForm)(Training.toForm))(Task.fromTrainingsTracingForm)(Task.toTrainingsTracingForm)).fill(Task.withEmptyTraining)
-
+  def taskToForm(t: Task) = {
+    (t.id, "", Training.empty)
+  }        
   def list = Authenticated { implicit request =>
     Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
   }
 
-  def trainingsTaskCreateHTML(taskForm: Form[Task], tracingForm: Form[Task])(implicit request: AuthenticatedRequest[_]) = {
+  def trainingsTaskCreateHTML(taskForm: Form[(String, String, Training)])(implicit request: AuthenticatedRequest[_]) = {
     html.admin.task.trainingsTaskCreate(
       Task.findAllNonTrainings,
-      Tracing.findAllExploratory(request.user),
-      TaskType.findAll,
+      Tracing.findOpenTracingsFor(request.user, TracingType.Explorational),
       Experience.findAllDomains,
-      taskForm,
-      tracingForm)
+      taskForm)
   }
 
   def create(taskId: String) = Authenticated { implicit request =>
     val form = Task.findOneById(taskId) map { task =>
-      trainingsTaskForm.fill(task)
+      trainingsTaskForm.fill(taskToForm(task))
     } getOrElse trainingsTaskForm
-    Ok(trainingsTaskCreateHTML(trainingsTaskForm, trainingsTracingForm))
-  }
-
-  def createFromTracing = Authenticated(parser = parse.multipartFormData) { implicit request =>
-    trainingsTracingForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(trainingsTaskCreateHTML(trainingsTaskForm, formWithErrors)),
-      { task =>
-        (for {
-          training <- task.training
-          sample <- Tracing.findOneById(training.sample)
-        } yield {
-          sample.update(_.copy(tracingType = TracingType.Sample))
-          Task.insertOne(task)
-          Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
-        }) getOrElse BadRequest("Couldn't create Training.")
-      })
+    Ok(trainingsTaskCreateHTML(trainingsTaskForm))
   }
 
   def createFromForm = Authenticated(parser = parse.multipartFormData) { implicit request =>
     trainingsTaskForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors, trainingsTracingForm)),
-      { task =>
-        implicit val ctx = NMLContext(request.user)
+      formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors)),
+      { case (taskId, tracingId, training) =>
         (for {
-          nmlFile <- request.body.file("nmlFile")
-          tracing <- new NMLParser(nmlFile.ref.file).parse.headOption
+          task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+          tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
         } yield {
-          Tracing.save(tracing.copy(tracingType = TracingType.Sample))
-          Task.save(task.copy(
-            training = task.training.map(_.copy(sample = tracing._id))))
+          val sample = Tracing.createSample(task._id, tracing)
+          Task.createAndInsertDeepCopy(task.copy(
+              instances = Integer.MAX_VALUE,
+              created = new Date,
+              training = Some(training.copy(sample = sample._id))),
+              includeUserTracings = false)
           Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
-        }) getOrElse BadRequest("No valid file attached.")
+        }) 
       })
   }
 
   def delete(taskId: String) = Authenticated { implicit request =>
-    Task.findOneById(taskId) map { task =>
+    for {
+      task <- Task.findOneById(taskId) ?~ Messages("task.training.notFound")
+    } yield {
       Task.remove(task)
-      AjaxOk.success("Trainings-Task successfuly deleted.")
-    } getOrElse AjaxBadRequest.error("Trainings-Task not found.")
+      JsonOk(Messages("task.training.deleted"))
+    }
   }
 }

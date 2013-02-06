@@ -5,6 +5,7 @@ import java.util.GregorianCalendar
 import java.text.SimpleDateFormat
 import java.util.TimeZone
 import org.bson.types.ObjectId
+import scala.concurrent.duration.Duration
 
 trait Formatter {
   def formatDate(date: Date) = {
@@ -22,8 +23,8 @@ trait Formatter {
   def formatHash(id: ObjectId): String = {
     formatHash(id.toString)
   }
-  
-  def formatTimeHumanReadable(time: akka.util.Duration) = {
+
+  def formatTimeHumanReadable(time: Duration) = {
     "%dh %dm".format(time.toHours, (time.toMinutes % 60) / 5 * 5)
   }
 }

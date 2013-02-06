@@ -1,6 +1,5 @@
 package models.user
 
-import play.api.db._
 import play.api.Play.current
 import com.mongodb.casbah.Imports._
 import models.context._
@@ -11,49 +10,49 @@ import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsBoolean
 import play.api.libs.json._
+import models.basics.BasicSettings
 
 case class UserConfiguration(
-  settings: Map[String, JsValue] ){
-    
+    settings: Map[String, JsValue]) {
+
   def settingsOrDefaults = {
     UserConfiguration.defaultConfiguration.settings ++ settings
   }
 }
 
-object UserConfiguration {
-  val MaxSettings = 50
+object UserConfiguration extends BasicSettings{
 
   val defaultConfiguration = UserConfiguration(
     Map(
-      "moveValue" -> JsNumber( 1 ),
-      "rotateValue" -> JsNumber( 0.01 ),
-      "scaleValue" -> JsNumber( 0.02 ),
-      "mouseRotateValue" -> JsNumber( 0.004 ),
-      "routeClippingDistance" -> JsNumber( 100 ),
-      "lockZoom" -> JsBoolean( true ),
-      "displayCrosshair" -> JsBoolean( true ),
-      "interpolation" -> JsBoolean( true ),
-      "fourBit" -> JsBoolean( true ),
-      "brightness" -> JsNumber( 0 ),
-      "contrast" -> JsNumber( 1 ),
-      "quality" -> JsNumber( 0 ),
-      "zoomXY" -> JsNumber( 0 ),
-      "zoomYZ" -> JsNumber( 0 ),
-      "zoomXZ" -> JsNumber( 0 ),
-      "displayPreviewXY" -> JsBoolean( false ),
-      "displayPreviewYZ" -> JsBoolean( false ),
-      "displayPreviewXZ" -> JsBoolean( false ),
-      "newNodeNewTree" -> JsBoolean( false ),
-      "nodesAsSpheres" -> JsBoolean( false ),
-      "mouseInversionX" -> JsNumber( -1 ),
-      "mouseInversionY" -> JsNumber( -1 ),
-      "mouseActive" -> JsBoolean( true ),
-      "keyboardActive" -> JsBoolean( true ),
-      "gamepadActive" -> JsBoolean( false ),
-      "motionsensorActive" -> JsBoolean( false ) ) )
+      "moveValue" -> JsNumber(1),
+      "moveValue3d" -> JsNumber(1),
+      "rotateValue" -> JsNumber(0.01),
+      "crosshairSize" -> JsNumber(0.5),
+      "scaleValue" -> JsNumber(0.05),
+      "mouseRotateValue" -> JsNumber(0.004),
+      "routeClippingDistance" -> JsNumber(100),
+      "lockZoom" -> JsBoolean(true),
+      "displayCrosshair" -> JsBoolean(true),
+      "interpolation" -> JsBoolean(false),
+      "fourBit" -> JsBoolean(true),
+      "briConNames" -> JsArray(Seq(JsString("default"), JsString("st08x2"), JsString("07x2"))),
+      "brightness" -> JsArray(Seq(JsNumber(0), JsNumber(-90), JsNumber(-70))),
+      "contrast" -> JsArray(Seq(JsNumber(1), JsNumber(2.4), JsNumber(2.4))),
+      "quality" -> JsNumber(0),
+      "zoomXY" -> JsNumber(2),
+      "zoomYZ" -> JsNumber(2),
+      "zoomXZ" -> JsNumber(2),
+      "displayPreviewXY" -> JsBoolean(false),
+      "displayPreviewYZ" -> JsBoolean(false),
+      "displayPreviewXZ" -> JsBoolean(false),
+      "newNodeNewTree" -> JsBoolean(false),
+      "nodesAsSpheres" -> JsBoolean(false),
+      "mouseInversionX" -> JsNumber(-1),
+      "mouseInversionY" -> JsNumber(-1),
+      "mouseActive" -> JsBoolean(true),
+      "keyboardActive" -> JsBoolean(true),
+      "gamepadActive" -> JsBoolean(false),
+      "motionsensorActive" -> JsBoolean(false),
+      "firstVisToggle" -> JsBoolean(true)))
 
-  def isValidSetting( field: Tuple2[String, JsValue] ) = {
-    val ( _, value ) = field
-    ( value.asOpt[String] ).isDefined || ( value.asOpt[Int] ).isDefined || ( value.asOpt[Boolean] ).isDefined
-  }
 }

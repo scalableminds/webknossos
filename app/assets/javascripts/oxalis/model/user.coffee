@@ -1,5 +1,6 @@
 ### define
 ../../libs/request : Request
+libs/event_mixin : EventMixin
 ###
 
 class User
@@ -7,7 +8,9 @@ class User
   # userdata
   # default values are defined in server
   moveValue : null
+  moveValue3d : null
   rotateValue : null
+  crosshairSize : null
   scaleValue : null
   mouseRotateValue : null
   routeClippingDistance : null
@@ -15,6 +18,7 @@ class User
   displayCrosshair : null
   interpolation : null
   fourBit : null
+  briConNames : null
   brightness : null
   contrast : null
   quality : null
@@ -32,11 +36,19 @@ class User
   keyboardActive : null
   gamepadActive : null
   motionsensorActive : null
+  firstVisToggle : null
 
 
   constructor : (user) ->
 
+    _.extend(this, new EventMixin())
     _.extend(@, user)
+
+
+  setValue : (name, value) ->
+
+    @[name] = value
+    @trigger(name + "Changed", value)
 
 
   push : ->
@@ -53,7 +65,9 @@ class User
       dataType : "json"
       data   : { 
         moveValue : @moveValue,
+        moveValue3d : @moveValue3d,
         rotateValue : @rotateValue,
+        crosshairSize : @crosshairSize,
         scaleValue : @scaleValue,
         mouseRotateValue : @mouseRotateValue,
         routeClippingDistance : @routeClippingDistance,
@@ -61,6 +75,7 @@ class User
         displayCrosshair : @displayCrosshair,
         interpolation : @interpolation,
         fourBit: @fourBit,
+        briConNames : @briConNames,
         brightness: @brightness,
         contrast: @contrast, 
         quality : @quality,
@@ -77,7 +92,8 @@ class User
         mouseActive : @mouseActive,
         keyboardActive : @keyboardActive,
         gamepadActive : @gamepadActive,
-        motionsensorActive : @motionsensorActive }
+        motionsensorActive : @motionsensorActive
+        firstVisToggle : @firstVisToggle }
     ).fail( =>
       
       console.log "could'nt save userdata"

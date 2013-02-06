@@ -15,11 +15,8 @@ VIEWPORT_WIDTH     = 380
 class Gui 
 
   model : null
-  sceneController : null
-  cameraController : null
-  flycam : null
   
-  constructor : (container, @model, @sceneController, @cameraController, @flycam) ->
+  constructor : (container, @model) ->
     
     _.extend(this, new EventMixin())
 
@@ -27,7 +24,16 @@ class Gui
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
     @qualityArray = ["high", "medium", "low"]
+
+    @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
+    @datasetPosition = @initDatasetPosition(data.briConNames)
+    
     @settings = 
+
+      rotateValue : data.rotateValue
+      moveValue3d : data.moveValue3d
+      mouseRotateValue : data.mouseRotateValue
+      crosshairSize : data.crosshairSize
       
       lockZoom: data.lockZoom
       inverseX: data.mouseInversionX == 1
@@ -38,8 +44,10 @@ class Gui
       displayCrosshairs: data.displayCrosshair
 
       fourBit : data.fourBit
-      brightness : data.brightness
-      contrast : data.contrast
+      briConNames : data.briConNames
+      brightness : data.brightness[@datasetPosition]
+      contrast : data.contrast[@datasetPosition]
+      resetBrightnessAndContrast : => @resetBrightnessAndContrast()
       interpolation : data.interpolation
       quality : @qualityArray[data.quality]
 
@@ -60,6 +68,13 @@ class Gui
       prevComment : @prevComment
       nextComment : @nextComment
 
+    if @datasetPosition == 0
+      # add new dataset to settings
+      @model.user.briConNames.push(@datasetPostfix)
+      @model.user.brightness.push(@settings.brightness)
+      @model.user.contrast.push(@settings.contrast)
+      @dataSetPosition = data.briConNames.length - 1
+
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
 
@@ -75,6 +90,25 @@ class Gui
     (fControls.add @settings, "inverseY")
                           .name("Inverse Y")
                           .onChange(@setMouseInversionY)
+
+    fFlightcontrols = @gui.addFolder("Flighcontrols")
+    (fFlightcontrols.add @settings, "mouseRotateValue", 0.001, 0.02)
+                          .step(0.001)
+                          .name("Mouse Rotation")
+                          .onChange(@setMouseRotateValue)
+    (fFlightcontrols.add @settings, "rotateValue", 0.001, 0.08)
+                          .step(0.001)
+                          .name("Keyboard Rotation Value")
+                          .onChange(@setRotateValue)
+    (fFlightcontrols.add @settings, "moveValue3d", 0.1, 10) 
+                          .step(0.1)
+                          .name("Move Value")    
+                          .onChange(@setMoveValue3d)
+    (fFlightcontrols.add @settings, "crosshairSize", 0.1, 1) 
+                          .step(0.01)
+                          .name("Crosshair size")    
+                          .onChange(@setCrosshairSize)                          
+
 
     fView = @gui.addFolder("Planes")
     (fView.add @settings, "moveValue", 0.1, 10) 
@@ -93,14 +127,18 @@ class Gui
     (fView.add @settings, "fourBit")
                           .name("4 Bit")
                           .onChange(@set4Bit)
+    @brightnessController =
     (fView.add @settings, "brightness", -256, 256) 
                           .step(5)
                           .name("Brightness")    
                           .onChange(@setBrightnessAndContrast)
+    @contrastController =
     (fView.add @settings, "contrast", 0.5, 5) 
                           .step(0.1)
                           .name("Contrast")    
                           .onChange(@setBrightnessAndContrast)
+    (fView.add @settings, "resetBrightnessAndContrast")
+                          .name("Reset To Default")
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
                           .onChange(@setInterpolation)
@@ -170,28 +208,31 @@ class Gui
       @setPosFromString(event.target.value)
       return
 
-    @flycam.on
-                globalPositionChanged : (position) => 
-                  @updateGlobalPosition(position)
-                zoomFactorChanged : (factor, step) =>
-                  nm = factor * VIEWPORT_WIDTH * @model.scaleInfo.baseVoxel
-                  if(nm<1000)
-                    $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
-                  else if (nm<1000000)
-                    $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " μm</p>")
-                  else
-                    $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
+    @model.flycam.on
+      positionChanged : (position) => 
+        @updateGlobalPosition(position)
+
+      zoomFactorChanged : (factor, step) =>
+        nm = factor * VIEWPORT_WIDTH * @model.scaleInfo.baseVoxel
+        if(nm<1000)
+          $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
+        else if (nm<1000000)
+          $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " μm</p>")
+        else
+          $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
     @model.route.on  
-                      newActiveNode    : => @update()
-                      newActiveTree    : => @update()
-                      deleteActiveTree : => @update()
-                      deleteActiveNode : => @update()
-                      deleteLastNode   : => @update()
-                      newNode          : => @update()
-                      newTree          : => @update()
-                      # newActiveNodeRadius : (radius) =>@updateRadius(radius) 
-                      PushFailed       : -> Toast.error("Auto-Save failed!")
+      newActiveNode    : => @update()
+      newActiveTree    : => @update()
+      deleteActiveTree : => @update()
+      deleteActiveNode : => @update()
+      deleteLastNode   : => @update()
+      newNode          : => @update()
+      newTree          : => @update()
+      # newActiveNodeRadius : (radius) =>@updateRadius(radius) 
+      pushFailed       : -> Toast.error("Auto-Save failed!")
+
+    @createTooltips()
 
   saveNow : =>
     @model.user.pushImpl()
@@ -206,22 +247,49 @@ class Gui
     if stringArray.length == 3
       pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
       if !isNaN(pos[0]) and !isNaN(pos[1]) and !isNaN(pos[2])
-        @flycam.setGlobalPos(pos)
+        @model.flycam.setPosition(pos)
         return
-    @updateGlobalPosition(@flycam.getGlobalPos())
+    @updateGlobalPosition(@model.flycam.getPosition())
+
+  initDatasetPosition : (briConNames) ->
+
+    for i in [0...briConNames.length]
+      if briConNames[i] == @datasetPostfix
+        datasetPosition = i
+    unless datasetPosition
+      # take default values
+      datasetPosition = 0
+    datasetPosition
+
+  createTooltips : ->
+      $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
 
   updateGlobalPosition : (globalPos) =>
     stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
     $("#trace-position-input").val(stringPos)
 
+  setMouseRotateValue : (value) =>
+    @model.user.mouseRotateValue = (Number) value
+    @model.user.push()
+
+  setRotateValue : (value) =>
+    @model.user.rotateValue = (Number) value
+    @model.user.push()    
+
   setMoveValue : (value) =>
     @model.user.moveValue = (Number) value
     @model.user.push()
 
+  setMoveValue3d : (value) =>
+    @model.user.moveValue3d = (Number) value
+    @model.user.push()    
+
+  setCrosshairSize : (value) =>
+    @model.user.setValue("crosshairSize", (Number) value)
+    @model.user.push()    
+
   setRouteClippingDistance : (value) =>
-    @model.user.routeClippingDistance = (Number) value
-    @cameraController.setRouteClippingDistance((Number) value)
-    @sceneController.setRouteClippingDistance((Number) value)
+    @model.user.setValue("routeClippingDistance", (Number) value)
     @model.user.push()   
 
   setLockZoom : (value) =>
@@ -229,13 +297,11 @@ class Gui
     @model.user.push()      
 
   setDisplayCrosshair : (value) =>
-    @model.user.displayCrosshair = value
-    @sceneController.setDisplayCrosshair(value)
+    @model.user.setValue("displayCrosshair", value)
     @model.user.push()    
 
   setInterpolation : (value) =>
-    @sceneController.setInterpolation(value)
-    @model.user.interpolation = (Boolean) value
+    @model.user.setValue("interpolation", (Boolean) value)
     @model.user.push()
 
   set4Bit : (value) =>
@@ -245,31 +311,42 @@ class Gui
 
   setBrightnessAndContrast : =>
     @model.binary.updateLookupTable(@settings.brightness, @settings.contrast)
-    @model.user.brightness = (Number) @settings.brightness
-    @model.user.contrast = (Number) @settings.contrast
+    @model.user.brightness[@datasetPosition] = (Number) @settings.brightness
+    @model.user.contrast[@datasetPosition] = (Number) @settings.contrast
     @model.user.push()
+
+  resetBrightnessAndContrast : =>
+    Request.send(
+      url : "/user/configuration/default"
+      dataType : "json"
+    ).done (defaultData) =>
+      defaultDatasetPosition = @initDatasetPosition(defaultData.briConNames)
+
+      @settings.brightness = defaultData.brightness[defaultDatasetPosition]
+      @settings.contrast = defaultData.contrast[defaultDatasetPosition]
+      @setBrightnessAndContrast()
+      @brightnessController.updateDisplay()
+      @contrastController.updateDisplay()
+
 
   setQuality : (value) =>
     for i in [0..(@qualityArray.length - 1)]
       if @qualityArray[i] == value
         value = i
-    @flycam.setQuality(value)
+    @model.flycam.setQuality(value)
     @model.user.quality = (Number) value
     @model.user.push()
 
   setDisplayPreviewXY : (value) =>
-    @model.user.displayPreviewXY = value
-    @sceneController.setDisplaySV PLANE_XY, value
+    @model.user.setValue("displayPreviewXY", value)
     @model.user.push()      
 
   setDisplayPreviewYZ : (value) =>
-    @model.user.displayPreviewYZ = value
-    @sceneController.setDisplaySV PLANE_YZ, value
+    @model.user.setValue("displayPreviewYZ", value)
     @model.user.push()      
 
   setDisplayPreviewXZ : (value) =>
-    @model.user.displayPreviewXZ = value
-    @sceneController.setDisplaySV PLANE_XZ, value
+    @model.user.setValue("displayPreviewXZ", value)  
     @model.user.push()      
 
   # setNodeAsSpheres : (value) =>

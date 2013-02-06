@@ -94,7 +94,7 @@ $ ->
               )
 
           (error) ->
-            $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error}")
+            $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
 
 
@@ -177,7 +177,7 @@ $ ->
           save()
 
 
-    "admin.creator.levelCreator" : ->
+    "levelcreator.levelCreator" : ->
 
       require ["./level_creator"], (LevelCreator) ->
 

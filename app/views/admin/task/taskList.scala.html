@@ -1,32 +1,19 @@
 @(tasks: List[models.task.Task])(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
-  <div class="container">
+  <div class="container wide">
     <h3>Tasks</h3>
-    <p>
-      Task states:
-      <span title="Unassigned"> 
-        <i class="icon-play-circle"></i> Unassigned
-      </span>
-      |
-      <span title="in Progress"> 
-        <i class="icon-random"></i> in Progress
-      </span>
-      |
-      <span title="Completed">
-        <i class="icon-ok-circle"></i> Completed
-      </span>
-    </p>
     <table class="table table-double-striped table-details">
       <thead>
         <tr>
           <th class="details-toggle-all"> <i class="caret-right"></i> <i class="caret-down"></i> </th>
           <th> # </th>
-          <th> H-Id </th>
-          <th> Type </th>
+          <th> H-Id</th>
+          <th> Project</th>
+          <th> Type</th>
           <th> DataSet </th>
-          <th> Experience</th>
-          <th> Start </th>
+          <th> Edit position </th>
+          <th> Experience </th>
           <th> Priority </th>
           <th> Created </th>
           <th> States </th>

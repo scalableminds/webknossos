@@ -3,24 +3,36 @@ package brainflight.io
 import java.io.File
 import name.pachler.nio.file.Path
 import name.pachler.nio.file.impl.PathImpl
-import models.binary._
 import brainflight.tools.geometry.Point3D
 import play.api.Logger
-import brainflight.tools.ExtendedTypes._
+import braingames.util.ExtendedTypes.ExtendedString
+import models.binary.DataSet
+import models.binary.ColorLayer
+import models.binary.DataLayer
+import net.liftweb.common._
+import models.knowledge.Mission
 
 class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {
     val file = path.asInstanceOf[PathImpl].getFile
     val files = file.listFiles()
-    Logger.trace("DataSetChangeHandler.onStart: files: %s".format(files.mkString(", ")))
+    Logger.trace(s"DataSetChangeHandler.onStart: files: ${files.mkString(", ")}")
     if (files != null) {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
-          DataSet.updateOrCreate(dataSet)
+          
+          MetaJsonHandler.extractMetaData(DataSet.findOneByName(dataSet.name).getOrElse(dataSet)) match {
+            case Full(metaData) => insertMetaData(dataSet, metaData)
+            case Failure(msg, _, _) => 
+              Logger.error(msg)
+              DataSet.updateOrCreate(dataSet)
+            //TODO: understand boxes
+            case Empty => Logger.info("empty box")
+          }
           dataSet.name
         }
       }
-      Logger.info("Found datasets " + foundDataSets.mkString(","))
+      Logger.info(s"Found datasets: ${foundDataSets.mkString(",")}")
       DataSet.deleteAllExcept(foundDataSets)
     }
   }
@@ -70,8 +82,8 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
 
   def dataSetFromFile(f: File): Option[DataSet] = {
     if (f.isDirectory) {
-      Logger.trace("dataSetFromFile: " + f)
-      
+      Logger.trace(s"dataSetFromFile: $f")
+
       for {
         colorLayer <- listDirectories(f).find(dir => dir.getName == ColorLayer.identifier)
         resolutionDirectories = listDirectories(colorLayer)
@@ -83,10 +95,25 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
         yMax <- maxValueFromFiles(xs.listFiles())
         zMax <- maxValueFromFiles(ys.listFiles())
       } yield {
-          val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
-          DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, dataLayers = Map[String, DataLayer](ColorLayer.identifier -> ColorLayer(supportedResolutions = resolutions)))
+        val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
+        DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, dataLayers = Map[String, DataLayer](ColorLayer.identifier -> ColorLayer(supportedResolutions = resolutions)))
       }
     } else None
+  }
+
+  def insertMetaData(dataSet: DataSet, metaData: MetaData) = {
+    val newMissions = metaData.missions.filterNot(Mission.hasAlreadyBeenInserted)
+    insertMissions(newMissions)
+    DataSet.updateOrCreate(dataSetWithDataLayers(dataSet, metaData.dataLayerSettings.dataLayers))
+    Logger.info(s"${dataSet.name}: Inserted ${newMissions.size} new missions and updated DataLayers ${metaData.dataLayerSettings.dataLayers.keys}.")
+  }
+
+  def insertMissions(missions: List[Mission]) = {
+    missions.foreach(Mission.insertOne)
+  }
+
+  def dataSetWithDataLayers(dataSet: DataSet, newDataLayers: Map[String, DataLayer]) = {
+    dataSet.copy(dataLayers = newDataLayers)
   }
 
 }

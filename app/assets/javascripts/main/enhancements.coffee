@@ -7,17 +7,18 @@ underscore : _
 $ ->
 
   # Progresssive enhancements
-  $("[data-newwindow]").live "click", (e) ->
+  $(document).on "click", "[data-newwindow]", (e) ->
 
     [ width, height ] = $(this).data("newwindow").split("x")
     window.open(this.href, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
     e.preventDefault()
 
 
-  $("a[data-ajax]").live "click", (event) ->
+  $(document).on "click", "a[data-ajax]", (event) ->
     
     event.preventDefault()
     $this = $(this)
+    $form = $this.parents("form").first()
 
     options = {}
     for action in $this.data("ajax").split(",")
@@ -32,8 +33,16 @@ $ ->
       return unless confirm("Are you sure?")
 
     if options["submit"]
-      $form = $this.parents("form")
-      ajaxOptions["type"] = $form[0].method ? "POST"
+      $validationGroup = $this.parents("form, [data-validation-group]").first()
+      isValid = true
+      $validationGroup.find(":input")
+        .each( ->
+          unless this.checkValidity()
+            isValid = false
+            Toast.error( $(this).data("invalid-message") || this.validationMessage )
+        )
+      return unless isValid
+      ajaxOptions["type"] = options.method ? $form[0].method ? "POST"
       ajaxOptions["data"] = $form.serialize()
 
 
@@ -89,7 +98,7 @@ $ ->
     )
   
 
-  $("table input.select-all-rows").live "change", ->
+  $(document).on "change", "table input.select-all-rows", ->
 
     $this = $(this)
     $this.parents("table").find("tbody input.select-row").prop("checked", this.checked)
@@ -111,7 +120,7 @@ $ ->
       
 
 
-    $("table input.select-row").live "change", ->
+    $(document).on "change", "table input.select-row", ->
 
       $this = $(this)
       $table = $this.parents("table").first()
@@ -132,6 +141,13 @@ $ ->
         $table.data("select-row-last", { el : $row, index : $row.prevAll().length })
 
       return
+
+  if window.location.hash
+    $(window.location.hash).addClass("highlighted")
+
+  $(window).on "hashchange", ->
+    $(".highlighted").removeClass("highlighted")
+    $(window.location.hash).addClass("highlighted")
 
 
   $("table.table-details").each ->

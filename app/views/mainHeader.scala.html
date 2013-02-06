@@ -6,8 +6,8 @@
 <header class="navbar navbar-static-top navbar-inverse">
   <div class="navbar-inner">
     @if(showNavButtons){
-      <a class="brand" href="@routes.Game.index">@current.configuration.getString("application.name")</a>
-      <span>v@current.configuration.getString("application.version") </span>
+      <a class="brand" href="@routes.UserController.dashboard">@current.configuration.getString("application.name")</a>
+      <span class="version">v@current.configuration.getString("application.version") </span>
       <ul class="nav">
         <li class="divider-vertical"></li>
         <li>

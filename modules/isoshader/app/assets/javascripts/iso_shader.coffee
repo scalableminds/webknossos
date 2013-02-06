@@ -41,8 +41,7 @@ class Isoshader
     @cam_matrix = []
     @cam_matrix = glMatrix.mat4.fromRotationTranslation(@cam_matrix, @cam.dir, @cam.pos)
 
-    @surfaces = [{},{}]
-    surface_uniforms = ["texture","threshold","draw_surface","draw_map"]
+    @surfaces = [{}]
 
     turn_speed = 0.003
     key_turn_speed = 0.2
@@ -81,9 +80,11 @@ class Isoshader
       surface.draw_surface = 1
       surface.draw_map = 1
 
-      surface.draw_surface = 1 if not @surfaces[1].draw_surface_set
+      #surface.draw_surface = 1 if not @surfaces[1].draw_surface_set
 
       @surfaces[i] = surface
+
+    #@surfaces[1].draw_surface = 0
 
 
   initThreeJS : ->
@@ -92,14 +93,13 @@ class Isoshader
     height = @canvas.height()
 
     # Initialize main THREE.js components
-    @renderer = new THREE.WebGLRenderer( canvas: @canvas[0], clearColor: 0xffffff, antialias: true, preserveDrawingBuffer: true  )
-    #@camera = new THREE.PerspectiveCamera(90, width /   height, 0.1, 10000)
+    @renderer = new THREE.WebGLRenderer( canvas: @canvas[0], preserveDrawingBuffer: true )
+    @renderer.autoClearStencil = 0
+
     @scene = new THREE.Scene()
     @camera = new THREE.Camera()
     @camera.position.z = 1
-
     @scene.add(@camera)
-    #@camera.lookAt(new THREE.Vector3( 0, 0, 0 ))
 
     @renderer.setSize(width, height)
 
@@ -117,14 +117,18 @@ class Isoshader
 
   initGeometry : ->
 
-    geometry = new THREE.PlaneGeometry(1,1,1,1)
+    geometry = new THREE.PlaneGeometry(2,2,1,1)
     material = @initShader()
+    #material = new THREE.MeshBasicMaterial({color: 0xff3355})
+    @scene.overrideMaterial = material
 
-    mesh = new THREE.Mesh(geometry, material)
-    @scene.add(mesh)
+    isoMesh = new THREE.Mesh(geometry, material)
+    isoMesh.doubleSided = true
+    @scene.add(isoMesh)
 
     # start the rendering loop
     @animate()
+
 
   initShader : ->
 
@@ -133,15 +137,25 @@ class Isoshader
     shaderUniforms =
       time :          { type: "f", value: parameters.time },
       resolution :    { type: "v2", value: new THREE.Vector2(parameters.screenWidth, parameters.screenHeight) },
-      camera_matrix : { type: "m4", value: new THREE.Matrix4(@camera_matrix) },
+      mouse :         { type: "v2", value: new THREE.Vector2(parameters.mouseX, parameters.mouseY) } #unused
+      camera_matrix : { type: "m4", value: new THREE.Matrix4(@cam_matrix...) },
       shading_type :  { type: "i", value : @shading_type},
       debug_mode :    { type: "i", value : @debug_mode},
       backbuffer :    { type: "backbuffer", value: new THREE.Texture() }, #unused right now
-      mouse :         { type: "mouse", value: new THREE.Vector2(parameters.mouseX, parameters.mouseY) } #unused
 
     for i in [0 .. @surfaces.length - 1]
 
-      texture = new THREE.Texture( @assetHandler.getFile("texture")[i] )
+      texture = new THREE.Texture(
+        @assetHandler.getFile("texture")[i],
+        new THREE.UVMapping(),
+        THREE.RepeatWrapping,
+        THREE.RepeatWrapping,
+        THREE.LinearFilter,
+        THREE.LinearFilter,
+        THREE.LuminanceFormat,
+        THREE.UnsignedByteType
+      )
+
       texture.needsUpdate = true
 
       shaderUniforms["surface_#{i}.texture"] =      { type: "t", value: texture }
@@ -151,8 +165,11 @@ class Isoshader
 
     @shaderMaterial = new THREE.ShaderMaterial(
       uniforms : shaderUniforms
-      vertexShader : @assetHandler.getFile("vertexShader")
-      fragmentShader : @assetHandler.getFile("fragmentShader")
+      vertexShader :   @assetHandler.getFile("vertexShader")
+      fragmentShader : @assetHandler.getFile("isoShader")
+      blending : THREE.NoBlending
+      depthTest : false
+      side : THREE.DoubleSide
     )
 
 
@@ -162,6 +179,8 @@ class Isoshader
       #enable or disable surface
       "m" : => @surfaces[0].draw_surface = +!@surfaces[0].draw_surface
       "p" : => @surfaces[1].draw_surface = +!@surfaces[1].draw_surface
+
+      "d" : => @debug_mode = +!@debug_mode
 
       # thresholds
       "," : => @surfaces[0].threshold
@@ -177,35 +196,63 @@ class Isoshader
 
   initMouse : ->
 
-      #parameters.mouseX = event.clientX / window.innerWidth;
-      #parameters.mouseY = 1 - event.clientY / window.innerHeight;
+    $(window).on "mousemove",(event) =>
+      @parameters.mouseX = event.clientX / window.innerWidth
+      @parameters.mouseY = 1 - event.clientY / window.innerHeight
 
-      new Input.Mouse(
-        @canvas
-        "x" : (distX) => @parameters.mouseX = distX
-        "y" : (distY) => @parameters.mouseY = distY
 
-        #TODO: Camera mouse handling
-      )
+    # new Input.Mouse(
+    #   @canvas
+    #   "x" : (distX) => @parameters.mouseX = distX
+    #   "y" : (distY) => @parameters.mouseY = distY
+
+    #   #TODO: Camera mouse handling
+    # )
 
 
   initGUI : ->
 
-    qualitySelection = $("quality")
+    qualitySelection = $("#quality")
     qualitySelection.selectedIndex = @quality
     qualitySelection.on( "change", (evt) =>
       @quality = evt.target.selectedIndex
+      @resize()
     )
 
-    shadingSelection = $("shading")
+    shadingSelection = $("#shading")
     shadingSelection.selectedIndex = @shading_type
     shadingSelection.on( "change", (evt) =>
       @shading_type = evt.target.selectedIndex
     )
 
 
-  createRenderTargets : ->
+  createRenderTarget : ->
 
+    @renderTarget = new THREE.WebGLRenderTarget(
+      @parameters.screenWidth,
+      @parameters.screenHeight,
+      options =
+        wrapS : THREE.ClampToEdgeWrapping
+        wrapT : THREE.ClampToEdgeWrapping
+        magFilter : THREE.NearestFilter
+        minFilter : THREE.NearestFilter
+        depthBuffer : true
+        stencilBuffer : false
+      )
+
+    return new THREE.MeshBasicMaterial(
+      map: @renderTarget
+      blending : THREE.NoBlending
+      side : THREE.DoubleSide
+      )
+    # return new THREE.ShaderMaterial(
+    #   uniforms: {
+    #     texture: { type: "t", value: 0, texture: @renderTarget }
+    #   }
+    #   vertex_shader: @assetHandler.getFile("vertexShader")
+    #   fragment_shader:@assetHandler.getFile("basicFragShader")
+    #   blending : THREE.NoBlending
+    # )
 
   updateUniforms : ->
 
@@ -217,7 +264,13 @@ class Isoshader
 
     @shaderMaterial.uniforms["time"].value = parameters.time / 1000
     @shaderMaterial.uniforms["resolution"].value = new THREE.Vector2(parameters.screenWidth, parameters.screenHeight)
-    @shaderMaterial.uniforms["camera_matrix"].value = new THREE.Matrix4(@camera_matrix) #array or single values???
+    @shaderMaterial.uniforms["mouse"].value = new THREE.Vector2(parameters.mouseX, parameters.mouseY)
+    @shaderMaterial.uniforms["camera_matrix"].value = new THREE.Matrix4(@cam_matrix...)
+
+    @shaderMaterial.uniforms["debug_mode"].value = @debug_mode
+    @shaderMaterial.uniforms["shading_type"].value = @shading_type
+    @shaderMaterial.uniforms["surface_0.draw_surface"].value = @surfaces[0].draw_surface
+    #@shaderMaterial.uniforms["surface_1.draw_surface"].value = @surfaces[1].draw_surface
 
     #both unused right now in shader
     #@shaderMaterial.uniforms["backbuffer"] = new THREE.Texture()
@@ -227,9 +280,11 @@ class Isoshader
   animate : ->
 
     @updateUniforms()
-
     @stats.update()
-    @renderer.render @scene, @camera
+
+    #render to screen
+    @renderer.render( @scene, @camera, )
+
 
     window.requestAnimationFrame => @animate()
 
@@ -250,6 +305,5 @@ class Isoshader
     @parameters.screenHeight = height
 
     @renderer.setSize( width, height )
-    #@camera.aspect = width / height
-    #@camera.updateProjectionMatrix()
+
 

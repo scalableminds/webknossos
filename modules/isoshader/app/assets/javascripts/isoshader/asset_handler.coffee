@@ -20,13 +20,15 @@ class AssetHandler
     $.when(
       Request.send(url : "/assets/shader/vertexShader.vs"),
       Request.send(url : "/assets/shader/example.fs"),
-      @loadImage(url : "/assets/images/rawBig.raw.png"),
+      Request.send(url : "/assets/shader/basicFragmentShader.fs"),
+      @loadImage(url : "/assets/images/test.png"),
       @loadImage(url : "/assets/images/skel_strongerDT.png")
-    ).pipe (vertexShader, fragmentShader, texture0, texture1) =>
+    ).pipe (vertexShader, isoShader, basicFragShader, texture0, texture1) =>
 
       @fileCache =
         "vertexShader" : vertexShader[0]
-        "fragmentShader" : fragmentShader[0]
+        "isoShader" : isoShader[0]
+        "basicFragShader" : basicFragShader[0]
         "texture" : [ texture0, texture1 ]
 
       @doneLoading.resolve(@)

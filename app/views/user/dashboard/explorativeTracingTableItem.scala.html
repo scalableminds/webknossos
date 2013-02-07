@@ -1,6 +1,7 @@
 @(tracing: models.tracing.Tracing)
   <tr>
     <td> @formatHash(tracing.id) </td>
+    <td> @tracing.name </td>
     <td> @tracing.dataSetName </td>
     <td> @tracing.trees.size </td>
     <td> @tracing.tracingType </td>

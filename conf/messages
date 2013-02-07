@@ -1,11 +1,10 @@
-error.email=Please supply a valid email address.
-error.email.inuse=This email address is already in use
+error.email=Please supply a valid email address
+error.required=Please supply all needed values
 
-error.password.nomatch=Passwords don''t match
-error.password.tooshort=Password too short
+notAllowed=None of your bussiness
 
-error.required=Please supply all needed values.
-error.login.invalid=Invalid email or password
+binary.payload.notSupplied=No valid payload supplied
+binary.payload.invalid=Couldn''t parse payload
 
 email=Email
 password=Password
@@ -14,53 +13,136 @@ password.validation=Password (again)
 firstName=First Name
 lastName=Last Name
 
-user.verified=has been verified
+user.verified={0} has been verified
+user.verifyFailed=Couldn't verify user
+user.notFound=User not found
 user.notVerified=Your account hasn''t been activated yet. After you have uploaded all requested information to braintracing.org, an admin will verify your acount.
 user.noPermission=You don''t have enough permissions to access this site. Sorry :(
-user.deleted=has been deleted
+user.deleted={0} has been deleted
+user.bulk.empty=No user has been chosen
+user.bulk.failedFor=Operation failed for {0}
+user.password.nomatch=Passwords don''t match
+user.password.tooshort=Password too short
+user.email.alreadyInUse=This email address is already in use
+user.login.failed=Invalid email or password
+user.login.success=You are now logged in
+user.settings.invalid=Couldn''t parse settings
+user.experience.increased=Increased experience of {0}
+user.experience.set=Set experience of {0}
+user.experience.set=Removed experience from {0}
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on oxalis to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
 braintracing.exists=Great, you already have an account on braintracing.org. Please double check that you have uploaded all requested information.
 
-task.create.success=Task successfully created
-task.finished=Task is finished
-task.passedToReview=Task is now getting reviewed. This may take some time.
-task.new=You got a new task
-task.alreadyHasOpenOne=You already have an open task.
-task.unavailable=There is currently no task available.
-task.notFound=Task couldn''t be found.
-task.removed=The task got removed
-
-taskInstances=Task instances
-
-taskType=Task type
-taskType.invalid=Selected type doesn''t exist
-
 dataSet=Data Set
-dataSet.invalid=Selected data set doesn''t exist
+dataSet.notFound=Selected data set doesn''t exist
+dataSet.notSupplied=No data set supplied
+
+dataLayer.notFound=DataLayer not found
 
 cellId=Cell Id
 
 start.point=Start
-point.invalid=Invalid format. Use something like: 4, 63, 24
 
 experience=Experience
 experience.domain=Experience Domain
+experience.domain.invalid=Invalid experience domain
+experience.value.invalid=Invalid experience value
 experience.value=Min Experience
+
+nmlFile=Reference NML File
+nml.file.uploadSuccess=Successfully uploaded file
+nml.file.notFound=Couldn''t extract NML file
+nml.file.invalid=Couldn''t parse NML file
+
+owner=Owner
+
+priority=Priority
+
+project=Project
+projectName=Project Name
+project.removed=Project got removed
+project.notFound=Project couldn''t be found
+project.nameAlreadyInUse=Name already used
+project.createSuccess=Project successfully created
+
+role.invalid=Invalid role
+role.removed=Removed role from {0}
+role.added=Added role to {0}
 
 training.domain=Trainings Domain
 training.gain=Experience Gain
 training.loss=Experience Loss
-training.new=You got a new Trainings-Task
-
-nmlFile=Reference NML File
-
-priority=Priority
 
 tracing=Tracing
-tracing.invalid=Selected training doesn''t exist
-tracing.notFound=Tracing couldn''t be found.
+tracing.finished=Tracing is finished
+tracing.invalid=Invalid tracing
+tracing.creationFailed=Failed to create tracing
+tracing.notFound=Tracing couldn''t be found
+tracing.review.assignFailed=Couldn''t assign reviewee
+tracing.review.notFound=There is no review for this tracing
+tracing.review.assigned=You got assigned as reviewee
+tracing.review.unassigned=You got unassigned from this training
+tracing.review.notReady=Tracing is not ready for review
+tracing.review.finishFailed=You can''t review this tracing
+tracing.review.finished=Review finished
+tracing.task.notFound=Couldn''t find task for tracing
+tracing.training.notFound=Couldn''t find training for tracing
+tracing.user.notFound=Couldn''t find a user for the tracing
+tracing.open.notFound=No open tracing found
+tracing.notPossible=Couldn''t access tracing
+
+jira.summary.notSupplied=No summary supplied
+jira.description.notSupplied=No description supplied
+jira.type.notSupplied=No issue type supplied
+jira.type.invalid=Invalid issue type
+
+task.createSuccess=Task successfully created
+task.finished=Task is finished
+task.cancelled=Task got cancelled
+task.passedToReview=Task is now getting reviewed. This may take some time.
+task.assigned=You got a new task
+task.alreadyHasOpenOne=You already have an open task
+task.unavailable=There is currently no task available
+task.notFound=Task couldn''t be found
+task.removed=Task got removed
+task.training.notFound=Couldn''t find training for this task
+task.training.deleted=Removed training from task
+task.training.sample.notFound= Couldn''t find sample for training
+task.training.assigned=You got a new Trainings-Task
+task.bulk.notSupplied=No data supplied
+task.bulk.createSuccess=Successfully created {0} Tasks
+
+taskInstances=Task instances
+
+taskType=Task type
+taskType.notFound=Selected task type doesn''t exist
+taskType.deleted=Task type '{0}' successfully deleted
+taskType.emptyModeSelection=Please select at least one tracing mode
+
+taskAlgorithm.notSupplied=No algorithm supplied
+taskAlgorithm.notFound=Couldn''t find algorithm
+taskAlgorithm.invalid=Invalid algorithm code
+taskAlgorithm.use.notSupplied=You need to specify if the algorithm should be used
+
+level.invalidName=Invalid level name
+level.notFound=Couldn''t find level
+level.removed=Level got removed
+level.code.saved=Code saved
+level.code.notSupplied=No code supplied
+level.assets.notSupplied=No asset supplied
+level.assets.uploaded=Asset successfully uploaded 
+level.assets.uploadFailed=Asset upload failed
+level.assets.notFound=Asset not found
+level.assets.deleted=Asset got removed
+level.assets.deleteFailed=Couldn''t delete asset
+level.creation.inProgress=Level creation in progress
+
+mission.notFound=No mission found
+
+time.invalidFormat=Time couldn''t get parsed.
+point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
 summary=Summary
 description=Description

@@ -13,17 +13,17 @@ import models.binary.DataSet
 import views._
 import play.api.Logger
 import models.tracing._
+import play.api.i18n.Messages
+import braingames.mvc.Controller
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
   def dashboard = Authenticated { implicit request =>
     val user = request.user
-    val tracings = Tracing.findFor(user)
+    val tracings = Tracing.findFor(user).filter(t => !TracingType.isSystemTracing(t))
     val (taskTracings, allExplorationalTracings) =
-      tracings.partition(e =>
-        e.tracingType == TracingType.Task ||
-          e.tracingType == TracingType.Training)
+      tracings.partition(_.tracingType == TracingType.Task)
 
     val explorationalTracings = 
       allExplorationalTracings
@@ -45,17 +45,22 @@ object UserController extends Controller with Secured {
 
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {
     implicit request =>
-      request.body.asOpt[JsObject] map { settings =>
+      request.body.asOpt[JsObject].map{ settings =>
         if(UserConfiguration.isValid(settings)){
           request.user.update(_.changeSettings(UserConfiguration(settings.fields.toMap)))
           Ok
         } else
           BadRequest("Invalid settings")
-      } getOrElse (BadRequest)
+      } ?~ Messages("user.settings.invalid")
   }
 
   def showSettings = Authenticated {
     implicit request =>
       Ok(toJson(request.user.configuration.settingsOrDefaults))
+  }
+  
+  def defaultSettings = Authenticated {
+    implicit request =>
+      Ok(toJson(UserConfiguration.defaultConfiguration.settings))
   }
 }

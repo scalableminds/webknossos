@@ -1,5 +1,7 @@
 package controllers.login
+
 import play.api.mvc._
+import play.api.libs.concurrent.Execution.Implicits._
 import views._
 import java.net.URLEncoder
 import play.api.libs.ws.WS
@@ -8,8 +10,6 @@ import com.restfb.DefaultFacebookClient
 import play.api.Play
 import brainflight.security.Secured
 import controllers.UserController
-import play.api.libs.concurrent.execution.defaultContext
-//import scala.concurrent.ExecutionContext.Implicits.global
 
 object FacebookLogin extends Controller {
   val conf = Play.current.configuration

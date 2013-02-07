@@ -1,11 +1,13 @@
 @(showNavButtons: Boolean = true)(implicit session: brainflight.view.SessionData)
 
 @import models.security._
+@import play.api.Play.current
 
 <header class="navbar navbar-static-top navbar-inverse">
   <div class="navbar-inner">
     @if(showNavButtons){
-      <a class="brand" href="@routes.Game.index">Oxalis</a>
+      <a class="brand" href="@routes.UserController.dashboard">@current.configuration.getString("application.name")</a>
+      <span class="version">v@current.configuration.getString("application.version") </span>
       <ul class="nav">
         <li class="divider-vertical"></li>
         <li>
@@ -21,6 +23,9 @@
             <ul class="dropdown-menu">            
               <li>
                 <a href="@controllers.admin.routes.UserAdministration.index">Users</a>
+              </li>  
+              <li>
+                <a href="@controllers.admin.routes.ProjectAdministration.list">Projects</a>
               </li>  
               <li class="dropdown-submenu">
                 <a tabindex="-1" href="@controllers.admin.routes.TaskAdministration.list">Tasks</a>

@@ -5,9 +5,10 @@ import javax.script.ScriptContext
 import collection.JavaConversions._
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
-import akka.util.duration._
+import scala.concurrent.duration._
 import play.api.Logger
-import akka.dispatch.Promise
+import scala.util._
+import scala.concurrent.Promise
 
 class JsExecutor {
   // create a script engine manager
@@ -30,24 +31,24 @@ class JsExecutor {
       def run() {
         promise complete {
           try {
-            Right(engine eval fkt)
+            Success(engine eval fkt)
           } catch {
             case e: Exception =>
-              System.err.println("Cached an Exception:")
+              Logger.error("Cached an Exception:")
               e.printStackTrace()
-              Left(e)
+              Failure(e)
           }
         }
       }
     })
     jsThread.start()
     Akka.system.scheduler.scheduleOnce(5 seconds) {
-      if(!promise.isCompleted){
+      if (!promise.isCompleted) {
         Logger.warn("Destroying JS executer: Runntime expired.")
         jsThread.stop()
-        promise.complete(Left(new Exception("Exceution timeout.")))
+        promise.complete(Failure(new Exception("Exceution timeout.")))
       }
     }
-    promise
+    promise.future
   }
 }

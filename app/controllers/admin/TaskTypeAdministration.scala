@@ -1,6 +1,6 @@
 package controllers.admin
 
-import controllers.Controller
+import braingames.mvc.Controller
 import play.mvc.Security.Authenticated
 import brainflight.security.Secured
 import models.security.Role
@@ -9,6 +9,7 @@ import models.task.TaskType
 import play.api.data.Forms._
 import play.api.data.Form
 import models.task.TimeSpan
+import play.api.i18n.Messages
 
 object TaskTypeAdministration extends Controller with Secured {
 
@@ -18,6 +19,8 @@ object TaskTypeAdministration extends Controller with Secured {
     mapping(
       "summary" -> nonEmptyText(2, 50),
       "description" -> text,
+      "allowedModes" -> seq(text).verifying("taskType.emptyModeSelection", l => !l.isEmpty),
+      "branchPointsAllowed" -> boolean,
       "expectedTime" -> mapping(
         "minTime" -> number,
         "maxTime" -> number,
@@ -38,9 +41,11 @@ object TaskTypeAdministration extends Controller with Secured {
   }
   
   def delete(taskTypeId: String) = Authenticated { implicit request =>
-    TaskType.findOneById(taskTypeId) map { taskType =>
+    for{
+      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+    } yield {
       TaskType.remove(taskType)
-      AjaxOk.success("TaskType '%s' successfuly deleted.".format(taskType.summary))
-    } getOrElse AjaxBadRequest.error("TaskType not found.")
+      JsonOk(Messages("taskType.deleted", taskType.summary))
+    }
   }
 }

@@ -1,0 +1,3 @@
+package controllers.levelcreator
+
+object Assets extends controllers.AssetsBuilder

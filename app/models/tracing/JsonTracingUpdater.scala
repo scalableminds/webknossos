@@ -9,7 +9,7 @@ object TracingUpdater {
   implicit object TracingUpdateReads extends Reads[TracingUpdater] {
     def reads(js: JsValue) = {
       val value = (js \ "value").as[JsObject]
-      (js \ "action").as[String] match {
+      JsSuccess((js \ "action").as[String] match {
         case "createTree"        => CreateTree(value)
         case "deleteTree"        => DeleteTree(value)
         case "updateTree"        => UpdateTree(value)
@@ -21,7 +21,7 @@ object TracingUpdater {
         case "createEdge"        => CreateEdge(value)
         case "deleteEdge"        => DeleteEdge(value)
         case "updateTracing"     => UpdateTracing(value)
-      }
+      })
     }
   }
 
@@ -48,8 +48,8 @@ case class CreateTree(value: JsObject) extends TracingUpdater {
     val id = (value \ "id").as[Int]
     val color = (value \ "color").as[Color]
     TracingUpdate { t =>
-      val tree = DBTree.insertOne(DBTree(id, color))
-      t.update(_.addEmptyTree(tree))
+      DBTree.insertOne(DBTree(t._id, id, color))
+      t
     }
   }
 }
@@ -60,8 +60,8 @@ case class DeleteTree(value: JsObject) extends TracingUpdater {
     TracingUpdate { t =>
       t.tree(id).map { tree =>
         DBTree.remove(tree)
-        t.update(_.removeTree(tree))
-      } getOrElse t
+      }
+      t
     }
   }
 }
@@ -84,15 +84,16 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
     val sourceId = (value \ "sourceId").as[Int]
     val targetId = (value \ "targetId").as[Int]
     TracingUpdate { t =>
-      (for {
+      for {
         source <- t.tree(sourceId)
         target <- t.tree(targetId)
       } yield {
         DBTree.moveAllNodes(source._id, target._id)
         DBTree.moveAllEdges(source._id, target._id)
-
-        t.update(_.removeTree(source))
-      }) getOrElse t
+        
+        DBTree.remove(source)
+      }
+      t
     }
   }
 }

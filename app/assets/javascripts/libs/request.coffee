@@ -36,7 +36,7 @@ Request =
         if @status == 200
           deferred.resolve(@response)
         else
-          deferred.reject(@statusText)
+          deferred.reject(xhr)
 
       xhr.onerror = (err) ->
         deferred.reject(err)

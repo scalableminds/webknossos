@@ -28,6 +28,17 @@ body:-webkit-full-screen {
     color: #999;
 }
 
+.navbar .version {
+    float: left;
+    font-size: 11px;
+    padding-top: 12px;
+    display: inline-block;
+}
+
+.label {
+    margin-right: .2em;
+}
+
 .well form {
     margin-bottom: 0;
 }
@@ -87,6 +98,10 @@ body:-webkit-full-screen {
     margin-bottom: 0;
 }
 
+.table tr.highlighted > td {
+    background: #fcf8e3 !important;
+}
+
 .table-details {
 
     .details-row > td {
@@ -141,6 +156,11 @@ body:-webkit-full-screen {
     }
 }
 
+.icon-random {
+    width: 14px;
+    background-position: -217px -120px;
+}
+
 .inline-block {
     display: inline-block;
 }
@@ -157,7 +177,7 @@ svg a:hover {
 }
 
 #alert-container {
-    position: absolute;
+    position: fixed;
     right: 20px;
     top: 60px;
     z-index: 100;
@@ -205,6 +225,14 @@ svg a:hover {
     top: 0;
     left: 0;
     z-index: 10;
+}
+#arbitraryplane {
+    width: 2*@standardViewportWidth+20px;
+    height: 2*@standardViewportWidth+20px;
+    position: absolute;
+    top: 20px;
+    left: 300px;
+    z-index: 100;
 }
 #abstractTreeViewer {
     top: 0px;
@@ -261,6 +289,13 @@ svg a:hover {
     top: 420px;
     left: 420px;
     z-index: 30;
+}
+#prevControls .btn > span {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
 }
 #overlay {
     position: absolute;
@@ -345,9 +380,8 @@ svg a:hover {
     #editor-container {
         input[type=submit] {
             margin: 10px 0;
+        }
     }
-}
-
 }
 
 

@@ -6,9 +6,9 @@ case class Experience(domain: String, value: Int) {
 
   override def toString = {
     if (domain == "" && value == 0)
-      "<nothing>"
+      ""
     else
-      "%s: %d".format(domain, value)
+      s"$domain: $value"
   }
 }
 

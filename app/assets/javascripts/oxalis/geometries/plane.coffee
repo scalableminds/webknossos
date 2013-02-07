@@ -81,7 +81,7 @@ class Plane
 
   updateTexture : =>
 
-      globalPos = @flycam.getGlobalPos()
+      globalPos = @flycam.getPosition()
 
       if @flycam.needsUpdate @planeID
         @flycam.notifyNewTexture @planeID
@@ -109,7 +109,7 @@ class Plane
       map.offset.y = 1 - area[3] / @textureWidth
 
   setScale : (factor) =>
-    scaleVec = new THREE.Vector3().multiply(new THREE.Vector3(factor, factor, factor), @scaleVector)
+    scaleVec = new THREE.Vector3().multiplyVectors(new THREE.Vector3(factor, factor, factor), @scaleVector)
     @plane.scale = @prevBorders.scale = @crosshair[0].scale = @crosshair[1].scale = scaleVec
 
   setRotation : (rotVec) =>
@@ -121,7 +121,7 @@ class Plane
     if      @planeID == PLANE_XY then offset.z =  1
     else if @planeID == PLANE_YZ then offset.x = -1
     else if @planeID == PLANE_XZ then offset.y = -1
-    @plane.position = offset.add(posVec, offset)
+    @plane.position = offset.addVectors(posVec, offset)
 
   setVisible : (visible) =>
     @plane.visible = @prevBorders.visible = visible

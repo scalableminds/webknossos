@@ -4,7 +4,7 @@
 
 class DrawArtCells
 
-  PUBLIC : false
+  PUBLIC : true
   COMMAND : "drawArtCells()"
   FRIENDLY_NAME : "Draw Art Cells"  
   DESCRIPTION : "Draws the morphing art cells"
@@ -33,10 +33,7 @@ class DrawArtCells
     canvas.height = height    
 
     context = canvas.getContext("2d")
-
-    context.fillStyle = "rgba(0, 0, 255, 1)"
-    context.strokeStyle = "rgba(0, 0, 0, 1)"
-    context.lineWidth = 2
+    context.lineWidth = 0
 
     activeSegments = _.filter(segments, (segment) -> segment.display is true)
     
@@ -44,6 +41,10 @@ class DrawArtCells
 
       path = segment.path
       artPath = segment.artPath
+      randomColor = segment.randomColor
+      color = "rgba(#{randomColor.r}, #{randomColor.g}, #{randomColor.b}, 1)"
+      context.fillStyle = color #"rgba(0, 0, 255, 1)"
+      context.strokeStyle = color #"rgba(0, 0, 0, 1)"
 
       context.beginPath()
 

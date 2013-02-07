@@ -44,7 +44,7 @@ class ColorSegmentsRandomly
 
     colors = []
     for segment in segments
-      colors[segment.value] = segment.randomColor
+      colors[segment.id] = segment.randomColor
 
     j = -1
     for i in [0...rgba.length] by 4

@@ -112,7 +112,7 @@ class PluginRenderer
           dimensions : @dimensions
         )
 
-        @plugins.segmentImporter.execute(input : inputData)
+        @plugins.segmentImporter.execute(input : inputData, slideOffset)
 
 
     for key, plugin of @plugins

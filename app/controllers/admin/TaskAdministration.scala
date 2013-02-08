@@ -28,7 +28,9 @@ object TaskAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
 
-  val taskFromNMLForm = Form(
+  val taskFromNMLForm = basicTaskForm(minTaskInstances = 1)
+  
+  def basicTaskForm(minTaskInstances: Int) = Form(
     tuple(
       "taskType" -> text.verifying("taskType.notFound",
         taskType => TaskType.findOneById(taskType).isDefined),
@@ -36,7 +38,8 @@ object TaskAdministration extends Controller with Secured {
         "domain" -> text,
         "value" -> number)(Experience.apply)(Experience.unapply),
       "priority" -> number,
-      "taskInstances" -> number,
+      "taskInstances" -> number.verifying("task.edit.toFewInstances", 
+          taskInstances => taskInstances >= minTaskInstances),
       "project" -> text.verifying("project.notFound",
         project => project == "" || Project.findOneByName(project).isDefined)))
     .fill(("", Experience.empty, 100, 10, ""))
@@ -74,6 +77,13 @@ object TaskAdministration extends Controller with Secured {
       Project.findAll,
       taskFromNMLForm,
       taskForm)
+
+  def taskEditHtml(taskFromNMLForm: Form[(String, Experience, Int, Int, String)])(implicit request: AuthenticatedRequest[_]) =
+    html.admin.task.taskEdit(
+      TaskType.findAll,
+      Experience.findAllDomains,
+      Project.findAll,
+      taskFromNMLForm)
 
   def create = Authenticated { implicit request =>
     Ok(taskCreateHTML(taskFromNMLForm, taskForm))
@@ -120,6 +130,49 @@ object TaskAdministration extends Controller with Secured {
             Tracing.createTracingBase(task, request.user._id, dataSetName, start)
             Redirect(routes.TaskAdministration.list).flashing(
               FlashSuccess(Messages("task.createSuccess")))
+          }
+      })
+  }
+  
+  def edit(taskId: String) = Authenticated{ implicit request =>
+    for{
+      task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+    } yield {
+      val form = basicTaskForm(task.assignedInstances).fill(
+          (task._taskType.toString, 
+           task.neededExperience,
+           task.priority, 
+           task.instances, 
+           task.project.map(_.name) getOrElse "")
+      )
+      
+      Ok(taskEditHtml(form))
+    }
+  }
+
+  def editTaskForm(taskId: String) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    taskFromNMLForm.bindFromRequest.fold(
+      formWithErrors => BadRequest(taskEditHtml(formWithErrors)),
+      {
+        case (taskTypeId, experience, priority, instances, projectName) =>
+          for {
+            task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+            taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+          } yield {
+            val project = Project.findOneByName(projectName)
+            /*val baseTask = Task(
+              0,
+              taskType._id,
+              experience,
+              priority,
+              instances,
+              _project = project.map(_.name))
+            nmls.foreach { nml =>
+              val task = Task.createAndInsertDeepCopy(baseTask)
+              Tracing.createTracingBase(task, request.user._id, nml)
+            }*/
+            Redirect(routes.TaskAdministration.list).flashing(
+              FlashSuccess(Messages("task.editSuccess")))
           }
       })
   }

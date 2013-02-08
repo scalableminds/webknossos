@@ -31,7 +31,7 @@
     }
   </td>
   <td>  
-  <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)"><i class="icon-pencil"></i> edit </a><br />
+    <a href="@controllers.admin.routes.TaskAdministration.edit(task.id)"><i class="icon-pencil"></i> edit </a><br />
     <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)"><i class="icon-download"></i> download </a><br />
     <a href="@controllers.admin.routes.TrainingsTaskAdministration.create(task.id)"><i class="icon-road"></i> use for Training </a><br />
     <a href="@controllers.admin.routes.TaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>

@@ -55,19 +55,6 @@ object LevelCreator extends Controller {
     }
   }
 
-  def meta(levelId: String) = Action { implicit request =>
-    for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-    } yield {
-      Ok(Json.obj(
-        "name" -> level.name,
-        "width" -> level.width,
-        "height" -> level.height,
-        "depth" -> level.depth
-      ))
-    }
-  }
-
   def delete(levelId: String) = Action { implicit request =>
     for {
       level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
@@ -106,7 +93,7 @@ object LevelCreator extends Controller {
   }
   
   //TODO produce one that has not been created yet
-  def produce(levelId: String) = Action { implicit request =>
+  def produce(levelId: String, count: Int) = Action { implicit request =>
     Async{
       for {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")

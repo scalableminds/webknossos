@@ -74,7 +74,9 @@ class LevelCreateActor extends Actor{
     val js = html.levelcreator.phantom(
         level, 
         imagesPath(level, mission) + "/stackImage%i.png", 
-        levelUrl).body
+        imagesPath(level, mission) + "/meta.json", 
+        levelUrl,
+        mission.start.startId).body
     val file = createTempFile(js)
     println("phantomjs " + file.getAbsolutePath())
     ("phantomjs %s".format(file.getAbsolutePath)) !! logger

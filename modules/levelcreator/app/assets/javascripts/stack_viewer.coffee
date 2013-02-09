@@ -14,14 +14,14 @@ class StackViewer
 
       $el.html("<div class=\"loading-indicator\"><i class=\"icon-refresh rotating\"></i></div>")
 
-      [a, levelId, stackId] = event.currentTarget.href.match(/stack-([0-9a-f]+)-([0-9a-f]+)$/)
-      @loadStack(levelId, stackId).then( (stack) => 
-        @loadImages(stack.name, stackId, stack.depth).then( 
+      [a, levelName, stackId] = event.currentTarget.href.match(/stack-([^-]+)-([0-9a-f]+)$/)
+      @loadStack(levelName, stackId).then( (stack) => 
+        @loadImages(levelName, stackId, stack.length).then( 
           
           (images...) =>
 
             $canvas = $("<canvas>").prop(width : stack.width, height : stack.height)
-            $slider = $("<input>", type : "range", min : 0, max : stack.depth, value : 0)
+            $slider = $("<input>", type : "range", min : 0, max : stack.length, value : 0)
             $el
               .html("")
               .append($canvas, "<br />", $slider)
@@ -40,13 +40,12 @@ class StackViewer
       )
 
 
-  loadStack : _.memoize (levelId, stackId) ->
+  loadStack : _.memoize (levelName, stackId) ->
 
     $.ajax(
-      url : routes.controllers.levelcreator.LevelCreator.meta(levelId).url
+      url : "/stacks/#{levelName}/#{stackId}/meta.json"
       dataType : "json"
-    ).then (stack) ->
-      _.extend(stack, { levelId, stackId })
+    )
 
 
   loadImages : _.memoize( (levelName, stackId, imageCount) ->

@@ -1,11 +1,12 @@
-@(level: models.knowledge.Level, outputFilepattern: String, levelUrl: String)
+@(level: models.knowledge.Level, outputFilepattern: String, metaFilename: String, levelUrl: String, missionId: Int)
 
-var page = require('webpage').create();
+var page = require("webpage").create();
+var fs = require("fs");
 
 page.viewportSize = { width : 1000, height : 1000 };
 
 
-var i = 0, length = 0;
+var i = 0, stackData;
 
 var triggerRender = function() {
   
@@ -23,9 +24,13 @@ page.onCallback = function (data) {
 
     page.clipRect = { top : 0, height : 0, width : data.width, height : data.height };
 
-    length = data.length;
+    stackData = { 
+      width: data.width, 
+      height: data.height,
+      length: data.length
+    };
 
-    console.log("" + length + " frames available");
+    console.log("" + stackData.length + " frames available");
     triggerRender();
   }
 
@@ -35,9 +40,20 @@ page.onCallback = function (data) {
     console.log("rendered frame #" + i + " to " + "@{outputFilepattern}".replace("%i", i));
     
     i++;
-    if (i <= length) {
+    if (i <= stackData.length) {
       triggerRender();
     } else {
+      stackData.createdAt = Date.now();
+      stackData.levelName = "@{level.name}";
+      stackData.levelId = "@{level.id}";
+      stackData.stackId = @{missionId};
+      fs.write(
+        "@{metaFilename}",
+        JSON.stringify(stackData),
+        "w"
+      );
+      console.log("wrote meta file to @{metaFilename}");
+      
       phantom.exit();
     }
   }

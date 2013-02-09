@@ -10,13 +10,13 @@
           <header>
             <h4>
               #@missionId
-              <a href="@controllers.levelcreator.routes.LevelCreator.download(level.id)">
+              <a href="@controllers.levelcreator.routes.Assets.at(path="/data/levels", s"${level.name}/$missionId/${level.name}_${missionId}_stack.zip")">
                 <i class="icon-download"></i>
               </a>
             </h4>
           </header>
           <div class="stack-display" style="height: @((level.height + 20) + "px");">
-            <a href="#stack-@level.id-@missionId">
+            <a href="#stack-@level.name-@missionId">
               <i class="icon-play"></i>
             </a>
           </div>

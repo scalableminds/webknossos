@@ -15,7 +15,7 @@ GET     /level/:levelId/produce             controllers.levelcreator.LevelCreato
 POST    /level/:levelId/uploadAsset         controllers.levelcreator.LevelCreator.uploadAsset(levelId: String)
 GET     /level/:levelId/deleteAsset/*asset  controllers.levelcreator.LevelCreator.deleteAsset(levelId: String, asset: String)
 GET     /level/:levelId/asset/*asset        controllers.levelcreator.LevelCreator.retrieveAsset(levelId: String, asset: String)
-GET     /level/:levelId/download            controllers.levelcreator.LevelCreator.download(levelId: String)
+#GET     /level/:levelId/download            controllers.levelcreator.LevelCreator.download(levelId: String)
 GET     /level/:levelId/stacks              controllers.levelcreator.LevelCreator.stackList(levelId: String)
 
 #Getting binary Data

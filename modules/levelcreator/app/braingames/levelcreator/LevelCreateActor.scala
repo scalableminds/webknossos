@@ -22,7 +22,7 @@ import java.io.{File, PrintWriter, FilenameFilter}
 
 
 case class CreateLevel(level: Level, mission: Mission)
-case class ZipLevel(level: Level, mission: Mission)
+//case class ZipLevel(level: Level, mission: Mission)
 
 case class ExecLogger(var messages: List[String] = Nil,
   var error: List[String] = Nil)
@@ -51,9 +51,12 @@ class LevelCreateActor extends Actor{
   def receive = {
     case CreateLevel(level, mission) =>
      sender ! createLevel(level, mission)
+    /*
     case ZipLevel(level, mission) => 
       createLevel(level, mission);
       sender ! zippedFiles(level, mission)
+    * 
+      */
   }
   
   def createTempFile(data: String) = {
@@ -77,16 +80,18 @@ class LevelCreateActor extends Actor{
     ("phantomjs %s".format(file.getAbsolutePath)) !! logger
     println("Finished phantomjs.")
     level.addRenderedMission(mission.start.startId)
+    zipFiles(level, mission)
     "finished stack creation"
+    
+   
   }
   
-  def zippedFiles(level: Level, mission: Mission) = {
-    val zipFile = imagesPath(level, mission) + "/stack.zip"
+  def zipFiles(level: Level, mission: Mission) = {
+    val zipFile = imagesPath(level, mission) + "/%s_%s_stack.zip".format(level.name, mission.start.startId)
     val stackDir = new File(imagesPath(level, mission))
     val pngFilter = new FileExtensionFilter(".png")
     val cmd = "zip %s %s".format(zipFile, stackDir.listFiles(pngFilter).mkString(" ") )
     cmd.!
     println("Finished zipping")
-    new File(zipFile)
   }
 }

@@ -104,7 +104,8 @@ object LevelCreator extends Controller {
       Ok(Json.toJson(level.assets.map(_.getName)))
     }
   }
-
+  
+  //TODO produce one that has not been created yet
   def produce(levelId: String) = Action { implicit request =>
     Async{
       for {
@@ -120,7 +121,7 @@ object LevelCreator extends Controller {
       }
     }
   }
-  
+  /*
   def download(levelId: String) = Action { implicit request => 
     Async{
       for {
@@ -131,7 +132,7 @@ object LevelCreator extends Controller {
         future.mapTo[File].map{file => Ok.sendFile(content = file)}
       }
     }
-  }
+  }*/
 
   def retrieveAsset(levelId: String, asset: String) = Action { implicit request =>
     for {

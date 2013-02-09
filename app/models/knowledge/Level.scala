@@ -13,6 +13,7 @@ case class Level(
     height: Int,
     depth: Int,
     code: String = Level.defaultCode,
+    renderedMissions: List[Int] = List(),
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
 
@@ -36,6 +37,11 @@ case class Level(
   
   def alterCode(c: String) = {
     copy(code = c)
+  }
+  
+  def addRenderedMission(missionStartId: Int) = {
+    if (! renderedMissions.contains(missionStartId))
+      update(_.copy(renderedMissions = missionStartId :: renderedMissions))
   }
   
   def retrieveAsset(name: String) = {

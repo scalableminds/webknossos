@@ -76,6 +76,7 @@ class LevelCreateActor extends Actor{
     println("phantomjs " + file.getAbsolutePath())
     ("phantomjs %s".format(file.getAbsolutePath)) !! logger
     println("Finished phantomjs.")
+    level.addRenderedMission(mission.start.startId)
     "finished stack creation"
   }
   

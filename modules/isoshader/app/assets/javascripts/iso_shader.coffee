@@ -15,11 +15,7 @@ class Isoshader
     @assetHandler = new AssetHandler()
     @canvas = $("#webgl_canvas")
 
-
     @quality = 2
-    @quality_levels = [ 0.5, 1, 2, 4, 8 ]
-    texture_res = 128
-    texture_loaded = false #shader only compiles after texture was loaded
 
     @parameters =
       startTime: Date.now()
@@ -32,34 +28,30 @@ class Isoshader
     @cam =
       pos: glMatrix.vec3.fromValues(10, 10, 10)
       dir: glMatrix.quat.fromValues(0, 0, 0, 1)
-      mouse_is_down: false
       mouse_prev_x: 0
       mouse_prev_y: 0
-      keys:[]
       prev_update_time: Date.now()
+
+    @surfaces = [{}]
+
+    @debug_mode = 0
+    @shading_type = 3
 
     @cam_matrix = []
     @cam_matrix = glMatrix.mat4.fromRotationTranslation(@cam_matrix, @cam.dir, @cam.pos)
 
-    @surfaces = [{}]
+    # camera movement parameters
+    @forward_speed = 1.0
+    @strafe_speed = 1.0
+    @ROLL_SPEED = 0.1
+    @TURN_SPEED = 0.02
 
-    turn_speed = 0.003
-    key_turn_speed = 0.2
-    roll_speed = 0.1
-
-    initial_motion_speed = 1.0
-    motion_accel = 0.1
-    motion_decel = 0.7
-
-    forward_speed = 1.0 #now set internally to do acceleration etc
-    strafe_speed = 1.0
+    @movement = glMatrix.vec3.fromValues(0, 0, 0)
+    @rotation = glMatrix.quat.fromValues(0, 0, 0, 1.0)
 
     threshold_speed = 0.01
-    max_dt = 0.2
-    @debug_mode = 0
-    max_debug_mode = 2
-    @shading_type = 3
 
+    # let's get started
     @initSurfaces()
     @initKeyboard()
     @initMouse()
@@ -137,11 +129,9 @@ class Isoshader
     shaderUniforms =
       time :          { type: "f", value: parameters.time },
       resolution :    { type: "v2", value: new THREE.Vector2(parameters.screenWidth, parameters.screenHeight) },
-      mouse :         { type: "v2", value: new THREE.Vector2(parameters.mouseX, parameters.mouseY) } #unused
-      camera_matrix : { type: "m4", value: new THREE.Matrix4(@cam_matrix...) },
+      camera_matrix : { type: "m4", value: new THREE.Matrix4(@cam_matrix...).transpose() },
       shading_type :  { type: "i", value : @shading_type},
       debug_mode :    { type: "i", value : @debug_mode},
-      backbuffer :    { type: "backbuffer", value: new THREE.Texture() }, #unused right now
 
     for i in [0 .. @surfaces.length - 1]
 
@@ -157,6 +147,7 @@ class Isoshader
       )
 
       texture.needsUpdate = true
+      texture.flipY = false
 
       shaderUniforms["surface_#{i}.texture"] =      { type: "t", value: texture }
       shaderUniforms["surface_#{i}.threshold"] =    { type: "f", value: @surfaces[i].threshold }
@@ -187,10 +178,26 @@ class Isoshader
       "." : => @surfaces[0].threshold
       "[" : => @surfaces[1].threshold
       "]" : => @surfaces[1].threshold
+    )
 
-      "t" :  ->
+    new Input.Keyboard(
 
-      # TODO : camera keys wsad, arrow keys
+      "w" : => @movement[2] += @forward_speed * @dt; @accel = true
+      "s" : => @movement[2] -= @forward_speed * @dt; @accel = true
+      "d" : => @movement[0] += @strafe_speed * @dt;  @accel = true
+      "a" : => @movement[0] -= @strafe_speed * @dt;  @accel = true
+
+      "r" : => @movement[1] += @strafe_speed * @dt; @accel = true
+      "f" : => @movement[1] -= @strafe_speed * @dt; @accel = true
+
+      "up" :    => @rotation[0] =  @dt * @TURN_SPEED
+      "down" :  => @rotation[0] =- @dt * @TURN_SPEED
+      "right" : => @rotation[1] =  @dt * @TURN_SPEED
+      "left" :  => @rotation[1] =- @dt * @TURN_SPEED
+      "q" :     => @rotation[2] =  @dt * @ROLL_SPEED
+      "e" :     => @rotation[2] =- @dt * @ROLL_SPEED
+
+
     )
 
 
@@ -200,14 +207,16 @@ class Isoshader
       @parameters.mouseX = event.clientX / window.innerWidth
       @parameters.mouseY = 1 - event.clientY / window.innerHeight
 
-
-    # new Input.Mouse(
-    #   @canvas
-    #   "x" : (distX) => @parameters.mouseX = distX
-    #   "y" : (distY) => @parameters.mouseY = distY
-
-    #   #TODO: Camera mouse handling
-    # )
+      # var x=event.clientX;
+      # var y=event.clientY;
+      # var dx=x-cam.mouse_prev_x;
+      # var dy=y-cam.mouse_prev_y;
+      # cam.mouse_prev_x=x;
+      # cam.mouse_prev_y=y;
+      # if(cam.mouse_is_down){
+      #   quat4.multiply(cam.dir, quat4.createFrom(dy*turn_speed, dx*turn_speed,0,1.0));
+      #   quat4.normalize(cam.dir);
+      # }
 
 
   initGUI : ->
@@ -226,33 +235,47 @@ class Isoshader
     )
 
 
-  createRenderTarget : ->
+  cameraStep : ->
 
-    @renderTarget = new THREE.WebGLRenderTarget(
-      @parameters.screenWidth,
-      @parameters.screenHeight,
-      options =
-        wrapS : THREE.ClampToEdgeWrapping
-        wrapT : THREE.ClampToEdgeWrapping
-        magFilter : THREE.NearestFilter
-        minFilter : THREE.NearestFilter
-        depthBuffer : true
-        stencilBuffer : false
-      )
+    INTIAL_MOTION_SPEED = 1.0
+    MOTION_ACCELERATE = 0.1
+    MOTION_DECELERATE = 0.7
+    MAX_DT = 0.2
 
-    return new THREE.MeshBasicMaterial(
-      map: @renderTarget
-      blending : THREE.NoBlending
-      side : THREE.DoubleSide
-      )
-    # return new THREE.ShaderMaterial(
-    #   uniforms: {
-    #     texture: { type: "t", value: 0, texture: @renderTarget }
-    #   }
-    #   vertex_shader: @assetHandler.getFile("vertexShader")
-    #   fragment_shader:@assetHandler.getFile("basicFragShader")
-    #   blending : THREE.NoBlending
-    # )
+    cam = @cam
+    forward_speed = @forward_speed
+    strafe_speed = @strafe_speed
+    dt = @dt
+    rotation = @rotation
+    movement = @movement
+
+    t = Date.now()
+    @dt = t - cam.prev_update_time
+    cam.prev_update_time = t
+    if @dt > MAX_DT
+      @dt = MAX_DT
+
+    @dt = 1
+
+    if @accel
+      forward_speed += dt * forward_speed * MOTION_ACCELERATE
+    else
+      forward_speed -= dt * forward_speed * MOTION_DECELERATE
+      if forward_speed < INTIAL_MOTION_SPEED
+        forward_speed = INTIAL_MOTION_SPEED
+    strafe_speed = forward_speed
+
+    #let's do the heavy lifting
+    glMatrix.quat.multiply(cam.dir, cam.dir, rotation)
+    glMatrix.quat.normalize(cam.dir,cam.dir)
+
+    #glMatrix.quat.multiplyVec3(cam.dir, cam.dir, movement)
+    glMatrix.vec3.add(cam.pos, cam.pos ,movement)
+
+    #reset things
+    @accel = false
+    @movement = glMatrix.vec3.fromValues(0, 0, 0)
+    @rotation = glMatrix.quat.fromValues(0, 0, 0, 1.0)
 
   updateUniforms : ->
 
@@ -264,28 +287,21 @@ class Isoshader
 
     @shaderMaterial.uniforms["time"].value = parameters.time / 1000
     @shaderMaterial.uniforms["resolution"].value = new THREE.Vector2(parameters.screenWidth, parameters.screenHeight)
-    @shaderMaterial.uniforms["mouse"].value = new THREE.Vector2(parameters.mouseX, parameters.mouseY)
-    @shaderMaterial.uniforms["camera_matrix"].value = new THREE.Matrix4(@cam_matrix...)
+    @shaderMaterial.uniforms["camera_matrix"].value = new THREE.Matrix4(@cam_matrix...).transpose()
 
     @shaderMaterial.uniforms["debug_mode"].value = @debug_mode
     @shaderMaterial.uniforms["shading_type"].value = @shading_type
     @shaderMaterial.uniforms["surface_0.draw_surface"].value = @surfaces[0].draw_surface
     #@shaderMaterial.uniforms["surface_1.draw_surface"].value = @surfaces[1].draw_surface
 
-    #both unused right now in shader
-    #@shaderMaterial.uniforms["backbuffer"] = new THREE.Texture()
-    #@shaderMaterial.uniforms["mouse"] = new THREE.Vector2(parameters.mouseX, parameters.mouseY)
-
 
   animate : ->
 
+    @cameraStep()
     @updateUniforms()
     @stats.update()
 
-    #render to screen
     @renderer.render( @scene, @camera, )
-
-
     window.requestAnimationFrame => @animate()
 
 

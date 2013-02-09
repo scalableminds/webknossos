@@ -20,7 +20,7 @@ class AssetHandler
     $.when(
       Request.send(url : "/assets/shader/vertexShader.vs"),
       Request.send(url : "/assets/shader/example.fs"),
-      Request.send(url : "/assets/shader/basicFragmentShader.fs"),
+      Request.send(url : "/assets/shader/fragmentShader.fs"),
       @loadImage(url : "/assets/images/test.png"),
       @loadImage(url : "/assets/images/skel_strongerDT.png")
     ).pipe (vertexShader, isoShader, basicFragShader, texture0, texture1) =>
@@ -35,6 +35,7 @@ class AssetHandler
 
 
   loadImage : (options) ->
+    #TODO texture resolution
 
     if options.url
 

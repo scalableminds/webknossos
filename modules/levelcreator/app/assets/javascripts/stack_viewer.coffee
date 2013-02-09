@@ -1,57 +1,57 @@
 ### define
 underscore : _
 jquery : $
+routes : routes
 ###
 
 class StackViewer
 
   constructor : ->
 
-    $(".collapse").toArray().forEach (el) =>
+    $(".stack-display a").click (event) =>
 
-      $el = $(el).on
+      $el = $(event.currentTarget).parent()
 
-        "show" : (event) =>
+      $el.html("<div class=\"loading-indicator\"><i class=\"icon-refresh rotating\"></i></div>")
 
-          $el = $(event.target).find(".accordion-inner")
+      [a, levelId, stackId] = event.currentTarget.href.match(/stack-([0-9a-f]+)-([0-9a-f]+)$/)
+      @loadStack(levelId, stackId).then( (stack) => 
+        @loadImages(stack.name, stackId, stack.depth).then( 
+          
+          (images...) =>
 
-          $el.html("<i class=\"icon-refresh rotating\"></i> Loading...")
+            $canvas = $("<canvas>").prop(width : stack.width, height : stack.height)
+            $slider = $("<input>", type : "range", min : 0, max : stack.depth, value : 0)
+            $el
+              .html("")
+              .append($canvas, "<br />", $slider)
 
-          @loadStack($el.prop("id")).then( (stack) => 
-            @loadImages(stack).then( 
-              
-              (images...) =>
+            $slider
+              .on("change", (event) ->
+                context = $canvas[0].getContext("2d")
+                context.clearRect(0, 0, stack.width, stack.height)
+                context.drawImage(images[event.target.value], 0, 0)
+              )
+              .change()
 
-                $image = $("<img>", width : stack.width, height : stack.height)
-                $slider = $("<input>", type : "range", min : 0, max : stack.depth, value : 0)
-                $el
-                  .html("")
-                  .append($image, "<br />", $slider)
-
-                $slider
-                  .on("change", (event) ->
-                    $image.prop( src : images[event.target.value].src )
-                  )
-                  .change()
-
-              -> 
-                $el.html("Error loading images.")
-            )
-          )
-
-        "hidden" : (event) =>
-
-          $el.html("")
+          -> 
+            $el.html("Error loading images.")
+        )
+      )
 
 
-  loadStack : _.memoize (stackId) ->
+  loadStack : _.memoize (levelId, stackId) ->
 
-    new $.Deferred( (a) -> a.resolve( width : 300, height : 200, depth : 30, images : [  ] ) )
+    $.ajax(
+      url : routes.controllers.levelcreator.LevelCreator.meta(levelId).url
+      dataType : "json"
+    ).then (stack) ->
+      _.extend(stack, { levelId, stackId })
 
 
-  loadImages : _.memoize (stack) ->
+  loadImages : _.memoize( (levelName, stackId, imageCount) ->
 
-    deferreds = for i in [0..stack.depth]
+    deferreds = for i in [0..imageCount]
 
       deferred = new $.Deferred()
       image = new Image()
@@ -63,11 +63,13 @@ class StackViewer
             "load" : -> deferred.resolve(image)
             "error" : -> deferred.reject()
           )
-          .prop( src : "http://placehold.it/#{300 + i}x#{200 - i}" )
+          .prop( src : "/stacks/#{levelName}/#{stackId}/stackImage#{i}.png" )
 
 
         deferred
 
     $.when(deferreds...)
+
+  , (args...) -> args.toString())
 
 

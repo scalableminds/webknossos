@@ -20,6 +20,11 @@ body:-webkit-full-screen {
   height: 100%;
 }
 
+a:hover {
+    text-decoration: none;
+    border-bottom: 1px solid #005580;
+}
+
 .navbar-inner {
     background: #4D1A1A;
 }
@@ -169,12 +174,32 @@ svg a:hover {
 }
 
 #stack-list {
-    .collapse {
-        text-align: center;
-        .accordion-inner {
-            padding: 10px;
+    .stack {
+        float: left;
+        margin-right: 20px;
+        margin-bottom: 20px;
+        padding: 10px;
+    }
+    .stack-display {
+
+        a, .loading-indicator {
+            display: block;
+            font-size: 80px;
+            text-align: center;
+            padding-top: 10%;
+            &:hover {
+                border-bottom: none;
+            }
+        }
+        input[type="range"] {
+            width: 100%;
         }
     }
+}
+
+[class^="icon-"]::before, 
+[class*=" icon-"]::before {
+    width: 1em;
 }
 
 
@@ -217,3 +242,5 @@ svg a:hover {
 .accordion-inner {
     padding: 0px 15px;
 }
+
+

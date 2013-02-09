@@ -4,19 +4,24 @@
   <div class="container">
     <h3>Stacks: @level.name</h3>
 
-    <div class="accordion" id="stack-list">
-      <div class="accordion-group">
-        <div class="accordion-heading">
-          <a class="accordion-toggle" data-toggle="collapse" data-parent="#stack-list" href="#stack-1">
-            Stack 1
-          </a>
-        </div>
-        <div id="stack-1" class="accordion-body collapse">
-          <div class="accordion-inner">
-            <canvas>
+    <div id="stack-list">
+      @level.renderedMissions.map{ missionId =>
+        <div class="stack img-polaroid" style="width: @(level.width + "px");">
+          <header>
+            <h4>
+              #@missionId
+              <a href="@controllers.levelcreator.routes.LevelCreator.download(level.id)">
+                <i class="icon-download"></i>
+              </a>
+            </h4>
+          </header>
+          <div class="stack-display" style="height: @((level.height + 20) + "px");">
+            <a href="#stack-@level.id-@missionId">
+              <i class="icon-play"></i>
+            </a>
           </div>
         </div>
-      </div>
+      }
     </div>
 
   </div>

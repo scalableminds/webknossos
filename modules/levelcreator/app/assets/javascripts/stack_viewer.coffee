@@ -16,7 +16,7 @@ class StackViewer
 
       [a, levelName, stackId] = event.currentTarget.href.match(/stack-([^-]+)-([0-9a-f]+)$/)
       @loadStack(levelName, stackId).then( (stack) => 
-        @loadImages(levelName, stackId, stack.length).then( 
+        @loadImages(levelName, stackId, stack.images).then( 
           
           (images...) =>
 
@@ -48,21 +48,21 @@ class StackViewer
     )
 
 
-  loadImages : _.memoize( (levelName, stackId, imageCount) ->
+  loadImages : _.memoize( (levelName, stackId, imageNames) ->
 
-    deferreds = for i in [0..imageCount]
+    deferreds = for imageName in imageNames
 
       deferred = new $.Deferred()
       image = new Image()
 
-      do (deferred, image, i) ->
+      do (deferred, image, imageName) ->
 
         $(image)
           .on(
             "load" : -> deferred.resolve(image)
             "error" : -> deferred.reject()
           )
-          .prop( src : "/stacks/#{levelName}/#{stackId}/stackImage#{i}.png" )
+          .prop( src : "/stacks/#{levelName}/#{stackId}/#{imageName}" )
 
 
         deferred

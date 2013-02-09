@@ -27,7 +27,11 @@ page.onCallback = function (data) {
     stackData = { 
       width: data.width, 
       height: data.height,
-      length: data.length
+      length: data.length,
+      levelName: "@{level.name}",
+      levelId: "@{level.id}",
+      stackId: @{missionId},
+      images: []
     };
 
     console.log("" + stackData.length + " frames available");
@@ -36,17 +40,16 @@ page.onCallback = function (data) {
 
   if (data.message == "rendered") {
     console.log("rendering frame #" + i + "!");
-    page.render("@{outputFilepattern}".replace("%i", i));
-    console.log("rendered frame #" + i + " to " + "@{outputFilepattern}".replace("%i", i));
+    var filename = "@{outputFilepattern}".replace("%i", i);
+    page.render(filename);
+    stackData.images.push(filename.substring(filename.lastIndexOf("/") + 1));
+    console.log("rendered frame #" + i + " to " + filename);
     
     i++;
     if (i <= stackData.length) {
       triggerRender();
     } else {
       stackData.createdAt = Date.now();
-      stackData.levelName = "@{level.name}";
-      stackData.levelId = "@{level.id}";
-      stackData.stackId = @{missionId};
       fs.write(
         "@{metaFilename}",
         JSON.stringify(stackData),

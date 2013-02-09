@@ -25,3 +25,10 @@ $ ->
       require ["./level_creator"], (LevelCreator) ->
 
         window.levelCreator = new LevelCreator()
+
+
+    "levelcreator.stackList" : ->
+
+      require ["./stack_viewer"], (StackViewer) ->
+
+        window.stackViewer = new StackViewer()

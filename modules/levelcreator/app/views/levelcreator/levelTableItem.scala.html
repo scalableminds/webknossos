@@ -7,7 +7,8 @@
   <td> @level.width x @level.height x @level.depth </td>
   <td>  
     <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"><i class="icon-pencil"></i> edit</a><br />
-    <a href="@controllers.levelcreator.routes.LevelCreator.produce(level.id)"><i class="icon-retweet"></i> produce</a><br />
+    <a href="@controllers.levelcreator.routes.LevelCreator.produce(level.id)"><i class="icon-retweet"></i> produce Stacks</a><br />
+    <a href="@controllers.levelcreator.routes.LevelCreator.stackList(level.id)"><i class="icon-picture"></i> view Stacks</a><br />
     <a href="@controllers.levelcreator.routes.LevelCreator.delete(level.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
   </td>
 </tr>

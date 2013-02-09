@@ -47,6 +47,14 @@ object LevelCreator extends Controller {
     }
   }
 
+  def stackList(levelId: String) = Action { implicit request =>
+    for {
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+    } yield {
+      Ok(html.levelcreator.stackList(level))
+    }
+  }
+
   def delete(levelId: String) = Action { implicit request =>
     for {
       level <- Level.findOneById(levelId) ?~ Messages("level.notFound")

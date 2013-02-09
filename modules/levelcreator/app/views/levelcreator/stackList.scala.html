@@ -1,0 +1,23 @@
+@(level: models.knowledge.Level)(implicit session: brainflight.view.UnAuthedSessionData)
+
+@main(){
+  <div class="container">
+    <h3>Stacks: @level.name</h3>
+
+    <div class="accordion" id="stack-list">
+      <div class="accordion-group">
+        <div class="accordion-heading">
+          <a class="accordion-toggle" data-toggle="collapse" data-parent="#stack-list" href="#stack-1">
+            Stack 1
+          </a>
+        </div>
+        <div id="stack-1" class="accordion-body collapse">
+          <div class="accordion-inner">
+            <canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+}

@@ -81,7 +81,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.MissionController.getRandomMission(@DATA_SET_ID)
+        Routes.controllers.levelcreator.MissionController.getMission(@DATA_SET_ID, @taskId)
         dataType : "json"
       )
     ).then(

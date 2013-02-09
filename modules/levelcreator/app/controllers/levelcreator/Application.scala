@@ -13,7 +13,8 @@ object Application extends Controller {
         controllers.levelcreator.routes.javascript.LevelCreator.retrieveAsset,
         controllers.levelcreator.routes.javascript.ArbitraryBinaryData.viaAjax,
         controllers.levelcreator.routes.javascript.ArbitraryBinaryData.missionViaAjax,
-        controllers.levelcreator.routes.javascript.MissionController.getRandomMission
+        controllers.levelcreator.routes.javascript.MissionController.getRandomMission,
+        controllers.levelcreator.routes.javascript.MissionController.getMission
       )).as("text/javascript")
   }
   

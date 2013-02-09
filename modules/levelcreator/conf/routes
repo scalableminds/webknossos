@@ -6,21 +6,23 @@
 GET     /                                   controllers.levelcreator.LevelCreator.list
 GET     /level                              controllers.levelcreator.LevelCreator.list
 POST    /level/create                       controllers.levelcreator.LevelCreator.create
-GET     /level/:id/assets                   controllers.levelcreator.LevelCreator.listAssets(id: String)
-GET     /level/:id/delete                   controllers.levelcreator.LevelCreator.delete(id: String)
-GET     /level/:id                          controllers.levelcreator.LevelCreator.use(id: String, missionId: String)
-POST    /level/:id/code                     controllers.levelcreator.LevelCreator.submitCode(id: String)
-GET     /level/:id/produce                  controllers.levelcreator.LevelCreator.produce(id: String)
-POST    /level/:id/uploadAsset              controllers.levelcreator.LevelCreator.uploadAsset(id: String)
-GET     /level/:id/deleteAsset/*asset       controllers.levelcreator.LevelCreator.deleteAsset(id: String, asset: String)
-GET     /level/:id/asset/*asset             controllers.levelcreator.LevelCreator.retrieveAsset(id: String, asset: String)
-
+GET     /level/:levelId/assets              controllers.levelcreator.LevelCreator.listAssets(levelId: String)
+GET     /level/:levelId/delete              controllers.levelcreator.LevelCreator.delete(levelId: String)
+GET     /level/:levelId                     controllers.levelcreator.LevelCreator.use(levelId: String, missionStartId: Int ?= -1)
+POST    /level/:levelId/code                controllers.levelcreator.LevelCreator.submitCode(levelId: String)
+GET     /level/:levelId/produce             controllers.levelcreator.LevelCreator.produce(levelId: String)
+POST    /level/:levelId/uploadAsset         controllers.levelcreator.LevelCreator.uploadAsset(levelId: String)
+GET     /level/:levelId/deleteAsset/*asset  controllers.levelcreator.LevelCreator.deleteAsset(levelId: String, asset: String)
+GET     /level/:levelId/asset/*asset        controllers.levelcreator.LevelCreator.retrieveAsset(levelId: String, asset: String)
+GET     /level/:levelId/download            controllers.levelcreator.LevelCreator.download(levelId: String)
 #Getting binary Data
 GET     /binary/arbitrary/ajax              controllers.levelcreator.ArbitraryBinaryData.viaAjax(dataLayerName: String, levelId: String, taskId: String)
-GET     /binary/ajax                        controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(dataSetName: String, levelId: String, missionStartId: String, dataLayerName: String) 
+GET     /binary/ajax                        controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(dataSetName: String, levelId: String, missionStartId: Int, dataLayerName: String) 
 #Mission Data
 GET     /missions                           controllers.levelcreator.MissionController.getMissions(dataSetName: String)
-GET     /mission                            controllers.levelcreator.MissionController.getRandomMission(dataSetName: String)
+GET     /mission/                           controllers.levelcreator.MissionController.getMission(dataSetName: String, missionStartId: Int)
+GET     /mission/random                     controllers.levelcreator.MissionController.getRandomMission(dataSetName: String)
+        
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.levelcreator.Application.javascriptRoutes
 

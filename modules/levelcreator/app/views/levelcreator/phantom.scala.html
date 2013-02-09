@@ -30,7 +30,7 @@ page.onCallback = function (data) {
   }
 
   if (data.message == "rendered") {
-
+    console.log("rendering frame #" + i + "!");
     page.render("@{outputFilepattern}".replace("%i", i));
     console.log("rendered frame #" + i + " to " + "@{outputFilepattern}".replace("%i", i));
     

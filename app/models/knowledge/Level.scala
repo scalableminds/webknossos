@@ -18,6 +18,8 @@ case class Level(
 
   lazy val id = _id.toString
   
+  def dataSetName = "2012-09-28_ex145_07x2"
+  
   val assetsFolder =
     s"${Level.assetsBaseFolder}/$name/assets"
 

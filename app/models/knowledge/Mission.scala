@@ -21,8 +21,7 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
 
   def findByDataSetName(dataSetName: String) = Option(find(MongoDBObject("dataSetName" -> dataSetName)).toList)
 
-  def findByStartId(startId: String): Option[Mission] = if (startId.forall(Character.isDigit)) findByStartId(startId.toInt) else None
-  def findByStartId(startId: Int): Option[Mission] = findOne(MongoDBObject("start.startId" -> startId))
+  def findByStartId(dataSetName: String, startId: Int): Option[Mission] = findOne(MongoDBObject("dataSetName" -> dataSetName, "start.startId" -> startId))
 
   def hasAlreadyBeenInserted(mission: Mission): Boolean = {
     (findOne(MongoDBObject(

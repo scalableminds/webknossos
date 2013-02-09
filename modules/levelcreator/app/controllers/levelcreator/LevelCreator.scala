@@ -2,21 +2,33 @@ package controllers.levelcreator
 
 import braingames.mvc.Controller
 import play.api.libs.concurrent._
+import scala.concurrent.duration._
+import scala.concurrent._
+import akka.pattern.ask
 import views._
 import braingames.mvc._
 import models.knowledge._
 import play.api.Play.current
 import akka.actor._
+import akka.util.Timeout
+import akka.pattern.AskTimeoutException
 import braingames.levelcreator._
 import play.api.data._
 import play.api.data.Forms._
 import play.api.mvc.Action
 import play.api.i18n.Messages
 import play.api.libs.json._
+import play.api._
+import ExecutionContext.Implicits.global
+import java.io.File
+import scala.util.Failure
 
 object LevelCreator extends Controller {
 
   val levelCreateActor = Akka.system.actorOf(Props(new LevelCreateActor))
+  
+  val conf = Play.current.configuration
+  implicit val timeout = Timeout(60 seconds)
 
   val levelForm = Form(
     mapping(
@@ -25,11 +37,13 @@ object LevelCreator extends Controller {
       "height" -> number,
       "depth" -> number)(Level.fromForm)(Level.toForm)).fill(Level.empty)
 
-  def use(levelId: String, missionId: String) = Action { implicit request =>
+  def use(levelId: String, missionStartId: Int) = Action { implicit request =>
     for {
       level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+      mission <- Mission.findByStartId(level.dataSetName, missionStartId) orElse 
+                  Mission.randomByDataSetName(level.dataSetName) ?~Messages("mission.notFound")
     } yield {
-      Ok(html.levelcreator.levelCreator(level, missionId))
+      Ok(html.levelcreator.levelCreator(level, mission.start.startId))
     }
   }
 
@@ -71,11 +85,30 @@ object LevelCreator extends Controller {
   }
 
   def produce(levelId: String) = Action { implicit request =>
-    for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-    } yield {
-      levelCreateActor ! CreateLevel(level)
-      Ok(Messages("level.creation.inProgress"))
+    Async{
+      for {
+        level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+        mission <- Mission.randomByDataSetName(level.dataSetName) ?~Messages("mission.notFound")
+      } yield {
+        val future = (levelCreateActor ? CreateLevel(level, mission)).recover{
+          case e: AskTimeoutException => 
+            println("stack creation timed out")
+            "timed out"
+        } 
+        future.mapTo[String].map{ result => Ok(result)}
+      }
+    }
+  }
+  
+  def download(levelId: String) = Action { implicit request => 
+    Async{
+      for {
+        level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+        mission <- Mission.randomByDataSetName(level.dataSetName) ?~Messages("mission.notFound")
+      } yield {
+        val future = levelCreateActor ? ZipLevel(level, mission)
+        future.mapTo[File].map{file => println("got file"); Ok.sendFile(content = file)}
+      }
     }
   }
 

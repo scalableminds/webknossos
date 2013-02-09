@@ -16,12 +16,13 @@ import scala.collection.JavaConversions._
 import play.api._
 import play.api.Configuration._
 import views._
-import models.knowledge.Level
+import models.knowledge.{Level, Mission}
 import scala.sys.process._
-import java.io.File
-import java.io.PrintWriter
+import java.io.{File, PrintWriter, FilenameFilter}
 
-case class CreateLevel(level: Level)
+
+case class CreateLevel(level: Level, mission: Mission)
+case class ZipLevel(level: Level, mission: Mission)
 
 case class ExecLogger(var messages: List[String] = Nil,
   var error: List[String] = Nil)
@@ -37,12 +38,22 @@ case class ExecLogger(var messages: List[String] = Nil,
   def buffer[T](f: => T): T = f
 }
 
+class FileExtensionFilter(fileExtension: String) extends FilenameFilter{
+  override def accept(dir: File, name: String) = name.endsWith(fileExtension)
+}
+
 class LevelCreateActor extends Actor{
   val server = "localhost"
   val port = Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000)
+  def imagesPath(level: Level, mission: Mission) = "data/levels/%s/stacks/%d".format(level.name, mission.start.startId)
+  val logger = new ExecLogger
+  
   def receive = {
-    case CreateLevel(level) =>
-      createLevel(level)
+    case CreateLevel(level, mission) =>
+     sender ! createLevel(level, mission)
+    case ZipLevel(level, mission) => 
+      createLevel(level, mission);
+      sender ! zippedFiles(level, mission)
   }
   
   def createTempFile(data: String) = {
@@ -53,20 +64,28 @@ class LevelCreateActor extends Actor{
     temp
   }
   
-  def createLevel(level: Level) = {
-    val logger = new ExecLogger
-    val missionId = "1"
-    val imagesPath = "data/levels/%s/stacks/%s/".format(level.name, missionId)
+  def createLevel(level: Level, mission: Mission) = {
     val levelUrl = "http://%s:%d".format(server, port) + 
-      controllers.levelcreator.routes.LevelCreator.use(level.id, missionId)
-      
+      controllers.levelcreator.routes.LevelCreator.use(level.id, mission.start.startId)
+
     val js = html.levelcreator.phantom(
         level, 
-        imagesPath + "stackImage%i.png", 
+        imagesPath(level, mission) + "/stackImage%i.png", 
         levelUrl).body
     val file = createTempFile(js)
     println("phantomjs " + file.getAbsolutePath())
     ("phantomjs %s".format(file.getAbsolutePath)) !! logger
     println("Finished phantomjs.")
+    "finished stack creation"
+  }
+  
+  def zippedFiles(level: Level, mission: Mission) = {
+    val zipFile = imagesPath(level, mission) + "/stack.zip"
+    val stackDir = new File(imagesPath(level, mission))
+    val pngFilter = new FileExtensionFilter(".png")
+    val cmd = "zip %s %s".format(zipFile, stackDir.listFiles(pngFilter).mkString(" ") )
+    cmd.!
+    println("Finished zipping")
+    new File(zipFile)
   }
 }

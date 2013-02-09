@@ -26,4 +26,13 @@ object MissionController extends Controller {
       Ok(Json.toJson(mission))
     } 
   }
+  
+  def getMission(dataSetName: String, missionStartId: Int) = Action { implicit request =>
+    for {
+      dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
+      mission <- Mission.findByStartId(dataSetName, missionStartId) ?~ Messages("mission.notFound")
+    } yield {
+      Ok(Json.toJson(mission))
+    }
+  }
 }

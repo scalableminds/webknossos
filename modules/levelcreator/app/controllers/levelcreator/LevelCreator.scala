@@ -107,7 +107,7 @@ object LevelCreator extends Controller {
         mission <- Mission.randomByDataSetName(level.dataSetName) ?~Messages("mission.notFound")
       } yield {
         val future = levelCreateActor ? ZipLevel(level, mission)
-        future.mapTo[File].map{file => println("got file"); Ok.sendFile(content = file)}
+        future.mapTo[File].map{file => Ok.sendFile(content = file)}
       }
     }
   }

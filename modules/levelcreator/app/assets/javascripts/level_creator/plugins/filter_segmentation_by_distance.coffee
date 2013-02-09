@@ -1,4 +1,6 @@
-### define ###
+### define 
+underscore : _
+###
 
 class FilterSegmentationByDistance
 
@@ -8,11 +10,11 @@ class FilterSegmentationByDistance
   DESCRIPTION : "Returns all segments that are farer or nearer than the given distance"
   PARAMETER : 
     input: 
-      rgba: 'Uint8Array'
-      segmentation: 'Uint16Array'
-      segments: '[]'
-      dimensions : '[]'
-    distance : 'int'
+      rgba: "Uint8Array"
+      segmentation: "Uint16Array"
+      segments: "[]"
+      dimensions : "[]"
+    distance : "int"
     mode : '\"<\", \"<=\", \">\", \"=>\"' # e.g. '<='
   EXAMPLES : [
       { description : "Displaying cells near the middle", lines :
@@ -30,17 +32,26 @@ class FilterSegmentationByDistance
 
   execute : (options) ->
 
-    { input: { rgba, segmentation, segments, dimensions }, distance, mode } = options
+    { input: { rgba, segmentation, segments, dimensions }, distance, weighted, mode } = options
 
     width = dimensions[0]
     height = dimensions[1]
     
     values = []
+    activeSegments = _.filter(segments, (segment) -> segment.display is true) 
     compareFunc = new Function("a","b", "return a #{mode} b;")
 
-    for segment in segments
-      if compareFunc(segment.distance, distance)
-        values.push segment.value
+    for segment in activeSegments
+      if weighted? and weighted is false
+        if compareFunc(segment.absoluteDistance, distance)
+          values.push segment.value
+      else
+        if compareFunc(segment.weightedDistance, distance)
+          values.push segment.value    
+
+    for segment in activeSegments
+      if _.contains(values, segment.value) is false
+        segment.display = false             
 
     j = 0
     for h in [0...height] by 1

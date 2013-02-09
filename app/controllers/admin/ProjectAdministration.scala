@@ -16,15 +16,20 @@ object ProjectAdministration extends Controller with Secured {
   override val DefaultAccessRole = Role.Admin
 
   val projectForm = Form(tuple(
-    "projectName" -> nonEmptyText(1, 100).verifying("project.nameAlreadyInUse", name => Project.findOneByName(name).isEmpty),
-    "owner" -> nonEmptyText(1, 100).verifying("user.notFound", userId => User.findOneById(userId).isDefined)))
+    "projectName" -> nonEmptyText(1, 100)
+      .verifying("project.nameAlreadyInUse", name => Project.findOneByName(name).isEmpty),
+    "owner" -> nonEmptyText(1, 100)
+      .verifying("user.notFound", userId => User.findOneById(userId).isDefined)))
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.project.projectList(Project.findAll, projectForm, User.findAll))
+    Ok(html.admin.project.projectList(
+      Project.findAll,
+      projectForm.fill("", request.user.id),
+      User.findAll.sortBy(_.name)))
   }
 
   def delete(projectName: String) = Authenticated { implicit reuqest =>
-    for{
+    for {
       project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
     } yield {
       Project.remove(project)

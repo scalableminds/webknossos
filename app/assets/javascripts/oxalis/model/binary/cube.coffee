@@ -29,15 +29,7 @@ class Cube
   # expanding is necessary. bucketCount keeps track of how many buckets are currently
   # in the cube.
   #
-  # Each bucket consists of a level-value, an access-value and the actual data.
-  # The lavel-values indiating wheter the bucket itself is loaded or has to be
-  # assembeled from higher resolution buckets. A value of 0 means, the bucket itself
-  # is loaded. Levels higher than 0 indicate, that buckets from the next "level" layers
-  # are needed. The lookup of higher / lower resolution buckets to replace a bucket
-  # an be configured using the LOOKUP_DEPTH_UP (lower resolution) and LOOKUP_DEPTH_DOWN
-  # (higher resolution) constants. When buckets are added or removed the level-values
-  # of lower resolution buckets have to be updated.
-  #
+  # Each bucket consists of an access-value, the zoomStep and the actual data.
   # The access-values are used for garbage collection. When a bucket is accessed, its
   # address is pushed to the access-queue and its access-value is increased by 1.
   # When buckets are needed, the buckets at the beginning of the queue will be removed
@@ -53,7 +45,7 @@ class Cube
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT
     @BUCKET_LENGTH = 1 << @BUCKET_SIZE_P * 3
     @cubes = []
-    @access = new RingBuffer(@MAXIMUM_BUCKET_COUNT * 20)
+    @access = new RingBuffer(4, 5000, Int32Array)
 
     # Initializing the cube-arrays with boundaries
     cubeBoundary = [
@@ -62,11 +54,14 @@ class Cube
       @upperBoundary[2] >> @BUCKET_SIZE_P
     ]
 
-    @arbitraryCube = { boundary: cubeBoundary.slice(), buckets: new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]) }
+    @arbitraryCube = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
+    @arbitraryCube.boundary = cubeBoundary.slice()
 
     for i in [0..@ZOOM_STEP_COUNT]
 
-      @cubes[i] = { boundary: cubeBoundary.slice(), buckets: new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2]) }
+      @cubes[i] = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
+      @cubes[i].boundary = cubeBoundary.slice()
+
       cubeBoundary = [
         (cubeBoundary[0] + 1) >> 1
         (cubeBoundary[1] + 1) >> 1
@@ -99,52 +94,27 @@ class Cube
 
   getBucketByZoomedAddress : (address) ->
 
-    buckets = @cubes[address[3]].buckets
+    cube = @cubes[address[3]]
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    if bucketIndex?
-      buckets[bucketIndex]
+    if bucketIndex? and (bucket = cube[bucketIndex]) != @LOADING_PLACEHOLDER
+      bucket
     else
-      undefined
-
-
-  getBucketDataByZoomedAddress : (address) ->
-
-    bucket = @getBucketByZoomedAddress(address)
-
-    if bucket?
-
-      @access.unshift(address)
-      bucket.access++
-      bucket.data
-
-    else
-
       null
 
 
   isBucketRequestedByZoomedAddress : (address) ->
 
-    buckets = @cubes[address[3]].buckets
+    cube = @cubes[address[3]]
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
-    # if the bucket lies inseide the dataset
-    if bucketIndex?
-
-      # check whether bucket exists at all, it can be assembled from other buckets or is already requested
-      bucket = buckets[bucketIndex]
-      bucket? and (bucket.level <= @LOOKUP_DEPTH_DOWN or bucket.data == @LOADING_PLACEHOLDER)
-
-    else
-
-      # else their is no point requesting it
-      true
+    # if the bucket does not lie inside the dataset, return true
+    not bucketIndex? or cube[bucketIndex]?
 
 
   isBucketLoadedByZoomedAddress : (address) ->
 
-    bucket = @getBucketByZoomedAddress(address)
-    return bucket? and bucket.level == 0
+    @getBucketByZoomedAddress(address)?
 
 
   requestBucketByZoomedAddress : (address) ->
@@ -152,151 +122,127 @@ class Cube
     # return if no request is needed
     return if @isBucketRequestedByZoomedAddress(address)
 
-    buckets = @cubes[address[3]].buckets 
+    cube = @cubes[address[3]]
     bucketIndex = @getBucketIndexByZoomedAddress(address)
-
-    # mark the bucket as requested
-    if buckets[bucketIndex]?
-      buckets[bucketIndex].data = @LOADING_PLACEHOLDER
-    else
-      buckets[bucketIndex] = { data: @LOADING_PLACEHOLDER, level: @LOOKUP_DEPTH_DOWN + 1, access: 0 }
+    cube[bucketIndex] = @LOADING_PLACEHOLDER
 
 
-  setBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
+  setBucketByZoomedAddress : (address, bucketData) ->
 
-    bucket = @getBucketByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
-    
     if bucketData?
 
+      cube = @cubes[address[3]]
+      bucketIndex = @getBucketIndexByZoomedAddress(address)
+
       @bucketCount++
-      @access.unshift([bucket_x, bucket_y, bucket_z, zoomStep])
+      @access.unshift(address)
+      bucketData.access = 1
+      bucketData.zoomStep = address[3]
 
-      bucket.access++
-      bucket.data = bucketData
-      bucket.level = 0
+      cube[bucketIndex] = bucketData
 
-      # the bucket with a lower zoomStep can maybe be assembled
-      # from buckets with the current zoomStep now
-      #@updateBucketChain([
-      #  bucket_x >> 1
-      #  bucket_y >> 1
-      #  bucket_z >> 1
-      #  zoomStep + 1
-      #])
-
-      @trigger("bucketLoaded", [bucket_x, bucket_y, bucket_z, zoomStep])
-
-      if zoomStep <= @ARBITRARY_MAX_ZOOMSTEP
-
-        arbitraryCube = @arbitraryCube.buckets
-        width = 1 << zoomStep
-
-        for dx in [0...width] by 1
-          for dy in [0...width] by 1
-            for dz in [0...width] by 1
-
-              subBucket = [
-                (bucket_x << zoomStep) + dx
-                (bucket_y << zoomStep) + dy
-                (bucket_z << zoomStep) + dz
-                0
-              ]
-
-              bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
-
-              if not arbitraryCube[bucketIndex] or arbitraryCube[bucketIndex].zoomStep > zoomStep
-
-                bucketData.zoomStep = zoomStep
-                arbitraryCube[bucketIndex] = bucketData
-
-    else
-
-      bucket.data = null
+      @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
+      @trigger("bucketLoaded", address)
 
 
-  updateBucket : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+  setArbitraryBucketByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep], bucketData) ->
 
-    return false if zoomStep == 0 or zoomStep == @ZOOM_STEP_COUNT 
+    cube = @arbitraryCube
 
-    cube = @cubes[zoomStep]
-    bucketIndex = @getBucketIndexByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
+    width = 1 << zoomStep
 
-    cube.buckets[bucketIndex] = { data: null, level: @LOOKUP_DEPTH_DOWN + 1, access: 0 } unless cube.buckets[bucketIndex]?
+    for dx in [0...width] by 1
+      for dy in [0...width] by 1
+        for dz in [0...width] by 1
 
-    bucket = cube.buckets[bucketIndex]
+          subBucket = [
+            (bucket_x << zoomStep) + dx
+            (bucket_y << zoomStep) + dy
+            (bucket_z << zoomStep) + dz
+            0
+          ]
 
-    return false if bucket.level == 0
+          bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
+          bucket = cube[bucketIndex]
 
-    oldBucketLevel = bucket.level
-    bucket.level = 0
-
-    subCube = @cubes[zoomStep - 1]
-
-    for dx in [0..1]
-      for dy in [0..1]
-        for dz in [0..1]
-
-          subBucketIndex = @getBucketIndexByZoomedAddress([(bucket_x << 1) + dx, (bucket_y << 1) + dy, (bucket_z << 1) + dz, zoomStep - 1])
-
-          unless subCube.buckets[subBucketIndex]?
-
-            bucket.level = @LOOKUP_DEPTH_DOWN + 1
-            return bucket.level != oldBucketLevel
-
-          bucket.level = Math.max(bucket.level, subCube.buckets[subBucketIndex].level + 1)
-
-    bucket.level = Math.min(bucket.level, @LOOKUP_DEPTH_DOWN + 1)
-    bucket.level != oldBucketLevel
+          cube[bucketIndex] = bucketData if not bucket? or bucket.zoomStep > zoomStep
 
 
-  updateBucketChain : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+  accessBuckets : (addressList) ->
 
-    while @updateBucket([bucket_x, bucket_y, bucket_z, zoomStep])
+    for address in addressList
 
-      bucket_x >>= 1
-      bucket_y >>= 1
-      bucket_z >>= 1
-      zoomStep += 1
+      bucket = @getBucketByZoomedAddress(address)
+
+      if bucket?
+
+        @access.unshift(address)
+        bucket.access++
 
 
   # tries to remove the bucket from the cube
-  # and returns whether removing was successful
-  tryCollectBucket : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+  tryCollectBucket : (address) ->
 
-    bucket = @getBucketByZoomedAddress([bucket_x, bucket_y, bucket_z, zoomStep])
+    cube = @cubes[address[3]]
+    bucketIndex = @getBucketIndexByZoomedAddress(address)
+    bucket = cube[bucketIndex]
 
     # if the bucket is no longer in the access-queue
     if bucket? and --bucket.access <= 0
 
       # remove it
       @bucketCount--
-      bucket.data = null
-      bucket.level = @LOOKUP_DEPTH_DOWN + 1
+      cube[bucketIndex] = null
 
-      # if buckets with a lower zoomStep rely on this bucket
-      # they need to get informed
-      #@updateBucket([bucket_x, bucket_y, bucket_z, zoomStep])
-      #@updateBucketChain([
-      #  bucket_x >> 1
-      #  bucket_y >> 1
-      #  bucket_z >> 1
-      #  zoomStep + 1
-      #])
-      true
+      @collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
 
-    else
 
-      false
+  collectArbitraryBucket : ([bucket_x, bucket_y, bucket_z, zoomStep], oldBucket) ->
+
+    cube = @arbitraryCube
+
+    substitute = null
+    substituteAddress = [
+      bucket_x >> 1
+      bucket_y >> 1
+      bucket_z >> 1
+      zoomStep + 1
+    ]
+
+    while substituteAddress[3] <= @ARBITRARY_MAX_ZOOMSTEP and not (substitute = @getBucketByZoomedAddress(substituteAddress))?
+
+          substituteAddress[0] >>= 1
+          substituteAddress[1] >>= 1
+          substituteAddress[2] >>= 1
+          substituteAddress[3]++
+
+    width = 1 << zoomStep
+
+    for dx in [0...width] by 1
+      for dy in [0...width] by 1
+        for dz in [0...width] by 1
+
+          subBucket = [
+            (bucket_x << zoomStep) + dx
+            (bucket_y << zoomStep) + dy
+            (bucket_z << zoomStep) + dz
+             0
+          ]
+
+          bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
+              
+          cube[bucketIndex] = substitute if cube[bucketIndex] == oldBucket
 
 
   # remove buckets until cube is within bucketCount-limit
   collectGarbage : ->
 
-    while (@bucketCount > @MAXIMUM_BUCKET_COUNT or @access.length / @access.capacity > 0.9) and @access.length
+    while @bucketCount > @MAXIMUM_BUCKET_COUNT and @access.length
 
       @tryCollectBucket(@access.pop())
 
 
+  # return the bucket a given voxel lies in
   positionToZoomedAddress : ([x, y, z], zoomStep) ->
 
     [ x >> @BUCKET_SIZE_P + zoomStep,

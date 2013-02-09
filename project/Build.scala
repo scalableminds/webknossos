@@ -1,12 +1,16 @@
 import sbt._
 import Keys._
-
+import com.typesafe.config._
 import PlayProject._
 
 object ApplicationBuild extends Build {
+  val conf = ConfigFactory.parseFile(new File("conf/application.conf"))
 
-  val appName = "oxalis"
-  val appVersion = "0.1"
+  val appName    = conf.getString("application.name").toLowerCase
+  val appVersion = "%s.%s.%s".format(
+    conf.getString("application.major"),
+    conf.getString("application.minor"),
+    conf.getString("application.revision"))
 
   val oxalisDependencies = Seq(
     "org.mongodb" %% "casbah-commons" % "2.5.0",
@@ -23,8 +27,8 @@ object ApplicationBuild extends Build {
     // Jira integration
     "com.sun.jersey" % "jersey-client" % "1.8",
     "com.sun.jersey" % "jersey-core" % "1.8",
-    "reactivemongo" % "reactivemongo_2.10.0" % "0.1-SNAPSHOT",
-    "org.scala-lang" % "scala-reflect" % "2.10.0-RC1")
+    "org.reactivemongo" %% "reactivemongo" % "0.8",
+    "org.scala-lang" % "scala-reflect" % "2.10.0")
 
   val dependencyResolvers = Seq(
     "repo.novus rels" at "http://repo.novus.com/releases/",
@@ -49,7 +53,7 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
-    //offline := true,
+    offline := true,
     playAssetsDirectories += file("data")
   )
 
@@ -73,7 +77,7 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
-    //offline := true,
+    offline := true,
     playAssetsDirectories += file("data")
   ).dependsOn(oxalis).aggregate(oxalis)
   

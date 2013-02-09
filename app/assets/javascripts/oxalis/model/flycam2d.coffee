@@ -111,12 +111,16 @@ class Flycam2d
 
   setDirection : (direction) ->
     @direction = direction
-    @setSpaceDirection()
+    @updateSpaceDirection()
 
-  setSpaceDirection : ->
+  updateSpaceDirection : ->
     ind = Dimensions.getIndices @activePlane
     if @direction[ind[0]] <= 0 then @spaceDirection[ind[0]] = -1 else @spaceDirection[ind[0]] = 1
     if @direction[ind[1]] <= 0 then @spaceDirection[ind[1]] = -1 else @spaceDirection[ind[1]] = 1
+
+  setSpaceDirection : (direction) ->
+    for index in [0..2]
+      if direction[index] <= 0 then @spaceDirection[index] = -1 else @spaceDirection[index] = 1
 
   getSpaceDirection : ->
     @spaceDirection

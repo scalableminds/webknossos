@@ -71,9 +71,17 @@ subPointMacro = (output, xd, yd, zd) ->
     
     output = lastBucket[pointIndex]
 
-  else if bucketIndex < cube.length and (bucket = cube[bucketIndex])? and not bucket.isPlaceholder
+  else if bucketIndex < cube.length and (bucket = cube[bucketIndex])?
 
     bucketZoomStep = bucket.zoomStep || 0
+
+    accessedBuckets.push [
+      sub_x >> bucketZoomStep
+      sub_y >> bucketZoomStep
+      sub_z >> bucketZoomStep
+      bucketZoomStep
+    ]
+
     pointIndexMacro(pointIndex, sub_x, sub_y, sub_z, bucketZoomStep)
 
     lastBucket = bucket
@@ -137,13 +145,14 @@ collectLoopMacro = (x, y, z, buffer, j, cube, min_x, min_y, min_z, max_x, max_y,
 
 InterpolationCollector =
 
-  bulkCollect : (vertices, cubeData) ->
+  bulkCollect : (vertices, buckets) ->
 
     buffer = new Uint8Array(vertices.length / 3)
+    accessedBuckets = []
 
-    if cubeData
+    if buckets
 
-      { buckets, boundary } = cubeData
+      boundary = buckets.boundary
 
       sizeZ   = boundary[2]
       sizeZY  = boundary[2] * boundary[1]
@@ -180,4 +189,4 @@ InterpolationCollector =
           max_x, max_y, max_z,
           sizeZ, sizeZY)
    
-    buffer
+    { buffer, accessedBuckets }

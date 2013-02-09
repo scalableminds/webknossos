@@ -91,6 +91,7 @@ class PluginRenderer
               dimensions : @dimensions
               relativeTime : (t - startFrame) / (endFrame - startFrame)
               absoluteTime : t
+              mission : @dataHandler.getMissionData()
             callback()
             BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
             inputData = null
@@ -146,7 +147,7 @@ class PluginRenderer
       exampleHTML = ""
       if plugin.EXAMPLES?
         for example in plugin.EXAMPLES
-          exampleHTML += example.description 
+          exampleHTML += "<span>" + example.description + "</span>"
           exampleHTML += "<pre class=\"prettyprint linenums\">"
           exampleHTML += "<ol class=\"linenums\">"
           for line in example.lines

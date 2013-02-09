@@ -107,10 +107,5 @@ object Level extends BasicKnowledgeDAO[Level]("levels") {
   val defaultCode = """
     |time(start : 0, end : 10) ->
     |  importSlides(start : 0, end : 10)
-    |  recolor(colorMapName : "blue2.bmp")
-    |  blur(radius : 10)
-    |  
-    |time(start : 10, end : 30) ->
-    |  importSlides(start : 10, end : 20, scale : .5) 
   """.stripMargin
 }

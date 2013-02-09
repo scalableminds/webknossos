@@ -4,17 +4,17 @@
 
 class DrawArtCells
 
-  PUBLIC : true
+  PUBLIC : false
   COMMAND : "drawArtCells()"
   FRIENDLY_NAME : "Draw Art Cells"  
   DESCRIPTION : "Draws the morphing art cells"
   PARAMETER : 
     input: 
-      rgba: 'Uint8Array'
-      segments: '[]'
-      relativeTime : 'float' # 0 <= time <= 1
-      dimensions : '[]'
-    customTime : '0.0 - 1.0'
+      rgba: "Uint8Array"
+      segments: "[]"
+      relativeTime : "float" # 0 <= time <= 1
+      dimensions : "[]"
+    customTime : "0.0 - 1.0 (opt)"
 
 
   constructor : () ->
@@ -37,8 +37,10 @@ class DrawArtCells
     context.fillStyle = "rgba(0, 0, 255, 1)"
     context.strokeStyle = "rgba(0, 0, 0, 1)"
     context.lineWidth = 2
+
+    activeSegments = _.filter(segments, (segment) -> segment.display is true)
     
-    for segment in segments
+    for segment in activeSegments
 
       path = segment.path
       artPath = segment.artPath

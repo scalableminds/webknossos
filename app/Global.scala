@@ -25,6 +25,7 @@ import scala.collection.JavaConversions._
 import brainflight.ActorSystems
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
+import scala.util._
 
 object Global extends GlobalSettings {
 
@@ -34,20 +35,24 @@ object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     val conf = Play.current.configuration
-    implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5))
+    implicit val timeout = Timeout((/*conf.getInt("actor.defaultTimeout") getOrElse*/ 25))
     if (Play.current.mode == Mode.Dev) {
       InitialData.insertRoles
       InitialData.insertUsers
+      InitialData.insertTaskAlgorithms
     }
 
-    (DirectoryWatcher ? StartWatching("binaryData")).onSuccess {
-      case x =>
+    (DirectoryWatcher ? StartWatching("binaryData")).onComplete {
+      case Success(x) =>
         if (Play.current.mode == Mode.Dev) {
           BasicEvolution.runDBEvolution()
           // Data insertion needs to be delayed, because the dataSets need to be
           // found by the DirectoryWatcher first
           InitialData.insertTasks
         }
+        Logger.info("Directory start completed")
+      case Failure(e) =>
+        Logger.error(e.toString)
     }
     if (Play.current.mode == Mode.Prod)
       Role.ensureImportantRoles()
@@ -92,14 +97,16 @@ object InitialData {
     }
   }
 
-  def insertTasks() = {
+  def insertTaskAlgorithms() = {
     if (TaskSelectionAlgorithm.findAll.isEmpty) {
       TaskSelectionAlgorithm.insertOne(TaskSelectionAlgorithm(
         """function simple(user, tasks){ 
           |  return tasks[0];
           |}""".stripMargin))
     }
+  }
 
+  def insertTasks() = {
     if (TaskType.findAll.isEmpty) {
       val user = User.findOneByEmail("scmboy@scalableminds.com").get
       val tt = TaskType(

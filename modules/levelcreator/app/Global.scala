@@ -23,7 +23,7 @@ object Global extends GlobalSettings {
     
   override def onStart(app: Application) {
       val conf = Play.current.configuration
-      implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds)
+      implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds)
       (DirectoryWatcher ? StartWatching("knowledge")).onSuccess {
         case x =>
           if (Play.current.mode == Mode.Dev) {

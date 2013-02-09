@@ -33,7 +33,7 @@ object TaskController extends Controller with Secured {
             }
           case _ =>
             for {
-              task <- Training.findAllFor(user).headOption ?~ Messages("task.unavailable")
+              task <- Training.findAssignableFor(user).headOption ?~ Messages("task.unavailable")
               tracing <- Tracing.createTracingFor(user, task) ?~ Messages("tracing.creationFailed")
             } yield {
               JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("task.training.assigned"))

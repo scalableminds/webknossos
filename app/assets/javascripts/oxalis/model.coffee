@@ -49,7 +49,7 @@ class Model
               @flycam.on
                 "positionChanged" : (position) =>
                   @flycam3d.setPositionSilent(position)
-              @route = new Route(tracing.tracing, @scaleInfo, @flycam)
+              @route = new Route(tracing.tracing, @scaleInfo, @flycam, @flycam3d)
               @user = new User(user)
               
               tracing.tracing.settings

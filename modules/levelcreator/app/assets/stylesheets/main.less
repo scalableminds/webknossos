@@ -20,11 +20,6 @@ body:-webkit-full-screen {
   height: 100%;
 }
 
-a:hover {
-    text-decoration: none;
-    border-bottom: 1px solid #005580;
-}
-
 .navbar-inner {
     background: #4D1A1A;
 }
@@ -199,9 +194,6 @@ svg a:hover {
             font-size: 80px;
             text-align: center;
             padding-top: 10%;
-            &:hover {
-                border-bottom: none;
-            }
         }
         input[type="range"] {
             width: 100%;
@@ -212,6 +204,7 @@ svg a:hover {
 [class^="icon-"]::before, 
 [class*=" icon-"]::before {
     width: 1em;
+    text-decoration: none;
 }
 
 

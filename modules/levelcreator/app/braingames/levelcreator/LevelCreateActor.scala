@@ -22,7 +22,6 @@ import java.io.{File, PrintWriter, FilenameFilter}
 
 
 case class CreateLevels(level: Level, mission: List[Mission])
-//case class ZipLevel(level: Level, mission: Mission)
 
 case class ExecLogger(var messages: List[String] = Nil,
   var error: List[String] = Nil)
@@ -51,12 +50,6 @@ class LevelCreateActor extends Actor{
   def receive = {
     case CreateLevels(level, missions) =>
      sender ! createLevels(level, missions)
-    /*
-    case ZipLevel(level, mission) => 
-      createLevel(level, mission);
-      sender ! zippedFiles(level, mission)
-    * 
-      */
   }
   
   def createTempFile(data: String) = {

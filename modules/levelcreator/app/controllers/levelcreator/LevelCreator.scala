@@ -112,18 +112,6 @@ object LevelCreator extends Controller {
       }
     }
   }
-  /*
-  def download(levelId: String) = Action { implicit request => 
-    Async{
-      for {
-        level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-        mission <- Mission.randomByDataSetName(level.dataSetName) ?~Messages("mission.notFound")
-      } yield {
-        val future = levelCreateActor ? ZipLevel(level, mission)
-        future.mapTo[File].map{file => Ok.sendFile(content = file)}
-      }
-    }
-  }*/
 
   def retrieveAsset(levelId: String, asset: String) = Action { implicit request =>
     for {

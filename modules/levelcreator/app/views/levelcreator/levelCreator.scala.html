@@ -20,7 +20,7 @@
       <div class="span8">
         <h3>Preview - @level.name</h3>
         <div class="row">
-          <div class="span10">
+          <div class="span9">
             <div class="well" id="preview">
               <p id="preview-error"></p>
               <canvas id="preview-canvas" width="250" height="150"></canvas>
@@ -28,7 +28,7 @@
             <input id="preview-slider" type="range" value="0" step=".5"></input>
           </div>
 
-          <div class="span2">
+          <div class="span3">
             <h5>Zoom</h5>
             <p>
               <input type="range" min="0.2" max="5" step=".1" value="1" id="zoom-slider"/>
@@ -40,7 +40,7 @@
 
         <div class="row">
 
-          <div class="span8" id="editor-container">
+          <div class="span9" id="editor-container">
             <h3>Editor</h3>
             @helper.form(action = controllers.levelcreator.routes.LevelCreator.submitCode(level.id)) {
 
@@ -56,7 +56,7 @@
           </div>
 
 
-          <div class="span4" id="assets">
+          <div class="span3" id="assets">
             <h3>Assets</h3>
             <div>
               <form id="assets-upload" action="@controllers.levelcreator.routes.LevelCreator.uploadAsset(level.id)" method="POST" enctype="multipart/form-data">

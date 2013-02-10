@@ -44,13 +44,13 @@ class FilterSegmentationByDistance
     for segment in activeSegments
       if weighted? and weighted is false
         if compareFunc(segment.absoluteDistance, distance)
-          values.push segment.value
+          values.push segment.id
       else
         if compareFunc(segment.weightedDistance, distance)
-          values.push segment.value    
+          values.push segment.id    
 
     for segment in activeSegments
-      if _.contains(values, segment.value) is false
+      if _.contains(values, segment.id) is false
         segment.display = false             
 
     j = 0

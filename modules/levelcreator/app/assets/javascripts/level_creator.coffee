@@ -125,7 +125,8 @@ class LevelCreator
   debouncedUpdatePreview : ->
 
     @debouncedUpdatePreview = _.debounce(@updatePreview, @EDIT_DEBOUNCE_TIME)    
-
+    @debouncedUpdatePreview()
+    
 
   updatePreview : ->
 

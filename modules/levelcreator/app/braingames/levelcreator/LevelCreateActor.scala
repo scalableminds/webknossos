@@ -44,7 +44,7 @@ class FileExtensionFilter(fileExtension: String) extends FilenameFilter{
 class LevelCreateActor extends Actor{
   val server = "localhost"
   val port = Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000)
-  def imagesPath(level: Level, mission: Mission) = "public/levelStacks/%s/%d".format(level.name, mission.start.startId)
+  def stackPath(level: Level, mission: Mission) = "public/levelStacks/%s/%d".format(level.name, mission.start.startId)
   val logger = new ExecLogger
   
   def receive = {
@@ -67,8 +67,8 @@ class LevelCreateActor extends Actor{
   
       val js = html.levelcreator.phantom(
           level, 
-          imagesPath(level, mission) + "/stackImage%i.png", 
-          imagesPath(level, mission) + "/meta.json", 
+          stackPath(level, mission) + "/stackImage%i.png", 
+          stackPath(level, mission) + "/meta.json", 
           levelUrl,
           mission.start.startId).body
       val file = createTempFile(js)
@@ -82,11 +82,15 @@ class LevelCreateActor extends Actor{
   }
   
   def zipFiles(level: Level, mission: Mission) = {
-    val zipFile = imagesPath(level, mission) + "/%s_%s_stack.zip".format(level.name, mission.start.startId)
-    val stackDir = new File(imagesPath(level, mission))
-    val pngFilter = new FileExtensionFilter(".png")
-    val cmd = "zip %s %s".format(zipFile, stackDir.listFiles(pngFilter).mkString(" ") )
-    cmd !! logger
-    println("Finished zipping")
+    val stackDir = new File(stackPath(level, mission))
+    if (stackDir.exists()){
+      val zipFile = stackPath(level, mission) + "/%s_%s_stack.zip".format(level.name, mission.start.startId)
+      val pngFilter = new FileExtensionFilter(".png")
+      val cmd = "zip %s %s".format(zipFile, stackDir.listFiles(pngFilter).mkString(" ") )
+      cmd !! logger
+      println("Finished zipping")
+    }
+    else
+      println("error: stackDir %s was not created during stack Creation".format(stackPath(level,mission)))
   }
 }

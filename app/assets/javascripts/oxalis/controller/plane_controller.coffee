@@ -32,8 +32,8 @@ class PlaneController
     keyboardNoLoop : null
 
     unbind : ->
-      @skeletonMouse?.unbind()
-      @planeMouse?.unbind()
+      #@skeletonMouse?.unbind()
+      #@planeMouse?.unbind()
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
 
@@ -112,7 +112,8 @@ class PlaneController
       return
 
     for planeId in ["xy", "yz", "xz"]
-      @input.planeMouse = new Input.Mouse($("#plane#{planeId}"),
+      #@input.planeMouse = new Input.Mouse($("#plane#{planeId}"),
+      new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
@@ -125,7 +126,8 @@ class PlaneController
         rightClick : @setWaypoint
       )
 
-    @input.skeletonMouse = new Input.Mouse($("#skeletonview"),
+    #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
+    new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
         @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
         @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
@@ -205,7 +207,8 @@ class PlaneController
 
   stop : ->
 
-    @input.unbind()
+    @input.keyboard.unbind()
+    @input.keyboardNoLoop.unbind()
     @view.stop()
 
 

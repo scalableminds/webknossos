@@ -57,7 +57,7 @@ class ArbitraryPlaneInfo
     rWidth = WIDTH - LINE_WIDTH * 2
     rHeight = HEIGHT - LINE_WIDTH * 2
 
-    context.lineWidth = 3
+    context.lineWidth = LINE_WIDTH
     context.strokeStyle = "rgba(255, 255, 255, #{ALPHA})"
 
     context.beginPath()

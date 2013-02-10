@@ -44,6 +44,7 @@ class LevelCreator
     @editor = Ace.edit("editor")
     @editor.setTheme("ace/theme/twilight")
     @editor.getSession().setMode("ace/mode/coffee")
+    @editor.getSession().setNewLineMode("unix")
 
     @$form = $("#save-form")
     @$saveCodeButton = @$form.find("[type=submit]")

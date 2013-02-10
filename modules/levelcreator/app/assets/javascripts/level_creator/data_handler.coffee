@@ -78,7 +78,7 @@ class DataHandler
         dataType : "json"
       )
     ).then(
-      null
+      _.identity
       (xhr) -> Toast.error("Couldn't load meta data.")
     )
       

@@ -18,7 +18,7 @@
 
       <!--Body content-->
       <div class="span8">
-        <h3>Preview - @level.name</h3>
+        <h3>Preview: @level.name #@missionId</h3>
         <div class="row">
           <div class="span9">
             <div class="well" id="preview">
@@ -42,16 +42,25 @@
 
           <div class="span9" id="editor-container">
             <h3>Editor</h3>
-            @helper.form(action = controllers.levelcreator.routes.LevelCreator.submitCode(level.id)) {
+            @helper.form(action = controllers.levelcreator.routes.LevelCreator.submitCode(level.id), 'id -> "save-form") {
 
-            <input type="submit" value="Save" class="btn btn-primary"/>
+            <button type="submit" class="btn btn-primary">
+              <i class="icon-save"></i> Save
+            </button>
             <input type="hidden" name="code" />
             <input type="hidden" name="use" value="1" />
+            }
+
+            <form method="POST" id="produce-form">
+              <input type="hidden" name="missionStartId" value="@missionId" />
+              <a href="@controllers.levelcreator.routes.LevelCreator.produce(level.id)" data-ajax="submit,busy-class" class="btn">
+                <i class="icon-retweet"></i> Produce
+              </a>
+            </form>
 
             <div class="editor-wrapper">
               <div id="editor">@level.code</div>
             </div>
-            }
 
           </div>
 
@@ -60,7 +69,7 @@
             <h3>Assets</h3>
             <div>
               <form id="assets-upload" action="@controllers.levelcreator.routes.LevelCreator.uploadAsset(level.id)" method="POST" enctype="multipart/form-data">
-                <button type="submit" class="btn btn-success">
+                <button type="submit" class="btn">
                   <i class="icon-plus icon-white"></i> Add files...
                 </button>
               </form>

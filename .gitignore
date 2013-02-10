@@ -33,3 +33,4 @@ src/main/scala/rebel.xml
 modules/shellgame/target
 modules/shellgame/logs
 modules/shellgame/shellgame-assets
+public/levelStacks

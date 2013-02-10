@@ -45,7 +45,7 @@ class LevelCreator
     @editor.setTheme("ace/theme/twilight")
     @editor.getSession().setMode("ace/mode/coffee")
 
-    @$form = $("#editor-container form")
+    @$form = $("#save-form")
     @$saveCodeButton = @$form.find("[type=submit]")
 
     @editor.on "change", => @debouncedUpdatePreview()
@@ -63,7 +63,7 @@ class LevelCreator
       $.ajax(
         url : @$form[0].action
         data : @$form.serialize()
-        type : "POST"
+        type : "PUT"
       ).then(
         ->
           Toast.success("Saved!")

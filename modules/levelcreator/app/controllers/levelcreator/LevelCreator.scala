@@ -92,14 +92,13 @@ object LevelCreator extends Controller {
     }
   }
   
-  //TODO produce one that has not been created yet
   def produce(levelId: String, count: Int) = Action { implicit request =>
     Async{
       for {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-        mission <- Mission.randomByDataSetName(level.dataSetName) ?~Messages("mission.notFound")
+        missions <-  Mission.findNotProduced(level.dataSetName, level.renderedMissions, count )?~Messages("mission.notFound")
       } yield {
-        val future = (levelCreateActor ? CreateLevel(level, mission)).recover{
+        val future = (levelCreateActor ? CreateLevels(level, missions)).recover{
           case e: AskTimeoutException => 
             println("stack creation timed out")
             "timed out"

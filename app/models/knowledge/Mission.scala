@@ -29,6 +29,12 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
       "start" -> grater[MissionStart].asDBObject(mission.start)))).isDefined
   }
 
+  def findNotProduced(dataSetName: String, alreadyProducedStartIds: List[Int], n: Int = 1) = {
+    for (missions <- findByDataSetName(dataSetName)) yield {
+      missions.filter(m => !alreadyProducedStartIds.contains(m.start.startId)).take(n)
+    }
+  }
+
   def randomByDataSetName(dataSetName: String) = {
     for { missions <- findByDataSetName(dataSetName) } yield { missions(Random.nextInt(missions.size)) }
   }

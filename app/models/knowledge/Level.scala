@@ -39,9 +39,9 @@ case class Level(
     copy(code = c)
   }
   
-  def addRenderedMission(missionStartId: Int) = {
-    if (! renderedMissions.contains(missionStartId))
-      update(_.copy(renderedMissions = missionStartId :: renderedMissions))
+  def addRenderedMissions(missionStartIds: List[Int]) = {   
+      update(_.copy(renderedMissions =  renderedMissions ++ 
+          missionStartIds.filter(id => !renderedMissions.contains(id))))
   }
   
   def retrieveAsset(name: String) = {

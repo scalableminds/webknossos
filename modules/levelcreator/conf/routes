@@ -24,8 +24,8 @@ GET     /binary/arbitrary/ajax              controllers.levelcreator.ArbitraryBi
 GET     /binary/ajax                        controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(dataSetName: String, levelId: String, missionStartId: Int, dataLayerName: String) 
 #Mission Data
 GET     /missions                           controllers.levelcreator.MissionController.getMissions(dataSetName: String)
-GET     /missions/:missionStartId           controllers.levelcreator.MissionController.getMission(dataSetName: String, missionStartId: Int)
 GET     /missions/random                    controllers.levelcreator.MissionController.getRandomMission(dataSetName: String)
+GET     /missions/:missionStartId           controllers.levelcreator.MissionController.getMission(dataSetName: String, missionStartId: Int)
         
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.levelcreator.Application.javascriptRoutes

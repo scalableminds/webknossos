@@ -48,6 +48,8 @@ $ ->
       ajaxOptions["type"] = options.method ? $form[0].method ? "POST"
       ajaxOptions["data"] = $form.serialize()
 
+    if options["busy-class"]
+      $this.addClass("busy")
 
     $.ajax(ajaxOptions).then(
 
@@ -104,6 +106,9 @@ $ ->
           Toast.error("Error :-/")
 
         $this.trigger("ajax-error", messages)
+    ).always(
+      -> 
+        $this.removeClass("busy")
     )
   
 

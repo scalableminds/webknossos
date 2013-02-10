@@ -12,14 +12,13 @@ case class Level(
     width: Int,
     height: Int,
     depth: Int,
+    dataSetName: String,
     code: String = Level.defaultCode,
     renderedMissions: List[Int] = List(),
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
 
   lazy val id = _id.toString
-  
-  def dataSetName = "2012-09-28_ex145_07x2"
   
   val assetsFolder =
     s"${Level.assetsBaseFolder}/$name/assets"
@@ -70,15 +69,17 @@ case class Level(
 }
 
 object Level extends BasicKnowledgeDAO[Level]("levels") {
+  
+  val defaultDataSetName = "2012-09-28_ex145_07x2"
 
-  def fromForm(name: String, width: Int, height: Int, depth: Int) = {
-    Level(name, width, height, depth)
+  def fromForm(name: String, width: Int, height: Int, depth: Int, dataSetName: String) = {
+    Level(name, width, height, depth, dataSetName)
   }
   
-  val empty = Level("", 250, 150, 30)
+  val empty = Level("", 250, 150, 30, defaultDataSetName)
   
   def toForm(level: Level) = {
-    Some(level.name, level.width, level.height, level.depth)
+    Some(level.name, level.width, level.height, level.depth, level.dataSetName)
   }
   
   val assetsBaseFolder = {

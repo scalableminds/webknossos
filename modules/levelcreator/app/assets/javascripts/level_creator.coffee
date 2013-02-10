@@ -26,6 +26,7 @@ class LevelCreator
 
     @levelId = $("#level-creator").data("level-id")
     @taskId = $("#level-creator").data("level-task-id")
+    @dataSetName = $("#level-creator").data("level-dataset-name")
 
     @dimensions = [
       parseInt( $("#level-creator").data("level-width")  )
@@ -33,7 +34,7 @@ class LevelCreator
       parseInt( $("#level-creator").data("level-depth")  )
     ]
 
-    @dataHandler = new DataHandler(@dimensions, @levelId, @taskId)
+    @dataHandler = new DataHandler(@dimensions, @levelId, @taskId, @dataSetName)
     @assetHandler = new AssetHandler(@levelId)
     @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler, @dataHandler)
 

@@ -10,9 +10,7 @@ libs/toast : Toast
 
 class DataHandler
 
-  DATA_SET_ID : "2012-09-28_ex145_07x2"
-
-  constructor : (@dimensions, @levelId, @taskId) ->
+  constructor : (@dimensions, @levelId, @taskId, @dataSetName) ->
 
     EventMixin.extend(this)
 
@@ -42,7 +40,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@DATA_SET_ID, @levelId, startId, "color")
+        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@dataSetName, @levelId, startId, "color")
         dataType : "arraybuffer"
       )
     ).then(
@@ -55,7 +53,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@DATA_SET_ID, @levelId, startId, "segmentation")
+        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@dataSetName, @levelId, startId, "segmentation")
         dataType : "arraybuffer"
       )
     ).then(
@@ -68,7 +66,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@DATA_SET_ID, @levelId, startId, "classification")
+        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@dataSetName, @levelId, startId, "classification")
         dataType : "arraybuffer"
       )
     ).then(
@@ -81,7 +79,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.MissionController.getMission(@DATA_SET_ID, @taskId)
+        Routes.controllers.levelcreator.MissionController.getMission(@dataSetName, @taskId)
         dataType : "json"
       )
     ).then(

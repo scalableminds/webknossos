@@ -22,6 +22,7 @@ import play.api._
 import ExecutionContext.Implicits.global
 import java.io.File
 import scala.util.Failure
+import models.binary.DataSet
 
 object LevelCreator extends Controller {
 
@@ -35,8 +36,10 @@ object LevelCreator extends Controller {
       "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
       "width" -> number,
       "height" -> number,
-      "depth" -> number)(Level.fromForm)(Level.toForm)).fill(Level.empty)
-
+      "depth" -> number,
+      "dataset" -> text.verifying("dataSet.notFound", DataSet.findOneByName(_).isDefined))(
+          Level.fromForm)(Level.toForm)).fill(Level.empty)
+          
   def use(levelId: String, missionStartId: Int) = Action { implicit request =>
     for {
       level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
@@ -100,6 +103,8 @@ object LevelCreator extends Controller {
       } yield {
         val future = (levelCreateActor ? CreateLevels(level, missions)).recover{
           case e: AskTimeoutException => 
+            //TODO when creating multiple stacks, actor may time out
+            //he will go on creating though
             println("stack creation timed out")
             "timed out"
         } 
@@ -140,17 +145,17 @@ object LevelCreator extends Controller {
 
   def create = Action(parse.urlFormEncoded) { implicit request =>
     levelForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.levelcreator.levelList(Level.findAll, formWithErrors)), //((taskCreateHTML(taskFromTracingForm, formWithErrors)),
+      formWithErrors => BadRequest(html.levelcreator.levelList(Level.findAll, formWithErrors, DataSet.findAll)), //((taskCreateHTML(taskFromTracingForm, formWithErrors)),
       { t =>
         if (Level.isValidLevelName(t.name)) {
           Level.insertOne(t)
-          Ok(html.levelcreator.levelList(Level.findAll, levelForm))
+          Ok(html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll))
         } else
           BadRequest(Messages("level.invalidName"))
       })
   }
 
   def list = Action { implicit request =>
-    Ok(html.levelcreator.levelList(Level.findAll, levelForm))
+    Ok(html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll))
   }
 }

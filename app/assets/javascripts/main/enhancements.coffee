@@ -32,6 +32,9 @@ $ ->
     if options["confirm"]
       return unless confirm("Are you sure?")
 
+    if options["method"]
+      ajaxOptions["type"] = options.method
+
     if options["submit"]
       $validationGroup = $this.parents("form, [data-validation-group]").first()
       isValid = true
@@ -70,6 +73,12 @@ $ ->
 
         if options["replace-table"]
           $(options["replace-table"]).replaceWith(html)
+
+        if options["delete-parent"]?
+          if options["delete-parent"] != true
+            $this.parents(options["delete-parent"]).first().remove()
+          else
+            $this.parent().remove()
 
         if options["reload"]
           window.location.reload()

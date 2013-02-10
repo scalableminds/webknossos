@@ -10,8 +10,10 @@
           <header>
             <h4>
               #@missionId
-              <a href="@controllers.levelcreator.routes.Assets.at(path="/public/levelStacks", s"${level.name}/$missionId/${level.name}_${missionId}_stack.zip")">
-                <i class="icon-download"></i>
+              <a href="@controllers.levelcreator.routes.Assets.at(path="/public/levelStacks", s"${level.name}/$missionId/${level.name}_${missionId}_stack.zip")" class="download-button"><i class="icon-download"></i></a>
+              <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, missionId)" class="edit-button"><i class="icon-pencil"></i></a>
+              <a href="@controllers.levelcreator.routes.LevelCreator.deleteStack(level.id, missionId)" class="delete-button" data-ajax="method=DELETE,delete-parent=.stack">
+                <i class="icon-trash"></i>
               </a>
             </h4>
           </header>

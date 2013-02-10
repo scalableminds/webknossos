@@ -63,7 +63,7 @@ class LevelCreator
       $.ajax(
         url : @$form[0].action
         data : @$form.serialize()
-        type : "POST"
+        type : "PUT"
       ).then(
         ->
           Toast.success("Saved!")

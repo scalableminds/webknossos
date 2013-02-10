@@ -57,6 +57,9 @@ object LevelCreator extends Controller {
       Ok(html.levelcreator.stackList(level))
     }
   }
+  def deleteStack(levelId: String, missionStartId: Int) = Action { implicit request =>
+    JsonOk("PENIS")
+  }
 
   def delete(levelId: String) = Action { implicit request =>
     for {

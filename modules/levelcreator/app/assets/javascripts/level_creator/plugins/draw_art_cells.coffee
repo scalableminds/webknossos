@@ -15,8 +15,8 @@ class DrawArtCells
       relativeTime : "float" # 0 <= time <= 1
       dimensions : "[]"
     customTime : "0.0 - 1.0 (opt)"
-    reverse : "true, false"
-    colorRandom : "true, false"
+    reverse : "true, false (default)"
+    colorRandom : "true, false (default)"
     endPosition : "\"edge\", \"segmentCenter\" (default)"
     startPosition : "\"segmentCenter\" (default)"
     lineWidth : "0 - 5"

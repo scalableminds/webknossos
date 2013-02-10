@@ -58,8 +58,14 @@ object LevelCreator extends Controller {
       Ok(html.levelcreator.stackList(level))
     }
   }
+  
   def deleteStack(levelId: String, missionStartId: Int) = Action { implicit request =>
-    JsonOk("PENIS")
+    for {
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+    } yield {
+      level.removeRenderedMission(missionStartId)
+      JsonOk(Messages("level.stack.removed"))
+    }
   }
 
   def delete(levelId: String) = Action { implicit request =>
@@ -105,9 +111,9 @@ object LevelCreator extends Controller {
         //TODO when creating multiple stacks, actor may time out
         //he will go on creating though
         println("stack creation timed out")
-        "timed out"
+        Messages("level.stack.creationTimeout")
     }
-    future.mapTo[String].map { result => Ok(result) }
+    future.mapTo[String].map { result => JsonOk(result) }
   }
 
   def produce(levelId: String, count: Int) = Action { implicit request =>

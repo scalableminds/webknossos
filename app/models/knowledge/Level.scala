@@ -43,6 +43,10 @@ case class Level(
           missionStartIds.filter(id => !renderedMissions.contains(id))))
   }
   
+  def removeRenderedMission(missionStartId: Int) = {
+    update(_.copy(renderedMissions = renderedMissions.filter(id => id != missionStartId)))
+  }
+  
   def retrieveAsset(name: String) = {
     val f = assetFile(name)
     if (f.getPath.startsWith(assetsFolder) && f.exists)

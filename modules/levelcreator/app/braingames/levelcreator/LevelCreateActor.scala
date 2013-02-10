@@ -18,6 +18,7 @@ import play.api.Configuration._
 import views._
 import models.knowledge.{Level, Mission}
 import scala.sys.process._
+import play.api.i18n.Messages
 import java.io.{File, PrintWriter, FilenameFilter}
 
 
@@ -78,7 +79,7 @@ class LevelCreateActor extends Actor{
       zipFiles(level, mission)
     }
     level.addRenderedMissions(missions.map(_.start.startId))
-    "created %d stacks!".format(missions.size)
+    Messages("level.stack.created")
   }
   
   def zipFiles(level: Level, mission: Mission) = {

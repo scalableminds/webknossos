@@ -33,6 +33,8 @@ class SegmentImporter
 
     cacheSegments = @cache[z]
     if cacheSegments?
+      for segment in cacheSegments.segments
+        segment.display = true
       input.segments = cacheSegments.segments
       input.segmentation = cacheSegments.cSegmentation
       return
@@ -55,8 +57,11 @@ class SegmentImporter
     @setWeightedDistance(segments, width, height)
     @setRandomColor(segments)
 
-    for segment in segments
-      @setArtPath(segment, width, height)
+    #for segment in segments
+    #  @setArtPath(segment, width, height)
+
+    @fillPasses(width, height, cSegmentation)
+    #@setNeighbours(width, height, cSegmentation, segments)
 
     input.segments = segments
     input.segmentation = cSegmentation
@@ -105,6 +110,7 @@ class SegmentImporter
               g: 0
               b: 0
             }
+            neighbours : []
           }
           segments.push(segment)
           
@@ -226,37 +232,6 @@ class SegmentImporter
     segment.path = path
 
 
-  setArtPath : (segment, width, height) ->
-
-    path = []
-    radius = Math.sqrt(segment.size) * 0.5
-    count = segment.path.length * 0.5
-
-    mx = 2 * segment.weightedCenter.x - (width * 0.5)
-    my = 2 * segment.weightedCenter.y - (height * 0.5)
-
-    mx = segment.weightedCenter.x
-    my = segment.weightedCenter.y
-
-    for i in [count..0] by -1
-    
-      radians = 2 * Math.PI * i / count
-      x = Math.sin(radians)
-      y = -Math.cos(radians)
-
-      x *= radius
-      y *= radius
-
-      x += mx
-      y += my 
-
-      path.push x
-      path.push y
-
-
-    segment.artPath = path
-
-
   smooth : (width, height, segmentation, removeThreshold) ->
 
     tempBuffer = new Uint16Array(segmentation.length)
@@ -318,13 +293,6 @@ class SegmentImporter
     paint x, y
     while ranges.length
       
-      # extendLeft
-      
-      # extendRight
-      
-      # extend range looked at for next lines
-      
-      # extend range ignored from previous line
       addNextLine = (newY, isNext, downwards) ->
         rMinX = minX
         inRange = false
@@ -368,3 +336,96 @@ class SegmentImporter
         r[1]++
       addNextLine y + 1, not up, true  if y < height
       addNextLine y - 1, not down, false  if y > 0    
+
+
+  fillPasses : (width, height, cSegmentation) ->
+
+    zeroCount = 3
+    while (zeroCount)
+      zeroCount--
+      tempBuffer = new Uint8Array(cSegmentation.length)
+
+      for h in [0...height] by 1
+        for w in [0...width] by 1
+          
+          base = h * width + w
+          
+          a = cSegmentation[base]
+          if a is 0 
+            #zeroCount++
+            continue
+
+          #left
+          tempBuffer[base - 1]             = a if cSegmentation[base - 1] is 0 and w - 1 > 0
+          #left up if 
+          tempBuffer[base + width - 1] = a if cSegmentation[base + width - 1] is 0 and w - 1 > 0 and h + 1 < height
+          #up if 
+          tempBuffer[base + width]     = a if cSegmentation[base + width] is 0 and h + 1 < height
+          #right up if 
+          tempBuffer[base + width + 1] = a if cSegmentation[base + width + 1] is 0 and h + 1 < height and w + 1 < width
+          #right if 
+          tempBuffer[base + 1]             = a if cSegmentation[base + 1] is 0 and w + 1 < width
+          #right down if 
+          tempBuffer[base - width + 1] = a if cSegmentation[base - width + 1] is 0 and h - 1 > 0 and w + 1 < width
+          #down if 
+          tempBuffer[base - width]     = a if cSegmentation[base - width] is 0 and h - 1 > 0
+          #left down if 
+          tempBuffer[base - width - 1] = a if cSegmentation[base - width - 1] is 0 and h - 1 > 0 and w - 1 > 0
+
+      for i in [0...cSegmentation.length]
+        cSegmentation[i] = tempBuffer[i] if tempBuffer[i] isnt 0
+
+    cSegmentation
+
+
+  setNeighbours : (width, height, segmentation, segments) ->
+
+    for h in [0...height] by 1
+      for w in [0...width] by 1
+        
+        base = h * width + w
+        baseValue = segmentation[base]
+        if baseValue is 0
+          continue
+
+        baseSegment = _.find(segments, (segment) => segment.id is baseValue)
+
+        #find left
+        ww = w
+        leftValue = baseValue
+        while ww >= 0 
+          leftValue = segmentation[h * width + ww--]          
+          if leftValue isnt baseValue and leftValue isnt 0
+            if _.contains(baseSegment.neighbours, leftValue) is false
+              baseSegment.neighbours.push(leftValue)
+            break
+
+        #find right
+        ww = w
+        rightValue = baseValue
+        while ww < width
+          rightValue = segmentation[h * width + ww++]          
+          if rightValue isnt baseValue and rightValue isnt 0
+            if _.contains(baseSegment.neighbours, rightValue) is false
+              baseSegment.neighbours.push(rightValue)
+            break
+
+        #find up
+        hh = h
+        upValue = baseValue
+        while hh >= 0 
+          upValue = segmentation[hh-- * width + w]          
+          if upValue isnt baseValue and upValue isnt 0
+            if _.contains(baseSegment.neighbours, upValue) is false
+              baseSegment.neighbours.push(upValue)
+            break                        
+
+        #find low
+        hh = h
+        downValue = baseValue
+        while hh < height 
+          downValue = segmentation[hh++ * width + w]          
+          if downValue isnt baseValue and downValue isnt 0
+            if _.contains(baseSegment.neighbours, downValue) is false
+              baseSegment.neighbours.push(downValue)
+            break   

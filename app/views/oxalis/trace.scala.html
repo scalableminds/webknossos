@@ -6,16 +6,6 @@
 @main( ){
   <div id="container" data-tracing-type="@tracing.tracingType">
     <div id="main" role="main">
-      <div id="arbitraryplane"></div>      
-      <div id="render">
-        <div id="prevControls"></div>
-        <div id="modal" class="modal hide fade"></div>
-        <div id="planexy" class="inputcatcher"></div>
-        <div id="planeyz" class="inputcatcher"></div>
-        <div id="planexz" class="inputcatcher"></div>
-        <div id="skeletonview" class="inputcatcher"></div>
-        <div id="abstractTreeViewer"></div>
-      </div>
       <div id="overlay">
         <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
         <div id="buttonbar" class="btn-group inline-block">
@@ -71,7 +61,20 @@
             </div>
           }
         </div>
-      </div>  
+      </div> 
+      <div id="tracing">
+        <div id="arbitraryplane"></div>      
+        <div id="render">
+          <div id="modal" class="modal hide fade"></div>
+          <div id="planexy" class="inputcatcher"></div>
+          <div id="planeyz" class="inputcatcher"></div>
+          <div id="planexz" class="inputcatcher"></div>
+          <div id="skeletonview" class="inputcatcher">
+            <div id="prevControls"></div>
+          </div>
+        </div>
+      </div>
+      <div id="abstractTreeViewer"></div>
     </div>   
   </div> <!--! end of #container -->
 

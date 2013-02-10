@@ -35,7 +35,7 @@ class PlaneView
     container = $("#render")
 
     # Create a 4x4 grid
-    @curWidth = WIDTH = (container.width()-20)/2
+    @curWidth = WIDTH = (container.width()-25)/2
     HEIGHT = (container.height()-20)/2
     @scaleFactor = 1
 
@@ -79,7 +79,7 @@ class PlaneView
     @scene.add(@group)
 
     # Attach the canvas to the container
-    @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
+    @renderer.setSize 2*WIDTH+25, 2*HEIGHT+20
     container.append @renderer.domElement
 
     @setActivePlaneXY()
@@ -154,10 +154,10 @@ class PlaneView
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
     container = $("#render")
-    WIDTH = (container.width()-20)/2
+    WIDTH = (container.width()-25)/2
     HEIGHT = (container.height()-20)/2
 
-    @renderer.setSize( 2*WIDTH+20, 2*HEIGHT+20)
+    @renderer.setSize( 2*WIDTH+25, 2*HEIGHT+20)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
       @camera[i].aspect = WIDTH / HEIGHT
       @camera[i].updateProjectionMatrix()
@@ -167,30 +167,19 @@ class PlaneView
     @scaleFactor = 1 unless @scaleFactor
     if (@scaleFactor+delta > 0.65) and (@scaleFactor+delta < 2)
       @scaleFactor += Number(delta)
-      @curWidth = WIDTH = HEIGHT = @scaleFactor * 384
+      @curWidth = WIDTH = HEIGHT = @scaleFactor * 380
       container = $("#render")
-      container.width(2 * WIDTH + 20)
+      container.width(2 * WIDTH + 25)
       container.height(2 * HEIGHT + 20)
 
       divs = $(".inputcatcher")
       for div in divs
-        $(div).width(WIDTH)
-        $(div).height(HEIGHT)
-
-      divYZ = $("#planeyz")
-      divYZ.css({left: @scaleFactor * 384 + 20 + "px"})
-      divXZ = $("#planexz")
-      divXZ.css({top: @scaleFactor * 384 + 20 + "px"})
-      divSkeleton = $("#skeletonview")
-      divSkeleton.css({left: @scaleFactor * 384 + 20 + "px", top: @scaleFactor * 384 + 20 + "px"})
-
-      # scales the 3D-view controls
-      prevControl = $("#prevControls")
-      prevControl.css({top: @scaleFactor * 420 + "px", left: @scaleFactor * 420 + "px"})
+        $(div).css({width: WIDTH + "px"})
+        $(div).css({height: HEIGHT + "px"})
 
       # move abstract tree viewer
       abstractTreeViewer = $("#abstractTreeViewer")
-      abstractTreeViewer.css({left: 2 * WIDTH + 20 + 10 + "px"})
+      abstractTreeViewer.css({left: 2 * (WIDTH - VIEWPORT_WIDTH) + 25 + 10 + "px"})
 
       @resize()
 
@@ -262,6 +251,8 @@ class PlaneView
     
   stop : ->
 
+    @scaleFactor = 1
+    @scaleTrianglesPlane(0)
     @running = false 
 
 

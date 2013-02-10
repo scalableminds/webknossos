@@ -226,35 +226,41 @@ svg a:hover {
     #abstractTreeViewer {
         color : #fff;
     }
+    .popover p {
+        color : #000;
+    }
+    .modal p {
+        color : #000;
+    }
+}
+#tracing {
+    width: 2*@standardViewportWidth+25px;
+    height: 2*@standardViewportWidth+20px;
+    margin-top: 10px;
+    position: relative;
+    float: left;
 }
 #render {
-    width: 2*@standardViewportWidth+20px;
-    height: 2*@standardViewportWidth+20px;
     position: absolute;
-    top: 20px;
-    left: 300px;
 }
 #render canvas {
     position: absolute;
-    top: 0;
-    left: 0;
+    left: 0px;
+    top: 0px;
     z-index: 10;
 }
 #arbitraryplane {
-    width: 2*@standardViewportWidth+20px;
-    height: 2*@standardViewportWidth+20px;
     position: absolute;
-    top: 20px;
-    left: 300px;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
     z-index: 100;
 }
 #abstractTreeViewer {
-    top: 0px;
-    left: 2*@standardViewportWidth+20px+10px;
-    width : 300px;
     height : 2*@standardViewportWidth + 20px;
-    border-width: 1px;
-    position:relative;
+    overflow: hidden;
+    position: relative;
 }
 #main-container {
     position: absolute;
@@ -264,44 +270,31 @@ svg a:hover {
     bottom: 0;
 }
 .inputcatcher {
-    width: @standardViewportWidth - 2px;
-    height: @standardViewportWidth - 2px;
-    border-width: 1px;
+    width: @standardViewportWidth;
+    height: @standardViewportWidth;
     border-style:solid;
     border-color: #ffff00;
-    position: absolute;
+    position: relative;
     z-index: 20;
-}
-#planexy {
-    top: 0px;
-    left: 0px;
+    box-sizing: border-box;
+    float: left;
 }
 #planeyz {
-    top: 0px;
-    left: @standardViewportWidth + 20px;
+    margin-left: 20px;
 }
 #planexz {
-    top: @standardViewportWidth + 20px;
-    left: 0px;
+    margin-top: 20px;
 }
 #skeletonview {
-    top: @standardViewportWidth + 20px;
-    left: @standardViewportWidth + 20px;
     border-width: 0px;
+    margin-top: 20px;
+    margin-left: 20px;
 }
-//canvas {
-//    margin-right: 20px;
-//    margin-bottom: 20px;
-//    border-width: 2px;
-//    border-style:solid;
-//    border-color: @mainBackground;
-//}
 #prevControls {
     float: left;
     height: 20px;
-    position: relative;
-    top: 420px;
-    left: 420px;
+    position: absolute;
+    top: 10px;
     z-index: 30;
 }
 #prevControls .btn > span {
@@ -312,11 +305,10 @@ svg a:hover {
     margin-right: 5px;
 }
 #overlay {
-    position: absolute;
+    position: relative;
     width: 280px;
-    top: 0;
-    left: 0;
     padding: 10px;
+    float: left;
 }
 #overlay > * {
     margin-bottom: 10px;
@@ -446,7 +438,7 @@ svg a:hover {
 
 .key-overlay {
     width: 700px;
-    margin-left: 180px;
+    margin-left: 200px;
 }
 
 .graph.well svg {

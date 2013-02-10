@@ -23,11 +23,12 @@ import ExecutionContext.Implicits.global
 import java.io.File
 import scala.util.Failure
 import models.binary.DataSet
+import braingames.util.ExtendedTypes.ExtendedString
 
 object LevelCreator extends Controller {
 
   val levelCreateActor = Akka.system.actorOf(Props(new LevelCreateActor))
-  
+
   val conf = Play.current.configuration
   implicit val timeout = Timeout(60 seconds)
 
@@ -38,13 +39,13 @@ object LevelCreator extends Controller {
       "height" -> number,
       "depth" -> number,
       "dataset" -> text.verifying("dataSet.notFound", DataSet.findOneByName(_).isDefined))(
-          Level.fromForm)(Level.toForm)).fill(Level.empty)
-          
+        Level.fromForm)(Level.toForm)).fill(Level.empty)
+
   def use(levelId: String, missionStartId: Int) = Action { implicit request =>
     for {
       level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-      mission <- Mission.findByStartId(level.dataSetName, missionStartId) orElse 
-                  Mission.randomByDataSetName(level.dataSetName) ?~Messages("mission.notFound")
+      mission <- Mission.findOneByStartId(level.dataSetName, missionStartId) orElse
+        Mission.randomByDataSetName(level.dataSetName) ?~ Messages("mission.notFound")
     } yield {
       Ok(html.levelcreator.levelCreator(level, mission.start.startId))
     }
@@ -94,21 +95,38 @@ object LevelCreator extends Controller {
       Ok(Json.toJson(level.assets.map(_.getName)))
     }
   }
-  
+
+  def createLevels(level: Level, missions: List[Mission]) = {
+    val future = (levelCreateActor ? CreateLevels(level, missions)).recover {
+      case e: AskTimeoutException =>
+        //TODO when creating multiple stacks, actor may time out
+        //he will go on creating though
+        println("stack creation timed out")
+        "timed out"
+    }
+    future.mapTo[String].map { result => Ok(result) }
+  }
+
   def produce(levelId: String, count: Int) = Action { implicit request =>
+    Async {
+      for {
+        level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+        missions <- Mission.findNotProduced(level.dataSetName, level.renderedMissions, count) ?~ Messages("mission.notFound")
+      } yield {
+        createLevels(level, missions)
+      }
+    }
+  }
+
+  def produceBulk(levelId: String) = Action(parse.urlFormEncoded) { implicit request =>
     Async{
       for {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-        missions <-  Mission.findNotProduced(level.dataSetName, level.renderedMissions, count )?~Messages("mission.notFound")
+        missionStartIds <- request.body.get("missionStartId") ?~ Messages("mission.startId.missing")
       } yield {
-        val future = (levelCreateActor ? CreateLevels(level, missions)).recover{
-          case e: AskTimeoutException => 
-            //TODO when creating multiple stacks, actor may time out
-            //he will go on creating though
-            println("stack creation timed out")
-            "timed out"
-        } 
-        future.mapTo[String].map{ result => Ok(result)}
+        val validIds = missionStartIds.flatMap(_.toIntOpt)
+        val missions = Mission.findByStartId(level.dataSetName, validIds.toList)
+        createLevels(level, missions)
       }
     }
   }

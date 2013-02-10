@@ -72,7 +72,7 @@ object ArbitraryBinaryData extends Controller {
       for {
         dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataset.notFound")
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-        mission <- Mission.findByStartId(dataSetName, missionStartId) ?~ Messages("mission.notFound")
+        mission <- Mission.findOneByStartId(dataSetName, missionStartId) ?~ Messages("mission.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
       } yield {
         (dataRequestActor ? SingleRequest(DataRequest(

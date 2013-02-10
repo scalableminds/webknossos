@@ -11,6 +11,7 @@ GET     /level/:levelId/delete              controllers.levelcreator.LevelCreato
 GET     /level/:levelId                     controllers.levelcreator.LevelCreator.use(levelId: String, missionStartId: Int ?= -1)
 POST    /level/:levelId/code                controllers.levelcreator.LevelCreator.submitCode(levelId: String)
 GET     /level/:levelId/produce             controllers.levelcreator.LevelCreator.produce(levelId: String, count: Int ?= 1)
+POST    /level/:levelId/produce             controllers.levelcreator.LevelCreator.produceBulk(levelId: String)
 POST    /level/:levelId/uploadAsset         controllers.levelcreator.LevelCreator.uploadAsset(levelId: String)
 GET     /level/:levelId/deleteAsset/*asset  controllers.levelcreator.LevelCreator.deleteAsset(levelId: String, asset: String)
 GET     /level/:levelId/asset/*asset        controllers.levelcreator.LevelCreator.retrieveAsset(levelId: String, asset: String)

@@ -234,19 +234,14 @@ svg a:hover {
     }
 }
 #tracing {
-    width: 2*@standardViewportWidth+25px;
-    height: 2*@standardViewportWidth+20px;
     margin-top: 10px;
     position: relative;
     float: left;
 }
 #render {
-    position: absolute;
+    position: relative;
 }
 #render canvas {
-    position: absolute;
-    left: 0px;
-    top: 0px;
     z-index: 10;
 }
 #arbitraryplane {
@@ -259,8 +254,8 @@ svg a:hover {
 }
 #abstractTreeViewer {
     height : 2*@standardViewportWidth + 20px;
-    overflow: hidden;
-    position: relative;
+    width: 300px;
+    float: left;
 }
 #main-container {
     position: absolute;
@@ -269,12 +264,15 @@ svg a:hover {
     right: 0;
     bottom: 0;
 }
+#inputcatchers {
+    position: absolute;
+    width: 100%;
+}
 .inputcatcher {
     width: @standardViewportWidth;
     height: @standardViewportWidth;
     border-style:solid;
     border-color: #ffff00;
-    position: relative;
     z-index: 20;
     box-sizing: border-box;
     float: left;
@@ -289,6 +287,7 @@ svg a:hover {
     border-width: 0px;
     margin-top: 20px;
     margin-left: 20px;
+    position: relative;
 }
 #prevControls {
     float: left;

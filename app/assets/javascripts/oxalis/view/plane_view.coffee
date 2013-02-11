@@ -35,8 +35,8 @@ class PlaneView
     container = $("#render")
 
     # Create a 4x4 grid
-    @curWidth = WIDTH = (container.width()-25)/2
-    HEIGHT = (container.height()-20)/2
+    @curWidth = WIDTH = VIEWPORT_WIDTH
+    HEIGHT = VIEWPORT_WIDTH
     @scaleFactor = 1
 
     # Initialize main THREE.js components
@@ -79,7 +79,7 @@ class PlaneView
     @scene.add(@group)
 
     # Attach the canvas to the container
-    @renderer.setSize 2*WIDTH+25, 2*HEIGHT+20
+    @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
     container.append @renderer.domElement
 
     @setActivePlaneXY()
@@ -154,10 +154,10 @@ class PlaneView
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
     container = $("#render")
-    WIDTH = (container.width()-25)/2
+    WIDTH = (container.width()-20)/2
     HEIGHT = (container.height()-20)/2
 
-    @renderer.setSize( 2*WIDTH+25, 2*HEIGHT+20)
+    @renderer.setSize( 2*WIDTH+20, 2*HEIGHT+20)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
       @camera[i].aspect = WIDTH / HEIGHT
       @camera[i].updateProjectionMatrix()
@@ -169,17 +169,13 @@ class PlaneView
       @scaleFactor += Number(delta)
       @curWidth = WIDTH = HEIGHT = @scaleFactor * 380
       container = $("#render")
-      container.width(2 * WIDTH + 25)
+      container.width(2 * WIDTH + 20)
       container.height(2 * HEIGHT + 20)
 
       divs = $(".inputcatcher")
       for div in divs
         $(div).css({width: WIDTH + "px"})
         $(div).css({height: HEIGHT + "px"})
-
-      # move abstract tree viewer
-      abstractTreeViewer = $("#abstractTreeViewer")
-      abstractTreeViewer.css({left: 2 * (WIDTH - VIEWPORT_WIDTH) + 25 + 10 + "px"})
 
       @resize()
 

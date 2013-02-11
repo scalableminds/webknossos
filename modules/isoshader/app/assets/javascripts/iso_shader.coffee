@@ -41,10 +41,10 @@ class Isoshader
     @cam_matrix = glMatrix.mat4.fromRotationTranslation(@cam_matrix, @cam.dir, @cam.pos)
 
     # camera movement parameters
-    @forward_speed = 1.0
-    @strafe_speed = 1.0
+    @forward_speed = 0.08
+    @strafe_speed = 0.08
     @ROLL_SPEED = 0.1
-    @TURN_SPEED = 0.02
+    @TURN_SPEED = 0.04
 
     @movement = glMatrix.vec3.fromValues(0, 0, 0)
     @rotation = glMatrix.quat.fromValues(0, 0, 0, 1.0)
@@ -171,7 +171,7 @@ class Isoshader
       "m" : => @surfaces[0].draw_surface = +!@surfaces[0].draw_surface
       "p" : => @surfaces[1].draw_surface = +!@surfaces[1].draw_surface
 
-      "d" : => @debug_mode = +!@debug_mode
+      "t" : => @debug_mode = +!@debug_mode
 
       # thresholds
       "," : => @surfaces[0].threshold
@@ -182,23 +182,25 @@ class Isoshader
 
     new Input.Keyboard(
 
-      "w" : => @movement[2] += @forward_speed * @dt; @accel = true
-      "s" : => @movement[2] -= @forward_speed * @dt; @accel = true
-      "d" : => @movement[0] += @strafe_speed * @dt;  @accel = true
-      "a" : => @movement[0] -= @strafe_speed * @dt;  @accel = true
+      "w" : => @movement[2] += @forward_speed; @accel = true
+      "s" : => @movement[2] -= @forward_speed; @accel = true
+      "d" : => @movement[0] += @strafe_speed ;  @accel = true
+      "a" : => @movement[0] -= @strafe_speed ;  @accel = true
 
-      "r" : => @movement[1] += @strafe_speed * @dt; @accel = true
-      "f" : => @movement[1] -= @strafe_speed * @dt; @accel = true
+      "r" : => @movement[1] += @strafe_speed; @accel = true
+      "f" : => @movement[1] -= @strafe_speed; @accel = true
 
-      "up" :    => @rotation[0] =  @dt * @TURN_SPEED
-      "down" :  => @rotation[0] =- @dt * @TURN_SPEED
-      "right" : => @rotation[1] =  @dt * @TURN_SPEED
-      "left" :  => @rotation[1] =- @dt * @TURN_SPEED
-      "q" :     => @rotation[2] =  @dt * @ROLL_SPEED
-      "e" :     => @rotation[2] =- @dt * @ROLL_SPEED
+      "up" :    => @rotation[0] =  @TURN_SPEED
+      "down" :  => @rotation[0] =- @TURN_SPEED
+      "right" : => @rotation[1] =  @TURN_SPEED
+      "left" :  => @rotation[1] =- @TURN_SPEED
+      "q" :     => @rotation[2] =  @ROLL_SPEED
+      "e" :     => @rotation[2] =- @ROLL_SPEED
 
 
     )
+
+    #TODO: remove dt???
 
 
   initMouse : ->
@@ -206,6 +208,14 @@ class Isoshader
     $(window).on "mousemove",(event) =>
       @parameters.mouseX = event.clientX / window.innerWidth
       @parameters.mouseY = 1 - event.clientY / window.innerHeight
+
+    new Input.Mouse(
+      @canvas
+      "x" : (distX) =>
+
+      "y" : (distY) =>
+
+    )
 
       # var x=event.clientX;
       # var y=event.clientY;
@@ -269,7 +279,7 @@ class Isoshader
     glMatrix.quat.multiply(cam.dir, cam.dir, rotation)
     glMatrix.quat.normalize(cam.dir,cam.dir)
 
-    #glMatrix.quat.multiplyVec3(cam.dir, cam.dir, movement)
+    glMatrix.vec3.transformQuat(movement, movement, cam.dir)
     glMatrix.vec3.add(cam.pos, cam.pos ,movement)
 
     #reset things

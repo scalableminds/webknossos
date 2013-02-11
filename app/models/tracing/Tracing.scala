@@ -110,7 +110,7 @@ case class Tracing(
   }
 }
 
-object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics{
+object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   def tracingBase(task: Task, userId: ObjectId, dataSetName: String): Tracing =
     Tracing(userId,
       dataSetName,
@@ -249,6 +249,15 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics{
 
     DBTree.createEmptyTree(tracing._id)
     tracing
+  }
+
+  def updateAllUsingNewTaskType(task: Task, taskType: TaskType) = {
+    update(
+      MongoDBObject(
+        "_task" -> task._id),
+      MongoDBObject(
+        "tracingSettings" -> taskType.tracingSettings),
+        false, true)
   }
 
   def findTrainingForReviewTracing(tracing: Tracing) =

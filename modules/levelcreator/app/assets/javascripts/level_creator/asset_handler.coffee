@@ -53,6 +53,8 @@ class AssetHandler
           type : "POST"
         ).done =>
 
+          @loadAsset(file.name)
+
           for file in input.files
             $("#assets tbody").append("""
               <tr>

@@ -1,16 +1,19 @@
 ### define 
 underscore : _
+../libs/jenkins: Jenkins
 ###
 
 class SegmentImporter
 
+  PUBLIC : false
   DESCRIPTION : "Generates all metadata from the original grey values"
-
   PARAMETER : 
     input: 
-      segmentation: 'Uint8Array'
+      segmentation: 'Uint16Array'
       dimensions : '[x, y, z]'
 
+
+  Z_FACTOR : 2
 
   directions : [ 
     {x: -1,  y:  0} 
@@ -19,98 +22,167 @@ class SegmentImporter
     {x:  0,  y: -1}
   ]
 
-  execute : ({ input }) ->
+  cache : []
 
-    { segmentation, dimensions } = input
 
-    segments = @getSegments(segmentation, dimensions)
+  execute : ({ input }, z) ->
 
-    @setCenter(segments)
-    @setDistance(segments, dimensions)
+    z = Math.round(z)
 
-    for segment in segments
-      @setPath(segmentation, segment, dimensions)
-      @setArtPath(segment, dimensions)
+    { segmentation } = input
+
+    cacheSegments = @cache[z]
+    if cacheSegments?
+      for segment in cacheSegments.segments
+        segment.display = true
+      input.segments = cacheSegments.segments
+      input.segmentation = cacheSegments.cSegmentation
+      return
+
+    [width, height, depth] = input.dimensions
+
+    cSegmentation = new Uint16Array(width * height)
+
+    for i in [0...2] by 1
+      @smooth(width, height, segmentation, 5)
+
+    for i in [4..1] by -1
+      @smooth(width, height, segmentation, i)
+
+    segments = @getSegments(segmentation, cSegmentation, width, height)
+
+    @setAbsoluteCenter(segments)
+    @setAbsoluteDistance(segments, width, height)
+    @setWeightedCenter(segments)
+    @setWeightedDistance(segments, width, height)
+    @setRandomColor(segments)
+
+    #for segment in segments
+    #  @setArtPath(segment, width, height)
+
+    @fillPasses(width, height, cSegmentation)
+    #@setNeighbours(width, height, cSegmentation, segments)
 
     input.segments = segments
+    input.segmentation = cSegmentation
+
+    @cache[z] = {segments, cSegmentation}
 
 
-  getSegments : (segmentation, [ width, height ]) ->
+  getSegments : (segmentation, cSegmentation, width, height) ->
 
     segments = []
+    count = 1
 
     i = 0
     for y in [0...height] by 1
       for x in [0...width] by 1
 
         value = segmentation[i]
+        id = cSegmentation[i]
         i++
 
-        #continue if value is 0
+        continue if value is 0
 
-        #is segment already there
-        segment = _.detect(segments, (s) -> s.value is value)
-
-        if segment?
-          
-          #set boundries
-          segment.xMin = Math.min(x, segment.xMin)
-          segment.xMax = Math.max(x, segment.xMax)
-
-          segment.yMin = Math.min(y, segment.yMin)
-          segment.yMax = Math.max(y, segment.yMax)
-
-        else
+        if id is 0
           segment = { 
+            id: count++
             value: value 
             xMin: x
             xMax: x
             yMin: y
             yMax: y
-            pathStart: {
-              x: x
-              y: y
-            } 
+            aggregatedX : 0
+            aggregatedY : 0
+            path: null
             size: 1
-            center: {
+            absoluteCenter: {
               x: 0
               y: 0
             }
+            weightedCenter: {
+              x: 0
+              y: 0
+            }
+            display : true
+            randomColor : {
+              r: 0
+              g: 0
+              b: 0
+            }
+            neighbours : []
           }
           segments.push(segment)
+          
+          @fillCSegmentation(x, y, width, height, false, segmentation, cSegmentation, segment)
+          @setPath(cSegmentation, segment, x, y, width, height)
 
-        #size
+        else
+          segment = _.detect(segments, (s) -> s.id is id)
+
+        segment.xMin = Math.min(x, segment.xMin)
+        segment.xMax = Math.max(x, segment.xMax)
+
+        segment.yMin = Math.min(y, segment.yMin)
+        segment.yMax = Math.max(y, segment.yMax)
+
         segment.size++
+        segment.aggregatedX += x
+        segment.aggregatedY += y
 
     segments
 
 
-  setCenter : (segments) ->
+  setAbsoluteCenter : (segments) ->
 
     for segment in segments
-      segment.center.x = (segment.xMax + segment.xMin) * 0.5
-      segment.center.y = (segment.yMax + segment.yMin) * 0.5
+      segment.absoluteCenter.x = (segment.xMax + segment.xMin) * 0.5
+      segment.absoluteCenter.y = (segment.yMax + segment.yMin) * 0.5
 
 
-  setDistance : (segments, [ width, height ]) ->
+  setWeightedCenter : (segments) ->
 
     for segment in segments
-      dx = segment.center.x - width * 0.5
-      dy = segment.center.y - height * 0.5
-      segment.distance = Math.sqrt(dx*dx + dy*dy)
+      segment.weightedCenter.x = segment.aggregatedX / segment.size
+      segment.weightedCenter.y = segment.aggregatedY / segment.size      
 
 
-  setPath : (segmentationData, segment, [ width, height ]) ->
+  setAbsoluteDistance : (segments, width, height) ->
+
+    for segment in segments
+      dx = segment.absoluteCenter.x - width * 0.5
+      dy = segment.absoluteCenter.y - height * 0.5
+      segment.absoluteDistance = Math.sqrt(dx*dx + dy*dy)
+
+
+  setWeightedDistance : (segments, width, height) ->
+
+    for segment in segments
+      dx = segment.weightedCenter.x - width * 0.5
+      dy = segment.weightedCenter.y - height * 0.5
+      segment.weightedDistance = Math.sqrt(dx*dx + dy*dy)
+
+
+  setRandomColor : (segments) ->
+
+    for segment in segments
+      color = Jenkins.hashlittle2("#{segment.value}", 0, 0)
+      segment.randomColor.r = color.b % 256
+      segment.randomColor.g = Math.abs((color.b >> 4) % 256)
+      segment.randomColor.b = color.c % 256
+
+
+  setPath : (segmentation, segment, startX, startY, width, height) ->
 
     { directions } = @
 
     path = []
     direction = 0
 
-    x = startX = segment.pathStart.x
-    y = startY = segment.pathStart.y
+    x = startX
+    y = startY
 
-    value = segment.value
+    value = segment.id
     
     i = 0
 
@@ -119,12 +191,10 @@ class SegmentImporter
       
       if 0 <= (y + directions[direction].y) < height and 
       0 <= (x + directions[direction].x) < width
-        front = segmentationData[(y + directions[direction].y ) * 
-          height + (x + directions[direction].x)]  
-
+        front = segmentation[(y + directions[direction].y ) * 
+          width + (x + directions[direction].x)]  
       else
         front = -1
-
 
       if front is value
         x += directions[direction].x
@@ -133,30 +203,27 @@ class SegmentImporter
         path.push x
         path.push y
 
-        leftDirection = (direction + 3) % 4
-        backDirection = (leftDirection + 3) % 4
+        rightDirection = (direction + 3) % 4
+        backDirection = (rightDirection + 3) % 4
 
-        if 0 <= (y + directions[leftDirection].y) < height and 
-        0 <= (x + directions[leftDirection].x) < width
-          left = segmentationData[(y + directions[leftDirection].y ) * height + 
-            (x + directions[leftDirection].x)]            
+        if 0 <= (y + directions[rightDirection].y) < height and 
+        0 <= (x + directions[rightDirection].x) < width
+          right = segmentation[(y + directions[rightDirection].y ) * width + 
+            (x + directions[rightDirection].x)]            
         else
-          left = -1
+          right = -1
 
-
-        if 0 <= (y + directions[leftDirection].y) < height and
-        0 <= (y + directions[backDirection].y) < height and
-        0 <= (x + directions[leftDirection].x) < width and
+        if 0 <= (y + directions[rightDirection].y) < height and
+        0 <= (y + directions[backDirection].y) < height and 
+        0 <= (x + directions[rightDirection].x) < width and 
         0 <= (x + directions[backDirection].x) < width
-
-          leftBack = segmentationData[(y + directions[leftDirection].y + 
-            directions[backDirection].y) * height + 
-            (x + directions[leftDirection].x + directions[backDirection].x)] 
+          rightBack = segmentation[(y + directions[rightDirection].y + 
+            directions[backDirection].y) * width + 
+            (x + directions[rightDirection].x + directions[backDirection].x)] 
         else
-          leftBack = -1
+          rightBack = -1
 
-
-        if leftBack isnt value and left is value
+        if rightBack isnt value and right is value
           direction = (direction + 3) % 4
 
       else
@@ -165,32 +232,200 @@ class SegmentImporter
     segment.path = path
 
 
-  setArtPath : (segment, [ width, height ]) ->
+  smooth : (width, height, segmentation, removeThreshold) ->
 
-    path = []
-    radius = Math.sqrt(segment.size) * 0.5
-    count = segment.path.length * 0.5
+    tempBuffer = new Uint16Array(segmentation.length)
 
-    mx = segment.center.x - (width*0.5)
-    my = segment.center.y - (height*0.5)
+    for h in [0...height] by 1
+      for w in [0...width] by 1
+        
+        base = (h * width + w)
+        
+        a = segmentation[base]
+        if segmentation[base] is 0 
+          continue
 
-    mx += segment.center.x
-    my += segment.center.y
+        neighbours = 0
 
-    for i in [count..0] by -1
+        #right
+        neighbours++ if segmentation[base - 1] is a or w - 1 < 0
+        #right up
+        neighbours++ if segmentation[base + width - 1] is a or w - 1 < 0 or h + 1 > height
+        #up
+        neighbours++ if segmentation[base + width ] is a or h + 1 > height
+        #right up
+        neighbours++ if segmentation[base + width + 1] is a or h + 1 > height or w + 1 > width
+        #right
+        neighbours++ if segmentation[base + 1] is a or w + 1 > width
+        #right down
+        neighbours++ if segmentation[base - width + 1] is a or h - 1 < 0 or w + 1 > width
+        #down
+        neighbours++ if segmentation[base - width ] is a or h - 1 < 0
+        #right down
+        neighbours++ if segmentation[base - width - 1] is a or h - 1 < 0 or w - 1 < 0
+
+        if neighbours >= removeThreshold
+          tempBuffer[base] = segmentation[base]        
+        else
+          tempBuffer[base] = 0
+
+    for i in [0...segmentation.length]
+      segmentation[i] = tempBuffer[i]
+
+    segmentation
+
+
+  # http://will.thimbleby.net/scanline-flood-fill/
+  fillCSegmentation : (x, y, width, height, diagonal, segmentation, cSegmentation, segment ) ->
     
-      radians = 2 * Math.PI * i / count
-      x = Math.sin(radians)
-      y = -Math.cos(radians)
+    value = segment.value
+    id = segment.id
 
-      x *= radius
-      y *= radius
+    test = (xx, yy) =>
+      segmentation[yy * width + xx] is value and
+      cSegmentation[yy * width + xx] isnt id
 
-      x += mx
-      y += my 
+    paint = (xx, yy) =>
+      cSegmentation[yy * width + xx] = id
 
-      path.push x
-      path.push y
+    # xMin, xMax, y, down[true] / up[false], extendLeft, extendRight
+    ranges = [[x, x, y, null, true, true]]
+    paint x, y
+    while ranges.length
+      
+      addNextLine = (newY, isNext, downwards) ->
+        rMinX = minX
+        inRange = false
+        x = minX
+
+        while x <= maxX
+          
+          # skip testing, if testing previous line within previous range
+          empty = (isNext or (x < r[0] or x > r[1])) and test(x, newY)
+          if not inRange and empty
+            rMinX = x
+            inRange = true
+          else if inRange and not empty
+            ranges.push [rMinX, x - 1, newY, downwards, rMinX is minX, false]
+            inRange = false
+          paint x, newY  if inRange
+          
+          # skip
+          x = r[1]  if not isNext and x is r[0]
+          x++
+        ranges.push [rMinX, x - 1, newY, downwards, rMinX is minX, true]  if inRange
+      r = ranges.pop()
+      down = r[3] is true
+      up = r[3] is false
+      minX = r[0]
+      y = r[2]
+      if r[4]
+        while minX > 0 and test(minX - 1, y)
+          minX--
+          paint minX, y
+      maxX = r[1]
+      if r[5]
+        while maxX < width - 1 and test(maxX + 1, y)
+          maxX++
+          paint maxX, y
+      if diagonal
+        minX--  if minX > 0
+        maxX++  if maxX < width - 1
+      else
+        r[0]--
+        r[1]++
+      addNextLine y + 1, not up, true  if y < height
+      addNextLine y - 1, not down, false  if y > 0    
 
 
-    segment.artPath = path
+  fillPasses : (width, height, cSegmentation) ->
+
+    zeroCount = 3
+    while (zeroCount)
+      zeroCount--
+      tempBuffer = new Uint8Array(cSegmentation.length)
+
+      for h in [0...height] by 1
+        for w in [0...width] by 1
+          
+          base = h * width + w
+          
+          a = cSegmentation[base]
+          if a is 0 
+            #zeroCount++
+            continue
+
+          #left
+          tempBuffer[base - 1]             = a if cSegmentation[base - 1] is 0 and w - 1 > 0
+          #left up if 
+          tempBuffer[base + width - 1] = a if cSegmentation[base + width - 1] is 0 and w - 1 > 0 and h + 1 < height
+          #up if 
+          tempBuffer[base + width]     = a if cSegmentation[base + width] is 0 and h + 1 < height
+          #right up if 
+          tempBuffer[base + width + 1] = a if cSegmentation[base + width + 1] is 0 and h + 1 < height and w + 1 < width
+          #right if 
+          tempBuffer[base + 1]             = a if cSegmentation[base + 1] is 0 and w + 1 < width
+          #right down if 
+          tempBuffer[base - width + 1] = a if cSegmentation[base - width + 1] is 0 and h - 1 > 0 and w + 1 < width
+          #down if 
+          tempBuffer[base - width]     = a if cSegmentation[base - width] is 0 and h - 1 > 0
+          #left down if 
+          tempBuffer[base - width - 1] = a if cSegmentation[base - width - 1] is 0 and h - 1 > 0 and w - 1 > 0
+
+      for i in [0...cSegmentation.length]
+        cSegmentation[i] = tempBuffer[i] if tempBuffer[i] isnt 0
+
+    cSegmentation
+
+
+  setNeighbours : (width, height, segmentation, segments) ->
+
+    for h in [0...height] by 1
+      for w in [0...width] by 1
+        
+        base = h * width + w
+        baseValue = segmentation[base]
+        if baseValue is 0
+          continue
+
+        baseSegment = _.find(segments, (segment) => segment.id is baseValue)
+
+        #find left
+        ww = w
+        leftValue = baseValue
+        while ww >= 0 
+          leftValue = segmentation[h * width + ww--]          
+          if leftValue isnt baseValue and leftValue isnt 0
+            if _.contains(baseSegment.neighbours, leftValue) is false
+              baseSegment.neighbours.push(leftValue)
+            break
+
+        #find right
+        ww = w
+        rightValue = baseValue
+        while ww < width
+          rightValue = segmentation[h * width + ww++]          
+          if rightValue isnt baseValue and rightValue isnt 0
+            if _.contains(baseSegment.neighbours, rightValue) is false
+              baseSegment.neighbours.push(rightValue)
+            break
+
+        #find up
+        hh = h
+        upValue = baseValue
+        while hh >= 0 
+          upValue = segmentation[hh-- * width + w]          
+          if upValue isnt baseValue and upValue isnt 0
+            if _.contains(baseSegment.neighbours, upValue) is false
+              baseSegment.neighbours.push(upValue)
+            break                        
+
+        #find low
+        hh = h
+        downValue = baseValue
+        while hh < height 
+          downValue = segmentation[hh++ * width + w]          
+          if downValue isnt baseValue and downValue isnt 0
+            if _.contains(baseSegment.neighbours, downValue) is false
+              baseSegment.neighbours.push(downValue)
+            break   

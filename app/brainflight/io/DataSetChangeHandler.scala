@@ -21,7 +21,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
           
-          MetaJsonHandler.extractMetaData(dataSet.name) match {
+          MetaJsonHandler.extractMetaData(DataSet.findOneByName(dataSet.name).getOrElse(dataSet)) match {
             case Full(metaData) => insertMetaData(dataSet, metaData)
             case Failure(msg, _, _) => 
               Logger.error(msg)

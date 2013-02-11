@@ -28,6 +28,7 @@ class SceneController
     @showSkeleton  = true
 
     @createMeshes()
+    @bind()
 
   createMeshes : ->
     # Cube
@@ -46,7 +47,7 @@ class SceneController
 
     # TODO: Implement text 
 
-    @skeleton = new Skeleton(1000000, @flycam, @model)
+    @skeleton = new Skeleton(@flycam, @model)
 
     # create Meshes
     @planes = new Array(3)
@@ -70,7 +71,7 @@ class SceneController
         if i == id
           @planes[i].setOriginalCrosshairColor()
           @planes[i].setVisible(true)
-          pos = @flycam.getGlobalPos().slice()
+          pos = @flycam.getPosition().slice()
           ind = Dimensions.getIndices(i)
           # Offset the plane so the user can see the route behind the plane
           pos[ind[2]] += if i==PLANE_XY then @planeShift[ind[2]] else -@planeShift[ind[2]]
@@ -80,14 +81,14 @@ class SceneController
     else
       @cube.visible = true
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-        pos = @flycam.getGlobalPos()
+        pos = @flycam.getPosition()
         @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))
         @planes[i].setGrayCrosshairColor()
         @planes[i].setVisible(true)
         @planes[i].plane.visible = @displayPlane[i]
 
   update : =>
-    gPos         = @flycam.getGlobalPos()
+    gPos         = @flycam.getPosition()
     globalPosVec = new THREE.Vector3(gPos...)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       
@@ -136,3 +137,23 @@ class SceneController
   toggleSkeletonVisibility : ->
     @showSkeleton = not @showSkeleton
     @skeleton.setVisibility(@showSkeleton)
+
+  bind : ->
+
+    @model.user.on "routeClippingDistanceChanged", (value) =>
+      @setRouteClippingDistance(value)
+
+    @model.user.on "displayCrosshairChanged", (value) =>
+      @setDisplayCrosshair(value)
+    
+    @model.user.on "interpolationChanged", (value) =>
+      @setInterpolation(value)
+
+    @model.user.on "displayPreviewXYChanged", (value) =>
+      @setDisplaySV PLANE_XY, value
+
+    @model.user.on "displayPreviewYZChanged", (value) =>
+      @setDisplaySV PLANE_YZ, value
+
+    @model.user.on "displayPreviewXZChanged", (value) =>
+      @setDisplaySV PLANE_XZ, value      

@@ -9,12 +9,15 @@ libs/event_mixin : EventMixin
 
 class PluginRenderer
 
+  plugins : null
+
+
   constructor : (@dimensions, @assetHandler, @dataHandler) ->
 
     [ @width, @height, @depth ] = dimensions
 
     @plugins = new Plugins(@assetHandler)
-
+    @createSidebar()
 
 
   setCode : (code) ->
@@ -84,10 +87,11 @@ class PluginRenderer
           (callback) =>
             inputData =
               rgba : new Uint8Array( 4 * pixelCount )
-              segmentation : new Uint8Array( pixelCount )
+              segmentation : new Uint16Array( pixelCount )
               dimensions : @dimensions
               relativeTime : (t - startFrame) / (endFrame - startFrame)
               absoluteTime : t
+              mission : @dataHandler.getMissionData()
             callback()
             BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
             inputData = null
@@ -104,11 +108,11 @@ class PluginRenderer
         slideOffset = (t - startFrame) * options.scale + options.start
         _.extend(inputData,
           rgba : @dataHandler.getRGBASlide( slideOffset )
-          # segmentation : @dataHandler.getSegmentationSlide( slideOffset )
+          segmentation : @dataHandler.getSegmentationSlide( slideOffset )
           dimensions : @dimensions
         )
 
-        @plugins.segmentImporter.execute(input : inputData)
+        @plugins.segmentImporter.execute(input : inputData, slideOffset)
 
 
     for key, plugin of @plugins
@@ -123,5 +127,68 @@ class PluginRenderer
     func(_plugins)
 
     frameBuffer
+
+
+  createSidebar : ->
+
+    { plugins } = @
+
+    containerName = "#plugins"
+    i = 0
+    html = ""
+    for pluginName of plugins
+
+      plugin = plugins[pluginName]
+
+      continue if plugin.PUBLIC is false
+
+      bodyId = "collapseBody" + i
+        
+      exampleHTML = ""
+      if plugin.EXAMPLES?
+        for example in plugin.EXAMPLES
+          exampleHTML += "<span>" + example.description + "</span>"
+          exampleHTML += "<pre class=\"prettyprint linenums\">"
+          exampleHTML += "<ol class=\"linenums\">"
+          for line in example.lines
+            exampleHTML += "<li><span class=\"pln\">" + line + "</span></li>" #<br>"
+          exampleHTML += "</ol>"
+          exampleHTML += "</pre>"            
+
+      parameterHtml = ""
+      for parameterName of plugin.PARAMETER
+        continue if parameterName is "input"
+        parameterHtml += 
+          "<dt>" + parameterName + "</dt>" +
+          "<dd>" + plugin.PARAMETER[parameterName] + "</dd>"
+
+      html += 
+        "<div class=\"accordion-group\">" +
+          "<div class=\"accordion-heading\">" +
+            "<a class=\"accordion-toggle\" " +
+                "data-toggle=\"collapse\" " +
+                "data-parent=\"" + containerName + "\" " +
+                "href=\"#" + bodyId + "\">" +
+              plugin.FRIENDLY_NAME +
+            "</a>" +
+          "</div>" +
+          "<div id=\"" + bodyId + "\" class=\"accordion-body collapse\">" +
+            "<div class=\"accordion-inner\">" +
+              "<dl>" +
+                "<dt>" + plugin.COMMAND + "</dt>" +
+                "<dd>" + plugin.DESCRIPTION + "</dd>" +
+              "</dl>" +
+              "<h5>Parameter:</h5>" +
+              "<dl class=\"dl-horizontal\">" +
+                parameterHtml +
+              "</dl>" +
+              "<h5>Examples:</h5>" +
+              exampleHTML +
+            "</div>" +
+          "</div>" +
+        "</div>"
+      i++        
+
+    $(containerName).html(html)
 
 

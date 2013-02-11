@@ -13,99 +13,153 @@ import models.task.Task
 import models.user.User
 import models.task.TaskType
 import play.api.data.Form
-import play.api.data.Forms.mapping
-import play.api.data.Forms.number
-import play.api.data.Forms.text
+import play.api.data.Forms._
 import views.html
 import models.user.Experience
 import braingames.mvc.Controller
 import play.api.i18n.Messages
 import play.api.libs.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
-
 import java.lang.Cloneable
+import models.task.Project
+import play.api.Logger
 
 object TaskAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
 
-  val taskFromTracingForm = Form(
-    mapping(
-      "tracing" -> text.verifying("tracing.notFound", tracing => Tracing.findOneById(tracing).isDefined),
-      "taskType" -> text.verifying("taskType.notFound", task => TaskType.findOneById(task).isDefined),
+  val taskFromNMLForm = Form(
+    tuple(
+      "taskType" -> text.verifying("taskType.notFound",
+        taskType => TaskType.findOneById(taskType).isDefined),
       "experience" -> mapping(
         "domain" -> text,
         "value" -> number)(Experience.apply)(Experience.unapply),
       "priority" -> number,
-      "taskInstances" -> number)(Task.fromTracingForm)(Task.toTracingForm)).fill(Task.empty)
+      "taskInstances" -> number,
+      "project" -> text.verifying("project.notFound",
+        project => project == "" || Project.findOneByName(project).isDefined)))
+    .fill(("", Experience.empty, 100, 10, ""))
 
-  val taskMapping = mapping(
-    "dataSet" -> text.verifying("dataSet.notFound", name => DataSet.findOneByName(name).isDefined),
-    "taskType" -> text.verifying("taskType.notFound", task => TaskType.findOneById(task).isDefined),
+  val taskMapping = tuple(
+    "dataSet" -> text.verifying("dataSet.notFound",
+      name => DataSet.findOneByName(name).isDefined),
+    "taskType" -> text.verifying("taskType.notFound",
+      task => TaskType.findOneById(task).isDefined),
     "start" -> mapping(
-      "point" -> text.verifying("point.invalid", p => p.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(Point3D.fromForm)(Point3D.toForm),
+      "point" -> text.verifying("point.invalid",
+        p => p.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(Point3D.fromForm)(Point3D.toForm),
     "experience" -> mapping(
       "domain" -> text,
       "value" -> number)(Experience.apply)(Experience.unapply),
     "priority" -> number,
-    "taskInstances" -> number)(Task.fromForm)(Task.toForm)
+    "taskInstances" -> number,
+    "project" -> text.verifying("project.notFound",
+      project => project == "" || Project.findOneByName(project).isDefined))
 
   val taskForm = Form(
-    taskMapping).fill(Task.empty)
+    taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "")
 
   def list = Authenticated { implicit request =>
     Ok(html.admin.task.taskList(Task.findAllNonTrainings))
   }
 
-  def taskCreateHTML(tracingForm: Form[models.task.Task], taskForm: Form[models.task.Task])(implicit request: AuthenticatedRequest[_]) =
+  def taskCreateHTML(
+    taskFromNMLForm: Form[(String, Experience, Int, Int, String)],
+    taskForm: Form[(String, String, Point3D, Experience, Int, Int, String)])(implicit request: AuthenticatedRequest[_]) =
     html.admin.task.taskCreate(
-      Tracing.findAllExploratory(request.user),
       TaskType.findAll,
       DataSet.findAll,
       Experience.findAllDomains,
-      tracingForm,
+      Project.findAll,
+      taskFromNMLForm,
       taskForm)
 
   def create = Authenticated { implicit request =>
-    Ok(taskCreateHTML(taskForm, taskFromTracingForm))
+    Ok(taskCreateHTML(taskFromNMLForm, taskForm))
   }
 
   def delete(taskId: String) = Authenticated { implicit request =>
-    for{
+    for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {
       Task.remove(task)
       JsonOk(Messages("task.removed"))
-    } 
+    }
+  }
+
+  def cancelTracing(tracingId: String) = Authenticated { implicit request =>
+    for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+    } yield {
+      UsedTracings.removeAll(tracing)
+      tracing match {
+        case t if t.tracingType == TracingType.Task =>
+          tracing.update(_.cancel)
+          JsonOk(Messages("task.cancelled"))
+      }
+    }
   }
 
   def createFromForm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(taskCreateHTML(taskFromTracingForm, formWithErrors)),
-      { t =>
-        Task.insertOne(t)
-        Redirect(routes.TaskAdministration.list)
+      formWithErrors => BadRequest(taskCreateHTML(taskFromNMLForm, formWithErrors)),
+      {
+        case (dataSetName, taskTypeId, start, experience, priority, instances, projectName) =>
+          for {
+            taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+          } yield {
+            val project = Project.findOneByName(projectName)
+            val task = Task.insertOne(Task(
+              0,
+              taskType._id,
+              experience,
+              priority,
+              instances,
+              _project = project.map(_.name)))
+            Tracing.createTracingBase(task, request.user._id, dataSetName, start)
+            Redirect(routes.TaskAdministration.list).flashing(
+              FlashSuccess(Messages("task.createSuccess")))
+          }
       })
   }
 
-  def createFromTracing = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    taskFromTracingForm.bindFromRequest.fold(
+  def createFromNML = Authenticated(parser = parse.multipartFormData) { implicit request =>
+    taskFromNMLForm.bindFromRequest.fold(
       formWithErrors => BadRequest(taskCreateHTML(formWithErrors, taskForm)),
-      { t =>
-        Task.insertOne(t)
-        Redirect(routes.TaskAdministration.list).flashing(
-          FlashSuccess(Messages("task.createSuccess")))
+      {
+        case (taskTypeId, experience, priority, instances, projectName) =>
+          for {
+            nmlFile <- request.body.file("nmlFile") ?~ Messages("nml.file.notFound")
+            taskType <- TaskType.findOneById(taskTypeId)
+          } yield {
+            val nmls = NMLIO.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+            val project = Project.findOneByName(projectName)
+            val baseTask = Task(
+              0,
+              taskType._id,
+              experience,
+              priority,
+              instances,
+              _project = project.map(_.name))
+            nmls.foreach { nml =>
+              val task = Task.createAndInsertDeepCopy(baseTask)
+              Tracing.createTracingBase(task, request.user._id, nml)
+            }
+            Redirect(routes.TaskAdministration.list).flashing(
+              FlashSuccess(Messages("task.bulk.createSuccess", nmls.size)))
+          }
       })
   }
 
   def createBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    for{
+    for {
       data <- postParameter("data") ?~ Messages("task.bulk.notSupplied")
     } yield {
       val inserted = data
         .split("\n")
         .map(_.split(" "))
-        .filter(_.size == 9)
+        .filter(_.size >= 9)
         .flatMap { params =>
           for {
             experienceValue <- params(3).toIntOpt
@@ -117,15 +171,22 @@ object TaskAdministration extends Controller with Secured {
             taskTypeSummary = params(1)
             taskType <- TaskType.findOneBySumnary(taskTypeSummary)
           } yield {
+            val project = if (params.size >= 10) Project.findOneByName(params(9)).map(_.name) else None
             val dataSetName = params(0)
             val experience = Experience(params(2), experienceValue)
-            Task(dataSetName, 0, taskType._id, Point3D(x, y, z), experience, priority, instances)
+            val task = Task.insertOne(Task(
+              0,
+              taskType._id,
+              experience,
+              priority,
+              instances,
+              _project = project))
+            Tracing.createTracingBase(task, request.user._id, dataSetName, Point3D(x, y, z))
+            task
           }
         }
-        .map { t =>
-          Task.insertOne(t)
-        }
-      Redirect(routes.TaskAdministration.list)
+      Redirect(routes.TaskAdministration.list).flashing(
+        FlashSuccess(Messages("task.bulk.createSuccess", inserted.size.toString)))
     }
   }
 
@@ -134,13 +195,17 @@ object TaskAdministration extends Controller with Secured {
       play.api.templates.Html
       val allUsers = User.findAll
       val allTaskTypes = TaskType.findAll
-      val usersWithoutTask = allUsers.filter(user => !Tracing.hasOpenTracing(user, false))
-      val usersWithTasks = Tracing.findAllOpen(TracingType.Task).flatMap { tracing =>
-        tracing.task.flatMap(task => tracing.user.flatMap(user => task.taskType.map(user -> _)))
-      }.toMap
+      val usersWithoutTask = allUsers.filter(user => !Tracing.hasOpenTracing(user, TracingType.Task))
+      val usersWithTasks =
+        (for {
+          user <- allUsers
+          tracing <- Tracing.findOpenTracingsFor(user, TracingType.Task)
+          task <- tracing.task
+          taskType <- task.taskType
+        } yield (user -> taskType)).toMap
 
       Task.simulateTaskAssignment(allUsers).map { futureTasks =>
-        val futureTaskTypes = futureTasks.flatMap( e => e._2.taskType.map( e._1 -> _))
+        val futureTaskTypes = futureTasks.flatMap(e => e._2.taskType.map(e._1 -> _))
         Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks, futureTaskTypes))
       }
     }

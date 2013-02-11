@@ -6,7 +6,7 @@ underscore : _
 
 updateMacro = (a) ->
 
-  @trigger("changed", true)
+  @trigger("changed", @currentMatrix)
   @hasChanged = true
 
 transformationWithDistanceMacro = (transformation) ->
@@ -21,7 +21,7 @@ transformationWithDistanceMacro = (transformation) ->
 class Flycam3d
 
   ZOOM_STEP_INTERVAL : 1.1
-  ZOOM_STEP_MIN : 1
+  ZOOM_STEP_MIN : 0.5
   ZOOM_STEP_MAX : 10
 
   zoomStep : 1  
@@ -29,11 +29,11 @@ class Flycam3d
 
   constructor : (@distance) ->
 
+    _.extend(this, new EventMixin())
+
     @reset()
     @distanceVecNegative = [0, 0, -distance]
     @distanceVecPositive = [0, 0, distance]
-
-    _.extend(this, new EventMixin())
 
 
   reset : ->
@@ -44,6 +44,8 @@ class Flycam3d
       0, 0, 1, 0, 
       0, 0, 0, 1 
     ]
+    updateMacro()
+
 
   resetRotation : ->
 
@@ -52,6 +54,8 @@ class Flycam3d
     m[4] = 0; m[5] = 1; m[6] = 0; m[7] = 0; 
     m[8] = 0; m[9] = 0; m[10] = 1; m[11] = 0; 
     m[15] = 1; 
+    updateMacro()
+
 
   update : -> 
 
@@ -89,13 +93,6 @@ class Flycam3d
     M4x4.clone @currentMatrix
 
 
-  getServerMatrix : ->
-
-    matrix = @getMatrix()
-    matrix[14] /= 2
-    matrix
-
-
   getZoomedMatrix : ->
 
     matrix = @getMatrix()
@@ -105,13 +102,6 @@ class Flycam3d
   setMatrix : (matrix) ->
 
     @currentMatrix = M4x4.clone(matrix)
-    updateMacro()
-
-
-  setServerMatrix : (matrix) ->
-
-    @currentMatrix = M4x4.clone(matrix)
-    @currentMatrix[14] *= 2
     updateMacro()
 
 
@@ -205,14 +195,7 @@ class Flycam3d
     [ matrix[12], matrix[13], matrix[14]]
 
 
-  getServerPosition : ->
-
-    position = @getPosition()
-    position[2] /= 2
-    position
-
-
-  setPos : (p) ->
+  setPositionSilent : (p) ->
 
     matrix = @currentMatrix
     matrix[12] = p[0]
@@ -220,14 +203,26 @@ class Flycam3d
     matrix[14] = p[2]
 
 
-  getDir : ->
+  setPosition : (p) ->
+
+    @setPositionSilent(p)
+    updateMacro()
+
+
+  getDirection : ->
 
     matrix = @currentMatrix
     [ matrix[8], matrix[9], matrix[10] ]
 
 
-  getUp : ->
+  setDirection : (d) ->
 
+    matrix = @currentMatrix
+    matrix[8] = d[0]
+    matrix[9] = d[1]
+    matrix[10] = d[2]
+
+  getUp : ->
 
     matrix = @currentMatrix
     [ matrix[4], matrix[5], matrix[6] ]

@@ -57,14 +57,14 @@ $ ->
 
           event.preventDefault()
 
-          oxalis.controller2d.gui.saveNow().done =>
+          oxalis.gui.saveNow().done =>
             window.location.href = this.href
 
 
         $("#trace-save-button").click (event) ->
 
           event.preventDefault()
-          oxalis.controller2d.gui.saveNow()
+          oxalis.gui.saveNow()
 
         return
 
@@ -94,7 +94,7 @@ $ ->
               )
 
           (error) ->
-            $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error}")
+            $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
 
 

@@ -15,6 +15,7 @@ import views.html
 import net.liftweb.common._
 import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
+import models.tracing.Tracing
 
 object UserAdministration extends Controller with Secured {
 
@@ -28,7 +29,7 @@ object UserAdministration extends Controller with Secured {
 
   def logTime(userId: String, time: String, note: String) = Authenticated { implicit request =>
     for {
-      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+      user <- User.findOneById(userId) ?~ Messages("user.notFound")
       time <- TimeTracking.parseTime(time) ?~ Messages("time.invalidFormat")
     } yield {
       TimeTracking.logTime(user, time, note)
@@ -53,7 +54,7 @@ object UserAdministration extends Controller with Secured {
 
   private def verifyUser(userId: String) = {
     for {
-      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+      user <- User.findOneById(userId) ?~ Messages("user.notFound")
       if (!user.verified)
     } yield {
       Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
@@ -75,9 +76,10 @@ object UserAdministration extends Controller with Secured {
 
   private def deleteUser(userId: String) = {
     for {
-      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+      user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
       User.remove(user)
+      Tracing.freeTacingsOfUser(user._id)
       user
     }
   }
@@ -94,7 +96,7 @@ object UserAdministration extends Controller with Secured {
 
   private def addRole(roleName: String)(userId: String) = {
     for {
-      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+      user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
       user.update(_.addRole(roleName))
     }
@@ -102,7 +104,7 @@ object UserAdministration extends Controller with Secured {
 
   private def deleteRole(roleName: String)(userId: String) = {
     for {
-      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+      user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
       user.update(_.deleteRole(roleName))
     }
@@ -110,7 +112,7 @@ object UserAdministration extends Controller with Secured {
 
   def loginAsUser(userId: String) = Authenticated(permission = Some(Permission("admin.ghost"))) { implicit request =>
     for {
-      user <- User.findOneById(userId) ?~ Messages("user.unknown")
+      user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
       Redirect(controllers.routes.UserController.dashboard)
         .withSession(Secured.createSession(user))

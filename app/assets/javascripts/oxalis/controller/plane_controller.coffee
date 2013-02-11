@@ -1,13 +1,12 @@
 ### define
 jquery : $
 underscore : _
-./cameracontroller : CameraController
-./scenecontroller : SceneController
+./camera_controller : CameraController
+./scene_controller : SceneController
 ../model/dimensions : DimensionsHelper
-../view/gui : Gui
 ../../libs/event_mixin : EventMixin
 ../../libs/input : Input
-../view : View
+../view/plane_view : PlaneView
 ###
 
 PLANE_XY         = Dimensions.PLANE_XY
@@ -16,27 +15,35 @@ PLANE_XZ         = Dimensions.PLANE_XZ
 VIEW_3D          = Dimensions.VIEW_3D
 TYPE_USUAL       = 0
 TYPE_BRANCH      = 1
-VIEWPORT_WIDTH   = 380
 WIDTH            = 384
-TEXTURE_SIZE     = 512
-TEXTURE_SIZE_P   = 9
 
 
-class Controller2d
+class PlaneController
 
   bindings : []
+  model : null
+  view : null
+  gui : null
+
+  input :
+    skeletonMouse : null
+    planeMouse : null
+    keyboard : null
+    keyboardNoLoop : null
+
+    unbind : ->
+      #@skeletonMouse?.unbind()
+      #@planeMouse?.unbind()
+      @keyboard?.unbind()
+      @keyboardNoLoop?.unbind()
 
 
-  constructor : (@model, stats) ->
+  constructor : (@model, stats, @gui ) ->
 
     _.extend(@, new EventMixin())
 
-    @fullScreen = false
-
     @flycam = @model.flycam
-    @view  = new View(@model, @flycam, stats)
-
-    @view.drawTree(@model.route.getTree())
+    @view  = new PlaneView(@model, @flycam, stats)    
 
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
@@ -46,7 +53,7 @@ class Controller2d
     @prevControls = $('#prevControls')
     @prevControls.addClass("btn-group")
 
-    @buttons = [
+    buttons = [
         name : "3D View"
         callback : @cameraController.changePrevSV
       ,
@@ -63,14 +70,13 @@ class Controller2d
         color : "#0f0"
     ]
 
-    for button in @buttons
+    for button in buttons
 
       button.control = @prevControls.append(
         $("<button>", type : "button", class : "btn btn-small")
           .html("#{if button.color then "<span style=\"background: #{button.color}\"></span>" else ""}#{button.name}")
+          .on("click", button.callback)
       )    
-
-    @view.createKeyboardCommandOverlay()
 
     @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
 
@@ -79,15 +85,9 @@ class Controller2d
     for mesh in meshes
       @view.addGeometry(mesh)
 
-    @gui = new Gui($("#optionswindow"), @model, @sceneController, @cameraController, @flycam)
-    @gui.update()
-
-    @flycam.setGlobalPos(@model.route.data.editPosition)
+    @flycam.setPosition(@model.route.data.editPosition)
     @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
     @flycam.setQuality(@model.user.quality)
-
-    @model.binary.queue.set4Bit(@model.user.fourBit)
-    @model.binary.updateLookupTable(@gui.settings.brightness, @gui.settings.contrast)
 
     @cameraController.changePrevSV()
     @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
@@ -99,6 +99,10 @@ class Controller2d
     @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
     @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
 
+    @initMouse()
+    @bind()
+    @start()
+
 
   initMouse : ->
 
@@ -108,7 +112,8 @@ class Controller2d
       return
 
     for planeId in ["xy", "yz", "xz"]
-      @bindings.push new Input.Mouse($("#plane#{planeId}"),
+      #@input.planeMouse = new Input.Mouse($("#plane#{planeId}"),
+      new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
@@ -121,7 +126,8 @@ class Controller2d
         rightClick : @setWaypoint
       )
 
-    @bindings.push new Input.Mouse($("#skeletonview"),
+    #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
+    new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
         @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
         @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
@@ -137,7 +143,7 @@ class Controller2d
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-    @bindings.push new Input.Keyboard(
+    @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
       "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
@@ -155,11 +161,9 @@ class Controller2d
       #"ctr + s"       : => @model.route.pushImpl()
     )
     
-    @bindings.push new Input.KeyboardNoLoop(
+    @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
-      #View
-      "q" : => @toggleFullScreen()
-      "t" : => @view.toggleTheme()
+      #View     
       "1" : =>
         @sceneController.toggleSkeletonVisibility()
         # Show warning, if this is the first time to use
@@ -179,11 +183,6 @@ class Controller2d
       "i" : => @zoomIn()
       "o" : => @zoomOut()
 
-      #Delete active node
-      "delete" : => @deleteActiveNode()
-
-      "c" : => @createNewTree()
-
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
       "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
@@ -202,11 +201,14 @@ class Controller2d
 
   start : ->
 
+    @initKeyboard()
     @view.start()
 
 
   stop : ->
 
+    @input.keyboard.unbind()
+    @input.keyboardNoLoop.unbind()
     @view.stop()
 
 
@@ -214,13 +216,9 @@ class Controller2d
 
     @view.bind()
 
-    @initMouse()
-    @initKeyboard()
-
     @view.on
       render : => @render()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
-      abstractTreeClick : (id) => @setActiveNode(id, true, false)
 
     @sceneController.skeleton.on
       newGeometries : (list, event) =>
@@ -230,53 +228,12 @@ class Controller2d
         for geometry in list
           @view.removeGeometry(geometry)    
 
-    @gui.on
-      deleteActiveNode : @deleteActiveNode
-      createNewTree : @createNewTree
-      setActiveTree : (id) => @setActiveTree(id)
-      setActiveNode : (id) => @setActiveNode(id, false) # not centered
-      deleteActiveTree : @deleteActiveTree
-
-    for button in @buttons
-      button.control.on("click", button.callback)  
-
-
-  unbind : ->
-
-    @view.unbind()
-    
-    for binding in @bindings
-      binding.unbind()
-
-    @view.off
-      render : => @render()
-      renderCam : (id, event) => @sceneController.updateSceneForCam(id)
-      abstractTreeClick : (id) => @setActiveNode(id, true, false)
-
-    @sceneController.skeleton.off
-      newGeometries : (list, event) =>
-        for geometry in list
-          @view.addGeometry(geometry)
-      removeGeometries : (list, event) =>
-        for geometry in list
-          @view.removeGeometry(geometry)    
-
-    @gui.off
-      deleteActiveNode : @deleteActiveNode
-      createNewTree : @createNewTree
-      setActiveTree : (id) => @setActiveTree(id)
-      setActiveNode : (id) => @setActiveNode(id, false) # not centered
-      deleteActiveTree : @deleteActiveTree
-    
-    for button in @buttons
-      button.control.off("click", button.callback)      
-   
 
   render : ->
 
-    @model.binary.ping(@flycam.getGlobalPos(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(PLANE_XY),
+    @model.binary.ping(@flycam.getPosition(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(PLANE_XY),
                         @flycam.getArea(PLANE_YZ), @flycam.getArea(PLANE_XZ)], activePlane: @flycam.getActivePlane()})
-    @model.route.globalPosition = @flycam.getGlobalPos()
+    @model.route.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()
     @model.route.rendered()
@@ -325,24 +282,11 @@ class Controller2d
         else
           @zoomOut()
 
-  toggleFullScreen : =>
-    if @fullScreen
-      cancelFullscreen = document.webkitCancelFullScreen or document.mozCancelFullScreen or document.cancelFullScreen
-      @fullScreen = false
-      if cancelFullscreen
-        cancelFullscreen.call(document)
-    else
-      body = $("body")[0]
-      requestFullscreen = body.webkitRequestFullScreen or body.mozRequestFullScreen or body.requestFullScreen
-      @fullScreen = true
-      if requestFullscreen
-        requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
-
 
   ########### Click callbacks
   
   setWaypoint : (relativePosition, typeNumber) =>
-    curGlobalPos  = @flycam.getGlobalPos()
+    curGlobalPos  = @flycam.getPosition()
     zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
     activeNodePos = @model.route.getActiveNodePos()
     scaleFactor   = @view.scaleFactor
@@ -390,22 +334,22 @@ class Controller2d
     
     # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()
-    ray = projector.pickingRay(vector, camera)
-    ray.threshold = @flycam.getRayThreshold(plane)
+    raycaster = projector.pickingRay(vector, camera)
+    raycaster.ray.threshold = @flycam.getRayThreshold(plane)
 
-    ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
+    raycaster.ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
  
     # identify clicked object
-    intersects = ray.intersectObjects(@sceneController.skeleton.nodes)
+    intersects = raycaster.intersectObjects(@sceneController.skeleton.nodes)
     #if intersects.length > 0 and intersects[0].distance >= 0
     for intersect in intersects
       
       index = intersect.index
-      nodeID = intersect.object.geometry.nodeIDs[index]
+      nodeID = intersect.object.geometry.nodeIDs.getAllElements()[index]
 
       posArray = intersect.object.geometry.__vertexArray
       intersectsCoord = [posArray[3 * index], posArray[3 * index + 1], posArray[3 * index + 2]]
-      globalPos = @flycam.getGlobalPos()
+      globalPos = @flycam.getPosition()
 
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = Dimensions.getIndices(plane)
@@ -444,35 +388,10 @@ class Controller2d
   centerActiveNode : =>
     position = @model.route.getActiveNodePos()
     if position
-      @flycam.setGlobalPos(position)
+      @flycam.setPosition(position)
 
   deleteActiveNode : =>
     @model.route.deleteActiveNode()
 
   createNewTree : =>
     @model.route.createNewTree()
-
-  setActiveTree : (treeId) =>
-    @model.route.setActiveTree(treeId)
-
-  deleteActiveTree : =>
-    @model.route.deleteTree(true)
-
-  ########### Input Properties
-
-  #Customize Options
-  setMoveValue : (value) =>
-    @model.user.moveValue = (Number) value
-    @model.user.push()
-
-  setRotateValue : (value) =>
-    @model.user.rotateValue = (Number) value 
-    @model.user.push()   
-
-  setScaleValue : (value) =>
-    @model.user.scaleValue = (Number) value  
-    @model.user.push()         
-
-  setMouseRotateValue : (value) =>
-    @model.user.mouseRotateValue = (Number) value
-    @model.user.push() 

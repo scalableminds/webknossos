@@ -9,12 +9,30 @@ import play.api.i18n.Messages
 
 object MissionController extends Controller {
 
-  def missions(dataSetName: String) = Action { implicit request =>
+  def getMissions(dataSetName: String) = Action { implicit request =>
     for {
       dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
       missions <- Mission.findByDataSetName(dataSet.name) ?~ Messages("mission.notFound")
     } yield {
       Ok(Json.toJson(missions))
+    }
+  }
+  
+  def getRandomMission(dataSetName: String) = Action { implicit request => 
+    for {
+      dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
+      mission <- Mission.randomByDataSetName(dataSetName) ?~ Messages("mission.notFound")
+    } yield {
+      Ok(Json.toJson(mission))
+    } 
+  }
+  
+  def getMission(dataSetName: String, missionStartId: Int) = Action { implicit request =>
+    for {
+      dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
+      mission <- Mission.findByStartId(dataSetName, missionStartId) ?~ Messages("mission.notFound")
+    } yield {
+      Ok(Json.toJson(mission))
     }
   }
 }

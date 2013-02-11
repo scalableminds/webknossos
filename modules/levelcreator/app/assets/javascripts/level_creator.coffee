@@ -11,19 +11,22 @@ libs/ace/ace : Ace
 
 class LevelCreator
 
+  EDIT_DEBOUNCE_TIME : 1000
+
   plugins : []
   stack : null
   canvas : null
   data : null
-  model : null
 
   assetHandler : null
   prepluginRenderer : null
+  processing : false
 
   constructor : ->
 
     @levelId = $("#level-creator").data("level-id")
     @taskId = $("#level-creator").data("level-task-id")
+    @dataSetName = $("#level-creator").data("level-dataset-name")
 
     @dimensions = [
       parseInt( $("#level-creator").data("level-width")  )
@@ -31,7 +34,7 @@ class LevelCreator
       parseInt( $("#level-creator").data("level-depth")  )
     ]
 
-    @dataHandler = new DataHandler(@dimensions, @levelId, @taskId)
+    @dataHandler = new DataHandler(@dimensions, @levelId, @taskId, @dataSetName)
     @assetHandler = new AssetHandler(@levelId)
     @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler, @dataHandler)
 
@@ -45,7 +48,7 @@ class LevelCreator
     @$form = $("#editor-container form")
     @$saveCodeButton = @$form.find("[type=submit]")
 
-    @editor.on "change", => @updatePreview()
+    @editor.on "change", => @debouncedUpdatePreview()
 
     @$form.submit (event) =>
 
@@ -117,9 +120,18 @@ class LevelCreator
         @dataHandler.deferred("initialized")
       ).done =>
         @prepareHeadlessRendering()
-      
+
+
+  debouncedUpdatePreview : ->
+
+    @debouncedUpdatePreview = _.debounce(@updatePreview, @EDIT_DEBOUNCE_TIME)    
+    @debouncedUpdatePreview()
+    
 
   updatePreview : ->
+
+    if @processing
+      return
 
     sliderValue = Math.floor(@$slider.val())
     
@@ -151,6 +163,8 @@ class LevelCreator
 
       $("#preview-error").html("<i class=\"icon-warning-sign\"></i> #{error}")
 
+
+    @processing = false
 
   zoomPreview : ->
 

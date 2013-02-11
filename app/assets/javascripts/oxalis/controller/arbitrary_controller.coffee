@@ -3,16 +3,15 @@ jquery : $
 underscore : _
 libs/event_mixin : EventMixin
 libs/request : Request
-../../libs/input : Input
+libs/input : Input
 ../geometries/arbitrary_plane : ArbitraryPlane
-../geometries/mesh : Mesh
 ../geometries/crosshair : Crosshair
 ../view/arbitrary_view : ArbitraryView
 ###
 
-class Controller3d
+class ArbitraryController
 
-  WIDTH : 256
+  WIDTH : 128
   HEIGHT : 128
 
   plane : null
@@ -49,7 +48,7 @@ class Controller3d
     @cam = @model.flycam3d
     @view = new ArbitraryView(canvas, @cam, stats)    
 
-    @plane = new ArbitraryPlane(@cam, @model.binary, @WIDTH, @HEIGHT)
+    @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
     @view.addGeometry @plane
 
     @input = _.extend({}, @input)
@@ -57,6 +56,7 @@ class Controller3d
     @crosshair = new Crosshair(model.user.crosshairSize)
     @view.addGeometry(@crosshair)
 
+    @bind()
     @view.draw()
 
 
@@ -117,67 +117,46 @@ class Controller3d
     )
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
-
-      #Fullscreen Mode
-      #"q" : => @toggleFullScreen()
-
-      #Reset Matrix
-      "r" : => @cam.resetRotation()
-
+      
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 
+      
+      #Reset Matrix
+      "r" : => @cam.resetRotation()
 
       #Recording of Waypoints
-      "t" : => 
+      "z" : => 
         @record = true
         @setWaypoint()
-      "z" : => @record = false
+      "u" : => @record = false
     )
 
 
   bind : ->
 
-    @initKeyboard()
-    @initMouse()
-
     @view.on "render", (force, event) => @render(force, event)
 
     @model.binary.cube.on "bucketLoaded", => @view.draw()
-
-    @cam.on "changed", =>
-      @trigger("matrixChanged", @cam.getMatrix())
 
     @model.user.on "crosshairSizeChanged", (value) =>
       @crosshair.setScale(value)
 
 
+  start : ->
 
-  unbind : ->
-
-    @input.unbind()
-    @view.off "render", (force, event) => @render(force, event)
-
-    @model.binary.cube.on "bucketLoaded", => @view.draw()
-
-    @cam.off "changed", =>
-      @trigger("matrixChanged", @cam.getMatrix())
-
-    @model.user.on "crosshairSizeChanged", (value) =>
-      @crosshair.setScale(value)      
-
-
-  show : ->
-
+    @initKeyboard()
+    @initMouse()
     @canvas.show()
     @view.start()
-    @view.draw()    
+    @view.draw()     
+ 
 
+  stop : ->
 
-  hide : ->
-
-    @canvas.hide()
     @view.stop()
+    @input.unbind()
+    @canvas.hide()
 
 
   addNode : (position) =>
@@ -217,10 +196,10 @@ class Controller3d
   setActiveNode : (nodeId, centered, mergeTree) ->
 
     @model.route.setActiveNode(nodeId, mergeTree)
-    @cam.setPos @model.route.getActiveNodePos()  
+    @cam.setPosition @model.route.getActiveNodePos()  
 
 
-  moved : =>
+  moved : ->
 
     matrix = @cam.getMatrix()
 

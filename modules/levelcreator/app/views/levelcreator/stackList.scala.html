@@ -1,0 +1,28 @@
+@(level: models.knowledge.Level)(implicit session: brainflight.view.UnAuthedSessionData)
+
+@main(){
+  <div class="container">
+    <h3>Stacks: @level.name</h3>
+
+    <div id="stack-list">
+      @level.renderedMissions.map{ missionId =>
+        <div class="stack img-polaroid" style="width: @(level.width + "px");">
+          <header>
+            <h4>
+              #@missionId
+              <a href="@controllers.levelcreator.routes.Assets.at(path="/public/levelStacks", s"${level.name}/$missionId/${level.name}_${missionId}_stack.zip")">
+                <i class="icon-download"></i>
+              </a>
+            </h4>
+          </header>
+          <div class="stack-display" style="height: @((level.height + 20) + "px");">
+            <a href="#stack-@level.name-@missionId">
+              <i class="icon-play"></i>
+            </a>
+          </div>
+        </div>
+      }
+    </div>
+
+  </div>
+}

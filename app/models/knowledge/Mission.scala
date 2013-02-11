@@ -8,6 +8,7 @@ import com.mongodb.casbah.commons.MongoDBObject
 import play.api.libs.json._
 import com.novus.salat._
 import models.context._
+import scala.util.Random
 
 case class Mission(dataSetName: String, start: MissionStart, possibleEnds: List[PossibleEnd], _id: ObjectId = new ObjectId) extends DAOCaseClass[Mission] {
   val dao = Mission
@@ -20,10 +21,22 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
 
   def findByDataSetName(dataSetName: String) = Option(find(MongoDBObject("dataSetName" -> dataSetName)).toList)
 
+  def findByStartId(dataSetName: String, startId: Int): Option[Mission] = findOne(MongoDBObject("dataSetName" -> dataSetName, "start.startId" -> startId))
+
   def hasAlreadyBeenInserted(mission: Mission): Boolean = {
     (findOne(MongoDBObject(
       "dataSetName" -> mission.dataSetName,
       "start" -> grater[MissionStart].asDBObject(mission.start)))).isDefined
+  }
+
+  def findNotProduced(dataSetName: String, alreadyProducedStartIds: List[Int], n: Int = 1) = {
+    for (missions <- findByDataSetName(dataSetName)) yield {
+      missions.filter(m => !alreadyProducedStartIds.contains(m.start.startId)).take(n)
+    }
+  }
+
+  def randomByDataSetName(dataSetName: String) = {
+    for { missions <- findByDataSetName(dataSetName) } yield { missions(Random.nextInt(missions.size)) }
   }
 
   implicit object MissionReads extends Format[Mission] {

@@ -20,16 +20,17 @@ object Global extends GlobalSettings {
   lazy val DirectoryWatcher = Akka.system.actorOf(
     Props(new DirectoryWatcherActor(new DataSetChangeHandler)),
     name = "directoryWatcher")
-
+    
   override def onStart(app: Application) {
-      implicit val timeout = Timeout(5 seconds)
+      val conf = Play.current.configuration
+      implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds)
       (DirectoryWatcher ? StartWatching("knowledge")).onSuccess {
         case x =>
           if (Play.current.mode == Mode.Dev) {
-            BasicEvolution.runDBEvolution()
+            //BasicEvolution.runDBEvolution()
             // Data insertion needs to be delayed, because the dataSets need to be
             // found by the DirectoryWatcher first
-            InitialData.insert()
+            Logger.info("starting in Dev mode")
           }
       }
   }

@@ -14,6 +14,7 @@ class FilterStartSegmentation
       mission: "{}"
       dimensions : "[]"
     mode: "\"in\", \"out\"" # e.g. "in" returns start segmentation, "out" returns all other segmentation
+    #neighbours: "true, false"
   EXAMPLES : [
       { description : "Show all but start segmentation", lines :
         [ "time(start : 0, end : 30) ->"
@@ -29,23 +30,30 @@ class FilterStartSegmentation
 
   execute : (options) ->
 
-    { input: { rgba, segmentation, segments, mission, dimensions }, mode } = options
+    { input: { rgba, segmentation, segments, mission, dimensions }, mode, neighbours } = options
 
     width = dimensions[0]
     height = dimensions[1]
+
+    neighbours = false unless neighbours?
 
     values = []
     startValue = mission.start.id
 
     if mode is "in"
-      for segment in segments
-        if segment.value is startValue
-          segment.display = true   
-      values = [startValue]   
+      startSegments = _.filter(segments, (segment) => segment.value is startValue)
+      for segment in startSegments
+        segment.display = true
+        values.push segment.id
+        if neighbours
+          for segment2 in segments
+            if _.contains(segment.neighbours, segment2.id)
+              segment2.display = true
+              values.push segment2.id
     else
       for segment in segments
         if segment.value isnt startValue
-          values.push segment.value
+          values.push segment.id
         else
           segment.display = false
 

@@ -1,4 +1,4 @@
-@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level])(implicit session: brainflight.view.UnAuthedSessionData)
+@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[models.binary.DataSet])(implicit session: brainflight.view.UnAuthedSessionData)
 
 @main(){
   <div class="container">
@@ -9,13 +9,14 @@
         @helper.inputText(form("width"), 'type -> "number")
         @helper.inputText(form("height"), 'type -> "number")
         @helper.inputText(form("depth"), 'type -> "number")
+        @helper.select(form("dataset"), options = dataSets.map(d => (d.name, d.name)))
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
         </div>
       }
     </div>
 
-    <table class="table table-striped">
+    <table class="table table-striped" id="level-list">
       <thead>
         <tr>
           <th> # </th>

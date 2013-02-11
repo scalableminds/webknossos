@@ -60,7 +60,7 @@ class AssetHandler
               <tr>
                 <td>#{file.name}</td>
                 <td>
-                  <a href="#{Routes.controllers.levelcreator.LevelCreator.deleteAsset(@levelId, file.name).url}" data-ajax="confirm,delete-row"><i class="icon-trash"></i>
+                  <a href="#{Routes.controllers.levelcreator.LevelCreator.deleteAsset(@levelId, file.name).url}" data-ajax="method=DELETE,confirm,delete-row"><i class="icon-trash"></i>
                   </a>
                 </td>
               </tr>""")

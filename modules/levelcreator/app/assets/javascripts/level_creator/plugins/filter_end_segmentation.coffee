@@ -49,11 +49,11 @@ class FilterEndSegmentation
       for segment in segments
         if _.contains(endValues, segment.value) is true
           segment.display = true
-      values = endValues
+          values.push segment.id
     else # out
       for segment in segments
         if _.contains(endValues, segment.value) is false
-          values.push segment.value
+          values.push segment.id
         else
           segment.display = false
 

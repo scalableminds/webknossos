@@ -211,7 +211,7 @@ object TaskAdministration extends Controller with Secured {
     } yield {
       val inserted = data
         .split("\n")
-        .map(_.split(" "))
+        .map(_.split(" ").map(_.trim))
         .filter(_.size >= 9)
         .flatMap { params =>
           for {
@@ -221,7 +221,7 @@ object TaskAdministration extends Controller with Secured {
             z <- params(6).toIntOpt
             priority <- params(7).toIntOpt
             instances <- params(8).toIntOpt
-            taskTypeSummary = params(1)
+            taskTypeSummary = params(1) 
             taskType <- TaskType.findOneBySumnary(taskTypeSummary)
           } yield {
             val project = if (params.size >= 10) Project.findOneByName(params(9)).map(_.name) else None

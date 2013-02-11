@@ -14,8 +14,8 @@ class SmoothEdges
       rgba: "Uint8Array"
       dimensions : '[]'
     removeThreshold : "0-8, default: 5"
-    removePasses : "0-5, default: 2"
-    fillPasses : "0-5, default: 3"
+    removePasses : "0-10, default: 2"
+    fillPasses : "0-10, default: 3"
     fillAlpha : "\"linear\", \"proportional\" (default)"
   EXAMPLES : [
       { description : "Smooth end and start segments with default values", lines :

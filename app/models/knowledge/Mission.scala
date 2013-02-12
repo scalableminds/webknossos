@@ -21,13 +21,19 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
 
   def findByDataSetName(dataSetName: String) = Option(find(MongoDBObject("dataSetName" -> dataSetName)).toList)
 
-  def findByStartId(startId: String): Option[Mission] = if (startId.forall(Character.isDigit)) findByStartId(startId.toInt) else None
-  def findByStartId(startId: Int): Option[Mission] = findOne(MongoDBObject("start.startId" -> startId))
+  def findByStartId(dataSetName: String, startIds: List[Int]):List[Mission] = startIds.flatMap(id => findOneByStartId(dataSetName, id))
+  def findOneByStartId(dataSetName: String, startId: Int): Option[Mission] = findOne(MongoDBObject("dataSetName" -> dataSetName, "start.startId" -> startId))
 
   def hasAlreadyBeenInserted(mission: Mission): Boolean = {
     (findOne(MongoDBObject(
       "dataSetName" -> mission.dataSetName,
       "start" -> grater[MissionStart].asDBObject(mission.start)))).isDefined
+  }
+
+  def findNotProduced(dataSetName: String, alreadyProducedStartIds: List[Int], n: Int = 1) = {
+    for (missions <- findByDataSetName(dataSetName)) yield {
+      missions.filter(m => !alreadyProducedStartIds.contains(m.start.startId)).take(n)
+    }
   }
 
   def randomByDataSetName(dataSetName: String) = {

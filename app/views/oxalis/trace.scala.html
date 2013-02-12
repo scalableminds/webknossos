@@ -35,30 +35,41 @@
         <div id="zoomFactor">
         </div>
         <div class="tabbable">
-          <ul class="nav nav-tabs">
-            @if(additionalHtml.body != ""){
-              <li class="active"><a href="#tab1" data-toggle="tab">Review</a></li>
-              <li>
-            } else {
-              <li class="active">
-            }
-            <a href="#tab2" data-toggle="tab">Options</a></li>
-          </ul>
-          <div class="tab-content">
-            @if(additionalHtml.body != ""){
-              <div class="tab-pane active" id="tab1">
-                <div id="review-comments">
-                  @additionalHtml
+          @defining(tracing.task){ task =>
+            <ul class="nav nav-tabs">
+              @if(task.isDefined) {
+                <li><a href="#tab0" data-toggle="tab">Task</a></li>
+              }
+              @if(additionalHtml.body != ""){
+                <li class="active"><a href="#tab1" data-toggle="tab">Review</a></li>
+                <li>
+              } else {
+                <li class="active">
+              }
+              <a href="#tab2" data-toggle="tab">Options</a></li>
+            </ul>
+            <div class="tab-content">
+              @if(task.isDefined) {
+                <div class="tab-pane" id="tab0">
+                  <h5>@task.map(_.taskType.map(_.summary))</h5>
+                  @task.map(_.taskType.map(_.description))
                 </div>
+              }
+              @if(additionalHtml.body != ""){
+                <div class="tab-pane active" id="tab1">
+                  <div id="review-comments">
+                    @additionalHtml
+                  </div>
+                </div>
+                <div class="tab-pane" id="tab2">
+              } else {
+                <div class="tab-pane active" id="tab2">
+              }
+                <div id="status"></div>
+                <div id="optionswindow"></div>
               </div>
-              <div class="tab-pane" id="tab2">
-            } else {
-              <div class="tab-pane active" id="tab2">
-            }
-              <div id="status"></div>
-              <div id="optionswindow"></div>
             </div>
-          </div>
+          }
         </div>
       </div>  
     </div>   

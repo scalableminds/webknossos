@@ -129,66 +129,57 @@ class PluginRenderer
     frameBuffer
 
 
+
+  pluginDocTemplate : _.template """
+    <div class="accordion-group">
+      <div class="accordion-heading">
+        <a class="accordion-toggle"
+          data-toggle="collapse"
+          data-parent="<%= containerName %>"
+          href="#<%= bodyId %>">
+          <%= plugin.FRIENDLY_NAME %>
+        </a>
+      </div>
+      <div id="<%= bodyId %>" class="accordion-body collapse">
+        <div class="accordion-inner">
+          <dl>
+            <dt><%= plugin.COMMAND %></dt>
+            <dd><%= plugin.DESCRIPTION %></dd>
+          </dl>
+          <h5>Parameter:</h5>
+          <dl class="dl-horizontal">
+            <% Object.keys(plugin.PARAMETER).forEach(function (parameterName) { %>
+              <% if (parameterName == "input") return; %>
+                <dt><%= parameterName %></dt>
+                <dd><%= plugin.PARAMETER[parameterName] %></dd>
+            <% }) %>
+          </dl>
+          <% if (plugin.EXAMPLES) { %>
+            <h5>Examples:</h5>
+            <% plugin.EXAMPLES.forEach(function (example) { %>
+              <span><%= example.description %></span>
+              <pre class="prettyprint linenums"><ol class="linenums"><% example.lines.forEach(function (line) { %><li><span class="pln"><%= line %></span></li><% }) %></ol></pre>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  """
+
   createSidebar : ->
 
     { plugins } = @
 
     containerName = "#plugins"
-    i = 0
-    html = ""
-    for pluginName of plugins
+
+    for pluginName, i in Object.keys(plugins)
 
       plugin = plugins[pluginName]
 
       continue if plugin.PUBLIC is false
 
-      bodyId = "collapseBody" + i
-        
-      exampleHTML = ""
-      if plugin.EXAMPLES?
-        for example in plugin.EXAMPLES
-          exampleHTML += "<span>" + example.description + "</span>"
-          exampleHTML += "<pre class=\"prettyprint linenums\">"
-          exampleHTML += "<ol class=\"linenums\">"
-          for line in example.lines
-            exampleHTML += "<li><span class=\"pln\">" + line + "</span></li>" #<br>"
-          exampleHTML += "</ol>"
-          exampleHTML += "</pre>"            
-
-      parameterHtml = ""
-      for parameterName of plugin.PARAMETER
-        continue if parameterName is "input"
-        parameterHtml += 
-          "<dt>" + parameterName + "</dt>" +
-          "<dd>" + plugin.PARAMETER[parameterName] + "</dd>"
-
-      html += 
-        "<div class=\"accordion-group\">" +
-          "<div class=\"accordion-heading\">" +
-            "<a class=\"accordion-toggle\" " +
-                "data-toggle=\"collapse\" " +
-                "data-parent=\"" + containerName + "\" " +
-                "href=\"#" + bodyId + "\">" +
-              plugin.FRIENDLY_NAME +
-            "</a>" +
-          "</div>" +
-          "<div id=\"" + bodyId + "\" class=\"accordion-body collapse\">" +
-            "<div class=\"accordion-inner\">" +
-              "<dl>" +
-                "<dt>" + plugin.COMMAND + "</dt>" +
-                "<dd>" + plugin.DESCRIPTION + "</dd>" +
-              "</dl>" +
-              "<h5>Parameter:</h5>" +
-              "<dl class=\"dl-horizontal\">" +
-                parameterHtml +
-              "</dl>" +
-              "<h5>Examples:</h5>" +
-              exampleHTML +
-            "</div>" +
-          "</div>" +
-        "</div>"
-      i++        
-
-    $(containerName).html(html)
+      $(containerName).append(
+        @pluginDocTemplate { i, plugin, containerName, bodyId : "collapseBody#{i}" }
+      )
 
 

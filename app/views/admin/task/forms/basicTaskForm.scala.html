@@ -1,0 +1,25 @@
+@(taskForm: Form[_], taskTypes: List[models.task.TaskType], experiences: List[String], projects: List[models.task.Project])
+
+@import play.api.libs.json.Json
+
+@taskTypeHelpLink() = {
+  <a href="@controllers.admin.routes.TaskTypeAdministration.list">Create a new Type</a>
+}
+
+@helper.select(taskForm("taskType"), taskTypes.map { tt =>
+  tt.id -> tt.summary
+}, Symbol("help-inline") -> taskTypeHelpLink)
+
+@helper.input(taskForm("experience.domain")) { (id, name, value, args) =>
+  <input type="text" name="@name" value="@value" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
+}
+
+@helper.inputText(taskForm("experience.value"), 'type -> "number")
+
+@helper.inputText(taskForm("priority"), 'type -> "number")
+
+@helper.inputText(taskForm("taskInstances"), 'type -> "number", 'min -> 1)
+
+@helper.select(taskForm("project"), ("" -> "") +: projects.map { project =>
+  project.name -> project.name 
+})

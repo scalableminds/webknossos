@@ -30,7 +30,6 @@ object Global extends GlobalSettings {
             //BasicEvolution.runDBEvolution()
             // Data insertion needs to be delayed, because the dataSets need to be
             // found by the DirectoryWatcher first
-            //InitialData.insert()
             Logger.info("starting in Dev mode")
           }
       }

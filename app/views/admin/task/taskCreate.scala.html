@@ -1,10 +1,6 @@
 @(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], projects: List[models.task.Project], nmlForm: Form[(String, models.user.Experience, Int, Int, String)], taskForm: Form[(String, String, brainflight.tools.geometry.Point3D, models.user.Experience, Int, Int, String)])(implicit session: brainflight.view.AuthedSessionData)
 
-@import play.api.libs.json.Json
-
-@taskTypeHelpLink() = {
-  <a href="@controllers.admin.routes.TaskTypeAdministration.list">Create a new Type</a>
-}
+@import forms._
 
 @main(){
   <div class="container">
@@ -14,22 +10,7 @@
       Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip).<br /><br />
       @helper.form(controllers.admin.routes.TaskAdministration.createFromNML, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
 
-        @helper.select(nmlForm("taskType"), taskTypes.map { tt =>
-          tt.id -> tt.summary
-        }, Symbol("help-inline") -> taskTypeHelpLink)
-
-        @helper.input(nmlForm("experience.domain")) { (id, name, value, args) =>
-          <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
-        }
-
-        @helper.inputText(nmlForm("experience.value"), 'type -> "number")
-
-        @helper.inputText(nmlForm("priority"), 'type -> "number")
-        @helper.inputText(nmlForm("taskInstances"), 'type -> "number", 'min -> 1)
-
-        @helper.select(nmlForm("project"), ("" -> "") +: projects.map { project =>
-          project.name -> project.name 
-        })
+        @basicTaskForm(nmlForm, taskTypes, experiences, projects)
 
         <div class="control-group">
           <label class="control-label" for="nmlFile">@Messages("nmlFile")</label>
@@ -47,30 +28,15 @@
     <h3>Create Task</h3>
     <div class="well">
       @helper.form(controllers.admin.routes.TaskAdministration.createFromForm, 'class -> "form-horizontal") {
-          
+
+        @basicTaskForm(nmlForm, taskTypes, experiences, projects)
+
         @helper.select(taskForm("dataSet"), dataSets.map { dataSet =>
           dataSet.name -> dataSet.name 
         })
-        
-        @helper.select(taskForm("taskType"), taskTypes.map { tt =>
-          tt.id -> tt.summary
-        }, Symbol("help-inline") -> taskTypeHelpLink)
-
-        @helper.input(taskForm("experience.domain")) { (id, name, value, args) =>
-          <input type="text" name="@name" id="@id" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" @toHtmlArgs(args)>
-        }
-
-        @helper.inputText(taskForm("experience.value"), 'type -> "number")
 
         @helper.inputText(taskForm("start.point"), 'type -> "text")
-
-        @helper.inputText(taskForm("priority"), 'type -> "number")
-        @helper.inputText(taskForm("taskInstances"), 'type -> "number", 'value -> 0, 'min -> 1)
-
-        @helper.select(taskForm("project"), ("" -> "") +: projects.map { project =>
-          project.name -> project.name 
-        })
-
+        
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
         </div>

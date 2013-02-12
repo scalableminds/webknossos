@@ -114,6 +114,8 @@ task.training.sample.notFound= Couldn''t find sample for training
 task.training.assigned=You got a new Trainings-Task
 task.bulk.notSupplied=No data supplied
 task.bulk.createSuccess=Successfully created {0} Tasks
+task.edit.toFewInstances=There are already more finished / in progress tracings
+task.editSuccess=Task successfully edited
 
 taskInstances=Task instances
 

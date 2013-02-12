@@ -23,12 +23,15 @@ import play.api.libs.concurrent.Execution.Implicits._
 import java.lang.Cloneable
 import models.task.Project
 import play.api.Logger
+import play.api.mvc.Result
 
 object TaskAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
 
-  val taskFromNMLForm = Form(
+  val taskFromNMLForm = basicTaskForm(minTaskInstances = 1)
+
+  def basicTaskForm(minTaskInstances: Int) = Form(
     tuple(
       "taskType" -> text.verifying("taskType.notFound",
         taskType => TaskType.findOneById(taskType).isDefined),
@@ -36,7 +39,8 @@ object TaskAdministration extends Controller with Secured {
         "domain" -> text,
         "value" -> number)(Experience.apply)(Experience.unapply),
       "priority" -> number,
-      "taskInstances" -> number,
+      "taskInstances" -> number.verifying("task.edit.toFewInstances",
+        taskInstances => taskInstances >= minTaskInstances),
       "project" -> text.verifying("project.notFound",
         project => project == "" || Project.findOneByName(project).isDefined)))
     .fill(("", Experience.empty, 100, 10, ""))
@@ -73,6 +77,14 @@ object TaskAdministration extends Controller with Secured {
       Experience.findAllDomains,
       Project.findAll,
       taskFromNMLForm,
+      taskForm)
+
+  def taskEditHtml(taskId: String, taskForm: Form[(String, Experience, Int, Int, String)])(implicit request: AuthenticatedRequest[_]) =
+    html.admin.task.taskEdit(
+      taskId,
+      TaskType.findAll,
+      Experience.findAllDomains,
+      Project.findAll,
       taskForm)
 
   def create = Authenticated { implicit request =>
@@ -118,10 +130,58 @@ object TaskAdministration extends Controller with Secured {
               instances,
               _project = project.map(_.name)))
             Tracing.createTracingBase(task, request.user._id, dataSetName, start)
-            Redirect(routes.TaskAdministration.list).flashing(
-              FlashSuccess(Messages("task.createSuccess")))
+            Redirect(routes.TaskAdministration.list)
+              .flashing(
+                FlashSuccess(Messages("task.createSuccess")))
+              .highlighting(task.id)
           }
       })
+  }
+
+  def edit(taskId: String) = Authenticated { implicit request =>
+    for {
+      task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+    } yield {
+      val form = basicTaskForm(task.assignedInstances).fill(
+        (task._taskType.toString,
+          task.neededExperience,
+          task.priority,
+          task.instances,
+          task.project.map(_.name) getOrElse ""))
+
+      Ok(taskEditHtml(task.id, form))
+    }
+  }
+
+  def editTaskForm(taskId: String) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    for {
+      task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+    } yield {
+      val result: Result = basicTaskForm(task.assignedInstances).bindFromRequest.fold(
+        formWithErrors => BadRequest(taskEditHtml(taskId, formWithErrors)),
+        {
+          case (taskTypeId, experience, priority, instances, projectName) =>
+            for {
+              taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+            } yield {
+              val project = Project.findOneByName(projectName)
+              task.update {
+                _.copy(
+                  _taskType = taskType._id,
+                  neededExperience = experience,
+                  priority = priority,
+                  instances = instances,
+                  _project = project.map(_.name))
+              }
+              Tracing.updateAllUsingNewTaskType(task, taskType)
+              Redirect(routes.TaskAdministration.list)
+                .flashing(
+                  FlashSuccess(Messages("task.editSuccess")))
+                .highlighting(task.id)
+            }
+        })
+      result
+    }
   }
 
   def createFromNML = Authenticated(parser = parse.multipartFormData) { implicit request =>
@@ -168,7 +228,7 @@ object TaskAdministration extends Controller with Secured {
             z <- params(6).toIntOpt
             priority <- params(7).toIntOpt
             instances <- params(8).toIntOpt
-            taskTypeSummary = params(1) 
+            taskTypeSummary = params(1)
             taskType <- TaskType.findOneBySumnary(taskTypeSummary)
           } yield {
             val project = if (params.size >= 10) Project.findOneByName(params(9)).map(_.name) else None
@@ -185,8 +245,9 @@ object TaskAdministration extends Controller with Secured {
             task
           }
         }
-      Redirect(routes.TaskAdministration.list).flashing(
-        FlashSuccess(Messages("task.bulk.createSuccess", inserted.size.toString)))
+      Redirect(routes.TaskAdministration.list)
+        .flashing(
+          FlashSuccess(Messages("task.bulk.createSuccess", inserted.size.toString)))
     }
   }
 

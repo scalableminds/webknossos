@@ -15,7 +15,7 @@ import akka.pattern.AskTimeoutException
 import braingames.levelcreator._
 import play.api.data._
 import play.api.data.Forms._
-import play.api.mvc.Action
+import play.api.mvc.{Action, Request, WrappedRequest, BodyParser, Result, BodyParsers}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api._
@@ -32,6 +32,18 @@ object LevelCreator extends Controller {
   val conf = Play.current.configuration
   implicit val timeout = Timeout(60 seconds)
 
+  case class LevelRequest[T](val level: Level, val request: Request[T]) extends WrappedRequest(request)
+  
+  def ActionWithValidLevel[T](levelId: String, parser: BodyParser[T] = BodyParsers.parse.anyContent)
+  (f: LevelRequest[T] => Result) = Action(parser){ 
+    implicit request => 
+    for {
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+    } yield {
+      f(LevelRequest(level, request))
+    }
+  }
+  
   val levelForm = Form(
     mapping(
       "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
@@ -41,68 +53,50 @@ object LevelCreator extends Controller {
       "dataset" -> text.verifying("dataSet.notFound", DataSet.findOneByName(_).isDefined))(
         Level.fromForm)(Level.toForm)).fill(Level.empty)
 
-  def use(levelId: String, missionStartId: Int) = Action { implicit request =>
+  def use(levelId: String, missionStartId: Int) = ActionWithValidLevel(levelId){ implicit request =>
+    val missionOpt = Mission.findOneByStartId(request.level.dataSetName, missionStartId) orElse
+        Mission.randomByDataSetName(request.level.dataSetName)
     for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-      mission <- Mission.findOneByStartId(level.dataSetName, missionStartId) orElse
-        Mission.randomByDataSetName(level.dataSetName) ?~ Messages("mission.notFound")
+      mission <- missionOpt ?~ Messages("mission.notFound")
     } yield {
-      Ok(html.levelcreator.levelCreator(level, mission.start.startId))
-    }
+      Ok(html.levelcreator.levelCreator(request.level, mission.start.startId))
+    } 
   }
 
-  def stackList(levelId: String) = Action { implicit request =>
-    for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-    } yield {
-      Ok(html.levelcreator.stackList(level))
-    }
+  def stackList(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
+      Ok(html.levelcreator.stackList(request.level))
   }
   
-  def deleteStack(levelId: String, missionStartId: Int) = Action { implicit request =>
-    for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-    } yield {
-      level.removeRenderedMission(missionStartId)
+  def deleteStack(levelId: String, missionStartId: Int) = ActionWithValidLevel(levelId) { implicit request =>
+      request.level.removeRenderedMission(missionStartId)
       JsonOk(Messages("level.stack.removed"))
-    }
   }
 
-  def delete(levelId: String) = Action { implicit request =>
-    for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-    } yield {
-      Level.remove(level)
+  def delete(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
+      Level.remove(request.level)
       JsonOk(Messages("level.removed"))
-    }
   }
 
-  def submitCode(levelId: String) = Action(parse.urlFormEncoded) { implicit request =>
+  def submitCode(levelId: String) = ActionWithValidLevel(levelId, parse.urlFormEncoded) { implicit request =>
     for {
       code <- postParameter("code") ?~ Messages("level.code.notSupplied")
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
     } yield {
-      level.update(_.alterCode(code))
+      request.level.update(_.alterCode(code))
       JsonOk("level.code.saved")
     }
   }
 
-  def uploadAsset(levelId: String) = Action(parse.multipartFormData) { implicit request =>
+  def uploadAsset(levelId: String) = ActionWithValidLevel(levelId, parse.multipartFormData) { implicit request =>
     (for {
       assetFile <- request.body.file("asset") ?~ Messages("level.assets.notSupplied")
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-      if (level.addAsset(assetFile.filename, assetFile.ref.file))
+      if (request.level.addAsset(assetFile.filename, assetFile.ref.file))
     } yield {
       JsonOk(Messages("level.assets.uploaded"))
     }) ?~ Messages("level.assets.uploadFailed")
   }
 
-  def listAssets(levelId: String) = Action { implicit request =>
-    for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-    } yield {
-      Ok(Json.toJson(level.assets.map(_.getName)))
-    }
+  def listAssets(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
+      Ok(Json.toJson(request.level.assets.map(_.getName)))
   }
 
   def createLevels(level: Level, missions: List[Mission]) = {
@@ -116,46 +110,40 @@ object LevelCreator extends Controller {
     future.mapTo[String].map { result => JsonOk(result) }
   }
 
-  def produce(levelId: String, count: Int) = Action { implicit request =>
+  def produce(levelId: String, count: Int) = ActionWithValidLevel(levelId) { implicit request =>
     Async {
       for {
-        level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-        missions <- Mission.findNotProduced(level.dataSetName, level.renderedMissions, count) ?~ Messages("mission.notFound")
+        missions <- Mission.findNotProduced(request.level.dataSetName, request.level.renderedMissions, count) ?~ Messages("mission.notFound")
       } yield {
-        createLevels(level, missions)
+        createLevels(request.level, missions)
       }
     }
   }
 
-  def produceBulk(levelId: String) = Action(parse.urlFormEncoded) { implicit request =>
+  def produceBulk(levelId: String) = ActionWithValidLevel(levelId, parse.urlFormEncoded) { implicit request =>
     Async{
       for {
-        level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-        missionStartIds <- request.body.get("missionStartId") ?~ Messages("mission.startId.missing")
+        missionStartIds <- postParameterList("missionStartId") ?~ Messages("mission.startId.missing")
+        missions = Mission.findByStartId(request.level.dataSetName, missionStartIds.toList.flatMap(_.toIntOpt))
       } yield {
-        val validIds = missionStartIds.flatMap(_.toIntOpt)
-        val missions = Mission.findByStartId(level.dataSetName, validIds.toList)
-        createLevels(level, missions)
+        createLevels(request.level, missions)
       }
     }
   }
 
-  def retrieveAsset(levelId: String, asset: String) = Action { implicit request =>
+  def retrieveAsset(levelId: String, asset: String) = ActionWithValidLevel(levelId) { implicit request =>
     for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-      assetFile <- level.retrieveAsset(asset) ?~ Messages("level.assets.notFound")
+      assetFile <- request.level.retrieveAsset(asset) ?~ Messages("level.assets.notFound")
     } yield {
       Ok.sendFile(assetFile, true)
     }
   }
 
-  def deleteAsset(levelId: String, asset: String) = Action { implicit request =>
-    (for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-      if (level.deleteAsset(asset))
-    } yield {
-      JsonOk(Messages("level.assets.deleted"))
-    }) ?~ Messages("level.assets.deleteFailed")
+  def deleteAsset(levelId: String, asset: String) = ActionWithValidLevel(levelId) { implicit request =>
+      if (request.level.deleteAsset(asset))
+        JsonOk(Messages("level.assets.deleted"))
+      else
+        JsonBadRequest(Messages("level.assets.deleteFailed"))
   }
 
   def create = Action(parse.urlFormEncoded) { implicit request =>

@@ -111,4 +111,6 @@ class Controller extends PlayController with ProvidesSessionData with JsonResult
   def postParameter(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
     request.body.get(parameter).flatMap(_.headOption)
 
+  def postParameterList(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
+    request.body.get(parameter)
 }

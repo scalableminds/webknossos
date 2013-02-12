@@ -5,7 +5,7 @@
 ./binary/plane2d : Plane2D
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
-./dimensions : DimensionHelper
+./dimensions : Dimensions
 ###
 
 class Binary

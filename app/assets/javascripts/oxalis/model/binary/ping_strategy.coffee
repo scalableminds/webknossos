@@ -1,5 +1,5 @@
 ### define
-../dimensions : DimensionHelper
+../dimensions : Dimensions
 ###
 
 class PingStrategy

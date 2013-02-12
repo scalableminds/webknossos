@@ -3,7 +3,7 @@ jquery : $
 underscore : _
 ./camera_controller : CameraController
 ./scene_controller : SceneController
-../model/dimensions : DimensionsHelper
+../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../../libs/input : Input
 ../view/plane_view : PlaneView

@@ -1,7 +1,7 @@
 ### define
 ./cube : Cube
 ./pullqueue : Queue
-../dimensions : DimensionHelper
+../dimensions : Dimensions
 ../../../libs/event_mixin : EventMixin
 ###
 

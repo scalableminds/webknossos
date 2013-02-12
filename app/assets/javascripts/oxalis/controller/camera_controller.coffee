@@ -1,7 +1,7 @@
 ### define
 ../model : Model
 ../view : View
-../model/dimensions : DimensionsHelper
+../model/dimensions : Dimensions
 ###
 
 

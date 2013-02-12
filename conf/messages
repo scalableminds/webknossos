@@ -26,6 +26,7 @@ user.password.tooshort=Password too short
 user.email.alreadyInUse=This email address is already in use
 user.login.failed=Invalid email or password
 user.login.success=You are now logged in
+user.logout.success=You have successfully logged out
 user.settings.invalid=Couldn''t parse settings
 user.experience.increased=Increased experience of {0}
 user.experience.set=Set experience of {0}

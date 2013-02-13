@@ -10,6 +10,8 @@ libs/input : Input
 ../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
 ###
 
+TYPE_USUAL = 0
+
 class ArbitraryController
 
   WIDTH : 128

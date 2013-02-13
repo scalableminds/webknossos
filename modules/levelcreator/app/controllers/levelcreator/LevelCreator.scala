@@ -98,7 +98,8 @@ object LevelCreator extends Controller {
   def listAssets(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
       Ok(Json.toJson(request.level.assets.map(_.getName)))
   }
-
+  //TODO: make this parallel in a way that a single actor gets one mission to create at a time and then add created missions 
+  // depending on which were successfully created
   def createLevels(level: Level, missions: List[Mission]) = {
     val future = (levelCreateActor ? CreateLevels(level, missions)).recover {
       case e: AskTimeoutException =>
@@ -111,12 +112,21 @@ object LevelCreator extends Controller {
       level.addRenderedMissions(missions.map(_.start.startId))
       JsonOk(result) } 
   }
-  //TODO: make this parallel in a way that a single actor gets one mission to create at a time and then add created missions 
-  // depending on which were successfully created
+
   def produce(levelId: String, count: Int) = ActionWithValidLevel(levelId) { implicit request =>
     Async {
       for {
-        missions <- Mission.findNotProduced(request.level.dataSetName, request.level.renderedMissions, count) ?~ Messages("mission.notFound")
+        missions <- Mission.findNotProduced(request.level.dataSetName, request.level.renderedMissions) ?~ Messages("mission.notFound")
+      } yield {
+        createLevels(request.level, missions.take(count))
+      }
+    }
+  }
+  
+  def produceAll(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
+    Async{
+      for {
+        missions <- Mission.findByDataSetName(request.level.dataSetName) ?~ Messages("mission.notFound")
       } yield {
         createLevels(request.level, missions)
       }

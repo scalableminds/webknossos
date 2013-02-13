@@ -29,10 +29,12 @@ case class ExecLogger(var messages: List[String] = Nil,
   extends ProcessLogger {
   def out(s: => String) {
     messages ::= s
+    Logger.info(s)
   }
 
   def err(s: => String) {
     error ::= s
+    Logger.error(s)
   }
 
   def buffer[T](f: => T): T = f
@@ -47,6 +49,7 @@ class LevelCreateActor extends Actor{
   val port = Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000)
   def stackPath(level: Level, mission: Mission) = level.stackFolder+"/%d".format(mission.start.startId)
   val logger = new ExecLogger
+  val pngFilter = new FileExtensionFilter(".png")
   
   def receive = {
     case CreateLevels(level, missions) =>
@@ -60,38 +63,37 @@ class LevelCreateActor extends Actor{
     finally{ out.close }
     temp
   }
-  
+
   def createLevels(level: Level, missions: List[Mission]) = {
-    for{mission <- missions}{
+    missions.foreach{ mission => 
       val levelUrl = "http://%s:%d".format(server, port) + 
         controllers.levelcreator.routes.LevelCreator.use(level.id, mission.start.startId)
   
       val js = html.levelcreator.phantom(
-          level, 
-          stackPath(level, mission) + "/stackImage%i.png", 
-          stackPath(level, mission) + "/meta.json", 
-          levelUrl,
-          mission.start.startId).body
+            level, 
+            stackPath(level, mission) + "/stackImage%i.png", 
+            stackPath(level, mission) + "/meta.json", 
+            levelUrl,
+            mission.start.startId).body
+          
       val file = createTempFile(js)
-      println("phantomjs " + file.getAbsolutePath())
+      Logger.info("phantomjs " + file.getAbsolutePath())
       ("phantomjs %s".format(file.getAbsolutePath)) !! logger
-      println("Finished phantomjs.")     
+      Logger.info("Finished phantomjs.")     
       zipFiles(level, mission)
     }
-    level.addRenderedMissions(missions.map(_.start.startId))
     Messages("level.stack.created")
   }
   
   def zipFiles(level: Level, mission: Mission) = {
     val stackDir = new File(stackPath(level, mission))
     if (stackDir.exists()){
-      val zipFile = stackPath(level, mission) + "/%s_%s_stack.zip".format(level.name, mission.start.startId)
-      val pngFilter = new FileExtensionFilter(".png")
-      val cmd = "zip %s %s".format(zipFile, stackDir.listFiles(pngFilter).mkString(" ") )
-      cmd !! logger
-      println("Finished zipping")
+      val zipFile= stackPath(level, mission) + "/%s_%s_stack.zip".format(level.name, mission.start.startId)
+      val stackImages = stackDir.listFiles(pngFilter).toList.map(_.toString)
+      ("zip" :: zipFile :: stackImages ) !! logger
+      Logger.info("Finished zipping")
     }
     else
-      println("error: stackDir %s was not created during stack Creation".format(stackPath(level,mission)))
+     Logger.error("stackDir %s was not created during stack Creation".format(stackPath(level,mission)))
   }
 }

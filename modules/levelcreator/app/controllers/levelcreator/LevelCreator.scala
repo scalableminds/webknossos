@@ -104,12 +104,15 @@ object LevelCreator extends Controller {
       case e: AskTimeoutException =>
         //TODO when creating multiple stacks, actor may time out
         //he will go on creating though
-        println("stack creation timed out")
+        Logger.error("stack creation timed out")
         Messages("level.stack.creationTimeout")
     }
-    future.mapTo[String].map { result => JsonOk(result) }
+    future.mapTo[String].map { result => 
+      level.addRenderedMissions(missions.map(_.start.startId))
+      JsonOk(result) } 
   }
-
+  //TODO: make this parallel in a way that a single actor gets one mission to create at a time and then add created missions 
+  // depending on which were successfully created
   def produce(levelId: String, count: Int) = ActionWithValidLevel(levelId) { implicit request =>
     Async {
       for {

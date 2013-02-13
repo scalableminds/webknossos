@@ -29,7 +29,6 @@ import scala.collection.mutable.ArrayBuffer
 import akka.routing.RoundRobinRouter
 import play.api.libs.concurrent.Execution.Implicits._
 import brainflight.tools.geometry.Vector3D
-import models.knowledge.Level
 import brainflight.binary.Cuboid
 import akka.agent.Agent
 import akka.routing.RoundRobinRouter
@@ -91,43 +90,6 @@ object BinaryData extends Controller with Secured {
         val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z), false)))
         handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize).map(result =>
           Ok(result.toArray))
-      }
-    }
-  }
-  
-  def arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String) = Authenticated(parser = parse.raw) { implicit request =>
-    Async {
-      Level.findOneById(levelId).flatMap { level =>
-        val t = System.currentTimeMillis()
-        val dataSet = DataSet.default
-        dataSet.dataLayers.get(dataLayerName).map { dataLayer =>
-          val position = Point3D(1920, 2048, 2432)
-          val direction = (1.0, 1.0, 1.0)
-
-          val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
-          val m = Cuboid(level.width, level.height, level.depth, 1, moveVector = point, axis = direction)
-          val future =
-            dataRequestActor ? SingleRequest(DataRequest(
-              dataSet,
-              dataLayer,
-              1,
-              m,
-              useHalfByte=false,
-              skipInterpolation=false))
-
-          future
-            .recover {
-              case e: AskTimeoutException =>
-                Logger.error("calculateImages: AskTimeoutException")
-                new Array[Byte](level.height * level.width * level.depth).toBuffer
-            }
-            .mapTo[ArrayBuffer[Byte]].map { data =>
-              Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
-              Ok(data.toArray)
-            }
-        }
-      } getOrElse {
-        Akka.future(BadRequest("Level not found."))
       }
     }
   }

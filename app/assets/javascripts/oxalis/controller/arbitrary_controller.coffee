@@ -7,6 +7,7 @@ libs/input : Input
 ../geometries/arbitrary_plane : ArbitraryPlane
 ../geometries/crosshair : Crosshair
 ../view/arbitrary_view : ArbitraryView
+../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
 ###
 
 class ArbitraryController
@@ -50,6 +51,9 @@ class ArbitraryController
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
     @view.addGeometry @plane
+
+    @infoPlane = new ArbitraryPlaneInfo()
+    @view.addGeometry @infoPlane
 
     @input = _.extend({}, @input)
 
@@ -128,8 +132,11 @@ class ArbitraryController
       #Recording of Waypoints
       "z" : => 
         @record = true
+        @infoPlane.updateInfo(true)
         @setWaypoint()
-      "u" : => @record = false
+      "u" : => 
+        @record = false
+        @infoPlane.updateInfo(false)
     )
 
 

@@ -23,6 +23,9 @@ case class Level(
   val assetsFolder =
     s"${Level.assetsBaseFolder}/$name/assets"
 
+  val stackFolder = 
+    s"${Level.stackBaseFolder}/$name"
+    
   private def assetFile(name: String) =
     new File(assetsFolder + "/" + name)
 
@@ -41,6 +44,10 @@ case class Level(
   def addRenderedMissions(missionStartIds: List[Int]) = {   
       update(_.copy(renderedMissions =  renderedMissions ++ 
           missionStartIds.filter(id => !renderedMissions.contains(id))))
+  }
+  
+  def removeRenderedMission(missionStartId: Int) = {
+    update(_.copy(renderedMissions = renderedMissions.filter(id => id != missionStartId)))
   }
   
   def retrieveAsset(name: String) = {
@@ -68,7 +75,7 @@ case class Level(
   }
 }
 
-object Level extends BasicKnowledgeDAO[Level]("levels") {
+object Level extends BasicDAO[Level]("levels") {
   
   val defaultDataSetName = "2012-09-28_ex145_07x2"
 
@@ -82,9 +89,16 @@ object Level extends BasicKnowledgeDAO[Level]("levels") {
     Some(level.name, level.width, level.height, level.depth, level.dataSetName)
   }
   
+  val stackBaseFolder = {
+    val folderName =
+      Play.current.configuration.getString("levelCreator.stackDirectory").getOrElse("public/levelStacks")
+    (new File(folderName).mkdirs())
+    folderName
+  }
+  
   val assetsBaseFolder = {
     val folderName =
-      Play.current.configuration.getString("levelCreator.assetsDirecory").getOrElse("levels")
+      Play.current.configuration.getString("levelCreator.assetsDirecory").getOrElse("data")
     (new File(folderName).mkdirs())
     folderName
   }

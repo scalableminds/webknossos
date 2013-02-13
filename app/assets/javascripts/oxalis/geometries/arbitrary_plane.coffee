@@ -129,9 +129,21 @@ class ArbitraryPlane
     planeGeo = new THREE.PlaneGeometry(width, height, 1, 1)
 
     # create texture
-    texture             = new THREE.DataTexture(new Uint8Array(width*height), width, height, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+    texture = 
+      new THREE.DataTexture(
+        new Uint8Array(width*height), 
+        width, 
+        height, 
+        THREE.LuminanceFormat, 
+        THREE.UnsignedByteType, 
+        new THREE.UVMapping(), 
+        THREE.ClampToEdgeWrapping , 
+        THREE.ClampToEdgeWrapping, 
+        THREE.LinearMipmapLinearFilter, 
+        THREE.LinearMipmapLinearFilter 
+      )
     texture.needsUpdate = true
-    textureMaterial     = new THREE.MeshBasicMaterial({wireframe : false, map : texture})
+    textureMaterial = new THREE.MeshBasicMaterial({wireframe : false, map : texture})
 
     # create mesh
     plane = new THREE.Mesh( planeGeo, textureMaterial )

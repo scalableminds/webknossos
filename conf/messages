@@ -26,6 +26,7 @@ user.password.tooshort=Password too short
 user.email.alreadyInUse=This email address is already in use
 user.login.failed=Invalid email or password
 user.login.success=You are now logged in
+user.logout.success=You have successfully logged out
 user.settings.invalid=Couldn''t parse settings
 user.experience.increased=Increased experience of {0}
 user.experience.set=Set experience of {0}
@@ -113,12 +114,16 @@ task.training.sample.notFound= Couldn''t find sample for training
 task.training.assigned=You got a new Trainings-Task
 task.bulk.notSupplied=No data supplied
 task.bulk.createSuccess=Successfully created {0} Tasks
+task.edit.toFewInstances=There are already more finished / in progress tracings
+task.editSuccess=Task successfully edited
 
 taskInstances=Task instances
 
 taskType=Task type
+taskType.editSuccess=Task type successfully edited
+taskType.createSuccess=Task type successfully created
 taskType.notFound=Selected task type doesn''t exist
-taskType.deleted=Task type '{0}' successfully deleted
+taskType.deleted=Task type ''{0}'' successfully deleted
 taskType.emptyModeSelection=Please select at least one tracing mode
 
 taskAlgorithm.notSupplied=No algorithm supplied
@@ -138,8 +143,12 @@ level.assets.notFound=Asset not found
 level.assets.deleted=Asset got removed
 level.assets.deleteFailed=Couldn''t delete asset
 level.creation.inProgress=Level creation in progress
+level.stack.removed=Removed stack
+level.stack.creationTimeout=Stack creation timed out
+level.stack.created=Stacks created
 
 mission.notFound=No mission found
+mission.startId.missing=Missing missionStartId parameter
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24

@@ -21,7 +21,8 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
 
   def findByDataSetName(dataSetName: String) = Option(find(MongoDBObject("dataSetName" -> dataSetName)).toList)
 
-  def findByStartId(dataSetName: String, startId: Int): Option[Mission] = findOne(MongoDBObject("dataSetName" -> dataSetName, "start.startId" -> startId))
+  def findByStartId(dataSetName: String, startIds: List[Int]):List[Mission] = startIds.flatMap(id => findOneByStartId(dataSetName, id))
+  def findOneByStartId(dataSetName: String, startId: Int): Option[Mission] = findOne(MongoDBObject("dataSetName" -> dataSetName, "start.startId" -> startId))
 
   def hasAlreadyBeenInserted(mission: Mission): Boolean = {
     (findOne(MongoDBObject(
@@ -29,9 +30,9 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
       "start" -> grater[MissionStart].asDBObject(mission.start)))).isDefined
   }
 
-  def findNotProduced(dataSetName: String, alreadyProducedStartIds: List[Int], n: Int = 1) = {
+  def findNotProduced(dataSetName: String, alreadyProducedStartIds: List[Int]) = {
     for (missions <- findByDataSetName(dataSetName)) yield {
-      missions.filter(m => !alreadyProducedStartIds.contains(m.start.startId)).take(n)
+      missions.filter(m => !alreadyProducedStartIds.contains(m.start.startId))
     }
   }
 

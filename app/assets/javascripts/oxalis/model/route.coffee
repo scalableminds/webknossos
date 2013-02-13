@@ -3,8 +3,8 @@ jquery : $
 underscore : _
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
-./tracepoint : TracePointClass
-./tracetree : TraceTreeClass
+./tracepoint : TracePoint
+./tracetree : TraceTree
 ./statelogger : StateLogger
 ###
 

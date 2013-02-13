@@ -59,7 +59,7 @@ object NMLIO extends Controller with Secured {
     request.body.file("nmlFile").flatMap { nmlFile =>
       extractFromNML(nmlFile.ref.file)
         .map { nml =>
-          println("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
+          Logger.debug("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
           Logger.debug("Successfully parsed nmlFile")
           val tracing = Tracing.createFromNMLFor(request.user._id, nml, TracingType.Explorational)
           UsedTracings.use(request.user, tracing)
@@ -75,6 +75,10 @@ object NMLIO extends Controller with Secured {
         "error" -> Messages("nml.file.invalid"))
     }
   }
+  
+  def tracingNMLName(t: Tracing) = {
+    "%s__%s__%s.nml".format(t.dataSetName, t.id, t.user.map(_.abreviatedName) getOrElse "")
+  }
 
   def download(tracingId: String) = Authenticated { implicit request =>
     (for {
@@ -83,7 +87,7 @@ object NMLIO extends Controller with Secured {
     } yield {
       Ok(prettyPrinter.format(Xml.toXML(tracing))).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",
-        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(tracing.dataSetName)))
+        CONTENT_DISPOSITION -> ("attachment; filename=" + tracingNMLName(tracing)))
     }) ?~ Messages("tracing.training.notFound")
   }
 
@@ -97,7 +101,7 @@ object NMLIO extends Controller with Secured {
       val zipStreams = tasksWithtracings.flatMap {
         case (task, tracings) => tracings.map { tracing =>
           val xml = prettyPrinter.format(Xml.toXML(tracing))
-          (IOUtils.toInputStream(xml, "UTF-8") -> (s"${task.id}_${tracing.id}.nml"))
+          (IOUtils.toInputStream(xml, "UTF-8") -> tracingNMLName(tracing))
         }
       }
       val zipped = new TemporaryFile(new File(projectName + "_nmls.zip"))
@@ -113,7 +117,7 @@ object NMLIO extends Controller with Secured {
       val tasksWithtracings = task.tracings.filter(_.state.isFinished)
       val zipStreams = tasksWithtracings.map { tracing =>
         val xml = prettyPrinter.format(Xml.toXML(tracing))
-        (IOUtils.toInputStream(xml, "UTF-8") -> (s"${task.id}_${tracing.id}.nml"))
+        (IOUtils.toInputStream(xml, "UTF-8") -> tracingNMLName(tracing))
       }
       val zipped = new TemporaryFile(new File(task.id + "_nmls.zip"))
       ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))

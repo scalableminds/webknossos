@@ -38,6 +38,8 @@ case class User(
   } yield role
 
   val name = firstName + " " + lastName
+  
+  val abreviatedName = (firstName.take(1) + lastName) toLowerCase
 
   lazy val id = _id.toString
 

@@ -1,7 +1,5 @@
 @(taskTypes: List[models.task.TaskType], dataSets: List[models.binary.DataSet], experiences: List[String], projects: List[models.task.Project], nmlForm: Form[(String, models.user.Experience, Int, Int, String)], taskForm: Form[(String, String, brainflight.tools.geometry.Point3D, models.user.Experience, Int, Int, String)])(implicit session: brainflight.view.AuthedSessionData)
 
-@import forms._
-
 @main(){
   <div class="container">
     

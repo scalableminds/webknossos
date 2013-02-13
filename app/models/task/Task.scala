@@ -94,6 +94,10 @@ object Task extends BasicDAO[Task]("tasks") {
   def findAllOfOneType(isTraining: Boolean) =
     find(MongoDBObject("training" -> MongoDBObject("$exists" -> isTraining)))
       .toList
+      
+  def findAllByTaskType(taskType: TaskType) = 
+    find(MongoDBObject("_taskType" -> taskType._id))
+      .toList
 
   def findAllByProject(project: String) =
     find(MongoDBObject("_project" -> project))

@@ -28,7 +28,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
       altered <- Tracing.assignReviewee(tracing, request.user) ?~ Messages("tracing.review.assignFailed")
     } yield {
       JsonOk(
-        html.admin.task.trainingsTasksDetailTableItem(request.user, altered),
+        html.admin.training.trainingsTasksDetailTableItem(request.user, altered),
         Messages("tracing.review.assigned"))
     }) ?~ Messages("tracing.review.notReady")
   }
@@ -48,7 +48,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
     } yield {
       val altered = training.update(_.unassignReviewer)
       JsonOk(
-        html.admin.task.trainingsTasksDetailTableItem(request.user, altered),
+        html.admin.training.trainingsTasksDetailTableItem(request.user, altered),
         Messages("tracing.review.unassigned"))
     }
   }
@@ -59,7 +59,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
       review <- tracing.review.headOption ?~ Messages("tracing.review.notFound")
       if (review._reviewee == request.user._id && tracing.state.isInReview)
     } yield {
-      Ok(html.admin.task.trainingsReview(tracing, reviewForm))
+      Ok(html.admin.training.trainingsReview(tracing, reviewForm))
     }) ?~ Messages("tracing.review.finishFailed")
   }
 

@@ -39,11 +39,11 @@ object TrainingsTaskAdministration extends Controller with Secured {
     (t.id, "", Training.empty)
   }        
   def list = Authenticated { implicit request =>
-    Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
+    Ok(html.admin.training.trainingsTaskList(Task.findAllTrainings))
   }
 
   def trainingsTaskCreateHTML(taskForm: Form[(String, String, Training)])(implicit request: AuthenticatedRequest[_]) = {
-    html.admin.task.trainingsTaskCreate(
+    html.admin.training.trainingsTaskCreate(
       Task.findAllNonTrainings,
       Tracing.findOpenTracingsFor(request.user, TracingType.Explorational),
       Experience.findAllDomains,
@@ -71,7 +71,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
               created = new Date,
               training = Some(training.copy(sample = sample._id))),
               includeUserTracings = false)
-          Ok(html.admin.task.trainingsTaskList(Task.findAllTrainings))
+          Ok(html.admin.training.trainingsTaskList(Task.findAllTrainings))
         }) 
       })
   }

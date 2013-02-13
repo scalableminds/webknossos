@@ -3,28 +3,38 @@
 # ~~~~
 
 # Level Creator
-GET     /                                   controllers.levelcreator.LevelCreator.list
-GET     /level                              controllers.levelcreator.LevelCreator.list
-POST    /level/create                       controllers.levelcreator.LevelCreator.create
-GET     /level/:id/assets                   controllers.levelcreator.LevelCreator.listAssets(id: String)
-GET     /level/:id/delete                   controllers.levelcreator.LevelCreator.delete(id: String)
-GET     /level/:id                          controllers.levelcreator.LevelCreator.use(id: String, missionId: String)
-POST    /level/:id/code                     controllers.levelcreator.LevelCreator.submitCode(id: String)
-GET     /level/:id/produce                  controllers.levelcreator.LevelCreator.produce(id: String)
-POST    /level/:id/uploadAsset              controllers.levelcreator.LevelCreator.uploadAsset(id: String)
-GET     /level/:id/deleteAsset/*asset       controllers.levelcreator.LevelCreator.deleteAsset(id: String, asset: String)
-GET     /level/:id/asset/*asset             controllers.levelcreator.LevelCreator.retrieveAsset(id: String, asset: String)
+
+GET     /                                    controllers.levelcreator.LevelCreator.list
+GET     /levels                              controllers.levelcreator.LevelCreator.list
+POST    /levels                              controllers.levelcreator.LevelCreator.create
+GET     /levels/:levelId                     controllers.levelcreator.LevelCreator.use(levelId: String, missionStartId: Int ?= -1)
+PUT     /levels/:levelId                     controllers.levelcreator.LevelCreator.submitCode(levelId: String)
+DELETE  /levels/:levelId                     controllers.levelcreator.LevelCreator.delete(levelId: String)
+GET     /levels/:levelId/produce             controllers.levelcreator.LevelCreator.produce(levelId: String, count: Int ?= 1)
+POST    /levels/:levelId/produce             controllers.levelcreator.LevelCreator.produceBulk(levelId: String)
+GET     /levels/:levelId/produce/all         controllers.levelcreator.LevelCreator.produceAll(levelId: String)
+
+GET     /levels/:levelId/stacks              controllers.levelcreator.LevelCreator.stackList(levelId: String)
+DELETE  /levels/:levelId/stacks/:missionStartId  controllers.levelcreator.LevelCreator.deleteStack(levelId: String, missionStartId: Int)
+
+GET     /levels/:levelId/assets              controllers.levelcreator.LevelCreator.listAssets(levelId: String)
+POST    /levels/:levelId/assets              controllers.levelcreator.LevelCreator.uploadAsset(levelId: String)
+GET     /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCreator.retrieveAsset(levelId: String, asset: String)
+DELETE  /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCreator.deleteAsset(levelId: String, asset: String)
+
 
 #Getting binary Data
 GET     /binary/arbitrary/ajax              controllers.levelcreator.ArbitraryBinaryData.viaAjax(dataLayerName: String, levelId: String, taskId: String)
-GET     /binary/ajax                        controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(dataSetName: String, levelId: String, missionStartId: String, dataLayerName: String) 
+GET     /binary/ajax                        controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(dataSetName: String, levelId: String, missionStartId: Int, dataLayerName: String) 
 #Mission Data
 GET     /missions                           controllers.levelcreator.MissionController.getMissions(dataSetName: String)
-GET     /mission                            controllers.levelcreator.MissionController.getRandomMission(dataSetName: String)
+GET     /missions/random                    controllers.levelcreator.MissionController.getRandomMission(dataSetName: String)
+GET     /missions/:missionStartId           controllers.levelcreator.MissionController.getMission(dataSetName: String, missionStartId: Int)
+        
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.levelcreator.Application.javascriptRoutes
 
 GET     /assets/level/*file                 controllers.levelcreator.Assets.at(path="/modules/levelcreator/public", file)
-
+GET     /stacks/*file                       controllers.levelcreator.Assets.at(path="/public/levelStacks", file)
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file                       controllers.Assets.at(path="/public", file)

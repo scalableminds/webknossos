@@ -1,3 +1,5 @@
+### define ###
+
 TYPE_USUAL  = 0
 TYPE_BRANCH = 1
 

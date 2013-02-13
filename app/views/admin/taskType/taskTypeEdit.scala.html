@@ -1,0 +1,20 @@
+@(taskTypeId: String, editForm: Form[models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
+
+@main(){
+  <div class="container">
+    
+    <h3>Edit Task type</h3>
+    <div class="well">
+      All tasks connected to this task type are going to get adjusted to this settings. <br /> <br /> 
+      @helper.form(controllers.admin.routes.TaskTypeAdministration.editTaskTypeForm(taskTypeId), 'class -> "form-horizontal") {
+
+        @basicTaskTypeForm(editForm)
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <a class="btn" href="@controllers.admin.routes.TaskTypeAdministration.list#@taskTypeId">Cancel</a>
+        </div>
+      }
+    </div>
+  </div>
+}

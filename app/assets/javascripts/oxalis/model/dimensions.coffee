@@ -1,3 +1,5 @@
+### define ###
+
 # This is a class with static methods and constants dealing with dimensions and
 # conversions between them.
 

@@ -1,7 +1,7 @@
 ### define
 ../model : Model
 ../model/route : Route
-../model/dimensions : DimensionsHelper
+../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer
 ###

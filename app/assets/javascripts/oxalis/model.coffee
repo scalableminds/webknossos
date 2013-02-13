@@ -2,7 +2,7 @@
 ./model/binary : Binary
 ./model/route : Route
 ./model/user : User
-./model/scaleinfo : ScaleInfoClass
+./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
 ../libs/request : Request

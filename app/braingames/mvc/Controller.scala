@@ -73,7 +73,7 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
 
   def apply(json: JsObject, message: String) =
     createResult(json ++ jsonMessages(Seq(jsonSuccess -> message)))
-  
+
   def apply(message: String): SimpleResult[JsObject] =
     apply(Html.empty, message)
 
@@ -83,12 +83,12 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
         Json.obj()
       case body =>
         Json.obj("html" -> body)
-    } 
-    
+    }
+
     htmlJson ++ jsonMessages(messages)
   }
-  
-  def jsonMessages(messages: Seq[(String, String)]) = 
+
+  def jsonMessages(messages: Seq[(String, String)]) =
     Json.obj(
       "messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
 }
@@ -103,7 +103,12 @@ trait JsonResultAttribues {
   val jsonError = "error"
 }
 
-class Controller extends PlayController with ProvidesSessionData with JsonResults with BoxImplicits with Status {
+class Controller extends PlayController
+    with ProvidesSessionData
+    with JsonResults
+    with BoxImplicits
+    with Status
+    with withHighlitableResult {
 
   implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]) =
     r.request
@@ -111,4 +116,6 @@ class Controller extends PlayController with ProvidesSessionData with JsonResult
   def postParameter(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
     request.body.get(parameter).flatMap(_.headOption)
 
+  def postParameterList(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
+    request.body.get(parameter)
 }

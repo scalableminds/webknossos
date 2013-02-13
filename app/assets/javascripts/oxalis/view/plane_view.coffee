@@ -1,6 +1,6 @@
 ### define
 jquery : $
-../model/dimensions : DimensionsHelper
+../model/dimensions : Dimensions
 ../../libs/toast : Toast
 ../../libs/event_mixin : EventMixin
 ../../libs/Tween : TWEEN_LIB

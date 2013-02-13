@@ -12,6 +12,7 @@ import scala.util.Random
 
 case class Mission(dataSetName: String, start: MissionStart, possibleEnds: List[PossibleEnd], _id: ObjectId = new ObjectId) extends DAOCaseClass[Mission] {
   val dao = Mission
+  lazy val id = _id.toString
 }
 
 object Mission extends BasicKnowledgeDAO[Mission]("missions") {
@@ -19,26 +20,23 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
   def createWithoutDataSet(start: MissionStart, possibleEnds: List[PossibleEnd]) =
     Mission("", start, possibleEnds)
 
-  def findByDataSetName(dataSetName: String) = Option(find(MongoDBObject("dataSetName" -> dataSetName)).toList)
-
-  def findByStartId(dataSetName: String, startIds: List[Int]):List[Mission] = startIds.flatMap(id => findOneByStartId(dataSetName, id))
-  def findOneByStartId(dataSetName: String, startId: Int): Option[Mission] = findOne(MongoDBObject("dataSetName" -> dataSetName, "start.startId" -> startId))
-
-  def hasAlreadyBeenInserted(mission: Mission): Boolean = {
-    (findOne(MongoDBObject(
-      "dataSetName" -> mission.dataSetName,
-      "start" -> grater[MissionStart].asDBObject(mission.start)))).isDefined
-  }
-
-  def findNotProduced(dataSetName: String, alreadyProducedStartIds: List[Int]) = {
-    for (missions <- findByDataSetName(dataSetName)) yield {
-      missions.filter(m => !alreadyProducedStartIds.contains(m.start.startId))
-    }
-  }
+  def findByDataSetName(dataSetName: String) = find(MongoDBObject("dataSetName" -> dataSetName)).toList
 
   def randomByDataSetName(dataSetName: String) = {
-    for { missions <- findByDataSetName(dataSetName) } yield { missions(Random.nextInt(missions.size)) }
+    val missions = findByDataSetName(dataSetName) 
+    if (! missions.isEmpty)
+      Some(missions(Random.nextInt(missions.size)))
+    else None
   }
+  
+  def updateOrCreate(m: Mission) =     
+    findOne(MongoDBObject("dataSetName" -> m.dataSetName, 
+        "start" -> grater[MissionStart].asDBObject(m.start))) match {
+      case Some(stored) =>
+        stored.update(_ => m.copy(_id = stored._id))
+      case _ =>
+        insertOne(m)
+    }
 
   implicit object MissionReads extends Format[Mission] {
     val START = "start"

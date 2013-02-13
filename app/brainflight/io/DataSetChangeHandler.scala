@@ -22,7 +22,10 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
         dataSetFromFile(f).map { dataSet =>
           
           MetaJsonHandler.extractMetaData(DataSet.findOneByName(dataSet.name).getOrElse(dataSet)) match {
-            case Full(metaData) => insertMetaData(dataSet, metaData)
+            case Full(metaData) => 
+              metaData.missions.foreach(Mission.updateOrCreate)
+              dataSet.updateDataLayers(metaData.dataLayerSettings.dataLayers)
+              Logger.info(s"${dataSet.name}: updated ${metaData.missions.size} new missions and DataLayers ${metaData.dataLayerSettings.dataLayers.keys}.")
             case Failure(msg, _, _) => 
               Logger.error(msg)
               DataSet.updateOrCreate(dataSet)
@@ -100,20 +103,4 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
       }
     } else None
   }
-
-  def insertMetaData(dataSet: DataSet, metaData: MetaData) = {
-    val newMissions = metaData.missions.filterNot(Mission.hasAlreadyBeenInserted)
-    insertMissions(newMissions)
-    DataSet.updateOrCreate(dataSetWithDataLayers(dataSet, metaData.dataLayerSettings.dataLayers))
-    Logger.info(s"${dataSet.name}: Inserted ${newMissions.size} new missions and updated DataLayers ${metaData.dataLayerSettings.dataLayers.keys}.")
-  }
-
-  def insertMissions(missions: List[Mission]) = {
-    missions.foreach(Mission.insertOne)
-  }
-
-  def dataSetWithDataLayers(dataSet: DataSet, newDataLayers: Map[String, DataLayer]) = {
-    dataSet.copy(dataLayers = newDataLayers)
-  }
-
 }

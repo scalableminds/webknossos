@@ -12,6 +12,7 @@ PUT     /levels/:levelId                     controllers.levelcreator.LevelCreat
 DELETE  /levels/:levelId                     controllers.levelcreator.LevelCreator.delete(levelId: String)
 GET     /levels/:levelId/produce             controllers.levelcreator.LevelCreator.produce(levelId: String, count: Int ?= 1)
 POST    /levels/:levelId/produce             controllers.levelcreator.LevelCreator.produceBulk(levelId: String)
+GET     /levels/:levelId/produce/all         controllers.levelcreator.LevelCreator.produceAll(levelId: String)
 
 GET     /levels/:levelId/stacks              controllers.levelcreator.LevelCreator.stackList(levelId: String)
 DELETE  /levels/:levelId/stacks/:missionStartId  controllers.levelcreator.LevelCreator.deleteStack(levelId: String, missionStartId: Int)

@@ -30,9 +30,9 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
       "start" -> grater[MissionStart].asDBObject(mission.start)))).isDefined
   }
 
-  def findNotProduced(dataSetName: String, alreadyProducedStartIds: List[Int], n: Int = 1) = {
+  def findNotProduced(dataSetName: String, alreadyProducedStartIds: List[Int]) = {
     for (missions <- findByDataSetName(dataSetName)) yield {
-      missions.filter(m => !alreadyProducedStartIds.contains(m.start.startId)).take(n)
+      missions.filter(m => !alreadyProducedStartIds.contains(m.start.startId))
     }
   }
 

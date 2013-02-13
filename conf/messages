@@ -120,8 +120,10 @@ task.editSuccess=Task successfully edited
 taskInstances=Task instances
 
 taskType=Task type
+taskType.editSuccess=Task type successfully edited
+taskType.createSuccess=Task type successfully created
 taskType.notFound=Selected task type doesn''t exist
-taskType.deleted=Task type '{0}' successfully deleted
+taskType.deleted=Task type ''{0}'' successfully deleted
 taskType.emptyModeSelection=Please select at least one tracing mode
 
 taskAlgorithm.notSupplied=No algorithm supplied

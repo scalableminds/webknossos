@@ -59,6 +59,8 @@ GET      /admin/tasks/algorithm/:id?use=true       controllers.admin.TaskAlgorit
 GET      /admin/taskTypes                          controllers.admin.TaskTypeAdministration.list
 POST     /admin/taskTypes/create                   controllers.admin.TaskTypeAdministration.create
 GET      /admin/taskTypes/:id/delete               controllers.admin.TaskTypeAdministration.delete(id: String)
+GET      /admin/taskTypes/:id/edit                 controllers.admin.TaskTypeAdministration.edit(id: String)
+POST     /admin/taskTypes/:id                      controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
 
 GET      /admin/projects                           controllers.admin.ProjectAdministration.list
 POST     /admin/projects/create                    controllers.admin.ProjectAdministration.create

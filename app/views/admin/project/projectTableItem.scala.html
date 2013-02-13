@@ -6,8 +6,7 @@
   <td> @project.name </td>
   <td> @project.owner.map(_.name).getOrElse("<deleted>") </td>
   <td>  
-    <a href="@controllers.admin.routes.ProjectAdministration.delete(project.name)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
-    <a href="@controllers.admin.routes.NMLIO.projectDownload(project.name)"><i class="icon-download"></i> download finished tracings</a>
+    <a href="@controllers.admin.routes.NMLIO.projectDownload(project.name)" title="download all finished tracings"><i class="icon-download"></i> download</a><br /><a href="@controllers.admin.routes.ProjectAdministration.delete(project.name)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
   </td>
 </tr>
 <tr class="details-row" >
@@ -42,6 +41,9 @@
                   <i class="icon-ok-circle"></i> @status.completed done
                 </span>
               }
+            </td>
+            <td>
+              <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="icon-download"></i> download </a>
             </td>
           </tr>
         }

@@ -24,12 +24,10 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
           MetaJsonHandler.extractMetaData(DataSet.findOneByName(dataSet.name).getOrElse(dataSet)) match {
             case Full(metaData) => 
               metaData.missions.foreach(Mission.updateOrCreate)
-              dataSet.updateDataLayers(metaData.dataLayerSettings.dataLayers)
+              DataSet.updateOrCreate(dataSet.withDataLayers(metaData.dataLayerSettings.dataLayers))
               Logger.info(s"${dataSet.name}: updated ${metaData.missions.size} new missions and DataLayers ${metaData.dataLayerSettings.dataLayers.keys}.")
             case Failure(msg, _, _) => 
               Logger.error(msg)
-              DataSet.updateOrCreate(dataSet)
-            //TODO: understand boxes
             case Empty => Logger.info("empty box")
           }
           dataSet.name

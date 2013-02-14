@@ -47,7 +47,7 @@ class FileExtensionFilter(fileExtension: String) extends FilenameFilter{
 class LevelCreateActor extends Actor{
   val server = "localhost"
   val port = Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000)
-  def stackPath(level: Level, mission: Mission) = level.stackFolder+"/%d".format(mission.id)
+  def stackPath(level: Level, mission: Mission) = level.stackFolder+"/%s".format(mission.id)
   val logger = new ExecLogger
   val pngFilter = new FileExtensionFilter(".png")
   

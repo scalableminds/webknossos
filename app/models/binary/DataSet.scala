@@ -27,8 +27,8 @@ case class DataSet(
     point.x >= 0 && point.y >= 0 && point.z >= 0 && // lower bound
       !(point hasGreaterCoordinateAs maxCoordinates)
       
-  def updateDataLayers(dataLayers: Map[String, DataLayer]) = {
-    update(_.copy(dataLayers = dataLayers))
+  def withDataLayers(dataLayers: Map[String, DataLayer]) = {
+    copy(dataLayers = dataLayers)
   }
 }
 

@@ -18,7 +18,7 @@
 
       <!--Body content-->
       <div class="span8">
-        <h3>Preview: @level.name #@missionId</h3>
+        <h3>Preview: @level.name #@formatHash(missionId)</h3>
         <div class="row">
           <div class="span9">
             <div class="well" id="preview">
@@ -52,7 +52,7 @@
             }
 
             <form method="POST" id="produce-form">
-              <input type="hidden" name="missionStartId" value="@missionId" />
+              <input type="hidden" name="missionId" value="@missionId" />
               <a href="@controllers.levelcreator.routes.LevelCreator.produce(level.id)" data-ajax="submit,busy-class" class="btn">
                 <i class="icon-retweet"></i> Produce
               </a>

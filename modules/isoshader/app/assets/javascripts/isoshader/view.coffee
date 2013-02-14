@@ -151,6 +151,7 @@ class View
     #needs both with/height and style width/height
     @canvas.width(width)
     @canvas.height(height)
+    @renderer.setSize( width, height )
 
     @canvas.css("width", window.innerWidth)
     @canvas.css("height", window.innerHeight)
@@ -158,4 +159,3 @@ class View
     @uniforms.screenWidth = width
     @uniforms.screenHeight = height
 
-    @renderer.setSize( width, height )

@@ -42,6 +42,9 @@ class Isoshader
       "p" : => @surfaces[1].draw_surface = +!@surfaces[1].draw_surface
 
       "t" : => @view.debug_mode = +!@view.debug_mode
+      "F11" : =>
+        if requestFullscreen
+          requestFullscreen.call(canvas, canvas.ALLOW_KEYBOARD_INPUT)
 
       # thresholds
       "," : => @surfaces[0].threshold
@@ -107,6 +110,13 @@ class Isoshader
     shadingSelection = $("#shading")
     shadingSelection.on( "change", (evt) =>
       @view.setUniform("shading_type", evt.target.selectedIndex)
+    )
+
+    canvas = @canvas[0]
+    requestFullscreen = canvas.webkitRequestFullScreen or canvas.mozRequestFullScreen or canvas.RequestFullScreen
+    fullscreenButton = $("#fullscreenButton").on("click", (evt) =>
+      if requestFullscreen
+        requestFullscreen.call(canvas, canvas.ALLOW_KEYBOARD_INPUT)
     )
 
 

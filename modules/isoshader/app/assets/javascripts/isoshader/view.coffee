@@ -79,7 +79,7 @@ class View
       shading_type :  { type: "i", value : uniforms.shading_type},
       debug_mode :    { type: "i", value : uniforms.debug_mode},
 
-    for i in [0 .. @surfaces.length - 1]
+    for surface, i in @surfaces
 
       texture = new THREE.Texture(
         @assetHandler.getFile("texture")[i],
@@ -96,9 +96,9 @@ class View
       texture.flipY = false
 
       shaderUniforms["surface_#{i}.texture"] =      { type: "t", value: texture }
-      shaderUniforms["surface_#{i}.threshold"] =    { type: "f", value: @surfaces[i].threshold }
-      shaderUniforms["surface_#{i}.draw_surface"] = { type: "i", value: @surfaces[i].draw_surface }
-      shaderUniforms["surface_#{i}.draw_map"] =     { type: "i", value: @surfaces[i].draw_map }
+      shaderUniforms["surface_#{i}.threshold"] =    { type: "f", value: surface.threshold }
+      shaderUniforms["surface_#{i}.draw_surface"] = { type: "i", value: surface.draw_surface }
+      shaderUniforms["surface_#{i}.draw_map"] =     { type: "i", value: surface.draw_map }
 
     @shaderMaterial = new THREE.ShaderMaterial(
       uniforms : shaderUniforms

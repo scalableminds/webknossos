@@ -6,14 +6,13 @@ libs/input : Input
 
 class Isoshader
 
+  NUM_SURFACES : 1
 
   constructor : ->
 
     @canvas = $("#webgl_canvas")
     @dataCam = new DataCam()
     @view = new View(@canvas, @dataCam)
-
-    @surfaces = [{}]
 
     # let's get started
     @initSurfaces()
@@ -26,14 +25,13 @@ class Isoshader
   #das hier ider bösewicht, der's langsam macht
   initSurfaces : ->
 
-    for i in [0 .. @surfaces.length - 1]
-      surface = {}
-      surface.threshold = 0.61
-      surface.uniform_name = "surface_#{i}"
-      surface.draw_surface = 1
-      surface.draw_map = 1
+    @surfaces = for i in [0 ... @NUM_SURFACES]
 
-      @surfaces[i] = surface
+      surface =
+        threshold : 0.61
+        uniform_name : "surface_#{i}"
+        draw_surface : 1
+        draw_map : 1
 
 
   initKeyboard : ->
@@ -101,14 +99,12 @@ class Isoshader
   initGUI : ->
 
     qualitySelection = $("#quality")
-    qualitySelection.selectedIndex = @view.uniforms.quality
     qualitySelection.on( "change", (evt) =>
       @view.setUniform("quality", evt.target.selectedIndex)
       @view.resize()
     )
 
     shadingSelection = $("#shading")
-    shadingSelection.selectedIndex = @view.uniforms.shading_type
     shadingSelection.on( "change", (evt) =>
       @view.setUniform("shading_type", evt.target.selectedIndex)
     )

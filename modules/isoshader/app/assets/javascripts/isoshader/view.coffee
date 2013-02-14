@@ -113,18 +113,18 @@ class View
   updateUniforms : (uniforms) ->
 
     uniforms = @uniforms
-    shaderMaterial = @ShaderMaterial
+    shaderMaterial = @shaderMaterial
 
     uniforms.time = Date.now() - uniforms.startTime
     cam_matrix = @dataCam.getMatrix()
 
-    @shaderMaterial.uniforms["time"].value = uniforms.time / 1000
-    @shaderMaterial.uniforms["resolution"].value = new THREE.Vector2(uniforms.screenWidth, uniforms.screenHeight)
-    @shaderMaterial.uniforms["camera_matrix"].value = new THREE.Matrix4(cam_matrix...).transpose()
+    shaderMaterial.uniforms["time"].value = uniforms.time / 1000
+    shaderMaterial.uniforms["resolution"].value = new THREE.Vector2(uniforms.screenWidth, uniforms.screenHeight)
+    shaderMaterial.uniforms["camera_matrix"].value = new THREE.Matrix4(cam_matrix...).transpose()
 
-    @shaderMaterial.uniforms["debug_mode"].value = uniforms.debug_mode
-    @shaderMaterial.uniforms["shading_type"].value = uniforms.shading_type
-    @shaderMaterial.uniforms["surface_0.draw_surface"].value = @surfaces[0].draw_surface
+    shaderMaterial.uniforms["debug_mode"].value = uniforms.debug_mode
+    shaderMaterial.uniforms["shading_type"].value = uniforms.shading_type
+    shaderMaterial.uniforms["surface_0.draw_surface"].value = @surfaces[0].draw_surface
     #@shaderMaterial.uniforms["surface_1.draw_surface"].value = @surfaces[1].draw_surface
 
 

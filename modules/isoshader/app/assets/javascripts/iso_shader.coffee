@@ -13,6 +13,7 @@ class Isoshader
     @dataCam = new DataCam()
     @view = new View(@canvas, @dataCam)
 
+    @surfaces = [{}]
 
     # let's get started
     @initSurfaces()
@@ -22,11 +23,10 @@ class Isoshader
     @view.initThreeJS(@surfaces)
 
 
+  #das hier ider bösewicht, der's langsam macht
   initSurfaces : ->
 
-    @surfaces = []
-
-    for i in [0 .. 1]
+    for i in [0 .. @surfaces.length - 1]
       surface = {}
       surface.threshold = 0.61
       surface.uniform_name = "surface_#{i}"

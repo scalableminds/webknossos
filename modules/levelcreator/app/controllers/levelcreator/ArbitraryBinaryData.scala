@@ -74,6 +74,7 @@ object ArbitraryBinaryData extends Controller {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
         mission <- Mission.findOneById(missionId) ?~ Messages("mission.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
+        direction = Vector3D(mission.start.direction.x, mission.start.direction.z, -mission.start.direction.y)
       } yield {
         (dataRequestActor ? SingleRequest(DataRequest(
           dataSet,
@@ -83,8 +84,9 @@ object ArbitraryBinaryData extends Controller {
               level.height, 
               level.depth, 
               1, 
-              moveVector = Vector3D(mission.start.position).toTuple, 
-              axis = mission.start.direction.toTuple),
+              moveVector = Vector3D(mission.start.position).toTuple,
+              axis = direction.toTuple),
+//              axis = mission.start.direction.toTuple),
           useHalfByte = false,
           skipInterpolation = false)))
         .recover{

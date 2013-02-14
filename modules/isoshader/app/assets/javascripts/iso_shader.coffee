@@ -7,6 +7,7 @@ libs/input : Input
 class Isoshader
 
   NUM_SURFACES : 1
+  MOUSE_SMOOTHING : 0.2
 
   constructor : ->
 
@@ -75,28 +76,12 @@ class Isoshader
 
   initMouse : ->
 
-    $(window).on "mousemove",(event) =>
-      # @parameters.mouseX = event.clientX / window.innerWidth
-      # @parameters.mouseY = 1 - event.clientY / window.innerHeight
-
     new Input.Mouse(
-      @canvas
-      "x" : (distX) =>
-        @dataCam.rotate("x", distX)
-      "y" : (distY) =>
-
+      @canvas,
+      leftDownMove : ( delta ) =>
+        @dataCam.rotate("y", delta.x * @MOUSE_SMOOTHING)
+        @dataCam.rotate("x", delta.y * @MOUSE_SMOOTHING)
     )
-
-      # var x=event.clientX;
-      # var y=event.clientY;
-      # var dx=x-cam.mouse_prev_x;
-      # var dy=y-cam.mouse_prev_y;
-      # cam.mouse_prev_x=x;
-      # cam.mouse_prev_y=y;
-      # if(cam.mouse_is_down){
-      #   quat4.multiply(cam.dir, quat4.createFrom(dy*turn_speed, dx*turn_speed,0,1.0));
-      #   quat4.normalize(cam.dir);
-      # }
 
 
   initGUI : ->

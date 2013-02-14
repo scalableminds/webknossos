@@ -24,8 +24,8 @@ DELETE  /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCreat
 
 
 #Getting binary Data
-GET     /binary/arbitrary/ajax              controllers.levelcreator.ArbitraryBinaryData.viaAjax(dataLayerName: String, levelId: String, taskId: String)
-GET     /binary/ajax                        controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) 
+GET     /binary/ajax                        controllers.levelcreator.BinaryData.viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) 
+
 #Mission Data
 GET     /missions                           controllers.levelcreator.MissionController.getMissions(dataSetName: String)
 GET     /missions/random                    controllers.levelcreator.MissionController.getRandomMission(dataSetName: String)

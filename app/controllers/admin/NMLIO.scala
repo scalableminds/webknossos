@@ -77,7 +77,10 @@ object NMLIO extends Controller with Secured {
   }
 
   def tracingNMLName(t: Tracing) = {
-    "%s__%s__%s.nml".format(t.dataSetName, t.id, t.user.map(_.abreviatedName) getOrElse "")
+    "%s__%s__%s.nml".format(
+        t.dataSetName, 
+        t.task.map(_.id) getOrElse("explorational"), 
+        t.user.map(_.abreviatedName) getOrElse "")
   }
 
   def download(tracingId: String) = Authenticated { implicit request =>

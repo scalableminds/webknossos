@@ -30,7 +30,7 @@ user.logout.success=You have successfully logged out
 user.settings.invalid=Couldn''t parse settings
 user.experience.increased=Increased experience of {0}
 user.experience.set=Set experience of {0}
-user.experience.set=Removed experience from {0}
+user.experience.removed=Removed experience from {0}
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on oxalis to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.

@@ -20,9 +20,10 @@ import models.knowledge.{Level, Mission}
 import scala.sys.process._
 import play.api.i18n.Messages
 import java.io.{File, PrintWriter, FilenameFilter}
+import scala.util.{Try, Success, Failure}
 
 
-case class CreateLevels(level: Level, mission: List[Mission])
+case class CreateLevel(level: Level, mission: Mission)
 
 case class ExecLogger(var messages: List[String] = Nil,
   var error: List[String] = Nil)
@@ -52,8 +53,8 @@ class LevelCreateActor extends Actor{
   val pngFilter = new FileExtensionFilter(".png")
   
   def receive = {
-    case CreateLevels(level, missions) =>
-     sender ! createLevels(level, missions)
+    case CreateLevel(level, mission) =>
+     sender ! createLevel(level, mission)
   }
   
   def createTempFile(data: String) = {
@@ -64,8 +65,8 @@ class LevelCreateActor extends Actor{
     temp
   }
 
-  def createLevels(level: Level, missions: List[Mission]) = {
-    missions.foreach{ mission => 
+  def createLevel(level: Level, mission: Mission) = {
+    (Try {
       val levelUrl = "http://%s:%d".format(server, port) + 
         controllers.levelcreator.routes.LevelCreator.use(level.id, mission.id)
   
@@ -81,8 +82,14 @@ class LevelCreateActor extends Actor{
       ("phantomjs %s".format(file.getAbsolutePath)) !! logger
       Logger.info("Finished phantomjs.")     
       zipFiles(level, mission)
+      mission
+    }) match {
+      case Success(m) => Some(m)
+      case Failure(exception) => 
+        Logger.error(s"failed creating stack for level:${level.id} mission:${mission.id}")
+        Logger.error(s"$exception")
+        None
     }
-    Messages("level.stack.created")
   }
   
   def zipFiles(level: Level, mission: Mission) = {

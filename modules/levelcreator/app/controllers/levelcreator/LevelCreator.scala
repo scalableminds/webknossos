@@ -5,6 +5,7 @@ import play.api.libs.concurrent._
 import scala.concurrent.duration._
 import scala.concurrent._
 import akka.pattern.ask
+import akka.routing.RoundRobinRouter
 import views._
 import braingames.mvc._
 import models.knowledge._
@@ -27,7 +28,8 @@ import braingames.util.ExtendedTypes.ExtendedString
 
 object LevelCreator extends Controller {
 
-  val levelCreateActor = Akka.system.actorOf(Props(new LevelCreateActor), name = "LevelCreateActor")//.withRouter(new RoundRobinRouter(3))
+  val levelCreateRouter = Akka.system.actorOf(Props[LevelCreateActor].withRouter(RoundRobinRouter(nrOfInstances = 3)),
+      name = "LevelCreateRouter")
 
   val conf = Play.current.configuration
   implicit val timeout = Timeout(60 seconds)
@@ -101,7 +103,7 @@ object LevelCreator extends Controller {
   //TODO: make this parallel in a way that a single actor gets one mission to create at a time and then add created missions 
   // depending on which were successfully created
   def createLevels(level: Level, missions: List[Mission]) = {
-    val future = Future.traverse(missions)(m => ask(levelCreateActor, CreateLevel(level, m))).recover {
+    val future = Future.traverse(missions)(m => ask(levelCreateRouter, CreateLevel(level, m))).recover {
       case e: AskTimeoutException =>
         Logger.error("stack creation timed out")
         Messages("level.stack.creationTimeout")

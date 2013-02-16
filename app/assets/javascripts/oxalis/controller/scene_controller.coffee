@@ -1,7 +1,7 @@
 ### define
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
-../model/dimensions : DimensionsHelper
+../model/dimensions : Dimensions
 ###
 
 

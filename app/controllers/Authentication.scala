@@ -124,6 +124,6 @@ object Authentication extends Controller with Secured {
   def logout = Action {
     Redirect(routes.Authentication.login)
       .withNewSession
-      .flashing("success" -> Messages("user.login.success"))
+      .flashing("success" -> Messages("user.logout.success"))
   }
 }

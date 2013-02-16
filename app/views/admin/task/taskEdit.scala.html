@@ -1,0 +1,20 @@
+@(taskId: String, taskTypes: List[models.task.TaskType], experiences: List[String], projects: List[models.task.Project], editForm: Form[(String, models.user.Experience, Int, Int, String)])(implicit session: brainflight.view.AuthedSessionData)
+
+@main(){
+  <div class="container">
+    
+    <h3>Edit Task</h3>
+    <div class="well">
+      All tracings of this task are going to get adjusted to this settings. This is espacially true when changing the Task type.<br /> <br /> 
+      @helper.form(controllers.admin.routes.TaskAdministration.editTaskForm(taskId), 'class -> "form-horizontal") {
+
+        @basicTaskForm(editForm, taskTypes, experiences, projects)
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <a class="btn" href="@controllers.admin.routes.TaskAdministration.list#@taskId">Cancel</a>
+        </div>
+      }
+    </div>
+  </div>
+}

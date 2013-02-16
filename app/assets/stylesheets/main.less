@@ -28,6 +28,20 @@ body:-webkit-full-screen {
     color: #999;
 }
 
+.navbar #main-menu {
+    a [class^="icon-"], 
+    a [class*=" icon-"] {
+        color: #fff;
+    }
+}
+
+.navbar .version {
+    float: left;
+    font-size: 11px;
+    padding-top: 12px;
+    display: inline-block;
+}
+
 .label {
     margin-right: .2em;
 }
@@ -130,6 +144,13 @@ body:-webkit-full-screen {
         .btn-mini {
             display: inline-block;
         }
+    }
+}
+
+.table {
+    a [class^="icon-"], 
+    a [class*=" icon-"] {
+        color: #000;
     }
 }
 
@@ -476,5 +497,10 @@ svg a:hover {
     }
 }
 
-
-
+// Fixing font awesome
+.btn [class^="icon-"], 
+.nav [class^="icon-"], 
+.btn [class*=" icon-"], 
+.nav [class*=" icon-"] {
+    line-height: normal;
+}

@@ -113,7 +113,7 @@ case class Tracing(
   }
 }
 
-object Tracing extends BasicDAO[Tracing]("tracings") {
+object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   def tracingBase(task: Task, userId: ObjectId, dataSetName: String): Tracing =
     Tracing(userId,
       dataSetName,
@@ -254,6 +254,15 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
     tracing
   }
 
+  def updateAllUsingNewTaskType(task: Task, taskType: TaskType) = {
+    update(
+      MongoDBObject(
+        "_task" -> task._id),
+      MongoDBObject(
+        "tracingSettings" -> taskType.tracingSettings),
+        false, true)
+  }
+
   def findTrainingForReviewTracing(tracing: Tracing) =
     findOne(MongoDBObject("review.reviewTracing" -> tracing._id))
 
@@ -322,7 +331,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") {
             <activeNode id={ e.activeNodeId.toString }/>
             <editPosition x={ e.editPosition.x.toString } y={ e.editPosition.y.toString } z={ e.editPosition.z.toString }/>
           </parameters>
-          { e.trees.map(t => Xml.toXML(t)) }
+          { e.trees.filter(_.isEmpty).map(t => Xml.toXML(t)) }
           <branchpoints>
             { e.branchPoints.map(BranchPoint.toXML) }
           </branchpoints>

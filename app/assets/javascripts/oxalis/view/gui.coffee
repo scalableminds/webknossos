@@ -3,7 +3,7 @@
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
 ../../libs/toast : Toast
-../model/dimensions : DimensionsHelper
+../model/dimensions : Dimensions
 ###
 
 PLANE_XY           = Dimensions.PLANE_XY

@@ -3,14 +3,15 @@ jquery : $
 underscore : _
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
-./tracepoint : TracePointClass
-./tracetree : TraceTreeClass
+./tracepoint : TracePoint
+./tracetree : TraceTree
 ./statelogger : StateLogger
 ###
 
 # This takes care of the route. 
   
 # Constants
+GOLDEN_RATIO      = 0.618033988749895
 BUFFER_SIZE       = 262144 # 1024 * 1204 / 4
 INIT_TIMEOUT      = 10000 # 10s
 TYPE_USUAL        = 0
@@ -387,14 +388,16 @@ class Route
 
   getNewTreeColor : ->
 
-    switch @treeIdCount
-      when 1 then return 0xFF0000
-      when 2 then return 0x00FF00
-      when 3 then return 0x0000FF
-      when 4 then return 0xFF00FF
-      when 5 then return 0xFFFF00
-      else  
-        new THREE.Color().setHSV(Math.random(), 1, 1).getHex()
+    # this generates the most distinct colors possible, using the golden ratio
+    if @trees.length == 0
+      @currentHue = null
+      return 0xFF0000
+    else
+      unless @currentHue
+        @currentHue = new THREE.Color().setHex(_.last(@trees).color).getHSV().h
+      @currentHue += GOLDEN_RATIO
+      @currentHue %= 1
+      new THREE.Color().setHSV(@currentHue, 1, 1).getHex()
 
 
   createNewTree : ->

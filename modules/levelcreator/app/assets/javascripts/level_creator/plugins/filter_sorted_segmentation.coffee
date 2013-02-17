@@ -59,10 +59,10 @@ class FilterSortedSegmentation
         sortedSegments = sortedSegments.slice(-count)
 
     for segment in sortedSegments
-      values.push segment.value
+      values.push segment.id
 
     for segment in activeSegments
-      if _.contains(values, segment.value) is false
+      if _.contains(values, segment.id) is false
         segment.display = false
 
     for h in [0...height] by 1

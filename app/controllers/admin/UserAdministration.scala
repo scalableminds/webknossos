@@ -21,7 +21,7 @@ object UserAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
 
-  def allUsers = User.findAll.sortBy(_.lastName)
+  def allUsers = User.findAll.sortBy(_.lastName.capitalize)
 
   def index = Authenticated { implicit request =>
     Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains))

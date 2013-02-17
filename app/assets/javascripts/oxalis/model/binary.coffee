@@ -5,7 +5,7 @@
 ./binary/plane2d : Plane2D
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
-./dimensions : DimensionHelper
+./dimensions : Dimensions
 ###
 
 class Binary
@@ -130,13 +130,15 @@ class Binary
 
     { lastLookUpTable } = @
 
-    colors = InterpolationCollector.bulkCollect(
+    { buffer, accessedBuckets } = InterpolationCollector.bulkCollect(
       vertices
       @cube.getArbitraryCube()
     )
 
-    for i in [0...colors.length] by 1
-      l = colors[i]
-      colors[i] = lastLookUpTable[l]
+    @cube.accessBuckets(accessedBuckets)
 
-    colors
+    for i in [0...buffer.length] by 1
+      l = buffer[i]
+      buffer[i] = lastLookUpTable[l]
+
+    buffer

@@ -19,8 +19,19 @@ import com.mongodb.casbah.query.Implicits._
 case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree] {
   val dao = DBTree
 
+  def isEmpty = {
+    DBTree.nodes.findByParentId(_id).isEmpty &&
+      DBTree.edges.findByParentId(_id).isEmpty
+  }
+
   def nodes = DBTree.nodes.findByParentId(_id).toList
   def edges = DBTree.edges.findByParentId(_id).toList
+
+  def numberOfNodes =
+    DBTree.nodes.countByParentId(_id)
+
+  def numberOfEdges =
+    DBTree.edges.countByParentId(_id)
 }
 
 trait DBTreeFactory {

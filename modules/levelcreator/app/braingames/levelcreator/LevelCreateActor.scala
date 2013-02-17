@@ -16,33 +16,44 @@ import scala.collection.JavaConversions._
 import play.api._
 import play.api.Configuration._
 import views._
-import models.knowledge.Level
+import models.knowledge.{Level, Mission}
 import scala.sys.process._
-import java.io.File
-import java.io.PrintWriter
+import play.api.i18n.Messages
+import java.io.{File, PrintWriter, FilenameFilter}
 
-case class CreateLevel(level: Level)
+
+case class CreateLevels(level: Level, mission: List[Mission])
 
 case class ExecLogger(var messages: List[String] = Nil,
   var error: List[String] = Nil)
   extends ProcessLogger {
   def out(s: => String) {
     messages ::= s
+    Logger.info(s)
   }
 
   def err(s: => String) {
     error ::= s
+    Logger.error(s)
   }
 
   def buffer[T](f: => T): T = f
 }
 
+class FileExtensionFilter(fileExtension: String) extends FilenameFilter{
+  override def accept(dir: File, name: String) = name.endsWith(fileExtension)
+}
+
 class LevelCreateActor extends Actor{
   val server = "localhost"
   val port = Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000)
+  def stackPath(level: Level, mission: Mission) = level.stackFolder+"/%d".format(mission.start.startId)
+  val logger = new ExecLogger
+  val pngFilter = new FileExtensionFilter(".png")
+  
   def receive = {
-    case CreateLevel(level) =>
-      createLevel(level)
+    case CreateLevels(level, missions) =>
+     sender ! createLevels(level, missions)
   }
   
   def createTempFile(data: String) = {
@@ -52,21 +63,37 @@ class LevelCreateActor extends Actor{
     finally{ out.close }
     temp
   }
+
+  def createLevels(level: Level, missions: List[Mission]) = {
+    missions.foreach{ mission => 
+      val levelUrl = "http://%s:%d".format(server, port) + 
+        controllers.levelcreator.routes.LevelCreator.use(level.id, mission.start.startId)
   
-  def createLevel(level: Level) = {
-    val logger = new ExecLogger
-    val missionId = "1"
-    val imagesPath = "data/levels/%s/stacks/%s/".format(level.name, missionId)
-    val levelUrl = "http://%s:%d".format(server, port) + 
-      controllers.levelcreator.routes.LevelCreator.use(level.id, missionId)
-      
-    val js = html.levelcreator.phantom(
-        level, 
-        imagesPath + "stackImage%i.png", 
-        levelUrl).body
-    val file = createTempFile(js)
-    println("phantomjs " + file.getAbsolutePath())
-    ("phantomjs %s".format(file.getAbsolutePath)) !! logger
-    println("Finished phantomjs.")
+      val js = html.levelcreator.phantom(
+            level, 
+            stackPath(level, mission) + "/stackImage%i.png", 
+            stackPath(level, mission) + "/meta.json", 
+            levelUrl,
+            mission.start.startId).body
+          
+      val file = createTempFile(js)
+      Logger.info("phantomjs " + file.getAbsolutePath())
+      ("phantomjs %s".format(file.getAbsolutePath)) !! logger
+      Logger.info("Finished phantomjs.")     
+      zipFiles(level, mission)
+    }
+    Messages("level.stack.created")
+  }
+  
+  def zipFiles(level: Level, mission: Mission) = {
+    val stackDir = new File(stackPath(level, mission))
+    if (stackDir.exists()){
+      val zipFile= stackPath(level, mission) + "/%s_%s_stack.zip".format(level.name, mission.start.startId)
+      val stackImages = stackDir.listFiles(pngFilter).toList.map(_.toString)
+      ("zip" :: zipFile :: stackImages ) !! logger
+      Logger.info("Finished zipping")
+    }
+    else
+     Logger.error("stackDir %s was not created during stack Creation".format(stackPath(level,mission)))
   }
 }

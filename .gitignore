@@ -12,6 +12,7 @@ target/
 binarydata/
 binaryData/
 binaryData
+knowledge
 data/
 boot/
 .idea/
@@ -32,3 +33,4 @@ src/main/scala/rebel.xml
 modules/shellgame/target
 modules/shellgame/logs
 modules/shellgame/shellgame-assets
+public/levelStacks

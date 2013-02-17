@@ -12,18 +12,12 @@ import models.task._
 import models.binary.DataSet
 import views._
 import play.api.Logger
-import play.api.data.Forms._
-import play.api.data._
 import models.tracing._
 import play.api.i18n.Messages
 import braingames.mvc.Controller
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
-
-  val renameForm = Form(
-    single(
-      "name" -> text))
 
   def dashboard = Authenticated { implicit request =>
     val user = request.user
@@ -46,8 +40,7 @@ object UserController extends Controller with Secured {
       explorationalTracings,
       userTasks,
       loggedTime,
-      dataSets,
-      renameForm))
+      dataSets))
   }
 
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {

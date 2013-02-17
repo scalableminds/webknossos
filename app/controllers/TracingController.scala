@@ -34,15 +34,9 @@ import models.tracing.UsedTracings
 import net.liftweb.common._
 import braingames.mvc.Controller
 import models.tracing.TracingType
-import play.api.data.Forms._
-import play.api.data._
 
 object TracingController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
-
-  val renameForm = Form(
-    single(
-      "name" -> text))
 
   def createDataSetInformation(dataSetName: String) =
     DataSet.findOneByName(dataSetName) match {
@@ -157,7 +151,7 @@ object TracingController extends Controller with Secured {
     } yield {
       tracing.update(_.copy(_name = Some(name)))
       JsonOk(
-        html.user.dashboard.explorativeTracingTableItem(tracing, renameForm),
+        html.user.dashboard.explorativeTracingTableItem(tracing),
         Messages("tracing.setName"))
     }
   }

@@ -1,4 +1,4 @@
-@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[models.binary.DataSet], form: Form[String])(implicit session: brainflight.view.AuthedSessionData)
+@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[models.binary.DataSet])(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
   <div class="container" id="dashboard">
@@ -39,7 +39,7 @@
       </thead>
       <tbody>
       @explorativeTracings.map{ tracing => 
-        @explorativeTracingTableItem(tracing, form)
+        @explorativeTracingTableItem(tracing)
       }
       </tbody>
     </table>

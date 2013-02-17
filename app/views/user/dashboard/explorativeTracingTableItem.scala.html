@@ -1,8 +1,15 @@
-@(tracing: models.tracing.Tracing, form: Form[String])(implicit session: brainflight.view.AuthedSessionData)
+@(tracing: models.tracing.Tracing)
   <tr>
     <td> @formatHash(tracing.id) </td>
-    <td> @tracing.name <a href="#" rel="popover" data-placement="bottom" data-title="Rename explorative tracing" data-html="true" data-content='@explorativeTracingRenameTableItem(tracing, form)'
-      class="btn btn-mini pull-right"><i class="icon-wrench"></i></a> </td>
+    <td>
+      <span class="explorative-name"> @tracing.name </span>
+      <form action=@controllers.routes.TracingController.nameExplorativeTracing(tracing.id) method="POST">
+        <div class="input-append">
+          <input name="name" id="name" maxlength="20" class="span2" type="text" value=@tracing.name>
+            <a href="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" data-ajax="submit,replace-row" class="btn"><i class="icon-ok-circle"></i></a>
+        </div>
+      </form>
+    </td>
     <td> @tracing.dataSetName </td>
     @defining(models.tracing.Tracing.statisticsForTracing(tracing)){ stats => 
       <td> 

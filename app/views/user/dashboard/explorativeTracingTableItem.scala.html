@@ -1,12 +1,12 @@
 @(tracing: models.tracing.Tracing)
   <tr>
     <td> @formatHash(tracing.id) </td>
-    <td>
+    <td class="span3">
       <span class="explorative-name"> @tracing.name </span>
-      <form action=@controllers.routes.TracingController.nameExplorativeTracing(tracing.id) method="POST">
+      <form action="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" method="POST">
         <div class="input-append">
-          <input name="name" id="name" maxlength="20" class="span2" type="text" value=@tracing.name>
-            <a href="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" data-ajax="submit,replace-row" class="btn"><i class="icon-ok-circle"></i></a>
+          <input name="name" id="name" maxlength="20" class="span2" type="text" value="@tracing.name">
+            <a href="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" data-ajax="submit,replace-row" class="btn"><i class="icon-ok"></i></a>
         </div>
       </form>
     </td>

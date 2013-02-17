@@ -23,49 +23,13 @@ import akka.pattern.AskTimeoutException
 import scala.collection.mutable.ArrayBuffer
 import play.api.libs.concurrent.Execution.Implicits._
 
-object ArbitraryBinaryData extends Controller {
+object BinaryData extends Controller {
   val dataRequestActor = Akka.system.actorOf(Props(new DataRequestActor), name = "dataRequestActor") //.withRouter(new RoundRobinRouter(3)))
 
   val conf = Play.current.configuration
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds) // needed for `?` below
-
-  def viaAjax(dataLayerName: String, levelId: String, taskId: String) = Action(parse.raw) { implicit request =>
-    Async {
-      val t = System.currentTimeMillis()
-      val dataSet = DataSet.findOneByName("e_k0563").get
-      for {
-        level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-        dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
-      } yield {
-        val position = Point3D(1792, 1920, 2304)
-        val direction = (1.0, 1.0, 1.0)
-
-        val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
-        val m = Cuboid(level.width, level.height, level.depth, 1, moveVector = point, axis = direction)
-        val future =
-          dataRequestActor ? SingleRequest(DataRequest(
-            dataSet,
-            dataLayer,
-            1,
-            m,
-            useHalfByte = false,
-            skipInterpolation = false))
-
-        future
-          .recover {
-            case e: AskTimeoutException =>
-              Logger.error("calculateImages: AskTimeoutException")
-              new Array[Byte](level.height * level.width * level.depth).toBuffer
-          }
-          .mapTo[ArrayBuffer[Byte]].map { data =>
-            Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
-            Ok(data.toArray)
-          }
-      }
-    }
-  }
     
-  def missionViaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) = 
+  def viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) = 
     Action { implicit request => 
     Async {
       val t = System.currentTimeMillis()
@@ -74,6 +38,7 @@ object ArbitraryBinaryData extends Controller {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
         mission <- Mission.findOneById(missionId) ?~ Messages("mission.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
+        direction = Vector3D(mission.start.direction.x, mission.start.direction.z, -mission.start.direction.y)
       } yield {
         (dataRequestActor ? SingleRequest(DataRequest(
           dataSet,
@@ -83,8 +48,9 @@ object ArbitraryBinaryData extends Controller {
               level.height, 
               level.depth, 
               1, 
-              moveVector = Vector3D(mission.start.position).toTuple, 
-              axis = mission.start.direction.toTuple),
+              moveVector = Vector3D(mission.start.position).toTuple,
+              axis = direction.toTuple),
+//              axis = mission.start.direction.toTuple),
           useHalfByte = false,
           skipInterpolation = false)))
         .recover{

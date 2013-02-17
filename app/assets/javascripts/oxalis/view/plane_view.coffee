@@ -153,9 +153,9 @@ class PlaneView
   #Call this after the canvas was resized to fix the viewport
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
-    container = $("#render")
-    WIDTH = (container.width()-20)/2
-    HEIGHT = (container.height()-20)/2
+    canvas = $("#render > canvas")
+    WIDTH = (canvas.width()-20)/2
+    HEIGHT = (canvas.height()-20)/2
 
     @renderer.setSize( 2*WIDTH+20, 2*HEIGHT+20)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
@@ -168,9 +168,9 @@ class PlaneView
     if (@scaleFactor+delta > 0.65) and (@scaleFactor+delta < 2)
       @scaleFactor += Number(delta)
       @curWidth = WIDTH = HEIGHT = @scaleFactor * 380
-      container = $("#render")
-      container.width(2 * WIDTH + 20)
-      container.height(2 * HEIGHT + 20)
+      canvas = $("#render > canvas")
+      canvas.width(2 * WIDTH + 20)
+      canvas.height(2 * HEIGHT + 20)
 
       divs = $(".inputcatcher")
       for div in divs

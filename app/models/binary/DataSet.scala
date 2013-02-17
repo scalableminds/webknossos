@@ -27,6 +27,9 @@ case class DataSet(
     point.x >= 0 && point.y >= 0 && point.z >= 0 && // lower bound
       !(point hasGreaterCoordinateAs maxCoordinates)
       
+  def withDataLayers(dataLayers: Map[String, DataLayer]) = {
+    copy(dataLayers = dataLayers)
+  }
 }
 
 object DataSet extends BasicDAO[DataSet]("dataSets") {

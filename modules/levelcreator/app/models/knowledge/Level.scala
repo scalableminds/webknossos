@@ -14,7 +14,7 @@ case class Level(
     depth: Int,
     dataSetName: String,
     code: String = Level.defaultCode,
-    renderedMissions: List[Int] = List(),
+    renderedMissions: List[String] = List(),
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
 
@@ -41,13 +41,13 @@ case class Level(
     copy(code = c)
   }
   
-  def addRenderedMissions(missionStartIds: List[Int]) = {   
-      update(_.copy(renderedMissions =  renderedMissions ++ 
-          missionStartIds.filter(id => !renderedMissions.contains(id))))
+  def addRenderedMissions(missionIds: List[String]) = {   
+      update(_.copy(renderedMissions = (renderedMissions ++ missionIds).distinct))
   }
   
-  def removeRenderedMission(missionStartId: Int) = {
-    update(_.copy(renderedMissions = renderedMissions.filter(id => id != missionStartId)))
+  def removeRenderedMission(missionId: String): Unit = {
+    update(_.copy(renderedMissions = 
+      renderedMissions.filterNot(mId => mId == missionId)))
   }
   
   def retrieveAsset(name: String) = {

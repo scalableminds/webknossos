@@ -53,13 +53,13 @@ object LevelCreator extends Controller {
       "dataset" -> text.verifying("dataSet.notFound", DataSet.findOneByName(_).isDefined))(
         Level.fromForm)(Level.toForm)).fill(Level.empty)
 
-  def use(levelId: String, missionStartId: Int) = ActionWithValidLevel(levelId){ implicit request =>
-    val missionOpt = Mission.findOneByStartId(request.level.dataSetName, missionStartId) orElse
+  def use(levelId: String, missionId: String) = ActionWithValidLevel(levelId){ implicit request =>
+    val missionOpt = Mission.findOneById(missionId) orElse
         Mission.randomByDataSetName(request.level.dataSetName)
     for {
       mission <- missionOpt ?~ Messages("mission.notFound")
     } yield {
-      Ok(html.levelcreator.levelCreator(request.level, mission.start.startId))
+      Ok(html.levelcreator.levelCreator(request.level, mission.id))
     } 
   }
 
@@ -67,8 +67,8 @@ object LevelCreator extends Controller {
       Ok(html.levelcreator.stackList(request.level))
   }
   
-  def deleteStack(levelId: String, missionStartId: Int) = ActionWithValidLevel(levelId) { implicit request =>
-      request.level.removeRenderedMission(missionStartId)
+  def deleteStack(levelId: String, missionId: String) = ActionWithValidLevel(levelId) { implicit request =>
+      request.level.removeRenderedMission(missionId)
       JsonOk(Messages("level.stack.removed"))
   }
 
@@ -109,35 +109,31 @@ object LevelCreator extends Controller {
         Messages("level.stack.creationTimeout")
     }
     future.mapTo[String].map { result => 
-      level.addRenderedMissions(missions.map(_.start.startId))
+      level.addRenderedMissions(missions.map(_.id))
       JsonOk(result) } 
   }
 
   def produce(levelId: String, count: Int) = ActionWithValidLevel(levelId) { implicit request =>
     Async {
-      for {
-        missions <- Mission.findNotProduced(request.level.dataSetName, request.level.renderedMissions) ?~ Messages("mission.notFound")
-      } yield {
-        createLevels(request.level, missions.take(count))
-      }
+      val missions = Mission.findByDataSetName(request.level.dataSetName).
+          filterNot(m => request.level.renderedMissions.contains(m._id))
+ 
+      createLevels(request.level, missions.take(count))
     }
   }
   
   def produceAll(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
     Async{
-      for {
-        missions <- Mission.findByDataSetName(request.level.dataSetName) ?~ Messages("mission.notFound")
-      } yield {
-        createLevels(request.level, missions)
-      }
+      val missions = Mission.findByDataSetName(request.level.dataSetName).toList
+      createLevels(request.level, missions) 
     }
   }
 
   def produceBulk(levelId: String) = ActionWithValidLevel(levelId, parse.urlFormEncoded) { implicit request =>
     Async{
       for {
-        missionStartIds <- postParameterList("missionStartId") ?~ Messages("mission.startId.missing")
-        missions = Mission.findByStartId(request.level.dataSetName, missionStartIds.toList.flatMap(_.toIntOpt))
+        missionIds <- postParameterList("missionId") ?~ Messages("mission.startId.missing")
+        missions = missionIds.flatMap(Mission.findOneById).toList
       } yield {
         createLevels(request.level, missions)
       }

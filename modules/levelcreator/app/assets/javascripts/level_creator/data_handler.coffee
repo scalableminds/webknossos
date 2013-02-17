@@ -74,7 +74,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.MissionController.getMission(@dataSetName, @missionId)
+        Routes.controllers.levelcreator.MissionController.getMission(@missionId)
         dataType : "json"
       )
     ).then(

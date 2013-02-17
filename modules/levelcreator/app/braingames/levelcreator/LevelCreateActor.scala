@@ -47,7 +47,7 @@ class FileExtensionFilter(fileExtension: String) extends FilenameFilter{
 class LevelCreateActor extends Actor{
   val server = "localhost"
   val port = Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000)
-  def stackPath(level: Level, mission: Mission) = level.stackFolder+"/%d".format(mission.start.startId)
+  def stackPath(level: Level, mission: Mission) = level.stackFolder+"/%s".format(mission.id)
   val logger = new ExecLogger
   val pngFilter = new FileExtensionFilter(".png")
   
@@ -67,14 +67,14 @@ class LevelCreateActor extends Actor{
   def createLevels(level: Level, missions: List[Mission]) = {
     missions.foreach{ mission => 
       val levelUrl = "http://%s:%d".format(server, port) + 
-        controllers.levelcreator.routes.LevelCreator.use(level.id, mission.start.startId)
+        controllers.levelcreator.routes.LevelCreator.use(level.id, mission.id)
   
       val js = html.levelcreator.phantom(
             level, 
             stackPath(level, mission) + "/stackImage%i.png", 
             stackPath(level, mission) + "/meta.json", 
             levelUrl,
-            mission.start.startId).body
+            mission.id).body
           
       val file = createTempFile(js)
       Logger.info("phantomjs " + file.getAbsolutePath())
@@ -88,7 +88,7 @@ class LevelCreateActor extends Actor{
   def zipFiles(level: Level, mission: Mission) = {
     val stackDir = new File(stackPath(level, mission))
     if (stackDir.exists()){
-      val zipFile= stackPath(level, mission) + "/%s_%s_stack.zip".format(level.name, mission.start.startId)
+      val zipFile= stackPath(level, mission) + "/%s_%s_stack.zip".format(level.name, mission.id)
       val stackImages = stackDir.listFiles(pngFilter).toList.map(_.toString)
       ("zip" :: zipFile :: stackImages ) !! logger
       Logger.info("Finished zipping")

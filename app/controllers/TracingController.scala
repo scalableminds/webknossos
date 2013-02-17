@@ -149,9 +149,9 @@ object TracingController extends Controller with Secured {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
       name <- postParameter("name") ?~ Messages("tracing.invalidName")
     } yield {
-      tracing.update(_.copy(_name = Some(name)))
+      val updated = tracing.update(_.copy(_name = Some(name)))
       JsonOk(
-        html.user.dashboard.explorativeTracingTableItem(tracing),
+        html.user.dashboard.explorativeTracingTableItem(updated),
         Messages("tracing.setName"))
     }
   }

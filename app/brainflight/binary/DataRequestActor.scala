@@ -68,6 +68,7 @@ class DataRequestActor extends Actor with DataCache {
           s ! results.foldLeft(new ArrayBuffer[Byte](size))(_ ++= _)
         case Failure(e) =>
           Logger.error(s"DataRequestActor Error for Request. Error: $e")
+          s ! ArrayBuffer()
       }
   }
 

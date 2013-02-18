@@ -84,7 +84,7 @@ class DataRequestActor extends Actor with DataCache {
             loadFromStore(tail)
           case e: ClassCastException =>
             // TODO: find a better way to catch the DataNotFoundException
-            Logger.warn(s"(${dataSet.name}/${dataLayer.folder} $block) ${a.path}: Not found.")
+            Logger.warn(s"(${dataSet.name}/${dataLayer.folder} $block) ${a.path}: Not found. E: $e")
             loadFromStore(tail)
         }
       case _ =>

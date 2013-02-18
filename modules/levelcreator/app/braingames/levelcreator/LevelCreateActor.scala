@@ -21,6 +21,7 @@ import scala.sys.process._
 import play.api.i18n.Messages
 import java.io.{File, PrintWriter, FilenameFilter}
 import scala.util.{Try, Success, Failure}
+import braingames.util.FileExtensionFilter
 
 
 case class CreateLevel(level: Level, mission: Mission)
@@ -39,10 +40,6 @@ case class ExecLogger(var messages: List[String] = Nil,
   }
 
   def buffer[T](f: => T): T = f
-}
-
-class FileExtensionFilter(fileExtension: String) extends FilenameFilter{
-  override def accept(dir: File, name: String) = name.endsWith(fileExtension)
 }
 
 class LevelCreateActor extends Actor{

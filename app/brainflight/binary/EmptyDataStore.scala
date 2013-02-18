@@ -9,6 +9,8 @@ class EmptyDataStore
     extends DataStore {
   val nullBlock = new Array[Byte](DataStore.blockSize)
 
+  override val allowAllResolutions = true
+  
   def load(blockInfo: LoadBlock): Future[Array[Byte]] = {
     Future.successful {
       nullFile(blockInfo.bytesPerElement)

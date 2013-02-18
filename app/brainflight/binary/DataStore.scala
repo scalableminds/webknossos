@@ -42,10 +42,12 @@ abstract class DataStore extends Actor {
    */
   def load(dataInfo: LoadBlock): Future[Array[Byte]]
 
+  val allowAllResolutions: Boolean = false
+
   def receive = {
     case request @ LoadBlock(dataSetBaseDir, dataSetName, dataLayerName, bytesPerElement, resolution, x, y, z) =>
-      if (resolution > MAX_RESOLUTION_EXPONENT)
-        sender ! new IndexOutOfBoundsException("Resolution not supported")
+      if (resolution > MAX_RESOLUTION_EXPONENT && !allowAllResolutions)
+        sender ! new IndexOutOfBoundsException("Resolution not supported: " + resolution)
       else {
         val s = sender
         load(request).onComplete {

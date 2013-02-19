@@ -27,9 +27,9 @@ case class DataSet(
     point.x >= 0 && point.y >= 0 && point.z >= 0 && // lower bound
       !(point hasGreaterCoordinateAs maxCoordinates)
       
-  def withDataLayers(dataLayers: Map[String, DataLayer]) = {
-    copy(dataLayers = dataLayers)
-  }
+  def updateDataLayers(newDataLayers: Map[String, DataLayer]) = {
+    update(_.copy(dataLayers = newDataLayers))  
+  }    
 }
 
 object DataSet extends BasicDAO[DataSet]("dataSets") {
@@ -53,7 +53,7 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
   def updateOrCreate(d: DataSet) = {
     findOne(MongoDBObject("name" -> d.name)) match {
       case Some(stored) =>
-        stored.update(_ => d.copy(_id = stored._id, priority = stored.priority))
+        stored.update(_ => d.copy(_id = stored._id, priority = stored.priority, dataLayers = stored.dataLayers))
       case _ =>
         insertOne(d)
     }

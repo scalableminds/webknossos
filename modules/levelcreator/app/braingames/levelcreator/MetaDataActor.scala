@@ -47,7 +47,7 @@ class MetaDataActor extends Actor{
         for {settings <- extractSettings(settingsJson)
              missions = extractMissions(baseFolder.listFiles(missionMetaFilter).toList, dataSet.name)
         }{
-        DataSet.updateOrCreate(dataSet.withDataLayers(settings))
+        dataSet.updateDataLayers(settings)
         Logger.debug(s"added ${settings} to dataSet ${dataSet.name}")
         missions.foreach{Mission.updateOrCreate}
         Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")

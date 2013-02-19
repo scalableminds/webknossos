@@ -6,11 +6,8 @@ import name.pachler.nio.file.impl.PathImpl
 import brainflight.tools.geometry.Point3D
 import play.api.Logger
 import braingames.util.ExtendedTypes.ExtendedString
-import models.binary.DataSet
-import models.binary.ColorLayer
-import models.binary.DataLayer
+import models.binary._
 import net.liftweb.common._
-import models.knowledge.Mission
 
 class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {
@@ -20,16 +17,8 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     if (files != null) {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
-          
-          MetaJsonHandler.extractMetaData(DataSet.findOneByName(dataSet.name).getOrElse(dataSet)) match {
-            case Full(metaData) => 
-              metaData.missions.foreach(Mission.updateOrCreate)
-              DataSet.updateOrCreate(dataSet.withDataLayers(metaData.dataLayerSettings.dataLayers))
-              Logger.info(s"${dataSet.name}: updated ${metaData.missions.size} new missions and DataLayers ${metaData.dataLayerSettings.dataLayers.keys}.")
-            case Failure(msg, _, _) => 
-              Logger.error(msg)
-            case Empty => Logger.info("empty box")
-          }
+          //TODO: updateOrCreate preserves prior dataLayers, so an update of available resolutions won't be recognized
+          DataSet.updateOrCreate(dataSet)
           dataSet.name
         }
       }

@@ -57,7 +57,7 @@ class Cube
     @arbitraryCube = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
     @arbitraryCube.boundary = cubeBoundary.slice()
 
-    for i in [0..@ZOOM_STEP_COUNT]
+    for i in [0...@ZOOM_STEP_COUNT]
 
       @cubes[i] = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
       @cubes[i].boundary = cubeBoundary.slice()
@@ -68,8 +68,6 @@ class Cube
         (cubeBoundary[2] + 1) >> 1
       ]
 
-    $.assertSame(1, 5, "Message", {test: 123})
-
 
   getArbitraryCube : ->
 
@@ -77,6 +75,13 @@ class Cube
 
 
   getBucketIndexByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+    
+    $.assertNotIs(@cubes[zoomStep], "undefined", "Cube for given zoomStep does not exist"
+      {
+        cubeCount: @cubes.length
+        zoomStep: zoomStep
+        zoomStepCount: @ZOOM_STEP_COUNT
+      })
 
     boundary = @cubes[zoomStep].boundary
 

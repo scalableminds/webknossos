@@ -60,6 +60,9 @@ object MetaJsonHandler extends BoxImplicits{
     val missionData = new File(dataSet.baseDir + "/meta.json") 
     if(missionData.exists())
       parse(JsonFromFile(missionData)) ?~ Messages(s"$dataSet.name: Meta.json parsing Error")
-    else None ?~ Messages(s"$dataSet.name: meta.json not found") 
+    else {
+      DataSet.updateOrCreate(dataSet)
+      None ?~ Messages(s"$dataSet.name: meta.json not found") 
+    }
   }
 }

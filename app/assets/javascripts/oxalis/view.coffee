@@ -14,6 +14,10 @@ class View
 
   constructor : (@model) ->
 
+    unless @webGlSupported()
+      Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>"+
+        "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>")
+
     { THEME_BRIGHT } = @
    
     @setTheme(THEME_BRIGHT)
@@ -84,3 +88,7 @@ class View
 
     popoverTemplate = '<div class="popover key-overlay"><div class="arrow key-arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
     $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
+
+  webGlSupported : ->
+
+    return window.WebGLRenderingContext and document.createElement('canvas').getContext('experimental-webgl')

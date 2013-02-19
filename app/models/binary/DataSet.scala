@@ -7,6 +7,8 @@ import com.novus.salat.dao.SalatDAO
 import brainflight.tools.geometry.Point3D
 import models.basics.BasicDAO
 import models.basics.DAOCaseClass
+import play.api.libs.json._
+
 
 case class DataSet(
     name: String,
@@ -43,6 +45,8 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
     all.maxBy(_.priority)
   }
   
+  val availableDataLayers = List(ColorLayer.identifier, SegmentationLayer.identifier, ClassificationLayer.identifier)
+  
   def deleteAllExcept(names: Array[String]) = {
     removeByIds(DataSet.findAll.filterNot( d => names.contains(d.name)).map(_._id))
   }
@@ -61,5 +65,37 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
 
   def removeByName(name: String) {
     DataSet.remove(MongoDBObject("name" -> name))
+  }
+  
+  implicit object DataSetReads extends Reads[DataSet] {
+    val NAME="name"
+    val BASE_DIR="baseDir"
+    val MAX_COORDINATES="maxCoordinates"
+    val PRIORITY="priority"
+    val DATALAYERS="dataLayers"
+      
+    def reads(js: JsValue) = {
+      val dataLayers = (
+        ((js \ DATALAYERS \ ColorLayer.identifier).asOpt[ColorLayer] match {
+          case Some(layer) => Map(ColorLayer.identifier -> layer)
+          case _ => Map()
+        }) ++
+        ((js \ DATALAYERS \ SegmentationLayer.identifier).asOpt[SegmentationLayer] match {
+          case Some(layer) => Map(SegmentationLayer.identifier -> layer)
+          case _ => Map()
+        })++
+        ((js \ DATALAYERS \ ClassificationLayer.identifier).asOpt[ClassificationLayer] match {
+          case Some(layer) => Map(ClassificationLayer.identifier -> layer)
+          case _ => Map()
+        })
+      )
+        
+      JsSuccess(DataSet(
+          (js \ NAME).as[String],
+          (js \ BASE_DIR).as[String],
+          Point3D.fromList((js \ MAX_COORDINATES).as[List[Int]]),
+          (js \ PRIORITY).as[Int],
+          dataLayers))
+    }
   }
 }

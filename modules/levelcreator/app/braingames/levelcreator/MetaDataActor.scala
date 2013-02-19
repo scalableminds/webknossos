@@ -2,7 +2,6 @@ package braingames.levelcreator
 
 import akka.actor._
 import java.io.File
-import scala.io.Source
 import scala.concurrent.duration._
 import play.api.Logger
 import play.api.libs.json._
@@ -11,6 +10,7 @@ import models.binary.DataSet
 import braingames.util.FileRegExFilter
 import models.knowledge._
 import models.binary._
+import braingames.util.JsonHelper._
 
 case class StartWatchingMetaData()
 case class StopWatchingMetaData()
@@ -36,51 +36,20 @@ class MetaDataActor extends Actor{
     updateTicker.cancel
   }
   
-  val missionRegEx = """mission[0-9]{3}\.json""".r
+  val missionRegEx = """missions[0-9]{3}\.json""".r
   val missionMetaFilter = new FileRegExFilter(missionRegEx)
   
   def checkMetaData() = {
     DataSet.findAll.toList.foreach { dataSet => 
       val baseFolder = new File(dataSet.baseDir)
-      val settingsJson = new File(dataSet.baseDir + "/settings.json")
-      if (settingsJson.exists) {
-        for {settings <- extractSettings(settingsJson)
-             missions = extractMissions(baseFolder.listFiles(missionMetaFilter).toList, dataSet.name)
-        }{
-        dataSet.updateDataLayers(settings)
-        Logger.debug(s"added ${settings} to dataSet ${dataSet.name}")
+      if (baseFolder.exists) {
+        val missions = extractMissions(baseFolder.listFiles(missionMetaFilter).toList, dataSet.name)
         missions.foreach{Mission.updateOrCreate}
         Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")
-        }
       }
       else
         Logger.info(s"no settings.json found for ${dataSet.name}")
     }
-  }
-  
-  def parseSettings(js: JsObject) = {
-    Logger.trace("MissionJsonParser->parseSettings: about to parse")
-    for {
-      settingsObj <- (js \ "settings").asOpt[JsObject]
-      dataSetName <- (settingsObj \ "dataset").asOpt[String]
-      dataLayersObj <- (settingsObj \ "dataLayers").asOpt[JsObject]
-      colorLayer <- (dataLayersObj \ "color").asOpt[ColorLayer]
-    } yield { 
-      val segmentationLayer = (dataLayersObj \ SegmentationLayer.identifier).asOpt[SegmentationLayer] match {
-        case Some(layer) => Map(SegmentationLayer.identifier -> layer)
-        case _ => Map()
-      }
-      val classificationLayer = (dataLayersObj \ ClassificationLayer.identifier).asOpt[ClassificationLayer] match {
-        case Some(layer) => Map(ClassificationLayer.identifier -> layer)
-        case _ => Map()
-      }
-      
-      Map(ColorLayer.identifier -> colorLayer) ++ segmentationLayer ++ classificationLayer
-    }
-  }
-  
-  def extractSettings(settingsFile: File) = {
-    parseSettings(JsonFromFile(settingsFile).as[JsObject])
   }
   
   def extractMissions(missionFiles: List[File], dataSetName: String) = {    
@@ -93,6 +62,4 @@ class MetaDataActor extends Actor{
     (js \ "missions").asOpt[List[Mission]]
   }
   
-  def JsonFromFile(file: File) = Json.parse(Source.fromFile(file).getLines.mkString)
-
 }

@@ -66,6 +66,9 @@ object LevelCreator extends Controller {
   def stackList(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
       Ok(html.levelcreator.stackList(request.level))
   }
+  def stackListJson(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
+      Ok(Json.toJson(request.level.renderedMissions))
+  }
   
   def deleteStack(levelId: String, missionId: String) = ActionWithValidLevel(levelId) { implicit request =>
       request.level.removeRenderedMission(missionId)

@@ -332,6 +332,7 @@ class Route
           break
       @comments.push({node: @activeNode.id, content: commentText})
       @stateLogger.push()
+      @updateComments()
 
 
   getComment : (nodeID) ->
@@ -348,6 +349,8 @@ class Route
       if(@comments[i].node == nodeID)
         @comments.splice(i, 1)
         @stateLogger.push()
+        @updateComments()
+        return
 
 
   nextCommentNodeID : (forward) ->
@@ -368,6 +371,9 @@ class Route
             return @comments[(i - 1)].node
 
     return @comments[0].node
+
+  updateComments : ->
+    @trigger("updateComments", @comments)
 
 
   setActiveTree : (id) ->
@@ -488,11 +494,12 @@ class Route
         index = i
         break
     @trees.splice(index, 1)
-    # remove comments of all nodes inside that tree
+    # remove branchpoints and comments, NOT when merging trees
     for node in tree.nodes
-      @deleteComment(node.id)
-      if deleteBranches and node.type == TYPE_BRANCH
-        @deleteBranch(node.id)
+      if deleteBranches
+        @deleteComment(node.id)
+        if node.type == TYPE_BRANCH
+          @deleteBranch(node.id)
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0

@@ -31,8 +31,8 @@ object Authentication extends Controller with Secured {
 
   val registerForm: Form[(String, String, String, String)] = {
 
-    def registerFormApply(user: String, firstName: String, lastName: String, password: Tuple2[String, String]) =
-      (user, firstName, lastName, password._1)
+    def registerFormApply(email: String, firstName: String, lastName: String, password: Tuple2[String, String]) =
+      (email.toLowerCase, firstName, lastName, password._1)
 
     def registerFormUnapply(user: (String, String, String, String)) =
       Some((user._1, user._2, user._3, ("", "")))
@@ -47,7 +47,7 @@ object Authentication extends Controller with Secured {
         "firstName" -> nonEmptyText(1, 30),
         "lastName" -> nonEmptyText(1, 30),
         "password" -> passwordField)(registerFormApply)(registerFormUnapply)
-        .verifying("user.email.alreadyInUse",
+        .verifying("user.email.alreadyInUse", 
           user => User.findLocalByEmail(user._1).isEmpty))
   }
 
@@ -92,7 +92,7 @@ object Authentication extends Controller with Secured {
       "email" -> text,
       "password" -> text) verifying ("user.login.failed", result => result match {
         case (email, password) =>
-          User.auth(email, password).isDefined
+          User.auth(email.toLowerCase, password).isDefined
       }))
 
   /**
@@ -111,10 +111,11 @@ object Authentication extends Controller with Secured {
       loginForm.bindFromRequest.fold(
         formWithErrors =>
           BadRequest(html.user.login(formWithErrors)),
-        userForm => {
-          val user = User.findLocalByEmail(userForm._1).get
-          Redirect(routes.Game.index)
-            .withSession(Secured.createSession(user))
+        {
+          case (email, password) =>
+            val user = User.findLocalByEmail(email.toLowerCase).get
+            Redirect(routes.Game.index)
+              .withSession(Secured.createSession(user))
         })
   }
 

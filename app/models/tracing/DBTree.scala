@@ -46,6 +46,8 @@ trait DBTreeFactory {
 
 object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
 
+  this.collection.ensureIndex("_tracing")
+  
   /*def createAndInsertDeepCopy(t: DBTree): DBTree = {
     createAndInsertDeepCopy(t, t._tracing, 0)
   }*/
@@ -209,8 +211,16 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
   def findOneWithTreeId(tracingId: ObjectId, treeId: Int) =
     findOne(MongoDBObject("_tracing" -> tracingId, "treeId" -> treeId))
 
-  val nodes = new ChildCollection[DBNode, ObjectId](collection = DB.connection("nodes"), parentIdField = "_treeId") {}
-  val edges = new ChildCollection[DBEdge, ObjectId](collection = DB.connection("edges"), parentIdField = "_treeId") {}
+  val nodes = {
+    val c = new ChildCollection[DBNode, ObjectId](collection = DB.connection("nodes"), parentIdField = "_treeId") {}
+    c.collection.ensureIndex("_treeId")
+    c
+  }
+  val edges = {
+    val c = new ChildCollection[DBEdge, ObjectId](collection = DB.connection("edges"), parentIdField = "_treeId") {}
+    c.collection.ensureIndex("_treeId")
+    c
+  }
 
   implicit object DBTreeXMLWrites extends XMLWrites[DBTree] {
     import DBNode.DBNodeXMLWrites

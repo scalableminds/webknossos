@@ -35,7 +35,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@dataSetName, @levelId, @missionId, "color")
+        Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, "color")
         dataType : "arraybuffer"
       )
     ).then(
@@ -48,7 +48,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@dataSetName, @levelId, @missionId, "segmentation")
+        Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, "segmentation")
         dataType : "arraybuffer"
       )
     ).then(
@@ -61,7 +61,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(@dataSetName, @levelId, @missionId, "classification")
+        Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, "classification")
         dataType : "arraybuffer"
       )
     ).then(

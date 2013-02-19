@@ -102,13 +102,13 @@ abstract class DataModel {
 }
 
 case class Cuboid(
-    _width: Int,
-    _height: Int,
-    _depth: Int,
-    resolution: Int,
-    topLeftOpt: Option[Vector3D] = None,
-    moveVector: (Double, Double, Double) = (0, 0, 0),
-    axis: (Double, Double, Double) = (0, 0, 0)) extends DataModel {
+  _width: Int,
+  _height: Int,
+  _depth: Int,
+  resolution: Int,
+  topLeftOpt: Option[Vector3D] = None,
+  moveVector: (Double, Double, Double) = (0, 0, 0),
+  axis: (Double, Double, Double) = (0, 0, 0)) extends DataModel {
 
   val width = resolution * _width
   val height = resolution * _height
@@ -118,7 +118,8 @@ case class Cuboid(
     val xh = (width / 2.0).floor
     val yh = (height / 2.0).floor
     val zh = (depth / 2.0).floor
-    Vector3D(-xh, -yh, -zh)
+    //Vector3D(-100, -100, 0)
+    Vector3D(-xh, -yh, 0)
   }
 
   val corners = rotateAndMove(moveVector, axis, ArrayBuffer(

@@ -328,7 +328,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
             <activeNode id={ e.activeNodeId.toString }/>
             <editPosition x={ e.editPosition.x.toString } y={ e.editPosition.y.toString } z={ e.editPosition.z.toString }/>
           </parameters>
-          { e.trees.filter(_.isEmpty).map(t => Xml.toXML(t)) }
+          { e.trees.filterNot(_.isEmpty).map(t => Xml.toXML(t)) }
           <branchpoints>
             { e.branchPoints.map(BranchPoint.toXML) }
           </branchpoints>

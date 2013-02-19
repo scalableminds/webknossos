@@ -65,9 +65,10 @@ class DataRequestActor extends Actor with DataCache {
       resultsPromise.onComplete {
         case Success(results) =>
           val size = results.map(_.size).sum
-          s ! results.foldLeft(new ArrayBuffer[Byte](size))(_ ++= _)
+          s ! Some(results.foldLeft(new ArrayBuffer[Byte](size))(_ ++= _))
         case Failure(e) =>
           Logger.error(s"DataRequestActor Error for Request. Error: $e")
+          s ! None
       }
   }
 
@@ -83,7 +84,7 @@ class DataRequestActor extends Actor with DataCache {
             loadFromStore(tail)
           case e: ClassCastException =>
             // TODO: find a better way to catch the DataNotFoundException
-            Logger.warn(s"(${dataSet.name}/${dataLayer.folder} $block) ${a.path}: Not found.")
+            Logger.warn(s"(${dataSet.name}/${dataLayer.folder} $block) ${a.path}: Not found. E: $e")
             loadFromStore(tail)
         }
       case _ =>

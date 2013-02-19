@@ -173,6 +173,8 @@ class Gui
       (fTrees.add @settings, "newNodeNewTree")
                             .name("Soma clicking mode")
                             .onChange(@setNewNodeNewTree)
+    else
+      @setNewNodeNewTree(false)
     (fTrees.add @settings, "newTree")
                           .name("Create New Tree")
     (fTrees.add @settings, "deleteActiveTree")

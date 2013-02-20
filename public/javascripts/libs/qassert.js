@@ -366,7 +366,6 @@
      */
     function logToAjax(value, message, stacktrace, globalContext, context) {
         var params = options.ajax;
-        console.log(params);
         if (params) {
             var data = {
                 globalContext: globalContext,

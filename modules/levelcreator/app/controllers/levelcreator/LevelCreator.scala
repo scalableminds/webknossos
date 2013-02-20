@@ -120,7 +120,7 @@ object LevelCreator extends Controller {
   def produce(levelId: String, count: Int) = ActionWithValidLevel(levelId) { implicit request =>
     Async {
       val missions = Mission.findByDataSetName(request.level.dataSetName).
-          filterNot(m => request.level.renderedMissions.contains(m._id))
+          filterNot(m => request.level.renderedMissions.contains(m.id))
  
       createLevels(request.level, missions.take(count))
     }

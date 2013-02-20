@@ -12,23 +12,23 @@ import models.knowledge._
 import models.binary._
 import braingames.util.JsonHelper._
 
-case class StartWatchingMetaData()
-case class StopWatchingMetaData()
+case class StartWatchingForMissions()
+case class StopWatchingForMissions()
 
-class MetaDataActor extends Actor{
-  val TICKER_INTERVAL = 1 minute
+class MissionWatcher extends Actor{
+  val TICKER_INTERVAL = 5 minutes
   
   var updateTicker: Cancellable = null
   
   def receive = {
-    case StartWatchingMetaData() => start
-    case StopWatchingMetaData() => stop
+    case StartWatchingForMissions() => start
+    case StopWatchingForMissions() => stop
   }
   
   def start = {
-    Logger.debug("Starting metadata ticker")
+    Logger.debug("Watching for Missions...")
     updateTicker = context.system.scheduler.schedule(0 seconds, TICKER_INTERVAL){
-      checkMetaData()
+      lookForMissions()
     }
   }
   
@@ -36,23 +36,21 @@ class MetaDataActor extends Actor{
     updateTicker.cancel
   }
   
-  val missionRegEx = """missions[0-9]{3}\.json""".r
-  val missionMetaFilter = new FileRegExFilter(missionRegEx)
+  val missionFileNameRegEx = """missions[0-9]{4}\.json""".r
+  val missionFileFilter = new FileRegExFilter(missionFileNameRegEx)
   
-  def checkMetaData() = {
+  def lookForMissions() = {
     DataSet.findAll.toList.foreach { dataSet => 
       val baseFolder = new File(dataSet.baseDir)
       if (baseFolder.exists) {
-        val missions = extractMissions(baseFolder.listFiles(missionMetaFilter).toList, dataSet.name)
+        val missions = aggregateMissions(baseFolder.listFiles(missionFileFilter).toList, dataSet.name)
         missions.foreach{Mission.updateOrCreate}
         Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")
       }
-      else
-        Logger.info(s"no settings.json found for ${dataSet.name}")
     }
   }
   
-  def extractMissions(missionFiles: List[File], dataSetName: String) = {    
+  def aggregateMissions(missionFiles: List[File], dataSetName: String) = {    
     (missionFiles.flatMap{ missionFile => 
       parseMissions(JsonFromFile(missionFile).as[JsObject])
     }).flatten.map(mission => mission.withDataSetName(dataSetName))

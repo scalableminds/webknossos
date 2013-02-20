@@ -103,7 +103,8 @@ object LevelCreator extends Controller {
   //TODO: make this parallel in a way that a single actor gets one mission to create at a time and then add created missions 
   // depending on which were successfully created
   def createLevels(level: Level, missions: List[Mission]) = {
-    implicit val timeout = Timeout((60 * missions.size) seconds)
+    println(missions)
+    implicit val timeout = Timeout((100 * missions.size) seconds)
     val future = Future.traverse(missions)(m => ask(levelCreateRouter, CreateLevel(level, m))).recover {
       case e: AskTimeoutException =>
         Logger.error("stack creation timed out")
@@ -120,7 +121,7 @@ object LevelCreator extends Controller {
   def produce(levelId: String, count: Int) = ActionWithValidLevel(levelId) { implicit request =>
     Async {
       val missions = Mission.findByDataSetName(request.level.dataSetName).
-          filterNot(m => request.level.renderedMissions.contains(m._id))
+          filterNot(m => request.level.renderedMissions.contains(m.id))
  
       createLevels(request.level, missions.take(count))
     }

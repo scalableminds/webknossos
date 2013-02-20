@@ -21,7 +21,6 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     if (files != null) {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
-          //TODO: updateOrCreate preserves prior dataLayers, so an update of available resolutions won't be recognized
           DataSet.updateOrCreate(dataSet)
           dataSet.name
         }
@@ -79,9 +78,10 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
       Logger.trace(s"dataSetFromFile: $f")
       val dataSetInfo = new File(f.getPath+"/settings.json")
       if(dataSetInfo.exists){
-        val dataSet = JsonFromFile(dataSetInfo).asOpt[DataSet]
-        Logger.info(dataSet.toString)
-        dataSet
+        JsonFromFile(dataSetInfo).asOpt[DataSet] match {
+          case Some(dataSet) => Some(dataSet.withBaseDir((f.getAbsolutePath)))
+          case _ => None
+        }
       }
       else {
         for {

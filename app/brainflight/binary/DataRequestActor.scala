@@ -33,7 +33,7 @@ case class MultiCubeRequest(requests: Seq[SingleRequest])
 class DataRequestActor extends Actor with DataCache {
   import DataStore._
 
-  implicit val dataBlockLoadTimeout = Timeout(10 seconds)
+  implicit val dataBlockLoadTimeout = Timeout(20 seconds)
   val conf = Play.current.configuration
   val remotePath = conf.getString("datarequest.remotepath").getOrElse("")
   val useRemote = conf.getBoolean("bindata.useRemote").getOrElse(false)

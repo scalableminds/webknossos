@@ -9,7 +9,7 @@ import models.basics.BasicDAO
 import models.basics.DAOCaseClass
 import play.api.libs.json._
 
-
+//TODO: basedir komplett rausziehen und in config definieren
 case class DataSet(
     name: String,
     baseDir: String,
@@ -28,10 +28,8 @@ case class DataSet(
   def doesContain(point: Point3D) =
     point.x >= 0 && point.y >= 0 && point.z >= 0 && // lower bound
       !(point hasGreaterCoordinateAs maxCoordinates)
-      
-  def updateDataLayers(newDataLayers: Map[String, DataLayer]) = {
-    update(_.copy(dataLayers = newDataLayers))  
-  }    
+  
+  def withBaseDir(newBaseDir: String) = copy(baseDir = newBaseDir)     
 }
 
 object DataSet extends BasicDAO[DataSet]("dataSets") {
@@ -45,8 +43,6 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
     all.maxBy(_.priority)
   }
   
-  val availableDataLayers = List(ColorLayer.identifier, SegmentationLayer.identifier, ClassificationLayer.identifier)
-  
   def deleteAllExcept(names: Array[String]) = {
     removeByIds(DataSet.findAll.filterNot( d => names.contains(d.name)).map(_._id))
   }
@@ -57,7 +53,7 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
   def updateOrCreate(d: DataSet) = {
     findOne(MongoDBObject("name" -> d.name)) match {
       case Some(stored) =>
-        stored.update(_ => d.copy(_id = stored._id, priority = stored.priority, dataLayers = stored.dataLayers))
+        stored.update(_ => d.copy(_id = stored._id, priority = stored.priority))
       case _ =>
         insertOne(d)
     }
@@ -69,7 +65,6 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
   
   implicit object DataSetReads extends Reads[DataSet] {
     val NAME="name"
-    val BASE_DIR="baseDir"
     val MAX_COORDINATES="maxCoordinates"
     val PRIORITY="priority"
     val DATALAYERS="dataLayers"
@@ -92,7 +87,7 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
         
       JsSuccess(DataSet(
           (js \ NAME).as[String],
-          (js \ BASE_DIR).as[String],
+          "", //BaseDir
           Point3D.fromList((js \ MAX_COORDINATES).as[List[Int]]),
           (js \ PRIORITY).as[Int],
           dataLayers))

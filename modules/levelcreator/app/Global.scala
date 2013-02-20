@@ -23,9 +23,9 @@ object Global extends GlobalSettings {
     Props(new DirectoryWatcherActor(new DataSetChangeHandler)),
     name = "directoryWatcher")
     
-  lazy val MetaDataWatcher = Akka.system.actorOf(
-    Props(new MetaDataActor),
-    name = "metaDataWatcher")
+  lazy val MissionWatcher = Akka.system.actorOf(
+    Props(new MissionWatcher),
+    name = "missionWatcher")
     
   override def onStart(app: Application) {
       val conf = Play.current.configuration
@@ -36,7 +36,7 @@ object Global extends GlobalSettings {
             //BasicEvolution.runDBEvolution()
             // Data insertion needs to be delayed, because the dataSets need to be
             // found by the DirectoryWatcher first
-            MetaDataWatcher ! StartWatchingMetaData()
+            MissionWatcher ! StartWatchingForMissions()
             Logger.info("starting in Dev mode")
           }
       }

@@ -186,7 +186,6 @@ class Cube
         bucket.accessed = false
         @bucketIterator = ++@bucketIterator % MAXIMUM_BUCKET_COUNT
 
-      console.log "Adding:", address, "Removing:", bucket, @bucketIterator
       @collectBucket(bucket)
       @bucketCount--
 

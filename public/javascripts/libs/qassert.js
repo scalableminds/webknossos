@@ -82,6 +82,10 @@
         return options.enabled;
     }
 
+    $.assertExtendContext = function(_context) {
+        options.context = $.extend(options.context, _context, true);
+    }
+
     /**
      * Selector assertion. If disabled, no-op.
      *
@@ -331,7 +335,7 @@
     function fail(value, message, context) {
         var stacktrace = printStackTrace( {guess: false} );
         stacktrace = stacktrace.slice(6, stacktrace.length);
-        var globalContext = options.contextCallback(value, message, stacktrace);
+        var globalContext = options.context;
         logToConsole(value, message, stacktrace, globalContext, context);
         logToAjax(value, message, stacktrace, globalContext, context);
     }
@@ -371,7 +375,7 @@
                 title: options.title,
                 value: value
             };
-            params = $.extend(params, {data: data}, true);
+            params = $.extend(params, {data: JSON.stringify(data)}, true);
             $.ajax(params);
         }
     }

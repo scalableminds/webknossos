@@ -371,7 +371,7 @@
                 title: options.title,
                 value: value
             };
-            params = $.extend(params, {data: data}, true);
+            params = $.extend(params, {data: JSON.stringify(data)}, true);
             $.ajax(params);
         }
     }

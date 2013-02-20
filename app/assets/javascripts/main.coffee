@@ -49,7 +49,7 @@ require [
   ], ->
 
     $.assertSetup({
-      ajax: "/assert"
+      ajax: { url: "/assert", type: "POST", contentType: "application/json", dataType: "json" }
       contextCallback: ->
         {}
       })

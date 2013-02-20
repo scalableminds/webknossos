@@ -348,6 +348,7 @@ class Route
       if(@comments[i].node == nodeID)
         @comments.splice(i, 1)
         @stateLogger.push()
+        break
 
 
   nextCommentNodeID : (forward) ->

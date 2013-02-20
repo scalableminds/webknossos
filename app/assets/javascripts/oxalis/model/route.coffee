@@ -109,15 +109,19 @@ class Route
       # dirty but this actually is what needs to be done
       TYPE_BRANCH = TYPE_USUAL
 
-      #calculate direction of first edge in nm
-      firstEdge = @data.trees[0]?.edges[0]
-      if firstEdge
-        sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, firstEdge.source).pos)
-        targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, firstEdge.target).pos)
-        @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
-                               targetNodeNm[1] - sourceNodeNm[1],
-                               targetNodeNm[2] - sourceNodeNm[2]]
 
+      #calculate direction of first edge in nm
+      if @data.trees[0]?.edges?
+        for edge in @data.trees[0].edges
+          sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.source).pos)
+          targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.target).pos)
+          if sourceNodeNm != targetNodeNm
+            @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
+                                   targetNodeNm[1] - sourceNodeNm[1],
+                                   targetNodeNm[2] - sourceNodeNm[2]]
+            break
+
+      if @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
         @flycam3d.setDirection(V3.normalize(@firstEdgeDirection))
 

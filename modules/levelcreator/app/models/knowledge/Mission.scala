@@ -12,6 +12,7 @@ import scala.util.Random
 
 case class Mission(dataSetName: String,
   start: MissionStart,
+  errorCenter: Point3D,
   possibleEnds: List[PossibleEnd],
   _id: ObjectId = new ObjectId) extends DAOCaseClass[Mission] {
   
@@ -21,10 +22,10 @@ case class Mission(dataSetName: String,
   def withDataSetName(newDataSetName: String) = copy(dataSetName = newDataSetName)
 }
 
-object Mission extends BasicKnowledgeDAO[Mission]("missions") {
+object Mission extends BasicDAO[Mission]("missions") {
 
-  def createWithoutDataSet(start: MissionStart, possibleEnds: List[PossibleEnd]) =
-    Mission("", start, possibleEnds)
+  def createWithoutDataSet(start: MissionStart, errorCenter: Point3D, possibleEnds: List[PossibleEnd]) =
+    Mission("", start, errorCenter, possibleEnds)
 
   def findByDataSetName(dataSetName: String) = find(MongoDBObject("dataSetName" -> dataSetName)).toList
 
@@ -47,13 +48,16 @@ object Mission extends BasicKnowledgeDAO[Mission]("missions") {
   implicit object MissionReads extends Format[Mission] {
     val START = "start"
     val POSSIBLE_ENDS = "possibleEnds"
+    val ERROR_CENTER = "errorCenter"
 
     def reads(js: JsValue) =
       JsSuccess(Mission.createWithoutDataSet((js \ START).as[MissionStart],
+        (js \ ERROR_CENTER).as[Point3D],
         (js \ POSSIBLE_ENDS).as[List[PossibleEnd]]))
 
     def writes(mission: Mission) = Json.obj(
       START -> mission.start,
+      ERROR_CENTER -> mission.errorCenter,
       POSSIBLE_ENDS -> Json.toJson(mission.possibleEnds))
   }
 }

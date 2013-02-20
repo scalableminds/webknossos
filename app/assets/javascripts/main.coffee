@@ -48,8 +48,4 @@ require [
     "qassert"
   ], ->
 
-    $.assertSetup({
-      ajax: { url: "/assert", type: "POST", contentType: "application/json", dataType: "json" }
-      contextCallback: ->
-        {}
-      })
+    $.assertSetup({ ajax: { url: "/assert", type: "POST", contentType: "application/json", dataType: "json" } })

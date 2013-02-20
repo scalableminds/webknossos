@@ -190,11 +190,13 @@ class Route
       @trigger("noBranchPoints")
       deferred.reject()
 
-  deleteBranch : (nodeID) ->
+  deleteBranch : (node) ->
+
+    if node.type != TYPE_BRANCH then return
 
     i = 0
     while i < @branchStack.length
-      if @branchStack[i].id == nodeID
+      if @branchStack[i].id == node.id
         @branchStack.splice(i, 1)
       else
         i++
@@ -348,6 +350,7 @@ class Route
       if(@comments[i].node == nodeID)
         @comments.splice(i, 1)
         @stateLogger.push()
+        break
 
 
   nextCommentNodeID : (forward) ->
@@ -425,8 +428,7 @@ class Route
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
-    if deletedNode.type == TYPE_BRANCH
-      @deleteBranch(deletedNode.id)
+    @deleteBranch(deletedNode.id)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree
@@ -460,24 +462,21 @@ class Route
       @deleteTree(false)
 
 
-  deleteTree : (notify, id, deleteBranches) ->
+  deleteTree : (notify, id, deleteBranchesAndComments) ->
 
     unless @activeNode?
       return
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
-        @reallyDeleteTree(id, deleteBranches)
+        @reallyDeleteTree(id, deleteBranchesAndComments)
       else
         return
     else
-      @reallyDeleteTree(id, deleteBranches)
+      @reallyDeleteTree(id, deleteBranchesAndComments)
 
 
-  reallyDeleteTree : (id, deleteBranches) ->
-
-    unless deleteBranches?
-      deleteBranches = true
+  reallyDeleteTree : (id, deleteBranchesAndComments = true) ->
 
     unless id
       id = @activeTree.treeId
@@ -490,9 +489,9 @@ class Route
     @trees.splice(index, 1)
     # remove comments of all nodes inside that tree
     for node in tree.nodes
-      @deleteComment(node.id)
-      if deleteBranches and node.type == TYPE_BRANCH
-        @deleteBranch(node.id)
+      if deleteBranchesAndComments
+        @deleteComment(node.id)
+        @deleteBranch(node)
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0

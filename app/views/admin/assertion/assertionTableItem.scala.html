@@ -1,0 +1,8 @@
+@(assertion: models.Assertion)
+<tr id="@assertion.id">
+  <td> @assertion.timestamp </td>
+  <td> @assertion.user.map(_.name) </td>
+  <td>
+    <a href="@controllers.routes.AssertionController.view(assertion.id)"><i class="icon-glass"></i> view </a> <br />
+  </td>
+</tr>

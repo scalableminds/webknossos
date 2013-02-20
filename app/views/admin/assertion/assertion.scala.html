@@ -1,0 +1,11 @@
+@(assertion: models.Assertion)(implicit session: brainflight.view.AuthedSessionData)
+
+@main(){
+  <div id="assertion" class="container">
+    
+    <h3> Assertion </h3> 
+
+    @assertion.user.map(_.name)
+
+  </div>
+}

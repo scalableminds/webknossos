@@ -1,0 +1,25 @@
+@(assertions: List[models.Assertion])(implicit session: brainflight.view.AuthedSessionData)
+
+@main(){
+  <div id="assertions" class="container">
+    
+    <h3> Assertions </h3> 
+
+    <table class="table table-striped" id="user-administration-table">
+      <thead>
+        <tr>
+          <th> Date </th>
+          <th> User </th>
+          <th> Assertion </th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @assertions.map{ assertion =>
+          @assertionTableItem(assertion)
+        }
+      </tbody>
+    </table>
+
+  </div>
+}

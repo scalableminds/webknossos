@@ -20,7 +20,7 @@ PLANE_YZ       = Dimensions.PLANE_YZ
 PLANE_XZ       = Dimensions.PLANE_XZ
 VIEW_3D        = Dimensions.VIEW_3D
 
-MAX_SCALE      = 5
+MAX_SCALE      = 10
 MIN_SCALE      = 0.5
 
 

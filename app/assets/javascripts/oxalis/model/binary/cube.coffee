@@ -1,6 +1,7 @@
 ### define
 ../../../libs/event_mixin : EventMixin
 ../../../libs/ring_buffer : RingBuffer
+../../../libs/request : Request
 ###
 
 class Cube
@@ -23,7 +24,7 @@ class Cube
   bucketCount : 0
 
 
-  # The new cube stores the buckets in a seperate array for each zoomStep. For each
+  # The cube stores the buckets in a seperate array for each zoomStep. For each
   # zoomStep the cube-array contains the boundaries and an array holding the buckets.
   # The bucket-arrays are initialized large enough to hold the whole cube. Thus no
   # expanding is necessary. bucketCount keeps track of how many buckets are currently

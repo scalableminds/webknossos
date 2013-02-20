@@ -240,7 +240,8 @@ class PlaneView
     commentTab = $("#tab-comments")
     commentTab.empty()
     for comment in comments
-      commentTab.append('<a href="#" data-nodeid="'+comment.node+'">'+comment.content+'</a><br />')
+      commentTab.append($('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content}))
+      commentTab.append($('<br>'))
 
 
   bind : ->  

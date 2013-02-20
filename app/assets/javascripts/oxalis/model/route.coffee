@@ -330,7 +330,8 @@ class Route
         if(@comments[i].node == @activeNode.id)
           @comments.splice(i, 1)
           break
-      @comments.push({node: @activeNode.id, content: commentText})
+      if commentText != ""
+        @comments.push({node: @activeNode.id, content: commentText})
       @stateLogger.push()
       @updateComments()
 

@@ -40,15 +40,16 @@ object BinaryData extends Controller {
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
         direction = Vector3D(mission.start.direction.x, mission.start.direction.z, -mission.start.direction.y)
       } yield {
+        val depth = level.slidesBeforeProblem + level.slidesAfterProblem
         (dataRequestActor ? SingleRequest(DataRequest(
           dataSet,
           dataLayer,
           1, // TODO resolution needed?
           Cuboid(level.width, 
               level.height, 
-              level.depth, 
+              depth, 
               1, 
-              moveVector = Vector3D(mission.start.position).toTuple,
+              moveVector = (Vector3D(mission.start.position)-(direction*level.slidesBeforeProblem)).toTuple,
               axis = direction.toTuple),
 //              axis = mission.start.direction.toTuple),
           useHalfByte = false,
@@ -56,7 +57,7 @@ object BinaryData extends Controller {
         .recover{
           case e: AskTimeoutException =>
             Logger.error("calculateImages: AskTimeoutException")
-            new Array[Byte](level.height * level.width * level.depth * dataLayer.bytesPerElement).toBuffer
+            new Array[Byte](level.height * level.width * depth * dataLayer.bytesPerElement).toBuffer
         }
         .mapTo[ArrayBuffer[Byte]].map { data =>
           Logger.debug("total: %d ms".format(System.currentTimeMillis - t))

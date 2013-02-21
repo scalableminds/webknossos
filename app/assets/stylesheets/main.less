@@ -136,18 +136,16 @@ body:-webkit-full-screen {
 
 .table-hover {
 
-    .input-append {
-        display: none;
-    }
-    .explorative-name {
-        display: inline-block;
-    }
-
-    tr:hover {
-        .input-append {
-            display: inline-block;
+    tr {
+        .hover-show {
+            display: none;
         }
-        .explorative-name {
+    }
+    tr:hover {
+        .hover-show {
+            display: inherit;
+        }
+        .hover-hide {
             display: none;
         }
     }

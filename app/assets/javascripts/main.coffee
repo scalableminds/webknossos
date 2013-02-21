@@ -56,4 +56,5 @@ require [
         contentType : "application/x-www-form-urlencoded"
       catchGlobalErrors : true
       context : "Oxalis"
+      log: $.proxy(console.warn, console)
     )

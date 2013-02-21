@@ -351,13 +351,13 @@
      * Logs to options.log
      */
     function logToConsole(value, message, stacktrace, globalContext, context) {
-        options.log(
-            options.title, message,
-            "\nValue:", value,
-            "\nStacktrace:\n ", stacktrace.join("\n  "),
-            "\nGlobal context:", globalContext,
-            "\nLocal context:", context
-        );
+        options.log(options.title, message, "\n",
+            {
+                "Value": value,
+                "Stacktrace": stacktrace,
+                "Global context": globalContext,
+                "Local context": context
+            });
     }
 
     /**
@@ -365,7 +365,6 @@
      */
     function logToAjax(value, message, stacktrace, globalContext, context) {
         var params = options.ajax;
-        console.log(params);
         if (params) {
             var data = {
                 globalContext: JSON.stringify(globalContext),

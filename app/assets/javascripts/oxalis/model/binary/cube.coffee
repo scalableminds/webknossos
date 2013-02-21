@@ -69,8 +69,6 @@ class Cube
         (cubeBoundary[2] + 1) >> 1
       ]
 
-    $.assertSame(1, 5, "Message", {test: 123})
-
 
   getArbitraryCube : ->
 

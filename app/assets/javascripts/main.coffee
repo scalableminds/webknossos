@@ -48,4 +48,7 @@ require [
     "qassert"
   ], ->
 
-    $.assertSetup({ ajax: { url: "/assert", type: "POST", contentType: "application/json", dataType: "json" } })
+    $.assertSetup({
+      ajax: { url: "/assert", type: "POST", contentType: "application/json", dataType: "json" }
+      log: $.proxy(console.warn, console)
+    })

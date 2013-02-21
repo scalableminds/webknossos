@@ -51,7 +51,7 @@ object BinaryData extends Controller {
               level.height, 
               depth, 
               1, 
-              moveVector = (Vector3D(mission.errorCenter)-(direction*level.slidesBeforeProblem)).toTuple,
+              moveVector = (Vector3D(mission.errorCenter)+(directionF*level.slidesBeforeProblem)).toTuple,
               axis = direction.toTuple),
           useHalfByte = false,
           skipInterpolation = false)))

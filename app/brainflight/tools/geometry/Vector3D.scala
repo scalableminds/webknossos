@@ -40,6 +40,11 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
   def -(o: Vector3D): Vector3D = {
     new Vector3D(x - o.x, y - o.y, z - o.z)
   }
+  
+  def +(o: Vector3D): Vector3D = {
+    new Vector3D(x + o.x, y + o.y, z + o.z)
+  }
+  
   def x(o: Vector3D): Vector3D = {
     new Vector3D(
       y * o.z - z * o.y,

@@ -240,9 +240,20 @@ class Flycam3d
   setDirection : (d) ->
 
     matrix = @currentMatrix
-    matrix[8] = d[0]
-    matrix[9] = d[1]
-    matrix[10] = d[2]
+    
+    m = M4x4.makeLookAt(d, @getPosition(), @getUp())
+
+    matrix[0] = m[0]
+    matrix[1] = m[4]
+    matrix[2] = m[8]
+    matrix[4] = m[1]
+    matrix[5] = m[5]
+    matrix[6] = m[9]
+    matrix[8] = m[2]
+    matrix[9] = m[6]
+    matrix[10] = m[10]
+    updateMacro()
+
 
   getUp : ->
 

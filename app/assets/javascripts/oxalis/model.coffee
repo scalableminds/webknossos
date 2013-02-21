@@ -39,6 +39,11 @@ class Model
           ).pipe(
             (user) =>
 
+              $.assertExtendContext({
+                task: task.task.id
+                dataSet: tracing.dataSet.id
+              })
+
               @scaleInfo = new ScaleInfo(tracing.tracing.scale)
               @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)    
               @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1)      

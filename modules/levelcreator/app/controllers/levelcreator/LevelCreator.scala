@@ -51,7 +51,8 @@ object LevelCreator extends Controller {
       "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
       "width" -> number,
       "height" -> number,
-      "depth" -> number,
+      "slides before problem" -> number,
+      "slides after problem" -> number,
       "dataset" -> text.verifying("dataSet.notFound", DataSet.findOneByName(_).isDefined))(
         Level.fromForm)(Level.toForm)).fill(Level.empty)
 
@@ -103,10 +104,10 @@ object LevelCreator extends Controller {
   def listAssets(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
       Ok(Json.toJson(request.level.assets.map(_.getName)))
   }
-  //TODO: make this parallel in a way that a single actor gets one mission to create at a time and then add created missions 
-  // depending on which were successfully created
+  //TODO: timeout like infinite
   def createLevels(level: Level, missions: List[Mission]) = {
-    implicit val timeout = Timeout((60 * missions.size) seconds)
+    println(missions)
+    implicit val timeout = Timeout((100 * missions.size) seconds)
     val future = Future.traverse(missions)(m => ask(levelCreateRouter, CreateLevel(level, m))).recover {
       case e: AskTimeoutException =>
         Logger.error("stack creation timed out")

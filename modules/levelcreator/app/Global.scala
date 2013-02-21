@@ -13,6 +13,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import models.basics.BasicEvolution
 import brainflight.ActorSystems
 
+import braingames.levelcreator._
+
 
 
 object Global extends GlobalSettings {
@@ -20,6 +22,10 @@ object Global extends GlobalSettings {
   lazy val DirectoryWatcher = Akka.system.actorOf(
     Props(new DirectoryWatcherActor(new DataSetChangeHandler)),
     name = "directoryWatcher")
+    
+  lazy val MissionWatcher = Akka.system.actorOf(
+    Props(new MissionWatcher),
+    name = "missionWatcher")
     
   override def onStart(app: Application) {
       val conf = Play.current.configuration
@@ -30,6 +36,7 @@ object Global extends GlobalSettings {
             //BasicEvolution.runDBEvolution()
             // Data insertion needs to be delayed, because the dataSets need to be
             // found by the DirectoryWatcher first
+            MissionWatcher ! StartWatchingForMissions()
             Logger.info("starting in Dev mode")
           }
       }

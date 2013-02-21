@@ -31,7 +31,7 @@ class LevelCreator
     @dimensions = [
       parseInt( $("#level-creator").data("level-width")  )
       parseInt( $("#level-creator").data("level-height") )
-      parseInt( $("#level-creator").data("level-depth")  )
+      parseInt( $("#level-creator").data("level-slidesbeforeproblem") +  $("#level-creator").data("level-slidesafterproblem") )
     ]
 
     @dataHandler = new DataHandler(@dimensions, @levelId, @taskId, @dataSetName)

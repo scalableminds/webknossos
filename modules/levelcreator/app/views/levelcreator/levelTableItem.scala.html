@@ -6,7 +6,7 @@
   <td> 
     <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"> @level.name </a>
   </td>
-  <td> @level.width x @level.height x @level.depth </td>
+  <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td>  
     <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"><i class="icon-pencil"></i> edit</a><br />
     <a href="@controllers.levelcreator.routes.LevelCreator.produce(level.id)" class="produce-stacks">

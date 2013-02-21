@@ -38,25 +38,27 @@ object BinaryData extends Controller {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
         mission <- Mission.findOneById(missionId) ?~ Messages("mission.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
-        direction = Vector3D(mission.start.direction.x, mission.start.direction.z, -mission.start.direction.y)
+        //direction = Vector3D(mission.start.direction.x, mission.start.direction.z, -mission.start.direction.y)
       } yield {
+        val depth = level.slidesBeforeProblem + level.slidesAfterProblem
+        val directionF = Vector3D( mission.start.position, mission.errorCenter ).normalize
+        val direction = Vector3D(directionF.x, -directionF.z, directionF.y)
         (dataRequestActor ? SingleRequest(DataRequest(
           dataSet,
           dataLayer,
-          1, // TODO resolution needed?
+          1,
           Cuboid(level.width, 
               level.height, 
-              level.depth, 
+              depth, 
               1, 
-              moveVector = Vector3D(mission.start.position).toTuple,
+              moveVector = (Vector3D(mission.errorCenter)+(directionF*level.slidesBeforeProblem)).toTuple,
               axis = direction.toTuple),
-//              axis = mission.start.direction.toTuple),
           useHalfByte = false,
           skipInterpolation = false)))
         .recover{
           case e: AskTimeoutException =>
             Logger.error("calculateImages: AskTimeoutException")
-            new Array[Byte](level.height * level.width * level.depth * dataLayer.bytesPerElement).toBuffer
+            new Array[Byte](level.height * level.width * depth * dataLayer.bytesPerElement).toBuffer
         }
         .mapTo[ArrayBuffer[Byte]].map { data =>
           Logger.debug("total: %d ms".format(System.currentTimeMillis - t))

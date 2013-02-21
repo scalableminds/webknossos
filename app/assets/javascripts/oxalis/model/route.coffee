@@ -115,13 +115,14 @@ class Route
         for edge in @data.trees[0].edges
           sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.source).pos)
           targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.target).pos)
-          if sourceNodeNm != targetNodeNm
+          if sourceNodeNm[0] != targetNodeNm[0] or sourceNodeNm[1] != targetNodeNm[1] or sourceNodeNm[2] != targetNodeNm[2]
             @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
                                    targetNodeNm[1] - sourceNodeNm[1],
                                    targetNodeNm[2] - sourceNodeNm[2]]
             break
 
       if @firstEdgeDirection
+        console.log @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
         @flycam3d.setDirection(V3.normalize(@firstEdgeDirection))
 

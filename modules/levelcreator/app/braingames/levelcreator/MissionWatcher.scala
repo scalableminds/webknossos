@@ -36,7 +36,7 @@ class MissionWatcher extends Actor{
     updateTicker.cancel
   }
   
-  val missionFileNameRegEx = """missions[0-9]{4}\.json""".r
+  val missionFileNameRegEx = """^missions[0-9]{4}\.json$""".r
   val missionFileFilter = new FileRegExFilter(missionFileNameRegEx)
   
   def lookForMissions() = {

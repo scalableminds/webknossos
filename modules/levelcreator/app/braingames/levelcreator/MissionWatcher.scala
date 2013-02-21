@@ -52,12 +52,7 @@ class MissionWatcher extends Actor{
   
   def aggregateMissions(missionFiles: List[File], dataSetName: String) = {    
     (missionFiles.flatMap{ missionFile => 
-      parseMissions(JsonFromFile(missionFile).as[JsObject])
+      JsonFromFile(missionFile).asOpt[List[Mission]]
     }).flatten.map(mission => mission.withDataSetName(dataSetName))
   }
-  
-  def parseMissions(js: JsObject) = {
-    (js \ "missions").asOpt[List[Mission]]
-  }
-  
 }

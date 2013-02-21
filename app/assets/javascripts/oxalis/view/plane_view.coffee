@@ -239,9 +239,17 @@ class PlaneView
   updateComments : (comments) ->
     commentTab = $("#tab-comments")
     commentTab.empty()
+    comments.sort(@compareNodes)
     for comment in comments
       commentTab.append($('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content}))
       commentTab.append($('<br>'))
+
+  compareNodes : (a, b) ->
+    if a.node < b.node
+      return -1
+    if a.node > b.node
+      return 1
+    return 0
 
 
   bind : ->  

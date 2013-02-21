@@ -39,7 +39,8 @@
             catchGlobalErrors: false,
             contextCallback: $.noop,
             log: console && $.isFunction(console.log) ? $.proxy(console.log, console) : $.noop,
-            title: "Assertion failed:"
+            title: "Assertion failed:",
+            globalTitle: "Global error:"
     };
 
     /**
@@ -325,33 +326,32 @@
     function assert(value, message, originalValue, context) {
         if (!value) {
             var reportValue = arguments.length < 3 ? value : originalValue;
-            fail(reportValue, message, context);
+            var stacktrace = printStackTrace({ guess: false }) 
+            stacktrace = stacktrace.slice(6, stacktrace.length);
+            fail(options.title, reportValue, message, stacktrace, context);
         }
     }
 
     /**
      * Handles a failed assertion.
      */
-    function fail(value, message, context) {
-        var stacktrace = printStackTrace( { guess: false } );
-        stacktrace = stacktrace.slice(6, stacktrace.length);
-        var globalContext = options.context;
-        logToConsole(value, message, stacktrace, globalContext, context);
-        logToAjax(value, message, stacktrace, globalContext, context);
+    function fail(title, value, message, stacktrace, context) {
+        logToConsole(title, value, message, stacktrace, options.context, context);
+        logToAjax(title, value, message, stacktrace, options.context, context);
     }
 
     /**
      * Handles window.onerror.
      */
     function failGlobal(msg, url, linenumber) {
-        fail({ url : url, linenumber : linenumber }, msg, "global");
+        fail(options.globalTitle, null, msg, [url + ":" + linenumber], "global");
     }
 
     /**
      * Logs to options.log
      */
-    function logToConsole(value, message, stacktrace, globalContext, context) {
-        options.log(options.title, message, "\n",
+    function logToConsole(title, value, message, stacktrace, globalContext, context) {
+        options.log(title, message, "\n",
             {
                 "Value": value,
                 "Stacktrace": stacktrace,
@@ -363,7 +363,7 @@
     /**
      * Logs to $.ajax(options.ajax)
      */
-    function logToAjax(value, message, stacktrace, globalContext, context) {
+    function logToAjax(title, value, message, stacktrace, globalContext, context) {
         var params = options.ajax;
         if (params) {
             var data = {
@@ -371,7 +371,7 @@
                 localContext: JSON.stringify(context),
                 message: message,
                 stacktrace: JSON.stringify(stacktrace),
-                title: options.title,
+                title: title,
                 value: JSON.stringify(value)
             };
             params = $.extend(params, { data: data }, true);

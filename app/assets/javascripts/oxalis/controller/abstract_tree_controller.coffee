@@ -13,7 +13,7 @@ class AbstractTreeController
   constructor : (@model) ->
     
     container = $("#abstractTreeViewer")
-    @view = new AbstractTreeView(container.width(), container.height() - 20)
+    @view = new AbstractTreeView(container.width(), container.height())
     container.append(@view.canvas)
 
     @bind()

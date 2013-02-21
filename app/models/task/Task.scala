@@ -77,6 +77,9 @@ case class Task(
 }
 
 object Task extends BasicDAO[Task]("tasks") {
+  this.collection.ensureIndex("_project")
+  this.collection.ensureIndex("_taskType")
+  
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
   

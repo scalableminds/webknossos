@@ -70,7 +70,7 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
     val DATALAYERS="dataLayers"
       
     def reads(js: JsValue) = {
-      val dataLayers = (
+      val newDataLayers = (
         ((js \ DATALAYERS \ ColorLayer.identifier).asOpt[ColorLayer] match {
           case Some(layer) => Map(ColorLayer.identifier -> layer)
           case _ => Map()
@@ -89,8 +89,7 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
           (js \ NAME).as[String],
           "", //BaseDir
           Point3D.fromList((js \ MAX_COORDINATES).as[List[Int]]),
-          (js \ PRIORITY).as[Int],
-          dataLayers))
+          dataLayers = newDataLayers))
     }
   }
 }

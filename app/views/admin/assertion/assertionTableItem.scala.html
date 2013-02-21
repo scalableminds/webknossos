@@ -1,0 +1,22 @@
+@(assertion: models.Assertion)
+
+@import play.api.libs.json._
+
+<tr id="@assertion.id">
+  <td> @formatDate(assertion.timestamp) </td>
+  <td> @assertion.user.map(_.name) </td>
+  <td> 
+    <strong>@assertion.title</strong> @assertion.message <br/>
+    <strong>Value: </strong> @assertion.value <br/><br/>
+    @Json.parse(assertion.stacktrace).asOpt[JsArray].map{ case JsArray(arr) => 
+       @arr.map{ case JsString(s) =>
+         @s <br />
+       } 
+     }
+  </td>
+  <td> @assertion.globalContext </td>
+  <td> @assertion.localContext </td>
+  <td>
+    <a href="@controllers.routes.AssertionController.view(assertion.id)"><i class="icon-glass"></i> view </a> <br />
+  </td>
+</tr>

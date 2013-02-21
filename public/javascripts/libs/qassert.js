@@ -367,14 +367,17 @@
         var params = options.ajax;
         if (params) {
             var data = {
-                globalContext: globalContext,
-                localContext: context,
+                globalContext: JSON.stringify(globalContext),
+                localContext: JSON.stringify(context),
                 message: message,
-                stacktrace: stacktrace,
+                stacktrace: JSON.stringify(stacktrace),
                 title: options.title,
-                value: value
+                value: JSON.stringify(value)
             };
-            params = $.extend(params, {data: JSON.stringify(data)}, true);
+            params = $.extend(params, {
+                contentType: "application/x-www-form-urlencoded",
+                data: data
+            }, true);
             $.ajax(params);
         }
     }

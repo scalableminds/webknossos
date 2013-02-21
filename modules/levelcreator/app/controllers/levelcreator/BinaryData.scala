@@ -38,11 +38,11 @@ object BinaryData extends Controller {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
         mission <- Mission.findOneById(missionId) ?~ Messages("mission.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
-        direction = Vector3D(mission.start.direction.x, mission.start.direction.z, -mission.start.direction.y)
+        //direction = Vector3D(mission.start.direction.x, mission.start.direction.z, -mission.start.direction.y)
       } yield {
         val depth = level.slidesBeforeProblem + level.slidesAfterProblem
-        //val direction = Vector3D(mission.start.position, mission.errorCenter).normalize
-        //val direction = mission.start.direction
+        val directionF = Vector3D( mission.start.position, mission.errorCenter ).normalize
+        val direction = Vector3D(directionF.x, -directionF.z, directionF.y)
         (dataRequestActor ? SingleRequest(DataRequest(
           dataSet,
           dataLayer,

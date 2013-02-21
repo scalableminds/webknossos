@@ -1,7 +1,7 @@
 @(assertions: List[models.Assertion])(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
-  <div id="assertions" class="container">
+  <div id="assertions" class="container wide">
     
     <h3> Assertions </h3> 
 
@@ -10,7 +10,9 @@
         <tr>
           <th> Date </th>
           <th> User </th>
-          <th> Assertion </th>
+          <th> Stacktrace </th>
+          <th> GlobalContext </th>
+          <th> LocalContext </th>
           <th></th>
         </tr>
       </thead>

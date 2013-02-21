@@ -37,9 +37,9 @@ POST     /binary/ajax                              controllers.BinaryData.reques
 GET      /binary/ajax                              controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
 
 # Assertions
-GET      /assertions/:assertionId                  controllers.AssertionController.view(assertionId: String)
-POST     /assertions                               controllers.AssertionController.log
-GET      /assertions                               controllers.AssertionController.list
+GET      /assert/:assertionId                      controllers.AssertionController.view(assertionId: String)
+POST     /assert                                   controllers.AssertionController.log
+GET      /assert                                   controllers.AssertionController.list
 
 # Tracing Stuff
 POST     /tracing/create                           controllers.TracingController.createExplorational

@@ -109,15 +109,19 @@ class Route
       # dirty but this actually is what needs to be done
       TYPE_BRANCH = TYPE_USUAL
 
-      #calculate direction of first edge in nm
-      firstEdge = @data.trees[0]?.edges[0]
-      if firstEdge
-        sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, firstEdge.source).pos)
-        targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, firstEdge.target).pos)
-        @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
-                               targetNodeNm[1] - sourceNodeNm[1],
-                               targetNodeNm[2] - sourceNodeNm[2]]
 
+      #calculate direction of first edge in nm
+      if @data.trees[0]?.edges?
+        for edge in @data.trees[0].edges
+          sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.source).pos)
+          targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.target).pos)
+          if sourceNodeNm[0] != targetNodeNm[0] or sourceNodeNm[1] != targetNodeNm[1] or sourceNodeNm[2] != targetNodeNm[2]
+            @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
+                                   targetNodeNm[1] - sourceNodeNm[1],
+                                   targetNodeNm[2] - sourceNodeNm[2]]
+            break
+
+      if @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
         @flycam3d.setDirection(V3.normalize(@firstEdgeDirection))
 
@@ -332,8 +336,10 @@ class Route
         if(@comments[i].node == @activeNode.id)
           @comments.splice(i, 1)
           break
-      @comments.push({node: @activeNode.id, content: commentText})
+      if commentText != ""
+        @comments.push({node: @activeNode.id, content: commentText})
       @stateLogger.push()
+      @updateComments()
 
 
   getComment : (nodeID) ->
@@ -350,6 +356,7 @@ class Route
       if(@comments[i].node == nodeID)
         @comments.splice(i, 1)
         @stateLogger.push()
+        @updateComments()
         break
 
 
@@ -371,6 +378,9 @@ class Route
             return @comments[(i - 1)].node
 
     return @comments[0].node
+
+  updateComments : ->
+    @trigger("updateComments", @comments)
 
 
   setActiveTree : (id) ->
@@ -487,7 +497,7 @@ class Route
         index = i
         break
     @trees.splice(index, 1)
-    # remove comments of all nodes inside that tree
+    # remove branchpoints and comments, NOT when merging trees
     for node in tree.nodes
       if deleteBranchesAndComments
         @deleteComment(node.id)

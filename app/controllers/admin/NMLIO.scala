@@ -29,8 +29,9 @@ import play.api.libs.Files.TemporaryFile
 import java.io.FileOutputStream
 import org.apache.commons.io.IOUtils
 import net.liftweb.common._
+import braingames.util.TextUtils
 
-object NMLIO extends Controller with Secured {
+object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
 
   val prettyPrinter = new PrettyPrinter(100, 2)
@@ -77,10 +78,12 @@ object NMLIO extends Controller with Secured {
   }
 
   def tracingNMLName(t: Tracing) = {
-    "%s__%s__%s.nml".format(
-        t.dataSetName, 
-        t.task.map(_.id) getOrElse("explorational"), 
-        t.user.map(_.abreviatedName) getOrElse "")
+    normalize(
+      "%s__%s__%s__%s.nml".format(
+        t.dataSetName,
+        t.task.map(_.id) getOrElse ("explorational"),
+        t.user.map(_.abreviatedName) getOrElse "",
+        brainflight.view.helpers.formatHash(t.id)))
   }
 
   def download(tracingId: String) = Authenticated { implicit request =>
@@ -94,34 +97,27 @@ object NMLIO extends Controller with Secured {
     }) ?~ Messages("tracing.training.notFound")
   }
 
-  def projectDownload(projectName: String) = Authenticated(role = Role.Admin) { implicit request =>
-    for {
-      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
-    } yield {
-      val tasksWithtracings = Task
-        .findAllByProject(project.name)
-        .map(task => task -> task.tracings.filter(_.state.isFinished))
-
-      val zipStreams = tasksWithtracings.flatMap {
-        case (task, tracings) => tracings.map { tracing =>
-          val xml = prettyPrinter.format(Xml.toXML(tracing))
-          (IOUtils.toInputStream(xml, "UTF-8") -> (task.id + "__" + tracingNMLName(tracing)))
-        }
-      }
-      val zipped = new TemporaryFile(new File(projectName + "_nmls.zip"))
-      ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
-      Ok.sendFile(zipped.file)
-    }
-  }
-
   def zipTracings(tracings: List[Tracing], zipFileName: String) = {
     val zipStreams = tracings.map { tracing =>
       val xml = prettyPrinter.format(Xml.toXML(tracing))
       (IOUtils.toInputStream(xml, "UTF-8") -> tracingNMLName(tracing))
     }
-    val zipped = new TemporaryFile(new File(zipFileName))
+    val zipped = new TemporaryFile(new File(normalize(zipFileName)))
     ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
     zipped
+  }
+
+  def projectDownload(projectName: String) = Authenticated(role = Role.Admin) { implicit request =>
+    for {
+      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
+    } yield {
+      val tracings = Task
+        .findAllByProject(project.name)
+        .flatMap(_.tracings.filter(_.state.isFinished))
+
+      val zipped = zipTracings(tracings, projectName + "_nmls.zip")
+      Ok.sendFile(zipped.file)
+    }
   }
 
   def taskDownload(taskId: String) = Authenticated(role = Role.Admin) { implicit request =>

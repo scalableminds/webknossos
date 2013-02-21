@@ -118,8 +118,7 @@ case class Cuboid(
     val xh = (width / 2.0).floor
     val yh = (height / 2.0).floor
     val zh = (depth / 2.0).floor
-    //Vector3D(-100, -100, 0)
-    Vector3D(-xh, -yh, 0)
+    Vector3D(-xh, -yh, -zh)
   }
 
   val corners = rotateAndMove(moveVector, axis, ArrayBuffer(

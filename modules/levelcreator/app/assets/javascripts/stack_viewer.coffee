@@ -10,6 +10,7 @@ class StackViewer
 
     $(".stack-display a").click (event) =>
 
+      event.preventDefault()
       $el = $(event.currentTarget).parent()
 
       $el.html("<div class=\"loading-indicator\"><i class=\"icon-refresh rotating\"></i></div>")

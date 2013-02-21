@@ -107,7 +107,7 @@ class Controller
 
 
   toggleArbitraryView : ->
-    
+
     if @mode is MODE_OXALIS and ALLOWED_ARBITRARY in @allowedModes
       @planeController.stop()
       @arbitraryController.start()

@@ -333,7 +333,7 @@
      * Handles a failed assertion.
      */
     function fail(value, message, context) {
-        var stacktrace = printStackTrace( {guess: false} );
+        var stacktrace = printStackTrace( { guess: false } );
         stacktrace = stacktrace.slice(6, stacktrace.length);
         var globalContext = options.context;
         logToConsole(value, message, stacktrace, globalContext, context);
@@ -344,7 +344,7 @@
      * Handles window.onerror.
      */
     function failGlobal(msg, url, linenumber) {
-        fail(arguments, "Global error");
+        fail({ url : url, linenumber : linenumber }, msg, "global");
     }
 
     /**
@@ -375,10 +375,7 @@
                 title: options.title,
                 value: JSON.stringify(value)
             };
-            params = $.extend(params, {
-                contentType: "application/x-www-form-urlencoded",
-                data: data
-            }, true);
+            params = $.extend(params, { data: data }, true);
             $.ajax(params);
         }
     }

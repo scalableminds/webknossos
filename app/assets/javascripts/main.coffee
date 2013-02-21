@@ -33,6 +33,7 @@ require.config
       exports : "V3"
     "m4x4" :
       exports : "M4x4"
+    "qassert" : [ "jquery" ]
 
 
 require [
@@ -48,4 +49,11 @@ require [
     "qassert"
   ], ->
 
-    $.assertSetup({ ajax: { url: "/assert", type: "POST", contentType: "application/json", dataType: "json" } })
+    $.assertSetup(
+      ajax : 
+        url : "/assert"
+        type : "POST"
+        contentType : "application/x-www-form-urlencoded"
+      catchGlobalErrors : true
+      context : "Oxalis"
+    )

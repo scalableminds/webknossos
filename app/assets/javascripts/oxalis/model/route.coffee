@@ -122,7 +122,6 @@ class Route
             break
 
       if @firstEdgeDirection
-        console.log @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
         @flycam3d.setDirection(V3.normalize(@firstEdgeDirection))
 

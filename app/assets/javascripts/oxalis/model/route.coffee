@@ -380,6 +380,8 @@ class Route
     return @comments[0].node
 
   updateComments : ->
+
+    @comments.sort(@compareNodes)
     @trigger("updateComments", @comments)
 
 
@@ -438,7 +440,7 @@ class Route
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
-    @deleteBranch(deletedNode.id)
+    @deleteBranch(deletedNode)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree
@@ -585,3 +587,11 @@ class Route
       if node.id == id
         return node
     return null
+
+  compareNodes : (a, b) ->
+
+    if a.node < b.node
+      return -1
+    if a.node > b.node
+      return 1
+    return 0

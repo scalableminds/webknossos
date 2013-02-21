@@ -19,14 +19,19 @@ class View
     @setTheme(THEME_BRIGHT)
     @createKeyboardCommandOverlay()
 
-    @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))
-
-    @model.route.on("noBranchPoints", =>
-      Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false))
-
-    @model.route.on("wrongDirection", =>
-      Toast.error("You're tracing in the wrong direction"))
+    @model.route.on({
+      emptyBranchStack : =>
+        Toast.error("No more branchpoints", false)
+      noBranchPoints : =>
+        Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false)
+      wrongDirection : =>
+        Toast.error("You're tracing in the wrong direction")
+      updateComments : (comments) => 
+        @updateComments(comments)
+      newActiveNode : => @updateActiveComment()
+      deleteTree : => @updateActiveComment()
+      newNode : => @updateActiveComment()
+      newTree : => @updateActiveComment() })
 
 
   toggleTheme : ->
@@ -84,3 +89,22 @@ class View
 
     popoverTemplate = '<div class="popover key-overlay"><div class="arrow key-arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
     $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
+
+
+  updateComments : (comments) ->
+    
+    commentTab = $("#comment-container")
+    commentTab.empty()
+
+    for comment in comments
+      commentTab.append($('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content}))
+      commentTab.append($('<br>'))
+
+
+  updateActiveComment : ->
+
+    comment = @model.route.getComment()
+    if comment
+      $("#comment-input").val(comment)
+    else
+      $("#comment-input").val("")

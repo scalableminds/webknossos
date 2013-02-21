@@ -236,29 +236,12 @@ class PlaneView
   hideModal : ->
     $("#modal").modal("hide")
 
-  updateComments : (comments) ->
-    commentTab = $("#tab-comments")
-    commentTab.empty()
-    comments.sort(@compareNodes)
-    for comment in comments
-      commentTab.append($('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content}))
-      commentTab.append($('<br>'))
-
-  compareNodes : (a, b) ->
-    if a.node < b.node
-      return -1
-    if a.node > b.node
-      return 1
-    return 0
-
-
   bind : ->  
 
     @model.route.on({
       doubleBranch         : (callback) => @showBranchModal(callback)      
       mergeDifferentTrees  : ->
-        Toast.error("You can't merge nodes within the same tree", false)
-      updateComments       : (comments) => @updateComments(comments) })
+        Toast.error("You can't merge nodes within the same tree", false) })
     
     
   stop : ->

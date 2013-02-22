@@ -14,9 +14,9 @@ import akka.actor._
 import akka.util.Timeout
 import akka.pattern.AskTimeoutException
 import braingames.levelcreator._
+import play.api.mvc.Action
 import play.api.data._
 import play.api.data.Forms._
-import play.api.mvc.{Action, Request, WrappedRequest, BodyParser, Result, BodyParsers}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api._
@@ -26,7 +26,7 @@ import scala.util.Failure
 import models.binary.DataSet
 import braingames.util.ExtendedTypes.ExtendedString
 
-object LevelCreator extends Controller {
+object LevelCreator extends LevelCreatorController {
 
   val levelCreateRouter = Akka.system.actorOf(Props[LevelCreateActor].withRouter(RoundRobinRouter(nrOfInstances = 4)),
       name = "LevelCreateRouter")
@@ -34,18 +34,6 @@ object LevelCreator extends Controller {
   val conf = Play.current.configuration
   implicit val timeout = Timeout(60 seconds)
 
-  case class LevelRequest[T](val level: Level, val request: Request[T]) extends WrappedRequest(request)
-  
-  def ActionWithValidLevel[T](levelId: String, parser: BodyParser[T] = BodyParsers.parse.anyContent)
-  (f: LevelRequest[T] => Result) = Action(parser){ 
-    implicit request => 
-    for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-    } yield {
-      f(LevelRequest(level, request))
-    }
-  }
-  
   val levelForm = Form(
     mapping(
       "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
@@ -66,20 +54,6 @@ object LevelCreator extends Controller {
     } 
   }
 
-  def stackList(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-      val missions = for{missionId <- request.level.renderedMissions
-                          mission <- Mission.findOneById(missionId)
-        } yield mission
-      Ok(html.levelcreator.stackList(request.level, missions))
-  }
-  def stackListJson(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-      Ok(Json.toJson(request.level.renderedMissions))
-  }
-  
-  def deleteStack(levelId: String, missionId: String) = ActionWithValidLevel(levelId) { implicit request =>
-      request.level.removeRenderedMission(missionId)
-      JsonOk(Messages("level.stack.removed"))
-  }
 
   def delete(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
       Level.remove(request.level)
@@ -122,6 +96,22 @@ object LevelCreator extends Controller {
       level.addRenderedMissions(renderedMissions.map(_.id))
       JsonOk(s"created ${renderedMissions.map(m => (m.id.takeRight(6))).mkString("\n")}") 
     } 
+  }
+  
+  def stackList(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
+      val missions = for{missionId <- request.level.renderedMissions
+                          mission <- Mission.findOneById(missionId)
+        } yield mission
+      Ok(html.levelcreator.stackList(request.level, missions))
+  }
+  
+  def stackListJson(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
+      Ok(Json.toJson(request.level.renderedMissions))
+  }
+  
+  def deleteStack(levelId: String, missionId: String) = ActionWithValidLevel(levelId) { implicit request =>
+      request.level.removeRenderedMission(missionId)
+      JsonOk(Messages("level.stack.removed"))
   }
 
   def produce(levelId: String, count: Int) = ActionWithValidLevel(levelId) { implicit request =>

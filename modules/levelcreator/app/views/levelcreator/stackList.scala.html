@@ -15,12 +15,12 @@
               <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, mission.id)" class="edit-button">
                 <i class="icon-pencil"></i>
               </a>
-              <a href="@controllers.levelcreator.routes.LevelCreator.deleteStack(level.id, mission.id)" class="delete-button" data-ajax="method=DELETE,delete-parent=.stack">
+              <a href="@controllers.levelcreator.routes.Stacks.delete(level.id, mission.id)" class="delete-button" data-ajax="method=DELETE,delete-parent=.stack">
                 <i class="icon-trash"></i>
               </a>
               <form method="POST">
                 <input type="hidden" name="missionId" value="@{mission.id}" />
-                <a href="@controllers.levelcreator.routes.LevelCreator.produce(level.id)" data-ajax="submit,busy-class"><i class="icon-retweet"></i></a>
+                <a href="@controllers.levelcreator.routes.Stacks.produce(level.id)" data-ajax="submit,busy-class"><i class="icon-retweet"></i></a>
               </form>
             </div>
           </header>

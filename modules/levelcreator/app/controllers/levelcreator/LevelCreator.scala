@@ -67,7 +67,10 @@ object LevelCreator extends Controller {
   }
 
   def stackList(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-      Ok(html.levelcreator.stackList(request.level))
+      val missions = for{missionId <- request.level.renderedMissions
+                          mission <- Mission.findOneById(missionId)
+        } yield mission
+      Ok(html.levelcreator.stackList(request.level, missions))
   }
   def stackListJson(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
       Ok(Json.toJson(request.level.renderedMissions))

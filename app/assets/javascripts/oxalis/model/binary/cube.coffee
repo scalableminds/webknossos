@@ -78,11 +78,10 @@ class Cube
   getBucketIndexByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
     
     $.assertNotIs(@cubes[zoomStep], "undefined", "Cube for given zoomStep does not exist"
-      {
-        cubeCount: @cubes.length
-        zoomStep: zoomStep
-        zoomStepCount: @ZOOM_STEP_COUNT
-      })
+      cubeCount: @cubes.length
+      zoomStep: zoomStep
+      zoomStepCount: @ZOOM_STEP_COUNT
+    )
 
     boundary = @cubes[zoomStep].boundary
 

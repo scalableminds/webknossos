@@ -20,8 +20,8 @@ import models.knowledge.{Level, Mission}
 
 object StackController extends LevelCreatorController{
   
-  val levelCreateRouter = Akka.system.actorOf(Props[LevelCreateActor].withRouter(RoundRobinRouter(nrOfInstances = 4)),
-      name = "LevelCreateRouter")
+  val stackCreator = Akka.system.actorOf(Props[StackCreator].withRouter(RoundRobinRouter(nrOfInstances = 4)),
+      name = "StackCreator")
       
   def list(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
       val missions = for{missionId <- request.level.renderedMissions
@@ -42,7 +42,7 @@ object StackController extends LevelCreatorController{
   def create(level: Level, missions: List[Mission]) = {
     println(missions)
     implicit val timeout = Timeout((100 * missions.size) seconds)
-    val future = Future.traverse(missions)(m => ask(levelCreateRouter, CreateLevel(level, m))).recover {
+    val future = Future.traverse(missions)(m => ask(stackCreator, CreateStack(level, m))).recover {
       case e: AskTimeoutException =>
         Logger.error("stack creation timed out")
         Messages("level.stack.creationTimeout")

@@ -18,7 +18,7 @@ import braingames.levelcreator._
 import views._
 import models.knowledge.{Level, Mission}
 
-object Stacks extends LevelCreatorController{
+object StackController extends LevelCreatorController{
   
   val levelCreateRouter = Akka.system.actorOf(Props[LevelCreateActor].withRouter(RoundRobinRouter(nrOfInstances = 4)),
       name = "LevelCreateRouter")

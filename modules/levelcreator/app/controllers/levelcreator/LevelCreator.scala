@@ -39,7 +39,6 @@ object LevelCreator extends LevelCreatorController {
     } 
   }
 
-
   def delete(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
       Level.remove(request.level)
       JsonOk(Messages("level.removed"))

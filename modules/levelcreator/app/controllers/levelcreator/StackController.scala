@@ -41,7 +41,7 @@ object StackController extends LevelCreatorController{
   
   def create(level: Level, missions: List[Mission]) = {
     println(missions)
-    implicit val timeout = Timeout((100 * missions.size) seconds)
+    implicit val timeout = Timeout((1000 * missions.size) seconds)
     val future = Future.traverse(missions)(m => ask(stackCreator, CreateStack(level, m))).recover {
       case e: AskTimeoutException =>
         Logger.error("stack creation timed out")

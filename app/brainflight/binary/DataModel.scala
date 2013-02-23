@@ -11,6 +11,7 @@ import play.api.Logger
 import brainflight.tools.geometry._
 import scala.collection.mutable.ArrayBuffer
 import play.api.libs.iteratee.Enumerator
+import brainflight.tools.geometry.TransformationMatrix
 
 /**
  * Scalable Minds - Brainflight
@@ -47,33 +48,13 @@ abstract class DataModel {
     } else {
       var t = System.currentTimeMillis()
       // orthogonal vector to (0,1,0) and rotation vector
-      val ortho = normalizeVector((axis._3, 0, -axis._1))
-
-      // dot product of (0,1,0) and rotation
-      val dotProd = axis._2
-      // transformation of dot product for cosA
-      val cosA = dotProd / sqrt(square(axis._1) + square(axis._2) + square(axis._3))
-      val sinA = sqrt(1 - square(cosA))
-
-      //calculate rotation matrix
-      val a11 = cosA + square(ortho._1) * (1 - cosA);
-      val a12 = -ortho._3 * sinA;
-      val a13 = ortho._1 * ortho._3 * (1 - cosA)
-
-      val a21 = ortho._3 * sinA;
-      val a22 = cosA;
-      val a23 = -ortho._1 * sinA;
-
-      val a31 = ortho._1 * ortho._3 * (1 - cosA);
-      val a32 = ortho._1 * sinA;
-      val a33 = cosA + square(ortho._3) * (1 - cosA);
-
+      
+      val matrix = TransformationMatrix(Vector3D(moveVector), Vector3D(axis)).value
+      
       @inline
       def coordinateTransformer(px: Double, py: Double, pz: Double) = {
-        val x = moveVector._1 + (a11 * px + a12 * py + a13 * pz)
-        val y = moveVector._2 + (a21 * px + a22 * py + a23 * pz)
-        val z = moveVector._3 + (a31 * px + a32 * py + a33 * pz)
-        f(x, y, z)
+        val v = Vector3D(px, py, pz).transformAffine(matrix)
+        f(v.x, v.y, v.z)
       }
 
       coordinates(coordinateTransformer)

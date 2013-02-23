@@ -42,7 +42,7 @@ object BinaryData extends Controller {
       } yield {
         val depth = level.slidesBeforeProblem + level.slidesAfterProblem
         val directionF = Vector3D( mission.start.position, mission.errorCenter ).normalize
-        val direction = Vector3D(directionF.x, -directionF.z, directionF.y)
+        val direction = Vector3D(-directionF.x, directionF.z, -directionF.y)
         (dataRequestActor ? SingleRequest(DataRequest(
           dataSet,
           dataLayer,
@@ -51,7 +51,7 @@ object BinaryData extends Controller {
               level.height, 
               depth, 
               1, 
-              moveVector = (Vector3D(mission.errorCenter)+(directionF*level.slidesBeforeProblem)).toTuple,
+              moveVector = (Vector3D(mission.errorCenter)-(directionF*level.slidesBeforeProblem)).toTuple,
               axis = direction.toTuple),
           useHalfByte = false,
           skipInterpolation = false)))

@@ -28,7 +28,26 @@ object BinaryData extends Controller {
 
   val conf = Play.current.configuration
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds) // needed for `?` below
+  
+  def createStackCuboid(level: Level, mission: Mission) = {
     
+    def calculateTopLeft(width: Int, height: Int, depth: Int) = {
+      Vector3D(-width / 2.0, -height / 2.0, 0)
+    }
+    
+    val realDirection = mission.start.direction
+    val direction = Vector3D(-realDirection.x, realDirection.z, -realDirection.y)
+    val depth = level.slidesBeforeProblem + level.slidesAfterProblem
+    
+    Cuboid(level.width, 
+      level.height, 
+      depth, 
+      1,
+      topLeftOpt = Some(calculateTopLeft(level.width, level.height, depth)),
+      moveVector = (Vector3D(mission.errorCenter)-(realDirection*level.slidesBeforeProblem)).toTuple,
+      axis = direction.toTuple)
+  }
+  
   def viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) = 
     Action { implicit request => 
     Async {
@@ -38,27 +57,18 @@ object BinaryData extends Controller {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
         mission <- Mission.findOneById(missionId) ?~ Messages("mission.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
-        //direction = Vector3D(mission.start.direction.x, mission.start.direction.z, -mission.start.direction.y)
       } yield {
-        val depth = level.slidesBeforeProblem + level.slidesAfterProblem
-        val directionF = Vector3D( mission.start.position, mission.errorCenter ).normalize
-        val direction = Vector3D(-directionF.x, directionF.z, -directionF.y)
         (dataRequestActor ? SingleRequest(DataRequest(
           dataSet,
           dataLayer,
           1,
-          Cuboid(level.width, 
-              level.height, 
-              depth, 
-              1, 
-              moveVector = (Vector3D(mission.errorCenter)-(directionF*level.slidesBeforeProblem)).toTuple,
-              axis = direction.toTuple),
+          createStackCuboid(level, mission),
           useHalfByte = false,
           skipInterpolation = false)))
         .recover{
           case e: AskTimeoutException =>
             Logger.error("calculateImages: AskTimeoutException")
-            new Array[Byte](level.height * level.width * depth * dataLayer.bytesPerElement).toBuffer
+            new Array[Byte](level.height * level.width * (level.slidesBeforeProblem + level.slidesAfterProblem) * dataLayer.bytesPerElement).toBuffer
         }
         .mapTo[ArrayBuffer[Byte]].map { data =>
           Logger.debug("total: %d ms".format(System.currentTimeMillis - t))

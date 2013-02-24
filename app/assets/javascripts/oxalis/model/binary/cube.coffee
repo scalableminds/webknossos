@@ -12,7 +12,7 @@ class Cube
   ZOOM_STEP_COUNT : 0
   LOOKUP_DEPTH_UP : 0
   LOOKUP_DEPTH_DOWN : 1
-  MAXIMUM_BUCKET_COUNT : 5000
+  MAXIMUM_BUCKET_COUNT : 500
   ARBITRARY_MAX_ZOOMSTEP : 2
 
   LOADING_PLACEHOLDER : {}
@@ -182,9 +182,9 @@ class Cube
       bucket = @getBucketByZoomedAddress(address)
 
       if bucket?
-
         @access.unshift(address)
         bucket.access++
+    console.log addressList.length, @access.length, @bucketCount
 
 
   # tries to remove the bucket from the cube

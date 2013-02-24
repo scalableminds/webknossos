@@ -14,13 +14,6 @@ import play.api.libs.iteratee.Enumerator
 import brainflight.tools.geometry.TransformationMatrix
 
 /**
- * Scalable Minds - Brainflight
- * User: tmbo
- * Date: 10/10/11
- * Time: 10:47 AM
- */
-
-/**
  * All possible data models the client should be able to request need to be defined here and registered in Boot.scala
  * A binary data model defines which binary data is responded given a viewpoint and an axis
  */

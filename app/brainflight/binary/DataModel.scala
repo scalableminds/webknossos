@@ -48,13 +48,13 @@ abstract class DataModel {
     } else {
       var t = System.currentTimeMillis()
       // orthogonal vector to (0,1,0) and rotation vector
-      
       val matrix = TransformationMatrix(Vector3D(moveVector), Vector3D(axis)).value
       
       @inline
       def coordinateTransformer(px: Double, py: Double, pz: Double) = {
-        val v = Vector3D(px, py, pz).transformAffine(matrix)
-        f(v.x, v.y, v.z)
+        f(matrix(0) * px + matrix(4) * py + matrix(8) * pz + matrix(12),
+          matrix(1) * px + matrix(5) * py + matrix(9) * pz + matrix(13),
+          matrix(2) * px + matrix(6) * py + matrix(10) * pz + matrix(14))
       }
 
       coordinates(coordinateTransformer)

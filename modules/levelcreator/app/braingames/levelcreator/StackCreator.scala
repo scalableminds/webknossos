@@ -24,7 +24,7 @@ import scala.util.{Try, Success, Failure}
 import braingames.util.FileExtensionFilter
 
 
-case class CreateLevel(level: Level, mission: Mission)
+case class CreateStack(level: Level, mission: Mission)
 
 case class ExecLogger(var messages: List[String] = Nil,
   var error: List[String] = Nil)
@@ -42,7 +42,7 @@ case class ExecLogger(var messages: List[String] = Nil,
   def buffer[T](f: => T): T = f
 }
 
-class LevelCreateActor extends Actor{
+class StackCreator extends Actor{
   val server = "localhost"
   val port = Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000)
   def stackPath(level: Level, mission: Mission) = level.stackFolder+"/%s".format(mission.id)
@@ -50,8 +50,8 @@ class LevelCreateActor extends Actor{
   val pngFilter = new FileExtensionFilter(".png")
   
   def receive = {
-    case CreateLevel(level, mission) =>
-     sender ! createLevel(level, mission)
+    case CreateStack(level, mission) =>
+     sender ! createStack(level, mission)
   }
   
   def createTempFile(data: String) = {
@@ -62,7 +62,7 @@ class LevelCreateActor extends Actor{
     temp
   }
 
-  def createLevel(level: Level, mission: Mission) = {
+  def createStack(level: Level, mission: Mission) = {
     (Try {
       val levelUrl = "http://%s:%d".format(server, port) + 
         controllers.levelcreator.routes.LevelCreator.use(level.id, mission.id)

@@ -10,13 +10,14 @@ POST    /levels                              controllers.levelcreator.LevelCreat
 GET     /levels/:levelId                     controllers.levelcreator.LevelCreator.use(levelId: String, missionId: String ?= "")
 PUT     /levels/:levelId                     controllers.levelcreator.LevelCreator.submitCode(levelId: String)
 DELETE  /levels/:levelId                     controllers.levelcreator.LevelCreator.delete(levelId: String)
-GET     /levels/:levelId/produce             controllers.levelcreator.LevelCreator.produce(levelId: String, count: Int ?= 1)
-POST    /levels/:levelId/produce             controllers.levelcreator.LevelCreator.produceBulk(levelId: String)
-GET     /levels/:levelId/produce/all         controllers.levelcreator.LevelCreator.produceAll(levelId: String)
 
-GET     /levels/:levelId/stacks              controllers.levelcreator.LevelCreator.stackList(levelId: String)
-GET     /levels/:levelId/stacks.json         controllers.levelcreator.LevelCreator.stackListJson(levelId: String)
-DELETE  /levels/:levelId/stacks/:missionId   controllers.levelcreator.LevelCreator.deleteStack(levelId: String, missionId: String)
+GET     /levels/:levelId/produce             controllers.levelcreator.StackController.produce(levelId: String, count: Int ?= 1)
+POST    /levels/:levelId/produce             controllers.levelcreator.StackController.produceBulk(levelId: String)
+GET     /levels/:levelId/produce/all         controllers.levelcreator.StackController.produceAll(levelId: String)
+
+GET     /levels/:levelId/stacks              controllers.levelcreator.StackController.list(levelId: String)
+GET     /levels/:levelId/stacks.json         controllers.levelcreator.StackController.listJson(levelId: String)
+DELETE  /levels/:levelId/stacks/:missionId   controllers.levelcreator.StackController.delete(levelId: String, missionId: String)
 
 GET     /levels/:levelId/assets              controllers.levelcreator.LevelCreator.listAssets(levelId: String)
 POST    /levels/:levelId/assets              controllers.levelcreator.LevelCreator.uploadAsset(levelId: String)

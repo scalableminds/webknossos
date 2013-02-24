@@ -9,13 +9,13 @@
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td>  
     <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"><i class="icon-pencil"></i> edit</a><br />
-    <a href="@controllers.levelcreator.routes.LevelCreator.produce(level.id)" class="produce-stacks">
+    <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">
       <i class="icon-retweet"></i> 
       produce 
       <input type="number" value="1" min="1">
       Stacks
     </a><br />
-    <a href="@controllers.levelcreator.routes.LevelCreator.stackList(level.id)" class="view-stacks">
+    <a href="@controllers.levelcreator.routes.StackController.list(level.id)" class="view-stacks">
       <i class="icon-picture"></i> view Stacks (@level.renderedMissions.length)
     </a><br />
     <a href="@controllers.levelcreator.routes.LevelCreator.delete(level.id)" data-ajax="method=DELETE,delete-row,confirm"><i class="icon-trash"></i> delete </a>

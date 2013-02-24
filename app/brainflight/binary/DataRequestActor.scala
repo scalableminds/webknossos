@@ -174,7 +174,7 @@ class DataRequestActor extends Actor with DataCache {
       case Some(byteArray) =>
         getLocalBytes(globalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
       case _ =>
-        Logger.error("Didn't find block! :(")
+        Logger.error(s"Didn't find block! :( -> $globalPoint -> $block")
         nullValue(bytesPerElement)
     }
   }

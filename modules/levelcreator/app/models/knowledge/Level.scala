@@ -11,7 +11,8 @@ case class Level(
     name: String , 
     width: Int,
     height: Int,
-    depth: Int,
+    slidesBeforeProblem: Int,
+    slidesAfterProblem: Int,
     dataSetName: String,
     code: String = Level.defaultCode,
     renderedMissions: List[String] = List(),
@@ -79,14 +80,14 @@ object Level extends BasicDAO[Level]("levels") {
   
   val defaultDataSetName = "2012-09-28_ex145_07x2"
 
-  def fromForm(name: String, width: Int, height: Int, depth: Int, dataSetName: String) = {
-    Level(name, width, height, depth, dataSetName)
+  def fromForm(name: String, width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int,  dataSetName: String) = {
+    Level(name, width, height, slidesBeforeProblem, slidesAfterProblem , dataSetName)
   }
   
-  val empty = Level("", 250, 150, 30, defaultDataSetName)
+  val empty = Level("", 250, 150, 15, 15, defaultDataSetName)
   
   def toForm(level: Level) = {
-    Some(level.name, level.width, level.height, level.depth, level.dataSetName)
+    Some(level.name, level.width, level.height, level.slidesBeforeProblem, level.slidesAfterProblem, level.dataSetName)
   }
   
   val stackBaseFolder = {

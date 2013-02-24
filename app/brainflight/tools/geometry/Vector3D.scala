@@ -8,7 +8,7 @@ import play.api.libs.json.Json._
 import play.Logger
 import play.api.data.validation.ValidationError
 /**
-
+ *
  * scalableminds - brainflight
  * User: tmbo
  * Date: 17.11.11
@@ -27,19 +27,24 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
     else
       this
   }
-  
-  def dx(d: Double) = 
-      Vector3D(x + d, y, z)
-      
-  def dy(d: Double) = 
-      Vector3D(x, y + d, z)
-      
-  def dz(d: Double) = 
+
+  def dx(d: Double) =
+    Vector3D(x + d, y, z)
+
+  def dy(d: Double) =
+    Vector3D(x, y + d, z)
+
+  def dz(d: Double) =
     Vector3D(x, y, z + d)
-  
+
   def -(o: Vector3D): Vector3D = {
     new Vector3D(x - o.x, y - o.y, z - o.z)
   }
+  
+  def +(o: Vector3D): Vector3D = {
+    new Vector3D(x + o.x, y + o.y, z + o.z)
+  }
+  
   def x(o: Vector3D): Vector3D = {
     new Vector3D(
       y * o.z - z * o.y,
@@ -86,24 +91,27 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
 object Vector3D {
   def apply(p: Point3D): Vector3D =
     Vector3D(p.x, p.y, p.z)
-  
+
   def apply(p: (Double, Double, Double)): Vector3D =
     Vector3D(p._1, p._2, p._3)
-    
+
+  def apply(from: Point3D, to: Point3D): Vector3D =
+    apply(to) - apply(from)
+
   implicit object Vector3DReads extends Format[Vector3D] {
     def reads(json: JsValue) = json match {
       case JsArray(ts) if ts.size == 3 =>
-        ts.map(fromJson[Double](_)) match{
+        ts.map(fromJson[Double](_)) match {
           case JsSuccess(a, _) :: JsSuccess(b, _) :: JsSuccess(c, _) :: _ =>
             JsSuccess(Vector3D(a, b, c))
           case _ =>
             JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.array.invalidContent"))))
         }
-      case _ => 
+      case _ =>
         JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.listExpected"))))
     }
-    
-    def writes(v: Vector3D) = 
+
+    def writes(v: Vector3D) =
       Json.toJson(List(v.x, v.y, v.z))
   }
 }

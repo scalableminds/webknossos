@@ -13,6 +13,7 @@ require.config
     "m4x4" : "libs/m4x4"
     "dat" : "libs/dat.gui.min"
     "coffee-script" : "libs/coffee-script-1.4.0.min"
+    "qassert" : "libs/qassert"
 
   shim :
     "underscore" :
@@ -32,6 +33,7 @@ require.config
       exports : "V3"
     "m4x4" :
       exports : "M4x4"
+    "qassert" : [ "jquery" ]
 
 
 require [
@@ -44,4 +46,15 @@ require [
     "./main/enhancements"
     "./main/routing"
     "libs/core_ext"
+    "qassert"
   ], ->
+
+    $.assertSetup(
+      ajax : 
+        url : "/assert"
+        type : "POST"
+        contentType : "application/x-www-form-urlencoded"
+      catchGlobalErrors : true
+      context : "Oxalis"
+      log: $.proxy(console.warn, console)
+    )

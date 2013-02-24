@@ -111,6 +111,9 @@ case class Tracing(
 }
 
 object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
+  this.collection.ensureIndex("_task")
+  this.collection.ensureIndex("_user")
+  
   def tracingBase(task: Task, userId: ObjectId, dataSetName: String): Tracing =
     Tracing(userId,
       dataSetName,

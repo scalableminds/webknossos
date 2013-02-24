@@ -33,8 +33,8 @@ case class MultiCubeRequest(requests: Seq[SingleRequest])
 class DataRequestActor extends Actor with DataCache {
   import DataStore._
 
-  implicit val dataBlockLoadTimeout = Timeout(10 seconds)
   val conf = Play.current.configuration
+  implicit val dataBlockLoadTimeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds)
   val remotePath = conf.getString("datarequest.remotepath").getOrElse("")
   val useRemote = conf.getBoolean("bindata.useRemote").getOrElse(false)
   implicit val system =
@@ -45,7 +45,7 @@ class DataRequestActor extends Actor with DataCache {
 
   lazy val dataStores = List[ActorRef](
     actorForWithLocalFallback[FileDataStore]("fileDataStore"),
-    actorForWithLocalFallback[GridDataStore]("gridDataStore"),
+    //actorForWithLocalFallback[GridDataStore]("gridDataStore"),
     system.actorOf(Props(new EmptyDataStore()), name = "emptyDataStore"))
 
   def actorForWithLocalFallback[T <: Actor](name: String)(implicit evidence: scala.reflect.ClassTag[T]) = {

@@ -41,6 +41,9 @@
             @if(taskType.tracingSettings.branchPointsAllowed) {
               <span class="label"> Branchpoints </span>
             }
+            @if(taskType.tracingSettings.somaClickingAllowed) {
+              <span class="label"> Soma clicking </span>
+            }
           </td>
           <td> @taskType.expectedTime </td>
           <td> @taskType.fileName.getOrElse("") </td>

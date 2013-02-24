@@ -23,7 +23,7 @@ class Cube
   bucketCount : 0
 
 
-  # The new cube stores the buckets in a seperate array for each zoomStep. For each
+  # The cube stores the buckets in a seperate array for each zoomStep. For each
   # zoomStep the cube-array contains the boundaries and an array holding the buckets.
   # The bucket-arrays are initialized large enough to hold the whole cube. Thus no
   # expanding is necessary. bucketCount keeps track of how many buckets are currently
@@ -57,7 +57,7 @@ class Cube
     @arbitraryCube = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
     @arbitraryCube.boundary = cubeBoundary.slice()
 
-    for i in [0..@ZOOM_STEP_COUNT]
+    for i in [0...@ZOOM_STEP_COUNT]
 
       @cubes[i] = new Array(cubeBoundary[0] * cubeBoundary[1] * cubeBoundary[2])
       @cubes[i].boundary = cubeBoundary.slice()
@@ -75,6 +75,12 @@ class Cube
 
 
   getBucketIndexByZoomedAddress : ([bucket_x, bucket_y, bucket_z, zoomStep]) ->
+    
+    $.assertNotIs(@cubes[zoomStep], "undefined", "Cube for given zoomStep does not exist"
+      cubeCount: @cubes.length
+      zoomStep: zoomStep
+      zoomStepCount: @ZOOM_STEP_COUNT
+    )
 
     boundary = @cubes[zoomStep].boundary
 

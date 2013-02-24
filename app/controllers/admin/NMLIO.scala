@@ -29,8 +29,9 @@ import play.api.libs.Files.TemporaryFile
 import java.io.FileOutputStream
 import org.apache.commons.io.IOUtils
 import net.liftweb.common._
+import braingames.util.TextUtils
 
-object NMLIO extends Controller with Secured {
+object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
 
   val prettyPrinter = new PrettyPrinter(100, 2)
@@ -77,11 +78,12 @@ object NMLIO extends Controller with Secured {
   }
 
   def tracingNMLName(t: Tracing) = {
-    "%s__%s__%s__%s.nml".format(
-      t.dataSetName,
-      t.task.map(_.id) getOrElse ("explorational"),
-      t.user.map(_.abreviatedName) getOrElse "",
-      brainflight.view.helpers.formatHash(t.id))
+    normalize(
+      "%s__%s__%s__%s.nml".format(
+        t.dataSetName,
+        t.task.map(_.id) getOrElse ("explorational"),
+        t.user.map(_.abreviatedName) getOrElse "",
+        brainflight.view.helpers.formatHash(t.id)))
   }
 
   def download(tracingId: String) = Authenticated { implicit request =>
@@ -100,7 +102,7 @@ object NMLIO extends Controller with Secured {
       val xml = prettyPrinter.format(Xml.toXML(tracing))
       (IOUtils.toInputStream(xml, "UTF-8") -> tracingNMLName(tracing))
     }
-    val zipped = new TemporaryFile(new File(zipFileName))
+    val zipped = new TemporaryFile(new File(normalize(zipFileName)))
     ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
     zipped
   }

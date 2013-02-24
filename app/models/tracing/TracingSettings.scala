@@ -7,7 +7,9 @@ import models.basics.BasicSettings
 import TracingSettings._
 
 case class TracingSettings(
-  allowedModes: List[String] = List(OXALIS, ARBITRARY), branchPointsAllowed: Boolean = true)
+  allowedModes: List[String] = List(OXALIS, ARBITRARY), 
+  branchPointsAllowed: Boolean = true,
+  somaClickingAllowed: Boolean = true)
 
 object TracingSettings {
   val OXALIS = "oxalis"
@@ -15,10 +17,5 @@ object TracingSettings {
 
   val default = TracingSettings()
 
-  implicit val TracingWrites: Writes[TracingSettings] = new Writes[TracingSettings] {
-    def writes(t: TracingSettings) = {
-      Json.obj("allowedModes" -> t.allowedModes,
-        "branchPointsAllowed" -> t.branchPointsAllowed)
-    }
-  }
+  implicit val TracingWrites: Writes[TracingSettings] = Json.writes[TracingSettings]
 }

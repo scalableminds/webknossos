@@ -6,6 +6,7 @@ import brainflight.tools.geometry.Point3D
 import org.bson.types.ObjectId
 import com.mongodb.casbah.commons.MongoDBObject
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import com.novus.salat._
 import models.context._
 import scala.util.Random
@@ -27,6 +28,8 @@ object Mission extends BasicDAO[Mission]("missions") {
   def createWithoutDataSet(start: MissionStart, errorCenter: Point3D, possibleEnds: List[PossibleEnd]) =
     Mission("", start, errorCenter, possibleEnds)
 
+  def unapplyWithoutDataSet(m: Mission) = (m.start, m.errorCenter, m.possibleEnds)
+  
   def findByDataSetName(dataSetName: String) = find(MongoDBObject("dataSetName" -> dataSetName)).toList
 
   def randomByDataSetName(dataSetName: String) = {
@@ -44,20 +47,10 @@ object Mission extends BasicDAO[Mission]("missions") {
       case _ =>
         insertOne(m)
     }
-
-  implicit object MissionReads extends Format[Mission] {
-    val START = "start"
-    val POSSIBLE_ENDS = "possibleEnds"
-    val ERROR_CENTER = "errorCenter"
-
-    def reads(js: JsValue) =
-      JsSuccess(Mission.createWithoutDataSet((js \ START).as[MissionStart],
-        (js \ ERROR_CENTER).as[Point3D],
-        (js \ POSSIBLE_ENDS).as[List[PossibleEnd]]))
-
-    def writes(mission: Mission) = Json.obj(
-      START -> mission.start,
-      ERROR_CENTER -> mission.errorCenter,
-      POSSIBLE_ENDS -> Json.toJson(mission.possibleEnds))
-  }
+  
+  implicit val MissionFormat: Format[Mission] = (
+    (__ \ "start").format[MissionStart] and
+    (__ \ "errorCenter").format[Point3D] and
+    (__ \ "possibleEnds").format[List[PossibleEnd]])(createWithoutDataSet, unapplyWithoutDataSet)
+    
 }

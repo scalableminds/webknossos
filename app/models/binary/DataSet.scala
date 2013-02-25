@@ -26,7 +26,7 @@ case class DataSet(
   val id = _id.toString
   
   val dataLayers = List(Some(colorLayer),segmentationLayer, classificationLayer).flatten.
-    groupBy(_.folder).map(pair => (pair._1 -> pair._2.head))
+    groupBy(_.name).map(pair => (pair._1 -> pair._2.head))
 
   /**
    * Checks if a point is inside the whole data set boundary.

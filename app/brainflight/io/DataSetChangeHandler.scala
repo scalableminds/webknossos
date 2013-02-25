@@ -9,6 +9,7 @@ import braingames.util.ExtendedTypes.ExtendedString
 import models.binary._
 import net.liftweb.common._
 import braingames.util.JsonHelper._
+import play.api.libs.json._
 
 case class ImplicitLayerInfo(name: String, resolutions: List[Int])
 case class ExplicitLayerInfo(name: String, dataType: String)
@@ -78,14 +79,15 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
       Logger.trace(s"dataSetFromFile: $f")
       val dataSetInfo = new File(f.getPath+"/settings.json")
       if(dataSetInfo.exists){
-        JsonFromFile(dataSetInfo).asOpt[DataSet] match {
-          case Some(dataSet) => Some(dataSet.withBaseDir((f.getAbsolutePath)))
-          case _ => None
+        JsonFromFile(dataSetInfo).validate[DataSet] match {
+          case JsSuccess(dataSet, _) => Some(dataSet.withBaseDir((f.getAbsolutePath)))
+          case JsError(error) => Logger.error(error.toString)
+          None
         }
       }
       else {
         for {
-          layer <- listDirectories(f).find(dir => ColorLayer.identifier == dir.getName)
+          layer <- listDirectories(f).find(dir => dir.getName == "color")
           resolutionDirectories = listDirectories(layer)
           resolutions = resolutionDirectories.flatMap(_.getName.toIntOpt).toList
           res <- highestResolutionDir(resolutionDirectories)

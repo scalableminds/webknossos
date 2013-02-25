@@ -263,7 +263,7 @@ class Plane2D
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@u]) + (sourceOffsets[1] << @DELTA[@v]) + (sourceOffsets[2] << @DELTA[@w])
 
-      bucketData = @cube.getBucketByZoomedAddress(map[mapIndex])
+      bucketData = @cube.getDataBucketByZoomedAddress(map[mapIndex])
       @cube.accessBuckets([map[mapIndex]])
 
       @renderToBuffer(destOffset, 1 << @TEXTURE_SIZE_P, tileSize, bucketData, sourceOffset,

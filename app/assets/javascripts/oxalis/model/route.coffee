@@ -3,14 +3,15 @@ jquery : $
 underscore : _
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
-./tracepoint : TracePointClass
-./tracetree : TraceTreeClass
+./tracepoint : TracePoint
+./tracetree : TraceTree
 ./statelogger : StateLogger
 ###
 
 # This takes care of the route. 
   
 # Constants
+GOLDEN_RATIO      = 0.618033988749895
 BUFFER_SIZE       = 262144 # 1024 * 1204 / 4
 INIT_TIMEOUT      = 10000 # 10s
 TYPE_USUAL        = 0
@@ -108,15 +109,19 @@ class Route
       # dirty but this actually is what needs to be done
       TYPE_BRANCH = TYPE_USUAL
 
-      #calculate direction of first edge in nm
-      firstEdge = @data.trees[0]?.edges[0]
-      if firstEdge
-        sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, firstEdge.source).pos)
-        targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, firstEdge.target).pos)
-        @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
-                               targetNodeNm[1] - sourceNodeNm[1],
-                               targetNodeNm[2] - sourceNodeNm[2]]
 
+      #calculate direction of first edge in nm
+      if @data.trees[0]?.edges?
+        for edge in @data.trees[0].edges
+          sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.source).pos)
+          targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.target).pos)
+          if sourceNodeNm[0] != targetNodeNm[0] or sourceNodeNm[1] != targetNodeNm[1] or sourceNodeNm[2] != targetNodeNm[2]
+            @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
+                                   targetNodeNm[1] - sourceNodeNm[1],
+                                   targetNodeNm[2] - sourceNodeNm[2]]
+            break
+
+      if @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
         @flycam3d.setDirection(V3.normalize(@firstEdgeDirection))
 
@@ -189,11 +194,13 @@ class Route
       @trigger("noBranchPoints")
       deferred.reject()
 
-  deleteBranch : (nodeID) ->
+  deleteBranch : (node) ->
+
+    if node.type != TYPE_BRANCH then return
 
     i = 0
     while i < @branchStack.length
-      if @branchStack[i].id == nodeID
+      if @branchStack[i].id == node.id
         @branchStack.splice(i, 1)
       else
         i++
@@ -329,8 +336,10 @@ class Route
         if(@comments[i].node == @activeNode.id)
           @comments.splice(i, 1)
           break
-      @comments.push({node: @activeNode.id, content: commentText})
+      if commentText != ""
+        @comments.push({node: @activeNode.id, content: commentText})
       @stateLogger.push()
+      @updateComments()
 
 
   getComment : (nodeID) ->
@@ -347,6 +356,8 @@ class Route
       if(@comments[i].node == nodeID)
         @comments.splice(i, 1)
         @stateLogger.push()
+        @updateComments()
+        break
 
 
   nextCommentNodeID : (forward) ->
@@ -368,6 +379,9 @@ class Route
 
     return @comments[0].node
 
+  updateComments : ->
+    @trigger("updateComments", @comments)
+
 
   setActiveTree : (id) ->
 
@@ -387,14 +401,16 @@ class Route
 
   getNewTreeColor : ->
 
-    switch @treeIdCount
-      when 1 then return 0xFF0000
-      when 2 then return 0x00FF00
-      when 3 then return 0x0000FF
-      when 4 then return 0xFF00FF
-      when 5 then return 0xFFFF00
-      else  
-        new THREE.Color().setHSV(Math.random(), 1, 1).getHex()
+    # this generates the most distinct colors possible, using the golden ratio
+    if @trees.length == 0
+      @currentHue = null
+      return 0xFF0000
+    else
+      unless @currentHue
+        @currentHue = new THREE.Color().setHex(_.last(@trees).color).getHSV().h
+      @currentHue += GOLDEN_RATIO
+      @currentHue %= 1
+      new THREE.Color().setHSV(@currentHue, 1, 1).getHex()
 
 
   createNewTree : ->
@@ -422,8 +438,7 @@ class Route
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
-    if deletedNode.type == TYPE_BRANCH
-      @deleteBranch(deletedNode.id)
+    @deleteBranch(deletedNode.id)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree
@@ -457,24 +472,21 @@ class Route
       @deleteTree(false)
 
 
-  deleteTree : (notify, id, deleteBranches) ->
+  deleteTree : (notify, id, deleteBranchesAndComments) ->
 
     unless @activeNode?
       return
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
-        @reallyDeleteTree(id, deleteBranches)
+        @reallyDeleteTree(id, deleteBranchesAndComments)
       else
         return
     else
-      @reallyDeleteTree(id, deleteBranches)
+      @reallyDeleteTree(id, deleteBranchesAndComments)
 
 
-  reallyDeleteTree : (id, deleteBranches) ->
-
-    unless deleteBranches?
-      deleteBranches = true
+  reallyDeleteTree : (id, deleteBranchesAndComments = true) ->
 
     unless id
       id = @activeTree.treeId
@@ -485,11 +497,11 @@ class Route
         index = i
         break
     @trees.splice(index, 1)
-    # remove comments of all nodes inside that tree
+    # remove branchpoints and comments, NOT when merging trees
     for node in tree.nodes
-      @deleteComment(node.id)
-      if deleteBranches and node.type == TYPE_BRANCH
-        @deleteBranch(node.id)
+      if deleteBranchesAndComments
+        @deleteComment(node.id)
+        @deleteBranch(node)
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0

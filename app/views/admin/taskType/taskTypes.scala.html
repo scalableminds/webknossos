@@ -1,23 +1,12 @@
 @(taskTypes: List[models.task.TaskType], form: Form[models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
 
-@import models.tracing.TracingSettings._
-
 @main(){
 	<div class="container">
     <h3>Task types</h3>
     <div class="well">
       @helper.form(controllers.admin.routes.TaskTypeAdministration.create, 'class -> "form-horizontal") {
 
-        @helper.inputText(form("summary"))
-        @helper.textarea(form("description"))
-
-        @helper.checkbox(field = form("allowedModes[]"), 'value-> OXALIS, '_label -> "Allow Oxalis", 'checked -> "checked")
-        @helper.checkbox(field = form("allowedModes[]"), 'value-> ARBITRARY, '_label -> "Allow Arbitrary", 'checked -> "checked")
-        @helper.checkbox(field = form("branchPointsAllowed"), '_label -> "Allow Branchpoints")
-
-        @helper.inputText(form("expectedTime.minTime"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")
-        @helper.inputText(form("expectedTime.maxTime"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")
-        @helper.inputText(form("expectedTime.maxHard"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")
+        @basicTaskTypeForm(form)
 
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
@@ -52,11 +41,15 @@
             @if(taskType.tracingSettings.branchPointsAllowed) {
               <span class="label"> Branchpoints </span>
             }
+            @if(taskType.tracingSettings.somaClickingAllowed) {
+              <span class="label"> Soma clicking </span>
+            }
           </td>
           <td> @taskType.expectedTime </td>
           <td> @taskType.fileName.getOrElse("") </td>
-          <td> 
-            <a href="@controllers.admin.routes.TaskTypeAdministration.delete(taskType.id)" data-ajax="delete-row"><i class="icon-trash"></i> delete </a>
+          <td>
+            <a href="@controllers.admin.routes.TaskTypeAdministration.edit(taskType.id)"><i class="icon-pencil"></i> edit </a> <br />
+            <a href="@controllers.admin.routes.TaskTypeAdministration.delete(taskType.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
           </td>
 	      </tr>
 	    }

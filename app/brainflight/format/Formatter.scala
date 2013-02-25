@@ -7,7 +7,10 @@ import java.util.TimeZone
 import org.bson.types.ObjectId
 import scala.concurrent.duration.Duration
 
-trait Formatter {
+trait Formatter{
+  def formatDate(timestamp: Long): String = 
+    formatDate(new Date(timestamp))
+  
   def formatDate(date: Date) = {
     val cal = new GregorianCalendar(TimeZone.getTimeZone("GMT+1"))
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm")

@@ -1,0 +1,15 @@
+@(taskTypeForm: Form[_])
+
+@import models.tracing.TracingSettings._
+
+@helper.inputText(taskTypeForm("summary"))
+@helper.textarea(taskTypeForm("description"))
+
+@helper.checkbox(field = taskTypeForm("allowedModes[]"), 'value-> OXALIS, '_label -> "Allow Oxalis", 'checked -> "checked")
+@helper.checkbox(field = taskTypeForm("allowedModes[]"), 'value-> ARBITRARY, '_label -> "Allow Arbitrary", 'checked -> "checked")
+@helper.checkbox(field = taskTypeForm("branchPointsAllowed"), '_label -> "Allow Branchpoints")
+@helper.checkbox(field = taskTypeForm("somaClickingAllowed"), '_label -> "Allow Soma clicking")
+
+@helper.inputText(taskTypeForm("expectedTime.minTime"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")
+@helper.inputText(taskTypeForm("expectedTime.maxTime"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")
+@helper.inputText(taskTypeForm("expectedTime.maxHard"), 'type -> "number", 'min -> 0, Symbol("input-append") -> "hours")

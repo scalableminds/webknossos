@@ -31,7 +31,7 @@ class LevelCreator
     @dimensions = [
       parseInt( $("#level-creator").data("level-width")  )
       parseInt( $("#level-creator").data("level-height") )
-      parseInt( $("#level-creator").data("level-depth")  )
+      parseInt( $("#level-creator").data("level-slidesbeforeproblem") +  $("#level-creator").data("level-slidesafterproblem") )
     ]
 
     @dataHandler = new DataHandler(@dimensions, @levelId, @taskId, @dataSetName)
@@ -44,8 +44,9 @@ class LevelCreator
     @editor = Ace.edit("editor")
     @editor.setTheme("ace/theme/twilight")
     @editor.getSession().setMode("ace/mode/coffee")
+    @editor.getSession().setNewLineMode("unix")
 
-    @$form = $("#editor-container form")
+    @$form = $("#save-form")
     @$saveCodeButton = @$form.find("[type=submit]")
 
     @editor.on "change", => @debouncedUpdatePreview()
@@ -63,7 +64,7 @@ class LevelCreator
       $.ajax(
         url : @$form[0].action
         data : @$form.serialize()
-        type : "POST"
+        type : "PUT"
       ).then(
         ->
           Toast.success("Saved!")

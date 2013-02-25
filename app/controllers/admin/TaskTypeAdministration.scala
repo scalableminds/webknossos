@@ -10,6 +10,8 @@ import play.api.data.Forms._
 import play.api.data.Form
 import models.task.TimeSpan
 import play.api.i18n.Messages
+import models.task.Task
+import models.tracing.Tracing
 
 object TaskTypeAdministration extends Controller with Secured {
 
@@ -21,6 +23,7 @@ object TaskTypeAdministration extends Controller with Secured {
       "description" -> text,
       "allowedModes" -> seq(text).verifying("taskType.emptyModeSelection", l => !l.isEmpty),
       "branchPointsAllowed" -> boolean,
+      "somaClickingAllowed" -> boolean,
       "expectedTime" -> mapping(
         "minTime" -> number,
         "maxTime" -> number,
@@ -28,20 +31,51 @@ object TaskTypeAdministration extends Controller with Secured {
         TaskType.fromForm)(TaskType.toForm)).fill(TaskType.empty)
 
   def list = Authenticated { implicit request =>
-    Ok(html.admin.task.taskTypes(TaskType.findAll, taskTypeForm))
+    Ok(html.admin.taskType.taskTypes(TaskType.findAll, taskTypeForm))
   }
 
   def create = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskTypeForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.admin.task.taskTypes(TaskType.findAll, formWithErrors)),
+      formWithErrors => BadRequest(html.admin.taskType.taskTypes(TaskType.findAll, formWithErrors)),
       { t =>
         TaskType.insertOne(t)
-        Ok(html.admin.task.taskTypes(TaskType.findAll, taskTypeForm))
+        Redirect(routes.TaskTypeAdministration.list)
+          .flashing(
+            FlashSuccess(Messages("taskType.createSuccess")))
+          .highlighting(t.id)
       })
   }
-  
+
+  def edit(taskTypeId: String) = Authenticated { implicit request =>
+    for {
+      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+    } yield {
+      Ok(html.admin.taskType.taskTypeEdit(taskType.id, taskTypeForm.fill(taskType)))
+    }
+  }
+
+  def editTaskTypeForm(taskTypeId: String) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    for {
+      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+    } yield {
+      taskTypeForm.bindFromRequest.fold(
+        formWithErrors => BadRequest(html.admin.taskType.taskTypeEdit(taskType.id, formWithErrors)),
+        { t =>
+          val updatedTaskType = t.copy(_id = taskType._id)
+          TaskType.save(updatedTaskType)
+          Task.findAllByTaskType(taskType).map { task =>
+            Tracing.updateAllUsingNewTaskType(task, updatedTaskType)
+          }
+          Redirect(routes.TaskTypeAdministration.list)
+            .flashing(
+              FlashSuccess(Messages("taskType.editSuccess")))
+            .highlighting(taskType.id)
+        })
+    }
+  }
+
   def delete(taskTypeId: String) = Authenticated { implicit request =>
-    for{
+    for {
       taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
     } yield {
       TaskType.remove(taskType)

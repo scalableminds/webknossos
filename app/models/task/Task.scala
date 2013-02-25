@@ -77,6 +77,9 @@ case class Task(
 }
 
 object Task extends BasicDAO[Task]("tasks") {
+  this.collection.ensureIndex("_project")
+  this.collection.ensureIndex("_taskType")
+  
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
   
@@ -93,6 +96,10 @@ object Task extends BasicDAO[Task]("tasks") {
 
   def findAllOfOneType(isTraining: Boolean) =
     find(MongoDBObject("training" -> MongoDBObject("$exists" -> isTraining)))
+      .toList
+      
+  def findAllByTaskType(taskType: TaskType) = 
+    find(MongoDBObject("_taskType" -> taskType._id))
       .toList
 
   def findAllByProject(project: String) =

@@ -3,7 +3,7 @@
 ../../libs/request : Request
 ../../libs/event_mixin : EventMixin
 ../../libs/toast : Toast
-../model/dimensions : DimensionsHelper
+../model/dimensions : Dimensions
 ###
 
 PLANE_XY           = Dimensions.PLANE_XY
@@ -16,7 +16,7 @@ class Gui
 
   model : null
   
-  constructor : (container, @model) ->
+  constructor : (container, @model, settings) ->
     
     _.extend(this, new EventMixin())
 
@@ -27,6 +27,8 @@ class Gui
 
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(data.briConNames)
+
+    somaClickingAllowed = settings.somaClickingAllowed
     
     @settings = 
 
@@ -61,7 +63,7 @@ class Gui
       deleteActiveTree : => @trigger "deleteActiveTree"
 
       activeNodeID : @model.route.getActiveNodeId()
-      newNodeNewTree : data.newNodeNewTree
+      newNodeNewTree : if somaClickingAllowed then data.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
       radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
       comment : ""
@@ -167,9 +169,12 @@ class Gui
                           .step(1)
                           .name("Active Tree ID")
                           .onFinishChange( (value) => @trigger "setActiveTree", value)
-    (fTrees.add @settings, "newNodeNewTree")
-                          .name("Soma clicking mode")
-                          .onChange(@setNewNodeNewTree)
+    if somaClickingAllowed
+      (fTrees.add @settings, "newNodeNewTree")
+                            .name("Soma clicking mode")
+                            .onChange(@setNewNodeNewTree)
+    else
+      @setNewNodeNewTree(false)
     (fTrees.add @settings, "newTree")
                           .name("Create New Tree")
     (fTrees.add @settings, "deleteActiveTree")
@@ -233,6 +238,7 @@ class Gui
       pushFailed       : -> Toast.error("Auto-Save failed!")
 
     @createTooltips()
+
 
   saveNow : =>
     @model.user.pushImpl()

@@ -29,12 +29,13 @@ import play.api.libs.Files.TemporaryFile
 import java.io.FileOutputStream
 import org.apache.commons.io.IOUtils
 import net.liftweb.common._
+import braingames.util.TextUtils
 
-object NMLIO extends Controller with Secured {
+object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
 
   val prettyPrinter = new PrettyPrinter(100, 2)
-  
+
   def extractFromZip(file: File): List[NML] =
     ZipIO.unzip(file).map(nml => (new NMLParser(nml)).parse).flatten
 
@@ -50,7 +51,7 @@ object NMLIO extends Controller with Secured {
       List(extractFromNML(file)).flatten
     }
   }
-  
+
   def uploadForm = Authenticated { implicit request =>
     Ok(html.admin.nml.nmlupload())
   }
@@ -59,7 +60,7 @@ object NMLIO extends Controller with Secured {
     request.body.file("nmlFile").flatMap { nmlFile =>
       extractFromNML(nmlFile.ref.file)
         .map { nml =>
-          println("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
+          Logger.debug("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
           Logger.debug("Successfully parsed nmlFile")
           val tracing = Tracing.createFromNMLFor(request.user._id, nml, TracingType.Explorational)
           UsedTracings.use(request.user, tracing)
@@ -76,6 +77,15 @@ object NMLIO extends Controller with Secured {
     }
   }
 
+  def tracingNMLName(t: Tracing) = {
+    normalize(
+      "%s__%s__%s__%s.nml".format(
+        t.dataSetName,
+        t.task.map(_.id) getOrElse ("explorational"),
+        t.user.map(_.abreviatedName) getOrElse "",
+        brainflight.view.helpers.formatHash(t.id)))
+  }
+
   def download(tracingId: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
@@ -83,25 +93,29 @@ object NMLIO extends Controller with Secured {
     } yield {
       Ok(prettyPrinter.format(Xml.toXML(tracing))).withHeaders(
         CONTENT_TYPE -> "application/octet-stream",
-        CONTENT_DISPOSITION -> ("attachment; filename=%s.nml".format(tracing.dataSetName)))
+        CONTENT_DISPOSITION -> ("attachment; filename=" + tracingNMLName(tracing)))
     }) ?~ Messages("tracing.training.notFound")
+  }
+
+  def zipTracings(tracings: List[Tracing], zipFileName: String) = {
+    val zipStreams = tracings.map { tracing =>
+      val xml = prettyPrinter.format(Xml.toXML(tracing))
+      (IOUtils.toInputStream(xml, "UTF-8") -> tracingNMLName(tracing))
+    }
+    val zipped = new TemporaryFile(new File(normalize(zipFileName)))
+    ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
+    zipped
   }
 
   def projectDownload(projectName: String) = Authenticated(role = Role.Admin) { implicit request =>
     for {
       project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
     } yield {
-      val tasksWithtracings = Task
+      val tracings = Task
         .findAllByProject(project.name)
-        .map(task => task -> task.tracings.filter(_.state.isFinished))
-      val zipStreams = tasksWithtracings.flatMap {
-        case (task, tracings) => tracings.map { tracing =>
-          val xml = prettyPrinter.format(Xml.toXML(tracing))
-          (IOUtils.toInputStream(xml, "UTF-8") -> (s"${task.id}_${tracing.id}.nml"))
-        }
-      }
-      val zipped = new TemporaryFile(new File(projectName + "_nmls.zip"))
-      ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
+        .flatMap(_.tracings.filter(_.state.isFinished))
+
+      val zipped = zipTracings(tracings, projectName + "_nmls.zip")
       Ok.sendFile(zipped.file)
     }
   }
@@ -110,13 +124,18 @@ object NMLIO extends Controller with Secured {
     for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {
-      val tasksWithtracings = task.tracings.filter(_.state.isFinished)
-      val zipStreams = tasksWithtracings.map { tracing =>
-        val xml = prettyPrinter.format(Xml.toXML(tracing))
-        (IOUtils.toInputStream(xml, "UTF-8") -> (s"${task.id}_${tracing.id}.nml"))
-      }
-      val zipped = new TemporaryFile(new File(task.id + "_nmls.zip"))
-      ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
+      val tracings = task.tracings.filter(_.state.isFinished)
+      val zipped = zipTracings(tracings, task.id + "_nmls.zip")
+      Ok.sendFile(zipped.file)
+    }
+  }
+
+  def userDownload(userId: String) = Authenticated(role = Role.Admin) { implicit request =>
+    for {
+      user <- User.findOneById(userId) ?~ Messages("user.notFound")
+    } yield {
+      val tracings = Tracing.findFor(user, TracingType.Task).filter(_.state.isFinished)
+      val zipped = zipTracings(tracings, user.abreviatedName + "_nmls.zip")
       Ok.sendFile(zipped.file)
     }
   }

@@ -50,7 +50,7 @@ $ ->
           levelId = $row.data("levelid")
           count = $this.find("input").val()
           
-          $.ajax(routes.controllers.levelcreator.LevelCreator.produce(levelId, count)).then(
+          $.ajax(routes.controllers.levelcreator.StackController.produce(levelId, count)).then(
 
             (msg) -> 
               Toast.success(msg)

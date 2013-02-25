@@ -3,7 +3,7 @@ jquery : $
 underscore : _
 ./camera_controller : CameraController
 ./scene_controller : SceneController
-../model/dimensions : DimensionsHelper
+../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../../libs/input : Input
 ../view/plane_view : PlaneView
@@ -43,7 +43,7 @@ class PlaneController
     _.extend(@, new EventMixin())
 
     @flycam = @model.flycam
-    @view  = new PlaneView(@model, @flycam, stats)    
+    @view  = new PlaneView(@model, @flycam, stats)
 
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
@@ -103,6 +103,9 @@ class PlaneController
     @bind()
     @start()
 
+    # initialize comments
+    @model.route.updateComments()
+
 
   initMouse : ->
 
@@ -110,6 +113,10 @@ class PlaneController
     $("#render").bind "contextmenu", (event) ->
       event.preventDefault()
       return
+
+    $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
+      event.preventDefault()
+      @setActiveNode($(event.target).data("nodeid"), true, false)
 
     for planeId in ["xy", "yz", "xz"]
       #@input.planeMouse = new Input.Mouse($("#plane#{planeId}"),

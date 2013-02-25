@@ -1,21 +1,21 @@
 @(users: List[models.user.User])
 
 <table class="table table-striped" id="user-administration-table">
-<thead>
-  <tr>
-    <th> <input type="checkbox" class="select-all-rows"> </th>
-    <th> Last name </th>
-    <th> First name </th>
-    <th> Email </th>
-    <th> Role </th>
-    <th> Experiences </th>
-    <th> Verified </th>
-    <th></th>
-  </tr>
-</thead>
-<tbody>
-  @users.map{ user =>
-    @userTableItem(user)
-  }
-</tbody>
+  <thead>
+    <tr>
+      <th> <input type="checkbox" class="select-all-rows"> </th>
+      <th> Last name </th>
+      <th> First name </th>
+      <th> Email </th>
+      <th> Role </th>
+      <th> Experiences </th>
+      <th> Verified </th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    @users.map{ user =>
+      @userTableItem(user)
+    }
+  </tbody>
 </table>

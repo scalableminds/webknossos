@@ -2,7 +2,7 @@
 ./model/binary : Binary
 ./model/route : Route
 ./model/user : User
-./model/scaleinfo : ScaleInfoClass
+./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
 ../libs/request : Request
@@ -39,10 +39,15 @@ class Model
           ).pipe(
             (user) =>
 
+              $.assertExtendContext({
+                task: task.task.id
+                dataSet: tracing.dataSet.id
+              })
+
               @scaleInfo = new ScaleInfo(tracing.tracing.scale)
               @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)    
               @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1)      
-              @flycam3d = new Flycam3d(DISTANCE_3D)
+              @flycam3d = new Flycam3d(DISTANCE_3D, tracing.tracing.scale)
               @flycam3d.on
                 "changed" : (matrix) =>
                   @flycam.setPosition([matrix[12], matrix[13], matrix[14]])

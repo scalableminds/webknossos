@@ -1,7 +1,7 @@
 ### define
 ../model : Model
 ../model/route : Route
-../model/dimensions : DimensionsHelper
+../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer
 ###
@@ -83,6 +83,7 @@ class Skeleton
 
     @route.on
       newActiveNode : => @setActiveNode()
+      newActiveTree : => @setActiveNode()
       newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)

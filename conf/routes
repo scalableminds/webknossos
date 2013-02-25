@@ -35,7 +35,11 @@ GET     /user/configuration/default         	   controllers.UserController.defau
 GET      /binary/ws                                controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
 POST     /binary/ajax                              controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
 GET      /binary/ajax                              controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
-GET      /binary/arbitrary/ajax                    controllers.BinaryData.arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String)
+
+# Assertions
+GET      /assert/:assertionId                      controllers.AssertionController.view(assertionId: String)
+POST     /assert                                   controllers.AssertionController.log
+GET      /assert                                   controllers.AssertionController.list
 
 # Tracing Stuff
 POST     /tracing/create                           controllers.TracingController.createExplorational
@@ -59,6 +63,8 @@ GET      /admin/tasks/algorithm/:id?use=true       controllers.admin.TaskAlgorit
 GET      /admin/taskTypes                          controllers.admin.TaskTypeAdministration.list
 POST     /admin/taskTypes/create                   controllers.admin.TaskTypeAdministration.create
 GET      /admin/taskTypes/:id/delete               controllers.admin.TaskTypeAdministration.delete(id: String)
+GET      /admin/taskTypes/:id/edit                 controllers.admin.TaskTypeAdministration.edit(id: String)
+POST     /admin/taskTypes/:id                      controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
 
 GET      /admin/projects                           controllers.admin.ProjectAdministration.list
 POST     /admin/projects/create                    controllers.admin.ProjectAdministration.create
@@ -66,14 +72,16 @@ GET      /admin/projects/:name/delete              controllers.admin.ProjectAdmi
 GET      /admin/projects/:name/download            controllers.admin.NMLIO.projectDownload(name: String)
 
 GET      /admin/tasks                              controllers.admin.TaskAdministration.list
-GET      /admin/tasks/:id/delete                   controllers.admin.TaskAdministration.delete(id: String)
-GET      /admin/tasks/:id/download                 controllers.admin.NMLIO.taskDownload(id: String)
 GET      /admin/tasks/create                       controllers.admin.TaskAdministration.create
 POST     /admin/tasks/createBulk                   controllers.admin.TaskAdministration.createBulk
 POST     /admin/tasks/createFromNML                controllers.admin.TaskAdministration.createFromNML
 POST     /admin/tasks/createFromForm               controllers.admin.TaskAdministration.createFromForm
 GET      /admin/tasks/overview                     controllers.admin.TaskAdministration.overview
 GET      /admin/tracings/:tracingId/cancel         controllers.admin.TaskAdministration.cancelTracing( tracingId: String )
+GET      /admin/tasks/:id/download                 controllers.admin.NMLIO.taskDownload(id: String)
+GET      /admin/tasks/:id/delete                   controllers.admin.TaskAdministration.delete(id: String)
+GET      /admin/tasks/:id/edit                     controllers.admin.TaskAdministration.edit(id: String)
+POST     /admin/tasks/:id                          controllers.admin.TaskAdministration.editTaskForm(id: String)
 
 GET      /admin/trainingsTasks                     controllers.admin.TrainingsTaskAdministration.list
 GET      /admin/trainingsTasks/create              controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
@@ -93,6 +101,7 @@ POST     /admin/users/delete                       controllers.admin.UserAdminis
 GET      /admin/users/:id/verify                   controllers.admin.UserAdministration.verify(id: String)
 GET      /admin/users/:id/delete                   controllers.admin.UserAdministration.delete(id: String)
 GET      /admin/users/:id/loginAs                  controllers.admin.UserAdministration.loginAsUser(id: String)
+GET      /admin/users/:id/download                 controllers.admin.NMLIO.userDownload(id: String)
 POST     /admin/users/role                         controllers.admin.UserAdministration.addRoleBulk
 DELETE   /admin/users/role                         controllers.admin.UserAdministration.deleteRoleBulk
 POST     /admin/users/experience                   controllers.admin.UserAdministration.setExperienceBulk

@@ -106,9 +106,9 @@ svg a:hover {
 }
 
 #alert-container {
-    position: absolute;
+    position: fixed;
     right: 20px;
-    top: 60px;
+    top: 20px;
     z-index: 100;
 
     .alert {
@@ -156,7 +156,7 @@ svg a:hover {
         width: 100%;
     }
     #zoom-slider {
-        width: 100%;
+        width: 70%;
     }
     #editor {
         position: relative;
@@ -164,8 +164,14 @@ svg a:hover {
         height: 500px;
     }
     #editor-container {
-        input[type=submit] {
+        form {
+            display: inline;
+        }
+        button[type=submit] {
             margin: 10px 0;
+        }
+        #produce-form .busy .icon-retweet {
+            .rotating;
         }
     }
 
@@ -186,6 +192,28 @@ svg a:hover {
         margin-right: 20px;
         margin-bottom: 20px;
         padding: 10px;
+
+        form {
+            display: inline;
+        }
+        h4, .stack-buttons {
+            float: left;
+        }
+        .stack-buttons {
+            margin: 10px;
+        }
+        .stack-buttons a {
+            font-size: 0;
+            margin: 0 5px;
+
+            [class^="icon-"]::before, 
+            [class*=" icon-"]::before {
+                font-size: 20px;
+            }
+        }
+        .stack-buttons .busy .icon-retweet {
+            .rotating;
+        }
     }
     .stack-display {
 

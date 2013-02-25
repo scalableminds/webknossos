@@ -38,6 +38,8 @@ case class User(
   } yield role
 
   val name = firstName + " " + lastName
+  
+  val abreviatedName = (firstName.take(1) + lastName) toLowerCase
 
   lazy val id = _id.toString
 
@@ -90,6 +92,7 @@ case class User(
 }
 
 object User extends BasicDAO[User]("users") {
+  this.collection.ensureIndex("email")
 
   def default = findLocalByEmail("scmboy@scalableminds.com").get
 

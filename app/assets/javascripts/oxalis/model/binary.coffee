@@ -5,7 +5,7 @@
 ./binary/plane2d : Plane2D
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
-./dimensions : DimensionHelper
+./dimensions : Dimensions
 ###
 
 class Binary
@@ -64,8 +64,6 @@ class Binary
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
 
-    @cube.collectGarbage()
-
     if @lastPosition?
       
       @direction = [
@@ -102,8 +100,6 @@ class Binary
 
 
   arbitraryPingImpl : (matrix) ->
-
-    @cube.collectGarbage()
 
     for strategy in @pingStrategies3d 
       if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)

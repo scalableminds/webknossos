@@ -26,34 +26,56 @@ class Flycam3d
 
   zoomStep : 1  
   hasChanged : true
+  scale : null
+  currentMatrix : null
 
-  constructor : (@distance) ->
+  constructor : (@distance, scale) ->
 
     _.extend(this, new EventMixin())
+
+    @scale = @calculateScaleValues(scale)
 
     @reset()
     @distanceVecNegative = [0, 0, -distance]
     @distanceVecPositive = [0, 0, distance]
 
 
+  calculateScaleValues : (scale) ->
+
+    scale = [1/scale[0], 1/scale[1], 1/scale[2]]  
+    maxScale = Math.max(scale[0], scale[1], scale[2])
+    multi = 1/maxScale
+    scale = [multi * scale[0], multi * scale[1], multi * scale[2]]  
+    scale
+
+
   reset : ->
 
-    @currentMatrix = [ 
+    { scale } = @
+
+    m = [ 
       1, 0, 0, 0, 
       0, 1, 0, 0, 
       0, 0, 1, 0, 
       0, 0, 0, 1 
     ]
+    M4x4.scale(scale, m, m)
+    @currentMatrix = m
+
     updateMacro()
 
 
   resetRotation : ->
 
-    m = @currentMatrix
-    m[0] = 1; m[1] = 0; m[2] = 0; m[3] = 0; 
-    m[4] = 0; m[5] = 1; m[6] = 0; m[7] = 0; 
-    m[8] = 0; m[9] = 0; m[10] = 1; m[11] = 0; 
-    m[15] = 1; 
+    { currentMatrix } = @
+
+    x = currentMatrix[12]
+    y = currentMatrix[13]
+    z = currentMatrix[14]
+
+    @reset()
+    @setPosition([x, y, z])
+
     updateMacro()
 
 

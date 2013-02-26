@@ -105,6 +105,7 @@ class SegmentImporter
               y: 0
             }
             display : true
+            staticDisplay : false
             randomColor : {
               r: 0
               g: 0

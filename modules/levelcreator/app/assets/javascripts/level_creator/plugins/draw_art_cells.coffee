@@ -65,11 +65,11 @@ class DrawArtCells
       color = "rgba(#{randomColor.r}, #{randomColor.g}, #{randomColor.b}, 1)"
       if hitMode
         if _.contains(endValues, segment.value) is true
-          context.strokeStyle = "rgba(0, 0, 255, 1)"
-          context.fillStyle = "rgba(0, 0, 255, 1)" 
+          context.strokeStyle = "rgba(255, 0, 0, 1)"
+          context.fillStyle = "rgba(255, 0, 0, 1)" 
         else
-          context.strokeStyle = "rgba(0, 0, 128, 1)"
-          context.fillStyle = "rgba(0, 0, 128, 1)" 
+          context.strokeStyle = "rgba(128, 0, 0, 1)"
+          context.fillStyle = "rgba(128, 0, 0, 1)" 
 
       else
         if colorRandom? and colorRandom

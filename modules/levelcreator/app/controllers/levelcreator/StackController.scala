@@ -16,12 +16,13 @@ import play.api._
 
 import braingames.levelcreator._
 import views._
-import models.knowledge.{Level, Mission}
+import models.knowledge._
 
 object StackController extends LevelCreatorController{
   
-  val stackCreator = Akka.system.actorOf(Props[StackCreator].withRouter(RoundRobinRouter(nrOfInstances = 4)),
+  lazy val stackCreator = Akka.system.actorOf(Props[StackCreator].withRouter(RoundRobinRouter(nrOfInstances = 4)),
       name = "StackCreator")
+  lazy val stackUploader = Akka.system.actorOf(Props[S3Uploader], name="StackUploader")
       
   def list(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
       val missions = for{missionId <- request.level.renderedMissions
@@ -47,10 +48,10 @@ object StackController extends LevelCreatorController{
         Messages("level.stack.creationTimeout")
         List()
     }
-    future.mapTo[List[Option[Mission]]].map { ms => 
-      val renderedMissions = ms.flatten
-      level.addRenderedMissions(renderedMissions.map(_.id))
-      JsonOk(s"created ${renderedMissions.map(m => (m.id.takeRight(6))).mkString("\n")}") 
+    future.mapTo[List[Option[Stack]]].map { stackOpts => 
+      val renderedStacks = stackOpts.flatten
+      level.addRenderedMissions(renderedStacks.map(_.mission.id))
+      JsonOk(s"created ${renderedStacks.map(s => (s.mission.id.takeRight(6))).mkString("\n")}") 
     } 
   }
 

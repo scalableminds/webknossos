@@ -21,6 +21,8 @@ case class Level(
 
   lazy val id = _id.toString
   
+  lazy val depth = slidesBeforeProblem + slidesAfterProblem
+  
   val assetsFolder =
     s"${Level.assetsBaseFolder}/$name/assets"
 

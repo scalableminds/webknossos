@@ -25,9 +25,4 @@ class SetSegmentsStaticDisplay
     
     mission.staticDisplay = []    
     for segment in activeSegments
-      #segment.staticDisplay = false      
       mission.staticDisplay.push segment.value
-
-
-    #for segment in activeSegments
-    #  segment.staticDisplay = true

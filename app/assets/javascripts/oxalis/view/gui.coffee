@@ -316,7 +316,7 @@ class Gui
     @model.user.push()
 
   setBrightnessAndContrast : =>
-    @model.binary.updateLookupTable(@settings.brightness, @settings.contrast)
+    @model.binary.updateContrastCurve(@settings.brightness, @settings.contrast)
     @model.user.brightness[@datasetPosition] = (Number) @settings.brightness
     @model.user.contrast[@datasetPosition] = (Number) @settings.contrast
     @model.user.push()

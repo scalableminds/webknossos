@@ -89,9 +89,9 @@ class Plane
       area = @flycam.getArea(@planeID)
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
-        @model.binary.planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(@planeID), area : @flycam.getArea(@planeID) }).done (buffer) =>
-          if buffer
-            @plane.texture.image.data.set(buffer)
+        @model.binary.planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(@planeID), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
+          if dataBuffer
+            @plane.texture.image.data.set(dataBuffer)
             @flycam.hasNewTexture[@planeID] = true
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)

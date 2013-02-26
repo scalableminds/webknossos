@@ -141,7 +141,7 @@ class Controller
     gui.update()  
 
     model.binary.queue.set4Bit(model.user.fourBit)
-    model.binary.updateLookupTable(gui.settings.brightness, gui.settings.contrast)
+    model.binary.updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
 
     gui.on
       deleteActiveNode : @deleteActiveNode

@@ -308,7 +308,7 @@ class Cube
           voxel[2] >> 1
         ]
 
-    return
+    @trigger("volumeLabled")
 
 
   # return the bucket a given voxel lies in

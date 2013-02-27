@@ -58,8 +58,7 @@ object StackController extends LevelCreatorController{
     future.mapTo[List[Option[Stack]]].map { stackOpts => 
       
       val renderedStacks = stackOpts.flatten
-      level.addRenderedMissions(renderedStacks.map(_.mission.id))
-      level.updateStacksFile
+      level.addRenderedMissions(renderedStacks.map(_.mission.id)).updateStacksFile
       stackUploader.foreach(_ ! UploadStacks(renderedStacks))      
         
       JsonOk(s"created ${renderedStacks.map(s => (s.mission.id.takeRight(6))).mkString("\n")}") 

@@ -8,9 +8,10 @@ case class Stack(level: Level, mission: Mission){
   val path = s"${level.stackFolder}/${mission.id}"
   val directory = new File(path)
   val zipFile = new File(s"$path/${level.name}_${mission.id}_stack.zip")
+  val metaFile = new File(s"$path/meta.json")
   
   def isZipped = zipFile.exists
-  def isProduced = directory.exists && images.size >= level.depth
+  def isProduced = directory.exists && images.size >= level.depth && metaFile.exists
   def images = directory.listFiles(Stack.stackImageFilter).toList
 }
 

@@ -25,13 +25,14 @@ case class Level(
   
   lazy val depth = slidesBeforeProblem + slidesAfterProblem
   
-  lazy val descriptionFile = new File(s"$stackFolder/level.json")
-  def hasDescription = descriptionFile.exists
-  def updateDescriptionFile {
-  if(! hasDescription )
-    descriptionFile.createNewFile
-  val out = new PrintWriter(descriptionFile)
-    try { out.print(Json.toJson(this)) }
+  lazy val stacksFileName="stacks.json"
+  lazy val stacksFile = new File(s"$stackFolder/$stacksFileName")
+  def hasStacksFile = stacksFile.exists
+  def updateStacksFile {
+  if(! hasStacksFile )
+    stacksFile.createNewFile
+  val out = new PrintWriter(stacksFile)
+    try { out.print(Json.toJson(renderedMissions)) }
     finally { out.close }
   }
   
@@ -145,14 +146,5 @@ object Level extends BasicDAO[Level]("levels") {
   val defaultCode = """
     |time(start : 0, end : 10) ->
     |  importSlides(start : 0, end : 10)
-  """.stripMargin
-  
-  def unapplyDescription(l: Level) = (l.width, l.height, l.depth, l.renderedMissions)
-    
-  implicit val LevelJsonWrites: Writes[Level] = (
-    (__ \ "width").write[Int] and
-    (__ \ "height").write[Int] and
-    (__ \ "depth").write[Int] and
-    (__ \ "availableStacks").write[List[String]])(unapplyDescription _)
-  
+  """.stripMargin 
 }

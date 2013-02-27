@@ -23,16 +23,25 @@ class S3Uploader(s3Config: S3Config) extends Actor{
     case UploadStacks(stacks) => uploadStacks(stacks)
   }
   
+  def buildUploadPairs(stack: Stack): List[Tuple2[File, String]] = {
+    val stacksFileKey = s"${s3Config.branchName}/${stack.level.id}/${stack.level.stacksFileName}"
+    val stackFiles = stack.metaFile :: stack.images
+    val stackFilePrefix = s"${s3Config.branchName}/${stack.level.id}/${stack.mission.id}"
+    (stackFiles.zip(stackFiles.map(f => s"$stackFilePrefix/${f.getName}"))) :+ 
+    (stack.level.stacksFile, stacksFileKey)
+  }
+  
   def uploadStacks(stacks: List[Stack]) = {
     for {stack <- stacks
-         stackImage <- stack.images
+         uploadPair <- buildUploadPairs(stack)
     } {
-      val key = s"${s3Config.branchName}/${stack.level.id}/${stack.mission.id}/${stackImage.getName}"
-      Logger.debug(s"uploading ${stackImage.getPath} to ${s3Config.bucketName}/$key")
-      val putObj = new PutObjectRequest(s3Config.bucketName, key, stackImage)
+      val (file, key) = uploadPair
+      Logger.debug(s"uploading ${file.getPath} to ${s3Config.bucketName}/$key")
+      val putObj = new PutObjectRequest(s3Config.bucketName, key, file)
       putObj.setCannedAcl(CannedAccessControlList.PublicRead);
       s3.putObject(putObj);
     }
   }
+  
   
 }

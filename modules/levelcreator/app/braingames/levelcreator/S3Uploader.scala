@@ -7,24 +7,22 @@ import play.api._
 import models.knowledge._
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.auth.BasicAWSCredentials
+import braingames.util.S3Config
 
 
-case class UploadStack(level: Level, mission: Mission)
+case class UploadStacks(stacks: List[Stack])
 
-class S3Uploader extends Actor{
+class S3Uploader(s3Config: S3Config) extends Actor{
 
-  val conf = Play.current.configuration
-  val AWS_ACCESS_KEY = conf.getString("AWS_ACCESS_KEY") getOrElse ""
-  val AWS_SECRET_KEY = conf.getString("AWS_SECRET_KEY") getOrElse ""
-  
-  val AWS_CREDENTIALS = new BasicAWSCredentials(AWS_ACCESS_KEY, AWS_SECRET_KEY)
-  val s3 = new AmazonS3Client(AWS_CREDENTIALS)
-  
+  val AWSCredentials = new BasicAWSCredentials(s3Config.accessKey, s3Config.secretKey)
+  val s3 = new AmazonS3Client(AWSCredentials)
+   
   def receive = {
-    case UploadStack(level, mission) => uploadStack(level, mission)
+    case UploadStacks(stacks) => uploadStacks(stacks)
   }
   
-  def uploadStack(level: Level, mission: Mission) = {
+  def uploadStacks(stacks: List[Stack]) = {
     
   }
+  
 }

@@ -1,11 +1,13 @@
 package models.knowledge
 
 import models.basics._
-import java.io.File
+import java.io.{File, PrintWriter}
 import com.mongodb.casbah.commons.MongoDBObject
 import org.apache.commons.io.FileUtils
 import play.api.Play
 import org.bson.types.ObjectId
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 case class Level(
     name: String , 
@@ -22,6 +24,16 @@ case class Level(
   lazy val id = _id.toString
   
   lazy val depth = slidesBeforeProblem + slidesAfterProblem
+  
+  lazy val descriptionFile = new File(s"$stackFolder/level.json")
+  def hasDescription = descriptionFile.exists
+  def updateDescriptionFile {
+  if(! hasDescription )
+    descriptionFile.createNewFile
+  val out = new PrintWriter(descriptionFile)
+    try { out.print(Json.toJson(this)) }
+    finally { out.close }
+  }
   
   val assetsFolder =
     s"${Level.assetsBaseFolder}/$name/assets"
@@ -134,4 +146,13 @@ object Level extends BasicDAO[Level]("levels") {
     |time(start : 0, end : 10) ->
     |  importSlides(start : 0, end : 10)
   """.stripMargin
+  
+  def unapplyDescription(l: Level) = (l.width, l.height, l.depth, l.renderedMissions)
+    
+  implicit val LevelJsonWrites: Writes[Level] = (
+    (__ \ "width").write[Int] and
+    (__ \ "height").write[Int] and
+    (__ \ "depth").write[Int] and
+    (__ \ "availableStacks").write[List[String]])(unapplyDescription _)
+  
 }

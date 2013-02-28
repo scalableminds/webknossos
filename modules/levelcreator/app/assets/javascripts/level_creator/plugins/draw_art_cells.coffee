@@ -1,5 +1,6 @@
 ### define 
 ../buffer_utils : BufferUtils
+../color_utils : ColorUtils
 ###
 
 class DrawArtCells
@@ -22,12 +23,14 @@ class DrawArtCells
     lineWidth : "0 - 5"
     size : "0 - 100"
     hitMode : "true, false (default)"
+    fillColor : "\hitMode\", \"randomColor\", \"rgba(0, 0, 255, 0.3)\""
+    strokeColor : "\hitMode\", \"randomColor\", \"rgba(0, 0, 255, 0.3)\""
 
 
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size}) ->
 
     width = dimensions[0]
     height = dimensions[1]
@@ -79,6 +82,18 @@ class DrawArtCells
           context.fillStyle = "rgba(160, 160, 160, 1)" #color #"rgba(0, 0, 255, 1)"
           context.strokeStyle = "rgba(100, 100, 100, 1)" # color #"rgba(0, 0, 0, 1)"
 
+      if fillColor?
+        if fillColor is "random"
+          context.fillStyle = "rgb(#{segment.randomColor2.r}, #{segment.randomColor2.g}, #{segment.randomColor2.b})"
+        else
+          context.fillStyle = fillColor
+
+      if strokeColor?
+        if strokeColor is "random"
+          context.strokeStyle = "rgb(#{segment.randomColor2.r}, #{segment.randomColor2.g}, #{segment.randomColor2.b})"
+        else
+          context.strokeStyle = strokeColor          
+
       context.beginPath()
 
       x = path[0] * relativeTime + artPath[0] * (1 - relativeTime)
@@ -112,7 +127,7 @@ class DrawArtCells
 
     if endPosition? and endPosition is "edge"
 
-      for i in [0..count] by 1
+      for i in [0...count] by 1
       
         radians = 2 * Math.PI * i / count
         x = Math.sin(radians)

@@ -16,13 +16,21 @@ import play.api._
 
 import braingames.levelcreator._
 import views._
-import models.knowledge.{Level, Mission}
+import models.knowledge._
+
+import braingames.util.S3Config
 
 object StackController extends LevelCreatorController{
   
-  val stackCreator = Akka.system.actorOf(Props[StackCreator].withRouter(RoundRobinRouter(nrOfInstances = 4)),
+  val conf = Play.current.configuration
+  
+  lazy val stackCreator = Akka.system.actorOf(Props[StackCreator].withRouter(RoundRobinRouter(nrOfInstances = 4)),
       name = "StackCreator")
       
+  lazy val stackUploader = S3Config.fromConfig(conf).map(s3Config => 
+      Akka.system.actorOf(Props(new S3Uploader(s3Config)), name="StackUploader"))
+    
+  
   def list(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
       val missions = for{missionId <- request.level.renderedMissions
                           mission <- Mission.findOneById(missionId)
@@ -47,10 +55,13 @@ object StackController extends LevelCreatorController{
         Messages("level.stack.creationTimeout")
         List()
     }
-    future.mapTo[List[Option[Mission]]].map { ms => 
-      val renderedMissions = ms.flatten
-      level.addRenderedMissions(renderedMissions.map(_.id))
-      JsonOk(s"created ${renderedMissions.map(m => (m.id.takeRight(6))).mkString("\n")}") 
+    future.mapTo[List[Option[Stack]]].map { stackOpts => 
+      
+      val renderedStacks = stackOpts.flatten
+      level.addRenderedMissions(renderedStacks.map(_.mission.id)).updateStacksFile
+      stackUploader.foreach(_ ! UploadStacks(renderedStacks))      
+        
+      JsonOk(s"created ${renderedStacks.map(s => (s.mission.id.takeRight(6))).mkString("\n")}") 
     } 
   }
 

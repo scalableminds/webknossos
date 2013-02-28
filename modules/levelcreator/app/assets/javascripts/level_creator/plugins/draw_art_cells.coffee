@@ -21,16 +21,18 @@ class DrawArtCells
     startPosition : "\"segmentCenter\" (default)"
     lineWidth : "0 - 5"
     size : "0 - 100"
+    hitMode : "true, false (default)"
 
 
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments, relativeTime, dimensions }, lineWidth, colorRandom, customTime, reverse, endPosition, size}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size}) ->
 
     width = dimensions[0]
     height = dimensions[1]
 
+    hitMode = false unless hitMode?
     lineWidth = 0 unless lineWidth?
 
     if reverse? and reverse
@@ -50,6 +52,10 @@ class DrawArtCells
     
     @setArtPaths(activeSegments, width, height, endPosition, size)
 
+    endValues = [mission.start.id]
+    for possibleEnd in mission.possibleEnds
+      endValues.push possibleEnd.id
+
 
     for segment in activeSegments
 
@@ -57,12 +63,21 @@ class DrawArtCells
       artPath = segment.artPath
       randomColor = segment.randomColor
       color = "rgba(#{randomColor.r}, #{randomColor.g}, #{randomColor.b}, 1)"
-      if colorRandom? and colorRandom
-        context.fillStyle = color
-        context.strokeStyle = "rgba(0, 0, 0, 1)"
+      if hitMode
+        if _.contains(endValues, segment.value) is true
+          context.strokeStyle = "rgba(255, 0, 0, 1)"
+          context.fillStyle = "rgba(255, 0, 0, 1)" 
+        else
+          context.strokeStyle = "rgba(128, 0, 0, 1)"
+          context.fillStyle = "rgba(128, 0, 0, 1)" 
+
       else
-        context.fillStyle = "rgba(160, 160, 160, 1)" #color #"rgba(0, 0, 255, 1)"
-        context.strokeStyle = "rgba(100, 100, 100, 1)" # color #"rgba(0, 0, 0, 1)"
+        if colorRandom? and colorRandom
+          context.fillStyle = color
+          context.strokeStyle = "rgba(0, 0, 0, 1)"
+        else
+          context.fillStyle = "rgba(160, 160, 160, 1)" #color #"rgba(0, 0, 255, 1)"
+          context.strokeStyle = "rgba(100, 100, 100, 1)" # color #"rgba(0, 0, 0, 1)"
 
       context.beginPath()
 

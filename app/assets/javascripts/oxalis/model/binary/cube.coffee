@@ -1,7 +1,5 @@
 ### define
 ../../../libs/event_mixin : EventMixin
-../../../libs/ring_buffer : RingBuffer
-../../../libs/request : Request
 ###
 
 class Cube
@@ -20,7 +18,8 @@ class Cube
   arbitraryCube : null
   cubes : null
   upperBoundary : null
-  access : null
+  buckets : null
+  bucketIterator : 0
   bucketCount : 0
 
 
@@ -32,8 +31,8 @@ class Cube
   #
   # Each bucket consists of an access-value, the zoomStep and the actual data.
   # The access-values are used for garbage collection. When a bucket is accessed, its
-  # address is pushed to the access-queue and its access-value is increased by 1.
-  # When buckets are needed, the buckets at the beginning of the queue will be removed
+  # access-flag is set to true.
+  # When buckets have to be collected, an iterator will loop through the the buckets at the beginning of the queue will be removed
   # from the queue and the access-value will be decreased. If the access-value of a
   # bucket becomes 0, itsis no longer in the access-queue and is least resently used.
   # It is then removed from the cube.
@@ -46,7 +45,7 @@ class Cube
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT
     @BUCKET_LENGTH = 1 << @BUCKET_SIZE_P * 3
     @cubes = []
-    @access = new RingBuffer(4, 5000, Int32Array)
+    @buckets = new Array(@MAXIMUM_BUCKET_COUNT)
 
     # Initializing the cube-arrays with boundaries
     cubeBoundary = [
@@ -141,9 +140,10 @@ class Cube
       cube = @cubes[address[3]]
       bucketIndex = @getBucketIndexByZoomedAddress(address)
 
+      @addBucketToGarbageCollection(address)
+
       @bucketCount++
-      @access.unshift(address)
-      bucketData.access = 1
+      bucketData.accessed = true
       bucketData.zoomStep = address[3]
 
       cube[bucketIndex] = bucketData
@@ -180,28 +180,33 @@ class Cube
     for address in addressList
 
       bucket = @getBucketByZoomedAddress(address)
-
-      if bucket?
-
-        @access.unshift(address)
-        bucket.access++
+      bucket.accessed = true if bucket?
 
 
-  # tries to remove the bucket from the cube
-  tryCollectBucket : (address) ->
+  addBucketToGarbageCollection : (address) ->
+
+    unless @bucketCount < @MAXIMUM_BUCKET_COUNT
+
+      while((bucket = @buckets[@bucketIterator]).accessed)
+
+        bucket.accessed = false
+        @bucketIterator = ++@bucketIterator % MAXIMUM_BUCKET_COUNT
+
+      @collectBucket(bucket)
+      @bucketCount--
+
+    @buckets[@bucketIterator] = address
+    @bucketIterator = ++@bucketIterator % @MAXIMUM_BUCKET_COUNT
+
+
+  collectBucket : (address) ->
 
     cube = @cubes[address[3]]
     bucketIndex = @getBucketIndexByZoomedAddress(address)
-    bucket = cube[bucketIndex]
+    bucket = @getBucketByZoomedAddress(address)
 
-    # if the bucket is no longer in the access-queue
-    if bucket? and --bucket.access <= 0
-
-      # remove it
-      @bucketCount--
-      cube[bucketIndex] = null
-
-      @collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
+    cube[bucketIndex] = null
+    @collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
 
 
   collectArbitraryBucket : ([bucket_x, bucket_y, bucket_z, zoomStep], oldBucket) ->
@@ -239,14 +244,6 @@ class Cube
           bucketIndex = @getBucketIndexByZoomedAddress(subBucket)
               
           cube[bucketIndex] = substitute if cube[bucketIndex] == oldBucket
-
-
-  # remove buckets until cube is within bucketCount-limit
-  collectGarbage : ->
-
-    while @bucketCount > @MAXIMUM_BUCKET_COUNT and @access.length
-
-      @tryCollectBucket(@access.pop())
 
 
   # return the bucket a given voxel lies in

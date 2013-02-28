@@ -1,11 +1,13 @@
 package models.knowledge
 
 import models.basics._
-import java.io.File
+import java.io.{File, PrintWriter}
 import com.mongodb.casbah.commons.MongoDBObject
 import org.apache.commons.io.FileUtils
 import play.api.Play
 import org.bson.types.ObjectId
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 case class Level(
     name: String , 
@@ -20,6 +22,19 @@ case class Level(
   val dao = Level
 
   lazy val id = _id.toString
+  
+  lazy val depth = slidesBeforeProblem + slidesAfterProblem
+  
+  lazy val stacksFileName="stacks.json"
+  lazy val stacksFile = new File(s"$stackFolder/$stacksFileName")
+  def hasStacksFile = stacksFile.exists
+  def updateStacksFile {
+  if(! hasStacksFile )
+    stacksFile.createNewFile
+  val out = new PrintWriter(stacksFile)
+    try { out.print(Json.toJson(renderedMissions)) }
+    finally { out.close }
+  }
   
   val assetsFolder =
     s"${Level.assetsBaseFolder}/$name/assets"
@@ -131,5 +146,5 @@ object Level extends BasicDAO[Level]("levels") {
   val defaultCode = """
     |time(start : 0, end : 10) ->
     |  importSlides(start : 0, end : 10)
-  """.stripMargin
+  """.stripMargin 
 }

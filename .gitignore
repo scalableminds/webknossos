@@ -12,7 +12,6 @@ target/
 binarydata/
 binaryData/
 binaryData
-knowledge
 data/
 boot/
 .idea/
@@ -34,3 +33,4 @@ modules/shellgame/target
 modules/shellgame/logs
 modules/shellgame/shellgame-assets
 public/levelStacks
+aws.conf

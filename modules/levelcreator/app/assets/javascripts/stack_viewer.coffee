@@ -15,7 +15,8 @@ class StackViewer
 
       $el.html("<div class=\"loading-indicator\"><i class=\"icon-refresh rotating\"></i></div>")
 
-      [a, levelName, stackId] = event.currentTarget.href.match(/stack-([^-]+)-([0-9a-f]+)$/)
+      levelName = $el.parents("#stack-list").data("levelname")
+      [a, stackId] = event.currentTarget.href.match(/stack-(.+)$/)
       @loadStack(levelName, stackId).then( (stack) => 
         @loadImages(levelName, stackId, stack.images).then( 
           

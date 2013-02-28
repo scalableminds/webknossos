@@ -23,14 +23,18 @@ class DrawArtCells
     lineWidth : "0 - 5"
     size : "0 - 100"
     hitMode : "true, false (default)"
-    fillColor : "\hitMode\", \"randomColor\", \"rgba(0, 0, 255, 0.3)\""
-    strokeColor : "\hitMode\", \"randomColor\", \"rgba(0, 0, 255, 0.3)\""
+    fillColor : "\"hitMode\", \"randomColor\", \"rgba(0, 0, 255, 0.3)\""
+    strokeColor : "\"hitMode\", \"randomColor\", \"rgba(0, 0, 255, 0.3)\""
+    shadowOffsetX : "float"
+    shadowOffsetY : "float"
+    shadowBlur : "float"
+    shadowColor : "\"rgba(0, 0, 255, 0.3)\""
 
 
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor}) ->
 
     width = dimensions[0]
     height = dimensions[1]
@@ -43,6 +47,11 @@ class DrawArtCells
 
     if customTime?
       relativeTime = customTime
+
+    shadowOffsetX = 0 unless shadowOffsetX
+    shadowOffsetY = 0 unless shadowOffsetY
+    shadowBlur = 0 unless shadowBlur
+    shadowColor = "rgba(0, 0, 0, 0)" unless shadowColor    
 
     canvas = $("<canvas>")[0]
     canvas.width = width
@@ -59,7 +68,7 @@ class DrawArtCells
     for possibleEnd in mission.possibleEnds
       endValues.push possibleEnd.id
 
-
+    activeSegments = _.sortBy(activeSegments, (s) -> s.artPath.circlePosition)
     for segment in activeSegments
 
       path = segment.path
@@ -92,7 +101,12 @@ class DrawArtCells
         if strokeColor is "random"
           context.strokeStyle = "rgb(#{segment.randomColor2.r}, #{segment.randomColor2.g}, #{segment.randomColor2.b})"
         else
-          context.strokeStyle = strokeColor          
+          context.strokeStyle = strokeColor   
+
+      context.shadowOffsetX = shadowOffsetX
+      context.shadowOffsetY = shadowOffsetY
+      context.shadowBlur = shadowBlur
+      context.shadowColor = shadowColor  
 
       context.beginPath()
 
@@ -110,9 +124,14 @@ class DrawArtCells
         i++
 
         context.lineTo(x, y)
+      
+      x = path[0] * relativeTime + artPath[0] * (1 - relativeTime)
+      y = path[1] * relativeTime + artPath[1] * (1 - relativeTime)
+      context.lineTo(x, y)
 
+      context.stroke() 
       context.fill()
-      context.stroke()    
+   
 
     canvasData = context.getImageData(0, 0, width, height).data
     BufferUtils.alphaBlendBuffer(rgba, canvasData)
@@ -139,7 +158,7 @@ class DrawArtCells
         x += width * 0.5
         y += height * 0.5
 
-        positions.push({x, y})
+        positions.push({x, y, i})
 
       for segment in segments
         nearestEndPoint = _.sortBy(positions, (position) =>  
@@ -187,5 +206,6 @@ class DrawArtCells
       path.push x
       path.push y
 
+    path.circlePosition = position.i
 
     segment.artPath = path    

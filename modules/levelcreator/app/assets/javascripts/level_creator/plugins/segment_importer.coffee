@@ -192,8 +192,7 @@ class SegmentImporter
   setRandomColor2 : (segments) ->
 
     for segment in segments
-      color = Jenkins.hashlittle2("#{segment.value}", 0, 0)
-      i = color.b % @COLORS.length
+      i = segment.id % @COLORS.length
       c = @COLORS[i]
       segment.randomColor2 = @hexToRgb(c)
 

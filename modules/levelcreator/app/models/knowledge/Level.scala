@@ -61,6 +61,8 @@ case class Level(
       update(_.copy(renderedMissions = (renderedMissions ++ missionIds).distinct))
   }
   
+  def removeAllRenderedMissions = update(_.copy(renderedMissions = List()))
+  
   def removeRenderedMission(missionId: String) = removeRenderedMissions(List(missionId))
   
   def removeRenderedMissions(missionIds: List[String]): Unit = {

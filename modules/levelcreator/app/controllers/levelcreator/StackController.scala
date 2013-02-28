@@ -47,6 +47,11 @@ object StackController extends LevelCreatorController{
       JsonOk(Messages("level.stack.removed"))
   }
   
+  def deleteAll(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
+    request.level.removeAllRenderedMissions
+    JsonOk(Messages("level.stack.removedAll"))
+  }
+  
   def create(level: Level, missions: List[Mission]) = {
     implicit val timeout = Timeout((1000 * missions.size) seconds)
     val future = Future.traverse(missions)(m => ask(stackCreator, CreateStack(level, m))).recover {

@@ -2,7 +2,7 @@
 
 class SetSegmentsStaticDisplay
 
-  PUBLIC : false
+  PUBLIC : true
   COMMAND : "setSegmentsStaticDisplay()"
   FRIENDLY_NAME : "Set Segments StaticDisplay"
   DESCRIPTION : "sets a value so this segments are displayrd throw all slides"  

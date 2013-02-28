@@ -2,7 +2,7 @@
 
 class ApplySegmentsStaticDisplay
 
-  PUBLIC : false
+  PUBLIC : true
   COMMAND : "applySegmentsStaticDisplay()"
   FRIENDLY_NAME : "Apply Segments StaticDisplay"
   DESCRIPTION : "shows all static display segmets"  

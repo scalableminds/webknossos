@@ -1,5 +1,6 @@
 ### define 
 ../buffer_utils : BufferUtils
+../color_utils : ColorUtils
 ###
 
 class DrawArtCells
@@ -22,12 +23,18 @@ class DrawArtCells
     lineWidth : "0 - 5"
     size : "0 - 100"
     hitMode : "true, false (default)"
+    fillColor : "\"hitMode\", \"randomColor\", \"rgba(0, 0, 255, 0.3)\""
+    strokeColor : "\"hitMode\", \"randomColor\", \"rgba(0, 0, 255, 0.3)\""
+    shadowOffsetX : "float"
+    shadowOffsetY : "float"
+    shadowBlur : "float"
+    shadowColor : "\"rgba(0, 0, 255, 0.3)\""
 
 
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor}) ->
 
     width = dimensions[0]
     height = dimensions[1]
@@ -40,6 +47,11 @@ class DrawArtCells
 
     if customTime?
       relativeTime = customTime
+
+    shadowOffsetX = 0 unless shadowOffsetX
+    shadowOffsetY = 0 unless shadowOffsetY
+    shadowBlur = 0 unless shadowBlur
+    shadowColor = "rgba(0, 0, 0, 0)" unless shadowColor    
 
     canvas = $("<canvas>")[0]
     canvas.width = width
@@ -56,7 +68,7 @@ class DrawArtCells
     for possibleEnd in mission.possibleEnds
       endValues.push possibleEnd.id
 
-
+    activeSegments = _.sortBy(activeSegments, (s) -> s.artPath.circlePosition)
     for segment in activeSegments
 
       path = segment.path
@@ -79,6 +91,23 @@ class DrawArtCells
           context.fillStyle = "rgba(160, 160, 160, 1)" #color #"rgba(0, 0, 255, 1)"
           context.strokeStyle = "rgba(100, 100, 100, 1)" # color #"rgba(0, 0, 0, 1)"
 
+      if fillColor?
+        if fillColor is "random"
+          context.fillStyle = "rgb(#{segment.randomColor2.r}, #{segment.randomColor2.g}, #{segment.randomColor2.b})"
+        else
+          context.fillStyle = fillColor
+
+      if strokeColor?
+        if strokeColor is "random"
+          context.strokeStyle = "rgb(#{segment.randomColor2.r}, #{segment.randomColor2.g}, #{segment.randomColor2.b})"
+        else
+          context.strokeStyle = strokeColor   
+
+      context.shadowOffsetX = shadowOffsetX
+      context.shadowOffsetY = shadowOffsetY
+      context.shadowBlur = shadowBlur
+      context.shadowColor = shadowColor  
+
       context.beginPath()
 
       x = path[0] * relativeTime + artPath[0] * (1 - relativeTime)
@@ -95,9 +124,14 @@ class DrawArtCells
         i++
 
         context.lineTo(x, y)
+      
+      x = path[0] * relativeTime + artPath[0] * (1 - relativeTime)
+      y = path[1] * relativeTime + artPath[1] * (1 - relativeTime)
+      context.lineTo(x, y)
 
+      context.stroke() 
       context.fill()
-      context.stroke()    
+   
 
     canvasData = context.getImageData(0, 0, width, height).data
     BufferUtils.alphaBlendBuffer(rgba, canvasData)
@@ -112,7 +146,7 @@ class DrawArtCells
 
     if endPosition? and endPosition is "edge"
 
-      for i in [0..count] by 1
+      for i in [0...count] by 1
       
         radians = 2 * Math.PI * i / count
         x = Math.sin(radians)
@@ -124,7 +158,7 @@ class DrawArtCells
         x += width * 0.5
         y += height * 0.5
 
-        positions.push({x, y})
+        positions.push({x, y, i})
 
       for segment in segments
         nearestEndPoint = _.sortBy(positions, (position) =>  
@@ -172,5 +206,6 @@ class DrawArtCells
       path.push x
       path.push y
 
+    path.circlePosition = position.i
 
     segment.artPath = path    

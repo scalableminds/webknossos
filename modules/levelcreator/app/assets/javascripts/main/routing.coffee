@@ -37,6 +37,13 @@ $ ->
 
     "levelcreator.levelList" : ->
 
+      $(document).on "click", "[data-prompt]", (event) ->
+
+        event.preventDefault()
+        prompt("Level id:", $(this).data("prompt"))
+
+
+
       $(document).on "click", "#level-list .produce-stacks", (event) -> 
 
         event.preventDefault()
@@ -53,7 +60,7 @@ $ ->
           $.ajax(routes.controllers.levelcreator.StackController.produce(levelId, count)).then(
 
             (msg) -> 
-              Toast.success(msg)
+              Toast.message(msg)
               
               $viewStacks = $row.find(".view-stacks")
               stackCount = $viewStacks.html().match(/[0-9]+/)[0]

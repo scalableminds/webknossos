@@ -34,3 +34,4 @@ modules/shellgame/logs
 modules/shellgame/shellgame-assets
 public/levelStacks
 aws.conf
+knowledge

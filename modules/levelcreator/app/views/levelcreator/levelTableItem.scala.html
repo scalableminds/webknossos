@@ -2,11 +2,12 @@
 @import brainflight.view.helpers._
 
 <tr data-levelid="@level.id">
-  <td> @formatHash(level.id) </td>
   <td> 
-    <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"> @level.name </a>
+    <a href="#" data-prompt="@level.id" title="@level.id">#</a>
+    <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)">@level.name</a>
   </td>
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
+  <td> @level.dataSetName </td>
   <td>  
     <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"><i class="icon-pencil"></i> edit</a><br />
     <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">

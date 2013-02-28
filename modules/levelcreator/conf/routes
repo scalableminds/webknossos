@@ -18,7 +18,7 @@ GET     /levels/:levelId/produce/all         controllers.levelcreator.StackContr
 
 GET     /levels/:levelId/stacks              controllers.levelcreator.StackController.list(levelId: String)
 GET     /levels/:levelId/stacks.json         controllers.levelcreator.StackController.listJson(levelId: String)
-DELETE  /levels/:levelId/stacks             controllers.levelcreator.StackController.deleteAll(levelId: String)
+DELETE  /levels/:levelId/stacks              controllers.levelcreator.StackController.deleteAll(levelId: String)
 DELETE  /levels/:levelId/stacks/:missionId   controllers.levelcreator.StackController.delete(levelId: String, missionId: String)
 
 GET     /levels/:levelId/assets              controllers.levelcreator.LevelCreator.listAssets(levelId: String)

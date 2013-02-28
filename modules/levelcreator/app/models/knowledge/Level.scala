@@ -61,9 +61,11 @@ case class Level(
       update(_.copy(renderedMissions = (renderedMissions ++ missionIds).distinct))
   }
   
-  def removeRenderedMission(missionId: String): Unit = {
+  def removeRenderedMission(missionId: String) = removeRenderedMissions(List(missionId))
+  
+  def removeRenderedMissions(missionIds: List[String]): Unit = {
     update(_.copy(renderedMissions = 
-      renderedMissions.filterNot(mId => mId == missionId)))
+      renderedMissions.filterNot(mId => missionIds.contains(mId))))
   }
   
   def retrieveAsset(name: String) = {
@@ -124,6 +126,9 @@ object Level extends BasicDAO[Level]("levels") {
 
   def findOneByName(name: String) =
     findOne(MongoDBObject("name" -> name))
+    
+  def findByDataSetName(dataSetName: String) = 
+    find(MongoDBObject("dataSetName" -> dataSetName)).toList
 
   def isValidAssetName(name: String) = {
     name match {

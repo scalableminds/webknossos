@@ -48,6 +48,17 @@ object Mission extends BasicDAO[Mission]("missions") {
         insertOne(m)
     }
   
+  def deleteAllForDataSetExcept(dataSetName: String, missions: List[Mission]) = {
+    val obsoleteMissions = findByDataSetName(dataSetName).filterNot(m => 
+      missions.exists( mission => 
+        m.start == mission.start &&
+        m.errorCenter == mission.errorCenter
+      ))
+      
+    removeByIds(obsoleteMissions.map(_._id))
+    obsoleteMissions.map(_.id)
+  }
+  
   implicit val MissionFormat: Format[Mission] = (
     (__ \ "start").format[MissionStart] and
     (__ \ "errorCenter").format[Point3D] and

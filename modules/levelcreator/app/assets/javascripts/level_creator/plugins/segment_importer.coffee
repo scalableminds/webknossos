@@ -73,6 +73,7 @@ class SegmentImporter
     @setWeightedDistance(segments, width, height)
     @setRandomColor(segments)
     @setRandomColor2(segments)
+    @setRandomColor3(segments)
 
     #for segment in segments
     #  @setArtPath(segment, width, height)
@@ -195,6 +196,14 @@ class SegmentImporter
       i = segment.id % @COLORS.length
       c = @COLORS[i]
       segment.randomColor2 = @hexToRgb(c)
+
+
+  setRandomColor3 : (segments) ->
+
+    for segment in segments
+      i = segment.value % @COLORS.length
+      c = @COLORS[i]
+      segment.randomColor3 = @hexToRgb(c)
 
 
   hexToRgb : (hex) ->

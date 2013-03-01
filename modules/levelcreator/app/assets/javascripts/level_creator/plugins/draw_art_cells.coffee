@@ -23,8 +23,8 @@ class DrawArtCells
     lineWidth : "0 - 5"
     size : "0 - 100"
     hitMode : "true, false (default)"
-    fillColor : "\"hitMode\", \"randomColor\", \"rgba(0, 0, 255, 0.3)\""
-    strokeColor : "\"hitMode\", \"randomColor\", \"rgba(0, 0, 255, 0.3)\""
+    fillColor : "\"hitMode\", \"random\", \"randomWhole\", \"rgba(0, 0, 255, 0.3)\""
+    strokeColor : "\"hitMode\", \"random\", \"randomWhole\", \"rgba(0, 0, 255, 0.3)\""
     shadowOffsetX : "float"
     shadowOffsetY : "float"
     shadowBlur : "float"
@@ -34,13 +34,14 @@ class DrawArtCells
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor, mergeSegments}) ->
 
     width = dimensions[0]
     height = dimensions[1]
 
     hitMode = false unless hitMode?
     lineWidth = 0 unless lineWidth?
+    mergeSegments = false unless mergeSegments?
 
     if reverse? and reverse
       relativeTime = 1 - relativeTime
@@ -62,7 +63,7 @@ class DrawArtCells
 
     activeSegments = _.filter(segments, (segment) -> segment.display is true)
     
-    @setArtPaths(activeSegments, width, height, endPosition, size)
+    @setArtPaths(activeSegments, width, height, endPosition, size, mergeSegments)
 
     endValues = [mission.start.id]
     for possibleEnd in mission.possibleEnds
@@ -94,12 +95,16 @@ class DrawArtCells
       if fillColor?
         if fillColor is "random"
           context.fillStyle = "rgb(#{segment.randomColor2.r}, #{segment.randomColor2.g}, #{segment.randomColor2.b})"
+        else if fillColor is "randomWhole"
+          context.fillStyle = "rgb(#{segment.randomColor3.r}, #{segment.randomColor3.g}, #{segment.randomColor3.b})"
         else
           context.fillStyle = fillColor
 
       if strokeColor?
         if strokeColor is "random"
           context.strokeStyle = "rgb(#{segment.randomColor2.r}, #{segment.randomColor2.g}, #{segment.randomColor2.b})"
+        else if strokeColor is "randomWhole"
+          context.strokeStyle = "rgb(#{segment.randomColor3.r}, #{segment.randomColor3.g}, #{segment.randomColor3.b})"
         else
           context.strokeStyle = strokeColor   
 
@@ -139,9 +144,16 @@ class DrawArtCells
     rgba
 
 
-  setArtPaths : (segments, width, height, endPosition, size) ->
+  setArtPaths : (segments, width, height, endPosition, size, mergeSegments) ->
 
-    count = segments.length
+    if mergeSegments
+      values = _.pluck(segments, "value")
+    else
+      values = _.pluck(segments, "id")
+
+    values = _.uniq(values)
+
+    count = values.length
     positions = []
 
     if endPosition? and endPosition is "edge"
@@ -160,15 +172,23 @@ class DrawArtCells
 
         positions.push({x, y, i})
 
-      for segment in segments
+      for value in values
+        
+        if mergeSegments
+          tempSegments = _.filter(segments, (s) => s.value is value)
+        else
+          tempSegments = _.filter(segments, (s) => s.id is value )
+
         nearestEndPoint = _.sortBy(positions, (position) =>  
           Math.sqrt(
-            Math.pow(segment.weightedCenter.x - position.x, 2) +
-            Math.pow(segment.weightedCenter.y - position.y, 2)
+            Math.pow(tempSegments[0].weightedCenter.x - position.x, 2) +
+            Math.pow(tempSegments[0].weightedCenter.y - position.y, 2)
           )
         )
         positions.splice(positions.indexOf(nearestEndPoint[0]), 1)
-        @setArtPath(segment, width, height, nearestEndPoint[0], size)
+
+        for segment in tempSegments
+          @setArtPath(segment, width, height, nearestEndPoint[0], size)
 
     else
 

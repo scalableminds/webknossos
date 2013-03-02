@@ -23,12 +23,15 @@ class S3Uploader(s3Config: S3Config) extends Actor{
     case UploadStacks(stacks) => uploadStacks(stacks)
   }
   
-  def buildUploadPairs(stack: Stack): List[Tuple2[File, String]] = {
+  def buildUploadPairs(stack: Stack): List[Tuple2[File, String]] = {  
     val stacksFileKey = s"${s3Config.branchName}/${stack.level.id}/${stack.level.stacksFileName}"
     val stackFiles = stack.metaFile :: stack.images
     val stackFilePrefix = s"${s3Config.branchName}/${stack.level.id}/${stack.mission.id}"
+    val zipFileKey = s"$stackFilePrefix/${stack.zipFile.getName}"
     (stackFiles.zip(stackFiles.map(f => s"$stackFilePrefix/${f.getName}"))) :+ 
-    (stack.level.stacksFile, stacksFileKey)
+    (stack.level.stacksFile, stacksFileKey) :+
+    (stack.zipFile, zipFileKey)
+    
   }
   
   def uploadStacks(stacks: List[Stack]) = {

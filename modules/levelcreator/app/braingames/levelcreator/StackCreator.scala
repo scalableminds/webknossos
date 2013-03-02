@@ -22,6 +22,8 @@ import play.api.i18n.Messages
 import java.io.{ File, PrintWriter, FilenameFilter }
 import scala.util.{ Try, Success, Failure }
 import braingames.util.FileExtensionFilter
+import braingames.util.ZipIO
+import java.io.{FileOutputStream, FileInputStream}
 
 case class CreateStack(level: Level, mission: Mission)
 
@@ -87,14 +89,24 @@ class StackCreator extends Actor {
     }) match {
       case Success(stack) => Some(stack)
       case Failure(exception) =>
-        Logger.error(s"failed creating stack for level:${level.id} mission:${mission.id}")
         Logger.error(s"$exception")
         None
     }
   }
 
-  def zipStack(stack: Stack) {
-    ("zip" :: stack.zipFile.getPath :: stack.images.map(_.getPath)) !! logger
-    Logger.info("Finished zipping")
+  def zipStack(stack: Stack) {   
+    def createZipName(file: File) = s"${stack.mission.id}/${file.getName}"
+    (Try {
+    val output = new FileOutputStream(stack.zipFile)
+    val inputs = stack.images.map(new FileInputStream(_))
+    val namesInZip = stack.images.map(createZipName(_))
+    ZipIO.zip(inputs.zip(namesInZip),output)
+    }) match {
+      case Success(_) => Logger.info("Finished zipping")
+      case Failure(exception) =>
+        Logger.error(s"failed zipping stack: $stack")
+        Logger.error(s"$exception")
+        None
+    }    
   }
 }

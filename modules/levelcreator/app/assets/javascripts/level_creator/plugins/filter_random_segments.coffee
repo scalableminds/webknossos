@@ -7,7 +7,7 @@ class FilterRandomSegments
   PUBLIC : true
   COMMAND : "filterRandomSegments()"
   FRIENDLY_NAME : "Filter Random Segments"
-  DESCRIPTION : "Filters segments that are not end/start segments"
+  DESCRIPTION : "Filters segments to fill a total number of segments"
   PARAMETER : 
     input: 
       rgba: "Uint8Array"

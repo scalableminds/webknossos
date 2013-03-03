@@ -36,10 +36,12 @@ class DrawArtCells
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, startShape, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor, mergeSegments}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, minSize, startShape, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor, mergeSegments}) ->
 
     width = dimensions[0]
     height = dimensions[1]
+
+    minSize = 0 unless minSize?
 
     hitMode = false unless hitMode?
     lineWidth = 0 unless lineWidth?
@@ -65,8 +67,8 @@ class DrawArtCells
 
     activeSegments = _.filter(segments, (segment) -> segment.display is true)
     
-    @setStartPaths(activeSegments, width, height, startShape)
-    @setEndPaths(activeSegments, width, height, endPosition, size, mergeSegments)
+    @setStartPaths(activeSegments, width, height, startShape, minSize)
+    @setEndPaths(activeSegments, width, height, endPosition, size, mergeSegments, minSize)
 
     endValues = [mission.start.id]
     for possibleEnd in mission.possibleEnds
@@ -147,7 +149,7 @@ class DrawArtCells
     rgba
 
 
-  setStartPaths : (segments, width, height, startShape) ->
+  setStartPaths : (segments, width, height, startShape, minSize) ->
 
     values = _.pluck(segments, "id")
 
@@ -164,7 +166,7 @@ class DrawArtCells
           width, 
           height, 
           segment.weightedCenter, 
-          Math.sqrt(segment.size) / Math.PI
+          Math.max(Math.sqrt(segment.size) / Math.PI, minSize)
         )
 
     else
@@ -173,7 +175,7 @@ class DrawArtCells
         segment.startPath = segment.path
 
 
-  setEndPaths : (segments, width, height, endPosition, size, mergeSegments) ->
+  setEndPaths : (segments, width, height, endPosition, size, mergeSegments, minSize) ->
 
     if mergeSegments
       values = _.pluck(segments, "value")
@@ -233,7 +235,7 @@ class DrawArtCells
           width, 
           height, 
           segment.weightedCenter, 
-          size || Math.sqrt(segment.size) / Math.PI
+          size || Math.max(Math.sqrt(segment.size) / Math.PI, minSize)
         )
 
 
@@ -244,7 +246,7 @@ class DrawArtCells
     if size? and size > 0
       radius = size
     else
-      radius = Math.sqrt(segment.size) * 0.5
+      radius = Math.max(Math.sqrt(segment.size) / Math.PI, @MIN_CELL_SIZE)
     count = segment.path.length * 0.5
 
     mx = position.x

@@ -20,6 +20,7 @@ class DrawArtCells
     colorRandom : "true, false (default)"
     endPosition : "\"edge\", \"segmentCenter\" (default)"
     startPosition : "\"segmentCenter\" (default)"
+    startShape : "\"circle\", \"segment\" (default)" 
     lineWidth : "0 - 5"
     size : "0 - 100"
     hitMode : "true, false (default)"
@@ -35,7 +36,7 @@ class DrawArtCells
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor, mergeSegments}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, startShape, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor, mergeSegments}) ->
 
     width = dimensions[0]
     height = dimensions[1]
@@ -64,17 +65,18 @@ class DrawArtCells
 
     activeSegments = _.filter(segments, (segment) -> segment.display is true)
     
-    @setArtPaths(activeSegments, width, height, endPosition, size, mergeSegments)
+    @setStartPaths(activeSegments, width, height, startShape)
+    @setEndPaths(activeSegments, width, height, endPosition, size, mergeSegments)
 
     endValues = [mission.start.id]
     for possibleEnd in mission.possibleEnds
       endValues.push possibleEnd.id
 
-    activeSegments = _.sortBy(activeSegments, (s) -> s.artPath.circlePosition)
+    activeSegments = _.sortBy(activeSegments, (s) -> -s.size)
     for segment in activeSegments
 
-      path = segment.path
-      artPath = segment.artPath
+      startPath = segment.startPath
+      endPath = segment.endPath
       randomColor = segment.randomColor
       color = "rgba(#{randomColor.r}, #{randomColor.g}, #{randomColor.b}, 1)"
       if hitMode
@@ -116,23 +118,23 @@ class DrawArtCells
 
       context.beginPath()
 
-      x = path[0] * relativeTime + artPath[0] * (1 - relativeTime)
-      y = path[1] * relativeTime + artPath[1] * (1 - relativeTime)      
+      x = startPath[0] * relativeTime + endPath[0] * (1 - relativeTime)
+      y = startPath[1] * relativeTime + endPath[1] * (1 - relativeTime)      
 
       context.moveTo(x, y)
 
       i = 0
 
-      while i < path.length
-        x = path[i] * relativeTime + artPath[i] * (1 - relativeTime)
+      while i < startPath.length
+        x = startPath[i] * relativeTime + endPath[i] * (1 - relativeTime)
         i++
-        y = path[i] * relativeTime + artPath[i] * (1 - relativeTime)
+        y = startPath[i] * relativeTime + endPath[i] * (1 - relativeTime)
         i++
 
         context.lineTo(x, y)
       
-      x = path[0] * relativeTime + artPath[0] * (1 - relativeTime)
-      y = path[1] * relativeTime + artPath[1] * (1 - relativeTime)
+      x = startPath[0] * relativeTime + endPath[0] * (1 - relativeTime)
+      y = startPath[1] * relativeTime + endPath[1] * (1 - relativeTime)
       context.lineTo(x, y)
 
       context.stroke() 
@@ -145,7 +147,33 @@ class DrawArtCells
     rgba
 
 
-  setArtPaths : (segments, width, height, endPosition, size, mergeSegments) ->
+  setStartPaths : (segments, width, height, startShape) ->
+
+    values = _.pluck(segments, "id")
+
+    values = _.uniq(values)
+
+    count = values.length
+    positions = []
+
+    if startShape? and startShape is "circle"
+       
+      for segment in segments
+        segment.startPath = @getArtPath(
+          segment, 
+          width, 
+          height, 
+          segment.weightedCenter, 
+          Math.sqrt(segment.size) / Math.PI
+        )
+
+    else
+
+      for segment in segments
+        segment.startPath = segment.path
+
+
+  setEndPaths : (segments, width, height, endPosition, size, mergeSegments) ->
 
     if mergeSegments
       values = _.pluck(segments, "value")
@@ -189,15 +217,28 @@ class DrawArtCells
         positions.splice(positions.indexOf(nearestEndPoint[0]), 1)
 
         for segment in tempSegments
-          @setArtPath(segment, width, height, nearestEndPoint[0], size)
+          segment.endPath = @getArtPath(
+            segment, 
+            width, 
+            height, 
+            nearestEndPoint[0], 
+            size
+          )
 
     else
 
       for segment in segments
-        @setArtPath(segment, width, height, segment.weightedCenter, size)
+        segment.endPath = @getArtPath(
+          segment, 
+          width, 
+          height, 
+          segment.weightedCenter, 
+          size || Math.sqrt(segment.size) / Math.PI
+        )
 
 
-  setArtPath : (segment, width, height, position, size) ->
+
+  getArtPath : (segment, width, height, position, size) ->
 
     path = []
     if size? and size > 0
@@ -205,9 +246,6 @@ class DrawArtCells
     else
       radius = Math.sqrt(segment.size) * 0.5
     count = segment.path.length * 0.5
-
-    #mx = 2 * segment.weightedCenter.x - (width * 0.5)
-    #my = 2 * segment.weightedCenter.y - (height * 0.5)
 
     mx = position.x
     my = position.y
@@ -229,4 +267,4 @@ class DrawArtCells
 
     path.circlePosition = position.i
 
-    segment.artPath = path    
+    path       

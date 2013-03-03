@@ -34,4 +34,5 @@ modules/shellgame/logs
 modules/shellgame/shellgame-assets
 public/levelStacks
 aws.conf
+aws.conf.disabled
 knowledge

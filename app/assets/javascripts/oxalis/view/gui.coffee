@@ -192,7 +192,7 @@ class Gui
     #                       .name("Radius")    
     #                       .listen()
     #                       .onChange(@setNodeRadius)
-    (fNodes.add @settings, "particleSize", 1, 10)
+    (fNodes.add @settings, "particleSize", 1, 20)
                           .name("Node Size")    
                           .listen()
                           .onChange(@setParticleSize)

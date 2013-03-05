@@ -119,7 +119,7 @@ class Skeleton
     @edgesBuffer.push(new ResizableBuffer(3))
     @nodesBuffer.push(new ResizableBuffer(3))
 
-    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: treeColor, linewidth: 1}), THREE.LinePieces))
+    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: treeColor, linewidth: @model.route.getParticleSize() / 4}), THREE.LinePieces))
     @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: treeColor, size: @model.route.getParticleSize(), sizeAttenuation : false})))
     @ids.push(treeId)
 
@@ -247,6 +247,8 @@ class Skeleton
   setParticleSize : (size) ->
     for particleSystem in @nodes
       particleSystem.material.size = size
+    for line in @routes
+      line.material.linewidth = size / 4
     @branches.material.size = size
     @activeNodeParticle.material.size = size + 3
     @flycam.hasChanged = true

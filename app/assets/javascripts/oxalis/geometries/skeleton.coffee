@@ -69,15 +69,16 @@ class Skeleton
     activeNodeGeometry = new THREE.Geometry()
     @activeNodeParticle = new THREE.ParticleSystem(
       activeNodeGeometry,
-        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 10, sizeAttenuation : false}))
+        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 10, sizeAttenuation: false}))
     activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
 
     routeGeometryBranchPoints = new THREE.Geometry()
     routeGeometryBranchPoints.dynamic = true
     @branches = new THREE.ParticleSystem(
         routeGeometryBranchPoints,
-        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE * 0.7, size: 8, sizeAttenuation : false}))
+        new THREE.ParticleBasicMaterial({size: 8, sizeAttenuation: false, vertexColors: true}))
     @branchesBuffer = new ResizableBuffer(3)
+    @branchesColorsBuffer = new ResizableBuffer(3)
 
     @updateBranches()
 
@@ -87,13 +88,14 @@ class Skeleton
       newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)
-      mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) => @mergeTree(lastTreeID, lastNodePosition, activeNodePosition)
+      mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) => 
+        @mergeTree(lastTreeID, lastNodePosition, activeNodePosition)
+        @updateBranches()
       newNode : => @setWaypoint()
       setBranch : (isBranchPoint, nodeID) => 
         @setBranchPoint(isBranchPoint, nodeID)
         @updateBranches()
-      deleteBranch : =>
-        @updateBranches()
+      deleteBranch : => @updateBranches()
       # spheres currently disabled
       #newActiveNodeRadius : (radius) => @setNodeRadius(radius)
       reloadTrees : (trees) =>
@@ -398,9 +400,17 @@ class Skeleton
       branchpoint.pos[1] + 0.01, 
       branchpoint.pos[2] - 0.01] for branchpoint in branchpoints)
 
+    @branchesColorsBuffer.clear()
+    @branchesColorsBuffer.pushMany([
+      ((0xffffff - (treeColor = @model.route.getTree(branchpoint.treeId).color)) >> 16 & 255 ) / 255,
+      ((0xffffff - treeColor) >> 8 & 255 ) / 255,
+      ((0xffffff - treeColor) & 255 ) / 255] for branchpoint in branchpoints)
+
     @branches.geometry.__vertexArray = @branchesBuffer.getBuffer()
     @branches.geometry.__webglParticleCount = @branchesBuffer.getLength()
+    @branches.geometry.__colorArray = @branchesColorsBuffer.getBuffer()
     @branches.geometry.verticesNeedUpdate = true
+    @branches.geometry.colorsNeedUpdate = true
     @flycam.hasChanged = true
 
 

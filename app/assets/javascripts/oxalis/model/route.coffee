@@ -63,7 +63,7 @@ class Route
       i = 0
       for node in treeData.nodes
         if node
-          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp))
+          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
           # idCount should be bigger than any other id
           @idCount = Math.max(node.id + 1, @idCount);
       # Initialize edges
@@ -223,7 +223,7 @@ class Route
       unless @lastRadius?
         @lastRadius = 10 * @scaleInfo.baseVoxel
         if @activeNode? then @lastRadius = @activeNode.radius
-      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime())
+      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime(), @activeTree.treeId)
       @activeTree.nodes.push(point)
       if @activeNode
         @activeNode.appendNext(point)
@@ -456,6 +456,10 @@ class Route
 
         @activeTree.nodes = []
         @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
+        # update tree ids
+        unless i == 0
+          for node in @activeTree.nodes
+            node.treeId = @activeTree.treeId
         @setActiveNode(deletedNode.neighbors[i].id)
         newTrees.push(@activeTree)
 
@@ -525,6 +529,10 @@ class Route
         @activeTree.nodes = @activeTree.nodes.concat(lastTree.nodes)
         @activeNode.appendNext(lastNode)
         lastNode.appendNext(@activeNode)
+
+        # update tree ids
+        for node in @activeTree.nodes
+          node.treeId = @activeTree.treeId
         
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 

@@ -19,6 +19,8 @@ TYPE_BRANCH       = 1
 # Max and min radius in base voxels (see scaleInfo.baseVoxel)
 MIN_RADIUS        = 1
 MAX_RADIUS        = 1000
+MIN_PARTICLE_SIZE = 1
+MAX_PARTICLE_SIZE = 10
 
 
 class Route
@@ -267,6 +269,9 @@ class Route
   getActiveNodeId : -> @lastActiveNodeId
 
 
+  getParticleSize : -> @particleSize
+
+
   getActiveNodePos : ->
 
     if @activeNode then @activeNode.pos else null
@@ -307,6 +312,14 @@ class Route
     @stateLogger.updateNode(@activeNode, @activeTree.treeId)
 
     @trigger("newActiveNodeRadius", radius)
+
+
+  setParticleSize : (size) ->
+
+    @particleSize = Math.min(MAX_PARTICLE_SIZE, size)
+    @particleSize = Math.max(MIN_PARTICLE_SIZE, @particleSize)
+
+    @trigger("newParticleSize", @particleSize)
 
 
   setActiveNode : (nodeID, mergeTree = false) ->

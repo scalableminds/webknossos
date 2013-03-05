@@ -14,7 +14,9 @@ VIEW_3D            = Dimensions.VIEW_3D
 TYPE_NORMAL = 0
 TYPE_BRANCH = 1
 
-COLOR_ACTIVE = 0x0000ff
+COLOR_ACTIVE = 0xff0000
+COLOR_BRANCH = 0x0000ff
+COLOR_ACTIVE_BRANCH = 0x660000
 
 class Skeleton
 
@@ -69,14 +71,14 @@ class Skeleton
     activeNodeGeometry = new THREE.Geometry()
     @activeNodeParticle = new THREE.ParticleSystem(
       activeNodeGeometry,
-        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 10, sizeAttenuation : false}))
+        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 8, sizeAttenuation : false}))
     activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
 
     routeGeometryBranchPoints = new THREE.Geometry()
     routeGeometryBranchPoints.dynamic = true
     @branches = new THREE.ParticleSystem(
         routeGeometryBranchPoints,
-        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE * 0.7, size: 8, sizeAttenuation : false}))
+        new THREE.ParticleBasicMaterial({color: COLOR_BRANCH, size: 5, sizeAttenuation : false}))
     @branchesBuffer = new ResizableBuffer(3)
 
     @updateBranches()
@@ -101,6 +103,7 @@ class Skeleton
           @route.one("rendered", =>
             @loadSkeletonFromModel(trees)))
       removeSpheresOfTree : (nodes) => @removeSpheresOfTree(nodes)
+      newParticleSize : (size) => @setParticleSize(size)
 
     @reset()
 
@@ -209,12 +212,12 @@ class Skeleton
       #if @activeNodeSphere
       #  @activeNodeSphere.visible = false
       if @route.getActiveNodeType() == TYPE_BRANCH
-        @activeNodeParticle.material.color.setHex(COLOR_ACTIVE * 0.7)
+        @activeNodeParticle.material.color.setHex(COLOR_ACTIVE_BRANCH)
       else
         @activeNodeParticle.material.color.setHex(COLOR_ACTIVE)
 
       # @setNodeRadius(@route.getActiveNodeRadius())
-      @activeNodeParticle.position = new THREE.Vector3(position[0] + 0.01, position[1] + 0.01, position[2] - 0.01)
+      @activeNodeParticle.position = new THREE.Vector3(position[0] + 0.02, position[1] + 0.02, position[2] - 0.02)
     else
       #@activeNodeSphere = null
       @activeNodeParticle.visible = false
@@ -239,6 +242,13 @@ class Skeleton
     @activeNode.scale = @calcScaleVector(vRadius)
     if @activeNodeSphere
       @activeNodeSphere.scale = @calcScaleVector(vRadius)
+    @flycam.hasChanged = true
+
+  setParticleSize : (size) ->
+    for particleSystem in @nodes
+      particleSystem.material.size = size
+    @branches.material.size = size
+    @activeNodeParticle.material.size = size + 3
     @flycam.hasChanged = true
 
   getMeshes : =>

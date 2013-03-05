@@ -14,7 +14,7 @@ MAX_EDGE_LENGTH = 2
 
 class VolumeTracing
 
-  constructor : (@flycam) ->
+  constructor : (@flycam, @cube) ->
     _.extend(@, new EventMixin())
 
     @cells        = []         # List of VolumeCells
@@ -60,6 +60,11 @@ class VolumeTracing
       return
 
     @addToLayer(@startPos)
+    startTime = new Date().getTime()
+    voxelList = @currentLayer.getVoxelArray()
+    #console.log "Time", (new Date().getTime() - startTime)#, @currentLayer.getVoxelArray()
+    @cube.labelVoxels(voxelList, 100)
+
     @currentLayer = null
     @startPos = null
     @prevPos = null

@@ -105,9 +105,9 @@ class Cube
 
   getVoxelIndexByVoxelOffset : ([x, y, z]) ->
 
-    x * (1 << @BUCKET_SIZE_P * 2) + 
+    x +
     y * (1 << @BUCKET_SIZE_P) + 
-    z
+    z * (1 << @BUCKET_SIZE_P * 2)
 
 
   getDataBucketByZoomedAddress : (address) ->

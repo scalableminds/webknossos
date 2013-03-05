@@ -67,7 +67,7 @@ class VolumeLayer
       
       if Math.abs(prevQuadrant - quadrant) == 2 or quadrant == 0
         # point is on the edge, considered within the polygon
-        console.log "Point is ON the edge", prevQuadrant, quadrant
+        #console.log "Point is ON the edge", prevQuadrant, quadrant
         return true
       diff = quadrant - prevQuadrant
       # special cases if quadrants are 4 and 1
@@ -81,6 +81,21 @@ class VolumeLayer
 
     #console.log "totalDiff", totalDiff
     return totalDiff != 0
+
+  getVoxelArray : ->
+
+    res = []
+    # Check every voxel in this cuboid
+    startTime = new Date().getTime()
+    for x in [@minCoord[0]..@maxCoord[0]]
+      for y in [@minCoord[1]..@maxCoord[1]]
+        for z in [@minCoord[2]..@maxCoord[2]]
+          if @containsVoxel([x, y, z])
+            res.push([x, y, z])
+    console.log "Time", (new Date().getTime() - startTime)
+    console.log "Cuboid", @minCoord, @maxCoord
+
+    return res
 
   get2DCoordinate : (coord3d) ->
     # Throw out 'thirdCoordinate' which is equal anyways

@@ -57,7 +57,7 @@ class Model
                   @flycam3d.setPositionSilent(position)
               @route = new Route(tracing.tracing, @scaleInfo, @flycam, @flycam3d)
               @user = new User(user)
-              @volumeTracing = new VolumeTracing(@flycam)
+              @volumeTracing = new VolumeTracing(@flycam, @binary.cube)
               
               tracing.tracing.settings
               

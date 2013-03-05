@@ -120,7 +120,7 @@ class Skeleton
     @nodesBuffer.push(new ResizableBuffer(3))
 
     @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: treeColor, linewidth: 1}), THREE.LinePieces))
-    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: treeColor, size: 5, sizeAttenuation : false})))
+    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: treeColor, size: @model.route.getParticleSize(), sizeAttenuation : false})))
     @ids.push(treeId)
 
     @setActiveNode()

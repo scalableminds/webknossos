@@ -1,7 +1,9 @@
 ### define
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
+../geometries/cellgeometry : CellGeometry
 ../model/dimensions : Dimensions
+../../libs/event_mixin : EventMixin
 ###
 
 
@@ -18,14 +20,15 @@ class SceneController
   # This class collects all the meshes displayed in the Sceleton View and updates position and scale of each
   # element depending on the provided flycam.
 
-  constructor : (upperBoundary, flycam, model) ->
-    @upperBoundary = upperBoundary
-    @flycam        = flycam
-    @model         = model
+  constructor : (@upperBoundary, @flycam, @model) ->
+    _.extend(@, new EventMixin())
+
     @current       = 0
     @displayPlane  = [true, true, true]
     @planeShift    = [0, 0, 0]
     @showSkeleton  = true
+
+    @model.volumeTracing.on "newCell", (cell) => @newCell(cell)
 
     @createMeshes()
     @bind()
@@ -115,7 +118,8 @@ class SceneController
   setRouteClippingDistance : (value) =>
     # convert nm to voxel
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @planeShift[i] = 2 * value * @model.scaleInfo.voxelPerNM[i]
+      @planeShift[i] = value * @model.scaleInfo.voxelPerNM[i]
+    console.log(@planeShift)
 
   setInterpolation : (value) =>
     for plane in @planes
@@ -133,6 +137,10 @@ class SceneController
     result = result.concat(@skeleton.getMeshes())
     result.push(@cube)
     return result
+
+  newCell : (cellModel) ->
+    @cell = new CellGeometry(@model, cellModel)
+    @trigger "newGeometries", @cell.getMeshes()
 
   toggleSkeletonVisibility : ->
     @showSkeleton = not @showSkeleton

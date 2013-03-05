@@ -335,6 +335,7 @@ class Route
       for i in [0...@comments.length]
         if(@comments[i].node == @activeNode.id)
           @comments.splice(i, 1)
+          @deletedCommentIndex = i
           break
       if commentText != ""
         @comments.push({node: @activeNode.id, content: commentText})
@@ -362,20 +363,22 @@ class Route
 
   nextCommentNodeID : (forward) ->
 
-    unless @activeNode?
-      if @comments.length > 0 then return @comments[0].node
+    length = @comments.length
+    offset = if forward then 1 else -1
 
-    if @comments.length == 0
+    unless @activeNode?
+      if length > 0 then return @comments[0].node
+
+    if length == 0
       return null
 
     for i in [0...@comments.length]
       if @comments[i].node == @activeNode.id
-        if forward
-          return @comments[(i + 1) % @comments.length].node
-        else
-          if i == 0 then return @comments[@comments.length - 1].node
-          else
-            return @comments[(i - 1)].node
+        return @comments[(length + i + offset) % length].node
+
+    if @deletedCommentIndex?
+      offset = if forward then 0 else -1
+      return @comments[(length + @deletedCommentIndex + offset) % length].node
 
     return @comments[0].node
 

@@ -2,6 +2,7 @@
 ./model/binary : Binary
 ./model/route : Route
 ./model/user : User
+./model/volumetracing : VolumeTracing
 ./model/scaleinfo : ScaleInfo
 ./model/flycam2d : Flycam2d
 ./model/flycam3d : Flycam3d
@@ -56,7 +57,9 @@ class Model
                   @flycam3d.setPositionSilent(position)
               @route = new Route(tracing.tracing, @scaleInfo, @flycam, @flycam3d)
               @user = new User(user)
+              @volumeTracing = new VolumeTracing(@flycam)
               
               tracing.tracing.settings
+              
             -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
           )

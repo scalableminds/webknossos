@@ -17,6 +17,8 @@ TYPE_USUAL       = 0
 TYPE_BRANCH      = 1
 WIDTH            = 384
 
+MODE_NORMAL      = 0
+MODE_VOLUME      = 1
 
 class PlaneController
 
@@ -43,7 +45,8 @@ class PlaneController
     _.extend(@, new EventMixin())
 
     @flycam = @model.flycam
-    @view  = new PlaneView(@model, @flycam, stats)
+    @view   = new PlaneView(@model, @flycam, stats)
+    @mode   = MODE_NORMAL
 
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
@@ -122,15 +125,30 @@ class PlaneController
       #@input.planeMouse = new Input.Mouse($("#plane#{planeId}"),
       new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
-        leftDownMove : (delta) => 
-          @move [
-            delta.x * @model.user.mouseInversionX / @view.scaleFactor
-            delta.y * @model.user.mouseInversionX / @view.scaleFactor
-            0
-          ]
+        leftDownMove : (delta, pos) => 
+          if @mode == MODE_NORMAL
+            @move [
+              delta.x * @model.user.mouseInversionX / @view.scaleFactor
+              delta.y * @model.user.mouseInversionX / @view.scaleFactor
+              0
+            ]
+          else if @mode == MODE_VOLUME
+            @drawVolume([pos.x, pos.y])
         scroll : @scroll
-        leftClick : @onPlaneClick
-        rightClick : @setWaypoint
+        leftClick : (pos, shiftPressed) =>
+          if @mode == MODE_NORMAL
+            @onPlaneClick(pos, shiftPressed)
+          else if @mode == MODE_VOLUME
+            @model.volumeTracing.startNewLayer()
+        leftMouseUp : =>
+          if @mode == MODE_VOLUME
+            @model.volumeTracing.finishLayer()
+
+        rightClick : (pos) =>
+          if @mode == MODE_VOLUME
+            @withinPolygonCheck(pos)
+          else
+            @setWaypoint(pos)
       )
 
     #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
@@ -194,6 +212,13 @@ class PlaneController
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
       "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
 
+      # Mode
+      "v" : =>  # Toggle Mode
+        if @mode == MODE_NORMAL 
+          @mode = MODE_VOLUME
+        else 
+          @mode = MODE_NORMAL
+
       #Move
       "space" : (first) => @moveZ( @model.user.moveValue, first)
       "f" : (first) => @moveZ( @model.user.moveValue, first)
@@ -227,6 +252,13 @@ class PlaneController
       render : => @render()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
+    @sceneController.on
+      newGeometries : (list, event) =>
+        for geometry in list
+          @view.addGeometry(geometry)
+      removeGeometries : (list, event) =>
+        for geometry in list
+          @view.removeGeometry(geometry)   
     @sceneController.skeleton.on
       newGeometries : (list, event) =>
         for geometry in list
@@ -293,30 +325,8 @@ class PlaneController
   ########### Click callbacks
   
   setWaypoint : (relativePosition, typeNumber) =>
-    curGlobalPos  = @flycam.getPosition()
-    zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
     activeNodePos = @model.route.getActiveNodePos()
-    scaleFactor   = @view.scaleFactor
-    planeRatio    = @model.scaleInfo.baseVoxelFactors
-    position = switch @flycam.getActivePlane()
-      when PLANE_XY 
-        [
-          curGlobalPos[0] - (WIDTH * scaleFactor / 2 - relativePosition[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
-          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - relativePosition[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
-          curGlobalPos[2]
-        ]
-      when PLANE_YZ 
-        [
-          curGlobalPos[0], 
-          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - relativePosition[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
-          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - relativePosition[0]) / scaleFactor * planeRatio[2] * zoomFactor
-        ]
-      when PLANE_XZ 
-        [
-          curGlobalPos[0] - (WIDTH * scaleFactor / 2 - relativePosition[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
-          curGlobalPos[1], 
-          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - relativePosition[1]) / scaleFactor * planeRatio[2] * zoomFactor
-        ]
+    position = @calculateGlobalPos(relativePosition)
     # set the new trace direction
     if activeNodePos
       @flycam.setDirection([
@@ -325,6 +335,38 @@ class PlaneController
         position[2] - activeNodePos[2]
       ])
     @addNode(position)
+
+  withinPolygonCheck : (relativePosition) =>
+    position = @calculateGlobalPos(relativePosition)
+    cell = @sceneController.cell.cell
+    activePlane = @flycam.getActivePlane()
+    thirdDimValue = position[Dimensions.thirdDimensionForPlane(activePlane)]
+    layer = cell.getLayer(activePlane, thirdDimValue)
+
+    console.log "Point in Polygon:", layer.containsVoxel(position)
+
+  drawVolume : (relativePosition) ->
+    pos = @calculateGlobalPos(relativePosition)
+    @model.volumeTracing.addToLayer(pos)
+
+  calculateGlobalPos : (clickPos) ->
+    curGlobalPos  = @flycam.getPosition()
+    zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
+    scaleFactor   = @view.scaleFactor
+    planeRatio    = @model.scaleInfo.baseVoxelFactors
+    position = switch @flycam.getActivePlane()
+      when PLANE_XY 
+        [ curGlobalPos[0] - (WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+          curGlobalPos[2] ]
+      when PLANE_YZ 
+        [ curGlobalPos[0], 
+          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[2] * zoomFactor ]
+      when PLANE_XZ 
+        [ curGlobalPos[0] - (WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+          curGlobalPos[1], 
+          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor ]
 
   onPreviewClick : (position, shiftAltPressed) =>
     @onClick(position, VIEW_3D, shiftAltPressed)

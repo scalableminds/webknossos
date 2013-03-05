@@ -46,6 +46,8 @@ class MissionWatcher extends Actor{
         val missions = aggregateMissions(baseFolder.listFiles(missionFileFilter).toList, dataSet.name)
         missions.foreach{Mission.updateOrCreate}
         Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")
+        val removedMissionIds = Mission.deleteAllForDataSetExcept(dataSet.name, missions)
+        Level.findByDataSetName(dataSet.name).foreach(_.removeRenderedMissions(removedMissionIds))
       }
     }
   }

@@ -12,6 +12,22 @@ class SegmentImporter
       segmentation: 'Uint16Array'
       dimensions : '[x, y, z]'
 
+  COLORS : [ 
+    "#bc51ff"
+    "#8251ff"
+    "#51d6ff"
+    "#478cea"
+    "#51f9ff"
+    "#5159ff"
+    "#006cff"
+    "#00c3ff"
+    "#573ec3"
+    "#963dc0"
+    "#a770c0"
+    "#6265a7"
+    "#52538c"
+    "#4064a6" 
+  ]
 
   Z_FACTOR : 2
 
@@ -56,6 +72,8 @@ class SegmentImporter
     @setWeightedCenter(segments)
     @setWeightedDistance(segments, width, height)
     @setRandomColor(segments)
+    @setRandomColor2(segments)
+    @setRandomColor3(segments)
 
     #for segment in segments
     #  @setArtPath(segment, width, height)
@@ -171,6 +189,33 @@ class SegmentImporter
       segment.randomColor.g = Math.abs((color.b >> 4) % 256)
       segment.randomColor.b = color.c % 256
 
+
+  setRandomColor2 : (segments) ->
+
+    for segment in segments
+      i = segment.id % @COLORS.length
+      c = @COLORS[i]
+      segment.randomColor2 = @hexToRgb(c)
+
+
+  setRandomColor3 : (segments) ->
+
+    for segment in segments
+      i = segment.value % @COLORS.length
+      c = @COLORS[i]
+      segment.randomColor3 = @hexToRgb(c)
+
+
+  hexToRgb : (hex) ->
+
+    result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    if result
+      r = parseInt(result[1], 16)
+      g = parseInt(result[2], 16)
+      b = parseInt(result[3], 16)
+      return {r, g, b}
+    else 
+      return null
 
   setPath : (segmentation, segment, startX, startY, width, height) ->
 

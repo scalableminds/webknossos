@@ -19,6 +19,9 @@ DISTANCE_3D      = 140
 ALLOWED_OXALIS    = MODE_OXALIS    = 0
 ALLOWED_ARBITRARY = MODE_ARBITRARY = 1
 
+MODE_NORMAL      = 0
+MODE_VOLUME      = 1
+
 
 class Controller
 
@@ -60,7 +63,7 @@ class Controller
 
       @arbitraryController = new ArbitraryController(@model, stats)
 
-      @abstractTreeController = new AbstractTreeController(@model)      
+      @abstractTreeController = new AbstractTreeController(@model)
 
       @initMouse()
       @initKeyboard()
@@ -99,6 +102,7 @@ class Controller
       "delete" : => @deleteActiveNode()
 
       "c" : => @createNewTree()
+
 
 
       #Activate ArbitraryView

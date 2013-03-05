@@ -38,13 +38,12 @@ object BinaryData extends Controller {
     val realDirection = mission.start.direction
     //val direction = Vector3D(realDirection.x, realDirection.z, -realDirection.y)
     val direction = realDirection
-    val depth = level.slidesBeforeProblem + level.slidesAfterProblem
     
     Cuboid(level.width, 
       level.height, 
-      depth, 
+      level.depth, 
       1,
-      topLeftOpt = Some(calculateTopLeft(level.width, level.height, depth)),
+      topLeftOpt = Some(calculateTopLeft(level.width, level.height, level.depth)),
       moveVector = (Vector3D(mission.errorCenter)-(realDirection*level.slidesBeforeProblem)).toTuple,
       axis = direction.toTuple)
   }
@@ -69,7 +68,7 @@ object BinaryData extends Controller {
         .recover{
           case e: AskTimeoutException =>
             Logger.error("calculateImages: AskTimeoutException")
-            new Array[Byte](level.height * level.width * (level.slidesBeforeProblem + level.slidesAfterProblem) * dataLayer.bytesPerElement).toBuffer
+            new Array[Byte](level.height * level.width * level.depth * dataLayer.bytesPerElement).toBuffer
         }
         .mapTo[ArrayBuffer[Byte]].map { data =>
           Logger.debug("total: %d ms".format(System.currentTimeMillis - t))

@@ -67,7 +67,7 @@ class BinaryData2DBActor extends Actor {
           y <- 0 to maxY
           z <- 0 to maxZ
         } {
-          val blockInfo = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.folder, dataLayer.bytesPerElement, resolution, x, y, z)
+          val blockInfo = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.name, dataLayer.bytesPerElement, resolution, x, y, z)
           val f = new File(DataStore.createFilename(blockInfo))
           val blockId = GridDataStore.blockToId(prefix, x, y, z)
           val meta = DefaultFileToSave(blockId, id = new BSONObjectID(blockId))

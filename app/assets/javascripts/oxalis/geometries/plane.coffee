@@ -38,15 +38,24 @@ class Plane
   createMeshes : (pWidth, tWidth) ->
     # create plane
     planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
+    volumePlaneGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
 
     # create texture
     texture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     texture.needsUpdate = true
     textureMaterial     = new THREE.MeshBasicMaterial({wireframe : false})
+    volumeTexture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+    volumeTexture.needsUpdate = true
+    volumeTextureMaterial     = new THREE.MeshBasicMaterial({wireframe : false})
 
     # create mesh
     @plane = new THREE.Mesh( planeGeo, textureMaterial )
     @plane.texture = texture
+    @volumePlane = new THREE.Mesh( volumePlaneGeo, volumeTextureMaterial )
+    @volumePlane.texture = volumeTexture
+    @volumePlane.visible = false
+    # Never interpolate
+    @plane.texture.magFilter = THREE.NearestFilter
 
     # create crosshair
     crosshairGeometries = new Array(2)
@@ -110,25 +119,29 @@ class Plane
 
   setScale : (factor) =>
     scaleVec = new THREE.Vector3().multiplyVectors(new THREE.Vector3(factor, factor, factor), @scaleVector)
-    @plane.scale = @prevBorders.scale = @crosshair[0].scale = @crosshair[1].scale = scaleVec
+    @plane.scale = @volumePlane.scale = @prevBorders.scale = @crosshair[0].scale = @crosshair[1].scale = scaleVec
 
   setRotation : (rotVec) =>
-    @plane.rotation = @prevBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
+    @plane.rotation = @volumePlane.rotation = @prevBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
 
   setPosition : (posVec) =>
     @prevBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
+    
     offset = new THREE.Vector3(0, 0, 0)
     if      @planeID == PLANE_XY then offset.z =  1
     else if @planeID == PLANE_YZ then offset.x = -1
     else if @planeID == PLANE_XZ then offset.y = -1
     @plane.position = offset.addVectors(posVec, offset)
 
+    volumeOffset = new THREE.Vector3(offset.x / 2, offset.y / 2, offset.z / 2)
+    @volumePlane.position = volumeOffset.addVectors(posVec, volumeOffset)
+
   setVisible : (visible) =>
     @plane.visible = @prevBorders.visible = visible
     @crosshair[0].visible = @crosshair[1].visible = visible and @displayCosshair
 
   getMeshes : =>
-    [@plane, @prevBorders, @crosshair[0], @crosshair[1]]
+    [@plane, @volumePlane, @prevBorders, @crosshair[0], @crosshair[1]]
 
   setLinearInterpolationEnabled : (value) =>
     @plane.texture.magFilter = if value==true then THREE.LinearFilter else THREE.NearestFilter

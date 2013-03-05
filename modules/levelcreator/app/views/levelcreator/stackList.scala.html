@@ -1,15 +1,22 @@
 @(level: models.knowledge.Level, missions: List[models.knowledge.Mission])(implicit session: brainflight.view.UnAuthedSessionData)
 @main(){
   <div class="container">
-    <h3>Stacks: @level.name</h3>
+    <h3>@level.name</h3>
+    <h4>#@level.id</h4>
 
-    <div id="stack-list">
+    <p>
+      <a href="@controllers.levelcreator.routes.StackController.deleteAll(level.id)" data-ajax="confirm,method=DELETE,reload" class="btn">
+        <i class="icon-trash"></i> Delete all
+      </a>
+    </p>
+
+    <div id="stack-list" data-levelname="@level.name">
       @missions.map{ mission =>
         <div class="stack img-polaroid" style="width: @(level.width + "px");">
           <header class="clearfix">
             <h4>#@formatHash(mission.id)</h4>
             <div class="stack-buttons">
-              <a href="@controllers.levelcreator.routes.Assets.at(path="/public/levelStacks", s"${level.name}/${mission.id}/${level.name}_${mission.id}_stack.zip")" class="download-button">
+              <a href="@controllers.levelcreator.routes.Assets.at(path="/public/levelStacks", s"${level.name}/${mission.id}/${level.id}_${mission.id}.zip")" class="download-button">
                 <i class="icon-download"></i>
               </a>
               <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, mission.id)" class="edit-button">
@@ -25,7 +32,7 @@
             </div>
           </header>
           <div class="stack-display" style="height: @((level.height + 20) + "px");">
-            <a href="#stack-@level.name-@{mission.id}">
+            <a href="#stack-@{mission.id}">
               <i class="icon-play"></i>
             </a>
           </div>

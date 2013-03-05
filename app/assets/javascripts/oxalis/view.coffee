@@ -96,9 +96,14 @@ class View
     commentTab = $("#comment-container")
     commentTab.empty()
 
+    # DOM container to append all elements at once for increased performance
+    newContent = document.createDocumentFragment()
+
     for comment in comments
-      commentTab.append($('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content}))
-      commentTab.append($('<br>'))
+      newContent.appendChild($('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content})[0])
+      newContent.appendChild($('<br>')[0])
+
+    commentTab.append(newContent)
 
 
   updateActiveComment : ->

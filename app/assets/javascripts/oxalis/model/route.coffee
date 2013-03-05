@@ -31,6 +31,7 @@ class Route
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
+  particleSize : 5
 
 
 
@@ -454,7 +455,7 @@ class Route
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
-    @deleteBranch(deletedNode.id)
+    @deleteBranch(deletedNode)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree

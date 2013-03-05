@@ -226,7 +226,7 @@ class Skeleton
     @flycam.hasChanged = true
 
   setBranchPoint : (isBranchPoint, nodeID) ->
-    colorActive = if isBranchPoint then COLOR_ACTIVE * 0.7 else COLOR_ACTIVE
+    colorActive = if isBranchPoint then COLOR_ACTIVE_BRANCH else COLOR_ACTIVE
     treeColor = @route.getTree().color
     colorNormal = if isBranchPoint then treeColor * 0.7 else treeColor
     if not nodeID? or nodeID == @route.getActiveNodeId()

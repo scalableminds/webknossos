@@ -1,4 +1,4 @@
-@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[models.binary.DataSet])(implicit session: brainflight.view.AuthedSessionData)
+@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[models.binary.DataSet], hasAnOpenTask: Boolean)(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
   <div class="container" id="dashboard">
@@ -20,7 +20,7 @@
       }
       </tbody>
     </table>
-    <a href="@controllers.routes.TaskController.request" class="btn"  data-ajax="add-row=#dashboard-tasks">Get a new task</a>
+    <a href="@controllers.routes.TaskController.request" class="btn"  data-ajax="add-row=#dashboard-tasks @if(hasAnOpenTask){,confirm}">Get a new task</a>
 
     <hr />
 

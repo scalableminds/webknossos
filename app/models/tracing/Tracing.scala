@@ -113,7 +113,7 @@ case class Tracing(
 object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   this.collection.ensureIndex("_task")
   this.collection.ensureIndex("_user")
-  
+
   def tracingBase(task: Task, userId: ObjectId, dataSetName: String): Tracing =
     Tracing(userId,
       dataSetName,
@@ -260,7 +260,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
         "_task" -> task._id),
       MongoDBObject(
         "tracingSettings" -> taskType.tracingSettings),
-        false, true)
+      false, true)
   }
 
   def findTrainingForReviewTracing(tracing: Tracing) =
@@ -269,8 +269,11 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   /*def findOpenTrainingFor(user: User) =
     findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "tracingType" -> "Training"))
 */
-  def hasOpenTracing(user: User, tracingType: TracingType.Value) =
-    !findOpenTracingsFor(user, tracingType).isEmpty
+  def countOpenTracings(user: User, tracingType: TracingType.Value) =
+    findOpenTracingsFor(user, tracingType).size
+
+  def hasAnOpenTracings(user: User, tracingType: TracingType.Value) =
+    countOpenTracings(user, tracingType) > 0
 
   def findFor(u: User) =
     find(MongoDBObject(

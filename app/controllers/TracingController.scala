@@ -132,7 +132,10 @@ object TracingController extends Controller with Secured {
             taskId <- tracing._task ?~ Messages("tracing.task.notFound")
             task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
           } yield {
-            JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), message)
+            JsonOk(
+                html.user.dashboard.taskTracingTableItem(task, tracing), 
+                Json.obj("hasAnOpenTask" -> Tracing.hasAnOpenTracings(request.user, TracingType.Task)),
+                message)
           }) asResult
     }
   }

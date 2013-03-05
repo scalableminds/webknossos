@@ -256,18 +256,16 @@ object TaskAdministration extends Controller with Secured {
       play.api.templates.Html
       val allUsers = User.findAll
       val allTaskTypes = TaskType.findAll
-      val usersWithoutTask = allUsers.filter(user => !Tracing.hasOpenTracing(user, TracingType.Task))
       val usersWithTasks =
         (for {
           user <- allUsers
           tracing <- Tracing.findOpenTracingsFor(user, TracingType.Task)
           task <- tracing.task
           taskType <- task.taskType
-        } yield (user -> taskType)).toMap
-
+        } yield (user -> taskType))
       Task.simulateTaskAssignment(allUsers).map { futureTasks =>
         val futureTaskTypes = futureTasks.flatMap(e => e._2.taskType.map(e._1 -> _))
-        Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks, futureTaskTypes))
+        Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks.removeDuplicates, futureTaskTypes))
       }
     }
   }

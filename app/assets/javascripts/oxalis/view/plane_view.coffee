@@ -191,9 +191,8 @@ class PlaneView
   setActivePlane : (planeID) =>
     @flycam.setActivePlane planeID
     for i in [0..2]
-      catcherStyle = $(".inputcatcher")[i].style
-      #catcherStyle.borderColor  = "#f8f800"   #  else "#C7D1D8"
       $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
+    @flycam.hasChanged = true
 
   getCameras : =>
     @camera

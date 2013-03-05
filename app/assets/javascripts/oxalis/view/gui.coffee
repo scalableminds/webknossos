@@ -193,7 +193,7 @@ class Gui
     #                       .listen()
     #                       .onChange(@setNodeRadius)
     (fNodes.add @settings, "particleSize", 1, 10)
-                          .name("Particle Size")    
+                          .name("Node Size")    
                           .listen()
                           .onChange(@setParticleSize)
     @commentController =

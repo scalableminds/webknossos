@@ -37,6 +37,7 @@ class User
   gamepadActive : null
   motionsensorActive : null
   firstVisToggle : null
+  particleSize : null
 
 
   constructor : (user) ->
@@ -93,7 +94,8 @@ class User
         keyboardActive : @keyboardActive,
         gamepadActive : @gamepadActive,
         motionsensorActive : @motionsensorActive
-        firstVisToggle : @firstVisToggle }
+        firstVisToggle : @firstVisToggle 
+        particleSize : @particleSize }
     ).fail( =>
       
       console.log "could'nt save userdata"

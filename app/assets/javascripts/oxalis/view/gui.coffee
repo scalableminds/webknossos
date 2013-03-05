@@ -22,14 +22,14 @@ class Gui
 
     data = @model.user
     # create GUI
-    modelRadius = @model.route.getActiveNodeRadius()
+    # modelRadius = @model.route.getActiveNodeRadius()
     @qualityArray = ["high", "medium", "low"]
 
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(data.briConNames)
 
     somaClickingAllowed = settings.somaClickingAllowed
-    
+
     @settings = 
 
       rotateValue : data.rotateValue
@@ -65,7 +65,8 @@ class Gui
       activeNodeID : @model.route.getActiveNodeId()
       newNodeNewTree : if somaClickingAllowed then data.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
-      radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
+      # radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
+      particleSize : data.particleSize
       comment : ""
       prevComment : @prevComment
       nextComment : @nextComment
@@ -191,6 +192,10 @@ class Gui
     #                       .name("Radius")    
     #                       .listen()
     #                       .onChange(@setNodeRadius)
+    (fNodes.add @settings, "particleSize", 1, 20)
+                          .name("Node Size")    
+                          .listen()
+                          .onChange(@setParticleSize)
     @commentController =
     (fNodes.add @settings, "comment")
                           .name("Comment")
@@ -234,7 +239,8 @@ class Gui
       deleteLastNode   : => @update()
       newNode          : => @update()
       newTree          : => @update()
-      # newActiveNodeRadius : (radius) =>@updateRadius(radius) 
+      # newActiveNodeRadius : (radius) =>@updateRadius(radius)
+      newParticleSize  : (value) => @updateParticleSize(value)
       pushFailed       : -> Toast.error("Auto-Save failed!")
 
     @createTooltips()
@@ -381,6 +387,15 @@ class Gui
 
   # setNodeRadius : (value) =>
   #   @model.route.setActiveNodeRadius(value)
+
+  setParticleSize : (value) =>
+    @model.route.setParticleSize(value)
+    @updateParticleSize(value)
+
+  updateParticleSize : (value) =>
+    @settings.particleSize = value
+    @model.user.particleSize = (Number) value
+    @model.user.push()
 
   setComment : (value) =>
     @model.route.setComment(value)

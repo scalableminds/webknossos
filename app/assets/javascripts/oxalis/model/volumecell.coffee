@@ -1,6 +1,6 @@
 ### define 
 ./volumelayer : VolumeLayer
-./dimensions : DimensionsHelper
+./dimensions : Dimensions
 ###
 
 class VolumeCell

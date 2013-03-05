@@ -2,10 +2,16 @@
   <tr>
     <td> @formatHash(tracing.id) </td>
     <td> @tracing.dataSetName </td>
-    <td> @tracing.trees.size </td>
+    @defining(models.tracing.Tracing.statisticsForTracing(tracing)){ stats => 
+      <td> 
+        <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
+        <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
+        <span title="Edges"><i class="icon-resize-horizontal"></i> @stats.numberOfEdges</span>
+      </td>
+    }
     <td> @tracing.tracingType </td>
     <td> @formatDate(tracing.date) </td>
     <td> <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br />
-         <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> NML</a><br />
+         <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download</a><br />
          <a href="@controllers.routes.TracingController.finish(tracing.id, true)" data-ajax="delete-row"><i class="icon-ok-circle"></i> finish</a></td>
   </tr>

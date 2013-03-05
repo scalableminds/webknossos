@@ -1,32 +1,40 @@
 @(task: models.task.Task)
 
 
-<tr>
+<tr id="@task.id">
   <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @formatHash(task.id) </td>
   <td> @task.seedIdHeidelberg </td>
-  <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
-  <td> @task.dataSetName </td>
-  <td> @task.neededExperience </td>
-  <td> @task.start </td>
+  <td> 
+    @task.project.map{ project =>
+      <a href="@controllers.admin.routes.ProjectAdministration.list#@project.name">
+        @project.name
+      </a>
+    }
+  </td>
+  <td> 
+    <a href="@controllers.admin.routes.TaskTypeAdministration.list#@task.taskType.map(_.id)">
+      @task.taskType.map(_.summary).getOrElse("<deleted>") 
+    </a>
+  </td>
+  <td> @task.tracingBase.map(_.dataSetName) </td>
+  <td> @task.tracingBase.map(_.editPosition) </td>
+  <td> <span class="label"> @task.neededExperience </span> </td>
   <td> @task.priority </td>
   <td> @formatDate(task.created) </td>
-  <td> 
-    <span title="Unassigned"> 
-      @task.open <i class="icon-play-circle"></i>
-    </span>
-    |
-    <span title="in Progress"> 
-      @task.inProgress <i class="icon-random"></i> 
-    </span>
-    |
-    <span title="Completed">
-      @task.completed <i class="icon-ok-circle"></i>
-    </span>
+  <td> @defining(task.status){ status =>
+      <i class="icon-play-circle"></i> @status.open open
+      <br />
+      <i class="icon-random"></i> @status.inProgress active
+      <br />
+      <i class="icon-ok-circle"></i> @status.completed done
+    }
   </td>
   <td>  
-    <a href="@controllers.admin.routes.TaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
-    <a href="@controllers.admin.routes.TrainingsTaskAdministration.create(task.id)"><i class="icon-road"></i> use for Training </a>
+    <a href="@controllers.admin.routes.TaskAdministration.edit(task.id)"><i class="icon-pencil"></i> edit </a><br />
+    <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
+    <a href="@controllers.admin.routes.TrainingsTaskAdministration.create(task.id)"><i class="icon-road"></i> use for Training </a><br />
+    <a href="@controllers.admin.routes.TaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
   </td>
 </tr>
 <tr class="details-row" >
@@ -35,9 +43,15 @@
       <tbody>
         @task.tracings.map{ tracing =>
           <tr>
-            <td> @tracing.user.map(_.name).getOrElse("<Maik>") </td>
+            <td> @tracing.user.map(_.name).getOrElse("<deleted>") </td>
             <td> @formatDate(tracing.date) </td>
-            <td> <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download NML </a></th>
+            <td> @if(tracing.state.isFinished){ <i class="icon-ok-circle"></i> Finished } else { <i class="icon-random"></i> In Progress } </td>
+            <td> 
+              <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download </a><br />
+              @if(!tracing.state.isFinished){ 
+                <a href="@controllers.admin.routes.TaskAdministration.cancelTracing(tracing.id)" data-ajax="delete-row,confirm"><i class="icon-remove"></i> cancel</a><br/>
+              }
+            </td>
           </tr>
         }
       </tbody>

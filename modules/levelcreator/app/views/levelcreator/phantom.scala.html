@@ -1,18 +1,28 @@
-@(level: models.knowledge.Level, outputFilepattern: String, levelUrl: String)
+@(level: models.knowledge.Level, outputFilepattern: String, metaFilename: String, levelUrl: String, missionId: String)
 
-var page = require('webpage').create();
+var page = require("webpage").create();
+var fs = require("fs");
 
 page.viewportSize = { width : 1000, height : 1000 };
 
+setTimeout(
+  function() {
+    console.log("Phantom timeout exceeded.")
+    phantom.exit();
+  }, 
+  60*60*1000 // 60min
+)
 
-var i = 0, length = 0;
+var i = 0, stackData;
 
 var triggerRender = function() {
   
-  console.log("rendering frame #" + i);
-  page.evaluate(function(i) {
-    window.levelCreator.headlessRendering(i);
-  }, i);
+  setTimeout(function () {
+    console.log("rendering frame #" + i);
+    page.evaluate(function(i) {
+      window.levelCreator.headlessRendering(i);
+    }, i);
+  }, 1);
 }
 
 page.onCallback = function (data) {
@@ -23,21 +33,39 @@ page.onCallback = function (data) {
 
     page.clipRect = { top : 0, height : 0, width : data.width, height : data.height };
 
-    length = data.length;
+    stackData = { 
+      width: data.width, 
+      height: data.height,
+      length: data.length,
+      levelName: "@{level.name}",
+      levelId: "@{level.id}",
+      stackId: "@{missionId}",
+      images: []
+    };
 
-    console.log("" + length + " frames available");
+    console.log("" + stackData.length + " frames available");
     triggerRender();
   }
 
   if (data.message == "rendered") {
-
-    page.render("@{outputFilepattern}".replace("%i", i));
-    console.log("rendered frame #" + i + " to " + "@{outputFilepattern}".replace("%i", i));
+    console.log("rendering frame #" + i + "!");
+    var filename = "@{outputFilepattern}".replace("%i", i);
+    page.render(filename);
+    stackData.images.push(filename.substring(filename.lastIndexOf("/") + 1));
+    console.log("rendered frame #" + i + " to " + filename);
     
     i++;
-    if (i <= length) {
+    if (i <= stackData.length) {
       triggerRender();
     } else {
+      stackData.createdAt = Date.now();
+      fs.write(
+        "@{metaFilename}",
+        JSON.stringify(stackData),
+        "w"
+      );
+      console.log("Wrote meta file to @{metaFilename}");
+      
       phantom.exit();
     }
   }

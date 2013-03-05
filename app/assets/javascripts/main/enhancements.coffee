@@ -32,6 +32,9 @@ $ ->
     if options["confirm"]
       return unless confirm("Are you sure?")
 
+    if options["method"]
+      ajaxOptions["type"] = options.method
+
     if options["submit"]
       $validationGroup = $this.parents("form, [data-validation-group]").first()
       isValid = true
@@ -45,6 +48,8 @@ $ ->
       ajaxOptions["type"] = options.method ? $form[0].method ? "POST"
       ajaxOptions["data"] = $form.serialize()
 
+    if options["busy-class"]
+      $this.addClass("busy")
 
     $.ajax(ajaxOptions).then(
 
@@ -71,6 +76,12 @@ $ ->
         if options["replace-table"]
           $(options["replace-table"]).replaceWith(html)
 
+        if options["delete-parent"]?
+          if options["delete-parent"] != true
+            $this.parents(options["delete-parent"]).first().remove()
+          else
+            $this.parent().remove()
+
         if options["reload"]
           window.location.reload()
 
@@ -95,6 +106,9 @@ $ ->
           Toast.error("Error :-/")
 
         $this.trigger("ajax-error", messages)
+    ).always(
+      -> 
+        $this.removeClass("busy")
     )
   
 
@@ -141,6 +155,13 @@ $ ->
         $table.data("select-row-last", { el : $row, index : $row.prevAll().length })
 
       return
+
+  if window.location.hash
+    $(window.location.hash).addClass("highlighted")
+
+  $(window).on "hashchange", ->
+    $(".highlighted").removeClass("highlighted")
+    $(window.location.hash).addClass("highlighted")
 
 
   $("table.table-details").each ->

@@ -1,0 +1,59 @@
+@(taskTypes: List[models.task.TaskType], form: Form[models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
+
+@main(){
+	<div class="container">
+    <h3>Task types</h3>
+    <div class="well">
+      @helper.form(controllers.admin.routes.TaskTypeAdministration.create, 'class -> "form-horizontal") {
+
+        @basicTaskTypeForm(form)
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+      }
+    </div>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th> # </th>
+          <th> Summary </th>
+          <th> Description </th>
+          <th> Modes </th>
+          <th> Settings </th>
+          <th> Expected Time </th>
+          <th> Attached File </th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+	    @taskTypes.map{ taskType => 
+	      <tr id="@taskType.id">
+	        <td> @formatHash(taskType.id) </td>
+	        <td> @taskType.summary </td>
+          <td> @taskType.description </td>
+          <td> 
+            @taskType.tracingSettings.allowedModes.map{ mode =>
+              <span class="label"> @mode.capitalize </span>
+            }
+          </td>
+          <td>
+            @if(taskType.tracingSettings.branchPointsAllowed) {
+              <span class="label"> Branchpoints </span>
+            }
+            @if(taskType.tracingSettings.somaClickingAllowed) {
+              <span class="label"> Soma clicking </span>
+            }
+          </td>
+          <td> @taskType.expectedTime </td>
+          <td> @taskType.fileName.getOrElse("") </td>
+          <td>
+            <a href="@controllers.admin.routes.TaskTypeAdministration.edit(taskType.id)"><i class="icon-pencil"></i> edit </a> <br />
+            <a href="@controllers.admin.routes.TaskTypeAdministration.delete(taskType.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+          </td>
+	      </tr>
+	    }
+      </tbody>
+    </table>
+  </div>
+}

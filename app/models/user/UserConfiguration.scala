@@ -10,6 +10,7 @@ import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsBoolean
 import play.api.libs.json._
+import models.basics.BasicSettings
 
 case class UserConfiguration(
     settings: Map[String, JsValue]) {
@@ -19,12 +20,14 @@ case class UserConfiguration(
   }
 }
 
-object UserConfiguration {
+object UserConfiguration extends BasicSettings{
 
   val defaultConfiguration = UserConfiguration(
     Map(
       "moveValue" -> JsNumber(1),
+      "moveValue3d" -> JsNumber(1),
       "rotateValue" -> JsNumber(0.01),
+      "crosshairSize" -> JsNumber(0.5),
       "scaleValue" -> JsNumber(0.05),
       "mouseRotateValue" -> JsNumber(0.004),
       "routeClippingDistance" -> JsNumber(100),
@@ -52,20 +55,4 @@ object UserConfiguration {
       "motionsensorActive" -> JsBoolean(false),
       "firstVisToggle" -> JsBoolean(true)))
 
-  val MaxSettings = defaultConfiguration.settings.size
-
-  def isValid(js: JsObject) = {
-    js
-      .fields
-      .filter {
-        case (s, _) =>
-          defaultConfiguration.settings.find(_._1 == s).isEmpty
-      }
-      .isEmpty
-  }
-
-  def isValidSetting(field: Tuple2[String, JsValue]) = {
-    val (key, _) = field
-    defaultConfiguration.settings.get(key)
-  }
 }

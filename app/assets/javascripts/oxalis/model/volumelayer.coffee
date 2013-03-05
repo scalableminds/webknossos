@@ -1,5 +1,5 @@
 ### define 
-./dimensions : DimensionsHelper
+./dimensions : Dimensions
 ###
 
 PLANE_XY         = Dimensions.PLANE_XY

@@ -28,6 +28,24 @@ body:-webkit-full-screen {
     color: #999;
 }
 
+.navbar #main-menu {
+    a [class^="icon-"], 
+    a [class*=" icon-"] {
+        color: #fff;
+    }
+}
+
+.navbar .version {
+    float: left;
+    font-size: 11px;
+    padding-top: 12px;
+    display: inline-block;
+}
+
+.label {
+    margin-right: .2em;
+}
+
 .well form {
     margin-bottom: 0;
 }
@@ -87,6 +105,10 @@ body:-webkit-full-screen {
     margin-bottom: 0;
 }
 
+.table tr.highlighted > td {
+    background: #fcf8e3 !important;
+}
+
 .table-details {
 
     .details-row > td {
@@ -109,6 +131,13 @@ body:-webkit-full-screen {
                 display: inline-block;
             }
         }
+    }
+}
+
+.table {
+    a [class^="icon-"], 
+    a [class*=" icon-"] {
+        color: #000;
     }
 }
 
@@ -139,6 +168,11 @@ body:-webkit-full-screen {
     to {
         -webkit-transform: rotate(360deg);
     }
+}
+
+.icon-random {
+    width: 14px;
+    background-position: -217px -120px;
 }
 
 .inline-block {
@@ -192,27 +226,45 @@ svg a:hover {
     #abstractTreeViewer {
         color : #fff;
     }
+    .popover p {
+        color : #000;
+    }
+    .modal p {
+        color : #000;
+    }
+}
+#tracing {
+    margin-top: 10px;
+    position: relative;
+    float: left;
 }
 #render {
-    width: 2*@standardViewportWidth+20px;
-    height: 2*@standardViewportWidth+20px;
-    position: absolute;
-    top: 20px;
-    left: 300px;
+    position: relative;
 }
 #render canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
     z-index: 10;
 }
-#abstractTreeViewer {
+#arbitraryplane {
+    position: absolute;
+    left: 0px;
     top: 0px;
-    left: 2*@standardViewportWidth+20px+10px;
-    width : 300px;
-    height : 2*@standardViewportWidth + 20px;
-    border-width: 1px;
-    position:relative;
+    width: 100%;
+    height: 100%;
+    z-index: 100;
+}
+#comments-tree {
+    float: left;
+    margin-top: 10px;
+    margin-left: 20px;
+}
+#tab-comments {
+    max-height: 2*@standardViewportWidth - 40px;
+}
+#abstractTreeViewer {
+    height : 2*@standardViewportWidth - 40px;
+    width: 300px;
+    float: left;
+    font-size: 0;
 }
 #main-container {
     position: absolute;
@@ -221,45 +273,36 @@ svg a:hover {
     right: 0;
     bottom: 0;
 }
+#inputcatchers {
+    position: absolute;
+    width: 100%;
+}
 .inputcatcher {
-    width: @standardViewportWidth - 2px;
-    height: @standardViewportWidth - 2px;
-    border-width: 1px;
+    width: @standardViewportWidth;
+    height: @standardViewportWidth;
     border-style:solid;
     border-color: #ffff00;
-    position: absolute;
     z-index: 20;
-}
-#planexy {
-    top: 0px;
-    left: 0px;
+    box-sizing: border-box;
+    float: left;
 }
 #planeyz {
-    top: 0px;
-    left: @standardViewportWidth + 20px;
+    margin-left: 20px;
 }
 #planexz {
-    top: @standardViewportWidth + 20px;
-    left: 0px;
+    margin-top: 20px;
 }
 #skeletonview {
-    top: @standardViewportWidth + 20px;
-    left: @standardViewportWidth + 20px;
     border-width: 0px;
+    margin-top: 20px;
+    margin-left: 20px;
+    position: relative;
 }
-//canvas {
-//    margin-right: 20px;
-//    margin-bottom: 20px;
-//    border-width: 2px;
-//    border-style:solid;
-//    border-color: @mainBackground;
-//}
 #prevControls {
     float: left;
     height: 20px;
-    position: relative;
-    top: 420px;
-    left: 420px;
+    position: absolute;
+    top: 10px;
     z-index: 30;
 }
 #prevControls .btn > span {
@@ -270,11 +313,10 @@ svg a:hover {
     margin-right: 5px;
 }
 #overlay {
-    position: absolute;
+    position: relative;
     width: 280px;
-    top: 0;
-    left: 0;
     padding: 10px;
+    float: left;
 }
 #overlay > * {
     margin-bottom: 10px;
@@ -404,7 +446,7 @@ svg a:hover {
 
 .key-overlay {
     width: 700px;
-    margin-left: 180px;
+    margin-left: 200px;
 }
 
 .graph.well svg {
@@ -442,5 +484,10 @@ svg a:hover {
     }
 }
 
-
-
+// Fixing font awesome
+.btn [class^="icon-"], 
+.nav [class^="icon-"], 
+.btn [class*=" icon-"], 
+.nav [class*=" icon-"] {
+    line-height: normal;
+}

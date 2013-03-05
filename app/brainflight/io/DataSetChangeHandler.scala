@@ -6,11 +6,13 @@ import name.pachler.nio.file.impl.PathImpl
 import brainflight.tools.geometry.Point3D
 import play.api.Logger
 import braingames.util.ExtendedTypes.ExtendedString
-import models.binary.DataSet
-import models.binary.ColorLayer
-import models.binary.DataLayer
+import models.binary._
 import net.liftweb.common._
-import models.knowledge.Mission
+import braingames.util.JsonHelper._
+import play.api.libs.json._
+
+case class ImplicitLayerInfo(name: String, resolutions: List[Int])
+case class ExplicitLayerInfo(name: String, dataType: String)
 
 class DataSetChangeHandler extends DirectoryChangeHandler {
   def onStart(path: Path) {
@@ -20,15 +22,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     if (files != null) {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
-          
-          MetaJsonHandler.extractMetaData(dataSet.name) match {
-            case Full(metaData) => insertMetaData(dataSet, metaData)
-            case Failure(msg, _, _) => 
-              Logger.error(msg)
-              DataSet.updateOrCreate(dataSet)
-            //TODO: understand boxes
-            case Empty => Logger.info("empty box")
-          }
+          DataSet.updateOrCreate(dataSet)
           dataSet.name
         }
       }
@@ -78,42 +72,35 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     else {
       Some(numbers.max)
     }
-  }
+  }  
 
   def dataSetFromFile(f: File): Option[DataSet] = {
     if (f.isDirectory) {
       Logger.trace(s"dataSetFromFile: $f")
-
-      for {
-        colorLayer <- listDirectories(f).find(dir => dir.getName == ColorLayer.identifier)
-        resolutionDirectories = listDirectories(colorLayer)
-        resolutions = resolutionDirectories.flatMap(_.getName.toIntOpt).toList
-        res <- highestResolutionDir(resolutionDirectories)
-        xs <- listDirectories(res).headOption
-        ys <- listDirectories(xs).headOption
-        xMax <- maxValueFromFiles(res.listFiles())
-        yMax <- maxValueFromFiles(xs.listFiles())
-        zMax <- maxValueFromFiles(ys.listFiles())
-      } yield {
-        val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
-        DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, dataLayers = Map[String, DataLayer](ColorLayer.identifier -> ColorLayer(supportedResolutions = resolutions)))
+      val dataSetInfo = new File(f.getPath+"/settings.json")
+      if(dataSetInfo.exists){
+        JsonFromFile(dataSetInfo).validate[DataSet] match {
+          case JsSuccess(dataSet, _) => Some(dataSet.withBaseDir((f.getAbsolutePath)))
+          case JsError(error) => Logger.error(error.toString)
+          None
+        }
+      }
+      else {
+        for {
+          layer <- listDirectories(f).find(dir => dir.getName == "color")
+          resolutionDirectories = listDirectories(layer)
+          resolutions = resolutionDirectories.flatMap(_.getName.toIntOpt).toList
+          res <- highestResolutionDir(resolutionDirectories)
+          xs <- listDirectories(res).headOption
+          ys <- listDirectories(xs).headOption
+          xMax <- maxValueFromFiles(res.listFiles())
+          yMax <- maxValueFromFiles(xs.listFiles())
+          zMax <- maxValueFromFiles(ys.listFiles())
+          } yield {
+          val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
+          DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, colorLayer = ColorLayer(supportedResolutions = resolutions))
+        }
       }
     } else None
   }
-
-  def insertMetaData(dataSet: DataSet, metaData: MetaData) = {
-    val newMissions = metaData.missions.filterNot(Mission.hasAlreadyBeenInserted)
-    insertMissions(newMissions)
-    DataSet.updateOrCreate(dataSetWithDataLayers(dataSet, metaData.dataLayerSettings.dataLayers))
-    Logger.info(s"${dataSet.name}: Inserted ${newMissions.size} new missions and updated DataLayers ${metaData.dataLayerSettings.dataLayers.keys}.")
-  }
-
-  def insertMissions(missions: List[Mission]) = {
-    missions.foreach(Mission.insertOne)
-  }
-
-  def dataSetWithDataLayers(dataSet: DataSet, newDataLayers: Map[String, DataLayer]) = {
-    dataSet.copy(dataLayers = newDataLayers)
-  }
-
 }

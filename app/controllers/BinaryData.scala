@@ -29,7 +29,6 @@ import scala.collection.mutable.ArrayBuffer
 import akka.routing.RoundRobinRouter
 import play.api.libs.concurrent.Execution.Implicits._
 import brainflight.tools.geometry.Vector3D
-import models.knowledge.Level
 import brainflight.binary.Cuboid
 import akka.agent.Agent
 import akka.routing.RoundRobinRouter
@@ -59,7 +58,7 @@ object BinaryData extends Controller with Secured {
     Cuboid(cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2), resolution, Some(cubeCorner))
   }
 
-  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int): Future[ArrayBuffer[Byte]] = {
+  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int): Future[Option[ArrayBuffer[Byte]]] = {
     val cubeRequests = multi.requests.map { request =>
       val resolution = resolutionFromExponent(request.resolutionExponent)
       val cuboid = cuboidFromPosition(request.position, cubeSize, resolution)
@@ -76,10 +75,10 @@ object BinaryData extends Controller with Secured {
     val future = (dataRequestActor ? MultiCubeRequest(cubeRequests)) recover {
       case e: AskTimeoutException =>
         Logger.warn("Data request to DataRequestActor timed out!")
-        new ArrayBuffer[Byte](0)
+        None
     }
 
-    future.mapTo[ArrayBuffer[Byte]]
+    future.mapTo[Option[ArrayBuffer[Byte]]]
   }
 
   def requestViaAjaxDebug(dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated { implicit request =>
@@ -89,45 +88,10 @@ object BinaryData extends Controller with Secured {
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
       } yield {
         val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z), false)))
-        handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize).map(result =>
-          Ok(result.toArray))
-      }
-    }
-  }
-  
-  def arbitraryViaAjax(dataLayerName: String, levelId: String, taskId: String) = Authenticated(parser = parse.raw) { implicit request =>
-    Async {
-      Level.findOneById(levelId).flatMap { level =>
-        val t = System.currentTimeMillis()
-        val dataSet = DataSet.default
-        dataSet.dataLayers.get(dataLayerName).map { dataLayer =>
-          val position = Point3D(1920, 2048, 2432)
-          val direction = (1.0, 1.0, 1.0)
-
-          val point = (position.x.toDouble, position.y.toDouble, position.z.toDouble)
-          val m = Cuboid(level.width, level.height, level.depth, 1, moveVector = point, axis = direction)
-          val future =
-            dataRequestActor ? SingleRequest(DataRequest(
-              dataSet,
-              dataLayer,
-              1,
-              m,
-              useHalfByte=false,
-              skipInterpolation=false))
-
-          future
-            .recover {
-              case e: AskTimeoutException =>
-                Logger.error("calculateImages: AskTimeoutException")
-                new Array[Byte](level.height * level.width * level.depth).toBuffer
-            }
-            .mapTo[ArrayBuffer[Byte]].map { data =>
-              Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
-              Ok(data.toArray)
-            }
+        handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize).map {
+          case Some(result) => Ok(result.toArray)
+          case _            => NotFound
         }
-      } getOrElse {
-        Akka.future(BadRequest("Level not found."))
       }
     }
   }
@@ -146,8 +110,10 @@ object BinaryData extends Controller with Secured {
       } yield {
         message match {
           case dataRequests @ MultipleDataRequest(_) =>
-            handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).map(result =>
-              Ok(result.toArray))
+            handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).map {
+              case Some(result) => Ok(result.toArray)
+              case _            => NotFound
+            }
           case _ =>
             Akka.future {
               BadRequest("Unknown message.")
@@ -185,10 +151,10 @@ object BinaryData extends Controller with Secured {
             BinaryProtocol.parseWebsocket(in).map {
               case dataRequests: MultipleDataRequest =>
                 Logger.trace("Websocket DataRequests: " + dataRequests.requests.mkString(", "))
-                handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).map { result =>
+                handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).map( _.map{ result =>
                   Logger.trace("Websocket result size: " + result.size)
                   channel.push((result ++= dataRequests.handle).toArray)
-                }
+                })
               case _ =>
                 Logger.error("Received unhandled message!")
             }

@@ -5,15 +5,29 @@
 
 class Fade
 
+  PUBLIC : true
+  COMMAND : "fade()"
+  FRIENDLY_NAME : "Fade"  
   DESCRIPTION : "Fades the input rgba in or out"
-
   PARAMETER :
     input :
       rgba: "Uint8Array"
       absoluteTime: "int"
     start: "int"
     end: "int"
-    mode: "string" # in or out
+    mode: "\"in\", \"out\""
+  EXAMPLES : [
+      { description : "Filters the biggest segment of the nearest 3 with fade in and out", lines :
+        [ "time(start : 0, end : 15) ->"
+          "  importSlides(start : 0, end : 15)"
+          "  filterSortedSegmentation(sorting: \"distance\", order: \"asc\", count: 3)"
+          "  filterSortedSegmentation(sorting: \"size\", order: \"desc\", count: 2)"
+          "  recolor(r: 0, g: 0, b: 255, a: 0.3)"
+          "  fade(start: 0, end: 3, mode: \"in\") "
+          "  fade(start: 12, end: 15, mode: \"out\") "
+        ]
+      }     
+    ]    
 
 
   constructor : ->

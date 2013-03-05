@@ -1,13 +1,24 @@
 @(level: models.knowledge.Level)
 @import brainflight.view.helpers._
 
-<tr>
-  <td> @formatHash(level.id) </td>
-  <td> @level.name </td>
-  <td> @level.width x @level.height x @level.depth </td>
+<tr data-levelid="@level.id">
+  <td> 
+    <a href="#" data-prompt="@level.id" title="@level.id">#</a>
+    <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)">@level.name</a>
+  </td>
+  <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
+  <td> @level.dataSetName </td>
   <td>  
-    <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, "1")"><i class="icon-pencil"></i> edit</a><br />
-    <a href="@controllers.levelcreator.routes.LevelCreator.produce(level.id)"><i class="icon-retweet"></i> produce</a><br />
-    <a href="@controllers.levelcreator.routes.LevelCreator.delete(level.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+    <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"><i class="icon-pencil"></i> edit</a><br />
+    <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">
+      <i class="icon-retweet"></i> 
+      produce 
+      <input type="number" value="1" min="1">
+      Stacks
+    </a><br />
+    <a href="@controllers.levelcreator.routes.StackController.list(level.id)" class="view-stacks">
+      <i class="icon-picture"></i> view Stacks (@level.renderedMissions.length)
+    </a><br />
+    <a href="@controllers.levelcreator.routes.LevelCreator.delete(level.id)" data-ajax="method=DELETE,delete-row,confirm"><i class="icon-trash"></i> delete </a>
   </td>
 </tr>

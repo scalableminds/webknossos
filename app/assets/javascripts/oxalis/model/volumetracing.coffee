@@ -1,7 +1,7 @@
 ### define 
 ./volumecell : VolumeCell
 ../../libs/event_mixin : EventMixin
-./dimensions : DimensionsHelper
+./dimensions : Dimensions
 ###
 
 MODE_LASSO = 0
@@ -33,7 +33,7 @@ class VolumeTracing
     # just for testing
     unless @currentCell?
       @createCell(1)
-    pos = Dimensions.roundCoordinate(@flycam.getGlobalPos())
+    pos = Dimensions.roundCoordinate(@flycam.getPosition())
     thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
     @currentLayer = @currentCell.createLayer(planeId, thirdDimValue)
     if @currentLayer?

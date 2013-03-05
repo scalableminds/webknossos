@@ -9,12 +9,15 @@ libs/event_mixin : EventMixin
 
 class PluginRenderer
 
+  plugins : null
+
+
   constructor : (@dimensions, @assetHandler, @dataHandler) ->
 
     [ @width, @height, @depth ] = dimensions
 
     @plugins = new Plugins(@assetHandler)
-
+    @createSidebar()
 
 
   setCode : (code) ->
@@ -84,10 +87,11 @@ class PluginRenderer
           (callback) =>
             inputData =
               rgba : new Uint8Array( 4 * pixelCount )
-              segmentation : new Uint8Array( pixelCount )
+              segmentation : new Uint16Array( pixelCount )
               dimensions : @dimensions
               relativeTime : (t - startFrame) / (endFrame - startFrame)
               absoluteTime : t
+              mission : @dataHandler.getMissionData()
             callback()
             BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
             inputData = null
@@ -104,11 +108,11 @@ class PluginRenderer
         slideOffset = (t - startFrame) * options.scale + options.start
         _.extend(inputData,
           rgba : @dataHandler.getRGBASlide( slideOffset )
-          # segmentation : @dataHandler.getSegmentationSlide( slideOffset )
+          segmentation : @dataHandler.getSegmentationSlide( slideOffset )
           dimensions : @dimensions
         )
 
-        @plugins.segmentImporter.execute(input : inputData)
+        @plugins.segmentImporter.execute(input : inputData, slideOffset)
 
 
     for key, plugin of @plugins
@@ -123,5 +127,59 @@ class PluginRenderer
     func(_plugins)
 
     frameBuffer
+
+
+
+  pluginDocTemplate : _.template """
+    <div class="accordion-group">
+      <div class="accordion-heading">
+        <a class="accordion-toggle"
+          data-toggle="collapse"
+          data-parent="<%= containerName %>"
+          href="#<%= bodyId %>">
+          <%= plugin.FRIENDLY_NAME %>
+        </a>
+      </div>
+      <div id="<%= bodyId %>" class="accordion-body collapse">
+        <div class="accordion-inner">
+          <dl>
+            <dt><%= plugin.COMMAND %></dt>
+            <dd><%= plugin.DESCRIPTION %></dd>
+          </dl>
+          <h5>Parameter:</h5>
+          <dl class="dl-horizontal">
+            <% Object.keys(plugin.PARAMETER).forEach(function (parameterName) { %>
+              <% if (parameterName == "input") return; %>
+                <dt><%= parameterName %></dt>
+                <dd><%= plugin.PARAMETER[parameterName] %></dd>
+            <% }) %>
+          </dl>
+          <% if (plugin.EXAMPLES) { %>
+            <h5>Examples:</h5>
+            <% plugin.EXAMPLES.forEach(function (example) { %>
+              <span><%= example.description %></span>
+              <pre class="prettyprint linenums"><ol class="linenums"><% example.lines.forEach(function (line) { %><li><span class="pln"><%= line %></span></li><% }) %></ol></pre>
+            <% }) %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  """
+
+  createSidebar : ->
+
+    { plugins } = @
+
+    containerName = "#plugins"
+
+    for pluginName, i in Object.keys(plugins)
+
+      plugin = plugins[pluginName]
+
+      continue if plugin.PUBLIC is false
+
+      $(containerName).append(
+        @pluginDocTemplate { i, plugin, containerName, bodyId : "collapseBody#{i}" }
+      )
 
 

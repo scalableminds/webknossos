@@ -2,9 +2,10 @@
 ./model/binary : Binary
 ./model/route : Route
 ./model/user : User
-./model/scaleinfo : ScaleInfoClass
-./model/flycam : Flycam
 ./model/volumetracing : VolumeTracing
+./model/scaleinfo : ScaleInfo
+./model/flycam2d : Flycam2d
+./model/flycam3d : Flycam3d
 ../libs/request : Request
 ../libs/toast : Toast
 ###
@@ -17,7 +18,7 @@
 
 class Model
 
-  initialize : (TEXTURE_SIZE_P, VIEWPORT_SIZE) =>
+  initialize : (TEXTURE_SIZE_P, VIEWPORT_SIZE, DISTANCE_3D) =>
 
 	  Request.send(
       url : "/game/initialize"
@@ -39,12 +40,26 @@ class Model
           ).pipe(
             (user) =>
 
+              $.assertExtendContext({
+                task: task.task.id
+                dataSet: tracing.dataSet.id
+              })
+
               @scaleInfo = new ScaleInfo(tracing.tracing.scale)
               @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)    
-              @flycam = new Flycam(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1)      
-              @route = new Route(tracing.tracing, @scaleInfo, @flycam)
+              @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1)      
+              @flycam3d = new Flycam3d(DISTANCE_3D, tracing.tracing.scale)
+              @flycam3d.on
+                "changed" : (matrix) =>
+                  @flycam.setPosition([matrix[12], matrix[13], matrix[14]])
+              @flycam.on
+                "positionChanged" : (position) =>
+                  @flycam3d.setPositionSilent(position)
+              @route = new Route(tracing.tracing, @scaleInfo, @flycam, @flycam3d)
               @user = new User(user)
               @volumeTracing = new VolumeTracing(@flycam)
-
+              
+              tracing.tracing.settings
+              
             -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
           )

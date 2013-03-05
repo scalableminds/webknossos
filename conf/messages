@@ -13,23 +13,24 @@ password.validation=Password (again)
 firstName=First Name
 lastName=Last Name
 
-user.verified=%s has been verified
+user.verified={0} has been verified
 user.verifyFailed=Couldn't verify user
-user.unknown=User not found
+user.notFound=User not found
 user.notVerified=Your account hasn''t been activated yet. After you have uploaded all requested information to braintracing.org, an admin will verify your acount.
 user.noPermission=You don''t have enough permissions to access this site. Sorry :(
-user.deleted=%s has been deleted
+user.deleted={0} has been deleted
 user.bulk.empty=No user has been chosen
-user.bulk.failedFor=Operation failed for %s
+user.bulk.failedFor=Operation failed for {0}
 user.password.nomatch=Passwords don''t match
 user.password.tooshort=Password too short
 user.email.alreadyInUse=This email address is already in use
 user.login.failed=Invalid email or password
 user.login.success=You are now logged in
+user.logout.success=You have successfully logged out
 user.settings.invalid=Couldn''t parse settings
-user.experience.increased=Increased experience of %s
-user.experience.set=Set experience of %s
-user.experience.set=Removed experience from %s
+user.experience.increased=Increased experience of {0}
+user.experience.set=Set experience of {0}
+user.experience.removed=Removed experience from {0}
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on oxalis to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
@@ -56,11 +57,20 @@ nml.file.uploadSuccess=Successfully uploaded file
 nml.file.notFound=Couldn''t extract NML file
 nml.file.invalid=Couldn''t parse NML file
 
+owner=Owner
+
 priority=Priority
 
+project=Project
+projectName=Project Name
+project.removed=Project got removed
+project.notFound=Project couldn''t be found
+project.nameAlreadyInUse=Name already used
+project.createSuccess=Project successfully created
+
 role.invalid=Invalid role
-role.removed=Removed role from %s
-role.added=Added role to %s
+role.removed=Removed role from {0}
+role.added=Added role to {0}
 
 training.domain=Trainings Domain
 training.gain=Experience Gain
@@ -69,6 +79,7 @@ training.loss=Experience Loss
 tracing=Tracing
 tracing.finished=Tracing is finished
 tracing.invalid=Invalid tracing
+tracing.creationFailed=Failed to create tracing
 tracing.notFound=Tracing couldn''t be found
 tracing.review.assignFailed=Couldn''t assign reviewee
 tracing.review.notFound=There is no review for this tracing
@@ -81,7 +92,7 @@ tracing.task.notFound=Couldn''t find task for tracing
 tracing.training.notFound=Couldn''t find training for tracing
 tracing.user.notFound=Couldn''t find a user for the tracing
 tracing.open.notFound=No open tracing found
-tracing.notPossible=Couldn''t finish tracing
+tracing.notPossible=Couldn''t access tracing
 
 jira.summary.notSupplied=No summary supplied
 jira.description.notSupplied=No description supplied
@@ -90,6 +101,7 @@ jira.type.invalid=Invalid issue type
 
 task.createSuccess=Task successfully created
 task.finished=Task is finished
+task.cancelled=Task got cancelled
 task.passedToReview=Task is now getting reviewed. This may take some time.
 task.assigned=You got a new task
 task.alreadyHasOpenOne=You already have an open task
@@ -101,12 +113,18 @@ task.training.deleted=Removed training from task
 task.training.sample.notFound= Couldn''t find sample for training
 task.training.assigned=You got a new Trainings-Task
 task.bulk.notSupplied=No data supplied
+task.bulk.createSuccess=Successfully created {0} Tasks
+task.edit.toFewInstances=There are already more finished / in progress tracings
+task.editSuccess=Task successfully edited
 
 taskInstances=Task instances
 
 taskType=Task type
+taskType.editSuccess=Task type successfully edited
+taskType.createSuccess=Task type successfully created
 taskType.notFound=Selected task type doesn''t exist
-taskType.deleted=Task type '%s' successfully deleted
+taskType.deleted=Task type ''{0}'' successfully deleted
+taskType.emptyModeSelection=Please select at least one tracing mode
 
 taskAlgorithm.notSupplied=No algorithm supplied
 taskAlgorithm.notFound=Couldn''t find algorithm
@@ -125,8 +143,13 @@ level.assets.notFound=Asset not found
 level.assets.deleted=Asset got removed
 level.assets.deleteFailed=Couldn''t delete asset
 level.creation.inProgress=Level creation in progress
+level.stack.removed=Removed stack
+level.stack.removedAll=Removed all stacks
+level.stack.creationTimeout=Stack creation timed out
+level.stack.created=Stacks created
 
 mission.notFound=No mission found
+mission.startId.missing=Missing missionStartId parameter
 
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24

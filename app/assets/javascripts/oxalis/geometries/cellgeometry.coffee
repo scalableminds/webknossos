@@ -1,6 +1,6 @@
 ### define
 ../../libs/event_mixin : EventMixin
-../model/dimensions : DimensionsHelper
+../model/dimensions : Dimensions
 ###
 
 MAX_EDGE_POINTS  = 10000
@@ -38,10 +38,10 @@ class CellGeometry
           if id == @id
             @addEdgePoint(pos)
         newLayer : =>
-          @update(@model.flycam.getGlobalPos())
+          @update(@model.flycam.getPosition())
         })
       @model.flycam.on({
-        globalPositionChanged : (pos) =>
+        positionChanged : (pos) =>
           @update(pos)
         })
 
@@ -83,7 +83,7 @@ class CellGeometry
     addEdgePoint : (pos) ->
 
       # pos might be integer, but the third dimension needs to be exact.
-      globalPos = @model.flycam.getGlobalPos()
+      globalPos = @model.flycam.getPosition()
       edgePoint = pos.slice()
       edgePoint[@thirdDimension] = globalPos[@thirdDimension]
 

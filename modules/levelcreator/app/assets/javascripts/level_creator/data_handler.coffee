@@ -10,7 +10,7 @@ libs/toast : Toast
 
 class DataHandler
 
-  constructor : (@dimensions, @levelId, @taskId) ->
+  constructor : (@dimensions, @levelId, @missionId, @dataSetName) ->
 
     EventMixin.extend(this)
 
@@ -22,21 +22,20 @@ class DataHandler
       @requestGray()
       @requestSegmentation()
       @requestClassification()
+      @requestMissionData()
     ).then(
+      ( gray, segmentation, classification, mission ) =>
 
-      ( gray, segmentation, classification ) =>
-
-        @data = { gray, segmentation, classification }
+        @data = { gray, segmentation, classification, mission }
         @trigger("initialized")
-        
-    )
+    )  
 
 
   requestGray : ->
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.viaAjax("color", @levelId, @taskId)
+        Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, "color")
         dataType : "arraybuffer"
       )
     ).then(
@@ -49,7 +48,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.viaAjax("segmentation", @levelId, @taskId)
+        Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, "segmentation")
         dataType : "arraybuffer"
       )
     ).then(
@@ -62,12 +61,25 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.ArbitraryBinaryData.viaAjax("classification", @levelId, @taskId)
+        Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, "classification")
         dataType : "arraybuffer"
       )
     ).then(
       (buffer) => new Uint8Array(buffer)
       (xhr) -> Toast.error("Couldn't load classification data layer.")
+    )
+
+
+  requestMissionData : ->
+
+    Request.send(
+      _.extend(
+        Routes.controllers.levelcreator.MissionController.getMission(@missionId)
+        dataType : "json"
+      )
+    ).then(
+      _.identity
+      (xhr) -> Toast.error("Couldn't load meta data.")
     )
       
 
@@ -99,11 +111,23 @@ class DataHandler
 
   getSegmentationSlide : (t) ->
 
-    t = Math.min(Math.round(t), @depth - 1)
+    t = Math.min(t, @depth - 1)
+    delta = t - Math.floor(t)
 
     slideLength = @width * @height
 
-    new Uint8Array(
-      @data.segmentation.subarray(t * slideLength,t * slideLength)
-    )
+    if delta <= 0.5
+      segmentationData = new Uint16Array(
+        @data.segmentation.subarray(Math.floor(t) * slideLength, Math.floor(t + 1) * slideLength)
+      )
+    else
+      segmentationData = new Uint16Array(
+        @data.segmentation.subarray(Math.floor(t + 1) * slideLength, Math.floor(t + 2) * slideLength)
+      )    
 
+    segmentationData
+
+
+  getMissionData : ->
+
+    @data.mission

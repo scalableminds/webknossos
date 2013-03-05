@@ -1,3 +1,4 @@
+### define ###
 # This class encapsulates any conversions between the nm and voxel
 # coordinate system.
 

@@ -11,27 +11,30 @@ libs/ace/ace : Ace
 
 class LevelCreator
 
+  EDIT_DEBOUNCE_TIME : 1000
+
   plugins : []
   stack : null
   canvas : null
   data : null
-  model : null
 
   assetHandler : null
   prepluginRenderer : null
+  processing : false
 
   constructor : ->
 
     @levelId = $("#level-creator").data("level-id")
     @taskId = $("#level-creator").data("level-task-id")
+    @dataSetName = $("#level-creator").data("level-dataset-name")
 
     @dimensions = [
       parseInt( $("#level-creator").data("level-width")  )
       parseInt( $("#level-creator").data("level-height") )
-      parseInt( $("#level-creator").data("level-depth")  )
+      parseInt( $("#level-creator").data("level-slidesbeforeproblem") +  $("#level-creator").data("level-slidesafterproblem") )
     ]
 
-    @dataHandler = new DataHandler(@dimensions, @levelId, @taskId)
+    @dataHandler = new DataHandler(@dimensions, @levelId, @taskId, @dataSetName)
     @assetHandler = new AssetHandler(@levelId)
     @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler, @dataHandler)
 
@@ -41,11 +44,12 @@ class LevelCreator
     @editor = Ace.edit("editor")
     @editor.setTheme("ace/theme/twilight")
     @editor.getSession().setMode("ace/mode/coffee")
+    @editor.getSession().setNewLineMode("unix")
 
-    @$form = $("#editor-container form")
+    @$form = $("#save-form")
     @$saveCodeButton = @$form.find("[type=submit]")
 
-    @editor.on "change", => @updatePreview()
+    @editor.on "change", => @debouncedUpdatePreview()
 
     @$form.submit (event) =>
 
@@ -60,7 +64,7 @@ class LevelCreator
       $.ajax(
         url : @$form[0].action
         data : @$form.serialize()
-        type : "POST"
+        type : "PUT"
       ).then(
         ->
           Toast.success("Saved!")
@@ -117,9 +121,18 @@ class LevelCreator
         @dataHandler.deferred("initialized")
       ).done =>
         @prepareHeadlessRendering()
-      
+
+
+  debouncedUpdatePreview : ->
+
+    @debouncedUpdatePreview = _.debounce(@updatePreview, @EDIT_DEBOUNCE_TIME)    
+    @debouncedUpdatePreview()
+    
 
   updatePreview : ->
+
+    if @processing
+      return
 
     sliderValue = Math.floor(@$slider.val())
     
@@ -151,6 +164,8 @@ class LevelCreator
 
       $("#preview-error").html("<i class=\"icon-warning-sign\"></i> #{error}")
 
+
+    @processing = false
 
   zoomPreview : ->
 

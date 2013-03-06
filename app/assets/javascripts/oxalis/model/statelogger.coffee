@@ -69,7 +69,9 @@ class StateLogger
       }
 
   edgeObject : (node, treeId) ->
-    # ASSUMTION: node has exactly one neighbor
+    $.assert(node.neighbors.length == 1,
+      "Node has to have exactly one neighbor", 0)
+
     return {
       treeId : treeId
       source : node.neighbors[0].id
@@ -77,6 +79,9 @@ class StateLogger
     }
 
   createNode : (node, treeId) ->
+    $.assert(node.neighbors.length <= 1,
+      "New node can't have more than one neighbor", 0)
+
     @pushDiff("createNode", @nodeObject(node, treeId))
     if node.neighbors.length == 1
       @pushDiff("createEdge", @edgeObject(node, treeId))

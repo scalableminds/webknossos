@@ -528,7 +528,7 @@ class Route
         
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
-        @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
+        @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
         @deleteTree(false, lastTree.treeId, false)
 

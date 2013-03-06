@@ -47,7 +47,7 @@ trait DBTreeFactory {
 object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
 
   this.collection.ensureIndex("_tracing")
-  
+
   /*def createAndInsertDeepCopy(t: DBTree): DBTree = {
     createAndInsertDeepCopy(t, t._tracing, 0)
   }*/
@@ -147,7 +147,9 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
   }
 
   def deleteEdge(edge: Edge, treeOid: ObjectId) = {
-    edges.remove(MongoDBObject("_treeId" -> treeOid, "edge.source" -> edge.source, "edge.target" -> edge.target))
+    edges.remove(MongoDBObject("_treeId" -> treeOid, "$or" -> MongoDBList(
+      MongoDBObject("edge.source" -> edge.source, "edge.target" -> edge.target),
+      MongoDBObject("edge.source" -> edge.target, "edge.targetcc" -> edge.source))))
   }
 
   def deleteEdgesOfNode(nodeId: Int, treeOid: ObjectId) = {

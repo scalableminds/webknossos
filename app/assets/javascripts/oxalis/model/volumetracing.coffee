@@ -63,7 +63,7 @@ class VolumeTracing
     startTime = new Date().getTime()
     voxelList = @currentLayer.getVoxelArray()
     #console.log "Time", (new Date().getTime() - startTime)#, @currentLayer.getVoxelArray()
-    @cube.labelVoxels(voxelList, 100)
+    @cube.labelVoxels(voxelList, 1)
 
     @currentLayer = null
     @startPos = null

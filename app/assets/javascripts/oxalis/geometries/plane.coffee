@@ -60,8 +60,17 @@ class Plane
       uniform vec2 offset, repeat;
       varying vec2 vUv;
       void main() {
-        gl_FragColor = texture2D(texture, vUv * repeat + offset) + 
-                        texture2D(volumeTexture, vUv * repeat + offset); }"
+        vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
+
+        /* Color map */
+             if(volumeColor[0] == 1.0 / 255.0) volumeColor = vec4(1, 0, 0, 1);
+        else if(volumeColor[0] == 2.0 / 255.0) volumeColor = vec4(0, 1, 0, 1);
+        else if(volumeColor[0] == 3.0 / 255.0) volumeColor = vec4(0, 1, 0, 1);
+        else if(volumeColor[0] == 4.0 / 255.0) volumeColor = vec4(0, 0, 1, 1);
+        else if(volumeColor[0] == 5.0 / 255.0) volumeColor = vec4(1, 1, 0, 1);
+        else if(volumeColor[0] == 6.0 / 255.0) volumeColor = vec4(0, 1, 1, 1);
+
+        gl_FragColor = texture2D(texture, vUv * repeat + offset) + volumeColor; }"
     uniforms = {
       texture : {type : "t", value : texture},
       volumeTexture : {type : "t", value : volumeTexture},

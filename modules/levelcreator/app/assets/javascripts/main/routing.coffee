@@ -37,6 +37,13 @@ $ ->
 
     "levelcreator.levelList" : ->
 
+      $(document).on "click", "[data-prompt]", (event) ->
+
+        event.preventDefault()
+        prompt("Level id:", $(this).data("prompt"))
+
+
+
       $(document).on "click", "#level-list .produce-stacks", (event) -> 
 
         event.preventDefault()
@@ -50,16 +57,22 @@ $ ->
           levelId = $row.data("levelid")
           count = $this.find("input").val()
           
-          $.ajax(routes.controllers.levelcreator.LevelCreator.produce(levelId, count)).then(
+          $.ajax(
+            _.extend(
+              dataType : "json"
+              beforeSend : (xhr) -> console.log xhr
+              routes.controllers.levelcreator.StackController.produce(levelId, count)
+            )
+          ).then(
 
             (msg) -> 
-              Toast.success(msg)
+              Toast.message(msg)
               
               $viewStacks = $row.find(".view-stacks")
               stackCount = $viewStacks.html().match(/[0-9]+/)[0]
               $viewStacks.html($viewStacks.html().replace(stackCount, parseInt(stackCount) + parseInt(count)))
 
-            (jqxhr) -> Toast.error(jqxhr.responseText ? "Connection error")
+            (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
 
           ).always(
             -> $this.find(".icon-retweet").removeClass("rotating")

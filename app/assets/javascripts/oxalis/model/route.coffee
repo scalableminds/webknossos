@@ -113,17 +113,17 @@ class Route
       #calculate direction of first edge in nm
       if @data.trees[0]?.edges?
         for edge in @data.trees[0].edges
-          sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.source).pos)
-          targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.target).pos)
-          if sourceNodeNm[0] != targetNodeNm[0] or sourceNodeNm[1] != targetNodeNm[1] or sourceNodeNm[2] != targetNodeNm[2]
-            @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
-                                   targetNodeNm[1] - sourceNodeNm[1],
-                                   targetNodeNm[2] - sourceNodeNm[2]]
+          sourceNode = @findNodeInList(@trees[0].nodes, edge.source).pos
+          targetNode = @findNodeInList(@trees[0].nodes, edge.target).pos
+          if sourceNode[0] != targetNode[0] or sourceNode[1] != targetNode[1] or sourceNode[2] != targetNode[2]
+            @firstEdgeDirection = [targetNode[0] - sourceNode[0],
+                                   targetNode[1] - sourceNode[1],
+                                   targetNode[2] - sourceNode[2]]
             break
 
       if @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
-        @flycam3d.setDirection(V3.normalize(@firstEdgeDirection))
+        @flycam3d.setDirection(@firstEdgeDirection)
 
     #@createNewTree()
     #for i in [0...10000]
@@ -335,6 +335,7 @@ class Route
       for i in [0...@comments.length]
         if(@comments[i].node == @activeNode.id)
           @comments.splice(i, 1)
+          @deletedCommentIndex = i
           break
       if commentText != ""
         @comments.push({node: @activeNode.id, content: commentText})
@@ -362,20 +363,22 @@ class Route
 
   nextCommentNodeID : (forward) ->
 
-    unless @activeNode?
-      if @comments.length > 0 then return @comments[0].node
+    length = @comments.length
+    offset = if forward then 1 else -1
 
-    if @comments.length == 0
+    unless @activeNode?
+      if length > 0 then return @comments[0].node
+
+    if length == 0
       return null
 
     for i in [0...@comments.length]
       if @comments[i].node == @activeNode.id
-        if forward
-          return @comments[(i + 1) % @comments.length].node
-        else
-          if i == 0 then return @comments[@comments.length - 1].node
-          else
-            return @comments[(i - 1)].node
+        return @comments[(length + i + offset) % length].node
+
+    if @deletedCommentIndex?
+      offset = if forward then 0 else -1
+      return @comments[(length + @deletedCommentIndex + offset) % length].node
 
     return @comments[0].node
 

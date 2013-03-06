@@ -43,17 +43,43 @@ class Plane
     # create texture
     texture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     texture.needsUpdate = true
-    textureMaterial     = new THREE.MeshBasicMaterial({wireframe : false})
-    volumeTexture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
-    volumeTexture.needsUpdate = true
-    volumeTextureMaterial     = new THREE.MeshBasicMaterial({wireframe : false})
+    volumeTexture       = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+    
+    offset = new THREE.Vector2(0, 0)
+    repeat = new THREE.Vector2(0, 0)
+
+    vertexShader = "
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position =   projectionMatrix * 
+                        modelViewMatrix * 
+                        vec4(position,1.0); }"
+    fragmentShader = "
+      uniform sampler2D texture, volumeTexture;
+      uniform vec2 offset, repeat;
+      varying vec2 vUv;
+      void main() {
+        gl_FragColor = texture2D(texture, vUv * repeat + offset) + 
+                        texture2D(volumeTexture, vUv * repeat + offset); }"
+    uniforms = {
+      texture : {type : "t", value : texture},
+      volumeTexture : {type : "t", value : volumeTexture},
+      offset : {type : "v2", value : offset},
+      repeat : {type : "v2", value : repeat}
+    }
+    textureMaterial = new THREE.ShaderMaterial({
+      uniforms : uniforms,
+      vertexShader : vertexShader,
+      fragmentShader : fragmentShader
+      })
 
     # create mesh
     @plane = new THREE.Mesh( planeGeo, textureMaterial )
     @plane.texture = texture
-    @volumePlane = new THREE.Mesh( volumePlaneGeo, volumeTextureMaterial )
-    @volumePlane.texture = volumeTexture
-    @volumePlane.visible = false
+    @plane.volumeTexture = volumeTexture
+    @plane.offset = offset
+    @plane.repeat = repeat
     # Never interpolate
     @plane.texture.magFilter = THREE.NearestFilter
 
@@ -99,30 +125,30 @@ class Plane
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
         @model.binary.planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(@planeID), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
-          if volumeBuffer
-            @plane.texture.image.data.set(volumeBuffer)
+          if dataBuffer
+            @plane.texture.image.data.set(dataBuffer)
             @flycam.hasNewTexture[@planeID] = true
+          if volumeBuffer
+            @plane.volumeTexture.image.data.set(volumeBuffer)
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return
 
       @plane.texture.needsUpdate = true
-      @plane.material.map = @plane.texture
+      @plane.volumeTexture.needsUpdate = true
       
       scalingFactor = @flycam.getTextureScalingFactor @planeID
-      map = @plane.material.map
-      map.repeat.x = (area[2] -  area[0]) / @textureWidth  # (tWidth -4) ???
-      map.repeat.y = (area[3] -  area[1]) / @textureWidth
-      map.offset.x = area[0] / @textureWidth
-      # THREE moved (0, 0) to bottom-left, apparently
-      map.offset.y = 1 - area[3] / @textureWidth
+      @plane.repeat.x = (area[2] -  area[0]) / @textureWidth  # (tWidth -4) ???
+      @plane.repeat.y = (area[3] -  area[1]) / @textureWidth
+      @plane.offset.x = area[0] / @textureWidth
+      @plane.offset.y = 1 - area[3] / @textureWidth
 
   setScale : (factor) =>
     scaleVec = new THREE.Vector3().multiplyVectors(new THREE.Vector3(factor, factor, factor), @scaleVector)
-    @plane.scale = @volumePlane.scale = @prevBorders.scale = @crosshair[0].scale = @crosshair[1].scale = scaleVec
+    @plane.scale = @prevBorders.scale = @crosshair[0].scale = @crosshair[1].scale = scaleVec
 
   setRotation : (rotVec) =>
-    @plane.rotation = @volumePlane.rotation = @prevBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
+    @plane.rotation = @prevBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
 
   setPosition : (posVec) =>
     @prevBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
@@ -133,15 +159,12 @@ class Plane
     else if @planeID == PLANE_XZ then offset.y = -1
     @plane.position = offset.addVectors(posVec, offset)
 
-    volumeOffset = new THREE.Vector3(offset.x / 2, offset.y / 2, offset.z / 2)
-    @volumePlane.position = volumeOffset.addVectors(posVec, volumeOffset)
-
   setVisible : (visible) =>
     @plane.visible = @prevBorders.visible = visible
     @crosshair[0].visible = @crosshair[1].visible = visible and @displayCosshair
 
   getMeshes : =>
-    [@plane, @volumePlane, @prevBorders, @crosshair[0], @crosshair[1]]
+    [@plane, @prevBorders, @crosshair[0], @crosshair[1]]
 
   setLinearInterpolationEnabled : (value) =>
     @plane.texture.magFilter = if value==true then THREE.LinearFilter else THREE.NearestFilter

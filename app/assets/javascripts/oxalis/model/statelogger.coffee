@@ -45,6 +45,21 @@ class StateLogger
       })
 
   mergeTree : (sourceTree, targetTree, lastNodeId, activeNodeId) ->
+    # Make sure that those nodes exist
+    found = false; treeIds = []
+    for node in sourceTree.nodes
+      found |= (node.id == lastNodeId)
+      treeIds.push(node.id)
+    $.assert(found, "lastNodeId not in sourceTree",
+      {sourceTreeNodeIds : treeIds, lastNodeId : lastNodeId})
+
+    found = false; treeIds = []
+    for node in targetTree.nodes
+      found |= (node.id == activeNodeId)
+      treeIds.push(node.id)
+    $.assert(found, "activeNodeId not in targetTree",
+      {targetTreeNodeIds : treeIds, activeNodeId : activeNodeId})
+
     # Copy all edges and nodes from sourceTree to
     # targetTree, while leaving targetTree's properties
     # unchanged. Then, delete sourceTree.

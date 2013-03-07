@@ -139,11 +139,6 @@ class Route
           return
     )
 
-  # INVARIANTS:
-  # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null
-  # activeNode: either null only if activeTree is empty (sentinel) or valid node
-
-
   pushNow : ->
 
     @stateLogger.pushNow()

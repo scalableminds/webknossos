@@ -44,3 +44,10 @@ Dimensions =
     for i in [0...res.length]
       res[i] = @round(res[i])
     return res
+
+  distance : (pos1, pos2) ->
+    sumOfSquares = 0
+    for i in [0..2]
+      diff = pos1[i] - pos2[i]
+      sumOfSquares += diff * diff
+    return Math.sqrt(sumOfSquares)

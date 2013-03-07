@@ -1,16 +1,18 @@
 ### define 
 ./volumecell : VolumeCell
+./volumelayer : VolumeLayer
 ../../libs/event_mixin : EventMixin
 ./dimensions : Dimensions
 ###
-
-MODE_LASSO = 0
-MODE_DRAW  = 1
 
 # Point in polygon algorithm expects the path to be
 # continous. Therefore, we need to ensure, that no
 # edge is longer than specified.
 MAX_EDGE_LENGTH = 2
+
+MODE_NORMAL      = 0
+MODE_SUB         = 1
+MODE_ADD         = 2
 
 class VolumeTracing
 
@@ -21,7 +23,6 @@ class VolumeTracing
     @activeCell   = null        # Cell currently selected
     @activeLayer  = null        # Layer currently selected
     @currentLayer = null        # Layer currently edited
-    @mode         = MODE_LASSO
     @idCount      = 1
 
   createCell : ->
@@ -30,9 +31,25 @@ class VolumeTracing
     @cells.push(@activeCell)
     @trigger "newCell", @activeCell
 
+  startEditing : (pos) ->
+    if not @startNewLayer()
+      
+      planeId = @flycam.getActivePlane()
+      thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
+      layer = @activeCell.getLayer(planeId, thirdDimValue)
+
+      if layer == @activeLayer
+        if layer.containsVoxel(pos)
+          layer.setMode(MODE_ADD)
+        else
+          layer.setMode(MODE_SUB)
+
+        @currentLayer = layer
+
   startNewLayer : (planeId = @flycam.getActivePlane()) ->
+    # Return, if layer was actually started
     if currentLayer?
-      return
+      return false
     # just for testing
     unless @activeCell?
       @createCell()
@@ -41,6 +58,8 @@ class VolumeTracing
     @currentLayer = @activeCell.createLayer(planeId, thirdDimValue)
     if @currentLayer?
       @trigger "newLayer"
+      return true
+    return false
 
   addToLayer : (pos) ->
 
@@ -62,36 +81,32 @@ class VolumeTracing
       return
 
     @addToLayer(@startPos)
-    startTime = new Date().getTime()
-    voxelList = @currentLayer.getVoxelArray()
-    #console.log "Time", (new Date().getTime() - startTime)#, @currentLayer.getVoxelArray()
-    @cube.labelVoxels(voxelList, @activeCell.id % 6 + 1)
+
+    #Delete any voxel before VolumeLayer.finishLayer()
+    @cube.labelVoxels(@currentLayer.getVoxelArray(), 0)
+    @currentLayer.finishLayer()
+    @cube.labelVoxels(@currentLayer.getVoxelArray(), @activeCell.id % 6 + 1)
 
     @currentLayer = null
     @startPos = null
     @prevPos = null
 
+    @trigger "layerUpdate"
+
   setActiveLayer : (layer) ->
     @activeLayer = layer
     if layer?
       @activeCell  = layer.cell
-    @trigger "newActiveLayer"
+    @trigger "layerUpdate"
 
   isActiveLayer : (layerId) ->
     return layerId == (if @activeLayer then @activeLayer.id else -1)
-
-  distance : (pos1, pos2) ->
-    sumOfSquares = 0
-    for i in [0..2]
-      diff = pos1[i] - pos2[i]
-      sumOfSquares += diff * diff
-    return Math.sqrt(sumOfSquares)
 
   interpolationList : (posSource, posTarget) ->
     # ensure that no edge is longer than MAX_EDGE_LENGTH
     unless posSource?
       return [posTarget]
-    distance = @distance(posSource, posTarget)
+    distance = Dimensions.distance(posSource, posTarget)
     if distance <= MAX_EDGE_LENGTH
       return [posTarget]
 

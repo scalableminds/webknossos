@@ -10,7 +10,7 @@ PLANE_YZ         = Dimensions.PLANE_YZ
 PLANE_XZ         = Dimensions.PLANE_XZ
 
 COLOR_NORMAL     = 0xff0000
-COLOR_ACTIVE     = 0xaaaa00
+COLOR_ACTIVE     = 0x0000ff
 
 class CellGeometry
 
@@ -42,21 +42,22 @@ class CellGeometry
             @addEdgePoint(pos)
         newLayer : =>
           @update()
-        newActiveLayer : =>
-          @update()
+        layerUpdate : =>
+          @update(true)
         })
       @model.flycam.on({
         positionChanged : (pos) =>
-          @update(pos)
+          @update()
         })
 
       @createMeshes()
 
-    update : (pos = @model.flycam.getPosition()) ->
+    update : (force = false) ->
 
+      pos = @model.flycam.getPosition()
       layer = @cell.getLayer(@planeId, pos[@thirdDimension])
 
-      if not layer? or layer.id != @id
+      if not layer? or layer.id != @id or force
         
         @reset()
         if layer?

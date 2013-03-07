@@ -139,7 +139,7 @@ class PlaneController
           if @mode == MODE_NORMAL
             @onPlaneClick(pos, shiftPressed)
           else if @mode == MODE_VOLUME
-            @model.volumeTracing.startNewLayer()
+            @model.volumeTracing.startEditing(@calculateGlobalPos(pos))
         leftMouseUp : =>
           if @mode == MODE_VOLUME
             @model.volumeTracing.finishLayer()

@@ -6,6 +6,10 @@ PLANE_XY         = Dimensions.PLANE_XY
 PLANE_YZ         = Dimensions.PLANE_YZ
 PLANE_XZ         = Dimensions.PLANE_XZ
 
+MODE_NORMAL      = 0
+MODE_SUB         = 1
+MODE_ADD         = 2
+
 class VolumeLayer
   
   constructor : (@cell, @plane, @thirdDimensionValue, @id, @time) ->
@@ -13,13 +17,21 @@ class VolumeLayer
     unless @time?
       @time = (new Date()).getTime()
     @contourList = []
+    @helperList  = []         # used to implement add/substract
     @comment     = ""
-    #@plane       = null
     @maxCoord    = null
     @minCoord    = null
+    @mode        = MODE_NORMAL
+
+  setMode : (newMode) ->
+    @mode = newMode
+    @helperList = []
 
   addContour : (pos) ->
-    @contourList.push(pos)
+    if @mode == MODE_NORMAL
+      @contourList.push(pos)
+    else
+      @helperList.push(pos)
 
     unless @maxCoord?
       @maxCoord = pos.slice()
@@ -29,7 +41,71 @@ class VolumeLayer
       @minCoord[i] = Math.min(@minCoord[i], pos[i])
       @maxCoord[i] = Math.max(@maxCoord[i], pos[i])
 
-  containsVoxel : (voxelCoordinate) ->
+  # Finalize add / substract
+  finishLayer : ->
+
+    if @mode == MODE_NORMAL then return
+
+    # Intersect contourList with helperList
+    cIn = []; cOut = []; isIn = null
+    
+    for pos in @contourList
+      newIsIn = @containsVoxel(pos, @helperList)
+      list = if newIsIn then cIn else cOut
+
+      if isIn != newIsIn
+        list.push([])
+      list[ list.length - 1 ].push(pos)
+      isIn = newIsIn
+
+    # Intersect helperList with contourList
+    hIn = []; hOut = []; isIn = null
+    
+    for pos in @helperList
+      newIsIn = @containsVoxel(pos)
+      list = if newIsIn then hIn else hOut
+
+      if isIn != newIsIn
+        list.push([])
+      list[ list.length - 1 ].push(pos)
+      isIn = newIsIn
+
+    # newContourList contains cOut and either
+    # hOut (MODE_ADD) or hIn (MODE_SUB)
+    if @mode == MODE_ADD then partsList = cOut.concat(hOut)
+    if @mode == MODE_SUB then partsList = cOut.concat(hIn)
+
+    # Construct newContourList by putting the parts together
+    newContourList = partsList.splice(0,1)[0]
+    while partsList.length > 0
+      pos = newContourList[newContourList.length - 1]
+      closestPart = {
+        distance  : Dimensions.distance(partsList[0][0], pos)
+        partIndex : 0,
+        reversed  : false 
+      }
+
+      for i in [0...partsList.length]
+        list = partsList[i]
+
+        for reversed in [true, false]
+          index = if reversed then list.length - 1 else 0
+          distance = Dimensions.distance(list[index], pos)
+
+          if distance < closestPart.distance
+            closestPart.distance  = distance
+            closestPart.partIndex = i
+            closestPart.reversed  = reversed
+
+      partToAdd = partsList.splice(closestPart.partIndex, 1)[0]
+      if closestPart.reversed
+        partToAdd.reverse()
+      newContourList = newContourList.concat(partToAdd)
+
+    @contourList = newContourList.concat([newContourList[0]])
+    @mode = MODE_NORMAL
+
+  containsVoxel : (voxelCoordinate, list = @contourList) ->
     
     thirdDimension = Dimensions.thirdDimensionForPlane(@plane)
     if voxelCoordinate[thirdDimension] != @thirdDimensionValue
@@ -39,7 +115,7 @@ class VolumeLayer
     totalDiff = 0
     point = @get2DCoordinate(voxelCoordinate)
 
-    for contour in @contourList
+    for contour in list
 
       contour2d = @get2DCoordinate(contour)
       newQuadrant = @getQuadrantWithRespectToPoint(contour2d, point)

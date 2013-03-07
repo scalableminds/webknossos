@@ -13,7 +13,7 @@ class VolumeCell
   createLayer : (planeId, thirdDimensionValue) ->
     if @getLayer(planeId, thirdDimensionValue) != null
       return null
-    layer = new VolumeLayer(planeId, thirdDimensionValue, @idCount++)
+    layer = new VolumeLayer(this, planeId, thirdDimensionValue, @idCount++)
     @layers.push(layer)
     return layer
 

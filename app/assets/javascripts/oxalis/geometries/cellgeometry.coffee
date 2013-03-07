@@ -9,6 +9,9 @@ PLANE_XY         = Dimensions.PLANE_XY
 PLANE_YZ         = Dimensions.PLANE_YZ
 PLANE_XZ         = Dimensions.PLANE_XZ
 
+COLOR_NORMAL     = 0xff0000
+COLOR_ACTIVE     = 0xaaaa00
+
 class CellGeometry
 
   constructor : (model, @cell) ->
@@ -38,7 +41,9 @@ class CellGeometry
           if id == @id
             @addEdgePoint(pos)
         newLayer : =>
-          @update(@model.flycam.getPosition())
+          @update()
+        newActiveLayer : =>
+          @update()
         })
       @model.flycam.on({
         positionChanged : (pos) =>
@@ -47,7 +52,7 @@ class CellGeometry
 
       @createMeshes()
 
-    update : (pos) ->
+    update : (pos = @model.flycam.getPosition()) ->
 
       layer = @cell.getLayer(@planeId, pos[@thirdDimension])
 
@@ -63,13 +68,20 @@ class CellGeometry
         else
           @id = null
 
+      if @model.volumeTracing.isActiveLayer(@id)
+        @edge.material.color.set(COLOR_ACTIVE)
+      else
+        @edge.material.color.set(COLOR_NORMAL)
+
+      @model.flycam.hasChanged = true
+
     createMeshes : ->
 
       edgeGeometry = new THREE.Geometry()
       edgeGeometry.dynamic = true
 
       @edgeBuffer = new Float32Array(MAX_EDGE_POINTS * 3)
-      @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: 0xff0000, linewidth: 4}), THREE.LineStrip)
+      @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: COLOR_NORMAL, linewidth: 4}), THREE.LineStrip)
       @reset()
 
     reset : ->

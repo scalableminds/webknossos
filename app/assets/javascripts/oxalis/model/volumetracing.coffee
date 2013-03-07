@@ -17,25 +17,28 @@ class VolumeTracing
   constructor : (@flycam, @cube) ->
     _.extend(@, new EventMixin())
 
-    @cells        = []         # List of VolumeCells
-    @currentCell  = null
-    @currentLayer = null
+    @cells        = []          # List of VolumeCells
+    @activeCell   = null        # Cell currently selected
+    @activeLayer  = null        # Layer currently selected
+    @currentLayer = null        # Layer currently edited
     @mode         = MODE_LASSO
+    @idCount      = 1
 
-  createCell : (id) ->
-    @currentCell = new VolumeCell(id)
-    @cells.push(@currentCell)
-    @trigger "newCell", @currentCell
+  createCell : ->
+    @activeCell = new VolumeCell(@idCount++)
+    @setActiveLayer(null)
+    @cells.push(@activeCell)
+    @trigger "newCell", @activeCell
 
   startNewLayer : (planeId = @flycam.getActivePlane()) ->
     if currentLayer?
       return
     # just for testing
-    unless @currentCell?
-      @createCell(1)
+    unless @activeCell?
+      @createCell()
     pos = Dimensions.roundCoordinate(@flycam.getPosition())
     thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
-    @currentLayer = @currentCell.createLayer(planeId, thirdDimValue)
+    @currentLayer = @activeCell.createLayer(planeId, thirdDimValue)
     if @currentLayer?
       @trigger "newLayer"
 
@@ -51,7 +54,6 @@ class VolumeTracing
     for contour in @interpolationList(@prevPos, pos)
       @currentLayer.addContour(contour)
       @trigger "newContour", @currentLayer.id, contour
-      #console.log "contour", contour
 
     @prevPos = pos.slice()
 
@@ -63,11 +65,20 @@ class VolumeTracing
     startTime = new Date().getTime()
     voxelList = @currentLayer.getVoxelArray()
     #console.log "Time", (new Date().getTime() - startTime)#, @currentLayer.getVoxelArray()
-    @cube.labelVoxels(voxelList, 1)
+    @cube.labelVoxels(voxelList, @activeCell.id % 6 + 1)
 
     @currentLayer = null
     @startPos = null
     @prevPos = null
+
+  setActiveLayer : (layer) ->
+    @activeLayer = layer
+    if layer?
+      @activeCell  = layer.cell
+    @trigger "newActiveLayer"
+
+  isActiveLayer : (layerId) ->
+    return layerId == (if @activeLayer then @activeLayer.id else -1)
 
   distance : (pos1, pos2) ->
     sumOfSquares = 0

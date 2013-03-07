@@ -146,7 +146,7 @@ class PlaneController
 
         rightClick : (pos) =>
           if @mode == MODE_VOLUME
-            @withinPolygonCheck(pos)
+            @selectLayer(pos)
           else
             @setWaypoint(pos)
       )
@@ -336,14 +336,15 @@ class PlaneController
       ])
     @addNode(position)
 
-  withinPolygonCheck : (relativePosition) =>
+  selectLayer : (relativePosition) =>
     position = @calculateGlobalPos(relativePosition)
     cell = @sceneController.cell.cell
     activePlane = @flycam.getActivePlane()
     thirdDimValue = position[Dimensions.thirdDimensionForPlane(activePlane)]
     layer = cell.getLayer(activePlane, thirdDimValue)
 
-    console.log "Point in Polygon:", layer.containsVoxel(position)
+    if layer?.containsVoxel(position)
+      @model.volumeTracing.setActiveLayer(layer)
 
   drawVolume : (relativePosition) ->
     pos = @calculateGlobalPos(relativePosition)

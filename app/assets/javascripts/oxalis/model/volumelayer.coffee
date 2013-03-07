@@ -8,7 +8,7 @@ PLANE_XZ         = Dimensions.PLANE_XZ
 
 class VolumeLayer
   
-  constructor : (@plane, @thirdDimensionValue, @id, @time) ->
+  constructor : (@cell, @plane, @thirdDimensionValue, @id, @time) ->
     
     unless @time?
       @time = (new Date()).getTime()
@@ -28,25 +28,6 @@ class VolumeLayer
     for i in [0..2]
       @minCoord[i] = Math.min(@minCoord[i], pos[i])
       @maxCoord[i] = Math.max(@maxCoord[i], pos[i])
-
-    # Automatically determine the plane, assuming
-    # that for at least one pos, both of the other
-    # coordinates will be different from the first
-    # position
-    
-    #unless @firstPos
-    #  @firstPos = pos.slice() 
-
-    #if @prevPos
-    #  equalDims = []
-      
-    #  for dim in [0..2]
-    #    if pos[dim] == @prevPos[dim]
-    #      equalDims.push(dim)
-      
-    #  if equalDims.length == 1
-    #    @plane = Dimensions.planeForThirdDimension(equalDims[0])
-    #    @thirdDimensionValue = pos[equalDims[0]]
 
   containsVoxel : (voxelCoordinate) ->
     

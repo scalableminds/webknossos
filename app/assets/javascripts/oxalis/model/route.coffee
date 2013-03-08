@@ -421,12 +421,16 @@ class Route
     # this generates the most distinct colors possible, using the golden ratio
     if @trees.length == 0
       @currentHue = null
-      return 0xFF0000
+      return 0xff0000
     else
       unless @currentHue
         @currentHue = new THREE.Color().setHex(_.last(@trees).color).getHSV().h
-      @currentHue += GOLDEN_RATIO
-      @currentHue %= 1
+      while 1
+        @currentHue += GOLDEN_RATIO
+        @currentHue %= 1
+        # exclude blue to purple colors, because they are too dark
+        if @currentHue < 0.6 or @currentHue > 0.75
+          break
       new THREE.Color().setHSV(@currentHue, 1, 1).getHex()
 
 

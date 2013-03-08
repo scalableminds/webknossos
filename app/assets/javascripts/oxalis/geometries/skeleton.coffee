@@ -121,8 +121,8 @@ class Skeleton
     @edgesBuffer.push(new ResizableBuffer(3))
     @nodesBuffer.push(new ResizableBuffer(3))
 
-    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: treeColor, linewidth: @model.route.getParticleSize() / 4}), THREE.LinePieces))
-    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: treeColor, size: @model.route.getParticleSize(), sizeAttenuation : false})))
+    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: @darkenHex(treeColor), linewidth: @model.route.getParticleSize() / 4}), THREE.LinePieces))
+    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: @darkenHex(treeColor), size: @model.route.getParticleSize(), sizeAttenuation : false})))
     @ids.push(treeId)
 
     @setActiveNode()
@@ -214,9 +214,9 @@ class Skeleton
       #if @activeNodeSphere
       #  @activeNodeSphere.visible = false
       if @route.getActiveNodeType() == TYPE_BRANCH
-        @activeNodeParticle.material.color.setHex(COLOR_ACTIVE_BRANCH)
+        @activeNodeParticle.material.color.setHex(@invertHex(@route.getTree().color))
       else
-        @activeNodeParticle.material.color.setHex(COLOR_ACTIVE)
+        @activeNodeParticle.material.color.setHex(@route.getTree().color)
 
       # @setNodeRadius(@route.getActiveNodeRadius())
       @activeNodeParticle.position = new THREE.Vector3(position[0] + 0.02, position[1] + 0.02, position[2] - 0.02)
@@ -226,17 +226,21 @@ class Skeleton
     @flycam.hasChanged = true
 
   setBranchPoint : (isBranchPoint, nodeID) ->
-    colorActive = if isBranchPoint then COLOR_ACTIVE_BRANCH else COLOR_ACTIVE
     treeColor = @route.getTree().color
-    colorNormal = if isBranchPoint then treeColor * 0.7 else treeColor
+    if isBranchPoint
+      colorActive = @invertHex(treeColor)
+    else 
+      colorActive = treeColor
+    
+    #colorNormal = if isBranchPoint then treeColor * 0.7 else treeColor
     if not nodeID? or nodeID == @route.getActiveNodeId()
       @activeNodeParticle.material.color.setHex(colorActive)
-      if @activeNodeSphere
-        @activeNodeSphere.material.color.setHex(colorNormal)
-    else
-      sphere = @getSphereFromId(nodeID)
-      if sphere?
-        sphere.material.color.setHex(colorNormal)
+    #   if @activeNodeSphere
+    #     @activeNodeSphere.material.color.setHex(colorNormal)
+    # else
+    #   sphere = @getSphereFromId(nodeID)
+    #   if sphere?
+    #     sphere.material.color.setHex(colorNormal)
     @flycam.hasChanged = true
 
   setNodeRadius : (radius) ->
@@ -413,10 +417,7 @@ class Skeleton
       branchpoint.pos[2] - 0.01] for branchpoint in branchpoints)
 
     @branchesColorsBuffer.clear()
-    @branchesColorsBuffer.pushMany([
-      ((0xffffff - (treeColor = @model.route.getTree(branchpoint.treeId).color)) >> 16 & 255 ) / 255,
-      ((0xffffff - treeColor) >> 8 & 255 ) / 255,
-      ((0xffffff - treeColor) & 255 ) / 255] for branchpoint in branchpoints)
+    @branchesColorsBuffer.pushMany(@invertHexToRGB(@darkenHex(@model.route.getTree(branchpoint.treeId).color)) for branchpoint in branchpoints)
 
     @branches.geometry.__vertexArray = @branchesBuffer.getBuffer()
     @branches.geometry.__webglParticleCount = @branchesBuffer.getLength()
@@ -484,3 +485,25 @@ class Skeleton
       @setActiveNode()
       @setDisplaySpheres(@disSpheres)
     @flycam.hasChanged = true
+
+
+  invertHexToRGB : (hexColor) ->
+
+    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor.h = (hsvColor.h + 0.5) % 1
+    rgbColor = new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v)
+    [rgbColor.r, rgbColor.g, rgbColor.b]
+
+
+  darkenHex : (hexColor) ->
+
+    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor.v = 0.6
+    new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+
+
+  invertHex : (hexColor) ->
+
+    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor.h = (hsvColor.h + 0.5) % 1
+    new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()

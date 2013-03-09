@@ -20,7 +20,7 @@ class Flycam2d
   viewportWidth : 0
 
 
-  constructor : (@viewportWidth, @scaleInfo, @zoomStepCount) ->
+  constructor : (@viewportWidth, @scaleInfo, @zoomStepCount, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -111,7 +111,8 @@ class Flycam2d
 
   setDirection : (direction) ->
     @direction = direction
-    @setSpaceDirection(direction)
+    if @user.dynamicSpaceDirection
+      @setSpaceDirection(direction)
 
   setSpaceDirection : (direction) ->
     for index in [0..2]

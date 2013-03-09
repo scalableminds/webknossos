@@ -3,31 +3,27 @@
 @main(){
   <div class="container" id="dashboard">
     <h3>Tasks</h3>
-    @if(!userTasks.isEmpty){
-      <table class="table table-striped" id="dashboard-tasks">
-        <thead>
-          <tr>
-            <th> # </th>
-            <th> Type </th>
-            <th> Project </th>
-            <th> Description </th>
-            <th> Modes </th>
-            <th> </th>
-          </tr>
-        </thead>
-        <tbody>
-        @userTasks.map{ case (task, tracing) => 
-          @taskTracingTableItem(task, tracing)
-        }
-        </tbody>
-      </table>
-    }
+    <table class="table table-striped" id="dashboard-tasks">
+      <thead>
+        <tr>
+          <th> # </th>
+          <th> Type </th>
+          <th> Project </th>
+          <th> Description </th>
+          <th> Modes </th>
+          <th> </th>
+        </tr>
+      </thead>
+      <tbody>
+      @userTasks.map{ case (task, tracing) => 
+        @taskTracingTableItem(task, tracing)
+      }
+      </tbody>
+    </table>
     <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks">Get a new task</a>
     
-    @if(!userTasks.isEmpty){
-      <div class="divider-vertical"></div>
-      <a href="#">Show finished tasks</a>
-    }
+    <div class="divider-vertical"></div>
+    <a href="#">Show finished tasks</a>
     <hr />
 
   	<a href="#" data-toggle="collapse" data-target="#explorativeTracings">
@@ -36,27 +32,25 @@
    
   	<div id="explorativeTracings" class="collapse out">
     
-      <h3>Explorative Tracings</h3>
-      @if(!explorativeTracings.isEmpty){
-        <table class="table table-striped">
-          <thead>
-            <tr>
-              <th> # </th>
-              <th> DataSet </th>
-              <th> Tracing Stats </th>
-              <th> Tracing-Type </th>
-              <th> Last edited </th>
-              <th> </th>
-            </tr>
-          </thead>
-          <tbody>
-          @explorativeTracings.map{ tracing => 
-            @explorativeTracingTableItem(tracing)
-          }
-          </tbody>
-        </table>
+    <h3>Explorative Tracings</h3>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th> # </th>
+          <th> DataSet </th>
+          <th> Tracing Stats </th>
+          <th> Tracing-Type </th>
+          <th> Last edited </th>
+          <th> </th>
+        </tr>
+      </thead>
+      <tbody>
+      @userTasks.map{ case (task, tracing) => 
+        @taskTracingTableItem(task, tracing)
       }
-      <div>
+      </tbody>
+    </table>
+    <div>
       @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
         <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button>
       }

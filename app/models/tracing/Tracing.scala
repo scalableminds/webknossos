@@ -20,6 +20,7 @@ import models.task._
 import models.Color
 import models.basics._
 import nml._
+import nml.utils._
 import play.api.Logger
 import com.mongodb.casbah.commons.MongoDBList
 
@@ -113,7 +114,7 @@ case class Tracing(
 object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   this.collection.ensureIndex("_task")
   this.collection.ensureIndex("_user")
-  
+
   def tracingBase(task: Task, userId: ObjectId, dataSetName: String): Tracing =
     Tracing(userId,
       dataSetName,
@@ -156,22 +157,45 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   }
 
   def createReviewFor(sample: Tracing, training: Tracing, user: User) = {
-    val reviewTracing = createAndInsertDeepCopy(training.copy(
+    val reviewTracing = copyDeepAndInsert(training.copy(
       _user = user._id,
       state = TracingState.Assigned,
       timestamp = System.currentTimeMillis,
       tracingType = TracingType.Review))
 
-    DBTree.cloneAndAddTrees(sample._id, reviewTracing._id)
+    mergeTracings(sample, reviewTracing)
+  }
 
-    reviewTracing
+  def createSample(taskId: ObjectId, tracing: Tracing) = {
+    copyDeepAndInsert(tracing.copy(
+      tracingType = TracingType.Sample,
+      _task = Some(taskId)))
+  }
+
+  def copyDeepAndInsert(source: Tracing) = {
+    val tracing = insertOne(source.copy(_id = new ObjectId, branchPoints = Nil, comments = Nil))
+    mergeTracings(source, tracing)
+  }
+
+  def mergeTracings(source: Tracing, target: Tracing): Tracing = {
+    println("mergeTracings - source: " + source.id + " " + source.tracingType + " target: " + target.id+ " " + target.tracingType )
+    val nodeMapping: NodeMapping = DBTree.mergeTrees(source._id, target._id)
+    println("nodeMapping" + nodeMapping)
+    target.update { t =>
+      println("Target comments: " + t.comments + " Source comments: "+ source.comments)
+      t.copy(
+        branchPoints = t.branchPoints ++ source.branchPoints.map(
+          bp => bp.copy(id = nodeMapping(bp.id).id)),
+        comments = t.comments ++ source.comments.map(
+          c => c.copy(node = nodeMapping(c.node).id)))
+    }
   }
 
   def createTracingFor(user: User, task: Task) = {
     task.tracingBase.map { tracingBase =>
       task.update(_.assigneOnce)
 
-      createAndInsertDeepCopy(tracingBase.copy(
+      copyDeepAndInsert(tracingBase.copy(
         _user = user._id,
         timestamp = System.currentTimeMillis,
         state = InProgress,
@@ -194,18 +218,6 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
       MongoDBObject(
         "$set" -> MongoDBObject(
           "state.isAssigned" -> false)))
-  }
-
-  def createAndInsertDeepCopy(source: Tracing) = {
-    val tracing = insertOne(source.copy(_id = new ObjectId))
-    DBTree.findAllWithTracingId(source._id).map(tree => DBTree.createAndInsertDeepCopy(tree, tracing._id, 0))
-    tracing
-  }
-
-  def createSample(taskId: ObjectId, tracing: Tracing) = {
-    createAndInsertDeepCopy(tracing.copy(
-      tracingType = TracingType.Sample,
-      _task = Some(taskId)))
   }
 
   def fromNML(userId: ObjectId, nml: NML) = {
@@ -260,7 +272,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
         "_task" -> task._id),
       MongoDBObject(
         "tracingSettings" -> taskType.tracingSettings),
-        false, true)
+      false, true)
   }
 
   def findTrainingForReviewTracing(tracing: Tracing) =
@@ -333,7 +345,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
           </parameters>
           { e.trees.filterNot(_.isEmpty).map(t => Xml.toXML(t)) }
           <branchpoints>
-            { e.branchPoints.map(BranchPoint.toXML) }
+            { e.branchPoints.map(b => Xml.toXML(b)) }
           </branchpoints>
           <comments>
             { e.comments.map(c => Xml.toXML(c)) }

@@ -46,8 +46,9 @@ class Model
               })
 
               @scaleInfo = new ScaleInfo(tracing.tracing.scale)
-              @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)    
-              @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1)      
+              @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)
+              @user = new User(user)
+              @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1, @user)      
               @flycam3d = new Flycam3d(DISTANCE_3D, tracing.tracing.scale)
               @flycam3d.on
                 "changed" : (matrix) =>
@@ -56,7 +57,6 @@ class Model
                 "positionChanged" : (position) =>
                   @flycam3d.setPositionSilent(position)
               @route = new Route(tracing.tracing, @scaleInfo, @flycam, @flycam3d)
-              @user = new User(user)
               @volumeTracing = new VolumeTracing(@flycam, @binary.cube)
               
               tracing.tracing.settings

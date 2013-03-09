@@ -15,6 +15,7 @@ class User
   mouseRotateValue : null
   routeClippingDistance : null
   lockZoom : null
+  dynamicSpaceDirection : null
   displayCrosshair : null
   interpolation : null
   fourBit : null
@@ -72,6 +73,7 @@ class User
         mouseRotateValue : @mouseRotateValue,
         routeClippingDistance : @routeClippingDistance,
         lockZoom : @lockZoom,
+        dynamicSpaceDirection : @dynamicSpaceDirection,
         displayCrosshair : @displayCrosshair,
         interpolation : @interpolation,
         fourBit: @fourBit,

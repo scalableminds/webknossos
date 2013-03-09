@@ -113,17 +113,17 @@ class Route
       #calculate direction of first edge in nm
       if @data.trees[0]?.edges?
         for edge in @data.trees[0].edges
-          sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.source).pos)
-          targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.target).pos)
-          if sourceNodeNm[0] != targetNodeNm[0] or sourceNodeNm[1] != targetNodeNm[1] or sourceNodeNm[2] != targetNodeNm[2]
-            @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
-                                   targetNodeNm[1] - sourceNodeNm[1],
-                                   targetNodeNm[2] - sourceNodeNm[2]]
+          sourceNode = @findNodeInList(@trees[0].nodes, edge.source).pos
+          targetNode = @findNodeInList(@trees[0].nodes, edge.target).pos
+          if sourceNode[0] != targetNode[0] or sourceNode[1] != targetNode[1] or sourceNode[2] != targetNode[2]
+            @firstEdgeDirection = [targetNode[0] - sourceNode[0],
+                                   targetNode[1] - sourceNode[1],
+                                   targetNode[2] - sourceNode[2]]
             break
 
       if @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
-        @flycam3d.setDirection(V3.normalize(@firstEdgeDirection))
+        @flycam3d.setDirection(@firstEdgeDirection)
 
     #@createNewTree()
     #for i in [0...10000]
@@ -138,11 +138,6 @@ class Route
         else
           return
     )
-
-  # INVARIANTS:
-  # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null
-  # activeNode: either null only if activeTree is empty (sentinel) or valid node
-
 
   pushNow : ->
 
@@ -441,7 +436,7 @@ class Route
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
-    @deleteBranch(deletedNode.id)
+    @deleteBranch(deletedNode)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree
@@ -528,7 +523,7 @@ class Route
         
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
-        @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
+        @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
         @deleteTree(false, lastTree.treeId, false)
 

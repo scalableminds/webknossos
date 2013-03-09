@@ -32,6 +32,7 @@ object UserConfiguration extends BasicSettings{
       "mouseRotateValue" -> JsNumber(0.004),
       "routeClippingDistance" -> JsNumber(100),
       "lockZoom" -> JsBoolean(true),
+      "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
       "interpolation" -> JsBoolean(false),
       "fourBit" -> JsBoolean(true),

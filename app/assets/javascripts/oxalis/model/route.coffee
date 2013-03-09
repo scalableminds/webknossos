@@ -139,11 +139,6 @@ class Route
           return
     )
 
-  # INVARIANTS:
-  # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null
-  # activeNode: either null only if activeTree is empty (sentinel) or valid node
-
-
   pushNow : ->
 
     @stateLogger.pushNow()
@@ -441,7 +436,7 @@ class Route
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
-    @deleteBranch(deletedNode.id)
+    @deleteBranch(deletedNode)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree
@@ -528,7 +523,7 @@ class Route
         
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
-        @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
+        @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
         @deleteTree(false, lastTree.treeId, false)
 

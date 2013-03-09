@@ -96,9 +96,10 @@ class StateLogger
   createNode : (node, treeId) ->
     $.assert(node.neighbors.length <= 1,
       "New node can't have more than one neighbor", node.neighbors.length)
-    $.assert(node.treeId == node.neighbors[0].treeId,
-      "Neighbot has different treeId",
-      {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
+    if node.neighbors[0]
+      $.assert(node.treeId == node.neighbors[0].treeId,
+        "Neighbot has different treeId",
+        {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
 
     @pushDiff("createNode", @nodeObject(node, treeId))
     if node.neighbors.length == 1

@@ -213,6 +213,19 @@ class Gui
       @setPosFromString(event.target.value)
       return
 
+    $("#trace-finish-button, #trace-download-button").click (event) =>
+
+      event.preventDefault()
+      @saveNow().done =>
+        if confirm("Are you sure?")
+          window.location.href = event.srcElement.href
+
+    $("#trace-save-button").click (event) =>
+
+      event.preventDefault()
+      @saveNow()
+
+
     @model.flycam.on
       positionChanged : (position) => 
         @updateGlobalPosition(position)

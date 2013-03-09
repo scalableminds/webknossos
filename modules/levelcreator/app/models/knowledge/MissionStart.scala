@@ -7,13 +7,11 @@ import play.api.libs.json._
 case class MissionStart(
   position: Point3D,
   direction: Vector3D,
-  startId: Int,
-  centerOfMass: Point3D)
+  startId: Int)
 
 object MissionStart {
   implicit val MissionStartFormat: Format[MissionStart] = (
     (__ \ "position").format[Point3D] and
     (__ \ "direction").format[Vector3D] and
-    (__ \ "id").format[Int] and
-    (__ \ "center").format[Point3D])(MissionStart.apply, unlift(MissionStart.unapply))
+    (__ \ "id").format[Int])(MissionStart.apply, unlift(MissionStart.unapply))
 }

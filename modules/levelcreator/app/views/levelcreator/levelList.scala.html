@@ -8,7 +8,8 @@
         @helper.inputText(form("name"))
         @helper.inputText(form("width"), 'type -> "number")
         @helper.inputText(form("height"), 'type -> "number")
-        @helper.inputText(form("depth"), 'type -> "number")
+        @helper.inputText(form("slides before problem"), 'type -> "number")
+        @helper.inputText(form("slides after problem"), 'type -> "number")
         @helper.select(form("dataset"), options = dataSets.map(d => (d.name, d.name)))
         <div class="form-actions">
           <button type="submit" class="btn btn-primary">Create</button>
@@ -19,9 +20,9 @@
     <table class="table table-striped" id="level-list">
       <thead>
         <tr>
-          <th> # </th>
           <th> Name </th>
           <th> Dimensions </th>
+          <th> DataSet </th>
           <th> </th>
         </tr>
       </thead>

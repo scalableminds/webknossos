@@ -111,6 +111,9 @@ case class Tracing(
 }
 
 object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
+  this.collection.ensureIndex("_task")
+  this.collection.ensureIndex("_user")
+  
   def tracingBase(task: Task, userId: ObjectId, dataSetName: String): Tracing =
     Tracing(userId,
       dataSetName,
@@ -330,7 +333,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
           </parameters>
           { e.trees.filterNot(_.isEmpty).map(t => Xml.toXML(t)) }
           <branchpoints>
-            { e.branchPoints.map(BranchPoint.toXML) }
+            { e.branchPoints.map(b => Xml.toXML(b)) }
           </branchpoints>
           <comments>
             { e.comments.map(c => Xml.toXML(c)) }

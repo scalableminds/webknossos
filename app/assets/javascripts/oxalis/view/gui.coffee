@@ -16,7 +16,7 @@ class Gui
 
   model : null
   
-  constructor : (container, @model) ->
+  constructor : (container, @model, settings) ->
     
     _.extend(this, new EventMixin())
 
@@ -27,6 +27,8 @@ class Gui
 
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(data.briConNames)
+
+    somaClickingAllowed = settings.somaClickingAllowed
     
     @settings = 
 
@@ -35,13 +37,14 @@ class Gui
       mouseRotateValue : data.mouseRotateValue
       crosshairSize : data.crosshairSize
       
-      lockZoom: data.lockZoom
-      inverseX: data.mouseInversionX == 1
-      inverseY: data.mouseInversionY == 1
+      lockZoom : data.lockZoom
+      inverseX : data.mouseInversionX == 1
+      inverseY : data.mouseInversionY == 1
+      dynamicSpaceDirection : data.dynamicSpaceDirection
 
       moveValue : data.moveValue
-      routeClippingDistance: data.routeClippingDistance
-      displayCrosshairs: data.displayCrosshair
+      routeClippingDistance : data.routeClippingDistance
+      displayCrosshairs : data.displayCrosshair
 
       fourBit : data.fourBit
       briConNames : data.briConNames
@@ -61,7 +64,7 @@ class Gui
       deleteActiveTree : => @trigger "deleteActiveTree"
 
       activeNodeID : @model.route.getActiveNodeId()
-      newNodeNewTree : data.newNodeNewTree
+      newNodeNewTree : if somaClickingAllowed then data.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
       radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
       comment : ""
@@ -90,6 +93,9 @@ class Gui
     (fControls.add @settings, "inverseY")
                           .name("Inverse Y")
                           .onChange(@setMouseInversionY)
+    (fControls.add @settings, "dynamicSpaceDirection")
+                          .name("d/f-Switching")
+                          .onChange(@setDynamicSpaceDirection)
 
     fFlightcontrols = @gui.addFolder("Flighcontrols")
     (fFlightcontrols.add @settings, "mouseRotateValue", 0.001, 0.02)
@@ -167,9 +173,12 @@ class Gui
                           .step(1)
                           .name("Active Tree ID")
                           .onFinishChange( (value) => @trigger "setActiveTree", value)
-    (fTrees.add @settings, "newNodeNewTree")
-                          .name("Soma clicking mode")
-                          .onChange(@setNewNodeNewTree)
+    if somaClickingAllowed
+      (fTrees.add @settings, "newNodeNewTree")
+                            .name("Soma clicking mode")
+                            .onChange(@setNewNodeNewTree)
+    else
+      @setNewNodeNewTree(false)
     (fTrees.add @settings, "newTree")
                           .name("Create New Tree")
     (fTrees.add @settings, "deleteActiveTree")
@@ -234,6 +243,7 @@ class Gui
 
     @createTooltips()
 
+
   saveNow : =>
     @model.user.pushImpl()
     @model.route.pushNow()
@@ -295,6 +305,10 @@ class Gui
   setLockZoom : (value) =>
     @model.user.lockZoom = value
     @model.user.push()      
+
+  setDynamicSpaceDirection : (value) =>
+    @model.user.dynamicSpaceDirection = value
+    @model.user.push()
 
   setDisplayCrosshair : (value) =>
     @model.user.setValue("displayCrosshair", value)

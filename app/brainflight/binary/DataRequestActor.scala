@@ -33,8 +33,8 @@ case class MultiCubeRequest(requests: Seq[SingleRequest])
 class DataRequestActor extends Actor with DataCache {
   import DataStore._
 
-  implicit val dataBlockLoadTimeout = Timeout(10 seconds)
   val conf = Play.current.configuration
+  implicit val dataBlockLoadTimeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds)
   val remotePath = conf.getString("datarequest.remotepath").getOrElse("")
   val useRemote = conf.getBoolean("bindata.useRemote").getOrElse(false)
   implicit val system =
@@ -45,7 +45,7 @@ class DataRequestActor extends Actor with DataCache {
 
   lazy val dataStores = List[ActorRef](
     actorForWithLocalFallback[FileDataStore]("fileDataStore"),
-    actorForWithLocalFallback[GridDataStore]("gridDataStore"),
+    //actorForWithLocalFallback[GridDataStore]("gridDataStore"),
     system.actorOf(Props(new EmptyDataStore()), name = "emptyDataStore"))
 
   def actorForWithLocalFallback[T <: Actor](name: String)(implicit evidence: scala.reflect.ClassTag[T]) = {
@@ -73,18 +73,18 @@ class DataRequestActor extends Actor with DataCache {
   }
 
   def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D) = {
-    val block2Load = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.folder, dataLayer.bytesPerElement, resolution, block.x, block.y, block.z)
+    val block2Load = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.name, dataLayer.bytesPerElement, resolution, block.x, block.y, block.z)
 
     def loadFromStore(dataStores: List[ActorRef]): Future[Array[Byte]] = dataStores match {
       case a :: tail =>
         Logger.trace(s"Sending request: $block to ${a.path}")
         (a ? block2Load).mapTo[Array[Byte]].recoverWith {
           case e: AskTimeoutException =>
-            Logger.warn(s"(${dataSet.name}/${dataLayer.folder} $block) ${a.path}: Not response in time.")
+            Logger.warn(s"(${dataSet.name}/${dataLayer.name} $block) ${a.path}: Not response in time.")
             loadFromStore(tail)
           case e: ClassCastException =>
             // TODO: find a better way to catch the DataNotFoundException
-            Logger.warn(s"(${dataSet.name}/${dataLayer.folder} $block) ${a.path}: Not found. E: $e")
+            Logger.warn(s"(${dataSet.name}/${dataLayer.name} $block) ${a.path}: Not found. E: $e")
             loadFromStore(tail)
         }
       case _ =>
@@ -174,7 +174,7 @@ class DataRequestActor extends Actor with DataCache {
       case Some(byteArray) =>
         getLocalBytes(globalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
       case _ =>
-        Logger.error("Didn't find block! :(")
+        Logger.error(s"Didn't find block! :( -> $globalPoint -> $block")
         nullValue(bytesPerElement)
     }
   }

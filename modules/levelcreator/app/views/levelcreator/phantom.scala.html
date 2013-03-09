@@ -5,15 +5,24 @@ var fs = require("fs");
 
 page.viewportSize = { width : 1000, height : 1000 };
 
+setTimeout(
+  function() {
+    console.log("Phantom timeout exceeded.")
+    phantom.exit();
+  }, 
+  60*60*1000 // 60min
+)
 
 var i = 0, stackData;
 
 var triggerRender = function() {
   
-  console.log("rendering frame #" + i);
-  page.evaluate(function(i) {
-    window.levelCreator.headlessRendering(i);
-  }, i);
+  setTimeout(function () {
+    console.log("rendering frame #" + i);
+    page.evaluate(function(i) {
+      window.levelCreator.headlessRendering(i);
+    }, i);
+  }, 1);
 }
 
 page.onCallback = function (data) {
@@ -55,7 +64,7 @@ page.onCallback = function (data) {
         JSON.stringify(stackData),
         "w"
       );
-      console.log("wrote meta file to @{metaFilename}");
+      console.log("Wrote meta file to @{metaFilename}");
       
       phantom.exit();
     }

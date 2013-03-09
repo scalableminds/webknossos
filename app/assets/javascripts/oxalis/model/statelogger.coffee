@@ -45,6 +45,21 @@ class StateLogger
       })
 
   mergeTree : (sourceTree, targetTree, lastNodeId, activeNodeId) ->
+    # Make sure that those nodes exist
+    found = false; treeIds = []
+    for node in sourceTree.nodes
+      found |= (node.id == lastNodeId)
+      treeIds.push(node.id)
+    $.assert(found, "lastNodeId not in sourceTree",
+      {sourceTreeNodeIds : treeIds, lastNodeId : lastNodeId})
+
+    found = false; treeIds = []
+    for node in targetTree.nodes
+      found |= (node.id == activeNodeId)
+      treeIds.push(node.id)
+    $.assert(found, "activeNodeId not in targetTree",
+      {targetTreeNodeIds : treeIds, activeNodeId : activeNodeId})
+
     # Copy all edges and nodes from sourceTree to
     # targetTree, while leaving targetTree's properties
     # unchanged. Then, delete sourceTree.
@@ -69,7 +84,9 @@ class StateLogger
       }
 
   edgeObject : (node, treeId) ->
-    # ASSUMTION: node has exactly one neighbor
+    $.assert(node.neighbors.length == 1,
+      "Node has to have exactly one neighbor", node.neighbors.length)
+
     return {
       treeId : treeId
       source : node.neighbors[0].id
@@ -77,6 +94,12 @@ class StateLogger
     }
 
   createNode : (node, treeId) ->
+    $.assert(node.neighbors.length <= 1,
+      "New node can't have more than one neighbor", node.neighbors.length)
+    $.assert(node.treeId == node.neighbors[0].treeId,
+      "Neighbot has different treeId",
+      {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
+
     @pushDiff("createNode", @nodeObject(node, treeId))
     if node.neighbors.length == 1
       @pushDiff("createEdge", @edgeObject(node, treeId))

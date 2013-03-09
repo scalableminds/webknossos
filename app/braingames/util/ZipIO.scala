@@ -21,18 +21,21 @@ object ZipIO {
 
   private def writeZip(sources: Seq[(InputStream, String)], zip: ZipOutputStream) = {
     val files = sources.map { case (file, name) => (file, normalizeName(name)) }
-
+    val t = System.currentTimeMillis()
     files.foreach {
       case (in, name) =>
         zip.putNextEntry(new ZipEntry(name))
-        var b = in.read()
-        while (b > -1) {
-          zip.write(b)
-          b = in.read()
-        }
+        var buffer = new Array[Byte](1024)
+        var len = 0
+        do{ 
+          len = in.read(buffer)
+          if(len > 0)
+            zip.write(buffer, 0, len)
+        } while(len > 0)
         in.close()
         zip.closeEntry()
     }
+    Logger.trace(s"ZIP compression of ${sources.size} elemens took ${System.currentTimeMillis-t}ms")
     zip.close()
   }
 

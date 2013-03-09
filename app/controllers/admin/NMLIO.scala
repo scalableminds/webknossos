@@ -98,10 +98,10 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def zipTracings(tracings: List[Tracing], zipFileName: String) = {
-    val zipStreams = tracings.map { tracing =>
+    val zipStreams = tracings.par.map { tracing =>
       val xml = prettyPrinter.format(Xml.toXML(tracing))
       (IOUtils.toInputStream(xml, "UTF-8") -> tracingNMLName(tracing))
-    }
+    }.seq
     val zipped = new TemporaryFile(new File(normalize(zipFileName)))
     ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
     zipped
@@ -111,11 +111,13 @@ object NMLIO extends Controller with Secured with TextUtils {
     for {
       project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
     } yield {
+      val t = System.currentTimeMillis()
       val tracings = Task
         .findAllByProject(project.name)
         .flatMap(_.tracings.filter(_.state.isFinished))
 
       val zipped = zipTracings(tracings, projectName + "_nmls.zip")
+      Logger.debug(s"Zipping took: ${System.currentTimeMillis-t} ms")
       Ok.sendFile(zipped.file)
     }
   }

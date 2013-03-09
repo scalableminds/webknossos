@@ -37,13 +37,14 @@ class Gui
       mouseRotateValue : data.mouseRotateValue
       crosshairSize : data.crosshairSize
       
-      lockZoom: data.lockZoom
-      inverseX: data.mouseInversionX == 1
-      inverseY: data.mouseInversionY == 1
+      lockZoom : data.lockZoom
+      inverseX : data.mouseInversionX == 1
+      inverseY : data.mouseInversionY == 1
+      dynamicSpaceDirection : data.dynamicSpaceDirection
 
       moveValue : data.moveValue
-      routeClippingDistance: data.routeClippingDistance
-      displayCrosshairs: data.displayCrosshair
+      routeClippingDistance : data.routeClippingDistance
+      displayCrosshairs : data.displayCrosshair
 
       fourBit : data.fourBit
       briConNames : data.briConNames
@@ -92,6 +93,9 @@ class Gui
     (fControls.add @settings, "inverseY")
                           .name("Inverse Y")
                           .onChange(@setMouseInversionY)
+    (fControls.add @settings, "dynamicSpaceDirection")
+                          .name("d/f-Switching")
+                          .onChange(@setDynamicSpaceDirection)
 
     fFlightcontrols = @gui.addFolder("Flighcontrols")
     (fFlightcontrols.add @settings, "mouseRotateValue", 0.001, 0.02)
@@ -301,6 +305,10 @@ class Gui
   setLockZoom : (value) =>
     @model.user.lockZoom = value
     @model.user.push()      
+
+  setDynamicSpaceDirection : (value) =>
+    @model.user.dynamicSpaceDirection = value
+    @model.user.push()
 
   setDisplayCrosshair : (value) =>
     @model.user.setValue("displayCrosshair", value)

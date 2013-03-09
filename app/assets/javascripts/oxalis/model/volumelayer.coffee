@@ -149,8 +149,8 @@ class VolumeLayer
         for z in [@minCoord[2]..@maxCoord[2]]
           if @containsVoxel([x, y, z])
             res.push([x, y, z])
-    console.log "Time", (new Date().getTime() - startTime)
-    console.log "Cuboid", @minCoord, @maxCoord
+    #console.log "Time", (new Date().getTime() - startTime)
+    #console.log "Cuboid", @minCoord, @maxCoord
 
     return res
 

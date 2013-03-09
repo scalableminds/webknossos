@@ -27,8 +27,11 @@ class VolumeTracing
 
   createCell : ->
     @activeCell = new VolumeCell(@idCount++)
+    @activeLayer = null
+    @currentLayer = null
     @setActiveLayer(null)
     @cells.push(@activeCell)
+    console.log("New Cell:", @activeCell.id)
     @trigger "newCell", @activeCell
 
   startEditing : (pos) ->
@@ -46,6 +49,8 @@ class VolumeTracing
 
         @currentLayer = layer
 
+    console.log "Start editing"
+
   startNewLayer : (planeId = @flycam.getActivePlane()) ->
     # Return, if layer was actually started
     if currentLayer?
@@ -57,7 +62,7 @@ class VolumeTracing
     thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
     @currentLayer = @activeCell.createLayer(planeId, thirdDimValue)
     if @currentLayer?
-      @trigger "newLayer"
+      @trigger "newLayer", @activeCell.id
       return true
     return false
 
@@ -72,7 +77,7 @@ class VolumeTracing
 
     for contour in @interpolationList(@prevPos, pos)
       @currentLayer.addContour(contour)
-      @trigger "newContour", @currentLayer.id, contour
+      @trigger "newContour", @activeCell.id, @currentLayer.id, contour
 
     @prevPos = pos.slice()
 
@@ -92,15 +97,29 @@ class VolumeTracing
     @prevPos = null
 
     @trigger "layerUpdate"
+    
+    console.log "Finish Layer"
+
+  selectLayer : (pos) ->
+
+    for cell in @cells
+      activePlane = @flycam.getActivePlane()
+      thirdDimValue = pos[Dimensions.thirdDimensionForPlane(activePlane)]
+      layer = cell.getLayer(activePlane, thirdDimValue)
+
+      if layer?.containsVoxel(pos)
+        @setActiveLayer(layer)
 
   setActiveLayer : (layer) ->
+    console.log("Set active layer!")
     @activeLayer = layer
     if layer?
       @activeCell  = layer.cell
     @trigger "layerUpdate"
 
-  isActiveLayer : (layerId) ->
-    return layerId == (if @activeLayer then @activeLayer.id else -1)
+  isActiveLayer : (cellId, layerId) ->
+    return cellId == @activeCell?.id and
+      layerId == (if @activeLayer then @activeLayer.id else -1)
 
   interpolationList : (posSource, posTarget) ->
     # ensure that no edge is longer than MAX_EDGE_LENGTH

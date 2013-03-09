@@ -219,6 +219,10 @@ class PlaneController
         else 
           @mode = MODE_NORMAL
 
+      "y" : =>
+        if @mode == MODE_VOLUME
+          @model.volumeTracing.createCell()
+
       #Move
       "space" : (first) => @moveZ( @model.user.moveValue, first)
       "f" : (first) => @moveZ( @model.user.moveValue, first)
@@ -337,14 +341,7 @@ class PlaneController
     @addNode(position)
 
   selectLayer : (relativePosition) =>
-    position = @calculateGlobalPos(relativePosition)
-    cell = @sceneController.cell.cell
-    activePlane = @flycam.getActivePlane()
-    thirdDimValue = position[Dimensions.thirdDimensionForPlane(activePlane)]
-    layer = cell.getLayer(activePlane, thirdDimValue)
-
-    if layer?.containsVoxel(position)
-      @model.volumeTracing.setActiveLayer(layer)
+    @model.volumeTracing.selectLayer( @calculateGlobalPos( relativePosition ) )
 
   drawVolume : (relativePosition) ->
     pos = @calculateGlobalPos(relativePosition)

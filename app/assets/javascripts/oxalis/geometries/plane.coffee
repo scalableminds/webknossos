@@ -63,12 +63,12 @@ class Plane
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
 
         /* Color map */
-             if(volumeColor[0] == 1.0 / 255.0) volumeColor = vec4(1, 0, 0, 1);
-        else if(volumeColor[0] == 2.0 / 255.0) volumeColor = vec4(0, 1, 0, 1);
-        else if(volumeColor[0] == 3.0 / 255.0) volumeColor = vec4(0, 1, 0, 1);
-        else if(volumeColor[0] == 4.0 / 255.0) volumeColor = vec4(0, 0, 1, 1);
-        else if(volumeColor[0] == 5.0 / 255.0) volumeColor = vec4(1, 1, 0, 1);
-        else if(volumeColor[0] == 6.0 / 255.0) volumeColor = vec4(0, 1, 1, 1);
+             if(volumeColor[0] == 1.0 / 255.0) volumeColor = vec4(0.3, 0.0, 0.0, 1);
+        else if(volumeColor[0] == 2.0 / 255.0) volumeColor = vec4(0.0, 0.3, 0.0, 1);
+        else if(volumeColor[0] == 3.0 / 255.0) volumeColor = vec4(0.0, 0.0, 0.3, 1);
+        else if(volumeColor[0] == 4.0 / 255.0) volumeColor = vec4(0.3, 0.3, 0.0, 1);
+        else if(volumeColor[0] == 5.0 / 255.0) volumeColor = vec4(0.0, 0.3, 0.3, 1);
+        else if(volumeColor[0] == 6.0 / 255.0) volumeColor = vec4(0.3, 0.0, 0.3, 1);
 
         gl_FragColor = texture2D(texture, vUv * repeat + offset) + volumeColor; }"
     uniforms = {

@@ -10,11 +10,12 @@ PLANE_YZ         = Dimensions.PLANE_YZ
 PLANE_XZ         = Dimensions.PLANE_XZ
 
 COLOR_NORMAL     = 0xff0000
-COLOR_ACTIVE     = 0x0000ff
+COLOR_ARRAY      = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff]
+COLOR_ACTIVE     = 0x000000
 
 class CellGeometry
 
-  constructor : (model, @cell) ->
+  constructor : (model, cell) ->
 
     @layers = []      # One layer per plane
     for i in [0..2]
@@ -36,12 +37,15 @@ class CellGeometry
       @thirdDimension = Dimensions.thirdDimensionForPlane(@planeId)
       @id = null
 
+      @color = COLOR_ARRAY[ @cell.id % COLOR_ARRAY.length]
+
       @model.volumeTracing.on({
-        newContour : (id, pos) =>
-          if id == @id
+        newContour : (cellId, layerId, pos) =>
+          if @cell.id == cellId and @id == layerId
             @addEdgePoint(pos)
-        newLayer : =>
-          @update()
+        newLayer : (cellId) =>
+          if @cell.id == cellId
+            @update()
         layerUpdate : =>
           @update(true)
         })
@@ -69,10 +73,10 @@ class CellGeometry
         else
           @id = null
 
-      if @model.volumeTracing.isActiveLayer(@id)
+      if @model.volumeTracing.isActiveLayer(@cell.id, @id)
         @edge.material.color.set(COLOR_ACTIVE)
       else
-        @edge.material.color.set(COLOR_NORMAL)
+        @edge.material.color.set(@color)
 
       @model.flycam.hasChanged = true
 
@@ -82,7 +86,7 @@ class CellGeometry
       edgeGeometry.dynamic = true
 
       @edgeBuffer = new Float32Array(MAX_EDGE_POINTS * 3)
-      @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: COLOR_NORMAL, linewidth: 4}), THREE.LineStrip)
+      @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: @color, linewidth: 4}), THREE.LineStrip)
       @reset()
 
     reset : ->
@@ -108,6 +112,6 @@ class CellGeometry
         @edge.geometry.verticesNeedUpdate = true
         
         @curIndex++
-        if @curIndex % 100 == 0
-          console.log "Celllayer curIndex:", @curIndex, "MAX_EDGE_POINTS", MAX_EDGE_POINTS
+        #if @curIndex % 100 == 0
+        #  console.log "Celllayer curIndex:", @curIndex, "MAX_EDGE_POINTS", MAX_EDGE_POINTS
         @model.flycam.hasChanged = true

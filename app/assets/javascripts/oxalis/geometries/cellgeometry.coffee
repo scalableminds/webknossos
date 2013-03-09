@@ -1,9 +1,8 @@
 ### define
 ../../libs/event_mixin : EventMixin
 ../model/dimensions : Dimensions
+../../libs/resizable_buffer : ResizableBuffer
 ###
-
-MAX_EDGE_POINTS  = 10000
 
 PLANE_XY         = Dimensions.PLANE_XY
 PLANE_YZ         = Dimensions.PLANE_YZ
@@ -33,7 +32,6 @@ class CellGeometry
 
       _.extend(this, new EventMixin())
 
-      @curIndex     = 0
       @thirdDimension = Dimensions.thirdDimensionForPlane(@planeId)
       @id = null
 
@@ -85,12 +83,12 @@ class CellGeometry
       edgeGeometry = new THREE.Geometry()
       edgeGeometry.dynamic = true
 
-      @edgeBuffer = new Float32Array(MAX_EDGE_POINTS * 3)
+      @edgeBuffer = new ResizableBuffer(3)
       @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: @color, linewidth: 4}), THREE.LineStrip)
       @reset()
 
     reset : ->
-      @curIndex = 0
+      @edgeBuffer.clear()
       @edge.geometry.__webglLineCount = 0
       @edge.geometry.verticesNeedUpdate = true
 
@@ -104,14 +102,9 @@ class CellGeometry
       edgePoint = pos.slice()
       edgePoint[@thirdDimension] = globalPos[@thirdDimension]
 
-      if @curIndex < MAX_EDGE_POINTS
-
-        @edgeBuffer.set(edgePoint, @curIndex * 3)
-        @edge.geometry.__vertexArray = @edgeBuffer
-        @edge.geometry.__webglLineCount = @curIndex + 1
-        @edge.geometry.verticesNeedUpdate = true
-        
-        @curIndex++
-        #if @curIndex % 100 == 0
-        #  console.log "Celllayer curIndex:", @curIndex, "MAX_EDGE_POINTS", MAX_EDGE_POINTS
-        @model.flycam.hasChanged = true
+      @edgeBuffer.push(edgePoint)
+      @edge.geometry.__vertexArray = @edgeBuffer.getBuffer()
+      @edge.geometry.__webglLineCount = @edgeBuffer.getLength()
+      @edge.geometry.verticesNeedUpdate = true
+      
+      @model.flycam.hasChanged = true

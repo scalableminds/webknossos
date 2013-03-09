@@ -28,7 +28,26 @@ object BinaryData extends Controller {
 
   val conf = Play.current.configuration
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds) // needed for `?` below
+  
+  def createStackCuboid(level: Level, mission: Mission) = {
     
+    def calculateTopLeft(width: Int, height: Int, depth: Int) = {
+      Vector3D(-(width / 2.0).floor, -(height / 2.0).floor, 0)
+    }
+    
+    val realDirection = mission.start.direction
+    //val direction = Vector3D(realDirection.x, realDirection.z, -realDirection.y)
+    val direction = realDirection
+    
+    Cuboid(level.width, 
+      level.height, 
+      level.depth, 
+      1,
+      topLeftOpt = Some(calculateTopLeft(level.width, level.height, level.depth)),
+      moveVector = (Vector3D(mission.errorCenter)-(realDirection*level.slidesBeforeProblem)).toTuple,
+      axis = direction.toTuple)
+  }
+  
   def viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) = 
     Action { implicit request => 
     Async {
@@ -38,19 +57,12 @@ object BinaryData extends Controller {
         level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
         mission <- Mission.findOneById(missionId) ?~ Messages("mission.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
-        direction = Vector3D(mission.start.direction.x, mission.start.direction.z, -mission.start.direction.y)
       } yield {
         (dataRequestActor ? SingleRequest(DataRequest(
           dataSet,
           dataLayer,
-          1, // TODO resolution needed?
-          Cuboid(level.width, 
-              level.height, 
-              level.depth, 
-              1, 
-              moveVector = Vector3D(mission.start.position).toTuple,
-              axis = direction.toTuple),
-//              axis = mission.start.direction.toTuple),
+          1,
+          createStackCuboid(level, mission),
           useHalfByte = false,
           skipInterpolation = false)))
         .recover{

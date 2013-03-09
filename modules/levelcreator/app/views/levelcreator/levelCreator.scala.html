@@ -2,7 +2,7 @@
 
 @main(){
 
-  <div class="container-fluid" id="level-creator" data-level-id="@level.id" data-level-task-id="@missionId" data-level-dataset-name="@level.dataSetName" data-level-width="@level.width" data-level-height="@level.height" data-level-depth="@level.depth" >
+  <div class="container-fluid" id="level-creator" data-level-id="@level.id" data-level-task-id="@missionId" data-level-dataset-name="@level.dataSetName" data-level-width="@level.width" data-level-height="@level.height" data-level-slidesbeforeproblem="@level.slidesBeforeProblem" data-level-slidesafterproblem="@level.slidesAfterProblem" >
 
     <div class="row-fluid">
 
@@ -53,7 +53,7 @@
 
             <form method="POST" id="produce-form">
               <input type="hidden" name="missionId" value="@missionId" />
-              <a href="@controllers.levelcreator.routes.LevelCreator.produce(level.id)" data-ajax="submit,busy-class" class="btn">
+              <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" data-ajax="submit,busy-class" class="btn">
                 <i class="icon-retweet"></i> Produce
               </a>
             </form>

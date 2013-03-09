@@ -39,7 +39,8 @@ object ApplicationBuild extends Build {
   )
   val shellgameDependencies = Seq()
   
-  val levelcreatorDependencies = Seq()
+  val levelcreatorDependencies = Seq(
+     "com.amazonaws" % "aws-java-sdk" % "1.3.32")
   
   val isoshaderDependencies = Seq()
   

@@ -35,8 +35,8 @@ class PlaneView
     container = $("#render")
 
     # Create a 4x4 grid
-    @curWidth = WIDTH = (container.width()-20)/2
-    HEIGHT = (container.height()-20)/2
+    @curWidth = WIDTH = VIEWPORT_WIDTH
+    HEIGHT = VIEWPORT_WIDTH
     @scaleFactor = 1
 
     # Initialize main THREE.js components
@@ -153,9 +153,9 @@ class PlaneView
   #Call this after the canvas was resized to fix the viewport
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
-    container = $("#render")
-    WIDTH = (container.width()-20)/2
-    HEIGHT = (container.height()-20)/2
+    canvas = $("#render > canvas")
+    WIDTH = (canvas.width()-20)/2
+    HEIGHT = (canvas.height()-20)/2
 
     @renderer.setSize( 2*WIDTH+20, 2*HEIGHT+20)
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
@@ -167,30 +167,15 @@ class PlaneView
     @scaleFactor = 1 unless @scaleFactor
     if (@scaleFactor+delta > 0.65) and (@scaleFactor+delta < 2)
       @scaleFactor += Number(delta)
-      @curWidth = WIDTH = HEIGHT = @scaleFactor * 384
-      container = $("#render")
-      container.width(2 * WIDTH + 20)
-      container.height(2 * HEIGHT + 20)
+      @curWidth = WIDTH = HEIGHT = @scaleFactor * 380
+      canvas = $("#render > canvas")
+      canvas.width(2 * WIDTH + 20)
+      canvas.height(2 * HEIGHT + 20)
 
       divs = $(".inputcatcher")
       for div in divs
-        $(div).width(WIDTH)
-        $(div).height(HEIGHT)
-
-      divYZ = $("#planeyz")
-      divYZ.css({left: @scaleFactor * 384 + 20 + "px"})
-      divXZ = $("#planexz")
-      divXZ.css({top: @scaleFactor * 384 + 20 + "px"})
-      divSkeleton = $("#skeletonview")
-      divSkeleton.css({left: @scaleFactor * 384 + 20 + "px", top: @scaleFactor * 384 + 20 + "px"})
-
-      # scales the 3D-view controls
-      prevControl = $("#prevControls")
-      prevControl.css({top: @scaleFactor * 420 + "px", left: @scaleFactor * 420 + "px"})
-
-      # move abstract tree viewer
-      abstractTreeViewer = $("#abstractTreeViewer")
-      abstractTreeViewer.css({left: 2 * WIDTH + 20 + 10 + "px"})
+        $(div).css({width: WIDTH + "px"})
+        $(div).css({height: HEIGHT + "px"})
 
       @resize()
 
@@ -206,9 +191,8 @@ class PlaneView
   setActivePlane : (planeID) =>
     @flycam.setActivePlane planeID
     for i in [0..2]
-      catcherStyle = $(".inputcatcher")[i].style
-      #catcherStyle.borderColor  = "#f8f800"   #  else "#C7D1D8"
       $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
+    @flycam.hasChanged = true
 
   getCameras : =>
     @camera
@@ -251,17 +235,35 @@ class PlaneView
   hideModal : ->
     $("#modal").modal("hide")
 
+  updateComments : (comments) ->
+    commentTab = $("#tab-comments")
+    commentTab.empty()
+    comments.sort(@compareNodes)
+    for comment in comments
+      commentTab.append($('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content}))
+      commentTab.append($('<br>'))
+
+  compareNodes : (a, b) ->
+    if a.node < b.node
+      return -1
+    if a.node > b.node
+      return 1
+    return 0
+
 
   bind : ->  
 
     @model.route.on({
       doubleBranch         : (callback) => @showBranchModal(callback)      
       mergeDifferentTrees  : ->
-        Toast.error("You can't merge nodes within the same tree", false)  })
+        Toast.error("You can't merge nodes within the same tree", false)
+      updateComments       : (comments) => @updateComments(comments) })
     
     
   stop : ->
 
+    @scaleFactor = 1
+    @scaleTrianglesPlane(0)
     @running = false 
 
 

@@ -109,17 +109,21 @@ class Route
       # dirty but this actually is what needs to be done
       TYPE_BRANCH = TYPE_USUAL
 
-      #calculate direction of first edge in nm
-      firstEdge = @data.trees[0]?.edges[0]
-      if firstEdge
-        sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, firstEdge.source).pos)
-        targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, firstEdge.target).pos)
-        @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
-                               targetNodeNm[1] - sourceNodeNm[1],
-                               targetNodeNm[2] - sourceNodeNm[2]]
 
+      #calculate direction of first edge in nm
+      if @data.trees[0]?.edges?
+        for edge in @data.trees[0].edges
+          sourceNode = @findNodeInList(@trees[0].nodes, edge.source).pos
+          targetNode = @findNodeInList(@trees[0].nodes, edge.target).pos
+          if sourceNode[0] != targetNode[0] or sourceNode[1] != targetNode[1] or sourceNode[2] != targetNode[2]
+            @firstEdgeDirection = [targetNode[0] - sourceNode[0],
+                                   targetNode[1] - sourceNode[1],
+                                   targetNode[2] - sourceNode[2]]
+            break
+
+      if @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
-        @flycam3d.setDirection(V3.normalize(@firstEdgeDirection))
+        @flycam3d.setDirection(@firstEdgeDirection)
 
     #@createNewTree()
     #for i in [0...10000]
@@ -190,11 +194,13 @@ class Route
       @trigger("noBranchPoints")
       deferred.reject()
 
-  deleteBranch : (nodeID) ->
+  deleteBranch : (node) ->
+
+    if node.type != TYPE_BRANCH then return
 
     i = 0
     while i < @branchStack.length
-      if @branchStack[i].id == nodeID
+      if @branchStack[i].id == node.id
         @branchStack.splice(i, 1)
       else
         i++
@@ -329,9 +335,12 @@ class Route
       for i in [0...@comments.length]
         if(@comments[i].node == @activeNode.id)
           @comments.splice(i, 1)
+          @deletedCommentIndex = i
           break
-      @comments.push({node: @activeNode.id, content: commentText})
+      if commentText != ""
+        @comments.push({node: @activeNode.id, content: commentText})
       @stateLogger.push()
+      @updateComments()
 
 
   getComment : (nodeID) ->
@@ -348,26 +357,33 @@ class Route
       if(@comments[i].node == nodeID)
         @comments.splice(i, 1)
         @stateLogger.push()
+        @updateComments()
+        break
 
 
   nextCommentNodeID : (forward) ->
 
-    unless @activeNode?
-      if @comments.length > 0 then return @comments[0].node
+    length = @comments.length
+    offset = if forward then 1 else -1
 
-    if @comments.length == 0
+    unless @activeNode?
+      if length > 0 then return @comments[0].node
+
+    if length == 0
       return null
 
     for i in [0...@comments.length]
       if @comments[i].node == @activeNode.id
-        if forward
-          return @comments[(i + 1) % @comments.length].node
-        else
-          if i == 0 then return @comments[@comments.length - 1].node
-          else
-            return @comments[(i - 1)].node
+        return @comments[(length + i + offset) % length].node
+
+    if @deletedCommentIndex?
+      offset = if forward then 0 else -1
+      return @comments[(length + @deletedCommentIndex + offset) % length].node
 
     return @comments[0].node
+
+  updateComments : ->
+    @trigger("updateComments", @comments)
 
 
   setActiveTree : (id) ->
@@ -425,8 +441,7 @@ class Route
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
-    if deletedNode.type == TYPE_BRANCH
-      @deleteBranch(deletedNode.id)
+    @deleteBranch(deletedNode.id)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree
@@ -460,24 +475,21 @@ class Route
       @deleteTree(false)
 
 
-  deleteTree : (notify, id, deleteBranches) ->
+  deleteTree : (notify, id, deleteBranchesAndComments) ->
 
     unless @activeNode?
       return
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
-        @reallyDeleteTree(id, deleteBranches)
+        @reallyDeleteTree(id, deleteBranchesAndComments)
       else
         return
     else
-      @reallyDeleteTree(id, deleteBranches)
+      @reallyDeleteTree(id, deleteBranchesAndComments)
 
 
-  reallyDeleteTree : (id, deleteBranches) ->
-
-    unless deleteBranches?
-      deleteBranches = true
+  reallyDeleteTree : (id, deleteBranchesAndComments = true) ->
 
     unless id
       id = @activeTree.treeId
@@ -488,11 +500,11 @@ class Route
         index = i
         break
     @trees.splice(index, 1)
-    # remove comments of all nodes inside that tree
+    # remove branchpoints and comments, NOT when merging trees
     for node in tree.nodes
-      @deleteComment(node.id)
-      if deleteBranches and node.type == TYPE_BRANCH
-        @deleteBranch(node.id)
+      if deleteBranchesAndComments
+        @deleteComment(node.id)
+        @deleteBranch(node)
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0

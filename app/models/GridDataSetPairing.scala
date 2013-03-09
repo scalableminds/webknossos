@@ -62,11 +62,11 @@ object GridDataSetPairing {
   }
 
   def getOrCreatePrefix(dataSet: DataSet, dataLayer: DataLayer, resolution: Int) = {
-    findPrefix(dataSet.name, dataLayer.folder, resolution).flatMap {
+    findPrefix(dataSet.name, dataLayer.name, resolution).flatMap {
       case Some(p) => Future.successful(p)
       case _ =>
         createNextPrefix.map { prefix =>
-          collection.insert(GridDataSetPairing(dataSet.name, dataLayer.folder, resolution, prefix))
+          collection.insert(GridDataSetPairing(dataSet.name, dataLayer.name, resolution, prefix))
           prefix
         }
     }

@@ -123,9 +123,11 @@ class PlaneController
       new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
+          mouseInversionX = if @model.user.inverseX then -1 else 1
+          mouseInversionY = if @model.user.inverseY then -1 else 1
           @move [
-            delta.x * @model.user.mouseInversionX / @view.scaleFactor
-            delta.y * @model.user.mouseInversionX / @view.scaleFactor
+            delta.x * mouseInversionX / @view.scaleFactor
+            delta.y * mouseInversionX / @view.scaleFactor
             0
           ]
         scroll : @scroll
@@ -136,8 +138,10 @@ class PlaneController
     #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
     new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
-        @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
-        @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
+        mouseInversionX = if @model.user.inverseX then -1 else 1
+        mouseInversionY = if @model.user.inverseY then -1 else 1
+        @cameraController.movePrevX(delta.x * mouseInversionX)
+        @cameraController.movePrevY(delta.y * mouseInversionX)
       scroll : @cameraController.zoomPrev
       leftClick : @onPreviewClick
     )

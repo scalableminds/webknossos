@@ -38,8 +38,8 @@ class Gui
       crosshairSize : data.crosshairSize
       
       lockZoom : data.lockZoom
-      inverseX : data.mouseInversionX == 1
-      inverseY : data.mouseInversionY == 1
+      inverseX : data.inverseX
+      inverseY : data.inverseY
       dynamicSpaceDirection : data.dynamicSpaceDirection
 
       moveValue : data.moveValue
@@ -86,85 +86,82 @@ class Gui
     fControls = @gui.addFolder("Controls")
     (fControls.add @settings, "lockZoom")
                           .name("Lock Zoom")
-                          .onChange(@setLockZoom)
+                          .onChange((v) => @setBoolean("lockZoom", v))
     (fControls.add @settings, "inverseX")
                           .name("Inverse X")
-                          .onChange(@setMouseInversionX)
+                          .onChange((v) => @setBoolean("inverseX", v))
     (fControls.add @settings, "inverseY")
                           .name("Inverse Y")
-                          .onChange(@setMouseInversionY)
+                          .onChange((v) => @setBoolean("inverseY", v))
     (fControls.add @settings, "dynamicSpaceDirection")
                           .name("d/f-Switching")
-                          .onChange(@setDynamicSpaceDirection)
+                          .onChange((v) => @setBoolean("dynamicSpaceDirection", v))
 
     fFlightcontrols = @gui.addFolder("Flighcontrols")
     (fFlightcontrols.add @settings, "mouseRotateValue", 0.001, 0.02)
                           .step(0.001)
                           .name("Mouse Rotation")
-                          .onChange(@setMouseRotateValue)
+                          .onChange((v) => @setNumber("mouseRotateValue", v))
     (fFlightcontrols.add @settings, "rotateValue", 0.001, 0.08)
                           .step(0.001)
                           .name("Keyboard Rotation Value")
-                          .onChange(@setRotateValue)
+                          .onChange((v) => @setNumber("rotateValue", v))
     (fFlightcontrols.add @settings, "moveValue3d", 0.1, 10) 
                           .step(0.1)
                           .name("Move Value")    
-                          .onChange(@setMoveValue3d)
+                          .onChange((v) => @setNumber("moveValue3d", v))
     (fFlightcontrols.add @settings, "crosshairSize", 0.1, 1) 
                           .step(0.01)
                           .name("Crosshair size")    
-                          .onChange(@setCrosshairSize)                          
+                          .onChange((v) => @setNumber("crosshairSize", v))                          
 
 
     fView = @gui.addFolder("Planes")
     (fView.add @settings, "moveValue", 0.1, 10) 
                           .step(0.1)
                           .name("Move Value")    
-                          .onChange(@setMoveValue)
+                          .onChange((v) => @setNumber("moveValue", v))
     scale = @model.scaleInfo.baseVoxel
     (fView.add @settings, "routeClippingDistance", 1, 1000 * scale)
                           .name("Clipping Distance")    
-                          .onChange(@setRouteClippingDistance)
+                          .onChange((v) => @setNumber("routeClippingDistance", v))
     (fView.add @settings, "displayCrosshairs")
                           .name("Show Crosshairs")
-                          .onChange(@setDisplayCrosshair)
+                          .onChange((v) => @setBoolean("displayCrosshair", v))
 
     fView = @gui.addFolder("Voxel")
     (fView.add @settings, "fourBit")
                           .name("4 Bit")
-                          .onChange(@set4Bit)
+                          .onChange((v) => @setBoolean("fourBit", v))
     @brightnessController =
     (fView.add @settings, "brightness", -256, 256) 
                           .step(5)
                           .name("Brightness")    
-                          .onChange(@setBrightnessAndContrast)
+                          .onChange( => @setBrightnessAndContrast())
     @contrastController =
     (fView.add @settings, "contrast", 0.5, 5) 
                           .step(0.1)
                           .name("Contrast")    
-                          .onChange(@setBrightnessAndContrast)
+                          .onChange( => @setBrightnessAndContrast())
     (fView.add @settings, "resetBrightnessAndContrast")
                           .name("Reset To Default")
     (fView.add @settings, "interpolation")
                           .name("Interpolation")
-                          .onChange(@setInterpolation)
+                          .onChange((v) => @setBoolean("interpolation", v))
     (fView.add @settings, "quality", @qualityArray)
                           .name("Quality")
-                          .onChange(@setQuality)
+                          .onChange((v) => @setQuality(v))
 
     fSkeleton = @gui.addFolder("Skeleton View")
     (fSkeleton.add @settings, "displayPrevXY")
                           .name("Display XY-Plane")
-                          .onChange(@setDisplayPreviewXY)
+                          .onChange((v) => @setBoolean("displayPreviewXY", v))
     (fSkeleton.add @settings, "displayPrevYZ")
                           .name("Display YZ-Plane")
-                          .onChange(@setDisplayPreviewYZ)
+                          .onChange((v) => @setBoolean("displayPreviewYZ", v))
     (fSkeleton.add @settings, "displayPrevXZ")
                           .name("Display XZ-Plane")
-                          .onChange(@setDisplayPreviewXZ)
-    # (fSkeleton.add @settings, "nodesAsSpheres")
-    #                       .name("Nodes as Spheres")
-    #                       .onChange(@setNodeAsSpheres)
+                          .onChange((v) => @setBoolean("displayPreviewXZ", v))
 
     fTrees = @gui.addFolder("Trees")
     @activeTreeIdController =
@@ -176,7 +173,7 @@ class Gui
     if somaClickingAllowed
       (fTrees.add @settings, "newNodeNewTree")
                             .name("Soma clicking mode")
-                            .onChange(@setNewNodeNewTree)
+                            .onChange((v) => @setBoolean("newNodeNewTree", v))
     else
       @setNewNodeNewTree(false)
     (fTrees.add @settings, "newTree")
@@ -191,10 +188,6 @@ class Gui
                           .step(1)
                           .name("Active Node ID")
                           .onFinishChange( (value) => @trigger "setActiveNode", value)
-    # (fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
-    #                       .name("Radius")    
-    #                       .listen()
-    #                       .onChange(@setNodeRadius)
     @commentController =
     (fNodes.add @settings, "comment")
                           .name("Comment")
@@ -278,50 +271,11 @@ class Gui
     stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
     $("#trace-position-input").val(stringPos)
 
-  setMouseRotateValue : (value) =>
-    @model.user.mouseRotateValue = (Number) value
-    @model.user.push()
+  setNumber : (name, value) =>
+    @model.user.setValue( name, (Number) value)
 
-  setRotateValue : (value) =>
-    @model.user.rotateValue = (Number) value
-    @model.user.push()    
-
-  setMoveValue : (value) =>
-    @model.user.moveValue = (Number) value
-    @model.user.push()
-
-  setMoveValue3d : (value) =>
-    @model.user.moveValue3d = (Number) value
-    @model.user.push()    
-
-  setCrosshairSize : (value) =>
-    @model.user.setValue("crosshairSize", (Number) value)
-    @model.user.push()    
-
-  setRouteClippingDistance : (value) =>
-    @model.user.setValue("routeClippingDistance", (Number) value)
-    @model.user.push()   
-
-  setLockZoom : (value) =>
-    @model.user.lockZoom = value
-    @model.user.push()      
-
-  setDynamicSpaceDirection : (value) =>
-    @model.user.dynamicSpaceDirection = value
-    @model.user.push()
-
-  setDisplayCrosshair : (value) =>
-    @model.user.setValue("displayCrosshair", value)
-    @model.user.push()    
-
-  setInterpolation : (value) =>
-    @model.user.setValue("interpolation", (Boolean) value)
-    @model.user.push()
-
-  set4Bit : (value) =>
-    @model.binary.queue.set4Bit(value)
-    @model.user.fourBit = (Boolean) value
-    @model.user.push()
+  setBoolean : (name, value) =>
+    @model.user.setValue( name, (Boolean) value)
 
   setBrightnessAndContrast : =>
     @model.binary.updateLookupTable(@settings.brightness, @settings.contrast)
@@ -347,48 +301,7 @@ class Gui
     for i in [0..(@qualityArray.length - 1)]
       if @qualityArray[i] == value
         value = i
-    @model.flycam.setQuality(value)
-    @model.user.quality = (Number) value
-    @model.user.push()
-
-  setDisplayPreviewXY : (value) =>
-    @model.user.setValue("displayPreviewXY", value)
-    @model.user.push()      
-
-  setDisplayPreviewYZ : (value) =>
-    @model.user.setValue("displayPreviewYZ", value)
-    @model.user.push()      
-
-  setDisplayPreviewXZ : (value) =>
-    @model.user.setValue("displayPreviewXZ", value)  
-    @model.user.push()      
-
-  # setNodeAsSpheres : (value) =>
-  #   @model.user.nodesAsSpheres = value
-  #   @sceneController.skeleton.setDisplaySpheres(value)
-  #   @model.user.push()  
-  #   @flycam.hasChanged = true    
-
-  setMouseInversionX : (value) =>
-    if value is true
-      @model.user.mouseInversionX = 1
-    else
-      @model.user.mouseInversionX = -1
-    @model.user.push()         
-
-  setMouseInversionY : (value) =>
-    if value is true
-      @model.user.mouseInversionY = 1
-    else
-      @model.user.mouseInversionY = -1
-    @model.user.push()
-
-  setNewNodeNewTree : (value) =>
-    @model.user.newNodeNewTree = value
-    @model.user.push()      
-
-  # setNodeRadius : (value) =>
-  #   @model.route.setActiveNodeRadius(value)
+    @setNumber("quality", value)
 
   setComment : (value) =>
     @model.route.setComment(value)
@@ -399,11 +312,6 @@ class Gui
   nextComment : =>
     @trigger "setActiveNode", @model.route.nextCommentNodeID(true)
 
-  # updateRadius : (value) ->
-  #   if value then @settings.radius = value
-  #   else if (value = @model.route.getActiveNodeRadius())
-  #     @settings.radius = value
-
   # Helper method to combine common update methods
   update : ->
     # called when value user switch to different active node
@@ -413,5 +321,3 @@ class Gui
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
     @commentController.updateDisplay()
-
-    # @updateRadius()

@@ -78,11 +78,13 @@ class ArbitraryController
     @input.mouse = new Input.Mouse(
       @canvas
       leftDownMove : (delta) =>
+        mouseInversionX = if @model.user.inverseX then -1 else 1
+        mouseInversionY = if @model.user.inverseY then -1 else 1
         @cam.yawDistance(
-          -delta.x * @model.user.mouseInversionX * @model.user.mouseRotateValue
+          -delta.x * mouseInversionX * @model.user.mouseRotateValue
         );
         @cam.pitchDistance(
-          delta.y * @model.user.mouseInversionY * @model.user.mouseRotateValue
+          delta.y * mouseInversionY * @model.user.mouseRotateValue
         )
     )
 

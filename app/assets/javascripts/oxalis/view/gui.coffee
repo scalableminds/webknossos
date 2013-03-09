@@ -32,32 +32,11 @@ class Gui
     
     @settings = 
 
-      rotateValue : @user.rotateValue
-      moveValue3d : @user.moveValue3d
-      mouseRotateValue : @user.mouseRotateValue
-      crosshairSize : @user.crosshairSize
-      
-      lockZoom : @user.lockZoom
-      inverseX : @user.inverseX
-      inverseY : @user.inverseY
-      dynamicSpaceDirection : @user.dynamicSpaceDirection
-
-      moveValue : @user.moveValue
-      routeClippingDistance : @user.routeClippingDistance
-      displayCrosshair : @user.displayCrosshair
-
       fourBit : @user.fourBit
-      briConNames : @user.briConNames
       brightness : @user.brightness[@datasetPosition]
       contrast : @user.contrast[@datasetPosition]
       resetBrightnessAndContrast : => @resetBrightnessAndContrast()
-      interpolation : @user.interpolation
       quality : @qualityArray[@user.quality]
-
-      displayPrevXY : @user.displayPreviewXY
-      displayPrevYZ : @user.displayPreviewYZ
-      displayPrevXZ : @user.displayPreviewXZ
-      nodesAsSpheres : @user.nodesAsSpheres
 
       activeTreeID : @model.route.getActiveTreeId()
       newTree : => @trigger "createNewTree"
@@ -85,20 +64,20 @@ class Gui
     
     fControls = @gui.addFolder("Controls")
     @addCheckbox(fControls, @user, "lockZoom", "Lock Zoom")
-    @addCheckbox(fControls, @settings, "inverseX", "Inverse X")
-    @addCheckbox(fControls, @settings, "inverseY", "Inverse Y")
-    @addCheckbox(fControls, @settings, "dynamicSpaceDirection", "d/f-Switching")
+    @addCheckbox(fControls, @user, "inverseX", "Inverse X")
+    @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
+    @addCheckbox(fControls, @user, "dynamicSpaceDirection", "d/f-Switching")
 
     fFlightcontrols = @gui.addFolder("Flighcontrols")
-    @addSlider(fFlightcontrols, @settings, "mouseRotateValue", 0.001, 0.02, 0.001, "Mouse Rotation")
-    @addSlider(fFlightcontrols, @settings, "rotateValue", 0.001, 0.08, 0.001, "Keyboard Rotation Value")
-    @addSlider(fFlightcontrols, @settings, "moveValue3d", 0.1, 10, 0.1, "Move Value")
-    @addSlider(fFlightcontrols, @settings, "crosshairSize", 0.1, 1, 0.01, "Crosshair size")
+    @addSlider(fFlightcontrols, @user, "mouseRotateValue", 0.001, 0.02, 0.001, "Mouse Rotation")
+    @addSlider(fFlightcontrols, @user, "rotateValue", 0.001, 0.08, 0.001, "Keyboard Rotation Value")
+    @addSlider(fFlightcontrols, @user, "moveValue3d", 0.1, 10, 0.1, "Move Value")
+    @addSlider(fFlightcontrols, @user, "crosshairSize", 0.1, 1, 0.01, "Crosshair size")
 
     fPlanes = @gui.addFolder("Planes")
-    @addSlider(fPlanes, @settings, "moveValue", 0.1, 10, 0.1, "Move Value")
-    @addSlider(fPlanes, @settings, "routeClippingDistance", 1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
-    @addCheckbox(fPlanes, @settings, "displayCrosshair", "Show Crosshairs")
+    @addSlider(fPlanes, @user, "moveValue", 0.1, 10, 0.1, "Move Value")
+    @addSlider(fPlanes, @user, "routeClippingDistance", 1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
+    @addCheckbox(fPlanes, @user, "displayCrosshair", "Show Crosshairs")
 
     fVoxel = @gui.addFolder("Voxel")
     @addCheckbox(fVoxel, @settings, "fourBit", "4 Bit")
@@ -107,15 +86,15 @@ class Gui
     @contrastController =
       @addSlider(fVoxel, @settings, "contrast", 0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
     @addFunction(fVoxel, @settings, "resetBrightnessAndContrast", "Reset To Default")
-    @addCheckbox(fVoxel, @settings, "interpolation", "Interpolation")
+    @addCheckbox(fVoxel, @user, "interpolation", "Interpolation")
     (fVoxel.add @settings, "quality", @qualityArray)
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 
     fSkeleton = @gui.addFolder("Skeleton View")
-    @addCheckbox(fSkeleton, @settings, "displayPrevXY", "Display XY-Plane")
-    @addCheckbox(fSkeleton, @settings, "displayPrevYZ", "Display YZ-Plane")
-    @addCheckbox(fSkeleton, @settings, "displayPrevXZ", "Display XZ-Plane")
+    @addCheckbox(fSkeleton, @user, "displayPreviewXY", "Display XY-Plane")
+    @addCheckbox(fSkeleton, @user, "displayPreviewYZ", "Display YZ-Plane")
+    @addCheckbox(fSkeleton, @user, "displayPreviewXZ", "Display XZ-Plane")
 
     fTrees = @gui.addFolder("Trees")
     @activeTreeIdController = @addNumer(fTrees, @settings, "activeTreeID", 1, 1, "Active Tree ID")

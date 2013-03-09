@@ -213,11 +213,17 @@ class Gui
       @setPosFromString(event.target.value)
       return
 
-    $("#trace-finish-button, #trace-download-button").click (event) =>
+    $("#trace-finish-button").click (event) =>
 
       event.preventDefault()
       @saveNow().done =>
         if confirm("Are you sure?")
+          window.location.href = event.srcElement.href
+
+    $("#trace-download-button").click (event) =>
+
+      event.preventDefault()
+      @saveNow().done =>
           window.location.href = event.srcElement.href
 
     $("#trace-save-button").click (event) =>

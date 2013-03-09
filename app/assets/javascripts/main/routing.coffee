@@ -52,20 +52,7 @@ $ ->
       ], (Controller) ->
 
         oxalis = window.oxalis = new Controller()
-
-        $("#trace-finish-button, #trace-download-button").click (event) ->
-
-          event.preventDefault()
-
-          oxalis.gui.saveNow().done =>
-            window.location.href = this.href
-
-
-        $("#trace-save-button").click (event) ->
-
-          event.preventDefault()
-          oxalis.gui.saveNow()
-
+        
         return
 
 

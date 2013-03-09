@@ -77,7 +77,8 @@ class VolumeTracing
 
     for contour in @interpolationList(@prevPos, pos)
       @currentLayer.addContour(contour)
-      @trigger "newContour", @activeCell.id, @currentLayer.id, contour
+      @trigger "newContour", @activeCell.id, @currentLayer.id,
+                            contour, (@currentLayer.mode != MODE_NORMAL)
 
     @prevPos = pos.slice()
 

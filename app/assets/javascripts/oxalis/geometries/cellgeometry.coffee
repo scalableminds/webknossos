@@ -38,9 +38,9 @@ class CellGeometry
       @color = COLOR_ARRAY[ @cell.id % COLOR_ARRAY.length]
 
       @model.volumeTracing.on({
-        newContour : (cellId, layerId, pos) =>
+        newContour : (cellId, layerId, pos, useHelper) =>
           if @cell.id == cellId and @id == layerId
-            @addEdgePoint(pos)
+            @addEdgePoint(pos, useHelper)
         newLayer : (cellId) =>
           if @cell.id == cellId
             @update()
@@ -82,29 +82,39 @@ class CellGeometry
 
       edgeGeometry = new THREE.Geometry()
       edgeGeometry.dynamic = true
+      helperEdgeGeometry = new THREE.Geometry()
+      helperEdgeGeometry.dynamic = true
 
-      @edgeBuffer = new ResizableBuffer(3)
       @edge = new THREE.Line(edgeGeometry, new THREE.LineBasicMaterial({color: @color, linewidth: 4}), THREE.LineStrip)
+      @edge.vertexBuffer = new ResizableBuffer(3)
+      @helperEdge = new THREE.Line(helperEdgeGeometry, new THREE.LineBasicMaterial({color: COLOR_ACTIVE, linewidth: 4}), THREE.LineStrip)
+      @helperEdge.vertexBuffer = new ResizableBuffer(3)
+
       @reset()
 
     reset : ->
-      @edgeBuffer.clear()
-      @edge.geometry.__webglLineCount = 0
-      @edge.geometry.verticesNeedUpdate = true
+      @edge.vertexBuffer.clear()
+      @finalizeMesh(@edge)
+      @helperEdge.vertexBuffer.clear()
+      @finalizeMesh(@helperEdge)
 
     getMeshes : ->
-      return [@edge]
+      return [@edge, @helperEdge]
 
-    addEdgePoint : (pos) ->
+    addEdgePoint : (pos, useHelper) ->
 
       # pos might be integer, but the third dimension needs to be exact.
       globalPos = @model.flycam.getPosition()
       edgePoint = pos.slice()
       edgePoint[@thirdDimension] = globalPos[@thirdDimension]
 
-      @edgeBuffer.push(edgePoint)
-      @edge.geometry.__vertexArray = @edgeBuffer.getBuffer()
-      @edge.geometry.__webglLineCount = @edgeBuffer.getLength()
-      @edge.geometry.verticesNeedUpdate = true
+      mesh = if useHelper then @helperEdge else @edge
+      mesh.vertexBuffer.push(edgePoint)
+      @finalizeMesh(mesh)
       
       @model.flycam.hasChanged = true
+
+    finalizeMesh : (mesh) ->
+      mesh.geometry.__vertexArray = mesh.vertexBuffer.getBuffer()
+      mesh.geometry.__webglLineCount = mesh.vertexBuffer.getLength()
+      mesh.geometry.verticesNeedUpdate = true

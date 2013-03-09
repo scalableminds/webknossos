@@ -69,23 +69,32 @@ class Gui
     @addCheckbox(fControls, @user, "dynamicSpaceDirection", "d/f-Switching")
 
     fFlightcontrols = @gui.addFolder("Flighcontrols")
-    @addSlider(fFlightcontrols, @user, "mouseRotateValue", 0.001, 0.02, 0.001, "Mouse Rotation")
-    @addSlider(fFlightcontrols, @user, "rotateValue", 0.001, 0.08, 0.001, "Keyboard Rotation Value")
-    @addSlider(fFlightcontrols, @user, "moveValue3d", 0.1, 10, 0.1, "Move Value")
-    @addSlider(fFlightcontrols, @user, "crosshairSize", 0.1, 1, 0.01, "Crosshair size")
+    @addSlider(fFlightcontrols, @user, "mouseRotateValue",
+      0.001, 0.02, 0.001, "Mouse Rotation")
+    @addSlider(fFlightcontrols, @user, "rotateValue",
+      0.001, 0.08, 0.001, "Keyboard Rotation Value")
+    @addSlider(fFlightcontrols, @user, "moveValue3d",
+      0.1, 10, 0.1, "Move Value")
+    @addSlider(fFlightcontrols, @user, "crosshairSize",
+      0.1, 1, 0.01, "Crosshair size")
 
     fPlanes = @gui.addFolder("Planes")
-    @addSlider(fPlanes, @user, "moveValue", 0.1, 10, 0.1, "Move Value")
-    @addSlider(fPlanes, @user, "routeClippingDistance", 1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
+    @addSlider(fPlanes, @user, "moveValue",
+      0.1, 10, 0.1, "Move Value")
+    @addSlider(fPlanes, @user, "routeClippingDistance",
+      1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
     @addCheckbox(fPlanes, @user, "displayCrosshair", "Show Crosshairs")
 
     fVoxel = @gui.addFolder("Voxel")
     @addCheckbox(fVoxel, @settings, "fourBit", "4 Bit")
     @brightnessController =
-      @addSlider(fVoxel, @settings, "brightness", -256, 256, 5, "Brightness", @setBrightnessAndContrast)
+      @addSlider(fVoxel, @settings, "brightness",
+        -256, 256, 5, "Brightness", @setBrightnessAndContrast)
     @contrastController =
-      @addSlider(fVoxel, @settings, "contrast", 0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
-    @addFunction(fVoxel, @settings, "resetBrightnessAndContrast", "Reset To Default")
+      @addSlider(fVoxel, @settings, "contrast",
+        0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
+    @addFunction(fVoxel, @settings, "resetBrightnessAndContrast",
+      "Reset To Default")
     @addCheckbox(fVoxel, @user, "interpolation", "Interpolation")
     (fVoxel.add @settings, "quality", @qualityArray)
                           .name("Quality")
@@ -97,7 +106,8 @@ class Gui
     @addCheckbox(fSkeleton, @user, "displayPreviewXZ", "Display XZ-Plane")
 
     fTrees = @gui.addFolder("Trees")
-    @activeTreeIdController = @addNumer(fTrees, @settings, "activeTreeID", 1, 1, "Active Tree ID")
+    @activeTreeIdController = @addNumber(fTrees, @settings, "activeTreeID",
+      1, 1, "Active Tree ID")
     if somaClickingAllowed
       @addCheckbox(fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
     else
@@ -106,7 +116,8 @@ class Gui
     @addFunction(fTrees, @settings, "deleteActiveTree", "Delete Active Tree")
 
     fNodes = @gui.addFolder("Nodes")
-    @activeNodeIdController = @addNumer(fNodes, @settings, "activeNodeID", 1, 1, "Active Node ID")
+    @activeNodeIdController = @addNumber(fNodes, @settings, "activeNodeID",
+      1, 1, "Active Node ID")
     @commentController =
     (fNodes.add @settings, "comment")
                           .name("Comment")
@@ -159,16 +170,18 @@ class Gui
                           .onChange((v) => @set(propertyName, v,  Boolean))
 
   addSlider : (folder, object, propertyName, start, end, step, displayName, onChange) =>
+    unless onChange?
+      onChange = (v) => @set(propertyName, v, Number)
     return (folder.add object, propertyName, start, end)
                           .step(step)
                           .name(displayName)
-                          .onChange(if onChange? then onChange else(v) => @set(propertyName, v, Number))
+                          .onChange(onChange)
 
   addFunction : (folder, object, propertyName, displayName) =>
     return (folder.add object, propertyName)
                           .name(displayName)
 
-  addNumer : (folder, object, propertyName, min, step, displayName) =>
+  addNumber : (folder, object, propertyName, min, step, displayName) =>
     return (folder.add object, propertyName)
                           .min(min)
                           .step(step)

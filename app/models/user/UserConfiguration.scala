@@ -30,7 +30,7 @@ object UserConfiguration extends BasicSettings{
       "crosshairSize" -> JsNumber(0.5),
       "scaleValue" -> JsNumber(0.05),
       "mouseRotateValue" -> JsNumber(0.004),
-      "routeClippingDistance" -> JsNumber(100),
+      "routeClippingDistance" -> JsNumber(50),
       "lockZoom" -> JsBoolean(true),
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),

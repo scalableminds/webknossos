@@ -2,15 +2,16 @@
  * @author Eberhard Graether / http://egraether.com/
  */
 
-THREE.TrackballControls = function ( object, domElement ) {
+THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 
 	THREE.EventDispatcher.call( this );
 
 	var _this = this;
-	var STATE = { NONE: -1, ROTATE: 0, ZOOM: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_ZOOM: 4, TOUCH_PAN: 5 };
+	var STATE = { NONE: -1, PAN: 0, ZOOM: 1, ROTATE: 2, TOUCH_ROTATE: 3, TOUCH_ZOOM: 4, TOUCH_PAN: 5 };
 
 	this.object = object;
 	this.domElement = ( domElement !== undefined ) ? domElement : document;
+	this.updateCallback = updateCallback;
 
 	// API
 
@@ -384,14 +385,20 @@ THREE.TrackballControls = function ( object, domElement ) {
 		if ( _state === STATE.ROTATE && !_this.noRotate ) {
 
 			_rotateEnd = _this.getMouseProjectionOnBall( event.clientX, event.clientY );
+			_this.update();
+			_this.updateCallback();
 
 		} else if ( _state === STATE.ZOOM && !_this.noZoom ) {
 
 			_zoomEnd = _this.getMouseOnScreen( event.clientX, event.clientY );
+			_this.update();
+			_this.updateCallback();
 
 		} else if ( _state === STATE.PAN && !_this.noPan ) {
 
 			_panEnd = _this.getMouseOnScreen( event.clientX, event.clientY );
+			_this.update();
+			_this.updateCallback();
 
 		}
 
@@ -533,5 +540,6 @@ THREE.TrackballControls = function ( object, domElement ) {
 	window.addEventListener( 'keyup', keyup, false );
 
 	this.handleResize();
+	this.update();
 
 };

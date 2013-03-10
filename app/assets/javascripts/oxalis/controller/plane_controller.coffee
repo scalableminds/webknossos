@@ -136,12 +136,27 @@ class PlaneController
 
     #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
     new Input.Mouse($("#skeletonview"),
-      leftDownMove : (delta) => 
-        @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
-        @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
+      #leftDownMove : (delta) => 
+      #  @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
+      #  @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
       scroll : @cameraController.zoomPrev
       leftClick : @onPreviewClick
     )
+
+    target = document.getElementById("skeletonview")
+    @controls = new THREE.TrackballControls(@view.getCameras()[VIEW_3D],
+                                      target, => @flycam.hasChanged = true )
+    
+    @controls.noZoom = true
+    @controls.noPan = true
+    #@controls.panSpeed = 1
+
+    bounds = @model.scaleInfo.voxelToNm(
+              @model.binary.cube.upperBoundary)
+    center = [bounds[0] / 2,
+              bounds[1] / 2,
+              bounds[2] / 2]
+    @controls.target.set(center...)
 
 
   initKeyboard : ->

@@ -63,6 +63,8 @@ class Gui
     container.append @gui.domElement
     
     fControls = @gui.addFolder("Controls")
+    @addSlider(fControls, @user, "moveValue",
+      0.1, 10, 0.1, "Move Value")
     @addCheckbox(fControls, @user, "lockZoom", "Lock Zoom")
     @addCheckbox(fControls, @user, "inverseX", "Inverse X")
     @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
@@ -78,25 +80,21 @@ class Gui
     @addSlider(fFlightcontrols, @user, "crosshairSize",
       0.1, 1, 0.01, "Crosshair size")
 
-    fPlanes = @gui.addFolder("Planes")
-    @addSlider(fPlanes, @user, "moveValue",
-      0.1, 10, 0.1, "Move Value")
-    @addSlider(fPlanes, @user, "routeClippingDistance",
-      1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
-    @addCheckbox(fPlanes, @user, "displayCrosshair", "Show Crosshairs")
-
-    fVoxel = @gui.addFolder("Voxel")
-    @addCheckbox(fVoxel, @settings, "fourBit", "4 Bit")
+    fView = @gui.addFolder("View")
+    @addCheckbox(fView, @settings, "fourBit", "4 Bit")
+    @addCheckbox(fView, @user, "interpolation", "Interpolation")
     @brightnessController =
-      @addSlider(fVoxel, @settings, "brightness",
+      @addSlider(fView, @settings, "brightness",
         -256, 256, 5, "Brightness", @setBrightnessAndContrast)
     @contrastController =
-      @addSlider(fVoxel, @settings, "contrast",
+      @addSlider(fView, @settings, "contrast",
         0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
-    @addFunction(fVoxel, @settings, "resetBrightnessAndContrast",
+    @addFunction(fView, @settings, "resetBrightnessAndContrast",
       "Reset To Default")
-    @addCheckbox(fVoxel, @user, "interpolation", "Interpolation")
-    (fVoxel.add @settings, "quality", @qualityArray)
+    @addSlider(fView, @user, "routeClippingDistance",
+      1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
+    @addCheckbox(fView, @user, "displayCrosshair", "Show Crosshairs")
+    (fView.add @settings, "quality", @qualityArray)
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 

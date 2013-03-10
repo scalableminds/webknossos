@@ -22,16 +22,22 @@ $ ->
 
     "user.dashboard.dashboard" : ->
 
+      # initialize/toggling for finished tasks
       $("#dashboard-tasks").find(".finished").addClass("hide")
       $("#toggle-finished").click ->
 
         $toggle = $(this)
-
         newState = !$toggle.hasClass("open")
         
         $("#dashboard-tasks").find(".finished").toggleClass("hide", !newState)
         $("#dashboard-tasks").find(".finished").toggleClass("open", newState)
         $toggle.toggleClass("open", newState)
+
+      # initialize masking for newly finished tasks
+      $("#dashboard-tasks").on "DOMSubtreeModified", (event) ->
+
+        initialState = if $("#toggle-finished").hasClass("open") then "open" else "hide"
+        $(".finished:not(.open):not(.hide)").addClass(initialState)
 
       $("#nml-explore-form").each ->
 
@@ -52,12 +58,12 @@ $ ->
 
       $("a[rel=popover]").popover()
 
-
+      # confirm new task, when there already is an open one
       $("#new-task-button").on "ajax-after", (event) ->
 
         $(this).data("ajax", "add-row=#dashboard-tasks,confirm=Do you really want another task?")
 
-
+      # remove confirmation, when there is no open task left
       $("#dashboard-tasks").on "ajax-success", ".trace-finish", (event, responseData) ->
 
         if responseData["hasAnOpenTask"] == false

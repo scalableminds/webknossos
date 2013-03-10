@@ -274,11 +274,12 @@ class PlaneController
     
     # Move the plane so that the mouse is at the same position as
     # before the zoom
-    mousePos = @getMousePosition()
-    moveVector = [@zoomPos[0] - mousePos[0],
-                  @zoomPos[1] - mousePos[1],
-                  @zoomPos[2] - mousePos[2]]
-    @flycam.move(moveVector, @flycam.getActivePlane())
+    if @isMouseOver()
+      mousePos = @getMousePosition()
+      moveVector = [@zoomPos[0] - mousePos[0],
+                    @zoomPos[1] - mousePos[1],
+                    @zoomPos[2] - mousePos[2]]
+      @flycam.move(moveVector, @flycam.getActivePlane())
 
     @model.user.setValue("zoomXY", @flycam.getZoomStep(PLANE_XY))
     @model.user.setValue("zoomYZ", @flycam.getZoomStep(PLANE_YZ))
@@ -288,6 +289,10 @@ class PlaneController
     activePlane = @flycam.getActivePlane()
     pos = @mouseControllers[activePlane].position
     return @calculateGlobalPos([pos.x, pos.y])
+
+  isMouseOver : ->
+    activePlane = @flycam.getActivePlane()
+    return @mouseControllers[activePlane].isMouseOver
 
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()

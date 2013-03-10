@@ -30,7 +30,11 @@ $ ->
       dataType : "json"
 
     if options["confirm"]
-      return unless confirm("Are you sure?")
+      if options["confirm"] != true
+        message = options["confirm"]
+      else
+        message = "Are you sure?"
+      return unless confirm(message)
 
     if options["method"]
       ajaxOptions["type"] = options.method
@@ -53,14 +57,16 @@ $ ->
 
     $.ajax(ajaxOptions).then(
 
-      ({ html, messages }) ->
+      (responseData) ->
+
+        { html, messages } = responseData
 
         if messages?
           Toast.message(messages)
         else
           Toast.success("Success :-)")
 
-        $this.trigger("ajax-success", html, messages)
+        $this.trigger("ajax-success", responseData)
 
         if options["replace-row"] 
           $this.parents("tr").first().replaceWith(html)
@@ -90,6 +96,8 @@ $ ->
             -> window.location.href = options["redirect"]
             500
           )
+
+        $this.trigger("ajax-after", responseData)
 
         return
 

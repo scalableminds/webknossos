@@ -53,6 +53,18 @@ $ ->
       $("a[rel=popover]").popover()
 
 
+      $("#new-task-button").on "ajax-after", (event) ->
+
+        $(this).data("ajax", "add-row=#dashboard-tasks,confirm=Do you really want another task?")
+
+
+      $("#dashboard-tasks").on "ajax-success", ".trace-finish", (event, responseData) ->
+
+        if responseData["hasAnOpenTask"] == false
+          $("#new-task-button").data("ajax", "add-row=#dashboard-tasks")
+
+      return
+
     "oxalis.trace" : ->
 
       require [
@@ -63,20 +75,7 @@ $ ->
       ], (Controller) ->
 
         oxalis = window.oxalis = new Controller()
-
-        $("#trace-finish-button, #trace-download-button").click (event) ->
-
-          event.preventDefault()
-
-          oxalis.gui.saveNow().done =>
-            window.location.href = this.href
-
-
-        $("#trace-save-button").click (event) ->
-
-          event.preventDefault()
-          oxalis.gui.saveNow()
-
+        
         return
 
 

@@ -20,50 +20,30 @@ class Gui
     
     _.extend(this, new EventMixin())
 
-    data = @model.user
+    @user = @model.user
     # create GUI
     modelRadius = @model.route.getActiveNodeRadius()
     @qualityArray = ["high", "medium", "low"]
 
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
-    @datasetPosition = @initDatasetPosition(data.briConNames)
+    @datasetPosition = @initDatasetPosition(@user.briConNames)
 
     somaClickingAllowed = settings.somaClickingAllowed
     
     @settings = 
 
-      rotateValue : data.rotateValue
-      moveValue3d : data.moveValue3d
-      mouseRotateValue : data.mouseRotateValue
-      crosshairSize : data.crosshairSize
-      
-      lockZoom: data.lockZoom
-      inverseX: data.mouseInversionX == 1
-      inverseY: data.mouseInversionY == 1
-
-      moveValue : data.moveValue
-      routeClippingDistance: data.routeClippingDistance
-      displayCrosshairs: data.displayCrosshair
-
-      fourBit : data.fourBit
-      briConNames : data.briConNames
-      brightness : data.brightness[@datasetPosition]
-      contrast : data.contrast[@datasetPosition]
+      fourBit : @user.fourBit
+      brightness : @user.brightness[@datasetPosition]
+      contrast : @user.contrast[@datasetPosition]
       resetBrightnessAndContrast : => @resetBrightnessAndContrast()
-      interpolation : data.interpolation
-      quality : @qualityArray[data.quality]
-
-      displayPrevXY : data.displayPreviewXY
-      displayPrevYZ : data.displayPreviewYZ
-      displayPrevXZ : data.displayPreviewXZ
-      nodesAsSpheres : data.nodesAsSpheres
+      quality : @qualityArray[@user.quality]
 
       activeTreeID : @model.route.getActiveTreeId()
       newTree : => @trigger "createNewTree"
       deleteActiveTree : => @trigger "deleteActiveTree"
 
       activeNodeID : @model.route.getActiveNodeId()
-      newNodeNewTree : if somaClickingAllowed then data.newNodeNewTree else false
+      newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
       radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
       comment : ""
@@ -72,10 +52,10 @@ class Gui
 
     if @datasetPosition == 0
       # add new dataset to settings
-      @model.user.briConNames.push(@datasetPostfix)
-      @model.user.brightness.push(@settings.brightness)
-      @model.user.contrast.push(@settings.contrast)
-      @dataSetPosition = data.briConNames.length - 1
+      @user.briConNames.push(@datasetPostfix)
+      @user.brightness.push(@settings.brightness)
+      @user.contrast.push(@settings.contrast)
+      @datasetPosition = @user.briConNames.length - 1
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
@@ -83,124 +63,66 @@ class Gui
     container.append @gui.domElement
     
     fControls = @gui.addFolder("Controls")
-    (fControls.add @settings, "lockZoom")
-                          .name("Lock Zoom")
-                          .onChange(@setLockZoom)
-    (fControls.add @settings, "inverseX")
-                          .name("Inverse X")
-                          .onChange(@setMouseInversionX)
-    (fControls.add @settings, "inverseY")
-                          .name("Inverse Y")
-                          .onChange(@setMouseInversionY)
+    @addSlider(fControls, @user, "moveValue",
+      0.1, 10, 0.1, "Move Value")
+    @addCheckbox(fControls, @user, "lockZoom", "Lock Zoom")
+    @addCheckbox(fControls, @user, "inverseX", "Inverse X")
+    @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
+    @addCheckbox(fControls, @user, "dynamicSpaceDirection", "d/f-Switching")
 
     fFlightcontrols = @gui.addFolder("Flighcontrols")
-    (fFlightcontrols.add @settings, "mouseRotateValue", 0.001, 0.02)
-                          .step(0.001)
-                          .name("Mouse Rotation")
-                          .onChange(@setMouseRotateValue)
-    (fFlightcontrols.add @settings, "rotateValue", 0.001, 0.08)
-                          .step(0.001)
-                          .name("Keyboard Rotation Value")
-                          .onChange(@setRotateValue)
-    (fFlightcontrols.add @settings, "moveValue3d", 0.1, 10) 
-                          .step(0.1)
-                          .name("Move Value")    
-                          .onChange(@setMoveValue3d)
-    (fFlightcontrols.add @settings, "crosshairSize", 0.1, 1) 
-                          .step(0.01)
-                          .name("Crosshair size")    
-                          .onChange(@setCrosshairSize)                          
+    @addSlider(fFlightcontrols, @user, "mouseRotateValue",
+      0.001, 0.02, 0.001, "Mouse Rotation")
+    @addSlider(fFlightcontrols, @user, "rotateValue",
+      0.001, 0.08, 0.001, "Keyboard Rotation Value")
+    @addSlider(fFlightcontrols, @user, "moveValue3d",
+      0.1, 10, 0.1, "Move Value")
+    @addSlider(fFlightcontrols, @user, "crosshairSize",
+      0.1, 1, 0.01, "Crosshair size")
 
-
-    fView = @gui.addFolder("Planes")
-    (fView.add @settings, "moveValue", 0.1, 10) 
-                          .step(0.1)
-                          .name("Move Value")    
-                          .onChange(@setMoveValue)
-    scale = @model.scaleInfo.baseVoxel
-    (fView.add @settings, "routeClippingDistance", 1, 1000 * scale)
-                          .name("Clipping Distance")    
-                          .onChange(@setRouteClippingDistance)
-    (fView.add @settings, "displayCrosshairs")
-                          .name("Show Crosshairs")
-                          .onChange(@setDisplayCrosshair)
-
-    fView = @gui.addFolder("Voxel")
-    (fView.add @settings, "fourBit")
-                          .name("4 Bit")
-                          .onChange(@set4Bit)
+    fView = @gui.addFolder("View")
+    @addCheckbox(fView, @settings, "fourBit", "4 Bit")
+    @addCheckbox(fView, @user, "interpolation", "Interpolation")
     @brightnessController =
-    (fView.add @settings, "brightness", -256, 256) 
-                          .step(5)
-                          .name("Brightness")    
-                          .onChange(@setBrightnessAndContrast)
+      @addSlider(fView, @settings, "brightness",
+        -256, 256, 5, "Brightness", @setBrightnessAndContrast)
     @contrastController =
-    (fView.add @settings, "contrast", 0.5, 5) 
-                          .step(0.1)
-                          .name("Contrast")    
-                          .onChange(@setBrightnessAndContrast)
-    (fView.add @settings, "resetBrightnessAndContrast")
-                          .name("Reset To Default")
-    (fView.add @settings, "interpolation")
-                          .name("Interpolation")
-                          .onChange(@setInterpolation)
+      @addSlider(fView, @settings, "contrast",
+        0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
+    @addFunction(fView, @settings, "resetBrightnessAndContrast",
+      "Reset To Default")
+    @addSlider(fView, @user, "routeClippingDistance",
+      1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
+    @addCheckbox(fView, @user, "displayCrosshair", "Show Crosshairs")
     (fView.add @settings, "quality", @qualityArray)
                           .name("Quality")
-                          .onChange(@setQuality)
+                          .onChange((v) => @setQuality(v))
 
     fSkeleton = @gui.addFolder("Skeleton View")
-    (fSkeleton.add @settings, "displayPrevXY")
-                          .name("Display XY-Plane")
-                          .onChange(@setDisplayPreviewXY)
-    (fSkeleton.add @settings, "displayPrevYZ")
-                          .name("Display YZ-Plane")
-                          .onChange(@setDisplayPreviewYZ)
-    (fSkeleton.add @settings, "displayPrevXZ")
-                          .name("Display XZ-Plane")
-                          .onChange(@setDisplayPreviewXZ)
-    # (fSkeleton.add @settings, "nodesAsSpheres")
-    #                       .name("Nodes as Spheres")
-    #                       .onChange(@setNodeAsSpheres)
+    @addCheckbox(fSkeleton, @user, "displayPreviewXY", "Display XY-Plane")
+    @addCheckbox(fSkeleton, @user, "displayPreviewYZ", "Display YZ-Plane")
+    @addCheckbox(fSkeleton, @user, "displayPreviewXZ", "Display XZ-Plane")
 
     fTrees = @gui.addFolder("Trees")
-    @activeTreeIdController =
-    (fTrees.add @settings, "activeTreeID")
-                          .min(1)
-                          .step(1)
-                          .name("Active Tree ID")
-                          .onFinishChange( (value) => @trigger "setActiveTree", value)
+    @activeTreeIdController = @addNumber(fTrees, @settings, "activeTreeID",
+      1, 1, "Active Tree ID")
     if somaClickingAllowed
-      (fTrees.add @settings, "newNodeNewTree")
-                            .name("Soma clicking mode")
-                            .onChange(@setNewNodeNewTree)
+      @addCheckbox(fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
     else
       @setNewNodeNewTree(false)
-    (fTrees.add @settings, "newTree")
-                          .name("Create New Tree")
-    (fTrees.add @settings, "deleteActiveTree")
-                          .name("Delete Active Tree")
+    @addFunction(fTrees, @settings, "newTree", "Create New Tree")
+    @addFunction(fTrees, @settings, "deleteActiveTree", "Delete Active Tree")
 
     fNodes = @gui.addFolder("Nodes")
-    @activeNodeIdController =
-    (fNodes.add @settings, "activeNodeID")
-                          .min(1)
-                          .step(1)
-                          .name("Active Node ID")
-                          .onFinishChange( (value) => @trigger "setActiveNode", value)
-    # (fNodes.add @settings, "radius", 1 * scale , 1000 * scale)
-    #                       .name("Radius")    
-    #                       .listen()
-    #                       .onChange(@setNodeRadius)
+    @activeNodeIdController = @addNumber(fNodes, @settings, "activeNodeID",
+      1, 1, "Active Node ID")
     @commentController =
     (fNodes.add @settings, "comment")
                           .name("Comment")
                           .onChange(@setComment)
-    (fNodes.add @settings, "prevComment")
-                          .name("Previous Comment")
-    (fNodes.add @settings, "nextComment")
-                          .name("Next Comment")
-    (fNodes.add @settings, "deleteActiveNode")
-                          .name("Delete Active Node")
+    @addFunction(fNodes, @settings, "prevComment", "Previous Comment")
+    @addFunction(fNodes, @settings, "nextComment", "Next Comment")
+    @addFunction(fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
     #fControls.open()
     #fView.open()
@@ -212,6 +134,25 @@ class Gui
 
       @setPosFromString(event.target.value)
       return
+
+    $("#trace-finish-button").click (event) =>
+
+      event.preventDefault()
+      @saveNow().done =>
+        if confirm("Are you sure?")
+          window.location.href = event.srcElement.href
+
+    $("#trace-download-button").click (event) =>
+
+      event.preventDefault()
+      @saveNow().done =>
+          window.location.href = event.srcElement.href
+
+    $("#trace-save-button").click (event) =>
+
+      event.preventDefault()
+      @saveNow()
+
 
     @model.flycam.on
       positionChanged : (position) => 
@@ -240,8 +181,32 @@ class Gui
     @createTooltips()
 
 
+  addCheckbox : (folder, object, propertyName, displayName) =>
+    return (folder.add object, propertyName)
+                          .name(displayName)
+                          .onChange((v) => @set(propertyName, v,  Boolean))
+
+  addSlider : (folder, object, propertyName, start, end, step, displayName, onChange) =>
+    unless onChange?
+      onChange = (v) => @set(propertyName, v, Number)
+    return (folder.add object, propertyName, start, end)
+                          .step(step)
+                          .name(displayName)
+                          .onChange(onChange)
+
+  addFunction : (folder, object, propertyName, displayName) =>
+    return (folder.add object, propertyName)
+                          .name(displayName)
+
+  addNumber : (folder, object, propertyName, min, step, displayName) =>
+    return (folder.add object, propertyName)
+                          .min(min)
+                          .step(step)
+                          .name(displayName)
+                          .onChange((v) => @set(propertyName, v, Number))
+
   saveNow : =>
-    @model.user.pushImpl()
+    @user.pushImpl()
     @model.route.pushNow()
       .then( 
         -> Toast.success("Saved!")
@@ -274,52 +239,14 @@ class Gui
     stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
     $("#trace-position-input").val(stringPos)
 
-  setMouseRotateValue : (value) =>
-    @model.user.mouseRotateValue = (Number) value
-    @model.user.push()
-
-  setRotateValue : (value) =>
-    @model.user.rotateValue = (Number) value
-    @model.user.push()    
-
-  setMoveValue : (value) =>
-    @model.user.moveValue = (Number) value
-    @model.user.push()
-
-  setMoveValue3d : (value) =>
-    @model.user.moveValue3d = (Number) value
-    @model.user.push()    
-
-  setCrosshairSize : (value) =>
-    @model.user.setValue("crosshairSize", (Number) value)
-    @model.user.push()    
-
-  setRouteClippingDistance : (value) =>
-    @model.user.setValue("routeClippingDistance", (Number) value)
-    @model.user.push()   
-
-  setLockZoom : (value) =>
-    @model.user.lockZoom = value
-    @model.user.push()      
-
-  setDisplayCrosshair : (value) =>
-    @model.user.setValue("displayCrosshair", value)
-    @model.user.push()    
-
-  setInterpolation : (value) =>
-    @model.user.setValue("interpolation", (Boolean) value)
-    @model.user.push()
-
-  set4Bit : (value) =>
-    @model.binary.queue.set4Bit(value)
-    @model.user.fourBit = (Boolean) value
-    @model.user.push()
+  set : (name, value, type) =>
+    @user.setValue( name, (type) value)
 
   setBrightnessAndContrast : =>
     @model.binary.updateLookupTable(@settings.brightness, @settings.contrast)
-    @model.user.brightness[@datasetPosition] = (Number) @settings.brightness
-    @model.user.contrast[@datasetPosition] = (Number) @settings.contrast
-    @model.user.push()
+    @user.brightness[@datasetPosition] = (Number) @settings.brightness
+    @user.contrast[@datasetPosition] = (Number) @settings.contrast
+    @user.push()
 
   resetBrightnessAndContrast : =>
     Request.send(
@@ -339,48 +266,7 @@ class Gui
     for i in [0..(@qualityArray.length - 1)]
       if @qualityArray[i] == value
         value = i
-    @model.flycam.setQuality(value)
-    @model.user.quality = (Number) value
-    @model.user.push()
-
-  setDisplayPreviewXY : (value) =>
-    @model.user.setValue("displayPreviewXY", value)
-    @model.user.push()      
-
-  setDisplayPreviewYZ : (value) =>
-    @model.user.setValue("displayPreviewYZ", value)
-    @model.user.push()      
-
-  setDisplayPreviewXZ : (value) =>
-    @model.user.setValue("displayPreviewXZ", value)  
-    @model.user.push()      
-
-  # setNodeAsSpheres : (value) =>
-  #   @model.user.nodesAsSpheres = value
-  #   @sceneController.skeleton.setDisplaySpheres(value)
-  #   @model.user.push()  
-  #   @flycam.hasChanged = true    
-
-  setMouseInversionX : (value) =>
-    if value is true
-      @model.user.mouseInversionX = 1
-    else
-      @model.user.mouseInversionX = -1
-    @model.user.push()         
-
-  setMouseInversionY : (value) =>
-    if value is true
-      @model.user.mouseInversionY = 1
-    else
-      @model.user.mouseInversionY = -1
-    @model.user.push()
-
-  setNewNodeNewTree : (value) =>
-    @model.user.newNodeNewTree = value
-    @model.user.push()      
-
-  # setNodeRadius : (value) =>
-  #   @model.route.setActiveNodeRadius(value)
+    @set("quality", value, Number)
 
   setComment : (value) =>
     @model.route.setComment(value)
@@ -391,11 +277,6 @@ class Gui
   nextComment : =>
     @trigger "setActiveNode", @model.route.nextCommentNodeID(true)
 
-  # updateRadius : (value) ->
-  #   if value then @settings.radius = value
-  #   else if (value = @model.route.getActiveNodeRadius())
-  #     @settings.radius = value
-
   # Helper method to combine common update methods
   update : ->
     # called when value user switch to different active node
@@ -405,5 +286,3 @@ class Gui
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
     @commentController.updateDisplay()
-
-    # @updateRadius()

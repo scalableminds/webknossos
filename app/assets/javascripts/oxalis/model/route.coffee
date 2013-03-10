@@ -132,17 +132,12 @@ class Route
     $(window).on(
       "beforeunload"
       =>
-        if !@stateLogger.savedCurrentState
+        if !@stateLogger.stateSaved()
           @stateLogger.pushImpl(true)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return
     )
-
-  # INVARIANTS:
-  # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null
-  # activeNode: either null only if activeTree is empty (sentinel) or valid node
-
 
   pushNow : ->
 
@@ -441,7 +436,7 @@ class Route
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
-    @deleteBranch(deletedNode.id)
+    @deleteBranch(deletedNode)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree
@@ -528,7 +523,7 @@ class Route
         
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
-        @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
+        @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
         @deleteTree(false, lastTree.treeId, false)
 

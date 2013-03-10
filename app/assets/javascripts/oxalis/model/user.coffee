@@ -15,6 +15,7 @@ class User
   mouseRotateValue : null
   routeClippingDistance : null
   lockZoom : null
+  dynamicSpaceDirection : null
   displayCrosshair : null
   interpolation : null
   fourBit : null
@@ -30,8 +31,8 @@ class User
   displayPreviewXZ : null
   newNodeNewTree : null
   nodesAsSpheres : null
-  mouseInversionX : null
-  mouseInversionY : null
+  inverseX : null
+  inverseY : null
   mouseActive : null
   keyboardActive : null
   gamepadActive : null
@@ -49,6 +50,7 @@ class User
 
     @[name] = value
     @trigger(name + "Changed", value)
+    @push()
 
 
   push : ->
@@ -72,6 +74,7 @@ class User
         mouseRotateValue : @mouseRotateValue,
         routeClippingDistance : @routeClippingDistance,
         lockZoom : @lockZoom,
+        dynamicSpaceDirection : @dynamicSpaceDirection,
         displayCrosshair : @displayCrosshair,
         interpolation : @interpolation,
         fourBit: @fourBit,
@@ -87,8 +90,8 @@ class User
         displayPreviewXZ : @displayPreviewXZ,
         newNodeNewTree : @newNodeNewTree,
         nodesAsSpheres : @nodesAsSpheres,
-        mouseInversionX : @mouseInversionX,
-        mouseInversionY : @mouseInversionY,
+        inverseX : @inverseX,
+        inverseY : @inverseY,
         mouseActive : @mouseActive,
         keyboardActive : @keyboardActive,
         gamepadActive : @gamepadActive,

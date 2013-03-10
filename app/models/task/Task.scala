@@ -132,13 +132,15 @@ object Task extends BasicDAO[Task]("tasks") {
       !finishedTasks.contains(t._id) && hasEnoughExperience(user, t))
   }
 
-  def createAndInsertDeepCopy(source: Task, includeUserTracings: Boolean = true) = {
+  def copyDeepAndInsert(source: Task, includeUserTracings: Boolean = true) = {
     val task = insertOne(source.copy(_id = new ObjectId))
     Tracing
       .findByTaskId(source._id)
       .foreach { tracing =>
-        if (includeUserTracings || TracingType.isSystemTracing(tracing))
-          Tracing.createAndInsertDeepCopy(tracing.copy(_task = Some(task._id)))
+        if (includeUserTracings || TracingType.isSystemTracing(tracing)){
+          println("Copying: " + tracing.id)
+          Tracing.copyDeepAndInsert(tracing.copy(_task = Some(task._id)))
+        }
       }
     task
   }

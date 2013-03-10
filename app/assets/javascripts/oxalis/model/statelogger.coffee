@@ -15,14 +15,17 @@ class StateLogger
 
     @committedDiffs = []
     @newDiffs = []
-    @savedCurrentState = true
+    @committedCurrentState = true
 
-  pushDiff : (action, value) ->
+  pushDiff : (action, value, push = true) ->
     @newDiffs.push({
       action : action
       value : value
     })
-    @push()
+    # In order to assure that certain actions are atomic,
+    # it is sometimes necessary not to push.
+    if push
+      @push()
 
   #### TREES
 
@@ -45,13 +48,28 @@ class StateLogger
       })
 
   mergeTree : (sourceTree, targetTree, lastNodeId, activeNodeId) ->
+    # Make sure that those nodes exist
+    found = false; treeIds = []
+    for node in sourceTree.nodes
+      found |= (node.id == lastNodeId)
+      treeIds.push(node.id)
+    $.assert(found, "lastNodeId not in sourceTree",
+      {sourceTreeNodeIds : treeIds, lastNodeId : lastNodeId})
+
+    found = false; treeIds = []
+    for node in targetTree.nodes
+      found |= (node.id == activeNodeId)
+      treeIds.push(node.id)
+    $.assert(found, "activeNodeId not in targetTree",
+      {targetTreeNodeIds : treeIds, activeNodeId : activeNodeId})
+
     # Copy all edges and nodes from sourceTree to
     # targetTree, while leaving targetTree's properties
     # unchanged. Then, delete sourceTree.
     @pushDiff("mergeTree", {
         sourceId : sourceTree.treeId
         targetId : targetTree.treeId
-      })
+      }, false)
     @createEdge(lastNodeId, activeNodeId, targetTree.treeId)
 
   #### NODES and EDGED
@@ -69,7 +87,9 @@ class StateLogger
       }
 
   edgeObject : (node, treeId) ->
-    # ASSUMTION: node has exactly one neighbor
+    $.assert(node.neighbors.length == 1,
+      "Node has to have exactly one neighbor", node.neighbors.length)
+
     return {
       treeId : treeId
       source : node.neighbors[0].id
@@ -77,8 +97,16 @@ class StateLogger
     }
 
   createNode : (node, treeId) ->
-    @pushDiff("createNode", @nodeObject(node, treeId))
-    if node.neighbors.length == 1
+    $.assert(node.neighbors.length <= 1,
+      "New node can't have more than one neighbor", node.neighbors.length)
+    if node.neighbors[0]
+      $.assert(node.treeId == node.neighbors[0].treeId,
+        "Neighbot has different treeId",
+        {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
+
+    needsEdge = node.neighbors.length == 1
+    @pushDiff("createNode", @nodeObject(node, treeId), !needsEdge)
+    if needsEdge
       @pushDiff("createEdge", @edgeObject(node, treeId))
 
   updateNode : (node, treeId) ->
@@ -122,8 +150,11 @@ class StateLogger
 
   #### SERVER COMMUNICATION
 
+  stateSaved : ->
+    return @committedCurrentState and @committedDiffs.length == 0
+
   push : ->
-    @savedCurrentState = false
+    @committedCurrentState = false
     @pushDebounced()
 
   # Pushes the buffered route to the server. Pushing happens at most 
@@ -147,6 +178,7 @@ class StateLogger
 
     @committedDiffs = @committedDiffs.concat(@newDiffs)
     @newDiffs = []
+    @committedCurrentState = true
     data = @concatUpdateTracing(@committedDiffs)
     console.log "Sending data: ", data
 
@@ -177,7 +209,6 @@ class StateLogger
       @pushDeferred = null
     .done (response) =>
       @version = response.version
-      @savedCurrentState = true
       @committedDiffs = []
       @pushDeferred.resolve()
       @pushDeferred = null

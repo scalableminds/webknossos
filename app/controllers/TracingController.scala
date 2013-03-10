@@ -34,6 +34,7 @@ import models.tracing.UsedTracings
 import net.liftweb.common._
 import braingames.mvc.Controller
 import models.tracing.TracingType
+import controllers.admin.NMLIO
 
 object TracingController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -111,6 +112,7 @@ object TracingController extends Controller with Secured {
       if (tracing._user == user._id && tracing.state.isInProgress)
     } yield {
       UsedTracings.removeAll(tracing)
+      NMLIO.writeTracingToFile(tracing)
       tracing match {
         case tracing if tracing._task.isEmpty =>
           tracing.update(_.finish) -> Messages("tracing.finished")
@@ -132,7 +134,10 @@ object TracingController extends Controller with Secured {
             taskId <- tracing._task ?~ Messages("tracing.task.notFound")
             task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
           } yield {
-            JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), message)
+            JsonOk(
+                html.user.dashboard.taskTracingTableItem(task, tracing), 
+                Json.obj("hasAnOpenTask" -> Tracing.hasAnOpenTracings(request.user, TracingType.Task)),
+                message)
           }) asResult
     }
   }

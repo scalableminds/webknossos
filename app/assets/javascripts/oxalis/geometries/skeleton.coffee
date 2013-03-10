@@ -71,7 +71,7 @@ class Skeleton
     activeNodeGeometry = new THREE.Geometry()
     @activeNodeParticle = new THREE.ParticleSystem(
       activeNodeGeometry,
-        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 8, sizeAttenuation : false}))
+        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 5, sizeAttenuation : false}))
     activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
 
     routeGeometryBranchPoints = new THREE.Geometry()
@@ -256,7 +256,7 @@ class Skeleton
     for line in @routes
       line.material.linewidth = size / 4
     @branches.material.size = size
-    @activeNodeParticle.material.size = size + 3
+    @activeNodeParticle.material.size = size
     @flycam.hasChanged = true
 
   getMeshes : =>

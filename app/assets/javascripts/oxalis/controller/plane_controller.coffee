@@ -4,9 +4,10 @@ underscore : _
 ./camera_controller : CameraController
 ./scene_controller : SceneController
 ../model/dimensions : Dimensions
-../../libs/event_mixin : EventMixin
-../../libs/input : Input
+libs/event_mixin : EventMixin
+libs/input : Input
 ../view/plane_view : PlaneView
+libs/threejs/TrackballControls : TrackballControls
 ###
 
 PLANE_XY         = Dimensions.PLANE_XY

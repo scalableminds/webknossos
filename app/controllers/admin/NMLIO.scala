@@ -106,13 +106,11 @@ object NMLIO extends Controller with Secured with TextUtils {
         .map { nml =>
           Logger.debug("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
           Logger.debug("Successfully parsed nmlFile")
-          val tracing = Tracing.createFromNMLFor(request.user._id, nml, TracingType.Explorational)
-          UsedTracings.use(request.user, tracing)
-          tracing
+          Tracing.createFromNMLFor(request.user._id, nml, TracingType.Explorational)
         }
         .headOption
         .map { tracing =>
-          Redirect(controllers.routes.Game.trace(tracing.id)).flashing(
+          Redirect(controllers.routes.TracingController.trace(tracing.id)).flashing(
             "success" -> Messages("nml.file.uploadSuccess"))
         }
     }.getOrElse {

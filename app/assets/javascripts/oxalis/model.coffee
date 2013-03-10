@@ -20,7 +20,7 @@ class Model
   initialize : (TEXTURE_SIZE_P, VIEWPORT_SIZE, DISTANCE_3D) =>
 
 	  Request.send(
-      url : "/game/initialize"
+      url : "/tracing/active"
       dataType : "json"
     ).pipe (task) =>
 

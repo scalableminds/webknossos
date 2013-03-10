@@ -1,7 +1,7 @@
 @(task: models.task.Task, tracing: models.tracing.Tracing)
 
 @tracingLinks = {
-  <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
+  <a href="@controllers.routes.TracingController.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
   <a href="@controllers.routes.TracingController.finish(tracing.id, false)" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> finish</a>
 }
 

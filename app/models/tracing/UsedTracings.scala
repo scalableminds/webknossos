@@ -6,12 +6,12 @@ import com.novus.salat.annotations._
 import models.basics.BasicDAO
 import models.user.User
 
-case class UsedTracings(user: ObjectId, tracing: ObjectId, _id: ObjectId = new ObjectId)
+case class UsedTracings(user: ObjectId, tracing: String, _id: ObjectId = new ObjectId)
 
 object UsedTracings extends BasicDAO[UsedTracings]("usedTracings") {
-  def use(user: User, tracing: Tracing) {
+  def use(user: User, tracingId: String) {
     removeAll(user)
-    insertOne(UsedTracings(user._id, tracing._id))
+    insertOne(UsedTracings(user._id, tracingId))
   }
   
   def by(user: User) = 

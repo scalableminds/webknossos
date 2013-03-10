@@ -47,6 +47,7 @@
             <td> @formatDate(tracing.date) </td>
             <td> @if(tracing.state.isFinished){ <i class="icon-ok-circle"></i> Finished } else { <i class="icon-random"></i> In Progress } </td>
             <td> 
+              <a href="@controllers.routes.TracingController.view(tracing.id)"><i class="icon-random"></i> view </a><br />
               <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download </a><br />
               @if(!tracing.state.isFinished){ 
                 <a href="@controllers.admin.routes.TaskAdministration.cancelTracing(tracing.id)" data-ajax="delete-row,confirm"><i class="icon-remove"></i> cancel</a><br/>

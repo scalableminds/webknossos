@@ -118,9 +118,11 @@ class PlaneController
       event.preventDefault()
       @setActiveNode($(event.target).data("nodeid"), true, false)
 
+    @mouseControllers = []
+
     for planeId in ["xy", "yz", "xz"]
       #@input.planeMouse = new Input.Mouse($("#plane#{planeId}"),
-      new Input.Mouse($("#plane#{planeId}"),
+      @mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
@@ -131,7 +133,7 @@ class PlaneController
         scroll : @scroll
         leftClick : @onPlaneClick
         rightClick : @setWaypoint
-      )
+      ) )
 
     #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
     new Input.Mouse($("#skeletonview"),
@@ -259,20 +261,38 @@ class PlaneController
       @move([0, 0, z])
 
   zoomIn : =>
+    @zoomPos = @getMousePosition()
     @cameraController.zoomIn()
-    # Remember Zoom Steps
-    @model.user.zoomXY = @flycam.getZoomStep(PLANE_XY)
-    @model.user.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-    @model.user.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-    @model.user.push()
+    @finishZoom()
 
   zoomOut : =>
+    @zoomPos = @getMousePosition()
     @cameraController.zoomOut()
-    # Remember Zoom Steps
-    @model.user.zoomXY = @flycam.getZoomStep(PLANE_XY)
-    @model.user.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-    @model.user.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-    @model.user.push()
+    @finishZoom()
+
+  finishZoom : =>
+    
+    # Move the plane so that the mouse is at the same position as
+    # before the zoom
+    if @isMouseOver()
+      mousePos = @getMousePosition()
+      moveVector = [@zoomPos[0] - mousePos[0],
+                    @zoomPos[1] - mousePos[1],
+                    @zoomPos[2] - mousePos[2]]
+      @flycam.move(moveVector, @flycam.getActivePlane())
+
+    @model.user.setValue("zoomXY", @flycam.getZoomStep(PLANE_XY))
+    @model.user.setValue("zoomYZ", @flycam.getZoomStep(PLANE_YZ))
+    @model.user.setValue("zoomXZ", @flycam.getZoomStep(PLANE_XZ))
+
+  getMousePosition : ->
+    activePlane = @flycam.getActivePlane()
+    pos = @mouseControllers[activePlane].position
+    return @calculateGlobalPos([pos.x, pos.y])
+
+  isMouseOver : ->
+    activePlane = @flycam.getActivePlane()
+    return @mouseControllers[activePlane].isMouseOver
 
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()
@@ -293,30 +313,8 @@ class PlaneController
   ########### Click callbacks
   
   setWaypoint : (relativePosition, typeNumber) =>
-    curGlobalPos  = @flycam.getPosition()
-    zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
     activeNodePos = @model.route.getActiveNodePos()
-    scaleFactor   = @view.scaleFactor
-    planeRatio    = @model.scaleInfo.baseVoxelFactors
-    position = switch @flycam.getActivePlane()
-      when PLANE_XY 
-        [
-          curGlobalPos[0] - (WIDTH * scaleFactor / 2 - relativePosition[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
-          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - relativePosition[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
-          curGlobalPos[2]
-        ]
-      when PLANE_YZ 
-        [
-          curGlobalPos[0], 
-          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - relativePosition[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
-          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - relativePosition[0]) / scaleFactor * planeRatio[2] * zoomFactor
-        ]
-      when PLANE_XZ 
-        [
-          curGlobalPos[0] - (WIDTH * scaleFactor / 2 - relativePosition[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
-          curGlobalPos[1], 
-          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - relativePosition[1]) / scaleFactor * planeRatio[2] * zoomFactor
-        ]
+    position = @calculateGlobalPos(relativePosition)
     # set the new trace direction
     if activeNodePos
       @flycam.setDirection([
@@ -325,6 +323,25 @@ class PlaneController
         position[2] - activeNodePos[2]
       ])
     @addNode(position)
+
+  calculateGlobalPos : (clickPos) ->
+    curGlobalPos  = @flycam.getPosition()
+    zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
+    scaleFactor   = @view.scaleFactor
+    planeRatio    = @model.scaleInfo.baseVoxelFactors
+    position = switch @flycam.getActivePlane()
+      when PLANE_XY 
+        [ curGlobalPos[0] - (WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+          curGlobalPos[2] ]
+      when PLANE_YZ 
+        [ curGlobalPos[0], 
+          curGlobalPos[1] - (WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[2] * zoomFactor ]
+      when PLANE_XZ 
+        [ curGlobalPos[0] - (WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+          curGlobalPos[1], 
+          curGlobalPos[2] - (WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor ]
 
   onPreviewClick : (position, shiftAltPressed) =>
     @onClick(position, VIEW_3D, shiftAltPressed)

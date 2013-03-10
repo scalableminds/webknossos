@@ -96,7 +96,7 @@ object Vector3D {
     Vector3D(p._1, p._2, p._3)
 
   def apply(from: Point3D, to: Point3D): Vector3D =
-    apply(to) - apply(from)
+    Vector3D(to) - Vector3D(from)
 
   implicit object Vector3DReads extends Format[Vector3D] {
     def reads(json: JsValue) = json match {

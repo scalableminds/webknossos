@@ -203,7 +203,7 @@ object TaskAdministration extends Controller with Secured {
               instances,
               _project = project.map(_.name))
             nmls.foreach { nml =>
-              val task = Task.createAndInsertDeepCopy(baseTask)
+              val task = Task.copyDeepAndInsert(baseTask)
               Tracing.createTracingBase(task, request.user._id, nml)
             }
             Redirect(routes.TaskAdministration.list).flashing(

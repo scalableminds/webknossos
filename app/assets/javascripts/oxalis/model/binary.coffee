@@ -25,7 +25,7 @@ class Binary
   lastLookUpTable : null
 
 
-  constructor : (flycam, dataSet, @TEXTURE_SIZE_P) ->
+  constructor : (@user, dataSet, @TEXTURE_SIZE_P) ->
 
     @dataSetId = dataSet.id
     @dataSetName = dataSet.name
@@ -40,6 +40,10 @@ class Binary
     @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P)
     @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P)
     @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P)
+
+    @user.on({
+      set4BitChanged : (is4Bit) => @queue(is4Bit)
+    })
 
 
   updateLookupTable : (brightness, contrast) ->
@@ -63,8 +67,6 @@ class Binary
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
-
-    @cube.collectGarbage()
 
     if @lastPosition?
       
@@ -102,8 +104,6 @@ class Binary
 
 
   arbitraryPingImpl : (matrix) ->
-
-    @cube.collectGarbage()
 
     for strategy in @pingStrategies3d 
       if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)

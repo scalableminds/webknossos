@@ -2,7 +2,7 @@
 
 @tracingLinks = {
   <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
-  <a href="@controllers.routes.TracingController.finish(tracing.id, false)" class="trace-finish" data-ajax="replace-row"><i class="icon-ok-circle"></i> finish</a>
+  <a href="@controllers.routes.TracingController.finish(tracing.id, false)" class="trace-finish" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> finish</a>
 }
 
 @linkText(failed: Boolean) = {

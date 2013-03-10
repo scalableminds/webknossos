@@ -33,11 +33,11 @@ object TrainingsTaskAdministration extends Controller with Secured {
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,
         "loss" -> number)(Training.fromForm)(Training.toForm)))
-        .fill("", "", Training.empty)
+    .fill("", "", Training.empty)
 
   def taskToForm(t: Task) = {
     (t.id, "", Training.empty)
-  }        
+  }
   def list = Authenticated { implicit request =>
     Ok(html.admin.training.trainingsTaskList(Task.findAllTrainings))
   }
@@ -60,19 +60,22 @@ object TrainingsTaskAdministration extends Controller with Secured {
   def createFromForm = Authenticated(parser = parse.multipartFormData) { implicit request =>
     trainingsTaskForm.bindFromRequest.fold(
       formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors)),
-      { case (taskId, tracingId, training) =>
-        (for {
-          task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
-          tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-        } yield {
-          val sample = Tracing.createSample(task._id, tracing)
-          Task.createAndInsertDeepCopy(task.copy(
+      {
+        case (taskId, tracingId, training) =>
+          (for {
+            task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+            tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+          } yield {
+            val trainingsTask = Task.copyDeepAndInsert(task.copy(
               instances = Integer.MAX_VALUE,
-              created = new Date,
-              training = Some(training.copy(sample = sample._id))),
+              created = new Date),
               includeUserTracings = false)
-          Ok(html.admin.training.trainingsTaskList(Task.findAllTrainings))
-        }) 
+
+            val sample = Tracing.createSample(trainingsTask._id, tracing)
+            trainingsTask.update(_.copy(training = Some(training.copy(sample = sample._id))))
+
+            Ok(html.admin.training.trainingsTaskList(Task.findAllTrainings))
+          })
       })
   }
 

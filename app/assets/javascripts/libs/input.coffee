@@ -201,18 +201,17 @@ class Input.Mouse
 
   mouseMove : (event) =>
 
-    if @leftDown
-      
-      newPosition =
-        x : event.pageX - @$target.offset().left
-        y : event.pageY - @$target.offset().top
-      
-      deltaX = (newPosition.x - @lastPosition.x)
-      deltaY = (newPosition.y - @lastPosition.y)
+    @position =
+      x : event.pageX - @$target.offset().left
+      y : event.pageY - @$target.offset().top
+    
+    if @lastPosition?
+      deltaX = (@position.x - @lastPosition.x)
+      deltaY = (@position.y - @lastPosition.y)
 
-      unless deltaX == 0 and deltaY == 0
-        @trigger("leftDownMove", x : deltaX, y : deltaY)
-        @lastPosition = newPosition
+    if @leftDown and !(deltaX == 0 and deltaY == 0)
+      @trigger("leftDownMove", x : deltaX, y : deltaY)
+      @lastPosition = @position
 
     return
 

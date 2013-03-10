@@ -50,7 +50,6 @@ class User
 
     @[name] = value
     @trigger(name + "Changed", value)
-    console.log "Set value #{name} to #{value}"
     @push()
 
 

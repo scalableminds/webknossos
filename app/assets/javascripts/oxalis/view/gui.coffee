@@ -52,10 +52,10 @@ class Gui
 
     if @datasetPosition == 0
       # add new dataset to settings
-      @model.user.briConNames.push(@datasetPostfix)
-      @model.user.brightness.push(@settings.brightness)
-      @model.user.contrast.push(@settings.contrast)
-      @dataSetPosition = @user.briConNames.length - 1
+      @user.briConNames.push(@datasetPostfix)
+      @user.brightness.push(@settings.brightness)
+      @user.contrast.push(@settings.contrast)
+      @datasetPosition = @user.briConNames.length - 1
 
 
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
@@ -189,7 +189,7 @@ class Gui
                           .onChange((v) => @set(propertyName, v, Number))
 
   saveNow : =>
-    @model.user.pushImpl()
+    @user.pushImpl()
     @model.route.pushNow()
       .then( 
         -> Toast.success("Saved!")
@@ -223,13 +223,13 @@ class Gui
     $("#trace-position-input").val(stringPos)
 
   set : (name, value, type) =>
-    @model.user.setValue( name, (type) value)
+    @user.setValue( name, (type) value)
 
   setBrightnessAndContrast : =>
     @model.binary.updateLookupTable(@settings.brightness, @settings.contrast)
-    @model.user.brightness[@datasetPosition] = (Number) @settings.brightness
-    @model.user.contrast[@datasetPosition] = (Number) @settings.contrast
-    @model.user.push()
+    @user.brightness[@datasetPosition] = (Number) @settings.brightness
+    @user.contrast[@datasetPosition] = (Number) @settings.contrast
+    @user.push()
 
   resetBrightnessAndContrast : =>
     Request.send(

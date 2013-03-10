@@ -30,11 +30,20 @@ import java.io.FileOutputStream
 import org.apache.commons.io.IOUtils
 import net.liftweb.common._
 import braingames.util.TextUtils
+import braingames.util.FileIO
+import java.io.FileInputStream
+import java.nio.channels.Channels
 
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
 
   val prettyPrinter = new PrettyPrinter(100, 2)
+
+  val baseTracingOutputDir = {
+    val folder = "data/nmls"
+    new File(folder).mkdirs()
+    folder
+  }
 
   def extractFromZip(file: File): List[NML] =
     ZipIO.unzip(file).map(nml => (new NMLParser(nml)).parse).flatten
@@ -49,6 +58,41 @@ object NMLIO extends Controller with Secured with TextUtils {
     } else {
       Logger.trace("Extracting from NML file")
       List(extractFromNML(file)).flatten
+    }
+  }
+
+  def outputPathForTracing(tracing: Tracing) =
+    s"$baseTracingOutputDir/${tracing.id}.nml"
+
+  def writeTracingToFile(tracing: Tracing) {
+    val f = new File(outputPathForTracing(tracing))
+    val out = new FileOutputStream(f).getChannel
+    val in = tracingToNMLStream(tracing)
+    val ch = Channels.newChannel(in)
+    try {
+      out.transferFrom(ch, 0, in.available)
+    } finally { out.close() }
+  }
+
+  def tracingToNMLStream(tracing: Tracing) = {
+    IOUtils.toInputStream(prettyPrinter.format(Xml.toXML(tracing)))
+  }
+
+  def loadTracingFromFileStream(tracing: Tracing) = {
+    if (tracing.state.isFinished) {
+      val f = new File(outputPathForTracing(tracing))
+      if (f.exists())
+        Some(new FileInputStream(f))
+      else
+        None
+    } else
+      None
+  }
+
+  def loadTracingStream(tracing: Tracing) = {
+    loadTracingFromFileStream(tracing) orElse {
+      writeTracingToFile(tracing)
+      loadTracingFromFileStream(tracing)
     }
   }
 
@@ -99,8 +143,9 @@ object NMLIO extends Controller with Secured with TextUtils {
 
   def zipTracings(tracings: List[Tracing], zipFileName: String) = {
     val zipStreams = tracings.par.map { tracing =>
-      val xml = prettyPrinter.format(Xml.toXML(tracing))
-      (IOUtils.toInputStream(xml, "UTF-8") -> tracingNMLName(tracing))
+      val tracingStream =
+        loadTracingStream(tracing) getOrElse tracingToNMLStream(tracing)
+      tracingStream -> tracingNMLName(tracing)
     }.seq
     val zipped = new TemporaryFile(new File(normalize(zipFileName)))
     ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
@@ -117,7 +162,7 @@ object NMLIO extends Controller with Secured with TextUtils {
         .flatMap(_.tracings.filter(_.state.isFinished))
 
       val zipped = zipTracings(tracings, projectName + "_nmls.zip")
-      Logger.debug(s"Zipping took: ${System.currentTimeMillis-t} ms")
+      Logger.debug(s"Zipping took: ${System.currentTimeMillis - t} ms")
       Ok.sendFile(zipped.file)
     }
   }

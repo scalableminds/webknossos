@@ -15,14 +15,17 @@ class StateLogger
 
     @committedDiffs = []
     @newDiffs = []
-    @savedCurrentState = true
+    @committedCurrentState = true
 
-  pushDiff : (action, value) ->
+  pushDiff : (action, value, push = true) ->
     @newDiffs.push({
       action : action
       value : value
     })
-    @push()
+    # In order to assure that certain actions are atomic,
+    # it is sometimes necessary not to push.
+    if push
+      @push()
 
   #### TREES
 
@@ -66,7 +69,7 @@ class StateLogger
     @pushDiff("mergeTree", {
         sourceId : sourceTree.treeId
         targetId : targetTree.treeId
-      })
+      }, false)
     @createEdge(lastNodeId, activeNodeId, targetTree.treeId)
 
   #### NODES and EDGED
@@ -96,12 +99,14 @@ class StateLogger
   createNode : (node, treeId) ->
     $.assert(node.neighbors.length <= 1,
       "New node can't have more than one neighbor", node.neighbors.length)
-    $.assert(node.treeId == node.neighbors[0].treeId,
-      "Neighbot has different treeId",
-      {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
+    if node.neighbors[0]
+      $.assert(node.treeId == node.neighbors[0].treeId,
+        "Neighbot has different treeId",
+        {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
 
-    @pushDiff("createNode", @nodeObject(node, treeId))
-    if node.neighbors.length == 1
+    needsEdge = node.neighbors.length == 1
+    @pushDiff("createNode", @nodeObject(node, treeId), !needsEdge)
+    if needsEdge
       @pushDiff("createEdge", @edgeObject(node, treeId))
 
   updateNode : (node, treeId) ->
@@ -145,8 +150,11 @@ class StateLogger
 
   #### SERVER COMMUNICATION
 
+  stateSaved : ->
+    return @committedCurrentState and @committedDiffs.length == 0
+
   push : ->
-    @savedCurrentState = false
+    @committedCurrentState = false
     @pushDebounced()
 
   # Pushes the buffered route to the server. Pushing happens at most 
@@ -170,6 +178,7 @@ class StateLogger
 
     @committedDiffs = @committedDiffs.concat(@newDiffs)
     @newDiffs = []
+    @committedCurrentState = true
     data = @concatUpdateTracing(@committedDiffs)
     console.log "Sending data: ", data
 
@@ -200,7 +209,6 @@ class StateLogger
       @pushDeferred = null
     .done (response) =>
       @version = response.version
-      @savedCurrentState = true
       @committedDiffs = []
       @pushDeferred.resolve()
       @pushDeferred = null

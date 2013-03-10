@@ -28,7 +28,10 @@ $ ->
 
         $toggle = $(this)
         newState = !$toggle.hasClass("open")
-        
+
+        description = if newState then "Hide finished tasks" else "Show finished tasks"
+        $toggle.text(description)
+
         $("#dashboard-tasks").find(".finished").toggleClass("hide", !newState)
         $("#dashboard-tasks").find(".finished").toggleClass("open", newState)
         $toggle.toggleClass("open", newState)

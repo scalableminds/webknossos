@@ -23,7 +23,7 @@
     <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks">Get a new task</a>
     
     <div class="divider-vertical"></div>
-    <a href="#">Show finished tasks</a>
+    <a href="#" id="toggle-finished">Show/Hide finished tasks</a>
     <hr />
 
   	<a href="#" data-toggle="collapse" data-target="#explorativeTracings">
@@ -45,8 +45,8 @@
         </tr>
       </thead>
       <tbody>
-      @userTasks.map{ case (task, tracing) => 
-        @taskTracingTableItem(task, tracing)
+      @explorativeTracings.map{ tracing => 
+        @explorativeTracingTableItem(tracing)
       }
       </tbody>
     </table>

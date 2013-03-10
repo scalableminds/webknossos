@@ -42,6 +42,18 @@ $ ->
       $("a[rel=popover]").popover()
 
 
+      $("#new-task-button").on "ajax-after", (event) ->
+
+        $(this).data("ajax", "add-row=#dashboard-tasks,confirm=Do you really want another task?")
+
+
+      $("#dashboard-tasks").on "ajax-success", ".trace-finish", (event, responseData) ->
+
+        if responseData["hasAnOpenTask"] == false
+          $("#new-task-button").data("ajax", "add-row=#dashboard-tasks")
+
+      return
+
     "oxalis.trace" : ->
 
       require [

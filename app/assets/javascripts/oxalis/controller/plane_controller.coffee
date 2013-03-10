@@ -136,9 +136,9 @@ class PlaneController
 
     #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
     new Input.Mouse($("#skeletonview"),
-      #leftDownMove : (delta) => 
-      #  @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
-      #  @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
+      leftDownMove : (delta) => 
+        @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
+        @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
       scroll : @cameraController.zoomPrev
       leftClick : @onPreviewClick
     )

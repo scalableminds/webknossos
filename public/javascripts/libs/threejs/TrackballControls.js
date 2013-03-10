@@ -370,8 +370,8 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 
 		}
 
-		document.addEventListener( 'mousemove', mousemove, false );
-		document.addEventListener( 'mouseup', mouseup, false );
+		window.addEventListener( 'mousemove', mousemove, false );
+		window.addEventListener( 'mouseup', mouseup, false );
 
 	}
 

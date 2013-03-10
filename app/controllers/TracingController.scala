@@ -82,7 +82,7 @@ object TracingController extends Controller with Secured {
     tracing._user == user._id
   }
 
-  def info(tracingId: String) = Authenticated { implicit request =>
+  def info(tracingType: String, tracingId: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
       if (isUserAllowedToViewTracing(tracing, request.user))

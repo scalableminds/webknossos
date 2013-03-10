@@ -42,14 +42,13 @@ GET      /assert                                   controllers.AssertionControll
 
 # Tracing Stuff
 POST     /tracing                                  controllers.TracingController.createExplorational
-GET      /tracing/:tracingId/trace                 controllers.TracingController.trace(tracingId: String)
+GET      /tracing/:tracingId/trace                 controllers.TracingController.trace( tracingId: String)
 GET      /tracing/:tracingId/view                  controllers.TracingController.view(tracingId: String)
-GET      /tracing/:tracingId                       controllers.TracingController.info( tracingId: String )
 PUT      /tracing/:tracingId                       controllers.TracingController.update( tracingId: String, version: Int )
 GET      /tracing/:tracingId/finishAndRedirect     controllers.TracingController.finishWithRedirect( tracingId: String )
 GET      /tracing/:tracingId/finish                controllers.TracingController.finish( tracingId: String, explorational: Boolean = false )
 GET      /tracing/:tracingId/finishExperimental    controllers.TracingController.finish( tracingId: String, explorational: Boolean = true )
-
+GET      /trace/:tracingType/:tracingId            controllers.TracingController.info( tracingType: String, tracingId: String )
 
 #Admin pages
 GET      /admin/nml/upload                         controllers.admin.NMLIO.uploadForm

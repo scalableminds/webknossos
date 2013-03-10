@@ -133,6 +133,9 @@ class ArbitraryController
       #Reset Matrix
       "r" : => @cam.resetRotation()
 
+      #Recenter active node
+      "y" : => @centerActiveNode()
+
       #Recording of Waypoints
       "z" : => 
         @record = true
@@ -202,6 +205,12 @@ class ArbitraryController
     _.defer => @model.route.popBranch().done((id) => 
       @setActiveNode(id, true)
     )
+
+  centerActiveNode : ->
+
+    position = @model.route.getActiveNodePos()
+    if position
+      @cam.setPosition position
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->

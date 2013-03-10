@@ -149,6 +149,7 @@ class ArbitraryPlane
     plane = new THREE.Mesh( planeGeo, textureMaterial )
     plane.texture = texture
     plane.rotation.x = Math.PI
+    plane.scale.x = plane.scale.y = plane.scale.z = 2.2
 
     plane
 

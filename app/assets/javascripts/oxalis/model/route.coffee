@@ -75,9 +75,9 @@ class Route
           targetNode.appendNext(sourceNode)
         else
           $.assertNotEquals(sourceNode, null, "source node undefined",
-            {"nodes" : tree.nodes, "sourceNode" : edge.source})
+            {"edge" : edge})
           $.assertNotEquals(targetNode, null, "target node undefined",
-            {"nodes" : tree.nodes, "sourceNode" : edge.target})
+            {"edge" : edge})
 
       # Set active Node
       activeNodeT = @findNodeInList(tree.nodes, @data.activeNode)

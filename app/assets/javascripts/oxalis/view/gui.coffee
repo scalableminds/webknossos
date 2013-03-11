@@ -175,7 +175,9 @@ class Gui
       deleteLastNode   : => @update()
       newNode          : => @update()
       newTree          : => @update()
-      # newActiveNodeRadius : (radius) =>@updateRadius(radius) 
+      # newActiveNodeRadius : (radius) =>@updateRadius(radius)
+
+    @model.route.stateLogger.on
       pushFailed       : -> Toast.error("Auto-Save failed!")
 
     @createTooltips()

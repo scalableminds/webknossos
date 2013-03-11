@@ -31,6 +31,7 @@ class DrawArtCells
     shadowBlur : "float"
     shadowColor : "\"rgba(0, 0, 255, 0.3)\""
     mergeSegments : "true, false (default)"
+    minSize : "Number"
 
 
   constructor : () ->

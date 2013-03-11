@@ -9,8 +9,8 @@ import models.tracing.TracingSettings
 import play.api.libs.json.Json
 import play.api.libs.functional.syntax._
 
-case class TimeSpan(min: Int, max: Int, maxHard: Int){
-  
+case class TimeSpan(min: Int, max: Int, maxHard: Int) {
+
   override def toString = s"$min - $max, Limit: $maxHard"
 }
 
@@ -19,14 +19,27 @@ case class TaskType(summary: String, description: String, expectedTime: TimeSpan
 }
 
 object TaskType extends BasicDAO[TaskType]("taskTypes") {
-  def empty = TaskType("","",TimeSpan(5, 10, 15))
-  
-  def fromForm(summary: String, description: String, allowedModes: Seq[String], branchPointsAllowed: Boolean, expectedTime: TimeSpan) = 
-    TaskType(summary, description, expectedTime, TracingSettings(allowedModes.toList, branchPointsAllowed))
-    
+  def empty = TaskType("", "", TimeSpan(5, 10, 15))
+
+  def fromForm(summary: String, description: String, allowedModes: Seq[String], branchPointsAllowed: Boolean, somaClickingAllowed: Boolean, expectedTime: TimeSpan) =
+    TaskType(
+      summary,
+      description,
+      expectedTime,
+      TracingSettings(
+        allowedModes.toList,
+        branchPointsAllowed,
+        somaClickingAllowed))
+
   def toForm(tt: TaskType) =
-    Some((tt.summary, tt.description, tt.tracingSettings.allowedModes, tt.tracingSettings.branchPointsAllowed, tt.expectedTime))
-    
+    Some((
+        tt.summary, 
+        tt.description, 
+        tt.tracingSettings.allowedModes, 
+        tt.tracingSettings.branchPointsAllowed, 
+        tt.tracingSettings.somaClickingAllowed,
+        tt.expectedTime))
+
   def findOneBySumnary(summary: String) = {
     findOne(MongoDBObject("summary" -> summary))
   }

@@ -106,9 +106,9 @@ svg a:hover {
 }
 
 #alert-container {
-    position: absolute;
+    position: fixed;
     right: 20px;
-    top: 60px;
+    top: 20px;
     z-index: 100;
 
     .alert {
@@ -192,6 +192,7 @@ svg a:hover {
         margin-right: 20px;
         margin-bottom: 20px;
         padding: 10px;
+        min-width: 250px;
 
         form {
             display: inline;
@@ -216,6 +217,8 @@ svg a:hover {
         }
     }
     .stack-display {
+
+        text-align: center;
 
         a, .loading-indicator {
             display: block;

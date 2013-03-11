@@ -76,9 +76,9 @@ subPointMacro = (output, xd, yd, zd) ->
     bucketZoomStep = bucket.zoomStep || 0
 
     accessedBuckets.push [
-      sub_x >> bucketZoomStep
-      sub_y >> bucketZoomStep
-      sub_z >> bucketZoomStep
+      sub_x >> (5 + bucketZoomStep)
+      sub_y >> (5 + bucketZoomStep)
+      sub_z >> (5 + bucketZoomStep)
       bucketZoomStep
     ]
 

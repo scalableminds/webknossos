@@ -15,6 +15,9 @@
 ./plugins/color_all : ColorAll
 ./plugins/color_segments_randomly : ColorSegmentsRandomly
 ./plugins/smooth_edges : SmoothEdges
+./plugins/apply_segments_static_display : ApplySegmentsStaticDisplay
+./plugins/set_segments_static_display : SetSegmentsStaticDisplay
+./plugins/filter_random_segments : FilterRandomSegments
 ###
 
 
@@ -38,4 +41,7 @@ class Plugins
     @smoothEdges = new SmoothEdges()
     @drawArtCells = new DrawArtCells()    
     @fade = new Fade()
+    @applySegmentsStaticDisplay = new ApplySegmentsStaticDisplay()
+    @setSegmentsStaticDisplay = new SetSegmentsStaticDisplay()
+    @filterRandomSegments = new FilterRandomSegments()
 

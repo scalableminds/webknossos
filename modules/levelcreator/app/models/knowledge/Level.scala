@@ -1,24 +1,40 @@
 package models.knowledge
 
 import models.basics._
-import java.io.File
+import java.io.{File, PrintWriter}
 import com.mongodb.casbah.commons.MongoDBObject
 import org.apache.commons.io.FileUtils
 import play.api.Play
 import org.bson.types.ObjectId
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 case class Level(
     name: String , 
     width: Int,
     height: Int,
-    depth: Int,
+    slidesBeforeProblem: Int,
+    slidesAfterProblem: Int,
     dataSetName: String,
     code: String = Level.defaultCode,
-    renderedMissions: List[Int] = List(),
+    renderedMissions: List[String] = List(),
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
 
   lazy val id = _id.toString
+  
+  lazy val depth = slidesBeforeProblem + slidesAfterProblem
+  
+  lazy val stacksFileName="stacks.json"
+  lazy val stacksFile = new File(s"$stackFolder/$stacksFileName")
+  def hasStacksFile = stacksFile.exists
+  def updateStacksFile {
+  if(! hasStacksFile )
+    stacksFile.createNewFile
+  val out = new PrintWriter(stacksFile)
+    try { out.print(Json.toJson(renderedMissions)) }
+    finally { out.close }
+  }
   
   val assetsFolder =
     s"${Level.assetsBaseFolder}/$name/assets"
@@ -41,13 +57,17 @@ case class Level(
     copy(code = c)
   }
   
-  def addRenderedMissions(missionStartIds: List[Int]) = {   
-      update(_.copy(renderedMissions =  renderedMissions ++ 
-          missionStartIds.filter(id => !renderedMissions.contains(id))))
+  def addRenderedMissions(missionIds: List[String]) = {   
+      update(_.copy(renderedMissions = (renderedMissions ++ missionIds).distinct))
   }
   
-  def removeRenderedMission(missionStartId: Int) = {
-    update(_.copy(renderedMissions = renderedMissions.filter(id => id != missionStartId)))
+  def removeAllRenderedMissions = update(_.copy(renderedMissions = List()))
+  
+  def removeRenderedMission(missionId: String) = removeRenderedMissions(List(missionId))
+  
+  def removeRenderedMissions(missionIds: List[String]): Unit = {
+    update(_.copy(renderedMissions = 
+      renderedMissions.filterNot(mId => missionIds.contains(mId))))
   }
   
   def retrieveAsset(name: String) = {
@@ -79,14 +99,14 @@ object Level extends BasicDAO[Level]("levels") {
   
   val defaultDataSetName = "2012-09-28_ex145_07x2"
 
-  def fromForm(name: String, width: Int, height: Int, depth: Int, dataSetName: String) = {
-    Level(name, width, height, depth, dataSetName)
+  def fromForm(name: String, width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int,  dataSetName: String) = {
+    Level(name, width, height, slidesBeforeProblem, slidesAfterProblem , dataSetName)
   }
   
-  val empty = Level("", 250, 150, 30, defaultDataSetName)
+  val empty = Level("", 250, 150, 15, 15, defaultDataSetName)
   
   def toForm(level: Level) = {
-    Some(level.name, level.width, level.height, level.depth, level.dataSetName)
+    Some(level.name, level.width, level.height, level.slidesBeforeProblem, level.slidesAfterProblem, level.dataSetName)
   }
   
   val stackBaseFolder = {
@@ -108,6 +128,9 @@ object Level extends BasicDAO[Level]("levels") {
 
   def findOneByName(name: String) =
     findOne(MongoDBObject("name" -> name))
+    
+  def findByDataSetName(dataSetName: String) = 
+    find(MongoDBObject("dataSetName" -> dataSetName)).toList
 
   def isValidAssetName(name: String) = {
     name match {
@@ -130,5 +153,5 @@ object Level extends BasicDAO[Level]("levels") {
   val defaultCode = """
     |time(start : 0, end : 10) ->
     |  importSlides(start : 0, end : 10)
-  """.stripMargin
+  """.stripMargin 
 }

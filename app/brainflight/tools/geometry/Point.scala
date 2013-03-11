@@ -43,8 +43,8 @@ object Point3D {
     else
       None
 
-  def fromList(l: List[Int]): Point3D = {
-    Point3D(0, 0, 0)
+  def fromList(l: List[Int])= {
+    fromArray(l.toArray) getOrElse Point3D(0,0,0)
   }
 
   implicit object Point3DReads extends Reads[Point3D] {

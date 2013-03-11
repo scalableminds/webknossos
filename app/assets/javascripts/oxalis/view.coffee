@@ -14,6 +14,10 @@ class View
 
   constructor : (@model) ->
 
+    unless @webGlSupported()
+      Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>"+
+        "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>")
+
     { THEME_BRIGHT } = @
    
     @setTheme(THEME_BRIGHT)
@@ -27,11 +31,16 @@ class View
       wrongDirection : =>
         Toast.error("You're tracing in the wrong direction")
       updateComments : (comments) => 
+        console.log comments
         @updateComments(comments)
       newActiveNode : => @updateActiveComment()
       deleteTree : => @updateActiveComment()
       newNode : => @updateActiveComment()
       newTree : => @updateActiveComment() })
+
+    # initialize comments
+    @model.route.updateComments()
+    @updateActiveComment()
 
 
   toggleTheme : ->
@@ -114,3 +123,24 @@ class View
       $("#comment-input").val(comment)
     else
       $("#comment-input").val("")
+
+    oldIcon = $("#comment-container i.icon-arrow-right")
+    if oldIcon.length
+      oldIcon.toggleClass("icon-arrow-right", false)
+      oldIcon.toggleClass("icon-angle-right", true)
+
+    activeHref = $("#comment-container a[data-nodeid=#{@model.route.getActiveNodeId()}]")
+    if activeHref.length
+
+      newIcon = activeHref.parent("li").children("i")
+      newIcon.toggleClass("icon-arrow-right", true)
+      newIcon.toggleClass("icon-angle-right", false)
+
+      # animate scrolling to the new comment
+      $("#comment-container").animate({
+        scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 500)
+
+
+  webGlSupported : ->
+
+    return window.WebGLRenderingContext and document.createElement('canvas').getContext('experimental-webgl')

@@ -54,7 +54,7 @@ class Controller
 
       @view = new View(@model)
 
-      @gui = @createGui()
+      @gui = @createGui(settings)
 
       @planeController = new PlaneController(@model, stats, @gui)
 
@@ -143,11 +143,11 @@ class Controller
         requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
 
-  createGui : ->
+  createGui : (settings)->
 
     { model } = @
 
-    gui = new Gui($("#optionswindow"), model)
+    gui = new Gui($("#optionswindow"), model, settings)
     gui.update()  
 
     model.binary.queue.set4Bit(model.user.fourBit)

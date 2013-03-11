@@ -20,6 +20,9 @@ PLANE_YZ       = Dimensions.PLANE_YZ
 PLANE_XZ       = Dimensions.PLANE_XZ
 VIEW_3D        = Dimensions.VIEW_3D
 
+MAX_SCALE      = 20
+MIN_SCALE      = 0.5
+
 
 
 class PlaneView
@@ -165,7 +168,7 @@ class PlaneView
   
   scaleTrianglesPlane : (delta) =>
     @scaleFactor = 1 unless @scaleFactor
-    if (@scaleFactor+delta > 0.65) and (@scaleFactor+delta < 2)
+    if (@scaleFactor+delta > MIN_SCALE) and (@scaleFactor+delta < MAX_SCALE)
       @scaleFactor += Number(delta)
       @curWidth = WIDTH = HEIGHT = @scaleFactor * 380
       canvas = $("#render > canvas")
@@ -191,9 +194,8 @@ class PlaneView
   setActivePlane : (planeID) =>
     @flycam.setActivePlane planeID
     for i in [0..2]
-      catcherStyle = $(".inputcatcher")[i].style
-      #catcherStyle.borderColor  = "#f8f800"   #  else "#C7D1D8"
       $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
+    @flycam.hasChanged = true
 
   getCameras : =>
     @camera

@@ -52,6 +52,8 @@
               <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download </a><br />
               @if(!tracing.state.isFinished){ 
                 <a href="@controllers.admin.routes.TaskAdministration.cancelTracing(tracing.id)" data-ajax="delete-row,confirm"><i class="icon-remove"></i> cancel</a><br/>
+              } else {
+                <a href="@controllers.routes.TracingController.reopen(tracing.id)" data-ajax="repalce-row"><i class="icon-share-alt"></i> reopen</a><br/>
               }
             </td>
           </tr>

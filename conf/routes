@@ -48,7 +48,8 @@ PUT      /tracing/:tracingId                       controllers.TracingController
 GET      /tracing/:tracingId/finishAndRedirect     controllers.TracingController.finishWithRedirect( tracingId: String )
 GET      /tracing/:tracingId/finish                controllers.TracingController.finish( tracingId: String, explorational: Boolean = false )
 GET      /tracing/:tracingId/finishExperimental    controllers.TracingController.finish( tracingId: String, explorational: Boolean = true )
-GET      /trace/:tracingType/:identifier            controllers.TracingController.info( tracingType: String, identifier: String )
+GET      /tracing/:tracingId/reopen                controllers.TracingController.reopen( tracingId: String )
+GET      /trace/:tracingType/:identifier           controllers.TracingController.info( tracingType: String, identifier: String )
 
 #Admin pages
 GET      /admin/nml/upload                         controllers.admin.NMLIO.uploadForm

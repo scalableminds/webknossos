@@ -99,6 +99,21 @@ object TracingController extends Controller with Secured with TracingInformation
       }
     }) ?~ Messages("tracing.notPossible")
   }
+    
+  def reopen(tracingId: String) = Authenticated( role=Role.Admin ) { implicit request =>
+    for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      task <- tracing.task ?~Messages("task.notFound")
+    } yield {
+      tracing match {
+        case t if t.tracingType == TracingType.Task =>
+          tracing.update(_.reopen)
+          JsonOk(html.admin.task.taskTableItem(task), Messages("tracing.reopened"))
+        case _ =>
+          JsonOk(Messages("tracing.unvalid"))
+      }
+    }
+  }
 
   def finish(tracingId: String, experimental: Boolean) = Authenticated { implicit request =>
     finishTracing(request.user, tracingId).map {

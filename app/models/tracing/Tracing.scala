@@ -102,7 +102,7 @@ case class Tracing(
   def finish = {
     this.copy(state = Finished)
   }
-
+  
   def passToReview = {
     this.copy(state = ReadyForReview)
   }

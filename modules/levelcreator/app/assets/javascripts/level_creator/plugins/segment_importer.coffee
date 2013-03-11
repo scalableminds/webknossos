@@ -213,10 +213,9 @@ class SegmentImporter
 
 
   setRandomColor3 : (segments) ->
-    i = 0
+    
     for segment in segments
-      i++
-      i %= @COLORS.length
+      i = segment.value % @COLORS.length
       c = @COLORS[i]
       segment.randomColor3 = @hexToRgb(c)
 

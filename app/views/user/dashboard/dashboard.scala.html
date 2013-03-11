@@ -1,7 +1,7 @@
 @( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[models.binary.DataSet])(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
-  <div class="container" id="dashboard">
+  <div class="container wide" id="dashboard">
     <h3>Tasks</h3>
     <table class="table table-striped" id="dashboard-tasks">
       <thead>

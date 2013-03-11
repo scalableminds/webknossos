@@ -60,7 +60,7 @@ case class TemporaryTracing(
     scale: Scale,
     editPosition: Point3D,
     comments: List[Comment] = Nil,
-    tracingSettings: TracingSettings = TracingSettings.default,
+    tracingSettings: TracingSettings = TracingSettings.default.copy(isEditable = false),
     tracingType: TracingType.Value = TracingType.CompoundProject,
     version: Int = 0) extends TracingLike[TemporaryTracing] {
 

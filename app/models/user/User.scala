@@ -92,6 +92,7 @@ case class User(
 }
 
 object User extends BasicDAO[User]("users") {
+  this.collection.ensureIndex("email")
 
   def default = findLocalByEmail("scmboy@scalableminds.com").get
 

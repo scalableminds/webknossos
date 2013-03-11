@@ -1,75 +1,42 @@
 package controllers.levelcreator
 
 import braingames.mvc.Controller
-import play.api.libs.concurrent._
-import scala.concurrent.duration._
-import scala.concurrent._
-import akka.pattern.ask
 import views._
 import braingames.mvc._
 import models.knowledge._
 import play.api.Play.current
-import akka.actor._
-import akka.util.Timeout
-import akka.pattern.AskTimeoutException
-import braingames.levelcreator._
+import play.api.mvc.Action
 import play.api.data._
 import play.api.data.Forms._
-import play.api.mvc.{Action, Request, WrappedRequest, BodyParser, Result, BodyParsers}
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api._
-import ExecutionContext.Implicits.global
+
 import java.io.File
 import scala.util.Failure
 import models.binary.DataSet
 import braingames.util.ExtendedTypes.ExtendedString
 
-object LevelCreator extends Controller {
+object LevelCreator extends LevelCreatorController {
 
-  val levelCreateActor = Akka.system.actorOf(Props(new LevelCreateActor))
-
-  val conf = Play.current.configuration
-  implicit val timeout = Timeout(60 seconds)
-
-  case class LevelRequest[T](val level: Level, val request: Request[T]) extends WrappedRequest(request)
-  
-  def ActionWithValidLevel[T](levelId: String, parser: BodyParser[T] = BodyParsers.parse.anyContent)
-  (f: LevelRequest[T] => Result) = Action(parser){ 
-    implicit request => 
-    for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-    } yield {
-      f(LevelRequest(level, request))
-    }
-  }
-  
   val levelForm = Form(
     mapping(
       "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
       "width" -> number,
       "height" -> number,
-      "depth" -> number,
+      "slides before problem" -> number,
+      "slides after problem" -> number,
       "dataset" -> text.verifying("dataSet.notFound", DataSet.findOneByName(_).isDefined))(
         Level.fromForm)(Level.toForm)).fill(Level.empty)
 
-  def use(levelId: String, missionStartId: Int) = ActionWithValidLevel(levelId){ implicit request =>
-    val missionOpt = Mission.findOneByStartId(request.level.dataSetName, missionStartId) orElse
+  def use(levelId: String, missionId: String) = ActionWithValidLevel(levelId){ implicit request =>
+    val missionOpt = Mission.findOneById(missionId) orElse
         Mission.randomByDataSetName(request.level.dataSetName)
     for {
       mission <- missionOpt ?~ Messages("mission.notFound")
     } yield {
-      Ok(html.levelcreator.levelCreator(request.level, mission.start.startId))
+      Ok(html.levelcreator.levelCreator(request.level, mission.id))
     } 
-  }
-
-  def stackList(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-      Ok(html.levelcreator.stackList(request.level))
-  }
-  
-  def deleteStack(levelId: String, missionStartId: Int) = ActionWithValidLevel(levelId) { implicit request =>
-      request.level.removeRenderedMission(missionStartId)
-      JsonOk(Messages("level.stack.removed"))
   }
 
   def delete(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
@@ -97,51 +64,6 @@ object LevelCreator extends Controller {
 
   def listAssets(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
       Ok(Json.toJson(request.level.assets.map(_.getName)))
-  }
-  //TODO: make this parallel in a way that a single actor gets one mission to create at a time and then add created missions 
-  // depending on which were successfully created
-  def createLevels(level: Level, missions: List[Mission]) = {
-    val future = (levelCreateActor ? CreateLevels(level, missions)).recover {
-      case e: AskTimeoutException =>
-        //TODO when creating multiple stacks, actor may time out
-        //he will go on creating though
-        Logger.error("stack creation timed out")
-        Messages("level.stack.creationTimeout")
-    }
-    future.mapTo[String].map { result => 
-      level.addRenderedMissions(missions.map(_.start.startId))
-      JsonOk(result) } 
-  }
-
-  def produce(levelId: String, count: Int) = ActionWithValidLevel(levelId) { implicit request =>
-    Async {
-      for {
-        missions <- Mission.findNotProduced(request.level.dataSetName, request.level.renderedMissions) ?~ Messages("mission.notFound")
-      } yield {
-        createLevels(request.level, missions.take(count))
-      }
-    }
-  }
-  
-  def produceAll(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    Async{
-      for {
-        missions <- Mission.findByDataSetName(request.level.dataSetName) ?~ Messages("mission.notFound")
-      } yield {
-        createLevels(request.level, missions)
-      }
-    }
-  }
-
-  def produceBulk(levelId: String) = ActionWithValidLevel(levelId, parse.urlFormEncoded) { implicit request =>
-    Async{
-      for {
-        missionStartIds <- postParameterList("missionStartId") ?~ Messages("mission.startId.missing")
-        missions = Mission.findByStartId(request.level.dataSetName, missionStartIds.toList.flatMap(_.toIntOpt))
-      } yield {
-        createLevels(request.level, missions)
-      }
-    }
   }
 
   def retrieveAsset(levelId: String, asset: String) = ActionWithValidLevel(levelId) { implicit request =>

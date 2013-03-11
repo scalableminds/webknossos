@@ -4,6 +4,7 @@ import play.api.libs.json.JsValue
 import play.api.libs.json.Format
 import play.api.libs.json._
 import play.api.data.validation.ValidationError
+import xml.XMLWrites
 
 case class BranchPoint(id: Int)
 
@@ -14,16 +15,18 @@ object BranchPoint {
     // TODO: rewrite
     def reads(json: JsValue) = (json \ ID) match {
       case JsNumber(n) => JsSuccess(BranchPoint(n.toInt))
-      case _ => JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.jsnumber"))))
+      case _           => JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.jsnumber"))))
     }
   }
-  
-  implicit object BranchPointWrites extends Writes[BranchPoint] {
+
+  implicit object BranchPointJsonWrites extends Writes[BranchPoint] {
 
     def writes(b: BranchPoint) = Json.obj(
       ID -> b.id)
   }
 
-  def toXML(b: BranchPoint) =
-    <branchpoint id={ b.id.toString }/>
+  implicit object BranchPointXMLWrites extends XMLWrites[BranchPoint] {
+    def writes(b: BranchPoint) =
+      <branchpoint id={ b.id.toString }/>
+  }
 }

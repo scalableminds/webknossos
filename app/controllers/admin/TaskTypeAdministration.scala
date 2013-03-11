@@ -23,6 +23,7 @@ object TaskTypeAdministration extends Controller with Secured {
       "description" -> text,
       "allowedModes" -> seq(text).verifying("taskType.emptyModeSelection", l => !l.isEmpty),
       "branchPointsAllowed" -> boolean,
+      "somaClickingAllowed" -> boolean,
       "expectedTime" -> mapping(
         "minTime" -> number,
         "maxTime" -> number,

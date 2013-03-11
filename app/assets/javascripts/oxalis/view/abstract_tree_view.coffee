@@ -20,16 +20,16 @@ class AbstractTreeView
     @canvas = $("<canvas>", {id : "abstractTreeViewerCanvas"})
     @canvas.click(@onClick)
     $(@canvas).css(
-        width : width
-        height : height
-        border : "2px"
-      )
+      width : width
+      height : height
+    )
     @canvas[0].width = @canvas.width()
     @canvas[0].height = @canvas.height()
     @ctx = @canvas[0].getContext("2d")
     console.log(@ctx)
     @width = width
     @height = height
+    @nodeList = []
 
 
   drawTree : (tree, @activeNodeId) ->

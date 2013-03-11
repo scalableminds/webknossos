@@ -34,7 +34,6 @@ class DataNotFoundException(message: String) extends Exception(s"$message Could 
 abstract class DataStore extends Actor {
   import DataStore._
 
-  val MAX_RESOLUTION_EXPONENT = 9
   val MAX_BYTES_PER_ELEMENT = 8
 
   /**
@@ -44,16 +43,12 @@ abstract class DataStore extends Actor {
 
   def receive = {
     case request @ LoadBlock(dataSetBaseDir, dataSetName, dataLayerName, bytesPerElement, resolution, x, y, z) =>
-      if (resolution > MAX_RESOLUTION_EXPONENT)
-        sender ! new IndexOutOfBoundsException("Resolution not supported")
-      else {
-        val s = sender
-        load(request).onComplete {
-          case Failure(e) =>
-            s ! e
-          case Success(d) =>
-            s ! d
-        }
+      val s = sender
+      load(request).onComplete {
+        case Failure(e) =>
+          s ! e
+        case Success(d) =>
+          s ! d
       }
   }
 
@@ -74,12 +69,12 @@ abstract class DataStore extends Actor {
     new Array[Byte](blockSize * bytesPerElement)
 
   lazy val nullBlocks: Array[Array[Byte]] =
-    (0 to MAX_RESOLUTION_EXPONENT).toArray.map { exp =>
+    (0 to MAX_BYTES_PER_ELEMENT).toArray.map { exp =>
       val bytesPerElement = math.pow(2, exp).toInt
       createNullArray(blockSize, bytesPerElement)
     }
 
-  def nullBlock(bytesPerElement: Int) =
+  def nullBlock(bytesPerElement: Int) = 
     nullBlocks(log2(bytesPerElement).toInt)
 
   lazy val nullFiles: Stream[Array[Byte]] =

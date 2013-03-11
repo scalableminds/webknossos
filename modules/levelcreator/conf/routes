@@ -7,15 +7,19 @@
 GET     /                                    controllers.levelcreator.LevelCreator.list
 GET     /levels                              controllers.levelcreator.LevelCreator.list
 POST    /levels                              controllers.levelcreator.LevelCreator.create
-GET     /levels/:levelId                     controllers.levelcreator.LevelCreator.use(levelId: String, missionStartId: Int ?= -1)
+GET     /levels/:levelId                     controllers.levelcreator.LevelCreator.use(levelId: String, missionId: String ?= "")
 PUT     /levels/:levelId                     controllers.levelcreator.LevelCreator.submitCode(levelId: String)
 DELETE  /levels/:levelId                     controllers.levelcreator.LevelCreator.delete(levelId: String)
-GET     /levels/:levelId/produce             controllers.levelcreator.LevelCreator.produce(levelId: String, count: Int ?= 1)
-POST    /levels/:levelId/produce             controllers.levelcreator.LevelCreator.produceBulk(levelId: String)
-GET     /levels/:levelId/produce/all         controllers.levelcreator.LevelCreator.produceAll(levelId: String)
 
-GET     /levels/:levelId/stacks              controllers.levelcreator.LevelCreator.stackList(levelId: String)
-DELETE  /levels/:levelId/stacks/:missionStartId  controllers.levelcreator.LevelCreator.deleteStack(levelId: String, missionStartId: Int)
+
+GET     /levels/:levelId/produce             controllers.levelcreator.StackController.produce(levelId: String, count: Int ?= 1)
+POST    /levels/:levelId/produce             controllers.levelcreator.StackController.produceBulk(levelId: String)
+GET     /levels/:levelId/produce/all         controllers.levelcreator.StackController.produceAll(levelId: String)
+
+GET     /levels/:levelId/stacks              controllers.levelcreator.StackController.list(levelId: String)
+GET     /levels/:levelId/stacks.json         controllers.levelcreator.StackController.listJson(levelId: String)
+DELETE  /levels/:levelId/stacks              controllers.levelcreator.StackController.deleteAll(levelId: String)
+DELETE  /levels/:levelId/stacks/:missionId   controllers.levelcreator.StackController.delete(levelId: String, missionId: String)
 
 GET     /levels/:levelId/assets              controllers.levelcreator.LevelCreator.listAssets(levelId: String)
 POST    /levels/:levelId/assets              controllers.levelcreator.LevelCreator.uploadAsset(levelId: String)
@@ -24,12 +28,12 @@ DELETE  /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCreat
 
 
 #Getting binary Data
-GET     /binary/arbitrary/ajax              controllers.levelcreator.ArbitraryBinaryData.viaAjax(dataLayerName: String, levelId: String, taskId: String)
-GET     /binary/ajax                        controllers.levelcreator.ArbitraryBinaryData.missionViaAjax(dataSetName: String, levelId: String, missionStartId: Int, dataLayerName: String) 
+GET     /binary/ajax                        controllers.levelcreator.BinaryData.viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) 
+
 #Mission Data
 GET     /missions                           controllers.levelcreator.MissionController.getMissions(dataSetName: String)
 GET     /missions/random                    controllers.levelcreator.MissionController.getRandomMission(dataSetName: String)
-GET     /missions/:missionStartId           controllers.levelcreator.MissionController.getMission(dataSetName: String, missionStartId: Int)
+GET     /missions/:missionId                controllers.levelcreator.MissionController.getMission(missionId: String)
         
 # Javascript routing
 GET     /assets/javascripts/routes.js       controllers.levelcreator.Application.javascriptRoutes

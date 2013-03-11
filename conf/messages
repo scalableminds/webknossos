@@ -106,7 +106,7 @@ task.finished=Task is finished
 task.cancelled=Task got cancelled
 task.passedToReview=Task is now getting reviewed. This may take some time.
 task.assigned=You got a new task
-task.alreadyHasOpenOne=You already have an open task
+task.tooManyOpenOnes=You already have too many open tasks
 task.unavailable=There is currently no task available
 task.notFound=Task couldn''t be found
 task.removed=Task got removed
@@ -146,6 +146,7 @@ level.assets.deleted=Asset got removed
 level.assets.deleteFailed=Couldn''t delete asset
 level.creation.inProgress=Level creation in progress
 level.stack.removed=Removed stack
+level.stack.removedAll=Removed all stacks
 level.stack.creationTimeout=Stack creation timed out
 level.stack.created=Stacks created
 

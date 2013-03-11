@@ -74,9 +74,9 @@ trait TracingLike[T <: TracingLike[T]] { self: T =>
     if (targetTrees.isEmpty)
       0
     else {
-      val targetNodeMinId = minNodeId(targetTrees)
-      val sourceNodeMaxId = maxNodeId(sourceTrees)
-      math.max(sourceNodeMaxId + 1 - targetNodeMinId, 0)
+      val targetNodeMaxId = maxNodeId(targetTrees)
+      val sourceNodeMinId = minNodeId(sourceTrees)
+      math.max(targetNodeMaxId + 1 - sourceNodeMinId, 0)
     }
   }
 }

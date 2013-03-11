@@ -21,6 +21,12 @@ object CompoundTracing {
       .map(_.copy(tracingType = TracingType.CompoundTask))
   }
 
+  def createFromTaskType(taskType: TaskType) = {
+    createFromTracings(Task.findAllByTaskType(taskType)
+      .flatMap(_.tracings.filter(_.state.isFinished)), taskType.id)
+      .map(_.copy(tracingType = TracingType.CompoundTaskType))
+  }
+
   def createFromTracings(tracings: List[Tracing], id: String): Option[TemporaryTracing] = {
     val t = System.currentTimeMillis()
     val r = tracings match {

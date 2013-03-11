@@ -48,6 +48,7 @@
           <td> @taskType.expectedTime </td>
           <td> @taskType.fileName.getOrElse("") </td>
           <td>
+            <a href="@controllers.admin.routes.TaskTypeAdministration.trace(taskType.id)" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
             <a href="@controllers.admin.routes.TaskTypeAdministration.edit(taskType.id)"><i class="icon-pencil"></i> edit </a> <br />
             <a href="@controllers.admin.routes.TaskTypeAdministration.delete(taskType.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
           </td>

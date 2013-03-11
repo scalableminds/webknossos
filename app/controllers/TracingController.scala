@@ -36,6 +36,7 @@ import play.api.templates.Html
 import models.tracing.TracingLike
 import models.task.Project
 import models.tracing.CompoundTracing
+import models.task.TaskType
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User
@@ -189,6 +190,8 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
         projectTracingInformationProvider(identifier)
       case x if x == TracingType.CompoundTask.toString =>
         taskTracingInformationProvider(identifier)
+      case x if x == TracingType.CompoundTaskType.toString =>
+        taskTypeTracingInformationProvider(identifier)
       case _ =>
         savedTracingInformationProvider(identifier)
     }
@@ -216,6 +219,17 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
         createDataSetInformation(tracing.dataSetName)
     }) ?~ Messages("notAllowed") ~> 403
   }
+  
+  def taskTypeTracingInformationProvider(taskTypeId: String)(implicit request: AuthenticatedRequest[_]): Box[JsObject] = {
+    (for {
+      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+      if (isAllowedToViewTaskType(taskType, request.user))
+      tracing <- CompoundTracing.createFromTaskType(taskType)
+    } yield {
+      createTracingInformation(tracing) ++
+        createDataSetInformation(tracing.dataSetName)
+    }) ?~ Messages("notAllowed") ~> 403
+  }
 
   def savedTracingInformationProvider(tracingId: String)(implicit request: AuthenticatedRequest[_]): Box[JsObject] = {
     (for {
@@ -238,6 +252,10 @@ trait TracingRights {
   }
 
   def isAllowedToViewTask(task: Task, user: User) = {
+    Role.Admin.map(user.hasRole) getOrElse false
+  }
+  
+  def isAllowedToViewTaskType(taskType: TaskType, user: User) = {
     Role.Admin.map(user.hasRole) getOrElse false
   }
 

@@ -9,16 +9,18 @@ object utils {
   type TreeMapping = HashMap[Int, (Int, NodeMapping)]
 
   def minNodeId(trees: List[TreeLike]) = {
-    if (trees.isEmpty)
+    val nodes = trees.flatMap(_.nodes)
+    if (nodes.isEmpty)
       0
     else
-      trees.flatMap(_.nodes).map(_.id).min
+      nodes.map(_.id).min
   }
 
   def maxNodeId(trees: List[TreeLike]) = {
-    if (trees.isEmpty)
+    val nodes = trees.flatMap(_.nodes)
+    if (nodes.isEmpty)
       0
     else
-      trees.flatMap(_.nodes).map(_.id).max
+      nodes.map(_.id).max
   }
 }

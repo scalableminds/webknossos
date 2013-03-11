@@ -45,12 +45,11 @@ object ProjectAdministration extends Controller with Secured {
     for {
       project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
     } yield {
-      project.tasks
       val tracingInfo = 
         TracingInfo(
-            "project__"+projectName,
+            projectName,
             "<unknown>",
-            TracingType.Temporary)
+            TracingType.CompoundProject)
       
       Ok(html.oxalis.trace(tracingInfo)(Html.empty))
     }

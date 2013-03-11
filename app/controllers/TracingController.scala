@@ -13,12 +13,8 @@ import brainflight.tools.geometry.Vector3I._
 import models.user.User
 import models.security._
 import models.tracing.Tracing
-import play.api.libs.iteratee.Concurrent
-import play.api.libs.iteratee.Iteratee
+import play.api.libs.iteratee._
 import play.api.libs.iteratee.Concurrent.Channel
-import play.api.libs.iteratee.Input
-import play.api.libs.iteratee.Done
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.Comet
 import models.binary.DataSet
 import nml.Node
@@ -38,31 +34,11 @@ import controllers.admin.NMLIO
 import brainflight.security.AuthenticatedRequest
 import play.api.templates.Html
 import models.tracing.TracingLike
+import models.task.Project
+import models.tracing.CompoundTracing
 
-object TracingController extends Controller with Secured {
+object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User
-
-  def createDataSetInformation(dataSetName: String) =
-    DataSet.findOneByName(dataSetName) match {
-      case Some(dataSet) =>
-        Json.obj(
-          "dataSet" -> Json.obj(
-            "id" -> dataSet.id,
-            "name" -> dataSet.name,
-            "dataLayers" -> Json.toJson(dataSet.dataLayers.map {
-              case (id, layer) =>
-                id -> Json.obj(
-                  "resolutions" -> layer.supportedResolutions)
-            }),
-            "upperBoundary" -> dataSet.maxCoordinates))
-      case _ =>
-        Json.obj("error" -> Messages("dataSet.notFound"))
-    }
-
-  def createTracingInformation(tracing: TracingLike[_]) = {
-    Json.obj(
-      "tracing" -> TracingLike.TracingLikeWrites.writes(tracing))
-  }
 
   def createExplorational = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     for {
@@ -74,29 +50,17 @@ object TracingController extends Controller with Secured {
     }
   }
 
-  def isUserAllowedToViewTracing(tracing: Tracing, user: User) = {
-    tracing._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
-  }
-
-  def isUserAllowedToUpdateTracing(tracing: Tracing, user: User) = {
-    tracing._user == user._id
-  }
-
-  def info(tracingType: String, tracingId: String) = Authenticated { implicit request =>
-    (for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if (isUserAllowedToViewTracing(tracing, request.user))
-    } yield {
-      UsedTracings.use(request.user, tracing.id)
-      Ok(createTracingInformation(tracing) ++
-        createDataSetInformation(tracing.dataSetName))
-    }) ?~ Messages("notAllowed") ~> 403
+  def info(tracingType: String, identifier: String) = Authenticated { implicit request =>
+    respondWithTracingInformation(tracingType, identifier).map { x =>
+      UsedTracings.use(request.user, identifier)
+      Ok(x)
+    }
   }
 
   def update(tracingId: String, version: Int) = Authenticated(parse.json(maxLength = 2097152)) { implicit request =>
     (for {
       oldTracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if (isUserAllowedToUpdateTracing(oldTracing, request.user))
+      if (isAllowedToUpdateTracing(oldTracing, request.user))
     } yield {
       if (version == oldTracing.version + 1) {
         request.body match {
@@ -120,7 +84,7 @@ object TracingController extends Controller with Secured {
   private def finishTracing(user: User, tracingId: String): Box[(Tracing, String)] = {
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if (isUserAllowedToUpdateTracing(tracing, user) && tracing.state.isInProgress)
+      if (isAllowedToUpdateTracing(tracing, user) && tracing.state.isInProgress)
     } yield {
       UsedTracings.removeAll(tracing)
       NMLIO.writeTracingToFile(tracing)
@@ -184,9 +148,96 @@ object TracingController extends Controller with Secured {
     val user = request.user
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if (isUserAllowedToViewTracing(tracing, user))
+      if (isAllowedToViewTracing(tracing, user))
     } yield {
       Ok(htmlForTracing(tracing))
     }) ?~ Messages("notAllowed") ~> 403
+  }
+}
+
+trait TracingInformationProvider extends play.api.http.Status with TracingRights {
+  import braingames.mvc.BoxImplicits._
+
+  def createDataSetInformation(dataSetName: String) =
+    DataSet.findOneByName(dataSetName) match {
+      case Some(dataSet) =>
+        Json.obj(
+          "dataSet" -> Json.obj(
+            "id" -> dataSet.id,
+            "name" -> dataSet.name,
+            "dataLayers" -> Json.toJson(dataSet.dataLayers.map {
+              case (id, layer) =>
+                id -> Json.obj(
+                  "resolutions" -> layer.supportedResolutions)
+            }),
+            "upperBoundary" -> dataSet.maxCoordinates))
+      case _ =>
+        Json.obj("error" -> Messages("dataSet.notFound"))
+    }
+
+  def createTracingInformation(tracing: TracingLike[_]) = {
+    Json.obj(
+      "tracing" -> TracingLike.TracingLikeWrites.writes(tracing))
+  }
+
+  def respondWithTracingInformation(tracingType: String, identifier: String)(implicit request: AuthenticatedRequest[_]) = Box[JsObject] {
+    tracingType match {
+      case x if x == TracingType.CompoundProject.toString =>
+        projectTracingInformationProvider(identifier)
+      case x if x == TracingType.CompoundTask.toString =>
+        taskTracingInformationProvider(identifier)
+      case _ =>
+        savedTracingInformationProvider(identifier)
+    }
+  }
+
+  def projectTracingInformationProvider(projectName: String)(implicit request: AuthenticatedRequest[_]): Box[JsObject] = {
+    (for {
+      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
+      if (isAllowedToViewProject(project, request.user))
+      tracing <- CompoundTracing.createFromProject(project)
+    } yield {
+      createTracingInformation(tracing) ++
+        createDataSetInformation(tracing.dataSetName)
+    }) ?~ Messages("notAllowed") ~> 403
+  }
+
+  def taskTracingInformationProvider(taskId: String)(implicit request: AuthenticatedRequest[_]): Box[JsObject] = {
+    (for {
+      task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+      if (isAllowedToViewTask(task, request.user))
+      tracing <- CompoundTracing.createFromTask(task)
+    } yield {
+      createTracingInformation(tracing) ++
+        createDataSetInformation(tracing.dataSetName)
+    }) ?~ Messages("notAllowed") ~> 403
+  }
+
+  def savedTracingInformationProvider(tracingId: String)(implicit request: AuthenticatedRequest[_]): Box[JsObject] = {
+    (for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      if (isAllowedToViewTracing(tracing, request.user))
+    } yield {
+      createTracingInformation(tracing) ++
+        createDataSetInformation(tracing.dataSetName)
+    }) ?~ Messages("notAllowed") ~> 403
+  }
+}
+
+trait TracingRights {
+  def isAllowedToViewTracing(tracing: Tracing, user: User) = {
+    tracing._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
+  }
+
+  def isAllowedToViewProject(project: Project, user: User) = {
+    Role.Admin.map(user.hasRole) getOrElse false
+  }
+
+  def isAllowedToViewTask(task: Task, user: User) = {
+    Role.Admin.map(user.hasRole) getOrElse false
+  }
+
+  def isAllowedToUpdateTracing(tracing: Tracing, user: User) = {
+    tracing._user == user._id
   }
 }

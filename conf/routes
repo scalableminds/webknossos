@@ -48,7 +48,7 @@ PUT      /tracing/:tracingId                       controllers.TracingController
 GET      /tracing/:tracingId/finishAndRedirect     controllers.TracingController.finishWithRedirect( tracingId: String )
 GET      /tracing/:tracingId/finish                controllers.TracingController.finish( tracingId: String, explorational: Boolean = false )
 GET      /tracing/:tracingId/finishExperimental    controllers.TracingController.finish( tracingId: String, explorational: Boolean = true )
-GET      /trace/:tracingType/:tracingId            controllers.TracingController.info( tracingType: String, tracingId: String )
+GET      /trace/:tracingType/:identifier            controllers.TracingController.info( tracingType: String, identifier: String )
 
 #Admin pages
 GET      /admin/nml/upload                         controllers.admin.NMLIO.uploadForm
@@ -83,6 +83,7 @@ GET      /admin/tracings/:tracingId/cancel         controllers.admin.TaskAdminis
 GET      /admin/tasks/:id/download                 controllers.admin.NMLIO.taskDownload(id: String)
 GET      /admin/tasks/:id/delete                   controllers.admin.TaskAdministration.delete(id: String)
 GET      /admin/tasks/:id/edit                     controllers.admin.TaskAdministration.edit(id: String)
+GET      /admin/tasks/:id/trace                    controllers.admin.TaskAdministration.trace(id: String)
 POST     /admin/tasks/:id                          controllers.admin.TaskAdministration.editTaskForm(id: String)
 
 GET      /admin/trainingsTasks                     controllers.admin.TrainingsTaskAdministration.list

@@ -40,11 +40,8 @@ trait TracingLike[T <: TracingLike[T]] { self: T =>
     l.foldLeft(t)(f)
   }
 
-  def mergeWith(source: TracingLike[T]): T = {
-    println("------- Starting merge -------")
+  def mergeWith(source: TracingLike[_]): T = {
     val (preparedTrees: List[TreeLike], nodeMapping: FunctionalNodeMapping) = prepareTreesForMerge(source.trees, trees)
-    println("SourceComments: " + source.comments.size)
-    println("TargetComments: " + comments.size)
     applyUpdates(
       updateWithAll(preparedTrees)(_.insertTree(_)),
       updateWithAll(source.branchPoints) {
@@ -58,7 +55,6 @@ trait TracingLike[T <: TracingLike[T]] { self: T =>
   private def prepareTreesForMerge(sourceTrees: List[TreeLike], targetTrees: List[TreeLike]): (List[TreeLike], FunctionalNodeMapping) = {
     val treeMaxId = maxTreeId(targetTrees)
     val nodeIdOffset = calculateNodeOffset(sourceTrees, targetTrees)
-    println(s"Tree max id: $treeMaxId, Node offset: $nodeIdOffset")
 
     def nodeMapping(nodeId: Int) = nodeId + nodeIdOffset
     val result = sourceTrees.map(tree =>
@@ -80,7 +76,6 @@ trait TracingLike[T <: TracingLike[T]] { self: T =>
     else {
       val targetNodeMinId = minNodeId(targetTrees)
       val sourceNodeMaxId = maxNodeId(sourceTrees)
-      println(s"Target min node: $targetNodeMinId. Source max node: $sourceNodeMaxId")
       math.max(sourceNodeMaxId + 1 - targetNodeMinId, 0)
     }
   }

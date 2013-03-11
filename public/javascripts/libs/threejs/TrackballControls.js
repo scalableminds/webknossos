@@ -39,6 +39,7 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 	// internals
 
 	this.target = new THREE.Vector3();
+	this.lastTarget = this.target.clone()
 
 	var lastPosition = new THREE.Vector3();
 
@@ -71,6 +72,12 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 
 
 	// methods
+
+	this.setTarget = function (newTarget) {
+		//this.object.position.subVectors(this.target, newTarget);
+		this.target = newTarget;
+		this.update();
+	}
 
 	this.handleResize = function () {
 
@@ -248,7 +255,7 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 
 	this.update = function () {
 
-		_eye.subVectors( _this.object.position, _this.target );
+		_eye.subVectors( _this.object.position, _this.lastTarget );
 
 		if ( !_this.noRotate ) {
 
@@ -270,6 +277,8 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 
 		_this.object.position.addVectors( _this.target, _eye );
 
+		console.log("Pos", _this.object.position);
+
 		_this.checkDistances();
 
 		_this.object.lookAt( _this.target );
@@ -281,6 +290,10 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 			lastPosition.copy( _this.object.position );
 
 		}
+
+		_this.lastTarget = _this.target.clone()
+
+		_this.updateCallback();
 
 	};
 
@@ -386,19 +399,16 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 
 			_rotateEnd = _this.getMouseProjectionOnBall( event.clientX, event.clientY );
 			_this.update();
-			_this.updateCallback();
 
 		} else if ( _state === STATE.ZOOM && !_this.noZoom ) {
 
 			_zoomEnd = _this.getMouseOnScreen( event.clientX, event.clientY );
 			_this.update();
-			_this.updateCallback();
 
 		} else if ( _state === STATE.PAN && !_this.noPan ) {
 
 			_panEnd = _this.getMouseOnScreen( event.clientX, event.clientY );
 			_this.update();
-			_this.updateCallback();
 
 		}
 
@@ -540,6 +550,5 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 	window.addEventListener( 'keyup', keyup, false );
 
 	this.handleResize();
-	this.update();
 
 };

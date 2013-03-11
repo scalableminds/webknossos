@@ -149,14 +149,26 @@ class PlaneController
     
     @controls.noZoom = true
     @controls.noPan = true
-    #@controls.panSpeed = 1
+    #@controls.noRotate = true
 
-    bounds = @model.scaleInfo.voxelToNm(
-              @model.binary.cube.upperBoundary)
-    center = [bounds[0] / 2,
-              bounds[1] / 2,
-              bounds[2] / 2]
-    @controls.target.set(center...)
+    @controls.target.set(
+      @model.scaleInfo.voxelToNm(
+        @flycam.getPosition()
+      )...
+    )
+
+    @flycam.on({
+      positionChanged : (position) =>
+        @controls.setTarget(
+          new THREE.Vector3(
+            @model.scaleInfo.voxelToNm(
+              position
+            )...
+          )
+        )
+        #@controls.update()
+        #@controls.reset()
+      })
 
 
   initKeyboard : ->

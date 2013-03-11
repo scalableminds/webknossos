@@ -21,7 +21,7 @@
       @helper.form(controllers.admin.routes.TrainingsTaskAdministration.createFromForm, 'class -> "form-horizontal", 'enctype -> "multipart/form-data") {
         
         @helper.select(tracingForm("task"), tasks.map { task =>
-          task.id -> (task.taskType.map(_.summary).getOrElse(""))
+          task.id -> (s"${task.taskType.map(_.summary).getOrElse("")} ${task.id}")
         }, Symbol("help-inline") -> taskHelpLink)
 
         @helper.select(tracingForm("tracing"), tracings.map { exp =>

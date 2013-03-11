@@ -342,6 +342,23 @@ svg a:hover {
     border-top: none;
 }
 
+#toggle-explorative {
+
+    .icon-caret-down {
+        display: none;
+    }
+
+    &:not(.collapsed) {
+        .icon-caret-right {
+            display: none;
+        }
+        .icon-caret-down {
+            display: inline-block;
+        }
+    }
+
+}
+
 #credits {
     margin-top: 100px;
     border-radius: 0;

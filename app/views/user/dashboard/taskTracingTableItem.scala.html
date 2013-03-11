@@ -2,7 +2,7 @@
 
 @tracingLinks = {
   <a href="@controllers.routes.TracingController.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
-  <a href="@controllers.routes.TracingController.finish(tracing.id, false)" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> finish</a>
+  <a href="@controllers.routes.TracingController.finish(tracing.id, false)" class="trace-finish" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> finish</a>
 }
 
 @linkText(failed: Boolean) = {
@@ -25,7 +25,7 @@
 
 }
 
-<tr>
+<tr class="@if(tracing.state.isFinished){finished}else{unfinished}">
   <td> @formatHash(task.id) </td>
   @defining(task.taskType){ taskType =>
     <td> @taskType.map(_.summary).getOrElse("<deleted>") - @tracing.tracingType</td>

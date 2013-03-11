@@ -31,6 +31,7 @@ class DrawArtCells
     shadowBlur : "float"
     shadowColor : "\"rgba(0, 0, 255, 0.3)\""
     mergeSegments : "true, false (default)"
+    minSize : "Number"
 
 
   constructor : () ->
@@ -75,6 +76,11 @@ class DrawArtCells
       endValues.push possibleEnd.id
 
     activeSegments = _.sortBy(activeSegments, (s) -> -s.size)
+    threeEndValues = []
+    sortedEnds = _.sortBy(mission.possibleEnds, (s) -> -s.probability)
+    for f in [0...Math.min(3, sortedEnds.length)]
+      threeEndValues.push sortedEnds[f].id 
+
     for segment in activeSegments
 
       startPath = segment.startPath
@@ -82,7 +88,8 @@ class DrawArtCells
       randomColor = segment.randomColor
       color = "rgba(#{randomColor.r}, #{randomColor.g}, #{randomColor.b}, 1)"
       if hitMode
-        if _.contains(endValues, segment.value) is true
+       
+        if _.contains(threeEndValues, segment.value) is true
           context.strokeStyle = "rgba(255, 0, 0, 1)"
           context.fillStyle = "rgba(255, 0, 0, 1)" 
         else

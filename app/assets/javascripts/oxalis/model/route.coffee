@@ -70,8 +70,15 @@ class Route
       for edge in treeData.edges
         sourceNode = @findNodeInList(tree.nodes, edge.source)
         targetNode = @findNodeInList(tree.nodes, edge.target)
-        sourceNode.appendNext(targetNode)
-        targetNode.appendNext(sourceNode)
+        if sourceNode and targetNode
+          sourceNode.appendNext(targetNode)
+          targetNode.appendNext(sourceNode)
+        else
+          $.assertNotEquals(sourceNode, null, "source node undefined",
+            {"edge" : edge})
+          $.assertNotEquals(targetNode, null, "target node undefined",
+            {"edge" : edge})
+
       # Set active Node
       activeNodeT = @findNodeInList(tree.nodes, @data.activeNode)
       if activeNodeT
@@ -132,7 +139,7 @@ class Route
     $(window).on(
       "beforeunload"
       =>
-        if !@stateLogger.savedCurrentState
+        if !@stateLogger.stateSaved()
           @stateLogger.pushImpl(true)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else

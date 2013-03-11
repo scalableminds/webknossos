@@ -109,7 +109,10 @@ object TracingController extends Controller with Secured with TracingInformation
             taskId <- tracing._task ?~ Messages("tracing.task.notFound")
             task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
           } yield {
-            JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), message)
+            JsonOk(
+                html.user.dashboard.taskTracingTableItem(task, tracing), 
+                Json.obj("hasAnOpenTask" -> Tracing.hasAnOpenTracings(request.user, TracingType.Task)),
+                message)
           }) asResult
     }
   }
@@ -197,6 +200,7 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
       if (isAllowedToViewProject(project, request.user))
       tracing <- CompoundTracing.createFromProject(project)
     } yield {
+      Logger.debug("Nodes: " + tracing.trees.map(_.nodes.size).sum)
       createTracingInformation(tracing) ++
         createDataSetInformation(tracing.dataSetName)
     }) ?~ Messages("notAllowed") ~> 403

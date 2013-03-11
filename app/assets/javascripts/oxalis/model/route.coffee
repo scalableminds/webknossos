@@ -70,8 +70,15 @@ class Route
       for edge in treeData.edges
         sourceNode = @findNodeInList(tree.nodes, edge.source)
         targetNode = @findNodeInList(tree.nodes, edge.target)
-        sourceNode.appendNext(targetNode)
-        targetNode.appendNext(sourceNode)
+        if sourceNode and targetNode
+          sourceNode.appendNext(targetNode)
+          targetNode.appendNext(sourceNode)
+        else
+          $.assertNotEquals(sourceNode, null, "source node undefined",
+            {"nodes" : tree.nodes, "sourceNode" : edge.source})
+          $.assertNotEquals(targetNode, null, "target node undefined",
+            {"nodes" : tree.nodes, "sourceNode" : edge.target})
+
       # Set active Node
       activeNodeT = @findNodeInList(tree.nodes, @data.activeNode)
       if activeNodeT

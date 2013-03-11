@@ -58,7 +58,7 @@ class Route
     # get tree to build
     for treeData in @data.trees
       # Create new tree
-      tree = new TraceTree(treeData.id, new THREE.Color().setRGB(treeData.color[0..2]...).getHex())
+      tree = new TraceTree(treeData.id, @getNewTreeColor(treeData.id))
       # Initialize nodes
       i = 0
       for node in treeData.nodes
@@ -404,23 +404,20 @@ class Route
     @trigger("newActiveTree")
 
 
-  getNewTreeColor : ->
+  getNewTreeColor : (treeId) ->
 
     # this generates the most distinct colors possible, using the golden ratio
-    if @trees.length == 0
-      @currentHue = null
+    if treeId == 1
       return 0xFF0000
     else
-      unless @currentHue
-        @currentHue = new THREE.Color().setHex(_.last(@trees).color).getHSV().h
-      @currentHue += GOLDEN_RATIO
-      @currentHue %= 1
-      new THREE.Color().setHSV(@currentHue, 1, 1).getHex()
+      currentHue = treeId * GOLDEN_RATIO
+      currentHue %= 1
+      new THREE.Color().setHSV(currentHue, 1, 1).getHex()
 
 
   createNewTree : ->
 
-    tree = new TraceTree(@treeIdCount++, @getNewTreeColor())
+    tree = new TraceTree(@treeIdCount++, @getNewTreeColor(@treeIdCount-1))
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null

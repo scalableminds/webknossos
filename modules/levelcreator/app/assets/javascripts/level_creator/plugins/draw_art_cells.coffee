@@ -32,12 +32,13 @@ class DrawArtCells
     shadowColor : "\"rgba(0, 0, 255, 0.3)\""
     mergeSegments : "true, false (default)"
     minSize : "Number"
+    maxRewardedEndSegments : "Number"
 
 
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, minSize, startShape, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor, mergeSegments}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, maxRewardedEndSegments, minSize, startShape, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor, mergeSegments}) ->
 
     width = dimensions[0]
     height = dimensions[1]
@@ -53,6 +54,9 @@ class DrawArtCells
 
     if customTime?
       relativeTime = customTime
+
+    unless maxRewardedEndSegments?
+      maxRewardedEndSegments = 3
 
     shadowOffsetX = 0 unless shadowOffsetX
     shadowOffsetY = 0 unless shadowOffsetY
@@ -78,7 +82,7 @@ class DrawArtCells
     activeSegments = _.sortBy(activeSegments, (s) -> -s.size)
     threeEndValues = []
     sortedEnds = _.sortBy(mission.possibleEnds, (s) -> -s.probability)
-    for f in [0...Math.min(3, sortedEnds.length)]
+    for f in [0...Math.min(maxRewardedEndSegments, sortedEnds.length)]
       threeEndValues.push sortedEnds[f].id 
 
     for segment in activeSegments

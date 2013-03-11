@@ -2,6 +2,7 @@
 ../model : Model
 ../view : View
 ../model/dimensions : Dimensions
+libs/event_mixin : EventMixin
 ###
 
 
@@ -23,6 +24,8 @@ class CameraController
   model : null
 
   constructor : (@cameras, @lights, @flycam, @model) ->
+
+    _.extend(@, new EventMixin())
 
     @updateCamViewport()
     for cam in @cameras
@@ -55,7 +58,8 @@ class CameraController
     camera = @cameras[VIEW_3D]
     b = @model.scaleInfo.voxelToNm(@model.binary.cube.upperBoundary)
     time = 800
-    @tween = new TWEEN.Tween({  middle: new THREE.Vector3(b[0]/2, b[1]/2, b[2]/2), upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera, flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
+    notify = => @trigger("cameraPositionChanged")
+    @tween = new TWEEN.Tween({ notify: notify, upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera, flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
     switch id
       when VIEW_3D
         scale = Math.sqrt(b[0]*b[0]+b[1]*b[1])/1.8
@@ -94,17 +98,17 @@ class CameraController
   changePrevSV : => @changePrev(VIEW_3D)
 
   updateCameraPrev : ->
-    @camera.position = new THREE.Vector3(@x, @y, @z)
+    @camera.position.set(@x, @y, @z)
     @camera.left = @l
     @camera.right = @r
     @camera.top = @t
     @camera.bottom = @b
     @camera.up = new THREE.Vector3(@upX, @upY, @upZ)
-    @camera.lookAt(@middle)
 
     @flycam.setRayThreshold(@camera.right, @camera.left)
 
     @camera.updateProjectionMatrix()
+    @notify()
     @flycam.hasChanged = true
     
   prevViewportSize : ->

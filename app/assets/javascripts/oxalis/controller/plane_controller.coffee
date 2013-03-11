@@ -169,6 +169,10 @@ class PlaneController
         #@controls.update()
         #@controls.reset()
       })
+    @cameraController.on({
+      cameraPositionChanged : =>
+        @controls.update()
+      })
 
 
   initKeyboard : ->

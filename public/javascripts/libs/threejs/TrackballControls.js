@@ -143,7 +143,7 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 	this.rotateCamera = function () {
 
 		var angle = Math.acos( _rotateStart.dot( _rotateEnd ) / _rotateStart.length() / _rotateEnd.length() );
-
+		
 		if ( angle ) {
 
 			var axis = ( new THREE.Vector3() ).crossVectors( _rotateStart, _rotateEnd ).normalize(),
@@ -276,8 +276,6 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 		}
 
 		_this.object.position.addVectors( _this.target, _eye );
-
-		console.log("Pos", _this.object.position);
 
 		_this.checkDistances();
 

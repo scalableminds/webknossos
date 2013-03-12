@@ -59,37 +59,36 @@ class CameraController
     b = @model.scaleInfo.voxelToNm(@model.binary.cube.upperBoundary)
     pos = @model.scaleInfo.voxelToNm(@model.flycam.getPosition())
     time = 800
+    to = {}
     notify = => @trigger("cameraPositionChanged")
     @tween = new TWEEN.Tween({ notify: notify, upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera, flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
-    switch id
-      when VIEW_3D
-        diagonal = Math.sqrt(b[0]*b[0]+b[1]*b[1])
-        scale = diagonal/1.8
-        # Calulate the x coordinate so that the vector from the camera to the cube's middle point is
-        # perpendicular to the vector going from (0, b[1], 0) to (b[0], 0, 0).
-        @tween.to({  x: pos[0] + b[1] / diagonal, y: pos[1] + b[0] / diagonal, z: pos[2] - 1/2, upX: 0, upY: 0, upZ: -1, l: -scale, r: scale, t: scale, b: -scale }, time)
-        .onUpdate(@updateCameraPrev)
-        .start()
-        #rotation: (-36.25, 30.6, 20.47) -> (-36.25, 30.6, 20.47)
-      when PLANE_XY
-        scale = (Math.max b[0], b[1] * 1.12)/1.75
-        @tween.to({  x: pos[0], y: pos[1], z: pos[2] - 1, upX: 0, upY: -1, upZ: 0, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
-        .onUpdate(@updateCameraPrev)
-        .start()
-        #rotation: (-90, 0, 90) -> (-90, 0, 0)
-      when PLANE_YZ
-        scale = (Math.max b[1] * 1.12, b[2])/1.75
-        @tween.to({  x: pos[0] + 1, y: pos[1], z: pos[2], upX: 0, upY: -1, upZ: 0, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
-        .onUpdate(@updateCameraPrev)
-        .start()
-        #rotation: (0, 90, 0) -> (-90, 90, 0)
-      when PLANE_XZ
-        scale = (Math.max b[0], b[2] * 1.12)/1.75
-        @tween.to({  x: pos[0], y: pos[1] + 1, z: pos[2], upX: 0, upY: 0, upZ: -1, l: -scale, r: scale, t: scale+scale*0.12, b: -scale+scale*0.12}, time)
-        .onUpdate(@updateCameraPrev)
-        .start()
-        #rotation: (0, 0, 0) -> (0, 0, 0)
-    @flycam.hasChanged = true
+    if id == VIEW_3D
+      diagonal = Math.sqrt(b[0]*b[0]+b[1]*b[1])
+      scale = diagonal/1.8
+      # Calulate the x coordinate so that the vector from the camera to the cube's middle point is
+      # perpendicular to the vector going from (0, b[1], 0) to (b[0], 0, 0).
+      to = {  x: pos[0] + b[1] / diagonal, y: pos[1] + b[0] / diagonal, z: pos[2] - 1/2, upX: 0, upY: 0, upZ: -1, l: -scale, r: scale, t: scale, b: -scale }
+    else
+      ind = Dimensions.getIndices(id)
+      width = Math.max(b[ind[0]], b[ind[1]] * 1.12) * 1.1
+      paddingTop = width * 0.12
+      padding = width / 1.1 * 0.1 / 2
+      offsetX = pos[ind[0]] + padding + (width - b[ind[0]]) / 2
+      offsetY = pos[ind[1]] + paddingTop + padding
+
+      positionOffset = [[0, 0, -1], [1, 0, 0], [0, 1, 0]]
+      upVector       = [[0, -1, 0], [0, -1, 0], [0, 0, -1]]
+
+      to.x = pos[0] + positionOffset[id][0]
+      to.y = pos[1] + positionOffset[id][1]
+      to.z = pos[2] + positionOffset[id][2]
+      to.upX = upVector[id][0]; to.upY = upVector[id][1]; to.upZ = upVector[id][2]
+      to.l = -offsetX; to.t = offsetY
+      to.r = to.l + width; to.b = to.t - width
+      
+    @tween.to(to, time)
+    .onUpdate(@updateCameraPrev)
+    .start()
 
   degToRad : (deg) -> deg/180*Math.PI
 

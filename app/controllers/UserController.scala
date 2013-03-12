@@ -40,7 +40,8 @@ object UserController extends Controller with Secured {
       explorationalTracings,
       userTasks,
       loggedTime,
-      dataSets))
+      dataSets,
+      userTasks.find(!_._2.state.isFinished).isDefined))
   }
 
   def saveSettings = Authenticated(parser = parse.json(maxLength = 2048)) {

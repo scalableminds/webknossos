@@ -1,6 +1,15 @@
 @(tracing: models.tracing.Tracing)
   <tr>
     <td> @formatHash(tracing.id) </td>
+    <td class="span3">
+      <span class="hover-hide" id="explorative-tracing-name"> @tracing.name </span>
+      <form action="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" method="POST" data-ajax="submit,replace-row" class="hover-show">
+        <div class="input-append">
+          <input name="name" id="explorative-name-input" maxlength="20" class="span2" type="text" value="@tracing.name">
+            <a href="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" data-ajax="submit,replace-row" id="explorative-name-submit" class="btn"><i class="icon-ok"></i></a>
+        </div>
+      </form>
+    </td>
     <td> @tracing.dataSetName </td>
     @defining(models.tracing.Tracing.statisticsForTracing(tracing)){ stats => 
       <td> 

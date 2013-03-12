@@ -14,11 +14,11 @@ $ ->
     e.preventDefault()
 
 
-  $(document).on "click", "a[data-ajax]", (event) ->
+  dataAjaxHandler = (event) ->
     
     event.preventDefault()
     $this = $(this)
-    $form = $this.parents("form").first()
+    $form = if $this.is("form") then $this else $this.parents("form").first()
 
     options = {}
     for action in $this.data("ajax").split(",")
@@ -26,17 +26,21 @@ $ ->
       options[key] = value ? true
 
     ajaxOptions = 
-      url : this.href
+      url : if $this.is("form") then this.action else this.href
       dataType : "json"
 
     if options["confirm"]
-      return unless confirm("Are you sure?")
+      if options["confirm"] != true
+        message = options["confirm"]
+      else
+        message = "Are you sure?"
+      return unless confirm(message)
 
     if options["method"]
       ajaxOptions["type"] = options.method
 
     if options["submit"]
-      $validationGroup = $this.parents("form, [data-validation-group]").first()
+      $validationGroup = if $this.is("form") then $this else $this.parents("form, [data-validation-group]").first()
       isValid = true
       $validationGroup.find(":input")
         .each( ->
@@ -53,14 +57,16 @@ $ ->
 
     $.ajax(ajaxOptions).then(
 
-      ({ html, messages }) ->
+      (responseData) ->
+
+        { html, messages } = responseData
 
         if messages?
           Toast.message(messages)
         else
           Toast.success("Success :-)")
 
-        $this.trigger("ajax-success", html, messages)
+        $this.trigger("ajax-success", responseData)
 
         if options["replace-row"] 
           $this.parents("tr").first().replaceWith(html)
@@ -91,6 +97,8 @@ $ ->
             500
           )
 
+        $this.trigger("ajax-after", responseData)
+
         return
 
       (jqXHR) ->
@@ -110,6 +118,9 @@ $ ->
       -> 
         $this.removeClass("busy")
     )
+
+  $(document).on "click", "a[data-ajax]", dataAjaxHandler
+  $(document).on "submit", "form[data-ajax]", dataAjaxHandler
   
 
   $(document).on "change", "table input.select-all-rows", ->
@@ -187,5 +198,3 @@ $ ->
       $table.find(".details-row").toggleClass("hide", !newState)
       $table.find(".details-toggle").toggleClass("open", newState)
       $toggle.toggleClass("open", newState)
-
-

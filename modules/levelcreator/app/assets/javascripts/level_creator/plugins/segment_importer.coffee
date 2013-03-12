@@ -12,6 +12,7 @@ class SegmentImporter
       segmentation: 'Uint16Array'
       dimensions : '[x, y, z]'
 
+  ###
   COLORS : [ 
     "#bc51ff"
     "#8251ff"
@@ -28,6 +29,19 @@ class SegmentImporter
     "#52538c"
     "#4064a6" 
   ]
+  ###
+  COLORS : [ 
+    "#00a486"
+    "#004753"
+    "#0500a8"
+    "#0009e3"
+    "#56a6ff"
+    "#404bff"
+    "#7711ff"
+    "#0c8fde"
+    "#00fbe7"
+  ]
+
 
   Z_FACTOR : 2
 
@@ -199,7 +213,7 @@ class SegmentImporter
 
 
   setRandomColor3 : (segments) ->
-
+    
     for segment in segments
       i = segment.value % @COLORS.length
       c = @COLORS[i]

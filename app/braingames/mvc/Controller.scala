@@ -17,6 +17,7 @@ import play.api.http._
 import scala.concurrent.Future
 import play.api.http.Status._
 import scala.concurrent.ExecutionContext
+import play.api.Logger
 
 class ResultBox[T <: Result](b: Box[T]) {
   import Results.Status
@@ -61,23 +62,34 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
       header = ResponseHeader(status, writeable.contentType.map(ct => Map(HeaderNames.CONTENT_TYPE -> ct)).getOrElse(Map.empty)),
       Enumerator(content))
 
-  def apply(html: Html, messages: Seq[(String, String)]) =
-    createResult(jsonHTMLResult(html, messages))
-
-  def apply(html: Html, message: String) = {
+  def messageTypeFromStatus =
     if (isSuccess)
-      createResult(jsonHTMLResult(html, Seq(jsonSuccess -> message)))
+      jsonSuccess
     else
-      createResult(jsonHTMLResult(html, Seq(jsonError -> message)))
-  }
+      jsonError
 
-  def apply(json: JsObject, message: String) =
-    createResult(json ++ jsonMessages(Seq(jsonSuccess -> message)))
+  def apply(json: JsObject, messages: Seq[(String, String)]) =
+    createResult(json ++ jsonMessages(messages))
+
+  def apply(html: Html, json: JsObject, messages: Seq[(String, String)]): SimpleResult[JsObject] =
+    apply(json ++ jsonHTMLResult(html), messages)
+
+  def apply(html: Html, json: JsObject, message: String): SimpleResult[JsObject] =
+    apply(json ++ jsonHTMLResult(html), Seq(messageTypeFromStatus -> message))
+
+  def apply(json: JsObject, message: String): SimpleResult[JsObject] =
+    apply(json, Seq(messageTypeFromStatus -> message))
+
+  def apply(html: Html, messages: Seq[(String, String)]): SimpleResult[JsObject] =
+    apply(html, Json.obj(), messages)
+
+  def apply(html: Html, message: String): SimpleResult[JsObject] =
+    apply(html, Seq(messageTypeFromStatus -> message))
 
   def apply(message: String): SimpleResult[JsObject] =
     apply(Html.empty, message)
 
-  def jsonHTMLResult(html: Html, messages: Seq[(String, String)]) = {
+  def jsonHTMLResult(html: Html) = {
     val htmlJson = html.body match {
       case "" =>
         Json.obj()
@@ -85,7 +97,7 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
         Json.obj("html" -> body)
     }
 
-    htmlJson ++ jsonMessages(messages)
+    htmlJson
   }
 
   def jsonMessages(messages: Seq[(String, String)]) =

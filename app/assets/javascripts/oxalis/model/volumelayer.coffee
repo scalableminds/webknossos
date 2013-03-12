@@ -139,7 +139,20 @@ class VolumeLayer
 
   getVoxelArray : ->
 
-    outline = @getOutlineVoxels()
+    minCoord2d = @get2DCoordinate(@minCoord)
+    maxCoord2d = @get2DCoordinate(@maxCoord)
+    width      = maxCoord2d[0] - minCoord2d[0] + 1
+    height     = maxCoord2d[1] - minCoord2d[1] + 1
+
+    start = new Date().getTime()
+    
+    map = new Array(width)
+    for x in [0...width]
+      map[x] = new Array(height)
+      for y in [0...height]
+        map[x][y] = false
+
+    @getOutlineVoxels(map)
 
     res = []
     # Check every voxel in this cuboid
@@ -149,17 +162,25 @@ class VolumeLayer
     #    for z in [@minCoord[2]..@maxCoord[2]]
     #      if @containsVoxel([x, y, z])
     #        res.push([x, y, z])
-    for p in outline
-      res.push(@get3DCoordinate(p))
+    #for p in outline
+    #  res.push(@get3DCoordinate(p))
+    for x in [0...width]
+      for y in [0...height]
+        if map[x][y]
+          res.push(@get3DCoordinate([x + minCoord2d[0], y + minCoord2d[1]]))
 
-    console.log(res)
+    #console.log(res)
     return res
 
-  getOutlineVoxels : ->
+  getOutlineVoxels : (map) ->
+
+    start = new Date().getTime()
 
     # Get first voxel within layer
     minCoord2d = @get2DCoordinate(@minCoord)
     maxCoord2d = @get2DCoordinate(@maxCoord)
+    offsetX    = minCoord2d[0]
+    offsetY    = minCoord2d[1]
     p = [ Math.round((minCoord2d[0] + maxCoord2d[0]) / 2),
           minCoord2d[1] ]
     while not @contains2dCoordinate(p)
@@ -185,26 +206,23 @@ class VolumeLayer
     applyDir = (point) ->
       return [point[0] + direction.xDiff, point[1] + direction.yDiff]
 
-    # Find outline
-    res = []
-    res.hasPoint = (p1) ->
-      for p2 in @
-        if p2[0] == p1[0] and p2[1] == p1[1]
-          return true
+    console.log "Before loop", new Date().getTime() - start
+    start = new Date().getTime()
 
     inCount = 0
     while inCount < 10
-      if res.hasPoint(p)
+      if map[p[0] - offsetX][p[1] - offsetY]
         inCount++
       else
         inCount = 0
-        res.push(p.slice())
+        map[p[0] - offsetX][p[1] - offsetY] = true
       prevDir()
       while not @contains2dCoordinate( applyDir(p) )
         nextDir()
       p = applyDir(p)
 
-    return res
+    console.log "After Loop", new Date().getTime() - start
+    start = new Date().getTime()
 
 
   get2DCoordinate : (coord3d) ->

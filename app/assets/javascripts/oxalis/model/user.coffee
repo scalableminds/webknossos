@@ -31,8 +31,8 @@ class User
   displayPreviewXZ : null
   newNodeNewTree : null
   nodesAsSpheres : null
-  mouseInversionX : null
-  mouseInversionY : null
+  inverseX : null
+  inverseY : null
   mouseActive : null
   keyboardActive : null
   gamepadActive : null
@@ -50,6 +50,7 @@ class User
 
     @[name] = value
     @trigger(name + "Changed", value)
+    @push()
 
 
   push : ->
@@ -89,8 +90,8 @@ class User
         displayPreviewXZ : @displayPreviewXZ,
         newNodeNewTree : @newNodeNewTree,
         nodesAsSpheres : @nodesAsSpheres,
-        mouseInversionX : @mouseInversionX,
-        mouseInversionY : @mouseInversionY,
+        inverseX : @inverseX,
+        inverseY : @inverseY,
         mouseActive : @mouseActive,
         keyboardActive : @keyboardActive,
         gamepadActive : @gamepadActive,

@@ -204,7 +204,7 @@ class StateLogger
             window.location.reload()
       @push()
       if (notifyOnFailure)
-        @trigger("PushFailed");
+        @trigger("pushFailed");
       @pushDeferred.reject()
       @pushDeferred = null
     .done (response) =>

@@ -16,14 +16,17 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import braingames.mvc.Controller
 import models.tracing.TracingType
+import play.api.Play.current
 
 object TaskController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
+  
+  val MAX_OPEN_TASKS = current.configuration.getInt("tasks.maxOpenPerUser") getOrElse 5
 
   def request = Authenticated { implicit request =>
     Async {
       val user = request.user
-      if (!Tracing.hasOpenTracing(request.user, TracingType.Task)) {
+      if (Tracing.countOpenTracings(request.user, TracingType.Task) < MAX_OPEN_TASKS) {
         Task.nextTaskForUser(request.user).map {
           case Some(task) =>
             for {
@@ -39,8 +42,9 @@ object TaskController extends Controller with Secured {
               JsonOk(html.user.dashboard.taskTracingTableItem(task, tracing), Messages("task.training.assigned"))
             }
         }
-      } else
-        Promise.pure(JsonBadRequest(Messages("task.alreadyHasOpenOne")))
+      } else{
+        Promise.pure(JsonBadRequest(Messages("task.tooManyOpenOnes")))
+      }
     }
   }
 }

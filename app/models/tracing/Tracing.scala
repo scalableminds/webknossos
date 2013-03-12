@@ -39,6 +39,7 @@ case class Tracing(
     tracingType: TracingType.Value = TracingType.Explorational,
     tracingSettings: TracingSettings = TracingSettings.default,
     version: Int = 0,
+    _name: Option[String] = None,
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Tracing] {
 
   def dao = Tracing
@@ -46,6 +47,8 @@ case class Tracing(
    * Easy access methods
    */
   def user = User.findOneById(_user)
+  
+  val name = _name getOrElse ""
 
   val date = new Date(timestamp)
 
@@ -281,8 +284,11 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   /*def findOpenTrainingFor(user: User) =
     findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "tracingType" -> "Training"))
 */
-  def hasOpenTracing(user: User, tracingType: TracingType.Value) =
-    !findOpenTracingsFor(user, tracingType).isEmpty
+  def countOpenTracings(user: User, tracingType: TracingType.Value) =
+    findOpenTracingsFor(user, tracingType).size
+
+  def hasAnOpenTracings(user: User, tracingType: TracingType.Value) =
+    countOpenTracings(user, tracingType) > 0
 
   def findFor(u: User) =
     find(MongoDBObject(

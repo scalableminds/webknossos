@@ -134,6 +134,23 @@ body:-webkit-full-screen {
     }
 }
 
+.table-hover {
+
+    tr {
+        .hover-show {
+            display: none;
+        }
+    }
+    tr:hover {
+        .hover-show {
+            display: inherit;
+        }
+        .hover-hide {
+            display: none;
+        }
+    }
+}
+
 .table {
     a [class^="icon-"], 
     a [class*=" icon-"] {
@@ -340,6 +357,33 @@ svg a:hover {
     padding: 10px;
     border: 1px solid #ddd;
     border-top: none;
+}
+
+#explorative-name-input {
+    padding-top: 0px;
+    padding-bottom: 0px;
+    margin-top: -1px;
+}
+#explorative-name-submit {
+    padding-top: 0px;
+    padding-bottom: 0px;
+    margin-top: -1px;
+}
+
+#toggle-explorative {
+
+    .icon-caret-down {
+        display: none;
+    }
+
+    &:not(.collapsed) {
+        .icon-caret-right {
+            display: none;
+        }
+        .icon-caret-down {
+            display: inline-block;
+        }
+    }
 }
 
 #credits {

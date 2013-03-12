@@ -35,7 +35,7 @@ class Route
 
 
 
-  constructor : (@data, @scaleInfo, @flycam, @flycam3d) ->
+  constructor : (@data, @scaleInfo, @flycam, @flycam3d, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -52,6 +52,10 @@ class Route
     lostTrees = []
 
     @doubleBranchPop = false
+
+    # change listener
+    @user.on "particleSizeChanged", (particleSize) =>
+      @setParticleSize(particleSize, false)
 
     ############ Load Tree from @data ##############
 
@@ -73,8 +77,15 @@ class Route
       for edge in treeData.edges
         sourceNode = @findNodeInList(tree.nodes, edge.source)
         targetNode = @findNodeInList(tree.nodes, edge.target)
-        sourceNode.appendNext(targetNode)
-        targetNode.appendNext(sourceNode)
+        if sourceNode and targetNode
+          sourceNode.appendNext(targetNode)
+          targetNode.appendNext(sourceNode)
+        else
+          $.assertNotEquals(sourceNode, null, "source node undefined",
+            {"edge" : edge})
+          $.assertNotEquals(targetNode, null, "target node undefined",
+            {"edge" : edge})
+
       # Set active Node
       activeNodeT = @findNodeInList(tree.nodes, @data.activeNode)
       if activeNodeT
@@ -135,17 +146,12 @@ class Route
     $(window).on(
       "beforeunload"
       =>
-        if !@stateLogger.savedCurrentState
+        if !@stateLogger.stateSaved()
           @stateLogger.pushImpl(true)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return
     )
-
-  # INVARIANTS:
-  # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null
-  # activeNode: either null only if activeTree is empty (sentinel) or valid node
-
 
   pushNow : ->
 
@@ -315,12 +321,12 @@ class Route
     @trigger("newActiveNodeRadius", radius)
 
 
-  setParticleSize : (size) ->
+  setParticleSize : (size, propagate = true) ->
 
     @particleSize = Math.min(MAX_PARTICLE_SIZE, size)
     @particleSize = Math.max(MIN_PARTICLE_SIZE, @particleSize)
 
-    @trigger("newParticleSize", @particleSize)
+    @trigger("newParticleSize", @particleSize, propagate)
 
 
   setActiveNode : (nodeID, mergeTree = false) ->
@@ -554,7 +560,7 @@ class Route
         
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
-        @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
+        @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
         @deleteTree(false, lastTree.treeId, false)
 

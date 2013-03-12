@@ -90,8 +90,8 @@ class Skeleton
       newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)
-      mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) => 
-        @mergeTree(lastTreeID, lastNodePosition, activeNodePosition)
+      mergeTree : (lastTreeID, lastNode, activeNode) => 
+        @mergeTree(lastTreeID, lastNode, activeNode)
         @updateBranches()
       newNode : => @setWaypoint()
       setBranch : (isBranchPoint, nodeID) => 
@@ -118,7 +118,7 @@ class Skeleton
     routeGeometry.dynamic = true
     routeGeometryNodes.dynamic = true
 
-    @edgesBuffer.push(new ResizableBuffer(3))
+    @edgesBuffer.push(new ResizableBuffer(6))
     @nodesBuffer.push(new ResizableBuffer(3))
 
     @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: @darkenHex(treeColor), linewidth: @model.route.getParticleSize() / 4}), THREE.LinePieces))
@@ -183,12 +183,11 @@ class Skeleton
         # (so we don't add the same edge twice)
         for neighbor in node.neighbors
           if neighbor.id < node.id
-            @edgesBuffer[index].push(neighbor.pos)
-            @edgesBuffer[index].push(node.pos)
+            @edgesBuffer[index].push(neighbor.pos.concat(node.pos))
 
 
       @routes[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-      @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength()
+      @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
       @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
       @nodes[index].geometry.__webglParticleCount =  @nodesBuffer[index].getLength()
 
@@ -277,9 +276,9 @@ class Skeleton
     unless @lastNodePosition
       @lastNodePosition = position
 
+    # ASSUMPTION: last node has smaller ID
     if @nodesBuffer[index].getLength() > 0
-      @edgesBuffer[index].push(@lastNodePosition)
-      @edgesBuffer[index].push(position)
+      @edgesBuffer[index].push(@lastNodePosition.concat(position))
 
     @nodesBuffer[index].push(position)
     @nodes[index].geometry.nodeIDs.push([id])
@@ -287,7 +286,7 @@ class Skeleton
     @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
     @nodes[index].geometry.__webglParticleCount = @nodesBuffer[index].getLength()
     @routes[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-    @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength()
+    @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
 
     # @pushNewNode(radius, position, id, color, type)
 
@@ -306,10 +305,8 @@ class Skeleton
     @flycam.hasChanged = true
 
   deleteNode : (node) ->
-
-    if node.neighbors.length != 1
-      console.error("Delete node that does not have exactly 1 neighbor?!")
-      return
+    $.assert(node.neighbors.length == 1,
+      "Node needs to have exactly 1 neighbor.", 0)
 
     index = @getIndexFromTreeId(@route.getTree().treeId)
 
@@ -332,7 +329,7 @@ class Skeleton
       edgeArray = node.pos.concat(node.neighbors[0].pos)
     else
       edgeArray = node.neighbors[0].pos.concat(node.pos)
-    for i in [0...@edgesBuffer[index].getLength() / 2]
+    for i in [0...@edgesBuffer[index].getLength()]
       found = true
       for j in [0..5]
         found &= Math.abs(@routes[index].geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.01
@@ -340,16 +337,17 @@ class Skeleton
         edgesIndex = i
         break
 
+    $.assert(found,
+      "No edge found.", found)
+
     # swap edges by popping the last one (which consists of two nodes) and inserting it into the position of the deleted one
-    lastEdgeSecondNode = @edgesBuffer[index].pop()
-    lastEdgeFirstNode = @edgesBuffer[index].pop()
-    lastEdge = lastEdgeFirstNode.concat(lastEdgeSecondNode)
+    lastEdge = @edgesBuffer[index].pop()
     for i in [0..5]
       @edgesBuffer[index].getAllElements()[edgesIndex * 6 + i] = lastEdge[i]
 
     
     @routes[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-    @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength()
+    @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
     @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
     @nodes[index].geometry.__webglParticleCount =  @nodesBuffer[index].getLength()
 
@@ -360,7 +358,7 @@ class Skeleton
     @setActiveNode()
     @flycam.hasChanged = true
 
-  mergeTree : (lastTreeID, lastNodePosition, activeNodePosition) ->
+  mergeTree : (lastTreeID, lastNode, activeNode) ->
     lastIndex = @getIndexFromTreeId(lastTreeID)
     index = @getIndexFromTreeId(@route.getTree().treeId)
 
@@ -371,11 +369,14 @@ class Skeleton
     @nodesBuffer[index].pushSubarray(@nodesBuffer[lastIndex].getAllElements())
 
     # merge edges
-    @edgesBuffer[index].pushMany([lastNodePosition, activeNodePosition])
+    if lastNode.id < activeNode.id
+      @edgesBuffer[index].push( lastNode.pos.concat(activeNode.pos) )
+    else
+      @edgesBuffer[index].push( activeNode.pos.concat(lastNode.pos) )
     @edgesBuffer[index].pushSubarray(@edgesBuffer[lastIndex].getAllElements())
 
     @routes[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-    @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength()
+    @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
     @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
     @nodes[index].geometry.__webglParticleCount =  @nodesBuffer[index].getLength()
 

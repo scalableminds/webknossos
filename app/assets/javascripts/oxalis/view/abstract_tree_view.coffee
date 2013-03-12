@@ -29,6 +29,7 @@ class AbstractTreeView
     console.log(@ctx)
     @width = width
     @height = height
+    @nodeList = []
 
 
   drawTree : (tree, @activeNodeId) ->

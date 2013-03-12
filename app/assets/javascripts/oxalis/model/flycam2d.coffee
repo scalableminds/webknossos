@@ -20,7 +20,7 @@ class Flycam2d
   viewportWidth : 0
 
 
-  constructor : (@viewportWidth, @scaleInfo, @zoomStepCount) ->
+  constructor : (@viewportWidth, @scaleInfo, @zoomStepCount, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -43,6 +43,10 @@ class Flycam2d
     @rayThreshold = [10, 10, 10, 100]
     @spaceDirection = [1, 1, 1]
     @quality = 0        # offset of integer zoom step to the best-quality zoom level
+
+    @user.on({
+      qualitiyChanged : (quality) => @setQuality(quality)
+      })
 
   zoomIn : (planeID) ->
     @setZoomStep(planeID, @zoomSteps[planeID] - ZOOM_DIFF)
@@ -111,12 +115,8 @@ class Flycam2d
 
   setDirection : (direction) ->
     @direction = direction
-    @updateSpaceDirection()
-
-  updateSpaceDirection : ->
-    ind = Dimensions.getIndices @activePlane
-    if @direction[ind[0]] <= 0 then @spaceDirection[ind[0]] = -1 else @spaceDirection[ind[0]] = 1
-    if @direction[ind[1]] <= 0 then @spaceDirection[ind[1]] = -1 else @spaceDirection[ind[1]] = 1
+    if @user.dynamicSpaceDirection
+      @setSpaceDirection(direction)
 
   setSpaceDirection : (direction) ->
     for index in [0..2]

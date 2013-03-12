@@ -19,6 +19,7 @@ import net.liftweb.common.Box
 import net.liftweb.common.Box._
 import net.liftweb.common.Box
 import net.liftweb.common.Failure
+import utils._
 
 object NMLParser {
 
@@ -103,7 +104,7 @@ class NMLParser(in: InputStream) {
   }
 
   def parseTrees(nodes: NodeSeq) = {
-    nodes.foldLeft((1, List[Tree](), Map[Int, Node]())) {
+    nodes.foldLeft((1, List[Tree](), new NodeMapping())) {
       case ((nextNodeId, trees, nodeMapping), xml) =>
         parseTree(xml, nextNodeId) match {
           case Some((mapping, tree)) =>
@@ -166,11 +167,11 @@ class NMLParser(in: InputStream) {
     }) getOrElse (DEFAULT_COLOR)
   }
 
-  def parseTree(tree: XMLNode, nextNodeId: Int): Option[(Map[Int, Node], Tree)] = {
+  def parseTree(tree: XMLNode, nextNodeId: Int): Option[(NodeMapping, Tree)] = {
     ((tree \ "@id").text).toIntOpt.flatMap { id =>
       val color = parseColor(tree)
       Logger.trace("Parsing tree Id: %d".format(id))
-      val (_,nodeMapping) = (tree \ "nodes" \ "node").foldLeft((nextNodeId, Map[Int, Node]())){
+      val (_,nodeMapping) = (tree \ "nodes" \ "node").foldLeft((nextNodeId, new NodeMapping())){
         case ((nextNodeId, nodeMapping), nodeXml) =>
           parseNode(nextNodeId)(nodeXml) match{
             case Some(mapping) => 

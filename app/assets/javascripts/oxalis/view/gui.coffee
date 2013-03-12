@@ -109,7 +109,7 @@ class Gui
     if somaClickingAllowed
       @addCheckbox(fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
     else
-      @setNewNodeNewTree(false)
+      @set("newNodeNewTree", false, Boolean)
     @addFunction(fTrees, @settings, "newTree", "Create New Tree")
     @addFunction(fTrees, @settings, "deleteActiveTree", "Delete Active Tree")
 
@@ -167,7 +167,7 @@ class Gui
         else
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
-    @model.route.on  
+    @model.route.on
       newActiveNode    : => @update()
       newActiveTree    : => @update()
       deleteActiveTree : => @update()

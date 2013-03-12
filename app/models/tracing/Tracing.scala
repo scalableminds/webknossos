@@ -145,7 +145,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
 
   def createTracingBase(task: Task, userId: ObjectId, dataSetName: String, start: Point3D) = {
     val tracing = insertOne(tracingBase(task, userId, dataSetName).copy(editPosition = start))
-    val tree = Tree(1, List(Node(1, start)), Nil, Color.RED)
+    val tree = Tree(1, Set(Node(1, start)), Set.empty, Color.RED)
     DBTree.insertOne(tracing._id, tree)
     tracing
   }

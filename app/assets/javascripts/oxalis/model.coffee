@@ -39,6 +39,10 @@ class Model
           ).pipe(
             (user) =>
 
+              # disable loader, show oxalis
+              $("#loader").css("display" : "none")
+              $("#container").css("display" : "inline")
+
               $.assertExtendContext({
                 task: task.task.id
                 dataSet: tracing.dataSet.id

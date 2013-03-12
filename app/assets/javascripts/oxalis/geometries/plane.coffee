@@ -61,7 +61,7 @@ class Plane
       varying vec2 vUv;
       void main() {
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
-
+        
         /* Color map */
              if(volumeColor[0] == 1.0 / 255.0) volumeColor = vec4(0.3, 0.0, 0.0, 1);
         else if(volumeColor[0] == 2.0 / 255.0) volumeColor = vec4(0.0, 0.3, 0.0, 1);
@@ -91,6 +91,7 @@ class Plane
     @plane.repeat = repeat
     # Never interpolate
     @plane.texture.magFilter = THREE.NearestFilter
+    @plane.volumeTexture.magFilter = THREE.NearestFilter
 
     # create crosshair
     crosshairGeometries = new Array(2)

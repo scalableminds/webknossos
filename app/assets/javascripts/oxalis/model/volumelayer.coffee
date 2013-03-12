@@ -111,9 +111,12 @@ class VolumeLayer
     if voxelCoordinate[thirdDimension] != @thirdDimensionValue
       return false
 
-     # Algorithm described in OX-322
+    return @contains2dCoordinate( @get2DCoordinate(voxelCoordinate), list )
+
+  contains2dCoordinate : (point, list = @contourList) ->
+    
+    # Algorithm described in OX-322
     totalDiff = 0
-    point = @get2DCoordinate(voxelCoordinate)
 
     for contour in list
 
@@ -132,27 +135,77 @@ class VolumeLayer
       if diff == -3 then diff =  1
       totalDiff -= diff
 
-      #if prevQuadrant != quadrant
-      #  console.log prevQuadrant, "-->", quadrant
-      
-
-    #console.log "totalDiff", totalDiff
     return totalDiff != 0
 
   getVoxelArray : ->
 
+    outline = @getOutlineVoxels()
+
     res = []
     # Check every voxel in this cuboid
-    startTime = new Date().getTime()
-    for x in [@minCoord[0]..@maxCoord[0]]
-      for y in [@minCoord[1]..@maxCoord[1]]
-        for z in [@minCoord[2]..@maxCoord[2]]
-          if @containsVoxel([x, y, z])
-            res.push([x, y, z])
-    #console.log "Time", (new Date().getTime() - startTime)
-    #console.log "Cuboid", @minCoord, @maxCoord
+    #startTime = new Date().getTime()
+    #for x in [@minCoord[0]..@maxCoord[0]]
+    #  for y in [@minCoord[1]..@maxCoord[1]]
+    #    for z in [@minCoord[2]..@maxCoord[2]]
+    #      if @containsVoxel([x, y, z])
+    #        res.push([x, y, z])
+    for p in outline
+      res.push(@get3DCoordinate(p))
+
+    console.log(res)
+    return res
+
+  getOutlineVoxels : ->
+
+    # Get first voxel within layer
+    minCoord2d = @get2DCoordinate(@minCoord)
+    maxCoord2d = @get2DCoordinate(@maxCoord)
+    p = [ Math.round((minCoord2d[0] + maxCoord2d[0]) / 2),
+          minCoord2d[1] ]
+    while not @contains2dCoordinate(p)
+      p[1]++
+
+    # Set up directions
+    directionRight = { xDiff :  1, yDiff :  0}
+    directionDown  = { xDiff :  0, yDiff :  1}
+    directionLeft  = { xDiff : -1, yDiff :  0}
+    directionUp    = { xDiff :  0, yDiff : -1}
+    directions     = [directionRight, directionDown,
+                      directionLeft, directionUp]
+
+    # Some helper methods
+    directionIndex = 0
+    direction = directions[directionIndex]
+    nextDir = ->
+      directionIndex = (directionIndex + 1) % 4
+      return direction = directions[directionIndex]
+    prevDir = ->
+      directionIndex = (directionIndex + 3) % 4
+      return direction = directions[directionIndex]
+    applyDir = (point) ->
+      return [point[0] + direction.xDiff, point[1] + direction.yDiff]
+
+    # Find outline
+    res = []
+    res.hasPoint = (p1) ->
+      for p2 in @
+        if p2[0] == p1[0] and p2[1] == p1[1]
+          return true
+
+    inCount = 0
+    while inCount < 10
+      if res.hasPoint(p)
+        inCount++
+      else
+        inCount = 0
+        res.push(p.slice())
+      prevDir()
+      while not @contains2dCoordinate( applyDir(p) )
+        nextDir()
+      p = applyDir(p)
 
     return res
+
 
   get2DCoordinate : (coord3d) ->
     # Throw out 'thirdCoordinate' which is equal anyways
@@ -162,6 +215,20 @@ class VolumeLayer
       if i != Dimensions.thirdDimensionForPlane(@plane)
         result.push(coord3d[i])
     return result
+
+  get3DCoordinate : (coord2d) ->
+    # Put thirdCoordinate back in
+    index   = Dimensions.thirdDimensionForPlane(@plane)
+    index2d = 0
+    res     = []
+
+    for i in [0..2]
+      if i != index
+        res.push(coord2d[index2d++])
+      else
+        res.push(@thirdDimensionValue)
+
+    return res
 
   getQuadrantWithRespectToPoint : (vertex, point) ->
     xDiff = vertex[0] - point[0]

@@ -64,10 +64,25 @@ class CameraController
     @tween = new TWEEN.Tween({ notify: notify, upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera, flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
     if id == VIEW_3D
       diagonal = Math.sqrt(b[0]*b[0]+b[1]*b[1])
-      scale = diagonal/1.8
+      padding = 0.05 * diagonal
+
+      # Calculate the distance from (0, b[1]) in order to center the view
+      a1 = b[0]; b1 = -b[1]; x1 = 0; y1 = b[1]
+      x2 = pos[0]; y2 = pos[1]
+
+      b2 = 1 / Math.sqrt(b1 * b1 / a1 / a1 + 1)
+      a2 = - b2 * b1 / a1
+      d2 = (a1 / b1 * (y1 - y2) - x1 + x2) / (- a2 + a1 * b2 / b1)
+
+      intersect = [x2 + d2 * a2, y2 + d2 * b2]
+      distance  = Dimensions.distance([x1, y1], intersect)
+
+      # Approximation to center the view vertically
+      yOffset = pos[2] - b[2] / 2
+
       # Calulate the x coordinate so that the vector from the camera to the cube's middle point is
       # perpendicular to the vector going from (0, b[1], 0) to (b[0], 0, 0).
-      to = {  x: pos[0] + b[1] / diagonal, y: pos[1] + b[0] / diagonal, z: pos[2] - 1/2, upX: 0, upY: 0, upZ: -1, l: -scale, r: scale, t: scale, b: -scale }
+      to = {  x: pos[0] + b[1] / diagonal, y: pos[1] + b[0] / diagonal, z: pos[2] - 1 / 2, upX: 0, upY: 0, upZ: -1, l: -distance - padding, r: diagonal - distance + padding, t: diagonal / 2 + padding + yOffset, b: -diagonal / 2 - padding + yOffset }
     else
       ind = Dimensions.getIndices(id)
       width = Math.max(b[ind[0]], b[ind[1]] * 1.12) * 1.1

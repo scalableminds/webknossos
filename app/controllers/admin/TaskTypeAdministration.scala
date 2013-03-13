@@ -43,7 +43,8 @@ object TaskTypeAdministration extends Controller with Secured {
         TracingInfo(
             taskType.id,
             "<unknown>",
-            TracingType.CompoundTaskType)
+            TracingType.CompoundTaskType,
+            isReadOnly = true)
       
       Ok(html.oxalis.trace(tracingInfo)(Html.empty))
     }

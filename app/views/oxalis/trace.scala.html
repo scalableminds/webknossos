@@ -7,13 +7,17 @@
   <div id="container" data-tracing-type="@tracing.tracingType" data-tracing-id="@tracing.id" class="clearfix">
     <div id="main" role="main">
       <div id="overlay">
-        <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
+        @if(!tracing.isReadOnly){
+          <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
+        } else {
+          <button class="btn btn-primary disabled">Read only</button> 
+        }
         <div id="buttonbar" class="btn-group inline-block">
           @if(tracing.tracingType == TracingType.Task){
             <a href="@controllers.routes.TracingController.finishWithRedirect(tracing.id)" class="btn btn-small" id="trace-finish-button"><i class="icon-ok-circle"></i> Finish</a>
-          }
+          } 
           @if(!Task.isTrainingsTracing(tracing)){
-            <a href="@controllers.admin.routes.NMLIO.download(tracing.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
+            <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
           }
           <a href="#" id="help-overlay" class="btn btn-small"><i class="icon-question-sign"></i> Help</a>
         </div>

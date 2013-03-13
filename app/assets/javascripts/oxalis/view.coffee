@@ -40,7 +40,6 @@ class View
 
     # initialize comments
     @model.route.updateComments()
-    @updateActiveComment()
 
 
   toggleTheme : ->
@@ -114,6 +113,8 @@ class View
         $('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content})))[0])
 
     commentList.append(newContent)
+
+    @updateActiveComment()
 
 
   updateActiveComment : ->

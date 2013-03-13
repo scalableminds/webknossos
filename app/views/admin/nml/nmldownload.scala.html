@@ -11,7 +11,7 @@
               <tr>
                 <td><strong>@tracing.dataSetName</strong></h4>
                 <td><time datetime="@tracing.date">@formatDate(tracing.date)</time></td>
-                <td><a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> Export NML</a></td>
+                <td><a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)"><i class="icon-download"></i> Export NML</a></td>
               </tr>
             }
           </tbody>

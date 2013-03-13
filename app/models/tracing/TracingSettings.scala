@@ -9,7 +9,8 @@ import TracingSettings._
 case class TracingSettings(
   allowedModes: List[String] = List(OXALIS, ARBITRARY), 
   branchPointsAllowed: Boolean = true,
-  somaClickingAllowed: Boolean = true)
+  somaClickingAllowed: Boolean = true,
+  isEditable: Boolean = true)
 
 object TracingSettings {
   val OXALIS = "oxalis"

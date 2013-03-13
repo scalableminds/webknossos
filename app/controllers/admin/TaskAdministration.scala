@@ -24,6 +24,7 @@ import java.lang.Cloneable
 import models.task.Project
 import play.api.Logger
 import play.api.mvc.Result
+import play.api.templates.Html
 
 object TaskAdministration extends Controller with Secured {
 
@@ -99,6 +100,22 @@ object TaskAdministration extends Controller with Secured {
       JsonOk(Messages("task.removed"))
     }
   }
+  
+  def trace(taskId: String) = Authenticated { implicit request =>
+    for {
+      task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+    } yield {
+      val tracingInfo = 
+        TracingInfo(
+            task.id,
+            "<unknown>",
+            TracingType.CompoundTask,
+            isReadOnly = true)
+      
+      Ok(html.oxalis.trace(tracingInfo)(Html.empty))
+    }
+  }
+
 
   def cancelTracing(tracingId: String) = Authenticated { implicit request =>
     for {
@@ -259,6 +276,21 @@ object TaskAdministration extends Controller with Secured {
       Redirect(routes.TaskAdministration.list)
         .flashing(
           FlashSuccess(Messages("task.bulk.createSuccess", inserted.size.toString)))
+    }
+  }
+  
+  def reopen(tracingId: String) = Authenticated{ implicit request =>
+    for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      task <- tracing.task ?~Messages("task.notFound")
+    } yield {
+      tracing match {
+        case t if t.tracingType == TracingType.Task =>
+          val updated = tracing.update(_.reopen)
+          JsonOk(html.admin.task.taskTracingDetailTableItem(updated), Messages("tracing.reopened"))
+        case _ =>
+          JsonOk(Messages("tracing.unvalid"))
+      }
     }
   }
 

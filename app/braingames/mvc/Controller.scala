@@ -53,6 +53,8 @@ trait BoxImplicits {
   }
 }
 
+object BoxImplicits extends BoxImplicits
+
 class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header = ResponseHeader(status), body = Enumerator(Results.EmptyContent())) with JsonResultAttribues {
 
   val isSuccess = List(OK) contains status

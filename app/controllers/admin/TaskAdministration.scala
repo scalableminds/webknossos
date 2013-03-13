@@ -24,6 +24,7 @@ import java.lang.Cloneable
 import models.task.Project
 import play.api.Logger
 import play.api.mvc.Result
+import play.api.templates.Html
 
 object TaskAdministration extends Controller with Secured {
 
@@ -99,6 +100,22 @@ object TaskAdministration extends Controller with Secured {
       JsonOk(Messages("task.removed"))
     }
   }
+  
+  def trace(taskId: String) = Authenticated { implicit request =>
+    for {
+      task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+    } yield {
+      val tracingInfo = 
+        TracingInfo(
+            task.id,
+            "<unknown>",
+            TracingType.CompoundTask,
+            isReadOnly = true)
+      
+      Ok(html.oxalis.trace(tracingInfo)(Html.empty))
+    }
+  }
+
 
   def cancelTracing(tracingId: String) = Authenticated { implicit request =>
     for {

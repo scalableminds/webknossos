@@ -59,13 +59,13 @@ class Route
 
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id)
+    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id, @data.settings.isEditable)
     console.log "Tracing data: ", @data
 
     # get tree to build
     for treeData in @data.trees
       # Create new tree
-      tree = new TraceTree(treeData.id, new THREE.Color().setRGB(treeData.color[0..2]...).getHex())
+      tree = new TraceTree(treeData.id, @getNewTreeColor(treeData.id))
       # Initialize nodes
       i = 0
       for node in treeData.nodes
@@ -146,7 +146,7 @@ class Route
     $(window).on(
       "beforeunload"
       =>
-        if !@stateLogger.stateSaved()
+        if !@stateLogger.stateSaved() and @stateLogger.isEditable
           @stateLogger.pushImpl(true)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
@@ -422,27 +422,20 @@ class Route
     @trigger("newActiveTree")
 
 
-  getNewTreeColor : ->
+  getNewTreeColor : (treeId) ->
 
     # this generates the most distinct colors possible, using the golden ratio
-    if @trees.length == 0
-      @currentHue = null
-      return 0xff0000
+    if treeId == 1
+      return 0xFF0000
     else
-      unless @currentHue
-        @currentHue = new THREE.Color().setHex(_.last(@trees).color).getHSV().h
-      while 1
-        @currentHue += GOLDEN_RATIO
-        @currentHue %= 1
-        # exclude blue to purple colors, because they are too dark
-        if @currentHue < 0.6 or @currentHue > 0.75
-          break
-      new THREE.Color().setHSV(@currentHue, 1, 1).getHex()
+      currentHue = treeId * GOLDEN_RATIO
+      currentHue %= 1
+      new THREE.Color().setHSV(currentHue, 1, 1).getHex()
 
 
   createNewTree : ->
 
-    tree = new TraceTree(@treeIdCount++, @getNewTreeColor())
+    tree = new TraceTree(@treeIdCount++, @getNewTreeColor(@treeIdCount-1))
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null

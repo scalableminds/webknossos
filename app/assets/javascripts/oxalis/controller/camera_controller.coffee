@@ -47,7 +47,7 @@ class CameraController
     @lights[PLANE_YZ].position = new THREE.Vector3(cPos[0] + 100000, cPos[1]         , cPos[2])
     @lights[PLANE_XZ].position = new THREE.Vector3(cPos[0]         , cPos[1] + 100000, cPos[2])
 
-  changePrev : (id) ->
+  changePrev : (id, animate = true) ->
     # In order for the rotation to be correct, it is not sufficient
     # to just use THREEJS' lookAt() function, because it may still
     # look at the plane in a wrong angle. Therefore, the rotation
@@ -100,17 +100,23 @@ class CameraController
       to.upX = upVector[id][0]; to.upY = upVector[id][1]; to.upZ = upVector[id][2]
       to.l = -offsetX; to.t = offsetY
       to.r = to.l + width; to.b = to.t - width
-      
-    @tween.to(to, time)
-    .onUpdate(@updateCameraPrev)
-    .start()
+    
+    if animate
+      @tween.to(to, time)
+      .onUpdate(@updateCameraPrev)
+      .start()
+    else
+      to.camera = camera
+      to.flycam = @flycam
+      to.notify = notify
+      @updateCameraPrev.call(to)
 
   degToRad : (deg) -> deg/180*Math.PI
 
   changePrevXY : => @changePrev(PLANE_XY)
   changePrevYZ : => @changePrev(PLANE_YZ)
   changePrevXZ : => @changePrev(PLANE_XZ)
-  changePrevSV : => @changePrev(VIEW_3D)
+  changePrevSV : (animate = true) => @changePrev(VIEW_3D, animate)
 
   updateCameraPrev : ->
     @camera.position.set(@x, @y, @z)

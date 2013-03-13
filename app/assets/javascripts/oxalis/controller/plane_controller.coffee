@@ -90,7 +90,10 @@ class PlaneController
     @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
     @flycam.setQuality(@model.user.quality)
 
-    @cameraController.changePrevSV()
+    setTimeout( (=> @cameraController.changePrevSV(false)), 300)
+    setTimeout( (=> @cameraController.changePrevSV(false)), 310)
+    #@cameraController.changePrevSV(false)
+    #@cameraController.changePrevSV(false)
     @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
     @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
     @sceneController.setDisplayCrosshair @model.user.displayCrosshair

@@ -23,14 +23,17 @@ class View
     @setTheme(THEME_BRIGHT)
     @createKeyboardCommandOverlay()
 
-    @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))
+    @model.route.on({
+      emptyBranchStack : =>
+        Toast.error("No more branchpoints", false)
+      noBranchPoints : =>
+        Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false)
+      wrongDirection : =>
+        Toast.error("You're tracing in the wrong direction")  })
 
-    @model.route.on("noBranchPoints", =>
-      Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false))
-
-    @model.route.on("wrongDirection", =>
-      Toast.error("You're tracing in the wrong direction"))
+    # disable loader, show oxalis
+    $("#loader").css("display" : "none")
+    $("#container").css("display" : "inline")
 
 
   toggleTheme : ->

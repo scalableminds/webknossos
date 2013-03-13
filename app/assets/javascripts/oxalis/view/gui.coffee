@@ -16,7 +16,7 @@ class Gui
 
   model : null
   
-  constructor : (container, @model, settings) ->
+  constructor : (container, @model, @tracingSettings) ->
     
     _.extend(this, new EventMixin())
 
@@ -28,7 +28,7 @@ class Gui
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(@user.briConNames)
 
-    somaClickingAllowed = settings.somaClickingAllowed
+    somaClickingAllowed = @tracingSettings.somaClickingAllowed
     
     @settings = 
 
@@ -207,11 +207,14 @@ class Gui
 
   saveNow : =>
     @user.pushImpl()
-    @model.route.pushNow()
-      .then( 
-        -> Toast.success("Saved!")
-        -> Toast.error("Couldn't save. Please try again.")
-      )
+    if @tracingSettings.isEditable
+      @model.route.pushNow()
+        .then( 
+          -> Toast.success("Saved!")
+          -> Toast.error("Couldn't save. Please try again.")
+        )
+    else
+      new $.Deferred().resolve()
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")

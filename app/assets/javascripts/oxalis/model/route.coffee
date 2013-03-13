@@ -52,7 +52,7 @@ class Route
 
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id)
+    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id, @data.settings.isEditable)
     console.log "Tracing data: ", @data
 
     # get tree to build
@@ -139,7 +139,7 @@ class Route
     $(window).on(
       "beforeunload"
       =>
-        if !@stateLogger.stateSaved()
+        if !@stateLogger.stateSaved() and @stateLogger.isEditable
           @stateLogger.pushImpl(true)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else

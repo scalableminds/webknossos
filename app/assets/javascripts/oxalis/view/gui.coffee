@@ -102,7 +102,7 @@ class Gui
 
     fTrees = @gui.addFolder("Trees")
     @activeTreeIdController = @addNumber(fTrees, @settings, "activeTreeID",
-      1, 1, "Active Tree ID")
+      1, 1, "Active Tree ID", (value) => @trigger( "setActiveTree", value))
     if somaClickingAllowed
       @addCheckbox(fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
     else
@@ -112,7 +112,7 @@ class Gui
 
     fNodes = @gui.addFolder("Nodes")
     @activeNodeIdController = @addNumber(fNodes, @settings, "activeNodeID",
-      1, 1, "Active Node ID")
+      1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
     @addFunction(fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
     #fControls.open()
@@ -191,12 +191,14 @@ class Gui
     return (folder.add object, propertyName)
                           .name(displayName)
 
-  addNumber : (folder, object, propertyName, min, step, displayName) =>
+  addNumber : (folder, object, propertyName, min, step, displayName, onChange) =>
+    unless onChange?
+      onChange = (v) => @set(propertyName, v, Number)
     return (folder.add object, propertyName)
                           .min(min)
                           .step(step)
                           .name(displayName)
-                          .onChange((v) => @set(propertyName, v, Number))
+                          .onChange(onChange)
 
   saveNow : =>
     @user.pushImpl()

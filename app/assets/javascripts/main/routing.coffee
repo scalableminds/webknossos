@@ -49,7 +49,7 @@ $ ->
         $form.find("[type=submit]").click (event) ->
 
           event.preventDefault()
-          $input = $("<input>", type : "file", name : "nmlFile", class : "hide")
+          $input = $("<input>", type : "file", name : "nmlFile", class : "hide", multiple : "")
 
           $input.change ->
             if this.files.length

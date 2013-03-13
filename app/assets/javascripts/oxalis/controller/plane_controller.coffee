@@ -99,6 +99,8 @@ class PlaneController
     @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
     @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
 
+    @model.route.setParticleSize(@model.user.particleSize)
+
     @initMouse()
     @bind()
     @start()
@@ -303,10 +305,13 @@ class PlaneController
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
     @model.route.setActiveNodeRadius(radius)
 
+  setParticleSize : (delta) =>
+    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+
   scroll : (delta, type) =>
     switch type
       when null then @moveZ(delta)
-      # when "shift" then @setNodeRadius(delta)
+      when "shift" then @setParticleSize(delta)
       when "alt"
         if delta > 0
           @zoomIn()

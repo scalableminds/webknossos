@@ -22,14 +22,14 @@ class Gui
 
     @user = @model.user
     # create GUI
-    modelRadius = @model.route.getActiveNodeRadius()
+    # modelRadius = @model.route.getActiveNodeRadius()
     @qualityArray = ["high", "medium", "low"]
 
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(@user.briConNames)
 
     somaClickingAllowed = settings.somaClickingAllowed
-    
+
     @settings = 
 
       fourBit : @user.fourBit
@@ -45,7 +45,7 @@ class Gui
       activeNodeID : @model.route.getActiveNodeId()
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
-      radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
+      # radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
       comment : ""
       prevComment : @prevComment
       nextComment : @nextComment
@@ -116,6 +116,9 @@ class Gui
     fNodes = @gui.addFolder("Nodes")
     @activeNodeIdController = @addNumber(fNodes, @settings, "activeNodeID",
       1, 1, "Active Node ID")
+    @particleSizeController = @addSlider(fNodes, @user, "particleSize",
+      1, 20, 1, "Node size")
+
     @commentController =
     (fNodes.add @settings, "comment")
                           .name("Comment")
@@ -176,6 +179,7 @@ class Gui
       newNode          : => @update()
       newTree          : => @update()
       # newActiveNodeRadius : (radius) =>@updateRadius(radius)
+      newParticleSize  : (value, propagate) => if propagate then @updateParticleSize(value)
 
     @model.route.stateLogger.on
       pushFailed       : -> Toast.error("Auto-Save failed!")
@@ -269,6 +273,10 @@ class Gui
       if @qualityArray[i] == value
         value = i
     @set("quality", value, Number)
+
+  updateParticleSize : (value) =>
+    @set("particleSize", value, Number)
+    @particleSizeController.updateDisplay()
 
   setComment : (value) =>
     @model.route.setComment(value)

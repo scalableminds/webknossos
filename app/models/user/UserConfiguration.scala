@@ -54,6 +54,7 @@ object UserConfiguration extends BasicSettings{
       "keyboardActive" -> JsBoolean(true),
       "gamepadActive" -> JsBoolean(false),
       "motionsensorActive" -> JsBoolean(false),
-      "firstVisToggle" -> JsBoolean(true)))
+      "firstVisToggle" -> JsBoolean(true),
+      "particleSize" -> JsNumber(5)))
 
 }

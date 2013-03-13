@@ -55,7 +55,7 @@ class Model
               @flycam.on
                 "positionChanged" : (position) =>
                   @flycam3d.setPositionSilent(position)
-              @route = new Route(tracing.tracing, @scaleInfo, @flycam, @flycam3d)
+              @route = new Route(tracing.tracing, @scaleInfo, @flycam, @flycam3d, @user)
               
               tracing.tracing.settings
             -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")

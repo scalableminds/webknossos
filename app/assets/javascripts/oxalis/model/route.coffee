@@ -19,6 +19,8 @@ TYPE_BRANCH       = 1
 # Max and min radius in base voxels (see scaleInfo.baseVoxel)
 MIN_RADIUS        = 1
 MAX_RADIUS        = 1000
+MIN_PARTICLE_SIZE = 1
+MAX_PARTICLE_SIZE = 20
 
 
 class Route
@@ -29,10 +31,11 @@ class Route
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
+  particleSize : 5
 
 
 
-  constructor : (@data, @scaleInfo, @flycam, @flycam3d) ->
+  constructor : (@data, @scaleInfo, @flycam, @flycam3d, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -50,6 +53,10 @@ class Route
 
     @doubleBranchPop = false
 
+    # change listener
+    @user.on "particleSizeChanged", (particleSize) =>
+      @setParticleSize(particleSize, false)
+
     ############ Load Tree from @data ##############
 
     @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id)
@@ -63,7 +70,7 @@ class Route
       i = 0
       for node in treeData.nodes
         if node
-          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp))
+          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
           # idCount should be bigger than any other id
           @idCount = Math.max(node.id + 1, @idCount);
       # Initialize edges
@@ -225,7 +232,7 @@ class Route
       unless @lastRadius?
         @lastRadius = 10 * @scaleInfo.baseVoxel
         if @activeNode? then @lastRadius = @activeNode.radius
-      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime())
+      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime(), @activeTree.treeId)
       @activeTree.nodes.push(point)
       if @activeNode
         @activeNode.appendNext(point)
@@ -269,6 +276,9 @@ class Route
   getActiveNodeId : -> @lastActiveNodeId
 
 
+  getParticleSize : -> @particleSize
+
+
   getActiveNodePos : ->
 
     if @activeNode then @activeNode.pos else null
@@ -309,6 +319,14 @@ class Route
     @stateLogger.updateNode(@activeNode, @activeTree.treeId)
 
     @trigger("newActiveNodeRadius", radius)
+
+
+  setParticleSize : (size, propagate = true) ->
+
+    @particleSize = Math.min(MAX_PARTICLE_SIZE, size)
+    @particleSize = Math.max(MIN_PARTICLE_SIZE, @particleSize)
+
+    @trigger("newParticleSize", @particleSize, propagate)
 
 
   setActiveNode : (nodeID, mergeTree = false) ->
@@ -409,12 +427,16 @@ class Route
     # this generates the most distinct colors possible, using the golden ratio
     if @trees.length == 0
       @currentHue = null
-      return 0xFF0000
+      return 0xff0000
     else
       unless @currentHue
         @currentHue = new THREE.Color().setHex(_.last(@trees).color).getHSV().h
-      @currentHue += GOLDEN_RATIO
-      @currentHue %= 1
+      while 1
+        @currentHue += GOLDEN_RATIO
+        @currentHue %= 1
+        # exclude blue to purple colors, because they are too dark
+        if @currentHue < 0.6 or @currentHue > 0.75
+          break
       new THREE.Color().setHSV(@currentHue, 1, 1).getHex()
 
 
@@ -458,6 +480,10 @@ class Route
 
         @activeTree.nodes = []
         @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
+        # update tree ids
+        unless i == 0
+          for node in @activeTree.nodes
+            node.treeId = @activeTree.treeId
         @setActiveNode(deletedNode.neighbors[i].id)
         newTrees.push(@activeTree)
 
@@ -527,6 +553,10 @@ class Route
         @activeTree.nodes = @activeTree.nodes.concat(lastTree.nodes)
         @activeNode.appendNext(lastNode)
         lastNode.appendNext(@activeNode)
+
+        # update tree ids
+        for node in @activeTree.nodes
+          node.treeId = @activeTree.treeId
         
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 

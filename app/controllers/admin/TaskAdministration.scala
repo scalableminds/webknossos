@@ -109,7 +109,8 @@ object TaskAdministration extends Controller with Secured {
         TracingInfo(
             task.id,
             "<unknown>",
-            TracingType.CompoundTask)
+            TracingType.CompoundTask,
+            isReadOnly = true)
       
       Ok(html.oxalis.trace(tracingInfo)(Html.empty))
     }
@@ -264,6 +265,21 @@ object TaskAdministration extends Controller with Secured {
       Redirect(routes.TaskAdministration.list)
         .flashing(
           FlashSuccess(Messages("task.bulk.createSuccess", inserted.size.toString)))
+    }
+  }
+  
+  def reopen(tracingId: String) = Authenticated{ implicit request =>
+    for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      task <- tracing.task ?~Messages("task.notFound")
+    } yield {
+      tracing match {
+        case t if t.tracingType == TracingType.Task =>
+          val updated = tracing.update(_.reopen)
+          JsonOk(html.admin.task.taskTracingDetailTableItem(updated), Messages("tracing.reopened"))
+        case _ =>
+          JsonOk(Messages("tracing.unvalid"))
+      }
     }
   }
 

@@ -20,7 +20,7 @@
       }
       </tbody>
     </table>
-    <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(hasAnOpenTask){,confirm=Do you really want another task?}" id="new-task-button">Get a new task</a>
+    <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(hasAnOpenTask){,confirm=@Messages("task.requestAnother")}" id="new-task-button">Get a new task</a>
     
     <div class="divider-vertical"></div>
     <a href="#" id="toggle-finished">Show finished tasks</a>
@@ -33,10 +33,11 @@
   	<div id="explorativeTracings" class="collapse out">
     
     <h3>Explorative Tracings</h3>
-    <table class="table table-striped">
+    <table class="table table-striped table-hover" id="explorative-tasks">
       <thead>
         <tr>
           <th> # </th>
+          <th> Name </th>
           <th> DataSet </th>
           <th> Tracing Stats </th>
           <th> Tracing-Type </th>

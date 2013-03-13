@@ -14,7 +14,9 @@ VIEW_3D            = Dimensions.VIEW_3D
 TYPE_NORMAL = 0
 TYPE_BRANCH = 1
 
-COLOR_ACTIVE = 0x0000ff
+COLOR_ACTIVE = 0xff0000
+COLOR_BRANCH = 0x0000ff
+COLOR_ACTIVE_BRANCH = 0x660000
 
 class Skeleton
 
@@ -69,15 +71,16 @@ class Skeleton
     activeNodeGeometry = new THREE.Geometry()
     @activeNodeParticle = new THREE.ParticleSystem(
       activeNodeGeometry,
-        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 10, sizeAttenuation : false}))
+        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 5, sizeAttenuation : false}))
     activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
 
     routeGeometryBranchPoints = new THREE.Geometry()
     routeGeometryBranchPoints.dynamic = true
     @branches = new THREE.ParticleSystem(
         routeGeometryBranchPoints,
-        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE * 0.7, size: 8, sizeAttenuation : false}))
+        new THREE.ParticleBasicMaterial({size: 5, sizeAttenuation: false, vertexColors: true}))
     @branchesBuffer = new ResizableBuffer(3)
+    @branchesColorsBuffer = new ResizableBuffer(3)
 
     @updateBranches()
 
@@ -87,13 +90,14 @@ class Skeleton
       newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)
-      mergeTree : (lastTreeID, lastNode, activeNode) => @mergeTree(lastTreeID, lastNode, activeNode)
+      mergeTree : (lastTreeID, lastNode, activeNode) => 
+        @mergeTree(lastTreeID, lastNode, activeNode)
+        @updateBranches()
       newNode : => @setWaypoint()
       setBranch : (isBranchPoint, nodeID) => 
         @setBranchPoint(isBranchPoint, nodeID)
         @updateBranches()
-      deleteBranch : =>
-        @updateBranches()
+      deleteBranch : => @updateBranches()
       # spheres currently disabled
       #newActiveNodeRadius : (radius) => @setNodeRadius(radius)
       reloadTrees : (trees) =>
@@ -101,6 +105,7 @@ class Skeleton
           @route.one("rendered", =>
             @loadSkeletonFromModel(trees)))
       removeSpheresOfTree : (nodes) => @removeSpheresOfTree(nodes)
+      newParticleSize : (size) => @setParticleSize(size)
 
     @reset()
 
@@ -116,8 +121,8 @@ class Skeleton
     @edgesBuffer.push(new ResizableBuffer(6))
     @nodesBuffer.push(new ResizableBuffer(3))
 
-    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: treeColor, linewidth: 1}), THREE.LinePieces))
-    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: treeColor, size: 5, sizeAttenuation : false})))
+    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: @darkenHex(treeColor), linewidth: @model.route.getParticleSize() / 4}), THREE.LinePieces))
+    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: @darkenHex(treeColor), size: @model.route.getParticleSize(), sizeAttenuation : false})))
     @ids.push(treeId)
 
     @setActiveNode()
@@ -208,29 +213,33 @@ class Skeleton
       #if @activeNodeSphere
       #  @activeNodeSphere.visible = false
       if @route.getActiveNodeType() == TYPE_BRANCH
-        @activeNodeParticle.material.color.setHex(COLOR_ACTIVE * 0.7)
+        @activeNodeParticle.material.color.setHex(@invertHex(@route.getTree().color))
       else
-        @activeNodeParticle.material.color.setHex(COLOR_ACTIVE)
+        @activeNodeParticle.material.color.setHex(@route.getTree().color)
 
       # @setNodeRadius(@route.getActiveNodeRadius())
-      @activeNodeParticle.position = new THREE.Vector3(position[0] + 0.01, position[1] + 0.01, position[2] - 0.01)
+      @activeNodeParticle.position = new THREE.Vector3(position[0] + 0.02, position[1] + 0.02, position[2] - 0.02)
     else
       #@activeNodeSphere = null
       @activeNodeParticle.visible = false
     @flycam.hasChanged = true
 
   setBranchPoint : (isBranchPoint, nodeID) ->
-    colorActive = if isBranchPoint then COLOR_ACTIVE * 0.7 else COLOR_ACTIVE
     treeColor = @route.getTree().color
-    colorNormal = if isBranchPoint then treeColor * 0.7 else treeColor
+    if isBranchPoint
+      colorActive = @invertHex(treeColor)
+    else 
+      colorActive = treeColor
+    
+    #colorNormal = if isBranchPoint then treeColor * 0.7 else treeColor
     if not nodeID? or nodeID == @route.getActiveNodeId()
       @activeNodeParticle.material.color.setHex(colorActive)
-      if @activeNodeSphere
-        @activeNodeSphere.material.color.setHex(colorNormal)
-    else
-      sphere = @getSphereFromId(nodeID)
-      if sphere?
-        sphere.material.color.setHex(colorNormal)
+    #   if @activeNodeSphere
+    #     @activeNodeSphere.material.color.setHex(colorNormal)
+    # else
+    #   sphere = @getSphereFromId(nodeID)
+    #   if sphere?
+    #     sphere.material.color.setHex(colorNormal)
     @flycam.hasChanged = true
 
   setNodeRadius : (radius) ->
@@ -238,6 +247,15 @@ class Skeleton
     @activeNode.scale = @calcScaleVector(vRadius)
     if @activeNodeSphere
       @activeNodeSphere.scale = @calcScaleVector(vRadius)
+    @flycam.hasChanged = true
+
+  setParticleSize : (size) ->
+    for particleSystem in @nodes
+      particleSystem.material.size = size
+    for line in @routes
+      line.material.linewidth = size / 4
+    @branches.material.size = size
+    @activeNodeParticle.material.size = size
     @flycam.hasChanged = true
 
   getMeshes : =>
@@ -399,9 +417,14 @@ class Skeleton
       branchpoint.pos[1] + 0.01, 
       branchpoint.pos[2] - 0.01] for branchpoint in branchpoints)
 
+    @branchesColorsBuffer.clear()
+    @branchesColorsBuffer.pushMany(@invertHexToRGB(@darkenHex(@model.route.getTree(branchpoint.treeId).color)) for branchpoint in branchpoints)
+
     @branches.geometry.__vertexArray = @branchesBuffer.getBuffer()
     @branches.geometry.__webglParticleCount = @branchesBuffer.getLength()
+    @branches.geometry.__colorArray = @branchesColorsBuffer.getBuffer()
     @branches.geometry.verticesNeedUpdate = true
+    @branches.geometry.colorsNeedUpdate = true
     @flycam.hasChanged = true
 
 
@@ -463,3 +486,25 @@ class Skeleton
       @setActiveNode()
       @setDisplaySpheres(@disSpheres)
     @flycam.hasChanged = true
+
+
+  invertHexToRGB : (hexColor) ->
+
+    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor.h = (hsvColor.h + 0.5) % 1
+    rgbColor = new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v)
+    [rgbColor.r, rgbColor.g, rgbColor.b]
+
+
+  darkenHex : (hexColor) ->
+
+    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor.v = 0.6
+    new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+
+
+  invertHex : (hexColor) ->
+
+    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor.h = (hsvColor.h + 0.5) % 1
+    new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()

@@ -14,11 +14,11 @@ $ ->
     e.preventDefault()
 
 
-  $(document).on "click", "a[data-ajax]", (event) ->
+  dataAjaxHandler = (event) ->
     
     event.preventDefault()
     $this = $(this)
-    $form = $this.parents("form").first()
+    $form = if $this.is("form") then $this else $this.parents("form").first()
 
     options = {}
     for action in $this.data("ajax").split(",")
@@ -26,7 +26,7 @@ $ ->
       options[key] = value ? true
 
     ajaxOptions = 
-      url : this.href
+      url : if $this.is("form") then this.action else this.href
       dataType : "json"
 
     if options["confirm"]
@@ -40,7 +40,7 @@ $ ->
       ajaxOptions["type"] = options.method
 
     if options["submit"]
-      $validationGroup = $this.parents("form, [data-validation-group]").first()
+      $validationGroup = if $this.is("form") then $this else $this.parents("form, [data-validation-group]").first()
       isValid = true
       $validationGroup.find(":input")
         .each( ->
@@ -118,6 +118,9 @@ $ ->
       -> 
         $this.removeClass("busy")
     )
+
+  $(document).on "click", "a[data-ajax]", dataAjaxHandler
+  $(document).on "submit", "form[data-ajax]", dataAjaxHandler
   
 
   $(document).on "change", "table input.select-all-rows", ->
@@ -195,5 +198,3 @@ $ ->
       $table.find(".details-row").toggleClass("hide", !newState)
       $table.find(".details-toggle").toggleClass("open", newState)
       $toggle.toggleClass("open", newState)
-
-

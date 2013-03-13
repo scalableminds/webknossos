@@ -9,8 +9,8 @@ import play.api.libs.json.Json
 trait TreeLike {
   def treeId: Int
   def color: Color
-  def nodes: List[Node]
-  def edges: List[Edge]
+  def nodes: Set[Node]
+  def edges: Set[Edge]
 
   def changeTreeId(id: Int): TreeLike
   

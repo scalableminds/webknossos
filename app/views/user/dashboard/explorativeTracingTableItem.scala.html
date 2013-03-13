@@ -1,17 +1,29 @@
 @(tracing: models.tracing.Tracing)
   <tr>
     <td> @formatHash(tracing.id) </td>
+    <td class="span3">
+      <span class="hover-hide" id="explorative-tracing-name"> @tracing.name </span>
+      <form action="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" method="POST" data-ajax="submit,replace-row" class="hover-show">
+        <div class="input-append">
+          <input name="name" id="explorative-name-input" maxlength="20" class="span2" type="text" value="@tracing.name">
+            <a href="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" data-ajax="submit,replace-row" id="explorative-name-submit" class="btn"><i class="icon-ok"></i></a>
+        </div>
+      </form>
+    </td>
     <td> @tracing.dataSetName </td>
     @defining(models.tracing.Tracing.statisticsForTracing(tracing)){ stats => 
       <td> 
-        <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
-        <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
+        <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span><br />
+        <span title="Nodes"><i class="icon-bull"></i> @stats.numberOfNodes &nbsp;</span><br />
         <span title="Edges"><i class="icon-resize-horizontal"></i> @stats.numberOfEdges</span>
       </td>
     }
     <td> @tracing.tracingType </td>
     <td> @formatDate(tracing.date) </td>
-    <td> <a href="@controllers.routes.TracingController.trace(tracing.id)"><i class="icon-random"></i> trace</a><br />
-         <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download</a><br />
-         <a href="@controllers.routes.TracingController.finish(tracing.id, true)" data-ajax="delete-row"><i class="icon-ok-circle"></i> finish</a></td>
+    <td  class="nowrap"> 
+      <a href="@controllers.routes.TracingController.trace(tracing.id)"><i class="icon-random"></i> trace</a><br />
+      <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)"><i class="icon-download"></i> download</a><br />
+      @if(models.tracing.TracingType.isExploratory(tracing)){
+        <a href="@controllers.routes.TracingController.finish(tracing.id, true)" data-ajax="delete-row,confirm=@Messages("tracing.finish.confirm")"><i class="icon-ok-circle"></i> finish</a></td>
+      }
   </tr>

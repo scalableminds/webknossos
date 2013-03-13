@@ -26,10 +26,10 @@ case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, _id: ObjectId =
     DBTree.nodes.findByParentId(_id).isEmpty &&
       DBTree.edges.findByParentId(_id).isEmpty
   }
- 
-  def nodes = DBTree.nodes.findByParentId(_id).map(_.node).toList
-  def edges = DBTree.edges.findByParentId(_id).map(_.edge).toList
 
+  def nodes = DBTree.nodes.findByParentId(_id).map(_.node).toSet
+  def edges = DBTree.edges.findByParentId(_id).map(_.edge).toSet
+  
   def numberOfNodes =
     DBTree.nodes.countByParentId(_id)
 

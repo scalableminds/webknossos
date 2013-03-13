@@ -9,7 +9,7 @@ PUSH_THROTTLE_TIME = 30000 # 30s
 
 class StateLogger
 
-  constructor : (@route, @flycam, @version, @dataId) ->
+  constructor : (@route, @flycam, @version, @dataId, @isEditable) ->
 
     _.extend(this, new EventMixin())
 
@@ -24,7 +24,7 @@ class StateLogger
     })
     # In order to assure that certain actions are atomic,
     # it is sometimes necessary not to push.
-    if push
+    if push and @isEditable
       @push()
 
   #### TREES
@@ -204,7 +204,7 @@ class StateLogger
             window.location.reload()
       @push()
       if (notifyOnFailure)
-        @trigger("PushFailed");
+        @trigger("pushFailed");
       @pushDeferred.reject()
       @pushDeferred = null
     .done (response) =>

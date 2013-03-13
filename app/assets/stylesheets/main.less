@@ -86,6 +86,10 @@ body:-webkit-full-screen {
     width: 400px;
 }
 
+.nowrap * {
+    white-space: nowrap;
+}
+
 .table-double-striped > tbody {
     & > tr:nth-child(4n+1) > td,
     & > tr:nth-child(4n+2) > td {
@@ -134,6 +138,23 @@ body:-webkit-full-screen {
     }
 }
 
+.table-hover {
+
+    tr {
+        .hover-show {
+            display: none;
+        }
+    }
+    tr:hover {
+        .hover-show {
+            display: inherit;
+        }
+        .hover-hide {
+            display: none;
+        }
+    }
+}
+
 .table {
     a [class^="icon-"], 
     a [class*=" icon-"] {
@@ -173,6 +194,12 @@ body:-webkit-full-screen {
 .icon-random {
     width: 14px;
     background-position: -217px -120px;
+}
+
+.icon-bull::before {
+    width: 14px;
+    content: "•";
+    text-align: center;
 }
 
 .inline-block {
@@ -233,6 +260,16 @@ svg a:hover {
         color : #000;
     }
 }
+
+#loader-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+}
+#container {
+    display: none;
+}
+
 #tracing {
     margin-top: 10px;
     position: relative;
@@ -342,6 +379,17 @@ svg a:hover {
     border-top: none;
 }
 
+#explorative-name-input {
+    padding-top: 0px;
+    padding-bottom: 0px;
+    margin-top: -1px;
+}
+#explorative-name-submit {
+    padding-top: 0px;
+    padding-bottom: 0px;
+    margin-top: -1px;
+}
+
 #toggle-explorative {
 
     .icon-caret-down {
@@ -356,7 +404,6 @@ svg a:hover {
             display: inline-block;
         }
     }
-
 }
 
 #credits {

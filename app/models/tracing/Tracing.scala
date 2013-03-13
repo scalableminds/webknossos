@@ -38,13 +38,21 @@ case class Tracing(
     tracingType: TracingType.Value = TracingType.Explorational,
     tracingSettings: TracingSettings = TracingSettings.default,
     version: Int = 0,
-    _id: ObjectId = new ObjectId) extends TracingLike[Tracing] with ContainsTracingInfo with DAOCaseClass[Tracing] {
+    _name: Option[String] = None,
+    _id: ObjectId = new ObjectId) extends TracingLike with ContainsTracingInfo with DAOCaseClass[Tracing] {
+  
+  type Self = Tracing
 
   def dao = Tracing
+  
+  def isReadOnly = false
   /**
    * Easy access methods
    */
-  def user = User.findOneById(_user)
+  
+  val name = _name getOrElse ""
+
+  override def user = User.findOneById(_user)
 
   val date = new Date(timestamp)
 
@@ -59,17 +67,17 @@ case class Tracing(
 
   def dbtrees = DBTree.findAllWithTracingId(_id).toList
 
-  def insertTree(t: TreeLike) = {
+  def insertTree[Tracing](t: TreeLike) = {
     println("Inserting tree: " + t.treeId)
     DBTree.insertOne(_id, t)
-    this
+    this.asInstanceOf[Tracing]
   }
 
-  def insertBranchPoint(bp: BranchPoint) =
-    this.copy(branchPoints = bp :: this.branchPoints)
+  def insertBranchPoint[Tracing](bp: BranchPoint) =
+    this.copy(branchPoints = bp :: this.branchPoints).asInstanceOf[Tracing]
 
-  def insertComment(c: Comment) =
-    this.copy(comments = c :: this.comments)
+  def insertComment[Tracing](c: Comment) =
+    this.copy(comments = c :: this.comments).asInstanceOf[Tracing]
 
   def tree(treeId: Int) = DBTree.findOneWithTreeId(_id, treeId)
 
@@ -155,7 +163,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
 
   def createTracingBase(task: Task, userId: ObjectId, dataSetName: String, start: Point3D) = {
     val tracing = insertOne(tracingBase(task, userId, dataSetName).copy(editPosition = start))
-    val tree = Tree(1, List(Node(1, start)), Nil, Color.RED)
+    val tree = Tree(1, Set(Node(1, start)), Set.empty, Color.RED)
     DBTree.insertOne(tracing._id, tree)
     tracing
   }

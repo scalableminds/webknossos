@@ -31,7 +31,7 @@
 	      <tr id="@taskType.id">
 	        <td> @formatHash(taskType.id) </td>
 	        <td> @taskType.summary </td>
-          <td> @taskType.description </td>
+          <td> @formatShortText(taskType.description) </td>
           <td> 
             @taskType.tracingSettings.allowedModes.map{ mode =>
               <span class="label"> @mode.capitalize </span>
@@ -47,9 +47,9 @@
           </td>
           <td> @taskType.expectedTime </td>
           <td> @taskType.fileName.getOrElse("") </td>
-          <td>
+          <td class="nowrap">
             <a href="@controllers.admin.routes.TaskTypeAdministration.trace(taskType.id)" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
-            <a href="@controllers.admin.routes.TaskTypeAdministration.edit(taskType.id)"><i class="icon-pencil"></i> edit </a> <br />
+            <a href="@controllers.admin.routes.TaskTypeAdministration.edit(taskType.id)" ><i class="icon-pencil"></i> edit </a> <br />
             <a href="@controllers.admin.routes.TaskTypeAdministration.delete(taskType.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
           </td>
 	      </tr>

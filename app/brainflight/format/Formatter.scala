@@ -30,4 +30,12 @@ trait Formatter{
   def formatTimeHumanReadable(time: Duration) = {
     "%dh %dm".format(time.toHours, (time.toMinutes % 60) / 5 * 5)
   }
+  
+  def formatShortText(text: String, maxLength: Int = 100) = {
+    if(text.length() > maxLength && maxLength > 4){
+      text.substring(0, maxLength - 4) + " ..."
+    } else {
+      text
+    }
+  }
 }

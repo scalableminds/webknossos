@@ -30,7 +30,7 @@
       <i class="icon-ok-circle"></i> @status.completed done
     }
   </td>
-  <td>  
+  <td class="nowrap">  
     <a href="@controllers.admin.routes.TaskAdministration.edit(task.id)"><i class="icon-pencil"></i> edit </a><br />
     <a href="@controllers.admin.routes.TaskAdministration.trace(task.id)" title="view all finished tracings"><i class="icon-random"></i> view </a><br />
     <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
@@ -43,20 +43,7 @@
     <table class="table table-condensed table-nohead">
       <tbody>
         @task.tracings.map{ tracing =>
-          <tr>
-            <td> @tracing.user.map(_.name).getOrElse("<deleted>") </td>
-            <td> @formatDate(tracing.date) </td>
-            <td> @if(tracing.state.isFinished){ <i class="icon-ok-circle"></i> Finished } else { <i class="icon-random"></i> In Progress } </td>
-            <td> 
-              <a href="@controllers.routes.TracingController.view(tracing.id)"><i class="icon-random"></i> view </a><br />
-              <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download </a><br />
-              @if(!tracing.state.isFinished){ 
-                <a href="@controllers.admin.routes.TaskAdministration.cancelTracing(tracing.id)" data-ajax="delete-row,confirm"><i class="icon-remove"></i> cancel</a><br/>
-              } else {
-                <a href="@controllers.routes.TracingController.reopen(tracing.id)" data-ajax="repalce-row"><i class="icon-share-alt"></i> reopen</a><br/>
-              }
-            </td>
-          </tr>
+          @taskTracingDetailTableItem(tracing)
         }
       </tbody>
     </table>

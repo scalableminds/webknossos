@@ -10,8 +10,13 @@ import xml.XMLWrites
 import models.binary.DataSet
 import xml.Xml
 import models.task.Task
+import models.user.User
 
-trait TracingLike[T <: TracingLike[T]] { self: T =>
+trait TracingLike extends ContainsTracingInfo{
+  type Self <: TracingLike
+  
+  def self = this.asInstanceOf[Self]
+  
   def id: String
   def dataSetName: String
   def timestamp: Long
@@ -26,24 +31,30 @@ trait TracingLike[T <: TracingLike[T]] { self: T =>
   def tracingType: TracingType.Value
   def editPosition: Point3D
 
-  def insertBranchPoint(bp: BranchPoint): T
-  def insertComment(c: Comment): T
-  def insertTree(tree: TreeLike): T
+  def insertBranchPoint[A](bp: BranchPoint): A
+  def insertComment[A](c: Comment): A
+  def insertTree[A](tree: TreeLike): A
+  
+  def isReadOnly: Boolean
+  
+  def user: Option[User] = None
 
-  private def applyUpdates(f: T => T*) = {
-    f.foldLeft(this) {
+  private def applyUpdates(f: Self => Self*) = {
+    f.foldLeft(self) {
       case (t, f) => f(t)
     }
   }
 
-  private def updateWithAll[E](l: List[E])(f: (T, E) => T)(t: T): T = {
+  private def updateWithAll[E](l: List[E])(f: (Self, E) => Self)(t: Self): Self = {
     l.foldLeft(t)(f)
   }
 
-  def mergeWith(source: TracingLike[_]): T = {
+  def mergeWith(source: TracingLike): Self = {
     val (preparedTrees: List[TreeLike], nodeMapping: FunctionalNodeMapping) = prepareTreesForMerge(source.trees, trees)
     applyUpdates(
-      updateWithAll(preparedTrees)(_.insertTree(_)),
+      updateWithAll(preparedTrees){
+        case (tracing, tree) => tracing.insertTree(tree)
+      },
       updateWithAll(source.branchPoints) {
         case (tracing, branchPoint) => tracing.insertBranchPoint(branchPoint.copy(id = nodeMapping(branchPoint.id)))
       },
@@ -82,8 +93,8 @@ trait TracingLike[T <: TracingLike[T]] { self: T =>
 }
 
 object TracingLike {
-  implicit object TracingLikeXMLWrites extends XMLWrites[TracingLike[_]] {
-    def writes(e: TracingLike[_]) = {
+  implicit object TracingLikeXMLWrites extends XMLWrites[TracingLike] {
+    def writes(e: TracingLike) = {
       (DataSet.findOneByName(e.dataSetName).map { dataSet =>
         <things>
           <parameters>
@@ -106,7 +117,7 @@ object TracingLike {
     }
   }
 
-  implicit object TracingLikeWrites extends Writes[TracingLike[_]] {
+  implicit object TracingLikeWrites extends Writes[TracingLike] {
     val ID = "id"
     val VERSION = "version"
     val TREES = "trees"
@@ -118,7 +129,7 @@ object TracingLike {
     val TRACING_TYPE = "tracingType"
     val SETTINGS = "settings"
 
-    def writes(e: TracingLike[_]) = Json.obj(
+    def writes(e: TracingLike) = Json.obj(
       ID -> e.id,
       SETTINGS -> e.tracingSettings,
       TREES -> e.trees,

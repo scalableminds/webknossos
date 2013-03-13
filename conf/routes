@@ -101,6 +101,7 @@ POST     /admin/users/delete                       controllers.admin.UserAdminis
 GET      /admin/users/:id/verify                   controllers.admin.UserAdministration.verify(id: String)
 GET      /admin/users/:id/delete                   controllers.admin.UserAdministration.delete(id: String)
 GET      /admin/users/:id/loginAs                  controllers.admin.UserAdministration.loginAsUser(id: String)
+GET      /admin/users/:id/details                  controllers.admin.UserDetailAdministration.show(id: String)
 GET      /admin/users/:id/download                 controllers.admin.NMLIO.userDownload(id: String)
 POST     /admin/users/role                         controllers.admin.UserAdministration.addRoleBulk
 DELETE   /admin/users/role                         controllers.admin.UserAdministration.deleteRoleBulk

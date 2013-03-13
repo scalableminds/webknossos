@@ -1,22 +1,27 @@
 @(task: models.task.Task, tracing: models.tracing.Tracing)
 
 @tracingLinks = {
-  <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
-  <a href="@controllers.routes.TracingController.finish(tracing.id, false)" class="trace-finish" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> finish</a>
+  <!--<a href="controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>-->
+  <!--<a href="controllers.routes.TracingController.finish(tracing.id, false)" class="trace-finish" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> reset</a>-->
+  <a href="@controllers.admin.routes.NMLIO.download(tracing.id)"><i class="icon-download"></i> download </a><br />
+  @if(!tracing.state.isFinished){ 
+    <a href="@controllers.routes.TracingController.finish(tracing.id, false)" class="trace-finish" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> finish</a><br />
+  } else {
+  }
+    <a href="@controllers.admin.routes.TaskAdministration.cancelTracing(tracing.id)" data-ajax="delete-row,confirm"><i class="icon-remove"></i> delete</a><br/>
 }
 
 @linkText(failed: Boolean) = {
   @if(failed) {
-    Review failed
+    Review failed - 
   } else {
-    Review
+    Review - 
   }
 }
 
 @displayComments(failed: Boolean, comments: List[String]) = {
   @comments match{
     case head :: tail => {
-      <br />
       <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
     }
     case _ => {
@@ -31,13 +36,23 @@
   @defining(task.taskType){ taskType =>
     <td> @taskType.map(_.summary).getOrElse("<deleted>") - @tracing.tracingType</td>
     <td> @task.project.map(_.name) </td>
-    <td> @taskType.map(_.description).getOrElse("") </td>
     <td>
       @taskType.toList.flatMap(_.tracingSettings.allowedModes).map{ mode =>
         <span class="label"> @mode.capitalize </span>
       }
     </td>
   }
+  <td> @tracing.dataSetName </td>
+  @defining(models.tracing.Tracing.statisticsForTracing(tracing)){ stats => 
+    <td> 
+      <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
+      <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
+      <span title="Edges"><i class="icon-resize-horizontal"></i> @stats.numberOfEdges</span>
+    </td>
+  }
+  <td>
+    @formatDate(tracing.timestamp)
+  </td>
   <td> 
     @tracing.state match{
       case s if s.isFinished => {
@@ -48,9 +63,12 @@
         <i class="icon-eye-open"></i><span> In Review</span>
       }
       case _ => {
-        @tracingLinks
+        <i class="icon-refresh"></i><span> In Progress</span>
         @displayComments(true, tracing.review.flatMap( _.comment ))
       }
     }
+  </td>
+  <td>   
+    @tracingLinks
   </td>
 </tr>

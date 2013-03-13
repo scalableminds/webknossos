@@ -113,6 +113,17 @@ object TaskAdministration extends Controller with Secured {
     }
   }
 
+  def resetTracing(tracingId: String) = Authenticated { implicit request =>
+    for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+    } yield {
+      Tracing.resetToBase(tracing) match {
+        case Some(_) => JsonOk(Messages("tracing.reset.success"))
+        case _       => JsonBadRequest(Messages("tracing.reset.failed"))
+      }
+    }
+  }
+
   def createFromForm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
       formWithErrors => BadRequest(taskCreateHTML(taskFromNMLForm, formWithErrors)),

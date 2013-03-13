@@ -65,6 +65,8 @@ case class Tracing(
 
   def maxNodeId = DBTree.maxNodeId(this.trees)
 
+  def clearTracing = this.copy(branchPoints = Nil, comments = Nil)
+  
   /**
    * State modifications
    * always return a new instance!
@@ -204,6 +206,20 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
         state = InProgress,
         tracingType = TracingType.Task))
     }
+  }
+  
+  def resetToBase(tracing: Tracing) = {
+    /*for{
+      task <- tracing.task
+      tracingBase <- task.tracingBase
+    } yield {
+      deleteAllTreesOf(tracing)
+      mergeTracings(tracingBase, tracing.clearTracing)
+    }
+    tracing.task.map{ task =>
+      
+    }*/
+    Some("penis")
   }
 
   def freeTacingsOfUser(userId: ObjectId) = {

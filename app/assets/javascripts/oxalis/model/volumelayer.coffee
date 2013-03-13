@@ -10,6 +10,13 @@ MODE_NORMAL      = 0
 MODE_SUB         = 1
 MODE_ADD         = 2
 
+
+# Macros
+swapMacro = (a, b) ->
+  __tmp = a
+  a = b
+  b = __tmp
+
 class VolumeLayer
   
   constructor : (@cell, @plane, @thirdDimensionValue, @id, @time) ->
@@ -152,77 +159,72 @@ class VolumeLayer
       for y in [0...height]
         map[x][y] = false
 
-    @getOutlineVoxels(map)
+    setMap = (x, y) =>
+      map[x - minCoord2d[0]][y - minCoord2d[1]] = true
+
+    @drawOutlineVoxels(setMap)
 
     res = []
-    # Check every voxel in this cuboid
-    #startTime = new Date().getTime()
-    #for x in [@minCoord[0]..@maxCoord[0]]
-    #  for y in [@minCoord[1]..@maxCoord[1]]
-    #    for z in [@minCoord[2]..@maxCoord[2]]
-    #      if @containsVoxel([x, y, z])
-    #        res.push([x, y, z])
-    #for p in outline
-    #  res.push(@get3DCoordinate(p))
     for x in [0...width]
       for y in [0...height]
         if map[x][y]
           res.push(@get3DCoordinate([x + minCoord2d[0], y + minCoord2d[1]]))
 
-    #console.log(res)
     return res
 
-  getOutlineVoxels : (map) ->
+  drawOutlineVoxels : (setMap) ->
 
-    start = new Date().getTime()
+    for i in [0...@contourList.length]
 
-    # Get first voxel within layer
-    minCoord2d = @get2DCoordinate(@minCoord)
-    maxCoord2d = @get2DCoordinate(@maxCoord)
-    offsetX    = minCoord2d[0]
-    offsetY    = minCoord2d[1]
-    p = [ Math.round((minCoord2d[0] + maxCoord2d[0]) / 2),
-          minCoord2d[1] ]
-    while not @contains2dCoordinate(p)
-      p[1]++
+      p1 = @get2DCoordinate(  @contourList[i]  )
+      p2 = @get2DCoordinate(  @contourList[(i+1) % @contourList.length]  )
+      
+      @drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap)
 
-    # Set up directions
-    directionRight = { xDiff :  1, yDiff :  0}
-    directionDown  = { xDiff :  0, yDiff :  1}
-    directionLeft  = { xDiff : -1, yDiff :  0}
-    directionUp    = { xDiff :  0, yDiff : -1}
-    directions     = [directionRight, directionDown,
-                      directionLeft, directionUp]
+  # Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
+  drawLine2d : (x, y, x1, y1, draw) ->
+    
+    x_inc = if (dx = x1 - x) < 0 then -1 else 1
+    y_inc = if (dy = y1 - y) < 0 then -1 else 1
+     
+    dx = Math.abs(dx)
+    dy = Math.abs(dy)
+     
+    dx2 = dx << 1
+    dy2 = dy << 1
 
-    # Some helper methods
-    directionIndex = 0
-    direction = directions[directionIndex]
-    nextDir = ->
-      directionIndex = (directionIndex + 1) % 4
-      return direction = directions[directionIndex]
-    prevDir = ->
-      directionIndex = (directionIndex + 3) % 4
-      return direction = directions[directionIndex]
-    applyDir = (point) ->
-      return [point[0] + direction.xDiff, point[1] + direction.yDiff]
+    draw(x, y)    
 
-    console.log "Before loop", new Date().getTime() - start
-    start = new Date().getTime()
+    if dx >= dy
 
-    inCount = 0
-    while inCount < 10
-      if map[p[0] - offsetX][p[1] - offsetY]
-        inCount++
+      d = dx
+      mode = 0
+
+    else
+
+      swapMacro(y, x)
+      swapMacro(y_inc, x_inc)
+      swapMacro(dy2, dx2)
+      d = dy
+      mode = 1
+
+    err = dy2 - d
+      
+    for i in [0...d]
+
+      if err > 0
+        y += y_inc
+        err -= dx2
+     
+      err += dy2
+      x   += x_inc
+      
+      if mode
+        draw(y, x)
       else
-        inCount = 0
-        map[p[0] - offsetX][p[1] - offsetY] = true
-      prevDir()
-      while not @contains2dCoordinate( applyDir(p) )
-        nextDir()
-      p = applyDir(p)
+        draw(x, y)
 
-    console.log "After Loop", new Date().getTime() - start
-    start = new Date().getTime()
+    return
 
 
   get2DCoordinate : (coord3d) ->

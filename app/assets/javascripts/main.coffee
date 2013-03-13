@@ -28,9 +28,6 @@ require.config
       exports : "ace"
     "three" :
       exports : "THREE"
-    "three.trackball" : 
-      deps : ["three"]
-      exports : "THREE.TrackballControls"
     "stats" :
       exports : "Stats"
     "v3" :

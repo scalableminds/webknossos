@@ -1,8 +1,8 @@
 /**
  * @author Eberhard Graether / http://egraether.com/
  */
-
-THREE.TrackballControls = function ( object, domElement, updateCallback ) {
+define(["three"], function (THREE) {
+return THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 
 	THREE.EventDispatcher.call( this );
 
@@ -550,3 +550,4 @@ THREE.TrackballControls = function ( object, domElement, updateCallback ) {
 	this.handleResize();
 
 };
+});

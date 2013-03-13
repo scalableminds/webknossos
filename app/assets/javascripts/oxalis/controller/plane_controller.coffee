@@ -105,9 +105,6 @@ class PlaneController
     @bind()
     @start()
 
-    # initialize comments
-    @model.route.updateComments()
-
 
   initMouse : ->
 

@@ -71,6 +71,16 @@ class Controller
         else
           Toast.error("There was no valid allowed tracing mode specified.")
 
+      $("#comment-input").on "change", (event) => 
+        @setComment(event.target.value)
+
+      $("#comment-previous").on "click", =>
+        @prevComment()
+
+      $("#comment-next").on "click", =>
+        @nextComment()
+
+
 
   initMouse : ->
 
@@ -185,3 +195,18 @@ class Controller
   deleteActiveTree : ->
 
     @model.route.deleteTree(true)
+
+
+  setComment : (value) =>
+
+    @model.route.setComment(value)
+
+
+  prevComment : =>
+
+    @setActiveNode(@model.route.nextCommentNodeID(false))
+
+
+  nextComment : =>
+
+    @setActiveNode(@model.route.nextCommentNodeID(true))

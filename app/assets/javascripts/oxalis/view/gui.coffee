@@ -46,9 +46,6 @@ class Gui
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
       # radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
-      comment : ""
-      prevComment : @prevComment
-      nextComment : @nextComment
 
     if @datasetPosition == 0
       # add new dataset to settings
@@ -118,13 +115,6 @@ class Gui
       1, 1, "Active Node ID")
     @particleSizeController = @addSlider(fNodes, @user, "particleSize",
       1, 20, 1, "Node size")
-
-    @commentController =
-    (fNodes.add @settings, "comment")
-                          .name("Comment")
-                          .onChange(@setComment)
-    @addFunction(fNodes, @settings, "prevComment", "Previous Comment")
-    @addFunction(fNodes, @settings, "nextComment", "Next Comment")
     @addFunction(fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
     #fControls.open()
@@ -274,25 +264,15 @@ class Gui
         value = i
     @set("quality", value, Number)
 
+
   updateParticleSize : (value) =>
     @set("particleSize", value, Number)
     @particleSizeController.updateDisplay()
-
-  setComment : (value) =>
-    @model.route.setComment(value)
-
-  prevComment : =>
-    @trigger "setActiveNode", @model.route.nextCommentNodeID(false)
-
-  nextComment : =>
-    @trigger "setActiveNode", @model.route.nextCommentNodeID(true)
 
   # Helper method to combine common update methods
   update : ->
     # called when value user switch to different active node
     @settings.activeNodeID = @model.route.lastActiveNodeId
     @settings.activeTreeID = @model.route.getActiveTreeId()
-    @settings.comment      = @model.route.getComment()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
-    @commentController.updateDisplay()

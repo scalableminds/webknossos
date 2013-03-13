@@ -147,7 +147,7 @@ class Route
       "beforeunload"
       =>
         if !@stateLogger.stateSaved()
-          @stateLogger.pushImpl(true)
+          @stateLogger.pushImpl(false)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return
@@ -402,7 +402,9 @@ class Route
 
     return @comments[0].node
 
-  updateComments : ->
+  updateComments : =>
+
+    @comments.sort(@compareNodes)
     @trigger("updateComments", @comments)
 
 
@@ -620,3 +622,11 @@ class Route
       if node.id == id
         return node
     return null
+
+  compareNodes : (a, b) ->
+
+    if a.node < b.node
+      return -1
+    if a.node > b.node
+      return 1
+    return 0

@@ -29,7 +29,17 @@ class View
       noBranchPoints : =>
         Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false)
       wrongDirection : =>
-        Toast.error("You're tracing in the wrong direction")  })
+        Toast.error("You're tracing in the wrong direction")
+      updateComments : (comments) => 
+        console.log comments
+        @updateComments(comments)
+      newActiveNode : => @updateActiveComment()
+      deleteTree : => @updateActiveComment()
+      newNode : => @updateActiveComment()
+      newTree : => @updateActiveComment() })
+
+    # initialize comments
+    @model.route.updateComments()
 
     # disable loader, show oxalis
     $("#loader").css("display" : "none")
@@ -91,6 +101,50 @@ class View
 
     popoverTemplate = '<div class="popover key-overlay"><div class="arrow key-arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
     $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
+
+
+  updateComments : (comments) ->
+    
+    commentList = $("#comment-list")
+    commentList.empty()
+
+    # DOM container to append all elements at once for increased performance
+    newContent = document.createDocumentFragment()
+
+    for comment in comments
+      newContent.appendChild((
+        $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
+        $('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content})))[0])
+
+    commentList.append(newContent)
+
+    @updateActiveComment()
+
+
+  updateActiveComment : ->
+
+    comment = @model.route.getComment()
+    if comment
+      $("#comment-input").val(comment)
+    else
+      $("#comment-input").val("")
+
+    oldIcon = $("#comment-container i.icon-arrow-right")
+    if oldIcon.length
+      oldIcon.toggleClass("icon-arrow-right", false)
+      oldIcon.toggleClass("icon-angle-right", true)
+
+    activeHref = $("#comment-container a[data-nodeid=#{@model.route.getActiveNodeId()}]")
+    if activeHref.length
+
+      newIcon = activeHref.parent("li").children("i")
+      newIcon.toggleClass("icon-arrow-right", true)
+      newIcon.toggleClass("icon-angle-right", false)
+
+      # animate scrolling to the new comment
+      $("#comment-container").animate({
+        scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 500)
+
 
   webGlSupported : ->
 

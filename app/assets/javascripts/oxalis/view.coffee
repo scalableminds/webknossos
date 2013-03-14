@@ -31,7 +31,6 @@ class View
       wrongDirection : =>
         Toast.error("You're tracing in the wrong direction")
       updateComments : (comments) => 
-        console.log comments
         @updateComments(comments)
       newActiveNode : => @updateActiveComment()
       deleteTree : => @updateActiveComment()
@@ -40,6 +39,10 @@ class View
 
     # initialize comments
     @model.route.updateComments()
+
+    # disable loader, show oxalis
+    $("#loader").css("display" : "none")
+    $("#container").css("display" : "inline")
 
 
   toggleTheme : ->
@@ -78,9 +81,9 @@ class View
           <tr><td>Del</td><td>Delete node/Split trees</td><td>J</td><td>Jump to last branchpoint</td></tr>
           <tr><td>Shift + Alt + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
           <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
-          <tr><td>N</td><td>Next comment</td><th colspan=\"2\">3D-view</th><td></td></tr>
-          <tr><td>T</td><td>Toggle theme</td><td>Mousewheel</td><td>Zoom in and out</td></tr>
-          <tr><td>1</td><td>Toggle Skeleton Visibility</td><td></td><td></td></tr>          
+          <tr><td>N</td><td>Next comment</td><td>Shift + Mousewheel</td><td>Change node size</td></tr>
+          <tr><td>T</td><td>Toggle theme</td><th colspan=\"2\">3D-view</th><td></td></tr>
+          <tr><td>1</td><td>Toggle Skeleton Visibility</td><td>Mousewheel</td><td>Zoom in and out</td></tr>          
           <tr><td>M</td><td>Toggle mode</td><td></td><td></td></tr>
           <tr><th colspan=\"2\">Flightmode</th><td></td><td></td></tr>
           <tr><td>Mouse or Arrow keys</td><td>Rotation</td><td></td><td></td></tr>

@@ -16,19 +16,19 @@ class Gui
 
   model : null
   
-  constructor : (container, @model, settings) ->
+  constructor : (container, @model, @tracingSettings) ->
     
     _.extend(this, new EventMixin())
 
     @user = @model.user
     # create GUI
-    modelRadius = @model.route.getActiveNodeRadius()
+    # modelRadius = @model.route.getActiveNodeRadius()
     @qualityArray = ["high", "medium", "low"]
 
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(@user.briConNames)
 
-    somaClickingAllowed = settings.somaClickingAllowed
+    somaClickingAllowed = @tracingSettings.somaClickingAllowed
     
     @settings = 
 
@@ -45,7 +45,7 @@ class Gui
       activeNodeID : @model.route.getActiveNodeId()
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
-      radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
+      # radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
 
     if @datasetPosition == 0
       # add new dataset to settings
@@ -106,13 +106,15 @@ class Gui
     if somaClickingAllowed
       @addCheckbox(fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
     else
-      @setNewNodeNewTree(false)
+      @set("newNodeNewTree", false, Boolean)
     @addFunction(fTrees, @settings, "newTree", "Create New Tree")
     @addFunction(fTrees, @settings, "deleteActiveTree", "Delete Active Tree")
 
     fNodes = @gui.addFolder("Nodes")
     @activeNodeIdController = @addNumber(fNodes, @settings, "activeNodeID",
       1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
+    @particleSizeController = @addSlider(fNodes, @user, "particleSize",
+      1, 20, 1, "Node size")
     @addFunction(fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
     #fControls.open()
@@ -158,7 +160,7 @@ class Gui
         else
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
-    @model.route.on  
+    @model.route.on
       newActiveNode    : => @update()
       newActiveTree    : => @update()
       deleteActiveTree : => @update()
@@ -167,6 +169,7 @@ class Gui
       newNode          : => @update()
       newTree          : => @update()
       # newActiveNodeRadius : (radius) =>@updateRadius(radius)
+      newParticleSize  : (value, propagate) => if propagate then @updateParticleSize(value)
 
     @model.route.stateLogger.on
       pushFailed       : -> Toast.error("Auto-Save failed!")
@@ -202,11 +205,14 @@ class Gui
 
   saveNow : =>
     @user.pushImpl()
-    @model.route.pushNow()
-      .then( 
-        -> Toast.success("Saved!")
-        -> Toast.error("Couldn't save. Please try again.")
-      )
+    if @tracingSettings.isEditable
+      @model.route.pushNow()
+        .then( 
+          -> Toast.success("Saved!")
+          -> Toast.error("Couldn't save. Please try again.")
+        )
+    else
+      new $.Deferred().resolve()
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
@@ -263,6 +269,10 @@ class Gui
         value = i
     @set("quality", value, Number)
 
+
+  updateParticleSize : (value) =>
+    @set("particleSize", value, Number)
+    @particleSizeController.updateDisplay()
 
   # Helper method to combine common update methods
   update : ->

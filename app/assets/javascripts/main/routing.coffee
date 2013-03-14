@@ -92,7 +92,7 @@ $ ->
 
       require [ "worker!libs/viz" ], (VizWorker) ->
 
-        graphSource = $("#graphData").html()
+        graphSource = $("#graphData").html().replace( /"[^"]+"/gm, (a) -> a.replace(" "," ") )
         userData = JSON.parse($("#userData").html())
 
         VizWorker.send(

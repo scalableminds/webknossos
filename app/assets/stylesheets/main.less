@@ -86,6 +86,10 @@ body:-webkit-full-screen {
     width: 400px;
 }
 
+.nowrap * {
+    white-space: nowrap;
+}
+
 .table-double-striped > tbody {
     & > tr:nth-child(4n+1) > td,
     & > tr:nth-child(4n+2) > td {
@@ -192,6 +196,12 @@ body:-webkit-full-screen {
     background-position: -217px -120px;
 }
 
+.icon-bull::before {
+    width: 14px;
+    content: "•";
+    text-align: center;
+}
+
 .inline-block {
     display: inline-block;
 }
@@ -250,6 +260,16 @@ svg a:hover {
         color : #000;
     }
 }
+
+#loader-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+}
+#container {
+    display: none;
+}
+
 #tracing {
     margin-top: 10px;
     position: relative;

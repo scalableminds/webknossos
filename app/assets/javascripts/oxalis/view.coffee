@@ -31,15 +31,30 @@ class View
       wrongDirection : =>
         Toast.error("You're tracing in the wrong direction")
       updateComments : (comments) => 
-        console.log comments
         @updateComments(comments)
-      newActiveNode : => @updateActiveComment()
-      deleteTree : => @updateActiveComment()
+      newActiveNode : => 
+        @updateActiveComment()
+        @updateActiveTree()
+      deleteTree : => 
+        @updateActiveComment()
+        @updateTrees()
+        @updateActiveTree()
+      mergeTree : =>
+        @updateTrees()
+      reloadTrees : =>
+        @updateTrees()
       newNode : => @updateActiveComment()
-      newTree : => @updateActiveComment() })
+      newTreeName : => 
+        @updateTrees()
+        @updateActiveTree()
+      newTree : => 
+        @updateActiveComment()
+        @updateTrees()
+        @updateActiveTree() })
 
-    # initialize comments
     @model.route.updateComments()
+    @updateActiveTree()
+    @updateTrees()
 
     # disable loader, show oxalis
     $("#loader").css("display" : "none")
@@ -144,6 +159,31 @@ class View
       # animate scrolling to the new comment
       $("#comment-container").animate({
         scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 500)
+
+
+  updateActiveTree : ->
+
+    name = @model.route.getActiveTreeName()
+    if name
+      $("#tree-name-input").val(name)
+      $("#tree-name").text(name)
+    else
+      $("#tree-name-input").val("")
+      $("#tree-name").text("")
+
+  updateTrees : ->
+
+    trees = @model.route.getTrees()
+
+    treeList = $("#tree-list")
+    treeList.empty()
+
+    newContent = document.createDocumentFragment()
+
+    for tree in trees
+      newContent.appendChild((
+        $('<li>').append($('<a>', {"href": "#", "data-treeid": tree.treeId, "text": tree.name})))[0])
+    treeList.append(newContent)
 
 
   webGlSupported : ->

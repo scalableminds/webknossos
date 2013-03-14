@@ -79,11 +79,31 @@
       </div>
       <div class="tabbable" id="comments-tree">
         <ul class="nav nav-tabs">
-          <li class="active"><a href="#tab-abstract" data-toggle="tab">Abstract Tree Viewer</a></li>
+          <li class="active"><a href="#tab-tree" data-toggle="tab">Tree Viewer</a></li>
           <li><a href="#tab-comments" data-toggle="tab">Comments</a></li>
         </ul>
         <div class="tab-content">
-          <div class="tab-pane active" id="tab-abstract">
+          <div class="tab-pane active" id="tab-tree">
+            <div id="tree-navbar">
+              <div class="btn-group">
+                <button class="btn" id="tree-create-button">Create new tree</button>
+                <button class="btn" id="tree-delete-button"><i class="icon-remove"></i> Delete tree</button>
+              </div><p>
+              <div>
+                <div class="hover-dynamic">
+                  <span class="hover-hide span3" id="tree-name"></span>
+                  <div class="input-append hover-show span3">
+                    <input name="name" id="tree-name-input" class="input-medium" maxlength="30" type="text" autocomplete="off">
+                    <button class="btn" id="tree-name-submit"><i class="icon-ok"></i></button>
+                  </div>
+                </div>
+                <div class="divider-vertical"></div>
+                <div class="btn-group inline-block">
+                  <a class="btn dropdown-toggle" data-toggle="dropdown" id="tree-list-button"><i class="icon-list"></i> </a>
+                  <ul class="dropdown-menu pull-right" id="tree-list"></ul>
+                </div>
+              </div>
+            </div>
             <div id="abstractTreeViewer"></div>
           </div>
           <div class="tab-pane" id="tab-comments">

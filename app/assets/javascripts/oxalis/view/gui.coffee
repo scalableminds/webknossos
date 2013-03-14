@@ -39,8 +39,6 @@ class Gui
       quality : @qualityArray[@user.quality]
 
       activeTreeID : @model.route.getActiveTreeId()
-      newTree : => @trigger "createNewTree"
-      deleteActiveTree : => @trigger "deleteActiveTree"
 
       activeNodeID : @model.route.getActiveNodeId()
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
@@ -107,8 +105,6 @@ class Gui
       @addCheckbox(fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
     else
       @set("newNodeNewTree", false, Boolean)
-    @addFunction(fTrees, @settings, "newTree", "Create New Tree")
-    @addFunction(fTrees, @settings, "deleteActiveTree", "Delete Active Tree")
 
     fNodes = @gui.addFolder("Nodes")
     @activeNodeIdController = @addNumber(fNodes, @settings, "activeNodeID",

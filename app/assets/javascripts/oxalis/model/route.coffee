@@ -65,7 +65,10 @@ class Route
     # get tree to build
     for treeData in @data.trees
       # Create new tree
-      tree = new TraceTree(treeData.id, new THREE.Color().setRGB(treeData.color[0..2]...).getHex())
+      tree = new TraceTree(
+        treeData.id,
+        new THREE.Color().setRGB(treeData.color[0..2]...).getHex(),
+        if treeData.name then treeData.name else "Tree#{treeData.id}")
       # Initialize nodes
       i = 0
       for node in treeData.nodes
@@ -299,6 +302,20 @@ class Route
     if @activeTree then @activeTree.treeId else null
 
 
+  getActiveTreeName : ->
+
+    if @activeTree then @activeTree.name else null
+
+
+  setTreeName : (name) ->
+
+    if @activeTree
+      @activeTree.name = name
+      @stateLogger.updateTree(@activeTree)
+      
+      @trigger("newTreeName")
+
+
   getNode : (id) ->
 
     for tree in @trees
@@ -421,6 +438,7 @@ class Route
       @lastActiveNodeId = @activeNode.id
     @stateLogger.push()
 
+    @trigger("newActiveNode")
     @trigger("newActiveTree")
 
 
@@ -444,7 +462,7 @@ class Route
 
   createNewTree : ->
 
-    tree = new TraceTree(@treeIdCount++, @getNewTreeColor())
+    tree = new TraceTree(@treeIdCount++, @getNewTreeColor(), "Tree#{@treeIdCount}")
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null

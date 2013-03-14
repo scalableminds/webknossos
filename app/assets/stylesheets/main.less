@@ -134,20 +134,19 @@ body:-webkit-full-screen {
     }
 }
 
-.table-hover {
-
-    tr {
-        .hover-show {
-            display: none;
-        }
+.hover-show {
+    display: none;
+}
+.hover-hide {
+    margin-top: 5px;
+    margin-bottom: 10px;
+}
+.hover-dynamic:hover {
+    .hover-show {
+        display: inherit;
     }
-    tr:hover {
-        .hover-show {
-            display: inherit;
-        }
-        .hover-hide {
-            display: none;
-        }
+    .hover-hide {
+        display: none;
     }
 }
 
@@ -284,6 +283,11 @@ svg a:hover {
     margin-top: 10px;
     margin-left: 20px;
 }
+#tab-tree {
+    padding-left: 5px;
+    padding-right: 5px;
+    overflow-y: hidden;
+}
 #tab-comments {
     padding-left: 5px;
     padding-right: 5px;
@@ -385,6 +389,9 @@ svg a:hover {
     padding-top: 0px;
     padding-bottom: 0px;
     margin-top: -1px;
+}
+#tree-name {
+    height: 20px;
 }
 
 #toggle-explorative {

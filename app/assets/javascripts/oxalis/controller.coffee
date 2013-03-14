@@ -74,11 +74,31 @@ class Controller
       $("#comment-input").on "change", (event) => 
         @setComment(event.target.value)
 
-      $("#comment-previous").on "click", =>
+      $("#comment-previous").click =>
         @prevComment()
 
-      $("#comment-next").on "click", =>
+      $("#comment-next").click =>
         @nextComment()
+
+      $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
+        event.preventDefault()
+        @setActiveNode($(event.target).data("nodeid"), true, false)
+
+      $("#tree-name-submit").click (event) =>
+        @setTreeName($("#tree-name-input").val())
+
+      $("#tree-name-input").keypress (event) =>
+        if event.which == 13 then $("#tree-name-submit").click()
+
+      $("#tree-create-button").click =>
+        @createNewTree()
+
+      $("#tree-delete-button").click =>
+        @deleteActiveTree()
+
+      $("#tree-list").on "click", "a[data-treeid]", (event) =>
+        event.preventDefault()
+        @setActiveTree($(event.target).data("treeid"))
 
 
 
@@ -155,10 +175,8 @@ class Controller
 
     gui.on
       deleteActiveNode : @deleteActiveNode
-      createNewTree : @createNewTree
       setActiveTree : (id) => @setActiveTree(id)
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
-      deleteActiveTree : @deleteActiveTree
 
     gui
 
@@ -195,6 +213,11 @@ class Controller
   deleteActiveTree : ->
 
     @model.route.deleteTree(true)
+
+
+  setTreeName : (name) ->
+
+    @model.route.setTreeName(name)
 
 
   setComment : (value) =>

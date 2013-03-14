@@ -3,122 +3,128 @@
 # ~~~~
 
 # The general pages
-GET      /                                         controllers.Game.index
-GET      /trace/:tracingId                         controllers.Game.trace(tracingId: String)
-GET      /dashboard                                controllers.UserController.dashboard
-GET      /game/initialize                          controllers.Game.initialize
+GET      /                                          controllers.TracingController.index
+GET      /dashboard                                 controllers.UserController.dashboard
+
 
 # Tasks
-GET      /tasks/requestTask                        controllers.TaskController.request
+GET      /tasks/requestTask                         controllers.TaskController.request
 
 # Jira integration
-GET      /jira                                     controllers.Jira.index
-POST     /jira                                     controllers.Jira.submit
+GET      /jira                                      controllers.Jira.index
+POST     /jira                                      controllers.Jira.submit
 
 # Authentication
-GET      /login                                    controllers.Authentication.login
-POST     /login                                    controllers.Authentication.authenticate
-GET      /logout                                   controllers.Authentication.logout
-GET      /register                                 controllers.Authentication.register
-POST     /register                                 controllers.Authentication.registrate
+GET      /login                                     controllers.Authentication.login
+POST     /login                                     controllers.Authentication.authenticate
+GET      /logout                                    controllers.Authentication.logout
+GET      /register                                  controllers.Authentication.register
+POST     /register                                  controllers.Authentication.registrate
 
-GET      /login/fb                                 controllers.login.FacebookLogin.login
-GET      /login/fb/code                            controllers.login.FacebookLogin.loginCode(code: String)
-GET      /login/tw                                 controllers.login.TwitterLogin.login
+GET      /login/fb                                  controllers.login.FacebookLogin.login
+GET      /login/fb/code                             controllers.login.FacebookLogin.loginCode(code: String)
+GET      /login/tw                                  controllers.login.TwitterLogin.login
 
 # User settings
-POST    /user/configuration                 	   controllers.UserController.saveSettings
-GET     /user/configuration                 	   controllers.UserController.showSettings
-GET     /user/configuration/default         	   controllers.UserController.defaultSettings
+POST     /user/configuration                        controllers.UserController.saveSettings
+GET      /user/configuration                        controllers.UserController.showSettings
+GET      /user/configuration/default                controllers.UserController.defaultSettings
 
 # Binary Data
-GET      /binary/ws                                controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
-POST     /binary/ajax                              controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
-GET      /binary/ajax                              controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
+GET      /binary/ws                                 controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
+POST     /binary/ajax                               controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
+GET      /binary/ajax                               controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
 
 # Assertions
-GET      /assert/:assertionId                      controllers.AssertionController.view(assertionId: String)
-POST     /assert                                   controllers.AssertionController.log
-GET      /assert                                   controllers.AssertionController.list
+GET      /assert/:assertionId                       controllers.AssertionController.view(assertionId: String)
+POST     /assert                                    controllers.AssertionController.log
+GET      /assert                                    controllers.AssertionController.list
 
 # Tracing Stuff
-POST     /tracing/create                           controllers.TracingController.createExplorational
-GET      /tracing/:tracingId                       controllers.TracingController.info( tracingId: String )
-PUT      /tracing/:tracingId                       controllers.TracingController.update( tracingId: String, version: Int )
-GET      /tracing/:tracingId/finishAndRedirect     controllers.TracingController.finishWithRedirect( tracingId: String )
-GET      /tracing/:tracingId/finish                controllers.TracingController.finish( tracingId: String, explorational: Boolean = false )
-GET      /tracing/:tracingId/finishExperimental    controllers.TracingController.finish( tracingId: String, explorational: Boolean = true )
-POST     /tracing/:tracingId/name                  controllers.TracingController.nameExplorativeTracing( tracingId: String)
+POST     /tracing                                   controllers.TracingController.createExplorational
+GET      /tracing/:tracingId/trace                  controllers.TracingController.trace( tracingId: String)
+GET      /tracing/:tracingId/view                   controllers.TracingController.view(tracingId: String)
+PUT      /tracing/:tracingId                        controllers.TracingController.update( tracingId: String, version: Int )
+POST     /tracing/:tracingId/name                   controllers.TracingController.nameExplorativeTracing( tracingId: String)
+GET      /tracing/:tracingId/finishAndRedirect      controllers.TracingController.finishWithRedirect( tracingId: String )
+GET      /tracing/:tracingId/finish                 controllers.TracingController.finish( tracingId: String, explorational: Boolean = false )
+GET      /tracing/:tracingId/finishExperimental     controllers.TracingController.finish( tracingId: String, explorational: Boolean = true )
+GET      /trace/:tracingType/:identifier            controllers.TracingController.info( tracingType: String, identifier: String )
+GET      /trace/:tracingType/:identifier/download   controllers.TracingController.download( tracingType: String, identifier: String )
 
 #Admin pages
-GET      /admin/nml/upload                         controllers.admin.NMLIO.uploadForm
-POST     /admin/nml/upload                         controllers.admin.NMLIO.upload
+GET      /admin/nml/upload                          controllers.admin.NMLIO.uploadForm
+POST     /admin/nml/upload                          controllers.admin.NMLIO.upload
 
 
 # Admin Tasks
-GET      /admin/tasks/algorithm                    controllers.admin.TaskAlgorithm.index
-POST     /admin/tasks/algorithm                    controllers.admin.TaskAlgorithm.submitAlgorithm
-GET      /admin/tasks/algorithm/:id?use=true       controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
+GET      /admin/tasks/algorithm                     controllers.admin.TaskAlgorithm.index
+POST     /admin/tasks/algorithm                     controllers.admin.TaskAlgorithm.submitAlgorithm
+GET      /admin/tasks/algorithm/:id?use=true        controllers.admin.TaskAlgorithm.useAlgorithm(id: String)
 
-GET      /admin/taskTypes                          controllers.admin.TaskTypeAdministration.list
-POST     /admin/taskTypes/create                   controllers.admin.TaskTypeAdministration.create
-GET      /admin/taskTypes/:id/delete               controllers.admin.TaskTypeAdministration.delete(id: String)
-GET      /admin/taskTypes/:id/edit                 controllers.admin.TaskTypeAdministration.edit(id: String)
-POST     /admin/taskTypes/:id                      controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
+GET      /admin/taskTypes                           controllers.admin.TaskTypeAdministration.list
+POST     /admin/taskTypes/create                    controllers.admin.TaskTypeAdministration.create
+GET      /admin/taskTypes/:id/delete                controllers.admin.TaskTypeAdministration.delete(id: String)
+GET      /admin/taskTypes/:id/trace                 controllers.admin.TaskTypeAdministration.trace(id: String)
+GET      /admin/taskTypes/:id/edit                  controllers.admin.TaskTypeAdministration.edit(id: String)
+POST     /admin/taskTypes/:id                       controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
 
-GET      /admin/projects                           controllers.admin.ProjectAdministration.list
-POST     /admin/projects/create                    controllers.admin.ProjectAdministration.create
-GET      /admin/projects/:name/delete              controllers.admin.ProjectAdministration.delete(name: String)
-GET      /admin/projects/:name/download            controllers.admin.NMLIO.projectDownload(name: String)
+GET      /admin/projects                            controllers.admin.ProjectAdministration.list
+POST     /admin/projects/create                     controllers.admin.ProjectAdministration.create
+GET      /admin/projects/:name/delete               controllers.admin.ProjectAdministration.delete(name: String)
+GET      /admin/projects/:name/download             controllers.admin.NMLIO.projectDownload(name: String)
+GET      /admin/projects/:name/download             controllers.admin.NMLIO.projectDownload(name: String)
+GET      /admin/projects/:name/trace                controllers.admin.ProjectAdministration.trace(name: String)
 
-GET      /admin/tasks                              controllers.admin.TaskAdministration.list
-GET      /admin/tasks/create                       controllers.admin.TaskAdministration.create
-POST     /admin/tasks/createBulk                   controllers.admin.TaskAdministration.createBulk
-POST     /admin/tasks/createFromNML                controllers.admin.TaskAdministration.createFromNML
-POST     /admin/tasks/createFromForm               controllers.admin.TaskAdministration.createFromForm
-GET      /admin/tasks/overview                     controllers.admin.TaskAdministration.overview
-GET      /admin/tracings/:tracingId/cancel         controllers.admin.TaskAdministration.cancelTracing( tracingId: String )
-GET      /admin/tasks/:id/download                 controllers.admin.NMLIO.taskDownload(id: String)
-GET      /admin/tasks/:id/delete                   controllers.admin.TaskAdministration.delete(id: String)
-GET      /admin/tasks/:id/edit                     controllers.admin.TaskAdministration.edit(id: String)
-POST     /admin/tasks/:id                          controllers.admin.TaskAdministration.editTaskForm(id: String)
+GET      /admin/tasks                               controllers.admin.TaskAdministration.list
+GET      /admin/tasks/create                        controllers.admin.TaskAdministration.create
+POST     /admin/tasks/createBulk                    controllers.admin.TaskAdministration.createBulk
+POST     /admin/tasks/createFromNML                 controllers.admin.TaskAdministration.createFromNML
+POST     /admin/tasks/createFromForm                controllers.admin.TaskAdministration.createFromForm
+GET      /admin/tasks/overview                      controllers.admin.TaskAdministration.overview
+GET      /admin/tracings/:tracingId/cancel          controllers.admin.TaskAdministration.cancelTracing( tracingId: String )
+GET      /admin/tasks/:id/download                  controllers.admin.NMLIO.taskDownload(id: String)
+GET      /admin/tasks/:id/delete                    controllers.admin.TaskAdministration.delete(id: String)
+GET      /admin/tasks/:id/edit                      controllers.admin.TaskAdministration.edit(id: String)
+GET      /admin/tasks/:id/trace                     controllers.admin.TaskAdministration.trace(id: String)
+POST     /admin/tasks/:id                           controllers.admin.TaskAdministration.editTaskForm(id: String)
 
-GET      /admin/trainingsTasks                     controllers.admin.TrainingsTaskAdministration.list
-GET      /admin/trainingsTasks/create              controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
-POST     /admin/trainingsTasks/createFromForm      controllers.admin.TrainingsTaskAdministration.createFromForm
-GET      /admin/trainingsTasks/:id/delete          controllers.admin.TrainingsTaskAdministration.delete(id: String)
+GET      /admin/trainingsTasks                      controllers.admin.TrainingsTaskAdministration.list
+GET      /admin/trainingsTasks/create               controllers.admin.TrainingsTaskAdministration.create(taskId: String ?= "")
+POST     /admin/trainingsTasks/createFromForm       controllers.admin.TrainingsTaskAdministration.createFromForm
+GET      /admin/trainingsTasks/:id/delete           controllers.admin.TrainingsTaskAdministration.delete(id: String)
 
-GET      /admin/training/:id/startReview           controllers.admin.TrainingsTracingAdministration.startReview(id: String)
-GET      /admin/training/:id/abortReview           controllers.admin.TrainingsTracingAdministration.abortReview(id: String)
-GET      /admin/training/:id/finishReview          controllers.admin.TrainingsTracingAdministration.finishReview(id: String)
-POST     /admin/training/:id/finishReview          controllers.admin.TrainingsTracingAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
+GET      /admin/training/:id/startReview            controllers.admin.TrainingsTracingAdministration.startReview(id: String)
+GET      /admin/training/:id/abortReview            controllers.admin.TrainingsTracingAdministration.abortReview(id: String)
+GET      /admin/training/:id/finishReview           controllers.admin.TrainingsTracingAdministration.finishReview(id: String)
+POST     /admin/training/:id/finishReview           controllers.admin.TrainingsTracingAdministration.finishReviewForm(id: String, passed: Boolean ?= true)
 
 
 # User Administration
-GET      /admin/users                              controllers.admin.UserAdministration.index
-POST     /admin/users/verify                       controllers.admin.UserAdministration.verifyBulk
-POST     /admin/users/delete                       controllers.admin.UserAdministration.deleteBulk
-GET      /admin/users/:id/verify                   controllers.admin.UserAdministration.verify(id: String)
-GET      /admin/users/:id/delete                   controllers.admin.UserAdministration.delete(id: String)
-GET      /admin/users/:id/loginAs                  controllers.admin.UserAdministration.loginAsUser(id: String)
-GET      /admin/users/:id/download                 controllers.admin.NMLIO.userDownload(id: String)
-POST     /admin/users/role                         controllers.admin.UserAdministration.addRoleBulk
-DELETE   /admin/users/role                         controllers.admin.UserAdministration.deleteRoleBulk
-POST     /admin/users/experience                   controllers.admin.UserAdministration.setExperienceBulk
-DELETE   /admin/users/experience                   controllers.admin.UserAdministration.deleteExperienceBulk
-POST     /admin/users/experience/increase          controllers.admin.UserAdministration.increaseExperienceBulk
+GET      /admin/users                               controllers.admin.UserAdministration.index
+POST     /admin/users/verify                        controllers.admin.UserAdministration.verifyBulk
+POST     /admin/users/delete                        controllers.admin.UserAdministration.deleteBulk
+GET      /admin/users/:id/verify                    controllers.admin.UserAdministration.verify(id: String)
+GET      /admin/users/:id/delete                    controllers.admin.UserAdministration.delete(id: String)
+GET      /admin/users/:id/loginAs                   controllers.admin.UserAdministration.loginAsUser(id: String)
+GET      /admin/users/:id/download                  controllers.admin.NMLIO.userDownload(id: String)
+POST     /admin/users/role                          controllers.admin.UserAdministration.addRoleBulk
+DELETE   /admin/users/role                          controllers.admin.UserAdministration.deleteRoleBulk
+POST     /admin/users/experience                    controllers.admin.UserAdministration.setExperienceBulk
+DELETE   /admin/users/experience                    controllers.admin.UserAdministration.deleteExperienceBulk
+POST     /admin/users/experience/increase           controllers.admin.UserAdministration.increaseExperienceBulk
 
-GET      /admin/tracings/:id/review                controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
-GET      /admin/tracings/:id/download              controllers.admin.NMLIO.download( id: String )
+GET      /admin/tracings/:id/review                 controllers.admin.TrainingsTracingAdministration.oxalisReview(id: String)
+GET      /admin/tracings/:id/reopen                 controllers.admin.TaskAdministration.reopen( id: String )
 
 # Binary Administration
-GET      /admin/binaryDB                           controllers.admin.BinaryDataAdministration.list
-GET      /admin/binaryDB/insert                    controllers.admin.BinaryDataAdministration.insertIntoDB(dataSetName: String)
-GET      /admin/binaryDB/insertionState            controllers.admin.BinaryDataAdministration.insertionProgress
+GET      /admin/binaryDB                            controllers.admin.BinaryDataAdministration.list
+GET      /admin/binaryDB/insert                     controllers.admin.BinaryDataAdministration.insertIntoDB(dataSetName: String)
+GET      /admin/binaryDB/insertionState             controllers.admin.BinaryDataAdministration.insertionProgress
 
 # Javascript routing
-GET      /assets/javascripts/routes.js             controllers.Application.javascriptRoutes
+GET      /assets/javascripts/routes.js              controllers.Application.javascriptRoutes
 
 # Map static resources from the /public folder to the /public path
-GET      /assets/*file                             controllers.Assets.at(path="/public", file)
+GET      /assets/*file                              controllers.Assets.at(path="/public", file)
 

@@ -16,7 +16,7 @@ class Gui
 
   model : null
   
-  constructor : (container, @model, settings) ->
+  constructor : (container, @model, @tracingSettings) ->
     
     _.extend(this, new EventMixin())
 
@@ -28,8 +28,8 @@ class Gui
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(@user.briConNames)
 
-    somaClickingAllowed = settings.somaClickingAllowed
-
+    somaClickingAllowed = @tracingSettings.somaClickingAllowed
+    
     @settings = 
 
       fourBit : @user.fourBit
@@ -100,7 +100,7 @@ class Gui
 
     fTrees = @gui.addFolder("Trees")
     @activeTreeIdController = @addNumber(fTrees, @settings, "activeTreeID",
-      1, 1, "Active Tree ID")
+      1, 1, "Active Tree ID", (value) => @trigger( "setActiveTree", value))
     if somaClickingAllowed
       @addCheckbox(fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
     else
@@ -108,7 +108,7 @@ class Gui
 
     fNodes = @gui.addFolder("Nodes")
     @activeNodeIdController = @addNumber(fNodes, @settings, "activeNodeID",
-      1, 1, "Active Node ID")
+      1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
     @particleSizeController = @addSlider(fNodes, @user, "particleSize",
       1, 20, 1, "Node size")
     @addFunction(fNodes, @settings, "deleteActiveNode", "Delete Active Node")
@@ -190,20 +190,25 @@ class Gui
     return (folder.add object, propertyName)
                           .name(displayName)
 
-  addNumber : (folder, object, propertyName, min, step, displayName) =>
+  addNumber : (folder, object, propertyName, min, step, displayName, onChange) =>
+    unless onChange?
+      onChange = (v) => @set(propertyName, v, Number)
     return (folder.add object, propertyName)
                           .min(min)
                           .step(step)
                           .name(displayName)
-                          .onChange((v) => @set(propertyName, v, Number))
+                          .onChange(onChange)
 
   saveNow : =>
     @user.pushImpl()
-    @model.route.pushNow()
-      .then( 
-        -> Toast.success("Saved!")
-        -> Toast.error("Couldn't save. Please try again.")
-      )
+    if @tracingSettings.isEditable
+      @model.route.pushNow()
+        .then( 
+          -> Toast.success("Saved!")
+          -> Toast.error("Couldn't save. Please try again.")
+        )
+    else
+      new $.Deferred().resolve()
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")

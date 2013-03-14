@@ -86,6 +86,10 @@ body:-webkit-full-screen {
     width: 400px;
 }
 
+.nowrap * {
+    white-space: nowrap;
+}
+
 .table-double-striped > tbody {
     & > tr:nth-child(4n+1) > td,
     & > tr:nth-child(4n+2) > td {
@@ -189,6 +193,12 @@ body:-webkit-full-screen {
 .icon-random {
     width: 14px;
     background-position: -217px -120px;
+}
+
+.icon-bull::before {
+    width: 14px;
+    content: "•";
+    text-align: center;
 }
 
 .inline-block {

@@ -60,7 +60,7 @@ object TwitterLogin extends Controller {
         val user = models.user.User.authRemote( email, "twitter" ) getOrElse (
           models.user.User.createRemote( email, firstName, lastName, "twitter" ) )
           
-        Redirect( controllers.routes.Game.index() ).withSession( Secured.createSession(user) )
+        Redirect( controllers.routes.TracingController.index() ).withSession( Secured.createSession(user) )
       } )
   }
 

@@ -33,6 +33,7 @@ import braingames.util.TextUtils
 import braingames.util.FileIO
 import java.io.FileInputStream
 import java.nio.channels.Channels
+import controllers.tracing.handler.SavedTracingInformationHandler
 
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
@@ -75,7 +76,7 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def tracingToNMLStream(tracing: Tracing) = {
-    IOUtils.toInputStream(prettyPrinter.format(Xml.toXML(tracing)))
+    IOUtils.toInputStream(toXML(tracing))
   }
 
   def loadTracingFromFileStream(tracing: Tracing) = {
@@ -106,13 +107,11 @@ object NMLIO extends Controller with Secured with TextUtils {
         .map { nml =>
           Logger.debug("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
           Logger.debug("Successfully parsed nmlFile")
-          val tracing = Tracing.createFromNMLFor(request.user._id, nml, TracingType.Explorational)
-          UsedTracings.use(request.user, tracing)
-          tracing
+          Tracing.createFromNMLFor(request.user._id, nml, TracingType.Explorational)
         }
         .headOption
         .map { tracing =>
-          Redirect(controllers.routes.Game.trace(tracing.id)).flashing(
+          Redirect(controllers.routes.TracingController.trace(tracing.id)).flashing(
             "success" -> Messages("nml.file.uploadSuccess"))
         }
     }.getOrElse {
@@ -121,31 +120,15 @@ object NMLIO extends Controller with Secured with TextUtils {
     }
   }
 
-  def tracingNMLName(t: Tracing) = {
-    normalize(
-      "%s__%s__%s__%s.nml".format(
-        t.dataSetName,
-        t.task.map(_.id) getOrElse ("explorational"),
-        t.user.map(_.abreviatedName) getOrElse "",
-        brainflight.view.helpers.formatHash(t.id)))
-  }
-
-  def download(tracingId: String) = Authenticated { implicit request =>
-    (for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if !Task.isTrainingsTracing(tracing)
-    } yield {
-      Ok(prettyPrinter.format(Xml.toXML(tracing))).withHeaders(
-        CONTENT_TYPE -> "application/octet-stream",
-        CONTENT_DISPOSITION -> ("attachment; filename=" + tracingNMLName(tracing)))
-    }) ?~ Messages("tracing.training.notFound")
+  def toXML[T <: TracingLike](t: T) = {
+    prettyPrinter.format(Xml.toXML(t))
   }
 
   def zipTracings(tracings: List[Tracing], zipFileName: String) = {
     val zipStreams = tracings.par.map { tracing =>
       val tracingStream =
         loadTracingStream(tracing) getOrElse tracingToNMLStream(tracing)
-      tracingStream -> tracingNMLName(tracing)
+      tracingStream -> SavedTracingInformationHandler.nameForTracing(tracing)
     }.seq
     val zipped = new TemporaryFile(new File(normalize(zipFileName)))
     ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))

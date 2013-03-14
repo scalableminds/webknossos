@@ -1,17 +1,16 @@
 @(task: models.task.Task, tracing: models.tracing.Tracing)
 
 @tracingLinks = {
-  <!--<a href="controllers.routes.TracingController.finish(tracing.id, false)" class="trace-finish" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> reset</a>-->
-  <a href="@controllers.admin.routes.TaskAdministration.cancelTracing(tracing.id)" data-ajax="delete-row,confirm"><i class="icon-remove"></i> delete</a><br/>
 
-  <a href="@controllers.routes.TracingController.view(tracing.id)"><i class="icon-random"></i> view </a><br />
-  <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)"><i class="icon-download"></i> download </a><br />
   @if(!tracing.state.isFinished){ 
-    <a href="@controllers.routes.TracingController.finish(tracing.id, false)" class="trace-finish" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> finish</a><br />
-    <a href="@controllers.admin.routes.TaskAdministration.cancelTracing(tracing.id)" data-ajax="delete-row,confirm"><i class="icon-remove"></i> cancel</a><br/>
+    <a href="@controllers.admin.routes.UserTracingAdministration.finish(tracing.id)" class="trace-finish" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> finish</a><br />
   } else {
-    <a href="@controllers.admin.routes.TaskAdministration.reopen(tracing.id)" data-ajax="replace-row"><i class="icon-share-alt"></i> reopen</a><br/>
+    <a href="@controllers.admin.routes.UserTracingAdministration.reopen(tracing.id)" data-ajax="replace-row"><i class="icon-share-alt"></i> reopen</a><br/>
   }
+  <a href="@controllers.routes.TracingController.trace(tracing.id)"><i class="icon-random"></i> view </a><br />
+  <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)"><i class="icon-download"></i> download </a><br />
+  <a href="@controllers.admin.routes.UserTracingAdministration.reset(tracing.id)" data-ajax="replace-row,confirm"><i class="icon-undo"></i> reset</a><br />
+  <a href="@controllers.admin.routes.TaskAdministration.cancelTracing(tracing.id)" data-ajax="delete-row,confirm"><i class="icon-remove"></i> delete</a><br/>
 }
 
 @linkText(failed: Boolean) = {

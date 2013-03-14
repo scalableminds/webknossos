@@ -35,10 +35,12 @@ trait TracingLike extends ContainsTracingInfo{
   def insertComment[A](c: Comment): A
   def insertTree[A](tree: TreeLike): A
   
-  def isReadOnly: Boolean
-  
   def user: Option[User] = None
-
+  
+  def makeReadOnly: Self
+  
+  def isEditable = tracingSettings.isEditable
+  
   private def applyUpdates(f: Self => Self*) = {
     f.foldLeft(self) {
       case (t, f) => f(t)

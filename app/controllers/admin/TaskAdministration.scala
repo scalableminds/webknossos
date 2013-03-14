@@ -110,7 +110,7 @@ object TaskAdministration extends Controller with Secured {
             task.id,
             "<unknown>",
             TracingType.CompoundTask,
-            isReadOnly = true)
+            isEditable = false)
       
       Ok(html.oxalis.trace(tracingInfo)(Html.empty))
     }
@@ -129,18 +129,7 @@ object TaskAdministration extends Controller with Secured {
       }
     }
   }
-
-  def resetTracing(tracingId: String) = Authenticated { implicit request =>
-    for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-    } yield {
-      Tracing.resetToBase(tracing) match {
-        case Some(_) => JsonOk(Messages("tracing.reset.success"))
-        case _       => JsonBadRequest(Messages("tracing.reset.failed"))
-      }
-    }
-  }
-
+  
   def createFromForm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
       formWithErrors => BadRequest(taskCreateHTML(taskFromNMLForm, formWithErrors)),
@@ -279,17 +268,23 @@ object TaskAdministration extends Controller with Secured {
     }
   }
   
+  def reopenTracing(tracing: Tracing): Option[Tracing] = {
+    if(tracing.tracingType == TracingType.Task)
+      Some(tracing.update(_.reopen))
+    else
+      None
+  }
+  
   def reopen(tracingId: String) = Authenticated{ implicit request =>
     for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
       task <- tracing.task ?~Messages("task.notFound")
     } yield {
-      tracing match {
-        case t if t.tracingType == TracingType.Task =>
-          val updated = tracing.update(_.reopen)
+      reopenTracing(tracing) match {
+        case Some(updated) =>
           JsonOk(html.admin.task.taskTracingDetailTableItem(updated), Messages("tracing.reopened"))
         case _ =>
-          JsonOk(Messages("tracing.unvalid"))
+          JsonOk(Messages("tracing.invalid"))
       }
     }
   }

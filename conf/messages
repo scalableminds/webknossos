@@ -77,8 +77,9 @@ training.gain=Experience Gain
 training.loss=Experience Loss
 
 tracing=Tracing
-tracing.finished=Tracing is finished
 tracing.invalid=Invalid tracing
+tracing.finished=Tracing is finished
+tracing.finish.confirm=Do you really want to finish the tracing?
 tracing.creationFailed=Failed to create tracing
 tracing.notFound=Tracing couldn''t be found
 tracing.review.assignFailed=Couldn''t assign reviewee
@@ -96,7 +97,9 @@ tracing.open.notFound=No open tracing found
 tracing.notPossible=Couldn''t access tracing
 tracing.setName=Successfully named tracing
 tracing.invalidName=Tracing name is invalid
-tracing.finish.confirm=Do you really want to finish the tracing?
+tracing.reset.success=Reseted tracing to base
+tracing.reset.failed=Couldn't reset tracing to base
+tracing.reopened=Tracing got reopened
 
 jira.summary.notSupplied=No summary supplied
 jira.description.notSupplied=No description supplied

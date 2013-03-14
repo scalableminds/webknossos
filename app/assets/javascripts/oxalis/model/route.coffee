@@ -598,7 +598,7 @@ class Route
     return null
 
 
-  getTrees : -> @trees
+  getTrees : -> $.extend(true, [], @trees).sort(@compareNames)
 
 
   # returns a list of nodes that are connected to the parent

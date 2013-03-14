@@ -68,7 +68,6 @@ case class Tracing(
   def dbtrees = DBTree.findAllWithTracingId(_id).toList
 
   def insertTree[Tracing](t: TreeLike) = {
-    println("Inserting tree: " + t.treeId)
     DBTree.insertOne(_id, t)
     this.asInstanceOf[Tracing]
   }

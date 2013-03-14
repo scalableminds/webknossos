@@ -102,21 +102,28 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
-    request.body.file("nmlFile").flatMap { nmlFile =>
-      extractFromNML(nmlFile.ref.file)
-        .map { nml =>
-          Logger.debug("NML: " + nml.trees.size + " Nodes: " + nml.trees.head.nodes.size)
-          Logger.debug("Successfully parsed nmlFile")
-          Tracing.createFromNMLFor(request.user._id, nml, TracingType.Explorational)
-        }
-        .headOption
-        .map { tracing =>
+    val parseResult = request.body.files.map(f => f.filename -> extractFromNML(f.ref.file))
+    if (parseResult.size > 0) {
+      parseResult.find(_._2.isEmpty) match {
+        case None =>
+          val parsedFiles = parseResult.map(_._2.open_!)
+          val head = parsedFiles.head
+          val tail = parsedFiles.tail
+
+          val startTracing = Tracing.createFromNMLFor(request.user._id, head, TracingType.Explorational)
+          val tracing = tail.foldLeft(startTracing) {
+            case (t, s) => t.mergeWith(TemporaryTracing.createFrom(s, s.timeStamp.toString))
+          }
+
           Redirect(controllers.routes.TracingController.trace(tracing.id)).flashing(
             "success" -> Messages("nml.file.uploadSuccess"))
-        }
-    }.getOrElse {
-      Redirect(controllers.routes.UserController.dashboard).flashing(
-        "error" -> Messages("nml.file.invalid"))
+        case Some((fileName, _)) =>
+          Redirect(controllers.routes.UserController.dashboard).flashing(
+            "error" -> Messages("nml.file.invalid", fileName))
+      }
+    } else {
+        Redirect(controllers.routes.UserController.dashboard).flashing(
+            "error" -> Messages("nml.file.noFile"))
     }
   }
 
@@ -128,7 +135,7 @@ object NMLIO extends Controller with Secured with TextUtils {
     val zipStreams = tracings.par.map { tracing =>
       val tracingStream =
         loadTracingStream(tracing) getOrElse tracingToNMLStream(tracing)
-      tracingStream -> SavedTracingInformationHandler.nameForTracing(tracing)
+      tracingStream -> (SavedTracingInformationHandler.nameForTracing(tracing) + ".nml")
     }.seq
     val zipped = new TemporaryFile(new File(normalize(zipFileName)))
     ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))

@@ -13,7 +13,7 @@ object SavedTracingInformationHandler extends TracingInformationHandler with Tra
   import braingames.mvc.BoxImplicits._
   
   override def nameForTracing(t: TracingLike): String = {
-    normalize("%s__%s__%s__%s.nml".format(
+    normalize("%s__%s__%s__%s".format(
         t.dataSetName,
         t.task.map(_.id) getOrElse ("explorational"),
         t.user.map(_.abreviatedName) getOrElse "",

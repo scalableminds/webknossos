@@ -5,6 +5,7 @@ import nml.BranchPoint
 import brainflight.tools.geometry.Scale
 import brainflight.tools.geometry.Point3D
 import nml.Comment
+import nml.NML
 
 case class TemporaryTracing(
     id: String,
@@ -38,6 +39,19 @@ case class TemporaryTracing(
 }
 
 object TemporaryTracing {
+  def createFrom(nml: NML, id: String) = {
+    TemporaryTracing(
+      id,
+      nml.dataSetName,
+      nml.trees,
+      nml.branchPoints,
+      System.currentTimeMillis(),
+      nml.activeNodeId,
+      nml.scale,
+      nml.editPosition,
+      nml.comments)
+  }
+  
   def createFrom(tracing: Tracing, id: String) = {
     TemporaryTracing(
       id,

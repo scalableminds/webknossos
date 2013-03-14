@@ -55,7 +55,8 @@ experience.value=Min Experience
 nmlFile=Reference NML File
 nml.file.uploadSuccess=Successfully uploaded file
 nml.file.notFound=Couldn''t extract NML file
-nml.file.invalid=Couldn''t parse NML file
+nml.file.invalid=Couldn''t parse file: {0}
+nml.file.noFile=No file uploaded
 
 owner=Owner
 

@@ -84,46 +84,47 @@ object TracingController extends Controller with Secured with TracingInformation
     }) ?~ Messages("notAllowed") ~> 403
   }
 
-  private def finishTracing(user: User, tracingId: String): Box[(Tracing, String)] = {
-    (for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if (isAllowedToUpdateTracing(tracing, user) && tracing.state.isInProgress)
-    } yield {
+  def finishTracing(user: User, tracing: Tracing): Box[(Tracing, String)] = {
+    if (isAllowedToFinishTracing(tracing, user) && tracing.state.isInProgress) {
       UsedTracings.removeAll(tracing)
       NMLIO.writeTracingToFile(tracing)
       tracing match {
         case tracing if tracing._task.isEmpty =>
-          tracing.update(_.finish) -> Messages("tracing.finished")
+          Full(tracing.update(_.finish) -> Messages("tracing.finished"))
         case tracing if Task.isTrainingsTracing(tracing) =>
-          tracing.update(_.passToReview) -> Messages("task.passedToReview")
+          Full(tracing.update(_.passToReview) -> Messages("task.passedToReview"))
         case _ =>
-          tracing.update(_.finish) -> Messages("task.finished")
+          Full(tracing.update(_.finish) -> Messages("task.finished"))
       }
-    }) ?~ Messages("tracing.notPossible")
+    } else
+      Failure(Messages("tracing.notPossible"))
   }
 
   def finish(tracingId: String, experimental: Boolean) = Authenticated { implicit request =>
-    finishTracing(request.user, tracingId).map {
-      case (tracing, message) =>
-        if (experimental)
-          JsonOk(message)
-        else
-          (for {
-            taskId <- tracing._task ?~ Messages("tracing.task.notFound")
-            task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
-          } yield {
-            JsonOk(
-              html.user.dashboard.taskTracingTableItem(task, tracing),
-              Json.obj("hasAnOpenTask" -> Tracing.hasAnOpenTracings(request.user, TracingType.Task)),
-              message)
-          }) asResult
+    for {
+      oldTracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      (tracing, message) <- finishTracing(request.user, oldTracing)
+    } yield {
+      if (experimental)
+        JsonOk(message)
+      else
+        (for {
+          task <- tracing.task ?~ Messages("tracing.task.notFound")
+        } yield {
+          JsonOk(
+            html.user.dashboard.taskTracingTableItem(task, tracing),
+            Json.obj("hasAnOpenTask" -> Tracing.hasAnOpenTracings(request.user, TracingType.Task)),
+            message)
+        }) asResult
     }
   }
 
   def finishWithRedirect(tracingId: String) = Authenticated { implicit request =>
-    finishTracing(request.user, tracingId).map {
-      case (_, message) =>
-        Redirect(routes.UserController.dashboard).flashing("success" -> message)
+    for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      (_, message) <- finishTracing(request.user, tracing)
+    } yield {
+      Redirect(routes.UserController.dashboard).flashing("success" -> message)
     }
   }
 
@@ -160,15 +161,18 @@ object TracingController extends Controller with Secured with TracingInformation
       .getOrElse(Redirect(routes.UserController.dashboard))
   }
 
-  def view(tracingId: String) = trace(tracingId)
-
   def trace(tracingId: String) = Authenticated { implicit request =>
-    val user = request.user
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if (isAllowedToViewTracing(tracing, user))
+      if (isAllowedToViewTracing(tracing, request.user))
     } yield {
-      Ok(htmlForTracing(tracing))
+      val modified =
+        if (!isAllowedToUpdateTracing(tracing, request.user))
+          tracing.makeReadOnly
+        else
+          tracing
+
+      Ok(htmlForTracing(modified))
     }) ?~ Messages("notAllowed") ~> 403
   }
 
@@ -187,12 +191,11 @@ object TracingController extends Controller with Secured with TracingInformation
 
 trait TracingInformationProvider extends play.api.http.Status with TracingRights {
   import braingames.mvc.BoxImplicits._
-  
+
   val informationHandlers = Map(
-      TracingType.CompoundProject.toString -> ProjectInformationHandler,
-      TracingType.CompoundTask.toString -> TaskInformationHandler,
-      TracingType.CompoundTaskType.toString -> TaskTypeInformationHandler
-  ).withDefaultValue(SavedTracingInformationHandler)
+    TracingType.CompoundProject.toString -> ProjectInformationHandler,
+    TracingType.CompoundTask.toString -> TaskInformationHandler,
+    TracingType.CompoundTaskType.toString -> TaskTypeInformationHandler).withDefaultValue(SavedTracingInformationHandler)
 
   def createDataSetInformation(dataSetName: String) =
     DataSet.findOneByName(dataSetName) match {
@@ -215,19 +218,19 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
     Json.obj(
       "tracing" -> TracingLike.TracingLikeWrites.writes(tracing))
   }
-  
+
   def withInformationHandler[A, T](tracingType: String)(f: TracingInformationHandler => T)(implicit request: AuthenticatedRequest[_]): T = {
     f(informationHandlers(tracingType))
   }
 
   def findTracing(tracingType: String, identifier: String)(implicit request: AuthenticatedRequest[_]) = Box[TracingLike] {
-    withInformationHandler(tracingType){
+    withInformationHandler(tracingType) {
       _.provideTracing(identifier)
     }
   }
-  
+
   def nameTracing(tracing: TracingLike)(implicit request: AuthenticatedRequest[_]) = Box[String] {
-    withInformationHandler(tracing.tracingType.toString){ handler =>
+    withInformationHandler(tracing.tracingType.toString) { handler =>
       handler.nameForTracing(tracing)
     }
   }
@@ -264,5 +267,9 @@ trait TracingRights {
 
   def isAllowedToUpdateTracing(tracing: Tracing, user: User) = {
     tracing._user == user._id
+  }
+
+  def isAllowedToFinishTracing(tracing: Tracing, user: User) = {
+    tracing._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
   }
 }

@@ -50,7 +50,7 @@ object ProjectAdministration extends Controller with Secured {
             projectName,
             "<unknown>",
             TracingType.CompoundProject,
-            isReadOnly = true)
+            isEditable = false)
       
       Ok(html.oxalis.trace(tracingInfo)(Html.empty))
     }

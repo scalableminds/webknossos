@@ -25,8 +25,9 @@ case class TemporaryTracing(
 
   def task = None
   
-  def isReadOnly = true
-
+  def makeReadOnly = 
+    this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
+  
   def insertTree[TemporaryTracing](tree: TreeLike) = {
     this.copy(trees = tree :: trees).asInstanceOf[TemporaryTracing]
   }

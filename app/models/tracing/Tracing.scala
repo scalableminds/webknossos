@@ -45,7 +45,8 @@ case class Tracing(
 
   def dao = Tracing
   
-  def isReadOnly = false
+  def makeReadOnly = this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
+  
   /**
    * Easy access methods
    */
@@ -82,6 +83,10 @@ case class Tracing(
 
   def maxNodeId = nml.utils.maxNodeId(this.trees)
 
+  def clearTracing = {
+    this.copy(branchPoints = Nil, comments = Nil)
+  }
+  
   /**
    * State modifications
    * always return a new instance!
@@ -198,11 +203,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   }
 
   def mergeTracings(source: Tracing, target: Tracing): Tracing =
-    target.update{ t =>
-     val a = t.mergeWith(source)
-     println("Result comments: " + a.comments)
-     a
-  }
+    target.update(_.mergeWith(source))
 
   def createTracingFor(user: User, task: Task) = {
     task.tracingBase.map { tracingBase =>
@@ -213,6 +214,16 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
         timestamp = System.currentTimeMillis,
         state = InProgress,
         tracingType = TracingType.Task))
+    }
+  }
+  
+  def resetToBase(tracing: Tracing) = {
+    for{
+      task <- tracing.task
+      tracingBase <- task.tracingBase
+    } yield {
+      DBTree.removeAllWithTracingId(tracing._id)
+      mergeTracings(tracingBase, tracing.clearTracing)
     }
   }
 

@@ -3,6 +3,7 @@ jquery : $
 underscore : _
 libs/toast : Toast
 libs/keyboard : KeyboardJS
+main/routing_utils : RoutingUtils
 ###
 
 $ ->
@@ -22,25 +23,7 @@ $ ->
 
     "user.dashboard.dashboard" : ->
 
-      # initialize/toggling for finished tasks
-      $("#dashboard-tasks").find(".finished").addClass("hide")
-      $("#toggle-finished").click ->
-
-        $toggle = $(this)
-        newState = !$toggle.hasClass("open")
-
-        description = if newState then "Hide finished tasks" else "Show finished tasks"
-        $toggle.text(description)
-
-        $("#dashboard-tasks").find(".finished").toggleClass("hide", !newState)
-        $("#dashboard-tasks").find(".finished").toggleClass("open", newState)
-        $toggle.toggleClass("open", newState)
-
-      # initialize masking for newly finished tasks
-      $("#dashboard-tasks").on "DOMSubtreeModified", (event) ->
-
-        initialState = if $("#toggle-finished").hasClass("open") then "open" else "hide"
-        $(".finished:not(.open):not(.hide)").addClass(initialState)
+      RoutingUtils.maskFinishedTasks()
 
       $("#nml-explore-form").each ->
 
@@ -115,6 +98,12 @@ $ ->
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
+
+    "admin.user.userTracingAdministration" : ->
+
+      RoutingUtils.maskFinishedTasks()
+
+      return
 
 
     "admin.task.taskSelectionAlgorithm" : ->

@@ -2,7 +2,7 @@
 
 class TraceTree
 
-  constructor : (@treeId, @color) ->
+  constructor : (@treeId, @color, @name) ->
     @nodes = []
 
   removeNode : (id) ->

@@ -34,6 +34,7 @@ class StateLogger
     return {
       id: tree.treeId
       color: [treeColor.r, treeColor.g, treeColor.b, 1]
+      name: tree.name
       }
 
   createTree : (tree) ->

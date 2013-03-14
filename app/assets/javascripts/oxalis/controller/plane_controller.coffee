@@ -113,10 +113,6 @@ class PlaneController
       event.preventDefault()
       return
 
-    $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
-      event.preventDefault()
-      @setActiveNode($(event.target).data("nodeid"), true, false)
-
     @mouseControllers = []
 
     for planeId in ["xy", "yz", "xz"]

@@ -138,20 +138,15 @@ body:-webkit-full-screen {
     }
 }
 
-.table-hover {
-
-    tr {
-        .hover-show {
-            display: none;
-        }
+.hover-show {
+    display: none;
+}
+.hover-dynamic:hover {
+    .hover-show {
+        display: inherit;
     }
-    tr:hover {
-        .hover-show {
-            display: inherit;
-        }
-        .hover-hide {
-            display: none;
-        }
+    .hover-hide {
+        display: none;
     }
 }
 
@@ -215,6 +210,12 @@ svg a:hover {
     &[href] {
         cursor: pointer;
     }
+}
+
+.dropdown-menu {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 #alert-container {
@@ -294,6 +295,11 @@ svg a:hover {
     margin-top: 10px;
     margin-left: 20px;
 }
+#tab-tree {
+    padding-left: 5px;
+    padding-right: 5px;
+    overflow-y: hidden;
+}
 #tab-comments {
     padding-left: 5px;
     padding-right: 5px;
@@ -303,6 +309,10 @@ svg a:hover {
     max-height: 2*@standardViewportWidth - 90px;
     margin-top: 10px;
     overflow-y: auto;
+}
+#tree-name {
+    margin-top: 15px;
+    margin-bottom: 10px;
 }
 #abstractTreeViewer {
     height : 2*@standardViewportWidth - 40px;
@@ -395,6 +405,9 @@ svg a:hover {
     padding-top: 0px;
     padding-bottom: 0px;
     margin-top: -1px;
+}
+#tree-name {
+    height: 20px;
 }
 
 #toggle-explorative {

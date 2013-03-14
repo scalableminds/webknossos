@@ -19,7 +19,7 @@ import com.mongodb.casbah.query.Implicits._
 import scala.collection.immutable.HashMap
 import nml.TreeLike
 
-case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree]{
+case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, name: String = "", _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree]{
   val dao = DBTree
 
   def isEmpty = {
@@ -37,18 +37,20 @@ case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, _id: ObjectId =
     DBTree.edges.countByParentId(_id)
     
   def toTree = {
-    Tree(treeId, nodes, edges, color)
+    Tree(treeId, nodes, edges, color, name)
   }
 }
 
 trait DBTreeFactory {
   def createFrom(tracingId: ObjectId, t: TreeLike) = {
-    DBTree(tracingId, t.treeId, t.color)
+    DBTree(tracingId, t.treeId, t.color, nameFromId(t.treeId))
   }
 
   def createCopy(t: DBTree, tid: ObjectId) = {
     t.copy(_id = new ObjectId, _tracing = tid)
   }
+
+  def nameFromId(treeId: Int) = "Tree%03d".format(treeId)
 }
 
 object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
@@ -58,6 +60,7 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
   /*def createAndInsertDeepCopy(t: DBTree): DBTree = {
     createAndInsertDeepCopy(t, t._tracing, 0)
   }*/
+  
 
   def findNodesByTree(tid: ObjectId) = {
     nodes.find(MongoDBObject("_treeId" -> tid)).toList
@@ -147,7 +150,7 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
   }
 
   def createEmptyTree(tracing: ObjectId) =
-    insertOne(DBTree(tracing, 1, Color(1, 0, 0, 0)))
+    insertOne(DBTree(tracing, 1, Color(1, 0, 0, 0), nameFromId(1)))
 
   def findAllWithTracingId(tracingId: ObjectId) =
     find(MongoDBObject("_tracing" -> tracingId)).toList

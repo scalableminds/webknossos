@@ -12,6 +12,7 @@ trait TreeLike {
   def nodes: Set[Node]
   def edges: Set[Edge]
 
+  def name: String
   def changeTreeId(id: Int): TreeLike
   
   def applyNodeMapping(f: Int => Int): TreeLike
@@ -41,11 +42,13 @@ object TreeLike{
     val NODES = "nodes"
     val EDGES = "edges"
     val COLOR = "color"
+    val NAME = "name"
 
     def writes(t: TreeLike) = Json.obj(
       ID -> t.treeId,
       NODES -> t.nodes,
       EDGES -> t.edges,
+      NAME -> t.name,
       COLOR -> t.color)
   }
 }

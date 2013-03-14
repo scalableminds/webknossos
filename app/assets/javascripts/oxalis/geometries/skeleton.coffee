@@ -86,7 +86,6 @@ class Skeleton
 
     @route.on
       newActiveNode : => @setActiveNode()
-      newActiveTree : => @setActiveNode()
       newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)

@@ -84,7 +84,7 @@ $ ->
       ], (Controller) ->
 
         oxalis = window.oxalis = new Controller()
-        
+
         return
 
 
@@ -102,6 +102,10 @@ $ ->
         ).then(
           (svgResult) ->
 
+            #remove error messages
+            startIndex = svgResult.indexOf("<?xml")
+            svgResult = svgResult.slice(startIndex, svgResult.length - 1)
+
             $(".graph").html(svgResult)
 
             userData.map (user) ->
@@ -111,6 +115,8 @@ $ ->
                 trigger: "hover",
                 content: user.tooltip
               )
+
+
 
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")

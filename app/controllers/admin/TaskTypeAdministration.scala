@@ -11,7 +11,8 @@ import play.api.data.Form
 import models.task.TimeSpan
 import play.api.i18n.Messages
 import models.task.Task
-import models.tracing.Tracing
+import models.tracing._
+import play.api.templates.Html
 
 object TaskTypeAdministration extends Controller with Secured {
 
@@ -34,6 +35,21 @@ object TaskTypeAdministration extends Controller with Secured {
     Ok(html.admin.taskType.taskTypes(TaskType.findAll, taskTypeForm))
   }
 
+  def trace(taskTypeId: String) = Authenticated { implicit request =>
+    for {
+      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+    } yield {
+      val tracingInfo = 
+        TracingInfo(
+            taskType.id,
+            "<unknown>",
+            TracingType.CompoundTaskType,
+            isEditable = false)
+      
+      Ok(html.oxalis.trace(tracingInfo)(Html.empty))
+    }
+  }
+  
   def create = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskTypeForm.bindFromRequest.fold(
       formWithErrors => BadRequest(html.admin.taskType.taskTypes(TaskType.findAll, formWithErrors)),

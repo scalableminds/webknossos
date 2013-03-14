@@ -2,7 +2,7 @@
 
 @main(){
   @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data") {
-      <input type="file" name="nmlFile">
+      <input type="file" name="nmlFile[]" multiple>
     <p>
         <input type="submit">
     </p>

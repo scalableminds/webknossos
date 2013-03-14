@@ -99,12 +99,11 @@ class PlaneController
     @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
     @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
 
+    @model.route.setParticleSize(@model.user.particleSize)
+
     @initMouse()
     @bind()
     @start()
-
-    # initialize comments
-    @model.route.updateComments()
 
 
   initMouse : ->
@@ -113,10 +112,6 @@ class PlaneController
     $("#render").bind "contextmenu", (event) ->
       event.preventDefault()
       return
-
-    $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
-      event.preventDefault()
-      @setActiveNode($(event.target).data("nodeid"), true, false)
 
     @mouseControllers = []
 
@@ -303,10 +298,13 @@ class PlaneController
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
     @model.route.setActiveNodeRadius(radius)
 
+  setParticleSize : (delta) =>
+    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+
   scroll : (delta, type) =>
     switch type
       when null then @moveZ(delta)
-      # when "shift" then @setNodeRadius(delta)
+      when "shift" then @setParticleSize(delta)
       when "alt"
         if delta > 0
           @zoomIn()

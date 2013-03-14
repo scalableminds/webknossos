@@ -2,7 +2,7 @@ package models.tracing
 
 trait TracingStatistics {
   def statisticsForTracing(tracing: Tracing) = {
-    val trees = tracing.trees
+    val trees = tracing.dbtrees
     val numberOfTrees = trees.size
     val (numberOfNodes, numberOfEdges) = trees.foldLeft((0l, 0l)) {
       case ((numberOfNodes, numberOfEdges), tree) =>

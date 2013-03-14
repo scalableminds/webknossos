@@ -1,0 +1,15 @@
+@(tracing: models.tracing.Tracing)
+<tr>
+  <td> @tracing.user.map(_.name).getOrElse("<deleted>") </td>
+  <td> @formatDate(tracing.date) </td>
+  <td> @if(tracing.state.isFinished){ <i class="icon-ok-circle"></i> Finished } else { <i class="icon-random"></i> In Progress } </td>
+  <td class="nowrap"> 
+    <a href="@controllers.routes.TracingController.trace(tracing.id)"><i class="icon-random"></i> view </a><br />
+    <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)"><i class="icon-download"></i> download </a><br />
+    @if(!tracing.state.isFinished){ 
+      <a href="@controllers.admin.routes.TaskAdministration.cancelTracing(tracing.id)" data-ajax="delete-row,confirm"><i class="icon-remove"></i> cancel</a><br/>
+    } else {
+      <a href="@controllers.admin.routes.TaskAdministration.reopen(tracing.id)" data-ajax="replace-row"><i class="icon-share-alt"></i> reopen</a><br/>
+    }
+  </td>
+</tr>

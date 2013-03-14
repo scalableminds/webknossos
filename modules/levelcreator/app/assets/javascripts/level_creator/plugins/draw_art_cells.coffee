@@ -31,12 +31,14 @@ class DrawArtCells
     shadowBlur : "float"
     shadowColor : "\"rgba(0, 0, 255, 0.3)\""
     mergeSegments : "true, false (default)"
+    minSize : "Number"
+    maxRewardedEndSegments : "Number"
 
 
   constructor : () ->
 
 
-  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, minSize, startShape, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor, mergeSegments}) ->
+  execute : ({ input : { rgba, segments, relativeTime, dimensions, mission }, maxRewardedEndSegments, minSize, startShape, fillColor, strokeColor, hitMode, lineWidth, colorRandom, customTime, reverse, endPosition, size, shadowOffsetX, shadowOffsetY, shadowBlur, shadowColor, mergeSegments}) ->
 
     width = dimensions[0]
     height = dimensions[1]
@@ -52,6 +54,9 @@ class DrawArtCells
 
     if customTime?
       relativeTime = customTime
+
+    unless maxRewardedEndSegments?
+      maxRewardedEndSegments = 3
 
     shadowOffsetX = 0 unless shadowOffsetX
     shadowOffsetY = 0 unless shadowOffsetY
@@ -75,6 +80,11 @@ class DrawArtCells
       endValues.push possibleEnd.id
 
     activeSegments = _.sortBy(activeSegments, (s) -> -s.size)
+    threeEndValues = []
+    sortedEnds = _.sortBy(mission.possibleEnds, (s) -> -s.probability)
+    for f in [0...Math.min(maxRewardedEndSegments, sortedEnds.length)]
+      threeEndValues.push sortedEnds[f].id 
+
     for segment in activeSegments
 
       startPath = segment.startPath
@@ -82,7 +92,8 @@ class DrawArtCells
       randomColor = segment.randomColor
       color = "rgba(#{randomColor.r}, #{randomColor.g}, #{randomColor.b}, 1)"
       if hitMode
-        if _.contains(endValues, segment.value) is true
+       
+        if _.contains(threeEndValues, segment.value) is true
           context.strokeStyle = "rgba(255, 0, 0, 1)"
           context.fillStyle = "rgba(255, 0, 0, 1)" 
         else

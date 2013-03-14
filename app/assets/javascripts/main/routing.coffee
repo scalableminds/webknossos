@@ -3,6 +3,7 @@ jquery : $
 underscore : _
 libs/toast : Toast
 libs/keyboard : KeyboardJS
+main/routing_utils : RoutingUtils
 ###
 
 $ ->
@@ -22,6 +23,8 @@ $ ->
 
     "user.dashboard.dashboard" : ->
 
+      RoutingUtils.maskFinishedTasks()
+
       $("#nml-explore-form").each ->
 
         $form = $(this)
@@ -29,7 +32,7 @@ $ ->
         $form.find("[type=submit]").click (event) ->
 
           event.preventDefault()
-          $input = $("<input>", type : "file", name : "nmlFile", class : "hide")
+          $input = $("<input>", type : "file", name : "nmlFile", class : "hide", multiple : "")
 
           $input.change ->
             if this.files.length
@@ -41,6 +44,18 @@ $ ->
 
       $("a[rel=popover]").popover()
 
+      # confirm new task, when there already is an open one
+      $("#new-task-button").on "ajax-after", (event) ->
+
+        $(this).data("ajax", "add-row=#dashboard-tasks,confirm=Do you really want another task?")
+
+      # remove confirmation, when there is no open task left
+      $("#dashboard-tasks").on "ajax-success", ".trace-finish", (event, responseData) ->
+
+        if responseData["hasAnOpenTask"] == false
+          $("#new-task-button").data("ajax", "add-row=#dashboard-tasks")
+
+      return
 
     "oxalis.trace" : ->
 
@@ -60,7 +75,7 @@ $ ->
 
       require [ "worker!libs/viz" ], (VizWorker) ->
 
-        graphSource = $("#graphData").html()
+        graphSource = $("#graphData").html().replace( /"[^"]+"/gm, (a) -> a.replace(" "," ") )
         userData = JSON.parse($("#userData").html())
 
         VizWorker.send(
@@ -83,6 +98,12 @@ $ ->
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
+
+    "admin.user.userTracingAdministration" : ->
+
+      RoutingUtils.maskFinishedTasks()
+
+      return
 
 
     "admin.task.taskSelectionAlgorithm" : ->

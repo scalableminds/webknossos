@@ -9,7 +9,7 @@ PUSH_THROTTLE_TIME = 30000 # 30s
 
 class StateLogger
 
-  constructor : (@route, @flycam, @version, @dataId) ->
+  constructor : (@route, @flycam, @version, @dataId, @isEditable) ->
 
     _.extend(this, new EventMixin())
 
@@ -34,6 +34,7 @@ class StateLogger
     return {
       id: tree.treeId
       color: [treeColor.r, treeColor.g, treeColor.b, 1]
+      name: tree.name
       }
 
   createTree : (tree) ->
@@ -154,8 +155,9 @@ class StateLogger
     return @committedCurrentState and @committedDiffs.length == 0
 
   push : ->
-    @committedCurrentState = false
-    @pushDebounced()
+    if @isEditable
+      @committedCurrentState = false
+      @pushDebounced()
 
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.
@@ -168,7 +170,6 @@ class StateLogger
     return @pushImpl(false)
 
   pushImpl : (notifyOnFailure) ->
-
     # do not allow multiple pushes, before result is there (breaks versioning)
     # still, return the deferred of the pending push, so that it will be informed about success
     if @pushDeferred?
@@ -204,7 +205,7 @@ class StateLogger
             window.location.reload()
       @push()
       if (notifyOnFailure)
-        @trigger("PushFailed");
+        @trigger("pushFailed");
       @pushDeferred.reject()
       @pushDeferred = null
     .done (response) =>

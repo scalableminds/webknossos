@@ -1,4 +1,4 @@
-@(users: List[models.user.User], taskTypes: List[models.task.TaskType], usersWithTasks: Map[models.user.User, models.task.TaskType], futureTasks: Map[models.user.User, models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
+@(users: List[models.user.User], taskTypes: List[models.task.TaskType], usersWithTasks: List[(models.user.User, models.task.TaskType)], futureTasks: Map[models.user.User, models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
 
 @import models.Color
 

@@ -1,20 +1,24 @@
-@(tracing: models.tracing.Tracing)(additionalHtml: Html)(implicit session: brainflight.view.AuthedSessionData)
+@(tracing: models.tracing.ContainsTracingInfo)(additionalHtml: Html)(implicit session: brainflight.view.AuthedSessionData)
 
 @import models.tracing.TracingType
 @import models.task.Task
 
 @main( ){
   <div id="loader"><div id="loader-icon"><i class="icon-spinner icon-spin icon-4x"></i><br>Loading</div></div>
-  <div id="container" data-tracing-type="@tracing.tracingType" class="clearfix">
+  <div id="container" data-tracing-type="@tracing.tracingType" data-tracing-id="@tracing.id" class="clearfix">
     <div id="main" role="main">
       <div id="overlay">
-        <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
+        @if(!tracing.isReadOnly){
+          <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
+        } else {
+          <button class="btn btn-primary disabled">Read only</button> 
+        }
         <div id="buttonbar" class="btn-group inline-block">
           @if(tracing.tracingType == TracingType.Task){
             <a href="@controllers.routes.TracingController.finishWithRedirect(tracing.id)" class="btn btn-small" id="trace-finish-button"><i class="icon-ok-circle"></i> Finish</a>
-          }
+          } 
           @if(!Task.isTrainingsTracing(tracing)){
-            <a href="@controllers.admin.routes.NMLIO.download(tracing.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
+            <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
           }
           <a href="#" id="help-overlay" class="btn btn-small"><i class="icon-question-sign"></i> Help</a>
         </div>
@@ -77,7 +81,7 @@
           </div>
         </div>
       </div>
-      <div class="tabbable span4" id="comments-tree">
+      <div class="tabbable" id="comments-tree">
         <ul class="nav nav-tabs">
           <li class="active"><a href="#tab-abstract" data-toggle="tab">Abstract Tree Viewer</a></li>
           <li><a href="#tab-comments" data-toggle="tab">Comments</a></li>
@@ -87,6 +91,14 @@
             <div id="abstractTreeViewer"></div>
           </div>
           <div class="tab-pane" id="tab-comments">
+            <div class="input-prepend input-append" id="comment-navbar">
+              <button class="btn" id="comment-previous"><i class="icon-arrow-left"></i></button>
+              <input class="input-large" id="comment-input" type="text" placeholder="Comment">
+              <button class="btn" id="comment-next"><i class="icon-arrow-right"></i></button>
+            </div>
+            <div id="comment-container">
+              <ul class="icons" id="comment-list"></ul>
+            </div>
           </div>
         </div>
       </div>

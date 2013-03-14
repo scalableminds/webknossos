@@ -86,6 +86,10 @@ body:-webkit-full-screen {
     width: 400px;
 }
 
+.nowrap * {
+    white-space: nowrap;
+}
+
 .table-double-striped > tbody {
     & > tr:nth-child(4n+1) > td,
     & > tr:nth-child(4n+2) > td {
@@ -192,6 +196,12 @@ body:-webkit-full-screen {
     background-position: -217px -120px;
 }
 
+.icon-bull::before {
+    width: 14px;
+    content: "•";
+    text-align: center;
+}
+
 .inline-block {
     display: inline-block;
 }
@@ -285,11 +295,18 @@ svg a:hover {
     margin-left: 20px;
 }
 #tab-comments {
-    max-height: 2*@standardViewportWidth - 40px;
+    padding-left: 5px;
+    padding-right: 5px;
+    overflow-y: hidden;
+}
+#comment-container {
+    max-height: 2*@standardViewportWidth - 90px;
+    margin-top: 10px;
+    overflow-y: auto;
 }
 #abstractTreeViewer {
     height : 2*@standardViewportWidth - 40px;
-    width: 300px;
+    width: 350px;
     float: left;
     font-size: 0;
 }

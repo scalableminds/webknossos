@@ -16,19 +16,19 @@ class Gui
 
   model : null
   
-  constructor : (container, @model, settings) ->
+  constructor : (container, @model, @tracingSettings) ->
     
     _.extend(this, new EventMixin())
 
     @user = @model.user
     # create GUI
-    modelRadius = @model.route.getActiveNodeRadius()
+    # modelRadius = @model.route.getActiveNodeRadius()
     @qualityArray = ["high", "medium", "low"]
 
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
     @datasetPosition = @initDatasetPosition(@user.briConNames)
 
-    somaClickingAllowed = settings.somaClickingAllowed
+    somaClickingAllowed = @tracingSettings.somaClickingAllowed
     
     @settings = 
 
@@ -45,10 +45,7 @@ class Gui
       activeNodeID : @model.route.getActiveNodeId()
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
-      radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
-      comment : ""
-      prevComment : @prevComment
-      nextComment : @nextComment
+      # radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
 
     if @datasetPosition == 0
       # add new dataset to settings
@@ -105,7 +102,7 @@ class Gui
 
     fTrees = @gui.addFolder("Trees")
     @activeTreeIdController = @addNumber(fTrees, @settings, "activeTreeID",
-      1, 1, "Active Tree ID")
+      1, 1, "Active Tree ID", (value) => @trigger( "setActiveTree", value))
     if somaClickingAllowed
       @addCheckbox(fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
     else
@@ -115,13 +112,9 @@ class Gui
 
     fNodes = @gui.addFolder("Nodes")
     @activeNodeIdController = @addNumber(fNodes, @settings, "activeNodeID",
-      1, 1, "Active Node ID")
-    @commentController =
-    (fNodes.add @settings, "comment")
-                          .name("Comment")
-                          .onChange(@setComment)
-    @addFunction(fNodes, @settings, "prevComment", "Previous Comment")
-    @addFunction(fNodes, @settings, "nextComment", "Next Comment")
+      1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
+    @particleSizeController = @addSlider(fNodes, @user, "particleSize",
+      1, 20, 1, "Node size")
     @addFunction(fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
     #fControls.open()
@@ -176,6 +169,7 @@ class Gui
       newNode          : => @update()
       newTree          : => @update()
       # newActiveNodeRadius : (radius) =>@updateRadius(radius)
+      newParticleSize  : (value, propagate) => if propagate then @updateParticleSize(value)
 
     @model.route.stateLogger.on
       pushFailed       : -> Toast.error("Auto-Save failed!")
@@ -200,20 +194,25 @@ class Gui
     return (folder.add object, propertyName)
                           .name(displayName)
 
-  addNumber : (folder, object, propertyName, min, step, displayName) =>
+  addNumber : (folder, object, propertyName, min, step, displayName, onChange) =>
+    unless onChange?
+      onChange = (v) => @set(propertyName, v, Number)
     return (folder.add object, propertyName)
                           .min(min)
                           .step(step)
                           .name(displayName)
-                          .onChange((v) => @set(propertyName, v, Number))
+                          .onChange(onChange)
 
   saveNow : =>
     @user.pushImpl()
-    @model.route.pushNow()
-      .then( 
-        -> Toast.success("Saved!")
-        -> Toast.error("Couldn't save. Please try again.")
-      )
+    if @tracingSettings.isEditable
+      @model.route.pushNow()
+        .then( 
+          -> Toast.success("Saved!")
+          -> Toast.error("Couldn't save. Please try again.")
+        )
+    else
+      new $.Deferred().resolve()
 
   setPosFromString : (posString) =>
     stringArray = posString.split(",")
@@ -270,21 +269,15 @@ class Gui
         value = i
     @set("quality", value, Number)
 
-  setComment : (value) =>
-    @model.route.setComment(value)
 
-  prevComment : =>
-    @trigger "setActiveNode", @model.route.nextCommentNodeID(false)
-
-  nextComment : =>
-    @trigger "setActiveNode", @model.route.nextCommentNodeID(true)
+  updateParticleSize : (value) =>
+    @set("particleSize", value, Number)
+    @particleSizeController.updateDisplay()
 
   # Helper method to combine common update methods
   update : ->
     # called when value user switch to different active node
     @settings.activeNodeID = @model.route.lastActiveNodeId
     @settings.activeTreeID = @model.route.getActiveTreeId()
-    @settings.comment      = @model.route.getComment()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
-    @commentController.updateDisplay()

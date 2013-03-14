@@ -10,6 +10,10 @@ import play.api.data.Form
 import play.api.data.Forms._
 import models.user.User
 import play.api.i18n.Messages
+import models.tracing.TracingInfo
+import models.tracing.TracingType
+import play.api.templates.Html
+import models.tracing.UsedTracings
 
 object ProjectAdministration extends Controller with Secured {
 
@@ -28,12 +32,27 @@ object ProjectAdministration extends Controller with Secured {
       User.findAll.sortBy(_.name)))
   }
 
-  def delete(projectName: String) = Authenticated { implicit reuqest =>
+  def delete(projectName: String) = Authenticated { implicit request =>
     for {
       project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
     } yield {
       Project.remove(project)
       JsonOk(Messages("project.removed"))
+    }
+  }
+  
+  def trace(projectName: String) = Authenticated { implicit request =>
+    for {
+      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
+    } yield {
+      val tracingInfo = 
+        TracingInfo(
+            projectName,
+            "<unknown>",
+            TracingType.CompoundProject,
+            isReadOnly = true)
+      
+      Ok(html.oxalis.trace(tracingInfo)(Html.empty))
     }
   }
 

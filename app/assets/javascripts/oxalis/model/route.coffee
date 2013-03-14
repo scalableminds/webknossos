@@ -68,7 +68,7 @@ class Route
       tree = new TraceTree(
         treeData.id,
         @getNewTreeColor(treeData.id),
-        if treeData.name then treeData.name else "Tree#{treeData.id}")
+        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}")
       # Initialize nodes
       i = 0
       for node in treeData.nodes
@@ -310,7 +310,10 @@ class Route
   setTreeName : (name) ->
 
     if @activeTree
-      @activeTree.name = name
+      if name
+        @activeTree.name = name
+      else
+        @activeTree.name = "Tree#{('00'+@activeTree.treeId).slice(-3)}"
       @stateLogger.updateTree(@activeTree)
       
       @trigger("newTreeName")
@@ -455,7 +458,10 @@ class Route
 
   createNewTree : ->
 
-    tree = new TraceTree(@treeIdCount++, @getNewTreeColor(@treeIdCount-1), "Tree#{@treeIdCount}")
+    tree = new TraceTree(
+      @treeIdCount++, 
+      @getNewTreeColor(@treeIdCount-1), 
+      "Tree#{('00'+(@treeIdCount-1)).slice(-3)}")
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null
@@ -592,7 +598,7 @@ class Route
     return null
 
 
-  getTrees : -> @trees
+  getTrees : -> @trees.sort(@compareNames)
 
 
   # returns a list of nodes that are connected to the parent
@@ -633,6 +639,15 @@ class Route
       if node.id == id
         return node
     return null
+
+  compareNames : (a, b) ->
+
+    if a.name < b.name
+      return -1
+    if a.name > b.name
+      return 1
+    return 0
+
 
   compareNodes : (a, b) ->
 

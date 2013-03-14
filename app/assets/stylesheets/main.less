@@ -141,10 +141,6 @@ body:-webkit-full-screen {
 .hover-show {
     display: none;
 }
-.hover-hide {
-    margin-top: 5px;
-    margin-bottom: 10px;
-}
 .hover-dynamic:hover {
     .hover-show {
         display: inherit;
@@ -214,6 +210,12 @@ svg a:hover {
     &[href] {
         cursor: pointer;
     }
+}
+
+.dropdown-menu {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 #alert-container {
@@ -307,6 +309,10 @@ svg a:hover {
     max-height: 2*@standardViewportWidth - 90px;
     margin-top: 10px;
     overflow-y: auto;
+}
+#tree-name {
+    margin-top: 15px;
+    margin-bottom: 10px;
 }
 #abstractTreeViewer {
     height : 2*@standardViewportWidth - 40px;

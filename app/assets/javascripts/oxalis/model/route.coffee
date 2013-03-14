@@ -598,7 +598,7 @@ class Route
     return null
 
 
-  getTrees : -> @trees.sort(@compareNames)
+  getTrees : -> @trees
 
 
   # returns a list of nodes that are connected to the parent

@@ -18,6 +18,9 @@ class View
       Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>"+
         "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>")
 
+    @renderer = new THREE.WebGLRenderer( clearColor: 0x000000, clearAlpha: 1.0, antialias: false )
+    @scene = new THREE.Scene()
+
     { THEME_BRIGHT } = @
    
     @setTheme(THEME_BRIGHT)

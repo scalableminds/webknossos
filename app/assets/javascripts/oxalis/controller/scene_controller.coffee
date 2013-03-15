@@ -142,6 +142,20 @@ class SceneController
     @showSkeleton = not @showSkeleton
     @skeleton.setVisibility(@showSkeleton)
 
+  stop : ->
+    for plane in @planes
+      plane.setVisible(false)
+    @cube.visible = false
+
+    @skeleton.setSizeAttenuation(true)
+
+  start : ->
+    for plane in @planes
+      plane.setVisible(true)
+    @cube.visible = true
+
+    @skeleton.setSizeAttenuation(false)
+
   bind : ->
 
     @model.user.on "routeClippingDistanceChanged", (value) =>

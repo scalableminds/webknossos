@@ -27,8 +27,8 @@ MIN_SCALE      = 0.5
 
 class PlaneView
 
-  constructor : (@model, @flycam, @stats) ->
-
+  constructor : (@model, @flycam, @stats, @renderer, @scene) ->
+    console.log @renderer.domElement, @scene
     _.extend(@, new EventMixin())
 
     @running = false
@@ -43,11 +43,9 @@ class PlaneView
     @scaleFactor = 1
 
     # Initialize main THREE.js components
-    colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
-    @renderer = new THREE.WebGLRenderer({clearColor: colors[i], clearAlpha: 1, antialias: false})
     @camera   = new Array(4)
     @lights   = new Array(3)
-    @scene    = new THREE.Scene()
+
     for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
       # Let's set up cameras
       # No need to set any properties, because the camera controller will deal with that
@@ -97,7 +95,6 @@ class PlaneView
     $(window).resize( => @.resize() )
 
     @modalCallbacks = {}
-    
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
@@ -105,10 +102,11 @@ class PlaneView
 
   animate : ->
 
+    return unless @running
+
     @renderFunction()
 
-    if @running is true
-      window.requestAnimationFrame => @animate()
+    window.requestAnimationFrame => @animate()
 
   # This is the main render function.
   # All 3D meshes and the trianglesplane are rendered here.
@@ -250,10 +248,15 @@ class PlaneView
 
     @scaleFactor = 1
     @scaleTrianglesPlane(0)
-    @running = false 
 
+    $(".inputcatcher").hide()
+
+    @running = false 
 
   start : ->
 
     @running = true
+
+    $(".inputcatcher").show()
+
     @animate()

@@ -507,3 +507,11 @@ class Skeleton
     hsvColor = new THREE.Color().setHex(hexColor).getHSV()
     hsvColor.h = (hsvColor.h + 0.5) % 1
     new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+
+  setSizeAttenuation : (boolean) ->
+
+    for particleSystem in @nodes
+      particleSystem.material.sizeAttenuation = boolean
+      particleSystem.material.needsUpdate = true
+    @branches.material.sizeAttenuation = boolean
+    @activeNodeParticle.material.sizeAttenuation = boolean

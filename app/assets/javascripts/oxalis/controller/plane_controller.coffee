@@ -38,12 +38,12 @@ class PlaneController
       @keyboardNoLoop?.unbind()
 
 
-  constructor : (@model, stats, @gui ) ->
+  constructor : (@model, stats, @gui, renderer, scene) ->
 
     _.extend(@, new EventMixin())
 
     @flycam = @model.flycam
-    @view  = new PlaneView(@model, @flycam, stats)
+    @view  = new PlaneView(@model, @flycam, stats, renderer, scene)
 
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
@@ -210,6 +210,7 @@ class PlaneController
   start : ->
 
     @initKeyboard()
+    @sceneController.start()
     @view.start()
 
 
@@ -218,6 +219,7 @@ class PlaneController
     @input.keyboard.unbind()
     @input.keyboardNoLoop.unbind()
     @view.stop()
+    @sceneController.stop()
 
 
   bind : ->

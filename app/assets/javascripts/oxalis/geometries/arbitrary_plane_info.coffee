@@ -16,7 +16,7 @@ class ArbitraryPlaneInfo
 
   isRecording : false
 
-  constructor : () ->
+  constructor : (@cam)->
 
     { WIDTH, HEIGHT } = @
 
@@ -81,6 +81,23 @@ class ArbitraryPlaneInfo
   update : ->
 
 
+    { mesh, cam } = this
+
+    m = @cam.getMatrix()
+
+    mesh.matrix.set m[0], m[4], m[8], m[12], 
+                    m[1], m[5], m[9], m[13], 
+                    m[2], m[6], m[10], m[14], 
+                    m[3], m[7], m[11], m[15]
+    mesh.matrix.translate(new THREE.Vector3(-100, 100, -20))
+    mesh.matrix.scale(new THREE.Vector3(0.5, 0.5, 0.5))
+
+    mesh.matrixWorldNeedsUpdate = true
+    # console.log "CrossPositionWorld", mesh.matrixWorld.getPosition()
+    # console.log "CrossPositionLocal", mesh.matrix.getPosition()
+    #mesh.updateMatrix()
+
+
   attachScene : (@scene) ->
 
     scene.add(@mesh)
@@ -109,5 +126,8 @@ class ArbitraryPlaneInfo
     mesh.position.x = 110
     mesh.position.y = 125
     mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.4
+
+    mesh.matrixAutoUpdate = false
+    mesh.doubleSided = true
 
     mesh 

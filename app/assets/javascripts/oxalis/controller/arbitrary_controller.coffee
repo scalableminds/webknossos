@@ -40,7 +40,7 @@ class ArbitraryController
       @keyboardNoLoop?.unbind()
 
 
-  constructor : (@model, stats) ->
+  constructor : (@model, stats, renderer, scene) ->
 
     _.extend(this, new EventMixin())
 
@@ -49,12 +49,12 @@ class ArbitraryController
    
     
     @cam = @model.flycam3d
-    @view = new ArbitraryView(canvas, @cam, stats)    
+    @view = new ArbitraryView(canvas, @cam, stats, renderer, scene)    
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
     @view.addGeometry @plane
 
-    @infoPlane = new ArbitraryPlaneInfo()
+    @infoPlane = new ArbitraryPlaneInfo(@cam)
     @view.addGeometry @infoPlane
 
     @input = _.extend({}, @input)

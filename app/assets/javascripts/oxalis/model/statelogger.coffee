@@ -24,7 +24,7 @@ class StateLogger
     })
     # In order to assure that certain actions are atomic,
     # it is sometimes necessary not to push.
-    if push and @isEditable
+    if push
       @push()
 
   #### TREES
@@ -155,8 +155,9 @@ class StateLogger
     return @committedCurrentState and @committedDiffs.length == 0
 
   push : ->
-    @committedCurrentState = false
-    @pushDebounced()
+    if @isEditable
+      @committedCurrentState = false
+      @pushDebounced()
 
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.
@@ -169,7 +170,6 @@ class StateLogger
     return @pushImpl(false)
 
   pushImpl : (notifyOnFailure) ->
-
     # do not allow multiple pushes, before result is there (breaks versioning)
     # still, return the deferred of the pending push, so that it will be informed about success
     if @pushDeferred?

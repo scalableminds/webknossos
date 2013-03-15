@@ -53,7 +53,7 @@ object TemporaryTracing {
       nml.comments)
   }
   
-  def createFrom(tracing: Tracing, id: String) = {
+  def createFrom(tracing: TracingLike, id: String) = {
     TemporaryTracing(
       id,
       tracing.dataSetName,

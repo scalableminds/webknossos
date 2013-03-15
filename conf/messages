@@ -1,7 +1,7 @@
 error.email=Please supply a valid email address
 error.required=Please supply all needed values
 
-notAllowed=None of your bussiness
+notAllowed=None of your business
 
 binary.payload.notSupplied=No valid payload supplied
 binary.payload.invalid=Couldn''t parse payload

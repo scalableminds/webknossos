@@ -17,7 +17,9 @@ object CompoundTracing {
   }
 
   def createFromTask(task: Task) = {
-    createFromTracings(task.tracings.filter(_.state.isFinished), task.id)
+    val id = task.id
+    createFromTracings(task.tracings.filter(_.state.isFinished), id)
+      .orElse(createFromTracings(task.tracingBase.toList, id))
       .map(_.copy(tracingType = TracingType.CompoundTask))
   }
 
@@ -28,23 +30,20 @@ object CompoundTracing {
   }
 
   def createFromTracings(tracings: List[Tracing], id: String): Option[TemporaryTracing] = {
-    val t = System.currentTimeMillis()
-    val r = tracings match {
-      case head :: tail =>
-        val base = TemporaryTracing.createFrom(head, id)
-        def createFromTracingsSmall(tracings: List[Tracing]): TemporaryTracing = {
-          tracings.foldLeft(base) {
+    def mergeThem(tracings: List[TracingLike]) = {
+      tracings match {
+        case head :: tail =>
+          val base = TemporaryTracing.createFrom(head, id)
+          Some(tail.foldLeft(base) {
             case (result, tracing) =>
               result.mergeWith(tracing)
-          }
-        }
-        Some(tracings.sliding(50, 50).toList.par.map(createFromTracingsSmall).foldLeft(base) {
-          case (result, tracing) =>
-            result.mergeWith(tracing)
-        })
-      case _ =>
-        None
+          })
+        case _ =>
+          None
+      }
     }
+    val t = System.currentTimeMillis()
+    val r = mergeThem(tracings.sliding(50, 50).toSeq.par.flatMap(mergeThem).toList)
     Logger.debug(s"Merging took: ${System.currentTimeMillis() - t} ms")
     r
   }

@@ -3,6 +3,7 @@ package controllers.admin;
 import braingames.mvc.Controller
 import brainflight.security.Secured
 import models.security.Role
+import scala.concurrent.duration._
 import views._
 import models.task.Project
 import play.api.data.Form._
@@ -14,8 +15,12 @@ import models.tracing.TracingInfo
 import models.tracing.TracingType
 import play.api.templates.Html
 import models.tracing.UsedTracings
+import brainflight.CommonActors
+import brainflight.tracing.TracingIdentifier
+import brainflight.tracing.RequestTemporaryTracing
 
-object ProjectAdministration extends Controller with Secured {
+
+object ProjectAdministration extends Controller with Secured with CommonActors{
 
   override val DefaultAccessRole = Role.Admin
 
@@ -45,12 +50,16 @@ object ProjectAdministration extends Controller with Secured {
     for {
       project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
     } yield {
+      val tracingType = TracingType.CompoundProject
+      val id = TracingIdentifier(tracingType.toString, projectName)
       val tracingInfo = 
         TracingInfo(
-            projectName,
+            id.identifier,
             "<unknown>",
-            TracingType.CompoundProject,
+            tracingType,
             isEditable = false)
+      
+      temporaryTracingGenerator ! RequestTemporaryTracing(id)
       
       Ok(html.oxalis.trace(tracingInfo)(Html.empty))
     }

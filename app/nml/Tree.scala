@@ -17,6 +17,10 @@ case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Color, n
   def changeTreeId(updatedTreeId: Int) = {
     this.copy(treeId = updatedTreeId)
   }
+  
+  def changeName(newName: String) = {
+    this.copy(name = newName)
+  }
 
   def applyNodeMapping(f: Int => Int) = {
     this.copy(

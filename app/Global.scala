@@ -14,6 +14,7 @@ import models.tracing._
 import models.basics.BasicEvolution
 import brainflight.mail.DefaultMails
 import brainflight.tools.geometry._
+import brainflight.tracing.TemporaryTracingGenerator
 import brainflight.mail.Mailer
 import brainflight.io._
 import scala.collection.parallel.Tasks
@@ -35,7 +36,8 @@ object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     val conf = Play.current.configuration
-    implicit val timeout = Timeout((/*conf.getInt("actor.defaultTimeout") getOrElse*/ 25 seconds))
+    startActors()
+    implicit val timeout = Timeout(( /*conf.getInt("actor.defaultTimeout") getOrElse*/ 25 seconds))
     if (Play.current.mode == Mode.Dev) {
       InitialData.insertRoles
       InitialData.insertUsers
@@ -63,6 +65,12 @@ object Global extends GlobalSettings {
     DirectoryWatcher ! StopWatching
     models.context.BinaryDB.connection.close()
     models.context.db.close()
+  }
+
+  def startActors() {
+    Akka.system.actorOf(
+      Props(new TemporaryTracingGenerator()),
+      name = "temporaryTracingGenerator")
   }
 }
 

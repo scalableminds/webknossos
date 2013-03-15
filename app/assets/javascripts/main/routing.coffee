@@ -67,13 +67,13 @@ $ ->
       ], (Controller) ->
 
         oxalis = window.oxalis = new Controller()
-        
+
         return
 
 
     "admin.task.taskOverview" : ->
 
-      require [ "worker!libs/viz" ], (VizWorker) ->
+      require [ "worker!libs/viz", "svgpan" ], (VizWorker, svgPan) ->
 
         graphSource = $("#graphData").html().replace( /"[^"]+"/gm, (a) -> a.replace(" "," ") )
         userData = JSON.parse($("#userData").html())
@@ -85,6 +85,10 @@ $ ->
         ).then(
           (svgResult) ->
 
+            #remove error messages
+            startIndex = svgResult.indexOf("<?xml")
+            svgResult = svgResult.slice(startIndex, svgResult.length - 1)
+
             $(".graph").html(svgResult)
 
             userData.map (user) ->
@@ -94,6 +98,43 @@ $ ->
                 trigger: "hover",
                 content: user.tooltip
               )
+
+            #reset some attributes before invoking panZoom plugin
+            $svg = $(".graph.well").find("svg")
+            $svg[0].setAttribute("viewBox", "0 0 0 0")
+            $svg[0].setAttribute("width", "100%")
+            $svg[0].setAttribute("height", "100%")
+            $svg.css("max-width", "100%")
+
+            $svg.svgPan("graph1")
+
+            # $svg = $("#graph1")
+            # transform = $svg.attr("transform")
+            # scale = parseFloat transform.match(/scale\(([\d\.]+) [\d\.]+\)/)[1]
+            # translateX = parseFloat transform.match(/translate\(([\d\.]+) ([\d\.]+)\)/)[1]
+            # translateY = parseFloat transform.match(/translate\(([\d\.]+) ([\d\.]+)\)/)[2]
+
+            # mouse = new Input.Mouse(
+            #   $(".graph.well")
+            #   leftDownMove : (delta) ->
+            #     translateX += delta.x
+            #     translateY += delta.y
+            #     $svg.attr("transform", "scale(#{scale} #{scale}) translate(#{translateX} #{translateY})")
+            #   scroll : (delta, arg ,event) ->
+            #     scale -= delta * 0.01
+            #     console.log event
+            #     #$svg.attr("transform", "scale(#{scale} #{scale}) translate(#{translateX} #{translateY})")
+            #     p =
+            #       x : event.clientX
+            #       y : event.clientY
+
+            #     root = $(".graph.well").find("svg")[0]
+            #     svgNode = $svg[0]
+            #     k = root.createSVGMatrix().translate(p.x, p.y).scale(scale).translate(-p.x, -p.y)
+            #     matrix = svgNode.getCTM().multiply(k)
+            #     $svg.attr("matrix", "matrix(" + matrix.a + "," + matrix.b + "," + matrix.c + "," + matrix.d + "," + matrix.e + "," + matrix.f + ")")
+
+            #)
 
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")

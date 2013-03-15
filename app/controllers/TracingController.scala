@@ -39,6 +39,14 @@ import models.tracing.CompoundTracing
 import models.task.TaskType
 import models.tracing.TemporaryTracing
 import controllers.tracing.handler._
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import brainflight.CommonActors
+import brainflight.tracing.RequestTemporaryTracing
+import brainflight.tracing.TracingIdentifier
+import akka.pattern.ask
+import play.api.libs.concurrent.Execution.Implicits._
+import akka.util.Timeout
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User
@@ -54,9 +62,11 @@ object TracingController extends Controller with Secured with TracingInformation
   }
 
   def info(tracingType: String, identifier: String) = Authenticated { implicit request =>
-    respondWithTracingInformation(tracingType, identifier).map { x =>
-      UsedTracings.use(request.user, identifier)
-      Ok(x)
+    Async {
+      respondWithTracingInformation(tracingType, identifier).map { x =>
+        UsedTracings.use(request.user, identifier)
+        x.map(js => Ok(js))
+      }
     }
   }
 
@@ -164,7 +174,7 @@ object TracingController extends Controller with Secured with TracingInformation
   def trace(tracingId: String) = Authenticated { implicit request =>
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if (isAllowedToViewTracing(tracing, request.user))
+      if (tracing.accessPermission(request.user))
     } yield {
       val modified =
         if (!isAllowedToUpdateTracing(tracing, request.user))
@@ -177,25 +187,26 @@ object TracingController extends Controller with Secured with TracingInformation
   }
 
   def download(tracingType: String, identifier: String) = Authenticated { implicit request =>
-    (for {
-      tracing <- findTracing(tracingType, identifier)
-      tracingName <- nameTracing(tracing)
-      if !Task.isTrainingsTracing(tracing) && isAllowedToViewTracing(tracing, request.user)
-    } yield {
-      Ok(NMLIO.toXML(tracing)).withHeaders(
-        CONTENT_TYPE -> "application/octet-stream",
-        CONTENT_DISPOSITION -> (s"attachment; filename=$tracingName.nml"))
-    }) ?~ Messages("tracing.download.notAllowed")
+    Async {
+      findTracing(tracingType, identifier).map { result =>
+        (for {
+          tracing <- result
+          tracingName <- nameTracing(tracing)
+          if !Task.isTrainingsTracing(tracing) && tracing.accessPermission(request.user)
+        } yield {
+          Ok(NMLIO.toXML(tracing)).withHeaders(
+            CONTENT_TYPE -> "application/octet-stream",
+            CONTENT_DISPOSITION -> (s"attachment; filename=$tracingName.nml"))
+        }) ?~ Messages("tracing.download.notAllowed")
+      }
+    }
   }
 }
 
-trait TracingInformationProvider extends play.api.http.Status with TracingRights {
+trait TracingInformationProvider extends play.api.http.Status with TracingRights with CommonActors {
   import braingames.mvc.BoxImplicits._
 
-  val informationHandlers = Map(
-    TracingType.CompoundProject.toString -> ProjectInformationHandler,
-    TracingType.CompoundTask.toString -> TaskInformationHandler,
-    TracingType.CompoundTaskType.toString -> TaskTypeInformationHandler).withDefaultValue(SavedTracingInformationHandler)
+  import tracing.handler.TracingInformationHandler._
 
   def createDataSetInformation(dataSetName: String) =
     DataSet.findOneByName(dataSetName) match {
@@ -223,10 +234,17 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
     f(informationHandlers(tracingType))
   }
 
-  def findTracing(tracingType: String, identifier: String)(implicit request: AuthenticatedRequest[_]) = Box[TracingLike] {
-    withInformationHandler(tracingType) {
-      _.provideTracing(identifier)
-    }
+  def findTracing(tracingType: String, identifier: String)(implicit request: AuthenticatedRequest[_]): Future[Box[TracingLike]] = {
+    val id = TracingIdentifier(tracingType, identifier)
+    implicit val timeout = Timeout(5 seconds)
+    val f = temporaryTracingGenerator ? RequestTemporaryTracing(id)
+
+    f.mapTo[Future[Box[TracingLike]]].flatMap(_.map(_.map { tracing =>
+      if (!isAllowedToUpdateTracing(tracing, request.user))
+        tracing.makeReadOnly
+      else
+        tracing
+    }))
   }
 
   def nameTracing(tracing: TracingLike)(implicit request: AuthenticatedRequest[_]) = Box[String] {
@@ -235,24 +253,15 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
     }
   }
 
-  def respondWithTracingInformation(tracingType: String, identifier: String)(implicit request: AuthenticatedRequest[_]) = Box[JsObject] {
-    findTracing(tracingType, identifier).map { tracing =>
+  def respondWithTracingInformation(tracingType: String, identifier: String)(implicit request: AuthenticatedRequest[_]): Future[Box[JsObject]] = {
+    findTracing(tracingType, identifier).map(_.map { tracing =>
       createTracingInformation(tracing) ++
         createDataSetInformation(tracing.dataSetName)
-    }
+    })
   }
 }
 
 trait TracingRights {
-  def isAllowedToViewTracing[T <: TracingLike](tracing: T, user: User) = {
-    (tracing match {
-      case t: Tracing =>
-        t._user == user._id
-      case _ =>
-        false
-    }) || (Role.Admin.map(user.hasRole) getOrElse false)
-  }
-
   def isAllowedToViewProject(project: Project, user: User) = {
     Role.Admin.map(user.hasRole) getOrElse false
   }
@@ -265,8 +274,8 @@ trait TracingRights {
     Role.Admin.map(user.hasRole) getOrElse false
   }
 
-  def isAllowedToUpdateTracing(tracing: Tracing, user: User) = {
-    tracing._user == user._id
+  def isAllowedToUpdateTracing[T <: TracingLike](tracing: T, user: User) = {
+    tracing.user.map(_._id == user._id) getOrElse false
   }
 
   def isAllowedToFinishTracing(tracing: Tracing, user: User) = {

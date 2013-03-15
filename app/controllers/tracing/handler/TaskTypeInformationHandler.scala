@@ -11,13 +11,12 @@ import models.tracing.CompoundTracing
 object TaskTypeInformationHandler extends TracingInformationHandler with TracingRights{
   import braingames.mvc.BoxImplicits._
   
-  def provideTracing(taskTypeId: String)(implicit request: AuthenticatedRequest[_]): Box[TemporaryTracing] = {
+  def provideTracing(taskTypeId: String): Box[TemporaryTracing] = {
     (for {
       taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
-      if (isAllowedToViewTaskType(taskType, request.user))
       tracing <- CompoundTracing.createFromTaskType(taskType)
     } yield {
-      tracing
+      tracing.copy(accessFkt = isAllowedToViewTaskType(taskType, _))
     }) ?~ Messages("notAllowed") ~> 403
   }
 }

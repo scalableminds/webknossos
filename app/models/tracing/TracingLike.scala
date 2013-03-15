@@ -39,6 +39,8 @@ trait TracingLike extends ContainsTracingInfo{
   
   def makeReadOnly: Self
   
+  def accessPermission(user: User): Boolean
+  
   def isEditable = tracingSettings.isEditable
   
   private def applyUpdates(f: Self => Self*) = {

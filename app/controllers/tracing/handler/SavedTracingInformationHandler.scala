@@ -8,6 +8,7 @@ import controllers.TracingRights
 import controllers.admin.NMLIO
 import models.tracing.TracingLike
 import braingames.util.TextUtils._
+import models.user.User
 
 object SavedTracingInformationHandler extends TracingInformationHandler with TracingRights {
   import braingames.mvc.BoxImplicits._
@@ -20,15 +21,13 @@ object SavedTracingInformationHandler extends TracingInformationHandler with Tra
       brainflight.view.helpers.formatHash(t.id)))
   }
 
-  def provideTracing(tracingId: String)(implicit request: AuthenticatedRequest[_]): Box[Tracing] = {
+  def provideTracing(tracingId: String): Box[Tracing] = {
     (for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      if (isAllowedToViewTracing(tracing, request.user))
     } yield {
-      if (isAllowedToUpdateTracing(tracing, request.user))
         tracing
-      else
-        tracing.makeReadOnly
     }) ?~ Messages("notAllowed") ~> 403
   }
+  
+  override def cache = false
 }

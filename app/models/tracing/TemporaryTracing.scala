@@ -6,6 +6,7 @@ import brainflight.tools.geometry.Scale
 import brainflight.tools.geometry.Point3D
 import nml.Comment
 import nml.NML
+import models.user.User
 
 case class TemporaryTracing(
     id: String,
@@ -19,6 +20,7 @@ case class TemporaryTracing(
     comments: List[Comment] = Nil,
     tracingSettings: TracingSettings = TracingSettings.default.copy(isEditable = false),
     tracingType: TracingType.Value = TracingType.CompoundProject,
+    accessFkt: User => Boolean =( _ => false),
     version: Int = 0) extends TracingLike {
 
   type Self = TemporaryTracing
@@ -37,6 +39,8 @@ case class TemporaryTracing(
 
   def insertComment[TemporaryTracing](c: Comment) =
     this.copy(comments = c :: this.comments).asInstanceOf[TemporaryTracing]
+  
+  def accessPermission(user: User) = accessFkt(user)
 }
 
 object TemporaryTracing {

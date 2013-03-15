@@ -8,17 +8,17 @@ import models.task.TaskType
 import play.api.i18n.Messages
 import models.tracing.CompoundTracing
 import models.task.Task
+import models.user.User
 
 object TaskInformationHandler extends TracingInformationHandler with TracingRights{
   import braingames.mvc.BoxImplicits._
   
-  def provideTracing(taskId: String)(implicit request: AuthenticatedRequest[_]): Box[TemporaryTracing] = {
+  def provideTracing(taskId: String): Box[TemporaryTracing] = {
     (for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
-      if (isAllowedToViewTask(task, request.user))
       tracing <- CompoundTracing.createFromTask(task)
     } yield {
-      tracing
+      tracing.copy(accessFkt = isAllowedToViewTask(task, _))
     }) ?~ Messages("notAllowed") ~> 403
   }
 }

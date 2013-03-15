@@ -98,7 +98,7 @@ class Controller
 
       $("#tree-list").on "click", "a[data-treeid]", (event) =>
         event.preventDefault()
-        @setActiveTree($(event.target).data("treeid"))
+        @setActiveTree($(event.target).data("treeid"), true)
 
 
 
@@ -175,7 +175,7 @@ class Controller
 
     gui.on
       deleteActiveNode : @deleteActiveNode
-      setActiveTree : (id) => @setActiveTree(id)
+      setActiveTree : (id) => @setActiveTree(id, false)
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
 
     gui
@@ -191,9 +191,11 @@ class Controller
     @model.route.createNewTree()
 
 
-  setActiveTree : (treeId) ->
+  setActiveTree : (treeId, centered) ->
 
     @model.route.setActiveTree(treeId)
+    if centered
+      @centerActiveNode()
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->
@@ -227,9 +229,9 @@ class Controller
 
   prevComment : =>
 
-    @setActiveNode(@model.route.nextCommentNodeID(false))
+    @setActiveNode(@model.route.nextCommentNodeID(false), true)
 
 
   nextComment : =>
 
-    @setActiveNode(@model.route.nextCommentNodeID(true))
+    @setActiveNode(@model.route.nextCommentNodeID(true), true)

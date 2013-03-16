@@ -53,8 +53,6 @@ class AssetHandler
   getFile : (fileName) ->
 
     if @fileCache.hasOwnProperty(fileName)
-
       return @fileCache[fileName]
-
     else
       console.warn("File not found: #{fileName}")

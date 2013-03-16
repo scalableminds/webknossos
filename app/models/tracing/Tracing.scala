@@ -8,7 +8,6 @@ import play.api.data.validation.ValidationError
 import xml.Xml
 import xml.XMLWrites
 import models.binary.DataSet
-import DBTree.DBTreeFormat
 import nml.Comment
 import models.user.User
 import brainflight.tools.geometry.Scale
@@ -20,6 +19,7 @@ import models.task._
 import models.Color
 import models.basics._
 import nml._
+import nml.utils._
 import play.api.Logger
 import com.mongodb.casbah.commons.MongoDBList
 
@@ -38,13 +38,21 @@ case class Tracing(
     tracingType: TracingType.Value = TracingType.Explorational,
     tracingSettings: TracingSettings = TracingSettings.default,
     version: Int = 0,
-    _id: ObjectId = new ObjectId) extends DAOCaseClass[Tracing] {
+    _name: Option[String] = None,
+    _id: ObjectId = new ObjectId) extends TracingLike with ContainsTracingInfo with DAOCaseClass[Tracing] {
+  
+  type Self = Tracing
 
   def dao = Tracing
+  
+  def isReadOnly = false
   /**
    * Easy access methods
    */
-  def user = User.findOneById(_user)
+  
+  val name = _name getOrElse ""
+
+  override def user = User.findOneById(_user)
 
   val date = new Date(timestamp)
 
@@ -55,11 +63,25 @@ case class Tracing(
   /**
    * Tree modification
    */
-  def trees = DBTree.findAllWithTracingId(_id).toList
+  def trees = dbtrees.map(_.toTree)
+
+  def dbtrees = DBTree.findAllWithTracingId(_id).toList
+
+  def insertTree[Tracing](t: TreeLike) = {
+    println("Inserting tree: " + t.treeId)
+    DBTree.insertOne(_id, t)
+    this.asInstanceOf[Tracing]
+  }
+
+  def insertBranchPoint[Tracing](bp: BranchPoint) =
+    this.copy(branchPoints = bp :: this.branchPoints).asInstanceOf[Tracing]
+
+  def insertComment[Tracing](c: Comment) =
+    this.copy(comments = c :: this.comments).asInstanceOf[Tracing]
 
   def tree(treeId: Int) = DBTree.findOneWithTreeId(_id, treeId)
 
-  def maxNodeId = DBTree.maxNodeId(this.trees)
+  def maxNodeId = nml.utils.maxNodeId(this.trees)
 
   /**
    * State modifications
@@ -88,7 +110,7 @@ case class Tracing(
   def finish = {
     this.copy(state = Finished)
   }
-
+  
   def passToReview = {
     this.copy(state = ReadyForReview)
   }
@@ -113,7 +135,7 @@ case class Tracing(
 object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   this.collection.ensureIndex("_task")
   this.collection.ensureIndex("_user")
-  
+
   def tracingBase(task: Task, userId: ObjectId, dataSetName: String): Tracing =
     Tracing(userId,
       dataSetName,
@@ -141,7 +163,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
 
   def createTracingBase(task: Task, userId: ObjectId, dataSetName: String, start: Point3D) = {
     val tracing = insertOne(tracingBase(task, userId, dataSetName).copy(editPosition = start))
-    val tree = Tree(1, List(Node(1, start)), Nil, Color.RED)
+    val tree = Tree(1, Set(Node(1, start)), Set.empty, Color.RED)
     DBTree.insertOne(tracing._id, tree)
     tracing
   }
@@ -156,22 +178,38 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   }
 
   def createReviewFor(sample: Tracing, training: Tracing, user: User) = {
-    val reviewTracing = createAndInsertDeepCopy(training.copy(
+    val reviewTracing = copyDeepAndInsert(training.copy(
       _user = user._id,
       state = TracingState.Assigned,
       timestamp = System.currentTimeMillis,
       tracingType = TracingType.Review))
 
-    DBTree.cloneAndAddTrees(sample._id, reviewTracing._id)
+    mergeTracings(sample, reviewTracing)
+  }
 
-    reviewTracing
+  def createSample(taskId: ObjectId, tracing: Tracing) = {
+    copyDeepAndInsert(tracing.copy(
+      tracingType = TracingType.Sample,
+      _task = Some(taskId)))
+  }
+
+  def copyDeepAndInsert(source: Tracing) = {
+    val tracing = insertOne(source.copy(_id = new ObjectId, branchPoints = Nil, comments = Nil))
+    mergeTracings(source, tracing)
+  }
+
+  def mergeTracings(source: Tracing, target: Tracing): Tracing =
+    target.update{ t =>
+     val a = t.mergeWith(source)
+     println("Result comments: " + a.comments)
+     a
   }
 
   def createTracingFor(user: User, task: Task) = {
     task.tracingBase.map { tracingBase =>
       task.update(_.assigneOnce)
 
-      createAndInsertDeepCopy(tracingBase.copy(
+      copyDeepAndInsert(tracingBase.copy(
         _user = user._id,
         timestamp = System.currentTimeMillis,
         state = InProgress,
@@ -194,18 +232,6 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
       MongoDBObject(
         "$set" -> MongoDBObject(
           "state.isAssigned" -> false)))
-  }
-
-  def createAndInsertDeepCopy(source: Tracing) = {
-    val tracing = insertOne(source.copy(_id = new ObjectId))
-    DBTree.findAllWithTracingId(source._id).map(tree => DBTree.createAndInsertDeepCopy(tree, tracing._id, 0))
-    tracing
-  }
-
-  def createSample(taskId: ObjectId, tracing: Tracing) = {
-    createAndInsertDeepCopy(tracing.copy(
-      tracingType = TracingType.Sample,
-      _task = Some(taskId)))
   }
 
   def fromNML(userId: ObjectId, nml: NML) = {
@@ -260,7 +286,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
         "_task" -> task._id),
       MongoDBObject(
         "tracingSettings" -> taskType.tracingSettings),
-        false, true)
+      false, true)
   }
 
   def findTrainingForReviewTracing(tracing: Tracing) =
@@ -269,8 +295,11 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
   /*def findOpenTrainingFor(user: User) =
     findOne(MongoDBObject("_user" -> user._id, "state.isFinished" -> false, "tracingType" -> "Training"))
 */
-  def hasOpenTracing(user: User, tracingType: TracingType.Value) =
-    !findOpenTracingsFor(user, tracingType).isEmpty
+  def countOpenTracings(user: User, tracingType: TracingType.Value) =
+    findOpenTracingsFor(user, tracingType).size
+
+  def hasAnOpenTracings(user: User, tracingType: TracingType.Value) =
+    countOpenTracings(user, tracingType) > 0
 
   def findFor(u: User) =
     find(MongoDBObject(
@@ -318,71 +347,4 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
       "$or" -> MongoDBList(
         "state.isAssigned" -> true,
         "state.isFinished" -> true))).toList
-
-  implicit object TracingXMLWrites extends XMLWrites[Tracing] {
-    def writes(e: Tracing) = {
-      (DataSet.findOneByName(e.dataSetName).map { dataSet =>
-        <things>
-          <parameters>
-            <experiment name={ dataSet.name }/>
-            <scale x={ e.scale.x.toString } y={ e.scale.y.toString } z={ e.scale.z.toString }/>
-            <offset x="0" y="0" z="0"/>
-            <time ms={ e.timestamp.toString }/>
-            <activeNode id={ e.activeNodeId.toString }/>
-            <editPosition x={ e.editPosition.x.toString } y={ e.editPosition.y.toString } z={ e.editPosition.z.toString }/>
-          </parameters>
-          { e.trees.filterNot(_.isEmpty).map(t => Xml.toXML(t)) }
-          <branchpoints>
-            { e.branchPoints.map(BranchPoint.toXML) }
-          </branchpoints>
-          <comments>
-            { e.comments.map(c => Xml.toXML(c)) }
-          </comments>
-        </things>
-      }) getOrElse (<error>DataSet not fount</error>)
-    }
-  }
-
-  implicit object TracingWrites extends Writes[Tracing] {
-    val ID = "id"
-    val VERSION = "version"
-    val TREES = "trees"
-    val ACTIVE_NODE = "activeNode"
-    val BRANCH_POINTS = "branchPoints"
-    val EDIT_POSITION = "editPosition"
-    val SCALE = "scale"
-    val COMMENTS = "comments"
-    val TRACING_TYPE = "tracingType"
-    val SETTINGS = "settings"
-
-    def writes(e: Tracing) = Json.obj(
-      ID -> e.id,
-      SETTINGS -> e.tracingSettings,
-      TREES -> e.trees,
-      VERSION -> e.version,
-      TREES -> e.trees.map(DBTreeFormat.writes),
-      ACTIVE_NODE -> e.activeNodeId,
-      BRANCH_POINTS -> e.branchPoints,
-      SCALE -> e.scale,
-      COMMENTS -> e.comments,
-      EDIT_POSITION -> e.editPosition,
-      TRACING_TYPE -> e.tracingType.toString)
-
-    /*def reads(js: JsValue): Tracing = {
-
-      val id = (js \ ID).as[String]
-      val version = (js \ VERSION).as[Int]
-      val trees = (js \ TREES).as[List[Tree]]
-      val comments = (js \ COMMENTS).as[List[Comment]]
-      val activeNode = (js \ ACTIVE_NODE).as[Int]
-      val branchPoints = (js \ BRANCH_POINTS).as[List[BranchPoint]]
-      val editPosition = (js \ EDIT_POSITION).as[Point3D]
-      Tracing.findOneById(id) match {
-        case Some(exp) =>
-          JsSuccess(exp.copy(trees = trees, version = version, activeNodeId = activeNode, branchPoints = branchPoints, editPosition = editPosition, comments = comments))
-        case _ =>
-          JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.objectid"))))
-      }
-    }*/
-  }
 }

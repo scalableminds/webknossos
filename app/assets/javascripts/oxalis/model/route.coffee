@@ -19,6 +19,8 @@ TYPE_BRANCH       = 1
 # Max and min radius in base voxels (see scaleInfo.baseVoxel)
 MIN_RADIUS        = 1
 MAX_RADIUS        = 1000
+MIN_PARTICLE_SIZE = 1
+MAX_PARTICLE_SIZE = 20
 
 
 class Route
@@ -29,10 +31,11 @@ class Route
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
+  particleSize : 5
 
 
 
-  constructor : (@data, @scaleInfo, @flycam, @flycam3d) ->
+  constructor : (@data, @scaleInfo, @flycam, @flycam3d, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -50,28 +53,39 @@ class Route
 
     @doubleBranchPop = false
 
+    # change listener
+    @user.on "particleSizeChanged", (particleSize) =>
+      @setParticleSize(particleSize, false)
+
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id)
+    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id, @data.settings.isEditable)
     console.log "Tracing data: ", @data
 
     # get tree to build
     for treeData in @data.trees
       # Create new tree
-      tree = new TraceTree(treeData.id, new THREE.Color().setRGB(treeData.color[0..2]...).getHex())
+      tree = new TraceTree(treeData.id, @getNewTreeColor(treeData.id))
       # Initialize nodes
       i = 0
       for node in treeData.nodes
         if node
-          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp))
+          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
           # idCount should be bigger than any other id
           @idCount = Math.max(node.id + 1, @idCount);
       # Initialize edges
       for edge in treeData.edges
         sourceNode = @findNodeInList(tree.nodes, edge.source)
         targetNode = @findNodeInList(tree.nodes, edge.target)
-        sourceNode.appendNext(targetNode)
-        targetNode.appendNext(sourceNode)
+        if sourceNode and targetNode
+          sourceNode.appendNext(targetNode)
+          targetNode.appendNext(sourceNode)
+        else
+          $.assertNotEquals(sourceNode, null, "source node undefined",
+            {"edge" : edge})
+          $.assertNotEquals(targetNode, null, "target node undefined",
+            {"edge" : edge})
+
       # Set active Node
       activeNodeT = @findNodeInList(tree.nodes, @data.activeNode)
       if activeNodeT
@@ -113,17 +127,17 @@ class Route
       #calculate direction of first edge in nm
       if @data.trees[0]?.edges?
         for edge in @data.trees[0].edges
-          sourceNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.source).pos)
-          targetNodeNm = @scaleInfo.voxelToNm(@findNodeInList(@trees[0].nodes, edge.target).pos)
-          if sourceNodeNm[0] != targetNodeNm[0] or sourceNodeNm[1] != targetNodeNm[1] or sourceNodeNm[2] != targetNodeNm[2]
-            @firstEdgeDirection = [targetNodeNm[0] - sourceNodeNm[0],
-                                   targetNodeNm[1] - sourceNodeNm[1],
-                                   targetNodeNm[2] - sourceNodeNm[2]]
+          sourceNode = @findNodeInList(@trees[0].nodes, edge.source).pos
+          targetNode = @findNodeInList(@trees[0].nodes, edge.target).pos
+          if sourceNode[0] != targetNode[0] or sourceNode[1] != targetNode[1] or sourceNode[2] != targetNode[2]
+            @firstEdgeDirection = [targetNode[0] - sourceNode[0],
+                                   targetNode[1] - sourceNode[1],
+                                   targetNode[2] - sourceNode[2]]
             break
 
       if @firstEdgeDirection
         @flycam.setSpaceDirection(@firstEdgeDirection)
-        @flycam3d.setDirection(V3.normalize(@firstEdgeDirection))
+        @flycam3d.setDirection(@firstEdgeDirection)
 
     #@createNewTree()
     #for i in [0...10000]
@@ -132,17 +146,12 @@ class Route
     $(window).on(
       "beforeunload"
       =>
-        if !@stateLogger.savedCurrentState
+        if !@stateLogger.stateSaved() and @stateLogger.isEditable
           @stateLogger.pushImpl(true)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return
     )
-
-  # INVARIANTS:
-  # activeTree: either sentinel (activeTree.isSentinel==true) or valid node with node.parent==null
-  # activeNode: either null only if activeTree is empty (sentinel) or valid node
-
 
   pushNow : ->
 
@@ -223,7 +232,7 @@ class Route
       unless @lastRadius?
         @lastRadius = 10 * @scaleInfo.baseVoxel
         if @activeNode? then @lastRadius = @activeNode.radius
-      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime())
+      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime(), @activeTree.treeId)
       @activeTree.nodes.push(point)
       if @activeNode
         @activeNode.appendNext(point)
@@ -265,6 +274,9 @@ class Route
 
 
   getActiveNodeId : -> @lastActiveNodeId
+
+
+  getParticleSize : -> @particleSize
 
 
   getActiveNodePos : ->
@@ -309,6 +321,14 @@ class Route
     @trigger("newActiveNodeRadius", radius)
 
 
+  setParticleSize : (size, propagate = true) ->
+
+    @particleSize = Math.min(MAX_PARTICLE_SIZE, size)
+    @particleSize = Math.max(MIN_PARTICLE_SIZE, @particleSize)
+
+    @trigger("newParticleSize", @particleSize, propagate)
+
+
   setActiveNode : (nodeID, mergeTree = false) ->
 
     lastActiveNode = @activeNode
@@ -335,6 +355,7 @@ class Route
       for i in [0...@comments.length]
         if(@comments[i].node == @activeNode.id)
           @comments.splice(i, 1)
+          @deletedCommentIndex = i
           break
       if commentText != ""
         @comments.push({node: @activeNode.id, content: commentText})
@@ -362,20 +383,22 @@ class Route
 
   nextCommentNodeID : (forward) ->
 
-    unless @activeNode?
-      if @comments.length > 0 then return @comments[0].node
+    length = @comments.length
+    offset = if forward then 1 else -1
 
-    if @comments.length == 0
+    unless @activeNode?
+      if length > 0 then return @comments[0].node
+
+    if length == 0
       return null
 
     for i in [0...@comments.length]
       if @comments[i].node == @activeNode.id
-        if forward
-          return @comments[(i + 1) % @comments.length].node
-        else
-          if i == 0 then return @comments[@comments.length - 1].node
-          else
-            return @comments[(i - 1)].node
+        return @comments[(length + i + offset) % length].node
+
+    if @deletedCommentIndex?
+      offset = if forward then 0 else -1
+      return @comments[(length + @deletedCommentIndex + offset) % length].node
 
     return @comments[0].node
 
@@ -399,23 +422,20 @@ class Route
     @trigger("newActiveTree")
 
 
-  getNewTreeColor : ->
+  getNewTreeColor : (treeId) ->
 
     # this generates the most distinct colors possible, using the golden ratio
-    if @trees.length == 0
-      @currentHue = null
+    if treeId == 1
       return 0xFF0000
     else
-      unless @currentHue
-        @currentHue = new THREE.Color().setHex(_.last(@trees).color).getHSV().h
-      @currentHue += GOLDEN_RATIO
-      @currentHue %= 1
-      new THREE.Color().setHSV(@currentHue, 1, 1).getHex()
+      currentHue = treeId * GOLDEN_RATIO
+      currentHue %= 1
+      new THREE.Color().setHSV(currentHue, 1, 1).getHex()
 
 
   createNewTree : ->
 
-    tree = new TraceTree(@treeIdCount++, @getNewTreeColor())
+    tree = new TraceTree(@treeIdCount++, @getNewTreeColor(@treeIdCount-1))
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null
@@ -438,7 +458,7 @@ class Route
     deletedNode = @activeNode
     @stateLogger.deleteNode(deletedNode, @activeTree.treeId)
 
-    @deleteBranch(deletedNode.id)
+    @deleteBranch(deletedNode)
     
     if deletedNode.neighbors.length > 1
       # Need to split tree
@@ -453,6 +473,10 @@ class Route
 
         @activeTree.nodes = []
         @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
+        # update tree ids
+        unless i == 0
+          for node in @activeTree.nodes
+            node.treeId = @activeTree.treeId
         @setActiveNode(deletedNode.neighbors[i].id)
         newTrees.push(@activeTree)
 
@@ -522,10 +546,14 @@ class Route
         @activeTree.nodes = @activeTree.nodes.concat(lastTree.nodes)
         @activeNode.appendNext(lastNode)
         lastNode.appendNext(@activeNode)
+
+        # update tree ids
+        for node in @activeTree.nodes
+          node.treeId = @activeTree.treeId
         
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
-        @trigger("mergeTree", lastTree.treeId, lastNode.pos, @activeNode.pos)
+        @trigger("mergeTree", lastTree.treeId, lastNode, @activeNode)
 
         @deleteTree(false, lastTree.treeId, false)
 

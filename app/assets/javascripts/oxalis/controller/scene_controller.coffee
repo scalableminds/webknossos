@@ -67,6 +67,8 @@ class SceneController
     # things have to be changed for each cam.
     if id in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       @cube.visible = false
+      unless @showSkeleton
+        @skeleton.setVisibility(false)
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
         if i == id
           @planes[i].setOriginalCrosshairColor()
@@ -80,6 +82,8 @@ class SceneController
           @planes[i].setVisible(false)
     else
       @cube.visible = true
+      unless @showSkeleton
+        @skeleton.setVisibility(true)
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
         pos = @flycam.getPosition()
         @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))

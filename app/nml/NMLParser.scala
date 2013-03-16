@@ -19,6 +19,8 @@ import net.liftweb.common.Box
 import net.liftweb.common.Box._
 import net.liftweb.common.Box
 import net.liftweb.common.Failure
+import utils._
+import scala.annotation.tailrec
 
 object NMLParser {
 
@@ -42,8 +44,8 @@ class NMLParser(in: InputStream) {
   val DEFAULT_VIEWPORT = 0
   val DEFAULT_RESOLUTION = 0
   val DEFAULT_TIMESTAMP = 0
-  
-  def this(file: File) = 
+
+  def this(file: File) =
     this(new FileInputStream(file))
 
   def parse: Box[NML] = {
@@ -57,7 +59,7 @@ class NMLParser(in: InputStream) {
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
         val editPosition = parseEditPosition(parameters \ "editPosition")
         val time = parseTime(parameters \ "time")
-        val (_, parsedTrees, nodeMapping)  = parseTrees((data \ "thing"))
+        val (_, parsedTrees, nodeMapping) = parseTrees((data \ "thing"))
         val trees = verifyTrees(parsedTrees)
         val comments = parseComments(data \ "comments", nodeMapping).toList
         val branchPoints = (data \ "branchpoints" \ "branchpoint").flatMap(parseBranchPoint(trees, nodeMapping))
@@ -76,18 +78,29 @@ class NMLParser(in: InputStream) {
   }
 
   def splitIntoComponents(tree: Tree): List[Tree] = {
-    def buildTreeFromNode(node: Node, sourceTree: Tree): Tree = {
-      val connectedEdges = sourceTree.edges.filter(e => e.target == node.id || e.source == node.id)
+    def emptyTree = Tree(tree.treeId, Set.empty, Set.empty, tree.color)
 
-      val connectedNodes = connectedEdges.flatMap {
-        case Edge(s, t) if s == node.id => sourceTree.nodes.find(_.id == t)
-        case Edge(s, t) if t == node.id => sourceTree.nodes.find(_.id == s)
-      }
+    val t = System.currentTimeMillis()
 
-      val componentPart = Tree(tree.treeId, node :: connectedNodes, connectedEdges, tree.color)
+    val nodeMap = tree.nodes.map(n => n.id -> n).toMap
 
-      connectedNodes.foldLeft(componentPart)((tree, n) =>
-        tree ++ buildTreeFromNode(n, sourceTree -- componentPart))
+    @tailrec
+    def buildTreeFromNode(nodesToProcess: List[Node], treeReminder: Tree, component: Tree = emptyTree): (Tree, Tree) = {
+      if (!nodesToProcess.isEmpty) {
+        val node = nodesToProcess.head
+        val tail = nodesToProcess.tail
+        val connectedEdges = treeReminder.edges.filter(e => e.source == node.id || e.target == node.id)
+          
+        val connectedNodes = connectedEdges.flatMap {
+          case Edge(s, t) if s == node.id => nodeMap.get(t)
+          case Edge(s, t) if t == node.id => nodeMap.get(s)
+        }
+
+        val currentComponent = Tree(tree.treeId, connectedNodes + node, connectedEdges, tree.color)
+        val r = (component ++ currentComponent)
+        buildTreeFromNode(tail ::: connectedNodes.toList, treeReminder -- currentComponent, r)
+      } else
+        (treeReminder -> component)
     }
 
     var treeToProcess = tree
@@ -95,15 +108,19 @@ class NMLParser(in: InputStream) {
     var components = List[Tree]()
 
     while (!treeToProcess.nodes.isEmpty) {
-      val component = buildTreeFromNode(treeToProcess.nodes.head, treeToProcess)
-      treeToProcess = treeToProcess -- component
+      val (treeReminder, component) = buildTreeFromNode(treeToProcess.nodes.head :: Nil, treeToProcess)
+      treeToProcess = treeReminder
       components ::= component
     }
-    components
+    Logger.trace("Connected components calculation: " + (System.currentTimeMillis() - t))
+    components.map(
+      _.copy(
+        color = tree.color,
+        treeId = tree.treeId))
   }
 
   def parseTrees(nodes: NodeSeq) = {
-    nodes.foldLeft((1, List[Tree](), Map[Int, Node]())) {
+    nodes.foldLeft((1, List[Tree](), new NodeMapping())) {
       case ((nextNodeId, trees, nodeMapping), xml) =>
         parseTree(xml, nextNodeId) match {
           case Some((mapping, tree)) =>
@@ -132,7 +149,7 @@ class NMLParser(in: InputStream) {
   }
 
   def parseBranchPoint(trees: List[Tree], nodeMapping: Map[Int, Node])(node: XMLNode) = {
-    for{
+    for {
       nodeId <- ((node \ "@id").text).toIntOpt
       node <- nodeMapping.get(nodeId)
     } yield BranchPoint(node.id)
@@ -166,24 +183,24 @@ class NMLParser(in: InputStream) {
     }) getOrElse (DEFAULT_COLOR)
   }
 
-  def parseTree(tree: XMLNode, nextNodeId: Int): Option[(Map[Int, Node], Tree)] = {
+  def parseTree(tree: XMLNode, nextNodeId: Int): Option[(NodeMapping, Tree)] = {
     ((tree \ "@id").text).toIntOpt.flatMap { id =>
       val color = parseColor(tree)
       Logger.trace("Parsing tree Id: %d".format(id))
-      val (_,nodeMapping) = (tree \ "nodes" \ "node").foldLeft((nextNodeId, Map[Int, Node]())){
+      val (_, nodeMapping) = (tree \ "nodes" \ "node").foldLeft((nextNodeId, new NodeMapping())) {
         case ((nextNodeId, nodeMapping), nodeXml) =>
-          parseNode(nextNodeId)(nodeXml) match{
-            case Some(mapping) => 
-              (nextNodeId+1, nodeMapping + mapping)
+          parseNode(nextNodeId)(nodeXml) match {
+            case Some(mapping) =>
+              (nextNodeId + 1, nodeMapping + mapping)
             case _ =>
               (nextNodeId, nodeMapping)
           }
       }
 
-      val edges = (tree \ "edges" \ "edge").flatMap(parseEdge(nodeMapping)).toList
+      val edges = (tree \ "edges" \ "edge").flatMap(parseEdge(nodeMapping)).toSet
 
       if (nodeMapping.size > 0)
-        Some(nodeMapping -> Tree(id, nodeMapping.values.toList, edges, color))
+        Some(nodeMapping -> Tree(id, nodeMapping.values.toSet, edges, color))
       else
         None
     }

@@ -24,6 +24,7 @@ import java.lang.Cloneable
 import models.task.Project
 import play.api.Logger
 import play.api.mvc.Result
+import play.api.templates.Html
 
 object TaskAdministration extends Controller with Secured {
 
@@ -99,6 +100,22 @@ object TaskAdministration extends Controller with Secured {
       JsonOk(Messages("task.removed"))
     }
   }
+  
+  def trace(taskId: String) = Authenticated { implicit request =>
+    for {
+      task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
+    } yield {
+      val tracingInfo = 
+        TracingInfo(
+            task.id,
+            "<unknown>",
+            TracingType.CompoundTask,
+            isReadOnly = true)
+      
+      Ok(html.oxalis.trace(tracingInfo)(Html.empty))
+    }
+  }
+
 
   def cancelTracing(tracingId: String) = Authenticated { implicit request =>
     for {
@@ -203,7 +220,7 @@ object TaskAdministration extends Controller with Secured {
               instances,
               _project = project.map(_.name))
             nmls.foreach { nml =>
-              val task = Task.createAndInsertDeepCopy(baseTask)
+              val task = Task.copyDeepAndInsert(baseTask)
               Tracing.createTracingBase(task, request.user._id, nml)
             }
             Redirect(routes.TaskAdministration.list).flashing(
@@ -250,24 +267,37 @@ object TaskAdministration extends Controller with Secured {
           FlashSuccess(Messages("task.bulk.createSuccess", inserted.size.toString)))
     }
   }
+  
+  def reopen(tracingId: String) = Authenticated{ implicit request =>
+    for {
+      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      task <- tracing.task ?~Messages("task.notFound")
+    } yield {
+      tracing match {
+        case t if t.tracingType == TracingType.Task =>
+          val updated = tracing.update(_.reopen)
+          JsonOk(html.admin.task.taskTracingDetailTableItem(updated), Messages("tracing.reopened"))
+        case _ =>
+          JsonOk(Messages("tracing.unvalid"))
+      }
+    }
+  }
 
   def overview = Authenticated { implicit request =>
     Async {
       play.api.templates.Html
       val allUsers = User.findAll
       val allTaskTypes = TaskType.findAll
-      val usersWithoutTask = allUsers.filter(user => !Tracing.hasOpenTracing(user, TracingType.Task))
       val usersWithTasks =
         (for {
           user <- allUsers
           tracing <- Tracing.findOpenTracingsFor(user, TracingType.Task)
           task <- tracing.task
           taskType <- task.taskType
-        } yield (user -> taskType)).toMap
-
+        } yield (user -> taskType))
       Task.simulateTaskAssignment(allUsers).map { futureTasks =>
         val futureTaskTypes = futureTasks.flatMap(e => e._2.taskType.map(e._1 -> _))
-        Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks, futureTaskTypes))
+        Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks.removeDuplicates, futureTaskTypes))
       }
     }
   }

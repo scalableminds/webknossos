@@ -16,9 +16,9 @@ import play.api.Logger
 
 case class TracingIdentifier(tracingType: String, identifier: String)
 
-case class RequestTemporaryTracing(id: TracingIdentifier, maxAge: Duration = 5 minutes)
+case class RequestTemporaryTracing(id: TracingIdentifier)
 
-case class StoredResult(result : Future[Box[TracingLike]], timestamp: Long = System.currentTimeMillis)
+case class StoredResult(result: Future[Box[TracingLike]], timestamp: Long = System.currentTimeMillis)
 
 class TemporaryTracingGenerator extends Actor {
   implicit val system = context.system
@@ -27,13 +27,25 @@ class TemporaryTracingGenerator extends Actor {
 
   val maxWait = 5 seconds
 
+  val maxCacheTime = 5 minutes
+
   val temporaryTracings = Agent[Map[TracingIdentifier, StoredResult]](Map())
 
+  def removeExpired() {
+    temporaryTracings.send { cached =>
+      cached.filterNot(e => isExpired(maxCacheTime)(e._2))
+    }
+  }
+
+  override def preStart() = {
+    system.scheduler.schedule(maxCacheTime, maxCacheTime)(removeExpired)
+  }
+
   def receive = {
-    case RequestTemporaryTracing(id: TracingIdentifier, maxAge) =>
+    case RequestTemporaryTracing(id: TracingIdentifier) =>
       val s = sender
       temporaryTracings.future(maxWait)
-        .map(_.get(id).filterNot(isExpired(maxAge)).map(_.result).getOrElse(generateTemporaryTracing(id)))
+        .map(_.get(id).filterNot(isExpired(maxCacheTime)).map(_.result).getOrElse(generateTemporaryTracing(id)))
         .recover {
           case e: AskTimeoutException =>
             Logger.error(e.toString)
@@ -43,8 +55,8 @@ class TemporaryTracingGenerator extends Actor {
           s ! result
         }
   }
-  
-  def isExpired(maxAge: Duration)(result: StoredResult) = 
+
+  def isExpired(maxAge: Duration)(result: StoredResult) =
     System.currentTimeMillis - result.timestamp > maxAge.toMillis
 
   def generateTemporaryTracing(id: TracingIdentifier) = {
@@ -52,7 +64,7 @@ class TemporaryTracingGenerator extends Actor {
     val f = Akka.future {
       handler.provideTracing(id.identifier)
     }(app)
-    if (handler.cache){
+    if (handler.cache) {
       val stored = StoredResult(f)
       temporaryTracings.send(_ + (id -> stored))
     }

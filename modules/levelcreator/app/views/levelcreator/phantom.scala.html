@@ -1,4 +1,4 @@
-@(level: models.knowledge.Level, outputFilepattern: String, metaFilename: String, levelUrl: String, missionId: String)
+@(stack: models.knowledge.Stack, levelUrl: String)
 
 var page = require("webpage").create();
 var fs = require("fs");
@@ -15,68 +15,100 @@ setTimeout(
 
 var i = 0, stackData;
 
+var imageFilePattern = function(i, ext) { return "stackImage" + i + "." + ext }
+
+var log = function () {
+  console.log.apply( console, [ "" + Date.now() + ":" ].concat([].slice.call(arguments)) );
+}
+
 var triggerRender = function() {
   
   setTimeout(function () {
-    console.log("rendering frame #" + i);
+    log("rendering frame #" + i);
     page.evaluate(function(i) {
       window.levelCreator.headlessRendering(i);
     }, i);
   }, 1);
+
 }
 
 page.onCallback = function (data) {
 
-  console.log(data.message);
+  switch (data.message) {
 
-  if (data.message == "initialized") {
+    case "initialized":
+  
+      page.clipRect = { top : 0, height : 0, width : data.width, height : data.height };
 
-    page.clipRect = { top : 0, height : 0, width : data.width, height : data.height };
+      stackData = { 
+        width: data.width, 
+        height: data.height,
+        length: data.length,
+        levelName: "@{stack.level.name}",
+        levelId: "@{stack.level.id}",
+        stackId: "@{stack.mission.id}",
+        images: [],
+        frameData: {}
+      };
 
-    stackData = { 
-      width: data.width, 
-      height: data.height,
-      length: data.length,
-      levelName: "@{level.name}",
-      levelId: "@{level.id}",
-      stackId: "@{missionId}",
-      images: []
-    };
-
-    console.log("" + stackData.length + " frames available");
-    triggerRender();
-  }
-
-  if (data.message == "rendered") {
-    console.log("rendering frame #" + i + "!");
-    var filename = "@{outputFilepattern}".replace("%i", i);
-    page.render(filename);
-    stackData.images.push(filename.substring(filename.lastIndexOf("/") + 1));
-    console.log("rendered frame #" + i + " to " + filename);
-    
-    i++;
-    if (i <= stackData.length) {
+      log("" + stackData.length + " frames available");
       triggerRender();
-    } else {
-      stackData.createdAt = Date.now();
-      fs.write(
-        "@{metaFilename}",
-        JSON.stringify(stackData),
-        "w"
-      );
-      console.log("Wrote meta file to @{metaFilename}");
+
+      break;
+
+    case "rendered":
+
+      var filename = "@{stack.path}/" + imageFilePattern(i, "png");
+      page.render(filename);
+      stackData.images.push(imageFilePattern(i, "png"));
+
+      log("rendered frame #" + i + " to " + filename);
+
+      if (data.frameData != null) {
+        stackData.frameData["" + i] = data.frameData;
+        log("added frameData for #" + i);
+      }
       
-      phantom.exit();
-    }
+      i++;
+      if (i <= stackData.length) {
+        triggerRender();
+      } else {
+        stackData.createdAt = Date.now();
+        fs.write(
+          "@{stack.path}/meta.json",
+          JSON.stringify(stackData),
+          "w"
+        );
+        log("wrote meta file to @{stack.path}/meta.json");
+        
+        phantom.exit();
+      }
+
+      break;
+
+    default:
+
+      log( "unknown message", data.message );
+
+      break;
   }
 }
 
 page.onConsoleMessage = function(msg) {
-  console.log( "CONSOLE: " + msg );
+  log( "CONSOLE:", msg );
 }
 
 page.onError = function() {
+  var msgStack = ['PHANTOM ERROR: ' + msg];
+  if (trace) {
+      msgStack.push('TRACE:');
+      trace.forEach(function(t) {
+          msgStack.push(' -> ' + (t.file || t.sourceURL) + ': ' + t.line + (t.function ? ' (in function ' + t.function + ')' : ''));
+      });
+  }
+  console.error(msgStack.join('\n'));
   phantom.exit();
 }
 
+log("starting")
 page.open("@{levelUrl}");

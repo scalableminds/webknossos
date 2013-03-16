@@ -65,7 +65,8 @@ class PluginRenderer
 
     pixelCount = @width * @height
     frameBuffer = new Uint8Array( 4 * pixelCount )
-    return frameBuffer unless @dataHandler.deferred("initialized").state() == "resolved"
+    frameData = null
+    return { frameBuffer, frameData } unless @dataHandler.deferred("initialized").state() == "resolved"
 
     func = @compile()
 
@@ -92,6 +93,9 @@ class PluginRenderer
               relativeTime : (t - startFrame) / (endFrame - startFrame)
               absoluteTime : t
               mission : @dataHandler.getMissionData()
+              writeFrameData : (key, payload) ->
+                frameData = frameData ? {}
+                frameData[key] = payload
             callback()
             BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
             inputData = null
@@ -126,7 +130,7 @@ class PluginRenderer
 
     func(_plugins)
 
-    frameBuffer
+    { frameBuffer, frameData }
 
 
 

@@ -107,7 +107,10 @@ class PluginRenderer
         _.defaults(options, scale : "auto")
 
         if options.scale == "auto"
-          options.scale = (options.end - options.start) / (endFrame - startFrame)
+          if endFrame - startFrame > 0
+            options.scale = (options.end - options.start) / (endFrame - startFrame)
+          else
+            options.scale = 1
 
         slideOffset = (t - startFrame) * options.scale + options.start
         _.extend(inputData,

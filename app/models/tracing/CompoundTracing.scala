@@ -11,43 +11,47 @@ import brainflight.format.Formatter
 
 object CompoundTracing extends Formatter {
 
-  def renameTrees(prefix: String, trees: List[TreeLike]) = {
-    trees.zipWithIndex.map {
-      case (tree, index) =>
-        tree.changeName(s"${prefix}tree%03d".format(index + 1))
-    }
-  }
-
   def treePrefix(tracing: TracingLike) = {
     val userName = tracing.user.map(_.abreviatedName) getOrElse ""
     val taskId = tracing.task.map(t => formatHash(t.id)) getOrElse ""
     s"${taskId}_${userName}_"
   }
 
+  def renameTreesOfTracing(tracing: Tracing) = {
+    def renameTrees(prefix: String, trees: List[TreeLike]) = {
+      trees.zipWithIndex.map {
+        case (tree, index) =>
+          tree.changeName(s"${prefix}tree%03d".format(index + 1))
+      }
+    }
+    val temp = TemporaryTracing.createFrom(tracing, "")
+    temp.copy(
+      trees = renameTrees(treePrefix(tracing), temp.trees))
+  }
+
   def createFromProject(project: Project) = {
     logTime("project composition") {
       createFromTracings(Task
         .findAllByProject(project.name)
-        .flatMap(_.tracings.filter(_.state.isFinished).par.map { tracing =>
-          val temp = TemporaryTracing.createFrom(tracing, "")
-          temp.copy(
-            trees = renameTrees(treePrefix(tracing), temp.trees))
-        }), project.name)
+        .flatMap(_.tracings.filter(_.state.isFinished).par.map(renameTreesOfTracing)), project.name)
         .map(_.copy(tracingType = TracingType.CompoundProject))
     }
   }
 
   def createFromTask(task: Task) = {
-    val id = task.id
-    createFromTracings(task.tracings.filter(_.state.isFinished), id)
-      .orElse(createFromTracings(task.tracingBase.toList, id))
-      .map(_.copy(tracingType = TracingType.CompoundTask))
+    logTime("task composition") {
+      createFromTracings(task.tracings.filter(_.state.isFinished).map(renameTreesOfTracing), task.id)
+        .orElse(createFromTracings(task.tracingBase.toList, task.id))
+        .map(_.copy(tracingType = TracingType.CompoundTask))
+    }
   }
 
   def createFromTaskType(taskType: TaskType) = {
-    createFromTracings(Task.findAllByTaskType(taskType)
-      .flatMap(_.tracings.filter(_.state.isFinished)), taskType.id)
-      .map(_.copy(tracingType = TracingType.CompoundTaskType))
+    logTime("taskType composition") {
+      createFromTracings(Task.findAllByTaskType(taskType)
+        .flatMap(_.tracings.filter(_.state.isFinished).par.map(renameTreesOfTracing)), taskType.id)
+        .map(_.copy(tracingType = TracingType.CompoundTaskType))
+    }
   }
 
   def createFromTracings(tracings: List[TracingLike], id: String): Option[TemporaryTracing] = {

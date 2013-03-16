@@ -21,12 +21,14 @@ import play.api.Play
 import play.api.Play.current
 import play.api.i18n.Messages
 import braingames.mvc.Controller
+import brainflight.mail.DefaultMails
+import brainflight.mail.Send
 
 object Jira extends Controller with Secured {
   override val DefaultAccessRole = Role.User
   
   val jiraUrl = "https://jira.scm.io"
-  val issueTypes = Map("bug" -> "Bug", "feature" -> "New Feature")
+  val issueTypes = Map("bug" -> "Bug", "feature" -> "New Feature", "unrelated" -> "")
   val conf = Play.configuration
   val branchName = conf.getString("branchname") getOrElse "master"
 
@@ -49,7 +51,7 @@ object Jira extends Controller with Secured {
           "name" -> issueType))).toString
   }
 
-  def createIssue(user: User, summary: String, description: String, issueType: String) {
+  def createJiraIssue(user: User, summary: String, description: String, issueType: String) {
     val auth = new String(Base64.encodeBase64("autoreporter:frw378iokl!24".getBytes))
     val client = Client.create();
 
@@ -67,6 +69,11 @@ object Jira extends Controller with Secured {
       Logger.debug(response.toString)
     }
   }
+  
+  def mailIssue(user: User, summary: String, description: String) {
+    val mail = DefaultMails.issueMail(user.name, summary, description)
+    Application.Mailer ! Send(mail)
+  }
 
   def submit = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     for {
@@ -75,7 +82,10 @@ object Jira extends Controller with Secured {
       postedType <- postParameter("type") ?~ Messages("jira.type.notSupplied")
       issueType <- issueTypes.get(postedType) ?~ Messages("jira.type.invalid")
     } yield {
-      createIssue(request.user, summary, description, issueType)
+      if(postedType != "unrelated")
+        createJiraIssue(request.user, summary, description, issueType)
+      else
+        mailIssue(request.user, summary, description)
       Ok(html.jira.close())
     } 
   }

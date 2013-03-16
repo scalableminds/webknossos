@@ -14,9 +14,9 @@ import models.task.Task
 import models.tracing._
 import play.api.templates.Html
 import brainflight.tracing._
-import brainflight.CommonActors
+import controllers.Application
 
-object TaskTypeAdministration extends Controller with Secured with CommonActors{
+object TaskTypeAdministration extends Controller with Secured{
 
   override val DefaultAccessRole = Role.Admin
 
@@ -50,7 +50,7 @@ object TaskTypeAdministration extends Controller with Secured with CommonActors{
             tracingType,
             isEditable = false)
             
-      temporaryTracingGenerator ! RequestTemporaryTracing(id)          
+      Application.temporaryTracingGenerator ! RequestTemporaryTracing(id)          
       
       Ok(html.oxalis.trace(tracingInfo)(Html.empty))
     }

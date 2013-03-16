@@ -71,6 +71,7 @@ object Global extends GlobalSettings {
     Akka.system.actorOf(
       Props(new TemporaryTracingGenerator()),
       name = "temporaryTracingGenerator")
+    Akka.system.actorOf(Props[Mailer], name = "mailActor")
   }
 }
 

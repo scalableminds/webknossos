@@ -41,7 +41,6 @@ import models.tracing.TemporaryTracing
 import controllers.tracing.handler._
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import brainflight.CommonActors
 import brainflight.tracing.RequestTemporaryTracing
 import brainflight.tracing.TracingIdentifier
 import akka.pattern.ask
@@ -203,7 +202,7 @@ object TracingController extends Controller with Secured with TracingInformation
   }
 }
 
-trait TracingInformationProvider extends play.api.http.Status with TracingRights with CommonActors {
+trait TracingInformationProvider extends play.api.http.Status with TracingRights {
   import braingames.mvc.BoxImplicits._
 
   import tracing.handler.TracingInformationHandler._
@@ -237,7 +236,7 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
   def findTracing(tracingType: String, identifier: String)(implicit request: AuthenticatedRequest[_]): Future[Box[TracingLike]] = {
     val id = TracingIdentifier(tracingType, identifier)
     implicit val timeout = Timeout(5 seconds)
-    val f = temporaryTracingGenerator ? RequestTemporaryTracing(id)
+    val f = Application.temporaryTracingGenerator ? RequestTemporaryTracing(id)
 
     f.mapTo[Future[Box[TracingLike]]].flatMap(_.map(_.map { tracing =>
       if (!isAllowedToUpdateTracing(tracing, request.user))

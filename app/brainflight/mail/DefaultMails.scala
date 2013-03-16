@@ -17,17 +17,20 @@ object DefaultMails {
   val uri = conf.getString("http.uri") getOrElse ("http://localhost")
 
   val defaultFrom = "no-reply@oxalis.at"
+
+  val brainTracingMailingList = conf.getString("braintracing.mailinglist") getOrElse ("")
+  val supportMail = conf.getString("scm.support.mail") getOrElse ("support@scm.io")
   /**
    * Creates a registration mail which should allow the user to verify his
    * account
    */
-  def registerAdminNotifyerMail(name: String, brainDBResult: String) = 
+  def registerAdminNotifyerMail(name: String, brainDBResult: String) =
     Mail(
-        from = defaultFrom,
-        subject = "A new user ("+name+") registered on oxalis.at",
-        bodyText = html.mail.registerAdminNotify(name, brainDBResult).body,
-        recipients = List("braintracing@neuro.mpg.de"))
-  
+      from = defaultFrom,
+      subject = "A new user (" + name + ") registered on oxalis.at",
+      bodyText = html.mail.registerAdminNotify(name, brainDBResult).body,
+      recipients = List("braintracing@neuro.mpg.de"))
+
   def registerMail(name: String, receiver: String, brainDBresult: String) =
     Mail(
       from = defaultFrom,
@@ -55,4 +58,12 @@ object DefaultMails {
       subject = "Please correct your trainings tracing.",
       bodyText = html.mail.trainingsFailure(name, comment).body,
       recipients = List(receiver))
+
+  def issueMail(userName: String, summary: String, description: String) =
+    Mail(
+      from = defaultFrom,
+      subject = "Non technical issue - " + summary,
+      bodyText = html.mail.nonTechnicalIssue(userName, description).body,
+      recipients = List(brainTracingMailingList),
+      ccRecipients = List(supportMail))
 }

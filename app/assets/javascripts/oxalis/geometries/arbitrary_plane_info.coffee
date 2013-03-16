@@ -16,7 +16,7 @@ class ArbitraryPlaneInfo
 
   isRecording : false
 
-  constructor : (@cam)->
+  constructor : ->
 
     { WIDTH, HEIGHT } = @
 
@@ -24,17 +24,18 @@ class ArbitraryPlaneInfo
     canvas.width = WIDTH
     canvas.height = HEIGHT
     
-    context = canvas.getContext("2d")
-
-    @mesh = @createMesh(canvas)
-    @context = context
+    @context = canvas.getContext("2d")
 
     @updateInfo(false)
+
+    $(canvas).attr("id": "arbitrary-info-canvas")
+    $(canvas).css(position: "absolute", left: 10, top: 10)
+    $("#render").append(canvas)
 
 
   updateInfo : (@isRecording) ->
 
-    { context, WIDTH, HEIGHT, mesh, ALPHA, LINE_WIDTH } = @
+    { context, WIDTH, HEIGHT, ALPHA, LINE_WIDTH } = @
 
     if isRecording
       text = "TRACING"
@@ -75,59 +76,3 @@ class ArbitraryPlaneInfo
     context.fill()  if fill
     context.fillStyle = "rgba(255, 255, 255, #{ALPHA})"    
     context.fillText(text, WIDTH * 0.5, HEIGHT * 0.5 + 3)
-
-    mesh.material.map.needsUpdate = true
-
-  update : ->
-
-
-    { mesh, cam } = this
-
-    m = @cam.getMatrix()
-
-    mesh.matrix.set m[0], m[4], m[8], m[12], 
-                    m[1], m[5], m[9], m[13], 
-                    m[2], m[6], m[10], m[14], 
-                    m[3], m[7], m[11], m[15]
-    mesh.matrix.translate(new THREE.Vector3(-100, 100, -20))
-    mesh.matrix.scale(new THREE.Vector3(0.5, 0.5, 0.5))
-
-    mesh.matrixWorldNeedsUpdate = true
-    # console.log "CrossPositionWorld", mesh.matrixWorld.getPosition()
-    # console.log "CrossPositionLocal", mesh.matrix.getPosition()
-    #mesh.updateMatrix()
-
-
-  attachScene : (@scene) ->
-
-    scene.add(@mesh)
-
-
-  removeScene : () ->
-
-    @scene.remove(@mesh)    
-
-
-  createMesh : (canvas) ->
-
-    { WIDTH, HEIGHT } = @
-
-    texture = new THREE.Texture(canvas)
-
-    material = new THREE.MeshBasicMaterial(map : texture)
-    material.transparent = true
-    
-    mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(WIDTH, HEIGHT)
-      material
-    )
-
-    mesh.rotation.y = Math.PI
-    mesh.position.x = 110
-    mesh.position.y = 125
-    mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.4
-
-    mesh.matrixAutoUpdate = false
-    mesh.doubleSided = true
-
-    mesh 

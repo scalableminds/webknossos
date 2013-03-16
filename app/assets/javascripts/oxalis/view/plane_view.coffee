@@ -81,6 +81,7 @@ class PlaneView
 
     # Attach the canvas to the container
     @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
+    $(@renderer.domElement).attr("id": "render-canvas")
     container.append @renderer.domElement
 
     @setActivePlaneXY()
@@ -154,7 +155,7 @@ class PlaneView
   #Call this after the canvas was resized to fix the viewport
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
-    canvas = $("#render > canvas")
+    canvas = $("#render-canvas")
     WIDTH = (canvas.width()-20)/2
     HEIGHT = (canvas.height()-20)/2
 
@@ -169,7 +170,7 @@ class PlaneView
     if (@scaleFactor+delta > MIN_SCALE) and (@scaleFactor+delta < MAX_SCALE)
       @scaleFactor += Number(delta)
       @curWidth = WIDTH = HEIGHT = @scaleFactor * 380
-      canvas = $("#render > canvas")
+      canvas = $("#render-canvas")
       canvas.width(2 * WIDTH + 20)
       canvas.height(2 * HEIGHT + 20)
 
@@ -246,9 +247,6 @@ class PlaneView
     
   stop : ->
 
-    @scaleFactor = 1
-    @scaleTrianglesPlane(0)
-
     $(".inputcatcher").hide()
 
     @running = false 
@@ -256,6 +254,9 @@ class PlaneView
   start : ->
 
     @running = true
+
+    @scaleFactor = 1
+    @scaleTrianglesPlane(0)
 
     $(".inputcatcher").show()
 

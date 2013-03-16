@@ -12,11 +12,12 @@ class Crosshair
 
   context : null
   mesh : null
+  scale : 0
 
   isDirty : true
 
 
-  constructor : (scale) ->
+  constructor : (@cam, scale) ->
 
     { WIDTH } = @
 
@@ -30,29 +31,41 @@ class Crosshair
 
   update : ->
 
-    { isDirty, context, WIDTH, COLOR, texture, mesh } = @
+    { isDirty, context, WIDTH, COLOR, texture, mesh, cam } = @
 
-    return unless isDirty
+    if @isDirty
 
-    context.clearRect(0, 0, WIDTH, WIDTH)
-    
-    context.fillStyle = COLOR
-    context.strokeStyle = COLOR
+      context.clearRect(0, 0, WIDTH, WIDTH)
+      
+      context.fillStyle = COLOR
+      context.strokeStyle = COLOR
 
-    context.lineWidth = 3
-    context.moveTo(WIDTH / 2, 3)
-    context.beginPath()
-    context.arc(WIDTH / 2, WIDTH / 2, WIDTH / 2 - 3, 0, 2 * Math.PI)
-    context.stroke()
+      context.lineWidth = 3
+      context.moveTo(WIDTH / 2, 3)
+      context.beginPath()
+      context.arc(WIDTH / 2, WIDTH / 2, WIDTH / 2 - 3, 0, 2 * Math.PI)
+      context.stroke()
 
-    context.beginPath()
-    context.moveTo(WIDTH / 2, WIDTH / 2 - 1)
-    context.arc(WIDTH / 2, WIDTH / 2, 4, 0, 2 * Math.PI, true)
-    context.fill()  
+      context.beginPath()
+      context.moveTo(WIDTH / 2, WIDTH / 2 - 1)
+      context.arc(WIDTH / 2, WIDTH / 2, 4, 0, 2 * Math.PI, true)
+      context.fill()  
 
-    mesh.material.map.needsUpdate = true
+      mesh.material.map.needsUpdate = true
 
-    @isDirty = false  
+    m = @cam.getMatrix()
+
+    mesh.matrix.set m[0], m[4], m[8], m[12], 
+                    m[1], m[5], m[9], m[13], 
+                    m[2], m[6], m[10], m[14], 
+                    m[3], m[7], m[11], m[15]
+
+    mesh.matrix.rotateY(Math.PI)
+    mesh.matrix.scale(new THREE.Vector3(@scale, @scale, @scale))
+
+    mesh.matrixWorldNeedsUpdate = true
+
+    @isDirty = false   
 
 
   setScale : (value) ->
@@ -60,7 +73,7 @@ class Crosshair
     { SCALE_MIN, SCALE_MAX, mesh } = @
 
     if value > SCALE_MIN and value < SCALE_MAX
-      mesh.scale.x = mesh.scale.y = mesh.scale.z = value
+      @scale = value
 
     @isDirty = true
 
@@ -85,5 +98,8 @@ class Crosshair
     )
 
     mesh.rotation.x = Math.PI
+
+    mesh.matrixAutoUpdate = false
+    mesh.doubleSided = true
 
     mesh 

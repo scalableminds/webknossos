@@ -44,9 +44,7 @@ class ArbitraryController
 
     _.extend(this, new EventMixin())
 
-    @canvas = canvas = $("#arbitraryplane")
-    canvas.hide()
-   
+    @canvas = canvas = $("#render-canvas")
     
     @cam = @model.flycam3d
     @view = new ArbitraryView(canvas, @cam, stats, renderer, scene)    
@@ -54,16 +52,17 @@ class ArbitraryController
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
     @view.addGeometry @plane
 
-    @infoPlane = new ArbitraryPlaneInfo(@cam)
-    @view.addGeometry @infoPlane
+    @infoPlane = new ArbitraryPlaneInfo()
 
     @input = _.extend({}, @input)
 
-    @crosshair = new Crosshair(model.user.crosshairSize)
+    @crosshair = new Crosshair(@cam, model.user.crosshairSize)
     @view.addGeometry(@crosshair)
 
     @bind()
     @view.draw()
+
+    @stop()
 
 
   render : (forceUpdate, event) ->
@@ -86,20 +85,21 @@ class ArbitraryController
         @cam.pitchDistance(
           delta.y * mouseInversionY * @model.user.mouseRotateValue
         )
+      scroll : @scroll
     )
 
 
   initKeyboard : ->
     
     @input.keyboard = new Input.Keyboard(
-
+ 
       #Scale plane
-      "l" : => @plane.applyScale -@model.user.scaleValue
-      "k" : => @plane.applyScale  @model.user.scaleValue
+      "l" : => @view.applyScale -@model.user.scaleValue
+      "k" : => @view.applyScale  @model.user.scaleValue
 
       #Move   
-      "w" : => @cam.move [0, -@model.user.moveValue3d, 0]
-      "s" : => @cam.move [0, @model.user.moveValue3d, 0]
+      "w" : => @cam.move [0, @model.user.moveValue3d, 0]
+      "s" : => @cam.move [0, -@model.user.moveValue3d, 0]
       "a" : => @cam.move [-@model.user.moveValue3d, 0, 0]
       "d" : => @cam.move [@model.user.moveValue3d, 0, 0]
       "space" : =>  
@@ -110,14 +110,14 @@ class ArbitraryController
       #Rotate in distance
       "left"  : => @cam.yawDistance -@model.user.rotateValue
       "right" : => @cam.yawDistance @model.user.rotateValue
-      "up"    : => @cam.pitchDistance @model.user.rotateValue
-      "down"  : => @cam.pitchDistance -@model.user.rotateValue
+      "up"    : => @cam.pitchDistance -@model.user.rotateValue
+      "down"  : => @cam.pitchDistance @model.user.rotateValue
       
       #Rotate at centre
       "shift + left"  : => @cam.yaw @model.user.rotateValue
       "shift + right" : => @cam.yaw -@model.user.rotateValue
-      "shift + up"    : => @cam.pitch -@model.user.rotateValue
-      "shift + down"  : => @cam.pitch @model.user.rotateValue
+      "shift + up"    : => @cam.pitch @model.user.rotateValue
+      "shift + down"  : => @cam.pitch -@model.user.rotateValue
 
       #Zoom in/out
       "i" : => @cam.zoomIn()
@@ -146,6 +146,10 @@ class ArbitraryController
         @infoPlane.updateInfo(false)
     )
 
+  init : ->
+
+    @setRouteClippingDistance @model.user.routeClippingDistance
+
 
   bind : ->
 
@@ -156,12 +160,15 @@ class ArbitraryController
     @model.user.on "crosshairSizeChanged", (value) =>
       @crosshair.setScale(value)
 
+    @model.user.on "routeClippingDistanceChanged", (value) =>
+      @setRouteClippingDistance(value)
+
 
   start : ->
 
     @initKeyboard()
     @initMouse()
-    @canvas.show()
+    @init()
     @view.start()
     @view.draw()     
  
@@ -170,7 +177,12 @@ class ArbitraryController
 
     @view.stop()
     @input.unbind()
-    @canvas.hide()
+
+
+  scroll : (delta, type) =>
+
+    switch type
+      when "shift" then @setParticleSize(delta)
 
 
   addNode : (position) =>
@@ -194,6 +206,15 @@ class ArbitraryController
 
     @addNode(position)    
 
+
+  setParticleSize : (delta) =>
+
+    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+
+
+  setRouteClippingDistance : (value) =>
+
+    @view.setRouteClippingDistance(value)
 
   pushBranch : ->
 

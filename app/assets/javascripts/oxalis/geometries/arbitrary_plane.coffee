@@ -84,9 +84,8 @@ class ArbitraryPlane
                       m[2], m[6], m[10], m[14], 
                       m[3], m[7], m[11], m[15]
 
-      mesh.matrix.translate(new THREE.Vector3(0, 0, -25))
+      mesh.matrix.rotateY(Math.PI)
       mesh.matrix.scale(new THREE.Vector3(@x, @x, @x))
-      mesh.matrix.rotateZ(Math.PI)
       mesh.matrixWorldNeedsUpdate = true
 
       @isDirty = false
@@ -162,7 +161,7 @@ class ArbitraryPlane
     plane = new THREE.Mesh( planeGeo, textureMaterial )
     plane.texture = texture
     plane.rotation.x = Math.PI
-    plane.scale.x = plane.scale.y = plane.scale.z = @x = 2.2
+    @x = 1
 
     plane.matrixAutoUpdate = false
     plane.doubleSided = true

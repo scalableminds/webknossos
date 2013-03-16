@@ -90,8 +90,6 @@ class PlaneController
     @flycam.setQuality(@model.user.quality)
 
     @cameraController.changePrevSV()
-    @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
-    @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
     @sceneController.setDisplayCrosshair @model.user.displayCrosshair
     @sceneController.setInterpolation @model.user.interpolation
     @sceneController.setDisplaySV PLANE_XY, @model.user.displayPreviewXY
@@ -207,9 +205,16 @@ class PlaneController
     )
 
 
+  init : ->
+
+    @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
+    @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
+
+
   start : ->
 
     @initKeyboard()
+    @init()
     @sceneController.start()
     @view.start()
 

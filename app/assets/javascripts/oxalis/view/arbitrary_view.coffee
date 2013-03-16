@@ -6,7 +6,12 @@ jquery : $
 underscore : _
 ###
 
-CAM_DISTANCE = 140
+CAM_DISTANCE = 64
+
+MAX_SCALE      = 3
+MIN_SCALE      = 1
+
+VIEWPORT_WIDTH = 384
 
 class ArbitraryView
 
@@ -14,7 +19,7 @@ class ArbitraryView
   geometries : []
   additionalInfo : ""
 
-  isRunning : false
+  isRunning : true
 
   scene : null
   camera : null
@@ -32,11 +37,11 @@ class ArbitraryView
 
     # Initialize main THREE.js components
 
-    @camera = camera = new THREE.PerspectiveCamera(90, @width / @height, 150, 1000)
+    @camera = camera = new THREE.PerspectiveCamera(90, @width / @height, 50, 1000)
     camera.matrixAutoUpdate = false
     camera.aspect = @width / @height
   
-    @cameraPosition = new THREE.Vector3(0, 0, -CAM_DISTANCE)
+    @cameraPosition = new THREE.Vector3(0, 0, CAM_DISTANCE)
 
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
@@ -50,8 +55,14 @@ class ArbitraryView
 
     unless @isRunning
       @isRunning = true
+
       for element in @group.children
         element.visible = true
+      $("#arbitrary-info-canvas").show()
+
+      #render hack to avoid flickering
+      @renderer.setSize(384, 384)
+      @resize()
       # start the rendering loop
       @animate()
       # Dont forget to handle window resizing!
@@ -63,8 +74,11 @@ class ArbitraryView
 
     if @isRunning
       @isRunning = false
+
       for element in @group.children
         element.visible = false
+      $("#arbitrary-info-canvas").hide()
+
       $(window).off "resize", @resize
 
 
@@ -89,7 +103,8 @@ class ArbitraryView
                         m[2], m[6], m[10], m[14], 
                         m[3], m[7], m[11], m[15]
 
-      camera.matrix.translate(new THREE.Vector3(0, 0, CAM_DISTANCE))
+      camera.matrix.rotateY(Math.PI)
+      camera.matrix.translate(@cameraPosition)
       camera.matrixWorldNeedsUpdate = true
 
       renderer.setViewport(0, 0, @width, @height)
@@ -108,6 +123,7 @@ class ArbitraryView
 
     @forceUpdate = true
 
+
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
   addGeometry : (geometry) -> 
@@ -120,7 +136,7 @@ class ArbitraryView
   # Call this after the canvas was resized to fix the viewport
   # Needs to be bound
   resize : =>
-    
+
     @width  = @container.width()
     @height = @container.height()
 
@@ -129,6 +145,26 @@ class ArbitraryView
     @draw()
 
 
+  applyScale : (delta) =>
+
+    @scaleFactor = 1 unless @scaleFactor
+    if (@scaleFactor+delta > MIN_SCALE) and (@scaleFactor+delta < MAX_SCALE)
+      @scaleFactor += Number(delta)
+      @width = @height = @scaleFactor * VIEWPORT_WIDTH
+      @container.width(@width)
+      @container.height(@height)
+
+      @resize()
+
+  setRouteClippingDistance : (value) =>
+
+    #@cameraPosition = CAM_DISTANCE - value
+    @camera.near = CAM_DISTANCE - value
+    
+    @camera.updateProjectionMatrix()
+
+
   setAdditionalInfo : (info) ->
+
     @additionalInfo = info
 

@@ -158,9 +158,7 @@ class ArbitraryView
 
   setRouteClippingDistance : (value) =>
 
-    #@cameraPosition = CAM_DISTANCE - value
     @camera.near = CAM_DISTANCE - value
-    
     @camera.updateProjectionMatrix()
 
 

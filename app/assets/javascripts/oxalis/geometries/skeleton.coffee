@@ -18,6 +18,9 @@ COLOR_ACTIVE = 0xff0000
 COLOR_BRANCH = 0x0000ff
 COLOR_ACTIVE_BRANCH = 0x660000
 
+MODE_OXALIS = 0
+MODE_ARBITRARY = 1
+
 class Skeleton
 
   # This class is supposed to collect all the Geometries that belong to the skeleton, like
@@ -56,6 +59,9 @@ class Skeleton
     @edgesBuffer  = []
     @nodesBuffer  = []
 
+    #initial mode
+    @mode = MODE_OXALIS
+
     # Create sphere to represent the active Node, radius is
     # 1 nm, so that @activeNode.scale is the radius in nm.
     # @activeNode = new THREE.Mesh(
@@ -71,14 +77,20 @@ class Skeleton
     activeNodeGeometry = new THREE.Geometry()
     @activeNodeParticle = new THREE.ParticleSystem(
       activeNodeGeometry,
-        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 5, sizeAttenuation : false}))
+      new THREE.ParticleBasicMaterial({
+        color: COLOR_ACTIVE, 
+        size: 5, 
+        sizeAttenuation : @mode == MODE_ARBITRARY}))
     activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
 
     routeGeometryBranchPoints = new THREE.Geometry()
     routeGeometryBranchPoints.dynamic = true
     @branches = new THREE.ParticleSystem(
-        routeGeometryBranchPoints,
-        new THREE.ParticleBasicMaterial({size: 5, sizeAttenuation: false, vertexColors: true}))
+      routeGeometryBranchPoints,
+      new THREE.ParticleBasicMaterial({
+        size: 5, 
+        sizeAttenuation: @mode == MODE_ARBITRARY, 
+        vertexColors: true}))
     @branchesBuffer = new ResizableBuffer(3)
     @branchesColorsBuffer = new ResizableBuffer(3)
 
@@ -120,8 +132,19 @@ class Skeleton
     @edgesBuffer.push(new ResizableBuffer(6))
     @nodesBuffer.push(new ResizableBuffer(3))
 
-    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: @darkenHex(treeColor), linewidth: @model.route.getParticleSize() / 4}), THREE.LinePieces))
-    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: @darkenHex(treeColor), size: @model.route.getParticleSize(), sizeAttenuation : false})))
+    @routes.push(new THREE.Line(
+      routeGeometry, 
+      new THREE.LineBasicMaterial({
+        color: @darkenHex(treeColor), 
+        linewidth: @model.route.getParticleSize() / 4}), THREE.LinePieces))
+
+    @nodes.push(new THREE.ParticleSystem(
+      routeGeometryNodes, 
+      new THREE.ParticleBasicMaterial({
+        color: @darkenHex(treeColor), 
+        size: @model.route.getParticleSize(), 
+        sizeAttenuation : @mode == MODE_ARBITRARY})))
+
     @ids.push(treeId)
 
     @setActiveNode()
@@ -510,8 +533,11 @@ class Skeleton
 
   setSizeAttenuation : (boolean) ->
 
+    @mode = if boolean then MODE_ARBITRARY else MODE_OXALIS
     for particleSystem in @nodes
       particleSystem.material.sizeAttenuation = boolean
       particleSystem.material.needsUpdate = true
     @branches.material.sizeAttenuation = boolean
+    @branches.material.needsUpdate = true
     @activeNodeParticle.material.sizeAttenuation = boolean
+    @activeNodeParticle.material.needsUpdate = true

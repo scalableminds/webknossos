@@ -40,10 +40,15 @@ class WritePathToMetaFile
     for segment in activeSegments
       segmentPayload = {}
       segmentPayload.isEndSegment = _.contains(endValues, segment.value)
+
       segmentPayload.isStartSegment = _.contains(startValue, segment.value)
       segmentPayload.path = segment.path
       segmentPayload.id = segment.id
       segmentPayload.value = segment.value
+      if segmentPayload.isEndSegment
+        segmentPayload.probability = _.find(mission.possibleEnds, (m) => m.id is segmentPayload.value).probability  
+      else 
+        segmentPayload.probability = 0
 
       payload.push segmentPayload
 

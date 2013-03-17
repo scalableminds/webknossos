@@ -12,6 +12,9 @@ PLANE_XZ           = Dimensions.PLANE_XZ
 VIEW_3D            = Dimensions.VIEW_3D
 VIEWPORT_WIDTH     = 380
 
+MODE_OXALIS    = 0
+MODE_ARBITRARY = 1
+
 class Gui 
 
   model : null
@@ -58,21 +61,23 @@ class Gui
     container.append @gui.domElement
     
     fControls = @gui.addFolder("Controls")
-    @addSlider(fControls, @user, "moveValue",
-      0.1, 10, 0.1, "Move Value")
-    @addCheckbox(fControls, @user, "lockZoom", "Lock Zoom")
     @addCheckbox(fControls, @user, "inverseX", "Inverse X")
     @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
-    @addCheckbox(fControls, @user, "dynamicSpaceDirection", "d/f-Switching")
 
-    fFlightcontrols = @gui.addFolder("Flighcontrols")
-    @addSlider(fFlightcontrols, @user, "mouseRotateValue",
-      0.001, 0.02, 0.001, "Mouse Rotation")
-    @addSlider(fFlightcontrols, @user, "rotateValue",
-      0.001, 0.08, 0.001, "Keyboard Rotation Value")
-    @addSlider(fFlightcontrols, @user, "moveValue3d",
+    @fViewportcontrols = @gui.addFolder("Viewportoptions")
+    @addSlider(@fViewportcontrols, @user, "moveValue",
       0.1, 10, 0.1, "Move Value")
-    @addSlider(fFlightcontrols, @user, "crosshairSize",
+    @addCheckbox(@fViewportcontrols, @user, "lockZoom", "Lock Zoom")
+    @addCheckbox(@fViewportcontrols, @user, "dynamicSpaceDirection", "d/f-Switching")
+
+    @fFlightcontrols = @gui.addFolder("Flightoptions")
+    @addSlider(@fFlightcontrols, @user, "mouseRotateValue",
+      0.001, 0.02, 0.001, "Mouse Rotation")
+    @addSlider(@fFlightcontrols, @user, "rotateValue",
+      0.001, 0.08, 0.001, "Keyboard Rotation Value")
+    @addSlider(@fFlightcontrols, @user, "moveValue3d",
+      0.1, 10, 0.1, "Move Value")
+    @addSlider(@fFlightcontrols, @user, "crosshairSize",
       0.1, 1, 0.01, "Crosshair size")
 
     fView = @gui.addFolder("View")
@@ -93,10 +98,10 @@ class Gui
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 
-    fSkeleton = @gui.addFolder("Skeleton View")
-    @addCheckbox(fSkeleton, @user, "displayPreviewXY", "Display XY-Plane")
-    @addCheckbox(fSkeleton, @user, "displayPreviewYZ", "Display YZ-Plane")
-    @addCheckbox(fSkeleton, @user, "displayPreviewXZ", "Display XZ-Plane")
+    @fSkeleton = @gui.addFolder("Skeleton View")
+    @addCheckbox(@fSkeleton, @user, "displayPreviewXY", "Display XY-Plane")
+    @addCheckbox(@fSkeleton, @user, "displayPreviewYZ", "Display YZ-Plane")
+    @addCheckbox(@fSkeleton, @user, "displayPreviewXZ", "Display XZ-Plane")
 
     fTrees = @gui.addFolder("Trees")
     @activeTreeIdController = @addNumber(fTrees, @settings, "activeTreeID",
@@ -277,3 +282,16 @@ class Gui
     @settings.activeTreeID = @model.route.getActiveTreeId()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
+
+  setMode : (mode) ->
+
+    switch mode 
+      when MODE_OXALIS
+        $(@fFlightcontrols.domElement).hide()
+        $(@fViewportcontrols.domElement).show()
+        $(@fSkeleton.domElement).show()
+      when MODE_ARBITRARY
+        $(@fFlightcontrols.domElement).show()
+        $(@fViewportcontrols.domElement).hide()
+        $(@fSkeleton.domElement).hide()
+

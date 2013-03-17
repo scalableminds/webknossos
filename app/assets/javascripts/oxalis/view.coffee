@@ -83,6 +83,11 @@ class View
     @currentTheme = theme
 
 
+  setMode : (mode) ->
+
+    
+
+
   createKeyboardCommandOverlay : ->
 
     keycommands =

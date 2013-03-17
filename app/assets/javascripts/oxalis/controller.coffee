@@ -36,7 +36,6 @@ class Controller
     _.extend(@, new EventMixin())
 
     @fullScreen = false
-    @mode = MODE_OXALIS
 
     @model = new Model()
 
@@ -64,6 +63,8 @@ class Controller
 
       @initMouse()
       @initKeyboard()
+
+      @propagateMode(MODE_OXALIS)
 
       if ALLOWED_OXALIS not in @allowedModes
         if ALLOWED_ARBITRARY in @allowedModes
@@ -141,11 +142,17 @@ class Controller
     if @mode is MODE_OXALIS and ALLOWED_ARBITRARY in @allowedModes
       @planeController.stop()
       @arbitraryController.start()
-      @mode = MODE_ARBITRARY
+      @propagateMode(MODE_ARBITRARY)
     else if @mode is MODE_ARBITRARY and ALLOWED_OXALIS in @allowedModes
       @arbitraryController.stop()
       @planeController.start()
-      @mode = MODE_OXALIS
+      @propagateMode(MODE_OXALIS)
+
+  propagateMode : (mode) ->
+
+    @mode = mode
+    @gui.setMode(mode)
+    @view.setMode(mode)
 
 
   toggleFullScreen : ->

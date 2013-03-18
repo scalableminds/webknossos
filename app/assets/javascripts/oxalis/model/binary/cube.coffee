@@ -277,9 +277,11 @@ class Cube
           cube[bucketIndex] = substitute if cube[bucketIndex] == oldBucket
 
 
-  labelVoxels : (voxelList, label) ->
+  labelVoxels : (iterator, label) ->
 
-    for voxel in voxelList
+    while iterator.hasNext
+
+      voxel = iterator.getNext()
 
       for zoomStep in [0...@ZOOM_STEP_COUNT]
 
@@ -309,7 +311,7 @@ class Cube
         ]
 
     @trigger("volumeLabled")
-
+    
 
   # return the bucket a given voxel lies in
   positionToZoomedAddress : ([x, y, z], zoomStep) ->

@@ -89,9 +89,11 @@ class VolumeTracing
     @addToLayer(@startPos)
 
     #Delete any voxel before VolumeLayer.finishLayer()
-    @cube.labelVoxels(@currentLayer.getVoxelArray(), 0)
+    iterator = @currentLayer.getVoxelIterator()
+    @cube.labelVoxels(iterator, 0)
     @currentLayer.finishLayer()
-    @cube.labelVoxels(@currentLayer.getVoxelArray(), @activeCell.id % 6 + 1)
+    iterator = @currentLayer.getVoxelIterator()
+    @cube.labelVoxels(iterator, @activeCell.id % 6 + 1)
 
     @currentLayer = null
     @startPos = null

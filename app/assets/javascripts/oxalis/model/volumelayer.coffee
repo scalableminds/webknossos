@@ -139,9 +139,8 @@ class VolumeLayer
 
     return totalDiff != 0
 
-  getVoxelArray : ->
+  getVoxelIterator : ->
 
-    console.log "Start getVoxelArray()"
     start = startTotal = new Date().getTime()
 
     minCoord2d = @get2DCoordinate(@minCoord)
@@ -158,30 +157,52 @@ class VolumeLayer
     setMap = (x, y) ->
       map[x - minCoord2d[0]][y - minCoord2d[1]] = true
 
-    console.log "## 1. Set up Map:", new Date().getTime() - start
-    start = new Date().getTime()
+    #console.log "## 1. Set up Map:", new Date().getTime() - start
+    #start = new Date().getTime()
 
     @drawOutlineVoxels(setMap)
 
-    console.log "## 2. Draw Outline:", new Date().getTime() - start
-    start = new Date().getTime()
+    #console.log "## 2. Draw Outline:", new Date().getTime() - start
+    #start = new Date().getTime()
 
     @fillOurline(map, width, height)
 
-    console.log "## 3. Fill Outline:", new Date().getTime() - start
-    start = new Date().getTime()
+    #console.log "## 3. Fill Outline:", new Date().getTime() - start
+    #start = new Date().getTime()
 
-    res = []
-    for x in [0...width]
-      for y in [0...height]
-        if map[x][y]
-          res.push(@get3DCoordinate([x + minCoord2d[0], y + minCoord2d[1]]))
+    #res = []
+    #for x in [0...width]
+    #  for y in [0...height]
+    #    if map[x][y]
+    #      res.push(@get3DCoordinate([x + minCoord2d[0], y + minCoord2d[1]]))
 
-    console.log "## 4. Convert map to array:", new Date().getTime() - start
+    #console.log "## 4. Convert map to array:", new Date().getTime() - start
 
-    console.log "## Total:", new Date().getTime() - startTotal
 
-    return res
+    iterator = {
+      hasNext : true
+      x : 0
+      y : 0
+      getNext : ->
+        res = @get3DCoordinate([@x + minCoord2d[0], @y + minCoord2d[1]])
+        while true
+          @x = (@x + 1) % width
+          if @x == 0 then @y++
+          if map[@x][@y] or @y == height
+            @hasNext = @y != height
+            break
+        return res
+      initialize : ->
+        if not map[0][0]
+          @getNext()
+      get3DCoordinate : (arg) => return @get3DCoordinate(arg)
+    }
+    iterator.initialize()
+    #console.log "## 4. Build iterator:", new Date().getTime() - start
+
+    #console.log "## Total:", new Date().getTime() - startTotal
+
+    return iterator
 
   drawOutlineVoxels : (setMap) ->
 
@@ -204,8 +225,6 @@ class VolumeLayer
       if not isEmpty(x-1, y) and isEmpty(x, y)
         break
 
-    console.log "x", x
-
     Drawing.fillArea(x, y, width, height, false, isEmpty, setMap)
 
   get2DCoordinate : (coord3d) ->
@@ -221,13 +240,13 @@ class VolumeLayer
     # Put thirdCoordinate back in
     index   = Dimensions.thirdDimensionForPlane(@plane)
     index2d = 0
-    res     = []
+    res     = [0, 0, 0]
 
     for i in [0..2]
       if i != index
-        res.push(coord2d[index2d++])
+        res[i] = coord2d[index2d++]
       else
-        res.push(@thirdDimensionValue)
+        res[i] = @thirdDimensionValue
 
     return res
 

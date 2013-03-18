@@ -133,15 +133,18 @@ class PlaneController
       ) )
 
     #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
-    new Input.Mouse($("#skeletonview"),
+    @mouseControllers.push( new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
         mouseInversionX = if @model.user.inverseX then 1 else -1
         mouseInversionY = if @model.user.inverseY then 1 else -1
         @cameraController.movePrevX(delta.x * mouseInversionX)
         @cameraController.movePrevY(delta.y * mouseInversionY)
-      scroll : @cameraController.zoomPrev
+      scroll : (value) =>
+        @cameraController.zoomPrev(value,
+          @mouseControllers[VIEW_3D].position,
+          @view.curWidth)
       leftClick : @onPreviewClick
-    )
+    ) )
 
 
   initKeyboard : ->

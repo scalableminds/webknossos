@@ -110,16 +110,24 @@ class CameraController
   prevViewportSize : ->
     (@cameras[VIEW_3D].right - @cameras[VIEW_3D].left)         # always quadratic
 
-  zoomPrev : (value) =>
+  zoomPrev : (value, position, curWidth) =>
+
     camera = @cameras[VIEW_3D]
     factor = Math.pow(0.9, value)
     middleX = (camera.left + camera.right)/2
     middleY = (camera.bottom + camera.top)/2
     size = @prevViewportSize()
-    camera.left = middleX - factor*size/2
-    camera.right = middleX + factor*size/2
-    camera.top = middleY + factor*size/2
-    camera.bottom = middleY - factor*size/2
+    
+    baseOffset = factor * size / 2
+    baseDiff = baseOffset - size / 2
+
+    offsetX = (position.x / curWidth * 2 - 1) * (-baseDiff)
+    offsetY = (position.y / curWidth * 2 - 1) * (+baseDiff)
+
+    camera.left = middleX - baseOffset + offsetX
+    camera.right = middleX + baseOffset + offsetX
+    camera.top = middleY + baseOffset + offsetY
+    camera.bottom = middleY - baseOffset + offsetY
     camera.updateProjectionMatrix()
 
     @flycam.setRayThreshold(camera.right, camera.left)

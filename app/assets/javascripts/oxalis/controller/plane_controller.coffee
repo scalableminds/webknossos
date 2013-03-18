@@ -86,20 +86,9 @@ class PlaneController
       @view.addGeometry(mesh)
 
     @flycam.setPosition(@model.route.data.editPosition)
-    @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
-    @flycam.setQuality(@model.user.quality)
 
     @cameraController.changePrevSV()
-    @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
-    @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
-    @sceneController.setDisplayCrosshair @model.user.displayCrosshair
-    @sceneController.setInterpolation @model.user.interpolation
-    @sceneController.setDisplaySV PLANE_XY, @model.user.displayPreviewXY
-    @sceneController.setDisplaySV PLANE_YZ, @model.user.displayPreviewYZ
-    @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
-    @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
-
-    @model.route.setParticleSize(@model.user.particleSize)
+    @model.user.triggerAll()
 
     @initMouse()
     @bind()
@@ -120,11 +109,9 @@ class PlaneController
       @mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
-          mouseInversionX = if @model.user.inverseX then 1 else -1
-          mouseInversionY = if @model.user.inverseY then 1 else -1
           @move [
-            delta.x * mouseInversionX / @view.scaleFactor
-            delta.y * mouseInversionY / @view.scaleFactor
+            delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
+            delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
             0
           ]
         scroll : @scroll
@@ -135,10 +122,8 @@ class PlaneController
     #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
     new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
-        mouseInversionX = if @model.user.inverseX then 1 else -1
-        mouseInversionY = if @model.user.inverseY then 1 else -1
-        @cameraController.movePrevX(delta.x * mouseInversionX)
-        @cameraController.movePrevY(delta.y * mouseInversionY)
+        @cameraController.movePrevX(delta.x * @model.user.getMouseInversionX())
+        @cameraController.movePrevY(delta.y * @model.user.getMouseInversionY())
       scroll : @cameraController.zoomPrev
       leftClick : @onPreviewClick
     )

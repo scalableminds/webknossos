@@ -141,12 +141,13 @@ class VolumeLayer
 
   getVoxelArray : ->
 
+    console.log "Start getVoxelArray()"
+    start = startTotal = new Date().getTime()
+
     minCoord2d = @get2DCoordinate(@minCoord)
     maxCoord2d = @get2DCoordinate(@maxCoord)
     width      = maxCoord2d[0] - minCoord2d[0] + 1
     height     = maxCoord2d[1] - minCoord2d[1] + 1
-
-    start = new Date().getTime()
     
     map = new Array(width)
     for x in [0...width]
@@ -154,16 +155,31 @@ class VolumeLayer
       for y in [0...height]
         map[x][y] = false
 
-    setMap = (x, y) =>
+    setMap = (x, y) ->
       map[x - minCoord2d[0]][y - minCoord2d[1]] = true
 
+    console.log "## 1. Set up Map:", new Date().getTime() - start
+    start = new Date().getTime()
+
     @drawOutlineVoxels(setMap)
+
+    console.log "## 2. Draw Outline:", new Date().getTime() - start
+    start = new Date().getTime()
+
+    @fillOurline(map, width, height)
+
+    console.log "## 3. Fill Outline:", new Date().getTime() - start
+    start = new Date().getTime()
 
     res = []
     for x in [0...width]
       for y in [0...height]
         if map[x][y]
           res.push(@get3DCoordinate([x + minCoord2d[0], y + minCoord2d[1]]))
+
+    console.log "## 4. Convert map to array:", new Date().getTime() - start
+
+    console.log "## Total:", new Date().getTime() - startTotal
 
     return res
 
@@ -176,6 +192,21 @@ class VolumeLayer
       
       Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap)
 
+  fillOurline : (map, width, height) ->
+
+    setMap = (x, y) ->
+      map[x][y] = true
+    isEmpty = (x, y) ->
+      return map[x][y] != true
+
+    y = Math.round(height / 2)
+    for x in [1...width]
+      if not isEmpty(x-1, y) and isEmpty(x, y)
+        break
+
+    console.log "x", x
+
+    Drawing.fillArea(x, y, width, height, false, isEmpty, setMap)
 
   get2DCoordinate : (coord3d) ->
     # Throw out 'thirdCoordinate' which is equal anyways

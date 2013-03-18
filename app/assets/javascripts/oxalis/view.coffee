@@ -182,7 +182,7 @@ class View
       newContent.appendChild((
         $('<li>').append($('<a>', {"href": "#", "data-treeid": tree.treeId}).append(
           $('<i>', {"class": "icon-sign-blank"}).css(
-            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"), tree.name)) )[0])
+            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"), $('<span>', {"text": tree.name}))) )[0])
 
     treeList.append(newContent)
 

@@ -69,15 +69,15 @@ class ArbitraryPlane
 
       { mesh, cam } = this
 
-      matrix = @cam.getZoomedMatrix()
+      matrix = cam.getZoomedMatrix()
 
       newVertices = M4x4.transformPointsAffine matrix, @queryVertices
       newColors = @model.binary.getByVerticesSync(newVertices)
  
-      @mesh.texture.image.data.set(newColors)
-      @mesh.texture.needsUpdate = true
+      mesh.texture.image.data.set(newColors)
+      mesh.texture.needsUpdate = true
 
-      m = @cam.getMatrix()
+      m = cam.getZoomedMatrix()
 
       mesh.matrix.set m[0], m[4], m[8], m[12], 
                       m[1], m[5], m[9], m[13], 
@@ -85,7 +85,6 @@ class ArbitraryPlane
                       m[3], m[7], m[11], m[15]
 
       mesh.matrix.rotateY(Math.PI)
-      mesh.matrix.scale(new THREE.Vector3(@x, @x, @x))
       mesh.matrixWorldNeedsUpdate = true
 
       @isDirty = false

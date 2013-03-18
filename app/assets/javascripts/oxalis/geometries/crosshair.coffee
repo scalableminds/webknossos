@@ -53,7 +53,7 @@ class Crosshair
 
       mesh.material.map.needsUpdate = true
 
-    m = @cam.getMatrix()
+    m = @cam.getZoomedMatrix()
 
     mesh.matrix.set m[0], m[4], m[8], m[12], 
                     m[1], m[5], m[9], m[13], 
@@ -61,6 +61,7 @@ class Crosshair
                     m[3], m[7], m[11], m[15]
 
     mesh.matrix.rotateY(Math.PI)
+    mesh.matrix.translate(new THREE.Vector3(0, 0, 1))
     mesh.matrix.scale(new THREE.Vector3(@scale, @scale, @scale))
 
     mesh.matrixWorldNeedsUpdate = true

@@ -96,7 +96,7 @@ class ArbitraryView
       for geometry in geometries when geometry.update?
         geometry.update()
 
-      m = @dataCam.getMatrix()
+      m = @dataCam.getZoomedMatrix()
        
       camera.matrix.set m[0], m[4], m[8],  m[12], 
                         m[1], m[5], m[9],  m[13], 

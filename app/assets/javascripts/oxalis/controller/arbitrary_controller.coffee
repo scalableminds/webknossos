@@ -149,6 +149,7 @@ class ArbitraryController
   init : ->
 
     @setRouteClippingDistance @model.user.routeClippingDistance
+    @view.applyScale(0)
 
 
   bind : ->
@@ -168,8 +169,8 @@ class ArbitraryController
 
     @initKeyboard()
     @initMouse()
-    @init()
     @view.start()
+    @init()
     @view.draw()     
  
 
@@ -229,9 +230,15 @@ class ArbitraryController
 
   centerActiveNode : ->
 
-    position = @model.route.getActiveNodePos()
-    if position
-      @cam.setPosition position
+    activeNode = @model.route.getActiveNode()
+    if activeNode
+      @cam.setPosition(activeNode.pos)
+      if parent = activeNode.parent
+        # set right direction
+        @cam.setDirection([
+          activeNode.pos[0] - parent.pos[0],
+          activeNode.pos[1] - parent.pos[1],
+          activeNode.pos[2] - parent.pos[2]])
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->

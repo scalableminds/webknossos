@@ -174,6 +174,7 @@ class View
       $("#tree-name-input").val("")
       $("#tree-name").text("")
 
+
   updateTrees : ->
 
     trees = @model.route.getTrees()

@@ -183,7 +183,7 @@ class Controller
 
   deleteActiveNode : ->
 
-    @model.route.deleteActiveNode()    
+    @model.route.deleteActiveNode()
 
 
   createNewTree : ->
@@ -205,9 +205,10 @@ class Controller
 
   centerActiveNode : ->
 
-    position = @model.route.getActiveNodePos()
-    if position
-      @model.flycam.setPosition(position)
+    if @mode is MODE_OXALIS
+      @planeController.centerActiveNode()
+    else
+      @arbitraryController.centerActiveNode()
 
 
   deleteActiveTree : ->

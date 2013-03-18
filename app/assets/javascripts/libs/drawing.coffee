@@ -55,3 +55,65 @@ Drawing =
         draw(x, y)
 
     return
+
+  # http://will.thimbleby.net/scanline-flood-fill/
+  fillCSegmentation : (x, y, width, height, diagonal, segmentation, cSegmentation, segment ) ->
+    
+    value = segment.value
+    id = segment.id
+
+    test = (xx, yy) =>
+      segmentation[yy * width + xx] is value and
+      cSegmentation[yy * width + xx] isnt id
+
+    paint = (xx, yy) =>
+      cSegmentation[yy * width + xx] = id
+
+    # xMin, xMax, y, down[true] / up[false], extendLeft, extendRight
+    ranges = [[x, x, y, null, true, true]]
+    paint x, y
+    while ranges.length
+      
+      addNextLine = (newY, isNext, downwards) ->
+        rMinX = minX
+        inRange = false
+        x = minX
+
+        while x <= maxX
+          
+          # skip testing, if testing previous line within previous range
+          empty = (isNext or (x < r[0] or x > r[1])) and test(x, newY)
+          if not inRange and empty
+            rMinX = x
+            inRange = true
+          else if inRange and not empty
+            ranges.push [rMinX, x - 1, newY, downwards, rMinX is minX, false]
+            inRange = false
+          paint x, newY  if inRange
+          
+          # skip
+          x = r[1]  if not isNext and x is r[0]
+          x++
+        ranges.push [rMinX, x - 1, newY, downwards, rMinX is minX, true]  if inRange
+      r = ranges.pop()
+      down = r[3] is true
+      up = r[3] is false
+      minX = r[0]
+      y = r[2]
+      if r[4]
+        while minX > 0 and test(minX - 1, y)
+          minX--
+          paint minX, y
+      maxX = r[1]
+      if r[5]
+        while maxX < width - 1 and test(maxX + 1, y)
+          maxX++
+          paint maxX, y
+      if diagonal
+        minX--  if minX > 0
+        maxX++  if maxX < width - 1
+      else
+        r[0]--
+        r[1]++
+      addNextLine y + 1, not up, true  if y < height
+      addNextLine y - 1, not down, false  if y > 0  

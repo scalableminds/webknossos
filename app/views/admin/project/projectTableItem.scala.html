@@ -5,8 +5,10 @@
   <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
   <td> @project.name </td>
   <td> @project.owner.map(_.name).getOrElse("<deleted>") </td>
-  <td>  
-    <a href="@controllers.admin.routes.NMLIO.projectDownload(project.name)" title="download all finished tracings"><i class="icon-download"></i> download</a><br /><a href="@controllers.admin.routes.ProjectAdministration.delete(project.name)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+  <td class="nowrap">  
+    <a href="@controllers.admin.routes.ProjectAdministration.trace(project.name)" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
+    <a href="@controllers.admin.routes.NMLIO.projectDownload(project.name)" title="download all finished tracings"><i class="icon-download"></i> download</a><br />
+    <a href="@controllers.admin.routes.ProjectAdministration.delete(project.name)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
   </td>
 </tr>
 <tr class="details-row" >
@@ -42,7 +44,7 @@
                 </span>
               }
             </td>
-            <td>
+            <td class="nowrap">
               <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="icon-download"></i> download </a>
             </td>
           </tr>

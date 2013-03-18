@@ -19,6 +19,8 @@ TYPE_BRANCH       = 1
 # Max and min radius in base voxels (see scaleInfo.baseVoxel)
 MIN_RADIUS        = 1
 MAX_RADIUS        = 1000
+MIN_PARTICLE_SIZE = 1
+MAX_PARTICLE_SIZE = 20
 
 
 class Route
@@ -29,10 +31,11 @@ class Route
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
+  particleSize : 5
 
 
 
-  constructor : (@data, @scaleInfo, @flycam, @flycam3d) ->
+  constructor : (@data, @scaleInfo, @flycam, @flycam3d, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -50,28 +53,42 @@ class Route
 
     @doubleBranchPop = false
 
+    # change listener
+    @user.on "particleSizeChanged", (particleSize) =>
+      @setParticleSize(particleSize, false)
+
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id)
+    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id, @data.settings.isEditable)
     console.log "Tracing data: ", @data
 
     # get tree to build
     for treeData in @data.trees
       # Create new tree
-      tree = new TraceTree(treeData.id, new THREE.Color().setRGB(treeData.color[0..2]...).getHex())
+      tree = new TraceTree(
+        treeData.id,
+        @getNewTreeColor(treeData.id),
+        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}")
       # Initialize nodes
       i = 0
       for node in treeData.nodes
         if node
-          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp))
+          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
           # idCount should be bigger than any other id
           @idCount = Math.max(node.id + 1, @idCount);
       # Initialize edges
       for edge in treeData.edges
         sourceNode = @findNodeInList(tree.nodes, edge.source)
         targetNode = @findNodeInList(tree.nodes, edge.target)
-        sourceNode.appendNext(targetNode)
-        targetNode.appendNext(sourceNode)
+        if sourceNode and targetNode
+          sourceNode.appendNext(targetNode)
+          targetNode.appendNext(sourceNode)
+        else
+          $.assertNotEquals(sourceNode, null, "source node undefined",
+            {"edge" : edge})
+          $.assertNotEquals(targetNode, null, "target node undefined",
+            {"edge" : edge})
+
       # Set active Node
       activeNodeT = @findNodeInList(tree.nodes, @data.activeNode)
       if activeNodeT
@@ -132,8 +149,8 @@ class Route
     $(window).on(
       "beforeunload"
       =>
-        if !@stateLogger.savedCurrentState
-          @stateLogger.pushImpl(true)
+        if !@stateLogger.stateSaved() and @stateLogger.isEditable
+          @stateLogger.pushImpl(false)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
           return
@@ -218,7 +235,7 @@ class Route
       unless @lastRadius?
         @lastRadius = 10 * @scaleInfo.baseVoxel
         if @activeNode? then @lastRadius = @activeNode.radius
-      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime())
+      point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime(), @activeTree.treeId)
       @activeTree.nodes.push(point)
       if @activeNode
         @activeNode.appendNext(point)
@@ -262,6 +279,9 @@ class Route
   getActiveNodeId : -> @lastActiveNodeId
 
 
+  getParticleSize : -> @particleSize
+
+
   getActiveNodePos : ->
 
     if @activeNode then @activeNode.pos else null
@@ -280,6 +300,23 @@ class Route
   getActiveTreeId : ->
 
     if @activeTree then @activeTree.treeId else null
+
+
+  getActiveTreeName : ->
+
+    if @activeTree then @activeTree.name else null
+
+
+  setTreeName : (name) ->
+
+    if @activeTree
+      if name
+        @activeTree.name = name
+      else
+        @activeTree.name = "Tree#{('00'+@activeTree.treeId).slice(-3)}"
+      @stateLogger.updateTree(@activeTree)
+      
+      @trigger("newTreeName")
 
 
   getNode : (id) ->
@@ -302,6 +339,14 @@ class Route
     @stateLogger.updateNode(@activeNode, @activeTree.treeId)
 
     @trigger("newActiveNodeRadius", radius)
+
+
+  setParticleSize : (size, propagate = true) ->
+
+    @particleSize = Math.min(MAX_PARTICLE_SIZE, size)
+    @particleSize = Math.max(MIN_PARTICLE_SIZE, @particleSize)
+
+    @trigger("newParticleSize", @particleSize, propagate)
 
 
   setActiveNode : (nodeID, mergeTree = false) ->
@@ -377,7 +422,9 @@ class Route
 
     return @comments[0].node
 
-  updateComments : ->
+  updateComments : =>
+
+    @comments.sort(@compareNodes)
     @trigger("updateComments", @comments)
 
 
@@ -394,26 +441,27 @@ class Route
       @lastActiveNodeId = @activeNode.id
     @stateLogger.push()
 
+    @trigger("newActiveNode")
     @trigger("newActiveTree")
 
 
-  getNewTreeColor : ->
+  getNewTreeColor : (treeId) ->
 
     # this generates the most distinct colors possible, using the golden ratio
-    if @trees.length == 0
-      @currentHue = null
+    if treeId == 1
       return 0xFF0000
     else
-      unless @currentHue
-        @currentHue = new THREE.Color().setHex(_.last(@trees).color).getHSV().h
-      @currentHue += GOLDEN_RATIO
-      @currentHue %= 1
-      new THREE.Color().setHSV(@currentHue, 1, 1).getHex()
+      currentHue = treeId * GOLDEN_RATIO
+      currentHue %= 1
+      new THREE.Color().setHSV(currentHue, 1, 1).getHex()
 
 
   createNewTree : ->
 
-    tree = new TraceTree(@treeIdCount++, @getNewTreeColor())
+    tree = new TraceTree(
+      @treeIdCount++, 
+      @getNewTreeColor(@treeIdCount-1), 
+      "Tree#{('00'+(@treeIdCount-1)).slice(-3)}")
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null
@@ -451,6 +499,10 @@ class Route
 
         @activeTree.nodes = []
         @getNodeListForRoot(@activeTree.nodes, deletedNode.neighbors[i])
+        # update tree ids
+        unless i == 0
+          for node in @activeTree.nodes
+            node.treeId = @activeTree.treeId
         @setActiveNode(deletedNode.neighbors[i].id)
         newTrees.push(@activeTree)
 
@@ -520,6 +572,10 @@ class Route
         @activeTree.nodes = @activeTree.nodes.concat(lastTree.nodes)
         @activeNode.appendNext(lastNode)
         lastNode.appendNext(@activeNode)
+
+        # update tree ids
+        for node in @activeTree.nodes
+          node.treeId = @activeTree.treeId
         
         @stateLogger.mergeTree(lastTree, @activeTree, lastNode.id, activeNodeID)
 
@@ -542,7 +598,7 @@ class Route
     return null
 
 
-  getTrees : -> @trees
+  getTrees : -> $.extend(true, [], @trees).sort(@compareNames)
 
 
   # returns a list of nodes that are connected to the parent
@@ -583,3 +639,20 @@ class Route
       if node.id == id
         return node
     return null
+
+  compareNames : (a, b) ->
+
+    if a.name < b.name
+      return -1
+    if a.name > b.name
+      return 1
+    return 0
+
+
+  compareNodes : (a, b) ->
+
+    if a.node < b.node
+      return -1
+    if a.node > b.node
+      return 1
+    return 0

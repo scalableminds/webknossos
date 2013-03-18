@@ -25,7 +25,7 @@ class Binary
   contrastCurves : []
 
 
-  constructor : (flycam, dataSet, @TEXTURE_SIZE_P) ->
+  constructor : (@user, dataSet, @TEXTURE_SIZE_P) ->
 
     @dataSetId = dataSet.id
     @dataSetName = dataSet.name
@@ -43,6 +43,10 @@ class Binary
 
     contrastCurve = new Uint8Array(256)
     @contrastCurves[0] = new Uint8Array(256)
+
+    @user.on({
+      set4BitChanged : (is4Bit) => @queue(is4Bit)
+    })
 
     for i in [1...@cube.ZOOM_STEP_COUNT]
       @contrastCurves[i] = contrastCurve

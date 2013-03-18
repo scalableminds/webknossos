@@ -20,46 +20,44 @@ class Model
 
   initialize : (TEXTURE_SIZE_P, VIEWPORT_SIZE, DISTANCE_3D) =>
 
-	  Request.send(
-      url : "/game/initialize"
+    tracingId = $("#container").data("tracing-id")
+    tracingType = $("#container").data("tracing-type")
+
+    Request.send(
+      url : "/trace/#{tracingType}/#{tracingId}"
       dataType : "json"
-    ).pipe (task) =>
+    ).pipe (tracing) =>
 
-      Request.send(
-        url : "/tracing/#{task.task.id}"
-        dataType : "json"
-      ).pipe (tracing) =>
+      if tracing.error
+        Toast.error(tracing.error)
 
-        if tracing.error
-          Toast.error(tracing.error)
+      else
+        Request.send(
+          url : "/user/configuration"
+          dataType : "json"
+        ).pipe(
+          (user) =>
 
-        else
-          Request.send(
-            url : "/user/configuration"
-            dataType : "json"
-          ).pipe(
-            (user) =>
+            $.assertExtendContext({
+              task: tracingId
+              dataSet: tracing.dataSet.id
+            })
 
-              $.assertExtendContext({
-                task: task.task.id
-                dataSet: tracing.dataSet.id
-              })
-
-              @scaleInfo = new ScaleInfo(tracing.tracing.scale)
-              @binary = new Binary(@flycam, tracing.dataSet, TEXTURE_SIZE_P)
-              @user = new User(user)
-              @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1, @user)      
-              @flycam3d = new Flycam3d(DISTANCE_3D, tracing.tracing.scale)
-              @flycam3d.on
-                "changed" : (matrix) =>
-                  @flycam.setPosition([matrix[12], matrix[13], matrix[14]])
-              @flycam.on
-                "positionChanged" : (position) =>
-                  @flycam3d.setPositionSilent(position)
-              @route = new Route(tracing.tracing, @scaleInfo, @flycam, @flycam3d)
-              @volumeTracing = new VolumeTracing(@flycam, @binary.cube)
-              
-              tracing.tracing.settings
-              
-            -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
-          )
+            @user = new User(user)
+            @scaleInfo = new ScaleInfo(tracing.tracing.scale)
+            @binary = new Binary(@user, tracing.dataSet, TEXTURE_SIZE_P)
+            @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1, @user)      
+            @flycam3d = new Flycam3d(DISTANCE_3D, tracing.tracing.scale)
+            @flycam3d.on
+              "changed" : (matrix) =>
+                @flycam.setPosition([matrix[12], matrix[13], matrix[14]])
+            @flycam.on
+              "positionChanged" : (position) =>
+                @flycam3d.setPositionSilent(position)
+            @route = new Route(tracing.tracing, @scaleInfo, @flycam, @flycam3d, @user)
+            @volumeTracing = new VolumeTracing(@flycam, @binary.cube)
+            
+            tracing.tracing.settings
+            
+          -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
+        )

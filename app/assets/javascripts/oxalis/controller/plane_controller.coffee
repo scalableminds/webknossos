@@ -102,12 +102,11 @@ class PlaneController
     @sceneController.setDisplaySV PLANE_XZ, @model.user.displayPreviewXZ
     @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
 
+    @model.route.setParticleSize(@model.user.particleSize)
+
     @initMouse()
     @bind()
     @start()
-
-    # initialize comments
-    @model.route.updateComments()
 
 
   initMouse : ->
@@ -117,29 +116,33 @@ class PlaneController
       event.preventDefault()
       return
 
-    $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
-      event.preventDefault()
-      @setActiveNode($(event.target).data("nodeid"), true, false)
+    @mouseControllers = []
 
     for planeId in ["xy", "yz", "xz"]
       #@input.planeMouse = new Input.Mouse($("#plane#{planeId}"),
-      new Input.Mouse($("#plane#{planeId}"),
+      @mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
+
         leftDownMove : (delta, pos) => 
           if @mode == MODE_NORMAL
+            mouseInversionX = if @model.user.inverseX then 1 else -1
+            mouseInversionY = if @model.user.inverseY then 1 else -1
             @move [
-              delta.x * @model.user.mouseInversionX / @view.scaleFactor
-              delta.y * @model.user.mouseInversionX / @view.scaleFactor
+              delta.x * mouseInversionX / @view.scaleFactor
+              delta.y * mouseInversionX / @view.scaleFactor
               0
             ]
           else if @mode == MODE_VOLUME
             @drawVolume([pos.x, pos.y])
+        
         scroll : @scroll
+        
         leftClick : (pos, shiftPressed) =>
           if @mode == MODE_NORMAL
             @onPlaneClick(pos, shiftPressed)
           else if @mode == MODE_VOLUME
             @model.volumeTracing.startEditing(@calculateGlobalPos(pos))
+        
         leftMouseUp : =>
           if @mode == MODE_VOLUME
             @model.volumeTracing.finishLayer()
@@ -149,13 +152,15 @@ class PlaneController
             @selectLayer(pos)
           else
             @setWaypoint(pos)
-      )
+      ) )
 
     #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
     new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
-        @cameraController.movePrevX(delta.x * @model.user.mouseInversionX)
-        @cameraController.movePrevY(delta.y * @model.user.mouseInversionX)
+        mouseInversionX = if @model.user.inverseX then 1 else -1
+        mouseInversionY = if @model.user.inverseY then 1 else -1
+        @cameraController.movePrevX(delta.x * mouseInversionX)
+        @cameraController.movePrevY(delta.y * mouseInversionY)
       scroll : @cameraController.zoomPrev
       leftClick : @onPreviewClick
     )
@@ -295,30 +300,51 @@ class PlaneController
       @move([0, 0, z])
 
   zoomIn : =>
+    @zoomPos = @getMousePosition()
     @cameraController.zoomIn()
-    # Remember Zoom Steps
-    @model.user.zoomXY = @flycam.getZoomStep(PLANE_XY)
-    @model.user.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-    @model.user.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-    @model.user.push()
+    @finishZoom()
 
   zoomOut : =>
+    @zoomPos = @getMousePosition()
     @cameraController.zoomOut()
-    # Remember Zoom Steps
-    @model.user.zoomXY = @flycam.getZoomStep(PLANE_XY)
-    @model.user.zoomYZ = @flycam.getZoomStep(PLANE_YZ)
-    @model.user.zoomXZ = @flycam.getZoomStep(PLANE_XZ)
-    @model.user.push()
+    @finishZoom()
+
+  finishZoom : =>
+    
+    # Move the plane so that the mouse is at the same position as
+    # before the zoom
+    if @isMouseOver()
+      mousePos = @getMousePosition()
+      moveVector = [@zoomPos[0] - mousePos[0],
+                    @zoomPos[1] - mousePos[1],
+                    @zoomPos[2] - mousePos[2]]
+      @flycam.move(moveVector, @flycam.getActivePlane())
+
+    @model.user.setValue("zoomXY", @flycam.getZoomStep(PLANE_XY))
+    @model.user.setValue("zoomYZ", @flycam.getZoomStep(PLANE_YZ))
+    @model.user.setValue("zoomXZ", @flycam.getZoomStep(PLANE_XZ))
+
+  getMousePosition : ->
+    activePlane = @flycam.getActivePlane()
+    pos = @mouseControllers[activePlane].position
+    return @calculateGlobalPos([pos.x, pos.y])
+
+  isMouseOver : ->
+    activePlane = @flycam.getActivePlane()
+    return @mouseControllers[activePlane].isMouseOver
 
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
     @model.route.setActiveNodeRadius(radius)
 
+  setParticleSize : (delta) =>
+    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+
   scroll : (delta, type) =>
     switch type
       when null then @moveZ(delta)
-      # when "shift" then @setNodeRadius(delta)
+      when "shift" then @setParticleSize(delta)
       when "alt"
         if delta > 0
           @zoomIn()

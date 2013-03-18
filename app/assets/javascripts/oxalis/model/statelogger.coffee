@@ -9,20 +9,23 @@ PUSH_THROTTLE_TIME = 30000 # 30s
 
 class StateLogger
 
-  constructor : (@route, @flycam, @version, @dataId) ->
+  constructor : (@route, @flycam, @version, @dataId, @isEditable) ->
 
     _.extend(this, new EventMixin())
 
     @committedDiffs = []
     @newDiffs = []
-    @savedCurrentState = true
+    @committedCurrentState = true
 
-  pushDiff : (action, value) ->
+  pushDiff : (action, value, push = true) ->
     @newDiffs.push({
       action : action
       value : value
     })
-    @push()
+    # In order to assure that certain actions are atomic,
+    # it is sometimes necessary not to push.
+    if push
+      @push()
 
   #### TREES
 
@@ -31,6 +34,7 @@ class StateLogger
     return {
       id: tree.treeId
       color: [treeColor.r, treeColor.g, treeColor.b, 1]
+      name: tree.name
       }
 
   createTree : (tree) ->
@@ -66,7 +70,7 @@ class StateLogger
     @pushDiff("mergeTree", {
         sourceId : sourceTree.treeId
         targetId : targetTree.treeId
-      })
+      }, false)
     @createEdge(lastNodeId, activeNodeId, targetTree.treeId)
 
   #### NODES and EDGED
@@ -101,8 +105,9 @@ class StateLogger
         "Neighbot has different treeId",
         {treeId1 : node.treeId, treeId2 : node.neighbors[0].treeId})
 
-    @pushDiff("createNode", @nodeObject(node, treeId))
-    if node.neighbors.length == 1
+    needsEdge = node.neighbors.length == 1
+    @pushDiff("createNode", @nodeObject(node, treeId), !needsEdge)
+    if needsEdge
       @pushDiff("createEdge", @edgeObject(node, treeId))
 
   updateNode : (node, treeId) ->
@@ -146,9 +151,13 @@ class StateLogger
 
   #### SERVER COMMUNICATION
 
+  stateSaved : ->
+    return @committedCurrentState and @committedDiffs.length == 0
+
   push : ->
-    @savedCurrentState = false
-    @pushDebounced()
+    if @isEditable
+      @committedCurrentState = false
+      @pushDebounced()
 
   # Pushes the buffered route to the server. Pushing happens at most 
   # every 30 seconds.
@@ -161,7 +170,6 @@ class StateLogger
     return @pushImpl(false)
 
   pushImpl : (notifyOnFailure) ->
-
     # do not allow multiple pushes, before result is there (breaks versioning)
     # still, return the deferred of the pending push, so that it will be informed about success
     if @pushDeferred?
@@ -171,6 +179,7 @@ class StateLogger
 
     @committedDiffs = @committedDiffs.concat(@newDiffs)
     @newDiffs = []
+    @committedCurrentState = true
     data = @concatUpdateTracing(@committedDiffs)
     console.log "Sending data: ", data
 
@@ -196,12 +205,11 @@ class StateLogger
             window.location.reload()
       @push()
       if (notifyOnFailure)
-        @trigger("PushFailed");
+        @trigger("pushFailed");
       @pushDeferred.reject()
       @pushDeferred = null
     .done (response) =>
       @version = response.version
-      @savedCurrentState = true
       @committedDiffs = []
       @pushDeferred.resolve()
       @pushDeferred = null

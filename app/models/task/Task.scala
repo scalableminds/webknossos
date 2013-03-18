@@ -90,7 +90,7 @@ object Task extends BasicDAO[Task]("tasks") {
     super.remove(t)
   }
 
-  def isTrainingsTracing(tracing: Tracing) = {
+  def isTrainingsTracing(tracing: ContainsTracingInfo) = {
     tracing.task.map(_.isTraining) getOrElse false
   }
 

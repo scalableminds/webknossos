@@ -65,8 +65,8 @@ $ ->
             )
           ).then(
 
-            (msg) -> 
-              Toast.message(msg)
+            ( { messages } ) -> 
+              Toast.message(messages)
               
               $viewStacks = $row.find(".view-stacks")
               stackCount = $viewStacks.html().match(/[0-9]+/)[0]

@@ -1,22 +1,23 @@
 @(task: models.task.Task, tracing: models.tracing.Tracing)
 
 @tracingLinks = {
-  <a href="@controllers.routes.Game.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
-  <a href="@controllers.routes.TracingController.finish(tracing.id, false)" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> finish</a>
+  <a href="@controllers.routes.TracingController.trace(tracing.id)"><i class="icon-random"></i> trace</a><br/>
+  <a href="@controllers.routes.TracingController.finish(tracing.id, false)" class="trace-finish" data-ajax="replace-row,confirm=@Messages("tracing.finish.confirm")" ><i class="icon-ok-circle"></i> finish</a>
 }
 
 @linkText(failed: Boolean) = {
   @if(failed) {
-    Review failed - 
+    Review failed
   } else {
-    Review - 
+    Review successful
   }
 }
 
 @displayComments(failed: Boolean, comments: List[String]) = {
   @comments match{
     case head :: tail => {
-      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
+      <br />
+      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> @linkText(failed)<span class="caret-down"></span></a>    
     }
     case _ => {
 
@@ -25,7 +26,7 @@
 
 }
 
-<tr>
+<tr class="@if(tracing.state.isFinished){finished}else{unfinished}">
   <td> @formatHash(task.id) </td>
   @defining(task.taskType){ taskType =>
     <td> @taskType.map(_.summary).getOrElse("<deleted>") - @tracing.tracingType</td>
@@ -37,7 +38,7 @@
       }
     </td>
   }
-  <td> 
+  <td class="nowrap"> 
     @tracing.state match{
       case s if s.isFinished => {
         <i class="icon-ok"></i><span> Finished</span><br />

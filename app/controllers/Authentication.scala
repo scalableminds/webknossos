@@ -75,7 +75,7 @@ object Authentication extends Controller with Secured {
               Application.Mailer ! Send(
                 DefaultMails.registerAdminNotifyerMail(user.name, brainDBresult))
               if (autoVerify) {
-                Redirect(routes.Game.index)
+                Redirect(routes.TracingController.index)
                   .withSession(Secured.createSession(user))
               } else {
                 Redirect(routes.Authentication.login)
@@ -114,7 +114,7 @@ object Authentication extends Controller with Secured {
         {
           case (email, password) =>
             val user = User.findLocalByEmail(email.toLowerCase).get
-            Redirect(routes.Game.index)
+            Redirect(routes.TracingController.index)
               .withSession(Secured.createSession(user))
         })
   }

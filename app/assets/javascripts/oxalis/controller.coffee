@@ -74,6 +74,36 @@ class Controller
         else
           Toast.error("There was no valid allowed tracing mode specified.")
 
+      $("#comment-input").on "change", (event) => 
+        @setComment(event.target.value)
+
+      $("#comment-previous").click =>
+        @prevComment()
+
+      $("#comment-next").click =>
+        @nextComment()
+
+      $("#tab-comments").on "click", "a[data-nodeid]", (event) =>
+        event.preventDefault()
+        @setActiveNode($(event.target).data("nodeid"), true, false)
+
+      $("#tree-name-submit").click (event) =>
+        @setTreeName($("#tree-name-input").val())
+
+      $("#tree-name-input").keypress (event) =>
+        if event.which == 13 then $("#tree-name-submit").click()
+
+      $("#tree-create-button").click =>
+        @createNewTree()
+
+      $("#tree-delete-button").click =>
+        @deleteActiveTree()
+
+      $("#tree-list").on "click", "a[data-treeid]", (event) =>
+        event.preventDefault()
+        @setActiveTree($(event.target).data("treeid"), true)
+
+
 
   initMouse : ->
 
@@ -149,10 +179,8 @@ class Controller
 
     gui.on
       deleteActiveNode : @deleteActiveNode
-      createNewTree : @createNewTree
-      setActiveTree : (id) => @setActiveTree(id)
+      setActiveTree : (id) => @setActiveTree(id, false)
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
-      deleteActiveTree : @deleteActiveTree
 
     gui
 
@@ -167,9 +195,11 @@ class Controller
     @model.route.createNewTree()
 
 
-  setActiveTree : (treeId) ->
+  setActiveTree : (treeId, centered) ->
 
     @model.route.setActiveTree(treeId)
+    if centered
+      @centerActiveNode()
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->
@@ -189,3 +219,23 @@ class Controller
   deleteActiveTree : ->
 
     @model.route.deleteTree(true)
+
+
+  setTreeName : (name) ->
+
+    @model.route.setTreeName(name)
+
+
+  setComment : (value) =>
+
+    @model.route.setComment(value)
+
+
+  prevComment : =>
+
+    @setActiveNode(@model.route.nextCommentNodeID(false), true)
+
+
+  nextComment : =>
+
+    @setActiveNode(@model.route.nextCommentNodeID(true), true)

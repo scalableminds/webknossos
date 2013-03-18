@@ -44,6 +44,10 @@ class Flycam2d
     @spaceDirection = [1, 1, 1]
     @quality = 0        # offset of integer zoom step to the best-quality zoom level
 
+    @user.on({
+      qualitiyChanged : (quality) => @setQuality(quality)
+      })
+
   zoomIn : (planeID) ->
     @setZoomStep(planeID, @zoomSteps[planeID] - ZOOM_DIFF)
 

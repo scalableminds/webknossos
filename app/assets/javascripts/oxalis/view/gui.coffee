@@ -118,9 +118,6 @@ class Gui
       1, 20, 1, "Node size")
     @addFunction(fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
-    #fControls.open()
-    #fView.open()
-    #fSkeleton.open()
     fTrees.open()
     fNodes.open()
 

@@ -85,33 +85,37 @@ class View
 
   setMode : (mode) ->
 
-    
+
 
 
   createKeyboardCommandOverlay : ->
 
     keycommands =
-      "<table class=\"table table-condensed table-nohead\">
+      "<table class=\"table table-condensed table-nohead table-bordered\">
         <tbody>
-          <tr><th colspan=\"2\">General</th><th colspan=\"2\">Viewports</th></tr>
-          <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Mousewheel or D and F</td><td>Move along 3rd axis</td></tr>
-          <tr><td>Leftclick</td><td>Select node</td><td>Rightclick</td><td>Set tracepoint</td></tr>
-          <tr><td>Q</td><td>Fullscreen</td><td>I or Alt + Mousewheel</td><td>Zoom in</td></tr>
-          <tr><td>K</td><td>Scale up viewports</td><td>O or Alt + Mousewheel</td><td>Zoom out</td></tr>
-          <tr><td>L</td><td>Scale down viewports</td><td>B</td><td>Set branchpoint</td></tr>
-          <tr><td>Del</td><td>Delete node/Split trees</td><td>J</td><td>Jump to last branchpoint</td></tr>
-          <tr><td>Shift + Alt + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
-          <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
-          <tr><td>N</td><td>Next comment</td><td>Shift + Mousewheel</td><td>Change node size</td></tr>
-          <tr><td>T</td><td>Toggle theme</td><th colspan=\"2\">3D-view</th><td></td></tr>
-          <tr><td>1</td><td>Toggle Skeleton Visibility</td><td>Mousewheel</td><td>Zoom in and out</td></tr>          
-          <tr><td>M</td><td>Toggle mode</td><td></td><td></td></tr>
-          <tr><th colspan=\"2\">Flightmode</th><td></td><td></td></tr>
-          <tr><td>Mouse or Arrow keys</td><td>Rotation</td><td></td><td></td></tr>
+          <tr><th colspan=\"4\">General</th></tr>
+          <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Leftclick</td><td>Select node</td></tr>
+          <tr><td>Q</td><td>Fullscreen</td><td>K</td><td>Scale up viewports</td></tr>
+          <tr><td>L</td><td>Scale down viewports</td><td>Del</td><td>Delete node/Split trees</td></tr>
+          <tr><td>Shift + Alt + Leftclick</td><td>Merge two trees</td><td>P,N</td><td>Previous/Next comment</td></tr>
+          <tr><td>T</td><td>Toggle theme</td><td>M</td><td>Toggle mode</td></tr>
+          <tr><td>1</td><td>Toggle Skeleton Visibility</td><td></td><td></td></tr>
+
+          <tr><th colspan=\"4\">3D-view</th><td></td></tr>
+          <tr><td>Mousewheel</td><td>Zoom in and out</td><td></td><td></td></tr>          
+
+          <tr><th colspan=\"4\">Viewports</th></tr>
+          <tr><td>Mousewheel or D and F</td><td>Move along 3rd axis</td><td>Rightclick</td><td>Set tracepoint</td></tr>
+          <tr><td>I,O or Alt + Mousewheel</td><td>Zoom in/out</td><td>B</td><td>Set branchpoint</td></tr>
+          <tr><td>J</td><td>Jump to last branchpoint</td><td>S</td><td>Center active node</td></tr>
+          <tr><td>C</td><td>Create new tree</td><td>Shift + Mousewheel</td><td>Change node size</td></tr>
+
+          <tr><th colspan=\"4\">Flightmode</th><td></td><td></td></tr>
+          <tr><td>Mouse or Arrow keys</td><td>Rotation</td><td>R</td><td>Reset rotation</td></tr>
           <tr><td>Shift + Mouse or Shift + Arrow</td><td>Rotation around Axis</td><td>W A S D</td><td>Strafe</td></tr>
           <tr><td>Space, Shift + Space</td><td>Forward, Backward</td><td>B, J</td><td>Set, Jump to last branchpoint</td></tr>
           <tr><td>K, L</td><td>Scale viewports</td><td>I, O</td><td>Zoom in and out</td><td></td></tr>
-          <tr><td>Z, U</td><td>Start, stop recording waypoints</td><td>R</td><td>Reset rotation</td></tr> 
+          <tr><td>Z, U</td><td>Start, stop recording waypoints</td><td></td><td></td></tr>
         </tbody>
       </table>
       <br>
@@ -119,8 +123,17 @@ class View
       Select the different categories to open/close them.
       Please report any issues.</p>"
 
-    popoverTemplate = '<div class="popover key-overlay"><div class="arrow key-arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
-    $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
+    html = '<div class="modal-header"><button type="button" class="close" data-dismiss="modal">x</button>'
+    html += '<h3>keyboard commands</h3></div>'
+    html += '<div class="modal-body" id="help-modal-body"><p>' + keycommands + '</p></div>'
+
+    html += '<div class="modal-footer">'
+    html += '<a href="#" class="btn" data-dismiss="modal">Close</a></div>'
+
+    $("#help-modal").html(html)
+    #$("#modal").modal("show")
+    #popoverTemplate = '<div class="popover key-overlay"><div class="arrow key-arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
+    #$('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
 
 
   updateComments : (comments) ->

@@ -44,6 +44,9 @@ class PlaneController
     _.extend(@, new EventMixin())
 
     @flycam = @model.flycam
+    @flycam.setPosition(@model.route.data.editPosition)
+    @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
+    @flycam.setQuality(@model.user.quality)
     @view  = new PlaneView(@model, @flycam, stats)
 
     # initialize Camera Controller
@@ -86,14 +89,6 @@ class PlaneController
     for mesh in meshes
       @view.addGeometry(mesh)
 
-    @flycam.setPosition(@model.route.data.editPosition)
-    @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
-    @flycam.setQuality(@model.user.quality)
-
-    setTimeout( (=> @cameraController.changePrevSV(false)), 300)
-    setTimeout( (=> @cameraController.changePrevSV(false)), 310)
-    #@cameraController.changePrevSV(false)
-    #@cameraController.changePrevSV(false)
     @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
     @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
     @sceneController.setDisplayCrosshair @model.user.displayCrosshair
@@ -146,9 +141,10 @@ class PlaneController
       leftClick : @onPreviewClick
     )
 
-    target = document.getElementById("skeletonview")
+    view = document.getElementById("skeletonview")
+    pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
     @controls = new THREE.TrackballControls(@view.getCameras()[VIEW_3D],
-                                      target, => @flycam.hasChanged = true )
+              view, new THREE.Vector3(pos...), => @flycam.hasChanged = true )
     
     @controls.noZoom = true
     @controls.noPan = true

@@ -32,6 +32,8 @@ class CameraController
       cam.near = -1000000
       cam.far  =  1000000
 
+    @changePrevSV(false)
+
     @bind()
 
   update : =>
@@ -127,7 +129,6 @@ class CameraController
     @camera.up = new THREE.Vector3(@upX, @upY, @upZ)
 
     @flycam.setRayThreshold(@camera.right, @camera.left)
-
     @camera.updateProjectionMatrix()
     @notify()
     @flycam.hasChanged = true

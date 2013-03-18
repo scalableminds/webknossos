@@ -2,7 +2,7 @@
  * @author Eberhard Graether / http://egraether.com/
  */
 define(["three"], function (THREE) {
-return THREE.TrackballControls = function ( object, domElement, updateCallback ) {
+return THREE.TrackballControls = function ( object, domElement, target, updateCallback ) {
 
 	THREE.EventDispatcher.call( this );
 
@@ -38,7 +38,7 @@ return THREE.TrackballControls = function ( object, domElement, updateCallback )
 
 	// internals
 
-	this.target = new THREE.Vector3();
+	this.target = target;
 	this.lastTarget = this.target.clone()
 
 	var lastPosition = new THREE.Vector3();
@@ -74,7 +74,6 @@ return THREE.TrackballControls = function ( object, domElement, updateCallback )
 	// methods
 
 	this.setTarget = function (newTarget) {
-		//this.object.position.subVectors(this.target, newTarget);
 		this.target = newTarget;
 		this.update();
 	}
@@ -256,6 +255,8 @@ return THREE.TrackballControls = function ( object, domElement, updateCallback )
 	this.update = function () {
 
 		_eye.subVectors( _this.object.position, _this.lastTarget );
+
+		console.log("Target", _this.target, _this.lastTarget)
 
 		if ( !_this.noRotate ) {
 
@@ -548,6 +549,8 @@ return THREE.TrackballControls = function ( object, domElement, updateCallback )
 	window.addEventListener( 'keyup', keyup, false );
 
 	this.handleResize();
+
+	this.update();
 
 };
 });

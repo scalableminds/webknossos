@@ -27,14 +27,14 @@ class PlaneController
   gui : null
 
   input :
-    skeletonMouse : null
-    planeMouse : null
+    mouseControllers : []
     keyboard : null
     keyboardNoLoop : null
 
     unbind : ->
-      #@skeletonMouse?.unbind()
-      #@planeMouse?.unbind()
+      for mouse in @mouseControllers
+        mouse.unbind()
+      @mouseControllers = []
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
 
@@ -93,23 +93,19 @@ class PlaneController
 
     @model.user.triggerAll()
 
-    @initMouse()
+    # hide contextmenu, while rightclicking a canvas
+    $("#render").bind "contextmenu", (event) ->
+      event.preventDefault()
+      return
+
     @bind()
     @start()
 
 
   initMouse : ->
 
-    # hide contextmenu, while rightclicking a canvas
-    $("#render").bind "contextmenu", (event) ->
-      event.preventDefault()
-      return
-
-    @mouseControllers = []
-
     for planeId in ["xy", "yz", "xz"]
-      #@input.planeMouse = new Input.Mouse($("#plane#{planeId}"),
-      @mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
+      @input.mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
           @move [
@@ -122,14 +118,16 @@ class PlaneController
         rightClick : @setWaypoint
       ) )
 
-    #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
-    new Input.Mouse($("#skeletonview"),
+    @input.mouseControllers.push( new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
         @cameraController.movePrevX(delta.x * @model.user.getMouseInversionX())
         @cameraController.movePrevY(delta.y * @model.user.getMouseInversionY())
-      scroll : @cameraController.zoomPrev
+      scroll : (value) =>
+        @cameraController.zoomPrev(value,
+          @input.mouseControllers[VIEW_3D].position,
+          @view.curWidth)
       leftClick : @onPreviewClick
-    )
+    ) )
 
     view = $("#skeletonview")[0]
     pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
@@ -221,13 +219,13 @@ class PlaneController
   start : ->
 
     @initKeyboard()
+    @initMouse()
     @view.start()
 
 
   stop : ->
 
-    @input.keyboard.unbind()
-    @input.keyboardNoLoop.unbind()
+    @input.unbind()
     @view.stop()
 
 
@@ -297,12 +295,12 @@ class PlaneController
 
   getMousePosition : ->
     activePlane = @flycam.getActivePlane()
-    pos = @mouseControllers[activePlane].position
+    pos = @input.mouseControllers[activePlane].position
     return @calculateGlobalPos([pos.x, pos.y])
 
   isMouseOver : ->
     activePlane = @flycam.getActivePlane()
-    return @mouseControllers[activePlane].isMouseOver
+    return @input.mouseControllers[activePlane].isMouseOver
 
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()

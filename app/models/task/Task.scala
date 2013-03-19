@@ -177,7 +177,7 @@ object Task extends BasicDAO[Task]("tasks") {
         Option(x)
       }).recover {
         case e: Exception =>
-          Logger.error("Catched MAPTO exception: ")
+          Logger.error("Catched exception: " + e.toString())
           e.printStackTrace()
           None
       }

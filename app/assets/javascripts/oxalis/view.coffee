@@ -167,13 +167,11 @@ class View
 
   updateActiveTree : ->
 
-    name = @model.route.getActiveTreeName()
-    if name
-      $("#tree-name-input").val(name)
-      $("#tree-name").text(name)
-    else
-      $("#tree-name-input").val("")
-      $("#tree-name").text("")
+    activeTree = @model.route.getTree()
+    if activeTree
+      $("#tree-name-input").val(activeTree.name)
+      $("#tree-name").text(activeTree.name)
+      $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
 
   updateTrees : ->
 
@@ -186,7 +184,10 @@ class View
 
     for tree in trees
       newContent.appendChild((
-        $('<li>').append($('<a>', {"href": "#", "data-treeid": tree.treeId, "text": tree.name})))[0])
+        $('<li>').append($('<a>', {"href": "#", "data-treeid": tree.treeId}).append(
+          $('<i>', {"class": "icon-sign-blank"}).css(
+            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"), $('<span>', {"text": tree.name}))) )[0])
+
     treeList.append(newContent)
 
 

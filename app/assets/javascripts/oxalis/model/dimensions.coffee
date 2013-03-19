@@ -22,3 +22,10 @@ Dimensions =
   transDim : (array, planeID) ->
     ind = @getIndices(planeID)
     return [array[ind[0]], array[ind[1]], array[ind[2]]]
+
+  distance : (pos1, pos2) ->
+    sumOfSquares = 0
+    for i in [0...pos1.length]
+      diff = pos1[i] - pos2[i]
+      sumOfSquares += diff * diff
+    return Math.sqrt(sumOfSquares)

@@ -8,6 +8,7 @@ require.config
     "bootstrap" : "libs/bootstrap.min"
     "worker" : "libs/worker_plugin"
     "three": "libs/threejs/three"
+    "three.trackball": "libs/threejs/TrackballControls"
     "stats" : "libs/threejs/stats"
     "v3" : "libs/v3"
     "m4x4" : "libs/m4x4"

@@ -91,7 +91,7 @@ class Controller
 
       $("#tree-list").on "click", "a[data-treeid]", (event) =>
         event.preventDefault()
-        @setActiveTree($(event.target).data("treeid"), true)
+        @setActiveTree($(event.currentTarget).data("treeid"), true)
 
 
 

@@ -135,21 +135,16 @@ class SceneController
     @skeleton.setVisibility(@showSkeleton)
 
   bind : ->
-
-    @model.user.on "routeClippingDistanceChanged", (value) =>
-      @setRouteClippingDistance(value)
-
-    @model.user.on "displayCrosshairChanged", (value) =>
-      @setDisplayCrosshair(value)
-    
-    @model.user.on "interpolationChanged", (value) =>
-      @setInterpolation(value)
-
-    @model.user.on "displayPreviewXYChanged", (value) =>
-      @setDisplaySV constants.PLANE_XY, value
-
-    @model.user.on "displayPreviewYZChanged", (value) =>
-      @setDisplaySV constants.PLANE_YZ, value
-
-    @model.user.on "displayPreviewXZChanged", (value) =>
-      @setDisplaySV constants.PLANE_XZ, value      
+    @model.user.on({
+      routeClippingDistanceChanged : (value) =>
+        @setRouteClippingDistance(value)
+      displayCrosshairChanged : (value) =>
+        @setDisplayCrosshair(value)
+      interpolationChanged : (value) =>
+        @setInterpolation(value)
+      displayPreviewXYChanged : (value) =>
+        @setDisplaySV constants.PLANE_XY, value
+      displayPreviewYZChanged : (value) =>
+        @setDisplaySV constants.PLANE_YZ, value
+      displayPreviewXZChanged : (value) =>
+        @setDisplaySV constants.PLANE_XZ, value  })   

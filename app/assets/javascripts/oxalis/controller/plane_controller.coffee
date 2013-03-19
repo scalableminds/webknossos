@@ -4,10 +4,11 @@ underscore : _
 ./camera_controller : CameraController
 ./scene_controller : SceneController
 ../model/dimensions : Dimensions
-../../libs/event_mixin : EventMixin
-../../libs/input : Input
+libs/event_mixin : EventMixin
+libs/input : Input
 ../view/plane_view : PlaneView
 ../constants : constants
+libs/threejs/TrackballControls : TrackballControls
 ###
 
 class PlaneController
@@ -18,14 +19,14 @@ class PlaneController
   gui : null
 
   input :
-    skeletonMouse : null
-    planeMouse : null
+    mouseControllers : []
     keyboard : null
     keyboardNoLoop : null
 
     unbind : ->
-      #@skeletonMouse?.unbind()
-      #@planeMouse?.unbind()
+      for mouse in @mouseControllers
+        mouse.unbind()
+      @mouseControllers = []
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
 
@@ -35,6 +36,9 @@ class PlaneController
     _.extend(@, new EventMixin())
 
     @flycam = @model.flycam
+    @flycam.setPosition(@model.route.data.editPosition)
+    @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
+    @flycam.setQuality(@model.user.quality)
     @view  = new PlaneView(@model, @flycam, stats)
 
     # initialize Camera Controller
@@ -78,45 +82,27 @@ class PlaneController
       @view.addGeometry(mesh)
 
     @flycam.setPosition(@model.route.data.editPosition)
-    @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
-    @flycam.setQuality(@model.user.quality)
 
-    @cameraController.changePrevSV()
-    @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
-    @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
-    @sceneController.setDisplayCrosshair @model.user.displayCrosshair
-    @sceneController.setInterpolation @model.user.interpolation
-    @sceneController.setDisplaySV constants.PLANE_XY, @model.user.displayPreviewXY
-    @sceneController.setDisplaySV constants.PLANE_YZ, @model.user.displayPreviewYZ
-    @sceneController.setDisplaySV constants.PLANE_XZ, @model.user.displayPreviewXZ
-    @sceneController.skeleton.setDisplaySpheres @model.user.nodesAsSpheres
-
-    @model.route.setParticleSize(@model.user.particleSize)
-
-    @initMouse()
-    @bind()
-    @start()
-
-
-  initMouse : ->
+    @model.user.triggerAll()
 
     # hide contextmenu, while rightclicking a canvas
     $("#render").bind "contextmenu", (event) ->
       event.preventDefault()
       return
 
-    @mouseControllers = []
+    @bind()
+    @start()
+
+
+  initMouse : ->
 
     for planeId in ["xy", "yz", "xz"]
-      #@input.planeMouse = new Input.Mouse($("#plane#{planeId}"),
-      @mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
+      @input.mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
-          mouseInversionX = if @model.user.inverseX then 1 else -1
-          mouseInversionY = if @model.user.inverseY then 1 else -1
           @move [
-            delta.x * mouseInversionX / @view.scaleFactor
-            delta.y * mouseInversionY / @view.scaleFactor
+            delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
+            delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
             0
           ]
         scroll : @scroll
@@ -124,16 +110,39 @@ class PlaneController
         rightClick : @setWaypoint
       ) )
 
-    #@input.skeletonMouse = new Input.Mouse($("#skeletonview"),
-    new Input.Mouse($("#skeletonview"),
+    @input.mouseControllers.push( new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
-        mouseInversionX = if @model.user.inverseX then 1 else -1
-        mouseInversionY = if @model.user.inverseY then 1 else -1
-        @cameraController.movePrevX(delta.x * mouseInversionX)
-        @cameraController.movePrevY(delta.y * mouseInversionY)
-      scroll : @cameraController.zoomPrev
+        @cameraController.movePrevX(delta.x * @model.user.getMouseInversionX())
+        @cameraController.movePrevY(delta.y * @model.user.getMouseInversionY())
+      scroll : (value) =>
+        @cameraController.zoomPrev(value,
+          @input.mouseControllers[constants.VIEW_3D].position,
+          @view.curWidth)
       leftClick : @onPreviewClick
-    )
+    ) )
+
+    view = $("#skeletonview")[0]
+    pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
+    @controls = new THREE.TrackballControls(
+      @view.getCameras()[constants.VIEW_3D],
+      view, 
+      new THREE.Vector3(pos...), 
+      => @flycam.hasChanged = true )
+    
+    @controls.noZoom = true
+    @controls.noPan = true
+
+    @controls.target.set(
+      @model.scaleInfo.voxelToNm(@flycam.getPosition())...)
+
+    @flycam.on
+      positionChanged : (position) =>
+        @controls.setTarget(
+          new THREE.Vector3(@model.scaleInfo.voxelToNm(position)...))
+
+    @cameraController.on
+      cameraPositionChanged : =>
+        @controls.update()
 
 
   initKeyboard : ->
@@ -202,13 +211,13 @@ class PlaneController
   start : ->
 
     @initKeyboard()
+    @initMouse()
     @view.start()
 
 
   stop : ->
 
-    @input.keyboard.unbind()
-    @input.keyboardNoLoop.unbind()
+    @input.unbind()
     @view.stop()
 
 
@@ -278,12 +287,12 @@ class PlaneController
 
   getMousePosition : ->
     activePlane = @flycam.getActivePlane()
-    pos = @mouseControllers[activePlane].position
+    pos = @input.mouseControllers[activePlane].position
     return @calculateGlobalPos([pos.x, pos.y])
 
   isMouseOver : ->
     activePlane = @flycam.getActivePlane()
-    return @mouseControllers[activePlane].isMouseOver
+    return @input.mouseControllers[activePlane].isMouseOver
 
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()

@@ -241,14 +241,20 @@ class Flycam3d
 
     pos = @getPosition()
 
-    matrix = new THREE.Matrix4()
-    matrix.setPosition(new THREE.Vector3(pos...))
-    matrix.scale(new THREE.Vector3(@scale...))
-    matrix.lookAt(new THREE.Vector3(d...),
+    m = new THREE.Matrix4().lookAt(new THREE.Vector3(d...),
       new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 1, 0))
+      new THREE.Vector3(0, 1, 0)).elements
 
-    @currentMatrix = matrix.elements
+    matrix2 = [ 
+      1, 0, 0, 0, 
+      0, 1, 0, 0, 
+      0, 0, 1, 0, 
+      pos[0], pos[1], pos[2], 1 
+    ]
+
+    M4x4.scale(@scale, matrix2, matrix2)
+
+    @currentMatrix = M4x4.mul(matrix2, m)
     updateMacro()
 
 

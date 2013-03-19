@@ -91,6 +91,7 @@ class PlaneController
       event.preventDefault()
       return
 
+    @initTrackballControls()
     @bind()
     @start()
 
@@ -121,6 +122,9 @@ class PlaneController
           @view.curWidth)
       leftClick : @onPreviewClick
     ) )
+
+
+  initTrackballControls : ->
 
     view = $("#skeletonview")[0]
     pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())

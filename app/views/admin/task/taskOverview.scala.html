@@ -1,4 +1,4 @@
-@(users: List[models.user.User], taskTypes: List[models.task.TaskType], usersWithTasks: Map[models.user.User, models.task.TaskType], futureTasks: Map[models.user.User, models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
+@(users: List[models.user.User], taskTypes: List[models.task.TaskType], usersWithTasks: List[(models.user.User, models.task.TaskType)], futureTasks: Map[models.user.User, models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
 
 @import models.Color
 
@@ -14,8 +14,8 @@
   @Html("\"" + a + "\"->\"" + b +"\";")
 }
 
-@userToolTip(user: models.user.User) = { 
-  Last Activity: @user.lastActivityDays days ago<br /> 
+@userToolTip(user: models.user.User) = {
+  Last Activity: @user.lastActivityDays days ago<br />
   Experiences: <br />
   @user.experiences.map{ experience =>
     @experience._1 : @experience._2 <br />
@@ -23,7 +23,7 @@
 }
 
 @main(){
-  <div class="container">
+  <div class="container wide">
     <h3>TaskType - User Overview</h3>
     <p>All ovals symbolize task types. Users are drawn as rectangles. Blue lines symbolize the next task type the user gets, after he has finished his current task. If the user currently has a task, then there is a black arrow drawn to the task type of the task. </p>
     <div class="graph well">

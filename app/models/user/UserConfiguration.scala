@@ -30,7 +30,7 @@ object UserConfiguration extends BasicSettings{
       "crosshairSize" -> JsNumber(0.5),
       "scaleValue" -> JsNumber(0.05),
       "mouseRotateValue" -> JsNumber(0.004),
-      "routeClippingDistance" -> JsNumber(100),
+      "routeClippingDistance" -> JsNumber(50),
       "lockZoom" -> JsBoolean(true),
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
@@ -48,12 +48,13 @@ object UserConfiguration extends BasicSettings{
       "displayPreviewXZ" -> JsBoolean(false),
       "newNodeNewTree" -> JsBoolean(false),
       "nodesAsSpheres" -> JsBoolean(false),
-      "mouseInversionX" -> JsNumber(-1),
-      "mouseInversionY" -> JsNumber(-1),
+      "inverseX" -> JsBoolean(false),
+      "inverseY" -> JsBoolean(false),
       "mouseActive" -> JsBoolean(true),
       "keyboardActive" -> JsBoolean(true),
       "gamepadActive" -> JsBoolean(false),
       "motionsensorActive" -> JsBoolean(false),
-      "firstVisToggle" -> JsBoolean(true)))
+      "firstVisToggle" -> JsBoolean(true),
+      "particleSize" -> JsNumber(5)))
 
 }

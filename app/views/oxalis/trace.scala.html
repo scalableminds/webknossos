@@ -1,19 +1,24 @@
-@(tracing: models.tracing.Tracing)(additionalHtml: Html)(implicit session: brainflight.view.AuthedSessionData)
+@(tracing: models.tracing.ContainsTracingInfo)(additionalHtml: Html)(implicit session: brainflight.view.AuthedSessionData)
 
 @import models.tracing.TracingType
 @import models.task.Task
 
 @main( ){
-  <div id="container" data-tracing-type="@tracing.tracingType" class="clearfix">
+  <div id="loader"><div id="loader-icon"><i class="icon-spinner icon-spin icon-4x"></i><br>Loading</div></div>
+  <div id="container" data-tracing-type="@tracing.tracingType" data-tracing-id="@tracing.id" class="clearfix">
     <div id="main" role="main">
       <div id="overlay">
-        <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
+        @if(tracing.isEditable){
+          <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
+        } else {
+          <button class="btn btn-primary disabled">Read only</button> 
+        }
         <div id="buttonbar" class="btn-group inline-block">
           @if(tracing.tracingType == TracingType.Task){
             <a href="@controllers.routes.TracingController.finishWithRedirect(tracing.id)" class="btn btn-small" id="trace-finish-button"><i class="icon-ok-circle"></i> Finish</a>
-          }
+          } 
           @if(!Task.isTrainingsTracing(tracing)){
-            <a href="@controllers.admin.routes.NMLIO.download(tracing.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
+            <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
           }
           <a href="#" id="help-overlay" class="btn btn-small"><i class="icon-question-sign"></i> Help</a>
         </div>
@@ -76,16 +81,41 @@
           </div>
         </div>
       </div>
-      <div class="tabbable span4" id="comments-tree">
+      <div class="tabbable" id="comments-tree">
         <ul class="nav nav-tabs">
-          <li class="active"><a href="#tab-abstract" data-toggle="tab">Abstract Tree Viewer</a></li>
+          <li class="active"><a href="#tab-tree" data-toggle="tab">Tree Viewer</a></li>
           <li><a href="#tab-comments" data-toggle="tab">Comments</a></li>
         </ul>
         <div class="tab-content">
-          <div class="tab-pane active" id="tab-abstract">
+          <div class="tab-pane active" id="tab-tree">
+            <div id="tree-navbar">
+              <div class="btn-group inline-block">
+                <button class="btn" id="tree-create-button"><i class="icon-plus"></i> Create new tree</button>
+                <button class="btn" id="tree-delete-button"><i class="icon-remove"></i> Delete tree</button>
+              </div>
+              <div class="btn-group inline-block">
+                <a class="btn dropdown-toggle" data-toggle="dropdown" id="tree-list-button"><i class="icon-list"></i> </a>
+                <ul class="dropdown-menu pull-right" id="tree-list"></ul>
+              </div><p>
+              <div class="hover-dynamic">
+                <p class="hover-hide" id="tree-name-p"><i class="icon-sign-blank icon-large" id="tree-active-color"></i>&#160;&#160;<span id="tree-name"></span></p>
+                <div class="input-append hover-show">
+                  <input name="name" id="tree-name-input" class="input-xlarge" maxlength="30" type="text" autocomplete="off">
+                  <button class="btn" id="tree-name-submit"><i class="icon-ok"></i></button>
+                </div>
+              </div>
+            </div>
             <div id="abstractTreeViewer"></div>
           </div>
           <div class="tab-pane" id="tab-comments">
+            <div class="input-prepend input-append" id="comment-navbar">
+              <button class="btn" id="comment-previous"><i class="icon-arrow-left"></i></button>
+              <input class="input-large" id="comment-input" type="text" placeholder="Comment">
+              <button class="btn" id="comment-next"><i class="icon-arrow-right"></i></button>
+            </div>
+            <div id="comment-container">
+              <ul class="icons" id="comment-list"></ul>
+            </div>
           </div>
         </div>
       </div>

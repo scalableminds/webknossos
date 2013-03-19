@@ -26,9 +26,11 @@ class AbstractTreeView
     @canvas[0].width = @canvas.width()
     @canvas[0].height = @canvas.height()
     @ctx = @canvas[0].getContext("2d")
+    @ctx.lineWidth = 1
     console.log(@ctx)
     @width = width
     @height = height
+    @nodeList = []
 
 
   drawTree : (tree, @activeNodeId) ->
@@ -65,9 +67,7 @@ class AbstractTreeView
     @recordWidths(tree)
     @drawTreeWithWidths(tree, 0, @width, @nodeDistance, mode)
 
-  drawTreeWithWidths : (tree, left, right, top, mode) ->
-    unless mode
-      mode = MODE_NORMAL
+  drawTreeWithWidths : (tree, left, right, top, mode = MODE_NORMAL) ->
 
     # get the decision point
     decisionPoint = @getNextDecisionPoint(tree)
@@ -116,10 +116,17 @@ class AbstractTreeView
         if i != 0
           @drawEdge(xr, top + (i - 1) * @nodeDistance, xr, top + i * @nodeDistance)
     else if mode == MODE_NOCHAIN
+
+      # Find out, if the chain contains an active node
+      node = tree.children[0]; hasActiveNode = false
+      for i in [0...(chainCount - 1)]
+        hasActiveNode |= node.id == @activeNodeId
+        node = node.children[0]
+
       # Draw root, chain indicator and decision point
       @drawNode(xr, top, tree.id)
       @drawEdge(xr, top, xr, top + 0.5 * @nodeDistance)
-      @drawChainIndicator(xr, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance)
+      @drawChainIndicator(xr, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
       @drawEdge(xr, top + 1.5 * @nodeDistance, xr, top + 2 * @nodeDistance)
       @drawNode(xr, top + 2 * @nodeDistance, decisionPoint.id)
 
@@ -141,15 +148,18 @@ class AbstractTreeView
     @ctx.lineTo(x2, y2)
     @ctx.stroke()
 
-  drawChainIndicator : (x, top, bottom) ->
+  drawChainIndicator : (x, top, bottom, emphasize = false) ->
     # Draw a dashed line
     dashLength = (bottom - top) / 7
+    if emphasize
+      @ctx.lineWidth = 4
     @ctx.beginPath()
     @ctx.strokeStyle = @vgColor
     for i in [0, 1, 2]
       @ctx.moveTo(x, top + (2 * i + 1) * dashLength)
       @ctx.lineTo(x, top + (2 * i + 2) * dashLength)
     @ctx.stroke()
+    @ctx.lineWidth = 1
 
   # Decision point is any point with point.children.length != 1
   getNextDecisionPoint : (tree) ->

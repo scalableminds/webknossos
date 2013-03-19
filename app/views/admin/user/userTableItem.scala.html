@@ -20,9 +20,10 @@
   		<a href="@controllers.admin.routes.UserAdministration.verify(user.id)" data-ajax="replace-row"> verify </a>
 		}
 	</td>
-	<td> 
+	<td class="nowrap"> 
+    <a href="@controllers.admin.routes.UserTracingAdministration.show(user.id)" ><i class="icon-user"></i> show Tracings</a><br />
     <a href="@controllers.admin.routes.NMLIO.userDownload(user.id)" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
   	<a href="@controllers.admin.routes.UserAdministration.delete(user.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />
-    <a href="@controllers.admin.routes.UserAdministration.loginAsUser(user.id)"><i class="icon-user"></i> log in as User </a>
+    <a href="@controllers.admin.routes.UserAdministration.loginAsUser(user.id)"><i class="icon-signin"></i> log in as User </a>
 	</td>
 </tr>

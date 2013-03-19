@@ -29,11 +29,15 @@ case class Level(
   lazy val stacksFile = new File(s"$stackFolder/$stacksFileName")
   def hasStacksFile = stacksFile.exists
   def updateStacksFile {
-  if(! hasStacksFile )
-    stacksFile.createNewFile
-  val out = new PrintWriter(stacksFile)
-    try { out.print(Json.toJson(renderedMissions)) }
-    finally { out.close }
+
+    if(! hasStacksFile ) {
+      stacksFile.getParentFile.mkdirs
+      stacksFile.createNewFile
+    }
+    val out = new PrintWriter(stacksFile)
+      try { out.print(Json.toJson(renderedMissions)) }
+      finally { out.close }
+
   }
   
   val assetsFolder =

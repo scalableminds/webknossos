@@ -23,14 +23,42 @@ class View
     @setTheme(THEME_BRIGHT)
     @createKeyboardCommandOverlay()
 
-    @model.route.on("emptyBranchStack", =>
-      Toast.error("No more branchpoints", false))
+    @model.route.on({
+      emptyBranchStack : =>
+        Toast.error("No more branchpoints", false)
+      noBranchPoints : =>
+        Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false)
+      wrongDirection : =>
+        Toast.error("You're tracing in the wrong direction")
+      updateComments : (comments) => 
+        @updateComments(comments)
+      newActiveNode : => 
+        @updateActiveComment()
+        @updateActiveTree()
+      deleteTree : => 
+        @updateActiveComment()
+        @updateTrees()
+        @updateActiveTree()
+      mergeTree : =>
+        @updateTrees()
+      reloadTrees : =>
+        @updateTrees()
+      newNode : => @updateActiveComment()
+      newTreeName : => 
+        @updateTrees()
+        @updateActiveTree()
+      newTree : => 
+        @updateActiveComment()
+        @updateTrees()
+        @updateActiveTree() })
 
-    @model.route.on("noBranchPoints", =>
-      Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false))
+    @model.route.updateComments()
+    @updateActiveTree()
+    @updateTrees()
 
-    @model.route.on("wrongDirection", =>
-      Toast.error("You're tracing in the wrong direction"))
+    # disable loader, show oxalis
+    $("#loader").css("display" : "none")
+    $("#container").css("display" : "inline")
 
 
   toggleTheme : ->
@@ -69,9 +97,9 @@ class View
           <tr><td>Del</td><td>Delete node/Split trees</td><td>J</td><td>Jump to last branchpoint</td></tr>
           <tr><td>Shift + Alt + Leftclick</td><td>Merge two trees</td><td>S</td><td>Center active node</td></tr>
           <tr><td>P</td><td>Previous comment</td><td>C</td><td>Create new tree</td></tr>
-          <tr><td>N</td><td>Next comment</td><th colspan=\"2\">3D-view</th><td></td></tr>
-          <tr><td>T</td><td>Toggle theme</td><td>Mousewheel</td><td>Zoom in and out</td></tr>
-          <tr><td>1</td><td>Toggle Skeleton Visibility</td><td></td><td></td></tr>          
+          <tr><td>N</td><td>Next comment</td><td>Shift + Mousewheel</td><td>Change node size</td></tr>
+          <tr><td>T</td><td>Toggle theme</td><th colspan=\"2\">3D-view</th><td></td></tr>
+          <tr><td>1</td><td>Toggle Skeleton Visibility</td><td>Mousewheel</td><td>Zoom in and out</td></tr>          
           <tr><td>M</td><td>Toggle mode</td><td></td><td></td></tr>
           <tr><th colspan=\"2\">Flightmode</th><td></td><td></td></tr>
           <tr><td>Mouse or Arrow keys</td><td>Rotation</td><td></td><td></td></tr>
@@ -88,6 +116,76 @@ class View
 
     popoverTemplate = '<div class="popover key-overlay"><div class="arrow key-arrow"></div><div class="popover-inner"><h3 class="popover-title"></h3><div class="popover-content"><p></p></div></div></div>'
     $('#help-overlay').popover({html: true, placement: 'bottom', title: 'keyboard commands', content: keycommands, template: popoverTemplate})
+
+
+  updateComments : (comments) ->
+    
+    commentList = $("#comment-list")
+    commentList.empty()
+
+    # DOM container to append all elements at once for increased performance
+    newContent = document.createDocumentFragment()
+
+    for comment in comments
+      newContent.appendChild((
+        $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
+        $('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content})))[0])
+
+    commentList.append(newContent)
+
+    @updateActiveComment()
+
+
+  updateActiveComment : ->
+
+    comment = @model.route.getComment()
+    if comment
+      $("#comment-input").val(comment)
+    else
+      $("#comment-input").val("")
+
+    oldIcon = $("#comment-container i.icon-arrow-right")
+    if oldIcon.length
+      oldIcon.toggleClass("icon-arrow-right", false)
+      oldIcon.toggleClass("icon-angle-right", true)
+
+    activeHref = $("#comment-container a[data-nodeid=#{@model.route.getActiveNodeId()}]")
+    if activeHref.length
+
+      newIcon = activeHref.parent("li").children("i")
+      newIcon.toggleClass("icon-arrow-right", true)
+      newIcon.toggleClass("icon-angle-right", false)
+
+      # animate scrolling to the new comment
+      $("#comment-container").animate({
+        scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 500)
+
+
+  updateActiveTree : ->
+
+    activeTree = @model.route.getTree()
+    if activeTree
+      $("#tree-name-input").val(activeTree.name)
+      $("#tree-name").text(activeTree.name)
+      $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
+
+  updateTrees : ->
+
+    trees = @model.route.getTrees()
+
+    treeList = $("#tree-list")
+    treeList.empty()
+
+    newContent = document.createDocumentFragment()
+
+    for tree in trees
+      newContent.appendChild((
+        $('<li>').append($('<a>', {"href": "#", "data-treeid": tree.treeId}).append(
+          $('<i>', {"class": "icon-sign-blank"}).css(
+            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"), $('<span>', {"text": tree.name}))) )[0])
+
+    treeList.append(newContent)
+
 
   webGlSupported : ->
 

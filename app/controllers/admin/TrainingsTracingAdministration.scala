@@ -38,7 +38,7 @@ object TrainingsTracingAdministration extends Controller with Secured {
       tracing <- Tracing.findOneById(training) ?~ Messages("tracing.notFound")
       review <- tracing.review.headOption ?~ Messages("tracing.review.notFound")
     } yield {
-      Redirect(controllers.routes.Game.trace(review.reviewTracing.toString))
+      Redirect(controllers.routes.TracingController.trace(review.reviewTracing.toString))
     }
   }
 

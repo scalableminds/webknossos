@@ -5,21 +5,24 @@ import play.api.mvc.Action
 import play.api.mvc._
 import play.api._
 import play.api.libs.concurrent.Akka
-import play.api.Play.current
 import akka.actor.Props
 import brainflight.mail.Mailer
 
 object Application extends Controller with Secured {
   override val DefaultAccessRole = None
-  val Mailer = Akka.system.actorOf(Props[Mailer], name = "mailActor")
+  lazy val app = play.api.Play.current
+
+  lazy val Mailer =
+    Akka.system(app).actorFor("/user/mailActor")
+
+  lazy val temporaryTracingGenerator =
+    Akka.system(app).actorFor("/user/temporaryTracingGenerator")
 
   // -- Javascript routing
 
   def javascriptRoutes = Action { implicit request =>
     Ok(
       Routes.javascriptRouter("jsRoutes")( //fill in stuff which should be able to be called from js
-        controllers.admin.routes.javascript.NMLIO.upload
-      )).as("text/javascript")
+        controllers.admin.routes.javascript.NMLIO.upload)).as("text/javascript")
   }
-
 }

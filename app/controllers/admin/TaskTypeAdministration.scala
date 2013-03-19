@@ -11,9 +11,12 @@ import play.api.data.Form
 import models.task.TimeSpan
 import play.api.i18n.Messages
 import models.task.Task
-import models.tracing.Tracing
+import models.tracing._
+import play.api.templates.Html
+import brainflight.tracing._
+import controllers.Application
 
-object TaskTypeAdministration extends Controller with Secured {
+object TaskTypeAdministration extends Controller with Secured{
 
   override val DefaultAccessRole = Role.Admin
 
@@ -34,6 +37,25 @@ object TaskTypeAdministration extends Controller with Secured {
     Ok(html.admin.taskType.taskTypes(TaskType.findAll, taskTypeForm))
   }
 
+  def trace(taskTypeId: String) = Authenticated { implicit request =>
+    for {
+      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+    } yield {
+      val tracingType = TracingType.CompoundTaskType
+      val id = TracingIdentifier(tracingType.toString, taskType.id)
+      val tracingInfo = 
+        TracingInfo(
+            id.identifier,
+            "<unknown>",
+            tracingType,
+            isEditable = false)
+            
+      Application.temporaryTracingGenerator ! RequestTemporaryTracing(id)          
+      
+      Ok(html.oxalis.trace(tracingInfo)(Html.empty))
+    }
+  }
+  
   def create = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskTypeForm.bindFromRequest.fold(
       formWithErrors => BadRequest(html.admin.taskType.taskTypes(TaskType.findAll, formWithErrors)),

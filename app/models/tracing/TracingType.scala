@@ -5,6 +5,9 @@ object TracingType extends Enumeration {
   val Task = Value("Task")
   val Explorational = Value("Explorational")
   val Review = Value("Trainings Review")
+  val CompoundTask = Value("CompoundTask")
+  val CompoundProject = Value("CompoundProject")
+  val CompoundTaskType = Value("CompoundTaskType")
   
   val UserTracings = List(Task, Explorational, Review)
 

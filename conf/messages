@@ -1,7 +1,7 @@
 error.email=Please supply a valid email address
 error.required=Please supply all needed values
 
-notAllowed=None of your bussiness
+notAllowed=None of your business
 
 binary.payload.notSupplied=No valid payload supplied
 binary.payload.invalid=Couldn''t parse payload
@@ -55,7 +55,8 @@ experience.value=Min Experience
 nmlFile=Reference NML File
 nml.file.uploadSuccess=Successfully uploaded file
 nml.file.notFound=Couldn''t extract NML file
-nml.file.invalid=Couldn''t parse NML file
+nml.file.invalid=Couldn''t parse file: {0}
+nml.file.noFile=No file uploaded
 
 owner=Owner
 
@@ -77,8 +78,9 @@ training.gain=Experience Gain
 training.loss=Experience Loss
 
 tracing=Tracing
-tracing.finished=Tracing is finished
 tracing.invalid=Invalid tracing
+tracing.finished=Tracing is finished
+tracing.finish.confirm=Do you really want to finish the tracing?
 tracing.creationFailed=Failed to create tracing
 tracing.notFound=Tracing couldn''t be found
 tracing.review.assignFailed=Couldn''t assign reviewee
@@ -90,9 +92,15 @@ tracing.review.finishFailed=You can''t review this tracing
 tracing.review.finished=Review finished
 tracing.task.notFound=Couldn''t find task for tracing
 tracing.training.notFound=Couldn''t find training for tracing
+tracing.download.notAllowed=You can''t download this tracing
 tracing.user.notFound=Couldn''t find a user for the tracing
 tracing.open.notFound=No open tracing found
 tracing.notPossible=Couldn''t access tracing
+tracing.setName=Successfully named tracing
+tracing.invalidName=Tracing name is invalid
+tracing.reset.success=Reseted tracing to base
+tracing.reset.failed=Couldn't reset tracing to base
+tracing.reopened=Tracing got reopened
 
 jira.summary.notSupplied=No summary supplied
 jira.description.notSupplied=No description supplied
@@ -104,7 +112,8 @@ task.finished=Task is finished
 task.cancelled=Task got cancelled
 task.passedToReview=Task is now getting reviewed. This may take some time.
 task.assigned=You got a new task
-task.alreadyHasOpenOne=You already have an open task
+task.tooManyOpenOnes=You already have too many open tasks
+task.requestAnother=Do you really want another task?
 task.unavailable=There is currently no task available
 task.notFound=Task couldn''t be found
 task.removed=Task got removed

@@ -67,6 +67,8 @@ class SceneController
     # things have to be changed for each cam.
     if id in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       @cube.visible = false
+      unless @showSkeleton
+        @skeleton.setVisibility(false)
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
         if i == id
           @planes[i].setOriginalCrosshairColor()
@@ -80,6 +82,8 @@ class SceneController
           @planes[i].setVisible(false)
     else
       @cube.visible = true
+      unless @showSkeleton
+        @skeleton.setVisibility(true)
       for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
         pos = @flycam.getPosition()
         @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))
@@ -140,20 +144,16 @@ class SceneController
 
   bind : ->
 
-    @model.user.on "routeClippingDistanceChanged", (value) =>
-      @setRouteClippingDistance(value)
-
-    @model.user.on "displayCrosshairChanged", (value) =>
-      @setDisplayCrosshair(value)
-    
-    @model.user.on "interpolationChanged", (value) =>
-      @setInterpolation(value)
-
-    @model.user.on "displayPreviewXYChanged", (value) =>
-      @setDisplaySV PLANE_XY, value
-
-    @model.user.on "displayPreviewYZChanged", (value) =>
-      @setDisplaySV PLANE_YZ, value
-
-    @model.user.on "displayPreviewXZChanged", (value) =>
-      @setDisplaySV PLANE_XZ, value      
+    @model.user.on({
+      routeClippingDistanceChanged : (value) =>
+        @setRouteClippingDistance(value)
+      displayCrosshairChanged : (value) =>
+        @setDisplayCrosshair(value)
+      interpolationChanged : (value) =>
+        @setInterpolation(value)
+      displayPreviewXYChanged : (value) =>
+        @setDisplaySV PLANE_XY, value
+      displayPreviewYZChanged : (value) =>
+        @setDisplaySV PLANE_YZ, value
+      displayPreviewXZChanged : (value) =>
+        @setDisplaySV PLANE_XZ, value  })   

@@ -4,16 +4,8 @@
 ../../libs/event_mixin : EventMixin
 ../../libs/toast : Toast
 ../model/dimensions : Dimensions
+../constants : constants
 ###
-
-PLANE_XY           = Dimensions.PLANE_XY
-PLANE_YZ           = Dimensions.PLANE_YZ
-PLANE_XZ           = Dimensions.PLANE_XZ
-VIEW_3D            = Dimensions.VIEW_3D
-VIEWPORT_WIDTH     = 380
-
-MODE_OXALIS    = 0
-MODE_ARBITRARY = 1
 
 class Gui 
 
@@ -150,7 +142,7 @@ class Gui
         @updateGlobalPosition(position)
 
       zoomFactorChanged : (factor, step) =>
-        nm = factor * VIEWPORT_WIDTH * @model.scaleInfo.baseVoxel
+        nm = factor * constants.VIEWPORT_WIDTH * @model.scaleInfo.baseVoxel
         if(nm<1000)
           $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
         else if (nm<1000000)
@@ -283,11 +275,11 @@ class Gui
   setMode : (mode) ->
 
     switch mode 
-      when MODE_OXALIS
+      when constants.MODE_OXALIS
         $(@fFlightcontrols.domElement).hide()
         $(@fViewportcontrols.domElement).show()
         $(@fSkeleton.domElement).show()
-      when MODE_ARBITRARY
+      when constants.MODE_ARBITRARY
         $(@fFlightcontrols.domElement).show()
         $(@fViewportcontrols.domElement).hide()
         $(@fSkeleton.domElement).hide()

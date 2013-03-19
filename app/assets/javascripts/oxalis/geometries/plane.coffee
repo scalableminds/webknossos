@@ -2,13 +2,10 @@
 ../model : Model
 ../view : View
 ../model/dimensions : Dimensions
+../constants : constants
 ###
 
 
-PLANE_XY         = Dimensions.PLANE_XY
-PLANE_YZ         = Dimensions.PLANE_YZ
-PLANE_XZ         = Dimensions.PLANE_XZ
-VIEW_3D          = Dimensions.VIEW_3D
 BORDER_COLORS    = [0xff0000, 0x0000ff, 0x00ff00]
 CROSSHAIR_COLORS = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
 GRAY_CH_COLOR    = 0x222222
@@ -118,9 +115,9 @@ class Plane
   setPosition : (posVec) =>
     @prevBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
     offset = new THREE.Vector3(0, 0, 0)
-    if      @planeID == PLANE_XY then offset.z =  1
-    else if @planeID == PLANE_YZ then offset.x = -1
-    else if @planeID == PLANE_XZ then offset.y = -1
+    if      @planeID == constants.PLANE_XY then offset.z =  1
+    else if @planeID == constants.PLANE_YZ then offset.x = -1
+    else if @planeID == constants.PLANE_XZ then offset.y = -1
     @plane.position = offset.addVectors(posVec, offset)
 
   setVisible : (visible) =>

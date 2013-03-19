@@ -1,29 +1,18 @@
 ### define 
 jquery : $
 ../libs/toast : Toast
+./constants : constants
 ###
 
 class View
-
-
-  THEME_BRIGHT   = 0
-  THEME_DARK     = 1
-
-  MODE_OXALIS    = 0
-  MODE_ARBITRARY = 1
-
-  currentTheme = null
-
 
   constructor : (@model) ->
 
     unless @webGlSupported()
       Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>"+
         "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>")
-
-    { THEME_BRIGHT } = @
    
-    @setTheme(THEME_BRIGHT)
+    @setTheme(constants.THEME_BRIGHT)
     @createKeyboardCommandOverlay()
 
     @model.route.on({
@@ -66,19 +55,15 @@ class View
 
   toggleTheme : ->
 
-    { currentTheme, THEME_BRIGHT, THEME_DARK } = @
-
-    if currentTheme is THEME_BRIGHT 
-      @setTheme(THEME_DARK)
+    if currentTheme is constants.THEME_BRIGHT 
+      @setTheme(constants.THEME_DARK)
     else
-      @setTheme(THEME_BRIGHT)
+      @setTheme(constants.THEME_BRIGHT)
 
 
   setTheme : (theme) ->
 
-    { THEME_BRIGHT, THEME_DARK } = @
-
-    if theme is THEME_BRIGHT
+    if theme is constants.THEME_BRIGHT
       $("body").attr('class', 'bright')
     else
       $("body").attr('class', 'dark')
@@ -123,7 +108,7 @@ class View
             <div class="modal-body" id="help-modal-body"><p>
             <table class="table table-condensed table-nohead table-bordered"><tbody>'''
       
-    html += generalKeys + if @mode == MODE_OXALIS then viewportKeys + skeletonKeys else arbitraryKeys
+    html += generalKeys + if @mode == constants.MODE_OXALIS then viewportKeys + skeletonKeys else arbitraryKeys
 
     html += '''</tbody>
             </table>

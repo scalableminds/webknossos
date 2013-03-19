@@ -4,6 +4,7 @@ jquery : $
 ../../libs/toast : Toast
 ../../libs/event_mixin : EventMixin
 ../../libs/Tween : TWEEN_LIB
+../constants : constants
 ###
 
 #model : Model
@@ -14,18 +15,13 @@ jquery : $
 # constants
 # display 512px out of 512px total width and height
 #CAM_DISTANCE = 384/2 # alt: 384/2  #alt: 96
-VIEWPORT_WIDTH = 380
-PLANE_XY       = Dimensions.PLANE_XY
-PLANE_YZ       = Dimensions.PLANE_YZ
-PLANE_XZ       = Dimensions.PLANE_XZ
-VIEW_3D        = Dimensions.VIEW_3D
-
-MAX_SCALE      = 20
-MIN_SCALE      = 0.5
 
 
 
 class PlaneView
+
+  MAX_SCALE      : 20
+  MIN_SCALE      : 0.5
 
   constructor : (@model, @flycam, @stats) ->
 
@@ -38,8 +34,8 @@ class PlaneView
     container = $("#render")
 
     # Create a 4x4 grid
-    @curWidth = WIDTH = VIEWPORT_WIDTH
-    HEIGHT = VIEWPORT_WIDTH
+    @curWidth = WIDTH = constants.VIEWPORT_WIDTH
+    HEIGHT = constants.VIEWPORT_WIDTH
     @scaleFactor = 1
 
     # Initialize main THREE.js components
@@ -48,25 +44,25 @@ class PlaneView
     @camera   = new Array(4)
     @lights   = new Array(3)
     @scene    = new THREE.Scene()
-    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
+    for i in constants.ALL_VIEWPORTS
       # Let's set up cameras
       # No need to set any properties, because the camera controller will deal with that
       @camera[i]   = new THREE.OrthographicCamera(0, 0, 0, 0)
       @scene.add @camera[i]
 
       # There is one light for each plane
-      if i != VIEW_3D
+      if i != constants.VIEW_3D
         @lights[i]   = new THREE.PointLight( 0xffffff, 0.8 )
         @scene.add @lights[i]
 
-    @camera[PLANE_XY].position.z = -1
-    @camera[PLANE_YZ].position.x =  1
-    @camera[PLANE_XZ].position.y =  1
-    @camera[VIEW_3D].position    = new THREE.Vector3(10, 10, -10)
-    @camera[PLANE_XY].up         = new THREE.Vector3( 0, -1,  0)
-    @camera[PLANE_YZ].up         = new THREE.Vector3( 0, -1,  0)
-    @camera[PLANE_XZ].up         = new THREE.Vector3( 0,  0, -1)
-    @camera[VIEW_3D].up          = new THREE.Vector3( 0,  0, -1)
+    @camera[constants.PLANE_XY].position.z = -1
+    @camera[constants.PLANE_YZ].position.x =  1
+    @camera[constants.PLANE_XZ].position.y =  1
+    @camera[constants.VIEW_3D].position    = new THREE.Vector3(10, 10, -10)
+    @camera[constants.PLANE_XY].up         = new THREE.Vector3( 0, -1,  0)
+    @camera[constants.PLANE_YZ].up         = new THREE.Vector3( 0, -1,  0)
+    @camera[constants.PLANE_XZ].up         = new THREE.Vector3( 0,  0, -1)
+    @camera[constants.VIEW_3D].up          = new THREE.Vector3( 0,  0, -1)
     for cam in @camera
       cam.lookAt(new THREE.Vector3( 0, 0, 0))
 
@@ -130,7 +126,7 @@ class PlaneView
     @renderer.autoClear = true
     colors   = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
     if @flycam.hasChanged or @flycam.hasNewTextures()
-      for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
+      for i in constants.ALL_VIEWPORTS
         @trigger "renderCam", i
         @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
         @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
@@ -161,14 +157,14 @@ class PlaneView
     HEIGHT = (canvas.height()-20)/2
 
     @renderer.setSize( 2*WIDTH+20, 2*HEIGHT+20)
-    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ, VIEW_3D]
+    for i in constants.ALL_VIEWPORTS
       @camera[i].aspect = WIDTH / HEIGHT
       @camera[i].updateProjectionMatrix()
     @draw()
   
   scaleTrianglesPlane : (delta) =>
     @scaleFactor = 1 unless @scaleFactor
-    if (@scaleFactor+delta > MIN_SCALE) and (@scaleFactor+delta < MAX_SCALE)
+    if (@scaleFactor+delta > @MIN_SCALE) and (@scaleFactor+delta < @MAX_SCALE)
       @scaleFactor += Number(delta)
       @curWidth = WIDTH = HEIGHT = @scaleFactor * 380
       canvas = $("#render > canvas")
@@ -183,13 +179,13 @@ class PlaneView
       @resize()
 
   setActivePlaneXY : =>
-    @setActivePlane PLANE_XY
+    @setActivePlane constants.PLANE_XY
 
   setActivePlaneYZ : =>
-    @setActivePlane PLANE_YZ
+    @setActivePlane constants.PLANE_YZ
 
   setActivePlaneXZ : =>
-    @setActivePlane PLANE_XZ
+    @setActivePlane constants.PLANE_XZ
 
   setActivePlane : (planeID) =>
     @flycam.setActivePlane planeID

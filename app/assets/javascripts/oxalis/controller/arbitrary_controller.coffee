@@ -8,9 +8,8 @@ libs/input : Input
 ../geometries/crosshair : Crosshair
 ../view/arbitrary_view : ArbitraryView
 ../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
+../constants : constants
 ###
-
-TYPE_USUAL = 0
 
 class ArbitraryController
 
@@ -176,9 +175,9 @@ class ArbitraryController
       @createNewTree()
       @model.route.one("rendered", =>
         @model.route.one("rendered", =>
-          @model.route.addNode(position, TYPE_USUAL)))
+          @model.route.addNode(position, constants.TYPE_USUAL)))
     else
-      @model.route.addNode(position, TYPE_USUAL)
+      @model.route.addNode(position, constants.TYPE_USUAL)
 
 
   setWaypoint : () =>

@@ -240,7 +240,8 @@ class Flycam3d
   setDirection : (d) ->
 
     pos = @getPosition()
-    m = M4x4.makeLookAtWithoutTranslation(d, [0,0,0], [0, 1, 0])
+
+    m = M4x4.makeLookAtWithoutTranslation(d, [0,0,0], [0,1,0])
 
     matrix2 = [ 
       1, 0, 0, 0, 
@@ -252,7 +253,7 @@ class Flycam3d
     M4x4.scale(@scale, matrix2, matrix2)
 
     @currentMatrix = M4x4.mul(matrix2, m)
-
+    
     updateMacro()
 
 

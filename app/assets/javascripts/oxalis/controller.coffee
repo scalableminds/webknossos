@@ -71,6 +71,9 @@ class Controller
         else
           Toast.error("There was no valid allowed tracing mode specified.")
 
+      @abstractTreeController.view.on 
+        nodeClick : (id) => @setActiveNode(id, true, false)
+
       $("#comment-input").on "change", (event) => 
         @setComment(event.target.value)
 

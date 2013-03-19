@@ -1,24 +1,18 @@
 ### define
 ../../libs/event_mixin : EventMixin
 ./dimensions : Dimensions
+../constants : constants
 ###
-
-# constants (for active_plane)
-PLANE_XY           = Dimensions.PLANE_XY
-PLANE_YZ           = Dimensions.PLANE_YZ
-PLANE_XZ           = Dimensions.PLANE_XZ
-VIEW_3D            = Dimensions.VIEW_3D
-TEXTURE_WIDTH      = 512
-MAX_TEXTURE_OFFSET = 31     # maximum difference between requested coordinate and actual texture position
-ZOOM_DIFF          = 0.1
-MAX_ZOOM_TRESHOLD  = 2
-
   
 class Flycam2d
 
+  TEXTURE_WIDTH      : 512
+  MAX_TEXTURE_OFFSET : 31     # maximum difference between requested coordinate and actual texture position
+  ZOOM_DIFF          : 0.1
+  MAX_ZOOM_THRESHOLD  : 2
+
   scaleInfo : null
   viewportWidth : 0
-
 
   constructor : (@viewportWidth, @scaleInfo, @zoomStepCount, @user) ->
 
@@ -27,7 +21,7 @@ class Flycam2d
     console.log "ZoomStepCount: ", @zoomStepCount
 
     # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
-    @maxZoomStepDiff = Math.min(Math.log(MAX_ZOOM_TRESHOLD) / Math.LN2, Math.log((TEXTURE_WIDTH-MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
+    @maxZoomStepDiff = Math.min(Math.log(@MAX_ZOOM_THRESHOLD) / Math.LN2, Math.log((@TEXTURE_WIDTH-@MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
     @hasNewTexture = [false, false, false]
     @zoomSteps = [0.0, 0.0, 0.0]
     @integerZoomSteps = [0, 0, 0]
@@ -39,7 +33,7 @@ class Flycam2d
     @texturePosition = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
     @direction = [0, 0, 1]
     @hasChanged = true
-    @activePlane = PLANE_XY
+    @activePlane = constants.PLANE_XY
     @rayThreshold = [10, 10, 10, 100]
     @spaceDirection = [1, 1, 1]
     @quality = 0        # offset of integer zoom step to the best-quality zoom level
@@ -50,12 +44,12 @@ class Flycam2d
       })
 
   zoomIn : (planeID) ->
-    @setZoomStep(planeID, @zoomSteps[planeID] - ZOOM_DIFF)
+    @setZoomStep(planeID, @zoomSteps[planeID] - @ZOOM_DIFF)
 
   zoomOut : (planeID) ->
     # Make sure the max. zoom Step will not be exceded
-    if @zoomSteps[planeID] < @zoomStepCount + @maxZoomStepDiff - ZOOM_DIFF
-      @setZoomStep(planeID, @zoomSteps[planeID] + ZOOM_DIFF)
+    if @zoomSteps[planeID] < @zoomStepCount + @maxZoomStepDiff - @ZOOM_DIFF
+      @setZoomStep(planeID, @zoomSteps[planeID] + @ZOOM_DIFF)
 
   zoomInAll : ->
     for i in [0..2]
@@ -83,7 +77,7 @@ class Flycam2d
 
   setZoomSteps : (zXY, zYZ, zXZ) ->
     zoomArray = [zXY, zYZ, zXZ]
-    for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+    for planeID in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       @setZoomStep(planeID, zoomArray[planeID])
 
   setZoomStep : (planeID, zoomStep) ->
@@ -93,11 +87,11 @@ class Flycam2d
     @trigger "zoomFactorChanged", Math.pow(2, @zoomSteps[0]), @zoomSteps[0]
 
   calculateBuffer : ->
-    for planeID in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+    for planeID in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       scaleArray = Dimensions.transDim(@scaleInfo.baseVoxelFactors, planeID)
       base = @viewportWidth * @getTextureScalingFactor(planeID) / 2
-      @buffer[planeID] = [TEXTURE_WIDTH/2 - base * scaleArray[0],
-                          TEXTURE_WIDTH/2 - base * scaleArray[1]]
+      @buffer[planeID] = [@TEXTURE_WIDTH/2 - base * scaleArray[0],
+                          @TEXTURE_WIDTH/2 - base * scaleArray[1]]
 
   getIntegerZoomStep : (planeID) ->
     @integerZoomSteps[planeID]
@@ -167,7 +161,7 @@ class Flycam2d
   needsUpdate : (planeID) ->
     area = @getArea planeID
     ind  = Dimensions.getIndices planeID
-    res = ((area[0] < 0) or (area[1] < 0) or (area[2] > TEXTURE_WIDTH) or (area[3] > TEXTURE_WIDTH) or
+    res = ((area[0] < 0) or (area[1] < 0) or (area[2] > @TEXTURE_WIDTH) or (area[3] > @TEXTURE_WIDTH) or
     (@position[ind[2]] != @texturePosition[planeID][ind[2]]) or
     (@zoomSteps[planeID] - (@integerZoomSteps[planeID]-1)) < @maxZoomStepDiff) or
     (@zoomSteps[planeID] -  @integerZoomSteps[planeID]     > @maxZoomStepDiff)
@@ -201,11 +195,11 @@ class Flycam2d
     @calculateBuffer()
 
   hasNewTextures : ->
-    (@hasNewTexture[PLANE_XY] or @hasNewTexture[PLANE_YZ] or @hasNewTexture[PLANE_XZ])
+    (@hasNewTexture[constants.PLANE_XY] or @hasNewTexture[constants.PLANE_YZ] or @hasNewTexture[constants.PLANE_XZ])
 
   setRayThreshold : (cameraRight, cameraLeft) ->
     # in nm
-    @rayThreshold[VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384
+    @rayThreshold[constants.VIEW_3D] = 4 * (cameraRight - cameraLeft) / 384
 
   getRayThreshold : (planeID) ->
     if planeID < 3

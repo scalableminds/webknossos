@@ -1,9 +1,5 @@
 ### define ###
 
-TYPE_USUAL  = 0
-TYPE_BRANCH = 1
-
-# This class should represent a Trace Point
 class TracePoint
 
   constructor : (@type, @id, @pos, @radius, @time, @treeId) ->

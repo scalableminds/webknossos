@@ -7,17 +7,6 @@ jquery : $
 ../constants : constants
 ###
 
-#model : Model
-    
-# global View variables
-# flycam = null
-
-# constants
-# display 512px out of 512px total width and height
-#CAM_DISTANCE = 384/2 # alt: 384/2  #alt: 96
-
-
-
 class PlaneView
 
   MAX_SCALE      : 20

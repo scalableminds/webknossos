@@ -5,15 +5,14 @@
 ../constants : constants
 ###
 
-
-BORDER_COLORS    = [0xff0000, 0x0000ff, 0x00ff00]
-CROSSHAIR_COLORS = [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
-GRAY_CH_COLOR    = 0x222222
-
 class Plane
 
   # This class is supposed to collect all the Geometries that belong to one single plane such as
   # the plane itself, its texture, borders and crosshairs.
+
+  BORDER_COLORS    : [0xff0000, 0x0000ff, 0x00ff00]
+  CROSSHAIR_COLORS : [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
+  GRAY_CH_COLOR    : 0x222222
 
   constructor : (planeWidth, textureWidth, flycam, planeID, model) ->
     @flycam          = flycam
@@ -54,7 +53,7 @@ class Plane
       crosshairGeometries[i].vertices.push(new THREE.Vector3( -25*i,  -25*(1-i), 0))
       crosshairGeometries[i].vertices.push(new THREE.Vector3( 25*i, 25*(1-i), 0))
       crosshairGeometries[i].vertices.push(new THREE.Vector3( pWidth/2*i,  pWidth/2*(1-i), 0))
-      @crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({color: CROSSHAIR_COLORS[@planeID][i], linewidth: 1}), THREE.LinePieces)
+      @crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({color: @CROSSHAIR_COLORS[@planeID][i], linewidth: 1}), THREE.LinePieces)
       
     # create borders
     prevBordersGeo = new THREE.Geometry()
@@ -63,18 +62,18 @@ class Plane
     prevBordersGeo.vertices.push(new THREE.Vector3(  pWidth/2,  pWidth/2, 0))
     prevBordersGeo.vertices.push(new THREE.Vector3(  pWidth/2, -pWidth/2, 0))
     prevBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2, -pWidth/2, 0))
-    @prevBorders = new THREE.Line(prevBordersGeo, new THREE.LineBasicMaterial({color: BORDER_COLORS[@planeID], linewidth: 1}))
+    @prevBorders = new THREE.Line(prevBordersGeo, new THREE.LineBasicMaterial({color: @BORDER_COLORS[@planeID], linewidth: 1}))
 
   setDisplayCrosshair : (value) =>
     @displayCosshair = value
 
   setOriginalCrosshairColor : =>
     for i in [0..1]
-      @crosshair[i].material = new THREE.LineBasicMaterial({color: CROSSHAIR_COLORS[@planeID][i], linewidth: 1})
+      @crosshair[i].material = new THREE.LineBasicMaterial({color: @CROSSHAIR_COLORS[@planeID][i], linewidth: 1})
 
   setGrayCrosshairColor : =>
     for i in [0..1]
-      @crosshair[i].material = new THREE.LineBasicMaterial({color: GRAY_CH_COLOR, linewidth: 1})
+      @crosshair[i].material = new THREE.LineBasicMaterial({color: @GRAY_CH_COLOR, linewidth: 1})
 
   updateTexture : =>
 

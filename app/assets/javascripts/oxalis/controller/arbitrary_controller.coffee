@@ -100,16 +100,16 @@ class ArbitraryController
       #Move   
       "w" : => @cam.move [0, @model.user.moveValue3d, 0]
       "s" : => @cam.move [0, -@model.user.moveValue3d, 0]
-      "a" : => @cam.move [-@model.user.moveValue3d, 0, 0]
-      "d" : => @cam.move [@model.user.moveValue3d, 0, 0]
+      "a" : => @cam.move [@model.user.moveValue3d, 0, 0]
+      "d" : => @cam.move [-@model.user.moveValue3d, 0, 0]
       "space" : =>  
         @cam.move [0, 0, @model.user.moveValue3d]
         @moved()
       "shift + space" : => @cam.move [0, 0, -@model.user.moveValue3d]
       
       #Rotate in distance
-      "left"  : => @cam.yawDistance -@model.user.rotateValue
-      "right" : => @cam.yawDistance @model.user.rotateValue
+      "left"  : => @cam.yawDistance @model.user.rotateValue
+      "right" : => @cam.yawDistance -@model.user.rotateValue
       "up"    : => @cam.pitchDistance -@model.user.rotateValue
       "down"  : => @cam.pitchDistance @model.user.rotateValue
       
@@ -233,12 +233,17 @@ class ArbitraryController
     activeNode = @model.route.getActiveNode()
     if activeNode
       @cam.setPosition(activeNode.pos)
-      if parent = activeNode.parent
+      parent = activeNode.parent
+      while parent
         # set right direction
-        @cam.setDirection([
+        direction = ([
           activeNode.pos[0] - parent.pos[0],
           activeNode.pos[1] - parent.pos[1],
           activeNode.pos[2] - parent.pos[2]])
+        if direction[0] or direction[1] or direction[2]
+          @cam.setDirection(direction)
+          break
+        parent = parent.parent
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->

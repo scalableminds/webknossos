@@ -243,12 +243,12 @@ class Flycam3d
 
     matrix = new THREE.Matrix4()
     matrix.setPosition(new THREE.Vector3(pos...))
+    matrix.scale(new THREE.Vector3(@scale...))
     matrix.lookAt(new THREE.Vector3(d...),
       new THREE.Vector3(0, 0, 0),
       new THREE.Vector3(0, 1, 0))
 
     @currentMatrix = matrix.elements
-
     updateMacro()
 
 

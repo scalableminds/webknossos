@@ -8,6 +8,7 @@ underscore : _
 
 CAM_DISTANCE = 64
 
+DEFAULT_SCALE  = 2
 MAX_SCALE      = 3
 MIN_SCALE      = 1
 
@@ -147,7 +148,7 @@ class ArbitraryView
 
   applyScale : (delta) =>
 
-    @scaleFactor = 1 unless @scaleFactor
+    @scaleFactor = DEFAULT_SCALE unless @scaleFactor
     if (@scaleFactor+delta > MIN_SCALE) and (@scaleFactor+delta < MAX_SCALE)
       @scaleFactor += Number(delta)
       @width = @height = @scaleFactor * VIEWPORT_WIDTH

@@ -88,7 +88,7 @@ class View
       <tr><td>1</td><td>Toggle skeleton visibility</td><td></td><td></td></tr>'
     skeletonKeys =
       '<tr><th colspan="4">3D-view</th></tr>
-      <tr><td>Mousewheel</td><td>Zoom in and out</td><td></td><td></td></tr>'
+      <tr><td>Mousewheel</td><td>Zoom in and out</td><td>Right-click drag</td><td>Rotate Skeleton View</td></tr>'
     viewportKeys =
       '<tr><th colspan="4">Viewports</th></tr>
       <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Leftclick</td><td>Select node</td></tr>

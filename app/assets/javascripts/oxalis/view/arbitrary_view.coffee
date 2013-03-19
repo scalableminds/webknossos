@@ -4,17 +4,15 @@ three : THREE
 stats : Stats
 jquery : $
 underscore : _
+../constants : constants
 ###
 
-CAM_DISTANCE = 64
-
-DEFAULT_SCALE  = 2
-MAX_SCALE      = 3
-MIN_SCALE      = 1
-
-VIEWPORT_WIDTH = 384
-
 class ArbitraryView
+
+  CAM_DISTANCE   : 64
+  DEFAULT_SCALE  : 2
+  MAX_SCALE      : 3
+  MIN_SCALE      : 1
 
   forceUpdate : false
   geometries : []
@@ -42,7 +40,7 @@ class ArbitraryView
     camera.matrixAutoUpdate = false
     camera.aspect = @width / @height
   
-    @cameraPosition = new THREE.Vector3(0, 0, CAM_DISTANCE)
+    @cameraPosition = new THREE.Vector3(0, 0, @CAM_DISTANCE)
 
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
@@ -148,10 +146,10 @@ class ArbitraryView
 
   applyScale : (delta) =>
 
-    @scaleFactor = DEFAULT_SCALE unless @scaleFactor
-    if (@scaleFactor+delta > MIN_SCALE) and (@scaleFactor+delta < MAX_SCALE)
+    @scaleFactor = @DEFAULT_SCALE unless @scaleFactor
+    if (@scaleFactor+delta > @MIN_SCALE) and (@scaleFactor+delta < @MAX_SCALE)
       @scaleFactor += Number(delta)
-      @width = @height = @scaleFactor * VIEWPORT_WIDTH
+      @width = @height = @scaleFactor * constants.WIDTH
       @container.width(@width)
       @container.height(@height)
 
@@ -159,7 +157,7 @@ class ArbitraryView
 
   setRouteClippingDistance : (value) =>
 
-    @camera.near = CAM_DISTANCE - value
+    @camera.near = @CAM_DISTANCE - value
     @camera.updateProjectionMatrix()
 
 

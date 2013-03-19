@@ -10,25 +10,16 @@ underscore : _
 ../libs/input : Input
 ./view/gui : Gui
 ../libs/toast : Toast
+./constants : constants
 ###
-
-VIEWPORT_WIDTH   = 380
-TEXTURE_SIZE_P   = 9
-DISTANCE_3D      = 140
-
-ALLOWED_OXALIS    = MODE_OXALIS    = 0
-ALLOWED_ARBITRARY = MODE_ARBITRARY = 1
-
 
 class Controller
 
-  mode : null
   view : null
   planeController : null
   arbitraryController : null
   abstractTreeController : null
   allowedModes : []
-  mode : MODE_OXALIS
   
 
   constructor : ->
@@ -36,16 +27,16 @@ class Controller
     _.extend(@, new EventMixin())
 
     @fullScreen = false
-    @mode = MODE_OXALIS
+    @mode = constants.MODE_OXALIS
 
     @model = new Model()
 
-    @model.initialize(TEXTURE_SIZE_P, VIEWPORT_WIDTH, DISTANCE_3D).done (settings) =>
+    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done (settings) =>
 
       for allowedMode in settings.allowedModes
         @allowedModes.push switch allowedMode
-          when "oxalis" then ALLOWED_OXALIS
-          when "arbitrary" then ALLOWED_ARBITRARY
+          when "oxalis" then constants.ALLOWED_OXALIS
+          when "arbitrary" then constants.ALLOWED_ARBITRARY
 
       # FPS stats
       stats = new Stats()
@@ -65,8 +56,10 @@ class Controller
       @initMouse()
       @initKeyboard()
 
-      if ALLOWED_OXALIS not in @allowedModes
-        if ALLOWED_ARBITRARY in @allowedModes
+      @propagateMode(constants.MODE_OXALIS)
+
+      if constants.ALLOWED_OXALIS not in @allowedModes
+        if constants.ALLOWED_ARBITRARY in @allowedModes
           @toggleArbitraryView()
         else
           Toast.error("There was no valid allowed tracing mode specified.")
@@ -101,7 +94,7 @@ class Controller
 
       $("#tree-list").on "click", "a[data-treeid]", (event) =>
         event.preventDefault()
-        @setActiveTree($(event.target).data("treeid"))
+        @setActiveTree($(event.currentTarget).data("treeid"), true)
 
 
 
@@ -141,14 +134,20 @@ class Controller
 
   toggleArbitraryView : ->
 
-    if @mode is MODE_OXALIS and ALLOWED_ARBITRARY in @allowedModes
+    if @mode is constants.MODE_OXALIS and constants.ALLOWED_ARBITRARY in @allowedModes
       @planeController.stop()
       @arbitraryController.start()
-      @mode = MODE_ARBITRARY
-    else if @mode is MODE_ARBITRARY and ALLOWED_OXALIS in @allowedModes
+      @propagateMode(constants.MODE_ARBITRARY)
+    else if @mode is constants.MODE_ARBITRARY and constants.ALLOWED_OXALIS in @allowedModes
       @arbitraryController.stop()
       @planeController.start()
-      @mode = MODE_OXALIS
+      @propagateMode(constants.MODE_OXALIS)
+
+  propagateMode : (mode) ->
+
+    @mode = mode
+    @gui.setMode(mode)
+    @view.setMode(mode)
 
 
   toggleFullScreen : ->
@@ -178,7 +177,7 @@ class Controller
 
     gui.on
       deleteActiveNode : @deleteActiveNode
-      setActiveTree : (id) => @setActiveTree(id)
+      setActiveTree : (id) => @setActiveTree(id, false)
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
 
     gui
@@ -194,9 +193,11 @@ class Controller
     @model.route.createNewTree()
 
 
-  setActiveTree : (treeId) ->
+  setActiveTree : (treeId, centered) ->
 
     @model.route.setActiveTree(treeId)
+    if centered
+      @centerActiveNode()
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->
@@ -208,7 +209,7 @@ class Controller
 
   centerActiveNode : ->
 
-    if @mode is MODE_OXALIS
+    if @mode is constants.MODE_OXALIS
       @planeController.centerActiveNode()
     else
       @arbitraryController.centerActiveNode()
@@ -231,9 +232,9 @@ class Controller
 
   prevComment : =>
 
-    @setActiveNode(@model.route.nextCommentNodeID(false))
+    @setActiveNode(@model.route.nextCommentNodeID(false), true)
 
 
   nextComment : =>
 
-    @setActiveNode(@model.route.nextCommentNodeID(true))
+    @setActiveNode(@model.route.nextCommentNodeID(true), true)

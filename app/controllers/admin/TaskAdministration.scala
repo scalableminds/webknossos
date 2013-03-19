@@ -25,8 +25,10 @@ import models.task.Project
 import play.api.Logger
 import play.api.mvc.Result
 import play.api.templates.Html
+import brainflight.tracing._
+import controllers.Application
 
-object TaskAdministration extends Controller with Secured {
+object TaskAdministration extends Controller with Secured{
 
   override val DefaultAccessRole = Role.Admin
 
@@ -105,13 +107,17 @@ object TaskAdministration extends Controller with Secured {
     for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {
+      val tracingType = TracingType.CompoundTask
+      val id = TracingIdentifier( tracingType.toString, task.id)
       val tracingInfo = 
         TracingInfo(
-            task.id,
+            id.identifier,
             "<unknown>",
-            TracingType.CompoundTask,
+            tracingType,
             isEditable = false)
       
+      Application.temporaryTracingGenerator ! RequestTemporaryTracing(id)      
+            
       Ok(html.oxalis.trace(tracingInfo)(Html.empty))
     }
   }

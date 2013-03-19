@@ -4,27 +4,15 @@
 ../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer
+../constants : constants
 ###
-
-PLANE_XY           = Dimensions.PLANE_XY
-PLANE_YZ           = Dimensions.PLANE_YZ
-PLANE_XZ           = Dimensions.PLANE_XZ
-VIEW_3D            = Dimensions.VIEW_3D
-
-TYPE_NORMAL = 0
-TYPE_BRANCH = 1
-
-COLOR_ACTIVE = 0xff0000
-COLOR_BRANCH = 0x0000ff
-COLOR_ACTIVE_BRANCH = 0x660000
-
-MODE_OXALIS = 0
-MODE_ARBITRARY = 1
 
 class Skeleton
 
   # This class is supposed to collect all the Geometries that belong to the skeleton, like
   # nodes, edges and trees
+
+  COLOR_ACTIVE : 0xff0000
 
   flycam : null
   model : null
@@ -60,14 +48,14 @@ class Skeleton
     @nodesBuffer  = []
 
     #initial mode
-    @mode = MODE_OXALIS
+    @mode = constants.MODE_OXALIS
 
     # Create sphere to represent the active Node, radius is
     # 1 nm, so that @activeNode.scale is the radius in nm.
     # @activeNode = new THREE.Mesh(
     #     new THREE.SphereGeometry(1),
     #     new THREE.MeshLambertMaterial({
-    #       color : COLOR_ACTIVE
+    #       color : @COLOR_ACTIVE
     #       #transparent: true
     #       #opacity: 0.5 })
     #       })
@@ -78,9 +66,9 @@ class Skeleton
     @activeNodeParticle = new THREE.ParticleSystem(
       activeNodeGeometry,
       new THREE.ParticleBasicMaterial({
-        color: COLOR_ACTIVE, 
+        color: @COLOR_ACTIVE, 
         size: 5, 
-        sizeAttenuation : @mode == MODE_ARBITRARY}))
+        sizeAttenuation : @mode == constants.MODE_ARBITRARY}))
     activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
 
     routeGeometryBranchPoints = new THREE.Geometry()
@@ -89,7 +77,7 @@ class Skeleton
       routeGeometryBranchPoints,
       new THREE.ParticleBasicMaterial({
         size: 5, 
-        sizeAttenuation: @mode == MODE_ARBITRARY, 
+        sizeAttenuation: @mode == constants.MODE_ARBITRARY, 
         vertexColors: true}))
     @branchesBuffer = new ResizableBuffer(3)
     @branchesColorsBuffer = new ResizableBuffer(3)
@@ -143,7 +131,7 @@ class Skeleton
       new THREE.ParticleBasicMaterial({
         color: @darkenHex(treeColor), 
         size: @model.route.getParticleSize(), 
-        sizeAttenuation : @mode == MODE_ARBITRARY})))
+        sizeAttenuation : @mode == constants.MODE_ARBITRARY})))
 
     @ids.push(treeId)
 
@@ -234,7 +222,7 @@ class Skeleton
       # Hide activeNodeSphere, because activeNode is visible anyway
       #if @activeNodeSphere
       #  @activeNodeSphere.visible = false
-      if @route.getActiveNodeType() == TYPE_BRANCH
+      if @route.getActiveNodeType() == constants.TYPE_BRANCH
         @activeNodeParticle.material.color.setHex(@invertHex(@route.getTree().color))
       else
         @activeNodeParticle.material.color.setHex(@route.getTree().color)
@@ -451,7 +439,7 @@ class Skeleton
 
 
   pushNewNode : (radius, position, id, color, type) ->
-    color = if type == TYPE_BRANCH then color * 0.7 else color
+    color = if type == constants.TYPE_BRANCH then color * 0.7 else color
     newNode = new THREE.Mesh(
       new THREE.SphereGeometry(1),
       new THREE.MeshLambertMaterial({ color : color})#, transparent: true, opacity: 0.5 })
@@ -533,7 +521,7 @@ class Skeleton
 
   setSizeAttenuation : (boolean) ->
 
-    @mode = if boolean then MODE_ARBITRARY else MODE_OXALIS
+    @mode = if boolean then constants.MODE_ARBITRARY else constants.MODE_OXALIS
     for particleSystem in @nodes
       particleSystem.material.sizeAttenuation = boolean
       particleSystem.material.needsUpdate = true

@@ -1,17 +1,17 @@
 ### define
 libs/event_mixin : EventMixin
+../constants : constants
 ###
-
-NODE_RADIUS = 2
-MAX_NODE_DISTANCE = 100
-CLICK_TRESHOLD = 6
-
-MODE_NORMAL = 0     # draw every node and the complete tree
-MODE_NOCHAIN = 1    # draw only decision points
 
 
 class AbstractTreeView
 
+  NODE_RADIUS          : 2
+  MAX_NODE_DISTANCE    : 100
+  CLICK_TRESHOLD       : 6
+
+  MODE_NORMAL          : 0     # draw every node and the complete tree
+  MODE_NOCHAIN         : 1    # draw only decision points
 
   constructor : (width, height) ->
 
@@ -26,6 +26,7 @@ class AbstractTreeView
     @canvas[0].width = @canvas.width()
     @canvas[0].height = @canvas.height()
     @ctx = @canvas[0].getContext("2d")
+    @ctx.lineWidth = 1
     console.log(@ctx)
     @width = width
     @height = height
@@ -43,13 +44,13 @@ class AbstractTreeView
     # List of {x : ..., y : ..., id: ...} objects
     @nodeList = []
 
-    mode = MODE_NOCHAIN
+    mode = @MODE_NOCHAIN
 
     # TODO: Actually, I though that buildTree() is pretty heavy, but
     # I do not experience performance issues, even with large trees.
     # Still, this might not need to be done on every single draw...
     tree.buildTree()
-    @nodeDistance = Math.min(@height / (@getMaxTreeDepth(tree, mode) + 1), MAX_NODE_DISTANCE)
+    @nodeDistance = Math.min(@height / (@getMaxTreeDepth(tree, mode) + 1), @MAX_NODE_DISTANCE)
 
     # The algorithm works as follows:
     # A tree is given a left and right border that it can use. If
@@ -66,9 +67,7 @@ class AbstractTreeView
     @recordWidths(tree)
     @drawTreeWithWidths(tree, 0, @width, @nodeDistance, mode)
 
-  drawTreeWithWidths : (tree, left, right, top, mode) ->
-    unless mode
-      mode = MODE_NORMAL
+  drawTreeWithWidths : (tree, left, right, top, mode = @MODE_NORMAL) ->
 
     # get the decision point
     decisionPoint = @getNextDecisionPoint(tree)
@@ -91,9 +90,9 @@ class AbstractTreeView
     # if the decision point has (2) children, draw them and remember their prosition
     if decisionPoint.children.length > 0
       # Calculate the top of the children
-      if mode == MODE_NORMAL or chainCount < 3
+      if mode == @MODE_NORMAL or chainCount < 3
         topC = top + (chainCount + 1) * @nodeDistance
-      else if mode == MODE_NOCHAIN
+      else if mode == @MODE_NOCHAIN
         topC = top + 3 * @nodeDistance
 
       c1 = @drawTreeWithWidths(decisionPoint.children[0], left,  m, topC, mode)
@@ -108,7 +107,7 @@ class AbstractTreeView
       # if decisionPoint is leaf, there's not much to do
       xr = m
     
-    if mode == MODE_NORMAL or chainCount < 3
+    if mode == @MODE_NORMAL or chainCount < 3
       # Draw the chain and the root, connect them.
       node = tree
       for i in [0..chainCount]
@@ -116,11 +115,19 @@ class AbstractTreeView
         node = node.children[0]
         if i != 0
           @drawEdge(xr, top + (i - 1) * @nodeDistance, xr, top + i * @nodeDistance)
-    else if mode == MODE_NOCHAIN
+
+    else if mode == @MODE_NOCHAIN
+
+      # Find out, if the chain contains an active node
+      node = tree.children[0]; hasActiveNode = false
+      for i in [0...(chainCount - 1)]
+        hasActiveNode |= node.id == @activeNodeId
+        node = node.children[0]
+
       # Draw root, chain indicator and decision point
       @drawNode(xr, top, tree.id)
       @drawEdge(xr, top, xr, top + 0.5 * @nodeDistance)
-      @drawChainIndicator(xr, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance)
+      @drawChainIndicator(xr, top + 0.5 * @nodeDistance, top + 1.5 * @nodeDistance, hasActiveNode)
       @drawEdge(xr, top + 1.5 * @nodeDistance, xr, top + 2 * @nodeDistance)
       @drawNode(xr, top + 2 * @nodeDistance, decisionPoint.id)
 
@@ -129,7 +136,7 @@ class AbstractTreeView
   drawNode : (x, y, id) ->
     @ctx.beginPath()
     @ctx.fillStyle = @vgColor
-    radius = if (id == @activeNodeId) then 2 * NODE_RADIUS else NODE_RADIUS
+    radius = if (id == @activeNodeId) then 2 * @NODE_RADIUS else @NODE_RADIUS
     @ctx.arc(x, y, radius, 0, 2 * Math.PI)
     @ctx.fill()
     # put it in nodeList
@@ -142,15 +149,18 @@ class AbstractTreeView
     @ctx.lineTo(x2, y2)
     @ctx.stroke()
 
-  drawChainIndicator : (x, top, bottom) ->
+  drawChainIndicator : (x, top, bottom, emphasize = false) ->
     # Draw a dashed line
     dashLength = (bottom - top) / 7
+    if emphasize
+      @ctx.lineWidth = 4
     @ctx.beginPath()
     @ctx.strokeStyle = @vgColor
     for i in [0, 1, 2]
       @ctx.moveTo(x, top + (2 * i + 1) * dashLength)
       @ctx.lineTo(x, top + (2 * i + 2) * dashLength)
     @ctx.stroke()
+    @ctx.lineWidth = 1
 
   # Decision point is any point with point.children.length != 1
   getNextDecisionPoint : (tree) ->
@@ -176,7 +186,7 @@ class AbstractTreeView
       result += child.width
     return result
 
-  getMaxTreeDepth : (tree, mode = MODE_NORMAL, count = 0) ->
+  getMaxTreeDepth : (tree, mode = @MODE_NORMAL, count = 0) ->
     unless tree
       return count
 
@@ -188,7 +198,7 @@ class AbstractTreeView
     while tree.children.length == 1
       tree = tree.children[0]
       chainCount++
-    if mode == MODE_NOCHAIN
+    if mode == @MODE_NOCHAIN
       chainCount = Math.min(chainCount, 2)
     count += chainCount
 
@@ -204,6 +214,6 @@ class AbstractTreeView
 
   getIdFromPos : (x, y) =>
     for entry in @nodeList
-      if Math.abs(x - entry.x) <= CLICK_TRESHOLD &&
-          Math.abs(y - entry.y) <= CLICK_TRESHOLD
+      if Math.abs(x - entry.x) <= @CLICK_TRESHOLD &&
+          Math.abs(y - entry.y) <= @CLICK_TRESHOLD
         return entry.id

@@ -8,9 +8,8 @@ libs/input : Input
 ../geometries/crosshair : Crosshair
 ../view/arbitrary_view : ArbitraryView
 ../geometries/arbitrary_plane_info : ArbitraryPlaneInfo
+../constants : constants
 ###
-
-TYPE_USUAL = 0
 
 class ArbitraryController
 
@@ -77,13 +76,11 @@ class ArbitraryController
     @input.mouse = new Input.Mouse(
       @canvas
       leftDownMove : (delta) =>
-        mouseInversionX = if @model.user.inverseX then 1 else -1
-        mouseInversionY = if @model.user.inverseY then 1 else -1
         @cam.yawDistance(
-          -delta.x * mouseInversionX * @model.user.mouseRotateValue
+          -delta.x * @model.user.getMouseInversionX() * @model.user.mouseRotateValue
         );
         @cam.pitchDistance(
-          delta.y * mouseInversionY * @model.user.mouseRotateValue
+          delta.y * @model.user.getMouseInversionY() * @model.user.mouseRotateValue
         )
       scroll : @scroll
     )
@@ -192,9 +189,9 @@ class ArbitraryController
       @createNewTree()
       @model.route.one("rendered", =>
         @model.route.one("rendered", =>
-          @model.route.addNode(position, TYPE_USUAL)))
+          @model.route.addNode(position, constants.TYPE_USUAL)))
     else
-      @model.route.addNode(position, TYPE_USUAL)
+      @model.route.addNode(position, constants.TYPE_USUAL)
 
 
   setWaypoint : () =>

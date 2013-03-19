@@ -5,9 +5,9 @@ jquery : $
 ../../libs/event_mixin : EventMixin
 ###
 
-PUSH_THROTTLE_TIME = 30000 # 30s
-
 class StateLogger
+
+  PUSH_THROTTLE_TIME : 30000 #30s
 
   constructor : (@route, @flycam, @version, @dataId, @isEditable) ->
 
@@ -163,7 +163,7 @@ class StateLogger
   # every 30 seconds.
   pushDebounced : ->
     saveFkt = => @pushImpl(true)
-    @pushDebounced = _.throttle(_.mutexDeferred( saveFkt, -1), PUSH_THROTTLE_TIME)
+    @pushDebounced = _.throttle(_.mutexDeferred( saveFkt, -1), @PUSH_THROTTLE_TIME)
     @pushDebounced()
 
   pushNow : ->   # Interface for view & controller 

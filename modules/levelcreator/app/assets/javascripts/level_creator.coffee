@@ -134,7 +134,9 @@ class LevelCreator
     if @processing
       return
 
-    sliderValue = Math.floor(@$slider.val())
+    sliderValue = @$slider.val()
+
+    $("#preview-framelabel").html(sliderValue)
     
     imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
 
@@ -142,7 +144,7 @@ class LevelCreator
     
     try
 
-      frameBuffer = @pluginRenderer.render(sliderValue)
+      { frameBuffer } = @pluginRenderer.render(sliderValue)
       imageData.data.set(frameBuffer)
       @context.putImageData(imageData, 0, 0)
 
@@ -164,8 +166,8 @@ class LevelCreator
 
       $("#preview-error").html("<i class=\"icon-warning-sign\"></i> #{error}")
 
-
     @processing = false
+
 
   zoomPreview : ->
 
@@ -203,14 +205,16 @@ class LevelCreator
 
     imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
     imageDataData = imageData.data
-    frameBuffer = @pluginRenderer.render(t)
+    { frameBuffer, frameData } = @pluginRenderer.render(t)
     # HACK Phantom doesn't support Uint8ClampedArray yet
     for i in [0...frameBuffer.length] by 1
       imageDataData[i] = frameBuffer[i]
     @context.putImageData(imageData, 0, 0)
 
-
-    window.callPhantom( message : "rendered" )
+    if frameData?
+      window.callPhantom({ message : "rendered", frameData })
+    else
+      window.callPhantom( message : "rendered" )
 
 
 

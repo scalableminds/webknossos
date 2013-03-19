@@ -18,6 +18,7 @@ import nml.NMLParser
 import models.task._
 import models.Color
 import models.basics._
+import models.security.Role
 import nml._
 import nml.utils._
 import play.api.Logger
@@ -47,13 +48,16 @@ case class Tracing(
   
   def makeReadOnly = this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
   
+  def accessPermission(user: User) = 
+     this._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
+  
   /**
    * Easy access methods
    */
   
   val name = _name getOrElse ""
 
-  override def user = User.findOneById(_user)
+  override lazy val user = User.findOneById(_user)
 
   val date = new Date(timestamp)
 

@@ -20,7 +20,7 @@
           @if(!Task.isTrainingsTracing(tracing)){
             <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
           }
-          <a href="#" id="help-overlay" class="btn btn-small"><i class="icon-question-sign"></i> Help</a>
+          <a href="#help-modal" class="btn btn-small" data-toggle="modal"><i class="icon-question-sign"></i> Help</a>
         </div>
         <div id="dataset" class="well well-small">@tracing.tracingType<br />DataSet: @tracing.dataSetName<br /></div>
         <div class="input-prepend">
@@ -69,8 +69,9 @@
       </div> 
       <div id="tracing">
         <div id="render">
+          <div id="help-modal" class="modal hide fade"></div>
+          <div id="modal" class="modal hide fade"></div>
           <div id="inputcatchers">
-            <div id="modal" class="modal hide fade"></div>
             <div id="planexy" class="inputcatcher"></div>
             <div id="planeyz" class="inputcatcher"></div>
             <div id="planexz" class="inputcatcher"></div>
@@ -97,7 +98,7 @@
                 <ul class="dropdown-menu pull-right" id="tree-list"></ul>
               </div><p>
               <div class="hover-dynamic">
-                <p class="hover-hide" id="tree-name"></p>
+                <p class="hover-hide" id="tree-name-p"><i class="icon-sign-blank icon-large" id="tree-active-color"></i>&#160;&#160;<span id="tree-name"></span></p>
                 <div class="input-append hover-show">
                   <input name="name" id="tree-name-input" class="input-xlarge" maxlength="30" type="text" autocomplete="off">
                   <button class="btn" id="tree-name-submit"><i class="icon-ok"></i></button>

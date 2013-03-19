@@ -33,6 +33,7 @@ class PlaneController
     unbind : ->
       for mouse in @mouseControllers
         mouse.unbind()
+      @mouseControllers = []
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
 

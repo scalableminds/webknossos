@@ -141,37 +141,28 @@ class PlaneController
       leftClick : @onPreviewClick
     )
 
-    view = document.getElementById("skeletonview")
+    view = $("#skeletonview")[0]
     pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
-    @controls = new THREE.TrackballControls(@view.getCameras()[VIEW_3D],
-              view, new THREE.Vector3(pos...), => @flycam.hasChanged = true )
+    @controls = new THREE.TrackballControls(
+      @view.getCameras()[VIEW_3D],
+      view, 
+      new THREE.Vector3(pos...), 
+      => @flycam.hasChanged = true )
     
     @controls.noZoom = true
     @controls.noPan = true
-    #@controls.noRotate = true
 
     @controls.target.set(
-      @model.scaleInfo.voxelToNm(
-        @flycam.getPosition()
-      )...
-    )
+      @model.scaleInfo.voxelToNm(@flycam.getPosition())...)
 
-    @flycam.on({
+    @flycam.on
       positionChanged : (position) =>
         @controls.setTarget(
-          new THREE.Vector3(
-            @model.scaleInfo.voxelToNm(
-              position
-            )...
-          )
-        )
-        #@controls.update()
-        #@controls.reset()
-      })
-    @cameraController.on({
+          new THREE.Vector3(@model.scaleInfo.voxelToNm(position)...))
+
+    @cameraController.on
       cameraPositionChanged : =>
         @controls.update()
-      })
 
 
   initKeyboard : ->

@@ -256,8 +256,6 @@ return THREE.TrackballControls = function ( object, domElement, target, updateCa
 
 		_eye.subVectors( _this.object.position, _this.lastTarget );
 
-		console.log("Target", _this.target, _this.lastTarget)
-
 		if ( !_this.noRotate ) {
 
 			_this.rotateCamera();

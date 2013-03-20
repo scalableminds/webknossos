@@ -63,11 +63,8 @@ class StackCreator extends Actor {
 
   def produceStack(stack: Stack, levelUrl: String) = {
     val js = html.levelcreator.phantom(
-      stack.level,
-      s"${stack.path}/stackImage%i.png",
-      s"${stack.path}/meta.json",
-      levelUrl,
-      stack.mission.id).body
+      stack,
+      levelUrl).body
 
     val jsFile = createTempFile(js)
     Logger.info("phantomjs " + jsFile.getAbsolutePath())

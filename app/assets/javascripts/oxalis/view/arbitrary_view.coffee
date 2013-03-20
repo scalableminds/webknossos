@@ -4,12 +4,12 @@ three : THREE
 stats : Stats
 jquery : $
 underscore : _
+../constants : constants
 ###
-
-CAM_DISTANCE = 140
 
 class ArbitraryView
 
+  CAM_DISTANCE : 140
   forceUpdate : false
   geometries : []
   additionalInfo : ""
@@ -38,7 +38,7 @@ class ArbitraryView
     camera.aspect = width / height
   
     @scene = scene = new THREE.Scene()  
-    @camera.position.z = -CAM_DISTANCE
+    @camera.position.z = -@CAM_DISTANCE
     @camera.lookAt(new THREE.Vector3( 0, 0, 0 ))
     scene.add(camera)
 

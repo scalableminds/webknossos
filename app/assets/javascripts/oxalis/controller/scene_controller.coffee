@@ -2,16 +2,8 @@
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
 ../model/dimensions : Dimensions
+../constants : constants
 ###
-
-
-PLANE_XY         = Dimensions.PLANE_XY
-PLANE_YZ         = Dimensions.PLANE_YZ
-PLANE_XZ         = Dimensions.PLANE_XZ
-VIEW_3D          = Dimensions.VIEW_3D
-WIDTH            = 384
-VIEWPORT_WIDTH   = 380
-TEXTURE_WIDTH    = 512
 
 class SceneController
 
@@ -51,12 +43,12 @@ class SceneController
 
     # create Meshes
     @planes = new Array(3)
-    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
-      @planes[i] = new Plane(VIEWPORT_WIDTH, TEXTURE_WIDTH, @flycam, i, @model)
+    for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
+      @planes[i] = new Plane(constants.VIEWPORT_WIDTH, constants.TEXTURE_WIDTH, @flycam, i, @model)
 
-    @planes[PLANE_XY].setRotation(new THREE.Vector3( Math.PI , 0, 0))
-    @planes[PLANE_YZ].setRotation(new THREE.Vector3( Math.PI, 1/2 * Math.PI, 0))
-    @planes[PLANE_XZ].setRotation(new THREE.Vector3( - 1/2 * Math.PI, 0, 0))
+    @planes[constants.PLANE_XY].setRotation(new THREE.Vector3( Math.PI , 0, 0))
+    @planes[constants.PLANE_YZ].setRotation(new THREE.Vector3( Math.PI, 1/2 * Math.PI, 0))
+    @planes[constants.PLANE_XZ].setRotation(new THREE.Vector3( - 1/2 * Math.PI, 0, 0))
 
   vec : (x, y, z) ->
     new THREE.Vector3(x, y, z)
@@ -65,18 +57,18 @@ class SceneController
     # This method is called for each of the four cams. Even
     # though they are all looking at the same scene, some
     # things have to be changed for each cam.
-    if id in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+    if id in constants.ALL_PLANES
       @cube.visible = false
       unless @showSkeleton
         @skeleton.setVisibility(false)
-      for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      for i in constants.ALL_PLANES
         if i == id
           @planes[i].setOriginalCrosshairColor()
           @planes[i].setVisible(true)
           pos = @flycam.getPosition().slice()
           ind = Dimensions.getIndices(i)
           # Offset the plane so the user can see the route behind the plane
-          pos[ind[2]] += if i==PLANE_XY then @planeShift[ind[2]] else -@planeShift[ind[2]]
+          pos[ind[2]] += if i==constants.PLANE_XY then @planeShift[ind[2]] else -@planeShift[ind[2]]
           @planes[i].setPosition(new THREE.Vector3(pos...))
         else
           @planes[i].setVisible(false)
@@ -84,7 +76,7 @@ class SceneController
       @cube.visible = true
       unless @showSkeleton
         @skeleton.setVisibility(true)
-      for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+      for i in constants.ALL_PLANES
         pos = @flycam.getPosition()
         @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))
         @planes[i].setGrayCrosshairColor()
@@ -94,7 +86,7 @@ class SceneController
   update : =>
     gPos         = @flycam.getPosition()
     globalPosVec = new THREE.Vector3(gPos...)
-    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+    for i in constants.ALL_PLANES
       
       @planes[i].updateTexture()
 
@@ -118,7 +110,7 @@ class SceneController
 
   setRouteClippingDistance : (value) =>
     # convert nm to voxel
-    for i in [PLANE_XY, PLANE_YZ, PLANE_XZ]
+    for i in constants.ALL_PLANES
       @planeShift[i] = 2 * value * @model.scaleInfo.voxelPerNM[i]
 
   setInterpolation : (value) =>
@@ -143,21 +135,16 @@ class SceneController
     @skeleton.setVisibility(@showSkeleton)
 
   bind : ->
-
-    @model.user.on "routeClippingDistanceChanged", (value) =>
-      @setRouteClippingDistance(value)
-
-    @model.user.on "displayCrosshairChanged", (value) =>
-      @setDisplayCrosshair(value)
-    
-    @model.user.on "interpolationChanged", (value) =>
-      @setInterpolation(value)
-
-    @model.user.on "displayPreviewXYChanged", (value) =>
-      @setDisplaySV PLANE_XY, value
-
-    @model.user.on "displayPreviewYZChanged", (value) =>
-      @setDisplaySV PLANE_YZ, value
-
-    @model.user.on "displayPreviewXZChanged", (value) =>
-      @setDisplaySV PLANE_XZ, value      
+    @model.user.on({
+      routeClippingDistanceChanged : (value) =>
+        @setRouteClippingDistance(value)
+      displayCrosshairChanged : (value) =>
+        @setDisplayCrosshair(value)
+      interpolationChanged : (value) =>
+        @setInterpolation(value)
+      displayPreviewXYChanged : (value) =>
+        @setDisplaySV constants.PLANE_XY, value
+      displayPreviewYZChanged : (value) =>
+        @setDisplaySV constants.PLANE_YZ, value
+      displayPreviewXZChanged : (value) =>
+        @setDisplaySV constants.PLANE_XZ, value  })   

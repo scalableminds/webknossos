@@ -186,6 +186,9 @@ class PlaneController
           @model.user.firstVisToggle = false
           @model.user.push()
 
+      "2" : =>
+        @sceneController.toggleInactiveTreeVisibility()
+
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 

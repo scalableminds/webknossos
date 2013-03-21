@@ -38,8 +38,6 @@ import controllers.tracing.handler.SavedTracingInformationHandler
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
 
-  val prettyPrinter = new PrettyPrinter(100, 2)
-
   val baseTracingOutputDir = {
     val folder = "data/nmls"
     new File(folder).mkdirs()
@@ -72,7 +70,7 @@ object NMLIO extends Controller with Secured with TextUtils {
     val ch = Channels.newChannel(in)
     try {
       out.transferFrom(ch, 0, in.available)
-    } finally { out.close() }
+    } finally { out.close(); ch.close() }
   }
 
   def tracingToNMLStream(tracing: Tracing) = {
@@ -122,12 +120,13 @@ object NMLIO extends Controller with Secured with TextUtils {
             "error" -> Messages("nml.file.invalid", fileName))
       }
     } else {
-        Redirect(controllers.routes.UserController.dashboard).flashing(
-            "error" -> Messages("nml.file.noFile"))
+      Redirect(controllers.routes.UserController.dashboard).flashing(
+        "error" -> Messages("nml.file.noFile"))
     }
   }
 
   def toXML[T <: TracingLike](t: T) = {
+    val prettyPrinter = new PrettyPrinter(100, 2)
     prettyPrinter.format(Xml.toXML(t))
   }
 

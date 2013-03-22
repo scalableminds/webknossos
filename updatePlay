@@ -5,7 +5,7 @@ git submodule update
 echo "[info] Cleaning brainflight..."
 ./clean
 echo "[info] Building play..."
-cp -rf playframework/preCompiledFiles/ playframework/
+cp -rf playframework/preCompiledFiles/* playframework/
 cd playframework/framework
 ./build publish-local
 

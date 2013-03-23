@@ -1,6 +1,6 @@
-@( userName: String, description: String )
+@( userName: String, email: String, description: String )
 Reporter: 
-@userName
+@userName ( @email )
 
 Time:
 @formatDate(System.currentTimeMillis)

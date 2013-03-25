@@ -59,11 +59,11 @@ object DefaultMails {
       bodyText = html.mail.trainingsFailure(name, comment).body,
       recipients = List(receiver))
 
-  def issueMail(userName: String, summary: String, description: String) =
+  def issueMail(userName: String, email: String, summary: String, description: String) =
     Mail(
       from = defaultFrom,
       subject = "Non technical issue - " + summary,
-      bodyText = html.mail.nonTechnicalIssue(userName, description).body,
+      bodyText = html.mail.nonTechnicalIssue(userName, email, description).body,
       recipients = List(brainTracingMailingList),
-      ccRecipients = List(supportMail))
+      ccRecipients = List(supportMail, email))
 }

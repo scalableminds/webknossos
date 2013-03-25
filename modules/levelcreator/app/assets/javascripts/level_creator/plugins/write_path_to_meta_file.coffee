@@ -41,7 +41,7 @@ class WritePathToMetaFile
       segmentPayload = {}
       segmentPayload.isEndSegment = _.contains(endValues, segment.value)
 
-      segmentPayload.isStartSegment = _.contains(startValue, segment.value)
+      segmentPayload.isStartSegment = startValue is segment.value
       segmentPayload.path = segment.path
       segmentPayload.id = segment.id
       segmentPayload.value = segment.value

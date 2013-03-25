@@ -6,24 +6,19 @@ underscore : _
 ./tracepoint : TracePoint
 ./tracetree : TraceTree
 ./statelogger : StateLogger
+../constants : constants
 ###
 
-# This takes care of the route. 
-  
-# Constants
-GOLDEN_RATIO      = 0.618033988749895
-BUFFER_SIZE       = 262144 # 1024 * 1204 / 4
-INIT_TIMEOUT      = 10000 # 10s
-TYPE_USUAL        = 0
-TYPE_BRANCH       = 1
-# Max and min radius in base voxels (see scaleInfo.baseVoxel)
-MIN_RADIUS        = 1
-MAX_RADIUS        = 1000
-MIN_PARTICLE_SIZE = 1
-MAX_PARTICLE_SIZE = 20
-
-
 class Route
+
+  GOLDEN_RATIO : 0.618033988749895
+  TYPE_USUAL   : constants.TYPE_USUAL
+  TYPE_BRANCH  : constants.TYPE_BRANCH
+  # Max and min radius in base voxels (see scaleInfo.baseVoxel)
+  MIN_RADIUS        : 1
+  MAX_RADIUS        : 1000
+  MIN_PARTICLE_SIZE : 1
+  MAX_PARTICLE_SIZE : 20
   
   branchStack : []
   trees : []
@@ -31,9 +26,7 @@ class Route
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
-  particleSize : 5
-
-
+  particleSize : 0
 
   constructor : (@data, @scaleInfo, @flycam, @flycam3d, @user) ->
 
@@ -44,6 +37,7 @@ class Route
     @trees = []
     @comments = []
     @activeNode = null
+    @particleSize = 5
     # Used to save in NML file, is always defined
     @lastActiveNodeId = 1
     @activeTree = null
@@ -73,7 +67,7 @@ class Route
       i = 0
       for node in treeData.nodes
         if node
-          tree.nodes.push(new TracePoint(TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
+          tree.nodes.push(new TracePoint(@TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
           # idCount should be bigger than any other id
           @idCount = Math.max(node.id + 1, @idCount);
       # Initialize edges
@@ -105,7 +99,7 @@ class Route
     for branchpoint in @data.branchPoints
       node = @findNodeInList(nodeList, branchpoint.id)
       if node?
-        node.type = TYPE_BRANCH
+        node.type = @TYPE_BRANCH
         @branchStack.push(node)
 
     if @data.comments?
@@ -124,7 +118,7 @@ class Route
     @branchPointsAllowed = @data.settings.branchPointsAllowed
     if not @branchPointsAllowed
       # dirty but this actually is what needs to be done
-      TYPE_BRANCH = TYPE_USUAL
+      @TYPE_BRANCH = @TYPE_USUAL
 
 
       #calculate direction of first edge in nm
@@ -166,7 +160,7 @@ class Route
     if @branchPointsAllowed
       if @activeNode
         @branchStack.push(@activeNode)
-        @activeNode.type = TYPE_BRANCH
+        @activeNode.type = @TYPE_BRANCH
         @stateLogger.push()
 
         @trigger("setBranch", true)
@@ -183,7 +177,7 @@ class Route
           point = @branchStack.pop()
           @stateLogger.push()
           @setActiveNode(point.id)
-          @activeNode.type = TYPE_USUAL
+          @activeNode.type = @TYPE_USUAL
 
           @trigger("setBranch", false, @activeNode.id)
           @doubleBranchPop = true
@@ -193,7 +187,7 @@ class Route
         @stateLogger.push()
         if point
           @setActiveNode(point.id)
-          @activeNode.type = TYPE_USUAL
+          @activeNode.type = @TYPE_USUAL
 
           @trigger("setBranch", false, @activeNode.id)
           @doubleBranchPop = true
@@ -208,7 +202,7 @@ class Route
 
   deleteBranch : (node) ->
 
-    if node.type != TYPE_BRANCH then return
+    if node.type != @TYPE_BRANCH then return
 
     i = 0
     while i < @branchStack.length
@@ -243,7 +237,7 @@ class Route
         @activeNode = point
       else
         @activeNode = point
-        point.type = TYPE_BRANCH
+        point.type = @TYPE_BRANCH
         if @branchPointsAllowed
           @pushBranch()
       @lastActiveNodeId = @activeNode.id
@@ -330,8 +324,8 @@ class Route
   setActiveNodeRadius : (radius) ->
 
     # make sure radius is within bounds
-    radius = Math.min(MAX_RADIUS * @scaleInfo.baseVoxel, radius)
-    radius = Math.max(MIN_RADIUS * @scaleInfo.baseVoxel, radius)
+    radius = Math.min(@MAX_RADIUS * @scaleInfo.baseVoxel, radius)
+    radius = Math.max(@MIN_RADIUS * @scaleInfo.baseVoxel, radius)
     if @activeNode
       @activeNode.radius = radius
       @lastRadius = radius
@@ -343,8 +337,8 @@ class Route
 
   setParticleSize : (size, propagate = true) ->
 
-    @particleSize = Math.min(MAX_PARTICLE_SIZE, size)
-    @particleSize = Math.max(MIN_PARTICLE_SIZE, @particleSize)
+    @particleSize = Math.min(@MAX_PARTICLE_SIZE, size)
+    @particleSize = Math.max(@MIN_PARTICLE_SIZE, @particleSize)
 
     @trigger("newParticleSize", @particleSize, propagate)
 
@@ -451,7 +445,7 @@ class Route
     if treeId == 1
       return 0xFF0000
     else
-      currentHue = treeId * GOLDEN_RATIO
+      currentHue = treeId * @GOLDEN_RATIO
       currentHue %= 1
       new THREE.Color().setHSV(currentHue, 1, 1).getHex()
 
@@ -598,7 +592,7 @@ class Route
     return null
 
 
-  getTrees : -> $.extend(true, [], @trees).sort(@compareNames)
+  getTrees : -> @trees
 
 
   # returns a list of nodes that are connected to the parent

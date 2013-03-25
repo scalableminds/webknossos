@@ -11,14 +11,14 @@ import scala.util._
 import scala.concurrent.Promise
 
 class JsExecutor {
-  // create a script engine manager
-  val factory = new ScriptEngineManager()
-  // create a JavaScript engine
-  val engine = factory.getEngineByName("JavaScript")
-
   val functionDef = "var executeMe = %s; executeMe(%s);"
 
   def execute(fktBody: String, params: Map[String, Any]) = {
+    // create a script engine manager
+    val factory = new ScriptEngineManager()
+    // create a JavaScript engine
+    val engine = factory.getEngineByName("JavaScript")
+
     val paramDef = params.keys.mkString(", ")
     val fkt = functionDef.format(fktBody, paramDef)
     implicit val excetutionContext = Akka.system.dispatcher

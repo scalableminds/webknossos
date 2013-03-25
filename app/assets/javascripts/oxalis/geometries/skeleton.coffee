@@ -4,24 +4,15 @@
 ../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer
+../constants : constants
 ###
-
-PLANE_XY           = Dimensions.PLANE_XY
-PLANE_YZ           = Dimensions.PLANE_YZ
-PLANE_XZ           = Dimensions.PLANE_XZ
-VIEW_3D            = Dimensions.VIEW_3D
-
-TYPE_NORMAL = 0
-TYPE_BRANCH = 1
-
-COLOR_ACTIVE = 0xff0000
-COLOR_BRANCH = 0x0000ff
-COLOR_ACTIVE_BRANCH = 0x660000
 
 class Skeleton
 
   # This class is supposed to collect all the Geometries that belong to the skeleton, like
   # nodes, edges and trees
+
+  COLOR_ACTIVE : 0xff0000
 
   flycam : null
   model : null
@@ -61,7 +52,7 @@ class Skeleton
     # @activeNode = new THREE.Mesh(
     #     new THREE.SphereGeometry(1),
     #     new THREE.MeshLambertMaterial({
-    #       color : COLOR_ACTIVE
+    #       color : @COLOR_ACTIVE
     #       #transparent: true
     #       #opacity: 0.5 })
     #       })
@@ -71,7 +62,7 @@ class Skeleton
     activeNodeGeometry = new THREE.Geometry()
     @activeNodeParticle = new THREE.ParticleSystem(
       activeNodeGeometry,
-        new THREE.ParticleBasicMaterial({color: COLOR_ACTIVE, size: 5, sizeAttenuation : false}))
+        new THREE.ParticleBasicMaterial({color: @COLOR_ACTIVE, size: 5, sizeAttenuation : false}))
     activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
 
     routeGeometryBranchPoints = new THREE.Geometry()
@@ -211,7 +202,7 @@ class Skeleton
       # Hide activeNodeSphere, because activeNode is visible anyway
       #if @activeNodeSphere
       #  @activeNodeSphere.visible = false
-      if @route.getActiveNodeType() == TYPE_BRANCH
+      if @route.getActiveNodeType() == constants.TYPE_BRANCH
         @activeNodeParticle.material.color.setHex(@invertHex(@route.getTree().color))
       else
         @activeNodeParticle.material.color.setHex(@route.getTree().color)
@@ -428,7 +419,7 @@ class Skeleton
 
 
   pushNewNode : (radius, position, id, color, type) ->
-    color = if type == TYPE_BRANCH then color * 0.7 else color
+    color = if type == constants.TYPE_BRANCH then color * 0.7 else color
     newNode = new THREE.Mesh(
       new THREE.SphereGeometry(1),
       new THREE.MeshLambertMaterial({ color : color})#, transparent: true, opacity: 0.5 })
@@ -486,6 +477,14 @@ class Skeleton
       @setDisplaySpheres(@disSpheres)
     @flycam.hasChanged = true
 
+  setInactiveTreeVisibility : (boolean) ->
+    for mesh in @getMeshes()
+      if mesh != @activeNodeParticle
+        mesh.visible = boolean
+    index = @getIndexFromTreeId(@route.getTree().treeId)
+    @routes[index].visible = true
+    @nodes[index].visible = true
+    @flycam.hasChanged = true
 
   invertHexToRGB : (hexColor) ->
 

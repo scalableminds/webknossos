@@ -93,7 +93,8 @@ class VolumeTracing
     @cube.labelVoxels(iterator, 0)
     @currentLayer.finishLayer()
     iterator = @currentLayer.getVoxelIterator()
-    @cube.labelVoxels(iterator, @activeCell.id % 6 + 1)
+    @cube.labelVoxels(iterator, (@activeCell.id % 6 + 1) )
+    console.log(@activeCell.id % 6 + 1)
 
     @currentLayer = null
     @startPos = null

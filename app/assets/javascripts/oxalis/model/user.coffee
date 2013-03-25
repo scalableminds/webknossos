@@ -53,6 +53,20 @@ class User
     @trigger(name + "Changed", value)
     @push()
 
+  getMouseInversionX : ->
+
+    return if @inverseX then 1 else -1
+
+  getMouseInversionY : ->
+
+    return if @inverseY then 1 else -1
+
+
+  triggerAll : ->
+
+    for property of this
+      @trigger(property + "Changed", @[property]) 
+
 
   push : ->
 

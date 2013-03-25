@@ -1,20 +1,22 @@
-### define ###
+### define
+../constants : constants
+###
 
-# This is a class with static methods and constants dealing with dimensions and
+# This is a class with static methods dealing with dimensions and
 # conversions between them.
 
 Dimensions =
 
-  PLANE_XY : 0
-  PLANE_YZ : 1
-  PLANE_XZ : 2
-  VIEW_3D  : 3
+  PLANE_XY : constants.PLANE_XY
+  PLANE_YZ : constants.PLANE_YZ
+  PLANE_XZ : constants.PLANE_XZ
+  VIEW_3D  : constants.VIEW_3D
 	
   getIndices : (planeID) ->         # Returns a ordered 3-tuple [x, y, z] which
     switch planeID                  # represents the dimensions from the viewpoint
-      when @PLANE_XY then [0, 1, 2]  # of each plane. For example, moving along the
-      when @PLANE_YZ then [2, 1, 0]  # X-Axis of the YZ-Plane is eqivalent to moving
-      when @PLANE_XZ then [0, 2, 1]  # along the Z axis in the cube -> ind[0]=2
+      when constants.PLANE_XY then [0, 1, 2]  # of each plane. For example, moving along the
+      when constants.PLANE_YZ then [2, 1, 0]  # X-Axis of the YZ-Plane is eqivalent to moving
+      when constants.PLANE_XZ then [0, 2, 1]  # along the Z axis in the cube -> ind[0]=2
 
   # Translate Dimension: Helper method to translate arrays with three elements
   transDim : (array, planeID) ->
@@ -47,7 +49,7 @@ Dimensions =
 
   distance : (pos1, pos2) ->
     sumOfSquares = 0
-    for i in [0..2]
+    for i in [0...pos1.length]
       diff = pos1[i] - pos2[i]
       sumOfSquares += diff * diff
     return Math.sqrt(sumOfSquares)

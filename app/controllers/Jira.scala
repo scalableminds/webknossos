@@ -71,7 +71,7 @@ object Jira extends Controller with Secured {
   }
   
   def mailIssue(user: User, summary: String, description: String) {
-    val mail = DefaultMails.issueMail(user.name, summary, description)
+    val mail = DefaultMails.issueMail(user.name, user.email, summary, description)
     Application.Mailer ! Send(mail)
   }
 

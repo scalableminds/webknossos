@@ -118,7 +118,7 @@ class PlaneController
           if @mode ==constants.MODE_NORMAL
             @onPlaneClick(pos, shiftPressed)
           else if @mode ==constants.MODE_VOLUME
-            @model.volumeTracing.startEditing(@calculateGlobalPos(pos))
+            @model.volumeTracing.startEditing()
         
         leftMouseUp : =>
           if @mode ==constants.MODE_VOLUME

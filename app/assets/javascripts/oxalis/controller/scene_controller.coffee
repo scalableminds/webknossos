@@ -1,7 +1,7 @@
 ### define
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
-../geometries/cellgeometry : CellGeometry
+../geometries/contourgeometry : ContourGeometry
 ../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../constants : constants
@@ -20,8 +20,6 @@ class SceneController
     @planeShift    = [0, 0, 0]
     @showSkeleton  = true
     @showInactiveTrees = true
-
-    @model.volumeTracing.on "newCell", (cell) => @newCell(cell)
 
     @createMeshes()
     @bind()
@@ -42,6 +40,8 @@ class SceneController
     @cube = new THREE.Line(geo, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
 
     # TODO: Implement text 
+
+    @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
 
     @skeleton = new Skeleton(@flycam, @model)
 
@@ -132,12 +132,9 @@ class SceneController
     for plane in @planes
       result = result.concat(plane.getMeshes())
     result = result.concat(@skeleton.getMeshes())
+                    .concat(@contour.getMeshes())
     result.push(@cube)
     return result
-
-  newCell : (cellModel) ->
-    @cell = new CellGeometry(@model, cellModel)
-    @trigger "newGeometries", @cell.getMeshes()
 
   toggleSkeletonVisibility : ->
     @showSkeleton = not @showSkeleton

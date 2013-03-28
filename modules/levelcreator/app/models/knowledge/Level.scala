@@ -61,8 +61,8 @@ case class Level(
     copy(code = c)
   }
   
-  def addRenderedMissions(missionIds: List[String]) = {   
-      update(_.copy(renderedMissions = (renderedMissions ++ missionIds).distinct))
+  def addRenderedMission(missionId: String) = {   
+      update(_.copy(renderedMissions = (missionId :: renderedMissions).distinct))
   }
   
   def removeAllRenderedMissions = update(_.copy(renderedMissions = List()))

@@ -16,8 +16,10 @@ class CellLayer
     @color = 0x000000
 
     @volumeTracing.on({
-      newContour : (pos) =>
-        @addEdgePoint(pos)
+      updateLayer : (contourList) =>
+        @reset()
+        for p in contourList
+          @addEdgePoint(p)
       resetContour : =>
         @reset()
       })

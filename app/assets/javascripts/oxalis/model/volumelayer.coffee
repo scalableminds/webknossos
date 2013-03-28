@@ -16,14 +16,20 @@ class VolumeLayer
   addContour : (pos) ->
     
     @contourList.push(pos)
+    @updateArea(pos)
+
+  updateArea : (pos) ->
 
     unless @maxCoord?
       @maxCoord = pos.slice()
       @minCoord = pos.slice()
 
     for i in [0..2]
-      @minCoord[i] = Math.min(@minCoord[i], pos[i])
-      @maxCoord[i] = Math.max(@maxCoord[i], pos[i])
+      @minCoord[i] = Math.min(@minCoord[i], Math.floor(pos[i]))
+      @maxCoord[i] = Math.max(@maxCoord[i], Math.ceil(pos[i]))
+
+  getSmoothedContourList : ->
+    return Drawing.smoothLine(@contourList, ( (pos) => @updateArea(pos) ) )
 
   getVoxelIterator : ->
 
@@ -41,6 +47,7 @@ class VolumeLayer
         map[x][y] = false
 
     setMap = (x, y) ->
+      x = Math.round(x); y = Math.round(y)
       map[x - minCoord2d[0]][y - minCoord2d[1]] = true
 
     @drawOutlineVoxels(setMap)

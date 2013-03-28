@@ -9,6 +9,10 @@ swapMacro = (a, b) ->
   a = b
   b = __tmp
 
+# Constants
+SMOOTH_LENGTH = 10
+SMOOTH_ALPHA  = 0.2
+
 Drawing =
 
   # Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
@@ -56,7 +60,7 @@ Drawing =
 
     return
 
-  # http://will.thimbleby.net/scanline-flood-fill/
+  # Source: http://will.thimbleby.net/scanline-flood-fill/
   fillArea : (x, y, width, height, diagonal, test, paint) ->
 
     # xMin, xMax, y, down[true] / up[false], extendLeft, extendRight
@@ -110,3 +114,24 @@ Drawing =
         r[1]++
       addNextLine y + 1, not up, true  if y < height
       addNextLine y - 1, not down, false  if y > 0  
+
+  # Source : http://twistedoakstudios.com/blog/Post3138_mouse-path-smoothing-for-jack-lumber
+  smoothLine : (points, callback) ->
+
+    if points.length > 2 + SMOOTH_LENGTH
+      
+      for i in [0...SMOOTH_LENGTH] 
+        
+        j = points.length-i-2
+        p0 = points[j] 
+        p1 = points[j+1] 
+        a = SMOOTH_ALPHA
+
+        p = []
+        for k in [0...p0.length]
+          p.push(p0[k] * (1-a) + p1[k] * a)
+
+        callback(p)
+        points[j] = p
+
+    return points

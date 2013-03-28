@@ -37,9 +37,8 @@ class VolumeTracing
     unless @currentLayer?
       return
 
-    pos = Dimensions.roundCoordinate(pos)
     @currentLayer.addContour(pos)
-    @trigger "newContour", pos
+    @trigger "updateLayer", @currentLayer.getSmoothedContourList()
 
   finishLayer : ->
     unless @currentLayer?

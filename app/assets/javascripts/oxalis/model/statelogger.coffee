@@ -17,6 +17,8 @@ class StateLogger
     @newDiffs = []
     @committedCurrentState = true
 
+    @failedPushCount = 0
+
   pushDiff : (action, value, push = true) ->
     @newDiffs.push({
       action : action
@@ -190,6 +192,9 @@ class StateLogger
       contentType : "application/json"
     )
     .fail (responseObject) =>
+      
+      @failedPushCount++
+
       if responseObject.responseText? && responseObject.responseText != ""
         # restore whatever is send as the response
         try
@@ -203,12 +208,17 @@ class StateLogger
               =>return null)
             alert("Sorry, but the current state is inconsistent. A reload is necessary.")
             window.location.reload()
+      
       @push()
       if (notifyOnFailure)
-        @trigger("pushFailed");
+        @trigger("pushFailed", @failedPushCount >= 3 );
       @pushDeferred.reject()
       @pushDeferred = null
+
     .done (response) =>
+      
+      @failedPushCount = 0
+      
       @version = response.version
       @committedDiffs = []
       @pushDeferred.resolve()

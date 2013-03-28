@@ -161,9 +161,6 @@ class Gui
       # newActiveNodeRadius : (radius) =>@updateRadius(radius)
       newParticleSize  : (value, propagate) => if propagate then @updateParticleSize(value)
 
-    @model.route.stateLogger.on
-      pushFailed       : -> Toast.error("Auto-Save failed!")
-
     @createTooltips()
 
 

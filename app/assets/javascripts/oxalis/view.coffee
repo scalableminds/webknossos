@@ -2,6 +2,7 @@
 jquery : $
 ../libs/toast : Toast
 ./constants : constants
+./view/modal : modal
 ###
 
 class View
@@ -43,6 +44,20 @@ class View
         @updateActiveComment()
         @updateTrees()
         @updateActiveTree() })
+
+    @model.route.stateLogger.on
+      pushFailed       : (critical) =>
+        if not critical or @reloadDenied
+          Toast.error("Auto-Save failed!")
+        else
+          modal.show("Several attempts to reach our server have failed. You should reload the page
+            to make sure that your work won't be lost.",
+            [ { id : "reload-button", label : "OK, reload", callback : ( ->
+              $(window).on(
+                "beforeunload"
+                =>return null)
+              window.location.reload() )},
+            {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
 
     @model.route.updateComments()
     @updateActiveTree()

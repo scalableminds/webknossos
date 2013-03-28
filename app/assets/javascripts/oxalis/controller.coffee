@@ -83,6 +83,12 @@ class Controller
       $("#tree-name-input").keypress (event) =>
         if event.which == 13 then $("#tree-name-submit").click()
 
+      $("#tree-prev-button").click (event) =>
+        @model.route.selectNextTree(false)
+
+      $("#tree-next-button").click (event) =>
+        @model.route.selectNextTree(true)
+
       $("#tree-create-button").click =>
         @createNewTree()
 

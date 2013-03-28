@@ -186,6 +186,9 @@ class PlaneController
           @model.user.firstVisToggle = false
           @model.user.push()
 
+      "2" : =>
+        @sceneController.toggleInactiveTreeVisibility()
+
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 
@@ -374,7 +377,7 @@ class PlaneController
     intersects = raycaster.intersectObjects(@sceneController.skeleton.nodes)
     #if intersects.length > 0 and intersects[0].distance >= 0
     for intersect in intersects
-      
+
       index = intersect.index
       nodeID = intersect.object.geometry.nodeIDs.getAllElements()[index]
 
@@ -384,7 +387,9 @@ class PlaneController
 
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = Dimensions.getIndices(plane)
-      if plane == constants.VIEW_3D or (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance(ind[2])+1)
+      if intersect.object.visible and
+        (plane == constants.VIEW_3D or
+          (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getRouteClippingDistance(ind[2])+1))
 
         # set the active Node to the one that has the ID stored in the vertex
         # center the node if click was in 3d-view

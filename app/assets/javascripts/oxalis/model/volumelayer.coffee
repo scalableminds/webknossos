@@ -25,15 +25,16 @@ class VolumeLayer
       @minCoord = pos.slice()
 
     for i in [0..2]
-      @minCoord[i] = Math.min(@minCoord[i], Math.floor(pos[i]))
-      @maxCoord[i] = Math.max(@maxCoord[i], Math.ceil(pos[i]))
+      @minCoord[i] = Math.min(@minCoord[i], Math.floor(pos[i]) - 1)
+      @maxCoord[i] = Math.max(@maxCoord[i], Math.ceil(pos[i]) + 1)
 
   getSmoothedContourList : ->
     return Drawing.smoothLine(@contourList, ( (pos) => @updateArea(pos) ) )
 
   getVoxelIterator : ->
 
-    start = startTotal = new Date().getTime()
+    unless @minCoord
+      return { hasNext : false }
 
     minCoord2d = @get2DCoordinate(@minCoord)
     maxCoord2d = @get2DCoordinate(@maxCoord)

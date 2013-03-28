@@ -3,6 +3,7 @@
 ./volumelayer : VolumeLayer
 ../../libs/event_mixin : EventMixin
 ./dimensions : Dimensions
+libs/drawing : Drawing
 ###
 
 class VolumeTracing
@@ -14,6 +15,10 @@ class VolumeTracing
     @activeCell   = null        # Cell currently selected
     @currentLayer = null        # Layer currently edited
     @idCount      = 1
+
+    # For testing
+    window.setAlpha = (v) -> Drawing.setAlpha(v)
+    window.setSmoothLength = (v) -> Drawing.setSmoothLength(v)
 
   createCell : ->
     @activeCell = new VolumeCell(@idCount++)

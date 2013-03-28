@@ -10,7 +10,7 @@ swapMacro = (a, b) ->
   b = __tmp
 
 # Constants
-SMOOTH_LENGTH = 10
+SMOOTH_LENGTH = 4
 SMOOTH_ALPHA  = 0.2
 
 Drawing =
@@ -118,14 +118,16 @@ Drawing =
   # Source : http://twistedoakstudios.com/blog/Post3138_mouse-path-smoothing-for-jack-lumber
   smoothLine : (points, callback) ->
 
-    if points.length > 2 + SMOOTH_LENGTH
+    smoothLength = @smoothLength || SMOOTH_LENGTH
+    a            = @alpha || SMOOTH_ALPHA
+
+    if points.length > 2 + smoothLength
       
-      for i in [0...SMOOTH_LENGTH] 
+      for i in [0...smoothLength] 
         
         j = points.length-i-2
         p0 = points[j] 
         p1 = points[j+1] 
-        a = SMOOTH_ALPHA
 
         p = []
         for k in [0...p0.length]
@@ -135,3 +137,6 @@ Drawing =
         points[j] = p
 
     return points
+
+  setSmoothLength : (v) -> @smoothLength = v
+  setAlpha : (v) -> @alpha = v

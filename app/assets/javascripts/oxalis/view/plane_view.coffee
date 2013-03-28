@@ -81,8 +81,6 @@ class PlaneView
 
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
-
-    @modalCallbacks = {}
     
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do

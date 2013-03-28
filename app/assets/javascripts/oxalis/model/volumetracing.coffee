@@ -45,8 +45,10 @@ class VolumeTracing
     unless @currentLayer?
       return
 
+    start = (new Date()).getTime()
     iterator = @currentLayer.getVoxelIterator()
     @cube.labelVoxels(iterator, @activeCell.id % 6 + 1)
+    console.log "Labeling time:", ((new Date()).getTime() - start)
 
     @currentLayer = null
     @flycam.hasChanged = true

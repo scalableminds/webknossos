@@ -26,6 +26,7 @@ class SceneController
     @displayPlane  = [true, true, true]
     @planeShift    = [0, 0, 0]
     @showSkeleton  = true
+    @showInactiveTrees = true
 
     @createMeshes()
     @bind()
@@ -65,6 +66,7 @@ class SceneController
     # This method is called for each of the four cams. Even
     # though they are all looking at the same scene, some
     # things have to be changed for each cam.
+    @skeleton.setInactiveTreeVisibility(@showInactiveTrees)
     if id in [PLANE_XY, PLANE_YZ, PLANE_XZ]
       @cube.visible = false
       unless @showSkeleton
@@ -141,6 +143,10 @@ class SceneController
   toggleSkeletonVisibility : ->
     @showSkeleton = not @showSkeleton
     @skeleton.setVisibility(@showSkeleton)
+
+  toggleInactiveTreeVisibility : ->
+    @showInactiveTrees = not @showInactiveTrees
+    @skeleton.setInactiveTreeVisibility(@showInactiveTrees)
 
   bind : ->
 

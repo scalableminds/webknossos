@@ -77,11 +77,16 @@ class Controller
         event.preventDefault()
         @setActiveNode($(event.target).data("nodeid"), true, false)
 
+      $("#tab-comments").mouseleave (event) =>
+        $("#comment-input").blur()
+
       $("#tree-name-submit").click (event) =>
         @setTreeName($("#tree-name-input").val())
 
       $("#tree-name-input").keypress (event) =>
-        if event.which == 13 then $("#tree-name-submit").click()
+        if event.which == 13
+          $("#tree-name-submit").click()
+          $("#tree-name-input").blur()
 
       $("#tree-prev-button").click (event) =>
         @model.route.selectNextTree(false)

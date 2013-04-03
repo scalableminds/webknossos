@@ -59,7 +59,6 @@ class Gui
     @fViewportcontrols = @gui.addFolder("Viewportoptions")
     @addSlider(@fViewportcontrols, @user, "moveValue",
       0.1, 10, 0.1, "Move Value")
-    @addCheckbox(@fViewportcontrols, @user, "lockZoom", "Lock Zoom")
     @addCheckbox(@fViewportcontrols, @user, "dynamicSpaceDirection", "d/f-Switching")
 
     @fFlightcontrols = @gui.addFolder("Flightoptions")

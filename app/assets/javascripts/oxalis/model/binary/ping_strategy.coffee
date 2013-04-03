@@ -61,19 +61,19 @@ class PingStrategy.DslSlow extends PingStrategy
         area[plane][3] - 1 >> @cube.BUCKET_SIZE_P
       ]
 
-      centerBucket = @cube.positionToZoomedAddress(position, zoomStep[plane])
+      centerBucket = @cube.positionToZoomedAddress(position, zoomStep)
       buckets = @getBucketArray(centerBucket, @TEXTURE_SIZE_P - 1, bucketArea)
 
       for bucket in buckets
         if bucket?
           priority = Math.abs(bucket[0] - centerBucket[0]) + Math.abs(bucket[1] - centerBucket[1]) + Math.abs(bucket[2] - centerBucket[2])
-          pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep[plane]], priority])
+          pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority])
           if plane == activePlane
             # preload only for active plane
             if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
-            pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep[plane]], priority << 1])
+            pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority << 1])
             if direction[@w] >= 0 then bucket[@w]++ else bucket[@w]--
-            pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep[plane]], priority << 2])
+            pullQueue.push([[bucket[0], bucket[1], bucket[2], zoomStep], priority << 2])
 
     pullQueue
 

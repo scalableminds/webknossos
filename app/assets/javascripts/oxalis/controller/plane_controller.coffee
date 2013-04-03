@@ -37,7 +37,7 @@ class PlaneController
 
     @flycam = @model.flycam
     @flycam.setPosition(@model.route.data.editPosition)
-    @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
+    @flycam.setZoomStep(@model.user.zoom)
     @flycam.setQuality(@model.user.quality)
     @view  = new PlaneView(@model, @flycam, stats)
 
@@ -247,7 +247,7 @@ class PlaneController
 
   render : ->
 
-    @model.binary.ping(@flycam.getPosition(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(constants.PLANE_XY),
+    @model.binary.ping(@flycam.getPosition(), {zoomStep: @flycam.getIntegerZoomStep(), area: [@flycam.getArea(constants.PLANE_XY),
                         @flycam.getArea(constants.PLANE_YZ), @flycam.getArea(constants.PLANE_XZ)], activePlane: @flycam.getActivePlane()})
     @model.route.globalPosition = @flycam.getPosition()
     @cameraController.update()
@@ -262,7 +262,7 @@ class PlaneController
     if(first)
       activePlane = @flycam.getActivePlane()
       @flycam.move(Dimensions.transDim(
-        [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep(activePlane)],
+        [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep()],
         activePlane), activePlane)
     else
       @move([0, 0, z])
@@ -288,9 +288,7 @@ class PlaneController
                     @zoomPos[2] - mousePos[2]]
       @flycam.move(moveVector, @flycam.getActivePlane())
 
-    @model.user.setValue("zoomXY", @flycam.getZoomStep(constants.PLANE_XY))
-    @model.user.setValue("zoomYZ", @flycam.getZoomStep(constants.PLANE_YZ))
-    @model.user.setValue("zoomXZ", @flycam.getZoomStep(constants.PLANE_XZ))
+    @model.user.setValue("zoom", @flycam.getZoomStep())
 
   getMousePosition : ->
     activePlane = @flycam.getActivePlane()
@@ -336,7 +334,7 @@ class PlaneController
 
   calculateGlobalPos : (clickPos) ->
     curGlobalPos  = @flycam.getPosition()
-    zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
+    zoomFactor    = @flycam.getPlaneScalingFactor()
     scaleFactor   = @view.scaleFactor
     planeRatio    = @model.scaleInfo.baseVoxelFactors
     position = switch @flycam.getActivePlane()

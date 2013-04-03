@@ -14,7 +14,6 @@ class User
   scaleValue : null
   mouseRotateValue : null
   routeClippingDistance : null
-  lockZoom : null
   dynamicSpaceDirection : null
   displayCrosshair : null
   interpolation : null
@@ -23,9 +22,7 @@ class User
   brightness : null
   contrast : null
   quality : null
-  zoomXY : null
-  zoomYZ : null
-  zoomXZ : null
+  zoom : null
   displayPreviewXY : null
   displayPreviewYZ : null
   displayPreviewXZ : null
@@ -88,7 +85,6 @@ class User
         scaleValue : @scaleValue,
         mouseRotateValue : @mouseRotateValue,
         routeClippingDistance : @routeClippingDistance,
-        lockZoom : @lockZoom,
         dynamicSpaceDirection : @dynamicSpaceDirection,
         displayCrosshair : @displayCrosshair,
         interpolation : @interpolation,
@@ -97,9 +93,7 @@ class User
         brightness: @brightness,
         contrast: @contrast, 
         quality : @quality,
-        zoomXY : @zoomXY,
-        zoomYZ : @zoomYZ,
-        zoomXZ : @zoomXZ,
+        zoom : @zoom,
         displayPreviewXY : @displayPreviewXY,
         displayPreviewYZ : @displayPreviewYZ,
         displayPreviewXZ : @displayPreviewXZ,

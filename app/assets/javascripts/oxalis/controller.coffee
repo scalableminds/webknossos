@@ -69,6 +69,7 @@ class Controller
 
       $("#comment-input").on "change", (event) => 
         @setComment(event.target.value)
+        $("#comment-input").blur()
 
       $("#comment-previous").click =>
         @prevComment()
@@ -80,11 +81,22 @@ class Controller
         event.preventDefault()
         @setActiveNode($(event.target).data("nodeid"), true, false)
 
+      $("#tab-comments").mouseleave (event) =>
+        $("#comment-input").blur()
+
       $("#tree-name-submit").click (event) =>
         @setTreeName($("#tree-name-input").val())
 
       $("#tree-name-input").keypress (event) =>
-        if event.which == 13 then $("#tree-name-submit").click()
+        if event.which == 13
+          $("#tree-name-submit").click()
+          $("#tree-name-input").blur()
+
+      $("#tree-prev-button").click (event) =>
+        @model.route.selectNextTree(false)
+
+      $("#tree-next-button").click (event) =>
+        @model.route.selectNextTree(true)
 
       $("#tree-create-button").click =>
         @createNewTree()

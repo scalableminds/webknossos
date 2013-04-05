@@ -497,6 +497,14 @@ class Skeleton
       @setDisplaySpheres(@disSpheres)
     @flycam.hasChanged = true
 
+  setInactiveTreeVisibility : (boolean) ->
+    for mesh in @getMeshes()
+      if mesh != @activeNodeParticle
+        mesh.visible = boolean
+    index = @getIndexFromTreeId(@route.getTree().treeId)
+    @routes[index].visible = true
+    @nodes[index].visible = true
+    @flycam.hasChanged = true
 
   invertHexToRGB : (hexColor) ->
 

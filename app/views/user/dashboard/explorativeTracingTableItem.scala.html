@@ -1,11 +1,11 @@
 @(tracing: models.tracing.Tracing)
   <tr class="hover-dynamic">
     <td> @formatHash(tracing.id) </td>
-    <td class="span3">
+    <td class="explorative-name-column">
       <span class="hover-hide" id="explorative-tracing-name"> @tracing.name </span>
       <form action="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" method="POST" data-ajax="submit,replace-row" class="hover-show">
         <div class="input-append">
-          <input name="name" id="explorative-name-input" maxlength="20" class="span2" type="text" value="@tracing.name" autocomplete="off">
+          <input class="input-medium" name="name" id="explorative-name-input" maxlength="50" type="text" value="@tracing.name" autocomplete="off">
             <a href="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" data-ajax="submit,replace-row" id="explorative-name-submit" class="btn"><i class="icon-ok"></i></a>
         </div>
       </form>

@@ -94,17 +94,20 @@ object TracingController extends Controller with Secured with TracingInformation
   }
 
   def finishTracing(user: User, tracing: Tracing): Box[(Tracing, String)] = {
-    if (isAllowedToFinishTracing(tracing, user) && tracing.state.isInProgress) {
-      UsedTracings.removeAll(tracing)
-      NMLIO.writeTracingToFile(tracing)
-      tracing match {
-        case tracing if tracing._task.isEmpty =>
-          Full(tracing.update(_.finish) -> Messages("tracing.finished"))
-        case tracing if Task.isTrainingsTracing(tracing) =>
-          Full(tracing.update(_.passToReview) -> Messages("task.passedToReview"))
-        case _ =>
-          Full(tracing.update(_.finish) -> Messages("task.finished"))
-      }
+    if (isAllowedToFinishTracing(tracing, user)) {
+      if (tracing.state.isInProgress) {
+        UsedTracings.removeAll(tracing)
+        NMLIO.writeTracingToFile(tracing)
+        tracing match {
+          case tracing if tracing._task.isEmpty =>
+            Full(tracing.update(_.finish) -> Messages("tracing.finished"))
+          case tracing if Task.isTrainingsTracing(tracing) =>
+            Full(tracing.update(_.passToReview) -> Messages("task.passedToReview"))
+          case _ =>
+            Full(tracing.update(_.finish) -> Messages("task.finished"))
+        }
+      } else
+        Failure(Messages("tracing.notInProgress"))
     } else
       Failure(Messages("tracing.notPossible"))
   }

@@ -66,6 +66,7 @@ class Controller
 
       $("#comment-input").on "change", (event) => 
         @setComment(event.target.value)
+        $("#comment-input").blur()
 
       $("#comment-previous").click =>
         @prevComment()

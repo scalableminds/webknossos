@@ -14,6 +14,7 @@ class User
   scaleValue : null
   mouseRotateValue : null
   routeClippingDistance : null
+  routeClippingDistanceArbitrary : null
   lockZoom : null
   dynamicSpaceDirection : null
   displayCrosshair : null
@@ -88,6 +89,7 @@ class User
         scaleValue : @scaleValue,
         mouseRotateValue : @mouseRotateValue,
         routeClippingDistance : @routeClippingDistance,
+        routeClippingDistanceArbitrary : @routeClippingDistanceArbitrary,
         lockZoom : @lockZoom,
         dynamicSpaceDirection : @dynamicSpaceDirection,
         displayCrosshair : @displayCrosshair,

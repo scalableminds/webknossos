@@ -93,10 +93,10 @@ class Controller
           $("#tree-name-input").blur()
 
       $("#tree-prev-button").click (event) =>
-        @model.route.selectNextTree(false)
+        @selectNextTree(false)
 
       $("#tree-next-button").click (event) =>
-        @model.route.selectNextTree(true)
+        @selectNextTree(true)
 
       $("#tree-create-button").click =>
         @createNewTree()
@@ -131,7 +131,12 @@ class Controller
       "t" : => 
         @view.toggleTheme()       
         @abstractTreeController.drawTree()
+
       "q" : => @toggleFullScreen()
+
+      "1" : => @planeController.toggleSkeletonVisibility()
+
+      "2" : => @planeController.toggleInactiveTreeVisibility()
 
       #Delete active node
       "delete" : => @deleteActiveNode()
@@ -210,6 +215,12 @@ class Controller
     @model.route.setActiveTree(treeId)
     if centered
       @centerActiveNode()
+
+
+  selectNextTree : (next) ->
+
+    @model.route.selectNextTree(next)
+    @centerActiveNode()
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->

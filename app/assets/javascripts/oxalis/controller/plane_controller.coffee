@@ -177,19 +177,6 @@ class PlaneController
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
-      #View     
-      "1" : =>
-        @sceneController.toggleSkeletonVisibility()
-        # Show warning, if this is the first time to use
-        # this function for this user
-        if @model.user.firstVisToggle
-          @view.showFirstVisToggle()
-          @model.user.firstVisToggle = false
-          @model.user.push()
-
-      "2" : =>
-        @sceneController.toggleInactiveTreeVisibility()
-
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 
@@ -328,6 +315,18 @@ class PlaneController
           @zoomIn()
         else
           @zoomOut()
+ 
+  toggleSkeletonVisibility : =>
+    @sceneController.toggleSkeletonVisibility()
+    # Show warning, if this is the first time to use
+    # this function for this user
+    if @model.user.firstVisToggle
+      @view.showFirstVisToggle()
+      @model.user.firstVisToggle = false
+      @model.user.push()
+
+  toggleInactiveTreeVisibility : =>
+    @sceneController.toggleInactiveTreeVisibility()
 
 
   ########### Click callbacks

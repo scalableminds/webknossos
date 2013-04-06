@@ -46,7 +46,7 @@ class ArbitraryController
     @canvas = canvas = $("#render-canvas")
     
     @cam = @model.flycam3d
-    @view = new ArbitraryView(canvas, @cam, stats, renderer, scene)    
+    @view = new ArbitraryView(canvas, @cam, stats, renderer, scene)
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
     @view.addGeometry @plane
@@ -158,7 +158,7 @@ class ArbitraryController
     @model.user.on "crosshairSizeChanged", (value) =>
       @crosshair.setScale(value)
 
-    @model.user.on "routeClippingDistanceChanged", (value) =>
+    @model.user.on "routeClippingDistanceArbitraryChanged", (value) =>
       @setRouteClippingDistance(value)
 
 

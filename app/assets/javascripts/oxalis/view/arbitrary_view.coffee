@@ -9,7 +9,7 @@ underscore : _
 
 class ArbitraryView
 
-  CAM_DISTANCE   : 64
+  CAM_DISTANCE   : 128
   DEFAULT_SCALE  : 2
   MAX_SCALE      : 3
   MIN_SCALE      : 1
@@ -36,7 +36,7 @@ class ArbitraryView
 
     # Initialize main THREE.js components
 
-    @camera = camera = new THREE.PerspectiveCamera(90, @width / @height, 50, 1000)
+    @camera = camera = new THREE.PerspectiveCamera(45, @width / @height, 50, 1000)
     camera.matrixAutoUpdate = false
     camera.aspect = @width / @height
   

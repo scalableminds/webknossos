@@ -5,6 +5,7 @@ jquery : $
 ../../libs/event_mixin : EventMixin
 ../../libs/Tween : TWEEN_LIB
 ../constants : constants
+./modal : modal
 ###
 
 class PlaneView
@@ -80,8 +81,6 @@ class PlaneView
 
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
-
-    @modalCallbacks = {}
     
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
@@ -188,40 +187,15 @@ class PlaneView
   getLights  : =>
     @lights
 
-  # buttons: [{id:..., label:..., callback:...}, ...]
-  showModal : (text, buttons) ->
-
-    html =  "<div class=\"modal-body\"><p>" + text + "</p></div>"
-
-    html += "<div class=\"modal-footer\">"
-    for button in buttons
-      html += "<a href=\"#\" id=\"" + button.id + "\" class=\"btn\">" +
-                    button.label + "</a>"
-    html += "</div>"
-
-    $("#modal").html(html)
-
-    for button in buttons
-      @modalCallbacks[button.id] = button.callback
-      $("#" + button.id).on("click", (evt) =>
-        callback = @modalCallbacks[evt.target.id]
-        if callback? then callback()
-        $("#modal").modal("hide"))
-
-    $("#modal").modal("show")
-
 
   showFirstVisToggle : ->
-    @showModal("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
+    modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
       [{id: "ok-button", label: "OK, Got it."}])
 
   showBranchModal : (callback) ->
-    @showModal("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+    modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
       [{id: "jump-button", label: "Jump again", callback: callback},
        {id: "cancel-button", label: "Cancel"}])
-
-  hideModal : ->
-    $("#modal").modal("hide")
 
   bind : ->  
 

@@ -25,8 +25,6 @@ import braingames.util.FileExtensionFilter
 import braingames.util.ZipIO
 import java.io.{FileOutputStream, FileInputStream}
 
-case class CreateStack(level: Level, mission: Mission)
-
 case class ExecLogger(var messages: List[String] = Nil,
   var error: List[String] = Nil)
   extends ProcessLogger {
@@ -50,7 +48,7 @@ class StackCreator extends Actor {
 
   def receive = {
     case CreateStack(level, mission) =>
-      sender ! createStack(level, mission)
+      context.parent ! FinishedStack(level, mission, createStack(level, mission))
   }
 
   def createTempFile(data: String) = {
@@ -72,7 +70,7 @@ class StackCreator extends Actor {
     Logger.info("Finished phantomjs.")
   }
 
-  def createStack(level: Level, mission: Mission) = {
+  def createStack(level: Level, mission: Mission): Option[Stack] = {
     (Try {
       val stack = Stack(level, mission)
       produceStack(stack, "http://%s:%d".format(server, port) +

@@ -118,9 +118,9 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
         timeTracker.timeEntries match {
           case lastEntry :: tail if current - lastEntry.timestamp < MAX_PAUSE && lastEntry.tracingEquals(tracing) =>
             val time = current - lastEntry.timestamp
-              BrainTracing.logTime(user, time)
-            val entry = lastEntry.copy(time = lastEntry.time + time, timestamp = current)
-            timeTracker.update(_.setTimeEntries(entry :: tail))
+            BrainTracing.logTime(user, lastEntry.copy(time = time, timestamp = current))
+            val accumulated = lastEntry.copy(time = lastEntry.time + time, timestamp = current)
+            timeTracker.update(_.setTimeEntries(accumulated :: tail))
           case _ =>
             val entry = TimeEntry(0, current, tracing = tracing.map(_._id))
             timeTracker.update(_.addTimeEntry(entry))

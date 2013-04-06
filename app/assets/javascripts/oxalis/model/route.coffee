@@ -421,6 +421,14 @@ class Route
     @comments.sort(@compareNodes)
     @trigger("updateComments", @comments)
 
+  selectNextTree : (forward) ->
+
+    for i in [0...@trees.length]
+      if @activeTree.treeId == @trees[i].treeId
+        break
+
+    diff = (if forward then 1 else -1) + @trees.length
+    @setActiveTree( @trees[ (i + diff) % @trees.length ].treeId )
 
   setActiveTree : (id) ->
 

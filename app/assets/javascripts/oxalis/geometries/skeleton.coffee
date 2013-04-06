@@ -49,6 +49,7 @@ class Skeleton
 
     #initial mode
     @mode = constants.MODE_OXALIS
+    @showInactiveTrees = true
 
     # Create sphere to represent the active Node, radius is
     # 1 nm, so that @activeNode.scale is the radius in nm.
@@ -85,8 +86,12 @@ class Skeleton
     @updateBranches()
 
     @route.on
-      newActiveNode : => @setActiveNode()
-      newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
+      newActiveNode : => 
+        @setActiveNode()
+        @setInactiveTreeVisibility(@showInactiveTrees)
+      newTree : (treeId, treeColor) => 
+        @createNewTree(treeId, treeColor)
+        @setInactiveTreeVisibility(@showInactiveTrees)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)
       mergeTree : (lastTreeID, lastNode, activeNode) => 
@@ -496,6 +501,10 @@ class Skeleton
       @setActiveNode()
       @setDisplaySpheres(@disSpheres)
     @flycam.hasChanged = true
+
+  toggleInactiveTreeVisibility : ->
+    @showInactiveTrees = not @showInactiveTrees
+    @setInactiveTreeVisibility(@showInactiveTrees)
 
   setInactiveTreeVisibility : (boolean) ->
     for mesh in @getMeshes()

@@ -198,3 +198,25 @@ $ ->
       $table.find(".details-row").toggleClass("hide", !newState)
       $table.find(".details-toggle").toggleClass("open", newState)
       $toggle.toggleClass("open", newState)
+
+
+  do ->
+
+    highlightToasts = ->
+
+      highlight = (target) =>
+
+        for i in [0..5]
+          target.animate({right: "+=20px"}, 30).animate({right: "-=20px"}, 30)
+        setTimeout(
+          => highlight(target)
+          5000
+        )
+
+      newTarget = $("div.alert:not(.highlighted)").addClass("highlighted")
+      if newTarget.length then highlight(newTarget)
+
+    $("#alert-container").on "DOMSubtreeModified", (event) ->
+      highlightToasts()
+
+    highlightToasts()

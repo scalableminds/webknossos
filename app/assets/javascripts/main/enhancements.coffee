@@ -220,3 +220,5 @@ $ ->
       highlightToasts()
 
     highlightToasts()
+
+    $(".modal-message").appendTo("body").modal("show")

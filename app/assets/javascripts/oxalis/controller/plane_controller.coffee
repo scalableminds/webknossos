@@ -196,8 +196,8 @@ class PlaneController
       "s" : @centerActiveNode
 
       #Zoom in/out
-      "i" : => @zoomIn()
-      "o" : => @zoomOut()
+      "i" : => @zoomIn(false)
+      "o" : => @zoomOut(false)
 
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
@@ -267,15 +267,17 @@ class PlaneController
     else
       @move([0, 0, z])
 
-  zoomIn : =>
+  zoomIn : (zoomToMouse) =>
     @zoomPos = @getMousePosition()
     @cameraController.zoomIn()
-    @finishZoom()
+    if zoomToMouse
+      @finishZoom()
 
-  zoomOut : =>
+  zoomOut : (zoomToMouse) =>
     @zoomPos = @getMousePosition()
     @cameraController.zoomOut()
-    @finishZoom()
+    if zoomToMouse
+      @finishZoom()
 
   finishZoom : =>
     
@@ -315,9 +317,9 @@ class PlaneController
       when "shift" then @setParticleSize(delta)
       when "alt"
         if delta > 0
-          @zoomIn()
+          @zoomIn(true)
         else
-          @zoomOut()
+          @zoomOut(true)
 
 
   ########### Click callbacks

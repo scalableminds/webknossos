@@ -238,7 +238,7 @@ class ArbitraryController
           activeNode.pos[1] - parent.pos[1],
           activeNode.pos[2] - parent.pos[2]])
         if direction[0] or direction[1] or direction[2]
-          @cam.setDirection(direction)
+          @cam.setDirection( @model.scaleInfo.voxelToNm( direction ))
           break
         parent = parent.parent
 

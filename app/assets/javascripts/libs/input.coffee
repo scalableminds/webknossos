@@ -147,7 +147,7 @@ class Input.Mouse
     @position =
       x : event.pageX - @$target.offset().left
       y : event.pageY - @$target.offset().top
-
+      
 
   unbind : ->
 

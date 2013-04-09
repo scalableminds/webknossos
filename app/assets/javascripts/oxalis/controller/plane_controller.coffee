@@ -174,6 +174,20 @@ class PlaneController
       #"n" : => Helper.toggle()
       #"ctr + s"       : => @model.route.pushImpl()
     )
+
+    @input.keyboardLoopDelayed = new Input.Keyboard(
+
+      #Move Z
+      "space" : (first) => @moveZ( @model.user.moveValue, first)
+      "f" : (first) => @moveZ( @model.user.moveValue, first)
+      "d" : (first) => @moveZ( - @model.user.moveValue, first)
+      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
+      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
+
+      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
+      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
+
+    , 200)
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
@@ -190,16 +204,6 @@ class PlaneController
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
       "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
-
-      #Move
-      "space" : (first) => @moveZ( @model.user.moveValue, first)
-      "f" : (first) => @moveZ( @model.user.moveValue, first)
-      "d" : (first) => @moveZ( - @model.user.moveValue, first)
-      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
-      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
-
-      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
-      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
     )
 
 

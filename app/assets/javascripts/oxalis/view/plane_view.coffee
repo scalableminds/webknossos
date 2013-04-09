@@ -13,7 +13,7 @@ class PlaneView
   MAX_SCALE      : 20
   MIN_SCALE      : 0.5
 
-  constructor : (@model, @flycam, @stats) ->
+  constructor : (@model, @flycam, @stats, @renderer, @scene) ->
 
     _.extend(@, new EventMixin())
 
@@ -29,11 +29,9 @@ class PlaneView
     @scaleFactor = 1
 
     # Initialize main THREE.js components
-    colors    = [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
-    @renderer = new THREE.WebGLRenderer({clearColor: colors[i], clearAlpha: 1, antialias: false})
     @camera   = new Array(4)
     @lights   = new Array(3)
-    @scene    = new THREE.Scene()
+
     for i in constants.ALL_VIEWPORTS
       # Let's set up cameras
       # No need to set any properties, because the camera controller will deal with that
@@ -69,6 +67,7 @@ class PlaneView
 
     # Attach the canvas to the container
     @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
+    $(@renderer.domElement).attr("id": "render-canvas")
     container.append @renderer.domElement
 
     @setActivePlaneXY()
@@ -81,7 +80,7 @@ class PlaneView
 
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
-    
+
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
@@ -89,10 +88,11 @@ class PlaneView
 
   animate : ->
 
+    return unless @running
+
     @renderFunction()
 
-    if @running is true
-      window.requestAnimationFrame => @animate()
+    window.requestAnimationFrame => @animate()
 
   # This is the main render function.
   # All 3D meshes and the trianglesplane are rendered here.
@@ -140,7 +140,7 @@ class PlaneView
   #Call this after the canvas was resized to fix the viewport
   resize : ->
     #FIXME: Is really the window's width or rather the DIV's?
-    canvas = $("#render > canvas")
+    canvas = $("#render-canvas")
     WIDTH = (canvas.width()-20)/2
     HEIGHT = (canvas.height()-20)/2
 
@@ -155,7 +155,7 @@ class PlaneView
     if (@scaleFactor+delta > @MIN_SCALE) and (@scaleFactor+delta < @MAX_SCALE)
       @scaleFactor += Number(delta)
       @curWidth = WIDTH = HEIGHT = @scaleFactor * 380
-      canvas = $("#render > canvas")
+      canvas = $("#render-canvas")
       canvas.width(2 * WIDTH + 20)
       canvas.height(2 * HEIGHT + 20)
 
@@ -207,12 +207,17 @@ class PlaneView
     
   stop : ->
 
-    @scaleFactor = 1
-    @scaleTrianglesPlane(0)
-    @running = false 
+    $(".inputcatcher").hide()
 
+    @running = false 
 
   start : ->
 
     @running = true
+
+    @scaleFactor = 1
+    @scaleTrianglesPlane(0)
+
+    $(".inputcatcher").show()
+
     @animate()

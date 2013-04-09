@@ -22,11 +22,6 @@ class AbstractTreeController
 
   bind : ->
 
-    { view } = @
-
-    view.on
-      nodeClick : (id) => @setActiveNode(id, true, false)
-
     @model.route.on({
       newActiveNode        : => @drawTree(),
       newActiveTree        : => @drawTree(),

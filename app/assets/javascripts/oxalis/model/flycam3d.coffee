@@ -214,7 +214,7 @@ class Flycam3d
   getPosition : ->
 
     matrix = @currentMatrix
-    [ matrix[12], matrix[13], matrix[14]]
+    [ matrix[12], matrix[13], matrix[14] ]
 
 
   setPositionSilent : (p) ->
@@ -239,19 +239,22 @@ class Flycam3d
 
   setDirection : (d) ->
 
-    matrix = @currentMatrix
-    
-    m = M4x4.makeLookAt(d, @getPosition(), @getUp())
+    pos = @getPosition()
 
-    matrix[0] = m[0]
-    matrix[1] = m[4]
-    matrix[2] = m[8]
-    matrix[4] = m[1]
-    matrix[5] = m[5]
-    matrix[6] = m[9]
-    matrix[8] = m[2]
-    matrix[9] = m[6]
-    matrix[10] = m[10]
+    m = new THREE.Matrix4().lookAt(new THREE.Vector3(d...),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 1, 0)).elements
+
+    matrix2 = [ 
+      1, 0, 0, 0, 
+      0, 1, 0, 0, 
+      0, 0, 1, 0, 
+      pos[0], pos[1], pos[2], 1 
+    ]
+
+    M4x4.scale(@scale, matrix2, matrix2)
+
+    @currentMatrix = M4x4.mul(matrix2, m)
     updateMacro()
 
 

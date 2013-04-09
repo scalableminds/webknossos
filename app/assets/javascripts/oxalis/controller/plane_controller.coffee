@@ -31,7 +31,7 @@ class PlaneController
       @keyboardNoLoop?.unbind()
 
 
-  constructor : (@model, stats, @gui ) ->
+  constructor : (@model, stats, @gui, renderer, scene) ->
 
     _.extend(@, new EventMixin())
 
@@ -39,7 +39,8 @@ class PlaneController
     @flycam.setPosition(@model.route.data.editPosition)
     @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
     @flycam.setQuality(@model.user.quality)
-    @view  = new PlaneView(@model, @flycam, stats)
+
+    @view  = new PlaneView(@model, @flycam, stats, renderer, scene)
 
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
@@ -176,19 +177,6 @@ class PlaneController
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
-      #View     
-      "1" : =>
-        @sceneController.toggleSkeletonVisibility()
-        # Show warning, if this is the first time to use
-        # this function for this user
-        if @model.user.firstVisToggle
-          @view.showFirstVisToggle()
-          @model.user.firstVisToggle = false
-          @model.user.push()
-
-      "2" : =>
-        @sceneController.toggleInactiveTreeVisibility()
-
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 
@@ -215,10 +203,18 @@ class PlaneController
     )
 
 
+  init : ->
+
+    @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
+    @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
+
+
   start : ->
 
     @initKeyboard()
+    @init()
     @initMouse()
+    @sceneController.start()
     @view.start()
 
 
@@ -226,6 +222,7 @@ class PlaneController
 
     @input.unbind()
     @view.stop()
+    @sceneController.stop()
 
 
   bind : ->
@@ -320,6 +317,18 @@ class PlaneController
           @zoomIn(true)
         else
           @zoomOut(true)
+ 
+  toggleSkeletonVisibility : =>
+    @sceneController.toggleSkeletonVisibility()
+    # Show warning, if this is the first time to use
+    # this function for this user
+    if @model.user.firstVisToggle
+      @view.showFirstVisToggle()
+      @model.user.firstVisToggle = false
+      @model.user.push()
+
+  toggleInactiveTreeVisibility : =>
+    @sceneController.toggleInactiveTreeVisibility()
 
 
   ########### Click callbacks

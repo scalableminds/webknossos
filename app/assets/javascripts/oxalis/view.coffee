@@ -12,6 +12,9 @@ class View
     unless @webGlSupported()
       Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>"+
         "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>")
+
+    @renderer = new THREE.WebGLRenderer( clearColor: 0x000000, clearAlpha: 1.0, antialias: false )
+    @scene = new THREE.Scene()
    
     @setTheme(constants.THEME_BRIGHT)
     @createKeyboardCommandOverlay()
@@ -100,7 +103,9 @@ class View
       <tr><td>P,N</td><td>Previous/Next comment</td><td>Del</td><td>Delete node/Split trees</td></tr>
       <tr><td>C</td><td>Create new tree</td><td>Shift + Alt + Leftclick</td><td>Merge two trees</td></tr>
       <tr><td>T</td><td>Toggle theme</td><td>M</td><td>Toggle mode</td></tr>
-      <tr><td>1</td><td>Toggle skeleton visibility</td><td>2</td><td>Toggle inactive tree visibility</td></tr>'
+      <tr><td>1</td><td>Toggle skeleton visibility</td><td>2</td><td>Toggle inactive tree visibility</td></tr>
+      <tr><td>Shift + Mousewheel</td><td>Change node size</td><td></td><td></td></tr>'
+
     skeletonKeys =
       '<tr><th colspan="4">3D-view</th></tr>
       <tr><td>Mousewheel</td><td>Zoom in and out</td><td>Rightclick drag</td><td>Rotate Skeleton View</td></tr>'
@@ -109,7 +114,7 @@ class View
       <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Leftclick</td><td>Select node</td></tr>
       <tr><td>Mousewheel or D and F</td><td>Move along 3rd axis</td><td>Rightclick</td><td>Set tracepoint</td></tr>
       <tr><td>I,O or Alt + Mousewheel</td><td>Zoom in/out</td><td>B,J</td><td>Set/Jump to branchpoint</td></tr>
-      <tr><td>Shift + Mousewheel</td><td>Change node size</td><td>S</td><td>Center active node</td></tr>'
+      <tr><td>S</td><td>Center active node</td><td></td><td></td></tr>'
     arbitraryKeys =
       '<tr><th colspan="4">Flightmode</th></tr>
       <tr><td>Mouse or Arrow keys</td><td>Rotation</td><td>R</td><td>Reset rotation</td></tr>
@@ -187,6 +192,7 @@ class View
       $("#tree-name-input").val(activeTree.name)
       $("#tree-name").text(activeTree.name)
       $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
+
 
   updateTrees : ->
 

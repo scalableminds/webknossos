@@ -9,50 +9,59 @@ underscore : _
 
 class ArbitraryView
 
-  CAM_DISTANCE : 140
+  CAM_DISTANCE   : 128
+  DEFAULT_SCALE  : 2
+  MAX_SCALE      : 3
+  MIN_SCALE      : 1
+
   forceUpdate : false
   geometries : []
   additionalInfo : ""
 
-  isRunning : false
+  isRunning : true
 
   scene : null
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam, @stats) ->
+  constructor : (canvas, @dataCam, @stats, @renderer, @scene, scaleInfo) ->
 
     _.extend(this, new EventMixin())
 
     # The "render" div serves as a container for the canvas, that is 
     # attached to it once a renderer has been initalized.
     @container = $(canvas)
-    width  = @container.width()
-    height = @container.height()
+    @width  = @container.width()
+    @height = @container.height()
 
     # Initialize main THREE.js components
-    @renderer = new THREE.WebGLRenderer( clearColor: 0x000000, clearAlpha: 1.0, antialias: false )
 
-    @camera = camera = new THREE.PerspectiveCamera(90, width / height, 0.1, 1000)
-    #camera.matrixAutoUpdate = false
-    camera.aspect = width / height
+    @camera = camera = new THREE.PerspectiveCamera(45, @width / @height, 50, 1000)
+    camera.matrixAutoUpdate = false
+    camera.aspect = @width / @height
   
-    @scene = scene = new THREE.Scene()  
-    @camera.position.z = -@CAM_DISTANCE
-    @camera.lookAt(new THREE.Vector3( 0, 0, 0 ))
-    scene.add(camera)
+    @cameraPosition = new THREE.Vector3(0, 0, @CAM_DISTANCE)
 
-    # Attach the canvas to the container
-    # DEBATE: a canvas can be passed the the renderer as an argument...!?
-    @renderer.setSize(width, height)
-    #@renderer.sortObjects = false
-    @container.append(@renderer.domElement)
+    @group = new THREE.Object3D
+    # The dimension(s) with the highest resolution will not be distorted
+    @group.scale = new THREE.Vector3(scaleInfo.nmPerVoxel...)
+    # Add scene to the group, all Geometries are than added to group
+    @scene.add(@group)
+    @group.add(camera)
 
 
   start : ->
 
     unless @isRunning
       @isRunning = true
+
+      for element in @group.children
+        element.visible = true
+      $("#arbitrary-info-canvas").show()
+
+      #render hack to avoid flickering
+      @renderer.setSize(384, 384)
+      @resize()
       # start the rendering loop
       @animate()
       # Dont forget to handle window resizing!
@@ -64,6 +73,11 @@ class ArbitraryView
 
     if @isRunning
       @isRunning = false
+
+      for element in @group.children
+        element.visible = false
+      $("#arbitrary-info-canvas").hide()
+
       $(window).off "resize", @resize
 
 
@@ -81,6 +95,22 @@ class ArbitraryView
       for geometry in geometries when geometry.update?
         geometry.update()
 
+      m = @dataCam.getZoomedMatrix()
+       
+      camera.matrix.set m[0], m[4], m[8],  m[12], 
+                        m[1], m[5], m[9],  m[13], 
+                        m[2], m[6], m[10], m[14], 
+                        m[3], m[7], m[11], m[15]
+
+      camera.matrix.rotateY(Math.PI)
+      camera.matrix.translate(@cameraPosition)
+      camera.matrixWorldNeedsUpdate = true
+
+      renderer.setViewport(0, 0, @width, @height)
+      renderer.setScissor(0, 0, @width, @height)
+      renderer.enableScissorTest(true)
+      renderer.setClearColorHex(0xFFFFFF, 1);
+
       renderer.render scene, camera
 
       forceUpdate = false
@@ -92,28 +122,46 @@ class ArbitraryView
 
     @forceUpdate = true
 
+
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
   addGeometry : (geometry) -> 
 
     @geometries.push(geometry)
-    geometry.attachScene(@scene)
+    geometry.attachScene(@group)
     return
 
 
   # Call this after the canvas was resized to fix the viewport
   # Needs to be bound
   resize : =>
-    
-    width  = @container.width()
-    height = @container.height()
 
-    @renderer.setSize( width, height )
-    @camera.aspect = width / height
+    @width  = @container.width()
+    @height = @container.height()
+
+    @camera.aspect = @width / @height
     @camera.updateProjectionMatrix()
     @draw()
 
 
+  applyScale : (delta) =>
+
+    @scaleFactor = @DEFAULT_SCALE unless @scaleFactor
+    if (@scaleFactor+delta > @MIN_SCALE) and (@scaleFactor+delta < @MAX_SCALE)
+      @scaleFactor += Number(delta)
+      @width = @height = @scaleFactor * constants.WIDTH
+      @container.width(@width)
+      @container.height(@height)
+
+      @resize()
+
+  setRouteClippingDistance : (value) =>
+
+    @camera.near = @CAM_DISTANCE - value
+    @camera.updateProjectionMatrix()
+
+
   setAdditionalInfo : (info) ->
+
     @additionalInfo = info
 

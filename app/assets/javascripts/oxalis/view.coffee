@@ -36,14 +36,18 @@ class View
         @updateTrees()
       reloadTrees : =>
         @updateTrees()
-      newNode : => @updateActiveComment()
+      newNode : => 
+        @updateActiveComment()
+        @updateTrees()
       newTreeName : => 
         @updateTrees()
         @updateActiveTree()
       newTree : => 
         @updateActiveComment()
         @updateTrees()
-        @updateActiveTree() })
+        @updateActiveTree() 
+      deleteActiveNode : =>
+        @updateTrees() })
 
     @model.route.stateLogger.on
       pushFailed       : (critical) =>
@@ -200,8 +204,11 @@ class View
     for tree in trees
       newContent.appendChild((
         $('<li>').append($('<a>', {"href": "#", "data-treeid": tree.treeId}).append(
+          $('<i>', {"class": "icon-bull"}),
+          $('<span>', {"title": "nodes", "text": tree.nodes.length}).css("display": "inline-block", "width": "50px"),
           $('<i>', {"class": "icon-sign-blank"}).css(
-            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"), $('<span>', {"text": tree.name}))) )[0])
+            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"),
+          $('<span>', {"title": "name", "text": tree.name}) )) )[0])
 
     treeList.append(newContent)
 

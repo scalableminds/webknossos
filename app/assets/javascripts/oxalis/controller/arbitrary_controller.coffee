@@ -46,7 +46,7 @@ class ArbitraryController
     @canvas = canvas = $("#render-canvas")
     
     @cam = @model.flycam3d
-    @view = new ArbitraryView(canvas, @cam, stats, renderer, scene)
+    @view = new ArbitraryView(canvas, @cam, stats, renderer, scene, @model.scaleInfo)
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
     @view.addGeometry @plane

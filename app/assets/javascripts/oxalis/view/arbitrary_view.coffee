@@ -24,7 +24,7 @@ class ArbitraryView
   camera : null
   cameraPosition : null
 
-  constructor : (canvas, @dataCam, @stats, @renderer, @scene) ->
+  constructor : (canvas, @dataCam, @stats, @renderer, @scene, scaleInfo) ->
 
     _.extend(this, new EventMixin())
 
@@ -44,7 +44,7 @@ class ArbitraryView
 
     @group = new THREE.Object3D
     # The dimension(s) with the highest resolution will not be distorted
-    @group.scale = new THREE.Vector3(12, 12, 24)
+    @group.scale = new THREE.Vector3(scaleInfo.nmPerVoxel...)
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
     @group.add(camera)

@@ -61,7 +61,7 @@ class Crosshair
                     m[3], m[7], m[11], m[15]
 
     mesh.matrix.rotateY(Math.PI)
-    mesh.matrix.translate(new THREE.Vector3(0, 0, 1))
+    mesh.matrix.translate(new THREE.Vector3(0, 0, 0.5))
     mesh.matrix.scale(new THREE.Vector3(@scale, @scale, @scale))
 
     mesh.matrixWorldNeedsUpdate = true

@@ -189,17 +189,11 @@ class CameraController
     @flycam.hasChanged = true
 
   zoomIn : =>
-    if @model.user.lockZoom
-      @flycam.zoomInAll()
-    else 
-      @flycam.zoomIn(@flycam.getActivePlane())
+    @flycam.zoomIn()
     @updateCamViewport()
 
   zoomOut : =>
-    if @model.user.lockZoom
-      @flycam.zoomOutAll()
-    else 
-      @flycam.zoomOut(@flycam.getActivePlane())
+    @flycam.zoomOut()
     @updateCamViewport()
 
   setRouteClippingDistance : (value) ->
@@ -211,9 +205,9 @@ class CameraController
 
   updateCamViewport : ->
     scaleFactor = @model.scaleInfo.baseVoxel
+    boundary    = constants.WIDTH / 2 * @flycam.getPlaneScalingFactor()
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
-      @cameras[i].near = -@camDistance #/ @flycam.getPlaneScalingFactor(i)
-      boundary     = constants.WIDTH / 2 * @flycam.getPlaneScalingFactor(i)
+      @cameras[i].near = -@camDistance
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor
       @cameras[i].right = @cameras[i].top    =  boundary * scaleFactor
       @cameras[i].updateProjectionMatrix()

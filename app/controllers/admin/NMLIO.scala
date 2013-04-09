@@ -38,8 +38,6 @@ import controllers.tracing.handler.SavedTracingInformationHandler
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
 
-  val prettyPrinter = new PrettyPrinter(100, 2)
-
   val baseTracingOutputDir = {
     val folder = "data/nmls"
     new File(folder).mkdirs()
@@ -72,7 +70,7 @@ object NMLIO extends Controller with Secured with TextUtils {
     val ch = Channels.newChannel(in)
     try {
       out.transferFrom(ch, 0, in.available)
-    } finally { out.close() }
+    } finally { out.close(); ch.close() }
   }
 
   def tracingToNMLStream(tracing: Tracing) = {
@@ -101,33 +99,47 @@ object NMLIO extends Controller with Secured with TextUtils {
     Ok(html.admin.nml.nmlupload())
   }
 
+  private def nameForNMLs(fileNames: Seq[String]) =
+    if (fileNames.size == 1)
+      fileNames.headOption
+    else
+      None
+
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
     val parseResult = request.body.files.map(f => f.filename -> extractFromNML(f.ref.file))
     if (parseResult.size > 0) {
       parseResult.find(_._2.isEmpty) match {
         case None =>
-          val parsedFiles = parseResult.map(_._2.open_!)
-          val head = parsedFiles.head
-          val tail = parsedFiles.tail
+          val tracingName = nameForNMLs(parseResult.map(_._1))
 
-          val startTracing = Tracing.createFromNMLFor(request.user._id, head, TracingType.Explorational)
-          val tracing = tail.foldLeft(startTracing) {
-            case (t, s) => t.mergeWith(TemporaryTracing.createFrom(s, s.timeStamp.toString))
-          }
+          val nmls = parseResult.map(_._2.open_!).toList
 
-          Redirect(controllers.routes.TracingController.trace(tracing.id)).flashing(
-            "success" -> Messages("nml.file.uploadSuccess"))
+          val tracingOpt = Tracing.createFromNMLsFor(
+            request.user._id,
+            nmls,
+            TracingType.Explorational,
+            tracingName)
+
+          tracingOpt
+            .map { tracing =>
+              Redirect(controllers.routes.TracingController.trace(tracing.id)).flashing(
+                "success" -> Messages("nml.file.uploadSuccess"))
+            }
+            .getOrElse(
+              Redirect(controllers.routes.UserController.dashboard).flashing(
+                "error" -> Messages("nml.file.invalid")))
         case Some((fileName, _)) =>
           Redirect(controllers.routes.UserController.dashboard).flashing(
             "error" -> Messages("nml.file.invalid", fileName))
       }
     } else {
-        Redirect(controllers.routes.UserController.dashboard).flashing(
-            "error" -> Messages("nml.file.noFile"))
+      Redirect(controllers.routes.UserController.dashboard).flashing(
+        "error" -> Messages("nml.file.noFile"))
     }
   }
 
   def toXML[T <: TracingLike](t: T) = {
+    val prettyPrinter = new PrettyPrinter(100, 2)
     prettyPrinter.format(Xml.toXML(t))
   }
 

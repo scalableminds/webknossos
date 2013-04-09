@@ -47,9 +47,9 @@ class Controller
 
       @gui = @createGui(settings)
 
-      @planeController = new PlaneController(@model, stats, @gui)
+      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene)
 
-      @arbitraryController = new ArbitraryController(@model, stats)
+      @arbitraryController = new ArbitraryController(@model, stats, @view.renderer, @view.scene)
 
       @abstractTreeController = new AbstractTreeController(@model)      
 
@@ -64,8 +64,12 @@ class Controller
         else
           Toast.error("There was no valid allowed tracing mode specified.")
 
+      @abstractTreeController.view.on 
+        nodeClick : (id) => @setActiveNode(id, true, false)
+
       $("#comment-input").on "change", (event) => 
         @setComment(event.target.value)
+        $("#comment-input").blur()
 
       $("#comment-previous").click =>
         @prevComment()
@@ -77,11 +81,22 @@ class Controller
         event.preventDefault()
         @setActiveNode($(event.target).data("nodeid"), true, false)
 
+      $("#tab-comments").mouseleave (event) =>
+        $("#comment-input").blur()
+
       $("#tree-name-submit").click (event) =>
         @setTreeName($("#tree-name-input").val())
 
       $("#tree-name-input").keypress (event) =>
-        if event.which == 13 then $("#tree-name-submit").click()
+        if event.which == 13
+          $("#tree-name-submit").click()
+          $("#tree-name-input").blur()
+
+      $("#tree-prev-button").click (event) =>
+        @selectNextTree(false)
+
+      $("#tree-next-button").click (event) =>
+        @selectNextTree(true)
 
       $("#tree-create-button").click =>
         @createNewTree()
@@ -116,7 +131,12 @@ class Controller
       "t" : => 
         @view.toggleTheme()       
         @abstractTreeController.drawTree()
+
       "q" : => @toggleFullScreen()
+
+      "1" : => @planeController.toggleSkeletonVisibility()
+
+      "2" : => @planeController.toggleInactiveTreeVisibility()
 
       #Delete active node
       "delete" : => @deleteActiveNode()
@@ -182,7 +202,7 @@ class Controller
 
   deleteActiveNode : ->
 
-    @model.route.deleteActiveNode()    
+    @model.route.deleteActiveNode()
 
 
   createNewTree : ->
@@ -197,6 +217,12 @@ class Controller
       @centerActiveNode()
 
 
+  selectNextTree : (next) ->
+
+    @model.route.selectNextTree(next)
+    @centerActiveNode()
+
+
   setActiveNode : (nodeId, centered, mergeTree) ->
 
     @model.route.setActiveNode(nodeId, mergeTree)
@@ -206,9 +232,10 @@ class Controller
 
   centerActiveNode : ->
 
-    position = @model.route.getActiveNodePos()
-    if position
-      @model.flycam.setPosition(position)
+    if @mode is constants.MODE_OXALIS
+      @planeController.centerActiveNode()
+    else
+      @arbitraryController.centerActiveNode()
 
 
   deleteActiveTree : ->

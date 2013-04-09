@@ -68,7 +68,6 @@
         </div>
       </div> 
       <div id="tracing">
-        <div id="arbitraryplane"></div>      
         <div id="render">
           <div id="help-modal" class="modal hide fade"></div>
           <div id="modal" class="modal hide fade"></div>
@@ -98,12 +97,19 @@
                 <a class="btn dropdown-toggle" data-toggle="dropdown" id="tree-list-button"><i class="icon-list"></i> </a>
                 <ul class="dropdown-menu pull-right" id="tree-list"></ul>
               </div><p>
-              <div class="hover-dynamic">
-                <p class="hover-hide" id="tree-name-p"><i class="icon-sign-blank icon-large" id="tree-active-color"></i>&#160;&#160;<span id="tree-name"></span></p>
-                <div class="input-append hover-show">
-                  <input name="name" id="tree-name-input" class="input-xlarge" maxlength="30" type="text" autocomplete="off">
-                  <button class="btn" id="tree-name-submit"><i class="icon-ok"></i></button>
+              <div id="tree-edit">
+                <button class="btn" id="tree-prev-button"><i class="icon-arrow-left"></i></button>
+                <div class="hover-dynamic inline-block">
+                  <p class="hover-hide" id="tree-name-p">
+                    <i class="icon-sign-blank icon-large" id="tree-active-color"></i>&#160;&#160;
+                    <span id="tree-name"></span>
+                  </p>
+                  <div class="input-append hover-show">
+                    <input name="name" id="tree-name-input" class="input-xlarge" maxlength="30" type="text" autocomplete="off">
+                    <button class="btn" id="tree-name-submit"><i class="icon-ok"></i></button>
+                  </div>
                 </div>
+                <button class="btn" id="tree-next-button"><i class="icon-arrow-right"></i></button>
               </div>
             </div>
             <div id="abstractTreeViewer"></div>

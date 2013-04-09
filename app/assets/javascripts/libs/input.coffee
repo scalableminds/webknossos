@@ -144,6 +144,10 @@ class Input.Mouse
     @on(initialBindings)
     @attach = @on
 
+    @position =
+      x : event.pageX - @$target.offset().left
+      y : event.pageY - @$target.offset().top
+      
 
   unbind : ->
 
@@ -180,7 +184,7 @@ class Input.Mouse
       $(":focus").blur() # see OX-159
 
       @leftDown = true
-      @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey and event.altKey)
+      @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey, event.altKey)
 
     else
       @trigger("rightClick", [@lastPosition.x, @lastPosition.y])

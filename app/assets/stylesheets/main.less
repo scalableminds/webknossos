@@ -276,14 +276,6 @@ svg a:hover {
 #render canvas {
     z-index: 10;
 }
-#arbitraryplane {
-    position: absolute;
-    left: 0px;
-    top: 0px;
-    width: 100%;
-    height: 100%;
-    z-index: 100;
-}
 #comments-tree {
     float: left;
     margin-top: 10px;
@@ -304,10 +296,6 @@ svg a:hover {
     max-height: 2*@standardViewportWidth - 90px;
     margin-top: 10px;
     overflow-y: auto;
-}
-#tree-name-p {
-    margin-top: 15px;
-    margin-bottom: 10px;
 }
 #abstractTreeViewer {
     height : 2*@standardViewportWidth - 40px;
@@ -406,8 +394,28 @@ svg a:hover {
     padding-bottom: 0px;
     margin-top: -1px;
 }
+.explorative-name-column {
+    width: 200px;
+    max-width: 200px;
+    word-wrap: break-word;
+}
 #tree-name {
     height: 20px;
+}
+
+#tree-edit {
+    height: 35px;
+    * {
+        vertical-align: top;
+    }
+    p {
+        width: 260px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+    }
+    input {
+        width: 203px;
+    }
 }
 
 #toggle-explorative {

@@ -102,7 +102,7 @@ class PlaneController
       @input.mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
-          @move [
+          @flycam.moveActivePlane [
             delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
             delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
             0
@@ -251,10 +251,8 @@ class PlaneController
     @sceneController.update()
     @model.route.rendered()
 
-  move : (v) => @flycam.moveActivePlane(v)
-
-  moveX : (x) => @move([x, 0, 0])
-  moveY : (y) => @move([0, y, 0])
+  moveX : (x) => @flycam.moveActivePlane([x, 0, 0])
+  moveY : (y) => @flycam.moveActivePlane([0, y, 0])
   moveZ : (z, first) =>
     if(first)
       activePlane = @flycam.getActivePlane()
@@ -262,7 +260,7 @@ class PlaneController
         [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep()],
         activePlane), activePlane)
     else
-      @move([0, 0, z])
+      @flycam.moveActivePlane([0, 0, z], false)
 
   zoomIn : (zoomToMouse) =>
     @zoomPos = @getMousePosition()

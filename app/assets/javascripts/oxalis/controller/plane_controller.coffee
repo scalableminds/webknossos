@@ -349,7 +349,7 @@ class PlaneController
     # Strg + Rightclick to set new not active branchpoint
     if ctrlPressed and 
       @model.user.newNodeNewTree == false and 
-        @model.route.getActiveNodeType == constants.TYPE_USUAL
+        @model.route.getActiveNodeType() == constants.TYPE_USUAL
 
       @pushBranch()
       @setActiveNode(activeNode.id)

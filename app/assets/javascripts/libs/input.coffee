@@ -144,6 +144,10 @@ class Input.Mouse
     @on(initialBindings)
     @attach = @on
 
+    @position =
+      x : event.pageX - @$target.offset().left
+      y : event.pageY - @$target.offset().top
+      
 
   unbind : ->
 

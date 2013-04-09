@@ -180,8 +180,7 @@ class Input.Mouse
       $(":focus").blur() # see OX-159
 
       @leftDown = true
-      if event.shiftKey
-        @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey and event.altKey)
+      @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey, event.altKey)
 
     else
       @trigger("rightClick", [@lastPosition.x, @lastPosition.y])

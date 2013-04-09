@@ -107,7 +107,7 @@ class PlaneController
             0
           ]
         scroll : @scroll
-        leftClick : @onPlaneClick
+        leftClick : @onClick
         rightClick : @setWaypoint
       ) )
 
@@ -353,14 +353,16 @@ class PlaneController
           curGlobalPos[1], 
           curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor ]
 
-  onPreviewClick : (position, shiftAltPressed) =>
-    @onClick(position, constants.VIEW_3D, shiftAltPressed)
+  onPreviewClick : (position, shiftPressed, altPressed) =>
+    @onClick(position, shiftPressed, altPressed, constants.VIEW_3D)
 
-  onPlaneClick : (position, shiftAltPressed) =>
-    plane = @flycam.getActivePlane()
-    @onClick(position, plane, shiftAltPressed)
+  onClick : (position, shiftPressed, altPressed, plane) =>
 
-  onClick : (position, plane, shiftAltPressed) =>
+    unless shiftPressed # do nothing
+      return
+    unless plane?
+      plane = @flycam.getActivePlane()
+
     scaleFactor = @view.scaleFactor
     camera      = @view.getCameras()[plane]
     # vector with direction from camera position to click position
@@ -394,7 +396,7 @@ class PlaneController
         # set the active Node to the one that has the ID stored in the vertex
         # center the node if click was in 3d-view
         centered = plane == constants.VIEW_3D
-        @setActiveNode(nodeID, centered, shiftAltPressed)
+        @setActiveNode(nodeID, centered, shiftPressed and altPressed)
         break
 
   ########### Model Interaction

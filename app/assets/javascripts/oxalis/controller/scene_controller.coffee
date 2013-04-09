@@ -86,6 +86,7 @@ class SceneController
   update : =>
     gPos         = @flycam.getPosition()
     globalPosVec = new THREE.Vector3(gPos...)
+    planeScale   = @flycam.getPlaneScalingFactor()
     for i in constants.ALL_PLANES
       
       @planes[i].updateTexture()
@@ -94,8 +95,7 @@ class SceneController
       @planes[i].setPosition(globalPosVec)
 
       # Update plane scale
-      sFactor      = @flycam.getPlaneScalingFactor(i)
-      @planes[i].setScale(sFactor)
+      @planes[i].setScale(planeScale)
 
   setTextRotation : (rotVec) =>
     # TODO: Implement

@@ -200,25 +200,24 @@ $ ->
       $toggle.toggleClass("open", newState)
 
 
-  do ->
+  highlightToasts = ->
 
-    highlightToasts = ->
+    highlight = (target) =>
 
-      highlight = (target) =>
+      for i in [0..5]
+        target.animate({right: "+=20px"}, 30).animate({right: "-=20px"}, 30)
+      setTimeout(
+        => highlight(target)
+        5000
+      )
 
-        for i in [0..5]
-          target.animate({right: "+=20px"}, 30).animate({right: "-=20px"}, 30)
-        setTimeout(
-          => highlight(target)
-          5000
-        )
+    newTarget = $("div.alert-error:not(.highlighted)").addClass("highlighted")
+    if newTarget.length then highlight(newTarget)
 
-      newTarget = $("div.alert:not(.highlighted)").addClass("highlighted")
-      if newTarget.length then highlight(newTarget)
-
-    $("#alert-container").on "DOMSubtreeModified", (event) ->
-      highlightToasts()
-
+  $("#alert-container").on "DOMSubtreeModified", (event) ->
     highlightToasts()
 
-    $(".modal-message").appendTo("body").modal("show")
+  highlightToasts()
+
+  # Show modal-message if present, has to be appended to the body, according to bootstrap manual
+  $(".modal-message").appendTo("body").modal("show")

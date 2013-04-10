@@ -93,9 +93,10 @@ class Input.Keyboard
           @keyCallbackMap[key] = callback
           @buttonLoop() if @keyPressedCount == 1
         
-        setTimeout( (=>
-          callback._delayed = false
-          ), @delay )
+        if @delay >= 0
+          setTimeout( (=>
+            callback._delayed = false
+            ), @delay )
 
         return
 

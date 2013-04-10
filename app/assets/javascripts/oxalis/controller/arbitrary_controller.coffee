@@ -102,7 +102,7 @@ class ArbitraryController
       "space" : =>  
         @cam.move [0, 0, @model.user.moveValue3d]
         @moved()
-      "shift + space" : => @cam.move [0, 0, -@model.user.moveValue3d]
+      "alt + space" : => @cam.move [0, 0, -@model.user.moveValue3d]
       
       #Rotate in distance
       "left"  : => @cam.yawDistance @model.user.rotateValue
@@ -132,6 +132,11 @@ class ArbitraryController
 
       #Recenter active node
       "y" : => @centerActiveNode()
+
+      #Delete active node and recenter last node
+      "shift + space" : =>
+        @model.route.deleteActiveNode()
+        @centerActiveNode()
 
       #Recording of Waypoints
       "z" : => 

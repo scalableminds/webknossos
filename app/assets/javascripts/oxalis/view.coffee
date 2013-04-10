@@ -119,9 +119,9 @@ class View
       '<tr><th colspan="4">Flightmode</th></tr>
       <tr><td>Mouse or Arrow keys</td><td>Rotation</td><td>R</td><td>Reset rotation</td></tr>
       <tr><td>Shift + Mouse or Shift + Arrow</td><td>Rotation around Axis</td><td>W A S D</td><td>Move</td></tr>
-      <tr><td>Space, Shift + Space</td><td>Forward, Backward</td><td>B, J</td><td>Set/Jump to last branchpoint</td></tr>
+      <tr><td>Space</td><td>Forward</td><td>B, J</td><td>Set/Jump to last branchpoint</td></tr>
       <tr><td>Y</td><td>Center active node</td><td>I, O</td><td>Zoom in and out</td></tr>
-      <tr><td>Z, U</td><td>Start/Stop recording waypoints</td><td></td><td></td></tr>'
+      <tr><td>Z, U</td><td>Start/Stop recording waypoints</td><td>Shift + Space</td><td>Delete active node, Recenter previous node</td></tr>'
 
     html = '''<div class="modal-header"><button type="button" class="close" data-dismiss="modal">x</button>
             <h3>keyboard commands</h3></div>

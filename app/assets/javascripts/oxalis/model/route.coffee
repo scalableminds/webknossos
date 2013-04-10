@@ -7,6 +7,7 @@ underscore : _
 ./tracetree : TraceTree
 ./statelogger : StateLogger
 ../constants : constants
+libs/threejs/ColorConverter : ColorConverter
 ###
 
 class Route
@@ -223,7 +224,7 @@ class Route
     @branchDeferred.resolve()
 
 
-  addNode : (position, type) ->
+  addNode : (position, type, centered = true) ->
 
     if @ensureDirection(position)
       unless @lastRadius?
@@ -239,13 +240,14 @@ class Route
         @activeNode = point
         point.type = @TYPE_BRANCH
         if @branchPointsAllowed
+          centered = true
           @pushBranch()
       @lastActiveNodeId = @activeNode.id
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
       
-      @trigger("newNode")
+      @trigger("newNode", centered)
     else
       @trigger("wrongDirection")
 
@@ -455,7 +457,7 @@ class Route
     else
       currentHue = treeId * @GOLDEN_RATIO
       currentHue %= 1
-      new THREE.Color().setHSV(currentHue, 1, 1).getHex()
+      ColorConverter.setHSV(new THREE.Color(), currentHue, 1, 1).getHex()
 
 
   createNewTree : ->

@@ -46,6 +46,7 @@ import brainflight.tracing.TracingIdentifier
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
+import braingames.util.ExtendedTypes.When
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User
@@ -179,10 +180,9 @@ object TracingController extends Controller with Secured with TracingInformation
       if (tracing.accessPermission(request.user))
     } yield {
       val modified =
-        if (!isAllowedToUpdateTracing(tracing, request.user))
-          tracing.makeReadOnly
-        else
-          tracing
+        tracing
+          .when(!isAllowedToUpdateTracing(_, request.user))(_.makeReadOnly)
+          .when(_.state.isFinished)(_.allowAllModes)
 
       Ok(htmlForTracing(modified))
     }) ?~ Messages("notAllowed") ~> 403
@@ -242,10 +242,9 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
     val f = Application.temporaryTracingGenerator ? RequestTemporaryTracing(id)
 
     f.mapTo[Future[Box[TracingLike]]].flatMap(_.map(_.map { tracing =>
-      if (!isAllowedToUpdateTracing(tracing, request.user))
-        tracing.makeReadOnly
-      else
-        tracing
+      tracing
+        .when(!isAllowedToUpdateTracing(_, request.user))(_.makeReadOnly)
+        .when(_.state.isFinished)(_.allowAllModes)
     }))
   }
 

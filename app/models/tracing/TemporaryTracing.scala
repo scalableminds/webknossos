@@ -21,6 +21,7 @@ case class TemporaryTracing(
     tracingSettings: TracingSettings = TracingSettings.default.copy(isEditable = false),
     tracingType: TracingType.Value = TracingType.CompoundProject,
     accessFkt: User => Boolean =( _ => false),
+    state: TracingState = TracingState.Finished,
     version: Int = 0) extends TracingLike {
 
   type Self = TemporaryTracing
@@ -29,6 +30,9 @@ case class TemporaryTracing(
   
   def makeReadOnly = 
     this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
+    
+   def allowAllModes = 
+    this.copy(tracingSettings = tracingSettings.copy(allowedModes = TracingSettings.ALL_MODES))  
   
   def insertTree[TemporaryTracing](tree: TreeLike) = {
     this.copy(trees = tree :: trees).asInstanceOf[TemporaryTracing]

@@ -5,6 +5,7 @@
 ../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer
 ../constants : constants
+libs/threejs/ColorConverter : ColorConverter
 ###
 
 class Skeleton
@@ -97,7 +98,7 @@ class Skeleton
       mergeTree : (lastTreeID, lastNode, activeNode) => 
         @mergeTree(lastTreeID, lastNode, activeNode)
         @updateBranches()
-      newNode : => @setWaypoint()
+      newNode : (centered) => @setWaypoint(centered)
       setBranch : (isBranchPoint, nodeID) => 
         @setBranchPoint(isBranchPoint, nodeID)
         @updateBranches()
@@ -276,7 +277,7 @@ class Skeleton
   getMeshes : =>
     return [@activeNodeParticle].concat(@nodes).concat(@nodesSpheres).concat(@routes).concat(@branches)
 
-  setWaypoint : =>
+  setWaypoint : (centered) =>
     curGlobalPos = @flycam.getPosition()
     activePlane  = @flycam.getActivePlane()
     position     = @route.getActiveNodePos()
@@ -309,14 +310,15 @@ class Skeleton
     @nodes[index].geometry.verticesNeedUpdate = true
 
     # Animation to center waypoint position
-    @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
-    @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 100)
-    @waypointAnimation.onUpdate ->
-      @flycam.setPosition [@globalPosX, @globalPosY, @globalPosZ]
-    @waypointAnimation.start()
+    if centered
+      @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
+      @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 100)
+      @waypointAnimation.onUpdate ->
+        @flycam.setPosition [@globalPosX, @globalPosY, @globalPosZ]
+      @waypointAnimation.start()
   
-    @setActiveNode()
-    #@setNodeRadius(radius)
+      @setActiveNode()
+
     @flycam.hasChanged = true
 
   deleteNode : (node) ->
@@ -517,24 +519,24 @@ class Skeleton
 
   invertHexToRGB : (hexColor) ->
 
-    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
     hsvColor.h = (hsvColor.h + 0.5) % 1
-    rgbColor = new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v)
+    rgbColor = ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v)
     [rgbColor.r, rgbColor.g, rgbColor.b]
 
 
   darkenHex : (hexColor) ->
 
-    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
     hsvColor.v = 0.6
-    new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+    ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
 
 
   invertHex : (hexColor) ->
 
-    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
     hsvColor.h = (hsvColor.h + 0.5) % 1
-    new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+    ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
 
   setSizeAttenuation : (boolean) ->
 

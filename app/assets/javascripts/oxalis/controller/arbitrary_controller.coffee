@@ -32,11 +32,13 @@ class ArbitraryController
     mouse : null
     keyboard : null
     keyboardNoLoop : null
+    keyboardOnce : null
 
     unbind : ->
       @mouse?.unbind()
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
+      @keyboardOnce?.unbind()
 
 
   constructor : (@model, stats, @gui, renderer, scene) ->
@@ -102,7 +104,7 @@ class ArbitraryController
       "space" : =>  
         @cam.move [0, 0, @model.user.moveValue3d]
         @moved()
-      "shift + space" : => @cam.move [0, 0, -@model.user.moveValue3d]
+      "alt + space" : => @cam.move [0, 0, -@model.user.moveValue3d]
       
       #Rotate in distance
       "left"  : => @cam.yawDistance @model.user.rotateValue
@@ -146,6 +148,15 @@ class ArbitraryController
         @record = false
         @infoPlane.updateInfo(false)
     )
+
+    @input.keyboardOnce = new Input.Keyboard(
+
+      #Delete active node and recenter last node
+      "shift + space" : =>
+        @model.route.deleteActiveNode()
+        @centerActiveNode()
+        
+    , -1)
 
   init : ->
 

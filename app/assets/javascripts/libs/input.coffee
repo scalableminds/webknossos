@@ -187,7 +187,7 @@ class Input.Mouse
       @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey, event.altKey)
 
     else
-      @trigger("rightClick", [@lastPosition.x, @lastPosition.y])
+      @trigger("rightClick", [@lastPosition.x, @lastPosition.y], event.ctrlKey)
 
     return
 

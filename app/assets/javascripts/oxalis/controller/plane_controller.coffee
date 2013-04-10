@@ -331,17 +331,26 @@ class PlaneController
 
   ########### Click callbacks
   
-  setWaypoint : (relativePosition, typeNumber) =>
-    activeNodePos = @model.route.getActiveNodePos()
+  setWaypoint : (relativePosition, ctrlPressed) =>
+    activeNode = @model.route.getActiveNode()
     position = @calculateGlobalPos(relativePosition)
     # set the new trace direction
-    if activeNodePos
+    if activeNode
       @flycam.setDirection([
-        position[0] - activeNodePos[0], 
-        position[1] - activeNodePos[1], 
-        position[2] - activeNodePos[2]
+        position[0] - activeNode.pos[0], 
+        position[1] - activeNode.pos[1], 
+        position[2] - activeNode.pos[2]
       ])
-    @addNode(position)
+
+    @addNode(position, not ctrlPressed)
+
+    # Strg + Rightclick to set new not active branchpoint
+    if ctrlPressed and 
+      @model.user.newNodeNewTree == false and 
+        @model.route.getActiveNodeType() == constants.TYPE_USUAL
+
+      @pushBranch()
+      @setActiveNode(activeNode.id)
 
   calculateGlobalPos : (clickPos) ->
     curGlobalPos  = @flycam.getPosition()
@@ -410,14 +419,14 @@ class PlaneController
 
   ########### Model Interaction
 
-  addNode : (position) =>
+  addNode : (position, centered) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
       @model.route.one("rendered", =>
         @model.route.one("rendered", =>
           @model.route.addNode(position, constants.TYPE_USUAL)))
     else
-      @model.route.addNode(position, constants.TYPE_USUAL)
+      @model.route.addNode(position, constants.TYPE_USUAL, centered)
 
   pushBranch : =>
     @model.route.pushBranch()

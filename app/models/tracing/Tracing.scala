@@ -46,8 +46,12 @@ case class Tracing(
 
   def dao = Tracing
 
-  def makeReadOnly = this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
+  def makeReadOnly = 
+    this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
 
+   def allowAllModes = 
+    this.copy(tracingSettings = tracingSettings.copy(allowedModes = TracingSettings.ALL_MODES))  
+    
   def accessPermission(user: User) =
     this._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
 

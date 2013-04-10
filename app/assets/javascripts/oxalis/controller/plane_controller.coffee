@@ -22,6 +22,7 @@ class PlaneController
     mouseControllers : []
     keyboard : null
     keyboardNoLoop : null
+    keyboardLoopDelayed : null
 
     unbind : ->
       for mouse in @mouseControllers
@@ -29,6 +30,7 @@ class PlaneController
       @mouseControllers = []
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
+      @keyboardLoopDelayed?.unbind()
 
 
   constructor : (@model, stats, @gui, renderer, scene) ->

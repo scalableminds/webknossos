@@ -56,7 +56,20 @@ class CameraController
     time = 800
     to = {}
     notify = => @trigger("cameraPositionChanged")
-    @tween = new TWEEN.Tween({ notify: notify, upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z, camera: camera, flycam: @flycam,sv : @skeletonView,x: camera.position.x,y: camera.position.y,z: camera.position.z,l: camera.left,r: camera.right,t: camera.top,b: camera.bottom })
+    getConvertedPosition = => return @model.scaleInfo.voxelToNm(@model.flycam.getPosition())
+    from = {
+      notify: notify
+      getConvertedPosition: getConvertedPosition
+      upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z
+      camera: camera
+      flycam: @flycam
+      sv : @skeletonView
+      dx:camera.position.x - pos[0]
+      dy:camera.position.y - pos[1]
+      dz:camera.position.z - pos[2]
+      l: camera.left, r: camera.right, t: camera.top, b: camera.bottom }
+    @tween = new TWEEN.Tween(from)
+
     if id == constants.VIEW_3D
       diagonal = Math.sqrt(b[0]*b[0]+b[1]*b[1])
       padding = 0.05 * diagonal
@@ -77,7 +90,15 @@ class CameraController
 
       # Calulate the x coordinate so that the vector from the camera to the cube's middle point is
       # perpendicular to the vector going from (0, b[1], 0) to (b[0], 0, 0).
-      to = {  x: pos[0] + b[1] / diagonal, y: pos[1] + b[0] / diagonal, z: pos[2] - 1 / 2, upX: 0, upY: 0, upZ: -1, l: -distance - padding, r: diagonal - distance + padding, t: diagonal / 2 + padding + yOffset, b: -diagonal / 2 - padding + yOffset }
+      to = {
+        dx: b[1] / diagonal
+        dy: b[0] / diagonal
+        dz:- 1 / 2
+        upX: 0, upY: 0, upZ: -1
+        l: -distance - padding
+        r: diagonal - distance + padding
+        t: diagonal / 2 + padding + yOffset
+        b: -diagonal / 2 - padding + yOffset }
     else
       ind = Dimensions.getIndices(id)
       width = Math.max(b[ind[0]], b[ind[1]] * 1.12) * 1.1
@@ -89,9 +110,9 @@ class CameraController
       positionOffset = [[0, 0, -1], [1, 0, 0], [0, 1, 0]]
       upVector       = [[0, -1, 0], [0, -1, 0], [0, 0, -1]]
 
-      to.x = pos[0] + positionOffset[id][0]
-      to.y = pos[1] + positionOffset[id][1]
-      to.z = pos[2] + positionOffset[id][2]
+      to.dx = positionOffset[id][0]
+      to.dy = positionOffset[id][1]
+      to.dz = positionOffset[id][2]
       to.upX = upVector[id][0]; to.upY = upVector[id][1]; to.upZ = upVector[id][2]
       to.l = -offsetX; to.t = offsetY
       to.r = to.l + width; to.b = to.t - width
@@ -101,9 +122,9 @@ class CameraController
       .onUpdate(@updateCameraPrev)
       .start()
     else
-      to.camera = camera
-      to.flycam = @flycam
-      to.notify = notify
+      for prop of from
+        unless to[prop]?
+          to[prop] = from[prop]
       @updateCameraPrev.call(to)
 
   degToRad : (deg) -> deg/180*Math.PI
@@ -114,7 +135,8 @@ class CameraController
   changePrevSV : (animate = true) => @changePrev(constants.VIEW_3D, animate)
 
   updateCameraPrev : ->
-    @camera.position.set(@x, @y, @z)
+    p = @getConvertedPosition()
+    @camera.position.set(@dx + p[0], @dy + p[1], @dz + p[2])
     @camera.left = @l
     @camera.right = @r
     @camera.top = @t
@@ -167,17 +189,11 @@ class CameraController
     @flycam.hasChanged = true
 
   zoomIn : =>
-    if @model.user.lockZoom
-      @flycam.zoomInAll()
-    else 
-      @flycam.zoomIn(@flycam.getActivePlane())
+    @flycam.zoomIn()
     @updateCamViewport()
 
   zoomOut : =>
-    if @model.user.lockZoom
-      @flycam.zoomOutAll()
-    else 
-      @flycam.zoomOut(@flycam.getActivePlane())
+    @flycam.zoomOut()
     @updateCamViewport()
 
   setRouteClippingDistance : (value) ->
@@ -189,9 +205,9 @@ class CameraController
 
   updateCamViewport : ->
     scaleFactor = @model.scaleInfo.baseVoxel
+    boundary    = constants.WIDTH / 2 * @flycam.getPlaneScalingFactor()
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
-      @cameras[i].near = -@camDistance #/ @flycam.getPlaneScalingFactor(i)
-      boundary     = constants.WIDTH / 2 * @flycam.getPlaneScalingFactor(i)
+      @cameras[i].near = -@camDistance
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor
       @cameras[i].right = @cameras[i].top    =  boundary * scaleFactor
       @cameras[i].updateProjectionMatrix()

@@ -23,8 +23,8 @@ class Flycam2d
     # Invariant: 2^zoomStep / 2^integerZoomStep <= 2^maxZoomDiff
     @maxZoomStepDiff = Math.min(Math.log(@MAX_ZOOM_THRESHOLD) / Math.LN2, Math.log((@TEXTURE_WIDTH-@MAX_TEXTURE_OFFSET)/@viewportWidth)/Math.LN2)
     @hasNewTexture = [false, false, false]
-    @zoomSteps = [0.0, 0.0, 0.0]
-    @integerZoomSteps = [0, 0, 0]
+    @zoomStep = 0.0
+    @integerZoomStep = 0
     # buffer: how many pixels is the texture larger than the canvas on each dimension?
     # --> two dimensional array with buffer[planeID][dimension], dimension: x->0, y->1
     @buffer = [[0, 0], [0, 0], [0, 0]]
@@ -37,73 +37,57 @@ class Flycam2d
     @rayThreshold = [10, 10, 10, 100]
     @spaceDirection = [1, 1, 1]
     @quality = 0        # offset of integer zoom step to the best-quality zoom level
-    @setZoomSteps(@user.zoomXY, @user.zoomYZ, @user.zoomXZ)
+    @setZoomStep(@user.zoom)
 
     @user.on({
-      qualitiyChanged : (quality) => @setQuality(quality)
+      qualityChanged : (quality) => @setQuality(quality)
       })
 
-  zoomIn : (planeID) ->
-    @setZoomStep(planeID, @zoomSteps[planeID] - @ZOOM_DIFF)
+  zoomIn : ->
+    @setZoomStep(@zoomStep - @ZOOM_DIFF)
 
-  zoomOut : (planeID) ->
+  zoomOut : ->
     # Make sure the max. zoom Step will not be exceded
-    if @zoomSteps[planeID] < @zoomStepCount + @maxZoomStepDiff - @ZOOM_DIFF
-      @setZoomStep(planeID, @zoomSteps[planeID] + @ZOOM_DIFF)
-
-  zoomInAll : ->
-    for i in [0..2]
-      @zoomIn i
-
-  zoomOutAll : ->
-    for i in [0..2]
-      @zoomOut i
+    if @zoomStep < @zoomStepCount + @maxZoomStepDiff - @ZOOM_DIFF
+      @setZoomStep(@zoomStep + @ZOOM_DIFF)
 
   # Set offset to the best-possible zoom step
   setQuality : (value) ->
     @quality = value
     for i in [0..2]
-      @calculateIntegerZoomStep(i)
+      @calculateIntegerZoomStep()
     @hasChanged = true
 
-  calculateIntegerZoomStep : (planeID) ->
+  calculateIntegerZoomStep : ->
     # round, because Model expects Integer
-    @integerZoomSteps[planeID] = Math.ceil(@zoomSteps[planeID] - @maxZoomStepDiff + @quality)
-    @integerZoomSteps[planeID] = Math.min(@integerZoomSteps[planeID], @zoomStepCount)
-    @integerZoomSteps[planeID] = Math.max(@integerZoomSteps[planeID], 0)
+    @integerZoomStep = Math.ceil(@zoomStep - @maxZoomStepDiff + @quality)
+    @integerZoomStep = Math.min(@integerZoomStep, @zoomStepCount)
+    @integerZoomStep = Math.max(@integerZoomStep, 0)
 
-  getZoomStep : (planeID) ->
-    @zoomSteps[planeID]
+  getZoomStep : ->
+    @zoomStep
 
-  setZoomSteps : (zXY, zYZ, zXZ) ->
-    zoomArray = [zXY, zYZ, zXZ]
-    for planeID in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
-      @setZoomStep(planeID, zoomArray[planeID])
-
-  setZoomStep : (planeID, zoomStep) ->
-    @zoomSteps[planeID] = zoomStep
+  setZoomStep : (zoomStep) ->
+    @zoomStep = zoomStep
     @hasChanged = true
     @calculateBuffer()
-    @trigger "zoomFactorChanged", Math.pow(2, @zoomSteps[0]), @zoomSteps[0]
+    @trigger "zoomFactorChanged", Math.pow(2, @zoomStep), @zoomStep
 
   calculateBuffer : ->
     for planeID in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       scaleArray = Dimensions.transDim(@scaleInfo.baseVoxelFactors, planeID)
-      base = @viewportWidth * @getTextureScalingFactor(planeID) / 2
+      base = @viewportWidth * @getTextureScalingFactor() / 2
       @buffer[planeID] = [@TEXTURE_WIDTH/2 - base * scaleArray[0],
                           @TEXTURE_WIDTH/2 - base * scaleArray[1]]
 
-  getIntegerZoomStep : (planeID) ->
-    @integerZoomSteps[planeID]
+  getIntegerZoomStep : ->
+    @integerZoomStep
 
-  getIntegerZoomSteps : ->
-    @integerZoomSteps
+  getTextureScalingFactor : ->
+    Math.pow(2, @zoomStep)/Math.pow(2, @integerZoomStep)
 
-  getTextureScalingFactor : (planeID) ->
-    Math.pow(2, @zoomSteps[planeID])/Math.pow(2, @integerZoomSteps[planeID])
-
-  getPlaneScalingFactor : (planeID) ->
-    Math.pow(2, @zoomSteps[planeID])
+  getPlaneScalingFactor : ->
+    Math.pow(2, @zoomStep)
 
   getDirection : ->
     @direction
@@ -129,7 +113,7 @@ class Flycam2d
   moveActivePlane : (p) -> # vector of voxels in BaseVoxels
     p = Dimensions.transDim(p, @activePlane)
     ind = Dimensions.getIndices(@activePlane)
-    zoomFactor = Math.pow(2, @zoomSteps[@activePlane])
+    zoomFactor = Math.pow(2, @zoomStep)
     scaleFactor = @scaleInfo.baseVoxelFactors
     delta = [p[0]*zoomFactor*scaleFactor[0], p[1]*zoomFactor*scaleFactor[1], p[2]*zoomFactor*scaleFactor[2]]
     @move(delta, @activePlane)
@@ -163,15 +147,15 @@ class Flycam2d
     ind  = Dimensions.getIndices planeID
     res = ((area[0] < 0) or (area[1] < 0) or (area[2] > @TEXTURE_WIDTH) or (area[3] > @TEXTURE_WIDTH) or
     (@position[ind[2]] != @texturePosition[planeID][ind[2]]) or
-    (@zoomSteps[planeID] - (@integerZoomSteps[planeID]-1)) < @maxZoomStepDiff) or
-    (@zoomSteps[planeID] -  @integerZoomSteps[planeID]     > @maxZoomStepDiff)
+    (@zoomStep - (@integerZoomStep-1)) < @maxZoomStepDiff) or
+    (@zoomStep -  @integerZoomStep     > @maxZoomStepDiff)
     return res
 
   # return the coordinate of the upper left corner of the viewport as texture-relative coordinate
   getOffsets : (planeID) ->
     ind = Dimensions.getIndices planeID
-    [ (@position[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID][0],
-      (@position[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @integerZoomSteps[planeID]) + @buffer[planeID][1]]
+    [ (@position[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @integerZoomStep) + @buffer[planeID][0],
+      (@position[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @integerZoomStep) + @buffer[planeID][1]]
 
   # returns [left, top, right, bottom] array
   getArea : (planeID) ->
@@ -179,19 +163,19 @@ class Flycam2d
     scaleArray = @scaleInfo.baseVoxelFactors
     ind        = Dimensions.getIndices(planeID)
     offsets = @getOffsets(planeID)
-    size    = @getTextureScalingFactor(planeID) * @viewportWidth
+    size    = @getTextureScalingFactor() * @viewportWidth
     # two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
     #[offsets[0] - 1, offsets[1] - 1, offsets[0] + size * scaleArray[ind[0]] + 1, offsets[1] + size * scaleArray[ind[1]] + 1]
     [offsets[0], offsets[1], offsets[0] + size * scaleArray[ind[0]], offsets[1] + size * scaleArray[ind[1]]]
 
   notifyNewTexture : (planeID) ->
     @texturePosition[planeID] = @position.slice()    #copy that position
-    @calculateIntegerZoomStep planeID
+    @calculateIntegerZoomStep()
     # As the Model does not render textures for exact positions, the last 5 bits of
     # the X and Y coordinates for each texture have to be set to 0
     for i in [0..2]
       if i != (planeID+2)%3
-        @texturePosition[planeID][i] &= -1 << (5 + @integerZoomSteps[planeID])
+        @texturePosition[planeID][i] &= -1 << (5 + @integerZoomStep)
     @calculateBuffer()
 
   hasNewTextures : ->
@@ -203,6 +187,6 @@ class Flycam2d
 
   getRayThreshold : (planeID) ->
     if planeID < 3
-      return @rayThreshold[planeID] * Math.pow(2, @zoomSteps[planeID]) * @scaleInfo.baseVoxel
+      return @rayThreshold[planeID] * Math.pow(2, @zoomStep) * @scaleInfo.baseVoxel
     else
       return @rayThreshold[planeID]

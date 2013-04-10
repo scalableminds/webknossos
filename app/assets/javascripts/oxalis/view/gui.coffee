@@ -59,7 +59,6 @@ class Gui
     @fViewportcontrols = @gui.addFolder("Viewportoptions")
     @addSlider(@fViewportcontrols, @user, "moveValue",
       0.1, 10, 0.1, "Move Value")
-    @addCheckbox(@fViewportcontrols, @user, "lockZoom", "Lock Zoom")
     @addCheckbox(@fViewportcontrols, @user, "dynamicSpaceDirection", "d/f-Switching")
 
     @fFlightcontrols = @gui.addFolder("Flightoptions")
@@ -70,23 +69,25 @@ class Gui
     @addSlider(@fFlightcontrols, @user, "moveValue3d",
       0.1, 10, 0.1, "Move Value")
     @addSlider(@fFlightcontrols, @user, "crosshairSize",
-      0.1, 1, 0.01, "Crosshair size")
+      0.05, 0.5, 0.01, "Crosshair size")
 
-    fView = @gui.addFolder("View")
-    @addCheckbox(fView, @settings, "fourBit", "4 Bit")
-    @addCheckbox(fView, @user, "interpolation", "Interpolation")
+    @fView = @gui.addFolder("View")
+    @addCheckbox(@fView, @settings, "fourBit", "4 Bit")
+    @addCheckbox(@fView, @user, "interpolation", "Interpolation")
     @brightnessController =
-      @addSlider(fView, @settings, "brightness",
+      @addSlider(@fView, @settings, "brightness",
         -256, 256, 5, "Brightness", @setBrightnessAndContrast)
     @contrastController =
-      @addSlider(fView, @settings, "contrast",
+      @addSlider(@fView, @settings, "contrast",
         0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
-    @addFunction(fView, @settings, "resetBrightnessAndContrast",
+    @addFunction(@fView, @settings, "resetBrightnessAndContrast",
       "Reset To Default")
-    @addSlider(fView, @user, "routeClippingDistance",
+    @clippingController = @addSlider(@fView, @user, "routeClippingDistance",
       1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
-    @addCheckbox(fView, @user, "displayCrosshair", "Show Crosshairs")
-    (fView.add @settings, "quality", @qualityArray)
+    @clippingControllerArbitrary = @addSlider(@fView, @user, "routeClippingDistanceArbitrary",
+      1, 127, 1, "Clipping Distance")
+    @addCheckbox(@fView, @user, "displayCrosshair", "Show Crosshairs")
+    (@fView.add @settings, "quality", @qualityArray)
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 
@@ -276,8 +277,14 @@ class Gui
         $(@fFlightcontrols.domElement).hide()
         $(@fViewportcontrols.domElement).show()
         $(@fSkeleton.domElement).show()
+        $(@clippingControllerArbitrary.domElement).parents(".cr").hide()
+        $(@clippingController.domElement).parents(".cr").show()
+        @user.triggerAll()
       when constants.MODE_ARBITRARY
         $(@fFlightcontrols.domElement).show()
         $(@fViewportcontrols.domElement).hide()
         $(@fSkeleton.domElement).hide()
+        $(@clippingControllerArbitrary.domElement).parents(".cr").show()
+        $(@clippingController.domElement).parents(".cr").hide()
+        @user.triggerAll()
 

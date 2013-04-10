@@ -1344,6 +1344,39 @@ M4x4.makeLookAt = function M4x4_makeLookAt (eye, center, up, r) {
   return M4x4.mul(tm1, tm2, r);
 };
 
+M4x4.makeLookAtWithoutTranslation = function M4x4_makeLookAtWithoutTranslation (eye, center, up, r) {
+  //MathUtils_assert(eye.length === 3, "eye.length === 3");
+  //MathUtils_assert(center.length === 3, "center.length === 3");
+  //MathUtils_assert(up.length === 3, "up.length === 3");
+  //MathUtils_assert(r === undefined || r.length === 16, "r === undefined || r.length === 16");
+
+  var z = V3.direction(eye, center, V3._temp1);
+  var x = V3.normalize(V3.cross(up, z, V3._temp2), V3._temp2);
+  var y = V3.normalize(V3.cross(z, x, V3._temp3), V3._temp3);
+
+  var tm1 = M4x4._temp1;
+  var tm2 = M4x4._temp2;
+
+  tm1[0] = x[0];
+  tm1[1] = y[0];
+  tm1[2] = z[0];
+  tm1[3] = 0;
+  tm1[4] = x[1];
+  tm1[5] = y[1];
+  tm1[6] = z[1];
+  tm1[7] = 0;
+  tm1[8] = x[2];
+  tm1[9] = y[2];
+  tm1[10] = z[2];
+  tm1[11] = 0;
+  tm1[12] = 0;
+  tm1[13] = 0;
+  tm1[14] = 0;
+  tm1[15] = 1;
+
+  return tm1
+};
+
 /*
  * Function: M4x4.transposeSelf
  */

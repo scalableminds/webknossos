@@ -13,6 +13,19 @@ $ ->
     window.open(this.href, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
     e.preventDefault()
 
+  # hover show/hide functionality
+  $(document).on "hover", ".hover-dynamic", ->
+    $(".hover-show", this).show()
+    $(".hover-hide", this).hide()
+  $(document).on "blur", ".hover-dynamic .hover-input", ->
+    window.setTimeout(( =>
+      $(this).parents(".hover-dynamic").find(".hover-show").hide()
+      $(this).parents(".hover-dynamic").find(".hover-hide").show()),200)
+  $(document).on "mouseleave", ".hover-dynamic", ->
+    if not $(".hover-input:focus", this).length
+      $(".hover-show", this).hide()
+      $(".hover-hide", this).show()
+
 
   dataAjaxHandler = (event) ->
     
@@ -198,3 +211,26 @@ $ ->
       $table.find(".details-row").toggleClass("hide", !newState)
       $table.find(".details-toggle").toggleClass("open", newState)
       $toggle.toggleClass("open", newState)
+
+
+  highlightToasts = ->
+
+    highlight = (target) =>
+
+      for i in [0..5]
+        target.animate({right: "+=20px"}, 30).animate({right: "-=20px"}, 30)
+      setTimeout(
+        => highlight(target)
+        5000
+      )
+
+    newTarget = $("div.alert-error:not(.highlighted)").addClass("highlighted")
+    if newTarget.length then highlight(newTarget)
+
+  $("#alert-container").on "DOMSubtreeModified", (event) ->
+    highlightToasts()
+
+  highlightToasts()
+
+  # Show modal-message if present, has to be appended to the body, according to bootstrap manual
+  $(".modal-message").appendTo("body").modal("show")

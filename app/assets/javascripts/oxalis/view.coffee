@@ -12,6 +12,9 @@ class View
     unless @webGlSupported()
       Toast.error("Couldn't initialise WebGL, please make sure you are using Google Chrome and WebGL is enabled.<br>"+
         "<a href='http://get.webgl.org/'>http://get.webgl.org/</a>")
+
+    @renderer = new THREE.WebGLRenderer( clearColor: 0x000000, clearAlpha: 1.0, antialias: false )
+    @scene = new THREE.Scene()
    
     @setTheme(constants.THEME_BRIGHT)
     @createKeyboardCommandOverlay()
@@ -36,14 +39,18 @@ class View
         @updateTrees()
       reloadTrees : =>
         @updateTrees()
-      newNode : => @updateActiveComment()
+      newNode : => 
+        @updateActiveComment()
+        @updateTrees()
       newTreeName : => 
         @updateTrees()
         @updateActiveTree()
       newTree : => 
         @updateActiveComment()
         @updateTrees()
-        @updateActiveTree() })
+        @updateActiveTree() 
+      deleteActiveNode : =>
+        @updateTrees() })
 
     @model.route.stateLogger.on
       pushFailed       : (critical) =>
@@ -100,23 +107,25 @@ class View
       <tr><td>P,N</td><td>Previous/Next comment</td><td>Del</td><td>Delete node/Split trees</td></tr>
       <tr><td>C</td><td>Create new tree</td><td>Shift + Alt + Leftclick</td><td>Merge two trees</td></tr>
       <tr><td>T</td><td>Toggle theme</td><td>M</td><td>Toggle mode</td></tr>
-      <tr><td>1</td><td>Toggle skeleton visibility</td><td>2</td><td>Toggle inactive tree visibility</td></tr>'
+      <tr><td>1</td><td>Toggle skeleton visibility</td><td>2</td><td>Toggle inactive tree visibility</td></tr>
+      <tr><td>Shift + Mousewheel</td><td>Change node size</td><td></td><td></td></tr>'
+
     skeletonKeys =
       '<tr><th colspan="4">3D-view</th></tr>
       <tr><td>Mousewheel</td><td>Zoom in and out</td><td>Rightclick drag</td><td>Rotate Skeleton View</td></tr>'
     viewportKeys =
       '<tr><th colspan="4">Viewports</th></tr>
-      <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Leftclick</td><td>Select node</td></tr>
+      <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Shift + Leftclick</td><td>Select node</td></tr>
       <tr><td>Mousewheel or D and F</td><td>Move along 3rd axis</td><td>Rightclick</td><td>Set tracepoint</td></tr>
       <tr><td>I,O or Alt + Mousewheel</td><td>Zoom in/out</td><td>B,J</td><td>Set/Jump to branchpoint</td></tr>
-      <tr><td>Shift + Mousewheel</td><td>Change node size</td><td>S</td><td>Center active node</td></tr>'
+      <tr><td>S</td><td>Center active node</td><td></td><td></td></tr>'
     arbitraryKeys =
       '<tr><th colspan="4">Flightmode</th></tr>
       <tr><td>Mouse or Arrow keys</td><td>Rotation</td><td>R</td><td>Reset rotation</td></tr>
       <tr><td>Shift + Mouse or Shift + Arrow</td><td>Rotation around Axis</td><td>W A S D</td><td>Move</td></tr>
-      <tr><td>Space, Shift + Space</td><td>Forward, Backward</td><td>B, J</td><td>Set/Jump to last branchpoint</td></tr>
+      <tr><td>Space</td><td>Forward</td><td>B, J</td><td>Set/Jump to last branchpoint</td></tr>
       <tr><td>Y</td><td>Center active node</td><td>I, O</td><td>Zoom in and out</td></tr>
-      <tr><td>Z, U</td><td>Start/Stop recording waypoints</td><td></td><td></td></tr>'
+      <tr><td>Z, U</td><td>Start/Stop recording waypoints</td><td>Shift + Space</td><td>Delete active node, Recenter previous node</td></tr>'
 
     html = '''<div class="modal-header"><button type="button" class="close" data-dismiss="modal">x</button>
             <h3>keyboard commands</h3></div>
@@ -148,7 +157,7 @@ class View
     for comment in comments
       newContent.appendChild((
         $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
-        $('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content})))[0])
+        $('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.node + " - " + comment.content})))[0])
 
     commentList.append(newContent)
 
@@ -188,6 +197,7 @@ class View
       $("#tree-name").text(activeTree.name)
       $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
 
+
   updateTrees : ->
 
     trees = @model.route.getTrees()
@@ -200,8 +210,11 @@ class View
     for tree in trees
       newContent.appendChild((
         $('<li>').append($('<a>', {"href": "#", "data-treeid": tree.treeId}).append(
+          $('<i>', {"class": "icon-bull"}),
+          $('<span>', {"title": "nodes", "text": tree.nodes.length}).css("display": "inline-block", "width": "50px"),
           $('<i>', {"class": "icon-sign-blank"}).css(
-            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"), $('<span>', {"text": tree.name}))) )[0])
+            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"),
+          $('<span>', {"title": "name", "text": tree.name}) )) )[0])
 
     treeList.append(newContent)
 

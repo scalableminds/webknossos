@@ -32,37 +32,38 @@ class ArbitraryController
     mouse : null
     keyboard : null
     keyboardNoLoop : null
+    keyboardOnce : null
 
     unbind : ->
       @mouse?.unbind()
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
+      @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats) ->
+  constructor : (@model, stats, renderer, scene) ->
 
     _.extend(this, new EventMixin())
 
-    @canvas = canvas = $("#arbitraryplane")
-    canvas.hide()
-   
+    @canvas = canvas = $("#render-canvas")
     
     @cam = @model.flycam3d
-    @view = new ArbitraryView(canvas, @cam, stats)    
+    @view = new ArbitraryView(canvas, @cam, stats, renderer, scene, @model.scaleInfo)
 
     @plane = new ArbitraryPlane(@cam, @model, @WIDTH, @HEIGHT)
     @view.addGeometry @plane
 
     @infoPlane = new ArbitraryPlaneInfo()
-    @view.addGeometry @infoPlane
 
     @input = _.extend({}, @input)
 
-    @crosshair = new Crosshair(model.user.crosshairSize)
+    @crosshair = new Crosshair(@cam, model.user.crosshairSize)
     @view.addGeometry(@crosshair)
 
     @bind()
     @view.draw()
+
+    @stop()
 
 
   render : (forceUpdate, event) ->
@@ -83,38 +84,39 @@ class ArbitraryController
         @cam.pitchDistance(
           delta.y * @model.user.getMouseInversionY() * @model.user.mouseRotateValue
         )
+      scroll : @scroll
     )
 
 
   initKeyboard : ->
     
     @input.keyboard = new Input.Keyboard(
-
+ 
       #Scale plane
-      "l" : => @plane.applyScale -@model.user.scaleValue
-      "k" : => @plane.applyScale  @model.user.scaleValue
+      "l" : => @view.applyScale -@model.user.scaleValue
+      "k" : => @view.applyScale  @model.user.scaleValue
 
       #Move   
-      "w" : => @cam.move [0, -@model.user.moveValue3d, 0]
-      "s" : => @cam.move [0, @model.user.moveValue3d, 0]
-      "a" : => @cam.move [-@model.user.moveValue3d, 0, 0]
-      "d" : => @cam.move [@model.user.moveValue3d, 0, 0]
+      "w" : => @cam.move [0, @model.user.moveValue3d, 0]
+      "s" : => @cam.move [0, -@model.user.moveValue3d, 0]
+      "a" : => @cam.move [@model.user.moveValue3d, 0, 0]
+      "d" : => @cam.move [-@model.user.moveValue3d, 0, 0]
       "space" : =>  
         @cam.move [0, 0, @model.user.moveValue3d]
         @moved()
-      "shift + space" : => @cam.move [0, 0, -@model.user.moveValue3d]
+      "alt + space" : => @cam.move [0, 0, -@model.user.moveValue3d]
       
       #Rotate in distance
-      "left"  : => @cam.yawDistance -@model.user.rotateValue
-      "right" : => @cam.yawDistance @model.user.rotateValue
-      "up"    : => @cam.pitchDistance @model.user.rotateValue
-      "down"  : => @cam.pitchDistance -@model.user.rotateValue
+      "left"  : => @cam.yawDistance @model.user.rotateValue
+      "right" : => @cam.yawDistance -@model.user.rotateValue
+      "up"    : => @cam.pitchDistance -@model.user.rotateValue
+      "down"  : => @cam.pitchDistance @model.user.rotateValue
       
       #Rotate at centre
       "shift + left"  : => @cam.yaw @model.user.rotateValue
       "shift + right" : => @cam.yaw -@model.user.rotateValue
-      "shift + up"    : => @cam.pitch -@model.user.rotateValue
-      "shift + down"  : => @cam.pitch @model.user.rotateValue
+      "shift + up"    : => @cam.pitch @model.user.rotateValue
+      "shift + down"  : => @cam.pitch -@model.user.rotateValue
 
       #Zoom in/out
       "i" : => @cam.zoomIn()
@@ -130,6 +132,9 @@ class ArbitraryController
       #Reset Matrix
       "r" : => @cam.resetRotation()
 
+      #Recenter active node
+      "y" : => @centerActiveNode()
+
       #Recording of Waypoints
       "z" : => 
         @record = true
@@ -139,6 +144,20 @@ class ArbitraryController
         @record = false
         @infoPlane.updateInfo(false)
     )
+
+    @input.keyboardOnce = new Input.Keyboard(
+
+      #Delete active node and recenter last node
+      "shift + space" : =>
+        @model.route.deleteActiveNode()
+        @centerActiveNode()
+        
+    , -1)
+
+  init : ->
+
+    @setRouteClippingDistance @model.user.routeClippingDistance
+    @view.applyScale(0)
 
 
   bind : ->
@@ -150,13 +169,16 @@ class ArbitraryController
     @model.user.on "crosshairSizeChanged", (value) =>
       @crosshair.setScale(value)
 
+    @model.user.on "routeClippingDistanceArbitraryChanged", (value) =>
+      @setRouteClippingDistance(value)
+
 
   start : ->
 
     @initKeyboard()
     @initMouse()
-    @canvas.show()
     @view.start()
+    @init()
     @view.draw()     
  
 
@@ -164,7 +186,12 @@ class ArbitraryController
 
     @view.stop()
     @input.unbind()
-    @canvas.hide()
+
+
+  scroll : (delta, type) =>
+
+    switch type
+      when "shift" then @setParticleSize(delta)
 
 
   addNode : (position) =>
@@ -189,6 +216,15 @@ class ArbitraryController
     @addNode(position)    
 
 
+  setParticleSize : (delta) =>
+
+    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+
+
+  setRouteClippingDistance : (value) =>
+
+    @view.setRouteClippingDistance(value)
+
   pushBranch : ->
 
     @model.route.pushBranch()
@@ -199,6 +235,23 @@ class ArbitraryController
     _.defer => @model.route.popBranch().done((id) => 
       @setActiveNode(id, true)
     )
+
+  centerActiveNode : ->
+
+    activeNode = @model.route.getActiveNode()
+    if activeNode
+      @cam.setPosition(activeNode.pos)
+      parent = activeNode.parent
+      while parent
+        # set right direction
+        direction = ([
+          activeNode.pos[0] - parent.pos[0],
+          activeNode.pos[1] - parent.pos[1],
+          activeNode.pos[2] - parent.pos[2]])
+        if direction[0] or direction[1] or direction[2]
+          @cam.setDirection( @model.scaleInfo.voxelToNm( direction ))
+          break
+        parent = parent.parent
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->

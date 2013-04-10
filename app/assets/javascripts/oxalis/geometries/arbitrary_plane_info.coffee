@@ -16,7 +16,7 @@ class ArbitraryPlaneInfo
 
   isRecording : false
 
-  constructor : () ->
+  constructor : ->
 
     { WIDTH, HEIGHT } = @
 
@@ -24,17 +24,18 @@ class ArbitraryPlaneInfo
     canvas.width = WIDTH
     canvas.height = HEIGHT
     
-    context = canvas.getContext("2d")
-
-    @mesh = @createMesh(canvas)
-    @context = context
+    @context = canvas.getContext("2d")
 
     @updateInfo(false)
+
+    $(canvas).attr("id": "arbitrary-info-canvas")
+    $(canvas).css(position: "absolute", left: 10, top: 10)
+    $("#render").append(canvas)
 
 
   updateInfo : (@isRecording) ->
 
-    { context, WIDTH, HEIGHT, mesh, ALPHA, LINE_WIDTH } = @
+    { context, WIDTH, HEIGHT, ALPHA, LINE_WIDTH } = @
 
     if isRecording
       text = "TRACING"
@@ -75,39 +76,3 @@ class ArbitraryPlaneInfo
     context.fill()  if fill
     context.fillStyle = "rgba(255, 255, 255, #{ALPHA})"    
     context.fillText(text, WIDTH * 0.5, HEIGHT * 0.5 + 3)
-
-    mesh.material.map.needsUpdate = true
-
-  update : ->
-
-
-  attachScene : (@scene) ->
-
-    scene.add(@mesh)
-
-
-  removeScene : () ->
-
-    @scene.remove(@mesh)    
-
-
-  createMesh : (canvas) ->
-
-    { WIDTH, HEIGHT } = @
-
-    texture = new THREE.Texture(canvas)
-
-    material = new THREE.MeshBasicMaterial(map : texture)
-    material.transparent = true
-    
-    mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(WIDTH, HEIGHT)
-      material
-    )
-
-    mesh.rotation.y = Math.PI
-    mesh.position.x = 110
-    mesh.position.y = 125
-    mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.4
-
-    mesh 

@@ -30,6 +30,7 @@ trait TracingLike extends ContainsTracingInfo{
   def comments: List[Comment]
   def tracingType: TracingType.Value
   def editPosition: Point3D
+  def state: TracingState
 
   def insertBranchPoint[A](bp: BranchPoint): A
   def insertComment[A](c: Comment): A
@@ -38,10 +39,13 @@ trait TracingLike extends ContainsTracingInfo{
   def user: Option[User] = None
   
   def makeReadOnly: Self
+
+  def allowAllModes: Self
   
   def accessPermission(user: User): Boolean
   
   def isEditable = tracingSettings.isEditable
+  
   
   private def applyUpdates(f: Self => Self*) = {
     f.foldLeft(self) {

@@ -7,7 +7,7 @@ import models.basics.BasicSettings
 import TracingSettings._
 
 case class TracingSettings(
-  allowedModes: List[String] = List(OXALIS, ARBITRARY), 
+  allowedModes: List[String] = ALL_MODES, 
   branchPointsAllowed: Boolean = true,
   somaClickingAllowed: Boolean = true,
   isEditable: Boolean = true)
@@ -15,6 +15,8 @@ case class TracingSettings(
 object TracingSettings {
   val OXALIS = "oxalis"
   val ARBITRARY = "arbitrary"
+
+  val ALL_MODES = List(OXALIS, ARBITRARY)
 
   val default = TracingSettings()
 

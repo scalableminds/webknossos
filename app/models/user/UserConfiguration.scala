@@ -27,7 +27,7 @@ object UserConfiguration extends BasicSettings{
       "moveValue" -> JsNumber(1),
       "moveValue3d" -> JsNumber(1),
       "rotateValue" -> JsNumber(0.01),
-      "crosshairSize" -> JsNumber(0.5),
+      "crosshairSize" -> JsNumber(0.1),
       "scaleValue" -> JsNumber(0.05),
       "mouseRotateValue" -> JsNumber(0.004),
       "routeClippingDistance" -> JsNumber(50),

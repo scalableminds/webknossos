@@ -81,9 +81,6 @@ class Controller
         event.preventDefault()
         @setActiveNode($(event.target).data("nodeid"), true, false)
 
-      $("#tab-comments").mouseleave (event) =>
-        $("#comment-input").blur()
-
       $("#tree-name-submit").click (event) =>
         @setTreeName($("#tree-name-input").val())
 
@@ -159,6 +156,7 @@ class Controller
       @arbitraryController.stop()
       @planeController.start()
       @propagateMode(constants.MODE_OXALIS)
+
 
   propagateMode : (mode) ->
 

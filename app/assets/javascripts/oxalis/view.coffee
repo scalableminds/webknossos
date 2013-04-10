@@ -39,14 +39,18 @@ class View
         @updateTrees()
       reloadTrees : =>
         @updateTrees()
-      newNode : => @updateActiveComment()
+      newNode : => 
+        @updateActiveComment()
+        @updateTrees()
       newTreeName : => 
         @updateTrees()
         @updateActiveTree()
       newTree : => 
         @updateActiveComment()
         @updateTrees()
-        @updateActiveTree() })
+        @updateActiveTree() 
+      deleteActiveNode : =>
+        @updateTrees() })
 
     @model.route.stateLogger.on
       pushFailed       : (critical) =>
@@ -111,7 +115,7 @@ class View
       <tr><td>Mousewheel</td><td>Zoom in and out</td><td>Rightclick drag</td><td>Rotate Skeleton View</td></tr>'
     viewportKeys =
       '<tr><th colspan="4">Viewports</th></tr>
-      <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Leftclick</td><td>Select node</td></tr>
+      <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Shift + Leftclick</td><td>Select node</td></tr>
       <tr><td>Mousewheel or D and F</td><td>Move along 3rd axis</td><td>Rightclick</td><td>Set tracepoint</td></tr>
       <tr><td>I,O or Alt + Mousewheel</td><td>Zoom in/out</td><td>B,J</td><td>Set/Jump to branchpoint</td></tr>
       <tr><td>S</td><td>Center active node</td><td></td><td></td></tr>'
@@ -153,7 +157,7 @@ class View
     for comment in comments
       newContent.appendChild((
         $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
-        $('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.content})))[0])
+        $('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.node + " - " + comment.content})))[0])
 
     commentList.append(newContent)
 
@@ -206,8 +210,11 @@ class View
     for tree in trees
       newContent.appendChild((
         $('<li>').append($('<a>', {"href": "#", "data-treeid": tree.treeId}).append(
+          $('<i>', {"class": "icon-bull"}),
+          $('<span>', {"title": "nodes", "text": tree.nodes.length}).css("display": "inline-block", "width": "50px"),
           $('<i>', {"class": "icon-sign-blank"}).css(
-            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"), $('<span>', {"text": tree.name}))) )[0])
+            "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"),
+          $('<span>', {"title": "name", "text": tree.name}) )) )[0])
 
     treeList.append(newContent)
 

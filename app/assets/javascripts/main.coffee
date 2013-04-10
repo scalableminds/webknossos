@@ -65,5 +65,3 @@ require [
           platform : navigator.platform
       log: $.proxy(console.warn, console)
     )
-
-    $.assert(false, "MSG", {})

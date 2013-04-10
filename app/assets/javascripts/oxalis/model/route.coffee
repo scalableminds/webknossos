@@ -223,7 +223,7 @@ class Route
     @branchDeferred.resolve()
 
 
-  addNode : (position, type) ->
+  addNode : (position, type, centered = true) ->
 
     if @ensureDirection(position)
       unless @lastRadius?
@@ -239,13 +239,14 @@ class Route
         @activeNode = point
         point.type = @TYPE_BRANCH
         if @branchPointsAllowed
+          centered = true
           @pushBranch()
       @lastActiveNodeId = @activeNode.id
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
       
-      @trigger("newNode")
+      @trigger("newNode", centered)
     else
       @trigger("wrongDirection")
 

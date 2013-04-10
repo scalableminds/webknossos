@@ -13,6 +13,19 @@ $ ->
     window.open(this.href, "_blank", "width=#{width},height=#{height},location=no,menubar=no")
     e.preventDefault()
 
+  # hover show/hide functionality
+  $(document).on "hover", ".hover-dynamic", ->
+    $(".hover-show", this).show()
+    $(".hover-hide", this).hide()
+  $(document).on "blur", ".hover-dynamic .hover-input", ->
+    window.setTimeout(( =>
+      $(this).parents(".hover-dynamic").find(".hover-show").hide()
+      $(this).parents(".hover-dynamic").find(".hover-hide").show()),200)
+  $(document).on "mouseleave", ".hover-dynamic", ->
+    if not $(".hover-input:focus", this).length
+      $(".hover-show", this).hide()
+      $(".hover-hide", this).show()
+
 
   dataAjaxHandler = (event) ->
     

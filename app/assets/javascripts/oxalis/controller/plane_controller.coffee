@@ -22,6 +22,7 @@ class PlaneController
     mouseControllers : []
     keyboard : null
     keyboardNoLoop : null
+    keyboardLoopDelayed : null
 
     unbind : ->
       for mouse in @mouseControllers
@@ -29,6 +30,7 @@ class PlaneController
       @mouseControllers = []
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
+      @keyboardLoopDelayed?.unbind()
 
 
   constructor : (@model, stats, @gui, renderer, scene) ->
@@ -174,6 +176,20 @@ class PlaneController
       #"n" : => Helper.toggle()
       #"ctr + s"       : => @model.route.pushImpl()
     )
+
+    @input.keyboardLoopDelayed = new Input.Keyboard(
+
+      #Move Z
+      "space" : (first) => @moveZ( @model.user.moveValue, first)
+      "f" : (first) => @moveZ( @model.user.moveValue, first)
+      "d" : (first) => @moveZ( - @model.user.moveValue, first)
+      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
+      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
+
+      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
+      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
+
+    , 200)
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
@@ -190,16 +206,6 @@ class PlaneController
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
       "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
-
-      #Move
-      "space" : (first) => @moveZ( @model.user.moveValue, first)
-      "f" : (first) => @moveZ( @model.user.moveValue, first)
-      "d" : (first) => @moveZ( - @model.user.moveValue, first)
-      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
-      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
-
-      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
-      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
     )
 
 
@@ -331,17 +337,26 @@ class PlaneController
 
   ########### Click callbacks
   
-  setWaypoint : (relativePosition, typeNumber) =>
-    activeNodePos = @model.route.getActiveNodePos()
+  setWaypoint : (relativePosition, ctrlPressed) =>
+    activeNode = @model.route.getActiveNode()
     position = @calculateGlobalPos(relativePosition)
     # set the new trace direction
-    if activeNodePos
+    if activeNode
       @flycam.setDirection([
-        position[0] - activeNodePos[0], 
-        position[1] - activeNodePos[1], 
-        position[2] - activeNodePos[2]
+        position[0] - activeNode.pos[0], 
+        position[1] - activeNode.pos[1], 
+        position[2] - activeNode.pos[2]
       ])
-    @addNode(position)
+
+    @addNode(position, not ctrlPressed)
+
+    # Strg + Rightclick to set new not active branchpoint
+    if ctrlPressed and 
+      @model.user.newNodeNewTree == false and 
+        @model.route.getActiveNodeType() == constants.TYPE_USUAL
+
+      @pushBranch()
+      @setActiveNode(activeNode.id)
 
   calculateGlobalPos : (clickPos) ->
     curGlobalPos  = @flycam.getPosition()
@@ -410,14 +425,14 @@ class PlaneController
 
   ########### Model Interaction
 
-  addNode : (position) =>
+  addNode : (position, centered) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
       @model.route.one("rendered", =>
         @model.route.one("rendered", =>
           @model.route.addNode(position, constants.TYPE_USUAL)))
     else
-      @model.route.addNode(position, constants.TYPE_USUAL)
+      @model.route.addNode(position, constants.TYPE_USUAL, centered)
 
   pushBranch : =>
     @model.route.pushBranch()

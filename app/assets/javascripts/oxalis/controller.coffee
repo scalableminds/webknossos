@@ -81,9 +81,6 @@ class Controller
         event.preventDefault()
         @setActiveNode($(event.target).data("nodeid"), true, false)
 
-      $("#tab-comments").mouseleave (event) =>
-        $("#comment-input").blur()
-
       $("#tree-name-submit").click (event) =>
         @setTreeName($("#tree-name-input").val())
 

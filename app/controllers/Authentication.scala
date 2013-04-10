@@ -26,8 +26,8 @@ object Authentication extends Controller with Secured {
   // -- Authentication
   override def DefaultAccessRole = None
 
-  val autoVerify = false
-    //Play.configuration.getBoolean("application.enableAutoVerify") getOrElse false
+  val autoVerify =
+    Play.configuration.getBoolean("application.enableAutoVerify") getOrElse false
 
   val registerForm: Form[(String, String, String, String)] = {
 

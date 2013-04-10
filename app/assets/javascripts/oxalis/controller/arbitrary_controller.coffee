@@ -39,7 +39,7 @@ class ArbitraryController
       @keyboardNoLoop?.unbind()
 
 
-  constructor : (@model, stats, renderer, scene) ->
+  constructor : (@model, stats, @gui, renderer, scene) ->
 
     _.extend(this, new EventMixin())
 
@@ -118,7 +118,11 @@ class ArbitraryController
 
       #Zoom in/out
       "i" : => @cam.zoomIn()
-      "o" : => @cam.zoomOut()      
+      "o" : => @cam.zoomOut()
+
+      #Change move value
+      "h" : => @changeMoveValue(0.1)
+      "g" : => @changeMoveValue(-0.1)
     )
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
@@ -202,7 +206,15 @@ class ArbitraryController
     position  = @cam.getPosition()
     activeNodePos = @model.route.getActiveNodePos()
 
-    @addNode(position)    
+    @addNode(position)
+
+  changeMoveValue : (delta) ->
+
+    moveValue = @model.user.moveValue3d + delta
+    moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
+    moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
+
+    @gui.updateMoveValue3d(moveValue)
 
 
   setParticleSize : (delta) =>
@@ -214,6 +226,7 @@ class ArbitraryController
 
     @view.setRouteClippingDistance(value)
 
+
   pushBranch : ->
 
     @model.route.pushBranch()
@@ -224,6 +237,7 @@ class ArbitraryController
     _.defer => @model.route.popBranch().done((id) => 
       @setActiveNode(id, true)
     )
+
 
   centerActiveNode : ->
 

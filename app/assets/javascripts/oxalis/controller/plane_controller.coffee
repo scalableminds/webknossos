@@ -187,6 +187,10 @@ class PlaneController
       "i" : => @zoomIn(false)
       "o" : => @zoomOut(false)
 
+      #Change move value
+      "h" : => @changeMoveValue(0.1)
+      "g" : => @changeMoveValue(-0.1)
+
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
       "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
@@ -297,6 +301,13 @@ class PlaneController
   isMouseOver : ->
     activePlane = @flycam.getActivePlane()
     return @input.mouseControllers[activePlane].isMouseOver
+
+  changeMoveValue : (delta) ->
+    moveValue = @model.user.moveValue + delta
+    moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
+    moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
+
+    @gui.updateMoveValue(moveValue)
 
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()

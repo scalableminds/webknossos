@@ -57,8 +57,8 @@ class Gui
     @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
 
     @fViewportcontrols = @gui.addFolder("Viewportoptions")
-    @addSlider(@fViewportcontrols, @user, "moveValue",
-      0.1, 10, 0.1, "Move Value")
+    @moveValueController = @addSlider(@fViewportcontrols, @user, "moveValue",
+      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 0.1, "Move Value")
     @addCheckbox(@fViewportcontrols, @user, "dynamicSpaceDirection", "d/f-Switching")
 
     @fFlightcontrols = @gui.addFolder("Flightoptions")
@@ -66,8 +66,8 @@ class Gui
       0.001, 0.02, 0.001, "Mouse Rotation")
     @addSlider(@fFlightcontrols, @user, "rotateValue",
       0.001, 0.08, 0.001, "Keyboard Rotation Value")
-    @addSlider(@fFlightcontrols, @user, "moveValue3d",
-      0.1, 10, 0.1, "Move Value")
+    @moveValue3dController = @addSlider(@fFlightcontrols, @user, "moveValue3d",
+      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 0.1, "Move Value")
     @addSlider(@fFlightcontrols, @user, "crosshairSize",
       0.1, 1, 0.01, "Crosshair size")
 
@@ -150,6 +150,7 @@ class Gui
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " μm</p>")
         else
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
+        @set("zoom", step, Number)
 
     @model.route.on
       newActiveNode    : => @update()
@@ -261,6 +262,14 @@ class Gui
   updateParticleSize : (value) =>
     @set("particleSize", value, Number)
     @particleSizeController.updateDisplay()
+
+  updateMoveValue : (value) =>
+    @set("moveValue", value, Number)
+    @moveValueController.updateDisplay()
+
+  updateMoveValue3d : (value) =>
+    @set("moveValue3d", value, Number)
+    @moveValue3dController.updateDisplay()
 
   # Helper method to combine common update methods
   update : ->

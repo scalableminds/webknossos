@@ -17,10 +17,21 @@
     @mainHeader(showNavButtons)    
     <div id="alert-container">
       @session.flash.data.map{ f =>
-        <div class="alert alert-@f._1">
-          <a href="#" class="close" data-dismiss="alert">×</a>
-          @f._2
-        </div>
+        @if(f._1 == "modal"){
+          <div class="modal modal-message hide fade">
+            <div class="modal-body">
+              <p>@f._2</p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn" data-dismiss="modal" aria-hidden="true">Ok</button>
+            </div>
+          </div>
+        } else {
+          <div class="alert alert-@f._1">
+            <a href="#" class="close" data-dismiss="alert">×</a>
+            @f._2
+          </div>
+        }
       }
     </div>
     <div id="main-container" data-template="@Reflect.getCallerClass.map( _(7).getName() )">

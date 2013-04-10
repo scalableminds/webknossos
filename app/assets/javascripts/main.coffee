@@ -9,6 +9,7 @@ require.config
     "worker" : "libs/worker_plugin"
     "three": "libs/threejs/three"
     "three.trackball": "libs/threejs/TrackballControls"
+    "three.color": "libs/threejs/ColorConverter"
     "stats" : "libs/threejs/stats"
     "v3" : "libs/v3"
     "m4x4" : "libs/m4x4"

@@ -5,6 +5,7 @@
 ../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer
 ../constants : constants
+libs/threejs/ColorConverter : ColorConverter
 ###
 
 class Skeleton
@@ -518,24 +519,24 @@ class Skeleton
 
   invertHexToRGB : (hexColor) ->
 
-    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
     hsvColor.h = (hsvColor.h + 0.5) % 1
-    rgbColor = new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v)
+    rgbColor = ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v)
     [rgbColor.r, rgbColor.g, rgbColor.b]
 
 
   darkenHex : (hexColor) ->
 
-    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
     hsvColor.v = 0.6
-    new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+    ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
 
 
   invertHex : (hexColor) ->
 
-    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
     hsvColor.h = (hsvColor.h + 0.5) % 1
-    new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+    ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
 
   setSizeAttenuation : (boolean) ->
 

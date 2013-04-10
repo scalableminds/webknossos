@@ -160,6 +160,7 @@ class Controller
       @planeController.start()
       @propagateMode(constants.MODE_OXALIS)
 
+
   propagateMode : (mode) ->
 
     @mode = mode

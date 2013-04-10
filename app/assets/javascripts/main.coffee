@@ -57,6 +57,13 @@ require [
         type : "POST"
         contentType : "application/x-www-form-urlencoded"
       catchGlobalErrors : true
-      context : "Oxalis"
+      context :
+        userAgent :
+          version : navigator.appVersion
+          product : navigator.product + " - " + navigator.productSub
+          vendor : navigator.vendor + " - " + navigator.vendorSub
+          platform : navigator.platform
       log: $.proxy(console.warn, console)
     )
+
+    $.assert(false, "MSG", {})

@@ -69,7 +69,7 @@ class Gui
     @addSlider(@fFlightcontrols, @user, "moveValue3d",
       0.1, 10, 0.1, "Move Value")
     @addSlider(@fFlightcontrols, @user, "crosshairSize",
-      0.1, 1, 0.01, "Crosshair size")
+      0.05, 0.5, 0.01, "Crosshair size")
 
     @fView = @gui.addFolder("View")
     @addCheckbox(@fView, @settings, "fourBit", "4 Bit")

@@ -104,7 +104,7 @@ class PlaneController
       @input.mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
-          @move [
+          @flycam.moveActivePlane [
             delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
             delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
             0
@@ -162,14 +162,14 @@ class PlaneController
     @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
-      "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
-      "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
+      "l" : (timeFactor) => @view.scaleTrianglesPlane(-@model.user.scaleValue * timeFactor )
+      "k" : (timeFactor) => @view.scaleTrianglesPlane( @model.user.scaleValue * timeFactor )
 
       #Move
-      "left"  : => @moveX(-@model.user.moveValue)
-      "right" : => @moveX( @model.user.moveValue)
-      "up"    : => @moveY(-@model.user.moveValue)
-      "down"  : => @moveY( @model.user.moveValue)
+      "left"  : (timeFactor) => @moveX(-@model.user.moveValue * timeFactor)
+      "right" : (timeFactor) => @moveX( @model.user.moveValue * timeFactor)
+      "up"    : (timeFactor) => @moveY(-@model.user.moveValue * timeFactor)
+      "down"  : (timeFactor) => @moveY( @model.user.moveValue * timeFactor)
 
       #misc keys
       # TODO: what does this? I removed it, I need the key.
@@ -180,15 +180,15 @@ class PlaneController
     @input.keyboardLoopDelayed = new Input.Keyboard(
 
       #Move Z
-      "space" : (first) => @moveZ( @model.user.moveValue, first)
-      "f" : (first) => @moveZ( @model.user.moveValue, first)
-      "d" : (first) => @moveZ( - @model.user.moveValue, first)
-      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
-      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
-
-      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
-      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
-
+      "space"         : (timeFactor, first) => @moveZ( @model.user.moveValue * timeFactor    , first)
+      "f"             : (timeFactor, first) => @moveZ( @model.user.moveValue * timeFactor    , first)
+      "d"             : (timeFactor, first) => @moveZ(-@model.user.moveValue * timeFactor    , first)
+      "shift + f"     : (timeFactor, first) => @moveZ( @model.user.moveValue * timeFactor * 5, first)
+      "shift + d"     : (timeFactor, first) => @moveZ(-@model.user.moveValue * timeFactor * 5, first)
+    
+      "shift + space" : (timeFactor, first) => @moveZ(-@model.user.moveValue * timeFactor    , first)
+      "ctrl + space"  : (timeFactor, first) => @moveZ(-@model.user.moveValue * timeFactor    , first)
+    
     , 200)
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
@@ -261,10 +261,8 @@ class PlaneController
     @sceneController.update()
     @model.route.rendered()
 
-  move : (v) => @flycam.moveActivePlane(v)
-
-  moveX : (x) => @move([x, 0, 0])
-  moveY : (y) => @move([0, y, 0])
+  moveX : (x) => @flycam.moveActivePlane([x, 0, 0])
+  moveY : (y) => @flycam.moveActivePlane([0, y, 0])
   moveZ : (z, first) =>
     if(first)
       activePlane = @flycam.getActivePlane()
@@ -272,7 +270,7 @@ class PlaneController
         [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep()],
         activePlane), activePlane)
     else
-      @move([0, 0, z])
+      @flycam.moveActivePlane([0, 0, z], false)
 
   zoomIn : (zoomToMouse) =>
     if zoomToMouse

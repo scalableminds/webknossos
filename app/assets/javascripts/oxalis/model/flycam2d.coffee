@@ -110,12 +110,14 @@ class Flycam2d
       p[Dimensions.getIndices(planeID)[2]] *= @spaceDirection[Dimensions.getIndices(planeID)[2]]
     @setPosition([@position[0]+p[0], @position[1]+p[1], @position[2]+p[2]])
     
-  moveActivePlane : (p) -> # vector of voxels in BaseVoxels
+  moveActivePlane : (p, increaseSpeedWithZoom = true) -> # vector of voxels in BaseVoxels
     p = Dimensions.transDim(p, @activePlane)
     ind = Dimensions.getIndices(@activePlane)
-    zoomFactor = Math.pow(2, @zoomStep)
+    zoomFactor = if increaseSpeedWithZoom then Math.pow(2, @zoomStep) else 1
     scaleFactor = @scaleInfo.baseVoxelFactors
-    delta = [p[0]*zoomFactor*scaleFactor[0], p[1]*zoomFactor*scaleFactor[1], p[2]*zoomFactor*scaleFactor[2]]
+    delta = [p[0] * zoomFactor * scaleFactor[0],
+              p[1] * zoomFactor * scaleFactor[1],
+              p[2] * zoomFactor * scaleFactor[2]]
     @move(delta, @activePlane)
 
   toString : ->

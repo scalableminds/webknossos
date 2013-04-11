@@ -3,6 +3,7 @@
 ./gamepad : GamepadJS
 ./event_mixin : EventMixin
 ./jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
+oxalis/constants : constants
 ###
 
 Input = {}
@@ -59,7 +60,7 @@ class Input.KeyboardNoLoop
 # fire the attached callback.
 class Input.Keyboard
 
-  DELAY : 1000 / 50
+  DELAY : 1000 / constants.FPS
 
   constructor : (initialBindings, @delay = 0) ->
 
@@ -83,14 +84,14 @@ class Input.Keyboard
         # When control key is pressed, everything is ignored, because
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
-
-        if not @keyCallbackMap[key]
-          callback(true)
         
         unless @keyCallbackMap[key]? or $(":focus").length
-          @keyPressedCount++
+          callback(1, true)
+          callback._lastTime   = (new Date()).getTime()
           callback._delayed    = true
           @keyCallbackMap[key] = callback
+
+          @keyPressedCount++
           @buttonLoop() if @keyPressedCount == 1
         
         if @delay >= 0
@@ -118,7 +119,13 @@ class Input.Keyboard
     if @keyPressedCount > 0
       for own key, callback of @keyCallbackMap
         if not callback._delayed
-          callback()
+
+          curTime  = (new Date()).getTime()
+          lastTime = callback._lastTime
+          elapsed  = curTime - lastTime
+          callback._lastTime = curTime
+
+          callback(elapsed / constants.FPS, false)
 
       setTimeout( (=> @buttonLoop()), @DELAY ) 
 

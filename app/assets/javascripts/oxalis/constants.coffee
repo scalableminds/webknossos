@@ -28,4 +28,6 @@ Constants =
   TYPE_BRANCH          : 1
 
   MIN_MOVE_VALUE       : 0.1
-  MAX_MOVE_VALUE       : 10
+  MAX_MOVE_VALUE       : 40
+
+  FPS                  : 50

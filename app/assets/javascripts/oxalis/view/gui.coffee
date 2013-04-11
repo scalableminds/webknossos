@@ -55,6 +55,8 @@ class Gui
     fControls = @gui.addFolder("Controls")
     @addCheckbox(fControls, @user, "inverseX", "Inverse X")
     @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
+    @addSlider(fControls, @user, "keyboardDelay",
+      0, 500, 10, "Keyboard delay (ms)" )
 
     @fViewportcontrols = @gui.addFolder("Viewportoptions")
     @moveValueController = @addSlider(@fViewportcontrols, @user, "moveValue",

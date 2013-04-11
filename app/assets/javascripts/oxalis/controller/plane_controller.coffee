@@ -159,6 +159,9 @@ class PlaneController
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
+    getVoxelOffset  = (timeFactor) =>
+      return @model.user.moveValue * timeFactor * @model.scaleInfo.baseVoxel / constants.FPS
+
     @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
@@ -166,10 +169,10 @@ class PlaneController
       "k" : (timeFactor) => @view.scaleTrianglesPlane( @model.user.scaleValue * timeFactor )
 
       #Move
-      "left"  : (timeFactor) => @moveX(-@model.user.moveValue * timeFactor)
-      "right" : (timeFactor) => @moveX( @model.user.moveValue * timeFactor)
-      "up"    : (timeFactor) => @moveY(-@model.user.moveValue * timeFactor)
-      "down"  : (timeFactor) => @moveY( @model.user.moveValue * timeFactor)
+      "left"  : (timeFactor) => @moveX(-getVoxelOffset(timeFactor))
+      "right" : (timeFactor) => @moveX( getVoxelOffset(timeFactor))
+      "up"    : (timeFactor) => @moveY(-getVoxelOffset(timeFactor))
+      "down"  : (timeFactor) => @moveY( getVoxelOffset(timeFactor))
 
       #misc keys
       # TODO: what does this? I removed it, I need the key.
@@ -180,14 +183,14 @@ class PlaneController
     @input.keyboardLoopDelayed = new Input.Keyboard(
 
       #Move Z
-      "space"         : (timeFactor, first) => @moveZ( @model.user.moveValue * timeFactor    , first)
-      "f"             : (timeFactor, first) => @moveZ( @model.user.moveValue * timeFactor    , first)
-      "d"             : (timeFactor, first) => @moveZ(-@model.user.moveValue * timeFactor    , first)
-      "shift + f"     : (timeFactor, first) => @moveZ( @model.user.moveValue * timeFactor * 5, first)
-      "shift + d"     : (timeFactor, first) => @moveZ(-@model.user.moveValue * timeFactor * 5, first)
+      "space"         : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor)    , first)
+      "f"             : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor)    , first)
+      "d"             : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+      "shift + f"     : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor) * 5, first)
+      "shift + d"     : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor) * 5, first)
     
-      "shift + space" : (timeFactor, first) => @moveZ(-@model.user.moveValue * timeFactor    , first)
-      "ctrl + space"  : (timeFactor, first) => @moveZ(-@model.user.moveValue * timeFactor    , first)
+      "shift + space" : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+      "ctrl + space"  : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
     
     , 200)
     

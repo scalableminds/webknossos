@@ -24,7 +24,7 @@ object UserConfiguration extends BasicSettings{
 
   val defaultConfiguration = UserConfiguration(
     Map(
-      "moveValue" -> JsNumber(1),
+      "moveValue" -> JsNumber(10),
       "moveValue3d" -> JsNumber(1),
       "rotateValue" -> JsNumber(0.01),
       "crosshairSize" -> JsNumber(0.1),

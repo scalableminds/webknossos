@@ -275,13 +275,15 @@ class PlaneController
       @move([0, 0, z])
 
   zoomIn : (zoomToMouse) =>
-    @zoomPos = @getMousePosition()
+    if zoomToMouse
+      @zoomPos = @getMousePosition()
     @cameraController.zoomIn()
     if zoomToMouse
       @finishZoom()
 
   zoomOut : (zoomToMouse) =>
-    @zoomPos = @getMousePosition()
+    if zoomToMouse
+      @zoomPos = @getMousePosition()
     @cameraController.zoomOut()
     if zoomToMouse
       @finishZoom()

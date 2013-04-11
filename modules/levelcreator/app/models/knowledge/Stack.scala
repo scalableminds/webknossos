@@ -2,6 +2,7 @@ package models.knowledge
 
 import java.io.File
 import braingames.util.FileRegExFilter
+import play.api.libs.json.Json
 
 
 case class Stack(level: Level, mission: Mission){
@@ -16,6 +17,8 @@ case class Stack(level: Level, mission: Mission){
 }
 
 object Stack {
+  implicit val stackFormat = Json.format[Stack]
+  
   val stackImageRegEx = """stackImage[0-9]+\.png""".r
   val stackImageFilter = new FileRegExFilter(stackImageRegEx)
 }

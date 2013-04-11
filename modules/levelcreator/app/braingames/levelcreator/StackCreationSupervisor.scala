@@ -12,7 +12,6 @@ import akka.agent.Agent
 
 case class CreateStacks(level: Level, missions: List[Mission])
 case class FinishedStack(level: Level, mission: Mission, stack: Option[Stack])
-case class CreateStack(level: Level, mission: Mission)
 case class Status(level: Level)
 
 class StackCreationSupervisor extends Actor {

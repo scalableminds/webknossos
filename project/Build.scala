@@ -86,6 +86,10 @@ object ApplicationBuild extends Build {
     playAssetsDirectories += file("data")
   ).dependsOn(oxalis).aggregate(oxalis)
   
+  lazy val stackrenderer = play.Project("stackrenderer", "0.1", levelcreatorDependencies, path = file("modules") / "stackrenderer").settings(
+    resolvers ++= dependencyResolvers
+  ).dependsOn(oxalis).aggregate(oxalis)  
+  
   lazy val isoshader = play.Project("isoshader", "0.1", isoshaderDependencies, path = file("modules") / "isoshader").settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",

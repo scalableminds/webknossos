@@ -23,7 +23,7 @@ case class Mission(dataSetName: String,
   def withDataSetName(newDataSetName: String) = copy(dataSetName = newDataSetName)
 }
 
-object Mission extends BasicDAO[Mission]("missions") {
+object Mission extends BasicDAO[Mission]("missions") with CommonFormats{
 
   def createWithoutDataSet(start: MissionStart, errorCenter: Point3D, possibleEnds: List[PossibleEnd]) =
     Mission("", start, errorCenter, possibleEnds)

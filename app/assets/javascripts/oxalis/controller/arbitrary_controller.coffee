@@ -110,16 +110,16 @@ class ArbitraryController
       "alt + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
       
       #Rotate in distance
-      "left"          : (timeFactor) => @cam.yawDistance @model.user.rotateValue
-      "right"         : (timeFactor) => @cam.yawDistance -@model.user.rotateValue
-      "up"            : (timeFactor) => @cam.pitchDistance -@model.user.rotateValue
-      "down"          : (timeFactor) => @cam.pitchDistance @model.user.rotateValue
+      "left"          : (timeFactor) => @cam.yawDistance @model.user.rotateValue * timeFactor
+      "right"         : (timeFactor) => @cam.yawDistance -@model.user.rotateValue * timeFactor
+      "up"            : (timeFactor) => @cam.pitchDistance -@model.user.rotateValue * timeFactor
+      "down"          : (timeFactor) => @cam.pitchDistance @model.user.rotateValue * timeFactor
       
       #Rotate at centre
-      "shift + left"  : (timeFactor) => @cam.yaw @model.user.rotateValue
-      "shift + right" : (timeFactor) => @cam.yaw -@model.user.rotateValue
-      "shift + up"    : (timeFactor) => @cam.pitch @model.user.rotateValue
-      "shift + down"  : (timeFactor) => @cam.pitch -@model.user.rotateValue
+      "shift + left"  : (timeFactor) => @cam.yaw @model.user.rotateValue * timeFactor
+      "shift + right" : (timeFactor) => @cam.yaw -@model.user.rotateValue * timeFactor
+      "shift + up"    : (timeFactor) => @cam.pitch @model.user.rotateValue * timeFactor
+      "shift + down"  : (timeFactor) => @cam.pitch -@model.user.rotateValue * timeFactor
 
       #Zoom in/out
       "i"             : (timeFactor) => @cam.zoomIn()

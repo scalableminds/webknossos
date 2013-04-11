@@ -26,3 +26,6 @@ Constants =
 
   TYPE_USUAL           : 0
   TYPE_BRANCH          : 1
+
+  MIN_MOVE_VALUE       : 0.1
+  MAX_MOVE_VALUE       : 10

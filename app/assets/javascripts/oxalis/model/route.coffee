@@ -7,6 +7,7 @@ underscore : _
 ./tracetree : TraceTree
 ./statelogger : StateLogger
 ../constants : constants
+libs/threejs/ColorConverter : ColorConverter
 ###
 
 class Route
@@ -456,7 +457,7 @@ class Route
     else
       currentHue = treeId * @GOLDEN_RATIO
       currentHue %= 1
-      new THREE.Color().setHSV(currentHue, 1, 1).getHex()
+      ColorConverter.setHSV(new THREE.Color(), currentHue, 1, 1).getHex()
 
 
   createNewTree : ->

@@ -49,9 +49,9 @@ class Controller
 
       @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene)
 
-      @arbitraryController = new ArbitraryController(@model, stats, @view.renderer, @view.scene)
+      @arbitraryController = new ArbitraryController(@model, stats, @gui, @view.renderer, @view.scene)
 
-      @abstractTreeController = new AbstractTreeController(@model)      
+      @abstractTreeController = new AbstractTreeController(@model)
 
       @initMouse()
       @initKeyboard()

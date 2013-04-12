@@ -1,16 +1,15 @@
-package braingames.levelcreator
+package braingames.stackrenderer
 
 import akka.actor._
 import java.io.File
 import scala.concurrent.duration._
 import play.api._
 import models.knowledge._
-import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.model._
-import braingames.util.S3Config
+import com.amazonaws.auth.BasicAWSCredentials
+import com.amazonaws.services.s3.AmazonS3Client
 
-case class UploadStack(stacks: Stack)
+case class UploadStack(id: String, stacks: Stack)
 
 class S3Uploader(s3Config: S3Config) extends Actor {
 
@@ -19,7 +18,21 @@ class S3Uploader(s3Config: S3Config) extends Actor {
   Logger.info("starting S3 uploader")
 
   def receive = {
-    case UploadStack(stack) => uploadStack(stack)
+    case UploadStack(id, stack) => 
+      uploadStack(stack)
+      sender ! FinishedUpload(id, stack)
+  }
+  
+    def uploadStack(stack: Stack) = {
+    for {
+      uploadPair <- buildUploadPairs(stack)
+    } {
+      val (file, key) = uploadPair
+      Logger.debug(s"uploading ${file.getPath} to ${s3Config.bucketName}/$key")
+      val putObj = new PutObjectRequest(s3Config.bucketName, key, file)
+      putObj.setCannedAcl(CannedAccessControlList.PublicRead);
+      s3.putObject(putObj);
+    }
   }
 
   def buildUploadPairs(stack: Stack): List[Tuple2[File, String]] = {
@@ -33,16 +46,6 @@ class S3Uploader(s3Config: S3Config) extends Actor {
 
   }
 
-  def uploadStack(stack: Stack) = {
-    for {
-      uploadPair <- buildUploadPairs(stack)
-    } {
-      val (file, key) = uploadPair
-      Logger.debug(s"uploading ${file.getPath} to ${s3Config.bucketName}/$key")
-      val putObj = new PutObjectRequest(s3Config.bucketName, key, file)
-      putObj.setCannedAcl(CannedAccessControlList.PublicRead);
-      s3.putObject(putObj);
-    }
-  }
+
 
 }

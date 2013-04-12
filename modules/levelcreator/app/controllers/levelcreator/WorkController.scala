@@ -11,10 +11,10 @@ import scala.concurrent.duration._
 import akka.pattern.AskTimeoutException
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.levelcreator.StackGenerationChallenge
-import models.knowledge.Stack
+import models.knowledge._
 import play.api.libs.json.Json
-import braingames.levelcreator.FinishWork
+import braingames.levelcreator.FinishedWork
+import braingames.levelcreator.FailedWork
 
 object WorkController extends LevelCreatorController {
   lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
@@ -29,19 +29,23 @@ object WorkController extends LevelCreatorController {
             Logger.warn("Stack request to stackWorkDistributor timed out!")
             None
         }
-        .mapTo[Option[StackGenerationChallenge]].map { resultOpt =>
+        .mapTo[Option[StackRenderingChallenge]].map { resultOpt =>
           resultOpt.map { result =>
-            Ok(Stack.stackFormat.writes(result.challenge.stack) ++ Json.obj(
-              "responseKey" -> result.responseKey))
+            Ok(StacksInProgress.stackRenderingChallengeFormat.writes(result))
           } getOrElse {
-            BadRequest
+            NoContent
           }
         }
     }
   }
 
-  def finish(responseKey: String) = Action { implicit request =>
-    stackWorkDistributor ! FinishWork(responseKey)
+  def finished(id: String) = Action { implicit request =>
+    stackWorkDistributor ! FinishedWork(id)
+    Ok
+  }
+
+  def failed(id: String) = Action { implicit request =>
+    stackWorkDistributor ! FailedWork(id)
     Ok
   }
 }

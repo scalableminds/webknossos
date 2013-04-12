@@ -1,4 +1,4 @@
-package braingames.util
+package braingames.stackrenderer
 
 import play.api.Configuration
 

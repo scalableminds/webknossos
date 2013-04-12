@@ -28,7 +28,8 @@ DELETE   /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCrea
 
 # worker urls
 GET      /renderer/requestWork                controllers.levelcreator.WorkController.request()
-GET      /renderer/finishWork                 controllers.levelcreator.WorkController.finish(responseKey: String)
+GET      /renderer/finishedWork               controllers.levelcreator.WorkController.finished(id: String)
+GET      /renderer/failedWork                 controllers.levelcreator.WorkController.failed(id: String)
 
 #Getting binary Data
 GET      /binary/ajax                         controllers.levelcreator.BinaryData.viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) 

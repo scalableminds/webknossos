@@ -18,7 +18,7 @@ case class StopWatchingForMissions()
 class MissionWatcher extends Actor{
   val TICKER_INTERVAL = 5 minutes
   
-  var updateTicker: Cancellable = null
+  var updateTicker: Option[Cancellable] = None
   
   def receive = {
     case StartWatchingForMissions() => start
@@ -27,13 +27,13 @@ class MissionWatcher extends Actor{
   
   def start = {
     Logger.debug("Watching for Missions...")
-    updateTicker = context.system.scheduler.schedule(0 seconds, TICKER_INTERVAL){
+    updateTicker = Some(context.system.scheduler.schedule(0 seconds, TICKER_INTERVAL){
       lookForMissions()
-    }
+    })
   }
-  
+    
   def stop = {
-    updateTicker.cancel
+    updateTicker.map(_.cancel())
   }
   
   val missionFileNameRegEx = """^missions[0-9]{4}\.json$""".r

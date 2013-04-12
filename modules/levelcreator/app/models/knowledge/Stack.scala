@@ -16,7 +16,7 @@ case class Stack(level: Level, mission: Mission){
   def images = directory.listFiles(Stack.stackImageFilter).toList
 }
 
-object Stack {
+object Stack extends Function2[Level, Mission, Stack]{
   implicit val stackFormat = Json.format[Stack]
   
   val stackImageRegEx = """stackImage[0-9]+\.png""".r

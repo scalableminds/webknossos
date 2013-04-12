@@ -9,51 +9,55 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
 import braingames.util.StartableActor
 import models.knowledge.Stack
+import org.bson.types.ObjectId
+import models.knowledge.StacksInProgress
+import models.knowledge.StacksQueued
+import models.knowledge.StackRenderingChallenge
 
 case class CreateStack(stack: Stack)
+case class CreateStacks(stacks: List[Stack])
 case class RequestWork()
-case class StackGenerationChallenge(challenge: CreateStack, responseKey: String)
-case class FinishWork(responseKey: String)
+case class FinishedWork(id: String)
+case class FailedWork(id: String)
 
 class StackWorkDistributor extends Actor {
   val maxStackGenerationTime = 30 minutes
 
   implicit val sys = context.system
 
-  val inProgressStacks = Agent[Map[String, CreateStack]](Map.empty)
-
-  val stackQueue = Agent[Queue[CreateStack]](Queue.empty)
-
   def receive = {
-    case s: CreateStack =>
-      stackQueue.send(_.enqueue(s))
+    case CreateStack(stack) =>
+      StacksQueued.insert(stack)
 
-    case FinishWork(responseKey) =>
-      inProgressStacks.send(_ - responseKey)
+    case CreateStacks(stacks) =>
+      StacksQueued.insert(stacks)
+
+    case FinishedWork(id) =>
+      StacksInProgress.findOneById(id).map{ challenge =>
+        challenge.stack.level.addRenderedMission(challenge.stack.mission.id).updateStacksFile
+        StacksInProgress.removeById(challenge._id)
+      }
+
+    case FailedWork(id) =>
+      if (ObjectId.isValid(id)){
+        Logger.error(s"Renderer reported failed Work: $id")
+      }
 
     case RequestWork() =>
-      val q = stackQueue()
-      if (q.isEmpty) {
-        val (s, _) = q.dequeue
-        stackQueue.send { q =>
-          if (!q.isEmpty)
-            q.dequeue._2
-          else
-            q
-        }
-        val responseKey = UUID.randomUUID().toString()
-        inProgressStacks.send(_ + (responseKey -> s))
+      StacksQueued.popOne().map { stack =>
+        val challenge = StackRenderingChallenge(stack)
+        StacksInProgress.insert(challenge)
 
         sys.scheduler.scheduleOnce(maxStackGenerationTime) {
-          inProgressStacks().get(responseKey).map { s =>
-            inProgressStacks.send(_ - responseKey)
-            stackQueue.send(_.enqueue(s))
-            Logger.warn(s"Stack was not completed! Key: $responseKey Stack: $s")
+          StacksInProgress.findOneById(challenge._id).map { challenge =>
+            StacksInProgress.removeById(challenge._id)
+            StacksQueued.insert(challenge.stack)
+            Logger.warn(s"Stack was not completed! Key: ${challenge._id} Stack: $stack")
           }
         }
 
-        sender ! Some(StackGenerationChallenge(s, responseKey))
-      } else {
+        sender ! Some(challenge)
+      } getOrElse {
         sender ! None
       }
   }

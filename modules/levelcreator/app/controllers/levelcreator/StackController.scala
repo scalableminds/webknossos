@@ -13,19 +13,15 @@ import play.api.Play.current
 import play.api.libs.json._
 import play.api.i18n.Messages
 import play.api._
-
 import braingames.levelcreator._
 import views._
 import models.knowledge._
-
-import braingames.util.S3Config
 
 object StackController extends LevelCreatorController {
 
   val conf = Play.current.configuration
 
-  lazy val stackCreator = Akka.system.actorOf(Props[StackCreationSupervisor],
-    name = "stackCreationSupervisor")
+  lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
 
   def list(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
     val missions = for {
@@ -51,7 +47,7 @@ object StackController extends LevelCreatorController {
 
   def create(level: Level, missions: List[Mission]) = {
     implicit val timeout = Timeout((1000 * missions.size) seconds)
-    stackCreator ! CreateStacks(level, missions)
+    stackWorkDistributor ! CreateStacks(missions.map(m => Stack(level, m)))
     JsonOk("Creation is in progress.")
   }
 

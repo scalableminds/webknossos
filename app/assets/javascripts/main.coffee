@@ -38,7 +38,6 @@ require.config
       exports : "M4x4"
     "qassert" : [ "jquery" ]
 
-
 require [
   "jquery"
   "underscore"
@@ -46,9 +45,6 @@ require [
 ], ->
 
   require [
-    "./main/enhancements"
-    "./main/routing"
-    "libs/core_ext"
     "qassert"
   ], ->
 
@@ -61,3 +57,9 @@ require [
       context : "Oxalis"
       log: $.proxy(console.warn, console)
     )
+
+    require [
+      "./main/enhancements"
+      "./main/routing"
+      "libs/core_ext"
+    ], ->

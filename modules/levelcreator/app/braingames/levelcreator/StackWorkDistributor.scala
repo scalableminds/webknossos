@@ -24,6 +24,8 @@ class StackWorkDistributor extends Actor {
   val maxStackGenerationTime = 30 minutes
 
   implicit val sys = context.system
+  
+  StacksInProgress.removeAll()
 
   def receive = {
     case CreateStack(stack) =>
@@ -34,7 +36,8 @@ class StackWorkDistributor extends Actor {
 
     case FinishedWork(id) =>
       StacksInProgress.findOneById(id).map{ challenge =>
-        challenge.stack.level.addRenderedMission(challenge.stack.mission.id).updateStacksFile
+        Logger.debug(s"Finished work of $id. Level: ${challenge.stack.level.id} Mission: ${challenge.stack.mission.id}")
+        challenge.stack.level.addRenderedMission(challenge.stack.mission.id)
         StacksInProgress.removeById(challenge._id)
       }
 

@@ -39,13 +39,8 @@ case class ExecLogger(var messages: List[String] = Nil,
   def buffer[T](f: => T): T = f
 }
 
-class StackRenderer extends Actor {
+class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
   
-  val conf = Play.current.configuration
-  
-  val levelcreatorBaseUrl = 
-    conf.getString("levelcreator.baseUrl") getOrElse ("http://localhost:9000")
-    
   val logger = new ExecLogger
 
   def receive = {
@@ -65,7 +60,7 @@ class StackRenderer extends Actor {
     temp
   }
 
-  def produceStack(stack: Stack, levelUrl: String) = {
+  def produceStack(stack: Stack, levelUrl: String, binaryDataUrl: String) = {
     val js = html.levelcreator.phantom(
       stack,
       levelUrl).body
@@ -77,8 +72,7 @@ class StackRenderer extends Actor {
   }
 
   def renderStack(stack: Stack): Boolean = {
-    produceStack(stack, levelcreatorBaseUrl +
-      controllers.levelcreator.routes.LevelCreator.use(stack.level.id, stack.mission.id))
+    produceStack(stack, useLevelUrl.format(stack.level.id, stack.mission.id), binaryDataUrl)
 
     if (stack.isProduced) {
       zipStack(stack)

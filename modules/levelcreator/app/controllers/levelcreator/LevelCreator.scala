@@ -29,19 +29,19 @@ object LevelCreator extends LevelCreatorController {
       "dataset" -> text.verifying("dataSet.notFound", DataSet.findOneByName(_).isDefined))(
         Level.fromForm)(Level.toForm)).fill(Level.empty)
 
-  def use(levelId: String, missionId: String) = ActionWithValidLevel(levelId){ implicit request =>
+  def use(levelId: String, missionId: String) = ActionWithValidLevel(levelId) { implicit request =>
     val missionOpt = Mission.findOneById(missionId) orElse
-        Mission.randomByDataSetName(request.level.dataSetName)
+      Mission.randomByDataSetName(request.level.dataSetName)
     for {
       mission <- missionOpt ?~ Messages("mission.notFound")
     } yield {
       Ok(html.levelcreator.levelCreator(request.level, mission.id))
-    } 
+    }
   }
 
   def delete(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-      Level.remove(request.level)
-      JsonOk(Messages("level.removed"))
+    Level.remove(request.level)
+    JsonOk(Messages("level.removed"))
   }
 
   def submitCode(levelId: String) = ActionWithValidLevel(levelId, parse.urlFormEncoded) { implicit request =>
@@ -63,7 +63,7 @@ object LevelCreator extends LevelCreatorController {
   }
 
   def listAssets(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-      Ok(Json.toJson(request.level.assets.map(_.getName)))
+    Ok(Json.toJson(request.level.assets.map(_.getName)))
   }
 
   def retrieveAsset(levelId: String, asset: String) = ActionWithValidLevel(levelId) { implicit request =>
@@ -75,10 +75,10 @@ object LevelCreator extends LevelCreatorController {
   }
 
   def deleteAsset(levelId: String, asset: String) = ActionWithValidLevel(levelId) { implicit request =>
-      if (request.level.deleteAsset(asset))
-        JsonOk(Messages("level.assets.deleted"))
-      else
-        JsonBadRequest(Messages("level.assets.deleteFailed"))
+    if (request.level.deleteAsset(asset))
+      JsonOk(Messages("level.assets.deleted"))
+    else
+      JsonBadRequest(Messages("level.assets.deleteFailed"))
   }
 
   def create = Action(parse.urlFormEncoded) { implicit request =>
@@ -91,6 +91,15 @@ object LevelCreator extends LevelCreatorController {
         } else
           BadRequest(Messages("level.invalidName"))
       })
+  }
+  
+  def autoRender(levelId: String, isEnabled: Boolean) = {
+    for{
+      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
+    } yield {
+      level.update( _.copy(autoRender = isEnabled))
+      Ok
+    }
   }
 
   def list = Action { implicit request =>

@@ -14,6 +14,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import akka.routing.SmallestMailboxRouter
 import scala.concurrent.duration._
 import braingames.util.StartableActor
+import models.stackrenderer.TemporaryStores._
 
 case class FinishedStack(id: String, stack: Stack)
 case class FailedStack(id: String, stack: Stack)
@@ -31,42 +32,43 @@ class StackRenderingSupervisor extends Actor {
   val nrOfStackRenderers = 4
 
   val conf = Play.current.configuration
-  
-  val levelcreatorBaseUrl = 
+
+  val levelcreatorBaseUrl =
     conf.getString("levelcreator.baseUrl") getOrElse ("http://localhost:9000")
 
-  lazy val stackRenderer = context.system.actorOf(Props[StackRenderer].withRouter(SmallestMailboxRouter(nrOfInstances = nrOfStackRenderers)),
+  val requestWorkUrl = levelcreatorBaseUrl + "/renderer/requestWork"
+  val finishedWorkUrl = levelcreatorBaseUrl + "/renderer/finishedWork"
+  val failedWorkUrl = levelcreatorBaseUrl + "/renderer/failedWork"
+  val binaryDataUrl = levelcreatorBaseUrl + "/binary/ajax"
+  val useLevelUrl = levelcreatorBaseUrl + "/levels/%s?missionId=%s"
+
+  lazy val stackRenderer = context.system.actorOf(Props(new StackRenderer(useLevelUrl, binaryDataUrl)).withRouter(SmallestMailboxRouter(nrOfInstances = nrOfStackRenderers)),
     name = "stackRenderer")
 
-  lazy val stackUploader = S3Config.fromConfig(conf).map(s3Config =>
-    context.system.actorOf(Props(new S3Uploader(s3Config)), name = "stackUploader")).getOrElse {
-    throw new Exception("Some S3 settings are missing.")
-  }
+  lazy val stackUploader = S3Uploader.start(conf, system)
 
   def receive = {
     case StopRendering() =>
-      //TODO: Stop it
+    //TODO: Stop it
     case StartRendering() =>
       self ! EnsureWork()
 
     case FinishedStack(id, stack) =>
       stacksInRendering.send(_ - id)
-      Logger.debug("about to upload response.")
-      
       stackUploader ! UploadStack(id, stack)
 
     case FailedStack(id, stack) =>
       stacksInRendering.send(_ - id)
       reportFailedWork(id)
+
     case FinishedUpload(id, stack) =>
-      Logger.debug("about to send out request.")
       reportFinishedWork(id)
+
     case EnsureWork() =>
       ensureEnoughWork
       context.system.scheduler.scheduleOnce(1 second) {
         self ! EnsureWork()
       }
-
   }
 
   def ensureEnoughWork = {
@@ -75,8 +77,7 @@ class StackRenderingSupervisor extends Actor {
   }
 
   def reportFailedWork(id: String) = {
-    val url = levelcreatorBaseUrl + controllers.levelcreator.routes.WorkController.failed(id)
-    WS.url(url).get().map { response =>
+    WS.url(failedWorkUrl).withQueryString("id" -> id).get().map { response =>
       response.status match {
         case 200 =>
           Logger.debug(s"Successfully reported FAILED work for $id")
@@ -87,8 +88,7 @@ class StackRenderingSupervisor extends Actor {
   }
 
   def reportFinishedWork(id: String) = {
-    val url = levelcreatorBaseUrl + controllers.levelcreator.routes.WorkController.finished(id)
-    WS.url(url).get().map { response =>
+    WS.url(finishedWorkUrl).withQueryString("id" -> id).get().map { response =>
       response.status match {
         case 200 =>
           Logger.debug(s"Successfully reported finished work for $id")
@@ -99,12 +99,13 @@ class StackRenderingSupervisor extends Actor {
   }
 
   def requestWork = {
-    val url = levelcreatorBaseUrl + controllers.levelcreator.routes.WorkController.request()
-    WS.url(url).get().map { response =>
+    WS.url(requestWorkUrl).get().map { response =>
       response.status match {
         case 200 =>
-          Logger.debug("Successfully requested work.")
           response.json.asOpt[StackRenderingChallenge].map { challenge =>
+            Logger.debug(s"Successfully requested work ${challenge.id}. Level: ${challenge.stack.level.id} Mission: ${challenge.stack.mission.id}")
+            levelStore.insert(challenge.stack.level.id, challenge.stack.level)
+            missionStore.insert(challenge.stack.mission.id, challenge.stack.mission)
             stacksInRendering.send(_ + (challenge.id -> challenge.stack))
             stackRenderer ! RenderStack(challenge.id, challenge.stack)
           }
@@ -117,6 +118,6 @@ class StackRenderingSupervisor extends Actor {
   }
 }
 
-object StackRenderingSupervisor extends StartableActor[StackRenderingSupervisor]{
+object StackRenderingSupervisor extends StartableActor[StackRenderingSupervisor] {
   val name = "stackRenderingSupervisor"
 }

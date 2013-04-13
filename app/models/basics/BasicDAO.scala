@@ -25,6 +25,9 @@ class BasicDAO[T <: AnyRef](collectionName: String, connection: MongoDB = DB.con
 
   def findAll = find(MongoDBObject.empty).toList
 
+  def removeAll() = 
+    remove(MongoDBObject.empty)
+  
   def findOneById(id: String): Option[T] = {
     if (ObjectId.isValid(id))
       findOneById(new ObjectId(id))

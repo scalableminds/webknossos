@@ -18,6 +18,7 @@ case class Level(
     slidesAfterProblem: Int,
     dataSetName: String,
     code: String = Level.defaultCode,
+    autoRender: Boolean = false,
     renderedMissions: List[String] = List(),
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
@@ -26,28 +27,13 @@ case class Level(
 
   lazy val depth = slidesBeforeProblem + slidesAfterProblem
 
-  lazy val stacksFileName = "stacks.json"
-  lazy val stacksFile = new File(s"$stackFolder/$stacksFileName")
-  def hasStacksFile = stacksFile.exists
-  def updateStacksFile {
-
-    if (!hasStacksFile) {
-      stacksFile.getParentFile.mkdirs
-      stacksFile.createNewFile
-    }
-    val out = new PrintWriter(stacksFile)
-    try { out.print(Json.toJson(renderedMissions)) }
-    finally { out.close }
-
-  }
-
   val assetsFolder =
     s"${Level.assetsBaseFolder}/$name/assets"
 
   val stackFolder =
     s"${Level.stackBaseFolder}/$name"
 
-  private def assetFile(name: String) =
+  private def assetFile(name: String) = 
     new File(assetsFolder + "/" + name)
 
   def assets = {
@@ -111,15 +97,15 @@ trait CommonFormats {
       }
       case _ => JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.jsstring"))))
     }
-    
+
     def writes(o: ObjectId) = JsString(o.toString)
   }
 }
 
-object Level extends BasicDAO[Level]("levels") with CommonFormats with Function9[String, Int, Int, Int, Int, String, String, List[String], ObjectId, Level]{
+object Level extends BasicDAO[Level]("levels") with CommonFormats with Function10[String, Int, Int, Int, Int, String, String, Boolean, List[String], ObjectId, Level] {
 
   implicit val levelFormat = Json.format[Level]
-  
+
   val defaultDataSetName = "2012-09-28_ex145_07x2"
 
   def fromForm(name: String, width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int, dataSetName: String) = {
@@ -148,6 +134,9 @@ object Level extends BasicDAO[Level]("levels") with CommonFormats with Function9
 
   val LevelNameRx = "[0-9A-Za-z\\_\\-\\s\\t]+"r
   val AssetsNameRx = "[0-9A-Za-z\\_\\-\\.\\s\\t]+"r
+  
+  def findAutoRenderLevels() = 
+    find(MongoDBObject("autoRender" -> true)).toList
 
   def findOneByName(name: String) =
     findOne(MongoDBObject("name" -> name))

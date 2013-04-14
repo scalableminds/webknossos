@@ -125,7 +125,7 @@ class Gui
 
       event.preventDefault()
       @saveNow().done =>
-        if confirm("Are you sure?")
+        if confirm("Are you sure you want to permanently finish this tracing?")
           window.location.href = event.srcElement.href
 
     $("#trace-download-button").click (event) =>

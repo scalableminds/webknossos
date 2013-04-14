@@ -40,7 +40,7 @@ class Flycam2d
     @setZoomSteps(@user.zoomXY, @user.zoomYZ, @user.zoomXZ)
 
     @user.on({
-      qualitiyChanged : (quality) => @setQuality(quality)
+      qualityChanged : (quality) => @setQuality(quality)
       })
 
   zoomIn : (planeID) ->

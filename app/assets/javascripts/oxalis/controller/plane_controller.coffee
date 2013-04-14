@@ -160,7 +160,7 @@ class PlaneController
       return
 
     getVoxelOffset  = (timeFactor) =>
-      return @model.user.moveValue * timeFactor * @model.scaleInfo.baseVoxel / constants.FPS
+      return @model.user.moveValue * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
 
     @input.keyboard = new Input.Keyboard(
 

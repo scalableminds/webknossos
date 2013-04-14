@@ -58,7 +58,7 @@ class Gui
 
     @fViewportcontrols = @gui.addFolder("Viewportoptions")
     @moveValueController = @addSlider(@fViewportcontrols, @user, "moveValue",
-      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 0.1, "Move Value (nm/s)")
+      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
     @addCheckbox(@fViewportcontrols, @user, "dynamicSpaceDirection", "d/f-Switching")
 
     @fFlightcontrols = @gui.addFolder("Flightoptions")
@@ -67,7 +67,7 @@ class Gui
     @addSlider(@fFlightcontrols, @user, "rotateValue",
       0.001, 0.08, 0.001, "Keyboard Rotation Value")
     @moveValue3dController = @addSlider(@fFlightcontrols, @user, "moveValue3d",
-      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 0.1, "Move Value (nm/s)")
+      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
     @addSlider(@fFlightcontrols, @user, "crosshairSize",
       0.05, 0.5, 0.01, "Crosshair size")
 

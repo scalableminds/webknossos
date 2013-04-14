@@ -87,7 +87,8 @@ class Input.Keyboard
         
         unless @keyCallbackMap[key]? or $(":focus").length
           callback(1, true)
-          callback._lastTime   = (new Date()).getTime()
+          # reset lastTime
+          callback._lastTime   = null
           callback._delayed    = true
           @keyCallbackMap[key] = callback
 
@@ -121,11 +122,12 @@ class Input.Keyboard
         if not callback._delayed
 
           curTime  = (new Date()).getTime()
-          lastTime = callback._lastTime
+          # If no lastTime, assume that desired FPS is met
+          lastTime = callback._lastTime || (curTime - 1000 / constants.FPS)
           elapsed  = curTime - lastTime
           callback._lastTime = curTime
 
-          callback(elapsed / constants.FPS, false)
+          callback(elapsed / 1000 * constants.FPS, false)
 
       setTimeout( (=> @buttonLoop()), @DELAY ) 
 

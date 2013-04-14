@@ -16,9 +16,9 @@ import scala.concurrent.duration._
 import braingames.util.StartableActor
 import models.stackrenderer.TemporaryStores._
 
-case class FinishedStack(id: String, stack: Stack)
-case class FailedStack(id: String, stack: Stack)
-case class FinishedUpload(id: String, stack: Stack)
+case class FinishedStack(stack: Stack)
+case class FailedStack(stack: Stack)
+case class FinishedUpload(stack: Stack)
 case class StartRendering()
 case class StopRendering()
 case class EnsureWork()
@@ -26,6 +26,8 @@ case class EnsureWork()
 class StackRenderingSupervisor extends Actor {
 
   implicit val system = context.system
+
+  val currentlyRequestingWork = Agent[Boolean](false)
 
   val stacksInRendering = Agent[Map[String, Stack]](Map.empty)
 
@@ -53,16 +55,16 @@ class StackRenderingSupervisor extends Actor {
     case StartRendering() =>
       self ! EnsureWork()
 
-    case FinishedStack(id, stack) =>
-      stacksInRendering.send(_ - id)
-      stackUploader ! UploadStack(id, stack)
+    case FinishedStack(stack) =>
+      stacksInRendering.send(_ - stack.id)
+      stackUploader ! UploadStack(stack)
 
-    case FailedStack(id, stack) =>
-      stacksInRendering.send(_ - id)
-      reportFailedWork(id)
+    case FailedStack(stack) =>
+      stacksInRendering.send(_ - stack.id)
+      reportFailedWork(stack.id)
 
-    case FinishedUpload(id, stack) =>
-      reportFinishedWork(id)
+    case FinishedUpload(stack) =>
+      reportFinishedWork(stack.id)
 
     case EnsureWork() =>
       ensureEnoughWork
@@ -77,43 +79,77 @@ class StackRenderingSupervisor extends Actor {
   }
 
   def reportFailedWork(id: String) = {
-    WS.url(failedWorkUrl).withQueryString("id" -> id).get().map { response =>
-      response.status match {
-        case 200 =>
-          Logger.debug(s"Successfully reported FAILED work for $id")
-        case s =>
-          Logger.error(s"Failed to report FAILED work for $id. Status: $s")
+    WS
+      .url(failedWorkUrl)
+      .withQueryString("key" -> id)
+      .get()
+      .map { response =>
+        response.status match {
+          case 200 =>
+            Logger.debug(s"Successfully reported FAILED work for $id")
+          case s =>
+            Logger.error(s"Failed to report FAILED work for $id. Status: $s")
+        }
       }
-    }
+      .recover {
+        case e =>
+          Logger.error("ReportFailedWork. An exception occoured: " + e)
+      }
   }
 
   def reportFinishedWork(id: String) = {
-    WS.url(finishedWorkUrl).withQueryString("id" -> id).get().map { response =>
-      response.status match {
-        case 200 =>
-          Logger.debug(s"Successfully reported finished work for $id")
-        case s =>
-          Logger.error(s"Failed to report finished work for $id. Status: $s")
+    WS
+      .url(finishedWorkUrl)
+      .withQueryString("key" -> id)
+      .get()
+      .map { response =>
+        response.status match {
+          case 200 =>
+            Logger.debug(s"Successfully reported finished work for $id")
+          case s =>
+            Logger.error(s"Failed to report finished work for $id. Status: $s")
+        }
       }
-    }
+      .recover {
+        case e =>
+          Logger.error("ReportFinishedWork. An exception occoured: " + e)
+      }
   }
 
+  /**
+   * There is some kind of semaphore around this function using
+   * currentlyRequestingWork. In general there is no problem when requesting
+   * multiple challenges, but the semaphore ensures that there are not to many
+   * requests issued if there are network delays.
+   */
   def requestWork = {
-    WS.url(requestWorkUrl).get().map { response =>
-      response.status match {
-        case 200 =>
-          response.json.asOpt[StackRenderingChallenge].map { challenge =>
-            Logger.debug(s"Successfully requested work ${challenge.id}. Level: ${challenge.stack.level.id} Mission: ${challenge.stack.mission.id}")
-            levelStore.insert(challenge.stack.level.id, challenge.stack.level)
-            missionStore.insert(challenge.stack.mission.id, challenge.stack.mission)
-            stacksInRendering.send(_ + (challenge.id -> challenge.stack))
-            stackRenderer ! RenderStack(challenge.id, challenge.stack)
+    if (!currentlyRequestingWork()) {
+      currentlyRequestingWork.send(true)
+      WS
+        .url(requestWorkUrl)
+        .get()
+        .map { response =>
+          response.status match {
+            case 200 =>
+              response.json.asOpt[Stack].map { stack =>
+                Logger.debug(s"Successfully requested work ${stack.id}. Level: ${stack.level.id} Mission: ${stack.mission.id}")
+                levelStore.insert(stack.level.id, stack.level)
+                missionStore.insert(stack.mission.id, stack.mission)
+                stacksInRendering.send(_ + (stack.id -> stack))
+                stackRenderer ! RenderStack(stack)
+              }
+            case 204 =>
+              Logger.warn("Levelcreator reported no work!")
+            case s =>
+              Logger.error("Levelcreator work request returned unknown status code: " + s)
           }
-        case 204 =>
-          Logger.warn("Levelcreator reported no work!")
-        case s =>
-          Logger.error("Levelcreator work request returned unknown status code: " + s)
-      }
+          currentlyRequestingWork.send(false)
+        }
+        .recover {
+          case e =>
+            Logger.error("RequestWork. An exception occoured: " + e)
+            currentlyRequestingWork.send(false)
+        }
     }
   }
 }

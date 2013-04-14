@@ -1,6 +1,10 @@
-@(level: models.knowledge.Level)
+@(level: models.knowledge.Level, stacksInQueue: Option[Int], stacksInProgress: Option[Int])
 @import brainflight.view.helpers._
 
+@calculateProgress(a: Int, b: Int) = @{ 
+    if(b + a == 0) 100
+    else (a *100 / (b + a)) - 10
+}
 <tr data-levelid="@level.id">
   <td> 
     <a href="#" data-prompt="@level.id" title="@level.id">#</a>
@@ -8,6 +12,12 @@
   </td>
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>
+  <td> 
+    <div class="progress progress-striped">
+        <div class="bar" style="width: @calculateProgress(stacksInProgress.getOrElse(0), stacksInQueue.getOrElse(0))%;"></div>
+    </div>
+    @stacksInQueue.getOrElse(0) in Queue <br />
+    @stacksInProgress.getOrElse(0) in Progress </td>
   <td>  
     <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"><i class="icon-pencil"></i> edit</a><br />
     <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">

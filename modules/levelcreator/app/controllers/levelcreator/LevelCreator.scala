@@ -83,26 +83,38 @@ object LevelCreator extends LevelCreatorController {
 
   def create = Action(parse.urlFormEncoded) { implicit request =>
     levelForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.levelcreator.levelList(Level.findAll, formWithErrors, DataSet.findAll)), //((taskCreateHTML(taskFromTracingForm, formWithErrors)),
+      formWithErrors => 
+        BadRequest(generateLevelList(formWithErrors)), //((taskCreateHTML(taskFromTracingForm, formWithErrors)),
       { t =>
         if (Level.isValidLevelName(t.name)) {
           Level.insertOne(t)
-          Ok(html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll))
+          Ok(generateLevelList(levelForm))
         } else
           BadRequest(Messages("level.invalidName"))
       })
   }
-  
+
   def autoRender(levelId: String, isEnabled: Boolean) = {
-    for{
+    for {
       level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
     } yield {
-      level.update( _.copy(autoRender = isEnabled))
+      level.update(_.copy(autoRender = isEnabled))
       Ok
     }
   }
 
+  def generateLevelList(levelForm: Form[Level])(implicit session: brainflight.view.UnAuthedSessionData) = {
+    val stacksInQueue =
+      StacksQueued.findAll.groupBy(_.level._id.toString).mapValues(_.size)
+
+    val stacksInGeneration =
+      StacksInProgress.findAll.groupBy(_._level.toString).mapValues(_.size)
+      
+    html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll, stacksInQueue, stacksInGeneration)
+  }
+    
+  
   def list = Action { implicit request =>
-    Ok(html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll))
+    Ok(generateLevelList(levelForm))
   }
 }

@@ -11,13 +11,36 @@ import java.io.InputStream
 import scala.collection.immutable.TreeSet
 import play.api.Logger
 import java.util.zip.ZipFile
+import java.util.zip.GZIPOutputStream
+import java.io.FileOutputStream
 
 object ZipIO {
   /** The size of the byte or char buffer used in various methods.*/
 
   def zip(sources: Seq[(InputStream, String)], out: OutputStream) =
-    if(sources.size > 0)
+    if (sources.size > 0)
       writeZip(sources, new ZipOutputStream(out))
+
+  def gzip(source: InputStream, out: OutputStream) = {
+    val t = System.currentTimeMillis()
+    var gout = new GZIPOutputStream(out)
+    var buffer = new Array[Byte](1024)
+    var len = 0
+    do {
+      len = source.read(buffer)
+      if (len > 0)
+        gout.write(buffer, 0, len)
+    } while (len > 0)
+    Logger.trace(s"GZIP took ${System.currentTimeMillis - t}ms")
+    source.close()
+    gout.close()
+  }
+
+  def gzipToTempFile(f: File) = {
+    val gzipped = File.createTempFile("temp", System.nanoTime().toString + "_" + f.getName())
+    gzip(new FileInputStream(f), new FileOutputStream(gzipped))
+    gzipped
+  }
 
   private def writeZip(sources: Seq[(InputStream, String)], zip: ZipOutputStream) = {
     val files = sources.map { case (file, name) => (file, normalizeName(name)) }
@@ -27,15 +50,15 @@ object ZipIO {
         zip.putNextEntry(new ZipEntry(name))
         var buffer = new Array[Byte](1024)
         var len = 0
-        do{ 
+        do {
           len = in.read(buffer)
-          if(len > 0)
+          if (len > 0)
             zip.write(buffer, 0, len)
-        } while(len > 0)
+        } while (len > 0)
         in.close()
         zip.closeEntry()
     }
-    Logger.trace(s"ZIP compression of ${sources.size} elemens took ${System.currentTimeMillis-t}ms")
+    Logger.trace(s"ZIP compression of ${sources.size} elemens took ${System.currentTimeMillis - t}ms")
     zip.close()
   }
 

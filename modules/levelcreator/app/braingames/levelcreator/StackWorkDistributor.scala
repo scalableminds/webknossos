@@ -13,53 +13,88 @@ import org.bson.types.ObjectId
 import models.knowledge.StacksInProgress
 import models.knowledge.StacksQueued
 import models.knowledge.StackRenderingChallenge
+import models.knowledge.Mission
+import models.knowledge.Level
 
 case class CreateStack(stack: Stack)
+case class CreateRandomStacks(level: Level, n: Int)
 case class CreateStacks(stacks: List[Stack])
 case class RequestWork()
-case class FinishedWork(id: String)
-case class FailedWork(id: String)
+case class FinishedWork(key: String)
+case class FailedWork(key: String)
+case class CheckStacksInProgress()
 
 class StackWorkDistributor extends Actor {
-  val maxStackGenerationTime = 30 minutes
+  val maxStackGenerationTime = 1 minutes
 
   implicit val sys = context.system
-  
-  StacksInProgress.removeAll()
+
+  override def preStart() {
+    sys.scheduler.schedule(10 seconds, 1 minute)(self ! CheckStacksInProgress())
+  }
+
+  def createStack(stack: Stack) = {
+    StacksQueued.remove(stack.level, stack.mission)
+    StacksQueued.insert(stack)
+  }
 
   def receive = {
+    case CreateRandomStacks(l, n) =>
+      Level.findOneById(l._id).map { level =>
+        Mission.findByDataSetName(level.dataSetName)
+          .filter(m =>
+            StacksQueued.find(level, m).isEmpty &&
+              StacksInProgress.find(level, m).isEmpty &&
+              !level.renderedMissions.contains(m.id))
+          .take(n)
+          .map(m => createStack(Stack(level, m)))
+      }
+
     case CreateStack(stack) =>
-      StacksQueued.insert(stack)
+      createStack(stack)
 
     case CreateStacks(stacks) =>
-      StacksQueued.insert(stacks)
+      stacks.map(createStack)
 
-    case FinishedWork(id) =>
-      StacksInProgress.findOneById(id).map{ challenge =>
-        Logger.debug(s"Finished work of $id. Level: ${challenge.stack.level.id} Mission: ${challenge.stack.mission.id}")
-        challenge.stack.level.addRenderedMission(challenge.stack.mission.id)
+    case FinishedWork(key) =>
+      StacksInProgress.findOneByKey(key).map { challenge =>
+        (for {
+          level <- challenge.level
+          mission <- challenge.mission
+        } yield {
+          level.addRenderedMission(mission.id)
+          Logger.debug(s"Finished work of $key. Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
+        }) getOrElse {
+          Logger.error(s"Couldn't update level! Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
+        }
         StacksInProgress.removeById(challenge._id)
       }
 
-    case FailedWork(id) =>
-      if (ObjectId.isValid(id)){
-        Logger.error(s"Renderer reported failed Work: $id")
+    case CheckStacksInProgress() =>
+      val unfinishedExpired = StacksInProgress.findAllOlderThan(maxStackGenerationTime)
+      Logger.debug(s"About to delete '${unfinishedExpired.size}' expired stacks in progress.")
+      unfinishedExpired.map { challenge =>
+        for {
+          level <- challenge.level
+          mission <- challenge.mission
+        } {
+          StacksQueued.insert(Stack(level, mission))
+        }
+        StacksInProgress.removeById(challenge._id)
+        Logger.warn(s"Stack was not completed! Challenge: ${challenge._id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
+      }
+
+    case FailedWork(key) =>
+      if (ObjectId.isValid(key)) {
+        Logger.error(s"Renderer reported failed Work: $key")
       }
 
     case RequestWork() =>
       StacksQueued.popOne().map { stack =>
-        val challenge = StackRenderingChallenge(stack)
+        val challenge = StackRenderingChallenge(stack.id, stack.level._id, stack.mission._id)
         StacksInProgress.insert(challenge)
 
-        sys.scheduler.scheduleOnce(maxStackGenerationTime) {
-          StacksInProgress.findOneById(challenge._id).map { challenge =>
-            StacksInProgress.removeById(challenge._id)
-            StacksQueued.insert(challenge.stack)
-            Logger.warn(s"Stack was not completed! Key: ${challenge._id} Stack: $stack")
-          }
-        }
-
-        sender ! Some(challenge)
+        sender ! Some(stack)
       } getOrElse {
         sender ! None
       }

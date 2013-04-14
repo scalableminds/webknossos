@@ -49,7 +49,9 @@ case class Level(
   }
 
   def addRenderedMission(missionId: String) = {
-    update(_.copy(renderedMissions = (missionId :: renderedMissions).distinct))
+    update{ e =>
+      e.copy(renderedMissions = (missionId :: e.renderedMissions).distinct)
+    }
   }
 
   def removeAllRenderedMissions = update(_.copy(renderedMissions = List()))
@@ -57,8 +59,10 @@ case class Level(
   def removeRenderedMission(missionId: String) = removeRenderedMissions(List(missionId))
 
   def removeRenderedMissions(missionIds: List[String]): Unit = {
-    update(_.copy(renderedMissions =
-      renderedMissions.filterNot(mId => missionIds.contains(mId))))
+    update{ e =>
+      e.copy(renderedMissions =
+        e.renderedMissions.filterNot(mId => missionIds.contains(mId)))
+    }
   }
 
   def retrieveAsset(name: String) = {

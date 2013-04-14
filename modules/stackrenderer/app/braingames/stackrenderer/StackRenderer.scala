@@ -19,9 +19,10 @@ import braingames.levelcreator.CreateStack
 import models.knowledge.Stack
 import java.io.FileOutputStream
 import java.io.FileInputStream
-import braingames.util.ZipIO
+import braingames.util.TarIO
+import braingames.util.FileIO
 
-case class RenderStack(id: String, stack: Stack)
+case class RenderStack(stack: Stack)
 
 case class ExecLogger(var messages: List[String] = Nil,
                       var error: List[String] = Nil)
@@ -40,24 +41,16 @@ case class ExecLogger(var messages: List[String] = Nil,
 }
 
 class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
-  
+
   val logger = new ExecLogger
 
   def receive = {
-    case RenderStack(id, stack) =>
+    case RenderStack(stack) =>
       if (renderStack(stack))
-        sender ! FinishedStack(id, stack)
+        sender ! FinishedStack(stack)
       else
-        sender ! FailedStack(id, stack)
+        sender ! FailedStack(stack)
 
-  }
-
-  def createTempFile(data: String) = {
-    val temp = File.createTempFile("temp", System.nanoTime().toString + ".js")
-    val out = new PrintWriter(temp)
-    try { out.print(data) }
-    finally { out.close }
-    temp
   }
 
   def produceStack(stack: Stack, levelUrl: String, binaryDataUrl: String) = {
@@ -65,7 +58,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
       stack,
       levelUrl).body
 
-    val jsFile = createTempFile(js)
+    val jsFile = FileIO.createTempFile(js, ".js")
     Logger.info("phantomjs " + jsFile.getAbsolutePath())
     ("phantomjs" :: jsFile.getAbsolutePath :: Nil) !! logger
     Logger.debug("Finished phantomjs.")
@@ -75,7 +68,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
     produceStack(stack, useLevelUrl.format(stack.level.id, stack.mission.id), binaryDataUrl)
 
     if (stack.isProduced) {
-      zipStack(stack)
+      tarStack(stack)
       true
     } else {
       Logger.error(s"stack $stack was not properly produced")
@@ -83,17 +76,21 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
     }
   }
 
-  def zipStack(stack: Stack) {
-    def createZipName(file: File) = s"${stack.mission.id}/${file.getName}"
+  def tarStack(stack: Stack) {
+    def createTarName(file: File) = s"${stack.mission.id}/${file.getName}"
     (Try {
-      val output = new FileOutputStream(stack.zipFile)
-      val inputs = stack.images.map(new FileInputStream(_))
-      val namesInZip = stack.images.map(createZipName(_))
-      ZipIO.zip(inputs.zip(namesInZip), output)
+      val output =
+        new FileOutputStream(stack.tarFile)
+      val inputs =
+        (stack.metaFile :: stack.images).map { f =>
+          f -> createTarName(f)
+        }
+      TarIO.tar(inputs, output)
     }) match {
-      case Success(_) => Logger.debug("Finished zipping")
+      case Success(_) =>
+        Logger.debug("Finished taring")
       case Failure(exception) =>
-        Logger.error(s"failed zipping stack: $stack")
+        Logger.error(s"failed to create tar for stack: $stack")
         Logger.error(s"$exception")
         None
     }

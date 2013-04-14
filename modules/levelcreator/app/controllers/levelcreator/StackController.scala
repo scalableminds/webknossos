@@ -24,10 +24,8 @@ object StackController extends LevelCreatorController {
   lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
 
   def list(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    val missions = for {
-      missionId <- request.level.renderedMissions
-      mission <- Mission.findOneById(missionId)
-    } yield mission
+    val missions = request.level.renderedMissions.flatMap(Mission.findOneById)
+    
     Ok(html.levelcreator.stackList(request.level, missions))
   }
 
@@ -46,16 +44,17 @@ object StackController extends LevelCreatorController {
   }
 
   def create(level: Level, missions: List[Mission]) = {
-    implicit val timeout = Timeout((1000 * missions.size) seconds)
     stackWorkDistributor ! CreateStacks(missions.map(m => Stack(level, m)))
+    JsonOk("Creation is in progress.")
+  }
+  
+  def create(level: Level, num: Int) = {
+    stackWorkDistributor ! CreateRandomStacks(level, num)
     JsonOk("Creation is in progress.")
   }
 
   def produce(levelId: String, count: Int) = ActionWithValidLevel(levelId) { implicit request =>
-    val missions = Mission.findByDataSetName(request.level.dataSetName).
-      filterNot(m => request.level.renderedMissions.contains(m.id))
-
-    create(request.level, missions.take(count))
+    create(request.level, count)
   }
 
   def produceAll(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>

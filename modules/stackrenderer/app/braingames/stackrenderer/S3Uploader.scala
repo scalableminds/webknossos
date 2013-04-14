@@ -8,8 +8,9 @@ import models.knowledge._
 import com.amazonaws.services.s3.model._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
+import braingames.util.ZipIO
 
-case class UploadStack(id: String, stacks: Stack)
+case class UploadStack(stacks: Stack)
 
 class S3Uploader(s3Config: S3Config) extends Actor {
 
@@ -18,26 +19,33 @@ class S3Uploader(s3Config: S3Config) extends Actor {
   Logger.info("starting S3 uploader")
 
   def receive = {
-    case UploadStack(id, stack) =>
+    case UploadStack(stack) =>
       if (s3Config.isEnabled)
         uploadStack(stack)
-      sender ! FinishedUpload(id, stack)
+      sender ! FinishedUpload(stack)
+  }
+  
+  val gzipMetadata = {
+    val metadata = new ObjectMetadata()
+    metadata.setContentEncoding("gzip")
+    metadata
   }
 
   def uploadStack(stack: Stack) = {
     for {
-      uploadPair <- buildUploadPairs(stack)
+      (file, key) <- buildUploadPairs(stack)
     } {
-      val (file, key) = uploadPair
-      Logger.trace(s"uploading ${file.getPath} to ${s3Config.bucketName}/$key")
-      val putObj = new PutObjectRequest(s3Config.bucketName, key, file)
+      val gzipped = ZipIO.gzipToTempFile(file)
+      Logger.debug(s"uploading ${file.getPath} to ${s3Config.bucketName}/$key")
+      val putObj = new PutObjectRequest(s3Config.bucketName, key, gzipped)
       putObj.setCannedAcl(CannedAccessControlList.PublicRead);
+      putObj.setMetadata(gzipMetadata)
       s3.putObject(putObj);
     }
   }
-
+  
   def buildUploadPairs(stack: Stack): List[Tuple2[File, String]] = {
-    val filesToUpload = stack.zipFile :: stack.metaFile :: stack.images
+    val filesToUpload = stack.tarFile :: stack.metaFile :: stack.images
 
     val stackFilePrefix = s"${s3Config.branchName}/${stack.level.id}/${stack.mission.id}"
 

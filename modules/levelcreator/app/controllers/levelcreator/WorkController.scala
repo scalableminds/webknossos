@@ -29,9 +29,9 @@ object WorkController extends LevelCreatorController {
             Logger.warn("Stack request to stackWorkDistributor timed out!")
             None
         }
-        .mapTo[Option[StackRenderingChallenge]].map { resultOpt =>
+        .mapTo[Option[Stack]].map { resultOpt =>
           resultOpt.map { result =>
-            Ok(StacksInProgress.stackRenderingChallengeFormat.writes(result))
+            Ok(Stack.stackFormat.writes(result))
           } getOrElse {
             NoContent
           }
@@ -39,13 +39,13 @@ object WorkController extends LevelCreatorController {
     }
   }
 
-  def finished(id: String) = Action { implicit request =>
-    stackWorkDistributor ! FinishedWork(id)
+  def finished(key: String) = Action { implicit request =>
+    stackWorkDistributor ! FinishedWork(key)
     Ok
   }
 
-  def failed(id: String) = Action { implicit request =>
-    stackWorkDistributor ! FailedWork(id)
+  def failed(key: String) = Action { implicit request =>
+    stackWorkDistributor ! FailedWork(key)
     Ok
   }
 }

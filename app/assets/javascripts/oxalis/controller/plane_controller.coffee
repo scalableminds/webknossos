@@ -189,7 +189,11 @@ class PlaneController
       "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
       "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
 
-    , 200)
+    )
+
+    @model.user.on({
+      keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
+      })
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 
@@ -275,13 +279,15 @@ class PlaneController
       @move([0, 0, z])
 
   zoomIn : (zoomToMouse) =>
-    @zoomPos = @getMousePosition()
+    if zoomToMouse
+      @zoomPos = @getMousePosition()
     @cameraController.zoomIn()
     if zoomToMouse
       @finishZoom()
 
   zoomOut : (zoomToMouse) =>
-    @zoomPos = @getMousePosition()
+    if zoomToMouse
+      @zoomPos = @getMousePosition()
     @cameraController.zoomOut()
     if zoomToMouse
       @finishZoom()

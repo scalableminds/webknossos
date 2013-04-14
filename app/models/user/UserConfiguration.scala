@@ -48,6 +48,7 @@ object UserConfiguration extends BasicSettings{
       "nodesAsSpheres" -> JsBoolean(false),
       "inverseX" -> JsBoolean(false),
       "inverseY" -> JsBoolean(false),
+      "keyboardDelay" -> JsNumber(200),
       "mouseActive" -> JsBoolean(true),
       "keyboardActive" -> JsBoolean(true),
       "gamepadActive" -> JsBoolean(false),

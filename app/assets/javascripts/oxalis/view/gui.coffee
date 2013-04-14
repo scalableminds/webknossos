@@ -55,6 +55,8 @@ class Gui
     fControls = @gui.addFolder("Controls")
     @addCheckbox(fControls, @user, "inverseX", "Inverse X")
     @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
+    @addSlider(fControls, @user, "keyboardDelay",
+      0, 500, 10, "Keyboard delay (ms)" )
 
     @fViewportcontrols = @gui.addFolder("Viewportoptions")
     @moveValueController = @addSlider(@fViewportcontrols, @user, "moveValue",
@@ -123,7 +125,7 @@ class Gui
 
       event.preventDefault()
       @saveNow().done =>
-        if confirm("Are you sure?")
+        if confirm("Are you sure you want to permanently finish this tracing?")
           window.location.href = event.srcElement.href
 
     $("#trace-download-button").click (event) =>

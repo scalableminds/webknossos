@@ -60,7 +60,8 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
   def produceStackFrames(stack: Stack, levelUrl: String, binaryDataUrl: String) = {
     val js = html.levelcreator.phantom(
       stack,
-      levelUrl).body
+      levelUrl,
+      binaryDataUrl).body
 
     val jsFile = FileIO.createTempFile(js, ".js")
     Logger.info("phantomjs " + jsFile.getAbsolutePath())

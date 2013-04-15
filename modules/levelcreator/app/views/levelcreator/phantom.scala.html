@@ -1,4 +1,4 @@
-@(stack: models.knowledge.Stack, levelUrl: String)
+@(stack: models.knowledge.Stack, levelUrl: String, binaryDataUrl: String)
 
 var page = require("webpage").create();
 var fs = require("fs");
@@ -15,7 +15,12 @@ setTimeout(
 
 var i = 0, stackData;
 
-var imageFilePattern = function(i, ext) { return "stackImage" + i + "." + ext }
+var imageFilePattern = function(i, ext) { 
+  i = "" + i;
+  var requiredNumberLength = Math.ceil(Math.log(stackData.length + 1) / Math.log(10));
+  while (i.length < requiredNumberLength) i = "0" + i;
+  return "stackImage" + i + "." + ext;
+}
 
 var log = function () {
   console.log.apply( console, [ "" + Date.now() + ":" ].concat([].slice.call(arguments)) );
@@ -36,6 +41,10 @@ page.onCallback = function (data) {
 
   switch (data.message) {
 
+    case "requestBinaryDataUrl":
+
+      return "@{binaryDataUrl}";
+
     case "initialized":
   
       page.clipRect = { top : 0, height : 0, width : data.width, height : data.height };
@@ -47,7 +56,7 @@ page.onCallback = function (data) {
         levelName: "@{stack.level.name}",
         levelId: "@{stack.level.id}",
         stackId: "@{stack.mission.id}",
-        images: [],
+        // images: [],
         frameData: {}
       };
 
@@ -60,7 +69,7 @@ page.onCallback = function (data) {
 
       var filename = "@{stack.path}/" + imageFilePattern(i, "png");
       page.render(filename);
-      stackData.images.push(imageFilePattern(i, "png"));
+      // stackData.images.push(imageFilePattern(i, "png"));
 
       log("rendered frame #" + i + " to " + filename);
 

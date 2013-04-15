@@ -18,7 +18,7 @@ import java.io.File
 object Global extends GlobalSettings {
 
   lazy val DirectoryWatcher = Akka.system.actorOf(
-    Props(new DirectoryWatcherActor(new DataSetChangeHandler)),
+    Props(new DirectoryWatcherActor(new MongoDataSetChangeHandler)),
     name = "directoryWatcher")
     
   lazy val MissionWatcher = Akka.system.actorOf(

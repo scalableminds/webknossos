@@ -53,7 +53,7 @@ case class Level(
       e.copy(renderedMissions = (missionId :: e.renderedMissions).distinct)
     }
   }
-
+  
   def removeAllRenderedMissions = update(_.copy(renderedMissions = List()))
 
   def removeRenderedMission(missionId: String) = removeRenderedMissions(List(missionId))

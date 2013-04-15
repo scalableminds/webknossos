@@ -12,7 +12,7 @@ import akka.pattern.AskTimeoutException
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits._
 import models.knowledge._
-import play.api.libs.json.Json
+import play.api.libs.json._
 import braingames.levelcreator.FinishedWork
 import braingames.levelcreator.FailedWork
 
@@ -31,7 +31,7 @@ object WorkController extends LevelCreatorController {
         }
         .mapTo[Option[Stack]].map { resultOpt =>
           resultOpt.map { result =>
-            Ok(Stack.stackFormat.writes(result))
+            Ok(Stack.stackFormat.writes(result.clearRenderedMissions))
           } getOrElse {
             NoContent
           }

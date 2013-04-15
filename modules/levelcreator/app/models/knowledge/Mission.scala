@@ -23,7 +23,7 @@ case class Mission(dataSetName: String,
   def withDataSetName(newDataSetName: String) = copy(dataSetName = newDataSetName)
 }
 
-object Mission extends BasicDAO[Mission]("missions") with CommonFormats{
+object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Function5[String, MissionStart, Point3D, List[PossibleEnd], ObjectId, Mission]{
 
   def createWithoutDataSet(start: MissionStart, errorCenter: Point3D, possibleEnds: List[PossibleEnd]) =
     Mission("", start, errorCenter, possibleEnds)
@@ -59,9 +59,10 @@ object Mission extends BasicDAO[Mission]("missions") with CommonFormats{
     obsoleteMissions.map(_.id)
   }
   
-  implicit val MissionFormat: Format[Mission] = (
-    (__ \ "start").format[MissionStart] and
-    (__ \ "errorCenter").format[Point3D] and
-    (__ \ "possibleEnds").format[List[PossibleEnd]])(createWithoutDataSet, unapplyWithoutDataSet)
+  val PartialMissionReader: Reads[Mission] = (
+    (__ \ "start").read[MissionStart] and
+    (__ \ "errorCenter").read[Point3D] and
+    (__ \ "possibleEnds").read[List[PossibleEnd]])(createWithoutDataSet _)
     
+  implicit val missionFormat: Format[Mission] = Json.format[Mission]  
 }

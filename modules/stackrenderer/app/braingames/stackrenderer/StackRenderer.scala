@@ -58,7 +58,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
   }
 
   def produceStackFrames(stack: Stack, levelUrl: String, binaryDataUrl: String) = {
-    val js = html.levelcreator.phantom(
+    val js = html.stackrenderer.phantom(
       stack,
       levelUrl,
       binaryDataUrl).body

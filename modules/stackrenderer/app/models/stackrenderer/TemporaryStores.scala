@@ -15,9 +15,12 @@ object TemporaryStores {
   class TemporaryStore[T] {
     implicit val sys = Akka.system(Play.current)
     val ts = Agent[Map[String, T]](Map())
-
+    
     def find(id: String) =
       ts().get(id)
+      
+    def removeAllExcept(l: Array[String]) =
+      ts.send( _.filterKeys( l.contains))
 
     def insert(id: String, t: T) =
       ts.send(_ + (id -> t))

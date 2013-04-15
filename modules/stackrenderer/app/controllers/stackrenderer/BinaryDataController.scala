@@ -17,7 +17,7 @@ object BinaryDataController extends Controller {
           dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
         } yield {
           controllers.levelcreator.BinaryData.handleDataRequest(dataSet, dataLayer, level, mission).map(
-            _.withHeaders("Access-Control-Allow-Origin" -> "http://localhost"))
+            _.withHeaders("Access-Control-Allow-Origin" -> "*"))
         }
       }
     }

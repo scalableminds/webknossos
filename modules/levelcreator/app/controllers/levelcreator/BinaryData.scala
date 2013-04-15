@@ -65,7 +65,7 @@ object BinaryData extends Controller {
           new Array[Byte](level.height * level.width * level.depth * dataLayer.bytesPerElement).toBuffer
       }
       .mapTo[ArrayBuffer[Byte]].map { data =>
-        Logger.debug("total: %d ms".format(System.currentTimeMillis - t))
+        Logger.debug("Stack data aggregation: %d ms".format(System.currentTimeMillis - t))
         Ok(data.toArray)
       }
   }

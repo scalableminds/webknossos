@@ -3,6 +3,7 @@ package models.knowledge
 import java.io.File
 import braingames.util.FileRegExFilter
 import play.api.libs.json.Json
+import play.api.libs.json._
 import org.bson.types.ObjectId
 
 
@@ -14,6 +15,8 @@ case class Stack(level: Level, mission: Mission, _id: ObjectId = new ObjectId){
   val tarFile = new File(s"$path/${level.id}_${mission.id}.tar")
   val metaFile = new File(s"$path/meta.json")
   val image = new File(s"$path/stack.png")
+  
+  def clearRenderedMissions = this.copy( level = level.copy(renderedMissions = Nil))
   
   def isTared = tarFile.exists
   def isProduced = directory.exists && metaFile.exists

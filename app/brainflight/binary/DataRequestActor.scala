@@ -57,7 +57,10 @@ class DataRequestActor extends Actor with DataCache {
 
   def receive = {
     case SingleRequest(dataRequest) =>
-      load(dataRequest) pipeTo sender
+      val s = sender
+      Akka.future{
+        load(dataRequest) pipeTo s
+      }
     case MultiCubeRequest(requests) =>
       val resultsPromise = Future.traverse(requests)(r =>
         load(r.dataRequest))
@@ -84,7 +87,7 @@ class DataRequestActor extends Actor with DataCache {
             loadFromStore(tail)
           case e: ClassCastException =>
             // TODO: find a better way to catch the DataNotFoundException
-            Logger.warn(s"(${dataSet.name}/${dataLayer.name} $block) ${a.path}: Not found. E: $e")
+            Logger.warn(s"(${dataSet.name}/${dataLayer.name} $block) ${a.path}: Not found.")
             loadFromStore(tail)
         }
       case _ =>

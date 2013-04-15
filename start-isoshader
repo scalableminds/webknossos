@@ -1,0 +1,3 @@
+#! /bin/bash
+playframework/play "project isoshader" "run 9092"
+

@@ -10,12 +10,16 @@ import java.io.OutputStream
 import java.io.InputStream
 import scala.collection.immutable.TreeSet
 import play.api.Logger
-import java.util.zip.ZipFile
-import java.util.zip.GZIPOutputStream
+import java.util.zip._
+import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream}
 import java.io.FileOutputStream
 
 object ZipIO {
   /** The size of the byte or char buffer used in various methods.*/
+
+  class GZIPOutputStream(out: OutputStream, compressionLevel: Int) extends DefaultGZIPOutputStream(out) {
+    `def`.setLevel(compressionLevel)
+  }
 
   def zip(sources: Seq[(InputStream, String)], out: OutputStream) =
     if (sources.size > 0)
@@ -23,7 +27,7 @@ object ZipIO {
 
   def gzip(source: InputStream, out: OutputStream) = {
     val t = System.currentTimeMillis()
-    var gout = new GZIPOutputStream(out)
+    val gout = new GZIPOutputStream(out, Deflater.BEST_COMPRESSION);
     var buffer = new Array[Byte](1024)
     var len = 0
     do {

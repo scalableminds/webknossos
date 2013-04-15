@@ -21,6 +21,8 @@ import java.io.FileOutputStream
 import java.io.FileInputStream
 import braingames.util.TarIO
 import braingames.util.FileIO
+import braingames.image._
+import javax.imageio.ImageIO
 
 case class RenderStack(stack: Stack)
 
@@ -44,6 +46,8 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
 
   val logger = new ExecLogger
 
+  val imagesPerRow = 10
+
   def receive = {
     case RenderStack(stack) =>
       if (renderStack(stack))
@@ -53,7 +57,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
 
   }
 
-  def produceStack(stack: Stack, levelUrl: String, binaryDataUrl: String) = {
+  def produceStackFrames(stack: Stack, levelUrl: String, binaryDataUrl: String) = {
     val js = html.levelcreator.phantom(
       stack,
       levelUrl).body
@@ -65,14 +69,26 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
   }
 
   def renderStack(stack: Stack): Boolean = {
-    produceStack(stack, useLevelUrl.format(stack.level.id, stack.mission.id), binaryDataUrl)
+    produceStackFrames(stack, useLevelUrl.format(stack.level.id, stack.mission.id), binaryDataUrl)
 
     if (stack.isProduced) {
+      createStackImage(stack)
       tarStack(stack)
       true
     } else {
       Logger.error(s"stack $stack was not properly produced")
       false
+    }
+  }
+
+  def createStackImage(stack: Stack) {
+    val images = stack.frames.map(ImageIO.read)
+    val params = ImageCreatorParameters(
+      slideWidth = stack.level.width,
+      slideHeight = stack.level.height,
+      imagesPerRow = imagesPerRow)
+    ImageCreator.createBigImage(images, params).map { i =>
+      new PNGWriter().writeToFile(i, stack.image)
     }
   }
 
@@ -82,7 +98,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
       val output =
         new FileOutputStream(stack.tarFile)
       val inputs =
-        (stack.metaFile :: stack.images).map { f =>
+        (stack.metaFile :: stack.image :: Nil).map { f =>
           f -> createTarName(f)
         }
       TarIO.tar(inputs, output)

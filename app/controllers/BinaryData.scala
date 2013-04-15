@@ -36,6 +36,7 @@ import scala.concurrent.Future
 import play.api.i18n.Messages
 import braingames.image._
 import java.awt.image.BufferedImage
+import braingames.image.JPEGWriter
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 object BinaryData extends Controller with Secured {
@@ -139,7 +140,7 @@ object BinaryData extends Controller with Secured {
         val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z), false)))
         handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize).map(_.flatMap { result =>
           ImageCreator.createImage(result.toArray, params).map { imageBuffer =>
-            val file = ImageWriter.writeToFile(imageBuffer)
+            val file = new JPEGWriter().writeToFile(imageBuffer)
             Ok.sendFile(file, true, _ => "test.jpg").withHeaders(
               CONTENT_TYPE -> "image/jpeg")
           }

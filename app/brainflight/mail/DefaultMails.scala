@@ -65,5 +65,6 @@ object DefaultMails {
       subject = "Non technical issue - " + summary,
       bodyText = html.mail.nonTechnicalIssue(userName, email, description).body,
       recipients = List(brainTracingMailingList),
+      replyTo = Some(email),
       ccRecipients = List(supportMail, email))
 }

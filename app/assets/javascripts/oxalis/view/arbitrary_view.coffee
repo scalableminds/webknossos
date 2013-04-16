@@ -59,14 +59,13 @@ class ArbitraryView
         element.visible = true
       $("#arbitrary-info-canvas").show()
 
-      #render hack to avoid flickering
-      @renderer.setSize(384, 384)
       @resize()
+      #render hack to avoid flickering
+      @renderer.setSize(constants.WIDTH, constants.WIDTH)
       # start the rendering loop
       @animate()
       # Dont forget to handle window resizing!
       $(window).on "resize", @resize
-      @resize()
 
 
   stop : ->
@@ -147,6 +146,7 @@ class ArbitraryView
   applyScale : (delta) =>
 
     @scaleFactor = @DEFAULT_SCALE unless @scaleFactor
+
     if (@scaleFactor+delta > @MIN_SCALE) and (@scaleFactor+delta < @MAX_SCALE)
       @scaleFactor += Number(delta)
       @width = @height = @scaleFactor * constants.WIDTH

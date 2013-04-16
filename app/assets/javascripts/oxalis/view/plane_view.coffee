@@ -81,6 +81,9 @@ class PlaneView
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
 
+    # regularily force update
+    setInterval(( => @renderFunction(true) ), 500)
+
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
@@ -96,33 +99,35 @@ class PlaneView
 
   # This is the main render function.
   # All 3D meshes and the trianglesplane are rendered here.
-  renderFunction : ->
+  renderFunction : ( force = false ) ->
 
     TWEEN.update()
-
-    @trigger "render"
 
     # skip rendering if nothing has changed
     # This prevents you the GPU/CPU from constantly
     # working and keeps your lap cool
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
-    
-    # update postion and FPS displays
-    @stats.update()
 
-    viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
-    @renderer.autoClear = true
-    colors   = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
-    if @flycam.hasChanged or @flycam.hasNewTextures()
+    if @flycam.hasChanged or @flycam.hasNewTextures() or force
+
+      @trigger "render"
+      
+      # update postion and FPS displays
+      @stats.update()
+      
+      viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
+      @renderer.autoClear = true
+      
       for i in constants.ALL_VIEWPORTS
         @trigger "renderCam", i
         @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
         @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
         @renderer.enableScissorTest(true)
-        @renderer.setClearColorHex(colors[i], 1);
+        @renderer.setClearColorHex(constants.PLANE_COLORS[i], 1);
         @renderer.render @scene, @camera[i]
-    @flycam.hasChanged = false
-    @flycam.hasNewTexture = [false, false, false]
+    
+      @flycam.hasChanged = false
+      @flycam.hasNewTexture = [false, false, false]
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.

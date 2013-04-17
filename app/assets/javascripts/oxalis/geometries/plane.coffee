@@ -131,7 +131,7 @@ class Plane
       area = @flycam.getArea(@planeID)
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
-        @model.binary.planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(@planeID), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
+        @model.binary.planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
           if dataBuffer
             @plane.texture.image.data.set(dataBuffer)
             @flycam.hasNewTexture[@planeID] = true
@@ -144,7 +144,7 @@ class Plane
       @plane.texture.needsUpdate = true
       @plane.volumeTexture.needsUpdate = true
       
-      scalingFactor = @flycam.getTextureScalingFactor @planeID
+      scalingFactor = @flycam.getTextureScalingFactor()
       @plane.repeat.x = (area[2] -  area[0]) / @textureWidth  # (tWidth -4) ???
       @plane.repeat.y = (area[3] -  area[1]) / @textureWidth
       @plane.offset.x = area[0] / @textureWidth

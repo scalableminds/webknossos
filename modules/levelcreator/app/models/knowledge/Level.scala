@@ -1,16 +1,17 @@
 package models.knowledge
 
 import models.basics._
-import java.io.{File, PrintWriter}
+import java.io.{ File, PrintWriter }
 import com.mongodb.casbah.commons.MongoDBObject
 import org.apache.commons.io.FileUtils
 import play.api.Play
 import org.bson.types.ObjectId
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import play.api.data.validation.ValidationError
 
 case class Level(
-    name: String , 
+    name: String,
     width: Int,
     height: Int,
     slidesBeforeProblem: Int,
@@ -22,58 +23,58 @@ case class Level(
   val dao = Level
 
   lazy val id = _id.toString
-  
+
   lazy val depth = slidesBeforeProblem + slidesAfterProblem
-  
-  lazy val stacksFileName="stacks.json"
+
+  lazy val stacksFileName = "stacks.json"
   lazy val stacksFile = new File(s"$stackFolder/$stacksFileName")
   def hasStacksFile = stacksFile.exists
   def updateStacksFile {
 
-    if(! hasStacksFile ) {
+    if (!hasStacksFile) {
       stacksFile.getParentFile.mkdirs
       stacksFile.createNewFile
     }
     val out = new PrintWriter(stacksFile)
-      try { out.print(Json.toJson(renderedMissions)) }
-      finally { out.close }
+    try { out.print(Json.toJson(renderedMissions)) }
+    finally { out.close }
 
   }
-  
+
   val assetsFolder =
     s"${Level.assetsBaseFolder}/$name/assets"
 
-  val stackFolder = 
+  val stackFolder =
     s"${Level.stackBaseFolder}/$name"
-    
+
   private def assetFile(name: String) =
     new File(assetsFolder + "/" + name)
 
   def assets = {
     val f = new File(assetsFolder).listFiles()
-    if(f == null)
+    if (f == null)
       Array[File]()
     else
       f
   }
-  
+
   def alterCode(c: String) = {
     copy(code = c)
   }
-  
-  def addRenderedMissions(missionIds: List[String]) = {   
-      update(_.copy(renderedMissions = (renderedMissions ++ missionIds).distinct))
+
+  def addRenderedMission(missionId: String) = {
+    update(_.copy(renderedMissions = (missionId :: renderedMissions).distinct))
   }
-  
+
   def removeAllRenderedMissions = update(_.copy(renderedMissions = List()))
-  
+
   def removeRenderedMission(missionId: String) = removeRenderedMissions(List(missionId))
-  
+
   def removeRenderedMissions(missionIds: List[String]): Unit = {
-    update(_.copy(renderedMissions = 
+    update(_.copy(renderedMissions =
       renderedMissions.filterNot(mId => missionIds.contains(mId))))
   }
-  
+
   def retrieveAsset(name: String) = {
     val f = assetFile(name)
     if (f.getPath.startsWith(assetsFolder) && f.exists)
@@ -99,27 +100,45 @@ case class Level(
   }
 }
 
-object Level extends BasicDAO[Level]("levels") {
+trait CommonFormats {
+  implicit object objectIdFormat extends Format[ObjectId] {
+    def reads(json: JsValue) = json match {
+      case JsString(s) => {
+        if (ObjectId.isValid(s))
+          JsSuccess(new ObjectId(s))
+        else
+          JsError(ValidationError("validate.error.objectid"))
+      }
+      case _ => JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.jsstring"))))
+    }
+    
+    def writes(o: ObjectId) = JsString(o.toString)
+  }
+}
+
+object Level extends BasicDAO[Level]("levels") with CommonFormats with Function9[String, Int, Int, Int, Int, String, String, List[String], ObjectId, Level]{
+
+  implicit val levelFormat = Json.format[Level]
   
   val defaultDataSetName = "2012-09-28_ex145_07x2"
 
-  def fromForm(name: String, width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int,  dataSetName: String) = {
-    Level(name, width, height, slidesBeforeProblem, slidesAfterProblem , dataSetName)
+  def fromForm(name: String, width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int, dataSetName: String) = {
+    Level(name, width, height, slidesBeforeProblem, slidesAfterProblem, dataSetName)
   }
-  
+
   val empty = Level("", 250, 150, 15, 15, defaultDataSetName)
-  
+
   def toForm(level: Level) = {
     Some(level.name, level.width, level.height, level.slidesBeforeProblem, level.slidesAfterProblem, level.dataSetName)
   }
-  
+
   val stackBaseFolder = {
     val folderName =
       Play.current.configuration.getString("levelCreator.stackDirectory").getOrElse("public/levelStacks")
     (new File(folderName).mkdirs())
     folderName
   }
-  
+
   val assetsBaseFolder = {
     val folderName =
       Play.current.configuration.getString("levelCreator.assetsDirecory").getOrElse("data")
@@ -132,8 +151,8 @@ object Level extends BasicDAO[Level]("levels") {
 
   def findOneByName(name: String) =
     findOne(MongoDBObject("name" -> name))
-    
-  def findByDataSetName(dataSetName: String) = 
+
+  def findByDataSetName(dataSetName: String) =
     find(MongoDBObject("dataSetName" -> dataSetName)).toList
 
   def isValidAssetName(name: String) = {
@@ -157,5 +176,5 @@ object Level extends BasicDAO[Level]("levels") {
   val defaultCode = """
     |time(start : 0, end : 10) ->
     |  importSlides(start : 0, end : 10)
-  """.stripMargin 
+  """.stripMargin
 }

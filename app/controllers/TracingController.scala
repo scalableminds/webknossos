@@ -46,6 +46,7 @@ import brainflight.tracing.TracingIdentifier
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
+import braingames.util.ExtendedTypes.When
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User
@@ -94,17 +95,25 @@ object TracingController extends Controller with Secured with TracingInformation
   }
 
   def finishTracing(user: User, tracing: Tracing): Box[(Tracing, String)] = {
-    if (isAllowedToFinishTracing(tracing, user) && tracing.state.isInProgress) {
-      UsedTracings.removeAll(tracing)
-      NMLIO.writeTracingToFile(tracing)
-      tracing match {
-        case tracing if tracing._task.isEmpty =>
-          Full(tracing.update(_.finish) -> Messages("tracing.finished"))
-        case tracing if Task.isTrainingsTracing(tracing) =>
-          Full(tracing.update(_.passToReview) -> Messages("task.passedToReview"))
-        case _ =>
-          Full(tracing.update(_.finish) -> Messages("task.finished"))
-      }
+    if (isAllowedToFinishTracing(tracing, user)) {
+      if (tracing.state.isInProgress) {
+        UsedTracings.removeAll(tracing)
+        NMLIO.writeTracingToFile(tracing)
+        tracing match {
+          case tracing if tracing._task.isEmpty =>
+            Full(tracing.update(_.finish) -> Messages("tracing.finished"))
+          case tracing if Task.isTrainingsTracing(tracing) =>
+            Full(tracing.update(_.passToReview) -> Messages("task.passedToReview"))
+          case _ =>
+            val nodesInBase = 
+              tracing.task.flatMap(_.tracingBase.map(Tracing.statisticsForTracing(_).numberOfNodes)).getOrElse(1L)
+            if(Tracing.statisticsForTracing(tracing).numberOfNodes > nodesInBase)
+              Full(tracing.update(_.finish) -> Messages("task.finished"))
+            else
+              Failure(Messages("tracing.notEnoughNodes"))
+        }
+      } else
+        Failure(Messages("tracing.notInProgress"))
     } else
       Failure(Messages("tracing.notPossible"))
   }
@@ -131,9 +140,14 @@ object TracingController extends Controller with Secured with TracingInformation
   def finishWithRedirect(tracingId: String) = Authenticated { implicit request =>
     for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      (_, message) <- finishTracing(request.user, tracing)
     } yield {
-      Redirect(routes.UserController.dashboard).flashing("success" -> message)
+      finishTracing(request.user, tracing) match{
+        case Full((_, message)) =>
+          Redirect(routes.UserController.dashboard).flashing("success" -> message)
+        case Failure(message, _, _) =>
+          Redirect(routes.UserController.dashboard).flashing("error" -> message)
+          
+      }
     }
   }
 
@@ -176,10 +190,9 @@ object TracingController extends Controller with Secured with TracingInformation
       if (tracing.accessPermission(request.user))
     } yield {
       val modified =
-        if (!isAllowedToUpdateTracing(tracing, request.user))
-          tracing.makeReadOnly
-        else
-          tracing
+        tracing
+          .when(!isAllowedToUpdateTracing(_, request.user))(_.makeReadOnly)
+          .when(_.state.isFinished)(_.allowAllModes)
 
       Ok(htmlForTracing(modified))
     }) ?~ Messages("notAllowed") ~> 403
@@ -239,10 +252,9 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
     val f = Application.temporaryTracingGenerator ? RequestTemporaryTracing(id)
 
     f.mapTo[Future[Box[TracingLike]]].flatMap(_.map(_.map { tracing =>
-      if (!isAllowedToUpdateTracing(tracing, request.user))
-        tracing.makeReadOnly
-      else
-        tracing
+      tracing
+        .when(!isAllowedToUpdateTracing(_, request.user))(_.makeReadOnly)
+        .when(_.state.isFinished)(_.allowAllModes)
     }))
   }
 

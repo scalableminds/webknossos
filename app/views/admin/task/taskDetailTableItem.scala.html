@@ -1,0 +1,34 @@
+@* taskDetailTableItem Template File *@
+@(task: models.task.Task)
+<tr>
+  <td> 
+    <a href="@controllers.admin.routes.TaskAdministration.list#@task.id">
+      @formatHash(task.id)
+    </a>
+  </td>
+  <td>
+    <a href="@controllers.admin.routes.TaskTypeAdministration.list#@task.taskType.map(_.id)">
+      @task.taskType.map(_.summary)
+    </a>
+  </td>
+  <td>
+    @task.tracingBase.map(_.dataSetName)
+  </td>
+  <td> @defining(task.status){ status =>
+      <span title="Unassigned"> 
+        <i class="icon-play-circle"></i> @status.open open
+      </span>
+      |
+      <span title="in Progress"> 
+        <i class="icon-random"></i> @status.inProgress active
+      </span>
+      |
+      <span title="Completed">
+        <i class="icon-ok-circle"></i> @status.completed done
+      </span>
+    }
+  </td>
+  <td class="nowrap">
+    <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="icon-download"></i> download </a>
+  </td>
+</tr>

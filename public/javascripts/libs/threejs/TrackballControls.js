@@ -16,6 +16,7 @@ return THREE.TrackballControls = function ( object, domElement, target, updateCa
 	// API
 
 	this.enabled = true;
+	this.keyboardEnabled = false
 
 	this.screen = { width: 0, height: 0, offsetLeft: 0, offsetTop: 0 };
 	this.radius = ( this.screen.width + this.screen.height ) / 4;
@@ -317,7 +318,7 @@ return THREE.TrackballControls = function ( object, domElement, target, updateCa
 
 	function keydown( event ) {
 
-		if ( _this.enabled === false ) return;
+		if ( _this.enabled === false || _this.keyboardEnabled === false ) return;
 
 		window.removeEventListener( 'keydown', keydown );
 
@@ -345,7 +346,7 @@ return THREE.TrackballControls = function ( object, domElement, target, updateCa
 
 	function keyup( event ) {
 
-		if ( _this.enabled === false ) return;
+		if ( _this.enabled === false || _this.keyboardEnabled === false ) return;
 
 		_state = _prevState;
 

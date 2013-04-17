@@ -55,11 +55,12 @@ class Gui
     fControls = @gui.addFolder("Controls")
     @addCheckbox(fControls, @user, "inverseX", "Inverse X")
     @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
+    @addSlider(fControls, @user, "keyboardDelay",
+      0, 500, 10, "Keyboard delay (ms)" )
 
     @fViewportcontrols = @gui.addFolder("Viewportoptions")
-    @addSlider(@fViewportcontrols, @user, "moveValue",
-      0.1, 10, 0.1, "Move Value")
-    @addCheckbox(@fViewportcontrols, @user, "lockZoom", "Lock Zoom")
+    @moveValueController = @addSlider(@fViewportcontrols, @user, "moveValue",
+      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 0.1, "Move Value")
     @addCheckbox(@fViewportcontrols, @user, "dynamicSpaceDirection", "d/f-Switching")
 
     @fFlightcontrols = @gui.addFolder("Flightoptions")
@@ -67,26 +68,28 @@ class Gui
       0.001, 0.02, 0.001, "Mouse Rotation")
     @addSlider(@fFlightcontrols, @user, "rotateValue",
       0.001, 0.08, 0.001, "Keyboard Rotation Value")
-    @addSlider(@fFlightcontrols, @user, "moveValue3d",
-      0.1, 10, 0.1, "Move Value")
+    @moveValue3dController = @addSlider(@fFlightcontrols, @user, "moveValue3d",
+      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 0.1, "Move Value")
     @addSlider(@fFlightcontrols, @user, "crosshairSize",
-      0.1, 1, 0.01, "Crosshair size")
+      0.05, 0.5, 0.01, "Crosshair size")
 
-    fView = @gui.addFolder("View")
-    @addCheckbox(fView, @settings, "fourBit", "4 Bit")
-    @addCheckbox(fView, @user, "interpolation", "Interpolation")
+    @fView = @gui.addFolder("View")
+    @addCheckbox(@fView, @settings, "fourBit", "4 Bit")
+    @addCheckbox(@fView, @user, "interpolation", "Interpolation")
     @brightnessController =
-      @addSlider(fView, @settings, "brightness",
+      @addSlider(@fView, @settings, "brightness",
         -256, 256, 5, "Brightness", @setBrightnessAndContrast)
     @contrastController =
-      @addSlider(fView, @settings, "contrast",
+      @addSlider(@fView, @settings, "contrast",
         0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
-    @addFunction(fView, @settings, "resetBrightnessAndContrast",
+    @addFunction(@fView, @settings, "resetBrightnessAndContrast",
       "Reset To Default")
-    @addSlider(fView, @user, "routeClippingDistance",
+    @clippingController = @addSlider(@fView, @user, "routeClippingDistance",
       1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
-    @addCheckbox(fView, @user, "displayCrosshair", "Show Crosshairs")
-    (fView.add @settings, "quality", @qualityArray)
+    @clippingControllerArbitrary = @addSlider(@fView, @user, "routeClippingDistanceArbitrary",
+      1, 127, 1, "Clipping Distance")
+    @addCheckbox(@fView, @user, "displayCrosshair", "Show Crosshairs")
+    (@fView.add @settings, "quality", @qualityArray)
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 
@@ -122,7 +125,7 @@ class Gui
 
       event.preventDefault()
       @saveNow().done =>
-        if confirm("Are you sure?")
+        if confirm("Are you sure you want to permanently finish this tracing?")
           window.location.href = event.srcElement.href
 
     $("#trace-download-button").click (event) =>
@@ -149,6 +152,7 @@ class Gui
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " μm</p>")
         else
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
+        @set("zoom", step, Number)
 
     @model.route.on
       newActiveNode    : => @update()
@@ -160,9 +164,6 @@ class Gui
       newTree          : => @update()
       # newActiveNodeRadius : (radius) =>@updateRadius(radius)
       newParticleSize  : (value, propagate) => if propagate then @updateParticleSize(value)
-
-    @model.route.stateLogger.on
-      pushFailed       : -> Toast.error("Auto-Save failed!")
 
     @createTooltips()
 
@@ -264,6 +265,14 @@ class Gui
     @set("particleSize", value, Number)
     @particleSizeController.updateDisplay()
 
+  updateMoveValue : (value) =>
+    @set("moveValue", value, Number)
+    @moveValueController.updateDisplay()
+
+  updateMoveValue3d : (value) =>
+    @set("moveValue3d", value, Number)
+    @moveValue3dController.updateDisplay()
+
   # Helper method to combine common update methods
   update : ->
     # called when value user switch to different active node
@@ -279,8 +288,14 @@ class Gui
         $(@fFlightcontrols.domElement).hide()
         $(@fViewportcontrols.domElement).show()
         $(@fSkeleton.domElement).show()
+        $(@clippingControllerArbitrary.domElement).parents(".cr").hide()
+        $(@clippingController.domElement).parents(".cr").show()
+        @user.triggerAll()
       when constants.MODE_ARBITRARY
         $(@fFlightcontrols.domElement).show()
         $(@fViewportcontrols.domElement).hide()
         $(@fSkeleton.domElement).hide()
+        $(@clippingControllerArbitrary.domElement).parents(".cr").show()
+        $(@clippingController.domElement).parents(".cr").hide()
+        @user.triggerAll()
 

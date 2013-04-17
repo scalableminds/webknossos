@@ -5,6 +5,7 @@
 ../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer
 ../constants : constants
+libs/threejs/ColorConverter : ColorConverter
 ###
 
 class Skeleton
@@ -47,6 +48,10 @@ class Skeleton
     @edgesBuffer  = []
     @nodesBuffer  = []
 
+    #initial mode
+    @mode = constants.MODE_OXALIS
+    @showInactiveTrees = true
+
     # Create sphere to represent the active Node, radius is
     # 1 nm, so that @activeNode.scale is the radius in nm.
     # @activeNode = new THREE.Mesh(
@@ -62,28 +67,38 @@ class Skeleton
     activeNodeGeometry = new THREE.Geometry()
     @activeNodeParticle = new THREE.ParticleSystem(
       activeNodeGeometry,
-        new THREE.ParticleBasicMaterial({color: @COLOR_ACTIVE, size: 5, sizeAttenuation : false}))
+      new THREE.ParticleBasicMaterial({
+        color: @COLOR_ACTIVE, 
+        size: 5, 
+        sizeAttenuation : @mode == constants.MODE_ARBITRARY}))
     activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
 
     routeGeometryBranchPoints = new THREE.Geometry()
     routeGeometryBranchPoints.dynamic = true
     @branches = new THREE.ParticleSystem(
-        routeGeometryBranchPoints,
-        new THREE.ParticleBasicMaterial({size: 5, sizeAttenuation: false, vertexColors: true}))
+      routeGeometryBranchPoints,
+      new THREE.ParticleBasicMaterial({
+        size: 5, 
+        sizeAttenuation: @mode == constants.MODE_ARBITRARY, 
+        vertexColors: true}))
     @branchesBuffer = new ResizableBuffer(3)
     @branchesColorsBuffer = new ResizableBuffer(3)
 
     @updateBranches()
 
     @route.on
-      newActiveNode : => @setActiveNode()
-      newTree : (treeId, treeColor) => @createNewTree(treeId, treeColor)
+      newActiveNode : => 
+        @setActiveNode()
+        @setInactiveTreeVisibility(@showInactiveTrees)
+      newTree : (treeId, treeColor) => 
+        @createNewTree(treeId, treeColor)
+        @setInactiveTreeVisibility(@showInactiveTrees)
       deleteTree : (index) => @deleteTree(index)
       deleteActiveNode : (node) => @deleteNode(node)
       mergeTree : (lastTreeID, lastNode, activeNode) => 
         @mergeTree(lastTreeID, lastNode, activeNode)
         @updateBranches()
-      newNode : => @setWaypoint()
+      newNode : (centered) => @setWaypoint(centered)
       setBranch : (isBranchPoint, nodeID) => 
         @setBranchPoint(isBranchPoint, nodeID)
         @updateBranches()
@@ -111,8 +126,19 @@ class Skeleton
     @edgesBuffer.push(new ResizableBuffer(6))
     @nodesBuffer.push(new ResizableBuffer(3))
 
-    @routes.push(new THREE.Line(routeGeometry, new THREE.LineBasicMaterial({color: @darkenHex(treeColor), linewidth: @model.route.getParticleSize() / 4}), THREE.LinePieces))
-    @nodes.push(new THREE.ParticleSystem(routeGeometryNodes, new THREE.ParticleBasicMaterial({color: @darkenHex(treeColor), size: @model.route.getParticleSize(), sizeAttenuation : false})))
+    @routes.push(new THREE.Line(
+      routeGeometry, 
+      new THREE.LineBasicMaterial({
+        color: @darkenHex(treeColor), 
+        linewidth: @model.route.getParticleSize() / 4}), THREE.LinePieces))
+
+    @nodes.push(new THREE.ParticleSystem(
+      routeGeometryNodes, 
+      new THREE.ParticleBasicMaterial({
+        color: @darkenHex(treeColor), 
+        size: @model.route.getParticleSize(), 
+        sizeAttenuation : @mode == constants.MODE_ARBITRARY})))
+
     @ids.push(treeId)
 
     @setActiveNode()
@@ -251,7 +277,7 @@ class Skeleton
   getMeshes : =>
     return [@activeNodeParticle].concat(@nodes).concat(@nodesSpheres).concat(@routes).concat(@branches)
 
-  setWaypoint : =>
+  setWaypoint : (centered) =>
     curGlobalPos = @flycam.getPosition()
     activePlane  = @flycam.getActivePlane()
     position     = @route.getActiveNodePos()
@@ -284,14 +310,15 @@ class Skeleton
     @nodes[index].geometry.verticesNeedUpdate = true
 
     # Animation to center waypoint position
-    @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
-    @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 100)
-    @waypointAnimation.onUpdate ->
-      @flycam.setPosition [@globalPosX, @globalPosY, @globalPosZ]
-    @waypointAnimation.start()
+    if centered
+      @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
+      @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 100)
+      @waypointAnimation.onUpdate ->
+        @flycam.setPosition [@globalPosX, @globalPosY, @globalPosZ]
+      @waypointAnimation.start()
   
-    @setActiveNode()
-    #@setNodeRadius(radius)
+      @setActiveNode()
+
     @flycam.hasChanged = true
 
   deleteNode : (node) ->
@@ -477,6 +504,10 @@ class Skeleton
       @setDisplaySpheres(@disSpheres)
     @flycam.hasChanged = true
 
+  toggleInactiveTreeVisibility : ->
+    @showInactiveTrees = not @showInactiveTrees
+    @setInactiveTreeVisibility(@showInactiveTrees)
+
   setInactiveTreeVisibility : (boolean) ->
     for mesh in @getMeshes()
       if mesh != @activeNodeParticle
@@ -488,21 +519,32 @@ class Skeleton
 
   invertHexToRGB : (hexColor) ->
 
-    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
     hsvColor.h = (hsvColor.h + 0.5) % 1
-    rgbColor = new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v)
+    rgbColor = ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v)
     [rgbColor.r, rgbColor.g, rgbColor.b]
 
 
   darkenHex : (hexColor) ->
 
-    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
     hsvColor.v = 0.6
-    new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+    ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
 
 
   invertHex : (hexColor) ->
 
-    hsvColor = new THREE.Color().setHex(hexColor).getHSV()
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
     hsvColor.h = (hsvColor.h + 0.5) % 1
-    new THREE.Color().setHSV(hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+    ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+
+  setSizeAttenuation : (boolean) ->
+
+    @mode = if boolean then constants.MODE_ARBITRARY else constants.MODE_OXALIS
+    for particleSystem in @nodes
+      particleSystem.material.sizeAttenuation = boolean
+      particleSystem.material.needsUpdate = true
+    @branches.material.sizeAttenuation = boolean
+    @branches.material.needsUpdate = true
+    @activeNodeParticle.material.sizeAttenuation = boolean
+    @activeNodeParticle.material.needsUpdate = true

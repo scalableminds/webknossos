@@ -25,7 +25,7 @@ object TreeLike{
     import Edge.EdgeXMLWrites
 
     def writes(t: TreeLike) =
-      <thing id={ t.treeId.toString } color.r={ t.color.r.toString } color.g={ t.color.g.toString } color.b={ t.color.b.toString } color.a={ t.color.a.toString }>
+      <thing id={ t.treeId.toString } color.r={ t.color.r.toString } color.g={ t.color.g.toString } color.b={ t.color.b.toString } color.a={ t.color.a.toString } name={t.name}>
         <nodes>
           { t.nodes.map(n => Xml.toXML(n)) }
         </nodes>

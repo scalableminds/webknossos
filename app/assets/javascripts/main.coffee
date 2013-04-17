@@ -9,6 +9,7 @@ require.config
     "worker" : "libs/worker_plugin"
     "three": "libs/threejs/three"
     "three.trackball": "libs/threejs/TrackballControls"
+    "three.color": "libs/threejs/ColorConverter"
     "stats" : "libs/threejs/stats"
     "v3" : "libs/v3"
     "m4x4" : "libs/m4x4"
@@ -37,7 +38,6 @@ require.config
       exports : "M4x4"
     "qassert" : [ "jquery" ]
 
-
 require [
   "jquery"
   "underscore"
@@ -45,9 +45,6 @@ require [
 ], ->
 
   require [
-    "./main/enhancements"
-    "./main/routing"
-    "libs/core_ext"
     "qassert"
   ], ->
 
@@ -57,6 +54,17 @@ require [
         type : "POST"
         contentType : "application/x-www-form-urlencoded"
       catchGlobalErrors : true
-      context : "Oxalis"
+      context :
+        userAgent :
+          version : navigator.appVersion
+          product : navigator.product + " - " + navigator.productSub
+          vendor : navigator.vendor + " - " + navigator.vendorSub
+          platform : navigator.platform
       log: $.proxy(console.warn, console)
     )
+
+    require [
+      "./main/enhancements"
+      "./main/routing"
+      "libs/core_ext"
+    ], ->

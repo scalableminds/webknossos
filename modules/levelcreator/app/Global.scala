@@ -40,6 +40,7 @@ object Global extends GlobalSettings {
             Logger.info("starting in Dev mode")
           }
       }
+      StackWorkDistributor.start(Akka.system(app))
   }
 
   override def onStop(app: Application) {

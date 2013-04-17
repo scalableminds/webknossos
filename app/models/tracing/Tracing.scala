@@ -39,22 +39,26 @@ case class Tracing(
     tracingType: TracingType.Value = TracingType.Explorational,
     tracingSettings: TracingSettings = TracingSettings.default,
     version: Int = 0,
-    _name: Option[String] = None,
+    override val _name: Option[String] = None,
     _id: ObjectId = new ObjectId) extends TracingLike with ContainsTracingInfo with DAOCaseClass[Tracing] {
-  
+
   type Self = Tracing
 
   def dao = Tracing
-  
-  def makeReadOnly = this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
-  
-  def accessPermission(user: User) = 
-     this._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
-  
+
+  def makeReadOnly = 
+    this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
+
+   def allowAllModes = 
+    this.copy(tracingSettings = tracingSettings.copy(allowedModes = TracingSettings.ALL_MODES))  
+    
+  def accessPermission(user: User) =
+    this._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
+
   /**
    * Easy access methods
    */
-  
+
   val name = _name getOrElse ""
 
   override lazy val user = User.findOneById(_user)
@@ -90,7 +94,7 @@ case class Tracing(
   def clearTracing = {
     this.copy(branchPoints = Nil, comments = Nil)
   }
-  
+
   /**
    * State modifications
    * always return a new instance!
@@ -118,7 +122,7 @@ case class Tracing(
   def finish = {
     this.copy(state = Finished)
   }
-  
+
   def passToReview = {
     this.copy(state = ReadyForReview)
   }
@@ -220,9 +224,9 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
         tracingType = TracingType.Task))
     }
   }
-  
+
   def resetToBase(tracing: Tracing) = {
-    for{
+    for {
       task <- tracing.task
       tracingBase <- task.tracingBase
     } yield {
@@ -260,12 +264,33 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
       nml.comments)
   }
 
-  def createFromNMLFor(userId: ObjectId, nml: NML, tracingType: TracingType.Value) = {
+  def createFromNMLFor(userId: ObjectId, nml: NML, tracingType: TracingType.Value, name: Option[String]) = {
     val tracing = insertOne(fromNML(userId, nml).copy(
+      _name = name,
       tracingType = tracingType))
 
     nml.trees.map(tree => DBTree.insertOne(tracing._id, tree))
     tracing
+  }
+
+  def createFromNMLsFor(userId: ObjectId, nmls: List[NML], tracingType: TracingType.Value, name: Option[String]) = {
+    nmls match {
+      case head :: tail =>
+        val startTracing = Tracing.createFromNMLFor(
+          userId,
+          head,
+          TracingType.Explorational,
+          name)
+
+        val tracing =
+          tail.foldLeft(startTracing) {
+            case (t, s) => t.mergeWith(TemporaryTracing.createFrom(s, s.timeStamp.toString))
+          }
+
+        Some(tracing)
+      case _ =>
+        None
+    }
   }
 
   def assignReviewee(trainingsTracing: Tracing, user: User): Option[Tracing] = {

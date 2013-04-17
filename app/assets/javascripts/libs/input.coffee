@@ -59,9 +59,9 @@ class Input.KeyboardNoLoop
 # fire the attached callback.
 class Input.Keyboard
 
-  DELAY : 1000 / 30
+  DELAY : 1000 / 50
 
-  constructor : (initialBindings) ->
+  constructor : (initialBindings, @delay = 0) ->
 
     @keyCallbackMap = {}
     @keyPressedCount = 0
@@ -84,10 +84,19 @@ class Input.Keyboard
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
 
+        if not @keyCallbackMap[key]
+          callback(true)
+        
         unless @keyCallbackMap[key]? or $(":focus").length
-          @keyPressedCount++ 
+          @keyPressedCount++
+          callback._delayed    = true
           @keyCallbackMap[key] = callback
           @buttonLoop() if @keyPressedCount == 1
+        
+        if @delay >= 0
+          setTimeout( (=>
+            callback._delayed = false
+            ), @delay )
 
         return
 
@@ -108,7 +117,8 @@ class Input.Keyboard
 
     if @keyPressedCount > 0
       for own key, callback of @keyCallbackMap
-        callback()
+        if not callback._delayed
+          callback()
 
       setTimeout( (=> @buttonLoop()), @DELAY ) 
 
@@ -143,7 +153,7 @@ class Input.Mouse
 
     @on(initialBindings)
     @attach = @on
-
+      
 
   unbind : ->
 
@@ -180,10 +190,10 @@ class Input.Mouse
       $(":focus").blur() # see OX-159
 
       @leftDown = true
-      @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey and event.altKey)
+      @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey, event.altKey)
 
     else
-      @trigger("rightClick", [@lastPosition.x, @lastPosition.y])
+      @trigger("rightClick", [@lastPosition.x, @lastPosition.y], event.ctrlKey)
 
     return
 

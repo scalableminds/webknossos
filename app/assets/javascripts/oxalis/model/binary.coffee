@@ -81,10 +81,10 @@ class Binary
         (1 - @DIRECTION_VECTOR_SMOOTHER) * @direction[2] + @DIRECTION_VECTOR_SMOOTHER * (position[2] - @lastPosition[2])
       ]
 
-    unless _.isEqual(position, @lastPosition) and _.isEqual(zoomStep, @lastZoomStep) and _.isEqual(area, @lastArea)
+    unless _.isEqual(position, @lastPosition) and zoomStep == @lastZoomStep and _.isEqual(area, @lastArea)
 
       @lastPosition = position.slice()
-      @lastZoomStep = zoomStep.slice()
+      @lastZoomStep = zoomStep
       @lastArea     = area.slice()
 
       # console.log "ping", @queue.roundTripTime, @queue.bucketsPerSecond, @cube.bucketCount

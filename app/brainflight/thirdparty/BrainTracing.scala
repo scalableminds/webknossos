@@ -12,6 +12,8 @@ import scala.concurrent.Promise
 import scala.concurrent.Future
 import scala.util._
 import play.api.libs.concurrent.Akka
+import models.user.TimeEntry
+import models.tracing.Tracing
 
 object BrainTracing {
   val URL = "http://braintracing.org/"
@@ -22,6 +24,7 @@ object BrainTracing {
   val LICENSE = "hu39rxpv7m"
 
   val isActive = Play.configuration.getBoolean("braintracing.active") getOrElse false
+  val logTimeForExplorative = Play.configuration.getBoolean("braintracing.logTimeForExplorative") getOrElse false
 
   def register(user: User, password: String): Future[String] = {
     val pwHash = md5(password)
@@ -54,26 +57,37 @@ object BrainTracing {
     }
   }
 
-  def logTime(user: User, time: Long) = {
+  def logTime(user: User, timeEntry: TimeEntry) = {
     if (isActive) {
-      val hours = time / (1000.0 * 60 * 60)
+      val tracing = timeEntry.tracing.flatMap(Tracing.findOneById)
+      val task = tracing.flatMap(_.task)
+      val taskType = task.flatMap(_.taskType)
+      val project = task.flatMap(_.project)
+      if (logTimeForExplorative || task.isDefined) {
+        val hours = timeEntry.time / (1000.0 * 60 * 60)
 
-      WS
-        .url(LOGTIME_URL)
-        .withAuth(USER, PW, AuthScheme.BASIC)
-        .withQueryString(
-          "license" -> LICENSE,
-          "email" -> user.email,
-          "hours" -> hours.toString)
-        .get()
-        .map { response =>
-          response.status match {
-            case 200 =>
-              Logger.debug(s"Logged time! User: ${user.email} Time: $hours")
-            case code =>
-              Logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
+        WS
+          .url(LOGTIME_URL)
+          .withAuth(USER, PW, AuthScheme.BASIC)
+          .withQueryString(
+            "license" -> LICENSE,
+            "email" -> user.email,
+            "hours" -> hours.toString,
+            "tasktype_id" -> taskType.map(_.id).getOrElse(""),
+            "tasktype_summary" -> taskType.map(_.summary).getOrElse(""),
+            "task_id" -> task.map(_.id).getOrElse(""),
+            "project_name" -> project.map(_.name).getOrElse("")
+          )
+          .get()
+          .map { response =>
+            response.status match {
+              case 200 =>
+                Logger.debug(s"Logged time! User: ${user.email} Time: $hours")
+              case code =>
+                Logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
+            }
           }
-        }
+      }
     }
   }
 }

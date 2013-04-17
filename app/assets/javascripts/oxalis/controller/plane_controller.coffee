@@ -22,6 +22,7 @@ class PlaneController
     mouseControllers : []
     keyboard : null
     keyboardNoLoop : null
+    keyboardLoopDelayed : null
 
     unbind : ->
       for mouse in @mouseControllers
@@ -29,18 +30,20 @@ class PlaneController
       @mouseControllers = []
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
+      @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @gui ) ->
+  constructor : (@model, stats, @gui, renderer, scene) ->
 
     _.extend(@, new EventMixin())
 
     @flycam = @model.flycam
     @mode   =constants.MODE_NORMAL
     @flycam.setPosition(@model.route.data.editPosition)
-    @flycam.setZoomSteps(@model.user.zoomXY, @model.user.zoomYZ, @model.user.zoomXZ)
+    @flycam.setZoomStep(@model.user.zoom)
     @flycam.setQuality(@model.user.quality)
-    @view  = new PlaneView(@model, @flycam, stats)
+
+    @view  = new PlaneView(@model, @flycam, stats, renderer, scene)
 
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
@@ -114,9 +117,9 @@ class PlaneController
         
         scroll : @scroll
         
-        leftClick : (pos, shiftPressed) =>
+        leftClick : (pos, shiftPressed, altPressed, plane) =>
           if @mode ==constants.MODE_NORMAL
-            @onPlaneClick(pos, shiftPressed)
+            @onClick(pos, shiftPressed, altPressed, plane)
           else if @mode ==constants.MODE_VOLUME
             @model.volumeTracing.startEditing()
         
@@ -124,11 +127,11 @@ class PlaneController
           if @mode ==constants.MODE_VOLUME
             @model.volumeTracing.finishLayer()
 
-        rightClick : (pos) =>
+        rightClick : (pos, ctrlPressed) =>
           if @mode ==constants.MODE_VOLUME
             @selectLayer(pos)
           else
-            @setWaypoint(pos)
+            @setWaypoint(pos, ctrlPressed)
       ) )
 
     @input.mouseControllers.push( new Input.Mouse($("#skeletonview"),
@@ -193,21 +196,26 @@ class PlaneController
       #"n" : => Helper.toggle()
       #"ctr + s"       : => @model.route.pushImpl()
     )
+
+    @input.keyboardLoopDelayed = new Input.Keyboard(
+
+      #Move Z
+      "space" : (first) => @moveZ( @model.user.moveValue, first)
+      "f" : (first) => @moveZ( @model.user.moveValue, first)
+      "d" : (first) => @moveZ( - @model.user.moveValue, first)
+      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
+      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
+
+      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
+      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
+
+    )
+
+    @model.user.on({
+      keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
+      })
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
-
-      #View     
-      "1" : =>
-        @sceneController.toggleSkeletonVisibility()
-        # Show warning, if this is the first time to use
-        # this function for this user
-        if @model.user.firstVisToggle
-          @view.showFirstVisToggle()
-          @model.user.firstVisToggle = false
-          @model.user.push()
-
-      "2" : =>
-        @sceneController.toggleInactiveTreeVisibility()
 
       #Branches
       "b" : => @pushBranch()
@@ -216,8 +224,12 @@ class PlaneController
       "s" : @centerActiveNode
 
       #Zoom in/out
-      "i" : => @zoomIn()
-      "o" : => @zoomOut()
+      "i" : => @zoomIn(false)
+      "o" : => @zoomOut(false)
+
+      #Change move value
+      "h" : => @changeMoveValue(0.1)
+      "g" : => @changeMoveValue(-0.1)
 
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
@@ -233,23 +245,20 @@ class PlaneController
       "y" : =>
         if @mode ==constants.MODE_VOLUME
           @model.volumeTracing.createCell()
-
-      #Move
-      "space" : (first) => @moveZ( @model.user.moveValue, first)
-      "f" : (first) => @moveZ( @model.user.moveValue, first)
-      "d" : (first) => @moveZ( - @model.user.moveValue, first)
-      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
-      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
-
-      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
-      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
     )
+
+  init : ->
+
+    @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
+    @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
 
 
   start : ->
 
     @initKeyboard()
+    @init()
     @initMouse()
+    @sceneController.start()
     @view.start()
 
 
@@ -257,6 +266,7 @@ class PlaneController
 
     @input.unbind()
     @view.stop()
+    @sceneController.stop()
 
 
   bind : ->
@@ -285,7 +295,7 @@ class PlaneController
 
   render : ->
 
-    @model.binary.ping(@flycam.getPosition(), {zoomStep: @flycam.getIntegerZoomSteps(), area: [@flycam.getArea(constants.PLANE_XY),
+    @model.binary.ping(@flycam.getPosition(), {zoomStep: @flycam.getIntegerZoomStep(), area: [@flycam.getArea(constants.PLANE_XY),
                         @flycam.getArea(constants.PLANE_YZ), @flycam.getArea(constants.PLANE_XZ)], activePlane: @flycam.getActivePlane()})
     @model.route.globalPosition = @flycam.getPosition()
     @cameraController.update()
@@ -300,20 +310,24 @@ class PlaneController
     if(first)
       activePlane = @flycam.getActivePlane()
       @flycam.move(Dimensions.transDim(
-        [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep(activePlane)],
+        [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep()],
         activePlane), activePlane)
     else
       @move([0, 0, z])
 
-  zoomIn : =>
-    @zoomPos = @getMousePosition()
+  zoomIn : (zoomToMouse) =>
+    if zoomToMouse
+      @zoomPos = @getMousePosition()
     @cameraController.zoomIn()
-    @finishZoom()
+    if zoomToMouse
+      @finishZoom()
 
-  zoomOut : =>
-    @zoomPos = @getMousePosition()
+  zoomOut : (zoomToMouse) =>
+    if zoomToMouse
+      @zoomPos = @getMousePosition()
     @cameraController.zoomOut()
-    @finishZoom()
+    if zoomToMouse
+      @finishZoom()
 
   finishZoom : =>
     
@@ -326,9 +340,7 @@ class PlaneController
                     @zoomPos[2] - mousePos[2]]
       @flycam.move(moveVector, @flycam.getActivePlane())
 
-    @model.user.setValue("zoomXY", @flycam.getZoomStep(constants.PLANE_XY))
-    @model.user.setValue("zoomYZ", @flycam.getZoomStep(constants.PLANE_YZ))
-    @model.user.setValue("zoomXZ", @flycam.getZoomStep(constants.PLANE_XZ))
+    @model.user.setValue("zoom", @flycam.getZoomStep())
 
   getMousePosition : ->
     activePlane = @flycam.getActivePlane()
@@ -338,6 +350,13 @@ class PlaneController
   isMouseOver : ->
     activePlane = @flycam.getActivePlane()
     return @input.mouseControllers[activePlane].isMouseOver
+
+  changeMoveValue : (delta) ->
+    moveValue = @model.user.moveValue + delta
+    moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
+    moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
+
+    @gui.updateMoveValue(moveValue)
 
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()
@@ -353,24 +372,45 @@ class PlaneController
       when "shift" then @setParticleSize(delta)
       when "alt"
         if delta > 0
-          @zoomIn()
+          @zoomIn(true)
         else
-          @zoomOut()
+          @zoomOut(true)
+ 
+  toggleSkeletonVisibility : =>
+    @sceneController.toggleSkeletonVisibility()
+    # Show warning, if this is the first time to use
+    # this function for this user
+    if @model.user.firstVisToggle
+      @view.showFirstVisToggle()
+      @model.user.firstVisToggle = false
+      @model.user.push()
+
+  toggleInactiveTreeVisibility : =>
+    @sceneController.toggleInactiveTreeVisibility()
 
 
   ########### Click callbacks
   
-  setWaypoint : (relativePosition, typeNumber) =>
-    activeNodePos = @model.route.getActiveNodePos()
+  setWaypoint : (relativePosition, ctrlPressed) =>
+    activeNode = @model.route.getActiveNode()
     position = @calculateGlobalPos(relativePosition)
     # set the new trace direction
-    if activeNodePos
+    if activeNode
       @flycam.setDirection([
-        position[0] - activeNodePos[0], 
-        position[1] - activeNodePos[1], 
-        position[2] - activeNodePos[2]
+        position[0] - activeNode.pos[0], 
+        position[1] - activeNode.pos[1], 
+        position[2] - activeNode.pos[2]
       ])
-    @addNode(position)
+
+    @addNode(position, not ctrlPressed)
+
+    # Strg + Rightclick to set new not active branchpoint
+    if ctrlPressed and 
+      @model.user.newNodeNewTree == false and 
+        @model.route.getActiveNodeType() == constants.TYPE_USUAL
+
+      @pushBranch()
+      @setActiveNode(activeNode.id)
 
   selectLayer : (relativePosition) =>
     @model.volumeTracing.selectLayer( @calculateGlobalPos( relativePosition ) )
@@ -381,7 +421,7 @@ class PlaneController
 
   calculateGlobalPos : (clickPos) ->
     curGlobalPos  = @flycam.getPosition()
-    zoomFactor    = @flycam.getPlaneScalingFactor @flycam.getActivePlane()
+    zoomFactor    = @flycam.getPlaneScalingFactor()
     scaleFactor   = @view.scaleFactor
     planeRatio    = @model.scaleInfo.baseVoxelFactors
     position = switch @flycam.getActivePlane()
@@ -398,14 +438,16 @@ class PlaneController
           curGlobalPos[1], 
           curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor ]
 
-  onPreviewClick : (position, shiftAltPressed) =>
-    @onClick(position, constants.VIEW_3D, shiftAltPressed)
+  onPreviewClick : (position, shiftPressed, altPressed) =>
+    @onClick(position, shiftPressed, altPressed, constants.VIEW_3D)
 
-  onPlaneClick : (position, shiftAltPressed) =>
-    plane = @flycam.getActivePlane()
-    @onClick(position, plane, shiftAltPressed)
+  onClick : (position, shiftPressed, altPressed, plane) =>
 
-  onClick : (position, plane, shiftAltPressed) =>
+    unless shiftPressed # do nothing
+      return
+    unless plane?
+      plane = @flycam.getActivePlane()
+
     scaleFactor = @view.scaleFactor
     camera      = @view.getCameras()[plane]
     # vector with direction from camera position to click position
@@ -439,19 +481,19 @@ class PlaneController
         # set the active Node to the one that has the ID stored in the vertex
         # center the node if click was in 3d-view
         centered = plane == constants.VIEW_3D
-        @setActiveNode(nodeID, centered, shiftAltPressed)
+        @setActiveNode(nodeID, centered, shiftPressed and altPressed)
         break
 
   ########### Model Interaction
 
-  addNode : (position) =>
+  addNode : (position, centered) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
       @model.route.one("rendered", =>
         @model.route.one("rendered", =>
           @model.route.addNode(position, constants.TYPE_USUAL)))
     else
-      @model.route.addNode(position, constants.TYPE_USUAL)
+      @model.route.addNode(position, constants.TYPE_USUAL, centered)
 
   pushBranch : =>
     @model.route.pushBranch()

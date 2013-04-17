@@ -19,7 +19,6 @@ class SceneController
     @displayPlane  = [true, true, true]
     @planeShift    = [0, 0, 0]
     @showSkeleton  = true
-    @showInactiveTrees = true
 
     @createMeshes()
     @bind()
@@ -61,7 +60,6 @@ class SceneController
     # This method is called for each of the four cams. Even
     # though they are all looking at the same scene, some
     # things have to be changed for each cam.
-    @skeleton.setInactiveTreeVisibility(@showInactiveTrees)
     if id in constants.ALL_PLANES
       @cube.visible = false
       unless @showSkeleton
@@ -91,6 +89,7 @@ class SceneController
   update : =>
     gPos         = @flycam.getPosition()
     globalPosVec = new THREE.Vector3(gPos...)
+    planeScale   = @flycam.getPlaneScalingFactor()
     for i in constants.ALL_PLANES
       
       @planes[i].updateTexture()
@@ -99,8 +98,7 @@ class SceneController
       @planes[i].setPosition(globalPosVec)
 
       # Update plane scale
-      sFactor      = @flycam.getPlaneScalingFactor(i)
-      @planes[i].setScale(sFactor)
+      @planes[i].setScale(planeScale)
 
   setTextRotation : (rotVec) =>
     # TODO: Implement
@@ -141,8 +139,22 @@ class SceneController
     @skeleton.setVisibility(@showSkeleton)
 
   toggleInactiveTreeVisibility : ->
-    @showInactiveTrees = not @showInactiveTrees
-    @skeleton.setInactiveTreeVisibility(@showInactiveTrees)
+    @skeleton.toggleInactiveTreeVisibility()
+
+  stop : ->
+    for plane in @planes
+      plane.setVisible(false)
+    @cube.visible = false
+
+    @skeleton.setVisibility(@showSkeleton)
+    @skeleton.setSizeAttenuation(true)
+
+  start : ->
+    for plane in @planes
+      plane.setVisible(true)
+    @cube.visible = true
+
+    @skeleton.setSizeAttenuation(false)
 
   bind : ->
     @model.user.on({

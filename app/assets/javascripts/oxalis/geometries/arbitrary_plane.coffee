@@ -31,11 +31,12 @@ class ArbitraryPlane
 
   mesh : null
 
-  isDirty : false
+  isDirty : true
 
   queryVertices : null
   width : 0
   height : 0
+  x : 0
 
 
   constructor : (@cam, @model, @width = 128, @height = 128) ->
@@ -68,13 +69,23 @@ class ArbitraryPlane
 
       { mesh, cam } = this
 
-      matrix = @cam.getZoomedMatrix()
+      matrix = cam.getZoomedMatrix()
 
       newVertices = M4x4.transformPointsAffine matrix, @queryVertices
       newColors = @model.binary.getByVerticesSync(newVertices)
  
-      @mesh.texture.image.data.set(newColors)
-      @mesh.texture.needsUpdate = true
+      mesh.texture.image.data.set(newColors)
+      mesh.texture.needsUpdate = true
+
+      m = cam.getZoomedMatrix()
+
+      mesh.matrix.set m[0], m[4], m[8], m[12], 
+                      m[1], m[5], m[9], m[13], 
+                      m[2], m[6], m[10], m[14], 
+                      m[3], m[7], m[11], m[15]
+
+      mesh.matrix.rotateY(Math.PI)
+      mesh.matrixWorldNeedsUpdate = true
 
       @isDirty = false
 
@@ -115,10 +126,10 @@ class ArbitraryPlane
 
   applyScale : (delta) ->
 
-    x = Number(@mesh.scale.x) + Number(delta)
+    @x = Number(@mesh.scale.x) + Number(delta)
 
-    if x > .5 and x < 10
-      @mesh.scale.x = @mesh.scale.y = @mesh.scale.z = x
+    if @x > .5 and @x < 10
+      @mesh.scale.x = @mesh.scale.y = @mesh.scale.z = @x
       @cam.update()
 
 
@@ -149,6 +160,10 @@ class ArbitraryPlane
     plane = new THREE.Mesh( planeGeo, textureMaterial )
     plane.texture = texture
     plane.rotation.x = Math.PI
+    @x = 1
+
+    plane.matrixAutoUpdate = false
+    plane.doubleSided = true
 
     plane
 

@@ -4,6 +4,7 @@ import braingames.mvc._
 import models.knowledge.Level
 import play.api.mvc.{Action, Request, WrappedRequest, BodyParser, Result, BodyParsers}
 import play.api.i18n.Messages
+import play.api.mvc.Controller
 
 case class LevelRequest[T](val level: Level, val request: Request[T]) extends WrappedRequest(request)
   

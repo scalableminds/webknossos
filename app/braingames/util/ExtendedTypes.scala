@@ -22,6 +22,11 @@ object ExtendedTypes {
     }
   }
 
+  implicit class When[F](fun: F) {
+    def when(cond: F => Boolean)(tail: F => F) =
+      if (cond(fun)) tail(fun) else fun
+  }
+
   implicit class ExtendedByteArray(val b: Array[Byte]) extends AnyVal {
     /**
      * Converts this array of bytes to one float value

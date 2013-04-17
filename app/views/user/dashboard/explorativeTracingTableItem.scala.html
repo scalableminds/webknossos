@@ -1,11 +1,11 @@
 @(tracing: models.tracing.Tracing)
   <tr class="hover-dynamic">
     <td> @formatHash(tracing.id) </td>
-    <td class="span3">
+    <td class="explorative-name-column">
       <span class="hover-hide" id="explorative-tracing-name"> @tracing.name </span>
-      <form action="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" method="POST" data-ajax="submit,replace-row" class="hover-show">
+      <form action="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" method="POST" data-ajax="submit,replace-row" class="hover-show hide">
         <div class="input-append">
-          <input name="name" id="explorative-name-input" maxlength="20" class="span2" type="text" value="@tracing.name" autocomplete="off">
+          <input class="input-medium hover-input" name="name" id="explorative-name-input" maxlength="50" type="text" value="@tracing.name" autocomplete="off">
             <a href="@controllers.routes.TracingController.nameExplorativeTracing(tracing.id)" data-ajax="submit,replace-row" id="explorative-name-submit" class="btn"><i class="icon-ok"></i></a>
         </div>
       </form>
@@ -24,6 +24,6 @@
       <a href="@controllers.routes.TracingController.trace(tracing.id)"><i class="icon-random"></i> trace</a><br />
       <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)"><i class="icon-download"></i> download</a><br />
       @if(models.tracing.TracingType.isExploratory(tracing)){
-        <a href="@controllers.routes.TracingController.finish(tracing.id, true)" data-ajax="delete-row,confirm=@Messages("tracing.finish.confirm")"><i class="icon-ok-circle"></i> finish</a></td>
+        <a href="@controllers.routes.TracingController.finish(tracing.id, true)" data-ajax="delete-row,confirm=@Messages("tracing.finish.confirm")"><i class="icon-trash"></i> delete</a></td>
       }
   </tr>

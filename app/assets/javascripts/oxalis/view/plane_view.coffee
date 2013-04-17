@@ -81,9 +81,6 @@ class PlaneView
     # Dont forget to handle window resizing!
     $(window).resize( => @.resize() )
 
-    # regularily force update
-    setInterval(( => @renderFunction(true) ), 500)
-
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
@@ -99,7 +96,7 @@ class PlaneView
 
   # This is the main render function.
   # All 3D meshes and the trianglesplane are rendered here.
-  renderFunction : ( force = false ) ->
+  renderFunction : ->
 
     TWEEN.update()
 
@@ -108,7 +105,11 @@ class PlaneView
     # working and keeps your lap cool
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
 
-    if @flycam.hasChanged or @flycam.hasNewTextures() or force
+    modelChanged = false
+    for plane in @model.binary.planes
+      modelChanged |= plane.hasChanged()
+
+    if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
 
       @trigger "render"
       

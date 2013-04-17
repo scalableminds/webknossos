@@ -40,7 +40,7 @@ class PlaneController
     _.extend(@, new EventMixin())
 
     @flycam = @model.flycam
-    @mode   =constants.MODE_NORMAL
+    @mode   = constants.MODE_NORMAL
     @flycam.setPosition(@model.route.data.editPosition)
     @flycam.setZoomStep(@model.user.zoom)
     @flycam.setQuality(@model.user.quality)
@@ -81,8 +81,9 @@ class PlaneController
       )    
 
     @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
-    @cellTracingController = new CellTracingController(@model, @view, @sceneController, @cameraController)
-    @volumeTracingController = new VolumeTracingController(@model, @view, @sceneController, @cameraController)
+    objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }
+    @cellTracingController = new CellTracingController( objects )
+    @volumeTracingController = new VolumeTracingController( objects )
 
     meshes = @sceneController.getMeshes()
     
@@ -100,43 +101,18 @@ class PlaneController
 
     @initTrackballControls()
     @bind()
-    @start()
+    @setMode( constants.MODE_NORMAL )
 
 
   initMouse : ->
 
     for planeId in ["xy", "yz", "xz"]
       @input.mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
-        over : @view["setActivePlane#{planeId.toUpperCase()}"]
-
-        leftDownMove : (delta, pos) => 
-          if @mode ==constants.MODE_NORMAL
-            @move [
-              delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
-              delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
-              0
-            ]
-          else if @mode ==constants.MODE_VOLUME
-            @volumeTracingController.drawVolume( @calculateGlobalPos([pos.x, pos.y]))
-        
-        scroll : @scroll
-        
-        leftClick : (pos, shiftPressed, altPressed, plane) =>
-          if @mode ==constants.MODE_NORMAL
-            @cellTracingController.onClick(pos, shiftPressed, altPressed, plane)
-          else if @mode ==constants.MODE_VOLUME
-            @model.volumeTracing.startEditing()
-        
-        leftMouseUp : =>
-          if @mode ==constants.MODE_VOLUME
-            @model.volumeTracing.finishLayer()
-
-        rightClick : (pos, ctrlPressed) =>
-          if @mode ==constants.MODE_VOLUME
-            @volumeTracingController.selectLayer(@calculateGlobalPos(pos))
-          else
-            @cellTracingController.setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
-      ) )
+        _.extend(@activeSubController.mouseControls,
+          {
+            over : @view["setActivePlane#{planeId.toUpperCase()}"]
+            scroll : @scroll
+          })))
 
     @input.mouseControllers.push( new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
@@ -219,38 +195,37 @@ class PlaneController
     @model.user.on({
       keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
       })
+
+    keyboardControls = _.extend(@activeSubController.keyboardControls,
+      {
+        #Zoom in/out
+        "i" : => @zoomIn(false)
+        "o" : => @zoomOut(false)
+
+        #Change move value
+        "h" : => @changeMoveValue(0.1)
+        "g" : => @changeMoveValue(-0.1)
+
+        # Mode
+        "v" : =>
+          @toggleMode()
+      })
     
-    @input.keyboardNoLoop = new Input.KeyboardNoLoop(
+    @input.keyboardNoLoop = new Input.KeyboardNoLoop( 
+      _.extend(@activeSubController.keyboardControls,
+        {
+          #Zoom in/out
+          "i" : => @zoomIn(false)
+          "o" : => @zoomOut(false)
 
-      #Branches
-      "b" : => @cellTracingController.pushBranch()
-      "j" : => @cellTracingController.popBranch() 
+          #Change move value
+          "h" : => @changeMoveValue(0.1)
+          "g" : => @changeMoveValue(-0.1)
 
-      "s" : @cellTracingController.centerActiveNode
-
-      #Zoom in/out
-      "i" : => @zoomIn(false)
-      "o" : => @zoomOut(false)
-
-      #Change move value
-      "h" : => @changeMoveValue(0.1)
-      "g" : => @changeMoveValue(-0.1)
-
-      #Comments
-      "n" : => @cellTracingController.setActiveNode(@model.route.nextCommentNodeID(false), false)
-      "p" : => @cellTracingController.setActiveNode(@model.route.nextCommentNodeID(true), false)
-
-      # Mode
-      "v" : =>  # Toggle Mode
-        if @mode ==constants.MODE_NORMAL 
-          @mode =constants.MODE_VOLUME
-        else 
-          @mode =constants.MODE_NORMAL
-
-      "y" : =>
-        if @mode ==constants.MODE_VOLUME
-          @model.volumeTracing.createCell()
-    )
+          # Mode
+          "v" : =>
+            @toggleMode()
+        }))
 
   init : ->
 
@@ -273,6 +248,23 @@ class PlaneController
     @view.stop()
     @sceneController.stop()
 
+  setMode : (newMode) ->
+
+    @mode = newMode
+    if @mode == constants.MODE_NORMAL 
+      @activeSubController = @cellTracingController
+    else 
+      @activeSubController = @volumeTracingController
+
+    # Restart, so new keyboard and mouse controls are set
+    @stop()
+    @start()
+
+  toggleMode : ->
+    if @mode == constants.MODE_NORMAL
+      @setMode(constants.MODE_VOLUME)
+    else 
+      @setMode(constants.MODE_NORMAL)
 
   bind : ->
 
@@ -373,7 +365,7 @@ class PlaneController
         else
           @zoomOut(true)
 
-  calculateGlobalPos : (clickPos) ->
+  calculateGlobalPos : (clickPos) =>
     curGlobalPos  = @flycam.getPosition()
     zoomFactor    = @flycam.getPlaneScalingFactor()
     scaleFactor   = @view.scaleFactor

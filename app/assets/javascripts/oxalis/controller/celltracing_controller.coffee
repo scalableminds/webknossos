@@ -5,8 +5,36 @@
 
 class CellTacingController
 
-  constructor : (@model, @view, @sceneController, @cameraController) ->
+  constructor : ( objects ) ->
 
+    _.extend( @, objects)
+
+    @mouseControls = 
+
+        leftDownMove : (delta, pos) => 
+          @move [
+            delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
+            delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
+            0
+          ]
+        
+        leftClick : (pos, shiftPressed, altPressed, plane) =>
+          @onClick(pos, shiftPressed, altPressed, plane)
+
+        rightClick : (pos, ctrlPressed) =>
+          @setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
+
+    @keyboardControls =
+
+      #Branches
+      "b" : => @pushBranch()
+      "j" : => @popBranch() 
+
+      "s" : @centerActiveNode
+
+      #Comments
+      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
+      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
 
 
   setNodeRadius : (delta) =>

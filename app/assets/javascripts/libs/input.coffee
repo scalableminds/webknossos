@@ -223,7 +223,7 @@ class Input.Mouse
 
     if @leftDown and !(deltaX == 0 and deltaY == 0)
       @trigger("leftDownMove", {x : deltaX, y : deltaY},
-        {x : @position.x, y: @position.y})
+        {x : @position.x, y: @position.y}, event.ctrlKey)
       @lastPosition = @position
 
     return

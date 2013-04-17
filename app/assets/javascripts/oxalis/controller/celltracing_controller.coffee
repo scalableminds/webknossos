@@ -5,24 +5,22 @@
 
 class CellTacingController
 
-  constructor : ( objects ) ->
-
-    _.extend( @, objects)
+  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos } ) ->
 
     @mouseControls = 
 
-        leftDownMove : (delta, pos) => 
-          @move [
-            delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
-            delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
-            0
-          ]
-        
-        leftClick : (pos, shiftPressed, altPressed, plane) =>
-          @onClick(pos, shiftPressed, altPressed, plane)
+      leftDownMove : (delta, pos) => 
+        @move [
+          delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
+          delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
+          0
+        ]
+      
+      leftClick : (pos, shiftPressed, altPressed, plane) =>
+        @onClick(pos, shiftPressed, altPressed, plane)
 
-        rightClick : (pos, ctrlPressed) =>
-          @setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
+      rightClick : (pos, ctrlPressed) =>
+        @setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
 
     @keyboardControls =
 

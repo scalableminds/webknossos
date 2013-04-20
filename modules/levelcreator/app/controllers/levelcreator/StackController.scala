@@ -24,22 +24,24 @@ object StackController extends LevelCreatorController {
   lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
 
   def list(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    val missions = request.level.renderedMissions.flatMap(Mission.findOneById)
-    
+    val missions = RenderedStack.findFor(request.level._id).flatMap(m =>
+      Mission.findOneById(m.mission._id))
+
     Ok(html.levelcreator.stackList(request.level, missions))
   }
 
   def listJson(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    Ok(Json.toJson(request.level.renderedMissions))
+    Ok(Json.toJson(RenderedStack.findFor(request.level._id).map(_.mission.id)))
   }
 
   def delete(levelId: String, missionId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    request.level.removeRenderedMission(missionId)
+    val level = request.level
+    RenderedStack.remove(level._id, missionId)
     JsonOk(Messages("level.stack.removed"))
   }
 
   def deleteAll(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    request.level.removeAllRenderedMissions
+    RenderedStack.removeAllOf(request.level._id)
     JsonOk(Messages("level.stack.removedAll"))
   }
 
@@ -47,7 +49,7 @@ object StackController extends LevelCreatorController {
     stackWorkDistributor ! CreateStacks(missions.map(m => Stack(level, m)))
     JsonOk("Creation is in progress.")
   }
-  
+
   def create(level: Level, num: Int) = {
     stackWorkDistributor ! CreateRandomStacks(level, num)
     JsonOk("Creation is in progress.")

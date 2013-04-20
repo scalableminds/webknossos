@@ -17,6 +17,8 @@ case class Mission(dataSetName: String,
   possibleEnds: List[PossibleEnd],
   _id: ObjectId = new ObjectId) extends DAOCaseClass[Mission] {
   
+  val key: String = start.toString
+  
   val dao = Mission
   lazy val id = _id.toString
 

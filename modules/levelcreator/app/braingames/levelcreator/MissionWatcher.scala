@@ -49,7 +49,13 @@ class MissionWatcher extends Actor {
         missions.foreach { Mission.updateOrCreate }
         Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")
         val removedMissionIds = Mission.deleteAllForDataSetExcept(dataSet.name, missions)
-        Level.findByDataSetName(dataSet.name).foreach(_.removeRenderedMissions(removedMissionIds))
+        Level.findByDataSetName(dataSet.name).foreach { level =>
+          if (level.autoRender)
+            Level.ensureMissions(level, missions)
+          removedMissionIds.map { missionId =>
+            RenderedStack.remove(level._id, missionId)
+          }
+        }
       }
     }
   }

@@ -10,11 +10,7 @@ import play.api.Logger
 import braingames.util.StartableActor
 import models.knowledge.Stack
 import org.bson.types.ObjectId
-import models.knowledge.StacksInProgress
-import models.knowledge.StacksQueued
-import models.knowledge.StackRenderingChallenge
-import models.knowledge.Mission
-import models.knowledge.Level
+import models.knowledge._
 
 case class CreateStack(stack: Stack)
 case class CreateRandomStacks(level: Level, n: Int)
@@ -41,11 +37,12 @@ class StackWorkDistributor extends Actor {
   def receive = {
     case CreateRandomStacks(l, n) =>
       Level.findOneById(l._id).map { level =>
+        val renderedStacks = RenderedStack.findFor(level._id).map(_.id)
         Mission.findByDataSetName(level.dataSetName)
           .filter(m =>
             StacksQueued.find(level, m).isEmpty &&
               StacksInProgress.find(level, m).isEmpty &&
-              !level.renderedMissions.contains(m.id))
+              !renderedStacks.contains(m.id))
           .take(n)
           .map(m => createStack(Stack(level, m)))
       }
@@ -62,7 +59,8 @@ class StackWorkDistributor extends Actor {
           level <- challenge.level
           mission <- challenge.mission
         } yield {
-          level.addRenderedMission(mission.id)
+          val missionInfo = MissionInfo(mission._id, mission.key, mission.possibleEnds)
+          RenderedStack.insertUnique(RenderedStack(level._id, missionInfo))
           Logger.debug(s"Finished work of $key. Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
         }) getOrElse {
           Logger.error(s"Couldn't update level! Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")

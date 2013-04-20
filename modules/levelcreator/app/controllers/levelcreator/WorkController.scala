@@ -31,7 +31,7 @@ object WorkController extends LevelCreatorController {
         }
         .mapTo[Option[Stack]].map { resultOpt =>
           resultOpt.map { result =>
-            Ok(Stack.stackFormat.writes(result.clearRenderedMissions))
+            Ok(Stack.stackFormat.writes(result))
           } getOrElse {
             NoContent
           }

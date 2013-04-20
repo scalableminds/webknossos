@@ -16,8 +16,6 @@ case class Stack(level: Level, mission: Mission, _id: ObjectId = new ObjectId){
   val metaFile = new File(s"$path/meta.json")
   val image = new File(s"$path/stack.png")
   
-  def clearRenderedMissions = this.copy( level = level.copy(renderedMissions = Nil))
-  
   def isTared = tarFile.exists
   def isProduced = directory.exists && metaFile.exists
   def frames = directory.listFiles(Stack.stackFrameFileFilter).toList.sortBy(_.getName)

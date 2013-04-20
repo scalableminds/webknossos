@@ -9,6 +9,7 @@ import org.bson.types.ObjectId
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
+import controllers.levelcreator.StackController
 
 case class Level(
     name: String,
@@ -19,7 +20,6 @@ case class Level(
     dataSetName: String,
     code: String = Level.defaultCode,
     autoRender: Boolean = false,
-    renderedMissions: List[String] = List(),
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
 
@@ -46,23 +46,6 @@ case class Level(
 
   def alterCode(c: String) = {
     copy(code = c)
-  }
-
-  def addRenderedMission(missionId: String) = {
-    update{ e =>
-      e.copy(renderedMissions = (missionId :: e.renderedMissions).distinct)
-    }
-  }
-  
-  def removeAllRenderedMissions = update(_.copy(renderedMissions = List()))
-
-  def removeRenderedMission(missionId: String) = removeRenderedMissions(List(missionId))
-
-  def removeRenderedMissions(missionIds: List[String]): Unit = {
-    update{ e =>
-      e.copy(renderedMissions =
-        e.renderedMissions.filterNot(mId => missionIds.contains(mId)))
-    }
   }
 
   def retrieveAsset(name: String) = {
@@ -106,7 +89,7 @@ trait CommonFormats {
   }
 }
 
-object Level extends BasicDAO[Level]("levels") with CommonFormats with Function10[String, Int, Int, Int, Int, String, String, Boolean, List[String], ObjectId, Level] {
+object Level extends BasicDAO[Level]("levels") with CommonFormats with Function9[String, Int, Int, Int, Int, String, String, Boolean, ObjectId, Level] {
 
   implicit val levelFormat = Json.format[Level]
 
@@ -141,6 +124,12 @@ object Level extends BasicDAO[Level]("levels") with CommonFormats with Function1
   
   def findAutoRenderLevels() = 
     find(MongoDBObject("autoRender" -> true)).toList
+    
+  def ensureMissions(level: Level, missions: List[Mission]) = {
+    val rendered = RenderedStack.findFor(level._id).map(_.mission.id)
+    val notRendered = missions.filterNot(m => rendered.contains(m.id))
+    StackController.create(level, notRendered)
+  }
 
   def findOneByName(name: String) =
     findOne(MongoDBObject("name" -> name))

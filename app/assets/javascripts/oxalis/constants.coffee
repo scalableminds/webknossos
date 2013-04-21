@@ -37,3 +37,5 @@ Constants =
   MAX_PARTICLE_SIZE    : 20
 
   ZOOM_DIFF            : 0.1
+
+  RESIZE_THROTTLE_TIME : 250

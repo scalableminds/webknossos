@@ -134,7 +134,7 @@ class PlaneView
   resizeThrottled : ->
     @resizeThrottled = _.throttle(
       => @resize()
-      500
+      constants.RESIZE_THROTTLE_TIME
     )
     @resizeThrottled()
 

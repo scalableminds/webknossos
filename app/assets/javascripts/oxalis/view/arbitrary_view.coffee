@@ -60,8 +60,6 @@ class ArbitraryView
       $("#arbitrary-info-canvas").show()
 
       @resize()
-      #render hack to avoid flickering
-      @renderer.setSize(constants.WIDTH, constants.WIDTH)
       # start the rendering loop
       @animate()
       # Dont forget to handle window resizing!
@@ -131,12 +129,24 @@ class ArbitraryView
     return
 
 
+  # throttle resize to avoid annoying flickering
+  resizeThrottled : ->
+
+    @resizeThrottled = _.throttle(
+      => @resize()
+      500
+    )
+    @resizeThrottled()
+
+
   # Call this after the canvas was resized to fix the viewport
   # Needs to be bound
   resize : =>
 
     @width  = @container.width()
     @height = @container.height()
+
+    @renderer.setSize(@width, @height)
 
     @camera.aspect = @width / @height
     @camera.updateProjectionMatrix()
@@ -153,7 +163,7 @@ class ArbitraryView
       @container.width(@width)
       @container.height(@height)
 
-      @resize()
+      @resizeThrottled()
 
   setRouteClippingDistance : (value) =>
 

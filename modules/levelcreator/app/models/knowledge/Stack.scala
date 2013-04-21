@@ -12,7 +12,7 @@ case class Stack(level: Level, mission: Mission, _id: ObjectId = new ObjectId){
   
   val path = s"${level.stackFolder}/${mission.id}"
   val directory = new File(path)
-  val tarFile = new File(s"$path/${level.id}_${mission.id}.tar")
+  val tarFile = new File(s"$path/stack.tar")
   val metaFile = new File(s"$path/meta.json")
   val image = new File(s"$path/stack.png")
   

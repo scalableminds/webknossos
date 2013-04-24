@@ -83,11 +83,9 @@ class Input.Keyboard
         # When control key is pressed, everything is ignored, because
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
-
-        if not @keyCallbackMap[key]
-          callback(true)
         
         unless @keyCallbackMap[key]? or $(":focus").length
+          callback(true)
           @keyPressedCount++
           callback._delayed    = true
           @keyCallbackMap[key] = callback

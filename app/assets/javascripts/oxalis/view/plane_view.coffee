@@ -10,9 +10,6 @@ jquery : $
 
 class PlaneView
 
-  MAX_SCALE      : 20
-  MIN_SCALE      : 0.5
-
   constructor : (@model, @flycam, @stats, @renderer, @scene) ->
 
     _.extend(@, new EventMixin())
@@ -78,9 +75,6 @@ class PlaneView
     @newTextures = [true, true, true, true]
     # start the rendering loop
 
-    # Dont forget to handle window resizing!
-    $(window).resize( => @.resize() )
-
     # refresh the scene once a bucket is loaded
     # FIXME: probably not the most elgant thing to do
     # FIXME: notifies all planes when any bucket is loaded
@@ -138,14 +132,20 @@ class PlaneView
   removeGeometry : (geometry) ->
     @group.remove geometry
 
-  #Apply a single draw (not used right now)
+  #Apply a single draw
   draw : ->
-    #FIXME: this is dirty
     @flycam.hasChanged = true
+
+  # throttle resize to avoid annoying flickering
+  resizeThrottled : ->
+    @resizeThrottled = _.throttle(
+      => @resize()
+      constants.RESIZE_THROTTLE_TIME
+    )
+    @resizeThrottled()
 
   #Call this after the canvas was resized to fix the viewport
   resize : ->
-    #FIXME: Is really the window's width or rather the DIV's?
     canvas = $("#render-canvas")
     WIDTH = (canvas.width()-20)/2
     HEIGHT = (canvas.height()-20)/2
@@ -156,21 +156,21 @@ class PlaneView
       @camera[i].updateProjectionMatrix()
     @draw()
   
-  scaleTrianglesPlane : (delta) =>
-    @scaleFactor = 1 unless @scaleFactor
-    if (@scaleFactor+delta > @MIN_SCALE) and (@scaleFactor+delta < @MAX_SCALE)
-      @scaleFactor += Number(delta)
-      @curWidth = WIDTH = HEIGHT = @scaleFactor * 380
-      canvas = $("#render-canvas")
-      canvas.width(2 * WIDTH + 20)
-      canvas.height(2 * HEIGHT + 20)
+  scaleTrianglesPlane : (scale) =>
+    @scaleFactor = scale
+    @curWidth = WIDTH = HEIGHT = @scaleFactor * constants.VIEWPORT_WIDTH
+    canvas = $("#render-canvas")
+    canvas.width(2 * WIDTH + 20)
+    canvas.height(2 * HEIGHT + 20)
 
-      divs = $(".inputcatcher")
-      for div in divs
-        $(div).css({width: WIDTH + "px"})
-        $(div).css({height: HEIGHT + "px"})
+    $('#prevControls button').width(@curWidth/5)
 
-      @resize()
+    divs = $(".inputcatcher")
+    for div in divs
+      $(div).css({width: WIDTH + "px"})
+      $(div).css({height: HEIGHT + "px"})
+
+    @resizeThrottled()
 
   setActivePlaneXY : =>
     @setActivePlane constants.PLANE_XY
@@ -209,11 +209,15 @@ class PlaneView
       doubleBranch         : (callback) => @showBranchModal(callback)      
       mergeDifferentTrees  : ->
         Toast.error("You can't merge nodes within the same tree", false) })
-    
+
+    @model.user.on 
+      scaleChanged : (scale) => if @running then @scaleTrianglesPlane(scale)
     
   stop : ->
 
     $(".inputcatcher").hide()
+
+    $(window).off "resize", => @.resize()
 
     @running = false 
 
@@ -221,9 +225,9 @@ class PlaneView
 
     @running = true
 
-    @scaleFactor = 1
-    @scaleTrianglesPlane(0)
-
+    @scaleTrianglesPlane(@model.user.scale)
     $(".inputcatcher").show()
+
+    $(window).on "resize", => @.resize()
 
     @animate()

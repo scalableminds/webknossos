@@ -30,3 +30,13 @@ Constants =
 
   MIN_MOVE_VALUE       : 0.1
   MAX_MOVE_VALUE       : 10
+
+  MIN_SCALE            : 0.05
+  MAX_SCALE            : 20
+
+  MIN_PARTICLE_SIZE    : 1
+  MAX_PARTICLE_SIZE    : 20
+
+  ZOOM_DIFF            : 0.1
+
+  RESIZE_THROTTLE_TIME : 250

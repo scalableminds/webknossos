@@ -36,6 +36,8 @@ trait TracingLike extends ContainsTracingInfo{
   def insertComment[A](c: Comment): A
   def insertTree[A](tree: TreeLike): A
   
+  def _name: Option[String] = None
+  
   def user: Option[User] = None
   
   def makeReadOnly: Self

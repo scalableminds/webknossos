@@ -53,18 +53,18 @@ class PlaneController
     @prevControls.addClass("btn-group")
 
     buttons = [
-        name : "3D View"
+        name : "3D"
         callback : @cameraController.changePrevSV
       ,
-        name : "XY Plane"
+        name : "XY"
         callback : @cameraController.changePrevXY
         color : "#f00"
       ,
-        name : "YZ Plane"
+        name : "YZ"
         callback : @cameraController.changePrevYZ
         color : "#00f"
       ,
-        name : "XZ Plane"
+        name : "XZ"
         callback : @cameraController.changePrevXZ
         color : "#0f0"
     ]
@@ -162,8 +162,8 @@ class PlaneController
     @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
-      "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
-      "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
+      "l" : => @scaleTrianglesPlane( -@model.user.scaleValue)
+      "k" : => @scaleTrianglesPlane( @model.user.scaleValue)
 
       #Move
       "left"  : => @moveX(-@model.user.moveValue)
@@ -281,14 +281,16 @@ class PlaneController
   zoomIn : (zoomToMouse) =>
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @cameraController.zoomIn()
+    @cameraController.zoom(@flycam.getZoomStep() - constants.ZOOM_DIFF)
+    @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()
 
   zoomOut : (zoomToMouse) =>
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @cameraController.zoomOut()
+    @cameraController.zoom(@flycam.getZoomStep() + constants.ZOOM_DIFF)
+    @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()
 
@@ -302,8 +304,6 @@ class PlaneController
                     @zoomPos[1] - mousePos[1],
                     @zoomPos[2] - mousePos[2]]
       @flycam.move(moveVector, @flycam.getActivePlane())
-
-    @model.user.setValue("zoom", @flycam.getZoomStep())
 
   getMousePosition : ->
     activePlane = @flycam.getActivePlane()
@@ -319,7 +319,14 @@ class PlaneController
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
-    @gui.updateMoveValue(moveValue)
+    @model.user.setValue("moveValue", (Number) moveValue)
+
+  scaleTrianglesPlane : (delta) ->
+    scale = @model.user.scale + delta
+    scale = Math.min(constants.MAX_SCALE, scale)
+    scale = Math.max(constants.MIN_SCALE, scale)
+
+    @model.user.setValue("scale", (Number) scale)
 
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()
@@ -327,7 +334,11 @@ class PlaneController
     @model.route.setActiveNodeRadius(radius)
 
   setParticleSize : (delta) =>
-    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+    particleSize = @model.user.particleSize + delta
+    particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
+    particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
+
+    @model.user.setValue("particleSize", (Number) particleSize)
 
   scroll : (delta, type) =>
     switch type

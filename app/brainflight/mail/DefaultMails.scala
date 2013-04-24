@@ -24,9 +24,10 @@ object DefaultMails {
    * Creates a registration mail which should allow the user to verify his
    * account
    */
-  def registerAdminNotifyerMail(name: String, brainDBResult: String) =
+  def registerAdminNotifyerMail(name: String, email: String, brainDBResult: String) =
     Mail(
-      from = defaultFrom,
+      from = email,
+      headers = Map("Sender" -> defaultFrom),
       subject = "A new user (" + name + ") registered on oxalis.at",
       bodyText = html.mail.registerAdminNotify(name, brainDBResult).body,
       recipients = List("braintracing@neuro.mpg.de"))
@@ -61,7 +62,8 @@ object DefaultMails {
 
   def issueMail(userName: String, email: String, summary: String, description: String) =
     Mail(
-      from = defaultFrom,
+      from = email,
+      headers = Map("Sender" -> defaultFrom),
       subject = "Non technical issue - " + summary,
       bodyText = html.mail.nonTechnicalIssue(userName, email, description).body,
       recipients = List(brainTracingMailingList),

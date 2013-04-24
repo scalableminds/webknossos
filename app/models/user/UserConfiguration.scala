@@ -41,6 +41,7 @@ object UserConfiguration extends BasicSettings{
       "contrast" -> JsArray(Seq(JsNumber(1), JsNumber(2.4), JsNumber(2.4))),
       "quality" -> JsNumber(0),
       "zoom" -> JsNumber(2),
+      "scale" -> JsNumber(1),
       "displayPreviewXY" -> JsBoolean(false),
       "displayPreviewYZ" -> JsBoolean(false),
       "displayPreviewXZ" -> JsBoolean(false),

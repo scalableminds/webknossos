@@ -53,18 +53,18 @@ class PlaneController
     @prevControls.addClass("btn-group")
 
     buttons = [
-        name : "3D View"
+        name : "3D"
         callback : @cameraController.changePrevSV
       ,
-        name : "XY Plane"
+        name : "XY"
         callback : @cameraController.changePrevXY
         color : "#f00"
       ,
-        name : "YZ Plane"
+        name : "YZ"
         callback : @cameraController.changePrevYZ
         color : "#00f"
       ,
-        name : "XZ Plane"
+        name : "XZ"
         callback : @cameraController.changePrevXZ
         color : "#0f0"
     ]

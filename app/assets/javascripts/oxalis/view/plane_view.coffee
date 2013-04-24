@@ -157,6 +157,8 @@ class PlaneView
     canvas.width(2 * WIDTH + 20)
     canvas.height(2 * HEIGHT + 20)
 
+    $('#prevControls button').width(@curWidth/5)
+
     divs = $(".inputcatcher")
     for div in divs
       $(div).css({width: WIDTH + "px"})

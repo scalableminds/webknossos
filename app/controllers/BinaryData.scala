@@ -42,10 +42,17 @@ import braingames.image.JPEGWriter
 object BinaryData extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
-  val dataRequestActor = Akka.system.actorOf(Props(new DataRequestActor), name = "dataRequestActor") //.withRouter(new RoundRobinRouter(3)))
+  val conf = Play.configuration
+
+  val dataRequestActor = {
+    implicit val system = Akka.system
+    val nrOfBinRequestActors = conf.getInt("binData.nrOfBinRequestActors") getOrElse 8
+    val bindataCache = Agent[Map[LoadBlock, Future[Array[Byte]]]](Map.empty)
+    Akka.system.actorOf(Props(new DataRequestActor(bindataCache))
+      .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
+  }
 
   implicit val dispatcher = Akka.system.dispatcher
-  val conf = Play.configuration
   val scaleFactors = Array(1, 1, 1)
 
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below

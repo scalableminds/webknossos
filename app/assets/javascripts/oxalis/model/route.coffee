@@ -18,8 +18,6 @@ class Route
   # Max and min radius in base voxels (see scaleInfo.baseVoxel)
   MIN_RADIUS        : 1
   MAX_RADIUS        : 1000
-  MIN_PARTICLE_SIZE : 1
-  MAX_PARTICLE_SIZE : 20
   
   branchStack : []
   trees : []
@@ -27,7 +25,6 @@ class Route
   activeNode : null
   activeTree : null
   firstEdgeDirection : null
-  particleSize : 0
 
   constructor : (@data, @scaleInfo, @flycam, @flycam3d, @user) ->
 
@@ -38,7 +35,6 @@ class Route
     @trees = []
     @comments = []
     @activeNode = null
-    @particleSize = 5
     # Used to save in NML file, is always defined
     @lastActiveNodeId = 1
     @activeTree = null
@@ -47,10 +43,6 @@ class Route
     lostTrees = []
 
     @doubleBranchPop = false
-
-    # change listener
-    @user.on "particleSizeChanged", (particleSize) =>
-      @setParticleSize(particleSize, false)
 
     ############ Load Tree from @data ##############
 
@@ -275,9 +267,6 @@ class Route
   getActiveNodeId : -> @lastActiveNodeId
 
 
-  getParticleSize : -> @particleSize
-
-
   getActiveNodePos : ->
 
     if @activeNode then @activeNode.pos else null
@@ -335,14 +324,6 @@ class Route
     @stateLogger.updateNode(@activeNode, @activeTree.treeId)
 
     @trigger("newActiveNodeRadius", radius)
-
-
-  setParticleSize : (size, propagate = true) ->
-
-    @particleSize = Math.min(@MAX_PARTICLE_SIZE, size)
-    @particleSize = Math.max(@MIN_PARTICLE_SIZE, @particleSize)
-
-    @trigger("newParticleSize", @particleSize, propagate)
 
 
   setActiveNode : (nodeID, mergeTree = false) ->

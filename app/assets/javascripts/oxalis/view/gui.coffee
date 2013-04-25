@@ -55,10 +55,16 @@ class Gui
     fControls = @gui.addFolder("Controls")
     @addCheckbox(fControls, @user, "inverseX", "Inverse X")
     @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
+    @addSlider(fControls, @user, "keyboardDelay",
+      0, 500, 10, "Keyboard delay (ms)" )
 
     @fViewportcontrols = @gui.addFolder("Viewportoptions")
     @moveValueController = @addSlider(@fViewportcontrols, @user, "moveValue",
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 0.1, "Move Value")
+    @zoomController = @addSlider(@fViewportcontrols, @user, "zoom",
+      0.001, @model.flycam.getMaxZoomStep(), 0.01, "Zoom")
+    @scaleController = @addSlider(@fViewportcontrols, @user, "scale", constants.MIN_SCALE,
+      constants.MAX_SCALE, 0.1, "Viewport Scale")
     @addCheckbox(@fViewportcontrols, @user, "dynamicSpaceDirection", "d/f-Switching")
 
     @fFlightcontrols = @gui.addFolder("Flightoptions")
@@ -108,7 +114,7 @@ class Gui
     @activeNodeIdController = @addNumber(fNodes, @settings, "activeNodeID",
       1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
     @particleSizeController = @addSlider(fNodes, @user, "particleSize",
-      1, 20, 1, "Node size")
+      constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node size")
     @addFunction(fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
     fTrees.open()
@@ -123,7 +129,7 @@ class Gui
 
       event.preventDefault()
       @saveNow().done =>
-        if confirm("Are you sure?")
+        if confirm("Are you sure you want to permanently finish this tracing?")
           window.location.href = event.srcElement.href
 
     $("#trace-download-button").click (event) =>
@@ -142,15 +148,15 @@ class Gui
       positionChanged : (position) => 
         @updateGlobalPosition(position)
 
-      zoomFactorChanged : (factor, step) =>
-        nm = factor * constants.VIEWPORT_WIDTH * @model.scaleInfo.baseVoxel
+    @model.user.on
+      zoomChanged : (zoom) =>
+        nm = zoom * constants.VIEWPORT_WIDTH * @model.scaleInfo.baseVoxel
         if(nm<1000)
           $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
         else if (nm<1000000)
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000).toFixed(1) + " μm</p>")
         else
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
-        @set("zoom", step, Number)
 
     @model.route.on
       newActiveNode    : => @update()
@@ -160,8 +166,13 @@ class Gui
       deleteLastNode   : => @update()
       newNode          : => @update()
       newTree          : => @update()
-      # newActiveNodeRadius : (radius) =>@updateRadius(radius)
-      newParticleSize  : (value, propagate) => if propagate then @updateParticleSize(value)
+
+    @model.user.on
+      scaleChanged : => @updateScale()
+      zoomChanged : => @updateZoom()
+      moveValueChanged : => @updateMoveValue()
+      moveValue3dChanged : => @updateMoveValue3d()
+      particleSizeChanged : => @updateParticleSize()
 
     @createTooltips()
 
@@ -259,17 +270,20 @@ class Gui
     @set("quality", value, Number)
 
 
-  updateParticleSize : (value) =>
-    @set("particleSize", value, Number)
+  updateParticleSize : =>
     @particleSizeController.updateDisplay()
 
-  updateMoveValue : (value) =>
-    @set("moveValue", value, Number)
+  updateMoveValue : =>
     @moveValueController.updateDisplay()
 
-  updateMoveValue3d : (value) =>
-    @set("moveValue3d", value, Number)
+  updateMoveValue3d : =>
     @moveValue3dController.updateDisplay()
+
+  updateScale : =>
+    @scaleController.updateDisplay()
+
+  updateZoom : =>
+    @zoomController.updateDisplay()
 
   # Helper method to combine common update methods
   update : ->

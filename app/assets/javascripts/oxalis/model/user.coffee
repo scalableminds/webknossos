@@ -24,6 +24,7 @@ class User
   contrast : null
   quality : null
   zoom : null
+  scale : null
   displayPreviewXY : null
   displayPreviewYZ : null
   displayPreviewXZ : null
@@ -31,6 +32,7 @@ class User
   nodesAsSpheres : null
   inverseX : null
   inverseY : null
+  keyboardDelay : null
   mouseActive : null
   keyboardActive : null
   gamepadActive : null
@@ -96,6 +98,7 @@ class User
         contrast: @contrast, 
         quality : @quality,
         zoom : @zoom,
+        scale : @scale,
         displayPreviewXY : @displayPreviewXY,
         displayPreviewYZ : @displayPreviewYZ,
         displayPreviewXZ : @displayPreviewXZ,
@@ -103,6 +106,7 @@ class User
         nodesAsSpheres : @nodesAsSpheres,
         inverseX : @inverseX,
         inverseY : @inverseY,
+        keyboardDelay : @keyboardDelay,
         mouseActive : @mouseActive,
         keyboardActive : @keyboardActive,
         gamepadActive : @gamepadActive,

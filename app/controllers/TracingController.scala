@@ -105,7 +105,12 @@ object TracingController extends Controller with Secured with TracingInformation
           case tracing if Task.isTrainingsTracing(tracing) =>
             Full(tracing.update(_.passToReview) -> Messages("task.passedToReview"))
           case _ =>
-            Full(tracing.update(_.finish) -> Messages("task.finished"))
+            val nodesInBase = 
+              tracing.task.flatMap(_.tracingBase.map(Tracing.statisticsForTracing(_).numberOfNodes)).getOrElse(1L)
+            if(Tracing.statisticsForTracing(tracing).numberOfNodes > nodesInBase)
+              Full(tracing.update(_.finish) -> Messages("task.finished"))
+            else
+              Failure(Messages("tracing.notEnoughNodes"))
         }
       } else
         Failure(Messages("tracing.notInProgress"))
@@ -135,9 +140,14 @@ object TracingController extends Controller with Secured with TracingInformation
   def finishWithRedirect(tracingId: String) = Authenticated { implicit request =>
     for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      (_, message) <- finishTracing(request.user, tracing)
     } yield {
-      Redirect(routes.UserController.dashboard).flashing("success" -> message)
+      finishTracing(request.user, tracing) match{
+        case Full((_, message)) =>
+          Redirect(routes.UserController.dashboard).flashing("success" -> message)
+        case Failure(message, _, _) =>
+          Redirect(routes.UserController.dashboard).flashing("error" -> message)
+          
+      }
     }
   }
 

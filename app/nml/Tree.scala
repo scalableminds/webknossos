@@ -7,11 +7,11 @@ case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Color, n
   def addEdges(es: Set[Edge]) = this.copy(edges = edges ++ es)
 
   def --(t: Tree) = {
-    Tree(treeId, nodes -- t.nodes, edges -- t.edges, color)
+    this.copy(nodes = nodes -- t.nodes, edges = edges -- t.edges)
   }
 
   def ++(t: Tree) = {
-    Tree(treeId, nodes ++ t.nodes, edges ++ t.edges, color)
+    this.copy(nodes = nodes ++ t.nodes, edges = edges ++ t.edges)
   }
 
   def changeTreeId(updatedTreeId: Int) = {

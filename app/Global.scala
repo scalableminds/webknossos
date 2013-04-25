@@ -38,7 +38,7 @@ object Global extends GlobalSettings {
     val conf = Play.current.configuration
     startActors()
     implicit val timeout = Timeout(( /*conf.getInt("actor.defaultTimeout") getOrElse*/ 25 seconds))
-    if (Play.current.mode == Mode.Dev) {
+    if (conf.getBoolean("application.insertInitialData") getOrElse true) {
       InitialData.insertRoles
       InitialData.insertUsers
       InitialData.insertTaskAlgorithms
@@ -56,8 +56,7 @@ object Global extends GlobalSettings {
       case Failure(e) =>
         Logger.error(e.toString)
     }
-    if (Play.current.mode == Mode.Prod)
-      Role.ensureImportantRoles()
+    Role.ensureImportantRoles()
   }
 
   override def onStop(app: Application) {

@@ -24,11 +24,21 @@ import scala.collection.mutable.ArrayBuffer
 import play.api.libs.concurrent.Execution.Implicits._
 import models.binary.DataLayer
 import models.binary.DataSet
+import akka.agent.Agent
+import scala.concurrent.Future
+import brainflight.binary.LoadBlock
+import akka.routing.RoundRobinRouter
 
 object BinaryData extends Controller {
-  val dataRequestActor = Akka.system.actorOf(Props(new DataRequestActor), name = "dataRequestActor") //.withRouter(new RoundRobinRouter(3)))
-
   val conf = Play.current.configuration
+  
+  val dataRequestActor = {
+    implicit val system = Akka.system
+    val nrOfBinRequestActors = conf.getInt("binData.nrOfBinRequestActors") getOrElse 8
+    val bindataCache = Agent[Map[LoadBlock, Future[Array[Byte]]]](Map.empty)
+    Akka.system.actorOf(Props(new DataRequestActor(bindataCache))
+      .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
+  }
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds) // needed for `?` below
 
   def createStackCuboid(level: Level, mission: Mission) = {

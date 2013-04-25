@@ -38,7 +38,7 @@ object Global extends GlobalSettings {
     val conf = Play.current.configuration
     startActors()
     implicit val timeout = Timeout(( /*conf.getInt("actor.defaultTimeout") getOrElse*/ 25 seconds))
-    if (conf.getBoolean("application.insertInitialData") getOrElse true) {
+    if (conf.getBoolean("application.insertInitialData") getOrElse false) {
       InitialData.insertRoles
       InitialData.insertUsers
       InitialData.insertTaskAlgorithms

@@ -8,6 +8,7 @@ Constants =
   VIEW_3D              : 3
   ALL_PLANES           : [0, 1, 2]
   ALL_VIEWPORTS        : [0, 1, 2, 3]
+  PLANE_COLORS         : [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
 
   MODE_OXALIS          : 0
   MODE_ARBITRARY       : 1
@@ -30,7 +31,7 @@ Constants =
   MIN_MOVE_VALUE       : 0.1
   MAX_MOVE_VALUE       : 10
 
-  MIN_SCALE            : 0.5
+  MIN_SCALE            : 0.05
   MAX_SCALE            : 20
 
   MIN_PARTICLE_SIZE    : 1

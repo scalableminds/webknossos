@@ -94,29 +94,35 @@ class PlaneView
 
     TWEEN.update()
 
-    @trigger "render"
-
     # skip rendering if nothing has changed
     # This prevents you the GPU/CPU from constantly
     # working and keeps your lap cool
     # ATTENTION: this limits the FPS to 30 FPS (depending on the keypress update frequence)
-    
-    # update postion and FPS displays
-    @stats.update()
 
-    viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
-    @renderer.autoClear = true
-    colors   = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
-    if @flycam.hasChanged or @flycam.hasNewTextures()
+    modelChanged = false
+    for plane in @model.binary.planes
+      modelChanged |= plane.hasChanged()
+
+    if @flycam.hasChanged or @flycam.hasNewTextures() or modelChanged
+
+      @trigger "render"
+      
+      # update postion and FPS displays
+      @stats.update()
+      
+      viewport = [[0, @curWidth+20], [@curWidth+20, @curWidth+20], [0, 0], [@curWidth+20, 0]]
+      @renderer.autoClear = true
+      
       for i in constants.ALL_VIEWPORTS
         @trigger "renderCam", i
         @renderer.setViewport(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
         @renderer.setScissor(viewport[i][0], viewport[i][1], @curWidth, @curWidth)
         @renderer.enableScissorTest(true)
-        @renderer.setClearColorHex(colors[i], 1);
+        @renderer.setClearColorHex(constants.PLANE_COLORS[i], 1);
         @renderer.render @scene, @camera[i]
-    @flycam.hasChanged = false
-    @flycam.hasNewTexture = [false, false, false]
+    
+      @flycam.hasChanged = false
+      @flycam.hasNewTexture = [false, false, false]
   
   # Adds a new Three.js geometry to the scene.
   # This provides the public interface to the GeometryFactory.
@@ -156,6 +162,8 @@ class PlaneView
     canvas = $("#render-canvas")
     canvas.width(2 * WIDTH + 20)
     canvas.height(2 * HEIGHT + 20)
+
+    $('#prevControls button').width(@curWidth/5)
 
     divs = $(".inputcatcher")
     for div in divs

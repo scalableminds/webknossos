@@ -34,17 +34,17 @@ class S3Uploader(s3Config: S3Config) extends Actor {
     metadata
   }
 
-  def uploadStack(stack: Stack): String = {
+  def uploadStack(stack: Stack): List[String] = {
     for {
       (file, key) <- buildUploadPairs(stack)
-    } {
+    } yield {
       val gzipped = ZipIO.gzipToTempFile(file)
       Logger.debug(s"uploading ${file.getPath} to ${s3Config.bucketName}/$key")
       val putObj = new PutObjectRequest(s3Config.bucketName, key, gzipped)
       putObj.setCannedAcl(CannedAccessControlList.PublicRead);
       putObj.setMetadata(gzipMetadata)
-      s3.putObject(putObj)
-      s"${s3Config.bucketName}/$key"
+      val r = s3.putObject(putObj)
+      s3.getResourceUrl(s3Config.bucketName, key)
     }
   }
 

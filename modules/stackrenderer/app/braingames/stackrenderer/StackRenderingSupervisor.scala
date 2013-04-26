@@ -125,8 +125,9 @@ class StackRenderingSupervisor extends Actor {
     WS
       .url(finishedWorkUrl)
       .withQueryString("key" -> id)
+      .withHeaders("Content-Type" -> "text/plain")
       .withAuth(levelcreatorAuth)
-      .post(downloadUrls.map("downloadUrl=" + _).mkString(" "))
+      .post(downloadUrls.mkString(" "))
       .map { response =>
         response.status match {
           case 200 =>

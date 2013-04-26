@@ -28,6 +28,9 @@ class DataHandler
 
         @data = { gray, segmentation, classification, mission }
         @trigger("initialized")
+
+      (error) =>
+        @__deferreds["initialized"].reject(error)
     )
 
 

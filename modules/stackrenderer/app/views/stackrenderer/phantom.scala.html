@@ -8,7 +8,7 @@ page.viewportSize = { width : 1000, height : 1000 };
 setTimeout(
   function() {
     console.log("Phantom timeout exceeded.")
-    phantom.exit();
+    phantom.exit(-1);
   }, 
   60*60*1000 // 60min
 )
@@ -44,6 +44,12 @@ page.onCallback = function (data) {
     case "requestBinaryDataUrl":
 
       return "@{binaryDataUrl}";
+
+    case "fatalError":
+
+      log("Fatal error!");
+      phantom.exit(-1);
+      return;
 
     case "initialized":
   
@@ -107,8 +113,8 @@ page.onConsoleMessage = function(msg) {
   log( "CONSOLE:", msg );
 }
 
-page.onError = function() {
-  var msgStack = ['PHANTOM ERROR: ' + msg];
+page.onError = phantom.onError = function(msg, trace) {
+  var msgStack = ['JS ERROR: ' + msg];
   if (trace) {
       msgStack.push('TRACE:');
       trace.forEach(function(t) {
@@ -116,7 +122,7 @@ page.onError = function() {
       });
   }
   console.error(msgStack.join('\n'));
-  phantom.exit();
+  phantom.exit(-1);
 }
 
 log("starting")

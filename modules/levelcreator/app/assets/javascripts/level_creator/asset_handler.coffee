@@ -76,7 +76,10 @@ class AssetHandler
       dataType : "json"
     ).done (assets) =>
       deferreds = (@loadAsset(asset) for asset in assets)
-      $.when(deferreds...).done => @trigger("initialized")
+      $.when(deferreds...).then(
+        => @trigger("initialized")
+        (error) => @__deferreds["initialized"].reject(error)
+      ) 
 
       return
 

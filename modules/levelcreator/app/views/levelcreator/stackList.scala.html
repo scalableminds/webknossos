@@ -1,4 +1,4 @@
-@(level: models.knowledge.Level, missions: List[models.knowledge.Mission])(implicit session: brainflight.view.UnAuthedSessionData)
+@(level: models.knowledge.Level, stacks: List[(models.knowledge.RenderedStack, models.knowledge.Mission)])(implicit session: brainflight.view.UnAuthedSessionData)
 @main(){
   <div class="container">
     <h3>@level.name</h3>
@@ -11,25 +11,28 @@
     </p>
 
     <div id="stack-list" data-levelname="@level.name">
-      @missions.map{ mission =>
+      @stacks.map{ case (stack, mission) =>
         <div class="stack img-polaroid" style="width: @(level.width + "px");">
           <header class="clearfix">
-            <h4>#@formatHash(mission.id)</h4>
+            <h4>#@formatHash(stack.mission.id)</h4>
             <div class="stack-buttons">
-              <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, mission.id)" class="edit-button">
+              <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, stack.mission.id)" class="edit-button">
                 <i class="icon-pencil"></i>
               </a>
-              <a href="@controllers.levelcreator.routes.StackController.delete(level.id, mission.id)" class="delete-button" data-ajax="method=DELETE,delete-parent=.stack">
+              <a href="@controllers.levelcreator.routes.StackController.delete(level.id, stack.mission.id)" class="delete-button" data-ajax="method=DELETE,delete-parent=.stack">
                 <i class="icon-trash"></i>
               </a>
+              <a href="@controllers.levelcreator.routes.StackController.delete(level.id, stack.mission.id)" class="delete-button" data-ajax="method=DELETE,delete-parent=.stack">
+                <i class="icon-thumbs-down"></i>
+              </a>
               <form method="POST">
-                <input type="hidden" name="missionId" value="@{mission.id}" />
+                <input type="hidden" name="missionId" value="@{stack.mission.id}" />
                 <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" data-ajax="submit,busy-class"><i class="icon-retweet"></i></a>
               </form>
             </div>
           </header>
           <div class="stack-display" style="height: @((level.height + 20) + "px");">
-            <a href="#stack-@{mission.id}">
+            <a href="@{stack.downloadUrls.find(_.endsWith(".tar"))}">
               <i class="icon-play"></i>
             </a>
           </div>

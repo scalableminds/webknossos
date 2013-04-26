@@ -25,7 +25,7 @@ object StackController extends LevelCreatorController {
 
   def list(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
     val missions = RenderedStack.findFor(request.level._id).flatMap(m =>
-      Mission.findOneById(m.mission._id) )
+      Mission.findOneById(m.mission._id).map(m -> _) )
 
     Ok(html.levelcreator.stackList(request.level, missions))
   }

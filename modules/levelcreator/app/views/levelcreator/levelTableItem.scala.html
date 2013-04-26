@@ -19,25 +19,35 @@
 <tr data-levelid="@level.id">
   <td> 
     <a href="#" data-prompt="@level.id" title="@level.id">#</a>
-    <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)">@level.name</a>
+    <a href="@controllers.levelcreator.routes.StackController.list(level.id)">@level.name</a>
   </td>
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>
-  <td> 
+  <td class="status-cell"> 
     @defining(level.numberOfRenderedStacks){ n =>
       @progressBar(n)
-      @n Finished <br />
-      @stacksInQueue.getOrElse(0) in Queue <br />
-      @stacksInProgress.getOrElse(0) in Progress </td>
+      <span title="Finished">
+        <i class="icon-ok"></i>
+        @n
+      </span>
+      <span title="in Progress">
+        <i class="icon-retweet"></i>
+        @stacksInProgress.getOrElse(0)
+      </span>
+      <span title="in Queue">
+        <i class="icon-inbox"></i>
+        @stacksInQueue.getOrElse(0)
+      </span>
     }
+  </td>
   <td>  
     <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"><i class="icon-pencil"></i> edit</a><br />
     <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">
       <i class="icon-retweet"></i> 
-      produce 
-      <input type="number" value="1" min="1">
-      Stacks
+      produce Stacks
     </a><br />
+    <input type="checkbox" @if(level.autoRender) { @Html("checked") } class="auto-render-stacks"> auto render
+    <br />
     <a href="@controllers.levelcreator.routes.StackController.list(level.id)" class="view-stacks">
       <i class="icon-picture"></i> view Stacks
     </a><br />

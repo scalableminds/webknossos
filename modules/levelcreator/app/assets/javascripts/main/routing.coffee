@@ -43,23 +43,17 @@ $ ->
         prompt("Level id:", $(this).data("prompt"))
 
 
+      $(document).on "click", "#level-list .auto-render-stacks", (event) ->
 
-      $(document).on "click", "#level-list .produce-stacks", (event) -> 
+        sendAutoRender = =>
 
-        event.preventDefault()
-        $this = $(this)
-      
-        unless $(event.target).is("input")
-          
-          $row = $this.parents("tr").first()
+          $row = $(this).parents("tr").first()
           levelId = $row.data("levelid")
-          count = $this.find("input").val()
-          
+
           $.ajax(
             _.extend(
+              routes.controllers.levelcreator.LevelCreator.autoRender(levelId, this.checked)
               dataType : "json"
-              beforeSend : (xhr) -> console.log xhr
-              routes.controllers.levelcreator.StackController.produce(levelId, count)
             )
           ).then(
 
@@ -67,5 +61,38 @@ $ ->
             (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
 
           )
+
+        if this.checked
+          if confirm("Are you sure, you want to generate a ton of stacks for this level?")
+            sendAutoRender()
+
+          else
+            this.checked = false
+        else
+          sendAutoRender()
+
+
+
+      $(document).on "click", "#level-list .produce-stacks", (event) -> 
+
+        event.preventDefault()
+        $this = $(this)
+      
+        $row = $this.parents("tr").first()
+        levelId = $row.data("levelid")
+        count = parseInt(prompt("How many stacks to produce?", "3"))
+        
+        $.ajax(
+          _.extend(
+            dataType : "json"
+            beforeSend : (xhr) -> console.log xhr
+            routes.controllers.levelcreator.StackController.produce(levelId, count)
+          )
+        ).then(
+
+          ( { messages } ) -> Toast.message(messages)
+          (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
+
+        )
 
         return

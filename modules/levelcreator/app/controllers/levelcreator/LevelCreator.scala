@@ -11,11 +11,13 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api._
-
 import java.io.File
 import scala.util.Failure
 import models.binary.DataSet
 import braingames.util.ExtendedTypes.ExtendedString
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Future
+import play.api.templates.Html
 
 object LevelCreator extends LevelCreatorController {
 
@@ -82,16 +84,18 @@ object LevelCreator extends LevelCreatorController {
   }
 
   def create = Action(parse.urlFormEncoded) { implicit request =>
-    levelForm.bindFromRequest.fold(
-      formWithErrors => 
-        BadRequest(generateLevelList(formWithErrors)), //((taskCreateHTML(taskFromTracingForm, formWithErrors)),
-      { t =>
-        if (Level.isValidLevelName(t.name)) {
-          Level.insertOne(t)
-          Ok(generateLevelList(levelForm))
-        } else
-          BadRequest(Messages("level.invalidName"))
-      })
+    Async {
+      levelForm.bindFromRequest.fold(
+        formWithErrors =>
+          generateLevelList(formWithErrors).map(BadRequest.apply[Html]), //((taskCreateHTML(taskFromTracingForm, formWithErrors)),
+        { t =>
+          if (Level.isValidLevelName(t.name)) {
+            Level.insertOne(t)
+            generateLevelList(levelForm).map(Ok.apply[Html])
+          } else
+            Future.successful(BadRequest(Messages("level.invalidName")))
+        })
+    }
   }
 
   def autoRender(levelId: String, isEnabled: Boolean) = {
@@ -103,18 +107,21 @@ object LevelCreator extends LevelCreatorController {
     }
   }
 
-  def generateLevelList(levelForm: Form[Level])(implicit session: brainflight.view.UnAuthedSessionData) = {
-    val stacksInQueue =
-      StacksQueued.findAll.groupBy(_.level._id.toString).mapValues(_.size)
+  def generateLevelList(levelForm: Form[Level])(implicit session: brainflight.view.UnAuthedSessionData): Future[Html] = {
+    WorkController.countActiveRenderers.map { rendererCount =>
+      val stacksInQueue =
+        StacksQueued.findAll.groupBy(_.level._id.toString).mapValues(_.size)
 
-    val stacksInGeneration =
-      StacksInProgress.findAll.groupBy(_._level.toString).mapValues(_.size)
-      
-    html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll, stacksInQueue, stacksInGeneration)
+      val stacksInGeneration =
+        StacksInProgress.findAll.groupBy(_._level.toString).mapValues(_.size)
+
+      html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll, stacksInQueue, stacksInGeneration, rendererCount)
+    }
   }
-    
-  
+
   def list = Action { implicit request =>
-    Ok(generateLevelList(levelForm))
+    Async {
+      generateLevelList(levelForm).map(Ok.apply[Html])
+    }
   }
 }

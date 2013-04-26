@@ -15,15 +15,24 @@ import models.knowledge._
 import play.api.libs.json._
 import braingames.levelcreator.FinishedWork
 import braingames.levelcreator.FailedWork
+import braingames.levelcreator.CountActiveRenderers
 
 object WorkController extends LevelCreatorController {
   lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
 
   implicit val requestWorkTimeout = Timeout(5 seconds)
+  
+  def countActiveRenderers = {
+    (stackWorkDistributor ? CountActiveRenderers()).mapTo[Int].map(Some.apply).recover {
+      case e => 
+        Logger.warn("Couldn't cound renderers because of: " + e)
+        None
+    }
+  }
 
-  def request() = Action { implicit request =>
+  def request(rendererId: String) = Action { implicit request =>
     Async {
-      (stackWorkDistributor ? RequestWork())
+      (stackWorkDistributor ? RequestWork(rendererId))
         .recover {
           case e: AskTimeoutException =>
             Logger.warn("Stack request to stackWorkDistributor timed out!")

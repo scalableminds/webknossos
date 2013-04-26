@@ -16,9 +16,6 @@
           <header class="clearfix">
             <h4>#@formatHash(mission.id)</h4>
             <div class="stack-buttons">
-              <a href="@controllers.levelcreator.routes.Assets.at(path="/public/levelStacks", s"${level.name}/${mission.id}/${level.id}_${mission.id}.zip")" class="download-button">
-                <i class="icon-download"></i>
-              </a>
               <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, mission.id)" class="edit-button">
                 <i class="icon-pencil"></i>
               </a>

@@ -34,6 +34,10 @@ object RenderedStack extends BasicDAO[RenderedStack]("renderedStacks") with Comm
   def findFor(levelId: ObjectId) = {
     find(MongoDBObject("_level" -> levelId)).toList
   }
+  
+  def countFor(levelId: ObjectId) = {
+    count(MongoDBObject("_level" -> levelId))
+  }
 
   def remove(levelId: ObjectId, missionId: String){
     if (ObjectId.isValid(missionId))

@@ -11,27 +11,47 @@ import braingames.util.StartableActor
 import models.knowledge.Stack
 import org.bson.types.ObjectId
 import models.knowledge._
+import play.api.Play
 
 case class CreateStack(stack: Stack)
 case class CreateRandomStacks(level: Level, n: Int)
 case class CreateStacks(stacks: List[Stack])
-case class RequestWork()
+case class RequestWork(rendererId: String)
 case class FinishedWork(key: String)
 case class FailedWork(key: String)
 case class CheckStacksInProgress()
 
-class StackWorkDistributor extends Actor {
-  val maxStackGenerationTime = 1 minutes
+case class CountActiveRenderers()
 
+class StackWorkDistributor extends Actor {
+  val conf = Play.current.configuration
+  
   implicit val sys = context.system
 
+  val maxRendererInactiveTime = 
+     (conf.getInt("levelcreator.render.maxInactiveTime") getOrElse 10) minutes
+  
+  val maxRenderTime = 
+    (conf.getInt("levelcreator.render.maxTime") getOrElse 30) minutes
+
+  val workingRenderers = Agent[Map[String, Long]](Map.empty)
+
   override def preStart() {
+    Logger.info("StackWorkDistributor started")
     sys.scheduler.schedule(10 seconds, 1 minute)(self ! CheckStacksInProgress())
   }
 
   def createStack(stack: Stack) = {
     StacksQueued.remove(stack.level, stack.mission)
     StacksQueued.insert(stack)
+  }
+
+  def logActiveRenderer(rendererId: String) = {
+    workingRenderers.send(_ + (rendererId -> System.currentTimeMillis()))
+  }
+
+  def deleteInactiveRenderers() = {
+    workingRenderers.send(_.filterNot( System.currentTimeMillis() - _._2 > maxRendererInactiveTime.toMillis))
   }
 
   def receive = {
@@ -69,7 +89,8 @@ class StackWorkDistributor extends Actor {
       }
 
     case CheckStacksInProgress() =>
-      val unfinishedExpired = StacksInProgress.findAllOlderThan(maxStackGenerationTime)
+      deleteInactiveRenderers()
+      val unfinishedExpired = StacksInProgress.findAllOlderThan(maxRenderTime)
       Logger.debug(s"About to delete '${unfinishedExpired.size}' expired stacks in progress.")
       unfinishedExpired.map { challenge =>
         for {
@@ -87,7 +108,11 @@ class StackWorkDistributor extends Actor {
         Logger.error(s"Renderer reported failed Work: $key")
       }
 
-    case RequestWork() =>
+    case CountActiveRenderers() =>
+      sender ! workingRenderers().size
+
+    case RequestWork(rendererId) =>
+      logActiveRenderer(rendererId)
       StacksQueued.popOne().map { stack =>
         val challenge = StackRenderingChallenge(stack.id, stack.level._id, stack.mission._id)
         StacksInProgress.insert(challenge)

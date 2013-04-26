@@ -100,7 +100,10 @@ object LevelCreator extends LevelCreatorController {
 
   def autoRender(levelId: String, isEnabled: Boolean) = ActionWithValidLevel(levelId) { implicit request =>
     request.level.update(_.copy(autoRender = isEnabled))
-    JsonOk(Messages("level.render.autoRenderEnabled"))
+    if (isEnabled) 
+      JsonOk(Messages("level.render.autoRenderEnabled"))
+    else
+      JsonOk(Messages("level.render.autoRenderDisabled"))
   }
 
   def generateLevelList(levelForm: Form[Level])(implicit session: brainflight.view.UnAuthedSessionData): Future[Html] = {

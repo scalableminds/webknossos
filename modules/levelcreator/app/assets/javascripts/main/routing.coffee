@@ -48,9 +48,7 @@ $ ->
 
         event.preventDefault()
         $this = $(this)
-
-        return if $this.find(".icon-retweet.rotating").length > 0
-        
+      
         unless $(event.target).is("input")
           
           $row = $this.parents("tr").first()
@@ -65,18 +63,9 @@ $ ->
             )
           ).then(
 
-            ( { messages } ) -> 
-              Toast.message(messages)
-              
-              $viewStacks = $row.find(".view-stacks")
-              stackCount = $viewStacks.html().match(/[0-9]+/)[0]
-              $viewStacks.html($viewStacks.html().replace(stackCount, parseInt(stackCount) + parseInt(count)))
-
+            ( { messages } ) -> Toast.message(messages)
             (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
 
-          ).always(
-            -> $this.find(".icon-retweet").removeClass("rotating")
           )
-          $this.find(".icon-retweet").addClass("rotating")
 
         return

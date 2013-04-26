@@ -20,7 +20,6 @@ case class RequestWork(rendererId: String)
 case class FinishedWork(key: String, downloadUrls: List[String])
 case class FailedWork(key: String)
 case class CheckStacksInProgress()
-
 case class CountActiveRenderers()
 
 class StackWorkDistributor extends Actor {

@@ -65,8 +65,10 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
 
     val jsFile = FileIO.createTempFile(js, ".js")
     Logger.info("phantomjs " + jsFile.getAbsolutePath())
-    ("phantomjs" :: jsFile.getAbsolutePath :: Nil) !! logger
-    Logger.debug("Finished phantomjs.")
+    val process = ("phantomjs" :: jsFile.getAbsolutePath :: Nil).run(logger, false)
+    val exitValue = process.exitValue()
+    process.destroy()
+    Logger.debug("Finished phantomjs. ExitValue: " + exitValue)
   }
 
   def renderStack(stack: Stack): Boolean = {

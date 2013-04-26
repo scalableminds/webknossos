@@ -43,6 +43,9 @@ case class Level(
     else
       f
   }
+    
+  def numberOfRenderedStacks = 
+    RenderedStack.countFor(_id)
 
   def alterCode(c: String) = {
     copy(code = c)
@@ -107,14 +110,14 @@ object Level extends BasicDAO[Level]("levels") with CommonFormats with Function9
 
   val stackBaseFolder = {
     val folderName =
-      Play.current.configuration.getString("levelCreator.stackDirectory").getOrElse("public/levelStacks")
+      Play.current.configuration.getString("levelcreator.stackDirectory").getOrElse("public/levelStacks")
     (new File(folderName).mkdirs())
     folderName
   }
 
   val assetsBaseFolder = {
     val folderName =
-      Play.current.configuration.getString("levelCreator.assetsDirecory").getOrElse("data")
+      Play.current.configuration.getString("levelcreator.assetsDirecory").getOrElse("data")
     (new File(folderName).mkdirs())
     folderName
   }

@@ -14,7 +14,12 @@ import play.api.libs.concurrent.Execution.Implicits._
 import akka.routing.SmallestMailboxRouter
 import scala.concurrent.duration._
 import braingames.util.StartableActor
+import braingames.util.ExtendedTypes.ExtendedWSRequestHolder
+import braingames.util.ExtendedTypes.Auth
 import models.stackrenderer.TemporaryStores._
+import java.util.UUID
+import play.api.libs.ws.WS.WSRequestHolder
+import com.ning.http.client.Realm.AuthScheme
 
 case class FinishedStack(stack: Stack)
 case class FailedStack(stack: Stack)
@@ -24,16 +29,27 @@ case class StopRendering()
 case class EnsureWork()
 
 class StackRenderingSupervisor extends Actor {
+  val rendererId = UUID.randomUUID().toString
 
   implicit val system = context.system
+
+  val conf = Play.current.configuration
 
   val currentlyRequestingWork = Agent[Boolean](false)
 
   val stacksInRendering = Agent[Map[String, Stack]](Map.empty)
 
-  val nrOfStackRenderers = 4
+  val nrOfStackRenderers = conf.getInt("stackrenderer.nrOfRenderers").get
 
-  val conf = Play.current.configuration
+  val levelcreatorAuth = {
+    if(conf.getBoolean("levelcreator.auth.enabled") getOrElse false)
+      Auth(
+          true,
+          conf.getString("levelcreator.auth.username") .get,
+          conf.getString("levelcreator.auth.password") .get)
+    else
+      Auth(false)
+  }
 
   val levelcreatorBaseUrl =
     conf.getString("levelcreator.baseUrl") getOrElse ("http://localhost:9000")
@@ -82,11 +98,14 @@ class StackRenderingSupervisor extends Actor {
     if (stacksInRendering().size < nrOfStackRenderers)
       requestWork
   }
+  
+
 
   def reportFailedWork(id: String) = {
     WS
       .url(failedWorkUrl)
       .withQueryString("key" -> id)
+      .withAuth(levelcreatorAuth)
       .get()
       .map { response =>
         response.status match {
@@ -106,6 +125,7 @@ class StackRenderingSupervisor extends Actor {
     WS
       .url(finishedWorkUrl)
       .withQueryString("key" -> id)
+      .withAuth(levelcreatorAuth)
       .get()
       .map { response =>
         response.status match {
@@ -132,6 +152,8 @@ class StackRenderingSupervisor extends Actor {
       currentlyRequestingWork.send(true)
       WS
         .url(requestWorkUrl)
+        .withQueryString("rendererId" -> rendererId)
+        .withAuth(levelcreatorAuth)
         .get()
         .map { response =>
           response.status match {

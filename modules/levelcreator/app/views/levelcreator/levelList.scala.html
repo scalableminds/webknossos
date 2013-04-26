@@ -1,8 +1,9 @@
-@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[models.binary.DataSet], stacksInQueue: Map[String, Int], stacksInGeneration: Map[String, Int])(implicit session: brainflight.view.UnAuthedSessionData)
+@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[models.binary.DataSet], stacksInQueue: Map[String, Int], stacksInGeneration: Map[String, Int], activeRenderers: Option[Int])(implicit session: brainflight.view.UnAuthedSessionData)
 
-@main(){
+@main(activeRenderers){
   <div class="container">
     <h3>Levels</h3>
+    <div> Active renderers: @activeRenderers.getOrElse("<Unknown>")</div>
     <div class="well">
       @helper.form(controllers.levelcreator.routes.LevelCreator.create, 'class -> "form-horizontal") {
         @helper.inputText(form("name"))

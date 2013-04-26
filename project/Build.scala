@@ -83,20 +83,18 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
     // offline := true,
-    coffeescriptOptions := Seq("native", "coffee -p"),
-    playAssetsDirectories += file("data")
+    coffeescriptOptions := Seq("native", "coffee -p")
   ).dependsOn(oxalis).aggregate(oxalis)
   
   lazy val stackrenderer = play.Project("stackrenderer", "0.1", stackrendererDependencies, path = file("modules") / "stackrenderer").settings(
     resolvers ++= dependencyResolvers
-  ).dependsOn(oxalis, levelcreator).aggregate(oxalis, levelcreator)  
+  ).dependsOn(levelcreator).aggregate(levelcreator)  
   
   lazy val isoshader = play.Project("isoshader", "0.1", isoshaderDependencies, path = file("modules") / "isoshader").settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
-    coffeescriptOptions := Seq("native", "coffee -p"),
-    playAssetsDirectories += file("data")
+    coffeescriptOptions := Seq("native", "coffee -p")
   ).dependsOn(oxalis).aggregate(oxalis)
 }
             

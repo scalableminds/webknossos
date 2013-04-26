@@ -1,10 +1,21 @@
 @(level: models.knowledge.Level, stacksInQueue: Option[Int], stacksInProgress: Option[Int])
 @import brainflight.view.helpers._
 
-@calculateProgress(a: Int, b: Int) = @{ 
-    if(b + a == 0) 100
-    else (a *100 / (b + a)) - 10
+@calculateProgress(n: Long, p: Int, q: Int) = @{ 
+    val d = (n + p + q).toFloat
+    if(d == 0) 100 -> 0
+    else n*100 / d -> p*100 / d
 }
+
+@progressBar(n: Long)  = {
+    @defining(calculateProgress(n, stacksInProgress.getOrElse(0), stacksInQueue.getOrElse(0))){ progress =>
+      <div class="progress progress-striped">
+        <div class="bar bar-success" style="width: @progress._1%;"></div>
+        <div class="bar bar-warning" style="width: @progress._2%;"></div>
+      </div>
+    }
+}
+
 <tr data-levelid="@level.id">
   <td> 
     <a href="#" data-prompt="@level.id" title="@level.id">#</a>
@@ -13,11 +24,12 @@
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>
   <td> 
-    <div class="progress progress-striped">
-        <div class="bar" style="width: @calculateProgress(stacksInProgress.getOrElse(0), stacksInQueue.getOrElse(0))%;"></div>
-    </div>
-    @stacksInQueue.getOrElse(0) in Queue <br />
-    @stacksInProgress.getOrElse(0) in Progress </td>
+    @defining(level.numberOfRenderedStacks){ n =>
+      @progressBar(n)
+      @n Finished <br />
+      @stacksInQueue.getOrElse(0) in Queue <br />
+      @stacksInProgress.getOrElse(0) in Progress </td>
+    }
   <td>  
     <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"><i class="icon-pencil"></i> edit</a><br />
     <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">

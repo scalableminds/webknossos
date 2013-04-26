@@ -21,7 +21,7 @@ case class FailedWork(key: String)
 case class CheckStacksInProgress()
 
 class StackWorkDistributor extends Actor {
-  val maxStackGenerationTime = 1 minutes
+  val maxStackGenerationTime = 5 minutes
 
   implicit val sys = context.system
 

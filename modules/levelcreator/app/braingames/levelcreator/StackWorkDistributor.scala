@@ -17,7 +17,7 @@ case class CreateStack(stack: Stack)
 case class CreateRandomStacks(level: Level, n: Int)
 case class CreateStacks(stacks: List[Stack])
 case class RequestWork(rendererId: String)
-case class FinishedWork(key: String)
+case class FinishedWork(key: String, downloadUrls: List[String])
 case class FailedWork(key: String)
 case class CheckStacksInProgress()
 
@@ -73,14 +73,14 @@ class StackWorkDistributor extends Actor {
     case CreateStacks(stacks) =>
       stacks.map(createStack)
 
-    case FinishedWork(key) =>
+    case FinishedWork(key, downloadUrls) =>
       StacksInProgress.findOneByKey(key).map { challenge =>
         (for {
           level <- challenge.level
           mission <- challenge.mission
         } yield {
           val missionInfo = MissionInfo(mission._id, mission.key, mission.possibleEnds)
-          RenderedStack.insertUnique(RenderedStack(level._id, missionInfo))
+          RenderedStack.insertUnique(RenderedStack(level._id, missionInfo, downloadUrls))
           Logger.debug(s"Finished work of $key. Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
         }) getOrElse {
           Logger.error(s"Couldn't update level! Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")

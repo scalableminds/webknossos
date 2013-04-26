@@ -16,6 +16,7 @@ import play.api.libs.json._
 import braingames.levelcreator.FinishedWork
 import braingames.levelcreator.FailedWork
 import braingames.levelcreator.CountActiveRenderers
+import play.api.mvc.BodyParsers._
 
 object WorkController extends LevelCreatorController {
   lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
@@ -48,8 +49,9 @@ object WorkController extends LevelCreatorController {
     }
   }
 
-  def finished(key: String) = Action { implicit request =>
-    stackWorkDistributor ! FinishedWork(key)
+  def finished(key: String) = Action(parse.urlFormEncoded) { implicit request =>
+    val downloadUrls = request.body.get("downloadUrl").map(_.toList) getOrElse Nil
+    stackWorkDistributor ! FinishedWork(key, downloadUrls)
     Ok
   }
 

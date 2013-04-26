@@ -23,7 +23,7 @@ import com.ning.http.client.Realm.AuthScheme
 
 case class FinishedStack(stack: Stack)
 case class FailedStack(stack: Stack)
-case class FinishedUpload(stack: Stack)
+case class FinishedUpload(stack: Stack, downloadUrls: List[String])
 case class StartRendering()
 case class StopRendering()
 case class EnsureWork()
@@ -84,8 +84,8 @@ class StackRenderingSupervisor extends Actor {
       stacksInRendering.send(_ - stack.id)
       reportFailedWork(stack.id)
 
-    case FinishedUpload(stack) =>
-      reportFinishedWork(stack.id)
+    case FinishedUpload(stack, downloadUrls) =>
+      reportFinishedWork(stack.id, downloadUrls)
 
     case EnsureWork() =>
       ensureEnoughWork
@@ -121,12 +121,12 @@ class StackRenderingSupervisor extends Actor {
       }
   }
 
-  def reportFinishedWork(id: String) = {
+  def reportFinishedWork(id: String, downloadUrls: List[String]) = {
     WS
       .url(finishedWorkUrl)
       .withQueryString("key" -> id)
       .withAuth(levelcreatorAuth)
-      .get()
+      .post(downloadUrls.map("downloadUrl=" + _).mkString(" "))
       .map { response =>
         response.status match {
           case 200 =>

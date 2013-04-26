@@ -98,13 +98,9 @@ object LevelCreator extends LevelCreatorController {
     }
   }
 
-  def autoRender(levelId: String, isEnabled: Boolean) = {
-    for {
-      level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-    } yield {
-      level.update(_.copy(autoRender = isEnabled))
-      Ok
-    }
+  def autoRender(levelId: String, isEnabled: Boolean) = ActionWithValidLevel(levelId) { implicit request =>
+    request.level.update(_.copy(autoRender = isEnabled))
+    JsonOk(Messages("level.render.autoRenderEnabled"))
   }
 
   def generateLevelList(levelForm: Form[Level])(implicit session: brainflight.view.UnAuthedSessionData): Future[Html] = {

@@ -20,18 +20,21 @@ class S3Uploader(s3Config: S3Config) extends Actor {
 
   def receive = {
     case UploadStack(stack) =>
-      if (s3Config.isEnabled)
-        uploadStack(stack)
-      sender ! FinishedUpload(stack)
+      val downloadUrls =
+        if (s3Config.isEnabled)
+          uploadStack(stack)
+        else
+          Nil
+      sender ! FinishedUpload(stack, downloadUrls)
   }
-  
+
   val gzipMetadata = {
     val metadata = new ObjectMetadata()
     metadata.setContentEncoding("gzip")
     metadata
   }
 
-  def uploadStack(stack: Stack) = {
+  def uploadStack(stack: Stack): String = {
     for {
       (file, key) <- buildUploadPairs(stack)
     } {
@@ -40,10 +43,11 @@ class S3Uploader(s3Config: S3Config) extends Actor {
       val putObj = new PutObjectRequest(s3Config.bucketName, key, gzipped)
       putObj.setCannedAcl(CannedAccessControlList.PublicRead);
       putObj.setMetadata(gzipMetadata)
-      s3.putObject(putObj);
+      s3.putObject(putObj)
+      s"${s3Config.bucketName}/$key"
     }
   }
-  
+
   def buildUploadPairs(stack: Stack): List[Tuple2[File, String]] = {
     val filesToUpload = stack.tarFile :: stack.metaFile :: stack.image :: Nil
 

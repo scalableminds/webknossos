@@ -21,6 +21,8 @@ GET      /levels/:levelId/stacks.json         controllers.levelcreator.StackCont
 DELETE   /levels/:levelId/stacks              controllers.levelcreator.StackController.deleteAll(levelId: String)
 DELETE   /levels/:levelId/stacks/:missionId   controllers.levelcreator.StackController.delete(levelId: String, missionId: String)
 
+
+GET      /levels/:levelId/autoRender          controllers.levelcreator.LevelCreator.autoRender(levelId: String, isEnabled: Boolean)
 GET      /levels/:levelId/assets              controllers.levelcreator.LevelCreator.listAssets(levelId: String)
 POST     /levels/:levelId/assets              controllers.levelcreator.LevelCreator.uploadAsset(levelId: String)
 GET      /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCreator.retrieveAsset(levelId: String, asset: String)
@@ -28,7 +30,7 @@ DELETE   /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCrea
 
 # worker urls
 GET      /renderer/requestWork                controllers.levelcreator.WorkController.request(rendererId: String)
-GET      /renderer/finishedWork               controllers.levelcreator.WorkController.finished(key: String)
+POST     /renderer/finishedWork               controllers.levelcreator.WorkController.finished(key: String)
 GET      /renderer/failedWork                 controllers.levelcreator.WorkController.failed(key: String)
 
 #Getting binary Data

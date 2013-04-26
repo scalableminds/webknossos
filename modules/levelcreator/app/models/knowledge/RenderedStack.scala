@@ -19,6 +19,7 @@ case class MissionInfo(_id: ObjectId, key: String, possibleEnds: List[PossibleEn
 case class RenderedStack(
     _level: ObjectId,
     mission: MissionInfo,
+    downloadUrls: List[String],
     _id: ObjectId = new ObjectId) extends DAOCaseClass[RenderedStack] {
 
   val dao = RenderedStack
@@ -26,7 +27,7 @@ case class RenderedStack(
 
 }
 
-object RenderedStack extends BasicDAO[RenderedStack]("renderedStacks") with CommonFormats with Function3[ObjectId, MissionInfo, ObjectId, RenderedStack] {
+object RenderedStack extends BasicDAO[RenderedStack]("renderedStacks") with CommonFormats with Function4[ObjectId, MissionInfo, List[String], ObjectId, RenderedStack] {
 
   implicit val missionInfoFormat: Format[MissionInfo] = Json.format[MissionInfo]
   implicit val renderedStackFormat: Format[RenderedStack] = Json.format[RenderedStack]

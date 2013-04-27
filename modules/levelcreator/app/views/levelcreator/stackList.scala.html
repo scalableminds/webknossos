@@ -31,13 +31,13 @@
               </form>
             </div>
           </header>
-          <div class="stack-display" style="height: @((level.height + 20) + "px");">
+          <div class="stack-display clearfix" style="height: @((level.height + 90) + "px");">
             <a href="@{stack.downloadUrls.find(_.endsWith(".tar"))}">
               <i class="icon-play"></i>
             </a>
           </div>
           <div style="padding-top: 5px">
-          startPos: @mission.start.position </br> startId: @mission.start.startId
+          Start: #@mission.start.startId @mission.start.position
           </div>
         </div>
       }

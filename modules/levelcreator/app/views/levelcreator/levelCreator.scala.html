@@ -8,7 +8,7 @@
 
       <!--Sidebar content-->
       <div class="span4">
-        <h3>Plugins</h3>
+        <h4>Plugins</h4>
 
         <div class="accordion" id="plugins">
 
@@ -18,7 +18,7 @@
 
       <!--Body content-->
       <div class="span8">
-        <h3>Preview: @level.name #@formatHash(missionId)</h3>
+        <h3>@level.name #@formatHash(missionId)</h3>
         <div class="row">
           <div class="span9">
             <div class="well" id="preview">
@@ -42,7 +42,7 @@
         <div class="row">
 
           <div class="span9" id="editor-container">
-            <h3>Editor</h3>
+            <h4>Editor</h4>
             @helper.form(action = controllers.levelcreator.routes.LevelCreator.submitCode(level.id), 'id -> "save-form") {
 
             <button type="submit" class="btn btn-primary">
@@ -58,6 +58,9 @@
                 <i class="icon-retweet"></i> Produce
               </a>
             </form>
+            <a href="@controllers.levelcreator.routes.StackController.list(level.id)" class="btn">
+              <i class="icon-picture"></i> View stacks
+            </a>
 
             <div class="editor-wrapper">
               <div id="editor">@level.code</div>
@@ -67,7 +70,7 @@
 
 
           <div class="span3" id="assets">
-            <h3>Assets</h3>
+            <h4>Assets</h4>
             <div>
               <form id="assets-upload" action="@controllers.levelcreator.routes.LevelCreator.uploadAsset(level.id)" method="POST" enctype="multipart/form-data">
                 <button type="submit" class="btn">

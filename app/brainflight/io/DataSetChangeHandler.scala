@@ -108,7 +108,7 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
   }
   
   def getSegmentationLayers(f: File): Option[List[SegmentationLayer]] = {
-    val segmentationsDir = new File(f.getPath + "/segmentations")
+    val segmentationsDir = new File(f.getPath + "/segmentation")
     if(segmentationsDir.isDirectory){
       Some((for{layerDir <- segmentationsDir.listFiles.toList.filter(d => d.isDirectory && d.getName.startsWith("layer"))
         layerInfo = new File(layerDir.getPath + "/layer.json")

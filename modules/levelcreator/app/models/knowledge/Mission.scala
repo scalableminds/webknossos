@@ -11,20 +11,21 @@ import com.novus.salat._
 import models.context._
 import scala.util.Random
 
-case class ContextFreeMission(uniqueId: Int, start: MissionStart, errorCenter: Point3D, possibleEnds: List[PossibleEnd]) {
-  def addContext(dataSetName: String, batchId: Int) = Mission(dataSetName, uniqueId, batchId, start, errorCenter, possibleEnds)
+case class ContextFreeMission(missionId: Int, start: MissionStart, errorCenter: Point3D, possibleEnds: List[PossibleEnd], difficulty: Double) {
+  def addContext(dataSetName: String, batchId: Int) = Mission(dataSetName, missionId, batchId, start, errorCenter, possibleEnds, difficulty: Double)
 }
 
-object ContextFreeMission extends Function4[Int, MissionStart, Point3D, List[PossibleEnd], ContextFreeMission]{
+object ContextFreeMission extends Function5[Int, MissionStart, Point3D, List[PossibleEnd], Double, ContextFreeMission]{
   implicit val ContextFreeMissionReader: Reads[ContextFreeMission] = Json.reads[ContextFreeMission]  
 }
 
 case class Mission(dataSetName: String,
-  uniqueId: Int,
+  missionId: Int,
   batchId: Int,
   start: MissionStart,
   errorCenter: Point3D,
   possibleEnds: List[PossibleEnd],
+  difficulty: Double,
   _id: ObjectId = new ObjectId) extends DAOCaseClass[Mission] {
   
   val key: String = start.toString
@@ -37,13 +38,11 @@ case class Mission(dataSetName: String,
   def batchId(newBatchId: Int) = copy(batchId = newBatchId)
 }
 
-object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Function7[String, Int, Int, MissionStart, Point3D, List[PossibleEnd], ObjectId, Mission]{
+object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Function8[String, Int, Int, MissionStart, Point3D, List[PossibleEnd], Double, ObjectId, Mission]{
 
-  def unapplyWithoutDataSetAndBatchId(m: Mission) = (m.uniqueId, m.start, m.errorCenter, m.possibleEnds)
-  
   def findByDataSetName(dataSetName: String) = find(MongoDBObject("dataSetName" -> dataSetName)).toList
   
-  def findOneByUniqueId(uniqueId: Int) = findOne(MongoDBObject("uniqueId" -> uniqueId))
+  def findOneByMissionId(missionId: Int) = findOne(MongoDBObject("missionId" -> missionId))
 
   def randomByDataSetName(dataSetName: String) = {
     val missions = findByDataSetName(dataSetName)
@@ -54,7 +53,7 @@ object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Fun
 
   def updateOrCreate(m: Mission) =
     findOne(MongoDBObject("dataSetName" -> m.dataSetName,
-      "uniqueId" -> m.uniqueId)) match {
+      "missionId" -> m.missionId)) match {
       case Some(stored) =>
         stored.update(_ => m.copy(_id = stored._id))
         stored._id

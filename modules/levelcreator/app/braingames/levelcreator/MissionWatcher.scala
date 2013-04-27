@@ -46,12 +46,12 @@ class MissionWatcher extends Actor {
       val baseFolder = new File(dataSet.baseDir)
       if (baseFolder.exists) {
         val missions = aggregateMissions(baseFolder.listFiles(missionFileFilter).toList, dataSet.name)
-        missions.foreach { Mission.updateOrCreate }
+        val availableMissionIds = missions.map { Mission.updateOrCreate }
         Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")
         val removedMissionIds = Mission.deleteAllForDataSetExcept(dataSet.name, missions)
         Level.findByDataSetName(dataSet.name).foreach { level =>
           if (level.autoRender)
-            Level.ensureMissions(level, missions)
+            Level.ensureMissions(level, availableMissionIds)
           removedMissionIds.map { missionId =>
             RenderedStack.remove(level._id, missionId)
           }

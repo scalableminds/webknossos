@@ -97,6 +97,12 @@ object LevelCreator extends LevelCreatorController {
         })
     }
   }
+  
+  def progress(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
+    val queued = StacksQueued.findFor(request.level._id).size
+    val inProgress = StacksInProgress.findFor(request.level._id).size
+    Ok(html.levelcreator.levelGenerationProgress(request.level, queued, inProgress))
+  }
 
   def autoRender(levelId: String, isEnabled: Boolean) = ActionWithValidLevel(levelId) { implicit request =>
     request.level.update(_.copy(autoRender = isEnabled))

@@ -106,6 +106,7 @@ class StackRenderingSupervisor extends Actor {
       .url(failedWorkUrl)
       .withQueryString("key" -> id)
       .withAuth(levelcreatorAuth)
+      .withTimeout(30000)
       .get()
       .map { response =>
         response.status match {
@@ -127,6 +128,7 @@ class StackRenderingSupervisor extends Actor {
       .withQueryString("key" -> id)
       .withHeaders("Content-Type" -> "text/plain")
       .withAuth(levelcreatorAuth)
+      .withTimeout(30000)
       .post(downloadUrls.mkString(" "))
       .map { response =>
         response.status match {
@@ -154,6 +156,7 @@ class StackRenderingSupervisor extends Actor {
       WS
         .url(requestWorkUrl)
         .withQueryString("rendererId" -> rendererId)
+        .withTimeout(30000)
         .withAuth(levelcreatorAuth)
         .get()
         .map { response =>

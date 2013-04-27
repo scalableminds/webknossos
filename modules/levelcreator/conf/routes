@@ -10,6 +10,7 @@ POST     /levels                              controllers.levelcreator.LevelCrea
 GET      /levels/:levelId                     controllers.levelcreator.LevelCreator.use(levelId: String, missionId: String ?= "")
 PUT      /levels/:levelId                     controllers.levelcreator.LevelCreator.submitCode(levelId: String)
 DELETE   /levels/:levelId                     controllers.levelcreator.LevelCreator.delete(levelId: String)
+GET      /levels/:levelId/progress            controllers.levelcreator.LevelCreator.progress(levelId: String)
 
 
 GET      /levels/:levelId/produce             controllers.levelcreator.StackController.produce(levelId: String, count: Int ?= 1)

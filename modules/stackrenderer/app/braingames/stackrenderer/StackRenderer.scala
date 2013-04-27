@@ -23,6 +23,9 @@ import braingames.util.TarIO
 import braingames.util.FileIO
 import braingames.image._
 import javax.imageio.ImageIO
+import scala.concurrent.Await
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 
 case class RenderStack(stack: Stack)
 
@@ -31,7 +34,7 @@ case class ExecLogger(var messages: List[String] = Nil,
     extends ProcessLogger {
   def out(s: => String) {
     messages ::= s
-    Logger.info(s)
+    Logger.trace(s)
   }
 
   def err(s: => String) {
@@ -45,8 +48,11 @@ case class ExecLogger(var messages: List[String] = Nil,
 class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
 
   val logger = new ExecLogger
+  
+  val conf = Play.current.configuration
 
-  val imagesPerRow = 10
+  val imagesPerRow = conf.getInt("stackrenderer.imagesPerRow") getOrElse 10
+  val phantomTimeout = (conf.getInt("stackrenderer.phantom.timeout") getOrElse 30) minutes
 
   def receive = {
     case RenderStack(stack) =>
@@ -66,15 +72,23 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
     val jsFile = FileIO.createTempFile(js, ".js")
     Logger.info("phantomjs " + jsFile.getAbsolutePath())
     val process = ("phantomjs" :: jsFile.getAbsolutePath :: Nil).run(logger, false)
-    val exitValue = process.exitValue()
+    val exitValue = Await.result(
+        Future{
+          process.exitValue()
+        }.recover{
+          case e => 
+            Logger.warn("Phantom execution threw: " +e)
+            -1
+      }, phantomTimeout)
     process.destroy()
     Logger.debug("Finished phantomjs. ExitValue: " + exitValue)
+    exitValue == 0
   }
 
   def renderStack(stack: Stack): Boolean = {
-    produceStackFrames(stack, useLevelUrl.format(stack.level.id, stack.mission.id), binaryDataUrl)
+    val success = produceStackFrames(stack, useLevelUrl.format(stack.level.id, stack.mission.id), binaryDataUrl)
 
-    if (stack.isProduced) {
+    if (stack.isProduced && success) {
       createStackImage(stack)
       tarStack(stack)
       true

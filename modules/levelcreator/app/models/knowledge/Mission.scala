@@ -46,8 +46,10 @@ object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Fun
       "start" -> grater[MissionStart].asDBObject(m.start))) match {
       case Some(stored) =>
         stored.update(_ => m.copy(_id = stored._id))
+        stored._id
       case _ =>
         insertOne(m)
+        m._id
     }
   
   def deleteAllForDataSetExcept(dataSetName: String, missions: List[Mission]) = {

@@ -31,6 +31,9 @@ object StacksInProgress extends BasicDAO[StackRenderingChallenge]("stacksInProgr
     findOne(MongoDBObject("key" -> key))
   }
   
+  def findFor(levelId: ObjectId) = {
+    find(MongoDBObject("_level" -> levelId)).toList
+  }
     
   def find(level: Level, mission: Mission): List[StackRenderingChallenge] = {
     find(MongoDBObject("_level" -> level._id, "_mission" -> mission._id)).toList

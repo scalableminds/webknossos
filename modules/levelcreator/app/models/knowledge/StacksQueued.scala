@@ -19,6 +19,10 @@ object StacksQueued extends BasicDAO[Stack]("stacksQueued"){
     remove(MongoDBObject("level._id" -> level._id, "mission._id" -> mission._id))
   }
   
+  def findFor(levelId: ObjectId) = {
+    find(MongoDBObject("level._id" -> levelId)).toList
+  }
+  
   def find(level: Level, mission: Mission): List[Stack] = {
     find(MongoDBObject("level._id" -> level._id, "mission._id" -> mission._id)).toList
   }

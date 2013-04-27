@@ -1,21 +1,6 @@
 @(level: models.knowledge.Level, stacksInQueue: Option[Int], stacksInProgress: Option[Int])
 @import brainflight.view.helpers._
 
-@calculateProgress(n: Long, p: Int, q: Int) = @{ 
-    val d = (n + p + q).toFloat
-    if(d == 0) 100 -> 0
-    else n*100 / d -> p*100 / d
-}
-
-@progressBar(n: Long)  = {
-    @defining(calculateProgress(n, stacksInProgress.getOrElse(0), stacksInQueue.getOrElse(0))){ progress =>
-      <div class="progress progress-striped">
-        <div class="bar bar-success" style="width: @progress._1%;"></div>
-        <div class="bar bar-warning" style="width: @progress._2%;"></div>
-      </div>
-    }
-}
-
 <tr data-levelid="@level.id">
   <td> 
     <a href="#" data-prompt="@level.id" title="@level.id">#</a>
@@ -24,21 +9,7 @@
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>
   <td class="status-cell"> 
-    @defining(level.numberOfRenderedStacks){ n =>
-      @progressBar(n)
-      <span title="Finished">
-        <i class="icon-ok"></i>
-        @n
-      </span>
-      <span title="in Progress">
-        <i class="icon-retweet"></i>
-        @stacksInProgress.getOrElse(0)
-      </span>
-      <span title="in Queue">
-        <i class="icon-inbox"></i>
-        @stacksInQueue.getOrElse(0)
-      </span>
-    }
+    @levelGenerationProgress(level, stacksInQueue.getOrElse(0), stacksInProgress.getOrElse(0))
   </td>
   <td>  
     <i class="icon-pencil"></i>

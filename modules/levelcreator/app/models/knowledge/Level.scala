@@ -128,10 +128,14 @@ object Level extends BasicDAO[Level]("levels") with CommonFormats with Function9
   def findAutoRenderLevels() = 
     find(MongoDBObject("autoRender" -> true)).toList
     
-  def ensureMissions(level: Level, missions: List[Mission]) = {
-    val rendered = RenderedStack.findFor(level._id).map(_.mission.id)
-    val notRendered = missions.filterNot(m => rendered.contains(m.id))
-    StackController.create(level, notRendered)
+  def ensureMissions(level: Level, missions: List[ObjectId]) = {
+    val rendered = 
+      RenderedStack.findFor(level._id).map(_.mission._id) :::
+      StacksQueued.findFor(level._id).map(_.mission._id) :::
+      StacksInProgress.findFor(level._id).map(_._mission)
+      
+    val notRendered = missions.filterNot(m => rendered.contains(m))
+    StackController.create(level, notRendered.flatMap( e => Mission.findOneById(e)))
   }
 
   def findOneByName(name: String) =

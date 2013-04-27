@@ -87,7 +87,7 @@ object BinaryData extends Controller {
           dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataset.notFound")
           level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
           mission <- Mission.findOneById(missionId) ?~ Messages("mission.notFound")
-          dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
+          dataLayer <- dataSet.dataLayers.get(dataLayerName) orElse dataSet.dataLayers.get(s"$dataLayerName${mission.batchId}") ?~ Messages("datalayer.notFound")
         } yield {
           handleDataRequest(dataSet, dataLayer, level, mission)
         }

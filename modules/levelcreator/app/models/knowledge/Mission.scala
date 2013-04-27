@@ -11,7 +11,17 @@ import com.novus.salat._
 import models.context._
 import scala.util.Random
 
+case class ContextFreeMission(uniqueId: Int, start: MissionStart, errorCenter: Point3D, possibleEnds: List[PossibleEnd]) {
+  def addContext(dataSetName: String, batchId: Int) = Mission(dataSetName, uniqueId, batchId, start, errorCenter, possibleEnds)
+}
+
+object ContextFreeMission extends Function4[Int, MissionStart, Point3D, List[PossibleEnd], ContextFreeMission]{
+  implicit val ContextFreeMissionReader: Reads[ContextFreeMission] = Json.reads[ContextFreeMission]  
+}
+
 case class Mission(dataSetName: String,
+  uniqueId: Int,
+  batchId: Int,
   start: MissionStart,
   errorCenter: Point3D,
   possibleEnds: List[PossibleEnd],
@@ -23,16 +33,17 @@ case class Mission(dataSetName: String,
   lazy val id = _id.toString
 
   def withDataSetName(newDataSetName: String) = copy(dataSetName = newDataSetName)
+  
+  def batchId(newBatchId: Int) = copy(batchId = newBatchId)
 }
 
-object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Function5[String, MissionStart, Point3D, List[PossibleEnd], ObjectId, Mission]{
+object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Function7[String, Int, Int, MissionStart, Point3D, List[PossibleEnd], ObjectId, Mission]{
 
-  def createWithoutDataSet(start: MissionStart, errorCenter: Point3D, possibleEnds: List[PossibleEnd]) =
-    Mission("", start, errorCenter, possibleEnds)
-
-  def unapplyWithoutDataSet(m: Mission) = (m.start, m.errorCenter, m.possibleEnds)
+  def unapplyWithoutDataSetAndBatchId(m: Mission) = (m.uniqueId, m.start, m.errorCenter, m.possibleEnds)
   
   def findByDataSetName(dataSetName: String) = find(MongoDBObject("dataSetName" -> dataSetName)).toList
+  
+  def findOneByUniqueId(uniqueId: Int) = findOne(MongoDBObject("uniqueId" -> uniqueId))
 
   def randomByDataSetName(dataSetName: String) = {
     val missions = findByDataSetName(dataSetName)
@@ -43,7 +54,7 @@ object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Fun
 
   def updateOrCreate(m: Mission) =
     findOne(MongoDBObject("dataSetName" -> m.dataSetName,
-      "start" -> grater[MissionStart].asDBObject(m.start))) match {
+      "uniqueId" -> m.uniqueId)) match {
       case Some(stored) =>
         stored.update(_ => m.copy(_id = stored._id))
         stored._id
@@ -63,10 +74,6 @@ object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Fun
     obsoleteMissions.map(_.id)
   }
   
-  val PartialMissionReader: Reads[Mission] = (
-    (__ \ "start").read[MissionStart] and
-    (__ \ "errorCenter").read[Point3D] and
-    (__ \ "possibleEnds").read[List[PossibleEnd]])(createWithoutDataSet _)
     
   implicit val missionFormat: Format[Mission] = Json.format[Mission]  
 }

@@ -79,18 +79,18 @@ class DataRequestActor(val cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]) ex
   }
 
   def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D) = {
-    val block2Load = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.name, dataLayer.bytesPerElement, resolution, block.x, block.y, block.z)
+    val block2Load = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.baseDir, dataLayer.bytesPerElement, resolution, block.x, block.y, block.z)
 
     def loadFromStore(dataStores: List[ActorRef]): Future[Array[Byte]] = dataStores match {
       case a :: tail =>
         Logger.trace(s"Sending request: $block to ${a.path}")
         (a ? block2Load).mapTo[Array[Byte]].recoverWith {
           case e: AskTimeoutException =>
-            Logger.warn(s"(${dataSet.name}/${dataLayer.name} $block) ${a.path}: Not response in time.")
+            Logger.warn(s"(${dataSet.name}/${dataLayer.baseDir} $block) ${a.path}: Not response in time.")
             loadFromStore(tail)
           case e: ClassCastException =>
             // TODO: find a better way to catch the DataNotFoundException
-            Logger.warn(s"(${dataSet.name}/${dataLayer.name} $block) ${a.path}: Not found.")
+            Logger.warn(s"(${dataSet.name}/${dataLayer.baseDir} $block) ${a.path}: Not found.")
             loadFromStore(tail)
         }
       case _ =>

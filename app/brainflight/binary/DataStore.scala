@@ -26,7 +26,7 @@ import scala.util._
  * system or db implementation) must implement to be used
  */
 
-case class LoadBlock(dataSetBaseDir: String, dataSetName: String, dataLayerName: String, bytesPerElement: Int, resolution: Int,
+case class LoadBlock(dataSetBaseDir: String, dataSetName: String, dataLayerBaseDir: String, bytesPerElement: Int, resolution: Int,
                      x: Int, y: Int, z: Int)
 
 class DataNotFoundException(message: String) extends Exception(s"$message Could not find the data")
@@ -42,7 +42,7 @@ abstract class DataStore extends Actor {
   def load(dataInfo: LoadBlock): Future[Array[Byte]]
 
   def receive = {
-    case request @ LoadBlock(dataSetBaseDir, dataSetName, dataLayerName, bytesPerElement, resolution, x, y, z) =>
+    case request @ LoadBlock(dataSetBaseDir, dataSetName, dataLayerBaseDir, bytesPerElement, resolution, x, y, z) =>
       val s = sender
       load(request).onComplete {
         case Failure(e) =>
@@ -95,7 +95,7 @@ object DataStore {
   def createFilename(dataInfo: LoadBlock) =
     "%s/%s/%d/x%04d/y%04d/z%04d/%s_mag%d_x%04d_y%04d_z%04d.raw".format(
       dataInfo.dataSetBaseDir,
-      dataInfo.dataLayerName,
+      dataInfo.dataLayerBaseDir,
       dataInfo.resolution,
       dataInfo.x, dataInfo.y, dataInfo.z,
       dataInfo.dataSetName,

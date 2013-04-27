@@ -13,6 +13,7 @@ import braingames.util.FileRegExFilter
 import models.knowledge._
 import models.binary._
 import braingames.util.JsonHelper._
+import braingames.util.ExtendedTypes._
 
 case class StartWatchingForMissions()
 case class StopWatchingForMissions()
@@ -38,33 +39,44 @@ class MissionWatcher extends Actor {
     updateTicker.map(_.cancel())
   }
 
-  val missionFileNameRegEx = """^missions[0-9]{4}\.json$""".r
-  val missionFileFilter = new FileRegExFilter(missionFileNameRegEx)
+  val layerDirFilter = new FileRegExFilter("""^layer[0-9]+$""".r)
+  
+  def getMissionFiles(dataSet: DataSet): List[File] = {
+    for{segmentationLayer <- dataSet.segmentationLayers
+        missionsFile = new File(s"${dataSet.baseDir}/${segmentationLayer.baseDir}/missions.json")
+        if missionsFile.isFile
+    } yield {
+      missionsFile
+    }
+  }
+  
+  def extractLayerId(missionFile: File) = {
+    missionFile.getParentFile.getName.replaceFirst("layer","").toIntOpt getOrElse 0
+  }
 
   def lookForMissions() = {
     DataSet.findAll.toList.foreach { dataSet =>
-      val baseFolder = new File(dataSet.baseDir)
-      if (baseFolder.exists) {
-        val missions = aggregateMissions(baseFolder.listFiles(missionFileFilter).toList, dataSet.name)
-        val availableMissionIds = missions.map { Mission.updateOrCreate }
-        Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")
-        val removedMissionIds = Mission.deleteAllForDataSetExcept(dataSet.name, missions)
-        Level.findByDataSetName(dataSet.name).foreach { level =>
-          if (level.autoRender)
-            Level.ensureMissions(level, availableMissionIds)
-          removedMissionIds.map { missionId =>
-            RenderedStack.remove(level._id, missionId)
-          }
+
+      val missions = aggregateMissions(getMissionFiles(dataSet), dataSet.name)
+      val availableMissionIds = missions.map { Mission.updateOrCreate(_) }
+      Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")
+      val removedMissionIds = Mission.deleteAllForDataSetExcept(dataSet.name, missions)
+      Level.findByDataSetName(dataSet.name).foreach { level =>
+        if (level.autoRender)
+          Level.ensureMissions(level, availableMissionIds)
+        removedMissionIds.map { missionId =>
+          RenderedStack.remove(level._id, missionId)
         }
       }
     }
   }
 
-  def aggregateMissions(missionFiles: List[File], dataSetName: String) = {
+  def aggregateMissions(missionFiles: List[File], dataSetName: String): List[Mission] = {
+    Logger.info(s"processing $missionFiles for $dataSetName")
     (missionFiles.flatMap { missionFile =>
       JsonFromFile(missionFile)
-        .asOpt[List[JsObject]]
-        .map(_.flatMap(_.asOpt[Mission](Mission.PartialMissionReader)))
-    }).flatten.map(mission => mission.withDataSetName(dataSetName))
+        .asOpt[List[ContextFreeMission]]
+        .map(_.map(_.addContext(dataSetName, extractLayerId(missionFile))))
+    }).flatten
   }
 }

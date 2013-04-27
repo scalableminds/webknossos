@@ -10,6 +10,7 @@ import net.liftweb.common._
 import braingames.util.JsonHelper._
 import play.api.libs.json._
 import models.binary._
+import braingames.util.ExtendedTypes
 
 case class ImplicitLayerInfo(name: String, resolutions: List[Int])
 case class ExplicitLayerInfo(name: String, dataType: String)
@@ -93,14 +94,53 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
       Some(numbers.max)
     }
   }
+  
+  def getColorLayer(f: File): Option[ColorLayer] = {
+    val colorLayerInfo = new File(f.getPath + "/color/layer.json")
+    if(colorLayerInfo.isFile) {
+      JsonFromFile(colorLayerInfo).validate[ColorLayer] match {
+        case JsSuccess(colorLayer, _) => Some(colorLayer)
+        case JsError(error) =>
+          Logger.error(error.toString)
+          None
+      }
+    } else None
+  }
+  
+  def getSegmentationLayers(f: File): Option[List[SegmentationLayer]] = {
+    val segmentationsDir = new File(f.getPath + "/segmentations")
+    if(segmentationsDir.isDirectory){
+      Some((for{layerDir <- segmentationsDir.listFiles.toList.filter(d => d.isDirectory && d.getName.startsWith("layer"))
+        layerInfo = new File(layerDir.getPath + "/layer.json")
+        if layerInfo.isFile
+     } yield {
+       JsonFromFile(layerInfo).validate[ContextFreeSegmentationLayer] match {
+         case JsSuccess(cfSegmentationLayer, _) => 
+           val parentDir = layerInfo.getParentFile
+           Logger.info(s"found segmentation layer: ${parentDir.getName}")
+           val batchId = parentDir.getName.replaceFirst("layer", "").toIntOpt
+           Some(cfSegmentationLayer.addContext(batchId getOrElse 0))
+         case JsError(error) =>
+           Logger.error(error.toString)
+           None
+       }
+     }).flatten)
+    } else None
+  }
 
   def dataSetFromFile(f: File): Option[DataSet] = {
     if (f.isDirectory) {
       Logger.trace(s"dataSetFromFile: $f")
       val dataSetInfo = new File(f.getPath + "/settings.json")
-      if (dataSetInfo.exists) {
-        JsonFromFile(dataSetInfo).validate[DataSet] match {
-          case JsSuccess(dataSet, _) => Some(dataSet.withBaseDir((f.getAbsolutePath)))
+      if (dataSetInfo.isFile) {
+        JsonFromFile(dataSetInfo).validate[BareDataSet] match {
+          case JsSuccess(bareDataSet, _) => 
+          val colorLayerOpt = getColorLayer(f)
+          val segmentationLayersOpt = getSegmentationLayers(f)
+          for{ colorLayer <- colorLayerOpt
+            segmentationLayers <- segmentationLayersOpt          
+          } yield bareDataSet.addLayers(f.getAbsolutePath, colorLayer, segmentationLayers)
+          
           case JsError(error) =>
             Logger.error(error.toString)
             None

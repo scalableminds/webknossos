@@ -29,7 +29,7 @@ class StackViewer
           $slider = $("<input>", type : "range", min : 0, max : stack.meta.length - 1, value : 0)
           $el
             .html("")
-            .append($canvas, "<br />", $slider)
+            .append($canvas, $slider, "<pre class=\"stack-meta\">#{JSON.stringify(stack.meta, null, " ")}</pre>")
 
           $slider
             .on("change", (event) ->

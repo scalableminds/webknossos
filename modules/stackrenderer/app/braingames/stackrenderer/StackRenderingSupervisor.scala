@@ -52,16 +52,23 @@ class StackRenderingSupervisor extends Actor {
   }
 
   val levelcreatorBaseUrl =
-    conf.getString("levelcreator.baseUrl") getOrElse ("http://localhost:9000")
+    conf.getString("levelcreator.baseUrl") getOrElse ("localhost:9000")
 
   val server = "localhost"
   val port = Option(System.getProperty("http.port")).map(Integer.parseInt(_)).getOrElse(9000)
   val rendererUrl = s"http://$server:$port"
 
-  val requestWorkUrl = levelcreatorBaseUrl + "/renderer/requestWork"
-  val finishedWorkUrl = levelcreatorBaseUrl + "/renderer/finishedWork"
-  val failedWorkUrl = levelcreatorBaseUrl + "/renderer/failedWork"
-  val useLevelUrl = levelcreatorBaseUrl + "/levels/%s?missionId=%s"
+  val requestWorkUrl = s"http://$levelcreatorBaseUrl/renderer/requestWork"
+  val finishedWorkUrl = s"http://$levelcreatorBaseUrl/renderer/finishedWork"
+  val failedWorkUrl = s"http://$levelcreatorBaseUrl/renderer/failedWork"
+  
+  val urlAuth = 
+    if(levelcreatorAuth.isEnabled)
+      s"${levelcreatorAuth.username}:${levelcreatorAuth.password}@"
+    else
+      ""
+  
+  val useLevelUrl = s"http://$urlAuth$levelcreatorBaseUrl/levels/%s?missionId=%s"
 
   val binaryDataUrl = rendererUrl + "/binary/ajax"
 

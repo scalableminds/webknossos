@@ -14,7 +14,7 @@
       @stacks.map{ case (stack, mission) =>
         <div class="stack img-polaroid" style="width: @(level.width + "px");">
           <header class="clearfix">
-            <h4>#@formatHash(stack.mission.id)</h4>
+            <h4>#@(mission.missionId)</h4>
             <div class="stack-buttons">
               <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, stack.mission.id)" class="edit-button">
                 <i class="icon-pencil"></i>
@@ -35,9 +35,6 @@
             <a href="@{stack.downloadUrls.find(_.endsWith(".tar"))}">
               <i class="icon-play"></i>
             </a>
-          </div>
-          <div style="padding-top: 5px">
-          Start: #@mission.start.startId @mission.start.position
           </div>
         </div>
       }

@@ -1,8 +1,8 @@
-@(level: models.knowledge.Level, missionId: String)(implicit session: brainflight.view.UnAuthedSessionData)
+@(level: models.knowledge.Level, mission: models.knowledge.Mission)(implicit session: brainflight.view.UnAuthedSessionData)
 
 @main(){
 
-  <div class="container-fluid" id="level-creator" data-level-id="@level.id" data-level-task-id="@missionId" data-level-dataset-name="@level.dataSetName" data-level-width="@level.width" data-level-height="@level.height" data-level-slidesbeforeproblem="@level.slidesBeforeProblem" data-level-slidesafterproblem="@level.slidesAfterProblem" >
+  <div class="container-fluid" id="level-creator" data-level-id="@level.id" data-level-task-id="@mission.id" data-level-dataset-name="@level.dataSetName" data-level-width="@level.width" data-level-height="@level.height" data-level-slidesbeforeproblem="@level.slidesBeforeProblem" data-level-slidesafterproblem="@level.slidesAfterProblem" >
 
     <div class="row-fluid">
 
@@ -18,7 +18,7 @@
 
       <!--Body content-->
       <div class="span8">
-        <h3>@level.name #@formatHash(missionId)</h3>
+        <h3>@level.name #@mission.missionId</h3>
         <div class="row">
           <div class="span9">
             <div class="well" id="preview">
@@ -53,7 +53,7 @@
             }
 
             <form method="POST" id="produce-form">
-              <input type="hidden" name="missionId" value="@missionId" />
+              <input type="hidden" name="missionId" value="@mission.id" />
               <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" data-ajax="submit,busy-class" class="btn">
                 <i class="icon-retweet"></i> Produce
               </a>

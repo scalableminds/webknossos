@@ -37,7 +37,7 @@ object LevelCreator extends LevelCreatorController {
     for {
       mission <- missionOpt ?~ Messages("mission.notFound")
     } yield {
-      Ok(html.levelcreator.levelCreator(request.level, mission.id))
+      Ok(html.levelcreator.levelCreator(request.level, mission))
     }
   }
 

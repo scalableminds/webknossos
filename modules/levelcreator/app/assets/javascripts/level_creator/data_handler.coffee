@@ -21,12 +21,12 @@ class DataHandler
     $.when(
       @requestGray()
       @requestSegmentation()
-      @requestClassification()
+      #@requestClassification()
       @requestMissionData()
     ).then(
-      ( gray, segmentation, classification, mission ) =>
+      ( gray, segmentation, mission ) =>
 
-        @data = { gray, segmentation, classification, mission }
+        @data = { gray, segmentation, mission }
         @trigger("initialized")
 
       (error) =>

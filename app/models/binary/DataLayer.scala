@@ -110,7 +110,7 @@ case class ClassificationLayer( elementClass: String = "uint8", supportedResolut
 }
 case class SegmentationLayer(batchId: Int, elementClass: String = "uint8", supportedResolutions: List[Int]) extends DataLayer with NearestNeighborInterpolation {
   val name = s"segmentation$batchId"
-  val baseDir = s"segmentations/layer$batchId"
+  val baseDir = s"segmentation/layer$batchId"
 }
 
 case class ContextFreeSegmentationLayer(elementClass: String = "uint8", supportedResolutions: List[Int]) {

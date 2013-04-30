@@ -27,9 +27,12 @@ class StackViewer
           imageData = context.createImageData(stack.meta.width, stack.meta.height)
 
           $slider = $("<input>", type : "range", min : 0, max : stack.meta.length - 1, value : 0)
+
+          prettyMeta = JSON.stringify(stack.meta, null, " ").replace(/\[(\s+(\d+,?)\n)+\s+\]/g, (a) -> a.replace(/\n\s+/g, ""))
+
           $el
             .html("")
-            .append($canvas, $slider, "<pre class=\"stack-meta\">#{JSON.stringify(stack.meta, null, " ")}</pre>")
+            .append($canvas, $slider)
 
           $slider
             .on("change", (event) ->

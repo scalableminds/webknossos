@@ -10,7 +10,6 @@ class Plane
   # This class is supposed to collect all the Geometries that belong to one single plane such as
   # the plane itself, its texture, borders and crosshairs.
 
-  BORDER_COLORS    : [0xff0000, 0x0000ff, 0x00ff00]
   CROSSHAIR_COLORS : [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
   GRAY_CH_COLOR    : 0x222222
 
@@ -62,7 +61,7 @@ class Plane
     prevBordersGeo.vertices.push(new THREE.Vector3(  pWidth/2,  pWidth/2, 0))
     prevBordersGeo.vertices.push(new THREE.Vector3(  pWidth/2, -pWidth/2, 0))
     prevBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2, -pWidth/2, 0))
-    @prevBorders = new THREE.Line(prevBordersGeo, new THREE.LineBasicMaterial({color: @BORDER_COLORS[@planeID], linewidth: 1}))
+    @prevBorders = new THREE.Line(prevBordersGeo, new THREE.LineBasicMaterial({color: constants.PLANE_COLORS[@planeID], linewidth: 1}))
 
   setDisplayCrosshair : (value) =>
     @displayCosshair = value

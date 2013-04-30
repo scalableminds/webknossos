@@ -28,8 +28,7 @@ case class Data(val value: Array[Byte]) extends AnyVal
  * A data store implementation which uses the hdd as data storage
  */
 trait DataCache {
-  implicit def system: ActorSystem
-  lazy val cache = Agent(Map[LoadBlock, Future[Array[Byte]]]().empty)
+  def cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]
 
   // defines the maximum count of cached file handles
   val maxCacheSize = Play.current.configuration.getInt("bindata.cacheMaxSize") getOrElse 100

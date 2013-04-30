@@ -228,12 +228,16 @@ class ArbitraryController
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
-    @gui.updateMoveValue3d(moveValue)
+    @model.user.setValue("moveValue3d", (Number) moveValue)
 
 
   setParticleSize : (delta) =>
 
-    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+    particleSize = @model.user.particleSize + delta
+    particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
+    particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
+
+    @model.user.setValue("particleSize", (Number) particleSize)
 
 
   setRouteClippingDistance : (value) =>

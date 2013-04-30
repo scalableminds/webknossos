@@ -8,6 +8,7 @@ trait ContainsTracingInfo {
   def tracingType: TracingType.Value
   def isEditable: Boolean
   def task: Option[Task]
+  def _name: Option[String]
 }
 
-case class TracingInfo(id: String, dataSetName: String, tracingType: TracingType.Value, isEditable: Boolean, task: Option[Task] = None) extends ContainsTracingInfo
+case class TracingInfo(id: String, dataSetName: String, tracingType: TracingType.Value, isEditable: Boolean, task: Option[Task] = None, _name: Option[String] = None) extends ContainsTracingInfo

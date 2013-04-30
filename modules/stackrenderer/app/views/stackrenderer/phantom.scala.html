@@ -1,0 +1,129 @@
+@(stack: models.knowledge.Stack, levelUrl: String, binaryDataUrl: String)
+
+var page = require("webpage").create();
+var fs = require("fs");
+
+page.viewportSize = { width : 1000, height : 1000 };
+
+setTimeout(
+  function() {
+    console.log("Phantom timeout exceeded.")
+    phantom.exit(-1);
+  }, 
+  60*60*1000 // 60min
+)
+
+var i = 0, stackData;
+
+var imageFilePattern = function(i, ext) { 
+  i = "" + i;
+  var requiredNumberLength = Math.ceil(Math.log(stackData.length + 1) / Math.log(10));
+  while (i.length < requiredNumberLength) i = "0" + i;
+  return "stackImage" + i + "." + ext;
+}
+
+var log = function () {
+  console.log.apply( console, [ "" + Date.now() + ":" ].concat([].slice.call(arguments)) );
+}
+
+var triggerRender = function() {
+  
+  setTimeout(function () {
+    log("rendering frame #" + i);
+    page.evaluate(function(i) {
+      window.levelCreator.headlessRendering(i);
+    }, i);
+  }, 1);
+
+}
+
+page.onCallback = function (data) {
+
+  switch (data.message) {
+
+    case "requestBinaryDataUrl":
+
+      return "@{binaryDataUrl}";
+
+    case "fatalError":
+
+      log("Fatal error!");
+      phantom.exit(-1);
+      return;
+
+    case "initialized":
+  
+      page.clipRect = { top : 0, height : 0, width : data.width, height : data.height };
+
+      stackData = { 
+        width: data.width, 
+        height: data.height,
+        length: data.length,
+        levelName: "@{stack.level.name}",
+        levelId: "@{stack.level.id}",
+        stackId: "@{stack.mission.id}",
+        // images: [],
+        frameData: {}
+      };
+
+      log("" + stackData.length + " frames available");
+      triggerRender();
+
+      break;
+
+    case "rendered":
+
+      var filename = "@{stack.path}/" + imageFilePattern(i, "png");
+      page.render(filename);
+      // stackData.images.push(imageFilePattern(i, "png"));
+
+      log("rendered frame #" + i + " to " + filename);
+
+      if (data.frameData != null) {
+        stackData.frameData["" + i] = data.frameData;
+        log("added frameData for #" + i);
+      }
+      
+      i++;
+      if (i <= stackData.length) {
+        triggerRender();
+      } else {
+        stackData.createdAt = Date.now();
+        fs.write(
+          "@{stack.path}/meta.json",
+          JSON.stringify(stackData),
+          "w"
+        );
+        log("wrote meta file to @{stack.path}/meta.json");
+        
+        phantom.exit();
+      }
+
+      break;
+
+    default:
+
+      log( "unknown message", data.message );
+
+      break;
+  }
+}
+
+page.onConsoleMessage = function(msg) {
+  log( "CONSOLE:", msg );
+}
+
+page.onError = phantom.onError = function(msg, trace) {
+  var msgStack = ['JS ERROR: ' + msg];
+  if (trace) {
+      msgStack.push('TRACE:');
+      trace.forEach(function(t) {
+          msgStack.push(' -> ' + (t.file || t.sourceURL) + ': ' + t.line + (t.function ? ' (in function ' + t.function + ')' : ''));
+      });
+  }
+  console.error(msgStack.join('\n'));
+  phantom.exit(-1);
+}
+
+log("starting")
+page.open("@{levelUrl}");

@@ -13,53 +13,50 @@ import play.api.Play.current
 import play.api.libs.json._
 import play.api.i18n.Messages
 import play.api._
-
 import braingames.levelcreator._
 import views._
 import models.knowledge._
-
-import braingames.util.S3Config
 
 object StackController extends LevelCreatorController {
 
   val conf = Play.current.configuration
 
-  lazy val stackCreator = Akka.system.actorOf(Props[StackCreationSupervisor],
-    name = "stackCreationSupervisor")
+  lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
 
   def list(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    val missions = for {
-      missionId <- request.level.renderedMissions
-      mission <- Mission.findOneById(missionId)
-    } yield mission
+    val missions = RenderedStack.findFor(request.level._id).flatMap(m =>
+      Mission.findOneById(m.mission._id).map(m -> _) )
+
     Ok(html.levelcreator.stackList(request.level, missions))
   }
 
   def listJson(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    Ok(Json.toJson(request.level.renderedMissions))
+    Ok(Json.toJson(RenderedStack.findFor(request.level._id).map(_.mission.id)))
   }
 
   def delete(levelId: String, missionId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    request.level.removeRenderedMission(missionId)
+    val level = request.level
+    RenderedStack.remove(level._id, missionId)
     JsonOk(Messages("level.stack.removed"))
   }
 
   def deleteAll(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    request.level.removeAllRenderedMissions
+    RenderedStack.removeAllOf(request.level._id)
     JsonOk(Messages("level.stack.removedAll"))
   }
 
   def create(level: Level, missions: List[Mission]) = {
-    implicit val timeout = Timeout((1000 * missions.size) seconds)
-    stackCreator ! CreateStacks(level, missions)
+    stackWorkDistributor ! CreateStacks(missions.map(m => Stack(level, m)))
+    JsonOk("Creation is in progress.")
+  }
+
+  def create(level: Level, num: Int) = {
+    stackWorkDistributor ! CreateRandomStacks(level, num)
     JsonOk("Creation is in progress.")
   }
 
   def produce(levelId: String, count: Int) = ActionWithValidLevel(levelId) { implicit request =>
-    val missions = Mission.findByDataSetName(request.level.dataSetName).
-      filterNot(m => request.level.renderedMissions.contains(m.id))
-
-    create(request.level, missions.take(count))
+    create(request.level, count)
   }
 
   def produceAll(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>

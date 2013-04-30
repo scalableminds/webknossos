@@ -24,6 +24,6 @@
       <a href="@controllers.routes.TracingController.trace(tracing.id)"><i class="icon-random"></i> trace</a><br />
       <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)"><i class="icon-download"></i> download</a><br />
       @if(models.tracing.TracingType.isExploratory(tracing)){
-        <a href="@controllers.routes.TracingController.finish(tracing.id, true)" data-ajax="delete-row,confirm=@Messages("tracing.finish.confirm")"><i class="icon-ok-circle"></i> finish</a></td>
+        <a href="@controllers.routes.TracingController.finish(tracing.id, true)" data-ajax="delete-row,confirm=@Messages("tracing.finish.confirm")"><i class="icon-trash"></i> delete</a></td>
       }
   </tr>

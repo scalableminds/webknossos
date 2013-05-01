@@ -104,9 +104,11 @@ class Skeleton
         @updateBranches()
       deleteBranch : => @updateBranches()
       reloadTrees : (trees) =>
-        @route.one("rendered", =>
-          @route.one("rendered", =>
-            @loadSkeletonFromModel(trees)))
+        @route.one("finishedRender", =>
+          @route.one("finishedRender", =>
+            @loadSkeletonFromModel(trees))
+          @flycam.hasChanged = true)
+        @flycam.hasChanged = true
       removeSpheresOfTree : (nodes) => @removeSpheresOfTree(nodes)
 
     @model.user.on "particleSizeChanged", (particleSize) =>
@@ -172,9 +174,11 @@ class Skeleton
     # Add Spheres to the scene
     @trigger "newGeometries", @nodesSpheres
     
-    @route.one("rendered", =>
-      @route.one("rendered", =>
-        @loadSkeletonFromModel()))
+    @route.one("finishedRender", =>
+      @route.one("finishedRender", =>
+        @loadSkeletonFromModel())
+      @flycam.hasChanged = true)
+    @flycam.hasChanged = true
 
   loadSkeletonFromModel : (trees) ->
     unless trees? then trees = @model.route.getTrees()

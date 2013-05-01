@@ -87,7 +87,7 @@ class Gui
       @addSlider(@fView, @settings, "contrast",
         0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
     @addFunction(@fView, @settings, "resetBrightnessAndContrast",
-      "Reset To Default")
+      "Reset B/C")
     @clippingController = @addSlider(@fView, @user, "routeClippingDistance",
       1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
     @clippingControllerArbitrary = @addSlider(@fView, @user, "routeClippingDistanceArbitrary",

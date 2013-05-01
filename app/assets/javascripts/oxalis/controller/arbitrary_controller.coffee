@@ -126,8 +126,8 @@ class ArbitraryController
       "o"             : (timeFactor) => @cam.zoomOut()
 
       #Change move value
-      "h"             : (timeFactor) => @changeMoveValue(0.1)
-      "g"             : (timeFactor) => @changeMoveValue(-0.1)
+      "h"             : (timeFactor) => @changeMoveValue(25)
+      "g"             : (timeFactor) => @changeMoveValue(-25)
     )
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(

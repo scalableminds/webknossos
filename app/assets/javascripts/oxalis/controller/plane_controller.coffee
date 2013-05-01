@@ -210,8 +210,8 @@ class PlaneController
       "o" : => @zoomOut(false)
 
       #Change move value
-      "h" : => @changeMoveValue(10)
-      "g" : => @changeMoveValue(-10)
+      "h" : => @changeMoveValue(25)
+      "g" : => @changeMoveValue(-25)
 
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)

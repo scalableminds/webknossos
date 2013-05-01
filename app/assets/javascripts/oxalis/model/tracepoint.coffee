@@ -26,7 +26,7 @@ class TracePoint
         res.push(neighbor)
     return res
 
-  buildTree : (parent = null) =>
+  buildTree : (parent = null) ->
     @setChildRelation(parent)
 
     childrenIterator = @children
@@ -36,11 +36,19 @@ class TracePoint
       childrenIterator[0].setChildRelation(parentIterator)
       parentIterator = childrenIterator[0]
       childrenIterator = parentIterator.children
-    
+
     for child in childrenIterator
       child.buildTree(parentIterator)
 
   setChildRelation : (@parent) =>
+    
+    # Make sure you only look once at every node. Assumes
+    # that @_seen does not exist or has been initialized
+    # to false for all nodes
+    if @_seen
+      throw "CyclicTree"
+    @_seen = true
+
     @children = @getNext(@parent)
     unless @children?
       @children = []

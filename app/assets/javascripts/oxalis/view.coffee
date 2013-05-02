@@ -48,7 +48,10 @@ class View
       newTree : => 
         @updateActiveComment()
         @updateTrees()
-        @updateActiveTree() 
+        @updateActiveTree()
+      newActiveTreeColor : =>
+        @updateActiveTree()
+        @updateTrees()
       deleteActiveNode : =>
         @updateTrees() })
 

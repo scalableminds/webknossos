@@ -31,10 +31,11 @@ class StateLogger
 
   #### TREES
 
-  treeObject : (tree) ->
+  treeObject : (tree, oldId) ->
     treeColor = new THREE.Color(tree.color)
     return {
-      id: tree.treeId
+      id: if oldId then oldId else tree.treeId
+      updatedId: if oldId then tree.treeId
       color: [treeColor.r, treeColor.g, treeColor.b, 1]
       name: tree.name
       }
@@ -42,8 +43,8 @@ class StateLogger
   createTree : (tree) ->
     @pushDiff("createTree", @treeObject(tree))
 
-  updateTree : (tree) ->
-    @pushDiff("updateTree", @treeObject(tree))
+  updateTree : (tree, oldId = false) ->
+    @pushDiff("updateTree", @treeObject(tree, oldId))
 
   deleteTree : (tree) ->
     @pushDiff("deleteTree", {

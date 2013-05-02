@@ -105,6 +105,9 @@ class Controller
         event.preventDefault()
         @setActiveTree($(event.currentTarget).data("treeid"), true)
 
+      $("#tree-color-shuffle").click =>
+        @model.route.shuffleActiveTreeColor()
+
 
 
   initMouse : ->

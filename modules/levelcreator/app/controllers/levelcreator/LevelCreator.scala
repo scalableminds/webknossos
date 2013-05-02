@@ -11,11 +11,13 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api._
-
 import java.io.File
 import scala.util.Failure
 import models.binary.DataSet
 import braingames.util.ExtendedTypes.ExtendedString
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Future
+import play.api.templates.Html
 
 object LevelCreator extends LevelCreatorController {
 
@@ -29,19 +31,19 @@ object LevelCreator extends LevelCreatorController {
       "dataset" -> text.verifying("dataSet.notFound", DataSet.findOneByName(_).isDefined))(
         Level.fromForm)(Level.toForm)).fill(Level.empty)
 
-  def use(levelId: String, missionId: String) = ActionWithValidLevel(levelId){ implicit request =>
+  def use(levelId: String, missionId: String) = ActionWithValidLevel(levelId) { implicit request =>
     val missionOpt = Mission.findOneById(missionId) orElse
-        Mission.randomByDataSetName(request.level.dataSetName)
+      Mission.randomByDataSetName(request.level.dataSetName)
     for {
       mission <- missionOpt ?~ Messages("mission.notFound")
     } yield {
       Ok(html.levelcreator.levelCreator(request.level, mission.id))
-    } 
+    }
   }
 
   def delete(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-      Level.remove(request.level)
-      JsonOk(Messages("level.removed"))
+    Level.remove(request.level)
+    JsonOk(Messages("level.removed"))
   }
 
   def submitCode(levelId: String) = ActionWithValidLevel(levelId, parse.urlFormEncoded) { implicit request =>
@@ -63,7 +65,7 @@ object LevelCreator extends LevelCreatorController {
   }
 
   def listAssets(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-      Ok(Json.toJson(request.level.assets.map(_.getName)))
+    Ok(Json.toJson(request.level.assets.map(_.getName)))
   }
 
   def retrieveAsset(levelId: String, asset: String) = ActionWithValidLevel(levelId) { implicit request =>
@@ -75,25 +77,56 @@ object LevelCreator extends LevelCreatorController {
   }
 
   def deleteAsset(levelId: String, asset: String) = ActionWithValidLevel(levelId) { implicit request =>
-      if (request.level.deleteAsset(asset))
-        JsonOk(Messages("level.assets.deleted"))
-      else
-        JsonBadRequest(Messages("level.assets.deleteFailed"))
+    if (request.level.deleteAsset(asset))
+      JsonOk(Messages("level.assets.deleted"))
+    else
+      JsonBadRequest(Messages("level.assets.deleteFailed"))
   }
 
   def create = Action(parse.urlFormEncoded) { implicit request =>
-    levelForm.bindFromRequest.fold(
-      formWithErrors => BadRequest(html.levelcreator.levelList(Level.findAll, formWithErrors, DataSet.findAll)), //((taskCreateHTML(taskFromTracingForm, formWithErrors)),
-      { t =>
-        if (Level.isValidLevelName(t.name)) {
-          Level.insertOne(t)
-          Ok(html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll))
-        } else
-          BadRequest(Messages("level.invalidName"))
-      })
+    Async {
+      levelForm.bindFromRequest.fold(
+        formWithErrors =>
+          generateLevelList(formWithErrors).map(BadRequest.apply[Html]), //((taskCreateHTML(taskFromTracingForm, formWithErrors)),
+        { t =>
+          if (Level.isValidLevelName(t.name)) {
+            Level.insertOne(t)
+            generateLevelList(levelForm).map(Ok.apply[Html])
+          } else
+            Future.successful(BadRequest(Messages("level.invalidName")))
+        })
+    }
+  }
+  
+  def progress(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
+    val queued = StacksQueued.findFor(request.level._id).size
+    val inProgress = StacksInProgress.findFor(request.level._id).size
+    Ok(html.levelcreator.levelGenerationProgress(request.level, queued, inProgress))
+  }
+
+  def autoRender(levelId: String, isEnabled: Boolean) = ActionWithValidLevel(levelId) { implicit request =>
+    request.level.update(_.copy(autoRender = isEnabled))
+    if (isEnabled) 
+      JsonOk(Messages("level.render.autoRenderEnabled"))
+    else
+      JsonOk(Messages("level.render.autoRenderDisabled"))
+  }
+
+  def generateLevelList(levelForm: Form[Level])(implicit session: brainflight.view.UnAuthedSessionData): Future[Html] = {
+    WorkController.countActiveRenderers.map { rendererCount =>
+      val stacksInQueue =
+        StacksQueued.findAll.groupBy(_.level._id.toString).mapValues(_.size)
+
+      val stacksInGeneration =
+        StacksInProgress.findAll.groupBy(_._level.toString).mapValues(_.size)
+
+      html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll, stacksInQueue, stacksInGeneration, rendererCount)
+    }
   }
 
   def list = Action { implicit request =>
-    Ok(html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll))
+    Async {
+      generateLevelList(levelForm).map(Ok.apply[Html])
+    }
   }
 }

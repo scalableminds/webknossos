@@ -3,7 +3,7 @@
 # ~~~~
 
 # Home page
-GET     /                           controllers.Application.index
+GET   /binary/ajax   controllers.stackrenderer.BinaryDataController.viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) 
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.at(path="/public", file)
+#GET     /assets/*file               controllers.Assets.at(path="/public", file)

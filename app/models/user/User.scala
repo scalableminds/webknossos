@@ -94,8 +94,6 @@ case class User(
 object User extends BasicDAO[User]("users") {
   this.collection.ensureIndex("email")
 
-  def default = findLocalByEmail("scmboy@scalableminds.com").get
-
   val LocalLoginType = "local"
 
   def findOneByEmail(email: String) = findOne(MongoDBObject(

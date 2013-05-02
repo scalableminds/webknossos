@@ -50,7 +50,12 @@ trait Secured {
    * Defines the access role which is used if no role is passed to an
    * authenticated action
    */
+  val defaultUserName = "scmboy@scalableminds.com"
+  lazy val defaultUser = User.findLocalByEmail(defaultUserName)
+  
   def DefaultAccessRole: Option[Role]
+  
+  val userService = models.services.UserService
 
   /**
    * Defines the default permission used for authenticated actions if not
@@ -64,7 +69,7 @@ trait Secured {
   def maybeUser(implicit request: RequestHeader): Option[User] = {
     for {
       userId <- userId(request)
-      user <- User.findOneById(userId)
+      user <- userService.findOneById(userId)
     } yield user
   }
   /**
@@ -77,7 +82,7 @@ trait Secured {
       case _ if Play.configuration.getBoolean("application.enableAutoLogin").get =>
         // development setting: if the above key is set, one gets logged in 
         // automatically
-        Some(User.default.id)
+        defaultUser.map(_.id)
       case _ =>
         None
     }

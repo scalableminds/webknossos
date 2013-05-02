@@ -53,18 +53,18 @@ class PlaneController
     @prevControls.addClass("btn-group")
 
     buttons = [
-        name : "3D View"
+        name : "3D"
         callback : @cameraController.changePrevSV
       ,
-        name : "XY Plane"
+        name : "XY"
         callback : @cameraController.changePrevXY
         color : "#f00"
       ,
-        name : "YZ Plane"
+        name : "YZ"
         callback : @cameraController.changePrevYZ
         color : "#00f"
       ,
-        name : "XZ Plane"
+        name : "XZ"
         callback : @cameraController.changePrevXZ
         color : "#0f0"
     ]
@@ -104,7 +104,7 @@ class PlaneController
       @input.mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
-          @move [
+          @flycam.moveActivePlane [
             delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
             delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
             0
@@ -159,17 +159,20 @@ class PlaneController
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
+    getVoxelOffset  = (timeFactor) =>
+      return @model.user.moveValue * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+
     @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
-      "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
-      "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
+      "l" : (timeFactor) => @scaleTrianglesPlane(-@model.user.scaleValue * timeFactor )
+      "k" : (timeFactor) => @scaleTrianglesPlane( @model.user.scaleValue * timeFactor )
 
       #Move
-      "left"  : => @moveX(-@model.user.moveValue)
-      "right" : => @moveX( @model.user.moveValue)
-      "up"    : => @moveY(-@model.user.moveValue)
-      "down"  : => @moveY( @model.user.moveValue)
+      "left"  : (timeFactor) => @moveX(-getVoxelOffset(timeFactor))
+      "right" : (timeFactor) => @moveX( getVoxelOffset(timeFactor))
+      "up"    : (timeFactor) => @moveY(-getVoxelOffset(timeFactor))
+      "down"  : (timeFactor) => @moveY( getVoxelOffset(timeFactor))
 
       #misc keys
       # TODO: what does this? I removed it, I need the key.
@@ -179,17 +182,16 @@ class PlaneController
 
     @input.keyboardLoopDelayed = new Input.Keyboard(
 
-      #Move Z
-      "space" : (first) => @moveZ( @model.user.moveValue, first)
-      "f" : (first) => @moveZ( @model.user.moveValue, first)
-      "d" : (first) => @moveZ( - @model.user.moveValue, first)
-      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
-      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
-
-      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
-      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
-
-    )
+      "space"         : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor)    , first)
+      "f"             : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor)    , first)
+      "d"             : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+      "shift + f"     : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor) * 5, first)
+      "shift + d"     : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor) * 5, first)
+    
+      "shift + space" : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+      "ctrl + space"  : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+    
+    , @model.user.keyboardDelay)
 
     @model.user.on({
       keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
@@ -208,8 +210,8 @@ class PlaneController
       "o" : => @zoomOut(false)
 
       #Change move value
-      "h" : => @changeMoveValue(0.1)
-      "g" : => @changeMoveValue(-0.1)
+      "h" : => @changeMoveValue(25)
+      "g" : => @changeMoveValue(-25)
 
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
@@ -265,10 +267,8 @@ class PlaneController
     @sceneController.update()
     @model.route.rendered()
 
-  move : (v) => @flycam.moveActivePlane(v)
-
-  moveX : (x) => @move([x, 0, 0])
-  moveY : (y) => @move([0, y, 0])
+  moveX : (x) => @flycam.moveActivePlane([x, 0, 0])
+  moveY : (y) => @flycam.moveActivePlane([0, y, 0])
   moveZ : (z, first) =>
     if(first)
       activePlane = @flycam.getActivePlane()
@@ -276,19 +276,21 @@ class PlaneController
         [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep()],
         activePlane), activePlane)
     else
-      @move([0, 0, z])
+      @flycam.moveActivePlane([0, 0, z], false)
 
   zoomIn : (zoomToMouse) =>
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @cameraController.zoomIn()
+    @cameraController.zoom(@flycam.getZoomStep() - constants.ZOOM_DIFF)
+    @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()
 
   zoomOut : (zoomToMouse) =>
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @cameraController.zoomOut()
+    @cameraController.zoom(@flycam.getZoomStep() + constants.ZOOM_DIFF)
+    @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()
 
@@ -302,8 +304,6 @@ class PlaneController
                     @zoomPos[1] - mousePos[1],
                     @zoomPos[2] - mousePos[2]]
       @flycam.move(moveVector, @flycam.getActivePlane())
-
-    @model.user.setValue("zoom", @flycam.getZoomStep())
 
   getMousePosition : ->
     activePlane = @flycam.getActivePlane()
@@ -319,7 +319,14 @@ class PlaneController
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
-    @gui.updateMoveValue(moveValue)
+    @model.user.setValue("moveValue", (Number) moveValue)
+
+  scaleTrianglesPlane : (delta) ->
+    scale = @model.user.scale + delta
+    scale = Math.min(constants.MAX_SCALE, scale)
+    scale = Math.max(constants.MIN_SCALE, scale)
+
+    @model.user.setValue("scale", (Number) scale)
 
   setNodeRadius : (delta) =>
     lastRadius = @model.route.getActiveNodeRadius()
@@ -327,7 +334,11 @@ class PlaneController
     @model.route.setActiveNodeRadius(radius)
 
   setParticleSize : (delta) =>
-    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+    particleSize = @model.user.particleSize + delta
+    particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
+    particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
+
+    @model.user.setValue("particleSize", (Number) particleSize)
 
   scroll : (delta, type) =>
     switch type

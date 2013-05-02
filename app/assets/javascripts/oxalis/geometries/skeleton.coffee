@@ -103,15 +103,15 @@ class Skeleton
         @setBranchPoint(isBranchPoint, nodeID)
         @updateBranches()
       deleteBranch : => @updateBranches()
-      # spheres currently disabled
-      #newActiveNodeRadius : (radius) => @setNodeRadius(radius)
       reloadTrees : (trees) =>
         @route.one("rendered", =>
           @route.one("rendered", =>
             @loadSkeletonFromModel(trees)))
       removeSpheresOfTree : (nodes) => @removeSpheresOfTree(nodes)
-      newParticleSize : (size) => @setParticleSize(size)
       newActiveTreeColor : (oldTreeId) => @updateActiveTreeColor(oldTreeId)
+
+    @model.user.on "particleSizeChanged", (particleSize) =>
+      @setParticleSize(particleSize)
 
     @reset()
 
@@ -131,13 +131,13 @@ class Skeleton
       routeGeometry, 
       new THREE.LineBasicMaterial({
         color: @darkenHex(treeColor), 
-        linewidth: @model.route.getParticleSize() / 4}), THREE.LinePieces))
+        linewidth: @model.user.particleSize / 4}), THREE.LinePieces))
 
     @nodes.push(new THREE.ParticleSystem(
       routeGeometryNodes, 
       new THREE.ParticleBasicMaterial({
         color: @darkenHex(treeColor), 
-        size: @model.route.getParticleSize(), 
+        size: @model.user.particleSize, 
         sizeAttenuation : @mode == constants.MODE_ARBITRARY})))
 
     @ids.push(treeId)

@@ -8,7 +8,6 @@ class Flycam2d
 
   TEXTURE_WIDTH      : 512
   MAX_TEXTURE_OFFSET : 31     # maximum difference between requested coordinate and actual texture position
-  ZOOM_DIFF          : 0.1
   MAX_ZOOM_THRESHOLD  : 2
 
   scaleInfo : null
@@ -43,13 +42,10 @@ class Flycam2d
       qualityChanged : (quality) => @setQuality(quality)
       })
 
-  zoomIn : ->
-    @setZoomStep(@zoomStep - @ZOOM_DIFF)
-
-  zoomOut : ->
+  zoom : (zoom) ->
     # Make sure the max. zoom Step will not be exceded
-    if @zoomStep < @zoomStepCount + @maxZoomStepDiff - @ZOOM_DIFF
-      @setZoomStep(@zoomStep + @ZOOM_DIFF)
+    if zoom < @zoomStepCount + @maxZoomStepDiff
+      @setZoomStep(zoom)
 
   # Set offset to the best-possible zoom step
   setQuality : (value) ->
@@ -71,7 +67,9 @@ class Flycam2d
     @zoomStep = zoomStep
     @hasChanged = true
     @calculateBuffer()
-    @trigger "zoomFactorChanged", Math.pow(2, @zoomStep), @zoomStep
+
+  getMaxZoomStep : ->
+    Math.pow(2, @zoomStepCount + @maxZoomStepDiff)
 
   calculateBuffer : ->
     for planeID in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
@@ -110,12 +108,14 @@ class Flycam2d
       p[Dimensions.getIndices(planeID)[2]] *= @spaceDirection[Dimensions.getIndices(planeID)[2]]
     @setPosition([@position[0]+p[0], @position[1]+p[1], @position[2]+p[2]])
     
-  moveActivePlane : (p) -> # vector of voxels in BaseVoxels
+  moveActivePlane : (p, increaseSpeedWithZoom = true) -> # vector of voxels in BaseVoxels
     p = Dimensions.transDim(p, @activePlane)
     ind = Dimensions.getIndices(@activePlane)
-    zoomFactor = Math.pow(2, @zoomStep)
+    zoomFactor = if increaseSpeedWithZoom then Math.pow(2, @zoomStep) else 1
     scaleFactor = @scaleInfo.baseVoxelFactors
-    delta = [p[0]*zoomFactor*scaleFactor[0], p[1]*zoomFactor*scaleFactor[1], p[2]*zoomFactor*scaleFactor[2]]
+    delta = [p[0] * zoomFactor * scaleFactor[0],
+              p[1] * zoomFactor * scaleFactor[1],
+              p[2] * zoomFactor * scaleFactor[2]]
     @move(delta, @activePlane)
 
   toString : ->

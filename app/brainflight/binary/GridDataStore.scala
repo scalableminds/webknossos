@@ -54,31 +54,30 @@ class BinaryData2DBActor extends Actor {
 
   def create(dataSet: DataSet) = {
     val resolution = 1
-    dataSet.dataLayers.get("color").map { dataLayer =>
-      GridDataSetPairing.getOrCreatePrefix(dataSet, dataLayer, 1).map { prefix =>
-        val max = dataSet.maxCoordinates
-        val maxX = ((max.x / 128.0).ceil - 1).toInt
-        val maxY = ((max.y / 128.0).ceil - 1).toInt
-        val maxZ = ((max.z / 128.0).ceil - 1).toInt
+    val dataLayer = dataSet.colorLayer
+    GridDataSetPairing.getOrCreatePrefix(dataSet, dataLayer, 1).map { prefix =>
+      val max = dataSet.maxCoordinates
+      val maxX = ((max.x / 128.0).ceil - 1).toInt
+      val maxY = ((max.y / 128.0).ceil - 1).toInt
+      val maxZ = ((max.z / 128.0).ceil - 1).toInt
 
-        val maxAll = maxX * maxY * maxZ
-        for {
-          x <- 0 to maxX
-          y <- 0 to maxY
-          z <- 0 to maxZ
-        } {
-          val blockInfo = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.name, dataLayer.bytesPerElement, resolution, x, y, z)
-          val f = new File(DataStore.createFilename(blockInfo))
-          val blockId = GridDataStore.blockToId(prefix, x, y, z)
-          val meta = DefaultFileToSave(blockId, id = new BSONObjectID(blockId))
-          val enumerator = Enumerator.fromFile(f)
-          val it = gridFS.save(enumerator, meta, 2359296)
-          it.map(result =>
-            insertionState send { d =>
-              val p = d.get(dataSet) getOrElse (0 -> 0)
-              d.updated(dataSet, (p._1 + 1 -> maxAll))
-            })
-        }
+      val maxAll = maxX * maxY * maxZ
+      for {
+        x <- 0 to maxX
+        y <- 0 to maxY
+        z <- 0 to maxZ
+      } {
+        val blockInfo = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.baseDir, dataLayer.bytesPerElement, resolution, x, y, z)
+        val f = new File(DataStore.createFilename(blockInfo))
+        val blockId = GridDataStore.blockToId(prefix, x, y, z)
+        val meta = DefaultFileToSave(blockId, id = new BSONObjectID(blockId))
+        val enumerator = Enumerator.fromFile(f)
+        val it = gridFS.save(enumerator, meta, 2359296)
+        it.map(result =>
+          insertionState send { d =>
+            val p = d.get(dataSet) getOrElse (0 -> 0)
+            d.updated(dataSet, (p._1 + 1 -> maxAll))
+          })
       }
     }
   }
@@ -97,7 +96,7 @@ class GridDataStore
   gridFS.ensureIndex()
 
   def load(blockInfo: LoadBlock): Future[Array[Byte]] = {
-    GridDataSetPairing.findPrefix(blockInfo.dataSetName, blockInfo.dataLayerName, blockInfo.resolution).flatMap {
+    GridDataSetPairing.findPrefix(blockInfo.dataSetName, blockInfo.dataLayerBaseDir, blockInfo.resolution).flatMap {
       _ match {
         case Some(prefix) =>
           val r = gridFS.find(BSONDocument(

@@ -188,12 +188,8 @@ class CameraController
     @cameras[constants.VIEW_3D].updateProjectionMatrix()
     @flycam.hasChanged = true
 
-  zoomIn : =>
-    @flycam.zoomIn()
-    @updateCamViewport()
-
-  zoomOut : =>
-    @flycam.zoomOut()
+  zoom : (zoom) =>
+    @flycam.zoom(zoom)
     @updateCamViewport()
 
   setRouteClippingDistance : (value) ->
@@ -216,5 +212,7 @@ class CameraController
 
   bind : ->
 
-    @model.user.on "routeClippingDistanceChanged", (value) =>
-      @setRouteClippingDistance(value)
+    @model.user.on 
+      routeClippingDistanceChanged : (value) => @setRouteClippingDistance(value)
+      zoomChanged : (value) => @zoom(Math.log(value) / Math.LN2)
+

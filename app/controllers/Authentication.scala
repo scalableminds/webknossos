@@ -73,7 +73,7 @@ object Authentication extends Controller with Secured {
               Application.Mailer ! Send(
                 DefaultMails.registerMail(user.name, email, brainDBresult))
               Application.Mailer ! Send(
-                DefaultMails.registerAdminNotifyerMail(user.name, brainDBresult))
+                DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBresult))
               if (autoVerify) {
                 Redirect(routes.TracingController.index)
                   .withSession(Secured.createSession(user))

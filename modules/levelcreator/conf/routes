@@ -10,6 +10,7 @@ POST     /levels                              controllers.levelcreator.LevelCrea
 GET      /levels/:levelId                     controllers.levelcreator.LevelCreator.use(levelId: String, missionId: String ?= "")
 PUT      /levels/:levelId                     controllers.levelcreator.LevelCreator.submitCode(levelId: String)
 DELETE   /levels/:levelId                     controllers.levelcreator.LevelCreator.delete(levelId: String)
+GET      /levels/:levelId/progress            controllers.levelcreator.LevelCreator.progress(levelId: String)
 
 
 GET      /levels/:levelId/produce             controllers.levelcreator.StackController.produce(levelId: String, count: Int ?= 1)
@@ -21,14 +22,17 @@ GET      /levels/:levelId/stacks.json         controllers.levelcreator.StackCont
 DELETE   /levels/:levelId/stacks              controllers.levelcreator.StackController.deleteAll(levelId: String)
 DELETE   /levels/:levelId/stacks/:missionId   controllers.levelcreator.StackController.delete(levelId: String, missionId: String)
 
+
+GET      /levels/:levelId/autoRender          controllers.levelcreator.LevelCreator.autoRender(levelId: String, isEnabled: Boolean)
 GET      /levels/:levelId/assets              controllers.levelcreator.LevelCreator.listAssets(levelId: String)
 POST     /levels/:levelId/assets              controllers.levelcreator.LevelCreator.uploadAsset(levelId: String)
 GET      /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCreator.retrieveAsset(levelId: String, asset: String)
 DELETE   /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCreator.deleteAsset(levelId: String, asset: String)
 
 # worker urls
-GET      /renderer/requestWork                controllers.levelcreator.WorkController.request()
-GET      /renderer/finishWork                 controllers.levelcreator.WorkController.finish(responseKey: String)
+GET      /renderer/requestWork                controllers.levelcreator.WorkController.request(rendererId: String)
+POST     /renderer/finishedWork               controllers.levelcreator.WorkController.finished(key: String)
+GET      /renderer/failedWork                 controllers.levelcreator.WorkController.failed(key: String)
 
 #Getting binary Data
 GET      /binary/ajax                         controllers.levelcreator.BinaryData.viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) 
@@ -42,6 +46,5 @@ GET      /missions/:missionId                 controllers.levelcreator.MissionCo
 GET      /assets/javascripts/routes.js        controllers.levelcreator.Application.javascriptRoutes
 
 GET      /assets/level/*file                  controllers.levelcreator.Assets.at(path="/modules/levelcreator/public", file)
-GET      /stacks/*file                        controllers.levelcreator.Assets.at(path="/public/levelStacks", file)
 # Map static resources from the /public folder to the /assets URL path
 GET      /assets/*file                        controllers.Assets.at(path="/public", file)

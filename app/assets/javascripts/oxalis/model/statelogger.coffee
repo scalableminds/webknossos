@@ -145,7 +145,7 @@ class StateLogger
       action : "updateTracing"
       value : {
         branchPoints : branchPoints
-        comments : @route.comments
+        comments : @route.getPlainComments()
         activeNodeId : @route.getActiveNodeId()
         editPosition : @flycam.getPosition()
       }

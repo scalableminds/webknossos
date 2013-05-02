@@ -11,7 +11,7 @@
     </p>
 
     <div id="stack-list" data-levelname="@level.name">
-      @stacks.map{ case (stack, mission) =>
+      @stacks.sortBy(_._2.missionId).map{ case (stack, mission) =>
         <div class="stack img-polaroid" style="width: @(level.width + "px");">
           <header class="clearfix">
             <h4>#@(mission.missionId)</h4>

@@ -43,7 +43,12 @@ case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, name: String = 
 
 trait DBTreeFactory {
   def createFrom(tracingId: ObjectId, t: TreeLike) = {
-    DBTree(tracingId, t.treeId, t.color, nameFromId(t.treeId))
+    val name = 
+      if(t.name == "")
+        nameFromId(t.treeId)
+      else
+        t.name
+    DBTree(tracingId, t.treeId, t.color, name)
   }
 
   def createCopy(t: DBTree, tid: ObjectId) = {

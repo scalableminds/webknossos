@@ -189,7 +189,11 @@ class PlaneController
       "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
       "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
 
-    , 200)
+    )
+
+    @model.user.on({
+      keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
+      })
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
 

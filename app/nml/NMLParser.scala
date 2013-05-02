@@ -78,7 +78,7 @@ class NMLParser(in: InputStream) {
   }
 
   def splitIntoComponents(tree: Tree): List[Tree] = {
-    def emptyTree = Tree(tree.treeId, Set.empty, Set.empty, tree.color)
+    def emptyTree = tree.copy(nodes = Set.empty, edges = Set.empty)
 
     val t = System.currentTimeMillis()
 
@@ -96,7 +96,7 @@ class NMLParser(in: InputStream) {
           case Edge(s, t) if t == node.id => nodeMap.get(s)
         }
 
-        val currentComponent = Tree(tree.treeId, connectedNodes + node, connectedEdges, tree.color)
+        val currentComponent = tree.copy(nodes = connectedNodes + node, edges = connectedEdges)
         val r = (component ++ currentComponent)
         buildTreeFromNode(tail ::: connectedNodes.toList, treeReminder -- currentComponent, r)
       } else
@@ -182,10 +182,15 @@ class NMLParser(in: InputStream) {
       Color(colorRed, colorBlue, colorGreen, colorAlpha)
     }) getOrElse (DEFAULT_COLOR)
   }
+  
+  def parseName(node: XMLNode) = {
+    (node \ "@name").text
+  }
 
   def parseTree(tree: XMLNode, nextNodeId: Int): Option[(NodeMapping, Tree)] = {
     ((tree \ "@id").text).toIntOpt.flatMap { id =>
       val color = parseColor(tree)
+      val name = parseName(tree)
       Logger.trace("Parsing tree Id: %d".format(id))
       val (_, nodeMapping) = (tree \ "nodes" \ "node").foldLeft((nextNodeId, new NodeMapping())) {
         case ((nextNodeId, nodeMapping), nodeXml) =>
@@ -200,7 +205,7 @@ class NMLParser(in: InputStream) {
       val edges = (tree \ "edges" \ "edge").flatMap(parseEdge(nodeMapping)).toSet
 
       if (nodeMapping.size > 0)
-        Some(nodeMapping -> Tree(id, nodeMapping.values.toSet, edges, color))
+        Some(nodeMapping -> Tree(id, nodeMapping.values.toSet, edges, color, name))
       else
         None
     }

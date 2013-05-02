@@ -31,6 +31,7 @@ class User
   nodesAsSpheres : null
   inverseX : null
   inverseY : null
+  keyboardDelay : null
   mouseActive : null
   keyboardActive : null
   gamepadActive : null
@@ -103,6 +104,7 @@ class User
         nodesAsSpheres : @nodesAsSpheres,
         inverseX : @inverseX,
         inverseY : @inverseY,
+        keyboardDelay : @keyboardDelay,
         mouseActive : @mouseActive,
         keyboardActive : @keyboardActive,
         gamepadActive : @gamepadActive,

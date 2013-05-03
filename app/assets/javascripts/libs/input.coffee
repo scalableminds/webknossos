@@ -3,6 +3,7 @@
 ./gamepad : GamepadJS
 ./event_mixin : EventMixin
 ./jquery-mousewheel-3.0.6/jquery.mousewheel : JQ_MOUSE_WHEEL
+oxalis/constants : constants
 ###
 
 Input = {}
@@ -59,7 +60,7 @@ class Input.KeyboardNoLoop
 # fire the attached callback.
 class Input.Keyboard
 
-  DELAY : 1000 / 50
+  DELAY : 1000 / constants.FPS
 
   constructor : (initialBindings, @delay = 0) ->
 
@@ -85,10 +86,13 @@ class Input.Keyboard
         # KeyboardJS does not receive the up event.
         
         unless @keyCallbackMap[key]? or $(":focus").length
-          callback(true)
-          @keyPressedCount++
+          callback(1, true)
+          # reset lastTime
+          callback._lastTime   = null
           callback._delayed    = true
           @keyCallbackMap[key] = callback
+
+          @keyPressedCount++
           @buttonLoop() if @keyPressedCount == 1
         
         if @delay >= 0
@@ -116,7 +120,14 @@ class Input.Keyboard
     if @keyPressedCount > 0
       for own key, callback of @keyCallbackMap
         if not callback._delayed
-          callback()
+
+          curTime  = (new Date()).getTime()
+          # If no lastTime, assume that desired FPS is met
+          lastTime = callback._lastTime || (curTime - 1000 / constants.FPS)
+          elapsed  = curTime - lastTime
+          callback._lastTime = curTime
+
+          callback(elapsed / 1000 * constants.FPS, false)
 
       setTimeout( (=> @buttonLoop()), @DELAY ) 
 

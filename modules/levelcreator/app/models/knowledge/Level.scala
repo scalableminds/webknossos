@@ -9,6 +9,7 @@ import org.bson.types.ObjectId
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
+import controllers.levelcreator.StackController
 
 case class Level(
     name: String,
@@ -18,7 +19,7 @@ case class Level(
     slidesAfterProblem: Int,
     dataSetName: String,
     code: String = Level.defaultCode,
-    renderedMissions: List[String] = List(),
+    autoRender: Boolean = false,
     _id: ObjectId = new ObjectId) extends DAOCaseClass[Level] {
   val dao = Level
 
@@ -26,28 +27,13 @@ case class Level(
 
   lazy val depth = slidesBeforeProblem + slidesAfterProblem
 
-  lazy val stacksFileName = "stacks.json"
-  lazy val stacksFile = new File(s"$stackFolder/$stacksFileName")
-  def hasStacksFile = stacksFile.exists
-  def updateStacksFile {
-
-    if (!hasStacksFile) {
-      stacksFile.getParentFile.mkdirs
-      stacksFile.createNewFile
-    }
-    val out = new PrintWriter(stacksFile)
-    try { out.print(Json.toJson(renderedMissions)) }
-    finally { out.close }
-
-  }
-
   val assetsFolder =
     s"${Level.assetsBaseFolder}/$name/assets"
 
   val stackFolder =
     s"${Level.stackBaseFolder}/$name"
 
-  private def assetFile(name: String) =
+  private def assetFile(name: String) = 
     new File(assetsFolder + "/" + name)
 
   def assets = {
@@ -57,22 +43,12 @@ case class Level(
     else
       f
   }
+    
+  def numberOfRenderedStacks = 
+    RenderedStack.countFor(_id)
 
   def alterCode(c: String) = {
     copy(code = c)
-  }
-
-  def addRenderedMission(missionId: String) = {
-    update(_.copy(renderedMissions = (missionId :: renderedMissions).distinct))
-  }
-
-  def removeAllRenderedMissions = update(_.copy(renderedMissions = List()))
-
-  def removeRenderedMission(missionId: String) = removeRenderedMissions(List(missionId))
-
-  def removeRenderedMissions(missionIds: List[String]): Unit = {
-    update(_.copy(renderedMissions =
-      renderedMissions.filterNot(mId => missionIds.contains(mId))))
   }
 
   def retrieveAsset(name: String) = {
@@ -111,15 +87,15 @@ trait CommonFormats {
       }
       case _ => JsError(Seq(JsPath() -> Seq(ValidationError("validate.error.expected.jsstring"))))
     }
-    
+
     def writes(o: ObjectId) = JsString(o.toString)
   }
 }
 
-object Level extends BasicDAO[Level]("levels") with CommonFormats with Function9[String, Int, Int, Int, Int, String, String, List[String], ObjectId, Level]{
+object Level extends BasicDAO[Level]("levels") with CommonFormats with Function9[String, Int, Int, Int, Int, String, String, Boolean, ObjectId, Level] {
 
   implicit val levelFormat = Json.format[Level]
-  
+
   val defaultDataSetName = "2012-09-28_ex145_07x2"
 
   def fromForm(name: String, width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int, dataSetName: String) = {
@@ -134,20 +110,33 @@ object Level extends BasicDAO[Level]("levels") with CommonFormats with Function9
 
   val stackBaseFolder = {
     val folderName =
-      Play.current.configuration.getString("levelCreator.stackDirectory").getOrElse("public/levelStacks")
+      Play.current.configuration.getString("levelcreator.stackDirectory").getOrElse("public/levelStacks")
     (new File(folderName).mkdirs())
     folderName
   }
 
   val assetsBaseFolder = {
     val folderName =
-      Play.current.configuration.getString("levelCreator.assetsDirecory").getOrElse("data")
+      Play.current.configuration.getString("levelcreator.assetsDirecory").getOrElse("data")
     (new File(folderName).mkdirs())
     folderName
   }
 
   val LevelNameRx = "[0-9A-Za-z\\_\\-\\s\\t]+"r
   val AssetsNameRx = "[0-9A-Za-z\\_\\-\\.\\s\\t]+"r
+  
+  def findAutoRenderLevels() = 
+    find(MongoDBObject("autoRender" -> true)).toList
+    
+  def ensureMissions(level: Level, missions: List[ObjectId]) = {
+    val rendered = 
+      RenderedStack.findFor(level._id).map(_.mission._id) :::
+      StacksQueued.findFor(level._id).map(_.mission._id) :::
+      StacksInProgress.findFor(level._id).map(_._mission)
+      
+    val notRendered = missions.filterNot(m => rendered.contains(m))
+    StackController.create(level, notRendered.flatMap( e => Mission.findOneById(e)))
+  }
 
   def findOneByName(name: String) =
     findOne(MongoDBObject("name" -> name))

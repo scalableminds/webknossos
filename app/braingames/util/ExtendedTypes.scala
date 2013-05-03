@@ -27,6 +27,20 @@ object ExtendedTypes {
       if (cond(fun)) tail(fun) else fun
   }
 
+  import play.api.libs.ws.WS.WSRequestHolder
+  import com.ning.http.client.Realm.AuthScheme
+
+  case class Auth(isEnabled: Boolean, username: String = "", password: String = "")
+
+  implicit class ExtendedWSRequestHolder(r: WSRequestHolder) {
+    def withAuth(a: Auth) = {
+      if (a.isEnabled)
+        r.withAuth(a.username, a.password, AuthScheme.BASIC)
+      else
+        r
+    }
+  }
+
   implicit class ExtendedByteArray(val b: Array[Byte]) extends AnyVal {
     /**
      * Converts this array of bytes to one float value

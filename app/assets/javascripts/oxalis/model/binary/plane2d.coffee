@@ -85,18 +85,9 @@ class Plane2D
     @changed = true
 
 
-  getBucketArray : (center, range, area) ->
+  hasChanged : ->
 
-    buckets = []
-
-    for u in [-(range-area[0])..(area[2]-range)]
-      for v in [-(range-area[1])..(area[3]-range)]
-        bucket = center.slice(0)
-        bucket[@u] += u
-        bucket[@v] += v
-        buckets.push if _.min(bucket) >= 0 then bucket else null
-
-    buckets
+    @changed
 
 
   get : (position, {zoomStep, area}) ->

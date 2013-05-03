@@ -34,6 +34,9 @@ import akka.agent.Agent
 import akka.routing.RoundRobinRouter
 import scala.concurrent.Future
 import play.api.i18n.Messages
+import braingames.image._
+import java.awt.image.BufferedImage
+import braingames.image.JPEGWriter
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 object BinaryData extends Controller with Secured {
@@ -129,6 +132,34 @@ object BinaryData extends Controller with Secured {
       }
     }
   }
+
+  def respondeWithImage(dataSetName: String, dataLayerName: String, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = {
+    Async {
+      val cubeSize = 128
+      val params = ImageCreatorParameters(
+        slideWidth = cubeSize,
+        slideHeight = cubeSize,
+        imagesPerRow = imagesPerRow)
+      for {
+        dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
+        dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
+      } yield {
+        val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z), false)))
+        handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize).map(_.flatMap { result =>
+          ImageCreator.createImage(result.toArray, params).map { imageBuffer =>
+            val file = new JPEGWriter().writeToFile(imageBuffer)
+            Ok.sendFile(file, true, _ => "test.jpg").withHeaders(
+              CONTENT_TYPE -> "image/jpeg")
+          }
+        } getOrElse NotFound)
+      }
+    }
+  }
+
+  def requestImage(dataSetName: String, dataLayerName: String, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated(parser = parse.raw) { implicit request =>
+    respondeWithImage(dataSetName, dataLayerName, imagesPerRow, x, y, z, resolution)
+  }
+
   /**
    * Handles a request for binary data via websockets. The content of a websocket
    * message is defined in the BinaryProtokoll.parseWebsocket function.

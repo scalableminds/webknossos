@@ -1,24 +1,27 @@
-@(level: models.knowledge.Level)
+@(level: models.knowledge.Level, stacksInQueue: Option[Int], stacksInProgress: Option[Int])
 @import brainflight.view.helpers._
 
 <tr data-levelid="@level.id">
   <td> 
     <a href="#" data-prompt="@level.id" title="@level.id">#</a>
-    <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)">@level.name</a>
+    <a href="@controllers.levelcreator.routes.StackController.list(level.id)">@level.name</a>
   </td>
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>
+  <td class="status-cell"> 
+    @levelGenerationProgress(level, stacksInQueue.getOrElse(0), stacksInProgress.getOrElse(0))
+  </td>
   <td>  
-    <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)"><i class="icon-pencil"></i> edit</a><br />
+    <i class="icon-pencil"></i>
+    <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)">edit</a><br />
+    <i class="icon-retweet"></i> 
     <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">
-      <i class="icon-retweet"></i> 
-      produce 
-      <input type="number" value="1" min="1">
-      Stacks
+      produce Stacks
     </a><br />
-    <a href="@controllers.levelcreator.routes.StackController.list(level.id)" class="view-stacks">
-      <i class="icon-picture"></i> view Stacks (@level.renderedMissions.length)
-    </a><br />
-    <a href="@controllers.levelcreator.routes.LevelCreator.delete(level.id)" data-ajax="method=DELETE,delete-row,confirm"><i class="icon-trash"></i> delete </a>
+    <input type="checkbox" @if(level.autoRender) { @Html("checked") } class="auto-render-stacks"> auto render<br />
+    <i class="icon-picture"></i> 
+    <a href="@controllers.levelcreator.routes.StackController.list(level.id)" class="view-stacks">view Stacks</a><br />
+    <i class="icon-trash"></i>
+    <a href="@controllers.levelcreator.routes.LevelCreator.delete(level.id)" data-ajax="method=DELETE,delete-row,confirm">delete</a>
   </td>
 </tr>

@@ -31,7 +31,7 @@ import scala.util._
 object Global extends GlobalSettings {
 
   lazy val DirectoryWatcher = Akka.system.actorOf(
-    Props(new DirectoryWatcherActor(new DataSetChangeHandler)),
+    Props(new DirectoryWatcherActor(new MongoDataSetChangeHandler)),
     name = "directoryWatcher")
 
   override def onStart(app: Application) {
@@ -123,7 +123,7 @@ object InitialData {
         TimeSpan(5, 10, 15))
       TaskType.insertOne(tt)
       if (Task.findAll.isEmpty) {
-        val sample = Tracing.createTracingFor(User.default)
+        val sample = Tracing.createTracingFor(user)
 
         var t = Task.insertOne(Task(
           0,

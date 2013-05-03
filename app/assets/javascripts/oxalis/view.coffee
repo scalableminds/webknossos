@@ -165,7 +165,7 @@ class View
       if treeId != lastTreeId
         newContent.appendChild((
           $('<li>').append($('<i>', {"class": "icon-sitemap"}),
-          $('<span>', {"text": treeId + " - " + @model.route.getTree(treeId).name})))[0])
+          $('<span>', {"text": @model.route.getTree(treeId).name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
         $('<li>').append($('<i>', {"class": "icon-angle-right"}), 

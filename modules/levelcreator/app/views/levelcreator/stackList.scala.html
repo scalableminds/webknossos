@@ -1,6 +1,6 @@
 @(level: models.knowledge.Level, stacks: List[(models.knowledge.RenderedStack, models.knowledge.Mission)])(implicit session: brainflight.view.UnAuthedSessionData)
 @main(){
-  <div class="container">
+  <div class="container wide">
     <h3>@level.name</h3>
     <h4>#@level.id</h4>
 
@@ -11,13 +11,16 @@
     </p>
 
     <div id="stack-list" data-levelname="@level.name">
-      @stacks.map{ case (stack, mission) =>
+      @stacks.sortBy(_._2.missionId).map{ case (stack, mission) =>
         <div class="stack img-polaroid" style="width: @(level.width + "px");">
           <header class="clearfix">
             <h4>#@(mission.missionId)</h4>
             <div class="stack-buttons">
               <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, stack.mission.id)" class="edit-button">
                 <i class="icon-pencil"></i>
+              </a>
+              <a href="@stack.downloadUrls.find(_.endsWith("meta.json"))" class="edit-button">
+                <i class="icon-cog"></i>
               </a>
               <a href="@controllers.levelcreator.routes.StackController.delete(level.id, stack.mission.id)" class="delete-button" data-ajax="method=DELETE,delete-parent=.stack">
                 <i class="icon-trash"></i>
@@ -31,8 +34,8 @@
               </form>
             </div>
           </header>
-          <div class="stack-display clearfix" style="height: @((level.height + 90) + "px");">
-            <a href="@{stack.downloadUrls.find(_.endsWith(".tar"))}">
+          <div class="stack-display clearfix" style="height: @((level.height + 20) + "px");">
+            <a href="@stack.downloadUrls.find(_.endsWith(".tar"))">
               <i class="icon-play"></i>
             </a>
           </div>

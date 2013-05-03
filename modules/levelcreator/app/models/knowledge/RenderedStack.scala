@@ -40,19 +40,24 @@ object RenderedStack extends BasicDAO[RenderedStack]("renderedStacks") with Comm
     count(MongoDBObject("_level" -> levelId))
   }
 
-  def remove(levelId: ObjectId, missionId: String){
-    if (ObjectId.isValid(missionId))
-      remove(MongoDBObject("_level" -> levelId, "mission._id" -> new ObjectId(missionId)))
+  def remove(levelId: ObjectId, missionOId: String){
+    if (ObjectId.isValid(missionOId))
+      remove(MongoDBObject("_level" -> levelId, "mission._id" -> new ObjectId(missionOId)))
   }
 
   def removeAllOf(levelId: ObjectId): WriteResult = {
     remove(MongoDBObject("_level" -> levelId))
   }
-
-  def insertUnique(r: RenderedStack) = {
-    update(MongoDBObject(
-      "mission.key" -> r.mission.key),
-      grater[RenderedStack].asDBObject(r), upsert = true, multi = false)
-  }
-
+  
+  def updateOrCreate(r: RenderedStack) =
+    findOne(MongoDBObject(
+      "_level" -> r._level,
+      "mission.key" -> r.mission.key)) match {
+      case Some(stored) =>
+        stored.update(_ => r.copy(_id = stored._id))
+        stored._id
+      case _ =>
+        insertOne(r)
+        r._id
+    }
 }

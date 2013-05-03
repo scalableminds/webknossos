@@ -79,7 +79,7 @@ class StackWorkDistributor extends Actor {
           mission <- challenge.mission
         } yield {
           val missionInfo = MissionInfo(mission._id, mission.key, mission.possibleEnds)
-          RenderedStack.insertUnique(RenderedStack(level._id, missionInfo, downloadUrls))
+          RenderedStack.updateOrCreate(RenderedStack(level._id, missionInfo, downloadUrls))
           Logger.debug(s"Finished work of $key. Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
         }) getOrElse {
           Logger.error(s"Couldn't update level! Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")

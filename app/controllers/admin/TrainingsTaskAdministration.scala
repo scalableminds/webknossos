@@ -83,7 +83,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
     for {
       task <- Task.findOneById(taskId) ?~ Messages("task.training.notFound")
     } yield {
-      Task.remove(task)
+      Task.removeById(task._id)
       JsonOk(Messages("task.training.deleted"))
     }
   }

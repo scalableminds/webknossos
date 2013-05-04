@@ -98,7 +98,7 @@ object TaskAdministration extends Controller with Secured{
     for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {
-      Task.remove(task)
+      Task.removeById(task._id)
       JsonOk(Messages("task.removed"))
     }
   }
@@ -127,7 +127,7 @@ object TaskAdministration extends Controller with Secured{
     for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
     } yield {
-      UsedTracings.removeAll(tracing)
+      UsedTracings.removeAll(tracing._id)
       tracing match {
         case t if t.tracingType == TracingType.Task =>
           tracing.update(_.cancel)

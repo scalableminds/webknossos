@@ -97,7 +97,7 @@ object TracingController extends Controller with Secured with TracingInformation
   def finishTracing(user: User, tracing: Tracing): Box[(Tracing, String)] = {
     if (isAllowedToFinishTracing(tracing, user)) {
       if (tracing.state.isInProgress) {
-        UsedTracings.removeAll(tracing)
+        UsedTracings.removeAll(tracing._id)
         NMLIO.writeTracingToFile(tracing)
         tracing match {
           case tracing if tracing._task.isEmpty =>

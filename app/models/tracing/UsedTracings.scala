@@ -18,10 +18,10 @@ object UsedTracings extends BasicDAO[UsedTracings]("usedTracings") {
     find( MongoDBObject("user" -> user._id)).map(_.tracing).toList
   
   def removeAll(user: User) {
-    UsedTracings.remove(MongoDBObject("user" -> user._id))
+    remove(MongoDBObject("user" -> user._id))
   }
   
-  def removeAll(tracing: Tracing) {
-    find(MongoDBObject("tracing" -> tracing._id)).toList.foreach(UsedTracings.remove)
+  def removeAll(tracingId: ObjectId) {
+    remove(MongoDBObject("tracing" -> tracingId))
   }
 }

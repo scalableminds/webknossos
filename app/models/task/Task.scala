@@ -85,9 +85,9 @@ object Task extends BasicDAO[Task]("tasks") {
   
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
-  override def remove(t: Task) = {
-    Tracing.removeAllWithTaskId(t._id)
-    super.remove(t)
+  override def removeById(t: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {
+    Tracing.removeAllWithTaskId(t)
+    super.removeById(t, wc)
   }
 
   def isTrainingsTracing(tracing: ContainsTracingInfo) = {

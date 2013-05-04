@@ -21,7 +21,7 @@ object UsedTracings extends BasicDAO[UsedTracings]("usedTracings") {
     remove(MongoDBObject("user" -> user._id))
   }
   
-  def removeAll(tracingId: ObjectId) {
-    remove(MongoDBObject("tracing" -> tracingId))
+  def removeAll(tracing: String) {
+    remove(MongoDBObject("tracing" -> tracing))
   }
 }

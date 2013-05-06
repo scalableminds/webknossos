@@ -1,0 +1,11 @@
+[Unit]
+Description=<%PROJECT%> for project brainflight
+
+[Service]
+ExecStart=/usr/bin/<%PROJECT%>
+Type=forking
+Restart=always
+User=<%PROJECT%>
+
+[Install]
+WantedBy=multi-user.target

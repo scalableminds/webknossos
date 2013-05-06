@@ -29,7 +29,6 @@ class Flycam2d
     @buffer = [[0, 0], [0, 0], [0, 0]]
     @calculateBuffer()
     @position = [0, 0, 0]
-    @texturePosition = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
     @direction = [0, 0, 1]
     @hasChanged = true
     @activePlane = constants.PLANE_XY
@@ -66,6 +65,7 @@ class Flycam2d
   setZoomStep : (zoomStep) ->
     @zoomStep = zoomStep
     @hasChanged = true
+    @calculateIntegerZoomStep()
     @calculateBuffer()
 
   getMaxZoomStep : ->
@@ -124,7 +124,15 @@ class Flycam2d
     @position
 
   getTexturePosition : (planeID) ->
-    @texturePosition[planeID]
+    
+    texturePosition = @position.slice()    #copy that position
+    # As the Model does not render textures for exact positions, the last 5 bits of
+    # the X and Y coordinates for each texture have to be set to 0
+    for i in [0..2]
+      if i != (planeID+2)%3
+        texturePosition[i] &= -1 << (5 + @integerZoomStep)
+
+    return texturePosition
 
   setPositionSilent : (position) ->
     @position = position
@@ -144,7 +152,7 @@ class Flycam2d
     area = @getArea planeID
     ind  = Dimensions.getIndices planeID
     res = ((area[0] < 0) or (area[1] < 0) or (area[2] > @TEXTURE_WIDTH) or (area[3] > @TEXTURE_WIDTH) or
-    (@position[ind[2]] != @texturePosition[planeID][ind[2]]) or
+    (@position[ind[2]] != @getTexturePosition(planeID)[ind[2]]) or
     (@zoomStep - (@integerZoomStep-1)) < @maxZoomStepDiff) or
     (@zoomStep -  @integerZoomStep     > @maxZoomStepDiff)
     return res
@@ -152,8 +160,8 @@ class Flycam2d
   # return the coordinate of the upper left corner of the viewport as texture-relative coordinate
   getOffsets : (planeID) ->
     ind = Dimensions.getIndices planeID
-    [ (@position[ind[0]] - @texturePosition[planeID][ind[0]])/Math.pow(2, @integerZoomStep) + @buffer[planeID][0],
-      (@position[ind[1]] - @texturePosition[planeID][ind[1]])/Math.pow(2, @integerZoomStep) + @buffer[planeID][1]]
+    [ (@position[ind[0]] - @getTexturePosition(planeID)[ind[0]])/Math.pow(2, @integerZoomStep) + @buffer[planeID][0],
+      (@position[ind[1]] - @getTexturePosition(planeID)[ind[1]])/Math.pow(2, @integerZoomStep) + @buffer[planeID][1]]
 
   # returns [left, top, right, bottom] array
   getArea : (planeID) ->
@@ -165,16 +173,6 @@ class Flycam2d
     # two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
     #[offsets[0] - 1, offsets[1] - 1, offsets[0] + size * scaleArray[ind[0]] + 1, offsets[1] + size * scaleArray[ind[1]] + 1]
     [offsets[0], offsets[1], offsets[0] + size * scaleArray[ind[0]], offsets[1] + size * scaleArray[ind[1]]]
-
-  notifyNewTexture : (planeID) ->
-    @texturePosition[planeID] = @position.slice()    #copy that position
-    @calculateIntegerZoomStep()
-    # As the Model does not render textures for exact positions, the last 5 bits of
-    # the X and Y coordinates for each texture have to be set to 0
-    for i in [0..2]
-      if i != (planeID+2)%3
-        @texturePosition[planeID][i] &= -1 << (5 + @integerZoomStep)
-    @calculateBuffer()
 
   hasNewTextures : ->
     (@hasNewTexture[constants.PLANE_XY] or @hasNewTexture[constants.PLANE_YZ] or @hasNewTexture[constants.PLANE_XZ])

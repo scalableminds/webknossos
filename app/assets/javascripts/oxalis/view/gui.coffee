@@ -284,7 +284,7 @@ class Gui
   setMode : (mode) ->
 
     switch mode 
-      when constants.MODE_OXALIS
+      when constants.MODE_PLANE_TRACING
         $(@fFlightcontrols.domElement).hide()
         $(@fViewportcontrols.domElement).show()
         $(@fSkeleton.domElement).show()

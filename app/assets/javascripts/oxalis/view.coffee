@@ -132,7 +132,7 @@ class View
             <div class="modal-body" id="help-modal-body"><p>
             <table class="table table-condensed table-nohead table-bordered"><tbody>'''
       
-    html += generalKeys + if @mode == constants.MODE_OXALIS then viewportKeys + skeletonKeys else arbitraryKeys
+    html += generalKeys + if @mode == constants.MODE_PLANE_TRACING then viewportKeys + skeletonKeys else arbitraryKeys
 
     html += '''</tbody>
             </table>

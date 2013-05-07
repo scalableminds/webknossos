@@ -9,9 +9,9 @@ Constants =
   ALL_PLANES           : [0, 1, 2]
   ALL_VIEWPORTS        : [0, 1, 2, 3]
 
-  MODE_OXALIS          : 0
+  MODE_PLANE_TRACING   : 0
   MODE_ARBITRARY       : 1
-  MODE_VOLUME          : 3
+  MODE_VOLUME          : 2
 
   THEME_BRIGHT         : 0
   THEME_DARK           : 1

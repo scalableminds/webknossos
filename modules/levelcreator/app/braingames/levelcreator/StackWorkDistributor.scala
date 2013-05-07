@@ -24,13 +24,13 @@ case class CountActiveRenderers()
 
 class StackWorkDistributor extends Actor {
   val conf = Play.current.configuration
-  
+
   implicit val sys = context.system
 
-  val maxRendererInactiveTime = 
-     (conf.getInt("levelcreator.render.maxInactiveTime") getOrElse 10) minutes
-  
-  val maxRenderTime = 
+  val maxRendererInactiveTime =
+    (conf.getInt("levelcreator.render.maxInactiveTime") getOrElse 10) minutes
+
+  val maxRenderTime =
     (conf.getInt("levelcreator.render.maxTime") getOrElse 30) minutes
 
   val workingRenderers = Agent[Map[String, Long]](Map.empty)
@@ -50,7 +50,7 @@ class StackWorkDistributor extends Actor {
   }
 
   def deleteInactiveRenderers() = {
-    workingRenderers.send(_.filterNot( System.currentTimeMillis() - _._2 > maxRendererInactiveTime.toMillis))
+    workingRenderers.send(_.filterNot(System.currentTimeMillis() - _._2 > maxRendererInactiveTime.toMillis))
   }
 
   def receive = {
@@ -82,7 +82,10 @@ class StackWorkDistributor extends Actor {
           RenderedStack.updateOrCreate(RenderedStack(level.levelId, missionInfo, downloadUrls))
           Logger.debug(s"Finished work of $key. Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
         }) getOrElse {
-          Logger.error(s"Couldn't update level! Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
+          Logger.error(
+            s"Couldn't update level! Challenge: ${challenge.id} " +
+              s"Level: ${challenge._level.toString} (empy: ${challenge.level.isEmpty})" +
+              s"Mission: ${challenge._mission.toString} (empy: ${challenge.mission.isEmpty})")
         }
         StacksInProgress.removeById(challenge._id)
       }

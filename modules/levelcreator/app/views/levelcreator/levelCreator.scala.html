@@ -18,7 +18,7 @@
 
       <!--Body content-->
       <div class="span8">
-        <h3>@level.name #@mission.missionId</h3>
+        <h3>@level.levelId #@mission.missionId</h3>
         <div class="row">
           <div class="span9">
             <div class="well" id="preview">
@@ -80,11 +80,11 @@
             </div>
             <table class="table table-striped">
               <tbody>
-                @level.assets.map{ file =>
+                @level.assets.map{ asset =>
                   <tr>
-                    <td>@file.getName</td>
+                    <td>@asset.accessName</td>
                     <td>
-                      <a href="@controllers.levelcreator.routes.LevelCreator.deleteAsset(level.id, file.getName)" data-ajax="confirm,delete-row">
+                      <a href="@controllers.levelcreator.routes.LevelCreator.deleteAsset(level.id, asset.accessName)" data-ajax="confirm,delete-row">
                         <i class="icon-trash"></i>
                       </a>
                     </td>

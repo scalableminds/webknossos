@@ -1,7 +1,7 @@
 @(level: models.knowledge.Level, stacks: List[(models.knowledge.RenderedStack, models.knowledge.Mission)])(implicit session: brainflight.view.UnAuthedSessionData)
 @main(){
   <div class="container wide">
-    <h3>@level.name</h3>
+    <h3>@level.levelId</h3>
     <h4>#@level.id</h4>
 
     <p>
@@ -10,7 +10,7 @@
       </a>
     </p>
 
-    <div id="stack-list" data-levelname="@level.name">
+    <div id="stack-list" data-levelname="@level.levelId">
       @stacks.sortBy(_._2.missionId).map{ case (stack, mission) =>
         <div class="stack img-polaroid" style="width: @(level.width + "px");">
           <header class="clearfix">

@@ -56,7 +56,7 @@ class StackWorkDistributor extends Actor {
   def receive = {
     case CreateRandomStacks(l, n) =>
       Level.findOneById(l._id).map { level =>
-        val renderedStacks = RenderedStack.findFor(level._id).map(_.id)
+        val renderedStacks = RenderedStack.findFor(level.levelId).map(_.id)
         Mission.findByDataSetName(level.dataSetName)
           .filter(m =>
             StacksQueued.find(level, m).isEmpty &&
@@ -79,7 +79,7 @@ class StackWorkDistributor extends Actor {
           mission <- challenge.mission
         } yield {
           val missionInfo = MissionInfo(mission._id, mission.key, mission.possibleEnds)
-          RenderedStack.updateOrCreate(RenderedStack(level._id, missionInfo, downloadUrls))
+          RenderedStack.updateOrCreate(RenderedStack(level.levelId, missionInfo, downloadUrls))
           Logger.debug(s"Finished work of $key. Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
         }) getOrElse {
           Logger.error(s"Couldn't update level! Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
@@ -113,7 +113,7 @@ class StackWorkDistributor extends Actor {
     case RequestWork(rendererId) =>
       logActiveRenderer(rendererId)
       StacksQueued.popOne().map { stack =>
-        val challenge = StackRenderingChallenge(stack.id, stack.level._id, stack.mission._id)
+        val challenge = StackRenderingChallenge(stack.id, stack.level.levelId, stack.mission._id)
         StacksInProgress.insert(challenge)
 
         sender ! Some(stack)

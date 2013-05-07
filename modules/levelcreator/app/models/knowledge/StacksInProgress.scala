@@ -9,7 +9,7 @@ import models.basics.DAOCaseClass
 import scala.concurrent.duration.FiniteDuration
 import com.mongodb.casbah.commons.MongoDBObject
 
-case class StackRenderingChallenge(key: String, _level: ObjectId, _mission: ObjectId, timestamp: Long = System.currentTimeMillis, _id: ObjectId = new ObjectId) extends DAOCaseClass[StackRenderingChallenge]{
+case class StackRenderingChallenge(key: String, _level: LevelId, _mission: ObjectId, timestamp: Long = System.currentTimeMillis, _id: ObjectId = new ObjectId) extends DAOCaseClass[StackRenderingChallenge]{
   val id = _id.toString
   val dao = StacksInProgress
 
@@ -31,11 +31,11 @@ object StacksInProgress extends BasicDAO[StackRenderingChallenge]("stacksInProgr
     findOne(MongoDBObject("key" -> key))
   }
   
-  def findFor(levelId: ObjectId) = {
+  def findFor(levelId: LevelId) = {
     find(MongoDBObject("_level" -> levelId)).toList
   }
     
   def find(level: Level, mission: Mission): List[StackRenderingChallenge] = {
-    find(MongoDBObject("_level" -> level._id, "_mission" -> mission._id)).toList
+    find(MongoDBObject("_level" -> level.levelId, "_mission" -> mission._id)).toList
   }
 }

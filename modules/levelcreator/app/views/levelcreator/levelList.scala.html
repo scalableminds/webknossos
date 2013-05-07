@@ -29,7 +29,7 @@
         </tr>
       </thead>
       <tbody>
-      @levels.map{ level => 
+      @levels.sortBy(_.levelId.name).map{ level => 
         @levelTableItem(level, stacksInQueue.get(level.id), stacksInGeneration.get(level.id))
       }
       </tbody>

@@ -51,7 +51,7 @@ class S3Uploader(s3Config: S3Config) extends Actor {
   def buildUploadPairs(stack: Stack): List[Tuple2[File, String]] = {
     val filesToUpload = stack.tarFile :: stack.metaFile :: stack.image :: Nil
 
-    val stackFilePrefix = s"${s3Config.branchName}/${stack.level.id}/${stack.mission.id}"
+    val stackFilePrefix = s"${s3Config.branchName}/${stack.level.levelId}/${stack.mission.id}"
 
     filesToUpload.zip(filesToUpload.map(f =>
       s"$stackFilePrefix/${f.getName}"))

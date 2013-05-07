@@ -23,7 +23,9 @@ object LevelCreator extends LevelCreatorController {
 
   val levelForm = Form(
     mapping(
-      "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
+      "name" -> text
+        .verifying("level.invalidName", Level.isValidLevelName _)
+        .verifying("level.alreadyInUse", name => Level.findByName(name).isEmpty ),
       "width" -> number,
       "height" -> number,
       "slides before problem" -> number,
@@ -50,22 +52,22 @@ object LevelCreator extends LevelCreatorController {
     for {
       code <- postParameter("code") ?~ Messages("level.code.notSupplied")
     } yield {
-      request.level.update(_.alterCode(code))
+      Level.createNewVersion(request.level, code)
       JsonOk("level.code.saved")
     }
   }
 
   def uploadAsset(levelId: String) = ActionWithValidLevel(levelId, parse.multipartFormData) { implicit request =>
-    (for {
+    for {
       assetFile <- request.body.file("asset") ?~ Messages("level.assets.notSupplied")
-      if (request.level.addAsset(assetFile.filename, assetFile.ref.file))
     } yield {
+      request.level.update(_.addAsset(assetFile.filename, assetFile.ref.file))
       JsonOk(Messages("level.assets.uploaded"))
-    }) ?~ Messages("level.assets.uploadFailed")
+    }
   }
 
   def listAssets(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    Ok(Json.toJson(request.level.assets.map(_.getName)))
+    Ok(Json.toJson(request.level.assets.map(_.accessName)))
   }
 
   def retrieveAsset(levelId: String, asset: String) = ActionWithValidLevel(levelId) { implicit request =>
@@ -77,10 +79,8 @@ object LevelCreator extends LevelCreatorController {
   }
 
   def deleteAsset(levelId: String, asset: String) = ActionWithValidLevel(levelId) { implicit request =>
-    if (request.level.deleteAsset(asset))
-      JsonOk(Messages("level.assets.deleted"))
-    else
-      JsonBadRequest(Messages("level.assets.deleteFailed"))
+    request.level.update(_.deleteAsset(asset))
+    JsonOk(Messages("level.assets.deleted"))
   }
 
   def create = Action(parse.urlFormEncoded) { implicit request =>
@@ -89,18 +89,15 @@ object LevelCreator extends LevelCreatorController {
         formWithErrors =>
           generateLevelList(formWithErrors).map(BadRequest.apply[Html]), //((taskCreateHTML(taskFromTracingForm, formWithErrors)),
         { t =>
-          if (Level.isValidLevelName(t.name)) {
             Level.insertOne(t)
             generateLevelList(levelForm).map(Ok.apply[Html])
-          } else
-            Future.successful(BadRequest(Messages("level.invalidName")))
         })
     }
   }
   
   def progress(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    val queued = StacksQueued.findFor(request.level._id).size
-    val inProgress = StacksInProgress.findFor(request.level._id).size
+    val queued = StacksQueued.findFor(request.level.levelId).size
+    val inProgress = StacksInProgress.findFor(request.level.levelId).size
     Ok(html.levelcreator.levelGenerationProgress(request.level, queued, inProgress))
   }
 
@@ -120,7 +117,7 @@ object LevelCreator extends LevelCreatorController {
       val stacksInGeneration =
         StacksInProgress.findAll.groupBy(_._level.toString).mapValues(_.size)
 
-      html.levelcreator.levelList(Level.findAll, levelForm, DataSet.findAll, stacksInQueue, stacksInGeneration, rendererCount)
+      html.levelcreator.levelList(Level.findAllLatest, levelForm, DataSet.findAll, stacksInQueue, stacksInGeneration, rendererCount)
     }
   }
 

@@ -28,7 +28,7 @@ class Controller
     _.extend(@, new EventMixin())
 
     @fullScreen = false
-    @mode = constants.MODE_OXALIS
+    @mode = constants.MODE_PLANE_TRACING
 
     @model = new Model()
 
@@ -59,7 +59,7 @@ class Controller
       @initMouse()
       @initKeyboard()
 
-      @propagateMode(constants.MODE_OXALIS)
+      @propagateMode(constants.MODE_PLANE_TRACING)
 
       if constants.ALLOWED_OXALIS not in @allowedModes
         if constants.ALLOWED_ARBITRARY in @allowedModes
@@ -145,14 +145,14 @@ class Controller
 
   toggleArbitraryView : ->
 
-    if @mode is constants.MODE_OXALIS and constants.ALLOWED_ARBITRARY in @allowedModes
+    if @mode is constants.MODE_PLANE_TRACING and constants.ALLOWED_ARBITRARY in @allowedModes
       @planeController.stop()
       @arbitraryController.start()
       @propagateMode(constants.MODE_ARBITRARY)
     else if @mode is constants.MODE_ARBITRARY and constants.ALLOWED_OXALIS in @allowedModes
       @arbitraryController.stop()
       @planeController.start()
-      @propagateMode(constants.MODE_OXALIS)
+      @propagateMode(constants.MODE_PLANE_TRACING)
 
 
   propagateMode : (mode) ->
@@ -227,7 +227,7 @@ class Controller
 
   centerActiveNode : ->
 
-    if @mode is constants.MODE_OXALIS
+    if @mode is constants.MODE_PLANE_TRACING
       @planeController.centerActiveNode()
     else
       @arbitraryController.centerActiveNode()

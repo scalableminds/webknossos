@@ -119,8 +119,10 @@ class LevelCreator
       $.when(
         @assetHandler.deferred("initialized")
         @dataHandler.deferred("initialized")
-      ).done =>
-        @prepareHeadlessRendering()
+      ).then(
+        => @prepareHeadlessRendering()
+        -> window.callPhantom( message : "fatalError" )
+      )
 
 
   debouncedUpdatePreview : ->

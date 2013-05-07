@@ -16,7 +16,7 @@ import models.binary.DataLayer
  * Date: 10.12.11
  * Time: 12:58
  */
-case class GridDataSetPairing(dataSetName: String, dataLayerName: String, resolution: Int, dataPrefix: Long, _id: ObjectId = new ObjectId) {
+case class GridDataSetPairing(dataSetName: String, dataLayerBaseDir: String, resolution: Int, dataPrefix: Long, _id: ObjectId = new ObjectId) {
   def id = _id.toString
 }
 
@@ -28,7 +28,7 @@ object GridDataSetPairing {
       BSONDocument(
         "_id" -> BSONObjectID(gridPrairing.id),
         "dataSetName" -> BSONString(gridPrairing.dataSetName),
-        "dataLayerName" -> BSONString(gridPrairing.dataLayerName),
+        "dataLayerBaseDir" -> BSONString(gridPrairing.dataLayerBaseDir),
         "resolution" -> BSONInteger(gridPrairing.resolution),
         "dataPrefix" -> BSONLong(gridPrairing.dataPrefix))
     }
@@ -36,10 +36,10 @@ object GridDataSetPairing {
 
   val collection = db.collection("dataSetPairing")
 
-  def findPrefix(dataSetName: String, dataLayerName: String, resolution: Int) = {
+  def findPrefix(dataSetName: String, dataLayerBaseDir: String, resolution: Int) = {
     val query = BSONDocument(
       "dataSetName" -> BSONString(dataSetName),
-      "dataLayerName" -> BSONString(dataLayerName),
+      "dataLayerBaseDir" -> BSONString(dataLayerBaseDir),
       "resolution" -> BSONInteger(resolution))
 
     // get a Cursor[BSONDocument]
@@ -62,11 +62,11 @@ object GridDataSetPairing {
   }
 
   def getOrCreatePrefix(dataSet: DataSet, dataLayer: DataLayer, resolution: Int) = {
-    findPrefix(dataSet.name, dataLayer.name, resolution).flatMap {
+    findPrefix(dataSet.name, dataLayer.baseDir, resolution).flatMap {
       case Some(p) => Future.successful(p)
       case _ =>
         createNextPrefix.map { prefix =>
-          collection.insert(GridDataSetPairing(dataSet.name, dataLayer.name, resolution, prefix))
+          collection.insert(GridDataSetPairing(dataSet.name, dataLayer.baseDir, resolution, prefix))
           prefix
         }
     }

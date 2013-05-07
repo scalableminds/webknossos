@@ -45,6 +45,7 @@ class WritePathToMetaFile
       segmentPayload.path = segment.path
       segmentPayload.id = segment.id
       segmentPayload.value = segment.value
+      segmentPayload.bounding = [segment.xMin, segment.yMin, segment.xMax, segment.yMax]
       if segmentPayload.isEndSegment
         segmentPayload.probability = _.find(mission.possibleEnds, (m) => m.id is segmentPayload.value).probability  
       else 

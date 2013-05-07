@@ -178,11 +178,15 @@ svg a:hover {
 }
 
 #level-list {
-    .produce-stacks input {
-        width: 40px;
-        padding-top: 0;
-        padding-bottom: 0;
-        margin-bottom: 4px;
+    td {
+        vertical-align: middle;
+    }
+    .status-cell span {
+        margin-right: 1em;
+    }
+    .auto-render-stacks {
+        width: 14px;
+        margin-top: 0;
     }
 }
 
@@ -219,15 +223,32 @@ svg a:hover {
     .stack-display {
 
         text-align: center;
+        position: relative;
+        box-shadow: inset 0 0 20px #eee;
 
         a, .loading-indicator {
             display: block;
             font-size: 80px;
             text-align: center;
-            padding-top: 10%;
+            top: 50%;
+            position: absolute;
+            margin-top: -40px;
+            width: 100%;
         }
         input[type="range"] {
             width: 100%;
+        }
+        canvas, input {
+            display: block;
+        }
+        .stack-meta {
+            font-family: "Monaco", Consolas, "Courier New", monospace, sans-serif;
+            height: 50px;
+            overflow: auto;
+            resize: both;
+            text-align: left;
+            font-size: .8em;
+            line-height: 1.5em;
         }
     }
 }

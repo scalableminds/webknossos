@@ -133,9 +133,13 @@ class CellTacingController
   addNode : (position, centered) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
-      @model.route.one("rendered", =>
-        @model.route.one("rendered", =>
-          @model.route.addNode(position, constants.TYPE_USUAL)))
+      # make sure the tree was rendered two times before adding nodes,
+      # otherwise our buffer optimizations won't work
+      @model.route.one("finishedRender", =>
+        @model.route.one("finishedRender", =>
+          @model.route.addNode(position, constants.TYPE_USUAL))
+        @view.draw())
+      @view.draw()
     else
       @model.route.addNode(position, constants.TYPE_USUAL, centered)
 

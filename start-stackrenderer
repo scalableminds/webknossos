@@ -1,0 +1,3 @@
+#!/bin/bash
+
+playframework/play "project stackrenderer" "run -Dhttp.port=9095"

@@ -158,6 +158,8 @@ level.stack.removed=Removed stack
 level.stack.removedAll=Removed all stacks
 level.stack.creationTimeout=Stack creation timed out
 level.stack.created=Stacks created
+level.render.autoRenderEnabled=Auto-rendering enabled
+level.render.autoRenderDisabled=Auto-rendering disabled
 
 mission.notFound=No mission found
 mission.startId.missing=Missing missionStartId parameter

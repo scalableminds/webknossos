@@ -34,6 +34,10 @@ class Controller
 
     @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done (settings) =>
 
+      # Do not continue, when there was an error and we got no settings from the server
+      unless settings
+        return
+
       for allowedMode in settings.allowedModes
         @allowedModes.push switch allowedMode
           when "oxalis" then constants.MODE_PLANE_TRACING
@@ -111,6 +115,9 @@ class Controller
         event.preventDefault()
         @setActiveTree($(event.currentTarget).data("treeid"), true)
 
+      $("#tree-color-shuffle").click =>
+        @model.route.shuffleActiveTreeColor()
+
 
 
   initMouse : ->
@@ -138,9 +145,15 @@ class Controller
       "q" : => @toggleFullScreen()
 
       #Activate ArbitraryView
-      "1" : => @setMode(constants.MODE_PLANE_TRACING)
-      "2" : => @setMode(constants.MODE_ARBITRARY)
-      "3" : => @setMode(constants.MODE_VOLUME)
+      "1" : =>
+        console.log "Set mode:", 1
+        @setMode(constants.MODE_PLANE_TRACING)
+      "2" : =>
+        console.log "Set mode:", 2
+        @setMode(constants.MODE_ARBITRARY)
+      "3" : =>
+        console.log "Set mode:", 3
+        @setMode(constants.MODE_VOLUME)
     )
 
 

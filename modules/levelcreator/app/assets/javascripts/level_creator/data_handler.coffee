@@ -28,14 +28,26 @@ class DataHandler
 
         @data = { gray, segmentation, classification, mission }
         @trigger("initialized")
-    )  
+
+      (error) =>
+        @__deferreds["initialized"].reject(error)
+    )
+
+
+  getBinaryDataUrl : (dataLayerName) ->
+
+    if window.callPhantom?
+      url : "#{window.callPhantom( message : "requestBinaryDataUrl" )}?dataSetName=#{@dataSetName}&levelId=#{@levelId}&missionId=#{@missionId}&dataLayerName=#{dataLayerName}"
+      method : "GET"
+    else
+      Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, dataLayerName)
 
 
   requestGray : ->
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, "color")
+        @getBinaryDataUrl("color")
         dataType : "arraybuffer"
       )
     ).then(
@@ -48,7 +60,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, "segmentation")
+        @getBinaryDataUrl("segmentation")
         dataType : "arraybuffer"
       )
     ).then(
@@ -61,7 +73,7 @@ class DataHandler
 
     Request.send(
       _.extend(
-        Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, "classification")
+        @getBinaryDataUrl("classification")
         dataType : "arraybuffer"
       )
     ).then(

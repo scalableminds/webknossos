@@ -24,6 +24,7 @@ class User
   contrast : null
   quality : null
   zoom : null
+  scale : null
   displayPreviewXY : null
   displayPreviewYZ : null
   displayPreviewXZ : null
@@ -97,6 +98,7 @@ class User
         contrast: @contrast, 
         quality : @quality,
         zoom : @zoom,
+        scale : @scale,
         displayPreviewXY : @displayPreviewXY,
         displayPreviewYZ : @displayPreviewYZ,
         displayPreviewXZ : @displayPreviewXZ,

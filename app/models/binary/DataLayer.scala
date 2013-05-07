@@ -62,6 +62,7 @@ trait NearestNeighborInterpolation {
 }
 
 sealed trait DataLayer{
+  val baseDir: String
   val name: String
   val elementClass: String
 
@@ -99,24 +100,30 @@ trait DataLayerJsonFormat {
   
 }
 
-case class ColorLayer(elementClass: String = "uint8", supportedResolutions: List[Int]) extends DataLayer with TrilerpInterpolation {
+case class ColorLayer( elementClass: String = "uint8", supportedResolutions: List[Int]) extends DataLayer with TrilerpInterpolation {
   val name = "color"
+  val baseDir = name
 }
-case class ClassificationLayer(elementClass: String = "uint8", supportedResolutions: List[Int], flags: List[String]) extends DataLayer with NearestNeighborInterpolation {
+case class ClassificationLayer( elementClass: String = "uint8", supportedResolutions: List[Int], flags: List[String]) extends DataLayer with NearestNeighborInterpolation {
   val name = "classification"
+  val baseDir = name
 }
-case class SegmentationLayer(elementClass: String = "uint8", supportedResolutions: List[Int]) extends DataLayer with NearestNeighborInterpolation {
-  val name = "segmentation"
+case class SegmentationLayer(batchId: Int, elementClass: String = "uint8", supportedResolutions: List[Int]) extends DataLayer with NearestNeighborInterpolation {
+  val name = s"segmentation$batchId"
+  val baseDir = s"segmentation/layer$batchId"
+}
+
+case class ContextFreeSegmentationLayer(elementClass: String = "uint8", supportedResolutions: List[Int]) {
+  def addContext(batchId: Int) = SegmentationLayer(batchId, elementClass, supportedResolutions)
+}
+
+object ContextFreeSegmentationLayer extends DataLayerJsonFormat {
+  implicit val ContextFreeSegmentationLayerReads: Reads[ContextFreeSegmentationLayer] = dataLayerReadsBuilder(ContextFreeSegmentationLayer.apply _)
 }
 
 object ColorLayer extends DataLayerJsonFormat{
   implicit val ColorLayerReads: Reads[ColorLayer] = dataLayerReadsBuilder(ColorLayer.apply _)
   implicit val ColorLayerWrites: Writes[ColorLayer] = dataLayerWritesBuilder(dataLayerUnapply _)
-}
-
-object SegmentationLayer extends DataLayerJsonFormat {
-  implicit val SegmentationLayerReads: Reads[SegmentationLayer] = dataLayerReadsBuilder(SegmentationLayer.apply _)
-  implicit val SegmentationLayerWrites: Writes[SegmentationLayer] = dataLayerWritesBuilder(dataLayerUnapply _)
 }
 
 object ClassificationLayer extends DataLayerJsonFormat {

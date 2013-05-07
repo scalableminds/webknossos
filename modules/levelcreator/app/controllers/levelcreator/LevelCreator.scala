@@ -106,7 +106,7 @@ object LevelCreator extends LevelCreatorController {
   
   def setAsActiveVersion(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
     Level.setAsActiveVersion(request.level)
-    Ok
+    JsonOk(Messages("level.render.setAsActiveVersion"))
   }
 
   def autoRender(levelId: String, isEnabled: Boolean) = ActionWithValidLevel(levelId) { implicit request =>
@@ -120,10 +120,10 @@ object LevelCreator extends LevelCreatorController {
   def generateLevelList(levelForm: Form[Level])(implicit session: brainflight.view.UnAuthedSessionData): Future[Html] = {
     WorkController.countActiveRenderers.map { rendererCount =>
       val stacksInQueue =
-        StacksQueued.findAll.groupBy(_.level._id.toString).mapValues(_.size)
+        StacksQueued.findAll.groupBy(_.level.levelId).mapValues(_.size)
 
       val stacksInGeneration =
-        StacksInProgress.findAll.groupBy(_._level.toString).mapValues(_.size)
+        StacksInProgress.findAll.groupBy(_._level).mapValues(_.size)
 
       html.levelcreator.levelList(Level.findAllLatest, levelForm, DataSet.findAll, stacksInQueue, stacksInGeneration, rendererCount)
     }

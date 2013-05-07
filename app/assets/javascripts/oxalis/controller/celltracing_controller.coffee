@@ -26,6 +26,13 @@ class CellTacingController
 
     @keyboardControls =
 
+      "8" : => @sceneController.toggleSkeletonVisibility()
+      "9" : => @sceneController.toggleInactiveTreeVisibility()
+
+      #Delete active node
+      "delete" : => @model.route.deleteActiveNode()
+      "c" : => @model.route.createNewTree()
+
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 

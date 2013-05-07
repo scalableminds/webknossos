@@ -4,6 +4,7 @@ underscore : _
 ./controller/plane_controller : PlaneController
 ./controller/arbitrary_controller : ArbitraryController
 ./controller/abstract_tree_controller : AbstractTreeController
+./controller/scene_controller : SceneController
 ./model : Model
 ./view : View
 ../libs/event_mixin : EventMixin
@@ -47,9 +48,11 @@ class Controller
 
       @gui = @createGui(settings)
 
-      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene)
+      @sceneController = new SceneController(@model.binary.cube.upperBoundary, @model.flycam, @model)
 
-      @arbitraryController = new ArbitraryController(@model, stats, @gui, @view.renderer, @view.scene)
+      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController)
+
+      @arbitraryController = new ArbitraryController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController)
 
       @abstractTreeController = new AbstractTreeController(@model)
 
@@ -131,19 +134,12 @@ class Controller
 
       "q" : => @toggleFullScreen()
 
-      "1" : => @planeController.toggleSkeletonVisibility()
-
-      "2" : => @planeController.toggleInactiveTreeVisibility()
-
-      #Delete active node
-      "delete" : => @deleteActiveNode()
-
-      "c" : => @createNewTree()
-
-
-
       #Activate ArbitraryView
       "m" : => @toggleArbitraryView()
+
+      "1" : => @setMode()
+      "2" : => @setMode()
+      "3" : => @setMode()
     )
 
 

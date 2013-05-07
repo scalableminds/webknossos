@@ -2,7 +2,6 @@
 jquery : $
 underscore : _
 ./camera_controller : CameraController
-./scene_controller : SceneController
 ../model/dimensions : Dimensions
 libs/event_mixin : EventMixin
 libs/input : Input
@@ -35,7 +34,7 @@ class PlaneController
       @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @gui, renderer, scene) ->
+  constructor : (@model, stats, @gui, renderer, scene, @sceneController) ->
 
     _.extend(@, new EventMixin())
 
@@ -80,7 +79,6 @@ class PlaneController
           .on("click", button.callback)
       )    
 
-    @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
     objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }
     @cellTracingController = new CellTracingController( objects )
     @volumeTracingController = new VolumeTracingController( objects )

@@ -16,6 +16,7 @@ import play.api._
 import braingames.levelcreator._
 import views._
 import models.knowledge._
+import play.api.mvc.Action
 
 object StackController extends LevelCreatorController {
 
@@ -23,11 +24,11 @@ object StackController extends LevelCreatorController {
 
   lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
 
-  def list(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    val missions = RenderedStack.findFor(request.level.levelId).flatMap(m =>
-      Mission.findOneById(m.mission._id).map(m -> _) )
-
-    Ok(html.levelcreator.stackList(request.level, missions))
+  def list(levelName: String) = Action { implicit request =>
+    val rendered = Level.findByName(levelName).map { level =>
+      level -> RenderedStack.findFor(level.levelId)
+    }.toMap
+    Ok(html.levelcreator.stackList(rendered))
   }
 
   def listJson(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>

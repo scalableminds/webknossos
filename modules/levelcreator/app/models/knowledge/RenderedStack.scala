@@ -12,12 +12,12 @@ import models.context._
 import scala.util.Random
 import com.mongodb.WriteResult
 
-case class MissionInfo(_id: ObjectId, key: String, possibleEnds: List[PossibleEnd]){
+case class MissionInfo(_id: ObjectId, key: String, possibleEnds: List[PossibleEnd]) {
   def id = _id.toString
 }
 
 case class RenderedStack(
-    level: LevelId,
+    _level: LevelId,
     mission: MissionInfo,
     downloadUrls: List[String],
     _id: ObjectId = new ObjectId) extends DAOCaseClass[RenderedStack] {
@@ -33,30 +33,40 @@ object RenderedStack extends BasicDAO[RenderedStack]("renderedStacks") with Comm
   implicit val renderedStackFormat: Format[RenderedStack] = Json.format[RenderedStack]
 
   def findFor(levelId: LevelId) = {
-    find(MongoDBObject("level" -> levelId)).toList
-  }
-  
-  def countFor(levelId: LevelId) = {
-    count(MongoDBObject("level" -> levelId))
+    find(MongoDBObject(
+      "_level.name" -> levelId.name,
+      "_level.version" -> levelId.version)).toList
   }
 
-  def remove(levelId: LevelId, missionOId: String){
-    if (ObjectId.isValid(missionOId))
-      remove(MongoDBObject("level" -> levelId, "mission._id" -> new ObjectId(missionOId)))
+  def countFor(levelId: LevelId) = {
+    count(MongoDBObject(
+      "_level.name" -> levelId.name,
+      "_level.version" -> levelId.version))
   }
-  
+
+  def remove(levelId: LevelId, missionOId: String) {
+    if (ObjectId.isValid(missionOId))
+      remove(MongoDBObject(
+        "_level.name" -> levelId.name,
+        "_level.version" -> levelId.version,
+        "mission._id" -> new ObjectId(missionOId)))
+  }
+
   def removeAllOfMission(missionOId: String) = {
     if (ObjectId.isValid(missionOId))
-      remove(MongoDBObject( "mission._id" ->  new ObjectId(missionOId)))
+      remove(MongoDBObject("mission._id" -> new ObjectId(missionOId)))
   }
-  
+
   def removeAllOf(levelId: LevelId): WriteResult = {
-    remove(MongoDBObject("level" -> levelId))
+    remove(MongoDBObject(
+      "_level.name" -> levelId.name,
+      "_level.version" -> levelId.version))
   }
-  
+
   def updateOrCreate(r: RenderedStack) =
     findOne(MongoDBObject(
-      "level" -> r.level,
+      "_level.name" -> r._level.name,
+      "_level.version" -> r._level.version,
       "mission.key" -> r.mission.key)) match {
       case Some(stored) =>
         stored.update(_ => r.copy(_id = stored._id))

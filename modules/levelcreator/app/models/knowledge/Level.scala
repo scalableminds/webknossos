@@ -194,21 +194,31 @@ object Level extends BasicDAO[Level]("levels") with CommonFormats with Function1
 
   def setAsActiveVersion(level: Level) = {
     update(
-      MongoDBObject("levelId.name" -> level.levelId.name),
-      MongoDBObject("$set" -> MongoDBObject("isActive" -> false)))
+      MongoDBObject(
+        "levelId.name" -> level.levelId.name),
+      MongoDBObject(
+        "$set" -> MongoDBObject("isActive" -> false)))
+
     update(
-      MongoDBObject("levelId" -> level.levelId),
-      MongoDBObject("$set" -> MongoDBObject("isActive" -> true)))
+      MongoDBObject(
+        "levelId.name" -> level.levelId.name,
+        "levelId.version" -> level.levelId.version),
+      MongoDBObject(
+        "$set" -> MongoDBObject("isActive" -> true)))
   }
 
   def findAllLatest() =
-    find(MongoDBObject("isLatest" -> true)).toList
+    find(MongoDBObject(
+      "isLatest" -> true)).toList
 
   def findAllActive() =
-    find(MongoDBObject("isLatest" -> true)).toList
+    find(MongoDBObject(
+      "isActive" -> true)).toList
 
   def findAutoRenderLevels() =
-    find(MongoDBObject("autoRender" -> true, "isActive" -> true)).toList
+    find(MongoDBObject(
+      "autoRender" -> true,
+      "isActive" -> true)).toList
 
   def ensureMissions(level: Level, missions: List[ObjectId]) = {
     val rendered =
@@ -221,19 +231,29 @@ object Level extends BasicDAO[Level]("levels") with CommonFormats with Function1
   }
 
   def findByName(name: String) =
-    find(MongoDBObject("levelId.name" -> name)).toList
+    find(MongoDBObject(
+      "levelId.name" -> name)).toList
 
   def findOneById(levelId: LevelId) =
-    findOne(MongoDBObject("levelId" -> levelId))
+    findOne(MongoDBObject(
+      "levelId.name" -> levelId.name,
+      "levelId.version" -> levelId.version))
 
   def findActiveOneBy(name: String) =
-    findOne(MongoDBObject("levelId.name" -> name, "isActive" -> true))
+    findOne(MongoDBObject(
+      "levelId.name" -> name,
+      "isActive" -> true))
 
   def findActiveByDataSetName(dataSetName: String) =
-    find(MongoDBObject("dataSetName" -> dataSetName, "isActive" -> true)).toList
+    find(MongoDBObject(
+      "dataSetName" -> dataSetName,
+      "isActive" -> true)).toList
 
   def findActiveAutoRenderByDataSetName(dataSetName: String) =
-    find(MongoDBObject("dataSetName" -> dataSetName, "isActive" -> true, "autoRender" -> true)).toList
+    find(MongoDBObject(
+      "dataSetName" -> dataSetName,
+      "isActive" -> true,
+      "autoRender" -> true)).toList
 
   val LevelNameRx = "[0-9A-Za-z\\_\\-\\s\\t]+"r
 

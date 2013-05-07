@@ -4,7 +4,7 @@
 <tr data-levelid="@level.id">
   <td> 
     <a href="#" data-prompt="@level.id" title="@level.id">#</a>
-    <a href="@controllers.levelcreator.routes.StackController.list(level.id)">@level.levelId</a>
+    <a href="@controllers.levelcreator.routes.StackController.list(level.id)">@level.levelId.toBeautifiedString</a>
   </td>
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>

@@ -13,6 +13,8 @@ import controllers.levelcreator.StackController
 
 case class LevelId(name: String, version: Int = 0){
   override def toString = s"${name}__${version}"
+  
+  def toBeautifiedString = name + ", Version " + version
 }
 
 case class Asset(accessName: String, version: Int){

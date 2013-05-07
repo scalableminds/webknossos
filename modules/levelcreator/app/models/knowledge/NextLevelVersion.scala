@@ -29,7 +29,7 @@ object NextLevelVersion extends BasicDAO[NextLevelVersion]("nextLevelVersions") 
   }
 
   def getNextVersion(name: String) = {
-    val v = findVersionByName(name) getOrElse 0
+    val v = findVersionByName(name) getOrElse 1
     setVersionFor(name, v + 1)
     v
   }

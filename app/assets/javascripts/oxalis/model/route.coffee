@@ -626,7 +626,7 @@ class Route
     return result
 
 
-  rendered : -> @trigger("rendered")
+  rendered : -> @trigger("finishedRender")
 
 
   # Helper method used in initialization

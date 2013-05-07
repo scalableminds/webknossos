@@ -3,6 +3,7 @@ package models.knowledge
 import models.basics.BasicDAO
 import com.mongodb.casbah.Imports._
 import com.novus.salat.annotations._
+import play.api.Logger
 
 object StacksQueued extends BasicDAO[Stack]("stacksQueued"){
   this.collection.ensureIndex(MongoDBObject("level.levelId" -> 1, "mission._id" -> 1))
@@ -20,7 +21,9 @@ object StacksQueued extends BasicDAO[Stack]("stacksQueued"){
   }
   
   def findFor(levelId: LevelId) = {
-    find(MongoDBObject("level.levelId" -> levelId)).toList
+    val m = MongoDBObject("level.levelId" -> levelId)
+    Logger.error("FIND FOR: " + m.toMap())
+    find(m).toList
   }
   
   def find(level: Level, mission: Mission): List[Stack] = {

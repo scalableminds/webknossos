@@ -453,6 +453,22 @@ class Route
       ColorConverter.setHSV(new THREE.Color(), currentHue, 1, 1).getHex()
 
 
+  shuffleActiveTreeColor : ->
+
+    oldTreeId = @activeTree.treeId
+    @activeTree.treeId = @treeIdCount++
+    @activeTree.color = @getNewTreeColor(@activeTree.treeId)
+
+    # update tree ids
+    for node in @activeTree.nodes
+      node.treeId = @activeTree.treeId
+
+    @stateLogger.updateTree(@activeTree, oldTreeId)
+
+    @trigger("newActiveTree")
+    @trigger("newActiveTreeColor", oldTreeId)
+
+
   createNewTree : ->
 
     tree = new TraceTree(

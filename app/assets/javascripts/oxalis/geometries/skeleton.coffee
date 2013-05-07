@@ -110,6 +110,7 @@ class Skeleton
           @flycam.hasChanged = true)
         @flycam.hasChanged = true
       removeSpheresOfTree : (nodes) => @removeSpheresOfTree(nodes)
+      newActiveTreeColor : (oldTreeId) => @updateActiveTreeColor(oldTreeId)
 
     @model.user.on "particleSizeChanged", (particleSize) =>
       @setParticleSize(particleSize)
@@ -182,6 +183,7 @@ class Skeleton
 
   loadSkeletonFromModel : (trees) ->
     unless trees? then trees = @model.route.getTrees()
+
     for tree in trees
       nodeList = tree.nodes
       index = @getIndexFromTreeId(tree.treeId)
@@ -277,6 +279,20 @@ class Skeleton
     @branches.material.size = size
     @activeNodeParticle.material.size = size
     @flycam.hasChanged = true
+
+  updateActiveTreeColor : (oldTreeId) ->
+    index = @getIndexFromTreeId(oldTreeId)
+    treeColor = @route.getTree().color
+
+    @ids[index] = @route.getActiveTreeId()
+    @nodes[index].material.color = new THREE.Color(@darkenHex(treeColor))
+    @routes[index].material.color = new THREE.Color(@darkenHex(treeColor))
+
+    @nodes[index].material.needsUpdate = true
+    @routes[index].material.needsUpdate = true
+
+    @updateBranches()
+    @setActiveNode()
 
   getMeshes : =>
     return [@activeNodeParticle].concat(@nodes).concat(@nodesSpheres).concat(@routes).concat(@branches)

@@ -70,11 +70,12 @@ case class DeleteTree(value: JsObject) extends TracingUpdater {
 case class UpdateTree(value: JsObject) extends TracingUpdater {
   def createUpdate() = {
     val id = (value \ "id").as[Int]
+    val updatedId = (value \ "updatedId").asOpt[Int] getOrElse id
     val color = (value \ "color").as[Color]
     val name = (value \ "name").asOpt[String] getOrElse (DBTree.nameFromId(id))
     TracingUpdate { t =>
       t.tree(id).map { tree =>
-        tree.update(_.copy(color = color, treeId = id, name = name))
+        tree.update(_.copy(color = color, treeId = updatedId, name = name))
       }
       t
     }

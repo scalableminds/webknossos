@@ -52,8 +52,8 @@ object LevelCreator extends LevelCreatorController {
     for {
       code <- postParameter("code") ?~ Messages("level.code.notSupplied")
     } yield {
-      Level.createNewVersion(request.level, code)
-      JsonOk("level.code.saved")
+      val n = Level.createNewVersion(request.level, code)
+      JsonOk(Json.obj("newId" -> n.id), "level.code.saved")
     }
   }
 

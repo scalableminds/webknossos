@@ -39,7 +39,6 @@ class PlaneController
     _.extend(@, new EventMixin())
 
     @flycam = @model.flycam
-    @mode   = constants.MODE_NORMAL
     @flycam.setPosition(@model.route.data.editPosition)
     @flycam.setZoomStep(@model.user.zoom)
     @flycam.setQuality(@model.user.quality)
@@ -99,7 +98,6 @@ class PlaneController
 
     @initTrackballControls()
     @bind()
-    @setMode( constants.MODE_NORMAL )
 
 
   initMouse : ->
@@ -193,21 +191,6 @@ class PlaneController
     @model.user.on({
       keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
       })
-
-    keyboardControls = _.extend(@activeSubController.keyboardControls,
-      {
-        #Zoom in/out
-        "i" : => @zoomIn(false)
-        "o" : => @zoomOut(false)
-
-        #Change move value
-        "h" : => @changeMoveValue(0.1)
-        "g" : => @changeMoveValue(-0.1)
-
-        # Mode
-        "v" : =>
-          @toggleMode()
-      })
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop( 
       _.extend(@activeSubController.keyboardControls,
@@ -219,10 +202,6 @@ class PlaneController
           #Change move value
           "h" : => @changeMoveValue(0.1)
           "g" : => @changeMoveValue(-0.1)
-
-          # Mode
-          "v" : =>
-            @toggleMode()
         }))
 
   init : ->
@@ -231,7 +210,14 @@ class PlaneController
     @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
 
 
-  start : ->
+  start : (newMode) ->
+
+    @stop()
+
+    if newMode == constants.MODE_PLANE_TRACING
+      @activeSubController = @cellTracingController
+    else if newMode == constants.MODE_VOLUME
+      @activeSubController = @volumeTracingController
 
     @initKeyboard()
     @init()
@@ -245,24 +231,6 @@ class PlaneController
     @input.unbind()
     @view.stop()
     @sceneController.stop()
-
-  setMode : (newMode) ->
-
-    @mode = newMode
-    if @mode == constants.MODE_NORMAL 
-      @activeSubController = @cellTracingController
-    else 
-      @activeSubController = @volumeTracingController
-
-    # Restart, so new keyboard and mouse controls are set
-    @stop()
-    @start()
-
-  toggleMode : ->
-    if @mode == constants.MODE_NORMAL
-      @setMode(constants.MODE_VOLUME)
-    else 
-      @setMode(constants.MODE_NORMAL)
 
   bind : ->
 

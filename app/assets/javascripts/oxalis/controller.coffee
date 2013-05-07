@@ -36,8 +36,11 @@ class Controller
 
       for allowedMode in settings.allowedModes
         @allowedModes.push switch allowedMode
-          when "oxalis" then constants.ALLOWED_OXALIS
-          when "arbitrary" then constants.ALLOWED_ARBITRARY
+          when "oxalis" then constants.MODE_PLANE_TRACING
+          when "arbitrary" then constants.MODE_ARBITRARY
+
+      # FIXME: only for developing
+      @allowedModes.push(constants.MODE_VOLUME)
 
       # FPS stats
       stats = new Stats()
@@ -59,10 +62,10 @@ class Controller
       @initMouse()
       @initKeyboard()
 
-      @propagateMode(constants.MODE_PLANE_TRACING)
+      @setMode(constants.MODE_PLANE_TRACING)
 
-      if constants.ALLOWED_OXALIS not in @allowedModes
-        if constants.ALLOWED_ARBITRARY in @allowedModes
+      if constants.MODE_PLANE_TRACING not in @allowedModes
+        if constants.MODE_ARBITRARY in @allowedModes
           @toggleArbitraryView()
         else
           Toast.error("There was no valid allowed tracing mode specified.")
@@ -135,31 +138,24 @@ class Controller
       "q" : => @toggleFullScreen()
 
       #Activate ArbitraryView
-      "m" : => @toggleArbitraryView()
-
-      "1" : => @setMode()
-      "2" : => @setMode()
-      "3" : => @setMode()
+      "1" : => @setMode(constants.MODE_PLANE_TRACING)
+      "2" : => @setMode(constants.MODE_ARBITRARY)
+      "3" : => @setMode(constants.MODE_VOLUME)
     )
 
 
-  toggleArbitraryView : ->
+  setMode : (newMode) ->
 
-    if @mode is constants.MODE_PLANE_TRACING and constants.ALLOWED_ARBITRARY in @allowedModes
+    if newMode == constants.MODE_ARBITRARY and newMode in @allowedModes
       @planeController.stop()
       @arbitraryController.start()
-      @propagateMode(constants.MODE_ARBITRARY)
-    else if @mode is constants.MODE_ARBITRARY and constants.ALLOWED_OXALIS in @allowedModes
+
+    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and newMode in @allowedModes
       @arbitraryController.stop()
-      @planeController.start()
-      @propagateMode(constants.MODE_PLANE_TRACING)
+      @planeController.start(newMode)
 
-
-  propagateMode : (mode) ->
-
-    @mode = mode
-    @gui.setMode(mode)
-    @view.setMode(mode)
+    @gui.setMode(newMode)
+    @view.setMode(newMode)
 
 
   toggleFullScreen : ->

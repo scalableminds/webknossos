@@ -22,9 +22,6 @@ Constants =
   TEXTURE_SIZE_P       : 9
   DISTANCE_3D          : 140
 
-  ALLOWED_OXALIS       : 0
-  ALLOWED_ARBITRARY    : 1
-
   TYPE_USUAL           : 0
   TYPE_BRANCH          : 1
 

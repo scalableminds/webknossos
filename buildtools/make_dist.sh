@@ -25,7 +25,7 @@ fi
 pushd $DIST_DIR
 
 ZIP=`ls $PROJECT*.zip | sort | tail -n 1`
-unzip -u ${ZIP}
+unzip -uq ${ZIP}
 rm ${ZIP}
 
 APP=${ZIP%.zip}
@@ -42,10 +42,12 @@ sed -i "s#^classpath=\"#classpath=\"$CLASSPATH_REF:#g" start
 
 sed -e "s#^scriptdir=.*#installdir=/usr/lib/$PROJECT#g" start > start.dist
 sed -i "s#\$scriptdir#\$installdir#g" start.dist
-sed -i "s#\`dirname \$0\`#/etc/$PROJECT#g" start.dist
-#fork the process
-sed -i '/^exec/s/$/ \&/' start.dist 
 
+CONFIG="-Dbindata.folder=/etc/$PROJECT/binaryData"
+EXECUTION_COMMAND="exec java $CONFIG \$* -cp \$classpath play.core.server.NettyServer /etc/$PROJECT &"
+
+sed -i "/^exec/ c\
+$EXECUTION_COMMAND" start.dist
 
 chmod +x start.dist
 chmod +x start

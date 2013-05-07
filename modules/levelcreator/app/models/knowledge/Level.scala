@@ -11,42 +11,42 @@ import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
 import controllers.levelcreator.StackController
 
-case class LevelId(name: String, version: Int = 0){
+case class LevelId(name: String, version: Int = 0) {
   override def toString = s"${name}__${version}"
-  
+
   def toBeautifiedString = name + ", Version " + version
 }
 
-case class Asset(accessName: String, version: Int){
+case class Asset(accessName: String, version: Int) {
   def fileName = s"${version}__$accessName"
-  
-  def assetFile(assetsFolder: String) = 
+
+  def assetFile(assetsFolder: String) =
     new File(assetsFolder + "/" + fileName)
-  
-  def file(assetsFolder: String): Option[File] = { 
+
+  def file(assetsFolder: String): Option[File] = {
     val f = assetFile(assetsFolder)
     if (f.getPath.startsWith(assetsFolder) && f.exists)
       Some(f)
     else
       None
-  } 
-  
+  }
+
   def deleteFromDisk(assetsFolder: String) = {
     val f = assetFile(assetsFolder)
     if (f.getPath.startsWith(assetsFolder) && f.exists)
       f.delete()
   }
-  
+
   def writeToDisk(assetsFolder: String, file: File) = {
     FileUtils.copyFile(file, assetFile(assetsFolder))
   }
 }
 
-object Asset extends Function2[String, Int, Asset]{
+object Asset extends Function2[String, Int, Asset] {
   val AssetsNameRx = "[0-9A-Za-z\\_\\-\\.\\s\\t]+"r
-  
+
   implicit val assetFormat = Json.format[Asset]
-  
+
   def isValidAssetName(name: String) = {
     name match {
       case AssetsNameRx() if !name.contains("..") =>
@@ -58,7 +58,7 @@ object Asset extends Function2[String, Int, Asset]{
 }
 
 case class Level(
-    levelId: LevelId /*ID, must be unique*/,
+    levelId: LevelId /*ID, must be unique*/ ,
     width: Int,
     height: Int,
     slidesBeforeProblem: Int,
@@ -85,28 +85,28 @@ case class Level(
     s"${Level.stackBaseFolder}/${levelId.name}/${levelId.version}/stacks"
 
   def assetFiles = assets.flatMap(a => retrieveAsset(a))
-    
-  def numberOfRenderedStacks = 
+
+  def numberOfRenderedStacks =
     RenderedStack.countFor(levelId)
 
   def alterCode(c: String) = {
     copy(code = c)
   }
 
-  def retrieveAsset(asset: Asset): Option[File] = { 
+  def retrieveAsset(asset: Asset): Option[File] = {
     asset.file(assetsFolder)
-  }  
-  
-  def assetFromName(name: String) = 
+  }
+
+  def assetFromName(name: String) =
     assets.find(_.accessName == name)
-  
-  def retrieveAsset(name: String): Option[File] = assetFromName(name).flatMap{ a =>
+
+  def retrieveAsset(name: String): Option[File] = assetFromName(name).flatMap { a =>
     retrieveAsset(a)
   }
 
   def deleteAsset(name: String): Level = {
-    assetFromName(name).map{ a =>
-      if(a.version == levelId.version)
+    assetFromName(name).map { a =>
+      if (a.version == levelId.version)
         a.deleteFromDisk(assetsFolder)
       copy(assets = assets.filterNot(_.accessName == name))
     } getOrElse this
@@ -140,11 +140,11 @@ trait CommonFormats {
 
 object Level extends BasicDAO[Level]("levels") with CommonFormats with Function14[LevelId, Int, Int, Int, Int, String, LevelId, Boolean, Boolean, String, Boolean, List[Asset], Long, ObjectId, Level] {
   this.collection.ensureIndex("levelId")
-  
+
   import Asset.assetFormat
-  
+
   implicit val levelIdFormat = Json.format[LevelId]
-  
+
   implicit val levelFormat = Json.format[Level]
 
   val defaultDataSetName = "2012-09-28_ex145_07x2"
@@ -172,18 +172,18 @@ object Level extends BasicDAO[Level]("levels") with CommonFormats with Function1
     (new File(folderName).mkdirs())
     folderName
   }
-  
+
   def createNewVersion(level: Level, code: String) = {
-    if(code != level.code){
-      val updated = 
+    if (code != level.code) {
+      val updated =
         level.copy(
-            _id = new ObjectId, 
-            levelId = level.levelId.copy(version = 
-              NextLevelVersion.getNextVersion(level.levelId.name)), 
-            isActive = false,
-            parent = level.levelId,
-            timestamp = System.currentTimeMillis(),
-            code = code)
+          _id = new ObjectId,
+          levelId = level.levelId.copy(version =
+            NextLevelVersion.getNextVersion(level.levelId.name)),
+          isActive = false,
+          parent = level.levelId,
+          timestamp = System.currentTimeMillis(),
+          code = code)
       insert(updated)
       level.update(_.copy(isLatest = false))
       updated
@@ -192,43 +192,51 @@ object Level extends BasicDAO[Level]("levels") with CommonFormats with Function1
     }
   }
 
+  def setAsActiveVersion(level: Level) = {
+    update(
+      MongoDBObject("levelId.name" -> level.levelId.name),
+      MongoDBObject("$set" -> MongoDBObject("isActive" -> false)))
+    update(
+      MongoDBObject("levelId" -> level.levelId),
+      MongoDBObject("$set" -> MongoDBObject("isActive" -> true)))
+  }
+
   def findAllLatest() =
     find(MongoDBObject("isLatest" -> true)).toList
-  
+
   def findAllActive() =
     find(MongoDBObject("isLatest" -> true)).toList
-  
-  def findAutoRenderLevels() = 
+
+  def findAutoRenderLevels() =
     find(MongoDBObject("autoRender" -> true, "isActive" -> true)).toList
-    
+
   def ensureMissions(level: Level, missions: List[ObjectId]) = {
-    val rendered = 
+    val rendered =
       RenderedStack.findFor(level.levelId).map(_.mission._id) :::
-      StacksQueued.findFor(level.levelId).map(_.mission._id) :::
-      StacksInProgress.findFor(level.levelId).map(_._mission)
-      
+        StacksQueued.findFor(level.levelId).map(_.mission._id) :::
+        StacksInProgress.findFor(level.levelId).map(_._mission)
+
     val notRendered = missions.filterNot(m => rendered.contains(m))
-    StackController.create(level, notRendered.flatMap( e => Mission.findOneById(e)))
+    StackController.create(level, notRendered.flatMap(e => Mission.findOneById(e)))
   }
 
   def findByName(name: String) =
     find(MongoDBObject("levelId.name" -> name)).toList
 
   def findOneById(levelId: LevelId) =
-    findOne(MongoDBObject("levelId" -> levelId))  
-    
+    findOne(MongoDBObject("levelId" -> levelId))
+
   def findActiveOneBy(name: String) =
     findOne(MongoDBObject("levelId.name" -> name, "isActive" -> true))
-        
+
   def findActiveByDataSetName(dataSetName: String) =
     find(MongoDBObject("dataSetName" -> dataSetName, "isActive" -> true)).toList
-    
-  def findActiveAutoRenderByDataSetName(dataSetName: String) = 
+
+  def findActiveAutoRenderByDataSetName(dataSetName: String) =
     find(MongoDBObject("dataSetName" -> dataSetName, "isActive" -> true, "autoRender" -> true)).toList
 
-  
   val LevelNameRx = "[0-9A-Za-z\\_\\-\\s\\t]+"r
-  
+
   def isValidLevelName(name: String) = {
     name match {
       case LevelNameRx() =>

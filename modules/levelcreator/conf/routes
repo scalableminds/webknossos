@@ -29,6 +29,8 @@ POST     /levels/:levelId/assets              controllers.levelcreator.LevelCrea
 GET      /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCreator.retrieveAsset(levelId: String, asset: String)
 DELETE   /levels/:levelId/assets/*asset       controllers.levelcreator.LevelCreator.deleteAsset(levelId: String, asset: String)
 
+GET      /levels/:levelId/setAsActiveVersion  controllers.levelcreator.LevelCreator.setAsActiveVersion(levelId: String)
+
 # worker urls
 GET      /renderer/requestWork                controllers.levelcreator.WorkController.request(rendererId: String)
 POST     /renderer/finishedWork               controllers.levelcreator.WorkController.finished(key: String)

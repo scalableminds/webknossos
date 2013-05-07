@@ -71,8 +71,10 @@ class LevelCreator
 
           saveForm = @$form[0]
           produceButton = $("#produce-form .btn")[0]
+          assetsForm = $("#assets-upload")[0]
 
           saveForm.action = saveForm.action.replace(@levelId, data.newId)
+          assetsForm.action = assetsForm.action.replace(@levelId, data.newId)
           produceButton.href = $("#produce-form .btn")[0].href.replace(@levelId, data.newId)
           @assetHandler.levelId = @levelId
 

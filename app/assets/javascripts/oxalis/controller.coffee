@@ -74,7 +74,7 @@ class Controller
         nodeClick : (id) => @setActiveNode(id, true, false)
 
       $("#comment-input").on "change", (event) => 
-        @setComment(event.target.value)
+        @model.route.setComment(event.target.value)
         $("#comment-input").blur()
 
       $("#comment-previous").click =>
@@ -88,7 +88,7 @@ class Controller
         @setActiveNode($(event.target).data("nodeid"), true, false)
 
       $("#tree-name-submit").click (event) =>
-        @setTreeName($("#tree-name-input").val())
+        @model.route.setTreeName($("#tree-name-input").val())
 
       $("#tree-name-input").keypress (event) =>
         if event.which == 13
@@ -102,10 +102,10 @@ class Controller
         @selectNextTree(true)
 
       $("#tree-create-button").click =>
-        @createNewTree()
+        @model.route.createNewTree()
 
       $("#tree-delete-button").click =>
-        @deleteActiveTree()
+        @deleteActiveTree(true)
 
       $("#tree-list").on "click", "a[data-treeid]", (event) =>
         event.preventDefault()
@@ -184,21 +184,11 @@ class Controller
     model.binary.updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
 
     gui.on
-      deleteActiveNode : @deleteActiveNode
+      deleteActiveNode : @model.route.deleteActiveNode
       setActiveTree : (id) => @setActiveTree(id, false)
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
 
     gui
-
-
-  deleteActiveNode : ->
-
-    @model.route.deleteActiveNode()
-
-
-  createNewTree : ->
-
-    @model.route.createNewTree()
 
 
   setActiveTree : (treeId, centered) ->
@@ -227,21 +217,6 @@ class Controller
       @planeController.centerActiveNode()
     else
       @arbitraryController.centerActiveNode()
-
-
-  deleteActiveTree : ->
-
-    @model.route.deleteTree(true)
-
-
-  setTreeName : (name) ->
-
-    @model.route.setTreeName(name)
-
-
-  setComment : (value) =>
-
-    @model.route.setComment(value)
 
 
   prevComment : =>

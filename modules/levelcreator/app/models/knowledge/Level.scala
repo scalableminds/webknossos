@@ -138,14 +138,14 @@ trait CommonFormats {
   }
 }
 
-object Level extends BasicDAO[Level]("levels") with CommonFormats with Function14[LevelId, Int, Int, Int, Int, String, LevelId, Boolean, Boolean, String, Boolean, List[Asset], Long, ObjectId, Level] {
-  this.collection.ensureIndex("levelId")
-
-  import Asset.assetFormat
-
+trait LevelFormats extends CommonFormats{
   implicit val levelIdFormat = Json.format[LevelId]
-
+  
   implicit val levelFormat = Json.format[Level]
+}
+
+object Level extends BasicDAO[Level]("levels") with LevelFormats with Function14[LevelId, Int, Int, Int, Int, String, LevelId, Boolean, Boolean, String, Boolean, List[Asset], Long, ObjectId, Level] {
+  import Asset.assetFormat
 
   val defaultDataSetName = "2012-09-28_ex145_07x2"
 

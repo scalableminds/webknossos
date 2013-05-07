@@ -38,7 +38,11 @@ case class Mission(dataSetName: String,
   def batchId(newBatchId: Int) = copy(batchId = newBatchId)
 }
 
-object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Function8[String, Int, Int, MissionStart, Point3D, List[PossibleEnd], Double, ObjectId, Mission] {
+trait MissionFormats extends CommonFormats {
+  implicit val missionFormat: Format[Mission] = Json.format[Mission]
+}
+
+object Mission extends BasicDAO[Mission]("missions") with MissionFormats with Function8[String, Int, Int, MissionStart, Point3D, List[PossibleEnd], Double, ObjectId, Mission] {
 
   def findByDataSetName(dataSetName: String) = find(MongoDBObject("dataSetName" -> dataSetName)).toList
 
@@ -73,5 +77,4 @@ object Mission extends BasicDAO[Mission]("missions") with CommonFormats with Fun
     obsoleteMissions.map(_.id)
   }
 
-  implicit val missionFormat: Format[Mission] = Json.format[Mission]
 }

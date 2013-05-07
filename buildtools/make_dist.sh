@@ -65,8 +65,10 @@ ln -sf /usr/lib/$PROJECT/start rootenv/usr/bin/$PROJECT
 popd
 
 INIT_SYSTEM=""
+FPM=""
 case $PKG_TYPE in
   "deb")
+  FPM="fpm"
     INIT_SYSTEM="sysvinit"
     mkdir -p $DIST_DIR/rootenv/etc/init.d/
     cp buildtools/${INIT_SYSTEM}_template $DIST_DIR/rootenv/etc/init.d/$PROJECT
@@ -75,6 +77,7 @@ case $PKG_TYPE in
 
   ;;
   "rpm")
+    FPM="fpm1.9"
     INIT_SYSTEM="systemd"
     mkdir -p $DIST_DIR/rootenv/etc/systemd/system
     cp buildtools/${INIT_SYSTEM}_template $DIST_DIR/rootenv/etc/systemd/system/$PROJECT.service
@@ -85,7 +88,7 @@ case $PKG_TYPE in
     exit 1
 esac
 
-fpm -m thomas@scm.io -s dir -t $PKG_TYPE -n $PROJECT -v $VERSION --iteration $ITERATION \
+$FPM -m thomas@scm.io -s dir -t $PKG_TYPE -n $PROJECT -v $VERSION --iteration $ITERATION \
 --before-install=buildtools/before-install.sh --after-install=buildtools/after-install.sh \
 --before-remove=buildtools/before-remove.sh --after-remove=buildtools/after-remove.sh --template-scripts \
 --template-value init_system=$INIT_SYSTEM -C $DIST_DIR/rootenv usr/ etc/

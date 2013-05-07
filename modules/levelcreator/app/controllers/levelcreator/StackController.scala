@@ -27,7 +27,7 @@ object StackController extends LevelCreatorController {
   def list(levelName: String) = Action { implicit request =>
     val rendered = Level.findByName(levelName).map { level =>
       level -> RenderedStack.findFor(level.levelId)
-    }.toMap
+    }
     Ok(html.levelcreator.stackList(rendered))
   }
 

@@ -66,7 +66,7 @@ class Controller
 
       if constants.MODE_PLANE_TRACING not in @allowedModes
         if constants.MODE_ARBITRARY in @allowedModes
-          @toggleArbitraryView()
+          @setMode(constants.MODE_ARBITRARY)
         else
           Toast.error("There was no valid allowed tracing mode specified.")
 

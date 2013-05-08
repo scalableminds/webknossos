@@ -95,11 +95,10 @@ class View
 
   setMode : (mode) ->
 
-    @mode = mode
-    @createKeyboardCommandOverlay()
+    @createKeyboardCommandOverlay(mode)
 
 
-  createKeyboardCommandOverlay : ->
+  createKeyboardCommandOverlay : (mode) ->
 
     generalKeys =
       '<tr><th colspan="4">General</th></tr>
@@ -133,9 +132,9 @@ class View
             <table class="table table-condensed table-nohead table-bordered"><tbody>'''
       
     html += generalKeys
-    if @mode == constants.MODE_PLANE_TRACING 
+    if mode == constants.MODE_PLANE_TRACING 
       html += viewportKeys + skeletonKeys
-    else if @mode == constants.MODE_ARBITRARY
+    else if mode == constants.MODE_ARBITRARY
       html += arbitraryKeys
 
     html += '''</tbody>

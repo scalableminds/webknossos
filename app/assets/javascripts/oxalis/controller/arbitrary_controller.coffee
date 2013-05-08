@@ -204,9 +204,9 @@ class ArbitraryController
   stop : ->
 
     if @isStarted
-
-      @view.stop()
       @input.unbind()
+    
+    @view.stop()
 
     @isStarted = false
 

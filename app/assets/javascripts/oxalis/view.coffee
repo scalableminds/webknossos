@@ -102,11 +102,10 @@ class View
 
   setMode : (mode) ->
 
-    @mode = mode
-    @createKeyboardCommandOverlay()
+    @createKeyboardCommandOverlay(mode)
 
 
-  createKeyboardCommandOverlay : ->
+  createKeyboardCommandOverlay : (mode) ->
 
     generalKeys =
       '<tr><th colspan="4">General</th></tr>
@@ -114,7 +113,7 @@ class View
       <tr><td>P,N</td><td>Previous/Next comment</td><td>Del</td><td>Delete node/Split trees</td></tr>
       <tr><td>C</td><td>Create new tree</td><td>Shift + Alt + Leftclick</td><td>Merge two trees</td></tr>
       <tr><td>T</td><td>Toggle theme</td><td>M</td><td>Toggle mode</td></tr>
-      <tr><td>1</td><td>Toggle skeleton visibility</td><td>2</td><td>Toggle inactive tree visibility</td></tr>
+      <tr><td>8</td><td>Toggle skeleton visibility</td><td>9</td><td>Toggle inactive tree visibility</td></tr>
       <tr><td>Shift + Mousewheel</td><td>Change node size</td><td></td><td></td></tr>'
 
     skeletonKeys =
@@ -139,7 +138,11 @@ class View
             <div class="modal-body" id="help-modal-body"><p>
             <table class="table table-condensed table-nohead table-bordered"><tbody>'''
       
-    html += generalKeys + if @mode == constants.MODE_PLANE_TRACING then viewportKeys + skeletonKeys else arbitraryKeys
+    html += generalKeys
+    if mode == constants.MODE_PLANE_TRACING 
+      html += viewportKeys + skeletonKeys
+    else if mode == constants.MODE_ARBITRARY
+      html += arbitraryKeys
 
     html += '''</tbody>
             </table>

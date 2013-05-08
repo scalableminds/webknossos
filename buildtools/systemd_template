@@ -6,6 +6,7 @@ ExecStart=/usr/bin/<%PROJECT%>
 Type=forking
 Restart=always
 User=<%PROJECT%>
+WorkingDirectory=/tmp/
 
 [Install]
 WantedBy=multi-user.target

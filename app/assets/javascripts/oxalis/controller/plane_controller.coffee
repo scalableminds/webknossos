@@ -38,6 +38,8 @@ class PlaneController
 
     _.extend(@, new EventMixin())
 
+    @isStarted = false
+
     @flycam = @model.flycam
     @flycam.setPosition(@model.route.data.editPosition)
     @flycam.setZoomStep(@model.user.zoom)
@@ -225,12 +227,17 @@ class PlaneController
     @sceneController.start()
     @view.start()
 
+    @isStarted = true
+
 
   stop : ->
 
-    @input.unbind()
-    @view.stop()
-    @sceneController.stop()
+    if @isStarted
+      @input.unbind()
+      @view.stop()
+      @sceneController.stop()
+
+    @isStarted = false
 
   bind : ->
 

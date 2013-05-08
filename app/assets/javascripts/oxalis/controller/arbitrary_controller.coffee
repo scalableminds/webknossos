@@ -45,6 +45,8 @@ class ArbitraryController
 
     _.extend(this, new EventMixin())
 
+    @isStarted = false
+
     @canvas = canvas = $("#render-canvas")
     
     @cam = @model.flycam3d
@@ -186,17 +188,25 @@ class ArbitraryController
 
   start : ->
 
+    @stop()
+
     @initKeyboard()
     @initMouse()
     @view.start()
     @init()
-    @view.draw()     
+    @view.draw()    
+
+    @isStarted = true 
  
 
   stop : ->
 
-    @view.stop()
-    @input.unbind()
+    if @isStarted
+
+      @view.stop()
+      @input.unbind()
+
+    @isStarted = false
 
 
   scroll : (delta, type) =>

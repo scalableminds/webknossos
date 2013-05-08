@@ -88,7 +88,7 @@ class Plane2D
 
   hasChanged : ->
 
-    @changed
+    not (@dataTexture.ready and @volumeTexture.ready)
 
   getImpl : (position, zoomStep, area) ->
 

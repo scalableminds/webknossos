@@ -43,7 +43,7 @@ sed -i "s#^classpath=\"#classpath=\"$CLASSPATH_REF:#g" start
 sed -e "s#^scriptdir=.*#installdir=/usr/lib/$PROJECT#g" start > start.dist
 sed -i "s#\$scriptdir#\$installdir#g" start.dist
 
-CONFIG="-Dbindata.folder=/etc/$PROJECT/binaryData"
+CONFIG="-Dconfig.file=/etc/$PROJECT/$PROJECT.conf"
 EXECUTION_COMMAND="exec java $CONFIG \$* -cp \$classpath play.core.server.NettyServer /etc/$PROJECT &"
 
 sed -i "/^exec/ c\
@@ -89,6 +89,10 @@ case $PKG_TYPE in
     echo "Only deb and rpm are supported, yet"
     exit 1
 esac
+
+mkdir -p $DIST_DIR/rootenv/etc/$PROJECT/binaryData
+cp buildtools/basic.conf $DIST_DIR/rootenv/etc/${PROJECT}/${PROJECT}.conf
+sed -i "s/<%PROJECT%>/$PROJECT/g" $DIST_DIR/rootenv/etc/${PROJECT}/${PROJECT}.conf
 
 $FPM -m thomas@scm.io -s dir -t $PKG_TYPE -n $PROJECT -v $VERSION --iteration $ITERATION \
 --before-install=buildtools/before-install.sh --after-install=buildtools/after-install.sh \

@@ -35,17 +35,8 @@ class AbstractTreeController
 
 
   drawTree : ->
-
-    { view, model } = @
-
-    # Use node with minimal ID as root
-    for node in model.route.getTree().nodes
-      if root?
-        if root.id > node.id then root = node
-      else 
-        root = node
-
-    view.drawTree(root, model.route.getActiveNodeId())
+    
+    @view.drawTree(@model.route.getTree(), @model.route.getActiveNodeId())
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->

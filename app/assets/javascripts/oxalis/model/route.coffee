@@ -417,12 +417,13 @@ class Route
 
   selectNextTree : (forward) ->
 
-    for i in [0...@trees.length]
-      if @activeTree.treeId == @trees[i].treeId
+    trees = @getTreesSorted(@user.sortTreesByName)
+    for i in [0...trees.length]
+      if @activeTree.treeId == trees[i].treeId
         break
 
-    diff = (if forward then 1 else -1) + @trees.length
-    @setActiveTree( @trees[ (i + diff) % @trees.length ].treeId )
+    diff = (if forward then 1 else -1) + trees.length
+    @setActiveTree( trees[ (i + diff) % trees.length ].treeId )
 
 
   setActiveTree : (id) ->
@@ -612,6 +613,14 @@ class Route
 
 
   getTrees : -> @trees
+
+
+  getTreesSorted : ->
+
+    if @user.sortTreesByName
+      return (@trees.slice(0)).sort(@compareNames)
+    else
+      return @trees
 
 
   # returns a list of nodes that are connected to the parent

@@ -56,7 +56,7 @@ class AbstractTreeView
       console.log "Error:", e
       if e == "CyclicTree"
         if not @_cyclicTreeWarningIssued
-          Toast.error "Cyclic trees are not supported by Oxalis."
+          Toast.error "Cyclic trees (Tree-ID: #{tree.treeId}) are not supported by Oxalis. Please check the .nml file."
           @_cyclicTreeWarningIssued = true
         return
 

@@ -377,3 +377,6 @@ class PlaneController
         [ curGlobalPos[0] - (constants.WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
           curGlobalPos[1], 
           curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor ]
+
+  centerActiveNode : ->
+    @activeSubController.centerActiveNode()

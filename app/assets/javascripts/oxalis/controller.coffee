@@ -109,7 +109,7 @@ class Controller
         @model.route.createNewTree()
 
       $("#tree-delete-button").click =>
-        @deleteActiveTree(true)
+        @model.route.deleteTree(true)
 
       $("#tree-list").on "click", "a[data-treeid]", (event) =>
         event.preventDefault()
@@ -197,7 +197,8 @@ class Controller
     model.binary.updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
 
     gui.on
-      deleteActiveNode : @model.route.deleteActiveNode
+      deleteActiveNode : =>
+        @model.route.deleteActiveNode()
       setActiveTree : (id) => @setActiveTree(id, false)
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
 

@@ -78,9 +78,6 @@ class Plane
 
       globalPos = @flycam.getPosition()
 
-      if @flycam.needsUpdate @planeID
-        @flycam.notifyNewTexture @planeID
-
       area = @flycam.getArea(@planeID)
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?

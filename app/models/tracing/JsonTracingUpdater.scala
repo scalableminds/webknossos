@@ -60,7 +60,7 @@ case class DeleteTree(value: JsObject) extends TracingUpdater {
     val id = (value \ "id").as[Int]
     TracingUpdate { t =>
       t.tree(id).map { tree =>
-        DBTree.remove(tree)
+        DBTree.removeById(tree._id)
       }
       t
     }
@@ -93,7 +93,7 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
         DBTree.moveAllNodes(source._id, target._id)
         DBTree.moveAllEdges(source._id, target._id)
         
-        DBTree.remove(source)
+        DBTree.removeById(source._id)
       }
       t
     }

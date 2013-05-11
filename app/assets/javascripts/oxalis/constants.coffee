@@ -28,8 +28,10 @@ Constants =
   TYPE_USUAL           : 0
   TYPE_BRANCH          : 1
 
-  MIN_MOVE_VALUE       : 0.1
-  MAX_MOVE_VALUE       : 10
+  MIN_MOVE_VALUE       : 30
+  MAX_MOVE_VALUE       : 14000
+
+  FPS                  : 50
 
   MIN_SCALE            : 0.05
   MAX_SCALE            : 20

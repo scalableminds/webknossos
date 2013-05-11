@@ -71,8 +71,6 @@ class ArbitraryController
     matrix = @cam.getMatrix()
     @model.binary.arbitraryPing(matrix)
 
-    @model.route.rendered()
-
 
   initMouse : ->
     @input.mouse = new Input.Mouse(
@@ -170,6 +168,7 @@ class ArbitraryController
   bind : ->
 
     @view.on "render", (force, event) => @render(force, event)
+    @view.on "finishedRender", => @model.route.rendered()
 
     @model.binary.cube.on "bucketLoaded", => @view.draw()
 
@@ -203,13 +202,7 @@ class ArbitraryController
 
   addNode : (position) =>
 
-    if @model.user.newNodeNewTree == true
-      @createNewTree()
-      @model.route.one("rendered", =>
-        @model.route.one("rendered", =>
-          @model.route.addNode(position, constants.TYPE_USUAL)))
-    else
-      @model.route.addNode(position, constants.TYPE_USUAL)
+    @model.route.addNode(position, constants.TYPE_USUAL)
 
 
   setWaypoint : () =>

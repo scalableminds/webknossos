@@ -247,6 +247,7 @@ class PlaneController
 
     @view.on
       render : => @render()
+      finishedRender : => @model.route.rendered()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
     @sceneController.skeleton.on
@@ -265,7 +266,6 @@ class PlaneController
     @model.route.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()
-    @model.route.rendered()
 
   moveX : (x) => @flycam.moveActivePlane([x, 0, 0])
   moveY : (y) => @flycam.moveActivePlane([0, y, 0])
@@ -456,9 +456,13 @@ class PlaneController
   addNode : (position, centered) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
-      @model.route.one("rendered", =>
-        @model.route.one("rendered", =>
-          @model.route.addNode(position, constants.TYPE_USUAL)))
+      # make sure the tree was rendered two times before adding nodes,
+      # otherwise our buffer optimizations won't work
+      @model.route.one("finishedRender", =>
+        @model.route.one("finishedRender", =>
+          @model.route.addNode(position, constants.TYPE_USUAL))
+        @view.draw())
+      @view.draw()
     else
       @model.route.addNode(position, constants.TYPE_USUAL, centered)
 

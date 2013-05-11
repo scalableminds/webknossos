@@ -1,6 +1,7 @@
 ### define
 libs/event_mixin : EventMixin
 ../constants : constants
+libs/toast : Toast
 ###
 
 
@@ -49,8 +50,20 @@ class AbstractTreeView
     # TODO: Actually, I though that buildTree() is pretty heavy, but
     # I do not experience performance issues, even with large trees.
     # Still, this might not need to be done on every single draw...
-    tree.buildTree()
-    @nodeDistance = Math.min(@height / (@getMaxTreeDepth(tree, mode) + 1), @MAX_NODE_DISTANCE)
+    try
+      root = tree.buildTree()
+    catch e
+      console.log "Error:", e
+      if e == "CyclicTree"
+        if not @_cyclicTreeWarningIssued
+          Toast.error "Cyclic trees (Tree-ID: #{tree.treeId}) are not supported by Oxalis. Please check the .nml file."
+          @_cyclicTreeWarningIssued = true
+        return
+
+    unless root?
+      return
+
+    @nodeDistance = Math.min(@height / (@getMaxTreeDepth(root, mode) + 1), @MAX_NODE_DISTANCE)
 
     # The algorithm works as follows:
     # A tree is given a left and right border that it can use. If
@@ -64,8 +77,8 @@ class AbstractTreeView
     # information to actually draw the tree. The first task is done
     # by recordWidths(), the second by drawTreeWithWidths().
 
-    @recordWidths(tree)
-    @drawTreeWithWidths(tree, 0, @width, @nodeDistance, mode)
+    @recordWidths(root)
+    @drawTreeWithWidths(root, 0, @width, @nodeDistance, mode)
 
   drawTreeWithWidths : (tree, left, right, top, mode = @MODE_NORMAL) ->
 

@@ -53,6 +53,9 @@ class View
         @updateTrees()
         @updateActiveTree()
         @updateComments()
+      newActiveTreeColor : =>
+        @updateActiveTree()
+        @updateTrees()
       deleteActiveNode : =>
         @updateTrees() })
 

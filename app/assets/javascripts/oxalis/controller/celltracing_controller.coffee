@@ -26,8 +26,8 @@ class CellTacingController
 
     @keyboardControls =
 
-      "8" : => @sceneController.toggleSkeletonVisibility()
-      "9" : => @sceneController.toggleInactiveTreeVisibility()
+      "1" : => @sceneController.toggleSkeletonVisibility()
+      "2" : => @sceneController.toggleInactiveTreeVisibility()
 
       #Delete active node
       "delete" : => @model.route.deleteActiveNode()

@@ -144,16 +144,20 @@ class Controller
 
       "q" : => @toggleFullScreen()
 
-      #Activate ArbitraryView
-      "1" : =>
-        console.log "Set mode:", 1
+      #Set Mode, outcomment for release
+      "shift + 1" : =>
         @setMode(constants.MODE_PLANE_TRACING)
-      "2" : =>
-        console.log "Set mode:", 2
+      "shift + 2" : =>
         @setMode(constants.MODE_ARBITRARY)
-      "3" : =>
-        console.log "Set mode:", 3
+      "shift + 3" : =>
         @setMode(constants.MODE_VOLUME)
+
+      "m" : => # toggle between plane tracing and arbitrary tracing
+
+        if @mode == constants.MODE_VOLUME or @mode == constants.MODE_PLANE_TRACING
+          @setMode(constants.MODE_ARBITRARY)
+        else
+          @setMode(constants.MODE_PLANE_TRACING)
     )
 
 
@@ -167,6 +171,10 @@ class Controller
       @arbitraryController.stop()
       @planeController.start(newMode)
 
+    else # newMode not allowed or invalid
+      return
+
+    @mode = newMode
     @gui.setMode(newMode)
     @view.setMode(newMode)
 

@@ -35,14 +35,23 @@ class AbstractTreeController
 
 
   drawTree : ->
+    
+    @view.drawTree(@model.route.getTree(), @model.route.getActiveNodeId())
 
-    { view, model } = @
 
-    # Use node with minimal ID as root
-    for node in model.route.getTree().nodes
-      if root?
-        if root.id > node.id then root = node
-      else 
-        root = node
+  setActiveNode : (nodeId, centered, mergeTree) ->
+    
+    { model } = @
 
-    view.drawTree(root, model.route.getActiveNodeId())
+    model.route.setActiveNode(nodeId, mergeTree)
+
+    @centerActiveNode() if centered
+
+
+  centerActiveNode : ->
+
+    { model } = @
+
+    position = model.route.getActiveNodePos()
+    if position
+      model.flycam.setPosition(position)

@@ -15,6 +15,7 @@ import play.api.Logger
 import models.tracing._
 import play.api.i18n.Messages
 import braingames.mvc.Controller
+import models.services.UserCache
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
@@ -49,6 +50,7 @@ object UserController extends Controller with Secured {
       request.body.asOpt[JsObject].map{ settings =>
         if(UserConfiguration.isValid(settings)){
           request.user.update(_.changeSettings(UserConfiguration(settings.fields.toMap)))
+          UserCache.invalidateUser(request.user.id)
           Ok
         } else
           BadRequest("Invalid settings")

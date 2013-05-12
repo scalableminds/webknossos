@@ -50,7 +50,11 @@ class CellTacingController
     @model.route.setActiveNodeRadius(radius)
 
   setParticleSize : (delta) =>
-    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+    particleSize = @model.user.particleSize + delta
+    particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
+    particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
+
+    @model.user.setValue("particleSize", (Number) particleSize)
  
   toggleSkeletonVisibility : =>
     @sceneController.toggleSkeletonVisibility()

@@ -342,13 +342,6 @@ class PlaneController
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
     @model.route.setActiveNodeRadius(radius)
 
-  setParticleSize : (delta) =>
-    particleSize = @model.user.particleSize + delta
-    particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
-    particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
-
-    @model.user.setValue("particleSize", (Number) particleSize)
-
   scroll : (delta, type) =>
     switch type
       when null then @moveZ(delta)

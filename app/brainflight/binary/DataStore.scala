@@ -1,17 +1,11 @@
 package brainflight.binary
 
-import brainflight.tools.geometry.Point3D
+import braingames.geometry._
 import scala.concurrent.Promise
 import scala.concurrent.Future
-import play.api.libs.concurrent.Promise
-import play.api.libs.concurrent.Execution.Implicits._
-import models.binary._
-import brainflight.tools.geometry.Vector3D
-import play.api.Play
-import brainflight.tools.Math._
+import braingames.util.Math._
 import scala.collection.mutable.ArrayBuffer
 import akka.actor.Actor
-import play.api.Logger
 import akka.agent.Agent
 import akka.util.Timeout
 import scala.concurrent.duration._
@@ -20,6 +14,7 @@ import akka.actor.Status
 import java.util.concurrent.TimeoutException
 import java.io.InputStream
 import scala.util._
+import scala.concurrent.ExecutionContext.Implicits._
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file

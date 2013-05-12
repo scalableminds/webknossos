@@ -1,26 +1,26 @@
 package models.tracing
 
-import brainflight.tools.geometry.Point3D
+import braingames.geometry.Point3D
 import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId
 import play.api.libs.json._
 import play.api.data.validation.ValidationError
-import xml.Xml
-import xml.XMLWrites
+import braingames.xml.Xml
+import braingames.xml.XMLWrites
 import models.binary.DataSet
-import nml.Comment
+import oxalis.nml.Comment
 import models.user.User
-import brainflight.tools.geometry.Scale
+import braingames.geometry.Scale
 import java.util.Date
 import com.mongodb.casbah.query._
 import models.tracing.TracingState._
-import nml.NMLParser
+import oxalis.nml.NMLParser
 import models.task._
 import models.Color
 import models.basics._
 import models.security.Role
-import nml._
-import nml.utils._
+import oxalis.nml._
+import oxalis.nml.utils._
 import play.api.Logger
 import com.mongodb.casbah.commons.MongoDBList
 
@@ -89,7 +89,7 @@ case class Tracing(
 
   def tree(treeId: Int) = DBTree.findOneWithTreeId(_id, treeId)
 
-  def maxNodeId = nml.utils.maxNodeId(this.trees)
+  def maxNodeId = oxalis.nml.utils.maxNodeId(this.trees)
 
   def clearTracing = {
     this.copy(branchPoints = Nil, comments = Nil)

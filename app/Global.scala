@@ -12,10 +12,10 @@ import models.binary._
 import models.security.Role
 import models.tracing._
 import models.basics.BasicEvolution
-import brainflight.mail.DefaultMails
-import brainflight.tools.geometry._
+import oxalis.mail.DefaultMails
+import braingames.geometry._
 import brainflight.tracing.TemporaryTracingGenerator
-import brainflight.mail.Mailer
+import braingames.mail.Mailer
 import brainflight.io._
 import scala.collection.parallel.Tasks
 import akka.pattern.ask
@@ -98,7 +98,7 @@ object InitialData {
         "SCM",
         "Boy",
         true,
-        brainflight.security.SCrypt.hashPassword("secret"),
+        braingames.security.SCrypt.hashPassword("secret"),
         "local",
         UserConfiguration.defaultConfiguration,
         Set("user", "admin")))

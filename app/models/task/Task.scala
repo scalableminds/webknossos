@@ -6,13 +6,13 @@ import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import models.basics._
 import java.util.Date
-import brainflight.tools.geometry.Point3D
+import braingames.geometry.Point3D
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import akka.actor.Props
 import akka.pattern.ask
-import brainflight.js.JsExecutionActor
-import brainflight.js.JS
+import braingames.js.JsExecutionActor
+import braingames.js.JS
 import akka.util.Timeout
 import scala.concurrent.duration._
 import akka.pattern.AskTimeoutException
@@ -23,12 +23,13 @@ import scala.concurrent.Promise
 import play.api.libs.json.Format
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
-import brainflight.tools.geometry.Scale
+import braingames.geometry.Scale
 import models.user.User
 import play.api.Logger
 import models.user.Experience
 import models.tracing._
-import nml.Tree
+import oxalis.nml.Tree
+import scala.util._
 
 case class CompletionStatus(open: Int, inProgress: Int, completed: Int)
 
@@ -79,10 +80,10 @@ case class Task(
 object Task extends BasicDAO[Task]("tasks") {
   this.collection.ensureIndex("_project")
   this.collection.ensureIndex("_taskType")
-  
+
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
-  
+
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
   override def removeById(t: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {
@@ -97,8 +98,8 @@ object Task extends BasicDAO[Task]("tasks") {
   def findAllOfOneType(isTraining: Boolean) =
     find(MongoDBObject("training" -> MongoDBObject("$exists" -> isTraining)))
       .toList
-      
-  def findAllByTaskType(taskType: TaskType) = 
+
+  def findAllByTaskType(taskType: TaskType) =
     find(MongoDBObject("_taskType" -> taskType._id))
       .toList
 
@@ -119,7 +120,7 @@ object Task extends BasicDAO[Task]("tasks") {
   def findAssignableTasksFor(user: User) = {
     findAssignableFor(user, shouldBeTraining = false)
   }
-  
+
   def findAssignableFor(user: User, shouldBeTraining: Boolean) = {
     val finishedTasks = Tracing.findFor(user, TracingType.Task).flatMap(_._task)
     val availableTasks =
@@ -127,7 +128,7 @@ object Task extends BasicDAO[Task]("tasks") {
         findAllTrainings
       else
         findAllAssignableNonTrainings
-        
+
     availableTasks.filter(t =>
       !finishedTasks.contains(t._id) && hasEnoughExperience(user, t))
   }
@@ -137,7 +138,7 @@ object Task extends BasicDAO[Task]("tasks") {
     Tracing
       .findByTaskId(source._id)
       .foreach { tracing =>
-        if (includeUserTracings || TracingType.isSystemTracing(tracing)){
+        if (includeUserTracings || TracingType.isSystemTracing(tracing)) {
           println("Copying: " + tracing.id)
           Tracing.copyDeepAndInsert(tracing.copy(_task = Some(task._id)))
         }
@@ -170,19 +171,23 @@ object Task extends BasicDAO[Task]("tasks") {
     } else {
       val params = Map("user" -> user, "tasks" -> tasks)
 
-      val future = (jsExecutionActor ? JS(TaskSelectionAlgorithm.current.js, params)) recover {
-        case e: AskTimeoutException =>
-          Logger.warn("JS Execution actor didn't return in time!")
-          null
-      }
-      future.mapTo[Future[Task]].flatMap(_.map { x =>
-        Option(x)
-      }).recover {
-        case e: Exception =>
-          Logger.error("Catched exception: " + e.toString())
-          e.printStackTrace()
-          None
-      }
+      (jsExecutionActor ? JS(TaskSelectionAlgorithm.current.js, params))
+        .mapTo[Future[Try[Task]]].flatMap(_.map {
+          case Failure(f) =>
+            Logger.error("JS Execution error: " + f)
+            None
+          case Success(s) =>
+            Some(s)
+        })
+        .recover {
+          case e: AskTimeoutException =>
+            Logger.warn("JS Execution actor didn't return in time!")
+            None
+          case e: Exception =>
+            Logger.error("JS Execution catched exception: " + e.toString())
+            e.printStackTrace()
+            None
+        }
     }
   }
 

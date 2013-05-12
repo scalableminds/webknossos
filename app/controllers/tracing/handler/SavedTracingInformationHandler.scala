@@ -1,6 +1,6 @@
 package controllers.tracing.handler
 
-import brainflight.security.AuthenticatedRequest
+import oxalis.security.AuthenticatedRequest
 import net.liftweb.common.Box
 import models.tracing.Tracing
 import play.api.i18n.Messages

@@ -5,7 +5,7 @@ import play.api.templates.Html
 import play.api.libs.json.Json
 import play.api.mvc.SimpleResult
 import play.api.libs.json.JsObject
-import brainflight.security.AuthenticatedRequest
+import oxalis.security.AuthenticatedRequest
 import brainflight.view.ProvidesSessionData
 import play.api.mvc.Request
 import net.liftweb.common.{ Box, Full, Empty, Failure, ParamFailure }

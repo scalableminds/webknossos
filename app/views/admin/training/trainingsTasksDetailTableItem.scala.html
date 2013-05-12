@@ -30,8 +30,6 @@
   <i class="icon-eye-open"></i><span> Already getting reviewed by @review.reviewee.map( _.name).</span>
 }
 
-@import brainflight.format._
-
 <tr>
   <td> @tracing.user.map(_.name).getOrElse("<Maik>") </td>
   <td> @formatDate(tracing.date) </td>

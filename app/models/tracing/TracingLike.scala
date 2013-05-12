@@ -1,14 +1,14 @@
 package models.tracing
 
-import nml._
-import nml.utils._
-import brainflight.tools.geometry.Scale
-import brainflight.tools.geometry.Point3D
+import oxalis.nml._
+import oxalis.nml.utils._
+import braingames.geometry.Scale
+import braingames.geometry.Point3D
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
-import xml.XMLWrites
+import braingames.xml.XMLWrites
 import models.binary.DataSet
-import xml.Xml
+import braingames.xml.Xml
 import models.task.Task
 import models.user.User
 

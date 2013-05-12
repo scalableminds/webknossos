@@ -102,7 +102,7 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
 }
 
 case class MoveTreeComponent(value: JsObject) extends TracingUpdater {
-  import nml.Node
+  import oxalis.nml.Node
   def createUpdate() = {
     val nodeIds = (value \ "nodeIds").as[List[Int]]
     val sourceId = (value \ "sourceId").as[Int]
@@ -120,7 +120,7 @@ case class MoveTreeComponent(value: JsObject) extends TracingUpdater {
 }
 
 case class CreateNode(value: JsObject) extends TracingUpdater {
-  import nml.Node
+  import oxalis.nml.Node
   def createUpdate() = {
     val node = value.as[Node]
     val treeId = (value \ "treeId").as[Int]
@@ -134,7 +134,7 @@ case class CreateNode(value: JsObject) extends TracingUpdater {
 }
 
 case class DeleteNode(value: JsObject) extends TracingUpdater {
-  import nml.Node
+  import oxalis.nml.Node
   def createUpdate() = {
     val nodeId = (value \ "id").as[Int]
     val treeId = (value \ "treeId").as[Int]
@@ -149,7 +149,7 @@ case class DeleteNode(value: JsObject) extends TracingUpdater {
 }
 
 case class UpdateNode(value: JsObject) extends TracingUpdater {
-  import nml.Node
+  import oxalis.nml.Node
   def createUpdate() = {
     val node = value.as[Node]
     val treeId = (value \ "treeId").as[Int]
@@ -163,7 +163,7 @@ case class UpdateNode(value: JsObject) extends TracingUpdater {
 }
 
 case class CreateEdge(value: JsObject) extends TracingUpdater {
-  import nml.Edge
+  import oxalis.nml.Edge
   def createUpdate() = {
     val edge = value.as[Edge]
     val treeId = (value \ "treeId").as[Int]
@@ -177,7 +177,7 @@ case class CreateEdge(value: JsObject) extends TracingUpdater {
 }
 
 case class DeleteEdge(value: JsObject) extends TracingUpdater {
-  import nml.Edge
+  import oxalis.nml.Edge
   def createUpdate() = {
     val edge = value.as[Edge]
     val treeId = (value \ "treeId").as[Int]
@@ -191,9 +191,9 @@ case class DeleteEdge(value: JsObject) extends TracingUpdater {
 }
 
 case class UpdateTracing(value: JsObject) extends TracingUpdater {
-  import nml.BranchPoint
-  import nml.Comment
-  import brainflight.tools.geometry.Point3D
+  import oxalis.nml.BranchPoint
+  import oxalis.nml.Comment
+  import braingames.geometry.Point3D
   def createUpdate() = {
     val branchPoints = (value \ "branchPoints").as[List[BranchPoint]]
     val comments = (value \ "comments").as[List[Comment]]

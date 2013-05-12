@@ -6,7 +6,7 @@ import play.api.test.Helpers._
 import brainflight.binary.DataStore
 import java.io.FileNotFoundException
 import brainflight.binary.FileDataStore
-import brainflight.tools.geometry.Point3D
+import braingames.geometry.Point3D
 import brainflight.binary.DataStore
 import models.DataSet
 

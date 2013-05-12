@@ -1,11 +1,11 @@
 package models.tracing
 
-import nml.TreeLike
-import nml.BranchPoint
-import brainflight.tools.geometry.Scale
-import brainflight.tools.geometry.Point3D
-import nml.Comment
-import nml.NML
+import oxalis.nml.TreeLike
+import oxalis.nml.BranchPoint
+import braingames.geometry.Scale
+import braingames.geometry.Point3D
+import oxalis.nml.Comment
+import oxalis.nml.NML
 import models.user.User
 
 case class TemporaryTracing(

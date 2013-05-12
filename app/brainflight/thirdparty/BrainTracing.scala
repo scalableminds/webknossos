@@ -1,6 +1,6 @@
 package brainflight.thirdparty
 
-import brainflight.security.SCrypt._
+import braingames.security.SCrypt._
 import models.user.User
 import play.api.libs.ws.WS
 import com.ning.http.client.Realm.AuthScheme

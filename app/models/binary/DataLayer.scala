@@ -1,8 +1,8 @@
 package models.binary
 
-import brainflight.tools.geometry.Point3D
-import brainflight.tools.geometry.Vector3D
-import brainflight.tools.Interpolator
+import braingames.geometry.Point3D
+import braingames.geometry.Vector3D
+import braingames.util.Interpolator
 import scala.collection.mutable.ArrayBuffer
 import play.api.libs.json._
 import play.api.libs.functional.syntax._

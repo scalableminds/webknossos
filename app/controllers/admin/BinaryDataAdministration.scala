@@ -3,7 +3,7 @@ package controllers.admin
 import braingames.mvc.Controller
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
-import brainflight.security.Secured
+import oxalis.security.Secured
 import akka.actor.Props
 import brainflight.binary._
 import models.binary.DataSet

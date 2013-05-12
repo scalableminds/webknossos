@@ -20,7 +20,6 @@ object ApplicationBuild extends Build {
     "com.novus" %% "salat-core" % "1.9.2-SNAPSHOT",
     "com.restfb" % "restfb" % "1.6.11",
     "commons-io" % "commons-io" % "1.3.2",
-    "org.apache.commons" % "commons-email" % "1.2",
     "com.typesafe.akka" %%  "akka-testkit" % "2.1.0",
     "com.typesafe.akka" %% "akka-agent" % "2.1.0",
     "com.typesafe.akka" %% "akka-remote" % "2.1.0",
@@ -35,8 +34,10 @@ object ApplicationBuild extends Build {
     "repo.novus snaps" at "http://repo.novus.com/snapshots/",
     "sonatype rels" at "https://oss.sonatype.org/content/repositories/releases/",
     "sonatype snaps" at "https://oss.sonatype.org/content/repositories/snapshots/",
-    "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/"
+    "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/",
+    "mandubian" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/"
   )
+  
   val shellgameDependencies = Seq()
   
   val stackrendererDependencies = Seq(
@@ -50,7 +51,26 @@ object ApplicationBuild extends Build {
     "com.sun.jersey" % "jersey-client" % "1.8",
     "com.sun.jersey" % "jersey-core" % "1.8",
     "com.typesafe.akka" %% "akka-remote" % "2.1.0") 
+    
+  lazy val braingamesDependencies = Seq(
+    "play" %% "play-json" % "2.2-SNAPSHOT",
+    "commons-io" % "commons-io" % "1.3.2",
+    "org.apache.commons" % "commons-email" % "1.3.1",
+    "org.apache.commons" % "commons-lang3" % "3.1",
+    "com.typesafe.akka" %% "akka-remote" % "2.1.0") 
   
+  lazy val braingamesUtil: Project = Project("braingames-util", file("modules") / "braingames-util").settings(
+    libraryDependencies ++= braingamesDependencies,
+    resolvers ++= dependencyResolvers,
+    scalaVersion := "2.10.0"
+  )
+  
+  lazy val braingamesBinary: Project = Project("braingames-binary", file("modules") / "braingames-binary").settings(
+    libraryDependencies ++= braingamesDependencies,
+    resolvers ++= dependencyResolvers,
+    scalaVersion := "2.10.0"
+  ).dependsOn(braingamesUtil).aggregate(braingamesUtil)
+    
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
@@ -58,7 +78,7 @@ object ApplicationBuild extends Build {
     resolvers ++= dependencyResolvers//,
     //offline := true,
     //playAssetsDirectories += file("data")
-  )
+  ).dependsOn(braingamesUtil, braingamesBinary).aggregate(braingamesUtil, braingamesBinary)
 
   lazy val shellgame = play.Project("shellgame", "0.1", shellgameDependencies, path = file("modules") / "shellgame").settings(
     templatesImport += "brainflight.view.helpers._",

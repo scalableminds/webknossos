@@ -1,6 +1,6 @@
 package controllers
 
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.user._
 import play.api.mvc.Action
 import play.api.mvc.Request

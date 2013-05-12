@@ -1,17 +1,12 @@
 package brainflight.binary
 
 import scala.math._
-import brainflight.tools.Math._
-import java.lang.OutOfMemoryError
-import brainflight.tools.geometry.Vector3D._
-import brainflight.tools.geometry.{ Vector3D, NGonalFrustum, Polygon }
+import braingames.util.Math._
+import braingames.geometry._
+import braingames.geometry.Vector3D._
 import scala.collection.parallel.ParSeq
-import brainflight.tools.geometry.Point3D
 import play.api.Logger
-import brainflight.tools.geometry._
 import scala.collection.mutable.ArrayBuffer
-import play.api.libs.iteratee.Enumerator
-import brainflight.tools.geometry.TransformationMatrix
 
 /**
  * All possible data models the client should be able to request need to be defined here and registered in Boot.scala

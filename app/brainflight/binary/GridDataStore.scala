@@ -1,6 +1,5 @@
 package brainflight.binary
 
-import play.Logger
 import java.io.{ FileNotFoundException, InputStream, FileInputStream }
 import scala.collection.JavaConverters._
 import models.binary.DataSet
@@ -12,29 +11,22 @@ import reactivemongo.bson.BSONDocument
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.bson._
 import reactivemongo.bson.handlers.DefaultBSONHandlers._
-import play.api.libs.iteratee.Iteratee
+import reactivemongo.api.gridfs.Implicits._
+import play.api.libs.iteratee._
 import scala.collection.mutable.ArrayBuffer
-import play.api.libs.iteratee.Enumerator
 import java.io.File
 import scala.concurrent.Future
-import play.api.libs.concurrent.Promise
-import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Promise
+import scala.concurrent.ExecutionContext.Implicits._
 import models.GridDataSetPairing
-import play.api.libs.concurrent.Akka
-import play.api.Play.current
-import play.api.libs.iteratee.Input
-import play.api.libs.iteratee.Done
 import models.binary.DataLayer
 import akka.actor.Actor
-import scala.concurrent.Promise
-import play.api.libs.iteratee.Cont
-import reactivemongo.api.gridfs.Implicits._
 
 case class InsertBinary(dataSet: DataSet)
 case class InsertionState()
 
 class BinaryData2DBActor extends Actor {
-  val insertionState = Agent[Map[DataSet, (Int, Int)]](Map())(Akka.system)
+  lazy val insertionState = Agent[Map[DataSet, (Int, Int)]](Map())(context.system)
 
   //GridFs handle
   lazy val connection = MongoConnection(List("localhost:27017"))

@@ -2,7 +2,7 @@ package controllers.admin
 
 import braingames.mvc.Controller
 import play.mvc.Security.Authenticated
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.security.Role
 import views._
 import models.task.TaskType

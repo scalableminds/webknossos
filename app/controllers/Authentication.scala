@@ -6,14 +6,14 @@ import play.api.data._
 import play.api.Play.current
 import play.api.libs.concurrent._
 import models.user._
-import views._
 import play.mvc.Results.Redirect
 import play.api.data.Forms._
 import models._
+import views.html
 import play.api.libs.iteratee.Done
 import play.api.libs.iteratee.Input
-import brainflight.security.Secured
-import brainflight.mail._
+import oxalis.security.Secured
+import braingames.mail._
 import controllers.admin._
 import models.tracing.Tracing
 import models.tracing.UsedTracings
@@ -21,6 +21,7 @@ import brainflight.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import braingames.mvc.Controller
+import oxalis.mail.DefaultMails
 
 object Authentication extends Controller with Secured {
   // -- Authentication

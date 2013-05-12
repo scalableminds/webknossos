@@ -4,7 +4,7 @@ import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
-import brainflight.tools.geometry.Point3D
+import braingames.geometry.Point3D
 import play.api.libs.functional.syntax._
 import models.basics.BasicDAO
 import models.basics.DAOCaseClass

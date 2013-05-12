@@ -2,7 +2,7 @@ package controllers.tracing.handler
 
 import net.liftweb.common.Box
 import models.tracing.TemporaryTracing
-import brainflight.security.AuthenticatedRequest
+import oxalis.security.AuthenticatedRequest
 import models.task.Project
 import play.api.i18n.Messages
 import controllers.TracingRights

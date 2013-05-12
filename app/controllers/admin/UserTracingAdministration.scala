@@ -1,10 +1,10 @@
 package controllers.admin
 
 import akka.actor.actorRef2Scala
-import brainflight.mail.DefaultMails
-import brainflight.mail.Send
-import brainflight.security.AuthenticatedRequest
-import brainflight.security.Secured
+import oxalis.mail.DefaultMails
+import braingames.mail.Send
+import oxalis.security.AuthenticatedRequest
+import oxalis.security.Secured
 import controllers._
 import models.security._
 import models.user.TimeTracking

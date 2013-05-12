@@ -1,24 +1,10 @@
 package brainflight.binary
 
-import brainflight.tools.geometry.Point3D
-import play.api.Logger
-import brainflight.tools.geometry.Point3D
-import models.binary._
-import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import akka.agent.Agent
-import play.api.libs.concurrent.Promise
-import play.api.libs.concurrent.Execution.Implicits._
-import brainflight.tools.geometry.Vector3D
-import brainflight.tools.Interpolator
 import play.api.Logger
-import scala.collection.mutable.ArrayBuffer
-import akka.actor.Actor
 import scala.concurrent.Future
-import akka.actor.ActorSystem
 import scala.concurrent.duration._
-import java.util.concurrent.TimeoutException
-import akka.dispatch.OnSuccess
-import play.api.Play
+import scala.concurrent.ExecutionContext.Implicits._
 
 case class DataBlock(info: LoadBlock, data: Data)
 
@@ -31,10 +17,10 @@ trait DataCache {
   def cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]
 
   // defines the maximum count of cached file handles
-  val maxCacheSize = Play.current.configuration.getInt("bindata.cacheMaxSize") getOrElse 100
+  def maxCacheSize: Int
 
   // defines how many file handles are deleted when the limit is reached
-  val dropCount = Play.current.configuration.getInt("bindata.cacheDropCount") getOrElse 20
+  def dropCount: Int
 
   /**
    * Loads the due to x,y and z defined block into the cache array and

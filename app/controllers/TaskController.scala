@@ -2,7 +2,7 @@ package controllers
 
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.security.Role
 import models.binary.DataSet
 import play.api.Logger

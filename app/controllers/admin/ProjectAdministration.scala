@@ -1,7 +1,7 @@
 package controllers.admin;
 
 import braingames.mvc.Controller
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.security.Role
 import scala.concurrent.duration._
 import views._

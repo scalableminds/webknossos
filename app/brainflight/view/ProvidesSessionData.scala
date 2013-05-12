@@ -1,6 +1,7 @@
 package brainflight.view
 
-import brainflight.security._
+import braingames.security._
+import oxalis.security._
 import play.api.mvc.Request
 
 trait ProvidesSessionData extends FlashMessages{

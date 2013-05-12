@@ -2,7 +2,7 @@ package controllers.tracing.handler
 
 import net.liftweb.common.Box
 import models.tracing.TracingLike
-import brainflight.security.AuthenticatedRequest
+import oxalis.security.AuthenticatedRequest
 import models.tracing.TracingLike
 import models.tracing.TracingType
 

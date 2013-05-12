@@ -10,8 +10,8 @@ import play.Logger
 import brainflight.binary.{ FileDataStore }
 import brainflight.binary.GridFileDataStore
 import java.security.MessageDigest
-import brainflight.tools.ExtendedTypes._
-import brainflight.tools.geometry.Point3D
+import braingames.util.ExtendedTypes._
+import braingames.geometry.Point3D
 import models.DataSet
 
 class GridFSTest extends Specification {

@@ -13,7 +13,7 @@ import play.api.libs._
 import play.api.libs.concurrent._
 import play.api.libs.iteratee._
 import com.ning.http.client.Realm.AuthScheme
-import brainflight.security.Secured
+import oxalis.security.Secured
 
 object TwitterLogin extends Controller {
 

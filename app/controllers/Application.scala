@@ -1,12 +1,12 @@
 package controllers
 
-import brainflight.security.Secured
+import oxalis.security.Secured
 import play.api.mvc.Action
 import play.api.mvc._
 import play.api._
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
-import brainflight.mail.Mailer
+import braingames.mail.Mailer
 
 object Application extends Controller with Secured {
   override val DefaultAccessRole = None

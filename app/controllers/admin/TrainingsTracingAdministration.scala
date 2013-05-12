@@ -1,6 +1,6 @@
 package controllers.admin
 
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.security.Role
 import braingames.mvc.Controller
 import models.tracing.Tracing
@@ -10,8 +10,8 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import controllers.Application
-import brainflight.mail.Send
-import brainflight.mail.DefaultMails
+import braingames.mail.Send
+import oxalis.mail.DefaultMails
 
 object TrainingsTracingAdministration extends Controller with Secured {
 

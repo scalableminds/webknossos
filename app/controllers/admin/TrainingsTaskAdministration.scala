@@ -2,19 +2,19 @@ package controllers.admin
 
 import braingames.mvc.Controller
 import play.mvc.Security.Authenticated
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.security._
 import views._
 import play.api.data.Form
 import play.api.data.Forms._
-import brainflight.security.AuthenticatedRequest
+import oxalis.security.AuthenticatedRequest
 import models.task.TaskType
 import models.binary.DataSet
 import models.task.Task
 import models.user.Experience
 import models.task.Training
 import models.tracing.Tracing
-import nml._
+import oxalis.nml._
 import models.tracing.TracingType
 import play.api.i18n.Messages
 import models.task.Project

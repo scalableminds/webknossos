@@ -3,10 +3,10 @@ package brainflight.io
 import java.io.File
 import name.pachler.nio.file.Path
 import name.pachler.nio.file.impl.PathImpl
-import brainflight.tools.geometry.Point3D
+import braingames.geometry.Point3D
 import play.api.Logger
 import braingames.util.ExtendedTypes.ExtendedString
-import net.liftweb.common._
+//import net.liftweb.common._
 import braingames.util.JsonHelper._
 import play.api.libs.json._
 import models.binary._

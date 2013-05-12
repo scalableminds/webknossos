@@ -5,19 +5,19 @@ import org.bson.types.ObjectId
 import models.basics._
 import models.context._
 import com.mongodb.casbah.commons.MongoDBObject
-import xml.Xml
-import xml.XMLWrites
+import braingames.xml.Xml
+import braingames.xml.XMLWrites
 import play.api.libs.json.Format
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
-import nml.Tree
-import nml.Node
-import nml.Edge
-import nml.utils._
+import oxalis.nml.Tree
+import oxalis.nml.Node
+import oxalis.nml.Edge
+import oxalis.nml.utils._
 import com.mongodb.casbah.commons.MongoDBList
 import com.mongodb.casbah.query.Implicits._
 import scala.collection.immutable.HashMap
-import nml.TreeLike
+import oxalis.nml.TreeLike
 
 case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, name: String = "", _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree]{
   val dao = DBTree

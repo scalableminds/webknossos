@@ -2,13 +2,13 @@ package controllers.admin
 
 import braingames.mvc.Controller
 import play.api.mvc.Action
-import brainflight.security.Secured
+import oxalis.security.Secured
 import views.html
 import models.user._
-import nml._
+import oxalis.nml._
 import models.security.Role
-import nml.NMLParser
-import xml.Xml
+import oxalis.nml.NMLParser
+import braingames.xml.Xml
 import play.api.Logger
 import scala.xml.PrettyPrinter
 import models.tracing._

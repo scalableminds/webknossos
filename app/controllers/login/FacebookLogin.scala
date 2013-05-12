@@ -8,7 +8,7 @@ import play.api.libs.ws.WS
 import com.restfb.BaseFacebookClient
 import com.restfb.DefaultFacebookClient
 import play.api.Play
-import brainflight.security.Secured
+import oxalis.security.Secured
 import controllers.UserController
 
 object FacebookLogin extends Controller {

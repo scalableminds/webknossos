@@ -1,7 +1,7 @@
 package brainflight.binary
 
 import akka.actor.Actor
-import brainflight.tools.geometry.Point3D
+import braingames.geometry.Point3D
 import models.binary._
 import scala.collection.mutable.ArrayBuffer
 import akka.agent.Agent
@@ -12,8 +12,8 @@ import akka.actor._
 import play.api.libs.concurrent.Promise
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.actor.ActorSystem
-import brainflight.tools.geometry.Vector3D
-import brainflight.tools.Math._
+import braingames.geometry.Vector3D
+import braingames.util.Math._
 import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import akka.util.Timeout
@@ -33,11 +33,18 @@ case class MultiCubeRequest(requests: Seq[SingleRequest])
 
 class DataRequestActor(val cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]) extends Actor with DataCache {
   import DataStore._
-  
+
   val id = UUID.randomUUID().toString()
 
   val conf = Play.current.configuration
   implicit val dataBlockLoadTimeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds)
+
+  // defines the maximum count of cached file handles
+  val maxCacheSize = Play.current.configuration.getInt("bindata.cacheMaxSize") getOrElse 100
+
+  // defines how many file handles are deleted when the limit is reached
+  val dropCount = Play.current.configuration.getInt("bindata.cacheDropCount") getOrElse 20
+
   val remotePath = conf.getString("datarequest.remotepath").getOrElse("")
   val useRemote = conf.getBoolean("bindata.useRemote").getOrElse(false)
   implicit val system =
@@ -61,7 +68,7 @@ class DataRequestActor(val cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]) ex
   def receive = {
     case SingleRequest(dataRequest) =>
       val s = sender
-      Akka.future{
+      Akka.future {
         load(dataRequest) pipeTo s
       }
     case MultiCubeRequest(requests) =>

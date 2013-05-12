@@ -55,9 +55,9 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     coffeescriptOptions := Seq("native", "coffee -p"),
-    resolvers ++= dependencyResolvers,
+    resolvers ++= dependencyResolvers//,
     //offline := true,
-    playAssetsDirectories += file("data")
+    //playAssetsDirectories += file("data")
   )
 
   lazy val shellgame = play.Project("shellgame", "0.1", shellgameDependencies, path = file("modules") / "shellgame").settings(
@@ -84,7 +84,7 @@ object ApplicationBuild extends Build {
     resolvers ++= dependencyResolvers,
     // offline := true,
     coffeescriptOptions := Seq("native", "coffee -p")
-  ).dependsOn(oxalis).aggregate(oxalis)
+  ).dependsOn(oxalis)
   
   lazy val stackrenderer = play.Project("stackrenderer", "0.1", stackrendererDependencies, path = file("modules") / "stackrenderer").settings(
     resolvers ++= dependencyResolvers

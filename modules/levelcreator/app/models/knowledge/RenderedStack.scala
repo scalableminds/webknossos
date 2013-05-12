@@ -12,12 +12,12 @@ import models.context._
 import scala.util.Random
 import com.mongodb.WriteResult
 
-case class MissionInfo(_id: ObjectId, key: String, possibleEnds: List[PossibleEnd]){
+case class MissionInfo(_id: ObjectId, key: String, possibleEnds: List[PossibleEnd]) {
   def id = _id.toString
 }
 
 case class RenderedStack(
-    _level: ObjectId,
+    _level: LevelId,
     mission: MissionInfo,
     downloadUrls: List[String],
     _id: ObjectId = new ObjectId) extends DAOCaseClass[RenderedStack] {
@@ -27,32 +27,52 @@ case class RenderedStack(
 
 }
 
-object RenderedStack extends BasicDAO[RenderedStack]("renderedStacks") with CommonFormats with Function4[ObjectId, MissionInfo, List[String], ObjectId, RenderedStack] {
-
+object RenderedStack extends BasicDAO[RenderedStack]("renderedStacks") with CommonFormats with Function4[LevelId, MissionInfo, List[String], ObjectId, RenderedStack] {
+  import Level.levelIdFormat
   implicit val missionInfoFormat: Format[MissionInfo] = Json.format[MissionInfo]
   implicit val renderedStackFormat: Format[RenderedStack] = Json.format[RenderedStack]
 
-  def findFor(levelId: ObjectId) = {
-    find(MongoDBObject("_level" -> levelId)).toList
-  }
-  
-  def countFor(levelId: ObjectId) = {
-    count(MongoDBObject("_level" -> levelId))
+  def findFor(levelId: LevelId) = {
+    find(MongoDBObject(
+      "_level.name" -> levelId.name,
+      "_level.version" -> levelId.version)).toList
   }
 
-  def remove(levelId: ObjectId, missionId: String){
-    if (ObjectId.isValid(missionId))
-      remove(MongoDBObject("_level" -> levelId, "mission._id" -> new ObjectId(missionId)))
+  def countFor(levelId: LevelId) = {
+    count(MongoDBObject(
+      "_level.name" -> levelId.name,
+      "_level.version" -> levelId.version))
   }
 
-  def removeAllOf(levelId: ObjectId): WriteResult = {
-    remove(MongoDBObject("_level" -> levelId))
+  def remove(levelId: LevelId, missionOId: String) {
+    if (ObjectId.isValid(missionOId))
+      remove(MongoDBObject(
+        "_level.name" -> levelId.name,
+        "_level.version" -> levelId.version,
+        "mission._id" -> new ObjectId(missionOId)))
   }
 
-  def insertUnique(r: RenderedStack) = {
-    update(MongoDBObject(
-      "mission.key" -> r.mission.key),
-      grater[RenderedStack].asDBObject(r), upsert = true, multi = false)
+  def removeAllOfMission(missionOId: String) = {
+    if (ObjectId.isValid(missionOId))
+      remove(MongoDBObject("mission._id" -> new ObjectId(missionOId)))
   }
 
+  def removeAllOf(levelId: LevelId): WriteResult = {
+    remove(MongoDBObject(
+      "_level.name" -> levelId.name,
+      "_level.version" -> levelId.version))
+  }
+
+  def updateOrCreate(r: RenderedStack) =
+    findOne(MongoDBObject(
+      "_level.name" -> r._level.name,
+      "_level.version" -> r._level.version,
+      "mission.key" -> r.mission.key)) match {
+      case Some(stored) =>
+        stored.update(_ => r.copy(_id = stored._id))
+        stored._id
+      case _ =>
+        insertOne(r)
+        r._id
+    }
 }

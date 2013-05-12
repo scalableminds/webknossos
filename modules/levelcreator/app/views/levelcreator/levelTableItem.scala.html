@@ -4,7 +4,7 @@
 <tr data-levelid="@level.id">
   <td> 
     <a href="#" data-prompt="@level.id" title="@level.id">#</a>
-    <a href="@controllers.levelcreator.routes.StackController.list(level.id)">@level.name</a>
+    <a href="@controllers.levelcreator.routes.StackController.list(level.levelId.name)">@level.levelId.toBeautifiedString</a>
   </td>
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>
@@ -20,7 +20,7 @@
     </a><br />
     <input type="checkbox" @if(level.autoRender) { @Html("checked") } class="auto-render-stacks"> auto render<br />
     <i class="icon-picture"></i> 
-    <a href="@controllers.levelcreator.routes.StackController.list(level.id)" class="view-stacks">view Stacks</a><br />
+    <a href="@controllers.levelcreator.routes.StackController.list(level.levelId.name)" class="view-stacks">view Stacks</a><br />
     <i class="icon-trash"></i>
     <a href="@controllers.levelcreator.routes.LevelCreator.delete(level.id)" data-ajax="method=DELETE,delete-row,confirm">delete</a>
   </td>

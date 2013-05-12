@@ -31,7 +31,7 @@ class LevelCreator
     @dimensions = [
       parseInt( $("#level-creator").data("level-width")  )
       parseInt( $("#level-creator").data("level-height") )
-      parseInt( $("#level-creator").data("level-slidesbeforeproblem") +  $("#level-creator").data("level-slidesafterproblem") )
+      parseInt( $("#level-creator").data("level-slidesbeforeproblem") + $("#level-creator").data("level-slidesafterproblem") )
     ]
 
     @dataHandler = new DataHandler(@dimensions, @levelId, @taskId, @dataSetName)
@@ -66,8 +66,23 @@ class LevelCreator
         data : @$form.serialize()
         type : "PUT"
       ).then(
-        ->
+        (data) =>
           Toast.success("Saved!")
+
+          saveForm = @$form[0]
+          produceButton = $("#produce-form .btn")[0]
+          assetsForm = $("#assets-upload")[0]
+
+          saveForm.action = saveForm.action.replace(@levelId, data.newId)
+          assetsForm.action = assetsForm.action.replace(@levelId, data.newId)
+          produceButton.href = $("#produce-form .btn")[0].href.replace(@levelId, data.newId)
+          @assetHandler.levelId = @levelId
+
+          heading = $("h3")
+          heading.html("#{data.newName} #{heading.text().match(/#\d+/)[0]}")
+
+          window.history.replaceState(null, "edit-#{data.newId}", window.location.href.replace(@levelId, data.newId))
+
         ->
           Toast.error(
             "Sorry, we couldn't save your code. Please try again."

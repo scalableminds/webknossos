@@ -14,6 +14,7 @@ import models.knowledge._
 import models.binary._
 import braingames.util.JsonHelper._
 import braingames.util.ExtendedTypes._
+import braingames.util.StartableActor
 
 case class StartWatchingForMissions()
 case class StopWatchingForMissions()
@@ -23,13 +24,18 @@ class MissionWatcher extends Actor {
 
   var updateTicker: Option[Cancellable] = None
 
+  override def preStart = {
+    
+    self ! StartWatchingForMissions()
+  }
+  
   def receive = {
     case StartWatchingForMissions() => start
     case StopWatchingForMissions()  => stop
   }
 
   def start = {
-    Logger.debug("Watching for Missions...")
+    Logger.info("Watching for Missions...")
     updateTicker = Some(context.system.scheduler.schedule(0 seconds, TICKER_INTERVAL) {
       lookForMissions()
     })
@@ -59,15 +65,17 @@ class MissionWatcher extends Actor {
 
       val missions = aggregateMissions(getMissionFiles(dataSet), dataSet.name)
       val availableMissionIds = missions.map { Mission.updateOrCreate(_) }
-      Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")
       val removedMissionIds = Mission.deleteAllForDataSetExcept(dataSet.name, missions)
-      Level.findByDataSetName(dataSet.name).foreach { level =>
-        if (level.autoRender)
-          Level.ensureMissions(level, availableMissionIds)
-        removedMissionIds.map { missionId =>
-          RenderedStack.remove(level._id, missionId)
-        }
+      
+      Level.findActiveAutoRenderByDataSetName(dataSet.name).foreach { level =>
+        Level.ensureMissions(level, availableMissionIds)
       }
+      
+      removedMissionIds.map { missionId =>
+        RenderedStack.removeAllOfMission(missionId)
+      }
+
+      Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")
     }
   }
 
@@ -79,4 +87,9 @@ class MissionWatcher extends Actor {
         .map(_.map(_.addContext(dataSetName, extractLayerId(missionFile))))
     }).flatten
   }
+}
+
+
+object MissionWatcher extends StartableActor[MissionWatcher] {
+  val name = "missionWatcher"
 }

@@ -100,7 +100,7 @@ object TaskTypeAdministration extends Controller with Secured{
     for {
       taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
     } yield {
-      TaskType.remove(taskType)
+      TaskType.removeById(taskType._id)
       JsonOk(Messages("taskType.deleted", taskType.summary))
     }
   }

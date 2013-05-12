@@ -95,9 +95,11 @@ class Route
         node.type = @TYPE_BRANCH
         @branchStack.push(node)
 
-    if @data.comments?
-      @comments = @data.comments
-      
+    # Set comments
+    for comment in @data.comments
+      comment.node = @findNodeInList(nodeList, comment.node)
+    @comments = @data.comments
+
     unless @activeTree
       if @trees.length > 0
         @activeTree = @trees[0]
@@ -350,31 +352,31 @@ class Route
     if(@activeNode?)
       # remove any existing comments for that node
       for i in [0...@comments.length]
-        if(@comments[i].node == @activeNode.id)
+        if(@comments[i].node.id == @activeNode.id)
           @comments.splice(i, 1)
           @deletedCommentIndex = i
           break
       if commentText != ""
-        @comments.push({node: @activeNode.id, content: commentText})
+        @comments.push({node: @activeNode, content: commentText})
       @stateLogger.push()
-      @updateComments()
+      @trigger("updateComments")
 
 
   getComment : (nodeID) ->
 
     unless nodeID? then nodeID = @activeNode.id if @activeNode?
     for comment in @comments
-      if comment.node == nodeID then return comment.content
+      if comment.node.id == nodeID then return comment.content
     return ""
 
 
   deleteComment : (nodeID) ->
 
     for i in [0...@comments.length]
-      if(@comments[i].node == nodeID)
+      if(@comments[i].node.id == nodeID)
         @comments.splice(i, 1)
         @stateLogger.push()
-        @updateComments()
+        @trigger("updateComments")
         break
 
 
@@ -384,25 +386,34 @@ class Route
     offset = if forward then 1 else -1
 
     unless @activeNode?
-      if length > 0 then return @comments[0].node
+      if length > 0 then return @comments[0].node.id
 
     if length == 0
       return null
 
     for i in [0...@comments.length]
-      if @comments[i].node == @activeNode.id
-        return @comments[(length + i + offset) % length].node
+      if @comments[i].node.id == @activeNode.id
+        return @comments[(length + i + offset) % length].node.id
 
     if @deletedCommentIndex?
       offset = if forward then 0 else -1
-      return @comments[(length + @deletedCommentIndex + offset) % length].node
+      return @comments[(length + @deletedCommentIndex + offset) % length].node.id
 
-    return @comments[0].node
+    return @comments[0].node.id
 
-  updateComments : =>
+
+  getComments : =>
 
     @comments.sort(@compareNodes)
-    @trigger("updateComments", @comments)
+
+
+  getPlainComments : =>
+
+    plainComments = []
+    for comment in @comments
+      plainComments.push({node: comment.node.id, content: comment.content})
+    plainComments
+
 
   selectNextTree : (forward) ->
 
@@ -412,6 +423,7 @@ class Route
 
     diff = (if forward then 1 else -1) + @trees.length
     @setActiveTree( @trees[ (i + diff) % @trees.length ].treeId )
+
 
   setActiveTree : (id) ->
 
@@ -439,6 +451,22 @@ class Route
       currentHue = treeId * @GOLDEN_RATIO
       currentHue %= 1
       ColorConverter.setHSV(new THREE.Color(), currentHue, 1, 1).getHex()
+
+
+  shuffleActiveTreeColor : ->
+
+    oldTreeId = @activeTree.treeId
+    @activeTree.treeId = @treeIdCount++
+    @activeTree.color = @getNewTreeColor(@activeTree.treeId)
+
+    # update tree ids
+    for node in @activeTree.nodes
+      node.treeId = @activeTree.treeId
+
+    @stateLogger.updateTree(@activeTree, oldTreeId)
+
+    @trigger("newActiveTree")
+    @trigger("newActiveTreeColor", oldTreeId)
 
 
   createNewTree : ->
@@ -614,7 +642,7 @@ class Route
     return result
 
 
-  rendered : -> @trigger("rendered")
+  rendered : -> @trigger("finishedRender")
 
 
   # Helper method used in initialization
@@ -636,8 +664,8 @@ class Route
 
   compareNodes : (a, b) ->
 
-    if a.node < b.node
+    if a.node.treeId < b.node.treeId
       return -1
-    if a.node > b.node
+    if a.node.treeId > b.node.treeId
       return 1
-    return 0
+    return a.node.id - b.node.id

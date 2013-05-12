@@ -33,6 +33,10 @@ class Controller
 
     @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done (settings) =>
 
+      # Do not continue, when there was an error and we got no settings from the server
+      unless settings
+        return
+
       for allowedMode in settings.allowedModes
         @allowedModes.push switch allowedMode
           when "oxalis" then constants.ALLOWED_OXALIS
@@ -104,6 +108,9 @@ class Controller
       $("#tree-list").on "click", "a[data-treeid]", (event) =>
         event.preventDefault()
         @setActiveTree($(event.currentTarget).data("treeid"), true)
+
+      $("#tree-color-shuffle").click =>
+        @model.route.shuffleActiveTreeColor()
 
 
 

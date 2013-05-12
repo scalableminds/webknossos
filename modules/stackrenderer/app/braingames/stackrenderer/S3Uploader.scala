@@ -9,6 +9,9 @@ import com.amazonaws.services.s3.model._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
 import braingames.util.ZipIO
+import scala.util.Try
+import scala.util.Success
+import scala.util.Failure
 
 case class UploadStack(stacks: Stack)
 
@@ -20,12 +23,13 @@ class S3Uploader(s3Config: S3Config) extends Actor {
 
   def receive = {
     case UploadStack(stack) =>
-      val downloadUrls =
-        if (s3Config.isEnabled)
-          uploadStack(stack)
-        else
-          Nil
-      sender ! FinishedUpload(stack, downloadUrls)
+      uploadStack(stack) match{
+        case Success(downloadUrls) =>
+        sender ! FinishedUpload(stack, downloadUrls)
+        case Failure(f) =>
+          Logger.error("An error occoured during upload: " + f)
+          sender ! FailedUpload(stack)
+      }
   }
 
   val gzipMetadata = {
@@ -34,17 +38,22 @@ class S3Uploader(s3Config: S3Config) extends Actor {
     metadata
   }
 
-  def uploadStack(stack: Stack): List[String] = {
-    for {
-      (file, key) <- buildUploadPairs(stack)
-    } yield {
-      val gzipped = ZipIO.gzipToTempFile(file)
-      Logger.debug(s"uploading ${file.getPath} to ${s3Config.bucketName}/$key")
-      val putObj = new PutObjectRequest(s3Config.bucketName, key, gzipped)
-      putObj.setCannedAcl(CannedAccessControlList.PublicRead);
-      putObj.setMetadata(gzipMetadata)
-      val r = s3.putObject(putObj)
-      s3.getResourceUrl(s3Config.bucketName, key)
+  def uploadStack(stack: Stack): Try[List[String]] = {
+    Try{
+      if (s3Config.isEnabled){
+        for {
+          (file, key) <- buildUploadPairs(stack)
+        } yield {
+          val gzipped = ZipIO.gzipToTempFile(file)
+          Logger.debug(s"uploading ${file.getPath} to ${s3Config.bucketName}/$key")
+          val putObj = new PutObjectRequest(s3Config.bucketName, key, gzipped)
+          putObj.setCannedAcl(CannedAccessControlList.PublicRead);
+          putObj.setMetadata(gzipMetadata)
+          val r = s3.putObject(putObj)
+          s3.getResourceUrl(s3Config.bucketName, key)
+        }
+      } else
+        Nil
     }
   }
 

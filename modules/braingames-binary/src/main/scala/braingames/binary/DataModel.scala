@@ -1,11 +1,10 @@
-package brainflight.binary
+package braingames.binary
 
 import scala.math._
 import braingames.util.Math._
 import braingames.geometry._
 import braingames.geometry.Vector3D._
 import scala.collection.parallel.ParSeq
-import play.api.Logger
 import scala.collection.mutable.ArrayBuffer
 
 /**

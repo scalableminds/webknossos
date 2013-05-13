@@ -1,45 +1,23 @@
-package brainflight.io
+package braingames.io
 
 import java.io.File
 import name.pachler.nio.file.Path
 import name.pachler.nio.file.impl.PathImpl
 import braingames.geometry.Point3D
-import play.api.Logger
 import braingames.util.ExtendedTypes.ExtendedString
-//import net.liftweb.common._
 import braingames.util.JsonHelper._
 import play.api.libs.json._
-import models.binary._
 import braingames.util.ExtendedTypes
+import braingames.binary.models.DataSetRepository
+import braingames.binary.models.DataSetLike
 
 case class ImplicitLayerInfo(name: String, resolutions: List[Int])
 case class ExplicitLayerInfo(name: String, dataType: String)
 
-class MongoDataSetChangeHandler extends DataSetChangeHandler {
-  def deleteAllDataSetsExcept(l: Array[String]) = {
-    DataSet.deleteAllExcept(l)
-  }
-
-  def updateOrCreateDataSet(d: DataSet) = {
-    DataSet.updateOrCreate(d)
-  }
-  
-  def removeDataSetByName(name: String) = {
-    DataSet.removeByName(name)
-  }
-}
-
-trait DataSetDAOLike {
-  def deleteAllDataSetsExcept(l: Array[String])
-  def updateOrCreateDataSet(d: DataSet)
-  def removeDataSetByName(name: String)
-}
-
-trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
+trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetRepository {
   def onStart(path: Path) {
     val file = path.asInstanceOf[PathImpl].getFile
     val files = file.listFiles()
-    Logger.trace(s"DataSetChangeHandler.onStart: files: ${files.mkString(", ")}")
     if (files != null) {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
@@ -47,7 +25,7 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
           dataSet.name
         }
       }
-      Logger.info(s"Found datasets: ${foundDataSets.mkString(",")}")
+      println(s"Found datasets: ${foundDataSets.mkString(",")}")
       deleteAllDataSetsExcept(foundDataSets)
     }
   }
@@ -56,7 +34,7 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
     onStart(path)
   }
 
-  def onCreate(path: Path) {
+  /*def onCreate(path: Path) {
     val file = path.asInstanceOf[PathImpl].getFile
     dataSetFromFile(file).map { dataSet =>
       updateOrCreateDataSet(dataSet)
@@ -68,7 +46,7 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
     dataSetFromFile(file).map { dataSet =>
       removeDataSetByName(dataSet.name)
     }
-  }
+  }*/
 
   def listDirectories(f: File) = {
     f.listFiles().filter(_.isDirectory())
@@ -128,9 +106,8 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
     } else None
   }
 
-  def dataSetFromFile(f: File): Option[DataSet] = {
+  def dataSetFromFile(f: File): Option[DataSetLike] = {
     if (f.isDirectory) {
-      Logger.trace(s"dataSetFromFile: $f")
       val dataSetInfo = new File(f.getPath + "/settings.json")
       if (dataSetInfo.isFile) {
         JsonFromFile(dataSetInfo).validate[BareDataSet] match {

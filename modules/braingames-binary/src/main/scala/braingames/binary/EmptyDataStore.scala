@@ -1,4 +1,4 @@
-package brainflight.binary
+package braingames.binary
 
 import scala.concurrent.Future
 import akka.agent.Agent

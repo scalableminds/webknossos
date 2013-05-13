@@ -1,8 +1,7 @@
-package brainflight.binary
+package braingames.binary
 
 import java.io.{ FileNotFoundException, InputStream, FileInputStream }
 import scala.collection.JavaConverters._
-import models.binary.DataSet
 import akka.agent.Agent
 import scala.io.Codec.charset2codec
 import reactivemongo.api._
@@ -19,14 +18,14 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext.Implicits._
 import models.GridDataSetPairing
-import models.binary.DataLayer
 import akka.actor.Actor
+import braingames.binary.models.DataSetLike
 
-case class InsertBinary(dataSet: DataSet)
+case class InsertBinary(dataSet: DataSetLike)
 case class InsertionState()
 
 class BinaryData2DBActor extends Actor {
-  lazy val insertionState = Agent[Map[DataSet, (Int, Int)]](Map())(context.system)
+  lazy val insertionState = Agent[Map[DataSetLike, (Int, Int)]](Map())(context.system)
 
   //GridFs handle
   lazy val connection = MongoConnection(List("localhost:27017"))
@@ -44,7 +43,7 @@ class BinaryData2DBActor extends Actor {
       sender ! state.mapValues(i => i._1 / i._2.toDouble)
   }
 
-  def create(dataSet: DataSet) = {
+  def create(dataSet: DataSetLike) = {
     val resolution = 1
     val dataLayer = dataSet.colorLayer
     GridDataSetPairing.getOrCreatePrefix(dataSet, dataLayer, 1).map { prefix =>

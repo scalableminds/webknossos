@@ -1,7 +1,6 @@
-package brainflight.binary
+package braingames.binary
 
 import akka.agent.Agent
-import play.api.Logger
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits._
@@ -33,7 +32,7 @@ trait DataCache {
       cache send (_ + (blockInfo -> p))
       p.onFailure {
         case e =>
-          Logger.warn(s"(${blockInfo.x}, ${blockInfo.y}, ${blockInfo.z}) DataStore couldn't load block: ${e.toString}")
+          println(s"WARN: (${blockInfo.x}, ${blockInfo.y}, ${blockInfo.z}) DataStore couldn't load block: ${e.toString}")
       }
       p
     }

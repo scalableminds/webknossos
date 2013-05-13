@@ -1,4 +1,4 @@
-package brainflight.binary
+package braingames.binary
 
 import braingames.geometry._
 import scala.concurrent.Promise

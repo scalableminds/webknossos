@@ -1,4 +1,4 @@
-package brainflight.binary
+package braingames.binary
 
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
 import akka.routing.Broadcast

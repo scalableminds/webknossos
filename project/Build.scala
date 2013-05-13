@@ -55,6 +55,7 @@ object ApplicationBuild extends Build {
   lazy val braingamesDependencies = Seq(
     "play" %% "play-json" % "2.2-SNAPSHOT",
     "commons-io" % "commons-io" % "1.3.2",
+    "com.typesafe.akka" %% "akka-agent" % "2.1.0",
     "org.apache.commons" % "commons-email" % "1.3.1",
     "org.apache.commons" % "commons-lang3" % "3.1",
     "com.typesafe.akka" %% "akka-remote" % "2.1.0") 

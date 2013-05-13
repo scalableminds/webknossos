@@ -1,16 +1,10 @@
-package brainflight.binary
+package braingames.binary
 
 import akka.actor.Actor
 import braingames.geometry.Point3D
-import models.binary._
 import scala.collection.mutable.ArrayBuffer
 import akka.agent.Agent
-import play.api.Logger
-import play.api.libs.concurrent.Akka
-import play.api.Play.current
 import akka.actor._
-import play.api.libs.concurrent.Promise
-import play.api.libs.concurrent.Execution.Implicits._
 import akka.actor.ActorSystem
 import braingames.geometry.Vector3D
 import braingames.util.Math._
@@ -22,34 +16,37 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import akka.pattern.pipe
 import com.typesafe.config.ConfigFactory
-import play.api.Play
-import brainflight.ActorSystems
 import scala.collection.immutable.HashMap
 import akka.routing.RoundRobinRouter
 import java.util.UUID
+import com.typesafe.config.Config
+import braingames.binary.models.DataLayerLike
+import braingames.binary.models.DataSetLike
 
 case class SingleRequest(dataRequest: DataRequest)
 case class MultiCubeRequest(requests: Seq[SingleRequest])
 
-class DataRequestActor(val cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]) extends Actor with DataCache {
+class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]) extends Actor with DataCache {
   import DataStore._
+  
+  implicit val ec = context.dispatcher
 
   val id = UUID.randomUUID().toString()
 
-  val conf = Play.current.configuration
-  implicit val dataBlockLoadTimeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds)
+  implicit val dataBlockLoadTimeout = Timeout((conf.getInt("loadTimeout")) seconds)
 
   // defines the maximum count of cached file handles
-  val maxCacheSize = Play.current.configuration.getInt("bindata.cacheMaxSize") getOrElse 100
+  val maxCacheSize = conf.getInt("cacheMaxSize")
 
   // defines how many file handles are deleted when the limit is reached
-  val dropCount = Play.current.configuration.getInt("bindata.cacheDropCount") getOrElse 20
+  val dropCount = conf.getInt("cacheDropCount")
 
-  val remotePath = conf.getString("datarequest.remotepath").getOrElse("")
-  val useRemote = conf.getBoolean("bindata.useRemote").getOrElse(false)
+  val remotePath = conf.getString("datarequest.remotepath")
+  val useRemote = conf.getBoolean("useRemote")
+  
   implicit val system =
     if (useRemote)
-      ActorSystems.dataRequestSystem
+      ActorSystem("DataRequests", conf.getConfig("datarequest"))
     else
       context.system
 
@@ -68,7 +65,7 @@ class DataRequestActor(val cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]) ex
   def receive = {
     case SingleRequest(dataRequest) =>
       val s = sender
-      Akka.future {
+      Future {
         load(dataRequest) pipeTo s
       }
     case MultiCubeRequest(requests) =>
@@ -80,24 +77,23 @@ class DataRequestActor(val cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]) ex
           val size = results.map(_.size).sum
           s ! Some(results.foldLeft(new ArrayBuffer[Byte](size))(_ ++= _))
         case Failure(e) =>
-          Logger.error(s"DataRequestActor Error for Request. Error: $e")
+          System.err.println(s"DataRequestActor Error for Request. Error: $e")
           s ! None
       }
   }
 
-  def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D) = {
+  def loadFromSomewhere(dataSet: DataSetLike, dataLayer: DataLayerLike, resolution: Int, block: Point3D) = {
     val block2Load = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.baseDir, dataLayer.bytesPerElement, resolution, block.x, block.y, block.z)
 
     def loadFromStore(dataStores: List[ActorRef]): Future[Array[Byte]] = dataStores match {
       case a :: tail =>
-        Logger.trace(s"Sending request: $block to ${a.path}")
         (a ? block2Load).mapTo[Array[Byte]].recoverWith {
           case e: AskTimeoutException =>
-            Logger.warn(s"(${dataSet.name}/${dataLayer.baseDir} $block) ${a.path}: Not response in time.")
+            println(s"WARN: (${dataSet.name}/${dataLayer.baseDir} $block) ${a.path}: Not response in time.")
             loadFromStore(tail)
           case e: ClassCastException =>
             // TODO: find a better way to catch the DataNotFoundException
-            Logger.warn(s"(${dataSet.name}/${dataLayer.baseDir} $block) ${a.path}: Not found.")
+            println(s"WARN: (${dataSet.name}/${dataLayer.baseDir} $block) ${a.path}: Not found.")
             loadFromStore(tail)
         }
       case _ =>
@@ -187,7 +183,7 @@ class DataRequestActor(val cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]) ex
       case Some(byteArray) =>
         getLocalBytes(globalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
       case _ =>
-        Logger.error(s"Didn't find block! :( -> $globalPoint -> $block")
+        System.err.println(s"Didn't find block! :( -> $globalPoint -> $block")
         nullValue(bytesPerElement)
     }
   }

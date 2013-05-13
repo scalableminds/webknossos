@@ -94,7 +94,7 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
    */
   def start(watchedPath: Path): Unit = {
     changeHandler.onStart(watchedPath)
-    updateTicker = Some(context.system.scheduler.schedule(TICKER_INTERVAL, TICKER_INTERVAL) { () =>
+    updateTicker = Some(context.system.scheduler.schedule(TICKER_INTERVAL, TICKER_INTERVAL) {
       changeHandler.onTick(watchedPath)
     })
 

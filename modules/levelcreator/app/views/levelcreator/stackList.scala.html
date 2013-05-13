@@ -20,6 +20,11 @@
                 <i class="icon-star"></i> Set as active version
               </a>
             </p>
+            <p>
+              <a href="#bulk-load">
+                <i class="icon-play"></i> Bulk load
+              </a>
+            </p>
           </header>
 
           <div data-levelname="@level.levelId" class="clearfix">
@@ -41,6 +46,7 @@
                       <input type="hidden" name="missionId" value="@{stack.mission.id}" />
                       <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" data-ajax="submit,busy-class"><i class="icon-retweet"></i></a>
                     </form>
+                    <input type="checkbox">
                   </div>
                 </header>
                 <div class="stack-display clearfix" style="height: @((level.height + 20) + "px");">

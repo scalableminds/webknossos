@@ -43,40 +43,56 @@ $ ->
         prompt("Level id:", $(this).data("prompt"))
 
 
+      $(document).on "click", "#level-list .auto-render-stacks", (event) ->
+
+        sendAutoRender = =>
+
+          $row = $(this).parents("tr").first()
+          levelId = $row.data("levelid")
+
+          $.ajax(
+            _.extend(
+              routes.controllers.levelcreator.LevelCreator.autoRender(levelId, this.checked)
+              dataType : "json"
+            )
+          ).then(
+
+            ( { messages } ) -> Toast.message(messages)
+            (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
+
+          )
+
+        if this.checked
+          if confirm("Are you sure, you want to generate a ton of stacks for this level?")
+            sendAutoRender()
+
+          else
+            this.checked = false
+        else
+          sendAutoRender()
+
+
 
       $(document).on "click", "#level-list .produce-stacks", (event) -> 
 
         event.preventDefault()
         $this = $(this)
-
-        return if $this.find(".icon-retweet.rotating").length > 0
+      
+        $row = $this.parents("tr").first()
+        levelId = $row.data("levelid")
+        count = parseInt(prompt("How many stacks to produce?", "3"))
         
-        unless $(event.target).is("input")
-          
-          $row = $this.parents("tr").first()
-          levelId = $row.data("levelid")
-          count = $this.find("input").val()
-          
-          $.ajax(
-            _.extend(
-              dataType : "json"
-              beforeSend : (xhr) -> console.log xhr
-              routes.controllers.levelcreator.StackController.produce(levelId, count)
-            )
-          ).then(
-
-            ( { messages } ) -> 
-              Toast.message(messages)
-              
-              $viewStacks = $row.find(".view-stacks")
-              stackCount = $viewStacks.html().match(/[0-9]+/)[0]
-              $viewStacks.html($viewStacks.html().replace(stackCount, parseInt(stackCount) + parseInt(count)))
-
-            (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
-
-          ).always(
-            -> $this.find(".icon-retweet").removeClass("rotating")
+        $.ajax(
+          _.extend(
+            dataType : "json"
+            beforeSend : (xhr) -> console.log xhr
+            routes.controllers.levelcreator.StackController.produce(levelId, count)
           )
-          $this.find(".icon-retweet").addClass("rotating")
+        ).then(
+
+          ( { messages } ) -> Toast.message(messages)
+          (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
+
+        )
 
         return

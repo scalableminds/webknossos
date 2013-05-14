@@ -1,7 +1,8 @@
-@(level: models.knowledge.Level, missions: List[models.knowledge.Mission])(implicit session: brainflight.view.UnAuthedSessionData)
+@(stacks: Map[models.knowledge.Level, List[models.knowledge.RenderedStack]])(implicit session: brainflight.view.UnAuthedSessionData)
 @main(){
-  <div class="container">
-    <h3>@level.name</h3>
+  <div class="container wide">
+    @stacks.map{ case(level, stacks) =>
+    <h3>@level.levelId</h3>
     <h4>#@level.id</h4>
 
     <p>
@@ -10,38 +11,38 @@
       </a>
     </p>
 
-    <div id="stack-list" data-levelname="@level.name">
-      @missions.map{ mission =>
+    <div id="stack-list" data-levelname="@level.levelId">
+      @stacks.sortBy(_.mission.key).map{ stack =>
         <div class="stack img-polaroid" style="width: @(level.width + "px");">
           <header class="clearfix">
-            <h4>#@formatHash(mission.id)</h4>
+            <h4>#@(stack.mission.key)</h4>
             <div class="stack-buttons">
-              <a href="@controllers.levelcreator.routes.Assets.at(path="/public/levelStacks", s"${level.name}/${mission.id}/${level.id}_${mission.id}.zip")" class="download-button">
-                <i class="icon-download"></i>
-              </a>
-              <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, mission.id)" class="edit-button">
+              <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id, stack.mission.id)" class="edit-button">
                 <i class="icon-pencil"></i>
               </a>
-              <a href="@controllers.levelcreator.routes.StackController.delete(level.id, mission.id)" class="delete-button" data-ajax="method=DELETE,delete-parent=.stack">
+              <a href="@stack.downloadUrls.find(_.endsWith("meta.json"))" class="edit-button">
+                <i class="icon-cog"></i>
+              </a>
+              <a href="@controllers.levelcreator.routes.StackController.delete(level.id, stack.mission.id)" class="delete-button" data-ajax="method=DELETE,delete-parent=.stack">
                 <i class="icon-trash"></i>
               </a>
+              <a href="@controllers.levelcreator.routes.StackController.delete(level.id, stack.mission.id)" class="delete-button" data-ajax="method=DELETE,delete-parent=.stack">
+                <i class="icon-thumbs-down"></i>
+              </a>
               <form method="POST">
-                <input type="hidden" name="missionId" value="@{mission.id}" />
+                <input type="hidden" name="missionId" value="@{stack.mission.id}" />
                 <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" data-ajax="submit,busy-class"><i class="icon-retweet"></i></a>
               </form>
             </div>
           </header>
-          <div class="stack-display" style="height: @((level.height + 20) + "px");">
-            <a href="#stack-@{mission.id}">
+          <div class="stack-display clearfix" style="height: @((level.height + 20) + "px");">
+            <a href="@stack.downloadUrls.find(_.endsWith(".tar"))">
               <i class="icon-play"></i>
             </a>
-          </div>
-          <div style="padding-top: 5px">
-          startPos: @mission.start.position </br> startId: @mission.start.startId
           </div>
         </div>
       }
     </div>
-
+    }
   </div>
 }

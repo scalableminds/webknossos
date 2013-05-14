@@ -9,51 +9,118 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Logger
 import braingames.util.StartableActor
 import models.knowledge.Stack
+import org.bson.types.ObjectId
+import models.knowledge._
+import play.api.Play
 
 case class CreateStack(stack: Stack)
-case class RequestWork()
-case class StackGenerationChallenge(challenge: CreateStack, responseKey: String)
-case class FinishWork(responseKey: String)
+case class CreateRandomStacks(level: Level, n: Int)
+case class CreateStacks(stacks: List[Stack])
+case class RequestWork(rendererId: String)
+case class FinishedWork(key: String, downloadUrls: List[String])
+case class FailedWork(key: String)
+case class CheckStacksInProgress()
+case class CountActiveRenderers()
 
 class StackWorkDistributor extends Actor {
-  val maxStackGenerationTime = 30 minutes
+  val conf = Play.current.configuration
 
   implicit val sys = context.system
 
-  val inProgressStacks = Agent[Map[String, CreateStack]](Map.empty)
+  val maxRendererInactiveTime =
+    (conf.getInt("levelcreator.render.maxInactiveTime") getOrElse 10) minutes
 
-  val stackQueue = Agent[Queue[CreateStack]](Queue.empty)
+  val maxRenderTime =
+    (conf.getInt("levelcreator.render.maxTime") getOrElse 30) minutes
+
+  val workingRenderers = Agent[Map[String, Long]](Map.empty)
+
+  override def preStart() {
+    Logger.info("StackWorkDistributor started")
+    sys.scheduler.schedule(10 seconds, 1 minute)(self ! CheckStacksInProgress())
+  }
+
+  def createStack(stack: Stack) = {
+    StacksQueued.remove(stack.level, stack.mission)
+    StacksQueued.insert(stack)
+  }
+
+  def logActiveRenderer(rendererId: String) = {
+    workingRenderers.send(_ + (rendererId -> System.currentTimeMillis()))
+  }
+
+  def deleteInactiveRenderers() = {
+    workingRenderers.send(_.filterNot(System.currentTimeMillis() - _._2 > maxRendererInactiveTime.toMillis))
+  }
 
   def receive = {
-    case s: CreateStack =>
-      stackQueue.send(_.enqueue(s))
+    case CreateRandomStacks(l, n) =>
+      Level.findOneById(l._id).map { level =>
+        val renderedStacks = RenderedStack.findFor(level.levelId).map(_.id)
+        Mission.findByDataSetName(level.dataSetName)
+          .filter(m =>
+            StacksQueued.find(level, m).isEmpty &&
+              StacksInProgress.find(level, m).isEmpty &&
+              !renderedStacks.contains(m.id))
+          .take(n)
+          .map(m => createStack(Stack(level, m)))
+      }
 
-    case FinishWork(responseKey) =>
-      inProgressStacks.send(_ - responseKey)
+    case CreateStack(stack) =>
+      createStack(stack)
 
-    case RequestWork() =>
-      val q = stackQueue()
-      if (q.isEmpty) {
-        val (s, _) = q.dequeue
-        stackQueue.send { q =>
-          if (!q.isEmpty)
-            q.dequeue._2
-          else
-            q
+    case CreateStacks(stacks) =>
+      stacks.map(createStack)
+
+    case FinishedWork(key, downloadUrls) =>
+      StacksInProgress.findOneByKey(key).map { challenge =>
+        (for {
+          level <- challenge.level
+          mission <- challenge.mission
+        } yield {
+          val missionInfo = MissionInfo(mission._id, mission.key, mission.possibleEnds)
+          RenderedStack.updateOrCreate(RenderedStack(level.levelId, missionInfo, downloadUrls))
+          Logger.debug(s"Finished work of $key. Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
+        }) getOrElse {
+          Logger.error(
+            s"Couldn't update level! Challenge: ${challenge.id} " +
+              s"Level: ${challenge._level.toString} (empy: ${challenge.level.isEmpty})" +
+              s"Mission: ${challenge._mission.toString} (empy: ${challenge.mission.isEmpty})")
         }
-        val responseKey = UUID.randomUUID().toString()
-        inProgressStacks.send(_ + (responseKey -> s))
+        StacksInProgress.removeById(challenge._id)
+      }
 
-        sys.scheduler.scheduleOnce(maxStackGenerationTime) {
-          inProgressStacks().get(responseKey).map { s =>
-            inProgressStacks.send(_ - responseKey)
-            stackQueue.send(_.enqueue(s))
-            Logger.warn(s"Stack was not completed! Key: $responseKey Stack: $s")
-          }
+    case CheckStacksInProgress() =>
+      deleteInactiveRenderers()
+      val unfinishedExpired = StacksInProgress.findAllOlderThan(maxRenderTime)
+      Logger.debug(s"About to delete '${unfinishedExpired.size}' expired stacks in progress.")
+      unfinishedExpired.map { challenge =>
+        for {
+          level <- challenge.level
+          mission <- challenge.mission
+        } {
+          StacksQueued.insert(Stack(level, mission))
         }
+        StacksInProgress.removeById(challenge._id)
+        Logger.warn(s"Stack was not completed! Challenge: ${challenge._id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
+      }
 
-        sender ! Some(StackGenerationChallenge(s, responseKey))
-      } else {
+    case FailedWork(key) =>
+      if (ObjectId.isValid(key)) {
+        Logger.error(s"Renderer reported failed Work: $key")
+      }
+
+    case CountActiveRenderers() =>
+      sender ! workingRenderers().size
+
+    case RequestWork(rendererId) =>
+      logActiveRenderer(rendererId)
+      StacksQueued.popOne().map { stack =>
+        val challenge = StackRenderingChallenge(stack.id, stack.level.levelId, stack.mission._id)
+        StacksInProgress.insert(challenge)
+
+        sender ! Some(stack)
+      } getOrElse {
         sender ! None
       }
   }

@@ -26,8 +26,8 @@ class View
         Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false)
       wrongDirection : =>
         Toast.error("You're tracing in the wrong direction")
-      updateComments : (comments) => 
-        @updateComments(comments)
+      updateComments : => 
+        @updateComments()
       newActiveNode : => 
         @updateActiveComment()
         @updateActiveTree()
@@ -37,18 +37,25 @@ class View
         @updateActiveTree()
       mergeTree : =>
         @updateTrees()
+        @updateComments()
       reloadTrees : =>
         @updateTrees()
+        @updateComments()
       newNode : => 
         @updateActiveComment()
         @updateTrees()
       newTreeName : => 
         @updateTrees()
         @updateActiveTree()
+        @updateComments()
       newTree : => 
         @updateActiveComment()
         @updateTrees()
-        @updateActiveTree() 
+        @updateActiveTree()
+        @updateComments()
+      newActiveTreeColor : =>
+        @updateActiveTree()
+        @updateTrees()
       deleteActiveNode : =>
         @updateTrees() })
 
@@ -66,7 +73,7 @@ class View
               window.location.reload() )},
             {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
 
-    @model.route.updateComments()
+    @updateComments()
     @updateActiveTree()
     @updateTrees()
 
@@ -95,11 +102,10 @@ class View
 
   setMode : (mode) ->
 
-    @mode = mode
-    @createKeyboardCommandOverlay()
+    @createKeyboardCommandOverlay(mode)
 
 
-  createKeyboardCommandOverlay : ->
+  createKeyboardCommandOverlay : (mode) ->
 
     generalKeys =
       '<tr><th colspan="4">General</th></tr>
@@ -132,7 +138,11 @@ class View
             <div class="modal-body" id="help-modal-body"><p>
             <table class="table table-condensed table-nohead table-bordered"><tbody>'''
       
-    html += generalKeys + if @mode == constants.MODE_OXALIS then viewportKeys + skeletonKeys else arbitraryKeys
+    html += generalKeys
+    if mode == constants.MODE_PLANE_TRACING 
+      html += viewportKeys + skeletonKeys
+    else if mode == constants.MODE_ARBITRARY
+      html += arbitraryKeys
 
     html += '''</tbody>
             </table>
@@ -146,18 +156,26 @@ class View
     $("#help-modal").html(html)
 
 
-  updateComments : (comments) ->
+  updateComments : ->
     
+    comments = @model.route.getComments()
     commentList = $("#comment-list")
     commentList.empty()
 
     # DOM container to append all elements at once for increased performance
     newContent = document.createDocumentFragment()
 
+    lastTreeId = -1
     for comment in comments
+      treeId = comment.node.treeId
+      if treeId != lastTreeId
+        newContent.appendChild((
+          $('<li>').append($('<i>', {"class": "icon-sitemap"}),
+          $('<span>', {"text": @model.route.getTree(treeId).name})))[0])
+        lastTreeId = treeId
       newContent.appendChild((
         $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
-        $('<a>', {"href": "#", "data-nodeid": comment.node, "text": comment.node + " - " + comment.content})))[0])
+        $('<a>', {"href": "#", "data-nodeid": comment.node.id, "text": comment.node.id + " - " + comment.content})))[0])
 
     commentList.append(newContent)
 

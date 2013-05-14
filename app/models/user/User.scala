@@ -59,16 +59,19 @@ case class User(
   }
 
   def setExperience(name: String, value: Int) = {
-    this.copy(experiences = this.experiences + (name -> value))
+    val n = name.trim
+    this.copy(experiences = this.experiences + (n -> value))
   }
   
   def deleteExperience(name: String) = {
-    this.copy(experiences = this.experiences.filterNot(_._1 == name))
+    val n = name.trim
+    this.copy(experiences = this.experiences.filterNot(_._1 == n))
   }  
 
   def increaseExperience(name: String, value: Int) = {
-    val sum = (this.experiences.get(name) getOrElse 0) + value
-    this.copy(experiences = this.experiences + (name -> sum))
+    val n = name.trim
+    val sum = (this.experiences.get(n) getOrElse 0) + value
+    this.copy(experiences = this.experiences + (n -> sum))
   }
 
   def logActivity(time: Long) = {
@@ -93,8 +96,6 @@ case class User(
 
 object User extends BasicDAO[User]("users") {
   this.collection.ensureIndex("email")
-
-  def default = findLocalByEmail("scmboy@scalableminds.com").get
 
   val LocalLoginType = "local"
 

@@ -39,7 +39,8 @@ object ApplicationBuild extends Build {
   )
   val shellgameDependencies = Seq()
   
-  val levelcreatorDependencies = Seq(
+  val stackrendererDependencies = Seq(
+     "org.kamranzafar" % "jtar" % "2.2",
      "com.amazonaws" % "aws-java-sdk" % "1.3.32")
   
   val isoshaderDependencies = Seq()
@@ -54,9 +55,9 @@ object ApplicationBuild extends Build {
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     coffeescriptOptions := Seq("native", "coffee -p"),
-    resolvers ++= dependencyResolvers,
+    resolvers ++= dependencyResolvers//,
     //offline := true,
-    playAssetsDirectories += file("data")
+    //playAssetsDirectories += file("data")
   )
 
   lazy val shellgame = play.Project("shellgame", "0.1", shellgameDependencies, path = file("modules") / "shellgame").settings(
@@ -77,25 +78,23 @@ object ApplicationBuild extends Build {
     scalaVersion := "2.10.0"
   ).aggregate(oxalis)
   
-  lazy val levelcreator = play.Project("levelcreator", "0.1", levelcreatorDependencies, path = file("modules") / "levelcreator").settings(
+  lazy val levelcreator = play.Project("levelcreator", "0.1", Seq(), path = file("modules") / "levelcreator").settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
     // offline := true,
-    coffeescriptOptions := Seq("native", "coffee -p"),
-    playAssetsDirectories += file("data")
-  ).dependsOn(oxalis).aggregate(oxalis)
+    coffeescriptOptions := Seq("native", "coffee -p")
+  ).dependsOn(oxalis)
   
-  lazy val stackrenderer = play.Project("stackrenderer", "0.1", levelcreatorDependencies, path = file("modules") / "stackrenderer").settings(
+  lazy val stackrenderer = play.Project("stackrenderer", "0.1", stackrendererDependencies, path = file("modules") / "stackrenderer").settings(
     resolvers ++= dependencyResolvers
-  ).dependsOn(oxalis).aggregate(oxalis)  
+  ).dependsOn(levelcreator).aggregate(levelcreator)  
   
   lazy val isoshader = play.Project("isoshader", "0.1", isoshaderDependencies, path = file("modules") / "isoshader").settings(
     templatesImport += "brainflight.view.helpers._",
     templatesImport += "brainflight.view._",
     resolvers ++= dependencyResolvers,
-    coffeescriptOptions := Seq("native", "coffee -p"),
-    playAssetsDirectories += file("data")
+    coffeescriptOptions := Seq("native", "coffee -p")
   ).dependsOn(oxalis).aggregate(oxalis)
 }
             

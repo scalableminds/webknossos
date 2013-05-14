@@ -6,15 +6,36 @@ import name.pachler.nio.file.impl.PathImpl
 import brainflight.tools.geometry.Point3D
 import play.api.Logger
 import braingames.util.ExtendedTypes.ExtendedString
-import models.binary._
 import net.liftweb.common._
 import braingames.util.JsonHelper._
 import play.api.libs.json._
+import models.binary._
+import braingames.util.ExtendedTypes
 
 case class ImplicitLayerInfo(name: String, resolutions: List[Int])
 case class ExplicitLayerInfo(name: String, dataType: String)
 
-class DataSetChangeHandler extends DirectoryChangeHandler {
+class MongoDataSetChangeHandler extends DataSetChangeHandler {
+  def deleteAllDataSetsExcept(l: Array[String]) = {
+    DataSet.deleteAllExcept(l)
+  }
+
+  def updateOrCreateDataSet(d: DataSet) = {
+    DataSet.updateOrCreate(d)
+  }
+  
+  def removeDataSetByName(name: String) = {
+    DataSet.removeByName(name)
+  }
+}
+
+trait DataSetDAOLike {
+  def deleteAllDataSetsExcept(l: Array[String])
+  def updateOrCreateDataSet(d: DataSet)
+  def removeDataSetByName(name: String)
+}
+
+trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
   def onStart(path: Path) {
     val file = path.asInstanceOf[PathImpl].getFile
     val files = file.listFiles()
@@ -22,12 +43,12 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     if (files != null) {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
-          DataSet.updateOrCreate(dataSet)
+          updateOrCreateDataSet(dataSet)
           dataSet.name
         }
       }
       Logger.info(s"Found datasets: ${foundDataSets.mkString(",")}")
-      DataSet.deleteAllExcept(foundDataSets)
+      deleteAllDataSetsExcept(foundDataSets)
     }
   }
 
@@ -38,14 +59,14 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
   def onCreate(path: Path) {
     val file = path.asInstanceOf[PathImpl].getFile
     dataSetFromFile(file).map { dataSet =>
-      DataSet.updateOrCreate(dataSet)
+      updateOrCreateDataSet(dataSet)
     }
   }
 
   def onDelete(path: Path) {
     val file = path.asInstanceOf[PathImpl].getFile
     dataSetFromFile(file).map { dataSet =>
-      DataSet.removeByName(dataSet.name)
+      removeDataSetByName(dataSet.name)
     }
   }
 
@@ -72,20 +93,59 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
     else {
       Some(numbers.max)
     }
-  }  
+  }
+  
+  def getColorLayer(f: File): Option[ColorLayer] = {
+    val colorLayerInfo = new File(f.getPath + "/color/layer.json")
+    if(colorLayerInfo.isFile) {
+      JsonFromFile(colorLayerInfo).validate[ColorLayer] match {
+        case JsSuccess(colorLayer, _) => Some(colorLayer)
+        case JsError(error) =>
+          Logger.error(error.toString)
+          None
+      }
+    } else None
+  }
+  
+  def getSegmentationLayers(f: File): Option[List[SegmentationLayer]] = {
+    val segmentationsDir = new File(f.getPath + "/segmentation")
+    if(segmentationsDir.isDirectory){
+      Some((for{layerDir <- segmentationsDir.listFiles.toList.filter(d => d.isDirectory && d.getName.startsWith("layer"))
+        layerInfo = new File(layerDir.getPath + "/layer.json")
+        if layerInfo.isFile
+     } yield {
+       JsonFromFile(layerInfo).validate[ContextFreeSegmentationLayer] match {
+         case JsSuccess(cfSegmentationLayer, _) => 
+           val parentDir = layerInfo.getParentFile
+           Logger.info(s"found segmentation layer: ${parentDir.getName}")
+           val batchId = parentDir.getName.replaceFirst("layer", "").toIntOpt
+           Some(cfSegmentationLayer.addContext(batchId getOrElse 0))
+         case JsError(error) =>
+           Logger.error(error.toString)
+           None
+       }
+     }).flatten)
+    } else None
+  }
 
   def dataSetFromFile(f: File): Option[DataSet] = {
     if (f.isDirectory) {
       Logger.trace(s"dataSetFromFile: $f")
-      val dataSetInfo = new File(f.getPath+"/settings.json")
-      if(dataSetInfo.exists){
-        JsonFromFile(dataSetInfo).validate[DataSet] match {
-          case JsSuccess(dataSet, _) => Some(dataSet.withBaseDir((f.getAbsolutePath)))
-          case JsError(error) => Logger.error(error.toString)
-          None
+      val dataSetInfo = new File(f.getPath + "/settings.json")
+      if (dataSetInfo.isFile) {
+        JsonFromFile(dataSetInfo).validate[BareDataSet] match {
+          case JsSuccess(bareDataSet, _) => 
+          val colorLayerOpt = getColorLayer(f)
+          val segmentationLayersOpt = getSegmentationLayers(f)
+          for{ colorLayer <- colorLayerOpt
+            segmentationLayers <- segmentationLayersOpt          
+          } yield bareDataSet.addLayers(f.getAbsolutePath, colorLayer, segmentationLayers)
+          
+          case JsError(error) =>
+            Logger.error(error.toString)
+            None
         }
-      }
-      else {
+      } else {
         for {
           layer <- listDirectories(f).find(dir => dir.getName == "color")
           resolutionDirectories = listDirectories(layer)
@@ -96,7 +156,7 @@ class DataSetChangeHandler extends DirectoryChangeHandler {
           xMax <- maxValueFromFiles(res.listFiles())
           yMax <- maxValueFromFiles(xs.listFiles())
           zMax <- maxValueFromFiles(ys.listFiles())
-          } yield {
+        } yield {
           val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
           DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, colorLayer = ColorLayer(supportedResolutions = resolutions))
         }

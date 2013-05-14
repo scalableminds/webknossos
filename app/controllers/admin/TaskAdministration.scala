@@ -40,7 +40,7 @@ object TaskAdministration extends Controller with Secured{
         taskType => TaskType.findOneById(taskType).isDefined),
       "experience" -> mapping(
         "domain" -> text,
-        "value" -> number)(Experience.apply)(Experience.unapply),
+        "value" -> number)(Experience.fromForm)(Experience.unapply),
       "priority" -> number,
       "taskInstances" -> number.verifying("task.edit.toFewInstances",
         taskInstances => taskInstances >= minTaskInstances),
@@ -58,7 +58,7 @@ object TaskAdministration extends Controller with Secured{
         p => p.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(Point3D.fromForm)(Point3D.toForm),
     "experience" -> mapping(
       "domain" -> text,
-      "value" -> number)(Experience.apply)(Experience.unapply),
+      "value" -> number)(Experience.fromForm)(Experience.unapply),
     "priority" -> number,
     "taskInstances" -> number,
     "project" -> text.verifying("project.notFound",
@@ -98,7 +98,7 @@ object TaskAdministration extends Controller with Secured{
     for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {
-      Task.remove(task)
+      Task.removeById(task._id)
       JsonOk(Messages("task.removed"))
     }
   }
@@ -127,7 +127,7 @@ object TaskAdministration extends Controller with Secured{
     for {
       tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
     } yield {
-      UsedTracings.removeAll(tracing)
+      UsedTracings.removeAll(tracing.id)
       tracing match {
         case t if t.tracingType == TracingType.Task =>
           tracing.update(_.cancel)

@@ -3,9 +3,11 @@
 # ~~~~
 
 # Home page
-GET     /                           controllers.isoshader.Application.index
+GET   /                         controllers.isoshader.Application.index
 
-GET     /assets/isoshader/*file     controllers.isoshader.Assets.at(path="/modules/isoshader/public", file)
+GET   /assets/isoshader/*file   controllers.isoshader.Assets.at(path="/modules/isoshader/public", file)
+
+GET   /binary/image             controllers.isoshader.BinaryData.requestImage( dataSetName: String, dataLayerName: String, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int )
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.at(path="/public", file)
+GET   /assets/*file             controllers.Assets.at(path="/public", file)

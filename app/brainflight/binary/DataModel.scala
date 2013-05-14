@@ -117,7 +117,6 @@ case class Cuboid(
     val yhMax = topLeft.y + height
     val zhMax = topLeft.z + depth
 
-    val t = System.currentTimeMillis()
     val array = new ArrayBuffer[T](_width * _height * _depth * extendArrayBy)
     var x = topLeft.x
     var y = topLeft.y

@@ -41,9 +41,11 @@ class ArbitraryController
       @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats, @gui, renderer, scene) ->
+  constructor : (@model, stats, @gui, renderer, scene, @sceneController) ->
 
     _.extend(this, new EventMixin())
+
+    @isStarted = false
 
     @canvas = canvas = $("#render-canvas")
     
@@ -71,8 +73,6 @@ class ArbitraryController
     matrix = @cam.getMatrix()
     @model.binary.arbitraryPing(matrix)
 
-    @model.route.rendered()
-
 
   initMouse : ->
     @input.mouse = new Input.Mouse(
@@ -89,45 +89,55 @@ class ArbitraryController
 
 
   initKeyboard : ->
+
+    getVoxelOffset  = (timeFactor) =>
+      return @model.user.moveValue3d * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
     
     @input.keyboard = new Input.Keyboard(
  
       #Scale plane
-      "l" : => @view.applyScale -@model.user.scaleValue
-      "k" : => @view.applyScale  @model.user.scaleValue
+      "l"             : (timeFactor) => @view.applyScale -@model.user.scaleValue
+      "k"             : (timeFactor) => @view.applyScale  @model.user.scaleValue
 
       #Move   
-      "w" : => @cam.move [0, @model.user.moveValue3d, 0]
-      "s" : => @cam.move [0, -@model.user.moveValue3d, 0]
-      "a" : => @cam.move [@model.user.moveValue3d, 0, 0]
-      "d" : => @cam.move [-@model.user.moveValue3d, 0, 0]
-      "space" : =>  
-        @cam.move [0, 0, @model.user.moveValue3d]
+      "w"             : (timeFactor) => @cam.move [0, getVoxelOffset(timeFactor), 0]
+      "s"             : (timeFactor) => @cam.move [0, -getVoxelOffset(timeFactor), 0]
+      "a"             : (timeFactor) => @cam.move [getVoxelOffset(timeFactor), 0, 0]
+      "d"             : (timeFactor) => @cam.move [-getVoxelOffset(timeFactor), 0, 0]
+      "space"         : (timeFactor) =>  
+        @cam.move [0, 0, getVoxelOffset(timeFactor)]
         @moved()
-      "alt + space" : => @cam.move [0, 0, -@model.user.moveValue3d]
+      "alt + space"   : (timeFactor) => @cam.move [0, 0, -getVoxelOffset(timeFactor)]
       
       #Rotate in distance
-      "left"  : => @cam.yawDistance @model.user.rotateValue
-      "right" : => @cam.yawDistance -@model.user.rotateValue
-      "up"    : => @cam.pitchDistance -@model.user.rotateValue
-      "down"  : => @cam.pitchDistance @model.user.rotateValue
+      "left"          : (timeFactor) => @cam.yawDistance @model.user.rotateValue * timeFactor
+      "right"         : (timeFactor) => @cam.yawDistance -@model.user.rotateValue * timeFactor
+      "up"            : (timeFactor) => @cam.pitchDistance -@model.user.rotateValue * timeFactor
+      "down"          : (timeFactor) => @cam.pitchDistance @model.user.rotateValue * timeFactor
       
       #Rotate at centre
-      "shift + left"  : => @cam.yaw @model.user.rotateValue
-      "shift + right" : => @cam.yaw -@model.user.rotateValue
-      "shift + up"    : => @cam.pitch @model.user.rotateValue
-      "shift + down"  : => @cam.pitch -@model.user.rotateValue
+      "shift + left"  : (timeFactor) => @cam.yaw @model.user.rotateValue * timeFactor
+      "shift + right" : (timeFactor) => @cam.yaw -@model.user.rotateValue * timeFactor
+      "shift + up"    : (timeFactor) => @cam.pitch @model.user.rotateValue * timeFactor
+      "shift + down"  : (timeFactor) => @cam.pitch -@model.user.rotateValue * timeFactor
 
       #Zoom in/out
-      "i" : => @cam.zoomIn()
-      "o" : => @cam.zoomOut()
+      "i"             : (timeFactor) => @cam.zoomIn()
+      "o"             : (timeFactor) => @cam.zoomOut()
 
       #Change move value
-      "h" : => @changeMoveValue(0.1)
-      "g" : => @changeMoveValue(-0.1)
+      "h"             : (timeFactor) => @changeMoveValue(25)
+      "g"             : (timeFactor) => @changeMoveValue(-25)
     )
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
+
+      "1" : => @sceneController.toggleSkeletonVisibility()
+      "2" : => @sceneController.toggleInactiveTreeVisibility()
+
+      #Delete active node
+      "delete" : => @model.route.deleteActiveNode()
+      "c" : => @model.route.createNewTree()
       
       #Branches
       "b" : => @pushBranch()
@@ -167,6 +177,7 @@ class ArbitraryController
   bind : ->
 
     @view.on "render", (force, event) => @render(force, event)
+    @view.on "finishedRender", => @model.route.rendered()
 
     @model.binary.cube.on "bucketLoaded", => @view.draw()
 
@@ -179,17 +190,25 @@ class ArbitraryController
 
   start : ->
 
+    @stop()
+
     @initKeyboard()
     @initMouse()
     @view.start()
     @init()
-    @view.draw()     
+    @view.draw()    
+
+    @isStarted = true 
  
 
   stop : ->
 
+    if @isStarted
+      @input.unbind()
+    
     @view.stop()
-    @input.unbind()
+
+    @isStarted = false
 
 
   scroll : (delta, type) =>
@@ -200,13 +219,7 @@ class ArbitraryController
 
   addNode : (position) =>
 
-    if @model.user.newNodeNewTree == true
-      @createNewTree()
-      @model.route.one("rendered", =>
-        @model.route.one("rendered", =>
-          @model.route.addNode(position, constants.TYPE_USUAL)))
-    else
-      @model.route.addNode(position, constants.TYPE_USUAL)
+    @model.route.addNode(position, constants.TYPE_USUAL)
 
 
   setWaypoint : () =>
@@ -225,12 +238,16 @@ class ArbitraryController
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
-    @gui.updateMoveValue3d(moveValue)
+    @model.user.setValue("moveValue3d", (Number) moveValue)
 
 
   setParticleSize : (delta) =>
 
-    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+    particleSize = @model.user.particleSize + delta
+    particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
+    particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
+
+    @model.user.setValue("particleSize", (Number) particleSize)
 
 
   setRouteClippingDistance : (value) =>

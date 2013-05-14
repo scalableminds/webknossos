@@ -2,7 +2,6 @@
 jquery : $
 underscore : _
 ./camera_controller : CameraController
-./scene_controller : SceneController
 ../model/dimensions : Dimensions
 libs/event_mixin : EventMixin
 libs/input : Input
@@ -35,12 +34,13 @@ class PlaneController
       @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @gui, renderer, scene) ->
+  constructor : (@model, stats, @gui, renderer, scene, @sceneController) ->
 
     _.extend(@, new EventMixin())
 
+    @isStarted = false
+
     @flycam = @model.flycam
-    @mode   = constants.MODE_NORMAL
     @flycam.setPosition(@model.route.data.editPosition)
     @flycam.setZoomStep(@model.user.zoom)
     @flycam.setQuality(@model.user.quality)
@@ -56,18 +56,18 @@ class PlaneController
     @prevControls.addClass("btn-group")
 
     buttons = [
-        name : "3D View"
+        name : "3D"
         callback : @cameraController.changePrevSV
       ,
-        name : "XY Plane"
+        name : "XY"
         callback : @cameraController.changePrevXY
         color : "#f00"
       ,
-        name : "YZ Plane"
+        name : "YZ"
         callback : @cameraController.changePrevYZ
         color : "#00f"
       ,
-        name : "XZ Plane"
+        name : "XZ"
         callback : @cameraController.changePrevXZ
         color : "#0f0"
     ]
@@ -80,7 +80,6 @@ class PlaneController
           .on("click", button.callback)
       )    
 
-    @sceneController = new SceneController(@model.binary.cube.upperBoundary, @flycam, @model)
     objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }
     @cellTracingController = new CellTracingController( objects )
     @volumeTracingController = new VolumeTracingController( objects )
@@ -101,7 +100,6 @@ class PlaneController
 
     @initTrackballControls()
     @bind()
-    @setMode( constants.MODE_NORMAL )
 
 
   initMouse : ->
@@ -160,17 +158,20 @@ class PlaneController
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
+    getVoxelOffset  = (timeFactor) =>
+      return @model.user.moveValue * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+
     @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
-      "l" : => @view.scaleTrianglesPlane(-@model.user.scaleValue)
-      "k" : => @view.scaleTrianglesPlane( @model.user.scaleValue)
+      "l" : (timeFactor) => @scaleTrianglesPlane(-@model.user.scaleValue * timeFactor )
+      "k" : (timeFactor) => @scaleTrianglesPlane( @model.user.scaleValue * timeFactor )
 
       #Move
-      "left"  : => @moveX(-@model.user.moveValue)
-      "right" : => @moveX( @model.user.moveValue)
-      "up"    : => @moveY(-@model.user.moveValue)
-      "down"  : => @moveY( @model.user.moveValue)
+      "left"  : (timeFactor) => @moveX(-getVoxelOffset(timeFactor))
+      "right" : (timeFactor) => @moveX( getVoxelOffset(timeFactor))
+      "up"    : (timeFactor) => @moveY(-getVoxelOffset(timeFactor))
+      "down"  : (timeFactor) => @moveY( getVoxelOffset(timeFactor))
 
       #misc keys
       # TODO: what does this? I removed it, I need the key.
@@ -180,35 +181,19 @@ class PlaneController
 
     @input.keyboardLoopDelayed = new Input.Keyboard(
 
-      #Move Z
-      "space" : (first) => @moveZ( @model.user.moveValue, first)
-      "f" : (first) => @moveZ( @model.user.moveValue, first)
-      "d" : (first) => @moveZ( - @model.user.moveValue, first)
-      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
-      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
-
-      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
-      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
-
-    )
+      "space"         : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor)    , first)
+      "f"             : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor)    , first)
+      "d"             : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+      "shift + f"     : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor) * 5, first)
+      "shift + d"     : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor) * 5, first)
+    
+      "shift + space" : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+      "ctrl + space"  : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+    
+    , @model.user.keyboardDelay)
 
     @model.user.on({
       keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
-      })
-
-    keyboardControls = _.extend(@activeSubController.keyboardControls,
-      {
-        #Zoom in/out
-        "i" : => @zoomIn(false)
-        "o" : => @zoomOut(false)
-
-        #Change move value
-        "h" : => @changeMoveValue(0.1)
-        "g" : => @changeMoveValue(-0.1)
-
-        # Mode
-        "v" : =>
-          @toggleMode()
       })
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop( 
@@ -219,12 +204,8 @@ class PlaneController
           "o" : => @zoomOut(false)
 
           #Change move value
-          "h" : => @changeMoveValue(0.1)
-          "g" : => @changeMoveValue(-0.1)
-
-          # Mode
-          "v" : =>
-            @toggleMode()
+          "h" : => @changeMoveValue(25)
+          "g" : => @changeMoveValue(-25)
         }))
 
   init : ->
@@ -233,7 +214,14 @@ class PlaneController
     @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
 
 
-  start : ->
+  start : (newMode) ->
+
+    @stop()
+
+    if newMode == constants.MODE_PLANE_TRACING
+      @activeSubController = @cellTracingController
+    else if newMode == constants.MODE_VOLUME
+      @activeSubController = @volumeTracingController
 
     @initKeyboard()
     @init()
@@ -241,30 +229,17 @@ class PlaneController
     @sceneController.start()
     @view.start()
 
+    @isStarted = true
+
 
   stop : ->
 
-    @input.unbind()
-    @view.stop()
-    @sceneController.stop()
+    if @isStarted
+      @input.unbind()
+      @view.stop()
+      @sceneController.stop()
 
-  setMode : (newMode) ->
-
-    @mode = newMode
-    if @mode == constants.MODE_NORMAL 
-      @activeSubController = @cellTracingController
-    else 
-      @activeSubController = @volumeTracingController
-
-    # Restart, so new keyboard and mouse controls are set
-    @stop()
-    @start()
-
-  toggleMode : ->
-    if @mode == constants.MODE_NORMAL
-      @setMode(constants.MODE_VOLUME)
-    else 
-      @setMode(constants.MODE_NORMAL)
+    @isStarted = false
 
   bind : ->
 
@@ -272,6 +247,7 @@ class PlaneController
 
     @view.on
       render : => @render()
+      finishedRender : => @model.route.rendered()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
     @sceneController.on
@@ -297,12 +273,11 @@ class PlaneController
     @model.route.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()
-    @model.route.rendered()
 
   move : (v) => @flycam.moveActivePlane(v)
 
-  moveX : (x) => @move([x, 0, 0])
-  moveY : (y) => @move([0, y, 0])
+  moveX : (x) => @flycam.moveActivePlane([x, 0, 0])
+  moveY : (y) => @flycam.moveActivePlane([0, y, 0])
   moveZ : (z, first) =>
     if(first)
       activePlane = @flycam.getActivePlane()
@@ -310,19 +285,21 @@ class PlaneController
         [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep()],
         activePlane), activePlane)
     else
-      @move([0, 0, z])
+      @flycam.moveActivePlane([0, 0, z], false)
 
   zoomIn : (zoomToMouse) =>
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @cameraController.zoomIn()
+    @cameraController.zoom(@flycam.getZoomStep() - constants.ZOOM_DIFF)
+    @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()
 
   zoomOut : (zoomToMouse) =>
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @cameraController.zoomOut()
+    @cameraController.zoom(@flycam.getZoomStep() + constants.ZOOM_DIFF)
+    @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()
 
@@ -336,8 +313,6 @@ class PlaneController
                     @zoomPos[1] - mousePos[1],
                     @zoomPos[2] - mousePos[2]]
       @flycam.move(moveVector, @flycam.getActivePlane())
-
-    @model.user.setValue("zoom", @flycam.getZoomStep())
 
   getMousePosition : ->
     activePlane = @flycam.getActivePlane()
@@ -353,7 +328,19 @@ class PlaneController
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
-    @gui.updateMoveValue(moveValue)
+    @model.user.setValue("moveValue", (Number) moveValue)
+
+  scaleTrianglesPlane : (delta) ->
+    scale = @model.user.scale + delta
+    scale = Math.min(constants.MAX_SCALE, scale)
+    scale = Math.max(constants.MIN_SCALE, scale)
+
+    @model.user.setValue("scale", (Number) scale)
+
+  setNodeRadius : (delta) =>
+    lastRadius = @model.route.getActiveNodeRadius()
+    radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
+    @model.route.setActiveNodeRadius(radius)
 
   scroll : (delta, type) =>
     switch type
@@ -383,3 +370,6 @@ class PlaneController
         [ curGlobalPos[0] - (constants.WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
           curGlobalPos[1], 
           curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor ]
+
+  centerActiveNode : ->
+    @activeSubController.centerActiveNode()

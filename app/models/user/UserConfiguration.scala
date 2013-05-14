@@ -24,8 +24,8 @@ object UserConfiguration extends BasicSettings{
 
   val defaultConfiguration = UserConfiguration(
     Map(
-      "moveValue" -> JsNumber(1),
-      "moveValue3d" -> JsNumber(1),
+      "moveValue" -> JsNumber(300),
+      "moveValue3d" -> JsNumber(300),
       "rotateValue" -> JsNumber(0.01),
       "crosshairSize" -> JsNumber(0.1),
       "scaleValue" -> JsNumber(0.05),
@@ -41,6 +41,7 @@ object UserConfiguration extends BasicSettings{
       "contrast" -> JsArray(Seq(JsNumber(1), JsNumber(2.4), JsNumber(2.4))),
       "quality" -> JsNumber(0),
       "zoom" -> JsNumber(2),
+      "scale" -> JsNumber(1),
       "displayPreviewXY" -> JsBoolean(false),
       "displayPreviewYZ" -> JsBoolean(false),
       "displayPreviewXZ" -> JsBoolean(false),

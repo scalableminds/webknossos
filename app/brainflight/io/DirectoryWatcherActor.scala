@@ -17,6 +17,7 @@ import play.utils.Threads
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import scala.concurrent.Future
+import java.io.File
 
 case class StartWatching(val pathName: String)
 case class StopWatching()
@@ -33,7 +34,7 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
 
   val keys = new HashMap[WatchKey, Path]
   var shouldStop = false
-  var updateTicker: Cancellable = null
+  var updateTicker: Option[Cancellable] = None
 
   def receive = {
     case StopWatching =>
@@ -41,9 +42,14 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
     case StartWatching(pathName) =>
       val t = System.currentTimeMillis()
       shouldStop = false
-      val watchedPath = Paths.get(pathName)
-      start(watchedPath)
-      sender ! true
+      if(new File(pathName).exists){
+        val watchedPath = Paths.get(pathName)
+          start(watchedPath)
+          sender ! true
+      } else {
+        Logger.error(s"Can't watch $pathName because it doesn't exist.")
+        sender ! false
+      }
   }
 
   /**
@@ -88,9 +94,9 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
    */
   def start(watchedPath: Path): Unit = {
     changeHandler.onStart(watchedPath)
-    updateTicker = context.system.scheduler.schedule(TICKER_INTERVAL, TICKER_INTERVAL) { () =>
+    updateTicker = Some(context.system.scheduler.schedule(TICKER_INTERVAL, TICKER_INTERVAL) {
       changeHandler.onTick(watchedPath)
-    }
+    })
 
     watchServiceOpt.map { watchService =>
       register(watchedPath, watchService)
@@ -138,8 +144,7 @@ class DirectoryWatcherActor(changeHandler: DirectoryChangeHandler) extends Actor
   override def postStop() = {
     super.postStop()
     shouldStop = true
-    if (updateTicker != null)
-      updateTicker.cancel()
+    updateTicker.map(_.cancel())
     watchServiceOpt.map(_.close())
   }
 }

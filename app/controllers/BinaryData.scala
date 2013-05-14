@@ -34,15 +34,25 @@ import akka.agent.Agent
 import akka.routing.RoundRobinRouter
 import scala.concurrent.Future
 import play.api.i18n.Messages
+import braingames.image._
+import java.awt.image.BufferedImage
+import braingames.image.JPEGWriter
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 object BinaryData extends Controller with Secured {
   override val DefaultAccessRole = Role.User
 
-  val dataRequestActor = Akka.system.actorOf(Props(new DataRequestActor), name = "dataRequestActor") //.withRouter(new RoundRobinRouter(3)))
+  val conf = Play.configuration
+
+  val dataRequestActor = {
+    implicit val system = Akka.system
+    val nrOfBinRequestActors = conf.getInt("binData.nrOfBinRequestActors") getOrElse 8
+    val bindataCache = Agent[Map[LoadBlock, Future[Array[Byte]]]](Map.empty)
+    Akka.system.actorOf(Props(new DataRequestActor(bindataCache))
+      .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
+  }
 
   implicit val dispatcher = Akka.system.dispatcher
-  val conf = Play.configuration
   val scaleFactors = Array(1, 1, 1)
 
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
@@ -122,6 +132,34 @@ object BinaryData extends Controller with Secured {
       }
     }
   }
+
+  def respondeWithImage(dataSetName: String, dataLayerName: String, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = {
+    Async {
+      val cubeSize = 128
+      val params = ImageCreatorParameters(
+        slideWidth = cubeSize,
+        slideHeight = cubeSize,
+        imagesPerRow = imagesPerRow)
+      for {
+        dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
+        dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
+      } yield {
+        val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z), false)))
+        handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize).map(_.flatMap { result =>
+          ImageCreator.createImage(result.toArray, params).map { imageBuffer =>
+            val file = new JPEGWriter().writeToFile(imageBuffer)
+            Ok.sendFile(file, true, _ => "test.jpg").withHeaders(
+              CONTENT_TYPE -> "image/jpeg")
+          }
+        } getOrElse NotFound)
+      }
+    }
+  }
+
+  def requestImage(dataSetName: String, dataLayerName: String, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated(parser = parse.raw) { implicit request =>
+    respondeWithImage(dataSetName, dataLayerName, imagesPerRow, x, y, z, resolution)
+  }
+
   /**
    * Handles a request for binary data via websockets. The content of a websocket
    * message is defined in the BinaryProtokoll.parseWebsocket function.
@@ -151,7 +189,7 @@ object BinaryData extends Controller with Secured {
             BinaryProtocol.parseWebsocket(in).map {
               case dataRequests: MultipleDataRequest =>
                 Logger.trace("Websocket DataRequests: " + dataRequests.requests.mkString(", "))
-                handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).map( _.map{ result =>
+                handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).map(_.map { result =>
                   Logger.trace("Websocket result size: " + result.size)
                   channel.push((result ++= dataRequests.handle).toArray)
                 })

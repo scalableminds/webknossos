@@ -24,6 +24,13 @@ class CellTacingController
 
     @keyboardControls =
 
+      "1" : => @sceneController.toggleSkeletonVisibility()
+      "2" : => @sceneController.toggleInactiveTreeVisibility()
+
+      #Delete active node
+      "delete" : => @model.route.deleteActiveNode()
+      "c" : => @model.route.createNewTree()
+
       #Branches
       "b" : => @pushBranch()
       "j" : => @popBranch() 
@@ -41,7 +48,11 @@ class CellTacingController
     @model.route.setActiveNodeRadius(radius)
 
   setParticleSize : (delta) =>
-    @model.route.setParticleSize(@model.route.getParticleSize() + delta)
+    particleSize = @model.user.particleSize + delta
+    particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
+    particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
+
+    @model.user.setValue("particleSize", (Number) particleSize)
  
   toggleSkeletonVisibility : =>
     @sceneController.toggleSkeletonVisibility()
@@ -124,9 +135,13 @@ class CellTacingController
   addNode : (position, centered) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
-      @model.route.one("rendered", =>
-        @model.route.one("rendered", =>
-          @model.route.addNode(position, constants.TYPE_USUAL)))
+      # make sure the tree was rendered two times before adding nodes,
+      # otherwise our buffer optimizations won't work
+      @model.route.one("finishedRender", =>
+        @model.route.one("finishedRender", =>
+          @model.route.addNode(position, constants.TYPE_USUAL))
+        @view.draw())
+      @view.draw()
     else
       @model.route.addNode(position, constants.TYPE_USUAL, centered)
 

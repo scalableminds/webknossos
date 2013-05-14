@@ -55,42 +55,6 @@ object BinaryData extends Controller with Secured {
   implicit val dispatcher = Akka.system.dispatcher
   val scaleFactors = Array(1, 1, 1)
 
-  implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
-
-  def resolutionFromExponent(resolutionExponent: Int) =
-    math.pow(2, resolutionExponent).toInt
-
-  def cuboidFromPosition(position: Point3D, cubeSize: Int, resolution: Int) = {
-    val cubeCorner = Vector3D(position.scale {
-      case (x, i) =>
-        x - x % (cubeSize / scaleFactors(i))
-    })
-    Cuboid(cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2), resolution, Some(cubeCorner))
-  }
-
-  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int): Future[Option[ArrayBuffer[Byte]]] = {
-    val cubeRequests = multi.requests.map { request =>
-      val resolution = resolutionFromExponent(request.resolutionExponent)
-      val cuboid = cuboidFromPosition(request.position, cubeSize, resolution)
-      SingleRequest(
-        DataRequest(
-          dataSet,
-          dataLayer,
-          resolution,
-          cuboid,
-          useHalfByte = request.useHalfByte,
-          skipInterpolation = true))
-    }
-
-    val future = (dataRequestActor ? MultiCubeRequest(cubeRequests)) recover {
-      case e: AskTimeoutException =>
-        Logger.warn("Data request to DataRequestActor timed out!")
-        None
-    }
-
-    future.mapTo[Option[ArrayBuffer[Byte]]]
-  }
-
   def requestViaAjaxDebug(dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated { implicit request =>
     Async {
       for {

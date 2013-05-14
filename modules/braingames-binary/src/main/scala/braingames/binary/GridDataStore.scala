@@ -9,7 +9,6 @@ import reactivemongo.api.gridfs._
 import reactivemongo.bson.BSONDocument
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.bson._
-import reactivemongo.bson.handlers.DefaultBSONHandlers._
 import reactivemongo.api.gridfs.Implicits._
 import play.api.libs.iteratee._
 import scala.collection.mutable.ArrayBuffer
@@ -17,13 +16,13 @@ import java.io.File
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext.Implicits._
-import models.GridDataSetPairing
 import akka.actor.Actor
 import braingames.binary.models.DataSetLike
+import reactivemongo.api.MongoConnection
 
 case class InsertBinary(dataSet: DataSetLike)
 case class InsertionState()
-
+/*
 class BinaryData2DBActor extends Actor {
   lazy val insertionState = Agent[Map[DataSetLike, (Int, Int)]](Map())(context.system)
 
@@ -73,12 +72,13 @@ class BinaryData2DBActor extends Actor {
     }
   }
 }
-
+*/
 class GridDataStore
     extends DataStore {
   import DataStore._
   //GridFs handle
-  lazy val connection = MongoConnection(List("localhost:27017"))
+  lazy val driver = new MongoDriver
+  lazy val connection = driver.connection(List("localhost:27017"))
   // a GridFS store named 'attachments'
 
   val gridFS = new GridFS(DB("binaryData", connection), "binarydata")
@@ -87,7 +87,7 @@ class GridDataStore
   gridFS.ensureIndex()
 
   def load(blockInfo: LoadBlock): Future[Array[Byte]] = {
-    GridDataSetPairing.findPrefix(blockInfo.dataSetName, blockInfo.dataLayerBaseDir, blockInfo.resolution).flatMap {
+    /*GridDataSetPairing.findPrefix(blockInfo.dataSetName, blockInfo.dataLayerBaseDir, blockInfo.resolution).flatMap {
       _ match {
         case Some(prefix) =>
           val r = gridFS.find(BSONDocument(
@@ -105,6 +105,10 @@ class GridDataStore
           Future.failed(new DataNotFoundException("GRIDFS2"))
       }
     }
+    * 
+    */
+    
+    Future.failed(new DataNotFoundException("GRIDFS2"))
   }
 }
 

@@ -30,10 +30,6 @@ import scala.util._
 
 object Global extends GlobalSettings {
 
-  lazy val DirectoryWatcher = Akka.system.actorOf(
-    Props(new DirectoryWatcherActor(new MongoDataSetChangeHandler)),
-    name = "directoryWatcher")
-
   override def onStart(app: Application) {
     val conf = Play.current.configuration
     startActors()

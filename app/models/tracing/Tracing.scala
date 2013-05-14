@@ -367,10 +367,10 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
       "state.isAssigned" -> true,
       "tracingType" -> tracingType.toString)).toList
 
-  override def remove(tracing: Tracing) = {
-    UsedTracings.removeAll(tracing)
-    DBTree.removeAllWithTracingId(tracing._id)
-    super.remove(tracing)
+  override def removeById(tracing: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {
+    UsedTracings.removeAll(tracing.toString)
+    DBTree.removeAllWithTracingId(tracing)
+    super.removeById(tracing, wc)
   }
 
   def removeAllWithTaskId(tid: ObjectId) =

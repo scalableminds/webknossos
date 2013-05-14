@@ -104,7 +104,7 @@ class PlaneController
       @input.mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
         over : @view["setActivePlane#{planeId.toUpperCase()}"]
         leftDownMove : (delta) => 
-          @move [
+          @flycam.moveActivePlane [
             delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
             delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
             0
@@ -159,17 +159,20 @@ class PlaneController
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
+    getVoxelOffset  = (timeFactor) =>
+      return @model.user.moveValue * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+
     @input.keyboard = new Input.Keyboard(
 
       #ScaleTrianglesPlane
-      "l" : => @scaleTrianglesPlane( -@model.user.scaleValue)
-      "k" : => @scaleTrianglesPlane( @model.user.scaleValue)
+      "l" : (timeFactor) => @scaleTrianglesPlane(-@model.user.scaleValue * timeFactor )
+      "k" : (timeFactor) => @scaleTrianglesPlane( @model.user.scaleValue * timeFactor )
 
       #Move
-      "left"  : => @moveX(-@model.user.moveValue)
-      "right" : => @moveX( @model.user.moveValue)
-      "up"    : => @moveY(-@model.user.moveValue)
-      "down"  : => @moveY( @model.user.moveValue)
+      "left"  : (timeFactor) => @moveX(-getVoxelOffset(timeFactor))
+      "right" : (timeFactor) => @moveX( getVoxelOffset(timeFactor))
+      "up"    : (timeFactor) => @moveY(-getVoxelOffset(timeFactor))
+      "down"  : (timeFactor) => @moveY( getVoxelOffset(timeFactor))
 
       #misc keys
       # TODO: what does this? I removed it, I need the key.
@@ -179,17 +182,16 @@ class PlaneController
 
     @input.keyboardLoopDelayed = new Input.Keyboard(
 
-      #Move Z
-      "space" : (first) => @moveZ( @model.user.moveValue, first)
-      "f" : (first) => @moveZ( @model.user.moveValue, first)
-      "d" : (first) => @moveZ( - @model.user.moveValue, first)
-      "shift + f" : (first) => @moveZ( @model.user.moveValue * 5, first)
-      "shift + d" : (first) => @moveZ( - @model.user.moveValue * 5, first)
-
-      "shift + space" : (first) => @moveZ(-@model.user.moveValue, first)
-      "ctrl + space" : (first) => @moveZ(-@model.user.moveValue, first)
-
-    )
+      "space"         : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor)    , first)
+      "f"             : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor)    , first)
+      "d"             : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+      "shift + f"     : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor) * 5, first)
+      "shift + d"     : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor) * 5, first)
+    
+      "shift + space" : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+      "ctrl + space"  : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+    
+    , @model.user.keyboardDelay)
 
     @model.user.on({
       keyboardDelayChanged : (value) => @input.keyboardLoopDelayed.delay = value
@@ -208,8 +210,8 @@ class PlaneController
       "o" : => @zoomOut(false)
 
       #Change move value
-      "h" : => @changeMoveValue(0.1)
-      "g" : => @changeMoveValue(-0.1)
+      "h" : => @changeMoveValue(25)
+      "g" : => @changeMoveValue(-25)
 
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
@@ -245,6 +247,7 @@ class PlaneController
 
     @view.on
       render : => @render()
+      finishedRender : => @model.route.rendered()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
     @sceneController.skeleton.on
@@ -263,12 +266,9 @@ class PlaneController
     @model.route.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()
-    @model.route.rendered()
 
-  move : (v) => @flycam.moveActivePlane(v)
-
-  moveX : (x) => @move([x, 0, 0])
-  moveY : (y) => @move([0, y, 0])
+  moveX : (x) => @flycam.moveActivePlane([x, 0, 0])
+  moveY : (y) => @flycam.moveActivePlane([0, y, 0])
   moveZ : (z, first) =>
     if(first)
       activePlane = @flycam.getActivePlane()
@@ -276,7 +276,7 @@ class PlaneController
         [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep()],
         activePlane), activePlane)
     else
-      @move([0, 0, z])
+      @flycam.moveActivePlane([0, 0, z], false)
 
   zoomIn : (zoomToMouse) =>
     if zoomToMouse
@@ -456,9 +456,13 @@ class PlaneController
   addNode : (position, centered) =>
     if @model.user.newNodeNewTree == true
       @createNewTree()
-      @model.route.one("rendered", =>
-        @model.route.one("rendered", =>
-          @model.route.addNode(position, constants.TYPE_USUAL)))
+      # make sure the tree was rendered two times before adding nodes,
+      # otherwise our buffer optimizations won't work
+      @model.route.one("finishedRender", =>
+        @model.route.one("finishedRender", =>
+          @model.route.addNode(position, constants.TYPE_USUAL))
+        @view.draw())
+      @view.draw()
     else
       @model.route.addNode(position, constants.TYPE_USUAL, centered)
 

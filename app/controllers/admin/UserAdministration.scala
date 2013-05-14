@@ -78,7 +78,7 @@ object UserAdministration extends Controller with Secured {
     for {
       user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
-      User.remove(user)
+      User.removeById(user._id)
       Tracing.freeTacingsOfUser(user._id)
       user
     }

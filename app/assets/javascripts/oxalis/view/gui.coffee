@@ -60,7 +60,7 @@ class Gui
 
     @fViewportcontrols = @gui.addFolder("Viewportoptions")
     @moveValueController = @addSlider(@fViewportcontrols, @user, "moveValue",
-      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 0.1, "Move Value")
+      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
     @zoomController = @addSlider(@fViewportcontrols, @user, "zoom",
       0.001, @model.flycam.getMaxZoomStep(), 0.01, "Zoom")
     @scaleController = @addSlider(@fViewportcontrols, @user, "scale", constants.MIN_SCALE,
@@ -73,7 +73,7 @@ class Gui
     @addSlider(@fFlightcontrols, @user, "rotateValue",
       0.001, 0.08, 0.001, "Keyboard Rotation Value")
     @moveValue3dController = @addSlider(@fFlightcontrols, @user, "moveValue3d",
-      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 0.1, "Move Value")
+      constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
     @addSlider(@fFlightcontrols, @user, "crosshairSize",
       0.05, 0.5, 0.01, "Crosshair size")
 
@@ -87,7 +87,7 @@ class Gui
       @addSlider(@fView, @settings, "contrast",
         0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
     @addFunction(@fView, @settings, "resetBrightnessAndContrast",
-      "Reset To Default")
+      "Reset B/C")
     @clippingController = @addSlider(@fView, @user, "routeClippingDistance",
       1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
     @clippingControllerArbitrary = @addSlider(@fView, @user, "routeClippingDistanceArbitrary",

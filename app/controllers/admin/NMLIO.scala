@@ -107,34 +107,39 @@ object NMLIO extends Controller with Secured with TextUtils {
 
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
     val parseResult = request.body.files.map(f => f.filename -> extractFromNML(f.ref.file))
-    if (parseResult.size > 0) {
-      parseResult.find(_._2.isEmpty) match {
-        case None =>
-          val tracingName = nameForNMLs(parseResult.map(_._1))
-
-          val nmls = parseResult.map(_._2.open_!).toList
-
-          val tracingOpt = Tracing.createFromNMLsFor(
-            request.user._id,
-            nmls,
-            TracingType.Explorational,
-            tracingName)
-
-          tracingOpt
-            .map { tracing =>
-              Redirect(controllers.routes.TracingController.trace(tracing.id)).flashing(
-                "success" -> Messages("nml.file.uploadSuccess"))
-            }
-            .getOrElse(
-              Redirect(controllers.routes.UserController.dashboard).flashing(
-                "error" -> Messages("nml.file.invalid")))
-        case Some((fileName, _)) =>
-          Redirect(controllers.routes.UserController.dashboard).flashing(
-            "error" -> Messages("nml.file.invalid", fileName))
+    val (parseSuccess, parseFailed) = parseResult.partition(_._2.isDefined)
+    if (parseFailed.size > 0) {
+      val errors = parseFailed.map {
+        case (fileName, _) => "error" -> Messages("nml.file.invalid", fileName)
       }
+      Redirect(controllers.routes.UserController.dashboard)
+        .flashing(
+          errors: _*)
+    } else if (parseSuccess.size == 0) {
+      Redirect(controllers.routes.UserController.dashboard)
+        .flashing(
+          "error" -> Messages("nml.file.noFile"))
     } else {
-      Redirect(controllers.routes.UserController.dashboard).flashing(
-        "error" -> Messages("nml.file.noFile"))
+      val tracingName = nameForNMLs(parseResult.map(_._1))
+
+      val nmls = parseResult.map(_._2.open_!).toList
+
+      val tracingOpt = Tracing.createFromNMLsFor(
+        request.user._id,
+        nmls,
+        TracingType.Explorational,
+        tracingName)
+
+      tracingOpt
+        .map { tracing =>
+          Redirect(controllers.routes.TracingController.trace(tracing.id))
+            .flashing(
+              "success" -> Messages("nml.file.uploadSuccess"))
+        }
+        .getOrElse(
+          Redirect(controllers.routes.UserController.dashboard)
+            .flashing(
+              "error" -> Messages("nml.file.invalid")))
     }
   }
 

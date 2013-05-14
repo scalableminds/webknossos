@@ -82,7 +82,7 @@ object BrainTracing {
           .map { response =>
             response.status match {
               case 200 =>
-                Logger.debug(s"Logged time! User: ${user.email} Time: $hours")
+                Logger.trace(s"Logged time! User: ${user.email} Time: $hours")
               case code =>
                 Logger.error(s"Time logging failed! Code $code User: ${user.email} Time: $hours")
             }

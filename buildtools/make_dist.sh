@@ -14,7 +14,7 @@ pushd `dirname $0`/..
 
 #1 modulename (oxalis/levelcreator/stackrenderer)
 
-./playframework/play "project $PROJECT" dist || (echo "error creating packages: (maybe bad project name)" && exit 1)
+./playframework/play "project $PROJECT" dist || (echo "error creating packages: (maybe bad project name)"; exit 1)
 
 DIST_DIR=""
 if [ $PROJECT = oxalis ]; then
@@ -43,7 +43,7 @@ sed -i "s#^classpath=\"#classpath=\"$CLASSPATH_REF:#g" start
 sed -e "s#^scriptdir=.*#installdir=/usr/lib/$PROJECT#g" start > start.dist
 sed -i "s#\$scriptdir#\$installdir#g" start.dist
 
-CONFIG="-Dconfig.file=/etc/$PROJECT/$PROJECT.conf"
+CONFIG="-Dconfig.resource=production.conf"
 EXECUTION_COMMAND="exec java $CONFIG \$* -cp \$classpath play.core.server.NettyServer /etc/$PROJECT &"
 
 sed -i "/^exec/ c\

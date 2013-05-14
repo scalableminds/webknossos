@@ -36,8 +36,10 @@ class Gui
       activeTreeID : @model.route.getActiveTreeId()
 
       activeNodeID : @model.route.getActiveNodeId()
+      activeCellID : @model.volumeTracing.getActiveCellId()
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
+      createNewCell : => @trigger "createNewCell"
       # radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
 
     if @datasetPosition == 0
@@ -119,8 +121,14 @@ class Gui
       constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node size")
     @addFunction(@fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
+    @folders.push( @fCells = @gui.addFolder("Cells") )
+    @activeCellIdController = @addNumber(@fCells, @settings, "activeCellID",
+      0, 1, "Active Cell ID", (value) => @trigger( "setActiveCell", value))
+    @addFunction(@fCells, @settings, "createNewCell", "Create new Cell")
+
     @fTrees.open()
     @fNodes.open()
+    @fCells.open()
 
     $("#trace-position-input").on "change", (event) => 
 
@@ -168,6 +176,11 @@ class Gui
       deleteLastNode   : => @update()
       newNode          : => @update()
       newTree          : => @update()
+
+    @model.volumeTracing.on
+      newActiveCell    : =>
+        console.log "newActiveCell!"
+        @update()
 
     @model.user.on
       scaleChanged : => @updateScale()
@@ -292,8 +305,10 @@ class Gui
     # called when value user switch to different active node
     @settings.activeNodeID = @model.route.lastActiveNodeId
     @settings.activeTreeID = @model.route.getActiveTreeId()
+    @settings.activeCellID = @model.volumeTracing.getActiveCellId()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
+    @activeCellIdController.updateDisplay()
 
   setFolderVisibility : (folder, visible) ->
 

@@ -25,18 +25,12 @@ class VolumeTracingController
       
       leftMouseUp : =>
         @model.volumeTracing.finishLayer()
-      
-      rightClick : (pos, ctrlPressed) =>
-        @selectLayer(@calculateGlobalPos(pos))
           
 
     @keyboardControls =
 
-      "n" : =>
+      "c" : =>
         @model.volumeTracing.createCell()
-
-  selectLayer : (pos) =>
-    @model.volumeTracing.selectLayer( pos )
 
   drawVolume : (pos) ->
     @model.volumeTracing.addToLayer(pos)

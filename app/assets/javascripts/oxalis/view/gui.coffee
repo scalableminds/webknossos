@@ -244,7 +244,7 @@ class Gui
     @user.setValue( name, (type) value)
 
   setBrightnessAndContrast : =>
-    @model.binary.updateLookupTable(@settings.brightness, @settings.contrast)
+    @model.binary.updateContrastCurve(@settings.brightness, @settings.contrast)
     @user.brightness[@datasetPosition] = (Number) @settings.brightness
     @user.contrast[@datasetPosition] = (Number) @settings.contrast
     @user.push()
@@ -296,7 +296,7 @@ class Gui
   setMode : (mode) ->
 
     switch mode 
-      when constants.MODE_OXALIS
+      when constants.MODE_PLANE_TRACING
         $(@fFlightcontrols.domElement).hide()
         $(@fViewportcontrols.domElement).show()
         $(@fSkeleton.domElement).show()

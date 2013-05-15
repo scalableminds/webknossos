@@ -40,7 +40,7 @@ object TaskAdministration extends Controller with Secured{
         taskType => TaskType.findOneById(taskType).isDefined),
       "experience" -> mapping(
         "domain" -> text,
-        "value" -> number)(Experience.apply)(Experience.unapply),
+        "value" -> number)(Experience.fromForm)(Experience.unapply),
       "priority" -> number,
       "taskInstances" -> number.verifying("task.edit.toFewInstances",
         taskInstances => taskInstances >= minTaskInstances),
@@ -58,7 +58,7 @@ object TaskAdministration extends Controller with Secured{
         p => p.matches("([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*")))(Point3D.fromForm)(Point3D.toForm),
     "experience" -> mapping(
       "domain" -> text,
-      "value" -> number)(Experience.apply)(Experience.unapply),
+      "value" -> number)(Experience.fromForm)(Experience.unapply),
     "priority" -> number,
     "taskInstances" -> number,
     "project" -> text.verifying("project.notFound",

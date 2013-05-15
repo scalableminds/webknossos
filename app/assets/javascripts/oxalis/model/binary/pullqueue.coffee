@@ -7,7 +7,7 @@ class PullQueue
 
   # Constants
   BATCH_LIMIT : 6
-  BATCH_SIZE : 2
+  BATCH_SIZE : 3
   ROUND_TRIP_TIME_SMOOTHER : .125
   BUCKET_TIME_SMOOTHER : .125
 
@@ -112,8 +112,8 @@ class PullQueue
       transmitBuffer.push(
         zoomStep
         if @fourBit and zoomStep == 0 then 1 else 0
-        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P),
-        bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P),
+        bucket[0] << (zoomStep + @cube.BUCKET_SIZE_P)
+        bucket[1] << (zoomStep + @cube.BUCKET_SIZE_P)
         bucket[2] << (zoomStep + @cube.BUCKET_SIZE_P)
       )
 
@@ -179,6 +179,7 @@ class PullQueue
       index++
 
     newColors
+
 
   set4Bit : (@fourBit) ->
 

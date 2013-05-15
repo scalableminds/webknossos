@@ -49,7 +49,7 @@ class Skeleton
     @nodesBuffer  = []
 
     #initial mode
-    @mode = constants.MODE_OXALIS
+    @mode = constants.MODE_PLANE_TRACING
     @showInactiveTrees = true
 
     # Create sphere to represent the active Node, radius is
@@ -560,7 +560,7 @@ class Skeleton
 
   setSizeAttenuation : (boolean) ->
 
-    @mode = if boolean then constants.MODE_ARBITRARY else constants.MODE_OXALIS
+    @mode = if boolean then constants.MODE_ARBITRARY else constants.MODE_PLANE_TRACING
     for particleSystem in @nodes
       particleSystem.material.sizeAttenuation = boolean
       particleSystem.material.needsUpdate = true

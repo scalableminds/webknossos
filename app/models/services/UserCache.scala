@@ -10,11 +10,14 @@ object UserCache {
   val userCacheKeyPrefix = current.configuration.getString("user.cacheKey") getOrElse "user"
 
   def cacheKeyForUser(id: String) =
-    s"$userCacheKeyPrefix.id"
+    s"${userCacheKeyPrefix}.${id}"
 
   def findUser(id: String) = {
     Cache.getOrElse(cacheKeyForUser(id), userCacheTimeout) {
       User.findOneById(id)
     }
   }
+  
+  def invalidateUser(id: String) = 
+    Cache.remove(cacheKeyForUser(id))
 }

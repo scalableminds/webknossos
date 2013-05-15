@@ -1,7 +1,9 @@
 ### define
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
+../geometries/contourgeometry : ContourGeometry
 ../model/dimensions : Dimensions
+../../libs/event_mixin : EventMixin
 ../constants : constants
 ###
 
@@ -10,10 +12,9 @@ class SceneController
   # This class collects all the meshes displayed in the Sceleton View and updates position and scale of each
   # element depending on the provided flycam.
 
-  constructor : (upperBoundary, flycam, model) ->
-    @upperBoundary = upperBoundary
-    @flycam        = flycam
-    @model         = model
+  constructor : (@upperBoundary, @flycam, @model) ->
+    _.extend(@, new EventMixin())
+
     @current       = 0
     @displayPlane  = [true, true, true]
     @planeShift    = [0, 0, 0]
@@ -38,6 +39,8 @@ class SceneController
     @cube = new THREE.Line(geo, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
 
     # TODO: Implement text 
+
+    @contour = new ContourGeometry(@model.volumeTracing, @model.flycam)
 
     @skeleton = new Skeleton(@flycam, @model)
 
@@ -127,6 +130,7 @@ class SceneController
     for plane in @planes
       result = result.concat(plane.getMeshes())
     result = result.concat(@skeleton.getMeshes())
+                    .concat(@contour.getMeshes())
     result.push(@cube)
     return result
 

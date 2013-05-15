@@ -110,8 +110,8 @@ object BinaryData extends Controller with Secured {
       } yield {
         val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z), false)))
         handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize).map(_.flatMap { result =>
-          ImageCreator.createImage(result.toArray, params).map { imageBuffer =>
-            val file = new JPEGWriter().writeToFile(imageBuffer)
+          ImageCreator.createImage(result.toArray, params).map { combinedImage =>
+            val file = new JPEGWriter().writeToFile(combinedImage.image)
             Ok.sendFile(file, true, _ => "test.jpg").withHeaders(
               CONTENT_TYPE -> "image/jpeg")
           }

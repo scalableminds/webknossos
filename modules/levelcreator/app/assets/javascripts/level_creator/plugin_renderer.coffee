@@ -49,7 +49,7 @@ class PluginRenderer
 
       time : (options) ->
 
-        length = Math.max(options.end, length)
+        length = Math.max(options.end + 1, length)
         (cb) -> cb()
 
       importSlides : ->

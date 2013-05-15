@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-if [ $1 = "purge" ];then
+if [ $1 = "purge" -o $1 -eq 0 ];then
   if [ -d /etc/<%= name %> ]; then
     rm -r /etc/<%= name %>
   fi

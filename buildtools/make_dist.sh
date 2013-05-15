@@ -44,6 +44,11 @@ sed -e "s#^scriptdir=.*#installdir=/usr/lib/$PROJECT#g" start > start.dist
 sed -i "s#\$scriptdir#\$installdir#g" start.dist
 
 CONFIG="-Dconfig.resource=production.conf"
+
+if [ "$PROJECT" = "stackrenderer" -a "$PKG_TYPE" = "rpm" ]; then
+  CONFIG="$CONFIG -Djava.io.tmpdir=/disk"
+fi
+
 EXECUTION_COMMAND="exec java $CONFIG \$* -cp \$classpath play.core.server.NettyServer /etc/$PROJECT &"
 
 sed -i "/^exec/ c\

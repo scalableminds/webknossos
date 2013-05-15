@@ -90,10 +90,6 @@ case $PKG_TYPE in
     exit 1
 esac
 
-mkdir -p $DIST_DIR/rootenv/etc/$PROJECT/binaryData
-cp buildtools/basic.conf $DIST_DIR/rootenv/etc/${PROJECT}/${PROJECT}.conf
-sed -i "s/<%PROJECT%>/$PROJECT/g" $DIST_DIR/rootenv/etc/${PROJECT}/${PROJECT}.conf
-
 $FPM -m thomas@scm.io -s dir -t $PKG_TYPE -n $PROJECT -v $VERSION --iteration $ITERATION \
 --before-install=buildtools/before-install.sh --after-install=buildtools/after-install.sh \
 --before-remove=buildtools/before-remove.sh --after-remove=buildtools/after-remove.sh --template-scripts \

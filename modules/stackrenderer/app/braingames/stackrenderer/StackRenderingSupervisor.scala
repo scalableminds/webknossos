@@ -181,7 +181,7 @@ class StackRenderingSupervisor extends Actor {
                 stackRenderer ! RenderStack(stack)
               }
             case 204 =>
-              Logger.warn("Levelcreator reported no work!")
+              Logger.debug("Levelcreator reported no work!")
             case s =>
               Logger.error("Levelcreator work request returned unknown status code: " + s)
           }

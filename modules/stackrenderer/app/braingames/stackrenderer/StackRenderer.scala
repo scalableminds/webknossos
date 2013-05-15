@@ -48,7 +48,7 @@ case class ExecLogger(var messages: List[String] = Nil,
 class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
 
   val logger = new ExecLogger
-  
+
   val conf = Play.current.configuration
 
   val imagesPerRow = conf.getInt("stackrenderer.imagesPerRow") getOrElse 10
@@ -73,12 +73,12 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
     Logger.info("phantomjs " + jsFile.getAbsolutePath())
     val process = ("phantomjs" :: jsFile.getAbsolutePath :: Nil).run(logger, false)
     val exitValue = Await.result(
-        Future{
-          process.exitValue()
-        }.recover{
-          case e => 
-            Logger.warn("Phantom execution threw: " +e)
-            -1
+      Future {
+        process.exitValue()
+      }.recover {
+        case e =>
+          Logger.warn("Phantom execution threw: " + e)
+          -1
       }, phantomTimeout)
     process.destroy()
     Logger.debug("Finished phantomjs. ExitValue: " + exitValue)
@@ -104,9 +104,11 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
       slideWidth = stack.level.width,
       slideHeight = stack.level.height,
       imagesPerRow = imagesPerRow)
-    ImageCreator.createBigImage(images, params).map { i =>
-      new PNGWriter().writeToFile(i, stack.image)
+    ImageCreator.createBigImage(images, params).map { combinedImage =>
+      new PNGWriter().writeToFile(combinedImage.image, stack.image)
+      XmlAtlas.writeToFile(combinedImage.info, stack.image.getName, stack.xmlAtlas)
     }
+
   }
 
   def tarStack(stack: Stack) {
@@ -115,7 +117,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
       val output =
         new FileOutputStream(stack.tarFile)
       val inputs =
-        (stack.metaFile :: stack.image :: Nil).map { f =>
+        (stack.metaFile :: stack.image :: stack.xmlAtlas :: Nil).map { f =>
           f -> createTarName(f)
         }
       TarIO.tar(inputs, output)

@@ -1,4 +1,4 @@
-package controllers.tracing.handler
+package oxalis.tracing.handler
 
 import net.liftweb.common.Box
 import models.tracing.TemporaryTracing

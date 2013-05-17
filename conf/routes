@@ -21,10 +21,6 @@ GET      /logout                                       controllers.Authenticatio
 GET      /register                                     controllers.Authentication.register
 POST     /register                                     controllers.Authentication.registrate
 
-GET      /login/fb                                     controllers.login.FacebookLogin.login
-GET      /login/fb/code                                controllers.login.FacebookLogin.loginCode(code: String)
-GET      /login/tw                                     controllers.login.TwitterLogin.login
-
 # User settings
 POST     /user/configuration                           controllers.UserController.saveSettings
 GET      /user/configuration                           controllers.UserController.showSettings

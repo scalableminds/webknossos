@@ -26,7 +26,7 @@ import models.task.Project
 import play.api.Logger
 import play.api.mvc.Result
 import play.api.templates.Html
-import brainflight.tracing._
+import oxalis.tracing._
 import controllers.Application
 
 object TaskAdministration extends Controller with Secured{
@@ -119,7 +119,7 @@ object TaskAdministration extends Controller with Secured{
       
       Application.temporaryTracingGenerator ! RequestTemporaryTracing(id)      
             
-      Ok(html.oxalis.trace(tracingInfo)(Html.empty))
+      Ok(html.tracing.trace(tracingInfo)(Html.empty))
     }
   }
 
@@ -310,7 +310,7 @@ object TaskAdministration extends Controller with Secured{
         } yield (user -> taskType))
       Task.simulateTaskAssignment(allUsers).map { futureTasks =>
         val futureTaskTypes = futureTasks.flatMap(e => e._2.taskType.map(e._1 -> _))
-        Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks.removeDuplicates, futureTaskTypes))
+        Ok(html.admin.task.taskOverview(allUsers, allTaskTypes, usersWithTasks.distinct, futureTaskTypes))
       }
     }
   }

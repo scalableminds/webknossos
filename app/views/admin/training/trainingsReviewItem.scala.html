@@ -1,4 +1,4 @@
-@(tracing: models.tracing.Tracing, form: Form[String])(implicit session: brainflight.view.AuthedSessionData)
+@(tracing: models.tracing.Tracing, form: Form[String])(implicit session: oxalis.view.AuthedSessionData)
 <h5>Review of Trainings-Tracing</h5>
 @helper.form(action = controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(tracing.id, true), 'class -> "form-vertical") {
   <div class="control-group">

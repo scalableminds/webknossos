@@ -1,4 +1,4 @@
-package brainflight.user
+package oxalis.user
 
 import akka.actor._
 import scala.concurrent.duration._

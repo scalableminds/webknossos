@@ -1,4 +1,4 @@
-package controllers.tracing.handler
+package oxalis.tracing.handler
 
 import oxalis.security.AuthenticatedRequest
 import net.liftweb.common.Box
@@ -18,7 +18,7 @@ object SavedTracingInformationHandler extends TracingInformationHandler with Tra
       t.dataSetName,
       t.task.map(_.id) getOrElse ("explorational"),
       t.user.map(_.abreviatedName) getOrElse "",
-      brainflight.view.helpers.formatHash(t.id)))
+      oxalis.view.helpers.formatHash(t.id)))
   }
 
   def provideTracing(tracingId: String): Box[Tracing] = {

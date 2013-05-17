@@ -13,7 +13,7 @@ import play.api.i18n.Messages
 import models.task.Task
 import models.tracing._
 import play.api.templates.Html
-import brainflight.tracing._
+import oxalis.tracing._
 import controllers.Application
 
 object TaskTypeAdministration extends Controller with Secured{
@@ -52,7 +52,7 @@ object TaskTypeAdministration extends Controller with Secured{
             
       Application.temporaryTracingGenerator ! RequestTemporaryTracing(id)          
       
-      Ok(html.oxalis.trace(tracingInfo)(Html.empty))
+      Ok(html.tracing.trace(tracingInfo)(Html.empty))
     }
   }
   

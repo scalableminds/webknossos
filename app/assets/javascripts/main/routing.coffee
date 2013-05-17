@@ -57,7 +57,7 @@ $ ->
 
       return
 
-    "oxalis.trace" : ->
+    "tracing.trace" : ->
 
       require [
         "./oxalis/controller"

@@ -5,7 +5,7 @@ import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
-import models.Color
+import braingames.image.Color
 import play.api.Logger
 import play.api.Play
 

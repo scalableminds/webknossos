@@ -1,6 +1,6 @@
 package oxalis.nml
 
-import models.Color
+import braingames.image.Color
 import braingames.xml.XMLWrites
 import braingames.xml.Xml
 import play.api.libs.json.Writes

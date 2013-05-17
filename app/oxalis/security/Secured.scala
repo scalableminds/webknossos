@@ -20,9 +20,9 @@ import play.api.libs.iteratee.Iteratee
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
-import brainflight.user.ActivityMonitor
-import brainflight.user.UserActivity
-import brainflight.view.AuthedSessionData
+import oxalis.user.ActivityMonitor
+import oxalis.user.UserActivity
+import oxalis.view.AuthedSessionData
 
 case class AuthenticatedRequest[A](
   val user: User, request: Request[A]) extends WrappedRequest(request)
@@ -55,7 +55,7 @@ trait Secured {
   
   def DefaultAccessRole: Option[Role]
   
-  val userService = models.services.UserService
+  val userService = oxalis.user.UserService
 
   /**
    * Defines the default permission used for authenticated actions if not

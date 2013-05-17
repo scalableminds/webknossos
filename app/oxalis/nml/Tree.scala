@@ -1,5 +1,5 @@
 package oxalis.nml
-import models.Color
+import braingames.image.Color
 
 case class Tree(treeId: Int, nodes: Set[Node], edges: Set[Edge], color: Color, name: String = "") extends TreeLike{
 

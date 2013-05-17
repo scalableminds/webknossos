@@ -1,4 +1,4 @@
-package brainflight.view
+package oxalis.view
 
 import play.api.mvc.Flash
 import models.user.User

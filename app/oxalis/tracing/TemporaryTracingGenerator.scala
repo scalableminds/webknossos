@@ -1,4 +1,4 @@
-package brainflight.tracing
+package oxalis.tracing
 
 import akka.actor.Actor
 import models.tracing.TracingType
@@ -6,7 +6,7 @@ import akka.agent.Agent
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import models.tracing.TemporaryTracing
-import controllers.tracing.handler.TracingInformationHandler
+import handler.TracingInformationHandler
 import play.api.libs.concurrent.Akka
 import net.liftweb.common.Box
 import net.liftweb.common.Failure

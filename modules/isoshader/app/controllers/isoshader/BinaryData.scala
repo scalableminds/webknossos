@@ -13,7 +13,7 @@ import play.libs.Akka._
 import play.api.Play.current
 import models.binary._
 import akka.util.Timeout
-import brainflight.binary._
+import oxalis.binary._
 import braingames.mvc.Controller
 import play.api.i18n.Messages
 import braingames.geometry._

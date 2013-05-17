@@ -1,6 +1,6 @@
 package models.tracing
 
-import models.Color
+import braingames.image.Color
 import org.bson.types.ObjectId
 import models.basics._
 import models.context._

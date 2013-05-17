@@ -8,10 +8,10 @@ import akka.testkit.TestActorRef
 import akka.testkit.TestKit
 import akka.pattern.ask
 import akka.actor.Props
-import brainflight.binary.DataSetActor
+import oxalis.binary.DataSetActor
 import play.api.test._
 import play.api.test.Helpers._
-import brainflight.binary.{ SingleRequest, CubeRequest }
+import oxalis.binary.{ SingleRequest, CubeRequest }
 import braingames.geometry.Point3D
 import akka.util.Timeout
 import models.DataSet

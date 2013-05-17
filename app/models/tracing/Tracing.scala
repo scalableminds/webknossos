@@ -16,7 +16,7 @@ import com.mongodb.casbah.query._
 import models.tracing.TracingState._
 import oxalis.nml.NMLParser
 import models.task._
-import models.Color
+import braingames.image.Color
 import models.basics._
 import models.security.Role
 import oxalis.nml._

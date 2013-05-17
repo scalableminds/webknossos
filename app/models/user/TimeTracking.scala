@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 import models.basics.DAOCaseClass
 import models.tracing.Tracing
 import braingames.util.ExtendedTypes.ExtendedString
-import brainflight.thirdparty.BrainTracing
+import oxalis.thirdparty.BrainTracing
 
 case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, tracing: Option[ObjectId] = None) {
   val created = {

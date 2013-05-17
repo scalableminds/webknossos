@@ -1,4 +1,4 @@
-package brainflight.thirdparty
+package oxalis.thirdparty
 
 import braingames.security.SCrypt._
 import models.user.User

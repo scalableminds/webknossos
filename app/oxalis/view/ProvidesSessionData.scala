@@ -1,4 +1,4 @@
-package brainflight.view
+package oxalis.view
 
 import braingames.security._
 import oxalis.security._

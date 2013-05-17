@@ -1,4 +1,4 @@
-package models
+package models.assertion
 
 import models.basics._
 import org.bson.types.ObjectId

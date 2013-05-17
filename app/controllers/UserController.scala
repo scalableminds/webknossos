@@ -16,7 +16,7 @@ import models.tracing._
 import models.binary._
 import play.api.i18n.Messages
 import braingames.mvc.Controller
-import models.services.UserCache
+import oxalis.user.UserCache
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User

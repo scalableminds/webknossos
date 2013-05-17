@@ -5,11 +5,11 @@ import akka.pattern.ask
 import akka.util.Timeout
 import akka.actor.ActorSystem
 import akka.actor.Props
-import brainflight.io._
+import oxalis.io._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.stackrenderer._
-import brainflight.io.DirectoryWatcherActor
+import oxalis.io.DirectoryWatcherActor
 import models.stackrenderer.TemporaryDataSetWatcher
 
 object Global extends GlobalSettings {

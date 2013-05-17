@@ -33,7 +33,7 @@ import braingames.util.TextUtils
 import braingames.util.FileIO
 import java.io.FileInputStream
 import java.nio.channels.Channels
-import controllers.tracing.handler.SavedTracingInformationHandler
+import oxalis.tracing.handler.SavedTracingInformationHandler
 
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
@@ -105,12 +105,24 @@ object NMLIO extends Controller with Secured with TextUtils {
     else
       None
 
+  def splitResult(r: Seq[(String, Box[NML])]) = {
+    r.foldLeft((List[String](), List[(String, NML)]())) {
+      case ((failed, successful), (fileName, nmlBox)) =>
+        nmlBox match {
+          case Full(nml) =>
+            (failed, (fileName -> nml) :: successful)
+          case _ =>
+            (fileName :: failed, successful)
+        }
+    }
+  }
+
   def upload = Authenticated(parse.multipartFormData) { implicit request =>
     val parseResult = request.body.files.map(f => f.filename -> extractFromNML(f.ref.file))
-    val (parseSuccess, parseFailed) = parseResult.partition(_._2.isDefined)
+    val (parseFailed, parseSuccess) = splitResult(parseResult)
     if (parseFailed.size > 0) {
-      val errors = parseFailed.map {
-        case (fileName, _) => "error" -> Messages("nml.file.invalid", fileName)
+      val errors = parseFailed.map { fileName =>
+        "error" -> Messages("nml.file.invalid", fileName)
       }
       Redirect(controllers.routes.UserController.dashboard)
         .flashing(
@@ -120,9 +132,8 @@ object NMLIO extends Controller with Secured with TextUtils {
         .flashing(
           "error" -> Messages("nml.file.noFile"))
     } else {
-      val tracingName = nameForNMLs(parseResult.map(_._1))
-
-      val nmls = parseResult.map(_._2.open_!).toList
+      val tracingName = nameForNMLs(parseSuccess.map{ case (fileName, _) => fileName})
+      val nmls = parseSuccess.map{ case (_, nml) => nml}
 
       val tracingOpt = Tracing.createFromNMLsFor(
         request.user._id,

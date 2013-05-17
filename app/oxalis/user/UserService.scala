@@ -1,4 +1,4 @@
-package models.services
+package oxalis.user
 
 import play.api.{ Logger, Application }
 import scala.Some

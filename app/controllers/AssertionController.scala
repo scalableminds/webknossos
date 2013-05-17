@@ -3,7 +3,7 @@ package controllers
 import braingames.mvc.Controller
 import oxalis.security.Secured
 import models.security.Role
-import models.Assertion
+import models.assertion.Assertion
 import views.html
 import play.api.libs.json.Json
 import oxalis.security._

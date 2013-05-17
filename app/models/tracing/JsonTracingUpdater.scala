@@ -1,7 +1,7 @@
 package models.tracing
 
 import play.api.libs.json._
-import models.Color
+import braingames.image.Color
 import play.api.Logger
 
 object TracingUpdater {

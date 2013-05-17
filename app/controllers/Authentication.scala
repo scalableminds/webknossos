@@ -17,7 +17,7 @@ import braingames.mail._
 import controllers.admin._
 import models.tracing.Tracing
 import models.tracing.UsedTracings
-import brainflight.thirdparty.BrainTracing
+import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import braingames.mvc.Controller

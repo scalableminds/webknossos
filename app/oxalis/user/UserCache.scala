@@ -1,4 +1,4 @@
-package models.services
+package oxalis.user
 
 import play.api.cache.Cache
 import play.api.Play.current

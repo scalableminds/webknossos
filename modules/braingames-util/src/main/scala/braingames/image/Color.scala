@@ -1,4 +1,4 @@
-package models
+package braingames.image
 
 import play.api.libs.json.Json._
 import play.api.libs.json._

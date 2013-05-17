@@ -3,7 +3,7 @@ package oxalis.nml
 import scala.xml.XML
 import braingames.binary.models.DataSet
 import models.tracing.Tracing
-import models.Color
+import braingames.image.Color
 import braingames.util.ExtendedTypes.ExtendedString
 import braingames.geometry.Point3D
 import scala.xml.{ Node => XMLNode }

@@ -48,9 +48,9 @@ object BinaryDataAdministration extends Controller with Secured {
   }
 
   def insertIntoDB(dataSetName: String) = Authenticated { implicit request =>
-    /*import brainflight.binary.GridDataStore
+    /*import oxalis.binary.GridDataStore
     import akka.agent.Agent
-    import brainflight.binary.Data
+    import oxalis.binary.Data
 
     implicit val system = Akka.system
 

@@ -14,7 +14,7 @@ import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.File
-import java.awt.Color
+import java.awt.{Color => JColor}
 import akka.pattern.ask
 import braingames.geometry.Point3D
 import akka.util.Timeout
@@ -94,7 +94,7 @@ object ImageCreator {
       val bufferedImage = new BufferedImage(params.slideWidth, params.slideHeight, targetType)
       bufferedImage.setRGB(0, 0, params.slideWidth, params.slideHeight, b.map { v =>
         val i = 0xff & v.asInstanceOf[Int]
-        new Color(i, i, i).getRGB
+        new JColor(i, i, i).getRGB
       }, 0, params.slideWidth)
       Some(bufferedImage)
     } catch {

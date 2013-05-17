@@ -13,7 +13,7 @@ import play.libs.Akka._
 import play.api.Play.current
 import models.binary._
 import akka.util.Timeout
-import brainflight.binary._
+import oxalis.binary._
 import models.knowledge._
 import braingames.mvc.Controller
 import play.api.i18n.Messages
@@ -26,7 +26,7 @@ import models.binary.DataLayer
 import braingames.binary.models.DataSet
 import akka.agent.Agent
 import scala.concurrent.Future
-import brainflight.binary.LoadBlock
+import oxalis.binary.LoadBlock
 import akka.routing.RoundRobinRouter
 
 object BinaryData extends Controller {

@@ -21,7 +21,7 @@ import oxalis.nml.Edge
 import braingames.geometry.Point3D
 import models.tracing.UsedTracings
 import models.user.TimeTracking
-import brainflight.view.helpers._
+import oxalis.view.helpers._
 import models.task.Task
 import views._
 import play.api.i18n.Messages
@@ -37,11 +37,11 @@ import models.task.Project
 import models.tracing.CompoundTracing
 import models.task.TaskType
 import models.tracing.TemporaryTracing
-import controllers.tracing.handler._
+import oxalis.tracing.handler._
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import brainflight.tracing.RequestTemporaryTracing
-import brainflight.tracing.TracingIdentifier
+import oxalis.tracing.RequestTemporaryTracing
+import oxalis.tracing.TracingIdentifier
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
@@ -146,7 +146,8 @@ object TracingController extends Controller with Secured with TracingInformation
           Redirect(routes.UserController.dashboard).flashing("success" -> message)
         case Failure(message, _, _) =>
           Redirect(routes.UserController.dashboard).flashing("error" -> message)
-          
+        case _ =>
+          Redirect(routes.UserController.dashboard).flashing("error" -> Messages("error.unknown"))
       }
     }
   }
@@ -171,8 +172,8 @@ object TracingController extends Controller with Secured with TracingInformation
         }
       } else
         tracing.review.headOption.flatMap(_.comment).map(comment =>
-          html.oxalis.trainingsComment(comment))).getOrElse(Html.empty)
-    html.oxalis.trace(tracing)(additionalHtml)
+          html.tracing.trainingsComment(comment))).getOrElse(Html.empty)
+    html.tracing.trace(tracing)(additionalHtml)
   }
 
   def index = Authenticated { implicit request =>
@@ -218,7 +219,7 @@ object TracingController extends Controller with Secured with TracingInformation
 trait TracingInformationProvider extends play.api.http.Status with TracingRights {
   import braingames.mvc.BoxImplicits._
 
-  import tracing.handler.TracingInformationHandler._
+  import oxalis.tracing.handler.TracingInformationHandler._
 
   def createDataSetInformation(dataSetName: String) =
     DataSetDAO.findOneByName(dataSetName) match {
@@ -258,7 +259,7 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
     }))
   }
 
-  def nameTracing(tracing: TracingLike)(implicit request: AuthenticatedRequest[_]) = Box[String] {
+  def nameTracing(tracing: TracingLike)(implicit request: AuthenticatedRequest[_]) = Box.legacyNullTest[String] {
     withInformationHandler(tracing.tracingType.toString) { handler =>
       handler.nameForTracing(tracing)
     }

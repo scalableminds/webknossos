@@ -6,7 +6,7 @@ import play.api.Play.current
 import models.security._
 import models.task._
 import models.user._
-import models.Color
+import braingames.image.Color
 import models.task._
 import models.binary._
 import models.security.Role
@@ -14,7 +14,7 @@ import models.tracing._
 import models.basics.BasicEvolution
 import oxalis.mail.DefaultMails
 import braingames.geometry._
-import brainflight.tracing.TemporaryTracingGenerator
+import oxalis.tracing.TemporaryTracingGenerator
 import braingames.mail.Mailer
 import scala.collection.parallel.Tasks
 import akka.pattern.ask

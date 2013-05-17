@@ -1,4 +1,4 @@
-package models
+package models.binary
 
 import play.mvc._
 import braingames.binary.models.DataSet

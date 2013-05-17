@@ -1,4 +1,4 @@
-package mvc
+package oxalis.mvc
 
 import play.api.mvc.Results.{Status => HttpStatus}
 

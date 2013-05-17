@@ -40,7 +40,7 @@
     case _ if tracing.state.isInProgress =>
       <i class="icon-time"></i><span> User is working on the task</span>
     case r :: _ if r._reviewee == user._id && tracing.state.isInReview =>
-      oxalisLink() + nmlDownloadLink() + finishReviewLink() + abortReviewLink
+      oxalisLink() += nmlDownloadLink() += finishReviewLink() += abortReviewLink
     case r :: _ if r._reviewee != user._id && tracing.state.isInReview =>
       alreadyInReviewLabel(r)
     case _ if tracing.state.isReadyForReview =>

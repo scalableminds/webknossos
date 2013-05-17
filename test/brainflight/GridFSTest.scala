@@ -7,8 +7,8 @@ import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.gridfs.Imports._
 import java.io._
 import play.Logger
-import brainflight.binary.{ FileDataStore }
-import brainflight.binary.GridFileDataStore
+import oxalis.binary.{ FileDataStore }
+import oxalis.binary.GridFileDataStore
 import java.security.MessageDigest
 import braingames.util.ExtendedTypes._
 import braingames.geometry.Point3D

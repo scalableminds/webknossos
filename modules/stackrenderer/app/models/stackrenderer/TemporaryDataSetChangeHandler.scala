@@ -1,11 +1,11 @@
 package models.stackrenderer
 
-import brainflight.io.DataSetChangeHandler
+import oxalis.io.DataSetChangeHandler
 import TemporaryStores._
 import braingames.binary.models.DataSet
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
-import brainflight.io._
+import oxalis.io._
 
 class TemporaryDataSetChangeHandler extends DataSetChangeHandler {
   def deleteAllDataSetsExcept(l: Array[String]) = {

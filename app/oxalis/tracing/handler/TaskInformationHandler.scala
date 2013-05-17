@@ -1,4 +1,4 @@
-package controllers.tracing.handler
+package oxalis.tracing.handler
 
 import controllers.TracingRights
 import net.liftweb.common.Box

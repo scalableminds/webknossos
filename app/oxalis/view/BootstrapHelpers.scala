@@ -1,4 +1,4 @@
-package brainflight.view
+package oxalis.view
 
 import views.html.helper.FieldConstructor
 

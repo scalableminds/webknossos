@@ -17,6 +17,10 @@ abstract class BinaryMessage extends Handle
 case class SingleDataRequest(resolutionExponent: Int, position: Point3D, useHalfByte: Boolean)
 case class MultipleDataRequest(requests: Array[SingleDataRequest]) extends BinaryMessage
 
+object MultipleDataRequest {
+  def apply(r: SingleDataRequest): MultipleDataRequest = MultipleDataRequest(Array(r))
+}
+
 object BinaryProtocol {
   /**
    * Length of the different transfert parts of a message

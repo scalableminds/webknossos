@@ -1,38 +1,33 @@
 package models
 
 import play.mvc._
-import com.mongodb.casbah.Imports._
-import models.binary.DataSet
+import braingames.binary.models.DataSet
+import reactivemongo.bson.Macros
+import reactivemongo.bson.BSONObjectID
 import reactivemongo.api._
-import reactivemongo.bson._
-import reactivemongo.bson.handlers.DefaultBSONHandlers._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.handlers.BSONWriter
-import models.binary.DataLayer
+import braingames.binary.models.DataLayer
+import play.api.libs.json.Json
+import org.bson.BSONObject
+import reactivemongo.bson.BSONDocument
+import reactivemongo.bson.BSONInteger
+import reactivemongo.bson.BSONString
+import reactivemongo.bson.BSONLong
 /**
  * scalableminds - brainflight
  * User: tmbo
  * Date: 10.12.11
  * Time: 12:58
  */
-case class GridDataSetPairing(dataSetName: String, dataLayerBaseDir: String, resolution: Int, dataPrefix: Long, _id: ObjectId = new ObjectId) {
+case class GridDataSetPairing(dataSetName: String, dataLayerBaseDir: String, resolution: Int, dataPrefix: Long, _id: BSONObjectID = BSONObjectID.generate) {
   def id = _id.toString
 }
 
 object GridDataSetPairing {
   import models.context.BinaryDB._
 
-  implicit object GridDataSetPairingBSONWriter extends BSONWriter[GridDataSetPairing] {
-    def toBSON(gridPrairing: GridDataSetPairing) = {
-      BSONDocument(
-        "_id" -> BSONObjectID(gridPrairing.id),
-        "dataSetName" -> BSONString(gridPrairing.dataSetName),
-        "dataLayerBaseDir" -> BSONString(gridPrairing.dataLayerBaseDir),
-        "resolution" -> BSONInteger(gridPrairing.resolution),
-        "dataPrefix" -> BSONLong(gridPrairing.dataPrefix))
-    }
-  }
+  implicit val gridDataSetMacro = Macros.handler[GridDataSetPairing]
 
   val collection = db.collection("dataSetPairing")
 
@@ -43,16 +38,12 @@ object GridDataSetPairing {
       "resolution" -> BSONInteger(resolution))
 
     // get a Cursor[BSONDocument]
-    val cursor = collection.find(query)
-    cursor.headOption.map {
-      _.map { d =>
-        d.getAs[BSONLong]("dataPrefix").get.value
-      }
-    }
+    val cursor = collection.find(query).cursor
+    cursor.headOption.map(_.map(_.dataPrefix))
   }
 
   private def createNextPrefix: Future[Long] = {
-    collection.find(BSONDocument()).toList.map(_.map(_.getAs[BSONLong]("dataPrefix").get.value)).map { prefixValues =>
+    collection.find(BSONDocument.empty).cursor.toList.map(_.map(_.dataPrefix)).map { prefixValues =>
       if (prefixValues.isEmpty) {
         0
       } else {

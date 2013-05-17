@@ -4,7 +4,6 @@ import play.api.libs.json.Json._
 import play.api.libs.json._
 import oxalis.security.Secured
 import models.security.Role
-import models.binary.DataSet
 import play.api.mvc._
 import play.api.Logger
 import models.tracing.Tracing

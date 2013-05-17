@@ -5,8 +5,7 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import oxalis.security.Secured
 import akka.actor.Props
-import brainflight.binary._
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import akka.util.Timeout
 import scala.concurrent.duration._
 import akka.pattern.ask
@@ -22,12 +21,12 @@ object BinaryDataAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
   
-  val dataInsertionActor = Akka.system.actorOf(Props(new BinaryData2DBActor))
+ // val dataInsertionActor = Akka.system.actorOf(Props(new BinaryData2DBActor))
 
   implicit val timeout = Timeout(5 seconds)
 
   def insertionProgress = Authenticated { implicit request =>
-    Async {
+    /*Async {
       val future = dataInsertionActor ? InsertionState()
       future
         .recover {
@@ -40,7 +39,8 @@ object BinaryDataAdministration extends Controller with Secured {
               dataSet.name -> state
           }))
         }
-    }
+    }*/
+    Ok
   }
 
   def list = Authenticated { implicit request =>
@@ -48,7 +48,7 @@ object BinaryDataAdministration extends Controller with Secured {
   }
 
   def insertIntoDB(dataSetName: String) = Authenticated { implicit request =>
-    import brainflight.binary.GridDataStore
+    /*import brainflight.binary.GridDataStore
     import akka.agent.Agent
     import brainflight.binary.Data
 
@@ -59,6 +59,7 @@ object BinaryDataAdministration extends Controller with Secured {
     } yield {
       dataInsertionActor ! InsertBinary(dataSet)
       Ok
-    }
+    }*/
+    Ok
   }
 }

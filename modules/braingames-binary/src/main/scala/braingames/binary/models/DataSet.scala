@@ -1,17 +1,16 @@
-package braingames.binary.models.defaults
+package braingames.binary.models
 
 import braingames.geometry.Point3D
-import braingames.binary.models.BareDataSetLike
 import play.api.libs.json.Reads
 import play.api.libs.json.Json
 import braingames.binary.models._
 
-case class BareDataSet(name: String, maxCoordinates: Point3D, priority: Int = 0) extends BareDataSetLike {
+case class BareDataSet(name: String, maxCoordinates: Point3D, priority: Int = 0) {
   def addLayers(
     baseDir: String,
     colorLayer: ColorLayer,
     segmentationLayers: List[SegmentationLayer] = Nil,
-    classificationLayer: Option[ClassificationLayer] = None): DataSetLike = {
+    classificationLayer: Option[ClassificationLayer] = None) = {
     DataSet(name, baseDir, maxCoordinates, priority, colorLayer, segmentationLayers, classificationLayer)
   }
 
@@ -30,7 +29,7 @@ case class DataSet(
     priority: Int = 0,
     colorLayer: ColorLayer,
     segmentationLayers: List[SegmentationLayer] = Nil,
-    classificationLayer: Option[ClassificationLayer] = None) extends DataSetLike {
+    classificationLayer: Option[ClassificationLayer] = None) {
 
   val dataLayers = ((colorLayer :: segmentationLayers)).groupBy(layer => layer.name).mapValues(list => list.head)
 

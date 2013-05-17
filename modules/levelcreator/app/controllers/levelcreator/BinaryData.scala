@@ -23,7 +23,7 @@ import akka.pattern.AskTimeoutException
 import scala.collection.mutable.ArrayBuffer
 import play.api.libs.concurrent.Execution.Implicits._
 import models.binary.DataLayer
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import akka.agent.Agent
 import scala.concurrent.Future
 import brainflight.binary.LoadBlock

@@ -17,10 +17,10 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.ExecutionContext.Implicits._
 import akka.actor.Actor
-import braingames.binary.models.DataSetLike
+import braingames.binary.models.DataSet
 import reactivemongo.api.MongoConnection
 
-case class InsertBinary(dataSet: DataSetLike)
+case class InsertBinary(dataSet: DataSet)
 case class InsertionState()
 /*
 class BinaryData2DBActor extends Actor {

@@ -6,11 +6,12 @@ import oxalis.security.AuthenticatedRequest
 import oxalis.security.Secured
 import braingames.util.ExtendedTypes.ExtendedString
 import braingames.geometry.Point3D
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import models.security.Role
 import models.tracing._
 import models.task.Task
 import models.user.User
+import models.binary.DataSetDAO
 import models.task.TaskType
 import play.api.data.Form
 import play.api.data.Forms._
@@ -50,7 +51,7 @@ object TaskAdministration extends Controller with Secured{
 
   val taskMapping = tuple(
     "dataSet" -> text.verifying("dataSet.notFound",
-      name => DataSet.findOneByName(name).isDefined),
+      name => DataSetDAO.findOneByName(name).isDefined),
     "taskType" -> text.verifying("taskType.notFound",
       task => TaskType.findOneById(task).isDefined),
     "start" -> mapping(
@@ -76,7 +77,7 @@ object TaskAdministration extends Controller with Secured{
     taskForm: Form[(String, String, Point3D, Experience, Int, Int, String)])(implicit request: AuthenticatedRequest[_]) =
     html.admin.task.taskCreate(
       TaskType.findAll,
-      DataSet.findAll,
+      DataSetDAO.findAll,
       Experience.findAllDomains,
       Project.findAll,
       taskFromNMLForm,

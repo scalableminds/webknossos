@@ -2,7 +2,7 @@ package models.stackrenderer
 
 import brainflight.io.DataSetChangeHandler
 import TemporaryStores._
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
 import brainflight.io._

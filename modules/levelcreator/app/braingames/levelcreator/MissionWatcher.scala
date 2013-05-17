@@ -8,7 +8,7 @@ import play.api.libs.json._
 import play.api.libs.json.Json._
 import play.api.libs.functional.syntax._
 import play.api.libs.concurrent.Execution.Implicits._
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import braingames.util.FileRegExFilter
 import models.knowledge._
 import models.binary._

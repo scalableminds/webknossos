@@ -7,7 +7,7 @@ import play.api.libs.json._
 import play.api.data.validation.ValidationError
 import braingames.xml.Xml
 import braingames.xml.XMLWrites
-import models.binary.DataSet
+import models.binary.DataSetDAO
 import oxalis.nml.Comment
 import models.user.User
 import braingames.geometry.Scale
@@ -23,6 +23,7 @@ import oxalis.nml._
 import oxalis.nml.utils._
 import play.api.Logger
 import com.mongodb.casbah.commons.MongoDBList
+import braingames.binary.models.DataSet
 
 case class Tracing(
     _user: ObjectId,
@@ -304,7 +305,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
     }
   }
 
-  def createTracingFor(u: User, d: DataSet = DataSet.default) = {
+  def createTracingFor(u: User, d: DataSet = DataSetDAO.default) = {
     val tracing = insertOne(Tracing(u._id,
       d.name,
       Nil,

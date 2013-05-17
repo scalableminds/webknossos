@@ -3,7 +3,7 @@ import play.api.mvc.Action
 import braingames.mvc._
 import play.api.data._
 import play.api.libs.json._
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import models.knowledge._
 import play.api.i18n.Messages
 

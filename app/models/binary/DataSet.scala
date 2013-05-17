@@ -9,20 +9,35 @@ import play.api.libs.functional.syntax._
 import models.basics.BasicDAO
 import models.basics.DAOCaseClass
 import play.api.libs.json._
+import braingames.binary.models.DataSet
 
-object DataSet extends BasicDAO[DataSet]("dataSets") {
+import braingames.binary.models.{ DataSetRepository => AbstractDataSetRepository }
+
+trait DataSetRepository extends AbstractDataSetRepository {
+
+  def deleteAllDataSetsExcept(l: Array[String]) =
+    DataSetDAO.deleteAllExcept(l)
+
+  def updateOrCreateDataSet(dataSet: DataSet) =
+    DataSetDAO.updateOrCreate(dataSet)
+
+  def removeDataSetByName(name: String) =
+    DataSetDAO.removeByName(name)
+}
+
+object DataSetDAO extends BasicDAO[DataSet]("dataSets") {
 
   def default = {
     //find(MongoDBObject())
-    
-    val all = DataSet.findAll
+
+    val all = DataSetDAO.findAll
     if (all.isEmpty)
       throw new Exception("No default data set found!")
     all.maxBy(_.priority)
   }
-  
+
   def deleteAllExcept(names: Array[String]) = {
-    removeByIds(DataSet.findAll.filterNot( d => names.contains(d.name)).map(_._id))
+    remove(MongoDBObject("name" -> MongoDBObject("$nin" -> names)))
   }
 
   def findOneByName(name: String) =
@@ -31,14 +46,16 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
   def updateOrCreate(d: DataSet) = {
     findOne(MongoDBObject("name" -> d.name)) match {
       case Some(stored) =>
-        stored.update(_ => d.copy(_id = stored._id, priority = stored.priority))
+        update(
+          MongoDBObject("name" -> d.name),
+          MongoDBObject("$set" -> d.copy(priority = stored.priority)))
       case _ =>
         insertOne(d)
     }
   }
 
   def removeByName(name: String) {
-    DataSet.remove(MongoDBObject("name" -> name))
+    remove(MongoDBObject("name" -> name))
   }
-  
+
 }

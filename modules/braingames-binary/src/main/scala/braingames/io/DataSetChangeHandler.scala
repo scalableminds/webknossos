@@ -12,21 +12,12 @@ import java.nio.file._
 case class ImplicitLayerInfo(name: String, resolutions: List[Int])
 case class ExplicitLayerInfo(name: String, dataType: String)
 
-trait LayerFormats {
-  implicit val colorLayerReads: Reads[ColorLayerLike]
-  implicit val segmentationLayerReads: Reads[SegmentationLayerLike]
-  implicit val ctxFreeSegmentationLayerReads: Reads[ContextFreeSegmentationLayerLike]
-  implicit val bareDataSetReads: Reads[BareDataSetLike]
-}
-
 trait DataSetChangeHandler
     extends DirectoryChangeHandler
     with DataSetRepository
-    with LayerFormats
-    with DataSetFactoryLike
-    with ColorLayerFactoryLike {
+    with LayerFormats {
 
-  def onStart(path: Path) {
+  def onStart(path: Path, recursive: Boolean) {
     val file = path.toFile()
     val files = file.listFiles()
     if (files != null) {
@@ -41,8 +32,8 @@ trait DataSetChangeHandler
     }
   }
 
-  def onTick(path: Path) {
-    onStart(path)
+  def onTick(path: Path, recursive: Boolean) {
+    onStart(path, recursive)
   }
 
   def onCreate(path: Path) {
@@ -84,10 +75,10 @@ trait DataSetChangeHandler
     }
   }
 
-  def getColorLayer(f: File): Option[ColorLayerLike] = {
+  def getColorLayer(f: File): Option[ColorLayer] = {
     val colorLayerInfo = new File(f.getPath + "/color/layer.json")
     if (colorLayerInfo.isFile) {
-      JsonFromFile(colorLayerInfo).validate[ColorLayerLike] match {
+      JsonFromFile(colorLayerInfo).validate[ColorLayer] match {
         case JsSuccess(colorLayer, _) => Some(colorLayer)
         case JsError(error) =>
           System.err.println(error.toString)
@@ -97,7 +88,7 @@ trait DataSetChangeHandler
   }
 
   def segmentationLayerFromFile(layerInfo: File) = {
-    JsonFromFile(layerInfo).validate[ContextFreeSegmentationLayerLike] match {
+    JsonFromFile(layerInfo).validate[ContextFreeSegmentationLayer] match {
       case JsSuccess(cfSegmentationLayer, _) =>
         val parentDir = layerInfo.getParentFile
         println(s"found segmentation layer: ${parentDir.getName}")
@@ -109,7 +100,7 @@ trait DataSetChangeHandler
     }
   }
 
-  def getSegmentationLayers(f: File): List[SegmentationLayerLike] = {
+  def getSegmentationLayers(f: File): List[SegmentationLayer] = {
     val segmentationsDir = new File(f.getPath + "/segmentation")
     if (segmentationsDir.isDirectory) {
       for {
@@ -124,11 +115,11 @@ trait DataSetChangeHandler
       Nil
   }
 
-  def dataSetFromFile(f: File): Option[DataSetLike] = {
+  def dataSetFromFile(f: File): Option[DataSet] = {
     if (f.isDirectory) {
       val dataSetInfo = new File(f.getPath + "/settings.json")
       if (dataSetInfo.isFile) {
-        JsonFromFile(dataSetInfo).validate[BareDataSetLike] match {
+        JsonFromFile(dataSetInfo).validate[BareDataSet] match {
           case JsSuccess(bareDataSet, _) =>
             getColorLayer(f).map { colorLayer =>
               bareDataSet
@@ -151,7 +142,7 @@ trait DataSetChangeHandler
           zMax <- maxValueFromFiles(ys.listFiles())
         } yield {
           val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
-          createDataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, colorLayer = createColorLayer(supportedResolutions = resolutions))
+          DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, colorLayer = ColorLayer(supportedResolutions = resolutions))
         }
       }
     } else None

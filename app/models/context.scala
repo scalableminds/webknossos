@@ -57,15 +57,17 @@ package object context {
 
   object BinaryDB {
     import reactivemongo.api._
+    import reactivemongo.api.MongoDriver
     import reactivemongo.api.gridfs._
     import reactivemongo.bson.BSONDocument
     import reactivemongo.bson.BSONObjectID
     import reactivemongo.bson._
-    import reactivemongo.bson.handlers.DefaultBSONHandlers._
 
     val dbName = conf.getString("mongo.binary.dbname")
+    
+    lazy val driver = new MongoDriver
 
-    lazy val connection = MongoConnection(List("localhost:27017"))
+    lazy val connection = driver.connection(List("localhost:27017"))
     // a GridFS store named 'attachments'
 
     val db = connection(dbName)

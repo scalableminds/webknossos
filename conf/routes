@@ -33,8 +33,8 @@ GET      /user/configuration/default                   controllers.UserControlle
 # Binary Data
 GET      /binary/ws                                    controllers.BinaryData.requestViaWebsocket( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
 POST     /binary/ajax                                  controllers.BinaryData.requestViaAjax( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int )
-GET      /binary/ajax                                  controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
-GET      /binary/image                                 controllers.BinaryData.requestImage( dataSetId: String, dataLayerName: String, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int )
+GET      /binary/ajax                                  controllers.BinaryData.requestViaAjaxDebug( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
+GET      /binary/image                                 controllers.BinaryData.requestImage( dataSetId: String, dataLayerName: String ?= "color", cubeSize: Int ?=128, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int )
 
 # Assertions
 GET      /assert/:assertionId                          controllers.AssertionController.view(assertionId: String)

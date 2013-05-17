@@ -7,7 +7,7 @@ import braingames.geometry.Point3D
 import play.api.libs.json.Json
 import play.api.libs.json.Writes
 import braingames.xml.XMLWrites
-import models.binary.DataSet
+import models.binary.DataSetDAO
 import braingames.xml.Xml
 import models.task.Task
 import models.user.User
@@ -105,7 +105,7 @@ trait TracingLike extends ContainsTracingInfo{
 object TracingLike {
   implicit object TracingLikeXMLWrites extends XMLWrites[TracingLike] {
     def writes(e: TracingLike) = {
-      (DataSet.findOneByName(e.dataSetName).map { dataSet =>
+      (DataSetDAO.findOneByName(e.dataSetName).map { dataSet =>
         <things>
           <parameters>
             <experiment name={ dataSet.name }/>

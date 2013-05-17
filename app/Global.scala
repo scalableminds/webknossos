@@ -16,32 +16,32 @@ import oxalis.mail.DefaultMails
 import braingames.geometry._
 import brainflight.tracing.TemporaryTracingGenerator
 import braingames.mail.Mailer
-import brainflight.io._
 import scala.collection.parallel.Tasks
 import akka.pattern.ask
 import akka.util.Timeout
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
 import scala.collection.JavaConversions._
-import brainflight.ActorSystems
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.util._
+import oxalis.binary.BinaryDataService
+import com.typesafe.config.Config
 
 object Global extends GlobalSettings {
 
   override def onStart(app: Application) {
     val conf = Play.current.configuration
-    startActors()
-    implicit val timeout = Timeout(( /*conf.getInt("actor.defaultTimeout") getOrElse*/ 25 seconds))
+    
+    startActors(conf.underlying)
+    
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
       InitialData.insertRoles
       InitialData.insertUsers
       InitialData.insertTaskAlgorithms
     }
-
-    (DirectoryWatcher ? StartWatching("binaryData")).onComplete {
-      case Success(x) =>
+    
+    BinaryDataService.start( onComplete = {
         if (Play.current.mode == Mode.Dev) {
           BasicEvolution.runDBEvolution()
           // Data insertion needs to be delayed, because the dataSets need to be
@@ -49,24 +49,21 @@ object Global extends GlobalSettings {
           InitialData.insertTasks
         }
         Logger.info("Directory start completed")
-      case Failure(e) =>
-        Logger.error(e.toString)
-    }
+    })
+    
     Role.ensureImportantRoles()
   }
 
   override def onStop(app: Application) {
-    ActorSystems.dataRequestSystem.shutdown
-    DirectoryWatcher ! StopWatching
-    models.context.BinaryDB.connection.close()
+    BinaryDataService.stop()
     models.context.db.close()
   }
 
-  def startActors() {
+  def startActors(conf: Config) {
     Akka.system.actorOf(
       Props(new TemporaryTracingGenerator()),
       name = "temporaryTracingGenerator")
-    Akka.system.actorOf(Props[Mailer], name = "mailActor")
+    Akka.system.actorOf(Props(new Mailer(conf)), name = "mailActor")
   }
 }
 
@@ -125,7 +122,7 @@ object InitialData {
           0,
           tt._id,
           Experience("basic", 5)))
-        Tracing.createTracingBase(t, user._id, DataSet.default.name, Point3D(50, 50, 50))
+        Tracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(50, 50, 50))
 
         t = Task.insertOne(Task(
           0,
@@ -138,7 +135,7 @@ object InitialData {
             5,
             5,
             sample._id))))
-        Tracing.createTracingBase(t, user._id, DataSet.default.name, Point3D(0, 0, 0))
+        Tracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(0, 0, 0))
       }
     }
   }

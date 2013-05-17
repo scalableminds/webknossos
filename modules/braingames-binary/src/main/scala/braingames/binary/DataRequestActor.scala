@@ -20,15 +20,12 @@ import scala.collection.immutable.HashMap
 import akka.routing.RoundRobinRouter
 import java.util.UUID
 import com.typesafe.config.Config
-import braingames.binary.models.DataLayerLike
-import braingames.binary.models.DataSetLike
-
-case class SingleRequest(dataRequest: DataRequest)
-case class MultiCubeRequest(requests: Seq[SingleRequest])
+import braingames.binary.models.DataLayer
+import braingames.binary.models.DataSet
 
 class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]) extends Actor with DataCache {
   import DataStore._
-  
+
   implicit val ec = context.dispatcher
 
   val id = UUID.randomUUID().toString()
@@ -43,7 +40,7 @@ class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[
 
   val remotePath = conf.getString("datarequest.remotepath")
   val useRemote = conf.getBoolean("useRemote")
-  
+
   implicit val system =
     if (useRemote)
       ActorSystem("DataRequests", conf.getConfig("datarequest"))
@@ -63,7 +60,7 @@ class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[
   }
 
   def receive = {
-    case SingleRequest(dataRequest) =>
+    case SingleCubeRequest(dataRequest) =>
       val s = sender
       Future {
         load(dataRequest) pipeTo s
@@ -82,7 +79,7 @@ class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[
       }
   }
 
-  def loadFromSomewhere(dataSet: DataSetLike, dataLayer: DataLayerLike, resolution: Int, block: Point3D) = {
+  def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D) = {
     val block2Load = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.baseDir, dataLayer.bytesPerElement, resolution, block.x, block.y, block.z)
 
     def loadFromStore(dataStores: List[ActorRef]): Future[Array[Byte]] = dataStores match {

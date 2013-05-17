@@ -16,7 +16,6 @@ import models.tracing.Tracing
 import play.api.libs.iteratee._
 import play.api.libs.iteratee.Concurrent.Channel
 import play.api.libs.Comet
-import models.binary.DataSet
 import oxalis.nml.Node
 import oxalis.nml.Edge
 import braingames.geometry.Point3D
@@ -47,14 +46,15 @@ import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
 import braingames.util.ExtendedTypes.When
+import models.binary.DataSetDAO
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User
 
   def createExplorational = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     for {
-      dataSetId <- postParameter("dataSetId") ?~ Messages("dataSet.notSupplied")
-      dataSet <- DataSet.findOneById(dataSetId) ?~ Messages("dataSet.notFound")
+      dataSetName <- postParameter("dataSetName") ?~ Messages("dataSet.notSupplied")
+      dataSet <- DataSetDAO.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
     } yield {
       val tracing = Tracing.createTracingFor(request.user, dataSet)
       Redirect(routes.TracingController.trace(tracing.id))
@@ -221,12 +221,12 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
   import tracing.handler.TracingInformationHandler._
 
   def createDataSetInformation(dataSetName: String) =
-    DataSet.findOneByName(dataSetName) match {
+    DataSetDAO.findOneByName(dataSetName) match {
       case Some(dataSet) =>
         Json.obj(
           "dataSet" -> Json.obj(
-            "id" -> dataSet.id,
             "name" -> dataSet.name,
+            "id" -> dataSet.name,
             "dataLayers" -> Json.toJson(dataSet.dataLayers.map {
               case (id, layer) =>
                 id -> Json.obj(

@@ -125,4 +125,20 @@ object ExtendedTypes {
       case _: java.lang.NumberFormatException => None
     }
   }
+
+  import net.liftweb.common._
+  import scala.concurrent.Future
+
+  implicit class ExtendedFutureBox[T](b: Box[Future[Box[T]]]) {
+    def flatten: Future[Box[T]] = {
+      b match {
+        case Full(f) =>
+          f
+        case Empty =>
+          Future.successful(Empty)
+        case f: Failure =>
+          Future.successful(f)
+      }
+    }
+  }
 }

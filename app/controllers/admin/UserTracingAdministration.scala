@@ -17,7 +17,7 @@ import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
 import models.tracing.Tracing
 import models.tracing.TracingType
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 
 object UserTracingAdministration extends Controller with Secured {
 

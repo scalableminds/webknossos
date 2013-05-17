@@ -1,7 +1,7 @@
 package oxalis.nml
 
 import scala.xml.XML
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import models.tracing.Tracing
 import models.Color
 import braingames.util.ExtendedTypes.ExtendedString

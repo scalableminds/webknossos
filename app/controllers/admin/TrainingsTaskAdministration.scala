@@ -9,7 +9,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import oxalis.security.AuthenticatedRequest
 import models.task.TaskType
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import models.task.Task
 import models.user.Experience
 import models.task.Training

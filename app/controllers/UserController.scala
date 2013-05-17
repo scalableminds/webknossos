@@ -9,10 +9,11 @@ import play.api.libs.json.JsValue
 import play.api.libs.json._
 import models.security.Role
 import models.task._
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import views._
 import play.api.Logger
 import models.tracing._
+import models.binary._
 import play.api.i18n.Messages
 import braingames.mvc.Controller
 import models.services.UserCache
@@ -35,7 +36,7 @@ object UserController extends Controller with Secured {
 
     val loggedTime = TimeTracking.loggedTime(user)
 
-    val dataSets = DataSet.findAll
+    val dataSets = DataSetDAO.findAll
 
     Ok(html.user.dashboard.dashboard(
       explorationalTracings,

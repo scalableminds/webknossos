@@ -1,11 +1,18 @@
-package models.binary
+package braingames.binary.models
 
 import braingames.geometry.Point3D
 import braingames.geometry.Vector3D
 import braingames.util.Interpolator
-import scala.collection.mutable.ArrayBuffer
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import braingames.binary.models._
+
+trait LayerFormats {
+  implicit val colorLayerReads: Reads[ColorLayer] = Json.reads[ColorLayer]
+  implicit val segmentationLayerReads: Reads[SegmentationLayer] = Json.reads[SegmentationLayer]
+  implicit val ctxFreeSegmentationLayerReads: Reads[ContextFreeSegmentationLayer] = Json.reads[ContextFreeSegmentationLayer]
+  implicit val bareDataSetReads: Reads[BareDataSet] = Json.reads[BareDataSet]
+}
 
 trait TrilerpInterpolation {
 
@@ -61,7 +68,7 @@ trait NearestNeighborInterpolation {
   }
 }
 
-sealed trait DataLayer{
+sealed trait DataLayer {
   val baseDir: String
   val name: String
   val elementClass: String

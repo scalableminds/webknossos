@@ -13,7 +13,7 @@ import play.api.libs.json._
 import play.api._
 import java.io.File
 import scala.util.Failure
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import braingames.util.ExtendedTypes.ExtendedString
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future

@@ -20,21 +20,28 @@ import braingames.binary.Cuboid
 import braingames.binary.models._
 import scala.collection.mutable.ArrayBuffer
 import braingames.binary.MultipleDataRequest
-import braingames.binary.SingleRequest
+import braingames.binary.SingleCubeRequest
 import braingames.binary.DataRequest
 import braingames.binary.MultiCubeRequest
 import akka.pattern.AskTimeoutException
+import braingames.io.StopWatching
+import braingames.io.StartWatching
+import scala.util.Success
+import scala.util.Failure
+import com.typesafe.config.Config
 
 trait BinaryDataService {
-  implicit val system: ActorSystem
+  implicit def system: ActorSystem
   
-  implicit val executor = system.dispatcher
+  lazy implicit val executor = system.dispatcher
 
   def dataSetChangeHandler: DataSetChangeHandler
 
-  val config = ConfigFactory.load()
+  def config: Config
 
-  implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds) // needed for `?` below
+  lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds) // needed for `?` below
+  
+  lazy val baseFolder = config.getString("braingames.binary.baseFolder")
   
   val scaleFactors = Array(1, 1, 1)
   
@@ -44,13 +51,28 @@ trait BinaryDataService {
     system.actorOf(Props(new DataRequestActor(config.getConfig("braingames.binary"), bindataCache))
       .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
   }
+  
+  var directoryWatcher: Option[ActorRef] = None
 
-  def start() {
-    lazy val DirectoryWatcher = system.actorOf(
+  def start(onComplete: => Unit = Unit) {
+    val actor = system.actorOf(
       Props(new DirectoryWatcherActor(
         config.getConfig("braingames.binary.changeHandler"),
         dataSetChangeHandler)),
       name = "directoryWatcher")
+      
+    directoryWatcher = Some(actor)
+    
+    (actor ? StartWatching(baseFolder, true)).onComplete {
+      case Success(x) =>
+        onComplete
+      case Failure(e) =>
+        System.err.println(s"Failed to start watching $baseFolder: $e")
+    }
+  }
+  
+  def stop(){
+    directoryWatcher.map( _ ! StopWatching)
   }
 
 
@@ -65,11 +87,11 @@ trait BinaryDataService {
     Cuboid(cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2), resolution, Some(cubeCorner))
   }
 
-  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSetLike, dataLayer: DataLayerLike, cubeSize: Int): Future[Option[ArrayBuffer[Byte]]] = {
+  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int): Future[Option[ArrayBuffer[Byte]]] = {
     val cubeRequests = multi.requests.map { request =>
       val resolution = resolutionFromExponent(request.resolutionExponent)
       val cuboid = cuboidFromPosition(request.position, cubeSize, resolution)
-      SingleRequest(
+      SingleCubeRequest(
         DataRequest(
           dataSet,
           dataLayer,

@@ -1,4 +1,4 @@
-@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[models.binary.DataSet], hasAnOpenTask: Boolean)(implicit session: brainflight.view.AuthedSessionData)
+@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: brainflight.view.AuthedSessionData)
 
 @main(){
   <div class="container" id="dashboard">
@@ -57,9 +57,9 @@
       }
       <div class="divider-vertical"></div>
       @helper.form(action = controllers.routes.TracingController.createExplorational, 'class -> "form-inline inline-block") {
-        <select name="dataSetId">
+        <select name="dataSetName">
           @dataSets.map{ d => 
-            <option value="@d.id"> @d.name </option>
+            <option value="@d.name"> @d.name </option>
           }
         </select>
         <button type="submit" class="btn"><i class="icon-search"></i> Explore data set</button>

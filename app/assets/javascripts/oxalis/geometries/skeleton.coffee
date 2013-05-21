@@ -528,10 +528,10 @@ class Skeleton
     @showInactiveTrees = not @showInactiveTrees
     @setInactiveTreeVisibility(@showInactiveTrees)
 
-  setInactiveTreeVisibility : (boolean) ->
+  setInactiveTreeVisibility : (visible) ->
     for mesh in @getMeshes()
       if mesh != @activeNodeParticle
-        mesh.visible = boolean
+        mesh.visible = visible
     index = @getIndexFromTreeId(@route.getTree().treeId)
     @routes[index].visible = true
     @nodes[index].visible = true
@@ -558,13 +558,13 @@ class Skeleton
     hsvColor.h = (hsvColor.h + 0.5) % 1
     ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
 
-  setSizeAttenuation : (boolean) ->
+  setSizeAttenuation : (sizeAttenuation) ->
 
-    @mode = if boolean then constants.MODE_ARBITRARY else constants.MODE_PLANE_TRACING
+    @mode = if sizeAttenuation then constants.MODE_ARBITRARY else constants.MODE_PLANE_TRACING
     for particleSystem in @nodes
-      particleSystem.material.sizeAttenuation = boolean
+      particleSystem.material.sizeAttenuation = sizeAttenuation
       particleSystem.material.needsUpdate = true
-    @branches.material.sizeAttenuation = boolean
+    @branches.material.sizeAttenuation = sizeAttenuation
     @branches.material.needsUpdate = true
-    @activeNodeParticle.material.sizeAttenuation = boolean
+    @activeNodeParticle.material.sizeAttenuation = sizeAttenuation
     @activeNodeParticle.material.needsUpdate = true

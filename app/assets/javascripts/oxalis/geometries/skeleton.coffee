@@ -94,7 +94,7 @@ class Skeleton
         @createNewTree(treeId, treeColor)
         @setInactiveTreeVisibility(@showInactiveTrees)
       deleteTree : (index) => @deleteTree(index)
-      deleteActiveNode : (node) => @deleteNode(node)
+      deleteActiveNode : (node, treeId) => @deleteNode(node, treeId)
       mergeTree : (lastTreeID, lastNode, activeNode) => 
         @mergeTree(lastTreeID, lastNode, activeNode)
         @updateBranches()
@@ -103,10 +103,10 @@ class Skeleton
         @setBranchPoint(isBranchPoint, nodeID)
         @updateBranches()
       deleteBranch : => @updateBranches()
-      reloadTrees : (trees) =>
+      reloadTrees : (trees, finishedDeferred) =>
         @route.one("finishedRender", =>
           @route.one("finishedRender", =>
-            @loadSkeletonFromModel(trees))
+            @loadSkeletonFromModel(trees, finishedDeferred))
           @flycam.hasChanged = true)
         @flycam.hasChanged = true
       removeSpheresOfTree : (nodes) => @removeSpheresOfTree(nodes)
@@ -181,7 +181,7 @@ class Skeleton
       @flycam.hasChanged = true)
     @flycam.hasChanged = true
 
-  loadSkeletonFromModel : (trees) ->
+  loadSkeletonFromModel : (trees, finishedDeferred) ->
     unless trees? then trees = @model.route.getTrees()
 
     for tree in trees
@@ -220,6 +220,10 @@ class Skeleton
     @updateBranches()
 
     @setActiveNode()
+
+    if finishedDeferred?
+      finishedDeferred.resolve()
+
 
   setActiveNode : =>
     id = @route.getActiveNodeId()
@@ -341,11 +345,11 @@ class Skeleton
 
     @flycam.hasChanged = true
 
-  deleteNode : (node) ->
+  deleteNode : (node, treeId) ->
     $.assert(node.neighbors.length == 1,
       "Node needs to have exactly 1 neighbor.", 0)
 
-    index = @getIndexFromTreeId(@route.getTree().treeId)
+    index = @getIndexFromTreeId(treeId)
 
     for i in [0...@nodes[index].geometry.nodeIDs.getLength()]
       if @nodes[index].geometry.nodeIDs.getAllElements()[i] == node.id
@@ -443,6 +447,7 @@ class Skeleton
 
     @setActiveNode()
     @flycam.hasChanged = true
+
 
   updateBranches : ->
 

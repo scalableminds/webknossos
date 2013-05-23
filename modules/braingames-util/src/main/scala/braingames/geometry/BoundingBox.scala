@@ -19,7 +19,7 @@ object BoundingBox {
     if (c.isEmpty)
       BoundingBox(Point3D(0, 0, 0), 0, 0, 0)
     else {
-      val topLeft = c.map(_.topLeft).foldLeft(Point3D(Int.MaxValue, Int.MaxValue, Int.MaxValue))((b, e) => (
+      val topLeft = c.map(_.topLeft).foldLeft(Point3D(0, 0, 0))((b, e) => (
         Point3D(math.max(b.x, e.x), math.max(b.y, e.y), math.max(b.z, e.z))))
 
       BoundingBox(

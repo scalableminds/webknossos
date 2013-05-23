@@ -139,6 +139,12 @@ object ExtendedTypes {
     } catch {
       case _: java.lang.NumberFormatException => None
     }
+
+    def toLongOpt = try {
+      Some(s.toLong)
+    } catch {
+      case _: java.lang.NumberFormatException => None
+    }
   }
 
   implicit class ExtendedGridFSDBFile(val f: GridFSDBFile) extends AnyVal {

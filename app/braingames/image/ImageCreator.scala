@@ -27,13 +27,22 @@ import play.api.Logger
 import scala.concurrent.duration._
 import scala.concurrent.Promise
 
-case class ImageCreatorParameters(slideWidth: Int = 128, slideHeight: Int = 128, imagesPerRow: Int = 8)
+case class ImagePartInfo(x: Int, y: Int, height: Int, width: Int)
+
+case class CombinedImage(image: BufferedImage, info: List[ImagePartInfo])
+
+case class ImageCreatorParameters(
+  slideWidth: Int = 128,
+  slideHeight: Int = 128,
+  imagesPerRow: Int = 8,
+  imageWidth: Option[Int] = None,
+  imageHeight: Option[Int] = None)
 
 object ImageCreator {
 
   val targetType = BufferedImage.TYPE_3BYTE_BGR
 
-  def createImage(data: Array[Byte], params: ImageCreatorParameters): Option[BufferedImage] = {
+  def createImage(data: Array[Byte], params: ImageCreatorParameters): Option[CombinedImage] = {
     val images = calculateImageSlices(data, params)
     createBigImage(images, params)
   }
@@ -45,27 +54,31 @@ object ImageCreator {
     }
   }
 
-  def createBigImage(bufferedImages: List[BufferedImage], params: ImageCreatorParameters) = {
+  def createBigImage(bufferedImages: List[BufferedImage], params: ImageCreatorParameters): Option[CombinedImage] = {
     if (bufferedImages.isEmpty) {
       Logger.warn("No images supplied")
       None
     } else {
-      val width = bufferedImages(0).getWidth()
-      val height = bufferedImages(0).getHeight()
+      val subpartWidth = bufferedImages(0).getWidth()
+      val subpartHeight = bufferedImages(0).getHeight()
       val imageType = bufferedImages(0).getType()
       val depth = math.ceil(bufferedImages.size.toFloat / params.imagesPerRow).toInt
+      val imageWidth = params.imageWidth.getOrElse(subpartWidth * params.imagesPerRow)
+      val imageHeight = params.imageHeight.getOrElse(subpartHeight * depth)
 
-      val finalImage = new BufferedImage(width * params.imagesPerRow, height * depth, imageType)
+      val finalImage = new BufferedImage(imageWidth, imageHeight, imageType)
 
-      bufferedImages.zipWithIndex.foreach {
+      val info = bufferedImages.zipWithIndex.map {
         case (image, idx) =>
-          assert(image.getWidth() == width, "Wrong image size!")
-          val w = idx % params.imagesPerRow
-          val h = idx / params.imagesPerRow
+          assert(image.getWidth() == subpartWidth, "Wrong image size!")
+          assert(image.getHeight() == subpartHeight, "Wrong image size!")
+          val w = idx % params.imagesPerRow * params.slideWidth
+          val h = idx / params.imagesPerRow * params.slideHeight 
           finalImage.createGraphics().drawImage(
-            image, params.slideWidth * w, params.slideHeight * h, null)
+            image,  w, h, null)
+          ImagePartInfo(w, h, subpartWidth, subpartHeight)
       }
-      Some(finalImage)
+      Some(CombinedImage(finalImage, info))
     }
   }
 

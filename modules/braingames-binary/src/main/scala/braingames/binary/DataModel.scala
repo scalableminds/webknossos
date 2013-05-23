@@ -36,7 +36,7 @@ abstract class DataModel {
       var t = System.currentTimeMillis()
       // orthogonal vector to (0,1,0) and rotation vector
       val matrix = TransformationMatrix(Vector3D(moveVector), Vector3D(axis)).value
-      
+
       @inline
       def coordinateTransformer(px: Double, py: Double, pz: Double) = {
         f(matrix(0) * px + matrix(4) * py + matrix(8) * pz + matrix(12),
@@ -70,13 +70,13 @@ abstract class DataModel {
 }
 
 case class Cuboid(
-  _width: Int,
-  _height: Int,
-  _depth: Int,
-  resolution: Int,
-  topLeftOpt: Option[Vector3D] = None,
-  moveVector: (Double, Double, Double) = (0, 0, 0),
-  axis: (Double, Double, Double) = (0, 0, 0)) extends DataModel {
+    _width: Int,
+    _height: Int,
+    _depth: Int,
+    resolution: Int = 1,
+    topLeftOpt: Option[Vector3D] = None,
+    moveVector: (Double, Double, Double) = (0, 0, 0),
+    axis: (Double, Double, Double) = (0, 0, 0)) extends DataModel {
 
   val width = resolution * _width
   val height = resolution * _height

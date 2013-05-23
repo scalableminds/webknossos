@@ -10,19 +10,23 @@ import models.basics.BasicDAO
 import models.basics.DAOCaseClass
 import play.api.libs.json._
 import braingames.binary.models.DataSet
-
 import braingames.binary.models.{ DataSetRepository => AbstractDataSetRepository }
+import scala.concurrent.Future
+import com.novus.salat._
 
-trait DataSetRepository extends AbstractDataSetRepository {
+object DataSetRepository extends AbstractDataSetRepository {
 
-  def deleteAllDataSetsExcept(l: Array[String]) =
+  def deleteAllExcept(l: Array[String]) =
     DataSetDAO.deleteAllExcept(l)
 
-  def updateOrCreateDataSet(dataSet: DataSet) =
+  def updateOrCreate(dataSet: DataSet) =
     DataSetDAO.updateOrCreate(dataSet)
 
-  def removeDataSetByName(name: String) =
+  def removeByName(name: String) =
     DataSetDAO.removeByName(name)
+
+  def findByName(name: String) =
+    Future.successful(DataSetDAO.findOneByName(name))
 }
 
 object DataSetDAO extends BasicDAO[DataSet]("dataSets") {
@@ -48,7 +52,8 @@ object DataSetDAO extends BasicDAO[DataSet]("dataSets") {
       case Some(stored) =>
         update(
           MongoDBObject("name" -> d.name),
-          MongoDBObject("$set" -> d.copy(priority = stored.priority)))
+          MongoDBObject("$set" -> grater[DataSet].asDBObject(
+            d.copy(priority = stored.priority))))
       case _ =>
         insertOne(d)
     }

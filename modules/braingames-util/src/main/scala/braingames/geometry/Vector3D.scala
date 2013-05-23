@@ -17,7 +17,7 @@ import play.api.data.validation.ValidationError
 /**
  * Vector in 3D space
  */
-case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
+case class Vector3D(x: Double = 0, y: Double = 0, z: Double = 0) {
 
   def normalize = {
     val length = sqrt(square(x) + square(y) + square(z))

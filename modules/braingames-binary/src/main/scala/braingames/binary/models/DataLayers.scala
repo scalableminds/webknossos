@@ -6,149 +6,90 @@ import braingames.util.Interpolator
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import braingames.binary.models._
+import braingames.geometry.BoundingBox
 
-trait LayerFormats {
-  implicit val colorLayerReads: Reads[ColorLayer] = Json.reads[ColorLayer]
-  implicit val segmentationLayerReads: Reads[SegmentationLayer] = Json.reads[SegmentationLayer]
-  implicit val ctxFreeSegmentationLayerReads: Reads[ContextFreeSegmentationLayer] = Json.reads[ContextFreeSegmentationLayer]
-  implicit val bareDataSetReads: Reads[BareDataSet] = Json.reads[BareDataSet]
+case class DataLayerSectionSettings(
+  sectionId: Option[Int],
+  bbox: List[List[Int]],
+  resolutions: List[Int])
+
+object DataLayerSection {
+  val dataLayerSectionSettingsReads = Json.reads[DataLayerSectionSettings]
 }
 
-trait TrilerpInterpolation {
+case class DataLayerSection(
+  baseDir: String,
+  sectionId: Option[String],
+  resolutions: List[Int],
+  hull: BoundingBox) extends DataLayerSectionLike
 
-  def getColor(
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte],
-    resolution: Int,
-    blockMap: Map[Point3D, Array[Byte]])(point: Point3D): Double = {
-
-    val color = byteLoader(point, 1, resolution, blockMap)(0)
-    (0xff & color.asInstanceOf[Int])
-  }
-
-  def interpolate(
-    resolution: Int,
-    blockMap: Map[Point3D, Array[Byte]],
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte] = {
-
-    val colorF = getColor(byteLoader, resolution, blockMap) _
-    val x = point.x.toInt
-    val y = point.y.toInt
-    val z = point.z.toInt
-
-    if (point.x == x && point.y == y & point.z == z) {
-      Array(colorF(Point3D(x, y, z)).toByte)
-    } else {
-      val floored = Vector3D(x, y, z)
-      val q = Array(
-        colorF(Point3D(x, y, z)),
-        colorF(Point3D(x, y, z + 1)),
-        colorF(Point3D(x, y + 1, z)),
-        colorF(Point3D(x, y + 1, z + 1)),
-        colorF(Point3D(x + 1, y, z)),
-        colorF(Point3D(x + 1, y, z + 1)),
-        colorF(Point3D(x + 1, y + 1, z)),
-        colorF(Point3D(x + 1, y + 1, z + 1)))
-
-      Array(Interpolator.triLerp(point - floored, q).round.toByte)
-    }
-  }
-}
-
-trait NearestNeighborInterpolation {
-  def bytesPerElement: Int
-
-  def interpolate(
-    resolution: Int,
-    blockMap: Map[Point3D, Array[Byte]],
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte] = {
-    
-    val byte = point.x % bytesPerElement
-    val x = (point.x - byte + (if (bytesPerElement - 2 * byte >= 0) 0 else bytesPerElement)).toInt
-    byteLoader(Point3D(x, point.y.round.toInt, point.z.round.toInt), bytesPerElement, resolution, blockMap)
-  }
-}
-
-sealed trait DataLayer {
+trait DataLayerSectionLike {
+  val hull: BoundingBox
   val baseDir: String
-  val name: String
-  val elementClass: String
+  val sectionId: Option[String]
 
-  val supportedResolutions: List[Int]
+  /**
+   * Checks if a point is inside the whole data set boundary.
+   */
+  def doesContainBlock(point: Point3D, blockLength: Int) =
+    hull.contains(point.scale((v, _) => v * blockLength))
+}
+
+trait DataLayerLike {
+  val sections: List[DataLayerSectionLike]
+  val elementClass: String
+  val typ: String
+
   val elementSize = elementClassToSize(elementClass)
   val bytesPerElement = elementSize / 8
 
+  def isCompatibleWith(other: DataLayerLike) =
+    this.bytesPerElement == other.bytesPerElement
+
   def elementClassToSize(elementClass: String): Int = elementClass match {
-    case "uint8" => 8
+    case "uint8"  => 8
     case "uint16" => 16
     case "uint32" => 32
     case "uint64" => 64
-    case _ => throw new IllegalArgumentException(s"illegal element class ($elementClass) for DataLayer")
+    case _        => throw new IllegalArgumentException(s"illegal element class ($elementClass) for DataLayer")
   }
-  
-  def interpolate(
-    resolution: Int,
-    blockMap: Map[Point3D, Array[Byte]],
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte]
 }
 
-trait DataLayerJsonFormat {
+case class DataLayerId(typ: String, section: Option[String] = None)
+
+case class DataLayerSettings(
+  typ: String,
+  `class`: String,
+  flags: Option[List[String]])
+
+case class DataLayer(
+    typ: String,
+    flags: Option[List[String]],
+    elementClass: String = "uint8",
+    sections: List[DataLayerSection] = Nil) extends DataLayerLike {
   
-  def dataLayerUnapply(layer: DataLayer) = (layer.bytesPerElement, layer.supportedResolutions)
+  val interpolator = DataLayer.interpolationFromString(typ)
+
+  val resolutions = sections.map(_.resolutions).distinct
   
-  def dataLayerReadsBuilder = (
-    (__ \ "class").read[String] and
-    (__ \ "resolutions").read[List[Int]]
-  )
-  
-  def dataLayerWritesBuilder = (
-    (__ \ "bytesPerElement").write[Int] and 
-    (__ \ "supportedResolutions").write[List[Int]]     
-  )
-  
+  val maxCoordinates = BoundingBox.hull(sections.map(_.hull))
 }
 
-case class ColorLayer( elementClass: String = "uint8", supportedResolutions: List[Int]) extends DataLayer with TrilerpInterpolation {
-  val name = "color"
-  val baseDir = name
-}
-case class ClassificationLayer( elementClass: String = "uint8", supportedResolutions: List[Int], flags: List[String]) extends DataLayer with NearestNeighborInterpolation {
-  val name = "classification"
-  val baseDir = name
-}
-case class SegmentationLayer(batchId: Int, elementClass: String = "uint8", supportedResolutions: List[Int]) extends DataLayer with NearestNeighborInterpolation {
-  val name = s"segmentation$batchId"
-  val baseDir = s"segmentation/layer$batchId"
-}
+object DataLayer {
 
-case class ContextFreeSegmentationLayer(elementClass: String = "uint8", supportedResolutions: List[Int]) {
-  def addContext(batchId: Int) = SegmentationLayer(batchId, elementClass, supportedResolutions)
-}
+  val dataLayerSettingsReads = Json.reads[DataLayerSettings]
 
-object ContextFreeSegmentationLayer extends DataLayerJsonFormat {
-  implicit val ContextFreeSegmentationLayerReads: Reads[ContextFreeSegmentationLayer] = dataLayerReadsBuilder(ContextFreeSegmentationLayer.apply _)
-}
+  val defaultInterpolation = NearestNeighborInterpolation
 
-object ColorLayer extends DataLayerJsonFormat{
-  implicit val ColorLayerReads: Reads[ColorLayer] = dataLayerReadsBuilder(ColorLayer.apply _)
-  implicit val ColorLayerWrites: Writes[ColorLayer] = dataLayerWritesBuilder(dataLayerUnapply _)
-}
-
-object ClassificationLayer extends DataLayerJsonFormat {
-  
-  def classificationLayerUnapply(layer: ClassificationLayer) = {
-    val genericDataLayer = dataLayerUnapply(layer)
-    (genericDataLayer._1, genericDataLayer._2, layer.flags)
+  def interpolationFromString(interpolationTyp: String) = {
+    interpolationTyp match {
+      case "color" =>
+        TrilerpInterpolation
+      case "segmentation" | "classification" =>
+        NearestNeighborInterpolation
+      case s =>
+        System.err.println(s"Invalid interpolation string: $s. Using default interpolation")
+        defaultInterpolation
+    }
   }
-  
-  implicit val ClassificationLayerReads: Reads[ClassificationLayer] = (
-    dataLayerReadsBuilder and 
-    (__ \ "flags").read[List[String]]
-  )(ClassificationLayer.apply _)
-  
-  implicit val ClassificationLayerWrites: Writes[ClassificationLayer] = (
-    dataLayerWritesBuilder and 
-    (__ \ "flags").write[List[String]]
-  )(classificationLayerUnapply _)
 }
-
-

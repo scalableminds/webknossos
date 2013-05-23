@@ -22,9 +22,28 @@ import java.util.UUID
 import com.typesafe.config.Config
 import braingames.binary.models.DataLayer
 import braingames.binary.models.DataSet
+import braingames.binary.models.DataLayerId
+import store._
+import braingames.binary.models.DataSetRepository
+import scala.concurrent.Await
+import scala.annotation.tailrec
+import braingames.binary.models.DataLayerSection
+import net.liftweb.common.Box
+import net.liftweb.common.{ Failure => BoxFailure }
+import net.liftweb.common.Full
+import java.util.NoSuchElementException
 
-class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]) extends Actor with DataCache {
-  import DataStore._
+class DataRequestActor(
+  val conf: Config,
+  val cache: Agent[Map[CachedBlock, Future[Option[Array[Byte]]]]],
+  dataSetRepository: DataSetRepository)
+    extends Actor
+    with DataCache
+    with EmptyDataProvider {
+
+  import store.DataStore._
+  
+  val sys = context.system
 
   implicit val ec = context.dispatcher
 
@@ -39,6 +58,7 @@ class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[
   val dropCount = conf.getInt("cacheDropCount")
 
   val remotePath = conf.getString("datarequest.remotepath")
+
   val useRemote = conf.getBoolean("useRemote")
 
   implicit val system =
@@ -48,9 +68,9 @@ class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[
       context.system
 
   lazy val dataStores = List[ActorRef](
-    actorForWithLocalFallback[FileDataStore]("fileDataStore"),
-    //actorForWithLocalFallback[GridDataStore]("gridDataStore"),
-    system.actorOf(Props(new EmptyDataStore()).withRouter(new RoundRobinRouter(3)), s"${id}__emptyDataStore"))
+    actorForWithLocalFallback[FileDataStore]("fileDataStore")) //,
+  //actorForWithLocalFallback[GridDataStore]("gridDataStore"),
+  //system.actorOf(Props(new EmptyDataStore()).withRouter(new RoundRobinRouter(3)), s"${id}__emptyDataStore"))
 
   def actorForWithLocalFallback[T <: Actor](name: String)(implicit evidence: scala.reflect.ClassTag[T]) = {
     if (useRemote)
@@ -79,40 +99,69 @@ class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[
       }
   }
 
-  def loadFromSomewhere(dataSet: DataSet, dataLayer: DataLayer, resolution: Int, block: Point3D) = {
-    val block2Load = LoadBlock(dataSet.baseDir, dataSet.name, dataLayer.baseDir, dataLayer.bytesPerElement, resolution, block.x, block.y, block.z)
+  def loadFromLayer(loadBlock: LoadBlock): Future[Option[Array[Byte]]] = {
+    if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSet.blockLength)) {
 
-    def loadFromStore(dataStores: List[ActorRef]): Future[Array[Byte]] = dataStores match {
-      case a :: tail =>
-        (a ? block2Load).mapTo[Array[Byte]].recoverWith {
-          case e: AskTimeoutException =>
-            println(s"WARN: (${dataSet.name}/${dataLayer.baseDir} $block) ${a.path}: Not response in time.")
-            loadFromStore(tail)
-          case e: ClassCastException =>
-            // TODO: find a better way to catch the DataNotFoundException
-            println(s"WARN: (${dataSet.name}/${dataLayer.baseDir} $block) ${a.path}: Not found.")
-            loadFromStore(tail)
-        }
-      case _ =>
-        throw new DataNotFoundException("DataSetActor")
-    }
+      def loadFromStore(dataStores: List[ActorRef]): Future[Option[Array[Byte]]] = dataStores match {
+        case a :: tail =>
+          (a ? loadBlock)
+            .mapTo[Option[Array[Byte]]]
+            .flatMap { dataOpt =>
+              dataOpt match {
+                case d: Some[Array[Byte]] =>
+                  Future.successful(d)
+                case _ =>
+                  loadFromStore(tail)
+              }
+            }.recoverWith {
+              case e: AskTimeoutException =>
+                println(s"WARN: (${loadBlock.dataSet.name}/${loadBlock.dataLayerSection.baseDir} ${loadBlock.block}) ${a.path}: Not response in time.")
+                loadFromStore(tail)
+            }
+        case _ =>
+          Future.successful(None)
+      }
 
-    withCache(block2Load) {
-      loadFromStore(dataStores)
+      withCache(loadBlock) {
+        loadFromStore(dataStores)
+      }
+    } else {
+      Future.successful(None)
     }
   }
 
-  def pointToBlock(point: Point3D, resolution: Int) =
-    Point3D(
-      point.x / blockLength / resolution,
-      point.y / blockLength / resolution,
-      point.z / blockLength / resolution)
+  def loadFromSomewhere(dataSet: DataSet, layer: DataLayer, requestedLayer: DataLayerId, resolution: Int, block: Point3D): Future[Array[Byte]] = {
 
-  def globalToLocal(point: Point3D, resolution: Int) =
-    Point3D(
-      (point.x / resolution) % blockLength,
-      (point.y / resolution) % blockLength,
-      (point.z / resolution) % blockLength)
+    def loadFromSections(sections: Stream[DataLayerSection]): Future[Array[Byte]] = sections match {
+      case section #:: tail =>
+        val loadBlock = LoadBlock(dataSet, layer, section, resolution, block)
+        loadFromLayer(loadBlock).flatMap{
+            case Some(byteArray) =>
+              Future.successful(byteArray)
+            case _ =>
+              loadFromSections(tail)
+        }
+      case _ =>
+        Future.successful(loadNullBlock(dataSet, layer))
+    }
+
+    val sections = Stream(layer.sections.filter { section =>
+      requestedLayer.section.isEmpty || requestedLayer.section == section.sectionId
+    }: _*).append {
+      Await.result(dataSet.fallback.map(dataSetRepository.findByName).getOrElse(Future.successful(None)).map(_.flatMap { d =>
+        d.dataLayer(requestedLayer.typ).map { fallbackLayer =>
+          if (layer.isCompatibleWith(fallbackLayer))
+            fallbackLayer.sections
+          else {
+            System.err.println("Incompatible fallback layer!")
+            Nil
+          }
+        }
+      }.getOrElse(Nil)), 5 seconds)
+    }
+
+    loadFromSections(sections)
+  }
 
   def load(dataRequest: DataRequest): Future[ArrayBuffer[Byte]] = {
 
@@ -124,38 +173,49 @@ class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[
 
     val minPoint = Point3D(math.max(roundDown(minCorner._1), 0), math.max(roundDown(minCorner._2), 0), math.max(roundDown(minCorner._3), 0))
 
-    val minBlock = pointToBlock(minPoint, dataRequest.resolution)
-    val maxBlock = pointToBlock(Point3D(roundUp(maxCorner._1), roundUp(maxCorner._2), roundUp(maxCorner._3)), dataRequest.resolution)
+    val minBlock =
+      dataRequest.dataSet.pointToBlock(minPoint, dataRequest.resolution)
+    val maxBlock =
+      dataRequest.dataSet.pointToBlock(
+        Point3D(roundUp(maxCorner._1), roundUp(maxCorner._2), roundUp(maxCorner._3)),
+        dataRequest.resolution)
 
-    val blocks = for {
-      x <- minBlock.x to maxBlock.x
-      y <- minBlock.y to maxBlock.y
-      z <- minBlock.z to maxBlock.z
-    } yield Point3D(x, y, z)
+    dataRequest.dataSet.dataLayer(dataRequest.dataLayer.typ) match {
+      case Some(layer) =>
 
-    Future.traverse(blocks) { p =>
-      loadFromSomewhere(
-        dataRequest.dataSet,
-        dataRequest.layer,
-        dataRequest.resolution,
-        p).map(p -> _)
-    }.map(HashMap() ++ _).map { blockMap =>
+        val blocks = for {
+          x <- minBlock.x to maxBlock.x
+          y <- minBlock.y to maxBlock.y
+          z <- minBlock.z to maxBlock.z
+        } yield Point3D(x, y, z)
 
-      @inline
-      def interpolatedData(px: Double, py: Double, pz: Double) = {
-        if (dataRequest.skipInterpolation)
-          getBytes(Point3D(px.toInt, py.toInt, pz.toInt), 1, dataRequest.resolution, blockMap)
-        else
-          dataRequest.layer.interpolate(dataRequest.resolution, blockMap, getBytes _)(Vector3D(px, py, pz))
-      }
+        Future.traverse(blocks) { p =>
+          loadFromSomewhere(
+            dataRequest.dataSet,
+            layer,
+            dataRequest.dataLayer,
+            dataRequest.resolution,
+            p).map(p -> _)
+        }.map(HashMap() ++ _).map { blockMap =>
 
-      val result = cube.withContainingCoordinates(extendArrayBy = dataRequest.layer.bytesPerElement)(interpolatedData)
+          @inline
+          def interpolatedData(px: Double, py: Double, pz: Double) = {
+            if (dataRequest.skipInterpolation)
+              getBytes(dataRequest.dataSet)(Point3D(px.toInt, py.toInt, pz.toInt), 1, dataRequest.resolution, blockMap)
+            else
+              layer.interpolator.interpolate(dataRequest.resolution, blockMap, layer.bytesPerElement, getBytes(dataRequest.dataSet))(Vector3D(px, py, pz))
+          }
 
-      if (dataRequest.useHalfByte)
-        convertToHalfByte(result)
-      else {
-        result
-      }
+          val result = cube.withContainingCoordinates(extendArrayBy = layer.bytesPerElement)(interpolatedData)
+
+          if (dataRequest.useHalfByte)
+            convertToHalfByte(result)
+          else {
+            result
+          }
+        }
+      case _ =>
+        Future.failed(new NoSuchElementException("Invalid dataLayer type"))
     }
   }
 
@@ -174,19 +234,19 @@ class DataRequestActor(val conf: Config, val cache: Agent[Map[LoadBlock, Future[
     compressed
   }
 
-  def getBytes(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Array[Byte] = {
-    val block = pointToBlock(globalPoint, resolution)
+  def getBytes(dataSet: DataSet)(globalPoint: Point3D, bytesPerElement: Int, resolution: Int, blockMap: Map[Point3D, Array[Byte]]): Array[Byte] = {
+    val block = dataSet.pointToBlock(globalPoint, resolution)
     blockMap.get(block) match {
       case Some(byteArray) =>
-        getLocalBytes(globalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
+        getLocalBytes(dataSet, dataSet.globalToLocal(globalPoint, resolution), bytesPerElement, byteArray)
       case _ =>
         System.err.println(s"Didn't find block! :( -> $globalPoint -> $block")
         nullValue(bytesPerElement)
     }
   }
 
-  def getLocalBytes(localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): Array[Byte] = {
-    val address = (localPoint.x + localPoint.y * blockLength + localPoint.z * blockLength * blockLength) * bytesPerElement
+  def getLocalBytes(dataSet: DataSet, localPoint: Point3D, bytesPerElement: Int, data: Array[Byte]): Array[Byte] = {
+    val address = (localPoint.x + localPoint.y * dataSet.blockLength + localPoint.z * dataSet.blockLength * dataSet.blockLength) * bytesPerElement
     val bytes = new Array[Byte](bytesPerElement)
     var i = 0
     while (i < bytesPerElement) {

@@ -35,7 +35,7 @@ import play.api.i18n.Messages
 import braingames.image._
 import java.awt.image.BufferedImage
 import braingames.image.JPEGWriter
-import braingames.binary.models.DataSet
+import braingames.binary.models._
 import braingames.binary._
 import oxalis.binary.BinaryDataService
 import net.liftweb.common._
@@ -53,9 +53,8 @@ object BinaryData extends Controller with Secured {
   def requestData(dataSetName: String, dataLayerName: String, cubeSize: Int, dataRequest: MultipleDataRequest) = {
     (for {
       dataSet <- DataSetDAO.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
-      dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
     } yield {
-      BinaryDataService.handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize).map {
+      BinaryDataService.handleMultiDataRequest(dataRequest, dataSet, DataLayerId(dataLayerName), cubeSize).map {
         case Some(result) => Full(result.toArray)
         case _            => Empty
       }
@@ -141,9 +140,9 @@ object BinaryData extends Controller with Secured {
       val input = Iteratee.foreach[Array[Byte]](in => {
         for {
           dataSet <- dataSetOpt
-          dataLayer <- dataSet.dataLayers.get(dataLayerName)
           channel <- channelOpt
         } {
+          val dataLayer = DataLayerId(dataLayerName)
           try {
             BinaryProtocol.parseWebsocket(in).map {
               case dataRequests: MultipleDataRequest =>

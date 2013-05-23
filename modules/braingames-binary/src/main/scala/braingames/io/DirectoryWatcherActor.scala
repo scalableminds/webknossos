@@ -17,6 +17,7 @@ import java.nio.file.attribute._
 import java.io.IOException
 import java.nio.file._
 import akka.agent.Agent
+import java.util.EnumSet
 
 case class StartWatching(pathName: String, recursive: Boolean)
 case class StopWatching()
@@ -31,7 +32,6 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
 
   val _watchService = Agent[Map[Path, WatchService]](Map.empty)
   val keys = new HashMap[WatchKey, Path]
-  var trace = false
 
   var shouldStop = false
   var updateTicker: Option[Cancellable] = None
@@ -79,6 +79,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
   def handleEvent(event: WatchEvent[_]): Unit = {
     val kind = event.kind
     val event_path = event.context().asInstanceOf[Path]
+    println("handleEvent called with: " + event.kind)
     if (kind.equals(StandardWatchEventKinds.ENTRY_CREATE)) {
       changeHandler.onCreate(event_path)
     } else if (kind.equals(StandardWatchEventKinds.ENTRY_DELETE)) {
@@ -97,17 +98,6 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
       StandardWatchEventKinds.ENTRY_MODIFY,
       StandardWatchEventKinds.ENTRY_DELETE)
 
-    if (trace) {
-      val prev = keys.getOrElse(key, null)
-      if (prev == null) {
-        println("register: " + dir)
-      } else {
-        if (!dir.equals(prev)) {
-          println("update: " + prev + " -> " + dir)
-        }
-      }
-    }
-
     keys(key) = dir
   }
 
@@ -125,9 +115,15 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
    *  Recursively register directories
    */
   def registerAll(start: Path, root: Option[Path] = None): Unit = {
-    Files.walkFileTree(start, (f: Path) => {
-      register(f, root orElse Some(start))
-    })
+    try {
+      Files.walkFileTree(start, Set(FileVisitOption.FOLLOW_LINKS).asJava, Integer.MAX_VALUE,
+        (f: Path) => {
+          register(f, root orElse Some(start))
+        })
+    } catch {
+      case e: FileSystemLoopException =>
+        System.err.println("LOOOOPException: " + e)
+    }
   }
 
   def watchFile(path: Path, recursive: Boolean) {
@@ -138,7 +134,6 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
         register(path)
       }
 
-      trace = true
       Future {
         breakable {
           while (true) {
@@ -164,6 +159,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
                         System.err.println("IOException: " + ioe)
                       case e: Exception =>
                         System.err.println("Exception: " + e)
+                        e.printStackTrace()
                         break
                     }
                   }
@@ -184,11 +180,10 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
       }
     } catch {
       case ie: InterruptedException =>
-        System.err.println("InterruptedException: " + ie)
-      case ioe: IOException =>
-        System.err.println("IOException: " + ioe)
+        System.err.println("Watch stopped. InterruptedException: " + ie)
       case e: Exception =>
-        System.err.println("Exception: " + e)
+        System.err.println("Watch stopped. Exception: " + e)
+        e.printStackTrace()
     }
   }
 

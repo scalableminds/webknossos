@@ -1,7 +1,10 @@
 package braingames.binary.models
 
+import scala.concurrent.Future
+
 trait DataSetRepository {
-  def deleteAllDataSetsExcept(l: Array[String])
-  def updateOrCreateDataSet(dataSet: DataSet)
-  def removeDataSetByName(name: String)
+  def deleteAllExcept(l: Array[String])
+  def updateOrCreate(dataSet: DataSet)
+  def removeByName(name: String)
+  def findByName(name: String): Future[Option[DataSet]]
 }

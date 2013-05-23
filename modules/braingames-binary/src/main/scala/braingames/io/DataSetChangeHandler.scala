@@ -8,14 +8,17 @@ import play.api.libs.json._
 import braingames.util.ExtendedTypes
 import braingames.binary.models._
 import java.nio.file._
+import braingames.binary.Cuboid
+import braingames.geometry.Vector3D
+import braingames.geometry.BoundingBox
 
 case class ImplicitLayerInfo(name: String, resolutions: List[Int])
 case class ExplicitLayerInfo(name: String, dataType: String)
 
-trait DataSetChangeHandler
-    extends DirectoryChangeHandler
-    with DataSetRepository
-    with LayerFormats {
+class DataSetChangeHandler(dataSetRepository: DataSetRepository)
+    extends DirectoryChangeHandler {
+
+  val maxRecursiveLayerDepth = 2
 
   def onStart(path: Path, recursive: Boolean) {
     val file = path.toFile()
@@ -23,12 +26,12 @@ trait DataSetChangeHandler
     if (files != null) {
       val foundDataSets = files.filter(_.isDirectory).flatMap { f =>
         dataSetFromFile(f).map { dataSet =>
-          updateOrCreateDataSet(dataSet)
+          dataSetRepository.updateOrCreate(dataSet)
           dataSet.name
         }
       }
       println(s"Found datasets: ${foundDataSets.mkString(",")}")
-      deleteAllDataSetsExcept(foundDataSets)
+      dataSetRepository.deleteAllExcept(foundDataSets)
     }
   }
 
@@ -39,15 +42,23 @@ trait DataSetChangeHandler
   def onCreate(path: Path) {
     val file = path.toFile()
     dataSetFromFile(file).map { dataSet =>
-      updateOrCreateDataSet(dataSet)
+      dataSetRepository.updateOrCreate(dataSet)
     }
   }
 
   def onDelete(path: Path) {
     val file = path.toFile()
     dataSetFromFile(file).map { dataSet =>
-      removeDataSetByName(dataSet.name)
+      dataSetRepository.removeByName(dataSet.name)
     }
+  }
+
+  def listFiles(f: File): Array[File] = {
+    val r = f.listFiles()
+    if (r == null)
+      Array()
+    else
+      r
   }
 
   def listDirectories(f: File) = {
@@ -75,76 +86,87 @@ trait DataSetChangeHandler
     }
   }
 
-  def getColorLayer(f: File): Option[ColorLayer] = {
-    val colorLayerInfo = new File(f.getPath + "/color/layer.json")
-    if (colorLayerInfo.isFile) {
-      JsonFromFile(colorLayerInfo).validate[ColorLayer] match {
-        case JsSuccess(colorLayer, _) => Some(colorLayer)
-        case JsError(error) =>
-          System.err.println(error.toString)
-          None
-      }
+  def extractSettingsFromFile[T](file: File, settingsReads: Reads[T]): Option[T] = {
+    if (file.isFile) {
+      JsonFromFile(file)
+        .validate(settingsReads)
+        .asOpt
     } else None
   }
 
-  def segmentationLayerFromFile(layerInfo: File) = {
-    JsonFromFile(layerInfo).validate[ContextFreeSegmentationLayer] match {
-      case JsSuccess(cfSegmentationLayer, _) =>
-        val parentDir = layerInfo.getParentFile
-        println(s"found segmentation layer: ${parentDir.getName}")
-        val batchId = parentDir.getName.replaceFirst("layer", "").toIntOpt
-        Some(cfSegmentationLayer.addContext(batchId getOrElse 0))
-      case JsError(error) =>
-        System.err.println(error.toString)
-        None
+  def layerSectionSettingsFromFile(f: File): Option[DataLayerSectionSettings] = {
+    extractSettingsFromFile(
+      new File(f.getPath + "/section.json"),
+      DataLayerSection.dataLayerSectionSettingsReads)
+  }
+
+  def dataSetSettingsFromFile(f: File): Option[DataSetSettings] = {
+    extractSettingsFromFile(
+      new File(f.getPath + "/settings.json"),
+      DataSet.dataSetSettingsReads)
+  }
+
+  def layerSettingsFromFile(f: File): Option[DataLayerSettings] = {
+    extractSettingsFromFile(
+      new File(f.getPath + "/layer.json"),
+      DataLayer.dataLayerSettingsReads)
+  }
+
+  def extractSections(base: File): Iterable[DataLayerSection] = {
+    val sectionSettingsMap = extractSectionSettings(base)
+    sectionSettingsMap.map {
+      case (path, settings) =>
+        DataLayerSection(
+          path,
+          settings.sectionId.map(_.toString),
+          settings.resolutions,
+          BoundingBox.createFrom(settings.bbox))
     }
   }
 
-  def getSegmentationLayers(f: File): List[SegmentationLayer] = {
-    val segmentationsDir = new File(f.getPath + "/segmentation")
-    if (segmentationsDir.isDirectory) {
-      for {
-        layerDir <- segmentationsDir.listFiles.toList.filter(d => d.isDirectory && d.getName.startsWith("layer"))
-        layerInfoFile = new File(layerDir.getPath + "/layer.json")
-        if layerInfoFile.isFile
-        segmentationLayer <- segmentationLayerFromFile(layerInfoFile)
-      } yield {
-        segmentationLayer
+  def extractSectionSettings(base: File): Map[String, DataLayerSectionSettings] = {
+    val basePath = base.getAbsolutePath()
+
+    def extract(path: File, depth: Int = 0): List[Option[(String, DataLayerSectionSettings)]] = {
+      if (depth > maxRecursiveLayerDepth) {
+        List()
+      } else {
+        layerSectionSettingsFromFile(path).map(path.getAbsolutePath() -> _) ::
+          listDirectories(path).toList.flatMap(d => extract(d, depth + 1))
       }
-    } else
-      Nil
+    }
+
+    extract(base).flatten.toMap
   }
 
-  def dataSetFromFile(f: File): Option[DataSet] = {
-    if (f.isDirectory) {
-      val dataSetInfo = new File(f.getPath + "/settings.json")
-      if (dataSetInfo.isFile) {
-        JsonFromFile(dataSetInfo).validate[BareDataSet] match {
-          case JsSuccess(bareDataSet, _) =>
-            getColorLayer(f).map { colorLayer =>
-              bareDataSet
-                .addLayers(f.getAbsolutePath, colorLayer, getSegmentationLayers(f))
-            }
-          case JsError(error) =>
-            System.err.println(error.toString)
-            None
-        }
-      } else {
-        for {
-          layer <- listDirectories(f).find(dir => dir.getName == "color")
-          resolutionDirectories = listDirectories(layer)
-          resolutions = resolutionDirectories.flatMap(_.getName.toIntOpt).toList
-          res <- highestResolutionDir(resolutionDirectories)
-          xs <- listDirectories(res).headOption
-          ys <- listDirectories(xs).headOption
-          xMax <- maxValueFromFiles(res.listFiles())
-          yMax <- maxValueFromFiles(xs.listFiles())
-          zMax <- maxValueFromFiles(ys.listFiles())
-        } yield {
-          val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
-          DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, colorLayer = ColorLayer(supportedResolutions = resolutions))
-        }
+  def extractLayers(file: File) = {
+    for {
+      layer <- listDirectories(file).toList
+      settings <- layerSettingsFromFile(layer)
+    } yield {
+      println("Found Layer: " + settings)
+      val sections = extractSections(layer).toList
+      DataLayer(settings.typ, settings.flags, settings.`class`, sections)
+    }
+  }
+
+  def dataSetFromFile(file: File): Option[DataSet] = {
+    if (file.isDirectory) {
+      val dataSet: DataSet = dataSetSettingsFromFile(file) match {
+        case Some(settings) =>
+          DataSet(
+            settings.name,
+            file.getAbsolutePath(),
+            settings.priority getOrElse 0,
+            settings.fallback)
+        case _ =>
+          DataSet(file.getName, file.getAbsolutePath)
       }
-    } else None
+
+      val layers = extractLayers(file)
+
+      Some(dataSet.copy(dataLayers = layers))
+    } else
+      None
   }
 }

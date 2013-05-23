@@ -79,7 +79,9 @@ object ApplicationBuild extends Build {
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
-    coffeescriptOptions := Seq("native", "coffee -p"),
+    coffeescriptOptions := Seq(/*"minify",*/ "native", "coffee -p"),
+    //requireJs := Seq("main"),
+    //requireJsShim += "main.js"
     resolvers ++= dependencyResolvers,
     offline := true
     //playAssetsDirectories += file("data")

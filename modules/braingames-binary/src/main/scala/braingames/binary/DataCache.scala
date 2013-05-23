@@ -9,11 +9,32 @@ case class DataBlock(info: LoadBlock, data: Data)
 
 case class Data(val value: Array[Byte]) extends AnyVal
 
+case class CachedBlock(
+  dataSetName: String,
+  dataLayerId: String,
+  dataLayerTyp: String,
+  resolution: Int,
+  x: Int,
+  y: Int,
+  z: Int)
+
+object CachedBlock {
+  def from(b: LoadBlock) =
+    CachedBlock(
+      b.dataSet.name,
+      b.dataLayerSection.sectionId getOrElse "",
+      b.dataLayer.typ,
+      b.resolution,
+      b.block.x,
+      b.block.y,
+      b.block.z)
+}
+
 /**
  * A data store implementation which uses the hdd as data storage
  */
 trait DataCache {
-  def cache: Agent[Map[LoadBlock, Future[Array[Byte]]]]
+  def cache: Agent[Map[CachedBlock, Future[Option[Array[Byte]]]]]
 
   // defines the maximum count of cached file handles
   def maxCacheSize: Int
@@ -25,15 +46,12 @@ trait DataCache {
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
    */
-  def withCache(blockInfo: LoadBlock)(loadF: => Future[Array[Byte]]): Future[Array[Byte]] = {
+  def withCache(blockInfo: LoadBlock)(loadF: => Future[Option[Array[Byte]]]): Future[Option[Array[Byte]]] = {
     ensureCacheMaxSize
-    cache().get(blockInfo).getOrElse {
+    val cachedBlockInfo = CachedBlock.from(blockInfo)
+    cache().get(cachedBlockInfo).getOrElse {
       val p = loadF
-      cache send (_ + (blockInfo -> p))
-      p.onFailure {
-        case e =>
-          println(s"WARN: (${blockInfo.x}, ${blockInfo.y}, ${blockInfo.z}) DataStore couldn't load block: ${e.toString}")
-      }
+      cache send (_ + (cachedBlockInfo -> p))
       p
     }
   }

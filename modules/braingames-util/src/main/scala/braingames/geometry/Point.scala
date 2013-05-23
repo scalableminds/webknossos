@@ -22,6 +22,11 @@ case class Point3D(x: Int, y: Int, z: Int) {
     x > other.x || y > other.y || z > other.z
 
   override def toString = "(%d, %d, %d)".format(x, y, z)
+
+  def toTuple = (x, y, z)
+
+  def move(dx: Int, dy: Int, dz: Int) =
+    Point3D(x + dx, y + dy, z + dz)
 }
 
 object Point3D {
@@ -43,8 +48,8 @@ object Point3D {
     else
       None
 
-  def fromList(l: List[Int])= {
-    fromArray(l.toArray) getOrElse Point3D(0,0,0)
+  def fromList(l: List[Int]) = {
+    fromArray(l.toArray) getOrElse Point3D(0, 0, 0)
   }
 
   implicit object Point3DReads extends Reads[Point3D] {

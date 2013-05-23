@@ -228,12 +228,13 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
           "dataSet" -> Json.obj(
             "name" -> dataSet.name,
             "id" -> dataSet.name,
-            "dataLayers" -> Json.toJson(dataSet.dataLayers.map {
-              case (id, layer) =>
-                id -> Json.obj(
-                  "resolutions" -> layer.supportedResolutions)
-            }),
-            "upperBoundary" -> dataSet.maxCoordinates))
+            "dataLayers" -> dataSet.dataLayers.map {
+              case layer =>
+                Json.obj(
+                  "typ" -> layer.typ,
+                  "maxCoordinates" -> layer.maxCoordinates,
+                  "resolutions" -> layer.resolutions)
+            }))
       case _ =>
         Json.obj("error" -> Messages("dataSet.notFound"))
     }

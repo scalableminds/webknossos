@@ -1,4 +1,4 @@
-package braingames.binary
+package braingames.binary.store
 
 import java.io.{ FileNotFoundException, InputStream, FileInputStream }
 import scala.collection.JavaConverters._
@@ -19,6 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 import akka.actor.Actor
 import braingames.binary.models.DataSet
 import reactivemongo.api.MongoConnection
+import braingames.binary.LoadBlock
 
 case class InsertBinary(dataSet: DataSet)
 case class InsertionState()

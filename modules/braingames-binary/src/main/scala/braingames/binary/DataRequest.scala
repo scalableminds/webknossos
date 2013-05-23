@@ -1,12 +1,11 @@
 package braingames.binary
 
 import braingames.geometry.Point3D
-import braingames.binary.models.DataLayer
-import braingames.binary.models.DataSet
+import braingames.binary.models._
 
 case class DataRequest(
   dataSet: DataSet,
-  layer: DataLayer,
+  dataLayer: DataLayerId,
   resolution: Int,
   cuboid: Cuboid,
   useHalfByte: Boolean = false,

@@ -82,6 +82,8 @@ $ ->
         levelId = $row.data("levelid")
         count = parseInt(prompt("How many stacks to produce?", "3"))
         
+        return if _.isNaN(count)
+
         $.ajax(
           _.extend(
             dataType : "json"

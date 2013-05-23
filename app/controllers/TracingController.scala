@@ -227,7 +227,6 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
         Json.obj(
           "dataSet" -> Json.obj(
             "name" -> dataSet.name,
-            "id" -> dataSet.name,
             "dataLayers" -> dataSet.dataLayers.map {
               case layer =>
                 Json.obj(

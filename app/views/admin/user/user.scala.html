@@ -1,6 +1,6 @@
 @( user: models.user.User, explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]])(implicit session: oxalis.view.AuthedSessionData)
 
-@import views._
+@import views.html
 
 @main(){
   <div class="container wide" id="userDetails">
@@ -22,7 +22,7 @@
       </thead>
       <tbody>
       @userTasks.map{ case (task, tracing) => 
-        @taskTracingTableItem(task, tracing)
+        @html.admin.tracing.extendedTracing(task, tracing)
       }
       </tbody>
     </table>

@@ -47,12 +47,12 @@ case class Tracing(
 
   def dao = Tracing
 
-  def makeReadOnly = 
+  def makeReadOnly =
     this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
 
-   def allowAllModes = 
-    this.copy(tracingSettings = tracingSettings.copy(allowedModes = TracingSettings.ALL_MODES))  
-    
+  def allowAllModes =
+    this.copy(tracingSettings = tracingSettings.copy(allowedModes = TracingSettings.ALL_MODES))
+
   def accessPermission(user: User) =
     this._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
 
@@ -172,6 +172,13 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
     } else {
       None
     }
+  }
+
+  def reopenTracing(tracing: Tracing): Option[Tracing] = {
+    if (tracing.tracingType == TracingType.Task)
+      Some(tracing.update(_.reopen))
+    else
+      None
   }
 
   def createTracingBase(task: Task, userId: ObjectId, dataSetName: String, start: Point3D) = {

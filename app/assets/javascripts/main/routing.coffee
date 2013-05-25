@@ -140,7 +140,7 @@ $ ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
 
-    "admin.user.userTracingAdministration" : ->
+    "admin.user.user" : ->
 
       RoutingUtils.maskFinishedTasks()
 

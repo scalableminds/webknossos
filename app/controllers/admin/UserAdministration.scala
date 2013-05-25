@@ -10,6 +10,7 @@ import models.security._
 import models.user.TimeTracking
 import models.user.User
 import models.user.Experience
+import models.tracing.TracingType
 import play.api.i18n.Messages
 import views.html
 import net.liftweb.common._
@@ -24,7 +25,32 @@ object UserAdministration extends Controller with Secured {
   def allUsers = User.findAll.sortBy(_.lastName.capitalize)
 
   def index = Authenticated { implicit request =>
-    Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains))
+    Ok(html.admin.user.userList(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains))
+  }
+
+  def show(userId: String) = Authenticated { implicit request =>
+    for {
+      user <- User.findOneById(userId) ?~ Messages("user.notFound")
+    } yield {
+      val tracings = Tracing.findFor(user).filter(t => !TracingType.isSystemTracing(t))
+      val (taskTracings, allExplorationalTracings) =
+        tracings.partition(_.tracingType == TracingType.Task)
+
+      val explorationalTracings =
+        allExplorationalTracings
+          .filter(!_.state.isFinished)
+          .sortBy(-_.timestamp)
+
+      val userTasks = taskTracings.flatMap(e => e.task.map(_ -> e))
+
+      val loggedTime = TimeTracking.loggedTime(user)
+
+      Ok(html.admin.user.user(
+        user,
+        explorationalTracings,
+        userTasks,
+        loggedTime))
+    }
   }
 
   def logTime(userId: String, time: String, note: String) = Authenticated { implicit request =>

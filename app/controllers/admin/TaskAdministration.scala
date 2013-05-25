@@ -29,7 +29,7 @@ import play.api.templates.Html
 import oxalis.tracing._
 import controllers.Application
 
-object TaskAdministration extends Controller with Secured{
+object TaskAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
 
@@ -103,40 +103,26 @@ object TaskAdministration extends Controller with Secured{
       JsonOk(Messages("task.removed"))
     }
   }
-  
+
   def trace(taskId: String) = Authenticated { implicit request =>
     for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {
       val tracingType = TracingType.CompoundTask
-      val id = TracingIdentifier( tracingType.toString, task.id)
-      val tracingInfo = 
+      val id = TracingIdentifier(tracingType.toString, task.id)
+      val tracingInfo =
         TracingInfo(
-            id.identifier,
-            "<unknown>",
-            tracingType,
-            isEditable = false)
-      
-      Application.temporaryTracingGenerator ! RequestTemporaryTracing(id)      
-            
+          id.identifier,
+          "<unknown>",
+          tracingType,
+          isEditable = false)
+
+      Application.temporaryTracingGenerator ! RequestTemporaryTracing(id)
+
       Ok(html.tracing.trace(tracingInfo)(Html.empty))
     }
   }
 
-
-  def cancelTracing(tracingId: String) = Authenticated { implicit request =>
-    for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-    } yield {
-      UsedTracings.removeAll(tracing.id)
-      tracing match {
-        case t if t.tracingType == TracingType.Task =>
-          tracing.update(_.cancel)
-          JsonOk(Messages("task.cancelled"))
-      }
-    }
-  }
-  
   def createFromForm = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     taskForm.bindFromRequest.fold(
       formWithErrors => BadRequest(taskCreateHTML(taskFromNMLForm, formWithErrors)),
@@ -274,26 +260,28 @@ object TaskAdministration extends Controller with Secured{
           FlashSuccess(Messages("task.bulk.createSuccess", inserted.size.toString)))
     }
   }
-  
-  def reopenTracing(tracing: Tracing): Option[Tracing] = {
-    if(tracing.tracingType == TracingType.Task)
-      Some(tracing.update(_.reopen))
-    else
-      None
-  }
-  
-  def reopen(tracingId: String) = Authenticated{ implicit request =>
+
+  def tasksForProject(projectName: String) = Authenticated { implicit request =>
     for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      task <- tracing.task ?~Messages("task.notFound")
+      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
     } yield {
-      reopenTracing(tracing) match {
-        case Some(updated) =>
-          JsonOk(html.admin.task.taskTracingDetailTableItem(updated), Messages("tracing.reopened"))
-        case _ =>
-          JsonOk(Messages("tracing.invalid"))
+      val result = project.tasks.foldLeft(Html.empty) {
+        case (h, e) => h += html.admin.task.simpleTask(e)
       }
+      Ok(result)
     }
+  }
+
+  def tasksForType(taskTypeId: String) = Authenticated { implicit request =>
+    for {
+      taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
+    } yield {
+      val result = Task.findAllByTaskType(taskType).foldLeft(Html.empty) {
+        case (h, e) => h += html.admin.task.simpleTask(e)
+      }
+      Ok(result)
+    }
+
   }
 
   def overview = Authenticated { implicit request =>

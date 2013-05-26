@@ -58,7 +58,8 @@ class Route
       tree = new TraceTree(
         treeData.id,
         @getNewTreeColor(treeData.id),
-        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}")
+        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
+        treeData.timestamp)
       # Initialize nodes
       i = 0
       for node in treeData.nodes
@@ -478,7 +479,8 @@ class Route
     tree = new TraceTree(
       @treeIdCount++, 
       @getNewTreeColor(@treeIdCount-1), 
-      "Tree#{('00'+(@treeIdCount-1)).slice(-3)}")
+      "Tree#{('00'+(@treeIdCount-1)).slice(-3)}",
+      (new Date()).getTime())
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null
@@ -628,7 +630,7 @@ class Route
     if @user.sortTreesByName
       return (@trees.slice(0)).sort(@compareNames)
     else
-      return @trees
+      return (@trees.slice(0)).sort(@compareTimestamps)
 
 
   # returns a list of nodes that are connected to the parent
@@ -670,11 +672,21 @@ class Route
         return node
     return null
 
+
   compareNames : (a, b) ->
 
     if a.name < b.name
       return -1
     if a.name > b.name
+      return 1
+    return 0
+
+
+  compareTimestamps : (a,b) ->
+
+    if a.timestamp < b.timestamp
+      return -1
+    if a.timestamp > b.timestamp
       return 1
     return 0
 

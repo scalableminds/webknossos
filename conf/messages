@@ -160,6 +160,7 @@ level.stack.creationTimeout=Stack creation timed out
 level.stack.created=Stacks created
 level.render.autoRenderEnabled=Auto-rendering enabled
 level.render.autoRenderDisabled=Auto-rendering disabled
+level.render.setAsActiveVersion=New active version is set
 
 mission.notFound=No mission found
 mission.startId.missing=Missing missionStartId parameter

@@ -16,6 +16,7 @@ import play.api._
 import braingames.levelcreator._
 import views._
 import models.knowledge._
+import play.api.mvc.Action
 
 object StackController extends LevelCreatorController {
 
@@ -23,25 +24,25 @@ object StackController extends LevelCreatorController {
 
   lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
 
-  def list(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    val missions = RenderedStack.findFor(request.level._id).flatMap(m =>
-      Mission.findOneById(m.mission._id).map(m -> _) )
-
-    Ok(html.levelcreator.stackList(request.level, missions))
+  def list(levelName: String) = Action { implicit request =>
+    val rendered = Level.findByName(levelName).map { level =>
+      level -> RenderedStack.findFor(level.levelId)
+    }
+    Ok(html.levelcreator.stackList(rendered))
   }
 
   def listJson(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    Ok(Json.toJson(RenderedStack.findFor(request.level._id).map(_.mission.id)))
+    Ok(Json.toJson(RenderedStack.findFor(request.level.levelId).map(_.mission.id)))
   }
 
   def delete(levelId: String, missionId: String) = ActionWithValidLevel(levelId) { implicit request =>
     val level = request.level
-    RenderedStack.remove(level._id, missionId)
+    RenderedStack.remove(level.levelId, missionId)
     JsonOk(Messages("level.stack.removed"))
   }
 
   def deleteAll(levelId: String) = ActionWithValidLevel(levelId) { implicit request =>
-    RenderedStack.removeAllOf(request.level._id)
+    RenderedStack.removeAllOf(request.level.levelId)
     JsonOk(Messages("level.stack.removedAll"))
   }
 

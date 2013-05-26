@@ -49,7 +49,7 @@ class Skeleton
     @nodesBuffer  = []
 
     #initial mode
-    @mode = constants.MODE_OXALIS
+    @mode = constants.MODE_PLANE_TRACING
     @showInactiveTrees = true
 
     # Create sphere to represent the active Node, radius is
@@ -94,7 +94,7 @@ class Skeleton
         @createNewTree(treeId, treeColor)
         @setInactiveTreeVisibility(@showInactiveTrees)
       deleteTree : (index) => @deleteTree(index)
-      deleteActiveNode : (node) => @deleteNode(node)
+      deleteActiveNode : (node, treeId) => @deleteNode(node, treeId)
       mergeTree : (lastTreeID, lastNode, activeNode) => 
         @mergeTree(lastTreeID, lastNode, activeNode)
         @updateBranches()
@@ -103,10 +103,10 @@ class Skeleton
         @setBranchPoint(isBranchPoint, nodeID)
         @updateBranches()
       deleteBranch : => @updateBranches()
-      reloadTrees : (trees) =>
+      reloadTrees : (trees, finishedDeferred) =>
         @route.one("finishedRender", =>
           @route.one("finishedRender", =>
-            @loadSkeletonFromModel(trees))
+            @loadSkeletonFromModel(trees, finishedDeferred))
           @flycam.hasChanged = true)
         @flycam.hasChanged = true
       removeSpheresOfTree : (nodes) => @removeSpheresOfTree(nodes)
@@ -181,7 +181,7 @@ class Skeleton
       @flycam.hasChanged = true)
     @flycam.hasChanged = true
 
-  loadSkeletonFromModel : (trees) ->
+  loadSkeletonFromModel : (trees, finishedDeferred) ->
     unless trees? then trees = @model.route.getTrees()
 
     for tree in trees
@@ -220,6 +220,10 @@ class Skeleton
     @updateBranches()
 
     @setActiveNode()
+
+    if finishedDeferred?
+      finishedDeferred.resolve()
+
 
   setActiveNode : =>
     id = @route.getActiveNodeId()
@@ -341,11 +345,11 @@ class Skeleton
 
     @flycam.hasChanged = true
 
-  deleteNode : (node) ->
+  deleteNode : (node, treeId) ->
     $.assert(node.neighbors.length == 1,
       "Node needs to have exactly 1 neighbor.", 0)
 
-    index = @getIndexFromTreeId(@route.getTree().treeId)
+    index = @getIndexFromTreeId(treeId)
 
     for i in [0...@nodes[index].geometry.nodeIDs.getLength()]
       if @nodes[index].geometry.nodeIDs.getAllElements()[i] == node.id
@@ -444,6 +448,7 @@ class Skeleton
     @setActiveNode()
     @flycam.hasChanged = true
 
+
   updateBranches : ->
 
     branchpoints = @route.branchStack
@@ -528,10 +533,10 @@ class Skeleton
     @showInactiveTrees = not @showInactiveTrees
     @setInactiveTreeVisibility(@showInactiveTrees)
 
-  setInactiveTreeVisibility : (boolean) ->
+  setInactiveTreeVisibility : (visible) ->
     for mesh in @getMeshes()
       if mesh != @activeNodeParticle
-        mesh.visible = boolean
+        mesh.visible = visible
     index = @getIndexFromTreeId(@route.getTree().treeId)
     @routes[index].visible = true
     @nodes[index].visible = true
@@ -558,13 +563,13 @@ class Skeleton
     hsvColor.h = (hsvColor.h + 0.5) % 1
     ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
 
-  setSizeAttenuation : (boolean) ->
+  setSizeAttenuation : (sizeAttenuation) ->
 
-    @mode = if boolean then constants.MODE_ARBITRARY else constants.MODE_OXALIS
+    @mode = if sizeAttenuation then constants.MODE_ARBITRARY else constants.MODE_PLANE_TRACING
     for particleSystem in @nodes
-      particleSystem.material.sizeAttenuation = boolean
+      particleSystem.material.sizeAttenuation = sizeAttenuation
       particleSystem.material.needsUpdate = true
-    @branches.material.sizeAttenuation = boolean
+    @branches.material.sizeAttenuation = sizeAttenuation
     @branches.material.needsUpdate = true
-    @activeNodeParticle.material.sizeAttenuation = boolean
+    @activeNodeParticle.material.sizeAttenuation = sizeAttenuation
     @activeNodeParticle.material.needsUpdate = true

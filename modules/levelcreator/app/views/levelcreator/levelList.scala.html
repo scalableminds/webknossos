@@ -1,4 +1,4 @@
-@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[models.binary.DataSet], stacksInQueue: Map[String, Int], stacksInGeneration: Map[String, Int], activeRenderers: Option[Int])(implicit session: brainflight.view.UnAuthedSessionData)
+@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[models.binary.DataSet], stacksInQueue: Map[models.knowledge.LevelId, Int], stacksInGeneration: Map[models.knowledge.LevelId, Int], activeRenderers: Option[Int])(implicit session: brainflight.view.UnAuthedSessionData)
 
 @main(activeRenderers){
   <div class="container">
@@ -29,8 +29,8 @@
         </tr>
       </thead>
       <tbody>
-      @levels.map{ level => 
-        @levelTableItem(level, stacksInQueue.get(level.id), stacksInGeneration.get(level.id))
+      @levels.sortBy(_.levelId.name).map{ level => 
+        @levelTableItem(level, stacksInQueue.get(level.levelId), stacksInGeneration.get(level.levelId))
       }
       </tbody>
     </table>

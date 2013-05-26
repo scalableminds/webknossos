@@ -1,5 +1,5 @@
 @* levelGenerationProgress Template File *@
-@(level: models.knowledge.Level, stacksInProgress: Int, stacksInQueue: Int)
+@(level: models.knowledge.Level, stacksInQueue: Int, stacksInProgress: Int)
 
 @calculateProgress(n: Long, p: Int, q: Int) = @{ 
   val d = (n + p + q).toFloat

@@ -102,11 +102,10 @@ class View
 
   setMode : (mode) ->
 
-    @mode = mode
-    @createKeyboardCommandOverlay()
+    @createKeyboardCommandOverlay(mode)
 
 
-  createKeyboardCommandOverlay : ->
+  createKeyboardCommandOverlay : (mode) ->
 
     generalKeys =
       '<tr><th colspan="4">General</th></tr>
@@ -139,7 +138,11 @@ class View
             <div class="modal-body" id="help-modal-body"><p>
             <table class="table table-condensed table-nohead table-bordered"><tbody>'''
       
-    html += generalKeys + if @mode == constants.MODE_OXALIS then viewportKeys + skeletonKeys else arbitraryKeys
+    html += generalKeys
+    if mode == constants.MODE_PLANE_TRACING 
+      html += viewportKeys + skeletonKeys
+    else if mode == constants.MODE_ARBITRARY
+      html += arbitraryKeys
 
     html += '''</tbody>
             </table>

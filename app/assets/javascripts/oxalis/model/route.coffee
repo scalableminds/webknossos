@@ -44,6 +44,9 @@ class Route
 
     @doubleBranchPop = false
 
+    # initialize deferreds
+    @finishedDeferred = new $.Deferred().resolve()
+
     ############ Load Tree from @data ##############
 
     @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id, @data.settings.isEditable)
@@ -489,6 +492,9 @@ class Route
 
     unless @activeNode?
       return
+    # don't delete nodes when the previous tree split isn't finished
+    unless @finishedDeferred.state() == "resolved"
+      return
 
     @deleteComment(@activeNode.id)
     for neighbor in @activeNode.neighbors
@@ -526,12 +532,14 @@ class Route
             nodeIds.push(node.id)
           @stateLogger.moveTreeComponent(oldActiveTreeId, @activeTree.treeId, nodeIds)
 
-      @trigger("reloadTrees", newTrees)
+      # this deferred will be resolved once the skeleton has finished reloading the trees
+      @finishedDeferred = new $.Deferred()
+      @trigger("reloadTrees", newTrees, @finishedDeferred)
         
     else if @activeNode.neighbors.length == 1
       # no children, so just remove it.
       @setActiveNode(deletedNode.neighbors[0].id)
-      @trigger("deleteActiveNode", deletedNode)
+      @trigger("deleteActiveNode", deletedNode, @activeTree.treeId)
     else
       @deleteTree(false)
 

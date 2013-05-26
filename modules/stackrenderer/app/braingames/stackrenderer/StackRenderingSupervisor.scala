@@ -24,6 +24,7 @@ import com.ning.http.client.Realm.AuthScheme
 case class FinishedStack(stack: Stack)
 case class FailedStack(stack: Stack)
 case class FinishedUpload(stack: Stack, downloadUrls: List[String])
+case class FailedUpload(stack: Stack)
 case class StartRendering()
 case class StopRendering()
 case class EnsureWork()
@@ -89,6 +90,9 @@ class StackRenderingSupervisor extends Actor {
 
     case FailedStack(stack) =>
       stacksInRendering.send(_ - stack.id)
+      reportFailedWork(stack.id)
+
+    case FailedUpload(stack) =>
       reportFailedWork(stack.id)
 
     case FinishedUpload(stack, downloadUrls) =>
@@ -177,7 +181,7 @@ class StackRenderingSupervisor extends Actor {
                 stackRenderer ! RenderStack(stack)
               }
             case 204 =>
-              Logger.warn("Levelcreator reported no work!")
+              Logger.debug("Levelcreator reported no work!")
             case s =>
               Logger.error("Levelcreator work request returned unknown status code: " + s)
           }

@@ -16,7 +16,7 @@ object BinaryDataController extends Controller {
           dataSet <- dataSetStore.find(dataSetName) ?~ Messages("dataset.notFound")
           level <- levelStore.find(levelId) ?~ Messages("level.notFound")
           mission <- missionStore.find(missionId) ?~ Messages("mission.notFound")
-          dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
+          dataLayer <- dataSet.dataLayers.get(dataLayerName) orElse dataSet.dataLayers.get(s"$dataLayerName${mission.batchId}") ?~ Messages("dataLayer.notFound")
         } yield {
           controllers.levelcreator.BinaryData.handleDataRequest(dataSet, dataLayer, level, mission)
         }

@@ -214,6 +214,8 @@ class Input.Mouse
     else
       @mouseEnter(which : 0) if @isHit(event)
 
+    if event.which == 1
+      @trigger("leftMouseUp")
     @leftDown = false
     return
 
@@ -229,7 +231,8 @@ class Input.Mouse
       deltaY = (@position.y - @lastPosition.y)
 
     if @leftDown and !(deltaX == 0 and deltaY == 0)
-      @trigger("leftDownMove", x : deltaX, y : deltaY)
+      @trigger("leftDownMove", {x : deltaX, y : deltaY},
+        {x : @position.x, y: @position.y})
       @lastPosition = @position
 
     return

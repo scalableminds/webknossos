@@ -21,10 +21,6 @@ object Global extends GlobalSettings {
     Props(new DirectoryWatcherActor(new MongoDataSetChangeHandler)),
     name = "directoryWatcher")
     
-  lazy val MissionWatcher = Akka.system.actorOf(
-    Props(new MissionWatcher),
-    name = "missionWatcher")
-    
   override def onStart(app: Application) {
       val conf = Play.current.configuration
       implicit val sys = Akka.system(app)
@@ -36,17 +32,18 @@ object Global extends GlobalSettings {
             //BasicEvolution.runDBEvolution()
             // Data insertion needs to be delayed, because the dataSets need to be
             // found by the DirectoryWatcher first
-            MissionWatcher ! StartWatchingForMissions()
             Logger.info("starting in Dev mode")
           }
+          
       }
       StackWorkDistributor.start
+      MissionWatcher.start
   }
 
   override def onStop(app: Application) {
     ActorSystems.dataRequestSystem.shutdown
     DirectoryWatcher ! StopWatching
-    MissionWatcher ! StopWatchingForMissions()
+    Akka.system.actorFor("/user/missionWatcher") ! StopWatchingForMissions()
     models.context.BinaryDB.connection.close()
     models.context.db.close()
   }

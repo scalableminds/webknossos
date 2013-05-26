@@ -149,7 +149,7 @@ $ ->
 
     "admin.user.userAdministration" : ->
 
-      $("td").on "click", ".label-experience", (event) ->
+      $("form").on "click", ".label-experience", (event) ->
         values = $(this).html().split(" ")
         if values
           $("input[name=experience-domain]").val(values[0])

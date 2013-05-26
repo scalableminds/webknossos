@@ -73,6 +73,11 @@ class View
               window.location.reload() )},
             {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
 
+    $("a[href=#tab-comments]").on "shown", (event) =>
+      @updateActiveComment()
+    $("a[href=#tab-trees]").on "shown", (event) =>
+      @updateActiveTree()
+
     @updateComments()
     @updateTrees()
     @updateTreesSortButton()
@@ -171,7 +176,7 @@ class View
       if treeId != lastTreeId
         newContent.appendChild((
           $('<li>').append($('<i>', {"class": "icon-sitemap"}),
-          $('<span>', {"text": @model.route.getTree(treeId).name})))[0])
+          $('<span>', {"data-treeid": treeId, "text": @model.route.getTree(treeId).name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
         $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
@@ -204,7 +209,12 @@ class View
 
       # animate scrolling to the new comment
       $("#comment-container").animate({
-        scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 500)
+        scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
+    else
+      activeTree = $("#comment-container span[data-treeid=#{@model.route.getActiveTreeId()}]")
+      if activeTree.length
+        $("#comment-container").animate({
+          scrollTop: activeTree.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
 
 
   updateActiveTree : ->
@@ -229,7 +239,7 @@ class View
 
       # animate scrolling to the new tree
       $("#tree-list").animate({
-        scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 500)
+        scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 250)
 
 
   # avoid lags caused by frequent DOM modification

@@ -1,24 +1,24 @@
-package models.tracing
+package models.annotation
 
 import play.api.libs.json._
 import play.api.libs.json.Json._
 import models.basics.BasicSettings
 
-import TracingSettings._
+import AnnotationSettings._
 
-case class TracingSettings(
+case class AnnotationSettings(
   allowedModes: List[String] = ALL_MODES, 
   branchPointsAllowed: Boolean = true,
   somaClickingAllowed: Boolean = true,
   isEditable: Boolean = true)
 
-object TracingSettings {
+object AnnotationSettings {
   val OXALIS = "oxalis"
   val ARBITRARY = "arbitrary"
 
   val ALL_MODES = List(OXALIS, ARBITRARY)
 
-  val default = TracingSettings()
+  val default = AnnotationSettings()
 
-  implicit val TracingWrites: Writes[TracingSettings] = Json.writes[TracingSettings]
+  implicit val TracingWrites: Writes[AnnotationSettings] = Json.writes[AnnotationSettings]
 }

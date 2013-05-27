@@ -1,7 +1,7 @@
 package models.tracing
 
 import models.task.Task
-
+/*
 trait ContainsTracingInfo {
   def id: String
   def dataSetName: String
@@ -12,3 +12,4 @@ trait ContainsTracingInfo {
 }
 
 case class TracingInfo(id: String, dataSetName: String, tracingType: TracingType.Value, isEditable: Boolean, task: Option[Task] = None, _name: Option[String] = None) extends ContainsTracingInfo
+*/

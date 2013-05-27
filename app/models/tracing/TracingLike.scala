@@ -11,26 +11,23 @@ import models.binary.DataSetDAO
 import braingames.xml.Xml
 import models.task.Task
 import models.user.User
+import models.annotation.AnnotationContent
+import models.annotation.AnnotationSettings
 
-trait TracingLike extends ContainsTracingInfo{
+trait TracingLike extends AnnotationContent{
   type Self <: TracingLike
   
   def self = this.asInstanceOf[Self]
   
-  def id: String
+  def settings: AnnotationSettings
   def dataSetName: String
-  def timestamp: Long
-  def tracingSettings: TracingSettings
   def trees: List[TreeLike]
-  def version: Int
   def activeNodeId: Int
+  def timestamp: Long
   def branchPoints: List[BranchPoint]
   def scale: Scale
-  def task: Option[Task]
   def comments: List[Comment]
-  def tracingType: TracingType.Value
   def editPosition: Point3D
-  def state: TracingState
 
   def insertBranchPoint[A](bp: BranchPoint): A
   def insertComment[A](c: Comment): A
@@ -46,8 +43,8 @@ trait TracingLike extends ContainsTracingInfo{
   
   def accessPermission(user: User): Boolean
   
-  def isEditable = tracingSettings.isEditable
   
+  def annotationInformation = TracingLike.TracingLikeWrites.writes(this)
   
   private def applyUpdates(f: Self => Self*) = {
     f.foldLeft(self) {
@@ -128,7 +125,6 @@ object TracingLike {
   }
 
   implicit object TracingLikeWrites extends Writes[TracingLike] {
-    val ID = "id"
     val VERSION = "version"
     val TREES = "trees"
     val ACTIVE_NODE = "activeNode"
@@ -140,15 +136,12 @@ object TracingLike {
     val SETTINGS = "settings"
 
     def writes(e: TracingLike) = Json.obj(
-      ID -> e.id,
-      SETTINGS -> e.tracingSettings,
+      SETTINGS -> e.settings,
       TREES -> e.trees,
-      VERSION -> e.version,
       ACTIVE_NODE -> e.activeNodeId,
       BRANCH_POINTS -> e.branchPoints,
       SCALE -> e.scale,
       COMMENTS -> e.comments,
-      EDIT_POSITION -> e.editPosition,
-      TRACING_TYPE -> e.tracingType.toString)
+      EDIT_POSITION -> e.editPosition)
   }
 }

@@ -13,7 +13,6 @@ import models.user.User
 import braingames.geometry.Scale
 import java.util.Date
 import com.mongodb.casbah.query._
-import models.tracing.TracingState._
 import oxalis.nml.NMLParser
 import models.task._
 import braingames.image.Color
@@ -24,35 +23,31 @@ import oxalis.nml.utils._
 import play.api.Logger
 import com.mongodb.casbah.commons.MongoDBList
 import braingames.binary.models.DataSet
+import models.annotation.AnnotationSettings
 
 case class Tracing(
-    _user: ObjectId,
-    dataSetName: String,
-    branchPoints: List[BranchPoint],
-    timestamp: Long,
-    activeNodeId: Int,
-    scale: Scale,
-    editPosition: Point3D,
-    comments: List[Comment] = Nil,
-    _task: Option[ObjectId] = None,
-    state: TracingState = InProgress,
-    review: List[TracingReview] = Nil,
-    tracingType: TracingType.Value = TracingType.Explorational,
-    tracingSettings: TracingSettings = TracingSettings.default,
-    version: Int = 0,
-    override val _name: Option[String] = None,
-    _id: ObjectId = new ObjectId) extends TracingLike with ContainsTracingInfo with DAOCaseClass[Tracing] {
+  _user: ObjectId,
+  dataSetName: String,
+  branchPoints: List[BranchPoint],
+  timestamp: Long,
+  activeNodeId: Int,
+  scale: Scale,
+  editPosition: Point3D,
+  comments: List[Comment] = Nil,
+  settings: AnnotationSettings = AnnotationSettings.default)
+    extends TracingLike
+    with DAOCaseClass[Tracing] {
 
   type Self = Tracing
 
   def dao = Tracing
 
-  def makeReadOnly = 
-    this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
+  def makeReadOnly =
+    this.copy(settings = settings.copy(isEditable = false))
 
-   def allowAllModes = 
-    this.copy(tracingSettings = tracingSettings.copy(allowedModes = TracingSettings.ALL_MODES))  
-    
+  def allowAllModes =
+    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
+
   def accessPermission(user: User) =
     this._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
 
@@ -65,10 +60,6 @@ case class Tracing(
   override lazy val user = User.findOneById(_user)
 
   val date = new Date(timestamp)
-
-  lazy val id = _id.toString
-
-  def task = _task flatMap Task.findOneById
 
   /**
    * Tree modification
@@ -94,54 +85,6 @@ case class Tracing(
 
   def clearTracing = {
     this.copy(branchPoints = Nil, comments = Nil)
-  }
-
-  /**
-   * State modifications
-   * always return a new instance!
-   */
-  def unassignReviewer =
-    this.copy(
-      state = ReadyForReview,
-      review = if (this.review.isEmpty) Nil else review.tail)
-
-  def finishReview(comment: String) = {
-    val alteredReview = this.review match {
-      case head :: tail =>
-        head.copy(comment = Some(comment)) :: tail
-      case _ =>
-        Nil
-    }
-    this.copy(review = alteredReview)
-  }
-
-  def cancel = {
-    task.map(_.update(_.unassigneOnce))
-    this.copy(state = Unassigned)
-  }
-
-  def finish = {
-    this.copy(state = Finished)
-  }
-
-  def passToReview = {
-    this.copy(state = ReadyForReview)
-  }
-
-  def assignReviewer(user: User, reviewTracing: Tracing) =
-    this.copy(
-      state = InReview,
-      review = TracingReview(
-        user._id,
-        reviewTracing._id,
-        System.currentTimeMillis()) :: this.review)
-
-  def reopen = {
-    this.copy(state = InProgress)
-  }
-
-  def removeTask = {
-    this.copy(_task = None, tracingType = TracingType.Orphan)
   }
 }
 

@@ -1,4 +1,4 @@
-package models.tracing
+package models.annotation
 
 import org.bson.types.ObjectId
 import com.mongodb.casbah.Imports._
@@ -9,7 +9,7 @@ import models.basics.BasicDAO
 import models.user.User
 import java.util.Date
 
-case class TracingReview(
+case class AnnotationReview(
     _reviewee: ObjectId,
     reviewTracing: ObjectId,
     timestamp: Long,

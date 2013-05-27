@@ -1,15 +1,15 @@
-package models.tracing
+package models.annotation
 
-case class TracingState(
+case class AnnotationState(
   isAssigned: Boolean = false,
   isFinished: Boolean = false,
   isInReview: Boolean = false,
   isReadyForReview: Boolean = false,
   isInProgress: Boolean = false)
 
-object TracingState{
-  val Assigned = TracingState(isAssigned = true)
-  val Unassigned = TracingState()
+object AnnotationState{
+  val Assigned = AnnotationState(isAssigned = true)
+  val Unassigned = AnnotationState()
 
   val ReadyForReview = Assigned.copy(isReadyForReview = true)
   

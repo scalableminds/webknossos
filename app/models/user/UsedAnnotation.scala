@@ -1,17 +1,16 @@
-package models.tracing
+package models.user
 
 import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.annotations._
 import models.basics.BasicDAO
-import models.user.User
 
-case class UsedTracings(user: ObjectId, tracing: String, _id: ObjectId = new ObjectId)
+case class UsedAnnotation(user: ObjectId, tracing: String, _id: ObjectId = new ObjectId)
 
-object UsedTracings extends BasicDAO[UsedTracings]("usedTracings") {
+object UsedAnnotation extends BasicDAO[UsedAnnotation]("usedAnnotations") {
   def use(user: User, tracingId: String) {
     removeAll(user)
-    insertOne(UsedTracings(user._id, tracingId))
+    insertOne(UsedAnnotation(user._id, tracingId))
   }
   
   def by(user: User) = 

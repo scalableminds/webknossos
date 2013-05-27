@@ -70,7 +70,7 @@ case class DataLayer(
   
   val interpolator = DataLayer.interpolationFromString(typ)
 
-  val resolutions = sections.map(_.resolutions).distinct
+  val resolutions = sections.flatMap(_.resolutions).distinct
   
   val maxCoordinates = BoundingBox.hull(sections.map(_.hull))
 }

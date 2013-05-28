@@ -32,7 +32,7 @@ abstract class DataStore extends Actor {
   /**
    * Loads the data of a given point from the data source
    */
-  def load(dataInfo: LoadBlock): Future[Array[Byte]]
+  def load(dataInfo: LoadBlock): Future[Option[Array[Byte]]]
 
   def receive = {
     case request: LoadBlock =>

@@ -133,7 +133,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
       } else {
         register(path)
       }
-
+      
       Future {
         breakable {
           while (true) {

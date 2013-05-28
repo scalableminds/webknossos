@@ -31,6 +31,7 @@ import scala.util.Failure
 import com.typesafe.config.Config
 import braingames.binary.models.DataLayerId
 import braingames.binary.CachedBlock
+import net.liftweb.common.Box
 
 trait BinaryDataService {
   implicit def system: ActorSystem
@@ -50,7 +51,7 @@ trait BinaryDataService {
   val scaleFactors = Array(1, 1, 1)
 
   lazy val dataRequestActor = {
-    val bindataCache = Agent[Map[CachedBlock, Future[Option[Array[Byte]]]]](Map.empty)
+    val bindataCache = Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]](Map.empty)
     val props = Props(new DataRequestActor(
       config.getConfig("braingames.binary"),
       bindataCache,

@@ -20,6 +20,7 @@ import akka.actor.Actor
 import braingames.binary.models.DataSet
 import reactivemongo.api.MongoConnection
 import braingames.binary.LoadBlock
+import net.liftweb.common.Box
 
 case class InsertBinary(dataSet: DataSet)
 case class InsertionState()
@@ -87,7 +88,7 @@ class GridDataStore
   // let's build an index on our gridfs chunks collection if none
   gridFS.ensureIndex()
 
-  def load(blockInfo: LoadBlock): Future[Option[Array[Byte]]] = {
+  def load(blockInfo: LoadBlock): Future[Box[Array[Byte]]] = {
     /*GridDataSetPairing.findPrefix(blockInfo.dataSetName, blockInfo.dataLayerBaseDir, blockInfo.resolution).flatMap {
       _ match {
         case Some(prefix) =>

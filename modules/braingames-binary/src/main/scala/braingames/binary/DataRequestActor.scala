@@ -35,7 +35,7 @@ import java.util.NoSuchElementException
 
 class DataRequestActor(
   val conf: Config,
-  val cache: Agent[Map[CachedBlock, Future[Option[Array[Byte]]]]],
+  val cache: Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]],
   dataSetRepository: DataSetRepository)
     extends Actor
     with DataCache
@@ -99,16 +99,16 @@ class DataRequestActor(
       }
   }
 
-  def loadFromLayer(loadBlock: LoadBlock): Future[Option[Array[Byte]]] = {
+  def loadFromLayer(loadBlock: LoadBlock): Future[Box[Array[Byte]]] = {
     if (loadBlock.dataLayerSection.doesContainBlock(loadBlock.block, loadBlock.dataSet.blockLength)) {
 
-      def loadFromStore(dataStores: List[ActorRef]): Future[Option[Array[Byte]]] = dataStores match {
+      def loadFromStore(dataStores: List[ActorRef]): Future[Box[Array[Byte]]] = dataStores match {
         case a :: tail =>
           (a ? loadBlock)
-            .mapTo[Option[Array[Byte]]]
+            .mapTo[Box[Array[Byte]]]
             .flatMap { dataOpt =>
               dataOpt match {
-                case d: Some[Array[Byte]] =>
+                case d: Full[Array[Byte]] =>
                   Future.successful(d)
                 case _ =>
                   loadFromStore(tail)
@@ -136,8 +136,11 @@ class DataRequestActor(
       case section #:: tail =>
         val loadBlock = LoadBlock(dataSet, layer, section, resolution, block)
         loadFromLayer(loadBlock).flatMap{
-            case Some(byteArray) =>
+            case Full(byteArray) =>
               Future.successful(byteArray)
+            case net.liftweb.common.Failure(e, _, _) =>
+              System.err.println("DataStore Failure: " + e)
+              loadFromSections(tail)
             case _ =>
               loadFromSections(tail)
         }

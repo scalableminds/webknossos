@@ -14,7 +14,7 @@ class PullQueue
   cube : null
   queue : []
 
-  dataSetId : ""
+  dataSetName : ""
 
   batchCount : 0
   roundTripTime : 0

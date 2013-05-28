@@ -38,7 +38,7 @@ class Binary
 
     upperBoundary = [dataLayer.maxCoordinates.width, dataLayer.maxCoordinates.height, dataLayer.maxCoordinates.depth]
 
-    @cube = new Cube(upperBoundary, dataLayer.resolutions[0].length)
+    @cube = new Cube(upperBoundary, dataLayer.resolutions.length)
     @queue = new PullQueue(@dataSetName, @cube)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]

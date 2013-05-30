@@ -84,18 +84,25 @@
       <div class="tabbable" id="comments-tree">
         <ul class="nav nav-tabs">
           <li class="active"><a href="#tab-tree" data-toggle="tab">Tree Viewer</a></li>
+          <li><a href="#tab-trees" data-toggle="tab">Trees</a></li>
           <li><a href="#tab-comments" data-toggle="tab">Comments</a></li>
         </ul>
         <div class="tab-content">
           <div class="tab-pane active" id="tab-tree">
+            <div id="abstractTreeViewer"></div>
+          </div>
+          <div class="tab-pane" id="tab-trees">
             <div id="tree-navbar">
               <div class="btn-group inline-block">
                 <button class="btn" id="tree-create-button"><i class="icon-plus"></i> Create tree</button>
                 <button class="btn" id="tree-delete-button"><i class="icon-remove"></i> Delete tree</button>
               </div>
               <div class="btn-group inline-block">
-                <a class="btn dropdown-toggle" data-toggle="dropdown" id="tree-list-button"><i class="icon-list"></i> </a>
-                <ul class="dropdown-menu pull-right" id="tree-list"></ul>
+                <a class="btn dropdown-toggle" data-toggle="dropdown" id="tree-sort-button" title="Sort"><i class="icon-list-ol"></i></a>
+                <ul class="dropdown-menu pull-right" id="tree-sort">
+                  <a href="#" data-sort="name"><li>by name <i class="icon-ok" id="sort-name-icon"></i></li></a>
+                  <a href="#" data-sort="id"><li>by creation time <i class="icon-ok" id= "sort-id-icon"></i></li></a>
+                </ul>
               </div>
               <div class="inline-block pull-right">
                 <a class="btn" id="tree-color-shuffle" title="Change color"><i class="icon-adjust"></i></a>
@@ -114,8 +121,10 @@
                 </div>
                 <button class="btn" id="tree-next-button"><i class="icon-arrow-right"></i></button>
               </div>
-            </div>
-            <div id="abstractTreeViewer"></div>
+              <div>
+                <ul id="tree-list"></ul>
+              </div>
+            </div>  
           </div>
           <div class="tab-pane" id="tab-comments">
             <div class="input-prepend input-append" id="comment-navbar">

@@ -39,6 +39,7 @@ class User
   motionsensorActive : null
   firstVisToggle : null
   particleSize : null
+  sortTreesByName : null
 
 
   constructor : (user) ->
@@ -112,7 +113,8 @@ class User
         gamepadActive : @gamepadActive,
         motionsensorActive : @motionsensorActive
         firstVisToggle : @firstVisToggle 
-        particleSize : @particleSize }
+        particleSize : @particleSize 
+        sortTreesByName : @sortTreesByName }
     ).fail( =>
       
       console.log "could'nt save userdata"

@@ -118,6 +118,9 @@ class Controller
       $("#tree-color-shuffle").click =>
         @model.route.shuffleActiveTreeColor()
 
+      $("#tree-sort").on "click", "a[data-sort]", (event) =>
+        event.preventDefault()
+        @model.user.setValue("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
 
 
   initMouse : ->

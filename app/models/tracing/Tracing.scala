@@ -284,7 +284,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with TracingStatistics {
 
         val tracing =
           tail.foldLeft(startTracing) {
-            case (t, s) => t.mergeWith(TemporaryTracing.createFrom(s, s.timeStamp.toString))
+            case (t, s) => t.mergeWith(TemporaryTracing.createFrom(s, s.timestamp.toString))
           }
 
         Some(tracing)

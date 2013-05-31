@@ -9,7 +9,7 @@ import braingames.binary.models.DataSet
 trait EmptyDataProvider {
   implicit val sys: ActorSystem
 
-  val nullFiles = Agent[Map[(Int, Int), Array[Byte]]](Map.empty)
+  lazy val nullFiles = Agent[Map[(Int, Int), Array[Byte]]](Map.empty)
 
   def loadNullBlock(dataSet: DataSet, dataLayer: DataLayer): Array[Byte] = {
     nullFile(dataSet.blockSize, dataLayer.bytesPerElement)

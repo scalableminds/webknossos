@@ -6,6 +6,8 @@ import akka.agent.Agent
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
 import braingames.binary.LoadBlock
+import net.liftweb.common.Box
+import net.liftweb.common.Failure
 
 /**
  * A data store implementation which uses the hdd as data storage
@@ -16,16 +18,15 @@ class FileDataStore extends DataStore {
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
    */
-  def load(dataInfo: LoadBlock): Future[Array[Byte]] = {
+  def load(dataInfo: LoadBlock): Future[Box[Array[Byte]]] = {
     Future {
       try {
         val binaryStream =
           new FileInputStream(createFilename(dataInfo))
-        inputStreamToByteArray(binaryStream, dataInfo)
-
+        Some(inputStreamToByteArray(binaryStream, dataInfo))
       } catch {
         case e: FileNotFoundException =>
-          throw new DataNotFoundException("FILEDATASTORE")
+          Failure("Couldn't find file: " + e)
       }
     }
   }

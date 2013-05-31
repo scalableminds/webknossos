@@ -40,7 +40,7 @@ class Model
 
             $.assertExtendContext({
               task: tracingId
-              dataSet: tracing.dataSet.id
+              dataSet: tracing.dataSet.name
             })
 
             @user = new User(user)

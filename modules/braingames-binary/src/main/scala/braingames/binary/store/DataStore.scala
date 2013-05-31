@@ -18,6 +18,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 import braingames.binary.models.DataSet
 import braingames.binary.models.DataLayer
 import braingames.binary.LoadBlock
+import net.liftweb.common.Box
 
 /**
  * Abstract Datastore defines all method a binary data source (e.q. normal file
@@ -32,7 +33,7 @@ abstract class DataStore extends Actor {
   /**
    * Loads the data of a given point from the data source
    */
-  def load(dataInfo: LoadBlock): Future[Array[Byte]]
+  def load(dataInfo: LoadBlock): Future[Box[Array[Byte]]]
 
   def receive = {
     case request: LoadBlock =>

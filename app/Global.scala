@@ -44,7 +44,7 @@ object Global extends GlobalSettings {
       InitialData.insertTaskAlgorithms
     }
 
-    (DirectoryWatcher ? StartWatching("binaryData")).onComplete {
+    (DirectoryWatcher ? StartWatching(conf.getString("bindata.folder") getOrElse "binaryData")).onComplete {
       case Success(x) =>
         if (Play.current.mode == Mode.Dev) {
           BasicEvolution.runDBEvolution()

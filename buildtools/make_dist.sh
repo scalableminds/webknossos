@@ -43,7 +43,23 @@ sed -i "s#^classpath=\"#classpath=\"$CLASSPATH_REF:#g" start
 sed -e "s#^scriptdir=.*#installdir=/usr/lib/$PROJECT#g" start > start.dist
 sed -i "s#\$scriptdir#\$installdir#g" start.dist
 
-CONFIG="-Dconfig.resource=production.conf"
+CONFIG="-Dconfig.resource=application_production.conf"
+
+case "$PROJECT" in
+  "stackrenderer")
+    PORT=9000
+  ;;
+  "oxalis")
+    PORT=9500
+  ;;
+  "levelcreator")
+    PORT=10000
+  ;;
+  "*")
+    PORT=9000
+  ;;
+esac
+CONFIG="$CONFIG -Dhttp.port=$PORT"
 
 if [ "$PROJECT" = "stackrenderer" -a "$PKG_TYPE" = "rpm" ]; then
   CONFIG="$CONFIG -Djava.io.tmpdir=/disk"

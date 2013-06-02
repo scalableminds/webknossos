@@ -9,7 +9,7 @@ import play.api.Logger
 import models.tracing._
 
 object BasicEvolution {
-  val watchedClasses: List[BasicDAO[_]] = List(Role, User, Task, Tracing, UsedTracings)
+  val watchedClasses: List[BasicDAO[_]] = List(Role, User, Task, Tracing, UsedAnnotation)
 
   def runDBEvolution() {
     val fakeObjectId = new ObjectId

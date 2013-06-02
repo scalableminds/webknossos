@@ -10,13 +10,12 @@ import braingames.binary.models.DataSet
 import models.security.Role
 import models.tracing._
 import models.task.Task
-import models.user.User
+import models.user.{UsedAnnotation, User, Experience}
 import models.binary.DataSetDAO
 import models.task.TaskType
 import play.api.data.Form
 import play.api.data.Forms._
 import views.html
-import models.user.Experience
 import braingames.mvc.Controller
 import play.api.i18n.Messages
 import play.api.libs.concurrent._
@@ -28,6 +27,8 @@ import play.api.mvc.Result
 import play.api.templates.Html
 import oxalis.tracing._
 import controllers.Application
+import models.annotation.Annotation
+import models.annotation.{AnnotationDAO, AnnotationType}
 
 object TaskAdministration extends Controller with Secured{
 
@@ -103,35 +104,15 @@ object TaskAdministration extends Controller with Secured{
       JsonOk(Messages("task.removed"))
     }
   }
-  
-  def trace(taskId: String) = Authenticated { implicit request =>
-    for {
-      task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
-    } yield {
-      val tracingType = TracingType.CompoundTask
-      val id = TracingIdentifier( tracingType.toString, task.id)
-      val tracingInfo = 
-        TracingInfo(
-            id.identifier,
-            "<unknown>",
-            tracingType,
-            isEditable = false)
-      
-      Application.temporaryTracingGenerator ! RequestTemporaryTracing(id)      
-            
-      Ok(html.tracing.trace(tracingInfo)(Html.empty))
-    }
-  }
 
-
-  def cancelTracing(tracingId: String) = Authenticated { implicit request =>
+  def cancelTracing(annotationId: String) = Authenticated { implicit request =>
     for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+      annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
     } yield {
-      UsedTracings.removeAll(tracing.id)
-      tracing match {
-        case t if t.tracingType == TracingType.Task =>
-          tracing.update(_.cancel)
+      UsedAnnotation.removeAll(annotation.id)
+      annotation match {
+        case t if t.typ == AnnotationType.Task =>
+          annotation.update(_.cancel)
           JsonOk(Messages("task.cancelled"))
       }
     }
@@ -153,7 +134,7 @@ object TaskAdministration extends Controller with Secured{
               priority,
               instances,
               _project = project.map(_.name)))
-            Tracing.createTracingBase(task, request.user._id, dataSetName, start)
+            AnnotationDAO.createAnnotationBase(task, request.user._id, task.settings, dataSetName, start)
             Redirect(routes.TaskAdministration.list)
               .flashing(
                 FlashSuccess(Messages("task.createSuccess")))
@@ -197,7 +178,7 @@ object TaskAdministration extends Controller with Secured{
                   instances = instances,
                   _project = project.map(_.name))
               }
-              Tracing.updateAllUsingNewTaskType(task, taskType)
+              AnnotationDAO.updateAllUsingNewTaskType(task, taskType)
               Redirect(routes.TaskAdministration.list)
                 .flashing(
                   FlashSuccess(Messages("task.editSuccess")))
@@ -228,7 +209,7 @@ object TaskAdministration extends Controller with Secured{
               _project = project.map(_.name))
             nmls.foreach { nml =>
               val task = Task.copyDeepAndInsert(baseTask)
-              Tracing.createTracingBase(task, request.user._id, nml)
+              AnnotationDAO.createAnnotationBase(task, request.user._id, task.settings, nml)
             }
             Redirect(routes.TaskAdministration.list).flashing(
               FlashSuccess(Messages("task.bulk.createSuccess", nmls.size)))
@@ -243,7 +224,7 @@ object TaskAdministration extends Controller with Secured{
       val inserted = data
         .split("\n")
         .map(_.split(" ").map(_.trim))
-        .filter(_.size >= 9)
+        .filter(_.length >= 9)
         .flatMap { params =>
           for {
             experienceValue <- params(3).toIntOpt
@@ -255,7 +236,7 @@ object TaskAdministration extends Controller with Secured{
             taskTypeSummary = params(1)
             taskType <- TaskType.findOneBySumnary(taskTypeSummary)
           } yield {
-            val project = if (params.size >= 10) Project.findOneByName(params(9)).map(_.name) else None
+            val project = if (params.length >= 10) Project.findOneByName(params(9)).map(_.name) else None
             val dataSetName = params(0)
             val experience = Experience(params(2), experienceValue)
             val task = Task.insertOne(Task(
@@ -265,7 +246,7 @@ object TaskAdministration extends Controller with Secured{
               priority,
               instances,
               _project = project))
-            Tracing.createTracingBase(task, request.user._id, dataSetName, Point3D(x, y, z))
+            AnnotationDAO.createAnnotationBase(task, request.user._id, task.settings, dataSetName, Point3D(x, y, z))
             task
           }
         }
@@ -275,23 +256,23 @@ object TaskAdministration extends Controller with Secured{
     }
   }
   
-  def reopenTracing(tracing: Tracing): Option[Tracing] = {
-    if(tracing.tracingType == TracingType.Task)
-      Some(tracing.update(_.reopen))
+  def reopenAnnotation(annotation: Annotation): Option[Annotation] = {
+    if(annotation.typ== AnnotationType.Task)
+      Some(annotation.update(_.reopen))
     else
       None
   }
   
-  def reopen(tracingId: String) = Authenticated{ implicit request =>
+  def reopen(annotationId: String) = Authenticated{ implicit request =>
     for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      task <- tracing.task ?~Messages("task.notFound")
+      annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
+      task <- annotation.task ?~Messages("task.notFound")
     } yield {
-      reopenTracing(tracing) match {
+      reopenAnnotation(annotation) match {
         case Some(updated) =>
-          JsonOk(html.admin.task.taskTracingDetailTableItem(updated), Messages("tracing.reopened"))
+          JsonOk(html.admin.task.taskAnnotationDetailTableItem(updated), Messages("annotation.reopened"))
         case _ =>
-          JsonOk(Messages("tracing.invalid"))
+          JsonOk(Messages("annotation.invalid"))
       }
     }
   }
@@ -304,8 +285,8 @@ object TaskAdministration extends Controller with Secured{
       val usersWithTasks =
         (for {
           user <- allUsers
-          tracing <- Tracing.findOpenTracingsFor(user, TracingType.Task)
-          task <- tracing.task
+          annotation <- AnnotationDAO.findOpenAnnotationsFor(user, AnnotationType.Task)
+          task <- annotation.task
           taskType <- task.taskType
         } yield (user -> taskType))
       Task.simulateTaskAssignment(allUsers).map { futureTasks =>

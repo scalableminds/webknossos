@@ -3,7 +3,7 @@
 # ~~~~
 
 # The general pages
-GET      /                                             controllers.TracingController.index
+GET      /                                             controllers.AnnotationController.index
 GET      /dashboard                                    controllers.UserController.dashboard
 
 
@@ -38,15 +38,16 @@ POST     /assert                                       controllers.AssertionCont
 GET      /assert                                       controllers.AssertionController.list
 
 # Tracing Stuff
-POST     /tracing                                      controllers.TracingController.createExplorational
-GET      /tracing/:tracingId/trace                     controllers.TracingController.trace( tracingId: String)
-PUT      /tracing/:tracingId                           controllers.TracingController.update( tracingId: String, version: Int )
-POST     /tracing/:tracingId/name                      controllers.TracingController.nameExplorativeTracing( tracingId: String)
-GET      /tracing/:tracingId/finishAndRedirect         controllers.TracingController.finishWithRedirect( tracingId: String )
-GET      /tracing/:tracingId/finish                    controllers.TracingController.finish( tracingId: String, explorational: Boolean = false )
-GET      /tracing/:tracingId/finishExperimental        controllers.TracingController.finish( tracingId: String, explorational: Boolean = true )
-GET      /trace/:tracingType/:identifier               controllers.TracingController.info( tracingType: String, identifier: String )
-GET      /trace/:tracingType/:identifier/download      controllers.TracingController.download( tracingType: String, identifier: String )
+POST     /annotations/createExplorational              controllers.AnnotationController.createExplorational(contentType: String)
+PUT      /annotations/:typ/:id                         controllers.AnnotationController.updateWithJson( typ: String, id: String, version: Int )
+POST     /annotations/:typ/:id/name                    controllers.AnnotationController.nameExplorativeAnnotation( typ: String, id: String)
+GET      /annotations/:typ/:id/finishAndRedirect       controllers.AnnotationController.finishWithRedirect( typ: String, id: String )
+GET      /annotations/:typ/:id/finish                  controllers.AnnotationController.finish( typ: String, id: String, experimental: Boolean = false )
+GET      /annotations/:typ/:id/finishExperimental      controllers.AnnotationController.finish( typ: String, id: String, experimental: Boolean = true )
+
+GET      /annotations/:typ/:id                         controllers.AnnotationController.trace( typ: String, id: String)
+GET      /annotations/:typ/:id/info                    controllers.AnnotationController.info( typ: String, id: String )
+GET      /annotations/:typ/:id/download                controllers.AnnotationController.download( typ: String, id: String )
 
 #Admin pages
 GET      /admin/nml/upload                             controllers.admin.NMLIO.uploadForm
@@ -61,7 +62,6 @@ GET      /admin/tasks/algorithm/:id?use=true           controllers.admin.TaskAlg
 GET      /admin/taskTypes                              controllers.admin.TaskTypeAdministration.list
 POST     /admin/taskTypes/create                       controllers.admin.TaskTypeAdministration.create
 GET      /admin/taskTypes/:id/delete                   controllers.admin.TaskTypeAdministration.delete(id: String)
-GET      /admin/taskTypes/:id/trace                    controllers.admin.TaskTypeAdministration.trace(id: String)
 GET      /admin/taskTypes/:id/edit                     controllers.admin.TaskTypeAdministration.edit(id: String)
 POST     /admin/taskTypes/:id                          controllers.admin.TaskTypeAdministration.editTaskTypeForm(id: String)
 
@@ -70,7 +70,6 @@ POST     /admin/projects/create                        controllers.admin.Project
 GET      /admin/projects/:name/delete                  controllers.admin.ProjectAdministration.delete(name: String)
 GET      /admin/projects/:name/download                controllers.admin.NMLIO.projectDownload(name: String)
 GET      /admin/projects/:name/download                controllers.admin.NMLIO.projectDownload(name: String)
-GET      /admin/projects/:name/trace                   controllers.admin.ProjectAdministration.trace(name: String)
 
 GET      /admin/tasks                                  controllers.admin.TaskAdministration.list
 GET      /admin/tasks/create                           controllers.admin.TaskAdministration.create
@@ -82,7 +81,6 @@ GET      /admin/tracings/:tracingId/cancel             controllers.admin.TaskAdm
 GET      /admin/tasks/:id/download                     controllers.admin.NMLIO.taskDownload(id: String)
 GET      /admin/tasks/:id/delete                       controllers.admin.TaskAdministration.delete(id: String)
 GET      /admin/tasks/:id/edit                         controllers.admin.TaskAdministration.edit(id: String)
-GET      /admin/tasks/:id/trace                        controllers.admin.TaskAdministration.trace(id: String)
 POST     /admin/tasks/:id                              controllers.admin.TaskAdministration.editTaskForm(id: String)
 
 GET      /admin/trainingsTasks                         controllers.admin.TrainingsTaskAdministration.list

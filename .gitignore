@@ -15,6 +15,7 @@ binaryData
 data/
 boot/
 .idea/
+*.iml
 .idea_modules/
 *.db
 *.class

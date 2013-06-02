@@ -16,6 +16,7 @@ import net.liftweb.common._
 import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
 import models.tracing.Tracing
+import models.annotation.AnnotationDAO
 
 object UserAdministration extends Controller with Secured {
 
@@ -79,7 +80,7 @@ object UserAdministration extends Controller with Secured {
       user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
       User.removeById(user._id)
-      Tracing.freeTacingsOfUser(user._id)
+      AnnotationDAO.freeAnnotationsOfUser(user._id)
       user
     }
   }

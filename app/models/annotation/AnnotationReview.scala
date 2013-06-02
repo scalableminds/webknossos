@@ -10,13 +10,13 @@ import models.user.User
 import java.util.Date
 
 case class AnnotationReview(
-    _reviewee: ObjectId,
-    reviewTracing: ObjectId,
+    _reviewer: ObjectId,
+    reviewAnnotation: ObjectId,
     timestamp: Long,
     comment: Option[String] = None,
     _id: ObjectId = new ObjectId) {
 
-  def reviewee = User.findOneById(_reviewee)
+  def reviewer = User.findOneById(_reviewer)
   
   val date = new Date(timestamp)
 }

@@ -1,4 +1,4 @@
-@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
+@( explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container" id="dashboard">
@@ -15,8 +15,8 @@
         </tr>
       </thead>
       <tbody>
-      @userTasks.map{ case (task, tracing) => 
-        @taskTracingTableItem(task, tracing)
+      @userTasks.map{ case (task, annotation) =>
+        @taskAnnotationTableItem(task, annotation)
       }
       </tbody>
     </table>
@@ -46,8 +46,8 @@
         </tr>
       </thead>
       <tbody>
-      @explorativeTracings.map{ tracing => 
-        @explorativeTracingTableItem(tracing)
+      @explorativeAnnotations.map{ annotation =>
+        @explorativeAnnotationTableItem(annotation)
       }
       </tbody>
     </table>
@@ -56,7 +56,7 @@
         <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button>
       }
       <div class="divider-vertical"></div>
-      @helper.form(action = controllers.routes.TracingController.createExplorational, 'class -> "form-inline inline-block") {
+      @helper.form(action = controllers.routes.AnnotationController.createExplorational("skeletonTracing"), 'class -> "form-inline inline-block") {
         <select name="dataSetName">
           @dataSets.map{ d => 
             <option value="@d.name"> @d.name </option>

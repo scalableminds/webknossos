@@ -12,9 +12,10 @@ import play.api.i18n.Messages
 import controllers.Application
 import braingames.mail.Send
 import oxalis.mail.DefaultMails
+import models.annotation.{AnnotationType, AnnotationDAO}
+
 
 object TrainingsTracingAdministration extends Controller with Secured {
-
   override val DefaultAccessRole = Role.Admin
 
   val reviewForm = Form(
@@ -23,43 +24,43 @@ object TrainingsTracingAdministration extends Controller with Secured {
 
   def startReview(training: String) = Authenticated { implicit request =>
     (for {
-      tracing <- Tracing.findOneById(training) ?~ Messages("tracing.notFound")
-      if (tracing.state.isReadyForReview)
-      altered <- Tracing.assignReviewee(tracing, request.user) ?~ Messages("tracing.review.assignFailed")
+      annotation<- AnnotationDAO.findOneById(training) ?~ Messages("annotation.notFound")
+      if (annotation.state.isReadyForReview)
+      altered <- AnnotationDAO.assignReviewer(annotation, request.user) ?~ Messages("annotation.review.assignFailed")
     } yield {
       JsonOk(
         html.admin.training.trainingsTasksDetailTableItem(request.user, altered),
-        Messages("tracing.review.assigned"))
-    }) ?~ Messages("tracing.review.notReady")
+        Messages("annotation.review.assigned"))
+    }) ?~ Messages("annotation.review.notReady")
   }
 
   def oxalisReview(training: String) = Authenticated { implicit request =>
     for {
-      tracing <- Tracing.findOneById(training) ?~ Messages("tracing.notFound")
-      review <- tracing.review.headOption ?~ Messages("tracing.review.notFound")
+      annotation <- AnnotationDAO.findOneById(training) ?~ Messages("annotation.notFound")
+      review <- annotation.review.headOption ?~ Messages("annotation.review.notFound")
     } yield {
-      Redirect(controllers.routes.TracingController.trace(review.reviewTracing.toString))
+      Redirect(controllers.routes.AnnotationController.trace(AnnotationType.Review, review.reviewAnnotation.toString))
     }
   }
 
   def abortReview(trainingsId: String) = Authenticated { implicit request =>
     for {
-      training <- Tracing.findOneById(trainingsId) ?~ Messages("tracing.review.notFound")
+      training <- AnnotationDAO.findOneById(trainingsId) ?~ Messages("annotation.review.notFound")
     } yield {
       val altered = training.update(_.unassignReviewer)
       JsonOk(
         html.admin.training.trainingsTasksDetailTableItem(request.user, altered),
-        Messages("tracing.review.unassigned"))
+        Messages("annotation.review.unassigned"))
     }
   }
 
   def finishReview(trainingId: String) = Authenticated { implicit request =>
     (for {
-      tracing <- Tracing.findOneById(trainingId) ?~ Messages("tracing.notFound")
-      review <- tracing.review.headOption ?~ Messages("tracing.review.notFound")
-      if (review._reviewee == request.user._id && tracing.state.isInReview)
+      annotation <- AnnotationDAO.findOneById(trainingId) ?~ Messages("annotation.notFound")
+      review <- annotation.review.headOption ?~ Messages("annotation.review.notFound")
+      if (review._reviewer == request.user._id && annotation.state.isInReview)
     } yield {
-      Ok(html.admin.training.trainingsReview(tracing, reviewForm))
+      Ok(html.admin.training.trainingsReview(annotation, reviewForm))
     }) ?~ Messages("tracing.review.finishFailed")
   }
 
@@ -69,28 +70,28 @@ object TrainingsTracingAdministration extends Controller with Secured {
         BadRequest,
       { comment =>
         (for {
-          tracing <- Tracing.findOneById(training) ?~ Messages("tracing.notFound")
-          if tracing.state.isInReview
-          review <- tracing.review.headOption ?~ Messages("tracing.review.notFound")
-          if review._reviewee == request.user._id
-          task <- tracing.task ?~ Messages("tracing.task.notFound")
-          training <- task.training ?~ Messages("tracing.training.notFound")
-          trainee <- tracing.user ?~ Messages("tracing.user.notFound")
+          annotation <- AnnotationDAO.findOneById(training) ?~ Messages("annotation.notFound")
+          if annotation.state.isInReview
+          review <- annotation.review.headOption ?~ Messages("annotation.review.notFound")
+          if review._reviewer == request.user._id
+          task <- annotation.task ?~ Messages("annotation.task.notFound")
+          training <- task.training ?~ Messages("annotation.training.notFound")
+          trainee <- annotation.user ?~ Messages("annotation.user.notFound")
         } yield {
           if (passed) {
             trainee.update(_.increaseExperience(training.domain, training.gain))
-            tracing.update(_.finishReview(comment).finish)
+            annotation.update(_.finishReview(comment).finish)
             Application.Mailer ! Send(
               DefaultMails.trainingsSuccessMail(trainee.name, trainee.email, comment))
           } else {
-            tracing.update(_.finishReview(comment).reopen)
+            annotation.update(_.finishReview(comment).reopen)
             Application.Mailer ! Send(
               DefaultMails.trainingsFailureMail(trainee.name, trainee.email, comment))
           }
-          Tracing.findOneById(review.reviewTracing).map(reviewTracing =>
-            reviewTracing.update(_.finish))
-          JsonOk(Messages("tracing.review.finished"))
-        }) ?~ Messages("tracing.review.finishFailed")
+            AnnotationDAO.findOneById(review.reviewAnnotation).map(reviewAnnotation =>
+              reviewAnnotation.update(_.finish))
+          JsonOk(Messages("annotation.review.finished"))
+        }) ?~ Messages("annotation.review.finishFailed")
       })
   }
 }

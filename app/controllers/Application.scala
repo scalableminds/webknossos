@@ -15,8 +15,8 @@ object Application extends Controller with Secured {
   lazy val Mailer =
     Akka.system(app).actorFor("/user/mailActor")
 
-  lazy val temporaryTracingGenerator =
-    Akka.system(app).actorFor("/user/temporaryTracingGenerator")
+  lazy val annotationStore =
+    Akka.system(app).actorFor("/user/annotationStore")
 
   // -- Javascript routing
 

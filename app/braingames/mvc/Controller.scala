@@ -1,6 +1,6 @@
 package braingames.mvc
 
-import play.api.mvc.{ Controller => PlayController }
+import play.api.mvc.{Controller => PlayController}
 import play.api.templates.Html
 import play.api.libs.json.Json
 import play.api.mvc.SimpleResult
@@ -8,7 +8,7 @@ import play.api.libs.json.JsObject
 import oxalis.security.AuthenticatedRequest
 import oxalis.view.ProvidesSessionData
 import play.api.mvc.Request
-import net.liftweb.common.{ Box, Full, Empty, Failure, ParamFailure }
+import net.liftweb.common.{Box, Full, Empty, Failure, ParamFailure}
 import play.api.mvc.Result
 import play.api.mvc.Results
 import play.api.mvc.ResponseHeader
@@ -20,7 +20,9 @@ import scala.concurrent.ExecutionContext
 import play.api.Logger
 
 class ResultBox[T <: Result](b: Box[T]) {
+
   import Results.Status
+
   def asResult = b match {
     case Full(result) =>
       result
@@ -49,6 +51,13 @@ trait BoxImplicits {
         Future.successful(new ResultBox(Empty).asResult)
       case f: Failure =>
         Future.successful(new ResultBox(f).asResult)
+    }
+  }
+
+  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext): Future[Result] = {
+    f.map {
+      b =>
+        new ResultBox(b).asResult
     }
   }
 }
@@ -118,11 +127,11 @@ trait JsonResultAttribues {
 }
 
 class Controller extends PlayController
-    with ProvidesSessionData
-    with JsonResults
-    with BoxImplicits
-    with Status
-    with withHighlitableResult {
+with ProvidesSessionData
+with JsonResults
+with BoxImplicits
+with Status
+with withHighlitableResult {
 
   implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]) =
     r.request

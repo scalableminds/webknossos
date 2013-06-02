@@ -1,4 +1,5 @@
 import akka.actor.Props
+import models.annotation.AnnotationDAO
 import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent._
@@ -14,7 +15,7 @@ import models.tracing._
 import models.basics.BasicEvolution
 import oxalis.mail.DefaultMails
 import braingames.geometry._
-import oxalis.tracing.TemporaryTracingGenerator
+import oxalis.tracing.{AnnotationStore}
 import braingames.mail.Mailer
 import scala.collection.parallel.Tasks
 import akka.pattern.ask
@@ -61,8 +62,8 @@ object Global extends GlobalSettings {
 
   def startActors(conf: Config) {
     Akka.system.actorOf(
-      Props(new TemporaryTracingGenerator()),
-      name = "temporaryTracingGenerator")
+      Props(new AnnotationStore()),
+      name = "annotationStore")
     Akka.system.actorOf(Props(new Mailer(conf)), name = "mailActor")
   }
 }
@@ -116,26 +117,26 @@ object InitialData {
         TimeSpan(5, 10, 15))
       TaskType.insertOne(tt)
       if (Task.findAll.isEmpty) {
-        val sample = Tracing.createTracingFor(user)
-
-        var t = Task.insertOne(Task(
-          0,
-          tt._id,
-          Experience("basic", 5)))
-        Tracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(50, 50, 50))
-
-        t = Task.insertOne(Task(
-          0,
-          tt._id,
-          Experience.empty,
-          100,
-          Integer.MAX_VALUE,
-          training = Some(Training(
-            "basic",
-            5,
-            5,
-            sample._id))))
-        Tracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(0, 0, 0))
+//        val sample = AnnotationDAO.createAnnotationFor(user)
+//
+//        var t = Task.insertOne(Task(
+//          0,
+//          tt._id,
+//          Experience("basic", 5)))
+//        Tracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(50, 50, 50))
+//
+//        t = Task.insertOne(Task(
+//          0,
+//          tt._id,
+//          Experience.empty,
+//          100,
+//          Integer.MAX_VALUE,
+//          training = Some(Training(
+//            "basic",
+//            5,
+//            5,
+//            sample._id))))
+//        Tracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(0, 0, 0))
       }
     }
   }

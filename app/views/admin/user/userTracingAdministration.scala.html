@@ -1,4 +1,4 @@
-@( user: models.user.User, explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]])(implicit session: oxalis.view.AuthedSessionData)
+@( user: models.user.User, explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]])(implicit session: oxalis.view.AuthedSessionData)
 
 @import views._
 
@@ -21,8 +21,8 @@
         </tr>
       </thead>
       <tbody>
-      @userTasks.map{ case (task, tracing) => 
-        @taskTracingTableItem(task, tracing)
+      @userTasks.map{ case (task, annotation) =>
+        @taskAnnotationTableItem(task, annotation)
       }
       </tbody>
     </table>
@@ -53,8 +53,8 @@
         </tr>
       </thead>
       <tbody>
-      @explorativeTracings.map{ tracing => 
-        @html.user.dashboard.explorativeTracingTableItem(tracing)
+      @explorativeAnnotations.map{ annotation =>
+        @html.user.dashboard.explorativeAnnotationTableItem(annotation)
       }
       </tbody>
     </table>

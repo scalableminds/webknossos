@@ -15,10 +15,10 @@ import models.user.Experience
 import models.task.Training
 import models.tracing.Tracing
 import oxalis.nml._
-import models.tracing.TracingType
 import play.api.i18n.Messages
 import models.task.Project
 import java.util.Date
+import models.annotation.{AnnotationType, AnnotationDAO}
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
@@ -45,7 +45,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
   def trainingsTaskCreateHTML(taskForm: Form[(String, String, Training)])(implicit request: AuthenticatedRequest[_]) = {
     html.admin.training.trainingsTaskCreate(
       Task.findAllNonTrainings,
-      Tracing.findOpenTracingsFor(request.user, TracingType.Explorational),
+      AnnotationDAO.findOpenAnnotationsFor(request.user, AnnotationType.Explorational),
       Experience.findAllDomains,
       taskForm)
   }
@@ -61,17 +61,17 @@ object TrainingsTaskAdministration extends Controller with Secured {
     trainingsTaskForm.bindFromRequest.fold(
       formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors)),
       {
-        case (taskId, tracingId, training) =>
+        case (taskId, annotationId, training) =>
           (for {
             task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
-            tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+            annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
           } yield {
             val trainingsTask = Task.copyDeepAndInsert(task.copy(
               instances = Integer.MAX_VALUE,
               created = new Date),
               includeUserTracings = false)
 
-            val sample = Tracing.createSample(trainingsTask._id, tracing)
+            val sample = AnnotationDAO.createSample(annotation, trainingsTask._id)
             trainingsTask.update(_.copy(training = Some(training.copy(sample = sample._id))))
 
             Ok(html.admin.training.trainingsTaskList(Task.findAllTrainings))

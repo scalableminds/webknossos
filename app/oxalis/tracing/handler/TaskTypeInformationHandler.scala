@@ -1,22 +1,31 @@
 package oxalis.tracing.handler
 
-import controllers.TracingRights
 import net.liftweb.common.Box
-import models.tracing.TemporaryTracing
-import oxalis.security.AuthenticatedRequest
+import models.tracing.CompoundAnnotation
 import models.task.TaskType
 import play.api.i18n.Messages
-import models.tracing.CompoundTracing
+import models.annotation.{AnnotationRestrictions, TemporaryAnnotation}
+import models.user.User
+import models.security.Role
 
-object TaskTypeInformationHandler extends TracingInformationHandler with TracingRights{
+object TaskTypeInformationHandler extends AnnotationInformationHandler {
+
   import braingames.mvc.BoxImplicits._
-  
-  def provideTracing(taskTypeId: String): Box[TemporaryTracing] = {
-    (for {
+
+  type AType = TemporaryAnnotation
+
+  def taskTypeAnnotationRestrictions(taskType: TaskType) =
+    new AnnotationRestrictions {
+      override def allowAccess(user: User) =
+        Role.Admin.map(user.hasRole) getOrElse false
+    }
+
+  def provideAnnotation(taskTypeId: String): Box[TemporaryAnnotation] = {
+    for {
       taskType <- TaskType.findOneById(taskTypeId) ?~ Messages("taskType.notFound")
-      tracing <- CompoundTracing.createFromTaskType(taskType)
+      annotation <- CompoundAnnotation.createFromTaskType(taskType) ?~ Messages("taskType.noAnnotations")
     } yield {
-      tracing.copy(accessFkt = isAllowedToViewTaskType(taskType, _))
-    }) ?~ Messages("notAllowed") ~> 403
+      annotation.copy(restrictions = taskTypeAnnotationRestrictions(taskType))
+    }
   }
 }

@@ -1,33 +1,34 @@
 package oxalis.tracing.handler
 
-import oxalis.security.AuthenticatedRequest
 import net.liftweb.common.Box
-import models.tracing.Tracing
 import play.api.i18n.Messages
-import controllers.TracingRights
-import controllers.admin.NMLIO
-import models.tracing.TracingLike
 import braingames.util.TextUtils._
-import models.user.User
+import models.annotation.{AnnotationDAO, AnnotationLike, Annotation}
 
-object SavedTracingInformationHandler extends TracingInformationHandler with TracingRights {
+object SavedTracingInformationHandler extends AnnotationInformationHandler {
+
   import braingames.mvc.BoxImplicits._
 
-  override def nameForTracing(t: TracingLike): String = {
-    normalize("%s__%s__%s__%s".format(
-      t.dataSetName,
-      t.task.map(_.id) getOrElse ("explorational"),
-      t.user.map(_.abreviatedName) getOrElse "",
-      oxalis.view.helpers.formatHash(t.id)))
+  type AType = Annotation
+
+  override val cache = false
+
+  override def nameForAnnotation(a: AnnotationLike): String = a match {
+    case annotation: Annotation =>
+      val task = annotation.task.map(_.id) getOrElse ("explorational")
+      val user = annotation.user.map(_.abreviatedName) getOrElse ""
+      val id = oxalis.view.helpers.formatHash(annotation.id)
+      normalize(s"${annotation.dataSetName}__${task}__${user}__${id}")
+    case a =>
+      a.id
   }
 
-  def provideTracing(tracingId: String): Box[Tracing] = {
-    (for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+  def provideAnnotation(annotationId: String): Box[Annotation] = {
+    for {
+      annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
     } yield {
-        tracing
-    }) ?~ Messages("notAllowed") ~> 403
+      annotation
+    }
   }
-  
-  override def cache = false
+
 }

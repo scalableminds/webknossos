@@ -7,6 +7,8 @@ import braingames.geometry.Point3D
 import oxalis.nml.Comment
 import oxalis.nml.NML
 import models.user.User
+import models.annotation.{AnnotationSettings, AnnotationContent}
+import play.api.libs.json.JsValue
 
 case class TemporaryTracing(
     id: String,
@@ -18,21 +20,17 @@ case class TemporaryTracing(
     scale: Scale,
     editPosition: Point3D,
     comments: List[Comment] = Nil,
-    tracingSettings: TracingSettings = TracingSettings.default.copy(isEditable = false),
-    tracingType: TracingType.Value = TracingType.CompoundProject,
-    accessFkt: User => Boolean =( _ => false),
-    state: TracingState = TracingState.Finished,
-    version: Int = 0) extends TracingLike {
+    settings: AnnotationSettings = AnnotationSettings.default.copy(isEditable = false)) extends TracingLike with AnnotationContent{
 
   type Self = TemporaryTracing
 
   def task = None
-  
-  def makeReadOnly = 
-    this.copy(tracingSettings = tracingSettings.copy(isEditable = false))
+
+  def makeReadOnly =
+    this.copy(settings = settings.copy(isEditable = false))
     
    def allowAllModes = 
-    this.copy(tracingSettings = tracingSettings.copy(allowedModes = TracingSettings.ALL_MODES))  
+    this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
   
   def insertTree[TemporaryTracing](tree: TreeLike) = {
     this.copy(trees = tree :: trees).asInstanceOf[TemporaryTracing]
@@ -44,7 +42,11 @@ case class TemporaryTracing(
   def insertComment[TemporaryTracing](c: Comment) =
     this.copy(comments = c :: this.comments).asInstanceOf[TemporaryTracing]
   
-  def accessPermission(user: User) = accessFkt(user)
+  def updateFromJson(js: Seq[JsValue]) = ???
+
+  def copyDeepAndInsert = ???
+
+  def clearTracingData = ???
 }
 
 object TemporaryTracing {

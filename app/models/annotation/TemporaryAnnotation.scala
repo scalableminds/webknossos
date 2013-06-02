@@ -18,7 +18,7 @@ import models.user.User
 import models.task.Task
 import models.annotation.AnnotationType._
 import org.bson.types.ObjectId
-import models.tracing.skeleton.{TracingLike, TemporaryTracing}
+import models.tracing.skeleton.{SkeletonTracingLike, TemporarySkeletonTracing}
 
 case class TemporaryAnnotation(
                                 id: String,

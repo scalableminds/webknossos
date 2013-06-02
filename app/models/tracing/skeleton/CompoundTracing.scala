@@ -19,19 +19,19 @@ import org.bson.types.ObjectId
 
 object CompoundAnnotation extends Formatter {
 
-  def treePrefix(tracing: TracingLike, user: Option[User], taskId: Option[ObjectId]) = {
+  def treePrefix(tracing: SkeletonTracingLike, user: Option[User], taskId: Option[ObjectId]) = {
     val userName = user.map(_.abreviatedName) getOrElse ""
     s"${formatHash(taskId.map(_.toString).getOrElse(""))}_${userName}_"
   }
 
-  def renameTreesOfTracing(tracing: Tracing, user: Option[User], taskId: Option[ObjectId]) = {
+  def renameTreesOfTracing(tracing: SkeletonTracing, user: Option[User], taskId: Option[ObjectId]) = {
     def renameTrees(prefix: String, trees: List[TreeLike]) = {
       trees.zipWithIndex.map {
         case (tree, index) =>
           tree.changeName(s"${prefix}tree%03d".format(index + 1))
       }
     }
-    val temp = TemporaryTracing.createFrom(tracing, "")
+    val temp = TemporarySkeletonTracing.createFrom(tracing, "")
     temp.copy(
       trees = renameTrees(treePrefix(tracing, user, taskId), temp.trees))
   }
@@ -66,7 +66,7 @@ object CompoundAnnotation extends Formatter {
 
     def createContent() = {
       lazy val ts: List[AnnotationContent] = as.flatMap(annotation => annotation.content.map {
-        case t: Tracing =>
+        case t: SkeletonTracing =>
           renameTreesOfTracing(t, annotation.user, annotation._task)
         case e =>
           e
@@ -87,13 +87,13 @@ object CompoundAnnotation extends Formatter {
     }
   }
 
-  def createFromTracings(tracings: List[AnnotationContent], id: String): Option[TemporaryTracing] = {
-    def mergeThem(tracings: List[AnnotationContent]): Option[TemporaryTracing] = {
+  def createFromTracings(tracings: List[AnnotationContent], id: String): Option[TemporarySkeletonTracing] = {
+    def mergeThem(tracings: List[AnnotationContent]): Option[TemporarySkeletonTracing] = {
       tracings match {
         case head :: tail =>
           head match {
-            case t: Tracing =>
-              val base = TemporaryTracing.createFrom(t, id)
+            case t: SkeletonTracing =>
+              val base = TemporarySkeletonTracing.createFrom(t, id)
               Some(tail.foldLeft(base) {
                 case (result, tracing) =>
                   result.mergeWith(tracing)

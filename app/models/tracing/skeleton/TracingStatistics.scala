@@ -6,7 +6,7 @@ import play.api.Logger
 trait AnnotationStatistics {
   def statisticsForAnnotation(annotation: Annotation) = {
     annotation.content.map {
-      case t: Tracing =>
+      case t: SkeletonTracing =>
         val trees = t.dbtrees
         val numberOfTrees = trees.size
         val (numberOfNodes, numberOfEdges) = trees.foldLeft((0l, 0l)) {
@@ -14,15 +14,15 @@ trait AnnotationStatistics {
             (numberOfNodes + tree.numberOfNodes,
               numberOfEdges + tree.numberOfEdges)
         }
-        TracingStatistic(numberOfNodes, numberOfEdges, numberOfTrees)
+        SkeletonTracingStatistic(numberOfNodes, numberOfEdges, numberOfTrees)
       case _ =>
         Logger.warn("No statistics available for content")
-        TracingStatistic(0, 0, 0)
+        SkeletonTracingStatistic(0, 0, 0)
     }
   }
 }
 
-case class TracingStatistic(
+case class SkeletonTracingStatistic(
                              numberOfNodes: Long,
                              numberOfEdges: Long,
                              numberOfTrees: Long)

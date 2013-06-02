@@ -18,7 +18,7 @@ import play.api.i18n.Messages
 import models.task.Project
 import java.util.Date
 import models.annotation.{AnnotationType, AnnotationDAO}
-import models.tracing.skeleton.Tracing
+import models.tracing.skeleton.SkeletonTracing
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
@@ -28,7 +28,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
   val trainingsTaskForm = Form(
     tuple(
       "task" -> text.verifying("task.notFound", task => Task.findOneById(task).isDefined),
-      "tracing" -> text.verifying("tracing.notFound", exp => Tracing.findOneById(exp).isDefined),
+      "tracing" -> text.verifying("tracing.notFound", exp => SkeletonTracing.findOneById(exp).isDefined),
       "training" -> mapping(
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,

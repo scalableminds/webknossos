@@ -41,7 +41,7 @@ import braingames.util.ExtendedTypes.When
 import models.binary.DataSetDAO
 import models.annotation.{AnnotationLike, AnnotationDAO}
 import models.annotation.AnnotationType._
-import models.tracing.skeleton.{TracingLike, Tracing, TemporaryTracing, CompoundAnnotation}
+import models.tracing.skeleton.{SkeletonTracingLike, SkeletonTracing, TemporarySkeletonTracing, CompoundAnnotation}
 import oxalis.annotation.handler.AnnotationInformationHandler
 
 object TracingController extends Controller with Secured with TracingInformationProvider {

@@ -20,7 +20,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import braingames.mvc.Controller
 import oxalis.mail.DefaultMails
-import models.tracing.skeleton.Tracing
+import models.tracing.skeleton.SkeletonTracing
 
 object Authentication extends Controller with Secured {
   // -- Authentication

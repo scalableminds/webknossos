@@ -17,7 +17,7 @@ import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
 import braingames.binary.models.DataSet
 import models.annotation.{AnnotationType, AnnotationDAO}
-import models.tracing.skeleton.Tracing
+import models.tracing.skeleton.SkeletonTracing
 
 object UserTracingAdministration extends Controller with Secured {
 

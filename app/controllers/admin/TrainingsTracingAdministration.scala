@@ -12,7 +12,7 @@ import controllers.Application
 import braingames.mail.Send
 import oxalis.mail.DefaultMails
 import models.annotation.{AnnotationType, AnnotationDAO}
-import models.tracing.skeleton.Tracing
+import models.tracing.skeleton.SkeletonTracing
 
 
 object TrainingsTracingAdministration extends Controller with Secured {

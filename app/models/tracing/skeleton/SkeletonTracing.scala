@@ -13,7 +13,7 @@ import oxalis.nml._
 import braingames.binary.models.DataSet
 import models.annotation.{AnnotationContentDAO, AnnotationSettings, AnnotationContent}
 
-case class Tracing(
+case class SkeletonTracing(
   dataSetName: String,
   branchPoints: List[BranchPoint],
   timestamp: Long,
@@ -23,13 +23,13 @@ case class Tracing(
   comments: List[Comment] = Nil,
   settings: AnnotationSettings = AnnotationSettings.default,
   _id: ObjectId = new ObjectId)
-  extends DAOCaseClass[Tracing] with TracingLike with AnnotationContent {
+  extends DAOCaseClass[SkeletonTracing] with SkeletonTracingLike with AnnotationContent {
 
   def id = _id.toString
 
-  type Self = Tracing
+  type Self = SkeletonTracing
 
-  def dao = Tracing
+  def dao = SkeletonTracing
 
   def makeReadOnly =
     this.copy(settings = settings.copy(isEditable = false))
@@ -65,24 +65,24 @@ case class Tracing(
     this.update(_.copy(branchPoints = Nil, comments = Nil))
   }
 
-  override def mergeWith(c: AnnotationContent): Tracing = {
+  override def mergeWith(c: AnnotationContent): SkeletonTracing = {
     c match {
-      case c: TracingLike =>
+      case c: SkeletonTracingLike =>
         super.mergeWith(c)
       case e =>
-        throw new Exception("Can't merge Tracing with: " + e)
+        throw new Exception("Can't merge SkeletonTracing with: " + e)
     }
   }
 
   def copyDeepAndInsert = {
-    val tracing = Tracing.insertOne(this.copy(
+    val tracing = SkeletonTracing.insertOne(this.copy(
       _id = new ObjectId,
       branchPoints = Nil,
       comments = Nil))
-    Tracing.mergeWith(this, tracing)
+    SkeletonTracing.mergeWith(this, tracing)
   }
 
-  def updateFromJson(jsUpdates: Seq[JsValue]): Option[Tracing] = {
+  def updateFromJson(jsUpdates: Seq[JsValue]): Option[SkeletonTracing] = {
     val updates = jsUpdates.flatMap {
       TracingUpdater.createUpdateFromJson
     }
@@ -90,7 +90,7 @@ case class Tracing(
       val tracing = updates.foldLeft(this) {
         case (tracing, updater) => updater.update(tracing)
       }
-      Tracing.save(tracing.copy(timestamp = System.currentTimeMillis))
+      SkeletonTracing.save(tracing.copy(timestamp = System.currentTimeMillis))
       Some(tracing)
     } else {
       None
@@ -98,11 +98,11 @@ case class Tracing(
   }
 }
 
-object Tracing extends BasicDAO[Tracing]("tracings") with AnnotationStatistics with AnnotationContentDAO {
-  type AType = Tracing
+object SkeletonTracing extends BasicDAO[SkeletonTracing]("tracings") with AnnotationStatistics with AnnotationContentDAO {
+  type AType = SkeletonTracing
 
-  def tracingBase(settings: AnnotationSettings, dataSetName: String): Tracing =
-    Tracing(
+  def tracingBase(settings: AnnotationSettings, dataSetName: String): SkeletonTracing =
+    SkeletonTracing(
       dataSetName,
       Nil,
       System.currentTimeMillis,
@@ -125,7 +125,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with AnnotationStatistics w
         Nil))
   }
 
-  def createFromNML(settings: AnnotationSettings, nml: NML): Tracing = {
+  def createFromNML(settings: AnnotationSettings, nml: NML): SkeletonTracing = {
     val tracing = insertOne(fromNML(nml).copy(
       settings = settings))
 
@@ -134,7 +134,7 @@ object Tracing extends BasicDAO[Tracing]("tracings") with AnnotationStatistics w
   }
 
   def fromNML(nml: NML) = {
-    Tracing(
+    SkeletonTracing(
       nml.dataSetName,
       nml.branchPoints,
       System.currentTimeMillis,
@@ -144,12 +144,12 @@ object Tracing extends BasicDAO[Tracing]("tracings") with AnnotationStatistics w
       nml.comments)
   }
 
-  def mergeWith(source: Tracing, target: Tracing) = {
+  def mergeWith(source: SkeletonTracing, target: SkeletonTracing) = {
     target.update(t => t.mergeWith(source))
   }
 
   def createForDataSet(d: DataSet = DataSetDAO.default) = {
-    val tracing = insertOne(Tracing(
+    val tracing = insertOne(SkeletonTracing(
       d.name,
       Nil,
       System.currentTimeMillis,

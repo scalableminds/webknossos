@@ -34,7 +34,7 @@ import braingames.util.FileIO
 import java.io.FileInputStream
 import java.nio.channels.Channels
 import models.annotation.{AnnotationDAO, Annotation, AnnotationType}
-import models.tracing.skeleton.TracingLike
+import models.tracing.skeleton.SkeletonTracingLike
 import oxalis.annotation.handler.SavedTracingInformationHandler
 
 object NMLIO extends Controller with Secured with TextUtils {
@@ -82,7 +82,7 @@ object NMLIO extends Controller with Secured with TextUtils {
 
   def tracingToNMLStream(annotation: Annotation) = {
     annotation.content.map {
-      case t: TracingLike =>
+      case t: SkeletonTracingLike =>
         IOUtils.toInputStream(toXML(t))
       case _ =>
         throw new Exception("Invalid content!")
@@ -174,7 +174,7 @@ object NMLIO extends Controller with Secured with TextUtils {
       }
   }
 
-  def toXML[T <: TracingLike](t: T) = {
+  def toXML[T <: SkeletonTracingLike](t: T) = {
     val prettyPrinter = new PrettyPrinter(100, 2)
     prettyPrinter.format(Xml.toXML(t))
   }

@@ -14,7 +14,7 @@ import play.api.i18n.Messages
 import braingames.mvc.Controller
 import models.annotation.{AnnotationDAO, AnnotationType}
 import play.api.Play.current
-import models.tracing.skeleton.Tracing
+import models.tracing.skeleton.SkeletonTracing
 
 object TaskController extends Controller with Secured {
   override val DefaultAccessRole = Role.User

@@ -123,7 +123,7 @@ object InitialData {
 //          0,
 //          tt._id,
 //          Experience("basic", 5)))
-//        Tracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(50, 50, 50))
+//        SkeletonTracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(50, 50, 50))
 //
 //        t = Task.insertOne(Task(
 //          0,
@@ -136,7 +136,7 @@ object InitialData {
 //            5,
 //            5,
 //            sample._id))))
-//        Tracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(0, 0, 0))
+//        SkeletonTracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(0, 0, 0))
       }
     }
   }

@@ -13,7 +13,7 @@ import braingames.geometry.Point3D
 import java.util.Date
 import play.api.libs.json.JsValue
 import play.api.Logger
-import models.tracing.skeleton.{AnnotationStatistics, Tracing, TemporaryTracing}
+import models.tracing.skeleton.{AnnotationStatistics, SkeletonTracing, TemporarySkeletonTracing}
 
 case class Annotation(
   _user: ObjectId,
@@ -54,8 +54,8 @@ case class Annotation(
   def isReadyToBeFinished = {
     // TODO: RF - rework
     val nodesInBase =
-      task.flatMap(_.annotationBase.flatMap(Tracing.statisticsForAnnotation).map(_.numberOfNodes)).getOrElse(1L)
-    Tracing.statisticsForAnnotation(this).map(_.numberOfNodes > nodesInBase) getOrElse true
+      task.flatMap(_.annotationBase.flatMap(SkeletonTracing.statisticsForAnnotation).map(_.numberOfNodes)).getOrElse(1L)
+    SkeletonTracing.statisticsForAnnotation(this).map(_.numberOfNodes > nodesInBase) getOrElse true
   }
 
   def unassignReviewer =
@@ -171,13 +171,13 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
   }
 
   def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, nml: NML) = {
-    val tracing = Tracing.createFromNML(settings, nml)
+    val tracing = SkeletonTracing.createFromNML(settings, nml)
     val content = ContentReference.createFor(tracing)
     insertOne(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
   }
 
   def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, dataSetName: String, start: Point3D) = {
-    val tracing = Tracing.createFromStart(settings, dataSetName, start)
+    val tracing = SkeletonTracing.createFromStart(settings, dataSetName, start)
     val content = ContentReference.createFor(tracing)
     insertOne(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
   }
@@ -291,7 +291,7 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
   }
 
   def createFromNML(userId: ObjectId, nml: NML, annotationType: AnnotationType, name: Option[String]) = {
-    val content = Tracing.createFromNML(AnnotationSettings.default, nml)
+    val content = SkeletonTracing.createFromNML(AnnotationSettings.default, nml)
 
     insertOne(Annotation(
       userId,
@@ -313,7 +313,7 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
           c =>
             tail.foldLeft(c) {
               case (t, s) =>
-                t.mergeWith(TemporaryTracing.createFrom(s, s.timeStamp.toString))
+                t.mergeWith(TemporarySkeletonTracing.createFrom(s, s.timeStamp.toString))
             }
         }
         Some(startAnnotation)

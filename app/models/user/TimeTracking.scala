@@ -12,7 +12,7 @@ import models.basics.DAOCaseClass
 import braingames.util.ExtendedTypes.ExtendedString
 import oxalis.thirdparty.BrainTracing
 import models.annotation.{AnnotationLike, Annotation}
-import models.tracing.skeleton.Tracing
+import models.tracing.skeleton.SkeletonTracing
 
 case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, annotation: Option[String] = None) {
   val created = {

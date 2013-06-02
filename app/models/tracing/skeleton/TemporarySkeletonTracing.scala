@@ -9,7 +9,7 @@ import oxalis.nml.NML
 import models.annotation.{AnnotationSettings, AnnotationContent}
 import play.api.libs.json.JsValue
 
-case class TemporaryTracing(
+case class TemporarySkeletonTracing(
     id: String,
     dataSetName: String,
     trees: List[TreeLike],
@@ -19,9 +19,9 @@ case class TemporaryTracing(
     scale: Scale,
     editPosition: Point3D,
     comments: List[Comment] = Nil,
-    settings: AnnotationSettings = AnnotationSettings.default.copy(isEditable = false)) extends TracingLike with AnnotationContent{
+    settings: AnnotationSettings = AnnotationSettings.default.copy(isEditable = false)) extends SkeletonTracingLike with AnnotationContent{
 
-  type Self = TemporaryTracing
+  type Self = TemporarySkeletonTracing
 
   def task = None
 
@@ -48,9 +48,9 @@ case class TemporaryTracing(
   def clearTracingData = ???
 }
 
-object TemporaryTracing {
+object TemporarySkeletonTracing {
   def createFrom(nml: NML, id: String) = {
-    TemporaryTracing(
+    TemporarySkeletonTracing(
       id,
       nml.dataSetName,
       nml.trees,
@@ -62,8 +62,8 @@ object TemporaryTracing {
       nml.comments)
   }
   
-  def createFrom(tracing: TracingLike, id: String) = {
-    TemporaryTracing(
+  def createFrom(tracing: SkeletonTracingLike, id: String) = {
+    TemporarySkeletonTracing(
       id,
       tracing.dataSetName,
       tracing.trees,

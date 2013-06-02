@@ -21,7 +21,7 @@ import play.api.i18n.Messages
 import braingames.mvc.Controller
 import oxalis.mail.DefaultMails
 import braingames.mail.Send
-import models.tracing.skeleton.Tracing
+import models.tracing.skeleton.SkeletonTracing
 
 object Jira extends Controller with Secured {
   override val DefaultAccessRole = Role.User

@@ -14,7 +14,7 @@ import scala.util._
 import play.api.libs.concurrent.Akka
 import models.user.TimeEntry
 import models.annotation.AnnotationDAO
-import models.tracing.skeleton.Tracing
+import models.tracing.skeleton.SkeletonTracing
 
 object BrainTracing {
   val URL = "http://braintracing.org/"

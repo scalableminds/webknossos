@@ -1,5 +1,5 @@
 @(annotation: models.annotation.Annotation, form: Form[String])(implicit session: oxalis.view.AuthedSessionData)
-<h5>Review of Trainings-Tracing</h5>
+<h5>Review of Trainings-SkeletonTracing</h5>
 @helper.form(action = controllers.admin.routes.TrainingsTracingAdministration.finishReviewForm(annotation.id, true), 'class -> "form-vertical") {
   <div class="control-group">
     <label class="control-label" for="comment">Comment</label>

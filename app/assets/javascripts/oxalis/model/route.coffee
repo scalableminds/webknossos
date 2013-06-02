@@ -47,7 +47,7 @@ class Route
     ############ Load Tree from @data ##############
 
     @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id, @data.settings.isEditable)
-    console.log "Tracing data: ", @data
+    console.log "SkeletonTracing data: ", @data
 
     # get tree to build
     for treeData in @data.trees

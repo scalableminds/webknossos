@@ -20,7 +20,7 @@ import net.liftweb.common.Box
 import net.liftweb.common.Failure
 import utils._
 import scala.annotation.tailrec
-import models.tracing.skeleton.Tracing
+import models.tracing.skeleton.SkeletonTracing
 
 object NMLParser {
 

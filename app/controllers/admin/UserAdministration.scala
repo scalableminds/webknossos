@@ -16,7 +16,7 @@ import net.liftweb.common._
 import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
 import models.annotation.AnnotationDAO
-import models.tracing.skeleton.Tracing
+import models.tracing.skeleton.SkeletonTracing
 
 object UserAdministration extends Controller with Secured {
 

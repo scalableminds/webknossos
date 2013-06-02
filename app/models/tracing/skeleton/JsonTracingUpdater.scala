@@ -37,7 +37,7 @@ object TracingUpdater {
   }
 }
 
-case class TracingUpdate(update: Tracing => Tracing)
+case class TracingUpdate(update: SkeletonTracing => SkeletonTracing)
 
 trait TracingUpdater {
   def createUpdate(): TracingUpdate

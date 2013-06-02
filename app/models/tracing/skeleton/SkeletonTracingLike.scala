@@ -15,8 +15,8 @@ import play.api.i18n.Messages
 import controllers.admin.NMLIO
 import org.apache.commons.io.IOUtils
 
-trait TracingLike extends AnnotationContent {
-  type Self <: TracingLike
+trait SkeletonTracingLike extends AnnotationContent {
+  type Self <: SkeletonTracingLike
 
   def self = this.asInstanceOf[Self]
 
@@ -55,7 +55,7 @@ trait TracingLike extends AnnotationContent {
   def toDownloadStream =
     IOUtils.toInputStream(NMLIO.toXML(this))
 
-  def annotationInformation = TracingLike.TracingLikeWrites.writes(this)
+  def annotationInformation = SkeletonTracingLike.TracingLikeWrites.writes(this)
 
   private def applyUpdates(f: (Self => Self)*) = {
     f.foldLeft(self) {
@@ -69,7 +69,7 @@ trait TracingLike extends AnnotationContent {
 
   def mergeWith(source: AnnotationContent): Self = {
     source match {
-      case source: TracingLike =>
+      case source: SkeletonTracingLike =>
         val (preparedTrees: List[TreeLike], nodeMapping: FunctionalNodeMapping) = prepareTreesForMerge(source.trees, trees)
         applyUpdates(
           updateWithAll(preparedTrees) {
@@ -131,14 +131,14 @@ trait TracingLike extends AnnotationContent {
 
   def createTracingInformation() = {
     Json.obj(
-      "tracing" -> TracingLike.TracingLikeWrites.writes(this)) ++ createDataSetInformation(dataSetName)
+      "tracing" -> SkeletonTracingLike.TracingLikeWrites.writes(this)) ++ createDataSetInformation(dataSetName)
   }
 }
 
-object TracingLike {
+object SkeletonTracingLike {
 
-  implicit object TracingLikeXMLWrites extends XMLWrites[TracingLike] {
-    def writes(e: TracingLike) = {
+  implicit object TracingLikeXMLWrites extends XMLWrites[SkeletonTracingLike] {
+    def writes(e: SkeletonTracingLike) = {
       (DataSetDAO.findOneByName(e.dataSetName).map {
         dataSet =>
           <things>
@@ -160,7 +160,7 @@ object TracingLike {
     }
   }
 
-  implicit object TracingLikeWrites extends Writes[TracingLike] {
+  implicit object TracingLikeWrites extends Writes[SkeletonTracingLike] {
     val VERSION = "version"
     val TREES = "trees"
     val ACTIVE_NODE = "activeNode"
@@ -171,7 +171,7 @@ object TracingLike {
     val TRACING_TYPE = "tracingType"
     val SETTINGS = "settings"
 
-    def writes(e: TracingLike) = Json.obj(
+    def writes(e: SkeletonTracingLike) = Json.obj(
       SETTINGS -> e.settings,
       TREES -> e.trees,
       ACTIVE_NODE -> e.activeNodeId,

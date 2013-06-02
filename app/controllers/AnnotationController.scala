@@ -9,13 +9,12 @@ import play.api.libs.json.{Json, JsArray}
 import play.api.Logger
 import models.annotation.{AnnotationLike, AnnotationType, AnnotationDAO, Annotation}
 import play.api.libs.concurrent.Execution.Implicits._
-import models.tracing.{TracingLike, Tracing}
 import net.liftweb.common.{Failure, Full, Box}
 import controllers.admin.NMLIO
 import models.task.{Project, Task}
 import views.html
 import play.api.templates.Html
-import oxalis.tracing.{RequestAnnotation, AnnotationIdentifier}
+import oxalis.annotation.{RequestAnnotation, AnnotationIdentifier}
 import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration._

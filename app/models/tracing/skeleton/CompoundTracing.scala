@@ -1,4 +1,4 @@
-package models.tracing
+package models.tracing.skeleton
 
 import braingames.geometry.Scale
 import braingames.geometry.Point3D

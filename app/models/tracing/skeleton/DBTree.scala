@@ -1,22 +1,15 @@
-package models.tracing
+package models.tracing.skeleton
 
 import braingames.image.Color
 import org.bson.types.ObjectId
 import models.basics._
 import models.context._
 import com.mongodb.casbah.commons.MongoDBObject
-import braingames.xml.Xml
-import braingames.xml.XMLWrites
-import play.api.libs.json.Format
-import play.api.libs.json.Writes
-import play.api.libs.json.Json
 import oxalis.nml.Tree
 import oxalis.nml.Node
 import oxalis.nml.Edge
-import oxalis.nml.utils._
 import com.mongodb.casbah.commons.MongoDBList
 import com.mongodb.casbah.query.Implicits._
-import scala.collection.immutable.HashMap
 import oxalis.nml.TreeLike
 
 case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, name: String = "", _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree]{

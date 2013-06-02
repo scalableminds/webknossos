@@ -7,6 +7,7 @@ import models.security._
 import org.bson.types.ObjectId
 import play.api.Logger
 import models.tracing._
+import models.tracing.skeleton.Tracing
 
 object BasicEvolution {
   val watchedClasses: List[BasicDAO[_]] = List(Role, User, Task, Tracing, UsedAnnotation)

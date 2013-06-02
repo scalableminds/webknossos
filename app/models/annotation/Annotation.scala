@@ -3,7 +3,6 @@ package models.annotation
 import org.bson.types.ObjectId
 import models.basics._
 import models.task.{TaskType, Task}
-import models.tracing.{AnnotationStatistics, TemporaryTracing, DBTree, Tracing}
 import models.user.User
 import models.security.Role
 import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
@@ -14,6 +13,7 @@ import braingames.geometry.Point3D
 import java.util.Date
 import play.api.libs.json.JsValue
 import play.api.Logger
+import models.tracing.skeleton.{AnnotationStatistics, Tracing, TemporaryTracing}
 
 case class Annotation(
   _user: ObjectId,

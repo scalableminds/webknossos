@@ -1,4 +1,4 @@
-package models.tracing
+package models.tracing.skeleton
 
 import oxalis.nml.TreeLike
 import oxalis.nml.BranchPoint
@@ -6,7 +6,6 @@ import braingames.geometry.Scale
 import braingames.geometry.Point3D
 import oxalis.nml.Comment
 import oxalis.nml.NML
-import models.user.User
 import models.annotation.{AnnotationSettings, AnnotationContent}
 import play.api.libs.json.JsValue
 

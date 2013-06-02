@@ -1,12 +1,12 @@
-package oxalis.tracing.handler
+package oxalis.annotation.handler
 
 import net.liftweb.common.Box
-import models.tracing.CompoundAnnotation
 import models.task.TaskType
 import play.api.i18n.Messages
 import models.annotation.{AnnotationRestrictions, TemporaryAnnotation}
 import models.user.User
 import models.security.Role
+import models.tracing.skeleton.CompoundAnnotation
 
 object TaskTypeInformationHandler extends AnnotationInformationHandler {
 

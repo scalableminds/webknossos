@@ -13,7 +13,7 @@ import play.api.i18n.Messages
 import models.task.Task
 import models.tracing._
 import play.api.templates.Html
-import oxalis.tracing._
+import oxalis.annotation._
 import controllers.Application
 import models.annotation.AnnotationDAO
 

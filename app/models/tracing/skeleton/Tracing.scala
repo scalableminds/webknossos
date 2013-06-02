@@ -1,4 +1,4 @@
-package models.tracing
+package models.tracing.skeleton
 
 import braingames.geometry.Point3D
 import com.mongodb.casbah.commons.MongoDBObject
@@ -7,7 +7,6 @@ import play.api.libs.json._
 import models.binary.DataSetDAO
 import models.user.UsedAnnotation
 import braingames.geometry.Scale
-import java.util.Date
 import braingames.image.Color
 import models.basics._
 import oxalis.nml._

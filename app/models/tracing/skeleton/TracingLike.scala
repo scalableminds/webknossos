@@ -1,4 +1,4 @@
-package models.tracing
+package models.tracing.skeleton
 
 import oxalis.nml._
 import oxalis.nml.utils._

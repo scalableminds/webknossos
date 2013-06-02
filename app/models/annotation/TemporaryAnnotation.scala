@@ -15,11 +15,10 @@ import oxalis.nml.Comment
 import oxalis.nml.NML
 import models.user.User
 import models.user.User
-import models.tracing.TracingLike
-import models.tracing.TemporaryTracing
 import models.task.Task
 import models.annotation.AnnotationType._
 import org.bson.types.ObjectId
+import models.tracing.skeleton.{TracingLike, TemporaryTracing}
 
 case class TemporaryAnnotation(
                                 id: String,

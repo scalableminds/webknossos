@@ -25,7 +25,7 @@ import models.task.Project
 import play.api.Logger
 import play.api.mvc.Result
 import play.api.templates.Html
-import oxalis.tracing._
+import oxalis.annotation._
 import controllers.Application
 import models.annotation.Annotation
 import models.annotation.{AnnotationDAO, AnnotationType}

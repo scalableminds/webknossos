@@ -15,7 +15,7 @@ import models.tracing._
 import models.basics.BasicEvolution
 import oxalis.mail.DefaultMails
 import braingames.geometry._
-import oxalis.tracing.{AnnotationStore}
+import oxalis.annotation.{AnnotationStore}
 import braingames.mail.Mailer
 import scala.collection.parallel.Tasks
 import akka.pattern.ask

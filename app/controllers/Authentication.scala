@@ -15,12 +15,12 @@ import play.api.libs.iteratee.Input
 import oxalis.security.Secured
 import braingames.mail._
 import controllers.admin._
-import models.tracing.Tracing
 import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import braingames.mvc.Controller
 import oxalis.mail.DefaultMails
+import models.tracing.skeleton.Tracing
 
 object Authentication extends Controller with Secured {
   // -- Authentication

@@ -2,7 +2,6 @@ package oxalis.nml
 
 import scala.xml.XML
 import braingames.binary.models.DataSet
-import models.tracing.Tracing
 import braingames.image.Color
 import braingames.util.ExtendedTypes.ExtendedString
 import braingames.geometry.Point3D
@@ -21,6 +20,7 @@ import net.liftweb.common.Box
 import net.liftweb.common.Failure
 import utils._
 import scala.annotation.tailrec
+import models.tracing.skeleton.Tracing
 
 object NMLParser {
 

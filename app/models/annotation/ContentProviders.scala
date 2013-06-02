@@ -1,8 +1,8 @@
 package models.annotation
 
-import models.tracing.Tracing
 import braingames.binary.models.DataSet
 import play.api.Logger
+import models.tracing.skeleton.Tracing
 
 /**
  * Company: scalableminds

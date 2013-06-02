@@ -1,4 +1,4 @@
-package oxalis.tracing.handler
+package oxalis.annotation.handler
 
 import net.liftweb.common.Box
 import play.api.i18n.Messages

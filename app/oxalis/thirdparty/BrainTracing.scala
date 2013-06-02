@@ -13,8 +13,8 @@ import scala.concurrent.Future
 import scala.util._
 import play.api.libs.concurrent.Akka
 import models.user.TimeEntry
-import models.tracing.Tracing
 import models.annotation.AnnotationDAO
+import models.tracing.skeleton.Tracing
 
 object BrainTracing {
   val URL = "http://braintracing.org/"

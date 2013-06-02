@@ -1,4 +1,4 @@
-package models.tracing
+package models.tracing.skeleton
 
 import models.annotation.Annotation
 import play.api.Logger

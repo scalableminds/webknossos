@@ -4,7 +4,7 @@ import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.annotations._
 import models.basics.BasicDAO
-import oxalis.tracing.AnnotationIdentifier
+import oxalis.annotation.AnnotationIdentifier
 
 case class UsedAnnotation(user: ObjectId, annotationId: AnnotationIdentifier, _id: ObjectId = new ObjectId)
 

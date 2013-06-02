@@ -1,10 +1,10 @@
-package oxalis.tracing.handler
+package oxalis.annotation.handler
 
 import net.liftweb.common.Box
 import oxalis.security.AuthenticatedRequest
 import models.annotation.{AnnotationType, AnnotationLike}
 
-object TracingInformationHandler {
+object AnnotationInformationHandler {
   val informationHandlers: Map[String, AnnotationInformationHandler] = Map(
     AnnotationType.CompoundProject.toString ->
       ProjectInformationHandler,

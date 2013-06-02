@@ -5,7 +5,6 @@ import play.api.libs.json._
 import oxalis.security.Secured
 import models.security.Role
 import play.api.Logger
-import models.tracing.Tracing
 import models.user._
 import models.task._
 import views._
@@ -15,6 +14,7 @@ import play.api.i18n.Messages
 import braingames.mvc.Controller
 import models.annotation.{AnnotationDAO, AnnotationType}
 import play.api.Play.current
+import models.tracing.skeleton.Tracing
 
 object TaskController extends Controller with Secured {
   override val DefaultAccessRole = Role.User

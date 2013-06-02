@@ -33,8 +33,9 @@ import braingames.util.TextUtils
 import braingames.util.FileIO
 import java.io.FileInputStream
 import java.nio.channels.Channels
-import oxalis.tracing.handler.SavedTracingInformationHandler
 import models.annotation.{AnnotationDAO, Annotation, AnnotationType}
+import models.tracing.skeleton.TracingLike
+import oxalis.annotation.handler.SavedTracingInformationHandler
 
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User

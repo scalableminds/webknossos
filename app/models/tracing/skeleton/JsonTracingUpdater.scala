@@ -1,4 +1,4 @@
-package models.tracing
+package models.tracing.skeleton
 
 import play.api.libs.json._
 import braingames.image.Color

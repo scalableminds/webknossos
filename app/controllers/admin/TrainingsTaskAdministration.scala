@@ -13,12 +13,12 @@ import braingames.binary.models.DataSet
 import models.task.Task
 import models.user.Experience
 import models.task.Training
-import models.tracing.Tracing
 import oxalis.nml._
 import play.api.i18n.Messages
 import models.task.Project
 import java.util.Date
 import models.annotation.{AnnotationType, AnnotationDAO}
+import models.tracing.skeleton.Tracing
 
 object TrainingsTaskAdministration extends Controller with Secured {
 

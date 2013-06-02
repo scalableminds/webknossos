@@ -12,7 +12,6 @@ import braingames.geometry.Vector3I
 import braingames.geometry.Vector3I._
 import models.user.User
 import models.security._
-import models.tracing.Tracing
 import play.api.libs.iteratee._
 import play.api.libs.iteratee.Concurrent.Channel
 import play.api.libs.Comet
@@ -29,15 +28,12 @@ import braingames.mvc.Controller
 import controllers.admin.NMLIO
 import oxalis.security.AuthenticatedRequest
 import play.api.templates.Html
-import models.tracing.TracingLike
 import models.task.Project
-import models.tracing.CompoundAnnotation
 import models.task.TaskType
-import models.tracing.TemporaryTracing
-import oxalis.tracing.handler._
+import oxalis.annotation.handler._
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import oxalis.tracing.{RequestAnnotation, AnnotationIdentifier}
+import oxalis.annotation.{RequestAnnotation, AnnotationIdentifier}
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
@@ -45,6 +41,8 @@ import braingames.util.ExtendedTypes.When
 import models.binary.DataSetDAO
 import models.annotation.{AnnotationLike, AnnotationDAO}
 import models.annotation.AnnotationType._
+import models.tracing.skeleton.{TracingLike, Tracing, TemporaryTracing, CompoundAnnotation}
+import oxalis.annotation.handler.AnnotationInformationHandler
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User
@@ -54,7 +52,7 @@ trait TracingInformationProvider extends play.api.http.Status {
 
   import braingames.mvc.BoxImplicits._
 
-  import oxalis.tracing.handler.TracingInformationHandler._
+  import AnnotationInformationHandler._
 
   def withInformationHandler[A, T](tracingType: String)(f: AnnotationInformationHandler => T)(implicit request: AuthenticatedRequest[_]): T = {
     f(informationHandlers(tracingType))

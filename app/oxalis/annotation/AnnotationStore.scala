@@ -1,18 +1,13 @@
-package oxalis.tracing
+package oxalis.annotation
 
 import akka.actor.Actor
 import akka.agent.Agent
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import models.tracing.TemporaryTracing
-import handler.TracingInformationHandler
-import play.api.libs.concurrent.Akka
 import net.liftweb.common.Box
-import net.liftweb.common.Failure
-import models.tracing.TracingLike
-import akka.pattern.AskTimeoutException
 import play.api.Logger
 import models.annotation.AnnotationLike
+import oxalis.annotation.handler.AnnotationInformationHandler
 
 case class AnnotationIdentifier(annotationType: String, identifier: String)
 
@@ -60,7 +55,7 @@ class AnnotationStore extends Actor {
     System.currentTimeMillis - result.timestamp > maxAge.toMillis
 
   def requestAnnotation(id: AnnotationIdentifier) = {
-    val handler = TracingInformationHandler.informationHandlers(id.annotationType)
+    val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
     val f: Future[Box[AnnotationLike]] = Future {
       handler.provideAnnotation(id.identifier)
     }

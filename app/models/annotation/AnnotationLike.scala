@@ -4,6 +4,8 @@ import models.user.User
 import org.bson.types.ObjectId
 import models.task.Task
 import models.annotation.AnnotationType._
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 /**
  * Company: scalableminds
@@ -39,4 +41,22 @@ trait AnnotationLike {
   def isTrainingsAnnotation() = {
     this.task.map(_.isTraining) getOrElse false
   }
+
+  def annotationInfo(user: User): JsObject =
+    AnnotationLike.annotationLikeInfoWrites(user).writes(this)
+}
+
+object AnnotationLike {
+
+  import models.annotation.AnnotationContent.annotationContentWrites
+
+  def annotationLikeInfoWrites(user: User): OWrites[AnnotationLike] =
+    ((__ \ 'version).write[Int] and
+    (__ \ 'name).write[String] and
+    (__ \ 'typ).write[String] and
+    (__ \ 'content).write[Option[AnnotationContent]] and
+    (__ \ 'restrictions).write[AnnotationRestrictions](
+      AnnotationRestrictions.writeFor(user)))(a =>
+      (a.version, a._name getOrElse "", a.typ, a.content, a.restrictions))
+
 }

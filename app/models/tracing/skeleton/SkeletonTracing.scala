@@ -12,6 +12,7 @@ import models.basics._
 import oxalis.nml._
 import braingames.binary.models.DataSet
 import models.annotation.{AnnotationContentDAO, AnnotationSettings, AnnotationContent}
+import models.tracing.CommonTracingDAO
 
 case class SkeletonTracing(
   dataSetName: String,
@@ -98,7 +99,7 @@ case class SkeletonTracing(
   }
 }
 
-object SkeletonTracing extends BasicDAO[SkeletonTracing]("tracings") with AnnotationStatistics with AnnotationContentDAO {
+object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with AnnotationStatistics with AnnotationContentDAO with CommonTracingDAO{
   type AType = SkeletonTracing
 
   def tracingBase(settings: AnnotationSettings, dataSetName: String): SkeletonTracing =
@@ -159,18 +160,6 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("tracings") with Annota
 
     DBTree.createEmptyTree(tracing._id)
     tracing
-  }
-
-  def updateSettings(settings: AnnotationSettings, tracingId: String) = {
-    withValidId(tracingId) {
-      id =>
-        Some(update(
-          MongoDBObject("_id" -> id),
-          MongoDBObject("settings" -> settings),
-          false,
-          false
-        ))
-    }
   }
 
   override def removeById(tracing: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {

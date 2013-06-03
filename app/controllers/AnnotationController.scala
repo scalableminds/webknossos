@@ -5,7 +5,7 @@ import oxalis.security.{AuthenticatedRequest, Secured}
 import models.security.Role
 import models.user.{User, TimeTracking, UsedAnnotation}
 import play.api.i18n.Messages
-import play.api.libs.json.{Json, JsArray}
+import play.api.libs.json.{JsObject, JsValue, Json, JsArray}
 import play.api.Logger
 import models.annotation.{AnnotationLike, AnnotationType, AnnotationDAO, Annotation}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -21,6 +21,7 @@ import scala.concurrent.duration._
 import play.api.libs.iteratee.Enumerator
 import models.binary.DataSetDAO
 import play.api.libs.iteratee.Input.EOF
+import scala.concurrent.Future
 
 /**
  * Company: scalableminds
@@ -126,7 +127,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
                       JsonBadRequest("Invalid update Json")
                   }
                 } else
-                  JsonBadRequest(oldAnnotation.content.map(_.createTracingInformation()) getOrElse Json.obj(), "tracing.dirtyState")
+                  JsonBadRequest(oldAnnotation.annotationInfo(request.user), "tracing.dirtyState")
 
               )
             }
@@ -164,7 +165,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def finish(typ: String, id: String, experimental: Boolean) = Authenticated {
     implicit request =>
-      // TODO: RF - user Store
+    // TODO: RF - user Store
       for {
         oldAnnotation <- AnnotationDAO.findOneById(id) ?~ Messages("annotation.notFound")
         (annotation, message) <- finishAnnotation(request.user, oldAnnotation)
@@ -185,7 +186,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def finishWithRedirect(typ: String, id: String) = Authenticated {
     implicit request =>
-      // TODO: RF - user store
+    // TODO: RF - user store
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~ Messages("annotation.notFound")
       } yield {
@@ -202,7 +203,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   def nameExplorativeAnnotation(typ: String, id: String) = Authenticated(parser = parse.urlFormEncoded) {
     implicit request =>
-      // TODO: RF - user store
+    // TODO: RF - user store
       for {
         annotation <- AnnotationDAO.findOneById(id) ?~ Messages("annotation.notFound")
         name <- postParameter("name") ?~ Messages("tracing.invalidName")

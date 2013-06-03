@@ -20,5 +20,6 @@ object AnnotationSettings {
 
   val default = AnnotationSettings()
 
-  implicit val TracingWrites: Writes[AnnotationSettings] = Json.writes[AnnotationSettings]
+  implicit val settingsWrites: Writes[AnnotationSettings] =
+    Json.writes[AnnotationSettings]
 }

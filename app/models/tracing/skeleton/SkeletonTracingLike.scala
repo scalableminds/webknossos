@@ -4,8 +4,8 @@ import oxalis.nml._
 import oxalis.nml.utils._
 import braingames.geometry.Scale
 import braingames.geometry.Point3D
-import play.api.libs.json.Json
-import play.api.libs.json.Writes
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import braingames.xml.XMLWrites
 import models.binary.DataSetDAO
 import braingames.xml.Xml
@@ -55,7 +55,8 @@ trait SkeletonTracingLike extends AnnotationContent {
   def toDownloadStream =
     IOUtils.toInputStream(NMLIO.toXML(this))
 
-  def annotationInformation = SkeletonTracingLike.TracingLikeWrites.writes(this)
+  override def contentData =
+    Some(SkeletonTracingLike.skeletonTracingLikeWrites.writes(this))
 
   private def applyUpdates(f: (Self => Self)*) = {
     f.foldLeft(self) {
@@ -111,33 +112,11 @@ trait SkeletonTracingLike extends AnnotationContent {
       math.max(targetNodeMaxId + 1 - sourceNodeMinId, 0)
     }
   }
-
-  def createDataSetInformation(dataSetName: String) =
-    DataSetDAO.findOneByName(dataSetName) match {
-      case Some(dataSet) =>
-        Json.obj(
-          "dataSet" -> Json.obj(
-            "name" -> dataSet.name,
-            "dataLayers" -> dataSet.dataLayers.map {
-              case layer =>
-                Json.obj(
-                  "typ" -> layer.typ,
-                  "maxCoordinates" -> layer.maxCoordinates,
-                  "resolutions" -> layer.resolutions)
-            }))
-      case _ =>
-        Json.obj("error" -> Messages("dataSet.notFound"))
-    }
-
-  def createTracingInformation() = {
-    Json.obj(
-      "tracing" -> SkeletonTracingLike.TracingLikeWrites.writes(this)) ++ createDataSetInformation(dataSetName)
-  }
 }
 
 object SkeletonTracingLike {
 
-  implicit object TracingLikeXMLWrites extends XMLWrites[SkeletonTracingLike] {
+  implicit object SkeletonTracingLikeXMLWrites extends XMLWrites[SkeletonTracingLike] {
     def writes(e: SkeletonTracingLike) = {
       (DataSetDAO.findOneByName(e.dataSetName).map {
         dataSet =>
@@ -160,25 +139,10 @@ object SkeletonTracingLike {
     }
   }
 
-  implicit object TracingLikeWrites extends Writes[SkeletonTracingLike] {
-    val VERSION = "version"
-    val TREES = "trees"
-    val ACTIVE_NODE = "activeNode"
-    val BRANCH_POINTS = "branchPoints"
-    val EDIT_POSITION = "editPosition"
-    val SCALE = "scale"
-    val COMMENTS = "comments"
-    val TRACING_TYPE = "tracingType"
-    val SETTINGS = "settings"
-
-    def writes(e: SkeletonTracingLike) = Json.obj(
-      SETTINGS -> e.settings,
-      TREES -> e.trees,
-      ACTIVE_NODE -> e.activeNodeId,
-      BRANCH_POINTS -> e.branchPoints,
-      SCALE -> e.scale,
-      COMMENTS -> e.comments,
-      EDIT_POSITION -> e.editPosition)
-  }
-
+  implicit val skeletonTracingLikeWrites: OWrites[SkeletonTracingLike] =
+    ((__ \ 'trees).write[List[TreeLike]] and
+      (__ \ 'activeNode).write[Int] and
+      (__ \ 'branchPoints).write[List[BranchPoint]] and
+      (__ \ 'comments).write[List[Comment]])(t =>
+      (t.trees, t.activeNodeId, t.branchPoints, t.comments))
 }

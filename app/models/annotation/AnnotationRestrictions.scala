@@ -2,7 +2,8 @@ package models.annotation
 
 import models.user.User
 import models.security.Role
-
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 /**
  * Company: scalableminds
  * User: tmbo
@@ -21,6 +22,13 @@ class AnnotationRestrictions {
 }
 
 object AnnotationRestrictions {
+  def writeFor(u: User): Writes[AnnotationRestrictions] =
+    ((__ \'allowAccess).write[Boolean] and
+    (__ \'allowUpdate).write[Boolean] and
+    (__ \'allowFinish).write[Boolean] and
+    (__ \'allowDownload).write[Boolean])( ar =>
+      (ar.allowAccess(u), ar.allowUpdate(u), ar.allowFinish(u), ar.allowDownload(u)))
+
   def restrictEverything =
     new AnnotationRestrictions()
 

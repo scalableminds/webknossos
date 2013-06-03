@@ -79,6 +79,9 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
     else
       jsonError
 
+  def apply(json: JsObject) =
+    createResult(json)
+
   def apply(json: JsObject, messages: Seq[(String, String)]) =
     createResult(json ++ jsonMessages(messages))
 

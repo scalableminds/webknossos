@@ -64,7 +64,11 @@ trait TracingInformationProvider extends play.api.http.Status {
   }
 
   def withAnnotation[T](typ: AnnotationType, id: String)(f: AnnotationLike => Box[T])(implicit request: AuthenticatedRequest[_]): Future[Box[T]] = {
-    findAnnotation(typ, id).map(_.flatMap(f))
+    withAnnotation(AnnotationIdentifier(typ, id))(f)
+  }
+
+  def withAnnotation[T](annotationId: AnnotationIdentifier)(f: AnnotationLike => Box[T])(implicit request: AuthenticatedRequest[_]): Future[Box[T]] = {
+    findAnnotation(annotationId).map(_.flatMap(f))
   }
 
   def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: AuthenticatedRequest[_]): Future[Box[AnnotationLike]] = {
@@ -82,10 +86,10 @@ trait TracingInformationProvider extends play.api.http.Status {
     }
   }
 
-  def respondWithTracingInformation(annotationId: AnnotationIdentifier)(implicit request: AuthenticatedRequest[_]): Future[Box[JsObject]] = {
-    findAnnotation(annotationId).map(_.flatMap {
+  def respondWithTracingInformation(annotationId: AnnotationIdentifier)(implicit request: AuthenticatedRequest[_]): Future[Box[JsValue]] = {
+    withAnnotation(annotationId) {
       annotation =>
-        annotation.content.map(_.createTracingInformation())
-    })
+        Full(annotation.annotationInfo(request.user))
+    }
   }
 }

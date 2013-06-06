@@ -20,7 +20,7 @@ import play.libs.Akka._
 import models.security.Role
 import models.binary._
 import brainflight.binary._
-import brainflight.security.Secured
+import brainflight.security._
 import scala.concurrent.Future
 import brainflight.tools.geometry.Point3D
 import akka.pattern.AskTimeoutException
@@ -37,6 +37,7 @@ import play.api.i18n.Messages
 import braingames.image._
 import java.awt.image.BufferedImage
 import braingames.image.JPEGWriter
+import brainflight.security.AuthenticatedRequest
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 object BinaryData extends Controller with Secured {
@@ -94,7 +95,7 @@ object BinaryData extends Controller with Secured {
   def requestViaAjaxDebug(dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated { implicit request =>
     Async {
       for {
-        dataSet <- DataSet.findOneById(dataSetId) ?~ Messages("dataSet.notFound")
+        dataSet <- DataSet.findOneById(dataSetId, request.user) ?~ Messages("dataSet.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
       } yield {
         val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z), false)))
@@ -115,7 +116,7 @@ object BinaryData extends Controller with Secured {
       for {
         payload <- request.body.asBytes() ?~ Messages("binary.payload.notSupplied")
         message <- BinaryProtocol.parseAjax(payload) ?~ Messages("binary.payload.invalid")
-        dataSet <- DataSet.findOneById(dataSetId) ?~ Messages("dataSet.notFound")
+        dataSet <- DataSet.findOneById(dataSetId, request.user) ?~ Messages("dataSet.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
       } yield {
         message match {
@@ -133,7 +134,7 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def respondeWithImage(dataSetName: String, dataLayerName: String, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = {
+  def respondeWithImage(dataSetName: String, dataLayerName: String, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: AuthenticatedRequest[_]) = {
     Async {
       val cubeSize = 128
       val params = ImageCreatorParameters(
@@ -141,7 +142,7 @@ object BinaryData extends Controller with Secured {
         slideHeight = cubeSize,
         imagesPerRow = imagesPerRow)
       for {
-        dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
+        dataSet <- DataSet.findOneByName(dataSetName, request.user) ?~ Messages("dataSet.notFound")
         dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
       } yield {
         val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z), false)))
@@ -171,7 +172,7 @@ object BinaryData extends Controller with Secured {
   def requestViaWebsocket(dataSetId: String, dataLayerName: String, cubeSize: Int) = AuthenticatedWebSocket[Array[Byte]]() { user =>
 
     request =>
-      val dataSetOpt = DataSet.findOneById(dataSetId)
+      val dataSetOpt = DataSet.findOneById(dataSetId, user)
       var channelOpt: Option[Channel[Array[Byte]]] = None
 
       val output = Concurrent.unicast[Array[Byte]](

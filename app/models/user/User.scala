@@ -22,6 +22,7 @@ case class User(
     lastName: String,
     verified: Boolean = false,
     pwdHash: String = "",
+    teams: List[String],
     loginType: String = "local",
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: Set[String] = Set.empty,
@@ -115,7 +116,7 @@ object User extends BasicDAO[User]("users") {
     } yield user
 
   def create(email: String, firstName: String, lastName: String, password: String, isVerified: Boolean): User = {
-    val u = User(email, firstName, lastName, false, hashPassword(password))
+    val u = User(email, firstName, lastName, false, hashPassword(password), Nil)
     
     if(isVerified)
       User.insertOne(u.verify)
@@ -124,6 +125,6 @@ object User extends BasicDAO[User]("users") {
   }
 
   def createRemote(email: String, firstName: String, lastName: String, loginType: String) = {
-    insertOne(User(email, firstName, lastName, true, "", loginType = loginType))
+    insertOne(User(email, firstName, lastName, true, "", Nil, loginType = loginType))
   }
 }

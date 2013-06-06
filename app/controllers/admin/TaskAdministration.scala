@@ -48,9 +48,9 @@ object TaskAdministration extends Controller with Secured{
         project => project == "" || Project.findOneByName(project).isDefined)))
     .fill(("", Experience.empty, 100, 10, ""))
 
-  val taskMapping = tuple(
+  def taskMapping(user: User) = tuple(
     "dataSet" -> text.verifying("dataSet.notFound",
-      name => DataSet.findOneByName(name).isDefined),
+      name => DataSet.findOneByName(name, user).isDefined),
     "taskType" -> text.verifying("taskType.notFound",
       task => TaskType.findOneById(task).isDefined),
     "start" -> mapping(
@@ -64,8 +64,8 @@ object TaskAdministration extends Controller with Secured{
     "project" -> text.verifying("project.notFound",
       project => project == "" || Project.findOneByName(project).isDefined))
 
-  val taskForm = Form(
-    taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "")
+  def taskForm(implicit request: AuthenticatedRequest[_]) = Form(
+    taskMapping(request.user)).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "")
 
   def list = Authenticated { implicit request =>
     Ok(html.admin.task.taskList(Task.findAllNonTrainings))
@@ -76,7 +76,7 @@ object TaskAdministration extends Controller with Secured{
     taskForm: Form[(String, String, Point3D, Experience, Int, Int, String)])(implicit request: AuthenticatedRequest[_]) =
     html.admin.task.taskCreate(
       TaskType.findAll,
-      DataSet.findAll,
+      DataSet.allAccessible(request.user),
       Experience.findAllDomains,
       Project.findAll,
       taskFromNMLForm,

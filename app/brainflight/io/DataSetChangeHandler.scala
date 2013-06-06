@@ -11,6 +11,7 @@ import braingames.util.JsonHelper._
 import play.api.libs.json._
 import models.binary._
 import braingames.util.ExtendedTypes
+import models.team.Team
 
 case class ImplicitLayerInfo(name: String, resolutions: List[Int])
 case class ExplicitLayerInfo(name: String, dataType: String)
@@ -158,7 +159,7 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
           zMax <- maxValueFromFiles(ys.listFiles())
         } yield {
           val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
-          DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, colorLayer = ColorLayer(supportedResolutions = resolutions))
+          DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, colorLayer = ColorLayer(supportedResolutions = resolutions), allowedTeams = List(Team.default.name))
         }
       }
     } else None

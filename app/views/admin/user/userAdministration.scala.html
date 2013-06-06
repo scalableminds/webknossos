@@ -1,10 +1,12 @@
-@(users: List[models.user.User], roles: List[models.security.Role], experiences: List[String])(implicit session: brainflight.view.AuthedSessionData)
+@(users: List[models.user.User], roles: List[models.security.Role], experiences: List[String], teams: List[models.team.Team])(implicit session: brainflight.view.AuthedSessionData)
 
 @import play.api.libs.json.Json
 
 @main(){
   <div id="user-administration" class="container wide">
-    
+    @teams.map{team =>
+        @team.name
+    }
     <h3> Users </h3> 
     <form method="post">
       @userTable(users)

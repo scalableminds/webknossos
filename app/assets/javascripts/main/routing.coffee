@@ -146,6 +146,9 @@ $ ->
 
       return
 
+    "admin.user.userAdministration" : ->
+
+      require ["multiselect"], -> 
 
     "admin.task.taskSelectionAlgorithm" : ->
 

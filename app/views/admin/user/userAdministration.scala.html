@@ -4,9 +4,11 @@
 
 @main(){
   <div id="user-administration" class="container wide">
-    @teams.map{team =>
-        @team.name
-    }
+	<select data-role="multiselect" multiple="multiple" >
+        @teams.map{team =>
+            <option value="@team.name">@team.name</option>
+        }
+    </select>
     <h3> Users </h3> 
     <form method="post">
       @userTable(users)

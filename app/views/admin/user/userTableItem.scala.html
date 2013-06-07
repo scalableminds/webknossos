@@ -13,6 +13,12 @@
 		@user.experiences.map{ experience =>
 			<span class="label">@experience._1 @experience._2</span>
 		}
+    </td>
+    <td>
+        @user.teams.map{ team =>
+            @team <br />
+        }
+    </td>
 	<td>
 		@if(user.verified) {
   		<i class="icon-ok"></i>

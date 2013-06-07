@@ -59,7 +59,7 @@ object UserAdministration extends Controller with Secured {
       if (!user.verified)
     } yield {
       Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-      user.update(_.verify.copy(teams = teams.toList))
+      user/*.update(_*/.verify.copy(teams = teams.toList)//)
     }
   }
 

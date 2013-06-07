@@ -105,7 +105,7 @@ trait TracingLike extends ContainsTracingInfo{
 object TracingLike {
   implicit object TracingLikeXMLWrites extends XMLWrites[TracingLike] {
     def writes(e: TracingLike) = {
-      (DataSet.findOneByName(e.dataSetName).map { dataSet =>
+      (DataSet.findInAllOneByName(e.dataSetName).map { dataSet =>
         <things>
           <parameters>
             <experiment name={ dataSet.name }/>

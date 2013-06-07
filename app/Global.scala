@@ -27,6 +27,7 @@ import brainflight.ActorSystems
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.util._
+import models.team.Team
 
 object Global extends GlobalSettings {
 
@@ -42,9 +43,10 @@ object Global extends GlobalSettings {
       InitialData.insertRoles
       InitialData.insertUsers
       InitialData.insertTaskAlgorithms
+      InitialData.insertTeams
     }
 
-    (DirectoryWatcher ? StartWatching("binaryData")).onComplete {
+    (DirectoryWatcher ? StartWatching(conf.getString("bindata.folder") getOrElse "binaryData")).onComplete {
       case Success(x) =>
         if (Play.current.mode == Mode.Dev) {
           BasicEvolution.runDBEvolution()
@@ -99,6 +101,7 @@ object InitialData {
         "Boy",
         true,
         brainflight.security.SCrypt.hashPassword("secret"),
+        List(models.team.Team.default.name),
         "local",
         UserConfiguration.defaultConfiguration,
         Set("user", "admin")))
@@ -111,6 +114,12 @@ object InitialData {
         """function simple(user, tasks){ 
           |  return tasks[0];
           |}""".stripMargin))
+    }
+  }
+  
+  def insertTeams() = {
+    if(Team.findAll.isEmpty) {
+      Team.insertOne(Team("Structure of Neocortical Circuits Group"))
     }
   }
 

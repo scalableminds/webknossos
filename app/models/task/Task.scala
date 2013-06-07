@@ -29,6 +29,7 @@ import play.api.Logger
 import models.user.Experience
 import models.tracing._
 import nml.Tree
+import models.binary.DataSet
 
 case class CompletionStatus(open: Int, inProgress: Int, completed: Int)
 
@@ -120,6 +121,10 @@ object Task extends BasicDAO[Task]("tasks") {
     findAssignableFor(user, shouldBeTraining = false)
   }
   
+  def isAllowedToView(t: Task, user: User) = {
+    t.tracingBase.map(base => DataSet.findOneByName(base.dataSetName, user).isDefined) getOrElse false
+  }
+  
   def findAssignableFor(user: User, shouldBeTraining: Boolean) = {
     val finishedTasks = Tracing.findFor(user, TracingType.Task).flatMap(_._task)
     val availableTasks =
@@ -129,7 +134,7 @@ object Task extends BasicDAO[Task]("tasks") {
         findAllAssignableNonTrainings
         
     availableTasks.filter(t =>
-      !finishedTasks.contains(t._id) && hasEnoughExperience(user, t))
+      !finishedTasks.contains(t._id) && hasEnoughExperience(user, t) && isAllowedToView(t, user))
   }
 
   def copyDeepAndInsert(source: Task, includeUserTracings: Boolean = true) = {

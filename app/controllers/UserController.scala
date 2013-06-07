@@ -35,7 +35,7 @@ object UserController extends Controller with Secured {
 
     val loggedTime = TimeTracking.loggedTime(user)
 
-    val dataSets = DataSet.findAll
+    val dataSets = DataSet.allAccessible(request.user)
 
     Ok(html.user.dashboard.dashboard(
       explorationalTracings,

@@ -54,7 +54,7 @@ object TracingController extends Controller with Secured with TracingInformation
   def createExplorational = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
     for {
       dataSetId <- postParameter("dataSetId") ?~ Messages("dataSet.notSupplied")
-      dataSet <- DataSet.findOneById(dataSetId) ?~ Messages("dataSet.notFound")
+      dataSet <- DataSet.findOneById(dataSetId, request.user) ?~ Messages("dataSet.notFound")
     } yield {
       val tracing = Tracing.createTracingFor(request.user, dataSet)
       Redirect(routes.TracingController.trace(tracing.id))
@@ -220,8 +220,8 @@ trait TracingInformationProvider extends play.api.http.Status with TracingRights
 
   import tracing.handler.TracingInformationHandler._
 
-  def createDataSetInformation(dataSetName: String) =
-    DataSet.findOneByName(dataSetName) match {
+  def createDataSetInformation(dataSetName: String)(implicit request: AuthenticatedRequest[_]) =
+    DataSet.findOneByName(dataSetName, request.user) match {
       case Some(dataSet) =>
         Json.obj(
           "dataSet" -> Json.obj(

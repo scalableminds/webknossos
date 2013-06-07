@@ -16,6 +16,8 @@ import net.liftweb.common._
 import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
 import models.tracing.Tracing
+import models.team.Team
+import play.api.Logger
 
 object UserAdministration extends Controller with Secured {
 
@@ -24,7 +26,7 @@ object UserAdministration extends Controller with Secured {
   def allUsers = User.findAll.sortBy(_.lastName.capitalize)
 
   def index = Authenticated { implicit request =>
-    Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains))
+    Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains, Team.findAll))
   }
 
   def logTime(userId: String, time: String, note: String) = Authenticated { implicit request =>
@@ -52,26 +54,28 @@ object UserAdministration extends Controller with Secured {
     }).asResult
   }
 
-  private def verifyUser(userId: String) = {
+  private def verifyUser(teams: Seq[String])(userId: String) = {
     for {
       user <- User.findOneById(userId) ?~ Messages("user.notFound")
       if (!user.verified)
     } yield {
       Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-      user.update(_.verify)
+      user.update(_.verify.copy(teams = teams.toList))
     }
   }
 
-  def verify(userId: String) = Authenticated { implicit request =>
+  def verify(userId: String) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    val teams = request.body.get("teams").getOrElse(Nil)
     for {
-      user <- verifyUser(userId) ?~ Messages("user.verifyFailed")
+      user <- verifyUser(teams)(userId) ?~ Messages("user.verifyFailed")
     } yield {
       JsonOk(html.admin.user.userTableItem(user), Messages("user.verified", user.name))
     }
   }
 
   def verifyBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    bulkOperation(verifyUser)(user => Messages("user.verified", user.name))
+    val teams = request.body.get("teams").getOrElse(Nil)
+    bulkOperation(verifyUser(teams))(user => Messages("user.verified", user.name))
   }
 
   private def deleteUser(userId: String) = {
@@ -98,6 +102,7 @@ object UserAdministration extends Controller with Secured {
     for {
       user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
+      Logger.warn("Added role: " + roleName)
       user.update(_.addRole(roleName))
     }
   }

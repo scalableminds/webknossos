@@ -1,70 +1,68 @@
-@(users: List[models.user.User], roles: List[models.security.Role], experiences: List[String])(implicit session: brainflight.view.AuthedSessionData)
+@(users: List[models.user.User], roles: List[models.security.Role], experiences: List[String], teams: List[models.team.Team])(implicit session: brainflight.view.AuthedSessionData)
 
 @import play.api.libs.json.Json
 
 @main(){
   <div id="user-administration" class="container wide">
-    
-    <h3> Users </h3> 
+
+    <div id="single-teampicker" style="display:none">
+      <select name="teams" multiple="multiple" class="multiselect">
+        @teams.map{team =>
+            <option value="@team.name">@team.name</option>
+        }
+      </select>
+      <a class="btn btn-primary popover-hide">Save</a>
+      <button type="button popover-hide" class="btn">Cancel</button>
+    </div>
+
+    <h3> Users </h3>
     <form method="post">
       @userTable(users)
 
       <div class="form-actions navbar-fixed-bottom">
 
-        <div class="form-inline">
+        <div class="form-horizontal">
 
           <div class="btn-group dropup">
             <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
               Bulk Actions
               <span class="caret"></span>
             </a>
-            <ul class="dropdown-menu">
+            <ul class="dropdown-menu" id="bulk-actions">
               <li>
-                <a @ajaxAttributes(controllers.admin.routes.UserAdministration.verifyBulk, "submit,replace-table=#user-administration-table")> 
+                <a data-template="teampicker">
                   <i class="icon-ok"></i> Verify
                 </a>
               </li>
               <li>
-                <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteBulk, "submit,confirm,replace-table=#user-administration-table")>
+                <a data-template="deletepicker">
                   <i class="icon-trash"></i> Delete
                 </a>
-              </li> 
+              </li>
+              <li>
+                <a data-template="experiencepicker">
+                  <i class="icon-trophy"></i> Change Experience
+                </a>
+              </li>
+              <li>
+                <a data-template="rolepicker">
+                  <i class="icon-tags"></i> Modify Roles
+                </a>
+              </li>
             </ul>
           </div>
 
-          <div class="divider-vertical"></div>
-
-          <fieldset data-validation-group>
-            <select name="role" class="input-medium" required data-invalid-message="Please select a role.">
-              <option value="">Modify roles...</option>
-              @roles.map{ role =>
-                <option value="@role.name">@role.name</option>
-              }
-            </select>
-            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.addRoleBulk, "submit,replace-table=#user-administration-table") class="btn">
-              Add Role
-            </a>
-            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteRoleBulk, "submit,replace-table=#user-administration-table") class="btn">
-              Remove Role
-            </a>
-          </fieldset>
-
-          <div class="divider-vertical"></div>
-
-          <fieldset data-validation-group>
-            <input type="text" class="input-small" name="experience-domain" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" required data-invalid-message="Please enter a experience domain.">
-            <input type="number" class="input-small" name="experience-value" value="0" required data-invalid-message="Please specify a experience value.">
-
-            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.increaseExperienceBulk, "submit,replace-table=#user-administration-table") class="btn">
-              Increase Experience
-            </a>
-            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.setExperienceBulk, "submit,replace-table=#user-administration-table") class="btn">
-              Set Experience
-            </a>
-            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteExperienceBulk, "confirm,submit,replace-table=#user-administration-table") class="btn">
-              Delete Experience
-            </a>
-          </fieldset>
+          <div class="modal hide fade">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+              <h3></h3>
+            </div>
+            <div class="modal-body">
+            </div>
+            <div class="modal-footer">
+              <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+            </div>
+          </div>
 
         </div>
 
@@ -73,6 +71,94 @@
       </div>
 
     </form>
+
+    <div id="modal-templates">
+      <div id="teampicker" data-header="Assign users to Teams" style="display:none">
+        <fieldset data-validation-group>
+          <div class="control-group">
+            <label class="control-label" for="teams">Teams</label>
+            <div class="controls">
+              <select name="teams" multiple="multiple" class="multiselect">
+                @teams.map{team =>
+                    <option value="@team.name">@team.name</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="controls">
+              <a @ajaxAttributes(controllers.admin.routes.UserAdministration.verifyBulk, "submit,replace-table=#user-administration-table")class="btn btn-primary modal-hide">Save</a>
+            </div>
+          </div>
+
+        </fieldset>
+      </div>
+
+      <div id="deletepicker" data-header="Do you really want to delete these users?" style="display:none">
+        <fieldset data-validation-group>
+          <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteBulk, "submit,replace-table=#user-administration-table") class="btn btn-danger modal-hide" >Delete</a>
+        </fieldset>
+      </div>
+
+      <div id="rolepicker" data-header="Modify Roles" style="display:none">
+        <fieldset data-validation-group>
+          <div class="control-group">
+            <label class="control-label" for="role">Role</label>
+            <div class="controls">
+              <select name="role" class="input-medium" required data-invalid-message="Please select a role.">
+                <option value="">Modify roles...</option>
+                @roles.map{ role =>
+                  <option value="@role.name">@role.name</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <div class="control-group">
+            <div class="controls">
+              <a @ajaxAttributes(controllers.admin.routes.UserAdministration.addRoleBulk, "submit,replace-table=#user-administration-table") class="btn modal-hide">
+                Add Role
+              </a>
+              <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteRoleBulk, "submit,replace-table=#user-administration-table") class="btn modal-hide">
+                Remove Role
+              </a>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <div id="experiencepicker" data-header="Change Experience" style="display:none">
+        <fieldset data-validation-group>
+          <div class="control-group">
+            <label class="control-label" for="experience-domain">Domain</label>
+            <div class="controls">
+              <input type="text" class="input-small" name="experience-domain" data-source='@Json.stringify(Json.toJson(experiences))' data-provide="typeahead" autocomplete="off" required data-invalid-message="Please enter a experience domain.">
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label" for="experience-value">Value</label>
+            <div class="controls">
+              <input type="number" class="input-small" name="experience-value" value="0" required data-invalid-message="Please specify a experience value.">
+            </div>
+          </div>
+
+          <div class="btn-group">
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.increaseExperienceBulk, "submit,replace-table=#user-administration-table") class="btn modal-hide">
+            Increase Experience
+            </a>
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.setExperienceBulk, "submit,replace-table=#user-administration-table") class="btn modal-hide">
+              Set Experience
+            </a>
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteExperienceBulk, "submit,replace-table=#user-administration-table") class="btn modal-hide">
+              Delete Experience
+            </a>
+          </div>
+
+        </fieldset>
+      </div>
+
+    </div>
 
   </div>
 }

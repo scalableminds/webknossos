@@ -17,6 +17,7 @@ import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
 import models.tracing.Tracing
 import models.team.Team
+import play.api.Logger
 
 object UserAdministration extends Controller with Secured {
 
@@ -104,6 +105,7 @@ object UserAdministration extends Controller with Secured {
     for {
       user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
+      Logger.warn("Added role: " + roleName)
       user.update(_.addRole(roleName))
     }
   }

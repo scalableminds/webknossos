@@ -125,7 +125,7 @@ $ ->
         $popovers = $("a[rel=popover]")
         template = """
           <form class="form-inline">
-          #{$("#teampicker").html()}
+          #{$("#single-teampicker").html()}
           </form>
           """
 
@@ -139,18 +139,34 @@ $ ->
           url = $this.data("url")
           rowId = $this.closest("tr").data("id")
 
-          $(".popover")
-            .find("a")
-              .attr("href", url)
-              .attr("data-ajax", "method=POST,submit,replace=##{rowId}")
+          $(".popover").find("a")
+            .attr("href", url)
+            .attr("data-ajax", "method=POST,submit,replace=##{rowId}")
 
-          $(".popover").find(".multiselect").multiselect(
+          $(".popover").find(".multiselect")
+            .multiselect(
               buttonWidth: "200px"
             )
 
           $(".popover").find(".popover-hide").on "click", -> $this.popover("hide")
 
-        return
+
+      $("#bulk-actions a").on "click", ->
+
+        $this = $(@)
+        templateId = $this.data("template")
+        template = $("##{templateId}")
+        title = template.data("header")
+
+        $modal = $(".modal")
+
+        $modal.find(".modal-body").html(template.html())
+        $modal.find(".modal-header h3").text(title)
+        $modal.find("a").on "click", -> $modal.modal("hide")
+
+        $modal.modal("show")
+
+      return
 
     "admin.task.taskSelectionAlgorithm" : ->
 

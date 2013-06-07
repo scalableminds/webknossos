@@ -60,13 +60,13 @@ object UserAdministration extends Controller with Secured {
       if (!user.verified)
     } yield {
       Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
-      user/*.update(_*/.verify.copy(teams = teams.toList)//)
+      user.update(_.verify.copy(teams = teams.toList))
     }
   }
 
   def verify(userId: String) = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+    val teams = request.body.get("teams").getOrElse(Nil)
     for {
-      teams <- request.body.get("teams") ?~ Messages("user.verifyFailed")
       user <- verifyUser(teams)(userId) ?~ Messages("user.verifyFailed")
     } yield {
       JsonOk(html.admin.user.userTableItem(user), Messages("user.verified", user.name))
@@ -74,11 +74,8 @@ object UserAdministration extends Controller with Secured {
   }
 
   def verifyBulk = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
-    for {
-      teams <- request.body.get("teams") ?~ Messages("user.verifyFailed")
-    } yield {
-      bulkOperation(verifyUser(teams))(user => Messages("user.verified", user.name))
-    }
+    val teams = request.body.get("teams").getOrElse(Nil)
+    bulkOperation(verifyUser(teams))(user => Messages("user.verified", user.name))
   }
 
   private def deleteUser(userId: String) = {

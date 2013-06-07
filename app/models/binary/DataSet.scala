@@ -67,7 +67,6 @@ object DataSet {
   }
 
   def hasAccess(user: User)(dataSet: DataSet) = {
-    println("user: " + user.teams + " DataSets: " + dataSet.allowedTeams)
     dataSet.allowedTeams.isEmpty || dataSet.allowedTeams.find(user.teams.contains).isDefined
   }
 

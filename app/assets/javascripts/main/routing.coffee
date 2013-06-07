@@ -122,6 +122,8 @@ $ ->
 
       require ["multiselect"], ->
 
+        $(".multiselect").multiselect()
+
         $popovers = $("a[rel=popover]")
         template = """
           <form class="form-inline">
@@ -162,7 +164,7 @@ $ ->
 
         $modal.find(".modal-body").html(template.html())
         $modal.find(".modal-header h3").text(title)
-        $modal.find("a").on "click", -> $modal.modal("hide")
+        $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
 
         $modal.modal("show")
 

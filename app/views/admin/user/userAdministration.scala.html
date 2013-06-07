@@ -41,7 +41,7 @@
               </li>
               <li>
                 <a data-template="experiencepicker">
-                  <i class="icon-plus"></i> Set Experience
+                  <i class="icon-trophy"></i> Change Experience
                 </a>
               </li>
               <li>
@@ -75,18 +75,28 @@
     <div id="modal-templates">
       <div id="teampicker" data-header="Assign users to Teams" style="display:none">
         <fieldset data-validation-group>
-          <select name="teams" multiple="multiple" class="multiselect">
-            @teams.map{team =>
-                <option value="@team.name">@team.name</option>
-            }
-          </select>
-          <a @ajaxAttributes(controllers.admin.routes.UserAdministration.verifyBulk, "submit,replace-table=#user-administration-table")class="btn btn-primary ">Save</a>
+          <div class="control-group">
+            <label class="control-label" for="teams">Teams</label>
+            <div class="controls">
+              <select name="teams" multiple="multiple" class="multiselect">
+                @teams.map{team =>
+                    <option value="@team.name">@team.name</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="controls">
+              <a @ajaxAttributes(controllers.admin.routes.UserAdministration.verifyBulk, "submit,replace-table=#user-administration-table")class="btn btn-primary modal-hide">Save</a>
+            </div>
+          </div>
+
         </fieldset>
       </div>
 
       <div id="deletepicker" data-header="Do you really want to delete these users?" style="display:none">
         <fieldset data-validation-group>
-          <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteBulk, "submit,replace-table=#user-administration-table") class="btn btn-danger" >Delete</a>
+          <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteBulk, "submit,replace-table=#user-administration-table") class="btn btn-danger modal-hide" >Delete</a>
         </fieldset>
       </div>
 
@@ -106,10 +116,10 @@
 
           <div class="control-group">
             <div class="controls">
-              <a @ajaxAttributes(controllers.admin.routes.UserAdministration.addRoleBulk, "submit,replace-table=#user-administration-table") class="btn">
+              <a @ajaxAttributes(controllers.admin.routes.UserAdministration.addRoleBulk, "submit,replace-table=#user-administration-table") class="btn modal-hide">
                 Add Role
               </a>
-              <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteRoleBulk, "submit,replace-table=#user-administration-table") class="btn">
+              <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteRoleBulk, "submit,replace-table=#user-administration-table") class="btn modal-hide">
                 Remove Role
               </a>
             </div>
@@ -117,7 +127,7 @@
         </fieldset>
       </div>
 
-      <div id="experiencepicker" data-header="Set new Experience" style="display:none">
+      <div id="experiencepicker" data-header="Change Experience" style="display:none">
         <fieldset data-validation-group>
           <div class="control-group">
             <label class="control-label" for="experience-domain">Domain</label>
@@ -134,13 +144,13 @@
           </div>
 
           <div class="btn-group">
-            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.increaseExperienceBulk, "submit,replace-table=#user-administration-table") class="btn">
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.increaseExperienceBulk, "submit,replace-table=#user-administration-table") class="btn modal-hide">
             Increase Experience
             </a>
-            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.setExperienceBulk, "submit,replace-table=#user-administration-table") class="btn">
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.setExperienceBulk, "submit,replace-table=#user-administration-table") class="btn modal-hide">
               Set Experience
             </a>
-            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteExperienceBulk, "confirm,submit,replace-table=#user-administration-table") class="btn">
+            <a @ajaxAttributes(controllers.admin.routes.UserAdministration.deleteExperienceBulk, "submit,replace-table=#user-administration-table") class="btn modal-hide">
               Delete Experience
             </a>
           </div>

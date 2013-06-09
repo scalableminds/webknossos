@@ -6,7 +6,7 @@ import PlayProject._
 object ApplicationBuild extends Build {
   val conf = ConfigFactory.parseFile(new File("conf/application.conf"))
 
-  val appName    = conf.getString("application.name").toLowerCase
+  val appName = conf.getString("application.name").toLowerCase
   val appVersion = "%s.%s.%s".format(
     conf.getString("application.major"),
     conf.getString("application.minor"),
@@ -20,7 +20,7 @@ object ApplicationBuild extends Build {
     "com.novus" %% "salat-core" % "1.9.2-SNAPSHOT",
     "com.restfb" % "restfb" % "1.6.11",
     "commons-io" % "commons-io" % "1.3.2",
-    "com.typesafe.akka" %%  "akka-testkit" % "2.1.0",
+    "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
     "com.typesafe.akka" %% "akka-agent" % "2.1.0",
     "com.typesafe.akka" %% "akka-remote" % "2.1.0",
     // Jira integration
@@ -37,21 +37,21 @@ object ApplicationBuild extends Build {
     "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/",
     "mandubian" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/"
   )
-  
+
   val shellgameDependencies = Seq()
-  
+
   val stackrendererDependencies = Seq(
-     "org.kamranzafar" % "jtar" % "2.2",
-     "com.amazonaws" % "aws-java-sdk" % "1.3.32")
-  
+    "org.kamranzafar" % "jtar" % "2.2",
+    "com.amazonaws" % "aws-java-sdk" % "1.3.32")
+
   val isoshaderDependencies = Seq()
-  
+
   lazy val dataStoreDependencies = Seq(
     "org.scala-lang" % "scala-reflect" % "2.10.0",
     "com.sun.jersey" % "jersey-client" % "1.8",
     "com.sun.jersey" % "jersey-core" % "1.8",
-    "com.typesafe.akka" %% "akka-remote" % "2.1.0") 
-    
+    "com.typesafe.akka" %% "akka-remote" % "2.1.0")
+
   lazy val braingamesDependencies = Seq(
     "play" %% "play-json" % "2.2-SNAPSHOT",
     "commons-io" % "commons-io" % "1.3.2",
@@ -60,28 +60,28 @@ object ApplicationBuild extends Build {
     "com.typesafe.akka" %% "akka-agent" % "2.1.0",
     "org.apache.commons" % "commons-email" % "1.3.1",
     "org.apache.commons" % "commons-lang3" % "3.1",
-    "com.typesafe.akka" %% "akka-remote" % "2.1.0") 
-  
+    "com.typesafe.akka" %% "akka-remote" % "2.1.0")
+
   lazy val braingamesUtil: Project = Project("braingames-util", file("modules") / "braingames-util").settings(
     libraryDependencies ++= braingamesDependencies,
     resolvers ++= dependencyResolvers,
     scalaVersion := "2.10.0",
     offline := true
   )
-  
+
   lazy val braingamesBinary: Project = Project("braingames-binary", file("modules") / "braingames-binary").settings(
     libraryDependencies ++= braingamesDependencies,
     resolvers ++= dependencyResolvers,
     scalaVersion := "2.10.0",
     offline := true
   ).dependsOn(braingamesUtil).aggregate(braingamesUtil)
-    
+
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     coffeescriptOptions := Seq(/*"minify",*/ "native", "coffee -p"),
     //requireJs := Seq("main"),
-    //requireJsShim += "main.js"
+    //requireJsShim += "main.js",
     resolvers ++= dependencyResolvers,
     offline := true
     //playAssetsDirectories += file("data")
@@ -93,8 +93,8 @@ object ApplicationBuild extends Build {
     resolvers ++= dependencyResolvers,
     coffeescriptOptions := Seq("native", "coffee -p"),
     playAssetsDirectories ++= Seq(
-        file("modules") / "shellgame" / "shellgame-assets",
-        file("data")
+      file("modules") / "shellgame" / "shellgame-assets",
+      file("data")
     )
   ).dependsOn(oxalis).aggregate(oxalis)
 
@@ -104,7 +104,7 @@ object ApplicationBuild extends Build {
     coffeescriptOptions := Seq("native", "coffee -p"),
     scalaVersion := "2.10.0"
   ).aggregate(oxalis)
-  
+
   lazy val levelcreator = play.Project("levelcreator", "0.1", Seq(), path = file("modules") / "levelcreator").settings(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
@@ -112,11 +112,11 @@ object ApplicationBuild extends Build {
     // offline := true,
     coffeescriptOptions := Seq("native", "coffee -p")
   ).dependsOn(oxalis)
-  
+
   lazy val stackrenderer = play.Project("stackrenderer", "0.1", stackrendererDependencies, path = file("modules") / "stackrenderer").settings(
     resolvers ++= dependencyResolvers
-  ).dependsOn(levelcreator).aggregate(levelcreator)  
-  
+  ).dependsOn(levelcreator).aggregate(levelcreator)
+
   lazy val isoshader = play.Project("isoshader", "0.1", isoshaderDependencies, path = file("modules") / "isoshader").settings(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",

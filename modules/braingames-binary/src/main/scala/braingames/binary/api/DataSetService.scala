@@ -1,6 +1,6 @@
 package braingames.binary.api
 
-import braingames.binary.models.{DataSetSettings, DataSetRepository, DataSet}
+import braingames.binary.models.{DataLayer, DataSetSettings, DataSetRepository, DataSet}
 import java.util.UUID
 import com.typesafe.config.Config
 import braingames.geometry.Point3D
@@ -30,11 +30,16 @@ trait DataSetService {
 
   def createUserDataSet(baseDataSet: DataSet): DataSet = {
     val name = userDataSetName()
+    val segmentationLayer = DataLayer(
+      DataLayer.SEGMENTATION.name,
+      None,
+      fallback = Some(baseDataSet.name))
+
     val dataSet = DataSet(
       name = name,
       baseDir = userDataSetFolder(name),
       scale = baseDataSet.scale,
-      fallback = Some(baseDataSet.name)
+      dataLayers = List(segmentationLayer)
     )
     val baseFolder = new File(dataSet.baseDir)
     baseFolder.mkdirs()

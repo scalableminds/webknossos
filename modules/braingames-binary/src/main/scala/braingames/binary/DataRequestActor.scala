@@ -151,7 +151,7 @@ class DataRequestActor(
     val sections = Stream(layer.sections.filter { section =>
       requestedLayer.section.isEmpty || requestedLayer.section == section.sectionId
     }: _*).append {
-      Await.result(dataSet.fallback.map(dataSetRepository.findByName).getOrElse(Future.successful(None)).map(_.flatMap { d =>
+      Await.result(layer.fallback.map(dataSetRepository.findByName).getOrElse(Future.successful(None)).map(_.flatMap { d =>
         d.dataLayer(requestedLayer.typ).map { fallbackLayer =>
           if (layer.isCompatibleWith(fallbackLayer))
             fallbackLayer.sections

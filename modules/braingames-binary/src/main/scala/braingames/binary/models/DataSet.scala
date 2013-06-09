@@ -11,15 +11,13 @@ import java.io.File
 case class DataSetSettings(
   name: String,
   scale: Scale,
-  priority: Option[Int],
-  fallback: Option[String])
+  priority: Option[Int])
 
 case class DataSet(
   name: String,
   baseDir: String,
   priority: Int = 0,
   scale: Scale,
-  fallback: Option[String] = None,
   dataLayers: List[DataLayer] = Nil) {
 
   def dataLayer(typ: String) =
@@ -61,8 +59,7 @@ object DataSetSettings extends SettingsFile {
   def fromDataSet(dataSet: DataSet) = DataSetSettings(
     dataSet.name,
     dataSet.scale,
-    Some(dataSet.priority),
-    dataSet.fallback
+    Some(dataSet.priority)
   )
 
   def writeToFolder(dataSet: DataSet, folder: File) = {

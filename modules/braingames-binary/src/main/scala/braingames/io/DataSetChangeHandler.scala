@@ -118,7 +118,7 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
     } yield {
       println("Found Layer: " + settings)
       val sections = extractSections(layer, dataSetPath).toList
-      DataLayer(settings.typ, settings.flags, settings.`class`, sections)
+      DataLayer(settings.typ, settings.flags, settings.`class`, settings.fallback, sections)
     }
   }
 
@@ -130,8 +130,7 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
             settings.name,
             folder.getAbsolutePath(),
             settings.priority getOrElse 0,
-            settings.scale,
-            settings.fallback)
+            settings.scale)
         case _ =>
           DataSet(folder.getName, folder.getAbsolutePath, 0, Scale.default)
       }

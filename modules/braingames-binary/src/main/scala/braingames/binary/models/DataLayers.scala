@@ -21,21 +21,22 @@ trait DataLayerLike {
     this.bytesPerElement == other.bytesPerElement
 
   def elementClassToSize(elementClass: String): Int = elementClass match {
-    case "uint8"  => 8
+    case "uint8" => 8
     case "uint16" => 16
     case "uint32" => 32
     case "uint64" => 64
-    case _        => throw new IllegalArgumentException(s"illegal element class ($elementClass) for DataLayer")
+    case _ => throw new IllegalArgumentException(s"illegal element class ($elementClass) for DataLayer")
   }
 }
 
 case class DataLayerId(typ: String, section: Option[String] = None)
 
 case class DataLayer(
-    typ: String,
-    flags: Option[List[String]],
-    elementClass: String = "uint8",
-    sections: List[DataLayerSection] = Nil) extends DataLayerLike {
+  typ: String,
+  flags: Option[List[String]],
+  elementClass: String = "uint8",
+  fallback: Option[String] = None,
+  sections: List[DataLayerSection] = Nil) extends DataLayerLike {
 
   val interpolator = DataLayer.interpolationFromString(typ)
 
@@ -44,20 +45,30 @@ case class DataLayer(
   val maxCoordinates = BoundingBox.hull(sections.map(_.hull))
 }
 
-object DataLayer {
 
+case class DataLayerType(name: String, interpolation: Interpolation)
+
+object DataLayer {
+  val COLOR =
+    DataLayerType("color", TrilerpInterpolation)
+  val SEGMENTATION =
+    DataLayerType("segmentation", NearestNeighborInterpolation)
+  val CLASSIFICATION =
+    DataLayerType("classification", NearestNeighborInterpolation)
+
+  val supportedLayers = List(
+    COLOR, SEGMENTATION, CLASSIFICATION
+  )
 
   val defaultInterpolation = NearestNeighborInterpolation
 
-  def interpolationFromString(interpolationTyp: String) = {
-    interpolationTyp match {
-      case "color" =>
-        TrilerpInterpolation
-      case "segmentation" | "classification" =>
-        NearestNeighborInterpolation
-      case s =>
-        System.err.println(s"Invalid interpolation string: $s. Using default interpolation")
-        defaultInterpolation
+  def interpolationFromString(layerType: String) = {
+    supportedLayers
+      .find(_.name == layerType)
+      .map(_.interpolation)
+      .getOrElse {
+      System.err.println(s"Invalid interpolation string: $layerType. Using default interpolation")
+      defaultInterpolation
     }
   }
 }

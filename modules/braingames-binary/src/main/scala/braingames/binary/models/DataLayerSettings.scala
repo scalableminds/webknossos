@@ -12,7 +12,8 @@ import java.io.File
 case class DataLayerSettings(
   typ: String,
   `class`: String,
-  flags: Option[List[String]])
+  flags: Option[List[String]],
+  fallback: Option[String])
 
 object DataLayerSettings extends SettingsFile {
   val dataLayerSettingsReads = Json.reads[DataLayerSettings]

@@ -7,33 +7,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import braingames.binary.models._
 import braingames.geometry.BoundingBox
-
-case class DataLayerSectionSettings(
-  sectionId: Option[Int],
-  bbox: List[List[Int]],
-  resolutions: List[Int])
-
-object DataLayerSection {
-  val dataLayerSectionSettingsReads = Json.reads[DataLayerSectionSettings]
-}
-
-case class DataLayerSection(
-  baseDir: String,
-  sectionId: Option[String],
-  resolutions: List[Int],
-  hull: BoundingBox) extends DataLayerSectionLike
-
-trait DataLayerSectionLike {
-  val hull: BoundingBox
-  val baseDir: String
-  val sectionId: Option[String]
-
-  /**
-   * Checks if a point is inside the whole data set boundary.
-   */
-  def doesContainBlock(point: Point3D, blockLength: Int) =
-    hull.contains(point.scale((v, _) => v * blockLength))
-}
+import java.io.File
 
 trait DataLayerLike {
   val sections: List[DataLayerSectionLike]
@@ -57,27 +31,21 @@ trait DataLayerLike {
 
 case class DataLayerId(typ: String, section: Option[String] = None)
 
-case class DataLayerSettings(
-  typ: String,
-  `class`: String,
-  flags: Option[List[String]])
-
 case class DataLayer(
     typ: String,
     flags: Option[List[String]],
     elementClass: String = "uint8",
     sections: List[DataLayerSection] = Nil) extends DataLayerLike {
-  
+
   val interpolator = DataLayer.interpolationFromString(typ)
 
   val resolutions = sections.flatMap(_.resolutions).distinct
-  
+
   val maxCoordinates = BoundingBox.hull(sections.map(_.hull))
 }
 
 object DataLayer {
 
-  val dataLayerSettingsReads = Json.reads[DataLayerSettings]
 
   val defaultInterpolation = NearestNeighborInterpolation
 

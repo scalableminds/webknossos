@@ -38,7 +38,7 @@ POST     /assert                                       controllers.AssertionCont
 GET      /assert                                       controllers.AssertionController.list
 
 # SkeletonTracing Stuff
-POST     /annotations/createExplorational              controllers.AnnotationController.createExplorational(contentType: String)
+POST     /annotations/createExplorational              controllers.AnnotationController.createExplorational
 PUT      /annotations/:typ/:id                         controllers.AnnotationController.updateWithJson( typ: String, id: String, version: Int )
 POST     /annotations/:typ/:id/name                    controllers.AnnotationController.nameExplorativeAnnotation( typ: String, id: String)
 GET      /annotations/:typ/:id/finishAndRedirect       controllers.AnnotationController.finishWithRedirect( typ: String, id: String )

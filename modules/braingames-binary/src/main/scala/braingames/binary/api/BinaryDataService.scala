@@ -33,7 +33,7 @@ import braingames.binary.models.DataLayerId
 import braingames.binary.CachedBlock
 import net.liftweb.common.Box
 
-trait BinaryDataService {
+trait BinaryDataService extends DataSetService{
   implicit def system: ActorSystem
 
   lazy implicit val executor = system.dispatcher

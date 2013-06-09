@@ -1,7 +1,7 @@
 package braingames.io
 
 import java.io.File
-import braingames.geometry.Point3D
+import braingames.geometry.{Scale, Point3D, Vector3D, BoundingBox}
 import braingames.util.ExtendedTypes.ExtendedString
 import braingames.util.JsonHelper._
 import play.api.libs.json._
@@ -9,8 +9,6 @@ import braingames.util.ExtendedTypes
 import braingames.binary.models._
 import java.nio.file._
 import braingames.binary.Cuboid
-import braingames.geometry.Vector3D
-import braingames.geometry.BoundingBox
 
 case class ImplicitLayerInfo(name: String, resolutions: List[Int])
 case class ExplicitLayerInfo(name: String, dataType: String)
@@ -86,32 +84,6 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
     }
   }
 
-  def extractSettingsFromFile[T](file: File, settingsReads: Reads[T]): Option[T] = {
-    if (file.isFile) {
-      JsonFromFile(file)
-        .validate(settingsReads)
-        .asOpt
-    } else None
-  }
-
-  def layerSectionSettingsFromFile(f: File): Option[DataLayerSectionSettings] = {
-    extractSettingsFromFile(
-      new File(f.getPath + "/section.json"),
-      DataLayerSection.dataLayerSectionSettingsReads)
-  }
-
-  def dataSetSettingsFromFile(f: File): Option[DataSetSettings] = {
-    extractSettingsFromFile(
-      new File(f.getPath + "/settings.json"),
-      DataSet.dataSetSettingsReads)
-  }
-
-  def layerSettingsFromFile(f: File): Option[DataLayerSettings] = {
-    extractSettingsFromFile(
-      new File(f.getPath + "/layer.json"),
-      DataLayer.dataLayerSettingsReads)
-  }
-
   def extractSections(base: File, dataSetPath: String): Iterable[DataLayerSection] = {
     val sectionSettingsMap = extractSectionSettings(base)
     sectionSettingsMap.map {
@@ -131,7 +103,7 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
       if (depth > maxRecursiveLayerDepth) {
         List()
       } else {
-        layerSectionSettingsFromFile(path).map(path.getAbsolutePath() -> _) ::
+        DataLayerSectionSettings.fromFile(path).map(path.getAbsolutePath() -> _) ::
           listDirectories(path).toList.flatMap(d => extract(d, depth + 1))
       }
     }
@@ -142,7 +114,7 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
   def extractLayers(file: File, dataSetPath: String) = {
     for {
       layer <- listDirectories(file).toList
-      settings <- layerSettingsFromFile(layer)
+      settings <- DataLayerSettings.fromFile(layer)
     } yield {
       println("Found Layer: " + settings)
       val sections = extractSections(layer, dataSetPath).toList
@@ -150,20 +122,21 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
     }
   }
 
-  def dataSetFromFile(file: File): Option[DataSet] = {
-    if (file.isDirectory) {
-      val dataSet: DataSet = dataSetSettingsFromFile(file) match {
+  def dataSetFromFile(folder: File): Option[DataSet] = {
+    if (folder.isDirectory) {
+      val dataSet: DataSet = DataSetSettings.readFromFolder(folder) match {
         case Some(settings) =>
           DataSet(
             settings.name,
-            file.getAbsolutePath(),
+            folder.getAbsolutePath(),
             settings.priority getOrElse 0,
+            settings.scale,
             settings.fallback)
         case _ =>
-          DataSet(file.getName, file.getAbsolutePath)
+          DataSet(folder.getName, folder.getAbsolutePath, 0, Scale.default)
       }
 
-      val layers = extractLayers(file, file.getAbsolutePath())
+      val layers = extractLayers(folder, folder.getAbsolutePath())
 
       Some(dataSet.copy(dataLayers = layers))
     } else

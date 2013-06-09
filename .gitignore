@@ -10,7 +10,7 @@ logs/
 .history
 target/
 binarydata/
-binaryData/
+userBinaryData/
 binaryData
 data/
 boot/

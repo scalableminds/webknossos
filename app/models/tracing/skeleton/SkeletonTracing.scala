@@ -19,7 +19,6 @@ case class SkeletonTracing(
   branchPoints: List[BranchPoint],
   timestamp: Long,
   activeNodeId: Int,
-  scale: Scale,
   editPosition: Point3D,
   comments: List[Comment] = Nil,
   settings: AnnotationSettings = AnnotationSettings.default,
@@ -102,13 +101,14 @@ case class SkeletonTracing(
 object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with AnnotationStatistics with AnnotationContentDAO with CommonTracingDAO{
   type AType = SkeletonTracing
 
+  val contentType = "skeletonTracing"
+
   def tracingBase(settings: AnnotationSettings, dataSetName: String): SkeletonTracing =
     SkeletonTracing(
       dataSetName,
       Nil,
       System.currentTimeMillis,
       1,
-      Scale(12, 12, 24),
       Point3D(0, 0, 0),
       settings = settings)
 
@@ -140,7 +140,6 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with Annot
       nml.branchPoints,
       System.currentTimeMillis,
       nml.activeNodeId,
-      nml.scale,
       nml.editPosition,
       nml.comments)
   }
@@ -155,7 +154,6 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with Annot
       Nil,
       System.currentTimeMillis,
       1,
-      Scale(12, 12, 24),
       Point3D(0, 0, 0)))
 
     DBTree.createEmptyTree(tracing._id)

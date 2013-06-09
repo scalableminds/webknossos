@@ -91,10 +91,11 @@ object AnnotationController extends Controller with Secured with TracingInformat
       }
   }
 
-  def createExplorational(contentType: String) = Authenticated(parser = parse.urlFormEncoded) {
+  def createExplorational = Authenticated(parser = parse.urlFormEncoded) {
     implicit request =>
       for {
         dataSetName <- postParameter("dataSetName") ?~ Messages("dataSet.notSupplied")
+        contentType <- postParameter("contentType") ?~ Messages("annotation.contentType.notSupplied")
         dataSet <- DataSetDAO.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
         annotation <- AnnotationDAO.createExplorationalFor(request.user, dataSet, contentType) ?~ Messages("annotation.create.failed")
       } yield {

@@ -32,8 +32,6 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def branchPoints: List[BranchPoint]
 
-  def scale: Scale
-
   def comments: List[Comment]
 
   def editPosition: Point3D
@@ -44,11 +42,11 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def insertTree[A](tree: TreeLike): A
 
-  def contentType = "skeletonTracing"
-
   def makeReadOnly: Self
 
   def allowAllModes: Self
+
+  def contentType = SkeletonTracing.contentType
 
   def downloadFileExtension = ".nml"
 
@@ -123,7 +121,7 @@ object SkeletonTracingLike {
           <things>
             <parameters>
               <experiment name={dataSet.name}/>
-              <scale x={e.scale.x.toString} y={e.scale.y.toString} z={e.scale.z.toString}/>
+              <scale x={dataSet.scale.x.toString} y={dataSet.scale.y.toString} z={dataSet.scale.z.toString}/>
               <offset x="0" y="0" z="0"/>
               <time ms={e.timestamp.toString}/>
               <activeNode id={e.activeNodeId.toString}/>

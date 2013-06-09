@@ -16,7 +16,6 @@ case class TemporarySkeletonTracing(
     branchPoints: List[BranchPoint],
     timestamp: Long,
     activeNodeId: Int,
-    scale: Scale,
     editPosition: Point3D,
     comments: List[Comment] = Nil,
     settings: AnnotationSettings = AnnotationSettings.default.copy(isEditable = false)) extends SkeletonTracingLike with AnnotationContent{
@@ -57,7 +56,6 @@ object TemporarySkeletonTracing {
       nml.branchPoints,
       System.currentTimeMillis(),
       nml.activeNodeId,
-      nml.scale,
       nml.editPosition,
       nml.comments)
   }
@@ -70,7 +68,6 @@ object TemporarySkeletonTracing {
       tracing.branchPoints,
       System.currentTimeMillis(),
       tracing.activeNodeId,
-      tracing.scale,
       tracing.editPosition,
       tracing.comments)
   }

@@ -7,9 +7,11 @@ import org.bson.types.ObjectId
 import models.basics.{BasicDAO, DAOCaseClass}
 import models.tracing.skeleton.SkeletonTracingLike
 import models.tracing.CommonTracingDAO
-import braingames.binary.models.DataSet
+import braingames.binary.models.{DataSetSettings, DataSet}
 import java.io.InputStream
 import play.api.libs.json.{JsValue, JsObject}
+import java.util.UUID
+import oxalis.binary.BinaryDataService
 
 /**
  * Company: scalableminds
@@ -20,7 +22,6 @@ import play.api.libs.json.{JsValue, JsObject}
 case class VolumeTracing(
   dataSetName: String,
   timestamp: Long,
-  scale: Scale,
   editPosition: Point3D,
   settings: AnnotationSettings = AnnotationSettings.default,
   _id: ObjectId = new ObjectId)
@@ -42,7 +43,7 @@ case class VolumeTracing(
 
   def clearTracingData() = ???
 
-  def contentType: String = ???
+  def contentType: String =  VolumeTracing.contentType
 
   def createTracingInformation(): JsObject = ???
 
@@ -51,11 +52,15 @@ case class VolumeTracing(
   def downloadFileExtension: String = ???
 }
 
-object VolumeTracing extends BasicDAO[VolumeTracing]("volumes") with AnnotationContentDAO with CommonTracingDAO{
+object VolumeTracing extends BasicDAO[VolumeTracing]("volumes") with AnnotationContentDAO with CommonTracingDAO {
   type AType = VolumeTracing
 
-  def createForDataSet(dataSet: DataSet) =
-    //TODO
-    ???
+  val contentType = "volumeTracing"
+
+  def createForDataSet(baseDataSet: DataSet) = {
+    val dataSet = BinaryDataService.createUserDataSet(baseDataSet)
+    val t = VolumeTracing(dataSet.name, System.currentTimeMillis(), Point3D(0,0,0))
+    insertOne(t)
+  }
 
 }

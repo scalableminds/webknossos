@@ -3,6 +3,7 @@ package models.annotation
 import braingames.binary.models.DataSet
 import play.api.Logger
 import models.tracing.skeleton.SkeletonTracing
+import models.tracing.volume.VolumeTracing
 
 /**
  * Company: scalableminds
@@ -18,13 +19,18 @@ trait AnnotationContentDAO {
   def findOneById(id: String): Option[AType]
 
   def createForDataSet(dataSet: DataSet): AType
+
+  def contentType: String
 }
 
 trait AnnotationContentProviders {
+
   val contentProviders: Map[String, AnnotationContentDAO] = Map(
-    "skeletonTracing" -> SkeletonTracing,
-    "volumeTracing" -> SkeletonTracing
+    SkeletonTracing.contentType -> SkeletonTracing,
+    VolumeTracing.contentType -> VolumeTracing
   )
+
+  val providerList = contentProviders.keys
 
   def withProviderForContentType[T](contentType: String)(f: AnnotationContentDAO => T): Option[T] = {
     contentProviders.get(contentType) match {

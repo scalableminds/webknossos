@@ -13,8 +13,6 @@ trait AnnotationContent {
 
   def id: String
 
-  def scale: Scale
-
   def editPosition: Point3D
 
   def timestamp: Long
@@ -65,9 +63,8 @@ object AnnotationContent {
     ((__ \ 'id).write[String] and
       (__ \ 'settings).write[AnnotationSettings] and
       (__ \ 'dataSet).write[Option[DataSet]] and
-      (__ \ 'scale).write[Scale] and
       (__ \ 'contentData).write[Option[JsObject]] and
       (__ \ 'editPosition).write[Point3D] and
       (__ \ 'contentType).write[String])(ac =>
-      (ac.id, ac.settings, ac.dataSet, ac.scale, ac.contentData, ac.editPosition, ac.contentType))
+      (ac.id, ac.settings, ac.dataSet, ac.contentData, ac.editPosition, ac.contentType))
 }

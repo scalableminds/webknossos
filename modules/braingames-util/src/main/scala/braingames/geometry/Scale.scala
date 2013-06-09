@@ -1,12 +1,20 @@
 package braingames.geometry
 
-import play.api.libs.json.Json
-import play.api.libs.json.Writes
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 case class Scale(x: Float, y: Float, z: Float)
 
 object Scale{
-  implicit object ScaleWrites extends Writes[Scale]{
-    def writes(s: Scale) = Json.arr(s.x, s.y, s.z)
-  }
+  val scaleReads =
+    __.read[List[Float]].filter(_.size >= 3).map{ l =>
+      Scale(l(0), l(1), l(2))
+    }
+
+  val scaleWrites: Writes[Scale] =
+    Writes{s: Scale => JsArray(List(JsNumber(s.x), JsNumber(s.y), JsNumber(s.z)))}
+
+  implicit val scaleFormat = Format.apply(scaleReads, scaleWrites)
+
+  def default = Scale(12, 12, 24)
 }

@@ -1,22 +1,26 @@
 package braingames.binary.models
 
-import braingames.geometry.Point3D
 import play.api.libs.json.Reads
+import braingames.geometry.{Scale, Point3D}
+import braingames.geometry.Scale._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import braingames.binary.models._
+import java.io.File
 
 case class DataSetSettings(
   name: String,
+  scale: Scale,
   priority: Option[Int],
   fallback: Option[String])
 
 case class DataSet(
-    name: String,
-    baseDir: String,
-    priority: Int = 0,
-    fallback: Option[String] = None,
-    dataLayers: List[DataLayer] = Nil) {
+  name: String,
+  baseDir: String,
+  priority: Int = 0,
+  scale: Scale,
+  fallback: Option[String] = None,
+  dataLayers: List[DataLayer] = Nil) {
 
   def dataLayer(typ: String) =
     dataLayers.find(_.typ == typ)
@@ -38,6 +42,31 @@ case class DataSet(
       (point.z / resolution) % blockLength)
 }
 
-object DataSet {
-  val dataSetSettingsReads = Json.reads[DataSetSettings]
+object DataSetSettings extends SettingsFile {
+
+  val settingsFileName = "settings.json"
+
+  implicit val dataSetSettingsFormat = Json.format[DataSetSettings]
+
+  def settingsFileFromFolder(f: File)  = {
+    new File(f.getPath + "/" + settingsFileName)
+  }
+
+  def readFromFolder(folder: File): Option[DataSetSettings] = {
+    extractSettingsFromFile(
+      settingsFileFromFolder(folder),
+      dataSetSettingsFormat)
+  }
+
+  def fromDataSet(dataSet: DataSet) = DataSetSettings(
+    dataSet.name,
+    dataSet.scale,
+    Some(dataSet.priority),
+    dataSet.fallback
+  )
+
+  def writeToFolder(dataSet: DataSet, folder: File) = {
+    val settings = fromDataSet(dataSet)
+    writeSettingsToFile(settings, settingsFileFromFolder(folder))
+  }
 }

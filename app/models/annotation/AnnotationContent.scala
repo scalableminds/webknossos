@@ -37,8 +37,6 @@ trait AnnotationContent {
 
   def contentData: Option[JsObject] = None
 
-  def isEditable = settings.isEditable
-
   lazy val date = new Date(timestamp)
 
   def dataSet: Option[DataSet] = DataSetDAO.findOneByName(dataSetName)

@@ -9,8 +9,7 @@ import AnnotationSettings._
 case class AnnotationSettings(
   allowedModes: List[String] = ALL_MODES, 
   branchPointsAllowed: Boolean = true,
-  somaClickingAllowed: Boolean = true,
-  isEditable: Boolean = true)
+  somaClickingAllowed: Boolean = true)
 
 object AnnotationSettings {
   val OXALIS = "oxalis"

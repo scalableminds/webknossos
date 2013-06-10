@@ -31,9 +31,6 @@ case class SkeletonTracing(
 
   def dao = SkeletonTracing
 
-  def makeReadOnly =
-    this.copy(settings = settings.copy(isEditable = false))
-
   def allowAllModes =
     this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
 

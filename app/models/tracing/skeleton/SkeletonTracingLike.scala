@@ -42,8 +42,6 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def insertTree[A](tree: TreeLike): A
 
-  def makeReadOnly: Self
-
   def allowAllModes: Self
 
   def contentType = SkeletonTracing.contentType

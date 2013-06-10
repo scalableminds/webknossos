@@ -56,8 +56,9 @@ object AnnotationContent {
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and
+      (__ \ 'scale).write[Scale] and
       (__ \ 'dataLayers).write[List[DataLayer]])(d =>
-      (d.name, d.dataLayers))
+      (d.name, d.scale, d.dataLayers))
 
   implicit val annotationContentWrites: OWrites[AnnotationContent] =
     ((__ \ 'id).write[String] and

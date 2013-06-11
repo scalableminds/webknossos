@@ -313,7 +313,7 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
           c =>
             tail.foldLeft(c) {
               case (t, s) =>
-                t.mergeWith(TemporarySkeletonTracing.createFrom(s, s.timeStamp.toString))
+                t.mergeWith(TemporarySkeletonTracing.createFrom(s, s.timestamp.toString))
             }
         }
         Some(startAnnotation)

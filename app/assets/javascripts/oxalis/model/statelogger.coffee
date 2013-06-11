@@ -38,6 +38,7 @@ class StateLogger
       updatedId: if oldId then tree.treeId
       color: [treeColor.r, treeColor.g, treeColor.b, 1]
       name: tree.name
+      timestamp: tree.timestamp
       }
 
   createTree : (tree) ->

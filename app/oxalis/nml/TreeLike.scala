@@ -10,6 +10,7 @@ trait TreeLike {
   def color: Color
   def nodes: Set[Node]
   def edges: Set[Edge]
+  def timestamp: Long
 
   def name: String
   def changeTreeId(id: Int): TreeLike
@@ -43,12 +44,14 @@ object TreeLike{
     val EDGES = "edges"
     val COLOR = "color"
     val NAME = "name"
+    val TIMESTAMP = "timestamp"
 
     def writes(t: TreeLike) = Json.obj(
       ID -> t.treeId,
       NODES -> t.nodes,
       EDGES -> t.edges,
       NAME -> t.name,
-      COLOR -> t.color)
+      COLOR -> t.color,
+      TIMESTAMP -> t.timestamp)
   }
 }

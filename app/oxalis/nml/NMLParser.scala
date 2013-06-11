@@ -38,12 +38,12 @@ object NMLParser {
 
 class NMLParser(in: InputStream) {
   val DEFAULT_EDIT_POSITION = Point3D(0, 0, 0)
-  val DEFAULT_TIME = 0
+  val DEFAULT_TIME = 0L
   val DEFAULT_ACTIVE_NODE_ID = 1
   val DEFAULT_COLOR = Color(1, 0, 0, 0)
   val DEFAULT_VIEWPORT = 0
   val DEFAULT_RESOLUTION = 0
-  val DEFAULT_TIMESTAMP = 0
+  val DEFAULT_TIMESTAMP = 0L
 
   def this(file: File) =
     this(new FileInputStream(file))
@@ -142,7 +142,7 @@ class NMLParser(in: InputStream) {
   }
 
   def parseTime(node: NodeSeq) = {
-    (node \ "@ms").text.toIntOpt.getOrElse(DEFAULT_TIME)
+    (node \ "@ms").text.toLongOpt.getOrElse(DEFAULT_TIME)
   }
   def parseEditPosition(node: NodeSeq) = {
     node.headOption.flatMap(parsePoint3D).getOrElse(DEFAULT_EDIT_POSITION)
@@ -250,7 +250,7 @@ class NMLParser(in: InputStream) {
   }
 
   def parseTimestamp(node: NodeSeq) = {
-    ((node \ "@time").text).toIntOpt.getOrElse(DEFAULT_TIMESTAMP)
+    ((node \ "@time").text).toLongOpt.getOrElse(DEFAULT_TIMESTAMP)
   }
 
   def parseNode(nextNodeId: Int)(node: XMLNode) = {

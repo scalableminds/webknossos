@@ -34,7 +34,6 @@ class View
       deleteTree : => 
         @updateActiveComment()
         @updateTrees()
-        @updateActiveTree()
       mergeTree : =>
         @updateTrees()
         @updateComments()
@@ -43,21 +42,22 @@ class View
         @updateComments()
       newNode : => 
         @updateActiveComment()
-        @updateTrees()
+        @updateTreesThrottled()
       newTreeName : => 
         @updateTrees()
-        @updateActiveTree()
         @updateComments()
       newTree : => 
-        @updateActiveComment()
         @updateTrees()
-        @updateActiveTree()
         @updateComments()
       newActiveTreeColor : =>
-        @updateActiveTree()
         @updateTrees()
       deleteActiveNode : =>
         @updateTrees() })
+
+    @model.user.on
+      sortTreesByNameChanged : =>
+        @updateTreesSortButton()
+        @updateTrees()
 
     @model.route.stateLogger.on
       pushFailed       : (critical) =>
@@ -73,9 +73,14 @@ class View
               window.location.reload() )},
             {id : "cancel-button", label : "Cancel", callback : ( => @reloadDenied = true ) } ] )
 
+    $("a[href=#tab-comments]").on "shown", (event) =>
+      @updateActiveComment()
+    $("a[href=#tab-trees]").on "shown", (event) =>
+      @updateActiveTree()
+
     @updateComments()
-    @updateActiveTree()
     @updateTrees()
+    @updateTreesSortButton()
 
     # disable loader, show oxalis
     $("#loader").css("display" : "none")
@@ -177,7 +182,7 @@ class View
       if treeId != lastTreeId
         newContent.appendChild((
           $('<li>').append($('<i>', {"class": "icon-sitemap"}),
-          $('<span>', {"text": @model.route.getTree(treeId).name})))[0])
+          $('<span>', {"data-treeid": treeId, "text": @model.route.getTree(treeId).name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
         $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
@@ -210,7 +215,12 @@ class View
 
       # animate scrolling to the new comment
       $("#comment-container").animate({
-        scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 500)
+        scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
+    else
+      activeTree = $("#comment-container span[data-treeid=#{@model.route.getActiveTreeId()}]")
+      if activeTree.length
+        $("#comment-container").animate({
+          scrollTop: activeTree.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
 
 
   updateActiveTree : ->
@@ -221,10 +231,34 @@ class View
       $("#tree-name").text(activeTree.name)
       $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
 
+    oldIcon = $("#tree-list i.icon-arrow-right")
+    if oldIcon.length
+      oldIcon.toggleClass("icon-arrow-right", false)
+      oldIcon.toggleClass("icon-bull", true)
+
+    activeHref = $("#tree-list a[data-treeid=#{activeTree.treeId}]")
+    if activeHref.length
+
+      newIcon = activeHref.parent("li").children("i")
+      newIcon.toggleClass("icon-arrow-right", true)
+      newIcon.toggleClass("icon-bull", false)
+
+      # animate scrolling to the new tree
+      $("#tree-list").animate({
+        scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 250)
+
+
+  # avoid lags caused by frequent DOM modification
+  updateTreesThrottled : ->
+    @updateTreesThrottled = _.throttle(
+      => @updateTrees()
+      1000
+    )
+    @updateTreesThrottled()
 
   updateTrees : ->
 
-    trees = @model.route.getTrees()
+    trees = @model.route.getTreesSorted()
 
     treeList = $("#tree-list")
     treeList.empty()
@@ -233,14 +267,26 @@ class View
 
     for tree in trees
       newContent.appendChild((
-        $('<li>').append($('<a>', {"href": "#", "data-treeid": tree.treeId}).append(
-          $('<i>', {"class": "icon-bull"}),
-          $('<span>', {"title": "nodes", "text": tree.nodes.length}).css("display": "inline-block", "width": "50px"),
+        $('<li>').append($('<i>', {"class": "icon-bull"}),
+          $('<a>', {"href": "#", "data-treeid": tree.treeId})
+          .append($('<span>', {"title": "nodes", "text": tree.nodes.length}).css("display": "inline-block", "width": "50px"),
           $('<i>', {"class": "icon-sign-blank"}).css(
             "color": "##{('000000'+tree.color.toString(16)).slice(-6)}"),
           $('<span>', {"title": "name", "text": tree.name}) )) )[0])
 
     treeList.append(newContent)
+
+    @updateActiveTree()
+
+
+  updateTreesSortButton : ->
+
+    if @model.user.sortTreesByName
+      $("#sort-name-icon").show()
+      $("#sort-id-icon").hide()
+    else
+      $("#sort-name-icon").hide()
+      $("#sort-id-icon").show()
 
 
   webGlSupported : ->

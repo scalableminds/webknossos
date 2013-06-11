@@ -12,7 +12,7 @@ import com.mongodb.casbah.commons.MongoDBList
 import com.mongodb.casbah.query.Implicits._
 import oxalis.nml.TreeLike
 
-case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, name: String = "", _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree]{
+case class DBTree(_tracing: ObjectId, treeId: Int, color: Color, timestamp: Long = System.currentTimeMillis, name: String = "", _id: ObjectId = new ObjectId) extends DAOCaseClass[DBTree]{
   val dao = DBTree
 
   def isEmpty = {
@@ -41,7 +41,7 @@ trait DBTreeFactory {
         nameFromId(t.treeId)
       else
         t.name
-    DBTree(tracingId, t.treeId, t.color, name)
+    DBTree(tracingId, t.treeId, t.color, t.timestamp, name)
   }
 
   def createCopy(t: DBTree, tid: ObjectId) = {
@@ -148,7 +148,7 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
   }
 
   def createEmptyTree(tracing: ObjectId) =
-    insertOne(DBTree(tracing, 1, Color(1, 0, 0, 0), nameFromId(1)))
+    insertOne(DBTree(tracing, 1, Color(1, 0, 0, 0), System.currentTimeMillis(), nameFromId(1)))
 
   def findAllWithTracingId(tracingId: ObjectId) =
     find(MongoDBObject("_tracing" -> tracingId)).toList

@@ -147,6 +147,17 @@ $ ->
       return
 
 
+    "admin.user.userAdministration" : ->
+
+      $("form").on "click", ".label-experience", (event) ->
+        values = $(this).html().split(" ")
+        if values
+          $("input[name=experience-domain]").val(values[0])
+          $("input[name=experience-value]").val(values[1])
+          $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
+          $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
+
+
     "admin.task.taskSelectionAlgorithm" : ->
 
       $this = $(this)

@@ -47,9 +47,10 @@ case class CreateTree(value: JsObject) extends TracingUpdater {
   def createUpdate() = {
     val id = (value \ "id").as[Int]
     val color = (value \ "color").as[Color]
+    val timestamp = (value \ "timestamp").as[Long]
     val name = (value \ "name").asOpt[String] getOrElse (DBTree.nameFromId(id))
     TracingUpdate { t =>
-      DBTree.insertOne(DBTree(t._id, id, color, name))
+      DBTree.insertOne(DBTree(t._id, id, color, timestamp, name))
       t
     }
   }
@@ -93,7 +94,7 @@ case class MergeTree(value: JsObject) extends TracingUpdater {
       } yield {
         DBTree.moveAllNodes(source._id, target._id)
         DBTree.moveAllEdges(source._id, target._id)
-        
+
         DBTree.removeById(source._id)
       }
       t

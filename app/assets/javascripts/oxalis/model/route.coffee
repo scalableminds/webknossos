@@ -26,7 +26,7 @@ class Route
   activeTree : null
   firstEdgeDirection : null
 
-  constructor : (@data, @scaleInfo, @flycam, @flycam3d, @user) ->
+  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -44,10 +44,15 @@ class Route
 
     @doubleBranchPop = false
 
+    @data = tracing.content.contentData
+
+    @flycam.setPosition(tracing.content.editPosition)
+
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id, @data.settings.isEditable)
-    console.log "SkeletonTracing data: ", @data
+    @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.content.id, tracing.content.settings.isEditable)
+    
+    console.log "Annotation data: ", tracing
 
     # get tree to build
     for treeData in @data.trees
@@ -106,11 +111,11 @@ class Route
       else
         @createNewTree()
 
-    tracingType = data.tracingType
+    tracingType = tracing.typ
     if (tracingType == "Task" or tracingType == "Training") and nodeList.length == 0
-      @addNode(data.editPosition)
+      @addNode(tracing.content.editPosition)
 
-    @branchPointsAllowed = @data.settings.branchPointsAllowed
+    @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
       # dirty but this actually is what needs to be done
       @TYPE_BRANCH = @TYPE_USUAL

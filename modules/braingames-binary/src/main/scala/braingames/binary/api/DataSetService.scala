@@ -33,6 +33,7 @@ trait DataSetService {
     val segmentationLayer = DataLayer(
       DataLayer.SEGMENTATION.name,
       None,
+      DataLayer.SEGMENTATION.defaultElementClass,
       fallback = Some(baseDataSet.name))
 
     val dataSet = DataSet(

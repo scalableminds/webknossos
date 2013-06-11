@@ -46,7 +46,7 @@ case class DataLayer(
 }
 
 
-case class DataLayerType(name: String, interpolation: Interpolation)
+case class DataLayerType(name: String, interpolation: Interpolation, defaultElementClass: String = "uint8")
 
 object DataLayer {
   val COLOR =

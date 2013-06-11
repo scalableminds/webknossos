@@ -39,15 +39,15 @@ case class Annotation(
 
   val name = _name getOrElse ""
 
-  def task = _task flatMap Task.findOneById
+  lazy val task = _task flatMap Task.findOneById
 
   lazy val user = User.findOneById(_user)
 
   lazy val content: Option[AnnotationContent] = _content.resolveAs[AnnotationContent]
 
-  def dataSetName = content.map(_.dataSetName) getOrElse ""
+  lazy val dataSetName = content.map(_.dataSetName) getOrElse ""
 
-  def contentType = _content.contentType
+  lazy val contentType = _content.contentType
 
   val restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(this)
 

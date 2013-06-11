@@ -56,6 +56,8 @@ object DataLayer {
   val CLASSIFICATION =
     DataLayerType("classification", NearestNeighborInterpolation)
 
+  implicit val dataLayerFormat = Json.format[DataLayer]
+
   val supportedLayers = List(
     COLOR, SEGMENTATION, CLASSIFICATION
   )

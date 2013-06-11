@@ -6,6 +6,9 @@ import models.task.Task
 import models.annotation.AnnotationType._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import scala.concurrent.Future
+import models.basics.DBAccessContext
+import play.api.libs.concurrent.Execution.Implicits._
 
 /**
  * Company: scalableminds
@@ -42,21 +45,27 @@ trait AnnotationLike {
     this.task.map(_.isTraining) getOrElse false
   }
 
-  def annotationInfo(user: User): JsObject =
-    AnnotationLike.annotationLikeInfoWrites(user).writes(this)
+  def annotationInfo(user: User)(implicit ctx: DBAccessContext): Future[JsObject] =
+    AnnotationLike.annotationLikeInfoWrites(this, user)
 }
 
 object AnnotationLike {
 
-  import models.annotation.AnnotationContent.annotationContentWrites
+  import models.annotation.AnnotationContent._
 
-  def annotationLikeInfoWrites(user: User): OWrites[AnnotationLike] =
-    ((__ \ 'version).write[Int] and
-    (__ \ 'name).write[String] and
-    (__ \ 'typ).write[String] and
-    (__ \ 'content).write[Option[AnnotationContent]] and
-    (__ \ 'restrictions).write[AnnotationRestrictions](
-      AnnotationRestrictions.writeFor(user)))(a =>
-      (a.version, a._name getOrElse "", a.typ, a.content, a.restrictions))
+  def annotationLikeInfoWrites(a: AnnotationLike, user: User)(implicit ctx: DBAccessContext): Future[JsObject] = {
+    a.content.map(writeAnnotationContent).getOrElse(Future.successful(Json.obj())).map {
+      js =>
+        ((__ \ 'version).write[Int] and
+          (__ \ 'name).write[String] and
+          (__ \ 'typ).write[String] and
+          (__ \ 'content).write[JsObject] and
+          (__ \ 'restrictions).write[AnnotationRestrictions](
+            AnnotationRestrictions.writeFor(user)))
+          .tupled
+          .writes(
+          (a.version, a._name getOrElse "", a.typ, js, a.restrictions))
+    }
+  }
 
 }

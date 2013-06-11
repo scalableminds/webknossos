@@ -43,7 +43,7 @@ object ExtendedTypes {
 
     def toBooleanFromFloat = b match {
       case Array(0x3F, -0x80, 0x0, 0x0) => true
-      case _                            => false
+      case _ => false
     }
 
     /**
@@ -55,7 +55,9 @@ object ExtendedTypes {
   }
 
   implicit class ExtendedDouble(val d: Double) extends AnyVal {
+
     import braingames.util.Math._
+
     /**
      * Patches the value of this double (used during arithmetic operations
      * which may result in slightly incorrect result. To ensure correct

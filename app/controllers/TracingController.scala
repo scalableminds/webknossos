@@ -24,7 +24,7 @@ import models.task.Task
 import views._
 import play.api.i18n.Messages
 import net.liftweb.common._
-import braingames.mvc.Controller
+import braingames.mvc.{BoxImplicits, Fox, Controller}
 import controllers.admin.NMLIO
 import oxalis.security.AuthenticatedRequest
 import play.api.templates.Html
@@ -48,7 +48,7 @@ object TracingController extends Controller with Secured with TracingInformation
   override val DefaultAccessRole = Role.User
 }
 
-trait TracingInformationProvider extends play.api.http.Status {
+trait TracingInformationProvider extends play.api.http.Status with BoxImplicits with models.basics.Implicits{
 
   import braingames.mvc.BoxImplicits._
 
@@ -58,20 +58,19 @@ trait TracingInformationProvider extends play.api.http.Status {
     f(informationHandlers(tracingType))
   }
 
-  def findAnnotation(typ: AnnotationType, id: String)(implicit request: AuthenticatedRequest[_]): Future[Box[AnnotationLike]] = {
-    val annotationId = AnnotationIdentifier(typ, id)
-    findAnnotation(annotationId)
+  def withAnnotation[T](typ: AnnotationType, id: String)(f: AnnotationLike => Box[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
+    withAnnotation(AnnotationIdentifier(typ, id))( a => Future.successful(f(a)))
   }
 
-  def withAnnotation[T](typ: AnnotationType, id: String)(f: AnnotationLike => Box[T])(implicit request: AuthenticatedRequest[_]): Future[Box[T]] = {
-    withAnnotation(AnnotationIdentifier(typ, id))(f)
+  def withAnnotation[T](annotationId: AnnotationIdentifier)(f: AnnotationLike => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
+    findAnnotation(annotationId).flatMap(f)
   }
 
-  def withAnnotation[T](annotationId: AnnotationIdentifier)(f: AnnotationLike => Box[T])(implicit request: AuthenticatedRequest[_]): Future[Box[T]] = {
-    findAnnotation(annotationId).map(_.flatMap(f))
+  def findAnnotation(typ: AnnotationType, id: String)(implicit request: AuthenticatedRequest[_]): Fox[AnnotationLike] = {
+    findAnnotation(AnnotationIdentifier(typ, id))
   }
 
-  def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: AuthenticatedRequest[_]): Future[Box[AnnotationLike]] = {
+  def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: AuthenticatedRequest[_]): Fox[AnnotationLike] = {
     implicit val timeout = Timeout(5 seconds)
     val f = Application.annotationStore ? RequestAnnotation(annotationId)
 
@@ -86,10 +85,10 @@ trait TracingInformationProvider extends play.api.http.Status {
     }
   }
 
-  def respondWithTracingInformation(annotationId: AnnotationIdentifier)(implicit request: AuthenticatedRequest[_]): Future[Box[JsValue]] = {
+  def respondWithTracingInformation(annotationId: AnnotationIdentifier)(implicit request: AuthenticatedRequest[_]): Fox[JsValue] = {
     withAnnotation(annotationId) {
       annotation =>
-        Full(annotation.annotationInfo(request.user))
+        annotation.annotationInfo(request.user).map( js => Full(js))
     }
   }
 }

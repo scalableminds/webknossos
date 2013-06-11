@@ -18,15 +18,12 @@ case class TemporarySkeletonTracing(
     activeNodeId: Int,
     editPosition: Point3D,
     comments: List[Comment] = Nil,
-    settings: AnnotationSettings = AnnotationSettings.default.copy(isEditable = false)) extends SkeletonTracingLike with AnnotationContent{
+    settings: AnnotationSettings = AnnotationSettings.default) extends SkeletonTracingLike with AnnotationContent{
 
   type Self = TemporarySkeletonTracing
 
   def task = None
 
-  def makeReadOnly =
-    this.copy(settings = settings.copy(isEditable = false))
-    
    def allowAllModes = 
     this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
   

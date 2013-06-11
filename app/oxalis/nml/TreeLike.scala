@@ -1,8 +1,7 @@
 package oxalis.nml
 
 import braingames.image.Color
-import braingames.xml.XMLWrites
-import braingames.xml.Xml
+import braingames.xml.{SynchronousXMLWrites, XMLWrites, Xml}
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
 
@@ -20,11 +19,11 @@ trait TreeLike {
 }
 
 object TreeLike{
-    implicit object TreeLikeXMLWrites extends XMLWrites[TreeLike] {
+    implicit object TreeLikeXMLWrites extends SynchronousXMLWrites[TreeLike] {
     import Node.NodeXMLWrites
     import Edge.EdgeXMLWrites
 
-    def writes(t: TreeLike) =
+    def synchronousWrites(t: TreeLike) =
       <thing id={ t.treeId.toString } color.r={ t.color.r.toString } color.g={ t.color.g.toString } color.b={ t.color.b.toString } color.a={ t.color.a.toString } name={t.name}>
         <nodes>
           { t.nodes.map(n => Xml.toXML(n)) }

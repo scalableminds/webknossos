@@ -31,9 +31,6 @@ case class SkeletonTracing(
 
   def dao = SkeletonTracing
 
-  def makeReadOnly =
-    this.copy(settings = settings.copy(isEditable = false))
-
   def allowAllModes =
     this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
 
@@ -148,7 +145,7 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with Annot
     target.update(t => t.mergeWith(source))
   }
 
-  def createForDataSet(d: DataSet = DataSetDAO.default) = {
+  def createForDataSet(d: DataSet) = {
     val tracing = insertOne(SkeletonTracing(
       d.name,
       Nil,

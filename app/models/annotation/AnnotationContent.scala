@@ -1,12 +1,15 @@
 package models.annotation
 
-import braingames.geometry.{BoundingBox, Scale, Point3D}
 import java.util.Date
+import braingames.geometry.{BoundingBox, Scale, Point3D}
 import java.io.InputStream
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import braingames.binary.models.{DataLayer, DataSet}
 import models.binary.DataSetDAO
+import models.basics.DBAccessContext
+import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
 
 trait AnnotationContent {
   type Self <: AnnotationContent
@@ -31,17 +34,15 @@ trait AnnotationContent {
 
   def contentType: String
 
-  def toDownloadStream: InputStream
+  def toDownloadStream: Future[InputStream]
 
   def downloadFileExtension: String
 
   def contentData: Option[JsObject] = None
 
-  def isEditable = settings.isEditable
-
   lazy val date = new Date(timestamp)
 
-  def dataSet: Option[DataSet] = DataSetDAO.findOneByName(dataSetName)
+  def dataSet(implicit ctx: DBAccessContext): Future[Option[DataSet]] = DataSetDAO.findOneByName(dataSetName)
 }
 
 object AnnotationContent {
@@ -56,15 +57,21 @@ object AnnotationContent {
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and
+      (__ \ 'scale).write[Scale] and
       (__ \ 'dataLayers).write[List[DataLayer]])(d =>
-      (d.name, d.dataLayers))
+      (d.name, d.scale, d.dataLayers))
 
-  implicit val annotationContentWrites: OWrites[AnnotationContent] =
-    ((__ \ 'id).write[String] and
-      (__ \ 'settings).write[AnnotationSettings] and
-      (__ \ 'dataSet).write[Option[DataSet]] and
-      (__ \ 'contentData).write[Option[JsObject]] and
-      (__ \ 'editPosition).write[Point3D] and
-      (__ \ 'contentType).write[String])(ac =>
-      (ac.id, ac.settings, ac.dataSet, ac.contentData, ac.editPosition, ac.contentType))
+  def writeAnnotationContent(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
+    ac.dataSet.map {
+      dataSet =>
+        ((__ \ 'id).write[String] and
+          (__ \ 'settings).write[AnnotationSettings] and
+          (__ \ 'dataSet).write[Option[DataSet]] and
+          (__ \ 'contentData).write[Option[JsObject]] and
+          (__ \ 'editPosition).write[Point3D] and
+          (__ \ 'contentType).write[String])
+          .tupled
+          .writes((ac.id, ac.settings, dataSet, ac.contentData, ac.editPosition, ac.contentType))
+    }
+  }
 }

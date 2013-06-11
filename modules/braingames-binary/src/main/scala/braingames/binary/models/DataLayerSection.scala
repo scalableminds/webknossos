@@ -28,3 +28,7 @@ trait DataLayerSectionLike {
   def doesContainBlock(point: Point3D, blockLength: Int) =
     hull.contains(point.scale((v, _) => v * blockLength))
 }
+
+object DataLayerSection{
+  implicit val dataLayerSectionFormat = Json.format[DataLayerSection]
+}

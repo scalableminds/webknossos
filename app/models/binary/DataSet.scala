@@ -49,7 +49,8 @@ object DataSetDAO extends SecuredMongoDAO[DataSet] {
     collectionUpdate(
       Json.obj("name" -> d.name),
       Json.obj(
-        "$set" -> formatWithoutId(d)))
+        "$set" -> formatWithoutId(d)),
+      upsert = true)
 
   def removeByName(name: String)(implicit ctx: DBAccessContext) =
     remove("name", name)

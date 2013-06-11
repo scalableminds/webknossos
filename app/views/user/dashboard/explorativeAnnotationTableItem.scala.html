@@ -21,7 +21,7 @@
       </td>
       }.getOrElse(<td />)
     }
-    <td> @annotation.typ </td>
+    <td> @annotation.content.map(_.contentType + " - ")@annotation.typ </td>
     <td> @annotation.content.map(c => formatDate(c.date)) </td>
     <td  class="nowrap"> 
       <a href="@controllers.routes.AnnotationController.trace(annotation.typ, annotation.id)"><i class="icon-random"></i> trace</a><br />

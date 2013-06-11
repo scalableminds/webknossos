@@ -49,11 +49,11 @@ object AnnotationController extends Controller with Secured with TracingInformat
     implicit request =>
       Async {
         val annotationId = AnnotationIdentifier(typ, id)
-        respondWithTracingInformation(annotationId).map(_.map {
+        respondWithTracingInformation(annotationId).map {
           js =>
             UsedAnnotation.use(request.user, annotationId)
             Ok(js)
-        })
+        }
       }
   }
 
@@ -74,32 +74,35 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def download(typ: String, id: String) = Authenticated {
     implicit request =>
       Async {
-        withAnnotation(typ, id) {
+        withAnnotation(AnnotationIdentifier(typ, id)) {
           annotation =>
             (for {
-              annotationName <- nameAnnotation(annotation)
+              annotationName <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
               if annotation.restrictions.allowDownload(request.user)
-              content <- annotation.content
+              content <- annotation.content ?~> Messages("annotation.content.empty")
+              stream <- content.toDownloadStream
             } yield {
-              Ok.stream(Enumerator.fromStream(content.toDownloadStream).andThen(Enumerator.eof[Array[Byte]])).withHeaders(
+              Ok.stream(Enumerator.fromStream(stream).andThen(Enumerator.eof[Array[Byte]])).withHeaders(
                 CONTENT_TYPE ->
                   "application/octet-stream",
                 CONTENT_DISPOSITION ->
                   s"filename=${annotationName + content.downloadFileExtension}")
-            }) ?~ Messages("annotation.download.notAllowed")
+            }) ?~> Messages("annotation.download.notAllowed")
         }
       }
   }
 
   def createExplorational = Authenticated(parser = parse.urlFormEncoded) {
     implicit request =>
-      for {
-        dataSetName <- postParameter("dataSetName") ?~ Messages("dataSet.notSupplied")
-        contentType <- postParameter("contentType") ?~ Messages("annotation.contentType.notSupplied")
-        dataSet <- DataSetDAO.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
-        annotation <- AnnotationDAO.createExplorationalFor(request.user, dataSet, contentType) ?~ Messages("annotation.create.failed")
-      } yield {
-        Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
+      Async {
+        for {
+          dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")
+          dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
+          contentType <- postParameter("contentType") ?~> Messages("annotation.contentType.notSupplied")
+          annotation <- AnnotationDAO.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
+        } yield {
+          Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
+        }
       }
   }
 
@@ -107,32 +110,28 @@ object AnnotationController extends Controller with Secured with TracingInformat
   def updateWithJson(typ: String, id: String, version: Int) = Authenticated(parse.json(maxLength = 2097152)) {
     implicit request =>
       Async {
-        withAnnotation(typ, id) {
-          oldAnnotation =>
-            if (oldAnnotation.restrictions.allowUpdate(request.user))
-              Failure(Messages("notAllowed")) ~> 403
-            else {
-              Full(
-                if (version == oldAnnotation.version + 1) {
-                  request.body match {
-                    case JsArray(jsUpdates) =>
-                      AnnotationDAO.updateFromJson(jsUpdates, oldAnnotation) match {
-                        case Some(annotation) =>
-                          TimeTracking.logUserAction(request.user, annotation)
-                          JsonOk(Json.obj("version" -> version), "tracing.saved")
-                        case _ =>
-                          JsonBadRequest("Invalid update Json")
-                      }
-                    case _ =>
-                      Logger.error("Invalid update json.")
-                      JsonBadRequest("Invalid update Json")
-                  }
-                } else
-                  JsonBadRequest(oldAnnotation.annotationInfo(request.user), "tracing.dirtyState")
-
-              )
+        (for {
+          oldAnnotation <- findAnnotation(typ, id)
+          oldJs <- oldAnnotation.annotationInfo(request.user)
+          if (oldAnnotation.restrictions.allowUpdate(request.user))
+        } yield {
+          if (version == oldAnnotation.version + 1) {
+            request.body match {
+              case JsArray(jsUpdates) =>
+                AnnotationDAO.updateFromJson(jsUpdates, oldAnnotation) match {
+                  case Some(annotation) =>
+                    TimeTracking.logUserAction(request.user, annotation)
+                    JsonOk(Json.obj("version" -> version), "tracing.saved")
+                  case _ =>
+                    JsonBadRequest("Invalid update Json")
+                }
+              case _ =>
+                Logger.error("Invalid update json.")
+                JsonBadRequest("Invalid update Json")
             }
-        }
+          } else
+            JsonBadRequest(oldJs, "tracing.dirtyState")
+        }) ?~> Messages("notAllowed") ~> 403
       }
   }
 

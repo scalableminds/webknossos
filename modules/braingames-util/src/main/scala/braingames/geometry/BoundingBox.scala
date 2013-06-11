@@ -43,5 +43,5 @@ object BoundingBox {
   def createFrom(width: Int, height: Int, deph: Int, topLeft: Point3D): BoundingBox =
     BoundingBox(topLeft, width, height, deph)
 
-  implicit val boundingBoxWrites: Writes[BoundingBox] = Json.writes[BoundingBox]
+  implicit val boundingBoxFormat = Json.format[BoundingBox]
 }

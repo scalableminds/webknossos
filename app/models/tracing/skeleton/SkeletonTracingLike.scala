@@ -14,6 +14,9 @@ import models.annotation.AnnotationSettings
 import play.api.i18n.Messages
 import controllers.admin.NMLIO
 import org.apache.commons.io.IOUtils
+import models.basics.GlobalDBAccess
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.Future
 
 trait SkeletonTracingLike extends AnnotationContent {
   type Self <: SkeletonTracingLike
@@ -49,7 +52,7 @@ trait SkeletonTracingLike extends AnnotationContent {
   def downloadFileExtension = ".nml"
 
   def toDownloadStream =
-    IOUtils.toInputStream(NMLIO.toXML(this))
+    NMLIO.toXML(this).map(IOUtils.toInputStream)
 
   override def contentData =
     Some(SkeletonTracingLike.skeletonTracingLikeWrites.writes(this))
@@ -112,26 +115,36 @@ trait SkeletonTracingLike extends AnnotationContent {
 
 object SkeletonTracingLike {
 
-  implicit object SkeletonTracingLikeXMLWrites extends XMLWrites[SkeletonTracingLike] {
+  implicit object SkeletonTracingLikeXMLWrites extends XMLWrites[SkeletonTracingLike] with GlobalDBAccess {
     def writes(e: SkeletonTracingLike) = {
-      (DataSetDAO.findOneByName(e.dataSetName).map {
-        dataSet =>
-          <things>
-            <parameters>
-              <experiment name={dataSet.name}/>
-              <scale x={dataSet.scale.x.toString} y={dataSet.scale.y.toString} z={dataSet.scale.z.toString}/>
-              <offset x="0" y="0" z="0"/>
-              <time ms={e.timestamp.toString}/>
-              <activeNode id={e.activeNodeId.toString}/>
-              <editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
-            </parameters>{e.trees.filterNot(_.nodes.isEmpty).map(t => Xml.toXML(t))}<branchpoints>
-            {e.branchPoints.map(b => Xml.toXML(b))}
-          </branchpoints>
-            <comments>
-              {e.comments.map(c => Xml.toXML(c))}
-            </comments>
-          </things>
-      }) getOrElse (<error>DataSet not fount</error>)
+      for {
+        dataSetOpt <- DataSetDAO.findOneByName(e.dataSetName)
+        trees <- Xml.toXML(e.trees.filterNot(_.nodes.isEmpty))
+        branchpoints <- Xml.toXML(e.branchPoints)
+      } yield {
+        dataSetOpt match {
+          case Some(dataSet) =>
+            <things>
+              <parameters>
+                <experiment name={dataSet.name}/>
+                <scale x={dataSet.scale.x.toString} y={dataSet.scale.y.toString} z={dataSet.scale.z.toString}/>
+                <offset x="0" y="0" z="0"/>
+                <time ms={e.timestamp.toString}/>
+                <activeNode id={e.activeNodeId.toString}/>
+                <editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
+              </parameters>
+              {trees}
+              <branchpoints>
+                {branchpoints}
+              </branchpoints>
+              <comments>
+                {e.comments.map(c => Xml.toXML(c))}
+              </comments>
+            </things>
+          case _ =>
+            <error>DataSet not fount</error>
+        }
+      }
     }
   }
 

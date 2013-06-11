@@ -6,15 +6,15 @@ import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import braingames.geometry.Point3D
 import play.api.libs.functional.syntax._
-import models.basics.BasicDAO
-import models.basics.DAOCaseClass
+import models.basics._
 import play.api.libs.json._
 import braingames.binary.models.DataSet
-import braingames.binary.models.{ DataSetRepository => AbstractDataSetRepository }
+import braingames.binary.models.{DataSetRepository => AbstractDataSetRepository}
 import scala.concurrent.Future
 import com.novus.salat._
+import braingames.binary.models.DataSet
 
-object DataSetRepository extends AbstractDataSetRepository {
+object DataSetRepository extends AbstractDataSetRepository with GlobalDBAccess{
 
   def deleteAllExcept(l: Array[String]) =
     DataSetDAO.deleteAllExcept(l)
@@ -26,41 +26,32 @@ object DataSetRepository extends AbstractDataSetRepository {
     DataSetDAO.removeByName(name)
 
   def findByName(name: String) =
-    Future.successful(DataSetDAO.findOneByName(name))
+    DataSetDAO.findOneByName(name)
 }
 
-object DataSetDAO extends BasicDAO[DataSet]("dataSets") {
+object DataSetDAO extends SecuredMongoDAO[DataSet] {
+  val collectionName = "dataSets"
 
-  def default = {
-    //find(MongoDBObject())
+  import braingames.binary.models.DataLayer.dataLayerFormat
 
-    val all = DataSetDAO.findAll
-    if (all.isEmpty)
-      throw new Exception("No default data set found!")
-    all.maxBy(_.priority)
-  }
+  val formatter = Json.format[DataSet]
 
-  def deleteAllExcept(names: Array[String]) = {
-    remove(MongoDBObject("name" -> MongoDBObject("$nin" -> names)))
-  }
+  def default()(implicit ctx: DBAccessContext) =
+    findMaxBy("priority")
 
-  def findOneByName(name: String) =
-    findOne(MongoDBObject("name" -> name))
+  def deleteAllExcept(names: Array[String])(implicit ctx: DBAccessContext) =
+    collectionRemove(Json.obj("name" -> Json.obj("$nin" -> names)))
 
-  def updateOrCreate(d: DataSet) = {
-    findOne(MongoDBObject("name" -> d.name)) match {
-      case Some(stored) =>
-        update(
-          MongoDBObject("name" -> d.name),
-          MongoDBObject("$set" -> grater[DataSet].asDBObject(
-            d.copy(priority = stored.priority))))
-      case _ =>
-        insertOne(d)
-    }
-  }
+  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
+    findOne("name", name)
 
-  def removeByName(name: String) {
-    remove(MongoDBObject("name" -> name))
-  }
+  def updateOrCreate(d: DataSet)(implicit ctx: DBAccessContext) =
+    collectionUpdate(
+      Json.obj("name" -> d.name),
+      Json.obj(
+        "$set" -> formatWithoutId(d)))
+
+  def removeByName(name: String)(implicit ctx: DBAccessContext) =
+    remove("name", name)
 
 }

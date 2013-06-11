@@ -12,6 +12,7 @@ import java.io.InputStream
 import play.api.libs.json.{JsValue, JsObject}
 import java.util.UUID
 import oxalis.binary.BinaryDataService
+import scala.concurrent.Future
 
 /**
  * Company: scalableminds
@@ -47,7 +48,7 @@ case class VolumeTracing(
 
   def createTracingInformation(): JsObject = ???
 
-  def toDownloadStream: InputStream = ???
+  def toDownloadStream: Future[InputStream] = ???
 
   def downloadFileExtension: String = ???
 }

@@ -145,7 +145,7 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with Annot
     target.update(t => t.mergeWith(source))
   }
 
-  def createForDataSet(d: DataSet = DataSetDAO.default) = {
+  def createForDataSet(d: DataSet) = {
     val tracing = insertOne(SkeletonTracing(
       d.name,
       Nil,

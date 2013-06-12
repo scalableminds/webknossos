@@ -38,12 +38,15 @@ import models.tracing.skeleton.SkeletonTracingLike
 import oxalis.annotation.handler.SavedTracingInformationHandler
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
+import play.api.Play
 
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
 
-  val baseTracingOutputDir = {
-    val folder = "data/nmls"
+  val conf = Play.current.configuration
+
+  val nmlStorageFolder = {
+    val folder = conf.getString("oxalis.nml.storageFolder") getOrElse "data/nmls"
     new File(folder).mkdirs()
     folder
   }
@@ -65,7 +68,7 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def outputPathForAnnotation(annotation: Annotation) =
-    s"$baseTracingOutputDir/${annotation.id}.nml"
+    s"$nmlStorageFolder/${annotation.id}.nml"
 
   def writeTracingToFile(annotation: Annotation) {
     val f = new File(outputPathForAnnotation(annotation))

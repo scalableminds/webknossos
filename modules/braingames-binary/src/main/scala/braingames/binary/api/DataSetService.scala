@@ -40,7 +40,9 @@ trait DataSetService {
       name = name,
       baseDir = userDataSetFolder(name),
       scale = baseDataSet.scale,
-      dataLayers = List(segmentationLayer)
+      dataLayers = List(segmentationLayer),
+      owningTeam = baseDataSet.owningTeam,
+      allowedTeams = baseDataSet.allowedTeams
     )
     val baseFolder = new File(dataSet.baseDir)
     baseFolder.mkdirs()

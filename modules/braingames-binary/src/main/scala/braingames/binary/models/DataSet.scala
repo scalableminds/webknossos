@@ -18,7 +18,10 @@ case class DataSet(
   baseDir: String,
   priority: Int = 0,
   scale: Scale,
-  dataLayers: List[DataLayer] = Nil) {
+  dataLayers: List[DataLayer] = Nil,
+  owningTeam: String,
+  allowedTeams: List[String]
+  ) {
 
   def dataLayer(typ: String) =
     dataLayers.find(_.typ == typ)

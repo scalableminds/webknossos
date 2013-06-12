@@ -32,6 +32,17 @@ object DataSetRepository extends AbstractDataSetRepository with GlobalDBAccess{
 object DataSetDAO extends SecuredMongoDAO[DataSet] {
   val collectionName = "dataSets"
 
+  // Security
+
+  override def findQueryFilter(implicit ctx: DBAccessContext) = {
+    ctx.user match{
+      case Some(user) =>
+        AllowIf(Json.obj("allowedTeams" -> Json.obj("$in" -> user.teams)))
+      case _ =>
+        DenyEveryone()
+    }
+  }
+
   import braingames.binary.models.DataLayer.dataLayerFormat
 
   val formatter = Json.format[DataSet]
@@ -49,7 +60,7 @@ object DataSetDAO extends SecuredMongoDAO[DataSet] {
     collectionUpdate(
       Json.obj("name" -> d.name),
       Json.obj(
-        "$set" -> formatWithoutId(d)),
+        "$seet" -> formatWithoutId(d)),
       upsert = true)
 
   def removeByName(name: String)(implicit ctx: DBAccessContext) =

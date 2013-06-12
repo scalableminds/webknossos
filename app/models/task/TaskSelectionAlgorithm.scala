@@ -22,14 +22,14 @@ object TaskSelectionAlgorithm extends BasicDAO[TaskSelectionAlgorithm]("taskAlgo
       .toList
       .headOption getOrElse (throw new Exception("No active task selection algorithm found!"))
   }
-  
+
   def use(alg: TaskSelectionAlgorithm) {
     update(MongoDBObject.empty, $set("active" -> false), false, true)
     update(MongoDBObject("_id" -> alg._id), $set("active" -> true))
   }
 
   def isValidAlgorithm(js: String) = true // TODO: implement testing strategie
-  
+
   implicit object TaskSelectionAlgorithmFormat extends Writes[TaskSelectionAlgorithm] {
     def writes(e: TaskSelectionAlgorithm) = Json.obj(
       "id" -> e.id,

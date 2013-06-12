@@ -130,9 +130,19 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
             settings.name,
             folder.getAbsolutePath(),
             settings.priority getOrElse 0,
-            settings.scale)
+            settings.scale,
+            Nil,
+            "Structure of Neocortical Circuits Group",
+            List("Structure of Neocortical Circuits Group"))
         case _ =>
-          DataSet(folder.getName, folder.getAbsolutePath, 0, Scale.default)
+          DataSet(
+            folder.getName,
+            folder.getAbsolutePath,
+            0,
+            Scale.default,
+            Nil,
+            "Structure of Neocortical Circuits Group",
+            List("Structure of Neocortical Circuits Group"))
       }
 
       val layers = extractLayers(folder, folder.getAbsolutePath())

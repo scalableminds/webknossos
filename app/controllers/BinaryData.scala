@@ -134,6 +134,7 @@ object BinaryData extends Controller with Secured {
    * If the message is valid the result is posted onto the websocket.
    *
    */
+
   def requestViaWebsocket(dataSetName: String, dataLayerName: String, cubeSize: Int): WebSocket[Array[Byte]] =
     AuthenticatedWebSocket[Array[Byte]]() {
       user =>

@@ -13,7 +13,8 @@
       <pattern>%coloredLevel %logger{15} - %message%n%xException{5}</pattern>
     </encoder>
   </appender>
-  
+
+  <logger name="reactivemongo.core.actors.MongoDBSystem" level="WARN" />
   <logger name="play" level="INFO" />
   <logger name="application" level="INFO" />
 

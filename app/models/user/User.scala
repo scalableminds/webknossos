@@ -15,6 +15,7 @@ import models.security.Permission
 import models.security.Implyable
 import models.security.Role
 import models.user.Experience._
+import models.group.{GroupDAO, GroupHelpers}
 
 case class User(
     email: String,
@@ -22,6 +23,7 @@ case class User(
     lastName: String,
     verified: Boolean = false,
     pwdHash: String = "",
+    teams: List[String],
     loginType: String = "local",
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: Set[String] = Set.empty,
@@ -31,6 +33,9 @@ case class User(
     _id: ObjectId = new ObjectId) extends DAOCaseClass[User] {
 
   val dao = User
+
+  lazy val _groups = teams.flatMap(GroupHelpers.splitIntoTeamAndGroup(_)).map(_._1)
+  lazy val groups = GroupDAO.findAllGroups(_groups)(GlobalAccessContext)
 
   val _roles = for {
     roleName <- roles
@@ -115,7 +120,7 @@ object User extends BasicDAO[User]("users") {
     } yield user
 
   def create(email: String, firstName: String, lastName: String, password: String, isVerified: Boolean): User = {
-    val u = User(email, firstName, lastName, false, hashPassword(password))
+    val u = User(email, firstName, lastName, false, hashPassword(password), Nil)
     
     if(isVerified)
       User.insertOne(u.verify)
@@ -124,6 +129,6 @@ object User extends BasicDAO[User]("users") {
   }
 
   def createRemote(email: String, firstName: String, lastName: String, loginType: String) = {
-    insertOne(User(email, firstName, lastName, true, "", loginType = loginType))
+    insertOne(User(email, firstName, lastName, true, "", Nil, loginType = loginType))
   }
 }

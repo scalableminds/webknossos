@@ -25,17 +25,8 @@ trait UnsecuredMongoDAO[T] extends MongoDAO[T] with UnsecuredDAO[T] {
 
 }
 
-trait UnsecuredDAO[T] extends SecuredDAO[T] {
+trait UnsecuredDAO[T] extends SecuredDAO[T] with AllowEverytingDBAccessValidator {
   this: MongoDAO[T] =>
-  implicit val ctx = UnAuthedAccessContext
-
-  override def isAllowedToInsert(implicit ctx: DBAccessContext) = true
-
-  override def removeQueryFilter(implicit ctx: DBAccessContext) = Json.obj()
-
-  override def updateQueryFilter(implicit ctx: DBAccessContext) = Json.obj()
-
-  override def findQueryFilter(implicit ctx: DBAccessContext) = Json.obj()
 }
 
 trait GlobalDBAccess {
@@ -45,11 +36,11 @@ trait GlobalDBAccess {
 trait AllowEverytingDBAccessValidator extends DBAccessValidator {
   def isAllowedToInsert(implicit ctx: DBAccessContext): Boolean = true
 
-  def removeQueryFilter(implicit ctx: DBAccessContext): JsObject = Json.obj()
+  def removeQueryFilter(implicit ctx: DBAccessContext): AccessRestriction = AllowEveryone
 
-  def updateQueryFilter(implicit ctx: DBAccessContext): JsObject = Json.obj()
+  def updateQueryFilter(implicit ctx: DBAccessContext): AccessRestriction = AllowEveryone
 
-  def findQueryFilter(implicit ctx: DBAccessContext): JsObject = Json.obj()
+  def findQueryFilter(implicit ctx: DBAccessContext): AccessRestriction = AllowEveryone
 }
 
 trait AllowEyerthingDBAccessFactory extends DBAccessFactory {
@@ -61,17 +52,31 @@ trait DBAccessFactory {
 }
 
 trait DBAccessValidator {
+
+  trait AccessRestriction
+
+  val AllowEveryone = AllowIf(Json.obj())
+
+  case class AllowIf(condition: JsObject) extends AccessRestriction
+
+  case class DenyEveryone() extends AccessRestriction
+
+
   def isAllowedToInsert(implicit ctx: DBAccessContext): Boolean
 
-  def removeQueryFilter(implicit ctx: DBAccessContext): JsObject
+  def removeQueryFilter(implicit ctx: DBAccessContext): AccessRestriction
 
-  def updateQueryFilter(implicit ctx: DBAccessContext): JsObject
+  def updateQueryFilter(implicit ctx: DBAccessContext): AccessRestriction
 
-  def findQueryFilter(implicit ctx: DBAccessContext): JsObject
+  def findQueryFilter(implicit ctx: DBAccessContext): AccessRestriction
 }
 
 trait SecuredDAO[T] extends DBAccessValidator with DBAccessFactory with AllowEyerthingDBAccessFactory with AllowEverytingDBAccessValidator {
   this: MongoDAO[T] =>
+
+  def AccessDeniedError =
+    Future.successful(
+      LastError(false, None, None, Some("Access denied"), None, 0, false))
 
   def withId(sid: String)(f: BSONObjectID => Future[LastError]): Future[LastError] =
     withId(sid, LastError(false, None, None, Some("Couldn't parse ObjectId"), None, 0, false))(f)
@@ -85,16 +90,20 @@ trait SecuredDAO[T] extends DBAccessValidator with DBAccessFactory with AllowEye
       }
       future
     } else {
-      Future.successful(
-        LastError(false, None, None, Some("Access denied"), None, 0, false))
+      AccessDeniedError
     }
   }
 
   def collectionFind(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
-    if (ctx.globalAccess)
-      collection.find(query)
-    else
-      collection.find(query ++ findQueryFilter)
+    findQueryFilter match {
+      case _ if ctx.globalAccess =>
+        collection.find(query)
+      case AllowIf(condition) =>
+        collection.find(query ++ condition)
+      case DenyEveryone() =>
+        // TODO: find a different way to abort the query
+        collection.find(query ++ Json.obj("failAttribute" -> 1, "failAttribute" -> Json.obj("$ne" -> 1)))
+    }
   }
 
   def logError(f: => Future[LastError]) = {
@@ -114,25 +123,34 @@ trait SecuredDAO[T] extends DBAccessValidator with DBAccessFactory with AllowEye
       else
         update
 
-    val q =
-      if (ctx.globalAccess)
-        query
-      else
-        query ++ updateQueryFilter
+    updateQueryFilter match {
+      case DenyEveryone() =>
+        AccessDeniedError
+      case AllowIf(condition) =>
+        val q =
+          if (ctx.globalAccess)
+            query
+          else
+            query ++ condition
 
-    collection.update(
-      q,
-      u,
-      upsert = isUpsertAllowed,
-      multi = multi)
+        collection.update(
+          q,
+          u,
+          upsert = isUpsertAllowed,
+          multi = multi)
+    }
   }
 
   def collectionRemove(js: JsObject)(implicit ctx: DBAccessContext) = {
     logError {
-      if (ctx.globalAccess)
-        collection.remove(js)
-      else
-        collection.remove(js ++ removeQueryFilter)
+      removeQueryFilter match {
+        case DenyEveryone() =>
+          AccessDeniedError
+        case _ if ctx.globalAccess =>
+          collection.remove(js)
+        case AllowIf(condition) =>
+          collection.remove(js ++ condition)
+      }
     }
   }
 }

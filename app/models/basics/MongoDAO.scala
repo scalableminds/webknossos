@@ -103,7 +103,7 @@ trait MongoDAO[T] extends DAO[T] with MongoHelpers {
   }
 
   def findHeadOption(attribute: String, value: String)(implicit ctx: DBAccessContext) = {
-    find(attribute, value).one[T]
+    findByAttribute(attribute, value).one[T]
   }
 
   def findOne(implicit ctx: DBAccessContext) = {
@@ -111,7 +111,7 @@ trait MongoDAO[T] extends DAO[T] with MongoHelpers {
   }
 
   def findOne(attribute: String, value: String)(implicit ctx: DBAccessContext) = {
-    find(attribute, value).one[T]
+    findByAttribute(attribute, value).one[T]
   }
 
   def findMaxBy(attribute: String)(implicit ctx: DBAccessContext) = {
@@ -126,8 +126,16 @@ trait MongoDAO[T] extends DAO[T] with MongoHelpers {
     collectionFind().sort(Json.obj(attribute -> desc)).cursor[T].collect[List](limit)
   }
 
-  def find(attribute: String, value: String)(implicit ctx: DBAccessContext): GenericQueryBuilder[JsObject, play.api.libs.json.Reads, play.api.libs.json.Writes] = {
+  private def findByAttribute(attribute: String, value: String)(implicit ctx: DBAccessContext) = {
     collectionFind(Json.obj(attribute -> value))
+  }
+
+  def find(attribute: String, value: String)(implicit ctx: DBAccessContext) = {
+    findByAttribute(attribute, value).cursor[T]
+  }
+
+  def find(query: JsObject)(implicit ctx: DBAccessContext) = {
+    collectionFind(query).cursor[T]
   }
 
   def remove(attribute: String, value: String)(implicit ctx: DBAccessContext): Future[LastError] = {

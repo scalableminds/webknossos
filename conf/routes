@@ -98,7 +98,7 @@ POST     /admin/training/:id/finishReview              controllers.admin.Trainin
 GET      /admin/users                                  controllers.admin.UserAdministration.index
 POST     /admin/users/verify                           controllers.admin.UserAdministration.verifyBulk
 POST     /admin/users/delete                           controllers.admin.UserAdministration.deleteBulk
-GET      /admin/users/:id/verify                       controllers.admin.UserAdministration.verify(id: String)
+POST     /admin/users/:id/verify                       controllers.admin.UserAdministration.verify(id: String)
 GET      /admin/users/:id/delete                       controllers.admin.UserAdministration.delete(id: String)
 GET      /admin/users/:id/loginAs                      controllers.admin.UserAdministration.loginAsUser(id: String)
 GET      /admin/users/:id/details                      controllers.admin.UserTracingAdministration.show(id: String)

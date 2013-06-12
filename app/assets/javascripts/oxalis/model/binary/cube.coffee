@@ -283,32 +283,38 @@ class Cube
 
       voxel = iterator.getNext()
 
-      for zoomStep in [0...@ZOOM_STEP_COUNT]
+      voxelInCube = true
+      for i in [0..2]
+        voxelInCube &= voxel[i] in [0...@upperBoundary[i]]
 
-        address = [
-          voxel[0] >> @BUCKET_SIZE_P
-          voxel[1] >> @BUCKET_SIZE_P
-          voxel[2] >> @BUCKET_SIZE_P
-          zoomStep
-        ]
+      if voxelInCube
+        
+        for zoomStep in [0...@ZOOM_STEP_COUNT]
 
-        voxelOffset = [
-          voxel[0] & 0b11111
-          voxel[1] & 0b11111
-          voxel[2] & 0b11111
-        ]
+          address = [
+            voxel[0] >> @BUCKET_SIZE_P
+            voxel[1] >> @BUCKET_SIZE_P
+            voxel[2] >> @BUCKET_SIZE_P
+            zoomStep
+          ]
 
-        bucket = @getOrCreateVolumeBucketByZoomedAddress(address)
-        voxelIndex = @getVoxelIndexByVoxelOffset(voxelOffset)
+          voxelOffset = [
+            voxel[0] & 0b11111
+            voxel[1] & 0b11111
+            voxel[2] & 0b11111
+          ]
 
-        break if bucket[voxelIndex] == label
-        bucket[voxelIndex] = label
+          bucket = @getOrCreateVolumeBucketByZoomedAddress(address)
+          voxelIndex = @getVoxelIndexByVoxelOffset(voxelOffset)
 
-        voxel = [
-          voxel[0] >> 1
-          voxel[1] >> 1
-          voxel[2] >> 1
-        ]
+          break if bucket[voxelIndex] == label
+          bucket[voxelIndex] = label
+
+          voxel = [
+            voxel[0] >> 1
+            voxel[1] >> 1
+            voxel[2] >> 1
+          ]
 
     @trigger("volumeLabled")
     

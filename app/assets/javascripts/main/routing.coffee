@@ -120,7 +120,6 @@ $ ->
 
     "admin.user.userAdministration" : ->
       require ["multiselect"], ->
-        $(".multiselect").multiselect()
 
         $popovers = $("a[rel=popover]")
         template = """
@@ -166,6 +165,7 @@ $ ->
           $modal.find(".modal-body").html(template.html())
           $modal.find(".modal-header h3").text(title)
           $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
+          $modal.find(".multiselect").multiselect()
 
           $modal.modal("show")
 

@@ -2,6 +2,7 @@ package braingames.util
 
 import java.nio.ByteBuffer
 import scala.math._
+import scala.reflect.ClassTag
 
 object ExtendedTypes {
 
@@ -16,6 +17,23 @@ object ExtendedTypes {
       while (iterator.hasNext) {
         val steps = f(iterator.next().toList)
         iterator.drop(steps)
+      }
+    }
+  }
+
+  implicit class ExtendedArraySeq[T](val as: Seq[Array[T]]){
+    def appendArrays(implicit c: ClassTag[T]) = {
+      if (as.size == 1)
+        as(0)
+      else {
+        val size = as.map(_.size).sum
+        val combined = new Array[T](size)
+        as.foldLeft(0) {
+          case (idx, a) =>
+            Array.copy(a, 0, combined, idx, a.length)
+            idx + a.length
+        }
+        combined
       }
     }
   }

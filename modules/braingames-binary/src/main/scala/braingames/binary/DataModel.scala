@@ -6,6 +6,7 @@ import braingames.geometry._
 import braingames.geometry.Vector3D._
 import scala.collection.parallel.ParSeq
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect.ClassTag
 
 /**
  * All possible data models the client should be able to request need to be defined here and registered in Boot.scala
@@ -17,8 +18,8 @@ abstract class DataModel {
   protected def rotateAndMove(
     moveVector: (Double, Double, Double),
     axis: (Double, Double, Double),
-    coordinates: ArrayBuffer[Vector3D]): ArrayBuffer[Vector3D] = {
-    def ff(f: (Double, Double, Double) => Array[Vector3D]): ArrayBuffer[Vector3D] = {
+    coordinates: Array[Vector3D]): Array[Vector3D] = {
+    def ff(f: (Double, Double, Double) => Array[Vector3D]): Array[Vector3D] = {
       coordinates.map(c => f(c.x, c.y, c.z)(0))
     }
 
@@ -28,7 +29,7 @@ abstract class DataModel {
   @inline
   protected def rotateAndMove[T](
     moveVector: (Double, Double, Double),
-    axis: (Double, Double, Double))(coordinates: ((Double, Double, Double) => Array[T]) => ArrayBuffer[T])(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
+    axis: (Double, Double, Double))(coordinates: ((Double, Double, Double) => Array[T]) => Array[T])(f: (Double, Double, Double) => Array[T]): Array[T] = {
 
     if (axis._1 == 0 && axis._2 == 0 && axis._3 == 0) {
       simpleMove(moveVector, coordinates)(f)
@@ -51,7 +52,7 @@ abstract class DataModel {
   @inline
   protected def simpleMove[T](
     moveVector: (Double, Double, Double),
-    coordinates: ((Double, Double, Double) => Array[T]) => ArrayBuffer[T])(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
+    coordinates: ((Double, Double, Double) => Array[T]) => Array[T])(f: (Double, Double, Double) => Array[T]): Array[T] = {
     coordinates { (px, py, pz) =>
       val x = moveVector._1 + px
       val y = moveVector._2 + py
@@ -66,7 +67,7 @@ abstract class DataModel {
   }
 
   // calculate all coordinates which are in the model boundary
-  def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T]
+  def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit c: ClassTag[T]): Array[T]
 }
 
 case class Cuboid(
@@ -82,14 +83,14 @@ case class Cuboid(
   val height = resolution * _height
   val depth = resolution * _depth
 
-  private val topLeft = topLeftOpt getOrElse {
+  val topLeft = topLeftOpt getOrElse {
     val xh = (width / 2.0).floor
     val yh = (height / 2.0).floor
     val zh = (depth / 2.0).floor
     Vector3D(-xh, -yh, -zh)
   }
 
-  val corners = rotateAndMove(moveVector, axis, ArrayBuffer(
+  val corners = rotateAndMove(moveVector, axis, Array(
     topLeft,
     topLeft.dx(width - 1),
     topLeft.dy(height - 1),
@@ -105,13 +106,17 @@ case class Cuboid(
   val minCorner = corners.foldLeft(maxCorner)((b, e) => (
     math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
 
+  def isUnrotated =
+    axis == (0,0,0)
+
   @inline
-  private def looper[T](extendArrayBy: Int)(f: (Double, Double, Double) => Array[T]) = {
+  private def looper[T](extendArrayBy: Int, c: ClassTag[T])(f: (Double, Double, Double) => Array[T]) = {
+    implicit val tag = c
     val xhMax = topLeft.x + width
     val yhMax = topLeft.y + height
     val zhMax = topLeft.z + depth
 
-    val array = new ArrayBuffer[T](_width * _height * _depth * extendArrayBy)
+    val array = new Array[T](_width * _height * _depth * extendArrayBy)
     var x = topLeft.x
     var y = topLeft.y
     var z = topLeft.z
@@ -121,7 +126,7 @@ case class Cuboid(
       while (y < yhMax) {
         x = topLeft.x
         while (x < xhMax) {
-          array ++= f(x, y, z)
+          f(x, y, z).copyToArray(array, idx, extendArrayBy)
           x += resolution
           idx += extendArrayBy
         }
@@ -132,7 +137,7 @@ case class Cuboid(
     array
   }
 
-  override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
-    rotateAndMove(moveVector, axis)(looper[T](extendArrayBy))(f)
+  override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T])(implicit c: ClassTag[T]): Array[T] = {
+    rotateAndMove(moveVector, axis)(looper[T](extendArrayBy, c))(f)
   }
 }

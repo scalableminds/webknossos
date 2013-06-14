@@ -40,6 +40,7 @@ import braingames.binary._
 import oxalis.binary.BinaryDataService
 import net.liftweb.common._
 import braingames.util.ExtendedTypes.ExtendedFutureBox
+import braingames.util.ExtendedTypes.ExtendedArraySeq
 
 //import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -51,13 +52,10 @@ object BinaryData extends Controller with Secured {
   implicit val dispatcher = Akka.system.dispatcher
   val scaleFactors = Array(1, 1, 1)
 
-  def requestData(dataSetName: String, dataLayerName: String, cubeSize: Int, dataRequest: MultipleDataRequest)(implicit request: AuthenticatedRequest[_]) = {
+  def requestData(dataSetName: String, dataLayerName: String, cubeSize: Int, dataRequest: MultipleDataRequest)(implicit request: AuthenticatedRequest[_]): Future[Box[Array[Byte]]] = {
     DataSetDAO.findOneByName(dataSetName).flatMap {
       case Some(dataSet) =>
-        BinaryDataService.handleMultiDataRequest(dataRequest, dataSet, DataLayerId(dataLayerName), cubeSize).map {
-          case Some(result) => Full(result.toArray)
-          case _ => Empty
-        }
+        BinaryDataService.handleMultiDataRequest(dataRequest, dataSet, DataLayerId(dataLayerName), cubeSize).map(option2Box)
       case _ =>
         Future.successful(Failure(Messages("dataSet.notFound")))
     }
@@ -89,7 +87,8 @@ object BinaryData extends Controller with Secured {
             case dataRequests@MultipleDataRequest(_) =>
               requestData(dataSetName, dataLayerName, cubeSize, dataRequests).map {
                 b =>
-                  b.map(byteArray => Ok(byteArray))
+                  b.map{byteArray =>
+                    Ok(byteArray)}
               }
             case _ =>
               Akka.future {
@@ -103,15 +102,17 @@ object BinaryData extends Controller with Secured {
   def respondeWithImage(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: AuthenticatedRequest[_]) = {
     Async {
       val dataRequests = MultipleDataRequest(SingleDataRequest(resolution, Point3D(x, y, z), false))
-      val params = ImageCreatorParameters(
-        slideWidth = cubeSize,
-        slideHeight = cubeSize,
-        imagesPerRow = imagesPerRow)
 
       requestData(dataSetName, dataLayerName, cubeSize, dataRequests).map {
         b =>
           b.flatMap {
             byteArray =>
+              val params = ImageCreatorParameters(
+                bytesPerElement = byteArray.length / cubeSize / cubeSize / cubeSize,
+                slideWidth = cubeSize,
+                slideHeight = cubeSize,
+                imagesPerRow = imagesPerRow)
+
               ImageCreator.createImage(byteArray, params).map {
                 combinedImage =>
                   val file = new JPEGWriter().writeToFile(combinedImage.image)
@@ -165,7 +166,8 @@ object BinaryData extends Controller with Secured {
                         BinaryDataService.handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).map(_.map {
                           result =>
                             Logger.trace("Websocket result size: " + result.size)
-                            channel.push((result ++= dataRequests.handle).toArray)
+                            val resultWithHandle = Seq(result, dataRequests.handle).appendArrays
+                            channel.push(resultWithHandle)
                         })
                       case _ =>
                         Logger.error("Received unhandled message!")

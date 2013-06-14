@@ -6,30 +6,22 @@ import braingames.geometry.Vector3D
 
 trait Interpolation {
   def interpolate(
-    resolution: Int,
-    blockMap: Map[Point3D, Array[Byte]],
     bytesPerElement: Int,
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte]
+    byteLoader: (Point3D) => Array[Byte])(point: Vector3D): Array[Byte]
 }
 
 object TrilerpInterpolation extends Interpolation {
 
-  def getColor(
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte],
-    resolution: Int,
-    blockMap: Map[Point3D, Array[Byte]])(point: Point3D): Double = {
-
-    val color = byteLoader(point, 1, resolution, blockMap)(0)
+  def getColor(byteLoader: (Point3D) => Array[Byte])(point: Point3D): Double = {
+    val color = byteLoader(point)(0)
     (0xff & color.asInstanceOf[Int])
   }
 
   def interpolate(
-    resolution: Int,
-    blockMap: Map[Point3D, Array[Byte]],
     bytesPerElement: Int,
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte] = {
+    byteLoader: (Point3D) => Array[Byte])(point: Vector3D): Array[Byte] = {
 
-    val colorF = getColor(byteLoader, resolution, blockMap) _
+    val colorF = getColor(byteLoader) _
     val x = point.x.toInt
     val y = point.y.toInt
     val z = point.z.toInt
@@ -56,13 +48,11 @@ object TrilerpInterpolation extends Interpolation {
 object NearestNeighborInterpolation extends Interpolation {
 
   def interpolate(
-    resolution: Int,
-    blockMap: Map[Point3D, Array[Byte]],
     bytesPerElement: Int,
-    byteLoader: (Point3D, Int, Int, Map[Point3D, Array[Byte]]) => Array[Byte])(point: Vector3D): Array[Byte] = {
+    byteLoader: (Point3D) => Array[Byte])(point: Vector3D): Array[Byte] = {
 
     val byte = point.x % bytesPerElement
     val x = (point.x - byte + (if (bytesPerElement - 2 * byte >= 0) 0 else bytesPerElement)).toInt
-    byteLoader(Point3D(x, point.y.round.toInt, point.z.round.toInt), bytesPerElement, resolution, blockMap)
+    byteLoader(Point3D(x, point.y.round.toInt, point.z.round.toInt))
   }
 }

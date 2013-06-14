@@ -23,6 +23,7 @@ trait DataLayerLike {
   def elementClassToSize(elementClass: String): Int = elementClass match {
     case "uint8" => 8
     case "uint16" => 16
+    case "uint24" => 24
     case "uint32" => 32
     case "uint64" => 64
     case _ => throw new IllegalArgumentException(s"illegal element class ($elementClass) for DataLayer")

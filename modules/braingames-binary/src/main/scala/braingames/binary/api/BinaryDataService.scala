@@ -88,14 +88,13 @@ trait BinaryDataService extends DataSetService{
     math.pow(2, resolutionExponent).toInt
 
   def cuboidFromPosition(position: Point3D, cubeSize: Int, resolution: Int) = {
-    val cubeCorner = Vector3D(position.scale {
-      case (x, i) =>
+    val cubeCorner = Vector3D(position.scale { (x,i) =>
         x - x % (cubeSize / scaleFactors(i))
     })
     Cuboid(cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2), resolution, Some(cubeCorner))
   }
 
-  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayerId, cubeSize: Int): Future[Option[ArrayBuffer[Byte]]] = {
+  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayerId, cubeSize: Int): Future[Option[Array[Byte]]] = {
     val cubeRequests = multi.requests.map { request =>
       val resolution = resolutionFromExponent(request.resolutionExponent)
       val cuboid = cuboidFromPosition(request.position, cubeSize, resolution)
@@ -106,7 +105,7 @@ trait BinaryDataService extends DataSetService{
           resolution,
           cuboid,
           useHalfByte = request.useHalfByte,
-          skipInterpolation = true))
+          skipInterpolation = false))
     }
 
     val future = (dataRequestActor ? MultiCubeRequest(cubeRequests)) recover {
@@ -115,6 +114,6 @@ trait BinaryDataService extends DataSetService{
         None
     }
 
-    future.mapTo[Option[ArrayBuffer[Byte]]]
+    future.mapTo[Option[Array[Byte]]]
   }
 }

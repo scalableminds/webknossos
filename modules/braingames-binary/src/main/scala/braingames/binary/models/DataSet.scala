@@ -36,11 +36,11 @@ case class DataSet(
       point.y / blockLength / resolution,
       point.z / blockLength / resolution)
 
-  def globalToLocal(point: Point3D, resolution: Int) =
+  def applyResolution(point: Point3D, resolution: Int) =
     Point3D(
-      (point.x / resolution) % blockLength,
-      (point.y / resolution) % blockLength,
-      (point.z / resolution) % blockLength)
+      point.x / resolution,
+      point.y / resolution,
+      point.z / resolution)
 }
 
 object DataSetSettings extends SettingsFile {
@@ -49,7 +49,7 @@ object DataSetSettings extends SettingsFile {
 
   implicit val dataSetSettingsFormat = Json.format[DataSetSettings]
 
-  def settingsFileFromFolder(f: File)  = {
+  def settingsFileFromFolder(f: File) = {
     new File(f.getPath + "/" + settingsFileName)
   }
 

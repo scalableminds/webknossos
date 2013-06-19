@@ -114,6 +114,7 @@ class PlaneController
 
     @input.mouseControllers.push( new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
+        console.log "PlaneController, leftDownMove"
         @cameraController.movePrevX(delta.x * @model.user.getMouseInversionX())
         @cameraController.movePrevY(delta.y * @model.user.getMouseInversionY())
       scroll : (value) =>
@@ -317,7 +318,7 @@ class PlaneController
   getMousePosition : ->
     activePlane = @flycam.getActivePlane()
     pos = @input.mouseControllers[activePlane].position
-    return @calculateGlobalPos([pos.x, pos.y])
+    return @calculateGlobalPos(pos)
 
   isMouseOver : ->
     activePlane = @flycam.getActivePlane()
@@ -359,17 +360,17 @@ class PlaneController
     planeRatio    = @model.scaleInfo.baseVoxelFactors
     position = switch @flycam.getActivePlane()
       when constants.PLANE_XY 
-        [ curGlobalPos[0] - (constants.WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
-          curGlobalPos[1] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+        [ curGlobalPos[0] - (constants.WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor, 
+          curGlobalPos[1] - (constants.WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[1] * zoomFactor, 
           curGlobalPos[2] ]
       when constants.PLANE_YZ 
         [ curGlobalPos[0], 
-          curGlobalPos[1] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
-          curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[2] * zoomFactor ]
+          curGlobalPos[1] - (constants.WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[1] * zoomFactor, 
+          curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[2] * zoomFactor ]
       when constants.PLANE_XZ 
-        [ curGlobalPos[0] - (constants.WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+        [ curGlobalPos[0] - (constants.WIDTH * scaleFactor / 2 - clickPos.x) / scaleFactor * planeRatio[0] * zoomFactor, 
           curGlobalPos[1], 
-          curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor ]
+          curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[2] * zoomFactor ]
 
   centerActiveNode : ->
     @activeSubController.centerActiveNode()

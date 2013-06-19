@@ -18,7 +18,7 @@ class VolumeTracingController
             0
           ]
         else
-          @drawVolume( @calculateGlobalPos([pos.x, pos.y]))
+          @drawVolume( @calculateGlobalPos(pos))
       
       leftClick : (pos, shiftPressed, altPressed, plane) =>
         @model.volumeTracing.startEditing()

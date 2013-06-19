@@ -155,9 +155,9 @@ class Controller
 
       "m" : => # toggle between plane tracing and arbitrary tracing
 
-        if @mode == constants.MODE_VOLUME or @mode == constants.MODE_PLANE_TRACING
+        if @mode == constants.MODE_PLANE_TRACING
           @setMode(constants.MODE_ARBITRARY)
-        else
+        else if @mode == constants.MODE_ARBITRARY
           @setMode(constants.MODE_PLANE_TRACING)
     )
 

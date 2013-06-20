@@ -145,26 +145,31 @@ class Input.Mouse
   class MouseButton
 
     constructor : (@name, @which, @mouse) ->
-      @down = false
-      @drag = false
+      @down  = false
+      @drag  = false
+      @moved = false
 
     handleMouseDown : (event) ->
+
       if event.which == @which
         $(":focus").blur() # see OX-159
 
-        @down = true
-        console.log "trigger:", (@name + "Click")
-        @mouse.trigger(@name + "Click", @mouse.lastPosition, event.shiftKey, event.altKey)
+        @down  = true
+        @moved = false
+        @mouse.trigger(@name + "MouseDown", @mouse.lastPosition, event.shiftKey, event.altKey)
 
     handleMouseUp : (event) ->
-      if event.which == @which
-        console.log "trigger:", (@name + "MouseUp")
+
+      if event.which == @which and @down
         @mouse.trigger(@name + "MouseUp")
+        if not @moved
+          @mouse.trigger(@name + "Click", @mouse.lastPosition, event.shiftKey, event.altKey)
         @down = false
 
     handleMouseMove : (event, delta) ->
+
       if @down
-        console.log "trigger:", (@name + "DownMove"), @mouse
+        @moved = true
         @mouse.trigger(@name + "DownMove", delta, @mouse.position, event.ctrlKey)
 
   constructor : (@$target, initialBindings) ->

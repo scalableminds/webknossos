@@ -114,7 +114,6 @@ class PlaneController
 
     @input.mouseControllers.push( new Input.Mouse($("#skeletonview"),
       leftDownMove : (delta) => 
-        console.log "PlaneController, leftDownMove"
         @cameraController.movePrevX(delta.x * @model.user.getMouseInversionX())
         @cameraController.movePrevY(delta.y * @model.user.getMouseInversionY())
       scroll : (value) =>

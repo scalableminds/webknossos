@@ -107,9 +107,7 @@ class CellTacingController
  
     # identify clicked object
     intersects = raycaster.intersectObjects(@sceneController.skeleton.nodes)
-    console.log "position", position
-    console.log "intersetcs:", intersects.length, intersects
-    #if intersects.length > 0 and intersects[0].distance >= 0
+    
     for intersect in intersects
 
       index = intersect.index

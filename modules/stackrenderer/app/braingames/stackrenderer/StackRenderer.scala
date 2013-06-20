@@ -26,6 +26,7 @@ import javax.imageio.ImageIO
 import scala.concurrent.Await
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.util.JsonHelper
 
 case class RenderStack(stack: Stack)
 
@@ -140,22 +141,22 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
   
   def writeMetaFile(stack:Stack, pages: List[CombinedPage]) = {
     val json = Json.obj(
-      "width" -> stack.level.width,
-      "height" -> stack.level.height,
-      "length" -> stack.level.depth,
       "levelName" -> stack.level.levelId.name,
       "levelVersion" -> stack.level.levelId.version,
       "levelId" -> stack.level.id,
       "stackId" -> stack.mission.id,
-      "frameData" -> Json.obj(),
       "sprites" -> pages.map{ p => Json.obj(
           "name" -> p.pageInfo.name,
           "start" -> p.pageInfo.start,
-          "number" -> p.pageInfo.number
-      )},
-      "createdAt" -> System.currentTimeMillis
+          "count" -> p.pageInfo.number
+      )}
       )
-    printToFile(stack.metaFile)( _.println(json.toString))
+    val originalJson = 
+      if(stack.metaFile.exists)
+        JsonHelper.JsonFromFile(stack.metaFile).as[JsObject]
+      else
+          Json.obj()
+    printToFile(stack.metaFile)( _.println((originalJson ++ json).toString))
   }
   
   def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit): File = {

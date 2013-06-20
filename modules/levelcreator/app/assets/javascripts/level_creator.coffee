@@ -136,7 +136,7 @@ class LevelCreator
         @dataHandler.deferred("initialized")
       ).then(
         => @prepareHeadlessRendering()
-        -> window.callPhantom( message : "fatalError" )
+        (error) -> window.callPhantom( { message : "fatalError", error } )
       )
 
 

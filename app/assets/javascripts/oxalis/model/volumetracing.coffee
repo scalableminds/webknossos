@@ -50,7 +50,7 @@ class VolumeTracing
 
     start = (new Date()).getTime()
     iterator = @currentLayer.getVoxelIterator()
-    labelValue = if @activeCell then ( @activeCell.id % 6 + 1 ) else 0
+    labelValue = if @activeCell then @activeCell.id else 0
     @cube.labelVoxels(iterator, labelValue)
     console.log "Labeling time:", ((new Date()).getTime() - start)
 
@@ -67,6 +67,8 @@ class VolumeTracing
       return 0
 
   setActiveCell : (id) ->
+
+    console.log "setActiveCell", id
 
     @activeCell = null
     for cell in @cells

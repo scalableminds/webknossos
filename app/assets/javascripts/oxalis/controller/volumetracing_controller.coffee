@@ -18,19 +18,33 @@ class VolumeTracingController
             0
           ]
         else
-          @drawVolume( @calculateGlobalPos(pos))
+          @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
       
-      leftMouseDown : (pos, shiftPressed, altPressed, plane) =>
+      leftMouseDown : (pos, shiftPressed, altPressed) =>
         @model.volumeTracing.startEditing()
       
       leftMouseUp : =>
         @model.volumeTracing.finishLayer()
+      
+      rightDownMove : (delta, pos, ctrlPressed) =>
+        @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
+      
+      rightMouseDown : (pos, shiftPressed, altPressed) =>
+        @prevActiveCell = @model.volumeTracing.getActiveCellId()
+        @model.volumeTracing.setActiveCell(0)
+        @model.volumeTracing.startEditing()
+      
+      rightMouseUp : =>
+        @model.volumeTracing.finishLayer()
+        @model.volumeTracing.setActiveCell( @prevActiveCell )
+
+      leftClick : (pos, shiftPressed, altPressed) =>
+        @model.volumeTracing.setActiveCell(
+          @model.binary.cube.getLabel(
+            @calculateGlobalPos( pos )))
           
 
     @keyboardControls =
 
       "c" : =>
         @model.volumeTracing.createCell()
-
-  drawVolume : (pos) ->
-    @model.volumeTracing.addToLayer(pos)

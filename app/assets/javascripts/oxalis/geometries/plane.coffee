@@ -56,15 +56,37 @@ class Plane
       varying vec2 vUv;
       void main() {
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
-        
+        float id = (volumeColor[0] * 255.0);
+        float golden_ratio = 0.618033988749895;
+
         /* Color map (<= to fight rounding mistakes) */
-             if(volumeColor[0] * 255.0 <= 0.1) volumeColor = vec4(0.0, 0.0, 0.0, 1);
-        else if(volumeColor[0] * 255.0 <= 1.1) volumeColor = vec4(0.3, 0.0, 0.0, 1);
-        else if(volumeColor[0] * 255.0 <= 2.1) volumeColor = vec4(0.0, 0.3, 0.0, 1);
-        else if(volumeColor[0] * 255.0 <= 3.1) volumeColor = vec4(0.0, 0.0, 0.3, 1);
-        else if(volumeColor[0] * 255.0 <= 4.1) volumeColor = vec4(0.3, 0.3, 0.0, 1);
-        else if(volumeColor[0] * 255.0 <= 5.1) volumeColor = vec4(0.0, 0.3, 0.3, 1);
-        else if(volumeColor[0] * 255.0 <= 6.1) volumeColor = vec4(0.3, 0.0, 0.3, 1);
+
+        /*
+        if (id > 0.1) {
+          vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1, 0.3, 1 );
+          vec4 hue;
+          hue.x = abs(HSV.x - 3.0) - 1.0;
+          hue.y = 2.0 - abs(HSV.x - 2.0);
+          hue.z = 2.0 - abs(HSV.x - 4.0);
+          volumeColor = ((clamp(hue,0.0,1.0) - 1.0) * HSV.y + 1.0) * HSV.z;
+        } else {
+            volumeColor = vec4(0.0, 0.0, 0.0, 1);
+        }*/
+
+             if(id <= 0.1) volumeColor = vec4(0.0, 0.0, 0.0, 1);
+        else if(id <= 1.1) volumeColor = vec4(0.3, 0.0, 0.0, 1);
+        else if(id <= 2.1) volumeColor = vec4(0.0, 0.3, 0.0, 1);
+        else if(id <= 3.1) volumeColor = vec4(0.0, 0.0, 0.3, 1);
+        else if(id <= 4.1) volumeColor = vec4(0.3, 0.3, 0.0, 1);
+        else if(id <= 5.1) volumeColor = vec4(0.0, 0.3, 0.3, 1);
+        else if(id <= 6.1) volumeColor = vec4(0.3, 0.0, 0.3, 1);
+
+        else if(id <= 7.1) volumeColor = vec4(0.3, 0.0, 0.0, 1);
+        else if(id <= 8.1) volumeColor = vec4(0.0, 0.3, 0.0, 1);
+        else if(id <= 9.1) volumeColor = vec4(0.0, 0.0, 0.3, 1);
+        else if(id <= 10.1) volumeColor = vec4(0.3, 0.3, 0.0, 1);
+        else if(id <= 11.1) volumeColor = vec4(0.0, 0.3, 0.3, 1);
+        else if(id <= 12.1) volumeColor = vec4(0.3, 0.0, 0.3, 1);
 
         gl_FragColor = texture2D(texture, vUv * repeat + offset) + volumeColor; }"
     uniforms = {

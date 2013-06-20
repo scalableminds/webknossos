@@ -291,21 +291,7 @@ class Cube
         
         for zoomStep in [0...@ZOOM_STEP_COUNT]
 
-          address = [
-            voxel[0] >> @BUCKET_SIZE_P
-            voxel[1] >> @BUCKET_SIZE_P
-            voxel[2] >> @BUCKET_SIZE_P
-            zoomStep
-          ]
-
-          voxelOffset = [
-            voxel[0] & 0b11111
-            voxel[1] & 0b11111
-            voxel[2] & 0b11111
-          ]
-
-          bucket = @getOrCreateVolumeBucketByZoomedAddress(address)
-          voxelIndex = @getVoxelIndexByVoxelOffset(voxelOffset)
+          { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, zoomStep )
 
           break if bucket[voxelIndex] == label
           bucket[voxelIndex] = label
@@ -317,6 +303,30 @@ class Cube
           ]
 
     @trigger("volumeLabled")
+
+  getLabel : ( voxel ) ->
+
+    { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, 0 )
+    return bucket[voxelIndex]
+
+  getBucketAndVoxelIndex : ([x, y, z], zoomStep) ->
+
+    address = [
+      x >> @BUCKET_SIZE_P
+      y >> @BUCKET_SIZE_P
+      z >> @BUCKET_SIZE_P
+      zoomStep
+    ]
+
+    voxelOffset = [
+      x & 0b11111
+      y & 0b11111
+      z & 0b11111
+    ]
+
+    return {
+      bucket : @getOrCreateVolumeBucketByZoomedAddress(address)
+      voxelIndex : @getVoxelIndexByVoxelOffset(voxelOffset) }
     
 
   # return the bucket a given voxel lies in

@@ -27,14 +27,21 @@ import play.api.Logger
 import scala.concurrent.duration._
 import scala.concurrent.Promise
 
-case class ImagePartInfo(x: Int, y: Int, height: Int, width: Int)
+case class ImagePartInfo(page: Int, x: Int, y: Int, height: Int, width: Int)
 
-case class CombinedImage(image: BufferedImage, info: List[ImagePartInfo])
+case class PageInfo(idx: Int, start: Int, number: Int){
+  def name = idx + ".png"
+}
+
+case class CombinedImage(pages: List[CombinedPage])
+
+case class CombinedPage(image: BufferedImage, info: List[ImagePartInfo], pageInfo: PageInfo)
 
 case class ImageCreatorParameters(
   slideWidth: Int = 128,
   slideHeight: Int = 128,
   imagesPerRow: Int = 8,
+  imagesPerColumn: Int = Int.MaxValue,
   imageWidth: Option[Int] = None,
   imageHeight: Option[Int] = None)
 
@@ -44,7 +51,8 @@ object ImageCreator {
 
   def createImage(data: Array[Byte], params: ImageCreatorParameters): Option[CombinedImage] = {
     val images = calculateImageSlices(data, params)
-    createBigImage(images, params)
+    // TODO: Fix
+    createBigImages(images, params)
   }
 
   def calculateImageSlices(data: Array[Byte], params: ImageCreatorParameters): List[BufferedImage] = {
@@ -54,31 +62,37 @@ object ImageCreator {
     }
   }
 
-  def createBigImage(bufferedImages: List[BufferedImage], params: ImageCreatorParameters): Option[CombinedImage] = {
-    if (bufferedImages.isEmpty) {
+  def createBigImages(images: List[BufferedImage], params: ImageCreatorParameters): Option[CombinedImage] = {
+    if (images.isEmpty) {
       Logger.warn("No images supplied")
       None
     } else {
-      val subpartWidth = bufferedImages(0).getWidth()
-      val subpartHeight = bufferedImages(0).getHeight()
-      val imageType = bufferedImages(0).getType()
-      val depth = math.ceil(bufferedImages.size.toFloat / params.imagesPerRow).toInt
-      val imageWidth = params.imageWidth.getOrElse(subpartWidth * params.imagesPerRow)
-      val imageHeight = params.imageHeight.getOrElse(subpartHeight * depth)
-
-      val finalImage = new BufferedImage(imageWidth, imageHeight, imageType)
-
-      val info = bufferedImages.zipWithIndex.map {
-        case (image, idx) =>
-          assert(image.getWidth() == subpartWidth, "Wrong image size!")
-          assert(image.getHeight() == subpartHeight, "Wrong image size!")
-          val w = idx % params.imagesPerRow * params.slideWidth
-          val h = idx / params.imagesPerRow * params.slideHeight 
-          finalImage.createGraphics().drawImage(
-            image,  w, h, null)
-          ImagePartInfo(w, h, subpartWidth, subpartHeight)
-      }
-      Some(CombinedImage(finalImage, info))
+      val subpartWidth = images(0).getWidth()
+      val subpartHeight = images(0).getHeight()
+      val imageType = images(0).getType()
+      val imagesPerPage = params.imagesPerColumn * params.imagesPerRow
+      val pages = images.sliding(imagesPerPage,imagesPerPage).zipWithIndex.map{ 
+        case (pageImages, page) =>
+          val depth = math.ceil(pageImages.size.toFloat / params.imagesPerRow).toInt
+        
+          val imageWidth = params.imageWidth.getOrElse(subpartWidth * params.imagesPerRow)
+          val imageHeight = params.imageHeight.getOrElse(subpartHeight * depth)
+    
+          val finalImage = new BufferedImage(imageWidth, imageHeight, imageType)
+    
+          val info = pageImages.zipWithIndex.map {
+            case (image, idx) =>
+              assert(image.getWidth() == subpartWidth, "Wrong image size!")
+              assert(image.getHeight() == subpartHeight, "Wrong image size!")
+              val w = idx % params.imagesPerRow * params.slideWidth
+              val h = idx / params.imagesPerRow * params.slideHeight 
+              finalImage.createGraphics().drawImage(
+                image,  w, h, null)
+              ImagePartInfo(page, w, h, subpartWidth, subpartHeight)
+          }
+          CombinedPage(finalImage, info, PageInfo(page, page*imagesPerPage, pageImages.size))
+      }.toList
+      Some(CombinedImage(pages))
     }
   }
 

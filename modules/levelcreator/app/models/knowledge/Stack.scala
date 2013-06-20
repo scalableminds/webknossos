@@ -14,7 +14,6 @@ case class Stack(level: Level, mission: Mission, _id: ObjectId = new ObjectId){
   val directory = new File(path)
   val tarFile = new File(s"$path/stack.tar")
   val metaFile = new File(s"$path/meta.json")
-  val image = new File(s"$path/stack.png")
   val xmlAtlas = new File(s"$path/atlas.xml")
   
   def isTared = tarFile.exists

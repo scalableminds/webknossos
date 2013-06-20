@@ -51,8 +51,10 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
 
   val conf = Play.current.configuration
 
-  val imagesPerRow = conf.getInt("stackrenderer.imagesPerRow") getOrElse 10
   val phantomTimeout = (conf.getInt("stackrenderer.phantom.timeout") getOrElse 30) minutes
+  
+  val maxSpriteSheetHeight = 2048
+  val maxSpriteSheetWidth = 2048
 
   def receive = {
     case RenderStack(stack) =>
@@ -89,8 +91,9 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
     val success = produceStackFrames(stack, useLevelUrl.format(stack.level.id, stack.mission.id), binaryDataUrl)
 
     if (stack.isProduced && success) {
-      createStackImage(stack)
-      tarStack(stack)
+      
+      val stackImages = createStackImages(stack) getOrElse Nil
+      tarStack(stack, (stack.metaFile :: stack.xmlAtlas :: stackImages))
       true
     } else {
       Logger.error(s"stack $stack was not properly produced")
@@ -98,26 +101,30 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
     }
   }
 
-  def createStackImage(stack: Stack) {
+  def createStackImages(stack: Stack): Option[List[File]] = {
     val images = stack.frames.map(ImageIO.read)
     val params = ImageCreatorParameters(
       slideWidth = stack.level.width,
       slideHeight = stack.level.height,
-      imagesPerRow = imagesPerRow)
-    ImageCreator.createBigImage(images, params).map { combinedImage =>
-      new PNGWriter().writeToFile(combinedImage.image, stack.image)
-      XmlAtlas.writeToFile(combinedImage.info, stack.image.getName, stack.xmlAtlas)
+      imagesPerRow = maxSpriteSheetWidth / stack.level.width,
+      imagesPerColumn = maxSpriteSheetHeight / stack.level.height)
+    ImageCreator.createBigImages(images, params).map { combinedImage =>
+      val files = combinedImage.pages.map{ p => 
+        new PNGWriter().writeToFile(p.image, new File(stack.path+"/"+ p.pageInfo.name))
+      }
+      writeMetaFile(stack: Stack, combinedImage.pages)
+      XmlAtlas.writeToFile(combinedImage, stack.xmlAtlas)
+      files
     }
 
   }
 
-  def tarStack(stack: Stack) {
+  def tarStack(stack: Stack, files: List[File]) {
     def createTarName(file: File) = s"${stack.mission.id}/${file.getName}"
     (Try {
       val output =
         new FileOutputStream(stack.tarFile)
-      val inputs =
-        (stack.metaFile :: stack.image :: stack.xmlAtlas :: Nil).map { f =>
+      val inputs = files.map { f =>
           f -> createTarName(f)
         }
       TarIO.tar(inputs, output)
@@ -129,5 +136,31 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
         Logger.error(s"$exception")
         None
     }
+  }
+  
+  def writeMetaFile(stack:Stack, pages: List[CombinedPage]) = {
+    val json = Json.obj(
+      "width" -> stack.level.width,
+      "height" -> stack.level.height,
+      "length" -> stack.level.depth,
+      "levelName" -> stack.level.levelId.name,
+      "levelVersion" -> stack.level.levelId.version,
+      "levelId" -> stack.level.id,
+      "stackId" -> stack.mission.id,
+      "frameData" -> Json.obj(),
+      "sprites" -> pages.map{ p => Json.obj(
+          "name" -> p.pageInfo.name,
+          "start" -> p.pageInfo.start,
+          "number" -> p.pageInfo.number
+      )},
+      "createdAt" -> System.currentTimeMillis
+      )
+    printToFile(stack.metaFile)( _.println(json.toString))
+  }
+  
+  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit): File = {
+    val p = new java.io.PrintWriter(f)
+    try { op(p) } finally { p.close() }
+    f
   }
 }

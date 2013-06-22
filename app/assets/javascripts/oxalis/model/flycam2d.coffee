@@ -35,6 +35,9 @@ class Flycam2d
     @rayThreshold = [10, 10, 10, 100]
     @spaceDirection = [1, 1, 1]
     @quality = 0        # offset of integer zoom step to the best-quality zoom level
+    
+    # correct zoom values that are too high
+    @user.setValue("zoom", Math.min(@user.zoom, Math.floor(@getMaxZoomStep())))
     @setZoomStep(@user.zoom)
 
     @user.on({

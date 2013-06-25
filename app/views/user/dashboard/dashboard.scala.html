@@ -14,6 +14,12 @@
         <div class="tab-pane active" id="tab-tasks">
 
           <h3>Tasks</h3>
+          <br />
+          <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(hasAnOpenTask){,confirm=@Messages("task.requestAnother")}" id="new-task-button">Get a new task</a>
+          
+          <div class="divider-vertical"></div>
+          <a href="#" id="toggle-finished">Show finished tasks</a>
+          <br /><br />
           <table class="table table-striped mask-finished" id="dashboard-tasks">
             <thead>
               <tr>
@@ -31,10 +37,6 @@
             }
             </tbody>
           </table>
-          <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(hasAnOpenTask){,confirm=@Messages("task.requestAnother")}" id="new-task-button">Get a new task</a>
-          
-          <div class="divider-vertical"></div>
-          <a href="#" id="toggle-finished">Show finished tasks</a>
         </div>
 
       	<div class="tab-pane" id="tab-explorative">

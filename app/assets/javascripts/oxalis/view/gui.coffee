@@ -215,7 +215,11 @@ class Gui
       new $.Deferred().resolve()
 
   setPosFromString : (posString) =>
-    stringArray = posString.split(",")
+    # remove leading/trailing whitespaces
+    strippedString = posString.trim()
+    # replace remaining whitespaces with commata
+    unifiedString = strippedString.replace /,?\s+,?/g, ","
+    stringArray = unifiedString.split(",")
     if stringArray.length == 3
       pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
       if !isNaN(pos[0]) and !isNaN(pos[1]) and !isNaN(pos[2])

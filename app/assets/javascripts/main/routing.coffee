@@ -168,10 +168,6 @@ $ ->
 
         $modal.modal("show")
 
-      return
-
-    "admin.user.userAdministration" : ->
-
       $("form").on "click", ".label-experience", (event) ->
         values = $(this).html().split(" ")
         if values
@@ -179,6 +175,8 @@ $ ->
           $("input[name=experience-value]").val(values[1])
           $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
           $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
+
+      return
 
 
     "admin.task.taskSelectionAlgorithm" : ->

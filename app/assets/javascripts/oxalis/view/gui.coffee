@@ -241,7 +241,7 @@ class Gui
       $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
 
   updateGlobalPosition : (globalPos) =>
-    stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
+    stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
     $("#trace-position-input").val(stringPos)
 
   set : (name, value, type) =>

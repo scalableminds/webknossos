@@ -54,7 +54,7 @@ class Route
 
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.content.id, tracing.content.settings.isEditable)
+    @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.content.id, tracing.restrictions.allowUpdate)
     
     console.log "Annotation data: ", tracing
 
@@ -148,7 +148,7 @@ class Route
     $(window).on(
       "beforeunload"
       =>
-        if !@stateLogger.stateSaved() and @stateLogger.isEditable
+        if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
           @stateLogger.pushImpl(false)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else

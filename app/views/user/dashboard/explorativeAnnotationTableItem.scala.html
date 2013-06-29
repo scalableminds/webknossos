@@ -27,6 +27,6 @@
       <a href="@controllers.routes.AnnotationController.trace(annotation.typ, annotation.id)"><i class="icon-random"></i> trace</a><br />
       <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)"><i class="icon-download"></i> download</a><br />
       @if(models.annotation.AnnotationType.isExploratory(annotation)){
-        <a href="@controllers.routes.AnnotationController.finish(annotation.typ, annotation.id, true)" data-ajax="delete-row,confirm=@Messages("tracing.finish.confirm")"><i class="icon-trash"></i> delete</a></td>
+        <a href="@controllers.routes.AnnotationController.finish(annotation.typ, annotation.id, true)" data-ajax="delete-row,confirm=@Messages("annotation.finish.confirm")"><i class="icon-trash"></i> delete</a></td>
       }
   </tr>

@@ -11,7 +11,7 @@ class Gui
 
   model : null
   
-  constructor : (container, @model, @tracingSettings) ->
+  constructor : (container, @model, @restrictions, @tracingSettings) ->
     
     _.extend(this, new EventMixin())
 
@@ -130,6 +130,8 @@ class Gui
     @fNodes.open()
     @fCells.open()
 
+    $("#dataset-name").text(@model.binary.dataSetName)
+
     $("#trace-position-input").on "change", (event) => 
 
       @setPosFromString(event.target.value)
@@ -220,7 +222,7 @@ class Gui
 
   saveNow : =>
     @user.pushImpl()
-    if @tracingSettings.isEditable
+    if @restrictions.allowUpdate
       @model.route.pushNow()
         .then( 
           -> Toast.success("Saved!")

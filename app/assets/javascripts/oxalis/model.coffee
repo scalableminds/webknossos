@@ -57,7 +57,7 @@ class Model
             @route = new Route(tracing, @scaleInfo, @flycam, @flycam3d, @user)
             @volumeTracing = new VolumeTracing(@flycam, @binary.cube)
             
-            tracing.content.settings
+            [tracing.restrictions, tracing.content.settings]
             
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )

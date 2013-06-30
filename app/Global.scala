@@ -96,7 +96,7 @@ object InitialData extends GlobalDBAccess {
         "Boy",
         true,
         braingames.security.SCrypt.hashPassword("secret"),
-        List("test"),
+        List("Structure of Neocortical Circuits Group\\\\Everyone"),
         "local",
         UserConfiguration.defaultConfiguration,
         Set("user", "admin")))

@@ -548,9 +548,6 @@ class Route
 
   deleteTree : (notify, id, deleteBranchesAndComments) ->
 
-    unless @activeNode?
-      return
-
     if notify
       if confirm("Do you really want to delete the whole tree?")
         @reallyDeleteTree(id, deleteBranchesAndComments)

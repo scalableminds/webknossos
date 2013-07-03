@@ -123,7 +123,7 @@ class Gui
     $("#trace-position-input").on "change", (event) => 
 
       @setPosFromString(event.target.value)
-      return
+      $("#trace-position-input").blur()
 
     $("#trace-finish-button").click (event) =>
 

@@ -197,6 +197,18 @@ svg a:hover {
 }
 
 #stack-list {
+
+    .level-version {
+
+        margin-top: 40px;
+
+        header > * {
+            display: inline-block;
+            margin-right: 20px;
+
+        }
+    }
+
     .stack {
         float: left;
         margin-right: 20px;
@@ -222,6 +234,9 @@ svg a:hover {
                 font-size: 20px;
             }
         }
+        .stack-buttons input[type=checkbox] {
+            margin: -7px 5px 0;
+        }
         .stack-buttons .busy .icon-retweet {
             .rotating;
         }
@@ -230,7 +245,6 @@ svg a:hover {
 
         text-align: center;
         position: relative;
-        box-shadow: inset 0 0 20px #eee;
 
         a, .loading-indicator {
             display: block;

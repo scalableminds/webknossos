@@ -34,12 +34,15 @@ import braingames.util.FileIO
 import java.io.FileInputStream
 import java.nio.channels.Channels
 import controllers.tracing.handler.SavedTracingInformationHandler
+import play.api.Play
 
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
 
+  val conf = Play.current.configuration
+
   val baseTracingOutputDir = {
-    val folder = "data/nmls"
+    val folder = conf.getString("binData.nmlFolder") getOrElse "data/nmls"
     new File(folder).mkdirs()
     folder
   }

@@ -19,7 +19,9 @@ body:-webkit-full-screen {
   width: 100%;
   height: 100%;
 }
-
+.navbar-static-top {
+    min-width: 1024px;
+}
 .navbar .brand {
     background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
     padding-left: 43px;
@@ -287,13 +289,14 @@ svg a:hover {
     overflow-y: auto;
 }
 #abstractTreeViewer {
-    height : 2*@standardViewportWidth - 40px;
+    height : 2*@standardViewportWidth + 20px;
     width: 350px;
     float: left;
     font-size: 0;
 }
 #tree-list {
-    max-height: 500px;
+    height : 2*@standardViewportWidth - 90px;
+    margin-top: 10px;
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -305,6 +308,7 @@ svg a:hover {
     bottom: 0;
     overflow-x: auto;
     width: 100%;
+    min-width: 1024px;
 }
 #main {
     width: 5000px;
@@ -421,6 +425,9 @@ svg a:hover {
             display: inline-block;
         }
     }
+}
+#user-administration-table {
+    margin-bottom: 70px;
 }
 
 #credits {

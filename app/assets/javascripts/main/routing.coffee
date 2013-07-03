@@ -108,34 +108,6 @@ $ ->
 
             $svg.svgPan("graph1")
 
-            # $svg = $("#graph1")
-            # transform = $svg.attr("transform")
-            # scale = parseFloat transform.match(/scale\(([\d\.]+) [\d\.]+\)/)[1]
-            # translateX = parseFloat transform.match(/translate\(([\d\.]+) ([\d\.]+)\)/)[1]
-            # translateY = parseFloat transform.match(/translate\(([\d\.]+) ([\d\.]+)\)/)[2]
-
-            # mouse = new Input.Mouse(
-            #   $(".graph.well")
-            #   leftDownMove : (delta) ->
-            #     translateX += delta.x
-            #     translateY += delta.y
-            #     $svg.attr("transform", "scale(#{scale} #{scale}) translate(#{translateX} #{translateY})")
-            #   scroll : (delta, arg ,event) ->
-            #     scale -= delta * 0.01
-            #     console.log event
-            #     #$svg.attr("transform", "scale(#{scale} #{scale}) translate(#{translateX} #{translateY})")
-            #     p =
-            #       x : event.clientX
-            #       y : event.clientY
-
-            #     root = $(".graph.well").find("svg")[0]
-            #     svgNode = $svg[0]
-            #     k = root.createSVGMatrix().translate(p.x, p.y).scale(scale).translate(-p.x, -p.y)
-            #     matrix = svgNode.getCTM().multiply(k)
-            #     $svg.attr("matrix", "matrix(" + matrix.a + "," + matrix.b + "," + matrix.c + "," + matrix.d + "," + matrix.e + "," + matrix.f + ")")
-
-            #)
-
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")
         )
@@ -143,6 +115,66 @@ $ ->
     "admin.user.userTracingAdministration" : ->
 
       RoutingUtils.maskFinishedTasks()
+
+      return
+
+    "admin.user.userAdministration" : ->
+
+      require ["multiselect"], ->
+
+        $(".multiselect").multiselect()
+
+        $popovers = $("a[rel=popover]")
+        template = """
+          <form class="form-inline">
+          #{$("#single-teampicker").html()}
+          </form>
+          """
+
+        $popovers.popover(
+          content: template
+        )
+
+        $popovers.on "click", ->
+
+          $this = $(@)
+          url = $this.data("url")
+          rowId = $this.closest("tr").data("id")
+
+          $(".popover").find("a")
+            .attr("href", url)
+            .attr("data-ajax", "method=POST,submit,replace=##{rowId}")
+
+          $(".popover").find(".multiselect")
+            .multiselect(
+              buttonWidth: "200px"
+            )
+
+          $(".popover").find(".popover-hide").on "click", -> $this.popover("hide")
+
+
+      $("#bulk-actions a").on "click", ->
+
+        $this = $(@)
+        templateId = $this.data("template")
+        template = $("##{templateId}")
+        title = template.data("header")
+
+        $modal = $(".modal")
+
+        $modal.find(".modal-body").html(template.html())
+        $modal.find(".modal-header h3").text(title)
+        $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
+
+        $modal.modal("show")
+
+      $("form").on "click", ".label-experience", (event) ->
+        values = $(this).html().split(" ")
+        if values
+          $("input[name=experience-domain]").val(values[0])
+          $("input[name=experience-value]").val(values[1])
+          $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
+          $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
 
       return
 

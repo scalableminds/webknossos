@@ -14,7 +14,7 @@ pushd `dirname $0`/..
 
 #1 modulename (oxalis/levelcreator/stackrenderer)
 
-./playframework/play "project $PROJECT" dist || (echo "error creating packages: (maybe bad project name)" && exit 1)
+./playframework/play "project $PROJECT" dist || (echo "error creating packages: (maybe bad project name)"; exit 1)
 
 DIST_DIR=""
 if [ $PROJECT = oxalis ]; then
@@ -43,7 +43,28 @@ sed -i "s#^classpath=\"#classpath=\"$CLASSPATH_REF:#g" start
 sed -e "s#^scriptdir=.*#installdir=/usr/lib/$PROJECT#g" start > start.dist
 sed -i "s#\$scriptdir#\$installdir#g" start.dist
 
-CONFIG="-Dconfig.file=/etc/$PROJECT/$PROJECT.conf"
+CONFIG="-Dconfig.resource=application_production.conf"
+
+case "$PROJECT" in
+  "stackrenderer")
+    PORT=9000
+  ;;
+  "oxalis")
+    PORT=9500
+  ;;
+  "levelcreator")
+    PORT=10000
+  ;;
+  "*")
+    PORT=9000
+  ;;
+esac
+CONFIG="$CONFIG -Dhttp.port=$PORT"
+
+if [ "$PROJECT" = "stackrenderer" -a "$PKG_TYPE" = "rpm" ]; then
+  CONFIG="$CONFIG -Djava.io.tmpdir=/disk"
+fi
+
 EXECUTION_COMMAND="exec java $CONFIG \$* -cp \$classpath play.core.server.NettyServer /etc/$PROJECT &"
 
 sed -i "/^exec/ c\
@@ -89,10 +110,6 @@ case $PKG_TYPE in
     echo "Only deb and rpm are supported, yet"
     exit 1
 esac
-
-mkdir -p $DIST_DIR/rootenv/etc/$PROJECT/binaryData
-cp buildtools/basic.conf $DIST_DIR/rootenv/etc/${PROJECT}/${PROJECT}.conf
-sed -i "s/<%PROJECT%>/$PROJECT/g" $DIST_DIR/rootenv/etc/${PROJECT}/${PROJECT}.conf
 
 $FPM -m thomas@scm.io -s dir -t $PKG_TYPE -n $PROJECT -v $VERSION --iteration $ITERATION \
 --before-install=buildtools/before-install.sh --after-install=buildtools/after-install.sh \

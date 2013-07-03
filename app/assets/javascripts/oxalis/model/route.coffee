@@ -44,6 +44,9 @@ class Route
 
     @doubleBranchPop = false
 
+    # initialize deferreds
+    @finishedDeferred = new $.Deferred().resolve()
+
     ############ Load Tree from @data ##############
 
     @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id, @data.settings.isEditable)
@@ -55,7 +58,8 @@ class Route
       tree = new TraceTree(
         treeData.id,
         @getNewTreeColor(treeData.id),
-        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}")
+        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
+        treeData.timestamp)
       # Initialize nodes
       i = 0
       for node in treeData.nodes
@@ -417,12 +421,13 @@ class Route
 
   selectNextTree : (forward) ->
 
-    for i in [0...@trees.length]
-      if @activeTree.treeId == @trees[i].treeId
+    trees = @getTreesSorted(@user.sortTreesByName)
+    for i in [0...trees.length]
+      if @activeTree.treeId == trees[i].treeId
         break
 
-    diff = (if forward then 1 else -1) + @trees.length
-    @setActiveTree( @trees[ (i + diff) % @trees.length ].treeId )
+    diff = (if forward then 1 else -1) + trees.length
+    @setActiveTree( trees[ (i + diff) % trees.length ].treeId )
 
 
   setActiveTree : (id) ->
@@ -474,7 +479,8 @@ class Route
     tree = new TraceTree(
       @treeIdCount++, 
       @getNewTreeColor(@treeIdCount-1), 
-      "Tree#{('00'+(@treeIdCount-1)).slice(-3)}")
+      "Tree#{('00'+(@treeIdCount-1)).slice(-3)}",
+      (new Date()).getTime())
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null
@@ -487,6 +493,9 @@ class Route
   deleteActiveNode : ->
 
     unless @activeNode?
+      return
+    # don't delete nodes when the previous tree split isn't finished
+    unless @finishedDeferred.state() == "resolved"
       return
 
     @deleteComment(@activeNode.id)
@@ -525,12 +534,14 @@ class Route
             nodeIds.push(node.id)
           @stateLogger.moveTreeComponent(oldActiveTreeId, @activeTree.treeId, nodeIds)
 
-      @trigger("reloadTrees", newTrees)
+      # this deferred will be resolved once the skeleton has finished reloading the trees
+      @finishedDeferred = new $.Deferred()
+      @trigger("reloadTrees", newTrees, @finishedDeferred)
         
     else if @activeNode.neighbors.length == 1
       # no children, so just remove it.
       @setActiveNode(deletedNode.neighbors[0].id)
-      @trigger("deleteActiveNode", deletedNode)
+      @trigger("deleteActiveNode", deletedNode, @activeTree.treeId)
     else
       @deleteTree(false)
 
@@ -614,6 +625,14 @@ class Route
   getTrees : -> @trees
 
 
+  getTreesSorted : ->
+
+    if @user.sortTreesByName
+      return (@trees.slice(0)).sort(@compareNames)
+    else
+      return (@trees.slice(0)).sort(@compareTimestamps)
+
+
   # returns a list of nodes that are connected to the parent
   #
   # ASSUMPTION:    we are dealing with a tree, circles would
@@ -653,11 +672,21 @@ class Route
         return node
     return null
 
+
   compareNames : (a, b) ->
 
     if a.name < b.name
       return -1
     if a.name > b.name
+      return 1
+    return 0
+
+
+  compareTimestamps : (a,b) ->
+
+    if a.timestamp < b.timestamp
+      return -1
+    if a.timestamp > b.timestamp
       return 1
     return 0
 

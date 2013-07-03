@@ -55,7 +55,7 @@ object BinaryDataAdministration extends Controller with Secured {
     implicit val system = Akka.system
 
     for {
-      dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
+      dataSet <- DataSet.findOneByName(dataSetName, request.user) ?~ Messages("dataSet.notFound")
     } yield {
       dataInsertionActor ! InsertBinary(dataSet)
       Ok

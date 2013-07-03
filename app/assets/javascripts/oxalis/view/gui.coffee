@@ -237,6 +237,10 @@ class Gui
       datasetPosition = 0
     datasetPosition
 
+  addTooltip : (element, title) ->
+
+    $(element.domElement).parent().parent().tooltip({ title : title })
+
   createTooltips : ->
       $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
 

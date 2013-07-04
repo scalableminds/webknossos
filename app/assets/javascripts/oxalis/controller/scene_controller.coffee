@@ -2,9 +2,11 @@
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
 ../geometries/contourgeometry : ContourGeometry
+../geometries/volumegeometry : VolumeGeometry
 ../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../constants : constants
+../view/polygons/polygon_factory : PolygonFactory
 ###
 
 class SceneController
@@ -15,10 +17,12 @@ class SceneController
   constructor : (@upperBoundary, @flycam, @model) ->
     _.extend(@, new EventMixin())
 
-    @current       = 0
-    @displayPlane  = [true, true, true]
-    @planeShift    = [0, 0, 0]
-    @showSkeleton  = true
+    @current        = 0
+    @displayPlane   = [true, true, true]
+    @planeShift     = [0, 0, 0]
+    @showSkeleton   = true
+
+    @polygonFactory = new PolygonFactory( @model.binary.cube )
 
     @createMeshes()
     @bind()
@@ -52,6 +56,12 @@ class SceneController
     @planes[constants.PLANE_XY].setRotation(new THREE.Vector3( Math.PI , 0, 0))
     @planes[constants.PLANE_YZ].setRotation(new THREE.Vector3( Math.PI, 1/2 * Math.PI, 0))
     @planes[constants.PLANE_XZ].setRotation(new THREE.Vector3( - 1/2 * Math.PI, 0, 0))
+
+  addTestShape : ->
+
+    test = new VolumeGeometry( @polygonFactory, [80,80,80], [120,120,120], 5 )
+    meshes = test.getMeshes()
+    @trigger("newGeometries", meshes)
 
   vec : (x, y, z) ->
     new THREE.Vector3(x, y, z)

@@ -8,7 +8,7 @@ class PolygonFactory
 
   constructor : (@modelCube) ->
 
-    @cubeSize = 3
+    @cubeSize = 2
 
   getTriangles : (min, max, id) ->
 

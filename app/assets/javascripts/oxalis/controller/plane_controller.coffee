@@ -48,7 +48,7 @@ class PlaneController
     @view  = new PlaneView(@model, @flycam, stats, renderer, scene)
 
     # initialize Camera Controller
-    @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
+    @cameraController = new CameraController(@view.getCameras(), @flycam, @model)
 
     @canvasesAndNav = $("#main")[0]
 

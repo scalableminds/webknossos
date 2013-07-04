@@ -13,14 +13,28 @@ class VolumeGeometry
     for triangle in triangles
       for vertex in triangle
         geo.vertices.push( new THREE.Vector3(vertex...) )
-      geo.faces.push( new THREE.Face3(i++, i++, i++) )
+      normal = @getTriangleNormal( triangle )
+      geo.faces.push( new THREE.Face3(i++, i++, i++, normal) )
 
     @mesh = new THREE.Mesh( geo,
-      new THREE.MeshBasicMaterial({
+      new THREE.MeshPhongMaterial({
         color : 0xff0000
-        wireframe : false
       }))
-    @mesh.material.side = THREE.DoubleSide
+    @mesh.oberdraw = true
+
+  getTriangleNormal : (triangle) ->
+
+    v1 = new THREE.Vector3( triangle[1][0] - triangle[0][0],
+                            triangle[1][1] - triangle[0][1],
+                            triangle[1][2] - triangle[0][2] )
+
+    v2 = new THREE.Vector3( triangle[2][0] - triangle[0][0],
+                            triangle[2][1] - triangle[0][1],
+                            triangle[2][2] - triangle[0][2] )
+
+    v1.cross(v2)
+    v1.normalize()
+    return v1
 
   getMeshes : ->
 

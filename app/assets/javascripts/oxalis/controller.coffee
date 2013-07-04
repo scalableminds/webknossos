@@ -141,6 +141,11 @@ class Controller
 
     new Input.KeyboardNoLoop(
 
+      "5" : =>
+        @model.binary.cube.labelTestShape()
+        @sceneController.addTestShape()
+        @model.flycam.hasChanged = true
+
       #View
       "t" : => 
         @view.toggleTheme()       

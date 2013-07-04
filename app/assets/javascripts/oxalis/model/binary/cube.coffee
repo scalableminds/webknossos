@@ -276,33 +276,46 @@ class Cube
               
           cube[bucketIndex] = substitute if cube[bucketIndex] == oldBucket
 
+  labelTestShape : ->
+    # draw a sqhere, centered at (100, 100, 100) with radius 50
+
+    for x in [80..120]
+      for y in [80..120]
+        for z in [80..120]
+
+          if Math.sqrt((x-100) * (x-100) + (y-100) * (y-100) + (z-100) * (z-100)) <= 20
+            @labelVoxel([x, y, z], 5)
+
+    @trigger("volumeLabled")
 
   labelVoxels : (iterator, label) ->
 
     while iterator.hasNext
-
       voxel = iterator.getNext()
-
-      voxelInCube = true
-      for i in [0..2]
-        voxelInCube &= voxel[i] in [0...@upperBoundary[i]]
-
-      if voxelInCube
-        
-        for zoomStep in [0...@ZOOM_STEP_COUNT]
-
-          { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, zoomStep )
-
-          break if bucket[voxelIndex] == label
-          bucket[voxelIndex] = label
-
-          voxel = [
-            voxel[0] >> 1
-            voxel[1] >> 1
-            voxel[2] >> 1
-          ]
+      @labelVoxel(voxel, label)
 
     @trigger("volumeLabled")
+
+  labelVoxel : (voxel, label) ->
+
+    voxelInCube = true
+    for i in [0..2]
+      voxelInCube &= voxel[i] in [0...@upperBoundary[i]]
+
+    if voxelInCube
+      
+      for zoomStep in [0...@ZOOM_STEP_COUNT]
+
+        { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, zoomStep )
+
+        break if bucket[voxelIndex] == label
+        bucket[voxelIndex] = label
+
+        voxel = [
+          voxel[0] >> 1
+          voxel[1] >> 1
+          voxel[2] >> 1
+        ]
 
   getLabel : ( voxel ) ->
 

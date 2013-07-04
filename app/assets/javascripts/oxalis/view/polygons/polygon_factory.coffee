@@ -23,7 +23,23 @@ class PolygonFactory
             bit = if @isInSolid(x, y, z, i, id) then 1 else 0
             cubeIndex |= bit << i
 
-          triangles = triangles.concat( tlt[ cubeIndex ] )
+          newTriangles = []
+
+          for triangle in tlt[ cubeIndex ]
+            newTriangle = []
+
+            for vertex in triangle
+              newTriangle.push( [ vertex[0] * (@cubeSize) + x,
+                                  vertex[1] * (@cubeSize) + y,
+                                  vertex[2] * (@cubeSize) + z ] )
+            
+            newTriangles.push(newTriangle)
+
+          if newTriangles.length != 0
+            console.log newTriangles.length
+          triangles = triangles.concat( newTriangles )
+
+    return triangles
 
   isInSolid : (x, y, z, vertex, id) ->
 

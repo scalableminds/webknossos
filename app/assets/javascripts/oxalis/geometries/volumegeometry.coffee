@@ -4,10 +4,13 @@ three : THREE
 
 class VolumeGeometry
 
+  COLORS : [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff]
+
   constructor : (@polygonFactory, @min, @max, @id) ->
 
     triangles = @polygonFactory.getTriangles(@min, @max, @id)
     geo = new THREE.Geometry()
+    color = @COLORS[ (@id - 1) % 6 ]
 
     i = 0
     for triangle in triangles
@@ -18,7 +21,7 @@ class VolumeGeometry
 
     @mesh = new THREE.Mesh( geo,
       new THREE.MeshPhongMaterial({
-        color : 0xff0000
+        color : color
       }))
     @mesh.oberdraw = true
 

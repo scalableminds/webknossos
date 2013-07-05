@@ -23,6 +23,7 @@ class SceneController
     @showSkeleton   = true
 
     @polygonFactory = new PolygonFactory( @model.binary.cube )
+    @volumeMeshes   = []
 
     @createMeshes()
     @bind()
@@ -56,6 +57,16 @@ class SceneController
     @planes[constants.PLANE_XY].setRotation(new THREE.Vector3( Math.PI , 0, 0))
     @planes[constants.PLANE_YZ].setRotation(new THREE.Vector3( Math.PI, 1/2 * Math.PI, 0))
     @planes[constants.PLANE_XZ].setRotation(new THREE.Vector3( - 1/2 * Math.PI, 0, 0))
+
+  showAllShapes : (min, max) ->
+
+    @trigger("removeGeometries", @volumeMeshes)
+
+    @volumeMeshes = []
+    for id in [1..@model.volumeTracing.idCount]
+      volume = new VolumeGeometry( @polygonFactory, min, max, id )
+      @volumeMeshes = @volumeMeshes.concat( volume.getMeshes() )
+    @trigger("newGeometries", @volumeMeshes)
 
   addTestShape : ->
 

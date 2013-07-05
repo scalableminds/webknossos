@@ -10,48 +10,65 @@ class PolygonFactory
 
     @cubeOffset = 2
 
-  getTriangles : (min, max, id) ->
+  getTriangles : (min, max) ->
 
-    triangles = []
+    result = {}
 
     for x in [(min[0] - 1)...(max[0] + 3)] by @cubeOffset
       for y in [(min[1] - 1)...(max[1] + 3)] by @cubeOffset
         for z in [(min[2] - 1)...(max[2] + 3)] by @cubeOffset
 
-          cubeIndex = 0
-          for i in [0..7]
-            bit = if @isInSolid(x, y, z, i, id) then 1 else 0
-            cubeIndex |= bit << i
+          cubeIndices = @getCubeIndices(x, y, z)
 
-          if cubeIndex == 0 or cubeIndex == 255
-            continue
-
-          newTriangles = []
-
-          for triangle in tlt[ cubeIndex ]
-            newTriangle = []
-
-            for vertex in triangle
-              newTriangle.push( [ vertex[0] * @cubeOffset + x,
-                                  vertex[1] * @cubeOffset + y,
-                                  vertex[2] * @cubeOffset + z ] )
+          for cellId of cubeIndices
             
-            newTriangles.push(newTriangle)
+            unless result[cellId]?
+              result[ cellId ] = []
 
-          triangles = triangles.concat( newTriangles )
+            if cubeIndices[ cellId ] % 255 == 0
+              continue
 
-    return triangles
+            newTriangles = []
 
-  isInSolid : (x, y, z, vertex, id) ->
+            for triangle in tlt[ cubeIndices[ cellId ] ]
+              newTriangle = []
 
-    switch vertex
-      when 0 then voxel = [x, y, z]
-      when 1 then voxel = [x + @cubeOffset, y, z]
-      when 2 then voxel = [x + @cubeOffset, y, z + @cubeOffset]
-      when 3 then voxel = [x, y, z + @cubeOffset]
-      when 4 then voxel = [x, y + @cubeOffset, z]
-      when 5 then voxel = [x + @cubeOffset, y + @cubeOffset, z]
-      when 6 then voxel = [x + @cubeOffset, y + @cubeOffset, z + @cubeOffset]
-      when 7 then voxel = [x, y + @cubeOffset, z + @cubeOffset]
+              for vertex in triangle
+                newTriangle.push( [ vertex[0] * @cubeOffset + x,
+                                    vertex[1] * @cubeOffset + y,
+                                    vertex[2] * @cubeOffset + z ] )
+              
+              newTriangles.push(newTriangle)
 
-    return @modelCube.getLabel( voxel ) == id
+            result[ cellId ] = result[ cellId ].concat( newTriangles )
+
+    return result
+
+  getCubeIndices : (x, y, z) ->
+
+    labels = [
+      @modelCube.getLabel( [x, y, z]                                             ),
+      @modelCube.getLabel( [x + @cubeOffset, y, z]                               ),
+      @modelCube.getLabel( [x + @cubeOffset, y, z + @cubeOffset]                 ),
+      @modelCube.getLabel( [x, y, z + @cubeOffset]                               ),
+      @modelCube.getLabel( [x, y + @cubeOffset, z]                               ),
+      @modelCube.getLabel( [x + @cubeOffset, y + @cubeOffset, z]                 ),
+      @modelCube.getLabel( [x + @cubeOffset, y + @cubeOffset, z + @cubeOffset]   ),
+      @modelCube.getLabel( [x, y + @cubeOffset, z + @cubeOffset]                 ) ]
+
+    cellIds = []
+    for label in labels
+      unless label in cellIds or label == 0
+        cellIds.push( label )
+
+    result = {}
+    for cellId in cellIds
+      cubeIndex = 0
+      
+      for i in [0..7]
+        bit = if cellId == labels[i] then 1 else 0
+        cubeIndex |= bit << i
+      
+      result[cellId] = cubeIndex
+
+    return result

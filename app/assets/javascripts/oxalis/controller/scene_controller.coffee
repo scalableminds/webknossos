@@ -63,8 +63,9 @@ class SceneController
     @trigger("removeGeometries", @volumeMeshes)
 
     @volumeMeshes = []
-    for id in [1..@model.volumeTracing.idCount]
-      volume = new VolumeGeometry( @polygonFactory, min, max, id )
+    triangles = @polygonFactory.getTriangles(min, max)
+    for id of triangles
+      volume = new VolumeGeometry( triangles[id], parseInt( id ) )
       @volumeMeshes = @volumeMeshes.concat( volume.getMeshes() )
     @trigger("newGeometries", @volumeMeshes)
 

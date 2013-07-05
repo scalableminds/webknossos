@@ -145,7 +145,7 @@ class Controller
         #@model.binary.cube.labelTestShape()
         #@sceneController.addTestShape()
         start = new Date().getTime()
-        @sceneController.showAllShapes([0,0,0], [100,100,30])
+        @sceneController.showAllShapes([50,50,0], [150,150,30])
         console.log( "Rendering Time: " + ( new Date().getTime() - start ))
         @model.flycam.hasChanged = true
 

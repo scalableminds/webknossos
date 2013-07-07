@@ -15,7 +15,7 @@ If you are not blessed with a good OS try the steps below and fail ;)
 git submodule init
 git submodule update
 cd playframework/framework
-./build build-repository
+./build publish-local
 ```
 -> done!
 

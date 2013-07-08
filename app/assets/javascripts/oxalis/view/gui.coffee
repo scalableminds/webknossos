@@ -135,7 +135,7 @@ class Gui
     $("#trace-position-input").on "change", (event) => 
 
       @setPosFromString(event.target.value)
-      return
+      $("#trace-position-input").blur()
 
     $("#trace-finish-button").click (event) =>
 
@@ -232,7 +232,11 @@ class Gui
       new $.Deferred().resolve()
 
   setPosFromString : (posString) =>
-    stringArray = posString.split(",")
+    # remove leading/trailing whitespaces
+    strippedString = posString.trim()
+    # replace remaining whitespaces with commata
+    unifiedString = strippedString.replace /,?\s+,?/g, ","
+    stringArray = unifiedString.split(",")
     if stringArray.length == 3
       pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
       if !isNaN(pos[0]) and !isNaN(pos[1]) and !isNaN(pos[2])
@@ -254,7 +258,7 @@ class Gui
       $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
 
   updateGlobalPosition : (globalPos) =>
-    stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
+    stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
     $("#trace-position-input").val(stringPos)
 
   set : (name, value, type) =>

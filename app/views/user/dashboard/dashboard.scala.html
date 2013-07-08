@@ -2,101 +2,114 @@
 
 @main(){
   <div class="container" id="dashboard">
-    <h3>Tasks</h3>
-    <table class="table table-striped mask-finished" id="dashboard-tasks">
-      <thead>
-        <tr>
-          <th> # </th>
-          <th> Type </th>
-          <th> Project </th>
-          <th> Description </th>
-          <th> Modes </th>
-          <th> </th>
-        </tr>
-      </thead>
-      <tbody>
-      @userTasks.map{ case (task, annotation) =>
-        @taskAnnotationTableItem(task, annotation)
-      }
-      </tbody>
-    </table>
-    <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(hasAnOpenTask){,confirm=@Messages("task.requestAnother")}" id="new-task-button">Get a new task</a>
+    <div class="tabbable" id="tabbable-dashboard">
+      <ul class="nav nav-tabs">
+        <li class="active"><a href="#tab-tasks" data-toggle="tab">Tasks</a></li>
+        <li><a href="#tab-explorative" data-toggle="tab">Explorative Tracings</a></li>
+        <li><a href="#tab-tracked-time" data-toggle="tab">Tracked Time</a></li>
+      </ul>
 
-    <div class="divider-vertical"></div>
-    <a href="#" id="toggle-finished">Show finished tasks</a>
-    <hr />
+      <div class="tab-content">
+        <div class="tab-pane active" id="tab-tasks">
 
-  	<a href="#" data-toggle="collapse" data-target="#explorativeTracings" id="toggle-explorative" class="collapsed">
-    Explorative Tracings <i class="icon-caret-right"></i><i class="icon-caret-down"></i>
-  	</a>
+          <h3>Tasks</h3>
+          <br />
+          <a href="@controllers.routes.TaskController.request" class="btn btn-success"  data-ajax="add-row=#dashboard-tasks@if(hasAnOpenTask){,confirm=@Messages("task.requestAnother")}" id="new-task-button">Get a new task</a>
+          
+          <div class="divider-vertical"></div>
+          <a href="#" id="toggle-finished">Show finished tasks</a>
+          <br /><br />
+          <table class="table table-striped mask-finished" id="dashboard-tasks">
+            <thead>
+              <tr>
+                <th> # </th>
+                <th> Type </th>
+                <th> Project </th>
+                <th> Description </th>
+                <th> Modes </th>
+                <th> </th>
+              </tr>
+            </thead>
+            <tbody>
+            @userTasks.map{ case (task, annotation) => 
+              @taskAnnotationTableItem(task, annotation)
+            }
+            </tbody>
+          </table>
+        </div>
 
-  	<div id="explorativeTracings" class="collapse out">
+      	<div class="tab-pane" id="tab-explorative">
+        
+          <h3>Explorative Tracings</h3>
+          <br />
+          <div>
+            @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
+              <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button>
+            }
+            <div class="divider-vertical"></div>
+            @helper.form(action = controllers.routes.AnnotationController.createExplorational, 'class -> "form-inline inline-block") {
+              <select name="dataSetName">
+                @dataSets.map{ d =>
+                  <option value="@d.name"> @d.name </option>
+                }
+              </select>
+              <label class="radio inline">
+                <input type="radio" name="contentType" value="skeletonTracing" checked>
+                Skeleton
+              </label>
+              <label class="radio inline">
+                <input type="radio" name="contentType" value="volumeTracing">
+                Volume
+              </label>
+              <button type="submit" class="btn"><i class="icon-search"></i> Explore data set</button>
+            }
+          </div>
 
-    <h3>Explorative Tracings</h3>
-    <table class="table table-striped table-hover" id="explorative-tasks">
-      <thead>
-        <tr>
-          <th> # </th>
-          <th> Name </th>
-          <th> DataSet </th>
-          <th> Stats </th>
-          <th> Type </th>
-          <th> Last edited </th>
-          <th> </th>
-        </tr>
-      </thead>
-      <tbody>
-      @explorativeAnnotations.map{ annotation =>
-        @explorativeAnnotationTableItem(annotation)
-      }
-      </tbody>
-    </table>
-    <div>
-      @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data", 'id -> "nml-explore-form", 'class -> "form-inline inline-block"){
-        <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button>
-      }
-      <div class="divider-vertical"></div>
-      @helper.form(action = controllers.routes.AnnotationController.createExplorational, 'class -> "form-inline inline-block") {
-        <select name="dataSetName">
-          @dataSets.map{ d =>
-            <option value="@d.name"> @d.name </option>
-          }
-        </select>
-        <label class="radio inline">
-          <input type="radio" name="contentType" value="skeletonTracing" checked>
-          Skeleton
-        </label>
-        <label class="radio inline">
-          <input type="radio" name="contentType" value="volumeTracing">
-          Volume
-        </label>
-        <button type="submit" class="btn"><i class="icon-search"></i> Explore data set</button>
-      }
+          <table class="table table-striped table-hover" id="explorative-tasks">
+            <thead>
+              <tr>
+                <th> # </th>
+                <th> Name </th>
+                <th> DataSet </th>
+                <th> Stats </th>
+                <th> Type </th>
+                <th> Last edited </th>
+                <th> </th>
+              </tr>
+            </thead>
+            <tbody>
+            @explorativeAnnotations.map{ annotation => 
+              @explorativeAnnotationTableItem(annotation)
+            }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tab-pane" id="tab-tracked-time">
+
+          <h3>Tracked Time</h3>
+          @trackedTimeOpt.map{ trackedTime =>
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th> Month </th>
+                  <th> Worked </th>
+                  <th> Payed </th>
+                </tr>
+              </thead>
+              <tbody>
+              @trackedTime.map{ case (interval, time) => 
+                <tr>
+                  <td> @interval </td>
+                  <td> @formatTimeHumanReadable(time) </td>
+                  <td> </td>
+                </tr>
+              }
+              </tbody>
+            </table>
+        </div>
       </div>
     </div>
-
-    <hr />
-
-    @trackedTimeOpt.map{ trackedTime =>
-      <h3>Tracked Time</h3>
-      <table class="table table-striped">
-        <thead>
-          <tr>
-            <th> Month </th>
-            <th> Worked </th>
-            <th> Payed </th>
-          </tr>
-        </thead>
-        <tbody>
-        @trackedTime.map{ case (interval, time) =>
-          <tr>
-            <td> @interval </td>
-            <td> @formatTimeHumanReadable(time) </td>
-            <td> </td>
-          </tr>
-        }
-        </tbody>
-      </table>
     }
   </div>
   @credits()

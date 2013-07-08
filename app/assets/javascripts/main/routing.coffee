@@ -181,6 +181,7 @@ $ ->
             $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
             $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
 
+      return
 
 
     "admin.task.taskSelectionAlgorithm" : ->

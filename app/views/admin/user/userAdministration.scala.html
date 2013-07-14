@@ -1,4 +1,4 @@
-@(users: List[models.user.User], roles: List[models.security.Role], experiences: List[String], teams: List[String])(implicit session: oxalis.view.AuthedSessionData)
+@(users: List[models.user.User], roles: List[models.security.Role], experiences: List[String], teams: List[models.team.TeamPath])(implicit session: oxalis.view.AuthedSessionData)
 
 @import play.api.libs.json.Json
 

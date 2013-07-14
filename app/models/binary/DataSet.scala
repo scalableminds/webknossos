@@ -37,7 +37,9 @@ object DataSetDAO extends SecuredMongoDAO[DataSet] {
   override def findQueryFilter(implicit ctx: DBAccessContext) = {
     ctx.user match{
       case Some(user) =>
-        AllowIf(Json.obj("allowedTeams" -> Json.obj("$in" -> user.teams)))
+        AllowIf(Json.obj("$or" -> user.teams.map(t =>
+          Json.obj(
+            "allowedTeams" -> Json.obj("$regex" -> t.teamPath.toRegex)))))
       case _ =>
         DenyEveryone()
     }

@@ -18,8 +18,9 @@ import braingames.util.ExtendedTypes.ExtendedString
 import models.annotation.AnnotationDAO
 import models.tracing.skeleton.SkeletonTracing
 import play.api.Logger
-import models.group.GroupDAO
+import models.team.{TeamPath, TeamMembership}
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.mvc.Request
 
 object UserAdministration extends Controller with Secured {
 
@@ -29,12 +30,7 @@ object UserAdministration extends Controller with Secured {
 
   def index = Authenticated {
     implicit request =>
-      Async {
-        request.user.groups.map(_.flatMap(_.teamPaths)).map {
-          teamPaths =>
-            Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains, teamPaths))
-        }
-      }
+      Ok(html.admin.user.userAdministration(allUsers, Role.findAll.sortBy(_.name), Experience.findAllDomains, request.user.adminTeams))
   }
 
   def logTime(userId: String, time: String, note: String) = Authenticated {
@@ -64,30 +60,58 @@ object UserAdministration extends Controller with Secured {
     }).asResult
   }
 
-  private def verifyUser(teams: Seq[String])(userId: String) = {
+  private def verifyUser(teams: Seq[TeamMembership])(userId: String)(implicit issuingUser: User): Box[User] = {
     for {
       user <- User.findOneById(userId) ?~ Messages("user.notFound")
       if (!user.verified)
     } yield {
+      assignToTeams(teams, issuingUser)(userId)
       Application.Mailer ! Send(DefaultMails.verifiedMail(user.name, user.email))
       user.update(_.verify.copy(teams = teams.toList))
     }
   }
 
+  def extractTeamsFromRequest(request: Request[Map[String, Seq[String]]]) = {
+    request.body.get("teams").getOrElse(Nil).map{
+      t => TeamMembership(TeamPath.fromString(t), TeamMembership.Member)}
+  }
+
   def verify(userId: String) = Authenticated(parser = parse.urlFormEncoded) {
     implicit request =>
-      val teams = request.body.get("teams").getOrElse(Nil)
+      implicit val issuingUser = request.user
+      val teams = extractTeamsFromRequest(request)
       for {
         user <- verifyUser(teams)(userId) ?~ Messages("user.verifyFailed")
       } yield {
+
         JsonOk(html.admin.user.userTableItem(user), Messages("user.verified", user.name))
       }
   }
 
   def verifyBulk = Authenticated(parser = parse.urlFormEncoded) {
     implicit request =>
-      val teams = request.body.get("teams").getOrElse(Nil)
+      implicit val issuingUser = request.user
+      val teams = extractTeamsFromRequest(request)
       bulkOperation(verifyUser(teams))(user => Messages("user.verified", user.name))
+  }
+
+  def userIsAllowedToAssignTeam(teamMembership: TeamMembership, user: User) = {
+    user.teams.exists(t => t.teamPath.implies(teamMembership.teamPath)
+      && t.role == TeamMembership.Admin)
+  }
+
+  private def assignToTeams(teamMemberships: Seq[TeamMembership], assigningUser: User)(userId: String) = {
+    teamMemberships.map(t => assignToTeam(t, assigningUser)(userId))
+  }
+
+  private def assignToTeam(teamMembership: TeamMembership, assigningUser: User)(userId: String) = {
+    (for {
+      user <- User.findOneById(userId) ?~ Messages("user.notFound")
+      if userIsAllowedToAssignTeam(teamMembership, assigningUser)
+    } yield {
+      Logger.warn("Added TeamMembership: " + teamMembership)
+      user.update(_.addTeamMembership(teamMembership))
+    }) ?~ Messages("team.assign.notAllowed")
   }
 
   private def deleteUser(userId: String) = {

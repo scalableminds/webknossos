@@ -181,7 +181,6 @@ class DataRequestActor(
       z <- minBlock.z to maxBlock.z
     } yield Point3D(x, y, z)
 
-    println("Number of blocks: " + blockIdxs + " Size: " + dataRequest.cuboid)
     Future.traverse(blockIdxs) {
       p =>
         loadFromSomewhere(
@@ -228,9 +227,7 @@ class DataRequestActor(
         }
           .map {
           block =>
-            val r = new DataBlockCutter(block, dataRequest, layer, pointOffset).cutOutRequestedData
-            println("LOAD TOOK: " + (System.currentTimeMillis() - t))
-            r
+            new DataBlockCutter(block, dataRequest, layer, pointOffset).cutOutRequestedData
         }
       case _ =>
         Future.failed(new NoSuchElementException("Invalid dataLayer type"))
@@ -260,7 +257,6 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataRequest, lay
     if (dataRequest.useHalfByte)
       convertToHalfByte(result)
     else {
-
       result
     }
   }

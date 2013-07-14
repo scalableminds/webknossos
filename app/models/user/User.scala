@@ -15,7 +15,7 @@ import models.security.Permission
 import models.security.Implyable
 import models.security.Role
 import models.user.Experience._
-import models.group.{GroupDAO, GroupHelpers}
+import models.team.{TeamMembership, TeamTreeDAO, TeamPath}
 
 case class User(
     email: String,
@@ -23,7 +23,7 @@ case class User(
     lastName: String,
     verified: Boolean = false,
     pwdHash: String = "",
-    teams: List[String],
+    teams: List[TeamMembership],
     loginType: String = "local",
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: Set[String] = Set.empty,
@@ -34,8 +34,7 @@ case class User(
 
   val dao = User
 
-  lazy val _groups = teams.flatMap(GroupHelpers.splitIntoTeamAndGroup(_)).map(_._1)
-  lazy val groups = GroupDAO.findAllGroups(_groups)(GlobalAccessContext)
+  //lazy val teamTrees = TeamTreeDAO.findAllTeams(_groups)(GlobalAccessContext)
 
   val _roles = for {
     roleName <- roles
@@ -53,6 +52,9 @@ case class User(
 
   def hasRole(role: Role) =
     _roles.find(_.name == role.name).isDefined
+
+  def adminTeams =
+    teams.filter(_.role == TeamMembership.Admin).map(_.teamPath)
 
   def hasPermission(permission: Permission) =
     ruleSet.find(_.implies(permission)).isDefined
@@ -89,6 +91,10 @@ case class User(
 
   def addRole(role: String) = {
     this.copy(roles = this.roles + role)
+  }
+
+  def addTeamMembership(teamMembership: TeamMembership) = {
+    this.copy(teams  = teamMembership :: teams)
   }
 
   def deleteRole(role: String) = {

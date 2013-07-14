@@ -1,5 +1,9 @@
 import akka.actor.Props
 import models.annotation.AnnotationDAO
+import models.security.Permission
+import models.task.TimeSpan
+import models.team._
+import models.team.TeamTree
 import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent._
@@ -25,10 +29,10 @@ import com.typesafe.config.ConfigFactory
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
+import scala.Some
 import scala.util._
 import oxalis.binary.BinaryDataService
 import com.typesafe.config.Config
-import models.group.{Group, GroupDAO, Team}
 
 object Global extends GlobalSettings {
 
@@ -38,10 +42,10 @@ object Global extends GlobalSettings {
     startActors(conf.underlying)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insertRoles
-      InitialData.insertUsers
-      InitialData.insertTaskAlgorithms
-      InitialData.insertTeams
+      InitialData.insertRoles()
+      InitialData.insertUsers()
+      InitialData.insertTaskAlgorithms()
+      InitialData.insertTeams()
     }
 
     BinaryDataService.start(onComplete = {
@@ -49,7 +53,7 @@ object Global extends GlobalSettings {
         BasicEvolution.runDBEvolution()
         // Data insertion needs to be delayed, because the dataSets need to be
         // found by the DirectoryWatcher first
-        InitialData.insertTasks
+        InitialData.insertTasks()
       }
       Logger.info("Directory start completed")
     })
@@ -96,7 +100,9 @@ object InitialData extends GlobalDBAccess {
         "Boy",
         true,
         braingames.security.SCrypt.hashPassword("secret"),
-        List("Structure of Neocortical Circuits Group\\\\Everyone"),
+        List(TeamMembership(
+          TeamPath("Structure of Neocortical Circuits Group" :: Nil),
+          TeamMembership.Admin)),
         "local",
         UserConfiguration.defaultConfiguration,
         Set("user", "admin")))
@@ -113,10 +119,10 @@ object InitialData extends GlobalDBAccess {
   }
 
   def insertTeams() = {
-    GroupDAO.findOne.map {
+    TeamTreeDAO.findOne.map {
       case Some(_) =>
       case _ =>
-        GroupDAO.insert(Group("Structure of Neocortical Circuits Group"))
+        TeamTreeDAO.insert(TeamTree(Team("Structure of Neocortical Circuits Group", Nil)))
     }
   }
 

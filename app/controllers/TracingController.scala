@@ -48,7 +48,7 @@ object TracingController extends Controller with Secured with TracingInformation
   override val DefaultAccessRole = Role.User
 }
 
-trait TracingInformationProvider extends play.api.http.Status with BoxImplicits with models.basics.Implicits{
+trait TracingInformationProvider extends play.api.http.Status with BoxImplicits with models.basics.Implicits {
 
   import braingames.mvc.BoxImplicits._
 
@@ -59,7 +59,7 @@ trait TracingInformationProvider extends play.api.http.Status with BoxImplicits 
   }
 
   def withAnnotation[T](typ: AnnotationType, id: String)(f: AnnotationLike => Box[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
-    withAnnotation(AnnotationIdentifier(typ, id))( a => Future.successful(f(a)))
+    withAnnotation(AnnotationIdentifier(typ, id))(a => Future.successful(f(a)))
   }
 
   def withAnnotation[T](annotationId: AnnotationIdentifier)(f: AnnotationLike => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
@@ -88,7 +88,7 @@ trait TracingInformationProvider extends play.api.http.Status with BoxImplicits 
   def respondWithTracingInformation(annotationId: AnnotationIdentifier)(implicit request: AuthenticatedRequest[_]): Fox[JsValue] = {
     withAnnotation(annotationId) {
       annotation =>
-        annotation.annotationInfo(request.user).map( js => Full(js))
+        annotation.annotationInfo(request.user).map(js => Full(js))
     }
   }
 }

@@ -45,6 +45,8 @@ class PlaneController
     @flycam.setZoomStep(@model.user.zoom)
     @flycam.setQuality(@model.user.quality)
 
+    @oldNmPos = @model.scaleInfo.voxelToNm( @flycam.getPosition() )
+
     @view  = new PlaneView(@model, @flycam, stats, renderer, scene)
 
     # initialize Camera Controller
@@ -88,8 +90,6 @@ class PlaneController
     
     for mesh in meshes
       @view.addGeometry(mesh)
-
-    @flycam.setPosition(@model.route.data.editPosition)
 
     @model.user.triggerAll()
 
@@ -143,8 +143,22 @@ class PlaneController
 
     @flycam.on
       positionChanged : (position) =>
+
+        nmPosition = @model.scaleInfo.voxelToNm(position)
+
         @controls.setTarget(
-          new THREE.Vector3(@model.scaleInfo.voxelToNm(position)...))
+          new THREE.Vector3(nmPosition...))
+      
+        # As the previous step will also move the camera, we need to
+        # fix this by offsetting the viewport
+
+        invertedDiff = []
+        for i in [0..2]
+          invertedDiff.push( @oldNmPos[i] - nmPosition[i] )
+        @oldNmPos = nmPosition
+
+        @cameraController.movePrev( 
+          new THREE.Vector3( invertedDiff... ))
 
     @cameraController.on
       cameraPositionChanged : =>

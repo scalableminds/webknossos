@@ -86,6 +86,8 @@ class SceneController
     if id in constants.ALL_PLANES
       unless @showSkeleton
         @skeleton.setVisibility(false)
+      for mesh in @volumeMeshes
+        mesh.visible = false
       for i in constants.ALL_PLANES
         if i == id
           @planes[i].setOriginalCrosshairColor()
@@ -100,6 +102,8 @@ class SceneController
     else
       unless @showSkeleton
         @skeleton.setVisibility(true)
+      for mesh in @volumeMeshes
+        mesh.visible = true
       for i in constants.ALL_PLANES
         pos = @flycam.getPosition()
         @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))

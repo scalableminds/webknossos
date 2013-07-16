@@ -54,7 +54,7 @@ class Route
 
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.content.id, tracing.restrictions.allowUpdate)
+    @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
     
     console.log "Annotation data: ", tracing
 

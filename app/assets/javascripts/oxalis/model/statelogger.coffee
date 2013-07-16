@@ -9,7 +9,7 @@ class StateLogger
 
   PUSH_THROTTLE_TIME : 30000 #30s
 
-  constructor : (@route, @flycam, @version, @dataId, @allowUpdate) ->
+  constructor : (@route, @flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
     _.extend(this, new EventMixin())
 
@@ -188,7 +188,7 @@ class StateLogger
     console.log "Sending data: ", data
 
     Request.send(
-      url : "/tracing/#{@dataId}?version=#{(@version + 1)}"
+      url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
       method : "PUT"
       data : data
       contentType : "application/json"

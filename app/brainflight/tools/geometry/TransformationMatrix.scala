@@ -16,8 +16,8 @@ case class TransformationMatrix(value: Array[Float]) {
 object TransformationMatrix {
   val defaultSize = 16
   
-  def apply(pos: Vector3D, direction: Vector3D): TransformationMatrix = {
-
+  def apply(pos: Vector3D, directionOld: Vector3D): TransformationMatrix = {
+    val direction = Vector3D(directionOld.x, directionOld.y, directionOld.z / 2)
     val nz = direction.normalize
     val y = Vector3D(0, 1, 0)
     val nx = (y x nz).normalize

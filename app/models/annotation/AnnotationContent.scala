@@ -64,14 +64,13 @@ object AnnotationContent {
   def writeAnnotationContent(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
     ac.dataSet.map {
       dataSet =>
-        ((__ \ 'id).write[String] and
-          (__ \ 'settings).write[AnnotationSettings] and
+        ((__ \ 'settings).write[AnnotationSettings] and
           (__ \ 'dataSet).write[Option[DataSet]] and
           (__ \ 'contentData).write[Option[JsObject]] and
           (__ \ 'editPosition).write[Point3D] and
           (__ \ 'contentType).write[String])
           .tupled
-          .writes((ac.id, ac.settings, dataSet, ac.contentData, ac.editPosition, ac.contentType))
+          .writes((ac.settings, dataSet, ac.contentData, ac.editPosition, ac.contentType))
     }
   }
 }

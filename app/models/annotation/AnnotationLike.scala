@@ -57,6 +57,7 @@ object AnnotationLike {
     a.content.map(writeAnnotationContent).getOrElse(Future.successful(Json.obj())).map {
       js =>
         ((__ \ 'version).write[Int] and
+          (__ \ 'id).write[String] and
           (__ \ 'name).write[String] and
           (__ \ 'typ).write[String] and
           (__ \ 'content).write[JsObject] and
@@ -64,7 +65,7 @@ object AnnotationLike {
             AnnotationRestrictions.writeFor(user)))
           .tupled
           .writes(
-          (a.version, a._name getOrElse "", a.typ, js, a.restrictions))
+          (a.version, a.id, a._name getOrElse "", a.typ, js, a.restrictions))
     }
   }
 

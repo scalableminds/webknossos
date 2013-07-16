@@ -19,10 +19,9 @@ object TransformationMatrix {
   def apply(pos: Vector3D, direction: Vector3D): TransformationMatrix = {
 
     val nz = direction.normalize
-    val x = Vector3D(1, 0, 0)
-    val nx = (x - nz * (nz ° x)).normalize
     val y = Vector3D(0, 1, 0)
-    val ny = (y - nz * (nz ° y) - nx * (nx ° y)).normalize
+    val nx = (y x nz).normalize
+    val ny = (nx x nz).normalize
 
     TransformationMatrix(Array(nx.x, nx.y, nx.z, 0, ny.x, ny.y, ny.z, 0, nz.x, nz.y, nz.z, 0, pos.x, pos.y, pos.z, 1).map(_.toFloat))
   }

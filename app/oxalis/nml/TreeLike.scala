@@ -4,6 +4,7 @@ import braingames.image.Color
 import braingames.xml.{SynchronousXMLWrites, XMLWrites, Xml}
 import play.api.libs.json.Writes
 import play.api.libs.json.Json
+import play.api.libs.concurrent.Execution.Implicits._
 
 trait TreeLike {
   def treeId: Int
@@ -20,19 +21,24 @@ trait TreeLike {
 }
 
 object TreeLike{
-    implicit object TreeLikeXMLWrites extends SynchronousXMLWrites[TreeLike] {
+    implicit object TreeLikeXMLWrites extends XMLWrites[TreeLike] {
     import Node.NodeXMLWrites
     import Edge.EdgeXMLWrites
 
-    def synchronousWrites(t: TreeLike) =
-      <thing id={ t.treeId.toString } color.r={ t.color.r.toString } color.g={ t.color.g.toString } color.b={ t.color.b.toString } color.a={ t.color.a.toString } name={t.name}>
-        <nodes>
-          { t.nodes.map(n => Xml.toXML(n)) }
-        </nodes>
-        <edges>
-          { t.edges.map(e => Xml.toXML(e)) }
-        </edges>
-      </thing>
+    def writes(t: TreeLike) =
+      for{
+        nodes <- Xml.toXML(t.nodes.toSeq)
+        edges <- Xml.toXML(t.edges.toSeq)
+      } yield {
+        <thing id={ t.treeId.toString } color.r={ t.color.r.toString } color.g={ t.color.g.toString } color.b={ t.color.b.toString } color.a={ t.color.a.toString } name={t.name}>
+          <nodes>
+            { nodes}
+          </nodes>
+          <edges>
+            { edges }
+          </edges>
+        </thing>
+      }
   }
 
   implicit object DBTreeFormat extends Writes[TreeLike] {

@@ -18,7 +18,7 @@ trait AnnotationContentDAO {
 
   def findOneById(id: String): Option[AType]
 
-  def createForDataSet(dataSet: DataSet): AType
+  def createFrom(dataSet: DataSet): AType
 
   def contentType: String
 }

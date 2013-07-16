@@ -6,27 +6,32 @@ import braingames.geometry.Scale
 import braingames.geometry.Point3D
 import oxalis.nml.Comment
 import oxalis.nml.NML
-import models.annotation.{AnnotationSettings, AnnotationContent}
+import models.annotation.{AnnotationType, ContentReference, AnnotationSettings, AnnotationContent}
 import play.api.libs.json.JsValue
+import org.bson.types.ObjectId
+import models.annotation.AnnotationType._
+import scala.Some
+import oxalis.nml.NML
+import models.annotation.AnnotationType.AnnotationType
 
 case class TemporarySkeletonTracing(
-    id: String,
-    dataSetName: String,
-    trees: List[TreeLike],
-    branchPoints: List[BranchPoint],
-    timestamp: Long,
-    activeNodeId: Int,
-    editPosition: Point3D,
-    comments: List[Comment] = Nil,
-    settings: AnnotationSettings = AnnotationSettings.default) extends SkeletonTracingLike with AnnotationContent{
+  id: String,
+  dataSetName: String,
+  trees: List[TreeLike],
+  branchPoints: List[BranchPoint],
+  timestamp: Long,
+  activeNodeId: Int,
+  editPosition: Point3D,
+  comments: List[Comment] = Nil,
+  settings: AnnotationSettings = AnnotationSettings.default) extends SkeletonTracingLike with AnnotationContent {
 
   type Self = TemporarySkeletonTracing
 
   def task = None
 
-   def allowAllModes = 
+  def allowAllModes =
     this.copy(settings = settings.copy(allowedModes = AnnotationSettings.ALL_MODES))
-  
+
   def insertTree[TemporaryTracing](tree: TreeLike) = {
     this.copy(trees = tree :: trees).asInstanceOf[TemporaryTracing]
   }
@@ -36,7 +41,7 @@ case class TemporarySkeletonTracing(
 
   def insertComment[TemporaryTracing](c: Comment) =
     this.copy(comments = c :: this.comments).asInstanceOf[TemporaryTracing]
-  
+
   def updateFromJson(js: Seq[JsValue]) = ???
 
   def copyDeepAndInsert = ???
@@ -45,7 +50,7 @@ case class TemporarySkeletonTracing(
 }
 
 object TemporarySkeletonTracing {
-  def createFrom(nml: NML, id: String) = {
+  def createFrom(nml: NML, id: String, settings: AnnotationSettings = AnnotationSettings.default) = {
     TemporarySkeletonTracing(
       id,
       nml.dataSetName,
@@ -54,9 +59,10 @@ object TemporarySkeletonTracing {
       System.currentTimeMillis(),
       nml.activeNodeId,
       nml.editPosition,
-      nml.comments)
+      nml.comments,
+      settings)
   }
-  
+
   def createFrom(tracing: SkeletonTracingLike, id: String) = {
     TemporarySkeletonTracing(
       id,
@@ -67,5 +73,19 @@ object TemporarySkeletonTracing {
       tracing.activeNodeId,
       tracing.editPosition,
       tracing.comments)
+  }
+
+  def createFrom(nmls: List[NML], settings: AnnotationSettings): Option[TemporarySkeletonTracing] = {
+    nmls match {
+      case head :: tail =>
+        val startTracing = createFrom(head, "", settings)
+
+        Some(tail.foldLeft(startTracing) {
+          case (t, s) =>
+            t.mergeWith(TemporarySkeletonTracing.createFrom(s, s.timestamp.toString))
+        })
+      case _ =>
+        None
+    }
   }
 }

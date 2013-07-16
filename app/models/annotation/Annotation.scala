@@ -164,20 +164,56 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
         "state.isAssigned" -> true,
         "state.isFinished" -> true))).toList
 
+  def freeAnnotationsOfUser(userId: ObjectId) = {
+    find(MongoDBObject(
+      "_user" -> userId,
+      "state.isFinished" -> false,
+      "typ" -> AnnotationType.Task.toString))
+      .toList
+      .foreach(_.update(_.cancel))
+
+    update(
+      MongoDBObject(
+        "_user" -> userId,
+        "typ" -> MongoDBObject("$in" -> AnnotationType.UserTracings)),
+      MongoDBObject(
+        "$set" -> MongoDBObject(
+          "state.isAssigned" -> false)))
+  }
+
+
+  def updateAllUsingNewTaskType(task: Task, taskType: TaskType) = {
+    find(
+      MongoDBObject(
+        "_task" -> task._id)).map {
+      annotation =>
+        annotation._content.dao.updateSettings(task.settings, annotation._content._id)
+    }
+  }
+
   def createSample(annotation: Annotation, taskId: ObjectId): Annotation = {
     copyDeepAndInsert(annotation.copy(
       typ = AnnotationType.Sample,
       _task = Some(taskId)))
   }
 
+  def createFrom(userId: ObjectId, content: AnnotationContent, annotationType: AnnotationType, name: Option[String]) = {
+    insertOne(Annotation(
+      userId,
+      ContentReference.createFor(content),
+      _name = name,
+      typ = annotationType))
+  }
+
   def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, nml: NML) = {
-    val tracing = SkeletonTracing.createFromNML(settings, nml)
-    val content = ContentReference.createFor(tracing)
-    insertOne(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+    SkeletonTracing.createFrom(nml, settings).map{tracing =>
+      val content = ContentReference.createFor(tracing)
+      insertOne(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
+    }
   }
 
   def createAnnotationBase(task: Task, userId: ObjectId, settings: AnnotationSettings, dataSetName: String, start: Point3D) = {
-    val tracing = SkeletonTracing.createFromStart(settings, dataSetName, start)
+    val tracing = SkeletonTracing.createFrom(dataSetName, start, true, settings)
     val content = ContentReference.createFor(tracing)
     insertOne(Annotation(userId, content, typ = AnnotationType.TracingBase, _task = Some(task._id)))
   }
@@ -207,7 +243,6 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
   }
 
   def createAnnotationFor(user: User, task: Task) = {
-    Logger.warn("reached createAnnotationFor: " + task.annotationBase + " Task " + task)
     task.annotationBase.map {
       annotationBase =>
         task.update(_.assigneOnce)
@@ -222,7 +257,7 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
   def createExplorationalFor(user: User, dataSet: DataSet, contentType: String) = {
     withProviderForContentType(contentType) {
       provider =>
-        val content = provider.createForDataSet(dataSet)
+        val content = provider.createFrom(dataSet)
         insertOne(Annotation(
           user._id,
           ContentReference.createFor(content),
@@ -248,15 +283,6 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
     }
   }
 
-  def updateAllUsingNewTaskType(task: Task, taskType: TaskType) = {
-    find(
-      MongoDBObject(
-        "_task" -> task._id)).map {
-      annotation =>
-        annotation._content.dao.updateSettings(task.settings, annotation._content._id)
-    }
-  }
-
   def updateFromJson(js: Seq[JsValue], annotation: AnnotationLike) = {
     annotation.content.flatMap(_.updateFromJson(js)).map(_ =>
       annotation.incrementVersion)
@@ -270,55 +296,6 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
       reviewAnnotation <- createReviewFor(sample, training, user)
     } yield {
       training.update(_.assignReviewer(user, reviewAnnotation))
-    }
-  }
-
-  def freeAnnotationsOfUser(userId: ObjectId) = {
-    find(MongoDBObject(
-      "_user" -> userId,
-      "state.isFinished" -> false,
-      "typ" -> AnnotationType.Task.toString))
-      .toList
-      .foreach(_.update(_.cancel))
-
-    update(
-      MongoDBObject(
-        "_user" -> userId,
-        "typ" -> MongoDBObject("$in" -> AnnotationType.UserTracings)),
-      MongoDBObject(
-        "$set" -> MongoDBObject(
-          "state.isAssigned" -> false)))
-  }
-
-  def createFromNML(userId: ObjectId, nml: NML, annotationType: AnnotationType, name: Option[String]) = {
-    val content = SkeletonTracing.createFromNML(AnnotationSettings.default, nml)
-
-    insertOne(Annotation(
-      userId,
-      ContentReference.createFor(content),
-      _name = name,
-      typ = annotationType))
-  }
-
-  def createFromNMLs(userId: ObjectId, nmls: List[NML], annotationType: AnnotationType, name: Option[String]): Option[Annotation] = {
-    nmls match {
-      case head :: tail =>
-        val startAnnotation = createFromNML(
-          userId,
-          head,
-          AnnotationType.Explorational,
-          name)
-
-        startAnnotation.content.map {
-          c =>
-            tail.foldLeft(c) {
-              case (t, s) =>
-                t.mergeWith(TemporarySkeletonTracing.createFrom(s, s.timestamp.toString))
-            }
-        }
-        Some(startAnnotation)
-      case _ =>
-        None
     }
   }
 }

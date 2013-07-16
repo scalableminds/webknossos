@@ -58,7 +58,7 @@ object VolumeTracing extends BasicDAO[VolumeTracing]("volumes") with AnnotationC
 
   val contentType = "volumeTracing"
 
-  def createForDataSet(baseDataSet: DataSet) = {
+  def createFrom(baseDataSet: DataSet) = {
     val dataSet = BinaryDataService.createUserDataSet(baseDataSet)
     val t = VolumeTracing(dataSet.name, System.currentTimeMillis(), Point3D(0,0,0))
     insertOne(t)

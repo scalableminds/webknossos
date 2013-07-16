@@ -13,6 +13,9 @@ import oxalis.nml._
 import braingames.binary.models.DataSet
 import models.annotation.{AnnotationContentDAO, AnnotationSettings, AnnotationContent}
 import models.tracing.CommonTracingDAO
+import scala.Some
+import braingames.binary.models.DataSet
+import oxalis.nml.NML
 
 case class SkeletonTracing(
   dataSetName: String,
@@ -57,7 +60,7 @@ case class SkeletonTracing(
 
   def maxNodeId = oxalis.nml.utils.maxNodeId(this.trees)
 
-  def clearTracingData = {
+  def clearTracingData() = {
     DBTree.removeAllWithTracingId(_id)
     this.update(_.copy(branchPoints = Nil, comments = Nil))
   }
@@ -84,21 +87,33 @@ case class SkeletonTracing(
       TracingUpdater.createUpdateFromJson
     }
     if (jsUpdates.size == updates.size) {
-      val tracing = updates.foldLeft(this) {
+      val updatedTracing = updates.foldLeft(this) {
         case (tracing, updater) => updater.update(tracing)
       }
-      SkeletonTracing.save(tracing.copy(timestamp = System.currentTimeMillis))
-      Some(tracing)
+      SkeletonTracing.save(updatedTracing.copy(timestamp = System.currentTimeMillis))
+      Some(updatedTracing)
     } else {
       None
     }
   }
 }
 
-object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with AnnotationStatistics with AnnotationContentDAO with CommonTracingDAO{
+object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with AnnotationStatistics with AnnotationContentDAO with CommonTracingDAO {
   type AType = SkeletonTracing
 
   val contentType = "skeletonTracing"
+
+  private def skeletonFromSkeletonLike(t: SkeletonTracingLike) = {
+    SkeletonTracing(
+      t.dataSetName,
+      t.branchPoints,
+      t.timestamp,
+      t.activeNodeId,
+      t.editPosition,
+      t.comments,
+      t.settings
+    )
+  }
 
   def tracingBase(settings: AnnotationSettings, dataSetName: String): SkeletonTracing =
     SkeletonTracing(
@@ -109,52 +124,50 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with Annot
       Point3D(0, 0, 0),
       settings = settings)
 
-  def createFromStart(settings: AnnotationSettings, dataSetName: String, start: Point3D) = {
-    createFromNML(
-      settings,
-      NML(
+  def createFrom(dataSetName: String, start: Point3D, insertStartAsNode: Boolean, settings: AnnotationSettings = AnnotationSettings.default): SkeletonTracing = {
+    val trees =
+      if(insertStartAsNode)
+         List(Tree.createFrom(start))
+      else
+        Nil
+
+    createFrom(
+      TemporarySkeletonTracing(
+        "",
         dataSetName,
-        List(Tree(1, Set(Node(1, start)), Set.empty, Color.RED)),
+        trees,
         Nil,
         System.currentTimeMillis(),
         1,
-        Scale(12, 12, 24),
         start,
-        Nil))
+        Nil,
+        settings))
   }
 
-  def createFromNML(settings: AnnotationSettings, nml: NML): SkeletonTracing = {
-    val tracing = insertOne(fromNML(nml).copy(
-      settings = settings))
+  def createFrom(tracingLike: SkeletonTracingLike): SkeletonTracing = {
+    val tracing = insertOne(skeletonFromSkeletonLike(tracingLike))
 
-    nml.trees.map(tree => DBTree.insertOne(tracing._id, tree))
+    tracingLike.trees.map(tree => DBTree.insertOne(tracing._id, tree))
     tracing
   }
 
-  def fromNML(nml: NML) = {
-    SkeletonTracing(
-      nml.dataSetName,
-      nml.branchPoints,
-      System.currentTimeMillis,
-      nml.activeNodeId,
-      nml.editPosition,
-      nml.comments)
+  def createFrom(nmls: List[NML], settings: AnnotationSettings): Option[SkeletonTracing] = {
+    TemporarySkeletonTracing.createFrom(nmls, settings).map {
+      temporary =>
+        createFrom(temporary)
+    }
+  }
+
+  def createFrom(nml: NML, settings: AnnotationSettings): Option[SkeletonTracing] = {
+    createFrom(List(nml), settings)
   }
 
   def mergeWith(source: SkeletonTracing, target: SkeletonTracing) = {
     target.update(t => t.mergeWith(source))
   }
 
-  def createForDataSet(d: DataSet) = {
-    val tracing = insertOne(SkeletonTracing(
-      d.name,
-      Nil,
-      System.currentTimeMillis,
-      1,
-      Point3D(0, 0, 0)))
-
-    DBTree.createEmptyTree(tracing._id)
-    tracing
+  def createFrom(dataSet: DataSet) = {
+    createFrom(dataSet.name, Point3D(0,0,0), false)
   }
 
   override def removeById(tracing: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {

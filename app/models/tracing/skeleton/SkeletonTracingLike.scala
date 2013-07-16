@@ -9,14 +9,18 @@ import play.api.libs.functional.syntax._
 import braingames.xml.XMLWrites
 import models.binary.DataSetDAO
 import braingames.xml.Xml
-import models.annotation.AnnotationContent
-import models.annotation.AnnotationSettings
+import models.annotation.{AnnotationType, ContentReference, AnnotationContent, AnnotationSettings}
 import play.api.i18n.Messages
 import controllers.admin.NMLIO
 import org.apache.commons.io.IOUtils
 import models.basics.GlobalDBAccess
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
+import org.bson.types.ObjectId
+import models.annotation.AnnotationType._
+import scala.Some
+import oxalis.nml.NML
+import models.annotation.AnnotationType.AnnotationType
 
 trait SkeletonTracingLike extends AnnotationContent {
   type Self <: SkeletonTracingLike

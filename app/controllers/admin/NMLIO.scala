@@ -33,12 +33,14 @@ import braingames.util.TextUtils
 import braingames.util.FileIO
 import java.io.FileInputStream
 import java.nio.channels.Channels
-import models.annotation.{AnnotationDAO, Annotation, AnnotationType}
-import models.tracing.skeleton.SkeletonTracingLike
+import models.annotation.{AnnotationSettings, AnnotationDAO, Annotation, AnnotationType}
+import models.annotation.AnnotationType._
+import models.tracing.skeleton.{SkeletonTracing, SkeletonTracingLike}
 import oxalis.annotation.handler.SavedTracingInformationHandler
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import play.api.Play
+import org.bson.types.ObjectId
 
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
@@ -137,6 +139,17 @@ object NMLIO extends Controller with Secured with TextUtils {
     }
   }
 
+  def createAnnotationFrom(user: User, nmls: List[NML], typ: AnnotationType, name: Option[String]) = {
+    SkeletonTracing.createFrom(nmls, AnnotationSettings.default).map {
+      content =>
+        AnnotationDAO.createFrom(
+          user._id,
+          content,
+          typ,
+          name)
+    }
+  }
+
   def upload = Authenticated(parse.multipartFormData) {
     implicit request =>
       val parseResult = request.body.files.map(f => f.filename -> extractFromNML(f.ref.file))
@@ -161,13 +174,7 @@ object NMLIO extends Controller with Secured with TextUtils {
           case (_, nml) => nml
         }
 
-        val annotationOpt = AnnotationDAO.createFromNMLs(
-          request.user._id,
-          nmls,
-          AnnotationType.Explorational,
-          tracingName)
-
-        annotationOpt
+        createAnnotationFrom(request.user, nmls, AnnotationType.Explorational, tracingName)
           .map {
           annotation =>
             Redirect(controllers.routes.AnnotationController.trace(annotation.typ, annotation.id))

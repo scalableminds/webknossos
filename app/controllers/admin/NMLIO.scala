@@ -18,7 +18,7 @@ import models.task.Task
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipOutputStream
-import braingames.util.ZipIO
+import braingames.util.{NamedFileStream, ZipIO, TextUtils, FileIO}
 import java.io.StringReader
 import java.io.InputStream
 import org.xml.sax.InputSource
@@ -29,8 +29,6 @@ import play.api.libs.Files.TemporaryFile
 import java.io.FileOutputStream
 import org.apache.commons.io.IOUtils
 import net.liftweb.common._
-import braingames.util.TextUtils
-import braingames.util.FileIO
 import java.io.FileInputStream
 import java.nio.channels.Channels
 import models.annotation.{AnnotationSettings, AnnotationDAO, Annotation, AnnotationType}
@@ -73,20 +71,21 @@ object NMLIO extends Controller with Secured with TextUtils {
     s"$nmlStorageFolder/${annotation.id}.nml"
 
   def writeTracingToFile(annotation: Annotation) {
-    val f = new File(outputPathForAnnotation(annotation))
-    val out = new FileOutputStream(f).getChannel
     for {
       futureStream <- tracingToNMLStream(annotation)
       in <- futureStream
     } {
+      val f = new File(outputPathForAnnotation(annotation))
+      val out = new FileOutputStream(f).getChannel
       val ch = Channels.newChannel(in)
       try {
         out.transferFrom(ch, 0, in.available)
       } finally {
-        out.close();
         ch.close()
+        out.close()
       }
     }
+
   }
 
   def tracingToNMLStream(annotation: Annotation) = {
@@ -110,10 +109,10 @@ object NMLIO extends Controller with Secured with TextUtils {
   }
 
   def loadTracingStream(annotation: Annotation): Option[Future[InputStream]] = {
-    loadTracingFromFileStream(annotation) orElse {
+    loadTracingFromFileStream(annotation).orElse {
       writeTracingToFile(annotation)
       loadTracingFromFileStream(annotation)
-    }
+    }.orElse(tracingToNMLStream(annotation))
   }
 
   def uploadForm = Authenticated {
@@ -193,12 +192,16 @@ object NMLIO extends Controller with Secured with TextUtils {
     Xml.toXML(t).map(prettyPrinter.format(_))
   }
 
+  def loadAnnotation(annotation: Annotation) =
+    loadTracingStream(annotation).map(_.map {
+      tracingStream =>
+        NamedFileStream(
+          tracingStream,
+          SavedTracingInformationHandler.nameForAnnotation(annotation) + ".nml")
+    })
+
   def zipTracings(annotations: List[Annotation], zipFileName: String) = {
-    Future.sequence(annotations.par.flatMap {
-      annotation =>
-        (loadTracingStream(annotation) orElse tracingToNMLStream(annotation)).map(_.map(tracingStream =>
-          tracingStream -> (SavedTracingInformationHandler.nameForAnnotation(annotation) + ".nml")))
-    }.seq).map {
+    Future.sequence(annotations.par.flatMap(loadAnnotation).seq).map {
       zipStreams =>
         val zipped = new TemporaryFile(new File(normalize(zipFileName)))
         ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))

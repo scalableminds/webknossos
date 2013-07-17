@@ -113,8 +113,8 @@ case class Cuboid(
 
   @inline
   private def looper[T](extendArrayBy: Int)(f: (Double, Double, Double) => Array[T]) = {
-    val xhMax = topLeft.x + width
-    val yhMax = topLeft.y + height
+    val xhMax = topLeft.x - width
+    val yhMax = topLeft.y - height
     val zhMax = topLeft.z + depth
 
     val array = new ArrayBuffer[T](_width * _height * _depth * extendArrayBy)
@@ -124,9 +124,9 @@ case class Cuboid(
     var idx = 0
     while (z < zhMax) {
       y = topLeft.y
-      while (y < yhMax) {
+      while (y > yhMax) {
         x = topLeft.x
-        while (x < xhMax) {
+        while (x > xhMax) {
           array ++= f(x, y, z)
           x -= resolution
           idx += extendArrayBy

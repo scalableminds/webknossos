@@ -128,10 +128,10 @@ case class Cuboid(
         x = topLeft.x
         while (x < xhMax) {
           array ++= f(x, y, z)
-          x += resolution
+          x -= resolution
           idx += extendArrayBy
         }
-        y += resolution
+        y -= resolution
       }
       z += resolution
     }

@@ -44,7 +44,7 @@ object BinaryData extends Controller {
   def createStackCuboid(level: Level, mission: Mission) = {
 
     def calculateTopLeft(width: Int, height: Int, depth: Int) = {
-      Vector3D(-(width / 2.0).floor, -(height / 2.0).floor, -depth)
+      Vector3D((width/2), (height / 2.0).floor, 0)
     }
 
     val realDirection = mission.start.direction

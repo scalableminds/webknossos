@@ -47,16 +47,14 @@ object BinaryData extends Controller {
       Vector3D(-(width/2.0).floor, -(height / 2.0).floor, 0)
     }
 
-    val realDirection = mission.start.direction
-    //val direction = Vector3D(realDirection.x, realDirection.z, -realDirection.y)
-    val direction = realDirection
+    val direction = mission.start.direction.normalize
 
     Cuboid(level.width,
       level.height,
       level.depth,
       1,
       topLeftOpt = Some(calculateTopLeft(level.width, level.height, level.depth)),
-      moveVector = (Vector3D(mission.errorCenter) - (realDirection * level.slidesBeforeProblem)).toTuple,
+      moveVector = (Vector3D(mission.errorCenter) - (direction * level.slidesBeforeProblem)).toTuple,
       axis = direction.toTuple)
   }
 

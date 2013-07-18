@@ -1,5 +1,6 @@
 package controllers.levelcreator
 
+import _root_.models.basics.GlobalDBAccess
 import akka.actor._
 import akka.dispatch._
 import scala.concurrent.duration._
@@ -11,10 +12,9 @@ import play.api.libs.iteratee._
 import play.api.libs.concurrent._
 import play.libs.Akka._
 import play.api.Play.current
-import models.binary._
+import _root_.models.binary._
 import akka.util.Timeout
-import oxalis.binary._
-import models.knowledge._
+import _root_.models.knowledge._
 import braingames.mvc.Controller
 import play.api.i18n.Messages
 import braingames.geometry._
@@ -22,23 +22,22 @@ import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import scala.collection.mutable.ArrayBuffer
 import play.api.libs.concurrent.Execution.Implicits._
-import models.binary.DataLayer
-import braingames.binary.models.DataSet
+import braingames.binary.models.{DataLayerId, DataLayer, DataSet}
+import models.knowledge.DataSetDAO
 import akka.agent.Agent
 import scala.concurrent.Future
-import oxalis.binary.LoadBlock
 import akka.routing.RoundRobinRouter
+import braingames.binary._
+import braingames.binary.models.DataLayerId
+import scala.Some
+import braingames.binary.Cuboid
+import braingames.binary.models.DataSet
+import braingames.binary.SingleCubeRequest
+import braingames.levelcreator.BinaryDataService
 
-object BinaryData extends Controller {
+object BinaryData extends Controller with GlobalDBAccess{
   val conf = Play.current.configuration
-  
-  val dataRequestActor = {
-    implicit val system = Akka.system
-    val nrOfBinRequestActors = conf.getInt("binData.nrOfBinRequestActors") getOrElse 8
-    val bindataCache = Agent[Map[LoadBlock, Future[Array[Byte]]]](Map.empty)
-    Akka.system.actorOf(Props(new DataRequestActor(bindataCache))
-      .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
-  }
+
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds) // needed for `?` below
 
   def createStackCuboid(level: Level, mission: Mission) = {
@@ -60,36 +59,28 @@ object BinaryData extends Controller {
       axis = direction.toTuple)
   }
 
-  def handleDataRequest(dataSet: DataSet, dataLayer: DataLayer, level: Level, mission: Mission) = {
-    val t = System.currentTimeMillis()
-    (dataRequestActor ? SingleRequest(DataRequest(
+  def handleDataRequest(dataSet: DataSet, dataLayerName: String, level: Level, mission: Mission): Future[Option[Array[Byte]]] = {
+    val dataRequest = SingleCubeRequest(DataRequest(
       dataSet,
-      dataLayer,
+      DataLayerId(dataLayerName),
       1,
       createStackCuboid(level, mission),
       useHalfByte = false,
-      skipInterpolation = false)))
-      .recover {
-        case e: AskTimeoutException =>
-          Logger.error("calculateImages: AskTimeoutException")
-          new Array[Byte](level.height * level.width * level.depth * dataLayer.bytesPerElement).toBuffer
-      }
-      .mapTo[ArrayBuffer[Byte]].map { data =>
-        Logger.debug("Stack data aggregation: %d ms".format(System.currentTimeMillis - t))
-        Ok(data.toArray)
-      }
+      skipInterpolation = false))
+
+    BinaryDataService.handleSingleCubeRequest(dataRequest)
   }
 
   def viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) =
     Action { implicit request =>
       Async {
         for {
-          dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataset.notFound")
-          level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-          mission <- Mission.findOneById(missionId) ?~ Messages("mission.notFound")
-          dataLayer <- dataSet.dataLayers.get(dataLayerName) orElse dataSet.dataLayers.get(s"$dataLayerName${mission.batchId}") ?~ Messages("datalayer.notFound")
+          dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataset.notFound")
+          level <- Level.findOneById(levelId) ?~> Messages("level.notFound")
+          mission <- Mission.findOneById(missionId) ?~> Messages("mission.notFound")
+          result <- handleDataRequest(dataSet, dataLayerName, level, mission) ?~> "Data couldn'T be retireved"
         } yield {
-          handleDataRequest(dataSet, dataLayer, level, mission)
+          Ok(result)
         }
       }
     }

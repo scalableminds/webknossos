@@ -4,11 +4,10 @@ import akka.actor.ActorSystem
 import akka.agent.Agent
 import akka.actor.ActorRef
 import com.typesafe.config.ConfigFactory
-import braingames.binary.LoadBlock
+import braingames.binary._
 import scala.concurrent.Future
 import akka.actor.Props
 import akka.pattern.ask
-import braingames.binary.DataRequestActor
 import akka.routing.RoundRobinRouter
 import braingames.io.DirectoryWatcherActor
 import braingames.io.DataSetChangeHandler
@@ -16,13 +15,8 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import braingames.geometry.Point3D
 import braingames.geometry.Vector3D
-import braingames.binary.Cuboid
 import braingames.binary.models._
 import scala.collection.mutable.ArrayBuffer
-import braingames.binary.MultipleDataRequest
-import braingames.binary.SingleCubeRequest
-import braingames.binary.DataRequest
-import braingames.binary.MultiCubeRequest
 import akka.pattern.AskTimeoutException
 import braingames.io.StopWatching
 import braingames.io.StartWatching
@@ -30,8 +24,24 @@ import scala.util.Success
 import scala.util.Failure
 import com.typesafe.config.Config
 import braingames.binary.models.DataLayerId
-import braingames.binary.CachedBlock
 import net.liftweb.common.Box
+import braingames.io.StopWatching
+import braingames.binary.models.DataLayerId
+import scala.util.Failure
+import scala.Some
+import scala.util.Success
+import braingames.binary.models.DataSet
+import braingames.io.StartWatching
+import braingames.io.StopWatching
+import braingames.binary.models.DataLayerId
+import scala.util.Failure
+import scala.Some
+import braingames.binary.DataRequest
+import braingames.binary.Cuboid
+import scala.util.Success
+import braingames.binary.models.DataSet
+import braingames.binary.SingleCubeRequest
+import braingames.io.StartWatching
 
 trait BinaryDataService extends DataSetService{
   implicit def system: ActorSystem
@@ -63,7 +73,7 @@ trait BinaryDataService extends DataSetService{
 
   var directoryWatcher: Option[ActorRef] = None
 
-  def start(onComplete: => Unit = Unit) {
+  def   start(onComplete: => Unit = Unit) {
     val actor = system.actorOf(
       Props(new DirectoryWatcherActor(
         config.getConfig("braingames.binary.changeHandler"),
@@ -94,6 +104,10 @@ trait BinaryDataService extends DataSetService{
     Cuboid(cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2), resolution, Some(cubeCorner))
   }
 
+  def handleSingleCubeRequest(request: SingleCubeRequest) = {
+    askDataRequestActor(request)
+  }
+
   def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayerId, cubeSize: Int): Future[Option[Array[Byte]]] = {
     val cubeRequests = multi.requests.map { request =>
       val resolution = resolutionFromExponent(request.resolutionExponent)
@@ -108,7 +122,11 @@ trait BinaryDataService extends DataSetService{
           skipInterpolation = false))
     }
 
-    val future = (dataRequestActor ? MultiCubeRequest(cubeRequests)) recover {
+    askDataRequestActor(MultiCubeRequest(cubeRequests))
+  }
+
+  def askDataRequestActor[T](request: T) = {
+    val future = (dataRequestActor ? request) recover {
       case e: AskTimeoutException =>
         println("WARN: Data request to DataRequestActor timed out!")
         None

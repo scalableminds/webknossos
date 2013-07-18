@@ -86,7 +86,13 @@ class DataRequestActor(
     case SingleCubeRequest(dataRequest) =>
       val s = sender
       Future {
-        load(dataRequest) pipeTo s
+        load(dataRequest).onComplete{
+          case Success(data) =>
+            s ! Some(data)
+          case Failure(e) =>
+            System.err.println(s"DataRequestActor Error for Request. Error: $e")
+            s! None
+        }
       }
     case MultiCubeRequest(requests) =>
       val resultsPromise = Future.traverse(requests)(r =>

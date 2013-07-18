@@ -8,30 +8,33 @@ import play.api.libs.json._
 import play.api.libs.json.Json._
 import play.api.libs.functional.syntax._
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.binary.models.DataSet
+import braingames.binary.models.{DataLayer, DataSet}
 import braingames.util.FileRegExFilter
 import models.knowledge._
 import models.binary._
 import braingames.util.JsonHelper._
 import braingames.util.ExtendedTypes._
 import braingames.util.StartableActor
+import models.knowledge.DataSetDAO
+import models.basics.GlobalDBAccess
 
 case class StartWatchingForMissions()
+
 case class StopWatchingForMissions()
 
-class MissionWatcher extends Actor {
+class MissionWatcher extends Actor with GlobalDBAccess {
   val TICKER_INTERVAL = 5 minutes
 
   var updateTicker: Option[Cancellable] = None
 
   override def preStart = {
-    
+    Logger.debug("About to start MissionWatcher")
     self ! StartWatchingForMissions()
   }
-  
+
   def receive = {
     case StartWatchingForMissions() => start
-    case StopWatchingForMissions()  => stop
+    case StopWatchingForMissions() => stop
   }
 
   def start = {
@@ -45,46 +48,54 @@ class MissionWatcher extends Actor {
     updateTicker.map(_.cancel())
   }
 
-  val layerDirFilter = new FileRegExFilter("""^layer[0-9]+$""".r)
-  
+  val layerDirFilter = new FileRegExFilter( """^layer[0-9]+$""".r)
+
   def getMissionFiles(dataSet: DataSet): List[File] = {
-    for{segmentationLayer <- dataSet.segmentationLayers
-        missionsFile = new File(s"${dataSet.baseDir}/${segmentationLayer.baseDir}/missions.json")
-        if missionsFile.isFile
-    } yield {
-      missionsFile
-    }
+    dataSet.dataLayer("segmentation").map {
+      segmentationLayer =>
+        segmentationLayer.sections.map {
+          section =>
+            new File(s"${dataSet.baseDir}/${section.baseDir}/missions.json")
+        }.filter(_.isFile)
+
+    } getOrElse Nil
   }
-  
+
   def extractLayerId(missionFile: File) = {
-    missionFile.getParentFile.getName.replaceFirst("layer","").toIntOpt getOrElse 0
+    missionFile.getParentFile.getName.replaceFirst("layer", "").toIntOpt getOrElse 0
+  }
+
+  def insertMissionsIntoDB(missions: List[Mission]) = {
+    missions.map(Mission.updateOrCreate)
   }
 
   def lookForMissions() = {
-    DataSet.findAll.toList.foreach { dataSet =>
+    DataSetDAO.findAll.map {
+      _.foreach {
+        dataSet =>
+          val missions = readMissionsFromFile(getMissionFiles(dataSet), dataSet.name)
+          val insertedMissions = insertMissionsIntoDB(missions)
+          val removedMissions = Mission.deleteAllForDataSetExcept(dataSet.name, missions)
 
-      val missions = aggregateMissions(getMissionFiles(dataSet), dataSet.name)
-      val availableMissionIds = missions.map { Mission.updateOrCreate(_) }
-      val removedMissionIds = Mission.deleteAllForDataSetExcept(dataSet.name, missions)
-      
-      Level.findActiveAutoRenderByDataSetName(dataSet.name).foreach { level =>
-        Level.ensureMissions(level, availableMissionIds)
-      }
-      
-      removedMissionIds.map { missionId =>
-        RenderedStack.removeAllOfMission(missionId)
-      }
+          Level.findActiveAutoRenderByDataSetName(dataSet.name).foreach {
+            level =>
+              Level.ensureMissions(level, insertedMissions)
+          }
 
-      Logger.debug(s"found ${missions.size} missions for dataset ${dataSet.name}")
+          removedMissions.map(RenderedStack.removeAllOfMission)
+
+          Logger.info(s"Found ${missions.size} missions for dataset ${dataSet.name}")
+      }
     }
   }
 
-  def aggregateMissions(missionFiles: List[File], dataSetName: String): List[Mission] = {
-    Logger.info(s"processing $missionFiles for $dataSetName")
-    (missionFiles.flatMap { missionFile =>
-      JsonFromFile(missionFile)
-        .asOpt[List[ContextFreeMission]]
-        .map(_.map(_.addContext(dataSetName, extractLayerId(missionFile))))
+  def readMissionsFromFile(missionFiles: List[File], dataSetName: String): List[Mission] = {
+    Logger.debug(s"processing $missionFiles for $dataSetName")
+    (missionFiles.flatMap {
+      missionFile =>
+        JsonFromFile(missionFile)
+          .asOpt[List[ContextFreeMission]]
+          .map(_.map(_.addContext(dataSetName, extractLayerId(missionFile))))
     }).flatten
   }
 }

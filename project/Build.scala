@@ -112,7 +112,7 @@ object ApplicationBuild extends Build {
     resolvers ++= dependencyResolvers,
     // offline := true,
     coffeescriptOptions := Seq("native", "coffee -p")
-  ).dependsOn(oxalis)
+  ).dependsOn(braingamesUtil, braingamesBinary, oxalis).aggregate(braingamesUtil, braingamesBinary, oxalis)
 
   lazy val stackrenderer = play.Project("stackrenderer", "0.1", stackrendererDependencies, path = file("modules") / "stackrenderer").settings(
     resolvers ++= dependencyResolvers

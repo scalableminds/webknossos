@@ -17,7 +17,7 @@ object TransformationMatrix {
   val defaultSize = 16
   
   def apply(pos: Vector3D, directionOld: Vector3D): TransformationMatrix = {
-    val direction = Vector3D(directionOld.x * 11, directionOld.y * 11, directionOld.z * 28)
+    val direction = Vector3D(directionOld.x * 11.28, directionOld.y * 11.28, directionOld.z * 28)
     val nz = direction.normalize
     val y = Vector3D(0, 1, 0)
     val nx = (nz x y).normalize

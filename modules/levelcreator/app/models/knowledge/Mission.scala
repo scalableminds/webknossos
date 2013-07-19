@@ -44,7 +44,7 @@ trait MissionFormats extends CommonFormats {
 
 object Mission extends BasicDAO[Mission]("missions") with MissionFormats with Function8[String, Int, Int, MissionStart, Point3D, List[PossibleEnd], Double, ObjectId, Mission] {
 
-  def findByDataSetName(dataSetName: String) = find(MongoDBObject("dataSetName" -> dataSetName, "missionId" -> 31)).toList
+  def findByDataSetName(dataSetName: String) = find(MongoDBObject("dataSetName" -> dataSetName)).toList
 
   def findOneByMissionId(missionId: Int) = findOne(MongoDBObject("missionId" -> missionId))
 

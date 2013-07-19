@@ -20,6 +20,7 @@ object ApplicationBuild extends Build {
     "com.novus" %% "salat-core" % "1.9.2-SNAPSHOT",
     "com.restfb" % "restfb" % "1.6.11",
     "commons-io" % "commons-io" % "1.3.2",
+    "commons-io" % "commons-io" % "1.3.2",
     "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
     "com.typesafe.akka" %% "akka-agent" % "2.1.0",
     "com.typesafe.akka" %% "akka-remote" % "2.1.0",
@@ -36,7 +37,8 @@ object ApplicationBuild extends Build {
     "sonatype rels" at "https://oss.sonatype.org/content/repositories/releases/",
     "sonatype snaps" at "https://oss.sonatype.org/content/repositories/snapshots/",
     "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/",
-    "mandubian" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/"
+    "mandubian" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/",
+    "typesafe" at "http://repo.typesafe.com/typesafe/releases"
   )
 
   val shellgameDependencies = Seq()
@@ -59,7 +61,7 @@ object ApplicationBuild extends Build {
   )
 
   lazy val braingamesDependencies = Seq(
-    "play" %% "play-json" % "2.2-SNAPSHOT",
+    "com.typesafe.play" %% "play-json" % "2.2.0-M1",
     "commons-io" % "commons-io" % "1.3.2",
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
@@ -71,6 +73,7 @@ object ApplicationBuild extends Build {
   lazy val braingamesUtil: Project = Project("braingames-util", file("modules") / "braingames-util").settings(
     libraryDependencies ++= braingamesDependencies,
     resolvers ++= dependencyResolvers,
+    organization := "com.scalableminds",
     scalaVersion := "2.10.0",
     offline := true
   )

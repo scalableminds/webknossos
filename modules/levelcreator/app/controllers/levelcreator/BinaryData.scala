@@ -1,6 +1,5 @@
 package controllers.levelcreator
 
-import _root_.models.basics.GlobalDBAccess
 import akka.actor._
 import akka.dispatch._
 import scala.concurrent.duration._
@@ -34,6 +33,7 @@ import braingames.binary.Cuboid
 import braingames.binary.models.DataSet
 import braingames.binary.SingleCubeRequest
 import braingames.levelcreator.BinaryDataService
+import braingames.reactivemongo.GlobalDBAccess
 
 object BinaryData extends Controller with GlobalDBAccess{
   val conf = Play.current.configuration

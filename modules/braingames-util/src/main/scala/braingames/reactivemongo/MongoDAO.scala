@@ -1,4 +1,4 @@
-package models.basics
+package braingames.reactivemongo
 
 /**
  * Company: scalableminds
@@ -7,28 +7,22 @@ package models.basics
  * Time: 00:59
  */
 
-import play.api.Play.current
-import play.modules.reactivemongo._
-import reactivemongo.api.collections._
+import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.api._
 import play.api.libs.json._
 import reactivemongo.api.DefaultDB
 import reactivemongo.bson.BSONObjectID
-import play.api.libs.json.JsObject
+import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.json.Writes
-import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 import reactivemongo.core.commands.LastError
-import play.api.Logger
-import reactivemongo.bson.buffer._
 import reactivemongo.api.collections.GenericQueryBuilder
-import play.modules.reactivemongo.json.collection.JSONGenericHandlers
-import play.modules.reactivemongo.MongoController
-import play.modules.reactivemongo.json.collection.JSONCollection
-import play.api.libs.concurrent.Execution.Implicits._
+import scala.Some
+import reactivemongo.api.QueryOpts
 import scala.util.Success
-import java.io.Writer
-import models.user.User
+import reactivemongo.api.DefaultDB
+import play.api.libs.json.JsObject
 
 trait DAO[T] extends BaseDAO[T] {
   def findHeadOption(attribute: String, value: String)(implicit ctx: DBAccessContext): Future[Option[T]]
@@ -60,8 +54,8 @@ trait BaseDAO[T] {
   def collectionRemove(js: JsObject)(implicit ctx: DBAccessContext): Future[LastError]
 }
 
-case class AuthedAccessContext(u: User) extends DBAccessContext {
-  override def user = Some(u)
+case class AuthedAccessContext(t: DBAccessContextPayload) extends DBAccessContext {
+  override def data = Some(t)
 }
 
 case object UnAuthedAccessContext extends DBAccessContext
@@ -71,30 +65,32 @@ case object GlobalAccessContext extends DBAccessContext {
 }
 
 trait DBAccessContext {
-  def user: Option[User] = None
+  def data: Option[DBAccessContextPayload] = None
 
   def globalAccess: Boolean = false
 }
 
+trait DBAccessContextPayload
+
 trait MongoDAO[T] extends DAO[T] with MongoHelpers {
 
-  import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 
   def collectionName: String
+
+  def db: DefaultDB
 
   implicit def formatter: OFormat[T]
 
   def formatWithoutId(t: T) = {
     val js = formatter.writes(t)
     js.transform(removeId).getOrElse{
-      Logger.warn("Couldn't remove ID from: " + js)
+      System.err.println("Couldn't remove ID from: " + js)
       js
     }
   }
 
   def defaultOrderBy = "_id"
 
-  def db: DefaultDB = ReactiveMongoPlugin.db
 
   lazy val collection = db.collection[JSONCollection](collectionName)
 
@@ -173,7 +169,7 @@ trait MongoDAO[T] extends DAO[T] with MongoHelpers {
       case Success(bid) =>
         f(bid)
       case _ =>
-        Logger.error(s"Failed to parse objectId: $id")
+        System.err.println(s"Failed to parse objectId: $id")
         Future.successful(errorValue)
     }
   }

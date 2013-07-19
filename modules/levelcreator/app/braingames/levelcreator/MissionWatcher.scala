@@ -16,7 +16,7 @@ import braingames.util.JsonHelper._
 import braingames.util.ExtendedTypes._
 import braingames.util.StartableActor
 import models.knowledge.DataSetDAO
-import models.basics.GlobalDBAccess
+import braingames.reactivemongo.GlobalDBAccess
 
 case class StartWatchingForMissions()
 

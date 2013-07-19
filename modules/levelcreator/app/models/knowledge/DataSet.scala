@@ -1,8 +1,9 @@
 package models.knowledge
 
-import models.basics.{DBAccessContext, SecuredMongoDAO, GlobalDBAccess}
 import braingames.binary.models.{DataSetRepository => AbstractDataSetRepository, DataSet}
 import play.api.libs.json.Json
+import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
+import models.knowledge.basics.BasicReactiveDAO
 
 
 object DataSetRepository extends AbstractDataSetRepository with GlobalDBAccess{
@@ -20,21 +21,8 @@ object DataSetRepository extends AbstractDataSetRepository with GlobalDBAccess{
     DataSetDAO.findOneByName(name)
 }
 
-object DataSetDAO extends SecuredMongoDAO[DataSet] {
+object DataSetDAO extends BasicReactiveDAO[DataSet] {
   val collectionName = "dataSets"
-
-  // Security
-
-  override def findQueryFilter(implicit ctx: DBAccessContext) = {
-    ctx.user match{
-      case Some(user) =>
-        AllowIf(Json.obj("$or" -> user.teams.map(t =>
-          Json.obj(
-            "allowedTeams" -> Json.obj("$regex" -> t.teamPath.toRegex)))))
-      case _ =>
-        DenyEveryone()
-    }
-  }
 
   import braingames.binary.models.DataLayer.dataLayerFormat
 

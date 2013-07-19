@@ -1,4 +1,4 @@
-package models.basics
+package braingames.reactivemongo
 
 import play.api.libs.json._
 import play.api.libs.json.Json._

@@ -1,11 +1,12 @@
 package models.team
 
-import models.basics.{SecuredMongoDAO, DBAccessContext, SecuredDAO, BasicDAO}
+import models.basics.{BasicReactiveDAO, BasicDAO}
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.json.Json
 import scala.concurrent.Future
 import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.reactivemongo.{DBAccessContext, SecuredMongoDAO}
 
 /**
  * Company: scalableminds
@@ -24,7 +25,7 @@ case class TeamTree(root: Team, _id: BSONObjectID = BSONObjectID.generate) {
   }
 }
 
-object TeamTreeDAO extends SecuredMongoDAO[TeamTree] {
+object TeamTreeDAO extends BasicReactiveDAO[TeamTree] {
   val collectionName = "teams"
   val formatter = Json.format[TeamTree]
 

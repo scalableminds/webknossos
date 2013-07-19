@@ -7,7 +7,6 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
-import models.basics.BasicEvolution
 import braingames.levelcreator._
 import java.io.File
 

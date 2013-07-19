@@ -1,4 +1,4 @@
-package models.basics
+package braingames.reactivemongo
 
 /**
  * Company: scalableminds
@@ -10,10 +10,9 @@ package models.basics
 import scala.concurrent.Future
 import reactivemongo.core.commands.LastError
 import play.api.libs.json.JsObject
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import play.api.Logger
+import scala.concurrent.ExecutionContext.Implicits._
 
 trait SecuredMongoDAO[T] extends MongoDAO[T] with SecuredDAO[T] {
   this: MongoDAO[T] =>
@@ -86,7 +85,7 @@ trait SecuredDAO[T] extends DBAccessValidator with DBAccessFactory with AllowEye
       val future = collection.insert(js ++ createACL(js))
       future.onFailure {
         case e: Throwable =>
-          Logger.error(e.toString)
+          System.err.println(e.toString)
       }
       future
     } else {
@@ -110,7 +109,7 @@ trait SecuredDAO[T] extends DBAccessValidator with DBAccessFactory with AllowEye
     f.map {
       r =>
         if (!r.ok)
-          Logger.warn("DB LastError: " + r)
+          System.err.println("DB LastError: " + r)
         r
     }
   }

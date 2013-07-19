@@ -7,8 +7,8 @@ import models.annotation.AnnotationType._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import scala.concurrent.Future
-import models.basics.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.reactivemongo.DBAccessContext
 
 /**
  * Company: scalableminds

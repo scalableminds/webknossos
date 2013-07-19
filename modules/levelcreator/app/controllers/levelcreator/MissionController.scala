@@ -7,8 +7,8 @@ import play.api.libs.json._
 import braingames.binary.models.DataSet
 import models.knowledge._
 import play.api.i18n.Messages
-import models.basics.GlobalDBAccess
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.reactivemongo.GlobalDBAccess
 
 object MissionController extends Controller with GlobalDBAccess {
 

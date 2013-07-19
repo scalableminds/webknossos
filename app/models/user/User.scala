@@ -16,6 +16,7 @@ import models.security.Implyable
 import models.security.Role
 import models.user.Experience._
 import models.team.{TeamMembership, TeamTreeDAO, TeamPath}
+import braingames.reactivemongo.DBAccessContextPayload
 
 case class User(
     email: String,
@@ -30,7 +31,7 @@ case class User(
     permissions: List[Permission] = Nil,
     experiences: Map[String, Int] = Map.empty,
     lastActivity: Long = System.currentTimeMillis,
-    _id: ObjectId = new ObjectId) extends DAOCaseClass[User] {
+    _id: ObjectId = new ObjectId) extends DAOCaseClass[User] with DBAccessContextPayload{
 
   val dao = User
 

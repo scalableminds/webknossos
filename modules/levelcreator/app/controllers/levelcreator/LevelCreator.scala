@@ -18,7 +18,7 @@ import braingames.util.ExtendedTypes.ExtendedString
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import play.api.templates.Html
-import models.basics.GlobalDBAccess
+import braingames.reactivemongo.GlobalDBAccess
 
 object LevelCreator extends LevelCreatorController with GlobalDBAccess {
 

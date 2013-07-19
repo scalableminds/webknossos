@@ -7,9 +7,9 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import braingames.binary.models.{DataLayer, DataSet}
 import models.binary.DataSetDAO
-import models.basics.DBAccessContext
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.reactivemongo.DBAccessContext
 
 trait AnnotationContent {
   type Self <: AnnotationContent

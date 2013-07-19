@@ -53,11 +53,16 @@ object ApplicationBuild extends Build {
     "com.sun.jersey" % "jersey-core" % "1.8",
     "com.typesafe.akka" %% "akka-remote" % "2.1.0")
 
+  lazy val levelcreatorDependencies = Seq(
+    "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
+    "org.reactivemongo" %% "play2-reactivemongo" % "0.9"
+  )
+
   lazy val braingamesDependencies = Seq(
     "play" %% "play-json" % "2.2-SNAPSHOT",
     "commons-io" % "commons-io" % "1.3.2",
-    "org.reactivemongo" %% "reactivemongo" % "0.9",
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
+    "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
     "com.typesafe.akka" %% "akka-agent" % "2.1.0",
     "org.apache.commons" % "commons-email" % "1.3.1",
     "org.apache.commons" % "commons-lang3" % "3.1",
@@ -106,7 +111,7 @@ object ApplicationBuild extends Build {
     scalaVersion := "2.10.0"
   ).aggregate(oxalis)
 
-  lazy val levelcreator = play.Project("levelcreator", "0.1", Seq(), path = file("modules") / "levelcreator").settings(
+  lazy val levelcreator = play.Project("levelcreator", "0.1", levelcreatorDependencies, path = file("modules") / "levelcreator").settings(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     resolvers ++= dependencyResolvers,

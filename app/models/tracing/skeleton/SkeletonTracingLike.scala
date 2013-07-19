@@ -13,7 +13,6 @@ import models.annotation.{AnnotationType, ContentReference, AnnotationContent, A
 import play.api.i18n.Messages
 import controllers.admin.NMLIO
 import org.apache.commons.io.IOUtils
-import models.basics.GlobalDBAccess
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import org.bson.types.ObjectId
@@ -21,6 +20,7 @@ import models.annotation.AnnotationType._
 import scala.Some
 import oxalis.nml.NML
 import models.annotation.AnnotationType.AnnotationType
+import braingames.reactivemongo.GlobalDBAccess
 
 trait SkeletonTracingLike extends AnnotationContent {
   type Self <: SkeletonTracingLike

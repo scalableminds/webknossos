@@ -1,4 +1,5 @@
 import akka.actor.Props
+import braingames.reactivemongo.GlobalDBAccess
 import models.annotation.AnnotationDAO
 import models.security.Permission
 import models.task.TimeSpan
@@ -16,7 +17,7 @@ import models.task._
 import models.binary._
 import models.security.Role
 import models.tracing._
-import models.basics.{GlobalDBAccess, GlobalAccessContext, BasicEvolution}
+import models.basics.{BasicEvolution}
 import oxalis.mail.DefaultMails
 import braingames.geometry._
 import oxalis.annotation.{AnnotationStore}

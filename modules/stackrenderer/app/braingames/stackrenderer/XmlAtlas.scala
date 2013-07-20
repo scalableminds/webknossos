@@ -10,7 +10,7 @@ object XmlAtlas {
 
   def infoToXml(image: CombinedImage) = {
     s"""<?xml version="1.0" encoding="UTF-8"?>
-        |${ image.pages.map(pageToXml) }""".stripMargin
+        |${ image.pages.map(pageToXml).mkString("\n") }""".stripMargin
   }
         
   def pageToXml(page: CombinedPage) = {

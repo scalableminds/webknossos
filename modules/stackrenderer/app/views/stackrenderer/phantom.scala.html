@@ -48,6 +48,7 @@ page.onCallback = function (data) {
     case "fatalError":
 
       log("Fatal error!");
+      log(data.error);
       phantom.exit(-1);
       return;
 
@@ -59,10 +60,6 @@ page.onCallback = function (data) {
         width: data.width, 
         height: data.height,
         length: data.length,
-        levelName: "@{stack.level.levelId.name}",
-        levelVersion: @{stack.level.levelId.version},
-        levelId: "@{stack.level.id}",
-        stackId: "@{stack.mission.id}",
         // images: [],
         frameData: {}
       };

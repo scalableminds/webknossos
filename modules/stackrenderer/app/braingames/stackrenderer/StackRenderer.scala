@@ -26,6 +26,8 @@ import javax.imageio.ImageIO
 import scala.concurrent.Await
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.util.JsonHelper
+import java.awt.image.BufferedImage
 
 case class RenderStack(stack: Stack)
 
@@ -52,7 +54,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
   val conf = Play.current.configuration
 
   val phantomTimeout = (conf.getInt("stackrenderer.phantom.timeout") getOrElse 30) minutes
-  
+
   val maxSpriteSheetHeight = 2048
   val maxSpriteSheetWidth = 2048
 
@@ -91,7 +93,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
     val success = produceStackFrames(stack, useLevelUrl.format(stack.level.id, stack.mission.id), binaryDataUrl)
 
     if (stack.isProduced && success) {
-      
+
       val stackImages = createStackImages(stack) getOrElse Nil
       tarStack(stack, (stack.metaFile :: stack.xmlAtlas :: stackImages))
       true
@@ -108,14 +110,24 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
       slideHeight = stack.level.height,
       imagesPerRow = maxSpriteSheetWidth / stack.level.width,
       imagesPerColumn = maxSpriteSheetHeight / stack.level.height)
+    //create single image
+    // TODO: needs to be removed in the future
+    val stackImage = ImageCreator.createBigImages(
+      images,
+      params.copy(imagesPerColumn = 1000000)).map { combinedImage =>
+        combinedImage.pages.map { p =>
+          new PNGWriter().writeToFile(p.image, new File(stack.path + "/stack.png"))
+        }
+      } getOrElse Nil
+
     ImageCreator.createBigImages(images, params).map { combinedImage =>
-      val files = combinedImage.pages.map{ p => 
-        new PNGWriter().writeToFile(p.image, new File(stack.path+"/"+ p.pageInfo.name))
+      val files = combinedImage.pages.map { p =>
+        new PNGWriter().writeToFile(p.image, new File(stack.path + "/" + p.pageInfo.name))
       }
-      writeMetaFile(stack: Stack, combinedImage.pages)
+      writeMetaFile(stack, combinedImage.pages)
       XmlAtlas.writeToFile(combinedImage, stack.xmlAtlas)
       files
-    }
+    }.map(_ ::: stackImage)
 
   }
 
@@ -125,8 +137,8 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
       val output =
         new FileOutputStream(stack.tarFile)
       val inputs = files.map { f =>
-          f -> createTarName(f)
-        }
+        f -> createTarName(f)
+      }
       TarIO.tar(inputs, output)
     }) match {
       case Success(_) =>
@@ -137,27 +149,27 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
         None
     }
   }
-  
-  def writeMetaFile(stack:Stack, pages: List[CombinedPage]) = {
+
+  def writeMetaFile(stack: Stack, pages: List[CombinedPage]) = {
     val json = Json.obj(
-      "width" -> stack.level.width,
-      "height" -> stack.level.height,
-      "length" -> stack.level.depth,
       "levelName" -> stack.level.levelId.name,
       "levelVersion" -> stack.level.levelId.version,
       "levelId" -> stack.level.id,
       "stackId" -> stack.mission.id,
-      "frameData" -> Json.obj(),
-      "sprites" -> pages.map{ p => Json.obj(
+      "sprites" -> pages.map { p =>
+        Json.obj(
           "name" -> p.pageInfo.name,
           "start" -> p.pageInfo.start,
-          "number" -> p.pageInfo.number
-      )},
-      "createdAt" -> System.currentTimeMillis
-      )
-    printToFile(stack.metaFile)( _.println(json.toString))
+          "count" -> p.pageInfo.number)
+      })
+    val originalJson =
+      if (stack.metaFile.exists)
+        JsonHelper.JsonFromFile(stack.metaFile).as[JsObject]
+      else
+        Json.obj()
+    printToFile(stack.metaFile)(_.println((originalJson ++ json).toString))
   }
-  
+
   def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit): File = {
     val p = new java.io.PrintWriter(f)
     try { op(p) } finally { p.close() }

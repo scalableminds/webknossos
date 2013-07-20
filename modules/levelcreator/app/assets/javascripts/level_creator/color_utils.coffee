@@ -60,3 +60,5 @@ ColorUtils =
       ]
 
     throw new Error("\"#{colorName}\" is not a valid color.")
+
+    

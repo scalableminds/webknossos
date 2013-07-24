@@ -29,6 +29,6 @@ trait DataLayerSectionLike {
     hull.contains(point.scale((v, _) => v * blockLength))
 }
 
-object DataLayerSection{
+object DataLayerSection extends Function4[String, Option[String], List[Int], BoundingBox, DataLayerSection]{
   implicit val dataLayerSectionFormat = Json.format[DataLayerSection]
 }

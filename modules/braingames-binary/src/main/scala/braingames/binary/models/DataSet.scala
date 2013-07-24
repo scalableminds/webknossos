@@ -43,7 +43,7 @@ case class DataSet(
       point.z / resolution)
 }
 
-object DataSetSettings extends SettingsFile {
+object DataSetSettings extends SettingsFile with Function3[String, Scale, Option[Int], DataSetSettings]{
 
   val settingsFileName = "settings.json"
 

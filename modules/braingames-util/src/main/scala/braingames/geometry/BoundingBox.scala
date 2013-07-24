@@ -11,7 +11,7 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
   }
 }
 
-object BoundingBox {
+object BoundingBox extends Function4[Point3D, Int, Int, Int, BoundingBox]{
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 

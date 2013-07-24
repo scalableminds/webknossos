@@ -1,7 +1,10 @@
 package models.team
 
 import org.json4s.JsonAST.JString
-import play.api.libs.json.Json
+import play.api.libs.json._
+import play.api.libs.json.Json._
+import play.api.libs.json.Reads._
+import play.api.libs.functional.syntax._
 import java.util.regex.Pattern
 
 /**
@@ -39,13 +42,17 @@ case class TeamPath(elements: List[String]) {
   }
 }
 
-object TeamPath {
+object TeamPath extends Function1[List[String], TeamPath]{
 
   val TeamSeparator = "/"
 
   val All = "*"
 
-  val teamPathFormat = Json.format[TeamPath]
+  val teamPathFormat = {
+    val r = (__ \ 'elements).read(list[String]).map(TeamPath.apply)
+    val w = (__ \ 'elements).write[List[String]].contramap{ t: TeamPath => t.elements}
+    Format(r, w)
+  }
 
   def pathStringFor(elements: List[String]) = {
     TeamSeparator + elements.mkString(TeamSeparator)

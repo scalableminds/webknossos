@@ -20,6 +20,6 @@ case class Team(name: String, subTeams: List[Team], owner: Option[BSONObjectID] 
   }
 }
 
-object Team{
+object Team extends Function3[String, List[Team], Option[BSONObjectID], Team]{
   implicit val teamFormat = Json.format[Team]
 }

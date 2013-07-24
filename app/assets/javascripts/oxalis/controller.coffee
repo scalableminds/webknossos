@@ -145,6 +145,14 @@ class Controller
 
     new Input.KeyboardNoLoop(
 
+      "5" : =>
+        #@model.binary.cube.labelTestShape()
+        #@sceneController.addTestShape()
+        start = new Date().getTime()
+        @sceneController.showAllShapes([50,50,0], [150,150,30])
+        console.log( "Rendering Time: " + ( new Date().getTime() - start ))
+        @model.flycam.hasChanged = true
+
       #View
       "t" : => 
         @view.toggleTheme()       
@@ -162,9 +170,9 @@ class Controller
 
       "m" : => # toggle between plane tracing and arbitrary tracing
 
-        if @mode == constants.MODE_VOLUME or @mode == constants.MODE_PLANE_TRACING
+        if @mode == constants.MODE_PLANE_TRACING
           @setMode(constants.MODE_ARBITRARY)
-        else
+        else if @mode == constants.MODE_ARBITRARY
           @setMode(constants.MODE_PLANE_TRACING)
     )
 

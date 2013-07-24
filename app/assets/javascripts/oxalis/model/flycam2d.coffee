@@ -144,8 +144,8 @@ class Flycam2d
     @hasChanged = true
 
   setPosition : (position) ->
-    @setPositionSilent(position)
     @trigger("positionChanged", position)
+    @setPositionSilent(position)
     
   setActivePlane : (activePlane) ->
     @activePlane = activePlane

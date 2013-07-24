@@ -135,7 +135,7 @@ class PullQueue
               bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
             else
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-
+            #bucketData = @getTestBucket()
             #console.log "Success: ", bucket
             @cube.setBucketByZoomedAddress(bucket, bucketData)
 
@@ -195,3 +195,15 @@ class PullQueue
       requestBufferType : Float32Array
       responseBufferType : Uint8Array
     )
+
+  getTestBucket : _.once ->
+
+    result = new Uint8Array(@cube.BUCKET_LENGTH)
+
+    index = 0
+    for i in [0...@cube.BUCKET_LENGTH / 3]
+      result[index++] = 255
+      result[index++] = 0
+      result[index++] = 0
+
+    result

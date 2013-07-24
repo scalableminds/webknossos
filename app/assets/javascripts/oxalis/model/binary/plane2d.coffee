@@ -42,11 +42,12 @@ class Plane2D
   volumeTexture : null
 
 
-  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P) ->
+  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @BIT_DEPTH = 24) ->
 
     _.extend(@, new EventMixin())
 
     @BUCKETS_PER_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
+    @TEXTURE_SIZE = (1 << (@TEXTURE_SIZE_P << 1)) * (@BIT_DEPTH >> 3)
 
     for i in [0..@cube.LOOKUP_DEPTH_DOWN]
       @MAP_SIZE += 1 << (i << 1)
@@ -134,7 +135,7 @@ class Plane2D
       texture.area = area
 
       texture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-      texture.buffer = new Uint8Array(1 << (@TEXTURE_SIZE_P << 1))
+      texture.buffer = new Uint8Array(@TEXTURE_SIZE)
       texture.ready = false
 
     # If the top-left-bucket has changed, still visible tiles are copied to their new location
@@ -145,7 +146,7 @@ class Plane2D
       oldTiles = texture.tiles
       oldBuffer = texture.buffer
       texture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-      texture.buffer = new Uint8Array(1 << (@TEXTURE_SIZE_P << 1))
+      texture.buffer = new Uint8Array(@TEXTURE_SIZE)
       texture.ready = false
 
       # Calculating boundaries for copying
@@ -170,9 +171,9 @@ class Plane2D
           oldTileIndex = tileIndexByTileMacro(oldTile)
           newTileIndex = tileIndexByTileMacro(newTile)
 
-          if oldTiles[oldTileIndex]
-            @copyTile(newTile, oldTile, texture.buffer, oldBuffer)
-            texture.tiles[newTileIndex] = true
+          #if oldTiles[oldTileIndex]
+          #  @copyTile(newTile, oldTile, texture.buffer, oldBuffer)
+          #  texture.tiles[newTileIndex] = true
 
     # If something has changed, only changed tiles are drawn
     unless texture.ready and _.isEqual(texture.area, area)
@@ -387,8 +388,12 @@ class Plane2D
     source.nextRowMask = (1 << destination.widthP + source.rowRepeatP) - 1
 
     while i--
-      destination.buffer[destination.offset++] = if contrastCurve? then contrastCurve[source.buffer[source.offset]] else source.buffer[source.offset]
-     
+      dest = destination.offset++ * 3
+      src = source.offset * 3
+      times = @BIT_DEPTH >> 3
+      for t in [1..times]
+        destination.buffer[dest++] = source.buffer[src++]
+
       if (i & source.nextPixelMask) == 0
         source.offset += source.pixelDelta
       

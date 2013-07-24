@@ -95,37 +95,64 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
     }
   }
   
-  def getColorLayer(f: File): Option[ColorLayer] = {
+  def createColorLayerFromFileStructure(f: File): Option[ColorLayer] = {
+    for{
+      layer <- listDirectories(f).find(dir => dir.getName == "color")
+      resolutionDirectories = listDirectories(layer)
+      resolutions = resolutionDirectories.flatMap(_.getName.toIntOpt).toList
+    } yield ColorLayer(supportedResolutions = resolutions)
+  }
+  
+  def createDataSetFromFileStructure(f: File): Option[DataSet] = {
+    for {
+      colorLayer <- createColorLayerFromFileStructure(f)
+      colorLayerDir <- listDirectories(f).find(dir => dir.getName == "color")
+      resolutionDirectories = listDirectories(colorLayerDir)
+      res <- highestResolutionDir(resolutionDirectories)
+      xs <- listDirectories(res).headOption
+      ys <- listDirectories(xs).headOption
+      xMax <- maxValueFromFiles(res.listFiles())
+      yMax <- maxValueFromFiles(xs.listFiles())
+      zMax <- maxValueFromFiles(ys.listFiles())
+    } yield {
+      val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
+      DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, colorLayer = colorLayer)
+    }
+  }
+  
+  def readColorLayerJson(f: File): Option[ColorLayer] = {
     val colorLayerInfo = new File(f.getPath + "/color/layer.json")
     if(colorLayerInfo.isFile) {
       JsonFromFile(colorLayerInfo).validate[ColorLayer] match {
         case JsSuccess(colorLayer, _) => Some(colorLayer)
         case JsError(error) =>
           Logger.error(error.toString)
-          None
+          Logger.info("Falling back to reading colorlayer from file structure!")
+          createColorLayerFromFileStructure(f)
       }
     } else None
   }
   
-  def getSegmentationLayers(f: File): Option[List[SegmentationLayer]] = {
+  def getSegmentationLayers(f: File): List[SegmentationLayer] = {
     val segmentationsDir = new File(f.getPath + "/segmentation")
     if(segmentationsDir.isDirectory){
-      Some((for{layerDir <- segmentationsDir.listFiles.toList.filter(d => d.isDirectory && d.getName.startsWith("layer"))
-        layerInfo = new File(layerDir.getPath + "/layer.json")
-        if layerInfo.isFile
-     } yield {
-       JsonFromFile(layerInfo).validate[ContextFreeSegmentationLayer] match {
-         case JsSuccess(cfSegmentationLayer, _) => 
-           val parentDir = layerInfo.getParentFile
-           Logger.info(s"found segmentation layer: ${parentDir.getName}")
-           val batchId = parentDir.getName.replaceFirst("layer", "").toIntOpt
-           Some(cfSegmentationLayer.addContext(batchId getOrElse 0))
-         case JsError(error) =>
-           Logger.error(error.toString)
-           None
-       }
-     }).flatten)
-    } else None
+      (for{layerDir <- listDirectories(segmentationsDir).filter(_.getName.matches("""^layer[0-9]+$""")).toList
+      } yield {
+       val layerInfo = new File(layerDir.getPath + "/layer.json")
+       if (layerInfo.isFile) {
+         JsonFromFile(layerInfo).validate[ContextFreeSegmentationLayer] match {
+           case JsSuccess(cfSegmentationLayer, _) => 
+             val parentDir = layerInfo.getParentFile
+             Logger.info(s"found segmentation layer: ${parentDir.getName}")
+             val batchId = parentDir.getName.replaceFirst("layer", "").toIntOpt
+             Some(cfSegmentationLayer.addContext(batchId getOrElse 0))
+           case JsError(error) =>
+             Logger.error(error.toString)
+             None
+         }
+       } else None
+      }).flatten
+    } else Nil
   }
 
   def dataSetFromFile(f: File): Option[DataSet] = {
@@ -135,31 +162,16 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
       if (dataSetInfo.isFile) {
         JsonFromFile(dataSetInfo).validate[BareDataSet] match {
           case JsSuccess(bareDataSet, _) => 
-          val colorLayerOpt = getColorLayer(f)
-          val segmentationLayersOpt = getSegmentationLayers(f)
-          for{ colorLayer <- colorLayerOpt
-            segmentationLayers <- segmentationLayersOpt          
-          } yield bareDataSet.addLayers(f.getAbsolutePath, colorLayer, segmentationLayers)
+          
+          for{ colorLayer <- readColorLayerJson(f)      
+          } yield bareDataSet.addLayers(f.getAbsolutePath, colorLayer, getSegmentationLayers(f))
           
           case JsError(error) =>
             Logger.error(error.toString)
             None
         }
       } else {
-        for {
-          layer <- listDirectories(f).find(dir => dir.getName == "color")
-          resolutionDirectories = listDirectories(layer)
-          resolutions = resolutionDirectories.flatMap(_.getName.toIntOpt).toList
-          res <- highestResolutionDir(resolutionDirectories)
-          xs <- listDirectories(res).headOption
-          ys <- listDirectories(xs).headOption
-          xMax <- maxValueFromFiles(res.listFiles())
-          yMax <- maxValueFromFiles(xs.listFiles())
-          zMax <- maxValueFromFiles(ys.listFiles())
-        } yield {
-          val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
-          DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, colorLayer = ColorLayer(supportedResolutions = resolutions))
-        }
+        createDataSetFromFileStructure(f)
       }
     } else None
   }

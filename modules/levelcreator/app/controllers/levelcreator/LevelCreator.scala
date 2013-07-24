@@ -125,7 +125,7 @@ object LevelCreator extends LevelCreatorController {
       val stacksInGeneration =
         StacksInProgress.findAll.groupBy(_._level).mapValues(_.size)
 
-      html.levelcreator.levelList(Level.findAllLatest, levelForm, DataSet.findAll, stacksInQueue, stacksInGeneration, rendererCount)
+      html.levelcreator.levelList(Level.findAllLatest, levelForm, DataSet.findWithSegmentation, stacksInQueue, stacksInGeneration, rendererCount)
     }
   }
 

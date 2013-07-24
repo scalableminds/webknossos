@@ -9,6 +9,7 @@ import play.api.libs.functional.syntax._
 import models.basics.BasicDAO
 import models.basics.DAOCaseClass
 import play.api.libs.json._
+import com.mongodb.casbah.query.Implicits._
 
 case class BareDataSet(name: String ,maxCoordinates: Point3D, priority: Int = 0) {
   def addLayers(baseDir: String,
@@ -51,7 +52,7 @@ case class DataSet(
 }
 
 object DataSet extends BasicDAO[DataSet]("dataSets") {
-
+  
   def default = {
     //find(MongoDBObject())
     
@@ -76,6 +77,8 @@ object DataSet extends BasicDAO[DataSet]("dataSets") {
         insertOne(d)
     }
   }
+  
+  def findWithSegmentation() = DataSet.find(MongoDBObject("segmentationLayers" -> MongoDBObject("$not" -> MongoDBObject("$size" -> 0)))).toList
 
   def removeByName(name: String) {
     DataSet.remove(MongoDBObject("name" -> name))

@@ -82,6 +82,12 @@ class View
     @updateTrees()
     @updateTreesSortButton()
 
+    # turn of a few elements for data viewer
+    $('#lefttabbar').css("display" : "none")
+    $('#trace-save-button').css("display" : "none")
+    $('#buttonbar').css("display" : "none")
+    $('#comments-tree').css("display" : "none")
+
     # disable loader, show oxalis
     $("#loader").css("display" : "none")
     $("#container").css("display" : "inline")

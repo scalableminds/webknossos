@@ -67,7 +67,7 @@ class Controller
       @initKeyboard()
 
       @setMode(constants.MODE_PLANE_TRACING)
-      @setMode(constants.MODE_VOLUME)
+      #@setMode(constants.MODE_VOLUME)
 
       if constants.MODE_PLANE_TRACING not in @allowedModes
         if constants.MODE_ARBITRARY in @allowedModes
@@ -141,13 +141,13 @@ class Controller
 
     new Input.KeyboardNoLoop(
 
-      "5" : =>
+      #"5" : =>
         #@model.binary.cube.labelTestShape()
         #@sceneController.addTestShape()
-        start = new Date().getTime()
-        @sceneController.showAllShapes([50,50,0], [150,150,30])
-        console.log( "Rendering Time: " + ( new Date().getTime() - start ))
-        @model.flycam.hasChanged = true
+      #  start = new Date().getTime()
+      #  @sceneController.showAllShapes([50,50,0], [150,150,30])
+      #  console.log( "Rendering Time: " + ( new Date().getTime() - start ))
+      #  @model.flycam.hasChanged = true
 
       #View
       "t" : => 
@@ -157,19 +157,19 @@ class Controller
       "q" : => @toggleFullScreen()
 
       #Set Mode, outcomment for release
-      "shift + 1" : =>
-        @setMode(constants.MODE_PLANE_TRACING)
-      "shift + 2" : =>
-        @setMode(constants.MODE_ARBITRARY)
-      "shift + 3" : =>
-        @setMode(constants.MODE_VOLUME)
+      #"shift + 1" : =>
+      #  @setMode(constants.MODE_PLANE_TRACING)
+      #"shift + 2" : =>
+      #  @setMode(constants.MODE_ARBITRARY)
+      #"shift + 3" : =>
+      #  @setMode(constants.MODE_VOLUME)
 
-      "m" : => # toggle between plane tracing and arbitrary tracing
+      #"m" : => # toggle between plane tracing and arbitrary tracing
 
-        if @mode == constants.MODE_PLANE_TRACING
-          @setMode(constants.MODE_ARBITRARY)
-        else if @mode == constants.MODE_ARBITRARY
-          @setMode(constants.MODE_PLANE_TRACING)
+      #  if @mode == constants.MODE_PLANE_TRACING
+      #    @setMode(constants.MODE_ARBITRARY)
+      #  else if @mode == constants.MODE_ARBITRARY
+      #    @setMode(constants.MODE_PLANE_TRACING)
     )
 
 

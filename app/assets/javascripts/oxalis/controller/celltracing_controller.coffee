@@ -17,10 +17,10 @@ class CellTacingController
         ]
       
       leftClick : (pos, shiftPressed, altPressed, plane) =>
-        @onClick(pos, shiftPressed, altPressed, plane)
+        #@onClick(pos, shiftPressed, altPressed, plane)
 
       rightClick : (pos, ctrlPressed) =>
-        @setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
+        #@setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
 
     @keyboardControls =
 
@@ -40,6 +40,9 @@ class CellTacingController
       #Comments
       "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
       "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
+
+    # For data viewer, no keyboard controls
+    @keyboardControls = {}
 
 
   setNodeRadius : (delta) =>

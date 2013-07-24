@@ -42,6 +42,7 @@ class SceneController
       max : [150,150,30]
       color : 0xff0000
       showCrossSections : true })
+    @bb.setVisibility( false )
 
     # TODO: Implement text 
 
@@ -183,7 +184,7 @@ class SceneController
     for plane in @planes
       plane.setVisible(true)
     @cube.setVisibility( true )
-    @bb.setVisibility( true )
+    #@bb.setVisibility( true )
 
     @skeleton.setSizeAttenuation(false)
 

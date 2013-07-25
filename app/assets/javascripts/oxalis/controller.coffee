@@ -32,10 +32,14 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done (settings) =>
+    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       unless settings
+        return
+
+      unless restrictions.allowAccess
+        Toast.Error "You are not allowed to access this tracing"
         return
 
       for allowedMode in settings.allowedModes
@@ -53,7 +57,7 @@ class Controller
 
       @view = new View(@model)
 
-      @gui = @createGui(settings)
+      @gui = @createGui(restrictions, settings)
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @model.flycam, @model)
 
@@ -206,11 +210,11 @@ class Controller
         requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
 
-  createGui : (settings)->
+  createGui : (restrictions, settings)->
 
     { model } = @
 
-    gui = new Gui($("#optionswindow"), model, settings)
+    gui = new Gui($("#optionswindow"), model, restrictions, settings)
     gui.update()  
 
     model.binary.queue.set4Bit(model.user.fourBit)

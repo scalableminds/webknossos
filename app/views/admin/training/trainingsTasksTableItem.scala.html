@@ -5,8 +5,8 @@
   <td> @formatHash(task.id) </td>
   <td> @task.seedIdHeidelberg </td>
   <td> @task.taskType.map(_.summary).getOrElse("<deleted>") </td>
-  <td> @task.tracingBase.map(_.dataSetName) </td>
-  <td> @task.tracingBase.map(_.editPosition) </td>
+  <td> @task.annotationBase.map(_.dataSetName) </td>
+  <td> @task.annotationBase.map(_.content.map(_.editPosition)) </td>
   @task.training.map{ training =>
   	<td> @training.domain (+@training.gain, -@training.loss) </td>
   }.getOrElse( <td></td> )
@@ -20,8 +20,8 @@
   <td colspan="11">
     <table class="table table-condensed table-nohead">
       <tbody>
-        @task.tracings.map{ tracing =>
-        	@trainingsTasksDetailTableItem(user, tracing)
+        @task.annotations.map{ annotation =>
+        	@trainingsTasksDetailTableItem(user, annotation)
         }
       </tbody>
     </table>

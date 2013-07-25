@@ -9,7 +9,7 @@ class StateLogger
 
   PUSH_THROTTLE_TIME : 30000 #30s
 
-  constructor : (@route, @flycam, @version, @dataId, @isEditable) ->
+  constructor : (@route, @flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
     _.extend(this, new EventMixin())
 
@@ -159,7 +159,7 @@ class StateLogger
     return @committedCurrentState and @committedDiffs.length == 0
 
   push : ->
-    if @isEditable
+    if @allowUpdate
       @committedCurrentState = false
       @pushDebounced()
 
@@ -188,7 +188,7 @@ class StateLogger
     console.log "Sending data: ", data
 
     Request.send(
-      url : "/tracing/#{@dataId}?version=#{(@version + 1)}"
+      url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
       method : "PUT"
       data : data
       contentType : "application/json"
@@ -203,7 +203,7 @@ class StateLogger
           response = JSON.parse(responseObject.responseText)
         catch error
           console.error "parsing failed."
-        if response.messages?[0]?.error?
+        if response?.messages?[0]?.error?
           if response.messages[0].error == "tracing.dirtyState"
             $(window).on(
               "beforeunload"

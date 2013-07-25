@@ -1,17 +1,17 @@
-@(userTracings: Map[models.user.User,List[models.tracing.Tracing]])(implicit session: brainflight.view.AuthedSessionData)
+@(userAnnotations: Map[models.user.User,List[models.annotation.Annotation]])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(false){
   <div class="container">
-    @userTracings.map{ case (user, tracings) =>
+    @userAnnotations.map{ case (user, annotations) =>
       <div class="folder">
             <h5>@user.name (@user.email)</h5>
         <table class="table table-striped">
           <tbody>
-            @tracings.sortBy(_.timestamp).map{ tracing =>
+            @annotations.sortBy(_.content.map(_.timestamp).getOrElse(0L)).map{ annotation =>
               <tr>
-                <td><strong>@tracing.dataSetName</strong></h4>
-                <td><time datetime="@tracing.date">@formatDate(tracing.date)</time></td>
-                <td><a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)"><i class="icon-download"></i> Export NML</a></td>
+                <td><strong>@annotation.dataSetName</strong></h4>
+                <td><time datetime="@annotation.content.map(_.date)">@annotation.content.map(a => formatDate(a.date))</time></td>
+                <td><a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)"><i class="icon-download"></i> Export NML</a></td>
               </tr>
             }
           </tbody>

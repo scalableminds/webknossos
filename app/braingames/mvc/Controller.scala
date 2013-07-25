@@ -1,14 +1,14 @@
 package braingames.mvc
 
-import play.api.mvc.{ Controller => PlayController }
+import play.api.mvc.{Controller => PlayController}
 import play.api.templates.Html
 import play.api.libs.json.Json
 import play.api.mvc.SimpleResult
 import play.api.libs.json.JsObject
-import brainflight.security.AuthenticatedRequest
-import brainflight.view.ProvidesSessionData
+import oxalis.security.AuthenticatedRequest
+import oxalis.view.ProvidesSessionData
 import play.api.mvc.Request
-import net.liftweb.common.{ Box, Full, Empty, Failure, ParamFailure }
+import net.liftweb.common.{Box, Full, Empty, Failure, ParamFailure}
 import play.api.mvc.Result
 import play.api.mvc.Results
 import play.api.mvc.ResponseHeader
@@ -20,7 +20,9 @@ import scala.concurrent.ExecutionContext
 import play.api.Logger
 
 class ResultBox[T <: Result](b: Box[T]) {
+
   import Results.Status
+
   def asResult = b match {
     case Full(result) =>
       result
@@ -33,11 +35,76 @@ class ResultBox[T <: Result](b: Box[T]) {
   }
 }
 
+class Fox[A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext){
+  val self = this
+
+  def ?~>(s: String) =
+    new Fox(futureBox.map(_ ?~ s))
+
+  def ~>[T](errorCode: => T) =
+    new Fox(futureBox.map(_ ~> errorCode))
+
+  def map[B](f: A => B): Fox[B] =
+    new Fox(futureBox.map(_.map(f)))
+
+  def flatMap[B](f: A => Fox[B]): Fox[B] =
+    new Fox(futureBox.flatMap {
+      case Full(t) =>
+        f(t).futureBox
+      case Empty =>
+        Future.successful(Empty)
+      case fail: Failure =>
+        Future.successful(fail)
+    })
+
+  def filter(f: A => Boolean): Fox[A] = {
+    new Fox(futureBox.map(_.filter(f)))
+  }
+
+  def foreach(f: A => _): Unit = {
+    futureBox.map(_.map(f))
+  }
+
+  /**
+   * Makes Box play better with Scala 2.8 for comprehensions
+   */
+  def withFilter(p: A => Boolean): WithFilter = new WithFilter(p)
+
+  /**
+   * Play NiceLike with the Scala 2.8 for comprehension
+   */
+  class WithFilter(p: A => Boolean) {
+    def map[B](f: A => B): Fox[B] = self.filter(p).map(f)
+    def flatMap[B](f: A => Fox[B]): Fox[B] = self.filter(p).flatMap(f)
+    def foreach[U](f: A => U): Unit = self.filter(p).foreach(f)
+    def withFilter(q: A => Boolean): WithFilter =
+      new WithFilter(x => p(x) && q(x))
+  }
+}
+
 trait BoxImplicits {
+  implicit def futureBox2Fox[T](f: Future[Box[T]])(implicit ec: ExecutionContext) =
+    new Fox(f)
+
+  implicit def box2Fox[T](b: Box[T])(implicit ec: ExecutionContext) =
+    new Fox(Future.successful(b))
+
+  implicit def future2Fox[T](f: Future[T])(implicit ec: ExecutionContext) =
+    new Fox(f.map(Full(_)))
+
+  implicit def option2Fox[T](b: Option[T])(implicit ec: ExecutionContext) =
+    new Fox(Future.successful(Box(b)))
+
+  implicit def futureOption2Fox[T](f: Future[Option[T]])(implicit ec: ExecutionContext) =
+    new Fox(f.map(Box(_)))
+
   implicit def option2Box[T](in: Option[T]): Box[T] = Box(in)
 
   implicit def box2Result[T <: Result](b: Box[T]): Result =
     new ResultBox(b).asResult
+
+  implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext): Future[Result] =
+    b.futureBox.map( new ResultBox(_).asResult)
 
   implicit def box2ResultBox[T <: Result](b: Box[T]) = new ResultBox(b)
 
@@ -49,6 +116,13 @@ trait BoxImplicits {
         Future.successful(new ResultBox(Empty).asResult)
       case f: Failure =>
         Future.successful(new ResultBox(f).asResult)
+    }
+  }
+
+  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext): Future[Result] = {
+    f.map {
+      b =>
+        new ResultBox(b).asResult
     }
   }
 }
@@ -69,6 +143,9 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
       jsonSuccess
     else
       jsonError
+
+  def apply(json: JsObject) =
+    createResult(json)
 
   def apply(json: JsObject, messages: Seq[(String, String)]) =
     createResult(json ++ jsonMessages(messages))
@@ -118,11 +195,12 @@ trait JsonResultAttribues {
 }
 
 class Controller extends PlayController
-    with ProvidesSessionData
-    with JsonResults
-    with BoxImplicits
-    with Status
-    with withHighlitableResult {
+with ProvidesSessionData
+with JsonResults
+with BoxImplicits
+with Status
+with withHighlitableResult
+with models.basics.Implicits {
 
   implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]) =
     r.request

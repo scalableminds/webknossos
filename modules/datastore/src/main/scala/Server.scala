@@ -2,7 +2,7 @@ import akka.actor.ActorSystem
 import akka.actor.Props
 import akka.agent.Agent
 import com.typesafe.config.ConfigFactory
-import brainflight.binary._
+import oxalis.binary._
 
 object Server extends App {
   val conf = ConfigFactory.load()

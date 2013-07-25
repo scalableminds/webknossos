@@ -1,12 +1,12 @@
 package controllers
 
-import brainflight.security.Secured
+import oxalis.security.Secured
 import play.api.mvc.Action
 import play.api.mvc._
 import play.api._
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
-import brainflight.mail.Mailer
+import braingames.mail.Mailer
 
 object Application extends Controller with Secured {
   override val DefaultAccessRole = None
@@ -15,8 +15,8 @@ object Application extends Controller with Secured {
   lazy val Mailer =
     Akka.system(app).actorFor("/user/mailActor")
 
-  lazy val temporaryTracingGenerator =
-    Akka.system(app).actorFor("/user/temporaryTracingGenerator")
+  lazy val annotationStore =
+    Akka.system(app).actorFor("/user/annotationStore")
 
   // -- Javascript routing
 

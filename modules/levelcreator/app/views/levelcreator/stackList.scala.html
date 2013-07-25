@@ -1,4 +1,4 @@
-@(stacks: List[(models.knowledge.Level, List[models.knowledge.RenderedStack])])(implicit session: brainflight.view.UnAuthedSessionData)
+@(stacks: List[(models.knowledge.Level, List[models.knowledge.RenderedStack])])(implicit session: oxalis.view.UnAuthedSessionData)
 @main(){
   <div id="stack-list" class="container wide">
     @stacks.sortBy(-_._1.levelId.version).map{ case(level, stacks) =>

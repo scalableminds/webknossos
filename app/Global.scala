@@ -1,4 +1,10 @@
 import akka.actor.Props
+import braingames.reactivemongo.GlobalDBAccess
+import models.annotation.AnnotationDAO
+import models.security.Permission
+import models.task.TimeSpan
+import models.team._
+import models.team.TeamTree
 import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent._
@@ -6,73 +12,66 @@ import play.api.Play.current
 import models.security._
 import models.task._
 import models.user._
-import models.Color
+import braingames.image.Color
 import models.task._
 import models.binary._
 import models.security.Role
 import models.tracing._
-import models.basics.BasicEvolution
-import brainflight.mail.DefaultMails
-import brainflight.tools.geometry._
-import brainflight.tracing.TemporaryTracingGenerator
-import brainflight.mail.Mailer
-import brainflight.io._
+import models.basics.{BasicEvolution}
+import oxalis.mail.DefaultMails
+import braingames.geometry._
+import oxalis.annotation.{AnnotationStore}
+import braingames.mail.Mailer
 import scala.collection.parallel.Tasks
 import akka.pattern.ask
 import akka.util.Timeout
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
 import scala.collection.JavaConversions._
-import brainflight.ActorSystems
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
+import scala.Some
 import scala.util._
-import models.team.Team
+import oxalis.binary.BinaryDataService
+import com.typesafe.config.Config
 
 object Global extends GlobalSettings {
 
-  lazy val DirectoryWatcher = Akka.system.actorOf(
-    Props(new DirectoryWatcherActor(new MongoDataSetChangeHandler)),
-    name = "directoryWatcher")
-
   override def onStart(app: Application) {
     val conf = Play.current.configuration
-    startActors()
-    implicit val timeout = Timeout(( /*conf.getInt("actor.defaultTimeout") getOrElse*/ 25 seconds))
+
+    startActors(conf.underlying)
+
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insertRoles
-      InitialData.insertUsers
-      InitialData.insertTaskAlgorithms
-      InitialData.insertTeams
+      InitialData.insertRoles()
+      InitialData.insertUsers()
+      InitialData.insertTaskAlgorithms()
+      InitialData.insertTeams()
     }
 
-    (DirectoryWatcher ? StartWatching(conf.getString("bindata.folder") getOrElse "binaryData")).onComplete {
-      case Success(x) =>
-        if (Play.current.mode == Mode.Dev) {
-          BasicEvolution.runDBEvolution()
-          // Data insertion needs to be delayed, because the dataSets need to be
-          // found by the DirectoryWatcher first
-          InitialData.insertTasks
-        }
-        Logger.info("Directory start completed")
-      case Failure(e) =>
-        Logger.error(e.toString)
-    }
+    BinaryDataService.start(onComplete = {
+      if (Play.current.mode == Mode.Dev) {
+        BasicEvolution.runDBEvolution()
+        // Data insertion needs to be delayed, because the dataSets need to be
+        // found by the DirectoryWatcher first
+        InitialData.insertTasks()
+      }
+      Logger.info("Directory start completed")
+    })
+
     Role.ensureImportantRoles()
   }
 
   override def onStop(app: Application) {
-    ActorSystems.dataRequestSystem.shutdown
-    DirectoryWatcher ! StopWatching
-    models.context.BinaryDB.connection.close()
+    BinaryDataService.stop()
     models.context.db.close()
   }
 
-  def startActors() {
+  def startActors(conf: Config) {
     Akka.system.actorOf(
-      Props(new TemporaryTracingGenerator()),
-      name = "temporaryTracingGenerator")
-    Akka.system.actorOf(Props[Mailer], name = "mailActor")
+      Props(new AnnotationStore()),
+      name = "annotationStore")
+    Akka.system.actorOf(Props(new Mailer(conf)), name = "mailActor")
   }
 }
 
@@ -80,7 +79,7 @@ object Global extends GlobalSettings {
  * Initial set of data to be imported
  * in the sample application.
  */
-object InitialData {
+object InitialData extends GlobalDBAccess {
 
   def insertRoles() = {
     if (Role.findAll.isEmpty) {
@@ -92,6 +91,7 @@ object InitialData {
         Color(0.2745F, 0.5333F, 0.2784F, 1)))
     }
   }
+
   def insertUsers() = {
     if (User.findOneByEmail("scmboy@scalableminds.com").isEmpty) {
       println("inserted")
@@ -100,8 +100,10 @@ object InitialData {
         "SCM",
         "Boy",
         true,
-        brainflight.security.SCrypt.hashPassword("secret"),
-        List(models.team.Team.default.name),
+        braingames.security.SCrypt.hashPassword("secret"),
+        List(TeamMembership(
+          TeamPath("Structure of Neocortical Circuits Group" :: Nil),
+          TeamMembership.Admin)),
         "local",
         UserConfiguration.defaultConfiguration,
         Set("user", "admin")))
@@ -116,10 +118,12 @@ object InitialData {
           |}""".stripMargin))
     }
   }
-  
+
   def insertTeams() = {
-    if(Team.findAll.isEmpty) {
-      Team.insertOne(Team("Structure of Neocortical Circuits Group"))
+    TeamTreeDAO.findOne.map {
+      case Some(_) =>
+      case _ =>
+        TeamTreeDAO.insert(TeamTree(Team("Structure of Neocortical Circuits Group", Nil)))
     }
   }
 
@@ -132,26 +136,26 @@ object InitialData {
         TimeSpan(5, 10, 15))
       TaskType.insertOne(tt)
       if (Task.findAll.isEmpty) {
-        val sample = Tracing.createTracingFor(user)
-
-        var t = Task.insertOne(Task(
-          0,
-          tt._id,
-          Experience("basic", 5)))
-        Tracing.createTracingBase(t, user._id, DataSet.default.name, Point3D(50, 50, 50))
-
-        t = Task.insertOne(Task(
-          0,
-          tt._id,
-          Experience.empty,
-          100,
-          Integer.MAX_VALUE,
-          training = Some(Training(
-            "basic",
-            5,
-            5,
-            sample._id))))
-        Tracing.createTracingBase(t, user._id, DataSet.default.name, Point3D(0, 0, 0))
+        //        val sample = AnnotationDAO.createAnnotationFor(user)
+        //
+        //        var t = Task.insertOne(Task(
+        //          0,
+        //          tt._id,
+        //          Experience("basic", 5)))
+        //        SkeletonTracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(50, 50, 50))
+        //
+        //        t = Task.insertOne(Task(
+        //          0,
+        //          tt._id,
+        //          Experience.empty,
+        //          100,
+        //          Integer.MAX_VALUE,
+        //          training = Some(Training(
+        //            "basic",
+        //            5,
+        //            5,
+        //            sample._id))))
+        //        SkeletonTracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(0, 0, 0))
       }
     }
   }

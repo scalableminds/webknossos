@@ -5,7 +5,7 @@ import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
-import brainflight.security.SCrypt._
+import braingames.security.SCrypt._
 import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json._
@@ -15,6 +15,8 @@ import models.security.Permission
 import models.security.Implyable
 import models.security.Role
 import models.user.Experience._
+import models.team.{TeamMembership, TeamTreeDAO, TeamPath}
+import braingames.reactivemongo.DBAccessContextPayload
 
 case class User(
     email: String,
@@ -22,16 +24,18 @@ case class User(
     lastName: String,
     verified: Boolean = false,
     pwdHash: String = "",
-    teams: List[String],
+    teams: List[TeamMembership],
     loginType: String = "local",
     configuration: UserConfiguration = UserConfiguration.defaultConfiguration,
     roles: Set[String] = Set.empty,
     permissions: List[Permission] = Nil,
     experiences: Map[String, Int] = Map.empty,
     lastActivity: Long = System.currentTimeMillis,
-    _id: ObjectId = new ObjectId) extends DAOCaseClass[User] {
+    _id: ObjectId = new ObjectId) extends DAOCaseClass[User] with DBAccessContextPayload{
 
   val dao = User
+
+  //lazy val teamTrees = TeamTreeDAO.findAllTeams(_groups)(GlobalAccessContext)
 
   val _roles = for {
     roleName <- roles
@@ -49,6 +53,9 @@ case class User(
 
   def hasRole(role: Role) =
     _roles.find(_.name == role.name).isDefined
+
+  def adminTeams =
+    teams.filter(_.role == TeamMembership.Admin).map(_.teamPath)
 
   def hasPermission(permission: Permission) =
     ruleSet.find(_.implies(permission)).isDefined
@@ -85,6 +92,10 @@ case class User(
 
   def addRole(role: String) = {
     this.copy(roles = this.roles + role)
+  }
+
+  def addTeamMembership(teamMembership: TeamMembership) = {
+    this.copy(teams  = teamMembership :: teams)
   }
 
   def deleteRole(role: String) = {

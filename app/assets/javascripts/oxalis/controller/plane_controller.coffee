@@ -41,7 +41,6 @@ class PlaneController
     @isStarted = false
 
     @flycam = @model.flycam
-    @flycam.setPosition(@model.route.data.editPosition)
     @flycam.setZoomStep(@model.user.zoom)
     @flycam.setQuality(@model.user.quality)
 
@@ -88,8 +87,6 @@ class PlaneController
     
     for mesh in meshes
       @view.addGeometry(mesh)
-
-    @flycam.setPosition(@model.route.data.editPosition)
 
     @model.user.triggerAll()
 

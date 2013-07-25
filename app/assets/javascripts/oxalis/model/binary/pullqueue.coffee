@@ -14,13 +14,13 @@ class PullQueue
   cube : null
   queue : []
 
-  dataSetId : ""
+  dataSetName : ""
 
   batchCount : 0
   roundTripTime : 0
 
   
-  constructor : (@dataSetId, @cube) ->
+  constructor : (@dataSetName, @cube) ->
 
 
   swap : (a, b) ->
@@ -135,8 +135,7 @@ class PullQueue
               bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
             else
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-
-            #console.log "Success: ", bucket
+            #console.log "Success: ", bucket, bucketData
             @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>
@@ -188,10 +187,22 @@ class PullQueue
 
     new ArrayBufferSocket(
       senders : [
-        # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array
     )
+
+  getTestBucket : _.once ->
+
+    result = new Uint8Array(@cube.BUCKET_LENGTH)
+
+    index = 0
+    for i in [0...@cube.BUCKET_LENGTH / 3]
+      result[index++] = 255
+      result[index++] = 255
+      result[index++] = 0
+
+    result

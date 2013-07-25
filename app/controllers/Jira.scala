@@ -2,12 +2,10 @@ package controllers
 
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.security.Role
-import models.binary.DataSet
 import play.api.mvc._
 import play.api.Logger
-import models.tracing.Tracing
 import models.user.User
 import org.apache.commons.codec.binary.Base64
 import com.sun.jersey.api.client.WebResource
@@ -16,13 +14,14 @@ import com.sun.jersey.api.client.ClientResponse
 import views.html
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
-import brainflight.security.InsecureSSLSocketFactory._
+import braingames.security.InsecureSSLSocketFactory._
 import play.api.Play
 import play.api.Play.current
 import play.api.i18n.Messages
 import braingames.mvc.Controller
-import brainflight.mail.DefaultMails
-import brainflight.mail.Send
+import oxalis.mail.DefaultMails
+import braingames.mail.Send
+import models.tracing.skeleton.SkeletonTracing
 
 object Jira extends Controller with Secured {
   override val DefaultAccessRole = Role.User

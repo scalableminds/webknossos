@@ -56,7 +56,7 @@ class Binary
       set4BitChanged : (is4Bit) => @queue(is4Bit)
     })
 
-    for i in [1...@cube.ZOOM_STEP_COUNT]
+    for i in [1..@cube.ZOOM_STEP_COUNT]
       @contrastCurves[i] = contrastCurve
 
 

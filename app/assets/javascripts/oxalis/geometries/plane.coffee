@@ -85,7 +85,7 @@ class Plane
 
       void main() {
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
-        float id = (volumeColor[0] * 255.0);
+        float id = (volumeColor[0] * 65535.0);
         float golden_ratio = 0.618033988749895;
 
         /* Color map (<= to fight rounding mistakes) */

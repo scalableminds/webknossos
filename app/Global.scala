@@ -129,34 +129,11 @@ object InitialData extends GlobalDBAccess {
 
   def insertTasks() = {
     if (TaskType.findAll.isEmpty) {
-      val user = User.findOneByEmail("scmboy@scalableminds.com").get
       val tt = TaskType(
         "ek_0563_BipolarCells",
         "Check those cells out!",
         TimeSpan(5, 10, 15))
       TaskType.insertOne(tt)
-      if (Task.findAll.isEmpty) {
-        //        val sample = AnnotationDAO.createAnnotationFor(user)
-        //
-        //        var t = Task.insertOne(Task(
-        //          0,
-        //          tt._id,
-        //          Experience("basic", 5)))
-        //        SkeletonTracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(50, 50, 50))
-        //
-        //        t = Task.insertOne(Task(
-        //          0,
-        //          tt._id,
-        //          Experience.empty,
-        //          100,
-        //          Integer.MAX_VALUE,
-        //          training = Some(Training(
-        //            "basic",
-        //            5,
-        //            5,
-        //            sample._id))))
-        //        SkeletonTracing.createTracingBase(t, user._id, DataSetDAO.default.name, Point3D(0, 0, 0))
-      }
     }
   }
 }

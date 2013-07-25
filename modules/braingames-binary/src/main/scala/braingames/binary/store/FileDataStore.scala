@@ -26,6 +26,7 @@ class FileDataStore extends DataStore {
         Some(inputStreamToByteArray(binaryStream, dataInfo))
       } catch {
         case e: FileNotFoundException =>
+          System.err.println("File datastore couldn't find file: " + createFilename(dataInfo))
           Failure("Couldn't find file: " + e)
       }
     }

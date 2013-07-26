@@ -199,8 +199,6 @@ class DataRequestActor(
   }
 
   def load(dataRequest: DataRequest): Future[Array[Byte]] = {
-    val t = System.currentTimeMillis()
-
     val cube = dataRequest.cuboid
 
     val dataSet = dataRequest.dataSet
@@ -229,7 +227,8 @@ class DataRequestActor(
               blocks.toVector,
               dataSet.blockLength, dataSet.blockLength, dataSet.blockLength,
               maxBlock.x - minBlock.x + 1, maxBlock.y - minBlock.y + 1, maxBlock.z - minBlock.z + 1,
-              layer.bytesPerElement)
+              layer.bytesPerElement,
+              0.toByte)
         }
           .map {
           block =>
@@ -248,15 +247,15 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataRequest, lay
 
   val cube = dataRequest.cuboid
 
-  def cutOutRequestedData = {
-    @inline
-    def interpolatedData(px: Double, py: Double, pz: Double) = {
-      if (dataRequest.skipInterpolation)
-        byteLoader(Point3D(px.toInt, py.toInt, pz.toInt))
-      else
-        layer.interpolator.interpolate(layer.bytesPerElement, byteLoader _)(Vector3D(px, py, pz))
-    }
+  @inline
+  def interpolatedData(px: Double, py: Double, pz: Double) = {
+    if (dataRequest.skipInterpolation)
+      byteLoader(Point3D(px.toInt, py.toInt, pz.toInt))
+    else
+      layer.interpolator.interpolate(layer.bytesPerElement, byteLoader _)(Vector3D(px, py, pz))
+  }
 
+  def cutOutRequestedData = {
     val result: Array[Byte] =
       cube.withContainingCoordinates(extendArrayBy = layer.bytesPerElement)(interpolatedData)
 

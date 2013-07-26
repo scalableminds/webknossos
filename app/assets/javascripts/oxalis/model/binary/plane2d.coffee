@@ -42,7 +42,7 @@ class Plane2D
   volumeTexture : null
 
 
-  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @BIT_DEPTH = 24) ->
+  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @BIT_DEPTH) ->
 
     _.extend(@, new EventMixin())
 
@@ -387,11 +387,12 @@ class Plane2D
     source.nextPixelMask = (1 << source.pixelRepeatP) - 1
     source.nextRowMask = (1 << destination.widthP + source.rowRepeatP) - 1
 
+    bytes = @BIT_DEPTH >> 3
+
     while i--
-      dest = destination.offset++ * 3
-      src = source.offset * 3
-      times = @BIT_DEPTH >> 3
-      for t in [1..times]
+      dest = destination.offset++ * bytes
+      src = source.offset * bytes
+      for t in [1..bytes]
         destination.buffer[dest++] = source.buffer[src++]
 
       if (i & source.nextPixelMask) == 0

@@ -43,8 +43,6 @@ class SegmentImporter
   ]
 
 
-  Z_FACTOR : 2
-
   directions : [ 
     {x: -1,  y:  0} 
     {x:  0,  y:  1}
@@ -88,6 +86,7 @@ class SegmentImporter
     @setRandomColor(segments)
     @setRandomColor2(segments)
     @setRandomColor3(segments)
+    @setProbability(segments, input.mission)
 
     #for segment in segments
     #  @setArtPath(segment, width, height)
@@ -488,3 +487,10 @@ class SegmentImporter
             if _.contains(baseSegment.neighbours, downValue) is false
               baseSegment.neighbours.push(downValue)
             break   
+
+
+
+  setProbability: (segments, mission) ->
+
+    for segment in segments
+      segment.probability = _.find(mission.possibleEnds, (m) => m.id is segment.value).probability 

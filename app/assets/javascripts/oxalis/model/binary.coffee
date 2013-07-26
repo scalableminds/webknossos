@@ -24,18 +24,18 @@ class Binary
   contrastCurves : []
 
 
-  constructor : (@user, dataSet, @TEXTURE_SIZE_P) ->
+  constructor : (@user, dataSet, @TEXTURE_SIZE_P, @dataLayerName, @BIT_DEPTH) ->
 
     @dataSetName = dataSet.name
 
     for layer in dataSet.dataLayers
-      if layer.typ == "color"
+      if layer.typ == @dataLayerName
         dataLayer = layer
 
     upperBoundary = [dataLayer.maxCoordinates.width, dataLayer.maxCoordinates.height, dataLayer.maxCoordinates.depth]
 
-    @cube = new Cube(upperBoundary, dataLayer.resolutions.length)
-    @queue = new PullQueue(@dataSetName, @cube)
+    @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @BIT_DEPTH)
+    @queue = new PullQueue(@dataSetName, @cube, @dataLayerName)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
     @pingStrategies3d = [new PingStrategy3d.DslSlow()]

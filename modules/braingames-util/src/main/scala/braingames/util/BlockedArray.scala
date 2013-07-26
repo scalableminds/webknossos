@@ -24,7 +24,8 @@ case class BlockedArray3D[T](
       (p.x % blockWidth +
         p.y % blockHeight * blockWidth +
         p.z % blockDepth * blockHeight * blockWidth) * elementSize
-
+    //println(this + " point " + p)
+    //println(this + " address " + address)
     val bytes = new Array[T](elementSize)
     var i = 0
     while (i < elementSize) {

@@ -277,7 +277,6 @@ object AnnotationDAO extends BasicDAO[Annotation]("annotations") with Annotation
       annotation.update(
         _.copy(_content = ContentReference.createFor(resetted))
       )
-      //TODO: RF - remove annotationContent from DB
       annotationContent.clearTracingData()
       annotation
     }

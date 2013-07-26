@@ -39,81 +39,11 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import play.api.Play
 import org.bson.types.ObjectId
+import oxalis.annotation.AnnotationService
 
 object NMLIO extends Controller with Secured with TextUtils {
   override val DefaultAccessRole = Role.User
 
-  val conf = Play.current.configuration
-
-  val nmlStorageFolder = {
-    val folder = conf.getString("oxalis.nml.storageFolder") getOrElse "data/nmls"
-    new File(folder).mkdirs()
-    folder
-  }
-
-  def extractFromZip(file: File): List[NML] =
-    ZipIO.unzip(file).map(nml => (new NMLParser(nml)).parse).flatten
-
-  def extractFromNML(file: File) =
-    new NMLParser(file).parse
-
-  def extractFromFile(file: File, fileName: String): List[NML] = {
-    if (fileName.endsWith(".zip")) {
-      Logger.trace("Extracting from ZIP file")
-      extractFromZip(file)
-    } else {
-      Logger.trace("Extracting from NML file")
-      List(extractFromNML(file)).flatten
-    }
-  }
-
-  def outputPathForAnnotation(annotation: Annotation) =
-    s"$nmlStorageFolder/${annotation.id}.nml"
-
-  def writeTracingToFile(annotation: Annotation) {
-    for {
-      futureStream <- tracingToNMLStream(annotation)
-      in <- futureStream
-    } {
-      val f = new File(outputPathForAnnotation(annotation))
-      val out = new FileOutputStream(f).getChannel
-      val ch = Channels.newChannel(in)
-      try {
-        out.transferFrom(ch, 0, in.available)
-      } finally {
-        ch.close()
-        out.close()
-      }
-    }
-
-  }
-
-  def tracingToNMLStream(annotation: Annotation) = {
-    annotation.content.map {
-      case t: SkeletonTracingLike =>
-        toXML(t).map(IOUtils.toInputStream)
-      case _ =>
-        throw new Exception("Invalid content!")
-    }
-  }
-
-  def loadTracingFromFileStream(annotation: Annotation) = {
-    if (annotation.state.isFinished) {
-      val f = new File(outputPathForAnnotation(annotation))
-      if (f.exists())
-        Some(Future.successful(new FileInputStream(f)))
-      else
-        None
-    } else
-      None
-  }
-
-  def loadTracingStream(annotation: Annotation): Option[Future[InputStream]] = {
-    loadTracingFromFileStream(annotation).orElse {
-      writeTracingToFile(annotation)
-      loadTracingFromFileStream(annotation)
-    }.orElse(tracingToNMLStream(annotation))
-  }
 
   def uploadForm = Authenticated {
     implicit request =>
@@ -151,7 +81,7 @@ object NMLIO extends Controller with Secured with TextUtils {
 
   def upload = Authenticated(parse.multipartFormData) {
     implicit request =>
-      val parseResult = request.body.files.map(f => f.filename -> extractFromNML(f.ref.file))
+      val parseResult = request.body.files.map(f => f.filename -> NMLService.extractFromNML(f.ref.file))
       val (parseFailed, parseSuccess) = splitResult(parseResult)
       if (parseFailed.size > 0) {
         val errors = parseFailed.map {
@@ -187,21 +117,8 @@ object NMLIO extends Controller with Secured with TextUtils {
       }
   }
 
-  def toXML[T <: SkeletonTracingLike](t: T) = {
-    val prettyPrinter = new PrettyPrinter(100, 2)
-    Xml.toXML(t).map(prettyPrinter.format(_))
-  }
-
-  def loadAnnotation(annotation: Annotation) =
-    loadTracingStream(annotation).map(_.map {
-      tracingStream =>
-        NamedFileStream(
-          tracingStream,
-          SavedTracingInformationHandler.nameForAnnotation(annotation) + ".nml")
-    })
-
   def zipTracings(annotations: List[Annotation], zipFileName: String) = {
-    Future.sequence(annotations.par.flatMap(loadAnnotation).seq).map {
+    Future.sequence(annotations.par.flatMap(AnnotationService.loadAnnotationContent).seq).map {
       zipStreams =>
         val zipped = new TemporaryFile(new File(normalize(zipFileName)))
         ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))

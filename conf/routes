@@ -115,9 +115,7 @@ GET      /admin/tracings/:id/review                    controllers.admin.Trainin
 GET      /admin/tracings/:id/reopen                    controllers.admin.TaskAdministration.reopen( id: String )
 
 # Binary Administration
-GET      /admin/binaryDB                               controllers.admin.BinaryDataAdministration.list
-GET      /admin/binaryDB/insert                        controllers.admin.BinaryDataAdministration.insertIntoDB(dataSetName: String)
-GET      /admin/binaryDB/insertionState                controllers.admin.BinaryDataAdministration.insertionProgress
+GET      /admin/dataSets                               controllers.admin.BinaryDataAdministration.list
 
 # Javascript routing
 GET      /assets/javascripts/routes.js                 controllers.Application.javascriptRoutes

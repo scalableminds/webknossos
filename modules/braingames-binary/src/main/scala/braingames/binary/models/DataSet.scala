@@ -26,6 +26,8 @@ case class DataSet(
   def dataLayer(typ: String) =
     dataLayers.find(_.typ == typ)
 
+  def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
+
   val blockLength = 128
 
   val blockSize = blockLength * blockLength * blockLength

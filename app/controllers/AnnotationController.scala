@@ -163,14 +163,14 @@ object AnnotationController extends Controller with Secured with TracingInformat
     }
   }
 
-  def finish(typ: String, id: String, experimental: Boolean) = Authenticated {
+  def finish(typ: String, id: String) = Authenticated {
     implicit request =>
     // TODO: RF - user Store
       for {
         oldAnnotation <- AnnotationDAO.findOneById(id) ?~ Messages("annotation.notFound")
         (annotation, message) <- finishAnnotation(request.user, oldAnnotation)
       } yield {
-        if (experimental)
+        if(annotation.typ != AnnotationType.Task)
           JsonOk(message)
         else
           (for {

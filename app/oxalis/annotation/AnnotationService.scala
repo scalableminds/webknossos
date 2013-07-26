@@ -18,13 +18,18 @@ import play.api.libs.concurrent.Execution.Implicits._
  * Date: 26.07.13
  * Time: 12:08
  */
-object AnnotationService extends AnnotationFileService{
+object AnnotationService extends AnnotationFileService {
 
 }
 
-trait AnnotationFileService{
+trait AnnotationFileService {
 
   val conf = Play.current.configuration
+
+  val defaultDownloadExtension = ".txt"
+
+  def fileExtension(annotation: Annotation) =
+    annotation.content.map(_.downloadFileExtension) getOrElse defaultDownloadExtension
 
   val annotationStorageFolder = {
     val folder = conf.getString("oxalis.nml.storageFolder") getOrElse "data/nmls"
@@ -33,7 +38,7 @@ trait AnnotationFileService{
   }
 
   def outputPathForAnnotation(annotation: Annotation) =
-    s"$annotationStorageFolder/${annotation.id}.${annotation.content.map{_.downloadFileExtension}}"
+    s"$annotationStorageFolder/${annotation.id}${fileExtension(annotation)}"
 
   def writeAnnotationToFile(annotation: Annotation) {
     for {

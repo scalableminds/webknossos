@@ -61,7 +61,7 @@ object ApplicationBuild extends Build {
   )
 
   lazy val braingamesDependencies = Seq(
-    "play" %% "play" % "2.1-SNAPSHOT",
+    "play" %% "play" % "2.1.2-SCM",
     "commons-io" % "commons-io" % "1.3.2",
     "org.reactivemongo" %% "reactivemongo-bson-macros" % "0.9",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",

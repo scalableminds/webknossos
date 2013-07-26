@@ -3,6 +3,7 @@ package braingames.binary.models
 import braingames.util.Interpolator
 import braingames.geometry.Point3D
 import braingames.geometry.Vector3D
+import braingames.util.ExtendedTypes.ExtendedDouble
 
 trait Interpolation {
   def interpolate(
@@ -20,9 +21,9 @@ object TrilerpInterpolation extends Interpolation {
     bytesPerElement: Int,
     byteLoader: (Point3D) => Array[Byte])(point: Vector3D): Array[Byte] = {
 
-    val x = point.x.toInt
-    val y = point.y.toInt
-    val z = point.z.toInt
+    val x = point.x.castToInt
+    val y = point.y.castToInt
+    val z = point.z.castToInt
 
     if (point.x == x && point.y == y & point.z == z) {
       byteLoader(Point3D(x,y,z))
@@ -50,8 +51,6 @@ object NearestNeighborInterpolation extends Interpolation {
     bytesPerElement: Int,
     byteLoader: (Point3D) => Array[Byte])(point: Vector3D): Array[Byte] = {
 
-    val byte = point.x % bytesPerElement
-    val x = (point.x - byte + (if (bytesPerElement - 2 * byte >= 0) 0 else bytesPerElement)).toInt
-    byteLoader(Point3D(x, point.y.round.toInt, point.z.round.toInt))
+    byteLoader(Point3D(point.x.round.toInt, point.y.round.toInt, point.z.round.toInt))
   }
 }

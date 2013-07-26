@@ -35,6 +35,7 @@ import java.util.NoSuchElementException
 import braingames.util.BlockedArray3D
 import scala.reflect.ClassTag
 import braingames.util.ExtendedTypes.ExtendedArraySeq
+import braingames.util.ExtendedTypes.ExtendedDouble
 
 class DataRequestActor(
   val conf: Config,
@@ -86,12 +87,13 @@ class DataRequestActor(
     case SingleCubeRequest(dataRequest) =>
       val s = sender
       Future {
-        load(dataRequest).onComplete{
+        load(dataRequest).onComplete {
           case Success(data) =>
             s ! Some(data)
           case Failure(e) =>
             System.err.println(s"DataRequestActor Error for Request. Error: $e")
-            s! None
+            e.printStackTrace()
+            s ! None
         }
       }
     case MultiCubeRequest(requests) =>
@@ -250,7 +252,7 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataRequest, lay
   @inline
   def interpolatedData(px: Double, py: Double, pz: Double) = {
     if (dataRequest.skipInterpolation)
-      byteLoader(Point3D(px.toInt, py.toInt, pz.toInt))
+      byteLoader(Point3D(px.castToInt, py.castToInt, pz.castToInt))
     else
       layer.interpolator.interpolate(layer.bytesPerElement, byteLoader _)(Vector3D(px, py, pz))
   }

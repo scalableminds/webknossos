@@ -124,7 +124,7 @@ object ApplicationBuild extends Build {
 
   lazy val stackrenderer = play.Project("stackrenderer", "0.1", stackrendererDependencies, path = file("modules") / "stackrenderer").settings(
     resolvers ++= dependencyResolvers
-  ).dependsOn(levelcreator).aggregate(levelcreator)
+  ).dependsOn(braingamesUtil, braingamesBinary, oxalis, levelcreator).aggregate(braingamesUtil, braingamesBinary, oxalis, levelcreator)
 
   lazy val isoshader = play.Project("isoshader", "0.1", isoshaderDependencies, path = file("modules") / "isoshader").settings(
     templatesImport += "oxalis.view.helpers._",

@@ -56,7 +56,7 @@ trait SkeletonTracingLike extends AnnotationContent {
   def downloadFileExtension = ".nml"
 
   def toDownloadStream =
-    NMLIO.toXML(this).map(IOUtils.toInputStream)
+    NMLService.toNML(this).map(IOUtils.toInputStream)
 
   override def contentData =
     Some(SkeletonTracingLike.skeletonTracingLikeWrites.writes(this))

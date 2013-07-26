@@ -153,8 +153,10 @@ object DBTree extends BasicDAO[DBTree]("trees") with DBTreeFactory {
   def findAllWithTracingId(tracingId: ObjectId) =
     find(MongoDBObject("_tracing" -> tracingId)).toList
 
-  def removeAllWithTracingId(tracingId: ObjectId) =
+  def removeAllWithTracingId(tracingId: ObjectId) = {
+    // TODO: remove nodes / edges
     remove(MongoDBObject("_tracing" -> tracingId))
+  }
 
   def findOneWithTreeId(tracingId: ObjectId, treeId: Int) =
     findOne(MongoDBObject("_tracing" -> tracingId, "treeId" -> treeId))

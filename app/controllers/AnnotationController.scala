@@ -14,7 +14,7 @@ import controllers.admin.NMLIO
 import models.task.{Project, Task}
 import views.html
 import play.api.templates.Html
-import oxalis.annotation.{RequestAnnotation, AnnotationIdentifier}
+import oxalis.annotation.{AnnotationService, RequestAnnotation, AnnotationIdentifier}
 import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration._
@@ -157,20 +157,20 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
     tryToFinish().map {
       result =>
-      //TODO: RF - write to disk
+        AnnotationService.writeAnnotationToFile(annotation)
         UsedAnnotation.removeAll(annotation.id)
         result
     }
   }
 
-  def finish(typ: String, id: String, experimental: Boolean) = Authenticated {
+  def finish(typ: String, id: String) = Authenticated {
     implicit request =>
     // TODO: RF - user Store
       for {
         oldAnnotation <- AnnotationDAO.findOneById(id) ?~ Messages("annotation.notFound")
         (annotation, message) <- finishAnnotation(request.user, oldAnnotation)
       } yield {
-        if (experimental)
+        if(annotation.typ != AnnotationType.Task)
           JsonOk(message)
         else
           (for {

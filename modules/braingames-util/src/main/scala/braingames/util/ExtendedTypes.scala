@@ -83,7 +83,7 @@ object ExtendedTypes {
      */
     def patchAbsoluteValue =
       if (d >= 0)
-        d + Math.EPSILON
+        d + EPSILON
       else
         d - EPSILON
 
@@ -92,6 +92,9 @@ object ExtendedTypes {
      */
     def isNearZero =
       d <= EPSILON && d >= -EPSILON
+
+    def castToInt =
+      (d + EPSILON).toInt
 
     /**
      * Makes sure the double is in the given interval.

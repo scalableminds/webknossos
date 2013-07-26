@@ -19,7 +19,7 @@ import models.tracing.skeleton.SkeletonTracing
 object TaskController extends Controller with Secured {
   override val DefaultAccessRole = Role.User
   
-  val MAX_OPEN_TASKS = current.configuration.getInt("tasks.maxOpenPerUser") getOrElse 5
+  val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 5
 
   def request = Authenticated { implicit request =>
     Async {

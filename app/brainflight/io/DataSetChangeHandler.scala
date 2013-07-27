@@ -140,12 +140,9 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
       } yield {
        val layerInfo = new File(layerDir.getPath + "/layer.json")
        if (layerInfo.isFile) {
-         JsonFromFile(layerInfo).validate[ContextFreeSegmentationLayer] match {
-           case JsSuccess(cfSegmentationLayer, _) => 
-             val parentDir = layerInfo.getParentFile
-             Logger.info(s"found segmentation layer: ${parentDir.getName}")
-             val batchId = parentDir.getName.replaceFirst("layer", "").toIntOpt
-             Some(cfSegmentationLayer.addContext(batchId getOrElse 0))
+         JsonFromFile(layerInfo).validate[SegmentationLayer] match {
+           case JsSuccess(segmentationLayer, _) => 
+             Some(segmentationLayer)
            case JsError(error) =>
              Logger.error(error.toString)
              None

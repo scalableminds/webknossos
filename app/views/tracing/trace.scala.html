@@ -14,9 +14,7 @@
           <button class="btn btn-primary disabled">Read only</button> 
         }
         <div id="buttonbar" class="btn-group inline-block">
-          @if(annotation.typ == AnnotationType.Task){
-            <a href="@controllers.routes.AnnotationController.finishWithRedirect(annotation.typ, annotation.id)" class="btn btn-small" id="trace-finish-button"><i class="icon-ok-circle"></i> Finish</a>
-          } 
+          <a href="@controllers.routes.AnnotationController.finishWithRedirect(annotation.typ, annotation.id)" class="btn btn-small" id="trace-finish-button"><i class="icon-ok-circle"></i> Finish</a>
           @if(!annotation.isTrainingsAnnotation()){
             <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
           }

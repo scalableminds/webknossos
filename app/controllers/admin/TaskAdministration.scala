@@ -30,6 +30,7 @@ import controllers.Application
 import models.annotation.Annotation
 import models.annotation.{AnnotationDAO, AnnotationType}
 import scala.concurrent.Future
+import oxalis.nml.NMLService
 
 object TaskAdministration extends Controller with Secured {
 
@@ -214,7 +215,7 @@ object TaskAdministration extends Controller with Secured {
                   nmlFile <- request.body.file("nmlFile") ?~ Messages("nml.file.notFound")
                   taskType <- TaskType.findOneById(taskTypeId)
                 } yield {
-                  val nmls = NMLIO.extractFromFile(nmlFile.ref.file, nmlFile.filename)
+                  val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename)
                   val project = Project.findOneByName(projectName)
                   val baseTask = Task(
                     0,

@@ -39,11 +39,11 @@ object AnnotationRestrictions {
       }
 
       override def allowUpdate(user: User) = {
-        annotation._user == user._id
+        annotation._user == user._id && !annotation.state.isFinished
       }
 
       override def allowFinish(user: User) = {
-        annotation._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false)
+        (annotation._user == user._id || (Role.Admin.map(user.hasRole) getOrElse false))  && !annotation.state.isFinished
       }
 
       override def allowDownload(user: User) = {

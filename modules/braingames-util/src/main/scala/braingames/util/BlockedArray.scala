@@ -17,9 +17,12 @@ case class BlockedArray3D[T](
   xBlocks: Int,
   yBlocks: Int,
   zBlocks: Int,
-  elementSize: Int) {
+  elementSize: Int,
+  nullElement: T)(implicit classTag: ClassTag[T]) {
 
-  def getBytes(p: Point3D, block: Array[T])(implicit c: ClassTag[T]) = {
+  lazy val nullArray = Array.fill[T](elementSize)(nullElement)
+
+  def getBytes(p: Point3D, block: Array[T]) = {
     val address =
       (p.x % blockWidth +
         p.y % blockHeight * blockWidth +
@@ -34,13 +37,17 @@ case class BlockedArray3D[T](
     bytes
   }
 
-  def apply(p: Point3D)(implicit c: ClassTag[T]) = {
-    //println(s"p: $p depth: $blockDepth w: $blockWidth h: $blockHeight")
-    val blockIdx =
-      p.z / blockDepth +
-        p.y / blockHeight * zBlocks +
-        p.x / blockWidth * zBlocks * yBlocks
+  def calculateBlockIdx(p: Point3D) =
+    p.z / blockDepth +
+      p.y / blockHeight * zBlocks +
+      p.x / blockWidth * zBlocks * yBlocks
 
-    getBytes(p, underlying(blockIdx))
+  def apply(p: Point3D): Array[T] = {
+    if(p.x < 0 || p.y < 0 || p.z < 0)
+      nullArray
+    else {
+      val blockIdx = calculateBlockIdx(p)
+      getBytes(p, underlying(blockIdx))
+    }
   }
 }

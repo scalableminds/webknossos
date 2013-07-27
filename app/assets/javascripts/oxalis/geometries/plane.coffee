@@ -36,7 +36,7 @@ class Plane
     volumePlaneGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
 
     # create texture
-    texture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth*3), tWidth, tWidth, THREE.RGBFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+    texture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     texture.needsUpdate = true
     volumeTexture       = new THREE.DataTexture(new Uint8Array(tWidth*tWidth*3), tWidth, tWidth, THREE.RGBFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     
@@ -54,41 +54,50 @@ class Plane
       uniform sampler2D texture, volumeTexture;
       uniform vec2 offset, repeat;
       varying vec2 vUv;
+
+      /* Inspired from: https://github.com/McManning/WebGL-Platformer/blob/master/shaders/main.frag */
+      vec4 hsv_to_rgb(vec4 HSV)
+      {
+        vec4 RGB; /* = HSV.z; */
+
+        float h = HSV.x;
+        float s = HSV.y;
+        float v = HSV.z;
+
+        float i = floor(h);
+        float f = h - i;
+
+        float p = (1.0 - s);
+        float q = (1.0 - s * f);
+        float t = (1.0 - s * (1.0 - f));
+
+        if (i == 0.0) { RGB = vec4(1.0, t, p, 1.0); }
+        else if (i == 1.0) { RGB = vec4(q, 1.0, p, 1.0); }
+        else if (i == 2.0) { RGB = vec4(p, 1.0, t, 1.0); }
+        else if (i == 3.0) { RGB = vec4(p, q, 1.0, 1.0); }
+        else if (i == 4.0) { RGB = vec4(t, p, 1.0, 1.0); }
+        else /* i == -1 */ { RGB = vec4(1.0, p, q, 1.0); }
+
+        RGB *= v;
+
+        return RGB;
+      }
+
       void main() {
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
-        float id = (volumeColor[0] * 255.0);
+        float id = (volumeColor[0] * 65535.0);
         float golden_ratio = 0.618033988749895;
 
         /* Color map (<= to fight rounding mistakes) */
-
-        /*
+        
         if (id > 0.1) {
-          vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1, 0.3, 1 );
-          vec4 hue;
-          hue.x = abs(HSV.x - 3.0) - 1.0;
-          hue.y = 2.0 - abs(HSV.x - 2.0);
-          hue.z = 2.0 - abs(HSV.x - 4.0);
-          volumeColor = ((clamp(hue,0.0,1.0) - 1.0) * HSV.y + 1.0) * HSV.z;
+          vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
+          gl_FragColor = 0.7 * texture2D(texture, vUv * repeat + offset) + 0.3 * hsv_to_rgb( HSV );
         } else {
-            volumeColor = vec4(0.0, 0.0, 0.0, 1);
-        }*/
-
-             if(id <= 0.1) volumeColor = vec4(0.0, 0.0, 0.0, 1);
-        else if(id <= 1.1) volumeColor = vec4(0.3, 0.0, 0.0, 1);
-        else if(id <= 2.1) volumeColor = vec4(0.0, 0.3, 0.0, 1);
-        else if(id <= 3.1) volumeColor = vec4(0.0, 0.0, 0.3, 1);
-        else if(id <= 4.1) volumeColor = vec4(0.3, 0.3, 0.0, 1);
-        else if(id <= 5.1) volumeColor = vec4(0.0, 0.3, 0.3, 1);
-        else if(id <= 6.1) volumeColor = vec4(0.3, 0.0, 0.3, 1);
-
-        else if(id <= 7.1) volumeColor = vec4(0.3, 0.0, 0.0, 1);
-        else if(id <= 8.1) volumeColor = vec4(0.0, 0.3, 0.0, 1);
-        else if(id <= 9.1) volumeColor = vec4(0.0, 0.0, 0.3, 1);
-        else if(id <= 10.1) volumeColor = vec4(0.3, 0.3, 0.0, 1);
-        else if(id <= 11.1) volumeColor = vec4(0.0, 0.3, 0.3, 1);
-        else if(id <= 12.1) volumeColor = vec4(0.3, 0.0, 0.3, 1);
-
-        gl_FragColor = texture2D(texture, vUv * repeat + offset) + volumeColor; }"
+          gl_FragColor = texture2D(texture, vUv * repeat + offset);
+        }
+      }
+        "
     uniforms = {
       texture : {type : "t", value : texture},
       volumeTexture : {type : "t", value : volumeTexture},

@@ -75,11 +75,13 @@ object CompoundAnnotation extends Formatter {
       createFromTracings(ts, id)
     }
 
+    val annotationContent = createContent
+
     as match {
       case head :: _ =>
         Some(TemporaryAnnotation(
           id,
-          createContent,
+          () => annotationContent,
           typ
         ))
       case _ =>
@@ -92,7 +94,7 @@ object CompoundAnnotation extends Formatter {
       tracings match {
         case head :: tail =>
           head match {
-            case t: SkeletonTracing =>
+            case t: SkeletonTracingLike =>
               val base = TemporarySkeletonTracing.createFrom(t, id)
               Some(tail.foldLeft(base) {
                 case (result, tracing) =>

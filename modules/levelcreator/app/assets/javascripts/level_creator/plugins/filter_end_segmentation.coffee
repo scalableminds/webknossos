@@ -46,7 +46,7 @@ class FilterEndSegmentation
 
     #endSegments = _.sortBy(segments, (s) -> -s.probability).slice(0, Math.min(segments.length, maxCount))
 
-    possibleEnds = _.sortBy(mission.possibleEnd, (s) -> -s.probability).slice(0, Math.min(mission.possibleEnd.length, maxCount))
+    possibleEnds = _.sortBy(mission.possibleEnds, (s) -> -s.probability).slice(0, Math.min(mission.possibleEnds.length, maxCount))
     for possibleEnd in possibleEnds
       endValues.push possibleEnd.id
 

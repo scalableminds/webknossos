@@ -20,7 +20,7 @@ class PullQueue
   roundTripTime : 0
 
   
-  constructor : (@dataSetName, @cube, @dataLayerName) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
 
 
   swap : (a, b) ->
@@ -136,6 +136,10 @@ class PullQueue
             else
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
             #console.log "Success: ", bucket, bucketData
+            if @testData
+              id = bucket[0] + bucket[1] * 100 + bucket[2] * 10000
+              for i in [0...bucketData.length]
+                bucketData[i] = (id >> (8 * ((@cube.BIT_DEPTH >> 3) - 1 - (i % (@cube.BIT_DEPTH >> 3))))) % 256
             @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>

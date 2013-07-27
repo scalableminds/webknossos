@@ -39,22 +39,24 @@ class FilterEndSegmentation
 
     width = dimensions[0]
     height = dimensions[1]
+    maxCount = Infinity unless maxCount?
 
     values = []
     endValues = []
 
-    endSegments = _.sortBy(segments, (s) -> -s.probability).slice(0, Math.min(segments.length, maxCount))
+    #endSegments = _.sortBy(segments, (s) -> -s.probability).slice(0, Math.min(segments.length, maxCount))
 
-    for possibleEnd in mission.possibleEnds
+    possibleEnds = _.sortBy(mission.possibleEnd, (s) -> -s.probability).slice(0, Math.min(mission.possibleEnd.length, maxCount))
+    for possibleEnd in possibleEnds
       endValues.push possibleEnd.id
 
     if mode is "in"
-      for segment in endSegments
+      for segment in segments
         if _.contains(endValues, segment.value) is true
           segment.display = true
           values.push segment.id
     else # out
-      for segment in endSegments
+      for segment in segments
         if _.contains(endValues, segment.value) is false
           values.push segment.id
         else

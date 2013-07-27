@@ -85,7 +85,8 @@ class Plane
 
       void main() {
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
-        float id = (volumeColor[0] * 65535.0);
+        /* assume little endian order */
+        float id = (volumeColor[0] * 255.0) + (volumeColor[1] * 255.0) * 256.0 + (volumeColor[2] * 255.0) * 256.0 * 256.0;
         float golden_ratio = 0.618033988749895;
 
         /* Color map (<= to fight rounding mistakes) */
@@ -162,7 +163,14 @@ class Plane
           if dataBuffer
             @plane.texture.image.data.set(dataBuffer)
             @flycam.hasNewTexture[@planeID] = true
+
+        @model.binaryVolume.planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
           if volumeBuffer
+            # Generate test pattern
+            #for i in [0...512]
+            #  for j in [0...512]
+            #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
+            #    volumeBuffer[(i * 512 + j)*3] = id
             @plane.volumeTexture.image.data.set(volumeBuffer)
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)

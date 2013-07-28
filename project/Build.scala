@@ -38,7 +38,8 @@ object ApplicationBuild extends Build {
     "sonatype snaps" at "https://oss.sonatype.org/content/repositories/snapshots/",
     "sgodbillon" at "https://bitbucket.org/sgodbillon/repository/raw/master/snapshots/",
     "mandubian" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/",
-    "typesafe" at "http://repo.typesafe.com/typesafe/releases"
+    "typesafe" at "http://repo.typesafe.com/typesafe/releases",
+    Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns)
   )
 
   val shellgameDependencies = Seq()

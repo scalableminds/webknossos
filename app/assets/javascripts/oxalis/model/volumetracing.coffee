@@ -16,22 +16,21 @@ class VolumeTracing
     @currentLayer = null        # Layer currently edited
     @idCount      = 1
 
+    @createCell()
+
     # For testing
     window.setAlpha = (v) -> Drawing.setAlpha(v)
     window.setSmoothLength = (v) -> Drawing.setSmoothLength(v)
 
   createCell : ->
-    @activeCell = new VolumeCell(@idCount++)
+    @cells.push( newCell = new VolumeCell(@idCount++) )
+    @setActiveCell( newCell.id )
     @currentLayer = null
-    @cells.push(@activeCell)
 
   startEditing : (planeId = @flycam.getActivePlane()) ->
     # Return, if layer was actually started
     if currentLayer?
       return false
-    # just for testing
-    unless @activeCell?
-      @createCell()
     pos = Dimensions.roundCoordinate(@flycam.getPosition())
     thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
     @currentLayer = new VolumeLayer(planeId, thirdDimValue)
@@ -51,10 +50,27 @@ class VolumeTracing
 
     start = (new Date()).getTime()
     iterator = @currentLayer.getVoxelIterator()
-    @cube.labelVoxels(iterator, @activeCell.id % 6 + 1)
+    labelValue = if @activeCell then ( @activeCell.id % 6 + 1 ) else 0
+    @cube.labelVoxels(iterator, labelValue)
     console.log "Labeling time:", ((new Date()).getTime() - start)
 
     @currentLayer = null
     @flycam.hasChanged = true
 
     @trigger "resetContour"
+
+  getActiveCellId : ->
+
+    if @activeCell?
+      return @activeCell.id
+    else
+      return 0
+
+  setActiveCell : (id) ->
+
+    @activeCell = null
+    for cell in @cells
+      if cell.id == id then @activeCell = cell
+
+    console.log @getActiveCellId()
+    @trigger "newActiveCell"

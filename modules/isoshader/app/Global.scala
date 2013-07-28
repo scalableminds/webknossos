@@ -7,10 +7,10 @@ import akka.util.Timeout
 import akka.actor.ActorSystem
 import akka.actor.Props
 
-import brainflight.io._
+import oxalis.io._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits._
-import brainflight.ActorSystems
+import oxalis.ActorSystems
 
 object Global extends GlobalSettings {
   lazy val DirectoryWatcher = Akka.system.actorOf(

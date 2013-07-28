@@ -2,7 +2,7 @@ package models.stackrenderer
 
 import akka.agent.Agent
 import models.knowledge._
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import play.api.libs.concurrent.Akka
 import play.api.Play
 

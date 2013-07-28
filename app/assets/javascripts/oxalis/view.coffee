@@ -137,6 +137,10 @@ class View
       <tr><td>Space</td><td>Forward</td><td>B, J</td><td>Set/Jump to last branchpoint</td></tr>
       <tr><td>Y</td><td>Center active node</td><td>I, O</td><td>Zoom in and out</td></tr>
       <tr><td>Z, U</td><td>Start/Stop recording waypoints</td><td>Shift + Space</td><td>Delete active node, Recenter previous node</td></tr>'
+    volumeKeys =
+      '<tr><th colspan="4">Volume Tracing</th></tr>
+      <tr><td>Mouse drag</td><td>Add to current Cell</td><td>Ctrl + Mouse drag / Arrow keys</td><td>Move</td></tr>
+      <tr><td>C</td><td>Create new cell</td><td></td><td></td></tr>'
 
     html = '''<div class="modal-header"><button type="button" class="close" data-dismiss="modal">x</button>
             <h3>keyboard commands</h3></div>
@@ -148,6 +152,8 @@ class View
       html += viewportKeys + skeletonKeys
     else if mode == constants.MODE_ARBITRARY
       html += arbitraryKeys
+    else if mode == constants.MODE_VOLUME
+      html += volumeKeys
 
     html += '''</tbody>
             </table>

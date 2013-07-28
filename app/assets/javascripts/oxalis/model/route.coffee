@@ -26,7 +26,7 @@ class Route
   activeTree : null
   firstEdgeDirection : null
 
-  constructor : (@data, @scaleInfo, @flycam, @flycam3d, @user) ->
+  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -44,13 +44,19 @@ class Route
 
     @doubleBranchPop = false
 
+    @data = tracing.content.contentData
+
+    @flycam.setPosition(tracing.content.editPosition)
+
     # initialize deferreds
     @finishedDeferred = new $.Deferred().resolve()
 
+
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id, @data.settings.isEditable)
-    console.log "Tracing data: ", @data
+    @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
+    
+    console.log "Annotation data: ", tracing
 
     # get tree to build
     for treeData in @data.trees
@@ -110,11 +116,11 @@ class Route
       else
         @createNewTree()
 
-    tracingType = data.tracingType
+    tracingType = tracing.typ
     if (tracingType == "Task" or tracingType == "Training") and nodeList.length == 0
-      @addNode(data.editPosition)
+      @addNode(tracing.content.editPosition)
 
-    @branchPointsAllowed = @data.settings.branchPointsAllowed
+    @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
       # dirty but this actually is what needs to be done
       @TYPE_BRANCH = @TYPE_USUAL
@@ -142,7 +148,7 @@ class Route
     $(window).on(
       "beforeunload"
       =>
-        if !@stateLogger.stateSaved() and @stateLogger.isEditable
+        if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
           @stateLogger.pushImpl(false)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else

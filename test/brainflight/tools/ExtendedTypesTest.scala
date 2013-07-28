@@ -1,6 +1,6 @@
 package brainflight.tools
 
-import brainflight.tools.ExtendedTypes._
+import braingames.util.ExtendedTypes._
 import org.specs2.mutable.Specification
 
 class ExtendedTypesTest extends Specification{

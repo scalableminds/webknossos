@@ -1,0 +1,20 @@
+@* tracingLinks Template File *@
+@(annotation: models.annotation.Annotation)
+<div class="btn-group">
+  <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+    Actions
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu">
+    @if(!annotation.state.isFinished){
+      <li><a href="@controllers.admin.routes.UserTracingAdministration.finish(annotation.id)" class="trace-finish" data-ajax="replace-row,confirm"><i class="icon-ok-circle"></i> finish</a></li>
+    } else {
+      <li><a href="@controllers.admin.routes.UserTracingAdministration.reopen(annotation.id)" data-ajax="replace-row"><i class="icon-share-alt"></i> reopen</a></li>
+    }
+    <li><a href="@controllers.routes.AnnotationController.trace(annotation.typ, annotation.id)"><i class="icon-random"></i> view </a></li>
+    <li><a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)"><i class="icon-download"></i> download </a></li>
+    <li><a href="@controllers.admin.routes.UserTracingAdministration.reset(annotation.id)" data-ajax="replace-row,confirm"><i class="icon-undo"></i> reset</a></li>
+    <li><a href="@controllers.admin.routes.TaskAdministration.cancelTracing(annotation.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete</a></li>
+    <!-- dropdown menu links -->
+  </ul>
+</div>

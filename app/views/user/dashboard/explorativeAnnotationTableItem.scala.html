@@ -1,0 +1,32 @@
+@(annotation: models.annotation.Annotation)
+
+<tr class="hover-dynamic">
+    <td> @formatHash(annotation.id) </td>
+    <td class="explorative-name-column">
+      <span class="hover-hide" id="explorative-tracing-name"> @annotation.name </span>
+      <form action="@controllers.routes.AnnotationController.nameExplorativeAnnotation(annotation.typ, annotation.id)" method="POST" data-ajax="submit,replace-row" class="hover-show hide">
+        <div class="input-append">
+          <input class="input-medium hover-input" name="name" id="explorative-name-input" maxlength="50" type="text" value="@annotation.name" autocomplete="off">
+            <a href="@controllers.routes.AnnotationController.nameExplorativeAnnotation(annotation.typ, annotation.id)" data-ajax="submit,replace-row" id="explorative-name-submit" class="btn"><i class="icon-ok"></i></a>
+        </div>
+      </form>
+    </td>
+    <td> @annotation.content.map(_.dataSetName) </td>
+    @defining(models.annotation.AnnotationDAO.statisticsForAnnotation(annotation)){ statsOpt =>
+      @statsOpt.map{stats =>
+      <td> 
+        <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span><br />
+        <span title="Nodes"><i class="icon-bull"></i> @stats.numberOfNodes &nbsp;</span><br />
+        <span title="Edges"><i class="icon-resize-horizontal"></i> @stats.numberOfEdges</span>
+      </td>
+      }.getOrElse(<td />)
+    }
+    <td> @annotation.content.map(_.contentType + " - ")@annotation.typ </td>
+    <td> @annotation.content.map(c => formatDate(c.date)) </td>
+    <td  class="nowrap"> 
+      <a href="@controllers.routes.AnnotationController.trace(annotation.typ, annotation.id)"><i class="icon-random"></i> trace</a><br />
+      <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)"><i class="icon-download"></i> download</a><br />
+      @if(models.annotation.AnnotationType.isExploratory(annotation)){
+        <a href="@controllers.routes.AnnotationController.finish(annotation.typ, annotation.id)" data-ajax="delete-row,confirm=@Messages("annotation.finish.confirm")"><i class="icon-trash"></i> delete</a></td>
+      }
+  </tr>

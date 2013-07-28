@@ -9,27 +9,21 @@ import java.util.Date
 import java.util.Calendar
 import scala.concurrent.duration._
 import models.basics.DAOCaseClass
-import models.tracing.Tracing
 import braingames.util.ExtendedTypes.ExtendedString
-import brainflight.thirdparty.BrainTracing
+import oxalis.thirdparty.BrainTracing
+import models.annotation.{AnnotationLike, Annotation}
+import models.tracing.skeleton.SkeletonTracing
 
-case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, tracing: Option[ObjectId] = None) {
+case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, annotation: Option[String] = None) {
   val created = {
     new Date(timestamp)
   }
 
-  def tracingEquals(other: Tracing): Boolean =
-    tracingEquals(Some(other))
+  def annotationEquals(other: String): Boolean =
+    annotationEquals(Some(other))
 
-  def tracingEquals(other: Option[Tracing]): Boolean = {
-    (tracing, other) match {
-      case (Some(tracing), Some(other)) =>
-        tracing == other._id
-      case (None, None) =>
-        true
-      case _ =>
-        false
-    }
+  def annotationEquals(other: Option[String]): Boolean = {
+    annotation == other
   }
 }
 
@@ -108,25 +102,25 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
     ((ds * 24 + hs) * 60 + ms) * 60000L
   }
 
-  def logUserAction(user: User, tracing: Tracing): TimeTracking =
-    logUserAction(user, Some(tracing))
+  def logUserAction(user: User, annotation: AnnotationLike): TimeTracking =
+    logUserAction(user, Some(annotation))
 
-  def logUserAction(user: User, tracing: Option[Tracing]): TimeTracking = {
+  def logUserAction(user: User, annotation: Option[AnnotationLike]): TimeTracking = {
     val current = System.currentTimeMillis
     findOneByUser(user) match {
       case Some(timeTracker) =>
         timeTracker.timeEntries match {
-          case lastEntry :: tail if current - lastEntry.timestamp < MAX_PAUSE && lastEntry.tracingEquals(tracing) =>
+          case lastEntry :: tail if current - lastEntry.timestamp < MAX_PAUSE && lastEntry.annotationEquals(annotation.map(_.id)) =>
             val time = current - lastEntry.timestamp
             BrainTracing.logTime(user, lastEntry.copy(time = time, timestamp = current))
             val accumulated = lastEntry.copy(time = lastEntry.time + time, timestamp = current)
             timeTracker.update(_.setTimeEntries(accumulated :: tail))
           case _ =>
-            val entry = TimeEntry(0, current, tracing = tracing.map(_._id))
+            val entry = TimeEntry(0, current, annotation = annotation.map(_.id))
             timeTracker.update(_.addTimeEntry(entry))
         }
       case _ =>
-        val entry = TimeEntry(0, current, tracing = tracing.map(_._id))
+        val entry = TimeEntry(0, current, annotation = annotation.map(_.id))
         insertOne(TimeTracking(user._id, List(entry)))
     }
   }

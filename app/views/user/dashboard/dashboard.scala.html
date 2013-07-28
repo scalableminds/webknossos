@@ -1,8 +1,7 @@
-@( explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[models.binary.DataSet], hasAnOpenTask: Boolean)(implicit session: brainflight.view.AuthedSessionData)
+@( explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container" id="dashboard">
-
     <div class="tabbable" id="tabbable-dashboard">
       <ul class="nav nav-tabs">
         <li class="active"><a href="#tab-tasks" data-toggle="tab">Tasks</a></li>
@@ -32,8 +31,8 @@
               </tr>
             </thead>
             <tbody>
-            @userTasks.map{ case (task, tracing) => 
-              @taskTracingTableItem(task, tracing)
+            @userTasks.map{ case (task, annotation) => 
+              @taskAnnotationTableItem(task, annotation)
             }
             </tbody>
           </table>
@@ -48,12 +47,20 @@
               <button type="submit" class="btn"><i class="icon-upload"></i> Upload NML & explore</button>
             }
             <div class="divider-vertical"></div>
-            @helper.form(action = controllers.routes.TracingController.createExplorational, 'class -> "form-inline inline-block") {
-              <select name="dataSetId">
-                @dataSets.map{ d => 
-                  <option value="@d.id"> @d.name </option>
+            @helper.form(action = controllers.routes.AnnotationController.createExplorational, 'class -> "form-inline inline-block") {
+              <select name="dataSetName">
+                @dataSets.map{ d =>
+                  <option value="@d.name"> @d.name </option>
                 }
               </select>
+              <label class="radio inline">
+                <input type="radio" name="contentType" value="skeletonTracing" checked>
+                Skeleton
+              </label>
+              <label class="radio inline">
+                <input type="radio" name="contentType" value="volumeTracing">
+                Volume
+              </label>
               <button type="submit" class="btn"><i class="icon-search"></i> Explore data set</button>
             }
           </div>
@@ -64,15 +71,15 @@
                 <th> # </th>
                 <th> Name </th>
                 <th> DataSet </th>
-                <th> Tracing Stats </th>
-                <th> Tracing-Type </th>
+                <th> Stats </th>
+                <th> Type </th>
                 <th> Last edited </th>
                 <th> </th>
               </tr>
             </thead>
             <tbody>
-            @explorativeTracings.map{ tracing => 
-              @explorativeTracingTableItem(tracing)
+            @explorativeAnnotations.map{ annotation => 
+              @explorativeAnnotationTableItem(annotation)
             }
             </tbody>
           </table>

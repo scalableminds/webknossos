@@ -29,8 +29,14 @@ class BasicDAO[T <: AnyRef](collectionName: String, connection: MongoDB = DB.con
     remove(MongoDBObject.empty)
   
   def findOneById(id: String): Option[T] = {
+    withValidId(id){ id =>
+      findOneById(id)
+    }
+  }
+
+  def withValidId[A](id: String)(f: ObjectId => Option[A]): Option[A] = {
     if (ObjectId.isValid(id))
-      findOneById(new ObjectId(id))
+     f(new ObjectId(id))
     else
       None
   }

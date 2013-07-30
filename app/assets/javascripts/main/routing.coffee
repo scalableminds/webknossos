@@ -3,7 +3,7 @@ jquery : $
 underscore : _
 libs/toast : Toast
 libs/keyboard : KeyboardJS
-libs/input : Input
+libs/panZoomSVG : PanZoomSVG
 main/routing_utils : RoutingUtils
 ###
 
@@ -74,7 +74,7 @@ $ ->
 
     "admin.task.taskOverview" : ->
 
-      require [ "worker!libs/viz", "svgpan" ], (VizWorker, svgPan) ->
+      require [ "worker!libs/viz" ], (VizWorker) ->
 
         graphSource = $("#graphData").html().replace( /"[^"]+"/gm, (a) -> a.replace(" "," ") )
         userData = JSON.parse($("#userData").html())
@@ -102,48 +102,12 @@ $ ->
 
             #reset some attributes before invoking panZoom plugin
             $svg = $(".graph.well").find("svg")
-            $svg[0].setAttribute("viewBox", "0 0 0 0")
+            #$svg[0].setAttribute("viewBox", "0 0 0 0")
             $svg[0].setAttribute("width", "100%")
             $svg[0].setAttribute("height", "100%")
             $svg.css("max-width", "100%")
 
-            #$svg.svgPan("graph1")
-            panZoom = (delta, position) ->
-
-              svgElement = $svg[0]
-              
-              if position
-
-                mouse =
-                  x: position[0] - $svg.offset().left
-                  y: position[1] - $svg.offset().top
-
-              else
-
-                mouse =
-                  x: $svg.width() / 2
-                  y: $svg.height() / 2
-
-              scale = 1 #zoomLevel / @oldZoomLevel
-
-              p = svgElement.createSVGPoint()
-              p.x = mouse.x
-              p.y = mouse.y
-
-              p.matrixTransform(@transformationGroup.getCTM().inverse())
-
-              transformationMatrix = svgElement.createSVGMatrix()
-                .translate(p.x, p.y)
-                .scale(scale)
-                .translate(-p.x, -p.y)
-
-              matrix = svgElement.getCTM().multiply(transformationMatrix)
-              matrixString = "#{matrix.a} #{matrix.b} #{matrix.c} #{matrix.d} #{matrix.e} #{matrix.f}"
-              $svg.attr("transform", "matrix(#{matrixString})")
-              #@oldZoomLevel = zoomLevel
-
-            mouse = new Input.Mouse($svg) 
-            mouse.on("leftDownMove", panZoom)
+            new PanZoomSVG($svg) 
 
           (error) ->
             $(".graph").html("<i class=\"icon-warning-sign\"></i> #{error.replace(/\n/g,"<br>")}")

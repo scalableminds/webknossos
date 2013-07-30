@@ -17,7 +17,6 @@ require.config
     "dat" : "libs/dat.gui.min"
     "coffee-script" : "libs/coffee-script-1.4.0.min"
     "qassert" : "libs/qassert"
-    "svgpan" : "http://talos.github.com/jquery-svgpan/jquery-svgpan"
 
   shim :
     "underscore" :

@@ -25,8 +25,7 @@ object Global extends GlobalSettings {
       val conf = Play.current.configuration
       implicit val sys = Akka.system(app)
       implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds)
-      new File("knowledge").mkdir
-      (DirectoryWatcher ? StartWatching(conf.getString("knowledge.folder") getOrElse "knowledge")).onSuccess {
+      (DirectoryWatcher ? StartWatching(conf.getString("bindata.folder") getOrElse "binaryData")).onSuccess {
         case x =>
           if (Play.current.mode == Mode.Dev) {
             //BasicEvolution.runDBEvolution()

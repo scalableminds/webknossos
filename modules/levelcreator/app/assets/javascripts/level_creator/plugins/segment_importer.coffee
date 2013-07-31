@@ -493,4 +493,6 @@ class SegmentImporter
   setProbability: (segments, mission) ->
 
     for segment in segments
-      segment.probability = _.find(mission.possibleEnds, (m) => m.id is segment.value).probability 
+      es = _.find(mission.possibleEnds, (m) => m.id is segment.value)
+      if es?
+        segment.probability = es.probability

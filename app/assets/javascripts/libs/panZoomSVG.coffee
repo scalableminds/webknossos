@@ -16,6 +16,8 @@ class PanZoomSVG
     @buffer = 0
     @mouseDown = false
     @oldZoomLevel = 1
+    @oldMouse = null
+    @zoom = 1
 
     $el
       .on("mousedown", @mouseDownHandler)
@@ -23,8 +25,19 @@ class PanZoomSVG
       .on("mousemove", @mouseMoveHandler)
       .on("mousewheel", @mouseWheelHandler)
 
-  mouseDownHandler : => @mouseDown = true; return
+    #find the first group to apply all transformations to
+    @svgElement = $el.find("#graph1")[0]
+    @offset = $el.find("#graph1").offset()
+    @svgRoot = $el[0]
+
   mouseUpHandler : => @mouseDown = false; return
+  mouseDownHandler : (event) => 
+    
+    @mouseDown = true
+    @startMouse = @mouseToSVGLocalCoordinates(event)
+    @startMatrix = @svgElement.getCTM()
+    
+
   mouseWheelHandler : (event) =>
   
     event.preventDefault()
@@ -43,15 +56,40 @@ class PanZoomSVG
 
       buffer = buffer % BUFFER_THRESHOLD
 
-      @panZoom([ pageX, pageY ], wheelDelta)
+      @zoom += wheelDelta
+      @panZoom( {x: pageX, y: pageY }, @zoom)
+      console.log wheelDelta
   
 
   mouseMoveHandler : (event) =>
 
     event.preventDefault()
-    return unless @mouseDown
+    return unless @mouseDown 
 
-    @panZoom([ event.pageX, event.pageY ], @oldZoomLevel)
+    @pan(event)
+
+
+  pan : (event) =>
+
+    position = @mouseToSVGLocalCoordinates(event, @startMatrix.inverse())
+
+    delta = 
+      x: position.x - @startMouse.x,
+      y: position.y - @startMouse.y
+
+    transformationMatrix = @startMatrix.translate(delta.x, delta.y)
+    @setCTM(transformationMatrix)
+
+
+  mouseToSVGLocalCoordinates : (event, matrix) ->
+
+    p = @svgRoot.createSVGPoint()
+
+    p.x = event.pageX - @offset.left
+    p.y = event.pageY - @offset.top
+
+    transformationMatrix = matrix ? @svgElement.getCTM().inverse()
+    p.matrixTransform(transformationMatrix)
 
 
   panZoom : (position, zoomLevel) ->
@@ -62,8 +100,8 @@ class PanZoomSVG
     if position
 
       mouse =
-        x: position[0] - $el.offset().left
-        y: position[1] - $el.offset().top
+        x: position.x - $el.offset().left
+        y: position.y - $el.offset().top
 
     else
 
@@ -73,7 +111,7 @@ class PanZoomSVG
 
     scale = zoomLevel / @oldZoomLevel
 
-    p = svgElement.createSVGPoint()
+    p = @svgRoot.createSVGPoint()
     p.x = mouse.x
     p.y = mouse.y
 
@@ -85,6 +123,11 @@ class PanZoomSVG
       .translate(-p.x, -p.y)
 
     matrix = svgElement.getCTM().multiply(transformationMatrix)
-    matrixString = "#{matrix.a} #{matrix.b} #{matrix.c} #{matrix.d} #{matrix.e} #{matrix.f}"
-    $el.attr("transform", "matrix(#{matrixString})")
+    @setCTM(matrix)
     @oldZoomLevel = zoomLevel
+
+
+  setCTM : (matrix) ->
+
+    matrixString = "#{matrix.a} #{matrix.b} #{matrix.c} #{matrix.d} #{matrix.e} #{matrix.f}"
+    @$el.find("#graph1").attr("transform", "matrix(#{matrixString})")

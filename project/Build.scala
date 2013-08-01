@@ -4,6 +4,12 @@ import com.typesafe.config._
 import PlayProject._
 
 object ApplicationBuild extends Build {
+  val coffeeCmd = 
+    if(System.getProperty("os.name").startsWith("Windows")) 
+      "cmd /C coffee -p"
+    else
+      "coffee -p"
+
   val conf = ConfigFactory.parseFile(new File("conf/application.conf"))
 
   val appName = conf.getString("application.name").toLowerCase
@@ -89,7 +95,7 @@ object ApplicationBuild extends Build {
   lazy val oxalis: Project = play.Project(appName, appVersion, oxalisDependencies).settings(
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
-    coffeescriptOptions := Seq(/*"minify",*/ "native", "coffee -p"),
+    coffeescriptOptions := Seq(/*"minify",*/ "native", coffeeCmd),
     //requireJs := Seq("main"),
     //requireJsShim += "main.js",
     resolvers ++= dependencyResolvers,
@@ -101,7 +107,7 @@ object ApplicationBuild extends Build {
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     resolvers ++= dependencyResolvers,
-    coffeescriptOptions := Seq("native", "coffee -p"),
+    coffeescriptOptions := Seq("native", coffeeCmd),
     playAssetsDirectories ++= Seq(
       file("modules") / "shellgame" / "shellgame-assets",
       file("data")
@@ -111,7 +117,7 @@ object ApplicationBuild extends Build {
   lazy val datastore: Project = Project("datastore", file("modules") / "datastore", dependencies = Seq(oxalis)).settings(
     libraryDependencies ++= dataStoreDependencies,
     resolvers ++= dependencyResolvers,
-    coffeescriptOptions := Seq("native", "coffee -p"),
+    coffeescriptOptions := Seq("native", coffeeCmd),
     scalaVersion := "2.10.0"
   ).aggregate(oxalis)
 
@@ -120,7 +126,7 @@ object ApplicationBuild extends Build {
     templatesImport += "oxalis.view._",
     resolvers ++= dependencyResolvers,
     // offline := true,
-    coffeescriptOptions := Seq("native", "coffee -p")
+    coffeescriptOptions := Seq("native", coffeeCmd)
   ).dependsOn(braingamesUtil, braingamesBinary, oxalis).aggregate(braingamesUtil, braingamesBinary, oxalis)
 
   lazy val stackrenderer = play.Project("stackrenderer", "0.1", stackrendererDependencies, path = file("modules") / "stackrenderer").settings(
@@ -131,7 +137,7 @@ object ApplicationBuild extends Build {
     templatesImport += "oxalis.view.helpers._",
     templatesImport += "oxalis.view._",
     resolvers ++= dependencyResolvers,
-    coffeescriptOptions := Seq("native", "coffee -p")
+    coffeescriptOptions := Seq("native", coffeeCmd)
   ).dependsOn(oxalis).aggregate(oxalis)
 }
             

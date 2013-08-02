@@ -151,13 +151,13 @@ object NMLIO extends Controller with Secured with TextUtils {
     prettyPrinter.format(Xml.toXML(t))
   }
 
-  def zipTracings(tracings: List[Tracing], zipFileName: String) = {
+  def zipTracings(tracings: List[Tracing]) = {
     val zipStreams = tracings.par.map { tracing =>
       val tracingStream =
         loadTracingStream(tracing) getOrElse tracingToNMLStream(tracing)
       tracingStream -> (SavedTracingInformationHandler.nameForTracing(tracing) + ".nml")
     }.seq
-    val zipped = new TemporaryFile(new File(normalize(zipFileName)))
+    val zipped = new TemporaryFile(File.createTempFile("nml",".zip"))
     ZipIO.zip(zipStreams, new BufferedOutputStream(new FileOutputStream(zipped.file)))
     zipped
   }
@@ -170,10 +170,12 @@ object NMLIO extends Controller with Secured with TextUtils {
       val tracings = Task
         .findAllByProject(project.name)
         .flatMap(_.tracings.filter(_.state.isFinished))
-
-      val zipped = zipTracings(tracings, projectName + "_nmls.zip")
+      val zipped = zipTracings(tracings)
       Logger.debug(s"Zipping took: ${System.currentTimeMillis - t} ms")
-      Ok.sendFile(zipped.file)
+      Ok.sendFile(
+        content = zipped.file,
+        fileName = _ => normalize(projectName + "_nmls.zip")
+      )
     }
   }
 
@@ -182,8 +184,11 @@ object NMLIO extends Controller with Secured with TextUtils {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {
       val tracings = task.tracings.filter(_.state.isFinished)
-      val zipped = zipTracings(tracings, task.id + "_nmls.zip")
-      Ok.sendFile(zipped.file)
+      val zipped = zipTracings(tracings)
+      Ok.sendFile(
+        content = zipped.file,
+        fileName = _ => normalize(task.id + "_nmls.zip")
+      )
     }
   }
 
@@ -192,8 +197,11 @@ object NMLIO extends Controller with Secured with TextUtils {
       user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
       val tracings = Tracing.findFor(user, TracingType.Task).filter(_.state.isFinished)
-      val zipped = zipTracings(tracings, user.abreviatedName + "_nmls.zip")
-      Ok.sendFile(zipped.file)
+      val zipped = zipTracings(tracings)
+      Ok.sendFile(
+          content = zipped.file,
+          fileName = _ => normalize(user.abreviatedName + "_nmls.zip")
+      )
     }
   }
 }

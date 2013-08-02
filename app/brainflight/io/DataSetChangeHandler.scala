@@ -133,7 +133,7 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
     if (f.isDirectory) {
       Logger.trace(s"dataSetFromFile: $f")
       val dataSetInfo = new File(f.getPath + "/settings.json")
-      if (dataSetInfo.isFile) {
+      /*if (dataSetInfo.isFile) {
         JsonFromFile(dataSetInfo).validate[BareDataSet] match {
           case JsSuccess(bareDataSet, _) => 
           val colorLayerOpt = getColorLayer(f)
@@ -146,7 +146,7 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
             Logger.error(error.toString)
             None
         }
-      } else {
+      } else {*/
         for {
           layer <- listDirectories(f).find(dir => dir.getName == "color")
           resolutionDirectories = listDirectories(layer)
@@ -161,7 +161,7 @@ trait DataSetChangeHandler extends DirectoryChangeHandler with DataSetDAOLike {
           val maxCoordinates = Point3D((xMax + 1) * 128, (yMax + 1) * 128, (zMax + 1) * 128)
           DataSet(f.getName(), f.getAbsolutePath(), maxCoordinates, colorLayer = ColorLayer(supportedResolutions = resolutions), allowedTeams = List(Team.default.name))
         }
-      }
+      //}
     } else None
   }
 }

@@ -28,6 +28,9 @@
       </span>
     }
   </td>
+  <td>
+      Tracked Time: @task.tracingTime.map(formatTimeHumanReadable).getOrElse("-")
+  </td>
   <td class="nowrap">
     <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="icon-download"></i> download </a>
   </td>

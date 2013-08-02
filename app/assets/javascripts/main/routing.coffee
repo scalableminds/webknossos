@@ -102,7 +102,7 @@ $ ->
 
             #reset some attributes before invoking panZoom plugin
             $svg = $(".graph.well").find("svg")
-            $svg[0].setAttribute("viewBox", "")
+            $svg[0].removeAttribute("viewBox") #get rid of the troublemaker. messes up transformations
             $svg[0].setAttribute("width", "100%")
             $svg[0].setAttribute("height", "100%")
             $svg.css("max-width", "100%")

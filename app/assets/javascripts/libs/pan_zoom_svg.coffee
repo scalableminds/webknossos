@@ -67,7 +67,6 @@ class PanZoomSVG
     #   @buffer = buffer % BUFFER_THRESHOLD
 
     @panZoom( {x: pageX, y: pageY }, @zoom)
-    console.log pageX, pageY
   
 
   mouseMoveHandler : (event) =>

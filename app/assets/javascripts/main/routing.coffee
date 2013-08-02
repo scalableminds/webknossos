@@ -3,7 +3,7 @@ jquery : $
 underscore : _
 libs/toast : Toast
 libs/keyboard : KeyboardJS
-libs/panZoomSVG : PanZoomSVG
+libs/pan_zoom_svg : PanZoomSVG
 main/routing_utils : RoutingUtils
 ###
 

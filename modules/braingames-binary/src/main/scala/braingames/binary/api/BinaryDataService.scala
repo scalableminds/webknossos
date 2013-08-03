@@ -42,6 +42,7 @@ import scala.util.Success
 import braingames.binary.models.DataSet
 import braingames.binary.SingleCubeRequest
 import braingames.io.StartWatching
+import java.io.File
 
 trait BinaryDataService extends DataSetService{
   implicit def system: ActorSystem
@@ -56,7 +57,9 @@ trait BinaryDataService extends DataSetService{
 
   lazy implicit val timeout = Timeout(config.getInt("braingames.binary.loadTimeout") seconds) // needed for `?` below
 
-  lazy val baseFolder = config.getString("braingames.binary.baseFolder")
+  lazy val baseFolder = {
+    new File(config.getString("braingames.binary.baseFolder")).getAbsolutePath
+  }
 
   val scaleFactors = Array(1, 1, 1)
 

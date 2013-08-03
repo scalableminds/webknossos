@@ -13,6 +13,7 @@ import braingames.util.ExtendedTypes.ExtendedString
 import oxalis.thirdparty.BrainTracing
 import models.annotation.{AnnotationLike, Annotation}
 import models.tracing.skeleton.SkeletonTracing
+import models.task.Task
 
 case class TimeEntry(time: Long, timestamp: Long, note: Option[String] = None, annotation: Option[String] = None) {
   val created = {
@@ -102,6 +103,10 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
     ((ds * 24 + hs) * 60 + ms) * 60000L
   }
 
+  def logTimeToTask(time: Long, taskOpt: Option[Task]) = {
+    taskOpt.map(task => Task.logTime(time, task))
+  }
+
   def logUserAction(user: User, annotation: AnnotationLike): TimeTracking =
     logUserAction(user, Some(annotation))
 
@@ -113,6 +118,7 @@ object TimeTracking extends BasicDAO[TimeTracking]("timeTracking") {
           case lastEntry :: tail if current - lastEntry.timestamp < MAX_PAUSE && lastEntry.annotationEquals(annotation.map(_.id)) =>
             val time = current - lastEntry.timestamp
             BrainTracing.logTime(user, lastEntry.copy(time = time, timestamp = current))
+            logTimeToTask(time, annotation.flatMap(_.task))
             val accumulated = lastEntry.copy(time = lastEntry.time + time, timestamp = current)
             timeTracker.update(_.setTimeEntries(accumulated :: tail))
           case _ =>

@@ -137,7 +137,7 @@ object NMLIO extends Controller with Secured with TextUtils {
             .findAllByProject(project.name)
             .flatMap(_.annotations.filter(_.state.isFinished))
 
-          zipTracings(tracings, projectName + "_nmls.zip").map {
+          zipTracings(tracings, normalize(projectName + "_nmls.zip")).map {
             zipped =>
               Logger.debug(s"Zipping took: ${System.currentTimeMillis - t} ms")
               Ok.sendFile(zipped.file)
@@ -153,7 +153,7 @@ object NMLIO extends Controller with Secured with TextUtils {
           task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
         } yield {
           val annotations = task.annotations.filter(_.state.isFinished)
-          zipTracings(annotations, task.id + "_nmls.zip").map {
+          zipTracings(annotations, normalize(task.id + "_nmls.zip")).map {
             zipped =>
               Ok.sendFile(zipped.file)
           }
@@ -168,7 +168,7 @@ object NMLIO extends Controller with Secured with TextUtils {
           user <- User.findOneById(userId) ?~ Messages("user.notFound")
         } yield {
           val annotations = AnnotationDAO.findFor(user, AnnotationType.Task).filter(_.state.isFinished)
-          zipTracings(annotations, user.abreviatedName + "_nmls.zip").map {
+          zipTracings(annotations, normalize(user.abreviatedName + "_nmls.zip")).map {
             zipped =>
               Ok.sendFile(zipped.file)
           }

@@ -34,7 +34,7 @@ object DataSetController extends Controller with Secured {
       Async {
         DataSetDAO.findAll.map {
           dataSets =>
-            Ok(html.welcome(dataSets))
+            Ok(html.dataSets(dataSets))
         }
       }
   }

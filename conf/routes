@@ -27,8 +27,8 @@ GET           /user/configuration                                controllers.Use
 GET           /user/configuration/default                        controllers.UserController.defaultSettings
 
 # DataSets
-GET           /dataSets                                          controllers.DataSetController.list
-GET           /dataSets/:dataSetName/view                        controllers.DataSetController.view(dataSetName: String)
+GET           /datasets                                          controllers.DataSetController.list
+GET           /datasets/:dataSetName/view                        controllers.DataSetController.view(dataSetName: String)
 
 # Binary Data
 GET           /binary/ws                                         controllers.BinaryData.requestViaWebsocket( dataSetName: String, dataLayerName: String ?= "color", cubeSize: Int )

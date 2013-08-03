@@ -99,7 +99,7 @@ object BinaryData extends Controller with Secured {
       }
   }
 
-  def respondeWithImage(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: AuthenticatedRequest[_]) = {
+  def respondeWithImage(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: UserAwareRequest[_]) = {
     Async {
       val dataRequests = MultipleDataRequest(SingleDataRequest(resolution, Point3D(x, y, z), false))
 
@@ -124,7 +124,7 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def requestImage(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated(parser = parse.raw) {
+  def requestImage(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = UserAwareAction(parser = parse.raw) {
     implicit request =>
       respondeWithImage(dataSetName, dataLayerName, cubeSize, imagesPerRow, x, y, z, resolution)
   }

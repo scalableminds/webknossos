@@ -1,0 +1,16 @@
+@(datasets: List[braingames.binary.models.DataSet])(implicit session: oxalis.view.SessionData)
+
+@import braingames.util.Reflect
+
+@main() {
+  <div id="dataSets" class="container">
+    @datasets.groupBy(_.owningTeam).map{ case (team, ds) =>
+      <h3>@team.replace("/", " ")</h3>
+      @ds.map{ dataSet =>
+        @dataSet.name
+        <a href="@controllers.routes.DataSetController.view(dataSet.name)">View</a> <br />
+      }
+    }
+  </div>
+}
+

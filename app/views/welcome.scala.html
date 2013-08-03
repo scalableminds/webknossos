@@ -1,0 +1,14 @@
+@(datasets: List[braingames.binary.models.DataSet])
+
+@import braingames.util.Reflect
+
+@pageSkeleton {
+  @paleHeader()
+
+  <div id="main-container" data-template="@Reflect.getCallerClass.map(_(7).getName())">
+  @datasets.map { dataSet =>
+    <a href="@controllers.routes.DataSetController.view(dataSet.name)">@dataSet.name</a> <br />
+  }
+  </div>
+}
+

@@ -70,6 +70,15 @@ trait DBAccessContext {
   def globalAccess: Boolean = false
 }
 
+object DBAccessContext{
+  def apply(payload: Option[DBAccessContextPayload]) = {
+    payload match{
+      case Some(p) => AuthedAccessContext(p)
+      case _ => UnAuthedAccessContext
+    }
+  }
+}
+
 trait DBAccessContextPayload
 
 trait MongoDAO[T] extends DAO[T] with MongoHelpers {

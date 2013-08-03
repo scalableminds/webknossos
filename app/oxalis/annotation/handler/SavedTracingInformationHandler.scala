@@ -4,6 +4,10 @@ import net.liftweb.common.Box
 import play.api.i18n.Messages
 import braingames.util.TextUtils._
 import models.annotation.{AnnotationDAO, AnnotationLike, Annotation}
+import braingames.reactivemongo.DBAccessContext
+import scala.concurrent.Future
+import braingames.mvc.Fox
+import play.api.libs.concurrent.Execution.Implicits._
 
 object SavedTracingInformationHandler extends AnnotationInformationHandler {
 
@@ -23,12 +27,13 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler {
       a.id
   }
 
-  def provideAnnotation(annotationId: String): Box[Annotation] = {
-    for {
-      annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
-    } yield {
-      annotation
-    }
+  def provideAnnotation(annotationId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    Future.successful(
+      for {
+        annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
+      } yield {
+        annotation
+      })
   }
 
 }

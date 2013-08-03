@@ -75,7 +75,7 @@ object Authentication extends Controller with Secured {
               Application.Mailer ! Send(
                 DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBresult))
               if (autoVerify) {
-                Redirect(controllers.routes.AnnotationController.index)
+                Redirect(controllers.routes.Application.index)
                   .withSession(Secured.createSession(user))
               } else {
                 Redirect(controllers.routes.Authentication.login)
@@ -114,7 +114,7 @@ object Authentication extends Controller with Secured {
         {
           case (email, password) =>
             val user = User.findLocalByEmail(email.toLowerCase).get
-            Redirect(controllers.routes.AnnotationController.index)
+            Redirect(controllers.routes.Application.index)
               .withSession(Secured.createSession(user))
         })
   }

@@ -19,7 +19,7 @@ import play.api.libs.json.JsValue
 import play.libs.Akka._
 import models.security.Role
 import models.binary._
-import oxalis.security.{AuthenticatedRequest, Secured}
+import oxalis.security.{UserAwareRequest, AuthenticatedRequest, Secured}
 import scala.concurrent.Future
 import braingames.geometry.Point3D
 import akka.pattern.AskTimeoutException
@@ -52,7 +52,7 @@ object BinaryData extends Controller with Secured {
   implicit val dispatcher = Akka.system.dispatcher
   val scaleFactors = Array(1, 1, 1)
 
-  def requestData(dataSetName: String, dataLayerName: String, cubeSize: Int, dataRequest: MultipleDataRequest)(implicit request: AuthenticatedRequest[_]): Future[Box[Array[Byte]]] = {
+  def requestData(dataSetName: String, dataLayerName: String, cubeSize: Int, dataRequest: MultipleDataRequest)(implicit request: UserAwareRequest[_]): Future[Box[Array[Byte]]] = {
     DataSetDAO.findOneByName(dataSetName).flatMap {
       case Some(dataSet) =>
         BinaryDataService.handleMultiDataRequest(dataRequest, dataSet, DataLayerId(dataLayerName), cubeSize).map(option2Box)
@@ -76,7 +76,7 @@ object BinaryData extends Controller with Secured {
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
-  def requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = Authenticated(parser = parse.raw) {
+  def requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = UserAwareAction(parser = parse.raw) {
     implicit request =>
       Async {
         (for {

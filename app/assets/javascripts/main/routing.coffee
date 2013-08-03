@@ -70,6 +70,19 @@ $ ->
 
         return
 
+    "tracing.view" : ->
+
+      require [
+        "./oxalis/controller"
+        "./libs/core_ext"
+        "three"
+        "stats"
+      ], (Controller) ->
+
+        oxalis = window.oxalis = new Controller()
+
+        return
+
 
     "admin.task.taskOverview" : ->
 

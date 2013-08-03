@@ -19,6 +19,12 @@ trait FlashMessages{
     def messageType = "success"
   }
 }
+
+trait SessionData{
+  def userOpt: Option[User]
+  def flash: Flash
+}
+
 case class UnAuthedSessionData(flash: Flash) extends SessionData {
   val userOpt = None
 }
@@ -26,8 +32,13 @@ case class AuthedSessionData(user: User, flash: Flash) extends SessionData {
   val userOpt = Some(user)
 }
 
-
-trait SessionData{
-  def userOpt: Option[User]
-  def flash: Flash
+object SessionData{
+  def apply(user: Option[User], flash: Flash) = {
+    user match{
+      case Some(u) =>
+        AuthedSessionData(u, flash)
+      case _ =>
+        UnAuthedSessionData(flash)
+    }
+  }
 }

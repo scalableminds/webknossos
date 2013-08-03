@@ -35,7 +35,7 @@ class ResultBox[T <: Result](b: Box[T]) {
   }
 }
 
-class Fox[A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext){
+class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext){
   val self = this
 
   def ?~>(s: String) =

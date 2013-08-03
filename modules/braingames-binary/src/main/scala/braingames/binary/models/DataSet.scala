@@ -11,6 +11,7 @@ import java.io.File
 case class DataSetSettings(
   name: String,
   scale: Scale,
+  allowedTeams: Option[List[String]],
   priority: Option[Int])
 
 case class DataSet(
@@ -45,7 +46,7 @@ case class DataSet(
       point.z / resolution)
 }
 
-object DataSetSettings extends SettingsFile with Function3[String, Scale, Option[Int], DataSetSettings]{
+object DataSetSettings extends SettingsFile with Function4[String, Scale, Option[List[String]], Option[Int], DataSetSettings]{
 
   val settingsFileName = "settings.json"
 
@@ -64,6 +65,7 @@ object DataSetSettings extends SettingsFile with Function3[String, Scale, Option
   def fromDataSet(dataSet: DataSet) = DataSetSettings(
     dataSet.name,
     dataSet.scale,
+    Some(dataSet.allowedTeams),
     Some(dataSet.priority)
   )
 

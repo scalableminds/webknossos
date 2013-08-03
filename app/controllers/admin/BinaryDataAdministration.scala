@@ -16,50 +16,17 @@ import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import models.security.Role
+import models.binary.DataSetDAO
 
 object BinaryDataAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
   
- // val dataInsertionActor = Akka.system.actorOf(Props(new BinaryData2DBActor))
-
-  implicit val timeout = Timeout(5 seconds)
-
-  def insertionProgress = Authenticated { implicit request =>
-    /*Async {
-      val future = dataInsertionActor ? InsertionState()
-      future
-        .recover {
-          case e: AskTimeoutException =>
-            Promise.pure(Map[DataSet, Double]())
-        }
-        .mapTo[Map[DataSet, Double]].map { states =>
-          Ok(Json.toJson(states.map {
-            case (dataSet, state) =>
-              dataSet.name -> state
-          }))
-        }
-    }*/
-    Ok
-  }
-
   def list = Authenticated { implicit request =>
-    Ok(html.admin.binary.binaryData())
-  }
-
-  def insertIntoDB(dataSetName: String) = Authenticated { implicit request =>
-    /*import oxalis.binary.GridDataStore
-    import akka.agent.Agent
-    import oxalis.binary.Data
-
-    implicit val system = Akka.system
-
-    for {
-      dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
-    } yield {
-      dataInsertionActor ! InsertBinary(dataSet)
-      Ok
-    }*/
-    Ok
+    Async{
+      DataSetDAO.findAll.map{ dataSets=>
+        Ok(html.admin.binary.binaryData(dataSets))
+      }
+    }
   }
 }

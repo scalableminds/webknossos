@@ -35,10 +35,31 @@ import braingames.binary.SingleCubeRequest
 import braingames.levelcreator.BinaryDataService
 import braingames.reactivemongo.GlobalDBAccess
 
-object BinaryData extends Controller with GlobalDBAccess{
+object BinaryData extends Controller with GlobalDBAccess with BinaryDataRequestHandler{
   val conf = Play.current.configuration
 
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds) // needed for `?` below
+
+  val binaryDataService = BinaryDataService
+
+  def viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) =
+    Action {
+      implicit request =>
+        Async {
+          for {
+            dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataset.notFound")
+            level <- Level.findOneById(levelId) ?~> Messages("level.notFound")
+            mission <- Mission.findOneById(missionId) ?~> Messages("mission.notFound")
+            result <- handleDataRequest(dataSet, dataLayerName, level, mission) ?~> "Data couldn'T be retireved"
+          } yield {
+            Ok(result)
+          }
+        }
+    }
+}
+
+trait BinaryDataRequestHandler {
+  val binaryDataService: braingames.binary.api.BinaryDataService
 
   def createStackCuboid(level: Level, mission: Mission) = {
 
@@ -68,20 +89,6 @@ object BinaryData extends Controller with GlobalDBAccess{
       useHalfByte = false,
       skipInterpolation = false))
 
-    BinaryDataService.handleSingleCubeRequest(dataRequest)
+    binaryDataService.handleSingleCubeRequest(dataRequest)
   }
-
-  def viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) =
-    Action { implicit request =>
-      Async {
-        for {
-          dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataset.notFound")
-          level <- Level.findOneById(levelId) ?~> Messages("level.notFound")
-          mission <- Mission.findOneById(missionId) ?~> Messages("mission.notFound")
-          result <- handleDataRequest(dataSet, dataLayerName, level, mission) ?~> "Data couldn'T be retireved"
-        } yield {
-          Ok(result)
-        }
-      }
-    }
 }

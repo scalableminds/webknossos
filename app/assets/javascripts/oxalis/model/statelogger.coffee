@@ -180,6 +180,13 @@ class StateLogger
       return @pushDeferred
 
     @pushDeferred = new $.Deferred()
+    # reject and null pushDeferred if the server didn't answer after 10 seconds
+    setTimeout(((version) =>
+      if @pushDeferred and version == @version
+        @pushDeferred.reject()
+        @pushDeferred = null
+        console.error "Server did take too long to answer"),
+      10000, @version)
 
     @committedDiffs = @committedDiffs.concat(@newDiffs)
     @newDiffs = []
@@ -214,8 +221,9 @@ class StateLogger
       @push()
       if (notifyOnFailure)
         @trigger("pushFailed", @failedPushCount >= 3 );
-      @pushDeferred.reject()
-      @pushDeferred = null
+      if @pushDeferred
+        @pushDeferred.reject()
+        @pushDeferred = null
 
     .done (response) =>
       
@@ -223,5 +231,6 @@ class StateLogger
       
       @version = response.version
       @committedDiffs = []
-      @pushDeferred.resolve()
-      @pushDeferred = null
+      if @pushDeferred
+        @pushDeferred.resolve()
+        @pushDeferred = null

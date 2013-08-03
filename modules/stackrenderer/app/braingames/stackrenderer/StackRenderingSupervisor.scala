@@ -14,8 +14,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import akka.routing.SmallestMailboxRouter
 import scala.concurrent.duration._
 import braingames.util.StartableActor
-import braingames.util.ExtendedTypes.ExtendedWSRequestHolder
-import braingames.util.ExtendedTypes.Auth
+import oxalis.util.ExtendedTypes.ExtendedWSRequestHolder
+import oxalis.util.ExtendedTypes.Auth
 import models.stackrenderer.TemporaryStores._
 import java.util.UUID
 import play.api.libs.ws.WS.WSRequestHolder

@@ -3,7 +3,11 @@ package braingames.geometry
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-case class Scale(x: Float, y: Float, z: Float)
+case class Scale(x: Float, y: Float, z: Float){
+  override def toString() = {
+    s"($x, $y, $z)"
+  }
+}
 
 object Scale{
   val scaleReads =

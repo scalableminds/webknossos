@@ -112,6 +112,9 @@ class Cube
 
   getDataBucketByZoomedAddress : (address) ->
 
+    if address[3] >= @ZOOM_STEP_COUNT
+      return null
+
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 

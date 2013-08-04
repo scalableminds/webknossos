@@ -7,6 +7,7 @@ fi
 
 USER=$1
 SERVER="levelcreator.org"
+CONTROL_PATH="/tmp/%r@%h:%p"
 BINARY_DATA_DIR="/home/deployboy/binaryData"
 LOCAL_BINARY_DATA_DIR="../../binaryData"
 
@@ -15,7 +16,7 @@ echo "cancel with CTRL+C"
 
 function download_segmentation_oriented() {
   echo "Which layer do you want to download?(including color data)"
-  select Layer in `ssh $USER@$SERVER ls $BINARY_DATA_DIR/$DataSet/segmentation | grep -P "^layer"`;
+  select Layer in `ssh $USER@$SERVER -S $CONTROL_PATH ls $BINARY_DATA_DIR/$DataSet/segmentation | grep -P "^layer"`;
   do
     ssh $USER@$SERVER find $BINARY_DATA_DIR/$DataSet/segmentation/$Layer -name "*.raw" -printf '+_%f\\n' > layerfiles
     rsync -rtvuczm --progress --filter=._layerfiles --filter=+_*.json --filter=-_*.raw "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet" $LOCAL_BINARY_DATA_DIR
@@ -25,8 +26,8 @@ function download_segmentation_oriented() {
 }
 
 function download_block_range() {
-  X_MIN=`ssh $USER@$SERVER ls $BINARY_DATA_DIR/$DataSet/color/1/ | grep -P "x[0-9]{4}" | cut -c2- | head -n 1` #| sed 's/0*//' | sed 's/^$/0/'`
-  X_MAX=`ssh $USER@$SERVER ls $BINARY_DATA_DIR/$DataSet/color/1/ | grep -P "x[0-9]{4}" | cut -c2- | tail -n 1` #| sed 's/0*//' | sed 's/^$/0/'`
+  X_MIN=`ssh $USER@$SERVER -S $CONTROL_PATH ls $BINARY_DATA_DIR/$DataSet/color/1/ | grep -P "x[0-9]{4}" | cut -c2- | head -n 1` #| sed 's/0*//' | sed 's/^$/0/'`
+  X_MAX=`ssh $USER@$SERVER -S $CONTROL_PATH ls $BINARY_DATA_DIR/$DataSet/color/1/ | grep -P "x[0-9]{4}" | cut -c2- | tail -n 1` #| sed 's/0*//' | sed 's/^$/0/'`
   echo "Dataset consists of x$X_MIN - x$X_MAX"
   echo "Lower bound for x?"
   read X_LOWER_B
@@ -41,8 +42,8 @@ function download_block_range() {
     exit 1
   fi
 
-  Y_MIN=`ssh $USER@$SERVER ls $BINARY_DATA_DIR/$DataSet/color/1/x$X_MIN/ | grep -P "y[0-9]{4}" | cut -c2- | head -n 1`
-  Y_MAX=`ssh $USER@$SERVER ls $BINARY_DATA_DIR/$DataSet/color/1/x$X_MIN/ | grep -P "y[0-9]{4}" | cut -c2- | tail -n 1`
+  Y_MIN=`ssh $USER@$SERVER -S $CONTROL_PATH ls $BINARY_DATA_DIR/$DataSet/color/1/x$X_MIN/ | grep -P "y[0-9]{4}" | cut -c2- | head -n 1`
+  Y_MAX=`ssh $USER@$SERVER -S $CONTROL_PATH ls $BINARY_DATA_DIR/$DataSet/color/1/x$X_MIN/ | grep -P "y[0-9]{4}" | cut -c2- | tail -n 1`
   echo "Dataset consists of y$Y_MIN - y$Y_MAX"
   echo "Lower bound for y?"
   read Y_LOWER_B
@@ -57,8 +58,8 @@ function download_block_range() {
     exit 1
   fi
 
-  Z_MIN=`ssh $USER@$SERVER ls $BINARY_DATA_DIR/$DataSet/color/1/x$X_MIN/y$Y_MIN/ | grep -P "z[0-9]{4}" | cut -c2- | head -n 1`
-  Z_MAX=`ssh $USER@$SERVER ls $BINARY_DATA_DIR/$DataSet/color/1/x$X_MIN/y$Y_MIN/ | grep -P "z[0-9]{4}" | cut -c2- | tail -n 1`
+  Z_MIN=`ssh $USER@$SERVER -S $CONTROL_PATH ls $BINARY_DATA_DIR/$DataSet/color/1/x$X_MIN/y$Y_MIN/ | grep -P "z[0-9]{4}" | cut -c2- | head -n 1`
+  Z_MAX=`ssh $USER@$SERVER -S $CONTROL_PATH ls $BINARY_DATA_DIR/$DataSet/color/1/x$X_MIN/y$Y_MIN/ | grep -P "z[0-9]{4}" | cut -c2- | tail -n 1`
   echo "Dataset consists of z$Z_MIN - z$Z_MAX"
   echo "Lower bound for z?"
   read Z_LOWER_B
@@ -85,7 +86,8 @@ function download_block_range() {
   rsync -rtvuczm --progress --filter=-_segmentation/ --filter=._tempfilter --filter=+_*.json --filter=-_*.raw  "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet" $LOCAL_BINARY_DATA_DIR
   rm tempfilter
 }
-
+echo "setting up ssh connection"
+ssh $USER@$SERVER -fN -M -S $CONTROL_PATH
 PS3="Your choice: "
 select DataSet in `ssh $USER@$SERVER ls $BINARY_DATA_DIR`;
 do
@@ -100,7 +102,7 @@ do
         "partial")
           RANGE=4
           RESOLUTION=1
-          ssh $USER@$SERVER test -d $BINARY_DATA_DIR/$DataSet/segmentation
+          ssh $USER@$SERVER -S $CONTROL_PATH test -d $BINARY_DATA_DIR/$DataSet/segmentation
 
           if [[ $? -eq 0 ]]; then
             echo "For $DataSet segmentation is available, do you want to download segmentation block oriented or do you want to give ranges for blocks?"

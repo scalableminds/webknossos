@@ -99,7 +99,7 @@ object BinaryData extends Controller with Secured {
       }
   }
 
-  def respondeWithImage(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: AuthenticatedRequest[_]) = {
+  def respondeWithSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: AuthenticatedRequest[_]) = {
     Async {
       val dataRequests = MultipleDataRequest(SingleDataRequest(resolution, Point3D(x, y, z), false))
 
@@ -113,7 +113,7 @@ object BinaryData extends Controller with Secured {
                 slideHeight = cubeSize,
                 imagesPerRow = imagesPerRow)
 
-              ImageCreator.createImage(byteArray, params).map {
+              ImageCreator.spriteSheetFor(byteArray, params).map {
                 combinedImage =>
                   val file = new JPEGWriter().writeToFile(combinedImage.image)
                   Ok.sendFile(file, true, _ => "test.jpg").withHeaders(
@@ -124,9 +124,9 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def requestImage(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated(parser = parse.raw) {
+  def requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated(parser = parse.raw) {
     implicit request =>
-      respondeWithImage(dataSetName, dataLayerName, cubeSize, imagesPerRow, x, y, z, resolution)
+      respondeWithSpriteSheet(dataSetName, dataLayerName, cubeSize, imagesPerRow, x, y, z, resolution)
   }
 
   /**

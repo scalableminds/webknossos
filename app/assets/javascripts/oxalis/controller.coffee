@@ -154,11 +154,6 @@ class Controller
       return
 
     keyboardControls = {
-      #View
-      "t" : => 
-        @view.toggleTheme()       
-        @abstractTreeController.drawTree()
-
       "q" : => @toggleFullScreen()
     }
 
@@ -171,6 +166,10 @@ class Controller
           @setMode(constants.MODE_ARBITRARY)
         "shift + 3" : =>
           @setMode(constants.MODE_VOLUME)
+          
+        "t" : => 
+          @view.toggleTheme()       
+          @abstractTreeController.drawTree()
 
         "m" : => # toggle between plane tracing and arbitrary tracing
 

@@ -127,6 +127,16 @@ class Controller
         event.preventDefault()
         @model.user.setValue("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
 
+      $("#switch-data").on "click", (event) =>
+        $("#switch-data").removeClass("btn-default").addClass("btn-primary")
+        $("#switch-segmentation").removeClass("btn-primary").addClass("btn-default")
+        @sceneController.setDataMode( constants.SHOW_DATA )
+
+      $("#switch-segmentation").on "click", (event) =>
+        $("#switch-segmentation").removeClass("btn-default").addClass("btn-primary")
+        $("#switch-data").removeClass("btn-primary").addClass("btn-default")
+        @sceneController.setDataMode( constants.SHOW_SEGMENTATION )
+
 
   initMouse : ->
 

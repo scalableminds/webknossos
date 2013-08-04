@@ -163,6 +163,11 @@ class SceneController
   toggleInactiveTreeVisibility : ->
     @skeleton.toggleInactiveTreeVisibility()
 
+  setDataMode : (mode) ->
+
+    for plane in @planes
+      plane.setDataMode( mode )
+
   stop : ->
     for plane in @planes
       plane.setVisible(false)

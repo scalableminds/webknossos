@@ -17,6 +17,9 @@ Constants =
   CONTROL_MODE_TRACE   : 0
   CONTROL_MODE_VIEW    : 1
 
+  SHOW_DATA            : 0
+  SHOW_SEGMENTATION    : 1
+
   THEME_BRIGHT         : 0
   THEME_DARK           : 1
 

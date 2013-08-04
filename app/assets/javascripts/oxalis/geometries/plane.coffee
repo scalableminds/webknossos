@@ -169,13 +169,13 @@ class Plane
             @flycam.hasNewTexture[@planeID] = true
 
         @model.binaryVolume.planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
-          if volumeBuffer
+          if dataBuffer
             # Generate test pattern
-            for i in [0...512]
-              for j in [0...512]
-                id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
-                volumeBuffer[(i * 512 + j)*3] = id
-            @plane.volumeTexture.image.data.set(volumeBuffer)
+            #for i in [0...512]
+            #  for j in [0...512]
+            #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
+            #    dataBuffer[(i * 512 + j)*3] = id
+            @plane.volumeTexture.image.data.set(dataBuffer)
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return

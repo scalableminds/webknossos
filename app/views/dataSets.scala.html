@@ -3,14 +3,28 @@
 @import braingames.util.Reflect
 
 @main() {
-  <div id="dataSets" class="container">
+  <div id="dataset-list" class="container">
     @datasets.groupBy(_.owningTeam).map{ case (team, ds) =>
       <h3>@team.replace("/", " ")</h3>
       @ds.map{ dataSet =>
-        @dataSet.name
-        <a href="@controllers.routes.DataSetController.view(dataSet.name)">View</a> <br />
+        <div class="dataset img-polaroid" style="width: 200px;">
+          <header class="clearfix">
+            <h4>@dataSet.name</h4>
+            <div class="dataset-buttons">
+              <!--<a href="/levels/512c70a6e4b004e525ec5635?missionId=51f90698e4b02ee135a87368" class="edit-button">
+                <i class="icon-pencil"></i>
+              </a>-->
+            </div>
+          </header>
+          <div class="dataset-display clearfix" style="height: 220px;">
+            <a href="@controllers.routes.DataSetController.view(dataSet.name)">
+              <i class="icon-eye-open"></i>
+            </a>
+          </div>
+        </div>
       }
     }
   </div>
+  @user.dashboard.credits()
 }
 

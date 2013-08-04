@@ -520,6 +520,77 @@ svg a:hover {
     }
 }
 
+#dataset-list {
+
+  .dataset {
+    float: left;
+    margin-right: 20px;
+    margin-bottom: 20px;
+    padding: 10px;
+    min-width: 250px;
+
+    form {
+      display: inline;
+    }
+    h4, .stack-buttons {
+      float: left;
+    }
+    .dataset-buttons {
+      margin: 10px;
+    }
+    .dataset-buttons a {
+      font-size: 0;
+      margin: 0 5px;
+
+      [class^="icon-"]::before,
+      [class*=" icon-"]::before {
+        font-size: 20px;
+      }
+    }
+    .dataset-buttons input[type=checkbox] {
+      margin: -7px 5px 0;
+    }
+    .dataset-buttons .busy .icon-retweet {
+      .rotating;
+    }
+  }
+
+  .dataset-display {
+
+    text-align: center;
+    position: relative;
+
+    a, .loading-indicator {
+      display: block;
+      font-size: 80px;
+      text-align: center;
+      top: 50%;
+      position: absolute;
+      margin-top: -40px;
+      width: 100%;
+      text-decoration: none;
+    }
+    input[type="range"] {
+      width: 100%;
+    }
+    canvas, input {
+      display: block;
+    }
+    canvas {
+      margin: 0 auto;
+    }
+    .stack-meta {
+      font-family: "Monaco", Consolas, "Courier New", monospace, sans-serif;
+      height: 50px;
+      overflow: auto;
+      resize: both;
+      text-align: left;
+      font-size: .8em;
+      line-height: 1.5em;
+    }
+  }
+}
+
 #task-selection-algoritm {
 
     position: relative;

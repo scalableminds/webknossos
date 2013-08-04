@@ -14,6 +14,9 @@ Constants =
   MODE_ARBITRARY       : 1
   MODE_VOLUME          : 2
 
+  CONTROL_MODE_TRACE   : 0
+  CONTROL_MODE_VIEW    : 1
+
   THEME_BRIGHT         : 0
   THEME_DARK           : 1
 

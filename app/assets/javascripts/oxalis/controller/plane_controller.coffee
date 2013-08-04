@@ -34,7 +34,7 @@ class PlaneController
       @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @gui, renderer, scene, @sceneController) ->
+  constructor : (@model, stats, @gui, renderer, scene, @sceneController, @controlMode) ->
 
     _.extend(@, new EventMixin())
 
@@ -80,7 +80,7 @@ class PlaneController
       )    
 
     objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }
-    @cellTracingController = new CellTracingController( objects )
+    @cellTracingController = new CellTracingController( objects, @controlMode )
     @volumeTracingController = new VolumeTracingController( objects )
 
     meshes = @sceneController.getMeshes()

@@ -47,11 +47,6 @@ class User
     _.extend(this, new EventMixin())
     _.extend(@, user)
 
-    # Data viewer hot fix
-    @displayPreviewXY = true
-    @displayPreviewYZ = true
-    @displayPreviewXZ = true
-
 
   setValue : (name, value) ->
 

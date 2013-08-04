@@ -23,7 +23,7 @@ class Controller
   allowedModes : []
   
 
-  constructor : ->
+  constructor : (@controlMode) ->
 
     _.extend(@, new EventMixin())
 
@@ -61,7 +61,7 @@ class Controller
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @model.flycam, @model)
 
-      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController)
+      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController, @controlMode)
 
       @arbitraryController = new ArbitraryController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController)
 
@@ -143,39 +143,34 @@ class Controller
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-    new Input.KeyboardNoLoop(
-
-      #"5" : =>
-        #@model.binary.cube.labelTestShape()
-        #@sceneController.addTestShape()
-      #  start = new Date().getTime()
-      #  @sceneController.showAllShapes([50,50,0], [150,150,30])
-      #  console.log( "Rendering Time: " + ( new Date().getTime() - start ))
-      #  @model.flycam.hasChanged = true
-
+    keyboardControls = {
       #View
       "t" : => 
         @view.toggleTheme()       
         @abstractTreeController.drawTree()
 
       "q" : => @toggleFullScreen()
+    }
 
-      #Set Mode, outcomment for release
-      #"shift + 1" : =>
-      #  @setMode(constants.MODE_PLANE_TRACING)
-      #"shift + 2" : =>
-      #  @setMode(constants.MODE_ARBITRARY)
-      #"shift + 3" : =>
-      #  @setMode(constants.MODE_VOLUME)
+    if @controlMode == constants.CONTROL_MODE_TRACE
+      _.extend( keyboardControls, {
+        #Set Mode, outcomment for release
+        "shift + 1" : =>
+          @setMode(constants.MODE_PLANE_TRACING)
+        "shift + 2" : =>
+          @setMode(constants.MODE_ARBITRARY)
+        "shift + 3" : =>
+          @setMode(constants.MODE_VOLUME)
 
-      #"m" : => # toggle between plane tracing and arbitrary tracing
+        "m" : => # toggle between plane tracing and arbitrary tracing
 
-      #  if @mode == constants.MODE_PLANE_TRACING
-      #    @setMode(constants.MODE_ARBITRARY)
-      #  else if @mode == constants.MODE_ARBITRARY
-      #    @setMode(constants.MODE_PLANE_TRACING)
-    )
+          if @mode == constants.MODE_PLANE_TRACING
+            @setMode(constants.MODE_ARBITRARY)
+          else if @mode == constants.MODE_ARBITRARY
+            @setMode(constants.MODE_PLANE_TRACING)
+      } )
 
+    new Input.KeyboardNoLoop( keyboardControls )
 
   setMode : (newMode) ->
 

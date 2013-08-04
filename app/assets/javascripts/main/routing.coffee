@@ -4,6 +4,7 @@ underscore : _
 libs/toast : Toast
 libs/keyboard : KeyboardJS
 main/routing_utils : RoutingUtils
+oxalis/constants : constants
 ###
 
 $ ->
@@ -66,7 +67,7 @@ $ ->
         "stats"
       ], (Controller) ->
 
-        oxalis = window.oxalis = new Controller()
+        oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
 
         return
 
@@ -79,7 +80,7 @@ $ ->
         "stats"
       ], (Controller) ->
 
-        oxalis = window.oxalis = new Controller()
+        oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_VIEW)
 
         return
 

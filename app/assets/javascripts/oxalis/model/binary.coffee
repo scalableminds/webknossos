@@ -71,6 +71,7 @@ class Binary
 
   ping : _.once (position, {zoomStep, area, activePlane}) ->
 
+    console.log "ping!", @dataLayerName
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
     @ping(position, {zoomStep, area, activePlane})
 

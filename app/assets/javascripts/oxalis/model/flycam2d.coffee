@@ -179,6 +179,13 @@ class Flycam2d
     #[offsets[0] - 1, offsets[1] - 1, offsets[0] + size * scaleArray[ind[0]] + 1, offsets[1] + size * scaleArray[ind[1]] + 1]
     [offsets[0], offsets[1], offsets[0] + size * scaleArray[ind[0]], offsets[1] + size * scaleArray[ind[1]]]
 
+  getAreas : ->
+
+    result = []
+    for i in [0..2]
+      result.push( @getArea(i) )
+    return result
+
   hasNewTextures : ->
     (@hasNewTexture[constants.PLANE_XY] or @hasNewTexture[constants.PLANE_YZ] or @hasNewTexture[constants.PLANE_XZ])
 

@@ -56,6 +56,9 @@ class Binary
       @contrastCurves[i] = contrastCurve
 
 
+    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
+
+
   updateContrastCurve : (brightness, contrast) ->
 
     contrastCurve = @contrastCurves[1]
@@ -69,14 +72,9 @@ class Binary
       plane.updateContrastCurves(@contrastCurves)
 
 
-  ping : _.once (position, {zoomStep, area, activePlane}) ->
+  pingImpl : (position, {zoomStep, area, activePlane}) ->
 
     console.log "ping!", @dataLayerName
-    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @ping(position, {zoomStep, area, activePlane})
-
-
-  pingImpl : (position, {zoomStep, area, activePlane}) ->
 
     if @lastPosition?
       

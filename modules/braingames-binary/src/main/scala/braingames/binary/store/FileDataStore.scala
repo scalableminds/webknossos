@@ -1,8 +1,6 @@
 package braingames.binary.store
 
 import java.io.{ FileNotFoundException, InputStream, FileInputStream, File }
-import akka.routing.Broadcast
-import akka.agent.Agent
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
 import braingames.binary.LoadBlock

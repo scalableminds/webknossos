@@ -37,12 +37,18 @@ object DataSetDAO extends BasicReactiveDAO[DataSet] {
 
   // Security
 
+  def allUserAccess = {
+    Json.obj("allowedTeams" -> TeamPath.All)
+  }
+
+  def teamRegexesForUser(user: User) = user.teams.map{t =>
+    Json.obj(
+      "allowedTeams" -> Json.obj("$regex" -> t.teamPath.toRegex))}
+
   override def findQueryFilter(implicit ctx: DBAccessContext) = {
     ctx.data match{
       case Some(user: User) =>
-        AllowIf(Json.obj("$or" -> user.teams.map(t =>
-          Json.obj(
-            "allowedTeams" -> Json.obj("$regex" -> t.teamPath.toRegex)))))
+        AllowIf(Json.obj("$or" -> JsArray(allUserAccess :: teamRegexesForUser(user))))
       case _ =>
         AllowIf(Json.obj(
           "allowedTeams" -> TeamPath.All))

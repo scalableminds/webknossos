@@ -12,23 +12,8 @@ import braingames.binary.models.{DataLayerId, DataSet}
  */
 trait BinaryDataHelpers {
 
-  val scaleFactors = Array(1, 1, 1)
-
   def resolutionFromExponent(resolutionExponent: Int) =
     math.pow(2, resolutionExponent).toInt
-
-  def scaledCuboid(position: Point3D, width: Int, height: Int, depth: Int, resolution: Int) = {
-    val scaledWidth = width / scaleFactors(0)
-    val scaledHeight = height / scaleFactors(1)
-    val scaledDepth = depth / scaleFactors(2)
-
-    val cubeCorner = Vector3D(
-      position.x - position.x % scaledWidth,
-      position.y - position.y % scaledHeight,
-      position.z - position.z % scaledDepth)
-
-    Cuboid(scaledWidth, scaledHeight, scaledDepth, resolution, Some(cubeCorner))
-  }
 
   def createDataRequest(dataSet: DataSet, dataLayerId: DataLayerId, width: Int, height: Int, depth: Int, parsed: ParsedRequest): DataRequest = {
     val settings = DataRequestSettings(
@@ -44,7 +29,7 @@ trait BinaryDataHelpers {
 
   def createDataRequest(dataSet: DataSet, dataLayerId: DataLayerId, width: Int, height: Int, depth: Int, position: Point3D, resolutionExponent: Int, settings: DataRequestSettings) = {
     val resolution = resolutionFromExponent(resolutionExponent)
-    val cuboid = scaledCuboid(position, width, height, depth, resolution)
+    val cuboid = Cuboid(width, height, depth,  resolution, Some(Vector3D(position)))
 
     DataRequest(
       dataSet,

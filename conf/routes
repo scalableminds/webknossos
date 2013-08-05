@@ -32,6 +32,7 @@ GET           /datasets/:dataSetName/layers/:dataLayerName/ws_data        contro
 POST          /datasets/:dataSetName/layers/:dataLayerName/data           controllers.BinaryData.requestViaAjax( dataSetName: String, dataLayerName: String, cubeSize: Int )
 GET           /datasets/:dataSetName/layers/:dataLayerName/data           controllers.BinaryData.requestViaAjaxDebug( dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
 GET           /datasets/:dataSetName/layers/:dataLayerName/sprite         controllers.BinaryData.requestSpriteSheet( dataSetName: String, dataLayerName: String, cubeSize: Int ?=128, imagesPerRow: Int ?= 8, x: Int, y: Int, z: Int, resolution: Int )
+GET           /datasets/:dataSetName/layers/:dataLayerName/image          controllers.BinaryData.requestImage( dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int )
 
 # Assertions
 GET           /assert/:assertionId                                        controllers.AssertionController.view(assertionId: String)

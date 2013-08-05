@@ -32,7 +32,12 @@ class Binary
       if layer.typ == @dataLayerName
         dataLayer = layer
 
-    upperBoundary = [dataLayer.maxCoordinates.width, dataLayer.maxCoordinates.height, dataLayer.maxCoordinates.depth]
+    lowerBoundary = [dataLayer.maxCoordinates.topLeft]
+    upperBoundary = [
+      dataLayer.maxCoordinates.width + dataLayer.maxCoordinates.topLeft[0]
+      dataLayer.maxCoordinates.height + dataLayer.maxCoordinates.topLeft[1]
+      dataLayer.maxCoordinates.depth + dataLayer.maxCoordinates.topLeft[2]
+    ]
 
     @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @BIT_DEPTH)
     @queue = new PullQueue(@dataSetName, @cube, @dataLayerName, @testData)

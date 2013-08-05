@@ -71,14 +71,14 @@ object TeamPath extends Function1[List[String], TeamPath]{
     val all = Pattern.quote(All)
 
     def regexify(elements: List[String]): String = elements match {
-      case All :: tail =>
-        separator + ".*" + regexify(tail)
+      case All :: _ =>
+        separator + ".*"
       case element :: tail =>
         val regexSaveElement = Pattern.quote(element)
         s"$separator($all|($regexSaveElement${regexify(tail)}))"
       case _ =>
-        ""
+        "("+separator+all+")?"
     }
-    "^"+regexify(elements)
+    "^"+regexify(elements)+"$"
   }
 }

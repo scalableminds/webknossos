@@ -2,11 +2,11 @@ package controllers
 
 import oxalis.security.Secured
 import play.api.mvc.Action
-import play.api.mvc._
 import play.api._
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
 import braingames.mail.Mailer
+import braingames.mvc.Controller
 
 object Application extends Controller with Secured {
   override val DefaultAccessRole = None
@@ -24,5 +24,9 @@ object Application extends Controller with Secured {
     Ok(
       Routes.javascriptRouter("jsRoutes")( //fill in stuff which should be able to be called from js
         controllers.admin.routes.javascript.NMLIO.upload)).as("text/javascript")
+  }
+
+  def impressum = Authenticated{ implicit request =>
+    Ok(views.html.impressum())
   }
 }

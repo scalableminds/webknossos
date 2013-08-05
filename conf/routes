@@ -5,6 +5,7 @@
 # The general pages
 GET           /                                                           controllers.Application.index
 GET           /dashboard                                                  controllers.UserController.dashboard
+GET           /impressum                                                  controllers.Application.impressum
 
 
 # Tasks
@@ -120,7 +121,7 @@ GET           /admin/tracings/:id/review                                  contro
 GET           /admin/tracings/:id/reopen                                  controllers.admin.TaskAdministration.reopen( id: String )
 
 # Binary Administration
-GET           /admin/dataSets                                             controllers.admin.BinaryDataAdministration.list
+GET           /admin/datasets                                             controllers.admin.BinaryDataAdministration.list
 
 # Javascript routing
 GET           /assets/javascripts/routes.js                               controllers.Application.javascriptRoutes

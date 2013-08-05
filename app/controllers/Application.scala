@@ -2,7 +2,6 @@ package controllers
 
 import oxalis.security.Secured
 import play.api.mvc.Action
-import play.api.mvc._
 import play.api._
 import play.api.libs.concurrent.Akka
 import akka.actor.Props
@@ -13,6 +12,7 @@ import scala.concurrent.Future
 import models.user.UsedAnnotation
 import models.basics.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.mvc.Controller
 
 object Application extends Controller with Secured {
   override val DefaultAccessRole = None
@@ -47,5 +47,9 @@ object Application extends Controller with Secured {
         case _ =>
           Redirect(routes.DataSetController.list)
       }
+  }
+
+  def impressum = UserAwareAction{ implicit request =>
+    Ok(views.html.impressum())
   }
 }

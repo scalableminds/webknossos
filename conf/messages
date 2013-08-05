@@ -5,6 +5,7 @@ notAllowed=None of your business
 
 binary.payload.notSupplied=No valid payload supplied
 binary.payload.invalid=Couldn''t parse payload
+binary.data.notFound=Couldn''t find the requested data
 
 email=Email
 password=Password
@@ -12,6 +13,8 @@ password.main=Password
 password.validation=Password (again)
 firstName=First Name
 lastName=Last Name
+
+image.create.failed=Failed to create image
 
 user.verified={0} has been verified
 user.verifyFailed=Couldn't verify user

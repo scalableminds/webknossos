@@ -162,8 +162,8 @@ class Plane
           if dataBuffer and @planeID < 2
             @plane.texture.image.data.set(dataBuffer)
             @flycam.hasNewTexture[@planeID] = true
-          if volumeBuffer and @planeID == 3
-            @plane.volumeTexture.image.data.set(volumeBuffer)
+      #    if volumeBuffer and @planeID == 3
+      #      @plane.volumeTexture.image.data.set(volumeBuffer)
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return

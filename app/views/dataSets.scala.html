@@ -17,8 +17,11 @@
             </div>
           </header>
           <div class="dataset-display clearfix" style="height: 220px;">
+            @dataSet.dataLayer("color").map{ colorLayer =>
+              <img src="@controllers.routes.BinaryData.requestImage(dataSet.name, "color", 200, 200, 200, 200, 0, math.log(colorLayer.resolutions.max).toInt)" />
+            }
             <a href="@controllers.routes.DataSetController.view(dataSet.name)">
-              <i class="icon-eye-open"></i>
+              <i class="icon-play"></i>
             </a>
           </div>
         </div>

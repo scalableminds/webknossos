@@ -120,7 +120,7 @@ class PullQueue
     # Measuring the time until response arrives to select appropriate preloading strategy 
     roundTripBeginTime = new Date()
 
-    @getLoadSocket().send(transmitBuffer)
+    @getLoadSocket(@dataLayerName).send(transmitBuffer)
       .pipe(
 
         (responseBuffer) =>
@@ -183,9 +183,9 @@ class PullQueue
   set4Bit : (@fourBit) ->
 
 
-  getLoadSocket : _.once ->
+  getLoadSocket : ->
 
-    new ArrayBufferSocket(
+    if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
         # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
@@ -194,6 +194,7 @@ class PullQueue
       requestBufferType : Float32Array
       responseBufferType : Uint8Array
     )
+
 
   getTestBucket : _.once ->
 

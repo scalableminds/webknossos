@@ -283,7 +283,7 @@ class Plane2D
           pixelRepeatP: repeatP
           rowRepeatP: repeatP
         }
-        @contrastCurves[bucket[3]]
+        null
       )
 
 

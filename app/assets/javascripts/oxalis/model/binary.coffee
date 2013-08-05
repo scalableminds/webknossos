@@ -74,8 +74,6 @@ class Binary
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
 
-    console.log "ping!", @dataLayerName
-
     if @lastPosition?
       
       @direction = [

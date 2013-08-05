@@ -38,7 +38,7 @@ class Plane
     # create texture
     texture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     texture.needsUpdate = true
-    volumeTexture       = new THREE.DataTexture(new Uint8Array(tWidth*tWidth*3), tWidth, tWidth, THREE.RGBFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+    volumeTexture       = new THREE.DataTexture(new Uint8Array(tWidth*tWidth*2), tWidth, tWidth, THREE.LuminanceAlphaFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     
     offset = new THREE.Vector2(0, 0)
     repeat = new THREE.Vector2(0, 0)
@@ -87,12 +87,12 @@ class Plane
       void main() {
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
         /* assume little endian order */
-        float id = (volumeColor[0] * 255.0) + (volumeColor[1] * 255.0) * 256.0 + (volumeColor[2] * 255.0) * 256.0 * 256.0;
+        float id = (volumeColor[0] * 255.0) + (volumeColor[3] * 255.0) * 256.0;
         float golden_ratio = 0.618033988749895;
 
         /* Color map (<= to fight rounding mistakes) */
         
-        if ( dataMode[0] == 1.0 && id > 0.1) {
+        if ( dataMode[0] == 1.0 && id > 0.1 ) {
           vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
           gl_FragColor = 0.7 * texture2D(texture, vUv * repeat + offset) + 0.3 * hsv_to_rgb( HSV );
         } else {
@@ -174,7 +174,7 @@ class Plane
             #for i in [0...512]
             #  for j in [0...512]
             #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
-            #    dataBuffer[(i * 512 + j)*3] = id
+            #    dataBuffer[(i * 512 + j)*2 + 1] = id
             @plane.volumeTexture.image.data.set(dataBuffer)
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)

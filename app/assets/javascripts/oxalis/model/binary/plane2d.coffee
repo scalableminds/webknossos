@@ -91,6 +91,7 @@ class Plane2D
 
     not (@dataTexture.ready and @volumeTexture.ready)
 
+
   getImpl : (position, zoomStep, area) ->
 
     [@getTexture(@dataTexture, position, zoomStep, area), @getTexture(@volumeTexture, position, zoomStep, area)]
@@ -283,7 +284,7 @@ class Plane2D
           pixelRepeatP: repeatP
           rowRepeatP: repeatP
         }
-        @contrastCurves[bucket[3]]
+        null
       )
 
 

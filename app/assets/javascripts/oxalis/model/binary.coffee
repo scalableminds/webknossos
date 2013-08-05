@@ -55,6 +55,8 @@ class Binary
     for i in [1..@cube.ZOOM_STEP_COUNT]
       @contrastCurves[i] = contrastCurve
 
+    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
+
 
   updateContrastCurve : (brightness, contrast) ->
 
@@ -67,12 +69,6 @@ class Binary
 
     for plane in @planes
       plane.updateContrastCurves(@contrastCurves)
-
-
-  ping : _.once (position, {zoomStep, area, activePlane}) ->
-
-    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @ping(position, {zoomStep, area, activePlane})
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->

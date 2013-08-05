@@ -3,13 +3,17 @@
 @main( ){
   
   <div class="container">
-    <div class="span7 offset2 space-top">
+    <div class="span9 offset1 space-top">
       <div class="well">
         
         @helper.form(routes.Authentication.registrate, 'class -> "form-horizontal") {
         
           <legend>Sign up</legend>
-          
+
+          <div class="alert alert-info">
+            Please be advised, registration is for lab members only. If you are not a lab member, you are not going to get verified.
+          </div>
+
           @form.errors.map { error =>
             <div class="alert alert-error">
               @Messages(error.message)

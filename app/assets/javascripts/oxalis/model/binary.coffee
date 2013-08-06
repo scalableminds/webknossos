@@ -79,7 +79,12 @@ class Binary
       plane.updateContrastCurves(@contrastCurves)
 
 
-  pingImpl : (position, {zoomStep, area, activePlane}) ->
+  pingImpl : (position, {zoomStep, area, activePlane}, doLoad = true) ->
+
+    unless doLoad
+
+      @queue.clear()
+      return
 
     if @lastPosition?
       

@@ -187,7 +187,6 @@ class PullQueue
 
 
   getLoadSocket : ->
-<<<<<<< HEAD
 
     if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
@@ -198,22 +197,6 @@ class PullQueue
       requestBufferType : Float32Array
       responseBufferType : Uint8Array
     )
-=======
-
-    if @socket?
-      @socket
-    else
-      @socket = new ArrayBufferSocket(
-        senders : [
-          # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-          # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-          new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetName=#{@dataSetName}&dataLayerName=#{@dataLayerName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        ]
-        requestBufferType : Float32Array
-        responseBufferType : Uint8Array
-      )
-
->>>>>>> rgb-2
 
 
   getTestBucket : _.once ->

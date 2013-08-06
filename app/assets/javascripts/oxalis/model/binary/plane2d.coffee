@@ -60,7 +60,7 @@ class Plane2D
     @cube.on "bucketLoaded", (bucket) =>
 
       # Checking, whether the new bucket intersects with the current layer
-      if @dataTexture.layer >> (@cube.BUCKET_SIZE_P + bucket[3]) == bucket[@W]
+      if @dataTexture.layer >> (@cube.BUCKET_SIZE_P + bucket[3]) == bucket[@W] and @dataTexture.topLeftBucket?
 
         # Get the tile, the bucket would be drawn to
         u = bucket[@U] - @dataTexture.topLeftBucket[@U]
@@ -90,6 +90,7 @@ class Plane2D
   hasChanged : ->
 
     not (@dataTexture.ready and @volumeTexture.ready)
+
 
   getImpl : (position, zoomStep, area) ->
 

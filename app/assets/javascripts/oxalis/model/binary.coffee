@@ -24,7 +24,7 @@ class Binary
   contrastCurves : []
 
 
-  constructor : (@user, dataSet, @TEXTURE_SIZE_P, @dataLayerName, @BIT_DEPTH) ->
+  constructor : (@user, dataSet, @TEXTURE_SIZE_P, @dataLayerName, @BIT_DEPTH, @testData = false) ->
 
     @dataSetName = dataSet.name
 
@@ -32,10 +32,15 @@ class Binary
       if layer.typ == @dataLayerName
         dataLayer = layer
 
-    upperBoundary = [dataLayer.maxCoordinates.width, dataLayer.maxCoordinates.height, dataLayer.maxCoordinates.depth]
+    lowerBoundary = [dataLayer.maxCoordinates.topLeft]
+    upperBoundary = [
+      dataLayer.maxCoordinates.width + dataLayer.maxCoordinates.topLeft[0]
+      dataLayer.maxCoordinates.height + dataLayer.maxCoordinates.topLeft[1]
+      dataLayer.maxCoordinates.depth + dataLayer.maxCoordinates.topLeft[2]
+    ]
 
     @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @BIT_DEPTH)
-    @queue = new PullQueue(@dataSetName, @cube, @dataLayerName)
+    @queue = new PullQueue(@dataSetName, @cube, @dataLayerName, @testData)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
     @pingStrategies3d = [new PingStrategy3d.DslSlow()]
@@ -54,6 +59,8 @@ class Binary
 
     for i in [1..@cube.ZOOM_STEP_COUNT]
       @contrastCurves[i] = contrastCurve
+
+    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 
 
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)

@@ -82,7 +82,7 @@ class PullQueue
 
   clear : ->
 
-    @queue.length = 0
+    @queue = []
 
 
   # Starting to download some buckets

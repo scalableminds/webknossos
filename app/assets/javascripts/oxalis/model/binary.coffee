@@ -101,7 +101,7 @@ class Binary
         if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
 
           pullQueue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
-          @queue.clear
+          @queue.clear()
           for entry in pullQueue
             @queue.insert(entry...)
 

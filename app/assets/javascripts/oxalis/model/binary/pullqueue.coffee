@@ -12,7 +12,7 @@ class PullQueue
   BUCKET_TIME_SMOOTHER : .125
 
   cube : null
-  queue : []
+  queue : null
 
   dataSetName : ""
 
@@ -21,6 +21,8 @@ class PullQueue
 
   
   constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
+
+    @queue = []
 
 
   swap : (a, b) ->

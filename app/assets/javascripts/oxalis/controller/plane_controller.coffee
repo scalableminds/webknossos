@@ -265,12 +265,14 @@ class PlaneController
 
   render : ->
 
-    for binary in [ @model.binary, @model.binaryVolume ]
-      binary.ping(@flycam.getPosition(), {
-        zoomStep:     @flycam.getIntegerZoomStep()
-        area:         @flycam.getAreas()
-        activePlane:  @flycam.getActivePlane()
-      })
+    binaries = [ @model.binary, @model.binaryVolume ]
+    for i in [0..1]
+      if i == 0 or i == @sceneController.dataMode
+        binaries[i].ping(@flycam.getPosition(), {
+          zoomStep:     @flycam.getIntegerZoomStep()
+          area:         @flycam.getAreas()
+          activePlane:  @flycam.getActivePlane()
+        })
     
     @model.route.globalPosition = @flycam.getPosition()
     @cameraController.update()

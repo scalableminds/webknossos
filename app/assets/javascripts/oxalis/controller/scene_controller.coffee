@@ -24,6 +24,7 @@ class SceneController
     @displayPlane   = [true, true, true]
     @planeShift     = [0, 0, 0]
     @showSkeleton   = true
+    @dataMode       = constants.SHOW_DATA
 
     @polygonFactory = new PolygonFactory( @model.binary.cube )
     @volumeMeshes   = []
@@ -47,7 +48,7 @@ class SceneController
     # create Meshes
     @planes = new Array(3)
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
-      @planes[i] = new Plane(constants.VIEWPORT_WIDTH, constants.TEXTURE_WIDTH, @flycam, i, @model)
+      @planes[i] = new Plane(constants.VIEWPORT_WIDTH, constants.TEXTURE_WIDTH, @flycam, i, @model, @dataMode)
 
     @planes[constants.PLANE_XY].setRotation(new THREE.Vector3( Math.PI , 0, 0))
     @planes[constants.PLANE_YZ].setRotation(new THREE.Vector3( Math.PI, 1/2 * Math.PI, 0))
@@ -163,10 +164,10 @@ class SceneController
   toggleInactiveTreeVisibility : ->
     @skeleton.toggleInactiveTreeVisibility()
 
-  setDataMode : (mode) ->
+  setDataMode : (@dataMode) ->
 
     for plane in @planes
-      plane.setDataMode( mode )
+      plane.setDataMode( @dataMode )
 
   stop : ->
     for plane in @planes

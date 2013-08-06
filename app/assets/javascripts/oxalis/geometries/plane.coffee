@@ -13,7 +13,7 @@ class Plane
   CROSSHAIR_COLORS : [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
   GRAY_CH_COLOR    : 0x222222
 
-  constructor : (planeWidth, textureWidth, flycam, planeID, model) ->
+  constructor : (planeWidth, textureWidth, flycam, planeID, model, dataMode) ->
     @flycam          = flycam
     @planeID         = planeID
     @model           = model
@@ -30,7 +30,7 @@ class Plane
     
     @createMeshes(planeWidth, textureWidth)
 
-  createMeshes : (pWidth, tWidth) ->
+  createMeshes : (pWidth, tWidth, dataMode) ->
     # create plane
     planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
     volumePlaneGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
@@ -101,7 +101,7 @@ class Plane
       }
         "
     # weird workaround to force JS to pass this as a reference...
-    @dataMode = new THREE.Vector2( constants.SHOW_DATA, 0)
+    @dataMode = new THREE.Vector2( dataMode, 0)
     uniforms = {
       texture : {type : "t", value : texture},
       volumeTexture : {type : "t", value : volumeTexture},
@@ -210,7 +210,6 @@ class Plane
     @crosshair[0].visible = @crosshair[1].visible = visible and @displayCosshair
 
   setDataMode : (mode) ->
-    console.log mode
     @dataMode.x = mode
     @flycam.hasChanged = true
 

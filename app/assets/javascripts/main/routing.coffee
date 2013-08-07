@@ -78,6 +78,7 @@ $ ->
         "./libs/core_ext"
         "three"
         "stats"
+        "slider"
       ], (Controller) ->
 
         oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_VIEW)

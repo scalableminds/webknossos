@@ -283,7 +283,7 @@ class PlaneController
 
     binaries = [ @model.binary, @model.binaryVolume ]
     for i in [0..1]
-      if i == 0 or i == @sceneController.dataMode
+      if (i == 0 and @sceneController.pingBinary) or (i == 1 and @sceneController.pingBinaryVolume)
         binaries[i].ping(@flycam.getPosition(), {
           zoomStep:     @flycam.getIntegerZoomStep()
           area:         @flycam.getAreas()

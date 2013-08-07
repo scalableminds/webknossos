@@ -30,7 +30,7 @@ class Plane
     
     @createMeshes(planeWidth, textureWidth)
 
-  createMeshes : (pWidth, tWidth, dataMode) ->
+  createMeshes : (pWidth, tWidth, alpha) ->
     # create plane
     planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
     volumePlaneGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
@@ -53,7 +53,7 @@ class Plane
     fragmentShader = "
       uniform sampler2D texture, volumeTexture;
       uniform vec2 offset, repeat;
-      uniform vec2 dataMode;
+      uniform vec2 alpha;
       varying vec2 vUv;
 
       /* Inspired from: https://github.com/McManning/WebGL-Platformer/blob/master/shaders/main.frag */
@@ -92,22 +92,22 @@ class Plane
 
         /* Color map (<= to fight rounding mistakes) */
         
-        if ( dataMode[0] == 1.0 && id > 0.1 ) {
+        if ( id > 0.1 ) {
           vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
-          gl_FragColor = 0.7 * texture2D(texture, vUv * repeat + offset) + 0.3 * hsv_to_rgb( HSV );
+          gl_FragColor = (1.0 - alpha[0]/100.0) * texture2D(texture, vUv * repeat + offset) + alpha[0]/100.0 * hsv_to_rgb( HSV );
         } else {
           gl_FragColor = texture2D(texture, vUv * repeat + offset);
         }
       }
         "
     # weird workaround to force JS to pass this as a reference...
-    @dataMode = new THREE.Vector2( dataMode, 0)
+    @alpha = new THREE.Vector2( alpha, 0)
     uniforms = {
       texture : {type : "t", value : texture},
       volumeTexture : {type : "t", value : volumeTexture},
       offset : {type : "v2", value : offset},
       repeat : {type : "v2", value : repeat},
-      dataMode : {type : "v2", value : @dataMode}
+      alpha : {type : "v2", value : @alpha}
     }
     textureMaterial = new THREE.ShaderMaterial({
       uniforms : uniforms,
@@ -210,8 +210,8 @@ class Plane
     @plane.visible = @prevBorders.visible = visible
     @crosshair[0].visible = @crosshair[1].visible = visible and @displayCosshair
 
-  setDataMode : (mode) ->
-    @dataMode.x = mode
+  setSegmentationAlpha : (alpha) ->
+    @alpha.x = alpha
     @flycam.hasChanged = true
 
   getMeshes : =>

@@ -20,11 +20,12 @@ class SceneController
   constructor : (@upperBoundary, @flycam, @model) ->
     _.extend(@, new EventMixin())
 
-    @current        = 0
-    @displayPlane   = [true, true, true]
-    @planeShift     = [0, 0, 0]
-    @showSkeleton   = true
-    @dataMode       = constants.SHOW_DATA
+    @current          = 0
+    @displayPlane     = [true, true, true]
+    @planeShift       = [0, 0, 0]
+    @showSkeleton     = true
+    @pingBinary       = true
+    @pingBinaryVolume = false
 
     @polygonFactory = new PolygonFactory( @model.binary.cube )
     @volumeMeshes   = []
@@ -48,7 +49,7 @@ class SceneController
     # create Meshes
     @planes = new Array(3)
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
-      @planes[i] = new Plane(constants.VIEWPORT_WIDTH, constants.TEXTURE_WIDTH, @flycam, i, @model, @dataMode)
+      @planes[i] = new Plane(constants.VIEWPORT_WIDTH, constants.TEXTURE_WIDTH, @flycam, i, @model, 0)
 
     @planes[constants.PLANE_XY].setRotation(new THREE.Vector3( Math.PI , 0, 0))
     @planes[constants.PLANE_YZ].setRotation(new THREE.Vector3( Math.PI, 1/2 * Math.PI, 0))
@@ -164,10 +165,13 @@ class SceneController
   toggleInactiveTreeVisibility : ->
     @skeleton.toggleInactiveTreeVisibility()
 
-  setDataMode : (@dataMode) ->
+  setSegmentationAlpha : (alpha) ->
 
     for plane in @planes
-      plane.setDataMode( @dataMode )
+      plane.setSegmentationAlpha( alpha )
+    @pingBinary = alpha != 100
+    @pingBinaryVolume = alpha != 0
+    #console.log "pingValues:", @pingBinary, @pingBinaryVolume
 
   stop : ->
     for plane in @planes

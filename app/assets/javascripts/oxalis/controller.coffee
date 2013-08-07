@@ -127,16 +127,17 @@ class Controller
         event.preventDefault()
         @model.user.setValue("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
 
-      $("#switch-data").on "click", (event) =>
-        $("#switch-data").removeClass("btn-default").addClass("btn-primary")
-        $("#switch-segmentation").removeClass("btn-primary").addClass("btn-default")
-        @sceneController.setDataMode( constants.SHOW_DATA )
-        @model.binaryVolume.pingStop()
+      if @controlMode == constants.CONTROL_MODE_VIEW
+        $('#alpha-slider').slider().on "slide", (event) =>
 
-      $("#switch-segmentation").on "click", (event) =>
-        $("#switch-segmentation").removeClass("btn-default").addClass("btn-primary")
-        $("#switch-data").removeClass("btn-primary").addClass("btn-default")
-        @sceneController.setDataMode( constants.SHOW_SEGMENTATION )
+          alpha = event.value
+          if (alpha == 0)
+            @model.binaryVolume.pingStop()
+            console.log "stop ping binaryVolume"
+          if (alpha == 100)
+            @model.binary.pingStop()
+            console.log "stop ping binary"
+          @sceneController.setSegmentationAlpha( alpha )
 
 
   initMouse : ->

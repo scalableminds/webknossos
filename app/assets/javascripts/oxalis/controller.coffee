@@ -133,10 +133,8 @@ class Controller
           alpha = event.value
           if (alpha == 0)
             @model.binaryVolume.pingStop()
-            console.log "stop ping binaryVolume"
           if (alpha == 100)
             @model.binary.pingStop()
-            console.log "stop ping binary"
           @sceneController.setSegmentationAlpha( alpha )
 
 

@@ -8,6 +8,7 @@
 ./model/flycam3d : Flycam3d
 ../libs/request : Request
 ../libs/toast : Toast
+./constants : constants
 ###
 
 # This is the model. It takes care of the data including the 
@@ -18,7 +19,7 @@
 
 class Model
 
-  initialize : (TEXTURE_SIZE_P, VIEWPORT_SIZE, DISTANCE_3D) =>
+  initialize : (TEXTURE_SIZE_P, VIEWPORT_SIZE, DISTANCE_3D, controlMode) =>
 
     tracingId = $("#container").data("tracing-id")
     tracingType = $("#container").data("tracing-type")
@@ -47,7 +48,8 @@ class Model
             @scaleInfo = new ScaleInfo(tracing.content.dataSet.scale)
             @binary = new Binary(@user, tracing.content.dataSet, TEXTURE_SIZE_P, "color", 8)
             @binaryVolume = new Binary(@user, tracing.content.dataSet, TEXTURE_SIZE_P, "volume", 16)
-            @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, @binary.cube.ZOOM_STEP_COUNT - 1, @user)      
+            zoomStepCount = if controlMode == constants.CONTROL_MODE_VIEW then 1 else @binary.cube.ZOOM_STEP_COUNT - 1
+            @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, zoomStepCount, @user)      
             @flycam3d = new Flycam3d(DISTANCE_3D, tracing.content.dataSet.scale)
             @flycam3d.on
               "changed" : (matrix) =>

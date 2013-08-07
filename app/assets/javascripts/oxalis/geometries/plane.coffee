@@ -176,6 +176,7 @@ class Plane
             #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
             #    dataBuffer[(i * 512 + j)*2 + 1] = id
             @plane.volumeTexture.image.data.set(dataBuffer)
+            @flycam.hasNewTexture[@planeID] = true
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return

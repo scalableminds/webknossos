@@ -1,8 +1,6 @@
 package braingames.binary
 
-import akka.actor.Actor
 import braingames.geometry.Point3D
-import scala.collection.mutable.ArrayBuffer
 import akka.agent.Agent
 import akka.actor._
 import akka.actor.ActorSystem
@@ -14,9 +12,6 @@ import akka.util.Timeout
 import scala.util._
 import scala.concurrent.duration._
 import scala.concurrent.Future
-import akka.pattern.pipe
-import com.typesafe.config.ConfigFactory
-import scala.collection.immutable.HashMap
 import akka.routing.RoundRobinRouter
 import java.util.UUID
 import com.typesafe.config.Config
@@ -26,14 +21,12 @@ import braingames.binary.models.DataLayerId
 import store._
 import braingames.binary.models.DataSetRepository
 import scala.concurrent.Await
-import scala.annotation.tailrec
 import braingames.binary.models.DataLayerSection
 import net.liftweb.common.Box
 import net.liftweb.common.{Failure => BoxFailure}
 import net.liftweb.common.Full
 import java.util.NoSuchElementException
 import braingames.util.BlockedArray3D
-import scala.reflect.ClassTag
 import braingames.util.ExtendedTypes.ExtendedArraySeq
 import braingames.util.ExtendedTypes.ExtendedDouble
 
@@ -84,7 +77,7 @@ class DataRequestActor(
   }
 
   def receive = {
-    case SingleCubeRequest(dataRequest) =>
+    case dataRequest: DataRequest =>
       val s = sender
       Future {
         load(dataRequest).onComplete {
@@ -96,9 +89,8 @@ class DataRequestActor(
             s! None
         }
       }
-    case MultiCubeRequest(requests) =>
-      val resultsPromise = Future.traverse(requests)(r =>
-        load(r.dataRequest))
+    case DataRequestCollection(requests) =>
+      val resultsPromise = Future.traverse(requests)(load)
       val s = sender
       resultsPromise.onComplete {
         case Success(results) =>
@@ -251,7 +243,7 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataRequest, lay
 
   @inline
   def interpolatedData(px: Double, py: Double, pz: Double) = {
-    if (dataRequest.skipInterpolation)
+    if (dataRequest.settings.skipInterpolation)
       byteLoader(Point3D(px.castToInt, py.castToInt, pz.castToInt))
     else
       layer.interpolator.interpolate(layer.bytesPerElement, byteLoader _)(Vector3D(px, py, pz))
@@ -261,7 +253,7 @@ class DataBlockCutter(block: BlockedArray3D[Byte], dataRequest: DataRequest, lay
     val result: Array[Byte] =
       cube.withContainingCoordinates(extendArrayBy = layer.bytesPerElement)(interpolatedData)
 
-    if (dataRequest.useHalfByte)
+    if (dataRequest.settings.useHalfByte)
       convertToHalfByte(result)
     else {
       result

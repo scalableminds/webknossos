@@ -9,6 +9,9 @@
         @helper.form(routes.Authentication.authenticate, 'class -> "form-horizontal") {
         
           <legend>Login</legend>
+          <div class="alert alert-info">
+            Please be advised, access is for lab members only.
+          </div>
 
           @form.globalError.map { error =>
             <div class="alert alert-error">

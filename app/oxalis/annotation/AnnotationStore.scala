@@ -61,7 +61,6 @@ class AnnotationStore extends Actor {
     System.currentTimeMillis - result.timestamp > maxAge.toMillis
 
   def requestAnnotation(id: AnnotationIdentifier)(implicit ctx: DBAccessContext) = {
-    Logger.warn("Identifier: " + id)
     try {
       val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
       val f: Fox[AnnotationLike] =
@@ -73,7 +72,7 @@ class AnnotationStore extends Actor {
       f
     } catch {
       case e =>
-        Logger.error("TRY CATCH: " + e)
+        Logger.error("Request Annotaton in AnnotationStore failed: " + e)
         throw e
     }
   }

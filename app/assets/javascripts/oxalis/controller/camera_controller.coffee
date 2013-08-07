@@ -169,16 +169,31 @@ class CameraController
     @flycam.hasChanged = true
 
   movePrevX : (x) =>
-    size = @prevViewportSize()
-    @cameras[constants.VIEW_3D].left += x*size/384
-    @cameras[constants.VIEW_3D].right += x*size/384
-    @cameras[constants.VIEW_3D].updateProjectionMatrix()
-    @flycam.hasChanged = true
+
+    @movePrevRaw(
+      new THREE.Vector2( x * @prevViewportSize() / constants.WIDTH, 0 ))
 
   movePrevY : (y) =>
-    size = @prevViewportSize()
-    @cameras[constants.VIEW_3D].top -= y*size/384
-    @cameras[constants.VIEW_3D].bottom -= y*size/384
+
+    @movePrevRaw(
+      new THREE.Vector2( 0, - y * @prevViewportSize() / constants.WIDTH ))
+
+  movePrev : ( nmVector ) ->
+    # moves camera by the nm vector
+    camera = @cameras[constants.VIEW_3D]
+
+    rotation = camera.rotation.clone().negate()
+    eulerOrder = camera.eulerOrder.split("").reverse().join("")       # reverse order
+    
+    nmVector.applyEuler( rotation , eulerOrder )
+    @movePrevRaw( nmVector )
+
+  movePrevRaw : (moveVector) ->
+
+    @cameras[constants.VIEW_3D].left   += moveVector.x
+    @cameras[constants.VIEW_3D].right  += moveVector.x
+    @cameras[constants.VIEW_3D].top    += moveVector.y
+    @cameras[constants.VIEW_3D].bottom += moveVector.y
     @cameras[constants.VIEW_3D].updateProjectionMatrix()
     @flycam.hasChanged = true
 

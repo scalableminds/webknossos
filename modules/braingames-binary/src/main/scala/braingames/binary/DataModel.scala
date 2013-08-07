@@ -3,9 +3,6 @@ package braingames.binary
 import scala.math._
 import braingames.util.Math._
 import braingames.geometry._
-import braingames.geometry.Vector3D._
-import scala.collection.parallel.ParSeq
-import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 
 /**
@@ -34,7 +31,6 @@ abstract class DataModel {
     if (axis._1 == 0 && axis._2 == 0 && axis._3 == 0) {
       simpleMove(moveVector, coordinates)(f)
     } else {
-      var t = System.currentTimeMillis()
       // orthogonal vector to (0,1,0) and rotation vector
       val matrix = TransformationMatrix(Vector3D(moveVector), Vector3D(axis)).value
 

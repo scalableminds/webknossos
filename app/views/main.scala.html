@@ -10,6 +10,7 @@
   while(c == "views.html.main$" && i <= max){
     i += 1
     c = Reflect.getCallerClass.map( _(i).getName() ) 
+    play.api.Logger.error(s"REFL $i: $c")
   }
   c
 }

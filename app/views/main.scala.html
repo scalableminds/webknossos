@@ -7,7 +7,7 @@
   var c = Reflect.getCallerClass.map( _(8).getName() )
   var i = 8
   val max = 12
-  while(c == "views.html.main$" && i <= max){
+  while(c == Some("views.html.main$") && i <= max){
     i += 1
     c = Reflect.getCallerClass.map( _(i).getName() ) 
     play.api.Logger.error(s"REFL $i: $c")

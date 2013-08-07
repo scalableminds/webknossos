@@ -2,7 +2,15 @@
 
 @import braingames.util.Reflect
 
- @pageSkeleton{
+@callingTemplate = @{
+  val c = Reflect.getCallerClass.map( _(8).getName() )
+  if(c == "views.html.main$")
+    Reflect.getCallerClass.map( _(9).getName() )  
+  else
+    c
+}
+
+@pageSkeleton{
     @mainHeader(showNavButtons)    
     <div id="alert-container">
       @session.flash.data.map{ f =>
@@ -23,8 +31,7 @@
         }
       }
     </div>
-    <div id="main-container" data-template="@Reflect.getCallerClass.map( _(7).getName() )">
+    <div id="main-container" data-template="@callingTemplate">
       @body
     </div>
 }
-

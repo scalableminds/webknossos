@@ -2,6 +2,14 @@
 
 @import braingames.util.Reflect
 
+@callingTemplate = @{
+  val c = Reflect.getCallerClass.map( _(8).getName() )
+  if(c == "views.html.main$")
+    Reflect.getCallerClass.map( _(9).getName() )  
+  else
+    c
+}
+
 <!doctype html>
 <html>
   <head>
@@ -34,7 +42,7 @@
         }
       }
     </div>
-    <div id="main-container" data-template="@Reflect.getCallerClass.map( _(7).getName() )">
+    <div id="main-container" data-template="@callingTemplate">
       @body
     </div>
     <!-- Prompt IE 6 users to install Chrome Frame. Remove this if you want to support IE 6.

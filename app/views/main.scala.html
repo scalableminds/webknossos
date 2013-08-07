@@ -3,11 +3,15 @@
 @import braingames.util.Reflect
 
 @callingTemplate = @{
-  val c = Reflect.getCallerClass.map( _(8).getName() )
-  if(c == "views.html.main$")
-    Reflect.getCallerClass.map( _(9).getName() )  
-  else
-    c
+  // TODO: REMOVE HOTFIX
+  var c = Reflect.getCallerClass.map( _(8).getName() )
+  var i = 8
+  val max = 12
+  while(c == "views.html.main$" && i <= max){
+    i += 1
+    c = Reflect.getCallerClass.map( _(i).getName() ) 
+  }
+  c
 }
 
 <!doctype html>

@@ -131,6 +131,7 @@ class Controller
         $("#switch-data").removeClass("btn-default").addClass("btn-primary")
         $("#switch-segmentation").removeClass("btn-primary").addClass("btn-default")
         @sceneController.setDataMode( constants.SHOW_DATA )
+        @model.binaryVolume.pingStop()
 
       $("#switch-segmentation").on "click", (event) =>
         $("#switch-segmentation").removeClass("btn-default").addClass("btn-primary")

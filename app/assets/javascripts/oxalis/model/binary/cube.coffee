@@ -126,6 +126,9 @@ class Cube
 
   getVolumeBucketByZoomedAddress : (address) ->
 
+    if address[3] >= @ZOOM_STEP_COUNT
+      return null
+
     cube = @cubes[address[3]].volume
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 

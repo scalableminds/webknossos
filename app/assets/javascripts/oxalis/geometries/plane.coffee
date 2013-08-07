@@ -13,7 +13,7 @@ class Plane
   CROSSHAIR_COLORS : [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
   GRAY_CH_COLOR    : 0x222222
 
-  constructor : (planeWidth, textureWidth, flycam, planeID, model) ->
+  constructor : (planeWidth, textureWidth, flycam, planeID, model, dataMode) ->
     @flycam          = flycam
     @planeID         = planeID
     @model           = model
@@ -30,7 +30,7 @@ class Plane
     
     @createMeshes(planeWidth, textureWidth)
 
-  createMeshes : (pWidth, tWidth) ->
+  createMeshes : (pWidth, tWidth, dataMode) ->
     # create plane
     planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
     volumePlaneGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
@@ -38,7 +38,7 @@ class Plane
     # create texture
     texture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     texture.needsUpdate = true
-    volumeTexture       = new THREE.DataTexture(new Uint8Array(tWidth*tWidth*3), tWidth, tWidth, THREE.RGBFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+    volumeTexture       = new THREE.DataTexture(new Uint8Array(tWidth*tWidth*2), tWidth, tWidth, THREE.LuminanceAlphaFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     
     offset = new THREE.Vector2(0, 0)
     repeat = new THREE.Vector2(0, 0)
@@ -87,12 +87,12 @@ class Plane
       void main() {
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
         /* assume little endian order */
-        float id = (volumeColor[0] * 255.0) + (volumeColor[1] * 255.0) * 256.0 + (volumeColor[2] * 255.0) * 256.0 * 256.0;
+        float id = (volumeColor[0] * 255.0) + (volumeColor[3] * 255.0) * 256.0;
         float golden_ratio = 0.618033988749895;
 
         /* Color map (<= to fight rounding mistakes) */
         
-        if ( dataMode[0] == 1.0 && id > 0.1) {
+        if ( dataMode[0] == 1.0 && id > 0.1 ) {
           vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
           gl_FragColor = 0.7 * texture2D(texture, vUv * repeat + offset) + 0.3 * hsv_to_rgb( HSV );
         } else {
@@ -101,7 +101,7 @@ class Plane
       }
         "
     # weird workaround to force JS to pass this as a reference...
-    @dataMode = new THREE.Vector2( constants.SHOW_DATA, 0)
+    @dataMode = new THREE.Vector2( dataMode, 0)
     uniforms = {
       texture : {type : "t", value : texture},
       volumeTexture : {type : "t", value : volumeTexture},
@@ -174,7 +174,7 @@ class Plane
             #for i in [0...512]
             #  for j in [0...512]
             #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
-            #    dataBuffer[(i * 512 + j)*3] = id
+            #    dataBuffer[(i * 512 + j)*2 + 1] = id
             @plane.volumeTexture.image.data.set(dataBuffer)
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
@@ -210,7 +210,6 @@ class Plane
     @crosshair[0].visible = @crosshair[1].visible = visible and @displayCosshair
 
   setDataMode : (mode) ->
-    console.log mode
     @dataMode.x = mode
     @flycam.hasChanged = true
 

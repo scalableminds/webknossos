@@ -48,7 +48,7 @@ class Model
             @scaleInfo = new ScaleInfo(tracing.content.dataSet.scale)
             @binary = new Binary(@user, tracing.content.dataSet, TEXTURE_SIZE_P, "color", 8)
             @binaryVolume = new Binary(@user, tracing.content.dataSet, TEXTURE_SIZE_P, "volume", 16)
-            zoomStepCount = if controlMode == constants.CONTROL_MODE_VIEW then 1 else @binary.cube.ZOOM_STEP_COUNT - 1
+            zoomStepCount = Math.min(@binary.cube.ZOOM_STEP_COUNT, @binaryVolume.cube.ZOOM_STEP_COUNT) - 1
             @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, zoomStepCount, @user)      
             @flycam3d = new Flycam3d(DISTANCE_3D, tracing.content.dataSet.scale)
             @flycam3d.on

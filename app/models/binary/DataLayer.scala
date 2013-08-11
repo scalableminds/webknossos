@@ -108,17 +108,13 @@ case class ClassificationLayer( elementClass: String = "uint8", supportedResolut
   val name = "classification"
   val baseDir = name
 }
-case class SegmentationLayer(batchId: Int, elementClass: String = "uint8", supportedResolutions: List[Int]) extends DataLayer with NearestNeighborInterpolation {
+case class SegmentationLayer(elementClass: String = "uint8", supportedResolutions: List[Int], batchId: Int) extends DataLayer with NearestNeighborInterpolation {
   val name = s"segmentation$batchId"
   val baseDir = s"segmentation/layer$batchId"
 }
 
-case class ContextFreeSegmentationLayer(elementClass: String = "uint8", supportedResolutions: List[Int]) {
-  def addContext(batchId: Int) = SegmentationLayer(batchId, elementClass, supportedResolutions)
-}
-
-object ContextFreeSegmentationLayer extends DataLayerJsonFormat {
-  implicit val ContextFreeSegmentationLayerReads: Reads[ContextFreeSegmentationLayer] = dataLayerReadsBuilder(ContextFreeSegmentationLayer.apply _)
+object SegmentationLayer extends DataLayerJsonFormat {
+  implicit val SegmentationLayerReads: Reads[SegmentationLayer] = (dataLayerReadsBuilder and (__ \ "layerId").read[Int])(SegmentationLayer.apply _)
 }
 
 object ColorLayer extends DataLayerJsonFormat{

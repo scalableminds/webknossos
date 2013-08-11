@@ -13,6 +13,7 @@ class WritePathToMetaFile
   PARAMETER :
     input :
       segments: "[]"
+      maxEndSegments: "Number"
   EXAMPLES : [
       { description : "write the outline of the segments to the meta file in the first slide", lines :
         [ "time(start: 0, end : 0) ->"
@@ -46,8 +47,10 @@ class WritePathToMetaFile
       segmentPayload.id = segment.id
       segmentPayload.value = segment.value
       segmentPayload.bounding = [segment.xMin, segment.yMin, segment.xMax, segment.yMax]
+      segmentPayload.absoluteCenter = [segment.absoluteCenter.x, segment.absoluteCenter.y]
+      segmentPayload.weightedCenter = [segment.weightedCenter.x, segment.weightedCenter.y]      
       if segmentPayload.isEndSegment
-        segmentPayload.probability = _.find(mission.possibleEnds, (m) => m.id is segmentPayload.value).probability  
+        segmentPayload.probability = segment.probability  
       else 
         segmentPayload.probability = 0
 

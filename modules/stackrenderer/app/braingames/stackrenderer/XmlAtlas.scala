@@ -21,8 +21,7 @@ object XmlAtlas {
                     s"""<SubTexture name="$idx" x="${i.x}" y="${i.y}" width="${i.width}" height="${i.height}"/>"""
                 }.mkString("\n")
               }
-          |</TextureAtlas>
-        |}""".stripMargin
+          |</TextureAtlas>""".stripMargin
   }
 
   def writeToFile(image: CombinedImage, file: File) = {

@@ -12,7 +12,7 @@ import models.context._
 import scala.util.Random
 import com.mongodb.WriteResult
 
-case class MissionInfo(_id: ObjectId, key: String, possibleEnds: List[PossibleEnd]) {
+case class MissionInfo(_id: ObjectId, key: String, possibleEnds: List[EndSegment]) {
   def id = _id.toString
 }
 

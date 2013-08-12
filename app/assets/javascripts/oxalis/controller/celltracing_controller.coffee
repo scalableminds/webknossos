@@ -38,8 +38,8 @@ class CellTacingController
       "s" : @centerActiveNode
 
       #Comments
-      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), false)
-      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), false)
+      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), true)
+      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), true)
 
 
   setNodeRadius : (delta) =>

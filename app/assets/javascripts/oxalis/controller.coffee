@@ -151,6 +151,10 @@ class Controller
         @abstractTreeController.drawTree()
 
       "q" : => @toggleFullScreen()
+      
+      # "f1" : =>
+      #   console.log "open help"
+      #   $("#help-modal").modal('toggle')
 
       #Set Mode, outcomment for release
       "shift + 1" : =>

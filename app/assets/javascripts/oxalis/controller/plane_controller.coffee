@@ -52,29 +52,29 @@ class PlaneController
 
     @canvasesAndNav = $("#main")[0]
 
-    @prevControls = $('#prevControls')
-    @prevControls.addClass("btn-group")
+    @TDViewControls = $('#TDViewControls')
+    @TDViewControls.addClass("btn-group")
 
     buttons = [
         name : "3D"
-        callback : @cameraController.changePrevSV
+        callback : @cameraController.changeTDViewDiagonal
       ,
         name : "XY"
-        callback : @cameraController.changePrevXY
+        callback : @cameraController.changeTDViewXY
         color : "#f00"
       ,
         name : "YZ"
-        callback : @cameraController.changePrevYZ
+        callback : @cameraController.changeTDViewYZ
         color : "#00f"
       ,
         name : "XZ"
-        callback : @cameraController.changePrevXZ
+        callback : @cameraController.changeTDViewXZ
         color : "#0f0"
     ]
 
     for button in buttons
 
-      button.control = @prevControls.append(
+      button.control = @TDViewControls.append(
         $("<button>", type : "button", class : "btn btn-small")
           .html("#{if button.color then "<span style=\"background: #{button.color}\"></span>" else ""}#{button.name}")
           .on("click", button.callback)
@@ -110,25 +110,25 @@ class PlaneController
             scroll : @scroll
           })))
 
-    @input.mouseControllers.push( new Input.Mouse($("#skeletonview"),
+    @input.mouseControllers.push( new Input.Mouse($("#TDView"),
       leftDownMove : (delta) => 
-        @cameraController.movePrevX(delta.x * @model.user.getMouseInversionX())
-        @cameraController.movePrevY(delta.y * @model.user.getMouseInversionY())
+        @cameraController.moveTDViewX(delta.x * @model.user.getMouseInversionX())
+        @cameraController.moveTDViewY(delta.y * @model.user.getMouseInversionY())
       scroll : (value) =>
-        @cameraController.zoomPrev(value,
-          @input.mouseControllers[constants.VIEW_3D].position,
+        @cameraController.zoomTDView(value,
+          @input.mouseControllers[constants.TDView].position,
           @view.curWidth)
       leftClick : (position, shiftPressed, altPressed) =>
-        @cellTracingController.onClick(position, shiftPressed, altPressed, constants.VIEW_3D)
+        @cellTracingController.onClick(position, shiftPressed, altPressed, constants.TDView)
     ) )
 
 
   initTrackballControls : ->
 
-    view = $("#skeletonview")[0]
+    view = $("#TDView")[0]
     pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
     @controls = new THREE.TrackballControls(
-      @view.getCameras()[constants.VIEW_3D],
+      @view.getCameras()[constants.TDView],
       view, 
       new THREE.Vector3(pos...), 
       => @flycam.update())
@@ -155,7 +155,7 @@ class PlaneController
           invertedDiff.push( @oldNmPos[i] - nmPosition[i] )
         @oldNmPos = nmPosition
 
-        @cameraController.movePrev( 
+        @cameraController.moveTDView( 
           new THREE.Vector3( invertedDiff... ))
 
     @cameraController.on
@@ -185,10 +185,8 @@ class PlaneController
       "up"    : (timeFactor) => @moveY(-getVoxelOffset(timeFactor))
       "down"  : (timeFactor) => @moveY( getVoxelOffset(timeFactor))
 
-      #misc keys
-      # TODO: what does this? I removed it, I need the key.
-      #"n" : => Helper.toggle()
-      #"ctr + s"       : => @model.cellTracing.pushImpl()
+      # standard behaviour cannot be prevented?
+      # "ctrl + s"       : => @model.cellTracing.stateLogger.pushImpl()
     )
 
     @input.keyboardLoopDelayed = new Input.Keyboard(

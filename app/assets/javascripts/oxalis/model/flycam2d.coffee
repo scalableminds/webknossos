@@ -248,7 +248,7 @@ class Flycam2d
   setRayThreshold : (cameraRight, cameraLeft) ->
 
     # in nm
-    @rayThreshold[constants.VIEW_3D] = 8 * (cameraRight - cameraLeft) / 384
+    @rayThreshold[constants.TDView] = 8 * (cameraRight - cameraLeft) / 384
 
 
   getRayThreshold : (planeID) ->

@@ -136,12 +136,12 @@ class CellTacingController
       # make sure you can't click nodes, that are clipped away (one can't see)
       ind = Dimensions.getIndices(plane)
       if intersect.object.visible and
-        (plane == constants.VIEW_3D or
+        (plane == constants.TDView or
           (Math.abs(globalPos[ind[2]] - intersectsCoord[ind[2]]) < @cameraController.getclippingDistance(ind[2])+1))
 
         # set the active Node to the one that has the ID stored in the vertex
         # center the node if click was in 3d-view
-        centered = plane == constants.VIEW_3D
+        centered = plane == constants.TDView
         @setActiveNode(nodeID, centered, shiftPressed and altPressed)
         break
 

@@ -90,7 +90,7 @@ class Skeleton
 
 
   createNewTree : (treeId, treeColor) ->
-    # create cellTracing to show in previewBox and pre-allocate buffers
+    # create cellTracing to show in TDView and pre-allocate buffers
 
     edgeGeometry = new THREE.Geometry()
     nodeGeometry = new THREE.Geometry()

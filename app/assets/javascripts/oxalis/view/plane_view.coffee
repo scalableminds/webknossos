@@ -36,18 +36,18 @@ class PlaneView
       @scene.add @camera[i]
 
       # There is one light for each plane
-      if i != constants.VIEW_3D
+      if i != constants.TDView
         @lights[i]   = new THREE.PointLight( 0xffffff, 0.8 )
         @scene.add @lights[i]
 
     @camera[constants.PLANE_XY].position.z = -1
     @camera[constants.PLANE_YZ].position.x =  1
     @camera[constants.PLANE_XZ].position.y =  1
-    @camera[constants.VIEW_3D].position    = new THREE.Vector3(10, 10, -10)
+    @camera[constants.TDView].position    = new THREE.Vector3(10, 10, -10)
     @camera[constants.PLANE_XY].up         = new THREE.Vector3( 0, -1,  0)
     @camera[constants.PLANE_YZ].up         = new THREE.Vector3( 0, -1,  0)
     @camera[constants.PLANE_XZ].up         = new THREE.Vector3( 0,  0, -1)
-    @camera[constants.VIEW_3D].up          = new THREE.Vector3( 0,  0, -1)
+    @camera[constants.TDView].up          = new THREE.Vector3( 0,  0, -1)
     for cam in @camera
       cam.lookAt(new THREE.Vector3( 0, 0, 0))
 
@@ -172,7 +172,7 @@ class PlaneView
     canvas.width(2 * WIDTH + 20)
     canvas.height(2 * HEIGHT + 20)
 
-    $('#prevControls button').width(@curWidth/5)
+    $('#TDViewControls button').width(@curWidth/5)
 
     divs = $(".inputcatcher")
     for div in divs

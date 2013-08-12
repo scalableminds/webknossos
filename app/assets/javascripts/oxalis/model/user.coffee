@@ -25,9 +25,9 @@ class User
   quality : null
   zoom : null
   scale : null
-  displayPreviewXY : null
-  displayPreviewYZ : null
-  displayPreviewXZ : null
+  displayTDViewXY : null
+  displayTDViewYZ : null
+  displayTDViewXZ : null
   newNodeNewTree : null
   inverseX : null
   inverseY : null
@@ -100,9 +100,9 @@ class User
         quality : @quality,
         zoom : @zoom,
         scale : @scale,
-        displayPreviewXY : @displayPreviewXY,
-        displayPreviewYZ : @displayPreviewYZ,
-        displayPreviewXZ : @displayPreviewXZ,
+        displayTDViewXY : @displayTDViewXY,
+        displayTDViewYZ : @displayTDViewYZ,
+        displayTDViewXZ : @displayTDViewXZ,
         newNodeNewTree : @newNodeNewTree,
         inverseX : @inverseX,
         inverseY : @inverseY,

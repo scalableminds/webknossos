@@ -25,7 +25,7 @@ class CameraController
       cam.near = -1000000
       cam.far  =  1000000
 
-    @changePrevSV(false)
+    @changeTDViewDiagonal(false)
 
     @bind()
 
@@ -42,7 +42,7 @@ class CameraController
     @lights[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0] + 100000, cPos[1]         , cPos[2])
     @lights[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0]         , cPos[1] + 100000, cPos[2])
 
-  changePrev : (id, animate = true) ->
+  changeTDView : (id, animate = true) ->
     # In order for the rotation to be correct, it is not sufficient
     # to just use THREEJS' lookAt() function, because it may still
     # look at the plane in a wrong angle. Therefore, the rotation
@@ -50,7 +50,7 @@ class CameraController
     #
     # CORRECTION: You're telling lies, you need to use the up vector...
 
-    camera = @cameras[constants.VIEW_3D]
+    camera = @cameras[constants.TDView]
     b = @model.scaleInfo.voxelToNm(@model.binary.cube.upperBoundary)
     pos = @model.scaleInfo.voxelToNm(@model.flycam.getPosition())
     time = 800
@@ -63,14 +63,13 @@ class CameraController
       upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z
       camera: camera
       flycam: @flycam
-      sv : @skeletonView
       dx:camera.position.x - pos[0]
       dy:camera.position.y - pos[1]
       dz:camera.position.z - pos[2]
       l: camera.left, r: camera.right, t: camera.top, b: camera.bottom }
     @tween = new TWEEN.Tween(from)
 
-    if id == constants.VIEW_3D
+    if id == constants.TDView
       diagonal = Math.sqrt(b[0]*b[0]+b[1]*b[1])
       padding = 0.05 * diagonal
 
@@ -119,22 +118,22 @@ class CameraController
     
     if animate
       @tween.to(to, time)
-      .onUpdate(@updateCameraPrev)
+      .onUpdate(@updateCameraTDView)
       .start()
     else
       for prop of from
         unless to[prop]?
           to[prop] = from[prop]
-      @updateCameraPrev.call(to)
+      @updateCameraTDView.call(to)
 
   degToRad : (deg) -> deg/180*Math.PI
 
-  changePrevXY : => @changePrev(constants.PLANE_XY)
-  changePrevYZ : => @changePrev(constants.PLANE_YZ)
-  changePrevXZ : => @changePrev(constants.PLANE_XZ)
-  changePrevSV : (animate = true) => @changePrev(constants.VIEW_3D, animate)
+  changeTDViewXY : => @changeTDView(constants.PLANE_XY)
+  changeTDViewYZ : => @changeTDView(constants.PLANE_YZ)
+  changeTDViewXZ : => @changeTDView(constants.PLANE_XZ)
+  changeTDViewDiagonal : (animate = true) => @changeTDView(constants.TDView, animate)
 
-  updateCameraPrev : ->
+  updateCameraTDView : ->
 
     p = @getConvertedPosition()
     @camera.position.set(@dx + p[0], @dy + p[1], @dz + p[2])
@@ -150,18 +149,18 @@ class CameraController
     @flycam.update()
     
 
-  prevViewportSize : ->
+  TDViewportSize : ->
 
-    (@cameras[constants.VIEW_3D].right - @cameras[constants.VIEW_3D].left)         # always quadratic
+    (@cameras[constants.TDView].right - @cameras[constants.TDView].left)         # always quadratic
 
 
-  zoomPrev : (value, position, curWidth) =>
+  zoomTDView : (value, position, curWidth) =>
 
-    camera = @cameras[constants.VIEW_3D]
+    camera = @cameras[constants.TDView]
     factor = Math.pow(0.9, value)
     middleX = (camera.left + camera.right)/2
     middleY = (camera.bottom + camera.top)/2
-    size = @prevViewportSize()
+    size = @TDViewportSize()
     
     baseOffset = factor * size / 2
     baseDiff = baseOffset - size / 2
@@ -179,36 +178,36 @@ class CameraController
     @flycam.update()
 
 
-  movePrevX : (x) =>
+  moveTDViewX : (x) =>
 
-    @movePrevRaw(
-      new THREE.Vector2( x * @prevViewportSize() / constants.WIDTH, 0 ))
-
-
-  movePrevY : (y) =>
-
-    @movePrevRaw(
-      new THREE.Vector2( 0, - y * @prevViewportSize() / constants.WIDTH ))
+    @moveTDViewRaw(
+      new THREE.Vector2( x * @TDViewportSize() / constants.WIDTH, 0 ))
 
 
-  movePrev : ( nmVector ) ->
+  moveTDViewY : (y) =>
+
+    @moveTDViewRaw(
+      new THREE.Vector2( 0, - y * @TDViewportSize() / constants.WIDTH ))
+
+
+  moveTDView : ( nmVector ) ->
     # moves camera by the nm vector
-    camera = @cameras[constants.VIEW_3D]
+    camera = @cameras[constants.TDView]
 
     rotation = camera.rotation.clone().negate()
     eulerOrder = camera.eulerOrder.split("").reverse().join("")       # reverse order
     
     nmVector.applyEuler( rotation , eulerOrder )
-    @movePrevRaw( nmVector )
+    @moveTDViewRaw( nmVector )
 
 
-  movePrevRaw : (moveVector) ->
+  moveTDViewRaw : (moveVector) ->
 
-    @cameras[constants.VIEW_3D].left   += moveVector.x
-    @cameras[constants.VIEW_3D].right  += moveVector.x
-    @cameras[constants.VIEW_3D].top    += moveVector.y
-    @cameras[constants.VIEW_3D].bottom += moveVector.y
-    @cameras[constants.VIEW_3D].updateProjectionMatrix()
+    @cameras[constants.TDView].left   += moveVector.x
+    @cameras[constants.TDView].right  += moveVector.x
+    @cameras[constants.TDView].top    += moveVector.y
+    @cameras[constants.TDView].bottom += moveVector.y
+    @cameras[constants.TDView].updateProjectionMatrix()
     @flycam.update()
 
 

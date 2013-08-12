@@ -10,7 +10,7 @@ Dimensions =
   PLANE_XY : constants.PLANE_XY
   PLANE_YZ : constants.PLANE_YZ
   PLANE_XZ : constants.PLANE_XZ
-  VIEW_3D  : constants.VIEW_3D
+  TDView  : constants.TDView
 	
   getIndices : (planeID) ->
     # Returns a ordered 3-tuple [x, y, z] which represents the dimensions from the viewpoint

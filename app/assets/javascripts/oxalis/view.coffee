@@ -159,9 +159,9 @@ class View
       <tr><td>1</td><td>Toggle skeleton visibility</td><td>2</td><td>Toggle inactive tree visibility</td></tr>
       <tr><td>Shift + Mousewheel</td><td>Change node size</td><td></td><td></td></tr>'
 
-    skeletonKeys =
+    TDViewKeys =
       '<tr><th colspan="4">3D-view</th></tr>
-      <tr><td>Mousewheel</td><td>Zoom in and out</td><td>Rightclick drag</td><td>Rotate Skeleton View</td></tr>'
+      <tr><td>Mousewheel</td><td>Zoom in and out</td><td>Rightclick drag</td><td>Rotate 3D View</td></tr>'
     viewportKeys =
       '<tr><th colspan="4">Viewports</th></tr>
       <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Shift + Leftclick</td><td>Select node</td></tr>
@@ -187,7 +187,7 @@ class View
       
     html += generalKeys
     if mode == constants.MODE_PLANE_TRACING 
-      html += viewportKeys + skeletonKeys
+      html += viewportKeys + TDViewKeys
     else if mode == constants.MODE_ARBITRARY
       html += arbitraryKeys
     else if mode == constants.MODE_VOLUME

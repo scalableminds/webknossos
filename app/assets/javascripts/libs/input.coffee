@@ -86,6 +86,7 @@ class Input.Keyboard
         # KeyboardJS does not receive the up event.
         
         unless @keyCallbackMap[key]? or $(":focus").length
+          event.preventDefault()
           callback(1, true)
           # reset lastTime
           callback._lastTime   = null

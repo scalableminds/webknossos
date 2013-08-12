@@ -97,10 +97,10 @@ class Gui
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 
-    @folders.push( @fSkeleton = @gui.addFolder("Skeleton View") )
-    @addCheckbox(@fSkeleton, @user, "displayPreviewXY", "Display XY-Plane")
-    @addCheckbox(@fSkeleton, @user, "displayPreviewYZ", "Display YZ-Plane")
-    @addCheckbox(@fSkeleton, @user, "displayPreviewXZ", "Display XZ-Plane")
+    @folders.push(@fTDView = @gui.addFolder("3D View"))
+    @addCheckbox(@fTDView, @user, "displayTDViewXY", "Display XY-Plane")
+    @addCheckbox(@fTDView, @user, "displayTDViewYZ", "Display YZ-Plane")
+    @addCheckbox(@fTDView, @user, "displayTDViewXZ", "Display XZ-Plane")
 
     @folders.push( @fTrees = @gui.addFolder("Trees") )
     @activeTreeIdController = @addNumber(@fTrees, @settings, "activeTreeID",
@@ -377,7 +377,7 @@ class Gui
         @hideFolders( [ @fFlightcontrols ] )
         @user.triggerAll()
       when constants.MODE_ARBITRARY
-        @hideFolders( [ @fViewportcontrols, @fSkeleton ] )
+        @hideFolders( [ @fViewportcontrols, @fTDView ] )
         @setFolderElementVisibility( @clippingControllerArbitrary, true )
         @setFolderElementVisibility( @clippingController, false )
         @user.triggerAll()

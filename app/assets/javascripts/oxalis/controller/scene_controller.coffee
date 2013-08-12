@@ -197,10 +197,10 @@ class SceneController
         @setDisplayCrosshair(value)
       interpolationChanged : (value) =>
         @setInterpolation(value)
-      displayPreviewXYChanged : (value) =>
+      displayTDViewXYChanged : (value) =>
         @setDisplaySV constants.PLANE_XY, value
-      displayPreviewYZChanged : (value) =>
+      displayTDViewYZChanged : (value) =>
         @setDisplaySV constants.PLANE_YZ, value
-      displayPreviewXZChanged : (value) =>
+      displayTDViewXZChanged : (value) =>
         @setDisplaySV constants.PLANE_XZ, value  })   
 

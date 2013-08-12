@@ -44,7 +44,7 @@ object BinaryData extends Controller {
   def createStackCuboid(level: Level, mission: Mission) = {
 
     def calculateTopLeft(width: Int, height: Int, depth: Int) = {
-      Vector3D(-(width / 2.0).floor, -(height / 2.0).floor, 0)
+      Vector3D(-(width / 2.0).floor, -(height / 2.0).floor, -level.slidesBeforeProblem)
     }
 
     val direction = Vector3D(mission.start.direction.x * 11.24, mission.start.direction.y * 11.24, mission.start.direction.z * 28).normalize
@@ -54,7 +54,7 @@ object BinaryData extends Controller {
       level.depth,
       1,
       topLeftOpt = Some(calculateTopLeft(level.width, level.height, level.depth)),
-      moveVector = (Vector3D(mission.errorCenter) - (direction * level.slidesBeforeProblem)).toTuple,
+      moveVector = Vector3D(mission.errorCenter).toTuple,
       axis = direction.toTuple)
   }
 

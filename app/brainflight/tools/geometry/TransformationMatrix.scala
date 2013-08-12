@@ -20,7 +20,7 @@ object TransformationMatrix {
     
     val nz = direction.normalize
     val y = Vector3D(0, 1, 0)
-    val nx = (y x nz).normalize
+    val nx = (nz x y).normalize
     val ny = (nz x nx).normalize
 
     TransformationMatrix(Array(

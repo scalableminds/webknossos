@@ -29,7 +29,6 @@ class User
   displayPreviewYZ : null
   displayPreviewXZ : null
   newNodeNewTree : null
-  nodesAsSpheres : null
   inverseX : null
   inverseY : null
   keyboardDelay : null
@@ -104,7 +103,6 @@ class User
         displayPreviewYZ : @displayPreviewYZ,
         displayPreviewXZ : @displayPreviewXZ,
         newNodeNewTree : @newNodeNewTree,
-        nodesAsSpheres : @nodesAsSpheres,
         inverseX : @inverseX,
         inverseY : @inverseY,
         keyboardDelay : @keyboardDelay,

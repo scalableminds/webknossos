@@ -14,32 +14,16 @@ class Skeleton
   # nodes, edges and trees
 
   COLOR_ACTIVE : 0xff0000
-
-  flycam : null
-  model : null
-
-  # Edges
-  routes : []
-  # Nodes
-  nodes : []
-  nodeSpheres : []
-  # Tree IDs
-  ids : []
-  # Current Index
-  curIndex : []
-  # whether or not display the spheres
-  disSpheres : true
-
+  
   constructor : (@flycam, @model) ->
 
     _.extend(this, new EventMixin())
 
     @scaleVector  = @model.scaleInfo.getVoxelPerNMVector()
     # Edges
-    @routes       = []
+    @edges        = []
     # Nodes
     @nodes        = []
-    @nodesSpheres = []
     # Tree IDs
     @ids          = []
 
@@ -51,18 +35,6 @@ class Skeleton
     #initial mode
     @mode = constants.MODE_PLANE_TRACING
     @showInactiveTrees = true
-
-    # Create sphere to represent the active Node, radius is
-    # 1 nm, so that @activeNode.scale is the radius in nm.
-    # @activeNode = new THREE.Mesh(
-    #     new THREE.SphereGeometry(1),
-    #     new THREE.MeshLambertMaterial({
-    #       color : @COLOR_ACTIVE
-    #       #transparent: true
-    #       #opacity: 0.5 })
-    #       })
-    #   )
-    # @activeNode.doubleSided = true
 
     activeNodeGeometry = new THREE.Geometry()
     @activeNodeParticle = new THREE.ParticleSystem(
@@ -109,7 +81,6 @@ class Skeleton
             @loadSkeletonFromModel(trees, finishedDeferred))
           @flycam.hasChanged = true)
         @flycam.hasChanged = true
-      removeSpheresOfTree : (nodes) => @removeSpheresOfTree(nodes)
       newActiveTreeColor : (oldTreeId) => @updateActiveTreeColor(oldTreeId)
 
     @model.user.on "particleSizeChanged", (particleSize) =>
@@ -129,7 +100,7 @@ class Skeleton
     @edgesBuffer.push(new ResizableBuffer(6))
     @nodesBuffer.push(new ResizableBuffer(3))
 
-    @routes.push(new THREE.Line(
+    @edges.push(new THREE.Line(
       routeGeometry, 
       new THREE.LineBasicMaterial({
         color: @darkenHex(treeColor), 
@@ -146,35 +117,31 @@ class Skeleton
 
     @setActiveNode()
 
-    @trigger "newGeometries", [@routes[@routes.length - 1], @nodes[@nodes.length - 1]]
+    @trigger "newGeometries", [@edges[@edges.length - 1], @nodes[@nodes.length - 1]]
 
 
   # Will completely reload the trees from model.
   # This needs to be done at initialization
   reset : ->
     if (@ids.length > 0)
-      @trigger "removeGeometries", @routes.concat(@nodes).concat(@nodesSpheres)
+      @trigger "removeGeometries", @edges.concat(@nodes)
 
-    for threeLine in @routes
+    for threeLine in @edges
       threeLine.geometry.dispose()
       threeLine.material.dispose()
     for threeParticleSystem in @nodes
       threeParticleSystem.geometry.dispose()
       threeParticleSystem.material.dispose()
 
-    @routes       = []
+    @edges       = []
     @nodes        = []
     @ids          = []
-    @nodesSpheres = []
     @edgesBuffer  = []
     @nodesBuffer  = []
 
     for tree in @route.getTrees()
       @createNewTree(tree.treeId, tree.color)
 
-    # Add Spheres to the scene
-    @trigger "newGeometries", @nodesSpheres
-    
     @route.one("finishedRender", =>
       @route.one("finishedRender", =>
         @loadSkeletonFromModel())
@@ -198,9 +165,6 @@ class Skeleton
         @nodes[index].geometry.nodeIDs.pushSubarray(node.id for node in nodeList)
 
       for node in nodeList
-        # currently disabled due to performance issues
-        # @pushNewNode(node.radius, node.pos, node.id, tree.color, node.type)
-
         # Add edges to neighbor, if neighbor id is smaller
         # (so we don't add the same edge twice)
         for neighbor in node.neighbors
@@ -208,12 +172,12 @@ class Skeleton
             @edgesBuffer[index].push(neighbor.pos.concat(node.pos))
 
 
-      @routes[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-      @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
+      @edges[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
+      @edges[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
       @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
       @nodes[index].geometry.__webglParticleCount =  @nodesBuffer[index].getLength()
 
-      @routes[index].geometry.verticesNeedUpdate = true
+      @edges[index].geometry.verticesNeedUpdate = true
       @nodes[index].geometry.verticesNeedUpdate = true
     # for branchPoint in @route.branchStack
     #   @setBranchPoint(true, branchPoint.id)
@@ -228,16 +192,10 @@ class Skeleton
   setActiveNode : =>
     id = @route.getActiveNodeId()
     position = @route.getActiveNodePos()
-    if @activeNodeSphere and @disSpheres==true
-      @activeNodeSphere.visible = true
     # May be null
     @lastNodePosition = position
     if position
       @activeNodeParticle.visible = true
-      @activeNodeSphere = @getSphereFromId(id)
-      # Hide activeNodeSphere, because activeNode is visible anyway
-      #if @activeNodeSphere
-      #  @activeNodeSphere.visible = false
       if @route.getActiveNodeType() == constants.TYPE_BRANCH
         @activeNodeParticle.material.color.setHex(@invertHex(@route.getTree().color))
       else
@@ -246,7 +204,6 @@ class Skeleton
       # @setNodeRadius(@route.getActiveNodeRadius())
       @activeNodeParticle.position = new THREE.Vector3(position[0] + 0.02, position[1] + 0.02, position[2] - 0.02)
     else
-      #@activeNodeSphere = null
       @activeNodeParticle.visible = false
     @flycam.hasChanged = true
 
@@ -260,25 +217,17 @@ class Skeleton
     #colorNormal = if isBranchPoint then treeColor * 0.7 else treeColor
     if not nodeID? or nodeID == @route.getActiveNodeId()
       @activeNodeParticle.material.color.setHex(colorActive)
-    #   if @activeNodeSphere
-    #     @activeNodeSphere.material.color.setHex(colorNormal)
-    # else
-    #   sphere = @getSphereFromId(nodeID)
-    #   if sphere?
-    #     sphere.material.color.setHex(colorNormal)
     @flycam.hasChanged = true
 
   setNodeRadius : (radius) ->
     vRadius = new THREE.Vector3(radius, radius, radius)
     @activeNode.scale = @calcScaleVector(vRadius)
-    if @activeNodeSphere
-      @activeNodeSphere.scale = @calcScaleVector(vRadius)
     @flycam.hasChanged = true
 
   setParticleSize : (size) ->
     for particleSystem in @nodes
       particleSystem.material.size = size
-    for line in @routes
+    for line in @edges
       line.material.linewidth = size / 4
     @branches.material.size = size
     @activeNodeParticle.material.size = size
@@ -290,16 +239,16 @@ class Skeleton
 
     @ids[index] = @route.getActiveTreeId()
     @nodes[index].material.color = new THREE.Color(@darkenHex(treeColor))
-    @routes[index].material.color = new THREE.Color(@darkenHex(treeColor))
+    @edges[index].material.color = new THREE.Color(@darkenHex(treeColor))
 
     @nodes[index].material.needsUpdate = true
-    @routes[index].material.needsUpdate = true
+    @edges[index].material.needsUpdate = true
 
     @updateBranches()
     @setActiveNode()
 
   getMeshes : =>
-    return [@activeNodeParticle].concat(@nodes).concat(@nodesSpheres).concat(@routes).concat(@branches)
+    return [@activeNodeParticle].concat(@nodes).concat(@edges).concat(@branches)
 
   setWaypoint : (centered) =>
     curGlobalPos = @flycam.getPosition()
@@ -325,12 +274,10 @@ class Skeleton
 
     @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
     @nodes[index].geometry.__webglParticleCount = @nodesBuffer[index].getLength()
-    @routes[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-    @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
+    @edges[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
+    @edges[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
 
-    # @pushNewNode(radius, position, id, color, type)
-
-    @routes[index].geometry.verticesNeedUpdate = true
+    @edges[index].geometry.verticesNeedUpdate = true
     @nodes[index].geometry.verticesNeedUpdate = true
 
     # Animation to center waypoint position
@@ -373,7 +320,7 @@ class Skeleton
     for i in [0...@edgesBuffer[index].getLength()]
       found = true
       for j in [0..5]
-        found &= Math.abs(@routes[index].geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.01
+        found &= Math.abs(@edges[index].geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.01
       if found
         edgesIndex = i
         break
@@ -387,15 +334,14 @@ class Skeleton
       @edgesBuffer[index].getAllElements()[edgesIndex * 6 + i] = lastEdge[i]
 
     
-    @routes[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-    @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
+    @edges[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
+    @edges[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
     @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
     @nodes[index].geometry.__webglParticleCount =  @nodesBuffer[index].getLength()
 
-    @routes[index].geometry.verticesNeedUpdate = true
+    @edges[index].geometry.verticesNeedUpdate = true
     @nodes[index].geometry.verticesNeedUpdate = true
 
-    @trigger("removeGeometries", [@getSphereFromId(node.id)])
     @setActiveNode()
     @flycam.hasChanged = true
 
@@ -416,31 +362,29 @@ class Skeleton
       @edgesBuffer[index].push( activeNode.pos.concat(lastNode.pos) )
     @edgesBuffer[index].pushSubarray(@edgesBuffer[lastIndex].getAllElements())
 
-    @routes[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-    @routes[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
+    @edges[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
+    @edges[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
     @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
     @nodes[index].geometry.__webglParticleCount =  @nodesBuffer[index].getLength()
 
-    @routes[index].geometry.verticesNeedUpdate = true
+    @edges[index].geometry.verticesNeedUpdate = true
     @nodes[index].geometry.verticesNeedUpdate = true
 
     @flycam.hasChanged = true
 
   deleteTree : (index) ->
 
-    # Remove all geometries and spheres
-    nodeSpheres = (@popSphereFromId(nodeID) for nodeID in @nodes[index].geometry.nodeIDs.getAllElements())
-    @trigger "removeGeometries", [@routes[index]].concat([@nodes[index]]).concat(nodeSpheres)
+    @trigger "removeGeometries", [@edges[index]].concat([@nodes[index]])
 
     # deallocate memory for THREE geometries and materials
-    @routes[index].geometry.dispose()
-    @routes[index].material.dispose()
+    @edges[index].geometry.dispose()
+    @edges[index].material.dispose()
     @nodes[index].geometry.dispose()
     @nodes[index].material.dispose()
 
     # Remove entries
     @ids.splice(index, 1)
-    @routes.splice(index, 1)
+    @edges.splice(index, 1)
     @nodes.splice(index, 1)
     @edgesBuffer.splice(index, 1)
     @nodesBuffer.splice(index, 1)
@@ -469,21 +413,6 @@ class Skeleton
     @branches.geometry.colorsNeedUpdate = true
     @flycam.hasChanged = true
 
-
-  pushNewNode : (radius, position, id, color, type) ->
-    color = if type == constants.TYPE_BRANCH then color * 0.7 else color
-    newNode = new THREE.Mesh(
-      new THREE.SphereGeometry(1),
-      new THREE.MeshLambertMaterial({ color : color})#, transparent: true, opacity: 0.5 })
-    )
-    newNode.scale = @calcScaleVector(new THREE.Vector3(radius, radius, radius))
-    newNode.position = new THREE.Vector3(position...)
-    newNode.nodeId = id
-    newNode.visible = @disSpheres
-    newNode.doubleSided = true
-    @nodesSpheres.push(newNode)
-    @trigger "newGeometries", [newNode]
-
   getIndexFromTreeId : (treeId) ->
     unless treeId
       treeId = @route.getTree().treeId
@@ -491,31 +420,6 @@ class Skeleton
       if @ids[i] == treeId
         return i
     return null
-
-  removeSpheresOfTree : (nodes) ->
-    nodeSpheres = (@popSphereFromId(node.id) for node in nodes)
-    @trigger "removeGeometries", nodeSpheres
-
-  getSphereFromId : (nodeId) ->
-    for node in @nodesSpheres
-      if node.nodeId == nodeId
-        return node
-
-  popSphereFromId : (nodeId) ->
-    i = 0
-    while i < @nodesSpheres.length
-      if @nodesSpheres[i].nodeId == nodeId
-        node = @nodesSpheres[i]
-        @nodesSpheres.splice(i, 1)
-        return node
-      else
-        i++
-
-  setDisplaySpheres : (value) ->
-    @disSpheres = value
-    for sphere in @nodesSpheres
-      if sphere != @activeNodeSphere
-        sphere.visible = value
 
   # Helper function
   calcScaleVector : (v) ->
@@ -526,7 +430,6 @@ class Skeleton
       mesh.visible = isVisible
     if isVisible
       @setActiveNode()
-      @setDisplaySpheres(@disSpheres)
     @flycam.hasChanged = true
 
   toggleInactiveTreeVisibility : ->
@@ -538,7 +441,7 @@ class Skeleton
       if mesh != @activeNodeParticle
         mesh.visible = visible
     index = @getIndexFromTreeId(@route.getTree().treeId)
-    @routes[index].visible = true
+    @edges[index].visible = true
     @nodes[index].visible = true
     @flycam.hasChanged = true
 

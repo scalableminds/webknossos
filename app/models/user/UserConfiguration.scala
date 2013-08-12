@@ -46,7 +46,6 @@ object UserConfiguration extends BasicSettings{
       "displayPreviewYZ" -> JsBoolean(false),
       "displayPreviewXZ" -> JsBoolean(false),
       "newNodeNewTree" -> JsBoolean(false),
-      "nodesAsSpheres" -> JsBoolean(false),
       "inverseX" -> JsBoolean(false),
       "inverseY" -> JsBoolean(false),
       "keyboardDelay" -> JsNumber(200),

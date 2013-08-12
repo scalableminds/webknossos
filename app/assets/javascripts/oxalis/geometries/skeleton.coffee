@@ -171,16 +171,7 @@ class Skeleton
           if neighbor.id < node.id
             @edgesBuffer[index].push(neighbor.pos.concat(node.pos))
 
-
-      @edges[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-      @edges[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
-      @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
-      @nodes[index].geometry.__webglParticleCount =  @nodesBuffer[index].getLength()
-
-      @edges[index].geometry.verticesNeedUpdate = true
-      @nodes[index].geometry.verticesNeedUpdate = true
-    # for branchPoint in @route.branchStack
-    #   @setBranchPoint(true, branchPoint.id)
+    @updateGeometries()
     @updateBranches()
 
     @setActiveNode()
@@ -272,13 +263,7 @@ class Skeleton
     @nodesBuffer[index].push(position)
     @nodes[index].geometry.nodeIDs.push([id])
 
-    @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
-    @nodes[index].geometry.__webglParticleCount = @nodesBuffer[index].getLength()
-    @edges[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-    @edges[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
-
-    @edges[index].geometry.verticesNeedUpdate = true
-    @nodes[index].geometry.verticesNeedUpdate = true
+    @updateGeometries()
 
     # Animation to center waypoint position
     if centered
@@ -334,13 +319,7 @@ class Skeleton
       @edgesBuffer[index].getAllElements()[edgesIndex * 6 + i] = lastEdge[i]
 
     
-    @edges[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-    @edges[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
-    @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
-    @nodes[index].geometry.__webglParticleCount =  @nodesBuffer[index].getLength()
-
-    @edges[index].geometry.verticesNeedUpdate = true
-    @nodes[index].geometry.verticesNeedUpdate = true
+    updateGeometries()
 
     @setActiveNode()
     @flycam.hasChanged = true
@@ -362,13 +341,7 @@ class Skeleton
       @edgesBuffer[index].push( activeNode.pos.concat(lastNode.pos) )
     @edgesBuffer[index].pushSubarray(@edgesBuffer[lastIndex].getAllElements())
 
-    @edges[index].geometry.__vertexArray = @edgesBuffer[index].getBuffer()
-    @edges[index].geometry.__webglLineCount = @edgesBuffer[index].getLength() * 2
-    @nodes[index].geometry.__vertexArray = @nodesBuffer[index].getBuffer()
-    @nodes[index].geometry.__webglParticleCount =  @nodesBuffer[index].getLength()
-
-    @edges[index].geometry.verticesNeedUpdate = true
-    @nodes[index].geometry.verticesNeedUpdate = true
+    @updateGeometries()
 
     @flycam.hasChanged = true
 
@@ -476,3 +449,16 @@ class Skeleton
     @branches.material.needsUpdate = true
     @activeNodeParticle.material.sizeAttenuation = sizeAttenuation
     @activeNodeParticle.material.needsUpdate = true
+  
+  updateGeometries: ->
+
+    edges = @edges[index].geometry
+    nodes = @nodes[index].geometry
+
+    edges.__vertexArray = @edgesBuffer[index].getBuffer()
+    edges.__webglLineCount = @edgesBuffer[index].getLength() * 2
+    nodes.__vertexArray = @nodesBuffer[index].getBuffer()
+    nodes.__webglParticleCount =  @nodesBuffer[index].getLength()
+
+    edges.verticesNeedUpdate = true
+    nodes.verticesNeedUpdate = true

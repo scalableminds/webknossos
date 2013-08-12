@@ -5,3 +5,5 @@ resolvers ++= Seq(
 )
 
 addSbtPlugin("play" % "sbt-plugin" % "2.1.2-SCM")
+
+addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.5.1")

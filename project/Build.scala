@@ -48,8 +48,6 @@ object ApplicationBuild extends Build {
     Resolver.url("Scalableminds REL Repo", url("http://scalableminds.github.com/releases/"))(Resolver.ivyStylePatterns)
   )
 
-  val shellgameDependencies = Seq()
-
   val stackrendererDependencies = Seq(
     "org.kamranzafar" % "jtar" % "2.2",
     "com.amazonaws" % "aws-java-sdk" % "1.3.32")
@@ -102,17 +100,6 @@ object ApplicationBuild extends Build {
     offline := true
     //playAssetsDirectories += file("data")
   ).dependsOn(braingamesUtil, braingamesBinary).aggregate(braingamesUtil, braingamesBinary)
-
-  lazy val shellgame = play.Project("shellgame", "0.1", shellgameDependencies, path = file("modules") / "shellgame").settings(
-    templatesImport += "oxalis.view.helpers._",
-    templatesImport += "oxalis.view._",
-    resolvers ++= dependencyResolvers,
-    coffeescriptOptions := Seq("native", coffeeCmd),
-    playAssetsDirectories ++= Seq(
-      file("modules") / "shellgame" / "shellgame-assets",
-      file("data")
-    )
-  ).dependsOn(oxalis).aggregate(oxalis)
 
   lazy val datastore: Project = Project("datastore", file("modules") / "datastore", dependencies = Seq(oxalis)).settings(
     libraryDependencies ++= dataStoreDependencies,

@@ -105,7 +105,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
       slideWidth = stack.level.width,
       slideHeight = stack.level.height,
       imagesPerRow = imagesPerRow)
-    ImageCreator.createBigImage(images, params, ImageCreator.defaultTargetType).map { combinedImage =>
+    ImageCreator.createSpriteSheet(images, params, ImageCreator.defaultTargetType).map { combinedImage =>
       new PNGWriter().writeToFile(combinedImage.image, stack.image)
       XmlAtlas.writeToFile(combinedImage.info, stack.image.getName, stack.xmlAtlas)
     }

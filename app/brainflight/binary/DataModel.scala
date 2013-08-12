@@ -137,43 +137,7 @@ case class Cuboid(
     }
     array
   }
-  /*
-   def transform = {
-     
-    val matrix = TransformationMatrix(Vector3D(moveVector), Vector3D(axis)).value   
-    println(s"matrix:\n${matrix.toList.sliding(4,4).map(_.mkString(",")).mkString("\n")}\n")
-    def f(px: Double, py: Double, pz: Double) = {
-        Vector3D(matrix(0) * px + matrix(1) * py + matrix(2) * pz + matrix(3),
-          matrix(4) * px + matrix(5) * py + matrix(6) * pz + matrix(7),
-          matrix(8) * px + matrix(9) * py + matrix(10) * pz + matrix(11))
-      } 
-     
-    val xhMax = topLeft.x + width
-    val yhMax = topLeft.y + height
-    val zhMax = topLeft.z + depth
-
-    val array = new ArrayBuffer[Vector3D](_width * _height * _depth)
-    var x = topLeft.x
-    var y = topLeft.y
-    var z = topLeft.z
-    var idx = 0
-    while (z < zhMax) {
-      y = topLeft.y
-      while (y < yhMax) {
-        x = topLeft.x
-        while (x < xhMax) {
-          println(s"$idx: ($x, $y, $z)")
-          array += f(x, y, z)
-          idx += 1
-          x += resolution
-        }
-        y += resolution
-      }
-      z += resolution
-    }
-    array
-  }
-  */
+  
   override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
     rotateAndMove(moveVector, axis)(looper[T](extendArrayBy))(f)
   }

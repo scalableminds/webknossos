@@ -146,7 +146,7 @@ class CameraController
     @flycam.setRayThreshold(@camera.right, @camera.left)
     @camera.updateProjectionMatrix()
     @notify()
-    @flycam.hasChanged = true
+    @flycam.update()
     
   prevViewportSize : ->
     (@cameras[constants.VIEW_3D].right - @cameras[constants.VIEW_3D].left)         # always quadratic
@@ -172,7 +172,7 @@ class CameraController
     camera.updateProjectionMatrix()
 
     @flycam.setRayThreshold(camera.right, camera.left)
-    @flycam.hasChanged = true
+    @flycam.update()
 
   movePrevX : (x) =>
 
@@ -201,7 +201,7 @@ class CameraController
     @cameras[constants.VIEW_3D].top    += moveVector.y
     @cameras[constants.VIEW_3D].bottom += moveVector.y
     @cameras[constants.VIEW_3D].updateProjectionMatrix()
-    @flycam.hasChanged = true
+    @flycam.update()
 
   zoom : (zoom) =>
     @flycam.zoom(zoom)
@@ -222,7 +222,7 @@ class CameraController
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor
       @cameras[i].right = @cameras[i].top    =  boundary * scaleFactor
       @cameras[i].updateProjectionMatrix()
-    @flycam.hasChanged = true
+    @flycam.update()
 
 
   bind : ->

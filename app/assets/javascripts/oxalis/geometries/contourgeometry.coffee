@@ -53,7 +53,7 @@ class CellLayer
     @edge.vertexBuffer.push(edgePoint)
     @finalizeMesh(@edge)
     
-    @flycam.hasChanged = true
+    @flycam.update()
 
   finalizeMesh : (mesh) ->
     mesh.geometry.__vertexArray = mesh.vertexBuffer.getBuffer()

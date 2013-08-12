@@ -132,7 +132,7 @@ class PlaneController
       @view.getCameras()[constants.VIEW_3D],
       view, 
       new THREE.Vector3(pos...), 
-      => @flycam.hasChanged = true )
+      => @flycam.update())
     
     @controls.noZoom = true
     @controls.noPan = true

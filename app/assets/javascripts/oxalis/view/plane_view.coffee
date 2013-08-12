@@ -75,10 +75,6 @@ class PlaneView
     @newTextures = [true, true, true, true]
     # start the rendering loop
 
-    # refresh the scene once a bucket is loaded
-    # FIXME: probably not the most elgant thing to do
-    # FIXME: notifies all planes when any bucket is loaded
-    # $(window).on("bucketloaded", => @flycam.hasChanged = true; @flycam.newBuckets = [true, true, true]) 
 
   animate : ->
 
@@ -136,7 +132,7 @@ class PlaneView
 
   #Apply a single draw
   draw : ->
-    @flycam.hasChanged = true
+    @flycam.update()
 
   # throttle resize to avoid annoying flickering
   resizeThrottled : ->
@@ -187,7 +183,7 @@ class PlaneView
     @flycam.setActivePlane planeID
     for i in [0..2]
       $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
-    @flycam.hasChanged = true
+    @flycam.update()
 
   getCameras : =>
     @camera

@@ -109,7 +109,7 @@ class SceneController
   setDisplayCrosshair : (value) =>
     for plane in @planes
       plane.setDisplayCrosshair value
-    @flycam.hasChanged = true
+    @flycam.update()
 
   setRouteClippingDistance : (value) =>
     # convert nm to voxel
@@ -119,11 +119,11 @@ class SceneController
   setInterpolation : (value) =>
     for plane in @planes
       plane.setLinearInterpolationEnabled(value)
-    @flycam.hasChanged = true
+    @flycam.update()
 
   setDisplaySV : (plane, value) =>
     @displayPlane[plane] = value
-    @flycam.hasChanged = true
+    @flycam.update()
 
   getMeshes : =>
     result = []

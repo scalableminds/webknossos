@@ -55,7 +55,7 @@ class VolumeTracing
     console.log "Labeling time:", ((new Date()).getTime() - start)
 
     @currentLayer = null
-    @flycam.hasChanged = true
+    @flycam.update()
 
     @trigger "resetContour"
 

@@ -13,8 +13,8 @@ class User
   crosshairSize : null
   scaleValue : null
   mouseRotateValue : null
-  routeClippingDistance : null
-  routeClippingDistanceArbitrary : null
+  clippingDistance : null
+  clippingDistanceArbitrary : null
   dynamicSpaceDirection : null
   displayCrosshair : null
   interpolation : null
@@ -88,8 +88,8 @@ class User
         crosshairSize : @crosshairSize,
         scaleValue : @scaleValue,
         mouseRotateValue : @mouseRotateValue,
-        routeClippingDistance : @routeClippingDistance,
-        routeClippingDistanceArbitrary : @routeClippingDistanceArbitrary,
+        clippingDistance : @clippingDistance,
+        clippingDistanceArbitrary : @clippingDistanceArbitrary,
         dynamicSpaceDirection : @dynamicSpaceDirection,
         displayCrosshair : @displayCrosshair,
         interpolation : @interpolation,

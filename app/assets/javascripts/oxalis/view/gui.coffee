@@ -16,8 +16,6 @@ class Gui
     _.extend(this, new EventMixin())
 
     @user = @model.user
-    # create GUI
-    # modelRadius = @model.route.getActiveNodeRadius()
     @qualityArray = ["high", "medium", "low"]
 
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
@@ -33,14 +31,12 @@ class Gui
       resetBrightnessAndContrast : => @resetBrightnessAndContrast()
       quality : @qualityArray[@user.quality]
 
-      activeTreeID : @model.route.getActiveTreeId()
-
-      activeNodeID : @model.route.getActiveNodeId()
+      activeTreeID : @model.cellTracing.getActiveTreeId()
+      activeNodeID : @model.cellTracing.getActiveNodeId()
       activeCellID : @model.volumeTracing.getActiveCellId()
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
       createNewCell : => @trigger "createNewCell"
-      # radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
 
     if @datasetPosition == 0
       # add new dataset to settings
@@ -92,9 +88,9 @@ class Gui
         0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
     @addFunction(@fView, @settings, "resetBrightnessAndContrast",
       "Reset B/C")
-    @clippingController = @addSlider(@fView, @user, "routeClippingDistance",
+    @clippingController = @addSlider(@fView, @user, "clippingDistance",
       1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
-    @clippingControllerArbitrary = @addSlider(@fView, @user, "routeClippingDistanceArbitrary",
+    @clippingControllerArbitrary = @addSlider(@fView, @user, "clippingDistanceArbitrary",
       1, 127, 1, "Clipping Distance")
     @addCheckbox(@fView, @user, "displayCrosshair", "Show Crosshairs")
     (@fView.add @settings, "quality", @qualityArray)
@@ -170,7 +166,7 @@ class Gui
         else
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
-    @model.route.on
+    @model.cellTracing.on
       newActiveNode    : => @update()
       newActiveTree    : => @update()
       deleteActiveTree : => @update()
@@ -232,7 +228,7 @@ class Gui
 
     @user.pushImpl()
     if @restrictions.allowUpdate
-      @model.route.pushNow()
+      @model.cellTracing.pushNow()
         .then( 
           -> Toast.success("Saved!")
           -> Toast.error("Couldn't save. Please try again.")
@@ -343,8 +339,8 @@ class Gui
 
     # Helper method to combine common update methods
     # called when value user switch to different active node
-    @settings.activeNodeID = @model.route.lastActiveNodeId
-    @settings.activeTreeID = @model.route.getActiveTreeId()
+    @settings.activeNodeID = @model.cellTracing.lastActiveNodeId
+    @settings.activeTreeID = @model.cellTracing.getActiveTreeId()
     @settings.activeCellID = @model.volumeTracing.getActiveCellId()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()

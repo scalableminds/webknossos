@@ -167,7 +167,7 @@ class ArbitraryView
 
       @resizeThrottled()
 
-  setRouteClippingDistance : (value) =>
+  setClippingDistance : (value) =>
 
     @camera.near = @CAM_DISTANCE - value
     @camera.updateProjectionMatrix()

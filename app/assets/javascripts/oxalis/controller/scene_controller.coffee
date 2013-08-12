@@ -77,7 +77,7 @@ class SceneController
           @planes[i].setVisible(true)
           pos = @flycam.getPosition().slice()
           ind = Dimensions.getIndices(i)
-          # Offset the plane so the user can see the route behind the plane
+          # Offset the plane so the user can see the cellTracing behind the plane
           pos[ind[2]] += if i==constants.PLANE_XY then @planeShift[ind[2]] else -@planeShift[ind[2]]
           @planes[i].setPosition(new THREE.Vector3(pos...))
         else
@@ -127,7 +127,7 @@ class SceneController
     @flycam.update()
 
 
-  setRouteClippingDistance : (value) =>
+  setClippingDistance : (value) =>
 
     # convert nm to voxel
     for i in constants.ALL_PLANES
@@ -191,8 +191,8 @@ class SceneController
   bind : ->
     
     @model.user.on({
-      routeClippingDistanceChanged : (value) =>
-        @setRouteClippingDistance(value)
+      clippingDistanceChanged : (value) =>
+        @setClippingDistance(value)
       displayCrosshairChanged : (value) =>
         @setDisplayCrosshair(value)
       interpolationChanged : (value) =>

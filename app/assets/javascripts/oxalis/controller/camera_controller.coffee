@@ -212,13 +212,13 @@ class CameraController
     @flycam.update()
 
 
-  setRouteClippingDistance : (value) ->
+  setClippingDistance : (value) ->
 
     @camDistance = value # Plane is shifted so it's <value> to the back and the front
     @updateCamViewport()
 
 
-  getRouteClippingDistance : (planeID) ->
+  getClippingDistance : (planeID) ->
 
     @camDistance * @model.scaleInfo.voxelPerNM[planeID]
 
@@ -238,5 +238,5 @@ class CameraController
   bind : ->
 
     @model.user.on 
-      routeClippingDistanceChanged : (value) => @setRouteClippingDistance(value)
+      clippingDistanceChanged : (value) => @setClippingDistance(value)
       zoomChanged : (value) => @updateCamViewport()

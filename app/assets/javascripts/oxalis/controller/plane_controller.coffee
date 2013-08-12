@@ -78,7 +78,7 @@ class PlaneController
         $("<button>", type : "button", class : "btn btn-small")
           .html("#{if button.color then "<span style=\"background: #{button.color}\"></span>" else ""}#{button.name}")
           .on("click", button.callback)
-      )    
+      )
 
     objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }
     @cellTracingController = new CellTracingController( objects )
@@ -188,7 +188,7 @@ class PlaneController
       #misc keys
       # TODO: what does this? I removed it, I need the key.
       #"n" : => Helper.toggle()
-      #"ctr + s"       : => @model.route.pushImpl()
+      #"ctr + s"       : => @model.cellTracing.pushImpl()
     )
 
     @input.keyboardLoopDelayed = new Input.Keyboard(
@@ -222,8 +222,8 @@ class PlaneController
 
   init : ->
 
-    @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
-    @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
+    @cameraController.setClippingDistance @model.user.clippingDistance
+    @sceneController.setClippingDistance @model.user.clippingDistance
 
 
   start : (newMode) ->
@@ -259,7 +259,7 @@ class PlaneController
 
     @view.on
       render : => @render()
-      finishedRender : => @model.route.rendered()
+      finishedRender : => @model.cellTracing.rendered()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
     @sceneController.on
@@ -282,7 +282,7 @@ class PlaneController
 
     @model.binary.ping(@flycam.getPosition(), {zoomStep: @flycam.getIntegerZoomStep(), area: [@flycam.getArea(constants.PLANE_XY),
                         @flycam.getArea(constants.PLANE_YZ), @flycam.getArea(constants.PLANE_XZ)], activePlane: @flycam.getActivePlane()})
-    @model.route.globalPosition = @flycam.getPosition()
+    @model.cellTracing.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()
 
@@ -363,9 +363,9 @@ class PlaneController
 
   setNodeRadius : (delta) =>
 
-    lastRadius = @model.route.getActiveNodeRadius()
+    lastRadius = @model.cellTracing.getActiveNodeRadius()
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
-    @model.route.setActiveNodeRadius(radius)
+    @model.cellTracing.setActiveNodeRadius(radius)
 
 
   scroll : (delta, type) =>

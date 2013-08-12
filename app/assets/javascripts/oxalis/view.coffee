@@ -19,7 +19,7 @@ class View
     @setTheme(constants.THEME_BRIGHT)
     @createKeyboardCommandOverlay()
 
-    @model.route.on({
+    @model.cellTracing.on({
       emptyBranchStack : =>
 
         Toast.error("No more branchpoints", false)
@@ -97,7 +97,7 @@ class View
         @updateTreesSortButton()
         @updateTrees()
 
-    @model.route.stateLogger.on
+    @model.cellTracing.stateLogger.on
       pushFailed       : (critical) =>
         if not critical or @reloadDenied
           Toast.error("Auto-Save failed!")
@@ -207,7 +207,7 @@ class View
 
   updateComments : ->
     
-    comments = @model.route.getComments()
+    comments = @model.cellTracing.getComments()
     commentList = $("#comment-list")
     commentList.empty()
 
@@ -220,7 +220,7 @@ class View
       if treeId != lastTreeId
         newContent.appendChild((
           $('<li>').append($('<i>', {"class": "icon-sitemap"}),
-          $('<span>', {"data-treeid": treeId, "text": @model.route.getTree(treeId).name})))[0])
+          $('<span>', {"data-treeid": treeId, "text": @model.cellTracing.getTree(treeId).name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
         $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
@@ -233,7 +233,7 @@ class View
 
   updateActiveComment : ->
 
-    comment = @model.route.getComment()
+    comment = @model.cellTracing.getComment()
     if comment
       $("#comment-input").val(comment)
     else
@@ -244,7 +244,7 @@ class View
       oldIcon.toggleClass("icon-arrow-right", false)
       oldIcon.toggleClass("icon-angle-right", true)
 
-    activeHref = $("#comment-container a[data-nodeid=#{@model.route.getActiveNodeId()}]")
+    activeHref = $("#comment-container a[data-nodeid=#{@model.cellTracing.getActiveNodeId()}]")
     if activeHref.length
 
       newIcon = activeHref.parent("li").children("i")
@@ -255,7 +255,7 @@ class View
       $("#comment-container").animate({
         scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
     else
-      activeTree = $("#comment-container span[data-treeid=#{@model.route.getActiveTreeId()}]")
+      activeTree = $("#comment-container span[data-treeid=#{@model.cellTracing.getActiveTreeId()}]")
       if activeTree.length
         $("#comment-container").animate({
           scrollTop: activeTree.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
@@ -263,7 +263,7 @@ class View
 
   updateActiveTree : ->
 
-    activeTree = @model.route.getTree()
+    activeTree = @model.cellTracing.getTree()
     if activeTree
       $("#tree-name-input").val(activeTree.name)
       $("#tree-name").text(activeTree.name)
@@ -298,7 +298,7 @@ class View
 
   updateTrees : ->
 
-    trees = @model.route.getTreesSorted()
+    trees = @model.cellTracing.getTreesSorted()
 
     treeList = $("#tree-list")
     treeList.empty()

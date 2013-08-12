@@ -171,7 +171,7 @@ class Skeleton
           if neighbor.id < node.id
             @edgesBuffer[index].push(neighbor.pos.concat(node.pos))
 
-    @updateGeometries()
+    @updateGeometries(index)
     @updateBranches()
 
     @setActiveNode()
@@ -263,7 +263,7 @@ class Skeleton
     @nodesBuffer[index].push(position)
     @nodes[index].geometry.nodeIDs.push([id])
 
-    @updateGeometries()
+    @updateGeometries(index)
 
     # Animation to center waypoint position
     if centered
@@ -319,7 +319,7 @@ class Skeleton
       @edgesBuffer[index].getAllElements()[edgesIndex * 6 + i] = lastEdge[i]
 
     
-    updateGeometries()
+    @updateGeometries(index)
 
     @setActiveNode()
     @flycam.update()
@@ -341,7 +341,7 @@ class Skeleton
       @edgesBuffer[index].push( activeNode.pos.concat(lastNode.pos) )
     @edgesBuffer[index].pushSubarray(@edgesBuffer[lastIndex].getAllElements())
 
-    @updateGeometries()
+    @updateGeometries(index)
 
     @flycam.update()
 
@@ -450,7 +450,7 @@ class Skeleton
     @activeNodeParticle.material.sizeAttenuation = sizeAttenuation
     @activeNodeParticle.material.needsUpdate = true
   
-  updateGeometries: ->
+  updateGeometries: (index) ->
 
     edges = @edges[index].geometry
     nodes = @nodes[index].geometry

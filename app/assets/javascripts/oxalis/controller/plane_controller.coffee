@@ -41,8 +41,6 @@ class PlaneController
     @isStarted = false
 
     @flycam = @model.flycam
-    @flycam.setZoomStep(@model.user.zoom)
-    @flycam.setQuality(@model.user.quality)
 
     @oldNmPos = @model.scaleInfo.voxelToNm( @flycam.getPosition() )
 
@@ -303,7 +301,7 @@ class PlaneController
   zoomIn : (zoomToMouse) =>
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @cameraController.zoom(@flycam.getZoomStep() - constants.ZOOM_DIFF)
+    @flycam.zoomIn()
     @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()
@@ -311,7 +309,7 @@ class PlaneController
   zoomOut : (zoomToMouse) =>
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @cameraController.zoom(@flycam.getZoomStep() + constants.ZOOM_DIFF)
+    @flycam.zoomOut()
     @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()

@@ -203,9 +203,6 @@ class CameraController
     @cameras[constants.VIEW_3D].updateProjectionMatrix()
     @flycam.update()
 
-  zoom : (zoom) =>
-    @flycam.zoom(zoom)
-    @updateCamViewport()
 
   setRouteClippingDistance : (value) ->
     @camDistance = value # Plane is shifted so it's <value> to the back and the front
@@ -216,7 +213,7 @@ class CameraController
 
   updateCamViewport : ->
     scaleFactor = @model.scaleInfo.baseVoxel
-    boundary    = constants.WIDTH / 2 * @flycam.getPlaneScalingFactor()
+    boundary    = constants.WIDTH / 2 * @model.user.zoom
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       @cameras[i].near = -@camDistance
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor
@@ -229,4 +226,4 @@ class CameraController
 
     @model.user.on 
       routeClippingDistanceChanged : (value) => @setRouteClippingDistance(value)
-      zoomChanged : (value) => @zoom(Math.log(value) / Math.LN2)
+      zoomChanged : (value) => @updateCamViewport()

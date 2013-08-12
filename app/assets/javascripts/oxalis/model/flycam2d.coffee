@@ -38,11 +38,20 @@ class Flycam2d
 
     # correct zoom values that are too high
     @user.setValue("zoom", Math.min(@user.zoom, Math.floor(@getMaxZoomStep())))
-    @setZoomStep(@user.zoom)
 
     @user.on({
       qualityChanged : (quality) => @setQuality(quality)
+      zoomChanged : (zoomFactor) => @zoom(Math.log(zoomFactor) / Math.LN2)
       })
+
+  zoomIn : ->
+
+    @zoom(@zoomStep - constants.ZOOM_DIFF)
+
+
+  zoomOut : ->
+
+    @zoom(@zoomStep + constants.ZOOM_DIFF)
 
 
   zoom : (zoom) ->

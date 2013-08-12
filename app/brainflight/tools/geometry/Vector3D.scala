@@ -27,6 +27,8 @@ case class Vector3D(val x: Double = 0, val y: Double = 0, val z: Double = 0) {
     else
       this
   }
+  
+  def neg = Vector3D(-x, -y, -z)
 
   def dx(d: Double) =
     Vector3D(x + d, y, z)

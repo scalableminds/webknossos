@@ -10,17 +10,23 @@ class CellTacingController
     @mouseControls = 
 
       leftDownMove : (delta, pos) => 
+
         @move [
           delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
           delta.y * @model.user.getMouseInversionY() / @view.scaleFactor
           0
         ]
       
+
       leftClick : (pos, shiftPressed, altPressed, plane) =>
+
         @onClick(pos, shiftPressed, altPressed, plane)
 
+
       rightClick : (pos, ctrlPressed) =>
+
         @setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
+
 
     @keyboardControls =
 
@@ -43,18 +49,23 @@ class CellTacingController
 
 
   setNodeRadius : (delta) =>
+
     lastRadius = @model.route.getActiveNodeRadius()
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
     @model.route.setActiveNodeRadius(radius)
 
+
   setParticleSize : (delta) =>
+
     particleSize = @model.user.particleSize + delta
     particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize)
     particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize)
 
     @model.user.setValue("particleSize", (Number) particleSize)
  
+
   toggleSkeletonVisibility : =>
+
     @sceneController.toggleSkeletonVisibility()
     # Show warning, if this is the first time to use
     # this function for this user
@@ -63,10 +74,14 @@ class CellTacingController
       @model.user.firstVisToggle = false
       @model.user.push()
 
+
   toggleInactiveTreeVisibility : =>
+
     @sceneController.toggleInactiveTreeVisibility()
   
+
   setWaypoint : (position, ctrlPressed) =>
+
     activeNode = @model.route.getActiveNode()
     # set the new trace direction
     if activeNode
@@ -85,6 +100,7 @@ class CellTacingController
 
       @pushBranch()
       @setActiveNode(activeNode.id)
+
 
   onClick : (position, shiftPressed, altPressed, plane) =>
 
@@ -133,6 +149,7 @@ class CellTacingController
   ########### Model Interaction
 
   addNode : (position, centered) =>
+
     if @model.user.newNodeNewTree == true
       @createNewTree()
       # make sure the tree was rendered two times before adding nodes,
@@ -145,26 +162,40 @@ class CellTacingController
     else
       @model.route.addNode(position, constants.TYPE_USUAL, centered)
 
+
   pushBranch : =>
+
     @model.route.pushBranch()
 
+
   popBranch : =>
+
     _.defer => @model.route.popBranch().done((id) => 
       @setActiveNode(id, true)
     )
 
+
   setActiveNode : (nodeId, centered, mergeTree) =>
+
     @model.route.setActiveNode(nodeId, mergeTree)
     if centered
       @centerActiveNode()
 
+
   centerActiveNode : =>
+
     position = @model.route.getActiveNodePos()
     if position
       @model.flycam.setPosition(position)
 
+
   deleteActiveNode : =>
+
     @model.route.deleteActiveNode()
 
+
   createNewTree : =>
+
     @model.route.createNewTree()
+
+    

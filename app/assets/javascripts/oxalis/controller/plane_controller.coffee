@@ -26,6 +26,7 @@ class PlaneController
     keyboardLoopDelayed : null
 
     unbind : ->
+
       for mouse in @mouseControllers
         mouse.unbind()
       @mouseControllers = []
@@ -299,6 +300,7 @@ class PlaneController
       @flycam.moveActivePlane([0, 0, z], false)
 
   zoomIn : (zoomToMouse) =>
+
     if zoomToMouse
       @zoomPos = @getMousePosition()
     @flycam.zoomIn()
@@ -306,13 +308,16 @@ class PlaneController
     if zoomToMouse
       @finishZoom()
 
+
   zoomOut : (zoomToMouse) =>
+
     if zoomToMouse
       @zoomPos = @getMousePosition()
     @flycam.zoomOut()
     @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()
+
 
   finishZoom : =>
     
@@ -326,34 +331,45 @@ class PlaneController
       @flycam.move(moveVector, @flycam.getActivePlane())
 
   getMousePosition : ->
+
     activePlane = @flycam.getActivePlane()
     pos = @input.mouseControllers[activePlane].position
     return @calculateGlobalPos([pos.x, pos.y])
 
+
   isMouseOver : ->
+
     activePlane = @flycam.getActivePlane()
     return @input.mouseControllers[activePlane].isMouseOver
 
+
   changeMoveValue : (delta) ->
+
     moveValue = @model.user.moveValue + delta
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
     @model.user.setValue("moveValue", (Number) moveValue)
 
+
   scaleTrianglesPlane : (delta) ->
+
     scale = @model.user.scale + delta
     scale = Math.min(constants.MAX_SCALE, scale)
     scale = Math.max(constants.MIN_SCALE, scale)
 
     @model.user.setValue("scale", (Number) scale)
 
+
   setNodeRadius : (delta) =>
+
     lastRadius = @model.route.getActiveNodeRadius()
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
     @model.route.setActiveNodeRadius(radius)
 
+
   scroll : (delta, type) =>
+
     switch type
       when null then @moveZ(delta)
       when "shift" then @cellTracingController.setParticleSize(delta)
@@ -363,7 +379,9 @@ class PlaneController
         else
           @zoomOut(true)
 
+
   calculateGlobalPos : (clickPos) =>
+
     curGlobalPos  = @flycam.getPosition()
     zoomFactor    = @flycam.getPlaneScalingFactor()
     scaleFactor   = @view.scaleFactor
@@ -382,5 +400,9 @@ class PlaneController
           curGlobalPos[1], 
           curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor ]
 
+
   centerActiveNode : ->
+
     @activeSubController.centerActiveNode()
+
+    

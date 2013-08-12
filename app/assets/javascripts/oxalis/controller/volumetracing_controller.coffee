@@ -33,4 +33,7 @@ class VolumeTracingController
         @model.volumeTracing.createCell()
 
   drawVolume : (pos) ->
+
     @model.volumeTracing.addToLayer(pos)
+
+    

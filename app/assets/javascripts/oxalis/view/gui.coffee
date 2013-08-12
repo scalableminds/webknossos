@@ -195,11 +195,14 @@ class Gui
 
 
   addCheckbox : (folder, object, propertyName, displayName) =>
+
     return (folder.add object, propertyName)
                           .name(displayName)
                           .onChange((v) => @set(propertyName, v,  Boolean))
 
+
   addSlider : (folder, object, propertyName, start, end, step, displayName, onChange) =>
+
     unless onChange?
       onChange = (v) => @set(propertyName, v, Number)
     return (folder.add object, propertyName, start, end)
@@ -207,11 +210,15 @@ class Gui
                           .name(displayName)
                           .onChange(onChange)
 
+
   addFunction : (folder, object, propertyName, displayName) =>
+
     return (folder.add object, propertyName)
                           .name(displayName)
 
+
   addNumber : (folder, object, propertyName, min, step, displayName, onChange) =>
+
     unless onChange?
       onChange = (v) => @set(propertyName, v, Number)
     return (folder.add object, propertyName)
@@ -220,7 +227,9 @@ class Gui
                           .name(displayName)
                           .onChange(onChange)
 
+
   saveNow : =>
+
     @user.pushImpl()
     if @restrictions.allowUpdate
       @model.route.pushNow()
@@ -231,7 +240,9 @@ class Gui
     else
       new $.Deferred().resolve()
 
+
   setPosFromString : (posString) =>
+
     # remove leading/trailing whitespaces
     strippedString = posString.trim()
     # replace remaining whitespaces with commata
@@ -244,6 +255,7 @@ class Gui
         return
     @updateGlobalPosition(@model.flycam.getPosition())
 
+
   initDatasetPosition : (briConNames) ->
 
     for i in [0...briConNames.length]
@@ -254,23 +266,33 @@ class Gui
       datasetPosition = 0
     datasetPosition
 
+
   createTooltips : ->
+
       $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
 
+
   updateGlobalPosition : (globalPos) =>
+
     stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
     $("#trace-position-input").val(stringPos)
 
+
   set : (name, value, type) =>
+
     @user.setValue( name, (type) value)
 
+
   setBrightnessAndContrast : =>
+
     @model.binary.updateContrastCurve(@settings.brightness, @settings.contrast)
     @user.brightness[@datasetPosition] = (Number) @settings.brightness
     @user.contrast[@datasetPosition] = (Number) @settings.contrast
     @user.push()
 
+
   resetBrightnessAndContrast : =>
+
     Request.send(
       url : "/user/configuration/default"
       dataType : "json"
@@ -285,6 +307,7 @@ class Gui
 
 
   setQuality : (value) =>
+
     for i in [0..(@qualityArray.length - 1)]
       if @qualityArray[i] == value
         value = i
@@ -292,22 +315,33 @@ class Gui
 
 
   updateParticleSize : =>
+
     @particleSizeController.updateDisplay()
 
+
   updateMoveValue : =>
+
     @moveValueController.updateDisplay()
 
+
   updateMoveValue3d : =>
+
     @moveValue3dController.updateDisplay()
 
+
   updateScale : =>
+
     @scaleController.updateDisplay()
 
+
   updateZoom : =>
+
     @zoomController.updateDisplay()
 
-  # Helper method to combine common update methods
+
   update : ->
+
+    # Helper method to combine common update methods
     # called when value user switch to different active node
     @settings.activeNodeID = @model.route.lastActiveNodeId
     @settings.activeTreeID = @model.route.getActiveTreeId()
@@ -316,20 +350,24 @@ class Gui
     @activeTreeIdController.updateDisplay()
     @activeCellIdController.updateDisplay()
 
+
   setFolderVisibility : (folder, visible) ->
 
     $element = $(folder.domElement)
     if visible then $element.show() else $element.hide()
+
 
   setFolderElementVisibility : (element, visible) ->
 
     $element = $(element.domElement).parents(".cr")
     if visible then $element.show() else $element.hide()
 
+
   hideFolders : (folders) ->
 
     for folder in folders
       @setFolderVisibility( folder, false)
+
 
   setMode : (mode) ->
 

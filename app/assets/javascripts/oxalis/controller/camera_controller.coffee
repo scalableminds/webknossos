@@ -135,6 +135,7 @@ class CameraController
   changePrevSV : (animate = true) => @changePrev(constants.VIEW_3D, animate)
 
   updateCameraPrev : ->
+
     p = @getConvertedPosition()
     @camera.position.set(@dx + p[0], @dy + p[1], @dz + p[2])
     @camera.left = @l
@@ -148,8 +149,11 @@ class CameraController
     @notify()
     @flycam.update()
     
+
   prevViewportSize : ->
+
     (@cameras[constants.VIEW_3D].right - @cameras[constants.VIEW_3D].left)         # always quadratic
+
 
   zoomPrev : (value, position, curWidth) =>
 
@@ -174,15 +178,18 @@ class CameraController
     @flycam.setRayThreshold(camera.right, camera.left)
     @flycam.update()
 
+
   movePrevX : (x) =>
 
     @movePrevRaw(
       new THREE.Vector2( x * @prevViewportSize() / constants.WIDTH, 0 ))
 
+
   movePrevY : (y) =>
 
     @movePrevRaw(
       new THREE.Vector2( 0, - y * @prevViewportSize() / constants.WIDTH ))
+
 
   movePrev : ( nmVector ) ->
     # moves camera by the nm vector
@@ -193,6 +200,7 @@ class CameraController
     
     nmVector.applyEuler( rotation , eulerOrder )
     @movePrevRaw( nmVector )
+
 
   movePrevRaw : (moveVector) ->
 
@@ -205,13 +213,18 @@ class CameraController
 
 
   setRouteClippingDistance : (value) ->
+
     @camDistance = value # Plane is shifted so it's <value> to the back and the front
     @updateCamViewport()
 
+
   getRouteClippingDistance : (planeID) ->
+
     @camDistance * @model.scaleInfo.voxelPerNM[planeID]
 
+
   updateCamViewport : ->
+    
     scaleFactor = @model.scaleInfo.baseVoxel
     boundary    = constants.WIDTH / 2 * @model.user.zoom
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]

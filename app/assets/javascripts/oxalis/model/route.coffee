@@ -205,6 +205,7 @@ class Route
       @trigger("noBranchPoints")
       deferred.reject()
 
+
   deleteBranch : (node) ->
 
     if node.type != @TYPE_BRANCH then return
@@ -635,11 +636,11 @@ class Route
       return (@trees.slice(0)).sort(@compareTimestamps)
 
 
-  # returns a list of nodes that are connected to the parent
-  #
-  # ASSUMPTION:    we are dealing with a tree, circles would
-  #                break this algorithm
   getNodeListForRoot : (result, root, previous) ->
+    # returns a list of nodes that are connected to the parent
+    #
+    # ASSUMPTION:    we are dealing with a tree, circles would
+    #                break this algorithm
 
     result.push(root)
     next = root.getNext(previous)

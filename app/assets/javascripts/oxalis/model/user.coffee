@@ -74,6 +74,7 @@ class User
 
 
   pushImpl : ->
+    
     deferred = $.Deferred()
       
     Request.send(

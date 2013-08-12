@@ -32,6 +32,7 @@ Modal =
 
     $("#modal").modal("show")
 
+
   hide : ->
     
     $("#modal").modal("hide")

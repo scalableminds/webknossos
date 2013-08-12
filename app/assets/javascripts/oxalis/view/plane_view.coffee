@@ -122,28 +122,37 @@ class PlaneView
 
       @trigger "finishedRender"
   
-  # Adds a new Three.js geometry to the scene.
-  # This provides the public interface to the GeometryFactory.
   addGeometry : (geometry) ->
+    # Adds a new Three.js geometry to the scene.
+    # This provides the public interface to the GeometryFactory.
+
     @group.add geometry
 
+
   removeGeometry : (geometry) ->
+
     @group.remove geometry
 
-  #Apply a single draw
+
   draw : ->
+
+    #Apply a single draw
     @flycam.update()
 
-  # throttle resize to avoid annoying flickering
+
   resizeThrottled : ->
+
+    # throttle resize to avoid annoying flickering
     @resizeThrottled = _.throttle(
       => @resize()
       constants.RESIZE_THROTTLE_TIME
     )
     @resizeThrottled()
 
-  #Call this after the canvas was resized to fix the viewport
+
   resize : ->
+
+    #Call this after the canvas was resized to fix the viewport
     canvas = $("#render-canvas")
     WIDTH = (canvas.width()-20)/2
     HEIGHT = (canvas.height()-20)/2
@@ -154,7 +163,9 @@ class PlaneView
       @camera[i].updateProjectionMatrix()
     @draw()
   
+
   scaleTrianglesPlane : (scale) =>
+
     @scaleFactor = scale
     @curWidth = WIDTH = HEIGHT = Math.round(@scaleFactor * constants.VIEWPORT_WIDTH)
     canvas = $("#render-canvas")
@@ -170,38 +181,54 @@ class PlaneView
 
     @resizeThrottled()
 
+
   setActivePlaneXY : =>
+
     @setActivePlane constants.PLANE_XY
 
+
   setActivePlaneYZ : =>
+
     @setActivePlane constants.PLANE_YZ
 
+
   setActivePlaneXZ : =>
+
     @setActivePlane constants.PLANE_XZ
 
+
   setActivePlane : (planeID) =>
+
     @flycam.setActivePlane planeID
     for i in [0..2]
       $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
     @flycam.update()
 
+
   getCameras : =>
+
     @camera
 
+
   getLights  : =>
+
     @lights
 
 
   showFirstVisToggle : ->
+
     modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
       [{id: "ok-button", label: "OK, Got it."}])
 
+
   showBranchModal : (callback) ->
+
     modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
       [{id: "jump-button", label: "Jump again", callback: callback},
        {id: "cancel-button", label: "Cancel"}])
 
-  bind : ->  
+
+  bind : ->
 
     @model.route.on({
       doubleBranch         : (callback) => @showBranchModal(callback)      
@@ -211,6 +238,7 @@ class PlaneView
     @model.user.on 
       scaleChanged : (scale) => if @running then @scaleTrianglesPlane(scale)
     
+
   stop : ->
 
     $(".inputcatcher").hide()
@@ -218,6 +246,7 @@ class PlaneView
     $(window).off "resize", => @.resize()
 
     @running = false 
+
 
   start : ->
 
@@ -229,3 +258,4 @@ class PlaneView
     $(window).on "resize", => @.resize()
 
     @animate()
+

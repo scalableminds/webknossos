@@ -137,10 +137,14 @@ read_obj_file = ->
   xhr.send(null)
   return new3DMesh
   
+
 triangulate = (arr) ->
+
   triangles = []  
   for i in [1...arr.length - 1]
     triangles.push arr[0]
     triangles.push arr[i]
     triangles.push arr[i + 1]
   return triangles
+
+  

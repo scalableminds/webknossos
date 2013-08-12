@@ -21,38 +21,76 @@ class View
 
     @model.route.on({
       emptyBranchStack : =>
+
         Toast.error("No more branchpoints", false)
+
+
       noBranchPoints : =>
+
         Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false)
+
+
       wrongDirection : =>
+
         Toast.error("You're tracing in the wrong direction")
+
+
       updateComments : => 
+
         @updateComments()
+
+
       newActiveNode : => 
+
         @updateActiveComment()
         @updateActiveTree()
-      deleteTree : => 
+
+
+      deleteTree : =>
+
         @updateActiveComment()
         @updateTrees()
+
+
       mergeTree : =>
+
         @updateTrees()
         @updateComments()
+
+
       reloadTrees : =>
+
         @updateTrees()
         @updateComments()
+
+
       newNode : => 
+
         @updateActiveComment()
         @updateTreesThrottled()
+
+
       newTreeName : => 
+
         @updateTrees()
         @updateComments()
+
+
       newTree : => 
+
         @updateTrees()
         @updateComments()
+
+
       newActiveTreeColor : =>
+
         @updateTrees()
+
+
       deleteActiveNode : =>
+
         @updateTrees() })
+
 
     @model.user.on
       sortTreesByNameChanged : =>
@@ -250,11 +288,13 @@ class View
 
   # avoid lags caused by frequent DOM modification
   updateTreesThrottled : ->
+
     @updateTreesThrottled = _.throttle(
       => @updateTrees()
       1000
     )
     @updateTreesThrottled()
+
 
   updateTrees : ->
 

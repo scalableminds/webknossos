@@ -1,18 +1,28 @@
 jasmine.Matchers::toBeSameArrayAs = (expected) ->
+
   _.all(@actual, (el, i) -> el == expected[i])
   
+
 jasmine.Matchers::toBeA = (clazz) ->
+
   @actual.constructor == clazz
   
+
 jasmine.Matchers::toBeBetween = (a,b) ->
+
   Math.min(a, b) <= @actual <= Math.max(a, b)
 
+
 jasmine.Matchers::toBeStrictlyBetween = (a,b) ->
+
   Math.min(a, b) < @actual < Math.max(a, b)
 
+
 jasmine.Matchers::toBeNearly = (a) ->
+
   EPSILON = 1e-10
   a - EPSILON < @actual < a + EPSILON
+
 
 async = (timeout, handler) ->
   

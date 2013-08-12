@@ -35,6 +35,7 @@ class ArbitraryController
     keyboardOnce : null
 
     unbind : ->
+
       @mouse?.unbind()
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
@@ -75,6 +76,7 @@ class ArbitraryController
 
 
   initMouse : ->
+
     @input.mouse = new Input.Mouse(
       @canvas
       leftDownMove : (delta) =>
@@ -91,7 +93,9 @@ class ArbitraryController
   initKeyboard : ->
 
     getVoxelOffset  = (timeFactor) =>
+
       return @model.user.moveValue3d * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+    
     
     @input.keyboard = new Input.Keyboard(
  

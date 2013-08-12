@@ -88,6 +88,7 @@ class Skeleton
 
     @reset()
 
+
   createNewTree : (treeId, treeColor) ->
     # create route to show in previewBox and pre-allocate buffers
 
@@ -122,7 +123,9 @@ class Skeleton
 
   # Will completely reload the trees from model.
   # This needs to be done at initialization
+
   reset : ->
+
     if (@ids.length > 0)
       @trigger "removeGeometries", @edges.concat(@nodes)
 
@@ -148,7 +151,9 @@ class Skeleton
       @flycam.update())
     @flycam.update()
 
+
   loadSkeletonFromModel : (trees, finishedDeferred) ->
+
     unless trees? then trees = @model.route.getTrees()
 
     for tree in trees
@@ -181,6 +186,7 @@ class Skeleton
 
 
   setActiveNode : =>
+
     id = @route.getActiveNodeId()
     position = @route.getActiveNodePos()
     # May be null
@@ -198,7 +204,9 @@ class Skeleton
       @activeNodeParticle.visible = false
     @flycam.update()
 
+
   setBranchPoint : (isBranchPoint, nodeID) ->
+
     treeColor = @route.getTree().color
     if isBranchPoint
       colorActive = @invertHex(treeColor)
@@ -210,12 +218,16 @@ class Skeleton
       @activeNodeParticle.material.color.setHex(colorActive)
     @flycam.update()
 
+
   setNodeRadius : (radius) ->
+
     vRadius = new THREE.Vector3(radius, radius, radius)
     @activeNode.scale = @calcScaleVector(vRadius)
     @flycam.update()
 
+
   setParticleSize : (size) ->
+
     for particleSystem in @nodes
       particleSystem.material.size = size
     for line in @edges
@@ -224,7 +236,9 @@ class Skeleton
     @activeNodeParticle.material.size = size
     @flycam.update()
 
+
   updateActiveTreeColor : (oldTreeId) ->
+
     index = @getIndexFromTreeId(oldTreeId)
     treeColor = @route.getTree().color
 
@@ -238,10 +252,14 @@ class Skeleton
     @updateBranches()
     @setActiveNode()
 
+
   getMeshes : =>
+
     return [@activeNodeParticle].concat(@nodes).concat(@edges).concat(@branches)
 
+
   setWaypoint : (centered) =>
+
     curGlobalPos = @flycam.getPosition()
     activePlane  = @flycam.getActivePlane()
     position     = @route.getActiveNodePos()
@@ -277,7 +295,9 @@ class Skeleton
 
     @flycam.update()
 
+
   deleteNode : (node, treeId) ->
+
     $.assert(node.neighbors.length == 1,
       "Node needs to have exactly 1 neighbor.", 0)
 
@@ -324,7 +344,9 @@ class Skeleton
     @setActiveNode()
     @flycam.update()
 
+
   mergeTree : (lastTreeID, lastNode, activeNode) ->
+
     lastIndex = @getIndexFromTreeId(lastTreeID)
     index = @getIndexFromTreeId(@route.getTree().treeId)
 
@@ -344,6 +366,7 @@ class Skeleton
     @updateGeometries(index)
 
     @flycam.update()
+
 
   deleteTree : (index) ->
 
@@ -386,7 +409,9 @@ class Skeleton
     @branches.geometry.colorsNeedUpdate = true
     @flycam.update()
 
+
   getIndexFromTreeId : (treeId) ->
+
     unless treeId
       treeId = @route.getTree().treeId
     for i in [0..@ids.length]
@@ -394,22 +419,29 @@ class Skeleton
         return i
     return null
 
-  # Helper function
+
   calcScaleVector : (v) ->
+    # Helper function
+
     return (new THREE.Vector3()).multiplyVectors(v, @scaleVector)
 
   setVisibility : (isVisible) ->
+
     for mesh in @getMeshes()
       mesh.visible = isVisible
     if isVisible
       @setActiveNode()
     @flycam.update()
 
+
   toggleInactiveTreeVisibility : ->
+
     @showInactiveTrees = not @showInactiveTrees
     @setInactiveTreeVisibility(@showInactiveTrees)
 
+
   setInactiveTreeVisibility : (visible) ->
+
     for mesh in @getMeshes()
       if mesh != @activeNodeParticle
         mesh.visible = visible
@@ -417,6 +449,7 @@ class Skeleton
     @edges[index].visible = true
     @nodes[index].visible = true
     @flycam.update()
+    
 
   invertHexToRGB : (hexColor) ->
 

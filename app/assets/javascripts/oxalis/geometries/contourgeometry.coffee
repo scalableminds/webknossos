@@ -26,6 +26,7 @@ class CellLayer
 
     @createMeshes()
 
+
   createMeshes : ->
 
     edgeGeometry = new THREE.Geometry()
@@ -36,12 +37,17 @@ class CellLayer
 
     @reset()
 
+
   reset : ->
+
     @edge.vertexBuffer.clear()
     @finalizeMesh(@edge)
 
+
   getMeshes : ->
+
     return [@edge]
+
 
   addEdgePoint : (pos) ->
 
@@ -55,7 +61,10 @@ class CellLayer
     
     @flycam.update()
 
+
   finalizeMesh : (mesh) ->
+
     mesh.geometry.__vertexArray = mesh.vertexBuffer.getBuffer()
     mesh.geometry.__webglLineCount = mesh.vertexBuffer.getLength()
     mesh.geometry.verticesNeedUpdate = true
+

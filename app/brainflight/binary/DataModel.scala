@@ -45,9 +45,9 @@ abstract class DataModel {
       
       @inline
       def coordinateTransformer(px: Double, py: Double, pz: Double) = {
-        f(matrix(0) * px + matrix(4) * py + matrix(8) * pz + matrix(12),
-          matrix(1) * px + matrix(5) * py + matrix(9) * pz + matrix(13),
-          matrix(2) * px + matrix(6) * py + matrix(10) * pz + matrix(14))
+        f(matrix(0) * px + matrix(1) * py + matrix(2) * pz + matrix(3),
+          matrix(4) * px + matrix(5) * py + matrix(6) * pz + matrix(7),
+          matrix(8) * px + matrix(9) * py + matrix(10) * pz + matrix(11))
       }
 
       coordinates(coordinateTransformer)
@@ -104,13 +104,13 @@ case class Cuboid(
     topLeft.dz(depth - 1).dx(width - 1),
     topLeft.dz(depth - 1).dy(height - 1),
     topLeft.dz(depth - 1).dx(width - 1).dy(height - 1)))
-
+  
   val maxCorner = corners.foldLeft((0.0, 0.0, 0.0))((b, e) => (
     math.max(b._1, e.x), math.max(b._2, e.y), math.max(b._3, e.z)))
 
   val minCorner = corners.foldLeft(maxCorner)((b, e) => (
     math.min(b._1, e.x), math.min(b._2, e.y), math.min(b._3, e.z)))
-
+  
   @inline
   private def looper[T](extendArrayBy: Int)(f: (Double, Double, Double) => Array[T]) = {
     val xhMax = topLeft.x + width
@@ -137,7 +137,43 @@ case class Cuboid(
     }
     array
   }
+  /*
+   def transform = {
+     
+    val matrix = TransformationMatrix(Vector3D(moveVector), Vector3D(axis)).value   
+    println(s"matrix:\n${matrix.toList.sliding(4,4).map(_.mkString(",")).mkString("\n")}\n")
+    def f(px: Double, py: Double, pz: Double) = {
+        Vector3D(matrix(0) * px + matrix(1) * py + matrix(2) * pz + matrix(3),
+          matrix(4) * px + matrix(5) * py + matrix(6) * pz + matrix(7),
+          matrix(8) * px + matrix(9) * py + matrix(10) * pz + matrix(11))
+      } 
+     
+    val xhMax = topLeft.x + width
+    val yhMax = topLeft.y + height
+    val zhMax = topLeft.z + depth
 
+    val array = new ArrayBuffer[Vector3D](_width * _height * _depth)
+    var x = topLeft.x
+    var y = topLeft.y
+    var z = topLeft.z
+    var idx = 0
+    while (z < zhMax) {
+      y = topLeft.y
+      while (y < yhMax) {
+        x = topLeft.x
+        while (x < xhMax) {
+          println(s"$idx: ($x, $y, $z)")
+          array += f(x, y, z)
+          idx += 1
+          x += resolution
+        }
+        y += resolution
+      }
+      z += resolution
+    }
+    array
+  }
+  */
   override def withContainingCoordinates[T](extendArrayBy: Int = 1)(f: (Double, Double, Double) => Array[T]): ArrayBuffer[T] = {
     rotateAndMove(moveVector, axis)(looper[T](extendArrayBy))(f)
   }

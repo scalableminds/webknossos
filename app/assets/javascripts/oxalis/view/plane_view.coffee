@@ -84,9 +84,9 @@ class PlaneView
 
     window.requestAnimationFrame => @animate()
 
-  # This is the main render function.
-  # All 3D meshes and the trianglesplane are rendered here.
   renderFunction : ->
+    # This is the main render function.
+    # All 3D meshes and the trianglesplane are rendered here.
 
     TWEEN.update()
 

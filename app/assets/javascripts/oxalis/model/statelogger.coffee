@@ -196,9 +196,9 @@ class StateLogger
       @pushDebounced()
 
 
-  # Pushes the buffered route to the server. Pushing happens at most 
-  # every 30 seconds.
   pushDebounced : ->
+    # Pushes the buffered route to the server. Pushing happens at most 
+    # every 30 seconds.
 
     saveFkt = => @pushImpl(true)
     @pushDebounced = _.throttle(_.mutexDeferred( saveFkt, -1), @PUSH_THROTTLE_TIME)

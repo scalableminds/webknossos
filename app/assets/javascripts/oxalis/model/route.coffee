@@ -667,8 +667,8 @@ class Route
   rendered : -> @trigger("finishedRender")
 
 
-  # Helper method used in initialization
   findNodeInList : (list, id) ->
+    # Helper method used in initialization
 
     for node in list
       if node.id == id

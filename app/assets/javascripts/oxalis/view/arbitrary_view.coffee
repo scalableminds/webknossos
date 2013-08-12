@@ -122,17 +122,17 @@ class ArbitraryView
     @forceUpdate = true
 
 
-  # Adds a new Three.js geometry to the scene.
-  # This provides the public interface to the GeometryFactory.
   addGeometry : (geometry) -> 
+    # Adds a new Three.js geometry to the scene.
+    # This provides the public interface to the GeometryFactory.
 
     @geometries.push(geometry)
     geometry.attachScene(@group)
     return
 
 
-  # throttle resize to avoid annoying flickering
   resizeThrottled : ->
+    # throttle resize to avoid annoying flickering
 
     @resizeThrottled = _.throttle(
       => @resize()
@@ -141,9 +141,9 @@ class ArbitraryView
     @resizeThrottled()
 
 
-  # Call this after the canvas was resized to fix the viewport
-  # Needs to be bound
   resize : =>
+    # Call this after the canvas was resized to fix the viewport
+    # Needs to be bound
 
     @width  = @container.width()
     @height = @container.height()

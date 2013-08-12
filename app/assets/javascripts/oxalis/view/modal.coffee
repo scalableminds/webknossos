@@ -6,8 +6,8 @@ Modal =
 
   callbacks : {}
 
-  # buttons: [{id:..., label:..., callback:...}, ...]
   show : (text, buttons) ->
+    # buttons: [{id:..., label:..., callback:...}, ...]
 
     html =  "<div class=\"modal-body\"><p>" + text + "</p></div>"
 

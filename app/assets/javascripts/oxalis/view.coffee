@@ -286,8 +286,8 @@ class View
         scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 250)
 
 
-  # avoid lags caused by frequent DOM modification
   updateTreesThrottled : ->
+    # avoid lags caused by frequent DOM modification
 
     @updateTreesThrottled = _.throttle(
       => @updateTrees()

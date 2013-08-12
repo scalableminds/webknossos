@@ -61,8 +61,8 @@ class Flycam2d
       @setZoomStep(zoom)
 
 
-  # Set offset to the best-possible zoom step
   setQuality : (value) ->
+    # Set offset to the best-possible zoom step
 
     @quality = value
     for i in [0..2]

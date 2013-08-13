@@ -16,12 +16,25 @@ case class TransformationMatrix(value: Array[Float]) {
 object TransformationMatrix {
   val defaultSize = 16
 
+  private def orthonormalBasis(direction: Vector3D):Tuple3[Vector3D, Vector3D, Vector3D] = {
+    val nz = direction.normalize
+    
+    if(nz == Vector3D(0, 1, 0))
+      (Vector3D(0,-1,0), Vector3D(0,0,1), Vector3D(1,0,0))
+    else if ( nz == Vector3D(0, -1, 0))
+      (Vector3D(0,-1,0), Vector3D(0,0,-1), Vector3D(1,0,0))
+    else {
+      val y = Vector3D(0, 1, 0)
+      val nx = (nz x y).normalize
+      val ny = (nz x nx).normalize
+    
+      (nx, ny, nz)
+    }
+  }
+  
   def apply(pos: Vector3D, direction: Vector3D): TransformationMatrix = {
     
-    val nz = direction.normalize
-    val y = Vector3D(0, 1, 0)
-    val nx = (nz x y).normalize
-    val ny = (nz x nx).normalize
+    val (nx, ny, nz) = orthonormalBasis(direction)
 
     TransformationMatrix(Array(
       nx.x, nx.y, nx.z, pos.x,

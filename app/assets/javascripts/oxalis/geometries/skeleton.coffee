@@ -176,7 +176,7 @@ class Skeleton
           if neighbor.id < node.id
             @edgesBuffer[index].push(neighbor.pos.concat(node.pos))
 
-    @updateGeometries(index)
+      @updateGeometries(index)
     @updateBranches()
 
     @setActiveNode()

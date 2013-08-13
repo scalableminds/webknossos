@@ -57,7 +57,7 @@ class CellTracing
     @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
     
     console.log "Annotation data: ", tracing
-
+    # ####################################################################################################
     # get tree to build
     for treeData in @data.trees
       # Create new tree
@@ -115,7 +115,7 @@ class CellTracing
         @activeTree = @trees[0]
       else
         @createNewTree()
-
+    # ####################################################################################################
     tracingType = tracing.typ
     if (tracingType == "Task" or tracingType == "Training") and nodeList.length == 0
       @addNode(tracing.content.editPosition)

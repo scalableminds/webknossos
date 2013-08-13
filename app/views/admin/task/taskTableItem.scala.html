@@ -3,7 +3,7 @@
 @import models.annotation.AnnotationType
 
 <tr id="@task.id">
-  <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+  <td class="details-toggle" href="@controllers.admin.routes.AnnotationAdministration.annotationsForTask(task.id)" data-ajax="add-row=#@task.id + tr"> <i class="caret-right"></i> <i class="caret-down"></i> <a href="#" class="hide"></a> </td>
   <td> @formatHash(task.id) </td>
   <td> @task.seedIdHeidelberg </td>
   <td> 

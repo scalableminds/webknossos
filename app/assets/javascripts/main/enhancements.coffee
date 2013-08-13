@@ -27,10 +27,10 @@ $ ->
       $(".hover-hide", this).show()
 
 
-  dataAjaxHandler = (event) ->
-
+  dataAjaxHandler = (event, element=null) ->
     event.preventDefault()
-    $this = $(this)
+    
+    $this = element or $(this)
     $form = if $this.is("form") then $this else $this.parents("form").first()
 
     options = {}
@@ -39,7 +39,7 @@ $ ->
       options[key] = value ? true
 
     ajaxOptions =
-      url : if $this.is("form") then this.action else this.href
+      url : if $this.is("form") then $this.attr("action") else $this.attr("href")
       dataType : "json"
 
     if options["confirm"]
@@ -198,9 +198,11 @@ $ ->
 
     $table.find(".details-row").addClass("hide")
 
-    $table.find(".details-toggle").click ->
-
+    $table.find(".details-toggle").click (event) ->
       $toggle = $(this)
+
+      dataAjaxHandler(event, $toggle)
+
       newState = !$toggle.hasClass("open")
 
       $toggle.parents("tr").next().toggleClass("hide", !newState)

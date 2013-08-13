@@ -339,7 +339,7 @@ class Gui
 
     # Helper method to combine common update methods
     # called when value user switch to different active node
-    @settings.activeNodeID = @model.cellTracing.lastActiveNodeId
+    @settings.activeNodeID = @model.cellTracing.getActiveNodeId()
     @settings.activeTreeID = @model.cellTracing.getActiveTreeId()
     @settings.activeCellID = @model.volumeTracing.getActiveCellId()
     @activeNodeIdController.updateDisplay()

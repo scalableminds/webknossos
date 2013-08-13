@@ -7,6 +7,7 @@ underscore : _
 ./tracetree : TraceTree
 ./statelogger : StateLogger
 ../constants : constants
+./tracingparser : TracingParser
 libs/threejs/ColorConverter : ColorConverter
 ###
 
@@ -35,12 +36,8 @@ class CellTracing
     @trees = []
     @comments = []
     @activeNode = null
-    # Used to save in NML file, is always defined
-    @lastActiveNodeId = 1
+    @activeNodeId = null
     @activeTree = null
-
-    # For trees that are disconnected
-    lostTrees = []
 
     @doubleBranchPop = false
 
@@ -57,65 +54,18 @@ class CellTracing
     @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
     
     console.log "Annotation data: ", tracing
-    # ####################################################################################################
-    # get tree to build
-    for treeData in @data.trees
-      # Create new tree
-      tree = new TraceTree(
-        treeData.id,
-        @getNewTreeColor(treeData.id),
-        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
-        treeData.timestamp)
-      # Initialize nodes
-      i = 0
-      for node in treeData.nodes
-        if node
-          tree.nodes.push(new TracePoint(@TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
-          # idCount should be bigger than any other id
-          @idCount = Math.max(node.id + 1, @idCount);
-      # Initialize edges
-      for edge in treeData.edges
-        sourceNode = @findNodeInList(tree.nodes, edge.source)
-        targetNode = @findNodeInList(tree.nodes, edge.target)
-        if sourceNode and targetNode
-          sourceNode.appendNext(targetNode)
-          targetNode.appendNext(sourceNode)
-        else
-          $.assertNotEquals(sourceNode, null, "source node undefined",
-            {"edge" : edge})
-          $.assertNotEquals(targetNode, null, "target node undefined",
-            {"edge" : edge})
+ 
+    tracingParser = new TracingParser(@, @data)
+    {
+      @idCount
+      @treeIdCount
+      @trees
+      @comments
+      @activeNode
+      @activeNodeId
+      @activeTree
+    } = tracingParser.parse()
 
-      # Set active Node
-      activeNodeT = @findNodeInList(tree.nodes, @data.activeNode)
-      if activeNodeT
-        @activeNode = activeNodeT
-        @lastActiveNodeId = @activeNode.id
-        # Active Tree is the one last added
-        @activeTree = tree
-
-      @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
-      @trees.push(tree)
-    
-    # Set branchpoints
-    nodeList = @getNodeListOfAllTrees()
-    for branchpoint in @data.branchPoints
-      node = @findNodeInList(nodeList, branchpoint.id)
-      if node?
-        node.type = @TYPE_BRANCH
-        @branchStack.push(node)
-
-    # Set comments
-    for comment in @data.comments
-      comment.node = @findNodeInList(nodeList, comment.node)
-    @comments = @data.comments
-
-    unless @activeTree
-      if @trees.length > 0
-        @activeTree = @trees[0]
-      else
-        @createNewTree()
-    # ####################################################################################################
     tracingType = tracing.typ
     if (tracingType == "Task" or tracingType == "Training") and nodeList.length == 0
       @addNode(tracing.content.editPosition)
@@ -141,9 +91,6 @@ class CellTracing
         @flycam.setSpaceDirection(@firstEdgeDirection)
         @flycam3d.setDirection(@firstEdgeDirection)
 
-    #@createNewTree()
-    #for i in [0...10000]
-    #  @addNode([Math.random() * 2000, Math.random() * 2000, Math.random() * 2000], TYPE_USUAL)
 
     $(window).on(
       "beforeunload"
@@ -247,7 +194,7 @@ class CellTracing
         if @branchPointsAllowed
           centered = true
           @pushBranch()
-      @lastActiveNodeId = @activeNode.id
+      @activeNodeId = @activeNode.id
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
@@ -277,7 +224,7 @@ class CellTracing
   getActiveNode : -> @activeNode
 
 
-  getActiveNodeId : -> @lastActiveNodeId
+  getActiveNodeId : -> @activeNodeId
 
 
   getActiveNodePos : ->
@@ -347,7 +294,7 @@ class CellTracing
       for node in tree.nodes
         if node.id == nodeID
           @activeNode = node
-          @lastActiveNodeId = @activeNode.id
+          @activeNodeId = @activeNode.id
           @activeTree = tree
           break
     @stateLogger.push()
@@ -447,7 +394,7 @@ class CellTracing
       @activeNode = null
     else
       @activeNode = @activeTree.nodes[0]
-      @lastActiveNodeId = @activeNode.id
+      @activeNodeId = @activeNode.id
     @stateLogger.push()
 
     @trigger("newActiveNode")

@@ -85,8 +85,14 @@ class Input.Keyboard
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
         
+        returnValue = undefined
+
         unless @keyCallbackMap[key]? or $(":focus").length
-          event.preventDefault()
+          # this would allow ctrl+s to work but since ctrl+f triggers this method, too (why?),
+          # the default behaviour for searching the current page will be disabled
+          # event.preventDefault()
+          # returnValue = false
+          
           callback(1, true)
           # reset lastTime
           callback._lastTime   = null
@@ -95,13 +101,13 @@ class Input.Keyboard
 
           @keyPressedCount++
           @buttonLoop() if @keyPressedCount == 1
-        
+          
         if @delay >= 0
           setTimeout( (=>
             callback._delayed = false
             ), @delay )
 
-        return
+        return returnValue
 
       =>
         

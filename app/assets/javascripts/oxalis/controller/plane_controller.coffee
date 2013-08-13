@@ -186,7 +186,7 @@ class PlaneController
       "down"  : (timeFactor) => @moveY( getVoxelOffset(timeFactor))
 
       # standard behaviour cannot be prevented?
-      # "ctrl + s"       : => @model.cellTracing.stateLogger.pushImpl()
+      # "ctrl + s"       : => @gui.saveNow()
     )
 
     @input.keyboardLoopDelayed = new Input.Keyboard(

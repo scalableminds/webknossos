@@ -1,7 +1,13 @@
 package braingames.util
 
-import java.io.File
-import java.io.PrintWriter
+import java.io.{InputStream, File, PrintWriter}
+
+case class NamedFileStream(stream: InputStream, name: String){
+  def normalizedName = {
+    val sep = File.separatorChar
+    if (sep == '/') name else name.replace(sep, '/')
+  }
+}
 
 object FileIO {
   def printToFile(s: String)(op: java.io.PrintWriter => Unit) {

@@ -15,13 +15,12 @@ import play.api.libs.iteratee.Input
 import oxalis.security.Secured
 import braingames.mail._
 import controllers.admin._
-import models.tracing.Tracing
-import models.tracing.UsedTracings
 import oxalis.thirdparty.BrainTracing
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.i18n.Messages
 import braingames.mvc.Controller
 import oxalis.mail.DefaultMails
+import models.tracing.skeleton.SkeletonTracing
 
 object Authentication extends Controller with Secured {
   // -- Authentication
@@ -76,10 +75,10 @@ object Authentication extends Controller with Secured {
               Application.Mailer ! Send(
                 DefaultMails.registerAdminNotifyerMail(user.name, email, brainDBresult))
               if (autoVerify) {
-                Redirect(routes.TracingController.index)
+                Redirect(controllers.routes.AnnotationController.index)
                   .withSession(Secured.createSession(user))
               } else {
-                Redirect(routes.Authentication.login)
+                Redirect(controllers.routes.Authentication.login)
                   .flashing("modal" -> "An account has been created. An administrator is going to unlock you soon.")
               }
             }
@@ -115,7 +114,7 @@ object Authentication extends Controller with Secured {
         {
           case (email, password) =>
             val user = User.findLocalByEmail(email.toLowerCase).get
-            Redirect(routes.TracingController.index)
+            Redirect(controllers.routes.AnnotationController.index)
               .withSession(Secured.createSession(user))
         })
   }
@@ -124,7 +123,7 @@ object Authentication extends Controller with Secured {
    * Logout and clean the session.
    */
   def logout = Action {
-    Redirect(routes.Authentication.login)
+    Redirect(controllers.routes.Authentication.login)
       .withNewSession
       .flashing("success" -> Messages("user.logout.success"))
   }

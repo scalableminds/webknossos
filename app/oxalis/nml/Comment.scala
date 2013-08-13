@@ -1,6 +1,6 @@
 package oxalis.nml
 
-import braingames.xml.XMLWrites
+import braingames.xml.{SynchronousXMLWrites, XMLWrites}
 import play.api.libs.json._
 
 case class Comment(node: Int, content: String)
@@ -19,8 +19,8 @@ object Comment {
         (js \ CONTENT).as[String]))
   }
   
-  implicit object CommentXMLWrites extends XMLWrites[Comment] {
-    def writes(n: Comment) =
+  implicit object CommentXMLWrites extends SynchronousXMLWrites[Comment] {
+    def synchronousWrites(n: Comment) =
       <comment node={ n.node.toString } content={ n.content } />
   }
 }

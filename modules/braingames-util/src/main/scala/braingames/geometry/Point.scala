@@ -18,6 +18,9 @@ case class Point3D(x: Int, y: Int, z: Int) {
   def scale(f: (Int, Int) => Int) =
     Point3D(f(x, 0), f(y, 1), f(z, 2))
 
+  def scale(s: Int): Point3D =
+    scale((v, _) => v * s)
+
   def hasGreaterCoordinateAs(other: Point3D) =
     x > other.x || y > other.y || z > other.z
 
@@ -27,6 +30,11 @@ case class Point3D(x: Int, y: Int, z: Int) {
 
   def move(dx: Int, dy: Int, dz: Int) =
     Point3D(x + dx, y + dy, z + dz)
+
+  def move(o: Point3D): Point3D =
+    move(o.x, o.y, o.z)
+
+  def negate = Point3D(-x, -y, -z)
 }
 
 object Point3D {

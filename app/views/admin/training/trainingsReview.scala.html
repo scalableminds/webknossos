@@ -1,7 +1,7 @@
-@(tracing: models.tracing.Tracing, form: Form[String])(implicit session: oxalis.view.AuthedSessionData)
+@(annotation: models.annotation.Annotation, form: Form[String])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
 	<div class="container">
-  	@trainingsReviewItem(tracing, form)
+  	@trainingsReviewItem(annotation, form)
   </div>
 }

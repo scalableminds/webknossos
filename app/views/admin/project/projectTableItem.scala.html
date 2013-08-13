@@ -1,4 +1,5 @@
 @(project: models.task.Project)
+@import models.annotation.AnnotationType
 
 
 <tr id="@project.name">
@@ -6,7 +7,7 @@
   <td> @project.name </td>
   <td> @project.owner.map(_.name).getOrElse("<deleted>") </td>
   <td class="nowrap">  
-    <a href="@controllers.admin.routes.ProjectAdministration.trace(project.name)" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
+    <a href="@controllers.routes.AnnotationController.trace(AnnotationType.CompoundProject, project.name)" title="view all finished tracings"><i class="icon-random"></i> view</a><br />
     <a href="@controllers.admin.routes.NMLIO.projectDownload(project.name)" title="download all finished tracings"><i class="icon-download"></i> download</a><br />
     <a href="@controllers.admin.routes.ProjectAdministration.delete(project.name)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
   </td>

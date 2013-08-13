@@ -10,8 +10,8 @@ package object context {
     import com.mongodb.casbah.commons.Imports._
     import com.mongodb.casbah.MongoConnection
 
-    val url = conf.getString("mongo.url")
-    val port = conf.getInt("mongo.port")
+    val url = conf.getString("mongodb.url")
+    val port = conf.getInt("mongodb.port")
 
     MongoConnection(url, port)
   }
@@ -20,10 +20,10 @@ package object context {
     import com.mongodb.casbah.commons.Imports._
 
     val connection = db(dbName)
-    val needsAuth = conf.getBoolean("mongo.needsAuth")
+    val needsAuth = conf.getBoolean("mongodb.needsAuth")
     if (needsAuth) {
-      val dbuser = conf.getString("mongo.user")
-      val dbpasswd = conf.getString("mongo.password")
+      val dbuser = conf.getString("mongodb.user")
+      val dbpasswd = conf.getString("mongodb.password")
       connection.authenticate(dbuser, dbpasswd)
     }
     connection
@@ -31,14 +31,14 @@ package object context {
 
   object DB {
     lazy val connection = createConnection(
-      conf.getString("mongo.dbname"))
+      conf.getString("mongodb.db"))
 
   }
 
   object KnowledgeDB {
     lazy val connection =
       createConnection(
-        conf.getString("mongo.knowledgedb.dbname"))
+        conf.getString("mongodb.knowledgedb.db"))
   }
 
   implicit lazy val ctx = {
@@ -63,7 +63,7 @@ package object context {
     import reactivemongo.bson.BSONObjectID
     import reactivemongo.bson._
 
-    val dbName = conf.getString("mongo.binary.dbname")
+    val dbName = conf.getString("mongodb.binary.dbname")
     
     lazy val driver = new MongoDriver
 

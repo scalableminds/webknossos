@@ -1,5 +1,6 @@
 @(task: models.task.Task)
 
+@import models.annotation.AnnotationType
 
 <tr id="@task.id">
   <td class="details-toggle"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
@@ -17,8 +18,8 @@
       @task.taskType.map(_.summary).getOrElse("<deleted>") 
     </a>
   </td>
-  <td> @task.tracingBase.map(_.dataSetName) </td>
-  <td> @task.tracingBase.map(_.editPosition) </td>
+  <td> @task.annotationBase.map(_.dataSetName) </td>
+  <td> @task.annotationBase.flatMap(_.content.map(_.editPosition)) </td>
   <td> <span class="label"> @task.neededExperience </span> </td>
   <td> @task.priority </td>
   <td> @formatDate(task.created) </td>
@@ -32,7 +33,7 @@
   </td>
   <td class="nowrap">  
     <a href="@controllers.admin.routes.TaskAdministration.edit(task.id)"><i class="icon-pencil"></i> edit </a><br />
-    <a href="@controllers.admin.routes.TaskAdministration.trace(task.id)" title="view all finished tracings"><i class="icon-random"></i> view </a><br />
+    <a href="@controllers.routes.AnnotationController.trace(AnnotationType.CompoundTask,task.id)" title="view all finished tracings"><i class="icon-random"></i> view </a><br />
     <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
     <a href="@controllers.admin.routes.TrainingsTaskAdministration.create(task.id)"><i class="icon-road"></i> use for Training </a><br />
     <a href="@controllers.admin.routes.TaskAdministration.delete(task.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
@@ -42,7 +43,7 @@
   <td colspan="12">
     <table class="table table-condensed table-nohead">
       <tbody>
-        <!-- DETAILS FOR A TASKS TRACINGS NEED TO BE PUT IN HERE -->
+        <!-- DETAILS FOR A TASKS ANNOTATIONS NEED TO BE PUT IN HERE -->
       </tbody>
     </table>
   </td>

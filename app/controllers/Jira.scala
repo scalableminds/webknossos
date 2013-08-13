@@ -6,7 +6,6 @@ import oxalis.security.Secured
 import models.security.Role
 import play.api.mvc._
 import play.api.Logger
-import models.tracing.Tracing
 import models.user.User
 import org.apache.commons.codec.binary.Base64
 import com.sun.jersey.api.client.WebResource
@@ -22,6 +21,7 @@ import play.api.i18n.Messages
 import braingames.mvc.Controller
 import oxalis.mail.DefaultMails
 import braingames.mail.Send
+import models.tracing.skeleton.SkeletonTracing
 
 object Jira extends Controller with Secured {
   override val DefaultAccessRole = Role.User

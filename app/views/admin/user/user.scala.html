@@ -1,6 +1,4 @@
-@( user: models.user.User, explorativeTracings: List[models.tracing.Tracing], userTasks: List[(models.task.Task, models.tracing.Tracing)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]])(implicit session: oxalis.view.AuthedSessionData)
-
-@import views.html
+@( user: models.user.User, explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container wide" id="userDetails">
@@ -14,15 +12,15 @@
           <th> Project </th>
           <th> Modes </th>
           <th> DataSet </th>
-          <th> Tracing Stats </th>
+          <th> SkeletonTracing Stats </th>
           <th> Last edited </th>
           <th> State </th>
           <th> </th>
         </tr>
       </thead>
       <tbody>
-      @userTasks.map{ case (task, tracing) => 
-        @html.admin.tracing.extendedTracing(task, tracing)
+      @userTasks.map{ case (task, annotation) =>
+        @views.html.user.dashboard.taskAnnotationTableItem(task, annotation)
       }
       </tbody>
     </table>
@@ -46,15 +44,15 @@
           <th> # </th>
           <th> Name </th>
           <th> DataSet </th>
-          <th> Tracing Stats </th>
-          <th> Tracing-Type </th>
+          <th> SkeletonTracing Stats </th>
+          <th> SkeletonTracing-Type </th>
           <th> Last edited </th>
           <th> </th>
         </tr>
       </thead>
       <tbody>
-      @explorativeTracings.map{ tracing => 
-        @html.user.dashboard.explorativeTracingTableItem(tracing)
+      @explorativeAnnotations.map{ annotation =>
+        @views.html.user.dashboard.explorativeAnnotationTableItem(annotation)
       }
       </tbody>
     </table>

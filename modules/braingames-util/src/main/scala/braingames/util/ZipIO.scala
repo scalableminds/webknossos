@@ -14,13 +14,14 @@ import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream}
 import java.io.FileOutputStream
 
 object ZipIO {
-  /** The size of the byte or char buffer used in various methods.*/
+
+  /** The size of the byte or char buffer used in various methods. */
 
   class GZIPOutputStream(out: OutputStream, compressionLevel: Int) extends DefaultGZIPOutputStream(out) {
     `def`.setLevel(compressionLevel)
   }
 
-  def zip(sources: Seq[(InputStream, String)], out: OutputStream) =
+  def zip(sources: Seq[NamedFileStream], out: OutputStream) =
     if (sources.size > 0)
       writeZip(sources, new ZipOutputStream(out))
 
@@ -44,20 +45,19 @@ object ZipIO {
     gzipped
   }
 
-  private def writeZip(sources: Seq[(InputStream, String)], zip: ZipOutputStream) = {
-    val files = sources.map { case (file, name) => (file, normalizeName(name)) }
+  private def writeZip(sources: Seq[NamedFileStream], zip: ZipOutputStream) = {
     val t = System.currentTimeMillis()
-    files.foreach {
-      case (in, name) =>
-        zip.putNextEntry(new ZipEntry(name))
+    sources.foreach {
+      source =>
+        zip.putNextEntry(new ZipEntry(source.normalizedName))
         var buffer = new Array[Byte](1024)
         var len = 0
         do {
-          len = in.read(buffer)
+          len = source.stream.read(buffer)
           if (len > 0)
             zip.write(buffer, 0, len)
         } while (len > 0)
-        in.close()
+        source.stream.close()
         zip.closeEntry()
     }
     zip.close()
@@ -76,10 +76,4 @@ object ZipIO {
       .map(entry => zip.getInputStream(entry))
       .toList
   }
-
-  private def normalizeName(name: String) =
-    {
-      val sep = File.separatorChar
-      if (sep == '/') name else name.replace(sep, '/')
-    }
 }

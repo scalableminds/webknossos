@@ -14,7 +14,7 @@ import models.user.UsedAnnotation
 object AnnotationAdministration extends Controller with Secured {
   override val DefaultAccessRole = Role.Admin
 
-  def tracingsForTask(taskId: String) = Authenticated { implicit request =>
+  def annotationsForTask(taskId: String) = Authenticated { implicit request =>
     for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {

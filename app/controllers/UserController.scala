@@ -2,15 +2,11 @@ package controllers
 
 import oxalis.security.Secured
 import models.user._
-import play.api.mvc.Action
-import play.api.mvc.Request
 import play.api.libs.json.Json._
 import play.api.libs.json.JsValue
 import play.api.libs.json._
 import models.security.Role
 import models.task._
-import braingames.binary.models.DataSet
-import views._
 import play.api.Logger
 import models.tracing._
 import models.binary._
@@ -19,6 +15,7 @@ import braingames.mvc.Controller
 import oxalis.user.UserCache
 import models.annotation.{AnnotationType, AnnotationDAO}
 import play.api.libs.concurrent.Execution.Implicits._
+import views._
 
 object UserController extends Controller with Secured {
   override val DefaultAccessRole = Role.User

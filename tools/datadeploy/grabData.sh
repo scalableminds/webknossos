@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-  echo "Usage: $0 <username on levelcreator.org>"
+  echo "Usage: $0 <ssh-username on levelcreator.org>"
   exit 1
 fi
 

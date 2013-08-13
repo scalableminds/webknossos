@@ -4,7 +4,7 @@ require.config
 
   paths :
     "jquery" : "libs/jquery-1.8.3.min"
-    "underscore" : "libs/lodash-1.0.0-rc.2.min"
+    "underscore" : "libs/lodash-1.3.1"
     "bootstrap" : "libs/bootstrap.min"
     "worker" : "libs/worker_plugin"
     "three": "libs/threejs/three"

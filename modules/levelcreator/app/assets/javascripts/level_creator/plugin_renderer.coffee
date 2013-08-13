@@ -3,6 +3,7 @@ underscore : _
 coffee-script : CoffeeScript
 routes : Routes
 libs/event_mixin : EventMixin
+libs/key_value_store : KeyValueStore
 ./plugins : Plugins
 ./buffer_utils : BufferUtils
 ###
@@ -15,6 +16,8 @@ class PluginRenderer
   constructor : (@dimensions, @assetHandler, @dataHandler) ->
 
     [ @width, @height, @depth ] = dimensions
+
+    @state = new KeyValueStore()
 
     @plugins = new Plugins(@assetHandler)
     @createSidebar()
@@ -54,6 +57,10 @@ class PluginRenderer
 
       importSlides : ->
 
+      unsafe : ->
+
+      state : @state
+
     (_plugins[key] = ->) for key of @plugins
 
     func(_plugins)
@@ -86,19 +93,23 @@ class PluginRenderer
 
         if startFrame <= t <= endFrame
           (callback) =>
-            inputData =
+            inputData = 
               rgba : new Uint8Array( 4 * pixelCount )
               segmentation : new Uint16Array( pixelCount )
-              dimensions : @dimensions
               relativeTime : (t - startFrame) / (endFrame - startFrame)
               absoluteTime : t
+              state : @state
+              dimensions : @dimensions
               mission : @dataHandler.getMissionData()
               writeFrameData : (key, payload) ->
                 frameData = frameData ? {}
                 frameData[key] = payload
+
             callback()
             BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
+            
             inputData = null
+
         else
           ->
 
@@ -116,10 +127,17 @@ class PluginRenderer
         _.extend(inputData,
           rgba : @dataHandler.getRGBASlide( slideOffset )
           segmentation : @dataHandler.getSegmentationSlide( slideOffset )
-          dimensions : @dimensions
         )
 
         @plugins.segmentImporter.execute(input : inputData, slideOffset)
+
+
+      state : @state
+
+      unsafe : (callback) ->
+
+        callback(inputData)
+
 
 
     for key, plugin of @plugins

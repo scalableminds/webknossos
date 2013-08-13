@@ -75,7 +75,6 @@ class CellTracing
       # dirty but this actually is what needs to be done
       @TYPE_BRANCH = @TYPE_USUAL
 
-
       #calculate direction of first edge in nm
       if @data.trees[0]?.edges?
         for edge in @data.trees[0].edges

@@ -13,8 +13,6 @@ libs/threejs/ColorConverter : ColorConverter
 class TracingParser
   constructor: (@celltracing, @data) ->
 
-
-
   buildTrees: ->
 
     for treeData in @data.trees
@@ -27,12 +25,9 @@ class TracingParser
       
       # Initialize nodes
       for node in treeData.nodes
-        if node
-          tree.nodes.push(new TracePoint(@celltracing.TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
-          # idCount should be bigger than any other id
-          @idCount = Math.max(node.id + 1, @idCount);
-        else
-          console.warn "shouldn't occur?"
+        tree.nodes.push(new TracePoint(@celltracing.TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
+        # idCount should be bigger than any other id
+        @idCount = Math.max(node.id + 1, @idCount);
       
       # Initialize edges
       for edge in treeData.edges

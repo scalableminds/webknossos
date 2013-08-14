@@ -28,15 +28,18 @@ class LevelCreator
     @taskId = $("#level-creator").data("level-task-id")
     @dataSetName = $("#level-creator").data("level-dataset-name")
 
+    @slidesBeforeProblem = parseInt $("#level-creator").data("level-slidesbeforeproblem") 
+    @slidesAfterProblem = parseInt $("#level-creator").data("level-slidesafterproblem")
+
     @dimensions = [
       parseInt( $("#level-creator").data("level-width")  )
       parseInt( $("#level-creator").data("level-height") )
-      parseInt( $("#level-creator").data("level-slidesbeforeproblem") + $("#level-creator").data("level-slidesafterproblem") )
+      @slidesBeforeProblem + @slidesAfterProblem
     ]
 
     @dataHandler = new DataHandler(@dimensions, @levelId, @taskId, @dataSetName)
     @assetHandler = new AssetHandler(@levelId)
-    @pluginRenderer = new PluginRenderer(@dimensions, @assetHandler, @dataHandler)
+    @pluginRenderer = new PluginRenderer(@dimensions, @slidesBeforeProblem, @slidesAfterProblem, @assetHandler, @dataHandler)
 
     #### code editor
 

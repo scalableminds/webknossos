@@ -10,10 +10,12 @@ libs/key_value_store : KeyValueStore
 
 class PluginRenderer
 
+  PIXEL_SIZE : 11.3
+
   plugins : null
 
 
-  constructor : (@dimensions, @assetHandler, @dataHandler) ->
+  constructor : (@dimensions, @slidesBeforeProblem, @slidesAfterProblem, @assetHandler, @dataHandler) ->
 
     [ @width, @height, @depth ] = dimensions
 
@@ -25,7 +27,110 @@ class PluginRenderer
 
   setCode : (code) ->
 
-    @code = code
+    return unless code?
+    return unless @dataHandler.deferred("initialized").state() == "resolved"
+
+    @filter code
+    @code = @replaceMakros code
+
+
+
+
+  filter : (code) ->
+
+
+    missionData = @dataHandler.getMissionData()
+
+    # get meta info from code
+    # DESIRED_SLIDES_BEFORE_PROBLEM
+    # DESIRED_SLIDES_AFTER_PROBLEM
+    # SEGMENTS_AT_START
+    # SEGMENTS_AT_END
+
+
+    result = code.match( /DESIRED_SLIDES_BEFORE_PROBLEM\=([0-9]+)/m )
+    if result?.length is 2
+      desiredStartSlide = @slidesBeforeProblem - parseInt(result[1])
+    else
+      desiredStartSlide = 0
+
+    result = code.match( /MIN_END_SEGMENTS_AT_FIRST_SLIDE\=([0-9]+)/m )
+    if result?.length is 2
+      minEndSegmentsAtFirstSlide = parseInt(result[1])
+    else
+      minEndSegmentsAtFirstSlide = 0
+
+    result = code.match( /DESIRED_SLIDES_AFTER_PROBLEM\=([0-9]+)/m )
+    if result?.length is 2
+      desiredEndSlide = @slidesBeforeProblem + parseInt(result[1])
+    else
+      desiredEndSlide = @slidesBeforeProblem + @slidesAfterProblem
+
+    result = code.match( /MIN_END_SEGMENTS_AT_LAST_SLIDE\=([0-9]+)/m )
+    if result?.length is 2
+      minEndSegmentsAtLastSlide = parseInt(result[1]) - 1 # -1 for startSegment
+    else
+      minEndSegmentsAtLastSlide = 0
+
+    # check plausibility
+
+    if missionData.possibleEnds.length < minEndSegmentsAtFirstSlide
+      console.log "abort"
+
+
+    # apply filters
+
+    # get StartSlide - apply DESIRED_SLIDES_BEFORE_PROBLEM and MIN_SEGMENTS_AT_FIRST_SLIDE
+
+    firstStartFrame = @nmToSlide(missionData.start.firstFrame)
+
+    searchStart = Math.max(firstStartFrame, desiredStartSlide)
+
+
+    for i in [Math.floor(searchStart)...@slidesBeforeProblem] by 1
+      result = _.filter(missionData.possibleEnds, (e) => 
+        #console.log @nmToSlide(e.firstFrame) + "  - " + i + " -  " + @nmToSlide(e.lastFrame)
+        @nmToSlide(e.firstFrame) < i < @nmToSlide(e.lastFrame) ).length
+      #console.log i + " " + result
+      if result >= minEndSegmentsAtFirstSlide 
+        startSlide = i
+        break
+
+    
+    console.log "abort" unless startSlide?
+    console.log "Start: " + startSlide
+
+    startSlide = 0 unless startSlide?
+
+
+    lastStartFrame = @nmToSlide(missionData.start.lastFrame)
+
+    #searchStart = Math.max(firstStartFrame, desiredEndSlide)
+
+
+    for i in [Math.floor(desiredEndSlide)...Math.max(@slidesBeforeProblem, lastStartFrame)] by -1
+      result = _.filter(missionData.possibleEnds, (e) => 
+        #console.log @nmToSlide(e.firstFrame) + "  - " + i + " -  " + @nmToSlide(e.lastFrame)
+        @nmToSlide(e.firstFrame) < i < @nmToSlide(e.lastFrame) ).length
+      #console.log i + " " + result
+      if result >= minEndSegmentsAtLastSlide 
+        endSlide = i
+        break
+
+    
+    console.log "abort" unless endSlide?
+    console.log "end: " + endSlide
+
+    endSlide = @slidesBeforeProblem + @slidesAfterProblem unless endSlide?
+
+
+
+
+
+
+  nmToSlide : (nm) ->
+    
+    (nm / @PIXEL_SIZE) + @slidesBeforeProblem    
 
 
   testCompile : ->
@@ -82,14 +187,15 @@ class PluginRenderer
 
     inputData = null
 
+
     _plugins =
+
 
       time : (options) =>
 
         _.defaults(options, alpha : 1)
         startFrame = options.start
         endFrame = options.end
-
 
         if startFrame <= t <= endFrame
           (callback) =>
@@ -98,7 +204,7 @@ class PluginRenderer
               segmentation : new Uint16Array( pixelCount )
               relativeTime : (t - startFrame) / (endFrame - startFrame)
               absoluteTime : t
-              state : @state
+              state : @statel
               dimensions : @dimensions
               mission : @dataHandler.getMissionData()
               writeFrameData : (key, payload) ->
@@ -116,6 +222,7 @@ class PluginRenderer
       importSlides : (options) =>
 
         _.defaults(options, scale : "auto")
+
 
         if options.scale == "auto"
           if endFrame - startFrame > 0
@@ -208,3 +315,17 @@ class PluginRenderer
       )
 
 
+  replaceMakros : (object) ->
+
+    json = JSON.stringify(object)
+
+    json = json.replace(/\$EC/g, "#{@slidesBeforeProblem}")
+    json = json.replace(/\$SBE/g, "#{@slidesBeforeProblem}")
+    json = json.replace(/\$SAE/g, "#{@slidesAfterProblem}")
+    json = json.replace(/\$LE/g, "#{@slidesAfterProblem+@slidesBeforeProblem}")
+
+    jQuery.parseJSON( json )
+
+
+        
+     

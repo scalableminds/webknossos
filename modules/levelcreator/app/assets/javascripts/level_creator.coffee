@@ -117,6 +117,15 @@ class LevelCreator
     @canvas.width = @dimensions[0]
     @canvas.height = @dimensions[1]
 
+
+    #### clear state
+
+    $("#clear-state").click (event) =>
+
+      event.preventDefault()
+      @pluginRenderer.state.clear()
+      @updatePreview()
+
     
     #### resource init
 

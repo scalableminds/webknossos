@@ -1,6 +1,6 @@
 ### define 
 underscore : _
-../libs/jenkins: Jenkins
+libs/jenkins: Jenkins
 ###
 
 class SegmentImporter

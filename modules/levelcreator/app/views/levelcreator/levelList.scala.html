@@ -2,8 +2,10 @@
 
 @main(activeRenderers){
   <div class="container">
-    <h3>Levels</h3>
-    <div> Active renderers: @activeRenderers.getOrElse("<Unknown>")</div>
+    <div class="clearfix">
+      <h3 class="pull-left">Levels</h3>
+      <p class="pull-right">Active renderers: @activeRenderers.getOrElse("<Unknown>")</p>
+    </div>
     <div class="well">
       @helper.form(controllers.levelcreator.routes.LevelCreator.create, 'class -> "form-horizontal") {
         @helper.inputText(form("name"))

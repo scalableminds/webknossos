@@ -27,7 +27,7 @@ class WritePathToMetaFile
   constructor : ->
 
 
-  execute : ({ input }) ->
+  execute : ({ input, properties }) ->
 
     { segments, mission } = input
 
@@ -39,22 +39,26 @@ class WritePathToMetaFile
     startValue = mission.start.id
 
     for segment in activeSegments
-      segmentPayload = {}
-      segmentPayload.isEndSegment = _.contains(endValues, segment.value)
 
-      segmentPayload.isStartSegment = startValue is segment.value
-      segmentPayload.path = segment.path
-      segmentPayload.id = segment.id
-      segmentPayload.value = segment.value
-      segmentPayload.bounding = [segment.xMin, segment.yMin, segment.xMax, segment.yMax]
-      segmentPayload.absoluteCenter = [segment.absoluteCenter.x, segment.absoluteCenter.y]
-      segmentPayload.weightedCenter = [segment.weightedCenter.x, segment.weightedCenter.y]      
+      segmentPayload = 
+        isEndSegment : _.contains(endValues, segment.value)
+        isStartSegment : startValue is segment.value
+        path : segment.path
+        id : segment.id
+        value : segment.value
+        bounding : [segment.xMin, segment.yMin, segment.xMax, segment.yMax]
+        absoluteCenter : [segment.absoluteCenter.x, segment.absoluteCenter.y]
+        weightedCenter : [segment.weightedCenter.x, segment.weightedCenter.y] 
+
       if segmentPayload.isEndSegment
         segmentPayload.probability = segment.probability  
       else 
         segmentPayload.probability = 0
 
-      payload.push segmentPayload
+      if properties
+        payload.push(_.pick(segmentPayload, properties))
+      else
+        payload.push(segmentPayload)
 
     input.writeFrameData(
       "paths"

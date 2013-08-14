@@ -8,7 +8,7 @@ import braingames.image.CombinedPage
 
 object XmlAtlas {
 
-  def infoToXml(image: CombinedImage) = {
+  def combinedImageToXml(image: CombinedImage) = {
     s"""<?xml version="1.0" encoding="UTF-8"?>
         |${ image.pages.map(pageToXml).mkString("\n") }""".stripMargin
   }
@@ -26,7 +26,7 @@ object XmlAtlas {
 
   def writeToFile(image: CombinedImage, file: File) = {
     FileIO.printToFile(file) { p =>
-      p.print(infoToXml(image))
+      p.print(combinedImageToXml(image))
     }
   }
 }

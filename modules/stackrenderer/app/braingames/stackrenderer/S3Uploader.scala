@@ -23,12 +23,12 @@ class S3Uploader(s3Config: S3Config) extends Actor {
 
   def receive = {
     case UploadStack(stack) =>
-      uploadStack(stack) match{
+      uploadStack(stack) match {
         case Success(downloadUrls) =>
-        sender ! FinishedUpload(stack, downloadUrls)
+          sender ! UploadFinished(stack, downloadUrls)
         case Failure(f) =>
           Logger.error("An error occoured during upload: " + f)
-          sender ! FailedUpload(stack)
+          sender ! UploadFailed(stack, net.liftweb.common.Failure("Uploda failed: " + f))
       }
   }
 
@@ -39,8 +39,8 @@ class S3Uploader(s3Config: S3Config) extends Actor {
   }
 
   def uploadStack(stack: Stack): Try[List[String]] = {
-    Try{
-      if (s3Config.isEnabled){
+    Try {
+      if (s3Config.isEnabled) {
         for {
           (file, key) <- buildUploadPairs(stack)
         } yield {

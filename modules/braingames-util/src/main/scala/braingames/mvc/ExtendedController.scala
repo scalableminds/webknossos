@@ -6,7 +6,7 @@ import play.api.http.Status._
 import net.liftweb.common.Full
 import scala.concurrent.{ExecutionContext, Future}
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{JsValue, Json, JsObject}
 import play.api.http.{HeaderNames, Writeable}
 import play.api.templates.Html
 import play.api.http.Status
@@ -131,7 +131,7 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
 
   val isSuccess = List(OK) contains status
 
-  def createResult(content: JsObject)(implicit writeable: Writeable[JsObject]) =
+  def createResult[T <: JsValue](content: T)(implicit writeable: Writeable[T]) =
     SimpleResult(
       header = ResponseHeader(status, writeable.contentType.map(ct => Map(HeaderNames.CONTENT_TYPE -> ct)).getOrElse(Map.empty)),
       Enumerator(content))
@@ -142,7 +142,7 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
     else
       jsonError
 
-  def apply(json: JsObject) =
+  def apply(json: JsValue) =
     createResult(json)
 
   def apply(json: JsObject, messages: Seq[(String, String)]) =

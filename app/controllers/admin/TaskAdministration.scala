@@ -31,6 +31,7 @@ import models.annotation.Annotation
 import models.annotation.{AnnotationDAO, AnnotationType}
 import scala.concurrent.Future
 import oxalis.nml.NMLService
+import play.api.libs.json.JsArray
 
 object TaskAdministration extends Controller with Secured {
 
@@ -70,9 +71,12 @@ object TaskAdministration extends Controller with Secured {
   val taskForm = Form(
     taskMapping).fill("", "", Point3D(0, 0, 0), Experience.empty, 100, 10, "")
 
-  def list = Authenticated {
+  def list = Authenticated{
     implicit request =>
-      Ok(html.admin.task.taskList(Task.findAllNonTrainings))
+      render{
+        case Accepts.Html() => Ok(html.admin.task.taskList())
+        case Accepts.Json() => JsonOk(JsArray(Task.findAllNonTrainings.map(Task.taskFormat.writes)))
+      }
   }
 
   def taskCreateHTML(

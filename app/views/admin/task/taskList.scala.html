@@ -3,6 +3,7 @@
 @main(){
   <div class="container wide">
     <h3>Tasks</h3>
+    <div id="page-selection"></div>
     <table class="table table-double-striped table-details">
       <thead>
         <tr>
@@ -19,7 +20,7 @@
           <th> States </th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="hide">
       @tasks.map{ task => 
         @taskTableItem(task)
       }

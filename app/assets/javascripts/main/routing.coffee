@@ -70,6 +70,38 @@ $ ->
 
         return
 
+    "admin.task.taskList" : ->
+
+      require ["libs/jquery.bootpag.min"], ->
+        console.log "admin.tasks in routing.coffee was triggered"
+        tbody = $("#main-container > div > table > tbody")
+        
+        allRows = [] # tbody.html()
+        tbody.html("")
+        tbody.removeClass("hide")
+
+        pageCount = 10
+        pages = []
+
+        # dummy data
+        tr = "<tr><td>Table Row</td></tr>"
+        for i in [0...100]
+          allRows.push tr
+
+
+        rowsPerPage = allRows.length / pageCount
+
+        for i in [0...10]
+          pages.push allRows.splice(0, rowsPerPage)
+
+        pageSelection = $("#page-selection")
+        
+        pageSelection.bootpag({total: pageCount}).on "page", (event, num) ->
+          console.log "event", event, "num", num
+          tbody.html(pages[num].join(""))
+
+        return
+
 
     "admin.task.taskOverview" : ->
 

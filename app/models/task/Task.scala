@@ -36,6 +36,7 @@ case class Task(
     priority: Int = 100,
     instances: Int = 1,
     assignedInstances: Int = 0,
+    tracingTime: Option[Long] = None,
     created: Date = new Date,
     _project: Option[String] = None,
     training: Option[Training] = None,
@@ -111,6 +112,10 @@ object Task extends BasicDAO[Task]("tasks") {
 
   def findAssignableTasksFor(user: User) = {
     findAssignableFor(user, shouldBeTraining = false)
+  }
+
+  def logTime(time: Long, task: Task) = {
+    update(MongoDBObject("_id" -> task._id), MongoDBObject("$inc" -> MongoDBObject("tracingTime" -> time)))
   }
 
   def findAssignableFor(user: User, shouldBeTraining: Boolean) = {

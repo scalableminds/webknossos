@@ -1,22 +1,9 @@
 package braingames.binary.store
 
-import braingames.geometry._
-import scala.concurrent.Promise
 import scala.concurrent.Future
-import braingames.util.Math._
-import scala.collection.mutable.ArrayBuffer
 import akka.actor.Actor
-import akka.agent.Agent
-import akka.util.Timeout
-import scala.concurrent.duration._
-import akka.pattern.pipe
-import akka.actor.Status
-import java.util.concurrent.TimeoutException
-import java.io.InputStream
 import scala.util._
 import scala.concurrent.ExecutionContext.Implicits._
-import braingames.binary.models.DataSet
-import braingames.binary.models.DataLayer
 import braingames.binary.LoadBlock
 import net.liftweb.common.Box
 
@@ -28,8 +15,6 @@ import net.liftweb.common.Box
 class DataNotFoundException(message: String) extends Exception(s"$message Could not find the data")
 
 abstract class DataStore extends Actor {
-  import DataStore._
-
   /**
    * Loads the data of a given point from the data source
    */

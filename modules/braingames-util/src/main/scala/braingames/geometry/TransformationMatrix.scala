@@ -1,6 +1,9 @@
 package braingames.geometry
 
 case class TransformationMatrix(value: Array[Float]) {
+  val width = math.sqrt(TransformationMatrix.defaultSize).toInt
+  val height = width
+
   /**
    * Extract the translation from the transformation matrix
    */
@@ -15,6 +18,13 @@ case class TransformationMatrix(value: Array[Float]) {
 
 object TransformationMatrix {
   val defaultSize = 16
+
+  def identity =
+    TransformationMatrix(Array[Float](
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1))
   
   def apply(pos: Vector3D, direction: Vector3D): TransformationMatrix = {
 

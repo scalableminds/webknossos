@@ -1,7 +1,5 @@
 @( user: models.user.User, explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTimeOpt: Option[Map[models.user.PaymentInterval, scala.concurrent.duration.Duration]])(implicit session: oxalis.view.AuthedSessionData)
 
-@import views._
-
 @main(){
   <div class="container wide" id="userDetails">
     <h3>User: @user.name</h3>
@@ -54,7 +52,7 @@
       </thead>
       <tbody>
       @explorativeAnnotations.map{ annotation =>
-        @html.user.dashboard.explorativeAnnotationTableItem(annotation)
+        @views.html.user.dashboard.explorativeAnnotationTableItem(annotation)
       }
       </tbody>
     </table>

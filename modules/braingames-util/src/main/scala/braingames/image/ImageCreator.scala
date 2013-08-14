@@ -40,13 +40,13 @@ object ImageCreator {
 
   val defaultTargetType = BufferedImage.TYPE_3BYTE_BGR
 
-  def createImage(data: Array[Byte], params: ImageCreatorParameters): Option[CombinedImage] = {
+  def spriteSheetFor(data: Array[Byte], params: ImageCreatorParameters): Option[CombinedImage] = {
     val targetType = defaultTargetType
-    val images = calculateImageSlices(data, params, targetType)
-    createBigImage(images, params, targetType)
+    val images = calculateSprites(data, params, targetType)
+    createSpriteSheet(images, params, targetType)
   }
 
-  def calculateImageSlices(data: Array[Byte], params: ImageCreatorParameters, targetType: Int): List[BufferedImage] = {
+  def calculateSprites(data: Array[Byte], params: ImageCreatorParameters, targetType: Int): List[BufferedImage] = {
     val slidingSize = params.slideHeight * params.slideWidth * params.bytesPerElement
     data.sliding(slidingSize, slidingSize).toList.flatMap {
       slice =>
@@ -54,7 +54,7 @@ object ImageCreator {
     }
   }
 
-  def createBigImage(bufferedImages: List[BufferedImage], params: ImageCreatorParameters, targetType: Int): Option[CombinedImage] = {
+  def createSpriteSheet(bufferedImages: List[BufferedImage], params: ImageCreatorParameters, targetType: Int): Option[CombinedImage] = {
     if (bufferedImages.isEmpty) {
       None
     } else {

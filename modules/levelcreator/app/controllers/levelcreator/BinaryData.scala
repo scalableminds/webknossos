@@ -31,11 +31,15 @@ import braingames.binary.models.DataLayerId
 import scala.Some
 import braingames.binary.Cuboid
 import braingames.binary.models.DataSet
-import braingames.binary.SingleCubeRequest
 import braingames.levelcreator.BinaryDataService
 import braingames.reactivemongo.GlobalDBAccess
+import braingames.binary.models.DataLayerId
+import scala.Some
+import braingames.binary.DataRequest
+import braingames.binary.Cuboid
+import braingames.binary.models.DataSet
 
-object BinaryData extends Controller with GlobalDBAccess with BinaryDataRequestHandler{
+object BinaryData extends Controller with GlobalDBAccess with BinaryDataRequestHandler {
   val conf = Play.current.configuration
 
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds) // needed for `?` below
@@ -61,7 +65,22 @@ object BinaryData extends Controller with GlobalDBAccess with BinaryDataRequestH
 trait BinaryDataRequestHandler {
   val binaryDataService: braingames.binary.api.BinaryDataService
 
-  def createStackCuboid(level: Level, mission: Mission) = {
+  private def createRequest(dataSet: DataSet, dataLayerId: DataLayerId, cuboid: Cuboid) = {
+
+    val settings = DataRequestSettings(
+      useHalfByte = false,
+      skipInterpolation = false
+    )
+
+    DataRequest(
+      dataSet,
+      dataLayerId,
+      0,
+      cuboid,
+      settings)
+  }
+
+  private def createStackCuboid(level: Level, mission: Mission) = {
 
     def calculateTopLeft(width: Int, height: Int, depth: Int) = {
       Vector3D(-(width / 2.0).floor, -(height / 2.0).floor, 0)
@@ -81,14 +100,11 @@ trait BinaryDataRequestHandler {
   }
 
   def handleDataRequest(dataSet: DataSet, dataLayerName: String, level: Level, mission: Mission): Future[Option[Array[Byte]]] = {
-    val dataRequest = SingleCubeRequest(DataRequest(
+    val dataRequest = createRequest(
       dataSet,
       DataLayerId(dataLayerName),
-      1,
-      createStackCuboid(level, mission),
-      useHalfByte = false,
-      skipInterpolation = false))
+      createStackCuboid(level, mission))
 
-    binaryDataService.handleSingleCubeRequest(dataRequest)
+    binaryDataService.handleDataRequest(dataRequest)
   }
 }

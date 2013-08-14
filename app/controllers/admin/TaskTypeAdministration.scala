@@ -4,6 +4,7 @@ import braingames.mvc.Controller
 import play.mvc.Security.Authenticated
 import oxalis.security.Secured
 import models.security.Role
+import oxalis.annotation._
 import views._
 import models.task.TaskType
 import play.api.data.Forms._
@@ -13,7 +14,6 @@ import play.api.i18n.Messages
 import models.task.Task
 import models.tracing._
 import play.api.templates.Html
-import oxalis.annotation._
 import controllers.Application
 import models.annotation.AnnotationDAO
 

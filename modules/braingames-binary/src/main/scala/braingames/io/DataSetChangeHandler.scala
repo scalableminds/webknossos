@@ -133,7 +133,7 @@ class DataSetChangeHandler(dataSetRepository: DataSetRepository)
             settings.scale,
             Nil,
             "/Structure of Neocortical Circuits Group",
-            List("/Structure of Neocortical Circuits Group/*"))
+            settings.allowedTeams getOrElse List("/Structure of Neocortical Circuits Group/*"))
         case _ =>
           DataSet(
             folder.getName,

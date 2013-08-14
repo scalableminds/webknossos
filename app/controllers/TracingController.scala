@@ -1,48 +1,23 @@
 package controllers
 
-import play.api.Logger
-import play.api.libs.json.Json._
 import play.api.libs.json._
-import oxalis.nml.BranchPoint
-import play.api.mvc._
-import org.bson.types.ObjectId
-import braingames.util.Math._
 import oxalis.security.Secured
-import braingames.geometry.Vector3I
-import braingames.geometry.Vector3I._
 import models.user.User
 import models.security._
-import play.api.libs.iteratee._
-import play.api.libs.iteratee.Concurrent.Channel
-import play.api.libs.Comet
-import oxalis.nml.Node
-import oxalis.nml.Edge
-import braingames.geometry.Point3D
-import models.user.TimeTracking
-import oxalis.view.helpers._
-import models.task.Task
-import views._
-import play.api.i18n.Messages
 import net.liftweb.common._
 import braingames.mvc.{BoxImplicits, Fox, Controller}
 import controllers.admin.NMLIO
 import oxalis.security.AuthenticatedRequest
-import play.api.templates.Html
-import models.task.Project
-import models.task.TaskType
-import oxalis.annotation.handler._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import oxalis.annotation.{RequestAnnotation, AnnotationIdentifier}
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
-import braingames.util.ExtendedTypes.When
-import models.binary.DataSetDAO
 import models.annotation.{AnnotationLike, AnnotationDAO}
 import models.annotation.AnnotationType._
-import models.tracing.skeleton.{SkeletonTracingLike, SkeletonTracing, TemporarySkeletonTracing, CompoundAnnotation}
 import oxalis.annotation.handler.AnnotationInformationHandler
+import views._
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User

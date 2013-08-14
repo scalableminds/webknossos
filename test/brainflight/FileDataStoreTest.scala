@@ -3,11 +3,11 @@ package brainflight
 import org.specs2.mutable.Specification
 import play.api.test._
 import play.api.test.Helpers._
-import brainflight.binary.DataStore
+import oxalis.binary.DataStore
 import java.io.FileNotFoundException
-import brainflight.binary.FileDataStore
-import brainflight.tools.geometry.Point3D
-import brainflight.binary.DataStore
+import oxalis.binary.FileDataStore
+import braingames.geometry.Point3D
+import oxalis.binary.DataStore
 import models.DataSet
 
 class FileDataStoreTest extends Specification {

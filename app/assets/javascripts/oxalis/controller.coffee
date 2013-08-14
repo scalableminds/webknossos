@@ -4,6 +4,7 @@ underscore : _
 ./controller/plane_controller : PlaneController
 ./controller/arbitrary_controller : ArbitraryController
 ./controller/abstract_tree_controller : AbstractTreeController
+./controller/scene_controller : SceneController
 ./model : Model
 ./view : View
 ../libs/event_mixin : EventMixin
@@ -27,20 +28,27 @@ class Controller
     _.extend(@, new EventMixin())
 
     @fullScreen = false
-    @mode = constants.MODE_OXALIS
+    @mode = constants.MODE_PLANE_TRACING
 
     @model = new Model()
 
-    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done (settings) =>
+    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       unless settings
         return
 
+      unless restrictions.allowAccess
+        Toast.Error "You are not allowed to access this tracing"
+        return
+
       for allowedMode in settings.allowedModes
         @allowedModes.push switch allowedMode
-          when "oxalis" then constants.ALLOWED_OXALIS
-          when "arbitrary" then constants.ALLOWED_ARBITRARY
+          when "oxalis" then constants.MODE_PLANE_TRACING
+          when "arbitrary" then constants.MODE_ARBITRARY
+
+      # FIXME: only for developing
+      @allowedModes.push(constants.MODE_VOLUME)
 
       # FPS stats
       stats = new Stats()
@@ -49,22 +57,25 @@ class Controller
 
       @view = new View(@model)
 
-      @gui = @createGui(settings)
+      @gui = @createGui(restrictions, settings)
 
-      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene)
+      @sceneController = new SceneController(@model.binary.cube.upperBoundary, @model.flycam, @model)
 
-      @arbitraryController = new ArbitraryController(@model, stats, @gui, @view.renderer, @view.scene)
+      @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController)
+
+      @arbitraryController = new ArbitraryController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController)
 
       @abstractTreeController = new AbstractTreeController(@model)
 
       @initMouse()
       @initKeyboard()
 
-      @propagateMode(constants.MODE_OXALIS)
+      @setMode(constants.MODE_PLANE_TRACING)
+      # @setMode(constants.MODE_VOLUME)
 
-      if constants.ALLOWED_OXALIS not in @allowedModes
-        if constants.ALLOWED_ARBITRARY in @allowedModes
-          @toggleArbitraryView()
+      if constants.MODE_PLANE_TRACING not in @allowedModes
+        if constants.MODE_ARBITRARY in @allowedModes
+          @setMode(constants.MODE_ARBITRARY)
         else
           Toast.error("There was no valid allowed tracing mode specified.")
 
@@ -72,7 +83,7 @@ class Controller
         nodeClick : (id) => @setActiveNode(id, true, false)
 
       $("#comment-input").on "change", (event) => 
-        @setComment(event.target.value)
+        @model.route.setComment(event.target.value)
         $("#comment-input").blur()
 
       $("#comment-previous").click =>
@@ -86,7 +97,7 @@ class Controller
         @setActiveNode($(event.target).data("nodeid"), true, false)
 
       $("#tree-name-submit").click (event) =>
-        @setTreeName($("#tree-name-input").val())
+        @model.route.setTreeName($("#tree-name-input").val())
 
       $("#tree-name-input").keypress (event) =>
         if event.which == 13
@@ -100,10 +111,10 @@ class Controller
         @selectNextTree(true)
 
       $("#tree-create-button").click =>
-        @createNewTree()
+        @model.route.createNewTree()
 
       $("#tree-delete-button").click =>
-        @deleteActiveTree()
+        @model.route.deleteTree(true)
 
       $("#tree-list").on "click", "a[data-treeid]", (event) =>
         event.preventDefault()
@@ -112,6 +123,9 @@ class Controller
       $("#tree-color-shuffle").click =>
         @model.route.shuffleActiveTreeColor()
 
+      $("#tree-sort").on "click", "a[data-sort]", (event) =>
+        event.preventDefault()
+        @model.user.setValue("sortTreesByName", ($(event.currentTarget).data("sort") == "name"))
 
 
   initMouse : ->
@@ -138,38 +152,39 @@ class Controller
 
       "q" : => @toggleFullScreen()
 
-      "1" : => @planeController.toggleSkeletonVisibility()
+      #Set Mode, outcomment for release
+      "shift + 1" : =>
+        @setMode(constants.MODE_PLANE_TRACING)
+      "shift + 2" : =>
+        @setMode(constants.MODE_ARBITRARY)
+      "shift + 3" : =>
+        @setMode(constants.MODE_VOLUME)
 
-      "2" : => @planeController.toggleInactiveTreeVisibility()
+      "m" : => # toggle between plane tracing and arbitrary tracing
 
-      #Delete active node
-      "delete" : => @deleteActiveNode()
-
-      "c" : => @createNewTree()
-
-
-      #Activate ArbitraryView
-      "m" : => @toggleArbitraryView()
+        if @mode == constants.MODE_VOLUME or @mode == constants.MODE_PLANE_TRACING
+          @setMode(constants.MODE_ARBITRARY)
+        else
+          @setMode(constants.MODE_PLANE_TRACING)
     )
 
 
-  toggleArbitraryView : ->
+  setMode : (newMode) ->
 
-    if @mode is constants.MODE_OXALIS and constants.ALLOWED_ARBITRARY in @allowedModes
+    if newMode == constants.MODE_ARBITRARY and newMode in @allowedModes
       @planeController.stop()
       @arbitraryController.start()
-      @propagateMode(constants.MODE_ARBITRARY)
-    else if @mode is constants.MODE_ARBITRARY and constants.ALLOWED_OXALIS in @allowedModes
+
+    else if (newMode == constants.MODE_PLANE_TRACING or newMode == constants.MODE_VOLUME) and newMode in @allowedModes
       @arbitraryController.stop()
-      @planeController.start()
-      @propagateMode(constants.MODE_OXALIS)
+      @planeController.start(newMode)
 
+    else # newMode not allowed or invalid
+      return
 
-  propagateMode : (mode) ->
-
-    @mode = mode
-    @gui.setMode(mode)
-    @view.setMode(mode)
+    @mode = newMode
+    @gui.setMode(newMode)
+    @view.setMode(newMode)
 
 
   toggleFullScreen : ->
@@ -187,32 +202,25 @@ class Controller
         requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
 
-  createGui : (settings)->
+  createGui : (restrictions, settings)->
 
     { model } = @
 
-    gui = new Gui($("#optionswindow"), model, settings)
+    gui = new Gui($("#optionswindow"), model, restrictions, settings)
     gui.update()  
 
     model.binary.queue.set4Bit(model.user.fourBit)
-    model.binary.updateLookupTable(gui.settings.brightness, gui.settings.contrast)
+    model.binary.updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
 
     gui.on
-      deleteActiveNode : @deleteActiveNode
+      deleteActiveNode : =>
+        @model.route.deleteActiveNode()
       setActiveTree : (id) => @setActiveTree(id, false)
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
+      setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
+      createNewCell : => @model.volumeTracing.createCell()
 
     gui
-
-
-  deleteActiveNode : ->
-
-    @model.route.deleteActiveNode()
-
-
-  createNewTree : ->
-
-    @model.route.createNewTree()
 
 
   setActiveTree : (treeId, centered) ->
@@ -237,25 +245,10 @@ class Controller
 
   centerActiveNode : ->
 
-    if @mode is constants.MODE_OXALIS
+    if @mode is constants.MODE_PLANE_TRACING
       @planeController.centerActiveNode()
     else
       @arbitraryController.centerActiveNode()
-
-
-  deleteActiveTree : ->
-
-    @model.route.deleteTree(true)
-
-
-  setTreeName : (name) ->
-
-    @model.route.setTreeName(name)
-
-
-  setComment : (value) =>
-
-    @model.route.setComment(value)
 
 
   prevComment : =>

@@ -1,4 +1,3 @@
-
 # Awesome Installer
 If you are using OSX try using this awesome installer:
 https://gist.github.com/3942354
@@ -7,7 +6,7 @@ If you are not blessed with a good OS try the steps below and fail ;)
 
 
 ## Project setup:
-- install java 1.6 (from oracle! don't use openJDK)
+- install java 1.7 (from oracle! don't use openJDK)
 - make sure "JAVA_HOME" and "JDK_HOME" are set and PATH contains path to jdk
 - install nodejs + coffee + less and make sure PATH is set to find them 
 
@@ -16,7 +15,7 @@ If you are not blessed with a good OS try the steps below and fail ;)
 git submodule init
 git submodule update
 cd playframework/framework
-./build build-repository
+./build publish-local
 ```
 -> done!
 

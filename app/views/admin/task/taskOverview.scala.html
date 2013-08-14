@@ -1,6 +1,6 @@
-@(users: List[models.user.User], taskTypes: List[models.task.TaskType], usersWithTasks: List[(models.user.User, models.task.TaskType)], futureTasks: Map[models.user.User, models.task.TaskType])(implicit session: brainflight.view.AuthedSessionData)
+@(users: List[models.user.User], taskTypes: List[models.task.TaskType], usersWithTasks: List[(models.user.User, models.task.TaskType)], futureTasks: Map[models.user.User, models.task.TaskType])(implicit session: oxalis.view.AuthedSessionData)
 
-@import models.Color
+@import braingames.image.Color
 
 @userDot(user: models.user.User) = {
   @Html("\"" + user.name + "\" [id=\""+ user.id +"\", shape=box, fillcolor=\"" + Color.jet(math.min(50, user.lastActivityDays) * (128 / 50) + 128).toHtml + "\"];")

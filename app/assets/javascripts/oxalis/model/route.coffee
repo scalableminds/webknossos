@@ -26,7 +26,7 @@ class Route
   activeTree : null
   firstEdgeDirection : null
 
-  constructor : (@data, @scaleInfo, @flycam, @flycam3d, @user) ->
+  constructor : (tracing, @scaleInfo, @flycam, @flycam3d, @user) ->
 
     _.extend(this, new EventMixin())
 
@@ -44,10 +44,19 @@ class Route
 
     @doubleBranchPop = false
 
+    @data = tracing.content.contentData
+
+    @flycam.setPosition(tracing.content.editPosition)
+
+    # initialize deferreds
+    @finishedDeferred = new $.Deferred().resolve()
+
+
     ############ Load Tree from @data ##############
 
-    @stateLogger = new StateLogger(this, @flycam, @data.version, @data.id, @data.settings.isEditable)
-    console.log "Tracing data: ", @data
+    @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
+    
+    console.log "Annotation data: ", tracing
 
     # get tree to build
     for treeData in @data.trees
@@ -55,7 +64,8 @@ class Route
       tree = new TraceTree(
         treeData.id,
         @getNewTreeColor(treeData.id),
-        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}")
+        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
+        treeData.timestamp)
       # Initialize nodes
       i = 0
       for node in treeData.nodes
@@ -106,11 +116,11 @@ class Route
       else
         @createNewTree()
 
-    tracingType = data.tracingType
+    tracingType = tracing.typ
     if (tracingType == "Task" or tracingType == "Training") and nodeList.length == 0
-      @addNode(data.editPosition)
+      @addNode(tracing.content.editPosition)
 
-    @branchPointsAllowed = @data.settings.branchPointsAllowed
+    @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
       # dirty but this actually is what needs to be done
       @TYPE_BRANCH = @TYPE_USUAL
@@ -138,7 +148,7 @@ class Route
     $(window).on(
       "beforeunload"
       =>
-        if !@stateLogger.stateSaved() and @stateLogger.isEditable
+        if !@stateLogger.stateSaved() and @stateLogger.allowUpdate
           @stateLogger.pushImpl(false)
           return "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site."
         else
@@ -417,12 +427,13 @@ class Route
 
   selectNextTree : (forward) ->
 
-    for i in [0...@trees.length]
-      if @activeTree.treeId == @trees[i].treeId
+    trees = @getTreesSorted(@user.sortTreesByName)
+    for i in [0...trees.length]
+      if @activeTree.treeId == trees[i].treeId
         break
 
-    diff = (if forward then 1 else -1) + @trees.length
-    @setActiveTree( @trees[ (i + diff) % @trees.length ].treeId )
+    diff = (if forward then 1 else -1) + trees.length
+    @setActiveTree( trees[ (i + diff) % trees.length ].treeId )
 
 
   setActiveTree : (id) ->
@@ -474,7 +485,8 @@ class Route
     tree = new TraceTree(
       @treeIdCount++, 
       @getNewTreeColor(@treeIdCount-1), 
-      "Tree#{('00'+(@treeIdCount-1)).slice(-3)}")
+      "Tree#{('00'+(@treeIdCount-1)).slice(-3)}",
+      (new Date()).getTime())
     @trees.push(tree)
     @activeTree = tree
     @activeNode = null
@@ -487,6 +499,9 @@ class Route
   deleteActiveNode : ->
 
     unless @activeNode?
+      return
+    # don't delete nodes when the previous tree split isn't finished
+    unless @finishedDeferred.state() == "resolved"
       return
 
     @deleteComment(@activeNode.id)
@@ -525,20 +540,19 @@ class Route
             nodeIds.push(node.id)
           @stateLogger.moveTreeComponent(oldActiveTreeId, @activeTree.treeId, nodeIds)
 
-      @trigger("reloadTrees", newTrees)
+      # this deferred will be resolved once the skeleton has finished reloading the trees
+      @finishedDeferred = new $.Deferred()
+      @trigger("reloadTrees", newTrees, @finishedDeferred)
         
     else if @activeNode.neighbors.length == 1
       # no children, so just remove it.
       @setActiveNode(deletedNode.neighbors[0].id)
-      @trigger("deleteActiveNode", deletedNode)
+      @trigger("deleteActiveNode", deletedNode, @activeTree.treeId)
     else
       @deleteTree(false)
 
 
   deleteTree : (notify, id, deleteBranchesAndComments) ->
-
-    unless @activeNode?
-      return
 
     if notify
       if confirm("Do you really want to delete the whole tree?")
@@ -614,6 +628,14 @@ class Route
   getTrees : -> @trees
 
 
+  getTreesSorted : ->
+
+    if @user.sortTreesByName
+      return (@trees.slice(0)).sort(@compareNames)
+    else
+      return (@trees.slice(0)).sort(@compareTimestamps)
+
+
   # returns a list of nodes that are connected to the parent
   #
   # ASSUMPTION:    we are dealing with a tree, circles would
@@ -653,11 +675,21 @@ class Route
         return node
     return null
 
+
   compareNames : (a, b) ->
 
     if a.name < b.name
       return -1
     if a.name > b.name
+      return 1
+    return 0
+
+
+  compareTimestamps : (a,b) ->
+
+    if a.timestamp < b.timestamp
+      return -1
+    if a.timestamp > b.timestamp
       return 1
     return 0
 

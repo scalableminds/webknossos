@@ -33,9 +33,9 @@ class CameraController
     gPos = @flycam.getPosition()
     # camera porition's unit is nm, so convert it.
     cPos = @model.scaleInfo.voxelToNm(gPos)
-    @cameras[constants.PLANE_XY].position = new THREE.Vector3(cPos[0]    , cPos[1]    , cPos[2] - 1)
-    @cameras[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0] + 1, cPos[1]    , cPos[2])
-    @cameras[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0]    , cPos[1] + 1, cPos[2])
+    @cameras[constants.PLANE_XY].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
+    @cameras[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
+    @cameras[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
 
     # offset the lights very far
     @lights[constants.PLANE_XY].position = new THREE.Vector3(cPos[0]         , cPos[1]         , cPos[2] - 100000)
@@ -175,16 +175,31 @@ class CameraController
     @flycam.hasChanged = true
 
   movePrevX : (x) =>
-    size = @prevViewportSize()
-    @cameras[constants.VIEW_3D].left += x*size/384
-    @cameras[constants.VIEW_3D].right += x*size/384
-    @cameras[constants.VIEW_3D].updateProjectionMatrix()
-    @flycam.hasChanged = true
+
+    @movePrevRaw(
+      new THREE.Vector2( x * @prevViewportSize() / constants.WIDTH, 0 ))
 
   movePrevY : (y) =>
-    size = @prevViewportSize()
-    @cameras[constants.VIEW_3D].top -= y*size/384
-    @cameras[constants.VIEW_3D].bottom -= y*size/384
+
+    @movePrevRaw(
+      new THREE.Vector2( 0, - y * @prevViewportSize() / constants.WIDTH ))
+
+  movePrev : ( nmVector ) ->
+    # moves camera by the nm vector
+    camera = @cameras[constants.VIEW_3D]
+
+    rotation = camera.rotation.clone().negate()
+    eulerOrder = camera.eulerOrder.split("").reverse().join("")       # reverse order
+    
+    nmVector.applyEuler( rotation , eulerOrder )
+    @movePrevRaw( nmVector )
+
+  movePrevRaw : (moveVector) ->
+
+    @cameras[constants.VIEW_3D].left   += moveVector.x
+    @cameras[constants.VIEW_3D].right  += moveVector.x
+    @cameras[constants.VIEW_3D].top    += moveVector.y
+    @cameras[constants.VIEW_3D].bottom += moveVector.y
     @cameras[constants.VIEW_3D].updateProjectionMatrix()
     @flycam.hasChanged = true
 
@@ -193,7 +208,7 @@ class CameraController
     @updateCamViewport()
 
   setRouteClippingDistance : (value) ->
-    @camDistance = 2 * value # Plane is shifted so it's <value> to the back and the front
+    @camDistance = value # Plane is shifted so it's <value> to the back and the front
     @updateCamViewport()
 
   getRouteClippingDistance : (planeID) ->
@@ -215,4 +230,3 @@ class CameraController
     @model.user.on 
       routeClippingDistanceChanged : (value) => @setRouteClippingDistance(value)
       zoomChanged : (value) => @zoom(Math.log(value) / Math.LN2)
-

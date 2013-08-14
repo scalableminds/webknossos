@@ -106,29 +106,20 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
   def createStackImages(stack: Stack): Option[List[File]] = {
     val images = stack.frames.map(ImageIO.read)
     val params = ImageCreatorParameters(
+      bytesPerElement = 1,
       slideWidth = stack.level.width,
       slideHeight = stack.level.height,
       imagesPerRow = maxSpriteSheetWidth / stack.level.width,
       imagesPerColumn = maxSpriteSheetHeight / stack.level.height)
-    //create single image
-    // TODO: needs to be removed in the future
-    val stackImage = ImageCreator.createBigImages(
-      images,
-      params.copy(imagesPerColumn = 1000000)).map { combinedImage =>
-        combinedImage.pages.map { p =>
-          new PNGWriter().writeToFile(p.image, new File(stack.path + "/stack.png"))
-        }
-      } getOrElse Nil
 
-    ImageCreator.createBigImages(images, params).map { combinedImage =>
+    ImageCreator.createSpriteSheet(images, params, ImageCreator.defaultTargetType).map { combinedImage =>
       val files = combinedImage.pages.map { p =>
         new PNGWriter().writeToFile(p.image, new File(stack.path + "/" + p.pageInfo.name))
       }
       writeMetaFile(stack, combinedImage.pages)
       XmlAtlas.writeToFile(combinedImage, stack.xmlAtlas)
       files
-    }.map(_ ::: stackImage)
-
+    }
   }
 
   def tarStack(stack: Stack, files: List[File]) {

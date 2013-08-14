@@ -75,6 +75,8 @@ class PluginRenderer
 
   render : (t) ->
 
+    t = +t
+
     exited = false
     pixelCount = @width * @height
     frameBuffer = new Uint8Array( 4 * pixelCount )
@@ -86,7 +88,12 @@ class PluginRenderer
     startFrame = 0
     endFrame = 0
 
-    inputData = null
+    initialInputData = 
+      state : @state
+      dimensions : @dimensions
+      mission : @dataHandler.getMissionData()
+              
+    inputData = _.clone(initialInputData)
 
     _plugins =
 
@@ -102,11 +109,8 @@ class PluginRenderer
             inputData = 
               rgba : new Uint8Array( 4 * pixelCount )
               segmentation : new Uint16Array( pixelCount )
-              relativeTime : (t - startFrame) / (endFrame - startFrame)
+              relativeTime : if endFrame - startFrame > 0 then (t - startFrame) / (endFrame - startFrame) else 0
               absoluteTime : t
-              state : @state
-              dimensions : @dimensions
-              mission : @dataHandler.getMissionData()
               writeFrameData : (key, payload) ->
                 frameData = frameData ? {}
                 frameData[key] = payload
@@ -114,7 +118,7 @@ class PluginRenderer
             callback()
             BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
             
-            inputData = null
+            inputData = _.clone(initialInputData)
 
         else
           ->

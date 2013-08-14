@@ -79,15 +79,16 @@ class DataRequestActor(
   def receive = {
     case dataRequest: DataRequest =>
       val s = sender
-      Future {
-        load(dataRequest).onComplete {
-          case Success(data) =>
-            s ! Some(data)
-          case Failure(e) =>
-            System.err.println(s"DataRequestActor Error for Request. Error: $e")
-            e.printStackTrace()
-            s ! None
-        }
+      // This construct results in a parallel execution and catches all the errors
+      Future.successful().flatMap{ _ =>
+        load(dataRequest)
+      }.onComplete{
+        case Success(data) =>
+        s ! Some(data)
+        case Failure(e) =>
+          System.err.println(s"DataRequestActor Error for Request. Error: $e")
+          e.printStackTrace()
+          s ! None
       }
     case DataRequestCollection(requests) =>
       val resultsPromise = Future.traverse(requests)(load)

@@ -201,7 +201,10 @@ $ ->
     $table.find(".details-toggle").click (event) ->
       $toggle = $(this)
 
-      dataAjaxHandler(event, $toggle)
+      alreadyFetched = $toggle.data("alreadyFetched")
+      unless alreadyFetched
+        dataAjaxHandler(event, $toggle)
+        $toggle.data("alreadyFetched", true)
 
       newState = !$toggle.hasClass("open")
 

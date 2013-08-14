@@ -1,5 +1,17 @@
 @(showNavButtons: Boolean = true)(body: Html)(implicit session: oxalis.view.UnAuthedSessionData)
 
+@callingTemplate = @{
+  // TODO: REMOVE HOTFIX
+  var c = Reflect.getCallerClass.map( _(8).getName() )
+  var i = 8
+  val max = 12
+  while(c == Some("views.html.main$") && i <= max){
+    i += 1
+    c = Reflect.getCallerClass.map( _(i).getName() )
+  }
+  c
+}
+
 @import braingames.util.Reflect
 
 <!doctype html>
@@ -23,7 +35,7 @@
         </div>
       }
     </div>
-    <div id="main-container" data-template="@Reflect.getCallerClass.map( _(8).getName() )">
+    <div id="main-container" data-template="@callingTemplate">
       @body
     </div>
     <!-- Prompt IE 6 users to install Chrome Frame. Remove this if you want to support IE 6.

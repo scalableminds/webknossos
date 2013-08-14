@@ -75,7 +75,7 @@ trait BinaryDataRequestHandler {
     DataRequest(
       dataSet,
       dataLayerId,
-      0,
+      1,
       cuboid,
       settings)
   }

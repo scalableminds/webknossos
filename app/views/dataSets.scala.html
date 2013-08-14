@@ -3,18 +3,16 @@
 @import braingames.util.Reflect
 
 @main() {
+
   <div id="dataset-list" class="container">
+    <div id="oxalis-header">
+      <img src="@controllers.routes.Assets.at("images/oxalis.svg")">
+      <div><p>Oxalis</p></div>
+    </div>
     @datasets.groupBy(_.owningTeam).map{ case (team, ds) =>
-      <!--<h3>@team.replace("/", " ")</h3>-->
-      <h3>Max-Planck Institute for Medical Research</h3>
-      <h4>Original data and segmentation</h4>
-      <p>
-        Connectomic reconstruction of the inner plexiform layer in the mouse retina.<br/>
-        Helmstaedter M, Briggman KL, Turaga SC, Jain V, Seung HS, Denk W.<br/>
-        Nature. 2013 Aug 8;500(7461):168-74. doi: 10.1038/nature12346.<br/>
-      </p>
+
       @ds.map{ dataSet =>
-        <div class="dataset img-polaroid" style="width: 200px;">
+        <div class="dataset img-polaroid">
           <header class="clearfix">
             <h4>@dataSet.name</h4>
             <div class="dataset-buttons">
@@ -30,6 +28,16 @@
             <a href="@controllers.routes.DataSetController.view(dataSet.name)">
               <i class="icon-play"></i>
             </a>
+          </div>
+            <!--FIXME-->
+          <div class="dataset-description clearfix">
+            <h3>Max-Planck Institute for Medical Research</h3>
+            <h4>Original data and segmentation</h4>
+            <p>
+              Connectomic reconstruction of the inner plexiform layer in the mouse retina.<br/>
+              Helmstaedter M, Briggman KL, Turaga SC, Jain V, Seung HS, Denk W.<br/>
+              Nature. 2013 Aug 8;500(7461):168-74. doi: 10.1038/nature12346.<br/>
+            </p>
           </div>
         </div>
       }

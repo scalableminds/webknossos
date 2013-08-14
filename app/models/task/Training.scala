@@ -2,6 +2,8 @@ package models.task
 
 import com.mongodb.casbah.Imports._
 import models.user.User
+import play.api.libs.json.Json
+import models.basics.BasicDAOFormats
 
 case class Training(
     domain: String,
@@ -9,7 +11,9 @@ case class Training(
     loss: Int,
     sample: ObjectId)
 
-object Training {
+object Training extends BasicDAOFormats{
+
+  implicit val trainingFormat = Json.format[Training]
   
   def empty = Training("", 10, 5, null)
   

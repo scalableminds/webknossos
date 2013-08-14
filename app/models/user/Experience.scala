@@ -1,6 +1,7 @@
 package models.user
 
 import models.task._
+import play.api.libs.json.Json
 
 case class Experience(domain: String, value: Int) {
 
@@ -13,6 +14,8 @@ case class Experience(domain: String, value: Int) {
 }
 
 object Experience {
+  implicit val experienceFormat = Json.format[Experience]
+
   implicit def MapToExperienceList(m: Map[String, Int]) =
     m.map(e => Experience(e._1, e._2)).toList
 

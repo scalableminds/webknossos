@@ -1,4 +1,4 @@
-@(tasks: List[models.task.Task])(implicit session: oxalis.view.AuthedSessionData)
+@()(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container wide">
@@ -20,9 +20,7 @@
         </tr>
       </thead>
       <tbody>
-      @tasks.map{ task => 
-        @taskTableItem(task)
-      }
+        <!-- TASKS NEED TO GO HERE taskTableItem(task) -->
       </tbody>
     </table>
     <p>

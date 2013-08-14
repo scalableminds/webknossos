@@ -26,6 +26,7 @@ import models.tracing._
 import oxalis.nml.Tree
 import scala.util._
 import models.annotation.{AnnotationType, AnnotationDAO, AnnotationSettings}
+import play.api.libs.json.Json
 
 case class CompletionStatus(open: Int, inProgress: Int, completed: Int)
 
@@ -80,6 +81,8 @@ object Task extends BasicDAO[Task]("tasks") {
 
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
+
+  implicit val taskFormat = Json.format[Task]
 
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 

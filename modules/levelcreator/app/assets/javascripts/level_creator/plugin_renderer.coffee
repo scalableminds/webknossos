@@ -59,6 +59,11 @@ class PluginRenderer
 
       unsafe : ->
 
+      exit : ->
+        _plugins.time = -> (->)
+        length = 0
+        return
+
       state : @state
 
     (_plugins[key] = ->) for key of @plugins
@@ -70,6 +75,7 @@ class PluginRenderer
 
   render : (t) ->
 
+    exited = false
     pixelCount = @width * @height
     frameBuffer = new Uint8Array( 4 * pixelCount )
     frameData = null
@@ -134,9 +140,9 @@ class PluginRenderer
 
       state : @state
 
-      unsafe : (callback) ->
+      unsafe : (callback) -> callback(inputData)
 
-        callback(inputData)
+      exit : -> exited = true; return
 
 
 
@@ -151,7 +157,10 @@ class PluginRenderer
 
     func(_plugins)
 
-    { frameBuffer, frameData }
+    if exited
+      null
+    else
+      { frameBuffer, frameData }
 
 
 

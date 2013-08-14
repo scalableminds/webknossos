@@ -170,14 +170,23 @@ class LevelCreator
     
     try
 
-      { frameBuffer } = @pluginRenderer.render(sliderValue)
-      imageData.data.set(frameBuffer)
-      @context.putImageData(imageData, 0, 0)
+      renderResult = @pluginRenderer.render(sliderValue)
 
-      @$slider.prop( max : @pluginRenderer.getLength() )
+      if renderResult
 
-      $("#preview-error").html("")
+        imageData.data.set(renderResult.frameBuffer)
+        @context.putImageData(imageData, 0, 0)
+
+        @$slider.prop( max : @pluginRenderer.getLength() )
+
+        $("#preview-error").html("")
+
+      else
+
+        $("#preview-error").html("""<i class="icon-thumbs-down"></i> Exited.""")
+      
       @$saveCodeButton.removeClass("disabled").popover("destroy")
+
 
     catch error
 
@@ -190,7 +199,7 @@ class LevelCreator
           trigger : "hover"
         )
 
-      $("#preview-error").html("<i class=\"icon-warning-sign\"></i> #{error}")
+      $("#preview-error").html("""<i class="icon-warning-sign"></i> #{error}""")
 
     @processing = false
 
@@ -231,16 +240,21 @@ class LevelCreator
 
     imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
     imageDataData = imageData.data
-    { frameBuffer, frameData } = @pluginRenderer.render(t)
-    # HACK Phantom doesn't support Uint8ClampedArray yet
-    for i in [0...frameBuffer.length] by 1
-      imageDataData[i] = frameBuffer[i]
-    @context.putImageData(imageData, 0, 0)
+    renderResult = @pluginRenderer.render(t)
 
-    if frameData?
-      window.callPhantom({ message : "rendered", frameData })
+    if renderResult
+      # HACK Phantom doesn't support Uint8ClampedArray yet
+      for i in [0...frameBuffer.length] by 1
+        imageDataData[i] = frameBuffer[i]
+      @context.putImageData(imageData, 0, 0)
+
+      if frameData?
+        window.callPhantom({ message : "rendered", frameData })
+      else
+        window.callPhantom( message : "rendered" )
     else
-      window.callPhantom( message : "rendered" )
+      window.callPhantom( message : "exited" )
+
 
 
 

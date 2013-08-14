@@ -99,6 +99,13 @@ page.onCallback = function (data) {
 
       break;
 
+    case "exited":
+
+      log("exited rendering");
+      phantom.exit(-12);
+
+      break;
+
     default:
 
       log( "unknown message", data.message );

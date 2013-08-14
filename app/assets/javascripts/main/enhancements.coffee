@@ -198,7 +198,7 @@ $ ->
 
     $table.find(".details-row").addClass("hide")
 
-    $table.find(".details-toggle").click (event) ->
+    $table.on "click", ".details-toggle", (event) ->
       $toggle = $(this)
 
       alreadyFetched = $toggle.data("alreadyFetched")

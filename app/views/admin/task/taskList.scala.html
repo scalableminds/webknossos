@@ -3,7 +3,10 @@
 @main(){
   <div class="container wide">
     <h3>Tasks</h3>
-    <div id="page-selection"></div>
+  
+    <div id="page-selection" data-url="@controllers.admin.routes.TaskAdministration.list()" ></div>
+    <input type="text" class="search-query" placeholder="Search" id="searchbox">
+    
     <table class="table table-double-striped table-details">
       <thead>
         <tr>
@@ -20,7 +23,7 @@
           <th> States </th>
         </tr>
       </thead>
-      <tbody class="hide">
+      <tbody>
         <!-- TASKS NEED TO GO HERE taskTableItem(task) -->
       </tbody>
     </table>

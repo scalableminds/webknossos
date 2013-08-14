@@ -73,32 +73,125 @@ $ ->
     "admin.task.taskList" : ->
 
       require ["libs/jquery.bootpag.min"], ->
-        console.log "admin.tasks in routing.coffee was triggered"
-        tbody = $("#main-container > div > table > tbody")
-        
-        allRows = [] # tbody.html()
-        tbody.html("")
-        tbody.removeClass("hide")
-
-        pageCount = 10
-        pages = []
-
-        # dummy data
-        tr = "<tr><td>Table Row</td></tr>"
-        for i in [0...100]
-          allRows.push tr
-
-
-        rowsPerPage = allRows.length / pageCount
-
-        for i in [0...10]
-          pages.push allRows.splice(0, rowsPerPage)
-
         pageSelection = $("#page-selection")
         
-        pageSelection.bootpag({total: pageCount}).on "page", (event, num) ->
-          console.log "event", event, "num", num
-          tbody.html(pages[num].join(""))
+        ajaxOptions =
+          url : pageSelection.data("url")
+          dataType : "json"
+          type : "get"
+        
+        jsonTasks = null
+
+        JSONcontains = (data, query, valuesToConsider=null) ->
+          # TODO valuesToConsider could be a json which contains which values should be searched
+
+          for own key, value of data
+            # which keys should be searched? use valuesToConsider ?
+
+            if _.isObject(value) or _.isArray(value)
+              return JSONcontains value, query
+
+            if _.isNumber(value) or _.isString(value)
+              # stringify
+              value += ''
+              if value.indexOf(query) > -1
+                return true
+          return false
+        
+        tbody = $("#main-container > div > table > tbody")
+
+        $("#searchbox").keypress ->
+          query = $(this).val()
+          results = []
+
+          for task in jsonTasks
+            if JSONcontains task, query
+              results.push task
+
+          displayJSON results
+
+          console.log results
+          console.log query
+
+
+        generateHTML = (element) ->
+
+          formatDate = (timestamp) ->
+            # like 2013-02-03 18:29
+            return timestamp
+
+          #  href="@controllers.admin.routes.AnnotationAdministration.annotationsForTask(task.id)" data-ajax="add-row=#@task.id + tr"
+
+          """
+          <tr id="#{element._id.$oid}">
+            <td class="details-toggle" href="@controllers.admin.routes.AnnotationAdministration.annotationsForTask(task.id)" data-ajax="add-row=##{element._id.$oid} + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+            <td> ? # like ? 7ff024 is it #{element._id.$oid} ?</td>
+            <td> ? H-Id like ? 0 </td>
+            <td> 
+                <a href="/admin/projects#tracingMethodsComparison">
+                  ? project like ? tracingMethodsComparison
+                </a>
+            </td>
+            <td> 
+              <a href="/admin/taskTypes#5113621ce4b02448f8a1784d">
+                ? type like ? methodComaprison_regularTracing 
+              </a>
+            </td>
+            <td> ? data set like ? 2012-09-28_ex145_07x2 </td>
+            <td> ? edit position like ? (6369, 2924, 1) </td>
+            <td> <span class="label"> #{element.neededExperience.domain}: #{element.neededExperience.value} </span> </td>
+            <td> #{element.priority} </td>
+            <td> #{formatDate element._taskType.created} </td>
+            <td>
+                <i class="icon-play-circle"></i> ? open
+                <br>
+                <i class="icon-random"></i> ? active
+                <br>
+                <i class="icon-ok-circle"></i> ? done
+            </td>
+            <td class="nowrap">
+              <a href="/admin/tasks/#{element._id.$oid} ?oder? #{element._taskType.$oid}/edit"><i class="icon-pencil"></i> edit </a><br>
+              <a href="/annotations/CompoundTask/#{element._id.$oid} ?oder? #{element._taskType.$oid}" title="view all finished tracings"><i class="icon-random"></i> view </a><br>
+              <a href="/admin/tasks/#{element._id.$oid} ?oder? #{element._taskType.$oid}/download" title="download all finished tracings"><i class="icon-download"></i> download </a><br>
+              <a href="/admin/trainingsTasks/create?taskId=#{element._id.$oid} ?oder? #{element._taskType.$oid}"><i class="icon-road"></i> use for Training </a><br>
+              <a href="/admin/tasks/#{element._id.$oid} ?oder? #{element._taskType.$oid}/delete" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+            </td>
+          </tr>
+          """
+
+        displayJSON = (jsonArray) ->
+          htmlArray = []
+          
+          for element in jsonArray
+            htmlArray.push generateHTML(element)
+
+          tbody.html(htmlArray.join(""))
+
+        $.ajax(ajaxOptions).then(
+
+          (responseData) ->
+            jsonTasks = responseData
+            console.log jsonTasks
+
+            pageCount = 20
+            rowsPerPage = Math.ceil jsonTasks.length / pageCount
+            
+
+            
+            
+            pageSelectionHandler = (event, number) ->
+              index = number - 1
+              json = jsonTasks.slice(rowsPerPage * index, rowsPerPage * (index + 1))
+              displayJSON json
+            
+            pageSelection.bootpag({total: pageCount}).on "page", pageSelectionHandler
+
+            # activate the first page
+            pageSelectionHandler null, 1
+
+            return
+        )
+
 
         return
 

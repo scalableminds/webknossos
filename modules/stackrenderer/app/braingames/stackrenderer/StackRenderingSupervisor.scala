@@ -14,17 +14,18 @@ import play.api.libs.concurrent.Execution.Implicits._
 import akka.routing.SmallestMailboxRouter
 import scala.concurrent.duration._
 import braingames.util.StartableActor
-import braingames.util.ExtendedTypes.ExtendedWSRequestHolder
-import braingames.util.ExtendedTypes.Auth
+import oxalis.util.ExtendedTypes.ExtendedWSRequestHolder
+import oxalis.util.ExtendedTypes.Auth
 import models.stackrenderer.TemporaryStores._
 import java.util.UUID
 import play.api.libs.ws.WS.WSRequestHolder
 import com.ning.http.client.Realm.AuthScheme
+import net.liftweb.common.{Empty, Failure, Full, Box}
 
-case class FinishedStack(stack: Stack)
-case class FailedStack(stack: Stack)
-case class FinishedUpload(stack: Stack, downloadUrls: List[String])
-case class FailedUpload(stack: Stack)
+case class RenderingFinished(stack: Stack)
+case class RenderingFailed(stack: Stack, failure: Failure)
+case class UploadFinished(stack: Stack, downloadUrls: List[String])
+case class UploadFailed(stack: Stack, failure: Failure)
 case class StartRendering()
 case class StopRendering()
 case class EnsureWork()
@@ -88,19 +89,19 @@ class StackRenderingSupervisor extends Actor {
     case StartRendering() =>
       self ! EnsureWork()
 
-    case FinishedStack(stack) =>
+    case RenderingFinished(stack) =>
       stacksInRendering.send(_ - stack.id)
       stackUploader ! UploadStack(stack)
 
-    case FailedStack(stack) =>
+    case RenderingFailed(stack: Stack, failure: Failure) =>
       stacksInRendering.send(_ - stack.id)
-      reportFailedWork(stack.id)
+      reportFailedWork(stack.id, failure)
 
-    case FailedUpload(stack) =>
-      reportFailedWork(stack.id)
+    case UploadFailed(stack, failure) =>
+      reportFailedWork(stack.id, failure)
 
-    case FinishedUpload(stack, downloadUrls) =>
-      reportFinishedWork(stack.id, downloadUrls)
+    case UploadFinished(stack, downloadUrls) =>
+      reportFinishedWork(stack, downloadUrls)
 
     case EnsureWork() =>
       ensureEnoughWork
@@ -116,10 +117,12 @@ class StackRenderingSupervisor extends Actor {
   
 
 
-  def reportFailedWork(id: String) = {
+  def reportFailedWork(id: String, failure: Failure) = {
     WS
       .url(failedWorkUrl)
-      .withQueryString("key" -> id)
+      .withQueryString(
+        "key" -> id,
+        "error" -> failure.msg)
       .withAuth(levelcreatorAuth)
       .withTimeout(30000)
       .get()
@@ -137,10 +140,10 @@ class StackRenderingSupervisor extends Actor {
       }
   }
 
-  def reportFinishedWork(id: String, downloadUrls: List[String]) = {
+  def reportFinishedWork(stack: Stack, downloadUrls: List[String]) = {
     WS
       .url(finishedWorkUrl)
-      .withQueryString("key" -> id)
+      .withQueryString("key" -> stack.id)
       .withHeaders("Content-Type" -> "text/plain")
       .withAuth(levelcreatorAuth)
       .withTimeout(30000)
@@ -148,9 +151,9 @@ class StackRenderingSupervisor extends Actor {
       .map { response =>
         response.status match {
           case 200 =>
-            Logger.debug(s"Successfully reported finished work for $id")
+            Logger.debug(s"Successfully reported finished work for $stack.id")
           case s =>
-            Logger.error(s"Failed to report finished work for $id. Status: $s")
+            Logger.error(s"Failed to report finished work for $stack.id. Status: $s")
         }
       }
       .recover {

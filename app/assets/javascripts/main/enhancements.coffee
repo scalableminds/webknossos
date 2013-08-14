@@ -1,4 +1,4 @@
-### define 
+### define
 jquery : $
 underscore : _
 ../libs/toast : Toast
@@ -28,7 +28,7 @@ $ ->
 
 
   dataAjaxHandler = (event) ->
-    
+
     event.preventDefault()
     $this = $(this)
     $form = if $this.is("form") then $this else $this.parents("form").first()
@@ -38,7 +38,7 @@ $ ->
       [ key, value ] = action.split("=")
       options[key] = value ? true
 
-    ajaxOptions = 
+    ajaxOptions =
       url : if $this.is("form") then this.action else this.href
       dataType : "json"
 
@@ -64,6 +64,7 @@ $ ->
       return unless isValid
       ajaxOptions["type"] = options.method ? $form[0].method ? "POST"
       ajaxOptions["data"] = $form.serialize()
+      ajaxOptions["contentType"] = "application/x-www-form-urlencoded; charset=UTF-8"
 
     if options["busy-class"]
       $this.addClass("busy")
@@ -81,7 +82,7 @@ $ ->
 
         $this.trigger("ajax-success", responseData)
 
-        if options["replace-row"] 
+        if options["replace-row"]
           $this.parents("tr").first().replaceWith(html)
 
         if options["delete-row"]
@@ -91,6 +92,9 @@ $ ->
 
         if options["add-row"]
           $(options["add-row"]).find("tbody").append(html)
+
+        if options["replace"]
+          $(options["replace"]).replaceWith(html)
 
         if options["replace-table"]
           $(options["replace-table"]).replaceWith(html)
@@ -128,13 +132,13 @@ $ ->
 
         $this.trigger("ajax-error", messages)
     ).always(
-      -> 
+      ->
         $this.removeClass("busy")
     )
 
   $(document).on "click", "a[data-ajax]", dataAjaxHandler
   $(document).on "submit", "form[data-ajax]", dataAjaxHandler
-  
+
 
   $(document).on "change", "table input.select-all-rows", ->
 
@@ -146,7 +150,7 @@ $ ->
   do ->
 
     shiftKeyPressed = false
-    $(document).on 
+    $(document).on
       "keydown" : (event) ->
         shiftKeyPressed = event.shiftKey
         return
@@ -155,7 +159,7 @@ $ ->
         if shiftKeyPressed and (event.which == 16 or event.which == 91)
           shiftKeyPressed = false
         return
-      
+
 
 
     $(document).on "change", "table input.select-row", ->
@@ -175,7 +179,7 @@ $ ->
 
         $table.data("select-row-last", null)
       else
-        
+
         $table.data("select-row-last", { el : $row, index : $row.prevAll().length })
 
       return

@@ -5,7 +5,7 @@ import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
-import brainflight.security.SCrypt._
+import braingames.security.SCrypt._
 import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsBoolean
@@ -55,6 +55,7 @@ object UserConfiguration extends BasicSettings{
       "gamepadActive" -> JsBoolean(false),
       "motionsensorActive" -> JsBoolean(false),
       "firstVisToggle" -> JsBoolean(true),
-      "particleSize" -> JsNumber(5)))
+      "particleSize" -> JsNumber(5),
+      "sortTreesByName" -> JsBoolean(false)))
 
 }

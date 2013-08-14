@@ -6,6 +6,7 @@
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
 ./dimensions : Dimensions
+../../libs/toast : Toast
 ###
 
 class Binary
@@ -19,19 +20,26 @@ class Binary
   queue : null
   planes : []
 
-  dataSetId : ""
   dataSetName : ""
   direction : [0, 0, 0]
-  lastLookUpTable : null
+  contrastCurves : []
 
 
   constructor : (@user, dataSet, @TEXTURE_SIZE_P) ->
 
-    @dataSetId = dataSet.id
     @dataSetName = dataSet.name
 
-    @cube = new Cube(dataSet.upperBoundary, dataSet.dataLayers.color.resolutions.length)
-    @queue = new PullQueue(@dataSetId, @cube)
+    for layer in dataSet.dataLayers
+      if layer.typ == "color"
+        dataLayer = layer
+
+    unless dataLayer
+      Toast.error("No coloured data layer specified.")
+
+    upperBoundary = [dataLayer.maxCoordinates.width, dataLayer.maxCoordinates.height, dataLayer.maxCoordinates.depth]
+
+    @cube = new Cube(upperBoundary, dataLayer.resolutions.length)
+    @queue = new PullQueue(@dataSetName, @cube)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
     @pingStrategies3d = [new PingStrategy3d.DslSlow()]
@@ -41,23 +49,28 @@ class Binary
     @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P)
     @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P)
 
+    contrastCurve = new Uint8Array(256)
+    @contrastCurves[0] = new Uint8Array(256)
+
     @user.on({
       set4BitChanged : (is4Bit) => @queue(is4Bit)
     })
 
+    for i in [1..@cube.ZOOM_STEP_COUNT]
+      @contrastCurves[i] = contrastCurve
 
-  updateLookupTable : (brightness, contrast) ->
 
-    lookUpTable = new Uint8Array(256)
-    @lastLookUpTable = lookUpTable
-    lookUpTableMag1 = new Uint8Array(256)
+  updateContrastCurve : (brightness, contrast) ->
 
-    for i in [0..255]
-      lookUpTable[i] = Math.max(Math.min((i + brightness) * contrast, 255), 0)
-      lookUpTableMag1[i] = Math.max(Math.min((i + brightness + 8) * contrast, 255), 0)
+    contrastCurve = @contrastCurves[1]
+    contrastCurveMag1 = @contrastCurves[0]
+
+    for i in [0..255] by 1
+      contrastCurve[i] = Math.max(Math.min((i + brightness) * contrast, 255), 0)
+      contrastCurveMag1[i] = Math.max(Math.min((i + brightness + 8) * contrast, 255), 0)
 
     for plane in @planes
-      plane.updateLookUpTables(lookUpTable, lookUpTableMag1)
+      plane.updateContrastCurves(@contrastCurves)
 
 
   ping : _.once (position, {zoomStep, area, activePlane}) ->
@@ -118,17 +131,10 @@ class Binary
     @queue.pull() 
 
 
-  # Not used anymore. Instead the planes get-functions are called directly.
-  #get : (position, options) ->
-
-   # for i in [0...Math.min(options.length, @planes.length)]
-    #  @planes[i].get(position, options[i]) if options[i]?
-
-
   # A synchronized implementation of `get`. Cuz its faster.
   getByVerticesSync : (vertices) ->
 
-    { lastLookUpTable } = @
+    contrastCurve = @contrastCurves[1]
 
     { buffer, accessedBuckets } = InterpolationCollector.bulkCollect(
       vertices
@@ -138,7 +144,6 @@ class Binary
     @cube.accessBuckets(accessedBuckets)
 
     for i in [0...buffer.length] by 1
-      l = buffer[i]
-      buffer[i] = lastLookUpTable[l]
+      buffer[i] = contrastCurve[buffer[i]]
 
     buffer

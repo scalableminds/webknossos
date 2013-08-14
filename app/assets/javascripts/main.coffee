@@ -4,6 +4,7 @@ require.config
 
   paths :
     "jquery" : "libs/jquery-1.8.3.min"
+    "multiselect" : "libs/bootstrap-multiselect"
     "underscore" : "libs/lodash-1.3.1"
     "bootstrap" : "libs/bootstrap.min"
     "worker" : "libs/worker_plugin"
@@ -22,6 +23,7 @@ require.config
     "underscore" :
       exports : "_"
     "bootstrap" : [ "jquery" ]
+    "multiselect" : [ "bootstrap" ]
     "libs/viz" :
       exports : "Viz"
     "routes" :

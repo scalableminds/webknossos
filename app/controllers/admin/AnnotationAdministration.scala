@@ -18,7 +18,7 @@ object AnnotationAdministration extends Controller with Secured {
     for {
       task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
     } yield {
-      Ok(task.annotations.foldLeft(Html.empty) {
+      JsonOk(task.annotations.foldLeft(Html.empty) {
         case (h, e) =>
           h += html.admin.annotation.simpleAnnotation(e)
       })

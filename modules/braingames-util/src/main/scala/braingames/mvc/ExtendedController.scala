@@ -163,6 +163,9 @@ class JsonResult(status: Int) extends SimpleResult[Results.EmptyContent](header 
   def apply(html: Html, message: String): SimpleResult[JsObject] =
     apply(html, Seq(messageTypeFromStatus -> message))
 
+  def apply(html: Html): SimpleResult[JsObject] =
+    apply(html, Seq.empty)
+
   def apply(message: String): SimpleResult[JsObject] =
     apply(Html.empty, message)
 

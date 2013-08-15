@@ -186,6 +186,7 @@ class Paginator
         return match
     )
 
+
     filledTemplate = filledTemplate.replace( /(#\{[^}]*\})/g, (match) ->
       
       # remove #{ and }

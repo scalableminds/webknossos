@@ -44,6 +44,8 @@ class PluginRenderer
 
   getRange : ->
 
+    return { start: 0, end: 0 } unless @dataHandler.deferred("initialized").state() == "resolved"
+
     func = @compile()
 
     range = { start: Infinity, end: 0 }

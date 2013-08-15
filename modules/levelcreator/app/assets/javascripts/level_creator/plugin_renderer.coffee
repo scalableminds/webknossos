@@ -77,6 +77,7 @@ class PluginRenderer
             options = {} unless options? #if plugin has no options
 
             _.extend( options, input : inputData )
+            _.extend( options, exit : _plugins.exit )
             plugin.execute(options)
 
         else
@@ -183,6 +184,7 @@ class PluginRenderer
           options = {} unless options? #if plugin has no options
 
           _.extend( options, input : inputData )
+          _.extend( options, exit : _plugins.exit )
           plugin.execute(options)
 
     func(_plugins)

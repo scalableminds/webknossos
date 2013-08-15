@@ -35,6 +35,7 @@ class GetMetaValues
 
     { 
       input: { slidesBeforeProblem, slidesAfterProblem, mission, dimensions }
+      exit
       DESIRED_SLIDES_BEFORE_PROBLEM
       MIN_END_SEGMENTS_AT_FIRST_SLIDE
       DESIRED_SLIDES_AFTER_PROBLEM
@@ -75,7 +76,7 @@ class GetMetaValues
     # check plausibility
 
     if mission.possibleEnds.length < minEndSegmentsAtFirstSlide
-      console.log "abort"
+      exit()
 
 
     # apply filters
@@ -96,10 +97,7 @@ class GetMetaValues
         startSlide = i
         break
 
-    
-    console.log "abort" unless startSlide?
-    console.log "Start: " + startSlide
-
+    exit() unless startSlide?
     startSlide = 0 unless startSlide?
 
 
@@ -121,12 +119,8 @@ class GetMetaValues
         break
 
     
-    console.log "abort" unless endSlide?
-    console.log "end: " + endSlide
-
+    exit() unless endSlide?
     endSlide = slidesBeforeProblem + @slidesAfterProblem unless endSlide?
-
-
 
     # return macro values
     keyValues = new Object()

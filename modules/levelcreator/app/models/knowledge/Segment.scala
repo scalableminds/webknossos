@@ -1,7 +1,7 @@
 package models.knowledge
 
-import brainflight.tools.geometry._
 import play.api.libs.json._
+import braingames.geometry.Vector3D
 
 sealed trait Segment {
   val id: Int

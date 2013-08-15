@@ -1,13 +1,7 @@
 package models.task
 
 import com.mongodb.casbah.Imports._
-import models.context._
-import com.novus.salat.annotations._
-import com.novus.salat.dao.SalatDAO
-import models.basics.BasicDAO
 import models.user.User
-import models.tracing.Tracing
-import models.tracing.TracingType
 
 case class Training(
     domain: String,

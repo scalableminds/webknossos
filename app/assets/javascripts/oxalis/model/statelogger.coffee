@@ -9,7 +9,7 @@ class StateLogger
 
   PUSH_THROTTLE_TIME : 30000 #30s
 
-  constructor : (@route, @flycam, @version, @dataId, @isEditable) ->
+  constructor : (@route, @flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
     _.extend(this, new EventMixin())
 
@@ -38,6 +38,7 @@ class StateLogger
       updatedId: if oldId then tree.treeId
       color: [treeColor.r, treeColor.g, treeColor.b, 1]
       name: tree.name
+      timestamp: tree.timestamp
       }
 
   createTree : (tree) ->
@@ -158,7 +159,7 @@ class StateLogger
     return @committedCurrentState and @committedDiffs.length == 0
 
   push : ->
-    if @isEditable
+    if @allowUpdate
       @committedCurrentState = false
       @pushDebounced()
 
@@ -179,6 +180,13 @@ class StateLogger
       return @pushDeferred
 
     @pushDeferred = new $.Deferred()
+    # reject and null pushDeferred if the server didn't answer after 10 seconds
+    setTimeout(((version) =>
+      if @pushDeferred and version == @version
+        @pushDeferred.reject()
+        @pushDeferred = null
+        console.error "Server did take too long to answer"),
+      10000, @version)
 
     @committedDiffs = @committedDiffs.concat(@newDiffs)
     @newDiffs = []
@@ -187,7 +195,7 @@ class StateLogger
     console.log "Sending data: ", data
 
     Request.send(
-      url : "/tracing/#{@dataId}?version=#{(@version + 1)}"
+      url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
       method : "PUT"
       data : data
       contentType : "application/json"
@@ -202,7 +210,7 @@ class StateLogger
           response = JSON.parse(responseObject.responseText)
         catch error
           console.error "parsing failed."
-        if response.messages?[0]?.error?
+        if response?.messages?[0]?.error?
           if response.messages[0].error == "tracing.dirtyState"
             $(window).on(
               "beforeunload"
@@ -213,8 +221,9 @@ class StateLogger
       @push()
       if (notifyOnFailure)
         @trigger("pushFailed", @failedPushCount >= 3 );
-      @pushDeferred.reject()
-      @pushDeferred = null
+      if @pushDeferred
+        @pushDeferred.reject()
+        @pushDeferred = null
 
     .done (response) =>
       
@@ -222,5 +231,6 @@ class StateLogger
       
       @version = response.version
       @committedDiffs = []
-      @pushDeferred.resolve()
-      @pushDeferred = null
+      if @pushDeferred
+        @pushDeferred.resolve()
+        @pushDeferred = null

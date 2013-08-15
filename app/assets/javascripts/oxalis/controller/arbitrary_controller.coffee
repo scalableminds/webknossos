@@ -41,9 +41,11 @@ class ArbitraryController
       @keyboardOnce?.unbind()
 
 
-  constructor : (@model, stats, @gui, renderer, scene) ->
+  constructor : (@model, stats, @gui, renderer, scene, @sceneController) ->
 
     _.extend(this, new EventMixin())
+
+    @isStarted = false
 
     @canvas = canvas = $("#render-canvas")
     
@@ -129,6 +131,13 @@ class ArbitraryController
     )
     
     @input.keyboardNoLoop = new Input.KeyboardNoLoop(
+
+      "1" : => @sceneController.toggleSkeletonVisibility()
+      "2" : => @sceneController.toggleInactiveTreeVisibility()
+
+      #Delete active node
+      "delete" : => @model.route.deleteActiveNode()
+      "c" : => @model.route.createNewTree()
       
       #Branches
       "b" : => @pushBranch()
@@ -148,6 +157,9 @@ class ArbitraryController
       "u" : => 
         @record = false
         @infoPlane.updateInfo(false)
+      #Comments
+      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), true)
+      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), true)
     )
 
     @input.keyboardOnce = new Input.Keyboard(
@@ -181,17 +193,25 @@ class ArbitraryController
 
   start : ->
 
+    @stop()
+
     @initKeyboard()
     @initMouse()
     @view.start()
     @init()
-    @view.draw()     
+    @view.draw()    
+
+    @isStarted = true 
  
 
   stop : ->
 
+    if @isStarted
+      @input.unbind()
+    
     @view.stop()
-    @input.unbind()
+
+    @isStarted = false
 
 
   scroll : (delta, type) =>

@@ -65,6 +65,11 @@ class PluginRenderer
 
       unsafe : ->
 
+      exit : ->
+        _plugins.time = -> (->)
+        length = 0
+        return
+
       state : @state
 
     (_plugins[key] = ->) for key of @plugins
@@ -76,6 +81,9 @@ class PluginRenderer
 
   render : (t) ->
 
+    t = +t
+
+    exited = false
     pixelCount = @width * @height
     frameBuffer = new Uint8Array( 4 * pixelCount )
     frameData = null
@@ -86,7 +94,12 @@ class PluginRenderer
     startFrame = 0
     endFrame = 0
 
-    inputData = null
+    initialInputData = 
+      state : @state
+      dimensions : @dimensions
+      mission : @dataHandler.getMissionData()
+              
+    inputData = _.clone(initialInputData)
 
 
     _plugins =
@@ -103,11 +116,8 @@ class PluginRenderer
             inputData = 
               rgba : new Uint8Array( 4 * pixelCount )
               segmentation : new Uint16Array( pixelCount )
-              relativeTime : (t - startFrame) / (endFrame - startFrame)
+              relativeTime : if endFrame - startFrame > 0 then (t - startFrame) / (endFrame - startFrame) else 0
               absoluteTime : t
-              state : @statel
-              dimensions : @dimensions
-              mission : @dataHandler.getMissionData()
               writeFrameData : (key, payload) ->
                 frameData = frameData ? {}
                 frameData[key] = payload
@@ -115,7 +125,7 @@ class PluginRenderer
             callback()
             BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
             
-            inputData = null
+            inputData = _.clone(initialInputData)
 
         else
           ->
@@ -142,9 +152,9 @@ class PluginRenderer
 
       state : @state
 
-      unsafe : (callback) ->
+      unsafe : (callback) -> callback(inputData)
 
-        callback(inputData)
+      exit : -> exited = true; return
 
 
 
@@ -159,7 +169,10 @@ class PluginRenderer
 
     func(_plugins)
 
-    { frameBuffer, frameData }
+    if exited
+      null
+    else
+      { frameBuffer, frameData }
 
 
 

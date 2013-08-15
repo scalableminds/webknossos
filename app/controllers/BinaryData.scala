@@ -1,42 +1,42 @@
 package controllers
 
-import java.nio.ByteBuffer
-import akka.actor._
-import akka.dispatch._
-import scala.concurrent.duration._
-import akka.pattern.{ ask, pipe }
-import akka.util.Timeout
 import play.api._
-import braingames.mvc.Controller
-import play.api.mvc.AsyncResult
-import play.api.data._
-import play.api.libs.json.Json._
+import braingames.mvc.{Fox, Controller}
+import play.api.mvc.{WebSocket, AsyncResult}
 import play.api.Play.current
 import play.api.libs.iteratee._
 import Input.EOF
 import play.api.libs.concurrent._
-import play.api.libs.json.JsValue
-import play.libs.Akka._
-import models.security.Role
-import models.binary._
-import brainflight.binary._
-import brainflight.security.Secured
+import _root_.models.security.Role
+import _root_.models.binary._
+import oxalis.security.{AuthenticatedRequest, Secured}
 import scala.concurrent.Future
-import brainflight.tools.geometry.Point3D
+import braingames.geometry.Point3D
 import akka.pattern.AskTimeoutException
 import play.api.libs.iteratee.Concurrent.Channel
 import scala.collection.mutable.ArrayBuffer
 import akka.routing.RoundRobinRouter
 import play.api.libs.concurrent.Execution.Implicits._
-import brainflight.tools.geometry.Vector3D
-import brainflight.binary.Cuboid
-import akka.agent.Agent
-import akka.routing.RoundRobinRouter
 import scala.concurrent.Future
 import play.api.i18n.Messages
 import braingames.image._
 import java.awt.image.BufferedImage
 import braingames.image.JPEGWriter
+import braingames.binary.models._
+import braingames.binary._
+import oxalis.binary.BinaryDataService
+import net.liftweb.common._
+import braingames.util.ExtendedTypes.ExtendedFutureBox
+import braingames.util.ExtendedTypes.ExtendedArraySeq
+import braingames.binary.ParsedRequest
+import oxalis.security.AuthenticatedRequest
+import braingames.binary.models.DataLayerId
+import scala.Some
+import braingames.binary.DataRequestSettings
+import braingames.image.ImageCreatorParameters
+import braingames.binary.ParsedRequestCollection
+import braingames.reactivemongo.DBAccessContext
+
 //import scala.concurrent.ExecutionContext.Implicits.global
 
 object BinaryData extends Controller with Secured {
@@ -44,120 +44,117 @@ object BinaryData extends Controller with Secured {
 
   val conf = Play.configuration
 
-  val dataRequestActor = {
-    implicit val system = Akka.system
-    val nrOfBinRequestActors = conf.getInt("binData.nrOfBinRequestActors") getOrElse 8
-    val bindataCache = Agent[Map[LoadBlock, Future[Array[Byte]]]](Map.empty)
-    Akka.system.actorOf(Props(new DataRequestActor(bindataCache))
-      .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
-  }
-
   implicit val dispatcher = Akka.system.dispatcher
   val scaleFactors = Array(1, 1, 1)
 
-  implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
-  def resolutionFromExponent(resolutionExponent: Int) =
-    math.pow(2, resolutionExponent).toInt
-
-  def cuboidFromPosition(position: Point3D, cubeSize: Int, resolution: Int) = {
-    val cubeCorner = Vector3D(position.scale {
-      case (x, i) =>
-        x - x % (cubeSize / scaleFactors(i))
-    })
-    Cuboid(cubeSize / scaleFactors(0), cubeSize / scaleFactors(1), cubeSize / scaleFactors(2), resolution, Some(cubeCorner))
+  def createDataRequestCollection(dataSet: DataSet, dataLayerName: String, cubeSize: Int, parsedRequest: ParsedRequestCollection) = {
+    val dataLayerId = DataLayerId(dataLayerName)
+    val dataRequests = parsedRequest.requests.map(r =>
+      BinaryDataService.createDataRequest(dataSet, dataLayerId, cubeSize, r))
+    DataRequestCollection(dataRequests)
   }
 
-  def handleMultiDataRequest(multi: MultipleDataRequest, dataSet: DataSet, dataLayer: DataLayer, cubeSize: Int): Future[Option[ArrayBuffer[Byte]]] = {
-    val cubeRequests = multi.requests.map { request =>
-      val resolution = resolutionFromExponent(request.resolutionExponent)
-      val cuboid = cuboidFromPosition(request.position, cubeSize, resolution)
-      SingleRequest(
-        DataRequest(
-          dataSet,
-          dataLayer,
-          resolution,
-          cuboid,
-          useHalfByte = request.useHalfByte,
-          skipInterpolation = true))
-    }
 
-    val future = (dataRequestActor ? MultiCubeRequest(cubeRequests)) recover {
-      case e: AskTimeoutException =>
-        Logger.warn("Data request to DataRequestActor timed out!")
-        None
+  def requestData(
+    dataSetName: String,
+    dataLayerName: String,
+    cubeSize: Int,
+    parsedRequest: ParsedRequestCollection)(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
+    for {
+      dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataRequestCollection = createDataRequestCollection(dataSet, dataLayerName, cubeSize, parsedRequest)
+      data <- BinaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
+    } yield {
+      data
     }
-
-    future.mapTo[Option[ArrayBuffer[Byte]]]
   }
 
-  def requestViaAjaxDebug(dataSetId: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated { implicit request =>
-    Async {
-      for {
-        dataSet <- DataSet.findOneById(dataSetId) ?~ Messages("dataSet.notFound")
-        dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
-      } yield {
-        val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z), false)))
-        handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize).map {
-          case Some(result) => Ok(result.toArray)
-          case _            => NotFound
+  def requestData(
+    dataSetName: String,
+    dataLayerName: String,
+    position: Point3D,
+    width: Int,
+    height: Int,
+    depth: Int,
+    resolutionExponent: Int,
+    settings: DataRequestSettings)(implicit ctx: DBAccessContext): Fox[Array[Byte]] = {
+    for {
+      dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
+      dataRequestCollection = BinaryDataService.createDataRequest(
+        dataSet,
+        DataLayerId(dataLayerName),
+        width,
+        height,
+        depth,
+        position,
+        resolutionExponent,
+        settings)
+      data <- BinaryDataService.handleDataRequest(dataRequestCollection) ?~> "Data request couldn't get handled"
+    } yield {
+      data
+    }
+  }
+
+  def requestViaAjaxDebug(dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated {
+    implicit request =>
+      Async {
+        val dataRequests = ParsedRequestCollection(Array(ParsedRequest(resolution, Point3D(x, y, z), false)))
+        for {
+          data <- requestData(dataSetName, dataLayerName, cubeSize, dataRequests)
+        } yield {
+          Ok(data)
         }
       }
-    }
   }
 
   /**
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
-  def requestViaAjax(dataSetId: String, dataLayerName: String, cubeSize: Int) = Authenticated(parser = parse.raw) { implicit request =>
-    Async {
-      for {
-        payload <- request.body.asBytes() ?~ Messages("binary.payload.notSupplied")
-        message <- BinaryProtocol.parseAjax(payload) ?~ Messages("binary.payload.invalid")
-        dataSet <- DataSet.findOneById(dataSetId) ?~ Messages("dataSet.notFound")
-        dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
-      } yield {
-        message match {
-          case dataRequests @ MultipleDataRequest(_) =>
-            handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).map {
-              case Some(result) => Ok(result.toArray)
-              case _            => NotFound
-            }
-          case _ =>
-            Akka.future {
-              BadRequest("Unknown message.")
-            }
+  def requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = Authenticated(parser = parse.raw) {
+    implicit request =>
+      Async {
+        for {
+          payload <- request.body.asBytes() ?~> Messages("binary.payload.notSupplied")
+          requests <- BinaryProtocol.parse(payload, containsHandle = false) ?~> Messages("binary.payload.invalid")
+          data <- requestData(dataSetName, dataLayerName, cubeSize, requests) ?~> Messages("binary.data.notFound")
+        } yield {
+          Ok(data)
         }
       }
-    }
   }
 
-  def respondeWithImage(dataSetName: String, dataLayerName: String, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = {
+  def respondWithSpriteSheet(dataSetName: String, dataLayerName: String, width: Int, height: Int, depth: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: AuthenticatedRequest[_]) = {
     Async {
-      val cubeSize = 128
-      val params = ImageCreatorParameters(
-        slideWidth = cubeSize,
-        slideHeight = cubeSize,
-        imagesPerRow = imagesPerRow)
+      val settings = DataRequestSettings(useHalfByte = false, skipInterpolation = false)
       for {
-        dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataSet.notFound")
-        dataLayer <- dataSet.dataLayers.get(dataLayerName) ?~ Messages("dataLayer.notFound")
+        dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
+        dataLayer <- dataSet.dataLayer(dataLayerName) ?~> Messages("dataLayer.notFound")
+        params = ImageCreatorParameters(dataLayer.bytesPerElement, width, height, imagesPerRow)
+        data <- requestData(dataSetName, dataLayerName, Point3D(x, y, z), width, height, depth, resolution, settings) ?~> Messages("binary.data.notFound")
+        spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
+        firstSheet <- spriteSheet.pages.headOption ?~> "Couldn'T create spritesheet"
       } yield {
-        val dataRequest = MultipleDataRequest(Array(SingleDataRequest(resolution, Point3D(x, y, z), false)))
-        handleMultiDataRequest(dataRequest, dataSet, dataLayer, cubeSize).map(_.flatMap { result =>
-          ImageCreator.createImage(result.toArray, params).map { combinedImage =>
-            val file = new JPEGWriter().writeToFile(combinedImage.pages.head.image)
-            Ok.sendFile(file, true, _ => "test.jpg").withHeaders(
-              CONTENT_TYPE -> "image/jpeg")
-          }
-        } getOrElse NotFound)
+        val file = new JPEGWriter().writeToFile(firstSheet.image)
+        Ok.sendFile(file, true, _ => "test.jpg").withHeaders(
+          CONTENT_TYPE -> "image/jpeg")
       }
     }
   }
 
-  def requestImage(dataSetName: String, dataLayerName: String, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated(parser = parse.raw) { implicit request =>
-    respondeWithImage(dataSetName, dataLayerName, imagesPerRow, x, y, z, resolution)
+  def respondWithImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: AuthenticatedRequest[_]) = {
+    respondWithSpriteSheet(dataSetName, dataLayerName, width, height, 1, 1, x, y, z, resolution)
+  }
+
+  def requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated(parser = parse.raw) {
+    implicit request =>
+      respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
+  }
+
+  def requestImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated(parser = parse.raw) {
+    implicit request =>
+      respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
   }
 
   /**
@@ -165,43 +162,41 @@ object BinaryData extends Controller with Secured {
    * message is defined in the BinaryProtokoll.parseWebsocket function.
    * If the message is valid the result is posted onto the websocket.
    *
-   * @param
-   * 	modelType:	id of the model to use
    */
-  def requestViaWebsocket(dataSetId: String, dataLayerName: String, cubeSize: Int) = AuthenticatedWebSocket[Array[Byte]]() { user =>
 
-    request =>
-      val dataSetOpt = DataSet.findOneById(dataSetId)
-      var channelOpt: Option[Channel[Array[Byte]]] = None
+  def requestViaWebsocket(dataSetName: String, dataLayerName: String, cubeSize: Int): WebSocket[Array[Byte]] =
+    AuthenticatedWebSocket[Array[Byte]]() {
+      user =>
+        request =>
+          val dataLayer = DataLayerId(dataLayerName)
 
-      val output = Concurrent.unicast[Array[Byte]](
-        { c => channelOpt = Some(c) },
-        { Logger.debug("Data websocket completed") },
-        { case (e, i) => Logger.error("An error ocourd on websocket stream: " + e) })
+          DataSetDAO.findOneByName(dataSetName)(user).map {
+            dataSetOpt =>
+              var channelOpt: Option[Channel[Array[Byte]]] = None
 
-      val input = Iteratee.foreach[Array[Byte]](in => {
-        for {
-          dataSet <- dataSetOpt
-          dataLayer <- dataSet.dataLayers.get(dataLayerName)
-          channel <- channelOpt
-        } {
-          try {
-            BinaryProtocol.parseWebsocket(in).map {
-              case dataRequests: MultipleDataRequest =>
-                Logger.trace("Websocket DataRequests: " + dataRequests.requests.mkString(", "))
-                handleMultiDataRequest(dataRequests, dataSet, dataLayer, cubeSize).map(_.map { result =>
-                  Logger.trace("Websocket result size: " + result.size)
-                  channel.push((result ++= dataRequests.handle).toArray)
-                })
-              case _ =>
-                Logger.error("Received unhandled message!")
-            }
-          } catch {
-            case e: Throwable =>
-              Logger.error("FAIL in Websocket: " + e.toString)
+              val output = Concurrent.unicast[Array[Byte]](
+              {
+                c => channelOpt = Some(c)
+              }, {
+                Logger.debug("Data websocket completed")
+              }, {
+                case (e, i) => Logger.error("An error ocourd on websocket stream: " + e)
+              })
+
+              val input = Iteratee.foreach[Array[Byte]](in => {
+                for {
+                  dataSet <- dataSetOpt
+                  channel <- channelOpt
+                  requests <- BinaryProtocol.parse(in, containsHandle = true)
+                  dataRequestCollection = createDataRequestCollection(dataSet, dataLayerName, cubeSize, requests)
+                  dataOpt <- BinaryDataService.handleDataRequest(dataRequestCollection)
+                  data <- dataOpt
+                } {
+                  val resultWithHandle = Seq(data, requests.handle.getOrElse(Array())).appendArrays
+                  channel.push(resultWithHandle)
+                }
+              })
+              (input, output)
           }
-        }
-      })
-      (input, output)
-  }
+    }
 }

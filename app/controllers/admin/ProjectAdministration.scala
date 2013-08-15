@@ -1,7 +1,7 @@
 package controllers.admin;
 
 import braingames.mvc.Controller
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.security.Role
 import scala.concurrent.duration._
 import views._
@@ -11,12 +11,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import models.user.User
 import play.api.i18n.Messages
-import models.tracing.TracingInfo
-import models.tracing.TracingType
 import play.api.templates.Html
-import models.tracing.UsedTracings
-import brainflight.tracing.TracingIdentifier
-import brainflight.tracing.RequestTemporaryTracing
 import controllers.Application
 
 
@@ -43,25 +38,6 @@ object ProjectAdministration extends Controller with Secured{
     } yield {
       Project.remove(project)
       JsonOk(Messages("project.removed"))
-    }
-  }
-  
-  def trace(projectName: String) = Authenticated { implicit request =>
-    for {
-      project <- Project.findOneByName(projectName) ?~ Messages("project.notFound")
-    } yield {
-      val tracingType = TracingType.CompoundProject
-      val id = TracingIdentifier(tracingType.toString, projectName)
-      val tracingInfo = 
-        TracingInfo(
-            id.identifier,
-            "<unknown>",
-            tracingType,
-            isEditable = false)
-      
-      Application.temporaryTracingGenerator ! RequestTemporaryTracing(id)
-      
-      Ok(html.oxalis.trace(tracingInfo)(Html.empty))
     }
   }
 

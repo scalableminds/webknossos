@@ -160,7 +160,7 @@ class PlaneView
   
   scaleTrianglesPlane : (scale) =>
     @scaleFactor = scale
-    @curWidth = WIDTH = HEIGHT = @scaleFactor * constants.VIEWPORT_WIDTH
+    @curWidth = WIDTH = HEIGHT = Math.round(@scaleFactor * constants.VIEWPORT_WIDTH)
     canvas = $("#render-canvas")
     canvas.width(2 * WIDTH + 20)
     canvas.height(2 * HEIGHT + 20)

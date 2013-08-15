@@ -1,4 +1,6 @@
-### define ###
+### define 
+underscore : _
+###
 
 class KeyValueStore
 	
@@ -12,7 +14,10 @@ class KeyValueStore
     if @attributes[key]?
       @attributes[key]
     else
-      @attributes[key] = value
+      if _.isFunction(value) 
+        @attributes[key] = value()
+      else
+        @attributes[key] = value
 
 
   set : (key, value) ->

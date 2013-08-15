@@ -7,9 +7,10 @@ import models.security._
 import org.bson.types.ObjectId
 import play.api.Logger
 import models.tracing._
+import models.tracing.skeleton.SkeletonTracing
 
 object BasicEvolution {
-  val watchedClasses: List[BasicDAO[_]] = List(Role, DataSet, User, Task, Tracing, UsedTracings)
+  val watchedClasses: List[BasicDAO[_]] = List(Role, User, Task, SkeletonTracing, UsedAnnotation)
 
   def runDBEvolution() {
     val fakeObjectId = new ObjectId

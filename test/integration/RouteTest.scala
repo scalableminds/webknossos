@@ -8,7 +8,7 @@ import play.api.libs.json.Json._
 import scala.util.Random
 import play.api.mvc._
 import models.DataSet
-import brainflight.security.Secured
+import oxalis.security.Secured
 import util.ExtendedFakeRequest._
 
 object RouteTest extends Specification {

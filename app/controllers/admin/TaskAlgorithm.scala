@@ -1,6 +1,6 @@
 package controllers.admin
 
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.security.Role
 import models.task.TaskSelectionAlgorithm
 import play.api.libs.json.Json

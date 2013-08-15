@@ -1,4 +1,4 @@
-@()(implicit session: brainflight.view.AuthedSessionData)
+@()(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   @helper.form(action = controllers.admin.routes.NMLIO.upload, 'enctype -> "multipart/form-data") {

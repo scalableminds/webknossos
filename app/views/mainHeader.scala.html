@@ -1,4 +1,4 @@
-@(showNavButtons: Boolean = true)(implicit session: brainflight.view.SessionData)
+@(showNavButtons: Boolean = true)(implicit session: oxalis.view.SessionData)
 
 @import models.security._
 @import play.api.Play.current
@@ -26,7 +26,11 @@
               </li>  
               <li>
                 <a href="@controllers.admin.routes.ProjectAdministration.list">Projects</a>
-              </li>  
+              </li>
+              <li>
+                <a href="@controllers.admin.routes.BinaryDataAdministration.list">DataSets</a>
+              </li>
+
               <li class="dropdown-submenu">
                 <a tabindex="-1" href="@controllers.admin.routes.TaskAdministration.list">Tasks</a>
                 <ul class="dropdown-menu">

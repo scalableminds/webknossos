@@ -32,5 +32,11 @@ case class EndSegment(id: Int,
                       
 object EndSegment extends Function6[Int, Double, Double, Double, Double, Double, EndSegment]{
   implicit val EndSegmentFormat: Format[EndSegment] = Json.format[EndSegment]
-}                   
+}             
+
+case class SimpleSegment(id: Int)
+
+object SimpleSegment extends Function1[Int, SimpleSegment]{
+  implicit val SimpleSegmentFormat: Format[SimpleSegment] = Json.format[SimpleSegment]
+}
 

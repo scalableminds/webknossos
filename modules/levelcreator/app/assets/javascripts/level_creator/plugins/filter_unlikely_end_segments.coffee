@@ -39,8 +39,13 @@ class FilterUnlikelyEndSegments
 
 
     if orEndSegmentLength
-      endLastFrame = _.sortBy(mission.possibleEnds, (e) -> -e.probability)[0].lastFrame
-      minEnd = Math.min(endLastFrame, minLengthAfterProblem)
+      id = mission.end.id
+      endSegment = _.find(mission.possibleEnds, (e) => e.id is id)
+
+      if endSegment?
+        endLastFrame = endSegment.lastFrame
+        minEnd = Math.min(endLastFrame, minLengthAfterProblem)
+      minEnd = minLengthAfterProblem
     else
       minEnd = minLengthAfterProblem
 

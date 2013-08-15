@@ -15,6 +15,8 @@ class Gui
     
     _.extend(this, new EventMixin())
 
+    @updateGlobalPosition( @model.flycam.getPosition() )
+
     @user = @model.user
     @qualityArray = ["high", "medium", "low"]
 

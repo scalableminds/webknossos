@@ -71,7 +71,7 @@ class PluginRenderer
 
     for key, plugin of @plugins
       do (plugin) ->
-        if key is "getMetaValues" or "filterUnlikelyEndSegments"
+        if key is "getMetaValues" or key is "filterUnlikelyEndSegments"
 
           _plugins[key] = (options) ->
             options = {} unless options? #if plugin has no options

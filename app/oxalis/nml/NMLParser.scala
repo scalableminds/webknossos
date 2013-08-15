@@ -138,7 +138,7 @@ class NMLParser(in: InputStream) {
   }
 
   def parseActiveNode(node: NodeSeq) = {
-    (node \ "@id").text.toIntOpt.getOrElse(DEFAULT_ACTIVE_NODE_ID)
+    (node \ "@id").text.toIntOpt
   }
 
   def parseTime(node: NodeSeq) = {

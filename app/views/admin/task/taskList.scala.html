@@ -4,10 +4,14 @@
   <div class="container wide">
     <h3>Tasks</h3>
   
-    <div id="page-selection" data-url="@controllers.admin.routes.TaskAdministration.list()" ></div>
-    <input type="text" class="search-query" placeholder="Search" id="searchbox">
+    <div id="page-selection"
+      data-url="@controllers.admin.routes.TaskAdministration.list()"
+      data-paged-table-id="tasklist-table"
+    >
+      <input type="text" class="search-query pagination-searchbox" placeholder="Search">
+    </div>
     
-    <table class="table table-double-striped table-details">
+    <table id="tasklist-table" class="table table-double-striped table-details">
       <thead>
         <tr>
           <th class="details-toggle-all"> <i class="caret-right"></i> <i class="caret-down"></i> </th>
@@ -23,8 +27,52 @@
           <th> States </th>
         </tr>
       </thead>
-      <tbody>
-        <!-- TASKS NEED TO GO HERE taskTableItem(task) -->
+      <tbody class="hide">
+        <tr id="#{_id.$oid}">
+          <td class="details-toggle" href="controllers.admin.routes.AnnotationAdministration.annotationsForTask" data-ajax="add-row=##{_id.$oid} + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+          <td> ? # like ? 7ff024 is it #{_id.$oid} ?</td>
+          <td> ? H-Id like ? 0 </td>
+          <td> 
+              <a href="?? controllers.admin.routes.ProjectAdministration.list#project.name">
+                ? project like ? tracingMethodsComparison
+              </a>
+          </td>
+          <td> 
+            <a href="?? controllers.admin.routes.TaskTypeAdministration.list#task.taskType.map(_.id)">
+              ? type like ? methodComaprison_regularTracing 
+            </a>
+          </td>
+          <td> ? data set like ? 2012-09-28_ex145_07x2 </td>
+          <td> ? edit position like ? (6369, 2924, 1) </td>
+          <td> <span class="label"> #{neededExperience.domain}: #{neededExperience.value} </span> </td>
+          <td> #{priority} </td>
+          <td> #{created} </td>
+          <td>
+              <i class="icon-play-circle"></i> ? open
+              <br>
+              <i class="icon-random"></i> ? active
+              <br>
+              <i class="icon-ok-circle"></i> ? done
+          </td>
+          <td class="nowrap">
+            <a href="controllers.admin.routes.TaskAdministration.edit"><i class="icon-pencil"></i> edit </a><br>
+            <a href="?? controllers.routes.AnnotationController.trace(AnnotationType.CompoundTask,task.id)" title="view all finished tracings"><i class="icon-random"></i> view </a><br>
+            <a href="controllers.admin.routes.NMLIO.taskDownload" title="download all finished tracings"><i class="icon-download"></i> download </a><br>
+            <a href="controllers.admin.routes.TrainingsTaskAdministration.create"><i class="icon-road"></i> use for Training </a><br>
+            <a href="controllers.admin.routes.TaskAdministration.delete" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>
+          </td>
+        </tr>
+
+        <tr class="details-row" >
+          <td colspan="12">
+            <table class="table table-condensed table-nohead">
+              <tbody>
+                
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
       </tbody>
     </table>
     <p>

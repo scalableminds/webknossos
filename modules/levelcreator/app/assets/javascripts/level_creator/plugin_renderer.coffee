@@ -10,8 +10,6 @@ libs/key_value_store : KeyValueStore
 
 class PluginRenderer
 
-  PIXEL_SIZE : 11.3
-
   plugins : null
 
 
@@ -27,11 +25,7 @@ class PluginRenderer
 
   setCode : (code) ->
 
-    return unless code?
-    return unless @dataHandler.deferred("initialized").state() == "resolved"
-
-    keyValues = @getMacroValues code
-    @code = @replaceMacros code, keyValues
+    @code = code
 
 
   testCompile : ->
@@ -72,11 +66,36 @@ class PluginRenderer
 
       state : @state
 
-    (_plugins[key] = ->) for key of @plugins
+
+    inputData = @getInitialInputData()
+
+    for key, plugin of @plugins
+      do (plugin) ->
+        if key is "getMetaValues"
+
+          _plugins[key] = (options) ->
+            options = {} unless options? #if plugin has no options
+
+            _.extend( options, input : inputData )
+            plugin.execute(options)
+
+        else
+          _plugins[key] = ->
 
     func(_plugins)
 
     length
+
+
+  getInitialInputData : ->
+    
+    initialInputData = 
+      state : @state
+      dimensions : @dimensions
+      slidesBeforeProblem : @slidesBeforeProblem
+      slidesAfterProblem : @slidesBeforeProblem
+      mission : @dataHandler.getMissionData()
+
 
 
   render : (t) ->
@@ -94,10 +113,7 @@ class PluginRenderer
     startFrame = 0
     endFrame = 0
 
-    initialInputData = 
-      state : @state
-      dimensions : @dimensions
-      mission : @dataHandler.getMissionData()
+    initialInputData = @getInitialInputData()
               
     inputData = _.clone(initialInputData)
 
@@ -113,7 +129,7 @@ class PluginRenderer
 
         if startFrame <= t <= endFrame
           (callback) =>
-            inputData = 
+            _.extend(inputData,
               rgba : new Uint8Array( 4 * pixelCount )
               segmentation : new Uint16Array( pixelCount )
               relativeTime : if endFrame - startFrame > 0 then (t - startFrame) / (endFrame - startFrame) else 0
@@ -121,6 +137,7 @@ class PluginRenderer
               writeFrameData : (key, payload) ->
                 frameData = frameData ? {}
                 frameData[key] = payload
+            )
 
             callback()
             BufferUtils.alphaBlendBuffer(frameBuffer, inputData.rgba, options.alpha)
@@ -155,6 +172,7 @@ class PluginRenderer
       unsafe : (callback) -> callback(inputData)
 
       exit : -> exited = true; return
+
 
 
 
@@ -228,136 +246,3 @@ class PluginRenderer
         @pluginDocTemplate { i, plugin, containerName, bodyId : "collapseBody#{i}" }
       )
 
-
-  replaceMacros : (object, keyValues) ->
-
-    json = JSON.stringify(object)
-
-    for key of keyValues
-
-      re = new RegExp("\\$#{key}", "g")
-      json = json.replace(re, "#{keyValues[key]}")
-
-    jQuery.parseJSON( json )
-
-
-  getMacroValues : (code) ->
-
-
-    missionData = @dataHandler.getMissionData()
-
-    # get meta info from code
-    # DESIRED_SLIDES_BEFORE_PROBLEM
-    # DESIRED_SLIDES_AFTER_PROBLEM
-    # SEGMENTS_AT_START
-    # SEGMENTS_AT_END
-
-
-    result = code.match( /DESIRED_SLIDES_BEFORE_PROBLEM\=([0-9]+)/m )
-    if result?.length is 2
-      desiredStartSlide = @slidesBeforeProblem - parseInt(result[1])
-    else
-      desiredStartSlide = 0
-
-    result = code.match( /MIN_END_SEGMENTS_AT_FIRST_SLIDE\=([0-9]+)/m )
-    if result?.length is 2
-      minEndSegmentsAtFirstSlide = parseInt(result[1])
-    else
-      minEndSegmentsAtFirstSlide = 0
-
-    result = code.match( /DESIRED_SLIDES_AFTER_PROBLEM\=([0-9]+)/m )
-    if result?.length is 2
-      desiredEndSlide = @slidesBeforeProblem + parseInt(result[1])
-    else
-      desiredEndSlide = @slidesBeforeProblem + @slidesAfterProblem
-
-    result = code.match( /MIN_END_SEGMENTS_AT_LAST_SLIDE\=([0-9]+)/m )
-    if result?.length is 2
-      minEndSegmentsAtLastSlide = parseInt(result[1]) - 1 # -1 for startSegment
-    else
-      minEndSegmentsAtLastSlide = 0
-
-    result = code.match( /NO_START_SEGMENT_AT_LAST_SLIDE\=([a-z]+)/m )
-    if result?.length is 2
-      if result[1] is "true"
-        noStartSegmentAtLastSlide = true
-      else
-        noStartSegmentAtLastSlide = false
-    else
-      noStartSegmentAtLastSlide = false      
-
-    # check plausibility
-
-    if missionData.possibleEnds.length < minEndSegmentsAtFirstSlide
-      console.log "abort"
-
-
-    # apply filters
-
-    # get StartSlide - apply DESIRED_SLIDES_BEFORE_PROBLEM and MIN_SEGMENTS_AT_FIRST_SLIDE
-
-    firstStartFrame = @nmToSlide(missionData.start.firstFrame)
-
-    searchStart = Math.max(firstStartFrame, desiredStartSlide)
-
-
-    for i in [Math.floor(searchStart)...@slidesBeforeProblem] by 1
-      result = _.filter(missionData.possibleEnds, (e) => 
-        #console.log @nmToSlide(e.firstFrame) + "  - " + i + " -  " + @nmToSlide(e.lastFrame)
-        @nmToSlide(e.firstFrame) < i < @nmToSlide(e.lastFrame) ).length
-      #console.log i + " " + result
-      if result >= minEndSegmentsAtFirstSlide 
-        startSlide = i
-        break
-
-    
-    console.log "abort" unless startSlide?
-    console.log "Start: " + startSlide
-
-    startSlide = 0 unless startSlide?
-
-
-    # get endSlide
-    lastStartFrame = @nmToSlide(missionData.start.lastFrame)
-
-    if noStartSegmentAtLastSlide
-      searchEnd = Math.max(@slidesBeforeProblem, lastStartFrame)
-    else
-      searchEnd = @slidesBeforeProblem
-
-    for i in [Math.floor(desiredEndSlide)...searchEnd] by -1
-      result = _.filter(missionData.possibleEnds, (e) => 
-        #console.log @nmToSlide(e.firstFrame) + "  - " + i + " -  " + @nmToSlide(e.lastFrame)
-        @nmToSlide(e.firstFrame) < i < @nmToSlide(e.lastFrame) ).length
-      #console.log i + " " + result
-      if result >= minEndSegmentsAtLastSlide 
-        endSlide = i
-        break
-
-    
-    console.log "abort" unless endSlide?
-    console.log "end: " + endSlide
-
-    endSlide = @slidesBeforeProblem + @slidesAfterProblem unless endSlide?
-
-
-
-    # return macro values
-    keyValues = new Object()
-
-    keyValues.START = startSlide
-    keyValues.END = endSlide
-    keyValues.LENGTH = endSlide - startSlide
-    keyValues.ERROR_CENTER = @slidesBeforeProblem
-    keyValues.DATA_START = 0
-    keyValues.DATA_END = @slidesAfterProblem+@slidesBeforeProblem
-    keyValues.DATA_ELENGTH = @slidesAfterProblem+@slidesBeforeProblem
-
-    console.log keyValues
-    keyValues
-
-
-
-  nmToSlide : (nm) ->
-    
-    (nm / @PIXEL_SIZE) + @slidesBeforeProblem    

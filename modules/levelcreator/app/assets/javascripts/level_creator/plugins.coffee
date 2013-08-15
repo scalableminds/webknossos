@@ -19,6 +19,7 @@
 ./plugins/set_segments_static_display : SetSegmentsStaticDisplay
 ./plugins/filter_random_segments : FilterRandomSegments
 ./plugins/write_path_to_meta_file : WritePathToMetaFile
+./plugins/getMetaValues : GetMetaValues
 ###
 
 
@@ -46,3 +47,4 @@ class Plugins
     @setSegmentsStaticDisplay = new SetSegmentsStaticDisplay()
     @filterRandomSegments = new FilterRandomSegments()
     @writePathToMetaFile = new WritePathToMetaFile()
+    @getMetaValues = new GetMetaValues()

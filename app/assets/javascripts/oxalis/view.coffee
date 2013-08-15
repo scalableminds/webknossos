@@ -268,14 +268,14 @@ class View
       $("#tree-name-input").val(activeTree.name)
       $("#tree-name").text(activeTree.name)
       $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
+      activeHref = $("#tree-list a[data-treeid=#{activeTree.treeId}]")
 
     oldIcon = $("#tree-list i.icon-arrow-right")
     if oldIcon.length
       oldIcon.toggleClass("icon-arrow-right", false)
       oldIcon.toggleClass("icon-bull", true)
 
-    activeHref = $("#tree-list a[data-treeid=#{activeTree.treeId}]")
-    if activeHref.length
+    if activeHref?.length
 
       newIcon = activeHref.parent("li").children("i")
       newIcon.toggleClass("icon-arrow-right", true)

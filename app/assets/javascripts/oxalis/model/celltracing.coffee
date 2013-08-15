@@ -31,14 +31,6 @@ class CellTracing
 
     _.extend(this, new EventMixin())
 
-    @idCount = 1
-    @treeIdCount = 1
-    @trees = []
-    @comments = []
-    @activeNode = null
-    @activeNodeId = null
-    @activeTree = null
-
     @doubleBranchPop = false
 
     @data = tracing.content.contentData
@@ -62,9 +54,15 @@ class CellTracing
       @trees
       @comments
       @activeNode
-      @activeNodeId
       @activeTree
     } = tracingParser.parse()
+
+    # ensure a tree is active
+    unless @activeTree
+      if @trees.length > 0
+        @activeTree = @trees[0]
+      else
+        @createNewTree()
 
     tracingType = tracing.typ
     if (tracingType == "Task" or tracingType == "Training") and nodeList.length == 0
@@ -180,7 +178,7 @@ class CellTracing
     if @ensureDirection(position)
       unless @lastRadius?
         @lastRadius = 10 * @scaleInfo.baseVoxel
-        if @activeNode? then @lastRadius = @activeNode.radius
+        if @activeNode then @lastRadius = @activeNode.radius
       point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime(), @activeTree.treeId)
       @activeTree.nodes.push(point)
       if @activeNode
@@ -193,7 +191,6 @@ class CellTracing
         if @branchPointsAllowed
           centered = true
           @pushBranch()
-      @activeNodeId = @activeNode.id
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
@@ -223,7 +220,9 @@ class CellTracing
   getActiveNode : -> @activeNode
 
 
-  getActiveNodeId : -> @activeNodeId
+  getActiveNodeId : -> 
+
+    if @activeNode then @activeNode.id else null
 
 
   getActiveNodePos : ->
@@ -280,9 +279,9 @@ class CellTracing
       @activeNode.radius = radius
       @lastRadius = radius
 
-    @stateLogger.updateNode(@activeNode, @activeTree.treeId)
+      @stateLogger.updateNode(@activeNode, @activeTree.treeId)
 
-    @trigger("newActiveNodeRadius", radius)
+      @trigger("newActiveNodeRadius", radius)
 
 
   setActiveNode : (nodeID, mergeTree = false) ->
@@ -293,7 +292,6 @@ class CellTracing
       for node in tree.nodes
         if node.id == nodeID
           @activeNode = node
-          @activeNodeId = @activeNode.id
           @activeTree = tree
           break
     @stateLogger.push()
@@ -306,7 +304,7 @@ class CellTracing
 
   setComment : (commentText) ->
 
-    if(@activeNode?)
+    if @activeNode
       # remove any existing comments for that node
       for i in [0...@comments.length]
         if(@comments[i].node.id == @activeNode.id)
@@ -321,7 +319,7 @@ class CellTracing
 
   getComment : (nodeID) ->
 
-    unless nodeID? then nodeID = @activeNode.id if @activeNode?
+    unless nodeID? then nodeID = @activeNode.id if @activeNode
     for comment in @comments
       if comment.node.id == nodeID then return comment.content
     return ""
@@ -342,7 +340,7 @@ class CellTracing
     length = @comments.length
     offset = if forward then 1 else -1
 
-    unless @activeNode?
+    unless @activeNode
       if length > 0 then return @comments[0].node.id
 
     if length == 0
@@ -393,7 +391,6 @@ class CellTracing
       @activeNode = null
     else
       @activeNode = @activeTree.nodes[0]
-      @activeNodeId = @activeNode.id
     @stateLogger.push()
 
     @trigger("newActiveNode")
@@ -445,7 +442,7 @@ class CellTracing
 
   deleteActiveNode : ->
 
-    unless @activeNode?
+    unless @activeNode
       return
     # don't delete nodes when the previous tree split isn't finished
     unless @finishedDeferred.state() == "resolved"
@@ -538,6 +535,9 @@ class CellTracing
 
 
   mergeTree : (lastNode, lastTree) ->
+
+    unless lastNode
+      return
 
     activeNodeID = @activeNode.id
     if lastNode.id != activeNodeID

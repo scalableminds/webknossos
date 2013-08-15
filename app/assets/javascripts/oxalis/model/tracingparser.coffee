@@ -11,9 +11,19 @@ libs/threejs/ColorConverter : ColorConverter
 ###
 
 class TracingParser
-  constructor: (@celltracing, @data) ->
 
-  buildTrees: ->
+
+  constructor : (@celltracing, @data) ->
+
+    @idCount = 1
+    @treeIdCount = 1
+    @trees = []
+    @comments = []
+    @activeNode = null
+    @activeTree = null
+
+
+  buildTrees : ->
 
     for treeData in @data.trees
       # Create new tree
@@ -46,7 +56,6 @@ class TracingParser
       activeNodeT = @celltracing.findNodeInList(tree.nodes, @data.activeNode)
       if activeNodeT
         @activeNode = activeNodeT
-        @activeNodeId = @activeNode.id
         # Active Tree is the one last added
         @activeTree = tree
 
@@ -54,42 +63,23 @@ class TracingParser
       @trees.push(tree)
 
 
-  setBranchpoints: (nodeList) ->
+  setBranchpoints : (nodeList) ->
 
     for branchpoint in @data.branchPoints
       node = @celltracing.findNodeInList(nodeList, branchpoint.id)
-      if node?
+      if node
         node.type = @celltracing.TYPE_BRANCH
         @celltracing.branchStack.push(node)
 
 
-  setComments: (nodeList) ->
+  setComments : (nodeList) ->
 
     for comment in @data.comments
       comment.node = @celltracing.findNodeInList(nodeList, comment.node)
     @comments = @data.comments
-
-
-  ensureATreeIsActive: ->
-
-    unless @activeTree
-      if @trees.length > 0
-        @activeTree = @celltracing.trees[0]
-      else
-        @celltracing.createNewTree()
   
 
-  parse: ->
-
-    {
-      @idCount
-      @treeIdCount
-      @trees
-      @comments
-      @activeNode
-      @activeNodeId
-      @activeTree
-    } = @celltracing
+  parse : ->
 
     @buildTrees()
     
@@ -97,7 +87,6 @@ class TracingParser
 
     @setBranchpoints(nodeList)
     @setComments(nodeList)
-    @ensureATreeIsActive()
 
     return {
       @idCount
@@ -105,6 +94,5 @@ class TracingParser
       @trees
       @comments
       @activeNode
-      @activeNodeId
       @activeTree
     }

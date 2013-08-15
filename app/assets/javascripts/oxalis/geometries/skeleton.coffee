@@ -1,6 +1,6 @@
 ### define
 ../model : Model
-../model/cellTracing : CellTracing
+../model/celltracing : CellTracing
 ../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer
@@ -212,7 +212,6 @@ class Skeleton
     else 
       colorActive = treeColor
     
-    #colorNormal = if isBranchPoint then treeColor * 0.7 else treeColor
     if not nodeID? or nodeID == @cellTracing.getActiveNodeId()
       @activeNodeParticle.material.color.setHex(colorActive)
     @flycam.update()

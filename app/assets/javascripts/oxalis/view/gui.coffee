@@ -32,7 +32,7 @@ class Gui
       quality : @qualityArray[@user.quality]
 
       activeTreeID : @model.cellTracing.getActiveTreeId()
-      activeNodeID : @model.cellTracing.getActiveNodeId()
+      activeNodeID : @model.cellTracing.getActiveNodeId() or -1
       activeCellID : @model.volumeTracing.getActiveCellId()
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
@@ -339,7 +339,7 @@ class Gui
 
     # Helper method to combine common update methods
     # called when value user switch to different active node
-    @settings.activeNodeID = @model.cellTracing.getActiveNodeId()
+    @settings.activeNodeID = @model.cellTracing.getActiveNodeId() or -1
     @settings.activeTreeID = @model.cellTracing.getActiveTreeId()
     @settings.activeCellID = @model.volumeTracing.getActiveCellId()
     @activeNodeIdController.updateDisplay()
@@ -374,10 +374,10 @@ class Gui
 
     switch mode 
       when constants.MODE_PLANE_TRACING
-        @hideFolders( [ @fFlightcontrols ] )
+        @hideFolders( [ @fFlightcontrols, @fCells ] )
         @user.triggerAll()
       when constants.MODE_ARBITRARY
-        @hideFolders( [ @fViewportcontrols, @fTDView ] )
+        @hideFolders( [ @fViewportcontrols, @fTDView, @fCells ] )
         @setFolderElementVisibility( @clippingControllerArbitrary, true )
         @setFolderElementVisibility( @clippingController, false )
         @user.triggerAll()

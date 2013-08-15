@@ -1,6 +1,6 @@
 ### define 
 ./model/binary : Binary
-./model/cellTracing : CellTracing
+./model/celltracing : CellTracing
 ./model/user : User
 ./model/volumetracing : VolumeTracing
 ./model/scaleinfo : ScaleInfo

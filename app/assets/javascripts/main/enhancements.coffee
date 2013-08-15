@@ -2,6 +2,8 @@
 jquery : $
 underscore : _
 ../libs/toast : Toast
+./paginator : Paginator
+../libs/jquery.bootpag.min : Bootpag
 ###
 
 $ ->
@@ -138,6 +140,11 @@ $ ->
 
   $(document).on "click", "a[data-ajax]", dataAjaxHandler
   $(document).on "submit", "form[data-ajax]", dataAjaxHandler
+
+
+  $(".page-selection").each ->
+
+        new Paginator $(this)
 
 
   $(document).on "change", "table input.select-all-rows", ->

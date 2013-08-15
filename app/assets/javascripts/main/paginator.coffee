@@ -8,20 +8,21 @@ routes : jsRoutes
 class Paginator
   
 
-  constructor: () ->
+  constructor: (@pageSelectionDiv) ->
     
-    @jsonTasks = null
+    @allElements = null
+    @elementsToShow = null
     
-    pageSelectionDiv = $("#page-selection")
+    # @pageSelectionDiv = $("#page-selection")
     
-    tableID = pageSelectionDiv.data("paged-table-id")
+    tableID = @pageSelectionDiv.data("paged-table-id")
     @tbody = $("#"+tableID).find("tbody")
 
     @extractTemplate()
 
-    @retrieveData(pageSelectionDiv)
+    @retrieveData()
     
-    searchboxElement = pageSelectionDiv.find(".pagination-searchbox")
+    searchboxElement = @pageSelectionDiv.find(".pagination-searchbox")
     @addSearchboxListener(searchboxElement)
 
 
@@ -32,12 +33,12 @@ class Paginator
     @tbody.removeClass("hide")
 
 
-  retrieveData : (pageSelectionDiv) ->
+  retrieveData : () ->
     
-    @maximumRowsPerPage = 200
+    @rowsPerPage = 200
     
     ajaxOptions =
-      url : pageSelectionDiv.data("url")
+      url : @pageSelectionDiv.data("url")
       dataType : "json"
       type : "get"
 
@@ -45,23 +46,46 @@ class Paginator
 
       (responseData) =>
         
-        @jsonTasks = responseData
-        console.log @jsonTasks
+        @allElements = @elementsToShow = responseData
 
-        pageCount = Math.ceil(@jsonTasks.length / @maximumRowsPerPage)
-        rowsPerPage = @maximumRowsPerPage
+        pageCount = Math.ceil(@allElements.length / @rowsPerPage)
         
         pageSelectionHandler = (event, number) =>
           index = number - 1
-          json = @jsonTasks.slice(rowsPerPage * index, rowsPerPage * (index + 1))
+          json = @getElementsForPage index
           @displayJSON json
         
-        pageSelectionDiv.bootpag(total: pageCount).on "page", pageSelectionHandler
+        @pageSelectionDiv.bootpag(
+          total: pageCount
+          page: 1
+          maxVisible: 20
+          leaps: true
+        ).on "page", pageSelectionHandler
 
         # activate the first page
         pageSelectionHandler null, 1
 
+        @hideLoader()
+
         return
+    )
+
+  hideLoader : ->
+
+    $("#loader").css("display" : "none")
+
+
+  getElementsForPage : (index) ->
+    
+    start = @rowsPerPage * index
+    return @elementsToShow.slice(start, start + @rowsPerPage)
+
+
+  updatePageCount : ->
+    
+    @pageSelectionDiv.bootpag(
+      total: Math.ceil(@elementsToShow.length / @rowsPerPage)
+      page:  1
     )
 
 
@@ -79,27 +103,29 @@ class Paginator
       lastQuery = currentQuery
       currentQuery = newQuery
 
-      results = []
-
       console.time("search")
+
       if currentQuery.length > 0
+        @elementsToShow = []
+
         i = 0
-        for task in @jsonTasks
-          if i++ < @maximumRowsPerPage
-            if @JSONcontains task, currentQuery
-              results.push task
-          else
-            break
+        for task in @allElements
+          if @JSONcontains task, currentQuery
+            @elementsToShow.push task
       else
-        results = @jsonTasks[..@maximumRowsPerPage]
+        @elementsToShow = @allElements
+
 
       console.timeEnd("search")
 
       console.time("display")
-      @displayJSON results
+      
+      @updatePageCount()
+      @displayJSON(@getElementsForPage 0)
+      
       console.timeEnd("display")
 
-      console.log "results for", currentQuery, ":", results
+      console.log "results for", currentQuery, ":", @elementsToShow
 
 
   displayJSON : (jsonArray) ->

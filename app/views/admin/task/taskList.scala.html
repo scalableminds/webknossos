@@ -1,10 +1,11 @@
 @()(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
+  <div id="loader"><div id="loader-icon"><i class="icon-spinner icon-spin icon-4x"></i><br>Loading</div></div>
   <div class="container wide">
     <h3>Tasks</h3>
   
-    <div id="page-selection"
+    <div class="page-selection"
       data-url="@controllers.admin.routes.TaskAdministration.list()"
       data-paged-table-id="tasklist-table"
     >
@@ -63,7 +64,7 @@
           </td>
         </tr>
 
-        <tr class="details-row" >
+        <tr class="details-row hide" >
           <td colspan="12">
             <table class="table table-condensed table-nohead">
               <tbody>

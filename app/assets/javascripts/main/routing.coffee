@@ -4,7 +4,6 @@ underscore : _
 libs/toast : Toast
 libs/keyboard : KeyboardJS
 main/routing_utils : RoutingUtils
-main/paginator : Paginator
 ###
 
 $ ->
@@ -68,13 +67,6 @@ $ ->
       ], (Controller) ->
 
         oxalis = window.oxalis = new Controller()
-
-        return
-
-    "admin.task.taskList" : ->
-
-      require ["libs/jquery.bootpag.min"], ->
-        paginator = new Paginator()
 
         return
 

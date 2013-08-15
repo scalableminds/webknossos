@@ -32,11 +32,13 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D, @controlMode).done ([restrictions, settings]) =>
+    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D, @controlMode).done (tracingState) =>
 
       # Do not continue, when there was an error and we got no settings from the server
-      unless settings
+      if tracingState.error
         return
+
+      [restrictions, settings] = [tracingState.restrictions, tracingState.settings]
 
       unless restrictions.allowAccess
         Toast.Error "You are not allowed to access this tracing"

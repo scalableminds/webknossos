@@ -31,6 +31,11 @@ class Model
 
       if tracing.error
         Toast.error(tracing.error)
+        {"error": true}
+
+      else unless tracing.content.dataSet
+        Toast.error("Selected dataset doesnt exist")
+        {"error": true}
 
       else
         Request.send(
@@ -60,7 +65,7 @@ class Model
             @route = new Route(tracing, @scaleInfo, @flycam, @flycam3d, @user)
             @volumeTracing = new VolumeTracing(@flycam, @binary.cube)
             
-            [tracing.restrictions, tracing.content.settings]
+            {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
             
           -> Toast.error("Ooops. We couldn't communicate with our mother ship. Please try to reload this page.")
         )

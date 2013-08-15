@@ -11,11 +11,11 @@ import com.novus.salat._
 import models.context._
 import scala.util.Random
 
-case class ContextFreeMission(missionId: Int, start: StartSegment, errorCenter: Point3D, possibleEnds: List[EndSegment], difficulty: Double) {
-  def addContext(dataSetName: String, batchId: Int) = Mission(dataSetName, missionId, batchId, start, errorCenter, possibleEnds, difficulty: Double)
+case class ContextFreeMission(missionId: Int, start: StartSegment, errorCenter: Point3D, end: SimpleSegment, possibleEnds: List[EndSegment], difficulty: Double) {
+  def addContext(dataSetName: String, batchId: Int) = Mission(dataSetName, missionId, batchId, start, errorCenter, end, possibleEnds, difficulty)
 }
 
-object ContextFreeMission extends Function5[Int, StartSegment, Point3D, List[EndSegment], Double, ContextFreeMission] {
+object ContextFreeMission extends Function6[Int, StartSegment, Point3D, SimpleSegment, List[EndSegment], Double, ContextFreeMission] {
   implicit val ContextFreeMissionReader: Reads[ContextFreeMission] = Json.reads[ContextFreeMission]
 }
 
@@ -24,6 +24,7 @@ case class Mission(dataSetName: String,
                    batchId: Int,
                    start: StartSegment,
                    errorCenter: Point3D,
+                   end: SimpleSegment,
                    possibleEnds: List[EndSegment],
                    difficulty: Double,
                    _id: ObjectId = new ObjectId) extends DAOCaseClass[Mission] {
@@ -38,11 +39,11 @@ case class Mission(dataSetName: String,
   def batchId(newBatchId: Int) = copy(batchId = newBatchId)
 }
 
-trait MissionFormats extends CommonFormats with Function8[String, Int, Int, StartSegment, Point3D, List[EndSegment], Double, ObjectId, Mission]{
+trait MissionFormats extends CommonFormats with Function9[String, Int, Int, StartSegment, Point3D, SimpleSegment, List[EndSegment], Double, ObjectId, Mission]{
   implicit val missionFormat: Format[Mission] = Json.format[Mission]
 }
 
-object Mission extends BasicDAO[Mission]("missions") with MissionFormats with Function8[String, Int, Int, StartSegment, Point3D, List[EndSegment], Double, ObjectId, Mission] {
+object Mission extends BasicDAO[Mission]("missions") with MissionFormats with Function9[String, Int, Int, StartSegment, Point3D, SimpleSegment, List[EndSegment], Double, ObjectId, Mission] {
 
   def findByDataSetName(dataSetName: String) = find(MongoDBObject("dataSetName" -> dataSetName)).toList
 

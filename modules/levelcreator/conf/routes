@@ -5,7 +5,6 @@
 # Level Creator
 
 GET           /                                                controllers.levelcreator.LevelCreator.list
-GET           /levels                                          controllers.levelcreator.LevelCreator.list
 POST          /levels                                          controllers.levelcreator.LevelCreator.create
 
 GET           /levels/:levelName/stacks                        controllers.levelcreator.StackController.list(levelName: String)

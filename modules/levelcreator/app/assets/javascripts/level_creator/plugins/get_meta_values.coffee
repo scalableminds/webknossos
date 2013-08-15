@@ -44,6 +44,7 @@ class GetMetaValues
     } = options
 
 
+
     # for nm function
     @slidesBeforeProblem = slidesBeforeProblem
 
@@ -61,7 +62,7 @@ class GetMetaValues
     if DESIRED_SLIDES_AFTER_PROBLEM?
       desiredEndSlide = slidesBeforeProblem + DESIRED_SLIDES_AFTER_PROBLEM
     else
-      desiredEndSlide = slidesBeforeProblem + @slidesBeforeProblem
+      desiredEndSlide = slidesBeforeProblem + slidesAfterProblem
 
     if MIN_END_SEGMENTS_AT_LAST_SLIDE?
       minEndSegmentsAtLastSlide = MIN_END_SEGMENTS_AT_LAST_SLIDE
@@ -75,8 +76,10 @@ class GetMetaValues
 
     # check plausibility
 
-    if mission.possibleEnds.length < minEndSegmentsAtFirstSlide
-      exit()
+    exit() if desiredStartSlide < 0
+    exit() if desiredEndSlide > slidesBeforeProblem + slidesAfterProblem
+    exit() if mission.possibleEnds.length < minEndSegmentsAtFirstSlide
+      
 
 
     # apply filters
@@ -120,7 +123,7 @@ class GetMetaValues
 
     
     exit() unless endSlide?
-    endSlide = slidesBeforeProblem + @slidesAfterProblem unless endSlide?
+    endSlide = slidesBeforeProblem + slidesAfterProblem unless endSlide?
 
     # return macro values
     keyValues = new Object()

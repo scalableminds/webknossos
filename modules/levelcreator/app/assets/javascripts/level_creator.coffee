@@ -180,8 +180,8 @@ class LevelCreator
 
         imageData.data.set(renderResult.frameBuffer)
         @context.putImageData(imageData, 0, 0)
-
-        @$slider.prop( max : @pluginRenderer.getLength() )
+        range = @pluginRenderer.getRange()
+        @$slider.prop( min: range.start, max : range.end )
 
         $("#preview-error").html("")
 

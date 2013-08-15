@@ -42,17 +42,19 @@ class PluginRenderer
     )
 
 
-  getLength : ->
+  getRange : ->
 
     func = @compile()
 
-    length = 0
+    range = { start: Infinity, end: 0 }
 
     _plugins =
 
       time : (options) ->
+        start = Math.min(options.start, range.start)
+        end = start + Math.max(options.end, range.end)
+        range = { start, end }
 
-        length = Math.max(options.end + 1, length)
         (cb) -> cb()
 
       importSlides : ->
@@ -61,7 +63,7 @@ class PluginRenderer
 
       exit : ->
         _plugins.time = -> (->)
-        length = 0
+        range = { start: 0, end: 0 }
         return
 
       state : @state
@@ -85,7 +87,7 @@ class PluginRenderer
 
     func(_plugins)
 
-    length
+    range
 
 
   getInitialInputData : ->

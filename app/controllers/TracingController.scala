@@ -2,11 +2,9 @@ package controllers
 
 import play.api.libs.json._
 import oxalis.security.Secured
-import models.user.User
 import models.security._
 import net.liftweb.common._
-import braingames.mvc.{BoxImplicits, Fox, Controller}
-import controllers.admin.NMLIO
+import braingames.mvc.Controller
 import oxalis.security.AuthenticatedRequest
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -14,18 +12,16 @@ import oxalis.annotation.{RequestAnnotation, AnnotationIdentifier}
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
-import models.annotation.{AnnotationLike, AnnotationDAO}
+import models.annotation.AnnotationLike
 import models.annotation.AnnotationType._
 import oxalis.annotation.handler.AnnotationInformationHandler
-import views._
+import braingames.util.{FoxImplicits, Fox}
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User
 }
 
-trait TracingInformationProvider extends play.api.http.Status with BoxImplicits with models.basics.Implicits {
-
-  import braingames.mvc.BoxImplicits._
+trait TracingInformationProvider extends play.api.http.Status with FoxImplicits with models.basics.Implicits {
 
   import AnnotationInformationHandler._
 
@@ -49,7 +45,6 @@ trait TracingInformationProvider extends play.api.http.Status with BoxImplicits 
     implicit val timeout = Timeout(5 seconds)
     val f = Application.annotationStore ? RequestAnnotation(annotationId)
 
-    //TODO: RF - fix .when(_.state.isFinished)(_.allowAllModes)
     f.mapTo[Box[AnnotationLike]]
   }
 

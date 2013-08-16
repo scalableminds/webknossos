@@ -146,7 +146,9 @@ class AbstractTreeView
 
     return [xr, top]
 
+
   drawNode : (x, y, id) ->
+
     @ctx.beginPath()
     @ctx.fillStyle = @vgColor
     radius = if (id == @activeNodeId) then 2 * @NODE_RADIUS else @NODE_RADIUS
@@ -155,14 +157,18 @@ class AbstractTreeView
     # put it in nodeList
     @nodeList.push({x : x, y : y, id : id})
 
+
   drawEdge : (x1, y1, x2, y2) ->
+
     @ctx.beginPath()
     @ctx.strokeStyle = @vgColor
     @ctx.moveTo(x1, y1)
     @ctx.lineTo(x2, y2)
     @ctx.stroke()
 
+
   drawChainIndicator : (x, top, bottom, emphasize = false) ->
+
     # Draw a dashed line
     dashLength = (bottom - top) / 7
     if emphasize
@@ -175,13 +181,17 @@ class AbstractTreeView
     @ctx.stroke()
     @ctx.lineWidth = 1
 
-  # Decision point is any point with point.children.length != 1
+
   getNextDecisionPoint : (tree) ->
+
+    # Decision point is any point with point.children.length != 1
     while tree.children.length == 1
       tree = tree.children[0]
     return tree
 
+
   recordWidths : (tree) ->
+
     # Because any node with children.length == 1 has
     # the same width as its child, we can skip those.
 
@@ -199,7 +209,9 @@ class AbstractTreeView
       result += child.width
     return result
 
+
   getMaxTreeDepth : (tree, mode = @MODE_NORMAL, count = 0) ->
+
     unless tree
       return count
 
@@ -220,13 +232,19 @@ class AbstractTreeView
     return Math.max(@getMaxTreeDepth(tree.children[0], mode, count),
               @getMaxTreeDepth(tree.children[1], mode, count))
 
+
   onClick : (evt) =>
+
     id = @getIdFromPos(evt.offsetX, evt.offsetY)
     if id
       @trigger "nodeClick", id
 
+
   getIdFromPos : (x, y) =>
+
     for entry in @nodeList
       if Math.abs(x - entry.x) <= @CLICK_TRESHOLD &&
           Math.abs(y - entry.y) <= @CLICK_TRESHOLD
         return entry.id
+
+        

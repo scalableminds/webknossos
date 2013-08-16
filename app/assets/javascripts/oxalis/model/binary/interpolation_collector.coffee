@@ -95,6 +95,7 @@ subPointMacro = (output, xd, yd, zd) ->
 
 # Trilinear interpolation (Point is in a cube)
 trilinearMacro = (p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2) ->
+  
   p000 * (1 - d0) * (1 - d1) * (1 - d2) +
   p100 * d0 * (1 - d1) * (1 - d2) + 
   p010 * (1 - d0) * d1 * (1 - d2) + 

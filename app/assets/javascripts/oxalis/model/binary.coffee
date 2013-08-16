@@ -131,8 +131,8 @@ class Binary
     @queue.pull() 
 
 
-  # A synchronized implementation of `get`. Cuz its faster.
   getByVerticesSync : (vertices) ->
+    # A synchronized implementation of `get`. Cuz its faster.
 
     contrastCurve = @contrastCurves[1]
 

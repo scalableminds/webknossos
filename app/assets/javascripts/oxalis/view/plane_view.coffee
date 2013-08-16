@@ -36,18 +36,18 @@ class PlaneView
       @scene.add @camera[i]
 
       # There is one light for each plane
-      if i != constants.VIEW_3D
+      if i != constants.TDView
         @lights[i]   = new THREE.PointLight( 0xffffff, 0.8 )
         @scene.add @lights[i]
 
     @camera[constants.PLANE_XY].position.z = -1
     @camera[constants.PLANE_YZ].position.x =  1
     @camera[constants.PLANE_XZ].position.y =  1
-    @camera[constants.VIEW_3D].position    = new THREE.Vector3(10, 10, -10)
+    @camera[constants.TDView].position    = new THREE.Vector3(10, 10, -10)
     @camera[constants.PLANE_XY].up         = new THREE.Vector3( 0, -1,  0)
     @camera[constants.PLANE_YZ].up         = new THREE.Vector3( 0, -1,  0)
     @camera[constants.PLANE_XZ].up         = new THREE.Vector3( 0,  0, -1)
-    @camera[constants.VIEW_3D].up          = new THREE.Vector3( 0,  0, -1)
+    @camera[constants.TDView].up          = new THREE.Vector3( 0,  0, -1)
     for cam in @camera
       cam.lookAt(new THREE.Vector3( 0, 0, 0))
 
@@ -75,10 +75,6 @@ class PlaneView
     @newTextures = [true, true, true, true]
     # start the rendering loop
 
-    # refresh the scene once a bucket is loaded
-    # FIXME: probably not the most elgant thing to do
-    # FIXME: notifies all planes when any bucket is loaded
-    # $(window).on("bucketloaded", => @flycam.hasChanged = true; @flycam.newBuckets = [true, true, true]) 
 
   animate : ->
 
@@ -88,9 +84,9 @@ class PlaneView
 
     window.requestAnimationFrame => @animate()
 
-  # This is the main render function.
-  # All 3D meshes and the trianglesplane are rendered here.
   renderFunction : ->
+    # This is the main render function.
+    # All 3D meshes and the trianglesplane are rendered here.
 
     TWEEN.update()
 
@@ -126,28 +122,37 @@ class PlaneView
 
       @trigger "finishedRender"
   
-  # Adds a new Three.js geometry to the scene.
-  # This provides the public interface to the GeometryFactory.
   addGeometry : (geometry) ->
+    # Adds a new Three.js geometry to the scene.
+    # This provides the public interface to the GeometryFactory.
+
     @group.add geometry
 
+
   removeGeometry : (geometry) ->
+
     @group.remove geometry
 
-  #Apply a single draw
-  draw : ->
-    @flycam.hasChanged = true
 
-  # throttle resize to avoid annoying flickering
+  draw : ->
+
+    #Apply a single draw
+    @flycam.update()
+
+
   resizeThrottled : ->
+
+    # throttle resize to avoid annoying flickering
     @resizeThrottled = _.throttle(
       => @resize()
       constants.RESIZE_THROTTLE_TIME
     )
     @resizeThrottled()
 
-  #Call this after the canvas was resized to fix the viewport
+
   resize : ->
+
+    #Call this after the canvas was resized to fix the viewport
     canvas = $("#render-canvas")
     WIDTH = (canvas.width()-20)/2
     HEIGHT = (canvas.height()-20)/2
@@ -158,14 +163,16 @@ class PlaneView
       @camera[i].updateProjectionMatrix()
     @draw()
   
+
   scaleTrianglesPlane : (scale) =>
+
     @scaleFactor = scale
     @curWidth = WIDTH = HEIGHT = Math.round(@scaleFactor * constants.VIEWPORT_WIDTH)
     canvas = $("#render-canvas")
     canvas.width(2 * WIDTH + 20)
     canvas.height(2 * HEIGHT + 20)
 
-    $('#prevControls button').width(@curWidth/5)
+    $('#TDViewControls button').width(@curWidth/5)
 
     divs = $(".inputcatcher")
     for div in divs
@@ -174,40 +181,56 @@ class PlaneView
 
     @resizeThrottled()
 
+
   setActivePlaneXY : =>
+
     @setActivePlane constants.PLANE_XY
 
+
   setActivePlaneYZ : =>
+
     @setActivePlane constants.PLANE_YZ
 
+
   setActivePlaneXZ : =>
+
     @setActivePlane constants.PLANE_XZ
 
+
   setActivePlane : (planeID) =>
+
     @flycam.setActivePlane planeID
     for i in [0..2]
       $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
-    @flycam.hasChanged = true
+    @flycam.update()
+
 
   getCameras : =>
+
     @camera
 
+
   getLights  : =>
+
     @lights
 
 
   showFirstVisToggle : ->
+
     modal.show("You just toggled the skeleton visibility. To toggle back, just hit the 1-Key.",
       [{id: "ok-button", label: "OK, Got it."}])
 
+
   showBranchModal : (callback) ->
+
     modal.show("You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
       [{id: "jump-button", label: "Jump again", callback: callback},
        {id: "cancel-button", label: "Cancel"}])
 
-  bind : ->  
 
-    @model.route.on({
+  bind : ->
+
+    @model.cellTracing.on({
       doubleBranch         : (callback) => @showBranchModal(callback)      
       mergeDifferentTrees  : ->
         Toast.error("You can't merge nodes within the same tree", false) })
@@ -215,6 +238,7 @@ class PlaneView
     @model.user.on 
       scaleChanged : (scale) => if @running then @scaleTrianglesPlane(scale)
     
+
   stop : ->
 
     $(".inputcatcher").hide()
@@ -222,6 +246,7 @@ class PlaneView
     $(window).off "resize", => @.resize()
 
     @running = false 
+
 
   start : ->
 
@@ -233,3 +258,4 @@ class PlaneView
     $(window).on "resize", => @.resize()
 
     @animate()
+

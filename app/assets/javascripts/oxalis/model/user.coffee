@@ -13,8 +13,8 @@ class User
   crosshairSize : null
   scaleValue : null
   mouseRotateValue : null
-  routeClippingDistance : null
-  routeClippingDistanceArbitrary : null
+  clippingDistance : null
+  clippingDistanceArbitrary : null
   dynamicSpaceDirection : null
   displayCrosshair : null
   interpolation : null
@@ -25,11 +25,10 @@ class User
   quality : null
   zoom : null
   scale : null
-  displayPreviewXY : null
-  displayPreviewYZ : null
-  displayPreviewXZ : null
+  displayTDViewXY : null
+  displayTDViewYZ : null
+  displayTDViewXZ : null
   newNodeNewTree : null
-  nodesAsSpheres : null
   inverseX : null
   inverseY : null
   keyboardDelay : null
@@ -75,6 +74,7 @@ class User
 
 
   pushImpl : ->
+    
     deferred = $.Deferred()
       
     Request.send(
@@ -88,8 +88,8 @@ class User
         crosshairSize : @crosshairSize,
         scaleValue : @scaleValue,
         mouseRotateValue : @mouseRotateValue,
-        routeClippingDistance : @routeClippingDistance,
-        routeClippingDistanceArbitrary : @routeClippingDistanceArbitrary,
+        clippingDistance : @clippingDistance,
+        clippingDistanceArbitrary : @clippingDistanceArbitrary,
         dynamicSpaceDirection : @dynamicSpaceDirection,
         displayCrosshair : @displayCrosshair,
         interpolation : @interpolation,
@@ -100,11 +100,10 @@ class User
         quality : @quality,
         zoom : @zoom,
         scale : @scale,
-        displayPreviewXY : @displayPreviewXY,
-        displayPreviewYZ : @displayPreviewYZ,
-        displayPreviewXZ : @displayPreviewXZ,
+        displayTDViewXY : @displayTDViewXY,
+        displayTDViewYZ : @displayTDViewYZ,
+        displayTDViewXZ : @displayTDViewXZ,
         newNodeNewTree : @newNodeNewTree,
-        nodesAsSpheres : @nodesAsSpheres,
         inverseX : @inverseX,
         inverseY : @inverseY,
         keyboardDelay : @keyboardDelay,

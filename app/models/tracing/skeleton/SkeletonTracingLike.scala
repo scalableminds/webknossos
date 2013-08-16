@@ -33,7 +33,7 @@ trait SkeletonTracingLike extends AnnotationContent {
 
   def trees: List[TreeLike]
 
-  def activeNodeId: Int
+  def activeNodeId: Option[Int]
 
   def timestamp: Long
 
@@ -134,7 +134,7 @@ object SkeletonTracingLike {
                 <scale x={dataSet.scale.x.toString} y={dataSet.scale.y.toString} z={dataSet.scale.z.toString}/>
                 <offset x="0" y="0" z="0"/>
                 <time ms={e.timestamp.toString}/>
-                <activeNode id={e.activeNodeId.toString}/>
+                {e.activeNodeId.map(id => s"<activeNode id=$id/>").getOrElse("")}
                 <editPosition x={e.editPosition.x.toString} y={e.editPosition.y.toString} z={e.editPosition.z.toString}/>
               </parameters>
               {trees}
@@ -154,7 +154,7 @@ object SkeletonTracingLike {
 
   implicit val skeletonTracingLikeWrites: OWrites[SkeletonTracingLike] =
     ((__ \ 'trees).write[List[TreeLike]] and
-      (__ \ 'activeNode).write[Int] and
+      (__ \ 'activeNode).writeNullable[Int] and
       (__ \ 'branchPoints).write[List[BranchPoint]] and
       (__ \ 'comments).write[List[Comment]])(t =>
       (t.trees, t.activeNodeId, t.branchPoints, t.comments))

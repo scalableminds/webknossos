@@ -16,7 +16,7 @@ import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.json.Writes
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
-import reactivemongo.core.commands.LastError
+import reactivemongo.core.commands.{Count, LastError}
 import reactivemongo.api.collections.GenericQueryBuilder
 import scala.Some
 import reactivemongo.api.QueryOpts
@@ -25,7 +25,7 @@ import reactivemongo.api.DefaultDB
 import play.api.libs.json.JsObject
 
 trait DAO[T] extends BaseDAO[T] {
-  def findHeadOption(attribute: String, value: String)(implicit ctx: DBAccessContext): Future[Option[T]]
+  def findHeadOption[V](attribute: String, value: V)(implicit w: Writes[V], ctx: DBAccessContext): Future[Option[T]]
 
   def findSome(offset: Int, limit: Int, orderBy: String = defaultOrderBy)(implicit ctx: DBAccessContext): Future[List[T]]
 
@@ -83,7 +83,7 @@ trait MongoDAO[T] extends DAO[T] with MongoHelpers {
 
   def formatWithoutId(t: T) = {
     val js = formatter.writes(t)
-    js.transform(removeId).getOrElse{
+    js.transform(removeId).getOrElse {
       System.err.println("Couldn't remove ID from: " + js)
       js
     }
@@ -98,16 +98,20 @@ trait MongoDAO[T] extends DAO[T] with MongoHelpers {
     LastError(ok = false, None, None, Some(msg), None, 0, false)
   }
 
-  def findHeadOption(attribute: String, value: String)(implicit ctx: DBAccessContext) = {
-    findByAttribute(attribute, value).one[T]
+  def findHeadOption[V](attribute: String, value: V)(implicit w: Writes[V], ctx: DBAccessContext) = {
+    findByAttribute(attribute, w.writes(value)).one[T]
   }
 
-  def findOne(implicit ctx: DBAccessContext) = {
-    collectionFind(Json.obj()).one[T]
+  def findOne(query: JsObject)(implicit ctx: DBAccessContext): Future[Option[T]] = {
+    collectionFind(query).one[T]
   }
 
-  def findOne(attribute: String, value: String)(implicit ctx: DBAccessContext) = {
-    findByAttribute(attribute, value).one[T]
+  def findOne()(implicit ctx: DBAccessContext): Future[Option[T]] = {
+    findOne(Json.obj())
+  }
+
+  def findOne[V](attribute: String, value: V)(implicit w: Writes[V], ctx: DBAccessContext): Future[Option[T]] = {
+    findOne(Json.obj(attribute -> w.writes(value)))
   }
 
   def findMaxBy(attribute: String)(implicit ctx: DBAccessContext) = {
@@ -122,20 +126,20 @@ trait MongoDAO[T] extends DAO[T] with MongoHelpers {
     collectionFind().sort(Json.obj(attribute -> desc)).cursor[T].collect[List](limit)
   }
 
-  private def findByAttribute(attribute: String, value: String)(implicit ctx: DBAccessContext) = {
+  private def findByAttribute(attribute: String, value: JsValue)(implicit ctx: DBAccessContext) = {
     collectionFind(Json.obj(attribute -> value))
   }
 
-  def find(attribute: String, value: String)(implicit ctx: DBAccessContext) = {
-    findByAttribute(attribute, value).cursor[T]
+  def find[V](attribute: String, value: V)(implicit w: Writes[V], ctx: DBAccessContext) = {
+    findByAttribute(attribute, w.writes(value)).cursor[T]
   }
 
   def find(query: JsObject)(implicit ctx: DBAccessContext) = {
     collectionFind(query).cursor[T]
   }
 
-  def remove(attribute: String, value: String)(implicit ctx: DBAccessContext): Future[LastError] = {
-    collectionRemove(Json.obj(attribute -> value))
+  def remove[V](attribute: String, value: V)(implicit w: Writes[V], ctx: DBAccessContext): Future[LastError] = {
+    collectionRemove(Json.obj(attribute -> w.writes(value)))
   }
 
   def findSome(offset: Int, limit: Int, orderBy: String = defaultOrderBy)(implicit ctx: DBAccessContext): Future[List[T]] = {
@@ -182,6 +186,10 @@ trait MongoDAO[T] extends DAO[T] with MongoHelpers {
       }))
   }
 
+  def findOneById(bid: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    collectionFind(Json.obj("_id" -> bid)).one[T]
+  }
+
   def findOneById(id: String)(implicit ctx: DBAccessContext) = {
     withId[Option[T]](id, errorValue = None) {
       bid =>
@@ -189,14 +197,18 @@ trait MongoDAO[T] extends DAO[T] with MongoHelpers {
     }
   }
 
-  def findOneById(bid: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    collectionFind(Json.obj("_id" -> bid)).one[T]
+  def count(query: JsObject)(implicit ctx: DBAccessContext): Future[Int] = {
+    db.command(Count(collectionName, Some(BSONDocumentFormat.reads(query).get)))
+  }
+
+  def removeById(bid: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    collectionRemove(Json.obj("_id" -> bid))
   }
 
   def removeById(id: String)(implicit ctx: DBAccessContext) = {
     withId(id, errorValue = LastError(false, None, None, Some(s"failed to parse objectId $id"), None, 0, false)) {
       bid =>
-        collectionRemove(Json.obj("_id" -> new BSONObjectID(id)))
+        removeById(bid)
     }
   }
 

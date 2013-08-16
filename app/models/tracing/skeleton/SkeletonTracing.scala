@@ -21,7 +21,7 @@ case class SkeletonTracing(
   dataSetName: String,
   branchPoints: List[BranchPoint],
   timestamp: Long,
-  activeNodeId: Int,
+  activeNodeId: Option[Int],
   editPosition: Point3D,
   comments: List[Comment] = Nil,
   settings: AnnotationSettings = AnnotationSettings.default,
@@ -120,7 +120,7 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with Annot
       dataSetName,
       Nil,
       System.currentTimeMillis,
-      1,
+      None,
       Point3D(0, 0, 0),
       settings = settings)
 
@@ -138,7 +138,7 @@ object SkeletonTracing extends BasicDAO[SkeletonTracing]("skeletons") with Annot
         trees,
         Nil,
         System.currentTimeMillis(),
-        1,
+        Some(1),
         start,
         Nil,
         settings))

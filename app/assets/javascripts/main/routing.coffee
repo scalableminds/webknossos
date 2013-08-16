@@ -157,6 +157,7 @@ $ ->
           showModal(templateId)
 
         showModal = (templateId) ->
+
           template = $("##{templateId}")
           title = template.data("header")
 
@@ -168,6 +169,7 @@ $ ->
           $modal.find(".multiselect").multiselect()
 
           $modal.modal("show")
+
 
 
         $("form").on "click", ".label-experience", (event) ->

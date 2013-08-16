@@ -83,7 +83,7 @@ class Controller
         nodeClick : (id) => @setActiveNode(id, true, false)
 
       $("#comment-input").on "change", (event) => 
-        @model.route.setComment(event.target.value)
+        @model.cellTracing.setComment(event.target.value)
         $("#comment-input").blur()
 
       $("#comment-previous").click =>
@@ -97,7 +97,7 @@ class Controller
         @setActiveNode($(event.target).data("nodeid"), true, false)
 
       $("#tree-name-submit").click (event) =>
-        @model.route.setTreeName($("#tree-name-input").val())
+        @model.cellTracing.setTreeName($("#tree-name-input").val())
 
       $("#tree-name-input").keypress (event) =>
         if event.which == 13
@@ -111,17 +111,17 @@ class Controller
         @selectNextTree(true)
 
       $("#tree-create-button").click =>
-        @model.route.createNewTree()
+        @model.cellTracing.createNewTree()
 
       $("#tree-delete-button").click =>
-        @model.route.deleteTree(true)
+        @model.cellTracing.deleteTree(true)
 
       $("#tree-list").on "click", "a[data-treeid]", (event) =>
         event.preventDefault()
         @setActiveTree($(event.currentTarget).data("treeid"), true)
 
       $("#tree-color-shuffle").click =>
-        @model.route.shuffleActiveTreeColor()
+        @model.cellTracing.shuffleActiveTreeColor()
 
       $("#tree-sort").on "click", "a[data-sort]", (event) =>
         event.preventDefault()
@@ -151,6 +151,10 @@ class Controller
         @abstractTreeController.drawTree()
 
       "q" : => @toggleFullScreen()
+      
+      # "f1" : =>
+      #   console.log "open help"
+      #   $("#help-modal").modal('toggle')
 
       #Set Mode, outcomment for release
       "shift + 1" : =>
@@ -214,7 +218,7 @@ class Controller
 
     gui.on
       deleteActiveNode : =>
-        @model.route.deleteActiveNode()
+        @model.cellTracing.deleteActiveNode()
       setActiveTree : (id) => @setActiveTree(id, false)
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
       setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
@@ -225,20 +229,20 @@ class Controller
 
   setActiveTree : (treeId, centered) ->
 
-    @model.route.setActiveTree(treeId)
+    @model.cellTracing.setActiveTree(treeId)
     if centered
       @centerActiveNode()
 
 
   selectNextTree : (next) ->
 
-    @model.route.selectNextTree(next)
+    @model.cellTracing.selectNextTree(next)
     @centerActiveNode()
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->
 
-    @model.route.setActiveNode(nodeId, mergeTree)
+    @model.cellTracing.setActiveNode(nodeId, mergeTree)
     if centered
       @centerActiveNode()
 
@@ -253,9 +257,9 @@ class Controller
 
   prevComment : =>
 
-    @setActiveNode(@model.route.nextCommentNodeID(false), true)
+    @setActiveNode(@model.cellTracing.nextCommentNodeID(false), true)
 
 
   nextComment : =>
 
-    @setActiveNode(@model.route.nextCommentNodeID(true), true)
+    @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)

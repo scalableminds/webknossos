@@ -3,10 +3,14 @@
 class TracePoint
 
   constructor : (@type, @id, @pos, @radius, @time, @treeId) ->
+
     @neighbors = []
 
+
   appendNext : (next) ->
+
     @neighbors.push(next)
+
 
   getNext : (parent) ->
 
@@ -26,7 +30,9 @@ class TracePoint
         res.push(neighbor)
     return res
 
+
   buildTree : (parent = null) ->
+
     @setChildRelation(parent)
 
     childrenIterator = @children
@@ -39,6 +45,7 @@ class TracePoint
 
     for child in childrenIterator
       child.buildTree(parentIterator)
+
 
   setChildRelation : (@parent) =>
     
@@ -55,9 +62,12 @@ class TracePoint
     unless _.isArray(@children)
       @children = [@children]
 
+
   removeNeighbor : (id) ->
+
     for i in [0...@neighbors.length]
       if @neighbors[i].id == id
         # Remove neighbor
         @neighbors.splice(i, 1)
         return
+        

@@ -20,7 +20,7 @@ case class TemporarySkeletonTracing(
   trees: List[TreeLike],
   branchPoints: List[BranchPoint],
   timestamp: Long,
-  activeNodeId: Int,
+  activeNodeId: Option[Int],
   editPosition: Point3D,
   comments: List[Comment] = Nil,
   settings: AnnotationSettings = AnnotationSettings.default) extends SkeletonTracingLike with AnnotationContent {

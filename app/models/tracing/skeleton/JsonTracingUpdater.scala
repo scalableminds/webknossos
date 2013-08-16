@@ -198,7 +198,7 @@ case class UpdateTracing(value: JsObject) extends TracingUpdater {
   def createUpdate() = {
     val branchPoints = (value \ "branchPoints").as[List[BranchPoint]]
     val comments = (value \ "comments").as[List[Comment]]
-    val activeNodeId = (value \ "activeNodeId").as[Int]
+    val activeNodeId = (value \ "activeNodeId").asOpt[Int]
     val editPosition = (value \ "editPosition").as[Point3D]
     TracingUpdate { t =>
       t.update(_.copy(

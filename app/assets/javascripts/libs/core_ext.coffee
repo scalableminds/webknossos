@@ -32,6 +32,7 @@ M4x4.transformPointsAffine = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.len
 
   r
 
+
 # Applies a transformation matrix on an array of points.
 M4x4.transformPoints = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) ->
 
@@ -54,6 +55,7 @@ M4x4.transformPoints = (m, points, r = new MJS_FLOAT_ARRAY_TYPE(points.length)) 
 
 
 M4x4.inverse = (mat, dest = new MJS_FLOAT_ARRAY_TYPE(16)) ->
+
   # cache matrix values
   a00 = mat[0]
   a01 = mat[1]
@@ -107,22 +109,30 @@ M4x4.inverse = (mat, dest = new MJS_FLOAT_ARRAY_TYPE(16)) ->
 
   return dest
 
+
 M4x4.extractTranslation = (m, r = new MJS_FLOAT_ARRAY_TYPE(3)) ->
+
   r[0] = m[12]
   r[1] = m[13]
   r[2] = m[14]
   r
 
+
 V3.round = (v, r = new MJS_FLOAT_ARRAY_TYPE(3)) ->
+
   r[0] = Math.round(v[0])
   r[1] = Math.round(v[1])
   r[2] = Math.round(v[2])
   r
 
+
 V3.toString = (v) ->
+
   "#{v[0]},#{v[1]},#{v[2]}"
 
+
 $.bindDeferred = (target, source) ->
+
   source
     .done(-> target.resolve.apply(target, arguments))
     .fail(-> target.reject.apply(target, arguments))
@@ -134,6 +144,7 @@ _.mixin(
   toCamelCase : (string) ->
 
     "#{string[0].toLowerCase}#{string.substring(1)}"
+
 
   debounceOrThrottleDeferred : (func, waitDebounce, waitThrottle) ->
 
@@ -157,12 +168,15 @@ _.mixin(
         else
           deferred.reject()
 
+
       unthrottler = ->
         throttled = false
+
 
       debouncer = ->
         timeoutDebounce = null
         caller()
+
 
       clearTimeout(timeoutDebounce)
       if throttled
@@ -172,7 +186,9 @@ _.mixin(
 
       deferred.promise()
 
+
   debounceDeferred : (func, wait) ->
+
     timeout = null
     deferred = null
     ->
@@ -183,6 +199,7 @@ _.mixin(
       deferred = $.Deferred()
       
       later = ->
+
         timeout = null
         result = func.apply(context, args)
         if result
@@ -202,6 +219,7 @@ _.mixin(
   # which are dropped. In contrast to `_.throttle`, the function
   # at the beginning of the time span.
   throttle2 : (func, wait, resume = true) ->
+
     timeout = more = false
 
     ->
@@ -217,6 +235,7 @@ _.mixin(
           ), wait
       else
         more = resume and true
+
 
   # Returns a wrapper function that rejects all invocations while an 
   # instance of the function is still running. The mutex can be 
@@ -243,14 +262,18 @@ _.mixin(
 
   # Removes the first occurrence of given element from an array.
   removeElement : (array, element) ->
+
     if (index = array.indexOf(element)) != -1
       array.splice(index, 1)
+
 )
+
 
 # Works like `$.when`. However, there is a notification when one
 # of the deferreds completes.
 # http://api.jquery.com/jQuery.when/
 $.whenWithProgress = (args...) ->
+
   sliceDeferred = [].slice
   length = args.length
   pValues = new Array( length )
@@ -263,7 +286,9 @@ $.whenWithProgress = (args...) ->
       jQuery.Deferred()
   promise = deferred.promise()
   
+
   resolveFunc = ( i ) ->
+
     ( value ) ->
       args[ i ] = if arguments.length > 1 then sliceDeferred.call( arguments, 0 ) else value
       if !( --count ) 
@@ -272,10 +297,13 @@ $.whenWithProgress = (args...) ->
       else
         deferred.notifyWith( deferred, args )
 
+
   progressFunc = ( i ) ->
+
     ( value ) ->
       pValues[ i ] = if arguments.length > 1 then sliceDeferred.call( arguments, 0 ) else value
       deferred.notifyWith( promise, pValues )
+
 
   if length > 1
     for i in [0...length] 

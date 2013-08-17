@@ -12,10 +12,4 @@ with models.basics.Implicits {
 
   implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]) =
     r.request
-
-  def postParameter(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
-    request.body.get(parameter).flatMap(_.headOption)
-
-  def postParameterList(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
-    request.body.get(parameter)
 }

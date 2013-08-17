@@ -185,8 +185,6 @@ class PlaneController
       "up"    : (timeFactor) => @moveY(-getVoxelOffset(timeFactor))
       "down"  : (timeFactor) => @moveY( getVoxelOffset(timeFactor))
 
-      # standard behaviour cannot be prevented?
-      # "ctrl + s"       : => @gui.saveNow()
     )
 
     @input.keyboardLoopDelayed = new Input.Keyboard(

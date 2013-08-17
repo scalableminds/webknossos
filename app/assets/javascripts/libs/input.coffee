@@ -29,7 +29,6 @@ class Input.KeyboardNoLoop
   constructor : (initialBindings) ->
 
     @bindings = []
-    @keyCount = 0
 
     for own key, callback of initialBindings
       @attach(key, callback)
@@ -39,11 +38,7 @@ class Input.KeyboardNoLoop
 
     binding = KeyboardJS.on(key, 
       (event) => 
-        @keyCount++
-        callback(@keyCount <= 2) unless $(":focus").length
-        return
-      () =>
-        @keyCount = 0
+        callback(event) unless $(":focus").length
         return
     )
     @bindings.push(binding)
@@ -88,10 +83,6 @@ class Input.Keyboard
         returnValue = undefined
 
         unless @keyCallbackMap[key]? or $(":focus").length
-          # this would allow ctrl+s to work but since ctrl+f triggers this method, too (why?),
-          # the default behaviour for searching the current page will be disabled
-          # event.preventDefault()
-          # returnValue = false
           
           callback(1, true)
           # reset lastTime

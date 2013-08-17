@@ -184,13 +184,13 @@ class CameraController
   moveTDViewX : (x) =>
 
     @moveTDViewRaw(
-      new THREE.Vector2( x * @TDViewportSize() / constants.WIDTH, 0 ))
+      new THREE.Vector2( x * @TDViewportSize() / constants.VIEWPORT_WIDTH, 0 ))
 
 
   moveTDViewY : (y) =>
 
     @moveTDViewRaw(
-      new THREE.Vector2( 0, - y * @TDViewportSize() / constants.WIDTH ))
+      new THREE.Vector2( 0, - y * @TDViewportSize() / constants.VIEWPORT_WIDTH ))
 
 
   moveTDView : ( nmVector ) ->
@@ -228,7 +228,7 @@ class CameraController
   updateCamViewport : ->
     
     scaleFactor = @model.scaleInfo.baseVoxel
-    boundary    = constants.WIDTH / 2 * @model.user.zoom
+    boundary    = constants.VIEWPORT_WIDTH / 2 * @model.user.zoom
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       @cameras[i].near = -@camDistance
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor

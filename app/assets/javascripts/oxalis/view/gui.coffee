@@ -160,7 +160,7 @@ class Gui
 
     @model.user.on
       zoomChanged : (zoom) =>
-        nm = zoom * constants.VIEWPORT_WIDTH * @model.scaleInfo.baseVoxel
+        nm = zoom * constants.PLANE_WIDTH * @model.scaleInfo.baseVoxel
         if(nm<1000)
           $("#zoomFactor").html("<p>Viewport width: " + nm.toFixed(0) + " nm</p>")
         else if (nm<1000000)

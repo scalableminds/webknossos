@@ -50,7 +50,7 @@ class SceneController
     # create Meshes
     @planes = new Array(3)
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
-      @planes[i] = new Plane(constants.VIEWPORT_WIDTH, constants.TEXTURE_WIDTH, @flycam, i, @model)
+      @planes[i] = new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, @flycam, i, @model)
 
     @planes[constants.PLANE_XY].setRotation(new THREE.Vector3( Math.PI , 0, 0))
     @planes[constants.PLANE_YZ].setRotation(new THREE.Vector3( Math.PI, 1/2 * Math.PI, 0))

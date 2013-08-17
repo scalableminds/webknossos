@@ -18,8 +18,8 @@ Constants =
   THEME_BRIGHT         : 0
   THEME_DARK           : 1
 
-  VIEWPORT_WIDTH       : 380
-  WIDTH                : 384
+  PLANE_WIDTH          : 376
+  VIEWPORT_WIDTH       : 384
   TEXTURE_WIDTH        : 512
   TEXTURE_SIZE_P       : 9
   DISTANCE_3D          : 140

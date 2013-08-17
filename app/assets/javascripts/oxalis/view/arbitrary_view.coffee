@@ -161,7 +161,7 @@ class ArbitraryView
 
     if (@scaleFactor+delta > @MIN_SCALE) and (@scaleFactor+delta < @MAX_SCALE)
       @scaleFactor += Number(delta)
-      @width = @height = @scaleFactor * constants.WIDTH
+      @width = @height = @scaleFactor * constants.VIEWPORT_WIDTH
       @container.width(@width)
       @container.height(@height)
 

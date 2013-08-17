@@ -21,8 +21,7 @@ class PlaneView
     container = $("#render")
 
     # Create a 4x4 grid
-    @curWidth = WIDTH = constants.VIEWPORT_WIDTH
-    HEIGHT = constants.VIEWPORT_WIDTH
+    @curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH
     @scaleFactor = 1
 
     # Initialize main THREE.js components
@@ -185,7 +184,11 @@ class PlaneView
   setActiveViewport : (viewportID) =>
 
     for i in [0..3]
-      $(".inputcatcher")[i].style.borderWidth = if i==viewportID then "2px" else "0px"
+      if i == viewportID
+        $(".inputcatcher").eq(i).removeClass("inactive").addClass("active")
+      else
+        $(".inputcatcher").eq(i).removeClass("active").addClass("inactive")
+
     @flycam.update()
 
 

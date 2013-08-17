@@ -165,8 +165,11 @@ class CameraController
     baseOffset = factor * size / 2
     baseDiff = baseOffset - size / 2
 
-    offsetX = (position.x / curWidth * 2 - 1) * (-baseDiff)
-    offsetY = (position.y / curWidth * 2 - 1) * (+baseDiff)
+    if position?
+      offsetX = (position.x / curWidth * 2 - 1) * (-baseDiff)
+      offsetY = (position.y / curWidth * 2 - 1) * (+baseDiff)
+    else
+      offsetX = offsetY = 0
 
     camera.left = middleX - baseOffset + offsetX
     camera.right = middleX + baseOffset + offsetX

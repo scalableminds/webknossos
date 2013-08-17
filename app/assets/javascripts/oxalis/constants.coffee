@@ -6,6 +6,7 @@ Constants =
   PLANE_YZ             : 1
   PLANE_XZ             : 2
   TDView               : 3
+  PLANE_NAMES          : ["xy", "yz", "xz"]
   ALL_PLANES           : [0, 1, 2]
   ALL_VIEWPORTS        : [0, 1, 2, 3]
   PLANE_COLORS         : [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]
@@ -26,6 +27,7 @@ Constants =
   TYPE_USUAL           : 0
   TYPE_BRANCH          : 1
 
+  TDView_MOVE_SPEED    : 80
   MIN_MOVE_VALUE       : 30
   MAX_MOVE_VALUE       : 14000
 

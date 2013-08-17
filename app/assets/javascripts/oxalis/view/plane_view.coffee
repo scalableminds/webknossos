@@ -67,7 +67,7 @@ class PlaneView
     $(@renderer.domElement).attr("id": "render-canvas")
     container.append @renderer.domElement
 
-    @setActivePlaneXY()
+    @setActiveViewport( constants.PLANE_XY )
 
     @positionStats = $("#status")
 
@@ -182,26 +182,10 @@ class PlaneView
     @resizeThrottled()
 
 
-  setActivePlaneXY : =>
+  setActiveViewport : (viewportID) =>
 
-    @setActivePlane constants.PLANE_XY
-
-
-  setActivePlaneYZ : =>
-
-    @setActivePlane constants.PLANE_YZ
-
-
-  setActivePlaneXZ : =>
-
-    @setActivePlane constants.PLANE_XZ
-
-
-  setActivePlane : (planeID) =>
-
-    @flycam.setActivePlane planeID
-    for i in [0..2]
-      $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
+    for i in [0..3]
+      $(".inputcatcher")[i].style.borderWidth = if i==viewportID then "2px" else "0px"
     @flycam.update()
 
 

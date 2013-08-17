@@ -21,7 +21,7 @@ class VolumeTracingController
           @drawVolume( @calculateGlobalPos([pos.x, pos.y]))
       
       leftClick : (pos, shiftPressed, altPressed, plane) =>
-        @model.volumeTracing.startEditing()
+        @model.volumeTracing.startEditing( plane )
       
       leftMouseUp : =>
         @model.volumeTracing.finishLayer()

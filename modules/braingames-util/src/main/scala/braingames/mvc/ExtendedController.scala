@@ -1,6 +1,6 @@
 package braingames.mvc
 
-import play.api.mvc.{ResponseHeader, SimpleResult, Results, Result}
+import play.api.mvc._
 import net.liftweb.common._
 import play.api.http.Status._
 import net.liftweb.common.Full
@@ -11,6 +11,10 @@ import play.api.http.{HeaderNames, Writeable}
 import play.api.templates.Html
 import play.api.http.Status
 import braingames.util.{FoxImplicits, Fox}
+import net.liftweb.common.Full
+import play.api.mvc.SimpleResult
+import play.api.mvc.ResponseHeader
+import play.api.libs.json.JsObject
 
 /**
  * Company: scalableminds
@@ -133,6 +137,14 @@ trait JsonResultAttribues {
   val jsonError = "error"
 }
 
+trait PostRequestHelpers {
+  def postParameter(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
+    request.body.get(parameter).flatMap(_.headOption)
+
+  def postParameterList(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
+    request.body.get(parameter)
+}
+
 trait ExtendedController
   extends JsonResults
   with BoxImplicits
@@ -140,3 +152,4 @@ trait ExtendedController
   with ResultImplicits
   with Status
   with withHighlightableResult
+  with PostRequestHelpers

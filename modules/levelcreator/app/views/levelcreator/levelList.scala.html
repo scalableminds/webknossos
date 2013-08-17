@@ -1,5 +1,7 @@
 @(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[braingames.binary.models.DataSet], rendered: Map[String, Int], stacksInQueue: Map[String, Int], stacksInGeneration: Map[String, Int], activeRenderers: Option[Int])(implicit request: RequestHeader)
 
+@import views.BootstrapHelpers.bootsrapFields
+
 @main(){
   <div class="container">
     <div class="clearfix">

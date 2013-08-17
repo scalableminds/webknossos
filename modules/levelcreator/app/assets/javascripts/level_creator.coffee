@@ -232,9 +232,12 @@ class LevelCreator
       .css(backgroundColor : "transparent")
       .children().filter(":not(#preview-canvas)").hide()
 
+    range = @pluginRenderer.getRange()
     window.callPhantom( 
       message : "initialized"
-      length : @pluginRenderer.getLength()
+      length : range.end - range.start + 1
+      start : range.start
+      end : range.end
       width : @canvas.width
       height : @canvas.height
     )
@@ -245,6 +248,7 @@ class LevelCreator
     imageData = @context.getImageData( 0, 0, @canvas.width, @canvas.height )
     imageDataData = imageData.data
     renderResult = @pluginRenderer.render(t)
+    { frameBuffer, metaFrameData, paraFrameData } = renderResult
 
     if renderResult
       # HACK Phantom doesn't support Uint8ClampedArray yet
@@ -252,10 +256,10 @@ class LevelCreator
         imageDataData[i] = frameBuffer[i]
       @context.putImageData(imageData, 0, 0)
 
-      if frameData?
-        window.callPhantom({ message : "rendered", frameData })
-      else
-        window.callPhantom( message : "rendered" )
+      #if metaFrameData?
+      window.callPhantom({ message : "rendered", metaFrameData, paraFrameData })
+      #else
+      #  window.callPhantom( message : "rendered" )
     else
       window.callPhantom( message : "exited" )
 

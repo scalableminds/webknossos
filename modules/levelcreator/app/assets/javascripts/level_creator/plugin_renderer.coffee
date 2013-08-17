@@ -54,7 +54,7 @@ class PluginRenderer
 
       time : (options) ->
         start = Math.min(options.start, range.start)
-        end = start + Math.max(options.end, range.end)
+        end = Math.max(options.end, range.end)
         range = { start, end }
 
         (cb) -> cb()
@@ -110,8 +110,9 @@ class PluginRenderer
     exited = false
     pixelCount = @width * @height
     frameBuffer = new Uint8Array( 4 * pixelCount )
-    frameData = null
-    return { frameBuffer, frameData } unless @dataHandler.deferred("initialized").state() == "resolved"
+    metaFrameData = null
+    paraFrameData = null
+    return { frameBuffer, metaFrameData, paraFrameData } unless @dataHandler.deferred("initialized").state() == "resolved"
 
     func = @compile()
 
@@ -139,9 +140,12 @@ class PluginRenderer
               segmentation : new Uint16Array( pixelCount )
               relativeTime : if endFrame - startFrame > 0 then (t - startFrame) / (endFrame - startFrame) else 0
               absoluteTime : t
-              writeFrameData : (key, payload) ->
-                frameData = frameData ? {}
-                frameData[key] = payload
+              writeMetaFrameData : (key, payload) ->
+                metaFrameData = metaFrameData ? {}
+                metaFrameData[key] = payload
+              writeParaFrameData : (key, payload) ->
+                paraFrameData = paraFrameData ? {}
+                paraFrameData[key] = payload                
             )
 
             callback()
@@ -196,7 +200,7 @@ class PluginRenderer
     if exited
       null
     else
-      { frameBuffer, frameData }
+      { frameBuffer, metaFrameData, paraFrameData }
 
 
 

@@ -19,18 +19,7 @@ class Skeleton
 
     _.extend(this, new EventMixin())
 
-    @scaleVector  = @model.scaleInfo.getVoxelPerNMVector()
-    # Edges
-    @edges        = []
-    # Nodes
-    @nodes        = []
-    # Tree IDs
-    @ids          = []
-
-    @cellTracing        = @model.cellTracing
-    # Buffer
-    @edgesBuffer  = []
-    @nodesBuffer  = []
+    @cellTracing = @model.cellTracing
 
     #initial mode
     @mode = constants.MODE_PLANE_TRACING
@@ -98,8 +87,8 @@ class Skeleton
     edgeGeometry.dynamic = true
     nodeGeometry.dynamic = true
 
-    @edgesBuffer.push(new ResizableBuffer(6))
-    @nodesBuffer.push(new ResizableBuffer(3))
+    @edgesBuffers.push(new ResizableBuffer(6))
+    @nodesBuffers.push(new ResizableBuffer(3))
 
     @edges.push(new THREE.Line(
       edgeGeometry, 
@@ -126,21 +115,21 @@ class Skeleton
 
   reset : ->
 
-    if (@ids.length > 0)
+    if @edges? and @nodes?
       @trigger "removeGeometries", @edges.concat(@nodes)
 
-    for threeLine in @edges
-      threeLine.geometry.dispose()
-      threeLine.material.dispose()
-    for threeParticleSystem in @nodes
-      threeParticleSystem.geometry.dispose()
-      threeParticleSystem.material.dispose()
+      for threeLine in @edges
+        threeLine.geometry.dispose()
+        threeLine.material.dispose()
+      for threeParticleSystem in @nodes
+        threeParticleSystem.geometry.dispose()
+        threeParticleSystem.material.dispose()
 
-    @edges       = []
-    @nodes        = []
-    @ids          = []
-    @edgesBuffer  = []
-    @nodesBuffer  = []
+    @edges         = []
+    @nodes         = []
+    @ids           = []
+    @edgesBuffers  = []
+    @nodesBuffers  = []
 
     for tree in @cellTracing.getTrees()
       @createNewTree(tree.treeId, tree.color)
@@ -160,12 +149,12 @@ class Skeleton
       nodeList = tree.nodes
       index = @getIndexFromTreeId(tree.treeId)
 
-      @nodesBuffer[index].clear()
-      @edgesBuffer[index].clear()
+      @nodesBuffers[index].clear()
+      @edgesBuffers[index].clear()
       @nodes[index].geometry.nodeIDs.clear()
 
       if nodeList.length
-        @nodesBuffer[index].pushMany(node.pos for node in nodeList)
+        @nodesBuffers[index].pushMany(node.pos for node in nodeList)
         # Assign the ID to the vertex, so we can access it later
         @nodes[index].geometry.nodeIDs.pushSubarray(node.id for node in nodeList)
 
@@ -174,7 +163,7 @@ class Skeleton
         # (so we don't add the same edge twice)
         for neighbor in node.neighbors
           if neighbor.id < node.id
-            @edgesBuffer[index].push(neighbor.pos.concat(node.pos))
+            @edgesBuffers[index].push(neighbor.pos.concat(node.pos))
 
       @updateGeometries(index)
     @updateBranches()
@@ -217,13 +206,6 @@ class Skeleton
     @flycam.update()
 
 
-  setNodeRadius : (radius) ->
-
-    vRadius = new THREE.Vector3(radius, radius, radius)
-    @activeNode.scale = @calcScaleVector(vRadius)
-    @flycam.update()
-
-
   setParticleSize : (size) ->
 
     for particleSystem in @nodes
@@ -259,24 +241,20 @@ class Skeleton
   setWaypoint : (centered) =>
 
     curGlobalPos = @flycam.getPosition()
-    activePlane  = @flycam.getActivePlane()
     position     = @cellTracing.getActiveNodePos()
     id           = @cellTracing.getActiveNodeId()
     index        = @getIndexFromTreeId(@cellTracing.getTree().treeId)
-    color        = @cellTracing.getTree().color
-    radius       = @cellTracing.getActiveNodeRadius()
-    type         = @cellTracing.getActiveNodeType()
 
-    if !@nodesBuffer[index].getLength()
+    if !@nodesBuffers[index].getLength()
       @lastNodePosition = position
     unless @lastNodePosition
       @lastNodePosition = position
 
     # ASSUMPTION: last node has smaller ID
-    if @nodesBuffer[index].getLength() > 0
-      @edgesBuffer[index].push(@lastNodePosition.concat(position))
+    if @nodesBuffers[index].getLength() > 0
+      @edgesBuffers[index].push(@lastNodePosition.concat(position))
 
-    @nodesBuffer[index].push(position)
+    @nodesBuffers[index].push(position)
     @nodes[index].geometry.nodeIDs.push([id])
 
     @updateGeometries(index)
@@ -310,9 +288,9 @@ class Skeleton
     @nodes[index].geometry.nodeIDs.getAllElements()[nodesIndex] = @nodes[index].geometry.nodeIDs.pop()
 
     # swap nodes by popping the last one and inserting it into the position of the deleted one
-    lastNode = @nodesBuffer[index].pop()
+    lastNode = @nodesBuffers[index].pop()
     for i in [0..2]
-      @nodesBuffer[index].getAllElements()[nodesIndex * 3 + i] = lastNode[i]
+      @nodesBuffers[index].getAllElements()[nodesIndex * 3 + i] = lastNode[i]
 
     # Delete Edge by finding it in the array
     # ASSUMPTION edges always go from smaller ID to bigger ID
@@ -320,7 +298,7 @@ class Skeleton
       edgeArray = node.pos.concat(node.neighbors[0].pos)
     else
       edgeArray = node.neighbors[0].pos.concat(node.pos)
-    for i in [0...@edgesBuffer[index].getLength()]
+    for i in [0...@edgesBuffers[index].getLength()]
       found = true
       for j in [0..5]
         found &= Math.abs(@edges[index].geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.01
@@ -332,9 +310,9 @@ class Skeleton
       "No edge found.", found)
 
     # swap edges by popping the last one (which consists of two nodes) and inserting it into the position of the deleted one
-    lastEdge = @edgesBuffer[index].pop()
+    lastEdge = @edgesBuffers[index].pop()
     for i in [0..5]
-      @edgesBuffer[index].getAllElements()[edgesIndex * 6 + i] = lastEdge[i]
+      @edgesBuffers[index].getAllElements()[edgesIndex * 6 + i] = lastEdge[i]
 
     
     @updateGeometries(index)
@@ -352,14 +330,14 @@ class Skeleton
     @nodes[index].geometry.nodeIDs.pushSubarray(@nodes[lastIndex].geometry.nodeIDs.getAllElements())
 
     # merge nodes
-    @nodesBuffer[index].pushSubarray(@nodesBuffer[lastIndex].getAllElements())
+    @nodesBuffers[index].pushSubarray(@nodesBuffers[lastIndex].getAllElements())
 
     # merge edges
     if lastNode.id < activeNode.id
-      @edgesBuffer[index].push( lastNode.pos.concat(activeNode.pos) )
+      @edgesBuffers[index].push( lastNode.pos.concat(activeNode.pos) )
     else
-      @edgesBuffer[index].push( activeNode.pos.concat(lastNode.pos) )
-    @edgesBuffer[index].pushSubarray(@edgesBuffer[lastIndex].getAllElements())
+      @edgesBuffers[index].push( activeNode.pos.concat(lastNode.pos) )
+    @edgesBuffers[index].pushSubarray(@edgesBuffers[lastIndex].getAllElements())
 
     @updateGeometries(index)
 
@@ -371,17 +349,13 @@ class Skeleton
     @trigger "removeGeometries", [@edges[index]].concat([@nodes[index]])
 
     # deallocate memory for THREE geometries and materials
-    @edges[index].geometry.dispose()
-    @edges[index].material.dispose()
-    @nodes[index].geometry.dispose()
-    @nodes[index].material.dispose()
+    for mesh in [ @edges[index], @nodes[index] ]
+      mesh.geometry.dispose()
+      mesh.material.dispose()
 
     # Remove entries
-    @ids.splice(index, 1)
-    @edges.splice(index, 1)
-    @nodes.splice(index, 1)
-    @edgesBuffer.splice(index, 1)
-    @nodesBuffer.splice(index, 1)
+    for array in [@ids, @edges, @nodes, @edgesBuffers, @nodesBuffers]
+      array.splice(index, 1)
 
     @setActiveNode()
     @flycam.update()
@@ -417,11 +391,6 @@ class Skeleton
         return i
     return null
 
-
-  calcScaleVector : (v) ->
-    # Helper function
-
-    return (new THREE.Vector3()).multiplyVectors(v, @scaleVector)
 
   setVisibility : (isVisible) ->
 
@@ -486,10 +455,10 @@ class Skeleton
     edges = @edges[index].geometry
     nodes = @nodes[index].geometry
 
-    edges.__vertexArray = @edgesBuffer[index].getBuffer()
-    edges.__webglLineCount = @edgesBuffer[index].getLength() * 2
-    nodes.__vertexArray = @nodesBuffer[index].getBuffer()
-    nodes.__webglParticleCount =  @nodesBuffer[index].getLength()
+    edges.__vertexArray = @edgesBuffers[index].getBuffer()
+    edges.__webglLineCount = @edgesBuffers[index].getLength() * 2
+    nodes.__vertexArray = @nodesBuffers[index].getBuffer()
+    nodes.__webglParticleCount =  @nodesBuffers[index].getLength()
 
     edges.verticesNeedUpdate = true
     nodes.verticesNeedUpdate = true

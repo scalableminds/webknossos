@@ -357,13 +357,6 @@ class PlaneController
     @model.user.setValue("scale", (Number) scale)
 
 
-  setNodeRadius : (delta) =>
-
-    lastRadius = @model.cellTracing.getActiveNodeRadius()
-    radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
-    @model.cellTracing.setActiveNodeRadius(radius)
-
-
   scroll : (delta, type) =>
 
     switch type

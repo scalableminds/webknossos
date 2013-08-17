@@ -48,13 +48,6 @@ class CellTacingController
       "p" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)
 
 
-  setNodeRadius : (delta) =>
-
-    lastRadius = @model.cellTracing.getActiveNodeRadius()
-    radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
-    @model.cellTracing.setActiveNodeRadius(radius)
-
-
   setParticleSize : (delta) =>
 
     particleSize = @model.user.particleSize + delta

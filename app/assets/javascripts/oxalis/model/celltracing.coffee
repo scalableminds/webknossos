@@ -235,11 +235,6 @@ class CellTracing
     if @activeNode then @activeNode.type else null
 
 
-  getActiveNodeRadius : ->
-
-    if @activeNode then @activeNode.radius else null
-
-
   getActiveTreeId : ->
 
     if @activeTree then @activeTree.treeId else null
@@ -268,20 +263,6 @@ class CellTracing
       for node in tree.nodes
         if node.id == id then return node
     return null
-    
-
-  setActiveNodeRadius : (radius) ->
-
-    # make sure radius is within bounds
-    radius = Math.min(@MAX_RADIUS * @scaleInfo.baseVoxel, radius)
-    radius = Math.max(@MIN_RADIUS * @scaleInfo.baseVoxel, radius)
-    if @activeNode
-      @activeNode.radius = radius
-      @lastRadius = radius
-
-      @stateLogger.updateNode(@activeNode, @activeTree.treeId)
-
-      @trigger("newActiveNodeRadius", radius)
 
 
   setActiveNode : (nodeID, mergeTree = false) ->

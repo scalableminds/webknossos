@@ -1,7 +1,6 @@
 package controllers.levelcreator
 
-import play.api.mvc.Action
-import braingames.mvc._
+import play.api.mvc.{Controller, Action}
 import play.api.data._
 import play.api.libs.json._
 import braingames.binary.models.DataSet
@@ -10,8 +9,9 @@ import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.GlobalDBAccess
 import models.knowledge.MissionDAO.formatter
+import braingames.mvc.ExtendedController
 
-object MissionController extends Controller with GlobalDBAccess {
+object MissionController extends ExtendedController with Controller with GlobalDBAccess {
 
   def getMissions(dataSetName: String) = Action {
     implicit request =>

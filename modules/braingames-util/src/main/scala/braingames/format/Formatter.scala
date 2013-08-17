@@ -6,6 +6,8 @@ import java.text.SimpleDateFormat
 import java.util.TimeZone
 import scala.concurrent.duration.Duration
 
+object Formatter extends Formatter
+
 trait Formatter{
   def formatDate(timestamp: Long): String = 
     formatDate(new Date(timestamp))

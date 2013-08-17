@@ -4,7 +4,7 @@ import views.html
 import braingames.mvc._
 import models.knowledge._
 import play.api.Play.current
-import play.api.mvc.Action
+import play.api.mvc.{RequestHeader, Action}
 import play.api.data._
 import play.api.data.Forms._
 import play.api.i18n.Messages
@@ -201,7 +201,7 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
       }
   }
 
-  def generateLevelList(levelForm: Form[Level])(implicit session: oxalis.view.UnAuthedSessionData): Future[Html] = {
+  def generateLevelList(levelForm: Form[Level])(implicit request: RequestHeader): Future[Html] = {
     WorkController.countActiveRenderers.flatMap {
       rendererCount =>
         for {

@@ -110,8 +110,6 @@ object ApplicationBuild extends Build {
   ).aggregate(oxalis)
 
   lazy val levelcreator = play.Project("levelcreator", "0.1", levelcreatorDependencies, path = file("modules") / "levelcreator").settings(
-    templatesImport += "oxalis.view.helpers._",
-    templatesImport += "oxalis.view._",
     resolvers ++= dependencyResolvers,
     // offline := true,
     coffeescriptOptions := Seq("native", coffeeCmd)

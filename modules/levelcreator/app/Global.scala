@@ -1,3 +1,5 @@
+import braingames.reactivemongo.GlobalAccessContext
+import models.knowledge.DataSetDAO
 import play.api._
 import play.api.Play.current
 import play.api.libs.concurrent._
@@ -18,6 +20,7 @@ object Global extends GlobalSettings {
       val conf = app.configuration
       implicit val sys = Akka.system(app)
       implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds)
+
       BinaryDataService.start()
       StackWorkDistributor.start
       MissionWatcher.start

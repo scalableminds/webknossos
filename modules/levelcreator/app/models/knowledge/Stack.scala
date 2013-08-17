@@ -4,7 +4,6 @@ import java.io.File
 import braingames.util.FileRegExFilter
 import play.api.libs.json.Json
 import play.api.libs.json._
-import org.bson.types.ObjectId
 import reactivemongo.bson.BSONObjectID
 import MissionDAO.{formatter => levelFormat}
 import LevelDAO.{formatter => missionFormat}

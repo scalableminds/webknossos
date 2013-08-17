@@ -2,7 +2,7 @@ package models.knowledge
 
 import braingames.binary.models.{DataSetRepository => AbstractDataSetRepository, DataSet}
 import play.api.libs.json.Json
-import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
+import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess}
 import models.knowledge.basics.BasicReactiveDAO
 import play.api.libs.concurrent.Execution.Implicits._
 

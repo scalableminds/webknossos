@@ -11,7 +11,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import braingames.binary.models.{DataLayer, DataSet}
 import braingames.util.FileRegExFilter
 import models.knowledge._
-import models.binary._
 import braingames.util.JsonHelper._
 import braingames.util.ExtendedTypes._
 import braingames.util.StartableActor

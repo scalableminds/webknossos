@@ -1,4 +1,4 @@
-@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[braingames.binary.models.DataSet], stacksInQueue: Map[models.knowledge.LevelId, Int], stacksInGeneration: Map[models.knowledge.LevelId, Int], activeRenderers: Option[Int])(implicit session: oxalis.view.UnAuthedSessionData)
+@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[braingames.binary.models.DataSet], rendered: Map[String, Int], stacksInQueue: Map[String, Int], stacksInGeneration: Map[String, Int], activeRenderers: Option[Int])(implicit request: RequestHeader)
 
 @main(){
   <div class="container">
@@ -32,7 +32,7 @@
       </thead>
       <tbody>
       @levels.sortBy(_.levelId.name).map{ level => 
-        @levelTableItem(level, stacksInQueue.get(level.levelId), stacksInGeneration.get(level.levelId))
+        @levelTableItem(level, rendered.get(level.levelId.name), stacksInQueue.get(level.levelId.name), stacksInGeneration.get(level.levelId.name))
       }
       </tbody>
     </table>

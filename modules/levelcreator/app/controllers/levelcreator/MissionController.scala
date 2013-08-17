@@ -9,6 +9,7 @@ import models.knowledge._
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.reactivemongo.GlobalDBAccess
+import models.knowledge.MissionDAO.formatter
 
 object MissionController extends Controller with GlobalDBAccess {
 
@@ -17,7 +18,7 @@ object MissionController extends Controller with GlobalDBAccess {
       Async {
         for {
           dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
-          missions = Mission.findByDataSetName(dataSet.name).toList
+          missions <- MissionDAO.findByDataSetName(dataSet.name)
         } yield {
           Ok(Json.toJson(missions))
         }
@@ -29,7 +30,7 @@ object MissionController extends Controller with GlobalDBAccess {
       Async {
         for {
           dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataSet.notFound")
-          mission <- Mission.randomByDataSetName(dataSetName) ?~ Messages("mission.notFound")
+          mission <- MissionDAO.randomByDataSetName(dataSetName) ?~> Messages("mission.notFound")
         } yield {
           Ok(Json.toJson(mission))
         }
@@ -38,10 +39,12 @@ object MissionController extends Controller with GlobalDBAccess {
 
   def getMission(missionId: String) = Action {
     implicit request =>
-      for {
-        mission <- Mission.findOneById(missionId) ?~ Messages("mission.notFound")
-      } yield {
-        Ok(Json.toJson(mission))
+      Async {
+        for {
+          mission <- MissionDAO.findOneById(missionId) ?~> Messages("mission.notFound")
+        } yield {
+          Ok(Json.toJson(mission))
+        }
       }
   }
 }

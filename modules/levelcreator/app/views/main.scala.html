@@ -1,4 +1,4 @@
-@()(body: Html)(implicit session: oxalis.view.UnAuthedSessionData)
+@()(body: Html)(implicit request: RequestHeader)
 
 <!doctype html>
 <html>
@@ -14,7 +14,7 @@
   <body>
     @mainHeader()    
     <div id="alert-container">
-      @session.flash.data.map{ f =>
+      @request.flash.data.map{ f =>
         <div class="alert alert-@f._1">
           <a href="#" class="close" data-dismiss="alert">×</a>
           @f._2

@@ -1,4 +1,4 @@
-@(stacks: List[(models.knowledge.Level, List[models.knowledge.RenderedStack])])(implicit session: oxalis.view.UnAuthedSessionData)
+@(stacks: List[(models.knowledge.Level, List[models.knowledge.RenderedStack])])(implicit request: RequestHeader)
 @main(){
   <div id="stack-list" class="container wide">
     @stacks.sortBy(-_._1.levelId.version).map{ case(level, stacks) =>
@@ -66,7 +66,7 @@
             <p>#@level.id</p>
 
             <p>
-              <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)">
+              <a href="@controllers.levelcreator.routes.LevelCreator.useRandom(level.id)">
                 <i class="icon-pencil"></i> Edit
               </a>
             </p>

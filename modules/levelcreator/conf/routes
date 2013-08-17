@@ -9,7 +9,8 @@ POST          /levels                                          controllers.level
 
 GET           /levels/:levelName/stacks                        controllers.levelcreator.StackController.list(levelName: String)
 
-GET           /levels/:levelId                                 controllers.levelcreator.LevelCreator.use(levelId: String, missionId: String ?= "")
+GET           /levels/:levelId                                 controllers.levelcreator.LevelCreator.useRandom(levelId: String)
+GET           /levels/:levelId/missions/:missionId             controllers.levelcreator.LevelCreator.use(levelId: String, missionId: String)
 PUT           /levels/:levelId                                 controllers.levelcreator.LevelCreator.submitCode(levelId: String)
 DELETE        /levels/:levelId                                 controllers.levelcreator.LevelCreator.delete(levelId: String)
 GET           /levels/:levelId/progress                        controllers.levelcreator.LevelCreator.progress(levelId: String)

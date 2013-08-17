@@ -24,7 +24,7 @@ object WorkController extends LevelCreatorController {
   implicit val requestWorkTimeout = Timeout(5 seconds)
   
   def countActiveRenderers = {
-    (stackWorkDistributor ? CountActiveRenderers()).mapTo[Int].map(Some.apply).recover {
+    (stackWorkDistributor ? CountActiveRenderers).mapTo[Int].map(Some.apply).recover {
       case e => 
         Logger.warn("Couldn't cound renderers because of: " + e)
         None

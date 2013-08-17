@@ -1,4 +1,4 @@
-@(level: models.knowledge.Level, stacksInQueue: Option[Int], stacksInProgress: Option[Int])
+@(level: models.knowledge.Level, rendered: Option[Int], stacksInQueue: Option[Int], stacksInProgress: Option[Int])
 @import oxalis.view.helpers._
 
 <tr data-levelid="@level.id">
@@ -9,11 +9,11 @@
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>
   <td class="status-cell"> 
-    @levelGenerationProgress(level, stacksInQueue.getOrElse(0), stacksInProgress.getOrElse(0))
+    @levelGenerationProgress(rendered.getOrElse(0), stacksInQueue.getOrElse(0), stacksInProgress.getOrElse(0))
   </td>
   <td>  
     <i class="icon-pencil"></i>
-    <a href="@controllers.levelcreator.routes.LevelCreator.use(level.id)">edit</a><br />
+    <a href="@controllers.levelcreator.routes.LevelCreator.useRandom(level.id)">edit</a><br />
     <i class="icon-retweet"></i> 
     <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">
       produce Stacks

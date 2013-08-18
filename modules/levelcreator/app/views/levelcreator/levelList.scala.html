@@ -1,6 +1,6 @@
 @(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[braingames.binary.models.DataSet], stacksInQueue: Map[models.knowledge.LevelId, Int], stacksInGeneration: Map[models.knowledge.LevelId, Int], activeRenderers: Option[Int])(implicit session: oxalis.view.UnAuthedSessionData)
 
-@main(activeRenderers){
+@main(){
   <div class="container">
     <div class="clearfix">
       <h3 class="pull-left">Levels</h3>

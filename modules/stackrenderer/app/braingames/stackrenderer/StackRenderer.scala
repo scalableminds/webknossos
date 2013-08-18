@@ -147,6 +147,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
       "levelVersion" -> stack.level.levelId.version,
       "levelId" -> stack.level.id,
       "stackId" -> stack.mission.id,
+      "missionId" -> stack.mission.missionId,
       "sprites" -> pages.map {
         p =>
           Json.obj(

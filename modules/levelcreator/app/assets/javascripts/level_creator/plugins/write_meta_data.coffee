@@ -3,12 +3,12 @@
 
 
 
-class WritePathToMetaFile
+class WriteMetaData
 
 
   PUBLIC : true
-  COMMAND : "writePathToMetaFile()"
-  FRIENDLY_NAME : "Write Path To Meta File"
+  COMMAND : "writeMetaData()"
+  FRIENDLY_NAME : "Write Meta Data"
   DESCRIPTION : "writes the path of all desplayed segments to the meta file"
   PARAMETER :
     input :
@@ -60,7 +60,7 @@ class WritePathToMetaFile
       else
         payload.push(segmentPayload)
 
-    input.writeFrameData(
+    input.writeMetaFrameData(
       "paths"
       payload
     )

@@ -1,18 +1,4 @@
-@(showNavButtons: Boolean = true)(body: Html)(implicit session: oxalis.view.UnAuthedSessionData)
-
-@callingTemplate = @{
-  // TODO: REMOVE HOTFIX
-  var c = Reflect.getCallerClass.map( _(8).getName() )
-  var i = 8
-  val max = 12
-  while(c == Some("views.html.main$") && i <= max){
-    i += 1
-    c = Reflect.getCallerClass.map( _(i).getName() )
-  }
-  c
-}
-
-@import braingames.util.Reflect
+@()(body: Html)(implicit session: oxalis.view.UnAuthedSessionData)
 
 <!doctype html>
 <html>
@@ -35,14 +21,8 @@
         </div>
       }
     </div>
-    <div id="main-container" data-template="@callingTemplate">
+    <div id="main-container">
       @body
     </div>
-    <!-- Prompt IE 6 users to install Chrome Frame. Remove this if you want to support IE 6.
-       chromium.org/developers/how-tos/chrome-frame-getting-started -->
-    <!--[if lt IE 9 ]>
-      <script src="//ajax.googleapis.com/ajax/libs/chrome-frame/1.0.3/CFInstall.min.js"></script>
-      <script>window.attachEvent('onload',function(){CFInstall.check({mode:'overlay'})})</script>
-    <![endif]-->
   </body>
 </html>

@@ -4,38 +4,48 @@ underscore : _
 libs/toast : Toast
 libs/keyboard : KeyboardJS
 routes : routes
+../level_creator : LevelCreator
+../stack_viewer : StackViewer
 ###
 
 $ ->
 
   route = (routes) ->
 
-    javaTemplate = $("#main-container").data("template")
+    optionalParam = /\((.*?)\)/g
+    namedParam    = /(\(\?)?:\w+/g
+    splatParam    = /\*\w+/g
+    escapeRegExp  = /[\-{}\[\]+?.,\\\^$|#\s]/g
 
-    javaTemplate = javaTemplate.match(/views\.html\.(.*)\$/)[1]
+    routeToRegExp = (route) ->
+      route = route
+        .replace(escapeRegExp, '\\$&')
+        .replace(optionalParam, '(?:$1)?')
+        .replace(namedParam, (match, optional) ->
+          if optional then match else '([^\/]+)'
+        )
+        .replace(splatParam, '(.*?)')
+      new RegExp('^' + route + '$')
 
-    if routes[javaTemplate]?
-      routes[javaTemplate].call($("#main-container")[0])
-    return
-
+    url = window.location.pathname
+    for route, script of routes
+      if routeToRegExp(route).test(url)
+        script.call($("#main-container")[0])
+        return
 
   route
 
-    "levelcreator.levelCreator" : ->
+    "/levels/:levelId" : ->
 
-      require ["./level_creator"], (LevelCreator) ->
-
-        window.levelCreator = new LevelCreator()
+      window.levelCreator = new LevelCreator()
 
 
-    "levelcreator.stackList" : ->
+    "/levels/:levelId/stacks" : ->
 
-      require ["./stack_viewer"], (StackViewer) ->
-
-        window.stackViewer = new StackViewer()
+      window.stackViewer = new StackViewer()
 
 
-    "levelcreator.levelList" : ->
+    "/" : ->
 
       $(document).on "click", "[data-prompt]", (event) ->
 

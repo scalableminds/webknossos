@@ -127,6 +127,22 @@ svg a:hover {
 
 #level-creator {
 
+    .left_pane {
+        position: absolute;
+        top: 40px;
+        left: 0;
+        right: 50%;
+        bottom: 0;
+    }
+    .right_pane {
+        position: absolute;
+        top: 40px;
+        right: 0;
+        left: 50%;
+        bottom: 0;
+        padding: 20px;
+    }
+
     .layer-filter-group {
         background: rgba(123,45,35,.8);
         box-shadow: 0 0 5px #444;
@@ -138,10 +154,11 @@ svg a:hover {
         height: 20px;
     }
 
+
     #preview {
         resize: both;
         overflow: auto;
-        height: 175px;
+        height: 200px;
         position: relative;
     }
     #preview-error {
@@ -167,9 +184,9 @@ svg a:hover {
     #editor {
         position: relative;
         width: 100%;
-        height: 500px;
+        height: 100%;
     }
-    #editor-container {
+    #buttons {
         form {
             display: inline;
         }

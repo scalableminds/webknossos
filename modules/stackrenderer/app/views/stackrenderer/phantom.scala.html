@@ -13,7 +13,7 @@ setTimeout(
   60*60*1000 // 60min
 )
 
-var i = 0, stackData;
+var i = 0, stackData, end = 0;
 
 var imageFilePattern = function(i, ext) { 
   i = "" + i;
@@ -61,8 +61,16 @@ page.onCallback = function (data) {
         height: data.height,
         length: data.length,
         // images: [],
-        frameData: {}
+        frameData: {},
+        metaFrameData: {},
+        paraFrameData: {},
+        start: data.start,
+        end: data.end
       };
+
+      // set i so frames can start dynamic
+      i = data.start;
+      end = data.end;
 
       log("" + stackData.length + " frames available");
       triggerRender();
@@ -72,30 +80,65 @@ page.onCallback = function (data) {
     case "rendered":
 
       var filename = "@{stack.path}/" + imageFilePattern(i, "png");
+      var tempPara, tempMeta;
       page.render(filename);
       // stackData.images.push(imageFilePattern(i, "png"));
 
       log("rendered frame #" + i + " to " + filename);
 
-      if (data.frameData != null) {
-        stackData.frameData["" + i] = data.frameData;
-        log("added frameData for #" + i);
+      if (data.metaFrameData != null) {
+        stackData.metaFrameData["" + i] = data.metaFrameData;
+        log("added metaFrameData for #" + i);
       }
+
+      if (data.paraFrameData != null) {
+        stackData.paraFrameData["" + i] = data.paraFrameData;
+        log("added paraFrameData for #" + i);
+      }      
       
       i++;
-      if (i <= stackData.length) {
+      if (i <= end) {
         triggerRender();
       } else {
         stackData.createdAt = Date.now();
+
+        tempPara = stackData.paraFrameData
+        tempMeta = stackData.metaFrameData
+
+        delete stackData.paraFrameData
+        delete stackData.metaFrameData
+
+        stackData.frameData = tempMeta
+
         fs.write(
           "@{stack.path}/meta.json",
           JSON.stringify(stackData),
           "w"
         );
         log("wrote meta file to @{stack.path}/meta.json");
-        
+
+        stackData.frameData = tempPara
+
+        fs.write(
+          "@{stack.path}/para.json",
+          JSON.stringify(stackData),
+          "w"
+        );
+        log("wrote meta file to @{stack.path}/para.json");
+
+        stackData.paraFrameData = tempPara
+        stackData.metaFrameData = tempMeta
+        stackData.frameData = {}
+
         phantom.exit();
       }
+
+      break;
+
+    case "exited":
+
+      log("exited rendering");
+      phantom.exit(-12);
 
       break;
 

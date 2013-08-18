@@ -83,7 +83,7 @@ function download_block_range() {
       done
     done
   done
-  rsync -rtvuczm --progress --filter=-_segmentation/ --filter=._tempfilter --filter=+_*.json --filter=-_*.raw  "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet" $LOCAL_BINARY_DATA_DIR
+  rsync -rtvuczm --progress --filter=._tempfilter --filter=+_*.json --filter=-_*.raw  "$USER@$SERVER:$BINARY_DATA_DIR/$DataSet" $LOCAL_BINARY_DATA_DIR
   rm tempfilter
 }
 echo "setting up ssh connection"

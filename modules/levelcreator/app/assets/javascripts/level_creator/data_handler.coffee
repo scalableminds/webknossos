@@ -37,7 +37,7 @@ class DataHandler
   getBinaryDataUrl : (dataLayerName) ->
 
     if window.callPhantom?
-      url : "#{window.callPhantom( message : "requestBinaryDataUrl" )}?dataSetName=#{@dataSetName}&levelId=#{@levelId}&missionId=#{@missionId}&dataLayerName=#{dataLayerName}"
+      url : "#{window.callPhantom( message : "requestBinaryDataUrl" )}/datasets/#{@dataSetName}/layers/#{dataLayerName}/data?levelId=#{@levelId}&missionId=#{@missionId}"
       method : "GET"
     else
       Routes.controllers.levelcreator.BinaryData.viaAjax(@dataSetName, @levelId, @missionId, dataLayerName)
@@ -52,7 +52,8 @@ class DataHandler
       )
     ).then(
       (buffer) => new Uint8Array(buffer)
-      (xhr) -> Toast.error("Couldn't load color data layer.")
+      (xhr) -> 
+        Toast.error("Couldn't load color data layer.")
     )
 
 
@@ -65,7 +66,8 @@ class DataHandler
       )
     ).then(
       (buffer) => new Uint16Array(buffer)
-      (xhr) -> Toast.error("Couldn't load segmentation data layer.")
+      (xhr) -> 
+        Toast.error("Couldn't load segmentation data layer.")
     )
 
 

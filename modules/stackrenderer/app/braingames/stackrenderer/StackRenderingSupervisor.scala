@@ -77,10 +77,10 @@ class StackRenderingSupervisor extends Actor {
   val useLevelUrl = s"http://$urlAuth$levelcreatorBaseUrl/levels/%s/missions/%s"
 
   val binaryDataUrl =
-    if (conf.getBoolean("levelcreator.useLevelcreatorAsDataSource").getOrElse(false))
-      s"http://$levelcreatorBaseUrl/binary/ajax"
+    if(conf.getBoolean("levelcreator.useLevelcreatorAsDataSource").getOrElse(false))
+      s"http://$levelcreatorBaseUrl"
     else
-      rendererUrl + "/binary/ajax"
+      rendererUrl
 
   lazy val stackRenderer = context.system.actorOf(Props(new StackRenderer(useLevelUrl, binaryDataUrl)).withRouter(SmallestMailboxRouter(nrOfInstances = nrOfStackRenderers)),
     name = "stackRenderer")

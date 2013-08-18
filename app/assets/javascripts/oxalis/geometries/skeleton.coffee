@@ -5,7 +5,6 @@
 ../../libs/event_mixin : EventMixin
 ../../libs/resizable_buffer : ResizableBuffer
 ../constants : constants
-libs/threejs/ColorConverter : ColorConverter
 ./tree : Tree
 ###
 
@@ -76,7 +75,7 @@ class Skeleton
 
   createNewTree : (treeId, treeColor) ->
     
-    @treeGeometries.push( tree = new Tree(treeId, @darkenHex( treeColor ), @model) )
+    @treeGeometries.push( tree = new Tree(treeId, treeColor, @model) )
     @updateNodes()
     @trigger "newGeometries", tree.getMeshes()
 
@@ -123,7 +122,7 @@ class Skeleton
 
     treeColor = @cellTracing.getTree().color
     if isBranchPoint
-      colorActive = @invertHex(treeColor)
+      colorActive = treeColor#@invertHex(treeColor)
     else 
       colorActive = treeColor
     
@@ -146,7 +145,7 @@ class Skeleton
     treeColor    = @cellTracing.getTree().color
 
     newTreeId    = @cellTracing.getActiveTreeId()
-    newColor     = new THREE.Color(@darkenHex(treeColor))
+    newColor     = new THREE.Color(treeColor)
     @treeGeometry.updateColor( newTreeId, newColor )
 
     @updateBranches()
@@ -217,6 +216,8 @@ class Skeleton
 
   updateBranches : ->
 
+    return
+
     branchpoints = @cellTracing.branchStack
 
     @branchesBuffer.clear()
@@ -226,7 +227,8 @@ class Skeleton
       branchpoint.pos[2] - 0.01] for branchpoint in branchpoints)
 
     @branchesColorsBuffer.clear()
-    @branchesColorsBuffer.pushMany(@invertHexToRGB(@darkenHex(@model.cellTracing.getTree(branchpoint.treeId).color)) for branchpoint in branchpoints)
+    #@branchesColorsBuffer.pushMany(@invertHexToRGB(@darkenHex(@model.cellTracing.getTree(branchpoint.treeId).color)) for branchpoint in branchpoints)
+    @branchesColorsBuffer.pushMany(@model.cellTracing.getTree(branchpoint.treeId).color for branchpoint in branchpoints)
 
     @branches.geometry.__vertexArray = @branchesBuffer.getBuffer()
     @branches.geometry.__webglParticleCount = @branchesBuffer.getLength()
@@ -281,28 +283,7 @@ class Skeleton
     treeGeometry.edges.visible = true
     treeGeometry.nodes.visible = true
     @flycam.update()
-    
 
-  invertHexToRGB : (hexColor) ->
-
-    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
-    hsvColor.h = (hsvColor.h + 0.5) % 1
-    rgbColor = ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v)
-    [rgbColor.r, rgbColor.g, rgbColor.b]
-
-
-  darkenHex : (hexColor) ->
-
-    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
-    hsvColor.v = 0.6
-    ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
-
-
-  invertHex : (hexColor) ->
-
-    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
-    hsvColor.h = (hsvColor.h + 0.5) % 1
-    ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
 
   setSizeAttenuation : (sizeAttenuation) ->
 

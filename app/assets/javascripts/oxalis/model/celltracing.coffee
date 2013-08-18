@@ -527,6 +527,10 @@ class CellTracing
       if deleteBranchesAndComments
         @deleteComment(node.id)
         @deleteBranch(node)
+
+    @stateLogger.deleteTree(tree)
+    @trigger("deleteTree", index)
+    
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0
@@ -534,9 +538,6 @@ class CellTracing
     else
       # just set the last tree to be the active one
       @setActiveTree(@trees[@trees.length - 1].treeId)
-    @stateLogger.deleteTree(tree)
-
-    @trigger("deleteTree", index)
 
 
   mergeTree : (lastNode, lastTree) ->

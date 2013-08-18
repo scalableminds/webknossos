@@ -1,10 +1,11 @@
 ### define
 ../../libs/resizable_buffer : ResizableBuffer
+libs/threejs/ColorConverter : ColorConverter
 ###
 
 class Tree
 
-  constructor : (treeId, color, @model) ->
+  constructor : (treeId, treeColor, @model) ->
     # create cellTracing to show in TDView and pre-allocate buffers
 
     edgeGeometry = new THREE.Geometry()
@@ -19,7 +20,7 @@ class Tree
     @edges = new THREE.Line(
       edgeGeometry, 
       new THREE.LineBasicMaterial({
-        color: color, 
+        color: @darkenHex( treeColor ), 
         linewidth: @model.user.particleSize / 4}), THREE.LinePieces)
 
     @nodes = new THREE.ParticleSystem(
@@ -141,8 +142,8 @@ class Tree
 
     @id = newTreeId
 
-    @nodes.material.color = color
-    @edges.material.color = color
+    @nodes.material.color = @darkenHex( color )
+    @edges.material.color = @darkenHex( color )
     @updateGeometries()
 
 
@@ -173,15 +174,45 @@ class Tree
   updateNodes : ->
 
     activeNodeId = @model.cellTracing.getActiveNodeId()
+    color        = @darkenHex( @model.cellTracing.getTree(@id).color )
 
     @nodesColorBuffer.clear()
     for i in [0..@nodeIDs.length]
       if @nodeIDs.get(i) == activeNodeId
-        @nodesColorBuffer.push( [1, 1, 0] )
+        @nodesColorBuffer.push( @invertHexToRGB( color ))
       else
-        @nodesColorBuffer.push( [1, 0, 0] )
+        @nodesColorBuffer.push( @hexToRGB( color ))
 
-     @nodes.geometry.__colorArray = @nodesColorBuffer.getBuffer()
-     @nodes.geometry.colorsNeedUpdate = true
+      @nodes.geometry.__colorArray = @nodesColorBuffer.getBuffer()
+      @nodes.geometry.colorsNeedUpdate = true
 
-     @updateGeometries()
+    @updateGeometries()
+
+    
+  #### Color utility methods
+
+  hexToRGB : (hexColor) ->
+
+    rgbColor = new THREE.Color().setHex(hexColor)
+    [rgbColor.r, rgbColor.g, rgbColor.b]
+
+  invertHexToRGB : (hexColor) ->
+
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
+    hsvColor.h = (hsvColor.h + 0.5) % 1
+    rgbColor = ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v)
+    [rgbColor.r, rgbColor.g, rgbColor.b]
+
+
+  darkenHex : (hexColor) ->
+
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
+    hsvColor.v = 0.6
+    ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()
+
+
+  invertHex : (hexColor) ->
+
+    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
+    hsvColor.h = (hsvColor.h + 0.5) % 1
+    ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v).getHex()

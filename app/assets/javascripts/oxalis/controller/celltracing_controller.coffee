@@ -122,7 +122,7 @@ class CellTacingController
     raycaster.ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
  
     # identify clicked object
-    intersects = raycaster.intersectObjects(@sceneController.skeleton.nodes)
+    intersects = raycaster.intersectObjects(@sceneController.skeleton.getAllNodes())
     #if intersects.length > 0 and intersects[0].distance >= 0
     for intersect in intersects
 

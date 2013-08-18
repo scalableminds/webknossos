@@ -263,6 +263,11 @@ class Skeleton
     @flycam.update()
 
 
+  getAllNodes : ->
+
+    return (tree.nodes for tree in @treeGeometries)
+
+
   getTreeGeometry : (treeId) ->
 
     unless treeId

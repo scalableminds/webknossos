@@ -6,6 +6,7 @@
 ../../libs/resizable_buffer : ResizableBuffer
 ../constants : constants
 libs/threejs/ColorConverter : ColorConverter
+./tree : Tree
 ###
 
 class Skeleton
@@ -19,10 +20,9 @@ class Skeleton
 
     _.extend(this, new EventMixin())
 
-    @cellTracing = @model.cellTracing
+    @cellTracing    = @model.cellTracing
+    @treeGeometries = []
 
-    #initial mode
-    @mode = constants.MODE_PLANE_TRACING
     @showInactiveTrees = true
 
     activeNodeGeometry = new THREE.Geometry()
@@ -31,7 +31,7 @@ class Skeleton
       new THREE.ParticleBasicMaterial({
         color: @COLOR_ACTIVE, 
         size: 5, 
-        sizeAttenuation : @mode == constants.MODE_ARBITRARY}))
+        sizeAttenuation : false}))
     activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
 
     branchPointsGeometry = new THREE.Geometry()
@@ -40,11 +40,11 @@ class Skeleton
       branchPointsGeometry,
       new THREE.ParticleBasicMaterial({
         size: 5, 
-        sizeAttenuation: @mode == constants.MODE_ARBITRARY, 
+        sizeAttenuation: false, 
         vertexColors: true}))
     @branchesBuffer = new ResizableBuffer(3)
     @branchesColorsBuffer = new ResizableBuffer(3)
-
+    
     @reset()
 
     @updateBranches()
@@ -84,36 +84,10 @@ class Skeleton
 
 
   createNewTree : (treeId, treeColor) ->
-    # create cellTracing to show in TDView and pre-allocate buffers
-
-    edgeGeometry = new THREE.Geometry()
-    nodeGeometry = new THREE.Geometry()
-    nodeGeometry.nodeIDs = new ResizableBuffer(1, 100, Int32Array)
-    edgeGeometry.dynamic = true
-    nodeGeometry.dynamic = true
-
-    @edgesBuffers.push(new ResizableBuffer(6))
-    @nodesBuffers.push(new ResizableBuffer(3))
-
-    @edges.push(new THREE.Line(
-      edgeGeometry, 
-      new THREE.LineBasicMaterial({
-        color: @darkenHex(treeColor), 
-        linewidth: @model.user.particleSize / 4}), THREE.LinePieces))
-
-    @nodes.push(new THREE.ParticleSystem(
-      nodeGeometry, 
-      new THREE.ParticleBasicMaterial({
-        size: @model.user.particleSize,
-        vertexColors: true,
-        sizeAttenuation : @mode == constants.MODE_ARBITRARY})))
-    @nodesColorBuffers.push( new ResizableBuffer(3) )
-
-    @ids.push(treeId)
-
+    
+    @treeGeometries.push( tree = new Tree(treeId, @darkenHex( treeColor ), @model) )
     @setActiveNode()
-
-    @trigger "newGeometries", [@edges[@edges.length - 1], @nodes[@nodes.length - 1]]
+    @trigger "newGeometries", tree.getMeshes()
 
 
   # Will completely reload the trees from model.
@@ -121,22 +95,11 @@ class Skeleton
 
   reset : ->
 
-    if @edges? and @nodes?
-      @trigger "removeGeometries", @edges.concat(@nodes)
+    for tree in @treeGeometries
+      @trigger "removeGeometries", tree.getMeshes()
+      tree.dispose()
 
-      for threeLine in @edges
-        threeLine.geometry.dispose()
-        threeLine.material.dispose()
-      for threeParticleSystem in @nodes
-        threeParticleSystem.geometry.dispose()
-        threeParticleSystem.material.dispose()
-
-    @edges             = []
-    @nodes             = []
-    @ids               = []
-    @edgesBuffers      = []
-    @nodesBuffers      = []
-    @nodesColorBuffers = []
+    @treeGeometries = []
 
     for tree in @cellTracing.getTrees()
       @createNewTree(tree.treeId, tree.color)
@@ -153,29 +116,12 @@ class Skeleton
     unless trees? then trees = @model.cellTracing.getTrees()
 
     for tree in trees
-      nodeList = tree.nodes
-      index = @getIndexFromTreeId(tree.treeId)
 
-      @nodesBuffers[index].clear()
-      @edgesBuffers[index].clear()
-      @nodes[index].geometry.nodeIDs.clear()
+      treeGeometry = @getTreeGeometry(tree.treeId)
+      treeGeometry.clear()
+      treeGeometry.addNodes( tree.nodes )
 
-      if nodeList.length
-        @nodesBuffers[index].pushMany(node.pos for node in nodeList)
-        # Assign the ID to the vertex, so we can access it later
-        @nodes[index].geometry.nodeIDs.pushSubarray(node.id for node in nodeList)
-
-      for node in nodeList
-        # Add edges to neighbor, if neighbor id is smaller
-        # (so we don't add the same edge twice)
-        for neighbor in node.neighbors
-          if neighbor.id < node.id
-            @edgesBuffers[index].push(neighbor.pos.concat(node.pos))
-
-      @updateGeometries(index)
     @updateBranches()
-    @updateNodes()
-
     @setActiveNode()
 
     if finishedDeferred?
@@ -217,10 +163,8 @@ class Skeleton
 
   setParticleSize : (size) ->
 
-    for particleSystem in @nodes
-      particleSystem.material.size = size
-    for line in @edges
-      line.material.linewidth = size / 4
+    for tree in @treeGeometries
+      tree.setSize( size )
     @branches.material.size = size
     @activeNodeParticle.material.size = size
     @flycam.update()
@@ -228,15 +172,12 @@ class Skeleton
 
   updateActiveTreeColor : (oldTreeId) ->
 
-    index = @getIndexFromTreeId(oldTreeId)
-    treeColor = @cellTracing.getTree().color
+    treeGeometry = @getTreeGeometry(oldTreeId)
+    treeColor    = @cellTracing.getTree().color
 
-    @ids[index] = @cellTracing.getActiveTreeId()
-    @nodes[index].material.color = new THREE.Color(@darkenHex(treeColor))
-    @edges[index].material.color = new THREE.Color(@darkenHex(treeColor))
-
-    @nodes[index].material.needsUpdate = true
-    @edges[index].material.needsUpdate = true
+    newTreeId    = @cellTracing.getActiveTreeId()
+    newColor     = new THREE.Color(@darkenHex(treeColor))
+    @treeGeometry.updateColor( newTreeId, newColor )
 
     @updateBranches()
     @updateNodes()
@@ -245,31 +186,20 @@ class Skeleton
 
   getMeshes : =>
 
-    return @nodes.concat(@edges).concat(@branches)
-
+    meshes = [@branches]
+    for tree in @treeGeometries
+      meshes = meshes.concat( tree.getMeshes() )
+    return meshes
 
   setWaypoint : (centered) =>
 
     curGlobalPos = @flycam.getPosition()
-    position     = @cellTracing.getActiveNodePos()
-    id           = @cellTracing.getActiveNodeId()
-    index        = @getIndexFromTreeId(@cellTracing.getTree().treeId)
+    treeGeometry = @getTreeGeometry(@cellTracing.getTree().treeId)
 
-    if !@nodesBuffers[index].getLength()
-      @lastNodePosition = position
-    unless @lastNodePosition
-      @lastNodePosition = position
-
-    # ASSUMPTION: last node has smaller ID
-    if @nodesBuffers[index].getLength() > 0
-      @edgesBuffers[index].push(@lastNodePosition.concat(position))
-
-    @nodesBuffers[index].push(position)
-    @nodes[index].geometry.nodeIDs.push([id])
-
-    @updateGeometries(index)
+    treeGeometry.addNode( @cellTracing.getActiveNode() )
 
     # Animation to center waypoint position
+    position = @cellTracing.getActiveNodePos()
     if centered
       @waypointAnimation = new TWEEN.Tween({ globalPosX: curGlobalPos[0], globalPosY: curGlobalPos[1], globalPosZ: curGlobalPos[2], flycam: @flycam})
       @waypointAnimation.to({globalPosX: position[0], globalPosY: position[1], globalPosZ: position[2]}, 200)
@@ -287,45 +217,8 @@ class Skeleton
     $.assert(node.neighbors.length == 1,
       "Node needs to have exactly 1 neighbor.", 0)
 
-    index = @getIndexFromTreeId(treeId)
-
-    for i in [0...@nodes[index].geometry.nodeIDs.getLength()]
-      if @nodes[index].geometry.nodeIDs.getAllElements()[i] == node.id
-        nodesIndex = i
-        break
-
-    # swap IDs
-    @nodes[index].geometry.nodeIDs.getAllElements()[nodesIndex] = @nodes[index].geometry.nodeIDs.pop()
-
-    # swap nodes by popping the last one and inserting it into the position of the deleted one
-    lastNode = @nodesBuffers[index].pop()
-    for i in [0..2]
-      @nodesBuffers[index].getAllElements()[nodesIndex * 3 + i] = lastNode[i]
-
-    # Delete Edge by finding it in the array
-    # ASSUMPTION edges always go from smaller ID to bigger ID
-    if node.id < node.neighbors[0].id
-      edgeArray = node.pos.concat(node.neighbors[0].pos)
-    else
-      edgeArray = node.neighbors[0].pos.concat(node.pos)
-    for i in [0...@edgesBuffers[index].getLength()]
-      found = true
-      for j in [0..5]
-        found &= Math.abs(@edges[index].geometry.__vertexArray[6 * i + j] - edgeArray[j]) < 0.01
-      if found
-        edgesIndex = i
-        break
-
-    $.assert(found,
-      "No edge found.", found)
-
-    # swap edges by popping the last one (which consists of two nodes) and inserting it into the position of the deleted one
-    lastEdge = @edgesBuffers[index].pop()
-    for i in [0..5]
-      @edgesBuffers[index].getAllElements()[edgesIndex * 6 + i] = lastEdge[i]
-
-    
-    @updateGeometries(index)
+    treeGeometry = @getTreeGeometry(treeId)
+    treeGeometry.deleteNode(node)
 
     @setActiveNode()
     @flycam.update()
@@ -333,39 +226,21 @@ class Skeleton
 
   mergeTree : (lastTreeID, lastNode, activeNode) ->
 
-    lastIndex = @getIndexFromTreeId(lastTreeID)
-    index = @getIndexFromTreeId(@cellTracing.getTree().treeId)
+    lastTree   = @getTreeGeometry(lastTreeID)
+    activeTree = @getTreeGeometry(@cellTracing.getTree().treeId)
 
-    # merge IDs
-    @nodes[index].geometry.nodeIDs.pushSubarray(@nodes[lastIndex].geometry.nodeIDs.getAllElements())
-
-    # merge nodes
-    @nodesBuffers[index].pushSubarray(@nodesBuffers[lastIndex].getAllElements())
-
-    # merge edges
-    if lastNode.id < activeNode.id
-      @edgesBuffers[index].push( lastNode.pos.concat(activeNode.pos) )
-    else
-      @edgesBuffers[index].push( activeNode.pos.concat(lastNode.pos) )
-    @edgesBuffers[index].pushSubarray(@edgesBuffers[lastIndex].getAllElements())
-
-    @updateGeometries(index)
+    activeTree.mergeTree(lastTree, lastNode, activeNode)
 
     @flycam.update()
 
 
   deleteTree : (index) ->
 
-    @trigger "removeGeometries", [@edges[index]].concat([@nodes[index]])
+    treeGeometry = @treeGeometries[index]
 
-    # deallocate memory for THREE geometries and materials
-    for mesh in [ @edges[index], @nodes[index] ]
-      mesh.geometry.dispose()
-      mesh.material.dispose()
-
-    # Remove entries
-    for array in [@ids, @edges, @nodes, @edgesBuffers, @nodesBuffers]
-      array.splice(index, 1)
+    @trigger "removeGeometries", treeGeometry.getMeshes()
+    treeGeometry.dispose()
+    @treeGeometries.splice(index, 1)
 
     @setActiveNode()
     @flycam.update()
@@ -394,34 +269,24 @@ class Skeleton
 
   updateNodes : ->
 
-    activeNodeId = @cellTracing.getActiveNodeId()
+    for treeGeometry in @treeGeometries
+      treeGeometry.updateNodes()
 
-    for i in [0...@nodes.length]
-
-      tree = @cellTracing.getTree( @ids[i] )
-
-      @nodesColorBuffers[i].clear()
-      for node in tree.nodes
-        if node.id == activeNodeId
-          @nodesColorBuffers[i].push( @invertHexToRGB( 0xffff00 ))
-        else
-          @nodesColorBuffers[i].push( @invertHexToRGB( 0xff0000 ))
-
-      @nodes[i].geometry.__colorArray = @nodesColorBuffers[i].getBuffer()
-      console.log @nodes[i].geometry.__colorArray
-      @nodes[i].geometry.colorsNeedUpdate = true
-
-      @updateGeometries( i )
-      @flycam.update()
+    @flycam.update()
 
 
-  getIndexFromTreeId : (treeId) ->
+  getAllNodes : ->
+
+    return (tree.nodes for tree in @treeGeometries)
+
+
+  getTreeGeometry : (treeId) ->
 
     unless treeId
       treeId = @cellTracing.getTree().treeId
-    for i in [0..@ids.length]
-      if @ids[i] == treeId
-        return i
+    for tree in @treeGeometries
+      if tree.id == treeId
+        return tree
     return null
 
 
@@ -445,9 +310,9 @@ class Skeleton
     for mesh in @getMeshes()
       if mesh != @activeNodeParticle
         mesh.visible = visible
-    index = @getIndexFromTreeId(@cellTracing.getTree().treeId)
-    @edges[index].visible = true
-    @nodes[index].visible = true
+    treeGeometry = @getTreeGeometry(@cellTracing.getTree().treeId)
+    treeGeometry.edges.visible = true
+    treeGeometry.nodes.visible = true
     @flycam.update()
     
 
@@ -474,24 +339,10 @@ class Skeleton
 
   setSizeAttenuation : (sizeAttenuation) ->
 
-    @mode = if sizeAttenuation then constants.MODE_ARBITRARY else constants.MODE_PLANE_TRACING
-    for particleSystem in @nodes
-      particleSystem.material.sizeAttenuation = sizeAttenuation
-      particleSystem.material.needsUpdate = true
+    for tree in @treeGeometries
+      tree.setSizeAttenuation( sizeAttenuation )
+
     @branches.material.sizeAttenuation = sizeAttenuation
     @branches.material.needsUpdate = true
     @activeNodeParticle.material.sizeAttenuation = sizeAttenuation
     @activeNodeParticle.material.needsUpdate = true
-  
-  updateGeometries: (index) ->
-
-    edges = @edges[index].geometry
-    nodes = @nodes[index].geometry
-
-    edges.__vertexArray = @edgesBuffers[index].getBuffer()
-    edges.__webglLineCount = @edgesBuffers[index].getLength() * 2
-    nodes.__vertexArray = @nodesBuffers[index].getBuffer()
-    nodes.__webglParticleCount =  @nodesBuffers[index].getLength()
-
-    edges.verticesNeedUpdate = true
-    nodes.verticesNeedUpdate = true

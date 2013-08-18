@@ -45,7 +45,10 @@ class Skeleton
     @branchesBuffer = new ResizableBuffer(3)
     @branchesColorsBuffer = new ResizableBuffer(3)
 
+    @reset()
+
     @updateBranches()
+    @updateNodes()
 
     @cellTracing.on
       newActiveNode : => 
@@ -59,11 +62,15 @@ class Skeleton
       mergeTree : (lastTreeID, lastNode, activeNode) => 
         @mergeTree(lastTreeID, lastNode, activeNode)
         @updateBranches()
+        @updateNodes()
       newNode : (centered) => @setWaypoint(centered)
       setBranch : (isBranchPoint, nodeID) => 
         @setBranchPoint(isBranchPoint, nodeID)
         @updateBranches()
-      deleteBranch : => @updateBranches()
+        @updateNodes()
+      deleteBranch : =>
+        @updateBranches()
+        @updateNodes()
       reloadTrees : (trees, finishedDeferred) =>
         @cellTracing.one("finishedRender", =>
           @cellTracing.one("finishedRender", =>
@@ -74,8 +81,6 @@ class Skeleton
 
     @model.user.on "particleSizeChanged", (particleSize) =>
       @setParticleSize(particleSize)
-
-    @reset()
 
 
   createNewTree : (treeId, treeColor) ->
@@ -99,9 +104,10 @@ class Skeleton
     @nodes.push(new THREE.ParticleSystem(
       nodeGeometry, 
       new THREE.ParticleBasicMaterial({
-        color: @darkenHex(treeColor), 
-        size: @model.user.particleSize, 
+        size: @model.user.particleSize,
+        vertexColors: true,
         sizeAttenuation : @mode == constants.MODE_ARBITRARY})))
+    @nodesColorBuffers.push( new ResizableBuffer(3) )
 
     @ids.push(treeId)
 
@@ -125,11 +131,12 @@ class Skeleton
         threeParticleSystem.geometry.dispose()
         threeParticleSystem.material.dispose()
 
-    @edges         = []
-    @nodes         = []
-    @ids           = []
-    @edgesBuffers  = []
-    @nodesBuffers  = []
+    @edges             = []
+    @nodes             = []
+    @ids               = []
+    @edgesBuffers      = []
+    @nodesBuffers      = []
+    @nodesColorBuffers = []
 
     for tree in @cellTracing.getTrees()
       @createNewTree(tree.treeId, tree.color)
@@ -167,6 +174,7 @@ class Skeleton
 
       @updateGeometries(index)
     @updateBranches()
+    @updateNodes()
 
     @setActiveNode()
 
@@ -190,6 +198,7 @@ class Skeleton
       @activeNodeParticle.position = new THREE.Vector3(position[0] + 0.02, position[1] + 0.02, position[2] - 0.02)
     else
       @activeNodeParticle.visible = false
+    @updateNodes()
     @flycam.update()
 
 
@@ -230,12 +239,13 @@ class Skeleton
     @edges[index].material.needsUpdate = true
 
     @updateBranches()
+    @updateNodes()
     @setActiveNode()
 
 
   getMeshes : =>
 
-    return [@activeNodeParticle].concat(@nodes).concat(@edges).concat(@branches)
+    return @nodes.concat(@edges).concat(@branches)
 
 
   setWaypoint : (centered) =>
@@ -380,6 +390,29 @@ class Skeleton
     @branches.geometry.verticesNeedUpdate = true
     @branches.geometry.colorsNeedUpdate = true
     @flycam.update()
+
+
+  updateNodes : ->
+
+    activeNodeId = @cellTracing.getActiveNodeId()
+
+    for i in [0...@nodes.length]
+
+      tree = @cellTracing.getTree( @ids[i] )
+
+      @nodesColorBuffers[i].clear()
+      for node in tree.nodes
+        if node.id == activeNodeId
+          @nodesColorBuffers[i].push( @invertHexToRGB( 0xffff00 ))
+        else
+          @nodesColorBuffers[i].push( @invertHexToRGB( 0xff0000 ))
+
+      @nodes[i].geometry.__colorArray = @nodesColorBuffers[i].getBuffer()
+      console.log @nodes[i].geometry.__colorArray
+      @nodes[i].geometry.colorsNeedUpdate = true
+
+      @updateGeometries( i )
+      @flycam.update()
 
 
   getIndexFromTreeId : (treeId) ->

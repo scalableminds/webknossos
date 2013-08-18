@@ -12,11 +12,11 @@ class GetMetaValues
       dimensions : "[]"
       rgba: "Uint8Array"
       segmentation: "Uint16Array" 
-    DESIRED_SLIDES_BEFORE_PROBLEM : "Number"
-    MIN_END_SEGMENTS_AT_FIRST_SLIDE : "Number"
-    DESIRED_SLIDES_AFTER_PROBLEM : "Number"
-    MIN_END_SEGMENTS_AT_LAST_SLIDE : "Number"
-    NO_START_SEGMENT_AT_LAST_SLIDE : "Boolean"
+    desiredSlidesBeforeProblem : "Number"
+    minEndSegmentsAtFirstSlide : "Number"
+    desiredSlidesAfterProblem : "Number"
+    minEndSegmentsAtLastSlide : "Number"
+    noStartSegmentAtLastSlide : "Boolean"
 
 
   PIXEL_SIZE : 11.3
@@ -27,20 +27,20 @@ class GetMetaValues
 
   execute : (options) ->
 
-    # DESIRED_SLIDES_BEFORE_PROBLEM
-    # MIN_END_SEGMENTS_AT_FIRST_SLIDE
-    # DESIRED_SLIDES_AFTER_PROBLEM
-    # MIN_END_SEGMENTS_AT_LAST_SLIDE
-    # NO_START_SEGMENT_AT_LAST_SLIDE
+    # desiredSlidesBeforeProblem
+    # minEndSegmentsAtFirstSlide
+    # desiredSlidesAfterProblem
+    # minEndSegmentsAtLastSlide
+    # noStartSegmentAtLastSlide
 
     { 
       input: { slidesBeforeProblem, slidesAfterProblem, mission, dimensions }
       exit
-      DESIRED_SLIDES_BEFORE_PROBLEM
-      MIN_END_SEGMENTS_AT_FIRST_SLIDE
-      DESIRED_SLIDES_AFTER_PROBLEM
-      MIN_END_SEGMENTS_AT_LAST_SLIDE
-      NO_START_SEGMENT_AT_LAST_SLIDE
+      desiredSlidesBeforeProblem
+      minEndSegmentsAtFirstSlide
+      desiredSlidesAfterProblem
+      minEndSegmentsAtLastSlide
+      noStartSegmentAtLastSlide
     } = options
 
 
@@ -49,28 +49,28 @@ class GetMetaValues
     @slidesBeforeProblem = slidesBeforeProblem
 
 
-    if DESIRED_SLIDES_BEFORE_PROBLEM?
-      desiredStartSlide = slidesBeforeProblem - DESIRED_SLIDES_BEFORE_PROBLEM
+    if desiredSlidesBeforeProblem?
+      desiredStartSlide = slidesBeforeProblem - desiredSlidesBeforeProblem
     else
       desiredStartSlide = 0
 
-    if MIN_END_SEGMENTS_AT_FIRST_SLIDE?
-      minEndSegmentsAtFirstSlide = MIN_END_SEGMENTS_AT_FIRST_SLIDE
+    if minEndSegmentsAtFirstSlide?
+      minEndSegmentsAtFirstSlide = minEndSegmentsAtFirstSlide
     else
       minEndSegmentsAtFirstSlide = 0
 
-    if DESIRED_SLIDES_AFTER_PROBLEM?
-      desiredEndSlide = slidesBeforeProblem + DESIRED_SLIDES_AFTER_PROBLEM
+    if desiredSlidesAfterProblem?
+      desiredEndSlide = slidesBeforeProblem + desiredSlidesAfterProblem
     else
       desiredEndSlide = slidesBeforeProblem + slidesAfterProblem
 
-    if MIN_END_SEGMENTS_AT_LAST_SLIDE?
-      minEndSegmentsAtLastSlide = MIN_END_SEGMENTS_AT_LAST_SLIDE
+    if minEndSegmentsAtLastSlide?
+      minEndSegmentsAtLastSlide = minEndSegmentsAtLastSlide
     else
       minEndSegmentsAtLastSlide = 0
 
-    if NO_START_SEGMENT_AT_LAST_SLIDE?
-      noStartSegmentAtLastSlide = NO_START_SEGMENT_AT_LAST_SLIDE
+    if noStartSegmentAtLastSlide?
+      noStartSegmentAtLastSlide = noStartSegmentAtLastSlide
     else
       noStartSegmentAtLastSlide = false      
 
@@ -84,7 +84,7 @@ class GetMetaValues
 
     # apply filters
 
-    # get StartSlide - apply DESIRED_SLIDES_BEFORE_PROBLEM and MIN_SEGMENTS_AT_FIRST_SLIDE
+    # get StartSlide - apply desiredSlidesBeforeProblem and MIN_SEGMENTS_AT_FIRST_SLIDE
 
     firstStartFrame = @nmToSlide(mission.start.firstFrame)
 

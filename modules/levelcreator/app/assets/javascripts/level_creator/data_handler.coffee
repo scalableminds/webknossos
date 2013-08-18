@@ -44,7 +44,7 @@ class DataHandler
 
 
   requestGray : ->
-
+    console.log @getBinaryDataUrl("color").url
     Request.send(
       _.extend(
         @getBinaryDataUrl("color")
@@ -58,7 +58,7 @@ class DataHandler
 
 
   requestSegmentation : ->
-
+    console.log @getBinaryDataUrl("segmentation").url
     Request.send(
       _.extend(
         @getBinaryDataUrl("segmentation")

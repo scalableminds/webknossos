@@ -1,6 +1,7 @@
 ### define 
 underscore : _
 libs/jenkins: Jenkins
+../data_utils : DataUtils
 ###
 
 class SegmentImporter
@@ -57,7 +58,7 @@ class SegmentImporter
 
     z = Math.round(z)
 
-    { segmentation } = input
+    { slidesBeforeProblem, slidesAfterProblem, segmentation } = input
 
     cacheSegments = @cache[z]
     if cacheSegments?
@@ -86,7 +87,7 @@ class SegmentImporter
     @setRandomColor(segments)
     @setRandomColor2(segments)
     @setRandomColor3(segments)
-    @setMissionDataToSegments(segments, input.mission)
+    @setMissionDataToSegments(segments, input.mission, slidesBeforeProblem)
 
 
     #for segment in segments
@@ -491,15 +492,22 @@ class SegmentImporter
 
 
 
-  setMissionDataToSegments: (segments, mission) ->
+  setMissionDataToSegments: (segments, mission, slidesBeforeProblem) ->
 
     for segment in segments
       es = _.find(mission.possibleEnds, (m) => m.id is segment.value)
       if es?
         segment.probability = es.probability
         segment.isEndSegment = true
+        segment.firstSlide = DataUtils.nmToSlide(es.firstFrame, slidesBeforeProblem)
+        segment.lastSlide = DataUtils.nmToSlide(es.lastFrame, slidesBeforeProblem)        
       else
         segment.isEndSegment = false
 
 
-      segment.isStartSegment = segment.value is mission.start.id
+      if segment.value is mission.start.id
+        segment.isStartSegment = true
+        segment.firstSlide = DataUtils.nmToSlide(mission.start.firstFrame, slidesBeforeProblem)
+        segment.lastSlide = DataUtils.nmToSlide(mission.start.lastFrame, slidesBeforeProblem)
+      else
+        segment.isStartSegment = false

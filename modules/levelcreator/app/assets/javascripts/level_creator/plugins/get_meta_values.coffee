@@ -1,4 +1,6 @@
-### define ###
+### define 
+../data_utils : DataUtils
+###
 
 class GetMetaValues
 
@@ -18,8 +20,6 @@ class GetMetaValues
     minEndSegmentsAtLastSlide : "Number"
     noStartSegmentAtLastSlide : "Boolean"
 
-
-  PIXEL_SIZE : 11.3
 
 
   constructor : () ->
@@ -86,15 +86,15 @@ class GetMetaValues
 
     # get StartSlide - apply desiredSlidesBeforeProblem and MIN_SEGMENTS_AT_FIRST_SLIDE
 
-    firstStartFrame = @nmToSlide(mission.start.firstFrame)
+    firstStartFrame = DataUtils.nmToSlide(mission.start.firstFrame, slidesBeforeProblem)
 
     searchStart = Math.max(firstStartFrame, desiredStartSlide)
 
 
     for i in [Math.floor(searchStart)...slidesBeforeProblem] by 1
       result = _.filter(mission.possibleEnds, (e) => 
-        #console.log @nmToSlide(e.firstFrame) + "  - " + i + " -  " + @nmToSlide(e.lastFrame)
-        @nmToSlide(e.firstFrame) < i < @nmToSlide(e.lastFrame) ).length
+        #console.log DataUtils.nmToSlide(e.firstFrame) + "  - " + i + " -  " + DataUtils.nmToSlide(e.lastFrame)
+        DataUtils.nmToSlide(e.firstFrame, slidesBeforeProblem) < i < DataUtils.nmToSlide(e.lastFrame, slidesBeforeProblem) ).length
       #console.log i + " " + result
       if result >= minEndSegmentsAtFirstSlide 
         startSlide = i
@@ -105,7 +105,7 @@ class GetMetaValues
 
 
     # get endSlide
-    lastStartFrame = @nmToSlide(mission.start.lastFrame)
+    lastStartFrame = DataUtils.nmToSlide(mission.start.lastFrame, slidesBeforeProblem)
 
     if noStartSegmentAtLastSlide
       searchEnd = Math.max(slidesBeforeProblem, lastStartFrame)
@@ -114,8 +114,8 @@ class GetMetaValues
 
     for i in [Math.floor(desiredEndSlide)...searchEnd] by -1
       result = _.filter(mission.possibleEnds, (e) => 
-        #console.log @nmToSlide(e.firstFrame) + "  - " + i + " -  " + @nmToSlide(e.lastFrame)
-        @nmToSlide(e.firstFrame) < i < @nmToSlide(e.lastFrame) ).length
+        #console.log DataUtils.nmToSlide(e.firstFrame) + "  - " + i + " -  " + DataUtils.nmToSlide(e.lastFrame)
+        DataUtils.nmToSlide(e.firstFrame, slidesBeforeProblem) < i < DataUtils.nmToSlide(e.lastFrame, slidesBeforeProblem) ).length
       #console.log i + " " + result
       if result >= minEndSegmentsAtLastSlide 
         endSlide = i
@@ -139,6 +139,4 @@ class GetMetaValues
     keyValues
 
 
-  nmToSlide : (nm) ->
-    
-    (nm / @PIXEL_SIZE) + @slidesBeforeProblem    
+  

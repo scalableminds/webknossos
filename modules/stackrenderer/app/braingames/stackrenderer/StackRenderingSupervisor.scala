@@ -108,7 +108,7 @@ class StackRenderingSupervisor extends Actor {
       reportFinishedWork(stack, downloadUrls)
 
     case EnsureWork() =>
-      Logger.debug("Ensuring work")
+      Logger.trace("Ensuring work")
       ensureEnoughWork
       context.system.scheduler.scheduleOnce(1 second) {
         self ! EnsureWork()

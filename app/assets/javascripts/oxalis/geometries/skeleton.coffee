@@ -25,15 +25,6 @@ class Skeleton
 
     @showInactiveTrees = true
 
-    activeNodeGeometry = new THREE.Geometry()
-    @activeNodeParticle = new THREE.ParticleSystem(
-      activeNodeGeometry,
-      new THREE.ParticleBasicMaterial({
-        color: @COLOR_ACTIVE, 
-        size: 5, 
-        sizeAttenuation : false}))
-    activeNodeGeometry.vertices.push(new THREE.Vector3(0, 0, 0))
-
     branchPointsGeometry = new THREE.Geometry()
     branchPointsGeometry.dynamic = true
     @branches = new THREE.ParticleSystem(
@@ -52,7 +43,7 @@ class Skeleton
 
     @cellTracing.on
       newActiveNode : => 
-        @setActiveNode()
+        @updateNodes()
         @setInactiveTreeVisibility(@showInactiveTrees)
       newTree : (treeId, treeColor) => 
         @createNewTree(treeId, treeColor)
@@ -86,7 +77,7 @@ class Skeleton
   createNewTree : (treeId, treeColor) ->
     
     @treeGeometries.push( tree = new Tree(treeId, @darkenHex( treeColor ), @model) )
-    @setActiveNode()
+    @updateNodes()
     @trigger "newGeometries", tree.getMeshes()
 
 
@@ -122,30 +113,10 @@ class Skeleton
       treeGeometry.addNodes( tree.nodes )
 
     @updateBranches()
-    @setActiveNode()
+    @updateNodes()
 
     if finishedDeferred?
       finishedDeferred.resolve()
-
-
-  setActiveNode : =>
-
-    id = @cellTracing.getActiveNodeId()
-    position = @cellTracing.getActiveNodePos()
-    # May be null
-    @lastNodePosition = position
-    if position
-      @activeNodeParticle.visible = true
-      if @cellTracing.getActiveNodeType() == constants.TYPE_BRANCH
-        @activeNodeParticle.material.color.setHex(@invertHex(@cellTracing.getTree().color))
-      else
-        @activeNodeParticle.material.color.setHex(@cellTracing.getTree().color)
-
-      @activeNodeParticle.position = new THREE.Vector3(position[0] + 0.02, position[1] + 0.02, position[2] - 0.02)
-    else
-      @activeNodeParticle.visible = false
-    @updateNodes()
-    @flycam.update()
 
 
   setBranchPoint : (isBranchPoint, nodeID) ->
@@ -156,8 +127,8 @@ class Skeleton
     else 
       colorActive = treeColor
     
-    if not nodeID? or nodeID == @cellTracing.getActiveNodeId()
-      @activeNodeParticle.material.color.setHex(colorActive)
+    #if not nodeID? or nodeID == @cellTracing.getActiveNodeId()
+    #  @activeNodeParticle.material.color.setHex(colorActive)
     @flycam.update()
 
 
@@ -166,7 +137,6 @@ class Skeleton
     for tree in @treeGeometries
       tree.setSize( size )
     @branches.material.size = size
-    @activeNodeParticle.material.size = size
     @flycam.update()
 
 
@@ -181,7 +151,6 @@ class Skeleton
 
     @updateBranches()
     @updateNodes()
-    @setActiveNode()
 
 
   getMeshes : =>
@@ -207,7 +176,7 @@ class Skeleton
         @flycam.setPosition [@globalPosX, @globalPosY, @globalPosZ]
       @waypointAnimation.start()
   
-      @setActiveNode()
+      @updateNodes()
 
     @flycam.update()
 
@@ -220,7 +189,7 @@ class Skeleton
     treeGeometry = @getTreeGeometry(treeId)
     treeGeometry.deleteNode(node)
 
-    @setActiveNode()
+    @updateNodes()
     @flycam.update()
 
 
@@ -242,7 +211,7 @@ class Skeleton
     treeGeometry.dispose()
     @treeGeometries.splice(index, 1)
 
-    @setActiveNode()
+    @updateNodes()
     @flycam.update()
 
 
@@ -294,8 +263,7 @@ class Skeleton
 
     for mesh in @getMeshes()
       mesh.visible = isVisible
-    if isVisible
-      @setActiveNode()
+    @updateNodes()
     @flycam.update()
 
 
@@ -308,8 +276,7 @@ class Skeleton
   setInactiveTreeVisibility : (visible) ->
 
     for mesh in @getMeshes()
-      if mesh != @activeNodeParticle
-        mesh.visible = visible
+      mesh.visible = visible
     treeGeometry = @getTreeGeometry(@cellTracing.getTree().treeId)
     treeGeometry.edges.visible = true
     treeGeometry.nodes.visible = true
@@ -344,5 +311,3 @@ class Skeleton
 
     @branches.material.sizeAttenuation = sizeAttenuation
     @branches.material.needsUpdate = true
-    @activeNodeParticle.material.sizeAttenuation = sizeAttenuation
-    @activeNodeParticle.material.needsUpdate = true

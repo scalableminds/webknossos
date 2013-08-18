@@ -103,6 +103,30 @@ class CellTracing
 
     @stateLogger.pushNow()
 
+    
+  benchmark : (numberOfNodes = 10000) ->
+
+    console.log "[benchmark] start inserting #{numberOfNodes} nodes"
+    startTime = (new Date()).getTime()
+    @createNewTree()
+    for i in [0..numberOfNodes]
+      pos = [Math.random() * 1000, Math.random() * 1000, Math.random() * 1000]
+      point = new TracePoint(@TYPE_USUAL, @idCount++, pos, null, null, @activeTree.treeId)
+      @activeTree.nodes.push(point)
+      if @activeNode
+        @activeNode.appendNext(point)
+        point.appendNext(@activeNode)
+        @activeNode = point
+      else
+        @activeNode = point
+        point.type = @TYPE_BRANCH
+        if @branchPointsAllowed
+          centered = true
+          @pushBranch()
+      @doubleBranchPop = false
+    @trigger "reloadTrees"
+    console.log "[benchmark] done. Took me #{((new Date()).getTime() - startTime) / 1000} seconds."
+
 
   pushBranch : ->
 

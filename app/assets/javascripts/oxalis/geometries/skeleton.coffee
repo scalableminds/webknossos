@@ -23,7 +23,6 @@ class Skeleton
     @cellTracing    = @model.cellTracing
     @treeGeometries = []
 
-    #initial mode
     @showInactiveTrees = true
 
     activeNodeGeometry = new THREE.Geometry()
@@ -85,7 +84,7 @@ class Skeleton
 
     @setActiveNode()
 
-    @trigger "newGeometries", tree.getGeometries()
+    @trigger "newGeometries", tree.getMeshes()
 
 
   # Will completely reload the trees from model.
@@ -94,8 +93,10 @@ class Skeleton
   reset : ->
 
     for tree in @treeGeometries
-      @trigger "removeGeometries", tree.getGeometries()
+      @trigger "removeGeometries", tree.getMeshes()
       tree.dispose()
+
+    @treeGeometries = []
 
     for tree in @cellTracing.getTrees()
       @createNewTree(tree.treeId, tree.color)
@@ -113,14 +114,12 @@ class Skeleton
 
     for tree in trees
 
-      nodeList = tree.nodes
       treeGeometry = @getTreeGeometry(tree.treeId)
 
       treeGeometry.clear()
-      treeGeometry.addNodesAndEdges( nodeList )
+      treeGeometry.addNodes( tree.nodes )
 
     @updateBranches()
-
     @setActiveNode()
 
     if finishedDeferred?
@@ -183,9 +182,10 @@ class Skeleton
 
   getMeshes : =>
 
-    return [@activeNodeParticle].concat(tree.nodes for tree in @treeGeometries)
-      .concat(tree.edges for tree in @treeGeometries).concat(@branches)
-
+    meshes = [@activeNodeParticle].concat(@branches)
+    for tree in @treeGeometries
+      meshes = meshes.concat( tree.getMeshes() )
+    return meshes
 
   setWaypoint : (centered) =>
 
@@ -225,7 +225,7 @@ class Skeleton
     lastTree   = @getTreeGeometry(lastTreeID)
     activeTree = @getTreeGeometry(@cellTracing.getTree().treeId)
 
-    activeTree.mergeTree(lastTree, lastNode activeNode)
+    activeTree.mergeTree(lastTree, lastNode, activeNode)
 
     @flycam.update()
 
@@ -234,7 +234,7 @@ class Skeleton
 
     treeGeometry = @treeGeometries[index]
 
-    @trigger "removeGeometries", treeGeometry.getGeometries()
+    @trigger "removeGeometries", treeGeometry.getMeshes()
     treeGeometry.dispose()
     @treeGeometries.splice(index, 1)
 

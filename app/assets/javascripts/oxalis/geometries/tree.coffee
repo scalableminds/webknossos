@@ -29,9 +29,6 @@ class Tree
         size: @model.user.particleSize, 
         sizeAttenuation : false}))
 
-    @edges.__abc = true
-    @nodes.__abc = true
-
     @id = treeId
 
 
@@ -62,7 +59,7 @@ class Tree
     @updateGeometries()
 
 
-  addNodesAndEdges : (nodeList) ->
+  addNodes : (nodeList) ->
 
     for node in nodeList
       @addNode( node )
@@ -70,9 +67,9 @@ class Tree
 
   deleteNode : (node) ->
 
-    nodeIds  = @nodes.geometry.nodeIDs
+    nodeIDs  = @nodes.geometry.nodeIDs
 
-    swapLast = (array, index) ->
+    swapLast = (array, index) =>
       lastElement = array.pop()
       for i in [0..array.elementLength]
         @nodesBuffer.getAllElements()[index * array.elementLength + i] = lastElement[i]
@@ -111,10 +108,10 @@ class Tree
       @[property].pushSubarray(otherTree[property].getAllElements())
 
     # merge IDs, nodes and edges
-    merge("nodes.geometry.nodeIDs")
+    @nodes.geometry.nodeIDs.pushSubarray(otherTree.nodes.geometry.nodeIDs.getAllElements())
     merge("nodesBuffer")
     merge("edgesBuffer")
-    @edgesBuffer.push( @getEdgeArray(lastNode.id, activeNode.id) )
+    @edgesBuffer.push( @getEdgeArray(lastNode, activeNode) )
 
     @updateGeometries()
 
@@ -149,25 +146,25 @@ class Tree
     @updateGeometries()
 
 
-  getGeometries : ->
+  getMeshes : ->
 
     return [ @edges, @nodes ]
   
 
   updateGeometries: ->
 
-    @edges.__vertexArray        = @edgesBuffer.getBuffer()
-    @edges.__webglLineCount     = @edgesBuffer.getLength() * 2
-    @nodes.__vertexArray        = @nodesBuffer.getBuffer()
-    @nodes.__webglParticleCount =  @nodesBuffer.getLength()
+    @edges.geometry.__vertexArray        = @edgesBuffer.getBuffer()
+    @edges.geometry.__webglLineCount     = @edgesBuffer.getLength() * 2
+    @nodes.geometry.__vertexArray        = @nodesBuffer.getBuffer()
+    @nodes.geometry.__webglParticleCount = @nodesBuffer.getLength()
 
-    @edges.verticesNeedUpdate   = true
-    @nodes.verticesNeedUpdate   = true
+    @edges.geometry.verticesNeedUpdate   = true
+    @nodes.geometry.verticesNeedUpdate   = true
 
 
   dispose : ->
 
-    for geometry in @getGeometries()
+    for geometry in @getMeshes()
 
       geometry.geometry.dispose()
       geometry.material.dispose()

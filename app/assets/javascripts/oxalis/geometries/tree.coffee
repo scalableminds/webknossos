@@ -38,7 +38,7 @@ class Tree
 
     @nodesBuffer.clear()
     @edgesBuffer.clear()
-    @nodes.geometry.nodeIDs.clear()
+    @nodeIDs.clear()
 
 
   isEmpty : ->
@@ -49,7 +49,7 @@ class Tree
   addNode : (node) ->
 
     @nodesBuffer.push(node.pos)
-    @nodes.geometry.nodeIDs.push([node.id])
+    @nodeIDs.push([node.id])
 
     # Add any edge from smaller IDs to the node
     # ASSUMPTION: if this node is new, it should have a
@@ -69,21 +69,19 @@ class Tree
 
   deleteNode : (node) ->
 
-    nodeIDs  = @nodes.geometry.nodeIDs
-
     swapLast = (array, index) =>
       lastElement = array.pop()
       for i in [0..array.elementLength]
         @nodesBuffer.getAllElements()[index * array.elementLength + i] = lastElement[i]
 
     # Find index
-    for i in [0...nodeIDs.getLength()]
-      if nodeIDs.get(i) == node.id
+    for i in [0...@nodeIDs.getLength()]
+      if @nodeIDs.get(i) == node.id
         nodesIndex = i
         break
 
     # swap IDs and nodes
-    swapLast( nodeIDs, nodesIndex )
+    swapLast( @nodeIDs, nodesIndex )
     swapLast( @nodesBuffer, nodesIndex )
 
     # Delete Edge by finding it in the array
@@ -110,7 +108,7 @@ class Tree
       @[property].pushSubarray(otherTree[property].getAllElements())
 
     # merge IDs, nodes and edges
-    @nodes.geometry.nodeIDs.pushSubarray(otherTree.nodes.geometry.nodeIDs.getAllElements())
+    merge("nodeIDs")
     merge("nodesBuffer")
     merge("edgesBuffer")
     @edgesBuffer.push( @getEdgeArray(lastNode, activeNode) )

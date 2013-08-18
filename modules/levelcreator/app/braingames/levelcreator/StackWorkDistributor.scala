@@ -10,23 +10,30 @@ import models.knowledge._
 import play.api.libs.iteratee._
 import braingames.reactivemongo.GlobalDBAccess
 import scala.Some
-import models.knowledge.Mission
-import models.knowledge.MissionInfo
 import braingames.mvc.BoxImplicits
 import net.liftweb.common.Failure
 import reactivemongo.bson.BSONObjectID
+import models.knowledge.StackInProgress
+import scala.Some
+import models.knowledge.QueuedStack
+import models.knowledge.Game
+import models.knowledge.RenderedStack
+import models.knowledge.Mission
+import models.knowledge.MissionInfo
+import play.api.i18n.Messages
+import scala.concurrent.Future
 
-case class CreateStack(stack: Stack)
+//case class CreateStack(stack: Stack)
 
 case class CreateRandomStacks(level: Level, n: Int)
 
-case class CreateStacks(stacks: Seq[Stack])
+//case class CreateStacks(stacks: Seq[Stack])
 
 case class RequestWork(rendererId: String)
 
 case class FinishedWork(key: String, downloadUrls: List[String])
 
-case class FailedWork(key: String)
+case class FailedWork(key: String, reason: String)
 
 case object CountActiveRenderers
 
@@ -42,14 +49,71 @@ case object UpdateWorkQueue
 case object CheckStacksInProgress
 
 
+object DistributionStrategy {
+  type DistributionFunktion = ((Seq[QueuedStack], Mission) => Option[Level])
+}
+
 trait DistributionStrategy {
-  def distribute(levels: List[Level])(mission: Mission): Option[Level]
+
+  import DistributionStrategy._
+
+  def distributeOver(games: List[Game], levels: List[Level], inProgress: List[StackInProgress], queued: Vector[QueuedStack]): DistributionFunktion
 }
 
 object DefaultDistributionStrategy extends DistributionStrategy {
-  def distribute(levels: List[Level])(mission: Mission): Option[Level] = {
-    // TODO: Implement
-    None
+
+  import DistributionStrategy._
+
+  def distributeOver(games: List[Game], levels: List[Level], inProgress: List[StackInProgress], queued: Vector[QueuedStack]): DistributionFunktion = {
+    def renderedPerGame =
+      levels.groupBy(_.game).mapValues(_.map(_.numberOfActiveStacks).sum)
+
+    def calculateQueuedPerGame(queue: Seq[QueuedStack]) = {
+      queued.map(_.stack.level).groupBy(_.game).mapValues(_.size)
+    }
+
+    def plannedPerGame = {
+      val inProgressPerGame = inProgress.map(_.levelId).flatMap {
+        levelId =>
+          levels.find(_.levelId == levelId)
+      }.groupBy(_.game).mapValues(_.size)
+
+      val queuedPerGame = calculateQueuedPerGame(queued)
+
+      mergeMaps(inProgressPerGame, queuedPerGame)
+    }
+
+    def mergeMaps(m1: Map[String, Int], m2: Map[String, Int]) =
+      m1 ++ m2.map {
+        case (k, v) => k -> (v + m1.getOrElse(k, 0))
+      }
+
+    val initialRenderedPerGame =
+      mergeMaps(renderedPerGame, plannedPerGame)
+
+    def distributor(proposedForQueue: Seq[QueuedStack], mission: Mission): Option[Level] = {
+      val renderedPerGame = mergeMaps(initialRenderedPerGame, calculateQueuedPerGame(proposedForQueue))
+
+      val currentQueue = queued ++ proposedForQueue
+
+      val renderStatus = mission.missionStatus.renderStatus
+      val excludedLevels =
+        renderStatus.abortedFor.map(_.levelId) ++
+          renderStatus.renderedFor ++
+          inProgress.filter(_._mission == mission._id).map(_.levelId) ++
+          currentQueue.filter(_.stack.mission._id == mission._id).map(_.stack.level.levelId)
+
+      Logger.trace("Excluding" + excludedLevels.mkString(" , "))
+
+      //Logger.debug("Distribute called")
+      val filteredLevels = levels.filterNot(l => excludedLevels.contains(l.levelId))
+
+      val ranked = filteredLevels.sortBy(l => renderedPerGame.get(l.game).getOrElse(0))
+
+      ranked.headOption
+    }
+
+    distributor _
   }
 }
 
@@ -88,10 +152,10 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
     (conf.getInt("levelcreator.renderWorkQueue.inProgressCheckIntervallInMinutes") getOrElse 1) minutes
 
   val minWorkQueueSize =
-    conf.getInt("levelcreator.renderWorkQueue.minSize").getOrElse(20)
+    conf.getInt("levelcreator.renderWorkQueue.minSize").getOrElse(2)
 
   val maxWorkQueueSize =
-    conf.getInt("levelcreator.renderWorkQueue.maxSize").getOrElse(50)
+    conf.getInt("levelcreator.renderWorkQueue.maxSize").getOrElse(5)
 
   val minWorkQueueUpdateInterval =
     conf.getInt("levelcreator.renderWorkQueue.minUpdateIntervalInSec").getOrElse(1) seconds
@@ -101,20 +165,25 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
 
   val workQueueUpdateInterval = Agent[FiniteDuration](minWorkQueueUpdateInterval)
 
-  val workQueue = Agent[List[QueuedStack]](Nil)
+  val workQueue = Agent[Vector[QueuedStack]](Vector.empty)
 
+  def enQueue(q: QueuedStack) {
+    workQueue.send(_ :+ q)
+  }
 
+  def enQueue(q: Vector[QueuedStack]) {
+    workQueue.send(_ ++ q)
+  }
+
+  def deQueue(q: QueuedStack) {
+    workQueue.send(_ :+ q)
+  }
 
   override def preStart() {
     Logger.info("StackWorkDistributor started")
     scheduleNextWorkQueueUpdate(true)
     sys.scheduler.schedule(10 seconds, inProgressCheckIntervall, self, CheckStacksInProgress)
   }
-
-  /*def createStack(stack: Stack) = {
-    StacksQueued.remove(stack.level, stack.mission)
-    StacksQueued.insert(stack)
-  } */
 
   def workQueueRunsEmpty =
     workQueue().size < minWorkQueueSize
@@ -129,6 +198,7 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
     val d = workQueueUpdateInterval()
     workQueueUpdateInterval.send {
       duration =>
+        Logger.debug("slowing down to : " + duration)
         if (duration * 2 < maxWorkQueueUpdateInterval)
           duration * 2
         else
@@ -158,15 +228,19 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
     context.system.scheduler.scheduleOnce(duration, self, UpdateWorkQueue)
   }
 
-  def stackWorkGenerator(maxNumber: Int, distributionStrategy: Mission => Option[Level]) = {
+  def stackWorkGenerator(maxNumber: Int, distributionStrategy: DistributionStrategy.DistributionFunktion) = {
     def Cons = Cont[Mission, Vector[QueuedStack]] _
+    var x = 0
+    var y = 0
     def step(queued: Vector[QueuedStack])(input: Input[Mission]): Iteratee[Mission, Vector[QueuedStack]] = input match {
       case Input.El(mission) if queued.size < maxNumber =>
-        distributionStrategy(mission) match {
+        distributionStrategy(queued, mission) match {
           case Some(level) =>
             val stack = QueuedStack(Stack(level, mission))
+            x += 1
             Cons(i => step(queued :+ stack)(i))
           case _ =>
+            y += 1
             Cons(i => step(queued)(i))
         }
       case _ =>
@@ -175,43 +249,69 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
     Cons(i => step(Vector.empty)(i))
   }
 
-  def generateWork = {
-    for {
-      levels <- LevelDAO.findActiveAutoRender()
-    } {
-      val missions = MissionDAO.findLeastRendered()
-      val max = maxWorkToGenerate
-      missions.run(stackWorkGenerator(max, distributionStrategy.distribute(levels: List[Level]))).map {
-        queued =>
-          workQueue.send(q => q ++ queued)
-          scheduleNextWorkQueueUpdate(shouldSpeedUp = queued.size < max)
+  def distributeMissions(missions: Enumerator[Mission], games: List[Game], levels: List[Level], max: Int) = {
+    if (games.isEmpty || levels.isEmpty || max == 0)
+      Future.successful(0)
+    else
+      StackInProgressDAO.findAll.flatMap {
+        inProgress =>
+          Logger.trace("Distributing between Levels: " + levels.size)
+          val queued = workQueue()
+          val distributor = distributionStrategy.distributeOver(games, levels, inProgress, queued)
+          missions.run(stackWorkGenerator(max, distributor)).map {
+            queued =>
+              enQueue(queued)
+              queued.size
+          }
       }
+  }
+
+  def generateWork: Future[Boolean] = {
+    for {
+      games <- GameDAO.findAll
+      levels <- LevelDAO.findAutoRenderLevels()
+      max = maxWorkToGenerate
+      missions = MissionDAO.findLeastRenderedUnFinished()
+      numberOfEnqueued <- distributeMissions(missions, games, levels, max)
+    } yield {
+      Logger.debug(s"Enqueued $numberOfEnqueued stacks")
+      numberOfEnqueued == max
     }
   }
 
   def receive = {
-    case CreateRandomStacks(l, n) =>
-    /*Level.findOneById(l._id).map {
-      level =>
-        val renderedStacks = RenderedStack.findFor(level.levelId).map(_.id)
-        Mission.findByDataSetName(level.dataSetName)
-          .filter(m =>
-          StacksQueued.find(level, m).isEmpty &&
-            StacksInProgress.find(level, m).isEmpty &&
-            !renderedStacks.contains(m.id))
-          .take(n)
-          .map(m => createStack(Stack(level, m)))
-    }*/
+    case CreateRandomStacks(l, max) =>
+      for {
+        games <- GameDAO.findAll
+        levelOpt <- LevelDAO.findOneById(l._id)
+      } {
+        levelOpt match {
+          case Some(level) =>
+            val missions = MissionDAO.findNotRenderedFor(level.id)
+            distributeMissions(missions, games, List(level), max).map {
+              numberOfEnqueued =>
+                Logger.debug(s"Enqueued $numberOfEnqueued stacks for " + level.levelId)
 
-    case CreateStack(stack) =>
+            }
+          case _ =>
+            Logger.warn("CreateRandomStacks for unknown level called! Level: " + l.id)
+        }
+      }
+
+    //case CreateStack(stack) =>
     //createStack(stack)
 
-    case CreateStacks(stacks) =>
+    //case CreateStacks(stacks) =>
     //stacks.map(createStack)
 
     case UpdateWorkQueue =>
-      if (workQueueRunsEmpty)
-        generateWork
+      val shouldSpeedUp =
+        if (workQueueRunsEmpty)
+          generateWork
+        else
+          Future.successful(false)
+
+      shouldSpeedUp.map(scheduleNextWorkQueueUpdate)
 
     case CheckStacksInProgress =>
       deleteInactiveRenderers()
@@ -224,8 +324,8 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
     case FinishedWork(key, downloadUrls) =>
       handleFinishedWork(key, downloadUrls)
 
-    case FailedWork(key) =>
-      handleFailedWork(key)
+    case FailedWork(key, reason) =>
+      handleFailedWork(key, reason)
 
     case CountActiveRenderers =>
       sender ! numberOfWorkingRenderers
@@ -241,38 +341,55 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
       level <- challenge.level ?~> "Level not found"
       mission <- challenge.mission ?~> "Mission not found"
     } yield {
+      Logger.debug(s"FINISHED stack work. Level: ${challenge.levelId} Mission: ${mission.stringify}")
+
       val missionInfo = MissionInfo(mission._id, mission.key, mission.possibleEnds)
-      RenderedStackDAO.updateOrCreate(RenderedStack(level.levelId, missionInfo, downloadUrls))
-      Logger.debug(s"Finished work of $key. Challenge: ${challenge.id} Level: ${challenge._level.toString} Mission: ${challenge._mission.toString}")
-      StackInProgressDAO.removeById(challenge.id)
+
+      RenderedStackDAO.updateOrCreate(
+        RenderedStack(level.levelId, missionInfo, downloadUrls, !mission.isFinished))
+
+      MissionDAO.successfullyRendered(level, mission)
+
+      if (!mission.isFinished)
+        LevelDAO.increaseNumberOfActiveStacks(level)
+
+      StackInProgressDAO.removeById(challenge._id)
     }) map {
       case f: Failure =>
-        Logger.error(s"Handle Finished work failed: ${f.msg}")
+        Logger.error(s"Handle Finished work FAILED: ${f.msg}")
       case _ =>
     }
   }
 
   def handleWorkRequest(requester: ActorRef): Unit = {
     workQueue.send(_ match {
-      case head :: tail =>
+      case (head: QueuedStack) +: tail =>
         val challenge = StackInProgress(head.stack.id, head.stack.level.levelId, head.stack.mission._id)
         StackInProgressDAO.insert(challenge)
         requester ! Some(head.stack)
         tail
       case _ =>
         requester ! None
-        Nil
+        Vector.empty
     })
   }
 
-  def handleFailedWork(key: String) = {
-    BSONObjectID.parse(key).map{_ =>
-      Logger.error(s"Renderer reported failed Work: $key")
-    }
-  }
+  def handleFailedWork(key: String, reason: String) = {
+    (for {
+      challenge <- StackInProgressDAO.findOneByKey(key) ?~> "Challenge not found"
+      level <- challenge.level ?~> "Level not found"
+      mission <- challenge.mission ?~> "Mission not found"
+    } yield {
+      Logger.warn(s"FAILED stack work. Level: ${challenge.levelId} Mission: ${mission.stringify}")
 
-  def addToWorkQueue(stack: Stack) = {
-    // TODO
+      MissionDAO.failedToRender(level, mission, reason)
+
+      StackInProgressDAO.removeById(challenge._id)
+    }) map {
+      case f: Failure =>
+        Logger.error(s"Handle failed work FAILED: ${f.msg}")
+      case _ =>
+    }
   }
 
   def deleteInactiveStacksInProgress() = {
@@ -282,13 +399,13 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
       level <- expired.level
       mission <- expired.mission
     } {
-      (level, mission) match{
+      (level, mission) match {
         case (Some(l), Some(m)) =>
-          addToWorkQueue(Stack(l, m))
+          enQueue(QueuedStack(Stack(l, m)))
         case _ =>
       }
       StackInProgressDAO.removeById(expired.id)
-      Logger.warn(s"Stack was not completed! Challenge: ${expired._id} Level: ${expired._level.toString} Mission: ${expired._mission.stringify}")
+      Logger.warn(s"INCOMPLETE stack work. Level: ${expired.levelId} Mission: ${mission.map(_.stringify)}")
     }
   }
 

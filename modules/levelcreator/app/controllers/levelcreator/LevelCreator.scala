@@ -24,6 +24,7 @@ import akka.pattern.ask
 import scala.concurrent.duration._
 import braingames.levelcreator.{QueueStatus, QueueStatusRequest, StackWorkDistributor}
 import akka.util.Timeout
+import net.liftweb.common.Full
 
 object LevelCreator extends LevelCreatorController with GlobalDBAccess {
 
@@ -32,6 +33,7 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
   val levelForm = Form(
     mapping(
       "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
+      "game" -> nonEmptyText,
       "width" -> number,
       "height" -> number,
       "slides before problem" -> number,
@@ -132,22 +134,16 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
         levelForm.bindFromRequest.fold(
           formWithErrors =>
             generateLevelList(formWithErrors).map(BadRequest.apply[Html]), //((taskCreateHTML(taskFromTracingForm, formWithErrors)), {
-          t =>
-            for {
-              dataSetOpt <- DataSetDAO.findOneByName(t.dataSetName)
-              existingLevelWithSameName <- LevelDAO.findOneByName(t.levelId.name)
+          t => {
+            (for {
+              dataSet <- DataSetDAO.findOneByName(t.dataSetName) ?~> Messages("dataSet.notFound")
+              game <- GameDAO.findOneByName(t.game) ?~> Messages("game.notFound")
+              existingLevelWithSameName <- LevelDAO.createLevel(t) ?~> Messages("level.create.failed")
               form <- generateLevelList(levelForm)
             } yield {
-              (dataSetOpt, existingLevelWithSameName) match {
-                case (Some(dataSet), None) =>
-                  LevelDAO.insert(t)
-                  Ok(form)
-                case (_, Some(_)) =>
-                  BadRequest(form).flashing("error" -> Messages("level.invalidName"))
-                case _ =>
-                  BadRequest(form).flashing("error" -> Messages("dataSet.notFound"))
-              }
-            }
+              Ok(form)
+            }).map(s => s)
+          }
         )
       }
   }
@@ -178,25 +174,26 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
       }
   }
 
-  def setAsActiveVersion(levelId: String) = ActionWithValidLevel(levelId) {
+  def updateRenderSettings(levelId: String) = ActionWithValidLevel(levelId, parser = parse.json) {
     implicit request =>
       Async {
-        LevelDAO.setAsActiveVersion(request.level).map {
-          _ =>
-            JsonOk(Messages("level.render.setAsActiveVersion"))
-        }
-      }
-  }
-
-  def autoRender(levelId: String, isEnabled: Boolean) = ActionWithValidLevel(levelId) {
-    implicit request =>
-      Async {
-        LevelDAO.updateAutorenderStatus(request.level, shouldAutorender = isEnabled).map {
-          _ =>
-            if (isEnabled)
-              JsonOk(Messages("level.render.autoRenderEnabled"))
+        for {
+          settings <- request.body.asOpt[RenderSettings] ?~> Messages("level.render.invalidSettings")
+          _ <- LevelDAO.updateRenderSettings(request.level, settings)
+        } yield {
+          val shippingMessage =
+            if (settings.shouldAutoRender)
+              Messages("level.render.shippingActive")
             else
-              JsonOk(Messages("level.render.autoRenderDisabled"))
+              Messages("level.render.shippingInactive")
+
+          val autoRenderMessage =
+            if (settings.shouldAutoRender)
+              Messages("level.render.autoRenderActive")
+            else
+              Messages("level.render.autoRenderInactive")
+
+          JsonOk(shippingMessage + " " + autoRenderMessage)
         }
       }
   }
@@ -206,12 +203,13 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
       rendererCount =>
         for {
           dataSets <- DataSetDAO.findWithTyp("segmentation")(ctx)
+          games <- GameDAO.findAll(ctx)
           levels <- LevelDAO.findAllLatest
           stacksInQueue <- requestQueueStatus()
           rendered <- RenderedStackDAO.countAll(levels)
-          stacksInGeneration <- StackInProgressDAO.findAll.map(_.groupBy(_._level.name).mapValues(_.size))
+          stacksInGeneration <- StackInProgressDAO.findAll.map(_.groupBy(_.levelId.name).mapValues(_.size))
         } yield {
-          html.levelcreator.levelList(levels, levelForm, dataSets, rendered, stacksInQueue, stacksInGeneration, rendererCount)
+          html.levelcreator.levelList(levels, levelForm, dataSets, games, rendered, stacksInQueue, stacksInGeneration, rendererCount)
         }
     }
   }

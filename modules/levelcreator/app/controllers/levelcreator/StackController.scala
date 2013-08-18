@@ -64,10 +64,10 @@ object StackController extends LevelCreatorController {
       JsonOk(Messages("level.stack.removedAll"))
   }
 
-  def create(level: Level, missions: Seq[Mission]) = {
+  /*def create(level: Level, missions: Seq[Mission]) = {
     stackWorkDistributor ! CreateStacks(missions.map(m => Stack(level, m)))
     JsonOk("Creation is in progress.")
-  }
+  } */
 
   def create(level: Level, num: Int) = {
     stackWorkDistributor ! CreateRandomStacks(level, num)
@@ -79,18 +79,7 @@ object StackController extends LevelCreatorController {
       create(request.level, count)
   }
 
-  def produceAll(levelId: String) = ActionWithValidLevel(levelId) {
-    implicit request =>
-      Async {
-        for {
-          missions <- MissionDAO.findByDataSetName(request.level.dataSetName)
-        } yield {
-          create(request.level, missions)
-        }
-      }
-  }
-
-  def produceBulk(levelId: String) = ActionWithValidLevel(levelId, parse.urlFormEncoded) {
+  /*def produceBulk(levelId: String) = ActionWithValidLevel(levelId, parse.urlFormEncoded) {
     implicit request =>
       Async {
         for {
@@ -100,6 +89,5 @@ object StackController extends LevelCreatorController {
           create(request.level, missions.flatten)
         }
       }
-  }
-
+  } */
 }

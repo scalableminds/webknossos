@@ -1,4 +1,4 @@
-@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[braingames.binary.models.DataSet], rendered: Map[String, Int], stacksInQueue: Map[String, Int], stacksInGeneration: Map[String, Int], activeRenderers: Option[Int])(implicit request: RequestHeader)
+@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[braingames.binary.models.DataSet], games: List[models.knowledge.Game], rendered: Map[String, Int], stacksInQueue: Map[String, Int], stacksInGeneration: Map[String, Int], activeRenderers: Option[Int])(implicit request: RequestHeader)
 
 @import views.BootstrapHelpers.bootsrapFields
 
@@ -11,6 +11,7 @@
     <div class="well">
       @helper.form(controllers.levelcreator.routes.LevelCreator.create, 'class -> "form-horizontal") {
         @helper.inputText(form("name"))
+        @helper.select(form("game"), options = games.map(g => (g.name, g.name)))
         @helper.inputText(form("width"), 'type -> "number")
         @helper.inputText(form("height"), 'type -> "number")
         @helper.inputText(form("slides before problem"), 'type -> "number")
@@ -25,6 +26,7 @@
     <table class="table table-striped" id="level-list">
       <thead>
         <tr>
+          <th> Game </th>
           <th> Name </th>
           <th> Dimensions </th>
           <th> DataSet </th>
@@ -33,7 +35,7 @@
         </tr>
       </thead>
       <tbody>
-      @levels.sortBy(_.levelId.name).map{ level => 
+      @levels.sortBy(l => l.levelId.name.toLowerCase + "#" + l.levelId.name.toLowerCase).map{ level =>
         @levelTableItem(level, rendered.get(level.levelId.name), stacksInQueue.get(level.levelId.name), stacksInGeneration.get(level.levelId.name))
       }
       </tbody>

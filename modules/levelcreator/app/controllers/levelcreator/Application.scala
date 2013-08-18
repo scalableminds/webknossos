@@ -11,7 +11,7 @@ object Application extends Controller {
         controllers.levelcreator.routes.javascript.LevelCreator.deleteAsset,
         controllers.levelcreator.routes.javascript.LevelCreator.listAssets,
         controllers.levelcreator.routes.javascript.LevelCreator.retrieveAsset,
-        controllers.levelcreator.routes.javascript.LevelCreator.autoRender,
+        controllers.levelcreator.routes.javascript.LevelCreator.updateRenderSettings,
         controllers.levelcreator.routes.javascript.StackController.produce,
         controllers.levelcreator.routes.javascript.BinaryData.viaAjax,
         controllers.levelcreator.routes.javascript.MissionController.getRandomMission,

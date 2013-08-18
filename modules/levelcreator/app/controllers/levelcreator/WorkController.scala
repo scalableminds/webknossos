@@ -55,8 +55,8 @@ object WorkController extends LevelCreatorController {
     Ok
   }
 
-  def failed(key: String) = Action { implicit request =>
-    stackWorkDistributor ! FailedWork(key)
+  def failed(key: String, reason: String) = Action { implicit request =>
+    stackWorkDistributor ! FailedWork(key, reason)
     Ok
   }
 }

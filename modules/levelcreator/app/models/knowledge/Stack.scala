@@ -11,7 +11,7 @@ import play.modules.reactivemongo.json.BSONFormats._
 
 
 case class Stack(level: Level, mission: Mission, _id: BSONObjectID = BSONObjectID.generate){
-  val id = _id.toString
+  val id = _id.stringify
   
   val path = s"${level.stackFolder}/${mission.id}"
   val directory = new File(path)
@@ -21,7 +21,12 @@ case class Stack(level: Level, mission: Mission, _id: BSONObjectID = BSONObjectI
 
   def isTared = tarFile.exists
   def isProduced = directory.exists && metaFile.exists
-  def frames = directory.listFiles(Stack.stackFrameFileFilter).toList.sortBy(_.getName)
+  def frames = {
+    if(isProduced)
+      directory.listFiles(Stack.stackFrameFileFilter).toList.sortBy(_.getName)
+    else
+      Nil
+  }
 }
 
 object Stack{

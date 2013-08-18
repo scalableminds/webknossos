@@ -19,7 +19,7 @@ case class StartSegment(id: Int,
                         direction: Vector3D,
                         directionRotated: Vector3D) extends Segment
 
-object StartSegment extends Function7[Int, Double, Double, Double, Double, Vector3D, Vector3D, StartSegment]{
+object StartSegment{
   implicit val StartSegmentFormat: Format[StartSegment] = Json.format[StartSegment]
 }                        
 
@@ -30,13 +30,13 @@ case class EndSegment(id: Int,
                       lastFrameRotated: Double,
                       probability: Double) extends Segment
                       
-object EndSegment extends Function6[Int, Double, Double, Double, Double, Double, EndSegment]{
+object EndSegment{
   implicit val EndSegmentFormat: Format[EndSegment] = Json.format[EndSegment]
 }             
 
 case class SimpleSegment(id: Int)
 
-object SimpleSegment extends Function1[Int, SimpleSegment]{
+object SimpleSegment{
   implicit val SimpleSegmentFormat: Format[SimpleSegment] = Json.format[SimpleSegment]
 }
 

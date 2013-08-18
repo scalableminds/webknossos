@@ -12,12 +12,12 @@ import reactivemongo.core.commands.Count
 
 case class StackInProgress(
   key: String,
-  _level: LevelId,
+  levelId: LevelId,
   _mission: BSONObjectID,
   timestamp: Long = System.currentTimeMillis,
   _id: BSONObjectID = BSONObjectID.generate) {
 
-  def level(implicit ctx: DBAccessContext) = LevelDAO.findOneById(_level)
+  def level(implicit ctx: DBAccessContext) = LevelDAO.findOneById(levelId)
 
   val id = _id.stringify
 
@@ -55,8 +55,9 @@ object StackInProgressDAO extends BasicReactiveDAO[StackInProgress] with StackIn
       "_level.version" -> levelId.version)).cursor[StackInProgress].toList
   }
 
-  def countFor(levelName: String)(implicit ctx: DBAccessContext) = {
-    count(Json.obj("_level.name" -> levelName))
+  def countFor(levelname: String)(implicit ctx: DBAccessContext) = {
+    count(Json.obj(
+    "_level.name" -> levelname))
   }
 
   def find(level: Level, mission: Mission)(implicit ctx: DBAccessContext) = {

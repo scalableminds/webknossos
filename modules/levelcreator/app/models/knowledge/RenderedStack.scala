@@ -18,6 +18,8 @@ case class RenderedStack(
   _level: LevelId,
   mission: MissionInfo,
   downloadUrls: List[String],
+  isActive: Boolean,
+  random: Double = Math.random(),
   _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify

@@ -67,8 +67,18 @@ object Asset {
   }
 }
 
+case class RenderSettings(shouldAutoRender: Boolean = false, shouldBeShipped: Boolean = false)
+
+object RenderSettings {
+  implicit val renderSettingsFormat = Json.format[RenderSettings]
+
+  def initial =
+    RenderSettings()
+}
+
 case class Level(
   levelId: LevelId /*ID, must be unique*/ ,
+  game: String,
   width: Int,
   height: Int,
   slidesBeforeProblem: Int,
@@ -76,10 +86,10 @@ case class Level(
   dataSetName: String,
   parent: LevelId,
   isLatest: Boolean = true,
-  isActive: Boolean = true,
+  renderSettings: RenderSettings = RenderSettings.initial,
   code: String = Level.defaultCode,
-  autoRender: Boolean = false,
   assets: List[Asset] = Nil,
+  numberOfActiveStacks: Int = 0,
   timestamp: Long = System.currentTimeMillis,
   _id: BSONObjectID = BSONObjectID.generate) {
 
@@ -128,7 +138,7 @@ object Level {
                       |  importSlides(start : 0, end : 10)
                     """.stripMargin
 
-  val empty = Level(LevelId(""), 250, 150, 15, 15, defaultDataSetName, LevelId(""))
+  val empty = Level(LevelId(""), "", 250, 150, 15, 15, defaultDataSetName, LevelId(""))
 
   val stackBaseFolder = {
     val folderName =
@@ -144,12 +154,12 @@ object Level {
     folderName
   }
 
-  def fromForm(name: String, width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int, dataSetName: String) = {
-    Level(LevelId(name), width, height, slidesBeforeProblem, slidesAfterProblem, dataSetName, LevelId(name))
+  def fromForm(name: String, game: String, width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int, dataSetName: String) = {
+    Level(LevelId(name), game, width, height, slidesBeforeProblem, slidesAfterProblem, dataSetName, LevelId(name))
   }
 
   def toForm(level: Level) = {
-    Some(level.levelId.name, level.width, level.height, level.slidesBeforeProblem, level.slidesAfterProblem, level.dataSetName)
+    Some(level.levelId.name, level.game, level.width, level.height, level.slidesBeforeProblem, level.slidesAfterProblem, level.dataSetName)
   }
 
   def isValidLevelName(name: String) = {
@@ -169,6 +179,11 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
 
   val collectionName = "levels"
 
+  def findByLevelIdQ(levelId: LevelId) = Json.obj(
+    "levelId.name" -> levelId.name,
+    "levelId.version" -> levelId.version
+  )
+
   def createNewVersion(level: Level, code: String)(implicit ctx: DBAccessContext): Fox[Level] = {
     if (code != level.code) {
       NextLevelVersion.getNextVersion(level.levelId.name).flatMap {
@@ -177,7 +192,7 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
             level.copy(
               _id = BSONObjectID.generate,
               levelId = level.levelId.copy(version = nextVersion),
-              isActive = false,
+              renderSettings = RenderSettings(false, false),
               parent = level.levelId,
               timestamp = System.currentTimeMillis(),
               code = code)
@@ -194,18 +209,44 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
     }
   }
 
+  def increaseNumberOfActiveStacks(level: Level)(implicit ctx: DBAccessContext) = {
+    collectionUpdate(
+      findByLevelIdQ(level.levelId),
+      Json.obj("$inc" -> Json.obj("numberOfActiveStacks" -> 1)))
+  }
+
+  def createLevel(level: Level)(implicit ctx: DBAccessContext) = {
+    findOneByName(level.levelId.name).flatMap {
+      case Some(l) =>
+        Future.successful(Failure(Messages("level.invalidName")))
+      case _ =>
+        insert(level).map {
+          r =>
+            if (r.ok)
+              Full(r)
+            else
+              Empty
+        }
+    }
+  }
+
   def updateLatestStatus(level: Level, isLatest: Boolean)(implicit ctx: DBAccessContext) = {
     collectionUpdate(
-      Json.obj("_id" -> level._id),
+      findByLevelIdQ(level.levelId),
       Json.obj("$set" -> Json.obj(
         "isLatest" -> isLatest)))
   }
 
-  def updateAutorenderStatus(level: Level, shouldAutorender: Boolean)(implicit ctx: DBAccessContext) = {
+  def updateRenderSettings(level: Level, renderSettings: RenderSettings)(implicit ctx: DBAccessContext) = {
+    // Set renderSettings to false on all versions
     collectionUpdate(
-      Json.obj("_id" -> level._id),
-      Json.obj("$set" -> Json.obj(
-        "autoRender" -> shouldAutorender)))
+      Json.obj("levelId.name" -> level.levelId.name),
+      Json.obj("$set" -> Json.obj("renderSettings" -> RenderSettings.initial))).flatMap {
+      _ =>
+        collectionUpdate(
+          findByLevelIdQ(level.levelId),
+          Json.obj("$set" -> Json.obj("renderSettings" -> renderSettings)))
+    }
   }
 
   def addAssetToLevel(level: Level, name: String, file: File)(implicit ctx: DBAccessContext) = {
@@ -213,7 +254,7 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
       val asset = Asset(name, level.levelId.version)
       asset.writeToDisk(level.assetsFolder, file)
       val assets = asset :: level.assets.filterNot(_.accessName == name)
-      collectionUpdate(Json.obj("_id" -> level._id),
+      collectionUpdate(findByLevelIdQ(level.levelId),
         Json.obj("$set" -> Json.obj("assets" -> assets))).map {
         r =>
           if (!r.ok)
@@ -231,7 +272,7 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
         if (a.version == level.levelId.version)
           a.deleteFromDisk(level.assetsFolder)
         val assets = level.assets.filterNot(_.accessName == assetName)
-        collectionUpdate(Json.obj("_id" -> level._id),
+        collectionUpdate(findByLevelIdQ(level.levelId),
           Json.obj("$set" -> Json.obj("assets" -> assets))).map {
           r =>
             if (!r.ok)
@@ -242,33 +283,14 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
     }
   }
 
-  def setAsActiveVersion(level: Level)(implicit ctx: DBAccessContext) = {
-    collectionUpdate(
-      Json.obj(
-        "levelId.name" -> level.levelId.name),
-      Json.obj(
-        "$set" -> Json.obj("isActive" -> false)))
-
-    collectionUpdate(
-      Json.obj(
-        "levelId.name" -> level.levelId.name,
-        "levelId.version" -> level.levelId.version),
-      Json.obj(
-        "$set" -> Json.obj("isActive" -> true)))
-  }
-
   def findAllLatest()(implicit ctx: DBAccessContext) =
     collectionFind(Json.obj(
       "isLatest" -> true)).cursor[Level].toList
 
-  def findAllActive()(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
-      "isActive" -> true)).cursor[Level].toList
-
   def findAutoRenderLevels()(implicit ctx: DBAccessContext) =
     collectionFind(Json.obj(
-      "autoRender" -> true,
-      "isActive" -> true)).cursor[Level].toList
+      "renderSettings.shouldBeShipped" -> true,
+      "renderSettings.shouldAutoRender" -> true)).cursor[Level].toList
 
   def findByNameQ(name: String) =
     Json.obj("levelId.name" -> name)
@@ -280,22 +302,15 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
     collectionFind(findByNameQ(name)).one[Level]
 
   def findOneById(levelId: LevelId)(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
-      "levelId.name" -> levelId.name,
-      "levelId.version" -> levelId.version)).one[Level]
+    collectionFind(findByLevelIdQ(levelId)).one[Level]
 
-  def findActiveOneBy(name: String)(implicit ctx: DBAccessContext) =
+  def findShippedOneBy(name: String)(implicit ctx: DBAccessContext) =
     collectionFind(Json.obj(
       "levelId.name" -> name,
-      "isActive" -> true)).one[Level]
+      "renderSettings.shouldBeShipped" -> true)).one[Level]
 
-  def findActiveByDataSetName(dataSetName: String)(implicit ctx: DBAccessContext) =
+  def findShippedByDataSetName(dataSetName: String)(implicit ctx: DBAccessContext) =
     collectionFind(Json.obj(
       "dataSetName" -> dataSetName,
-      "isActive" -> true)).cursor[Level].toList
-
-  def findActiveAutoRender()(implicit ctx: DBAccessContext) =
-    collectionFind(Json.obj(
-      "isActive" -> true,
-      "autoRender" -> true)).cursor[Level].toList
+      "renderSettings.shouldBeShipped" -> true)).cursor[Level].toList
 }

@@ -5,11 +5,8 @@ import akka.agent.Agent
 import akka.actor.Props
 import play.api.Play
 import akka.actor.actorRef2Scala
-import models.knowledge._
 import play.api.libs.ws.WS
 import play.api.Logger
-import models.knowledge.StackRenderingChallenge
-import models.knowledge.StacksInProgress._
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.routing.SmallestMailboxRouter
 import scala.concurrent.duration._
@@ -21,13 +18,20 @@ import java.util.UUID
 import play.api.libs.ws.WS.WSRequestHolder
 import com.ning.http.client.Realm.AuthScheme
 import net.liftweb.common.{Empty, Failure, Full, Box}
+import models.knowledge.Stack
 
 case class RenderingFinished(stack: Stack)
+
 case class RenderingFailed(stack: Stack, failure: Failure)
+
 case class UploadFinished(stack: Stack, downloadUrls: List[String])
+
 case class UploadFailed(stack: Stack, failure: Failure)
+
 case class StartRendering()
+
 case class StopRendering()
+
 case class EnsureWork()
 
 class StackRenderingSupervisor extends Actor {
@@ -44,11 +48,11 @@ class StackRenderingSupervisor extends Actor {
   val nrOfStackRenderers = conf.getInt("stackrenderer.nrOfRenderers").get
 
   val levelcreatorAuth = {
-    if(conf.getBoolean("levelcreator.auth.enabled") getOrElse false)
+    if (conf.getBoolean("levelcreator.auth.enabled") getOrElse false)
       Auth(
-          true,
-          conf.getString("levelcreator.auth.username") .get,
-          conf.getString("levelcreator.auth.password") .get)
+        true,
+        conf.getString("levelcreator.auth.username").get,
+        conf.getString("levelcreator.auth.password").get)
     else
       Auth(false)
   }
@@ -63,17 +67,17 @@ class StackRenderingSupervisor extends Actor {
   val requestWorkUrl = s"http://$levelcreatorBaseUrl/renderer/requestWork"
   val finishedWorkUrl = s"http://$levelcreatorBaseUrl/renderer/finishedWork"
   val failedWorkUrl = s"http://$levelcreatorBaseUrl/renderer/failedWork"
-  
-  val urlAuth = 
-    if(levelcreatorAuth.isEnabled)
+
+  val urlAuth =
+    if (levelcreatorAuth.isEnabled)
       s"${levelcreatorAuth.username}:${levelcreatorAuth.password}@"
     else
       ""
-  
-  val useLevelUrl = s"http://$urlAuth$levelcreatorBaseUrl/levels/%s?missionId=%s"
+
+  val useLevelUrl = s"http://$urlAuth$levelcreatorBaseUrl/levels/%s/missions/%s"
 
   val binaryDataUrl =
-    if(conf.getBoolean("levelcreator.useLevelcreatorAsDataSource").getOrElse(false))
+    if (conf.getBoolean("levelcreator.useLevelcreatorAsDataSource").getOrElse(false))
       s"http://$levelcreatorBaseUrl/binary/ajax"
     else
       rendererUrl + "/binary/ajax"
@@ -104,6 +108,7 @@ class StackRenderingSupervisor extends Actor {
       reportFinishedWork(stack, downloadUrls)
 
     case EnsureWork() =>
+      Logger.debug("Ensuring work")
       ensureEnoughWork
       context.system.scheduler.scheduleOnce(1 second) {
         self ! EnsureWork()
@@ -114,30 +119,31 @@ class StackRenderingSupervisor extends Actor {
     if (stacksInRendering().size < nrOfStackRenderers)
       requestWork
   }
-  
-
 
   def reportFailedWork(id: String, failure: Failure) = {
     WS
       .url(failedWorkUrl)
       .withQueryString(
-        "key" -> id,
-        "error" -> failure.msg)
+      "key" -> id,
+      "reason" -> failure.msg)
       .withAuth(levelcreatorAuth)
       .withTimeout(30000)
       .get()
-      .map { response =>
+      .map {
+      response =>
         response.status match {
           case 200 =>
-            Logger.debug(s"Successfully reported FAILED work for $id")
+            Logger.debug(s"Reported FAILED work for $id")
           case s =>
-            Logger.error(s"Failed to report FAILED work for $id. Status: $s")
+            Logger.error(s"FAILED to report failed work for $id. Status: $s")
         }
-      }
+    }
       .recover {
-        case e =>
-          Logger.error("ReportFailedWork. An exception occoured: " + e)
-      }
+      case e: java.net.ConnectException if e.getMessage.startsWith("Connection refused") =>
+        Logger.warn("Levelcreator is unavailable.")
+      case e =>
+        Logger.error("ReportFailedWork. An exception occoured: " + e)
+    }
   }
 
   def reportFinishedWork(stack: Stack, downloadUrls: List[String]) = {
@@ -148,18 +154,21 @@ class StackRenderingSupervisor extends Actor {
       .withAuth(levelcreatorAuth)
       .withTimeout(30000)
       .post(downloadUrls.mkString(" "))
-      .map { response =>
+      .map {
+      response =>
         response.status match {
           case 200 =>
-            Logger.debug(s"Successfully reported finished work for $stack.id")
+            Logger.debug(s"Successfully reported finished work for ${stack.id}")
           case s =>
-            Logger.error(s"Failed to report finished work for $stack.id. Status: $s")
+            Logger.error(s"Failed to report finished work for ${stack.id}. Status: $s")
         }
-      }
+    }
       .recover {
-        case e =>
-          Logger.error("ReportFinishedWork. An exception occoured: " + e)
-      }
+      case e: java.net.ConnectException if e.getMessage.startsWith("Connection refused") =>
+        Logger.warn("Levelcreator is unavailable.")
+      case e =>
+        Logger.error("ReportFinishedWork. An exception occoured: " + e)
+    }
   }
 
   /**
@@ -170,6 +179,7 @@ class StackRenderingSupervisor extends Actor {
    */
   def requestWork = {
     if (!currentlyRequestingWork()) {
+      Logger.debug("About to request new work")
       currentlyRequestingWork.send(true)
       WS
         .url(requestWorkUrl)
@@ -177,15 +187,17 @@ class StackRenderingSupervisor extends Actor {
         .withTimeout(30000)
         .withAuth(levelcreatorAuth)
         .get()
-        .map { response =>
+        .map {
+        response =>
           response.status match {
             case 200 =>
-              response.json.asOpt[Stack].map { stack =>
-                Logger.debug(s"Successfully requested work ${stack.id}. Level: ${stack.level.id} Mission: ${stack.mission.id}")
-                levelStore.insert(stack.level.id, stack.level)
-                missionStore.insert(stack.mission.id, stack.mission)
-                stacksInRendering.send(_ + (stack.id -> stack))
-                stackRenderer ! RenderStack(stack)
+              response.json.asOpt[Stack].map {
+                stack =>
+                  Logger.debug(s"Successfully requested work ${stack.id}. Level: ${stack.level.levelId} Mission: ${stack.mission.stringify}")
+                  levelStore.insert(stack.level.id, stack.level)
+                  missionStore.insert(stack.mission.id, stack.mission)
+                  stacksInRendering.send(_ + (stack.id -> stack))
+                  stackRenderer ! RenderStack(stack)
               }
             case 204 =>
               Logger.debug("Levelcreator reported no work!")
@@ -193,12 +205,15 @@ class StackRenderingSupervisor extends Actor {
               Logger.error("Levelcreator work request returned unknown status code: " + s)
           }
           currentlyRequestingWork.send(false)
-        }
+      }
         .recover {
-          case e =>
-            Logger.error("RequestWork. An exception occoured: " + e)
-            currentlyRequestingWork.send(false)
-        }
+        case e: java.net.ConnectException if e.getMessage.startsWith("Connection refused") =>
+          Logger.warn("Levelcreator is unavailable.")
+          currentlyRequestingWork.send(false)
+        case e =>
+          Logger.error("RequestWork. An exception occoured: " + e)
+          currentlyRequestingWork.send(false)
+      }
     }
   }
 }

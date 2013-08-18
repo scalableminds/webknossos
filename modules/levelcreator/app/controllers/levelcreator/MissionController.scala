@@ -13,7 +13,7 @@ import braingames.mvc.ExtendedController
 
 object MissionController extends ExtendedController with Controller with GlobalDBAccess {
 
-  def getMissions(dataSetName: String) = Action {
+  /*def getMissions(dataSetName: String) = Action {
     implicit request =>
       Async {
         for {
@@ -23,7 +23,7 @@ object MissionController extends ExtendedController with Controller with GlobalD
           Ok(Json.toJson(missions))
         }
       }
-  }
+  }*/
 
   def getRandomMission(dataSetName: String) = Action {
     implicit request =>

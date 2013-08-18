@@ -2,6 +2,9 @@
 @import braingames.format.Formatter._
 
 <tr data-levelid="@level.id">
+  <td>
+    @level.game
+  </td>
   <td> 
     <a href="#" data-prompt="@level.id" title="@level.id">#</a>
     <a href="@controllers.levelcreator.routes.StackController.list(level.levelId.name)">@level.levelId.toBeautifiedString</a>
@@ -18,7 +21,7 @@
     <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">
       produce Stacks
     </a><br />
-    <input type="checkbox" @if(level.autoRender) { @Html("checked") } class="auto-render-stacks"> auto render<br />
+    <!--<input type="checkbox" if(level.autoRender) { Html("checked") } class="auto-render-stacks"> auto render<br />-->
     <i class="icon-picture"></i> 
     <a href="@controllers.levelcreator.routes.StackController.list(level.levelId.name)" class="view-stacks">view Stacks</a><br />
     <i class="icon-trash"></i>

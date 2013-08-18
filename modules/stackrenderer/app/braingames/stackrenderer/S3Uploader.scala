@@ -4,7 +4,6 @@ import akka.actor._
 import java.io.File
 import scala.concurrent.duration._
 import play.api._
-import models.knowledge._
 import com.amazonaws.services.s3.model._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3Client
@@ -12,6 +11,7 @@ import braingames.util.ZipIO
 import scala.util.Try
 import scala.util.Success
 import scala.util.Failure
+import models.knowledge.Stack
 
 case class UploadStack(stacks: Stack)
 

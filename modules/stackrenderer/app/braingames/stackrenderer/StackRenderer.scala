@@ -11,10 +11,8 @@ import scala.collection.JavaConversions._
 import play.api._
 import play.api.Configuration._
 import views._
-import models.knowledge._
 import scala.sys.process._
 import java.io.{File, PrintWriter}
-import braingames.levelcreator.CreateStack
 import models.knowledge.Stack
 import java.io.FileOutputStream
 import java.io.FileInputStream
@@ -71,25 +69,33 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
 
   }
 
+  def withProcess[A](process: Process)(f: Process => A): A = {
+    val r = f(process)
+    process.destroy()
+    r
+  }
+
   def produceStackFrames(stack: Stack, levelUrl: String, binaryDataUrl: String): Box[Int] = {
-    val js = html.stackrenderer.phantom(
-      stack,
-      levelUrl,
-      binaryDataUrl).body
+    val js = html.stackrenderer.phantom(stack, levelUrl, binaryDataUrl).body
 
     val jsFile = FileIO.createTempFile(js, ".js")
-    Logger.info("phantomjs " + jsFile.getAbsolutePath())
-    val process = ("phantomjs" :: jsFile.getAbsolutePath :: Nil).run(logger, false)
-    val exitValue = Await.result(
-      Future {
-        Full(process.exitValue())
-      }.recover {
-        case e =>
-          Failure("Phantom execution threw: " + e)
-      }, phantomTimeout)
-    process.destroy()
-    Logger.debug("Finished phantomjs. ExitValue: " + exitValue)
-    exitValue
+    val phantomCMD = "phantomjs" :: jsFile.getAbsolutePath :: Nil
+    Logger.info(phantomCMD.mkString(" "))
+    withProcess(phantomCMD.run(logger, false)) {
+      process =>
+        Await.result(
+          Future {
+            val e = process.exitValue()
+            Logger.debug("Finished phantomjs. ExitValue: " + e)
+            if (e == 0)
+              Full(e)
+            else
+              Failure(s"Phantom execution failed with code $e")
+          }.recover {
+            case e =>
+              Failure("Phantom execution threw: " + e)
+          }, phantomTimeout)
+    }
   }
 
   def renderStack(stack: Stack): Box[Boolean] = {

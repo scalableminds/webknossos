@@ -10,6 +10,7 @@ import reactivemongo.bson.BSONObjectID
 import braingames.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
 import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
+import play.api.Logger
 
 case class ContextFreeMission(missionId: Int, start: StartSegment, errorCenter: Point3D, end: SimpleSegment, possibleEnds: List[EndSegment], difficulty: Double) {
   def addContext(dataSetName: String, batchId: Int) = Mission(dataSetName, missionId, batchId, start, errorCenter, end, possibleEnds, difficulty)
@@ -28,14 +29,16 @@ case class Mission(dataSetName: String,
   end: SimpleSegment,
   possibleEnds: List[EndSegment],
   difficulty: Double,
-  renderStatus: RenderStatus = RenderStatus.initial,
+  missionStatus: MissionStatus = MissionStatus.initial,
   random: Double = Math.random(),
+  isFinished: Boolean = false,
   _id: BSONObjectID = BSONObjectID.generate) {
 
   val id = _id.stringify
 
   val key: String = dataSetName.toString + "_" + missionId.toString
 
+  def stringify = s"Mission(mid = $missionId, bid = $batchId, ds = $dataSetName)"
 }
 
 
@@ -45,20 +48,26 @@ trait MissionFormats {
 
 object MissionDAO extends BasicReactiveDAO[Mission] with MissionFormats {
 
+  val collectionName = "missions"
+
   collection.indexesManager.ensure(Index(Seq("random" -> IndexType.Ascending)))
   collection.indexesManager.ensure(Index(Seq("renderStatus.numberOfRenderedStacks" -> IndexType.Ascending)))
 
-  val collectionName = "missions"
 
   def findByDataSetNameQ(dataSetName: String) =
     Json.obj("dataSetName" -> dataSetName)
 
   def findByDataSetName(dataSetName: String)(implicit ctx: DBAccessContext) =
-    collectionFind(findByDataSetNameQ(dataSetName)).cursor[Mission].toList
+    collectionFind(findByDataSetNameQ(dataSetName)).cursor[Mission].enumerate()
+
+  def findNotRenderedFor(levelId: String)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj(
+      "missionStatus.renderStatus.renderedFor" -> Json.obj("$ne" -> levelId),
+      "missionStatus.renderStatus.abortedFor" -> Json.obj("$ne" -> levelId)
+    )).cursor[Mission].enumerate()
 
   def findOneByMissionId(missionId: Int)(implicit ctx: DBAccessContext) =
     findOne(Json.obj("missionId" -> missionId))
-
 
   def findRandomOne(q: JsObject)(implicit ctx: DBAccessContext): Future[Option[Mission]] = {
     val rand = Math.random()
@@ -68,19 +77,36 @@ object MissionDAO extends BasicReactiveDAO[Mission] with MissionFormats {
     }
   }
 
-  def randomByDataSetName(dataSetName: String)(implicit ctx: DBAccessContext) =
+  def successfullyRendered(level: Level, mission: Mission)(implicit ctx: DBAccessContext) = {
+    collectionUpdate(
+      Json.obj("_id" -> mission._id),
+      Json.obj("$addToSet" -> Json.obj("missionStatus.renderStatus.renderedFor" -> level.levelId)))
+  }
+
+  def failedToRender(level: Level, mission: Mission, reason: String)(implicit ctx: DBAccessContext) = {
+    val aborted = AbortedRendering(level.levelId, reason)
+    collectionUpdate(
+      Json.obj("_id" -> mission._id),
+      Json.obj("$addToSet" -> Json.obj("missionStatus.renderStatus.abortedFor" -> aborted)))
+  }
+
+  def randomByDataSetName(dataSetName: String)(implicit ctx: DBAccessContext) = {
     findRandomOne(findByDataSetNameQ(dataSetName))
+  }
 
   def updateOrCreate(m: Mission)(implicit ctx: DBAccessContext) = {
     val missionJson = Json.toJson(m).transform(removeId).get
     collectionUpdate(Json.obj(
       "dataSetName" -> m.dataSetName,
+      "batchId" -> m.batchId,
       "missionId" -> m.missionId), Json.obj("$set" -> missionJson), upsert = true)
   }
 
 
-  def findLeastRendered()(implicit ctx: DBAccessContext) = {
-    collectionFind().sort(Json.obj("renderStatus.numberOfRenderedStacks" -> 1)).cursor[Mission].enumerate()
+  def findLeastRenderedUnFinished()(implicit ctx: DBAccessContext) = {
+    collectionFind(Json.obj("isFinished" -> false))
+      .sort(Json.obj("renderStatus.numberOfRenderedStacks" -> 1))
+      .cursor[Mission].enumerate()
   }
 
   // TODO: This is horribly inefficient, we definitly need another way to delete missions

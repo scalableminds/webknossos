@@ -86,7 +86,8 @@ class SegmentImporter
     @setRandomColor(segments)
     @setRandomColor2(segments)
     @setRandomColor3(segments)
-    @setProbability(segments, input.mission)
+    @setMissionDataToSegments(segments, input.mission)
+
 
     #for segment in segments
     #  @setArtPath(segment, width, height)
@@ -490,9 +491,15 @@ class SegmentImporter
 
 
 
-  setProbability: (segments, mission) ->
+  setMissionDataToSegments: (segments, mission) ->
 
     for segment in segments
       es = _.find(mission.possibleEnds, (m) => m.id is segment.value)
       if es?
         segment.probability = es.probability
+        segment.isEndSegment = true
+      else
+        segment.isEndSegment = false
+
+
+      segment.isStartSegment = segment.value is mission.start.id

@@ -98,7 +98,7 @@ class PluginRenderer
       state : @state
       dimensions : @dimensions
       slidesBeforeProblem : @slidesBeforeProblem
-      slidesAfterProblem : @slidesBeforeProblem
+      slidesAfterProblem : @slidesAfterProblem
       mission : @dataHandler.getMissionData()
 
 

@@ -29,6 +29,9 @@ class Tree
         size: @model.user.particleSize, 
         sizeAttenuation : false}))
 
+    @edges.__abc = true
+    @nodes.__abc = true
+
     @id = treeId
 
 
@@ -148,7 +151,7 @@ class Tree
 
   getGeometries : ->
 
-    return [ @egdes, @nodes ]
+    return [ @edges, @nodes ]
   
 
   updateGeometries: ->

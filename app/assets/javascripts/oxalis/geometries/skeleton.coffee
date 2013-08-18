@@ -294,8 +294,8 @@ class Skeleton
       if mesh != @activeNodeParticle
         mesh.visible = visible
     treeGeometry = @getTreeGeometry(@cellTracing.getTree().treeId)
-    @treeGeometry.edges.visible = true
-    @treeGeometry.nodes.visible = true
+    treeGeometry.edges.visible = true
+    treeGeometry.nodes.visible = true
     @flycam.update()
     
 

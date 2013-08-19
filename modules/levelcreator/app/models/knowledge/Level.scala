@@ -242,7 +242,7 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
     // Set renderSettings to false on all versions
     collectionUpdate(
       Json.obj("levelId.name" -> level.levelId.name),
-      Json.obj("$set" -> Json.obj("renderSettings" -> RenderSettings.initial))).flatMap {
+      Json.obj("$set" -> Json.obj("renderSettings" -> RenderSettings.initial)), multi=true).flatMap {
       _ =>
         collectionUpdate(
           findByLevelIdQ(level.levelId),

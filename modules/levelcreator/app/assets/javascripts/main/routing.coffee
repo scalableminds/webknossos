@@ -33,6 +33,34 @@ $ ->
         script.call($("#main-container")[0])
         return
 
+  activateProduceStacksLink = ->
+
+    $(document).on "click", ".produce-stacks", (event) ->
+
+      event.preventDefault()
+      $this = $(this)
+
+      $row = $this.parents("tr").first()
+      levelId = $row.data("levelid")
+      count = parseInt(prompt("How many stacks to produce?", "3"))
+
+      return if _.isNaN(count)
+
+      $.ajax(
+        _.extend(
+          dataType : "json"
+          beforeSend : (xhr) -> console.log xhr
+          routes.controllers.levelcreator.StackController.produce(levelId, count)
+        )
+      ).then(
+
+        ( { messages } ) -> Toast.message(messages)
+        (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
+
+      )
+
+      return
+
   route
 
     "/levels/:levelId(/missions/:missionId)" : ->
@@ -43,6 +71,8 @@ $ ->
     "/levels/:levelId/stacks" : ->
 
       window.stackViewer = new StackViewer()
+
+      activateProduceStacksLink()
 
 
     "/" : ->
@@ -82,29 +112,4 @@ $ ->
           sendAutoRender()
 
 
-
-      $(document).on "click", "#level-list .produce-stacks", (event) -> 
-
-        event.preventDefault()
-        $this = $(this)
-      
-        $row = $this.parents("tr").first()
-        levelId = $row.data("levelid")
-        count = parseInt(prompt("How many stacks to produce?", "3"))
-        
-        return if _.isNaN(count)
-
-        $.ajax(
-          _.extend(
-            dataType : "json"
-            beforeSend : (xhr) -> console.log xhr
-            routes.controllers.levelcreator.StackController.produce(levelId, count)
-          )
-        ).then(
-
-          ( { messages } ) -> Toast.message(messages)
-          (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
-
-        )
-
-        return
+      activateProduceStacksLink()

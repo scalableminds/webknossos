@@ -1,4 +1,4 @@
-@(level: models.knowledge.Level, rendered: Option[Int], stacksInQueue: Option[Int], stacksInProgress: Option[Int])
+@(level: models.knowledge.Level, rendered: Option[Int], stacksInProgress: Option[Int], stacksInQueue: Option[Int])
 @import braingames.format.Formatter._
 
 <tr data-levelid="@level.id">
@@ -12,7 +12,7 @@
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>
   <td class="status-cell"> 
-    @levelGenerationProgress(rendered.getOrElse(0), stacksInQueue.getOrElse(0), stacksInProgress.getOrElse(0))
+    @levelGenerationProgress(rendered.getOrElse(0), stacksInProgress.getOrElse(0), stacksInQueue.getOrElse(0))
   </td>
   <td>  
     <i class="icon-pencil"></i>

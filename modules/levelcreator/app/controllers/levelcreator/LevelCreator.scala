@@ -165,11 +165,11 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
       Async {
         for {
           level <- LevelDAO.findOneByName(levelName) ?~> Messages("level.notFound")
-          queued <- requestQueueStatusFor(levelName)
+          stacksInQueued <- requestQueueStatusFor(levelName)
           rendered <- RenderedStackDAO.countFor(levelName)
-          inProgress <- StackInProgressDAO.countFor(levelName)
+          stacksInProgress <- StackInProgressDAO.countFor(levelName)
         } yield {
-          Ok(html.levelcreator.levelGenerationProgress(rendered, queued, inProgress))
+          Ok(html.levelcreator.levelGenerationProgress(rendered, stacksInQueued, stacksInProgress))
         }
       }
   }
@@ -181,6 +181,13 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
           settings <- request.body.asOpt[RenderSettings] ?~> Messages("level.render.invalidSettings")
           _ <- LevelDAO.updateRenderSettings(request.level, settings)
         } yield {
+
+          if(settings.shouldBeShipped){
+            ActiveLevelDAO.addActiveLevel(request.level.game, request.level.levelId)
+          } else {
+            ActiveLevelDAO.removeActiveLevel(request.level.game, request.level.levelId)
+          }
+
           val shippingMessage =
             if (settings.shouldAutoRender)
               Messages("level.render.shippingActive")
@@ -207,9 +214,9 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
           levels <- LevelDAO.findAllLatest
           stacksInQueue <- requestQueueStatus()
           rendered <- RenderedStackDAO.countAll(levels)
-          stacksInGeneration <- StackInProgressDAO.findAll.map(_.groupBy(_.levelId.name).mapValues(_.size))
+          stacksInProgress <- StackInProgressDAO.findAll.map(_.groupBy(_.levelId.name).mapValues(_.size))
         } yield {
-          html.levelcreator.levelList(levels, levelForm, dataSets, games, rendered, stacksInQueue, stacksInGeneration, rendererCount)
+          html.levelcreator.levelList(levels, levelForm, dataSets, games, rendered, stacksInProgress, stacksInQueue, rendererCount)
         }
     }
   }

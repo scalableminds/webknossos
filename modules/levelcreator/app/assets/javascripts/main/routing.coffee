@@ -35,7 +35,7 @@ $ ->
 
   route
 
-    "/levels/:levelId" : ->
+    "/levels/:levelId(/missions/:missionId)" : ->
 
       window.levelCreator = new LevelCreator()
 

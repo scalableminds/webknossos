@@ -10,12 +10,12 @@ import braingames.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 
-case class MissionInfo(_id: BSONObjectID, key: String, possibleEnds: List[EndSegment]) {
+case class MissionInfo(_id: BSONObjectID, key: String) {
   def id = _id.toString
 }
 
 case class RenderedStack(
-  _level: LevelId,
+  levelId: LevelId,
   mission: MissionInfo,
   downloadUrls: List[String],
   isActive: Boolean,
@@ -36,12 +36,12 @@ object RenderedStackDAO extends BasicReactiveDAO[RenderedStack] {
 
   def findFor(levelId: LevelId)(implicit ctx: DBAccessContext) = {
     collectionFind(Json.obj(
-      "_level.name" -> levelId.name,
-      "_level.version" -> levelId.version)).cursor[RenderedStack].toList
+      "levelId.name" -> levelId.name,
+      "levelId.version" -> levelId.version)).cursor[RenderedStack].toList
   }
 
   def countFor(levelName: String)(implicit ctx: DBAccessContext) = {
-    count(Json.obj("_level.name" -> levelName))
+    count(Json.obj("levelId.name" -> levelName))
   }
 
   def countAll(levels: List[Level])(implicit ctx: DBAccessContext) = {
@@ -52,8 +52,8 @@ object RenderedStackDAO extends BasicReactiveDAO[RenderedStack] {
     BSONObjectID.parse(missionOId).map {
       id =>
         collectionRemove(Json.obj(
-          "_level.name" -> levelId.name,
-          "_level.version" -> levelId.version,
+          "levelId.name" -> levelId.name,
+          "levelId.version" -> levelId.version,
           "mission._id" -> id))
     }
   }
@@ -67,15 +67,15 @@ object RenderedStackDAO extends BasicReactiveDAO[RenderedStack] {
 
   def removeAllOf(levelId: LevelId)(implicit ctx: DBAccessContext) = {
     collectionRemove(Json.obj(
-      "_level.name" -> levelId.name,
-      "_level.version" -> levelId.version))
+      "levelId.name" -> levelId.name,
+      "levelId.version" -> levelId.version))
   }
 
   def updateOrCreate(r: RenderedStack)(implicit ctx: DBAccessContext) = {
     val json = Json.toJson(r).transform(removeId).get
     collectionUpdate(Json.obj(
-      "_level.name" -> r._level.name,
-      "_level.version" -> r._level.version,
-      "mission.key" -> r.mission.key), Json.obj("$set" -> json))
+      "levelId.name" -> r.levelId.name,
+      "levelId.version" -> r.levelId.version,
+      "mission.key" -> r.mission.key), Json.obj("$set" -> json), upsert=true)
   }
 }

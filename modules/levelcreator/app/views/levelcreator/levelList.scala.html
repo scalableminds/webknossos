@@ -1,4 +1,4 @@
-@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[braingames.binary.models.DataSet], games: List[models.knowledge.Game], rendered: Map[String, Int], stacksInQueue: Map[String, Int], stacksInGeneration: Map[String, Int], activeRenderers: Option[Int])(implicit request: RequestHeader)
+@(levels: List[models.knowledge.Level], form: Form[models.knowledge.Level], dataSets: List[braingames.binary.models.DataSet], games: List[models.knowledge.Game], rendered: Map[String, Int], stacksInProgress: Map[String, Int], stacksInQueue: Map[String, Int], activeRenderers: Option[Int])(implicit request: RequestHeader)
 
 @import views.BootstrapHelpers.bootsrapFields
 
@@ -36,7 +36,7 @@
       </thead>
       <tbody>
       @levels.sortBy(l => l.levelId.name.toLowerCase + "#" + l.levelId.name.toLowerCase).map{ level =>
-        @levelTableItem(level, rendered.get(level.levelId.name), stacksInQueue.get(level.levelId.name), stacksInGeneration.get(level.levelId.name))
+        @levelTableItem(level, rendered.get(level.levelId.name), stacksInProgress.get(level.levelId.name), stacksInQueue.get(level.levelId.name))
       }
       </tbody>
     </table>

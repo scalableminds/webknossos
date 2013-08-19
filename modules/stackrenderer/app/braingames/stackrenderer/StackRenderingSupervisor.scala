@@ -179,7 +179,7 @@ class StackRenderingSupervisor extends Actor {
    */
   def requestWork = {
     if (!currentlyRequestingWork()) {
-      Logger.debug("About to request new work")
+      Logger.trace("About to request new work")
       currentlyRequestingWork.send(true)
       WS
         .url(requestWorkUrl)

@@ -36,7 +36,7 @@ case class Mission(dataSetName: String,
 
   val id = _id.stringify
 
-  val key: String = dataSetName.toString + "_" + missionId.toString
+  val key: String = dataSetName + "__" + batchId + "__" + missionId
 
   def stringify = s"Mission(mid = $missionId, bid = $batchId, ds = $dataSetName)"
 }
@@ -80,7 +80,7 @@ object MissionDAO extends BasicReactiveDAO[Mission] with MissionFormats {
   def successfullyRendered(level: Level, mission: Mission)(implicit ctx: DBAccessContext) = {
     collectionUpdate(
       Json.obj("_id" -> mission._id),
-      Json.obj("$addToSet" -> Json.obj("missionStatus.renderStatus.renderedFor" -> level.levelId)))
+      Json.obj("$push" -> Json.obj("missionStatus.renderStatus.renderedFor" -> level.levelId)))
   }
 
   def failedToRender(level: Level, mission: Mission, reason: String)(implicit ctx: DBAccessContext) = {
@@ -95,11 +95,13 @@ object MissionDAO extends BasicReactiveDAO[Mission] with MissionFormats {
   }
 
   def updateOrCreate(m: Mission)(implicit ctx: DBAccessContext) = {
-    val missionJson = Json.toJson(m).transform(removeId).get
-    collectionUpdate(Json.obj(
+    collectionFind(Json.obj(
       "dataSetName" -> m.dataSetName,
       "batchId" -> m.batchId,
-      "missionId" -> m.missionId), Json.obj("$set" -> missionJson), upsert = true)
+      "missionId" -> m.missionId)).one[Mission].map {
+      case Some(m) => Future.successful(m)
+      case _ => insert(m).map(_ => m)
+    }
   }
 
 

@@ -103,8 +103,6 @@ object DefaultDistributionStrategy extends DistributionStrategy {
           inProgress.filter(_._mission == mission._id).map(_.levelId) ++
           currentQueue.filter(_.stack.mission._id == mission._id).map(_.stack.level.levelId)
 
-      Logger.trace("Excluding" + excludedLevels.mkString(" , "))
-
       //Logger.debug("Distribute called")
       val filteredLevels = levels.filterNot(l => excludedLevels.contains(l.levelId))
 
@@ -198,10 +196,10 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
     val d = workQueueUpdateInterval()
     workQueueUpdateInterval.send {
       duration =>
-        Logger.debug("slowing down to : " + duration)
-        if (duration * 2 < maxWorkQueueUpdateInterval)
+        if (duration * 2 < maxWorkQueueUpdateInterval) {
+          Logger.debug(s"Slowing work queue update interval down to: ${duration * 2}")
           duration * 2
-        else
+        } else
           maxWorkQueueUpdateInterval
     }
     d
@@ -211,9 +209,10 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
     val d = workQueueUpdateInterval()
     workQueueUpdateInterval.send {
       duration =>
-        if (duration / 8 > minWorkQueueUpdateInterval)
+        if (duration / 8 > minWorkQueueUpdateInterval) {
+          Logger.debug(s"Speed work queue update interval up to: ${duration / 8}")
           duration / 8
-        else
+        } else
           minWorkQueueUpdateInterval
     }
     d
@@ -309,7 +308,7 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
         if (workQueueRunsEmpty)
           generateWork
         else
-          Future.successful(false)
+          Future.successful(true)
 
       shouldSpeedUp.map(scheduleNextWorkQueueUpdate)
 
@@ -341,9 +340,9 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
       level <- challenge.level ?~> "Level not found"
       mission <- challenge.mission ?~> "Mission not found"
     } yield {
-      Logger.debug(s"FINISHED stack work. Level: ${challenge.levelId} Mission: ${mission.stringify}")
+      Logger.debug(s"FINISHED stack work. Level: ${challenge.levelId} ${mission.stringify}")
 
-      val missionInfo = MissionInfo(mission._id, mission.key, mission.possibleEnds)
+      val missionInfo = MissionInfo(mission._id, mission.key)
 
       RenderedStackDAO.updateOrCreate(
         RenderedStack(level.levelId, missionInfo, downloadUrls, !mission.isFinished))
@@ -380,7 +379,7 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
       level <- challenge.level ?~> "Level not found"
       mission <- challenge.mission ?~> "Mission not found"
     } yield {
-      Logger.warn(s"FAILED stack work. Level: ${challenge.levelId} Mission: ${mission.stringify}")
+      Logger.warn(s"FAILED stack work. Level: ${challenge.levelId} ${mission.stringify}")
 
       MissionDAO.failedToRender(level, mission, reason)
 
@@ -405,7 +404,7 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
         case _ =>
       }
       StackInProgressDAO.removeById(expired.id)
-      Logger.warn(s"INCOMPLETE stack work. Level: ${expired.levelId} Mission: ${mission.map(_.stringify)}")
+      Logger.warn(s"INCOMPLETE stack work. Level: ${expired.levelId} ${mission.map(_.stringify)}")
     }
   }
 

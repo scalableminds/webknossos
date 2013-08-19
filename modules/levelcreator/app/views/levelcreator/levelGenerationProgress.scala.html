@@ -1,5 +1,5 @@
 @* levelGenerationProgress Template File *@
-@(rendered: Int, stacksInQueue: Int, stacksInProgress: Int)
+@(rendered: Int, stacksInProgress: Int, stacksInQueue: Int)
 
 @calculateProgress(n: Long, p: Int, q: Int) = @{
     val d = (n + p + q).toFloat
@@ -7,16 +7,12 @@
     else n * 100 / d -> p * 100 / d
 }
 
-@progressBar(n: Long) = {
-  @defining(calculateProgress(n, stacksInProgress, stacksInQueue)) { progress =>
-    <div class="progress progress-striped">
-      <div class="bar bar-success" style="width : @progress._1 % ;"></div>
-      <div class="bar bar-warning" style="width : @progress._2 % ;"></div>
-    </div>
-  }
+@defining(calculateProgress(rendered, stacksInProgress, stacksInQueue)) { progress =>
+  <div class="progress progress-striped">
+    <div class="bar bar-success" style="width : @progress._1% ;"></div>
+    <div class="bar bar-warning" style="width : @progress._2% ;"></div>
+  </div>
 }
-
-@progressBar(rendered)
 <span title="Finished">
   <i class="icon-ok"></i>
   @rendered

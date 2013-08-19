@@ -5,7 +5,7 @@ Constants =
   PLANE_XY             : 0
   PLANE_YZ             : 1
   PLANE_XZ             : 2
-  VIEW_3D              : 3
+  TDView               : 3
   ALL_PLANES           : [0, 1, 2]
   ALL_VIEWPORTS        : [0, 1, 2, 3]
   PLANE_COLORS         : [0xff0000, 0x0000ff, 0x00ff00, 0xffffff]

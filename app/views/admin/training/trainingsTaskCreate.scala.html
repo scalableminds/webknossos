@@ -1,4 +1,4 @@
-@(tasks: List[models.task.Task], tracings: List[models.tracing.Tracing], experiences: Seq[String], tracingForm: Form[(String, String, models.task.Training)])(implicit session: brainflight.view.AuthedSessionData)
+@(tasks: List[models.task.Task], annotations: List[models.annotation.Annotation], experiences: Seq[String], tracingForm: Form[(String, String, models.task.Training)])(implicit session: oxalis.view.AuthedSessionData)
 
 @import play.api.libs.json.Json
 
@@ -24,8 +24,8 @@
           task.id -> (s"${task.taskType.map(_.summary).getOrElse("")} ${task.id}")
         }, Symbol("help-inline") -> taskHelpLink)
 
-        @helper.select(tracingForm("tracing"), tracings.map { exp =>
-          exp.id -> ( exp.tracingType + " " + exp.dataSetName + " " + formatDate(exp.date)) 
+        @helper.select(tracingForm("tracing"), annotations.map { a =>
+          a.id -> ( a.typ + " " + a.dataSetName + " " + a.content.map(t => formatDate(t.date)) )
         })
 
         @helper.input(tracingForm("training.domain")) { (id, name, value, args) =>

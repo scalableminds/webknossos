@@ -5,7 +5,7 @@ import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
-import brainflight.security.SCrypt._
+import braingames.security.SCrypt._
 import scala.collection.mutable.Stack
 import play.api.libs.json.JsValue
 import play.api.libs.json.JsBoolean
@@ -30,8 +30,8 @@ object UserConfiguration extends BasicSettings{
       "crosshairSize" -> JsNumber(0.1),
       "scaleValue" -> JsNumber(0.05),
       "mouseRotateValue" -> JsNumber(0.004),
-      "routeClippingDistance" -> JsNumber(50),
-      "routeClippingDistanceArbitrary" -> JsNumber(64),
+      "clippingDistance" -> JsNumber(50),
+      "clippingDistanceArbitrary" -> JsNumber(64),
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
       "interpolation" -> JsBoolean(false),
@@ -42,11 +42,10 @@ object UserConfiguration extends BasicSettings{
       "quality" -> JsNumber(0),
       "zoom" -> JsNumber(2),
       "scale" -> JsNumber(1),
-      "displayPreviewXY" -> JsBoolean(false),
-      "displayPreviewYZ" -> JsBoolean(false),
-      "displayPreviewXZ" -> JsBoolean(false),
+      "displayTDViewXY" -> JsBoolean(false),
+      "displayTDViewYZ" -> JsBoolean(false),
+      "displayTDViewXZ" -> JsBoolean(false),
       "newNodeNewTree" -> JsBoolean(false),
-      "nodesAsSpheres" -> JsBoolean(false),
       "inverseX" -> JsBoolean(false),
       "inverseY" -> JsBoolean(false),
       "keyboardDelay" -> JsNumber(200),

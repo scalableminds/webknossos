@@ -259,7 +259,8 @@ svg a:hover {
 #tracing {
     margin-top: 10px;
     position: relative;
-    float: left;
+    display: inline-block;
+    vertical-align: top;
 }
 #render {
     position: relative;
@@ -268,7 +269,8 @@ svg a:hover {
     z-index: 10;
 }
 #comments-tree {
-    float: left;
+    display: inline-block;
+    vertical-align: top;
     margin-top: 10px;
     margin-left: 20px;
 }
@@ -311,7 +313,7 @@ svg a:hover {
     min-width: 1024px;
 }
 #main {
-    width: 5000px;
+    white-space: nowrap;
 }
 #inputcatchers {
     position: absolute;
@@ -332,20 +334,20 @@ svg a:hover {
 #planexz {
     margin-top: 20px;
 }
-#skeletonview {
+#TDView {
     border-width: 0px;
     margin-top: 20px;
     margin-left: 20px;
     position: relative;
 }
-#prevControls {
+#TDViewControls {
     float: left;
     height: 20px;
     position: absolute;
     top: 10px;
     z-index: 30;
 }
-#prevControls .btn > span {
+#TDViewControls .btn > span {
     display: inline-block;
     width: 10px;
     height: 10px;
@@ -356,7 +358,8 @@ svg a:hover {
     position: relative;
     width: 280px;
     padding: 10px;
-    float: left;
+    display: inline-block;
+    vertical-align: top;
 }
 #overlay > * {
     margin-bottom: 10px;
@@ -425,6 +428,10 @@ svg a:hover {
             display: inline-block;
         }
     }
+}
+#tabbable-dashboard {
+    margin-top: 20px;
+    min-height: 400px;
 }
 #user-administration-table {
     margin-bottom: 70px;
@@ -539,6 +546,12 @@ svg a:hover {
     input[type=submit] {
         margin: 10px 0;
     }
+}
+
+#impressum{
+  h5{
+    margin-top: 2em;
+  }
 }
 
 .key-arrow {

@@ -9,6 +9,7 @@ updateMacro = (a) ->
   @trigger("changed", @currentMatrix)
   @hasChanged = true
 
+
 transformationWithDistanceMacro = (transformation) ->
   
   { currentMatrix } = @

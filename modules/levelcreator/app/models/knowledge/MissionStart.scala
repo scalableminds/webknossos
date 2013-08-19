@@ -1,6 +1,6 @@
 package models.knowledge
 
-import brainflight.tools.geometry._
+import braingames.geometry._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 

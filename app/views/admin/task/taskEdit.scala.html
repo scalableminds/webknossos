@@ -1,4 +1,4 @@
-@(taskId: String, taskTypes: List[models.task.TaskType], experiences: List[String], projects: List[models.task.Project], editForm: Form[(String, models.user.Experience, Int, Int, String)])(implicit session: brainflight.view.AuthedSessionData)
+@(taskId: String, taskTypes: List[models.task.TaskType], experiences: List[String], projects: List[models.task.Project], editForm: Form[(String, models.user.Experience, Int, Int, String)])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
   <div class="container">

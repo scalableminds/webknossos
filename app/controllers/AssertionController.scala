@@ -1,11 +1,12 @@
 package controllers
 
 import braingames.mvc.Controller
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.security.Role
-import models.Assertion
+import models.assertion.Assertion
 import views.html
 import play.api.libs.json.Json
+import oxalis.security._
 
 object AssertionController extends Controller with Secured {
 

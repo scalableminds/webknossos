@@ -1,6 +1,6 @@
-@(showNavButtons: Boolean = true)(body: Html)(implicit session: brainflight.view.UnAuthedSessionData)
+@(showNavButtons: Boolean = true)(body: Html)(implicit session: oxalis.view.UnAuthedSessionData)
 
-@import brainflight.tools.Reflect
+@import braingames.util.Reflect
 
 <!doctype html>
 <html>
@@ -23,7 +23,7 @@
         </div>
       }
     </div>
-    <div id="main-container" data-template="@Reflect.getCallerClass.map( _(7).getName() )">
+    <div id="main-container" data-template="@Reflect.getCallerClass.map( _(8).getName() )">
       @body
     </div>
     <!-- Prompt IE 6 users to install Chrome Frame. Remove this if you want to support IE 6.

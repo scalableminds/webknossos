@@ -1,5 +1,26 @@
-@()(implicit session: brainflight.view.AuthedSessionData)
+@(dataSets: List[braingames.binary.models.DataSet])(implicit session: oxalis.view.AuthedSessionData)
 
 @main(){
-  
+    <div id="dataSet-Administartion" class="container wide">
+        <h3> DataSets </h3>
+        <table class="table table-striped" id="dataSet-table">
+            <thead>
+                <tr>
+                    <th> <input type="checkbox" class="select-all-rows"> </th>
+                    <th> Name </th>
+                    <th> Base Dir </th>
+                    <th> Scale </th>
+                    <th> Owning Team </th>
+                    <th> Allowed Teams </th>
+                    <th> Data Layers </th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @dataSets.map{ dataSet =>
+                @dataSetTableItem(dataSet)
+            }
+            </tbody>
+        </table>
+    </div>
 }

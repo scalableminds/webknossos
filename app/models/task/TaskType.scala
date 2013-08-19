@@ -5,16 +5,16 @@ import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
 import models.basics.BasicDAO
-import models.tracing.TracingSettings
 import play.api.libs.json.Json
 import play.api.libs.functional.syntax._
+import models.annotation.AnnotationSettings
 
 case class TimeSpan(min: Int, max: Int, maxHard: Int) {
 
   override def toString = s"$min - $max, Limit: $maxHard"
 }
 
-case class TaskType(summary: String, description: String, expectedTime: TimeSpan, tracingSettings: TracingSettings = TracingSettings.default, fileName: Option[String] = None, _id: ObjectId = new ObjectId) {
+case class TaskType(summary: String, description: String, expectedTime: TimeSpan, settings: AnnotationSettings = AnnotationSettings.default, fileName: Option[String] = None, _id: ObjectId = new ObjectId) {
   lazy val id = _id.toString
 }
 
@@ -26,7 +26,7 @@ object TaskType extends BasicDAO[TaskType]("taskTypes") {
       summary,
       description,
       expectedTime,
-      TracingSettings(
+      AnnotationSettings(
         allowedModes.toList,
         branchPointsAllowed,
         somaClickingAllowed))
@@ -35,9 +35,9 @@ object TaskType extends BasicDAO[TaskType]("taskTypes") {
     Some((
         tt.summary, 
         tt.description, 
-        tt.tracingSettings.allowedModes, 
-        tt.tracingSettings.branchPointsAllowed, 
-        tt.tracingSettings.somaClickingAllowed,
+        tt.settings.allowedModes,
+        tt.settings.branchPointsAllowed,
+        tt.settings.somaClickingAllowed,
         tt.expectedTime))
 
   def findOneBySumnary(summary: String) = {

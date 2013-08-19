@@ -35,6 +35,7 @@ class ArbitraryController
     keyboardOnce : null
 
     unbind : ->
+
       @mouse?.unbind()
       @keyboard?.unbind()
       @keyboardNoLoop?.unbind()
@@ -75,6 +76,7 @@ class ArbitraryController
 
 
   initMouse : ->
+
     @input.mouse = new Input.Mouse(
       @canvas
       leftDownMove : (delta) =>
@@ -91,7 +93,9 @@ class ArbitraryController
   initKeyboard : ->
 
     getVoxelOffset  = (timeFactor) =>
+
       return @model.user.moveValue3d * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+    
     
     @input.keyboard = new Input.Keyboard(
  
@@ -136,8 +140,8 @@ class ArbitraryController
       "2" : => @sceneController.toggleInactiveTreeVisibility()
 
       #Delete active node
-      "delete" : => @model.route.deleteActiveNode()
-      "c" : => @model.route.createNewTree()
+      "delete" : => @model.cellTracing.deleteActiveNode()
+      "c" : => @model.cellTracing.createNewTree()
       
       #Branches
       "b" : => @pushBranch()
@@ -157,35 +161,38 @@ class ArbitraryController
       "u" : => 
         @record = false
         @infoPlane.updateInfo(false)
+      #Comments
+      "n" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(false), true)
+      "p" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)
     )
 
     @input.keyboardOnce = new Input.Keyboard(
 
       #Delete active node and recenter last node
       "shift + space" : =>
-        @model.route.deleteActiveNode()
+        @model.cellTracing.deleteActiveNode()
         @centerActiveNode()
         
     , -1)
 
   init : ->
 
-    @setRouteClippingDistance @model.user.routeClippingDistance
+    @setClippingDistance @model.user.clippingDistance
     @view.applyScale(0)
 
 
   bind : ->
 
     @view.on "render", (force, event) => @render(force, event)
-    @view.on "finishedRender", => @model.route.rendered()
+    @view.on "finishedRender", => @model.cellTracing.rendered()
 
     @model.binary.cube.on "bucketLoaded", => @view.draw()
 
     @model.user.on "crosshairSizeChanged", (value) =>
       @crosshair.setScale(value)
 
-    @model.user.on "routeClippingDistanceArbitraryChanged", (value) =>
-      @setRouteClippingDistance(value)
+    @model.user.on "clippingDistanceArbitraryChanged", (value) =>
+      @setClippingDistance(value)
 
 
   start : ->
@@ -219,7 +226,7 @@ class ArbitraryController
 
   addNode : (position) =>
 
-    @model.route.addNode(position, constants.TYPE_USUAL)
+    @model.cellTracing.addNode(position, constants.TYPE_USUAL)
 
 
   setWaypoint : () =>
@@ -228,7 +235,7 @@ class ArbitraryController
       return
 
     position  = @cam.getPosition()
-    activeNodePos = @model.route.getActiveNodePos()
+    activeNodePos = @model.cellTracing.getActiveNodePos()
 
     @addNode(position)
 
@@ -250,26 +257,26 @@ class ArbitraryController
     @model.user.setValue("particleSize", (Number) particleSize)
 
 
-  setRouteClippingDistance : (value) =>
+  setClippingDistance : (value) =>
 
-    @view.setRouteClippingDistance(value)
+    @view.setClippingDistance(value)
 
 
   pushBranch : ->
 
-    @model.route.pushBranch()
+    @model.cellTracing.pushBranch()
 
 
   popBranch : ->
 
-    _.defer => @model.route.popBranch().done((id) => 
+    _.defer => @model.cellTracing.popBranch().done((id) => 
       @setActiveNode(id, true)
     )
 
 
   centerActiveNode : ->
 
-    activeNode = @model.route.getActiveNode()
+    activeNode = @model.cellTracing.getActiveNode()
     if activeNode
       @cam.setPosition(activeNode.pos)
       parent = activeNode.parent
@@ -287,8 +294,8 @@ class ArbitraryController
 
   setActiveNode : (nodeId, centered, mergeTree) ->
 
-    @model.route.setActiveNode(nodeId, mergeTree)
-    @cam.setPosition @model.route.getActiveNodePos()  
+    @model.cellTracing.setActiveNode(nodeId, mergeTree)
+    @cam.setPosition @model.cellTracing.getActiveNodePos()  
 
 
   moved : ->

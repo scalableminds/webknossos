@@ -51,6 +51,7 @@ Toast =
 
 
   success : (message, sticky) -> 
+
     if message?
       @message("success", message, sticky)
     else
@@ -58,6 +59,7 @@ Toast =
 
 
   error : (message, sticky = true) -> 
+    
     if message?
       @message("error", message, sticky)
     else

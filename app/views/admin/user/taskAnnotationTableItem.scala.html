@@ -1,0 +1,67 @@
+@(task: models.task.Task, annotation: models.annotation.Annotation)
+
+@import models.annotation.AnnotationDAO
+
+@linkText(failed: Boolean) = {
+  @if(failed) {
+    Review failed - 
+  } else {
+    Review - 
+  }
+}
+
+@displayComments(failed: Boolean, comments: List[String]) = {
+  @comments match{
+    case head :: tail => {
+      <a href="#" rel="popover" data-placement="bottom" data-title="Comment from Reviewer" data-html="true" data-content="@org.apache.commons.lang3.StringEscapeUtils.escapeHtml4(head).replaceAll("\n", "<br /><br />")"><i class="icon-eye-open"></i> @linkText(failed) Comment <span class="caret-down"></span></a>    
+    }
+    case _ => {
+
+    }
+  }
+
+}
+
+<tr class="@if(annotation.state.isFinished){finished}else{unfinished}">
+  <td> @formatHash(task.id) </td>
+  @defining(task.taskType){ taskType =>
+    <td> @taskType.map(_.summary).getOrElse("<deleted>") - @annotation.typ</td>
+    <td> @task.project.map(_.name) </td>
+    <td>
+      @taskType.toList.flatMap(_.settings.allowedModes).map{ mode =>
+        <span class="label"> @mode.capitalize </span>
+      }
+    </td>
+  }
+  <td> @annotation.dataSetName </td>
+  @defining(AnnotationDAO.statisticsForAnnotation(annotation)){ statsOpt =>
+    @statsOpt.map{ stats =>
+    <td> 
+      <span title="Trees"><i class="icon-sitemap"></i> @stats.numberOfTrees &nbsp;</span>
+      <span title="Nodes">&bull; @stats.numberOfNodes &nbsp;</span>
+      <span title="Edges"><i class="icon-resize-horizontal"></i> @stats.numberOfEdges</span>
+    </td>
+    }.getOrElse(<td />)
+  }
+  <td>
+    @annotation.content.map(e => formatDate(e.timestamp))
+  </td>
+  <td> 
+    @annotation.state match{
+      case s if s.isFinished => {
+        <i class="icon-ok"></i><span> Finished</span><br />
+        @displayComments(false, annotation.review.flatMap( _.comment ))
+      }
+      case s if s.isInReview || s.isReadyForReview => {
+        <i class="icon-eye-open"></i><span> In Review</span>
+      }
+      case _ => {
+        <i class="icon-refresh"></i><span> In Progress</span>
+        @displayComments(true, annotation.review.flatMap( _.comment ))
+      }
+    }
+  </td>
+  <td>   
+    @views.html.admin.task.annotationLinks(annotation)
+  </td>
+</tr>

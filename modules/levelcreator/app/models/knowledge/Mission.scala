@@ -2,7 +2,7 @@ package models.knowledge
 
 import models.basics.DAOCaseClass
 import models.basics.BasicDAO
-import brainflight.tools.geometry.Point3D
+import braingames.geometry.Point3D
 import org.bson.types.ObjectId
 import com.mongodb.casbah.commons.MongoDBObject
 import play.api.libs.json._

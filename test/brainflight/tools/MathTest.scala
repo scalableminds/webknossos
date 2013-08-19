@@ -1,6 +1,6 @@
 package brainflight.tools
 
-import brainflight.tools.Math._
+import braingames.util.Math._
 import org.specs2.mutable.Specification
 
 class MathTest extends Specification {

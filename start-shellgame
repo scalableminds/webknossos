@@ -1,3 +1,3 @@
 #! /bin/bash
-playframework/play "project shellgame" "run 9090"
+sbt "project shellgame" "run 9090"
 

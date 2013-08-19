@@ -1,10 +1,10 @@
 package controllers.admin
 
 import akka.actor.actorRef2Scala
-import brainflight.mail.DefaultMails
-import brainflight.mail.Send
-import brainflight.security.AuthenticatedRequest
-import brainflight.security.Secured
+import oxalis.mail.DefaultMails
+import braingames.mail.Send
+import oxalis.security.AuthenticatedRequest
+import oxalis.security.Secured
 import controllers._
 import models.security._
 import models.user.TimeTracking
@@ -15,48 +15,48 @@ import views.html
 import net.liftweb.common._
 import braingames.mvc.Controller
 import braingames.util.ExtendedTypes.ExtendedString
-import models.tracing.Tracing
-import models.tracing.TracingType
-import models.binary.DataSet
+import braingames.binary.models.DataSet
+import models.annotation.{AnnotationType, AnnotationDAO}
+import models.tracing.skeleton.SkeletonTracing
 
 object UserTracingAdministration extends Controller with Secured {
 
   override val DefaultAccessRole = Role.Admin
 
-  def reopen(tracingId: String) = Authenticated { implicit request =>
+  def reopen(annotationId: String) = Authenticated { implicit request =>
     for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      task <- tracing.task ?~ Messages("task.notFound")
+      annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
+      task <- annotation.task ?~ Messages("task.notFound")
     } yield {
-      TaskAdministration.reopenTracing(tracing) match {
+      TaskAdministration.reopenAnnotation(annotation) match {
         case Some(updated) =>
-          JsonOk(html.admin.user.taskTracingTableItem(task, updated), Messages("tracing.reopened"))
+          JsonOk(html.admin.user.taskAnnotationTableItem(task, updated), Messages("annotation.reopened"))
         case _ =>
-          JsonOk(Messages("tracing.invalid"))
+          JsonOk(Messages("annotation.invalid"))
       }
     }
   }
 
-  def finish(tracingId: String) = Authenticated { implicit request =>
+  def finish(annotationId: String) = Authenticated { implicit request =>
     for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      task <- tracing.task ?~ Messages("task.notFound")
-      (updated, message) <- TracingController.finishTracing(request.user, tracing)
+      annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
+      task <- annotation.task ?~ Messages("task.notFound")
+      (updated, message) <- AnnotationController.finishAnnotation(request.user, annotation)
     } yield {
-      JsonOk(html.admin.user.taskTracingTableItem(task, updated), Messages("tracing.finished"))
+      JsonOk(html.admin.user.taskAnnotationTableItem(task, updated), Messages("annotation.finished"))
     }
   }
   
-  def reset(tracingId: String) = Authenticated { implicit request =>
+  def reset(annotationId: String) = Authenticated { implicit request =>
     for {
-      tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
-      task <- tracing.task ?~ Messages("task.notFound")
+      annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
+      task <- annotation.task ?~ Messages("task.notFound")
     } yield {
-      Tracing.resetToBase(tracing) match {
+      AnnotationDAO.resetToBase(annotation) match {
         case Some(updated) => 
-          JsonOk(html.admin.user.taskTracingTableItem(task, updated), Messages("tracing.reset.success"))
+          JsonOk(html.admin.user.taskAnnotationTableItem(task, updated), Messages("annotation.reset.success"))
         case _       => 
-          JsonBadRequest(Messages("tracing.reset.failed"))
+          JsonBadRequest(Messages("annotation.reset.failed"))
       }
     }
   }
@@ -66,14 +66,14 @@ object UserTracingAdministration extends Controller with Secured {
     for {
       user <- User.findOneById(userId) ?~ Messages("user.notFound")
     } yield {
-      val tracings = Tracing.findFor(user).filter(t => !TracingType.isSystemTracing(t))
-      val (taskTracings, allExplorationalTracings) =
-        tracings.partition(_.tracingType == TracingType.Task)
+      val annotations = AnnotationDAO.findFor(user).filter(t => !AnnotationType.isSystemTracing(t))
+      val (taskTracings, allExplorationalAnnotations) =
+        annotations.partition(_.typ == AnnotationType.Task)
 
-      val explorationalTracings =
-        allExplorationalTracings
+      val explorationalAnnotations =
+        allExplorationalAnnotations
           .filter(!_.state.isFinished)
-          .sortBy(-_.timestamp)
+          .sortBy(a => - a.content.map(_.timestamp).getOrElse(0L))
 
       val userTasks = taskTracings.flatMap(e => e.task.map(_ -> e))
 
@@ -81,7 +81,7 @@ object UserTracingAdministration extends Controller with Secured {
 
       Ok(html.admin.user.userTracingAdministration(
         user,
-        explorationalTracings,
+        explorationalAnnotations,
         userTasks,
         loggedTime))
     }

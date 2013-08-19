@@ -9,12 +9,16 @@
    </appender>
 
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+      <level>DEBUG</level>
+    </filter>
     <encoder>
-      <pattern>%coloredLevel %logger{15} - %message%n%xException{5}</pattern>
+      <pattern>%date - [%level] - %message%n%xException{5}</pattern>
     </encoder>
   </appender>
-  
-  <logger name="play" level="INFO" />
+
+  <logger name="reactivemongo" level="WARN" />
+  <logger name="play" level="WARN" />
   <logger name="application" level="INFO" />
 
   <root level="WARN">

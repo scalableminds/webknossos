@@ -1,4 +1,4 @@
-@(assertion: models.Assertion)(implicit session: brainflight.view.AuthedSessionData)
+@(assertion: models.assertion.Assertion)(implicit session: oxalis.view.AuthedSessionData)
 
 @import play.api.libs.json._
 
@@ -12,9 +12,8 @@
     @assertion.value
     <h4>Stacktrace</h4>
     <strong>@assertion.title</strong> @assertion.message <br/><br/>
-    @Json.parse(assertion.stacktrace).asOpt[JsArray].map{ case JsArray(arr) => 
-       @println(arr)
-       @arr.map{ case JsString(s) =>
+    @Json.parse(assertion.stacktrace).asOpt[JsArray].map{ arr => 
+       @arr.value.map{ s =>
          @s <br />
        } 
      }

@@ -1,6 +1,6 @@
 package util
 
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.User
 import play.api.test.FakeRequest
 import models.Role

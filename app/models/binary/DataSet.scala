@@ -4,100 +4,78 @@ import com.mongodb.casbah.Imports._
 import models.context._
 import com.novus.salat.annotations._
 import com.novus.salat.dao.SalatDAO
-import brainflight.tools.geometry.Point3D
+import braingames.geometry.Point3D
 import play.api.libs.functional.syntax._
-import models.basics.BasicDAO
-import models.basics.DAOCaseClass
+import models.basics._
 import play.api.libs.json._
+import braingames.binary.models.DataSet
+import braingames.binary.models.{DataSetRepository => AbstractDataSetRepository}
+import scala.concurrent.Future
+import com.novus.salat._
+import braingames.binary.models.DataSet
 import models.user.User
-import models.team.Team
+import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
+import play.api.Logger
+import models.team.TeamPath
 
-case class BareDataSet(name: String, maxCoordinates: Point3D, priority: Int = 0) {
-  def addLayers(baseDir: String,
-                colorLayer: ColorLayer,
-                segmentationLayers: List[SegmentationLayer] = Nil,
-                classificationLayer: Option[ClassificationLayer] = None) = {
-    DataSet(name, baseDir, maxCoordinates, priority, colorLayer, List(Team.default.name), segmentationLayers, classificationLayer)
-  }
+object DataSetRepository extends AbstractDataSetRepository with GlobalDBAccess{
 
+  def deleteAllExcept(l: Array[String]) =
+    DataSetDAO.deleteAllExcept(l)
+
+  def updateOrCreate(dataSet: DataSet) =
+    DataSetDAO.updateOrCreate(dataSet)
+
+  def removeByName(name: String) =
+    DataSetDAO.removeByName(name)
+
+  def findByName(name: String) =
+    DataSetDAO.findOneByName(name)
 }
 
-object BareDataSet extends Function3[String, Point3D, Int, BareDataSet] {
+object DataSetDAO extends BasicReactiveDAO[DataSet] {
+  val collectionName = "dataSets"
 
-  implicit val BareDataSetReads: Reads[BareDataSet] = Json.reads[BareDataSet]
-}
+  // Security
 
-//TODO: basedir komplett rausziehen und in config definieren
-case class DataSet(
-    name: String,
-    baseDir: String,
-    maxCoordinates: Point3D,
-    priority: Int = 0,
-    colorLayer: ColorLayer,
-    allowedTeams: List[String],
-    segmentationLayers: List[SegmentationLayer] = Nil,
-    classificationLayer: Option[ClassificationLayer] = None,
-    _id: ObjectId = new ObjectId) extends DAOCaseClass[DataSet] {
-
-  def dao = UnsecuredDataSet
-
-  val id = _id.toString
-
-  val dataLayers = ((colorLayer :: segmentationLayers)).groupBy(layer => layer.name).mapValues(list => list.head)
-
-  /**
-   * Checks if a point is inside the whole data set boundary.
-   */
-  def doesContain(point: Point3D) =
-    point.x >= 0 && point.y >= 0 && point.z >= 0 && // lower bound
-      !(point hasGreaterCoordinateAs maxCoordinates)
-}
-
-object UnsecuredDataSet extends BasicDAO[DataSet]("dataSets")
-
-object DataSet {
-
-  def default = {
-    //find(MongoDBObject())
-
-    val all = UnsecuredDataSet.findAll.filter(_.allowedTeams.contains(Team.default.name))
-    if (all.isEmpty)
-      throw new Exception("No default data set found!")
-    all.maxBy(_.priority)
+  def allUserAccess = {
+    Json.obj("allowedTeams" -> TeamPath.All)
   }
 
-  def hasAccess(user: User)(dataSet: DataSet) = {
-    dataSet.allowedTeams.isEmpty || dataSet.allowedTeams.find(user.teams.contains).isDefined
-  }
+  def teamRegexesForUser(user: User) = user.teams.map{t =>
+    Json.obj(
+      "allowedTeams" -> Json.obj("$regex" -> t.teamPath.toRegex))}
 
-  def deleteAllExcept(names: Array[String]) = {
-    UnsecuredDataSet.removeByIds(UnsecuredDataSet.findAll.filterNot(d => names.contains(d.name)).map(_._id))
-  }
-
-  def allAccessible(user: User) = {
-    UnsecuredDataSet.findAll.filter(hasAccess(user))
-  }
-
-  def findOneById(id: String, user: User) =
-    UnsecuredDataSet.findOneById(id).filter(hasAccess(user))
-
-  def findInAllOneByName(name: String) =
-    UnsecuredDataSet.findOne(MongoDBObject("name" -> name))
-
-  def findOneByName(name: String, user: User) =
-    UnsecuredDataSet.findOne(MongoDBObject("name" -> name)).filter(hasAccess(user))
-
-  def updateOrCreate(d: DataSet) = {
-    UnsecuredDataSet.findOne(MongoDBObject("name" -> d.name)) match {
-      case Some(stored) =>
-        stored.update(_ => d.copy(_id = stored._id, priority = stored.priority, allowedTeams = stored.allowedTeams))
+  override def findQueryFilter(implicit ctx: DBAccessContext) = {
+    ctx.data match{
+      case Some(user: User) =>
+        AllowIf(Json.obj("$or" -> JsArray(allUserAccess :: teamRegexesForUser(user))))
       case _ =>
-        UnsecuredDataSet.insertOne(d)
+        DenyEveryone()
     }
   }
 
-  def removeByName(name: String) {
-    UnsecuredDataSet.remove(MongoDBObject("name" -> name))
-  }
+  import braingames.binary.models.DataLayer.dataLayerFormat
+
+  val formatter = Json.format[DataSet]
+
+  def default()(implicit ctx: DBAccessContext) =
+    findMaxBy("priority")
+
+  def deleteAllExcept(names: Array[String])(implicit ctx: DBAccessContext) =
+    collectionRemove(Json.obj("name" -> Json.obj("$nin" -> names)))
+
+  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
+    findOne("name", name)
+
+  def updateOrCreate(d: DataSet)(implicit ctx: DBAccessContext) =
+    collectionUpdate(
+      Json.obj("name" -> d.name),
+      Json.obj(
+        "$set" -> formatWithoutId(d)),
+      upsert = true)
+
+  def removeByName(name: String)(implicit ctx: DBAccessContext) =
+    remove("name", name)
 
 }

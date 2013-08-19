@@ -105,6 +105,7 @@ class GetMetaValues
 
 
     # get endSlide
+    lastStartFrame = DataUtils.nmToSlide(mission.start.lastFrame, slidesBeforeProblem)
 
     endS = _.detect(mission.possibleEnds, id: mission.end.id)
     if endS?

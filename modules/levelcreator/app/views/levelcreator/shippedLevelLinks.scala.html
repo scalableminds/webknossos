@@ -1,7 +1,7 @@
 @(level: models.knowledge.Level)
 
 <i class="icon-retweet"></i>
-<a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">
+<a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks" data-levelid="@level.id">
   produce Stacks
 </a><br />
 <input type="checkbox" @if(level.renderSettings.shouldAutoRender){ checked } class="auto-render-stacks"> auto render<br />

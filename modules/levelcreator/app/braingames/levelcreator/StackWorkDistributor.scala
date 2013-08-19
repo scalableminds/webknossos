@@ -256,7 +256,7 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
   }
 
   def distributeMissions(missions: Enumerator[Mission], games: List[Game], levels: List[Level], max: Int) = {
-    if (games.isEmpty || levels.isEmpty || max == 0)
+    if (levels.isEmpty || max == 0)
       Future.successful(0)
     else
       StackInProgressDAO.findAll.flatMap {

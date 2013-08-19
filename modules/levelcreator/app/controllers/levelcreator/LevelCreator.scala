@@ -33,7 +33,7 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
   val levelForm = Form(
     mapping(
       "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
-      "game" -> nonEmptyText,
+      "game" -> optional(text),
       "width" -> number,
       "height" -> number,
       "slides before problem" -> number,
@@ -137,7 +137,6 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
           t => {
             (for {
               dataSet <- DataSetDAO.findOneByName(t.dataSetName) ?~> Messages("dataSet.notFound")
-              game <- GameDAO.findOneByName(t.game) ?~> Messages("game.notFound")
               existingLevelWithSameName <- LevelDAO.createLevel(t) ?~> Messages("level.create.failed")
               form <- generateLevelList(levelForm)
             } yield {
@@ -176,30 +175,35 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
   def updateRenderSettings(levelId: String) = ActionWithValidLevel(levelId, parser = parse.json) {
     implicit request =>
       Async {
-        for {
-          settings <- request.body.asOpt[RenderSettings] ?~> Messages("level.render.invalidSettings")
-          _ <- LevelDAO.updateRenderSettings(request.level, settings)
-        } yield {
+        request.level.game match {
+          case Some(game) =>
+            for {
+              settings <- request.body.asOpt[RenderSettings] ?~> Messages("level.render.invalidSettings")
+              _ <- LevelDAO.updateRenderSettings(request.level, settings)
+            } yield {
 
-          if(settings.shouldBeShipped){
-            ActiveLevelDAO.addActiveLevel(request.level.game, request.level.levelId)
-          } else {
-            ActiveLevelDAO.removeActiveLevel(request.level.game, request.level.levelId)
-          }
+              if (settings.shouldBeShipped) {
+                ActiveLevelDAO.addActiveLevel(game, request.level.levelId)
+              } else {
+                ActiveLevelDAO.removeActiveLevel(game, request.level.levelId)
+              }
 
-          val shippingMessage =
-            if (settings.shouldBeShipped)
-              Messages("level.render.shippingActive")
-            else
-              Messages("level.render.shippingInactive")
+              val shippingMessage =
+                if (settings.shouldBeShipped)
+                  Messages("level.render.shippingActive")
+                else
+                  Messages("level.render.shippingInactive")
 
-          val autoRenderMessage =
-            if (settings.shouldAutoRender)
-              Messages("level.render.autoRenderActive")
-            else
-              Messages("level.render.autoRenderInactive")
+              val autoRenderMessage =
+                if (settings.shouldAutoRender)
+                  Messages("level.render.autoRenderActive")
+                else
+                  Messages("level.render.autoRenderInactive")
 
-          JsonOk(shippingMessage + " " + autoRenderMessage)
+              JsonOk(shippingMessage + " " + autoRenderMessage)
+            }
+          case _ =>
+            Future.successful(JsonOk("Can't ship levels without a game"))
         }
       }
   }

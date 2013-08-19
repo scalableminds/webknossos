@@ -78,7 +78,7 @@ object RenderSettings {
 
 case class Level(
   levelId: LevelId /*ID, must be unique*/ ,
-  game: String,
+  game: Option[String],
   width: Int,
   height: Int,
   slidesBeforeProblem: Int,
@@ -138,7 +138,7 @@ object Level {
                       |  importSlides(start : 0, end : 10)
                     """.stripMargin
 
-  val empty = Level(LevelId(""), "", 250, 150, 15, 15, defaultDataSetName, LevelId(""))
+  val empty = Level(LevelId(""), None, 250, 150, 15, 15, defaultDataSetName, LevelId(""))
 
   val stackBaseFolder = {
     val folderName =
@@ -154,7 +154,7 @@ object Level {
     folderName
   }
 
-  def fromForm(name: String, game: String, width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int, dataSetName: String) = {
+  def fromForm(name: String, game: Option[String], width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int, dataSetName: String) = {
     Level(LevelId(name), game, width, height, slidesBeforeProblem, slidesAfterProblem, dataSetName, LevelId(name))
   }
 

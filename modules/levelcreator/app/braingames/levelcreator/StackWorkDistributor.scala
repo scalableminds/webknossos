@@ -73,17 +73,17 @@ object DefaultDistributionStrategy extends DistributionStrategy {
 
   def distributeOver(games: List[Game], levels: List[Level], inProgress: List[StackInProgress], queued: Vector[QueuedStack]): DistributionFunktion = {
     def renderedPerGame =
-      levels.groupBy(_.game).mapValues(_.map(_.numberOfActiveStacks).sum)
+      levels.groupBy(_.game getOrElse "").mapValues(_.map(_.numberOfActiveStacks).sum)
 
     def calculateQueuedPerGame(queue: Seq[QueuedStack]) = {
-      queued.map(_.stack.level).groupBy(_.game).mapValues(_.size)
+      queued.map(_.stack.level).groupBy(_.game getOrElse "").mapValues(_.size)
     }
 
     def plannedPerGame = {
       val inProgressPerGame = inProgress.map(_.levelId).flatMap {
         levelId =>
           levels.find(_.levelId == levelId)
-      }.groupBy(_.game).mapValues(_.size)
+      }.groupBy(_.game getOrElse "").mapValues(_.size)
 
       val queuedPerGame = calculateQueuedPerGame(queued)
 
@@ -113,7 +113,7 @@ object DefaultDistributionStrategy extends DistributionStrategy {
       //Logger.debug("Distribute called")
       val filteredLevels = levels.filterNot(l => excludedLevels.contains(l.levelId))
 
-      val ranked = filteredLevels.sortBy(l => renderedPerGame.get(l.game).getOrElse(0))
+      val ranked = filteredLevels.sortBy(l => renderedPerGame.get(l.game getOrElse "").getOrElse(0))
 
       ranked.headOption
     }

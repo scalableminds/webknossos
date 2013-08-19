@@ -47,6 +47,10 @@ $ ->
 
     "/" : ->
 
+      # set ship it
+      $("#level-list .ship-stacks-poopover").popover()
+
+
       $(document).on "click", "[data-prompt]", (event) ->
 
         event.preventDefault()
@@ -81,7 +85,44 @@ $ ->
         else
           sendAutoRender()
 
+      
 
+      $(document).on "click", ".ship-stacks", (event) -> 
+
+        event.preventDefault()
+        $this = $(this)
+      
+        $row = $this.parents("tr").first()
+        levelId = $this.attr("data-level-id")
+        autoShip = $this.attr("data-autoship")
+
+        json = JSON.stringify({
+          "shouldAutoRender": autoShip is "true",
+          "shouldBeShipped": true
+        })
+        console.log json
+
+
+        $.ajax(
+          _.extend(
+            type : "POST"
+            dataType: "json"
+            data: json
+            headers: { 
+               Accept : "application/json",
+               "Content-Type": "application/json; charset=UTF-8" }
+            routes.controllers.levelcreator.LevelCreator.updateRenderSettings(levelId)
+          )
+        ).then(
+
+          ( { messages } ) -> Toast.message(messages)
+          (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
+
+        )
+        
+        return        
+
+      
 
       $(document).on "click", "#level-list .produce-stacks", (event) -> 
 

@@ -46,7 +46,7 @@ class Flycam2d
 
   zoomByDelta : (delta) ->
 
-    @zoom(@zoomStep + delta * constants.ZOOM_DIFF)
+    @zoom(@zoomStep - delta * constants.ZOOM_DIFF)
 
 
   zoom : (zoom) ->

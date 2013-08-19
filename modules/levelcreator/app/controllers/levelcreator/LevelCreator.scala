@@ -188,7 +188,7 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
           }
 
           val shippingMessage =
-            if (settings.shouldAutoRender)
+            if (settings.shouldBeShipped)
               Messages("level.render.shippingActive")
             else
               Messages("level.render.shippingInactive")

@@ -19,6 +19,7 @@ import play.api.libs.ws.WS.WSRequestHolder
 import com.ning.http.client.Realm.AuthScheme
 import net.liftweb.common.{Empty, Failure, Full, Box}
 import models.knowledge.Stack
+import play.api.libs.json.{JsObject, Json}
 
 case class RenderingFinished(stack: Stack)
 
@@ -147,13 +148,19 @@ class StackRenderingSupervisor extends Actor {
   }
 
   def reportFinishedWork(stack: Stack, downloadUrls: List[String]) = {
+    val paraInformation: JsObject = stack.paraInformation.getOrElse(Json.obj())
+    val jsonBody = Json.obj(
+      "downloadUrls" -> downloadUrls,
+      "paraInformation" -> paraInformation
+    )
+
     WS
       .url(finishedWorkUrl)
       .withQueryString("key" -> stack.id)
-      .withHeaders("Content-Type" -> "text/plain")
+      .withHeaders("Content-Type" -> "text/json")
       .withAuth(levelcreatorAuth)
       .withTimeout(30000)
-      .post(downloadUrls.mkString(" "))
+      .post(jsonBody)
       .map {
       response =>
         response.status match {

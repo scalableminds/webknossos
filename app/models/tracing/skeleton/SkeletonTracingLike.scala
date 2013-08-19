@@ -125,6 +125,7 @@ object SkeletonTracingLike {
         dataSetOpt <- DataSetDAO.findOneByName(e.dataSetName)
         trees <- Xml.toXML(e.trees.filterNot(_.nodes.isEmpty))
         branchpoints <- Xml.toXML(e.branchPoints)
+        comments <- Xml.toXML(e.comments)
       } yield {
         dataSetOpt match {
           case Some(dataSet) =>
@@ -142,7 +143,7 @@ object SkeletonTracingLike {
                 {branchpoints}
               </branchpoints>
               <comments>
-                {e.comments.map(c => Xml.toXML(c))}
+                {comments}
               </comments>
             </things>
           case _ =>

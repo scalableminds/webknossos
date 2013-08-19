@@ -19,6 +19,7 @@ case class RenderedStack(
   mission: MissionInfo,
   downloadUrls: List[String],
   isActive: Boolean,
+  paraInfo: JsObject,// = JsObject,
   random: Double = Math.random(),
   _id: BSONObjectID = BSONObjectID.generate) {
 

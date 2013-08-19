@@ -117,7 +117,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
       imagesPerRow = maxSpriteSheetWidth / stack.level.width,
       imagesPerColumn = maxSpriteSheetHeight / stack.level.height)
 
-    Box(ImageCreator.createSpriteSheet(images, params, ImageCreator.defaultTargetType)).flatMap {
+    Box(ImageCreator.createSpriteSheet(images, params, BufferedImage.TYPE_4BYTE_ABGR)).flatMap {
       combinedImage =>
         val files = combinedImage.pages.map {
           p =>

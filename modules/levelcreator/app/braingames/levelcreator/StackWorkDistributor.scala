@@ -22,6 +22,7 @@ import models.knowledge.Mission
 import models.knowledge.MissionInfo
 import play.api.i18n.Messages
 import scala.concurrent.Future
+import play.api.libs.json.{JsValue, Json, JsObject}
 
 //case class CreateStack(stack: Stack)
 
@@ -31,7 +32,7 @@ case class CreateRandomStacks(level: Level, n: Int)
 
 case class RequestWork(rendererId: String)
 
-case class FinishedWork(key: String, downloadUrls: List[String])
+case class FinishedWork(key: String, resultJson: JsValue)
 
 case class FailedWork(key: String, reason: String)
 
@@ -40,6 +41,12 @@ case object CountActiveRenderers
 case object QueueStatusRequest
 
 case class QueueStatus(levelStats: Map[LevelId, Int])
+
+case class RendererResult(downloadUrls: List[String], paraInformation: JsObject)
+
+object RendererResult{
+  implicit val rendererResultFormat = Json.format[RendererResult]
+}
 
 /**
  * Internal communication of StackWorkDistributor
@@ -320,8 +327,8 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
       logActiveRenderer(rendererId)
       handleWorkRequest(sender)
 
-    case FinishedWork(key, downloadUrls) =>
-      handleFinishedWork(key, downloadUrls)
+    case FinishedWork(key, resultJson) =>
+      handleFinishedWork(key, resultJson)
 
     case FailedWork(key, reason) =>
       handleFailedWork(key, reason)
@@ -334,8 +341,9 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
       sender ! QueueStatus(queueStatus)
   }
 
-  def handleFinishedWork(key: String, downloadUrls: List[String]) = {
+  def handleFinishedWork(key: String, result: JsValue) = {
     (for {
+      rendererResult <- result.asOpt[RendererResult] ?~> "Couldn't extract renderer result"
       challenge <- StackInProgressDAO.findOneByKey(key) ?~> "Challenge not found"
       level <- challenge.level ?~> "Level not found"
       mission <- challenge.mission ?~> "Mission not found"
@@ -345,7 +353,7 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
       val missionInfo = MissionInfo(mission._id, mission.key)
 
       RenderedStackDAO.updateOrCreate(
-        RenderedStack(level.levelId, missionInfo, downloadUrls, !mission.isFinished))
+        RenderedStack(level.levelId, missionInfo, rendererResult.downloadUrls, !mission.isFinished, rendererResult.paraInformation))
 
       MissionDAO.successfullyRendered(level, mission)
 

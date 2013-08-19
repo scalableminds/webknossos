@@ -57,7 +57,7 @@ $ ->
 
       return
 
-    "oxalis.trace" : ->
+    "tracing.trace" : ->
 
       require [
         "./oxalis/controller"
@@ -119,17 +119,14 @@ $ ->
       return
 
     "admin.user.userAdministration" : ->
-
       require ["multiselect"], ->
-
-        $(".multiselect").multiselect()
 
         $popovers = $("a[rel=popover]")
         template = """
-          <form class="form-inline">
-          #{$("#single-teampicker").html()}
-          </form>
-          """
+                   <form class="form-inline">
+        #{$("#single-teampicker").html()}
+                   </form>
+                   """
 
         $popovers.popover(
           content: template
@@ -153,28 +150,38 @@ $ ->
           $(".popover").find(".popover-hide").on "click", -> $this.popover("hide")
 
 
-      $("#bulk-actions a").on "click", ->
+        $("#bulk-actions a").on "click", ->
 
-        $this = $(@)
-        templateId = $this.data("template")
-        template = $("##{templateId}")
-        title = template.data("header")
+          $this = $(@)
+          templateId = $this.data("template")
+          showModal(templateId)
 
-        $modal = $(".modal")
+        showModal = (templateId) ->
 
-        $modal.find(".modal-body").html(template.html())
-        $modal.find(".modal-header h3").text(title)
-        $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
+          template = $("##{templateId}")
+          title = template.data("header")
 
-        $modal.modal("show")
+          $modal = $(".modal")
 
-      $("form").on "click", ".label-experience", (event) ->
-        values = $(this).html().split(" ")
-        if values
-          $("input[name=experience-domain]").val(values[0])
-          $("input[name=experience-value]").val(values[1])
-          $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
-          $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
+          $modal.find(".modal-body").html(template.html())
+          $modal.find(".modal-header h3").text(title)
+          $modal.find(".modal-hide").on "click", -> $modal.modal("hide")
+          $modal.find(".multiselect").multiselect()
+
+          $modal.modal("show")
+
+
+
+        $("form").on "click", ".label-experience", (event) ->
+          values = $(this).html().split(" ")
+          if values
+            showModal("experiencepicker")
+            $modal = $(".modal")
+
+            $modal.find("input[name=experience-domain]").attr("value", values[0])
+            $modal.find("input[name=experience-value]").attr("value", values[1])
+            $(this).parents("table").find("input[type=checkbox]").attr('checked', false)
+            $(this).parents("tr").find("input[type=checkbox]").attr('checked', true)
 
       return
 

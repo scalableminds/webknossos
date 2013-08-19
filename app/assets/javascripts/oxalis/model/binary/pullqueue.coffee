@@ -14,13 +14,13 @@ class PullQueue
   cube : null
   queue : []
 
-  dataSetId : ""
+  dataSetName : ""
 
   batchCount : 0
   roundTripTime : 0
 
   
-  constructor : (@dataSetId, @cube) ->
+  constructor : (@dataSetName, @cube) ->
 
 
   swap : (a, b) ->
@@ -83,8 +83,8 @@ class PullQueue
     @queue.length = 0
 
 
-  # Starting to download some buckets
   pull : ->
+    # Starting to download some buckets
 
     while @batchCount < @BATCH_LIMIT and @queue.length
       
@@ -101,8 +101,8 @@ class PullQueue
       @pullBatch(batch) if batch.length > 0
 
 
-  # Loading a bunch of buckets
   pullBatch : (batch) ->
+    # Loading a bunch of buckets
 
     @batchCount++
 
@@ -188,9 +188,9 @@ class PullQueue
 
     new ArrayBufferSocket(
       senders : [
-        # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/binary/ajax?dataSetId=#{@dataSetId}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/color/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array

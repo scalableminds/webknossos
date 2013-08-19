@@ -22,18 +22,27 @@ class ScaleInfo
                           @baseVoxel / @nmPerVoxel[2]]
 
   getNmPerVoxelVector : ->
+
     return new THREE.Vector3(@nmPerVoxel...)
 
+
   getVoxelPerNMVector : ->
+
     return new THREE.Vector3(@voxelPerNM...)
 
+
   voxelToNm : (posArray) ->
+
     nmPos = posArray.slice()
     for i in [0..2]
       nmPos[i] *= @nmPerVoxel[i]
 
+
   baseVoxelToVoxel : (baseVoxel) ->
+
     res = @baseVoxelFactors.slice();
     for i in [0..2]
     	res *= baseVoxel
     return res
+
+    

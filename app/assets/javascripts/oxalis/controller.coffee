@@ -32,10 +32,14 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done (settings) =>
+    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       unless settings
+        return
+
+      unless restrictions.allowAccess
+        Toast.Error "You are not allowed to access this tracing"
         return
 
       for allowedMode in settings.allowedModes
@@ -53,7 +57,7 @@ class Controller
 
       @view = new View(@model)
 
-      @gui = @createGui(settings)
+      @gui = @createGui(restrictions, settings)
 
       @sceneController = new SceneController(@model.binary.cube.upperBoundary, @model.flycam, @model)
 
@@ -67,7 +71,7 @@ class Controller
       @initKeyboard()
 
       @setMode(constants.MODE_PLANE_TRACING)
-      @setMode(constants.MODE_VOLUME)
+      # @setMode(constants.MODE_VOLUME)
 
       if constants.MODE_PLANE_TRACING not in @allowedModes
         if constants.MODE_ARBITRARY in @allowedModes
@@ -79,7 +83,7 @@ class Controller
         nodeClick : (id) => @setActiveNode(id, true, false)
 
       $("#comment-input").on "change", (event) => 
-        @model.route.setComment(event.target.value)
+        @model.cellTracing.setComment(event.target.value)
         $("#comment-input").blur()
 
       $("#comment-previous").click =>
@@ -93,7 +97,7 @@ class Controller
         @setActiveNode($(event.target).data("nodeid"), true, false)
 
       $("#tree-name-submit").click (event) =>
-        @model.route.setTreeName($("#tree-name-input").val())
+        @model.cellTracing.setTreeName($("#tree-name-input").val())
 
       $("#tree-name-input").keypress (event) =>
         if event.which == 13
@@ -107,17 +111,17 @@ class Controller
         @selectNextTree(true)
 
       $("#tree-create-button").click =>
-        @model.route.createNewTree()
+        @model.cellTracing.createNewTree()
 
       $("#tree-delete-button").click =>
-        @model.route.deleteTree(true)
+        @model.cellTracing.deleteTree(true)
 
       $("#tree-list").on "click", "a[data-treeid]", (event) =>
         event.preventDefault()
         @setActiveTree($(event.currentTarget).data("treeid"), true)
 
       $("#tree-color-shuffle").click =>
-        @model.route.shuffleActiveTreeColor()
+        @model.cellTracing.shuffleActiveTreeColor()
 
       $("#tree-sort").on "click", "a[data-sort]", (event) =>
         event.preventDefault()
@@ -133,11 +137,20 @@ class Controller
 
 
   initKeyboard : ->
+
+    $(document).keypress (event) ->
+      
+      if event.shiftKey && event.which == 63
+        $("#help-modal").modal('toggle')
+
+
     
     # avoid scrolling while pressing space
     $(document).keydown (event) ->
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
+
+
 
     new Input.KeyboardNoLoop(
 
@@ -155,7 +168,7 @@ class Controller
         @abstractTreeController.drawTree()
 
       "q" : => @toggleFullScreen()
-
+      
       #Set Mode, outcomment for release
       "shift + 1" : =>
         @setMode(constants.MODE_PLANE_TRACING)
@@ -170,6 +183,17 @@ class Controller
           @setMode(constants.MODE_ARBITRARY)
         else if @mode == constants.MODE_ARBITRARY
           @setMode(constants.MODE_PLANE_TRACING)
+
+      #"b" : =>
+      #  @model.cellTracing.benchmark( 1000000 )
+      #  Toast.success("Benchmark node insertion done")
+
+      "super + s, ctrl + s" : (event) =>
+
+        event.preventDefault()
+        event.stopPropagation()
+        @gui.saveNow()
+
     )
 
 
@@ -206,11 +230,11 @@ class Controller
         requestFullscreen.call(body, body.ALLOW_KEYBOARD_INPUT)
 
 
-  createGui : (settings)->
+  createGui : (restrictions, settings)->
 
     { model } = @
 
-    gui = new Gui($("#optionswindow"), model, settings)
+    gui = new Gui($("#optionswindow"), model, restrictions, settings)
     gui.update()  
 
     model.binary.queue.set4Bit(model.user.fourBit)
@@ -218,7 +242,7 @@ class Controller
 
     gui.on
       deleteActiveNode : =>
-        @model.route.deleteActiveNode()
+        @model.cellTracing.deleteActiveNode()
       setActiveTree : (id) => @setActiveTree(id, false)
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
       setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
@@ -229,20 +253,20 @@ class Controller
 
   setActiveTree : (treeId, centered) ->
 
-    @model.route.setActiveTree(treeId)
+    @model.cellTracing.setActiveTree(treeId)
     if centered
       @centerActiveNode()
 
 
   selectNextTree : (next) ->
 
-    @model.route.selectNextTree(next)
+    @model.cellTracing.selectNextTree(next)
     @centerActiveNode()
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->
 
-    @model.route.setActiveNode(nodeId, mergeTree)
+    @model.cellTracing.setActiveNode(nodeId, mergeTree)
     if centered
       @centerActiveNode()
 
@@ -257,9 +281,9 @@ class Controller
 
   prevComment : =>
 
-    @setActiveNode(@model.route.nextCommentNodeID(false), true)
+    @setActiveNode(@model.cellTracing.nextCommentNodeID(false), true)
 
 
   nextComment : =>
 
-    @setActiveNode(@model.route.nextCommentNodeID(true), true)
+    @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)

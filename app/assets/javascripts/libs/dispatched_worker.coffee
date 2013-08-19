@@ -10,6 +10,7 @@ underscore : _
 class DispatchedWorker
 
   constructor : (url) ->
+
     @worker = new Worker(url)
 
     @worker.onerror = (err) -> console?.error(err)
@@ -40,8 +41,10 @@ class DispatchedWorker
 class DispatchedWorker.Pool
 
   constructor : (@url, @workerLimit = 3) ->
+
     @queue = []
     @workers = []
+
 
   send : (data) ->
 
@@ -64,12 +67,16 @@ class DispatchedWorker.Pool
     worker.busy = false
     
     workerReset = =>
+
       worker.busy = false
       @queueShift(worker)
 
+
     worker.worker.onerror = (err) -> 
+
       console?.error(err)
       workerReset()
+
 
     worker.worker.addEventListener("message", workerReset, false)
 
@@ -77,6 +84,7 @@ class DispatchedWorker.Pool
 
     worker
   
+
   queueShift : (worker) ->
 
     if @queue.length > 0 and not worker.busy
@@ -85,9 +93,11 @@ class DispatchedWorker.Pool
         .done (data) -> deferred.resolve(data)
         .fail (err) -> deferred.reject(err)
     
+
   queuePush : (data) ->
 
     deferred = $.Deferred()
     @queue.push { data, deferred }
+
 
 DispatchedWorker

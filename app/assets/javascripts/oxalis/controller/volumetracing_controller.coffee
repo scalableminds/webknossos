@@ -55,6 +55,7 @@ class VolumeTracingController
       "c" : =>
         @model.volumeTracing.createCell()
 
+
   enterDeleteMode : (enter = true) ->
 
     @inDeleteMode = enter
@@ -63,8 +64,14 @@ class VolumeTracingController
       @prevActiveCell = @model.volumeTracing.getActiveCellId()
       @model.volumeTracing.setActiveCell(0)
 
+
   restoreAfterDeleteMode : ->
 
     if @inDeleteMode
       @model.volumeTracing.setActiveCell( @prevActiveCell )
     @inDeleteMode = false
+
+
+  drawVolume : (pos) ->
+
+    @model.volumeTracing.addToLayer(pos)

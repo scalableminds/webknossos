@@ -26,6 +26,7 @@ class PlaneController
     keyboardLoopDelayed : null
 
     unbind : ->
+
       for mouse in @mouseControllers
         mouse.unbind()
       @mouseControllers = []
@@ -41,9 +42,8 @@ class PlaneController
     @isStarted = false
 
     @flycam = @model.flycam
-    @flycam.setPosition(@model.route.data.editPosition)
-    @flycam.setZoomStep(@model.user.zoom)
-    @flycam.setQuality(@model.user.quality)
+
+    @oldNmPos = @model.scaleInfo.voxelToNm( @flycam.getPosition() )
 
     @view  = new PlaneView(@model, @flycam, stats, renderer, scene)
 
@@ -52,33 +52,33 @@ class PlaneController
 
     @canvasesAndNav = $("#main")[0]
 
-    @prevControls = $('#prevControls')
-    @prevControls.addClass("btn-group")
+    @TDViewControls = $('#TDViewControls')
+    @TDViewControls.addClass("btn-group")
 
     buttons = [
         name : "3D"
-        callback : @cameraController.changePrevSV
+        callback : @cameraController.changeTDViewDiagonal
       ,
         name : "XY"
-        callback : @cameraController.changePrevXY
+        callback : @cameraController.changeTDViewXY
         color : "#f00"
       ,
         name : "YZ"
-        callback : @cameraController.changePrevYZ
+        callback : @cameraController.changeTDViewYZ
         color : "#00f"
       ,
         name : "XZ"
-        callback : @cameraController.changePrevXZ
+        callback : @cameraController.changeTDViewXZ
         color : "#0f0"
     ]
 
     for button in buttons
 
-      button.control = @prevControls.append(
+      button.control = @TDViewControls.append(
         $("<button>", type : "button", class : "btn btn-small")
           .html("#{if button.color then "<span style=\"background: #{button.color}\"></span>" else ""}#{button.name}")
           .on("click", button.callback)
-      )    
+      )
 
     objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }
     @cellTracingController = new CellTracingController( objects )
@@ -88,8 +88,6 @@ class PlaneController
     
     for mesh in meshes
       @view.addGeometry(mesh)
-
-    @flycam.setPosition(@model.route.data.editPosition)
 
     @model.user.triggerAll()
 
@@ -112,28 +110,28 @@ class PlaneController
             scroll : @scroll
           })))
 
-    @input.mouseControllers.push( new Input.Mouse($("#skeletonview"),
+    @input.mouseControllers.push( new Input.Mouse($("#TDView"),
       leftDownMove : (delta) => 
-        @cameraController.movePrevX(delta.x * @model.user.getMouseInversionX())
-        @cameraController.movePrevY(delta.y * @model.user.getMouseInversionY())
+        @cameraController.moveTDViewX(delta.x * @model.user.getMouseInversionX())
+        @cameraController.moveTDViewY(delta.y * @model.user.getMouseInversionY())
       scroll : (value) =>
-        @cameraController.zoomPrev(value,
-          @input.mouseControllers[constants.VIEW_3D].position,
+        @cameraController.zoomTDView(value,
+          @input.mouseControllers[constants.TDView].position,
           @view.curWidth)
       leftClick : (position, shiftPressed, altPressed) =>
-        @cellTracingController.onClick(position, shiftPressed, altPressed, constants.VIEW_3D)
+        @cellTracingController.onClick(position, shiftPressed, altPressed, constants.TDView)
     ) )
 
 
   initTrackballControls : ->
 
-    view = $("#skeletonview")[0]
+    view = $("#TDView")[0]
     pos = @model.scaleInfo.voxelToNm(@flycam.getPosition())
     @controls = new THREE.TrackballControls(
-      @view.getCameras()[constants.VIEW_3D],
+      @view.getCameras()[constants.TDView],
       view, 
       new THREE.Vector3(pos...), 
-      => @flycam.hasChanged = true )
+      => @flycam.update())
     
     @controls.noZoom = true
     @controls.noPan = true
@@ -143,8 +141,22 @@ class PlaneController
 
     @flycam.on
       positionChanged : (position) =>
+
+        nmPosition = @model.scaleInfo.voxelToNm(position)
+
         @controls.setTarget(
-          new THREE.Vector3(@model.scaleInfo.voxelToNm(position)...))
+          new THREE.Vector3(nmPosition...))
+      
+        # As the previous step will also move the camera, we need to
+        # fix this by offsetting the viewport
+
+        invertedDiff = []
+        for i in [0..2]
+          invertedDiff.push( @oldNmPos[i] - nmPosition[i] )
+        @oldNmPos = nmPosition
+
+        @cameraController.moveTDView( 
+          new THREE.Vector3( invertedDiff... ))
 
     @cameraController.on
       cameraPositionChanged : =>
@@ -173,10 +185,6 @@ class PlaneController
       "up"    : (timeFactor) => @moveY(-getVoxelOffset(timeFactor))
       "down"  : (timeFactor) => @moveY( getVoxelOffset(timeFactor))
 
-      #misc keys
-      # TODO: what does this? I removed it, I need the key.
-      #"n" : => Helper.toggle()
-      #"ctr + s"       : => @model.route.pushImpl()
     )
 
     @input.keyboardLoopDelayed = new Input.Keyboard(
@@ -210,8 +218,8 @@ class PlaneController
 
   init : ->
 
-    @cameraController.setRouteClippingDistance @model.user.routeClippingDistance
-    @sceneController.setRouteClippingDistance @model.user.routeClippingDistance
+    @cameraController.setClippingDistance @model.user.clippingDistance
+    @sceneController.setClippingDistance @model.user.clippingDistance
 
 
   start : (newMode) ->
@@ -247,7 +255,7 @@ class PlaneController
 
     @view.on
       render : => @render()
-      finishedRender : => @model.route.rendered()
+      finishedRender : => @model.cellTracing.rendered()
       renderCam : (id, event) => @sceneController.updateSceneForCam(id)
 
     @sceneController.on
@@ -270,7 +278,7 @@ class PlaneController
 
     @model.binary.ping(@flycam.getPosition(), {zoomStep: @flycam.getIntegerZoomStep(), area: [@flycam.getArea(constants.PLANE_XY),
                         @flycam.getArea(constants.PLANE_YZ), @flycam.getArea(constants.PLANE_XZ)], activePlane: @flycam.getActivePlane()})
-    @model.route.globalPosition = @flycam.getPosition()
+    @model.cellTracing.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()
 
@@ -288,20 +296,24 @@ class PlaneController
       @flycam.moveActivePlane([0, 0, z], false)
 
   zoomIn : (zoomToMouse) =>
+
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @cameraController.zoom(@flycam.getZoomStep() - constants.ZOOM_DIFF)
+    @flycam.zoomIn()
     @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()
 
+
   zoomOut : (zoomToMouse) =>
+
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @cameraController.zoom(@flycam.getZoomStep() + constants.ZOOM_DIFF)
+    @flycam.zoomOut()
     @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
     if zoomToMouse
       @finishZoom()
+
 
   finishZoom : =>
     
@@ -315,34 +327,45 @@ class PlaneController
       @flycam.move(moveVector, @flycam.getActivePlane())
 
   getMousePosition : ->
+
     activePlane = @flycam.getActivePlane()
     pos = @input.mouseControllers[activePlane].position
     return @calculateGlobalPos(pos)
 
+
   isMouseOver : ->
+
     activePlane = @flycam.getActivePlane()
     return @input.mouseControllers[activePlane].isMouseOver
 
+
   changeMoveValue : (delta) ->
+
     moveValue = @model.user.moveValue + delta
     moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue)
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue)
 
     @model.user.setValue("moveValue", (Number) moveValue)
 
+
   scaleTrianglesPlane : (delta) ->
+
     scale = @model.user.scale + delta
     scale = Math.min(constants.MAX_SCALE, scale)
     scale = Math.max(constants.MIN_SCALE, scale)
 
     @model.user.setValue("scale", (Number) scale)
 
+
   setNodeRadius : (delta) =>
-    lastRadius = @model.route.getActiveNodeRadius()
+
+    lastRadius = @model.cellTracing.getActiveNodeRadius()
     radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
-    @model.route.setActiveNodeRadius(radius)
+    @model.cellTracing.setActiveNodeRadius(radius)
+
 
   scroll : (delta, type) =>
+
     switch type
       when null then @moveZ(delta)
       when "shift" then @cellTracingController.setParticleSize(delta)
@@ -352,7 +375,9 @@ class PlaneController
         else
           @zoomOut(true)
 
+
   calculateGlobalPos : (clickPos) =>
+
     curGlobalPos  = @flycam.getPosition()
     zoomFactor    = @flycam.getPlaneScalingFactor()
     scaleFactor   = @view.scaleFactor
@@ -371,5 +396,9 @@ class PlaneController
           curGlobalPos[1], 
           curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos.y) / scaleFactor * planeRatio[2] * zoomFactor ]
 
+
   centerActiveNode : ->
+
     @activeSubController.centerActiveNode()
+
+    

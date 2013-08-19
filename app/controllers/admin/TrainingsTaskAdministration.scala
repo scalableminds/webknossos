@@ -2,23 +2,23 @@ package controllers.admin
 
 import braingames.mvc.Controller
 import play.mvc.Security.Authenticated
-import brainflight.security.Secured
+import oxalis.security.Secured
 import models.security._
-import views._
 import play.api.data.Form
 import play.api.data.Forms._
-import brainflight.security.AuthenticatedRequest
+import oxalis.security.AuthenticatedRequest
 import models.task.TaskType
-import models.binary.DataSet
+import braingames.binary.models.DataSet
 import models.task.Task
 import models.user.Experience
 import models.task.Training
-import models.tracing.Tracing
-import nml._
-import models.tracing.TracingType
+import oxalis.nml._
 import play.api.i18n.Messages
 import models.task.Project
 import java.util.Date
+import models.annotation.{AnnotationType, AnnotationDAO}
+import models.tracing.skeleton.SkeletonTracing
+import views._
 
 object TrainingsTaskAdministration extends Controller with Secured {
 
@@ -28,7 +28,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
   val trainingsTaskForm = Form(
     tuple(
       "task" -> text.verifying("task.notFound", task => Task.findOneById(task).isDefined),
-      "tracing" -> text.verifying("tracing.notFound", exp => Tracing.findOneById(exp).isDefined),
+      "tracing" -> text.verifying("tracing.notFound", exp => SkeletonTracing.findOneById(exp).isDefined),
       "training" -> mapping(
         "domain" -> nonEmptyText(1, 50),
         "gain" -> number,
@@ -45,7 +45,7 @@ object TrainingsTaskAdministration extends Controller with Secured {
   def trainingsTaskCreateHTML(taskForm: Form[(String, String, Training)])(implicit request: AuthenticatedRequest[_]) = {
     html.admin.training.trainingsTaskCreate(
       Task.findAllNonTrainings,
-      Tracing.findOpenTracingsFor(request.user, TracingType.Explorational),
+      AnnotationDAO.findOpenAnnotationsFor(request.user, AnnotationType.Explorational),
       Experience.findAllDomains,
       taskForm)
   }
@@ -61,17 +61,17 @@ object TrainingsTaskAdministration extends Controller with Secured {
     trainingsTaskForm.bindFromRequest.fold(
       formWithErrors => BadRequest(trainingsTaskCreateHTML(formWithErrors)),
       {
-        case (taskId, tracingId, training) =>
+        case (taskId, annotationId, training) =>
           (for {
             task <- Task.findOneById(taskId) ?~ Messages("task.notFound")
-            tracing <- Tracing.findOneById(tracingId) ?~ Messages("tracing.notFound")
+            annotation <- AnnotationDAO.findOneById(annotationId) ?~ Messages("annotation.notFound")
           } yield {
             val trainingsTask = Task.copyDeepAndInsert(task.copy(
               instances = Integer.MAX_VALUE,
               created = new Date),
               includeUserTracings = false)
 
-            val sample = Tracing.createSample(trainingsTask._id, tracing)
+            val sample = AnnotationDAO.createSample(annotation, trainingsTask._id)
             trainingsTask.update(_.copy(training = Some(training.copy(sample = sample._id))))
 
             Ok(html.admin.training.trainingsTaskList(Task.findAllTrainings))

@@ -342,8 +342,8 @@ class Cube
       voxelIndex : @getVoxelIndexByVoxelOffset(voxelOffset) }
     
 
-  # return the bucket a given voxel lies in
   positionToZoomedAddress : ([x, y, z], zoomStep) ->
+    # return the bucket a given voxel lies in
 
     [
       x >> @BUCKET_SIZE_P + zoomStep,

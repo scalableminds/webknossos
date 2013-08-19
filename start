@@ -1,4 +1,4 @@
 mongod > /dev/null &
 PID="$!"
-playframework/play run -Xmx2048m -XX:MaxPermSize=512M
+sbt run -Xmx2048m -XX:MaxPermSize=512M
 kill -9 $PID

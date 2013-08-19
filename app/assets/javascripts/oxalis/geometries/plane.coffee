@@ -14,6 +14,7 @@ class Plane
   GRAY_CH_COLOR    : 0x222222
 
   constructor : (planeWidth, textureWidth, flycam, planeID, model) ->
+
     @flycam          = flycam
     @planeID         = planeID
     @model           = model
@@ -30,7 +31,9 @@ class Plane
     
     @createMeshes(planeWidth, textureWidth)
 
+
   createMeshes : (pWidth, tWidth) ->
+
     # create plane
     planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
     volumePlaneGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1)
@@ -132,24 +135,31 @@ class Plane
       @crosshair[i] = new THREE.Line(crosshairGeometries[i], new THREE.LineBasicMaterial({color: @CROSSHAIR_COLORS[@planeID][i], linewidth: 1}), THREE.LinePieces)
       
     # create borders
-    prevBordersGeo = new THREE.Geometry()
-    prevBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2, -pWidth/2, 0))
-    prevBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2,  pWidth/2, 0))
-    prevBordersGeo.vertices.push(new THREE.Vector3(  pWidth/2,  pWidth/2, 0))
-    prevBordersGeo.vertices.push(new THREE.Vector3(  pWidth/2, -pWidth/2, 0))
-    prevBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2, -pWidth/2, 0))
-    @prevBorders = new THREE.Line(prevBordersGeo, new THREE.LineBasicMaterial({color: constants.PLANE_COLORS[@planeID], linewidth: 1}))
+    TDViewBordersGeo = new THREE.Geometry()
+    TDViewBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2, -pWidth/2, 0))
+    TDViewBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2,  pWidth/2, 0))
+    TDViewBordersGeo.vertices.push(new THREE.Vector3(  pWidth/2,  pWidth/2, 0))
+    TDViewBordersGeo.vertices.push(new THREE.Vector3(  pWidth/2, -pWidth/2, 0))
+    TDViewBordersGeo.vertices.push(new THREE.Vector3( -pWidth/2, -pWidth/2, 0))
+    @TDViewBorders = new THREE.Line(TDViewBordersGeo, new THREE.LineBasicMaterial({color: constants.PLANE_COLORS[@planeID], linewidth: 1}))
+
 
   setDisplayCrosshair : (value) =>
+
     @displayCosshair = value
 
+
   setOriginalCrosshairColor : =>
+
     for i in [0..1]
       @crosshair[i].material = new THREE.LineBasicMaterial({color: @CROSSHAIR_COLORS[@planeID][i], linewidth: 1})
 
+
   setGrayCrosshairColor : =>
+
     for i in [0..1]
       @crosshair[i].material = new THREE.LineBasicMaterial({color: @GRAY_CH_COLOR, linewidth: 1})
+
 
   updateTexture : =>
 
@@ -177,15 +187,21 @@ class Plane
       @plane.offset.x = area[0] / @textureWidth
       @plane.offset.y = 1 - area[3] / @textureWidth
 
+
   setScale : (factor) =>
+
     scaleVec = new THREE.Vector3().multiplyVectors(new THREE.Vector3(factor, factor, factor), @scaleVector)
-    @plane.scale = @prevBorders.scale = @crosshair[0].scale = @crosshair[1].scale = scaleVec
+    @plane.scale = @TDViewBorders.scale = @crosshair[0].scale = @crosshair[1].scale = scaleVec
+
 
   setRotation : (rotVec) =>
-    @plane.rotation = @prevBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
+
+    @plane.rotation = @TDViewBorders.rotation = @crosshair[0].rotation = @crosshair[1].rotation = rotVec
+
 
   setPosition : (posVec) =>
-    @prevBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
+
+    @TDViewBorders.position = @crosshair[0].position = @crosshair[1].position = posVec
     
     offset = new THREE.Vector3(0, 0, 0)
     if      @planeID == constants.PLANE_XY then offset.z =  1
@@ -193,12 +209,19 @@ class Plane
     else if @planeID == constants.PLANE_XZ then offset.y = -1
     @plane.position = offset.addVectors(posVec, offset)
 
+
   setVisible : (visible) =>
-    @plane.visible = @prevBorders.visible = visible
+
+    @plane.visible = @TDViewBorders.visible = visible
     @crosshair[0].visible = @crosshair[1].visible = visible and @displayCosshair
 
+
   getMeshes : =>
-    [@plane, @prevBorders, @crosshair[0], @crosshair[1]]
+
+    [@plane, @TDViewBorders, @crosshair[0], @crosshair[1]]
+
 
   setLinearInterpolationEnabled : (value) =>
+
     @plane.texture.magFilter = if value==true then THREE.LinearFilter else THREE.NearestFilter
+

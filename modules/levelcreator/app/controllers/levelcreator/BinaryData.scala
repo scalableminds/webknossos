@@ -11,37 +11,76 @@ import play.api.libs.iteratee._
 import play.api.libs.concurrent._
 import play.libs.Akka._
 import play.api.Play.current
-import models.binary._
+import _root_.models.binary._
 import akka.util.Timeout
-import brainflight.binary._
-import models.knowledge._
+import _root_.models.knowledge._
 import braingames.mvc.Controller
 import play.api.i18n.Messages
-import brainflight.tools.geometry._
+import braingames.geometry._
 import akka.pattern.ask
 import akka.pattern.AskTimeoutException
 import scala.collection.mutable.ArrayBuffer
 import play.api.libs.concurrent.Execution.Implicits._
-import models.binary.DataLayer
-import models.binary.DataSet
+import braingames.binary.models.{DataLayerId, DataLayer, DataSet}
+import models.knowledge.DataSetDAO
 import akka.agent.Agent
 import scala.concurrent.Future
-import brainflight.binary.LoadBlock
 import akka.routing.RoundRobinRouter
+import braingames.binary._
+import braingames.binary.models.DataLayerId
+import scala.Some
+import braingames.binary.Cuboid
+import braingames.binary.models.DataSet
+import braingames.levelcreator.BinaryDataService
+import braingames.reactivemongo.GlobalDBAccess
+import braingames.binary.models.DataLayerId
+import scala.Some
+import braingames.binary.DataRequest
+import braingames.binary.Cuboid
+import braingames.binary.models.DataSet
 
-object BinaryData extends Controller {
+object BinaryData extends Controller with GlobalDBAccess with BinaryDataRequestHandler {
   val conf = Play.current.configuration
-  
-  val dataRequestActor = {
-    implicit val system = Akka.system
-    val nrOfBinRequestActors = conf.getInt("binData.nrOfBinRequestActors") getOrElse 8
-    val bindataCache = Agent[Map[LoadBlock, Future[Array[Byte]]]](Map.empty)
-    Akka.system.actorOf(Props(new DataRequestActor(bindataCache))
-      .withRouter(new RoundRobinRouter(nrOfBinRequestActors)), "dataRequestActor")
-  }
+
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds) // needed for `?` below
 
-  def createStackCuboid(level: Level, mission: Mission) = {
+  val binaryDataService = BinaryDataService
+
+  def viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) =
+    Action {
+      implicit request =>
+        Async {
+          for {
+            dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataset.notFound")
+            level <- Level.findOneById(levelId) ?~> Messages("level.notFound")
+            mission <- Mission.findOneById(missionId) ?~> Messages("mission.notFound")
+            result <- handleDataRequest(dataSet, dataLayerName, level, mission) ?~> "Data couldn'T be retireved"
+          } yield {
+            Ok(result)
+          }
+        }
+    }
+}
+
+trait BinaryDataRequestHandler {
+  val binaryDataService: braingames.binary.api.BinaryDataService
+
+  private def createRequest(dataSet: DataSet, dataLayerId: DataLayerId, cuboid: Cuboid) = {
+
+    val settings = DataRequestSettings(
+      useHalfByte = false,
+      skipInterpolation = false
+    )
+
+    DataRequest(
+      dataSet,
+      dataLayerId,
+      0,
+      cuboid,
+      settings)
+  }
+
+  private def createStackCuboid(level: Level, mission: Mission) = {
 
     def calculateTopLeft(width: Int, height: Int, depth: Int) = {
       Vector3D(-(width / 2.0).floor, -(height / 2.0).floor, 0)
@@ -60,37 +99,12 @@ object BinaryData extends Controller {
       axis = direction.toTuple)
   }
 
-  def handleDataRequest(dataSet: DataSet, dataLayer: DataLayer, level: Level, mission: Mission) = {
-    val t = System.currentTimeMillis()
-    (dataRequestActor ? SingleRequest(DataRequest(
+  def handleDataRequest(dataSet: DataSet, dataLayerName: String, level: Level, mission: Mission): Future[Option[Array[Byte]]] = {
+    val dataRequest = createRequest(
       dataSet,
-      dataLayer,
-      1,
-      createStackCuboid(level, mission),
-      useHalfByte = false,
-      skipInterpolation = false)))
-      .recover {
-        case e: AskTimeoutException =>
-          Logger.error("calculateImages: AskTimeoutException")
-          new Array[Byte](level.height * level.width * level.depth * dataLayer.bytesPerElement).toBuffer
-      }
-      .mapTo[ArrayBuffer[Byte]].map { data =>
-        Logger.debug("Stack data aggregation: %d ms".format(System.currentTimeMillis - t))
-        Ok(data.toArray)
-      }
-  }
+      DataLayerId(dataLayerName),
+      createStackCuboid(level, mission))
 
-  def viaAjax(dataSetName: String, levelId: String, missionId: String, dataLayerName: String) =
-    Action { implicit request =>
-      Async {
-        for {
-          dataSet <- DataSet.findOneByName(dataSetName) ?~ Messages("dataset.notFound")
-          level <- Level.findOneById(levelId) ?~ Messages("level.notFound")
-          mission <- Mission.findOneById(missionId) ?~ Messages("mission.notFound")
-          dataLayer <- dataSet.dataLayers.get(dataLayerName) orElse dataSet.dataLayers.get(s"$dataLayerName${mission.batchId}") ?~ Messages("datalayer.notFound")
-        } yield {
-          handleDataRequest(dataSet, dataLayer, level, mission)
-        }
-      }
-    }
+    binaryDataService.handleDataRequest(dataRequest)
+  }
 }

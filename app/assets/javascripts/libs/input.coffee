@@ -29,7 +29,6 @@ class Input.KeyboardNoLoop
   constructor : (initialBindings) ->
 
     @bindings = []
-    @keyCount = 0
 
     for own key, callback of initialBindings
       @attach(key, callback)
@@ -39,11 +38,7 @@ class Input.KeyboardNoLoop
 
     binding = KeyboardJS.on(key, 
       (event) => 
-        @keyCount++
-        callback(@keyCount <= 2) unless $(":focus").length
-        return
-      () =>
-        @keyCount = 0
+        callback(event) unless $(":focus").length
         return
     )
     @bindings.push(binding)
@@ -85,7 +80,10 @@ class Input.Keyboard
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
         
+        returnValue = undefined
+
         unless @keyCallbackMap[key]? or $(":focus").length
+          
           callback(1, true)
           # reset lastTime
           callback._lastTime   = null
@@ -94,13 +92,13 @@ class Input.Keyboard
 
           @keyPressedCount++
           @buttonLoop() if @keyPressedCount == 1
-        
+          
         if @delay >= 0
           setTimeout( (=>
             callback._delayed = false
             ), @delay )
 
-        return
+        return returnValue
 
       =>
         
@@ -329,17 +327,21 @@ class Input.Deviceorientation
           @unfire("y")
     )
 
+
   attach : (key, callback) ->
 
     @keyBindings[key] = callback
 
+
   unbind : ->
+
     $(window).off(
       "deviceorientation", 
       @eventHandler
       @unfire("x")
       @unfire("y")
     )
+
 
   fire : (key, dist) ->
 
@@ -359,6 +361,7 @@ class Input.Deviceorientation
     return
 
   buttonLoop : ->
+
     if @keyPressedCount > 0
       for own key, { callback, distance } of @keyPressedCallbacks
         callback?(distance)
@@ -414,6 +417,7 @@ class Input.Gamepad
 
 
   constructor : (bindings) ->
+
     if GamepadJS.supported
 
       for own key, callback of bindings
@@ -423,15 +427,21 @@ class Input.Gamepad
     else
      console.log "Your browser does not support gamepads!"
 
+
   attach : (button, callback)  ->
+
       @buttonCallbackMap[button] = callback
 
+
   unbind : ->
+
     @buttonCallbackMap = null
 
-  # actively poll the state of gameoad object as returned
-  # by the GamepadJS library.
+
   gamepadLoop : ->
+    # actively poll the state of gameoad object as returned
+    # by the GamepadJS library.
+
     #stops the loop caused by unbind
     return unless @buttonCallbackMap
 
@@ -456,9 +466,12 @@ class Input.Gamepad
 
     setTimeout( (=> @gamepadLoop()), @delay)
 
+
   # FIXME 
   # as far as I know the gamepad.js lib already provides values for deadzones
   filterDeadzone : (value) ->
+
       if Math.abs(value) > @DEADZONE then value / @SLOWDOWN_FACTOR else 0
+
 
 Input

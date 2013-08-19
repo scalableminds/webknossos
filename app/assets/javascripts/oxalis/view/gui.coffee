@@ -11,13 +11,13 @@ class Gui
 
   model : null
   
-  constructor : (container, @model, @tracingSettings) ->
+  constructor : (container, @model, @restrictions, @tracingSettings) ->
     
     _.extend(this, new EventMixin())
 
+    @updateGlobalPosition( @model.flycam.getPosition() )
+
     @user = @model.user
-    # create GUI
-    # modelRadius = @model.route.getActiveNodeRadius()
     @qualityArray = ["high", "medium", "low"]
 
     @datasetPostfix = _.last(@model.binary.dataSetName.split("_"))
@@ -33,14 +33,12 @@ class Gui
       resetBrightnessAndContrast : => @resetBrightnessAndContrast()
       quality : @qualityArray[@user.quality]
 
-      activeTreeID : @model.route.getActiveTreeId()
-
-      activeNodeID : @model.route.getActiveNodeId()
+      activeTreeID : @model.cellTracing.getActiveTreeId()
+      activeNodeID : @model.cellTracing.getActiveNodeId() or -1
       activeCellID : @model.volumeTracing.getActiveCellId()
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
       createNewCell : => @trigger "createNewCell"
-      # radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
 
     if @datasetPosition == 0
       # add new dataset to settings
@@ -66,7 +64,7 @@ class Gui
     @moveValueController = @addSlider(@fViewportcontrols, @user, "moveValue",
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
     @zoomController = @addSlider(@fViewportcontrols, @user, "zoom",
-      0.001, @model.flycam.getMaxZoomStep(), 0.01, "Zoom")
+      0.01, @model.flycam.getMaxZoomStep(), 0.001, "Zoom")
     @scaleController = @addSlider(@fViewportcontrols, @user, "scale", constants.MIN_SCALE,
       constants.MAX_SCALE, 0.1, "Viewport Scale")
     @addCheckbox(@fViewportcontrols, @user, "dynamicSpaceDirection", "d/f-Switching")
@@ -92,19 +90,19 @@ class Gui
         0.5, 5, 0.1, "Contrast", @setBrightnessAndContrast)
     @addFunction(@fView, @settings, "resetBrightnessAndContrast",
       "Reset B/C")
-    @clippingController = @addSlider(@fView, @user, "routeClippingDistance",
+    @clippingController = @addSlider(@fView, @user, "clippingDistance",
       1, 1000 * @model.scaleInfo.baseVoxel, 1, "Clipping Distance")
-    @clippingControllerArbitrary = @addSlider(@fView, @user, "routeClippingDistanceArbitrary",
+    @clippingControllerArbitrary = @addSlider(@fView, @user, "clippingDistanceArbitrary",
       1, 127, 1, "Clipping Distance")
     @addCheckbox(@fView, @user, "displayCrosshair", "Show Crosshairs")
     (@fView.add @settings, "quality", @qualityArray)
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 
-    @folders.push( @fSkeleton = @gui.addFolder("Skeleton View") )
-    @addCheckbox(@fSkeleton, @user, "displayPreviewXY", "Display XY-Plane")
-    @addCheckbox(@fSkeleton, @user, "displayPreviewYZ", "Display YZ-Plane")
-    @addCheckbox(@fSkeleton, @user, "displayPreviewXZ", "Display XZ-Plane")
+    @folders.push(@fTDView = @gui.addFolder("3D View"))
+    @addCheckbox(@fTDView, @user, "displayTDViewXY", "Display XY-Plane")
+    @addCheckbox(@fTDView, @user, "displayTDViewYZ", "Display YZ-Plane")
+    @addCheckbox(@fTDView, @user, "displayTDViewXZ", "Display XZ-Plane")
 
     @folders.push( @fTrees = @gui.addFolder("Trees") )
     @activeTreeIdController = @addNumber(@fTrees, @settings, "activeTreeID",
@@ -130,10 +128,12 @@ class Gui
     @fNodes.open()
     @fCells.open()
 
+    $("#dataset-name").text(@model.binary.dataSetName)
+
     $("#trace-position-input").on "change", (event) => 
 
       @setPosFromString(event.target.value)
-      return
+      $("#trace-position-input").blur()
 
     $("#trace-finish-button").click (event) =>
 
@@ -168,7 +168,7 @@ class Gui
         else
           $("#zoomFactor").html("<p>Viewport width: " + (nm / 1000000).toFixed(1) + " mm</p>")
 
-    @model.route.on
+    @model.cellTracing.on
       newActiveNode    : => @update()
       newActiveTree    : => @update()
       deleteActiveTree : => @update()
@@ -193,11 +193,14 @@ class Gui
 
 
   addCheckbox : (folder, object, propertyName, displayName) =>
+
     return (folder.add object, propertyName)
                           .name(displayName)
                           .onChange((v) => @set(propertyName, v,  Boolean))
 
+
   addSlider : (folder, object, propertyName, start, end, step, displayName, onChange) =>
+
     unless onChange?
       onChange = (v) => @set(propertyName, v, Number)
     return (folder.add object, propertyName, start, end)
@@ -205,11 +208,15 @@ class Gui
                           .name(displayName)
                           .onChange(onChange)
 
+
   addFunction : (folder, object, propertyName, displayName) =>
+
     return (folder.add object, propertyName)
                           .name(displayName)
 
+
   addNumber : (folder, object, propertyName, min, step, displayName, onChange) =>
+
     unless onChange?
       onChange = (v) => @set(propertyName, v, Number)
     return (folder.add object, propertyName)
@@ -218,10 +225,12 @@ class Gui
                           .name(displayName)
                           .onChange(onChange)
 
+
   saveNow : =>
+
     @user.pushImpl()
-    if @tracingSettings.isEditable
-      @model.route.pushNow()
+    if @restrictions.allowUpdate
+      @model.cellTracing.pushNow()
         .then( 
           -> Toast.success("Saved!")
           -> Toast.error("Couldn't save. Please try again.")
@@ -229,7 +238,9 @@ class Gui
     else
       new $.Deferred().resolve()
 
+
   setPosFromString : (posString) =>
+
     # remove leading/trailing whitespaces
     strippedString = posString.trim()
     # replace remaining whitespaces with commata
@@ -242,6 +253,7 @@ class Gui
         return
     @updateGlobalPosition(@model.flycam.getPosition())
 
+
   initDatasetPosition : (briConNames) ->
 
     for i in [0...briConNames.length]
@@ -252,27 +264,38 @@ class Gui
       datasetPosition = 0
     datasetPosition
 
+
   addTooltip : (element, title) ->
 
     $(element.domElement).parent().parent().tooltip({ title : title })
 
+
   createTooltips : ->
+
       $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
 
+
   updateGlobalPosition : (globalPos) =>
+
     stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
     $("#trace-position-input").val(stringPos)
 
+
   set : (name, value, type) =>
+
     @user.setValue( name, (type) value)
 
+
   setBrightnessAndContrast : =>
+
     @model.binary.updateContrastCurve(@settings.brightness, @settings.contrast)
     @user.brightness[@datasetPosition] = (Number) @settings.brightness
     @user.contrast[@datasetPosition] = (Number) @settings.contrast
     @user.push()
 
+
   resetBrightnessAndContrast : =>
+
     Request.send(
       url : "/user/configuration/default"
       dataType : "json"
@@ -287,6 +310,7 @@ class Gui
 
 
   setQuality : (value) =>
+
     for i in [0..(@qualityArray.length - 1)]
       if @qualityArray[i] == value
         value = i
@@ -294,44 +318,59 @@ class Gui
 
 
   updateParticleSize : =>
+
     @particleSizeController.updateDisplay()
 
+
   updateMoveValue : =>
+
     @moveValueController.updateDisplay()
 
+
   updateMoveValue3d : =>
+
     @moveValue3dController.updateDisplay()
 
+
   updateScale : =>
+
     @scaleController.updateDisplay()
 
+
   updateZoom : =>
+
     @zoomController.updateDisplay()
 
-  # Helper method to combine common update methods
+
   update : ->
+
+    # Helper method to combine common update methods
     # called when value user switch to different active node
-    @settings.activeNodeID = @model.route.lastActiveNodeId
-    @settings.activeTreeID = @model.route.getActiveTreeId()
+    @settings.activeNodeID = @model.cellTracing.getActiveNodeId() or -1
+    @settings.activeTreeID = @model.cellTracing.getActiveTreeId()
     @settings.activeCellID = @model.volumeTracing.getActiveCellId()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
     @activeCellIdController.updateDisplay()
+
 
   setFolderVisibility : (folder, visible) ->
 
     $element = $(folder.domElement)
     if visible then $element.show() else $element.hide()
 
+
   setFolderElementVisibility : (element, visible) ->
 
     $element = $(element.domElement).parents(".cr")
     if visible then $element.show() else $element.hide()
 
+
   hideFolders : (folders) ->
 
     for folder in folders
       @setFolderVisibility( folder, false)
+
 
   setMode : (mode) ->
 
@@ -342,10 +381,10 @@ class Gui
 
     switch mode 
       when constants.MODE_PLANE_TRACING
-        @hideFolders( [ @fFlightcontrols ] )
+        @hideFolders( [ @fFlightcontrols, @fCells ] )
         @user.triggerAll()
       when constants.MODE_ARBITRARY
-        @hideFolders( [ @fViewportcontrols, @fSkeleton ] )
+        @hideFolders( [ @fViewportcontrols, @fTDView, @fCells ] )
         @setFolderElementVisibility( @clippingControllerArbitrary, true )
         @setFolderElementVisibility( @clippingController, false )
         @user.triggerAll()

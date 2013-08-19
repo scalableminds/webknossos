@@ -24,7 +24,7 @@ class CameraController
       cam.near = -1000000
       cam.far  =  1000000
 
-    @changePrevSV(false)
+    @changeTDViewDiagonal(false)
 
     @bind()
 
@@ -36,7 +36,8 @@ class CameraController
     @cameras[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
     @cameras[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
 
-  changePrev : (id, animate = true) ->
+
+  changeTDView : (id, animate = true) ->
     # In order for the rotation to be correct, it is not sufficient
     # to just use THREEJS' lookAt() function, because it may still
     # look at the plane in a wrong angle. Therefore, the rotation
@@ -44,7 +45,7 @@ class CameraController
     #
     # CORRECTION: You're telling lies, you need to use the up vector...
 
-    camera = @cameras[constants.VIEW_3D]
+    camera = @cameras[constants.TDView]
     b = @model.scaleInfo.voxelToNm(@model.binary.cube.upperBoundary)
     pos = @model.scaleInfo.voxelToNm(@model.flycam.getPosition())
     time = 800
@@ -57,14 +58,13 @@ class CameraController
       upX: camera.up.x, upY: camera.up.y, upZ: camera.up.z
       camera: camera
       flycam: @flycam
-      sv : @skeletonView
       dx:camera.position.x - pos[0]
       dy:camera.position.y - pos[1]
       dz:camera.position.z - pos[2]
       l: camera.left, r: camera.right, t: camera.top, b: camera.bottom }
     @tween = new TWEEN.Tween(from)
 
-    if id == constants.VIEW_3D
+    if id == constants.TDView
       diagonal = Math.sqrt(b[0]*b[0]+b[1]*b[1])
       padding = 0.05 * diagonal
 
@@ -113,22 +113,23 @@ class CameraController
     
     if animate
       @tween.to(to, time)
-      .onUpdate(@updateCameraPrev)
+      .onUpdate(@updateCameraTDView)
       .start()
     else
       for prop of from
         unless to[prop]?
           to[prop] = from[prop]
-      @updateCameraPrev.call(to)
+      @updateCameraTDView.call(to)
 
   degToRad : (deg) -> deg/180*Math.PI
 
-  changePrevXY : => @changePrev(constants.PLANE_XY)
-  changePrevYZ : => @changePrev(constants.PLANE_YZ)
-  changePrevXZ : => @changePrev(constants.PLANE_XZ)
-  changePrevSV : (animate = true) => @changePrev(constants.VIEW_3D, animate)
+  changeTDViewXY : => @changeTDView(constants.PLANE_XY)
+  changeTDViewYZ : => @changeTDView(constants.PLANE_YZ)
+  changeTDViewXZ : => @changeTDView(constants.PLANE_XZ)
+  changeTDViewDiagonal : (animate = true) => @changeTDView(constants.TDView, animate)
 
-  updateCameraPrev : ->
+  updateCameraTDView : ->
+
     p = @getConvertedPosition()
     @camera.position.set(@dx + p[0], @dy + p[1], @dz + p[2])
     @camera.left = @l
@@ -140,18 +141,21 @@ class CameraController
     @flycam.setRayThreshold(@camera.right, @camera.left)
     @camera.updateProjectionMatrix()
     @notify()
-    @flycam.hasChanged = true
+    @flycam.update()
     
-  prevViewportSize : ->
-    (@cameras[constants.VIEW_3D].right - @cameras[constants.VIEW_3D].left)         # always quadratic
 
-  zoomPrev : (value, position, curWidth) =>
+  TDViewportSize : ->
 
-    camera = @cameras[constants.VIEW_3D]
+    (@cameras[constants.TDView].right - @cameras[constants.TDView].left)         # always quadratic
+
+
+  zoomTDView : (value, position, curWidth) =>
+
+    camera = @cameras[constants.TDView]
     factor = Math.pow(0.9, value)
     middleX = (camera.left + camera.right)/2
     middleY = (camera.bottom + camera.top)/2
-    size = @prevViewportSize()
+    size = @TDViewportSize()
     
     baseOffset = factor * size / 2
     baseDiff = baseOffset - size / 2
@@ -166,46 +170,67 @@ class CameraController
     camera.updateProjectionMatrix()
 
     @flycam.setRayThreshold(camera.right, camera.left)
-    @flycam.hasChanged = true
+    @flycam.update()
 
-  movePrevX : (x) =>
-    size = @prevViewportSize()
-    @cameras[constants.VIEW_3D].left += x*size/384
-    @cameras[constants.VIEW_3D].right += x*size/384
-    @cameras[constants.VIEW_3D].updateProjectionMatrix()
-    @flycam.hasChanged = true
 
-  movePrevY : (y) =>
-    size = @prevViewportSize()
-    @cameras[constants.VIEW_3D].top -= y*size/384
-    @cameras[constants.VIEW_3D].bottom -= y*size/384
-    @cameras[constants.VIEW_3D].updateProjectionMatrix()
-    @flycam.hasChanged = true
+  moveTDViewX : (x) =>
 
-  zoom : (zoom) =>
-    @flycam.zoom(zoom)
-    @updateCamViewport()
+    @moveTDViewRaw(
+      new THREE.Vector2( x * @TDViewportSize() / constants.WIDTH, 0 ))
 
-  setRouteClippingDistance : (value) ->
+
+  moveTDViewY : (y) =>
+
+    @moveTDViewRaw(
+      new THREE.Vector2( 0, - y * @TDViewportSize() / constants.WIDTH ))
+
+
+  moveTDView : ( nmVector ) ->
+    # moves camera by the nm vector
+    camera = @cameras[constants.TDView]
+
+    rotation = camera.rotation.clone().negate()
+    eulerOrder = camera.eulerOrder.split("").reverse().join("")       # reverse order
+    
+    nmVector.applyEuler( rotation , eulerOrder )
+    @moveTDViewRaw( nmVector )
+
+
+  moveTDViewRaw : (moveVector) ->
+
+    @cameras[constants.TDView].left   += moveVector.x
+    @cameras[constants.TDView].right  += moveVector.x
+    @cameras[constants.TDView].top    += moveVector.y
+    @cameras[constants.TDView].bottom += moveVector.y
+    @cameras[constants.TDView].updateProjectionMatrix()
+    @flycam.update()
+
+
+  setClippingDistance : (value) ->
+
     @camDistance = value # Plane is shifted so it's <value> to the back and the front
     @updateCamViewport()
 
-  getRouteClippingDistance : (planeID) ->
+
+  getClippingDistance : (planeID) ->
+
     @camDistance * @model.scaleInfo.voxelPerNM[planeID]
 
+
   updateCamViewport : ->
+    
     scaleFactor = @model.scaleInfo.baseVoxel
-    boundary    = constants.WIDTH / 2 * @flycam.getPlaneScalingFactor()
+    boundary    = constants.WIDTH / 2 * @model.user.zoom
     for i in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
       @cameras[i].near = -@camDistance
       @cameras[i].left  = @cameras[i].bottom = -boundary * scaleFactor
       @cameras[i].right = @cameras[i].top    =  boundary * scaleFactor
       @cameras[i].updateProjectionMatrix()
-    @flycam.hasChanged = true
+    @flycam.update()
 
 
   bind : ->
 
     @model.user.on 
-      routeClippingDistanceChanged : (value) => @setRouteClippingDistance(value)
-      zoomChanged : (value) => @zoom(Math.log(value) / Math.LN2)
+      clippingDistanceChanged : (value) => @setClippingDistance(value)
+      zoomChanged : (value) => @updateCamViewport()

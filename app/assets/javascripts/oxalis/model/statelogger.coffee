@@ -9,7 +9,7 @@ class StateLogger
 
   PUSH_THROTTLE_TIME : 30000 #30s
 
-  constructor : (@route, @flycam, @version, @dataId, @isEditable) ->
+  constructor : (@cellTracing, @flycam, @version, @tracingId, @tracingType, @allowUpdate) ->
 
     _.extend(this, new EventMixin())
 
@@ -19,7 +19,9 @@ class StateLogger
 
     @failedPushCount = 0
 
+
   pushDiff : (action, value, push = true) ->
+
     @newDiffs.push({
       action : action
       value : value
@@ -29,9 +31,11 @@ class StateLogger
     if push
       @push()
 
+
   #### TREES
 
   treeObject : (tree, oldId) ->
+
     treeColor = new THREE.Color(tree.color)
     return {
       id: if oldId then oldId else tree.treeId
@@ -41,18 +45,26 @@ class StateLogger
       timestamp: tree.timestamp
       }
 
+
   createTree : (tree) ->
+
     @pushDiff("createTree", @treeObject(tree))
 
+
   updateTree : (tree, oldId = false) ->
+
     @pushDiff("updateTree", @treeObject(tree, oldId))
 
+
   deleteTree : (tree) ->
+
     @pushDiff("deleteTree", {
       id: tree.treeId
       })
 
+
   mergeTree : (sourceTree, targetTree, lastNodeId, activeNodeId) ->
+
     # Make sure that those nodes exist
     found = false; treeIds = []
     for node in sourceTree.nodes
@@ -77,9 +89,11 @@ class StateLogger
       }, false)
     @createEdge(lastNodeId, activeNodeId, targetTree.treeId)
 
+
   #### NODES and EDGED
 
   nodeObject : (node, treeId) ->
+
     return {
       treeId : treeId,
       id: node.id,
@@ -91,7 +105,9 @@ class StateLogger
       resolution: 0
       }
 
+
   edgeObject : (node, treeId) ->
+
     $.assert(node.neighbors.length == 1,
       "Node has to have exactly one neighbor", node.neighbors.length)
 
@@ -101,7 +117,9 @@ class StateLogger
       target : node.id
     }
 
+
   createNode : (node, treeId) ->
+
     $.assert(node.neighbors.length <= 1,
       "New node can't have more than one neighbor", node.neighbors.length)
     if node.neighbors[0]
@@ -114,24 +132,32 @@ class StateLogger
     if needsEdge
       @pushDiff("createEdge", @edgeObject(node, treeId))
 
+
   updateNode : (node, treeId) ->
+
     @pushDiff("updateNode", @nodeObject(node, treeId))
 
+
   deleteNode : (node, treeId) ->
+
     # Edges will be deleted implicitly
     @pushDiff("deleteNode", {
       treeId : treeId
       id: node.id
       })
 
+
   moveTreeComponent : (sourceId, targetId, nodeIds) ->
+
     @pushDiff("moveTreeComponent", {
       sourceId : sourceId
       targetId : targetId
       nodeIds : nodeIds
       })
 
+
   createEdge : (source, target, treeId) ->
+
     # used when edges are set manually, e.g. for merging trees
     @pushDiff("createEdge", {
       treeId : treeId
@@ -139,41 +165,53 @@ class StateLogger
       target : target
       })
 
+
   concatUpdateTracing : (array) ->
+
     branchPoints = []
-    for branchPoint in @route.branchStack
+    for branchPoint in @cellTracing.branchStack
       branchPoints.push({id : branchPoint.id})
     return array.concat( {
       action : "updateTracing"
       value : {
         branchPoints : branchPoints
-        comments : @route.getPlainComments()
-        activeNodeId : @route.getActiveNodeId()
+        comments : @cellTracing.getPlainComments()
+        activeNodeId : @cellTracing.getActiveNodeId()
         editPosition : @flycam.getPosition()
       }
     })
 
+
   #### SERVER COMMUNICATION
 
   stateSaved : ->
+
     return @committedCurrentState and @committedDiffs.length == 0
 
+
   push : ->
-    if @isEditable
+
+    if @allowUpdate
       @committedCurrentState = false
       @pushDebounced()
 
-  # Pushes the buffered route to the server. Pushing happens at most 
-  # every 30 seconds.
+
   pushDebounced : ->
+    # Pushes the buffered cellTracing to the server. Pushing happens at most 
+    # every 30 seconds.
+
     saveFkt = => @pushImpl(true)
     @pushDebounced = _.throttle(_.mutexDeferred( saveFkt, -1), @PUSH_THROTTLE_TIME)
     @pushDebounced()
 
+
   pushNow : ->   # Interface for view & controller 
+
     return @pushImpl(false)
 
+
   pushImpl : (notifyOnFailure) ->
+    
     # do not allow multiple pushes, before result is there (breaks versioning)
     # still, return the deferred of the pending push, so that it will be informed about success
     if @pushDeferred?
@@ -195,7 +233,7 @@ class StateLogger
     console.log "Sending data: ", data
 
     Request.send(
-      url : "/tracing/#{@dataId}?version=#{(@version + 1)}"
+      url : "/annotations/#{@tracingType}/#{@tracingId}?version=#{(@version + 1)}"
       method : "PUT"
       data : data
       contentType : "application/json"

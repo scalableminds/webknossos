@@ -220,6 +220,7 @@ class CellTracing
       @stateLogger.createNode(point, @activeTree.treeId)
       
       @trigger("newNode", centered)
+      @trigger("newActiveNode")
     else
       @trigger("wrongDirection")
 

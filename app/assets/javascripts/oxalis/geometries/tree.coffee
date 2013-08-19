@@ -51,6 +51,7 @@ class Tree
 
     @nodesBuffer.push(node.pos)
     @nodeIDs.push([node.id])
+    @nodesColorBuffer.push( @getColor() )
 
     # Add any edge from smaller IDs to the node
     # ASSUMPTION: if this node is new, it should have a
@@ -59,6 +60,7 @@ class Tree
       if neighbor.id < node.id
         @edgesBuffer.push(neighbor.pos.concat(node.pos))
 
+    @setActiveNode()
     @updateGeometries()
 
 
@@ -84,6 +86,7 @@ class Tree
     # swap IDs and nodes
     swapLast( @nodeIDs, nodesIndex )
     swapLast( @nodesBuffer, nodesIndex )
+    swapLast( @nodesColorBuffer, nodesIndex )
 
     # Delete Edge by finding it in the array
     edgeArray = @getEdgeArray( node, node.neighbors[0] )
@@ -101,6 +104,7 @@ class Tree
 
     swapLast( @edgesBuffer, edgesIndex )
 
+    @updateColors()
     @updateGeometries()
 
   mergeTree : (otherTree, lastNode, activeNode) ->
@@ -112,8 +116,10 @@ class Tree
     merge("nodeIDs")
     merge("nodesBuffer")
     merge("edgesBuffer")
+    merge("nodesColorBuffer")
     @edgesBuffer.push( @getEdgeArray(lastNode, activeNode) )
 
+    @updateColors()
     @updateGeometries()
 
 
@@ -142,25 +148,15 @@ class Tree
 
     @id = newTreeId
 
-    @nodes.material.color = @darkenHex( color )
     @edges.material.color = @darkenHex( color )
+    
+    @updateNodes()
     @updateGeometries()
 
 
   getMeshes : ->
 
     return [ @edges, @nodes ]
-  
-
-  updateGeometries: ->
-
-    @edges.geometry.__vertexArray        = @edgesBuffer.getBuffer()
-    @edges.geometry.__webglLineCount     = @edgesBuffer.getLength() * 2
-    @nodes.geometry.__vertexArray        = @nodesBuffer.getBuffer()
-    @nodes.geometry.__webglParticleCount = @nodesBuffer.getLength()
-
-    @edges.geometry.verticesNeedUpdate   = true
-    @nodes.geometry.verticesNeedUpdate   = true
 
 
   dispose : ->
@@ -173,20 +169,56 @@ class Tree
 
   updateNodes : ->
 
-    activeNodeId = @model.cellTracing.getActiveNodeId()
-    color        = @darkenHex( @model.cellTracing.getTree(@id).color )
+    color   @darkenHex( @model.cellTracing.getTree(@id).color )
 
     @nodesColorBuffer.clear()
     for i in [0..@nodeIDs.length]
-      if @nodeIDs.get(i) == activeNodeId
-        @nodesColorBuffer.push( @invertHexToRGB( color ))
-      else
-        @nodesColorBuffer.push( @hexToRGB( color ))
+      @nodesColorBuffer.push( @hexToRGB( color ))
 
-      @nodes.geometry.__colorArray = @nodesColorBuffer.getBuffer()
-      @nodes.geometry.colorsNeedUpdate = true
+    @setActiveNode()
 
-    @updateGeometries()
+
+  updateNode : (id, colorFunction = (c) => @hexToRGB(@darkenHex(c)) ) ->
+
+    color = colorFunction( @model.cellTracing.getTree(@id).color )
+
+    for i in [0..@nodeIDs.length]
+      if @nodeIDs.get(i) == id
+        @nodesColorBuffer.set( color, i )
+
+    @updateColors()
+
+
+  setActiveNode : (id, isActiveNode) ->
+
+    if isActiveNode
+      @updateNode(
+        id,
+        (c) => @invertHexToRGB(@darkenHex(c)) )
+    else
+      @updateNode( id )
+
+
+  getColor : ->
+
+    return @hexToRGB(@darkenHex(@model.cellTracing.getTree(@id).color))
+
+
+  updateColors : ->
+
+    @nodes.geometry.__colorArray = @nodesColorBuffer.getBuffer()
+    @nodes.geometry.colorsNeedUpdate = true
+  
+
+  updateGeometries : ->
+
+    @edges.geometry.__vertexArray        = @edgesBuffer.getBuffer()
+    @edges.geometry.__webglLineCount     = @edgesBuffer.getLength() * 2
+    @nodes.geometry.__vertexArray        = @nodesBuffer.getBuffer()
+    @nodes.geometry.__webglParticleCount = @nodesBuffer.getLength()
+
+    @edges.geometry.verticesNeedUpdate   = true
+    @nodes.geometry.verticesNeedUpdate   = true
 
     
   #### Color utility methods

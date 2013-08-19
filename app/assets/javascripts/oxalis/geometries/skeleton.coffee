@@ -38,11 +38,10 @@ class Skeleton
     @reset()
 
     @updateBranches()
-    @updateNodes()
 
     @cellTracing.on
       newActiveNode : => 
-        @updateNodes()
+        @setActiveNode()
         @setInactiveTreeVisibility(@showInactiveTrees)
       newTree : (treeId, treeColor) => 
         @createNewTree(treeId, treeColor)
@@ -52,15 +51,12 @@ class Skeleton
       mergeTree : (lastTreeID, lastNode, activeNode) => 
         @mergeTree(lastTreeID, lastNode, activeNode)
         @updateBranches()
-        @updateNodes()
       newNode : (centered) => @setWaypoint(centered)
       setBranch : (isBranchPoint, nodeID) => 
         @setBranchPoint(isBranchPoint, nodeID)
         @updateBranches()
-        @updateNodes()
       deleteBranch : =>
         @updateBranches()
-        @updateNodes()
       reloadTrees : (trees, finishedDeferred) =>
         @cellTracing.one("finishedRender", =>
           @cellTracing.one("finishedRender", =>
@@ -76,7 +72,6 @@ class Skeleton
   createNewTree : (treeId, treeColor) ->
     
     @treeGeometries.push( tree = new Tree(treeId, treeColor, @model) )
-    @updateNodes()
     @trigger "newGeometries", tree.getMeshes()
 
 
@@ -112,7 +107,6 @@ class Skeleton
       treeGeometry.addNodes( tree.nodes )
 
     @updateBranches()
-    @updateNodes()
 
     if finishedDeferred?
       finishedDeferred.resolve()
@@ -149,7 +143,6 @@ class Skeleton
     @treeGeometry.updateColor( newTreeId, newColor )
 
     @updateBranches()
-    @updateNodes()
 
 
   getMeshes : =>
@@ -174,8 +167,6 @@ class Skeleton
       @waypointAnimation.onUpdate ->
         @flycam.setPosition [@globalPosX, @globalPosY, @globalPosZ]
       @waypointAnimation.start()
-  
-      @updateNodes()
 
     @flycam.update()
 
@@ -188,7 +179,6 @@ class Skeleton
     treeGeometry = @getTreeGeometry(treeId)
     treeGeometry.deleteNode(node)
 
-    @updateNodes()
     @flycam.update()
 
 
@@ -199,8 +189,6 @@ class Skeleton
 
     activeTree.mergeTree(lastTree, lastNode, activeNode)
 
-    @flycam.update()
-
 
   deleteTree : (index) ->
 
@@ -210,8 +198,20 @@ class Skeleton
     treeGeometry.dispose()
     @treeGeometries.splice(index, 1)
 
-    @updateNodes()
     @flycam.update()
+
+
+  setActiveNode : ->
+
+    if @lastActiveNode?
+      treeGeometry = @getTreeGeometry( @lastActiveNode.treeId )
+      treeGeometry?.setActiveNode( @lastActiveNode.id, false )
+
+    if (activeNode = @model.cellTracing.getActiveNode())?
+      treeGeometry = @getTreeGeometry( activeNode.treeId )
+      treeGeometry.setActiveNode( activeNode.id, true )
+
+    @lastActiveNode = activeNode
 
 
   updateBranches : ->
@@ -265,7 +265,6 @@ class Skeleton
 
     for mesh in @getMeshes()
       mesh.visible = isVisible
-    @updateNodes()
     @flycam.update()
 
 

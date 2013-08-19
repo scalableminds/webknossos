@@ -29,6 +29,10 @@ class ResizableBuffer
 
   get : (i) -> @buffer[i]
 
+  set : (element, i) ->
+
+    @buffer.set(element, i * @elementLength)
+
 
   push : (element) ->
 

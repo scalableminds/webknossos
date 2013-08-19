@@ -4,7 +4,7 @@
 <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">
   produce Stacks
 </a><br />
-<input type="checkbox" if(level.renderSettings.shouldAutoRender) { Html("checked") } class="auto-render-stacks"> auto render<br />
+<input type="checkbox" @if(level.renderSettings.shouldAutoRender){ checked } class="auto-render-stacks"> auto render<br />
 <i class="icon-picture"></i>
 <a href="@controllers.levelcreator.routes.StackController.list(level.levelId.name)" class="view-stacks">view Stacks</a><br />
 <!--<i class="icon-trash"></i>

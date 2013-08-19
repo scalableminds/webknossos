@@ -136,7 +136,7 @@ class CellTracing
         @activeNode.type = @TYPE_BRANCH
         @stateLogger.push()
 
-        @trigger("setBranch", true)
+        @trigger("setBranch", true, @activeNode)
     else
       @trigger("noBranchPoints")
 
@@ -152,7 +152,7 @@ class CellTracing
           @setActiveNode(point.id)
           @activeNode.type = @TYPE_USUAL
 
-          @trigger("setBranch", false, @activeNode.id)
+          @trigger("setBranch", false, @activeNode)
           @doubleBranchPop = true
           deferred.resolve(@activeNode.id))
       else
@@ -162,7 +162,7 @@ class CellTracing
           @setActiveNode(point.id)
           @activeNode.type = @TYPE_USUAL
 
-          @trigger("setBranch", false, @activeNode.id)
+          @trigger("setBranch", false, @activeNode)
           @doubleBranchPop = true
           deferred.resolve(@activeNode.id)
         else
@@ -184,7 +184,11 @@ class CellTracing
         @branchStack.splice(i, 1)
       else
         i++
-    @trigger("deleteBranch")
+
+
+  isBranchPoint : (id) ->
+
+    return id in (node.id for node in @branchStack)
 
 
   rejectBranchDeferred : ->

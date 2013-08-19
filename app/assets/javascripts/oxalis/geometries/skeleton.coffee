@@ -23,21 +23,8 @@ class Skeleton
     @treeGeometries = []
 
     @showInactiveTrees = true
-
-    branchPointsGeometry = new THREE.Geometry()
-    branchPointsGeometry.dynamic = true
-    @branches = new THREE.ParticleSystem(
-      branchPointsGeometry,
-      new THREE.ParticleBasicMaterial({
-        size: 5, 
-        sizeAttenuation: false, 
-        vertexColors: true}))
-    @branchesBuffer = new ResizableBuffer(3)
-    @branchesColorsBuffer = new ResizableBuffer(3)
     
     @reset()
-
-    @updateBranches()
 
     @cellTracing.on
       newActiveNode : => 
@@ -50,13 +37,9 @@ class Skeleton
       deleteActiveNode : (node, treeId) => @deleteNode(node, treeId)
       mergeTree : (lastTreeID, lastNode, activeNode) => 
         @mergeTree(lastTreeID, lastNode, activeNode)
-        @updateBranches()
       newNode : (centered) => @setWaypoint(centered)
-      setBranch : (isBranchPoint, nodeID) => 
-        @setBranchPoint(isBranchPoint, nodeID)
-        @updateBranches()
-      deleteBranch : =>
-        @updateBranches()
+      setBranch : (isBranchPoint, node) => 
+        @setBranch(isBranchPoint, node)
       reloadTrees : (trees, finishedDeferred) =>
         @cellTracing.one("finishedRender", =>
           @cellTracing.one("finishedRender", =>
@@ -106,22 +89,19 @@ class Skeleton
       treeGeometry.clear()
       treeGeometry.addNodes( tree.nodes )
 
-    @updateBranches()
+    for branchpoint in @cellTracing.branchStack
+      treeGeometry = @getTreeGeometry(branchpoint.treeId)
+      treeGeometry.setBranch(true, branchpoint.id)
 
     if finishedDeferred?
       finishedDeferred.resolve()
 
 
-  setBranchPoint : (isBranchPoint, nodeID) ->
+  setBranch : (isBranchPoint, node) ->
 
-    treeColor = @cellTracing.getTree().color
-    if isBranchPoint
-      colorActive = treeColor#@invertHex(treeColor)
-    else 
-      colorActive = treeColor
-    
-    #if not nodeID? or nodeID == @cellTracing.getActiveNodeId()
-    #  @activeNodeParticle.material.color.setHex(colorActive)
+    treeGeometry = @getTreeGeometry( node.treeId )
+    treeGeometry.setBranch(isBranchPoint, node.id)
+
     @flycam.update()
 
 
@@ -129,7 +109,6 @@ class Skeleton
 
     for tree in @treeGeometries
       tree.setSize( size )
-    @branches.material.size = size
     @flycam.update()
 
 
@@ -142,12 +121,10 @@ class Skeleton
     newColor     = new THREE.Color(treeColor)
     @treeGeometry.updateColor( newTreeId, newColor )
 
-    @updateBranches()
-
 
   getMeshes : =>
 
-    meshes = [@branches]
+    meshes = []
     for tree in @treeGeometries
       meshes = meshes.concat( tree.getMeshes() )
     return meshes
@@ -205,37 +182,13 @@ class Skeleton
 
     if @lastActiveNode?
       treeGeometry = @getTreeGeometry( @lastActiveNode.treeId )
-      treeGeometry?.setActiveNode( @lastActiveNode.id, false )
+      treeGeometry?.setActiveNode( false, @lastActiveNode.id )
 
     if (activeNode = @model.cellTracing.getActiveNode())?
       treeGeometry = @getTreeGeometry( activeNode.treeId )
-      treeGeometry.setActiveNode( activeNode.id, true )
+      treeGeometry.setActiveNode( true, activeNode.id )
 
     @lastActiveNode = activeNode
-
-
-  updateBranches : ->
-
-    return
-
-    branchpoints = @cellTracing.branchStack
-
-    @branchesBuffer.clear()
-    @branchesBuffer.pushMany([
-      branchpoint.pos[0] + 0.01,
-      branchpoint.pos[1] + 0.01, 
-      branchpoint.pos[2] - 0.01] for branchpoint in branchpoints)
-
-    @branchesColorsBuffer.clear()
-    #@branchesColorsBuffer.pushMany(@invertHexToRGB(@darkenHex(@model.cellTracing.getTree(branchpoint.treeId).color)) for branchpoint in branchpoints)
-    @branchesColorsBuffer.pushMany(@model.cellTracing.getTree(branchpoint.treeId).color for branchpoint in branchpoints)
-
-    @branches.geometry.__vertexArray = @branchesBuffer.getBuffer()
-    @branches.geometry.__webglParticleCount = @branchesBuffer.getLength()
-    @branches.geometry.__colorArray = @branchesColorsBuffer.getBuffer()
-    @branches.geometry.verticesNeedUpdate = true
-    @branches.geometry.colorsNeedUpdate = true
-    @flycam.update()
 
 
   updateNodes : ->
@@ -288,6 +241,3 @@ class Skeleton
 
     for tree in @treeGeometries
       tree.setSizeAttenuation( sizeAttenuation )
-
-    @branches.material.sizeAttenuation = sizeAttenuation
-    @branches.material.needsUpdate = true

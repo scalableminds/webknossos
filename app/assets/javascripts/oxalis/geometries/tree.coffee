@@ -60,7 +60,6 @@ class Tree
       if neighbor.id < node.id
         @edgesBuffer.push(neighbor.pos.concat(node.pos))
 
-    @setActiveNode()
     @updateGeometries()
 
 
@@ -175,8 +174,6 @@ class Tree
     for i in [0..@nodeIDs.length]
       @nodesColorBuffer.push( @hexToRGB( color ))
 
-    @setActiveNode()
-
 
   updateNode : (id, colorFunction = (c) => @hexToRGB(@darkenHex(c)) ) ->
 
@@ -189,14 +186,26 @@ class Tree
     @updateColors()
 
 
-  setActiveNode : (id, isActiveNode) ->
+  setActiveNode : (isActiveNode, id) ->
 
     if isActiveNode
-      @updateNode(
-        id,
-        (c) => @invertHexToRGB(@darkenHex(c)) )
+      @updateNode( id, (c) => @invertHexToRGB(@darkenHex(c)) )
     else
-      @updateNode( id )
+      @setBranch( @model.cellTracing.isBranchPoint(id), id)
+
+    @changeColorOnCheck( isActiveNode, id,
+      (c) => @invertHexToRGB(@darkenHex(c)) )
+
+
+  setBranch : (isBranchPoint, id) ->
+
+    @changeColorOnCheck( isBranchPoint, id,
+      (c) => @invertHexToRGB(c) )
+
+
+  changeColorOnCheck : (check, id, colorFunction) ->
+
+    @updateNode( id, if check then colorFunction )
 
 
   getColor : ->

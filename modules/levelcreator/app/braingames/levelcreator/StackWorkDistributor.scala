@@ -358,7 +358,7 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
       MissionDAO.successfullyRendered(level, mission)
 
       if (!mission.isFinished)
-        LevelDAO.increaseNumberOfActiveStacks(level)
+        LevelDAO.increaseNumberOfActiveStacks(level.levelId)
 
       StackInProgressDAO.removeById(challenge._id)
     }) map {

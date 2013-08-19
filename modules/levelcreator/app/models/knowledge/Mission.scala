@@ -83,6 +83,14 @@ object MissionDAO extends BasicReactiveDAO[Mission] with MissionFormats {
       Json.obj("$push" -> Json.obj("missionStatus.renderStatus.renderedFor" -> level.levelId)))
   }
 
+  def deleteRendered(levelId: LevelId, _mission: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    collectionUpdate(
+      Json.obj("_id" -> _mission),
+      Json.obj(
+        "$pull" -> Json.obj("missionStatus.renderStatus.renderedFor" -> levelId),
+        "$pull" -> Json.obj("missionStatus.renderStatus.abortedFor.levelId" -> levelId)))
+  }
+
   def failedToRender(level: Level, mission: Mission, reason: String)(implicit ctx: DBAccessContext) = {
     val aborted = AbortedRendering(level.levelId, reason)
     collectionUpdate(

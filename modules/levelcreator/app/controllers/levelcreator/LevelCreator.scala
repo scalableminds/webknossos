@@ -17,7 +17,7 @@ import braingames.util.ExtendedTypes.ExtendedString
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import play.api.templates.Html
-import braingames.reactivemongo.GlobalDBAccess
+import braingames.reactivemongo.{UnAuthedDBAccess, GlobalDBAccess}
 import play.api.i18n.Messages.Message
 import play.api.libs.concurrent.Akka
 import akka.pattern.ask
@@ -26,7 +26,7 @@ import braingames.levelcreator.{QueueStatus, QueueStatusRequest, StackWorkDistri
 import akka.util.Timeout
 import net.liftweb.common.Full
 
-object LevelCreator extends LevelCreatorController with GlobalDBAccess {
+object LevelCreator extends LevelCreatorController with UnAuthedDBAccess {
 
   lazy val stackWorkDistributor = Akka.system.actorFor(s"user/${StackWorkDistributor.name}")
 
@@ -66,8 +66,9 @@ object LevelCreator extends LevelCreatorController with GlobalDBAccess {
   def delete(levelId: String) = ActionWithValidLevel(levelId) {
     implicit request =>
       Async {
-        LevelDAO.removeById(request.level.id).map {
+        LevelDAO.markAsDeleted(request.level.levelId.name).map {
           e =>
+            ActiveLevelDAO.removeActiveLevel(request.level.levelId.name)
             if (e.ok)
               JsonOk(Messages("level.removed"))
             else

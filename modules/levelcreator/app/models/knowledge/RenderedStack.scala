@@ -9,6 +9,8 @@ import reactivemongo.core.commands.Count
 import braingames.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
+import net.liftweb.common.{Full, Failure}
+import scala.util.Success
 
 case class MissionInfo(_id: BSONObjectID, key: String) {
   def id = _id.stringify
@@ -19,7 +21,7 @@ case class RenderedStack(
   mission: MissionInfo,
   downloadUrls: List[String],
   isActive: Boolean,
-  paraInfo: JsObject,// = JsObject,
+  paraInfo: JsObject, // = JsObject,
   random: Double = Math.random(),
   _id: BSONObjectID = BSONObjectID.generate) {
 
@@ -49,20 +51,22 @@ object RenderedStackDAO extends BasicReactiveDAO[RenderedStack] {
     Future.traverse(levels)(l => countFor(l.levelId.name).map(l.levelId.name -> _)).map(_.toMap)
   }
 
-  def remove(levelId: LevelId, missionOId: String)(implicit ctx: DBAccessContext) {
-    BSONObjectID.parse(missionOId).map {
-      id =>
+  def remove(levelId: LevelId, missionOId: String)(implicit ctx: DBAccessContext) = {
+    BSONObjectID.parse(missionOId) match {
+      case Success(id) =>
         collectionRemove(Json.obj(
           "levelId.name" -> levelId.name,
           "levelId.version" -> levelId.version,
-          "mission._id" -> id))
+          "mission._id" -> id)).map( r => Full(r))
+      case _ =>
+        Future.successful(Failure("Couldn't decode missionOId"))
     }
   }
 
   def removeAllOfMission(missionOId: String)(implicit ctx: DBAccessContext) = {
     BSONObjectID.parse(missionOId).map {
       id =>
-      collectionRemove(Json.obj("mission._id" -> id))
+        collectionRemove(Json.obj("mission._id" -> id))
     }
   }
 
@@ -77,6 +81,6 @@ object RenderedStackDAO extends BasicReactiveDAO[RenderedStack] {
     collectionUpdate(Json.obj(
       "levelId.name" -> r.levelId.name,
       "levelId.version" -> r.levelId.version,
-      "mission.key" -> r.mission.key), Json.obj("$set" -> json), upsert=true)
+      "mission.key" -> r.mission.key), Json.obj("$set" -> json), upsert = true)
   }
 }

@@ -86,6 +86,7 @@ case class Level(
   dataSetName: String,
   parent: LevelId,
   isLatest: Boolean = true,
+  isDeleted: Boolean = false,
   renderSettings: RenderSettings = RenderSettings.initial,
   code: String = Level.defaultCode,
   assets: List[Asset] = Nil,
@@ -179,6 +180,14 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
 
   val collectionName = "levels"
 
+  override def findQueryFilter(implicit ctx: DBAccessContext) = {
+    AllowIf(Json.obj("isDeleted" -> false))
+  }
+
+  override def updateQueryFilter(implicit ctx: DBAccessContext) = {
+    AllowIf(Json.obj("isDeleted" -> false))
+  }
+
   def findByLevelIdQ(levelId: LevelId) = Json.obj(
     "levelId.name" -> levelId.name,
     "levelId.version" -> levelId.version
@@ -211,10 +220,24 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
     }
   }
 
-  def increaseNumberOfActiveStacks(level: Level)(implicit ctx: DBAccessContext) = {
+  def markAsDeleted(levelName: String)(implicit ctx: DBAccessContext) = {
+    collectionUpdate(Json.obj("levelId.name" -> levelName),
+      Json.obj("$set" -> Json.obj(
+        "isDeleted" -> true)), multi = true)
+  }
+
+  def changeNumberOfActiveStacks(levelId: LevelId, number: Int)(implicit ctx: DBAccessContext) = {
     collectionUpdate(
-      findByLevelIdQ(level.levelId),
-      Json.obj("$inc" -> Json.obj("numberOfActiveStacks" -> 1)))
+      findByLevelIdQ(levelId),
+      Json.obj("$inc" -> Json.obj("numberOfActiveStacks" -> number)))
+  }
+
+  def increaseNumberOfActiveStacks(levelId: LevelId)(implicit ctx: DBAccessContext) = {
+    changeNumberOfActiveStacks(levelId, 1)
+  }
+
+  def decreaseNumberOfActiveStacks(levelId: LevelId)(implicit ctx: DBAccessContext) = {
+    changeNumberOfActiveStacks(levelId, -1)
   }
 
   def createLevel(level: Level)(implicit ctx: DBAccessContext) = {

@@ -7,11 +7,11 @@ import braingames.binary.models.DataSet
 import models.knowledge._
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
-import braingames.reactivemongo.GlobalDBAccess
+import braingames.reactivemongo.{UnAuthedDBAccess, GlobalDBAccess}
 import models.knowledge.MissionDAO.formatter
 import braingames.mvc.ExtendedController
 
-object MissionController extends ExtendedController with Controller with GlobalDBAccess {
+object MissionController extends ExtendedController with Controller with UnAuthedDBAccess {
 
   /*def getMissions(dataSetName: String) = Action {
     implicit request =>

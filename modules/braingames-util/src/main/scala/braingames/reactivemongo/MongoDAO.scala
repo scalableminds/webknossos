@@ -209,6 +209,7 @@ trait MongoDAO[T] extends DAO[T] with MongoHelpers {
     withId(id, errorValue = LastError(false, None, None, Some(s"failed to parse objectId $id"), None, 0, false)) {
       bid =>
         removeById(bid)
+
     }
   }
 

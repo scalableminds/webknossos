@@ -31,6 +31,12 @@ object ActiveLevelDAO extends BasicReactiveDAO[ActiveLevel] {
     collectionUpdate(
       Json.obj("gameName" -> gameName, s"levels.${levelId.name}" -> levelId.version),
       Json.obj("$unset" -> Json.obj(
-        s"levels.${levelId.name}" -> "")))
+        s"levels.${levelId.name}" -> "")), multi = true)
+  }
+
+  def removeActiveLevel(levelName: String)(implicit ctx: DBAccessContext) = {
+    collectionUpdate(
+      Json.obj(s"levels.${levelName}" -> Json.obj("$exists" -> true)),
+      Json.obj("$unset" -> Json.obj(s"levels.${levelName}" -> "")), multi = true)
   }
 }

@@ -28,6 +28,10 @@ trait UnsecuredDAO[T] extends SecuredDAO[T] with AllowEverytingDBAccessValidator
   this: MongoDAO[T] =>
 }
 
+trait UnAuthedDBAccess{
+  implicit val ctx: DBAccessContext = UnAuthedAccessContext
+}
+
 trait GlobalDBAccess {
   implicit val ctx: DBAccessContext = GlobalAccessContext
 }

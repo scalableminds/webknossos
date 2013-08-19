@@ -8,7 +8,7 @@ import braingames.geometry._
 import _root_.models.knowledge._
 import scala.concurrent.Future
 import braingames.levelcreator.BinaryDataService
-import braingames.reactivemongo.GlobalDBAccess
+import braingames.reactivemongo.{UnAuthedDBAccess, GlobalDBAccess}
 import braingames.mvc.ExtendedController
 import play.api.Play
 import braingames.binary.models.DataLayerId
@@ -19,7 +19,7 @@ import braingames.binary.DataRequestSettings
 import braingames.binary.models.DataSet
 import play.api.libs.concurrent.Execution.Implicits._
 
-object BinaryData extends ExtendedController with Controller with GlobalDBAccess with BinaryDataRequestHandler {
+object BinaryData extends ExtendedController with Controller with UnAuthedDBAccess with BinaryDataRequestHandler {
   val conf = Play.current.configuration
 
   implicit val timeout = Timeout((conf.getInt("actor.defaultTimeout") getOrElse 20) seconds) // needed for `?` below

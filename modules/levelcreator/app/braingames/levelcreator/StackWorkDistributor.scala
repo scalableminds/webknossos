@@ -157,10 +157,10 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
     (conf.getInt("levelcreator.renderWorkQueue.inProgressCheckIntervallInMinutes") getOrElse 1) minutes
 
   val minWorkQueueSize =
-    conf.getInt("levelcreator.renderWorkQueue.minSize").getOrElse(2)
+    conf.getInt("levelcreator.renderWorkQueue.minSize").getOrElse(10)
 
   val maxWorkQueueSize =
-    conf.getInt("levelcreator.renderWorkQueue.maxSize").getOrElse(5)
+    conf.getInt("levelcreator.renderWorkQueue.maxSize").getOrElse(20)
 
   val minWorkQueueUpdateInterval =
     conf.getInt("levelcreator.renderWorkQueue.minUpdateIntervalInSec").getOrElse(1) seconds

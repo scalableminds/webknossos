@@ -79,6 +79,10 @@ $ ->
 
       # set ship it
       $("#level-list .ship-stacks-poopover").popover()
+      
+      $("#level-list .ship-stacks-poopover").on "click", (event) ->
+
+        event.preventDefault()
 
 
       $(document).on "click", "[data-prompt]", (event) ->
@@ -130,7 +134,7 @@ $ ->
           "shouldAutoRender": autoShip is "true",
           "shouldBeShipped": true
         })
-        console.log json
+        
 
         $.ajax(
           _.extend(

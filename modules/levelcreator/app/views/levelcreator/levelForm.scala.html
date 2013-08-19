@@ -15,7 +15,7 @@
         <h3>New Level</h3>
         @helper.form(controllers.levelcreator.routes.LevelCreator.create, 'class -> "form-horizontal") {
           @helper.inputText(form("name"))
-          @helper.select(form("game"), options = games.map(g => (g.name, g.name)))
+          @helper.select(form("game"), options = ""->""::(games.map(g => (g.name, g.name))))
           @helper.inputText(form("width"), 'type -> "number")
           @helper.inputText(form("height"), 'type -> "number")
           @helper.inputText(form("slides before problem"), 'type -> "number")

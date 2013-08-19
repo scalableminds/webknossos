@@ -7,7 +7,16 @@
   produce Stacks
 </a><br />
 <i class="icon-truck"></i>
-<a href="@controllers.levelcreator.routes.LevelCreator.updateRenderSettings(level.levelId.name)" class="view-stacks">ship it</a><br />
+<a href="#"
+	data-title = "Ship It!"
+    data-content = 
+    	"<button type='button' class='btn ship-stacks' data-level-id=@level.id data-autoship=true>Ship with autorender</button>
+    	<br>
+    	<button type='button' class='btn ship-stacks' data-level-id=@level.id data-autoship=false>Ship without autorender</button>"
+    data-toggle = "popover"
+    data-html = true
+    data-placement = "right"
+	class="ship-stacks-poopover">ship it</a><br />
 <i class="icon-picture"></i>
 <a href="@controllers.levelcreator.routes.StackController.list(level.levelId.name)" class="view-stacks">view Stacks</a><br />
 <i class="icon-trash"></i>

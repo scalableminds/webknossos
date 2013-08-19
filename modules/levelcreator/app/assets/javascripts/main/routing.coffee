@@ -77,6 +77,10 @@ $ ->
 
     "/" : ->
 
+      # set ship it
+      $("#level-list .ship-stacks-poopover").popover()
+
+
       $(document).on "click", "[data-prompt]", (event) ->
 
         event.preventDefault()
@@ -111,5 +115,66 @@ $ ->
         else
           sendAutoRender()
 
-
       activateProduceStacksLink()
+
+      $(document).on "click", ".ship-stacks", (event) -> 
+
+        event.preventDefault()
+        $this = $(this)
+      
+        $row = $this.parents("tr").first()
+        levelId = $this.attr("data-level-id")
+        autoShip = $this.attr("data-autoship")
+
+        json = JSON.stringify({
+          "shouldAutoRender": autoShip is "true",
+          "shouldBeShipped": true
+        })
+        console.log json
+
+        $.ajax(
+          _.extend(
+            type : "POST"
+            dataType: "json"
+            data: json
+            headers: { 
+               Accept : "application/json",
+               "Content-Type": "application/json; charset=UTF-8" }
+            routes.controllers.levelcreator.LevelCreator.updateRenderSettings(levelId)
+          )
+        ).then(
+
+          ( { messages } ) -> Toast.message(messages)
+          (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
+
+        )
+        
+        return        
+
+      
+
+      $(document).on "click", "#level-list .produce-stacks", (event) -> 
+
+        event.preventDefault()
+        $this = $(this)
+      
+        $row = $this.parents("tr").first()
+        levelId = $row.data("levelid")
+        count = parseInt(prompt("How many stacks to produce?", "3"))
+        
+        return if _.isNaN(count)
+
+        $.ajax(
+          _.extend(
+            dataType : "json"
+            beforeSend : (xhr) -> console.log xhr
+            routes.controllers.levelcreator.StackController.produce(levelId, count)
+          )
+        ).then(
+
+          ( { messages } ) -> Toast.message(messages)
+          (jqxhr) -> Toast.error(jqxhr.responseText || "Connection error.")
+
+        )
+
+        return

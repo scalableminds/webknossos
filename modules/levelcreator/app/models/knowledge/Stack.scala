@@ -1,7 +1,7 @@
 package models.knowledge
 
 import java.io.File
-import braingames.util.FileRegExFilter
+import braingames.util.{JsonHelper, FileRegExFilter}
 import play.api.libs.json.Json
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
@@ -17,6 +17,7 @@ case class Stack(level: Level, mission: Mission, _id: BSONObjectID = BSONObjectI
   val directory = new File(path)
   val tarFile = new File(s"$path/stack.tar")
   val metaFile = new File(s"$path/meta.json")
+  val paraFile = new File(s"$path/para.json")
   val xmlAtlas = new File(s"$path/atlas.xml")
 
   def isTared = tarFile.exists
@@ -26,6 +27,13 @@ case class Stack(level: Level, mission: Mission, _id: BSONObjectID = BSONObjectI
       directory.listFiles(Stack.stackFrameFileFilter).toList.sortBy(_.getName)
     else
       Nil
+  }
+
+  def paraInformation: Option[JsObject] = {
+    if(isProduced)
+      JsonHelper.JsonFromFile(paraFile).asOpt[JsObject]
+    else
+      None
   }
 }
 

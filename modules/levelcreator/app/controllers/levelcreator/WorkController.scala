@@ -49,9 +49,8 @@ object WorkController extends LevelCreatorController {
     }
   }
 
-  def finished(key: String) = Action(parse.text) { implicit request =>
-    val downloadUrls = request.body.split(" ").toList
-    stackWorkDistributor ! FinishedWork(key, downloadUrls)
+  def finished(key: String) = Action(parse.json) { implicit request =>
+    stackWorkDistributor ! FinishedWork(key, request.body)
     Ok
   }
 

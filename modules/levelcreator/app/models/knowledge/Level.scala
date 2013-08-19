@@ -195,14 +195,15 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
               renderSettings = RenderSettings(false, false),
               numberOfActiveStacks = 0,
               parent = level.levelId,
+              isLatest = true,
               timestamp = System.currentTimeMillis(),
               code = code)
-          insert(updated).flatMap {
+          unsetIsLatestStatus(level).flatMap {
             r =>
               if (r.ok)
-                updateLatestStatus(level, isLatest = false).map(_ => Full(updated))
+                insert(updated).map(_ => Full(updated))
               else
-                Future.successful(Failure("Couldn't insert updated version"))
+                Future.successful(Failure("Couldn't set latest version"))
           }
       }
     } else {
@@ -231,11 +232,11 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
     }
   }
 
-  def updateLatestStatus(level: Level, isLatest: Boolean)(implicit ctx: DBAccessContext) = {
+  def unsetIsLatestStatus(level: Level)(implicit ctx: DBAccessContext) = {
     collectionUpdate(
-      findByLevelIdQ(level.levelId),
+      Json.obj("levelId.name" -> level.levelId.name),
       Json.obj("$set" -> Json.obj(
-        "isLatest" -> isLatest)))
+        "isLatest" -> false)), multi = true)
   }
 
   def updateRenderSettings(level: Level, renderSettings: RenderSettings)(implicit ctx: DBAccessContext) = {

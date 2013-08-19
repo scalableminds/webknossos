@@ -171,7 +171,7 @@ class PlaneView
     canvas.width(2 * WIDTH + 20)
     canvas.height(2 * HEIGHT + 20)
 
-    $('#TDViewControls button').width(@curWidth/5)
+    $('#TDViewControls button').outerWidth(@curWidth/4)
 
     divs = $(".inputcatcher")
     for div in divs

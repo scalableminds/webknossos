@@ -193,6 +193,7 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
               _id = BSONObjectID.generate,
               levelId = level.levelId.copy(version = nextVersion),
               renderSettings = RenderSettings(false, false),
+              numberOfActiveStacks = 0,
               parent = level.levelId,
               timestamp = System.currentTimeMillis(),
               code = code)
@@ -216,7 +217,7 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
   }
 
   def createLevel(level: Level)(implicit ctx: DBAccessContext) = {
-    findOneByName(level.levelId.name).flatMap {
+    findLatestOneByName(level.levelId.name).flatMap {
       case Some(l) =>
         Future.successful(Failure(Messages("level.invalidName")))
       case _ =>
@@ -287,6 +288,10 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
     collectionFind(Json.obj(
       "isLatest" -> true)).cursor[Level].toList
 
+  def findAllShipped()(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj(
+      "renderSettings.shouldBeShipped" -> true)).cursor[Level].toList
+
   def findAutoRenderLevels()(implicit ctx: DBAccessContext) =
     collectionFind(Json.obj(
       "renderSettings.shouldBeShipped" -> true,
@@ -298,8 +303,8 @@ object LevelDAO extends BasicReactiveDAO[Level] with LevelFormats with FoxImplic
   def findByName(name: String)(implicit ctx: DBAccessContext) =
     collectionFind(findByNameQ(name)).cursor[Level].toList
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
-    collectionFind(findByNameQ(name)).one[Level]
+  def findLatestOneByName(name: String)(implicit ctx: DBAccessContext) =
+    collectionFind(findByNameQ(name) ++ Json.obj("isLatest" -> true)).one[Level]
 
   def findOneById(levelId: LevelId)(implicit ctx: DBAccessContext) =
     collectionFind(findByLevelIdQ(levelId)).one[Level]

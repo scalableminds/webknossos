@@ -1,30 +1,27 @@
-@(level: models.knowledge.Level, rendered: Option[Int], stacksInProgress: Option[Int], stacksInQueue: Option[Int])
+@(level: models.knowledge.Level, stacksInProgress: Option[Int], stacksInQueue: Option[Int], shipped: Boolean)
 @import braingames.format.Formatter._
 
-<tr data-levelid="@level.id">
+<tr data-levelid="@level.id" @if(level.isLatest != level.renderSettings.shouldBeShipped){ class="warning" }>
   <td>
     @level.game
   </td>
   <td> 
     <a href="#" data-prompt="@level.id" title="@level.id">#</a>
-    <a href="@controllers.levelcreator.routes.StackController.list(level.levelId.name)">@level.levelId.toBeautifiedString</a>
+    <a href="@controllers.levelcreator.routes.StackController.list(level.levelId.name)">@level.levelId.name</a>
+  </td>
+  <td>
+    @level.levelId.version
   </td>
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>
   <td class="status-cell"> 
-    @levelGenerationProgress(rendered.getOrElse(0), stacksInProgress.getOrElse(0), stacksInQueue.getOrElse(0))
+    @levelGenerationProgress(level.numberOfActiveStacks, stacksInProgress.getOrElse(0), stacksInQueue.getOrElse(0))
   </td>
-  <td>  
-    <i class="icon-pencil"></i>
-    <a href="@controllers.levelcreator.routes.LevelCreator.useRandom(level.id)">edit</a><br />
-    <i class="icon-retweet"></i> 
-    <a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">
-      produce Stacks
-    </a><br />
-    <!--<input type="checkbox" if(level.autoRender) { Html("checked") } class="auto-render-stacks"> auto render<br />-->
-    <i class="icon-picture"></i> 
-    <a href="@controllers.levelcreator.routes.StackController.list(level.levelId.name)" class="view-stacks">view Stacks</a><br />
-    <i class="icon-trash"></i>
-    <a href="@controllers.levelcreator.routes.LevelCreator.delete(level.id)" data-ajax="method=DELETE,delete-row,confirm">delete</a>
+  <td>
+    @if(shipped){
+      @shippedLevelLinks(level)
+    } else {
+      @latestLevelLinks(level)
+    }
   </td>
 </tr>

@@ -36,7 +36,7 @@ object StackInProgressDAO extends BasicReactiveDAO[StackInProgress] with StackIn
     "key" -> IndexType.Ascending)))
 
   this.collection.indexesManager.ensure(Index(Seq(
-    "_level" -> IndexType.Ascending,
+    "levelId" -> IndexType.Ascending,
     "_mission" -> IndexType.Ascending)))
 
   def findAllOlderThan(d: FiniteDuration)(implicit ctx: DBAccessContext) = {
@@ -51,19 +51,20 @@ object StackInProgressDAO extends BasicReactiveDAO[StackInProgress] with StackIn
 
   def findFor(levelId: LevelId)(implicit ctx: DBAccessContext) = {
     collectionFind(Json.obj(
-      "_level.name" -> levelId.name,
-      "_level.version" -> levelId.version)).cursor[StackInProgress].toList
+      "levelId.name" -> levelId.name,
+      "levelId.version" -> levelId.version)).cursor[StackInProgress].toList
   }
 
-  def countFor(levelname: String)(implicit ctx: DBAccessContext) = {
+  def countFor(levelId: LevelId)(implicit ctx: DBAccessContext) = {
     count(Json.obj(
-    "_level.name" -> levelname))
+    "levelId.name" -> levelId.name,
+    "levelId.version" -> levelId.version))
   }
 
   def find(level: Level, mission: Mission)(implicit ctx: DBAccessContext) = {
     collectionFind(Json.obj(
-      "_level.name" -> level.levelId.name,
-      "_level.version" -> level.levelId.version,
+      "levelId.name" -> level.levelId.name,
+      "levelId.version" -> level.levelId.version,
       "_mission" -> mission._id)).cursor[StackInProgress].toList
   }
 }

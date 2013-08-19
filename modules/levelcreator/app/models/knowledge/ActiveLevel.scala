@@ -24,7 +24,7 @@ object ActiveLevelDAO extends BasicReactiveDAO[ActiveLevel] {
       Json.obj("gameName" -> gameName),
       Json.obj("$set" -> Json.obj(
         "gameName" -> gameName,
-        s"levels.${levelId.name}" -> levelId.version)))
+        s"levels.${levelId.name}" -> levelId.version)), upsert=true)
   }
 
   def removeActiveLevel(gameName: String, levelId: LevelId)(implicit ctx: DBAccessContext) = {

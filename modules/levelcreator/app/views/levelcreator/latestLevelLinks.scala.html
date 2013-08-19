@@ -1,0 +1,14 @@
+@(level: models.knowledge.Level)
+
+<i class="icon-pencil"></i>
+<a href="@controllers.levelcreator.routes.LevelCreator.useRandom(level.id)">edit</a><br />
+<i class="icon-retweet"></i>
+<a href="@controllers.levelcreator.routes.StackController.produce(level.id)" class="produce-stacks">
+  produce Stacks
+</a><br />
+<i class="icon-truck"></i>
+<a href="@controllers.levelcreator.routes.LevelCreator.updateRenderSettings(level.levelId.name)" class="view-stacks">ship it</a><br />
+<i class="icon-picture"></i>
+<a href="@controllers.levelcreator.routes.StackController.list(level.levelId.name)" class="view-stacks">view Stacks</a><br />
+<i class="icon-trash"></i>
+<a href="@controllers.levelcreator.routes.LevelCreator.delete(level.id)" data-ajax="method=DELETE,delete-row,confirm">delete</a>

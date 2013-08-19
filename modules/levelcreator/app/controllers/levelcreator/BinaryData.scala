@@ -34,7 +34,7 @@ object BinaryData extends ExtendedController with Controller with GlobalDBAccess
             dataSet <- DataSetDAO.findOneByName(dataSetName) ?~> Messages("dataset.notFound")
             level <- LevelDAO.findOneById(levelId) ?~> Messages("level.notFound")
             mission <- MissionDAO.findOneById(missionId) ?~> Messages("mission.notFound")
-            result <- handleDataRequest(dataSet, dataLayerName, level, mission) ?~> "Data couldn'T be retireved"
+            result <- handleDataRequest(dataSet, dataLayerName, level, mission) ?~> "Data couldn't be retrieved"
           } yield {
             Ok(result)
           }

@@ -39,7 +39,7 @@ case object CountActiveRenderers
 
 case object QueueStatusRequest
 
-case class QueueStatus(levelStats: Map[String, Int])
+case class QueueStatus(levelStats: Map[LevelId, Int])
 
 /**
  * Internal communication of StackWorkDistributor
@@ -330,7 +330,7 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
       sender ! numberOfWorkingRenderers
 
     case QueueStatusRequest =>
-      val queueStatus = workQueue().groupBy(queued => queued.stack.level.levelId.name).mapValues(_.size)
+      val queueStatus = workQueue().groupBy(queued => queued.stack.level.levelId).mapValues(_.size)
       sender ! QueueStatus(queueStatus)
   }
 

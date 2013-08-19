@@ -32,7 +32,7 @@ object NextLevelVersion extends BasicReactiveDAO[NextLevelVersion] {
 
   def getNextVersion(name: String)(implicit ctx: DBAccessContext) = {
     for{
-      v <- findVersionByName(name).map(_ getOrElse 0)
+      v <- findVersionByName(name).map(_ getOrElse 1)
       _ <- setVersionFor(name, v + 1)
     } yield {
       v

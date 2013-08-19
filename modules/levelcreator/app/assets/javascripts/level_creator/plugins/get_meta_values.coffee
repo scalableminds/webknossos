@@ -105,14 +105,19 @@ class GetMetaValues
 
 
     # get endSlide
-    lastStartFrame = DataUtils.nmToSlide(mission.start.lastFrame, slidesBeforeProblem)
+
+    endS = _.detect(mission.possibleEnds, id: mission.end.id)
+    if endS?
+      maxEndSlide = Math.min(DataUtils.nmToSlide(endS.lastFrame, slidesBeforeProblem), desiredEndSlide)
+    else
+      maxEndSlide = desiredEndSlide
 
     if noStartSegmentAtLastSlide
       searchEnd = Math.max(slidesBeforeProblem, lastStartFrame)
     else
       searchEnd = slidesBeforeProblem
 
-    for i in [Math.floor(desiredEndSlide)...searchEnd] by -1
+    for i in [Math.floor(maxEndSlide)...searchEnd] by -1
       result = _.filter(mission.possibleEnds, (e) => 
         #console.log DataUtils.nmToSlide(e.firstFrame) + "  - " + i + " -  " + DataUtils.nmToSlide(e.lastFrame)
         DataUtils.nmToSlide(e.firstFrame, slidesBeforeProblem) < i < DataUtils.nmToSlide(e.lastFrame, slidesBeforeProblem) ).length

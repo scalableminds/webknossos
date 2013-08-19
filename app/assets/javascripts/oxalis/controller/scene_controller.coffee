@@ -1,6 +1,7 @@
 ### define
 ../geometries/plane : Plane
 ../geometries/skeleton : Skeleton
+../geometries/cube : Cube
 ../geometries/contourgeometry : ContourGeometry
 ../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
@@ -11,6 +12,8 @@ class SceneController
 
   # This class collects all the meshes displayed in the Sceleton View and updates position and scale of each
   # element depending on the provided flycam.
+
+  CUBE_COLOR : 0x999999
 
   constructor : (@upperBoundary, @flycam, @model) ->
 
@@ -26,20 +29,11 @@ class SceneController
 
 
   createMeshes : ->
-
-    # Cube
-    b   = @upperBoundary
-    geo = new THREE.Geometry()
-    v   = geo.vertices
-    v.push(@vec(   0,    0,    0));      v.push(@vec(   0, b[1],    0))
-    v.push(@vec(b[0], b[1],    0));      v.push(@vec(b[0],    0,    0))
-    v.push(@vec(b[0],    0, b[2]));      v.push(@vec(b[0], b[1], b[2]))
-    v.push(@vec(   0, b[1], b[2]));      v.push(@vec(   0,    0, b[2]))
-    v.push(@vec(   0,    0,    0));      v.push(@vec(b[0],    0,    0))
-    v.push(@vec(b[0], b[1],    0));      v.push(@vec(b[0], b[1], b[2]))
-    v.push(@vec(b[0],    0, b[2]));      v.push(@vec(   0,    0, b[2]))
-    v.push(@vec(   0, b[1], b[2]));      v.push(@vec(   0, b[1],    0))
-    @cube = new THREE.Line(geo, new THREE.LineBasicMaterial({color: 0x999999, linewidth: 1}))
+    # Cubes
+    @cube = new Cube(@model, {
+      max : @upperBoundary
+      color : @CUBE_COLOR
+      showCrossSections : true })
 
     # TODO: Implement text 
 
@@ -57,18 +51,15 @@ class SceneController
     @planes[constants.PLANE_XZ].setRotation(new THREE.Vector3( - 1/2 * Math.PI, 0, 0))
 
 
-  vec : (x, y, z) ->
-
-    new THREE.Vector3(x, y, z)
-
-
   updateSceneForCam : (id) =>
 
     # This method is called for each of the four cams. Even
     # though they are all looking at the same scene, some
     # things have to be changed for each cam.
+
+    @cube.updateForCam(id)
+
     if id in constants.ALL_PLANES
-      @cube.visible = false
       unless @showSkeleton
         @skeleton.setVisibility(false)
       for i in constants.ALL_PLANES
@@ -83,7 +74,6 @@ class SceneController
         else
           @planes[i].setVisible(false)
     else
-      @cube.visible = true
       unless @showSkeleton
         @skeleton.setVisibility(true)
       for i in constants.ALL_PLANES
@@ -152,9 +142,11 @@ class SceneController
     result = []
     for plane in @planes
       result = result.concat(plane.getMeshes())
+
     result = result.concat(@skeleton.getMeshes())
                     .concat(@contour.getMeshes())
-    result.push(@cube)
+                    .concat(@cube.getMeshes())
+    
     return result
 
 
@@ -173,7 +165,7 @@ class SceneController
 
     for plane in @planes
       plane.setVisible(false)
-    @cube.visible = false
+    @cube.setVisibility( false )
 
     @skeleton.setVisibility(@showSkeleton)
     @skeleton.setSizeAttenuation(true)
@@ -183,7 +175,7 @@ class SceneController
 
     for plane in @planes
       plane.setVisible(true)
-    @cube.visible = true
+    @cube.setVisibility( true )
 
     @skeleton.setSizeAttenuation(false)
 
@@ -202,5 +194,4 @@ class SceneController
       displayTDViewYZChanged : (value) =>
         @setDisplaySV constants.PLANE_YZ, value
       displayTDViewXZChanged : (value) =>
-        @setDisplaySV constants.PLANE_XZ, value  })   
-
+        @setDisplaySV constants.PLANE_XZ, value  })

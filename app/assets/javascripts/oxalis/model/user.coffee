@@ -76,44 +76,21 @@ class User
   pushImpl : ->
     
     deferred = $.Deferred()
+
+    data = {}
+    for property of this
+      
+      if not (typeof this[property] == "function") and property.charAt(0) != '_'
+
+        data[property] = this[property]
+
+    console.log "Sending User Data:", data
       
     Request.send(
       url      : "/user/configuration"
       type     : "POST"
       dataType : "json"
-      data   : { 
-        moveValue : @moveValue,
-        moveValue3d : @moveValue3d,
-        rotateValue : @rotateValue,
-        crosshairSize : @crosshairSize,
-        scaleValue : @scaleValue,
-        mouseRotateValue : @mouseRotateValue,
-        clippingDistance : @clippingDistance,
-        clippingDistanceArbitrary : @clippingDistanceArbitrary,
-        dynamicSpaceDirection : @dynamicSpaceDirection,
-        displayCrosshair : @displayCrosshair,
-        interpolation : @interpolation,
-        fourBit: @fourBit,
-        briConNames : @briConNames,
-        brightness: @brightness,
-        contrast: @contrast, 
-        quality : @quality,
-        zoom : @zoom,
-        scale : @scale,
-        displayTDViewXY : @displayTDViewXY,
-        displayTDViewYZ : @displayTDViewYZ,
-        displayTDViewXZ : @displayTDViewXZ,
-        newNodeNewTree : @newNodeNewTree,
-        inverseX : @inverseX,
-        inverseY : @inverseY,
-        keyboardDelay : @keyboardDelay,
-        mouseActive : @mouseActive,
-        keyboardActive : @keyboardActive,
-        gamepadActive : @gamepadActive,
-        motionsensorActive : @motionsensorActive
-        firstVisToggle : @firstVisToggle 
-        particleSize : @particleSize 
-        sortTreesByName : @sortTreesByName }
+      data     : data
     ).fail( =>
       
       console.log "could'nt save userdata"

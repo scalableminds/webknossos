@@ -20,12 +20,15 @@ class GetMetaValues
     minEndSegmentsAtLastSlide : "Number"
     noStartSegmentAtLastSlide : "Boolean"
 
+  FRAME_NM_ADD : 3
 
 
   constructor : () ->
 
 
   execute : (options) ->
+
+    { FRAME_NM_ADD } = @
 
     # desiredSlidesBeforeProblem
     # minEndSegmentsAtFirstSlide
@@ -86,15 +89,15 @@ class GetMetaValues
 
     # get StartSlide - apply desiredSlidesBeforeProblem and MIN_SEGMENTS_AT_FIRST_SLIDE
 
-    firstStartFrame = DataUtils.nmToSlide(mission.start.firstFrame, slidesBeforeProblem)
+    firstStartFrame = DataUtils.nmToSlide(mission.start.firstFrame, slidesBeforeProblem) + FRAME_NM_ADD
 
     searchStart = Math.max(firstStartFrame, desiredStartSlide)
 
 
-    for i in [Math.floor(searchStart)...slidesBeforeProblem] by 1
+    for i in [Math.round(searchStart)...slidesBeforeProblem] by 1
       result = _.filter(mission.possibleEnds, (e) => 
         #console.log DataUtils.nmToSlide(e.firstFrame) + "  - " + i + " -  " + DataUtils.nmToSlide(e.lastFrame)
-        DataUtils.nmToSlide(e.firstFrame, slidesBeforeProblem) < i < DataUtils.nmToSlide(e.lastFrame, slidesBeforeProblem) ).length
+        DataUtils.nmToSlide(e.firstFrame, slidesBeforeProblem) + FRAME_NM_ADD < i < DataUtils.nmToSlide(e.lastFrame, slidesBeforeProblem) - FRAME_NM_ADD ).length
       #console.log i + " " + result
       if result >= minEndSegmentsAtFirstSlide 
         startSlide = i
@@ -105,11 +108,11 @@ class GetMetaValues
 
 
     # get endSlide
-    lastStartFrame = DataUtils.nmToSlide(mission.start.lastFrame, slidesBeforeProblem)
+    lastStartFrame = DataUtils.nmToSlide(mission.start.lastFrame, slidesBeforeProblem) - FRAME_NM_ADD
 
     endS = _.detect(mission.possibleEnds, id: mission.end.id)
     if endS?
-      maxEndSlide = Math.min(DataUtils.nmToSlide(endS.lastFrame, slidesBeforeProblem), desiredEndSlide)
+      maxEndSlide = Math.min(DataUtils.nmToSlide(endS.lastFrame, slidesBeforeProblem) - FRAME_NM_ADD, desiredEndSlide)
     else
       maxEndSlide = desiredEndSlide
 
@@ -118,10 +121,10 @@ class GetMetaValues
     else
       searchEnd = slidesBeforeProblem
 
-    for i in [Math.floor(maxEndSlide)...searchEnd] by -1
+    for i in [Math.round(maxEndSlide)...searchEnd] by -1
       result = _.filter(mission.possibleEnds, (e) => 
         #console.log DataUtils.nmToSlide(e.firstFrame) + "  - " + i + " -  " + DataUtils.nmToSlide(e.lastFrame)
-        DataUtils.nmToSlide(e.firstFrame, slidesBeforeProblem) < i < DataUtils.nmToSlide(e.lastFrame, slidesBeforeProblem) ).length
+        DataUtils.nmToSlide(e.firstFrame, slidesBeforeProblem) + FRAME_NM_ADD < i < DataUtils.nmToSlide(e.lastFrame, slidesBeforeProblem) - FRAME_NM_ADD ).length
       #console.log i + " " + result
       if result >= minEndSegmentsAtLastSlide 
         endSlide = i

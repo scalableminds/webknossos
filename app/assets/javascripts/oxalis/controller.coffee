@@ -61,7 +61,7 @@ class Controller
 
       @gui = @createGui(restrictions, settings)
 
-      @sceneController = new SceneController(@model.binary.cube.upperBoundary, @model.flycam, @model)
+      @sceneController = new SceneController(@model.binary["color"].cube.upperBoundary, @model.flycam, @model)
 
       @planeController = new PlaneController(@model, stats, @gui, @view.renderer, @view.scene, @sceneController, @controlMode)
 
@@ -134,9 +134,9 @@ class Controller
 
           alpha = event.value
           if (alpha == 0)
-            @model.binaryVolume.pingStop()
+            @model.binary["volume"].pingStop()
           if (alpha == 100)
-            @model.binary.pingStop()
+            @model.binary["color"].pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
         # initial trigger
@@ -226,8 +226,8 @@ class Controller
     gui = new Gui($("#optionswindow"), model, restrictions, settings)
     gui.update()  
 
-    model.binary.queue.set4Bit(model.user.fourBit)
-    model.binary.updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
+    model.binary["color"].queue.set4Bit(model.user.fourBit)
+    model.binary["color"].updateContrastCurve(gui.settings.brightness, gui.settings.contrast)
 
     gui.on
       deleteActiveNode : =>

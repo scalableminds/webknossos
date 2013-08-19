@@ -51,9 +51,17 @@ class Model
 
             @user = new User(user)
             @scaleInfo = new ScaleInfo(tracing.content.dataSet.scale)
-            @binary = new Binary(@user, tracing.content.dataSet, TEXTURE_SIZE_P, "color", 8)
-            @binaryVolume = new Binary(@user, tracing.content.dataSet, TEXTURE_SIZE_P, "volume", 16)
-            zoomStepCount = Math.min(@binary.cube.ZOOM_STEP_COUNT, @binaryVolume.cube.ZOOM_STEP_COUNT) - 1
+
+            supportedDataLayers = [{name: "color", bitDepth: 8}, {name: "volume", bitDepth: 16}]            
+
+            zoomStepCount = Infinity
+            @binary = {}
+            for layer in tracing.content.dataSet.dataLayers
+              for supportedLayer in supportedDataLayers
+                if layer.typ == supportedLayer.name
+                  @binary[layer.typ] = new Binary(@user, tracing.content.dataSet, TEXTURE_SIZE_P, layer.typ, supportedLayer.bitDepth)
+              zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
+
             @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, zoomStepCount, @user)      
             @flycam3d = new Flycam3d(DISTANCE_3D, tracing.content.dataSet.scale)
             @flycam3d.on
@@ -63,7 +71,7 @@ class Model
               "positionChanged" : (position) =>
                 @flycam3d.setPositionSilent(position)
             @route = new Route(tracing, @scaleInfo, @flycam, @flycam3d, @user)
-            @volumeTracing = new VolumeTracing(@flycam, @binary.cube)
+            @volumeTracing = new VolumeTracing(@flycam, @binary["color"].cube)
             
             {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
             

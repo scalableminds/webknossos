@@ -27,7 +27,7 @@ class SceneController
     @pingBinary       = true
     @pingBinaryVolume = false
 
-    @polygonFactory = new PolygonFactory( @model.binary.cube )
+    @polygonFactory = new PolygonFactory( @model.binary["color"].cube )
     @volumeMeshes   = []
 
     @createMeshes()
@@ -172,6 +172,12 @@ class SceneController
     @pingBinary = alpha != 100
     @pingBinaryVolume = alpha != 0
     #console.log "pingValues:", @pingBinary, @pingBinaryVolume
+
+  pingDataLayer : (dataLayerName) ->
+
+    if dataLayerName == "color" then return @pingBinary
+    if dataLayerName == "volume" then return @pingBinaryVolume
+    false
 
   stop : ->
     for plane in @planes

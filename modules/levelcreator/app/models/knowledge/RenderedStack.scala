@@ -11,7 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 
 case class MissionInfo(_id: BSONObjectID, key: String) {
-  def id = _id.toString
+  def id = _id.stringify
 }
 
 case class RenderedStack(

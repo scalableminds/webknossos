@@ -71,7 +71,7 @@ class Controller
       @initKeyboard()
 
       @setMode(constants.MODE_PLANE_TRACING)
-      # @setMode(constants.MODE_VOLUME)
+      @setMode(constants.MODE_VOLUME)
 
       if constants.MODE_PLANE_TRACING not in @allowedModes
         if constants.MODE_ARBITRARY in @allowedModes

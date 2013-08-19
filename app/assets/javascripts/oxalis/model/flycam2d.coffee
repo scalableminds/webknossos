@@ -194,7 +194,6 @@ class Flycam2d
 
   setPosition : (position) ->
 
-
     @setPositionSilent(position)
     @trigger("positionChanged", position)
 

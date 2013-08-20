@@ -259,7 +259,6 @@ class Skeleton
   setWaypoint : (centered) =>
 
     curGlobalPos = @flycam.getPosition()
-    activePlane  = @flycam.getActivePlane()
     position     = @cellTracing.getActiveNodePos()
     id           = @cellTracing.getActiveNodeId()
     index        = @getIndexFromTreeId(@cellTracing.getTree().treeId)

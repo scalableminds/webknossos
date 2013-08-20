@@ -12,7 +12,7 @@ class VolumeTracingController
     @mouseControls =
       
       leftDownMove : (delta, pos, ctrlPressed) =>
-        
+        console.log("leftDownMove")
         if ctrlPressed
           @move [
             delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
@@ -23,25 +23,31 @@ class VolumeTracingController
           @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
       
       leftMouseDown : (pos, shiftPressed, altPressed) =>
+        console.log("leftMouseDown")
         @enterDeleteMode( shiftPressed )
         @model.volumeTracing.startEditing()
       
       leftMouseUp : =>
+        console.log("leftMouseUp")
         @model.volumeTracing.finishLayer()
         @restoreAfterDeleteMode()
       
       rightDownMove : (delta, pos, ctrlPressed) =>
+        console.log("rightDownMove")
         @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
       
       rightMouseDown : (pos, shiftPressed, altPressed) =>
+        console.log("rightMouseDown")
         @enterDeleteMode()
         @model.volumeTracing.startEditing()
       
       rightMouseUp : =>
+        console.log("rightMouseUp")
         @model.volumeTracing.finishLayer()
         @restoreAfterDeleteMode()
 
       leftClick : (pos, shiftPressed, altPressed) =>
+        console.log("leftClick")
 
         cell = @model.binary.cube.getLabel(
                   @calculateGlobalPos( pos ))

@@ -32,7 +32,7 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
+    @model.initialize(constants.TEXTURE_SIZE_P, constants.PLANE_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       unless settings
@@ -183,10 +183,6 @@ class Controller
           @setMode(constants.MODE_ARBITRARY)
         else if @mode == constants.MODE_ARBITRARY
           @setMode(constants.MODE_PLANE_TRACING)
-
-      #"b" : =>
-      #  @model.cellTracing.benchmark( 1000000 )
-      #  Toast.success("Benchmark node insertion done")
 
       "super + s, ctrl + s" : (event) =>
 

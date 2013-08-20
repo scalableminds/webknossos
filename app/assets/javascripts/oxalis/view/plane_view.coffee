@@ -21,8 +21,7 @@ class PlaneView
     container = $("#render")
 
     # Create a 4x4 grid
-    @curWidth = WIDTH = constants.VIEWPORT_WIDTH
-    HEIGHT = constants.VIEWPORT_WIDTH
+    @curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH
     @scaleFactor = 1
 
     # Initialize main THREE.js components
@@ -70,7 +69,7 @@ class PlaneView
     $(@renderer.domElement).attr("id": "render-canvas")
     container.append @renderer.domElement
 
-    @setActivePlaneXY()
+    @setActiveViewport( constants.PLANE_XY )
 
     @positionStats = $("#status")
 
@@ -175,7 +174,7 @@ class PlaneView
     canvas.width(2 * WIDTH + 20)
     canvas.height(2 * HEIGHT + 20)
 
-    $('#TDViewControls button').width(@curWidth/5)
+    $('#TDViewControls button').outerWidth(@curWidth/4)
 
     divs = $(".inputcatcher")
     for div in divs
@@ -185,26 +184,14 @@ class PlaneView
     @resizeThrottled()
 
 
-  setActivePlaneXY : =>
+  setActiveViewport : (viewportID) =>
 
-    @setActivePlane constants.PLANE_XY
+    for i in [0..3]
+      if i == viewportID
+        $(".inputcatcher").eq(i).removeClass("inactive").addClass("active")
+      else
+        $(".inputcatcher").eq(i).removeClass("active").addClass("inactive")
 
-
-  setActivePlaneYZ : =>
-
-    @setActivePlane constants.PLANE_YZ
-
-
-  setActivePlaneXZ : =>
-
-    @setActivePlane constants.PLANE_XZ
-
-
-  setActivePlane : (planeID) =>
-
-    @flycam.setActivePlane planeID
-    for i in [0..2]
-      $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
     @flycam.update()
 
 

@@ -31,7 +31,7 @@ class VolumeTracing
     @currentLayer = null
 
 
-  startEditing : (planeId = @flycam.getActivePlane()) ->
+  startEditing : (planeId) ->
 
     # Return, if layer was actually started
     if currentLayer?

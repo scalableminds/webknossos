@@ -142,10 +142,12 @@ class Input.Mouse
 
   class MouseButton
 
-    constructor : (@name, @which, @mouse) ->
+
+    constructor : (@name, @which, @mouse, @id) ->
       @down  = false
       @drag  = false
       @moved = false
+
 
     handleMouseDown : (event) ->
 
@@ -156,13 +158,15 @@ class Input.Mouse
         @moved = false
         @mouse.trigger(@name + "MouseDown", @mouse.lastPosition, event.shiftKey, event.altKey)
 
+
     handleMouseUp : (event) ->
 
       if event.which == @which and @down
         @mouse.trigger(@name + "MouseUp")
         if not @moved
-          @mouse.trigger(@name + "Click", @mouse.lastPosition, event.shiftKey, event.altKey)
+          @mouse.trigger(@name + "Click", @mouse.lastPosition, event.shiftKey, event.altKey, @id)
         @down = false
+
 
     handleMouseMove : (event, delta) ->
 
@@ -170,12 +174,13 @@ class Input.Mouse
         @moved = true
         @mouse.trigger(@name + "DownMove", delta, @mouse.position, event.ctrlKey)
 
-  constructor : (@$target, initialBindings) ->
+
+  constructor : (@$target, initialBindings, @id) ->
 
     _.extend(this, new EventMixin())
 
-    @leftMouseButton  = new MouseButton( "left",  1, this )
-    @rightMouseButton = new MouseButton( "right", 3, this )
+    @leftMouseButton  = new MouseButton( "left",  1, this, @id )
+    @rightMouseButton = new MouseButton( "right", 3, this, @id )
     @isMouseOver = false
     @lastPosition = null
 

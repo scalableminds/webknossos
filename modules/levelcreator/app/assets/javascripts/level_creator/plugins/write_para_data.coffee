@@ -33,13 +33,13 @@ class WriteParaData
     for segment in activeSegments
 
       segmentPayload = 
-        id : segment.id
-        segmentValue : segment.value
+        
+        segmentLabel : segment.value
 
         isEndSegment : segment.isEndSegment
         isStartSegment : segment.isStartSegment
 
-        outlineLength : segment.path.length
+        perimeter : segment.path.length
         size : segment.size
 
         probability : segment.probability || -1

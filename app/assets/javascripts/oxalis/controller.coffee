@@ -176,7 +176,7 @@ class Controller
         else
           @setMode(constants.MODE_PLANE_TRACING)
 
-      "b" : =>
+      "shift + alt + b" : =>
         @model.cellTracing.benchmark( 5, 1000 )
         Toast.success("Benchmark scenario finished")
 

@@ -1,10 +1,15 @@
 @(missions: List[models.knowledge.Mission], solutions: List[models.knowledge.MissionSolution])(implicit request: RequestHeader)
 
+@beautify(js: play.api.libs.json.JsObject) = @{
+  (js \ "id").as[String].take(30)
+}
+
 @main(){
   <div class="container">
     <h3>Missions</h3>
 
     @solutions.groupBy(_.mission).map{ case (mission, solutions) =>
+      <h4>@mission.key</h4>
       <table class="table">
         <thead>
           <th>Solution</th>
@@ -12,13 +17,13 @@
         </thead>
         <tbody>
           @solutions.groupBy(_.solution).map{ case (segment, ss) =>
-            <tr>
-              <td>@segment</td>
-              <td>@ss.map{ s =>
-                @s.userId , @s.game <br />
-              }
-              </td>
-            </tr>
+            @ss.map{ s =>
+              <tr>
+                <td>@segment</td>
+                <td>@s.game</td>
+                <td>@beautify(s.userId)</td>
+              </tr>
+            }
           }
         </tbody>
       </table>

@@ -17,9 +17,14 @@
         </thead>
         <tbody>
           @solutions.groupBy(_.solution).map{ case (segment, ss) =>
+            <tr>
+              <td>@{ss.size}x @segment</td>
+              <td></td>
+              <td></td>
+            </tr>
             @ss.map{ s =>
-              <tr>
-                <td>@segment</td>
+             <tr>
+                <td></td>
                 <td>@s.game</td>
                 <td>@beautify(s.userId)</td>
               </tr>

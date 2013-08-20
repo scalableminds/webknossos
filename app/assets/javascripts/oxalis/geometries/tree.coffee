@@ -51,7 +51,7 @@ class Tree
 
     @nodesBuffer.push(node.pos)
     @nodeIDs.push([node.id])
-    @nodesColorBuffer.push( @getColor() )
+    @nodesColorBuffer.push( @getColor(node.id) )
 
     # Add any edge from smaller IDs to the node
     # ASSUMPTION: if this node is new, it should have a
@@ -60,6 +60,7 @@ class Tree
       if neighbor.id < node.id
         @edgesBuffer.push(neighbor.pos.concat(node.pos))
 
+    @updateColors()
     @updateGeometries()
 
 
@@ -115,10 +116,9 @@ class Tree
     merge("nodeIDs")
     merge("nodesBuffer")
     merge("edgesBuffer")
-    merge("nodesColorBuffer")
     @edgesBuffer.push( @getEdgeArray(lastNode, activeNode) )
 
-    @updateColors()
+    @updateNodesColors()
     @updateGeometries()
 
 
@@ -143,13 +143,13 @@ class Tree
     @updateGeometries()
 
 
-  updateColor : ( newTreeId, color ) ->
+  updateTreeColor : ( newTreeId, color ) ->
 
     @id = newTreeId
 
     @edges.material.color = @darkenHex( color )
     
-    @updateNodes()
+    @updateNodesColors()
     @updateGeometries()
 
 
@@ -166,51 +166,38 @@ class Tree
       geometry.material.dispose()
 
 
-  updateNodes : ->
-
-    color   @darkenHex( @model.cellTracing.getTree(@id).color )
+  updateNodesColors : ->
 
     @nodesColorBuffer.clear()
     for i in [0..@nodeIDs.length]
-      @nodesColorBuffer.push( @hexToRGB( color ))
-
-
-  updateNode : (id, colorFunction = (c) => @hexToRGB(@darkenHex(c)) ) ->
-
-    color = colorFunction( @model.cellTracing.getTree(@id).color )
-
-    for i in [0..@nodeIDs.length]
-      if @nodeIDs.get(i) == id
-        @nodesColorBuffer.set( color, i )
+      @nodesColorBuffer.push( @getColor( @nodeIDs.get(i) ))
 
     @updateColors()
 
 
-  setActiveNode : (isActiveNode, id) ->
+  updateNodeColor : (id, isActiveNode, isBranchPoint) ->
 
-    if isActiveNode
-      @updateNode( id, (c) => @invertHexToRGB(@darkenHex(c)) )
-    else
-      @setBranch( @model.cellTracing.isBranchPoint(id), id)
+    for i in [0..@nodeIDs.length]
+      if @nodeIDs.get(i) == id
+        @nodesColorBuffer.set( @getColor( id, isActiveNode, isBranchPoint ), i )
 
-    @changeColorOnCheck( isActiveNode, id,
-      (c) => @invertHexToRGB(@darkenHex(c)) )
+    @updateColors()
 
 
-  setBranch : (isBranchPoint, id) ->
+  getColor : (id, isActiveNode, isBranchPoint) ->
 
-    @changeColorOnCheck( isBranchPoint, id,
-      (c) => @invertHexToRGB(c) )
+    color = @model.cellTracing.getTree(@id).color
+    if id?
 
+      isActiveNode  = isActiveNode  || @model.cellTracing.getActiveNodeId() == id
+      isBranchPoint = isBranchPoint || @model.cellTracing.isBranchPoint(id)
 
-  changeColorOnCheck : (check, id, colorFunction) ->
+      if not isActiveNode
+        color = @darkenHex(color)
+      if isBranchPoint
+        color = @invertHex(color)
 
-    @updateNode( id, if check then colorFunction )
-
-
-  getColor : ->
-
-    return @hexToRGB(@darkenHex(@model.cellTracing.getTree(@id).color))
+    return @hexToRGB( color )
 
 
   updateColors : ->
@@ -235,13 +222,6 @@ class Tree
   hexToRGB : (hexColor) ->
 
     rgbColor = new THREE.Color().setHex(hexColor)
-    [rgbColor.r, rgbColor.g, rgbColor.b]
-
-  invertHexToRGB : (hexColor) ->
-
-    hsvColor = ColorConverter.getHSV(new THREE.Color().setHex(hexColor))
-    hsvColor.h = (hsvColor.h + 0.5) % 1
-    rgbColor = ColorConverter.setHSV(new THREE.Color(), hsvColor.h, hsvColor.s, hsvColor.v)
     [rgbColor.r, rgbColor.g, rgbColor.b]
 
 

@@ -55,6 +55,7 @@ class Skeleton
   createNewTree : (treeId, treeColor) ->
     
     @treeGeometries.push( tree = new Tree(treeId, treeColor, @model) )
+    @setActiveNode()
     @trigger "newGeometries", tree.getMeshes()
 
 
@@ -91,7 +92,9 @@ class Skeleton
 
     for branchpoint in @cellTracing.branchStack
       treeGeometry = @getTreeGeometry(branchpoint.treeId)
-      treeGeometry.setBranch(true, branchpoint.id)
+      treeGeometry.updateNodeColor(branchpoint.id, null, true)
+
+    @setActiveNode()
 
     if finishedDeferred?
       finishedDeferred.resolve()
@@ -100,7 +103,7 @@ class Skeleton
   setBranch : (isBranchPoint, node) ->
 
     treeGeometry = @getTreeGeometry( node.treeId )
-    treeGeometry.setBranch(isBranchPoint, node.id)
+    treeGeometry.updateNodeColor(node.id, null, isBranchPoint)
 
     @flycam.update()
 
@@ -119,7 +122,7 @@ class Skeleton
 
     newTreeId    = @cellTracing.getActiveTreeId()
     newColor     = new THREE.Color(treeColor)
-    @treeGeometry.updateColor( newTreeId, newColor )
+    @treeGeometry.updateTreeColor( newTreeId, newColor )
 
 
   getMeshes : =>
@@ -182,21 +185,13 @@ class Skeleton
 
     if @lastActiveNode?
       treeGeometry = @getTreeGeometry( @lastActiveNode.treeId )
-      treeGeometry?.setActiveNode( false, @lastActiveNode.id )
+      treeGeometry?.updateNodeColor( @lastActiveNode.id, false )
 
     if (activeNode = @model.cellTracing.getActiveNode())?
       treeGeometry = @getTreeGeometry( activeNode.treeId )
-      treeGeometry.setActiveNode( true, activeNode.id )
+      treeGeometry?.updateNodeColor( activeNode.id, true )
 
     @lastActiveNode = activeNode
-
-
-  updateNodes : ->
-
-    for treeGeometry in @treeGeometries
-      treeGeometry.updateNodes()
-
-    @flycam.update()
 
 
   getAllNodes : ->

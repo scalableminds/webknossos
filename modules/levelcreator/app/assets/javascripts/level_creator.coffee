@@ -240,6 +240,8 @@ class LevelCreator
       end : range.end
       width : @canvas.width
       height : @canvas.height
+      slidesBeforeProblem : @slidesBeforeProblem
+      slidesAfterProblem : @slidesAfterProblem
     )
 
 

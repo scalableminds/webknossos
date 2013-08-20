@@ -15,7 +15,7 @@ case class SegmentSolution(segmentId: Int, solution: Int)
 object SegmentSolution{
   implicit val segmentSolutionFormatter = Json.format[SegmentSolution]
 }
-case class MissionSolution(mission: MissionInfo, token: String, game: String, userId: JsObject, solution: SegmentSolution, timestamp: Long = System.currentTimeMillis){
+case class MissionSolution(mission: MissionInfo, token: String, game: String, userId: JsObject, solution: List[SegmentSolution], timestamp: Long = System.currentTimeMillis){
   def date = new Date(timestamp)
 }
 

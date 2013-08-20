@@ -104,26 +104,30 @@ class CellTracing
     @stateLogger.pushNow()
 
     
-  benchmark : (numberOfNodes = 10000) ->
+  benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
 
-    console.log "[benchmark] start inserting #{numberOfNodes} nodes"
+    console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
     startTime = (new Date()).getTime()
-    @createNewTree()
-    for i in [0..numberOfNodes]
-      pos = [Math.random() * 1000, Math.random() * 1000, Math.random() * 1000]
-      point = new TracePoint(@TYPE_USUAL, @idCount++, pos, null, null, @activeTree.treeId)
-      @activeTree.nodes.push(point)
-      if @activeNode
-        @activeNode.appendNext(point)
-        point.appendNext(@activeNode)
-        @activeNode = point
-      else
-        @activeNode = point
-        point.type = @TYPE_BRANCH
-        if @branchPointsAllowed
-          centered = true
-          @pushBranch()
-      @doubleBranchPop = false
+    offset = 0
+    size = numberOfNodesPerTree / 100
+    for i in [0..numberOfTrees]
+      @createNewTree()
+      for i in [0..numberOfNodesPerTree]
+        pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
+        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, null, null, @activeTree.treeId)
+        @activeTree.nodes.push(point)
+        if @activeNode
+          @activeNode.appendNext(point)
+          point.appendNext(@activeNode)
+          @activeNode = point
+        else
+          @activeNode = point
+          point.type = @TYPE_BRANCH
+          if @branchPointsAllowed
+            centered = true
+            @pushBranch()
+        @doubleBranchPop = false
+      offset += size
     @trigger "reloadTrees"
     console.log "[benchmark] done. Took me #{((new Date()).getTime() - startTime) / 1000} seconds."
 

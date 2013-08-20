@@ -12,11 +12,10 @@ class CameraController
   # View. It provides methods to set a certain View (animated).
 
   cameras : null
-  lights : null
   flycam : null
   model : null
 
-  constructor : (@cameras, @lights, @flycam, @model) ->
+  constructor : (@cameras, @flycam, @model) ->
 
     _.extend(@, new EventMixin())
 
@@ -37,10 +36,6 @@ class CameraController
     @cameras[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
     @cameras[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0], cPos[1], cPos[2])
 
-    # offset the lights very far
-    @lights[constants.PLANE_XY].position = new THREE.Vector3(cPos[0]         , cPos[1]         , cPos[2] - 100000)
-    @lights[constants.PLANE_YZ].position = new THREE.Vector3(cPos[0] + 100000, cPos[1]         , cPos[2])
-    @lights[constants.PLANE_XZ].position = new THREE.Vector3(cPos[0]         , cPos[1] + 100000, cPos[2])
 
   changeTDView : (id, animate = true) ->
     # In order for the rotation to be correct, it is not sufficient

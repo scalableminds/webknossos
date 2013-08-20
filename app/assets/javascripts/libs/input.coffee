@@ -140,11 +140,47 @@ class Input.Keyboard
 # Events: over, out, leftClick, rightClick, leftDownMove
 class Input.Mouse
 
+  class MouseButton
+
+
+    constructor : (@name, @which, @mouse, @id) ->
+      @down  = false
+      @drag  = false
+      @moved = false
+
+
+    handleMouseDown : (event) ->
+
+      if event.which == @which
+        $(":focus").blur() # see OX-159
+
+        @down  = true
+        @moved = false
+        @mouse.trigger(@name + "MouseDown", @mouse.lastPosition, event.shiftKey, event.altKey, @id)
+
+
+    handleMouseUp : (event) ->
+
+      if event.which == @which and @down
+        @mouse.trigger(@name + "MouseUp")
+        if not @moved
+          @mouse.trigger(@name + "Click", @mouse.lastPosition, event.shiftKey, event.altKey, @id)
+        @down = false
+
+
+    handleMouseMove : (event, delta) ->
+
+      if @down
+        @moved = true
+        @mouse.trigger(@name + "DownMove", delta, @mouse.position, event.ctrlKey, @id)
+
+
   constructor : (@$target, initialBindings, @id) ->
 
     _.extend(this, new EventMixin())
 
-    @isLeftDown = false
+    @leftMouseButton  = new MouseButton( "left",  1, this, @id )
+    @rightMouseButton = new MouseButton( "right", 3, this, @id )
     @isMouseOver = false
     @lastPosition = null
 
@@ -183,6 +219,10 @@ class Input.Mouse
     left <= pageX <= left + @$target.width() and
     top <= pageY <= top + @$target.height()
 
+  handle : (eventName, args...) ->
+
+    for button in [ @leftMouseButton, @rightMouseButton ]
+      button["handle" + eventName].apply( button, args )
 
   mouseDown : (event) =>
 
@@ -192,17 +232,7 @@ class Input.Mouse
       x : event.pageX - @$target.offset().left
       y : event.pageY - @$target.offset().top
 
-    # check whether the mouseDown event is a leftclick
-    if event.which == 1
-      $(":focus").blur() # see OX-159
-
-      @leftDown = true
-      @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey, event.altKey, @id)
-
-    else
-      @trigger("rightClick", [@lastPosition.x, @lastPosition.y], event.ctrlKey, @id)
-
-    return
+    @handle("MouseDown", event)
 
 
   mouseUp : (event) =>
@@ -212,10 +242,7 @@ class Input.Mouse
     else
       @mouseEnter(which : 0) if @isHit(event)
 
-    if event.which == 1
-      @trigger("leftMouseUp")
-    @leftDown = false
-    return
+    @handle( "MouseUp", event )
 
 
   mouseMove : (event) =>
@@ -225,12 +252,15 @@ class Input.Mouse
       y : event.pageY - @$target.offset().top
     
     if @lastPosition?
-      deltaX = (@position.x - @lastPosition.x)
-      deltaY = (@position.y - @lastPosition.y)
 
-    if @leftDown and !(deltaX == 0 and deltaY == 0)
-      @trigger("leftDownMove", {x : deltaX, y : deltaY},
-        {x : @position.x, y: @position.y}, event.ctrlKey)
+      delta = 
+        x : (@position.x - @lastPosition.x)
+        y : (@position.y - @lastPosition.y)
+
+    if delta?.x != 0 or delta?.y != 0
+
+      @handle( "MouseMove", event, delta )
+
       @lastPosition = @position
 
     return

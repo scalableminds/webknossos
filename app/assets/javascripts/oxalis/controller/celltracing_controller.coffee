@@ -110,7 +110,7 @@ class CellTacingController
     scaleFactor = @view.scaleFactor
     camera      = @view.getCameras()[plane]
     # vector with direction from camera position to click position
-    vector = new THREE.Vector3((position[0] / (384 * scaleFactor) ) * 2 - 1, - (position[1] / (384 * scaleFactor)) * 2 + 1, 0.5)
+    vector = new THREE.Vector3((position.x / (384 * scaleFactor) ) * 2 - 1, - (position.y / (384 * scaleFactor)) * 2 + 1, 0.5)
     
     # create a ray with the direction of this vector, set ray threshold depending on the zoom of the 3D-view
     projector = new THREE.Projector()
@@ -121,7 +121,7 @@ class CellTacingController
  
     # identify clicked object
     intersects = raycaster.intersectObjects(@sceneController.skeleton.nodes)
-    #if intersects.length > 0 and intersects[0].distance >= 0
+    
     for intersect in intersects
 
       index = intersect.index

@@ -34,11 +34,6 @@ class PlaneView
       @camera[i]   = new THREE.OrthographicCamera(0, 0, 0, 0)
       @scene.add @camera[i]
 
-      # There is one light for each plane
-      if i != constants.TDView
-        @lights[i]   = new THREE.PointLight( 0xffffff, 0.8 )
-        @scene.add @lights[i]
-
     @camera[constants.PLANE_XY].position.z = -1
     @camera[constants.PLANE_YZ].position.x =  1
     @camera[constants.PLANE_XZ].position.y =  1
@@ -60,6 +55,14 @@ class PlaneView
     @group.scale = @model.scaleInfo.getNmPerVoxelVector()
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
+
+    @scene.add( new THREE.AmbientLight(0x333333) )
+    directionalLight = new THREE.DirectionalLight(0xffffff, 0.3)
+    directionalLight.position.set(1, 1, -1).normalize()
+    @scene.add( directionalLight )
+    directionalLight = new THREE.DirectionalLight(0xffffff, 0.3)
+    directionalLight.position.set(-1, -1, -1).normalize()
+    @scene.add( directionalLight )
 
     # Attach the canvas to the container
     @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
@@ -195,11 +198,6 @@ class PlaneView
   getCameras : =>
 
     @camera
-
-
-  getLights  : =>
-
-    @lights
 
 
   showFirstVisToggle : ->

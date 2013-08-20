@@ -177,7 +177,8 @@ class View
       <tr><td>Z, U</td><td>Start/Stop recording waypoints</td><td>Shift + Space</td><td>Delete active node, Recenter previous node</td></tr>'
     volumeKeys =
       '<tr><th colspan="4">Volume Tracing</th></tr>
-      <tr><td>Mouse drag</td><td>Add to current Cell</td><td>Ctrl + Mouse drag / Arrow keys</td><td>Move</td></tr>
+      <tr><td>Left Mouse drag</td><td>Add to current Cell</td><td>Ctrl + Left Mouse drag / Arrow keys</td><td>Move</td></tr>
+      <tr><td>Shift + Left Mouse drag / Right Mouse drag</td><td>Remove voxels from cell</td><td>Left mouse click</td><td>Set active cell</td></tr>
       <tr><td>C</td><td>Create new cell</td><td></td><td></td></tr>'
 
     html = '''<div class="modal-header"><button type="button" class="close" data-dismiss="modal">x</button>

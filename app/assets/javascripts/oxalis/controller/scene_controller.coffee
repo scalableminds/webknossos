@@ -3,9 +3,11 @@
 ../geometries/skeleton : Skeleton
 ../geometries/cube : Cube
 ../geometries/contourgeometry : ContourGeometry
+../geometries/volumegeometry : VolumeGeometry
 ../model/dimensions : Dimensions
 ../../libs/event_mixin : EventMixin
 ../constants : constants
+../view/polygons/polygon_factory : PolygonFactory
 ###
 
 class SceneController
@@ -19,10 +21,13 @@ class SceneController
 
     _.extend(@, new EventMixin())
 
-    @current       = 0
-    @displayPlane  = [true, true, true]
-    @planeShift    = [0, 0, 0]
-    @showSkeleton  = true
+    @current        = 0
+    @displayPlane   = [true, true, true]
+    @planeShift     = [0, 0, 0]
+    @showSkeleton   = true
+
+    @polygonFactory = new PolygonFactory( @model.binary.cube )
+    @volumeMeshes   = []
 
     @createMeshes()
     @bind()
@@ -51,6 +56,18 @@ class SceneController
     @planes[constants.PLANE_XZ].setRotation(new THREE.Vector3( - 1/2 * Math.PI, 0, 0))
 
 
+  showAllShapes : (min, max) ->
+
+    @trigger("removeGeometries", @volumeMeshes)
+
+    @volumeMeshes = []
+    triangles = @polygonFactory.getTriangles(min, max)
+    for id of triangles
+      volume = new VolumeGeometry( triangles[id], parseInt( id ) )
+      @volumeMeshes = @volumeMeshes.concat( volume.getMeshes() )
+    @trigger("newGeometries", @volumeMeshes)
+
+
   updateSceneForCam : (id) =>
 
     # This method is called for each of the four cams. Even
@@ -62,6 +79,8 @@ class SceneController
     if id in constants.ALL_PLANES
       unless @showSkeleton
         @skeleton.setVisibility(false)
+      for mesh in @volumeMeshes
+        mesh.visible = false
       for i in constants.ALL_PLANES
         if i == id
           @planes[i].setOriginalCrosshairColor()
@@ -76,6 +95,8 @@ class SceneController
     else
       unless @showSkeleton
         @skeleton.setVisibility(true)
+      for mesh in @volumeMeshes
+        mesh.visible = true
       for i in constants.ALL_PLANES
         pos = @flycam.getPosition()
         @planes[i].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]))

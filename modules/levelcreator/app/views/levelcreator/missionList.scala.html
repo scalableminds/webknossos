@@ -1,0 +1,27 @@
+@(missions: List[models.knowledge.Mission], solutions: List[models.knowledge.MissionSolution])(implicit request: RequestHeader)
+
+@main(){
+  <div class="container">
+    <h3>Missions</h3>
+
+    @solutions.groupBy(_.mission).map{ case (mission, solutions) =>
+      <table class="table">
+        <thead>
+          <th>Solution</th>
+          <th></th>
+        </thead>
+        <tbody>
+          @solutions.groupBy(_.solution).map{ case (segment, ss) =>
+            <tr>
+              <td>@segment</td>
+              <td>@ss.map{ s =>
+                @s.userId , @s.game <br />
+              }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+}

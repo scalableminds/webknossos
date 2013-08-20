@@ -42,7 +42,8 @@ GET           /datasets/:dataSetName/layers/:layer/data        controllers.level
 #GET           /missions                                        controllers.levelcreator.MissionController.getMissions(dataSetName: String)
 GET           /missions/random                                 controllers.levelcreator.MissionController.getRandomMission(dataSetName: String)
 GET           /missions/:missionId                             controllers.levelcreator.MissionController.getMission(missionId: String)
-        
+GET           /missions                                        controllers.levelcreator.MissionController.list
+
 # Javascript routing
 GET           /assets/javascripts/routes.js                    controllers.levelcreator.Application.javascriptRoutes
 

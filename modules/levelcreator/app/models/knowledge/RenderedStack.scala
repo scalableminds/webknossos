@@ -16,6 +16,10 @@ case class MissionInfo(_id: BSONObjectID, key: String) {
   def id = _id.stringify
 }
 
+object MissionInfo{
+  implicit val missionInfoFormat: Format[MissionInfo] = Json.format[MissionInfo]
+}
+
 case class RenderedStack(
   levelId: LevelId,
   mission: MissionInfo,
@@ -33,8 +37,6 @@ object RenderedStackDAO extends BasicReactiveDAO[RenderedStack] {
   val collectionName = "renderedStacks"
 
   import LevelDAO.levelIdFormat
-
-  implicit val missionInfoFormat: Format[MissionInfo] = Json.format[MissionInfo]
   implicit val formatter: OFormat[RenderedStack] = Json.format[RenderedStack]
 
   def findFor(levelId: LevelId)(implicit ctx: DBAccessContext) = {

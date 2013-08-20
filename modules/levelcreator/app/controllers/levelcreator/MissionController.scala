@@ -47,4 +47,15 @@ object MissionController extends ExtendedController with Controller with UnAuthe
         }
       }
   }
+
+  def list = Action { implicit request =>
+    Async {
+      for {
+        solutions <- MissionSolutionDAO.findAll
+        missions <- MissionDAO.findAll
+      } yield {
+        Ok(views.html.levelcreator.missionList(missions, solutions))
+      }
+    }
+  }
 }

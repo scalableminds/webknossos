@@ -75,7 +75,7 @@ class Tree
     swapLast = (array, index) =>
       lastElement = array.pop()
       for i in [0..array.elementLength]
-        @nodesBuffer.getAllElements()[index * array.elementLength + i] = lastElement[i]
+        array.getAllElements()[index * array.elementLength + i] = lastElement[i]
 
     # Find index
     for i in [0...@nodeIDs.getLength()]
@@ -143,11 +143,12 @@ class Tree
     @updateGeometries()
 
 
-  updateTreeColor : ( newTreeId, color ) ->
+  updateTreeColor : ( newTreeId ) ->
 
     @id = newTreeId
 
-    @edges.material.color = @darkenHex( color )
+    newColor = @model.cellTracing.getTree().color
+    @edges.material.color = new THREE.Color( @darkenHex( newColor ) )
     
     @updateNodesColors()
     @updateGeometries()

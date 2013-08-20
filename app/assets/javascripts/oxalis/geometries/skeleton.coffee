@@ -99,6 +99,8 @@ class Skeleton
     if finishedDeferred?
       finishedDeferred.resolve()
 
+    @flycam.update()
+
 
   setBranch : (isBranchPoint, node) ->
 
@@ -118,11 +120,9 @@ class Skeleton
   updateActiveTreeColor : (oldTreeId) ->
 
     treeGeometry = @getTreeGeometry(oldTreeId)
-    treeColor    = @cellTracing.getTree().color
-
     newTreeId    = @cellTracing.getActiveTreeId()
-    newColor     = new THREE.Color(treeColor)
-    @treeGeometry.updateTreeColor( newTreeId, newColor )
+    treeGeometry.updateTreeColor( newTreeId )
+    @flycam.update()
 
 
   getMeshes : =>

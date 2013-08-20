@@ -10,13 +10,19 @@ import java.util.Date
  * Date: 20.08.13
  * Time: 01:57
  */
-case class MissionSolution(mission: MissionInfo, token: String, game: String, userId: JsObject, solution: Int, timestamp: Long = System.currentTimeMillis){
+case class SegmentSolution(segmentId: Int, solution: Int)
+
+object SegmentSolution{
+  implicit val segmentSolutionFormatter = Json.format[SegmentSolution]
+}
+case class MissionSolution(mission: MissionInfo, token: String, game: String, userId: JsObject, solution: SegmentSolution, timestamp: Long = System.currentTimeMillis){
   def date = new Date(timestamp)
 }
 
 
 object MissionSolutionDAO extends BasicReactiveDAO[MissionSolution]{
   val collectionName = "solutions"
+
 
   implicit val formatter = Json.format[MissionSolution]
 }

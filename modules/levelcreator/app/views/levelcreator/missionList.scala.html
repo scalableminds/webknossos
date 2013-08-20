@@ -8,7 +8,7 @@
   <div class="container">
     <h3>Missions</h3>
 
-    @solutions.groupBy(_.mission).map{ case (mission, solutions) =>
+    @solutions.groupBy(_.mission).toList.sortBy(_._1.key).map{ case (mission, solutions) =>
       <h4>@mission.key</h4>
       <table class="table">
         <thead>

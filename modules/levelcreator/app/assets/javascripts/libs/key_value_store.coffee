@@ -3,13 +3,13 @@ underscore : _
 ###
 
 class KeyValueStore
-	
-	constructor : ->
+  
+  constructor : ->
 
-		@attributes = {}
+    @attributes = {}
 
 
-	getOrSet : (key, value) ->
+  getOrSet : (key, value) ->
         
     if @attributes[key]?
       @attributes[key]
@@ -28,10 +28,10 @@ class KeyValueStore
 
   get : (key) -> 
 
-  	@attributes[key]
+    @attributes[key]
 
 
   clear : ->
 
-  	@attributes = {}
+    @attributes = {}
 

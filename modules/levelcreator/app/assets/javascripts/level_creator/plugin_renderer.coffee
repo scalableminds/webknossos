@@ -44,9 +44,13 @@ class PluginRenderer
 
   getRange : ->
 
+    console.log "range"
+
     return { start: 0, end: 0 } unless @dataHandler.deferred("initialized").state() == "resolved"
 
     func = @compile()
+
+    inputData = @getInitialInputData()
 
     range = { start: Infinity, end: 0 }
 
@@ -61,7 +65,10 @@ class PluginRenderer
 
       importSlides : ->
 
-      unsafe : ->
+      unsafe : (isRangeSafe, callback) ->
+
+        if _.isFunction(callback) and isRangeSafe
+          callback(inputData)
 
       exit : ->
         _plugins.time = -> (->)
@@ -71,11 +78,9 @@ class PluginRenderer
       state : @state
 
 
-    inputData = @getInitialInputData()
-
     for key, plugin of @plugins
       do (plugin) ->
-        if key is "getMetaValues" or key is "filterUnlikelyEndSegments"
+        if plugin.IS_RANGE_SAFE
 
           _plugins[key] = (options) ->
             options = {} unless options? #if plugin has no options
@@ -178,7 +183,13 @@ class PluginRenderer
 
       state : @state
 
-      unsafe : (callback) -> callback(inputData)
+      unsafe : (isRangeSafe, callback) -> 
+
+        if _.isFunction(isRangeSafe)
+          callback = isRangeSafe
+
+        callback(inputData)
+
 
       exit : -> exited = true; return
 

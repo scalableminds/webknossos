@@ -4,6 +4,8 @@
 
 class GetMetaValues
 
+  IS_RANGE_SAFE : true
+
   PUBLIC : true
   COMMAND : "getMetaValues()"
   FRIENDLY_NAME : "Get Meta Values"

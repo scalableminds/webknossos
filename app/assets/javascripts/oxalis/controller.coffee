@@ -176,6 +176,10 @@ class Controller
         else
           @setMode(constants.MODE_PLANE_TRACING)
 
+      "b" : =>
+        @model.cellTracing.benchmark( 5, 1000 )
+        Toast.success("Benchmark scenario finished")
+
       "super + s, ctrl + s" : (event) =>
 
         event.preventDefault()

@@ -230,6 +230,9 @@ svg a:hover {
     #abstractTreeViewer {
         color : #000;
     }
+    .inactive {
+        border-color: #fff;
+    }
 }
 .dark {
     background : #000;
@@ -244,6 +247,9 @@ svg a:hover {
     }
     .modal p {
         color : #000;
+    }
+    .inactive {
+        border-color: #000;
     }
 }
 
@@ -323,10 +329,13 @@ svg a:hover {
     width: @standardViewportWidth;
     height: @standardViewportWidth;
     border-style:solid;
-    border-color: #ffff00;
+    border-width: 2px;
     z-index: 20;
     box-sizing: border-box;
     float: left;
+}
+.active {
+    border-color: #ff0;
 }
 #planeyz {
     margin-left: 20px;
@@ -335,7 +344,6 @@ svg a:hover {
     margin-top: 20px;
 }
 #TDView {
-    border-width: 0px;
     margin-top: 20px;
     margin-left: 20px;
     position: relative;
@@ -344,7 +352,7 @@ svg a:hover {
     float: left;
     height: 20px;
     position: absolute;
-    top: 10px;
+    top: 0px;
     z-index: 30;
 }
 #TDViewControls .btn > span {

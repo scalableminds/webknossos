@@ -31,7 +31,6 @@ class Flycam2d
     @position = [0, 0, 0]
     @direction = [0, 0, 1]
     @hasChanged = true
-    @activePlane = constants.PLANE_XY
     @rayThreshold = [10, 10, 10, 100]
     @spaceDirection = [1, 1, 1]
     @quality = 0        # offset of integer zoom step to the best-quality zoom level
@@ -44,14 +43,10 @@ class Flycam2d
       zoomChanged : (zoomFactor) => @zoom(Math.log(zoomFactor) / Math.LN2)
       })
 
-  zoomIn : ->
 
-    @zoom(@zoomStep - constants.ZOOM_DIFF)
+  zoomByDelta : (delta) ->
 
-
-  zoomOut : ->
-
-    @zoom(@zoomStep + constants.ZOOM_DIFF)
+    @zoom(@zoomStep - delta * constants.ZOOM_DIFF)
 
 
   zoom : (zoom) ->
@@ -151,16 +146,16 @@ class Flycam2d
     @setPosition([@position[0]+p[0], @position[1]+p[1], @position[2]+p[2]])
 
     
-  moveActivePlane : (p, increaseSpeedWithZoom = true) -> # vector of voxels in BaseVoxels
+  movePlane : (vector, planeID, increaseSpeedWithZoom = true) -> # vector of voxels in BaseVoxels
 
-    p = Dimensions.transDim(p, @activePlane)
-    ind = Dimensions.getIndices(@activePlane)
+    vector = Dimensions.transDim(vector, planeID)
+    ind = Dimensions.getIndices(planeID)
     zoomFactor = if increaseSpeedWithZoom then Math.pow(2, @zoomStep) else 1
     scaleFactor = @scaleInfo.baseVoxelFactors
-    delta = [p[0] * zoomFactor * scaleFactor[0],
-              p[1] * zoomFactor * scaleFactor[1],
-              p[2] * zoomFactor * scaleFactor[2]]
-    @move(delta, @activePlane)
+    delta = [ vector[0] * zoomFactor * scaleFactor[0],
+              vector[1] * zoomFactor * scaleFactor[1],
+              vector[2] * zoomFactor * scaleFactor[2]]
+    @move(delta, planeID)
 
 
   toString : ->
@@ -196,16 +191,6 @@ class Flycam2d
 
     @setPositionSilent(position)
     @trigger("positionChanged", position)
-
-    
-  setActivePlane : (activePlane) ->
-
-    @activePlane = activePlane
-
-
-  getActivePlane : ->
-
-    @activePlane
 
 
   needsUpdate : (planeID) ->

@@ -32,7 +32,7 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
+    @model.initialize(constants.TEXTURE_SIZE_P, constants.PLANE_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       unless settings
@@ -71,7 +71,7 @@ class Controller
       @initKeyboard()
 
       @setMode(constants.MODE_PLANE_TRACING)
-      # @setMode(constants.MODE_VOLUME)
+      #@setMode(constants.MODE_VOLUME)
 
       if constants.MODE_PLANE_TRACING not in @allowedModes
         if constants.MODE_ARBITRARY in @allowedModes
@@ -154,6 +154,12 @@ class Controller
 
     new Input.KeyboardNoLoop(
 
+      #"5" : =>
+      #  start = new Date().getTime()
+      #  @sceneController.showAllShapes([50,50,0], [150,150,30])
+      #  console.log( "Rendering Time: " + ( new Date().getTime() - start ))
+      #  @model.flycam.hasChanged = true
+
       #View
       "t" : => 
         @view.toggleTheme()       
@@ -171,9 +177,9 @@ class Controller
 
       "m" : => # toggle between plane tracing and arbitrary tracing
 
-        if @mode == constants.MODE_VOLUME or @mode == constants.MODE_PLANE_TRACING
+        if @mode == constants.MODE_PLANE_TRACING
           @setMode(constants.MODE_ARBITRARY)
-        else
+        else if @mode == constants.MODE_ARBITRARY
           @setMode(constants.MODE_PLANE_TRACING)
 
       "super + s, ctrl + s" : (event) =>

@@ -21,8 +21,7 @@ class PlaneView
     container = $("#render")
 
     # Create a 4x4 grid
-    @curWidth = WIDTH = constants.VIEWPORT_WIDTH
-    HEIGHT = constants.VIEWPORT_WIDTH
+    @curWidth = WIDTH = HEIGHT = constants.VIEWPORT_WIDTH
     @scaleFactor = 1
 
     # Initialize main THREE.js components
@@ -34,11 +33,6 @@ class PlaneView
       # No need to set any properties, because the camera controller will deal with that
       @camera[i]   = new THREE.OrthographicCamera(0, 0, 0, 0)
       @scene.add @camera[i]
-
-      # There is one light for each plane
-      if i != constants.TDView
-        @lights[i]   = new THREE.PointLight( 0xffffff, 0.8 )
-        @scene.add @lights[i]
 
     @camera[constants.PLANE_XY].position.z = -1
     @camera[constants.PLANE_YZ].position.x =  1
@@ -62,12 +56,20 @@ class PlaneView
     # Add scene to the group, all Geometries are than added to group
     @scene.add(@group)
 
+    @scene.add( new THREE.AmbientLight(0x333333) )
+    directionalLight = new THREE.DirectionalLight(0xffffff, 0.3)
+    directionalLight.position.set(1, 1, -1).normalize()
+    @scene.add( directionalLight )
+    directionalLight = new THREE.DirectionalLight(0xffffff, 0.3)
+    directionalLight.position.set(-1, -1, -1).normalize()
+    @scene.add( directionalLight )
+
     # Attach the canvas to the container
     @renderer.setSize 2*WIDTH+20, 2*HEIGHT+20
     $(@renderer.domElement).attr("id": "render-canvas")
     container.append @renderer.domElement
 
-    @setActivePlaneXY()
+    @setActiveViewport( constants.PLANE_XY )
 
     @positionStats = $("#status")
 
@@ -172,7 +174,7 @@ class PlaneView
     canvas.width(2 * WIDTH + 20)
     canvas.height(2 * HEIGHT + 20)
 
-    $('#TDViewControls button').width(@curWidth/5)
+    $('#TDViewControls button').outerWidth(@curWidth/4)
 
     divs = $(".inputcatcher")
     for div in divs
@@ -182,37 +184,20 @@ class PlaneView
     @resizeThrottled()
 
 
-  setActivePlaneXY : =>
+  setActiveViewport : (viewportID) =>
 
-    @setActivePlane constants.PLANE_XY
+    for i in [0..3]
+      if i == viewportID
+        $(".inputcatcher").eq(i).removeClass("inactive").addClass("active")
+      else
+        $(".inputcatcher").eq(i).removeClass("active").addClass("inactive")
 
-
-  setActivePlaneYZ : =>
-
-    @setActivePlane constants.PLANE_YZ
-
-
-  setActivePlaneXZ : =>
-
-    @setActivePlane constants.PLANE_XZ
-
-
-  setActivePlane : (planeID) =>
-
-    @flycam.setActivePlane planeID
-    for i in [0..2]
-      $(".inputcatcher")[i].style.borderWidth = if i==planeID then "2px" else "0px"
     @flycam.update()
 
 
   getCameras : =>
 
     @camera
-
-
-  getLights  : =>
-
-    @lights
 
 
   showFirstVisToggle : ->

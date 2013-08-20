@@ -47,6 +47,8 @@ class PlaneController
 
     @view  = new PlaneView(@model, @flycam, stats, renderer, scene)
 
+    @activeViewport = constants.PLANE_XY
+
     # initialize Camera Controller
     @cameraController = new CameraController(@view.getCameras(), @view.getLights(), @flycam, @model)
 
@@ -102,24 +104,23 @@ class PlaneController
 
   initMouse : ->
 
-    for planeId in ["xy", "yz", "xz"]
-      @input.mouseControllers.push( new Input.Mouse($("#plane#{planeId}"),
-        _.extend(@activeSubController.mouseControls,
-          {
-            over : @view["setActivePlane#{planeId.toUpperCase()}"]
-            scroll : @scroll
-          })))
+    for planeId in [0..2]
+      do (planeId) =>
+        inputcatcher = $("#plane#{constants.PLANE_NAMES[planeId]}")
+        @input.mouseControllers.push( new Input.Mouse( inputcatcher,
+          _.extend(@activeSubController.mouseControls,
+            {
+              over : => @view.setActiveViewport( @activeViewport = planeId )
+              scroll : @scrollPlanes
+            }), planeId))
 
     @input.mouseControllers.push( new Input.Mouse($("#TDView"),
-      leftDownMove : (delta) => 
-        @cameraController.moveTDViewX(delta.x * @model.user.getMouseInversionX())
-        @cameraController.moveTDViewY(delta.y * @model.user.getMouseInversionY())
-      scroll : (value) =>
-        @cameraController.zoomTDView(value,
-          @input.mouseControllers[constants.TDView].position,
-          @view.curWidth)
+      leftDownMove : (delta) => @moveTDView(delta)
+      scroll : (value) => @zoomTDView(value, true)
       leftClick : (position, shiftPressed, altPressed) =>
         @cellTracingController.onClick(position, shiftPressed, altPressed, constants.TDView)
+      over : => @view.setActiveViewport( @activeViewport = constants.TDView ),
+    constants.TDView
     ) )
 
 
@@ -170,8 +171,11 @@ class PlaneController
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-    getVoxelOffset  = (timeFactor) =>
-      return @model.user.moveValue * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+    getMoveValue  = (timeFactor) =>
+      if @activeViewport in [0..2]
+        return @model.user.moveValue * timeFactor / @model.scaleInfo.baseVoxel / constants.FPS
+      else
+        return constants.TDView_MOVE_SPEED * timeFactor / constants.FPS
 
     @input.keyboard = new Input.Keyboard(
 
@@ -180,23 +184,23 @@ class PlaneController
       "k" : (timeFactor) => @scaleTrianglesPlane( @model.user.scaleValue * timeFactor )
 
       #Move
-      "left"  : (timeFactor) => @moveX(-getVoxelOffset(timeFactor))
-      "right" : (timeFactor) => @moveX( getVoxelOffset(timeFactor))
-      "up"    : (timeFactor) => @moveY(-getVoxelOffset(timeFactor))
-      "down"  : (timeFactor) => @moveY( getVoxelOffset(timeFactor))
+      "left"  : (timeFactor) => @moveX(-getMoveValue(timeFactor))
+      "right" : (timeFactor) => @moveX( getMoveValue(timeFactor))
+      "up"    : (timeFactor) => @moveY(-getMoveValue(timeFactor))
+      "down"  : (timeFactor) => @moveY( getMoveValue(timeFactor))
 
     )
 
     @input.keyboardLoopDelayed = new Input.Keyboard(
 
-      "space"         : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor)    , first)
-      "f"             : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor)    , first)
-      "d"             : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
-      "shift + f"     : (timeFactor, first) => @moveZ( getVoxelOffset(timeFactor) * 5, first)
-      "shift + d"     : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor) * 5, first)
+      "space"         : (timeFactor, first) => @moveZ( getMoveValue(timeFactor)    , first)
+      "f"             : (timeFactor, first) => @moveZ( getMoveValue(timeFactor)    , first)
+      "d"             : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
+      "shift + f"     : (timeFactor, first) => @moveZ( getMoveValue(timeFactor) * 5, first)
+      "shift + d"     : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor) * 5, first)
     
-      "shift + space" : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
-      "ctrl + space"  : (timeFactor, first) => @moveZ(-getVoxelOffset(timeFactor)    , first)
+      "shift + space" : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
+      "ctrl + space"  : (timeFactor, first) => @moveZ(-getMoveValue(timeFactor)    , first)
     
     , @model.user.keyboardDelay)
 
@@ -208,8 +212,8 @@ class PlaneController
       _.extend(@activeSubController.keyboardControls,
         {
           #Zoom in/out
-          "i" : => @zoomIn(false)
-          "o" : => @zoomOut(false)
+          "i" : => @zoom( 1, false)
+          "o" : => @zoom(-1, false)
 
           #Change move value
           "h" : => @changeMoveValue(25)
@@ -277,42 +281,72 @@ class PlaneController
   render : ->
 
     @model.binary.ping(@flycam.getPosition(), {zoomStep: @flycam.getIntegerZoomStep(), area: [@flycam.getArea(constants.PLANE_XY),
-                        @flycam.getArea(constants.PLANE_YZ), @flycam.getArea(constants.PLANE_XZ)], activePlane: @flycam.getActivePlane()})
+                        @flycam.getArea(constants.PLANE_YZ), @flycam.getArea(constants.PLANE_XZ)], activePlane: @activeViewport})
     @model.cellTracing.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()
 
-  move : (v) => @flycam.moveActivePlane(v)
 
-  moveX : (x) => @flycam.moveActivePlane([x, 0, 0])
-  moveY : (y) => @flycam.moveActivePlane([0, y, 0])
-  moveZ : (z, first) =>
-    if(first)
-      activePlane = @flycam.getActivePlane()
-      @flycam.move(Dimensions.transDim(
-        [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep()],
-        activePlane), activePlane)
+  move : (v, increaseSpeedWithZoom = true) =>
+
+    if @activeViewport in [0..2]
+      @flycam.movePlane( v, @activeViewport, increaseSpeedWithZoom )
     else
-      @flycam.moveActivePlane([0, 0, z], false)
+      @moveTDView( {x : -v[0], y : -v[1]} )
 
-  zoomIn : (zoomToMouse) =>
+
+  moveX : (x) => @move([x, 0, 0])
+
+  moveY : (y) => @move([0, y, 0])
+
+  moveZ : (z, first) =>
+
+    if @activeViewport == constants.TDView
+      return
+
+    if(first)
+      @flycam.move(
+        Dimensions.transDim(
+          [0, 0, (if z < 0 then -1 else 1) << @flycam.getIntegerZoomStep()],
+          @activeViewport),
+        @activeViewport)
+
+    else
+      @move([0, 0, z], false)
+
+
+  zoom : (value, zoomToMouse) ->
+
+    if @activeViewport in [0..2]
+      @zoomPlanes(value, zoomToMouse)
+    else
+      @zoomTDView(value, zoomToMouse)
+
+
+  zoomPlanes : (value, zoomToMouse) ->
 
     if zoomToMouse
       @zoomPos = @getMousePosition()
-    @flycam.zoomIn()
+
+    @flycam.zoomByDelta( value )
     @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
+    
     if zoomToMouse
       @finishZoom()
 
 
-  zoomOut : (zoomToMouse) =>
+  zoomTDView : (value, zoomToMouse) ->
 
     if zoomToMouse
-      @zoomPos = @getMousePosition()
-    @flycam.zoomOut()
-    @model.user.setValue("zoom", @flycam.getPlaneScalingFactor())
-    if zoomToMouse
-      @finishZoom()
+      zoomToPosition = @input.mouseControllers[constants.TDView].position
+
+    @cameraController.zoomTDView(value, zoomToPosition, @view.curWidth)
+
+
+  moveTDView : (delta) ->
+
+    @cameraController.moveTDViewX(delta.x * @model.user.getMouseInversionX())
+    @cameraController.moveTDViewY(delta.y * @model.user.getMouseInversionY())
 
 
   finishZoom : =>
@@ -324,19 +358,17 @@ class PlaneController
       moveVector = [@zoomPos[0] - mousePos[0],
                     @zoomPos[1] - mousePos[1],
                     @zoomPos[2] - mousePos[2]]
-      @flycam.move(moveVector, @flycam.getActivePlane())
+      @flycam.move(moveVector, @activeViewport)
 
   getMousePosition : ->
 
-    activePlane = @flycam.getActivePlane()
-    pos = @input.mouseControllers[activePlane].position
+    pos = @input.mouseControllers[@activeViewport].position
     return @calculateGlobalPos([pos.x, pos.y])
 
 
   isMouseOver : ->
 
-    activePlane = @flycam.getActivePlane()
-    return @input.mouseControllers[activePlane].isMouseOver
+    return @input.mouseControllers[@activeViewport].isMouseOver
 
 
   changeMoveValue : (delta) ->
@@ -357,16 +389,13 @@ class PlaneController
     @model.user.setValue("scale", (Number) scale)
 
 
-  scroll : (delta, type) =>
+  scrollPlanes : (delta, type) =>
 
     switch type
       when null then @moveZ(delta)
       when "shift" then @cellTracingController.setParticleSize(delta)
       when "alt"
-        if delta > 0
-          @zoomIn(true)
-        else
-          @zoomOut(true)
+        @zoomPlanes(delta, true)
 
 
   calculateGlobalPos : (clickPos) =>
@@ -375,19 +404,19 @@ class PlaneController
     zoomFactor    = @flycam.getPlaneScalingFactor()
     scaleFactor   = @view.scaleFactor
     planeRatio    = @model.scaleInfo.baseVoxelFactors
-    position = switch @flycam.getActivePlane()
+    position = switch @activeViewport
       when constants.PLANE_XY 
-        [ curGlobalPos[0] - (constants.WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
-          curGlobalPos[1] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+        [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+          curGlobalPos[1] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
           curGlobalPos[2] ]
       when constants.PLANE_YZ 
         [ curGlobalPos[0], 
-          curGlobalPos[1] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
-          curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[2] * zoomFactor ]
+          curGlobalPos[1] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[1] * zoomFactor, 
+          curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[2] * zoomFactor ]
       when constants.PLANE_XZ 
-        [ curGlobalPos[0] - (constants.WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
+        [ curGlobalPos[0] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos[0]) / scaleFactor * planeRatio[0] * zoomFactor, 
           curGlobalPos[1], 
-          curGlobalPos[2] - (constants.WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor ]
+          curGlobalPos[2] - (constants.VIEWPORT_WIDTH * scaleFactor / 2 - clickPos[1]) / scaleFactor * planeRatio[2] * zoomFactor ]
 
 
   centerActiveNode : ->

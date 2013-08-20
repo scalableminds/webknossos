@@ -32,7 +32,7 @@ class Controller
 
     @model = new Model()
 
-    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
+    @model.initialize(constants.TEXTURE_SIZE_P, constants.PLANE_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       unless settings

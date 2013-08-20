@@ -83,7 +83,9 @@ class TracingParser
 
     @buildTrees()
     
-    nodeList = @celltracing.getNodeListOfAllTrees()
+    nodeList = []
+    for tree in @trees
+      nodeList = nodeList.concat(tree.nodes)
 
     @setBranchpoints(nodeList)
     @setComments(nodeList)

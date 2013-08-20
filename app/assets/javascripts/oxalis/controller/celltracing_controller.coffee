@@ -99,8 +99,6 @@ class CellTacingController
 
     unless shiftPressed # do nothing
       return
-    unless plane?
-      plane = @model.flycam.getActivePlane()
 
     scaleFactor = @view.scaleFactor
     camera      = @view.getCameras()[plane]

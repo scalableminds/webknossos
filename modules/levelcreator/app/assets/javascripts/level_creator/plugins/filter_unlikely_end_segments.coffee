@@ -2,6 +2,8 @@
 
 class FilterUnlikelyEndSegments
 
+  IS_RANGE_SAFE : true
+
   PUBLIC : true
   COMMAND : "filterUnlikelyEndSegments()"
   FRIENDLY_NAME : "Filter Unlikely End Segments"
@@ -12,8 +14,6 @@ class FilterUnlikelyEndSegments
     probabilityCut : "Float"
     minLengthAfterProblem : "Number"
     orEndSegmentLength : "Boolean"
-
-
 
   PIXEL_SIZE : 11.3
 

@@ -156,7 +156,7 @@ class Input.Mouse
 
         @down  = true
         @moved = false
-        @mouse.trigger(@name + "MouseDown", @mouse.lastPosition, event.shiftKey, event.altKey)
+        @mouse.trigger(@name + "MouseDown", @mouse.lastPosition, event.shiftKey, event.altKey, @id)
 
 
     handleMouseUp : (event) ->
@@ -172,7 +172,7 @@ class Input.Mouse
 
       if @down
         @moved = true
-        @mouse.trigger(@name + "DownMove", delta, @mouse.position, event.ctrlKey)
+        @mouse.trigger(@name + "DownMove", delta, @mouse.position, event.ctrlKey, @id)
 
 
   constructor : (@$target, initialBindings, @id) ->

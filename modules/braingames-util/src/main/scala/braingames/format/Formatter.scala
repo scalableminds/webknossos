@@ -31,3 +31,5 @@ trait Formatter{
     }
   }
 }
+
+object Formatter extends Formatter

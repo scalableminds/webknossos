@@ -12,14 +12,11 @@ class Paginator
     
     @allElements = null
     @elementsToShow = null
-    
-    # @pageSelectionDiv = $("#page-selection")
-    
+        
     tableID = @pageSelectionDiv.data("paged-table-id")
     @tbody = $("#"+tableID).find("tbody")
 
     @extractTemplate()
-
     @retrieveData()
     
     searchboxElement = @pageSelectionDiv.find(".pagination-searchbox")
@@ -33,9 +30,9 @@ class Paginator
     @tbody.removeClass("hide")
 
 
-  retrieveData : () ->
+  retrieveData : ->
     
-    @rowsPerPage = 200
+    @rowsPerPage = 100
     
     ajaxOptions =
       url : @pageSelectionDiv.data("url")
@@ -95,15 +92,14 @@ class Paginator
     currentQuery = null
 
     searchboxElement.keyup (event) =>
-      newQuery = $(event.currentTarget).val()
+      newQuery = $(event.currentTarget).val().toLowerCase()
 
       if newQuery == currentQuery
         return
 
+      currentQuery = currentQuery
       lastQuery = currentQuery
       currentQuery = newQuery
-
-      console.time("search")
 
       if currentQuery.length > 0
         @elementsToShow = []
@@ -114,19 +110,10 @@ class Paginator
             @elementsToShow.push task
       else
         @elementsToShow = @allElements
-
-
-      console.timeEnd("search")
-
-      console.time("display")
-      
+     
       @updatePageCount()
       @displayJSON(@getElementsForPage 0)
       
-      console.timeEnd("display")
-
-      console.log "results for", currentQuery, ":", @elementsToShow
-
 
   displayJSON : (jsonArray) ->
     
@@ -139,22 +126,19 @@ class Paginator
     @tbody.html(htmlArray.join(""))
 
 
-  JSONcontains : (data, query, valuesToConsider=null) ->
-
-    # TODO valuesToConsider could be a json which contains which values should be searched
+  JSONcontains : (data, query) ->
 
     contains = false
 
     $.each data, (key, value) =>
-      # which keys should be searched? use valuesToConsider ?
-
+    
       if _.isObject(value) or _.isArray(value)
          contains = @JSONcontains value, query
          return !contains # if contains then break else continue
 
       if _.isNumber(value) or _.isString(value)
         # stringify
-        value += ''
+        value = (value + '').toLowerCase()
         if value.indexOf(query) > -1
           contains = true
           return false # break
@@ -162,38 +146,13 @@ class Paginator
     return contains
 
 
-  formatDate : (timestamp) ->
-
-    # TODO
-    # like 2013-02-03 18:29
-    return timestamp
-
-
   generateHTML : (element) ->
-
-
-    #  href="@controllers.admin.routes.AnnotationAdministration.annotationsForTask(task.id)" data-ajax="add-row=#@task.id + tr"
-
-    # element =
-    #   "_id": { "$oid": "520a7335715d8120a67276fc" }
-    #   "_taskType": { "$oid": "520a7063715d41ed8a843577" }
-    #   "assignedInstances": 1
-    #   "created": 1376416565238
-    #   "instances": 10
-    #   "neededExperience": {
-    #     "domain": "experienceDomain" 
-    #     "value": 0 }
-    #   "priority": 100
-    #   "seedIdHeidelberg": 0
     
-    elementID = element._id.$oid
-
     filledTemplate = @template    
 
+    # resolve routes
     filledTemplate = filledTemplate.replace( /href="[^\"]*"/g, (match) ->
       
-      # href="" isn't a very precise selector; wont work for data-href etc.
-      # so, ignore failing route access
       try
         # remove href=" and "
         propertyChain = match.slice(6, match.length - 1)
@@ -205,14 +164,16 @@ class Paginator
             currentObject = currentObject[currentProperty]
 
         pathProvider = currentObject
-        url = pathProvider(elementID).url
+        url = pathProvider(element.id).url
         return 'href="' + url + '"'
 
       catch e
+        # href="" isn't a very precise selector; wont work for data-href etc.
+        # so, ignore failing route access
         return match
     )
 
-
+    # resolve #{pseudo string interpolation}
     filledTemplate = filledTemplate.replace( /(#\{[^}]*\})/g, (match) ->
       
       # remove #{ and }
@@ -226,6 +187,5 @@ class Paginator
 
       return currentObject
     )
-
 
     return filledTemplate

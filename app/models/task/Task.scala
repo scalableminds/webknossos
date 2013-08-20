@@ -26,9 +26,14 @@ import models.tracing._
 import oxalis.nml.Tree
 import scala.util._
 import models.annotation.{AnnotationType, AnnotationDAO, AnnotationSettings}
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, JsObject}
+import braingames.format.Formatter
 
 case class CompletionStatus(open: Int, inProgress: Int, completed: Int)
+
+object CompletionStatus {
+  implicit val completionStatusFormat = Json.format[CompletionStatus]
+}
 
 case class Task(
     seedIdHeidelberg: Int,
@@ -83,12 +88,28 @@ object Task extends BasicDAO[Task]("tasks") {
   val conf = current.configuration
 
   implicit val taskFormat = Json.format[Task]
-
+  
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
   override def removeById(t: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {
     AnnotationDAO.removeAllWithTaskId(t)
     super.removeById(t, wc)
+  }
+
+  def transformToJson(task: Task) : JsObject = {
+   Json.obj (
+      "id" -> task.id,
+      "formattedHash" -> Formatter.formatHash(task.id),
+      "seedIdHeidelberg" -> task.seedIdHeidelberg,
+      "projectName" -> task._project.getOrElse("").toString,
+      "type" -> task.taskType.map(_.summary).getOrElse("<deleted>").toString ,
+      "dataSet" -> task.annotationBase.map(_.dataSetName),
+      "editPosition" -> task.annotationBase.flatMap(_.content.map(_.editPosition)),
+      "neededExperience" -> task.neededExperience,
+      "priority" -> task.priority,
+      "created" -> Formatter.formatDate(task.created),
+      "status" -> task.status
+    )
   }
 
   def findAllOfOneType(isTraining: Boolean) =

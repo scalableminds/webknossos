@@ -224,9 +224,7 @@ $ ->
       $toggle = $(this)
       newState = !$toggle.hasClass("open")
 
-      $table.find(".details-row").toggleClass("hide", !newState)
-      $table.find(".details-toggle").toggleClass("open", newState)
-      $toggle.toggleClass("open", newState)
+      $table.find(".details-toggle").click()
 
 
   highlightToasts = ->

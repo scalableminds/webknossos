@@ -29,31 +29,31 @@
         </tr>
       </thead>
       <tbody class="hide">
-        <tr id="#{_id.$oid}">
-          <td class="details-toggle" href="controllers.admin.routes.AnnotationAdministration.annotationsForTask" data-ajax="add-row=##{_id.$oid} + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
-          <td> ? # like ? 7ff024 is it #{_id.$oid} ?</td>
-          <td> ? H-Id like ? 0 </td>
+        <tr id="#{id}">
+          <td class="details-toggle" href="controllers.admin.routes.AnnotationAdministration.annotationsForTask" data-ajax="add-row=##{id} + tr"> <i class="caret-right"></i> <i class="caret-down"></i> </td>
+          <td> #{formattedHash} </td>
+          <td> #{seedIdHeidelberg} </td>
           <td> 
-              <a href="?? controllers.admin.routes.ProjectAdministration.list#project.name">
-                ? project like ? tracingMethodsComparison
+              <a href="@controllers.admin.routes.ProjectAdministration.list##{projectName}">
+                #{projectName}
               </a>
           </td>
           <td> 
-            <a href="?? controllers.admin.routes.TaskTypeAdministration.list#task.taskType.map(_.id)">
-              ? type like ? methodComaprison_regularTracing 
+            <a href="@controllers.admin.routes.TaskTypeAdministration.list##{type}">
+              #{type}
             </a>
           </td>
-          <td> ? data set like ? 2012-09-28_ex145_07x2 </td>
-          <td> ? edit position like ? (6369, 2924, 1) </td>
+          <td> #{dataSet} </td>
+          <td> (#{editPosition}) </td>
           <td> <span class="label"> #{neededExperience.domain}: #{neededExperience.value} </span> </td>
           <td> #{priority} </td>
           <td> #{created} </td>
           <td>
-              <i class="icon-play-circle"></i> ? open
+              <i class="icon-play-circle"></i> #{status.open}
               <br>
-              <i class="icon-random"></i> ? active
+              <i class="icon-random"></i> #{status.inProgress}
               <br>
-              <i class="icon-ok-circle"></i> ? done
+              <i class="icon-ok-circle"></i> #{status.completed}
           </td>
           <td class="nowrap">
             <a href="controllers.admin.routes.TaskAdministration.edit"><i class="icon-pencil"></i> edit </a><br>

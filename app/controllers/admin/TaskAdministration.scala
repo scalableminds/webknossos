@@ -75,7 +75,8 @@ object TaskAdministration extends Controller with Secured {
     implicit request =>
       render{
         case Accepts.Html() => Ok(html.admin.task.taskList())
-        case Accepts.Json() => JsonOk(JsArray(Task.findAllNonTrainings.map(Task.taskFormat.writes)))
+        case Accepts.Json() => JsonOk(JsArray(Task.findAllNonTrainings.map(Task.transformToJson)))
+        // Task.taskFormat.writes
       }
   }
 

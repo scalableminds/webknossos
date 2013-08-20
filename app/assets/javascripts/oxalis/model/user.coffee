@@ -117,7 +117,7 @@ class User
         sortTreesByName : @sortTreesByName }
     ).fail( =>
       
-      console.log "could'nt save userdata"
+      console.log "couldn't save userdata"
 
     ).always(-> deferred.resolve())
     

@@ -140,7 +140,7 @@ class Input.Keyboard
 # Events: over, out, leftClick, rightClick, leftDownMove
 class Input.Mouse
 
-  constructor : (@$target, initialBindings) ->
+  constructor : (@$target, initialBindings, @id) ->
 
     _.extend(this, new EventMixin())
 
@@ -197,10 +197,10 @@ class Input.Mouse
       $(":focus").blur() # see OX-159
 
       @leftDown = true
-      @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey, event.altKey)
+      @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey, event.altKey, @id)
 
     else
-      @trigger("rightClick", [@lastPosition.x, @lastPosition.y], event.ctrlKey)
+      @trigger("rightClick", [@lastPosition.x, @lastPosition.y], event.ctrlKey, @id)
 
     return
 

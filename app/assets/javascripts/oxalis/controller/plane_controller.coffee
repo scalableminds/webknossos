@@ -112,14 +112,15 @@ class PlaneController
             {
               over : => @view.setActiveViewport( @activeViewport = planeId )
               scroll : @scrollPlanes
-            })))
+            }), planeId))
 
     @input.mouseControllers.push( new Input.Mouse($("#TDView"),
       leftDownMove : (delta) => @moveTDView(delta)
       scroll : (value) => @zoomTDView(value, true)
       leftClick : (position, shiftPressed, altPressed) =>
         @cellTracingController.onClick(position, shiftPressed, altPressed, constants.TDView)
-      over : => @view.setActiveViewport( @activeViewport = constants.TDView )
+      over : => @view.setActiveViewport( @activeViewport = constants.TDView ),
+    constants.TDView
     ) )
 
 

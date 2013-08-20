@@ -155,8 +155,6 @@ class Controller
     new Input.KeyboardNoLoop(
 
       "5" : =>
-        #@model.binary.cube.labelTestShape()
-        #@sceneController.addTestShape()
         start = new Date().getTime()
         @sceneController.showAllShapes([50,50,0], [150,150,30])
         console.log( "Rendering Time: " + ( new Date().getTime() - start ))

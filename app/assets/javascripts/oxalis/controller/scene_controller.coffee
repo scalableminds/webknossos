@@ -74,13 +74,6 @@ class SceneController
     @trigger("newGeometries", @volumeMeshes)
 
 
-  addTestShape : ->
-
-    test = new VolumeGeometry( @polygonFactory, [80,80,80], [120,120,120], 5 )
-    meshes = test.getMeshes()
-    @trigger("newGeometries", meshes)
-
-
   updateSceneForCam : (id) =>
 
     # This method is called for each of the four cams. Even

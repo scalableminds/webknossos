@@ -36,9 +36,13 @@ case class Mission(dataSetName: String,
 
   val id = _id.stringify
 
-  val key: String = dataSetName + "__" + batchId + "__" + missionId
+  val key: String = Mission.keyForMissionInfo(dataSetName, batchId, missionId.toString)
 
   def stringify = s"Mission(mid = $missionId, bid = $batchId, ds = $dataSetName)"
+}
+
+object Mission{
+  def keyForMissionInfo(dataSetName: String, batchId: Int, missionId: String) = dataSetName + "__" + batchId + "__" + missionId
 }
 
 
@@ -51,11 +55,15 @@ object MissionDAO extends BasicReactiveDAO[Mission] with MissionFormats {
   val collectionName = "missions"
 
   collection.indexesManager.ensure(Index(Seq("random" -> IndexType.Ascending)))
+  collection.indexesManager.ensure(Index(Seq("batchId" -> IndexType.Ascending)))
   collection.indexesManager.ensure(Index(Seq("renderStatus.numberOfRenderedStacks" -> IndexType.Ascending)))
 
 
   def findByDataSetNameQ(dataSetName: String) =
     Json.obj("dataSetName" -> dataSetName)
+
+  def findByBatch(dataSetName: String, batchId: Int)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj("dataSetName" -> dataSetName, "batchId" -> batchId)).cursor[Mission].toList
 
   def findByDataSetName(dataSetName: String)(implicit ctx: DBAccessContext) =
     collectionFind(findByDataSetNameQ(dataSetName)).cursor[Mission].enumerate()

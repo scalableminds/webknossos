@@ -37,6 +37,7 @@ GET           /renderer/failedWork                             controllers.level
 
 #Getting binary Data
 GET           /datasets/:dataSetName/layers/:layer/data        controllers.levelcreator.BinaryData.viaAjax(dataSetName: String, levelId: String, missionId: String, layer: String)
+GET           /datasets/:dataSetName/batches/:batchId/solutions  controllers.levelcreator.SolutionApi.solutions(batchId: Int, dataSetName: String)
 
 #Mission Data
 #GET           /missions                                        controllers.levelcreator.MissionController.getMissions(dataSetName: String)

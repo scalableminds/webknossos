@@ -11,6 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.Future
 import net.liftweb.common.{Full, Failure}
 import scala.util.Success
+import reactivemongo.api.indexes.{IndexType, Index}
 
 case class MissionInfo(_id: BSONObjectID, key: String) {
   def id = _id.stringify
@@ -36,6 +37,8 @@ case class RenderedStack(
 object RenderedStackDAO extends BasicReactiveDAO[RenderedStack] {
   val collectionName = "renderedStacks"
 
+  collection.indexesManager.ensure(Index(Seq("mission.key" -> IndexType.Ascending)))
+
   import LevelDAO.levelIdFormat
   implicit val formatter: OFormat[RenderedStack] = Json.format[RenderedStack]
 
@@ -48,6 +51,9 @@ object RenderedStackDAO extends BasicReactiveDAO[RenderedStack] {
   def countFor(levelName: String)(implicit ctx: DBAccessContext) = {
     count(Json.obj("levelId.name" -> levelName))
   }
+
+  def findByMissionKeyRx(missionKeyRx: String)(implicit ctx: DBAccessContext) =
+    collectionFind(Json.obj("mission.key" -> Json.obj("$regex" -> missionKeyRx))).cursor[RenderedStack].toList
 
   def countAll(levels: List[Level])(implicit ctx: DBAccessContext) = {
     Future.traverse(levels)(l => countFor(l.levelId.name).map(l.levelId.name -> _)).map(_.toMap)

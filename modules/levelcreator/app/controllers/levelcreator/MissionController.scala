@@ -58,4 +58,8 @@ object MissionController extends ExtendedController with Controller with UnAuthe
       }
     }
   }
+
+  def uploadMissions(dataSetName: String) = Action{
+    Ok
+  }
 }

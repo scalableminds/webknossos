@@ -12,8 +12,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import play.api.Logger
 
-case class ContextFreeMission(missionId: Int, start: StartSegment, errorCenter: Point3D, end: SimpleSegment, possibleEnds: List[EndSegment], difficulty: Double) {
-  def addContext(dataSetName: String, batchId: Int) = Mission(dataSetName, missionId, batchId, start, errorCenter, end, possibleEnds, difficulty)
+case class ContextFreeMission(missionId: Int, start: StartSegment, errorCenter: Point3D, end: SimpleSegment, isControl: Option[Boolean], possibleEnds: List[EndSegment], difficulty: Double) {
+  def addContext(dataSetName: String, batchId: Int) = Mission(dataSetName, missionId, batchId, start, errorCenter, end, isControl getOrElse false, possibleEnds, difficulty)
 }
 
 object ContextFreeMission {
@@ -27,6 +27,7 @@ case class Mission(dataSetName: String,
   start: StartSegment,
   errorCenter: Point3D,
   end: SimpleSegment,
+  isControl: Boolean,
   possibleEnds: List[EndSegment],
   difficulty: Double,
   missionStatus: MissionStatus = MissionStatus.initial,
@@ -41,7 +42,7 @@ case class Mission(dataSetName: String,
   def stringify = s"Mission(mid = $missionId, bid = $batchId, ds = $dataSetName)"
 }
 
-object Mission{
+object Mission {
   def keyForMissionInfo(dataSetName: String, batchId: Int, missionId: String) = dataSetName + "__" + batchId + "__" + missionId
 }
 

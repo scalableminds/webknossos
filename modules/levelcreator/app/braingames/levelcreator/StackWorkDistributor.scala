@@ -353,7 +353,7 @@ class StackWorkDistributor extends Actor with InactiveRederingWatcher with Globa
       val missionInfo = MissionInfo(mission._id, mission.key)
 
       RenderedStackDAO.updateOrCreate(
-        RenderedStack(level.levelId, missionInfo, rendererResult.downloadUrls, !mission.isFinished, rendererResult.paraInformation))
+        RenderedStack(level.levelId, missionInfo, rendererResult.downloadUrls, !mission.isFinished, mission.isControl, rendererResult.paraInformation))
 
       MissionDAO.successfullyRendered(level, mission)
 

@@ -394,7 +394,7 @@ class Plane2D
 
     while i--
       dest = destination.offset++ * bytesDest
-      src = source.offset * bytesSrc
+      src = source.offset * (bytesSrc + 1)
       for t in [1..bytesDest]
         value = source.buffer[src++]
         destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value

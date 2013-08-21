@@ -188,7 +188,7 @@ class Cube
 
       cube[bucketIndex] = bucketData
 
-      #@setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
+      @setArbitraryBucketByZoomedAddress(address, bucketData) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
       @trigger("bucketLoaded", address)
 
 

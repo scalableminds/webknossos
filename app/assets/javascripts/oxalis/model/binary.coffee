@@ -63,9 +63,6 @@ class Binary
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 
 
-    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-
-
   updateContrastCurve : (brightness, contrast) ->
 
     contrastCurve = @contrastCurves[1]

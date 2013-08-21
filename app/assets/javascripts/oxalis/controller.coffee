@@ -197,8 +197,6 @@ class Controller
           @gui.saveNow()
       } )
 
-    )
-
     new Input.KeyboardNoLoop( keyboardControls )
 
   setMode : (newMode) ->

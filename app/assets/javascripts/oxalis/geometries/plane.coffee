@@ -38,7 +38,7 @@ class Plane
     # create texture
     texture             = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     texture.needsUpdate = true
-    volumeTexture       = new THREE.DataTexture(new Uint8Array(tWidth*tWidth*2), tWidth, tWidth, THREE.LuminanceAlphaFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
+    volumeTexture       = new THREE.DataTexture(new Uint8Array(tWidth*tWidth), tWidth, tWidth, THREE.LuminanceFormat, THREE.UnsignedByteType, new THREE.UVMapping(), THREE.ClampToEdgeWrapping , THREE.ClampToEdgeWrapping, THREE.LinearMipmapLinearFilter, THREE.LinearMipmapLinearFilter )
     
     offset = new THREE.Vector2(0, 0)
     repeat = new THREE.Vector2(0, 0)
@@ -87,7 +87,7 @@ class Plane
       void main() {
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
         /* assume little endian order */
-        float id = (volumeColor[0] * 255.0) + (volumeColor[3] * 255.0) * 256.0;
+        float id = (volumeColor[0] * 255.0);
         float golden_ratio = 0.618033988749895;
 
         /* Color map (<= to fight rounding mistakes) */

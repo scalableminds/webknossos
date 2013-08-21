@@ -40,7 +40,7 @@ object UserController extends Controller with Secured {
         DataSetDAO.findAll.map {
           dataSets =>
 
-            Ok(html.user.dashboard.dashboard(
+            Ok(html.user.dashboard.userDashboard(
               explorationalAnnotations,
               userTasks,
               loggedTime,

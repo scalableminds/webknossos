@@ -46,7 +46,7 @@ class PanZoomSVG
     event.preventDefault()
     return if @mouseDown
 
-    buffer = @buffer
+    buffer = @buffer
     { wheelDelta, wheelDeltaX, wheelDeltaY, pageX, pageY } = event.originalEvent
 
     buffer += wheelDeltaY
@@ -123,7 +123,7 @@ class PanZoomSVG
     p.x = mouse.x
     p.y = mouse.y
 
-    p.matrixTransform(@svgElement.getCTM().inverse())
+    p = p.matrixTransform(@svgElement.getCTM().inverse())
 
     transformationMatrix = @svgRoot.createSVGMatrix()
       .translate(p.x, p.y)

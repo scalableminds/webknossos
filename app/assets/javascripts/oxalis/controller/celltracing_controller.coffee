@@ -48,13 +48,6 @@ class CellTacingController
       "p" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)
 
 
-  setNodeRadius : (delta) =>
-
-    lastRadius = @model.cellTracing.getActiveNodeRadius()
-    radius = lastRadius + (lastRadius/20 * delta) #achieve logarithmic change behaviour
-    @model.cellTracing.setActiveNodeRadius(radius)
-
-
   setParticleSize : (delta) =>
 
     particleSize = @model.user.particleSize + delta
@@ -120,7 +113,7 @@ class CellTacingController
     raycaster.ray.__scalingFactors = @model.scaleInfo.nmPerVoxel
  
     # identify clicked object
-    intersects = raycaster.intersectObjects(@sceneController.skeleton.nodes)
+    intersects = raycaster.intersectObjects(@sceneController.skeleton.getAllNodes())
     
     for intersect in intersects
 

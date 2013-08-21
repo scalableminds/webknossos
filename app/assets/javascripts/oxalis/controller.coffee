@@ -182,6 +182,10 @@ class Controller
         else if @mode == constants.MODE_ARBITRARY
           @setMode(constants.MODE_PLANE_TRACING)
 
+      "shift + alt + b" : =>
+        @model.cellTracing.benchmark( 5, 1000 )
+        Toast.success("Benchmark scenario finished")
+
       "super + s, ctrl + s" : (event) =>
 
         event.preventDefault()

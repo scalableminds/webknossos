@@ -103,6 +103,34 @@ class CellTracing
 
     @stateLogger.pushNow()
 
+    
+  benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
+
+    console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
+    startTime = (new Date()).getTime()
+    offset = 0
+    size = numberOfNodesPerTree / 100
+    for i in [0..numberOfTrees]
+      @createNewTree()
+      for i in [0..numberOfNodesPerTree]
+        pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
+        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, null, null, @activeTree.treeId)
+        @activeTree.nodes.push(point)
+        if @activeNode
+          @activeNode.appendNext(point)
+          point.appendNext(@activeNode)
+          @activeNode = point
+        else
+          @activeNode = point
+          point.type = @TYPE_BRANCH
+          if @branchPointsAllowed
+            centered = true
+            @pushBranch()
+        @doubleBranchPop = false
+      offset += size
+    @trigger "reloadTrees"
+    console.log "[benchmark] done. Took me #{((new Date()).getTime() - startTime) / 1000} seconds."
+
 
   pushBranch : ->
 
@@ -112,7 +140,7 @@ class CellTracing
         @activeNode.type = @TYPE_BRANCH
         @stateLogger.push()
 
-        @trigger("setBranch", true)
+        @trigger("setBranch", true, @activeNode)
     else
       @trigger("noBranchPoints")
 
@@ -128,7 +156,7 @@ class CellTracing
           @setActiveNode(point.id)
           @activeNode.type = @TYPE_USUAL
 
-          @trigger("setBranch", false, @activeNode.id)
+          @trigger("setBranch", false, @activeNode)
           @doubleBranchPop = true
           deferred.resolve(@activeNode.id))
       else
@@ -138,7 +166,7 @@ class CellTracing
           @setActiveNode(point.id)
           @activeNode.type = @TYPE_USUAL
 
-          @trigger("setBranch", false, @activeNode.id)
+          @trigger("setBranch", false, @activeNode)
           @doubleBranchPop = true
           deferred.resolve(@activeNode.id)
         else
@@ -160,7 +188,11 @@ class CellTracing
         @branchStack.splice(i, 1)
       else
         i++
-    @trigger("deleteBranch")
+
+
+  isBranchPoint : (id) ->
+
+    return id in (node.id for node in @branchStack)
 
 
   rejectBranchDeferred : ->
@@ -196,6 +228,7 @@ class CellTracing
       @stateLogger.createNode(point, @activeTree.treeId)
       
       @trigger("newNode", centered)
+      @trigger("newActiveNode")
     else
       @trigger("wrongDirection")
 
@@ -235,11 +268,6 @@ class CellTracing
     if @activeNode then @activeNode.type else null
 
 
-  getActiveNodeRadius : ->
-
-    if @activeNode then @activeNode.radius else null
-
-
   getActiveTreeId : ->
 
     if @activeTree then @activeTree.treeId else null
@@ -268,20 +296,6 @@ class CellTracing
       for node in tree.nodes
         if node.id == id then return node
     return null
-    
-
-  setActiveNodeRadius : (radius) ->
-
-    # make sure radius is within bounds
-    radius = Math.min(@MAX_RADIUS * @scaleInfo.baseVoxel, radius)
-    radius = Math.max(@MIN_RADIUS * @scaleInfo.baseVoxel, radius)
-    if @activeNode
-      @activeNode.radius = radius
-      @lastRadius = radius
-
-      @stateLogger.updateNode(@activeNode, @activeTree.treeId)
-
-      @trigger("newActiveNodeRadius", radius)
 
 
   setActiveNode : (nodeID, mergeTree = false) ->
@@ -522,6 +536,10 @@ class CellTracing
       if deleteBranchesAndComments
         @deleteComment(node.id)
         @deleteBranch(node)
+
+    @stateLogger.deleteTree(tree)
+    @trigger("deleteTree", index)
+    
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0
@@ -529,9 +547,6 @@ class CellTracing
     else
       # just set the last tree to be the active one
       @setActiveTree(@trees[@trees.length - 1].treeId)
-    @stateLogger.deleteTree(tree)
-
-    @trigger("deleteTree", index)
 
 
   mergeTree : (lastNode, lastTree) ->

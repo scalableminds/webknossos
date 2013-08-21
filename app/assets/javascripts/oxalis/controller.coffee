@@ -32,11 +32,7 @@ class Controller
 
     @model = new Model()
 
-<<<<<<< HEAD
-    @model.initialize(constants.TEXTURE_SIZE_P, constants.VIEWPORT_WIDTH, constants.DISTANCE_3D, @controlMode).done (tracingState) =>
-=======
-    @model.initialize(constants.TEXTURE_SIZE_P, constants.PLANE_WIDTH, constants.DISTANCE_3D).done ([restrictions, settings]) =>
->>>>>>> ca2aaa77333ce8e01a21890b459efb2a30764ed6
+    @model.initialize(constants.TEXTURE_SIZE_P, constants.PLANE_WIDTH, constants.DISTANCE_3D, @controlMode).done (tracingState) =>
 
       # Do not continue, when there was an error and we got no settings from the server
       if tracingState.error
@@ -169,7 +165,6 @@ class Controller
       event.preventDefault() if (event.which == 32 or event.which == 18 or 37 <= event.which <= 40) and !$(":focus").length
       return
 
-<<<<<<< HEAD
     keyboardControls = {
       "q" : => @toggleFullScreen()
     }
@@ -187,55 +182,22 @@ class Controller
         "t" : => 
           @view.toggleTheme()       
           @abstractTreeController.drawTree()
-=======
-
-
-    new Input.KeyboardNoLoop(
-
-      #"5" : =>
-      #  start = new Date().getTime()
-      #  @sceneController.showAllShapes([50,50,0], [150,150,30])
-      #  console.log( "Rendering Time: " + ( new Date().getTime() - start ))
-      #  @model.flycam.hasChanged = true
-
-      #View
-      "t" : => 
-        @view.toggleTheme()       
-        @abstractTreeController.drawTree()
-
-      "q" : => @toggleFullScreen()
-      
-      #Set Mode, outcomment for release
-      "shift + 1" : =>
-        @setMode(constants.MODE_PLANE_TRACING)
-      "shift + 2" : =>
-        @setMode(constants.MODE_ARBITRARY)
-      "shift + 3" : =>
-        @setMode(constants.MODE_VOLUME)
->>>>>>> ca2aaa77333ce8e01a21890b459efb2a30764ed6
 
         "m" : => # toggle between plane tracing and arbitrary tracing
 
-<<<<<<< HEAD
           if @mode == constants.MODE_PLANE_TRACING
             @setMode(constants.MODE_ARBITRARY)
           else if @mode == constants.MODE_ARBITRARY
             @setMode(constants.MODE_PLANE_TRACING)
-      } )
-=======
-        if @mode == constants.MODE_PLANE_TRACING
-          @setMode(constants.MODE_ARBITRARY)
-        else if @mode == constants.MODE_ARBITRARY
-          @setMode(constants.MODE_PLANE_TRACING)
 
       "super + s, ctrl + s" : (event) =>
 
         event.preventDefault()
         event.stopPropagation()
         @gui.saveNow()
+      } )
 
     )
->>>>>>> ca2aaa77333ce8e01a21890b459efb2a30764ed6
 
     new Input.KeyboardNoLoop( keyboardControls )
 

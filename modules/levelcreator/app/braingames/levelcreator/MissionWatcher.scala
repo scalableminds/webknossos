@@ -91,7 +91,6 @@ class MissionWatcher extends Actor with GlobalDBAccess {
         val missions = JsonFromFile(missionFile)
           .asOpt[List[ContextFreeMission]]
           .map(_.map(_.addContext(dataSetName, sectionId))) getOrElse Nil
-
         Future.sequence(insertMissionsIntoDB(missions)).map{ _ =>
           Logger.info(s"Found ${missions.size} missions for dataset ${dataSetName}")
         }

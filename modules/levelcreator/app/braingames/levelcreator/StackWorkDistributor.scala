@@ -8,7 +8,7 @@ import play.api.{Configuration, Logger, Play}
 import braingames.util.{FoxImplicits, StartableActor}
 import models.knowledge._
 import play.api.libs.iteratee._
-import braingames.reactivemongo.GlobalDBAccess
+import braingames.reactivemongo.{UnAuthedDBAccess, GlobalDBAccess}
 import scala.Some
 import braingames.mvc.BoxImplicits
 import net.liftweb.common.Failure
@@ -146,7 +146,7 @@ trait InactiveRederingWatcher {
     workingRenderers().size
 }
 
-class StackWorkDistributor extends Actor with InactiveRederingWatcher with GlobalDBAccess with FoxImplicits {
+class StackWorkDistributor extends Actor with InactiveRederingWatcher with UnAuthedDBAccess with FoxImplicits {
   val conf = Play.current.configuration
 
   implicit val sys = context.system

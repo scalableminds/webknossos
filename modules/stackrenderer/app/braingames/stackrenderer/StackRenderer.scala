@@ -79,7 +79,7 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
     val js = html.stackrenderer.phantom(stack, levelUrl, binaryDataUrl).body
 
     val jsFile = FileIO.createTempFile(js, ".js")
-    val phantomCMD = "phantomjs" :: jsFile.getAbsolutePath :: Nil
+    val phantomCMD = "phantomjs --web-security=false" :: jsFile.getAbsolutePath :: Nil
     Logger.info(phantomCMD.mkString(" "))
     withProcess(phantomCMD.run(logger, false)) {
       process =>

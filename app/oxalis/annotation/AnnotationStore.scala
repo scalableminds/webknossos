@@ -47,10 +47,11 @@ class AnnotationStore extends Actor {
         .filterNot(isExpired(maxCacheTime))
         .map(_.result)
         .getOrElse(requestAnnotation(id)(ctx))
+        .futureBox
         .map {
         result =>
           s ! result
-      }.futureBox.recover {
+      }.recover {
         case e =>
           Logger.error("AnnotationStore ERROR: " + e)
           e.printStackTrace()

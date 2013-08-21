@@ -21,11 +21,13 @@ class CellTacingController
       
 
       leftClick : (pos, shiftPressed, altPressed, plane) =>
+        
         if @inTraceMode
           @onClick(pos, shiftPressed, altPressed, plane)
 
 
       rightClick : (pos, ctrlPressed) =>
+        
         if @inTraceMode
           @setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
 

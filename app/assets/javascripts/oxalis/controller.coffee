@@ -190,11 +190,11 @@ class Controller
           else if @mode == constants.MODE_ARBITRARY
             @setMode(constants.MODE_PLANE_TRACING)
 
-      "super + s, ctrl + s" : (event) =>
+        "super + s, ctrl + s" : (event) =>
 
-        event.preventDefault()
-        event.stopPropagation()
-        @gui.saveNow()
+          event.preventDefault()
+          event.stopPropagation()
+          @gui.saveNow()
       } )
 
     )

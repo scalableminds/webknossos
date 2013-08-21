@@ -6,8 +6,8 @@
   
 class Flycam2d
 
-  TEXTURE_WIDTH      : 512
-  MAX_TEXTURE_OFFSET : 31     # maximum difference between requested coordinate and actual texture position
+  TEXTURE_WIDTH       : 512
+  MAX_TEXTURE_OFFSET  : 31     # maximum difference between requested coordinate and actual texture position
   MAX_ZOOM_THRESHOLD  : 2
 
   scaleInfo : null
@@ -27,7 +27,7 @@ class Flycam2d
     # buffer: how many pixels is the texture larger than the canvas on each dimension?
     # --> two dimensional array with buffer[planeID][dimension], dimension: x->0, y->1
     @buffer = [[0, 0], [0, 0], [0, 0]]
-    @calculateBuffer()
+    @updateStoredValues()
     @position = [0, 0, 0]
     @direction = [0, 0, 1]
     @hasChanged = true
@@ -61,7 +61,7 @@ class Flycam2d
 
     @quality = value
     for i in [0..2]
-      @calculateIntegerZoomStep()
+      @updateStoredValues()
     @hasChanged = true
 
 
@@ -82,8 +82,7 @@ class Flycam2d
 
     @zoomStep = zoomStep
     @hasChanged = true
-    @calculateIntegerZoomStep()
-    @calculateBuffer()
+    @updateStoredValues()
 
 
   getMaxZoomStep : ->
@@ -93,11 +92,17 @@ class Flycam2d
 
   calculateBuffer : ->
 
-    for planeID in [constants.PLANE_XY, constants.PLANE_YZ, constants.PLANE_XZ]
+    for planeID in [0..2]
       scaleArray = Dimensions.transDim(@scaleInfo.baseVoxelFactors, planeID)
-      base = @viewportWidth * @getTextureScalingFactor() / 2
-      @buffer[planeID] = [@TEXTURE_WIDTH/2 - base * scaleArray[0],
-                          @TEXTURE_WIDTH/2 - base * scaleArray[1]]
+      pixelNeeded = @viewportWidth * @getTextureScalingFactor()
+      @buffer[planeID] = [@TEXTURE_WIDTH - pixelNeeded * scaleArray[0],
+                          @TEXTURE_WIDTH - pixelNeeded * scaleArray[1]]
+
+
+  updateStoredValues : ->
+
+    @calculateIntegerZoomStep()
+    @calculateBuffer()
 
 
   getIntegerZoomStep : ->
@@ -175,7 +180,7 @@ class Flycam2d
     # As the Model does not render textures for exact positions, the last 5 bits of
     # the X and Y coordinates for each texture have to be set to 0
     for i in [0..2]
-      if i != (planeID+2)%3
+      if i != Dimensions.getIndices(planeID)[2]
         texturePosition[i] &= -1 << (5 + @integerZoomStep)
 
     return texturePosition
@@ -198,7 +203,7 @@ class Flycam2d
     area = @getArea planeID
     ind  = Dimensions.getIndices planeID
     res = ((area[0] < 0) or (area[1] < 0) or (area[2] > @TEXTURE_WIDTH) or (area[3] > @TEXTURE_WIDTH) or
-    (@position[ind[2]] != @getTexturePosition(planeID)[ind[2]]) or
+    #(@position[ind[2]] != @getTexturePosition(planeID)[ind[2]]) or # TODO: always false
     (@zoomStep - (@integerZoomStep-1)) < @maxZoomStepDiff) or
     (@zoomStep -  @integerZoomStep     > @maxZoomStepDiff)
     return res
@@ -208,21 +213,20 @@ class Flycam2d
     # return the coordinate of the upper left corner of the viewport as texture-relative coordinate
 
     ind = Dimensions.getIndices planeID
-    [ (@position[ind[0]] - @getTexturePosition(planeID)[ind[0]])/Math.pow(2, @integerZoomStep) + @buffer[planeID][0],
-      (@position[ind[1]] - @getTexturePosition(planeID)[ind[1]])/Math.pow(2, @integerZoomStep) + @buffer[planeID][1]]
+    [ @buffer[planeID][0]/2 + (@position[ind[0]] - @getTexturePosition(planeID)[ind[0]])/Math.pow(2, @integerZoomStep),
+      @buffer[planeID][1]/2 + (@position[ind[1]] - @getTexturePosition(planeID)[ind[1]])/Math.pow(2, @integerZoomStep)]
 
   
   getArea : (planeID) ->
     # returns [left, top, right, bottom] array
 
     # convert scale vector to array in order to be able to use getIndices()
-    scaleArray = @scaleInfo.baseVoxelFactors
-    ind        = Dimensions.getIndices(planeID)
-    offsets = @getOffsets(planeID)
-    size    = @getTextureScalingFactor() * @viewportWidth
+    scaleArray = Dimensions.transDim( @scaleInfo.baseVoxelFactors, planeID )
+    offsets    = @getOffsets(planeID)
+    size       = @getTextureScalingFactor() * @viewportWidth
     # two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
     #[offsets[0] - 1, offsets[1] - 1, offsets[0] + size * scaleArray[ind[0]] + 1, offsets[1] + size * scaleArray[ind[1]] + 1]
-    [offsets[0], offsets[1], offsets[0] + size * scaleArray[ind[0]], offsets[1] + size * scaleArray[ind[1]]]
+    [offsets[0], offsets[1], offsets[0] + size * scaleArray[0], offsets[1] + size * scaleArray[1]]
 
 
   hasNewTextures : ->

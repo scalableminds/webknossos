@@ -311,7 +311,7 @@ class Gui
 
   setQuality : (value) =>
 
-    for i in [0..(@qualityArray.length - 1)]
+    for i in [0...@qualityArray.length]
       if @qualityArray[i] == value
         value = i
     @set("quality", value, Number)

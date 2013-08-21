@@ -53,7 +53,8 @@ class Model
             @scaleInfo = new ScaleInfo(tracing.content.dataSet.scale)
 
             supportedDataLayers = [{name: "color", bitDepth: 8, allowManipulation : true},
-                                    {name: "volume", bitDepth: 16, allowManipulation : false}]            
+                                    {name: "volume", bitDepth: 16, allowManipulation : false},
+                                    {name: "segmentation", bitDepth: 16, allowManipulation : false}]            
 
             zoomStepCount = Infinity
             @binary = {}

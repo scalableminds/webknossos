@@ -28,6 +28,7 @@ class Plane2D
   TEXTURE_SIZE_P : 0
   BUCKETS_PER_ROW : 0
   MAP_SIZE : 0
+  TEXTURE_BIT_DEPTH : 8
   RECURSION_PLACEHOLDER : {}
   DELTA : [0, 5, 10]
   U : 0
@@ -42,12 +43,12 @@ class Plane2D
   volumeTexture : null
 
 
-  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @BIT_DEPTH) ->
+  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH) ->
 
     _.extend(@, new EventMixin())
 
     @BUCKETS_PER_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
-    @TEXTURE_SIZE = (1 << (@TEXTURE_SIZE_P << 1)) * (@BIT_DEPTH >> 3)
+    @TEXTURE_SIZE = (1 << (@TEXTURE_SIZE_P << 1)) * (@TEXTURE_BIT_DEPTH >> 3)
 
     for i in [0..@cube.LOOKUP_DEPTH_DOWN]
       @MAP_SIZE += 1 << (i << 1)
@@ -390,12 +391,13 @@ class Plane2D
     source.nextPixelMask = (1 << source.pixelRepeatP) - 1
     source.nextRowMask = (1 << destination.widthP + source.rowRepeatP) - 1
 
-    bytes = @BIT_DEPTH >> 3
+    bytesSrc  = @DATA_BIT_DEPTH >> 3
+    bytesDest = @TEXTURE_BIT_DEPTH >> 3
 
     while i--
-      dest = destination.offset++ * bytes
-      src = source.offset * bytes
-      for t in [1..bytes]
+      dest = destination.offset++ * bytesDest
+      src = source.offset * bytesSrc
+      for t in [1..bytesDest]
         value = source.buffer[src++]
         destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
 

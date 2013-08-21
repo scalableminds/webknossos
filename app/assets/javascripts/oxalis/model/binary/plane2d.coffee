@@ -286,7 +286,7 @@ class Plane2D
           pixelRepeatP: repeatP
           rowRepeatP: repeatP
         }
-        null
+        if @contrastCurves? then @contrastCurves[bucket[3]]
       )
 
 
@@ -396,7 +396,8 @@ class Plane2D
       dest = destination.offset++ * bytes
       src = source.offset * bytes
       for t in [1..bytes]
-        destination.buffer[dest++] = source.buffer[src++]
+        value = source.buffer[src++]
+        destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
 
       if (i & source.nextPixelMask) == 0
         source.offset += source.pixelDelta

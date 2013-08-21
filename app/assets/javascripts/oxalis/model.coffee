@@ -52,14 +52,15 @@ class Model
             @user = new User(user)
             @scaleInfo = new ScaleInfo(tracing.content.dataSet.scale)
 
-            supportedDataLayers = [{name: "color", bitDepth: 8}, {name: "volume", bitDepth: 16}]            
+            supportedDataLayers = [{name: "color", bitDepth: 8, allowManipulation : true},
+                                    {name: "volume", bitDepth: 16, allowManipulation : false}]            
 
             zoomStepCount = Infinity
             @binary = {}
             for layer in tracing.content.dataSet.dataLayers
               for supportedLayer in supportedDataLayers
                 if layer.typ == supportedLayer.name
-                  @binary[layer.typ] = new Binary(@user, tracing.content.dataSet, TEXTURE_SIZE_P, layer.typ, supportedLayer.bitDepth)
+                  @binary[layer.typ] = new Binary(@user, tracing.content.dataSet, TEXTURE_SIZE_P, supportedLayer)
               zoomStepCount = Math.min(zoomStepCount, @binary[layer.typ].cube.ZOOM_STEP_COUNT - 1)
 
             @flycam = new Flycam2d(VIEWPORT_SIZE, @scaleInfo, zoomStepCount, @user)      

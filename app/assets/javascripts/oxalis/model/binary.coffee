@@ -21,15 +21,14 @@ class Binary
 
   dataSetName : ""
   direction : [0, 0, 0]
-  contrastCurves : []
 
 
-  constructor : (@user, dataSet, @TEXTURE_SIZE_P, @dataLayerName, @BIT_DEPTH, @testData = false) ->
+  constructor : (@user, dataSet, @TEXTURE_SIZE_P, @layer, @testData = false) ->
 
     @dataSetName = dataSet.name
 
     for layer in dataSet.dataLayers
-      if layer.typ == @dataLayerName
+      if layer.typ == @layer.name
         dataLayer = layer
 
     lowerBoundary = [dataLayer.maxCoordinates.topLeft]
@@ -39,34 +38,37 @@ class Binary
       dataLayer.maxCoordinates.depth + dataLayer.maxCoordinates.topLeft[2]
     ]
 
-    @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @BIT_DEPTH)
-    @queue = new PullQueue(@dataSetName, @cube, @dataLayerName, @testData)
+    @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @layer.bitDepth)
+    @queue = new PullQueue(@dataSetName, @cube, @layer.name, @testData)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
     @pingStrategies3d = [new PingStrategy3d.DslSlow()]
 
     @planes = []
-    @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P, @BIT_DEPTH)
-    @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P, @BIT_DEPTH)
-    @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P, @BIT_DEPTH)
+    @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
+    @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
+    @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
 
-    contrastCurve = new Uint8Array(256)
-    @contrastCurves[0] = new Uint8Array(256)
+    if @layer.allowManipulation
+      # assume zoom step count to be at least 1
+      @contrastCurves = []
+      contrastCurve = new Uint8Array(256)
+      @contrastCurves[0] = new Uint8Array(256)
+
+      for i in [1..@cube.ZOOM_STEP_COUNT]
+        @contrastCurves[i] = contrastCurve
 
     @user.on({
       set4BitChanged : (is4Bit) => @queue(is4Bit)
     })
 
-    for i in [1..@cube.ZOOM_STEP_COUNT]
-      @contrastCurves[i] = contrastCurve
-
-    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-
-
     @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 
 
   updateContrastCurve : (brightness, contrast) ->
+
+    unless @contrastCurves?
+      return
 
     contrastCurve = @contrastCurves[1]
     contrastCurveMag1 = @contrastCurves[0]

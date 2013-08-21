@@ -105,7 +105,7 @@ class Plane
       }
         "
     # weird workaround to force JS to pass this as a reference...
-    @alpha = new THREE.Vector2( alpha, 0)
+    @alpha = new THREE.Vector2( 0, 0)
     uniforms = {
       texture : {type : "t", value : texture},
       volumeTexture : {type : "t", value : volumeTexture},

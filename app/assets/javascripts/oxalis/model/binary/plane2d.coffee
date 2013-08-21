@@ -97,7 +97,7 @@ class Plane2D
 
   getImpl : (position, zoomStep, area) ->
 
-    [@getTexture(@dataTexture, position, zoomStep, area), null]
+    [@getTexture(@dataTexture, position, zoomStep, area), @getTexture(@volumeTexture, position, zoomStep, area)]
 
 
   getTexture : (texture, position, zoomStep, area) ->

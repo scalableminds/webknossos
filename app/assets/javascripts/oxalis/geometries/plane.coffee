@@ -177,15 +177,19 @@ class Plane
         for dataLayerName of @model.binary
           @model.binary[dataLayerName].planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
             if dataBuffer
-              # Generate test pattern
-              #for i in [0...512]
-              #  for j in [0...512]
-              #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
-              #    dataBuffer[(i * 512 + j)*2 + 1] = id
               if dataLayerName == "color"
                 @plane.texture.image.data.set(dataBuffer)
               if dataLayerName == "volume"
                 @plane.volumeTexture.image.data.set(dataBuffer)
+              @flycam.hasNewTexture[@planeID] = true
+
+            if volumeBuffer and dataLayerName == "color"
+              # Generate test pattern
+              #for i in [0...512]
+              #  for j in [0...512]
+              #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
+              #    volumeBuffer[i * 512 + j] = id
+              @plane.volumeTexture.image.data.set(volumeBuffer)
               @flycam.hasNewTexture[@planeID] = true
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)

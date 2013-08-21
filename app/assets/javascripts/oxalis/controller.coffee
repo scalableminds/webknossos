@@ -139,8 +139,8 @@ class Controller
             @model.binary["color"].pingStop()
           @sceneController.setSegmentationAlpha( alpha )
 
-        # initial trigger
-        @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or 0)
+      # initial trigger
+      @sceneController.setSegmentationAlpha($('#alpha-slider').data("slider-value") or constants.DEFAULT_SEG_ALPHA)
 
 
   initMouse : ->

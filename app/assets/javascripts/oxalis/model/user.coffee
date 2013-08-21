@@ -13,8 +13,8 @@ class User
   crosshairSize : null
   scaleValue : null
   mouseRotateValue : null
-  routeClippingDistance : null
-  routeClippingDistanceArbitrary : null
+  clippingDistance : null
+  clippingDistanceArbitrary : null
   dynamicSpaceDirection : null
   displayCrosshair : null
   interpolation : null
@@ -25,11 +25,10 @@ class User
   quality : null
   zoom : null
   scale : null
-  displayPreviewXY : null
-  displayPreviewYZ : null
-  displayPreviewXZ : null
+  displayTDViewXY : null
+  displayTDViewYZ : null
+  displayTDViewXZ : null
   newNodeNewTree : null
-  nodesAsSpheres : null
   inverseX : null
   inverseY : null
   keyboardDelay : null
@@ -75,6 +74,7 @@ class User
 
 
   pushImpl : ->
+    
     deferred = $.Deferred()
 
     data = {}
@@ -90,7 +90,7 @@ class User
       url      : "/user/configuration"
       type     : "POST"
       dataType : "json"
-      data   : data
+      data     : data
     ).fail( =>
       
       console.log "could'nt save userdata"

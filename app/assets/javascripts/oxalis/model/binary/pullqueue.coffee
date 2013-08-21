@@ -85,8 +85,8 @@ class PullQueue
     @queue = []
 
 
-  # Starting to download some buckets
   pull : ->
+    # Starting to download some buckets
 
     while @batchCount < @BATCH_LIMIT and @queue.length
       
@@ -103,8 +103,8 @@ class PullQueue
       @pullBatch(batch) if batch.length > 0
 
 
-  # Loading a bunch of buckets
   pullBatch : (batch) ->
+    # Loading a bunch of buckets
 
     @batchCount++
 

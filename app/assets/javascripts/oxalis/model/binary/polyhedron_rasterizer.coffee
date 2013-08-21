@@ -168,8 +168,8 @@ class PolyhedronRasterizer
 
     return
 
-  # Draws the edges into the buffer.
   drawEdges : ->
+    # Draws the edges into the buffer.
 
     { indices, vertices } = @
 
@@ -192,8 +192,8 @@ class PolyhedronRasterizer
     return
 
 
-  # Source: https://sites.google.com/site/proyectosroboticos/bresenham-3d
   drawLine3d : (x, y, z, x1, y1, z1) ->
+    # Source: https://sites.google.com/site/proyectosroboticos/bresenham-3d
     
     { shift_z, buffer } = @
     
@@ -258,8 +258,8 @@ class PolyhedronRasterizer
 
     return
 
-  # Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
   drawLine2d : (x, y, x1, y1, z) ->
+    # Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
 
     { shift_z, buffer } = @
     
@@ -305,12 +305,12 @@ class PolyhedronRasterizer
 
     return
 
-  # Iterates over all relevant xy-planes. The points in
-  # each plane are used to build a convex polygon. The
-  # edges of that polygon is then drawn into the buffer.
-  # After that, we know all line segments that belong to
-  # the polyhedron.
   drawPolygons : ->
+    # Iterates over all relevant xy-planes. The points in
+    # each plane are used to build a convex polygon. The
+    # edges of that polygon is then drawn into the buffer.
+    # After that, we know all line segments that belong to
+    # the polyhedron.
 
     { delta_x, delta_y, delta_z, shift_z, buffer, pointsBuffer } = @
 

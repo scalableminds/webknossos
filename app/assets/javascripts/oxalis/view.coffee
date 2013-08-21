@@ -19,47 +19,85 @@ class View
     @setTheme(constants.THEME_BRIGHT)
     @createKeyboardCommandOverlay()
 
-    @model.route.on({
+    @model.cellTracing.on({
       emptyBranchStack : =>
+
         Toast.error("No more branchpoints", false)
+
+
       noBranchPoints : =>
+
         Toast.error("Setting branchpoints isn't necessary in this tracing mode.", false)
+
+
       wrongDirection : =>
+
         Toast.error("You're tracing in the wrong direction")
+
+
       updateComments : => 
+
         @updateComments()
+
+
       newActiveNode : => 
+
         @updateActiveComment()
         @updateActiveTree()
-      deleteTree : => 
+
+
+      deleteTree : =>
+
         @updateActiveComment()
         @updateTrees()
+
+
       mergeTree : =>
+
         @updateTrees()
         @updateComments()
+
+
       reloadTrees : =>
+
         @updateTrees()
         @updateComments()
+
+
       newNode : => 
+
         @updateActiveComment()
         @updateTreesThrottled()
+
+
       newTreeName : => 
+
         @updateTrees()
         @updateComments()
+
+
       newTree : => 
+
         @updateTrees()
         @updateComments()
+
+
       newActiveTreeColor : =>
+
         @updateTrees()
+
+
       deleteActiveNode : =>
+
         @updateTrees() })
+
 
     @model.user.on
       sortTreesByNameChanged : =>
         @updateTreesSortButton()
         @updateTrees()
 
-    @model.route.stateLogger.on
+    @model.cellTracing.stateLogger.on
       pushFailed       : (critical) =>
         if not critical or @reloadDenied
           Toast.error("Auto-Save failed!")
@@ -121,9 +159,9 @@ class View
       <tr><td>1</td><td>Toggle skeleton visibility</td><td>2</td><td>Toggle inactive tree visibility</td></tr>
       <tr><td>Shift + Mousewheel</td><td>Change node size</td><td></td><td></td></tr>'
 
-    skeletonKeys =
+    TDViewKeys =
       '<tr><th colspan="4">3D-view</th></tr>
-      <tr><td>Mousewheel</td><td>Zoom in and out</td><td>Rightclick drag</td><td>Rotate Skeleton View</td></tr>'
+      <tr><td>Mousewheel</td><td>Zoom in and out</td><td>Rightclick drag</td><td>Rotate 3D View</td></tr>'
     viewportKeys =
       '<tr><th colspan="4">Viewports</th></tr>
       <tr><td>Leftclick or Arrow keys</td><td>Move</td><td>Shift + Leftclick</td><td>Select node</td></tr>
@@ -150,7 +188,7 @@ class View
       
     html += generalKeys
     if mode == constants.MODE_PLANE_TRACING 
-      html += viewportKeys + skeletonKeys
+      html += viewportKeys + TDViewKeys
     else if mode == constants.MODE_ARBITRARY
       html += arbitraryKeys
     else if mode == constants.MODE_VOLUME
@@ -170,7 +208,7 @@ class View
 
   updateComments : ->
     
-    comments = @model.route.getComments()
+    comments = @model.cellTracing.getComments()
     commentList = $("#comment-list")
     commentList.empty()
 
@@ -183,7 +221,7 @@ class View
       if treeId != lastTreeId
         newContent.appendChild((
           $('<li>').append($('<i>', {"class": "icon-sitemap"}),
-          $('<span>', {"data-treeid": treeId, "text": @model.route.getTree(treeId).name})))[0])
+          $('<span>', {"data-treeid": treeId, "text": @model.cellTracing.getTree(treeId).name})))[0])
         lastTreeId = treeId
       newContent.appendChild((
         $('<li>').append($('<i>', {"class": "icon-angle-right"}), 
@@ -196,7 +234,7 @@ class View
 
   updateActiveComment : ->
 
-    comment = @model.route.getComment()
+    comment = @model.cellTracing.getComment()
     if comment
       $("#comment-input").val(comment)
     else
@@ -207,7 +245,7 @@ class View
       oldIcon.toggleClass("icon-arrow-right", false)
       oldIcon.toggleClass("icon-angle-right", true)
 
-    activeHref = $("#comment-container a[data-nodeid=#{@model.route.getActiveNodeId()}]")
+    activeHref = $("#comment-container a[data-nodeid=#{@model.cellTracing.getActiveNodeId()}]")
     if activeHref.length
 
       newIcon = activeHref.parent("li").children("i")
@@ -218,7 +256,7 @@ class View
       $("#comment-container").animate({
         scrollTop: newIcon.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
     else
-      activeTree = $("#comment-container span[data-treeid=#{@model.route.getActiveTreeId()}]")
+      activeTree = $("#comment-container span[data-treeid=#{@model.cellTracing.getActiveTreeId()}]")
       if activeTree.length
         $("#comment-container").animate({
           scrollTop: activeTree.offset().top - $("#comment-container").offset().top + $("#comment-container").scrollTop()}, 250)
@@ -226,19 +264,19 @@ class View
 
   updateActiveTree : ->
 
-    activeTree = @model.route.getTree()
+    activeTree = @model.cellTracing.getTree()
     if activeTree
       $("#tree-name-input").val(activeTree.name)
       $("#tree-name").text(activeTree.name)
       $("#tree-active-color").css("color": "##{('000000'+activeTree.color.toString(16)).slice(-6)}")
+      activeHref = $("#tree-list a[data-treeid=#{activeTree.treeId}]")
 
     oldIcon = $("#tree-list i.icon-arrow-right")
     if oldIcon.length
       oldIcon.toggleClass("icon-arrow-right", false)
       oldIcon.toggleClass("icon-bull", true)
 
-    activeHref = $("#tree-list a[data-treeid=#{activeTree.treeId}]")
-    if activeHref.length
+    if activeHref?.length
 
       newIcon = activeHref.parent("li").children("i")
       newIcon.toggleClass("icon-arrow-right", true)
@@ -249,17 +287,19 @@ class View
         scrollTop: newIcon.offset().top - $("#tree-list").offset().top + $("#tree-list").scrollTop()}, 250)
 
 
-  # avoid lags caused by frequent DOM modification
   updateTreesThrottled : ->
+    # avoid lags caused by frequent DOM modification
+
     @updateTreesThrottled = _.throttle(
       => @updateTrees()
       1000
     )
     @updateTreesThrottled()
 
+
   updateTrees : ->
 
-    trees = @model.route.getTreesSorted()
+    trees = @model.cellTracing.getTreesSorted()
 
     treeList = $("#tree-list")
     treeList.empty()

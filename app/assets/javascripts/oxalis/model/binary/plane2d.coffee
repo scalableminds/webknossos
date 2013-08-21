@@ -83,9 +83,11 @@ class Plane2D
     @dataTexture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
     @dataTexture.ready = false
 
+
   get : (position, {zoomStep, area}) ->
 
     $.when(@getImpl(position, zoomStep, area))
+
 
   hasChanged : ->
 

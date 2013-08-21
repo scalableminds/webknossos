@@ -32,7 +32,7 @@ trait AnnotationFileService {
     annotation.content.map(_.downloadFileExtension) getOrElse defaultDownloadExtension
 
   val annotationStorageFolder = {
-    val folder = conf.getString("oxalis.nml.storageFolder") getOrElse "data/nmls"
+    val folder = conf.getString("oxalis.annotation.storageFolder") getOrElse "data/nmls"
     new File(folder).mkdirs()
     folder
   }

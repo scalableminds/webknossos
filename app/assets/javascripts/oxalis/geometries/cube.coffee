@@ -106,7 +106,7 @@ class Cube
       else
         @crossSections[i].visible = false
 
-    @cube.visible = @visible and (id == constants.VIEW_3D)
+    @cube.visible = @visible and (id == constants.TDView)
 
   setVisibility : (visible) ->
 

@@ -3,7 +3,6 @@ package controllers.admin
 import oxalis.security.Secured
 import models.security.Role
 import braingames.mvc.Controller
-import views._
 import models.user.User
 import play.api.data._
 import play.api.data.Forms._
@@ -13,6 +12,7 @@ import braingames.mail.Send
 import oxalis.mail.DefaultMails
 import models.annotation.{AnnotationType, AnnotationDAO}
 import models.tracing.skeleton.SkeletonTracing
+import views._
 
 
 object TrainingsTracingAdministration extends Controller with Secured {

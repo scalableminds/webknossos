@@ -12,7 +12,7 @@ class VolumeTracingController
     @mouseControls =
       
       leftDownMove : (delta, pos, ctrlPressed) =>
-        
+
         if ctrlPressed
           @move [
             delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
@@ -22,26 +22,31 @@ class VolumeTracingController
         else
           @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
       
-      leftMouseDown : (pos, shiftPressed, altPressed) =>
+      leftMouseDown : (pos, shiftPressed, altPressed, id) =>
+
         @enterDeleteMode( shiftPressed )
-        @model.volumeTracing.startEditing()
+        @model.volumeTracing.startEditing(id)
       
       leftMouseUp : =>
+
         @model.volumeTracing.finishLayer()
         @restoreAfterDeleteMode()
       
-      rightDownMove : (delta, pos, ctrlPressed) =>
+      rightDownMove : (delta, pos, ctrlPressed, id) =>
+
         @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
       
-      rightMouseDown : (pos, shiftPressed, altPressed) =>
+      rightMouseDown : (pos, shiftPressed, altPressed, id) =>
+
         @enterDeleteMode()
-        @model.volumeTracing.startEditing()
+        @model.volumeTracing.startEditing(id)
       
       rightMouseUp : =>
+
         @model.volumeTracing.finishLayer()
         @restoreAfterDeleteMode()
 
-      leftClick : (pos, shiftPressed, altPressed) =>
+      leftClick : (pos, shiftPressed, altPressed, id) =>
 
         cell = @model.binary["color"].cube.getLabel(
                   @calculateGlobalPos( pos ))
@@ -55,6 +60,7 @@ class VolumeTracingController
       "c" : =>
         @model.volumeTracing.createCell()
 
+
   enterDeleteMode : (enter = true) ->
 
     @inDeleteMode = enter
@@ -63,8 +69,14 @@ class VolumeTracingController
       @prevActiveCell = @model.volumeTracing.getActiveCellId()
       @model.volumeTracing.setActiveCell(0)
 
+
   restoreAfterDeleteMode : ->
 
     if @inDeleteMode
       @model.volumeTracing.setActiveCell( @prevActiveCell )
     @inDeleteMode = false
+
+
+  drawVolume : (pos) ->
+
+    @model.volumeTracing.addToLayer(pos)

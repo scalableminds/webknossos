@@ -9,6 +9,7 @@ libs/drawing : Drawing
 class VolumeTracing
 
   constructor : (@flycam, @cube) ->
+
     _.extend(@, new EventMixin())
 
     @cells        = []          # List of VolumeCells
@@ -22,12 +23,16 @@ class VolumeTracing
     window.setAlpha = (v) -> Drawing.setAlpha(v)
     window.setSmoothLength = (v) -> Drawing.setSmoothLength(v)
 
+
   createCell : ->
+
     @cells.push( newCell = new VolumeCell(@idCount++) )
     @setActiveCell( newCell.id )
     @currentLayer = null
 
-  startEditing : (planeId = @flycam.getActivePlane()) ->
+
+  startEditing : (planeId) ->
+
     # Return, if layer was actually started
     if currentLayer?
       return false
@@ -35,6 +40,7 @@ class VolumeTracing
     thirdDimValue = pos[Dimensions.thirdDimensionForPlane(planeId)]
     @currentLayer = new VolumeLayer(planeId, thirdDimValue)
     return true
+
 
   addToLayer : (pos) ->
 
@@ -45,6 +51,7 @@ class VolumeTracing
     @trigger "updateLayer", @currentLayer.getSmoothedContourList()
 
   finishLayer : ->
+
     unless @currentLayer?
       return
 
@@ -55,9 +62,10 @@ class VolumeTracing
     console.log "Labeling time:", ((new Date()).getTime() - start)
 
     @currentLayer = null
-    @flycam.hasChanged = true
+    @flycam.update()
 
     @trigger "resetContour"
+
 
   getActiveCellId : ->
 
@@ -65,6 +73,7 @@ class VolumeTracing
       return @activeCell.id
     else
       return 0
+      
 
   setActiveCell : (id) ->
 

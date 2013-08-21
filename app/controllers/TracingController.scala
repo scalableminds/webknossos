@@ -1,8 +1,7 @@
 package controllers
 
-import play.api.Logger
-import play.api.libs.json.Json._
 import play.api.libs.json._
+<<<<<<< HEAD
 import oxalis.nml.BranchPoint
 import play.api.mvc._
 import org.bson.types.ObjectId
@@ -11,46 +10,42 @@ import oxalis.security.{UserAwareRequest, Secured, AuthenticatedRequest}
 import braingames.geometry.Vector3I
 import braingames.geometry.Vector3I._
 import models.user.User
+=======
+import oxalis.security.Secured
+>>>>>>> ca2aaa77333ce8e01a21890b459efb2a30764ed6
 import models.security._
-import play.api.libs.iteratee._
-import play.api.libs.iteratee.Concurrent.Channel
-import play.api.libs.Comet
-import oxalis.nml.Node
-import oxalis.nml.Edge
-import braingames.geometry.Point3D
-import models.user.TimeTracking
-import oxalis.view.helpers._
-import models.task.Task
-import views._
-import play.api.i18n.Messages
 import net.liftweb.common._
+<<<<<<< HEAD
 import braingames.mvc.{BoxImplicits, Fox, Controller}
 import controllers.admin.NMLIO
 import play.api.templates.Html
 import models.task.Project
 import models.task.TaskType
 import oxalis.annotation.handler._
+=======
+import braingames.mvc.Controller
+import oxalis.security.AuthenticatedRequest
+>>>>>>> ca2aaa77333ce8e01a21890b459efb2a30764ed6
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import oxalis.annotation.{RequestAnnotation, AnnotationIdentifier}
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import akka.util.Timeout
-import braingames.util.ExtendedTypes.When
-import models.binary.DataSetDAO
-import models.annotation.{AnnotationLike, AnnotationDAO}
+import models.annotation.AnnotationLike
 import models.annotation.AnnotationType._
-import models.tracing.skeleton.{SkeletonTracingLike, SkeletonTracing, TemporarySkeletonTracing, CompoundAnnotation}
 import oxalis.annotation.handler.AnnotationInformationHandler
+<<<<<<< HEAD
 import models.basics.Implicits._
+=======
+import braingames.util.{FoxImplicits, Fox}
+>>>>>>> ca2aaa77333ce8e01a21890b459efb2a30764ed6
 
 object TracingController extends Controller with Secured with TracingInformationProvider {
   override val DefaultAccessRole = Role.User
 }
 
-trait TracingInformationProvider extends play.api.http.Status with BoxImplicits with models.basics.Implicits {
-
-  import braingames.mvc.BoxImplicits._
+trait TracingInformationProvider extends play.api.http.Status with FoxImplicits with models.basics.Implicits {
 
   import AnnotationInformationHandler._
 
@@ -74,6 +69,7 @@ trait TracingInformationProvider extends play.api.http.Status with BoxImplicits 
     implicit val timeout = Timeout(5 seconds)
     val f = Application.annotationStore ? RequestAnnotation(annotationId, authedRequestToDBAccess)
 
+<<<<<<< HEAD
     //TODO: RF - fix .when(_.state.isFinished)(_.allowAllModes)
     f.mapTo[AnnotationLike].map{
       Full(_)
@@ -82,6 +78,9 @@ trait TracingInformationProvider extends play.api.http.Status with BoxImplicits 
         Logger.error("Got an error: " + e)
         Failure(e.toString)
     }
+=======
+    f.mapTo[Box[AnnotationLike]]
+>>>>>>> ca2aaa77333ce8e01a21890b459efb2a30764ed6
   }
 
   def nameAnnotation(annotation: AnnotationLike)(implicit request: AuthenticatedRequest[_]) = Box.legacyNullTest[String] {

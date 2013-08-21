@@ -233,6 +233,9 @@ svg a:hover {
     #abstractTreeViewer {
         color : #000;
     }
+    .inactive {
+        border-color: #fff;
+    }
 }
 .dark {
     background : #000;
@@ -248,6 +251,9 @@ svg a:hover {
     .modal p {
         color : #000;
     }
+    .inactive {
+        border-color: #000;
+    }
 }
 
 #loader-icon {
@@ -262,7 +268,8 @@ svg a:hover {
 #tracing {
     margin-top: 10px;
     position: relative;
-    float: left;
+    display: inline-block;
+    vertical-align: top;
 }
 #render {
     position: relative;
@@ -271,7 +278,8 @@ svg a:hover {
     z-index: 10;
 }
 #comments-tree {
-    float: left;
+    display: inline-block;
+    vertical-align: top;
     margin-top: 10px;
     margin-left: 20px;
 }
@@ -314,7 +322,7 @@ svg a:hover {
     min-width: 1024px;
 }
 #main {
-    width: 5000px;
+    white-space: nowrap;
 }
 #inputcatchers {
     position: absolute;
@@ -324,10 +332,13 @@ svg a:hover {
     width: @standardViewportWidth;
     height: @standardViewportWidth;
     border-style:solid;
-    border-color: #ffff00;
+    border-width: 2px;
     z-index: 20;
     box-sizing: border-box;
     float: left;
+}
+.active {
+    border-color: #ff0;
 }
 #planeyz {
     margin-left: 20px;
@@ -335,20 +346,19 @@ svg a:hover {
 #planexz {
     margin-top: 20px;
 }
-#skeletonview {
-    border-width: 0px;
+#TDView {
     margin-top: 20px;
     margin-left: 20px;
     position: relative;
 }
-#prevControls {
+#TDViewControls {
     float: left;
     height: 20px;
     position: absolute;
-    top: 10px;
+    top: 0px;
     z-index: 30;
 }
-#prevControls .btn > span {
+#TDViewControls .btn > span {
     display: inline-block;
     width: 10px;
     height: 10px;
@@ -359,7 +369,8 @@ svg a:hover {
     position: relative;
     width: 280px;
     padding: 10px;
-    float: left;
+    display: inline-block;
+    vertical-align: top;
 }
 #overlay > * {
     margin-bottom: 10px;

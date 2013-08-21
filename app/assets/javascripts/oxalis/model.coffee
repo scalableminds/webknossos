@@ -1,6 +1,6 @@
 ### define 
 ./model/binary : Binary
-./model/route : Route
+./model/celltracing : CellTracing
 ./model/user : User
 ./model/volumetracing : VolumeTracing
 ./model/scaleinfo : ScaleInfo
@@ -70,8 +70,13 @@ class Model
             @flycam.on
               "positionChanged" : (position) =>
                 @flycam3d.setPositionSilent(position)
+<<<<<<< HEAD
             @route = new Route(tracing, @scaleInfo, @flycam, @flycam3d, @user)
             @volumeTracing = new VolumeTracing(@flycam, @binary["color"].cube)
+=======
+            @cellTracing = new CellTracing(tracing, @scaleInfo, @flycam, @flycam3d, @user)
+            @volumeTracing = new VolumeTracing(@flycam, @binary.cube)
+>>>>>>> ca2aaa77333ce8e01a21890b459efb2a30764ed6
             
             {"restrictions": tracing.restrictions, "settings": tracing.content.settings}
             

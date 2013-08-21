@@ -17,12 +17,12 @@ class AbstractTreeController
     container.append(@view.canvas)
 
     @bind()
-    @drawTree(model.route.getTree())
+    @drawTree(model.cellTracing.getTree())
 
 
   bind : ->
 
-    @model.route.on({
+    @model.cellTracing.on({
       newActiveNode        : => @drawTree(),
       newActiveTree        : => @drawTree(),
       newTree              : => @drawTree(),
@@ -36,14 +36,14 @@ class AbstractTreeController
 
   drawTree : ->
     
-    @view.drawTree(@model.route.getTree(), @model.route.getActiveNodeId())
+    @view.drawTree(@model.cellTracing.getTree(), @model.cellTracing.getActiveNodeId())
 
 
   setActiveNode : (nodeId, centered, mergeTree) ->
     
     { model } = @
 
-    model.route.setActiveNode(nodeId, mergeTree)
+    model.cellTracing.setActiveNode(nodeId, mergeTree)
 
     @centerActiveNode() if centered
 
@@ -52,6 +52,6 @@ class AbstractTreeController
 
     { model } = @
 
-    position = model.route.getActiveNodePos()
+    position = model.cellTracing.getActiveNodePos()
     if position
       model.flycam.setPosition(position)

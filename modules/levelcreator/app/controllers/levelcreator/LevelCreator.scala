@@ -34,6 +34,7 @@ object LevelCreator extends LevelCreatorController with UnAuthedDBAccess {
     mapping(
       "name" -> text.verifying("level.invalidName", Level.isValidLevelName _),
       "game" -> optional(text),
+      "isRotated" -> boolean,
       "width" -> number,
       "height" -> number,
       "slides before problem" -> number,

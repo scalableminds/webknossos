@@ -16,6 +16,7 @@
         @helper.form(controllers.levelcreator.routes.LevelCreator.create, 'class -> "form-horizontal") {
           @helper.inputText(form("name"))
           @helper.select(form("game"), options = ""->""::(games.map(g => (g.name, g.name))))
+          @checkbox(field = form("isRotated"), '_label -> "Should be rotated")
           @helper.inputText(form("width"), 'type -> "number")
           @helper.inputText(form("height"), 'type -> "number")
           @helper.inputText(form("slides before problem"), 'type -> "number")

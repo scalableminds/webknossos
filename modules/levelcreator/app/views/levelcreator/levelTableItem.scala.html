@@ -14,6 +14,7 @@
   </td>
   <td> @level.width x @level.height x (@level.slidesBeforeProblem + @level.slidesAfterProblem) </td>
   <td> @level.dataSetName </td>
+  <td> <i @if(level.isRotated){class="icon-check"}else{class="icon-remove"}></i></td>
   <td class="status-cell"> 
     @levelGenerationProgress(level.numberOfActiveStacks, stacksInProgress.getOrElse(0), stacksInQueue.getOrElse(0))
   </td>

@@ -66,7 +66,13 @@ trait BinaryDataRequestHandler {
       Vector3D(-(width / 2.0).floor, -(height / 2.0).floor, -level.slidesBeforeProblem)
     }
 
-    val direction = Vector3D(mission.start.direction.x * 11.24, mission.start.direction.y * 11.24, mission.start.direction.z * 28).normalize
+    val d =
+      if (level.isRotated)
+        mission.start.directionRotated
+      else
+        mission.start.direction
+
+    val direction = Vector3D(d.x * 11.24, d.y * 11.24, d.z * 28).normalize
 
     Cuboid(level.width,
       level.height,

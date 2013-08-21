@@ -85,6 +85,7 @@ case class Level(
   slidesAfterProblem: Int,
   dataSetName: String,
   parent: LevelId,
+  isRotated: Boolean,
   isLatest: Boolean = true,
   isDeleted: Boolean = false,
   renderSettings: RenderSettings = RenderSettings.initial,
@@ -139,7 +140,7 @@ object Level {
                       |  importSlides(start : 0, end : 10)
                     """.stripMargin
 
-  val empty = Level(LevelId(""), None, 250, 150, 15, 15, defaultDataSetName, LevelId(""))
+  val empty = Level(LevelId(""), None, 250, 150, 15, 15, defaultDataSetName, LevelId(""), isRotated = false)
 
   val stackBaseFolder = {
     val folderName =
@@ -155,12 +156,12 @@ object Level {
     folderName
   }
 
-  def fromForm(name: String, game: Option[String], width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int, dataSetName: String) = {
-    Level(LevelId(name), game, width, height, slidesBeforeProblem, slidesAfterProblem, dataSetName, LevelId(name))
+  def fromForm(name: String, game: Option[String], isRotated: Boolean, width: Int, height: Int, slidesBeforeProblem: Int, slidesAfterProblem: Int, dataSetName: String) = {
+    Level(LevelId(name), game, width, height, slidesBeforeProblem, slidesAfterProblem, dataSetName, LevelId(name), isRotated)
   }
 
   def toForm(level: Level) = {
-    Some(level.levelId.name, level.game, level.width, level.height, level.slidesBeforeProblem, level.slidesAfterProblem, level.dataSetName)
+    Some(level.levelId.name, level.game, level.isRotated, level.width, level.height, level.slidesBeforeProblem, level.slidesAfterProblem, level.dataSetName)
   }
 
   def isValidLevelName(name: String) = {

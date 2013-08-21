@@ -6,10 +6,10 @@ import braingames.util.TextUtils._
 import models.annotation.{AnnotationDAO, AnnotationLike, Annotation}
 import braingames.reactivemongo.DBAccessContext
 import scala.concurrent.Future
-import braingames.mvc.Fox
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.util.{FoxImplicits, Fox}
 
-object SavedTracingInformationHandler extends AnnotationInformationHandler {
+object SavedTracingInformationHandler extends AnnotationInformationHandler with FoxImplicits{
 
   import braingames.mvc.BoxImplicits._
 

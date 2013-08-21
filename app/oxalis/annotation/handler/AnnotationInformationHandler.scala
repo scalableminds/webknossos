@@ -3,11 +3,11 @@ package oxalis.annotation.handler
 import net.liftweb.common.Box
 import oxalis.security.AuthenticatedRequest
 import models.annotation.{AnnotationType, AnnotationLike}
-import braingames.mvc.Fox
 import braingames.reactivemongo.DBAccessContext
 import models.basics.Implicits._
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.util.Fox
 
 object AnnotationInformationHandler {
   val informationHandlers: Map[String, AnnotationInformationHandler] = Map(

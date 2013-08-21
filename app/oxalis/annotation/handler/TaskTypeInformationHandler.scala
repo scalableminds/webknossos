@@ -8,11 +8,11 @@ import models.user.User
 import models.security.Role
 import models.tracing.skeleton.CompoundAnnotation
 import braingames.reactivemongo.DBAccessContext
-import braingames.mvc.Fox
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
+import braingames.util.{FoxImplicits, Fox}
 
-object TaskTypeInformationHandler extends AnnotationInformationHandler {
+object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxImplicits{
 
   import braingames.mvc.BoxImplicits._
 

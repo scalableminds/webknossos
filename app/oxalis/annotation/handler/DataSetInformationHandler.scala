@@ -8,11 +8,11 @@ import net.liftweb.common.Box
 import play.api.i18n.Messages
 import models.tracing.skeleton.{TemporarySkeletonTracing, CompoundAnnotation}
 import models.binary.DataSetDAO
-import braingames.mvc.Fox
 import braingames.reactivemongo.DBAccessContext
 import play.api.libs.concurrent.Execution.Implicits._
 import braingames.geometry.Point3D
 import play.api.Logger
+import braingames.util.{FoxImplicits, Fox}
 
 /**
  * Company: scalableminds
@@ -20,7 +20,7 @@ import play.api.Logger
  * Date: 03.08.13
  * Time: 18:39
  */
-object DataSetInformationHandler extends AnnotationInformationHandler {
+object DataSetInformationHandler extends AnnotationInformationHandler with FoxImplicits{
 
   import braingames.mvc.BoxImplicits._
 
@@ -41,7 +41,7 @@ object DataSetInformationHandler extends AnnotationInformationHandler {
         Nil,
         Nil,
         System.currentTimeMillis(),
-        0,
+        Some(0),
         Point3D(0, 0, 0)
       )
       TemporaryAnnotation(

@@ -9,7 +9,7 @@ import play.api.Logger
 import models.annotation.AnnotationLike
 import oxalis.annotation.handler.AnnotationInformationHandler
 import braingames.reactivemongo.DBAccessContext
-import braingames.mvc.Fox
+import braingames.util.Fox
 
 case class AnnotationIdentifier(annotationType: String, identifier: String)
 

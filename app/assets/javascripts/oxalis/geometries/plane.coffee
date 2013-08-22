@@ -182,7 +182,7 @@ class Plane
                 @plane.volumeTexture.image.data.set(dataBuffer)
               @flycam.hasNewTexture[@planeID] = true
 
-            if volumeBuffer and not (@binary["volume"]? or @binary["segmentation"]?)
+            if volumeBuffer and not (@model.binary["volume"]? or @model.binary["segmentation"]?)
               # Generate test pattern
               #for i in [0...512]
               #  for j in [0...512]

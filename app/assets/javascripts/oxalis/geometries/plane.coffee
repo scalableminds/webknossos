@@ -90,7 +90,6 @@ class Plane
 
       void main() {
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
-        /* assume little endian order */
         float id = (volumeColor[0] * 255.0);
         float golden_ratio = 0.618033988749895;
 

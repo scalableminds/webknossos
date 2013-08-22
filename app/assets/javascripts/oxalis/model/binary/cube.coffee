@@ -246,7 +246,7 @@ class Cube
     bucket = @getDataBucketByZoomedAddress(address)
 
     cube[bucketIndex] = null
-    #@collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
+    @collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
 
 
   collectArbitraryBucket : ([bucket_x, bucket_y, bucket_z, zoomStep], oldBucket) ->

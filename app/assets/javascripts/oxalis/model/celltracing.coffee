@@ -110,9 +110,9 @@ class CellTracing
     startTime = (new Date()).getTime()
     offset = 0
     size = numberOfNodesPerTree / 100
-    for i in [0..numberOfTrees]
+    for i in [0...numberOfTrees]
       @createNewTree()
-      for i in [0..numberOfNodesPerTree]
+      for i in [0...numberOfNodesPerTree]
         pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
         point = new TracePoint(@TYPE_USUAL, @idCount++, pos, null, null, @activeTree.treeId)
         @activeTree.nodes.push(point)

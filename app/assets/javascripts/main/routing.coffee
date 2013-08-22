@@ -22,7 +22,7 @@ $ ->
 
   route
 
-    "user.dashboard.dashboard" : ->
+    "user.dashboard.userDashboard" : ->
 
       RoutingUtils.maskFinishedTasks()
 

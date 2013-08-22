@@ -178,11 +178,11 @@ class Plane
             if dataBuffer
               if dataLayerName == "color"
                 @plane.texture.image.data.set(dataBuffer)
-              if dataLayerName == "volume"
+              if dataLayerName == "volume" or dataLayerName == "segmentation"
                 @plane.volumeTexture.image.data.set(dataBuffer)
               @flycam.hasNewTexture[@planeID] = true
 
-            if volumeBuffer and dataLayerName == "color"
+            if volumeBuffer and not (@binary["volume"]? or @binary["segmentation"]?)
               # Generate test pattern
               #for i in [0...512]
               #  for j in [0...512]

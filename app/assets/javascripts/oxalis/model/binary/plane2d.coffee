@@ -28,6 +28,7 @@ class Plane2D
   TEXTURE_SIZE_P : 0
   BUCKETS_PER_ROW : 0
   MAP_SIZE : 0
+  TEXTURE_BIT_DEPTH : 8
   RECURSION_PLACEHOLDER : {}
   DELTA : [0, 5, 10]
   U : 0
@@ -42,11 +43,12 @@ class Plane2D
   volumeTexture : null
 
 
-  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P) ->
+  constructor : (index, @cube, @queue, @TEXTURE_SIZE_P, @DATA_BIT_DEPTH) ->
 
     _.extend(@, new EventMixin())
 
     @BUCKETS_PER_ROW = 1 << (@TEXTURE_SIZE_P - @cube.BUCKET_SIZE_P)
+    @TEXTURE_SIZE = (1 << (@TEXTURE_SIZE_P << 1)) * (@TEXTURE_BIT_DEPTH >> 3)
 
     for i in [0..@cube.LOOKUP_DEPTH_DOWN]
       @MAP_SIZE += 1 << (i << 1)
@@ -59,7 +61,7 @@ class Plane2D
     @cube.on "bucketLoaded", (bucket) =>
 
       # Checking, whether the new bucket intersects with the current layer
-      if @dataTexture.layer >> (@cube.BUCKET_SIZE_P + bucket[3]) == bucket[@W]
+      if @dataTexture.layer >> (@cube.BUCKET_SIZE_P + bucket[3]) == bucket[@W] and @dataTexture.topLeftBucket?
 
         # Get the tile, the bucket would be drawn to
         u = bucket[@U] - @dataTexture.topLeftBucket[@U]
@@ -137,7 +139,7 @@ class Plane2D
       texture.area = area
 
       texture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-      texture.buffer = new Uint8Array(1 << (@TEXTURE_SIZE_P << 1))
+      texture.buffer = new Uint8Array(@TEXTURE_SIZE)
       texture.ready = false
 
     # If the top-left-bucket has changed, still visible tiles are copied to their new location
@@ -148,7 +150,7 @@ class Plane2D
       oldTiles = texture.tiles
       oldBuffer = texture.buffer
       texture.tiles = new Array(@BUCKETS_PER_ROW * @BUCKETS_PER_ROW)
-      texture.buffer = new Uint8Array(1 << (@TEXTURE_SIZE_P << 1))
+      texture.buffer = new Uint8Array(@TEXTURE_SIZE)
       texture.ready = false
 
       # Calculating boundaries for copying
@@ -173,9 +175,9 @@ class Plane2D
           oldTileIndex = tileIndexByTileMacro(oldTile)
           newTileIndex = tileIndexByTileMacro(newTile)
 
-          if oldTiles[oldTileIndex]
-            @copyTile(newTile, oldTile, texture.buffer, oldBuffer)
-            texture.tiles[newTileIndex] = true
+          #if oldTiles[oldTileIndex]
+          #  @copyTile(newTile, oldTile, texture.buffer, oldBuffer)
+          #  texture.tiles[newTileIndex] = true
 
     # If something has changed, only changed tiles are drawn
     unless texture.ready and _.isEqual(texture.area, area)
@@ -285,7 +287,7 @@ class Plane2D
           pixelRepeatP: repeatP
           rowRepeatP: repeatP
         }
-        @contrastCurves[bucket[3]]
+        if @contrastCurves? then @contrastCurves[bucket[3]]
       )
 
 
@@ -389,9 +391,16 @@ class Plane2D
     source.nextPixelMask = (1 << source.pixelRepeatP) - 1
     source.nextRowMask = (1 << destination.widthP + source.rowRepeatP) - 1
 
+    bytesSrc  = @DATA_BIT_DEPTH >> 3
+    bytesDest = @TEXTURE_BIT_DEPTH >> 3
+
     while i--
-      destination.buffer[destination.offset++] = if contrastCurve? then contrastCurve[source.buffer[source.offset]] else source.buffer[source.offset]
-     
+      dest = destination.offset++ * bytesDest
+      src = source.offset * bytesSrc
+      for t in [1..bytesDest]
+        value = source.buffer[src++]
+        destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
+
       if (i & source.nextPixelMask) == 0
         source.offset += source.pixelDelta
       

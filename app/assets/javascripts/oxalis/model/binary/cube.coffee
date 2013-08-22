@@ -40,12 +40,12 @@ class Cube
   # It is then removed from the cube.
 
 
-  constructor : (@upperBoundary, @ZOOM_STEP_COUNT) ->
+  constructor : (@upperBoundary, @ZOOM_STEP_COUNT, @BIT_DEPTH) ->
 
     _.extend(@, new EventMixin())
 
     @LOOKUP_DEPTH_UP = @ZOOM_STEP_COUNT - 1
-    @BUCKET_LENGTH = 1 << @BUCKET_SIZE_P * 3
+    @BUCKET_LENGTH = (1 << @BUCKET_SIZE_P * 3) * (@BIT_DEPTH >> 3)
 
     @cubes = []
     @buckets = new Array(@MAXIMUM_BUCKET_COUNT)
@@ -112,6 +112,9 @@ class Cube
 
   getDataBucketByZoomedAddress : (address) ->
 
+    if address[3] >= @ZOOM_STEP_COUNT
+      return null
+
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
 
@@ -122,6 +125,9 @@ class Cube
 
 
   getVolumeBucketByZoomedAddress : (address) ->
+
+    if address[3] >= @ZOOM_STEP_COUNT
+      return null
 
     cube = @cubes[address[3]].volume
     bucketIndex = @getBucketIndexByZoomedAddress(address)
@@ -141,6 +147,9 @@ class Cube
 
 
   isBucketRequestedByZoomedAddress : (address) ->
+
+    if address[3] >= @ZOOM_STEP_COUNT
+      return true
 
     cube = @cubes[address[3]].data
     bucketIndex = @getBucketIndexByZoomedAddress(address)
@@ -237,7 +246,7 @@ class Cube
     bucket = @getDataBucketByZoomedAddress(address)
 
     cube[bucketIndex] = null
-    @collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
+    #@collectArbitraryBucket(address, bucket) if address[3] <= @ARBITRARY_MAX_ZOOMSTEP
 
 
   collectArbitraryBucket : ([bucket_x, bucket_y, bucket_z, zoomStep], oldBucket) ->
@@ -287,6 +296,7 @@ class Cube
             @labelVoxel([x, y, z], 5)
 
     @trigger("volumeLabled")
+
 
   labelVoxels : (iterator, label) ->
 

@@ -5,7 +5,9 @@
 
 class CellTacingController
 
-  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos } ) ->
+  constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }, controlMode ) ->
+
+    @inTraceMode = controlMode == constants.CONTROL_MODE_TRACE
 
     @mouseControls = 
 
@@ -19,13 +21,15 @@ class CellTacingController
       
 
       leftClick : (pos, shiftPressed, altPressed, plane) =>
-
-        @onClick(pos, shiftPressed, altPressed, plane)
+        
+        if @inTraceMode
+          @onClick(pos, shiftPressed, altPressed, plane)
 
 
       rightClick : (pos, ctrlPressed) =>
-
-        @setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
+        
+        if @inTraceMode
+          @setWaypoint(@calculateGlobalPos( pos ), ctrlPressed)
 
 
     @keyboardControls =
@@ -46,6 +50,10 @@ class CellTacingController
       #Comments
       "n" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(false), true)
       "p" : => @setActiveNode(@model.cellTracing.nextCommentNodeID(true), true)
+
+    # For data viewer, no keyboard controls
+    if not @inTraceMode
+      @keyboardControls = {}
 
 
   setParticleSize : (delta) =>

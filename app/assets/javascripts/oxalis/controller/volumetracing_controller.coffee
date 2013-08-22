@@ -48,7 +48,7 @@ class VolumeTracingController
 
       leftClick : (pos, shiftPressed, altPressed, id) =>
 
-        cell = @model.binary.cube.getLabel(
+        cell = @model.binary["color"].cube.getLabel(
                   @calculateGlobalPos( pos ))
 
         if cell > 0

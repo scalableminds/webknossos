@@ -72,7 +72,7 @@ class ArbitraryController
   render : (forceUpdate, event) ->
 
     matrix = @cam.getMatrix()
-    @model.binary.arbitraryPing(matrix)
+    @model.binary["color"].arbitraryPing(matrix)
 
 
   initMouse : ->
@@ -186,7 +186,7 @@ class ArbitraryController
     @view.on "render", (force, event) => @render(force, event)
     @view.on "finishedRender", => @model.cellTracing.rendered()
 
-    @model.binary.cube.on "bucketLoaded", => @view.draw()
+    @model.binary["color"].cube.on "bucketLoaded", => @view.draw()
 
     @model.user.on "crosshairSizeChanged", (value) =>
       @crosshair.setScale(value)

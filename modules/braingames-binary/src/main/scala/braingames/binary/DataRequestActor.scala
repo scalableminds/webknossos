@@ -84,7 +84,7 @@ class DataRequestActor(
         load(dataRequest)
       }.onComplete{
         case Success(data) =>
-        s ! Some(data)
+          s ! Some(data)
         case Failure(e) =>
           System.err.println(s"DataRequestActor Error for Request. Error: $e")
           e.printStackTrace()

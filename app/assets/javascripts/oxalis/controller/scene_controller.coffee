@@ -21,12 +21,14 @@ class SceneController
 
     _.extend(@, new EventMixin())
 
-    @current        = 0
-    @displayPlane   = [true, true, true]
-    @planeShift     = [0, 0, 0]
-    @showSkeleton   = true
+    @current          = 0
+    @displayPlane     = [true, true, true]
+    @planeShift       = [0, 0, 0]
+    @showSkeleton     = true
+    @pingBinary       = true
+    @pingBinaryVolume = false
 
-    @polygonFactory = new PolygonFactory( @model.binary.cube )
+    @polygonFactory = new PolygonFactory( @model.binary["color"].cube )
     @volumeMeshes   = []
 
     @createMeshes()
@@ -180,6 +182,21 @@ class SceneController
   toggleInactiveTreeVisibility : ->
 
     @skeleton.toggleInactiveTreeVisibility()
+
+
+  setSegmentationAlpha : (alpha) ->
+
+    for plane in @planes
+      plane.setSegmentationAlpha( alpha )
+    @pingBinary = alpha != 100
+    @pingBinaryVolume = alpha != 0
+    #console.log "pingValues:", @pingBinary, @pingBinaryVolume
+
+  pingDataLayer : (dataLayerName) ->
+
+    if dataLayerName == "color" then return @pingBinary
+    if dataLayerName == "volume" then return @pingBinaryVolume
+    false
 
 
   stop : ->

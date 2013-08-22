@@ -13,6 +13,7 @@ class Plane
   CROSSHAIR_COLORS : [[0x0000ff, 0x00ff00], [0xff0000, 0x00ff00], [0x0000ff, 0xff0000]]
   GRAY_CH_COLOR    : 0x222222
 
+
   constructor : (planeWidth, textureWidth, flycam, planeID, model) ->
 
     @flycam          = flycam
@@ -56,6 +57,7 @@ class Plane
     fragmentShader = "
       uniform sampler2D texture, volumeTexture;
       uniform vec2 offset, repeat;
+      uniform vec2 alpha;
       varying vec2 vUv;
 
       /* Inspired from: https://github.com/McManning/WebGL-Platformer/blob/master/shaders/main.frag */
@@ -88,24 +90,28 @@ class Plane
 
       void main() {
         vec4 volumeColor = texture2D(volumeTexture, vUv * repeat + offset);
+        /* assume little endian order */
         float id = (volumeColor[0] * 255.0);
         float golden_ratio = 0.618033988749895;
 
         /* Color map (<= to fight rounding mistakes) */
         
-        if (id > 0.1) {
+        if ( id > 0.1 ) {
           vec4 HSV = vec4( mod( 6.0 * id * golden_ratio, 6.0), 1.0, 1.0, 1.0 );
-          gl_FragColor = 0.7 * texture2D(texture, vUv * repeat + offset) + 0.3 * hsv_to_rgb( HSV );
+          gl_FragColor = (1.0 - alpha[0]/100.0) * texture2D(texture, vUv * repeat + offset) + alpha[0]/100.0 * hsv_to_rgb( HSV );
         } else {
           gl_FragColor = texture2D(texture, vUv * repeat + offset);
         }
       }
         "
+    # weird workaround to force JS to pass this as a reference...
+    @alpha = new THREE.Vector2( 0, 0)
     uniforms = {
       texture : {type : "t", value : texture},
       volumeTexture : {type : "t", value : volumeTexture},
       offset : {type : "v2", value : offset},
-      repeat : {type : "v2", value : repeat}
+      repeat : {type : "v2", value : repeat},
+      alpha : {type : "v2", value : @alpha}
     }
     textureMaterial = new THREE.ShaderMaterial({
       uniforms : uniforms,
@@ -168,12 +174,23 @@ class Plane
       area = @flycam.getArea(@planeID)
       tPos = @flycam.getTexturePosition(@planeID).slice()
       if @model?
-        @model.binary.planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
-          if dataBuffer
-            @plane.texture.image.data.set(dataBuffer)
-            @flycam.hasNewTexture[@planeID] = true
-          if volumeBuffer
-            @plane.volumeTexture.image.data.set(volumeBuffer)
+        for dataLayerName of @model.binary
+          @model.binary[dataLayerName].planes[@planeID].get(@flycam.getTexturePosition(@planeID), { zoomStep : @flycam.getIntegerZoomStep(), area : @flycam.getArea(@planeID) }).done ([dataBuffer, volumeBuffer]) =>
+            if dataBuffer
+              if dataLayerName == "color"
+                @plane.texture.image.data.set(dataBuffer)
+              if dataLayerName == "volume"
+                @plane.volumeTexture.image.data.set(dataBuffer)
+              @flycam.hasNewTexture[@planeID] = true
+
+            if volumeBuffer and dataLayerName == "color"
+              # Generate test pattern
+              #for i in [0...512]
+              #  for j in [0...512]
+              #    id = Math.floor(i / 32) * 16 + Math.floor(j / 32)
+              #    volumeBuffer[i * 512 + j] = id
+              @plane.volumeTexture.image.data.set(volumeBuffer)
+              @flycam.hasNewTexture[@planeID] = true
   
       if !(@flycam.hasNewTexture[@planeID] or @flycam.hasChanged)
         return
@@ -214,6 +231,11 @@ class Plane
 
     @plane.visible = @TDViewBorders.visible = visible
     @crosshair[0].visible = @crosshair[1].visible = visible and @displayCosshair
+
+
+  setSegmentationAlpha : (alpha) ->
+    @alpha.x = alpha
+    @flycam.hasChanged = true
 
 
   getMeshes : =>

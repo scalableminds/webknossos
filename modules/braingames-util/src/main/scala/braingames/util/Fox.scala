@@ -28,7 +28,7 @@ trait FoxImplicits {
 }
 
 
-class Fox[A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
+class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   val self = this
 
   def ?~>(s: String) =

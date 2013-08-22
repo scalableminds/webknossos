@@ -6,7 +6,6 @@
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
 ./dimensions : Dimensions
-../../libs/toast : Toast
 ###
 
 class Binary
@@ -22,45 +21,54 @@ class Binary
 
   dataSetName : ""
   direction : [0, 0, 0]
-  contrastCurves : []
 
 
-  constructor : (@user, dataSet, @TEXTURE_SIZE_P) ->
+  constructor : (@user, dataSet, @TEXTURE_SIZE_P, @layer, @testData = false) ->
 
     @dataSetName = dataSet.name
 
     for layer in dataSet.dataLayers
-      if layer.typ == "color"
+      if layer.typ == @layer.name
         dataLayer = layer
 
-    unless dataLayer
-      Toast.error("No coloured data layer specified.")
+    lowerBoundary = [dataLayer.maxCoordinates.topLeft]
+    upperBoundary = [
+      dataLayer.maxCoordinates.width + dataLayer.maxCoordinates.topLeft[0]
+      dataLayer.maxCoordinates.height + dataLayer.maxCoordinates.topLeft[1]
+      dataLayer.maxCoordinates.depth + dataLayer.maxCoordinates.topLeft[2]
+    ]
 
-    upperBoundary = [dataLayer.maxCoordinates.width, dataLayer.maxCoordinates.height, dataLayer.maxCoordinates.depth]
-
-    @cube = new Cube(upperBoundary, dataLayer.resolutions.length)
-    @queue = new PullQueue(@dataSetName, @cube)
+    @cube = new Cube(upperBoundary, dataLayer.resolutions.length, @layer.bitDepth)
+    @queue = new PullQueue(@dataSetName, @cube, @layer.name, @testData)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
     @pingStrategies3d = [new PingStrategy3d.DslSlow()]
 
     @planes = []
-    @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P)
-    @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P)
-    @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P)
+    @planes[Dimensions.PLANE_XY] = new Plane2D(Dimensions.PLANE_XY, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
+    @planes[Dimensions.PLANE_XZ] = new Plane2D(Dimensions.PLANE_XZ, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
+    @planes[Dimensions.PLANE_YZ] = new Plane2D(Dimensions.PLANE_YZ, @cube, @queue, @TEXTURE_SIZE_P, @layer.bitDepth)
 
-    contrastCurve = new Uint8Array(256)
-    @contrastCurves[0] = new Uint8Array(256)
+    if @layer.allowManipulation
+      # assume zoom step count to be at least 1
+      @contrastCurves = []
+      contrastCurve = new Uint8Array(256)
+      @contrastCurves[0] = new Uint8Array(256)
+
+      for i in [1..@cube.ZOOM_STEP_COUNT]
+        @contrastCurves[i] = contrastCurve
 
     @user.on({
       set4BitChanged : (is4Bit) => @queue(is4Bit)
     })
 
-    for i in [1..@cube.ZOOM_STEP_COUNT]
-      @contrastCurves[i] = contrastCurve
+    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
 
 
   updateContrastCurve : (brightness, contrast) ->
+
+    unless @contrastCurves?
+      return
 
     contrastCurve = @contrastCurves[1]
     contrastCurveMag1 = @contrastCurves[0]
@@ -73,10 +81,9 @@ class Binary
       plane.updateContrastCurves(@contrastCurves)
 
 
-  ping : _.once (position, {zoomStep, area, activePlane}) ->
+  pingStop : ->
 
-    @ping = _.throttle(@pingImpl, @PING_THROTTLE_TIME)
-    @ping(position, {zoomStep, area, activePlane})
+    @queue.clear()
 
 
   pingImpl : (position, {zoomStep, area, activePlane}) ->
@@ -101,7 +108,7 @@ class Binary
         if strategy.inVelocityRange(1) and strategy.inRoundTripTimeRange(@queue.roundTripTime)
 
           pullQueue = strategy.ping(position, @direction, zoomStep, area, activePlane) if zoomStep? and area? and activePlane?
-
+          @queue.clear()
           for entry in pullQueue
             @queue.insert(entry...)
 

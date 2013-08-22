@@ -3,7 +3,7 @@
 # ~~~~
 
 # The general pages
-GET           /                                                           controllers.AnnotationController.index
+GET           /                                                           controllers.Application.index
 GET           /dashboard                                                  controllers.UserController.dashboard
 GET           /impressum                                                  controllers.Application.impressum
 
@@ -29,6 +29,9 @@ GET           /user/tasks/request                                         contro
 
 # Binary Data
 
+# DataSets
+GET           /datasets                                                   controllers.DataSetController.list
+GET           /datasets/:dataSetName/view                                 controllers.DataSetController.view(dataSetName: String)
 GET           /datasets/:dataSetName/layers/:dataLayerName/ws_data        controllers.BinaryData.requestViaWebsocket( dataSetName: String, dataLayerName: String, cubeSize: Int )
 POST          /datasets/:dataSetName/layers/:dataLayerName/data           controllers.BinaryData.requestViaAjax( dataSetName: String, dataLayerName: String, cubeSize: Int )
 GET           /datasets/:dataSetName/layers/:dataLayerName/data           controllers.BinaryData.requestViaAjaxDebug( dataSetName: String, dataLayerName: String, cubeSize: Int, x: Int, y: Int, z: Int, resolution: Int )
@@ -125,4 +128,3 @@ GET           /assets/javascripts/routes.js                               contro
 
 # Map static resources from the /public folder to the /public path
 GET           /assets/*file                                               controllers.Assets.at(path="/public", file)
-

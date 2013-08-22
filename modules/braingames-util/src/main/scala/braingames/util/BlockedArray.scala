@@ -43,7 +43,6 @@ case class BlockedArray3D[T](
       p.x / blockWidth * zBlocks * yBlocks
 
   def apply(p: Point3D): Array[T] = {
-    //println(s"p: $p depth: $blockDepth w: $blockWidth h: $blockHeight")
     if(p.x < 0 || p.y < 0 || p.z < 0)
       nullArray
     else {

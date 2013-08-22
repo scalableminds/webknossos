@@ -35,7 +35,7 @@ class PlaneController
       @keyboardLoopDelayed?.unbind()
 
 
-  constructor : (@model, stats, @gui, renderer, scene, @sceneController) ->
+  constructor : (@model, stats, @gui, renderer, scene, @sceneController, @controlMode) ->
 
     _.extend(@, new EventMixin())
 
@@ -83,7 +83,7 @@ class PlaneController
       )
 
     objects = { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos }
-    @cellTracingController = new CellTracingController( objects )
+    @cellTracingController = new CellTracingController( objects, @controlMode )
     @volumeTracingController = new VolumeTracingController( objects )
 
     meshes = @sceneController.getMeshes()
@@ -280,8 +280,14 @@ class PlaneController
 
   render : ->
 
-    @model.binary.ping(@flycam.getPosition(), {zoomStep: @flycam.getIntegerZoomStep(), area: [@flycam.getArea(constants.PLANE_XY),
-                        @flycam.getArea(constants.PLANE_YZ), @flycam.getArea(constants.PLANE_XZ)], activePlane: @activeViewport})
+    for dataLayerName of @model.binary
+      if (@sceneController.pingDataLayer(dataLayerName))
+        @model.binary[dataLayerName].ping(@flycam.getPosition(), {
+          zoomStep:     @flycam.getIntegerZoomStep()
+          area:         @flycam.getAreas()
+          activePlane:  @activeViewport
+        })
+
     @model.cellTracing.globalPosition = @flycam.getPosition()
     @cameraController.update()
     @sceneController.update()

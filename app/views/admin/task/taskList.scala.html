@@ -7,9 +7,9 @@
   
     <div class="page-selection"
       data-url="@controllers.admin.routes.TaskAdministration.list()"
-      data-paged-table-id="tasklist-table"
-    >
+      data-paged-table-id="tasklist-table">
       <input type="text" class="search-query pagination-searchbox" placeholder="Search">
+      <a href="@controllers.admin.routes.TaskAdministration.create()" class="pagination-createNew">Create new Task</a>
     </div>
     
     <table id="tasklist-table" class="table table-double-striped table-details">
@@ -76,8 +76,5 @@
 
       </tbody>
     </table>
-    <p>
-      <a href="@controllers.admin.routes.TaskAdministration.create()" class="btn">Create new...</a>
-    </p>
   </div>
 }

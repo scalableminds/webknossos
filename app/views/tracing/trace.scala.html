@@ -1,28 +1,26 @@
-@(tracing: models.tracing.ContainsTracingInfo)(additionalHtml: Html)(implicit session: oxalis.view.AuthedSessionData)
+@(annotation: models.annotation.AnnotationLike)(additionalHtml: Html)(implicit session: oxalis.view.AuthedSessionData)
 
-@import models.tracing.TracingType
 @import models.task.Task
+    @import models.annotation.AnnotationType
 
 @main( ){
   <div id="loader"><div id="loader-icon"><i class="icon-spinner icon-spin icon-4x"></i><br>Loading</div></div>
-  <div id="container" data-tracing-type="@tracing.tracingType" data-tracing-id="@tracing.id" class="clearfix">
+  <div id="container" data-tracing-type="@annotation.typ" data-tracing-id="@annotation.id" class="clearfix">
     <div id="main" role="main">
       <div id="overlay">
-        @if(tracing.isEditable){
+        @if(annotation.restrictions.allowUpdate(session.user)){
           <a href="#" class="btn btn-primary" id="trace-save-button">Save</a>
         } else {
           <button class="btn btn-primary disabled">Read only</button> 
         }
         <div id="buttonbar" class="btn-group inline-block">
-          @if(tracing.tracingType == TracingType.Task){
-            <a href="@controllers.routes.TracingController.finishWithRedirect(tracing.id)" class="btn btn-small" id="trace-finish-button"><i class="icon-ok-circle"></i> Finish</a>
-          } 
-          @if(!Task.isTrainingsTracing(tracing)){
-            <a href="@controllers.routes.TracingController.download(tracing.tracingType.toString, tracing.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
+          <a href="@controllers.routes.AnnotationController.finishWithRedirect(annotation.typ, annotation.id)" class="btn btn-small" id="trace-finish-button"><i class="icon-ok-circle"></i> Finish</a>
+          @if(!annotation.isTrainingsAnnotation()){
+            <a href="@controllers.routes.AnnotationController.download(annotation.typ, annotation.id)" class="btn btn-small" id="trace-download-button"><i class="icon-download"></i> NML</a>
           }
           <a href="#help-modal" class="btn btn-small" data-toggle="modal"><i class="icon-question-sign"></i> Help</a>
         </div>
-        <div id="dataset" class="well well-small">@tracing._name.getOrElse(tracing.tracingType)<br />DataSet: @tracing.dataSetName<br /></div>
+        <div id="dataset" class="well well-small">@annotation._name.getOrElse(annotation.typ)<br />DataSet: <span id="dataset-name"></span><br /></div>
         <div class="input-prepend">
           <span class="add-on">Position</span>
           <input id="trace-position-input" type="text">
@@ -30,7 +28,7 @@
         <div id="zoomFactor">
         </div>
         <div class="tabbable">
-          @defining(tracing.task){ task =>
+          @defining(annotation.task){ task =>
             <ul class="nav nav-tabs">
               @if(task.isDefined) {
                 <li><a href="#tab0" data-toggle="tab">Task</a></li>
@@ -56,9 +54,9 @@
                     @additionalHtml
                   </div>
                 </div>
-                <div class="tab-pane" id="tab2">
+                <div class="tab-pane" id="tab2" />
               } else {
-                <div class="tab-pane active" id="tab2">
+                <div class="tab-pane active" id="tab2" />
               }
                 <div id="status"></div>
                 <div id="optionswindow"></div>
@@ -66,7 +64,7 @@
             </div>
           }
         </div>
-      </div> 
+      </div>
       <div id="tracing">
         <div id="render">
           <div id="help-modal" class="modal hide fade"></div>
@@ -84,18 +82,25 @@
       <div class="tabbable" id="comments-tree">
         <ul class="nav nav-tabs">
           <li class="active"><a href="#tab-tree" data-toggle="tab">Tree Viewer</a></li>
+          <li><a href="#tab-trees" data-toggle="tab">Trees</a></li>
           <li><a href="#tab-comments" data-toggle="tab">Comments</a></li>
         </ul>
         <div class="tab-content">
           <div class="tab-pane active" id="tab-tree">
+            <div id="abstractTreeViewer"></div>
+          </div>
+          <div class="tab-pane" id="tab-trees">
             <div id="tree-navbar">
               <div class="btn-group inline-block">
                 <button class="btn" id="tree-create-button"><i class="icon-plus"></i> Create tree</button>
                 <button class="btn" id="tree-delete-button"><i class="icon-remove"></i> Delete tree</button>
               </div>
               <div class="btn-group inline-block">
-                <a class="btn dropdown-toggle" data-toggle="dropdown" id="tree-list-button"><i class="icon-list"></i> </a>
-                <ul class="dropdown-menu pull-right" id="tree-list"></ul>
+                <a class="btn dropdown-toggle" data-toggle="dropdown" id="tree-sort-button" title="Sort"><i class="icon-list-ol"></i></a>
+                <ul class="dropdown-menu pull-right" id="tree-sort">
+                  <a href="#" data-sort="name"><li>by name <i class="icon-ok" id="sort-name-icon"></i></li></a>
+                  <a href="#" data-sort="id"><li>by creation time <i class="icon-ok" id= "sort-id-icon"></i></li></a>
+                </ul>
               </div>
               <div class="inline-block pull-right">
                 <a class="btn" id="tree-color-shuffle" title="Change color"><i class="icon-adjust"></i></a>
@@ -114,8 +119,10 @@
                 </div>
                 <button class="btn" id="tree-next-button"><i class="icon-arrow-right"></i></button>
               </div>
-            </div>
-            <div id="abstractTreeViewer"></div>
+              <div>
+                <ul id="tree-list"></ul>
+              </div>
+            </div>  
           </div>
           <div class="tab-pane" id="tab-comments">
             <div class="input-prepend input-append" id="comment-navbar">
@@ -131,7 +138,6 @@
       </div>
     </div>   
   </div> <!--! end of #container -->
-
   <!-- JavaScript at the bottom for fast page loading -->
 
 }

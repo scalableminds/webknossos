@@ -157,6 +157,9 @@ class ArbitraryController
       "u" : => 
         @record = false
         @infoPlane.updateInfo(false)
+      #Comments
+      "n" : => @setActiveNode(@model.route.nextCommentNodeID(false), true)
+      "p" : => @setActiveNode(@model.route.nextCommentNodeID(true), true)
     )
 
     @input.keyboardOnce = new Input.Keyboard(

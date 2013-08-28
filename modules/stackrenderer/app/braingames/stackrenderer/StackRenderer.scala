@@ -101,10 +101,11 @@ class StackRenderer(useLevelUrl: String, binaryDataUrl: String) extends Actor {
   def createStackImage(stack: Stack) {
     val images = stack.frames.map(ImageIO.read)
     val params = ImageCreatorParameters(
+      bytesPerElement = 1,
       slideWidth = stack.level.width,
       slideHeight = stack.level.height,
       imagesPerRow = imagesPerRow)
-    ImageCreator.createBigImage(images, params).map { combinedImage =>
+    ImageCreator.createSpriteSheet(images, params, ImageCreator.defaultTargetType).map { combinedImage =>
       new PNGWriter().writeToFile(combinedImage.image, stack.image)
       XmlAtlas.writeToFile(combinedImage.info, stack.image.getName, stack.xmlAtlas)
     }

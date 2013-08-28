@@ -70,7 +70,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
     updateTicker = Some(context.system.scheduler.schedule(TICKER_INTERVAL, TICKER_INTERVAL) {
       changeHandler.onTick(watchedPath, recursive)
     })
-    watchFile(watchedPath, recursive)
+    // watchFile(watchedPath, recursive)
   }
 
   /**
@@ -133,7 +133,7 @@ class DirectoryWatcherActor(config: Config, changeHandler: DirectoryChangeHandle
       } else {
         register(path)
       }
-
+      
       Future {
         breakable {
           while (true) {

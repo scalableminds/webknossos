@@ -13,7 +13,8 @@ import scala.concurrent.Future
 import scala.util._
 import play.api.libs.concurrent.Akka
 import models.user.TimeEntry
-import models.tracing.Tracing
+import models.annotation.AnnotationDAO
+import models.tracing.skeleton.SkeletonTracing
 
 object BrainTracing {
   val URL = "http://braintracing.org/"
@@ -59,8 +60,8 @@ object BrainTracing {
 
   def logTime(user: User, timeEntry: TimeEntry) = {
     if (isActive) {
-      val tracing = timeEntry.tracing.flatMap(Tracing.findOneById)
-      val task = tracing.flatMap(_.task)
+      val annotation = timeEntry.annotation.flatMap(AnnotationDAO.findOneById)
+      val task = annotation.flatMap(_.task)
       val taskType = task.flatMap(_.taskType)
       val project = task.flatMap(_.project)
       if (logTimeForExplorative || task.isDefined) {

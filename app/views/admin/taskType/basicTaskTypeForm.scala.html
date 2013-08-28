@@ -1,12 +1,11 @@
 @(taskTypeForm: Form[_])
-
-@import models.tracing.TracingSettings._
+@import models.annotation.AnnotationSettings
 
 @helper.inputText(taskTypeForm("summary"))
 @helper.textarea(taskTypeForm("description"))
 
-@helper.checkbox(field = taskTypeForm("allowedModes[]"), 'value-> OXALIS, '_label -> "Allow Oxalis", 'checked -> "checked")
-@helper.checkbox(field = taskTypeForm("allowedModes[]"), 'value-> ARBITRARY, '_label -> "Allow Arbitrary", 'checked -> "checked")
+@helper.checkbox(field = taskTypeForm("allowedModes[]"), 'value-> AnnotationSettings.OXALIS, '_label -> "Allow Oxalis", 'checked -> "checked")
+@helper.checkbox(field = taskTypeForm("allowedModes[]"), 'value-> AnnotationSettings.ARBITRARY, '_label -> "Allow Arbitrary", 'checked -> "checked")
 @helper.checkbox(field = taskTypeForm("branchPointsAllowed"), '_label -> "Allow Branchpoints")
 @helper.checkbox(field = taskTypeForm("somaClickingAllowed"), '_label -> "Allow Soma clicking")
 

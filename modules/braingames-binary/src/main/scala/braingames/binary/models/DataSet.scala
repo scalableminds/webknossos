@@ -1,25 +1,33 @@
 package braingames.binary.models
 
-import braingames.geometry.Point3D
 import play.api.libs.json.Reads
+import braingames.geometry.{Scale, Point3D}
+import braingames.geometry.Scale._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import braingames.binary.models._
+import java.io.File
 
 case class DataSetSettings(
   name: String,
-  priority: Option[Int],
-  fallback: Option[String])
+  scale: Scale,
+  allowedTeams: Option[List[String]],
+  priority: Option[Int])
 
 case class DataSet(
-    name: String,
-    baseDir: String,
-    priority: Int = 0,
-    fallback: Option[String] = None,
-    dataLayers: List[DataLayer] = Nil) {
+  name: String,
+  baseDir: String,
+  priority: Int = 0,
+  scale: Scale,
+  dataLayers: List[DataLayer] = Nil,
+  owningTeam: String,
+  allowedTeams: List[String]
+  ) {
 
   def dataLayer(typ: String) =
     dataLayers.find(_.typ == typ)
+
+  def relativeBaseDir(binaryBase: String) = baseDir.replace(binaryBase, "")
 
   val blockLength = 128
 
@@ -31,13 +39,38 @@ case class DataSet(
       point.y / blockLength / resolution,
       point.z / blockLength / resolution)
 
-  def globalToLocal(point: Point3D, resolution: Int) =
+  def applyResolution(point: Point3D, resolution: Int) =
     Point3D(
-      (point.x / resolution) % blockLength,
-      (point.y / resolution) % blockLength,
-      (point.z / resolution) % blockLength)
+      point.x / resolution,
+      point.y / resolution,
+      point.z / resolution)
 }
 
-object DataSet {
-  val dataSetSettingsReads = Json.reads[DataSetSettings]
+object DataSetSettings extends SettingsFile with Function4[String, Scale, Option[List[String]], Option[Int], DataSetSettings]{
+
+  val settingsFileName = "settings.json"
+
+  implicit val dataSetSettingsFormat = Json.format[DataSetSettings]
+
+  def settingsFileFromFolder(f: File) = {
+    new File(f.getPath + "/" + settingsFileName)
+  }
+
+  def readFromFolder(folder: File): Option[DataSetSettings] = {
+    extractSettingsFromFile(
+      settingsFileFromFolder(folder),
+      dataSetSettingsFormat)
+  }
+
+  def fromDataSet(dataSet: DataSet) = DataSetSettings(
+    dataSet.name,
+    dataSet.scale,
+    Some(dataSet.allowedTeams),
+    Some(dataSet.priority)
+  )
+
+  def writeToFolder(dataSet: DataSet, folder: File) = {
+    val settings = fromDataSet(dataSet)
+    writeSettingsToFile(settings, settingsFileFromFolder(folder))
+  }
 }

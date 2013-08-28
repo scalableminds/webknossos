@@ -2,6 +2,7 @@ package braingames.util
 
 import java.nio.ByteBuffer
 import scala.math._
+import scala.reflect.ClassTag
 
 object ExtendedTypes {
 
@@ -16,6 +17,23 @@ object ExtendedTypes {
       while (iterator.hasNext) {
         val steps = f(iterator.next().toList)
         iterator.drop(steps)
+      }
+    }
+  }
+
+  implicit class ExtendedArraySeq[T](val as: Seq[Array[T]]){
+    def appendArrays(implicit c: ClassTag[T]) = {
+      if (as.size == 1)
+        as(0)
+      else {
+        val size = as.map(_.size).sum
+        val combined = new Array[T](size)
+        as.foldLeft(0) {
+          case (idx, a) =>
+            Array.copy(a, 0, combined, idx, a.length)
+            idx + a.length
+        }
+        combined
       }
     }
   }
@@ -43,7 +61,7 @@ object ExtendedTypes {
 
     def toBooleanFromFloat = b match {
       case Array(0x3F, -0x80, 0x0, 0x0) => true
-      case _                            => false
+      case _ => false
     }
 
     /**
@@ -55,7 +73,9 @@ object ExtendedTypes {
   }
 
   implicit class ExtendedDouble(val d: Double) extends AnyVal {
+
     import braingames.util.Math._
+
     /**
      * Patches the value of this double (used during arithmetic operations
      * which may result in slightly incorrect result. To ensure correct
@@ -63,7 +83,7 @@ object ExtendedTypes {
      */
     def patchAbsoluteValue =
       if (d >= 0)
-        d + Math.EPSILON
+        d + EPSILON
       else
         d - EPSILON
 
@@ -72,6 +92,9 @@ object ExtendedTypes {
      */
     def isNearZero =
       d <= EPSILON && d >= -EPSILON
+
+    def castToInt =
+      (d + EPSILON).toInt
 
     /**
      * Makes sure the double is in the given interval.
@@ -121,6 +144,12 @@ object ExtendedTypes {
 
     def toIntOpt = try {
       Some(s.toInt)
+    } catch {
+      case _: java.lang.NumberFormatException => None
+    }
+
+    def toLongOpt = try {
+      Some(s.toLong)
     } catch {
       case _: java.lang.NumberFormatException => None
     }

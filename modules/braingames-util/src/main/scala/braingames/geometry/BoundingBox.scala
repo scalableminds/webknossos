@@ -11,7 +11,7 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
   }
 }
 
-object BoundingBox {
+object BoundingBox extends Function4[Point3D, Int, Int, Int, BoundingBox]{
   import play.api.libs.json._
   import play.api.libs.functional.syntax._
 
@@ -43,5 +43,5 @@ object BoundingBox {
   def createFrom(width: Int, height: Int, deph: Int, topLeft: Point3D): BoundingBox =
     BoundingBox(topLeft, width, height, deph)
 
-  implicit val boundingBoxWrites: Writes[BoundingBox] = Json.writes[BoundingBox]
+  implicit val boundingBoxFormat = Json.format[BoundingBox]
 }

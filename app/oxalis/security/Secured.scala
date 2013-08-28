@@ -23,6 +23,7 @@ import akka.actor.Props
 import oxalis.user.ActivityMonitor
 import oxalis.user.UserActivity
 import oxalis.view.AuthedSessionData
+import scala.concurrent.Future
 
 case class AuthenticatedRequest[A](
   val user: User, request: Request[A]) extends WrappedRequest(request)
@@ -32,7 +33,7 @@ object Secured {
    * Key used to store authentication information in the client cookie
    */
   val SessionInformationKey = "userId"
-    
+
   val ActivityMonitor = Akka.system.actorOf(Props[ActivityMonitor], name = "activityMonitor")
 
   /**
@@ -52,9 +53,9 @@ trait Secured {
    */
   val defaultUserName = "scmboy@scalableminds.com"
   lazy val defaultUser = User.findLocalByEmail(defaultUserName)
-  
+
   def DefaultAccessRole: Option[Role]
-  
+
   val userService = oxalis.user.UserService
 
   /**
@@ -72,6 +73,7 @@ trait Secured {
       user <- userService.findOneById(userId)
     } yield user
   }
+
   /**
    * Retrieve the connected users email address.
    */
@@ -94,10 +96,10 @@ trait Secured {
    * a user fails this check he is redirected to the result of 'onUnauthorized'
    *
    * Example usage:
-   *   def initialize = Authenticated( role=Admin ) { user =>
-   *     implicit request =>
-   *       Ok("User is logged in!")
-   *   }
+   * def initialize = Authenticated( role=Admin ) { user =>
+   * implicit request =>
+   * Ok("User is logged in!")
+   * }
    *
    */
 
@@ -105,18 +107,20 @@ trait Secured {
     parser: BodyParser[A] = BodyParsers.parse.anyContent,
     role: Option[Role] = DefaultAccessRole,
     permission: Option[Permission] = DefaultAccessPermission)(f: AuthenticatedRequest[A] => Result) = {
-    Action(parser) { request =>
-      maybeUser(request).map { user =>
-        Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
-        if (user.verified) {
-          if (hasAccess(user, role, permission))
-            f(AuthenticatedRequest(user, request))
-          else
-            Forbidden(views.html.error.defaultError(Messages("user.noPermission"), true)(AuthedSessionData(user, request.flash)))
-        } else {
-          Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash)))
-        }
-      }.getOrElse(onUnauthorized(request))
+    Action(parser) {
+      request =>
+        maybeUser(request).map {
+          user =>
+            Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
+            if (user.verified) {
+              if (hasAccess(user, role, permission))
+                f(AuthenticatedRequest(user, request))
+              else
+                Forbidden(views.html.error.defaultError(Messages("user.noPermission"), true)(AuthedSessionData(user, request.flash)))
+            } else {
+              Forbidden(views.html.error.defaultError(Messages("user.notVerified"), false)(AuthedSessionData(user, request.flash)))
+            }
+        }.getOrElse(onUnauthorized(request))
     }
   }
 
@@ -126,26 +130,28 @@ trait Secured {
 
   def AuthenticatedWebSocket[A](
     role: Option[Role] = DefaultAccessRole,
-    permission: Option[Permission] = DefaultAccessPermission)(f: => User => RequestHeader => (Iteratee[A, _], Enumerator[A]))(implicit formatter: FrameFormatter[A]) =
-    WebSocket.using[A] { request =>
-      (for {
-        user <- maybeUser(request)
-        if (hasAccess(user, role, permission))
-      } yield {
-        f(user)(request)
-      }).getOrElse {
-        val iteratee = Done[A, Unit]((), Input.EOF)
-        // Send an error and close the socket
-        val (enumerator, channel) = Concurrent.broadcast[A]
-        channel.eofAndEnd
+    permission: Option[Permission] = DefaultAccessPermission)(f: => User => RequestHeader => Future[(Iteratee[A, _], Enumerator[A])])(implicit formatter: FrameFormatter[A]) =
+    WebSocket.async[A] {
+      request =>
+        (for {
+          user <- maybeUser(request)
+          if (hasAccess(user, role, permission))
+        } yield {
+          f(user)(request)
+        }).getOrElse {
+          val iteratee = Done[A, Unit]((), Input.EOF)
+          // Send an error and close the socket
+          val (enumerator, channel) = Concurrent.broadcast[A]
+          channel.eofAndEnd
 
-        (iteratee, enumerator)
-      }
+          Future.successful((iteratee -> enumerator))
+        }
     }
 
   def hasAccess(user: User, role: Option[Role], permission: Option[Permission]) =
     (role.isEmpty || user.hasRole(role.get)) &&
       (permission.isEmpty || user.hasPermission(permission.get))
+
   /**
    * Redirect to login if the user in not authorized.
    */

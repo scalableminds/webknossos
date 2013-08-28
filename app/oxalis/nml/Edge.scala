@@ -1,13 +1,13 @@
 package oxalis.nml
 
-import braingames.xml.XMLWrites
+import braingames.xml.{SynchronousXMLWrites, XMLWrites}
 import play.api.libs.json._
 
 case class Edge(source: Int, target: Int)
 
 object Edge {
-  implicit object EdgeXMLWrites extends XMLWrites[Edge] {
-    def writes(e: Edge) = {
+  implicit object EdgeXMLWrites extends SynchronousXMLWrites[Edge] {
+    def synchronousWrites(e: Edge) = {
       <edge source={ e.source.toString } target={ e.target.toString }/>
     }
   }

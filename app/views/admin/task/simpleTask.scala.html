@@ -1,5 +1,8 @@
 @* taskDetailTableItem Template File *@
 @(task: models.task.Task)
+
+@import scala.concurrent.duration._
+
 <tr>
   <td> 
     <a href="@controllers.admin.routes.TaskAdministration.list#@task.id">
@@ -12,7 +15,7 @@
     </a>
   </td>
   <td>
-    @task.tracingBase.map(_.dataSetName)
+    @task.annotationBase.map(_.dataSetName)
   </td>
   <td> @defining(task.status){ status =>
       <span title="Unassigned"> 
@@ -27,6 +30,9 @@
         <i class="icon-ok-circle"></i> @status.completed done
       </span>
     }
+  </td>
+  <td>
+      Tracked Time: @task.tracingTime.map(t => formatTimeHumanReadable(t millis)).getOrElse("-")
   </td>
   <td class="nowrap">
     <a href="@controllers.admin.routes.NMLIO.taskDownload(task.id)" title="download all finished tracings"><i class="icon-download"></i> download </a>

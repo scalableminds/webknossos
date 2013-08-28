@@ -9,7 +9,7 @@ fi
 getent passwd <%= name %>
 result=$? 
 if [ $result -eq 2 ]; then
-  useradd -d /nonexistent/ -g <%=name %> -s /bin/bash -r <%= name %>
+  useradd -md /usr/lib/<%=name %> -g <%=name %> -s /bin/bash -r <%= name %>
 fi
 
 mkdir -p /etc/<%= name %>

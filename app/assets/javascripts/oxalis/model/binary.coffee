@@ -6,6 +6,7 @@
 ./binary/ping_strategy : PingStrategy
 ./binary/ping_strategy_3d : PingStrategy3d
 ./dimensions : Dimensions
+../../libs/toast : Toast
 ###
 
 class Binary
@@ -19,7 +20,6 @@ class Binary
   queue : null
   planes : []
 
-  dataSetId : ""
   dataSetName : ""
   direction : [0, 0, 0]
   contrastCurves : []
@@ -27,11 +27,19 @@ class Binary
 
   constructor : (@user, dataSet, @TEXTURE_SIZE_P) ->
 
-    @dataSetId = dataSet.id
     @dataSetName = dataSet.name
 
-    @cube = new Cube(dataSet.upperBoundary, dataSet.dataLayers.color.resolutions.length)
-    @queue = new PullQueue(@dataSetId, @cube)
+    for layer in dataSet.dataLayers
+      if layer.typ == "color"
+        dataLayer = layer
+
+    unless dataLayer
+      Toast.error("No coloured data layer specified.")
+
+    upperBoundary = [dataLayer.maxCoordinates.width, dataLayer.maxCoordinates.height, dataLayer.maxCoordinates.depth]
+
+    @cube = new Cube(upperBoundary, dataLayer.resolutions.length)
+    @queue = new PullQueue(@dataSetName, @cube)
 
     @pingStrategies = [new PingStrategy.DslSlow(@cube, @TEXTURE_SIZE_P)]
     @pingStrategies3d = [new PingStrategy3d.DslSlow()]
@@ -48,7 +56,7 @@ class Binary
       set4BitChanged : (is4Bit) => @queue(is4Bit)
     })
 
-    for i in [1...@cube.ZOOM_STEP_COUNT]
+    for i in [1..@cube.ZOOM_STEP_COUNT]
       @contrastCurves[i] = contrastCurve
 
 

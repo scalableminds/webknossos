@@ -1,26 +1,32 @@
 @(user: models.user.User)
-<tr data-name="@user.name" data-id="@user.id"> 
+<tr data-name="@user.name" data-id="@user.id" id="@user.id">
 	<td> <input type="checkbox" name="id" value="@user.id" class="select-row"> </td>
 	<td> @user.lastName </td>
-	<td> @user.firstName</td> 
+	<td> @user.firstName</td>
 	<td> @user.email </td>
-	<td> 
+	<td>
 		@user.roles.map{ role =>
   		<span class="label" style="background-color:@models.security.Role.colorOf(role)">@role</span>
-		} 
+		}
 	</td>
 	<td>
 		@user.experiences.map{ experience =>
-			<span class="label">@experience._1 @experience._2</span>
+			<span class="label label-experience">@experience._1 @experience._2</span>
 		}
-	<td> 
-		@if(user.verified) {            
+    </td>
+    <td>
+        @user.teams.map{ team =>
+            @team <br />
+        }
+    </td>
+	<td>
+		@if(user.verified) {
   		<i class="icon-ok"></i>
 		} else {
-  		<a href="@controllers.admin.routes.UserAdministration.verify(user.id)" data-ajax="replace-row"> verify </a>
+  		<a href="#" data-url="@controllers.admin.routes.UserAdministration.verify(user.id)" data-placement="bottom" data-html="true" data-title="Assign to a Team" rel="popover"> verify </a>
 		}
 	</td>
-	<td class="nowrap"> 
+	<td class="nowrap">
     <a href="@controllers.admin.routes.UserAdministration.show(user.id)" ><i class="icon-user"></i> show Tracings</a><br />
     <a href="@controllers.admin.routes.NMLIO.userDownload(user.id)" title="download all finished tracings"><i class="icon-download"></i> download </a><br />
   	<a href="@controllers.admin.routes.UserAdministration.delete(user.id)" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a><br />

@@ -1,13 +1,9 @@
 package models.task
 
 import com.mongodb.casbah.Imports._
-import models.context._
-import com.novus.salat.annotations._
-import com.novus.salat.dao.SalatDAO
-import models.basics.BasicDAO
 import models.user.User
-import models.tracing.Tracing
-import models.tracing.TracingType
+import play.api.libs.json.Json
+import models.basics.BasicDAOFormats
 
 case class Training(
     domain: String,
@@ -15,7 +11,9 @@ case class Training(
     loss: Int,
     sample: ObjectId)
 
-object Training {
+object Training extends BasicDAOFormats{
+
+  implicit val trainingFormat = Json.format[Training]
   
   def empty = Training("", 10, 5, null)
   

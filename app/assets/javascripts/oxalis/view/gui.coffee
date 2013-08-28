@@ -11,9 +11,11 @@ class Gui
 
   model : null
   
-  constructor : (container, @model, @tracingSettings) ->
+  constructor : (container, @model, @restrictions, @tracingSettings) ->
     
     _.extend(this, new EventMixin())
+
+    @updateGlobalPosition( @model.flycam.getPosition() )
 
     @user = @model.user
     # create GUI
@@ -36,8 +38,10 @@ class Gui
       activeTreeID : @model.route.getActiveTreeId()
 
       activeNodeID : @model.route.getActiveNodeId()
+      activeCellID : @model.volumeTracing.getActiveCellId()
       newNodeNewTree : if somaClickingAllowed then @user.newNodeNewTree else false
       deleteActiveNode : => @trigger "deleteActiveNode"
+      createNewCell : => @trigger "createNewCell"
       # radius : if modelRadius then modelRadius else 10 * @model.scaleInfo.baseVoxel
 
     if @datasetPosition == 0
@@ -51,14 +55,16 @@ class Gui
     @gui = new dat.GUI(autoPlace: false, width : 280, hideable : false, closed : true)
 
     container.append @gui.domElement
+
+    @folders = []
     
-    fControls = @gui.addFolder("Controls")
+    @folders.push( fControls = @gui.addFolder("Controls") )
     @addCheckbox(fControls, @user, "inverseX", "Inverse X")
     @addCheckbox(fControls, @user, "inverseY", "Inverse Y")
     @addSlider(fControls, @user, "keyboardDelay",
       0, 500, 10, "Keyboard delay (ms)" )
 
-    @fViewportcontrols = @gui.addFolder("Viewportoptions")
+    @folders.push( @fViewportcontrols = @gui.addFolder("Viewportoptions") )
     @moveValueController = @addSlider(@fViewportcontrols, @user, "moveValue",
       constants.MIN_MOVE_VALUE, constants.MAX_MOVE_VALUE, 10, "Move Value (nm/s)")
     @zoomController = @addSlider(@fViewportcontrols, @user, "zoom",
@@ -67,7 +73,7 @@ class Gui
       constants.MAX_SCALE, 0.1, "Viewport Scale")
     @addCheckbox(@fViewportcontrols, @user, "dynamicSpaceDirection", "d/f-Switching")
 
-    @fFlightcontrols = @gui.addFolder("Flightoptions")
+    @folders.push( @fFlightcontrols = @gui.addFolder("Flightoptions") )
     @addSlider(@fFlightcontrols, @user, "mouseRotateValue",
       0.001, 0.02, 0.001, "Mouse Rotation")
     @addSlider(@fFlightcontrols, @user, "rotateValue",
@@ -77,7 +83,7 @@ class Gui
     @addSlider(@fFlightcontrols, @user, "crosshairSize",
       0.05, 0.5, 0.01, "Crosshair size")
 
-    @fView = @gui.addFolder("View")
+    @folders.push( @fView = @gui.addFolder("View") )
     @addCheckbox(@fView, @settings, "fourBit", "4 Bit")
     @addCheckbox(@fView, @user, "interpolation", "Interpolation")
     @brightnessController =
@@ -97,33 +103,41 @@ class Gui
                           .name("Quality")
                           .onChange((v) => @setQuality(v))
 
-    @fSkeleton = @gui.addFolder("Skeleton View")
+    @folders.push( @fSkeleton = @gui.addFolder("Skeleton View") )
     @addCheckbox(@fSkeleton, @user, "displayPreviewXY", "Display XY-Plane")
     @addCheckbox(@fSkeleton, @user, "displayPreviewYZ", "Display YZ-Plane")
     @addCheckbox(@fSkeleton, @user, "displayPreviewXZ", "Display XZ-Plane")
 
-    fTrees = @gui.addFolder("Trees")
-    @activeTreeIdController = @addNumber(fTrees, @settings, "activeTreeID",
+    @folders.push( @fTrees = @gui.addFolder("Trees") )
+    @activeTreeIdController = @addNumber(@fTrees, @settings, "activeTreeID",
       1, 1, "Active Tree ID", (value) => @trigger( "setActiveTree", value))
     if somaClickingAllowed
-      @addCheckbox(fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
+      @addCheckbox(@fTrees, @settings, "newNodeNewTree", "Soma clicking mode")
     else
       @set("newNodeNewTree", false, Boolean)
 
-    fNodes = @gui.addFolder("Nodes")
-    @activeNodeIdController = @addNumber(fNodes, @settings, "activeNodeID",
+    @folders.push( @fNodes = @gui.addFolder("Nodes") )
+    @activeNodeIdController = @addNumber(@fNodes, @settings, "activeNodeID",
       1, 1, "Active Node ID", (value) => @trigger( "setActiveNode", value))
-    @particleSizeController = @addSlider(fNodes, @user, "particleSize",
+    @particleSizeController = @addSlider(@fNodes, @user, "particleSize",
       constants.MIN_PARTICLE_SIZE, constants.MAX_PARTICLE_SIZE, 1, "Node size")
-    @addFunction(fNodes, @settings, "deleteActiveNode", "Delete Active Node")
+    @addFunction(@fNodes, @settings, "deleteActiveNode", "Delete Active Node")
 
-    fTrees.open()
-    fNodes.open()
+    @folders.push( @fCells = @gui.addFolder("Cells") )
+    @activeCellIdController = @addNumber(@fCells, @settings, "activeCellID",
+      0, 1, "Active Cell ID", (value) => @trigger( "setActiveCell", value))
+    @addFunction(@fCells, @settings, "createNewCell", "Create new Cell")
+
+    @fTrees.open()
+    @fNodes.open()
+    @fCells.open()
+
+    $("#dataset-name").text(@model.binary.dataSetName)
 
     $("#trace-position-input").on "change", (event) => 
 
       @setPosFromString(event.target.value)
-      return
+      $("#trace-position-input").blur()
 
     $("#trace-finish-button").click (event) =>
 
@@ -167,6 +181,11 @@ class Gui
       newNode          : => @update()
       newTree          : => @update()
 
+    @model.volumeTracing.on
+      newActiveCell    : =>
+        console.log "newActiveCell!"
+        @update()
+
     @model.user.on
       scaleChanged : => @updateScale()
       zoomChanged : => @updateZoom()
@@ -205,7 +224,7 @@ class Gui
 
   saveNow : =>
     @user.pushImpl()
-    if @tracingSettings.isEditable
+    if @restrictions.allowUpdate
       @model.route.pushNow()
         .then( 
           -> Toast.success("Saved!")
@@ -215,7 +234,11 @@ class Gui
       new $.Deferred().resolve()
 
   setPosFromString : (posString) =>
-    stringArray = posString.split(",")
+    # remove leading/trailing whitespaces
+    strippedString = posString.trim()
+    # replace remaining whitespaces with commata
+    unifiedString = strippedString.replace /,?\s+,?/g, ","
+    stringArray = unifiedString.split(",")
     if stringArray.length == 3
       pos = [parseInt(stringArray[0]), parseInt(stringArray[1]), parseInt(stringArray[2])]
       if !isNaN(pos[0]) and !isNaN(pos[1]) and !isNaN(pos[2])
@@ -237,7 +260,7 @@ class Gui
       $(".cr.number.has-slider").tooltip({"title" : "Move mouse up or down while clicking the number to easily adjust the value"})
 
   updateGlobalPosition : (globalPos) =>
-    stringPos = Math.round(globalPos[0]) + ", " + Math.round(globalPos[1]) + ", " + Math.round(globalPos[2])
+    stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
     $("#trace-position-input").val(stringPos)
 
   set : (name, value, type) =>
@@ -290,24 +313,42 @@ class Gui
     # called when value user switch to different active node
     @settings.activeNodeID = @model.route.lastActiveNodeId
     @settings.activeTreeID = @model.route.getActiveTreeId()
+    @settings.activeCellID = @model.volumeTracing.getActiveCellId()
     @activeNodeIdController.updateDisplay()
     @activeTreeIdController.updateDisplay()
+    @activeCellIdController.updateDisplay()
+
+  setFolderVisibility : (folder, visible) ->
+
+    $element = $(folder.domElement)
+    if visible then $element.show() else $element.hide()
+
+  setFolderElementVisibility : (element, visible) ->
+
+    $element = $(element.domElement).parents(".cr")
+    if visible then $element.show() else $element.hide()
+
+  hideFolders : (folders) ->
+
+    for folder in folders
+      @setFolderVisibility( folder, false)
 
   setMode : (mode) ->
 
+    for folder in @folders
+      @setFolderVisibility(folder, true)
+    @setFolderElementVisibility( @clippingControllerArbitrary, false )
+    @setFolderElementVisibility( @clippingController, true )
+
     switch mode 
       when constants.MODE_PLANE_TRACING
-        $(@fFlightcontrols.domElement).hide()
-        $(@fViewportcontrols.domElement).show()
-        $(@fSkeleton.domElement).show()
-        $(@clippingControllerArbitrary.domElement).parents(".cr").hide()
-        $(@clippingController.domElement).parents(".cr").show()
+        @hideFolders( [ @fFlightcontrols ] )
         @user.triggerAll()
       when constants.MODE_ARBITRARY
-        $(@fFlightcontrols.domElement).show()
-        $(@fViewportcontrols.domElement).hide()
-        $(@fSkeleton.domElement).hide()
-        $(@clippingControllerArbitrary.domElement).parents(".cr").show()
-        $(@clippingController.domElement).parents(".cr").hide()
+        @hideFolders( [ @fViewportcontrols, @fSkeleton ] )
+        @setFolderElementVisibility( @clippingControllerArbitrary, true )
+        @setFolderElementVisibility( @clippingController, false )
         @user.triggerAll()
+      when constants.MODE_VOLUME
+        @hideFolders( [ @fTrees, @fNodes, @fFlightcontrols ] )
 

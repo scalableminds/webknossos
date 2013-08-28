@@ -19,19 +19,21 @@ import akka.pattern.AskTimeoutException
 import org.bson.types.ObjectId
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits._
-import scala.concurrent.Promise
-import play.api.libs.json.Format
-import play.api.libs.json.Json
-import play.api.libs.json.Writes
-import braingames.geometry.Scale
 import models.user.User
 import play.api.Logger
 import models.user.Experience
 import models.tracing._
 import oxalis.nml.Tree
 import scala.util._
+import models.annotation.{AnnotationType, AnnotationDAO, AnnotationSettings}
+import play.api.libs.json.{Json, JsObject}
+import braingames.format.Formatter
 
 case class CompletionStatus(open: Int, inProgress: Int, completed: Int)
+
+object CompletionStatus {
+  implicit val completionStatusFormat = Json.format[CompletionStatus]
+}
 
 case class Task(
     seedIdHeidelberg: Int,
@@ -40,6 +42,7 @@ case class Task(
     priority: Int = 100,
     instances: Int = 1,
     assignedInstances: Int = 0,
+    tracingTime: Option[Long] = None,
     created: Date = new Date,
     _project: Option[String] = None,
     training: Option[Training] = None,
@@ -53,23 +56,23 @@ case class Task(
 
   def project = _project.flatMap(name => Project.findOneByName(name))
 
-  def tracings =
-    Tracing.findByTaskIdAndType(_id, TracingType.Task)
+  def annotations =
+    AnnotationDAO.findByTaskIdAndType(_id, AnnotationType.Task)
 
   def isFullyAssigned = instances <= assignedInstances
 
-  def tracingSettings = taskType.map(_.tracingSettings) getOrElse TracingSettings.default
+  def settings = taskType.map(_.settings) getOrElse AnnotationSettings.default
 
   def isTraining = training.isDefined
 
-  def tracingBase = Tracing.findByTaskIdAndType(_id, TracingType.TracingBase).headOption
+  def annotationBase = AnnotationDAO.findByTaskIdAndType(_id, AnnotationType.TracingBase).headOption
 
   def assigneOnce = this.copy(assignedInstances = assignedInstances + 1)
 
   def unassigneOnce = this.copy(assignedInstances = assignedInstances - 1)
 
   def status = {
-    val inProgress = tracings.filter(!_.state.isFinished).size
+    val inProgress = annotations.filter(!_.state.isFinished).size
     CompletionStatus(
       open = instances - assignedInstances,
       inProgress = inProgress,
@@ -84,15 +87,29 @@ object Task extends BasicDAO[Task]("tasks") {
   val jsExecutionActor = Akka.system.actorOf(Props[JsExecutionActor])
   val conf = current.configuration
 
+  implicit val taskFormat = Json.format[Task]
+  
   implicit val timeout = Timeout((conf.getInt("js.defaultTimeout") getOrElse 5) seconds) // needed for `?` below
 
   override def removeById(t: ObjectId, wc: com.mongodb.WriteConcern = defaultWriteConcern) = {
-    Tracing.removeAllWithTaskId(t)
+    AnnotationDAO.removeAllWithTaskId(t)
     super.removeById(t, wc)
   }
 
-  def isTrainingsTracing(tracing: ContainsTracingInfo) = {
-    tracing.task.map(_.isTraining) getOrElse false
+  def transformToJson(task: Task) : JsObject = {
+   Json.obj (
+      "id" -> task.id,
+      "formattedHash" -> Formatter.formatHash(task.id),
+      "seedIdHeidelberg" -> task.seedIdHeidelberg,
+      "projectName" -> task._project.getOrElse("").toString,
+      "type" -> task.taskType.map(_.summary).getOrElse("<deleted>").toString ,
+      "dataSet" -> task.annotationBase.map(_.dataSetName),
+      "editPosition" -> task.annotationBase.flatMap(_.content.map(_.editPosition)),
+      "neededExperience" -> task.neededExperience,
+      "priority" -> task.priority,
+      "created" -> Formatter.formatDate(task.created),
+      "status" -> task.status
+    )
   }
 
   def findAllOfOneType(isTraining: Boolean) =
@@ -121,8 +138,12 @@ object Task extends BasicDAO[Task]("tasks") {
     findAssignableFor(user, shouldBeTraining = false)
   }
 
+  def logTime(time: Long, task: Task) = {
+    update(MongoDBObject("_id" -> task._id), MongoDBObject("$inc" -> MongoDBObject("tracingTime" -> time)))
+  }
+
   def findAssignableFor(user: User, shouldBeTraining: Boolean) = {
-    val finishedTasks = Tracing.findFor(user, TracingType.Task).flatMap(_._task)
+    val finishedTasks = AnnotationDAO.findFor(user, AnnotationType.Task).flatMap(_._task)
     val availableTasks =
       if (shouldBeTraining)
         findAllTrainings
@@ -135,12 +156,12 @@ object Task extends BasicDAO[Task]("tasks") {
 
   def copyDeepAndInsert(source: Task, includeUserTracings: Boolean = true) = {
     val task = insertOne(source.copy(_id = new ObjectId))
-    Tracing
+    AnnotationDAO
       .findByTaskId(source._id)
-      .foreach { tracing =>
-        if (includeUserTracings || TracingType.isSystemTracing(tracing)) {
-          println("Copying: " + tracing.id)
-          Tracing.copyDeepAndInsert(tracing.copy(_task = Some(task._id)))
+      .foreach { annotation =>
+        if (includeUserTracings || AnnotationType.isSystemTracing(annotation)) {
+          println("Copying: " + annotation.id)
+          AnnotationDAO.copyDeepAndInsert(annotation.copy(_task = Some(task._id)))
         }
       }
     task
@@ -193,8 +214,8 @@ object Task extends BasicDAO[Task]("tasks") {
 
   def simulateFinishOfCurrentTask(user: User) = {
     (for {
-      tracing <- Tracing.findOpenTracingFor(user, TracingType.Task)
-      task <- tracing.task
+      annotation <- AnnotationDAO.findOpenAnnotationFor(user, AnnotationType.Task)
+      task <- annotation.task
       if (task.isTraining)
       training <- task.training
     } yield {
@@ -222,7 +243,7 @@ object Task extends BasicDAO[Task]("tasks") {
   }
 
   def simulateTaskAssignments(user: User, tasks: Map[ObjectId, Task]) = {
-    val doneTasks = Tracing.findFor(user, TracingType.Task).flatMap(_._task)
+    val doneTasks = AnnotationDAO.findFor(user, AnnotationType.Task).flatMap(_._task)
     val tasksAvailable = tasks.values.filter(t =>
       hasEnoughExperience(user, t) && !doneTasks.contains(t._id) && !t.isFullyAssigned)
     nextTaskForUser(user, tasksAvailable.toArray).map {

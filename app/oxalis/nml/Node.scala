@@ -3,13 +3,13 @@ package oxalis.nml
 import braingames.geometry.Point3D
 import com.novus.salat.annotations._
 import play.api.libs.json._
-import braingames.xml.XMLWrites
+import braingames.xml.{SynchronousXMLWrites, XMLWrites}
 
 case class Node(id: Int, position: Point3D, radius: Float = 120, viewport: Int = 1, resolution: Int = 1, timestamp: Long = System.currentTimeMillis)
 
 object Node {
-  implicit object NodeXMLWrites extends XMLWrites[Node] {
-    def writes(n: Node) =
+  implicit object NodeXMLWrites extends SynchronousXMLWrites[Node] {
+    def synchronousWrites(n: Node) =
       <node id={ n.id.toString } radius={ n.radius.toString } x={ n.position.x.toString } y={ n.position.y.toString } z={ (n.position.z).toString } inVp={ n.viewport.toString } inMag={ n.resolution.toString } time={ n.timestamp.toString }/>
   }
   

@@ -4,6 +4,7 @@ import akka.agent.Agent
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits._
+import net.liftweb.common.Box
 
 case class DataBlock(info: LoadBlock, data: Data)
 
@@ -34,7 +35,7 @@ object CachedBlock {
  * A data store implementation which uses the hdd as data storage
  */
 trait DataCache {
-  def cache: Agent[Map[CachedBlock, Future[Option[Array[Byte]]]]]
+  def cache: Agent[Map[CachedBlock, Future[Box[Array[Byte]]]]]
 
   // defines the maximum count of cached file handles
   def maxCacheSize: Int
@@ -46,7 +47,7 @@ trait DataCache {
    * Loads the due to x,y and z defined block into the cache array and
    * returns it.
    */
-  def withCache(blockInfo: LoadBlock)(loadF: => Future[Option[Array[Byte]]]): Future[Option[Array[Byte]]] = {
+  def withCache(blockInfo: LoadBlock)(loadF: => Future[Box[Array[Byte]]]): Future[Box[Array[Byte]]] = {
     ensureCacheMaxSize
     val cachedBlockInfo = CachedBlock.from(blockInfo)
     cache().get(cachedBlockInfo).getOrElse {

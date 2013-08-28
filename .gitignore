@@ -10,11 +10,12 @@ logs/
 .history
 target/
 binarydata/
-binaryData/
+userBinaryData/
 binaryData
 data/
 boot/
 .idea/
+*.iml
 .idea_modules/
 *.db
 *.class

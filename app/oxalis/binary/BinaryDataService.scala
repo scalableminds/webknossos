@@ -4,7 +4,6 @@ import braingames.binary.api.{ BinaryDataService => AbstractBinaryDataService }
 import models.binary.DataSetRepository
 import play.api.libs.concurrent.Akka
 import play.api.Play
-import braingames.io.DataSetChangeHandler
 
 object BinaryDataService extends AbstractBinaryDataService {
   def system = Akka.system(Play.current)

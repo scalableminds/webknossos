@@ -55,6 +55,7 @@ object UserConfiguration extends BasicSettings{
       "gamepadActive" -> JsBoolean(false),
       "motionsensorActive" -> JsBoolean(false),
       "firstVisToggle" -> JsBoolean(true),
-      "particleSize" -> JsNumber(5)))
+      "particleSize" -> JsNumber(5),
+      "sortTreesByName" -> JsBoolean(false)))
 
 }

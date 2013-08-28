@@ -5,6 +5,7 @@ notAllowed=None of your business
 
 binary.payload.notSupplied=No valid payload supplied
 binary.payload.invalid=Couldn''t parse payload
+binary.data.notFound=Couldn''t find the requested data
 
 email=Email
 password=Password
@@ -12,6 +13,8 @@ password.main=Password
 password.validation=Password (again)
 firstName=First Name
 lastName=Last Name
+
+image.create.failed=Failed to create image
 
 user.verified={0} has been verified
 user.verifyFailed=Couldn't verify user
@@ -77,32 +80,34 @@ training.domain=Trainings Domain
 training.gain=Experience Gain
 training.loss=Experience Loss
 
+annotation.creationFailed=Failed to create tracing
+annotation.notFound=Annotation couldn''t be found
+
 tracing=Tracing
-tracing.invalid=Invalid tracing
-tracing.finished=Tracing is finished
-tracing.finish.confirm=Are you sure you want to permanently finish this tracing?
-tracing.creationFailed=Failed to create tracing
+annotation.invalid=Invalid tracing
+annotation.finished=Tracing is finished
+annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
 tracing.notFound=Tracing couldn''t be found
-tracing.review.assignFailed=Couldn''t assign reviewee
-tracing.review.notFound=There is no review for this tracing
-tracing.review.assigned=You got assigned as reviewee
-tracing.review.unassigned=You got unassigned from this training
-tracing.review.notReady=Tracing is not ready for review
-tracing.review.finishFailed=You can''t review this tracing
-tracing.review.finished=Review finished
+annotation.review.assignFailed=Couldn''t assign reviewee
+annotation.review.notFound=There is no review for this tracing
+annotation.review.assigned=You got assigned as reviewee
+annotation.review.unassigned=You got unassigned from this training
+annotation.review.notReady=Tracing is not ready for review
+annotation.review.finishFailed=You can''t review this tracing
+annotation.review.finished=Review finished
 tracing.task.notFound=Couldn''t find task for tracing
 tracing.training.notFound=Couldn''t find training for tracing
 tracing.download.notAllowed=You can''t download this tracing
 tracing.user.notFound=Couldn''t find a user for the tracing
 tracing.open.notFound=No open tracing found
-tracing.notPossible=Couldn''t access tracing
+annotation.notPossible=Couldn''t access tracing
 tracing.notEnoughNodes=There are not enough nodes in the tracing to finish it
-tracing.notInProgress=The tracing is not in progress and can''t be finished
+annotation.notInProgress=The tracing is not in progress and can''t be finished
 tracing.setName=Successfully named tracing
 tracing.invalidName=Tracing name is invalid
 tracing.reset.success=Reseted tracing to base
 tracing.reset.failed=Couldn't reset tracing to base
-tracing.reopened=Tracing got reopened
+annotation.reopened=Tracing got reopened
 
 jira.summary.notSupplied=No summary supplied
 jira.description.notSupplied=No description supplied

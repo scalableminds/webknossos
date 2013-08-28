@@ -11,10 +11,7 @@ trait Formatter{
     formatDate(new Date(timestamp))
   
   def formatDate(date: Date) = {
-    val cal = new GregorianCalendar(TimeZone.getTimeZone("GMT+1"))
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm")
-    sdf.setCalendar(cal)
-    cal.setTime(date)
     sdf.format(date)
   }
 
@@ -34,3 +31,5 @@ trait Formatter{
     }
   }
 }
+
+object Formatter extends Formatter

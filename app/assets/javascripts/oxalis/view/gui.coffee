@@ -189,6 +189,12 @@ class Gui
       moveValue3dChanged : => @updateMoveValue3d()
       particleSizeChanged : => @updateParticleSize()
 
+    @model.binary["volume"]?.cube.on
+      bucketLoaded : => @updateSegmentID()
+
+    @model.binary["segmentation"]?.cube.on
+      bucketLoaded : => @updateSegmentID()
+
     @createTooltips()
 
 
@@ -279,6 +285,18 @@ class Gui
 
     stringPos = Math.floor(globalPos[0]) + ", " + Math.floor(globalPos[1]) + ", " + Math.floor(globalPos[2])
     $("#trace-position-input").val(stringPos)
+    @updateSegmentID()
+
+  updateSegmentID : ->
+
+    segmentationBinary = @model.binary["volume"] || @model.binary["segmentation"]
+
+    if segmentationBinary
+      segmentID = segmentationBinary.cube.getDataValue( @model.flycam.getPosition() )
+      if segmentID?
+        $("#segment-id").html("<p>Segment ID: " + segmentID + "</p>")
+      else
+        $("#segment-id").html("<p>Segment ID: -</p>")
 
 
   set : (name, value, type) =>

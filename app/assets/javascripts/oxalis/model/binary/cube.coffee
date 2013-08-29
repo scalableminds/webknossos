@@ -306,6 +306,7 @@ class Cube
 
     @trigger("volumeLabled")
 
+
   labelVoxel : (voxel, label) ->
 
     voxelInCube = true
@@ -327,29 +328,46 @@ class Cube
           voxel[2] >> 1
         ]
 
+
   getLabel : ( voxel ) ->
 
     { bucket, voxelIndex } = @getBucketAndVoxelIndex( voxel, 0 )
     return bucket[voxelIndex]
 
-  getBucketAndVoxelIndex : ([x, y, z], zoomStep) ->
 
-    address = [
-      x >> @BUCKET_SIZE_P
-      y >> @BUCKET_SIZE_P
-      z >> @BUCKET_SIZE_P
-      zoomStep
-    ]
+  getDataValue : ( voxel ) ->
 
-    voxelOffset = [
-      x & 0b11111
-      y & 0b11111
-      z & 0b11111
-    ]
+    byteOffset = (@BIT_DEPTH >> 3)
+    address    = @positionToZoomedAddress( voxel, 0 )
+    voxelIndex = byteOffset * @getVoxelIndexByVoxelOffset( @getVoxelOffset( voxel ) )
+    bucket     = @getDataBucketByZoomedAddress( address )
+
+    if bucket?
+      result = 0
+      for i in [0...byteOffset]
+        result += (1 << (8 * i)) * bucket[ voxelIndex + byteOffset - 1 - i]
+      return result
+
+    return null
+
+
+  getBucketAndVoxelIndex : (voxel, zoomStep ) ->
+
+    address = @positionToZoomedAddress( voxel, zoomStep )
+    voxelOffset = @getVoxelOffset( voxel )
 
     return {
       bucket : @getOrCreateVolumeBucketByZoomedAddress(address)
       voxelIndex : @getVoxelIndexByVoxelOffset(voxelOffset) }
+
+
+  getVoxelOffset : ( [x, y, z] ) ->
+
+    return [
+      x & 0b11111
+      y & 0b11111
+      z & 0b11111
+    ]
     
 
   positionToZoomedAddress : ([x, y, z], zoomStep) ->

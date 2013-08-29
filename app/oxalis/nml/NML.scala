@@ -8,7 +8,7 @@ case class NML(
   trees: List[Tree],
   branchPoints: List[BranchPoint],
   timestamp: Long,
-  activeNodeId: Int,
+  activeNodeId: Option[Int],
   scale: Scale,
   editPosition: Point3D,
   comments: List[Comment])

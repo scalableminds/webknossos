@@ -176,7 +176,7 @@ object Task extends BasicDAO[Task]("tasks") {
     } getOrElse null
 
   def hasEnoughExperience(user: User, task: Task) = {
-    val XP = user.experiences.get(task.neededExperience.domain) getOrElse 0
+    val XP = user.experiences.get(task.neededExperience.domain) getOrElse -1
     XP >= task.neededExperience.value
   }
 

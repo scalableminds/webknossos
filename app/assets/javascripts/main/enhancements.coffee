@@ -168,7 +168,6 @@ $ ->
         return
 
 
-
     $(document).on "change", "table input.select-row", ->
 
       $this = $(this)

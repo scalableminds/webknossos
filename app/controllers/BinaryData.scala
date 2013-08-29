@@ -1,15 +1,17 @@
 package controllers
 
 import play.api._
-import braingames.mvc.{Fox, Controller}
+import braingames.mvc.{Controller}
 import play.api.mvc.{WebSocket, AsyncResult}
 import play.api.Play.current
 import play.api.libs.iteratee._
 import Input.EOF
 import play.api.libs.concurrent._
-import _root_.models.security.Role
-import _root_.models.binary._
-import oxalis.security.{AuthenticatedRequest, Secured}
+import play.api.libs.json.JsValue
+import play.libs.Akka._
+import models.security.Role
+import models.binary._
+import oxalis.security.{UserAwareRequest, AuthenticatedRequest, Secured}
 import scala.concurrent.Future
 import braingames.geometry.Point3D
 import akka.pattern.AskTimeoutException
@@ -36,6 +38,7 @@ import braingames.binary.DataRequestSettings
 import braingames.image.ImageCreatorParameters
 import braingames.binary.ParsedRequestCollection
 import braingames.reactivemongo.DBAccessContext
+import braingames.util.Fox
 
 //import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -46,7 +49,6 @@ object BinaryData extends Controller with Secured {
 
   implicit val dispatcher = Akka.system.dispatcher
   val scaleFactors = Array(1, 1, 1)
-
 
   def createDataRequestCollection(dataSet: DataSet, dataLayerName: String, cubeSize: Int, parsedRequest: ParsedRequestCollection) = {
     val dataLayerId = DataLayerId(dataLayerName)
@@ -112,7 +114,7 @@ object BinaryData extends Controller with Secured {
    * Handles a request for binary data via a HTTP POST. The content of the
    * POST body is specified in the BinaryProtokoll.parseAjax functions.
    */
-  def requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = Authenticated(parser = parse.raw) {
+  def requestViaAjax(dataSetName: String, dataLayerName: String, cubeSize: Int) = UserAwareAction(parser = parse.raw) {
     implicit request =>
       Async {
         for {
@@ -125,7 +127,7 @@ object BinaryData extends Controller with Secured {
       }
   }
 
-  def respondWithSpriteSheet(dataSetName: String, dataLayerName: String, width: Int, height: Int, depth: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: AuthenticatedRequest[_]) = {
+  def respondWithSpriteSheet(dataSetName: String, dataLayerName: String, width: Int, height: Int, depth: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: UserAwareRequest[_]) = {
     Async {
       val settings = DataRequestSettings(useHalfByte = false, skipInterpolation = false)
       for {
@@ -142,16 +144,16 @@ object BinaryData extends Controller with Secured {
     }
   }
 
-  def respondWithImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: AuthenticatedRequest[_]) = {
+  def respondWithImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int)(implicit request: UserAwareRequest[_]) = {
     respondWithSpriteSheet(dataSetName, dataLayerName, width, height, 1, 1, x, y, z, resolution)
   }
 
-  def requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated(parser = parse.raw) {
+  def requestSpriteSheet(dataSetName: String, dataLayerName: String, cubeSize: Int, imagesPerRow: Int, x: Int, y: Int, z: Int, resolution: Int) = UserAwareAction(parser = parse.raw) {
     implicit request =>
       respondWithSpriteSheet(dataSetName, dataLayerName, cubeSize, cubeSize, cubeSize, imagesPerRow, x, y, z, resolution)
   }
 
-  def requestImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int) = Authenticated(parser = parse.raw) {
+  def requestImage(dataSetName: String, dataLayerName: String, width: Int, height: Int, x: Int, y: Int, z: Int, resolution: Int) = UserAwareAction(parser = parse.raw) {
     implicit request =>
       respondWithImage(dataSetName, dataLayerName, width, height, x, y, z, resolution)
   }

@@ -4,6 +4,7 @@ underscore : _
 libs/toast : Toast
 libs/keyboard : KeyboardJS
 main/routing_utils : RoutingUtils
+oxalis/constants : constants
 ###
 
 $ ->
@@ -21,7 +22,7 @@ $ ->
 
   route
 
-    "user.dashboard.dashboard" : ->
+    "user.dashboard.userDashboard" : ->
 
       RoutingUtils.maskFinishedTasks()
 
@@ -66,7 +67,21 @@ $ ->
         "stats"
       ], (Controller) ->
 
-        oxalis = window.oxalis = new Controller()
+        oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_TRACE)
+
+        return
+
+    "tracing.view" : ->
+
+      require [
+        "./oxalis/controller"
+        "./libs/core_ext"
+        "three"
+        "stats"
+        "slider"
+      ], (Controller) ->
+
+        oxalis = window.oxalis = new Controller(constants.CONTROL_MODE_VIEW)
 
         return
 
@@ -157,6 +172,7 @@ $ ->
           showModal(templateId)
 
         showModal = (templateId) ->
+
           template = $("##{templateId}")
           title = template.data("header")
 
@@ -168,6 +184,7 @@ $ ->
           $modal.find(".multiselect").multiselect()
 
           $modal.modal("show")
+
 
 
         $("form").on "click", ".label-experience", (event) ->

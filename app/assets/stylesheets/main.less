@@ -12,7 +12,9 @@
 body {
     //background: #000000;
     color: @mainColor;
-    // font: @defaultFont;
+    font-family: 'Source Sans Pro', sans-serif;
+    font-weight: 400;
+    font-size: 16px;
     -webkit-font-smoothing: antialised;
 }
 body:-webkit-full-screen {
@@ -25,6 +27,7 @@ body:-webkit-full-screen {
 .navbar .brand {
     background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
     padding-left: 43px;
+    font-weight: 400;
 }
 .navbar span.brand:hover {
     color: #999;
@@ -230,6 +233,9 @@ svg a:hover {
     #abstractTreeViewer {
         color : #000;
     }
+    .inactive {
+        border-color: #fff;
+    }
 }
 .dark {
     background : #000;
@@ -245,6 +251,9 @@ svg a:hover {
     .modal p {
         color : #000;
     }
+    .inactive {
+        border-color: #000;
+    }
 }
 
 #loader-icon {
@@ -259,7 +268,8 @@ svg a:hover {
 #tracing {
     margin-top: 10px;
     position: relative;
-    float: left;
+    display: inline-block;
+    vertical-align: top;
 }
 #render {
     position: relative;
@@ -268,7 +278,8 @@ svg a:hover {
     z-index: 10;
 }
 #comments-tree {
-    float: left;
+    display: inline-block;
+    vertical-align: top;
     margin-top: 10px;
     margin-left: 20px;
 }
@@ -311,7 +322,7 @@ svg a:hover {
     min-width: 1024px;
 }
 #main {
-    width: 5000px;
+    white-space: nowrap;
 }
 #inputcatchers {
     position: absolute;
@@ -321,10 +332,13 @@ svg a:hover {
     width: @standardViewportWidth;
     height: @standardViewportWidth;
     border-style:solid;
-    border-color: #ffff00;
+    border-width: 2px;
     z-index: 20;
     box-sizing: border-box;
     float: left;
+}
+.active {
+    border-color: #ff0;
 }
 #planeyz {
     margin-left: 20px;
@@ -332,20 +346,19 @@ svg a:hover {
 #planexz {
     margin-top: 20px;
 }
-#skeletonview {
-    border-width: 0px;
+#TDView {
     margin-top: 20px;
     margin-left: 20px;
     position: relative;
 }
-#prevControls {
+#TDViewControls {
     float: left;
     height: 20px;
     position: absolute;
-    top: 10px;
+    top: 0px;
     z-index: 30;
 }
-#prevControls .btn > span {
+#TDViewControls .btn > span {
     display: inline-block;
     width: 10px;
     height: 10px;
@@ -356,7 +369,9 @@ svg a:hover {
     position: relative;
     width: 280px;
     padding: 10px;
-    float: left;
+    display: inline-block;
+    vertical-align: top;
+    white-space: normal;
 }
 #overlay > * {
     margin-bottom: 10px;
@@ -441,6 +456,15 @@ svg a:hover {
 
     section {
         margin-top: 4em;
+    }
+}
+.credit-logos {
+    width: 200px;
+    float: left;
+    margin: -40px 30px auto 10px;
+
+    img {
+        margin-top: 15px;
     }
 }
 #help-modal-body {
@@ -529,6 +553,112 @@ svg a:hover {
     }
 }
 
+#oxalis-header {
+
+    margin-bottom: 20px;
+    margin-left: 34px;
+
+    img {
+        height: 200px;
+        width: 200px;
+    }
+
+    div {
+        font-weight: 200;
+        display: inline-block;
+        font-size: 150px;
+        color: #000;
+        margin-left: 17px;
+    }
+}
+
+#dataset-list {
+
+  margin-top: 40px;
+
+  .dataset {
+    float: left;
+    clear: both;
+    margin-right: 20px;
+    margin-bottom: 20px;
+    padding: 10px;
+    min-width: 250px;
+    width: 940px;
+
+    header {
+        width: 250px;
+
+        h4, .stack-buttons {
+          text-align: center;
+        }
+    }
+
+    form {
+      display: inline;
+    }
+
+    .dataset-buttons {
+      margin: 10px;
+    }
+    .dataset-buttons a {
+      font-size: 0;
+      margin: 0 5px;
+
+      [class^="icon-"]::before,
+      [class*=" icon-"]::before {
+        font-size: 20px;
+      }
+    }
+    .dataset-buttons input[type=checkbox] {
+      margin: -7px 5px 0;
+    }
+    .dataset-buttons .busy .icon-retweet {
+      .rotating;
+    }
+  }
+
+  .dataset-description {
+    float: left;
+  }
+
+  .dataset-display {
+
+    text-align: center;
+    position: relative;
+    width: 250px;
+    float: left;
+
+    a, .loading-indicator {
+      display: block;
+      font-size: 80px;
+      text-align: center;
+      top: 0;
+      line-height: 200px;
+      position: absolute;
+      width: 100%;
+      text-decoration: none;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+    img {
+      display: block;
+      opacity: 0.8;
+      margin: 0 auto;
+    }
+    .stack-meta {
+      font-family: "Monaco", Consolas, "Courier New", monospace, sans-serif;
+      height: 50px;
+      overflow: auto;
+      resize: both;
+      text-align: left;
+      font-size: .8em;
+      line-height: 1.5em;
+    }
+  }
+}
+
 #task-selection-algoritm {
 
     position: relative;
@@ -564,6 +694,12 @@ svg a:hover {
     left: 170px !important;
 }
 
+.img-mpi-neuro{
+  width: 176%;
+  margin-left: -15px;
+  margin-top: -101px;
+}
+
 .graph.well svg {
     max-width: 900px;
 }
@@ -577,6 +713,13 @@ svg a:hover {
 
 .space-top {
     margin-top: 30px;
+}
+
+#segmentation-slider {
+    p{
+        float:left;
+        padding: 3px;
+    }
 }
 
 // Fixing datGUI from Bootstrap

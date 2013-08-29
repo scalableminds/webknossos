@@ -7,10 +7,11 @@ underscore : _
 ./tracetree : TraceTree
 ./statelogger : StateLogger
 ../constants : constants
+./tracingparser : TracingParser
 libs/threejs/ColorConverter : ColorConverter
 ###
 
-class Route
+class CellTracing
 
   GOLDEN_RATIO : 0.618033988749895
   TYPE_USUAL   : constants.TYPE_USUAL
@@ -30,18 +31,6 @@ class Route
 
     _.extend(this, new EventMixin())
 
-    @idCount = 1
-    @treeIdCount = 1
-    @trees = []
-    @comments = []
-    @activeNode = null
-    # Used to save in NML file, is always defined
-    @lastActiveNodeId = 1
-    @activeTree = null
-
-    # For trees that are disconnected
-    lostTrees = []
-
     @doubleBranchPop = false
 
     @data = tracing.content.contentData
@@ -57,59 +46,18 @@ class Route
     @stateLogger = new StateLogger(this, @flycam, tracing.version, tracing.id, tracing.typ, tracing.restrictions.allowUpdate)
     
     console.log "Annotation data: ", tracing
+ 
+    tracingParser = new TracingParser(@, @data)
+    {
+      @idCount
+      @treeIdCount
+      @trees
+      @comments
+      @activeNode
+      @activeTree
+    } = tracingParser.parse()
 
-    # get tree to build
-    for treeData in @data.trees
-      # Create new tree
-      tree = new TraceTree(
-        treeData.id,
-        @getNewTreeColor(treeData.id),
-        if treeData.name then treeData.name else "Tree#{('00'+treeData.id).slice(-3)}",
-        treeData.timestamp)
-      # Initialize nodes
-      i = 0
-      for node in treeData.nodes
-        if node
-          tree.nodes.push(new TracePoint(@TYPE_USUAL, node.id, node.position, node.radius, node.timestamp, treeData.id))
-          # idCount should be bigger than any other id
-          @idCount = Math.max(node.id + 1, @idCount);
-      # Initialize edges
-      for edge in treeData.edges
-        sourceNode = @findNodeInList(tree.nodes, edge.source)
-        targetNode = @findNodeInList(tree.nodes, edge.target)
-        if sourceNode and targetNode
-          sourceNode.appendNext(targetNode)
-          targetNode.appendNext(sourceNode)
-        else
-          $.assertNotEquals(sourceNode, null, "source node undefined",
-            {"edge" : edge})
-          $.assertNotEquals(targetNode, null, "target node undefined",
-            {"edge" : edge})
-
-      # Set active Node
-      activeNodeT = @findNodeInList(tree.nodes, @data.activeNode)
-      if activeNodeT
-        @activeNode = activeNodeT
-        @lastActiveNodeId = @activeNode.id
-        # Active Tree is the one last added
-        @activeTree = tree
-
-      @treeIdCount = Math.max(tree.treeId + 1, @treeIdCount)
-      @trees.push(tree)
-    
-    # Set branchpoints
-    nodeList = @getNodeListOfAllTrees()
-    for branchpoint in @data.branchPoints
-      node = @findNodeInList(nodeList, branchpoint.id)
-      if node?
-        node.type = @TYPE_BRANCH
-        @branchStack.push(node)
-
-    # Set comments
-    for comment in @data.comments
-      comment.node = @findNodeInList(nodeList, comment.node)
-    @comments = @data.comments
-
+    # ensure a tree is active
     unless @activeTree
       if @trees.length > 0
         @activeTree = @trees[0]
@@ -117,14 +65,13 @@ class Route
         @createNewTree()
 
     tracingType = tracing.typ
-    if (tracingType == "Task" or tracingType == "Training") and nodeList.length == 0
+    if (tracingType == "Task" or tracingType == "Training") and @getNodeListOfAllTrees().length == 0
       @addNode(tracing.content.editPosition)
 
     @branchPointsAllowed = tracing.content.settings.branchPointsAllowed
     if not @branchPointsAllowed
       # dirty but this actually is what needs to be done
       @TYPE_BRANCH = @TYPE_USUAL
-
 
       #calculate direction of first edge in nm
       if @data.trees[0]?.edges?
@@ -141,9 +88,6 @@ class Route
         @flycam.setSpaceDirection(@firstEdgeDirection)
         @flycam3d.setDirection(@firstEdgeDirection)
 
-    #@createNewTree()
-    #for i in [0...10000]
-    #  @addNode([Math.random() * 2000, Math.random() * 2000, Math.random() * 2000], TYPE_USUAL)
 
     $(window).on(
       "beforeunload"
@@ -159,6 +103,34 @@ class Route
 
     @stateLogger.pushNow()
 
+    
+  benchmark : (numberOfTrees = 1, numberOfNodesPerTree = 10000) ->
+
+    console.log "[benchmark] start inserting #{numberOfNodesPerTree} nodes"
+    startTime = (new Date()).getTime()
+    offset = 0
+    size = numberOfNodesPerTree / 100
+    for i in [0...numberOfTrees]
+      @createNewTree()
+      for i in [0...numberOfNodesPerTree]
+        pos = [Math.random() * size + offset, Math.random() * size + offset, Math.random() * size + offset]
+        point = new TracePoint(@TYPE_USUAL, @idCount++, pos, null, null, @activeTree.treeId)
+        @activeTree.nodes.push(point)
+        if @activeNode
+          @activeNode.appendNext(point)
+          point.appendNext(@activeNode)
+          @activeNode = point
+        else
+          @activeNode = point
+          point.type = @TYPE_BRANCH
+          if @branchPointsAllowed
+            centered = true
+            @pushBranch()
+        @doubleBranchPop = false
+      offset += size
+    @trigger "reloadTrees"
+    console.log "[benchmark] done. Took me #{((new Date()).getTime() - startTime) / 1000} seconds."
+
 
   pushBranch : ->
 
@@ -168,7 +140,7 @@ class Route
         @activeNode.type = @TYPE_BRANCH
         @stateLogger.push()
 
-        @trigger("setBranch", true)
+        @trigger("setBranch", true, @activeNode)
     else
       @trigger("noBranchPoints")
 
@@ -184,7 +156,7 @@ class Route
           @setActiveNode(point.id)
           @activeNode.type = @TYPE_USUAL
 
-          @trigger("setBranch", false, @activeNode.id)
+          @trigger("setBranch", false, @activeNode)
           @doubleBranchPop = true
           deferred.resolve(@activeNode.id))
       else
@@ -194,7 +166,7 @@ class Route
           @setActiveNode(point.id)
           @activeNode.type = @TYPE_USUAL
 
-          @trigger("setBranch", false, @activeNode.id)
+          @trigger("setBranch", false, @activeNode)
           @doubleBranchPop = true
           deferred.resolve(@activeNode.id)
         else
@@ -204,6 +176,7 @@ class Route
     else
       @trigger("noBranchPoints")
       deferred.reject()
+
 
   deleteBranch : (node) ->
 
@@ -215,7 +188,11 @@ class Route
         @branchStack.splice(i, 1)
       else
         i++
-    @trigger("deleteBranch")
+
+
+  isBranchPoint : (id) ->
+
+    return id in (node.id for node in @branchStack)
 
 
   rejectBranchDeferred : ->
@@ -233,7 +210,7 @@ class Route
     if @ensureDirection(position)
       unless @lastRadius?
         @lastRadius = 10 * @scaleInfo.baseVoxel
-        if @activeNode? then @lastRadius = @activeNode.radius
+        if @activeNode then @lastRadius = @activeNode.radius
       point = new TracePoint(type, @idCount++, position, @lastRadius, (new Date()).getTime(), @activeTree.treeId)
       @activeTree.nodes.push(point)
       if @activeNode
@@ -246,12 +223,12 @@ class Route
         if @branchPointsAllowed
           centered = true
           @pushBranch()
-      @lastActiveNodeId = @activeNode.id
       @doubleBranchPop = false
 
       @stateLogger.createNode(point, @activeTree.treeId)
       
       @trigger("newNode", centered)
+      @trigger("newActiveNode")
     else
       @trigger("wrongDirection")
 
@@ -276,7 +253,9 @@ class Route
   getActiveNode : -> @activeNode
 
 
-  getActiveNodeId : -> @lastActiveNodeId
+  getActiveNodeId : -> 
+
+    if @activeNode then @activeNode.id else null
 
 
   getActiveNodePos : ->
@@ -287,11 +266,6 @@ class Route
   getActiveNodeType : ->
 
     if @activeNode then @activeNode.type else null
-
-
-  getActiveNodeRadius : ->
-
-    if @activeNode then @activeNode.radius else null
 
 
   getActiveTreeId : ->
@@ -322,20 +296,6 @@ class Route
       for node in tree.nodes
         if node.id == id then return node
     return null
-    
-
-  setActiveNodeRadius : (radius) ->
-
-    # make sure radius is within bounds
-    radius = Math.min(@MAX_RADIUS * @scaleInfo.baseVoxel, radius)
-    radius = Math.max(@MIN_RADIUS * @scaleInfo.baseVoxel, radius)
-    if @activeNode
-      @activeNode.radius = radius
-      @lastRadius = radius
-
-    @stateLogger.updateNode(@activeNode, @activeTree.treeId)
-
-    @trigger("newActiveNodeRadius", radius)
 
 
   setActiveNode : (nodeID, mergeTree = false) ->
@@ -346,7 +306,6 @@ class Route
       for node in tree.nodes
         if node.id == nodeID
           @activeNode = node
-          @lastActiveNodeId = @activeNode.id
           @activeTree = tree
           break
     @stateLogger.push()
@@ -359,7 +318,7 @@ class Route
 
   setComment : (commentText) ->
 
-    if(@activeNode?)
+    if @activeNode
       # remove any existing comments for that node
       for i in [0...@comments.length]
         if(@comments[i].node.id == @activeNode.id)
@@ -374,7 +333,7 @@ class Route
 
   getComment : (nodeID) ->
 
-    unless nodeID? then nodeID = @activeNode.id if @activeNode?
+    unless nodeID? then nodeID = @activeNode.id if @activeNode
     for comment in @comments
       if comment.node.id == nodeID then return comment.content
     return ""
@@ -395,7 +354,7 @@ class Route
     length = @comments.length
     offset = if forward then 1 else -1
 
-    unless @activeNode?
+    unless @activeNode
       if length > 0 then return @comments[0].node.id
 
     if length == 0
@@ -446,7 +405,6 @@ class Route
       @activeNode = null
     else
       @activeNode = @activeTree.nodes[0]
-      @lastActiveNodeId = @activeNode.id
     @stateLogger.push()
 
     @trigger("newActiveNode")
@@ -498,7 +456,7 @@ class Route
 
   deleteActiveNode : ->
 
-    unless @activeNode?
+    unless @activeNode
       return
     # don't delete nodes when the previous tree split isn't finished
     unless @finishedDeferred.state() == "resolved"
@@ -517,7 +475,6 @@ class Route
     if deletedNode.neighbors.length > 1
       # Need to split tree
       newTrees = []
-      @trigger("removeSpheresOfTree", @activeTree.nodes.concat(deletedNode))
       oldActiveTreeId = @activeTree.treeId
 
       for i in [0...@activeNode.neighbors.length]
@@ -579,6 +536,10 @@ class Route
       if deleteBranchesAndComments
         @deleteComment(node.id)
         @deleteBranch(node)
+
+    @stateLogger.deleteTree(tree)
+    @trigger("deleteTree", index)
+    
     # Because we always want an active tree, check if we need
     # to create one.
     if @trees.length == 0
@@ -586,12 +547,12 @@ class Route
     else
       # just set the last tree to be the active one
       @setActiveTree(@trees[@trees.length - 1].treeId)
-    @stateLogger.deleteTree(tree)
-
-    @trigger("deleteTree", index)
 
 
   mergeTree : (lastNode, lastTree) ->
+
+    unless lastNode
+      return
 
     activeNodeID = @activeNode.id
     if lastNode.id != activeNodeID
@@ -636,11 +597,11 @@ class Route
       return (@trees.slice(0)).sort(@compareTimestamps)
 
 
-  # returns a list of nodes that are connected to the parent
-  #
-  # ASSUMPTION:    we are dealing with a tree, circles would
-  #                break this algorithm
   getNodeListForRoot : (result, root, previous) ->
+    # returns a list of nodes that are connected to the parent
+    #
+    # ASSUMPTION:    we are dealing with a tree, circles would
+    #                break this algorithm
 
     result.push(root)
     next = root.getNext(previous)
@@ -667,8 +628,8 @@ class Route
   rendered : -> @trigger("finishedRender")
 
 
-  # Helper method used in initialization
   findNodeInList : (list, id) ->
+    # Helper method used in initialization
 
     for node in list
       if node.id == id

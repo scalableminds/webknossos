@@ -1,5 +1,7 @@
 @()(implicit session: oxalis.view.AuthedSessionData)
 
+@import models.annotation.AnnotationType
+
 @main(){
   <div id="loader"><div id="loader-icon"><i class="icon-spinner icon-spin icon-4x"></i><br>Loading</div></div>
   <div class="container wide">
@@ -11,7 +13,6 @@
       <input type="text" class="search-query pagination-searchbox" placeholder="Search">
       <a href="@controllers.admin.routes.TaskAdministration.create()" class="pagination-createNew">Create new Task</a>
     </div>
-    
     <table id="tasklist-table" class="table table-double-striped table-details">
       <thead>
         <tr>
@@ -57,7 +58,7 @@
           </td>
           <td class="nowrap">
             <a href="controllers.admin.routes.TaskAdministration.edit"><i class="icon-pencil"></i> edit </a><br>
-            <a href="?? controllers.routes.AnnotationController.trace(AnnotationType.CompoundTask,task.id)" title="view all finished tracings"><i class="icon-random"></i> view </a><br>
+            <a href="@controllers.routes.AnnotationController.trace(AnnotationType.CompoundTask, "")" title="view all finished tracings"><i class="icon-random"></i> view </a><br>
             <a href="controllers.admin.routes.NMLIO.taskDownload" title="download all finished tracings"><i class="icon-download"></i> download </a><br>
             <a href="controllers.admin.routes.TrainingsTaskAdministration.create"><i class="icon-road"></i> use for Training </a><br>
             <a href="controllers.admin.routes.TaskAdministration.delete" data-ajax="delete-row,confirm"><i class="icon-trash"></i> delete </a>

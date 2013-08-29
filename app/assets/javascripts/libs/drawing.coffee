@@ -5,9 +5,11 @@
 
 # Macros
 swapMacro = (a, b) ->
+
   __tmp = a
   a = b
   b = __tmp
+
 
 # Constants
 SMOOTH_LENGTH = 4
@@ -60,6 +62,7 @@ Drawing =
 
     return
 
+
   # Source: http://will.thimbleby.net/scanline-flood-fill/
   fillArea : (x, y, width, height, diagonal, test, paint) ->
 
@@ -69,6 +72,7 @@ Drawing =
     while ranges.length
       
       addNextLine = (newY, isNext, downwards) ->
+
         rMinX = minX
         inRange = false
         x = minX
@@ -89,6 +93,7 @@ Drawing =
           x = r[1]  if not isNext and x is r[0]
           x++
         ranges.push [rMinX, x - 1, newY, downwards, rMinX is minX, true]  if inRange
+
 
       r = ranges.pop()
       minX = r[0]
@@ -115,6 +120,7 @@ Drawing =
       addNextLine y + 1, not up, true  if y < height
       addNextLine y - 1, not down, false  if y > 0  
 
+
   # Source : http://twistedoakstudios.com/blog/Post3138_mouse-path-smoothing-for-jack-lumber
   smoothLine : (points, callback) ->
 
@@ -137,6 +143,7 @@ Drawing =
         points[j] = p
 
     return points
+
 
   setSmoothLength : (v) -> @smoothLength = v
   setAlpha : (v) -> @alpha = v

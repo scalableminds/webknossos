@@ -18,6 +18,7 @@ class VolumeLayer
     @contourList.push(pos)
     @updateArea(pos)
 
+
   updateArea : (pos) ->
 
     unless @maxCoord?
@@ -28,8 +29,11 @@ class VolumeLayer
       @minCoord[i] = Math.min(@minCoord[i], Math.floor(pos[i]) - 1)
       @maxCoord[i] = Math.max(@maxCoord[i], Math.ceil(pos[i]) + 1)
 
+
   getSmoothedContourList : ->
+
     return Drawing.smoothLine(@contourList, ( (pos) => @updateArea(pos) ) )
+
 
   getVoxelIterator : ->
 
@@ -48,8 +52,10 @@ class VolumeLayer
         map[x][y] = false
 
     setMap = (x, y) ->
+
       x = Math.round(x); y = Math.round(y)
       map[x - minCoord2d[0]][y - minCoord2d[1]] = true
+
 
     @drawOutlineVoxels(setMap)
 
@@ -77,6 +83,7 @@ class VolumeLayer
 
     return iterator
 
+
   drawOutlineVoxels : (setMap) ->
 
     for i in [0...@contourList.length]
@@ -85,6 +92,7 @@ class VolumeLayer
       p2 = @get2DCoordinate(  @contourList[(i+1) % @contourList.length]  )
       
       Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap)
+
 
   fillOutline : (map, width, height) ->
 
@@ -100,6 +108,7 @@ class VolumeLayer
 
     Drawing.fillArea(x, y, width, height, false, isEmpty, setMap)
 
+
   get2DCoordinate : (coord3d) ->
     # Throw out 'thirdCoordinate' which is equal anyways
 
@@ -108,6 +117,7 @@ class VolumeLayer
       if i != Dimensions.thirdDimensionForPlane(@plane)
         result.push(coord3d[i])
     return result
+
 
   get3DCoordinate : (coord2d) ->
     # Put thirdCoordinate back in

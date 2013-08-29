@@ -12,7 +12,7 @@ object AssertionController extends Controller with Secured {
 
   val DefaultAccessRole = Role.User
 
-  def log = Authenticated(parser = parse.urlFormEncoded) { implicit request =>
+  def log = UserAwareAction(parser = parse.urlFormEncoded) { implicit request =>
     for {
       value <- postParameter("value") ?~ "Value is missing"
       globalContext <- postParameter("globalContext") ?~ "globalContext is missing"
@@ -21,7 +21,7 @@ object AssertionController extends Controller with Secured {
       stacktrace <- postParameter("stacktrace") ?~ "stacktrace is missing"
       title <- postParameter("title") ?~ "title is missing"
     } yield {
-      val a = Assertion(request.user._id, System.currentTimeMillis(), value, title, message, stacktrace, globalContext, localContext)
+      val a = Assertion(request.userOpt.map(_._id), System.currentTimeMillis(), value, title, message, stacktrace, globalContext, localContext)
       Assertion.insert(a)
       Ok
     }

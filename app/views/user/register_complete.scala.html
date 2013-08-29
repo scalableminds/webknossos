@@ -1,26 +1,13 @@
 @()
 
-<html>
-    <head>
-        <title>Oxalis</title>
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/login.css")">
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/jquery-1.6.4.js")"></script>
-    </head>
-    <body>
-        
-        <header>
-            <a href="@routes.AnnotationController.index" id="logo"><span>Ox</span>alis</a>
-        </header>
-        
-        <dd>
-          <p>
-            Thanks for your registration! An email has been sent to your address to verify your account.
-          </p>
-        </dd>
-        <p class="note">
-            Welcome!
-        </p>
-            
-    </body>
-</html>
+@pageSkeleton{
+    @paleHeader()
+    <dd>
+      <p>
+        Thanks for your registration! An email has been sent to your address to verify your account.
+      </p>
+    </dd>
+    <p class="note">
+        Welcome!
+    </p>
+}

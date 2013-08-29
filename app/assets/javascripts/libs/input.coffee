@@ -29,7 +29,6 @@ class Input.KeyboardNoLoop
   constructor : (initialBindings) ->
 
     @bindings = []
-    @keyCount = 0
 
     for own key, callback of initialBindings
       @attach(key, callback)
@@ -39,11 +38,7 @@ class Input.KeyboardNoLoop
 
     binding = KeyboardJS.on(key, 
       (event) => 
-        @keyCount++
-        callback(@keyCount <= 2) unless $(":focus").length
-        return
-      () =>
-        @keyCount = 0
+        callback(event) unless $(":focus").length
         return
     )
     @bindings.push(binding)
@@ -85,7 +80,10 @@ class Input.Keyboard
         # if there is any browser action attached to this (as with Ctrl + S)
         # KeyboardJS does not receive the up event.
         
+        returnValue = undefined
+
         unless @keyCallbackMap[key]? or $(":focus").length
+          
           callback(1, true)
           # reset lastTime
           callback._lastTime   = null
@@ -94,13 +92,13 @@ class Input.Keyboard
 
           @keyPressedCount++
           @buttonLoop() if @keyPressedCount == 1
-        
+          
         if @delay >= 0
           setTimeout( (=>
             callback._delayed = false
             ), @delay )
 
-        return
+        return returnValue
 
       =>
         
@@ -142,11 +140,47 @@ class Input.Keyboard
 # Events: over, out, leftClick, rightClick, leftDownMove
 class Input.Mouse
 
-  constructor : (@$target, initialBindings) ->
+  class MouseButton
+
+
+    constructor : (@name, @which, @mouse, @id) ->
+      @down  = false
+      @drag  = false
+      @moved = false
+
+
+    handleMouseDown : (event) ->
+
+      if event.which == @which
+        $(":focus").blur() # see OX-159
+
+        @down  = true
+        @moved = false
+        @mouse.trigger(@name + "MouseDown", @mouse.lastPosition, event.shiftKey, event.altKey, @id)
+
+
+    handleMouseUp : (event) ->
+
+      if event.which == @which and @down
+        @mouse.trigger(@name + "MouseUp")
+        if not @moved
+          @mouse.trigger(@name + "Click", @mouse.lastPosition, event.shiftKey, event.altKey, @id)
+        @down = false
+
+
+    handleMouseMove : (event, delta) ->
+
+      if @down
+        @moved = true
+        @mouse.trigger(@name + "DownMove", delta, @mouse.position, event.ctrlKey, @id)
+
+
+  constructor : (@$target, initialBindings, @id) ->
 
     _.extend(this, new EventMixin())
 
-    @isLeftDown = false
+    @leftMouseButton  = new MouseButton( "left",  1, this, @id )
+    @rightMouseButton = new MouseButton( "right", 3, this, @id )
     @isMouseOver = false
     @lastPosition = null
 
@@ -185,6 +219,10 @@ class Input.Mouse
     left <= pageX <= left + @$target.width() and
     top <= pageY <= top + @$target.height()
 
+  handle : (eventName, args...) ->
+
+    for button in [ @leftMouseButton, @rightMouseButton ]
+      button["handle" + eventName].apply( button, args )
 
   mouseDown : (event) =>
 
@@ -194,17 +232,7 @@ class Input.Mouse
       x : event.pageX - @$target.offset().left
       y : event.pageY - @$target.offset().top
 
-    # check whether the mouseDown event is a leftclick
-    if event.which == 1
-      $(":focus").blur() # see OX-159
-
-      @leftDown = true
-      @trigger("leftClick", [@lastPosition.x, @lastPosition.y], event.shiftKey, event.altKey)
-
-    else
-      @trigger("rightClick", [@lastPosition.x, @lastPosition.y], event.ctrlKey)
-
-    return
+    @handle("MouseDown", event)
 
 
   mouseUp : (event) =>
@@ -214,10 +242,7 @@ class Input.Mouse
     else
       @mouseEnter(which : 0) if @isHit(event)
 
-    if event.which == 1
-      @trigger("leftMouseUp")
-    @leftDown = false
-    return
+    @handle( "MouseUp", event )
 
 
   mouseMove : (event) =>
@@ -227,12 +252,15 @@ class Input.Mouse
       y : event.pageY - @$target.offset().top
     
     if @lastPosition?
-      deltaX = (@position.x - @lastPosition.x)
-      deltaY = (@position.y - @lastPosition.y)
 
-    if @leftDown and !(deltaX == 0 and deltaY == 0)
-      @trigger("leftDownMove", {x : deltaX, y : deltaY},
-        {x : @position.x, y: @position.y}, event.ctrlKey)
+      delta = 
+        x : (@position.x - @lastPosition.x)
+        y : (@position.y - @lastPosition.y)
+
+    if delta?.x != 0 or delta?.y != 0
+
+      @handle( "MouseMove", event, delta )
+
       @lastPosition = @position
 
     return
@@ -304,17 +332,21 @@ class Input.Deviceorientation
           @unfire("y")
     )
 
+
   attach : (key, callback) ->
 
     @keyBindings[key] = callback
 
+
   unbind : ->
+
     $(window).off(
       "deviceorientation", 
       @eventHandler
       @unfire("x")
       @unfire("y")
     )
+
 
   fire : (key, dist) ->
 
@@ -334,6 +366,7 @@ class Input.Deviceorientation
     return
 
   buttonLoop : ->
+
     if @keyPressedCount > 0
       for own key, { callback, distance } of @keyPressedCallbacks
         callback?(distance)
@@ -389,6 +422,7 @@ class Input.Gamepad
 
 
   constructor : (bindings) ->
+
     if GamepadJS.supported
 
       for own key, callback of bindings
@@ -398,15 +432,21 @@ class Input.Gamepad
     else
      console.log "Your browser does not support gamepads!"
 
+
   attach : (button, callback)  ->
+
       @buttonCallbackMap[button] = callback
 
+
   unbind : ->
+
     @buttonCallbackMap = null
 
-  # actively poll the state of gameoad object as returned
-  # by the GamepadJS library.
+
   gamepadLoop : ->
+    # actively poll the state of gameoad object as returned
+    # by the GamepadJS library.
+
     #stops the loop caused by unbind
     return unless @buttonCallbackMap
 
@@ -431,9 +471,12 @@ class Input.Gamepad
 
     setTimeout( (=> @gamepadLoop()), @delay)
 
+
   # FIXME 
   # as far as I know the gamepad.js lib already provides values for deadzones
   filterDeadzone : (value) ->
+
       if Math.abs(value) > @DEADZONE then value / @SLOWDOWN_FACTOR else 0
+
 
 Input

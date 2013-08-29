@@ -1,0 +1,8 @@
+@( explorativeAnnotations: List[models.annotation.Annotation], userTasks: List[(models.task.Task, models.annotation.Annotation)], trackedTime: Map[models.user.PaymentInterval, scala.concurrent.duration.Duration], dataSets: List[braingames.binary.models.DataSet], hasAnOpenTask: Boolean)(implicit session: oxalis.view.AuthedSessionData)
+
+@main(){
+  <div class="container" id="dashboard">
+    @dashboard(None, explorativeAnnotations, userTasks, trackedTime, dataSets, hasAnOpenTask)
+  </div>
+  @credits()
+}

@@ -7,10 +7,12 @@ class VolumeTracingController
 
   constructor : ( { @model, @view, @sceneController, @cameraController, @move, @calculateGlobalPos } ) ->
 
+    @inDeleteMode = false
+
     @mouseControls =
       
       leftDownMove : (delta, pos, ctrlPressed) =>
-        
+
         if ctrlPressed
           @move [
             delta.x * @model.user.getMouseInversionX() / @view.scaleFactor
@@ -18,13 +20,39 @@ class VolumeTracingController
             0
           ]
         else
-          @drawVolume( @calculateGlobalPos([pos.x, pos.y]))
+          @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
       
-      leftClick : (pos, shiftPressed, altPressed, plane) =>
-        @model.volumeTracing.startEditing()
+      leftMouseDown : (pos, shiftPressed, altPressed, id) =>
+
+        @enterDeleteMode( shiftPressed )
+        @model.volumeTracing.startEditing(id)
       
       leftMouseUp : =>
+
         @model.volumeTracing.finishLayer()
+        @restoreAfterDeleteMode()
+      
+      rightDownMove : (delta, pos, ctrlPressed, id) =>
+
+        @model.volumeTracing.addToLayer( @calculateGlobalPos(pos))
+      
+      rightMouseDown : (pos, shiftPressed, altPressed, id) =>
+
+        @enterDeleteMode()
+        @model.volumeTracing.startEditing(id)
+      
+      rightMouseUp : =>
+
+        @model.volumeTracing.finishLayer()
+        @restoreAfterDeleteMode()
+
+      leftClick : (pos, shiftPressed, altPressed, id) =>
+
+        cell = @model.binary["color"].cube.getLabel(
+                  @calculateGlobalPos( pos ))
+
+        if cell > 0
+          @model.volumeTracing.setActiveCell( cell )
           
 
     @keyboardControls =
@@ -32,5 +60,23 @@ class VolumeTracingController
       "c" : =>
         @model.volumeTracing.createCell()
 
+
+  enterDeleteMode : (enter = true) ->
+
+    @inDeleteMode = enter
+
+    if @inDeleteMode
+      @prevActiveCell = @model.volumeTracing.getActiveCellId()
+      @model.volumeTracing.setActiveCell(0)
+
+
+  restoreAfterDeleteMode : ->
+
+    if @inDeleteMode
+      @model.volumeTracing.setActiveCell( @prevActiveCell )
+    @inDeleteMode = false
+
+
   drawVolume : (pos) ->
+
     @model.volumeTracing.addToLayer(pos)

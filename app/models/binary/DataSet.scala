@@ -15,7 +15,6 @@ import com.novus.salat._
 import braingames.binary.models.DataSet
 import models.user.User
 import braingames.reactivemongo.{DBAccessContext, GlobalDBAccess, SecuredMongoDAO}
-import play.api.Logger
 import models.team.TeamPath
 
 object DataSetRepository extends AbstractDataSetRepository with GlobalDBAccess{
@@ -51,7 +50,8 @@ object DataSetDAO extends BasicReactiveDAO[DataSet] {
       case Some(user: User) =>
         AllowIf(Json.obj("$or" -> JsArray(allUserAccess :: teamRegexesForUser(user))))
       case _ =>
-        DenyEveryone()
+        AllowIf(Json.obj(
+          "allowedTeams" -> TeamPath.All))
     }
   }
 

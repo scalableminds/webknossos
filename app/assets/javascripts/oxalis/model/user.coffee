@@ -13,8 +13,8 @@ class User
   crosshairSize : null
   scaleValue : null
   mouseRotateValue : null
-  routeClippingDistance : null
-  routeClippingDistanceArbitrary : null
+  clippingDistance : null
+  clippingDistanceArbitrary : null
   dynamicSpaceDirection : null
   displayCrosshair : null
   interpolation : null
@@ -25,11 +25,10 @@ class User
   quality : null
   zoom : null
   scale : null
-  displayPreviewXY : null
-  displayPreviewYZ : null
-  displayPreviewXZ : null
+  displayTDViewXY : null
+  displayTDViewYZ : null
+  displayTDViewXZ : null
   newNodeNewTree : null
-  nodesAsSpheres : null
   inverseX : null
   inverseY : null
   keyboardDelay : null
@@ -75,46 +74,23 @@ class User
 
 
   pushImpl : ->
+    
     deferred = $.Deferred()
+
+    data = {}
+    for property of this
+      
+      if not (typeof this[property] == "function") and property.charAt(0) != '_'
+
+        data[property] = this[property]
+
+    console.log "Sending User Data:", data
       
     Request.send(
       url      : "/user/configuration"
       type     : "POST"
       dataType : "json"
-      data   : { 
-        moveValue : @moveValue,
-        moveValue3d : @moveValue3d,
-        rotateValue : @rotateValue,
-        crosshairSize : @crosshairSize,
-        scaleValue : @scaleValue,
-        mouseRotateValue : @mouseRotateValue,
-        routeClippingDistance : @routeClippingDistance,
-        routeClippingDistanceArbitrary : @routeClippingDistanceArbitrary,
-        dynamicSpaceDirection : @dynamicSpaceDirection,
-        displayCrosshair : @displayCrosshair,
-        interpolation : @interpolation,
-        fourBit: @fourBit,
-        briConNames : @briConNames,
-        brightness: @brightness,
-        contrast: @contrast, 
-        quality : @quality,
-        zoom : @zoom,
-        scale : @scale,
-        displayPreviewXY : @displayPreviewXY,
-        displayPreviewYZ : @displayPreviewYZ,
-        displayPreviewXZ : @displayPreviewXZ,
-        newNodeNewTree : @newNodeNewTree,
-        nodesAsSpheres : @nodesAsSpheres,
-        inverseX : @inverseX,
-        inverseY : @inverseY,
-        keyboardDelay : @keyboardDelay,
-        mouseActive : @mouseActive,
-        keyboardActive : @keyboardActive,
-        gamepadActive : @gamepadActive,
-        motionsensorActive : @motionsensorActive
-        firstVisToggle : @firstVisToggle 
-        particleSize : @particleSize 
-        sortTreesByName : @sortTreesByName }
+      data     : data
     ).fail( =>
       
       console.log "couldn't save userdata"

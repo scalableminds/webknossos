@@ -34,24 +34,15 @@ object AnnotationController extends Controller with Secured with TracingInformat
 
   implicit val timeout = Timeout(5 seconds)
 
-  def index = Authenticated {
-    implicit request =>
-      UsedAnnotation
-        .oneBy(request.user)
-        .map(annotationId =>
-        Redirect(routes.AnnotationController.trace(annotationId.annotationType, annotationId.identifier)))
-        .getOrElse {
-        Redirect(routes.UserController.dashboard)
-      }
-  }
-
-  def info(typ: String, id: String) = Authenticated {
+  def info(typ: String, id: String) = UserAwareAction {
     implicit request =>
       Async {
         val annotationId = AnnotationIdentifier(typ, id)
         respondWithTracingInformation(annotationId).map {
           js =>
-            UsedAnnotation.use(request.user, annotationId)
+            request.userOpt.map{ user =>
+              UsedAnnotation.use(user, annotationId)
+            }
             Ok(js)
         }
       }
@@ -112,7 +103,7 @@ object AnnotationController extends Controller with Secured with TracingInformat
       Async {
         (for {
           oldAnnotation <- findAnnotation(typ, id)
-          oldJs <- oldAnnotation.annotationInfo(request.user)
+          oldJs <- oldAnnotation.annotationInfo(Some(request.user))
           if (oldAnnotation.restrictions.allowUpdate(request.user))
         } yield {
           if (version == oldAnnotation.version + 1) {

@@ -5,6 +5,7 @@ object AnnotationType {
 
   // user types
   val Task = "Task"
+  val View = "View"
   val Explorational = "Explorational"
   val Review = "Trainings Review"
   val CompoundTask = "CompoundTask"

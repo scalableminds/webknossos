@@ -12,7 +12,7 @@ class PullQueue
   BUCKET_TIME_SMOOTHER : .125
 
   cube : null
-  queue : []
+  queue : null
 
   dataSetName : ""
 
@@ -20,7 +20,9 @@ class PullQueue
   roundTripTime : 0
 
   
-  constructor : (@dataSetName, @cube) ->
+  constructor : (@dataSetName, @cube, @dataLayerName, @testData) ->
+
+    @queue = []
 
 
   swap : (a, b) ->
@@ -80,11 +82,11 @@ class PullQueue
 
   clear : ->
 
-    @queue.length = 0
+    @queue = []
 
 
-  # Starting to download some buckets
   pull : ->
+    # Starting to download some buckets
 
     while @batchCount < @BATCH_LIMIT and @queue.length
       
@@ -101,8 +103,8 @@ class PullQueue
       @pullBatch(batch) if batch.length > 0
 
 
-  # Loading a bunch of buckets
   pullBatch : (batch) ->
+    # Loading a bunch of buckets
 
     @batchCount++
 
@@ -120,7 +122,7 @@ class PullQueue
     # Measuring the time until response arrives to select appropriate preloading strategy 
     roundTripBeginTime = new Date()
 
-    @getLoadSocket().send(transmitBuffer)
+    @getLoadSocket(@dataLayerName).send(transmitBuffer)
       .pipe(
 
         (responseBuffer) =>
@@ -135,8 +137,10 @@ class PullQueue
               bucketData = @decode(responseBuffer.subarray(offset, offset += (@cube.BUCKET_LENGTH >> 1)))
             else
               bucketData = responseBuffer.subarray(offset, offset += @cube.BUCKET_LENGTH)
-
-            #console.log "Success: ", bucket
+            if @testData
+              id = bucket[0] + bucket[1] * 100 + bucket[2] * 10000
+              for i in [0...bucketData.length]
+                bucketData[i] = (id >> (8 * ((@cube.BIT_DEPTH >> 3) - 1 - (i % (@cube.BIT_DEPTH >> 3))))) % 256
             @cube.setBucketByZoomedAddress(bucket, bucketData)
 
         =>
@@ -184,14 +188,27 @@ class PullQueue
   set4Bit : (@fourBit) ->
 
 
-  getLoadSocket : _.once ->
+  getLoadSocket : ->
 
-    new ArrayBufferSocket(
+    if @socket? then @socket else @socket = new ArrayBufferSocket(
       senders : [
         # new ArrayBufferSocket.WebWorker("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
         # new ArrayBufferSocket.WebSocket("ws://#{document.location.host}/binary/ws?dataSetName=#{@dataSetName}&cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
-        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/color/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
+        new ArrayBufferSocket.XmlHttpRequest("/datasets/#{@dataSetName}/layers/#{@dataLayerName}/data?cubeSize=#{1 << @cube.BUCKET_SIZE_P}")
       ]
       requestBufferType : Float32Array
       responseBufferType : Uint8Array
     )
+
+
+  getTestBucket : _.once ->
+
+    result = new Uint8Array(@cube.BUCKET_LENGTH)
+
+    index = 0
+    for i in [0...@cube.BUCKET_LENGTH / 3]
+      result[index++] = 255
+      result[index++] = 255
+      result[index++] = 0
+
+    result

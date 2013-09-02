@@ -27,6 +27,7 @@ class Gui
     
     @settings = 
 
+      boundingBox : "0, 0, 0, 0, 0, 0"
       fourBit : @user.fourBit
       brightness : @user.brightness[@datasetPosition]
       contrast : @user.contrast[@datasetPosition]
@@ -80,6 +81,8 @@ class Gui
       0.05, 0.5, 0.01, "Crosshair size")
 
     @folders.push( @fView = @gui.addFolder("View") )
+    bbController = @fView.add(@settings, "boundingBox").name("Bounding Box").onChange(@setBoundingBox)
+    @addTooltip(bbController, "Format: minX, minY, minZ, maxX, maxY, maxZ")
     @addCheckbox(@fView, @settings, "fourBit", "4 Bit")
     @addCheckbox(@fView, @user, "interpolation", "Interpolation")
     @brightnessController =
@@ -237,6 +240,41 @@ class Gui
         )
     else
       new $.Deferred().resolve()
+
+
+  setBoundingBox : (value) =>
+
+    bbArray = @stringToNumberArray( value )
+    if bbArray?.length == 6
+      @trigger("newBoundingBox", bbArray)
+
+
+  setPosFromString : (posString) =>
+ 
+    posArray = @stringToNumberArray( posString )
+    if posArray?.length == 3
+      @model.flycam.setPosition(posArray)
+      return
+    else
+      @updateGlobalPosition(@model.flycam.getPosition())
+
+
+  stringToNumberArray : (s) ->
+
+    # remove leading/trailing whitespaces
+    s = s.trim()
+    # replace remaining whitespaces with commata
+    s = s.replace /,?\s+,?/g, ","
+    stringArray = s.split(",")
+
+    result = []
+    for e in stringArray
+      if not isNaN(newEl = parseInt(e))
+        result.push(newEl)
+      else
+        return null
+
+    return result
 
 
   setPosFromString : (posString) =>

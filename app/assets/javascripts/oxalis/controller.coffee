@@ -241,6 +241,7 @@ class Controller
       setActiveNode : (id) => @setActiveNode(id, false) # not centered
       setActiveCell : (id) => @model.volumeTracing.setActiveCell(id)
       createNewCell : => @model.volumeTracing.createCell()
+      newBoundingBox : (bb) => @sceneController.setBoundingBox(bb)
 
     gui
 

@@ -142,11 +142,12 @@ class Input.Mouse
 
   class MouseButton
 
+    MOVE_DELTA_THRESHOLD : 30
 
     constructor : (@name, @which, @mouse, @id) ->
       @down  = false
       @drag  = false
-      @moved = false
+      @moveDelta = 0
 
 
     handleMouseDown : (event) ->
@@ -155,7 +156,7 @@ class Input.Mouse
         $(":focus").blur() # see OX-159
 
         @down  = true
-        @moved = false
+        @moveDelta = 0
         @mouse.trigger(@name + "MouseDown", @mouse.lastPosition, event.shiftKey, event.altKey, @id)
 
 
@@ -163,7 +164,7 @@ class Input.Mouse
 
       if event.which == @which and @down
         @mouse.trigger(@name + "MouseUp")
-        if not @moved
+        if @moveDelta <= @MOVE_DELTA_THRESHOLD
           @mouse.trigger(@name + "Click", @mouse.lastPosition, event.shiftKey, event.altKey, @id)
         @down = false
 
@@ -171,7 +172,7 @@ class Input.Mouse
     handleMouseMove : (event, delta) ->
 
       if @down
-        @moved = true
+        @moveDelta += Math.abs( delta.x ) + Math.abs( delta.y )
         @mouse.trigger(@name + "DownMove", delta, @mouse.position, event.ctrlKey, @id)
 
 

@@ -270,8 +270,8 @@ class Plane2D
       sourceOffset = (sourceOffsets[0] << @DELTA[@U]) + (sourceOffsets[1] << @DELTA[@V]) + (sourceOffsets[2] << @DELTA[@W])
 
       # correct DATA_BIT_DEPTH
-      @DATA_BIT_DEPTH = 8
-      bucketData = @cube.get8BitDataBucketByZoomedAddress(bucket)
+      #@DATA_BIT_DEPTH = 8
+      bucketData = @cube.getDataBucketByZoomedAddress(bucket)
       @cube.accessBuckets([bucket])
 
       @renderToBuffer(

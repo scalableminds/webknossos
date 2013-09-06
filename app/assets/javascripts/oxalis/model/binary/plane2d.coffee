@@ -398,11 +398,11 @@ class Plane2D
       dest = destination.offset++ * bytesDest
       src = source.offset * bytesSrc
 
-      value = 0
-      for b in [1..bytesSrc]
-        value += source.buffer[src++]
-      value &= 0xff
-      destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
+      for b in [(bytesSrc - 1)..0] by -1
+        if (value = source.buffer[src + b]) or b == 0
+          destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
+          break
+      src += bytesSrc
 
       if (i & source.nextPixelMask) == 0
         source.offset += source.pixelDelta

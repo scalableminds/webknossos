@@ -124,29 +124,6 @@ class Cube
       null
 
 
-  get8BitDataBucketByZoomedAddress : (address) ->
-
-    bucket = @getDataBucketByZoomedAddress( address )
-    if @BIT_DEPTH == 8
-      return bucket
-
-    # Build 8 Bit data by using the LSB if
-    # it's not zero, otherwise use the MSB
-    # assuming big endian byte order
-
-    bucketSize = 1 << @BUCKET_SIZE_P * 3
-    byteOffset = @BIT_DEPTH >> 3
-    newBucket  = new Uint8Array( bucketSize )
-
-    for i in [0...bucketSize]
-      for b in [(byteOffset - 1)..0] by -1
-        if (value = bucket[i * byteOffset + b]) or b == 0
-          newBucket[i] = value
-          break
-
-    return newBucket
-
-
   getVolumeBucketByZoomedAddress : (address) ->
 
     if address[3] >= @ZOOM_STEP_COUNT

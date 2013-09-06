@@ -269,8 +269,6 @@ class Plane2D
 
       sourceOffset = (sourceOffsets[0] << @DELTA[@U]) + (sourceOffsets[1] << @DELTA[@V]) + (sourceOffsets[2] << @DELTA[@W])
 
-      # correct DATA_BIT_DEPTH
-      #@DATA_BIT_DEPTH = 8
       bucketData = @cube.getDataBucketByZoomedAddress(bucket)
       @cube.accessBuckets([bucket])
 
@@ -399,9 +397,12 @@ class Plane2D
     while i--
       dest = destination.offset++ * bytesDest
       src = source.offset * bytesSrc
-      for t in [1..bytesDest]
-        value = source.buffer[src++]
-        destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
+
+      value = 0
+      for b in [1..bytesSrc]
+        value += source.buffer[src++]
+      value &= 0xff
+      destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
 
       if (i & source.nextPixelMask) == 0
         source.offset += source.pixelDelta

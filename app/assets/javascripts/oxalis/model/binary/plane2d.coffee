@@ -398,8 +398,10 @@ class Plane2D
       dest = destination.offset++ * bytesDest
       src = source.offset * bytesSrc
 
-      for b in [(bytesSrc - 1)..0] by -1
-        if (value = source.buffer[src + b]) or b == 0
+      # use the first none-zero byte unless all are zero
+      # assuming little endian order
+      for b in [0...bytesSrc]
+        if (value = source.buffer[src + b]) or b == bytesSrc - 1
           destination.buffer[dest++] = if contrastCurve? then contrastCurve[value] else value
           break
       src += bytesSrc

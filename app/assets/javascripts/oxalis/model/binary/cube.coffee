@@ -344,9 +344,9 @@ class Cube
 
     if bucket?
       result = 0
-      # Assuming big endian byte order
+      # Assuming little endian byte order
       for i in [0...byteOffset]
-        result += (1 << (8 * i)) * bucket[ voxelIndex + byteOffset - 1 - i]
+        result += (1 << (8 * i)) * bucket[ voxelIndex + i]
       return result
 
     return null
